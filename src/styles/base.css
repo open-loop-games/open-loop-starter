@@ -1,0 +1,125 @@
+:root {
+  --color-bg: #1a1a2e;
+  --color-surface: #16213e;
+  --color-surface-hover: #1c2b4a;
+  --color-border: #2a3a5c;
+  --color-text: #e0e0e0;
+  --color-text-muted: #8892a4;
+  --color-primary: #4a9eff;
+  --color-primary-hover: #3a8eef;
+  --color-danger: #e05555;
+  --color-danger-hover: #d04545;
+  --color-success: #4caf50;
+  --color-badge: #3a3a5c;
+
+  --radius: 6px;
+  --gap: 12px;
+  --gap-sm: 8px;
+  --gap-lg: 20px;
+
+  --font-mono: 'Courier New', Courier, monospace;
+  --font-sans: system-ui, -apple-system, sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  transition: background 0.15s;
+}
+
+button:hover {
+  background: var(--color-surface-hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.btn-danger:hover {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.btn-sm {
+  padding: 3px 10px;
+  font-size: 0.85em;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+}
+
+textarea {
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+h1, h2, h3 {
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.75em;
+  border-radius: var(--radius);
+  background: var(--color-badge);
+  color: var(--color-text-muted);
+}
+
+.badge-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
