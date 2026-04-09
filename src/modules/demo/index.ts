@@ -8,6 +8,7 @@ import {
   createZoneSystem,
   beginPersistentContext,
   endPersistentContext,
+  SaveManagerKey,
   type EngineModule,
   type EngineContext,
   type DecimalSource,
@@ -111,6 +112,15 @@ export const demoModule: EngineModule = {
     });
 
     loop.run();
+
+    // --- Save metadata for slot cards ---
+    const saveManager = ctx.tryInject(SaveManagerKey);
+    if (saveManager) {
+      saveManager.setMetadataProvider(() => ({
+        loopCount: loop.count.value,
+        playtime: loop.elapsed.value,
+      }));
+    }
 
     // --- Expose state ---
     demoState = {

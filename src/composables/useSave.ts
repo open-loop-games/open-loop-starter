@@ -26,8 +26,18 @@ export function useSave() {
   }
 
   function importSave(data: string): boolean {
+    // Backup current save before overwriting
+    try {
+      const backup = mgr.exportSave();
+      if (backup) {
+        localStorage.setItem('open-loop-starter-import-backup', backup);
+      }
+    } catch {
+      // No existing save to back up — that's fine
+    }
+
     const result = mgr.importSave(data);
-    showStatus(result.success ? 'Imported' : 'Import failed');
+    showStatus(result.success ? 'Imported (backup saved)' : 'Import failed');
     return result.success;
   }
 
@@ -36,5 +46,36 @@ export function useSave() {
     showStatus('Save deleted');
   }
 
-  return { save, exportSave, importSave, deleteSave, status };
+  function downloadSave() {
+    const data = mgr.exportSave();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `save-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('Downloaded');
+  }
+
+  function uploadSave(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) return resolve(false);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = importSave(reader.result as string);
+          resolve(result);
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+  }
+
+  return { save, exportSave, importSave, deleteSave, downloadSave, uploadSave, status };
 }

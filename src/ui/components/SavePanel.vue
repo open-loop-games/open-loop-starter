@@ -4,7 +4,7 @@ import { useSave } from '@/composables/useSave';
 import BaseModal from './BaseModal.vue';
 
 const emit = defineEmits<{ close: [] }>();
-const { save, exportSave, importSave, deleteSave, status } = useSave();
+const { save, exportSave, importSave, deleteSave, downloadSave, uploadSave, status } = useSave();
 
 const exportText = ref('');
 const importText = ref('');
@@ -46,6 +46,11 @@ function doDelete() {
         <button class="btn-primary" @click="save">Save</button>
         <button @click="doExport">Export</button>
         <button @click="showImport = !showImport">Import</button>
+      </div>
+
+      <div class="actions">
+        <button @click="downloadSave">Download File</button>
+        <button @click="uploadSave">Upload File</button>
         <button class="btn-danger btn-sm" @click="doDelete">
           {{ confirmDelete ? 'Confirm Delete?' : 'Delete Save' }}
         </button>

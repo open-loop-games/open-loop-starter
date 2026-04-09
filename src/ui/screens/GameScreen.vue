@@ -4,6 +4,7 @@ import Decimal from 'break_eternity.js';
 import { demoState } from '@/modules/demo';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
+import AutosaveToast from '@/ui/components/AutosaveToast.vue';
 
 const showSave = ref(false);
 const showSettings = ref(false);
@@ -111,6 +112,7 @@ function endLoop() {
 
     <SavePanel v-if="showSave" @close="showSave = false" />
     <SettingsPanel v-if="showSettings" @close="showSettings = false" />
+    <AutosaveToast />
   </div>
 </template>
 
