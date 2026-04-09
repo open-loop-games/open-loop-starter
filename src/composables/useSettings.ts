@@ -4,6 +4,9 @@ import { stockSettings } from '@/modules/settings';
 export interface StockSettings {
   autoSave: Persistent<boolean>;
   offlineProgress: Persistent<boolean>;
+  theme: Persistent<string>;
+  notation: Persistent<string>;
+  confirmOnClose: Persistent<boolean>;
 }
 
 export function useSettings(): StockSettings {
