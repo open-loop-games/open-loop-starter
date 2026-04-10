@@ -10,6 +10,7 @@ import { useNotation } from '@/composables/useNotation';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import GameScreen from '@/ui/screens/GameScreen.vue';
 import OfflineReportModal from '@/ui/components/OfflineReportModal.vue';
+import ToastContainer from '@/ui/components/ToastContainer.vue';
 
 const currentScreen = ref<Screen>(Screen.Slots);
 
@@ -85,4 +86,5 @@ function startGame(slotId: number, modId?: string) {
     :gains="offlineReport.gains"
     @close="offlineReport = null"
   />
+  <ToastContainer />
 </template>

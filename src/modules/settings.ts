@@ -8,11 +8,12 @@ import {
   type Persistent,
 } from 'open-loop-engine';
 import type { StockSettings } from '@/composables/useSettings';
+import { useToasts } from '@/composables/useToasts';
 
 /** Module-level settings state — populated during install, used by Vue composables */
 export let stockSettings: StockSettings | null = null;
 
-/** Reactive timestamp of the last save — drives autosave toast (non-persistent) */
+/** Reactive timestamp of the last save — still exposed for any watcher that wants it */
 export const lastSaveTimestamp: Ref<number> = ref(0);
 
 export const settingsModule: EngineModule = {
@@ -28,8 +29,10 @@ export const settingsModule: EngineModule = {
 
     stockSettings = { autoSave, offlineProgress, theme, notation, confirmOnClose };
 
+    const { addToast } = useToasts();
     ctx.onSave(() => {
       lastSaveTimestamp.value = Date.now();
+      addToast('Saved', '', 1500);
     });
   },
 };

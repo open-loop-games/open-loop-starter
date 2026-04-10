@@ -1,24 +1,15 @@
-import { ref } from 'vue';
 import { useGame } from './useGame';
+import { useToasts } from './useToasts';
 
 export function useSave() {
   const { engine } = useGame();
   const mgr = engine.saveManager!;
-
-  const status = ref<string>('');
-  let statusTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function showStatus(msg: string) {
-    status.value = msg;
-    if (statusTimer) clearTimeout(statusTimer);
-    statusTimer = setTimeout(() => {
-      status.value = '';
-    }, 2000);
-  }
+  const { addToast } = useToasts();
 
   function save() {
     mgr.save();
-    showStatus('Saved');
+    // "Saved" toast is emitted by the settings module's onSave hook,
+    // so manual saves don't need to toast here.
   }
 
   function exportSave(): string {
@@ -26,7 +17,6 @@ export function useSave() {
   }
 
   function importSave(data: string): boolean {
-    // Backup current save before overwriting
     try {
       const backup = mgr.exportSave();
       if (backup) {
@@ -37,13 +27,17 @@ export function useSave() {
     }
 
     const result = mgr.importSave(data);
-    showStatus(result.success ? 'Imported (backup saved)' : 'Import failed');
+    if (result.success) {
+      addToast('Imported', 'Previous save backed up', 2500);
+    } else {
+      addToast('Import failed', 'Invalid save data', 4000);
+    }
     return result.success;
   }
 
   function deleteSave() {
     mgr.deleteSave();
-    showStatus('Save deleted');
+    addToast('Save deleted', '', 2000);
   }
 
   function downloadSave() {
@@ -55,7 +49,7 @@ export function useSave() {
     a.download = `save-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showStatus('Downloaded');
+    addToast('Downloaded', '', 2000);
   }
 
   function uploadSave(): Promise<boolean> {
@@ -77,5 +71,5 @@ export function useSave() {
     });
   }
 
-  return { save, exportSave, importSave, deleteSave, downloadSave, uploadSave, status };
+  return { save, exportSave, importSave, deleteSave, downloadSave, uploadSave };
 }

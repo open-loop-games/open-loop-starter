@@ -4,7 +4,7 @@ import { useSave } from '@/composables/useSave';
 import BaseModal from './BaseModal.vue';
 
 const emit = defineEmits<{ close: [] }>();
-const { save, exportSave, importSave, deleteSave, downloadSave, uploadSave, status } = useSave();
+const { save, exportSave, importSave, deleteSave, downloadSave, uploadSave } = useSave();
 
 const exportText = ref('');
 const importText = ref('');
@@ -56,8 +56,6 @@ function doDelete() {
         </button>
       </div>
 
-      <p v-if="status" class="status">{{ status }}</p>
-
       <div v-if="exportText" class="export-area">
         <textarea readonly :value="exportText" rows="4" />
         <button class="btn-sm" @click="doCopy">Copy to clipboard</button>
@@ -84,11 +82,6 @@ function doDelete() {
   display: flex;
   gap: var(--gap-sm);
   flex-wrap: wrap;
-}
-
-.status {
-  color: var(--color-success);
-  font-size: 0.9em;
 }
 
 .export-area,
