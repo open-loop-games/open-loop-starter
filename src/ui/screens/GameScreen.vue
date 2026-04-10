@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import Decimal from 'break_eternity.js';
+import { Decimal } from 'open-loop-engine';
 import { demoState } from '@/modules/demo';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
@@ -11,6 +11,7 @@ const showSettings = ref(false);
 
 const state = demoState!;
 const mana = computed(() => Decimal.floor(state.mana.value).toString());
+const maxMana = computed(() => state.maxMana.toString());
 const manaPercent = computed(() =>
   Decimal.div(state.mana.value, state.maxMana).mul(100).toNumber(),
 );
@@ -58,7 +59,7 @@ function endLoop() {
           <span class="stat-label">Mana</span>
           <div class="mana-bar">
             <div class="mana-fill" :style="{ width: manaPercent + '%' }" />
-            <span class="mana-text">{{ mana }} / {{ state.maxMana }}</span>
+            <span class="mana-text">{{ mana }} / {{ maxMana }}</span>
           </div>
         </div>
         <div class="stat">

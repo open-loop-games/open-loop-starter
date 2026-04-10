@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, provide, watchEffect } from 'vue';
-import Decimal from 'break_eternity.js';
-import { createEngine, processOfflineTime, format } from 'open-loop-engine';
+import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-engine';
 import { Screen } from '@/types';
 import { allModules } from '@/modules';
 import { stockSettings } from '@/modules/settings';

@@ -1,10 +1,16 @@
-import type { Action, Skill, Loop, ZoneSystem } from 'open-loop-engine';
-import type { Resource } from 'open-loop-engine';
-import type { DecimalSource } from 'open-loop-engine';
+import type {
+  Action,
+  Skill,
+  Loop,
+  ZoneSystem,
+  Resource,
+  Decimal,
+  DecimalSource,
+} from 'open-loop-engine';
 
 export interface DemoState {
   mana: Resource<DecimalSource>;
-  maxMana: number;
+  maxMana: Decimal;
   woodcutting: Skill;
   zones: ZoneSystem;
   actions: Map<string, Action>;

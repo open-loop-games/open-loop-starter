@@ -1,5 +1,5 @@
-import Decimal from 'break_eternity.js';
 import {
+  Decimal,
   createResource,
   createAction,
   createSkill,
@@ -18,7 +18,7 @@ import type { DemoState } from './types';
 /** Module-level state — populated during install, used by Vue composables */
 export let demoState: DemoState | null = null;
 
-const MAX_MANA = 100;
+const MAX_MANA = new Decimal(100);
 
 export const demoModule: EngineModule = {
   id: 'demo',
