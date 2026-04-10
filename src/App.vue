@@ -2,9 +2,9 @@
 import { ref, provide, watchEffect } from 'vue';
 import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-engine';
 import { Screen } from '@/types';
-import { allModules } from '@/modules';
+import { baseModules, modDefs } from '@/modules';
 import { stockSettings } from '@/modules/settings';
-import { demoState } from '@/modules/demo';
+import { coreState } from '@/modules/core';
 import { useTheme } from '@/composables/useTheme';
 import { useNotation } from '@/composables/useNotation';
 import { useSaveEvents } from '@/composables/useSaveEvents';
@@ -19,9 +19,10 @@ const engine = createEngine({
   gameId: 'open-loop-starter',
   tickRate: 20,
   autoSaveInterval: 60000,
+  mods: modDefs,
 });
 
-for (const mod of allModules) {
+for (const mod of baseModules) {
   engine.use(mod);
 }
 
@@ -59,19 +60,29 @@ function startGame(slotId: number, modId?: string) {
     const elapsed = (Date.now() - result.timestamp) / 1000;
     if (elapsed > 60 && stockSettings?.offlineProgress.value) {
       // Snapshot before
-      const xpBefore = demoState ? Decimal.floor(demoState.woodcutting.xp.value) : Decimal.dZero;
+      const woodBefore = coreState
+        ? Decimal.floor(coreState.resources.wood.value)
+        : Decimal.dZero;
+      const stoneBefore = coreState
+        ? Decimal.floor(coreState.resources.stone.value)
+        : Decimal.dZero;
+      const goldBefore = coreState
+        ? Decimal.floor(coreState.resources.gold.value)
+        : Decimal.dZero;
 
       const processed = processOfflineTime(engine.loop, elapsed);
 
-      // Compute gains
-      if (processed > 0 && demoState) {
-        const xpAfter = Decimal.floor(demoState.woodcutting.xp.value);
-        const xpGain = xpAfter.sub(xpBefore);
+      if (processed > 0 && coreState) {
         const gains: Record<string, string> = {};
-        if (xpGain.gt(0)) {
-          gains['Woodcutting XP'] = '+' + format(xpGain);
+        const woodGain = Decimal.floor(coreState.resources.wood.value).sub(woodBefore);
+        const stoneGain = Decimal.floor(coreState.resources.stone.value).sub(stoneBefore);
+        const goldGain = Decimal.floor(coreState.resources.gold.value).sub(goldBefore);
+        if (woodGain.gt(0)) gains['Wood'] = '+' + format(woodGain);
+        if (stoneGain.gt(0)) gains['Stone'] = '+' + format(stoneGain);
+        if (goldGain.gt(0)) gains['Gold'] = '+' + format(goldGain);
+        if (Object.keys(gains).length > 0) {
+          offlineReport.value = { elapsed: processed, gains };
         }
-        offlineReport.value = { elapsed: processed, gains };
       }
     }
   }
