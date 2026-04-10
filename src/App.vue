@@ -7,6 +7,7 @@ import { stockSettings } from '@/modules/settings';
 import { demoState } from '@/modules/demo';
 import { useTheme } from '@/composables/useTheme';
 import { useNotation } from '@/composables/useNotation';
+import { useSaveEvents } from '@/composables/useSaveEvents';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import GameScreen from '@/ui/screens/GameScreen.vue';
 import OfflineReportModal from '@/ui/components/OfflineReportModal.vue';
@@ -23,6 +24,8 @@ const engine = createEngine({
 for (const mod of allModules) {
   engine.use(mod);
 }
+
+useSaveEvents(engine.saveManager!);
 
 provide('engine', engine);
 provide('currentScreen', currentScreen);
