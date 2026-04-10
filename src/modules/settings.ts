@@ -20,11 +20,11 @@ export const settingsModule: EngineModule = {
   id: 'settings',
   install(ctx: EngineContext) {
     beginPersistentContext('settings');
-    const autoSave: Persistent<boolean> = persistent(true, false);
-    const offlineProgress: Persistent<boolean> = persistent(true, false);
-    const theme: Persistent<string> = persistent('dark', false);
-    const notation: Persistent<string> = persistent('standard', false);
-    const confirmOnClose: Persistent<boolean> = persistent(true, false);
+    const autoSave: Persistent<boolean> = persistent(true);
+    const offlineProgress: Persistent<boolean> = persistent(true);
+    const theme: Persistent<string> = persistent('dark');
+    const notation: Persistent<string> = persistent('standard');
+    const confirmOnClose: Persistent<boolean> = persistent(true);
     endPersistentContext();
 
     stockSettings = { autoSave, offlineProgress, theme, notation, confirmOnClose };
