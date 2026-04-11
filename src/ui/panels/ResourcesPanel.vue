@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
+import { ProgressBar } from 'open-loop-ui';
 import { coreState } from '@/modules/core';
 
 const state = coreState!;
@@ -13,6 +14,23 @@ const woodcuttingLvl = computed(() =>
 );
 const miningLvl = computed(() =>
   format(Decimal.floor(state.skills.mining.level.value)),
+);
+
+// Fractional progress to next level. xpToLevel is floor(xp/10) for
+// woodcutting and floor(xp/12) for mining — so in-level progress is
+// (xp mod xpPerLevel) / xpPerLevel. Clamped into [0,1] by ProgressBar.
+const progressToNext = (xp: unknown, xpPerLevel: number) => {
+  const raw = Decimal.sub(
+    xp as number,
+    Decimal.mul(Decimal.floor(Decimal.div(xp as number, xpPerLevel)), xpPerLevel),
+  );
+  return Decimal.div(raw, xpPerLevel).toNumber();
+};
+const woodcuttingProgress = computed(() =>
+  progressToNext(state.skills.woodcutting.xp.value, 10),
+);
+const miningProgress = computed(() =>
+  progressToNext(state.skills.mining.xp.value, 12),
 );
 </script>
 
@@ -33,10 +51,12 @@ const miningLvl = computed(() =>
     <div class="skill">
       <span class="label">Woodcutting</span>
       <span class="value">Lv {{ woodcuttingLvl }}</span>
+      <ProgressBar :value="woodcuttingProgress" data-testid="skill-progress-woodcutting" />
     </div>
     <div class="skill">
       <span class="label">Mining</span>
       <span class="value">Lv {{ miningLvl }}</span>
+      <ProgressBar :value="miningProgress" data-testid="skill-progress-mining" />
     </div>
   </div>
 </template>
