@@ -1,47 +1,48 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
+import { AppFrame, SingleColumnShell, useModalStack } from 'open-loop-ui';
 import { getSlot } from '@/modules/ui-registry';
 import VanillaLayout from '@/ui/layouts/VanillaLayout.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 
-const showSave = ref(false);
-const showSettings = ref(false);
-
 /**
  * The active mod contributes the `game-layout` slot during its install.
- * Fall back to the vanilla layout if nothing is registered (e.g. mod omitted
- * the slot but the base game still needs rendering).
+ * Fall back to the vanilla layout if nothing is registered.
  */
 const layout = computed(() => getSlot('game-layout') ?? VanillaLayout);
+
+const stack = useModalStack();
+
+const openSave = () => {
+  const id = stack.push(SavePanel, { onClose: () => stack.remove(id) });
+};
+
+const openSettings = () => {
+  const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
+};
 </script>
 
 <template>
-  <div class="game-screen">
-    <header class="game-header">
-      <h2>Open Loop Starter</h2>
-      <div class="header-actions">
-        <button class="btn-sm" @click="showSave = true">Save</button>
-        <button class="btn-sm" @click="showSettings = true">Settings</button>
+  <AppFrame :stack="stack">
+    <template #header>
+      <div class="game-header">
+        <h2>Open Loop Starter</h2>
+        <div class="header-actions">
+          <button class="btn-sm" data-testid="open-save" @click="openSave">Save</button>
+          <button class="btn-sm" data-testid="open-settings" @click="openSettings">
+            Settings
+          </button>
+        </div>
       </div>
-    </header>
-
-    <main class="game-content">
+    </template>
+    <SingleColumnShell max-width="800px">
       <component :is="layout" />
-    </main>
-
-    <SavePanel v-if="showSave" @close="showSave = false" />
-    <SettingsPanel v-if="showSettings" @close="showSettings = false" />
-  </div>
+    </SingleColumnShell>
+  </AppFrame>
 </template>
 
 <style scoped>
-.game-screen {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
 .game-header {
   display: flex;
   justify-content: space-between;
@@ -58,13 +59,5 @@ const layout = computed(() => getSlot('game-layout') ?? VanillaLayout);
 .header-actions {
   display: flex;
   gap: var(--gap-sm);
-}
-
-.game-content {
-  flex: 1;
-  padding: var(--gap-lg);
-  max-width: 800px;
-  margin: 0 auto;
-  width: 100%;
 }
 </style>

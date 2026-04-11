@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useSave } from '@/composables/useSave';
-import BaseModal from './BaseModal.vue';
 
 const emit = defineEmits<{ close: [] }>();
 const { save, exportSave, importSave, deleteSave, downloadSave, uploadSave } = useSave();
@@ -40,35 +39,37 @@ function doDelete() {
 </script>
 
 <template>
-  <BaseModal title="Save Management" @close="emit('close')">
-    <div class="save-panel">
-      <div class="actions">
-        <button class="btn-primary" @click="save">Save</button>
-        <button @click="doExport">Export</button>
-        <button @click="showImport = !showImport">Import</button>
-      </div>
-
-      <div class="actions">
-        <button @click="downloadSave">Download File</button>
-        <button @click="uploadSave">Upload File</button>
-        <button class="btn-danger btn-sm" @click="doDelete">
-          {{ confirmDelete ? 'Confirm Delete?' : 'Delete Save' }}
-        </button>
-      </div>
-
-      <div v-if="exportText" class="export-area">
-        <textarea readonly :value="exportText" rows="4" />
-        <button class="btn-sm" @click="doCopy">Copy to clipboard</button>
-      </div>
-
-      <div v-if="showImport" class="import-area">
-        <textarea v-model="importText" rows="4" placeholder="Paste save data here..." />
-        <button class="btn-primary btn-sm" :disabled="!importText.trim()" @click="doImport">
-          Import
-        </button>
-      </div>
+  <div class="save-panel">
+    <header class="save-panel__header">
+      <h3>Save Management</h3>
+      <button class="btn-sm" data-testid="save-panel-close" @click="emit('close')">X</button>
+    </header>
+    <div class="actions">
+      <button class="btn-primary" @click="save">Save</button>
+      <button @click="doExport">Export</button>
+      <button @click="showImport = !showImport">Import</button>
     </div>
-  </BaseModal>
+
+    <div class="actions">
+      <button @click="downloadSave">Download File</button>
+      <button @click="uploadSave">Upload File</button>
+      <button class="btn-danger btn-sm" @click="doDelete">
+        {{ confirmDelete ? 'Confirm Delete?' : 'Delete Save' }}
+      </button>
+    </div>
+
+    <div v-if="exportText" class="export-area">
+      <textarea readonly :value="exportText" rows="4" />
+      <button class="btn-sm" @click="doCopy">Copy to clipboard</button>
+    </div>
+
+    <div v-if="showImport" class="import-area">
+      <textarea v-model="importText" rows="4" placeholder="Paste save data here..." />
+      <button class="btn-primary btn-sm" :disabled="!importText.trim()" @click="doImport">
+        Import
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -76,6 +77,20 @@ function doDelete() {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  min-width: 360px;
+}
+
+.save-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gap);
+  padding-bottom: var(--gap-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.save-panel__header h3 {
+  font-size: 1.1em;
 }
 
 .actions {

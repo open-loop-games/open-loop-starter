@@ -1,57 +1,59 @@
 <script setup lang="ts">
 import { useSettings } from '@/composables/useSettings';
 import { NOTATION_OPTIONS } from '@/composables/useNotation';
-import BaseModal from './BaseModal.vue';
 
 const emit = defineEmits<{ close: [] }>();
 const settings = useSettings();
 </script>
 
 <template>
-  <BaseModal title="Settings" @close="emit('close')">
-    <div class="settings-panel">
-      <div class="setting-group">
-        <h3>Display</h3>
+  <div class="settings-panel">
+    <header class="settings-panel__header">
+      <h3>Settings</h3>
+      <button class="btn-sm" data-testid="settings-panel-close" @click="emit('close')">X</button>
+    </header>
 
-        <label class="setting">
-          <span>Theme</span>
-          <select v-model="settings.theme.value">
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-            <option value="system">System</option>
-          </select>
-        </label>
+    <div class="setting-group">
+      <h3>Display</h3>
 
-        <label class="setting">
-          <span>Number Notation</span>
-          <select v-model="settings.notation.value">
-            <option v-for="opt in NOTATION_OPTIONS" :key="opt.key" :value="opt.key">
-              {{ opt.label }}
-            </option>
-          </select>
-        </label>
-      </div>
+      <label class="setting">
+        <span>Theme</span>
+        <select v-model="settings.theme.value">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="system">System</option>
+        </select>
+      </label>
 
-      <div class="setting-group">
-        <h3>Game</h3>
-
-        <label class="setting">
-          <input v-model="settings.autoSave.value" type="checkbox" />
-          Auto-save (every 60 seconds)
-        </label>
-
-        <label class="setting">
-          <input v-model="settings.offlineProgress.value" type="checkbox" />
-          Process offline progress on load
-        </label>
-
-        <label class="setting">
-          <input v-model="settings.confirmOnClose.value" type="checkbox" />
-          Confirm before closing tab
-        </label>
-      </div>
+      <label class="setting">
+        <span>Number Notation</span>
+        <select v-model="settings.notation.value">
+          <option v-for="opt in NOTATION_OPTIONS" :key="opt.key" :value="opt.key">
+            {{ opt.label }}
+          </option>
+        </select>
+      </label>
     </div>
-  </BaseModal>
+
+    <div class="setting-group">
+      <h3>Game</h3>
+
+      <label class="setting">
+        <input v-model="settings.autoSave.value" type="checkbox" />
+        Auto-save (every 60 seconds)
+      </label>
+
+      <label class="setting">
+        <input v-model="settings.offlineProgress.value" type="checkbox" />
+        Process offline progress on load
+      </label>
+
+      <label class="setting">
+        <input v-model="settings.confirmOnClose.value" type="checkbox" />
+        Confirm before closing tab
+      </label>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -59,6 +61,20 @@ const settings = useSettings();
   display: flex;
   flex-direction: column;
   gap: var(--gap-lg);
+  min-width: 360px;
+}
+
+.settings-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gap);
+  padding-bottom: var(--gap-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-panel__header h3 {
+  font-size: 1.1em;
 }
 
 .setting-group {
