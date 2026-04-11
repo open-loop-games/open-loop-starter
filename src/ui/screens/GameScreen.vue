@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { AppFrame, SingleColumnShell, Popover, useModalStack } from '@/lib';
+import { AppFrame, SingleColumnShell, useModalStack } from '@/lib';
+import Popover from '@/ui/components/Popover.vue';
 import { getSlot } from '@/modules/ui-registry';
 import VanillaLayout from '@/ui/layouts/VanillaLayout.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';

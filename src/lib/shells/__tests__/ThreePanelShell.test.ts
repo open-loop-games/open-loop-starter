@@ -19,8 +19,8 @@ describe('<ThreePanelShell />', () => {
   it('applies default leftWidth and rightWidth', () => {
     const wrapper = mount(ThreePanelShell);
     const style = wrapper.element.getAttribute('style') ?? '';
-    expect(style).toContain('--olui-three-panel-left-width: 200px');
-    expect(style).toContain('--olui-three-panel-right-width: 280px');
+    expect(style).toContain('--three-panel-left-width: 200px');
+    expect(style).toContain('--three-panel-right-width: 280px');
   });
 
   it('applies custom widths', () => {
@@ -28,7 +28,7 @@ describe('<ThreePanelShell />', () => {
       props: { leftWidth: '15rem', rightWidth: '18rem' },
     });
     const style = wrapper.element.getAttribute('style') ?? '';
-    expect(style).toContain('--olui-three-panel-left-width: 15rem');
-    expect(style).toContain('--olui-three-panel-right-width: 18rem');
+    expect(style).toContain('--three-panel-left-width: 15rem');
+    expect(style).toContain('--three-panel-right-width: 18rem');
   });
 });

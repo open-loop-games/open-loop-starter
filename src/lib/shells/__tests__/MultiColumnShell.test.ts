@@ -24,7 +24,7 @@ describe('<MultiColumnShell />', () => {
   it('applies uniform grid template when columns is a number', () => {
     const wrapper = mount(MultiColumnShell, { props: { columns: 3 } });
     const style = wrapper.element.getAttribute('style') ?? '';
-    expect(style).toContain('--olui-multi-column-template: repeat(3, 1fr)');
+    expect(style).toContain('--multi-column-template: repeat(3, 1fr)');
   });
 
   it('applies explicit grid template when columns is an array', () => {
@@ -32,7 +32,7 @@ describe('<MultiColumnShell />', () => {
       props: { columns: ['200px', '1fr', '200px'] },
     });
     const style = wrapper.element.getAttribute('style') ?? '';
-    expect(style).toContain('--olui-multi-column-template: 200px 1fr 200px');
+    expect(style).toContain('--multi-column-template: 200px 1fr 200px');
     expect(wrapper.findAll('.olui-multi-column__col')).toHaveLength(3);
   });
 

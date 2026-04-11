@@ -26,7 +26,7 @@ withDefaults(
   <div
     class="olui-sidebar-main"
     :class="{ 'olui-sidebar-main--collapsible': collapsible }"
-    :style="{ '--olui-sidebar-main-width': sidebarWidth }"
+    :style="{ '--sidebar-main-width': sidebarWidth }"
   >
     <aside class="olui-sidebar-main__sidebar">
       <slot name="sidebarResources" />
@@ -42,7 +42,7 @@ withDefaults(
 .olui-sidebar-main {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: var(--olui-sidebar-main-width, 240px) 1fr;
+  grid-template-columns: var(--sidebar-main-width, 240px) 1fr;
   gap: var(--gap);
   padding: var(--gap);
   min-height: 0;

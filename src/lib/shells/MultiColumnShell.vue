@@ -36,7 +36,7 @@ const gridTemplate = computed(() => {
 <template>
   <div
     class="olui-multi-column"
-    :style="{ '--olui-multi-column-template': gridTemplate }"
+    :style="{ '--multi-column-template': gridTemplate }"
   >
     <section
       v-for="i in columnKeys"
@@ -53,7 +53,7 @@ const gridTemplate = computed(() => {
 .olui-multi-column {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: var(--olui-multi-column-template);
+  grid-template-columns: var(--multi-column-template);
   gap: var(--gap);
   padding: var(--gap);
   min-height: 0;

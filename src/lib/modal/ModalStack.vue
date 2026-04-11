@@ -55,8 +55,8 @@ const handleUpdateOpen = (id: string, open: boolean) => {
 .olui-modal-overlay {
   position: fixed;
   inset: 0;
-  background: var(--olui-modal-backdrop);
-  z-index: var(--olui-modal-z-base);
+  background: var(--modal-backdrop);
+  z-index: var(--modal-z-base);
 }
 
 .olui-modal-content {
@@ -64,12 +64,12 @@ const handleUpdateOpen = (id: string, open: boolean) => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: var(--olui-modal-surface);
+  background: var(--modal-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
-  border-radius: var(--olui-modal-radius);
-  padding: var(--olui-modal-padding);
-  z-index: calc(var(--olui-modal-z-base) + 1);
+  border-radius: var(--modal-radius);
+  padding: var(--modal-padding);
+  z-index: calc(var(--modal-z-base) + 1);
   max-width: min(90vw, 600px);
   max-height: 90vh;
   overflow: auto;

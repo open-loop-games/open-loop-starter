@@ -67,7 +67,7 @@ provide(modalStackKey, props.stack ?? useModalStack());
   position: fixed;
   bottom: var(--gap);
   right: var(--gap);
-  z-index: var(--olui-modal-z-base);
+  z-index: var(--modal-z-base);
   pointer-events: none;
 }
 

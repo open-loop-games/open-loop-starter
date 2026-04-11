@@ -20,8 +20,8 @@ withDefaults(
   <div
     class="olui-three-panel"
     :style="{
-      '--olui-three-panel-left-width': leftWidth,
-      '--olui-three-panel-right-width': rightWidth,
+      '--three-panel-left-width': leftWidth,
+      '--three-panel-right-width': rightWidth,
     }"
   >
     <aside class="olui-three-panel__left">
@@ -41,9 +41,9 @@ withDefaults(
   flex: 1 1 auto;
   display: grid;
   grid-template-columns:
-    var(--olui-three-panel-left-width, 200px)
+    var(--three-panel-left-width, 200px)
     1fr
-    var(--olui-three-panel-right-width, 280px);
+    var(--three-panel-right-width, 280px);
   gap: var(--gap);
   padding: var(--gap);
   min-height: 0;

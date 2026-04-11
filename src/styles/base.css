@@ -1,9 +1,9 @@
 /*
  * Starter base stylesheet.
  *
- * Tokens (--color-*, --gap-*, --radius*, --olui-*) are loaded from
- * src/lib/styles/tokens.css via main.ts. Override any token by
- * redeclaring it below. Widget-level selectors live in ./theme-widgets.css.
+ * Tokens are loaded from src/lib/styles/tokens.css via main.ts. Override
+ * any token by redeclaring it below. Widget-level selectors live in
+ * ./theme-widgets.css.
  */
 
 * {

@@ -34,13 +34,13 @@ describe('<SidebarMainShell />', () => {
   it('applies default sidebarWidth', () => {
     const wrapper = mount(SidebarMainShell);
     const style = wrapper.element.getAttribute('style') ?? '';
-    expect(style).toContain('--olui-sidebar-main-width: 240px');
+    expect(style).toContain('--sidebar-main-width: 240px');
   });
 
   it('applies custom sidebarWidth prop', () => {
     const wrapper = mount(SidebarMainShell, { props: { sidebarWidth: '20rem' } });
     const style = wrapper.element.getAttribute('style') ?? '';
-    expect(style).toContain('--olui-sidebar-main-width: 20rem');
+    expect(style).toContain('--sidebar-main-width: 20rem');
   });
 
   it('adds --collapsible modifier class when collapsible prop is true', () => {

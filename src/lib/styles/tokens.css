@@ -1,10 +1,10 @@
 /*
- * Design token contract for src/lib/ primitives.
+ * Default design tokens used by src/lib/ and the scaffold theme.
  *
- * Consumers theme by redeclaring these variables on :root or [data-theme='...'].
- * The --olui-* prefixed variables are library-owned; the --color-*, --gap-*,
- * --radius-*, and --font-* variables are consumer-facing defaults that game
- * forks are expected to override.
+ * Override any of these by redeclaring on :root or [data-theme='...'] in
+ * src/styles/. Scaffold layer tokens (shell, modal, panel, tooltip, etc.)
+ * and palette tokens (--color-*, --gap-*, --radius-*, --font-*) share one
+ * flat namespace — there is no separate library-owned tier.
  */
 
 :root,
@@ -31,14 +31,13 @@
   --font-mono: 'Courier New', Courier, monospace;
   --font-sans: system-ui, -apple-system, sans-serif;
 
-  /* Library-owned. Shells and modal stack read these. */
-  --olui-shell-sidebar-width: 250px;
-  --olui-shell-max-width: 1400px;
-  --olui-modal-backdrop: rgba(0, 0, 0, 0.55);
-  --olui-modal-surface: var(--color-surface);
-  --olui-modal-radius: var(--radius);
-  --olui-modal-padding: var(--gap-lg);
-  --olui-modal-z-base: 1000;
+  --shell-sidebar-width: 250px;
+  --shell-max-width: 1400px;
+  --modal-backdrop: rgba(0, 0, 0, 0.55);
+  --modal-surface: var(--color-surface);
+  --modal-radius: var(--radius);
+  --modal-padding: var(--gap-lg);
+  --modal-z-base: 1000;
 }
 
 [data-theme='light'] {
@@ -55,7 +54,7 @@
   --color-success: #2e7d32;
   --color-badge: #e0e3e8;
 
-  --olui-modal-backdrop: rgba(0, 0, 0, 0.35);
+  --modal-backdrop: rgba(0, 0, 0, 0.35);
 }
 
 @media (prefers-color-scheme: light) {
@@ -73,6 +72,6 @@
     --color-success: #2e7d32;
     --color-badge: #e0e3e8;
 
-    --olui-modal-backdrop: rgba(0, 0, 0, 0.35);
+    --modal-backdrop: rgba(0, 0, 0, 0.35);
   }
 }

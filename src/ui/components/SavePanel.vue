@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { PanelLayout } from '@/lib';
+import PanelLayout from '@/ui/components/PanelLayout.vue';
 import { useSave } from '@/composables/useSave';
 
 const emit = defineEmits<{ close: [] }>();

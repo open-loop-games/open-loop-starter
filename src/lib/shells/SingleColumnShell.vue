@@ -20,7 +20,7 @@ withDefaults(
 <template>
   <div
     class="olui-single-column"
-    :style="{ '--olui-single-column-max-width': maxWidth }"
+    :style="{ '--single-column-max-width': maxWidth }"
   >
     <div class="olui-single-column__inner">
       <slot />
@@ -39,7 +39,7 @@ withDefaults(
 
 .olui-single-column__inner {
   width: 100%;
-  max-width: var(--olui-single-column-max-width, 800px);
+  max-width: var(--single-column-max-width, 800px);
   display: flex;
   flex-direction: column;
   gap: var(--gap);

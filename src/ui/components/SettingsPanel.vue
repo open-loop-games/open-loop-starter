@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PanelLayout } from '@/lib';
+import PanelLayout from '@/ui/components/PanelLayout.vue';
 import { useSettings } from '@/composables/useSettings';
 import { NOTATION_OPTIONS } from '@/composables/useNotation';
 

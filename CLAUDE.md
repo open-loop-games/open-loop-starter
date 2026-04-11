@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-open-loop-starter — default theme tokens, UI primitives, and quick-copy scaffold for prototyping games on `open-loop-engine`. Games fork from here.
+open-loop-starter — quick-copy scaffold for prototyping games on `open-loop-engine`. Games fork from here.
 
 **Stack:** Vue 3 + TypeScript + Vite + reka-ui + open-loop-engine + break_eternity.js
 
@@ -8,8 +8,8 @@ open-loop-starter — default theme tokens, UI primitives, and quick-copy scaffo
 
 Three jobs:
 
-1. **UI primitives (`src/lib/`)** — layout shells, AppFrame, modal stack, thin reka-ui wrappers, `--olui-*` token contract. Formerly shipped as the peer package `open-loop-ui`; merged into starter on 2026-04-11 because starter was the only consumer and the sibling ceremony cost more than it delivered.
-2. **Default theme (`src/styles/`)** — opinionated CSS-variable values that fill in the `--olui-*` token contract with sensible defaults. Consumer games override per-variable or swap wholesale.
+1. **Scaffold layout/theme layer (`src/lib/`)** — layout shells, AppFrame, modal stack, default CSS tokens, reset. Presentational-only; no engine imports. Not an importable cross-package library.
+2. **Default theme (`src/styles/`)** — opinionated CSS-variable values and widget-level selectors layered over the token defaults. Forks override per-variable or swap wholesale.
 3. **Quick-copy scaffold (`src/modules/`, `src/composables/`, `src/ui/`)** — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, slot helpers, layout wrappers, and a demo village-gathering game across 4 mod variants. Everything a new game would re-derive from scratch. Fork the repo, rename, strip the demo module, start building content.
 
 Starter is not a library — it's a template. Downstream games consume it by *forking*, not by depending on it. The bar for code here is "would a new game want this on day one?" If yes, ship it; if no, cut it.
@@ -34,12 +34,11 @@ src/
 ├── main.ts           # Vue entry + engine creation + CSS import order
 ├── App.vue           # Root component
 ├── types.ts          # Shared starter types
-├── lib/              # UI primitives (formerly open-loop-ui)
+├── lib/              # Scaffold layout/theme layer
 │   ├── shells/       # 5 layout shells validated by the 42-game spray
 │   ├── frame/        # AppFrame: header + shell + modal stack + toasts + theme
 │   ├── modal/        # useModalStack composable + ModalStack mount (reka-ui Dialog)
-│   ├── widgets/      # ProgressBar, Tooltip, Popover, PanelLayout
-│   ├── styles/       # tokens.css (--olui-* contract) + reset.css
+│   ├── styles/       # tokens.css (default CSS custom properties) + reset.css
 │   └── index.ts      # Barrel — import via '@/lib'
 ├── modules/
 │   ├── index.ts      # allModules[] — registered with createEngine()
@@ -58,21 +57,22 @@ src/
     ├── layouts/      # Layout wrappers (Vanilla/Clicker/Ledger) around lib shells
     ├── screens/      # Page-level views (GameScreen, SlotScreen)
     ├── panels/       # Mountable panels registered via ui-registry
-    └── components/   # Misc game-specific Vue SFCs
+    └── components/   # Widgets (PanelLayout, Tooltip, Popover, ProgressBar)
+                      # + game-specific SFCs (SavePanel, SettingsPanel, etc.)
 ```
 
 ### Layering
 
 ```
 modules (engine logic) → composables (Vue bridge) → ui (game rendering)
-lib/styles → lib/shells → lib/frame → lib/modal → lib/widgets
-styles (consumer theme) → ui (via --olui-* token contract)
+lib/styles → lib/shells → lib/frame → lib/modal
+styles (scaffold theme) → ui + lib (via CSS custom properties)
 ```
 
-- **`src/lib/`** — pure UI primitives. No engine imports. Consumed by `src/ui/` via `@/lib`.
+- **`src/lib/`** — scaffold layout/theme layer. No engine imports. Consumed by `src/ui/` via `@/lib`.
 - **`src/modules/`** own engine state via `persistent()` refs; no UI imports.
 - **`src/composables/`** are the only `ui → modules` bridge.
-- **`src/styles/`** sets token defaults consumed by `src/lib/` components.
+- **`src/styles/`** sets token defaults and widget-level selectors consumed by `src/lib/` and `src/ui/components/`.
 
 ### Key Patterns
 
@@ -80,23 +80,27 @@ styles (consumer theme) → ui (via --olui-* token contract)
 - **UI slot registry** — panels and screens register themselves; composable mods can add/remove without touching the shell
 - **Mod extension point** — `src/modules/mods/` mirrors the idle-loops-ng pattern for vanilla-plus-mods games
 - **Slot-based shells** — `src/lib/shells/*` never prescribe content; games fill slots
-- **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the `--olui-*` contract; `src/styles/` provides the default values and widget theming
+- **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the default token values (palette, spacing, radius, shell/modal/widget knobs); `src/styles/` provides the scaffold theme and widget-level selectors on top
 
-## Resolved Decisions (src/lib/ scope)
+## `src/lib/` scope
 
-These govern what earns a place in `src/lib/`. Do not re-litigate without a reason.
+`src/lib/` is the scaffold's layout and theme layer: layout shells, AppFrame, modal stack, token defaults, reset. It is a real layer inside starter — presentational-only, no engine imports — but it is **not** an importable cross-package library. Games consume starter by forking; there is no `open-loop-starter` package dependency and no cross-game semver contract. Forks are free to rename, restructure, or delete any of this.
 
-1. **Styling: CSS custom properties only.** No Tailwind, no shadcn-vue. Games theme by variable override. A thin utility layer is acceptable only if genuinely needed.
-2. **Behavioral primitives via reka-ui.** a11y, focus trap, portal, positioning come from reka-ui. `src/lib/` layers `--olui-*`-bound classes on top but never reimplements the behavior.
-3. **Engine coupling: presentational props.** No typed engine-primitive props in `src/lib/` components. `src/ui/` owns the bridging via composables.
-4. **Prescriptive cut line: reka-ui gap ∩ universal-same-shape.** A primitive earns a place in `src/lib/` only when *both* hold: reka-ui doesn't cover it, AND every incremental game solves it the same way. That scopes `src/lib/` to shells, `useModalStack` semantics, the `--olui-*` token contract, and big-number display. Buttons, inputs, tooltips, popovers, and similar are thin CSS-variable bindings over reka primitives — ship only when the token contract alone is the value; otherwise game code pulls reka-ui direct. Composite game patterns (equipment pages, generator ladders, prestige trees) are explicitly out of scope for `src/lib/` and belong in the game layer (`src/ui/`) as copy-diverge scaffolds.
+Rules that apply inside `src/lib/`, and that forks should carry forward by default:
+
+1. **Styling: CSS custom properties only.** No Tailwind, no shadcn-vue. Theme by variable override.
+2. **Behavioral primitives via reka-ui.** a11y, focus trap, portal, positioning come from reka-ui. `src/lib/` layers classes and custom-property defaults on top; it never reimplements the behavior.
+3. **Presentational only.** No engine imports. `src/ui/` owns engine bridging via composables.
+4. **What lives here.** Shells (5 validated layout patterns), AppFrame (header + shell + modal + theme glue), `useModalStack` + `ModalStack`, `styles/tokens.css`, `styles/reset.css`. Widget components — PanelLayout, Tooltip, Popover, ProgressBar, and future additions — live in `src/ui/components/` alongside game components, not here. The cut line: `src/lib/` owns layout and cross-cutting surfaces (modals, theme root); concrete widgets are scaffold components forks adapt in place.
+
+Extraction to a real shared library is deferred until multiple independent game UI passes converge on the same shape. Don't pre-extract against a single consumer.
 
 ## Code Rules
 
 **Naming:**
 - Components: PascalCase.vue — `SidebarMainShell.vue`, `ModalStack.vue`
 - Composables: `use*` — `useModalStack`, `useGame`
-- CSS variables: `--olui-*` for library-owned tokens; consumer tokens (`--color-*`, `--gap-*`) pass through
+- CSS variables: one flat namespace. Palette (`--color-*`, `--gap-*`, `--radius-*`, `--font-*`) and scaffold knobs (`--shell-*`, `--modal-*`, `--panel-*`, `--tooltip-*`, `--popover-*`, `--progress-bar-*`) all live in `src/lib/styles/tokens.css`.
 
 **Must:**
 - All game quantities use `Decimal` from `open-loop-engine`

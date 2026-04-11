@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
-import { ProgressBar, Tooltip } from '@/lib';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
+import Tooltip from '@/ui/components/Tooltip.vue';
 import { coreState } from '@/modules/core';
 
 const state = coreState!;
