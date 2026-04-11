@@ -20,6 +20,7 @@ import {
   createProducerCategory,
   createScalingPurchasable,
   createPurchasableGroup,
+  additiveEffect,
   createSimpleAchievement,
   createAchievementGroup,
   createMultiplicativeModifier,
@@ -137,7 +138,7 @@ export const coreModule: EngineModule = {
       baseCost: 15,
       costScaling: 1.6,
       limit: 5,
-      effect: (amount: DecimalSource) => Decimal.add(1, Decimal.mul(amount, 0.5)),
+      effect: additiveEffect(0.5, 1),
       title: 'Sharp Axe',
       description: '+50% wood yield per level',
     });
@@ -148,7 +149,7 @@ export const coreModule: EngineModule = {
       baseCost: 8,
       costScaling: 1.7,
       limit: 5,
-      effect: (amount: DecimalSource) => Decimal.add(1, Decimal.mul(amount, 0.5)),
+      effect: additiveEffect(0.5, 1),
       title: 'Iron Pickaxe',
       description: '+50% stone yield per level',
     });
@@ -159,7 +160,7 @@ export const coreModule: EngineModule = {
       baseCost: 25,
       costScaling: 2,
       limit: 10,
-      effect: (amount: DecimalSource) => Decimal.add(1, Decimal.mul(amount, 0.25)),
+      effect: additiveEffect(0.25, 1),
       title: 'Foreman',
       description: '+25% producer rate per level',
     });
