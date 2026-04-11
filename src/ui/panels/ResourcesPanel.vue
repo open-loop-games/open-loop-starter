@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
-import { ProgressBar } from 'open-loop-ui';
+import { ProgressBar, Tooltip } from 'open-loop-ui';
 import { coreState } from '@/modules/core';
 
 const state = coreState!;
@@ -48,16 +48,26 @@ const miningProgress = computed(() =>
       <span class="label">Gold</span>
       <span class="value">{{ gold }}</span>
     </div>
-    <div class="skill">
-      <span class="label">Woodcutting</span>
-      <span class="value">Lv {{ woodcuttingLvl }}</span>
-      <ProgressBar :value="woodcuttingProgress" data-testid="skill-progress-woodcutting" />
-    </div>
-    <div class="skill">
-      <span class="label">Mining</span>
-      <span class="value">Lv {{ miningLvl }}</span>
-      <ProgressBar :value="miningProgress" data-testid="skill-progress-mining" />
-    </div>
+    <Tooltip>
+      <div class="skill">
+        <span class="label">Woodcutting</span>
+        <span class="value">Lv {{ woodcuttingLvl }}</span>
+        <ProgressBar :value="woodcuttingProgress" data-testid="skill-progress-woodcutting" />
+      </div>
+      <template #content>
+        Chopping trees. XP scales with zone tier. +10% retention per level on reset.
+      </template>
+    </Tooltip>
+    <Tooltip>
+      <div class="skill">
+        <span class="label">Mining</span>
+        <span class="value">Lv {{ miningLvl }}</span>
+        <ProgressBar :value="miningProgress" data-testid="skill-progress-mining" />
+      </div>
+      <template #content>
+        Breaking stone and ore. Higher level unlocks deeper zones.
+      </template>
+    </Tooltip>
   </div>
 </template>
 
