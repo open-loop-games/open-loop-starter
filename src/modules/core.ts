@@ -10,6 +10,7 @@
 import { computed } from 'vue';
 import {
   Decimal,
+  Formula,
   createResource,
   createSkill,
   createZoneSystem,
@@ -105,15 +106,15 @@ export const coreModule: EngineModule = {
     // --- Skills -------------------------------------------------------------
     const woodcutting = createSkill({
       id: 'woodcutting',
-      xpToLevel: (xp) => Decimal.floor(Decimal.div(xp, 10)),
-      retentionFormula: (level) => Decimal.mul(level, 0.1),
+      xpToLevel: (xp) => Formula.variable(xp).div(10).floor(),
+      retentionFormula: (level) => Formula.variable(level).mul(0.1),
       description: 'Woodcutting',
     });
 
     const mining = createSkill({
       id: 'mining',
-      xpToLevel: (xp) => Decimal.floor(Decimal.div(xp, 12)),
-      retentionFormula: (level) => Decimal.mul(level, 0.1),
+      xpToLevel: (xp) => Formula.variable(xp).div(12).floor(),
+      retentionFormula: (level) => Formula.variable(level).mul(0.1),
       description: 'Mining',
     });
 
@@ -136,7 +137,7 @@ export const coreModule: EngineModule = {
       baseCost: 15,
       costScaling: 1.6,
       limit: 5,
-      effect: (amount) => Decimal.add(1, Decimal.mul(amount, 0.5)),
+      effect: (amount: DecimalSource) => Decimal.add(1, Decimal.mul(amount, 0.5)),
       title: 'Sharp Axe',
       description: '+50% wood yield per level',
     });
@@ -147,7 +148,7 @@ export const coreModule: EngineModule = {
       baseCost: 8,
       costScaling: 1.7,
       limit: 5,
-      effect: (amount) => Decimal.add(1, Decimal.mul(amount, 0.5)),
+      effect: (amount: DecimalSource) => Decimal.add(1, Decimal.mul(amount, 0.5)),
       title: 'Iron Pickaxe',
       description: '+50% stone yield per level',
     });
@@ -158,7 +159,7 @@ export const coreModule: EngineModule = {
       baseCost: 25,
       costScaling: 2,
       limit: 10,
-      effect: (amount) => Decimal.add(1, Decimal.mul(amount, 0.25)),
+      effect: (amount: DecimalSource) => Decimal.add(1, Decimal.mul(amount, 0.25)),
       title: 'Foreman',
       description: '+25% producer rate per level',
     });
