@@ -1,10 +1,10 @@
 /*
- * Reference theme for open-loop-ui widgets.
+ * Reference theme for src/lib/ widgets.
  *
- * open-loop-ui ships zero visual opinions. This file is the reference
- * opinion — one production-quality stylistic pass per widget, targeting
- * the widget's class hooks and `data-state` attributes. New games copy
- * this file as a starting point and trim or tweak to taste.
+ * The primitives in src/lib/ ship zero visual opinions. This file is the
+ * reference opinion — one production-quality stylistic pass per widget,
+ * targeting each widget's class hooks and `data-state` attributes. Game
+ * forks copy this file as a starting point and trim or tweak to taste.
  *
  * Convention: keep entries minimal. Each widget block states:
  *   1. Size / layout overrides (min-height, padding, etc.)
@@ -94,4 +94,37 @@
 @keyframes olui-popover-out {
   from { opacity: 1; transform: scale(1); }
   to   { opacity: 0; transform: scale(0.96); }
+}
+
+/* ------------------------------------------------------------------ */
+/* PanelLayout (OL-277)                                                */
+/* ------------------------------------------------------------------ */
+
+.olui-panel {
+  --olui-panel-padding: var(--gap-lg);
+  --olui-panel-gap: var(--gap);
+  min-width: 360px;
+  max-width: 560px;
+}
+
+.olui-panel__header {
+  padding: var(--gap) var(--gap-lg);
+}
+
+.olui-panel__title {
+  font-weight: 600;
+}
+
+.olui-panel__close {
+  color: var(--color-text-muted);
+}
+.olui-panel__close:hover,
+.olui-panel__close:focus-visible {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.olui-panel__footer {
+  justify-content: flex-end;
+  background: color-mix(in srgb, var(--color-bg) 60%, var(--color-surface) 40%);
 }

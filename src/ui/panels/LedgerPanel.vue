@@ -35,18 +35,31 @@ const gold = computed(() => format(Decimal.floor(core.resources.gold.value)));
           <th>Owned</th>
           <th>Buy</th>
           <th>Sell</th>
-          <th></th>
+          <th />
         </tr>
       </thead>
       <tbody>
-        <tr v-for="t in mstate.trinkets" :key="t.id">
+        <tr
+          v-for="t in mstate.trinkets"
+          :key="t.id"
+        >
           <td>{{ t.name }}</td>
           <td>{{ format(mstate.inventory.get(t.id)) }}</td>
           <td>{{ t.buyPrice }}g</td>
           <td>{{ t.sellPrice }}g</td>
           <td class="actions">
-            <button class="btn-sm" @click="mstate.buy(t.id)">Buy</button>
-            <button class="btn-sm" @click="mstate.sell(t.id)">Sell</button>
+            <button
+              class="btn-sm"
+              @click="mstate.buy(t.id)"
+            >
+              Buy
+            </button>
+            <button
+              class="btn-sm"
+              @click="mstate.sell(t.id)"
+            >
+              Sell
+            </button>
           </td>
         </tr>
       </tbody>

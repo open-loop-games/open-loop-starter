@@ -20,7 +20,11 @@ function buy(id: string) {
   <section class="producers-panel">
     <h3>Producers</h3>
     <div class="producer-list">
-      <div v-for="entry in entries" :key="entry.def.id" class="producer-card">
+      <div
+        v-for="entry in entries"
+        :key="entry.def.id"
+        class="producer-card"
+      >
         <div class="info">
           <span class="name">{{ entry.def.name }}</span>
           <span class="rate">

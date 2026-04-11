@@ -4,11 +4,19 @@ const emit = defineEmits<{ close: [] }>();
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
+  <div
+    class="modal-overlay"
+    @click.self="emit('close')"
+  >
     <div class="modal-dialog">
       <div class="modal-header">
         <h3>{{ title }}</h3>
-        <button class="btn-sm" @click="emit('close')">X</button>
+        <button
+          class="btn-sm"
+          @click="emit('close')"
+        >
+          X
+        </button>
       </div>
       <div class="modal-body">
         <slot />

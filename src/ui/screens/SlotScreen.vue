@@ -50,14 +50,30 @@ function handleDeleteSlot(slotId: number) {
 
 <template>
   <div class="slot-screen">
-    <h1 class="title">Open Loop Starter</h1>
+    <h1 class="title">
+      Open Loop Starter
+    </h1>
 
-    <div v-if="showModPicker" class="picker-container">
-      <ModPicker :mods="engine.mods" @select="(modId) => startNewGame(modId)" />
-      <button class="btn-sm" @click="showModPicker = false">Back</button>
+    <div
+      v-if="showModPicker"
+      class="picker-container"
+    >
+      <ModPicker
+        :mods="engine.mods"
+        @select="(modId) => startNewGame(modId)"
+      />
+      <button
+        class="btn-sm"
+        @click="showModPicker = false"
+      >
+        Back
+      </button>
     </div>
 
-    <div v-else class="slots-container">
+    <div
+      v-else
+      class="slots-container"
+    >
       <div class="slot-list">
         <SlotCard
           v-for="s in slots"
@@ -72,7 +88,12 @@ function handleDeleteSlot(slotId: number) {
       </div>
 
       <div class="slot-actions">
-        <button class="btn-primary" @click="handleNewGame">New Game</button>
+        <button
+          class="btn-primary"
+          @click="handleNewGame"
+        >
+          New Game
+        </button>
       </div>
     </div>
   </div>

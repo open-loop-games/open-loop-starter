@@ -34,7 +34,11 @@ function cancelAction(id: string) {
 <template>
   <section class="actions-panel">
     <h3>Actions</h3>
-    <div v-for="zone in zoneOrder" :key="zone.id" class="zone-group">
+    <div
+      v-for="zone in zoneOrder"
+      :key="zone.id"
+      class="zone-group"
+    >
       <h4>{{ zone.name }}</h4>
       <div class="action-list">
         <div
@@ -59,7 +63,11 @@ function cancelAction(id: string) {
             >
               Start
             </button>
-            <button v-else class="btn-danger btn-sm" @click="cancelAction(id)">
+            <button
+              v-else
+              class="btn-danger btn-sm"
+              @click="cancelAction(id)"
+            >
               Cancel
             </button>
           </div>

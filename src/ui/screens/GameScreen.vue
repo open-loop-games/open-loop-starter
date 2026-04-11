@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { AppFrame, SingleColumnShell, Popover, useModalStack } from 'open-loop-ui';
+import { AppFrame, SingleColumnShell, Popover, useModalStack } from '@/lib';
 import { getSlot } from '@/modules/ui-registry';
 import VanillaLayout from '@/ui/layouts/VanillaLayout.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
@@ -24,23 +24,46 @@ const openSettings = () => {
 </script>
 
 <template>
-  <AppFrame :stack="stack" :tooltip-delay="400">
+  <AppFrame
+    :stack="stack"
+    :tooltip-delay="400"
+  >
     <template #header>
       <div class="game-header">
         <h2>Open Loop Starter</h2>
         <div class="header-actions">
-          <Popover align="end" :side-offset="8">
+          <Popover
+            align="end"
+            :side-offset="8"
+          >
             <template #trigger>
-              <button class="btn-sm" data-testid="open-info">?</button>
+              <button
+                class="btn-sm"
+                data-testid="open-info"
+              >
+                ?
+              </button>
             </template>
-            <h4 style="margin-bottom: 6px">About</h4>
+            <h4 style="margin-bottom: 6px">
+              About
+            </h4>
             <p>
-              A minimal open-loop-engine consumer. Uses open-loop-ui shells,
-              modal stack, and (as of Phase 2) the widget layer.
+              A minimal open-loop-engine consumer. Uses the starter's
+              built-in shells, modal stack, and widget layer.
             </p>
           </Popover>
-          <button class="btn-sm" data-testid="open-save" @click="openSave">Save</button>
-          <button class="btn-sm" data-testid="open-settings" @click="openSettings">
+          <button
+            class="btn-sm"
+            data-testid="open-save"
+            @click="openSave"
+          >
+            Save
+          </button>
+          <button
+            class="btn-sm"
+            data-testid="open-settings"
+            @click="openSettings"
+          >
             Settings
           </button>
         </div>

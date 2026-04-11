@@ -31,10 +31,16 @@ function convert() {
         <span class="label">Next at</span>
         <span class="value">{{ nextAt }} gold</span>
       </div>
-      <button class="btn-primary" :disabled="!canConvert" @click="convert">
+      <button
+        class="btn-primary"
+        :disabled="!canConvert"
+        @click="convert"
+      >
         Convert (resets run)
       </button>
-      <p class="hint">Each Renown adds +10% to every producer, permanently.</p>
+      <p class="hint">
+        Each Renown adds +10% to every producer, permanently.
+      </p>
     </div>
   </section>
 </template>

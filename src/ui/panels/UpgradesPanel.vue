@@ -20,7 +20,11 @@ function buy(p: typeof state.upgrades.sharpAxe) {
   <section class="upgrades-panel">
     <h3>Upgrades</h3>
     <div class="upgrade-list">
-      <div v-for="u in upgrades" :key="u.p.id" class="upgrade-card">
+      <div
+        v-for="u in upgrades"
+        :key="u.p.id"
+        class="upgrade-card"
+      >
         <div class="info">
           <span class="title">{{ u.p.display.title }}</span>
           <span class="desc">{{ u.p.display.description }}</span>
@@ -33,7 +37,9 @@ function buy(p: typeof state.upgrades.sharpAxe) {
           :disabled="!u.p.canPurchase.value"
           @click="buy(u.p)"
         >
-          <template v-if="u.p.maxed.value">Maxed</template>
+          <template v-if="u.p.maxed.value">
+            Maxed
+          </template>
           <template v-else>
             Buy ({{ format(u.p.getCost()) }} {{ u.costResource }})
           </template>

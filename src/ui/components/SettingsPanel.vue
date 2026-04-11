@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PanelLayout } from '@/lib';
 import { useSettings } from '@/composables/useSettings';
 import { NOTATION_OPTIONS } from '@/composables/useNotation';
 
@@ -7,12 +8,12 @@ const settings = useSettings();
 </script>
 
 <template>
-  <div class="settings-panel">
-    <header class="settings-panel__header">
-      <h3>Settings</h3>
-      <button class="btn-sm" data-testid="settings-panel-close" @click="emit('close')">X</button>
-    </header>
-
+  <PanelLayout
+    title="Settings"
+    class="settings-panel"
+    data-testid="settings-panel"
+    @close="emit('close')"
+  >
     <div class="setting-group">
       <h3>Display</h3>
 
@@ -28,7 +29,11 @@ const settings = useSettings();
       <label class="setting">
         <span>Number Notation</span>
         <select v-model="settings.notation.value">
-          <option v-for="opt in NOTATION_OPTIONS" :key="opt.key" :value="opt.key">
+          <option
+            v-for="opt in NOTATION_OPTIONS"
+            :key="opt.key"
+            :value="opt.key"
+          >
             {{ opt.label }}
           </option>
         </select>
@@ -39,42 +44,37 @@ const settings = useSettings();
       <h3>Game</h3>
 
       <label class="setting">
-        <input v-model="settings.autoSave.value" type="checkbox" />
+        <input
+          v-model="settings.autoSave.value"
+          type="checkbox"
+        >
         Auto-save (every 60 seconds)
       </label>
 
       <label class="setting">
-        <input v-model="settings.offlineProgress.value" type="checkbox" />
+        <input
+          v-model="settings.offlineProgress.value"
+          type="checkbox"
+        >
         Process offline progress on load
       </label>
 
       <label class="setting">
-        <input v-model="settings.confirmOnClose.value" type="checkbox" />
+        <input
+          v-model="settings.confirmOnClose.value"
+          type="checkbox"
+        >
         Confirm before closing tab
       </label>
     </div>
-  </div>
+  </PanelLayout>
 </template>
 
 <style scoped>
-.settings-panel {
+.settings-panel :deep(.olui-panel__body) {
   display: flex;
   flex-direction: column;
   gap: var(--gap-lg);
-  min-width: 360px;
-}
-
-.settings-panel__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--gap);
-  padding-bottom: var(--gap-sm);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.settings-panel__header h3 {
-  font-size: 1.1em;
 }
 
 .setting-group {

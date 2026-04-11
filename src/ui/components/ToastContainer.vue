@@ -7,14 +7,27 @@ const { toasts, removeToast } = useToasts();
 <template>
   <div class="toast-container">
     <TransitionGroup name="toast">
-      <div v-for="toast in toasts" :key="toast.id" class="toast-item">
+      <div
+        v-for="toast in toasts"
+        :key="toast.id"
+        class="toast-item"
+      >
         <div class="toast-header">
           <strong>{{ toast.title }}</strong>
-          <button class="toast-close" aria-label="Dismiss" @click="removeToast(toast.id)">
+          <button
+            class="toast-close"
+            aria-label="Dismiss"
+            @click="removeToast(toast.id)"
+          >
             ×
           </button>
         </div>
-        <div v-if="toast.content" class="toast-body">{{ toast.content }}</div>
+        <div
+          v-if="toast.content"
+          class="toast-body"
+        >
+          {{ toast.content }}
+        </div>
       </div>
     </TransitionGroup>
   </div>

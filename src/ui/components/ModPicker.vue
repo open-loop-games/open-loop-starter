@@ -22,8 +22,16 @@ const selected = ref<string | null>(
         @click="selected = mod.id"
       >
         <span class="mod-name">{{ mod.name }}</span>
-        <span v-if="mod.recommended" class="badge badge-primary">Recommended</span>
-        <p v-if="mod.description" class="mod-desc">{{ mod.description }}</p>
+        <span
+          v-if="mod.recommended"
+          class="badge badge-primary"
+        >Recommended</span>
+        <p
+          v-if="mod.description"
+          class="mod-desc"
+        >
+          {{ mod.description }}
+        </p>
       </button>
     </div>
     <button

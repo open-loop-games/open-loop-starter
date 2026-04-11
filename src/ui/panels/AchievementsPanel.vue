@@ -17,7 +17,9 @@ const total = state.achievements.group.totalCount;
         class="achievement"
         :class="{ earned: a.earned.value }"
       >
-        <div class="marker">{{ a.earned.value ? '✓' : '·' }}</div>
+        <div class="marker">
+          {{ a.earned.value ? '✓' : '·' }}
+        </div>
         <div class="info">
           <span class="title">{{ a.display.title }}</span>
           <span class="desc">{{ a.display.description }}</span>

@@ -1,0 +1,18 @@
+/*
+ * Minimal reset. Optional import — consumers may already have their own.
+ * Seeded from open-loop-starter for drop-in compatibility.
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  min-height: 100vh;
+}

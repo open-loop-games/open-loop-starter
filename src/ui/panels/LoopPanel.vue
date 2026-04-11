@@ -22,14 +22,22 @@ function endLoop() {
     <div class="mana-block">
       <span class="label">Mana</span>
       <div class="mana-bar">
-        <div class="mana-fill" :style="{ width: manaPercent + '%' }" />
+        <div
+          class="mana-fill"
+          :style="{ width: manaPercent + '%' }"
+        />
         <span class="mana-text">{{ mana }} / {{ maxMana }}</span>
       </div>
     </div>
     <div class="loop-info">
       <span>Loop #{{ loopCount }}</span>
       <span>{{ elapsed }}s</span>
-      <button class="btn-sm" @click="endLoop">End Loop</button>
+      <button
+        class="btn-sm"
+        @click="endLoop"
+      >
+        End Loop
+      </button>
     </div>
   </section>
 </template>

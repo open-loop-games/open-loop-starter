@@ -20,7 +20,10 @@ const prestigePanel = computed(() => (hasSlot('prestige-panel') ? getSlot('prest
       <div class="side">
         <ProducersPanel />
         <UpgradesPanel />
-        <component :is="prestigePanel" v-if="prestigePanel" />
+        <component
+          :is="prestigePanel"
+          v-if="prestigePanel"
+        />
       </div>
     </div>
     <AchievementsPanel />

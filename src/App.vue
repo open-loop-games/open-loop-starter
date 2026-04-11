@@ -92,7 +92,11 @@ function startGame(slotId: number, modId?: string) {
 </script>
 
 <template>
-  <SlotScreen v-if="currentScreen === Screen.Slots" :engine="engine" @start="startGame" />
+  <SlotScreen
+    v-if="currentScreen === Screen.Slots"
+    :engine="engine"
+    @start="startGame"
+  />
   <GameScreen v-else-if="currentScreen === Screen.Game" />
   <OfflineReportModal
     v-if="offlineReport"

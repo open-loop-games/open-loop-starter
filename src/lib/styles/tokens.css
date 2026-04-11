@@ -1,0 +1,78 @@
+/*
+ * Design token contract for src/lib/ primitives.
+ *
+ * Consumers theme by redeclaring these variables on :root or [data-theme='...'].
+ * The --olui-* prefixed variables are library-owned; the --color-*, --gap-*,
+ * --radius-*, and --font-* variables are consumer-facing defaults that game
+ * forks are expected to override.
+ */
+
+:root,
+[data-theme='dark'] {
+  --color-bg: #1a1a2e;
+  --color-surface: #16213e;
+  --color-surface-hover: #1c2b4a;
+  --color-border: #2a3a5c;
+  --color-text: #e0e0e0;
+  --color-text-muted: #8892a4;
+  --color-primary: #4a9eff;
+  --color-primary-hover: #3a8eef;
+  --color-danger: #e05555;
+  --color-danger-hover: #d04545;
+  --color-success: #4caf50;
+  --color-badge: #3a3a5c;
+
+  --radius: 6px;
+  --radius-sm: 4px;
+  --gap: 12px;
+  --gap-sm: 8px;
+  --gap-lg: 20px;
+
+  --font-mono: 'Courier New', Courier, monospace;
+  --font-sans: system-ui, -apple-system, sans-serif;
+
+  /* Library-owned. Shells and modal stack read these. */
+  --olui-shell-sidebar-width: 250px;
+  --olui-shell-max-width: 1400px;
+  --olui-modal-backdrop: rgba(0, 0, 0, 0.55);
+  --olui-modal-surface: var(--color-surface);
+  --olui-modal-radius: var(--radius);
+  --olui-modal-padding: var(--gap-lg);
+  --olui-modal-z-base: 1000;
+}
+
+[data-theme='light'] {
+  --color-bg: #f0f2f5;
+  --color-surface: #ffffff;
+  --color-surface-hover: #e8eaed;
+  --color-border: #d0d4da;
+  --color-text: #1a1a2e;
+  --color-text-muted: #5f6878;
+  --color-primary: #2979ff;
+  --color-primary-hover: #1c6ce6;
+  --color-danger: #d32f2f;
+  --color-danger-hover: #b71c1c;
+  --color-success: #2e7d32;
+  --color-badge: #e0e3e8;
+
+  --olui-modal-backdrop: rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    --color-bg: #f0f2f5;
+    --color-surface: #ffffff;
+    --color-surface-hover: #e8eaed;
+    --color-border: #d0d4da;
+    --color-text: #1a1a2e;
+    --color-text-muted: #5f6878;
+    --color-primary: #2979ff;
+    --color-primary-hover: #1c6ce6;
+    --color-danger: #d32f2f;
+    --color-danger-hover: #b71c1c;
+    --color-success: #2e7d32;
+    --color-badge: #e0e3e8;
+
+    --olui-modal-backdrop: rgba(0, 0, 0, 0.35);
+  }
+}

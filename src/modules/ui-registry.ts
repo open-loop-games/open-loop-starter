@@ -3,8 +3,6 @@
  * well-known layout slots. GameScreen.vue reads from the registry with
  * sensible fallbacks, so mods can swap the whole layout or individual panels
  * without the app shell knowing about them.
- *
- * This is the precursor to a future `open-loop-ui` package.
  */
 import { shallowReactive, markRaw, type Component } from 'vue';
 import type { EngineModule } from 'open-loop-engine';

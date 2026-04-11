@@ -1,6 +1,7 @@
 import { createApp } from 'vue';
 import App from './App.vue';
-import 'open-loop-ui/style.css';
+import '@/lib/styles/reset.css';
+import '@/lib/styles/tokens.css';
 import './styles/base.css';
 import './styles/theme-widgets.css';
 

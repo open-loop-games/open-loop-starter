@@ -38,9 +38,15 @@ function click(id: string) {
 <template>
   <div class="clicker-layout">
     <header class="hud">
-      <div class="chip">🪵 {{ wood }}</div>
-      <div class="chip">🪨 {{ stone }}</div>
-      <div class="chip">🪙 {{ gold }}</div>
+      <div class="chip">
+        🪵 {{ wood }}
+      </div>
+      <div class="chip">
+        🪨 {{ stone }}
+      </div>
+      <div class="chip">
+        🪙 {{ gold }}
+      </div>
     </header>
 
     <div class="click-grid">
