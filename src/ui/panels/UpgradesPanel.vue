@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { toValue } from 'vue';
 import { format, type DecimalSource } from 'open-loop-engine';
-import { coreState } from '@/modules/core';
+import { type Purchasable } from 'open-loop-engine';
+import { economyState } from '@/modules/economy';
 
-const state = coreState!;
+const e = economyState!;
 
 const upgrades = [
-  { p: state.upgrades.sharpAxe, costResource: 'Wood' },
-  { p: state.upgrades.ironPickaxe, costResource: 'Gold' },
-  { p: state.upgrades.foreman, costResource: 'Gold' },
+  { p: e.upgrades.sharpAxe, costResource: 'Wood' },
+  { p: e.upgrades.ironPickaxe, costResource: 'Gold' },
+  { p: e.upgrades.foreman, costResource: 'Gold' },
 ];
 
-function buy(p: typeof state.upgrades.sharpAxe) {
+function buy(p: Purchasable) {
   if (p.canPurchase.value) p.purchase();
 }
 </script>

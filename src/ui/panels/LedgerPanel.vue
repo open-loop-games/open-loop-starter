@@ -2,10 +2,10 @@
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
 import { merchantState } from '@/modules/mods/merchant';
-import { coreState } from '@/modules/core';
+import { gatheringState } from '@/modules/gathering';
 
 const mstate = merchantState!;
-const core = coreState!;
+const g = gatheringState!;
 
 const used = computed(() => {
   let total = new Decimal(0);
@@ -16,7 +16,7 @@ const used = computed(() => {
 });
 
 const capacity = computed(() => mstate.inventory.capacity.value);
-const gold = computed(() => format(Decimal.floor(core.resources.gold.value)));
+const gold = computed(() => format(Decimal.floor(g.resources.gold.value)));
 </script>
 
 <template>

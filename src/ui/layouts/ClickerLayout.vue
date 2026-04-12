@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
-import { coreState } from '@/modules/core';
+import { gatheringState } from '@/modules/gathering';
 import ProducersPanel from '@/ui/panels/ProducersPanel.vue';
 import UpgradesPanel from '@/ui/panels/UpgradesPanel.vue';
 import AchievementsPanel from '@/ui/panels/AchievementsPanel.vue';
 
-const state = coreState!;
+const g = gatheringState!;
 
 /**
  * Clicker-style: click big buttons to instantly start an action. In a real
@@ -15,20 +15,20 @@ const state = coreState!;
  */
 const bigButtons = computed(() => {
   const visible: Array<{ id: string; label: string }> = [];
-  for (const [id, action] of state.actions) {
-    const zone = state.actionZones.get(id) ?? 'village';
-    if (!state.zones.isUnlocked(zone)) continue;
-    visible.push({ id, label: action.display.title as string });
+  for (const entry of g.actions.getAll()) {
+    const zone = g.actionZones.get(entry.def.id) ?? 'village';
+    if (!g.zones.isUnlocked(zone)) continue;
+    visible.push({ id: entry.def.id, label: entry.action.display.title as string });
   }
   return visible;
 });
 
-const wood = computed(() => format(Decimal.floor(state.resources.wood.value)));
-const stone = computed(() => format(Decimal.floor(state.resources.stone.value)));
-const gold = computed(() => format(Decimal.floor(state.resources.gold.value)));
+const wood = computed(() => format(Decimal.floor(g.resources.wood.value)));
+const stone = computed(() => format(Decimal.floor(g.resources.stone.value)));
+const gold = computed(() => format(Decimal.floor(g.resources.gold.value)));
 
 function click(id: string) {
-  const action = state.actions.get(id);
+  const action = g.actions.getAction(id);
   if (!action) return;
   if (action.active.value) return;
   action.start();
@@ -59,8 +59,8 @@ function click(id: string) {
         <span class="click-label">{{ b.label }}</span>
         <span class="click-sub">
           {{
-            state.actions.get(b.id)!.active.value
-              ? Math.floor(state.actions.get(b.id)!.percentComplete.value * 100) + '%'
+            g.actions.getAction(b.id)!.active.value
+              ? Math.floor(g.actions.getAction(b.id)!.percentComplete.value * 100) + '%'
               : 'Click!'
           }}
         </span>

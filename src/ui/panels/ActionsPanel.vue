@@ -1,32 +1,32 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { coreState } from '@/modules/core';
+import { gatheringState } from '@/modules/gathering';
 
-const state = coreState!;
+const g = gatheringState!;
 
 const byZone = computed(() => {
-  const groups: Record<string, Array<{ id: string; action: ReturnType<typeof state.actions.get> }>> = {};
-  for (const [id, action] of state.actions) {
-    const zone = state.actionZones.get(id) ?? 'village';
-    if (!state.zones.isUnlocked(zone)) continue;
-    (groups[zone] ??= []).push({ id, action });
+  const groups: Record<string, Array<{ id: string; action: ReturnType<typeof g.actions.getAction> }>> = {};
+  for (const entry of g.actions.getAll()) {
+    const zone = g.actionZones.get(entry.def.id) ?? 'village';
+    if (!g.zones.isUnlocked(zone)) continue;
+    (groups[zone] ??= []).push({ id: entry.def.id, action: entry.action });
   }
   return groups;
 });
 
 const zoneOrder = computed(() =>
-  state.zones.ordered.value
-    .filter((z) => state.zones.isUnlocked(z.id))
+  g.zones.ordered.value
+    .filter((z) => g.zones.isUnlocked(z.id))
     .map((z) => ({ id: z.id, name: z.name })),
 );
 
 function startAction(id: string) {
-  const action = state.actions.get(id);
+  const action = g.actions.getAction(id);
   if (action && !action.active.value) action.start();
 }
 
 function cancelAction(id: string) {
-  const action = state.actions.get(id);
+  const action = g.actions.getAction(id);
   if (action && action.active.value) action.cancel();
 }
 </script>

@@ -12,7 +12,7 @@ import ClickerLayout from '@/ui/layouts/ClickerLayout.vue';
 
 export const clickerModule: EngineModule = {
   id: 'clicker',
-  dependencies: ['core'],
+  dependencies: ['gathering', 'economy'],
   install(_ctx: EngineContext) {
     setSlot('game-layout', ClickerLayout);
   },

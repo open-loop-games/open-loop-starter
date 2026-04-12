@@ -1,18 +1,22 @@
 import type { EngineModule, ModDef } from 'open-loop-engine';
 import { settingsModule } from './settings';
 import { uiRegistryModule } from './ui-registry';
-import { coreModule } from './core';
+import { gatheringModule } from './gathering';
+import { progressionModule } from './progression';
+import { economyModule } from './economy';
 import { loopModule } from './mods/loop';
 import { prestigeModule } from './mods/prestige';
 import { merchantModule } from './mods/merchant';
 import { clickerModule } from './mods/clicker';
-import { equipmentModule } from './mods/equipment';
+import { challengesModule } from './mods/challenges';
 
 /** Always-on modules installed before any mod selection. */
 export const baseModules: EngineModule[] = [
   settingsModule,
   uiRegistryModule,
-  coreModule,
+  gatheringModule,
+  progressionModule,
+  economyModule,
 ];
 
 /** Selectable game variants. Each `module` list is layered over `baseModules`. */
@@ -33,18 +37,18 @@ export const modDefs: ModDef[] = [
     module: [loopModule, prestigeModule],
   },
   {
-    id: 'equipment',
-    name: 'Equipment',
-    description:
-      'Vanilla plus auto-granted equipment that conditionally boosts production. Reference example for the surface-wide chain + persistent-effect pattern.',
-    module: [loopModule, equipmentModule],
-  },
-  {
     id: 'merchant',
     name: "Merchant's Ledger",
     description:
       'Vanilla plus a 20-slot trinket inventory and buy/sell trading. The game screen is reskinned as a shopkeeper ledger.',
     module: [loopModule, merchantModule],
+  },
+  {
+    id: 'challenges',
+    name: 'Challenges',
+    description:
+      'Vanilla plus 3 challenge variants that restrict gameplay for permanent rewards. Demonstrates challenge-category + reset integration.',
+    module: [loopModule, challengesModule],
   },
   {
     id: 'clicker',

@@ -16,7 +16,7 @@ import {
   type EngineContext,
   type Inventory,
 } from 'open-loop-engine';
-import { coreState } from '@/modules/core';
+import { gatheringState } from '@/modules/gathering';
 import { setSlot } from '@/modules/ui-registry';
 import LedgerLayout from '@/ui/layouts/LedgerLayout.vue';
 import LedgerPanel from '@/ui/panels/LedgerPanel.vue';
@@ -45,9 +45,9 @@ export let merchantState: MerchantState | null = null;
 
 export const merchantModule: EngineModule = {
   id: 'merchant',
-  dependencies: ['core', 'loop'],
+  dependencies: ['gathering', 'loop'],
   install(_ctx: EngineContext) {
-    const core = coreState!;
+    const g = gatheringState!;
 
     beginPersistentContext('merchant-inventory');
     const inventory = createInventory({
@@ -63,9 +63,9 @@ export const merchantModule: EngineModule = {
       const def = TRINKETS.find((t) => t.id === id);
       if (!def) return false;
       const price = new Decimal(def.buyPrice);
-      if (Decimal.lt(core.resources.gold.value, price)) return false;
+      if (Decimal.lt(g.resources.gold.value, price)) return false;
       if (!inventory.canFit(id, 1)) return false;
-      core.resources.gold.value = Decimal.sub(core.resources.gold.value, price);
+      g.resources.gold.value = Decimal.sub(g.resources.gold.value, price);
       inventory.add(id, 1);
       return true;
     }
@@ -75,8 +75,8 @@ export const merchantModule: EngineModule = {
       if (!def) return false;
       if (!inventory.has(id, 1)) return false;
       inventory.remove(id, 1);
-      core.resources.gold.value = Decimal.add(
-        core.resources.gold.value,
+      g.resources.gold.value = Decimal.add(
+        g.resources.gold.value,
         new Decimal(def.sellPrice),
       );
       return true;

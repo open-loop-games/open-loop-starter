@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
-import { coreState } from '@/modules/core';
+import { economyState } from '@/modules/economy';
 
-const state = coreState!;
+const e = economyState!;
 
-const entries = computed(() => state.producers.getAll());
+const entries = computed(() => e.producers.getAll());
 
 function buy(id: string) {
-  const entry = state.producers.getEntry(id);
+  const entry = e.producers.getEntry(id);
   const repeatable = entry?.producer.repeatable;
   if (repeatable && repeatable.canPurchase.value) {
     repeatable.purchase();

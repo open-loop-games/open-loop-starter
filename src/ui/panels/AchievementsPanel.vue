@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { coreState } from '@/modules/core';
+import { progressionState } from '@/modules/progression';
 
-const state = coreState!;
-const earnedCount = computed(() => state.achievements.group.earnedCount.value);
-const total = state.achievements.group.totalCount;
+const p = progressionState!;
+const earnedCount = p.achievements.earnedCount;
+const total = p.achievements.totalCount;
 </script>
 
 <template>
@@ -12,7 +11,7 @@ const total = state.achievements.group.totalCount;
     <h3>Achievements ({{ earnedCount }}/{{ total }})</h3>
     <div class="achievement-list">
       <div
-        v-for="a in state.achievements.list"
+        v-for="{ achievement: a } in p.achievements.getAll()"
         :key="a.id"
         class="achievement"
         :class="{ earned: a.earned.value }"

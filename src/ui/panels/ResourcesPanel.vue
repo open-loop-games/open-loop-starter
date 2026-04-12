@@ -3,18 +3,21 @@ import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
-import { coreState } from '@/modules/core';
+import { gatheringState } from '@/modules/gathering';
 
-const state = coreState!;
-const wood = computed(() => format(Decimal.floor(state.resources.wood.value)));
-const stone = computed(() => format(Decimal.floor(state.resources.stone.value)));
-const gold = computed(() => format(Decimal.floor(state.resources.gold.value)));
+const g = gatheringState!;
+const woodcutting = g.skills.getSkill('woodcutting')!;
+const mining = g.skills.getSkill('mining')!;
+
+const wood = computed(() => format(Decimal.floor(g.resources.wood.value)));
+const stone = computed(() => format(Decimal.floor(g.resources.stone.value)));
+const gold = computed(() => format(Decimal.floor(g.resources.gold.value)));
 
 const woodcuttingLvl = computed(() =>
-  format(Decimal.floor(state.skills.woodcutting.level.value)),
+  format(Decimal.floor(woodcutting.level.value)),
 );
 const miningLvl = computed(() =>
-  format(Decimal.floor(state.skills.mining.level.value)),
+  format(Decimal.floor(mining.level.value)),
 );
 
 // Fractional progress to next level. xpToLevel is floor(xp/10) for
@@ -28,10 +31,10 @@ const progressToNext = (xp: unknown, xpPerLevel: number) => {
   return Decimal.div(raw, xpPerLevel).toNumber();
 };
 const woodcuttingProgress = computed(() =>
-  progressToNext(state.skills.woodcutting.xp.value, 10),
+  progressToNext(woodcutting.xp.value, 10),
 );
 const miningProgress = computed(() =>
-  progressToNext(state.skills.mining.xp.value, 12),
+  progressToNext(mining.xp.value, 12),
 );
 </script>
 

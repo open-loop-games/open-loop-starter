@@ -4,7 +4,7 @@ import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-eng
 import { Screen } from '@/types';
 import { baseModules, modDefs } from '@/modules';
 import { stockSettings } from '@/modules/settings';
-import { coreState } from '@/modules/core';
+import { gatheringState } from '@/modules/gathering';
 import { useTheme } from '@/composables/useTheme';
 import { useNotation } from '@/composables/useNotation';
 import { useSaveEvents } from '@/composables/useSaveEvents';
@@ -60,23 +60,23 @@ function startGame(slotId: number, modId?: string) {
     const elapsed = (Date.now() - result.timestamp) / 1000;
     if (elapsed > 60 && stockSettings?.offlineProgress.value) {
       // Snapshot before
-      const woodBefore = coreState
-        ? Decimal.floor(coreState.resources.wood.value)
+      const woodBefore = gatheringState
+        ? Decimal.floor(gatheringState.resources.wood.value)
         : Decimal.dZero;
-      const stoneBefore = coreState
-        ? Decimal.floor(coreState.resources.stone.value)
+      const stoneBefore = gatheringState
+        ? Decimal.floor(gatheringState.resources.stone.value)
         : Decimal.dZero;
-      const goldBefore = coreState
-        ? Decimal.floor(coreState.resources.gold.value)
+      const goldBefore = gatheringState
+        ? Decimal.floor(gatheringState.resources.gold.value)
         : Decimal.dZero;
 
       const processed = processOfflineTime(engine.loop, elapsed);
 
-      if (processed > 0 && coreState) {
+      if (processed > 0 && gatheringState) {
         const gains: Record<string, string> = {};
-        const woodGain = Decimal.floor(coreState.resources.wood.value).sub(woodBefore);
-        const stoneGain = Decimal.floor(coreState.resources.stone.value).sub(stoneBefore);
-        const goldGain = Decimal.floor(coreState.resources.gold.value).sub(goldBefore);
+        const woodGain = Decimal.floor(gatheringState.resources.wood.value).sub(woodBefore);
+        const stoneGain = Decimal.floor(gatheringState.resources.stone.value).sub(stoneBefore);
+        const goldGain = Decimal.floor(gatheringState.resources.gold.value).sub(goldBefore);
         if (woodGain.gt(0)) gains['Wood'] = '+' + format(woodGain);
         if (stoneGain.gt(0)) gains['Stone'] = '+' + format(stoneGain);
         if (goldGain.gt(0)) gains['Gold'] = '+' + format(goldGain);
