@@ -6,6 +6,7 @@ import { loopModule } from './mods/loop';
 import { prestigeModule } from './mods/prestige';
 import { merchantModule } from './mods/merchant';
 import { clickerModule } from './mods/clicker';
+import { equipmentModule } from './mods/equipment';
 
 /** Always-on modules installed before any mod selection. */
 export const baseModules: EngineModule[] = [
@@ -30,6 +31,13 @@ export const modDefs: ModDef[] = [
     description:
       'Vanilla plus a Renown meta-currency. Convert gold → renown to reset your run; each renown adds +10% to every producer.',
     module: [loopModule, prestigeModule],
+  },
+  {
+    id: 'equipment',
+    name: 'Equipment',
+    description:
+      'Vanilla plus auto-granted equipment that conditionally boosts production. Reference example for the surface-wide chain + persistent-effect pattern.',
+    module: [loopModule, equipmentModule],
   },
   {
     id: 'merchant',
