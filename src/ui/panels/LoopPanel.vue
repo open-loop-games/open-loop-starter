@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal } from 'open-loop-engine';
-import { loopState } from '@/modules/mods/loop';
+import { useModule } from '@/composables/useModule';
+import { LoopKey } from '@/modules/mods/loop';
 
-const state = loopState!;
+const state = useModule(LoopKey);
 const mana = computed(() => Decimal.floor(state.mana.value).toString());
 const maxMana = computed(() => state.maxMana.toString());
 const manaPercent = computed(() =>

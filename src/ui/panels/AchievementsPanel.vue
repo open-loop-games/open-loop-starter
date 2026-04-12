@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { progressionState } from '@/modules/progression';
+import { useModule } from '@/composables/useModule';
+import { ProgressionKey } from '@/modules/progression';
 
-const p = progressionState!;
+const p = useModule(ProgressionKey);
 const earnedCount = p.achievements.earnedCount;
 const total = p.achievements.totalCount;
 </script>

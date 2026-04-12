@@ -8,15 +8,15 @@
  *   - mod replacing the `game-layout` UI slot wholesale
  */
 import {
-  Decimal,
   createInventory,
-  beginPersistentContext,
-  endPersistentContext,
+  addResource,
+  subtractResource,
+  type InjectionKey,
   type EngineModule,
   type EngineContext,
   type Inventory,
 } from 'open-loop-engine';
-import { gatheringState } from '@/modules/gathering';
+import { GatheringKey } from '@/modules/gathering';
 import { setSlot } from '@/modules/ui-registry';
 import LedgerLayout from '@/ui/layouts/LedgerLayout.vue';
 import LedgerPanel from '@/ui/panels/LedgerPanel.vue';
@@ -41,15 +41,14 @@ export interface MerchantState {
   sell: (id: string) => boolean;
 }
 
-export let merchantState: MerchantState | null = null;
+export const MerchantKey: InjectionKey<MerchantState> = Symbol('merchant') as InjectionKey<MerchantState>;
 
 export const merchantModule: EngineModule = {
   id: 'merchant',
   dependencies: ['gathering', 'loop'],
-  install(_ctx: EngineContext) {
-    const g = gatheringState!;
+  install(ctx: EngineContext) {
+    const g = ctx.inject(GatheringKey);
 
-    beginPersistentContext('merchant-inventory');
     const inventory = createInventory({
       id: 'trinkets',
       displayName: 'Trinkets',
@@ -57,15 +56,12 @@ export const merchantModule: EngineModule = {
       items: TRINKETS.map((t) => t.id),
       overflow: 'block',
     });
-    endPersistentContext();
 
     function buy(id: string): boolean {
       const def = TRINKETS.find((t) => t.id === id);
       if (!def) return false;
-      const price = new Decimal(def.buyPrice);
-      if (Decimal.lt(g.resources.gold.value, price)) return false;
       if (!inventory.canFit(id, 1)) return false;
-      g.resources.gold.value = Decimal.sub(g.resources.gold.value, price);
+      if (!subtractResource(g.resources.gold, def.buyPrice)) return false;
       inventory.add(id, 1);
       return true;
     }
@@ -75,14 +71,12 @@ export const merchantModule: EngineModule = {
       if (!def) return false;
       if (!inventory.has(id, 1)) return false;
       inventory.remove(id, 1);
-      g.resources.gold.value = Decimal.add(
-        g.resources.gold.value,
-        new Decimal(def.sellPrice),
-      );
+      addResource(g.resources.gold, def.sellPrice);
       return true;
     }
 
-    merchantState = { inventory, trinkets: TRINKETS, buy, sell };
+    const state: MerchantState = { inventory, trinkets: TRINKETS, buy, sell };
+    ctx.provide(MerchantKey, state);
 
     setSlot('ledger-panel', LedgerPanel);
     setSlot('game-layout', LedgerLayout);

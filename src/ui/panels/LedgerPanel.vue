@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
-import { merchantState } from '@/modules/mods/merchant';
-import { gatheringState } from '@/modules/gathering';
+import { useModule } from '@/composables/useModule';
+import { MerchantKey } from '@/modules/mods/merchant';
+import { GatheringKey } from '@/modules/gathering';
 
-const mstate = merchantState!;
-const g = gatheringState!;
+const mstate = useModule(MerchantKey);
+const g = useModule(GatheringKey);
 
 const used = computed(() => {
   let total = new Decimal(0);

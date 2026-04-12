@@ -3,9 +3,10 @@ import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
-import { gatheringState } from '@/modules/gathering';
+import { useModule } from '@/composables/useModule';
+import { GatheringKey } from '@/modules/gathering';
 
-const g = gatheringState!;
+const g = useModule(GatheringKey);
 const woodcutting = g.skills.getSkill('woodcutting')!;
 const mining = g.skills.getSkill('mining')!;
 

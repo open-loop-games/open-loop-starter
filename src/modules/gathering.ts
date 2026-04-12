@@ -28,8 +28,9 @@ import {
   createActionCategory,
   createActionQueue,
   createActionRunner,
-  beginPersistentContext,
-  endPersistentContext,
+  addResource,
+  subtractResource,
+  type InjectionKey,
   type EngineModule,
   type EngineContext,
   type Resource,
@@ -72,31 +73,24 @@ export interface GatheringState {
   skills: SkillCategory<GatheringSkillDef>;
   zones: ZoneSystem;
   actions: ActionCategory<GatheringActionDef>;
-  /** Zone lookup for UI — derived from action defs at registration time */
-  actionZones: Map<string, string>;
   queue: ActionQueue;
   runner: ActionRunner;
   automation: UseAutomationReturn;
+  /**
+   * Yield multiplier refs — downstream modules (economy) bind these to
+   * upgrade effects. Gathering's gain helpers multiply by these so
+   * upgrades apply without a hard dependency from gathering → economy.
+   */
+  woodYieldMult: Ref<DecimalSource>;
+  stoneYieldMult: Ref<DecimalSource>;
+  /**
+   * Writable earned-achievement count — progression writes this after
+   * creating achievements. Drives automation tier unlocks.
+   */
+  earnedAchievementCount: Ref<number>;
 }
 
-export let gatheringState: GatheringState | null = null;
-
-/**
- * Yield multiplier refs — economy.ts (OL-362) binds these to upgrade effects.
- * Gathering's gain helpers multiply by these so upgrades apply without a
- * hard dependency from gathering → economy.
- */
-export const woodYieldMult: Ref<DecimalSource> = ref(Decimal.dOne);
-export const stoneYieldMult: Ref<DecimalSource> = ref(Decimal.dOne);
-
-/**
- * Earned-achievement count getter — progression.ts (OL-361) sets this via
- * setEarnedAchievementCount once achievements are created.
- * Drives automation tier unlocks.
- */
-let _getEarnedAchievementCount: () => number = () => 0;
-export function getEarnedAchievementCount(): number { return _getEarnedAchievementCount(); }
-export function setEarnedAchievementCount(fn: () => number) { _getEarnedAchievementCount = fn; }
+export const GatheringKey: InjectionKey<GatheringState> = Symbol('gathering') as InjectionKey<GatheringState>;
 
 // ============================================================================
 // Module
@@ -107,18 +101,22 @@ export const gatheringModule: EngineModule = {
   dependencies: ['settings', 'ui-registry'],
   install(ctx: EngineContext) {
     // --- Resources ------------------------------------------------------------
-    // Context ID kept as 'core-resources' for save compatibility
-    beginPersistentContext('core-resources');
     const wood = createResource<DecimalSource>(Decimal.dZero, { displayName: 'Wood' });
     const stone = createResource<DecimalSource>(Decimal.dZero, { displayName: 'Stone' });
     const gold = createResource<DecimalSource>(Decimal.dZero, { displayName: 'Gold' });
-    endPersistentContext();
+
+    // --- Yield multiplier refs ------------------------------------------------
+    // Economy binds these to upgrade effects via watchSyncEffect.
+    const woodYieldMult: Ref<DecimalSource> = ref(Decimal.dOne);
+    const stoneYieldMult: Ref<DecimalSource> = ref(Decimal.dOne);
+
+    // --- Earned achievement count ---------------------------------------------
+    // Progression writes this once achievements are created.
+    const earnedAchievementCount = ref(0);
 
     // --- Skills (via category) ------------------------------------------------
-    // Accumulator mode: XP → level, permanent bonus retained across loops.
-    // Actions grant XP via skills.addXP() in their onComplete callbacks.
-    // Defs carry tuning constants; mapSkill applies the shared curve template.
     // Accumulator mode: XP → level via floor(xp / divisor), retention per loop.
+    // Actions grant XP via skills.addXP() in their onComplete callbacks.
     const skills = createSkillCategory<GatheringSkillDef>({
       id: 'gathering-skills',
       mapSkill: (def) => ({
@@ -147,17 +145,17 @@ export const gatheringModule: EngineModule = {
     // --- Resource gain helpers ------------------------------------------------
     // Multiplied by yield refs that economy.ts binds to upgrade effects.
     function gainWood(base: DecimalSource) {
-      wood.value = Decimal.add(wood.value, Decimal.mul(base, woodYieldMult.value));
+      addResource(wood, Decimal.mul(base, woodYieldMult.value));
     }
     function gainStone(base: DecimalSource) {
-      stone.value = Decimal.add(stone.value, Decimal.mul(base, stoneYieldMult.value));
+      addResource(stone, Decimal.mul(base, stoneYieldMult.value));
     }
     function gainGold(base: DecimalSource) {
-      gold.value = Decimal.add(gold.value, base);
+      addResource(gold, base);
     }
 
     // --- Actions (via category) -----------------------------------------------
-    // Each def carries its zone for the actionZones lookup map.
+    // Each def carries its zone — accessible post-registration via entry.def.zone.
     // mapAction strips zone (not an ActionOptions field) and passes the rest.
     const actions = createActionCategory<GatheringActionDef>({
       id: 'gathering-actions',
@@ -227,26 +225,17 @@ export const gatheringModule: EngineModule = {
         duration: 4,
         zone: 'village',
         onComplete() {
-          const cost = new Decimal(3);
-          if (Decimal.gte(wood.value, cost)) {
-            wood.value = Decimal.sub(wood.value, cost);
+          if (subtractResource(wood, 3)) {
             gainGold(2);
           }
         },
       },
     ]);
 
-    // Derive zone lookup from registered defs
-    const actionZones = new Map<string, string>();
-    for (const entry of actions.getAll()) {
-      actionZones.set(entry.def.id, entry.def.zone);
-    }
-
     // --- Action queue + automation tiers -------------------------------------
     // Tiers unlock as the player earns achievements. The earned count comes
-    // from progression.ts via earnedAchievementCount ref — starts at 0 until
-    // progression wires it.
-    const earnedCount = computed(() => getEarnedAchievementCount());
+    // from progression.ts which writes to earnedAchievementCount after install.
+    const earnedCount = computed(() => earnedAchievementCount.value);
 
     const queue = createActionQueue({
       id: 'core-queue',
@@ -316,15 +305,19 @@ export const gatheringModule: EngineModule = {
     });
 
     // --- Expose state ---------------------------------------------------------
-    gatheringState = {
+    const state: GatheringState = {
       resources: { wood, stone, gold },
       skills,
       zones,
       actions,
-      actionZones,
       queue,
       runner,
       automation,
+      woodYieldMult,
+      stoneYieldMult,
+      earnedAchievementCount,
     };
+
+    ctx.provide(GatheringKey, state);
   },
 };

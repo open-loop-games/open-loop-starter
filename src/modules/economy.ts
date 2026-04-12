@@ -30,8 +30,7 @@ import {
   createModifierChain,
   createMultiplicativeModifier,
   additiveEffect,
-  beginPersistentContext,
-  endPersistentContext,
+  type InjectionKey,
   type EngineModule,
   type EngineContext,
   type Resource,
@@ -42,7 +41,7 @@ import {
   type PersistentEffectSystem,
   type ModifierChain,
 } from 'open-loop-engine';
-import { gatheringState, woodYieldMult, stoneYieldMult } from './gathering';
+import { GatheringKey } from './gathering';
 
 // ============================================================================
 // Types
@@ -72,7 +71,7 @@ export interface EconomyState {
   effects: PersistentEffectSystem;
 }
 
-export let economyState: EconomyState | null = null;
+export const EconomyKey: InjectionKey<EconomyState> = Symbol('economy') as InjectionKey<EconomyState>;
 
 // ============================================================================
 // Module
@@ -82,14 +81,13 @@ export const economyModule: EngineModule = {
   id: 'economy',
   dependencies: ['settings', 'ui-registry', 'gathering'],
   install(ctx: EngineContext) {
-    const g = gatheringState!;
+    const g = ctx.inject(GatheringKey);
     const { wood, stone, gold } = g.resources;
 
     // --- Upgrades (scaling purchasables) ------------------------------------
     // Scaling costs depend on the amount ref that createPurchasable manages
     // internally, so we use createScalingPurchasable directly rather than the
     // purchasable category. The category is better for fixed-cost items.
-    beginPersistentContext('core-upgrades');
     const sharpAxe = createScalingPurchasable({
       id: 'sharp-axe',
       resource: wood,
@@ -122,7 +120,6 @@ export const economyModule: EngineModule = {
       title: 'Foreman',
       description: '+25% producer rate per level',
     });
-    endPersistentContext();
 
     const upgradeGroup = createPurchasableGroup({
       purchasables: [sharpAxe, ironPickaxe, foreman],
@@ -130,11 +127,10 @@ export const economyModule: EngineModule = {
 
     // Bind yield multipliers reactively — gathering's gain helpers pick up
     // the new effect values as the player buys upgrade levels.
-    watchSyncEffect(() => { woodYieldMult.value = sharpAxe.effect.value; });
-    watchSyncEffect(() => { stoneYieldMult.value = ironPickaxe.effect.value; });
+    watchSyncEffect(() => { g.woodYieldMult.value = sharpAxe.effect.value; });
+    watchSyncEffect(() => { g.stoneYieldMult.value = ironPickaxe.effect.value; });
 
     // --- Producers ----------------------------------------------------------
-    beginPersistentContext('core-producers');
     const producers = createProducerCategory<ProducerDef>({
       id: 'producers',
       registerTick: ctx.onTick,
@@ -180,7 +176,6 @@ export const economyModule: EngineModule = {
         costScaling: 1.7,
       },
     ]);
-    endPersistentContext();
 
     // Foreman multiplier applies to every producer's rate chain
     const foremanModifier = createMultiplicativeModifier({
@@ -210,11 +205,9 @@ export const economyModule: EngineModule = {
     // Equipment: auto-granted gear that conditionally boosts production.
     // In a real game these would be driven by drops, shops, or quests.
     // Here we auto-grant based on resource thresholds for demonstration.
-    beginPersistentContext('equipment');
     const glasses = ref(false);
     const pickaxe = ref(false);
     const compass = ref(false);
-    endPersistentContext();
 
     effects.register([
       // Conditional production modifiers (active when equipment is owned)
@@ -245,21 +238,28 @@ export const economyModule: EngineModule = {
       // Auto-grant triggers (placeholder for real game events)
       {
         id: 'auto-grant:glasses',
-        active: () => Decimal.gte(gold.value, 5 as DecimalSource),
+        active: () => Decimal.gte(gold.value, 5),
         onActivate: () => { glasses.value = true; },
       },
       {
         id: 'auto-grant:pickaxe',
-        active: () => Decimal.gte(stone.value, 25 as DecimalSource),
+        active: () => Decimal.gte(stone.value, 25),
         onActivate: () => { pickaxe.value = true; },
       },
       {
         id: 'auto-grant:compass',
-        active: () => Decimal.gte(wood.value, 50 as DecimalSource),
+        active: () => Decimal.gte(wood.value, 50),
         onActivate: () => { compass.value = true; },
       },
     ]);
 
-    economyState = { producers, upgrades: { sharpAxe, ironPickaxe, foreman, group: upgradeGroup }, productionChain, effects };
+    const state: EconomyState = {
+      producers,
+      upgrades: { sharpAxe, ironPickaxe, foreman, group: upgradeGroup },
+      productionChain,
+      effects,
+    };
+
+    ctx.provide(EconomyKey, state);
   },
 };

@@ -1,5 +1,6 @@
 import type { Persistent } from 'open-loop-engine';
-import { stockSettings } from '@/modules/settings';
+import { useModule } from './useModule';
+import { SettingsKey } from '@/modules/settings';
 
 export interface StockSettings {
   autoSave: Persistent<boolean>;
@@ -10,6 +11,5 @@ export interface StockSettings {
 }
 
 export function useSettings(): StockSettings {
-  if (!stockSettings) throw new Error('Settings not available — engine not started yet');
-  return stockSettings;
+  return useModule(SettingsKey).settings;
 }

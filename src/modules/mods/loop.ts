@@ -22,13 +22,11 @@ import {
   Decimal,
   createResource,
   createLoop,
-  createRetentionPolicy,
   createLoopLog,
   createTemporaryEffectSystem,
   createMultiplicativeModifier,
-  beginPersistentContext,
-  endPersistentContext,
   SaveManagerKey,
+  type InjectionKey,
   type EngineModule,
   type EngineContext,
   type Resource,
@@ -37,8 +35,8 @@ import {
   type LoopLog,
   type TemporaryEffectSystem,
 } from 'open-loop-engine';
-import { gatheringState } from '@/modules/gathering';
-import { economyState } from '@/modules/economy';
+import { GatheringKey } from '@/modules/gathering';
+import { EconomyKey } from '@/modules/economy';
 import { setSlot } from '@/modules/ui-registry';
 import VanillaLayout from '@/ui/layouts/VanillaLayout.vue';
 
@@ -53,21 +51,19 @@ export interface LoopState {
   tempEffects: TemporaryEffectSystem;
 }
 
-export let loopState: LoopState | null = null;
+export const LoopKey: InjectionKey<LoopState> = Symbol('loop') as InjectionKey<LoopState>;
 
 export const loopModule: EngineModule = {
   id: 'loop',
   dependencies: ['gathering', 'economy'],
   install(ctx: EngineContext) {
-    const g = gatheringState!;
-    const economy = economyState!;
+    const g = ctx.inject(GatheringKey);
+    const economy = ctx.inject(EconomyKey);
 
     const woodcutting = g.skills.getSkill('woodcutting')!;
     const mining = g.skills.getSkill('mining')!;
 
-    beginPersistentContext('loop');
     const mana = createResource<DecimalSource>(MAX_MANA, { displayName: 'Mana' });
-    endPersistentContext();
 
     // Drain mana while the loop is running
     ctx.onTick((dt: number) => {
@@ -77,34 +73,18 @@ export const loopModule: EngineModule = {
       }
     });
 
-    // Retention: keep permanent skill bonuses across loop resets
-    const retention = createRetentionPolicy({
-      keep: [
-        woodcutting.permanentBonus!,
-        mining.permanentBonus!,
-      ],
-    });
-
     const loop = createLoop({
       id: 'main-loop',
       endCondition: () => Decimal.lte(mana.value, 0),
-      thingsToReset: [
-        mana,
-        woodcutting.xp,
-        mining.xp,
-        g.resources.wood,
-        g.resources.stone,
-        g.resources.gold,
-        ...g.actions.getAll().map(e => e.action),
-      ],
+      resetModules: ['gathering'],
+      keep: [woodcutting.permanentBonus!, mining.permanentBonus!],
+      thingsToReset: [mana],
       onBeforeRestart() {
         woodcutting.accumulateBonus!();
         mining.accumulateBonus!();
-        retention.snapshot();
       },
       onRestart() {
         mana.value = MAX_MANA;
-        retention.restore();
         // Clear all temporary effects on loop restart — buffs are per-run
         tempEffects.dispelAll();
       },
@@ -165,18 +145,8 @@ export const loopModule: EngineModule = {
     });
 
     // Trigger production-surge when a skill levels up during this run
-    // (placeholder — in a real game this would be a proper event listener)
-    let lastWoodcuttingLevel = 0;
-    let lastMiningLevel = 0;
-    ctx.onTick(() => {
-      const wcLevel = new Decimal(woodcutting.level.value).toNumber();
-      const mnLevel = new Decimal(mining.level.value).toNumber();
-      if (wcLevel > lastWoodcuttingLevel || mnLevel > lastMiningLevel) {
-        tempEffects.apply('production-surge');
-        lastWoodcuttingLevel = wcLevel;
-        lastMiningLevel = mnLevel;
-      }
-    });
+    woodcutting.on('levelUp', () => tempEffects.apply('production-surge'));
+    mining.on('levelUp', () => tempEffects.apply('production-surge'));
 
     loop.run();
 
@@ -189,7 +159,8 @@ export const loopModule: EngineModule = {
       }));
     }
 
-    loopState = { mana, maxMana: MAX_MANA, loop, loopLog, tempEffects };
+    const state: LoopState = { mana, maxMana: MAX_MANA, loop, loopLog, tempEffects };
+    ctx.provide(LoopKey, state);
 
     // Register the default layout
     setSlot('game-layout', VanillaLayout);

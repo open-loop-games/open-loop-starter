@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
-import { economyState } from '@/modules/economy';
+import { useModule } from '@/composables/useModule';
+import { EconomyKey } from '@/modules/economy';
 
-const e = economyState!;
+const e = useModule(EconomyKey);
 
 const entries = computed(() => e.producers.getAll());
 

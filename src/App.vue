@@ -3,8 +3,8 @@ import { ref, provide, watchEffect } from 'vue';
 import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-engine';
 import { Screen } from '@/types';
 import { baseModules, modDefs } from '@/modules';
-import { stockSettings } from '@/modules/settings';
-import { gatheringState } from '@/modules/gathering';
+import { SettingsKey } from '@/modules/settings';
+import { GatheringKey } from '@/modules/gathering';
 import { useTheme } from '@/composables/useTheme';
 import { useNotation } from '@/composables/useNotation';
 import { useSaveEvents } from '@/composables/useSaveEvents';
@@ -44,8 +44,9 @@ function startGame(slotId: number, modId?: string) {
   useNotation();
 
   // Confirm on close
+  const settingsState = engine.tryInject(SettingsKey);
   watchEffect(() => {
-    if (stockSettings?.confirmOnClose.value && currentScreen.value === Screen.Game) {
+    if (settingsState?.settings.confirmOnClose.value && currentScreen.value === Screen.Game) {
       window.onbeforeunload = (e: BeforeUnloadEvent) => {
         e.preventDefault();
         return '';
@@ -58,7 +59,9 @@ function startGame(slotId: number, modId?: string) {
   const result = engine.load();
   if (result.success && result.timestamp) {
     const elapsed = (Date.now() - result.timestamp) / 1000;
-    if (elapsed > 60 && stockSettings?.offlineProgress.value) {
+    if (elapsed > 60 && settingsState?.settings.offlineProgress.value) {
+      const gatheringState = engine.tryInject(GatheringKey);
+
       // Snapshot before
       const woodBefore = gatheringState
         ? Decimal.floor(gatheringState.resources.wood.value)

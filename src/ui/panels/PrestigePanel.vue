@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
-import { prestigeState } from '@/modules/mods/prestige';
+import { useModule } from '@/composables/useModule';
+import { PrestigeKey } from '@/modules/mods/prestige';
 
-const state = prestigeState!;
+const state = useModule(PrestigeKey);
 
 const renown = computed(() => format(Decimal.floor(state.renown.value)));
 const gain = computed(() => format(state.conversion.currentGain.value));

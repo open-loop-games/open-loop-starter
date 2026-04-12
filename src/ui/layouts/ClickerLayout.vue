@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
-import { gatheringState } from '@/modules/gathering';
+import { useModule } from '@/composables/useModule';
+import { GatheringKey } from '@/modules/gathering';
 import ProducersPanel from '@/ui/panels/ProducersPanel.vue';
 import UpgradesPanel from '@/ui/panels/UpgradesPanel.vue';
 import AchievementsPanel from '@/ui/panels/AchievementsPanel.vue';
 
-const g = gatheringState!;
+const g = useModule(GatheringKey);
 
 /**
  * Clicker-style: click big buttons to instantly start an action. In a real
@@ -16,8 +17,7 @@ const g = gatheringState!;
 const bigButtons = computed(() => {
   const visible: Array<{ id: string; label: string }> = [];
   for (const entry of g.actions.getAll()) {
-    const zone = g.actionZones.get(entry.def.id) ?? 'village';
-    if (!g.zones.isUnlocked(zone)) continue;
+    if (!g.zones.isUnlocked(entry.def.zone)) continue;
     visible.push({ id: entry.def.id, label: entry.action.display.title as string });
   }
   return visible;

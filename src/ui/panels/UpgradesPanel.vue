@@ -2,9 +2,10 @@
 import { toValue } from 'vue';
 import { format, type DecimalSource } from 'open-loop-engine';
 import { type Purchasable } from 'open-loop-engine';
-import { economyState } from '@/modules/economy';
+import { useModule } from '@/composables/useModule';
+import { EconomyKey } from '@/modules/economy';
 
-const e = economyState!;
+const e = useModule(EconomyKey);
 
 const upgrades = [
   { p: e.upgrades.sharpAxe, costResource: 'Wood' },

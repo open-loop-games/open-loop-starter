@@ -19,18 +19,18 @@ import {
   Decimal,
   createResource,
   createIndependentConversion,
+  createReset,
   createMultiplicativeModifier,
   createPersistentEffectSystem,
-  beginPersistentContext,
-  endPersistentContext,
+  type InjectionKey,
   type EngineModule,
   type EngineContext,
   type Resource,
   type DecimalSource,
   type Conversion,
 } from 'open-loop-engine';
-import { gatheringState } from '@/modules/gathering';
-import { economyState } from '@/modules/economy';
+import { GatheringKey } from '@/modules/gathering';
+import { EconomyKey } from '@/modules/economy';
 import { setSlot } from '@/modules/ui-registry';
 import PrestigePanel from '@/ui/panels/PrestigePanel.vue';
 
@@ -40,20 +40,22 @@ export interface PrestigeState {
   resetRun: () => void;
 }
 
-export let prestigeState: PrestigeState | null = null;
+export const PrestigeKey: InjectionKey<PrestigeState> = Symbol('prestige') as InjectionKey<PrestigeState>;
 
 export const prestigeModule: EngineModule = {
   id: 'prestige',
   dependencies: ['gathering', 'economy', 'loop'],
-  install(_ctx: EngineContext) {
-    const g = gatheringState!;
-    const e = economyState!;
+  install(ctx: EngineContext) {
+    const g = ctx.inject(GatheringKey);
+    const e = ctx.inject(EconomyKey);
 
-    beginPersistentContext('prestige');
-    const renown = createResource<DecimalSource>(Decimal.dZero, {
-      displayName: 'Renown',
+    const renown = createResource<DecimalSource>(Decimal.dZero, { displayName: 'Renown' });
+
+    // Reset gathering + economy on prestige conversion.
+    // Renown lives in the prestige module context, so it's not in scope.
+    const prestigeReset = createReset({
+      resetModules: ['gathering', 'economy'],
     });
-    endPersistentContext();
 
     // sqrt(gold / 10) — slow but steady
     const conversion = createIndependentConversion({
@@ -62,19 +64,7 @@ export const prestigeModule: EngineModule = {
       formula: (baseValue: DecimalSource) =>
         Decimal.sqrt(Decimal.div(baseValue, 10)),
       roundDownGain: true,
-      onConvert: () => {
-        // Reset run resources + upgrades
-        g.resources.wood.value = Decimal.dZero;
-        g.resources.stone.value = Decimal.dZero;
-        g.resources.gold.value = Decimal.dZero;
-        e.upgrades.sharpAxe.amount.value = Decimal.dZero;
-        e.upgrades.ironPickaxe.amount.value = Decimal.dZero;
-        e.upgrades.foreman.amount.value = Decimal.dZero;
-        for (const entry of e.producers.getAll()) {
-          const repeatable = entry.producer.repeatable;
-          if (repeatable) repeatable.amount.value = Decimal.dZero;
-        }
-      },
+      reset: prestigeReset,
     });
 
     // Renown modifier via persistent-effect system (not raw chain.add)
@@ -92,12 +82,13 @@ export const prestigeModule: EngineModule = {
       }],
     }]);
 
-    prestigeState = {
+    const state: PrestigeState = {
       renown,
       conversion,
       resetRun: () => conversion.convert(),
     };
 
+    ctx.provide(PrestigeKey, state);
     setSlot('prestige-panel', PrestigePanel);
   },
 };

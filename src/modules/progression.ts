@@ -7,23 +7,25 @@
  *
  * Depends on gathering for resources and skill levels used in achievement
  * conditions. Wires the earned-achievement count back to gathering's
- * automation tier system so queue execution unlocks as milestones are hit.
+ * automation tier system via the earnedAchievementCount ref on GatheringState.
  *
  * Cross-references:
  *   - gathering.ts provides resources + skills read by achievement conditions
  *   - gathering.ts consumes earnedAchievementCount for automation tiers
  *   - loop.ts (OL-363) will wire best-of into loop-log for automatic tracking
  */
+import { watchSyncEffect } from 'vue';
 import {
   Decimal,
   createAchievementCategory,
   createBestOf,
+  type InjectionKey,
   type EngineModule,
   type EngineContext,
   type AchievementCategory,
   type BestOf,
 } from 'open-loop-engine';
-import { gatheringState, setEarnedAchievementCount } from './gathering';
+import { GatheringKey } from './gathering';
 
 // ============================================================================
 // Types
@@ -42,7 +44,7 @@ export interface ProgressionState {
   bestOf: BestOf;
 }
 
-export let progressionState: ProgressionState | null = null;
+export const ProgressionKey: InjectionKey<ProgressionState> = Symbol('progression') as InjectionKey<ProgressionState>;
 
 // ============================================================================
 // Module
@@ -51,8 +53,8 @@ export let progressionState: ProgressionState | null = null;
 export const progressionModule: EngineModule = {
   id: 'progression',
   dependencies: ['settings', 'ui-registry', 'gathering'],
-  install(_ctx: EngineContext) {
-    const g = gatheringState!;
+  install(ctx: EngineContext) {
+    const g = ctx.inject(GatheringKey);
     const { wood, stone, gold } = g.resources;
     const woodcutting = g.skills.getSkill('woodcutting')!;
 
@@ -102,7 +104,9 @@ export const progressionModule: EngineModule = {
     ]);
 
     // Wire earned count to gathering's automation tier system
-    setEarnedAchievementCount(() => achievements.earnedCount.value);
+    watchSyncEffect(() => {
+      g.earnedAchievementCount.value = achievements.earnedCount.value;
+    });
 
     // --- Best-of tracking ---------------------------------------------------
     // Tracks per-run high-water marks for key metrics. Loop integration
@@ -118,6 +122,7 @@ export const progressionModule: EngineModule = {
       },
     });
 
-    progressionState = { achievements, bestOf };
+    const state: ProgressionState = { achievements, bestOf };
+    ctx.provide(ProgressionKey, state);
   },
 };

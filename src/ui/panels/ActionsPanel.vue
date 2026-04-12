@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { gatheringState } from '@/modules/gathering';
+import { useModule } from '@/composables/useModule';
+import { GatheringKey } from '@/modules/gathering';
 
-const g = gatheringState!;
+const g = useModule(GatheringKey);
 
 const byZone = computed(() => {
   const groups: Record<string, Array<{ id: string; action: ReturnType<typeof g.actions.getAction> }>> = {};
   for (const entry of g.actions.getAll()) {
-    const zone = g.actionZones.get(entry.def.id) ?? 'village';
-    if (!g.zones.isUnlocked(zone)) continue;
-    (groups[zone] ??= []).push({ id: entry.def.id, action: entry.action });
+    if (!g.zones.isUnlocked(entry.def.zone)) continue;
+    (groups[entry.def.zone] ??= []).push({ id: entry.def.id, action: entry.action });
   }
   return groups;
 });
