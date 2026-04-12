@@ -1,16 +1,19 @@
 import { shallowRef, type Component, type InjectionKey, type ShallowRef } from 'vue';
 
+export type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
+
 export interface ModalStackEntry {
   id: string;
   component: Component;
   props?: Record<string, unknown>;
+  size?: ModalSize;
 }
 
 export interface ModalStackApi {
   stack: ShallowRef<readonly ModalStackEntry[]>;
-  push: (component: Component, props?: Record<string, unknown>) => string;
+  push: (component: Component, props?: Record<string, unknown>, size?: ModalSize) => string;
   pop: () => void;
-  replace: (component: Component, props?: Record<string, unknown>) => string;
+  replace: (component: Component, props?: Record<string, unknown>, size?: ModalSize) => string;
   clear: () => void;
   remove: (id: string) => void;
 }
@@ -21,9 +24,9 @@ const genId = () => `olui-modal-${++nextId}`;
 export function useModalStack(): ModalStackApi {
   const stack = shallowRef<ModalStackEntry[]>([]);
 
-  const push = (component: Component, props?: Record<string, unknown>) => {
+  const push = (component: Component, props?: Record<string, unknown>, size?: ModalSize) => {
     const id = genId();
-    stack.value = [...stack.value, { id, component, props }];
+    stack.value = [...stack.value, { id, component, props, size }];
     return id;
   };
 
@@ -32,10 +35,10 @@ export function useModalStack(): ModalStackApi {
     stack.value = stack.value.slice(0, -1);
   };
 
-  const replace = (component: Component, props?: Record<string, unknown>) => {
+  const replace = (component: Component, props?: Record<string, unknown>, size?: ModalSize) => {
     const id = genId();
     const next = stack.value.slice(0, -1);
-    next.push({ id, component, props });
+    next.push({ id, component, props, size });
     stack.value = next;
     return id;
   };

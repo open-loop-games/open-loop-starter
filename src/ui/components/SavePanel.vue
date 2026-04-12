@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { DialogTitle } from 'reka-ui';
 import PanelLayout from '@/ui/components/PanelLayout.vue';
 import { useSave } from '@/composables/useSave';
 
@@ -41,11 +42,17 @@ function doDelete() {
 
 <template>
   <PanelLayout
-    title="Save Management"
     class="save-panel"
     data-testid="save-panel"
     @close="emit('close')"
   >
+    <template #header>
+      <DialogTitle as-child>
+        <h3 class="olui-panel__title">
+          Save Management
+        </h3>
+      </DialogTitle>
+    </template>
     <div class="actions">
       <button
         class="btn-primary"

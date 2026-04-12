@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { inject } from 'vue';
-import {
-  DialogRoot,
-  DialogPortal,
-  DialogOverlay,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  VisuallyHidden,
-} from 'reka-ui';
+import { DialogRoot, DialogPortal, DialogOverlay, DialogContent } from 'reka-ui';
 import { modalStackKey, type ModalStackApi } from './useModalStack';
+
+// Consuming modals must render their own <DialogTitle as-child><h*>…</h*></DialogTitle>
+// for screen-reader labelling. aria-describedby is opted out (undefined) so reka-ui
+// does not require a DialogDescription.
 
 const props = defineProps<{
   stack?: ModalStackApi;
@@ -37,11 +33,10 @@ const handleUpdateOpen = (id: string, open: boolean) => {
   >
     <DialogPortal>
       <DialogOverlay class="olui-modal-overlay" />
-      <DialogContent class="olui-modal-content">
-        <VisuallyHidden>
-          <DialogTitle>Dialog</DialogTitle>
-          <DialogDescription>Modal dialog</DialogDescription>
-        </VisuallyHidden>
+      <DialogContent
+        :class="['olui-modal-content', `olui-modal-content--${entry.size ?? 'md'}`]"
+        :aria-describedby="undefined"
+      >
         <component
           :is="entry.component"
           v-bind="entry.props ?? {}"
@@ -70,8 +65,21 @@ const handleUpdateOpen = (id: string, open: boolean) => {
   border-radius: var(--modal-radius);
   padding: var(--modal-padding);
   z-index: calc(var(--modal-z-base) + 1);
-  max-width: min(90vw, 600px);
+  width: min(90vw, var(--modal-content-max-md));
   max-height: 90vh;
   overflow: auto;
+}
+
+.olui-modal-content--sm {
+  width: min(90vw, var(--modal-content-max-sm));
+}
+.olui-modal-content--md {
+  width: min(90vw, var(--modal-content-max-md));
+}
+.olui-modal-content--lg {
+  width: min(90vw, var(--modal-content-max-lg));
+}
+.olui-modal-content--xl {
+  width: min(90vw, var(--modal-content-max-xl));
 }
 </style>

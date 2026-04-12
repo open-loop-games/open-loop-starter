@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DialogTitle } from 'reka-ui';
 import PanelLayout from '@/ui/components/PanelLayout.vue';
 import { useSettings } from '@/composables/useSettings';
 import { NOTATION_OPTIONS } from '@/composables/useNotation';
@@ -9,11 +10,17 @@ const settings = useSettings();
 
 <template>
   <PanelLayout
-    title="Settings"
     class="settings-panel"
     data-testid="settings-panel"
     @close="emit('close')"
   >
+    <template #header>
+      <DialogTitle as-child>
+        <h3 class="olui-panel__title">
+          Settings
+        </h3>
+      </DialogTitle>
+    </template>
     <div class="setting-group">
       <h3>Display</h3>
 

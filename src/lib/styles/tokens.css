@@ -38,6 +38,10 @@
   --modal-radius: var(--radius);
   --modal-padding: var(--gap-lg);
   --modal-z-base: 1000;
+  --modal-content-max-sm: 360px;
+  --modal-content-max-md: 500px;
+  --modal-content-max-lg: 800px;
+  --modal-content-max-xl: 1100px;
 }
 
 [data-theme='light'] {
