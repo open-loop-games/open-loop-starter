@@ -1,14 +1,21 @@
 /**
- * Gathering domain — resources, zones, actions, skills, queue, and runner.
+ * Gathering domain — resources, zones, skills, and the dispatcher-owned
+ * action surface.
  *
  * Engine systems demonstrated:
- *   - createActionCategory (batch action registration with content registry)
- *   - createSkillCategory (batch skill registration with XP bridge)
- *   - createZoneSystem (progressive zone unlocking)
- *   - createActionQueue + createActionRunner (queue-driven execution)
+ *   - createResource / createSkillCategory / createZoneSystem
+ *   - createSequencer (shared queue, automation-driven fill)
+ *   - withPersistentContext (per-def action state, namespaced saves)
+ *   - Dispatcher pattern: a named `dispatchTick` consumed by `ctx.onTick`
+ *     resolves `queue.currentItem` to a per-def handler. Today there is
+ *     exactly one content type (gathering actions), so the dispatch path
+ *     is a direct lookup. Forks that introduce a second content type add
+ *     a `metadata.type` branch here; per-type handlers move into dedicated
+ *     modules. See incloneution `src/modules/actions.ts` for the multi-type
+ *     shape.
  *
  * This is the foundation module: every other domain module depends on
- * gathering for shared resources and the action execution pipeline.
+ * gathering for shared resources and the action execution surface.
  * Skills live here (not in progression) because actions grant XP directly
  * via skills.addXP — tight coupling that would invert the dependency graph
  * if skills were in a downstream module.
@@ -18,16 +25,16 @@
  *   - progression.ts reads skills for achievement conditions
  *   - loop.ts resets resources + skills each loop cycle
  */
-import { computed, ref, type Ref } from 'vue';
+import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import {
   Decimal,
   Formula,
   createResource,
   createZoneSystem,
   createSkillCategory,
-  createActionCategory,
-  createActionQueue,
-  createActionRunner,
+  createSequencer,
+  withPersistentContext,
+  persistent,
   addResource,
   subtractResource,
   type InjectionKey,
@@ -35,11 +42,9 @@ import {
   type EngineContext,
   type Resource,
   type DecimalSource,
-  type ActionQueue,
-  type ActionRunner,
+  type Sequencer,
   type ZoneSystem,
   type SkillCategory,
-  type ActionCategory,
 } from 'open-loop-engine';
 import { useAutomation, type UseAutomationReturn } from '@/composables/useAutomation';
 
@@ -64,6 +69,36 @@ interface GatheringActionDef {
   onComplete: () => void;
 }
 
+/** Per-def persistent state for a gathering action. */
+interface GatheringActionState {
+  /** Seconds of progress accumulated against `def.duration`. Persistent. */
+  progress: ReturnType<typeof persistent<number>>;
+}
+
+/**
+ * Runtime entry exposed to UI — what the old `Action` instance used to be.
+ *
+ * The display/active/percentComplete/start/cancel surface matches the shape
+ * UI components already consume (`ActionsPanel`, `ClickerLayout`) so the
+ * dispatcher rewrite stays contained to this module.
+ */
+export interface GatheringActionEntry {
+  def: GatheringActionDef;
+  state: GatheringActionState;
+  display: { title: string };
+  active: ComputedRef<boolean>;
+  percentComplete: ComputedRef<number>;
+  start: () => void;
+  cancel: () => void;
+}
+
+/** Category shim — what sibling modules and UI see as `g.actions`. */
+export interface GatheringActions {
+  readonly size: number;
+  getAction(id: string): GatheringActionEntry | undefined;
+  getAll(): Array<{ def: GatheringActionDef; action: GatheringActionEntry }>;
+}
+
 export interface GatheringState {
   resources: {
     wood: Resource<DecimalSource>;
@@ -72,9 +107,8 @@ export interface GatheringState {
   };
   skills: SkillCategory<GatheringSkillDef>;
   zones: ZoneSystem;
-  actions: ActionCategory<GatheringActionDef>;
-  queue: ActionQueue;
-  runner: ActionRunner;
+  actions: GatheringActions;
+  queue: Sequencer;
   automation: UseAutomationReturn;
   /**
    * Yield multiplier refs — downstream modules (economy) bind these to
@@ -154,20 +188,20 @@ export const gatheringModule: EngineModule = {
       addResource(gold, base);
     }
 
-    // --- Actions (via category) -----------------------------------------------
-    // Each def carries its zone — accessible post-registration via entry.def.zone.
-    // mapAction strips zone (not an ActionOptions field) and passes the rest.
-    const actions = createActionCategory<GatheringActionDef>({
-      id: 'gathering-actions',
-      registerTick: ctx.onTick,
-      mapAction: (def) => ({
-        display: def.display,
-        duration: def.duration,
-        onComplete: def.onComplete,
-      }),
+    // --- Action queue ---------------------------------------------------------
+    // Shared Sequencer for all gathering action items. Single content type
+    // today; per-type metadata would route here in a multi-type fork.
+    const queue = createSequencer({
+      id: 'core-queue',
+      mode: 'queue',
     });
 
-    actions.register([
+    // --- Action defs + per-def persistent state -------------------------------
+    // Each def lives in a plain Map; per-def progress gets its own nested
+    // persistent context so saves stay namespaced per action. The outer
+    // `gathering` context is already active — the engine wraps install() in
+    // withPersistentContext using the module id.
+    const defs: GatheringActionDef[] = [
       {
         id: 'gather-sticks',
         display: 'Gather Sticks',
@@ -230,17 +264,57 @@ export const gatheringModule: EngineModule = {
           }
         },
       },
-    ]);
+    ];
 
-    // --- Action queue + automation tiers -------------------------------------
+    const entries = new Map<string, GatheringActionEntry>();
+
+    for (const def of defs) {
+      const state = withPersistentContext(`gathering-actions:${def.id}`, () => ({
+        progress: persistent<number>(0, { name: 'progress' }),
+      }));
+
+      const active = computed(() => queue.currentItem?.id === def.id);
+      const percentComplete = computed(() =>
+        Math.min(1, Math.max(0, state.progress.value / def.duration)),
+      );
+
+      entries.set(def.id, {
+        def,
+        state,
+        display: { title: def.display },
+        active,
+        percentComplete,
+        start() {
+          queue.enqueue({ id: def.id, metadata: undefined });
+        },
+        cancel() {
+          if (queue.currentItem?.id === def.id) {
+            state.progress.value = 0;
+            queue.cancel();
+            return;
+          }
+          const idx = queue.items.value.findIndex((it) => it.id === def.id);
+          if (idx >= 0) queue.remove(idx);
+        },
+      });
+    }
+
+    const actions: GatheringActions = {
+      get size() {
+        return entries.size;
+      },
+      getAction(id) {
+        return entries.get(id);
+      },
+      getAll() {
+        return Array.from(entries.values(), (action) => ({ def: action.def, action }));
+      },
+    };
+
+    // --- Automation tiers -----------------------------------------------------
     // Tiers unlock as the player earns achievements. The earned count comes
     // from progression.ts which writes to earnedAchievementCount after install.
     const earnedCount = computed(() => earnedAchievementCount.value);
-
-    const queue = createActionQueue({
-      id: 'core-queue',
-      mode: 'queue',
-    });
 
     const automation = useAutomation({
       id: 'core-automation',
@@ -274,13 +348,30 @@ export const gatheringModule: EngineModule = {
 
     queue.fillStrategy = automation.strategy;
 
-    const runner = createActionRunner({
-      queue,
-      getAction: (item) => actions.getAction(item.id),
-      registerTick: ctx.onTick,
-    });
+    // --- Dispatcher -----------------------------------------------------------
+    // Single content type today. A multi-type fork adds a switch on
+    // `metadata.type` here (or extracts per-type handlers into sibling
+    // modules, the incloneution pattern).
+    function dispatchTick(dt: number) {
+      const current = queue.currentItem;
+      if (!current) return;
+      const entry = entries.get(current.id);
+      if (!entry) {
+        // Orphaned queue item (def was removed) — drop it so the queue
+        // can advance instead of stalling forever.
+        queue.complete();
+        return;
+      }
 
-    // --- Zone unlock + auto-fill tick ----------------------------------------
+      entry.state.progress.value += dt;
+      if (entry.state.progress.value >= entry.def.duration) {
+        entry.def.onComplete();
+        entry.state.progress.value = 0;
+        queue.complete();
+      }
+    }
+
+    // --- Zone unlock + dispatch + auto-fill tick -----------------------------
     ctx.onTick((dt) => {
       queue.resetAdvanceCount();
 
@@ -293,6 +384,8 @@ export const gatheringModule: EngineModule = {
           zones.unlock('quarry');
         }
       }
+
+      dispatchTick(dt);
 
       // Pull from fill strategy when idle
       if (
@@ -311,7 +404,6 @@ export const gatheringModule: EngineModule = {
       zones,
       actions,
       queue,
-      runner,
       automation,
       woodYieldMult,
       stoneYieldMult,

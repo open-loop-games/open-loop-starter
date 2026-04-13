@@ -104,7 +104,7 @@ Extraction to a real shared library is deferred until multiple independent game 
 
 **Must:**
 - All game quantities use `Decimal` from `open-loop-engine`
-- Declare engine state inside `beginPersistentContext` / `endPersistentContext` in `install(ctx)`
+- Declare engine state inside `withPersistentContext(id, () => ({ ... }))` in `install(ctx)` — or use bare `persistent()` calls when the module context is already active (the engine wraps `install()` in its own `withPersistentContext`)
 - Use `src/lib/` shells and frame for layout — don't hand-roll
 - Theme by setting CSS variables, not by writing component-level styles
 - Type all public component props and composable APIs explicitly

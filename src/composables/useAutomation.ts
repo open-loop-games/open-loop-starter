@@ -51,7 +51,7 @@ import {
   type AutomationTierDef,
   type ConditionalRule,
   type FillStrategy,
-  type QueueItem,
+  type SequencerItem,
   type Throttle,
 } from 'open-loop-engine';
 
@@ -94,7 +94,7 @@ export interface UseAutomationOptions<M = void> {
    * Returns priority candidates for the queue fill.
    * Only active when {@link priorityTier} is reached.
    */
-  getCandidates?: () => (QueueItem<M> & { priority: number })[];
+  getCandidates?: () => (SequencerItem<M> & { priority: number })[];
 
   /**
    * Interval in seconds for the auto-buy throttle.
