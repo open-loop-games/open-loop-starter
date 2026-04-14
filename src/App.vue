@@ -2,7 +2,7 @@
 import { ref, provide, watchEffect } from 'vue';
 import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-engine';
 import { Screen } from '@/types';
-import { baseModules, modDefs } from '@/modules';
+import { modDefs } from '@/modules';
 import { SettingsKey } from '@/modules/settings';
 import { GatheringKey } from '@/modules/gathering';
 import { useTheme } from '@/composables/useTheme';
@@ -21,10 +21,6 @@ const engine = createEngine({
   autoSaveInterval: 60000,
   mods: modDefs,
 });
-
-for (const mod of baseModules) {
-  engine.use(mod);
-}
 
 useSaveEvents(engine.saveManager!);
 
