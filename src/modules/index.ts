@@ -9,6 +9,8 @@ import { prestigeModule } from './mods/prestige';
 import { merchantModule } from './mods/merchant';
 import { clickerModule } from './mods/clicker';
 import { challengesModule } from './mods/challenges';
+import { cookieFactoryModule } from './mods/cookie-factory';
+import { ccAuthenticModule } from './mods/cc-authentic';
 
 const sharedBase = [settingsModule, uiRegistryModule];
 const villageContent = [gatheringModule, progressionModule, economyModule];
@@ -51,4 +53,23 @@ export const modDefs: ModDef[] = [
       'A different game from the same core: no loop, no mana. Producers and upgrades only, reframed as a big-button clicker.',
     modules: [...sharedBase, ...villageContent, clickerModule],
   },
+  {
+    id: 'cookie-factory',
+    name: 'Cookie Factory',
+    description:
+      'Total-conversion archetype: a self-contained idle producer. Single cookies resource, 7 producer tiers, scaling upgrades, milestone achievements. No loop, no village content.',
+    modules: [...sharedBase, cookieFactoryModule],
+  },
 ];
+
+// Dev-only calibration fixture. The push is tree-shaken out of prod builds
+// because `import.meta.env.DEV` is a Vite compile-time constant.
+if (import.meta.env.DEV) {
+  modDefs.push({
+    id: 'cc-authentic',
+    name: 'CC Authentic (dev)',
+    description:
+      'Calibration fixture: exact Cookie Clicker constants on top of the Cookie Factory wiring. Dev builds only.',
+    modules: [...sharedBase, ccAuthenticModule],
+  });
+}
