@@ -1,6 +1,6 @@
 import { watchEffect } from 'vue';
-import { notationManager, Presets } from 'open-loop-engine';
-import { useSettings } from './useSettings';
+import { notationManager, Presets, type Engine } from 'open-loop-engine';
+import { SettingsKey } from '@/modules/settings';
 
 /** Curated notation options for the settings picker */
 export const NOTATION_OPTIONS = [
@@ -16,8 +16,8 @@ export const NOTATION_OPTIONS = [
  * Registers extra eternal presets and syncs the active notation to the setting.
  * Call once after engine start.
  */
-export function useNotation() {
-  const settings = useSettings();
+export function useNotation(engine: Engine) {
+  const settings = engine.tryInject(SettingsKey)!.settings;
 
   // Register presets beyond the 3 defaults (standard, scientific, engineering)
   notationManager.register('logarithm', Presets.Logarithm);

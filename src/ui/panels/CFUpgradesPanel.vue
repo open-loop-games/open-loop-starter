@@ -28,9 +28,9 @@ function buy(p: Purchasable) {
           </span>
         </div>
         <button
+          v-hold-repeat="() => buy(up)"
           class="btn-sm"
           :disabled="!up.canPurchase.value"
-          @click="buy(up)"
         >
           <template v-if="up.maxed.value">
             Maxed

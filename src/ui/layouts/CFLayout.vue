@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal, format } from 'open-loop-engine';
+import { Decimal, addResource, format } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { CookieFactoryKey } from '@/modules/mods/cookie-factory';
 import CFProducersPanel from '@/ui/panels/CFProducersPanel.vue';
@@ -11,13 +11,11 @@ const cf = useModule(CookieFactoryKey);
 
 const cookies = computed(() => format(Decimal.floor(cf.cookies.value)));
 
-const totalCps = computed(() => {
-  let total = Decimal.dZero;
-  for (const entry of cf.producers.getAll()) {
-    total = Decimal.add(total, entry.producer.computedRate.value);
-  }
-  return format(total);
-});
+const totalCps = computed(() => format(cf.producers.getTotalRate(cf.cookies)));
+
+function clickCookie() {
+  addResource(cf.cookies, 1);
+}
 </script>
 
 <template>
@@ -30,6 +28,15 @@ const totalCps = computed(() => {
         {{ totalCps }}/s
       </div>
     </header>
+
+    <button
+      v-hold-repeat="clickCookie"
+      class="big-cookie"
+      type="button"
+      aria-label="Bake a cookie"
+    >
+      🍪
+    </button>
 
     <div class="grid-2">
       <CFProducersPanel />
@@ -70,6 +77,19 @@ const totalCps = computed(() => {
 .chip.muted {
   color: var(--color-text-muted);
 }
+.big-cookie {
+  align-self: center;
+  font-size: 5rem;
+  line-height: 1;
+  padding: var(--gap);
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.05s ease-out;
+}
+.big-cookie:hover { transform: scale(1.03); }
+.big-cookie:active { transform: scale(0.94); }
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

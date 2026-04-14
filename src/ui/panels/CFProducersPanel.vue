@@ -30,7 +30,7 @@ function buy(id: string) {
           <span class="name">{{ entry.def.name }}</span>
           <span class="desc">{{ entry.def.description }}</span>
           <span class="rate">
-            {{ format(entry.producer.computedRate.value) }}/s
+            {{ format(Decimal.mul(entry.producer.computedRate.value, entry.producer.count.value)) }}/s
           </span>
           <span class="count">
             Owned: {{ format(Decimal.floor(entry.producer.count.value)) }}
@@ -38,9 +38,9 @@ function buy(id: string) {
         </div>
         <button
           v-if="entry.producer.repeatable"
+          v-hold-repeat="() => buy(entry.def.id)"
           class="btn-sm"
           :disabled="!entry.producer.repeatable.canPurchase.value"
-          @click="buy(entry.def.id)"
         >
           Buy
           <span class="cost">

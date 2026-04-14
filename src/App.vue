@@ -36,8 +36,8 @@ function startGame(slotId: number, modId?: string) {
   engine.start();
 
   // Wire up composables that depend on engine being started
-  useTheme();
-  useNotation();
+  useTheme(engine);
+  useNotation(engine);
 
   // Confirm on close
   const settingsState = engine.tryInject(SettingsKey);
