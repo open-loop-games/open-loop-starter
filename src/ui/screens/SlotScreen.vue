@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import type { Engine } from 'open-loop-engine';
 import { useSlots } from '@/composables/useSlots';
 import SlotCard from '@/ui/components/SlotCard.vue';
@@ -17,8 +17,16 @@ const mgr = props.engine.saveManager!;
 const { slots, createSlot, deleteSlot, selectSlot, getModName, formatTimestamp, activeSlotId } =
   useSlots(mgr, props.engine.mods);
 
-const showModPicker = ref(false);
 const hasMods = props.engine.mods.length > 0;
+
+// Only show slots that have actual save data — the engine always creates a
+// default slot 0 "Autosave" as a placeholder, but we don't surface it until
+// the user has actually saved there.
+const savedSlots = computed(() => slots.value.filter((s) => s.peek !== null));
+
+// On first launch (no real saves) with mods, skip the empty slot list and go
+// straight to the mod picker.
+const showModPicker = ref(savedSlots.value.length === 0 && hasMods);
 
 function loadSlot(slotId: number) {
   selectSlot(slotId);
@@ -76,7 +84,7 @@ function handleDeleteSlot(slotId: number) {
     >
       <div class="slot-list">
         <SlotCard
-          v-for="s in slots"
+          v-for="s in savedSlots"
           :key="s.id"
           :info="s"
           :active="s.id === activeSlotId"
