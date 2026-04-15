@@ -1,13 +1,11 @@
 /**
- * Shared helpers for the time-to-beat dual-entry tests. The CF and
- * cc-authentic fixtures live in separate test files because persistent
- * contexts are process-global and booting both in one worker collides;
- * vitest's default per-file isolation gives each fixture a clean process.
+ * Shared helpers for the time-to-beat dual-entry tests. Fixtures live in
+ * separate test files per vitest file-isolation convention.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Decimal } from 'open-loop-engine';
 import { calculateBeatTiming } from 'open-loop-sim';
-import { reset, tick } from '@/test/harness';
+import { reset, type CFBoot } from '@/test/cookie-factory/accessors';
 import type {
   CFProducerDef,
   CFUpgradeDef,
@@ -49,7 +47,7 @@ export function stackedRate(
 
 export interface Fixture {
   name: string;
-  boot: () => CookieFactoryState;
+  boot: () => CFBoot;
   producerDefs: CFProducerDef[];
   upgradeDefs: CFUpgradeDef[];
   achievementDefs: CFAchievementDef[];
@@ -57,10 +55,12 @@ export interface Fixture {
 
 export function runTimeToBeatSuite(fixture: Fixture): void {
   describe(`time-to-beat dual-entry — ${fixture.name}`, () => {
+    let boot: CFBoot;
     let state: CookieFactoryState;
 
     beforeAll(() => {
-      state = fixture.boot();
+      boot = fixture.boot();
+      state = boot.state;
     });
 
     beforeEach(() => {
@@ -81,7 +81,7 @@ export function runTimeToBeatSuite(fixture: Fixture): void {
 
           // Tick once so achievement watchers flush — global cookie-total
           // and per-producer thresholds earn reactively, not synchronously.
-          await tick(1);
+          await boot.handle.tick(1);
 
           const live = entry.producer.purchaseBeatSeconds.value;
           const closed = calculateBeatTiming({

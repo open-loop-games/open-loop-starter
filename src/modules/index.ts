@@ -11,6 +11,7 @@ import { clickerModule } from './mods/clicker';
 import { challengesModule } from './mods/challenges';
 import { cookieFactoryModule } from './mods/cookie-factory';
 import { ccAuthenticModule } from './mods/cc-authentic';
+import { benchmarkModule } from './mods/benchmark';
 
 const sharedBase = [settingsModule, uiRegistryModule];
 const villageContent = [gatheringModule, progressionModule, economyModule];
@@ -62,8 +63,8 @@ export const modDefs: ModDef[] = [
   },
 ];
 
-// Dev-only calibration fixture. The push is tree-shaken out of prod builds
-// because `import.meta.env.DEV` is a Vite compile-time constant.
+// Dev-only entries. Each `push` is tree-shaken out of prod builds because
+// `import.meta.env.DEV` is a Vite compile-time constant.
 if (import.meta.env.DEV) {
   modDefs.push({
     id: 'cc-authentic',
@@ -71,5 +72,12 @@ if (import.meta.env.DEV) {
     description:
       'Calibration fixture: exact Cookie Clicker constants on top of the Cookie Factory wiring. Dev builds only.',
     modules: [...sharedBase, ccAuthenticModule],
+  });
+  modDefs.push({
+    id: 'benchmark',
+    name: 'Benchmark Harness (dev)',
+    description:
+      'Runs runMatrix against stock Cookie Factory and reports ms/tick. Shell for the perf-budget snapshot. Dev builds only.',
+    modules: [...sharedBase, benchmarkModule],
   });
 }

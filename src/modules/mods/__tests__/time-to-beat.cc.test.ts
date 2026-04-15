@@ -1,11 +1,11 @@
 /**
  * Engine-vs-sim dual-entry correctness — cc-authentic fixture (OL-426).
  *
- * Sibling of time-to-beat.test.ts. Split into its own file because both
- * fixtures install the Cookie Factory content wiring in process-global
- * persistent contexts, so they can't co-exist in one vitest worker.
+ * Sibling of time-to-beat.test.ts. Kept in its own file per vitest
+ * convention, though with namespaced `bootMod` handles the two fixtures
+ * could also coexist in one worker.
  */
-import { bootCC } from '@/test/harness';
+import { bootCC } from '@/test/cookie-factory/accessors';
 import {
   producers,
   upgrades,

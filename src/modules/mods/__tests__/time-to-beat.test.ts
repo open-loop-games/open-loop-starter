@@ -14,7 +14,7 @@
  * Must-not: open-loop-sim stays a dev dep. This file is a test file, so
  * the import is fine — the production Vite graph never pulls it in.
  */
-import { bootCF } from '@/test/harness';
+import { bootCF } from '@/test/cookie-factory/accessors';
 import {
   producers,
   upgrades,

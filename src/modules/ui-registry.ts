@@ -20,8 +20,22 @@ export type SlotId =
 
 const slots = shallowReactive<Partial<Record<SlotId, Component>>>({});
 
+/**
+ * When false, `setSlot` silently drops writes. Used by the benchmark
+ * runner to prevent inner-engine installs from mutating the outer app's
+ * slot registry during async measurement loops — an async run can't rely
+ * on Vue batching across `await nextTick()` points, so snapshot+restore
+ * doesn't work the way it would for a fully-sync mutation.
+ */
+let writesEnabled = true;
+
 export function setSlot(id: SlotId, component: Component): void {
+  if (!writesEnabled) return;
   slots[id] = markRaw(component);
+}
+
+export function setSlotWritesEnabled(enabled: boolean): void {
+  writesEnabled = enabled;
 }
 
 export function getSlot(id: SlotId): Component | undefined {
