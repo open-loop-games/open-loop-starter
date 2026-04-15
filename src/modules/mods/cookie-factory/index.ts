@@ -18,6 +18,9 @@ import {
   createModifierChain,
   createMultiplicativeModifier,
   additiveEffect,
+  persistent,
+  setupAutoPurchase,
+  setupAutoPurchaseProducers,
   type InjectionKey,
   type EngineModule,
   type EngineContext,
@@ -28,6 +31,7 @@ import {
   type AchievementCategory,
   type ModifierChain,
 } from 'open-loop-engine';
+import type { Persistent } from 'open-loop-engine';
 import { setSlot } from '@/modules/ui-registry';
 import CFLayout from '@/ui/layouts/CFLayout.vue';
 import {
@@ -46,6 +50,8 @@ export interface CookieFactoryState {
   achievements: AchievementCategory<CFAchievementDef>;
   /** Surface-wide chain — prestige/other follow-ups can push onto this. */
   productionChain: ModifierChain;
+  autoBuyProducers: Persistent<boolean>;
+  autoBuyUpgrades: Persistent<boolean>;
 }
 
 export const CookieFactoryKey: InjectionKey<CookieFactoryState> =
@@ -156,12 +162,23 @@ export function installCookieFactoryContent(
     }
   }
 
+  // Auto-buy toggles exposed as real player-facing features. Defaults
+  // (interval 0 / bulkAmount 1 / policy 'cheapest') match the engine's
+  // own defaults; wiring interval/bulk/policy to upgrades is a future
+  // CF-content concern, not part of this scaffold.
+  const autoBuyProducers = persistent<boolean>(false);
+  const autoBuyUpgrades = persistent<boolean>(false);
+  setupAutoPurchaseProducers(producers, { enabled: autoBuyProducers }, ctx.onTick);
+  setupAutoPurchase(upgradePurchasables, autoBuyUpgrades, ctx.onTick);
+
   const state: CookieFactoryState = {
     cookies,
     producers,
     upgrades: upgradePurchasables,
     achievements,
     productionChain,
+    autoBuyProducers,
+    autoBuyUpgrades,
   };
   ctx.provide(CookieFactoryKey, state);
   setSlot('game-layout', CFLayout);

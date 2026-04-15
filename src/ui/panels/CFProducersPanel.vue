@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal, format } from 'open-loop-engine';
+import { Decimal, format, classifyFlowChannel } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { CookieFactoryKey } from '@/modules/mods/cookie-factory';
+import { formatPurchaseBeat } from '@/composables/useFormatting';
 
 const cf = useModule(CookieFactoryKey);
 
@@ -34,6 +35,15 @@ function buy(id: string) {
           </span>
           <span class="count">
             Owned: {{ format(Decimal.floor(entry.producer.count.value)) }}
+          </span>
+          <span class="beat">
+            {{ formatPurchaseBeat(entry.producer.purchaseBeatSeconds.value) }}
+          </span>
+          <span
+            class="channel"
+            :data-channel="classifyFlowChannel(entry.producer.purchaseBeatSeconds.value)"
+          >
+            {{ classifyFlowChannel(entry.producer.purchaseBeatSeconds.value) }}
           </span>
         </div>
         <button
@@ -81,9 +91,15 @@ function buy(id: string) {
 }
 .desc,
 .rate,
-.count {
+.count,
+.beat,
+.channel {
   font-size: 0.8em;
   color: var(--color-text-muted);
+}
+.channel {
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
 }
 .cost {
   font-size: 0.8em;

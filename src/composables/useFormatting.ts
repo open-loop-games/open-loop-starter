@@ -48,6 +48,22 @@ export function formatPow(exponent: DecimalSource, precision = 2): string {
 }
 
 /**
+ * Purchase-beat display with a 1/sec-threshold flip, mirroring the
+ * validated pattern from incloneution's tooltip helpers. Infinite or
+ * NaN beats collapse to a shared "unaffordable" label — callers that
+ * care about the distinction should check the value themselves.
+ */
+export function formatPurchaseBeat(seconds: number): string {
+  if (!Number.isFinite(seconds)) return 'unaffordable';
+  if (seconds <= 0) return 'instant';
+  if (seconds < 1) {
+    const perSec = 1 / seconds;
+    return `${formatSmall(perSec, 1)}/s`;
+  }
+  return `next in ${formatTime(seconds)}`;
+}
+
+/**
  * Thin composable exposing engine formatters plus a handful of small helpers
  * validated across incremental game reference codebases.
  */
@@ -64,5 +80,6 @@ export function useFormatting() {
     formatPlus,
     formatGain,
     formatPow,
+    formatPurchaseBeat,
   };
 }

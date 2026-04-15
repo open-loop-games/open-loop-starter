@@ -27,6 +27,20 @@ function clickCookie() {
       <div class="chip muted">
         {{ totalCps }}/s
       </div>
+      <label class="chip toggle">
+        <input
+          v-model="cf.autoBuyProducers.value"
+          type="checkbox"
+        >
+        Auto producers
+      </label>
+      <label class="chip toggle">
+        <input
+          v-model="cf.autoBuyUpgrades.value"
+          type="checkbox"
+        >
+        Auto upgrades
+      </label>
     </header>
 
     <button
@@ -76,6 +90,18 @@ function clickCookie() {
 }
 .chip.muted {
   color: var(--color-text-muted);
+}
+.chip.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+}
+.chip.toggle input {
+  margin: 0;
 }
 .big-cookie {
   align-self: center;

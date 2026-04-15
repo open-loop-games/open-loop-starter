@@ -1,0 +1,31 @@
+/**
+ * Engine-vs-sim dual-entry correctness — Cookie Factory fixture.
+ *
+ * Asserts the engine's live `producer.purchaseBeatSeconds` matches the
+ * closed-form `calculateBeatTiming` from open-loop-sim across every
+ * (producer × owned) sample. Both sides compute `Cost(n) / Production(n)`
+ * with break_eternity, so divergence should be rounding noise — the
+ * 1e-6 relative band catches any real drift (OL-426).
+ *
+ * The cc-authentic fixture lives in time-to-beat.cc.test.ts because
+ * persistent contexts are process-global and vitest isolates workers
+ * per file by default.
+ *
+ * Must-not: open-loop-sim stays a dev dep. This file is a test file, so
+ * the import is fine — the production Vite graph never pulls it in.
+ */
+import { bootCF } from '@/test/harness';
+import {
+  producers,
+  upgrades,
+  achievements,
+} from '@/modules/mods/cookie-factory/content';
+import { runTimeToBeatSuite } from './time-to-beat-helpers';
+
+runTimeToBeatSuite({
+  name: 'Cookie Factory',
+  boot: bootCF,
+  producerDefs: producers,
+  upgradeDefs: upgrades,
+  achievementDefs: achievements,
+});
