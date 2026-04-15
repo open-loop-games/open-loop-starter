@@ -38,6 +38,7 @@ src/
 │   ├── shells/       # 5 layout shells validated by the 42-game spray
 │   ├── frame/        # AppFrame: header + shell + modal stack + toasts + theme
 │   ├── modal/        # useModalStack composable + ModalStack mount (reka-ui Dialog)
+│   ├── dev/          # DevPanelOverlay — presentational fullscreen dev surface
 │   ├── styles/       # tokens.css (default CSS custom properties) + reset.css
 │   └── index.ts      # Barrel — import via '@/lib'
 ├── modules/
@@ -91,9 +92,41 @@ Rules that apply inside `src/lib/`, and that forks should carry forward by defau
 1. **Styling: CSS custom properties only.** No Tailwind, no shadcn-vue. Theme by variable override.
 2. **Behavioral primitives via reka-ui.** a11y, focus trap, portal, positioning come from reka-ui. `src/lib/` layers classes and custom-property defaults on top; it never reimplements the behavior.
 3. **Presentational only.** No engine imports. `src/ui/` owns engine bridging via composables.
-4. **What lives here.** Shells (5 validated layout patterns), AppFrame (header + shell + modal + theme glue), `useModalStack` + `ModalStack`, `styles/tokens.css`, `styles/reset.css`. Widget components — PanelLayout, Tooltip, Popover, ProgressBar, and future additions — live in `src/ui/components/` alongside game components, not here. The cut line: `src/lib/` owns layout and cross-cutting surfaces (modals, theme root); concrete widgets are scaffold components forks adapt in place.
+4. **What lives here.** Shells (5 validated layout patterns), AppFrame (header + shell + modal + theme glue), `useModalStack` + `ModalStack`, `DevPanelOverlay` (fullscreen dev surface), `styles/tokens.css`, `styles/reset.css`. Widget components — PanelLayout, Tooltip, Popover, ProgressBar, and future additions — live in `src/ui/components/` alongside game components, not here. The cut line: `src/lib/` owns layout and cross-cutting surfaces (modals, theme root); concrete widgets are scaffold components forks adapt in place.
 
 Extraction to a real shared library is deferred until multiple independent game UI passes converge on the same shape. Don't pre-extract against a single consumer.
+
+## Dev overlay
+
+`src/lib/dev/DevPanelOverlay.vue` is a presentational fullscreen overlay (toolbar + content slot, ESC to close). It ships unmounted — base starter does not wire a dev panel into `App.vue`. Forks opt in by mounting it themselves, gated by their own dev flag.
+
+`src/ui/panels/BalanceWorkbench.vue` is the canonical content screen: a picker + perturbation form + delta table wired through `useBalanceWorkbench` onto `open-loop-engine/harness`. It's engine-aware and lives in the engine-bridged `src/ui/` layer.
+
+Typical fork wiring in `App.vue`:
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
+import { DevPanelOverlay } from '@/lib';
+import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
+import { engine } from './main';
+import { allModules } from './modules';
+
+const showDevPanel = ref(false);
+const onKey = (e: KeyboardEvent) => { if (e.key === 'F12') { e.preventDefault(); showDevPanel.value = !showDevPanel.value; } };
+onMounted(() => window.addEventListener('keydown', onKey));
+onUnmounted(() => window.removeEventListener('keydown', onKey));
+</script>
+
+<template>
+  <AppFrame>…</AppFrame>
+  <DevPanelOverlay v-if="showDevPanel" title="Balance Workbench" @close="showDevPanel = false">
+    <BalanceWorkbench :engine="engine" :modules="() => allModules" />
+  </DevPanelOverlay>
+</template>
+```
+
+The overlay is a top-level sibling of `AppFrame`, not pushed through `useModalStack` — it owns its own fullscreen chrome and doesn't need the modal stack's Dialog wrapping.
 
 ## Code Rules
 
