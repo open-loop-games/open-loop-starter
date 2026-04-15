@@ -1,7 +1,7 @@
 /**
  * Static pacing check — OL-425 Phase 1 deliverable.
  *
- * Feeds CF and cc-authentic constant tables through open-loop-sim's
+ * Feeds CF and cc-authentic constant tables through the engine's
  * `calculateBeatTiming` and asserts the implied beats fall in an acceptable
  * flow-channel band. No engine boot: this is a pure-math check that locks
  * pacing.ts's role shift from solver → checker.
@@ -11,17 +11,13 @@
  * final-state multipliers after all upgrades are applied, which isn't the
  * same signal. Walking the constant tables statically gives the right
  * snapshot.
- *
- * Must-not: open-loop-sim stays a *dev* dep. The only import site for
- * pacing symbols is this test file. Production Vite builds must not pull
- * any pacing code into dist/.
  */
 import { describe, it, expect } from 'vitest';
 import {
   calculateBeatTiming,
   classifyFlowChannel,
   type FlowChannel,
-} from 'open-loop-sim';
+} from 'open-loop-engine';
 import {
   producers as cfProducers,
   upgrades as cfUpgrades,

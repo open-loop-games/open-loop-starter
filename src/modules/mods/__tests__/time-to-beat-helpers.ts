@@ -3,8 +3,7 @@
  * separate test files per vitest file-isolation convention.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { Decimal } from 'open-loop-engine';
-import { calculateBeatTiming } from 'open-loop-sim';
+import { Decimal, calculateBeatTiming } from 'open-loop-engine';
 import { reset, type CFBoot } from '@/test/cookie-factory/accessors';
 import type {
   CFProducerDef,
