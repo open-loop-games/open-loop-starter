@@ -14,12 +14,14 @@ const DELAY_MS = 400;
 const INTERVAL_MS = 60;
 
 interface HoldState {
+  setHandler: (fn: () => void) => void;
   teardown: () => void;
 }
 
 const stateMap = new WeakMap<HTMLElement, HoldState>();
 
 function attach(el: HTMLElement, fn: () => void): HoldState {
+  let handler = fn;
   let delayTimer: ReturnType<typeof setTimeout> | null = null;
   let repeatTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -37,9 +39,11 @@ function attach(el: HTMLElement, fn: () => void): HoldState {
   const onPointerdown = (e: PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     el.setPointerCapture?.(e.pointerId);
-    fn();
+    handler();
     delayTimer = setTimeout(() => {
-      repeatTimer = setInterval(fn, INTERVAL_MS);
+      repeatTimer = setInterval(() => {
+        handler();
+      }, INTERVAL_MS);
     }, DELAY_MS);
   };
 
@@ -47,7 +51,7 @@ function attach(el: HTMLElement, fn: () => void): HoldState {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     if (e.repeat) return;
     e.preventDefault();
-    fn();
+    handler();
   };
 
   el.addEventListener('pointerdown', onPointerdown);
@@ -57,6 +61,9 @@ function attach(el: HTMLElement, fn: () => void): HoldState {
   el.addEventListener('keydown', onKeydown);
 
   return {
+    setHandler: (nextFn) => {
+      handler = nextFn;
+    },
     teardown: () => {
       stop();
       el.removeEventListener('pointerdown', onPointerdown);
@@ -73,9 +80,7 @@ export const vHoldRepeat: Directive<HTMLElement, () => void> = {
     stateMap.set(el, attach(el, binding.value));
   },
   updated(el, binding) {
-    if (binding.value === binding.oldValue) return;
-    stateMap.get(el)?.teardown();
-    stateMap.set(el, attach(el, binding.value));
+    stateMap.get(el)?.setHandler(binding.value);
   },
   unmounted(el) {
     stateMap.get(el)?.teardown();
