@@ -66,13 +66,8 @@ export function runTimeToBeatSuite(fixture: Fixture): void {
     beforeEach(() => {
       reset(state);
       state.cookies.value = Decimal.fromNumber(1e308);
-      // Drive every upgrade to its declared limit. purchaseMax() stopped
-      // one short in spot-checks (amountToPurchase seems to return
-      // limit - amount - 1 for some limit interpretations), so write the
-      // backing amount directly — the scalingAmount watcher syncs sync
-      // and the effect computed re-reads on next access.
       for (const up of state.upgrades) {
-        up.amount.value = up.limit;
+        up.purchaseMax();
       }
     });
 
