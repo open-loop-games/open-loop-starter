@@ -16,6 +16,7 @@
   both.
 -->
 <script setup lang="ts">
+import { ref } from 'vue';
 import {
   TooltipProvider,
   TooltipRoot,
@@ -33,15 +34,17 @@ withDefaults(
   }>(),
   { delay: 400, side: 'top', sideOffset: 4, disabled: false },
 );
+
+const isOpen = ref(false);
 </script>
 
 <template>
   <TooltipProvider :delay-duration="delay">
-    <TooltipRoot :disabled="disabled">
+    <TooltipRoot v-model:open="isOpen" :disabled="disabled">
       <TooltipTrigger as-child>
         <slot />
       </TooltipTrigger>
-      <TooltipPortal>
+      <TooltipPortal v-if="isOpen">
         <TooltipContent
           class="olui-tooltip__content"
           :side="side"
