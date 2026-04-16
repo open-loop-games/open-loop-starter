@@ -1,9 +1,7 @@
 import type { ModDef } from 'open-loop-engine';
 import { settingsModule } from './settings';
 import { uiRegistryModule } from './ui-registry';
-import { gatheringModule } from './gathering';
-import { progressionModule } from './progression';
-import { economyModule } from './economy';
+import { villageGathererModule } from './village-gatherer';
 import { loopModule } from './mods/loop';
 import { prestigeModule } from './mods/prestige';
 import { merchantModule } from './mods/merchant';
@@ -14,7 +12,6 @@ import { ccAuthenticModule } from './mods/cc-authentic';
 import { benchmarkModule } from './mods/benchmark';
 
 const sharedBase = [settingsModule, uiRegistryModule];
-const villageContent = [gatheringModule, progressionModule, economyModule];
 
 /** Selectable game variants. Each carries its full module set — not a tail. */
 export const modDefs: ModDef[] = [
@@ -24,35 +21,35 @@ export const modDefs: ModDef[] = [
     description:
       'The baseline village gatherer: 3 zones, 6 actions, producers, upgrades, achievements. Uses a mana-drained loop with skill retention.',
     recommended: true,
-    modules: [...sharedBase, ...villageContent, loopModule],
+    modules: [...sharedBase, ...villageGathererModule, loopModule],
   },
   {
     id: 'prestige',
     name: 'Prestige Run',
     description:
       'Vanilla plus a Renown meta-currency. Convert gold → renown to reset your run; each renown adds +10% to every producer.',
-    modules: [...sharedBase, ...villageContent, loopModule, prestigeModule],
+    modules: [...sharedBase, ...villageGathererModule, loopModule, prestigeModule],
   },
   {
     id: 'merchant',
     name: "Merchant's Ledger",
     description:
       'Vanilla plus a 20-slot trinket inventory and buy/sell trading. The game screen is reskinned as a shopkeeper ledger.',
-    modules: [...sharedBase, ...villageContent, loopModule, merchantModule],
+    modules: [...sharedBase, ...villageGathererModule, loopModule, merchantModule],
   },
   {
     id: 'challenges',
     name: 'Challenges',
     description:
       'Vanilla plus 3 challenge variants that restrict gameplay for permanent rewards. Demonstrates challenge-category + reset integration.',
-    modules: [...sharedBase, ...villageContent, loopModule, challengesModule],
+    modules: [...sharedBase, ...villageGathererModule, loopModule, challengesModule],
   },
   {
     id: 'clicker',
     name: 'Clicker',
     description:
       'A different game from the same core: no loop, no mana. Producers and upgrades only, reframed as a big-button clicker.',
-    modules: [...sharedBase, ...villageContent, clickerModule],
+    modules: [...sharedBase, ...villageGathererModule, clickerModule],
   },
   {
     id: 'cookie-factory',
