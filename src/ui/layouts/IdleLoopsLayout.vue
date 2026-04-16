@@ -4,6 +4,8 @@ import { Decimal, format } from 'open-loop-engine';
 import { MultiColumnShell } from '@/lib';
 import { useModule } from '@/composables/useModule';
 import { IdleLoopsKey } from '@/modules/mods/idle-loops';
+import HudBar from '@/ui/components/HudBar.vue';
+import HudChip from '@/ui/components/HudChip.vue';
 import ILQueueDisplay from '@/ui/panels/ILQueueDisplay.vue';
 import ILBestOfPanel from '@/ui/panels/ILBestOfPanel.vue';
 import ILRecommendationPanel from '@/ui/panels/ILRecommendationPanel.vue';
@@ -35,28 +37,28 @@ const statEntries = computed(() =>
 
 <template>
   <div class="il-layout">
-    <header class="il-hud">
-      <div class="il-chip">
+    <HudBar>
+      <HudChip>
         Loop #{{ loopCount }}
-      </div>
-      <div class="il-chip il-mana">
-        Mana: {{ manaDisplay }}
+      </HudChip>
+      <div class="il-mana-chip">
+        <span>Mana: {{ manaDisplay }}</span>
         <div
           class="il-mana-bar"
           :style="{ width: manaPercent + '%' }"
         />
       </div>
       <div class="il-stats">
-        <span
+        <HudChip
           v-for="s in statEntries"
           :key="s.id"
-          class="il-stat-chip"
+          variant="stat"
           :title="`${s.name} (+${s.permanentBonus} permanent)`"
         >
           {{ s.id.toUpperCase() }} {{ s.level }}
-        </span>
+        </HudChip>
       </div>
-    </header>
+    </HudBar>
 
     <MultiColumnShell
       class="il-body"
@@ -84,27 +86,17 @@ const statEntries = computed(() =>
   min-height: 0;
   flex: 1;
 }
-.il-hud {
-  display: flex;
-  gap: var(--gap-sm, 8px);
-  align-items: center;
-  padding: var(--gap-sm, 8px) var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  flex-wrap: wrap;
-}
-.il-chip {
-  padding: 4px 12px;
-  border-radius: var(--radius-sm, 4px);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-size: 0.9em;
-}
-.il-mana {
+.il-mana-chip {
   position: relative;
   overflow: hidden;
   min-width: 180px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 0.9em;
+  font-weight: 600;
 }
 .il-mana-bar {
   position: absolute;
@@ -119,15 +111,6 @@ const statEntries = computed(() =>
   gap: 4px;
   margin-left: auto;
   flex-wrap: wrap;
-}
-.il-stat-chip {
-  padding: 2px 8px;
-  border-radius: var(--radius-sm, 4px);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  font-size: 0.75em;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-muted, var(--color-muted));
 }
 .il-body {
   flex: 1;

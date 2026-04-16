@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { Decimal, addResource, format } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { CookieFactoryKey } from '@/modules/mods/cookie-factory';
+import HudBar from '@/ui/components/HudBar.vue';
+import HudChip from '@/ui/components/HudChip.vue';
 import CFProducersPanel from '@/ui/panels/CFProducersPanel.vue';
 import CFUpgradesPanel from '@/ui/panels/CFUpgradesPanel.vue';
 import CFAchievementsPanel from '@/ui/panels/CFAchievementsPanel.vue';
@@ -20,28 +22,28 @@ function clickCookie() {
 
 <template>
   <div class="cf-layout">
-    <header class="hud">
-      <div class="chip big">
+    <HudBar class="cf-hud">
+      <HudChip variant="big">
         🍪 {{ cookies }}
-      </div>
-      <div class="chip muted">
+      </HudChip>
+      <HudChip variant="muted">
         {{ totalCps }}/s
-      </div>
-      <label class="chip toggle">
+      </HudChip>
+      <HudChip variant="toggle">
         <input
           v-model="cf.autoBuyProducers.value"
           type="checkbox"
         >
         Auto producers
-      </label>
-      <label class="chip toggle">
+      </HudChip>
+      <HudChip variant="toggle">
         <input
           v-model="cf.autoBuyUpgrades.value"
           type="checkbox"
         >
         Auto upgrades
-      </label>
-    </header>
+      </HudChip>
+    </HudBar>
 
     <button
       v-hold-repeat="clickCookie"
@@ -67,41 +69,9 @@ function clickCookie() {
   flex-direction: column;
   gap: var(--gap);
 }
-.hud {
-  display: flex;
-  gap: var(--gap-sm);
-  align-items: center;
+.cf-hud {
   justify-content: center;
   padding: var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-.chip {
-  padding: 4px 12px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  font-weight: 600;
-}
-.chip.big {
-  font-size: 1.3em;
-  padding: 8px 20px;
-}
-.chip.muted {
-  color: var(--color-text-muted);
-}
-.chip.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.85em;
-  color: var(--color-text-muted);
-}
-.chip.toggle input {
-  margin: 0;
 }
 .big-cookie {
   align-self: center;
