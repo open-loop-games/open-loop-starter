@@ -6,6 +6,8 @@ import { getSlot } from '@/modules/ui-registry';
 import VanillaLayout from '@/ui/layouts/VanillaLayout.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
+import { useGame } from '@/composables/useGame';
+import { Screen } from '@/types';
 
 /**
  * The active mod contributes the `game-layout` slot during its install.
@@ -14,6 +16,7 @@ import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 const layout = computed(() => getSlot('game-layout') ?? VanillaLayout);
 
 const stack = useModalStack();
+const { engine, currentScreen } = useGame();
 
 const openSave = () => {
   const id = stack.push(SavePanel, { onClose: () => stack.remove(id) });
@@ -22,6 +25,12 @@ const openSave = () => {
 const openSettings = () => {
   const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
 };
+
+function returnToSlots() {
+  engine.saveManager?.save();
+  engine.stop();
+  currentScreen.value = Screen.Slots;
+}
 </script>
 
 <template>
@@ -31,7 +40,14 @@ const openSettings = () => {
   >
     <template #header>
       <div class="game-header">
-        <h2>Open Loop Starter</h2>
+        <button
+          class="title-button"
+          data-testid="return-to-slots"
+          title="Save and return to save picker"
+          @click="returnToSlots"
+        >
+          <h2>Open Loop Starter</h2>
+        </button>
         <div class="header-actions">
           <Popover
             align="end"
@@ -88,6 +104,19 @@ const openSettings = () => {
 
 .game-header h2 {
   font-size: 1.1em;
+}
+
+.title-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.title-button:hover h2 {
+  color: var(--color-primary);
 }
 
 .header-actions {
