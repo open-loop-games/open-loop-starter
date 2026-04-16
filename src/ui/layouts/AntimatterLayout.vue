@@ -6,6 +6,8 @@ import { AntimatterDimensionsKey } from '@/modules/mods/antimatter-dimensions';
 import HudBar from '@/ui/components/HudBar.vue';
 import HudChip from '@/ui/components/HudChip.vue';
 import ADDimensionsPanel from '@/ui/panels/ADDimensionsPanel.vue';
+import ADPrestigePanel from '@/ui/panels/ADPrestigePanel.vue';
+import ADInfinityUpgradesPanel from '@/ui/panels/ADInfinityUpgradesPanel.vue';
 
 const ad = useModule(AntimatterDimensionsKey);
 
@@ -18,15 +20,21 @@ interface TabDef {
   hint?: string;
 }
 
-// Infinity/Challenges/Eternity ship disabled — they light up in 4c/4d/4e.
-const tabs: TabDef[] = [
+const activeTab = ref<TabId>('antimatter');
+
+// Infinity tab unlocks on first infinity (persistent flag in `'ad-meta'`).
+// Challenges/Eternity ship disabled — they light up in 4d/4e.
+const tabs = computed<TabDef[]>(() => [
   { id: 'antimatter', label: 'Antimatter', enabled: true },
-  { id: 'infinity', label: 'Infinity', enabled: false, hint: 'Unlocks at 1e308 antimatter' },
+  {
+    id: 'infinity',
+    label: 'Infinity',
+    enabled: ad.hasReachedInfinity.value,
+    hint: ad.hasReachedInfinity.value ? undefined : 'Unlocks at 1e308 antimatter',
+  },
   { id: 'challenges', label: 'Challenges', enabled: false, hint: 'Unlocks after first Infinity' },
   { id: 'eternity', label: 'Eternity', enabled: false, hint: 'Unlocks at 1e1100 IP' },
-];
-
-const activeTab = ref<TabId>('antimatter');
+]);
 
 const antimatter = computed(() => format(Decimal.floor(ad.antimatter.value)));
 
@@ -34,6 +42,20 @@ const antimatterPerSec = computed(() => {
   const dim1 = ad.dims[0];
   return format(Decimal.mul(dim1.computedRate.value, dim1.count.value), 2);
 });
+
+const infinityPoints = computed(() => format(Decimal.floor(ad.infinityPoints.value)));
+
+function formatDuration(totalSeconds: number): string {
+  const s = Math.floor(totalSeconds);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const secs = s % 60;
+  if (m < 60) return `${m}m ${secs}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+const infinityTimer = computed(() => formatDuration(ad.infinityTimer.value));
 </script>
 
 <template>
@@ -44,6 +66,18 @@ const antimatterPerSec = computed(() => {
       </HudChip>
       <HudChip variant="muted">
         {{ antimatterPerSec }}/s
+      </HudChip>
+      <HudChip
+        v-if="ad.hasReachedInfinity.value"
+        variant="stat"
+      >
+        ∞ {{ infinityPoints }} IP
+      </HudChip>
+      <HudChip
+        v-if="ad.hasReachedInfinity.value"
+        variant="muted"
+      >
+        ⏱ {{ infinityTimer }}
       </HudChip>
     </HudBar>
 
@@ -64,6 +98,13 @@ const antimatterPerSec = computed(() => {
 
     <div class="ad-body">
       <ADDimensionsPanel v-if="activeTab === 'antimatter'" />
+      <div
+        v-else-if="activeTab === 'infinity'"
+        class="infinity-body"
+      >
+        <ADPrestigePanel />
+        <ADInfinityUpgradesPanel />
+      </div>
     </div>
   </div>
 </template>
@@ -99,5 +140,10 @@ const antimatterPerSec = computed(() => {
 .ad-tab.disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+.infinity-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
 }
 </style>

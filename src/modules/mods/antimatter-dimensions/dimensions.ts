@@ -13,7 +13,7 @@
  * (Feedback for OL-408: whether ProducerCategory should grow an escape hatch
  * for cascade shapes is a call the AD layers 4c/4e+ will inform.)
  */
-import { computed, type ComputedRef } from 'vue';
+import { computed, watch, type ComputedRef } from 'vue';
 import {
   Decimal,
   addResource,
@@ -44,6 +44,12 @@ export interface ADDimension {
 
 export interface DimensionLayer {
   antimatter: Resource<DecimalSource>;
+  /**
+   * Lifetime max antimatter within the current run. Feeds the IP gain
+   * formula (`10^(log10(max)/308 − 0.75)`). Resets to 0 on Layer 1 reset
+   * via the `'ad-layer0'` scope.
+   */
+  maxAntimatter: Resource<DecimalSource>;
   dims: ADDimension[];
   /** Surface-wide chain — 4c/4e hook cross-layer multipliers here. */
   productionChain: ModifierChain;
@@ -61,6 +67,16 @@ export function installDimensions(
     id: 'antimatter',
     displayName: 'Antimatter',
   });
+  const maxAntimatter = createResource<DecimalSource>(opts.startingAntimatter, {
+    id: 'max-antimatter',
+    displayName: 'Max Antimatter',
+  });
+  watch(
+    () => antimatter.value,
+    (v) => {
+      if (Decimal.gt(v, maxAntimatter.value)) maxAntimatter.value = v;
+    },
+  );
 
   const productionChain = createModifierChain('ad-production');
   const dims: ADDimension[] = [];
@@ -130,5 +146,5 @@ export function installDimensions(
     }
   });
 
-  return { antimatter, dims, productionChain };
+  return { antimatter, maxAntimatter, dims, productionChain };
 }

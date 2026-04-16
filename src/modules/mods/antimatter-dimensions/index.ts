@@ -1,13 +1,16 @@
 /**
- * Antimatter Dimensions — total-conversion archetype mod (OL-460 / OL-369 4b).
+ * Antimatter Dimensions — total-conversion archetype mod.
  *
- * Layer 0 skeleton: antimatter resource + 4 dimensions with per-10-pack cost
- * scaling and cascade production. No prestige wiring yet — Layers 1 (Infinity)
- * and 2 (Eternity) land in 4c and 4e.
+ * Layer 0 (OL-460): antimatter + 4 dimensions. Layer 1 (OL-461): Infinity
+ * Points, IP upgrades, Infinity reset that cascades `'ad-layer0'`. Layer 2
+ * (4e) will add Eternity on top.
  *
- * Persistent state is split into scoped contexts so future `resetModules:
- * ['ad-layer0']` can target Layer 0's refs without pulling in challenge
- * rewards or higher-layer currencies.
+ * State is split across scoped persistent contexts so the growing set of
+ * resets can target them by ID:
+ *   - `'ad-layer0'` — antimatter + dim counts + purchasable levels + maxAntimatter
+ *   - `'ad-layer1'` — IP + IP upgrade levels + infinity-run timer
+ *   - `'ad-meta'`   — never-reset: `hasReachedInfinity`, `lifetimeInfinities`,
+ *                     `totalTimePlayed`. 4d's challenge completions land here too.
  */
 import {
   withPersistentContext,
@@ -17,25 +20,36 @@ import {
   type Resource,
   type DecimalSource,
   type ModifierChain,
+  type Conversion,
+  type Reset,
+  type PurchasableCategory,
+  type Persistent,
 } from 'open-loop-engine';
 import { setSlot } from '@/modules/ui-registry';
 import AntimatterLayout from '@/ui/layouts/AntimatterLayout.vue';
-import { dimensionDefs, STARTING_ANTIMATTER } from './content';
+import { dimensionDefs, STARTING_ANTIMATTER, type IPUpgradeDef } from './content';
 import { installDimensions, type ADDimension } from './dimensions';
+import { installLayer1 } from './layers';
 
 export interface AntimatterDimensionsState {
   antimatter: Resource<DecimalSource>;
+  maxAntimatter: Resource<DecimalSource>;
   dims: ADDimension[];
   productionChain: ModifierChain;
+  // Layer 1
+  infinityPoints: Resource<DecimalSource>;
+  infinityTimer: Persistent<number>;
+  totalTimePlayed: Persistent<number>;
+  hasReachedInfinity: Persistent<boolean>;
+  lifetimeInfinities: Resource<DecimalSource>;
+  conversion: Conversion;
+  layer1Reset: Reset;
+  ipUpgrades: PurchasableCategory<IPUpgradeDef>;
 }
 
 export const AntimatterDimensionsKey: InjectionKey<AntimatterDimensionsState> =
   Symbol('antimatter-dimensions') as InjectionKey<AntimatterDimensionsState>;
 
-/**
- * Factory for the AD module. Follows the idle-loops shape so 4f's sensitivity
- * harness can spin up scratch engines with fresh module instances.
- */
 export function createAntimatterDimensionsModule(): EngineModule {
   return {
     id: 'antimatter-dimensions',
@@ -48,10 +62,14 @@ export function createAntimatterDimensionsModule(): EngineModule {
         }),
       );
 
+      const layer1 = installLayer1(ctx, layer0);
+
       const state: AntimatterDimensionsState = {
         antimatter: layer0.antimatter,
+        maxAntimatter: layer0.maxAntimatter,
         dims: layer0.dims,
         productionChain: layer0.productionChain,
+        ...layer1,
       };
       ctx.provide(AntimatterDimensionsKey, state);
 

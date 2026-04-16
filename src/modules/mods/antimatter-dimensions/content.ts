@@ -34,6 +34,14 @@ export interface UpgradeDef {
   description: string;
 }
 
+/** IP upgrade definition. Cost is in Infinity Points; all Layer 1 upgrades are cost=1, limit=1. */
+export interface IPUpgradeDef {
+  id: string;
+  title: string;
+  description: string;
+  cost: DecimalSource;
+}
+
 export interface ChallengeDef {
   id: string;
   title: string;
@@ -88,3 +96,33 @@ export const dimensionDefs: DimensionDef[] = [
 export const upgradeDefs: UpgradeDef[] = [];
 export const challengeDefs: ChallengeDef[] = [];
 export const achievementDefs: AchievementDef[] = [];
+
+/**
+ * IP upgrades shipped in Layer 1. Adapted from AD source
+ * `infinity-upgrades.js`, trimmed for the 4-dimension skeleton:
+ *   - totalTimeMult — gain × (totalMinutes / 2)^0.15
+ *   - dim14mult — dims 1 & 4 get ×(1 + 0.2×infinities); source targets
+ *     dims 1 & 8 but this skeleton only has tiers 1–4
+ *   - buy10Mult — flat ×1.1 on each dim's rate
+ * `dimboostMult` is dropped — the starter has no dimboost primitive.
+ */
+export const ipUpgradeDefs: IPUpgradeDef[] = [
+  {
+    id: 'totalTimeMult',
+    title: 'Time Dilation',
+    description: 'Antimatter Dimensions gain a multiplier based on total time played.',
+    cost: 1,
+  },
+  {
+    id: 'dim14mult',
+    title: 'Tier Resonance',
+    description: '1st and 4th Antimatter Dimensions gain a multiplier based on Infinities.',
+    cost: 1,
+  },
+  {
+    id: 'buy10Mult',
+    title: 'Ten-fold Legacy',
+    description: 'All Antimatter Dimensions gain a flat ×1.1 bonus.',
+    cost: 1,
+  },
+];
