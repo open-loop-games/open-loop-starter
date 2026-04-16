@@ -10,6 +10,7 @@ import { challengesModule } from './mods/challenges';
 import { cookieFactoryModule } from './mods/cookie-factory';
 import { ccAuthenticModule } from './mods/cc-authentic';
 import { benchmarkModule } from './mods/benchmark';
+import { idleLoopsModule } from './mods/idle-loops';
 
 const sharedBase = [settingsModule, uiRegistryModule];
 
@@ -57,6 +58,13 @@ export const modDefs: ModDef[] = [
     description:
       'Total-conversion archetype: a self-contained idle producer. Single cookies resource, 7 producer tiers, scaling upgrades, milestone achievements. No loop, no village content.',
     modules: [...sharedBase, cookieFactoryModule],
+  },
+  {
+    id: 'idle-loops',
+    name: 'Idle Loops',
+    description:
+      'Loop-runner archetype: plan an action queue, run until mana depletes, keep permanent stat bonuses. Demonstrates list-mode Sequencer, BestOf with captureStrategy, and RecommendationSystem wiring.',
+    modules: [...sharedBase, idleLoopsModule],
   },
 ];
 
