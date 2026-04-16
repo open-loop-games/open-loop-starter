@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
+import { MultiColumnShell } from '@/lib';
 import { useModule } from '@/composables/useModule';
 import { IdleLoopsKey } from '@/modules/mods/idle-loops';
+import ILQueueDisplay from '@/ui/panels/ILQueueDisplay.vue';
+import ILBestOfPanel from '@/ui/panels/ILBestOfPanel.vue';
+import ILRecommendationPanel from '@/ui/panels/ILRecommendationPanel.vue';
+import ILAutomationControls from '@/ui/panels/ILAutomationControls.vue';
 
 const il = useModule(IdleLoopsKey);
 
@@ -26,19 +31,6 @@ const statEntries = computed(() =>
       : '0',
   })),
 );
-
-const queueDisplay = computed(() =>
-  il.queue.items.value.map((item, i) => ({
-    id: item.id,
-    index: i,
-    active: i === il.queue.cursor && il.queue.currentItem?.id === item.id,
-    def: il.actions.registry.get(item.id),
-  })),
-);
-
-const progressPercent = computed(() =>
-  il.actions.progress.percentComplete.value * 100,
-);
 </script>
 
 <template>
@@ -54,43 +46,33 @@ const progressPercent = computed(() =>
           :style="{ width: manaPercent + '%' }"
         />
       </div>
+      <div class="il-stats">
+        <span
+          v-for="s in statEntries"
+          :key="s.id"
+          class="il-stat-chip"
+          :title="`${s.name} (+${s.permanentBonus} permanent)`"
+        >
+          {{ s.id.toUpperCase() }} {{ s.level }}
+        </span>
+      </div>
     </header>
 
-    <div class="il-body">
-      <section class="il-stats">
-        <h3>Stats</h3>
-        <div
-          v-for="stat in statEntries"
-          :key="stat.id"
-          class="il-stat-row"
-        >
-          <span class="il-stat-name">{{ stat.name }}</span>
-          <span class="il-stat-level">Lv {{ stat.level }}</span>
-          <span class="il-stat-bonus">(+{{ stat.permanentBonus }})</span>
-        </div>
-      </section>
-
-      <section class="il-queue">
-        <h3>Action Queue</h3>
-        <div
-          v-for="entry in queueDisplay"
-          :key="entry.index"
-          class="il-queue-item"
-          :class="{ active: entry.active }"
-        >
-          <span>{{ entry.def?.display ?? entry.id }}</span>
-          <div
-            v-if="entry.active"
-            class="il-progress-bar"
-          >
-            <div
-              class="il-progress-fill"
-              :style="{ width: progressPercent + '%' }"
-            />
-          </div>
-        </div>
-      </section>
-    </div>
+    <MultiColumnShell
+      class="il-body"
+      :columns="['1fr', '1fr', '1fr']"
+    >
+      <template #column-0>
+        <ILQueueDisplay />
+      </template>
+      <template #column-1>
+        <ILRecommendationPanel />
+        <ILBestOfPanel />
+      </template>
+      <template #column-2>
+        <ILAutomationControls />
+      </template>
+    </MultiColumnShell>
   </div>
 </template>
 
@@ -98,93 +80,57 @@ const progressPercent = computed(() =>
 .il-layout {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-md, 12px);
-  padding: var(--gap-md, 12px);
-  max-width: 600px;
+  gap: var(--gap);
+  min-height: 0;
+  flex: 1;
 }
-
 .il-hud {
   display: flex;
   gap: var(--gap-sm, 8px);
   align-items: center;
+  padding: var(--gap-sm, 8px) var(--gap);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  flex-wrap: wrap;
 }
-
 .il-chip {
   padding: 4px 12px;
   border-radius: var(--radius-sm, 4px);
-  background: var(--color-surface, #1a1a2e);
-  color: var(--color-text, #eee);
-  font-size: 0.9rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.9em;
 }
-
 .il-mana {
   position: relative;
   overflow: hidden;
-  flex: 1;
+  min-width: 180px;
 }
-
 .il-mana-bar {
   position: absolute;
   inset: 0;
   background: var(--color-accent, #4a6cf7);
   opacity: 0.2;
   transition: width 0.1s linear;
+  pointer-events: none;
 }
-
-.il-body {
+.il-stats {
   display: flex;
-  gap: var(--gap-md, 12px);
+  gap: 4px;
+  margin-left: auto;
+  flex-wrap: wrap;
 }
-
-.il-stats,
-.il-queue {
-  flex: 1;
-}
-
-.il-stats h3,
-.il-queue h3 {
-  margin: 0 0 var(--gap-sm, 8px);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  color: var(--color-muted, #888);
-}
-
-.il-stat-row {
-  display: flex;
-  gap: var(--gap-sm, 8px);
-  padding: 2px 0;
-  font-size: 0.85rem;
-}
-
-.il-stat-name {
-  flex: 1;
-}
-
-.il-stat-bonus {
-  color: var(--color-muted, #888);
-}
-
-.il-queue-item {
-  padding: 4px 8px;
+.il-stat-chip {
+  padding: 2px 8px;
   border-radius: var(--radius-sm, 4px);
-  font-size: 0.85rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-size: 0.75em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted, var(--color-muted));
 }
-
-.il-queue-item.active {
-  background: var(--color-surface, #1a1a2e);
-}
-
-.il-progress-bar {
-  height: 3px;
-  background: var(--color-border, #333);
-  border-radius: 2px;
-  margin-top: 2px;
-  overflow: hidden;
-}
-
-.il-progress-fill {
-  height: 100%;
-  background: var(--color-accent, #4a6cf7);
-  transition: width 0.05s linear;
+.il-body {
+  flex: 1;
+  min-height: 0;
 }
 </style>

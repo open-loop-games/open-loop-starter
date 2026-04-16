@@ -54,6 +54,18 @@ import { createIdleLoopsZones } from './zones';
 import { createIdleLoopsActions, type IdleLoopsActions } from './actions';
 import { createIdleLoopsLoop } from './loop';
 import type { MutateBestHandle } from './workbench/mutate-best-strategy';
+import { RECOMMENDATION_TIERS } from './tiers';
+
+export {
+  RECOMMENDATION_TIERS,
+  currentRecommendationTier,
+  nextRecommendationTier,
+  type RecommendationTierDef,
+} from './tiers';
+
+const SENSITIVITY_THRESHOLD = RECOMMENDATION_TIERS.find(
+  (t) => t.id === 'il-mutate-best-sensitivity',
+)!.achievementsRequired;
 
 // ============================================================================
 // Exported state
@@ -305,7 +317,7 @@ export function createIdleLoopsModule(): EngineModule {
         });
 
       state.mutateBest.setSensitivity({
-        threshold: 6,
+        threshold: SENSITIVITY_THRESHOLD,
         candidateCount: 4,
         seeds: [1, 2, 3],
         metricName: METRIC_NAME,

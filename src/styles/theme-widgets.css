@@ -125,3 +125,102 @@
   justify-content: flex-end;
   background: color-mix(in srgb, var(--color-bg) 60%, var(--color-surface) 40%);
 }
+
+/* ------------------------------------------------------------------ */
+/* Select                                                              */
+/* ------------------------------------------------------------------ */
+
+.olui-select__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 0.85em;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  min-width: 8em;
+  justify-content: space-between;
+}
+
+.olui-select__trigger:hover {
+  background: var(--color-surface-hover, var(--color-surface));
+}
+
+.olui-select__trigger:focus-visible {
+  outline: 2px solid var(--color-accent, #4a6cf7);
+  outline-offset: 1px;
+}
+
+.olui-select__trigger[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.olui-select__icon {
+  color: var(--color-text-muted, var(--color-muted));
+  font-size: 0.75em;
+}
+
+.olui-select__content {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  animation: olui-select-in 120ms ease-out;
+  overflow: hidden;
+}
+
+.olui-select__content[data-state='closed'] {
+  animation: olui-select-out 80ms ease-in;
+}
+
+.olui-select__viewport {
+  padding: 4px;
+}
+
+.olui-select__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 24px 4px 8px;
+  font-size: 0.85em;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  position: relative;
+}
+
+.olui-select__item[data-highlighted] {
+  background: color-mix(in srgb, var(--color-accent, #4a6cf7) 20%, transparent);
+  color: var(--color-text);
+}
+
+.olui-select__item[data-state='checked'] {
+  color: var(--color-accent, #4a6cf7);
+  font-weight: 600;
+}
+
+.olui-select__item[data-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.olui-select__indicator {
+  position: absolute;
+  right: 8px;
+  font-size: 0.8em;
+}
+
+@keyframes olui-select-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes olui-select-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}

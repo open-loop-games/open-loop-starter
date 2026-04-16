@@ -464,9 +464,8 @@ describe('idle-loops — Tier 4 GoalStrategy', () => {
     state.stats.addXP('con', 42);
     await boot.handle.tick(1);
 
-    // Simulate lots of loop counts by setting the counter. The loop's
-    // count is a persistent Decimal ref.
-    state.loop.count.value = new Decimal(30);
+    // Simulate lots of loop counts by setting the counter.
+    state.loop.count.value = 30;
     await boot.handle.tick(1);
     // Fake dungeon clear via queue event (simulate dungeon-sprint completion).
     state.queue.enqueue({ id: 'dungeon-sprint', metadata: undefined });

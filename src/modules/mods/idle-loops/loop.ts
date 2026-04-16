@@ -27,6 +27,11 @@ import {
 } from 'open-loop-engine';
 import type { StatDef } from './content';
 import { createMutateBestStrategy, type MutateBestHandle } from './workbench/mutate-best-strategy';
+import { RECOMMENDATION_TIERS } from './tiers';
+
+const THRESHOLD = Object.fromEntries(
+  RECOMMENDATION_TIERS.map((t) => [t.id, t.achievementsRequired]),
+) as Record<string, number>;
 
 // ============================================================================
 // Types
@@ -179,7 +184,7 @@ export function createIdleLoopsLoop(opts: CreateLoopOptions): IdleLoopsLoopState
   // best-known str-xp queue when the player has earned at least one achievement.
   const bestReplayStrategy = gateStrategy(
     createBestReplayStrategy('str-xp', { id: 'il-best-replay' }),
-    () => earnedCount() >= 1,
+    () => earnedCount() >= THRESHOLD['il-best-replay']!,
   );
 
   // Tier 3a: MutateBest blind (gated on earnedCount >= 5). Proposes random
@@ -193,7 +198,7 @@ export function createIdleLoopsLoop(opts: CreateLoopOptions): IdleLoopsLoopState
     metricKey: 'str-xp',
     earnedCount,
     actionPool,
-    threshold: 5,
+    threshold: THRESHOLD['il-mutate-best']!,
   });
 
   // Tier 4: GoalStrategy with a player-selectable metric. Hand-rolled (not
@@ -203,7 +208,7 @@ export function createIdleLoopsLoop(opts: CreateLoopOptions): IdleLoopsLoopState
   const goalStrategy: RecommendationStrategyDef = {
     id: 'il-goal',
     canApply: (ctx) => {
-      if (earnedCount() < 8) return false;
+      if (earnedCount() < THRESHOLD['il-goal']!) return false;
       const entry = ctx.bestOf.entries.value[selectedGoalMetric()];
       return entry != null && entry.status === 'valid' && entry.strategySnapshot != null;
     },
@@ -265,7 +270,7 @@ export function createIdleLoopsLoop(opts: CreateLoopOptions): IdleLoopsLoopState
   // immediately. Set on beforeRestart so the flag is live before the
   // recommendation system's own afterRestart handler runs evaluate().
   loop.on('beforeRestart', () => {
-    recommendations.autoApply.value = earnedCount() >= 3;
+    recommendations.autoApply.value = earnedCount() >= THRESHOLD['il-optimizer']!;
   });
 
   loop.run();
