@@ -22,7 +22,13 @@
  * worse than that at a handful of producers are an engine perf signal.
  */
 import { nextTick } from 'vue';
-import { Decimal } from 'open-loop-engine';
+import {
+  Decimal,
+  enableProfiling,
+  getProfileReport,
+  resetProfile,
+  type ProfileReport,
+} from 'open-loop-engine';
 import { settingsModule } from '@/modules/settings';
 import { uiRegistryModule, setSlotWritesEnabled } from '@/modules/ui-registry';
 import {
@@ -49,6 +55,8 @@ export interface CellStats {
   p99: number;
   max: number;
   totalMs: number;
+  /** Per-label attribution captured during the measured window (post-warmup). */
+  profile?: ProfileReport;
 }
 
 export interface RunCellOptions {
@@ -121,6 +129,10 @@ export async function runCell(
     modules: [settingsModule, uiRegistryModule, cookieFactoryModule],
     namespacePrefix: `bench-${cfg.name}`,
   });
+  // Profiling subscribes for the lifetime of the cell. Warmup ticks are
+  // captured but counters are reset before the measured window so the
+  // report only reflects steady-state per-label attribution.
+  const disposeProfiler = enableProfiling();
   try {
     const state = boot.engine.tryInject(CookieFactoryKey);
     if (!state) throw new Error(`${cfg.name}: CookieFactoryKey not provided`);
@@ -142,6 +154,7 @@ export async function runCell(
       }
     }
 
+    resetProfile();
     const samples: number[] = new Array(cfg.ticks);
     for (let i = 0; i < cfg.ticks; i++) {
       const t0 = performance.now();
@@ -154,8 +167,12 @@ export async function runCell(
       }
     }
 
-    return computeStats(cfg.name, samples);
+    const profile = getProfileReport();
+    const stats = computeStats(cfg.name, samples);
+    stats.profile = profile;
+    return stats;
   } finally {
+    disposeProfiler();
     boot.dispose();
     setSlotWritesEnabled(true);
   }

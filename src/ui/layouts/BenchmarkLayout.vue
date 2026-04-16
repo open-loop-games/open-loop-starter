@@ -112,6 +112,52 @@ async function runBenchmark(): Promise<void> {
         </tr>
       </tbody>
     </table>
+
+    <section
+      v-for="r in rows"
+      :key="`profile-${r.name}`"
+      class="profile-section"
+    >
+      <h3
+        v-if="r.profile && r.profile.entries.length > 0"
+        class="profile-title"
+      >
+        <code>{{ r.name }}</code> — per-label attribution
+      </h3>
+      <table
+        v-if="r.profile && r.profile.entries.length > 0"
+        class="results profile"
+      >
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>%</th>
+            <th>Total ms</th>
+            <th>Calls</th>
+            <th>Avg µs</th>
+            <th>p50 µs</th>
+            <th>p95 µs</th>
+            <th>p99 µs</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="e in r.profile.entries"
+            :key="e.name"
+            :class="{ denominator: e.name === 'tick.total' }"
+          >
+            <td>{{ e.name }}</td>
+            <td>{{ e.pct.toFixed(1) }}</td>
+            <td>{{ e.totalMs.toFixed(1) }}</td>
+            <td>{{ e.calls }}</td>
+            <td>{{ e.avgUs.toFixed(1) }}</td>
+            <td>{{ e.p50Us.toFixed(0) }}</td>
+            <td>{{ e.p95Us.toFixed(0) }}</td>
+            <td>{{ e.p99Us.toFixed(0) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   </div>
 </template>
 
@@ -182,5 +228,25 @@ async function runBenchmark(): Promise<void> {
 
 .results th {
   font-weight: 600;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+}
+
+.profile-title {
+  font-size: 0.95em;
+  margin: 0;
+}
+
+.profile-title code {
+  font-family: var(--font-mono, monospace);
+}
+
+.results.profile tbody tr.denominator {
+  font-weight: 600;
+  border-top: 1px solid var(--color-border, #333);
 }
 </style>
