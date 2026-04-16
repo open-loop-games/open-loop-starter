@@ -11,6 +11,7 @@ import { cookieFactoryModule } from './mods/cookie-factory';
 import { ccAuthenticModule } from './mods/cc-authentic';
 import { benchmarkModule } from './mods/benchmark';
 import { idleLoopsModule } from './mods/idle-loops';
+import { antimatterDimensionsModule } from './mods/antimatter-dimensions';
 
 const sharedBase = [settingsModule, uiRegistryModule];
 
@@ -65,6 +66,13 @@ export const modDefs: ModDef[] = [
     description:
       'Loop-runner archetype: plan an action queue, run until mana depletes, keep permanent stat bonuses. Demonstrates list-mode Sequencer, BestOf with captureStrategy, and RecommendationSystem wiring.',
     modules: [...sharedBase, idleLoopsModule],
+  },
+  {
+    id: 'antimatter-dimensions',
+    name: 'Antimatter Dimensions',
+    description:
+      'Nested-prestige archetype skeleton: Antimatter plus 4 dimensions with per-10-pack cost scaling and cascade production. Layer 0 only — Infinity and Eternity land in follow-up steps.',
+    modules: [...sharedBase, antimatterDimensionsModule],
   },
 ];
 
