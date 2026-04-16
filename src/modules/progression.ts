@@ -24,6 +24,7 @@ import {
   type EngineContext,
   type AchievementCategory,
   type BestOf,
+  type BestOfMetricDef,
 } from 'open-loop-engine';
 import { GatheringKey } from './gathering';
 
@@ -47,82 +48,98 @@ export interface ProgressionState {
 export const ProgressionKey: InjectionKey<ProgressionState> = Symbol('progression') as InjectionKey<ProgressionState>;
 
 // ============================================================================
-// Module
+// Factory
 // ============================================================================
 
-export const progressionModule: EngineModule = {
-  id: 'progression',
-  dependencies: ['settings', 'ui-registry', 'gathering'],
-  install(ctx: EngineContext) {
-    const g = ctx.inject(GatheringKey);
-    const { wood, stone, gold } = g.resources;
-    const woodcutting = g.skills.getSkill('woodcutting')!;
+export interface CreateProgressionModuleOptions {
+  /** Metric definitions passed to `createBestOf`. */
+  bestOfMetrics: Record<string, BestOfMetricDef>;
+}
 
-    // --- Achievements (via category) ----------------------------------------
-    // Defs carry display + a requirement closure. mapAchievement converts to
-    // AchievementOptions with a computed requirement — createAchievement's
-    // built-in Vue watch handles auto-complete, no tick polling needed.
-    const achievements = createAchievementCategory<AchievementDef>({
-      id: 'core-achievements',
-      mapAchievement: (def) => ({
-        display: { title: def.title, description: def.description },
-        requirement: () => def.requirement(),
-      }),
-    });
+/** Create a progression module with caller-supplied BestOf metrics. */
+export function createProgressionModule(opts: CreateProgressionModuleOptions): EngineModule {
+  return {
+    id: 'progression',
+    dependencies: ['settings', 'ui-registry', 'gathering'],
+    install(ctx: EngineContext) {
+      const g = ctx.inject(GatheringKey);
+      const { wood, stone, gold } = g.resources;
+      const woodcutting = g.skills.getSkill('woodcutting')!;
 
-    achievements.register([
-      {
-        id: 'first-wood',
-        title: 'First Wood',
-        description: 'Gather any wood.',
-        requirement: () => Decimal.gt(wood.value, 0),
-      },
-      {
-        id: 'lumberjack',
-        title: 'Lumberjack',
-        description: 'Accumulate 100 wood.',
-        requirement: () => Decimal.gte(wood.value, 100),
-      },
-      {
-        id: 'stonecarver',
-        title: 'Stonecarver',
-        description: 'Accumulate 50 stone.',
-        requirement: () => Decimal.gte(stone.value, 50),
-      },
-      {
-        id: 'merchant',
-        title: 'Merchant',
-        description: 'Earn 20 gold.',
-        requirement: () => Decimal.gte(gold.value, 20),
-      },
-      {
-        id: 'master-woodcutter',
-        title: 'Master Woodcutter',
-        description: 'Reach Woodcutting level 10.',
-        requirement: () => Decimal.gte(woodcutting.level.value, 10),
-      },
-    ]);
+      // --- Achievements (via category) ----------------------------------------
+      // Defs carry display + a requirement closure. mapAchievement converts to
+      // AchievementOptions with a computed requirement — createAchievement's
+      // built-in Vue watch handles auto-complete, no tick polling needed.
+      const achievements = createAchievementCategory<AchievementDef>({
+        id: 'core-achievements',
+        mapAchievement: (def) => ({
+          display: { title: def.title, description: def.description },
+          requirement: () => def.requirement(),
+        }),
+      });
 
-    // Wire earned count to gathering's automation tier system
-    watchSyncEffect(() => {
-      g.earnedAchievementCount.value = achievements.earnedCount.value;
-    });
+      achievements.register([
+        {
+          id: 'first-wood',
+          title: 'First Wood',
+          description: 'Gather any wood.',
+          requirement: () => Decimal.gt(wood.value, 0),
+        },
+        {
+          id: 'lumberjack',
+          title: 'Lumberjack',
+          description: 'Accumulate 100 wood.',
+          requirement: () => Decimal.gte(wood.value, 100),
+        },
+        {
+          id: 'stonecarver',
+          title: 'Stonecarver',
+          description: 'Accumulate 50 stone.',
+          requirement: () => Decimal.gte(stone.value, 50),
+        },
+        {
+          id: 'merchant',
+          title: 'Merchant',
+          description: 'Earn 20 gold.',
+          requirement: () => Decimal.gte(gold.value, 20),
+        },
+        {
+          id: 'master-woodcutter',
+          title: 'Master Woodcutter',
+          description: 'Reach Woodcutting level 10.',
+          requirement: () => Decimal.gte(woodcutting.level.value, 10),
+        },
+      ]);
 
-    // --- Best-of tracking ---------------------------------------------------
-    // Tracks per-run high-water marks for key metrics. Loop integration
-    // (auto-submit on finalize) is wired by OL-363 when loop-log lands.
-    // For now, metrics are declared but submit() must be called manually.
-    const bestOf = createBestOf({
-      id: 'progression-best',
-      metrics: {
-        wood: { mode: 'absolute' },
-        stone: { mode: 'absolute' },
-        gold: { mode: 'absolute' },
-        'woodcutting-level': { mode: 'absolute' },
-      },
-    });
+      // Wire earned count to gathering's automation tier system
+      watchSyncEffect(() => {
+        g.earnedAchievementCount.value = achievements.earnedCount.value;
+      });
 
-    const state: ProgressionState = { achievements, bestOf };
-    ctx.provide(ProgressionKey, state);
+      // --- Best-of tracking ---------------------------------------------------
+      // Tracks per-run high-water marks for key metrics. Loop integration
+      // (auto-submit on finalize) is wired by OL-363 when loop-log lands.
+      // For now, metrics are declared but submit() must be called manually.
+      const bestOf = createBestOf({
+        id: 'progression-best',
+        metrics: opts.bestOfMetrics,
+      });
+
+      const state: ProgressionState = { achievements, bestOf };
+      ctx.provide(ProgressionKey, state);
+    },
+  };
+}
+
+// ============================================================================
+// Village-gatherer default — backward-compatible constant
+// ============================================================================
+
+export const progressionModule: EngineModule = createProgressionModule({
+  bestOfMetrics: {
+    wood: { mode: 'absolute' },
+    stone: { mode: 'absolute' },
+    gold: { mode: 'absolute' },
+    'woodcutting-level': { mode: 'absolute' },
   },
-};
+});
