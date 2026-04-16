@@ -13,9 +13,13 @@ import {
   Decimal,
   createSequencer,
   createAchievementCategory,
+  buildSensitivityCell,
+  persistent,
+  SaveManagerKey,
   type InjectionKey,
   type EngineModule,
   type EngineContext,
+  type Engine,
   type Resource,
   type DecimalSource,
   type Sequencer,
@@ -26,7 +30,13 @@ import {
   type Loop,
   type LoopLog,
   type RecommendationSystem,
+  type Analyzer,
+  type AnalyzerResult,
+  type Cell,
+  type Persistent,
 } from 'open-loop-engine';
+import { settingsModule } from '@/modules/settings';
+import { uiRegistryModule } from '@/modules/ui-registry';
 import { useAutomation, type UseAutomationReturn } from '@/composables/useAutomation';
 import { setSlot } from '@/modules/ui-registry';
 import IdleLoopsLayout from '@/ui/layouts/IdleLoopsLayout.vue';
@@ -43,6 +53,7 @@ import { createIdleLoopsStats } from './stats';
 import { createIdleLoopsZones } from './zones';
 import { createIdleLoopsActions, type IdleLoopsActions } from './actions';
 import { createIdleLoopsLoop } from './loop';
+import type { MutateBestHandle } from './workbench/mutate-best-strategy';
 
 // ============================================================================
 // Exported state
@@ -59,6 +70,10 @@ export interface IdleLoopsState {
   loopLog: LoopLog;
   bestOf: BestOf;
   recommendations: RecommendationSystem;
+  /** Handle for the MutateBest strategy — setSensitivity is called during connect() to install Tier 3b. */
+  mutateBest: MutateBestHandle;
+  /** Tier 4: player-selectable goal metric driving the GoalStrategy. Defaults to 'str-xp'. */
+  selectedGoalMetric: Persistent<string>;
   achievements: AchievementCategory<AchievementDef>;
   automation: UseAutomationReturn;
 }
@@ -70,10 +85,17 @@ export const IdleLoopsKey: InjectionKey<IdleLoopsState> =
 // Module
 // ============================================================================
 
-export const idleLoopsModule: EngineModule = {
-  id: 'idle-loops',
-  dependencies: ['settings', 'ui-registry'],
-  install(ctx: EngineContext) {
+/**
+ * Factory for the idle-loops module. Returns a fresh EngineModule on each
+ * call — needed so the Tier 3b sensitivity path can spin up scratch engines
+ * with independent module instances. The default export `idleLoopsModule`
+ * calls this factory once.
+ */
+export function createIdleLoopsModule(): EngineModule {
+  return {
+    id: 'idle-loops',
+    dependencies: ['settings', 'ui-registry'],
+    install(ctx: EngineContext) {
     // 1. Stats (accumulator mode with retention)
     const stats = createIdleLoopsStats(statDefs);
 
@@ -100,12 +122,19 @@ export const idleLoopsModule: EngineModule = {
     });
 
     // 5. Loop lifecycle (mana, loop, loopLog, bestOf, recommendations)
+    // earnedCount is passed as a thunk so the recommendation strategies
+    // registered inside createIdleLoopsLoop can gate on achievements that
+    // aren't registered yet at this point in the install sequence.
+    const selectedGoalMetric = persistent<string>('str-xp', { name: 'selectedGoalMetric' });
     const loopState = createIdleLoopsLoop({
       stats,
       queue,
       progress: actions.progress,
       currentManaCostRate: actions.currentManaCostRate,
       registerTick: ctx.onTick,
+      earnedCount: () => achievements.earnedCount.value,
+      actionPool: () => actionDefs.map((a) => a.id),
+      selectedGoalMetric: () => selectedGoalMetric.value,
     });
 
     // 6. Achievements
@@ -134,6 +163,12 @@ export const idleLoopsModule: EngineModule = {
               return dungeonCompleted.value;
             case 'loop-10':
               return Decimal.gte(loopState.loop.count.value, 10);
+            case 'stat-10':
+              return statDefs.some((s) =>
+                Decimal.gte(stats.getSkill(s.id)!.level.value, 10),
+              );
+            case 'loop-25':
+              return Decimal.gte(loopState.loop.count.value, 25);
             default:
               return false;
           }
@@ -199,6 +234,8 @@ export const idleLoopsModule: EngineModule = {
       loopLog: loopState.loopLog,
       bestOf: loopState.bestOf,
       recommendations: loopState.recommendations,
+      mutateBest: loopState.mutateBest,
+      selectedGoalMetric,
       achievements,
       automation,
     };
@@ -206,5 +243,76 @@ export const idleLoopsModule: EngineModule = {
 
     // 10. Layout
     setSlot('game-layout', IdleLoopsLayout);
-  },
-};
+    },
+
+    connect(ctx: EngineContext) {
+      // Tier 3b wiring: install the sensitivity config on the MutateBest
+      // handle now that SaveManager is available. Deferred to connect() so
+      // the scratch-engine factory can read a fresh save blob each
+      // recommend() call.
+      const saveManager = ctx.tryInject(SaveManagerKey);
+      if (!saveManager) return;
+      const state = ctx.inject(IdleLoopsKey);
+
+      const METRIC_NAME = 'str-xp';
+      const ANALYZER_NAME = 'loop-log';
+
+      const buildCell = (name: string, queueSnapshot: Array<{ id: string }>): Cell =>
+        buildSensitivityCell({
+          name,
+          saveBlob: saveManager.exportSave(),
+          modules: () => [settingsModule, uiRegistryModule, createIdleLoopsModule()],
+          perturb: (engine: Engine) => {
+            const scratch = engine.tryInject(IdleLoopsKey);
+            if (!scratch) return;
+            scratch.queue.clear();
+            for (const item of queueSnapshot) {
+              scratch.queue.enqueue({ id: item.id, metadata: undefined });
+            }
+          },
+          buildAnalyzers: (engine: Engine): Analyzer[] => {
+            const scratch = engine.tryInject(IdleLoopsKey);
+            if (!scratch) return [];
+            let total = 0;
+            let unsub: (() => void) | null = null;
+            return [
+              {
+                name: ANALYZER_NAME,
+                onStart() {
+                  unsub = scratch.loopLog.on('finalize', (entry) => {
+                    const d = entry.deltas.find((x) => x.key === METRIC_NAME);
+                    if (d) total += new Decimal(d.delta).toNumber();
+                  });
+                },
+                onEnd() {
+                  unsub?.();
+                },
+                summarize(): AnalyzerResult {
+                  return {
+                    name: ANALYZER_NAME,
+                    metrics: { [METRIC_NAME]: total },
+                    issues: [],
+                  };
+                },
+              },
+            ];
+          },
+          tick: (engine: Engine, dt: number) => {
+            engine.loop.simulateTick(dt);
+          },
+          ticks: 400,
+          tickDelta: 0.05,
+        });
+
+      state.mutateBest.setSensitivity({
+        threshold: 6,
+        candidateCount: 4,
+        seeds: [1, 2, 3],
+        metricName: METRIC_NAME,
+        buildCell,
+      });
+    },
+  };
+}
+
+export const idleLoopsModule: EngineModule = createIdleLoopsModule();

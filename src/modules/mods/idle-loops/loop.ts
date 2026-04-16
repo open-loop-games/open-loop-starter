@@ -12,6 +12,7 @@ import {
   createLoopLog,
   createBestOf,
   createRecommendationSystem,
+  createBestReplayStrategy,
   type Resource,
   type DecimalSource,
   type State,
@@ -19,11 +20,13 @@ import {
   type LoopLog,
   type BestOf,
   type RecommendationSystem,
+  type RecommendationStrategyDef,
   type Sequencer,
   type SkillCategory,
   type TimedProgress,
 } from 'open-loop-engine';
 import type { StatDef } from './content';
+import { createMutateBestStrategy, type MutateBestHandle } from './workbench/mutate-best-strategy';
 
 // ============================================================================
 // Types
@@ -36,6 +39,8 @@ export interface IdleLoopsLoopState {
   loopLog: LoopLog;
   bestOf: BestOf;
   recommendations: RecommendationSystem;
+  /** Handle for the MutateBest strategy — call setSensitivity() to install the Tier 3b scratch-engine config. */
+  mutateBest: MutateBestHandle;
 }
 
 export interface CreateLoopOptions {
@@ -45,6 +50,29 @@ export interface CreateLoopOptions {
   /** Returns mana cost rate for the currently active action (mana/sec). */
   currentManaCostRate: () => number;
   registerTick: (callback: (dt: number) => void) => () => void;
+  /** Number of earned achievements, used to gate recommendation tiers. */
+  earnedCount: () => number;
+  /** All action IDs eligible for MutateBest insertion mutations. */
+  actionPool: () => string[];
+  /** Player-selected goal metric for the Tier 4 GoalStrategy. */
+  selectedGoalMetric: () => string;
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/** Wrap a strategy's canApply with an additional predicate (AND semantics). */
+function gateStrategy(
+  inner: RecommendationStrategyDef,
+  gate: () => boolean,
+): RecommendationStrategyDef {
+  return {
+    id: inner.id,
+    canApply: (ctx) => gate() && inner.canApply(ctx),
+    score: inner.score,
+    recommend: inner.recommend,
+  };
 }
 
 // ============================================================================
@@ -59,7 +87,16 @@ const BASE_MANA_DRAIN_PER_SEC = 2;
 // ============================================================================
 
 export function createIdleLoopsLoop(opts: CreateLoopOptions): IdleLoopsLoopState {
-  const { stats, queue, progress, currentManaCostRate, registerTick } = opts;
+  const {
+    stats,
+    queue,
+    progress,
+    currentManaCostRate,
+    registerTick,
+    earnedCount,
+    actionPool,
+    selectedGoalMetric,
+  } = opts;
 
   const mana = createResource<DecimalSource>(MAX_MANA, { displayName: 'Mana' });
 
@@ -137,7 +174,72 @@ export function createIdleLoopsLoop(opts: CreateLoopOptions): IdleLoopsLoopState
     captureStrategy: () => queue.items.value.map((item) => ({ id: item.id })),
   });
 
-  // --- RecommendationSystem (wiring only, no strategies) ---
+  // --- RecommendationSystem ---
+  // Tier 1: BestReplay advisory (gated on earnedCount >= 1). Replays the
+  // best-known str-xp queue when the player has earned at least one achievement.
+  const bestReplayStrategy = gateStrategy(
+    createBestReplayStrategy('str-xp', { id: 'il-best-replay' }),
+    () => earnedCount() >= 1,
+  );
+
+  // Tier 3a: MutateBest blind (gated on earnedCount >= 5). Proposes random
+  // queue mutations and evaluates them over a two-loop cadence. Scores
+  // higher than BestReplay so it wins arbitration once applicable.
+  //
+  // Tier 3b: once earnedCount >= 6 and a sensitivity config has been
+  // installed via mutateBest.setSensitivity(...), the strategy upgrades
+  // to scratch-engine-scored variant selection.
+  const mutateBest = createMutateBestStrategy({
+    metricKey: 'str-xp',
+    earnedCount,
+    actionPool,
+    threshold: 5,
+  });
+
+  // Tier 4: GoalStrategy with a player-selectable metric. Hand-rolled (not
+  // createGoalStrategy) because the built-in freezes `metric` at
+  // construction, and we want the player's dropdown pick to take effect
+  // without re-registering. Reads selectedGoalMetric on every call.
+  const goalStrategy: RecommendationStrategyDef = {
+    id: 'il-goal',
+    canApply: (ctx) => {
+      if (earnedCount() < 8) return false;
+      const entry = ctx.bestOf.entries.value[selectedGoalMetric()];
+      return entry != null && entry.status === 'valid' && entry.strategySnapshot != null;
+    },
+    score: (ctx) => {
+      const entry = ctx.bestOf.entries.value[selectedGoalMetric()];
+      if (!entry) return 0;
+      const ps = new Decimal(entry.perSecond).toNumber();
+      // +2 to edge out MutateBest's +1 — Tier 4 is the highest active tier.
+      const base = Number.isFinite(ps) ? ps : new Decimal(entry.value).toNumber();
+      return base + 2;
+    },
+    recommend: (ctx) => {
+      const metric = selectedGoalMetric();
+      const entry = ctx.bestOf.entries.value[metric]!;
+      const history = ctx.loopLog.history.value;
+      const lastEntry = history.length > 0 ? history[history.length - 1]! : null;
+      const lastDelta = lastEntry?.deltas.find((d) => d.key === metric);
+      const current = lastDelta?.delta ?? new Decimal(0);
+      const projected = entry.projected ?? entry.value;
+      return {
+        snapshot: entry.strategySnapshot!,
+        rationale: {
+          strategyId: 'il-goal',
+          metrics: {
+            [metric]: {
+              current,
+              projected,
+              delta: Decimal.sub(projected, current),
+            },
+          },
+          summary: `Goal (${metric}): replay best run (${entry.value} in ${entry.elapsed.toFixed(1)}s, loop #${entry.loopNumber})`,
+        },
+      };
+    },
+  };
+
   const recommendations = createRecommendationSystem({
     id: 'il-advisor',
     loop,
@@ -155,10 +257,18 @@ export function createIdleLoopsLoop(opts: CreateLoopOptions): IdleLoopsLoopState
         queue.enqueue({ id: item.id, metadata: undefined });
       }
     },
-    strategies: [],
+    strategies: [bestReplayStrategy, mutateBest.strategy, goalStrategy],
+  });
+
+  // Tier 2: Optimizer. Once earnedCount reaches 3, flip autoApply so the
+  // recommendation produced on afterRestart is applied to the queue
+  // immediately. Set on beforeRestart so the flag is live before the
+  // recommendation system's own afterRestart handler runs evaluate().
+  loop.on('beforeRestart', () => {
+    recommendations.autoApply.value = earnedCount() >= 3;
   });
 
   loop.run();
 
-  return { mana, maxMana: MAX_MANA, loop, loopLog, bestOf, recommendations };
+  return { mana, maxMana: MAX_MANA, loop, loopLog, bestOf, recommendations, mutateBest };
 }

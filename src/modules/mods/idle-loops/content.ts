@@ -180,6 +180,8 @@ export const achievementDefs: AchievementDef[] = [
   { id: 'forest-unlocked', title: 'Into the Woods', description: 'Unlock the Forest Path.' },
   { id: 'dungeon-clear', title: 'Dungeon Runner', description: 'Complete a Dungeon Sprint.' },
   { id: 'loop-10', title: 'Looper', description: 'Complete 10 loops.' },
+  { id: 'stat-10', title: 'Master of One', description: 'Reach level 10 in any stat.' },
+  { id: 'loop-25', title: 'Veteran', description: 'Complete 25 loops.' },
 ];
 
 // ============================================================================
