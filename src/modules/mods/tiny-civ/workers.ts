@@ -32,7 +32,7 @@
  * and sidesteps the three-workers-in-one-context collision that persistent
  * `progress` refs would cause.
  */
-import { reactive } from 'vue';
+import { computed, reactive, type ComputedRef } from 'vue';
 import {
   Decimal,
   addResource,
@@ -45,6 +45,7 @@ import {
   type DecimalSource,
   type EngineContext,
   type FillStrategy,
+  type ModifierChain,
   type Persistent,
   type Resource,
   type Sequencer,
@@ -58,9 +59,11 @@ import {
   PIN_TASK_DEFS,
   PIN_TASK_REWARDS,
   WORKER_IDS,
+  WORKER_REQUIREMENTS,
   type BountyDef,
   type BountyType,
   type BuildingId,
+  type EraId,
   type PinTaskId,
   type ResourceKind,
   type TaskReward,
@@ -91,6 +94,12 @@ export interface TinyCivWorker {
   worker: Worker<BountyDef>;
   sequencer: Sequencer<unknown>;
   tracker: TimedProgress;
+  /**
+   * True iff the worker has cleared its era + popCap requirements. Inactive
+   * workers do not pull bounties (their fillStrategy returns nothing) and
+   * the UI renders them as locked placeholders.
+   */
+  isActive: ComputedRef<boolean>;
   /** Cancel the current bounty and push its type back onto the shared pool. */
   recall: () => void;
   /** Tear down the tracker's tick subscription. */
@@ -121,10 +130,24 @@ export interface TinyCivWorkers {
   dispose: () => void;
 }
 
+export interface WorkerGates {
+  /** Current era — any non-baseline worker needs `era >= WORKER_REQUIREMENTS[id].era`. */
+  era: ComputedRef<EraId>;
+  /** Current pop cap (huts built). Gates worker-3/worker-4 physical housing. */
+  popCap: ComputedRef<Decimal>;
+  /**
+   * Multiplier chain applied to hide bounty rewards before deposit. Starts
+   * empty (no effect); Hunting tech binds a ×1.5 modifier onto it. Other
+   * reward kinds deposit at face value.
+   */
+  hideRewardChain: ModifierChain;
+}
+
 export function createTinyCivWorkers(
   ctx: EngineContext,
   resources: WorkerResources,
   inventories: WorkerInventories,
+  gates: WorkerGates,
 ): TinyCivWorkers {
   const availableTasks = withPersistentContext('tiny-civ-bounties', () =>
     persistent<BountyType[]>([], { name: 'availableTasks' }),
@@ -133,7 +156,7 @@ export function createTinyCivWorkers(
   const getTask = (id: string): BountyDef | undefined =>
     BOUNTY_DEFS[id as BountyType] ?? PIN_TASK_DEFS[id as PinTaskId];
 
-  const depositTo = (kind: ResourceKind, amount: Decimal): void => {
+  const depositTo = (kind: ResourceKind, amount: DecimalSource): void => {
     // Wood/stone route through their inventory so the cap clamps deposits.
     // `inv.add` with 'destroy' overflow deposits up to remaining space; any
     // excess is discarded (no pool re-push or retry for now).
@@ -152,7 +175,11 @@ export function createTinyCivWorkers(
     const reward: TaskReward | null | undefined =
       BOUNTY_REWARD_SPECS[taskId as BountyType] ?? PIN_TASK_REWARDS[taskId as PinTaskId];
     if (reward == null) return;
-    depositTo(reward.resource, new Decimal(reward.amount));
+    const amount =
+      reward.resource === 'hide'
+        ? gates.hideRewardChain.apply(reward.amount)
+        : new Decimal(reward.amount);
+    depositTo(reward.resource, amount);
   };
 
   interface BuiltWorker {
@@ -162,13 +189,32 @@ export function createTinyCivWorkers(
     worker: Worker<BountyDef>;
     /** The strategy used when NOT pinned — round-robin over the shared pool. */
     poolStrategy: FillStrategy<unknown>;
+    /** True when era + popCap requirements for this worker are met. */
+    isActive: ComputedRef<boolean>;
   }
+
+  /**
+   * Wraps an inner fill strategy so that it yields nothing while the gate is
+   * closed. Used on every worker's pool strategy: inactive workers (era or
+   * hut requirement unmet) simply never see candidates, so `sequencer.fill()`
+   * is a no-op. Pin strategies get the same wrapping on pin, so a pinned
+   * worker whose era regresses would also halt — though that direction isn't
+   * reachable with tech-only progression.
+   */
+  const gate = <T>(inner: FillStrategy<T>, isActive: () => boolean): FillStrategy<T> => ({
+    next: () => (isActive() ? inner.next() : null),
+  });
 
   // Per-worker persistent context isolates the sequencer's current/paused state
   // and the round-robin rotation index. Trackers are ephemeral so they don't
   // contend for a 'progress' key inside this context.
   const buildWorker = (id: WorkerId): BuiltWorker =>
     withPersistentContext(`tiny-civ-${id}`, () => {
+      const req = WORKER_REQUIREMENTS[id];
+      const isActive: ComputedRef<boolean> = computed(
+        () => gates.era.value >= req.era && gates.popCap.value.gte(req.hutsRequired),
+      );
+
       const sequencer: Sequencer<unknown> = createSequencer<unknown>({ id: `${id}:seq` });
 
       const tracker = createTimedProgress({
@@ -190,18 +236,21 @@ export function createTinyCivWorkers(
         if (idx >= 0) availableTasks.value.splice(idx, 1);
       });
 
-      const poolStrategy = createRoundRobinStrategy<unknown>(
-        `tiny-civ-${id}`,
-        () =>
-          availableTasks.value.map(
-            (type): SequencerItem<unknown> => ({ id: type, metadata: undefined }),
-          ),
+      const poolStrategy = gate(
+        createRoundRobinStrategy<unknown>(
+          `tiny-civ-${id}`,
+          () =>
+            availableTasks.value.map(
+              (type): SequencerItem<unknown> => ({ id: type, metadata: undefined }),
+            ),
+        ),
+        () => isActive.value,
       );
       sequencer.fillStrategy = poolStrategy;
 
       const worker = createWorker<BountyDef>({ id, sequencer, tracker, getTask });
 
-      return { id, sequencer, tracker, worker, poolStrategy };
+      return { id, sequencer, tracker, worker, poolStrategy, isActive };
     });
 
   const built = WORKER_IDS.map(buildWorker);
@@ -221,19 +270,19 @@ export function createTinyCivWorkers(
     return null;
   };
 
-  const makePinStrategy = (taskId: PinTaskId): FillStrategy<unknown> => ({
-    next: () => ({ id: taskId, metadata: undefined }),
-  });
+  const makePinStrategy = (taskId: PinTaskId, isActive: () => boolean): FillStrategy<unknown> =>
+    gate({ next: () => ({ id: taskId, metadata: undefined }) }, isActive);
 
   // Idle workers don't poll for new bounties — the sequencer only fills on
   // complete / cancel / explicit fill(). After a post or a recall, nudge each
-  // currently-idle AND unpinned worker once so exactly one of them claims the
-  // fresh entry. On recall, the recaller is excluded: otherwise it would be
-  // first in the iteration order and re-grab the task it just pushed back.
+  // currently-idle AND unpinned AND active worker once so exactly one of them
+  // claims the fresh entry. Inactive workers are skipped outright; their
+  // strategy is gated anyway, but this avoids the bookkeeping.
   const wakeIdleWorkers = (exceptId?: WorkerId): void => {
     for (const b of built) {
       if (b.id === exceptId) continue;
       if (pinnedBy[b.id] != null) continue;
+      if (!b.isActive.value) continue;
       if (b.sequencer.currentItem == null) b.sequencer.fill();
     }
   };
@@ -257,7 +306,7 @@ export function createTinyCivWorkers(
     } else if (b.sequencer.currentItem != null) {
       b.sequencer.cancel();
     }
-    b.sequencer.fillStrategy = makePinStrategy(taskId);
+    b.sequencer.fillStrategy = makePinStrategy(taskId, () => b.isActive.value);
     pinnedBy[workerId] = buildingId;
     b.sequencer.fill();
   };
@@ -277,6 +326,7 @@ export function createTinyCivWorkers(
     worker: b.worker,
     sequencer: b.sequencer,
     tracker: b.tracker,
+    isActive: b.isActive,
     recall: () => {
       // Recall is for pool tasks only; pinned workers have a dedicated unpin.
       if (pinnedBy[b.id] != null) return;

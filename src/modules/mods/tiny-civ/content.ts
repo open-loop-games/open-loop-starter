@@ -28,6 +28,8 @@ export const zoneDefs: TinyCivZoneDef[] = [
   { id: 'camp', name: 'Camp', order: 0 },
   { id: 'forest', name: 'Forest', order: 1 },
   { id: 'hills', name: 'Hills', order: 2 },
+  { id: 'mines', name: 'Mines', order: 3 },
+  { id: 'marsh', name: 'Marsh', order: 4 },
 ];
 
 /** Short hints shown under each zone name in the picker. */
@@ -35,6 +37,8 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
   camp: 'Home base. Gather food from nearby fields.',
   forest: 'Dense woodland. Wood and stone await harvest.',
   hills: 'Rocky uplands. Agriculture unlocks access.',
+  mines: 'Deep cuts into the rock. Masonry opens the way.',
+  marsh: 'Salt-rich wetlands. Currency marks their charting.',
 };
 
 /** Zones unlocked on a fresh game. */
@@ -128,12 +132,46 @@ export const BOUNTY_REWARDS: Record<BountyType, number> = {
 };
 
 /**
- * Fixed roster of worker identities. 5c hardcodes three; dynamic scaling lands
- * alongside era transitions in 5f.
+ * Full roster of worker identities. Three are active from the start; the 4th
+ * activates at era 1 (Settlement) with at least one hut, and the 5th at era 2
+ * (Commerce) with at least two huts. All five are *registered* at install —
+ * the activation predicate in workers.ts gates which sequencers can claim
+ * tasks. Keeping the registry static avoids mid-run `withPersistentContext`
+ * re-entry for the added workers.
  */
-export const WORKER_IDS = ['worker-0', 'worker-1', 'worker-2'] as const;
+export const WORKER_IDS = [
+  'worker-0',
+  'worker-1',
+  'worker-2',
+  'worker-3',
+  'worker-4',
+] as const;
 
 export type WorkerId = (typeof WORKER_IDS)[number];
+
+/**
+ * Activation requirement per worker. A worker is active iff the current era
+ * meets {@link WorkerRequirement.era} AND the current pop cap (huts built)
+ * meets {@link WorkerRequirement.hutsRequired}. Workers 0–2 are baseline:
+ * always active, no requirements. Workers 3–4 gate on era + huts.
+ *
+ * Era is the *authorization*, huts are the *physical housing*. Both must
+ * clear for the worker to pull bounties or run pin tasks.
+ */
+export interface WorkerRequirement {
+  /** Minimum era (0/1/2) the tech tree must have reached. */
+  era: EraId;
+  /** Number of huts that must exist before this worker activates. */
+  hutsRequired: number;
+}
+
+export const WORKER_REQUIREMENTS: Record<WorkerId, WorkerRequirement> = {
+  'worker-0': { era: 0, hutsRequired: 0 },
+  'worker-1': { era: 0, hutsRequired: 0 },
+  'worker-2': { era: 0, hutsRequired: 0 },
+  'worker-3': { era: 1, hutsRequired: 1 },
+  'worker-4': { era: 2, hutsRequired: 2 },
+};
 
 /**
  * Continuous building-bound tasks a pinned worker can loop on. Distinct from
@@ -163,7 +201,10 @@ export type ResourceKind =
   | 'salt'
   | 'tools'
   | 'leather'
-  | 'medicine';
+  | 'medicine'
+  | 'iron'
+  | 'gold'
+  | 'manuscripts';
 
 /** Ordered enumeration for registry iteration and row ordering in the UI. */
 export const RESOURCE_KINDS: readonly ResourceKind[] = [
@@ -176,6 +217,9 @@ export const RESOURCE_KINDS: readonly ResourceKind[] = [
   'tools',
   'leather',
   'medicine',
+  'iron',
+  'gold',
+  'manuscripts',
 ] as const;
 
 export interface ResourceDisplay {
@@ -183,7 +227,7 @@ export interface ResourceDisplay {
   name: string;
   icon: string;
   /** Row grouping for the left-column resource table. */
-  group: 'basic' | 'material' | 'craft';
+  group: 'basic' | 'material' | 'craft' | 'advanced';
 }
 
 export const RESOURCE_DISPLAY: Record<ResourceKind, ResourceDisplay> = {
@@ -196,6 +240,14 @@ export const RESOURCE_DISPLAY: Record<ResourceKind, ResourceDisplay> = {
   tools: { id: 'tools', name: 'Tools', icon: '🔧', group: 'craft' },
   leather: { id: 'leather', name: 'Leather', icon: '🟫', group: 'craft' },
   medicine: { id: 'medicine', name: 'Medicine', icon: '💊', group: 'craft' },
+  iron: { id: 'iron', name: 'Iron', icon: '⛏️', group: 'advanced' },
+  gold: { id: 'gold', name: 'Gold', icon: '🪙', group: 'advanced' },
+  manuscripts: {
+    id: 'manuscripts',
+    name: 'Manuscripts',
+    icon: '📜',
+    group: 'advanced',
+  },
 };
 
 /** Unified shape used by both bounties and pin tasks for reward dispatch. */
@@ -229,7 +281,14 @@ export const BOUNTY_REWARD_SPECS: Record<BountyType, TaskReward | null> = {
  * (farm passive production, storage cap) or via direct flag refs consumed by
  * later subtasks (hut popCap → 5f; workshop hasWorkshop → 5e).
  */
-export type BuildingId = 'hut' | 'farm' | 'workshop' | 'storage';
+export type BuildingId =
+  | 'hut'
+  | 'farm'
+  | 'workshop'
+  | 'storage'
+  | 'mines'
+  | 'marketplace'
+  | 'library';
 
 export interface BuildingCost {
   resource: ResourceKind;
@@ -247,6 +306,12 @@ export interface BuildingDef {
   pinnable: boolean;
   /** Icon glyph for the layout row. */
   icon: string;
+  /**
+   * Tech prerequisite. When set, the building's requirements array includes a
+   * {@link createBooleanRequirement} pointing at the tech's `bought.value`.
+   * Left undefined on baseline era-0 buildings (hut, farm, workshop, storage).
+   */
+  requiresTech?: TechId;
 }
 
 export const BUILDING_DEFS: BuildingDef[] = [
@@ -295,6 +360,47 @@ export const BUILDING_DEFS: BuildingDef[] = [
     pinnable: false,
     icon: '📦',
   },
+  {
+    id: 'mines',
+    name: 'Mines',
+    description: 'Cuts iron from the rock. Passive income once built.',
+    priceRatio: 1.15,
+    baseCosts: [
+      { resource: 'wood', amount: 40 },
+      { resource: 'stone', amount: 30 },
+    ],
+    pinnable: false,
+    icon: '⛏️',
+    requiresTech: 'masonry',
+  },
+  {
+    id: 'marketplace',
+    name: 'Marketplace',
+    description: 'Trade flows through. Generates gold over time.',
+    priceRatio: 1.15,
+    baseCosts: [
+      { resource: 'wood', amount: 60 },
+      { resource: 'stone', amount: 50 },
+      { resource: 'iron', amount: 20 },
+    ],
+    pinnable: false,
+    icon: '🏪',
+    requiresTech: 'currency',
+  },
+  {
+    id: 'library',
+    name: 'Library',
+    description: 'Scribes at work. Passive manuscripts.',
+    priceRatio: 1.15,
+    baseCosts: [
+      { resource: 'wood', amount: 80 },
+      { resource: 'stone', amount: 60 },
+      { resource: 'tools', amount: 30 },
+    ],
+    pinnable: false,
+    icon: '📚',
+    requiresTech: 'currency',
+  },
 ];
 
 /** Starting per-resource cap. Storage building extends these. */
@@ -306,7 +412,16 @@ export const STORAGE_CAP_PER_COPY = 25;
 /** Food/sec passive production per farm copy. Layered via modifier chain. */
 export const FARM_BASE_RATE = 0.2;
 
-/** Pop cap increment per hut copy. Consumed by 5f era transitions. */
+/** Iron/sec per mines copy (era 1, Masonry-gated). */
+export const MINES_BASE_RATE = 0.3;
+
+/** Gold/sec per marketplace copy (era 2, Currency-gated). */
+export const MARKETPLACE_BASE_RATE = 0.2;
+
+/** Manuscripts/sec per library copy (era 2, Currency-gated). */
+export const LIBRARY_BASE_RATE = 0.1;
+
+/** Pop cap increment per hut copy. Huts AND era gate worker-3/worker-4. */
 export const HUT_POP_PER_COPY = 1;
 
 /**
@@ -369,3 +484,188 @@ export const RECIPE_DEFS: RecipeDef[] = [
     icon: '💊',
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Tech tree (5f)
+// ---------------------------------------------------------------------------
+
+/**
+ * Era identifiers derived from which gateway techs have been bought. Era 0 is
+ * the starting Gathering era; era 1 (Settlement) entered by buying Agriculture;
+ * era 2 (Commerce) entered by buying Currency. Techs carry a {@link TechDef.tier}
+ * for DAG layout; "era" is computed separately and is not equivalent to tier.
+ */
+export type EraId = 0 | 1 | 2;
+
+export const ERA_NAMES: Record<EraId, string> = {
+  0: 'Gathering',
+  1: 'Settlement',
+  2: 'Commerce',
+};
+
+/**
+ * All nine techs across three tiers. Two are gateways (Agriculture, Currency);
+ * the rest each bind one modifier-chain effect. Effects themselves are not
+ * encoded here — they live in tech.ts's `bindEffects` where the target chains
+ * are known — but costs and prereqs are pure data.
+ */
+export type TechId =
+  | 'pottery'
+  | 'hunting'
+  | 'agriculture'
+  | 'masonry'
+  | 'animal-husbandry'
+  | 'currency'
+  | 'mathematics'
+  | 'engineering'
+  | 'writing';
+
+export interface TechCost {
+  resource: ResourceKind;
+  amount: number;
+}
+
+export interface TechDef {
+  id: TechId;
+  /** DAG tier for UI grouping. Not the same as {@link EraId}. */
+  tier: 0 | 1 | 2;
+  name: string;
+  /** Short flavor + mechanical summary shown in the rich tooltip. */
+  description: string;
+  icon: string;
+  /** Required-already-bought tech ids. Empty array = no prereqs (starter techs). */
+  prereqs: TechId[];
+  costs: TechCost[];
+  /**
+   * True for the two gateway techs. Purchasing a gateway fires the era
+   * transition bundle (banner + zone unlock). Drives the "strategic moment"
+   * visual emphasis in the tech panel.
+   */
+  gateway?: boolean;
+}
+
+export const TECH_DEFS: TechDef[] = [
+  {
+    id: 'pottery',
+    tier: 0,
+    name: 'Pottery',
+    description: 'Fired clay vessels keep the wood yard from overflowing.',
+    icon: '🏺',
+    prereqs: [],
+    costs: [
+      { resource: 'food', amount: 20 },
+      { resource: 'wood', amount: 15 },
+    ],
+  },
+  {
+    id: 'hunting',
+    tier: 0,
+    name: 'Hunting',
+    description: 'Skilled hunts yield more hide per outing.',
+    icon: '🏹',
+    prereqs: [],
+    costs: [
+      { resource: 'food', amount: 20 },
+      { resource: 'stone', amount: 10 },
+    ],
+  },
+  {
+    id: 'agriculture',
+    tier: 0,
+    name: 'Agriculture',
+    description: 'Tilled fields. Opens the Settlement era and the hills.',
+    icon: '🌾',
+    prereqs: ['pottery', 'hunting'],
+    costs: [
+      { resource: 'food', amount: 40 },
+      { resource: 'wood', amount: 30 },
+      { resource: 'stone', amount: 20 },
+    ],
+    gateway: true,
+  },
+  {
+    id: 'masonry',
+    tier: 1,
+    name: 'Masonry',
+    description: 'Stonework. Extends stone capacity and unlocks the mines.',
+    icon: '🧱',
+    prereqs: ['agriculture'],
+    costs: [
+      { resource: 'food', amount: 50 },
+      { resource: 'stone', amount: 40 },
+    ],
+  },
+  {
+    id: 'animal-husbandry',
+    tier: 1,
+    name: 'Animal Husbandry',
+    description: 'Livestock tended. Farms yield more food.',
+    icon: '🐑',
+    prereqs: ['agriculture'],
+    costs: [
+      { resource: 'food', amount: 60 },
+      { resource: 'leather', amount: 30 },
+    ],
+  },
+  {
+    id: 'currency',
+    tier: 1,
+    name: 'Currency',
+    description: 'Coin changes hands. Opens the Commerce era and the marsh.',
+    icon: '💰',
+    prereqs: ['masonry', 'animal-husbandry'],
+    costs: [
+      { resource: 'food', amount: 100 },
+      { resource: 'tools', amount: 50 },
+    ],
+    gateway: true,
+  },
+  {
+    id: 'mathematics',
+    tier: 2,
+    name: 'Mathematics',
+    description: 'Precise measure. Crafters yield 25% more per recipe.',
+    icon: '➕',
+    prereqs: ['currency'],
+    costs: [
+      { resource: 'food', amount: 200 },
+      { resource: 'tools', amount: 150 },
+    ],
+  },
+  {
+    id: 'engineering',
+    tier: 2,
+    name: 'Engineering',
+    description: 'Reinforced stores. Wood and stone caps each gain +30.',
+    icon: '⚙️',
+    prereqs: ['currency'],
+    costs: [
+      { resource: 'food', amount: 200 },
+      { resource: 'tools', amount: 200 },
+    ],
+  },
+  {
+    id: 'writing',
+    tier: 2,
+    name: 'Writing',
+    description: 'Ledgered knowledge. Farms gain another +20% yield.',
+    icon: '✍️',
+    prereqs: ['currency'],
+    costs: [
+      { resource: 'food', amount: 300 },
+      { resource: 'manuscripts', amount: 100 },
+    ],
+  },
+];
+
+/** Modifier strengths used by bindEffects; extracted here so they're scannable. */
+export const TECH_EFFECTS = {
+  potteryWoodCapBonus: 20,
+  huntingHideMultiplier: 1.5,
+  masonryStoneCapBonus: 25,
+  animalHusbandryFarmMultiplier: 1.2,
+  mathematicsCraftingMultiplier: 1.25,
+  engineeringWoodCapBonus: 30,
+  engineeringStoneCapBonus: 30,
+  writingFarmMultiplier: 1.2,
+} as const;

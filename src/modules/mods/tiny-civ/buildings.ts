@@ -18,6 +18,7 @@ import { computed, type ComputedRef } from 'vue';
 import {
   Decimal,
   createAdditiveModifier,
+  createBooleanRequirement,
   createCostRequirement,
   createPurchasableCategory,
   withPersistentContext,
@@ -26,16 +27,23 @@ import {
   type ModifierChain,
   type Purchasable,
   type PurchasableCategory,
+  type Requirement,
   type Resource,
 } from 'open-loop-engine';
 import {
   BUILDING_DEFS,
   FARM_BASE_RATE,
   HUT_POP_PER_COPY,
+  LIBRARY_BASE_RATE,
+  MARKETPLACE_BASE_RATE,
+  MINES_BASE_RATE,
   STORAGE_CAP_PER_COPY,
+  TECH_DEFS,
   type BuildingDef,
   type BuildingId,
   type ResourceKind,
+  type TechDef,
+  type TechId,
   type WorkerId,
 } from './content';
 
@@ -81,14 +89,29 @@ export interface BuildingWiring {
   woodStockpile: Inventory;
   /** Stone-side capacity chain entry point. */
   stoneStockpile: Inventory;
-  /** Additive chain the tick loop reads for passive food/sec. */
-  foodProductionChain: ModifierChain;
+  /**
+   * Per-resource production chains. Farm binds onto `food`, mines onto `iron`,
+   * marketplace onto `gold`, library onto `manuscripts`. The tick loop in
+   * index.ts sums each chain and deposits. Passed as a full record so era-2+
+   * producers can drop in without rethreading the wiring.
+   */
+  productionChains: Record<ResourceKind, ModifierChain>;
   /** Worker subsystem used to swap sequencer strategies on pin/unpin. */
   workers: PinDelegate;
+  /**
+   * Tech category — used to resolve {@link BuildingDef.requiresTech} into a
+   * {@link createBooleanRequirement}. Buildings without `requiresTech` are
+   * unaffected.
+   */
+  techCategory: PurchasableCategory<TechDef>;
 }
 
 export function createTinyCivBuildings(wiring: BuildingWiring): TinyCivBuildings {
-  const { resources, woodStockpile, stoneStockpile, foodProductionChain, workers } = wiring;
+  const { resources, woodStockpile, stoneStockpile, productionChains, workers, techCategory } =
+    wiring;
+
+  const techName = (id: TechId): string =>
+    TECH_DEFS.find((t) => t.id === id)?.name ?? id;
 
   // Categorize-then-register lives inside a persistent context so each
   // purchasable's `amount` ref is bucketed under 'tiny-civ-buildings' in the
@@ -97,7 +120,7 @@ export function createTinyCivBuildings(wiring: BuildingWiring): TinyCivBuildings
     createPurchasableCategory<BuildingDef>({
       id: 'tiny-civ-buildings',
       mapPurchasable: (def) => {
-        const requirements = def.baseCosts.map((c) => {
+        const costReqs: Requirement[] = def.baseCosts.map((c) => {
           const res = resources[c.resource];
           const base = c.amount;
           return createCostRequirement({
@@ -114,9 +137,21 @@ export function createTinyCivBuildings(wiring: BuildingWiring): TinyCivBuildings
           });
         });
 
+        const techReqs: Requirement[] =
+          def.requiresTech == null
+            ? []
+            : [
+                createBooleanRequirement({
+                  requirement: () =>
+                    techCategory.getPurchasable(def.requiresTech as TechId)?.bought.value ??
+                    false,
+                  description: `${techName(def.requiresTech)} tech`,
+                }),
+              ];
+
         return {
           display: { title: def.name, description: def.description },
-          requirements,
+          requirements: [...costReqs, ...techReqs],
           limit: Decimal.dInf,
         };
       },
@@ -137,15 +172,43 @@ export function createTinyCivBuildings(wiring: BuildingWiring): TinyCivBuildings
   const farmAmount = amountOf('farm');
   const workshopAmount = amountOf('workshop');
   const storageAmount = amountOf('storage');
+  const minesAmount = amountOf('mines');
+  const marketplaceAmount = amountOf('marketplace');
+  const libraryAmount = amountOf('library');
 
   // Farm passive production: additive into the food-production chain. The
   // chain is ticked by index.ts; this binding only contributes when at least
   // one farm exists (keeps `apply(0)` at zero before first purchase).
-  foodProductionChain.bind({
+  productionChains.food.bind({
     active: () => farmAmount.value.gt(0),
     modifier: createAdditiveModifier({
       addend: () => Decimal.mul(FARM_BASE_RATE, farmAmount.value),
       description: 'Farm passive production',
+    }),
+  });
+
+  // Era-1 Masonry-gated: mines → iron.
+  productionChains.iron.bind({
+    active: () => minesAmount.value.gt(0),
+    modifier: createAdditiveModifier({
+      addend: () => Decimal.mul(MINES_BASE_RATE, minesAmount.value),
+      description: 'Mines',
+    }),
+  });
+
+  // Era-2 Currency-gated: marketplace → gold, library → manuscripts.
+  productionChains.gold.bind({
+    active: () => marketplaceAmount.value.gt(0),
+    modifier: createAdditiveModifier({
+      addend: () => Decimal.mul(MARKETPLACE_BASE_RATE, marketplaceAmount.value),
+      description: 'Marketplace',
+    }),
+  });
+  productionChains.manuscripts.bind({
+    active: () => libraryAmount.value.gt(0),
+    modifier: createAdditiveModifier({
+      addend: () => Decimal.mul(LIBRARY_BASE_RATE, libraryAmount.value),
+      description: 'Library',
     }),
   });
 

@@ -36,7 +36,7 @@
  *   - `'tiny-civ-buildings'`  — per-building purchasable amounts
  *   - `'tiny-civ-crafting'`   — per-recipe purchasable amounts (craft counter)
  */
-import { computed, type ComputedRef } from 'vue';
+import { computed, shallowRef, type ComputedRef } from 'vue';
 import {
   Decimal,
   addResource,
@@ -55,6 +55,7 @@ import {
   type ZoneSystem,
 } from 'open-loop-engine';
 import { setSlot } from '@/modules/ui-registry';
+import { useToasts } from '@/composables/useToasts';
 import TinyCivLayout from '@/ui/layouts/TinyCivLayout.vue';
 import {
   zoneDefs,
@@ -70,6 +71,7 @@ import {
 import { createTinyCivWorkers, type TinyCivWorkers } from './workers';
 import { createTinyCivBuildings, type TinyCivBuildings } from './buildings';
 import { createTinyCivCrafting, type TinyCivCrafting } from './crafting';
+import { createTinyCivTech, type TinyCivTech } from './tech';
 
 export interface TinyCivState {
   /** Full resource record — everything the UI, bounties, and recipes read. */
@@ -91,6 +93,7 @@ export interface TinyCivState {
   workers: TinyCivWorkers;
   buildings: TinyCivBuildings;
   crafting: TinyCivCrafting;
+  tech: TinyCivTech;
 }
 
 export const TinyCivKey: InjectionKey<TinyCivState> =
@@ -141,6 +144,17 @@ export function createTinyCivModule(): EngineModule {
         }),
       }));
 
+      // Era-2 resources. Registered up front (per the "register everything,
+      // visibility gates downstream" decision) so save shape is stable — iron
+      // sits at 0 until mines produce it, same for gold/manuscripts.
+      const advanced = withPersistentContext('tiny-civ-advanced', () => ({
+        iron: createResource<DecimalSource>(0, { displayName: RESOURCE_DISPLAY.iron.name }),
+        gold: createResource<DecimalSource>(0, { displayName: RESOURCE_DISPLAY.gold.name }),
+        manuscripts: createResource<DecimalSource>(0, {
+          displayName: RESOURCE_DISPLAY.manuscripts.name,
+        }),
+      }));
+
       const resources: Record<ResourceKind, Resource<DecimalSource>> = {
         food,
         wood,
@@ -151,6 +165,9 @@ export function createTinyCivModule(): EngineModule {
         tools: crafted.tools,
         leather: crafted.leather,
         medicine: crafted.medicine,
+        iron: advanced.iron,
+        gold: advanced.gold,
+        manuscripts: advanced.manuscripts,
       };
 
       const inventories = { wood: woodStockpile, stone: stoneStockpile };
@@ -185,20 +202,64 @@ export function createTinyCivModule(): EngineModule {
         addResource(food, new Decimal(CLICK_GATHER_FOOD));
       };
 
-      const workers = createTinyCivWorkers(ctx, resources, inventories);
+      // Cross-cutting modifier chains. `hideRewardChain` is read inside the
+      // worker reward dispatch; `craftingOutputChain` is read inside every
+      // recipe's onPurchase. Both start empty and identity-apply over their
+      // input; tech effects bind multipliers in during tech-system install.
+      const hideRewardChain = createModifierChain('tc-hide-reward');
+      const craftingOutputChain = createModifierChain('tc-crafting-output');
+
+      // Tech has no peer dependencies on buildings/workers/crafting — it only
+      // needs the chains and inventories it binds effects onto, plus zones
+      // for mines-unlock. Create it first so `tech.era` + `tech.category`
+      // are ready for the downstream consumers.
+      const tech = createTinyCivTech({
+        resources,
+        woodStockpile,
+        stoneStockpile,
+        foodProductionChain: productionChains.food,
+        hideRewardChain,
+        craftingOutputChain,
+        zones,
+      });
+
+      // Buildings holder — workers' popCap gate reads from buildings, but
+      // buildings needs `workers` (for pin delegation). Break the cycle with
+      // a shallowRef populated after buildings is constructed. `popCap`
+      // re-evaluates once the holder flips from null to the built object.
+      const buildingsHolder = shallowRef<TinyCivBuildings | null>(null);
+      const popCap: ComputedRef<Decimal> = computed(
+        () => buildingsHolder.value?.popCap.value ?? Decimal.dZero,
+      );
+
+      const workers = createTinyCivWorkers(ctx, resources, inventories, {
+        era: tech.era,
+        popCap,
+        hideRewardChain,
+      });
 
       const buildings = createTinyCivBuildings({
         resources,
         woodStockpile,
         stoneStockpile,
-        foodProductionChain: productionChains.food,
+        productionChains,
         workers,
+        techCategory: tech.category,
       });
+      buildingsHolder.value = buildings;
 
       const crafting = createTinyCivCrafting({
         resources,
         inventories,
+        outputChain: craftingOutputChain,
       });
+
+      // Era transition bundle — banner toast + the era-only zone unlocks
+      // (hills at era 1, marsh at era 2). Non-immediate: a reload at era 2
+      // does not re-fire the handlers. Zone unlocks persist through the
+      // ZoneSystem's own persistent `unlocked` ref.
+      const { addToast } = useToasts();
+      tech.installEraWatch({ addToast });
 
       ctx.onTick((dt) => {
         for (const kind of RESOURCE_KINDS) {
@@ -226,6 +287,7 @@ export function createTinyCivModule(): EngineModule {
         workers,
         buildings,
         crafting,
+        tech,
       };
       ctx.provide(TinyCivKey, state);
 

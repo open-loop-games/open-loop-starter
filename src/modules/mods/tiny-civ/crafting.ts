@@ -28,6 +28,7 @@ import {
   withPersistentContext,
   type DecimalSource,
   type Inventory,
+  type ModifierChain,
   type PurchasableCategory,
   type Resource,
 } from 'open-loop-engine';
@@ -36,6 +37,13 @@ import { RECIPE_DEFS, type RecipeDef, type ResourceKind } from './content';
 export interface CraftingWiring {
   resources: Record<ResourceKind, Resource<DecimalSource>>;
   inventories: { wood: Inventory; stone: Inventory };
+  /**
+   * Multiplier chain applied to each recipe's output amount before deposit.
+   * Starts empty (identity); Mathematics tech binds a ×1.25 modifier onto
+   * it. Applied per-purchase rather than per-batch so an `n`-craft still
+   * gets the full multiplier stacked once.
+   */
+  outputChain: ModifierChain;
 }
 
 export interface TinyCivCrafting {
@@ -43,7 +51,7 @@ export interface TinyCivCrafting {
 }
 
 export function createTinyCivCrafting(wiring: CraftingWiring): TinyCivCrafting {
-  const { resources, inventories } = wiring;
+  const { resources, inventories, outputChain } = wiring;
 
   // Output deposits honour the same cap-clamp routing workers use for wood/stone
   // so a recipe that somehow produced wood (era-2 salvage, say) could not
@@ -83,7 +91,8 @@ export function createTinyCivCrafting(wiring: CraftingWiring): TinyCivCrafting {
           requirements,
           limit: Decimal.dInf,
           onPurchase: (n) => {
-            depositOutput(def.output.resource, Decimal.mul(def.output.amount, n));
+            const base = Decimal.mul(def.output.amount, n);
+            depositOutput(def.output.resource, outputChain.apply(base));
           },
         };
       },

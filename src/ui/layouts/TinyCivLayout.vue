@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
 import { ThreePanelShell } from '@/lib';
 import { useModule } from '@/composables/useModule';
@@ -8,9 +8,11 @@ import {
   BOUNTY_DEFS,
   BOUNTY_REWARDS,
   BUILDING_DEFS,
+  ERA_NAMES,
   RECIPE_DEFS,
   RESOURCE_DISPLAY,
   RESOURCE_KINDS,
+  WORKER_REQUIREMENTS,
   ZONE_DESCRIPTIONS,
   type BountyType,
   type BuildingId,
@@ -21,6 +23,8 @@ import {
 import HudBar from '@/ui/components/HudBar.vue';
 import HudChip from '@/ui/components/HudChip.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
+import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
+import TinyCivTechPanel from '@/ui/panels/TinyCivTechPanel.vue';
 
 const tc = useModule(TinyCivKey);
 
@@ -33,10 +37,14 @@ const capacityFor = (kind: ResourceKind): Decimal | null => {
 };
 
 const resourceGroups = computed(() => {
-  const groups: Record<'basic' | 'material' | 'craft', { name: string; rows: ResourceRow[] }> = {
+  const groups: Record<
+    'basic' | 'material' | 'craft' | 'advanced',
+    { name: string; rows: ResourceRow[] }
+  > = {
     basic: { name: 'Basic', rows: [] },
     material: { name: 'Materials', rows: [] },
     craft: { name: 'Crafted', rows: [] },
+    advanced: { name: 'Advanced', rows: [] },
   };
   for (const kind of RESOURCE_KINDS) {
     const display = RESOURCE_DISPLAY[kind];
@@ -54,7 +62,7 @@ const resourceGroups = computed(() => {
     };
     groups[display.group].rows.push(row);
   }
-  return [groups.basic, groups.material, groups.craft];
+  return [groups.basic, groups.material, groups.craft, groups.advanced];
 });
 
 interface ResourceRow {
@@ -91,11 +99,19 @@ const workerViews = computed(() =>
   tc.workers.workers.map((w) => {
     const task = w.worker.currentTask.value;
     const pinnedTo = tc.workers.pinnedBy[w.id];
+    const active = w.isActive.value;
+    const req = WORKER_REQUIREMENTS[w.id];
+    const requirementLabel = active
+      ? ''
+      : `Requires ${ERA_NAMES[req.era]} era + ${req.hutsRequired} hut${req.hutsRequired === 1 ? '' : 's'}`;
     return {
       id: w.id,
       label: w.id.replace('worker-', 'Worker '),
-      currentLabel: task?.label ?? (pinnedTo != null ? 'Idle (pinned)' : 'Idle'),
+      currentLabel: active
+        ? (task?.label ?? (pinnedTo != null ? 'Idle (pinned)' : 'Idle'))
+        : requirementLabel,
       isIdle: task == null,
+      isActive: active,
       pinnedTo,
       percent: w.tracker.percentComplete.value,
       recall: w.recall,
@@ -103,8 +119,10 @@ const workerViews = computed(() =>
   }),
 );
 
-const workersBusy = computed(() => workerViews.value.filter((w) => !w.isIdle).length);
-const workersTotal = computed(() => workerViews.value.length);
+const workersBusy = computed(
+  () => workerViews.value.filter((w) => w.isActive && !w.isIdle).length,
+);
+const workersTotal = computed(() => workerViews.value.filter((w) => w.isActive).length);
 
 const BOUNTY_ORDER: BountyType[] = [
   'gather-food',
@@ -199,7 +217,12 @@ const buildingViews = computed(() =>
 
 const idleUnpinnedWorkerIds = computed<WorkerId[]>(() =>
   tc.workers.workers
-    .filter((w) => tc.workers.pinnedBy[w.id] == null && w.worker.currentTask.value == null)
+    .filter(
+      (w) =>
+        w.isActive.value &&
+        tc.workers.pinnedBy[w.id] == null &&
+        w.worker.currentTask.value == null,
+    )
     .map((w) => w.id),
 );
 
@@ -264,6 +287,15 @@ function craftMax(id: string) {
   if (p == null || !p.canPurchase.value) return;
   p.purchaseMax();
 }
+
+const currentEraName = computed(() => ERA_NAMES[tc.tech.era.value]);
+
+const activeRightTab = ref<string>('buildings');
+const rightTabs = computed<TabItem[]>(() => [
+  { value: 'buildings', label: 'Buildings' },
+  { value: 'crafting', label: 'Crafting' },
+  { value: 'tech', label: 'Tech' },
+]);
 </script>
 
 <template>
@@ -274,6 +306,9 @@ function craftMax(id: string) {
       </HudChip>
       <HudChip>
         👥 {{ workersBusy }} / {{ workersTotal }} busy
+      </HudChip>
+      <HudChip class="tc-era-chip">
+        🏛️ {{ currentEraName }}
       </HudChip>
       <HudChip
         variant="muted"
@@ -418,17 +453,26 @@ function craftMax(id: string) {
               v-for="w in workerViews"
               :key="w.id"
               class="tc-worker-card"
-              :class="{ idle: w.isIdle, pinned: w.pinnedTo != null }"
+              :class="{
+                idle: w.isIdle,
+                pinned: w.pinnedTo != null,
+                inactive: !w.isActive,
+              }"
             >
               <div class="tc-worker-head">
-                <span class="tc-worker-label">{{ w.label }}</span>
+                <span class="tc-worker-label">
+                  <span
+                    v-if="!w.isActive"
+                    aria-hidden="true"
+                  >🔒 </span>{{ w.label }}
+                </span>
                 <span
                   v-if="w.pinnedTo"
                   class="tc-worker-pin-badge"
                   :title="`Pinned to ${w.pinnedTo}`"
                 >📌 {{ w.pinnedTo }}</span>
                 <button
-                  v-if="w.pinnedTo == null"
+                  v-if="w.isActive && w.pinnedTo == null"
                   type="button"
                   class="tc-worker-recall"
                   :disabled="w.isIdle"
@@ -442,111 +486,124 @@ function craftMax(id: string) {
                 {{ w.currentLabel }}
               </div>
               <ProgressBar
+                v-if="w.isActive"
                 :value="w.percent"
                 :max="1"
               />
             </li>
           </ul>
         </div>
-        <div class="tc-right-block">
-          <h3 class="tc-panel-title">
-            Buildings
-          </h3>
-          <ul class="tc-building-list">
-            <li
-              v-for="b in buildingViews"
-              :key="b.id"
-              class="tc-building-card"
-            >
-              <div class="tc-building-head">
-                <span class="tc-building-icon">{{ b.icon }}</span>
-                <span class="tc-building-name">{{ b.name }}</span>
-                <span class="tc-building-count">×{{ b.ownedText }}</span>
-              </div>
-              <div class="tc-building-desc">
-                {{ b.description }}
-              </div>
-              <div class="tc-building-actions">
-                <button
-                  type="button"
-                  class="tc-building-buy"
-                  :disabled="!b.canBuy"
-                  :title="b.canBuy ? `Cost: ${b.costText}` : `Need: ${b.costText}`"
-                  @click="buyBuilding(b.id)"
-                >
-                  Build
-                  <span class="tc-building-cost">{{ b.costText }}</span>
-                </button>
-                <button
-                  v-if="b.pinnable && b.pinnedWorker == null"
-                  type="button"
-                  class="tc-building-pin"
-                  :disabled="idleUnpinnedWorkerIds.length === 0 || b.owned.lte(0)"
-                  :title="b.owned.lte(0) ? 'Build one first' : 'Pin an idle worker to this building'"
-                  @click="pinFirstIdleTo(b.id)"
-                >
-                  📌 Pin worker
-                </button>
-                <button
-                  v-else-if="b.pinnable"
-                  type="button"
-                  class="tc-building-pin pinned"
-                  :title="`Release ${b.pinnedWorker}`"
-                  @click="unpinBuilding(b.id)"
-                >
-                  Unpin {{ b.pinnedWorker }}
-                </button>
-              </div>
-            </li>
-          </ul>
-        </div>
-        <div
-          v-if="hasWorkshop"
-          class="tc-right-block"
+
+        <Tabs
+          v-model="activeRightTab"
+          :items="rightTabs"
+          class="tc-right-tabs"
         >
-          <h3 class="tc-panel-title">
-            Crafting
-          </h3>
-          <ul class="tc-recipe-list">
-            <li
-              v-for="r in recipeEntries"
-              :key="r.id"
-              class="tc-recipe-card"
+          <template #panel-buildings>
+            <ul class="tc-building-list">
+              <li
+                v-for="b in buildingViews"
+                :key="b.id"
+                class="tc-building-card"
+              >
+                <div class="tc-building-head">
+                  <span class="tc-building-icon">{{ b.icon }}</span>
+                  <span class="tc-building-name">{{ b.name }}</span>
+                  <span class="tc-building-count">×{{ b.ownedText }}</span>
+                </div>
+                <div class="tc-building-desc">
+                  {{ b.description }}
+                </div>
+                <div class="tc-building-actions">
+                  <button
+                    type="button"
+                    class="tc-building-buy"
+                    :disabled="!b.canBuy"
+                    :title="b.canBuy ? `Cost: ${b.costText}` : `Need: ${b.costText}`"
+                    @click="buyBuilding(b.id)"
+                  >
+                    Build
+                    <span class="tc-building-cost">{{ b.costText }}</span>
+                  </button>
+                  <button
+                    v-if="b.pinnable && b.pinnedWorker == null"
+                    type="button"
+                    class="tc-building-pin"
+                    :disabled="idleUnpinnedWorkerIds.length === 0 || b.owned.lte(0)"
+                    :title="b.owned.lte(0) ? 'Build one first' : 'Pin an idle worker to this building'"
+                    @click="pinFirstIdleTo(b.id)"
+                  >
+                    📌 Pin worker
+                  </button>
+                  <button
+                    v-else-if="b.pinnable"
+                    type="button"
+                    class="tc-building-pin pinned"
+                    :title="`Release ${b.pinnedWorker}`"
+                    @click="unpinBuilding(b.id)"
+                  >
+                    Unpin {{ b.pinnedWorker }}
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </template>
+
+          <template #panel-crafting>
+            <p
+              v-if="!hasWorkshop"
+              class="tc-tab-hint"
             >
-              <div class="tc-recipe-head">
-                <span class="tc-recipe-icon">{{ r.icon }}</span>
-                <span class="tc-recipe-name">{{ r.name }}</span>
-                <span class="tc-recipe-count">×{{ r.craftedText }}</span>
-              </div>
-              <div class="tc-recipe-desc">
-                {{ r.description }}
-              </div>
-              <div class="tc-recipe-costs">
-                <span class="tc-recipe-cost">{{ r.costText }}</span>
-                <span class="tc-recipe-output">{{ r.outputText }}</span>
-              </div>
-              <div class="tc-recipe-actions">
-                <button
-                  type="button"
-                  class="tc-recipe-craft"
-                  :disabled="!r.canCraft"
-                  @click="craftOnce(r.id)"
-                >
-                  Craft
-                </button>
-                <button
-                  type="button"
-                  class="tc-recipe-craft-max"
-                  :disabled="!r.canCraft"
-                  :title="r.maxText ? `Craft ${r.maxText} now` : 'Need more resources'"
-                  @click="craftMax(r.id)"
-                >
-                  Craft max<span v-if="r.maxText"> ({{ r.maxText }})</span>
-                </button>
-              </div>
-            </li>
-          </ul>
-        </div>
+              Build a Workshop to unlock recipes.
+            </p>
+            <ul
+              v-else
+              class="tc-recipe-list"
+            >
+              <li
+                v-for="r in recipeEntries"
+                :key="r.id"
+                class="tc-recipe-card"
+              >
+                <div class="tc-recipe-head">
+                  <span class="tc-recipe-icon">{{ r.icon }}</span>
+                  <span class="tc-recipe-name">{{ r.name }}</span>
+                  <span class="tc-recipe-count">×{{ r.craftedText }}</span>
+                </div>
+                <div class="tc-recipe-desc">
+                  {{ r.description }}
+                </div>
+                <div class="tc-recipe-costs">
+                  <span class="tc-recipe-cost">{{ r.costText }}</span>
+                  <span class="tc-recipe-output">{{ r.outputText }}</span>
+                </div>
+                <div class="tc-recipe-actions">
+                  <button
+                    type="button"
+                    class="tc-recipe-craft"
+                    :disabled="!r.canCraft"
+                    @click="craftOnce(r.id)"
+                  >
+                    Craft
+                  </button>
+                  <button
+                    type="button"
+                    class="tc-recipe-craft-max"
+                    :disabled="!r.canCraft"
+                    :title="r.maxText ? `Craft ${r.maxText} now` : 'Need more resources'"
+                    @click="craftMax(r.id)"
+                  >
+                    Craft max<span v-if="r.maxText"> ({{ r.maxText }})</span>
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </template>
+
+          <template #panel-tech>
+            <TinyCivTechPanel />
+          </template>
+        </Tabs>
       </template>
     </ThreePanelShell>
   </div>
@@ -560,8 +617,12 @@ function craftMax(id: string) {
   min-height: 0;
   flex: 1;
 }
-.tc-zone-chip {
+.tc-era-chip {
   margin-left: auto;
+  font-weight: 600;
+}
+.tc-zone-chip {
+  margin-left: 0;
 }
 .tc-body {
   flex: 1;
@@ -863,6 +924,30 @@ function craftMax(id: string) {
 .tc-worker-card.pinned {
   border-color: var(--color-primary);
   opacity: 1;
+}
+.tc-worker-card.inactive {
+  opacity: 0.5;
+  border-style: dashed;
+}
+.tc-worker-card.inactive .tc-worker-task {
+  font-style: italic;
+}
+
+.tc-right-tabs {
+  flex: 1;
+  min-height: 0;
+}
+.tc-right-block + .tc-right-tabs {
+  margin-top: var(--gap);
+}
+.tc-tab-hint {
+  margin: var(--gap-sm) 0 0;
+  padding: var(--gap) var(--gap-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
 }
 .tc-worker-pin-badge {
   margin-left: auto;
