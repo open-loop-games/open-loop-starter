@@ -12,6 +12,7 @@ import { ccAuthenticModule } from './mods/cc-authentic';
 import { benchmarkModule } from './mods/benchmark';
 import { idleLoopsModule } from './mods/idle-loops';
 import { antimatterDimensionsModule } from './mods/antimatter-dimensions';
+import { tinyCivModule } from './mods/tiny-civ';
 
 const sharedBase = [settingsModule, uiRegistryModule];
 
@@ -73,6 +74,13 @@ export const modDefs: ModDef[] = [
     description:
       'Nested-prestige archetype skeleton: Antimatter plus 4 dimensions with per-10-pack cost scaling and cascade production. Layer 0 only — Infinity and Eternity land in follow-up steps.',
     modules: [...sharedBase, antimatterDimensionsModule],
+  },
+  {
+    id: 'tiny-civ',
+    name: 'Tiny Civilization',
+    description:
+      'Exploration-crafter archetype skeleton: three zones, three resources, and a placeholder click-gather. Workers, buildings, crafting, and tech land in follow-up steps.',
+    modules: [...sharedBase, tinyCivModule],
   },
 ];
 
