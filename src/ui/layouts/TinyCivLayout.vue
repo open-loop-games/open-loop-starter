@@ -8,9 +8,14 @@ import {
   BOUNTY_DEFS,
   BOUNTY_REWARDS,
   BUILDING_DEFS,
+  RECIPE_DEFS,
+  RESOURCE_DISPLAY,
+  RESOURCE_KINDS,
   ZONE_DESCRIPTIONS,
   type BountyType,
   type BuildingId,
+  type RecipeDef,
+  type ResourceKind,
   type WorkerId,
 } from '@/modules/mods/tiny-civ/content';
 import HudBar from '@/ui/components/HudBar.vue';
@@ -19,15 +24,48 @@ import ProgressBar from '@/ui/components/ProgressBar.vue';
 
 const tc = useModule(TinyCivKey);
 
-const food = computed(() => format(Decimal.floor(tc.food.value)));
-const wood = computed(() => format(Decimal.floor(tc.wood.value)));
-const stone = computed(() => format(Decimal.floor(tc.stone.value)));
-const woodCap = computed(() => format(Decimal.floor(tc.woodStockpile.capacity.value)));
-const stoneCap = computed(() => format(Decimal.floor(tc.stoneStockpile.capacity.value)));
-const foodRate = computed(() => {
-  const r = tc.foodPerSecond.value;
-  return r.gt(0) ? `+${format(r, 1)}/s` : '';
+const RESOURCES_WITH_CAP = new Set<ResourceKind>(['wood', 'stone']);
+
+const capacityFor = (kind: ResourceKind): Decimal | null => {
+  if (kind === 'wood') return new Decimal(tc.inventories.wood.capacity.value);
+  if (kind === 'stone') return new Decimal(tc.inventories.stone.capacity.value);
+  return null;
+};
+
+const resourceGroups = computed(() => {
+  const groups: Record<'basic' | 'material' | 'craft', { name: string; rows: ResourceRow[] }> = {
+    basic: { name: 'Basic', rows: [] },
+    material: { name: 'Materials', rows: [] },
+    craft: { name: 'Crafted', rows: [] },
+  };
+  for (const kind of RESOURCE_KINDS) {
+    const display = RESOURCE_DISPLAY[kind];
+    const res = tc.resources[kind];
+    const rate = tc.ratePerSecond[kind].value;
+    const cap = capacityFor(kind);
+    const row: ResourceRow = {
+      id: kind,
+      icon: display.icon,
+      name: display.name,
+      count: format(Decimal.floor(res.value), 0),
+      capText: cap ? `/ ${format(Decimal.floor(cap), 0)}` : '',
+      rateText: rate.gt(0) ? `+${format(rate, 1)}/s` : '',
+      hasCap: RESOURCES_WITH_CAP.has(kind),
+    };
+    groups[display.group].rows.push(row);
+  }
+  return [groups.basic, groups.material, groups.craft];
 });
+
+interface ResourceRow {
+  id: ResourceKind;
+  icon: string;
+  name: string;
+  count: string;
+  capText: string;
+  rateText: string;
+  hasCap: boolean;
+}
 
 const currentZoneName = computed(() => {
   const id = tc.zones.current.value;
@@ -65,45 +103,78 @@ const workerViews = computed(() =>
   }),
 );
 
-const BOUNTY_ORDER: BountyType[] = ['gather-food', 'gather-wood', 'gather-stone', 'explore-zone'];
+const workersBusy = computed(() => workerViews.value.filter((w) => !w.isIdle).length);
+const workersTotal = computed(() => workerViews.value.length);
+
+const BOUNTY_ORDER: BountyType[] = [
+  'gather-food',
+  'gather-wood',
+  'gather-stone',
+  'gather-hide',
+  'gather-herbs',
+  'gather-salt',
+  'explore-zone',
+];
 
 const BOUNTY_ICONS: Record<BountyType, string> = {
   'gather-food': '🌾',
   'gather-wood': '🪵',
   'gather-stone': '🪨',
+  'gather-hide': '🦌',
+  'gather-herbs': '🌿',
+  'gather-salt': '🧂',
   'explore-zone': '🧭',
 };
 
 function rewardLabel(type: BountyType): string {
   const amount = BOUNTY_REWARDS[type];
-  if (amount <= 0) return `${BOUNTY_DEFS[type].durationSec}s`;
+  const def = BOUNTY_DEFS[type];
+  if (amount <= 0) return `${def.durationSec}s`;
   const suffix = type.replace('gather-', '');
-  return `+${amount} ${suffix} · ${BOUNTY_DEFS[type].durationSec}s`;
+  return `+${amount} ${suffix} · ${def.durationSec}s`;
+}
+
+function zoneName(zoneId: string): string {
+  return tc.zones.ordered.value.find((z) => z.id === zoneId)?.name ?? zoneId;
 }
 
 const bountyEntries = computed(() =>
-  BOUNTY_ORDER.map((type) => ({
-    type,
-    icon: BOUNTY_ICONS[type],
-    label: BOUNTY_DEFS[type].label,
-    reward: rewardLabel(type),
-    pending: tc.workers.availableTasks.value.filter((t) => t === type).length,
-  })),
+  BOUNTY_ORDER.map((type) => {
+    const def = BOUNTY_DEFS[type];
+    const gateZone = def.requiresZone;
+    const available = gateZone == null || tc.zones.isUnlocked(gateZone);
+    return {
+      type,
+      icon: BOUNTY_ICONS[type],
+      label: def.label,
+      reward: rewardLabel(type),
+      pending: tc.workers.availableTasks.value.filter((t) => t === type).length,
+      available,
+      gateLabel: gateZone != null && !available ? `Requires ${zoneName(gateZone)}` : '',
+    };
+  }),
 );
 
 const pendingTotal = computed(() => tc.workers.availableTasks.value.length);
 
 function postBounty(type: BountyType) {
+  const def = BOUNTY_DEFS[type];
+  if (def.requiresZone != null && !tc.zones.isUnlocked(def.requiresZone)) return;
   tc.workers.postBounty(type);
 }
 
-const RESOURCE_LABELS = { food: 'food', wood: 'wood', stone: 'stone' } as const;
+function formatCostEntry(resource: ResourceKind, amount: Decimal): string {
+  const label = RESOURCE_DISPLAY[resource].name.toLowerCase();
+  return `${format(Decimal.floor(amount), 0)} ${label}`;
+}
 
-function formatCost(baseCosts: { resource: 'food' | 'wood' | 'stone'; amount: number }[], priceRatio: number, owned: Decimal): string {
+function formatBuildingCost(
+  baseCosts: { resource: ResourceKind; amount: number }[],
+  priceRatio: number,
+  owned: Decimal,
+): string {
   const scale = Decimal.pow(priceRatio, owned);
-  return baseCosts
-    .map((c) => `${format(Decimal.floor(Decimal.mul(c.amount, scale)))} ${RESOURCE_LABELS[c.resource]}`)
-    .join(', ');
+  return baseCosts.map((c) => formatCostEntry(c.resource, Decimal.mul(c.amount, scale))).join(', ');
 }
 
 const buildingViews = computed(() =>
@@ -119,8 +190,8 @@ const buildingViews = computed(() =>
       pinnable: def.pinnable,
       pinnedWorker,
       owned,
-      ownedText: format(Decimal.floor(owned)),
-      costText: formatCost(def.baseCosts, def.priceRatio, owned),
+      ownedText: format(Decimal.floor(owned), 0),
+      costText: formatBuildingCost(def.baseCosts, def.priceRatio, owned),
       canBuy: p?.canPurchase.value ?? false,
     };
   }),
@@ -128,9 +199,7 @@ const buildingViews = computed(() =>
 
 const idleUnpinnedWorkerIds = computed<WorkerId[]>(() =>
   tc.workers.workers
-    .filter(
-      (w) => tc.workers.pinnedBy[w.id] == null && w.worker.currentTask.value == null,
-    )
+    .filter((w) => tc.workers.pinnedBy[w.id] == null && w.worker.currentTask.value == null)
     .map((w) => w.id),
 );
 
@@ -149,25 +218,62 @@ function pinFirstIdleTo(id: BuildingId) {
 function unpinBuilding(id: BuildingId) {
   tc.buildings.unpinBuilding(id);
 }
+
+const hasWorkshop = computed(() => tc.buildings.hasWorkshop.value);
+
+function formatRecipeCost(def: RecipeDef): string {
+  return def.inputs.map((i) => formatCostEntry(i.resource, new Decimal(i.amount))).join(', ');
+}
+
+function formatRecipeOutput(def: RecipeDef): string {
+  return `→ ${def.output.amount} ${RESOURCE_DISPLAY[def.output.resource].name.toLowerCase()}`;
+}
+
+const recipeEntries = computed(() =>
+  RECIPE_DEFS.map((def) => {
+    const p = tc.crafting.category.getPurchasable(def.id);
+    const owned = p == null ? Decimal.dZero : new Decimal(p.amount.value);
+    const canCraft = p?.canPurchase.value ?? false;
+    const maxAmount = p == null ? Decimal.dZero : new Decimal(p.amountToPurchase.value);
+    // Engine's `amountToPurchase` is clamped to min 1 even when unaffordable
+    // (see purchasable.ts buildPurchasableComputeds); gate the "(N)" hint on
+    // canCraft so the button doesn't lie about what clicking will do.
+    const maxText = canCraft && maxAmount.gt(1) ? format(Decimal.floor(maxAmount), 0) : '';
+    return {
+      id: def.id,
+      name: def.name,
+      icon: def.icon,
+      description: def.description,
+      costText: formatRecipeCost(def),
+      outputText: formatRecipeOutput(def),
+      craftedText: format(Decimal.floor(owned), 0),
+      canCraft,
+      maxText,
+    };
+  }),
+);
+
+function craftOnce(id: string) {
+  const p = tc.crafting.category.getPurchasable(id);
+  if (p == null || !p.canPurchase.value) return;
+  p.purchase(1);
+}
+
+function craftMax(id: string) {
+  const p = tc.crafting.category.getPurchasable(id);
+  if (p == null || !p.canPurchase.value) return;
+  p.purchaseMax();
+}
 </script>
 
 <template>
   <div class="tc-layout">
     <HudBar>
-      <HudChip variant="big">
-        🌾 {{ food }} <span
-          v-if="foodRate"
-          class="tc-rate"
-        >{{ foodRate }}</span>
-      </HudChip>
       <HudChip>
-        🪵 {{ wood }} / {{ woodCap }}
-      </HudChip>
-      <HudChip>
-        🪨 {{ stone }} / {{ stoneCap }}
-      </HudChip>
-      <HudChip variant="muted">
         📋 {{ pendingTotal }} pending
+      </HudChip>
+      <HudChip>
+        👥 {{ workersBusy }} / {{ workersTotal }} busy
       </HudChip>
       <HudChip
         variant="muted"
@@ -179,32 +285,72 @@ function unpinBuilding(id: BuildingId) {
 
     <ThreePanelShell class="tc-body">
       <template #left>
-        <h3 class="tc-panel-title">
-          Zones
-        </h3>
-        <ul class="tc-zone-list">
-          <li
-            v-for="z in zoneEntries"
-            :key="z.id"
-          >
-            <button
-              type="button"
-              class="tc-zone-button"
-              :class="{ active: z.active, locked: !z.unlocked }"
-              :disabled="!z.unlocked"
-              :title="z.unlocked ? z.description : 'Locked — unlocks in a later era'"
-              @click="selectZone(z.id, z.unlocked)"
+        <section class="tc-left-block">
+          <h3 class="tc-panel-title">
+            Zones
+          </h3>
+          <ul class="tc-zone-list">
+            <li
+              v-for="z in zoneEntries"
+              :key="z.id"
             >
-              <span class="tc-zone-name">
-                <span
-                  v-if="!z.unlocked"
-                  aria-hidden="true"
-                >🔒 </span>{{ z.name }}
-              </span>
-              <span class="tc-zone-desc">{{ z.description }}</span>
-            </button>
-          </li>
-        </ul>
+              <button
+                type="button"
+                class="tc-zone-button"
+                :class="{ active: z.active, locked: !z.unlocked }"
+                :disabled="!z.unlocked"
+                :title="z.unlocked ? z.description : 'Locked — unlocks in a later era'"
+                @click="selectZone(z.id, z.unlocked)"
+              >
+                <span class="tc-zone-name">
+                  <span
+                    v-if="!z.unlocked"
+                    aria-hidden="true"
+                  >🔒 </span>{{ z.name }}
+                </span>
+                <span class="tc-zone-desc">{{ z.description }}</span>
+              </button>
+            </li>
+          </ul>
+        </section>
+
+        <section class="tc-left-block tc-resource-section">
+          <h3 class="tc-panel-title">
+            Resources
+          </h3>
+          <div class="tc-resource-grid">
+            <template
+              v-for="group in resourceGroups"
+              :key="group.name"
+            >
+              <div class="tc-resource-group-header">
+                {{ group.name }}
+              </div>
+              <div
+                v-for="row in group.rows"
+                :key="row.id"
+                class="tc-resource-row"
+                :class="{ empty: row.count === '0' && !row.rateText }"
+              >
+                <span class="tc-resource-name">
+                  <span class="tc-resource-icon">{{ row.icon }}</span>
+                  <span class="tc-resource-label">{{ row.name }}</span>
+                </span>
+                <span class="tc-resource-values">
+                  <span class="tc-resource-count">{{ row.count }}</span>
+                  <span
+                    v-if="row.capText"
+                    class="tc-resource-cap"
+                  >{{ row.capText }}</span>
+                  <span
+                    v-if="row.rateText"
+                    class="tc-resource-rate"
+                  >{{ row.rateText }}</span>
+                </span>
+              </div>
+            </template>
+          </div>
+        </section>
       </template>
 
       <section class="tc-main">
@@ -233,10 +379,19 @@ function unpinBuilding(id: BuildingId) {
               :key="b.type"
               type="button"
               class="tc-bounty-button"
+              :class="{ locked: !b.available }"
+              :disabled="!b.available"
+              :title="b.available ? '' : b.gateLabel"
               @click="postBounty(b.type)"
             >
               <span class="tc-bounty-head">
-                <span class="tc-bounty-icon">{{ b.icon }}</span>
+                <span class="tc-bounty-icon">
+                  <span
+                    v-if="!b.available"
+                    aria-hidden="true"
+                  >🔒</span>
+                  <span v-else>{{ b.icon }}</span>
+                </span>
                 <span class="tc-bounty-label">{{ b.label }}</span>
                 <span
                   v-if="b.pending > 0"
@@ -244,7 +399,10 @@ function unpinBuilding(id: BuildingId) {
                   aria-label="pending bounties"
                 >×{{ b.pending }}</span>
               </span>
-              <span class="tc-bounty-reward">{{ b.reward }}</span>
+              <span class="tc-bounty-reward">
+                <span v-if="!b.available">{{ b.gateLabel }}</span>
+                <span v-else>{{ b.reward }}</span>
+              </span>
             </button>
           </div>
         </div>
@@ -342,6 +500,53 @@ function unpinBuilding(id: BuildingId) {
             </li>
           </ul>
         </div>
+        <div
+          v-if="hasWorkshop"
+          class="tc-right-block"
+        >
+          <h3 class="tc-panel-title">
+            Crafting
+          </h3>
+          <ul class="tc-recipe-list">
+            <li
+              v-for="r in recipeEntries"
+              :key="r.id"
+              class="tc-recipe-card"
+            >
+              <div class="tc-recipe-head">
+                <span class="tc-recipe-icon">{{ r.icon }}</span>
+                <span class="tc-recipe-name">{{ r.name }}</span>
+                <span class="tc-recipe-count">×{{ r.craftedText }}</span>
+              </div>
+              <div class="tc-recipe-desc">
+                {{ r.description }}
+              </div>
+              <div class="tc-recipe-costs">
+                <span class="tc-recipe-cost">{{ r.costText }}</span>
+                <span class="tc-recipe-output">{{ r.outputText }}</span>
+              </div>
+              <div class="tc-recipe-actions">
+                <button
+                  type="button"
+                  class="tc-recipe-craft"
+                  :disabled="!r.canCraft"
+                  @click="craftOnce(r.id)"
+                >
+                  Craft
+                </button>
+                <button
+                  type="button"
+                  class="tc-recipe-craft-max"
+                  :disabled="!r.canCraft"
+                  :title="r.maxText ? `Craft ${r.maxText} now` : 'Need more resources'"
+                  @click="craftMax(r.id)"
+                >
+                  Craft max<span v-if="r.maxText"> ({{ r.maxText }})</span>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
       </template>
     </ThreePanelShell>
   </div>
@@ -370,6 +575,10 @@ function unpinBuilding(id: BuildingId) {
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.tc-left-block + .tc-left-block {
+  margin-top: var(--gap);
 }
 
 .tc-zone-list {
@@ -411,6 +620,75 @@ function unpinBuilding(id: BuildingId) {
   font-size: 0.8em;
   color: var(--color-text-muted);
   line-height: 1.3;
+}
+
+.tc-resource-section {
+  min-height: 0;
+}
+.tc-resource-grid {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85em;
+}
+.tc-resource-group-header {
+  margin-top: var(--gap-sm);
+  padding-top: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-top: 1px solid var(--color-border);
+}
+.tc-resource-group-header:first-child {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+}
+.tc-resource-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: 1px 0;
+  min-width: 0;
+}
+.tc-resource-row.empty {
+  opacity: 0.45;
+}
+.tc-resource-name {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tc-resource-icon {
+  flex: 0 0 auto;
+  width: 1.25em;
+  text-align: center;
+}
+.tc-resource-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tc-resource-values {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.tc-resource-count {
+  min-width: 1.5em;
+  text-align: right;
+}
+.tc-resource-cap {
+  color: var(--color-text-muted);
+}
+.tc-resource-rate {
+  color: var(--color-success, var(--color-primary));
 }
 
 .tc-main {
@@ -486,11 +764,16 @@ function unpinBuilding(id: BuildingId) {
   cursor: pointer;
   text-align: left;
 }
-.tc-bounty-button:hover {
+.tc-bounty-button:hover:not(:disabled) {
   border-color: var(--color-primary);
 }
-.tc-bounty-button:active {
+.tc-bounty-button:active:not(:disabled) {
   transform: translateY(1px);
+}
+.tc-bounty-button.locked,
+.tc-bounty-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .tc-bounty-head {
   display: flex;
@@ -499,6 +782,10 @@ function unpinBuilding(id: BuildingId) {
 }
 .tc-bounty-icon {
   font-size: 1.1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25em;
 }
 .tc-bounty-label {
   font-weight: 600;
@@ -573,13 +860,6 @@ function unpinBuilding(id: BuildingId) {
   color: var(--color-text-muted);
 }
 
-.tc-rate {
-  margin-left: var(--gap-sm);
-  font-size: 0.75em;
-  color: var(--color-text-muted);
-  font-weight: 500;
-}
-
 .tc-worker-card.pinned {
   border-color: var(--color-primary);
   opacity: 1;
@@ -594,7 +874,8 @@ function unpinBuilding(id: BuildingId) {
   color: var(--color-primary);
 }
 
-.tc-building-list {
+.tc-building-list,
+.tc-recipe-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -602,7 +883,8 @@ function unpinBuilding(id: BuildingId) {
   flex-direction: column;
   gap: var(--gap-sm);
 }
-.tc-building-card {
+.tc-building-card,
+.tc-recipe-card {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -611,28 +893,34 @@ function unpinBuilding(id: BuildingId) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
 }
-.tc-building-head {
+.tc-building-head,
+.tc-recipe-head {
   display: flex;
   align-items: center;
   gap: var(--gap-sm);
 }
-.tc-building-icon {
+.tc-building-icon,
+.tc-recipe-icon {
   font-size: 1.1em;
 }
-.tc-building-name {
+.tc-building-name,
+.tc-recipe-name {
   font-weight: 600;
 }
-.tc-building-count {
+.tc-building-count,
+.tc-recipe-count {
   margin-left: auto;
   font-size: 0.85em;
   color: var(--color-text-muted);
 }
-.tc-building-desc {
+.tc-building-desc,
+.tc-recipe-desc {
   font-size: 0.8em;
   color: var(--color-text-muted);
   line-height: 1.3;
 }
-.tc-building-actions {
+.tc-building-actions,
+.tc-recipe-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--gap-sm);
@@ -682,5 +970,40 @@ function unpinBuilding(id: BuildingId) {
 .tc-building-pin.pinned {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.tc-recipe-costs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-sm);
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+}
+.tc-recipe-output {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.tc-recipe-craft,
+.tc-recipe-craft-max {
+  padding: 4px var(--gap-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.85em;
+}
+.tc-recipe-craft:hover:not(:disabled),
+.tc-recipe-craft-max:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.tc-recipe-craft:disabled,
+.tc-recipe-craft-max:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.tc-recipe-craft-max {
+  background: transparent;
+  color: var(--color-text-muted);
 }
 </style>

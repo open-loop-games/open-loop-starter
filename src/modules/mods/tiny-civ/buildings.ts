@@ -51,11 +51,12 @@ export interface PinDelegate {
   pinnedBy: Record<WorkerId, BuildingId | null>;
 }
 
-export interface BuildingResources {
-  food: Resource<DecimalSource>;
-  wood: Resource<DecimalSource>;
-  stone: Resource<DecimalSource>;
-}
+/**
+ * Every resource a building cost might reference. Era-1 costs only draw from
+ * food/wood/stone, but widening to the full record means era-2+ buildings
+ * priced in tools / leather / etc. drop in without rethreading the wiring.
+ */
+export type BuildingResources = Record<ResourceKind, Resource<DecimalSource>>;
 
 export interface TinyCivBuildings {
   category: PurchasableCategory<BuildingDef>;
@@ -86,17 +87,6 @@ export interface BuildingWiring {
   workers: PinDelegate;
 }
 
-function resourceFor(kind: ResourceKind, r: BuildingResources): Resource<DecimalSource> {
-  switch (kind) {
-    case 'food':
-      return r.food;
-    case 'wood':
-      return r.wood;
-    case 'stone':
-      return r.stone;
-  }
-}
-
 export function createTinyCivBuildings(wiring: BuildingWiring): TinyCivBuildings {
   const { resources, woodStockpile, stoneStockpile, foodProductionChain, workers } = wiring;
 
@@ -108,7 +98,7 @@ export function createTinyCivBuildings(wiring: BuildingWiring): TinyCivBuildings
       id: 'tiny-civ-buildings',
       mapPurchasable: (def) => {
         const requirements = def.baseCosts.map((c) => {
-          const res = resourceFor(c.resource, resources);
+          const res = resources[c.resource];
           const base = c.amount;
           return createCostRequirement({
             resource: res,

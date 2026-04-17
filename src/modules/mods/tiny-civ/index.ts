@@ -16,15 +16,25 @@
  * food production runs through a tick-driven {@link ModifierChain}. Pinning
  * is delegated to the worker subsystem; pin slots are owned by buildings.
  *
+ * 5e (OL-482): era-1 crafting recipes. Six new resources land —
+ * hide/herbs/salt (bounty-sourced side materials, two of them zone-bound)
+ * and tools/leather/medicine (recipe outputs). The ad-hoc food production
+ * chain generalises to a per-resource registry keyed by {@link ResourceKind};
+ * the tick loop sums every chain. A new {@link BountyDef.requiresZone} field
+ * gates the hide and salt bounties at the UI layer.
+ *
  * State shape:
  *   - `'tiny-civ-layer0'`     — food amount (uncapped)
  *   - `'tiny-civ-wood'`       — Inventory-linked wood resource + cap state
  *   - `'tiny-civ-stone'`      — Inventory-linked stone resource + cap state
+ *   - `'tiny-civ-materials'`  — hide/herbs/salt amounts
+ *   - `'tiny-civ-crafted'`    — tools/leather/medicine amounts
  *   - `'tiny-civ-zones'`      — ZoneSystem's own `unlocked` + `current` refs
  *   - `'tiny-civ-bounties'`   — shared bounty pool
  *   - `'tiny-civ-worker-N'`   — per-worker sequencer + rotation index
  *   - `'worker-N:seq'`        — per-worker sequencer's own state
  *   - `'tiny-civ-buildings'`  — per-building purchasable amounts
+ *   - `'tiny-civ-crafting'`   — per-recipe purchasable amounts (craft counter)
  */
 import { computed, type ComputedRef } from 'vue';
 import {
@@ -53,27 +63,34 @@ import {
   CLICK_GATHER_FOOD,
   BASE_STONE_CAP,
   BASE_WOOD_CAP,
+  RESOURCE_DISPLAY,
+  RESOURCE_KINDS,
+  type ResourceKind,
 } from './content';
 import { createTinyCivWorkers, type TinyCivWorkers } from './workers';
 import { createTinyCivBuildings, type TinyCivBuildings } from './buildings';
+import { createTinyCivCrafting, type TinyCivCrafting } from './crafting';
 
 export interface TinyCivState {
-  food: Resource<DecimalSource>;
-  wood: Resource<DecimalSource>;
-  stone: Resource<DecimalSource>;
-  /** Wood inventory — UI reads `capacity.value` for the n/cap HUD display. */
-  woodStockpile: Inventory;
-  /** Stone inventory — UI reads `capacity.value` for the n/cap HUD display. */
-  stoneStockpile: Inventory;
+  /** Full resource record — everything the UI, bounties, and recipes read. */
+  resources: Record<ResourceKind, Resource<DecimalSource>>;
+  /** Inventories for the capped resources (era-1: wood and stone only). */
+  inventories: { wood: Inventory; stone: Inventory };
+  /**
+   * Per-resource production registry. Buildings, future-era producers, and
+   * passive sources bind onto the matching chain; the tick loop applies each
+   * one over 0 and deposits the result. Resources with no producer bind
+   * nothing and contribute 0/s.
+   */
+  productionChains: Record<ResourceKind, ModifierChain>;
+  /** Reactive per-resource rate (for the left-column resource table). */
+  ratePerSecond: Record<ResourceKind, ComputedRef<Decimal>>;
   zones: ZoneSystem;
-  /** Combined passive-food-per-second, summed over all contributing farms. */
-  foodPerSecond: ComputedRef<Decimal>;
   /** Adds {@link CLICK_GATHER_FOOD} to `food`. Placeholder mechanic for 5b. */
   gatherFood: () => void;
-  /** Majesty-inspired indirect-control worker pool. */
   workers: TinyCivWorkers;
-  /** Era-1 buildings + pin state. */
   buildings: TinyCivBuildings;
+  crafting: TinyCivCrafting;
 }
 
 export const TinyCivKey: InjectionKey<TinyCivState> =
@@ -85,7 +102,9 @@ export function createTinyCivModule(): EngineModule {
     dependencies: ['settings', 'ui-registry'],
     install(ctx: EngineContext) {
       const { food } = withPersistentContext('tiny-civ-layer0', () => ({
-        food: createResource<DecimalSource>(STARTING_RESOURCE, { displayName: 'Food' }),
+        food: createResource<DecimalSource>(STARTING_RESOURCE, {
+          displayName: RESOURCE_DISPLAY.food.name,
+        }),
       }));
 
       const woodStockpile = createInventory({
@@ -103,55 +122,110 @@ export function createTinyCivModule(): EngineModule {
       const wood = woodStockpile.resources.get('wood') as Resource<DecimalSource>;
       const stone = stoneStockpile.resources.get('stone') as Resource<DecimalSource>;
 
+      // Side-material inputs (hide/herbs/salt) — sourced by gather bounties,
+      // consumed by recipes. Uncapped for era-1; granary-style caps are era-2+.
+      const materials = withPersistentContext('tiny-civ-materials', () => ({
+        hide: createResource<DecimalSource>(0, { displayName: RESOURCE_DISPLAY.hide.name }),
+        herbs: createResource<DecimalSource>(0, { displayName: RESOURCE_DISPLAY.herbs.name }),
+        salt: createResource<DecimalSource>(0, { displayName: RESOURCE_DISPLAY.salt.name }),
+      }));
+
+      // Recipe outputs. Era-1 outputs have no consumer yet — they're tracked
+      // purely for the player's sense of accumulation; era-2+ will add
+      // buildings and worker expansions that spend them.
+      const crafted = withPersistentContext('tiny-civ-crafted', () => ({
+        tools: createResource<DecimalSource>(0, { displayName: RESOURCE_DISPLAY.tools.name }),
+        leather: createResource<DecimalSource>(0, { displayName: RESOURCE_DISPLAY.leather.name }),
+        medicine: createResource<DecimalSource>(0, {
+          displayName: RESOURCE_DISPLAY.medicine.name,
+        }),
+      }));
+
+      const resources: Record<ResourceKind, Resource<DecimalSource>> = {
+        food,
+        wood,
+        stone,
+        hide: materials.hide,
+        herbs: materials.herbs,
+        salt: materials.salt,
+        tools: crafted.tools,
+        leather: crafted.leather,
+        medicine: crafted.medicine,
+      };
+
+      const inventories = { wood: woodStockpile, stone: stoneStockpile };
+
       const zones = createZoneSystem({
         id: 'tiny-civ-zones',
         zones: zoneDefs,
         initiallyUnlocked: [...INITIAL_UNLOCKED_ZONES],
       });
 
+      // One chain per resource. Producer bindings (farm → food, hut pop cap →
+      // pop, era-2 mines → iron, etc.) attach to the matching chain; the
+      // tick loop sums and deposits. `apply(0)` over an empty chain is 0,
+      // so resources with no producer contribute nothing.
+      const productionChains: Record<ResourceKind, ModifierChain> = Object.fromEntries(
+        RESOURCE_KINDS.map((kind) => [kind, createModifierChain(`tc-${kind}-production`)]),
+      ) as Record<ResourceKind, ModifierChain>;
+
+      const depositTo = (kind: ResourceKind, amount: DecimalSource): void => {
+        if (kind === 'wood') {
+          woodStockpile.add('wood', amount);
+          return;
+        }
+        if (kind === 'stone') {
+          stoneStockpile.add('stone', amount);
+          return;
+        }
+        addResource(resources[kind], amount);
+      };
+
       const gatherFood = () => {
         addResource(food, new Decimal(CLICK_GATHER_FOOD));
       };
 
-      const workers = createTinyCivWorkers(
-        ctx,
-        { food, wood, stone },
-        { wood: woodStockpile, stone: stoneStockpile },
-      );
-
-      const foodProductionChain: ModifierChain = createModifierChain('tc-food-production');
+      const workers = createTinyCivWorkers(ctx, resources, inventories);
 
       const buildings = createTinyCivBuildings({
-        resources: { food, wood, stone },
+        resources,
         woodStockpile,
         stoneStockpile,
-        foodProductionChain,
+        foodProductionChain: productionChains.food,
         workers,
       });
 
-      // Farm passive income: chain applies over 0 each tick; result is
-      // food/sec that we multiply by dt. When no farm is owned, the chain's
-      // only contributing binding is gated inactive, so `apply(0)` stays 0.
+      const crafting = createTinyCivCrafting({
+        resources,
+        inventories,
+      });
+
       ctx.onTick((dt) => {
-        const rate = foodProductionChain.apply(0);
-        if (Decimal.gt(rate, 0)) {
-          addResource(food, Decimal.mul(rate, dt));
+        for (const kind of RESOURCE_KINDS) {
+          const rate = productionChains[kind].apply(0);
+          if (Decimal.gt(rate, 0)) {
+            depositTo(kind, Decimal.mul(rate, dt));
+          }
         }
       });
 
-      const foodPerSecond = computed(() => new Decimal(foodProductionChain.apply(0)));
+      const ratePerSecond: Record<ResourceKind, ComputedRef<Decimal>> = Object.fromEntries(
+        RESOURCE_KINDS.map((kind) => [
+          kind,
+          computed(() => new Decimal(productionChains[kind].apply(0))),
+        ]),
+      ) as Record<ResourceKind, ComputedRef<Decimal>>;
 
       const state: TinyCivState = {
-        food,
-        wood,
-        stone,
-        woodStockpile,
-        stoneStockpile,
+        resources,
+        inventories,
+        productionChains,
+        ratePerSecond,
         zones,
-        foodPerSecond,
         gatherFood,
         workers,
         buildings,
+        crafting,
       };
       ctx.provide(TinyCivKey, state);
 

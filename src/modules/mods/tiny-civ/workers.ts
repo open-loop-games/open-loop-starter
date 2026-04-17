@@ -68,12 +68,13 @@ import {
 } from './content';
 import type { Inventory } from 'open-loop-engine';
 
-/** Resources the worker subsystem deposits bounty rewards into. */
-export interface WorkerResources {
-  food: Resource<DecimalSource>;
-  wood: Resource<DecimalSource>;
-  stone: Resource<DecimalSource>;
-}
+/**
+ * Every resource the worker subsystem might deposit into. Bounty rewards only
+ * touch the raw-input subset (food/wood/stone/hide/herbs/salt) today, but the
+ * full record is passed so that pin-task rewards and future era-2+ bounty
+ * types can deposit anywhere without widening this contract again.
+ */
+export type WorkerResources = Record<ResourceKind, Resource<DecimalSource>>;
 
 /**
  * Inventories used for capped deposits. When wood/stone inventories are
@@ -133,15 +134,18 @@ export function createTinyCivWorkers(
     BOUNTY_DEFS[id as BountyType] ?? PIN_TASK_DEFS[id as PinTaskId];
 
   const depositTo = (kind: ResourceKind, amount: Decimal): void => {
-    if (kind === 'food') {
-      addResource(resources.food, amount);
-      return;
-    }
-    // Wood/stone route through the inventory so the cap clamps deposits.
+    // Wood/stone route through their inventory so the cap clamps deposits.
     // `inv.add` with 'destroy' overflow deposits up to remaining space; any
     // excess is discarded (no pool re-push or retry for now).
-    const inv = kind === 'wood' ? inventories.wood : inventories.stone;
-    inv.add(kind, amount);
+    if (kind === 'wood') {
+      inventories.wood.add('wood', amount);
+      return;
+    }
+    if (kind === 'stone') {
+      inventories.stone.add('stone', amount);
+      return;
+    }
+    addResource(resources[kind], amount);
   };
 
   const applyTaskReward = (taskId: string): void => {
