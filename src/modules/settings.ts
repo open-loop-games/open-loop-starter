@@ -19,11 +19,11 @@ export const settingsModule: EngineModule = {
   id: 'settings',
   install(ctx: EngineContext) {
     const settings: StockSettings = {
-      autoSave: persistent(true),
-      offlineProgress: persistent(true),
-      theme: persistent('dark'),
-      notation: persistent('standard'),
-      confirmOnClose: persistent(true),
+      autoSave: persistent(true, { name: 'autoSave' }),
+      offlineProgress: persistent(true, { name: 'offlineProgress' }),
+      theme: persistent('dark', { name: 'theme' }),
+      notation: persistent('standard', { name: 'notation' }),
+      confirmOnClose: persistent(true, { name: 'confirmOnClose' }),
     };
     const lastSaveTimestamp: Ref<number> = ref(0);
 
