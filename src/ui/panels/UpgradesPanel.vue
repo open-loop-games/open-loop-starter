@@ -3,7 +3,7 @@ import { toValue } from 'vue';
 import { format, type DecimalSource } from 'open-loop-engine';
 import { type Purchasable } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
-import { EconomyKey } from '@/modules/economy';
+import { EconomyKey } from '@/modules/village-gatherer/economy';
 
 const e = useModule(EconomyKey);
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useModule } from '@/composables/useModule';
-import { ProgressionKey } from '@/modules/progression';
+import { ProgressionKey } from '@/modules/village-gatherer/progression';
 
 const p = useModule(ProgressionKey);
 const earnedCount = p.achievements.earnedCount;

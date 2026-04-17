@@ -4,7 +4,7 @@ import { Decimal, format } from 'open-loop-engine';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
 import { useModule } from '@/composables/useModule';
-import { GatheringKey } from '@/modules/gathering';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
 
 const g = useModule(GatheringKey);
 const woodcutting = g.skills.getSkill('woodcutting')!;

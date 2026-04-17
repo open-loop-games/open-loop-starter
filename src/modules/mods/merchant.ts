@@ -16,7 +16,7 @@ import {
   type EngineContext,
   type Inventory,
 } from 'open-loop-engine';
-import { GatheringKey } from '@/modules/gathering';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
 import { setSlot } from '@/modules/ui-registry';
 import LedgerLayout from '@/ui/layouts/LedgerLayout.vue';
 import LedgerPanel from '@/ui/panels/LedgerPanel.vue';

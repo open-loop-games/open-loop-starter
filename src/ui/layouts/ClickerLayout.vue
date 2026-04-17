@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
 import { SidebarMainShell } from '@/lib';
 import { useModule } from '@/composables/useModule';
-import { GatheringKey } from '@/modules/gathering';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
 import ProducersPanel from '@/ui/panels/ProducersPanel.vue';
 import UpgradesPanel from '@/ui/panels/UpgradesPanel.vue';
 import AchievementsPanel from '@/ui/panels/AchievementsPanel.vue';

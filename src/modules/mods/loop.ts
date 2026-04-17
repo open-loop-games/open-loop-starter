@@ -36,8 +36,8 @@ import {
   type LoopLog,
   type TemporaryEffectSystem,
 } from 'open-loop-engine';
-import { GatheringKey } from '@/modules/gathering';
-import { EconomyKey } from '@/modules/economy';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
+import { EconomyKey } from '@/modules/village-gatherer/economy';
 import { setSlot } from '@/modules/ui-registry';
 import VanillaLayout from '@/ui/layouts/VanillaLayout.vue';
 

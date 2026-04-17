@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
-import { EconomyKey } from '@/modules/economy';
+import { EconomyKey } from '@/modules/village-gatherer/economy';
 
 const e = useModule(EconomyKey);
 

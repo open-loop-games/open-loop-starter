@@ -4,7 +4,7 @@ import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-eng
 import { Screen } from '@/types';
 import { modDefs } from '@/modules';
 import { SettingsKey } from '@/modules/settings';
-import { GatheringKey } from '@/modules/gathering';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
 import { useTheme } from '@/composables/useTheme';
 import { useNotation } from '@/composables/useNotation';
 import { useSaveEvents } from '@/composables/useSaveEvents';

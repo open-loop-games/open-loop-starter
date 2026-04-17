@@ -2,9 +2,9 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { Decimal, createEngine, createMemoryStorage, type Engine } from 'open-loop-engine';
 import { settingsModule } from '../settings';
 import { uiRegistryModule } from '../ui-registry';
-import { gatheringModule, GatheringKey } from '../gathering';
-import { progressionModule, ProgressionKey } from '../progression';
-import { economyModule, EconomyKey } from '../economy';
+import { gatheringModule, GatheringKey } from '../village-gatherer/gathering';
+import { progressionModule, ProgressionKey } from '../village-gatherer/progression';
+import { economyModule, EconomyKey } from '../village-gatherer/economy';
 
 const noopTimers = {
   setInterval: () => 0 as unknown as ReturnType<typeof globalThis.setInterval>,

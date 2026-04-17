@@ -31,8 +31,8 @@ import {
   type ChallengeCategory,
   type ChallengeDef,
 } from 'open-loop-engine';
-import { GatheringKey } from '@/modules/gathering';
-import { EconomyKey } from '@/modules/economy';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
+import { EconomyKey } from '@/modules/village-gatherer/economy';
 
 // ============================================================================
 // Types

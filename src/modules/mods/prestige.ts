@@ -29,8 +29,8 @@ import {
   type DecimalSource,
   type Conversion,
 } from 'open-loop-engine';
-import { GatheringKey } from '@/modules/gathering';
-import { EconomyKey } from '@/modules/economy';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
+import { EconomyKey } from '@/modules/village-gatherer/economy';
 import { setSlot } from '@/modules/ui-registry';
 import PrestigePanel from '@/ui/panels/PrestigePanel.vue';
 

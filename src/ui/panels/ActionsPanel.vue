@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useModule } from '@/composables/useModule';
-import { GatheringKey } from '@/modules/gathering';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
 
 const g = useModule(GatheringKey);
 

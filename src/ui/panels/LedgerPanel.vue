@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { MerchantKey } from '@/modules/mods/merchant';
-import { GatheringKey } from '@/modules/gathering';
+import { GatheringKey } from '@/modules/village-gatherer/gathering';
 
 const mstate = useModule(MerchantKey);
 const g = useModule(GatheringKey);
