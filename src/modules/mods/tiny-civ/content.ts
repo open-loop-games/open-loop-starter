@@ -49,3 +49,53 @@ export const STARTING_RESOURCE = 0;
  * once workers (5c) and farms (5d) land.
  */
 export const CLICK_GATHER_FOOD = 1;
+
+/**
+ * Bounty types the player can post to the shared pool. Each entry in the pool
+ * is just the type — instances of the same type are interchangeable, so pool
+ * state is a plain `BountyType[]` rather than a list of structured instances.
+ * Static per-type spec lives in {@link BOUNTY_DEFS}; the pool is resolved
+ * to a spec via `getTask(type)` inside the worker subsystem.
+ */
+export type BountyType = 'gather-food' | 'gather-wood' | 'gather-stone' | 'explore-zone';
+
+/**
+ * Immutable spec for a bounty type. Shared by every pool entry of that type.
+ * Reward magnitudes live separately in {@link BOUNTY_REWARDS} so the reward
+ * side-effect can be resolved by the worker subsystem without putting closures
+ * into a serialized structure.
+ */
+export interface BountyDef {
+  id: BountyType;
+  label: string;
+  /** Seconds to complete at speed = 1. */
+  durationSec: number;
+}
+
+export const BOUNTY_DEFS: Record<BountyType, BountyDef> = {
+  'gather-food': { id: 'gather-food', label: 'Gather food', durationSec: 5 },
+  'gather-wood': { id: 'gather-wood', label: 'Gather wood', durationSec: 6 },
+  'gather-stone': { id: 'gather-stone', label: 'Gather stone', durationSec: 8 },
+  'explore-zone': { id: 'explore-zone', label: 'Explore zone', durationSec: 15 },
+};
+
+/**
+ * Reward magnitudes applied when a bounty completes. `explore-zone` yields no
+ * resource in 5c — its real effect (zone progression) lands in 5f era
+ * transitions; for now it's a flavor verb that ticks through its duration
+ * and applies no payoff.
+ */
+export const BOUNTY_REWARDS: Record<BountyType, number> = {
+  'gather-food': 3,
+  'gather-wood': 3,
+  'gather-stone': 2,
+  'explore-zone': 0,
+};
+
+/**
+ * Fixed roster of worker identities. 5c hardcodes three; dynamic scaling lands
+ * alongside era transitions in 5f.
+ */
+export const WORKER_IDS = ['worker-0', 'worker-1', 'worker-2'] as const;
+
+export type WorkerId = (typeof WORKER_IDS)[number];
