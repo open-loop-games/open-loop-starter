@@ -43,10 +43,25 @@ export interface IPUpgradeDef {
   cost: DecimalSource;
 }
 
-export interface ChallengeDef {
+/** EP upgrade definition. Cost is in Eternity Points; all Layer 2 upgrades limit=1. */
+export interface EPUpgradeDef {
   id: string;
   title: string;
   description: string;
+  cost: DecimalSource;
+}
+
+/**
+ * AD Infinity Challenge definition. `name` matches the engine-side
+ * `ChallengeDef.name`; `restriction` is UI prose for the challenge card
+ * explaining what the challenge alters while active.
+ */
+export interface ADChallengeDef {
+  id: string;
+  name: string;
+  description: string;
+  restriction: string;
+  completionLimit?: number;
 }
 
 export interface AchievementDef {
@@ -131,8 +146,46 @@ export const dimensionDefs: DimensionDef[] = [
 ];
 
 export const upgradeDefs: UpgradeDef[] = [];
-export const challengeDefs: ChallengeDef[] = [];
 export const achievementDefs: AchievementDef[] = [];
+
+/**
+ * Antimatter threshold each Infinity Challenge targets for completion.
+ * Shallow uniform 1e650 per OL-462 plan — source canonical (1e650 / 1e10500 /
+ * 1e5000) is deferred; IC2 at 1e10500 is out of reach at the current Layer 0
+ * pacing, so a uniform ceiling keeps the three playable under one balance pass.
+ */
+export const CHALLENGE_GOAL_ANTIMATTER: DecimalSource = '1e650';
+
+/**
+ * Reward multiplier applied to `productionChain` once a challenge has any
+ * completions. `completionLimit: 1` so the multiplier resolves to this value
+ * flat. Uniform ×1.3 matches canonical IC1.
+ */
+export const CHALLENGE_REWARD_MULTIPLIER: DecimalSource = 1.3;
+
+export const challengeDefs: ADChallengeDef[] = [
+  {
+    id: 'ic1-combined',
+    name: 'Combined',
+    description: 'Two restrictions stacked: a middle-tier dimension produces nothing, and Dim Boosts grant no bonus.',
+    restriction: 'Fourth Dimension produces 0. Dim Boost multiplier disabled.',
+    completionLimit: 1,
+  },
+  {
+    id: 'ic2-sacrifice',
+    name: 'Auto-Sacrifice',
+    description: 'Dimensional Sacrifice auto-fires on a 400ms cadence while the challenge is active, provided you own an 8th Dimension.',
+    restriction: 'Dimensional Sacrifice auto-triggers every 400ms.',
+    completionLimit: 1,
+  },
+  {
+    id: 'ic3-tickspeed',
+    name: 'Tickspeed Rewire',
+    description: 'Tickspeed no longer grants ×1.1 per purchase. Instead each purchase grants (1.05 + galaxies × 0.005), so Tickspeed only contributes when you have Antimatter Galaxies.',
+    restriction: 'Tickspeed multiplier becomes (1.05 + 0.005·galaxies) per purchase.',
+    completionLimit: 1,
+  },
+];
 
 /**
  * IP upgrades shipped in Layer 1. Adapted from AD source `infinity-upgrades.js`:
@@ -159,5 +212,36 @@ export const ipUpgradeDefs: IPUpgradeDef[] = [
     title: 'Ten-fold Legacy',
     description: 'All Antimatter Dimensions gain a flat ×1.1 bonus.',
     cost: 1,
+  },
+];
+
+/**
+ * EP upgrades shipped in Layer 2. Adapted from AD source `eternity-upgrades.js` —
+ * the skeleton has no Infinity/Time Dimensions, so the canonical ID/TD targets
+ * retarget onto the archetype's existing productionChain:
+ *   - epMult — AD mult by (EP + 1) (canonical id=1, idMultEP)
+ *   - eternitiesMult — AD mult by (1 + 0.1 × eternities) (simplified id=2)
+ *   - ipMult — AD mult by (1 + log10(IP + 1)) (cross-layer synergy; canonical id=3 retargeted)
+ * Costs scaled so the first Eternity (~123 EP at the 1e1100 UI gate) affords
+ * the first two; ipMult waits a run.
+ */
+export const epUpgradeDefs: EPUpgradeDef[] = [
+  {
+    id: 'epMult',
+    title: 'Eternal Resonance',
+    description: 'Antimatter Dimensions gain ×(Eternity Points + 1).',
+    cost: 5,
+  },
+  {
+    id: 'eternitiesMult',
+    title: 'Recursive Endings',
+    description: 'Antimatter Dimensions gain ×(1 + 0.1 × Eternities).',
+    cost: 20,
+  },
+  {
+    id: 'ipMult',
+    title: 'Infinite Inheritance',
+    description: 'Antimatter Dimensions gain ×(1 + log10(Infinity Points + 1)).',
+    cost: 50,
   },
 ];

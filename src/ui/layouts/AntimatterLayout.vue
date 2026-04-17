@@ -8,6 +8,9 @@ import HudChip from '@/ui/components/HudChip.vue';
 import ADDimensionsPanel from '@/ui/panels/ADDimensionsPanel.vue';
 import ADPrestigePanel from '@/ui/panels/ADPrestigePanel.vue';
 import ADInfinityUpgradesPanel from '@/ui/panels/ADInfinityUpgradesPanel.vue';
+import ADChallengesPanel from '@/ui/panels/ADChallengesPanel.vue';
+import ADEternityPanel from '@/ui/panels/ADEternityPanel.vue';
+import ADEternityUpgradesPanel from '@/ui/panels/ADEternityUpgradesPanel.vue';
 
 const ad = useModule(AntimatterDimensionsKey);
 
@@ -22,8 +25,8 @@ interface TabDef {
 
 const activeTab = ref<TabId>('antimatter');
 
-// Infinity tab unlocks on first infinity (persistent flag in `'ad-meta'`).
-// Challenges/Eternity ship disabled — they light up in 4d/4e.
+// Infinity tab unlocks on first infinity, Eternity on first eternity —
+// both persistent flags in `'ad-meta'`.
 const tabs = computed<TabDef[]>(() => [
   { id: 'antimatter', label: 'Antimatter', enabled: true },
   {
@@ -32,8 +35,18 @@ const tabs = computed<TabDef[]>(() => [
     enabled: ad.hasReachedInfinity.value,
     hint: ad.hasReachedInfinity.value ? undefined : 'Unlocks at 1e308 antimatter',
   },
-  { id: 'challenges', label: 'Challenges', enabled: false, hint: 'Unlocks after first Infinity' },
-  { id: 'eternity', label: 'Eternity', enabled: false, hint: 'Unlocks at 1e1100 IP' },
+  {
+    id: 'challenges',
+    label: 'Challenges',
+    enabled: ad.hasReachedInfinity.value,
+    hint: ad.hasReachedInfinity.value ? undefined : 'Unlocks after first Infinity',
+  },
+  {
+    id: 'eternity',
+    label: 'Eternity',
+    enabled: ad.hasReachedEternity.value,
+    hint: ad.hasReachedEternity.value ? undefined : 'Unlocks at 1e1100 IP',
+  },
 ]);
 
 const antimatter = computed(() => format(Decimal.floor(ad.antimatter.value)));
@@ -44,6 +57,7 @@ const antimatterPerSec = computed(() => {
 });
 
 const infinityPoints = computed(() => format(Decimal.floor(ad.infinityPoints.value)));
+const eternityPoints = computed(() => format(Decimal.floor(ad.eternityPoints.value)));
 
 const boostCount = computed(() => format(Decimal.floor(ad.boostCount.value)));
 const galaxyCount = computed(() => format(Decimal.floor(ad.galaxyCount.value)));
@@ -61,6 +75,7 @@ function formatDuration(totalSeconds: number): string {
 }
 
 const infinityTimer = computed(() => formatDuration(ad.infinityTimer.value));
+const eternityTimer = computed(() => formatDuration(ad.eternityTimer.value));
 </script>
 
 <template>
@@ -96,6 +111,18 @@ const infinityTimer = computed(() => formatDuration(ad.infinityTimer.value));
       >
         ⏱ {{ infinityTimer }}
       </HudChip>
+      <HudChip
+        v-if="ad.hasReachedEternity.value"
+        variant="stat"
+      >
+        ⧖ {{ eternityPoints }} EP
+      </HudChip>
+      <HudChip
+        v-if="ad.hasReachedEternity.value"
+        variant="muted"
+      >
+        ⏳ {{ eternityTimer }}
+      </HudChip>
     </HudBar>
 
     <nav class="ad-tabs">
@@ -121,6 +148,14 @@ const infinityTimer = computed(() => formatDuration(ad.infinityTimer.value));
       >
         <ADPrestigePanel />
         <ADInfinityUpgradesPanel />
+      </div>
+      <ADChallengesPanel v-else-if="activeTab === 'challenges'" />
+      <div
+        v-else-if="activeTab === 'eternity'"
+        class="eternity-body"
+      >
+        <ADEternityPanel />
+        <ADEternityUpgradesPanel />
       </div>
     </div>
   </div>
@@ -158,7 +193,8 @@ const infinityTimer = computed(() => formatDuration(ad.infinityTimer.value));
   opacity: 0.35;
   cursor: not-allowed;
 }
-.infinity-body {
+.infinity-body,
+.eternity-body {
   display: flex;
   flex-direction: column;
   gap: var(--gap);

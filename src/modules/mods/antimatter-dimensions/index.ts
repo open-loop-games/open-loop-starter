@@ -1,16 +1,22 @@
 /**
  * Antimatter Dimensions — total-conversion archetype mod.
  *
- * Layer 0 (OL-460): antimatter + 4 dimensions. Layer 1 (OL-461): Infinity
- * Points, IP upgrades, Infinity reset that cascades `'ad-layer0'`. Layer 2
- * (4e) will add Eternity on top.
+ * Layer 0 (OL-460): antimatter + 8 dimensions. Layer 0+ (OL-467): DimBoost,
+ * Galaxy, Tickspeed, Sacrifice. Layer 1 (OL-461): Infinity Points, IP
+ * upgrades, Infinity reset that cascades `'ad-layer0'`. Challenges (OL-462):
+ * IC1/IC2/IC3. Layer 2 (OL-463): Eternity Points, EP upgrades, Eternity reset
+ * that cascades through `layer1Reset` into `'ad-layer0'`.
  *
  * State is split across scoped persistent contexts so the growing set of
  * resets can target them by ID:
  *   - `'ad-layer0'` — antimatter + dim counts + purchasable levels + maxAntimatter
- *   - `'ad-layer1'` — IP + IP upgrade levels + infinity-run timer
- *   - `'ad-meta'`   — never-reset: `hasReachedInfinity`, `lifetimeInfinities`,
- *                     `totalTimePlayed`. 4d's challenge completions land here too.
+ *                     + boost/galaxy counts, tickspeed, sacrifice multiplier
+ *   - `'ad-layer1'` — IP + maxIP + IP upgrade levels + infinity-run timer
+ *   - `'ad-layer2'` — EP + EP upgrade levels + eternity-run timer
+ *   - `'ad-meta'`   — never-reset: hasReachedInfinity, lifetimeInfinities,
+ *                     hasReachedEternity, lifetimeEternities, totalTimePlayed.
+ *                     Challenge completions persist in the category's own
+ *                     per-challenge contexts (also never reset).
  */
 import {
   withPersistentContext,
@@ -25,13 +31,22 @@ import {
   type Purchasable,
   type PurchasableCategory,
   type Persistent,
+  type Challenge,
+  type ChallengeCategory,
 } from 'open-loop-engine';
 import type { ComputedRef } from 'vue';
 import { setSlot } from '@/modules/ui-registry';
 import AntimatterLayout from '@/ui/layouts/AntimatterLayout.vue';
-import { dimensionDefs, STARTING_ANTIMATTER, type IPUpgradeDef } from './content';
+import {
+  dimensionDefs,
+  STARTING_ANTIMATTER,
+  type ADChallengeDef,
+  type EPUpgradeDef,
+  type IPUpgradeDef,
+} from './content';
 import { installDimensions, type ADDimension } from './dimensions';
-import { installLayer1 } from './layers';
+import { installLayer1, installLayer2 } from './layers';
+import { installChallenges } from './challenges';
 
 export interface AntimatterDimensionsState {
   antimatter: Resource<DecimalSource>;
@@ -54,6 +69,7 @@ export interface AntimatterDimensionsState {
   doSacrifice: () => boolean;
   // Layer 1
   infinityPoints: Resource<DecimalSource>;
+  maxInfinityPoints: Resource<DecimalSource>;
   infinityTimer: Persistent<number>;
   totalTimePlayed: Persistent<number>;
   hasReachedInfinity: Persistent<boolean>;
@@ -61,6 +77,19 @@ export interface AntimatterDimensionsState {
   conversion: Conversion;
   layer1Reset: Reset;
   ipUpgrades: PurchasableCategory<IPUpgradeDef>;
+  // Infinity Challenges (OL-462)
+  challenges: ChallengeCategory<ADChallengeDef>;
+  ic1: Challenge;
+  ic2: Challenge;
+  ic3: Challenge;
+  // Layer 2 (OL-463)
+  eternityPoints: Resource<DecimalSource>;
+  eternityTimer: Persistent<number>;
+  hasReachedEternity: Persistent<boolean>;
+  lifetimeEternities: Resource<DecimalSource>;
+  eternityConversion: Conversion;
+  layer2Reset: Reset;
+  epUpgrades: PurchasableCategory<EPUpgradeDef>;
 }
 
 export const AntimatterDimensionsKey: InjectionKey<AntimatterDimensionsState> =
@@ -79,6 +108,8 @@ export function createAntimatterDimensionsModule(): EngineModule {
       );
 
       const layer1 = installLayer1(ctx, layer0);
+      const challengeLayer = installChallenges(ctx, layer0, layer1);
+      const layer2 = installLayer2(ctx, layer0, layer1);
 
       const state: AntimatterDimensionsState = {
         antimatter: layer0.antimatter,
@@ -99,6 +130,8 @@ export function createAntimatterDimensionsModule(): EngineModule {
         doGalaxy: layer0.doGalaxy,
         doSacrifice: layer0.doSacrifice,
         ...layer1,
+        ...challengeLayer,
+        ...layer2,
       };
       ctx.provide(AntimatterDimensionsKey, state);
 
