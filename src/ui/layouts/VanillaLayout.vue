@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { ThreePanelShell } from '@/lib';
 import ResourcesPanel from '@/ui/panels/ResourcesPanel.vue';
 import ActionsPanel from '@/ui/panels/ActionsPanel.vue';
 import ProducersPanel from '@/ui/panels/ProducersPanel.vue';
@@ -15,17 +16,23 @@ const prestigePanel = computed(() => (hasSlot('prestige-panel') ? getSlot('prest
   <div class="vanilla-layout">
     <LoopPanel />
     <ResourcesPanel />
-    <div class="grid">
-      <ActionsPanel />
-      <div class="side">
-        <ProducersPanel />
+    <ThreePanelShell
+      class="vanilla-body"
+      left-width="280px"
+      right-width="280px"
+    >
+      <template #left>
+        <ActionsPanel />
+      </template>
+      <ProducersPanel />
+      <template #right>
         <UpgradesPanel />
         <component
           :is="prestigePanel"
           v-if="prestigePanel"
         />
-      </div>
-    </div>
+      </template>
+    </ThreePanelShell>
     <AchievementsPanel />
   </div>
 </template>
@@ -35,20 +42,11 @@ const prestigePanel = computed(() => (hasSlot('prestige-panel') ? getSlot('prest
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  min-height: 0;
+  flex: 1;
 }
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gap);
-}
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
-@media (max-width: 720px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
+.vanilla-body {
+  flex: 1;
+  min-height: 0;
 }
 </style>

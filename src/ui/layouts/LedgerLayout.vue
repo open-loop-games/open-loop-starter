@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ThreePanelShell } from '@/lib';
 import ResourcesPanel from '@/ui/panels/ResourcesPanel.vue';
 import ActionsPanel from '@/ui/panels/ActionsPanel.vue';
 import ProducersPanel from '@/ui/panels/ProducersPanel.vue';
@@ -11,14 +12,20 @@ import LedgerPanel from '@/ui/panels/LedgerPanel.vue';
   <div class="ledger-layout">
     <LoopPanel />
     <ResourcesPanel />
-    <LedgerPanel />
-    <div class="two-col">
-      <ActionsPanel />
-      <div class="side">
+    <ThreePanelShell
+      class="ledger-body"
+      left-width="280px"
+      right-width="280px"
+    >
+      <template #left>
+        <ActionsPanel />
+      </template>
+      <LedgerPanel />
+      <template #right>
         <ProducersPanel />
         <UpgradesPanel />
-      </div>
-    </div>
+      </template>
+    </ThreePanelShell>
   </div>
 </template>
 
@@ -27,20 +34,11 @@ import LedgerPanel from '@/ui/panels/LedgerPanel.vue';
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  min-height: 0;
+  flex: 1;
 }
-.two-col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gap);
-}
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
-@media (max-width: 720px) {
-  .two-col {
-    grid-template-columns: 1fr;
-  }
+.ledger-body {
+  flex: 1;
+  min-height: 0;
 }
 </style>

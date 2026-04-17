@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
+import { TabsBarShell } from '@/lib';
 import { useModule } from '@/composables/useModule';
 import { AntimatterDimensionsKey } from '@/modules/mods/antimatter-dimensions';
 import HudBar from '@/ui/components/HudBar.vue';
@@ -79,53 +80,55 @@ const eternityTimer = computed(() => formatDuration(ad.eternityTimer.value));
 </script>
 
 <template>
-  <div class="ad-layout">
-    <HudBar>
-      <HudChip variant="big">
-        ✴ {{ antimatter }}
-      </HudChip>
-      <HudChip variant="muted">
-        {{ antimatterPerSec }}/s
-      </HudChip>
-      <HudChip
-        v-if="hasBoosts"
-        variant="stat"
-      >
-        ▲ {{ boostCount }} boosts
-      </HudChip>
-      <HudChip
-        v-if="hasGalaxies"
-        variant="stat"
-      >
-        ✦ {{ galaxyCount }} galaxies
-      </HudChip>
-      <HudChip
-        v-if="ad.hasReachedInfinity.value"
-        variant="stat"
-      >
-        ∞ {{ infinityPoints }} IP
-      </HudChip>
-      <HudChip
-        v-if="ad.hasReachedInfinity.value"
-        variant="muted"
-      >
-        ⏱ {{ infinityTimer }}
-      </HudChip>
-      <HudChip
-        v-if="ad.hasReachedEternity.value"
-        variant="stat"
-      >
-        ⧖ {{ eternityPoints }} EP
-      </HudChip>
-      <HudChip
-        v-if="ad.hasReachedEternity.value"
-        variant="muted"
-      >
-        ⏳ {{ eternityTimer }}
-      </HudChip>
-    </HudBar>
+  <TabsBarShell class="ad-layout">
+    <template #resources>
+      <HudBar>
+        <HudChip variant="big">
+          ✴ {{ antimatter }}
+        </HudChip>
+        <HudChip variant="muted">
+          {{ antimatterPerSec }}/s
+        </HudChip>
+        <HudChip
+          v-if="hasBoosts"
+          variant="stat"
+        >
+          ▲ {{ boostCount }} boosts
+        </HudChip>
+        <HudChip
+          v-if="hasGalaxies"
+          variant="stat"
+        >
+          ✦ {{ galaxyCount }} galaxies
+        </HudChip>
+        <HudChip
+          v-if="ad.hasReachedInfinity.value"
+          variant="stat"
+        >
+          ∞ {{ infinityPoints }} IP
+        </HudChip>
+        <HudChip
+          v-if="ad.hasReachedInfinity.value"
+          variant="muted"
+        >
+          ⏱ {{ infinityTimer }}
+        </HudChip>
+        <HudChip
+          v-if="ad.hasReachedEternity.value"
+          variant="stat"
+        >
+          ⧖ {{ eternityPoints }} EP
+        </HudChip>
+        <HudChip
+          v-if="ad.hasReachedEternity.value"
+          variant="muted"
+        >
+          ⏳ {{ eternityTimer }}
+        </HudChip>
+      </HudBar>
+    </template>
 
-    <nav class="ad-tabs">
+    <template #tabs>
       <button
         v-for="tab in tabs"
         :key="tab.id"
@@ -138,40 +141,28 @@ const eternityTimer = computed(() => formatDuration(ad.eternityTimer.value));
       >
         {{ tab.label }}
       </button>
-    </nav>
+    </template>
 
-    <div class="ad-body">
-      <ADDimensionsPanel v-if="activeTab === 'antimatter'" />
-      <div
-        v-else-if="activeTab === 'infinity'"
-        class="infinity-body"
-      >
-        <ADPrestigePanel />
-        <ADInfinityUpgradesPanel />
-      </div>
-      <ADChallengesPanel v-else-if="activeTab === 'challenges'" />
-      <div
-        v-else-if="activeTab === 'eternity'"
-        class="eternity-body"
-      >
-        <ADEternityPanel />
-        <ADEternityUpgradesPanel />
-      </div>
+    <ADDimensionsPanel v-if="activeTab === 'antimatter'" />
+    <div
+      v-else-if="activeTab === 'infinity'"
+      class="infinity-body"
+    >
+      <ADPrestigePanel />
+      <ADInfinityUpgradesPanel />
     </div>
-  </div>
+    <ADChallengesPanel v-else-if="activeTab === 'challenges'" />
+    <div
+      v-else-if="activeTab === 'eternity'"
+      class="eternity-body"
+    >
+      <ADEternityPanel />
+      <ADEternityUpgradesPanel />
+    </div>
+  </TabsBarShell>
 </template>
 
 <style scoped>
-.ad-layout {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
-.ad-tabs {
-  display: flex;
-  gap: var(--gap-sm);
-  border-bottom: 1px solid var(--color-border);
-}
 .ad-tab {
   padding: var(--gap-sm) var(--gap);
   background: none;

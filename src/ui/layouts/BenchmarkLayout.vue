@@ -6,6 +6,7 @@
  * dragging Vue along.
  */
 import { ref, shallowRef } from 'vue';
+import { SingleColumnShell } from '@/lib';
 import {
   DEFAULT_CELLS,
   runCell,
@@ -42,7 +43,10 @@ async function runBenchmark(): Promise<void> {
 </script>
 
 <template>
-  <div class="benchmark-layout">
+  <SingleColumnShell
+    class="benchmark-layout"
+    max-width="900px"
+  >
     <header class="hud">
       <h2>Benchmark Harness</h2>
       <p class="muted">
@@ -158,17 +162,12 @@ async function runBenchmark(): Promise<void> {
         </tbody>
       </table>
     </section>
-  </div>
+  </SingleColumnShell>
 </template>
 
 <style scoped>
-.benchmark-layout {
-  display: flex;
-  flex-direction: column;
+.benchmark-layout :deep(.olui-single-column__inner) {
   gap: var(--gap-lg);
-  padding: var(--gap-lg);
-  max-width: 900px;
-  margin: 0 auto;
 }
 
 .hud h2 {

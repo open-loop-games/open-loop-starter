@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, addResource, format } from 'open-loop-engine';
+import { SidebarMainShell } from '@/lib';
 import { useModule } from '@/composables/useModule';
 import { CookieFactoryKey } from '@/modules/mods/cookie-factory';
 import HudBar from '@/ui/components/HudBar.vue';
@@ -45,21 +46,24 @@ function clickCookie() {
       </HudChip>
     </HudBar>
 
-    <button
-      v-hold-repeat="clickCookie"
-      class="big-cookie"
-      type="button"
-      aria-label="Bake a cookie"
+    <SidebarMainShell
+      class="cf-body"
+      sidebar-width="320px"
     >
-      🍪
-    </button>
-
-    <div class="grid-2">
-      <CFProducersPanel />
-      <CFUpgradesPanel />
-    </div>
-
-    <CFAchievementsPanel />
+      <template #sidebar>
+        <CFProducersPanel />
+        <CFUpgradesPanel />
+      </template>
+      <button
+        v-hold-repeat="clickCookie"
+        class="big-cookie"
+        type="button"
+        aria-label="Bake a cookie"
+      >
+        🍪
+      </button>
+      <CFAchievementsPanel />
+    </SidebarMainShell>
   </div>
 </template>
 
@@ -68,10 +72,16 @@ function clickCookie() {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  min-height: 0;
+  flex: 1;
 }
 .cf-hud {
   justify-content: center;
   padding: var(--gap);
+}
+.cf-body {
+  flex: 1;
+  min-height: 0;
 }
 .big-cookie {
   align-self: center;
@@ -86,14 +96,4 @@ function clickCookie() {
 }
 .big-cookie:hover { transform: scale(1.03); }
 .big-cookie:active { transform: scale(0.94); }
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gap);
-}
-@media (max-width: 720px) {
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
-}
 </style>

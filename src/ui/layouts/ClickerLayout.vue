@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
+import { SidebarMainShell } from '@/lib';
 import { useModule } from '@/composables/useModule';
 import { GatheringKey } from '@/modules/gathering';
 import ProducersPanel from '@/ui/panels/ProducersPanel.vue';
@@ -49,30 +50,33 @@ function click(id: string) {
       </div>
     </header>
 
-    <div class="click-grid">
-      <button
-        v-for="b in bigButtons"
-        :key="b.id"
-        class="click-btn"
-        @click="click(b.id)"
-      >
-        <span class="click-label">{{ b.label }}</span>
-        <span class="click-sub">
-          {{
-            g.actions.getAction(b.id)!.active.value
-              ? Math.floor(g.actions.getAction(b.id)!.percentComplete.value * 100) + '%'
-              : 'Click!'
-          }}
-        </span>
-      </button>
-    </div>
-
-    <div class="grid-2">
-      <ProducersPanel />
-      <UpgradesPanel />
-    </div>
-
-    <AchievementsPanel />
+    <SidebarMainShell
+      class="clicker-body"
+      sidebar-width="280px"
+    >
+      <template #sidebar>
+        <ProducersPanel />
+        <UpgradesPanel />
+      </template>
+      <div class="click-grid">
+        <button
+          v-for="b in bigButtons"
+          :key="b.id"
+          class="click-btn"
+          @click="click(b.id)"
+        >
+          <span class="click-label">{{ b.label }}</span>
+          <span class="click-sub">
+            {{
+              g.actions.getAction(b.id)!.active.value
+                ? Math.floor(g.actions.getAction(b.id)!.percentComplete.value * 100) + '%'
+                : 'Click!'
+            }}
+          </span>
+        </button>
+      </div>
+      <AchievementsPanel />
+    </SidebarMainShell>
   </div>
 </template>
 
@@ -81,6 +85,12 @@ function click(id: string) {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  min-height: 0;
+  flex: 1;
+}
+.clicker-body {
+  flex: 1;
+  min-height: 0;
 }
 .hud {
   display: flex;
@@ -133,15 +143,5 @@ function click(id: string) {
   font-size: 0.75em;
   font-weight: 500;
   opacity: 0.85;
-}
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gap);
-}
-@media (max-width: 720px) {
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
