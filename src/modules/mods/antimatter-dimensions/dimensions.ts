@@ -22,11 +22,14 @@ import {
   createCostRequirement,
   createModifierChain,
   createMultiplicativeModifier,
+  createPersistentEffectSystem,
+  createReset,
   type DecimalSource,
   type Resource,
   type Purchasable,
   type ModifierChain,
   type EngineContext,
+  type Reset,
 } from 'open-loop-engine';
 import { BUY_TEN_MULTIPLIER, type DimensionDef } from './content';
 
@@ -51,8 +54,40 @@ export interface DimensionLayer {
    */
   maxAntimatter: Resource<DecimalSource>;
   dims: ADDimension[];
-  /** Surface-wide chain — 4c/4e hook cross-layer multipliers here. */
+  /** Surface-wide chain — Layer 1+ cross-layer multipliers hook here. */
   productionChain: ModifierChain;
+
+  // Mid-loop mechanics (OL-467 Layer 0+ expansion)
+
+  /** Number of Dim Boosts performed in the current Infinity run. */
+  boostCount: Resource<DecimalSource>;
+  /** Number of Antimatter Galaxies performed in the current Infinity run. */
+  galaxyCount: Resource<DecimalSource>;
+  /** Tickspeed purchases — alternate investment track. Resets on Infinity. */
+  tickspeed: Purchasable;
+  /** Persistent Dim 8 multiplier accumulated from Dimensional Sacrifices. */
+  sacrificeMult: Resource<DecimalSource>;
+
+  /** Cost in Dim 8 count to perform the next Dim Boost. Reactive. */
+  boostCost: ComputedRef<DecimalSource>;
+  /** Cost in Dim 8 count to perform the next Galaxy. Reactive. */
+  galaxyCost: ComputedRef<DecimalSource>;
+  /** Gain that the next Dimensional Sacrifice would produce. Reactive. */
+  sacrificeGain: ComputedRef<DecimalSource>;
+
+  /** True when Dim 8 count >= boostCost. */
+  canBoost: ComputedRef<boolean>;
+  /** True when Dim 8 count >= galaxyCost. */
+  canGalaxy: ComputedRef<boolean>;
+  /** True when Dim 8 count >= 1 (you need a Dim 8 to sacrifice for). */
+  canSacrifice: ComputedRef<boolean>;
+
+  /** Perform a Dim Boost: reset Dim 1-7 state, bump boostCount. */
+  doBoost: () => boolean;
+  /** Perform an Antimatter Galaxy: reset Dim 1-7 state + boostCount, bump galaxyCount. */
+  doGalaxy: () => boolean;
+  /** Perform a Dimensional Sacrifice: fold sacrificeGain into sacrificeMult, zero Dim 1-7 counts. */
+  doSacrifice: () => boolean;
 }
 
 /**
@@ -146,5 +181,171 @@ export function installDimensions(
     }
   });
 
-  return { antimatter, maxAntimatter, dims, productionChain };
+  // --- Mid-loop mechanics (OL-467) --------------------------------------------
+  //
+  // DimBoost, Galaxy, Tickspeed, and Sacrifice all live in `'ad-layer0'` and
+  // reset automatically when Infinity fires (layer1Reset targets this scope).
+  // Each mechanic's productionChain modifier is registered once at init via
+  // `createPersistentEffectSystem`, matching the idiom from layers.ts:120-168.
+
+  const boostCount = createResource<DecimalSource>(Decimal.dZero, {
+    id: 'dim-boost-count',
+    displayName: 'Dim Boosts',
+  });
+  const galaxyCount = createResource<DecimalSource>(Decimal.dZero, {
+    id: 'galaxy-count',
+    displayName: 'Antimatter Galaxies',
+  });
+  const sacrificeMult = createResource<DecimalSource>(Decimal.dOne, {
+    id: 'sacrifice-mult',
+    displayName: 'Sacrifice Multiplier',
+  });
+
+  const lowerDims = dims.length >= 8 ? dims.slice(0, 7) : dims;
+  const topDim = dims.length >= 8 ? dims[7] : dims[dims.length - 1];
+
+  // Targets for a DimBoost-style reset: every ref that should zero out on the
+  // lower tiers. `thingsToReset` walks passed objects recursively, so Resource
+  // and Purchasable wrappers flatten to their persistent refs automatically.
+  const lowerDimResetTargets: unknown[] = lowerDims.flatMap((d) => [d.count, d.purchasable]);
+
+  const dimBoostReset: Reset = createReset({
+    thingsToReset: lowerDimResetTargets,
+  });
+  const galaxyReset: Reset = createReset({
+    thingsToReset: [...lowerDimResetTargets, boostCount],
+  });
+
+  const tickspeed: Purchasable = createPurchasable({
+    id: 'tickspeed',
+    display: {
+      title: 'Tickspeed',
+      description: 'Speeds up production. ×1.1 to all Antimatter Dimensions per purchase.',
+    },
+    requirements: createCostRequirement({
+      resource: antimatter,
+      cost: () => Decimal.mul(1000, Decimal.pow(1.33, tickspeed.amount.value)),
+    }),
+    limit: Decimal.dInf,
+  });
+
+  const boostCost = computed<DecimalSource>(() =>
+    Decimal.add(10, Decimal.mul(boostCount.value, 2)),
+  );
+  const galaxyCost = computed<DecimalSource>(() =>
+    Decimal.add(80, Decimal.mul(galaxyCount.value, 20)),
+  );
+  const sacrificeGain = computed<DecimalSource>(() => {
+    const base = Decimal.div(dims[0].count.value, 1000);
+    return Decimal.max(1, Decimal.pow(Decimal.max(1, base), 0.5));
+  });
+
+  const canBoost = computed(() => Decimal.gte(topDim.count.value, boostCost.value));
+  const canGalaxy = computed(() => Decimal.gte(topDim.count.value, galaxyCost.value));
+  const canSacrifice = computed(() => Decimal.gte(topDim.count.value, 1));
+
+  function doBoost(): boolean {
+    if (!canBoost.value) return false;
+    dimBoostReset.reset();
+    boostCount.value = Decimal.add(boostCount.value, 1);
+    return true;
+  }
+
+  function doGalaxy(): boolean {
+    if (!canGalaxy.value) return false;
+    galaxyReset.reset();
+    galaxyCount.value = Decimal.add(galaxyCount.value, 1);
+    return true;
+  }
+
+  function doSacrifice(): boolean {
+    if (!canSacrifice.value) return false;
+    sacrificeMult.value = Decimal.mul(sacrificeMult.value, sacrificeGain.value);
+    for (const dim of lowerDims) {
+      dim.count.value = Decimal.dZero;
+    }
+    return true;
+  }
+
+  const effects = createPersistentEffectSystem({ id: 'ad-layer0-effects' });
+
+  effects.register({
+    id: 'midloop:dim-boost-mult',
+    active: () => Decimal.gt(boostCount.value, 0),
+    modifiers: [
+      {
+        chain: productionChain,
+        modifier: () =>
+          createMultiplicativeModifier({
+            multiplier: () => Decimal.add(1, Decimal.mul(boostCount.value, 0.5)),
+            description: 'Dim Boosts',
+          }),
+      },
+    ],
+  });
+
+  effects.register({
+    id: 'midloop:galaxy-mult',
+    active: () => Decimal.gt(galaxyCount.value, 0),
+    modifiers: [
+      {
+        chain: productionChain,
+        modifier: () =>
+          createMultiplicativeModifier({
+            multiplier: () => Decimal.pow(1.5, galaxyCount.value),
+            description: 'Antimatter Galaxies',
+          }),
+      },
+    ],
+  });
+
+  effects.register({
+    id: 'midloop:tickspeed-mult',
+    active: () => Decimal.gt(tickspeed.amount.value, 0),
+    modifiers: [
+      {
+        chain: productionChain,
+        modifier: () =>
+          createMultiplicativeModifier({
+            multiplier: () => Decimal.pow(1.1, tickspeed.amount.value),
+            description: 'Tickspeed',
+          }),
+      },
+    ],
+  });
+
+  effects.register({
+    id: 'midloop:sacrifice-mult',
+    active: () => Decimal.gt(sacrificeMult.value, 1),
+    modifiers: [
+      {
+        chain: topDim.rateChain,
+        modifier: () =>
+          createMultiplicativeModifier({
+            multiplier: () => sacrificeMult.value,
+            description: 'Dimensional Sacrifice',
+          }),
+      },
+    ],
+  });
+
+  return {
+    antimatter,
+    maxAntimatter,
+    dims,
+    productionChain,
+    boostCount,
+    galaxyCount,
+    tickspeed,
+    sacrificeMult,
+    boostCost,
+    galaxyCost,
+    sacrificeGain,
+    canBoost,
+    canGalaxy,
+    canSacrifice,
+    doBoost,
+    doGalaxy,
+    doSacrifice,
+  };
 }

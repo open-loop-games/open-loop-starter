@@ -22,9 +22,11 @@ import {
   type ModifierChain,
   type Conversion,
   type Reset,
+  type Purchasable,
   type PurchasableCategory,
   type Persistent,
 } from 'open-loop-engine';
+import type { ComputedRef } from 'vue';
 import { setSlot } from '@/modules/ui-registry';
 import AntimatterLayout from '@/ui/layouts/AntimatterLayout.vue';
 import { dimensionDefs, STARTING_ANTIMATTER, type IPUpgradeDef } from './content';
@@ -36,6 +38,20 @@ export interface AntimatterDimensionsState {
   maxAntimatter: Resource<DecimalSource>;
   dims: ADDimension[];
   productionChain: ModifierChain;
+  // Layer 0+ mid-loop (OL-467)
+  boostCount: Resource<DecimalSource>;
+  galaxyCount: Resource<DecimalSource>;
+  tickspeed: Purchasable;
+  sacrificeMult: Resource<DecimalSource>;
+  boostCost: ComputedRef<DecimalSource>;
+  galaxyCost: ComputedRef<DecimalSource>;
+  sacrificeGain: ComputedRef<DecimalSource>;
+  canBoost: ComputedRef<boolean>;
+  canGalaxy: ComputedRef<boolean>;
+  canSacrifice: ComputedRef<boolean>;
+  doBoost: () => boolean;
+  doGalaxy: () => boolean;
+  doSacrifice: () => boolean;
   // Layer 1
   infinityPoints: Resource<DecimalSource>;
   infinityTimer: Persistent<number>;
@@ -69,6 +85,19 @@ export function createAntimatterDimensionsModule(): EngineModule {
         maxAntimatter: layer0.maxAntimatter,
         dims: layer0.dims,
         productionChain: layer0.productionChain,
+        boostCount: layer0.boostCount,
+        galaxyCount: layer0.galaxyCount,
+        tickspeed: layer0.tickspeed,
+        sacrificeMult: layer0.sacrificeMult,
+        boostCost: layer0.boostCost,
+        galaxyCost: layer0.galaxyCost,
+        sacrificeGain: layer0.sacrificeGain,
+        canBoost: layer0.canBoost,
+        canGalaxy: layer0.canGalaxy,
+        canSacrifice: layer0.canSacrifice,
+        doBoost: layer0.doBoost,
+        doGalaxy: layer0.doGalaxy,
+        doSacrifice: layer0.doSacrifice,
         ...layer1,
       };
       ctx.provide(AntimatterDimensionsKey, state);

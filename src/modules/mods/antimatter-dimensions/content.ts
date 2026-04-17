@@ -3,8 +3,9 @@
  *
  * Constants seeded verbatim from the AD source pin at
  * `/work/studio/open-loop-research/reference-code/AntimatterDimensionsSourceCode/`.
- * Only tiers 1–4 are shipped here; source defines 8 — higher tiers are out of
- * scope for the skeleton and will be added alongside dimboost in a later pass.
+ * All 8 tiers are unlocked from the start; the canonical tier-unlock-via-boost
+ * feature is deferred — DimBoost here grants its multiplier and resets the
+ * lower tiers but does not gate tier availability.
  */
 import type { DecimalSource } from 'open-loop-engine';
 
@@ -91,6 +92,42 @@ export const dimensionDefs: DimensionDef[] = [
     baseCostMultiplier: 1e6,
     baseRate: 10,
   },
+  {
+    tier: 5,
+    id: 'dim5',
+    name: 'Fifth Dimension',
+    description: 'Produces Fourth Dimensions.',
+    baseCost: 1e9,
+    baseCostMultiplier: 1e8,
+    baseRate: 10,
+  },
+  {
+    tier: 6,
+    id: 'dim6',
+    name: 'Sixth Dimension',
+    description: 'Produces Fifth Dimensions.',
+    baseCost: 1e13,
+    baseCostMultiplier: 1e10,
+    baseRate: 10,
+  },
+  {
+    tier: 7,
+    id: 'dim7',
+    name: 'Seventh Dimension',
+    description: 'Produces Sixth Dimensions.',
+    baseCost: 1e18,
+    baseCostMultiplier: 1e12,
+    baseRate: 10,
+  },
+  {
+    tier: 8,
+    id: 'dim8',
+    name: 'Eighth Dimension',
+    description: 'Produces Seventh Dimensions.',
+    baseCost: 1e24,
+    baseCostMultiplier: 1e15,
+    baseRate: 10,
+  },
 ];
 
 export const upgradeDefs: UpgradeDef[] = [];
@@ -98,13 +135,11 @@ export const challengeDefs: ChallengeDef[] = [];
 export const achievementDefs: AchievementDef[] = [];
 
 /**
- * IP upgrades shipped in Layer 1. Adapted from AD source
- * `infinity-upgrades.js`, trimmed for the 4-dimension skeleton:
+ * IP upgrades shipped in Layer 1. Adapted from AD source `infinity-upgrades.js`:
  *   - totalTimeMult — gain × (totalMinutes / 2)^0.15
- *   - dim14mult — dims 1 & 4 get ×(1 + 0.2×infinities); source targets
- *     dims 1 & 8 but this skeleton only has tiers 1–4
+ *   - dim18mult — dims 1 & 8 get ×(1 + 0.2×infinities), matching canonical
  *   - buy10Mult — flat ×1.1 on each dim's rate
- * `dimboostMult` is dropped — the starter has no dimboost primitive.
+ * `dimboostMult` is deferred pending a deeper DimBoost primitive pass.
  */
 export const ipUpgradeDefs: IPUpgradeDef[] = [
   {
@@ -114,9 +149,9 @@ export const ipUpgradeDefs: IPUpgradeDef[] = [
     cost: 1,
   },
   {
-    id: 'dim14mult',
+    id: 'dim18mult',
     title: 'Tier Resonance',
-    description: '1st and 4th Antimatter Dimensions gain a multiplier based on Infinities.',
+    description: '1st and 8th Antimatter Dimensions gain a multiplier based on Infinities.',
     cost: 1,
   },
   {

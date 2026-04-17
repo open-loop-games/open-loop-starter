@@ -48,7 +48,7 @@ export interface Layer1State {
   totalTimePlayed: Persistent<number>;
   /** First-infinity gate. Unlocks the Infinity tab and stays true forever. */
   hasReachedInfinity: Persistent<boolean>;
-  /** Count of Layer 1 resets performed. Drives `dim14mult`. */
+  /** Count of Layer 1 resets performed. Drives `dim18mult`. */
   lifetimeInfinities: Resource<DecimalSource>;
   conversion: Conversion;
   layer1Reset: Reset;
@@ -140,17 +140,17 @@ export function installLayer1(ctx: EngineContext, layer0: DimensionLayer): Layer
     ],
   });
 
-  const dim14Mult = () =>
+  const dim18Mult = () =>
     createMultiplicativeModifier({
       multiplier: () => Decimal.add(1, Decimal.mul(meta.lifetimeInfinities.value, 0.2)),
       description: 'Tier Resonance',
     });
   effects.register({
-    id: 'ip-upgrade:dim14mult',
-    active: isBought('dim14mult'),
+    id: 'ip-upgrade:dim18mult',
+    active: isBought('dim18mult'),
     modifiers: [
-      { chain: layer0.dims[0].rateChain, modifier: dim14Mult },
-      { chain: layer0.dims[3].rateChain, modifier: dim14Mult },
+      { chain: layer0.dims[0].rateChain, modifier: dim18Mult },
+      { chain: layer0.dims[layer0.dims.length - 1].rateChain, modifier: dim18Mult },
     ],
   });
 

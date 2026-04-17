@@ -45,6 +45,11 @@ const antimatterPerSec = computed(() => {
 
 const infinityPoints = computed(() => format(Decimal.floor(ad.infinityPoints.value)));
 
+const boostCount = computed(() => format(Decimal.floor(ad.boostCount.value)));
+const galaxyCount = computed(() => format(Decimal.floor(ad.galaxyCount.value)));
+const hasBoosts = computed(() => Decimal.gt(ad.boostCount.value, 0));
+const hasGalaxies = computed(() => Decimal.gt(ad.galaxyCount.value, 0));
+
 function formatDuration(totalSeconds: number): string {
   const s = Math.floor(totalSeconds);
   if (s < 60) return `${s}s`;
@@ -66,6 +71,18 @@ const infinityTimer = computed(() => formatDuration(ad.infinityTimer.value));
       </HudChip>
       <HudChip variant="muted">
         {{ antimatterPerSec }}/s
+      </HudChip>
+      <HudChip
+        v-if="hasBoosts"
+        variant="stat"
+      >
+        ▲ {{ boostCount }} boosts
+      </HudChip>
+      <HudChip
+        v-if="hasGalaxies"
+        variant="stat"
+      >
+        ✦ {{ galaxyCount }} galaxies
       </HudChip>
       <HudChip
         v-if="ad.hasReachedInfinity.value"
