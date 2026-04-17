@@ -146,15 +146,17 @@ export function installDimensions(
       },
     });
 
-    rateChain.add(
-      createMultiplicativeModifier({
-        multiplier: () => {
-          const packs = Decimal.floor(Decimal.div(purchasable.amount.value, 10));
-          return Decimal.pow(BUY_TEN_MULTIPLIER, packs);
-        },
-        description: 'Buy-10 bonus',
-      }),
-    );
+    rateChain.bind({
+      active: () => Decimal.gte(purchasable.amount.value, 10),
+      modifier: () =>
+        createMultiplicativeModifier({
+          multiplier: () => {
+            const packs = Decimal.floor(Decimal.div(purchasable.amount.value, 10));
+            return Decimal.pow(BUY_TEN_MULTIPLIER, packs);
+          },
+          description: 'Buy-10 bonus',
+        }),
+    });
 
     const computedRate = computed(() =>
       Decimal.fromValue(rateChain.apply(def.baseRate)),

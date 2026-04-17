@@ -3,11 +3,14 @@ import { computed } from 'vue';
 import { Decimal, format } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { AntimatterDimensionsKey } from '@/modules/mods/antimatter-dimensions';
+import RichTooltip from '@/ui/components/RichTooltip.vue';
+import ChainBreakdown from '@/ui/components/ChainBreakdown.vue';
 
 const ad = useModule(AntimatterDimensionsKey);
 
 const rows = computed(() =>
   ad.dims.map((dim) => ({
+    dim,
     id: dim.def.id,
     name: dim.def.name,
     description: dim.def.description,
@@ -77,7 +80,17 @@ function doSacrifice(): void {
             Count: {{ row.count }}
             <span class="muted">({{ row.bought }} bought)</span>
           </span>
-          <span class="stat">Produces: {{ row.rate }}/s</span>
+          <RichTooltip>
+            <span class="stat stat--hoverable">Produces: {{ row.rate }}/s</span>
+            <template #content>
+              <ChainBreakdown
+                :title="`${row.name} — per-unit rate`"
+                :modifier="row.dim.rateChain"
+                :base="row.dim.def.baseRate"
+                unit="/s"
+              />
+            </template>
+          </RichTooltip>
         </div>
         <button
           v-hold-repeat="() => buy(row.id)"
@@ -206,6 +219,11 @@ function doSacrifice(): void {
 .stat {
   font-size: 0.8em;
   color: var(--color-text-muted);
+}
+.stat--hoverable {
+  border-bottom: 1px dotted var(--color-text-muted);
+  cursor: help;
+  align-self: flex-start;
 }
 .muted {
   opacity: 0.7;
