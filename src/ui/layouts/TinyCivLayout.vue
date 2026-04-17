@@ -7,8 +7,11 @@ import { TinyCivKey } from '@/modules/mods/tiny-civ';
 import {
   BOUNTY_DEFS,
   BOUNTY_REWARDS,
+  BUILDING_DEFS,
   ZONE_DESCRIPTIONS,
   type BountyType,
+  type BuildingId,
+  type WorkerId,
 } from '@/modules/mods/tiny-civ/content';
 import HudBar from '@/ui/components/HudBar.vue';
 import HudChip from '@/ui/components/HudChip.vue';
@@ -19,6 +22,12 @@ const tc = useModule(TinyCivKey);
 const food = computed(() => format(Decimal.floor(tc.food.value)));
 const wood = computed(() => format(Decimal.floor(tc.wood.value)));
 const stone = computed(() => format(Decimal.floor(tc.stone.value)));
+const woodCap = computed(() => format(Decimal.floor(tc.woodStockpile.capacity.value)));
+const stoneCap = computed(() => format(Decimal.floor(tc.stoneStockpile.capacity.value)));
+const foodRate = computed(() => {
+  const r = tc.foodPerSecond.value;
+  return r.gt(0) ? `+${format(r, 1)}/s` : '';
+});
 
 const currentZoneName = computed(() => {
   const id = tc.zones.current.value;
@@ -43,11 +52,13 @@ function selectZone(id: string, unlocked: boolean) {
 const workerViews = computed(() =>
   tc.workers.workers.map((w) => {
     const task = w.worker.currentTask.value;
+    const pinnedTo = tc.workers.pinnedBy[w.id];
     return {
       id: w.id,
       label: w.id.replace('worker-', 'Worker '),
-      currentLabel: task?.label ?? 'Idle',
+      currentLabel: task?.label ?? (pinnedTo != null ? 'Idle (pinned)' : 'Idle'),
       isIdle: task == null,
+      pinnedTo,
       percent: w.tracker.percentComplete.value,
       recall: w.recall,
     };
@@ -85,19 +96,75 @@ const pendingTotal = computed(() => tc.workers.availableTasks.value.length);
 function postBounty(type: BountyType) {
   tc.workers.postBounty(type);
 }
+
+const RESOURCE_LABELS = { food: 'food', wood: 'wood', stone: 'stone' } as const;
+
+function formatCost(baseCosts: { resource: 'food' | 'wood' | 'stone'; amount: number }[], priceRatio: number, owned: Decimal): string {
+  const scale = Decimal.pow(priceRatio, owned);
+  return baseCosts
+    .map((c) => `${format(Decimal.floor(Decimal.mul(c.amount, scale)))} ${RESOURCE_LABELS[c.resource]}`)
+    .join(', ');
+}
+
+const buildingViews = computed(() =>
+  BUILDING_DEFS.map((def) => {
+    const p = tc.buildings.category.getPurchasable(def.id);
+    const owned = p == null ? Decimal.dZero : new Decimal(p.amount.value);
+    const pinnedWorker = def.pinnable ? tc.buildings.pinnedWorker(def.id) : null;
+    return {
+      id: def.id,
+      name: def.name,
+      icon: def.icon,
+      description: def.description,
+      pinnable: def.pinnable,
+      pinnedWorker,
+      owned,
+      ownedText: format(Decimal.floor(owned)),
+      costText: formatCost(def.baseCosts, def.priceRatio, owned),
+      canBuy: p?.canPurchase.value ?? false,
+    };
+  }),
+);
+
+const idleUnpinnedWorkerIds = computed<WorkerId[]>(() =>
+  tc.workers.workers
+    .filter(
+      (w) => tc.workers.pinnedBy[w.id] == null && w.worker.currentTask.value == null,
+    )
+    .map((w) => w.id),
+);
+
+function buyBuilding(id: BuildingId) {
+  const p = tc.buildings.category.getPurchasable(id);
+  if (p == null || !p.canPurchase.value) return;
+  p.purchase();
+}
+
+function pinFirstIdleTo(id: BuildingId) {
+  const worker = idleUnpinnedWorkerIds.value[0];
+  if (worker == null) return;
+  tc.buildings.pinWorker(id, worker);
+}
+
+function unpinBuilding(id: BuildingId) {
+  tc.buildings.unpinBuilding(id);
+}
 </script>
 
 <template>
   <div class="tc-layout">
     <HudBar>
       <HudChip variant="big">
-        🌾 {{ food }}
+        🌾 {{ food }} <span
+          v-if="foodRate"
+          class="tc-rate"
+        >{{ foodRate }}</span>
       </HudChip>
       <HudChip>
-        🪵 {{ wood }}
+        🪵 {{ wood }} / {{ woodCap }}
       </HudChip>
       <HudChip>
-        🪨 {{ stone }}
+        🪨 {{ stone }} / {{ stoneCap }}
       </HudChip>
       <HudChip variant="muted">
         📋 {{ pendingTotal }} pending
@@ -193,11 +260,17 @@ function postBounty(type: BountyType) {
               v-for="w in workerViews"
               :key="w.id"
               class="tc-worker-card"
-              :class="{ idle: w.isIdle }"
+              :class="{ idle: w.isIdle, pinned: w.pinnedTo != null }"
             >
               <div class="tc-worker-head">
                 <span class="tc-worker-label">{{ w.label }}</span>
+                <span
+                  v-if="w.pinnedTo"
+                  class="tc-worker-pin-badge"
+                  :title="`Pinned to ${w.pinnedTo}`"
+                >📌 {{ w.pinnedTo }}</span>
                 <button
+                  v-if="w.pinnedTo == null"
                   type="button"
                   class="tc-worker-recall"
                   :disabled="w.isIdle"
@@ -217,13 +290,57 @@ function postBounty(type: BountyType) {
             </li>
           </ul>
         </div>
-        <div class="tc-right-block tc-placeholder">
+        <div class="tc-right-block">
           <h3 class="tc-panel-title">
             Buildings
           </h3>
-          <p class="tc-placeholder-body">
-            Buildings unlock in the next step.
-          </p>
+          <ul class="tc-building-list">
+            <li
+              v-for="b in buildingViews"
+              :key="b.id"
+              class="tc-building-card"
+            >
+              <div class="tc-building-head">
+                <span class="tc-building-icon">{{ b.icon }}</span>
+                <span class="tc-building-name">{{ b.name }}</span>
+                <span class="tc-building-count">×{{ b.ownedText }}</span>
+              </div>
+              <div class="tc-building-desc">
+                {{ b.description }}
+              </div>
+              <div class="tc-building-actions">
+                <button
+                  type="button"
+                  class="tc-building-buy"
+                  :disabled="!b.canBuy"
+                  :title="b.canBuy ? `Cost: ${b.costText}` : `Need: ${b.costText}`"
+                  @click="buyBuilding(b.id)"
+                >
+                  Build
+                  <span class="tc-building-cost">{{ b.costText }}</span>
+                </button>
+                <button
+                  v-if="b.pinnable && b.pinnedWorker == null"
+                  type="button"
+                  class="tc-building-pin"
+                  :disabled="idleUnpinnedWorkerIds.length === 0 || b.owned.lte(0)"
+                  :title="b.owned.lte(0) ? 'Build one first' : 'Pin an idle worker to this building'"
+                  @click="pinFirstIdleTo(b.id)"
+                >
+                  📌 Pin worker
+                </button>
+                <button
+                  v-else-if="b.pinnable"
+                  type="button"
+                  class="tc-building-pin pinned"
+                  :title="`Release ${b.pinnedWorker}`"
+                  @click="unpinBuilding(b.id)"
+                >
+                  Unpin {{ b.pinnedWorker }}
+                </button>
+              </div>
+            </li>
+          </ul>
         </div>
       </template>
     </ThreePanelShell>
@@ -456,10 +573,114 @@ function postBounty(type: BountyType) {
   color: var(--color-text-muted);
 }
 
-.tc-placeholder-body {
-  margin: 0;
+.tc-rate {
+  margin-left: var(--gap-sm);
+  font-size: 0.75em;
   color: var(--color-text-muted);
-  font-size: 0.9em;
-  line-height: 1.4;
+  font-weight: 500;
+}
+
+.tc-worker-card.pinned {
+  border-color: var(--color-primary);
+  opacity: 1;
+}
+.tc-worker-pin-badge {
+  margin-left: auto;
+  padding: 2px var(--gap-sm);
+  font-size: 0.75em;
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+}
+
+.tc-building-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+}
+.tc-building-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--gap-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.tc-building-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+.tc-building-icon {
+  font-size: 1.1em;
+}
+.tc-building-name {
+  font-weight: 600;
+}
+.tc-building-count {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+}
+.tc-building-desc {
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+.tc-building-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-sm);
+  margin-top: 2px;
+}
+.tc-building-buy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 4px var(--gap-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.85em;
+}
+.tc-building-buy:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.tc-building-buy:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.tc-building-cost {
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+}
+.tc-building-pin {
+  padding: 4px var(--gap-sm);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.85em;
+}
+.tc-building-pin:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+.tc-building-pin:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.tc-building-pin.pinned {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 </style>

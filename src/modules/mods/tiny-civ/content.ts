@@ -60,13 +60,16 @@ export const CLICK_GATHER_FOOD = 1;
 export type BountyType = 'gather-food' | 'gather-wood' | 'gather-stone' | 'explore-zone';
 
 /**
- * Immutable spec for a bounty type. Shared by every pool entry of that type.
- * Reward magnitudes live separately in {@link BOUNTY_REWARDS} so the reward
+ * Immutable spec for a bounty or pin task. Reward magnitudes live separately in
+ * {@link BOUNTY_REWARD_SPECS} / {@link PIN_TASK_REWARDS} so the reward
  * side-effect can be resolved by the worker subsystem without putting closures
  * into a serialized structure.
+ *
+ * `id` is typed as `string` because both bounty types and pin task ids share
+ * this shape and live in sibling tables; narrowing happens at dispatch time.
  */
 export interface BountyDef {
-  id: BountyType;
+  id: string;
   label: string;
   /** Seconds to complete at speed = 1. */
   durationSec: number;
@@ -99,3 +102,121 @@ export const BOUNTY_REWARDS: Record<BountyType, number> = {
 export const WORKER_IDS = ['worker-0', 'worker-1', 'worker-2'] as const;
 
 export type WorkerId = (typeof WORKER_IDS)[number];
+
+/**
+ * Continuous building-bound tasks a pinned worker can loop on. Distinct from
+ * {@link BountyType} because pin tasks aren't poolable — there's always exactly
+ * one target (the pinned building) and the task just keeps firing.
+ */
+export type PinTaskId = 'farm-work';
+
+/** Kind of resource a task reward deposits into. */
+export type ResourceKind = 'food' | 'wood' | 'stone';
+
+/** Unified shape used by both bounties and pin tasks for reward dispatch. */
+export interface TaskReward {
+  resource: ResourceKind;
+  amount: number;
+}
+
+export const PIN_TASK_DEFS: Record<PinTaskId, BountyDef> = {
+  'farm-work': { id: 'farm-work', label: 'Tend the farm', durationSec: 4 },
+};
+
+export const PIN_TASK_REWARDS: Record<PinTaskId, TaskReward> = {
+  'farm-work': { resource: 'food', amount: 5 },
+};
+
+/** Reward shape unified across bounty and pin tasks — see workers.ts reward dispatch. */
+export const BOUNTY_REWARD_SPECS: Record<BountyType, TaskReward | null> = {
+  'gather-food': { resource: 'food', amount: BOUNTY_REWARDS['gather-food'] },
+  'gather-wood': { resource: 'wood', amount: BOUNTY_REWARDS['gather-wood'] },
+  'gather-stone': { resource: 'stone', amount: BOUNTY_REWARDS['gather-stone'] },
+  'explore-zone': null,
+};
+
+/**
+ * Era-1 buildings. Each has a scaling cost (multiple resources allowed) and a
+ * static effect bound once at module install. Effects land via modifier chains
+ * (farm passive production, storage cap) or via direct flag refs consumed by
+ * later subtasks (hut popCap → 5f; workshop hasWorkshop → 5e).
+ */
+export type BuildingId = 'hut' | 'farm' | 'workshop' | 'storage';
+
+export interface BuildingCost {
+  resource: ResourceKind;
+  amount: number;
+}
+
+export interface BuildingDef {
+  id: BuildingId;
+  name: string;
+  description: string;
+  /** Cost multiplier per copy owned. Matches Kittens-style price ratios. */
+  priceRatio: number;
+  baseCosts: BuildingCost[];
+  /** Era-1: only `farm` is pinnable. Extensible for era-2+ mines, etc. */
+  pinnable: boolean;
+  /** Icon glyph for the layout row. */
+  icon: string;
+}
+
+export const BUILDING_DEFS: BuildingDef[] = [
+  {
+    id: 'hut',
+    name: 'Hut',
+    description: 'Shelter for another worker. (Pop cap consumed in a later era.)',
+    priceRatio: 2.5,
+    baseCosts: [{ resource: 'wood', amount: 5 }],
+    pinnable: false,
+    icon: '🛖',
+  },
+  {
+    id: 'farm',
+    name: 'Farm',
+    description: 'Passive food income. Pin a worker for faster harvests.',
+    priceRatio: 1.15,
+    baseCosts: [
+      { resource: 'wood', amount: 10 },
+      { resource: 'stone', amount: 5 },
+    ],
+    pinnable: true,
+    icon: '🌾',
+  },
+  {
+    id: 'workshop',
+    name: 'Workshop',
+    description: 'Enables crafting. (Recipes unlock in a later step.)',
+    priceRatio: 1.15,
+    baseCosts: [
+      { resource: 'wood', amount: 30 },
+      { resource: 'stone', amount: 20 },
+    ],
+    pinnable: false,
+    icon: '🔨',
+  },
+  {
+    id: 'storage',
+    name: 'Storage',
+    description: 'Extends wood and stone capacity.',
+    priceRatio: 1.15,
+    baseCosts: [
+      { resource: 'wood', amount: 20 },
+      { resource: 'stone', amount: 15 },
+    ],
+    pinnable: false,
+    icon: '📦',
+  },
+];
+
+/** Starting per-resource cap. Storage building extends these. */
+export const BASE_WOOD_CAP = 50;
+export const BASE_STONE_CAP = 50;
+/** Additional capacity (wood AND stone) granted per Storage copy. */
+export const STORAGE_CAP_PER_COPY = 25;
+
+/** Food/sec passive production per farm copy. Layered via modifier chain. */
+export const FARM_BASE_RATE = 0.2;
+
+/** Pop cap increment per hut copy. Consumed by 5f era transitions. */
+export const HUT_POP_PER_COPY = 1;
