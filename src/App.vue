@@ -19,6 +19,7 @@ const engine = createEngine({
   gameId: 'open-loop-starter',
   tickRate: 20,
   autoSaveInterval: 60000,
+  maxSaveSlots: 30,
   mods: modDefs,
 });
 
