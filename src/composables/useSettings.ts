@@ -7,7 +7,6 @@ export interface StockSettings {
   offlineProgress: Persistent<boolean>;
   theme: Persistent<string>;
   notation: Persistent<string>;
-  confirmOnClose: Persistent<boolean>;
 }
 
 export function useSettings(): StockSettings {

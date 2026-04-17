@@ -65,14 +65,6 @@ const settings = useSettings();
         >
         Process offline progress on load
       </label>
-
-      <label class="setting">
-        <input
-          v-model="settings.confirmOnClose.value"
-          type="checkbox"
-        >
-        Confirm before closing tab
-      </label>
     </div>
   </PanelLayout>
 </template>

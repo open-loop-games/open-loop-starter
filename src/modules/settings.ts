@@ -23,7 +23,6 @@ export const settingsModule: EngineModule = {
       offlineProgress: persistent(true, { name: 'offlineProgress' }),
       theme: persistent('dark', { name: 'theme' }),
       notation: persistent('standard', { name: 'notation' }),
-      confirmOnClose: persistent(true, { name: 'confirmOnClose' }),
     };
     const lastSaveTimestamp: Ref<number> = ref(0);
 

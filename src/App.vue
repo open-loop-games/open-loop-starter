@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, provide, watchEffect } from 'vue';
+import { ref, provide } from 'vue';
 import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-engine';
 import { Screen } from '@/types';
 import { modDefs } from '@/modules';
@@ -40,18 +40,7 @@ function startGame(slotId: number, modId?: string) {
   useTheme(engine);
   useNotation(engine);
 
-  // Confirm on close
   const settingsState = engine.tryInject(SettingsKey);
-  watchEffect(() => {
-    if (settingsState?.settings.confirmOnClose.value && currentScreen.value === Screen.Game) {
-      window.onbeforeunload = (e: BeforeUnloadEvent) => {
-        e.preventDefault();
-        return '';
-      };
-    } else {
-      window.onbeforeunload = null;
-    }
-  });
 
   const result = engine.load();
   if (result.success && result.timestamp) {
