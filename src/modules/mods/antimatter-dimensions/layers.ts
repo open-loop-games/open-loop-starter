@@ -32,8 +32,6 @@ import {
   Formula,
   createCostRequirement,
   createCumulativeConversion,
-  createMultiplicativeModifier,
-  createPersistentEffectSystem,
   createPurchasableCategory,
   createReset,
   createResource,
@@ -43,6 +41,7 @@ import {
   type Conversion,
   type DecimalSource,
   type EngineContext,
+  type Grant,
   type Persistent,
   type PurchasableCategory,
   type Reset,
@@ -122,6 +121,7 @@ export function installLayer1(ctx: EngineContext, layer0: DimensionLayer): Layer
         display: { title: def.title, description: def.description },
         requirements: createCostRequirement({ resource: infinityPoints, cost: def.cost }),
         limit: 1,
+        grants: ipGrantsForDef(def, layer0, meta),
       }),
     });
     return { infinityPoints, maxInfinityPoints, infinityTimer, ipUpgrades };
@@ -159,56 +159,6 @@ export function installLayer1(ctx: EngineContext, layer0: DimensionLayer): Layer
     meta.hasReachedInfinity.value = true;
     meta.lifetimeInfinities.value = Decimal.add(meta.lifetimeInfinities.value, 1);
     layer1.infinityTimer.value = 0;
-  });
-
-  const effects = createPersistentEffectSystem({ id: 'ad-layer1-effects' });
-
-  const isBought = (id: string) => () =>
-    layer1.ipUpgrades.getPurchasable(id)?.bought.value ?? false;
-
-  effects.register({
-    id: 'ip-upgrade:totalTimeMult',
-    active: isBought('totalTimeMult'),
-    modifiers: [
-      {
-        chain: layer0.productionChain,
-        modifier: () =>
-          createMultiplicativeModifier({
-            multiplier: () => {
-              const minutes = Decimal.div(meta.totalTimePlayed.value, 60);
-              return Decimal.max(1, Decimal.pow(Decimal.div(minutes, 2).max(1), 0.15));
-            },
-            description: 'Time Dilation',
-          }),
-      },
-    ],
-  });
-
-  const dim18Mult = () =>
-    createMultiplicativeModifier({
-      multiplier: () => Decimal.add(1, Decimal.mul(meta.lifetimeInfinities.value, 0.2)),
-      description: 'Tier Resonance',
-    });
-  effects.register({
-    id: 'ip-upgrade:dim18mult',
-    active: isBought('dim18mult'),
-    modifiers: [
-      { chain: layer0.dims[0].rateChain, modifier: dim18Mult },
-      { chain: layer0.dims[layer0.dims.length - 1].rateChain, modifier: dim18Mult },
-    ],
-  });
-
-  effects.register({
-    id: 'ip-upgrade:buy10Mult',
-    active: isBought('buy10Mult'),
-    modifiers: layer0.dims.map((dim) => ({
-      chain: dim.rateChain,
-      modifier: () =>
-        createMultiplicativeModifier({
-          multiplier: 1.1,
-          description: 'Ten-fold Legacy',
-        }),
-    })),
   });
 
   ctx.onTick((dt) => {
@@ -270,6 +220,7 @@ export function installLayer2(
         display: { title: def.title, description: def.description },
         requirements: createCostRequirement({ resource: eternityPoints, cost: def.cost }),
         limit: 1,
+        grants: epGrantsForDef(def, layer0, layer1, meta, eternityPoints),
       }),
     });
     return { eternityPoints, eternityTimer, epUpgrades };
@@ -304,58 +255,6 @@ export function installLayer2(
     layer2.eternityTimer.value = 0;
   });
 
-  const effects = createPersistentEffectSystem({ id: 'ad-layer2-effects' });
-
-  const isBought = (id: string) => () =>
-    layer2.epUpgrades.getPurchasable(id)?.bought.value ?? false;
-
-  effects.register({
-    id: 'ep-upgrade:epMult',
-    active: isBought('epMult'),
-    modifiers: [
-      {
-        chain: layer0.productionChain,
-        modifier: () =>
-          createMultiplicativeModifier({
-            multiplier: () => Decimal.add(layer2.eternityPoints.value, 1),
-            description: 'Eternal Resonance',
-          }),
-      },
-    ],
-  });
-
-  effects.register({
-    id: 'ep-upgrade:eternitiesMult',
-    active: isBought('eternitiesMult'),
-    modifiers: [
-      {
-        chain: layer0.productionChain,
-        modifier: () =>
-          createMultiplicativeModifier({
-            multiplier: () =>
-              Decimal.add(1, Decimal.mul(meta.lifetimeEternities.value, 0.1)),
-            description: 'Recursive Endings',
-          }),
-      },
-    ],
-  });
-
-  effects.register({
-    id: 'ep-upgrade:ipMult',
-    active: isBought('ipMult'),
-    modifiers: [
-      {
-        chain: layer0.productionChain,
-        modifier: () =>
-          createMultiplicativeModifier({
-            multiplier: () =>
-              Decimal.add(1, Decimal.log10(Decimal.add(layer1.infinityPoints.value, 1))),
-            description: 'Infinite Inheritance',
-          }),
-      },
-    ],
-  });
-
   ctx.onTick((dt) => {
     updateResetTimers([layer2.eternityTimer], dt);
   });
@@ -369,4 +268,100 @@ export function installLayer2(
     layer2Reset,
     epUpgrades: layer2.epUpgrades,
   };
+}
+
+// ============================================================================
+// Declarative grant tables
+// ============================================================================
+// Each table returns the Grant[] for one upgrade def. The category lowers
+// each Grant to a `chain.bind` with `purchasable.bought` as the active
+// predicate, so balance-sim sees every contribution as
+// `ad-{ip,ep}-upgrades/{def.id}/{description}` in `chain.bindings()`.
+
+type Layer1Meta = {
+  readonly totalTimePlayed: Persistent<number>;
+  readonly lifetimeInfinities: Resource<DecimalSource>;
+};
+
+function ipGrantsForDef(
+  def: IPUpgradeDef,
+  layer0: DimensionLayer,
+  meta: Layer1Meta,
+): Grant[] {
+  switch (def.id) {
+    case 'totalTimeMult':
+      return [
+        {
+          chain: layer0.productionChain,
+          mult: () => {
+            const minutes = Decimal.div(meta.totalTimePlayed.value, 60);
+            return Decimal.max(1, Decimal.pow(Decimal.div(minutes, 2).max(1), 0.15));
+          },
+          description: 'Time Dilation',
+        },
+      ];
+    case 'dim18mult':
+      return [
+        {
+          chain: [
+            layer0.dims[0].rateChain,
+            layer0.dims[layer0.dims.length - 1].rateChain,
+          ],
+          mult: () => Decimal.add(1, Decimal.mul(meta.lifetimeInfinities.value, 0.2)),
+          description: 'Tier Resonance',
+        },
+      ];
+    case 'buy10Mult':
+      return [
+        {
+          chain: layer0.dims.map((d) => d.rateChain),
+          mult: 1.1,
+          description: 'Ten-fold Legacy',
+        },
+      ];
+    default:
+      return [];
+  }
+}
+
+type Layer2Meta = {
+  readonly lifetimeEternities: Resource<DecimalSource>;
+};
+
+function epGrantsForDef(
+  def: EPUpgradeDef,
+  layer0: DimensionLayer,
+  layer1: Layer1State,
+  meta: Layer2Meta,
+  eternityPoints: Resource<DecimalSource>,
+): Grant[] {
+  switch (def.id) {
+    case 'epMult':
+      return [
+        {
+          chain: layer0.productionChain,
+          mult: () => Decimal.add(eternityPoints.value, 1),
+          description: 'Eternal Resonance',
+        },
+      ];
+    case 'eternitiesMult':
+      return [
+        {
+          chain: layer0.productionChain,
+          mult: () => Decimal.add(1, Decimal.mul(meta.lifetimeEternities.value, 0.1)),
+          description: 'Recursive Endings',
+        },
+      ];
+    case 'ipMult':
+      return [
+        {
+          chain: layer0.productionChain,
+          mult: () =>
+            Decimal.add(1, Decimal.log10(Decimal.add(layer1.infinityPoints.value, 1))),
+          description: 'Infinite Inheritance',
+        },
+      ];
+    default:
+      return [];
+  }
 }
