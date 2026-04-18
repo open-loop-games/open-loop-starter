@@ -62,7 +62,7 @@ function buildTierCell(saveBlob: string, name: string, earnedCountTarget: number
     name,
     saveBlob,
     modules: () => [settingsModule, uiRegistryModule, createIdleLoopsModule()],
-    perturb: (engine: Engine) => {
+    perturb: (engine: Engine, _ctx) => {
       const scratch = engine.tryInject(IdleLoopsKey);
       if (!scratch) return;
       pumpAchievements(scratch, earnedCountTarget);
@@ -171,7 +171,7 @@ describe('idle-loops sensitivity — tier-over-tier improvement', () => {
         name: 'tier-4-goal',
         saveBlob: primeSave,
         modules: () => [settingsModule, uiRegistryModule, createIdleLoopsModule()],
-        perturb: (engine: Engine) => {
+        perturb: (engine: Engine, _ctx) => {
           const scratch = engine.tryInject(IdleLoopsKey);
           if (!scratch) return;
           pumpAchievements(scratch, 7);

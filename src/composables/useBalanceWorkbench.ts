@@ -213,7 +213,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         name: 'variant',
         saveBlob: blob,
         modules,
-        perturb: (e) => {
+        perturb: (e, _ctx) => {
           applyPerturbation(e, entry, perturbation);
         },
         buildAnalyzers: analyzerPack,

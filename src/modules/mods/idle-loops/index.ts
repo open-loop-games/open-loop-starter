@@ -274,7 +274,7 @@ export function createIdleLoopsModule(): EngineModule {
           name,
           saveBlob: saveManager.exportSave(),
           modules: () => [settingsModule, uiRegistryModule, createIdleLoopsModule()],
-          perturb: (engine: Engine) => {
+          perturb: (engine: Engine, _ctx) => {
             const scratch = engine.tryInject(IdleLoopsKey);
             if (!scratch) return;
             scratch.queue.clear();
