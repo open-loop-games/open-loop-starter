@@ -43,6 +43,7 @@ import { createHotspotSystem, type HotspotSystem } from './hotspots';
 import { createUpgradeSystem, type UpgradeSystem } from './upgrades';
 import { createRoundSystem, type RoundSystem } from './round';
 import { createMetaSystem, type MetaSystem } from './meta';
+import { createAchievementSystem, type AchievementSystem } from './achievements';
 import { setSlot } from '@/modules/ui-registry';
 import CreepWarfareLayout from '@/ui/layouts/CreepWarfareLayout.vue';
 
@@ -56,6 +57,7 @@ export interface CreepWarfareState {
   upgrades: UpgradeSystem;
   round: RoundSystem;
   meta: MetaSystem;
+  achievements: AchievementSystem;
   essence: Record<FactionId, Resource<DecimalSource>>;
   chains: {
     attack: Record<FactionId, ModifierChain>;
@@ -164,6 +166,12 @@ export function createCreepWarfareModule(): EngineModule {
         slotCapacity: goals.capacity,
       });
 
+      const achievements = createAchievementSystem({
+        grid: grid.grid,
+        hotspots: grid.blueprint.hotspots,
+        round,
+      });
+
       // Bridge plain-data grid mutations into the persistent snapshot ref.
       // The grid mutates in place during ticks; without this, the engine's
       // autosave would only see the fresh-game snapshot from grid.ts.
@@ -181,6 +189,9 @@ export function createCreepWarfareModule(): EngineModule {
           ai.onEngineTick(dt);
           hotspots.onEngineTick(dt);
         }
+        // achievements.onEngineTick runs regardless of phase so the
+        // total-dominance hold-timer drains cleanly on round end.
+        achievements.onEngineTick(dt);
       });
 
       const state: CreepWarfareState = {
@@ -193,6 +204,7 @@ export function createCreepWarfareModule(): EngineModule {
         upgrades,
         round,
         meta,
+        achievements,
         essence,
         chains: { attack, defense, spread: spreadChains, yield: yieldChains },
         factions: FACTION_IDS,

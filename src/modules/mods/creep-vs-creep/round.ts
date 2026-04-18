@@ -66,6 +66,8 @@ export interface RoundStats {
   territory: number;
   hotspotsHeld: number;
   survivingFactions: number;
+  /** Seconds elapsed when the round ended. Zero while active or on a fresh round. */
+  elapsed: number;
 }
 
 export interface RoundSystem {
@@ -168,7 +170,12 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
     createResource<DecimalSource>(0, { displayName: META_CURRENCY_NAME }),
   );
 
-  const stats = ref<RoundStats>({ territory: 0, hotspotsHeld: 0, survivingFactions: 0 });
+  const stats = ref<RoundStats>({
+    territory: 0,
+    hotspotsHeld: 0,
+    survivingFactions: 0,
+    elapsed: 0,
+  });
   const awardedReward = ref<DecimalSource>(0);
 
   // Reactive preview driven by the spatial grid's cellChanged emit cadence
@@ -216,7 +223,12 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
     const surviving = countSurvivingFactions(grid);
     const reward = computeReward(territory, hotspotsHeld);
 
-    stats.value = { territory, hotspotsHeld, survivingFactions: surviving };
+    stats.value = {
+      territory,
+      hotspotsHeld,
+      survivingFactions: surviving,
+      elapsed: elapsed.value,
+    };
     awardedReward.value = reward;
     if (Decimal.gt(reward, 0)) {
       addResource(metaCurrency, reward);
@@ -242,7 +254,7 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
     elapsed.value = 0;
     countdown.value = 0;
     awardedReward.value = 0;
-    stats.value = { territory: 0, hotspotsHeld: 0, survivingFactions: 0 };
+    stats.value = { territory: 0, hotspotsHeld: 0, survivingFactions: 0, elapsed: 0 };
     phase.value = 'active';
   }
 
