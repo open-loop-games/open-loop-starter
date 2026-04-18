@@ -13,6 +13,7 @@ import { benchmarkModule } from './mods/benchmark';
 import { idleLoopsModule } from './mods/idle-loops';
 import { antimatterDimensionsModule } from './mods/antimatter-dimensions';
 import { tinyCivModule } from './mods/tiny-civ';
+import { creepWarfareModule } from './mods/creep-vs-creep';
 
 const sharedBase = [settingsModule, uiRegistryModule];
 
@@ -100,5 +101,12 @@ if (import.meta.env.DEV) {
     description:
       'Runs runMatrix against stock Cookie Factory and reports ms/tick. Shell for the perf-budget snapshot. Dev builds only.',
     modules: [...sharedBase, benchmarkModule],
+  });
+  modDefs.push({
+    id: 'creep-vs-creep',
+    name: 'Creep vs Creep (dev)',
+    description:
+      'Mini-RTS demo skeleton (OL-504): 4 factions on a 60×60 mirrored SpatialGrid with terrain blockers, hotspots, and structure-level snapshot persistence. Foundation only — spread, combat, goals, AI, production, and round-end land in follow-ups. Dev builds only.',
+    modules: [...sharedBase, creepWarfareModule],
   });
 }
