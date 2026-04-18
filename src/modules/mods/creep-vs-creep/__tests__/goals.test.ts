@@ -52,14 +52,14 @@ function makeTestGrid(): SpatialGrid<CellState> {
   return createSpatialGrid<CellState>({
     width: MAP_WIDTH,
     height: MAP_HEIGHT,
-    initializer: () => ({ terrain: 'open', owner: null, hp: 0 }),
+    initializer: () => ({ terrain: 'open', owner: null, hp: 0, reservoir: 0 }),
   });
 }
 
 function resetGrid(grid: SpatialGrid<CellState>): void {
   for (let y = 0; y < MAP_HEIGHT; y++) {
     for (let x = 0; x < MAP_WIDTH; x++) {
-      grid.set(x, y, { terrain: 'open', owner: null, hp: 0 });
+      grid.set(x, y, { terrain: 'open', owner: null, hp: 0, reservoir: 0 });
     }
   }
 }
@@ -108,12 +108,12 @@ describe('goal-slot system', () => {
     goals.capacity.value = 3;
     // Seed defender-faction cells in the NW quadrant with adversaries so
     // `defend:sector-nw` doesn't read as already-completed.
-    grid.set(5, 5, { terrain: 'open', owner: 'red', hp: 0 });
-    grid.set(6, 5, { terrain: 'open', owner: 'blue', hp: 0 });
+    grid.set(5, 5, { terrain: 'open', owner: 'red', hp: 0, reservoir: 0 });
+    grid.set(6, 5, { terrain: 'open', owner: 'blue', hp: 0, reservoir: 0 });
     // And ensure blue has more territory than red so `pressure:faction-blue`
     // isn't trivially completed (blue's territory must exceed red's).
-    grid.set(40, 40, { terrain: 'open', owner: 'blue', hp: 0 });
-    grid.set(41, 40, { terrain: 'open', owner: 'blue', hp: 0 });
+    grid.set(40, 40, { terrain: 'open', owner: 'blue', hp: 0, reservoir: 0 });
+    grid.set(41, 40, { terrain: 'open', owner: 'blue', hp: 0, reservoir: 0 });
 
     goals.slots.red.select('defend:sector-nw');
     goals.slots.red.select('pressure:faction-blue');
@@ -146,8 +146,8 @@ describe('goal-slot system', () => {
 
   it('increasing capacity admits a previously-rejected selection', async () => {
     // Seed a threat so defend:sector-nw isn't already completed.
-    grid.set(5, 5, { terrain: 'open', owner: 'red', hp: 0 });
-    grid.set(6, 5, { terrain: 'open', owner: 'blue', hp: 0 });
+    grid.set(5, 5, { terrain: 'open', owner: 'red', hp: 0, reservoir: 0 });
+    grid.set(6, 5, { terrain: 'open', owner: 'blue', hp: 0, reservoir: 0 });
 
     goals.slots.red.select('claim:hotspot-hs-nw');
     expect(goals.slots.red.select('defend:sector-nw')).toBe(false);
@@ -175,7 +175,7 @@ describe('goal-slot system', () => {
     // re-evaluates when something reactive in its dependencies changes, so
     // we drive that via `sweepCompleted` which deselects the stale goal.
     const h = HOTSPOTS[0];
-    grid.set(h.x, h.y, { terrain: 'hotspot', owner: 'blue', hp: 0, hotspotId: h.id });
+    grid.set(h.x, h.y, { terrain: 'hotspot', owner: 'blue', hp: 0, hotspotId: h.id, reservoir: 0 });
     expect(goals.isGoalCompleted('red', 'claim:hotspot-hs-nw')).toBe(true);
 
     goals.sweepCompleted();
@@ -188,7 +188,7 @@ describe('goal-slot system', () => {
     expect(goals.slots.red.selected.value).toContain('claim:hotspot-hs-nw');
 
     const h = HOTSPOTS[0];
-    grid.set(h.x, h.y, { terrain: 'hotspot', owner: 'red', hp: 0, hotspotId: h.id });
+    grid.set(h.x, h.y, { terrain: 'hotspot', owner: 'red', hp: 0, hotspotId: h.id, reservoir: 0 });
 
     goals.sweepCompleted();
     expect(goals.slots.red.selected.value).not.toContain('claim:hotspot-hs-nw');

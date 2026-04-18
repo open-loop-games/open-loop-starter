@@ -4,8 +4,9 @@
  * State shape:
  *   - `'creep-warfare-map'` — single SpatialGrid snapshot ref
  *   - `'slot:creep-warfare/goals/{faction}'` — per-faction goal selection
+ *   - `'creep-warfare-essence'` — per-faction yield resources
  *
- * Chains: 12 total, `creep-warfare/{faction}/{attack|defense|spread}`,
+ * Chains: 16 total, `creep-warfare/{faction}/{attack|defense|spread|yield}`,
  * auto-registered via the engine's chain registry so balance-workbench,
  * goal grants (OL-508/OL-509), and OL-510 purchasable binds can discover
  * and push modifiers into them.
@@ -19,13 +20,16 @@
 import {
   createModifierChain,
   createPersistentEffectSystem,
+  createResource,
   withPersistentContext,
+  type DecimalSource,
   type EngineContext,
   type EngineModule,
   type InjectionKey,
   type ModifierChain,
+  type Resource,
 } from 'open-loop-engine';
-import { FACTION_IDS, type FactionId } from './content';
+import { FACTION_ESSENCE_NAMES, FACTION_IDS, type FactionId } from './content';
 import {
   createCombatSystem,
   type CombatChains,
@@ -35,6 +39,8 @@ import { createCreepGrid, type CreepGrid } from './grid';
 import { createSpreadSystem, type SpreadSystem } from './spread';
 import { createGoalSystem, type GoalSystem } from './goals';
 import { createAiSystem, type AiSystem } from './ai';
+import { createHotspotSystem, type HotspotSystem } from './hotspots';
+import { createUpgradeSystem, type UpgradeSystem } from './upgrades';
 
 export interface CreepWarfareState {
   grid: CreepGrid;
@@ -42,10 +48,14 @@ export interface CreepWarfareState {
   combat: CombatSystem;
   goals: GoalSystem;
   ai: AiSystem;
+  hotspots: HotspotSystem;
+  upgrades: UpgradeSystem;
+  essence: Record<FactionId, Resource<DecimalSource>>;
   chains: {
     attack: Record<FactionId, ModifierChain>;
     defense: Record<FactionId, ModifierChain>;
     spread: Record<FactionId, ModifierChain>;
+    yield: Record<FactionId, ModifierChain>;
   };
   factions: readonly FactionId[];
 }
@@ -55,7 +65,7 @@ export const CreepWarfareKey: InjectionKey<CreepWarfareState> = Symbol(
 ) as InjectionKey<CreepWarfareState>;
 
 function buildFactionChains(
-  kind: 'attack' | 'defense' | 'spread',
+  kind: 'attack' | 'defense' | 'spread' | 'yield',
 ): Record<FactionId, ModifierChain> {
   const out = {} as Record<FactionId, ModifierChain>;
   for (const f of FACTION_IDS) {
@@ -74,7 +84,18 @@ export function createCreepWarfareModule(): EngineModule {
       const attack = buildFactionChains('attack');
       const defense = buildFactionChains('defense');
       const spreadChains = buildFactionChains('spread');
+      const yieldChains = buildFactionChains('yield');
       const combatChains: CombatChains = { attack, defense };
+
+      const essence = withPersistentContext('creep-warfare-essence', () => {
+        const out = {} as Record<FactionId, Resource<DecimalSource>>;
+        for (const f of FACTION_IDS) {
+          out[f] = createResource<DecimalSource>(0, {
+            displayName: FACTION_ESSENCE_NAMES[f],
+          });
+        }
+        return out;
+      });
 
       const pes = createPersistentEffectSystem({ id: 'creep-warfare-effects' });
 
@@ -92,6 +113,21 @@ export function createCreepWarfareModule(): EngineModule {
         hotspots: grid.blueprint.hotspots,
         spawns: grid.blueprint.spawns,
       });
+      const hotspots = createHotspotSystem({
+        grid: grid.grid,
+        hotspots: grid.blueprint.hotspots,
+        essence,
+        yieldChains,
+      });
+      const upgrades = createUpgradeSystem({
+        essence,
+        chains: {
+          yield: yieldChains,
+          spread: spreadChains,
+          attack,
+          defense,
+        },
+      });
 
       // Bridge plain-data grid mutations into the persistent snapshot ref.
       // The grid mutates in place during ticks; without this, the engine's
@@ -103,6 +139,7 @@ export function createCreepWarfareModule(): EngineModule {
         spread.onEngineTick(dt);
         combat.onEngineTick(dt);
         ai.onEngineTick(dt);
+        hotspots.onEngineTick(dt);
       });
 
       const state: CreepWarfareState = {
@@ -111,7 +148,10 @@ export function createCreepWarfareModule(): EngineModule {
         combat,
         goals,
         ai,
-        chains: { attack, defense, spread: spreadChains },
+        hotspots,
+        upgrades,
+        essence,
+        chains: { attack, defense, spread: spreadChains, yield: yieldChains },
         factions: FACTION_IDS,
       };
       ctx.provide(CreepWarfareKey, state);

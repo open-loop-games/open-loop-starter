@@ -72,16 +72,16 @@ function makeGrid(): SpatialGrid<CellState> {
   const grid = createSpatialGrid<CellState>({
     width: MAP_WIDTH,
     height: MAP_HEIGHT,
-    initializer: () => ({ terrain: 'open', owner: null, hp: 0 }),
+    initializer: () => ({ terrain: 'open', owner: null, hp: 0, reservoir: 0 }),
   });
   // SpatialGrid's passable bitmap defaults to all-zero; without this, the
   // spread system treats every cell as blocked and nothing grows.
   for (let i = 0; i < grid.passable.length; i++) grid.passable[i] = 1;
   for (const s of SPAWNS) {
-    grid.set(s.x, s.y, { terrain: 'spawn', owner: s.faction, hp: BASE_HP });
+    grid.set(s.x, s.y, { terrain: 'spawn', owner: s.faction, hp: BASE_HP, reservoir: 0 });
   }
   for (const h of HOTSPOTS) {
-    grid.set(h.x, h.y, { terrain: 'hotspot', owner: null, hp: 0, hotspotId: h.id });
+    grid.set(h.x, h.y, { terrain: 'hotspot', owner: null, hp: 0, hotspotId: h.id, reservoir: 0 });
   }
   return grid;
 }
@@ -89,14 +89,14 @@ function makeGrid(): SpatialGrid<CellState> {
 function resetGrid(grid: SpatialGrid<CellState>): void {
   for (let y = 0; y < MAP_HEIGHT; y++) {
     for (let x = 0; x < MAP_WIDTH; x++) {
-      grid.set(x, y, { terrain: 'open', owner: null, hp: 0 });
+      grid.set(x, y, { terrain: 'open', owner: null, hp: 0, reservoir: 0 });
     }
   }
   for (const s of SPAWNS) {
-    grid.set(s.x, s.y, { terrain: 'spawn', owner: s.faction, hp: BASE_HP });
+    grid.set(s.x, s.y, { terrain: 'spawn', owner: s.faction, hp: BASE_HP, reservoir: 0 });
   }
   for (const h of HOTSPOTS) {
-    grid.set(h.x, h.y, { terrain: 'hotspot', owner: null, hp: 0, hotspotId: h.id });
+    grid.set(h.x, h.y, { terrain: 'hotspot', owner: null, hp: 0, hotspotId: h.id, reservoir: 0 });
   }
 }
 
@@ -130,8 +130,8 @@ describe('AI goal-picker', () => {
   it('populates non-red slots and leaves red empty after one tick', async () => {
     goals.capacity.value = 3;
     // Seed enemy territory so `pressurist` has a valid target.
-    grid.set(30, 30, { terrain: 'open', owner: 'red', hp: BASE_HP });
-    grid.set(31, 30, { terrain: 'open', owner: 'red', hp: BASE_HP });
+    grid.set(30, 30, { terrain: 'open', owner: 'red', hp: BASE_HP, reservoir: 0 });
+    grid.set(31, 30, { terrain: 'open', owner: 'red', hp: BASE_HP, reservoir: 0 });
 
     ai.tickOnce();
     await nextTick();
@@ -147,10 +147,10 @@ describe('AI goal-picker', () => {
     // Seed modest red advantage (2 cells) so pressure scores ~4 and
     // hotspot proximity (~9) wins. Heavy red territory would flip the
     // preference — pressure is correctly scaled to territory lead.
-    grid.set(54, 5, { terrain: 'open', owner: 'blue', hp: BASE_HP });
-    grid.set(54, 6, { terrain: 'open', owner: 'red', hp: BASE_HP });
-    grid.set(20, 30, { terrain: 'open', owner: 'red', hp: BASE_HP });
-    grid.set(21, 30, { terrain: 'open', owner: 'red', hp: BASE_HP });
+    grid.set(54, 5, { terrain: 'open', owner: 'blue', hp: BASE_HP, reservoir: 0 });
+    grid.set(54, 6, { terrain: 'open', owner: 'red', hp: BASE_HP, reservoir: 0 });
+    grid.set(20, 30, { terrain: 'open', owner: 'red', hp: BASE_HP, reservoir: 0 });
+    grid.set(21, 30, { terrain: 'open', owner: 'red', hp: BASE_HP, reservoir: 0 });
 
     ai.tickOnce();
     await nextTick();
@@ -164,10 +164,10 @@ describe('AI goal-picker', () => {
     goals.capacity.value = 1;
     // Seed a juicy defend target for green. Green's spawn is SW-corner
     // (4, 55), so place green + adversary in the SW quadrant.
-    grid.set(5, 50, { terrain: 'open', owner: 'green', hp: BASE_HP });
-    grid.set(5, 49, { terrain: 'open', owner: 'red', hp: BASE_HP });
-    grid.set(6, 50, { terrain: 'open', owner: 'green', hp: BASE_HP });
-    grid.set(6, 49, { terrain: 'open', owner: 'red', hp: BASE_HP });
+    grid.set(5, 50, { terrain: 'open', owner: 'green', hp: BASE_HP, reservoir: 0 });
+    grid.set(5, 49, { terrain: 'open', owner: 'red', hp: BASE_HP, reservoir: 0 });
+    grid.set(6, 50, { terrain: 'open', owner: 'green', hp: BASE_HP, reservoir: 0 });
+    grid.set(6, 49, { terrain: 'open', owner: 'red', hp: BASE_HP, reservoir: 0 });
 
     ai.tickOnce();
     await nextTick();
@@ -181,7 +181,7 @@ describe('AI goal-picker', () => {
     // Heavy red presence far from yellow. Yellow is the pressurist.
     for (let x = 20; x < 40; x++) {
       for (let y = 20; y < 30; y++) {
-        grid.set(x, y, { terrain: 'open', owner: 'red', hp: BASE_HP });
+        grid.set(x, y, { terrain: 'open', owner: 'red', hp: BASE_HP, reservoir: 0 });
       }
     }
 
@@ -229,11 +229,11 @@ describe('AI personality matchup acceptance', () => {
     const grid = createSpatialGrid<CellState>({
       width: MAP_WIDTH,
       height: MAP_HEIGHT,
-      initializer: () => ({ terrain: 'open', owner: null, hp: 0 }),
+      initializer: () => ({ terrain: 'open', owner: null, hp: 0, reservoir: 0 }),
     });
     for (let i = 0; i < grid.passable.length; i++) grid.passable[i] = 1;
-    grid.set(4, 30, { terrain: 'spawn', owner: 'red', hp: BASE_HP });
-    grid.set(55, 30, { terrain: 'spawn', owner: 'blue', hp: BASE_HP });
+    grid.set(4, 30, { terrain: 'spawn', owner: 'red', hp: BASE_HP, reservoir: 0 });
+    grid.set(55, 30, { terrain: 'spawn', owner: 'blue', hp: BASE_HP, reservoir: 0 });
 
     const chains = makeChains(`matchup-${a}-${b}-${seed}`);
     const spread = createSpreadSystem(grid, chains.spread);

@@ -40,7 +40,7 @@ export function generateSymmetricMap(): MapBlueprint {
   const passable: number[] = new Array(size).fill(1);
 
   for (let i = 0; i < size; i++) {
-    cells[i] = { terrain: 'open', owner: null, hp: 0 };
+    cells[i] = { terrain: 'open', owner: null, hp: 0, reservoir: 0 };
   }
 
   // Cross-shaped rock walls dividing the map into quadrants, with gaps
@@ -79,7 +79,7 @@ export function generateSymmetricMap(): MapBlueprint {
   const spawns: SpawnDef[] = FACTION_IDS.map((faction: FactionId, idx) => {
     const [x, y] = spawnCoords[idx];
     const i = y * w + x;
-    cells[i] = { terrain: 'spawn', owner: faction, hp: BASE_HP };
+    cells[i] = { terrain: 'spawn', owner: faction, hp: BASE_HP, reservoir: 0 };
     passable[i] = 1;
     return { faction, x, y };
   });
@@ -95,9 +95,16 @@ export function generateSymmetricMap(): MapBlueprint {
   ];
   const hotspots: HotspotDef[] = hotspotCoords.map(([id, x, y]) => {
     const i = y * w + x;
-    cells[i] = { terrain: 'hotspot', owner: null, hp: 0, hotspotId: id };
+    const capacity = 100;
+    cells[i] = {
+      terrain: 'hotspot',
+      owner: null,
+      hp: 0,
+      hotspotId: id,
+      reservoir: capacity,
+    };
     passable[i] = 1;
-    return { id, x, y, baseYield: 1, capacity: 100 };
+    return { id, x, y, baseYield: 1, capacity };
   });
 
   return { cells, passable, spawns, hotspots };

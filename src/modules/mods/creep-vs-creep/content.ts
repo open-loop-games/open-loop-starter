@@ -29,6 +29,13 @@ export interface CellState {
   hp: DecimalSource;
   /** Present iff `terrain === 'hotspot'`. References a {@link HotspotDef}. */
   hotspotId?: string;
+  /**
+   * Extraction reservoir for hotspot cells; always 0 on other terrain. Depletes
+   * proportional to per-tick yield and regenerates at {@link HOTSPOT_REGEN_PER_SEC}
+   * of the hotspot's capacity per second. Owning a freshly-replenished hotspot
+   * pays out more than squatting on a drained one — that's the "claim next" pressure.
+   */
+  reservoir: DecimalSource;
 }
 
 /**
@@ -42,6 +49,7 @@ export interface PersistedCellState {
   owner: FactionId | null;
   hp: string;
   hotspotId?: string;
+  reservoir: string;
 }
 
 export interface HotspotDef {
@@ -50,9 +58,17 @@ export interface HotspotDef {
   y: number;
   /** Yield-per-second at full capacity. */
   baseYield: number;
-  /** Reservoir size. Depleting + slow regen lands in OL-510. */
+  /** Reservoir size. Depleting + slow regen. */
   capacity: number;
 }
+
+/**
+ * Reservoir regen rate — fraction of capacity per second. 10% per minute per
+ * OL-510 spec, set so base extraction (yield = 1/s at full reservoir) always
+ * exceeds steady-state regen at a full hotspot, forcing factions to rotate
+ * claims instead of squatting.
+ */
+export const HOTSPOT_REGEN_PER_SEC = 0.1 / 60;
 
 export interface SpawnDef {
   faction: FactionId;
@@ -158,3 +174,75 @@ export const FACTION_PERSONALITIES: Record<Exclude<FactionId, typeof PLAYER_FACT
 
 /** Seconds between AI goal-picker ticks. 0.25 Hz per OL-509 spec. */
 export const AI_INTERVAL_S = 4;
+
+// ============================================================================
+// Per-faction resources + upgrade tree (OL-510)
+// ============================================================================
+
+/**
+ * Display name for each faction's yield resource. Accumulated from owned
+ * hotspots, spent on that faction's upgrade tree. Not meta-currency — that's
+ * OL-511. For this round essence resets implicitly via the OL-511 retention
+ * policy once that ticket lands.
+ */
+export const FACTION_ESSENCE_NAMES: Record<FactionId, string> = {
+  red: 'Crimson Essence',
+  blue: 'Azure Essence',
+  green: 'Verdant Essence',
+  yellow: 'Sulfur Essence',
+};
+
+/**
+ * Single linear upgrade dimension per target chain (OL-504 cut list — no
+ * branching tech tree). Each upgrade scales one chain by a multiplicative
+ * factor-per-level; max level caps the ramp so mid-round economies don't run
+ * away before OL-511 round-end + retention policies land.
+ */
+export type UpgradeTarget = 'yield' | 'spread' | 'attack' | 'defense';
+
+export interface UpgradeDef {
+  id: UpgradeTarget;
+  name: string;
+  description: string;
+  baseCost: DecimalSource;
+  costScaling: DecimalSource;
+  /** Multiplier per level applied as `(1 + perLevel)^amount` via a declarative grant. */
+  perLevel: DecimalSource;
+}
+
+export const UPGRADE_MAX_LEVEL: DecimalSource = 10;
+
+export const UPGRADE_DEFS: readonly UpgradeDef[] = [
+  {
+    id: 'yield',
+    name: 'Efficient Extraction',
+    description: '+25% hotspot yield per level.',
+    baseCost: 10,
+    costScaling: 1.5,
+    perLevel: 0.25,
+  },
+  {
+    id: 'spread',
+    name: 'Rapid Colonisation',
+    description: '+25% spread rate per level.',
+    baseCost: 15,
+    costScaling: 1.6,
+    perLevel: 0.25,
+  },
+  {
+    id: 'attack',
+    name: 'Corrosive Fronts',
+    description: '+25% frontier attack per level.',
+    baseCost: 20,
+    costScaling: 1.75,
+    perLevel: 0.25,
+  },
+  {
+    id: 'defense',
+    name: 'Reinforced Colonies',
+    description: '+25% cell defence per level.',
+    baseCost: 20,
+    costScaling: 1.75,
+    perLevel: 0.25,
+  },
+];
