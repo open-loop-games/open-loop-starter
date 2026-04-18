@@ -68,6 +68,31 @@ export const STARTING_GOAL_SLOTS = 1;
 export const MAX_GOAL_SLOTS = 5;
 
 // ============================================================================
+// Goal types
+// ============================================================================
+
+/**
+ * Map quadrant ids for `defend:sector-*` goals. Matches the quadrant structure
+ * established in `map.ts` (cross-shaped rock walls divide the map into four
+ * quadrants; hotspot ids `hs-nw|ne|sw|se` use the same naming).
+ */
+export const SECTOR_IDS = ['nw', 'ne', 'sw', 'se'] as const;
+export type SectorId = (typeof SECTOR_IDS)[number];
+
+/**
+ * Goal identifier. Each goal type targets a different chain when active:
+ * `claim:hotspot-*` → spread chain, `defend:sector-*` → defense chain,
+ * `pressure:faction-*` → attack chain. See `goals.ts` for resolution.
+ */
+export type GoalId =
+  | `claim:hotspot-${string}`
+  | `defend:sector-${SectorId}`
+  | `pressure:faction-${FactionId}`;
+
+/** Flat multiplier every active goal contributes to its target chain. */
+export const GOAL_MULT: DecimalSource = '1.5';
+
+// ============================================================================
 // Combat tuning
 // ============================================================================
 

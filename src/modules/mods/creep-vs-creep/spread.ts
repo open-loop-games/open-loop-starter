@@ -20,7 +20,7 @@
  * cells with `owner === null`.
  */
 
-import { random, type SpatialGrid } from 'open-loop-engine';
+import { Decimal, random, type Modifier, type SpatialGrid } from 'open-loop-engine';
 import {
   BASE_HP,
   FACTION_IDS,
@@ -33,8 +33,14 @@ import {
 
 const SPREAD_INTERVAL_S = 1;
 
-/** Cells claimed per faction per spread tick. OL-510 will scale this via chains. */
+/**
+ * Cells claimed per faction per spread tick before chain modulation. Goals
+ * (OL-508) and upgrades (OL-510) push modifiers onto each faction's spread
+ * chain; the chain's `apply` is what drives the per-tick loop count.
+ */
 const BASE_SPREAD_POWER = 1;
+
+export type SpreadChains = Record<FactionId, Modifier>;
 
 const TERRAIN_WEIGHT: Record<TerrainKind, number> = {
   open: 1,
@@ -71,7 +77,10 @@ export interface SpreadSystem {
   onEngineTick(dt: number): void;
 }
 
-export function createSpreadSystem(grid: SpatialGrid<CellState>): SpreadSystem {
+export function createSpreadSystem(
+  grid: SpatialGrid<CellState>,
+  chains: SpreadChains,
+): SpreadSystem {
   const totalClaimed: Record<FactionId, number> = {
     red: 0,
     blue: 0,
@@ -103,12 +112,16 @@ export function createSpreadSystem(grid: SpatialGrid<CellState>): SpreadSystem {
           }
         }
       }
-      for (let p = 0; p < BASE_SPREAD_POWER; p++) {
+      // Floor keeps the tick deterministic: a 1.5× multiplier on the default
+      // BASE_SPREAD_POWER of 1 rounds down to 1 pick — fractional picks
+      // wouldn't be meaningful as a loop count.
+      const power = Math.max(0, Math.floor(new Decimal(chains[faction].apply(BASE_SPREAD_POWER)).toNumber()));
+      for (let p = 0; p < power; p++) {
         const picked = pickByWeight(candidates);
         if (!picked) break;
         const target = grid.at(picked.x, picked.y);
-        // Re-check ownership in case BASE_SPREAD_POWER > 1 in future and an
-        // earlier pick this tick already claimed the same cell.
+        // Re-check ownership in case spread power >1 and an earlier pick this
+        // tick already claimed the same cell.
         if (target.owner !== null) continue;
         grid.set(picked.x, picked.y, { ...target, owner: faction, hp: BASE_HP });
         totalClaimed[faction]++;
