@@ -10,10 +10,12 @@ import { useNotation } from '@/composables/useNotation';
 import { useSaveEvents } from '@/composables/useSaveEvents';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import GameScreen from '@/ui/screens/GameScreen.vue';
+import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import OfflineReportModal from '@/ui/components/OfflineReportModal.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 
 const currentScreen = ref<Screen>(Screen.Slots);
+const isDev = import.meta.env.DEV;
 
 const engine = createEngine({
   gameId: 'open-loop-starter',
@@ -94,4 +96,5 @@ function startGame(slotId: number, modId?: string) {
     @close="offlineReport = null"
   />
   <ToastContainer />
+  <DevDiagnostics v-if="isDev" />
 </template>
