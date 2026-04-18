@@ -40,7 +40,10 @@ const isOpen = ref(false);
 
 <template>
   <TooltipProvider :delay-duration="delay">
-    <TooltipRoot v-model:open="isOpen" :disabled="disabled">
+    <TooltipRoot
+      v-model:open="isOpen"
+      :disabled="disabled"
+    >
       <TooltipTrigger as-child>
         <slot />
       </TooltipTrigger>
