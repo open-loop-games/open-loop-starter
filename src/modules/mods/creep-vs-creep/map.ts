@@ -1,12 +1,9 @@
 /**
- * Symmetric mirrored map generator. Deterministic without RNG — terrain,
- * spawns, and hotspots are placed by coordinate so a fresh game always
- * produces the same layout. Procedural seeding is explicitly out of scope
- * (see OL-504 cut list).
- *
- * Layout: 4 quadrants with corner-offset spawns, 4 mirrored hotspots
- * roughly 30% in from each corner, 1 hotspot at the center, and small
- * mirrored rock formations creating chokepoints between quadrants.
+ * Symmetric mirrored map generator. Terrain, spawns, and hotspots are placed
+ * by coordinate so the geometry is identical every call (per OL-504 cut list
+ * — no procedural generation). Optional `factionOrder` rotates which faction
+ * spawns at which corner; pass the default `FACTION_IDS` for a stable layout
+ * and a shuffled array for per-round variation (OL-511).
  */
 
 import {
@@ -31,7 +28,9 @@ export interface MapBlueprint {
 
 const SPAWN_INSET = 4;
 
-export function generateSymmetricMap(): MapBlueprint {
+export function generateSymmetricMap(
+  factionOrder: readonly FactionId[] = FACTION_IDS,
+): MapBlueprint {
   const w = MAP_WIDTH;
   const h = MAP_HEIGHT;
   const size = w * h;
@@ -76,7 +75,7 @@ export function generateSymmetricMap(): MapBlueprint {
     [SPAWN_INSET, h - 1 - SPAWN_INSET],
     [w - 1 - SPAWN_INSET, h - 1 - SPAWN_INSET],
   ];
-  const spawns: SpawnDef[] = FACTION_IDS.map((faction: FactionId, idx) => {
+  const spawns: SpawnDef[] = factionOrder.map((faction: FactionId, idx) => {
     const [x, y] = spawnCoords[idx];
     const i = y * w + x;
     cells[i] = { terrain: 'spawn', owner: faction, hp: BASE_HP, reservoir: 0 };

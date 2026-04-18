@@ -26,12 +26,18 @@ import {
   MAP_HEIGHT,
   MAP_WIDTH,
   type CellState,
+  type FactionId,
   type PersistedCellState,
 } from './content';
 import { generateSymmetricMap, type MapBlueprint } from './map';
 
 export interface CreepGrid {
   grid: SpatialGrid<CellState>;
+  /**
+   * Stable blueprint object — the reference never changes. On
+   * {@link regenerate} its `.spawns` and `.cells` contents are overwritten
+   * in place so consumers holding array references stay live.
+   */
   blueprint: MapBlueprint;
   /** Single persisted snapshot. Engine save/load drives serialization. */
   snapshot: Persistent<SpatialGridSnapshot<PersistedCellState>>;
@@ -39,6 +45,13 @@ export interface CreepGrid {
   commit(): void;
   /** Replay snapshot back into the grid. Call from `onLoad`. */
   hydrate(): void;
+  /**
+   * Rebuild the blueprint with a (possibly reshuffled) faction→corner
+   * assignment and reinitialise the SpatialGrid to match. Used by the round
+   * system on reset to wipe all in-place cell mutations cleanly and assign
+   * new starting corners per OL-511.
+   */
+  regenerate(factionOrder: readonly FactionId[]): void;
 }
 
 function toPersisted(
@@ -96,6 +109,34 @@ export function createCreepGrid(): CreepGrid {
     toPersisted(grid.serialize()),
   );
 
+  function regenerate(factionOrder: readonly FactionId[]): void {
+    const fresh = generateSymmetricMap(factionOrder);
+    // Mutate in place so AI spawn-proximity lookups (ai.ts `spawns()` getter)
+    // and any external consumers holding `blueprint.cells` etc. see the new
+    // geometry without re-capturing references.
+    blueprint.cells.length = 0;
+    blueprint.cells.push(...fresh.cells);
+    blueprint.passable.length = 0;
+    blueprint.passable.push(...fresh.passable);
+    blueprint.spawns.length = 0;
+    blueprint.spawns.push(...fresh.spawns);
+    // hotspots are geometry-stable across rounds — array identity preserved.
+
+    // Re-seed the spatial grid from the fresh blueprint. Using restore rather
+    // than per-cell set avoids firing one `cellChanged` emit per cell; the
+    // round transition is not an incremental mutation.
+    const size = MAP_WIDTH * MAP_HEIGHT;
+    grid.restore({
+      width: MAP_WIDTH,
+      height: MAP_HEIGHT,
+      cells: blueprint.cells.map((c) => ({ ...c })),
+      passable: [...blueprint.passable],
+      explored: new Array(size).fill(0),
+      visible: new Array(size).fill(0),
+    });
+    snapshot.value = toPersisted(grid.serialize());
+  }
+
   return {
     grid,
     blueprint,
@@ -106,5 +147,6 @@ export function createCreepGrid(): CreepGrid {
     hydrate() {
       grid.restore(fromPersisted(snapshot.value));
     },
+    regenerate,
   };
 }

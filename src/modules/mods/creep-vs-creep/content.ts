@@ -84,6 +84,103 @@ export const STARTING_GOAL_SLOTS = 1;
 export const MAX_GOAL_SLOTS = 5;
 
 // ============================================================================
+// Round lifecycle (OL-511)
+// ============================================================================
+
+/** Round length in seconds before the timeout termination fires. */
+export const ROUND_LENGTH_S = 300;
+
+/**
+ * End-of-round countdown displayed on the post-round panel. The player can
+ * click "Start Next Round" at any point to skip; when the countdown hits zero
+ * the panel auto-advances. 30s per OL-511 spec.
+ */
+export const END_OF_ROUND_COUNTDOWN_S = 30;
+
+/**
+ * Territory score weight for meta-currency award. Award is linear in
+ * `territory × cellWeight + ownedHotspots × hotspotWeight`, rounded down.
+ * Hotspots weigh heavier than ordinary cells because they're contested
+ * real estate and drive the "claim next" pressure.
+ */
+export const META_CURRENCY_PER_CELL = 0.05;
+export const META_CURRENCY_PER_HOTSPOT = 5;
+
+export const META_CURRENCY_NAME = 'Command';
+
+/**
+ * Single shared upgrade tree bought with meta-currency. All entries bind
+ * into the {@link PLAYER_FACTION}'s chains, except `slot-capacity` which
+ * directly increments {@link GoalSystem.capacity} (capped at
+ * {@link MAX_GOAL_SLOTS}). OL-510's per-faction essence upgrades remain
+ * in place and reset each round; meta upgrades stack on top and persist.
+ */
+export type MetaUpgradeId = 'yield' | 'spread' | 'attack' | 'defense' | 'slot-capacity';
+
+export interface MetaUpgradeDef {
+  id: MetaUpgradeId;
+  name: string;
+  description: string;
+  baseCost: DecimalSource;
+  costScaling: DecimalSource;
+  /**
+   * Multiplier per level for chain upgrades, applied as `(1 + perLevel)^amount`.
+   * Unused for `slot-capacity` (which increments a ref directly).
+   */
+  perLevel: DecimalSource;
+  maxLevel: DecimalSource;
+}
+
+export const META_UPGRADE_DEFS: readonly MetaUpgradeDef[] = [
+  {
+    id: 'yield',
+    name: 'Entrenched Extraction',
+    description: '+20% hotspot yield per level. Permanent across rounds.',
+    baseCost: 5,
+    costScaling: 1.6,
+    perLevel: 0.2,
+    maxLevel: 20,
+  },
+  {
+    id: 'spread',
+    name: 'Veteran Vanguard',
+    description: '+20% spread rate per level. Permanent across rounds.',
+    baseCost: 8,
+    costScaling: 1.7,
+    perLevel: 0.2,
+    maxLevel: 20,
+  },
+  {
+    id: 'attack',
+    name: 'Battle-Hardened',
+    description: '+20% frontier attack per level. Permanent across rounds.',
+    baseCost: 10,
+    costScaling: 1.8,
+    perLevel: 0.2,
+    maxLevel: 20,
+  },
+  {
+    id: 'defense',
+    name: 'Dug-In Colonies',
+    description: '+20% cell defense per level. Permanent across rounds.',
+    baseCost: 10,
+    costScaling: 1.8,
+    perLevel: 0.2,
+    maxLevel: 20,
+  },
+  {
+    id: 'slot-capacity',
+    name: 'Strategic Insight',
+    description: '+1 active goal slot per level. Caps at the maximum.',
+    baseCost: 25,
+    costScaling: 3,
+    perLevel: 1,
+    // Starts at 1, maxes at MAX_GOAL_SLOTS ⇒ levels = MAX_GOAL_SLOTS - 1.
+    maxLevel: MAX_GOAL_SLOTS - STARTING_GOAL_SLOTS,
+  },
+];
+
+// ============================================================================
 // Goal types
 // ============================================================================
 

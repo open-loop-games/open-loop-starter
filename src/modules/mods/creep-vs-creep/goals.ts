@@ -27,13 +27,14 @@
 import {
   createMultiplicativeModifier,
   createSlot,
+  persistent,
   withPersistentContext,
   type ModifierChain,
+  type Persistent,
   type PersistentEffectSystem,
   type SpatialGrid,
   type Slot,
 } from 'open-loop-engine';
-import { ref, type Ref } from 'vue';
 import {
   FACTION_IDS,
   GOAL_MULT,
@@ -57,8 +58,12 @@ export interface GoalChains {
 export interface GoalSystem {
   /** One slot per faction. `selected.value` holds the active goal ids. */
   readonly slots: Record<FactionId, Slot>;
-  /** Shared capacity driving every faction's `maxSelections`. OL-511 ratchets this. */
-  readonly capacity: Ref<number>;
+  /**
+   * Shared capacity driving every faction's `maxSelections`. Persistent so the
+   * meta-upgrade ratchet (OL-511) survives both round reset (via the retention
+   * policy's `keep` list) and page reloads.
+   */
+  readonly capacity: Persistent<number>;
   /** Full pool of valid goal ids for the given faction. Stable order for UI. */
   goalPoolFor(faction: FactionId): readonly GoalId[];
   /** True if the goal's objective has been achieved or is moot for the faction. */
@@ -114,7 +119,9 @@ export function createGoalSystem(
   hotspots: readonly HotspotDef[],
   grid: SpatialGrid<CellState>,
 ): GoalSystem {
-  const capacity = ref(STARTING_GOAL_SLOTS);
+  const capacity = withPersistentContext('creep-warfare-goal-capacity', () =>
+    persistent(STARTING_GOAL_SLOTS),
+  );
   const slots = {} as Record<FactionId, Slot>;
   const hotspotById = new Map<string, HotspotDef>();
   for (const h of hotspots) hotspotById.set(h.id, h);

@@ -29,7 +29,7 @@ import {
   type ModifierChain,
   type Resource,
 } from 'open-loop-engine';
-import { FACTION_ESSENCE_NAMES, FACTION_IDS, type FactionId } from './content';
+import { FACTION_ESSENCE_NAMES, FACTION_IDS, UPGRADE_DEFS, type FactionId } from './content';
 import {
   createCombatSystem,
   type CombatChains,
@@ -41,6 +41,10 @@ import { createGoalSystem, type GoalSystem } from './goals';
 import { createAiSystem, type AiSystem } from './ai';
 import { createHotspotSystem, type HotspotSystem } from './hotspots';
 import { createUpgradeSystem, type UpgradeSystem } from './upgrades';
+import { createRoundSystem, type RoundSystem } from './round';
+import { createMetaSystem, type MetaSystem } from './meta';
+import { setSlot } from '@/modules/ui-registry';
+import CreepWarfareLayout from '@/ui/layouts/CreepWarfareLayout.vue';
 
 export interface CreepWarfareState {
   grid: CreepGrid;
@@ -50,6 +54,8 @@ export interface CreepWarfareState {
   ai: AiSystem;
   hotspots: HotspotSystem;
   upgrades: UpgradeSystem;
+  round: RoundSystem;
+  meta: MetaSystem;
   essence: Record<FactionId, Resource<DecimalSource>>;
   chains: {
     attack: Record<FactionId, ModifierChain>;
@@ -111,7 +117,7 @@ export function createCreepWarfareModule(): EngineModule {
         grid: grid.grid,
         goals,
         hotspots: grid.blueprint.hotspots,
-        spawns: grid.blueprint.spawns,
+        spawns: () => grid.blueprint.spawns,
       });
       const hotspots = createHotspotSystem({
         grid: grid.grid,
@@ -129,6 +135,35 @@ export function createCreepWarfareModule(): EngineModule {
         },
       });
 
+      // Round-scoped per-faction essence upgrade amounts (OL-510). The
+      // engine's category-base creates its per-def contexts as registry
+      // roots rather than children of the outer category context, so listing
+      // `creep-warfare-upgrades-{faction}` in `resetModules` finds nothing.
+      // Passing the `amount` persistent refs directly side-steps that quirk
+      // and keeps the reset narrow — we only wipe what we actually mean to.
+      const upgradeAmounts = FACTION_IDS.flatMap((f) => {
+        const cat = upgrades.categoriesByFaction[f];
+        return UPGRADE_DEFS.map((def) => cat.getPurchasable(def.id)!.amount);
+      });
+
+      const round = createRoundSystem({
+        grid: grid.grid,
+        creepGrid: grid,
+        hotspots: grid.blueprint.hotspots,
+        extraResettables: upgradeAmounts,
+      });
+
+      const meta = createMetaSystem({
+        metaCurrency: round.metaCurrency,
+        chains: {
+          yield: yieldChains,
+          spread: spreadChains,
+          attack,
+          defense,
+        },
+        slotCapacity: goals.capacity,
+      });
+
       // Bridge plain-data grid mutations into the persistent snapshot ref.
       // The grid mutates in place during ticks; without this, the engine's
       // autosave would only see the fresh-game snapshot from grid.ts.
@@ -136,10 +171,16 @@ export function createCreepWarfareModule(): EngineModule {
       ctx.onLoad(() => grid.hydrate());
 
       ctx.onTick((dt) => {
-        spread.onEngineTick(dt);
-        combat.onEngineTick(dt);
-        ai.onEngineTick(dt);
-        hotspots.onEngineTick(dt);
+        // round.onEngineTick always runs — it owns the active→ended transition
+        // and the end-of-round countdown. Sim systems freeze once the round
+        // ends, so players can spend meta-currency without the world moving.
+        round.onEngineTick(dt);
+        if (round.phase.value === 'active') {
+          spread.onEngineTick(dt);
+          combat.onEngineTick(dt);
+          ai.onEngineTick(dt);
+          hotspots.onEngineTick(dt);
+        }
       });
 
       const state: CreepWarfareState = {
@@ -150,11 +191,14 @@ export function createCreepWarfareModule(): EngineModule {
         ai,
         hotspots,
         upgrades,
+        round,
+        meta,
         essence,
         chains: { attack, defense, spread: spreadChains, yield: yieldChains },
         factions: FACTION_IDS,
       };
       ctx.provide(CreepWarfareKey, state);
+      setSlot('game-layout', CreepWarfareLayout);
     },
   };
 }

@@ -117,7 +117,7 @@ describe('AI goal-picker', () => {
     grid = makeGrid();
     const pes = createPersistentEffectSystem({ id: 'ai-test-effects' });
     goals = createGoalSystem(pes, chains, HOTSPOTS, grid);
-    ai = createAiSystem({ grid, goals, hotspots: HOTSPOTS, spawns: SPAWNS });
+    ai = createAiSystem({ grid, goals, hotspots: HOTSPOTS, spawns: () => SPAWNS });
   });
 
   beforeEach(async () => {

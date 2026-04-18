@@ -53,7 +53,12 @@ export interface AiSystemOptions {
   grid: SpatialGrid<CellState>;
   goals: GoalSystem;
   hotspots: readonly HotspotDef[];
-  spawns: readonly SpawnDef[];
+  /**
+   * Getter so faction→corner reshuffles on round reset (OL-511) propagate
+   * without stale closures. Called once per AI tick; the 4-entry remap is
+   * free at 0.25 Hz.
+   */
+  spawns: () => readonly SpawnDef[];
 }
 
 export interface AiSystem {
@@ -144,13 +149,13 @@ function scoreGoal(
 
 export function createAiSystem(options: AiSystemOptions): AiSystem {
   const { grid, goals, hotspots, spawns } = options;
-  const spawnByFaction = new Map<FactionId, SpawnDef>();
-  for (const s of spawns) spawnByFaction.set(s.faction, s);
   let acc = 0;
 
   function tickOnce(): void {
     goals.sweepCompleted();
     const world = buildWorldView(grid, hotspots);
+    const spawnByFaction = new Map<FactionId, SpawnDef>();
+    for (const s of spawns()) spawnByFaction.set(s.faction, s);
 
     for (const faction of NON_PLAYER_FACTIONS) {
       const personality = FACTION_PERSONALITIES[faction];
