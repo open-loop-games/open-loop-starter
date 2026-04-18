@@ -9,9 +9,11 @@ import {
   META_CURRENCY_NAME,
   PLAYER_FACTION,
   ROUND_LENGTH_S,
+  type CellState,
   type FactionId,
   type GoalId,
 } from '@/modules/mods/creep-vs-creep/content';
+import DomGrid from '@/ui/components/spatial/DomGrid.vue';
 import EndOfRoundPanel from '@/ui/panels/EndOfRoundPanel.vue';
 
 const state = useModule(CreepWarfareKey);
@@ -44,6 +46,13 @@ const selectedGoals = computed(
   () => state.goals.slots[PLAYER_FACTION].selected.value as readonly GoalId[],
 );
 const goalPool = computed(() => state.goals.goalPoolFor(PLAYER_FACTION));
+
+function cellClass(cell: CellState): string[] {
+  const classes: string[] = [`cw-cell-terrain-${cell.terrain}`];
+  if (cell.owner !== null) classes.push(`cw-cell-owner-${cell.owner}`);
+  if (cell.hotspotId !== undefined) classes.push('cw-cell-hotspot');
+  return classes;
+}
 
 function toggleGoal(goalId: GoalId) {
   const slot = state.goals.slots[PLAYER_FACTION];
@@ -83,6 +92,17 @@ function endRoundNow() {
         <div class="stat">
           <span class="label">Preview reward</span>
           <span class="value">+{{ previewReward }}</span>
+        </div>
+      </section>
+
+      <section class="map-view">
+        <h3>Battlefield</h3>
+        <div class="map-viewport">
+          <DomGrid
+            :grid="state.grid.grid"
+            :cell-class="cellClass"
+            :cell-size="6"
+          />
         </div>
       </section>
 
@@ -201,5 +221,70 @@ function endRoundNow() {
 }
 .end-btn {
   align-self: flex-start;
+}
+
+.map-view {
+  padding: var(--gap);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.map-view h3 {
+  font-size: 1em;
+  margin: 0 0 var(--gap-sm);
+}
+.map-viewport {
+  display: inline-block;
+  background: var(--color-bg, #111);
+  padding: 2px;
+  border-radius: var(--radius);
+  line-height: 0;
+}
+
+/* Terrain baseline colors. */
+.cw-cell-terrain-open {
+  background: #2a2a2a;
+}
+.cw-cell-terrain-rock {
+  background: #555;
+}
+.cw-cell-terrain-spawn {
+  background: #444;
+  outline: 1px solid #888;
+  outline-offset: -1px;
+}
+.cw-cell-terrain-hotspot {
+  background: #6a5a1a;
+  box-shadow: inset 0 0 0 1px #caa040;
+}
+
+/* Faction ownership overlays (applied in addition to terrain). */
+.cw-cell-owner-red {
+  background: #b03030;
+}
+.cw-cell-owner-blue {
+  background: #3060b8;
+}
+.cw-cell-owner-green {
+  background: #2e9a4a;
+}
+.cw-cell-owner-yellow {
+  background: #c6a820;
+}
+
+/* Owned hotspot: terrain outline stays for legibility. */
+.cw-cell-hotspot.cw-cell-owner-red,
+.cw-cell-hotspot.cw-cell-owner-blue,
+.cw-cell-hotspot.cw-cell-owner-green,
+.cw-cell-hotspot.cw-cell-owner-yellow {
+  box-shadow: inset 0 0 0 1px #ffd770;
+}
+
+/* Rock is impassable — never owned, but defend against stale state. */
+.cw-cell-terrain-rock.cw-cell-owner-red,
+.cw-cell-terrain-rock.cw-cell-owner-blue,
+.cw-cell-terrain-rock.cw-cell-owner-green,
+.cw-cell-terrain-rock.cw-cell-owner-yellow {
+  background: #555;
 }
 </style>
