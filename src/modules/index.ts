@@ -14,6 +14,7 @@ import { idleLoopsModule } from './mods/idle-loops';
 import { antimatterDimensionsModule } from './mods/antimatter-dimensions';
 import { tinyCivModule } from './mods/tiny-civ';
 import { creepWarfareModule } from './mods/creep-vs-creep';
+import { createTimeBankModule } from './time-bank';
 
 const sharedBase = [settingsModule, uiRegistryModule];
 
@@ -101,6 +102,18 @@ if (import.meta.env.DEV) {
     description:
       'Runs runMatrix against stock Cookie Factory and reports ms/tick. Shell for the perf-budget snapshot. Dev builds only.',
     modules: [...sharedBase, benchmarkModule],
+  });
+  modDefs.push({
+    id: 'time-bank-demo',
+    name: 'Time Bank (dev)',
+    description:
+      'Vanilla plus the banked-time module: offline seconds and tab-hide overflow are banked as ms, spendable via a bottom-left drawer with 3x/10x/50x rate toggle. Dev builds only.',
+    modules: [
+      ...sharedBase,
+      ...villageGathererModule,
+      loopModule,
+      createTimeBankModule({ rates: [3, 10, 50] }),
+    ],
   });
   modDefs.push({
     id: 'creep-vs-creep',

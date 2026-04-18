@@ -8,10 +8,12 @@ import { GatheringKey } from '@/modules/village-gatherer/gathering';
 import { useTheme } from '@/composables/useTheme';
 import { useNotation } from '@/composables/useNotation';
 import { useSaveEvents } from '@/composables/useSaveEvents';
+import { useTimeBank } from '@/composables/useTimeBank';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import GameScreen from '@/ui/screens/GameScreen.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import OfflineReportModal from '@/ui/components/OfflineReportModal.vue';
+import TimeBankDrawer from '@/ui/components/TimeBankDrawer.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -43,11 +45,15 @@ function startGame(slotId: number, modId?: string) {
   useNotation(engine);
 
   const settingsState = engine.tryInject(SettingsKey);
+  const timeBank = useTimeBank(engine);
 
   const result = engine.load();
   if (result.success && result.timestamp) {
     const elapsed = (Date.now() - result.timestamp) / 1000;
-    if (elapsed > 60 && settingsState?.settings.offlineProgress.value) {
+    if (timeBank) {
+      // Bank model: credit offline time, never simulate.
+      if (elapsed > 5) timeBank.grant(elapsed * 1000);
+    } else if (elapsed > 60 && settingsState?.settings.offlineProgress.value) {
       const gatheringState = engine.tryInject(GatheringKey);
 
       // Snapshot before
@@ -95,6 +101,7 @@ function startGame(slotId: number, modId?: string) {
     :gains="offlineReport.gains"
     @close="offlineReport = null"
   />
+  <TimeBankDrawer v-if="currentScreen === Screen.Game" />
   <ToastContainer />
   <DevDiagnostics v-if="isDev" />
 </template>
