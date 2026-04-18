@@ -30,6 +30,7 @@ import {
   type Engine,
   type EngineModule,
   type MetricDelta,
+  type RunContext,
   type SensitivityResult,
 } from 'open-loop-engine';
 import {
@@ -58,6 +59,18 @@ export interface BalanceWorkbenchOptions {
    * `defaultAnalyzerPack(engine)`.
    */
   analyzerPack?: (engine: Engine) => Analyzer[];
+  /**
+   * Runs on every per-run engine (baseline + variant), after engine build and
+   * before any perturbation or tick. Receives the harness `RunContext` so
+   * stochastic consumers can route `ctx.seed` into per-run RNG seeding or
+   * sim-reset hooks — the routing happens symmetrically across cells so
+   * baseline/variant deltas compare matched seeded trajectories, not
+   * "variant got the seed, baseline didn't."
+   *
+   * Ordering: `prepare(engine, ctx)` → (variant only) `applyPerturbation(...)`
+   * → `buildAnalyzers(engine)` → ticks.
+   */
+  prepare?: (engine: Engine, ctx: RunContext) => void;
 }
 
 export type PerturbationKind = Perturbation['kind'];
@@ -111,6 +124,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     modules,
     tick = (e: Engine) => e.loop.stepOnce(),
     analyzerPack = (e: Engine) => defaultAnalyzerPack(e),
+    prepare,
   } = options;
 
   const snapshot = shallowRef<PickerSnapshot>(buildPickerSnapshot(engine));
@@ -205,6 +219,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         name: 'baseline',
         saveBlob: blob,
         modules,
+        ...(prepare && { perturb: (e, ctx) => prepare(e, ctx) }),
         buildAnalyzers: analyzerPack,
         tick,
         ticks: form.ticks,
@@ -213,7 +228,8 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         name: 'variant',
         saveBlob: blob,
         modules,
-        perturb: (e, _ctx) => {
+        perturb: (e, ctx) => {
+          prepare?.(e, ctx);
           applyPerturbation(e, entry, perturbation);
         },
         buildAnalyzers: analyzerPack,

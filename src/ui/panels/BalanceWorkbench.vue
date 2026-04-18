@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Analyzer, Engine, EngineModule } from 'open-loop-engine';
+import type { Analyzer, Engine, EngineModule, RunContext } from 'open-loop-engine';
 import type { PickerEntry } from 'open-loop-engine/harness';
 import { useBalanceWorkbench } from '@/composables/useBalanceWorkbench';
 
@@ -9,6 +9,7 @@ const props = defineProps<{
   modules: () => EngineModule[];
   tick?: (engine: Engine, dt: number) => void;
   analyzerPack?: (engine: Engine) => Analyzer[];
+  prepare?: (engine: Engine, ctx: RunContext) => void;
 }>();
 
 const wb = useBalanceWorkbench({
@@ -16,6 +17,7 @@ const wb = useBalanceWorkbench({
   modules: props.modules,
   ...(props.tick && { tick: props.tick }),
   ...(props.analyzerPack && { analyzerPack: props.analyzerPack }),
+  ...(props.prepare && { prepare: props.prepare }),
 });
 
 interface Group {

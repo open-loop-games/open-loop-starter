@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, provide } from 'vue';
+import { ref, provide, onMounted, onUnmounted } from 'vue';
 import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-engine';
 import { Screen } from '@/types';
 import { modDefs } from '@/modules';
@@ -15,6 +15,13 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import OfflineReportModal from '@/ui/components/OfflineReportModal.vue';
 import TimeBankDrawer from '@/ui/components/TimeBankDrawer.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
+import { DevPanelOverlay } from '@/lib';
+import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
+import {
+  creepAnalyzerPack,
+  creepWorkbenchPrepare,
+  creepWorkbenchTick,
+} from '@/modules/mods/creep-vs-creep/workbench';
 
 const currentScreen = ref<Screen>(Screen.Slots);
 const isDev = import.meta.env.DEV;
@@ -34,6 +41,28 @@ provide('currentScreen', currentScreen);
 
 // Offline report state
 const offlineReport = ref<{ elapsed: number; gains: Record<string, string> } | null>(null);
+
+// F12-toggled BalanceWorkbench dev panel. Wired here in the base starter for
+// dogfooding — forks replicate this block and can strip mod-specific hooks.
+// The creep-* hooks gracefully degrade on non-creep mods (tryInject returns
+// undefined), so the panel stays useful across the demo spray.
+const showDevPanel = ref(false);
+function onDevPanelKey(e: KeyboardEvent): void {
+  if (!isDev) return;
+  if (e.key === 'F12') {
+    e.preventDefault();
+    showDevPanel.value = !showDevPanel.value;
+  }
+}
+onMounted(() => window.addEventListener('keydown', onDevPanelKey));
+onUnmounted(() => window.removeEventListener('keydown', onDevPanelKey));
+
+function activeModules() {
+  const activeId = engine.activeModId;
+  if (!activeId) return [];
+  const mod = engine.mods.find((m) => m.id === activeId);
+  return mod ? mod.modules : [];
+}
 
 function startGame(slotId: number, modId?: string) {
   engine.saveManager!.selectSlot(slotId);
@@ -104,4 +133,47 @@ function startGame(slotId: number, modId?: string) {
   <TimeBankDrawer v-if="currentScreen === Screen.Game" />
   <ToastContainer />
   <DevDiagnostics v-if="isDev" />
+  <button
+    v-if="isDev && currentScreen === Screen.Game"
+    class="dev-workbench-button"
+    type="button"
+    title="Open Balance Workbench (F12)"
+    @click="showDevPanel = true"
+  >
+    Workbench
+  </button>
+  <DevPanelOverlay
+    v-if="isDev && showDevPanel && currentScreen === Screen.Game"
+    title="Balance Workbench"
+    @close="showDevPanel = false"
+  >
+    <BalanceWorkbench
+      :engine="engine"
+      :modules="activeModules"
+      :tick="creepWorkbenchTick"
+      :analyzer-pack="creepAnalyzerPack"
+      :prepare="creepWorkbenchPrepare"
+    />
+  </DevPanelOverlay>
 </template>
+
+<style scoped>
+.dev-workbench-button {
+  position: fixed;
+  bottom: 8px;
+  right: 140px;
+  z-index: 9998;
+  background: rgba(10, 10, 20, 0.88);
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: #aaccee;
+  cursor: pointer;
+}
+.dev-workbench-button:hover {
+  background: rgba(20, 20, 36, 0.95);
+  color: #cceeff;
+}
+</style>
