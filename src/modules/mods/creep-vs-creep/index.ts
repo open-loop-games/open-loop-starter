@@ -7,12 +7,18 @@
  *
  * Chains: 12 total, `creep-warfare/{faction}/{attack|defense|spread}`,
  * auto-registered via the engine's chain registry so balance-workbench,
- * OL-508 goal grants, and OL-510 purchasable binds can discover and push
- * modifiers into them.
+ * goal grants (OL-508/OL-509), and OL-510 purchasable binds can discover
+ * and push modifiers into them.
+ *
+ * Goal bindings route through a `PersistentEffectSystem` so their lifecycle
+ * is driven by completion predicates, not by slot callbacks — load
+ * reconstruction is implicit and stale goals drop their multiplier the
+ * tick they complete.
  */
 
 import {
   createModifierChain,
+  createPersistentEffectSystem,
   withPersistentContext,
   type EngineContext,
   type EngineModule,
@@ -28,12 +34,14 @@ import {
 import { createCreepGrid, type CreepGrid } from './grid';
 import { createSpreadSystem, type SpreadSystem } from './spread';
 import { createGoalSystem, type GoalSystem } from './goals';
+import { createAiSystem, type AiSystem } from './ai';
 
 export interface CreepWarfareState {
   grid: CreepGrid;
   spread: SpreadSystem;
   combat: CombatSystem;
   goals: GoalSystem;
+  ai: AiSystem;
   chains: {
     attack: Record<FactionId, ModifierChain>;
     defense: Record<FactionId, ModifierChain>;
@@ -68,27 +76,33 @@ export function createCreepWarfareModule(): EngineModule {
       const spreadChains = buildFactionChains('spread');
       const combatChains: CombatChains = { attack, defense };
 
+      const pes = createPersistentEffectSystem({ id: 'creep-warfare-effects' });
+
       const spread = createSpreadSystem(grid.grid, spreadChains);
       const combat = createCombatSystem(grid.grid, combatChains);
       const goals = createGoalSystem(
+        pes,
         { attack, defense, spread: spreadChains },
         grid.blueprint.hotspots,
+        grid.grid,
       );
+      const ai = createAiSystem({
+        grid: grid.grid,
+        goals,
+        hotspots: grid.blueprint.hotspots,
+        spawns: grid.blueprint.spawns,
+      });
 
       // Bridge plain-data grid mutations into the persistent snapshot ref.
       // The grid mutates in place during ticks; without this, the engine's
       // autosave would only see the fresh-game snapshot from grid.ts.
-      // Slot.restore() populates selected ids without firing onSelect, so
-      // goal grants must be re-installed explicitly via rebindAll().
       ctx.onSave(() => grid.commit());
-      ctx.onLoad(() => {
-        grid.hydrate();
-        goals.rebindAll();
-      });
+      ctx.onLoad(() => grid.hydrate());
 
       ctx.onTick((dt) => {
         spread.onEngineTick(dt);
         combat.onEngineTick(dt);
+        ai.onEngineTick(dt);
       });
 
       const state: CreepWarfareState = {
@@ -96,6 +110,7 @@ export function createCreepWarfareModule(): EngineModule {
         spread,
         combat,
         goals,
+        ai,
         chains: { attack, defense, spread: spreadChains },
         factions: FACTION_IDS,
       };

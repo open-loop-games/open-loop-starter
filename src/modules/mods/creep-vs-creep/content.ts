@@ -107,3 +107,54 @@ export const BASE_ATTACK: DecimalSource = '10';
 
 /** Per-cell defense base before chain.apply. */
 export const BASE_DEFENSE: DecimalSource = '5';
+
+// ============================================================================
+// AI personalities
+// ============================================================================
+
+/**
+ * Which faction the human player drives. Remaining factions run on AI.
+ * Hard-coded for the starter demo; real games would surface this as a setup
+ * option.
+ */
+export const PLAYER_FACTION = 'red' satisfies FactionId;
+
+export type AiPersonality = 'expansionist' | 'defender' | 'pressurist' | 'greedy';
+
+/**
+ * Weights fed into `scoreGoal` — all four personalities evaluate the same
+ * scoring surface, differentiated only by these knobs. Validates OL-504's
+ * "free differentiation from parameters, not code" claim.
+ *
+ * - `hotspotProximity` — reward claim goals on hotspots geographically near
+ *   the faction's spawn (expansionist).
+ * - `sectorThreat` — reward defend goals on sectors with enemy-adjacent
+ *   frontier cells belonging to this faction (defender).
+ * - `enemyDominance` — reward pressure goals on factions whose territory
+ *   is largest (pressurist).
+ * - `hotspotNearestBias` — reward claim goals on the single unclaimed
+ *   hotspot nearest the faction, ignoring everything else (greedy).
+ */
+export interface AiWeights {
+  hotspotProximity: number;
+  sectorThreat: number;
+  enemyDominance: number;
+  hotspotNearestBias: number;
+}
+
+export const AI_PERSONALITIES: Record<AiPersonality, AiWeights> = {
+  expansionist: { hotspotProximity: 10, sectorThreat: 1, enemyDominance: 2, hotspotNearestBias: 0 },
+  defender: { hotspotProximity: 1, sectorThreat: 10, enemyDominance: 1, hotspotNearestBias: 0 },
+  pressurist: { hotspotProximity: 2, sectorThreat: 1, enemyDominance: 10, hotspotNearestBias: 0 },
+  greedy: { hotspotProximity: 1, sectorThreat: 0, enemyDominance: 1, hotspotNearestBias: 10 },
+};
+
+/** Personality assigned to each non-player faction. */
+export const FACTION_PERSONALITIES: Record<Exclude<FactionId, typeof PLAYER_FACTION>, AiPersonality> = {
+  blue: 'expansionist',
+  green: 'defender',
+  yellow: 'pressurist',
+};
+
+/** Seconds between AI goal-picker ticks. 0.25 Hz per OL-509 spec. */
+export const AI_INTERVAL_S = 4;
