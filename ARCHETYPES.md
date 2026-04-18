@@ -1,345 +1,303 @@
-# Game Archetypes — Total Conversion Mods
+# Game Archetypes — Pattern-Composed Starting Points
 
-The starter ships 4 genuinely different games as total-conversion mods. Each
-defines its own resources, content, and UI layout from scratch. They share only
-infrastructure (settings, ui-registry, save management) and the `src/lib/`
-presentational layer.
+Seven forkable archetypes, each a pattern-composition skeleton validated by the
+research corpus. Each archetype ships as its own spec + vars schema + sim-test
+harness; themes are costumes layered on top. This is where research → engine →
+games closes the loop.
 
-**Dual purpose:**
-
-1. **Showcase** — demonstrate the engine's shape and expressiveness. Each
-   archetype is a grab-and-go starting point for a real game in that genre.
-2. **Stress test** — exercise the engine against the research corpus. Each
-   archetype targets a different slice of the engine surface and is designed
-   to find edges in expressiveness, performance, and composition.
-
-This is the test and culmination of the research→engine pipeline.
+Per-archetype specs live in `archetypes/<name>.md`. This file is the index,
+framing, and build order.
 
 ---
 
-## Architecture: mods as total conversions
+## The pipeline
 
-**Current state (to be refactored):** gathering/economy/progression are
-always-on base modules. Every mod shares wood/stone/gold. Mods layer on top.
+```
+research corpus   ──→   engine primitives   ──→   archetype skeletons   ──→   forked games
+(78+ analyses,          (resource, reset,         (per-archetype               (themed,
+ 12 patterns,            loop, challenge,          spec + vars +                tuned,
+ novel clusters)         zone, inventory, …)       sim tests)                   extended)
+```
 
-**Target state:** base modules shrink to infrastructure only. Each mod owns
-its entire content definition — resources, producers, actions, progression,
-and UI layout.
+The research corpus catalogued the genre's behavioural patterns across 78+
+games. The engine implemented the primitives those patterns decompose into.
+Archetypes are the third step: validated pattern *compositions* — the recipes
+that combine primitives into coherent game shapes — and the starter makes them
+forkable.
 
-### Base modules (shared by all 4 games)
+A fork picks an archetype, swaps the costume, tunes the balance vars, adds
+content. The skeleton plus the engine does the rest.
+
+---
+
+## Skeleton + Theme
+
+An **archetype** is a skeleton: a named pattern composition (e.g.
+*Multi-layer Prestige + Challenge + Deep Modifier Chains*) with a canonical
+engine-surface usage, a canonical beat map, and a canonical set of balance
+knobs.
+
+A **theme** is a costume over the skeleton: resource names, art, flavour copy,
+narrative framing. "Antimatter physics," "dream lucidity," "empire collapse"
+are all themes over the same Scaler skeleton.
+
+**Exemplar games are validation, not clone targets.** Each archetype cites the
+games from the corpus that exemplify its composition — as proof the skeleton
+has been stress-tested in the wild. You are not asked to clone them; you are
+inheriting a composition they proved viable.
+
+---
+
+## The 1–2 hour first-completion arc
+
+Every archetype is scoped to a **1–2 hour first-completion arc**: the time for
+a new player to experience one full traversal of the skeleton (first producer
+→ first upgrade → first prestige, or the archetype's equivalent). This is the
+design constraint that forces minimum-viable pattern density. You cannot
+cargo-cult a 100-hour reference game at 1/100 scale; you have to pick which
+pattern beats actually land in 90 minutes and build only those.
+
+This is the *showcase* arc. A fork that wants 100 hours of content extends
+after the skeleton lands. The 1–2h arc is what the shared archetype proves; the
+long tail is what the fork proves.
+
+---
+
+## Dev-loop integration
+
+Each archetype spec is a **harness-testable game shape**, not just a content
+sketch. Three tools wire in directly:
+
+- **Beat map** — 5–8 ordered beats across the arc, each with a target sim-time
+  window (e.g. *first prestige: 20–30 min of sim time*).
+- **Balance probes** — Workbench perturbations (cost scaling ±20%, tick rate
+  ±10%, …) with tolerance assertions per beat.
+- **Sim assertions** — headless `runHeadless` / `runMatrix` tests, checked in
+  as part of the archetype, that fail if beats land outside tolerance.
+
+The intended dev workflow inverts the usual: write the sim test first, then
+tune costs/rates in `balance.ts` until it passes. Content modules become
+hypotheses the harness falsifies. Forks inherit the beat map and probes when
+they theme a skeleton, and only swap the costume.
+
+Wires through `src/ui/panels/BalanceWorkbench.vue` and
+`open-loop-engine/harness`.
+
+---
+
+## Vars layering
+
+Archetype code has two homes, one level apart:
+
+- **`src/archetypes/<name>/`** — archetype-level. Shared TypeScript types and
+  default-vars constants. One copy, imported by every game of this archetype.
+  This is the contract layer.
+- **`src/modules/mods/<game>/vars/`** — game-level. A fork's own copy of the
+  defaults, deep-merged at load. This is the tuning surface.
+
+Each game owns three vars files, deep-merged at load in this order:
+
+```
+src/modules/mods/<game>/vars/
+  archetype.ts   # defaults from the archetype template — scaffold copy-in
+  theme.ts       # names, flavour, UI copy — no mechanical impact
+  balance.ts     # cost/rate/threshold overrides — mechanical
+```
+
+Tests override directly:
+
+```ts
+runSim({ ...loadVars(), balance: { ...balance, costScaling: 1.15 } })
+```
+
+A fork that diverges *structurally* replaces `archetype.ts` and forfeits the
+shared tuning template — acceptable trade. A fork that re-themes edits only
+`theme.ts` and is mechanically identical to its parent archetype.
+
+The `archetype.ts` schema is generated from the per-archetype doc's vars
+section via `pnpm codegen:archetype-vars <name>` (pending); the doc is the
+source of truth, codegen keeps the types honest.
+
+---
+
+## Base modules
+
+Shared by every archetype:
 
 | Module | Role |
 |--------|------|
-| settings | Theme, notation, autosave preferences |
+| settings | Theme, notation, autosave |
 | ui-registry | Slot-based panel/screen registration |
 
-That's it. Everything else is game-specific content defined by the mod.
+That's it. All content — resources, producers, actions, progression, UI layout
+— is per-archetype. (The current starter has gathering/economy/progression as
+always-on base modules; migrating them out is Phase 0 work.)
 
 ---
 
-## The 4 archetypes
+## The 8 archetypes
 
-### 1. Cookie Factory (Idle Producer)
+Each archetype has its own doc in `archetypes/<name>.md` following the shared
+10-section template (`archetypes/_template.md`). Six were enumerated top-down
+from pattern composition; two (Phase-shifter, Director) are candidates —
+Phase-shifter derived from novel-patterns cluster evidence, Director surfaced
+bottom-up from a shipped mod (OL-504) whose composition didn't fit any of the
+first seven.
 
-**The archetype:** Cookie Clicker / Egg Inc / AdVenture Capitalist
+### 1. Producer — `archetypes/producer.md`
 
-**Core feel:** Big numbers go brrr. Buy things that make numbers go up. Buy
-upgrades that make things make numbers go up faster.
+Pure A+C Activity + Cost Scaling + Achievement multipliers. Big numbers go
+brrr. Buy things that make things that make things.
 
-**Engine systems exercised:**
+- *Exemplars:* Cookie Clicker, Egg Inc, AdVenture Capitalist
+- *Primary stress:* modifier chain depth, cost-formula inversion at scale,
+  "does the engine feel clean at 30% surface use?"
 
-- `createResource` — single primary currency
-- `createProducerCategory` — the whole producer hierarchy (cursors → portals)
-- `createScalingPurchasable` — exponential cost scaling, the real pacing lever
-- `createModifierChain` — deep stacking: upgrades x achievements x milestones
-- `createPurchasableCategory` — one-shot upgrades that multiply producers
-- `createAchievementCategory` — milestone multipliers, not just cosmetic
-- `calculateMaxAffordable()` — bulk buying via Formula inversion under load
-- Big number formatting at scale (1e308+ via break_eternity)
+### 2. Looper — `archetypes/looper.md`
 
-**What it stress-tests:**
+Loop/Cycle + Mastery + Zone + Action Queue. Repetition with retention. Each
+run you get a little better at the same content; the loop IS the game.
 
-- Cost formula inversion with very large numbers
-- Modifier chain depth (10+ stacked multipliers)
-- Producer tick performance at scale (many producers, many levels)
-- The "no loop, no actions, no skills" path — does the engine feel clean
-  when you use only 30% of it?
+- *Exemplars:* Idle Loops, Progress Knight, Groundhog Life
+- *Primary stress:* loop reset correctness, action queue strategies,
+  recommendation-system convergence
 
-**Content sketch:**
+### 3. Scaler — `archetypes/scaler.md`
 
-- 1 resource (cookies/widgets)
-- 6–8 producers at escalating cost tiers
-- 10–12 upgrades (producer multipliers, click multipliers)
-- Achievements that grant passive bonuses
-- No prestige — keep it pure. Prestige is the next archetype's job.
+Multi-layer nested Prestige + Challenge + deep Modifier Chains. Layered
+compression — what took an hour now takes seconds; each prestige reveals a new
+game on top of the old one.
 
-**Research patterns:** Activity Systems (A+C hybrid), Purchase Mechanics,
-Cost Scaling, Modifier Chains, Achievement Systems.
+- *Exemplars:* Antimatter Dimensions, Synergism, NGU Idle
+- *Primary stress:* multi-layer reset coordination, modifier chain ordering,
+  Formula at extreme scales
 
----
+### 4. Interlocker — `archetypes/interlocker.md`
 
-### 2. Idle Loops (Loop Runner)
+Wide multi-resource graph + Conversion chains + Synergy. Wide, not deep. Many
+resources interlock; you're managing a system, not chasing a number.
 
-**The archetype:** Idle Loops / Progress Knight / Groundhog Life
+- *Exemplars:* Kittens Game, Evolve
+- *Primary stress:* multi-resource cost requirements, conversion chain synergy,
+  crafting-recipe primitive gaps
 
-**Core feel:** Repetition with mastery. Each run you get a little better at the
-same content. The loop IS the game.
+### 5. Explorer — `archetypes/explorer.md`
 
-**Engine systems exercised:**
+Spatial Zone-as-gameplay + Discovery + Inventory. The map IS the game. Fog of
+war, territory to chart, equipment earned through traversal.
 
-- `createLoop` + `createRetentionPolicy` — the headline system
-- `createSkillCategory` — accumulator mode, permanent bonuses
-- `createActionCategory` + `createActionRunner` + queue strategies
-- `createZoneSystem` — progressive content access
-- `createLoopLog` + `createBestOf` + `createRecommendationSystem`
-- `createTemporaryEffectSystem` — per-run buffs
-- `createAutomationTiers` — progressive automation unlock
+- *Exemplars:* Level13, Cavernous II, Trimps (spatial-traversal slice)
+- *Primary stress:* zone-scoped content queries, worker identity + position
+  composition, item-identity vs. fungible-resource boundary
 
-**What it stress-tests:**
+### 6. Scripter — `archetypes/scripter.md`
 
-- Loop reset correctness (does everything reset that should? does retention
-  survive?)
-- Recommendation system (does strategy advice converge?)
-- Action queue strategies under automation
-- The full loop-incremental stack end-to-end
+Programmable action queue + Automation gradient. The artifact is code — the
+player writes programs that the engine executes. Honours novel-patterns
+cluster #1 ("Programming-as-Gameplay," 7 games, ~10% of corpus).
 
-**Content sketch:**
+- *Exemplars:* Bitburner, Nucaranlaeg, Points Progression
+- *Primary stress:* action-queue programmability, sandboxed execution,
+  automation-tier unlock gradient
 
-- 3–4 skills (woodcutting, mining, combat, trading)
-- 5–6 zones with progressive unlock
-- 6–8 actions across zones
-- Mana-drain loop cycle with skill retention
-- Recommendation system wired to loop-log
-- Automation tiers gated by achievements
+### 7. Phase-shifter *(candidate)* — `archetypes/phase-shifter.md`
 
-**Research patterns:** Activity Systems (B — continuous), Loop/Cycle Systems,
-Mastery Systems, Automation, Time Systems (loop-constrained).
+Narrative-driven Phase Transitions + mechanic swap. Each phase the game
+changes what the player does — story unlocks reveal new mechanics, old ones
+sunset. Honours novel-patterns cluster #12 ("Phase Transitions," 20+ games).
 
-**Migration note:** This is the current vanilla mod promoted to a standalone
-game. Expand content, wire up the recommendation system, polish — don't
-rebuild.
+- *Exemplars:* A Dark Room, Universal Paperclips, Candy Box 2
+- *Status:* candidate — may collapse to a modifier layer over other
+  archetypes. Build it to find out.
+- *Primary stress:* mechanic lifecycle (install / disable / replace),
+  narrative trigger wiring, content-swap UX
 
----
+### 8. Director *(candidate)* — `archetypes/director.md` *(prework at `archetypes/_director-prework.md`)*
 
-### 3. Antimatter Dimensions (Prestige Scaler)
+Declarative goals + autonomous multi-agent simulation + spatial arena +
+round-scoped prestige. Player is observer-and-steerer, not actor: set goals,
+the sim runs across 4 factions (3 AI + player), round resolves on a timer.
+Surfaced bottom-up from the creep-vs-creep mod (OL-504, done) whose
+composition didn't fit any of the first 7 archetypes.
 
-**The archetype:** Antimatter Dimensions / NGU Idle / Synergism
-
-**Core feel:** Layered compression. What took an hour now takes seconds. Each
-prestige layer reveals a new game on top of the old one.
-
-**Engine systems exercised:**
-
-- `createReset` + `createConversion` — multi-layer: at least 2 prestige tiers
-- `trackResetTime` — time-since-reset as a progression signal
-- `createPurchasableCategory` — upgrade trees per layer
-- `createChallengeCategory` — restriction modifiers with permanent rewards
-- `createModifierChain` — deepest stacking: base x prestige1 x prestige2 x challenge
-- `createAchievementCategory` — cross-layer milestones
-- `Formula` integration/inversion — cost curves spanning 100+ orders of magnitude
-- `processOfflineTime` — idle scaling across resets
-
-**What it stress-tests:**
-
-- Multi-layer reset coordination (does layer 2 reset correctly preserve
-  layer 1 meta-currency?)
-- Conversion formulas at extreme scales
-- Modifier chain ordering (additive within layer, multiplicative across)
-- Challenge enter/exit lifecycle with nested resets
-- The full prestige + challenge stack — the genre's hardest composition problem
-
-**Content sketch:**
-
-- Layer 0: Antimatter (primary currency) + 4 dimensions (producers)
-- Layer 1: Infinity Points (convert antimatter → IP on reset) + IP upgrades
-- Layer 2: Eternity Points (convert IP → EP on reset) + EP upgrades
-- 3 challenges at the IP layer (restriction + permanent reward)
-- The minimal AD slice that exercises every prestige primitive
-
-**Research patterns:** Prestige Systems (multi-tier nested), Challenge Systems,
-Cost Scaling (extreme), Modifier Chains (deep stacking), Achievement Systems
-(cross-layer).
-
----
-
-### 4. Tiny Civilization (Exploration Crafter)
-
-**The archetype:** Kittens Game / Evolve / A Dark Room / Trimps
-
-**Core feel:** Wide, not deep. Many resources interlock. You're managing a
-system, not chasing a number.
-
-**Engine systems exercised:**
-
-- `createResource` — 8–10 distinct resources with caps and conversion chains
-- `createZoneSystem` — real spatial meaning (biomes, not just unlock gates)
-- `createInventory` + `createSlot` — equipment, crafted items
-- `createActionCategory` — multi-domain: gathering, crafting, building, exploring
-- `createWorker` — addressable units executing action queues; see Workers as RTS primitive below
-- `createProducerCategory` — population-driven (workers assigned to buildings)
-- `createPurchasableCategory` — buildings with capacity effects
-- `createModifierChain` — wide: many small bonuses from different sources
-- `ResourceBag` + `bulkTransfer` — multi-resource costs
-- Conditions/Effects system (`C`, `E` builders for complex unlock logic)
-
-**What it stress-tests:**
-
-- Wide resource graphs (many resources, many conversion paths)
-- Zone-scoped content visibility (only show actions available in current zone)
-- Inventory capacity and item identity (non-fungible entities)
-- Multi-resource cost requirements (building costs 50 wood + 20 stone + 5 iron)
-- The engine's ability to express a fundamentally different game shape — not
-  "producers make numbers" but "interconnected systems you manage"
-
-**Content sketch:**
-
-- Resources: food, wood, stone, iron, gold, herbs, leather, tools
-- Zones: camp, forest, hills, mines, marsh (progressive discovery)
-- Buildings: hut (pop cap), workshop (craft speed), storage (resource cap),
-  farm (food production)
-- Crafting: tools (from iron + wood), leather (from hides), medicine (from herbs)
-- Population: workers assignable to buildings
-- Simple tech tree via purchasable unlocks
-
-**Research patterns:** Activity Systems (multi-type), Discovery Systems,
-Inventory Systems, Progression Systems (branching), Synergy Systems.
-
-#### Workers as an RTS primitive
-
-`createWorker` (engine/systems) is a pure identity container over a Sequencer +
-TimedProgress + task lookup. It owns no behavior — the struct is four inputs
-(`id`, `sequencer`, `tracker`, `getTask`) plus two computeds
-(`currentTaskId`, `currentTask`) and a `dispose`. Its job is *naming*, not
-execution. Cavernous II's `Clone` is the direct precedent.
-
-Once workers are addressable, the multi-worker pattern is trivially RTS-shaped.
-A worker is `worker-0`, `villager-3`, `scout-1`; the player commands it by
-manipulating its sequencer. RTS verbs map directly:
-
-| RTS verb          | Sequencer call                             |
-|-------------------|--------------------------------------------|
-| Right-click order | `worker.sequencer.enqueue(task)`           |
-| Shift-queue       | repeated `enqueue` (list mode for persist) |
-| Stop              | `cancel()` + `clear()`                     |
-| Reorder build     | `reorder(from, to)`                        |
-| Pause unit        | `pause()`                                  |
-
-**Spawning:** a population module calls `createWorker` N times. Each worker
-owns its own sequencer (per-unit order book) and its own tracker (per-unit
-progress). A shared `getTask` lookup means all workers draw from the same
-content catalog.
-
-**Shared pools via fill strategies.** One shared "idle work" queue can feed
-multiple workers by having each worker's `fillStrategy` pull from the same
-source. Idle workers independently grab the next job when their sequencer
-runs dry — classic RTS auto-assignment (gather, build, repair) with zero
-engine-level coordination logic.
-
-**What Worker explicitly does not give you:** positioning, collision,
-movement, line-of-sight, fog-of-war, selection state. Those are game-side. A
-full TC "villager" is `Worker + Position + AssignedBuilding + Visuals`,
-composed at the mod level. The engine owns scheduling identity; the game
-owns everything else.
-
-**Build path for TC:** start with a fixed pool (`worker-0..2`) and per-worker
-panels before dynamic spawning. The N-worker wiring is also the first real
-stress test of OL-384's "consumer-wired tracker dance is fine" claim — if it
-feels like copy-paste at N=3, graduate a helper before the TC population
-loop multiplies it.
-
----
-
-## What was cut (and why)
-
-The research cookbook listed 7 archetypes. 3 collapse:
-
-- **"Basic Idle" vs "Incremental Clicker"** — same archetype at different
-  complexity. Cookie Factory covers both; toggle producers on/off if you
-  want pure clicking.
-- **"Narrative Idle"** — narrative is a layer on any archetype, not its own
-  mechanical skeleton. A Dark Room is mechanically an exploration crafter with
-  narrative presentation.
-- **"Time Loop"** — mechanically identical to Loop Runner. The "time" framing
-  is thematic, not structural.
-
-**Challenges** are an orthogonal modifier, not an archetype. Antimatter
-Dimensions includes them because multi-layer prestige is where challenges
-matter most. Any archetype could add a challenge layer.
-
----
-
-## Predicted engine gaps
-
-Each archetype is designed to surface friction. These are the gaps we expect
-to find:
-
-| Gap | Archetype | Severity | Notes |
-|-----|-----------|----------|-------|
-| Multi-resource costs | Tiny Civilization | High | `createScalingPurchasable` takes a single `resource`. Buildings costing wood+stone+iron need `CostRequirement` composition or a new API. |
-| Zone-scoped content queries | Tiny Civilization, Idle Loops | Medium | "Show only actions in current zone" is manual filtering today. |
-| Multi-layer reset coordination | Antimatter Dimensions | High | `createReset` zeros refs, but orchestrating layer 2→1→0 cascading resets isn't built-in. |
-| Population/workforce allocation | Tiny Civilization | Low | `createWorker` provides addressable scheduling identity; "assign N workers to building" is game-side composition of Worker + building reference. Revisit if the composition is verbose in practice. |
-| Crafting recipes | Tiny Civilization | Medium | Multi-input conversion has no direct primitive. `createConversion` is 1:1. |
-| Bulk buy UX | Cookie Factory | Low | `calculateMaxAffordable` exists; "buy 1/10/25/max" is game-side UI. |
-| Formula at extreme scale | Antimatter Dimensions | Unknown | break_eternity tetration paths may have edge cases. That's what stress testing is for. |
-
-Gaps are expected and good — the point is to find them, file engine tickets,
-and fix them. Each archetype's implementation generates concrete engine
-feedback for the next.
-
----
-
-## Extension: Benchmark Harness mod
-
-A 5th mod entry — not a game, but a performance harness that runs inside the
-mod picker alongside the 4 playable archetypes.
-
-**Concept:** The mod's `install()` doesn't set up a playable game. It
-synthesizes late-game state for a chosen archetype (hundreds of purchasables,
-modifier chains 20+ deep, numbers spanning 200+ orders of magnitude), then
-runs the engine's headless harness (`runHeadless` / `runMatrix` /
-`runSensitivity`) against it. The UI slot renders a results dashboard instead
-of a game layout.
-
-**Why a mod, not a separate tool:** It uses the same engine boot path, save
-system, and module composition that real games use. If the harness discovers
-a perf cliff, it's a real cliff — not a synthetic artifact of a different
-test rig.
-
-**Parameters** (configurable from the mod picker or a dashboard panel):
-
-- Which archetype shape to inflate (Cookie Factory's wide producers,
-  AD's deep prestige layers, Tiny Civ's wide resource graph)
-- Scale knobs: purchasable count, modifier chain depth, resource magnitude
-- Harness mode: single run, matrix (N seeds x M configs), sensitivity
-  (baseline vs variant)
-
-**Output:** Tick budget (ms/tick at target scale), save/load round-trip
-time, offline processing duration, memory profile. The performance budget
-for the engine.
-
-**When to build:** After at least one game archetype is implemented and
-has real shapes to inflate. Don't design the harness against imagined
-state — wait for concrete content modules to synthesize from.
+- *Exemplar lineage:* WC3 mods (Footmen Frenzy, Castle Fight, X Hero Siege)
+  + WC/SC melee map-design tradition (main / natural / third / contested
+  middle / chokepoints)
+- *Status:* candidate — elevates to canonical after Director doc lands and
+  creep-vs-creep (or successor) proves composition viable
+- *Primary stress:* outcome-distribution probes (seeded-batch `runMatrix`
+  across AI personality permutations), flow-field primitive graduation,
+  ~70% engine-surface usage (widest of any archetype)
+- *Next step:* next session resolves the open questions in
+  `_director-prework.md` and drafts `archetypes/director.md`; delete the
+  prework file on approval.
 
 ---
 
 ## Build sequence
 
-Each step is independently shippable.
+Each archetype ships independently. Order optimised for engine-feedback yield
+and re-use of existing content.
 
-1. **Refactor base modules** — move gathering/economy/progression out of
-   always-on base. Base becomes settings + ui-registry only. Each existing
-   mod inlines its content.
-2. **Cookie Factory** — simplest new archetype. Exercises producers and
-   purchasables in isolation. Validates that the engine feels clean when
-   you skip 70% of the systems.
-3. **Idle Loops** — promote vanilla to a standalone game. Expand content,
-   wire recommendation system, polish. Most mature archetype.
-4. **Antimatter Dimensions** — multi-layer prestige. The hardest composition
-   problem. Will generate the most engine API feedback.
-5. **Tiny Civilization** — widest engine surface. Different game shape
-   entirely. Will surface the most "missing primitive" gaps.
+| # | Archetype | Why this order |
+|---|-----------|----------------|
+| 1 | Looper | Vanilla mod promotes directly — shortest path to a real playable arc, validates the dev-loop harness against real content. |
+| 2 | Producer | Simplest new build. Validates "engine feels clean at 30% surface use." |
+| 3 | Scaler | Highest engine-feedback yield. Hardest composition problem; surfaces the most API friction. |
+| 4 | Interlocker | Widest resource graph. Surfaces multi-resource cost + crafting-recipe gaps. |
+| 5 | Explorer | First spatial archetype. Stress-tests worker + position composition, zone-scoped queries. |
+| 6 | Scripter | Different engine surface — programmable queue, sandboxed execution. |
+| 7 | Phase-shifter | Deferred until the other 6 prove whether phase transitions collapse to a modifier or justify their own skeleton. |
+| 8 | Director | Prework already done as `_director-prework.md` against a shipped mod (creep-vs-creep). Drafting blocked on two research open questions; see prework file for triage shape. |
+
+Gaps are expected and good — each archetype's implementation generates concrete
+engine tickets for the next. Drift audits (`/audit` from the starter) keep the
+engine and archetypes in sync.
+
+---
+
+## What changed from the prior archetype list
+
+The previous 4 archetypes globbed combinations the novel-patterns synthesis
+shows are distinct:
+
+- **Tiny Civilization split into Interlocker + Explorer.** Resource-web
+  management and spatial exploration are different player experiences; keeping
+  them together hid the split.
+- **Scripter promoted out of Looper.** Programming-as-Gameplay (cluster #1) is
+  structurally different — the artifact is code, not skill retention.
+- **Phase-shifter added as candidate.** Previously dismissed ("narrative is a
+  layer, not its own archetype"). The Phase Transitions cluster (#12, 20+
+  games) argues the structural pattern is real; we'll prototype it standalone
+  before collapsing.
+- **Director added as candidate (bottom-up discovery).** A shipped mod
+  (creep-vs-creep, OL-504) produced a composition — declarative goals +
+  autonomous multi-agent sim + spatial arena + round-scoped prestige — that
+  didn't fit any of the first 7. Most archetypes here are top-down from
+  pattern composition; Director is the first bottom-up entry. Prework at
+  `archetypes/_director-prework.md` captures the design decisions locked so
+  far and the open questions remaining.
+
+Still explicitly **not** archetypes:
+
+- **Challenges** — orthogonal modifier. Every archetype can add a challenge
+  layer; Scaler makes it central.
+- **Pure narrative idle** — narrative as presentation is a theme, not a
+  skeleton. Phase-shifter covers the case where narrative *drives mechanical
+  structure*.
+
+---
+
+## Extension: Benchmark Harness
+
+A mod entry that isn't a game — it synthesises late-game state for a chosen
+archetype (hundreds of purchasables, deep modifier chains, 200+ orders of
+magnitude), runs the engine's headless harness, renders a results dashboard.
+
+Uses the same engine boot path and save system that real games use, so
+discovered perf cliffs are real cliffs. Parameters: which archetype shape to
+inflate, scale knobs, harness mode. Builds after at least one archetype has
+real shapes to synthesise from.
 
 ---
 
@@ -347,8 +305,11 @@ Each step is independently shippable.
 
 - **Research corpus:** `/work/studio/open-loop-research/LIBRARY.md` — pattern
   vocabulary, tier model, engine mapping
+- **Novel patterns synthesis:** `/work/studio/open-loop-research/reports/novel-patterns/novel-patterns-synthesis-v4.md`
+  — combination clusters from 87 games
 - **Composition cookbook:** `/work/studio/open-loop-research/practical/composition-cookbook/`
-  — the 7-archetype list these 4 consolidate from
-- **Engine API:** `/work/studio/open-loop-engine/docs/api/*.api.md`
+  — predecessor aspirational list; superseded by this doc
+- **Engine API:** `/work/studio/open-loop-engine/docs/api/INDEX.md`
 - **Layout research:** `/work/studio/open-loop-research/patterns/ui-ux/layout-spray-2026-04.md`
-  — 42-game spray that validated the 5-shell set
+- **Per-archetype template:** `archetypes/_template.md` *(Phase 0, pending)*
+- **Per-archetype specs:** `archetypes/<name>.md` *(Phase 1–3, pending)*
