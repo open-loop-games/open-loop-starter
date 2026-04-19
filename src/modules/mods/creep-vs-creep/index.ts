@@ -155,6 +155,12 @@ export function createCreepWarfareModule(): EngineModule {
         startingGoalSlots: vars.archetype.startingGoalSlots,
         goalMultiplier: vars.balance.goalMultiplier,
       });
+      const tierYieldMul = {
+        near: vars.balance.nearHotspotYieldMul,
+        natural: vars.balance.naturalHotspotYieldMul,
+        contested: vars.balance.contestedHotspotYieldMul,
+        center: vars.balance.centerHotspotYieldMul,
+      };
       const ai = createAiSystem({
         grid: grid.grid,
         goals,
@@ -163,6 +169,7 @@ export function createCreepWarfareModule(): EngineModule {
         playerFaction: vars.archetype.playerFaction,
         factionPersonalities: vars.balance.factionPersonalities,
         aiIntervalSec: vars.balance.aiIntervalSec,
+        tierYieldMul,
       });
       const hotspots = createHotspotSystem({
         grid: grid.grid,
@@ -170,12 +177,7 @@ export function createCreepWarfareModule(): EngineModule {
         essence,
         yieldChains,
         regenPerSec: vars.balance.hotspotRegenPerSec,
-        tierYieldMul: {
-          near: vars.balance.nearHotspotYieldMul,
-          natural: vars.balance.naturalHotspotYieldMul,
-          contested: vars.balance.contestedHotspotYieldMul,
-          center: vars.balance.centerHotspotYieldMul,
-        },
+        tierYieldMul,
       });
       const upgrades = createUpgradeSystem({
         essence,

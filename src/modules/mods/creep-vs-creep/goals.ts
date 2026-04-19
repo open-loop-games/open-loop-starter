@@ -182,7 +182,10 @@ export function createGoalSystem(opts: GoalSystemOptions): GoalSystem {
       const hid = goalId.slice('claim:hotspot-'.length);
       const h = hotspotById.get(hid);
       if (h == null) return true;
-      return grid.at(h.x, h.y).owner !== null;
+      // Self-ownership completes the claim. Enemy ownership leaves the goal
+      // pursuable via conquest — Director-archetype expansion shouldn't be
+      // gated by who happened to own a near-hotspot at gen time.
+      return grid.at(h.x, h.y).owner === faction;
     }
     if (goalId.startsWith('defend:sector-')) {
       const sector = goalId.slice('defend:sector-'.length) as SectorId;

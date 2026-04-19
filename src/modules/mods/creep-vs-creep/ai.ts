@@ -28,6 +28,7 @@ import {
   type FactionId,
   type GoalId,
   type HotspotDef,
+  type HotspotTier,
   type SectorId,
   type SpawnDef,
 } from './content';
@@ -55,6 +56,13 @@ export interface AiSystemOptions {
   playerFaction: DirectorFactionId;
   factionPersonalities: Record<Exclude<DirectorFactionId, 'red'>, DirectorAiPersonality>;
   aiIntervalSec: number;
+  /**
+   * Per-tier yield multiplier. Lifted into proximity scoring so contested
+   * (1.5×) and centre (2.0×) hotspots score competitively against the
+   * always-closer near hotspots (0.5×) — without this, every personality
+   * collapses onto the nearest tile-1 target.
+   */
+  tierYieldMul: Record<HotspotTier, number>;
 }
 
 export interface AiSystem {
@@ -123,14 +131,18 @@ function scoreGoal(
   spawn: SpawnDef,
   nearestUnclaimedHotspot: HotspotDef | null,
   mapDiagonalNorm: number,
+  tierYieldMul: Record<HotspotTier, number>,
 ): number {
   if (goalId.startsWith('claim:hotspot-')) {
     const hid = goalId.slice('claim:hotspot-'.length);
     const h = hotspots.find((x) => x.id === hid);
     if (h == null) return 0;
-    // Proximity term: farther = lower score. Normalise against map diagonal.
+    // Proximity term: farther = lower score, scaled by per-tier yield mul so
+    // a far-but-rich centre hotspot can outscore a near-but-thin near one.
     const dist = manhattan(spawn.x, spawn.y, h.x, h.y);
-    const proximity = 1 - dist / mapDiagonalNorm;
+    const proximity = (1 - dist / mapDiagonalNorm) * tierYieldMul[h.tier];
+    // Greedy bias stays tier-blind: it picks the absolute-nearest unclaimed
+    // hotspot regardless of yield, per OL-609 spec.
     const nearestBonus = nearestUnclaimedHotspot?.id === hid ? 1 : 0;
     return weights.hotspotProximity * proximity + weights.hotspotNearestBias * nearestBonus;
   }
@@ -147,8 +159,16 @@ function scoreGoal(
 }
 
 export function createAiSystem(options: AiSystemOptions): AiSystem {
-  const { grid, goals, hotspots, spawns, playerFaction, factionPersonalities, aiIntervalSec } =
-    options;
+  const {
+    grid,
+    goals,
+    hotspots,
+    spawns,
+    playerFaction,
+    factionPersonalities,
+    aiIntervalSec,
+    tierYieldMul,
+  } = options;
   let acc = 0;
 
   const nonPlayerFactions = FACTION_IDS.filter((f): f is FactionId => f !== playerFaction);
@@ -163,8 +183,8 @@ export function createAiSystem(options: AiSystemOptions): AiSystem {
     for (const faction of nonPlayerFactions) {
       // The factionPersonalities record is keyed by Exclude<FactionId, 'red'>
       // in the Director schema; this lookup is safe because the non-player
-      // set never contains the player's colour. OL-609 revisits when
-      // playerFaction becomes non-default.
+      // set never contains the player's colour. Revisit if playerFaction
+      // becomes a runtime knob.
       const personality = (factionPersonalities as Record<FactionId, AiPersonality>)[faction];
       const weights = AI_PERSONALITIES[personality];
       const slot = goals.slots[faction];
@@ -197,6 +217,7 @@ export function createAiSystem(options: AiSystemOptions): AiSystem {
           spawn,
           nearest,
           mapDiagonalNorm,
+          tierYieldMul,
         );
         candidates.push({ id: goalId, score });
       }

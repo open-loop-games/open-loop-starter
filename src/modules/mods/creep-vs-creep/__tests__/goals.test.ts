@@ -46,9 +46,29 @@ function makeChains(namespace: string): GoalChains {
   return { attack: build('attack'), defense: build('defense'), spread: build('spread') };
 }
 
+/**
+ * 13-hotspot fixture mirroring MAP.md §§ 4 + 5: per-quadrant near + natural,
+ * axis-aligned contested, single centre. Coordinates are illustrative — the
+ * goal system reads tier and id, not geometry.
+ */
 const HOTSPOTS: HotspotDef[] = [
-  { id: 'hs-nw', x: 18, y: 18, baseYield: 1, capacity: 100, tier: 'near' },
-  { id: 'hs-mid', x: 30, y: 30, baseYield: 1, capacity: 100, tier: 'center' },
+  // near (faction-owned at gen time in real play; tests pre-clear the grid)
+  { id: 'hs-near-nw', x: 8, y: 8, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-near-ne', x: 91, y: 8, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-near-se', x: 91, y: 91, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-near-sw', x: 8, y: 91, baseYield: 1, capacity: 100, tier: 'near' },
+  // natural
+  { id: 'hs-natural-nw', x: 22, y: 22, baseYield: 1, capacity: 100, tier: 'natural' },
+  { id: 'hs-natural-ne', x: 77, y: 22, baseYield: 1, capacity: 100, tier: 'natural' },
+  { id: 'hs-natural-se', x: 77, y: 77, baseYield: 1, capacity: 100, tier: 'natural' },
+  { id: 'hs-natural-sw', x: 22, y: 77, baseYield: 1, capacity: 100, tier: 'natural' },
+  // contested (axis-aligned, shared by 2 adjacent factions)
+  { id: 'hs-contested-n', x: 50, y: 22, baseYield: 1, capacity: 100, tier: 'contested' },
+  { id: 'hs-contested-e', x: 77, y: 50, baseYield: 1, capacity: 100, tier: 'contested' },
+  { id: 'hs-contested-s', x: 50, y: 77, baseYield: 1, capacity: 100, tier: 'contested' },
+  { id: 'hs-contested-w', x: 22, y: 50, baseYield: 1, capacity: 100, tier: 'contested' },
+  // centre
+  { id: 'hs-center', x: 50, y: 50, baseYield: 1, capacity: 100, tier: 'center' },
 ];
 
 function makeTestGrid(): SpatialGrid<CellState> {
@@ -99,17 +119,17 @@ describe('goal-slot system', () => {
     const spreadRed = chains.spread.red;
     expect(Number(spreadRed.apply(10))).toBe(10);
 
-    expect(goals.slots.red.select('claim:hotspot-hs-nw')).toBe(true);
+    expect(goals.slots.red.select('claim:hotspot-hs-near-nw')).toBe(true);
     await nextTick();
     expect(Number(spreadRed.apply(10))).toBeCloseTo(15);
   });
 
   it('deselecting releases the modifier', async () => {
-    goals.slots.red.select('claim:hotspot-hs-nw');
+    goals.slots.red.select('claim:hotspot-hs-near-nw');
     await nextTick();
     expect(Number(chains.spread.red.apply(10))).toBeCloseTo(15);
 
-    expect(goals.slots.red.deselect('claim:hotspot-hs-nw')).toBe(true);
+    expect(goals.slots.red.deselect('claim:hotspot-hs-near-nw')).toBe(true);
     await nextTick();
     expect(Number(chains.spread.red.apply(10))).toBe(10);
   });
@@ -127,7 +147,7 @@ describe('goal-slot system', () => {
 
     goals.slots.red.select('defend:sector-nw');
     goals.slots.red.select('pressure:faction-blue');
-    goals.slots.red.select('claim:hotspot-hs-mid');
+    goals.slots.red.select('claim:hotspot-hs-center');
     await nextTick();
 
     expect(Number(chains.defense.red.apply(10))).toBeCloseTo(15);
@@ -136,8 +156,8 @@ describe('goal-slot system', () => {
   });
 
   it('two factions can pick the same goal id without collision', async () => {
-    goals.slots.red.select('claim:hotspot-hs-nw');
-    goals.slots.blue.select('claim:hotspot-hs-nw');
+    goals.slots.red.select('claim:hotspot-hs-near-nw');
+    goals.slots.blue.select('claim:hotspot-hs-near-nw');
     await nextTick();
 
     expect(Number(chains.spread.red.apply(10))).toBeCloseTo(15);
@@ -146,7 +166,7 @@ describe('goal-slot system', () => {
 
   it('capacity 1 rejects a second selection', async () => {
     expect(goals.capacity.value).toBe(1);
-    expect(goals.slots.red.select('claim:hotspot-hs-nw')).toBe(true);
+    expect(goals.slots.red.select('claim:hotspot-hs-near-nw')).toBe(true);
     expect(goals.slots.red.select('defend:sector-nw')).toBe(false);
     await nextTick();
 
@@ -159,7 +179,7 @@ describe('goal-slot system', () => {
     grid.set(5, 5, { terrain: 'open', owner: 'red', hp: 0, reservoir: 0 });
     grid.set(6, 5, { terrain: 'open', owner: 'blue', hp: 0, reservoir: 0 });
 
-    goals.slots.red.select('claim:hotspot-hs-nw');
+    goals.slots.red.select('claim:hotspot-hs-near-nw');
     expect(goals.slots.red.select('defend:sector-nw')).toBe(false);
 
     goals.capacity.value = 2;
@@ -175,37 +195,64 @@ describe('goal-slot system', () => {
     expect(goals.slots.red.select('pressure:faction-red')).toBe(false);
   });
 
-  it("claim goal's modifier drops after sweep when the hotspot gains an owner", async () => {
-    goals.slots.red.select('claim:hotspot-hs-nw');
+  it('pool surfaces the full 13-hotspot + 4-sector + 3-pressure id set', () => {
+    // OL-609: 13 claim:hotspot-* (4 near + 4 natural + 4 contested + 1 centre)
+    // + 4 defend:sector-* + 3 pressure:faction-* (excluding self) = 20.
+    const pool = goals.goalPoolFor('red');
+    const claims = pool.filter((g) => g.startsWith('claim:hotspot-'));
+    const defends = pool.filter((g) => g.startsWith('defend:sector-'));
+    const pressures = pool.filter((g) => g.startsWith('pressure:faction-'));
+    expect(claims).toHaveLength(13);
+    expect(defends).toHaveLength(4);
+    expect(pressures).toHaveLength(3);
+    // Every hotspot id is represented exactly once.
+    expect(new Set(claims).size).toBe(13);
+    for (const h of HOTSPOTS) {
+      expect(claims).toContain(`claim:hotspot-${h.id}`);
+    }
+  });
+
+  it("claim goal's modifier drops after sweep when the selecting faction owns the hotspot", async () => {
+    goals.slots.red.select('claim:hotspot-hs-near-nw');
     await nextTick();
     expect(Number(chains.spread.red.apply(10))).toBeCloseTo(15);
 
-    // Any owner completes the goal — the opportunity is gone either way.
+    // Self-ownership is what completes the claim — see goals.ts isGoalCompleted.
     // SpatialGrid reads are non-reactive; the completion predicate only
     // re-evaluates when something reactive in its dependencies changes, so
     // we drive that via `sweepCompleted` which deselects the stale goal.
     const h = HOTSPOTS[0];
-    grid.set(h.x, h.y, { terrain: 'hotspot', owner: 'blue', hp: 0, hotspotId: h.id, reservoir: 0 });
-    expect(goals.isGoalCompleted('red', 'claim:hotspot-hs-nw')).toBe(true);
+    grid.set(h.x, h.y, { terrain: 'hotspot', owner: 'red', hp: 0, hotspotId: h.id, reservoir: 0 });
+    expect(goals.isGoalCompleted('red', 'claim:hotspot-hs-near-nw')).toBe(true);
 
     goals.sweepCompleted();
     await nextTick();
     expect(Number(chains.spread.red.apply(10))).toBe(10);
   });
 
+  it('claim goal stays uncompleted when an enemy faction owns the hotspot', () => {
+    // OL-609: near-hotspots start faction-owned at gen time. Claim goals on
+    // enemy-held hotspots must remain pursuable so expansion-via-conquest
+    // is reachable; the predicate keys on self-ownership, not "any owner".
+    const h = HOTSPOTS[0]; // hs-near-nw
+    grid.set(h.x, h.y, { terrain: 'hotspot', owner: 'blue', hp: 0, hotspotId: h.id, reservoir: 0 });
+    expect(goals.isGoalCompleted('red', 'claim:hotspot-hs-near-nw')).toBe(false);
+    expect(goals.isGoalCompleted('blue', 'claim:hotspot-hs-near-nw')).toBe(true);
+  });
+
   it('sweepCompleted deselects goals whose predicate is true', () => {
-    goals.slots.red.select('claim:hotspot-hs-nw');
-    expect(goals.slots.red.selected.value).toContain('claim:hotspot-hs-nw');
+    goals.slots.red.select('claim:hotspot-hs-near-nw');
+    expect(goals.slots.red.selected.value).toContain('claim:hotspot-hs-near-nw');
 
     const h = HOTSPOTS[0];
     grid.set(h.x, h.y, { terrain: 'hotspot', owner: 'red', hp: 0, hotspotId: h.id, reservoir: 0 });
 
     goals.sweepCompleted();
-    expect(goals.slots.red.selected.value).not.toContain('claim:hotspot-hs-nw');
+    expect(goals.slots.red.selected.value).not.toContain('claim:hotspot-hs-near-nw');
   });
 
   it('restoring slot selections reapplies modifiers implicitly via PES', async () => {
-    goals.slots.red.restore(['claim:hotspot-hs-mid']);
+    goals.slots.red.restore(['claim:hotspot-hs-center']);
     await nextTick();
     expect(Number(chains.spread.red.apply(10))).toBeCloseTo(15);
   });
