@@ -52,6 +52,8 @@ export interface PersistedCellState {
   reservoir: string;
 }
 
+export type HotspotTier = 'near' | 'natural' | 'contested' | 'center';
+
 export interface HotspotDef {
   id: string;
   x: number;
@@ -60,6 +62,8 @@ export interface HotspotDef {
   baseYield: number;
   /** Reservoir size. Depleting + slow regen. */
   capacity: number;
+  /** Tier — drives per-tier yield multipliers in `DirectorBalanceVars`. */
+  tier: HotspotTier;
 }
 
 export interface SpawnDef {

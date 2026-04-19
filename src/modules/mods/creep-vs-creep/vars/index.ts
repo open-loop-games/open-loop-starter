@@ -14,12 +14,10 @@ import {
   type DirectorVars,
   type DirectorVarsOverride,
 } from '@/archetypes/director';
-import { creepVsCreepArchetype } from './archetype';
 import { creepVsCreepBalance } from './balance';
 import { creepVsCreepTheme } from './theme';
 
 const MOD_OVERRIDE: DirectorVarsOverride = {
-  archetype: creepVsCreepArchetype,
   theme: creepVsCreepTheme,
   balance: creepVsCreepBalance,
 };
