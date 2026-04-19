@@ -20,6 +20,13 @@
  * No RNG — pure Decimal arithmetic. The HP-accumulator model was chosen
  * over RNG-per-tick or batched-RNG so chain.apply attribution shows up in
  * combat outcomes end-to-end (OL-507 validation).
+ *
+ * Flow-field coupling (OL-608) adds a supply-side defense modifier: the
+ * defender's local flow is normalized by its faction's current max flow
+ * and scaled by `flowToDefenseModifier`, so a cell deep in friendly flow
+ * enjoys up to `+flowToDefenseModifier` defense while a frontier cell
+ * cut off from supply gets no bonus. The modifier multiplies the chain-
+ * computed defense (`defense × (1 + flowToDefenseModifier × flowFactor)`).
  */
 
 import {
@@ -29,6 +36,7 @@ import {
   type SpatialGrid,
 } from 'open-loop-engine';
 import { FACTION_IDS, type CellState, type FactionId } from './content';
+import type { FlowField } from './flow';
 
 const COMBAT_INTERVAL_S = 1;
 
@@ -54,10 +62,20 @@ export interface CombatSystemOptions {
   baseHp: DecimalSource;
   baseAttack: DecimalSource;
   baseDefense: DecimalSource;
+  /**
+   * Optional flow-field coupling. When present, defense is multiplied by
+   * `1 + flowToDefenseModifier × flowFactor` where `flowFactor` is the
+   * defender's flow at the cell normalized by its faction's current max
+   * flow, clamped to `[0, 1]`. Tests that exercise combat in isolation can
+   * omit both fields to run against a zero-flow baseline.
+   */
+  flow?: FlowField;
+  flowToDefenseModifier?: number;
 }
 
 export function createCombatSystem(opts: CombatSystemOptions): CombatSystem {
-  const { grid, chains, baseHp, baseAttack, baseDefense } = opts;
+  const { grid, chains, baseHp, baseAttack, baseDefense, flow, flowToDefenseModifier = 0 } = opts;
+  const flowActive = flow !== undefined && flowToDefenseModifier > 0;
 
   const totalFlipped: Record<FactionId, number> = {
     red: 0,
@@ -70,11 +88,19 @@ export function createCombatSystem(opts: CombatSystemOptions): CombatSystem {
   // Reused per-tick to avoid hot-path allocation.
   const frontier: Array<{ x: number; y: number; owner: FactionId }> = [];
   const attackerCounts: Partial<Record<FactionId, number>> = {};
+  // Per-faction max flow for this tick — recomputed each tick so normalization
+  // tracks live field state without introducing a cached ceiling (see OL-608
+  // uncertainty resolution).
+  const maxFlowByFaction: Partial<Record<FactionId, number>> = {};
 
   function tickOnce(): void {
     const w = grid.width;
     const h = grid.height;
     frontier.length = 0;
+
+    if (flowActive) {
+      for (const f of FACTION_IDS) maxFlowByFaction[f] = flow!.maxIntensity(f);
+    }
 
     // Single whole-grid scan builds the frontier set. "No per-faction-pair
     // scan" is the goal — this is O(W·H) once per tick, not O(W·H) × 4.
@@ -108,7 +134,15 @@ export function createCombatSystem(opts: CombatSystemOptions): CombatSystem {
         attackerCounts[nOwner] = (attackerCounts[nOwner] ?? 0) + 1;
       }
 
-      const defense = chains.defense[defender].apply(baseDefense);
+      let defense: DecimalSource = chains.defense[defender].apply(baseDefense);
+      if (flowActive) {
+        const maxFlow = maxFlowByFaction[defender] ?? 0;
+        if (maxFlow > 0) {
+          const rawFactor = flow!.intensity(defender, x, y) / maxFlow;
+          const flowFactor = rawFactor < 0 ? 0 : rawFactor > 1 ? 1 : rawFactor;
+          defense = Decimal.mul(defense, 1 + flowToDefenseModifier * flowFactor);
+        }
+      }
 
       // Strongest attacker (largest damage) claims the tick.
       let bestDamage: Decimal = new Decimal(0);

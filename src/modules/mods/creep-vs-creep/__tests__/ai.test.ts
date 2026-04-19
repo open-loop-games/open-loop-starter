@@ -293,7 +293,10 @@ describe('AI personality matchup acceptance', () => {
 
   // Four personalities × three opponents × 10 seeds = 120 matchups total.
   // Acceptance bar: each personality wins ≥1 seed somewhere in the grid.
-  it('each personality wins ≥1 of 10 seeded matchups against some opponent', () => {
+  // Timeout bumped to 15s — the 100×100 matchup grid runs right at the edge
+  // of the default 5s budget, and OL-608's per-tick flow-max pass adds a
+  // small constant overhead that pushed the default over on slower runners.
+  it('each personality wins ≥1 of 10 seeded matchups against some opponent', { timeout: 15_000 }, () => {
     const wins: Record<AiPersonality, number> = {
       expansionist: 0,
       defender: 0,

@@ -38,10 +38,19 @@ const vars = loadCreepVsCreepVars();
 const MAP_WIDTH = vars.archetype.mapWidth;
 const MAP_HEIGHT = vars.archetype.mapHeight;
 const HOTSPOT_REGEN_PER_SEC = vars.balance.hotspotRegenPerSec;
+const TIER_YIELD_MUL = {
+  near: vars.balance.nearHotspotYieldMul,
+  natural: vars.balance.naturalHotspotYieldMul,
+  contested: vars.balance.contestedHotspotYieldMul,
+  center: vars.balance.centerHotspotYieldMul,
+};
 
+// Fixtures use `natural` tier (mul 1.0) so yield math stays 1:1 with baseYield
+// for the extraction/regen/upgrade-amplification tests. The tier-multiplier
+// contract is covered separately in `applies per-tier yield multiplier`.
 const HOTSPOTS: HotspotDef[] = [
-  { id: 'hs-a', x: 10, y: 10, baseYield: 1, capacity: 100, tier: 'near' },
-  { id: 'hs-b', x: 40, y: 40, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-a', x: 10, y: 10, baseYield: 1, capacity: 100, tier: 'natural' },
+  { id: 'hs-b', x: 40, y: 40, baseYield: 1, capacity: 100, tier: 'natural' },
 ];
 
 function makeGrid(): SpatialGrid<CellState> {
@@ -92,6 +101,7 @@ describe('hotspot producers + reservoir', () => {
       essence,
       yieldChains,
       regenPerSec: HOTSPOT_REGEN_PER_SEC,
+      tierYieldMul: TIER_YIELD_MUL,
     });
   });
 
@@ -224,5 +234,70 @@ describe('hotspot producers + reservoir', () => {
 
     expect(boosted).toBeGreaterThan(baseline);
     expect(boosted).toBeCloseTo(baseline * 2, 3);
+  });
+});
+
+describe('hotspot tier multiplier', () => {
+  // Separate hotspot system with its own persistent-context namespace so the
+  // tier-ratio fixture doesn't collide with the natural-tier fixture above.
+  const TIER_HOTSPOTS: HotspotDef[] = [
+    { id: 'hs-tier-near', x: 5, y: 5, baseYield: 1, capacity: 100, tier: 'near' },
+    { id: 'hs-tier-contested', x: 15, y: 15, baseYield: 1, capacity: 100, tier: 'contested' },
+  ];
+
+  let grid: SpatialGrid<CellState>;
+  let essence: Record<FactionId, Resource<DecimalSource>>;
+  let hotspots: HotspotSystem;
+
+  beforeAll(() => {
+    grid = createSpatialGrid<CellState>({
+      width: MAP_WIDTH,
+      height: MAP_HEIGHT,
+      initializer: () => ({ terrain: 'open', owner: null, hp: 0, reservoir: 0 }),
+    });
+    for (let i = 0; i < grid.passable.length; i++) grid.passable[i] = 1;
+    for (const h of TIER_HOTSPOTS) {
+      grid.set(h.x, h.y, {
+        terrain: 'hotspot',
+        owner: 'red',
+        hp: 0,
+        hotspotId: h.id,
+        reservoir: h.capacity,
+      });
+    }
+    essence = {} as Record<FactionId, Resource<DecimalSource>>;
+    for (const f of FACTION_IDS) essence[f] = createResource<DecimalSource>(0);
+    const yieldChains = {} as Record<FactionId, ModifierChain>;
+    for (const f of FACTION_IDS) {
+      yieldChains[f] = createModifierChain(`tier-test/${f}/yield`);
+    }
+    hotspots = createHotspotSystem({
+      grid,
+      hotspots: TIER_HOTSPOTS,
+      essence,
+      yieldChains,
+      regenPerSec: 0,
+      tierYieldMul: TIER_YIELD_MUL,
+    });
+  });
+
+  it('contested pays out 3× a near hotspot at matching reservoir + baseYield', () => {
+    // Extract for one tick against full reservoir so reservoirFactor = 1 on
+    // both hotspots. Yield is `baseYield × reservoirFactor × tierMul` — with
+    // near=0.5 and contested=1.5 that's exactly 3×.
+    essence.red.value = 0;
+    for (const h of TIER_HOTSPOTS) {
+      grid.set(h.x, h.y, {
+        terrain: 'hotspot',
+        owner: 'red',
+        hp: 0,
+        hotspotId: h.id,
+        reservoir: h.capacity,
+      });
+    }
+    const nearYield = Number(hotspots.currentYield('red', 'hs-tier-near'));
+    const contestedYield = Number(hotspots.currentYield('red', 'hs-tier-contested'));
+    expect(nearYield).toBeGreaterThan(0);
+    expect(contestedYield / nearYield).toBeCloseTo(3, 5);
   });
 });

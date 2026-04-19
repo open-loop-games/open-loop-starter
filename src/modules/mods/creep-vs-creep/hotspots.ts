@@ -42,6 +42,7 @@ import {
   type CellState,
   type FactionId,
   type HotspotDef,
+  type HotspotTier,
 } from './content';
 
 export interface HotspotSystem {
@@ -65,10 +66,12 @@ export interface HotspotSystemOptions {
   yieldChains: Record<FactionId, ModifierChain>;
   /** Fraction of capacity per second; 10% per minute in the default tuning. */
   regenPerSec: number;
+  /** Per-tier yield multiplier applied before the yield chain. */
+  tierYieldMul: Record<HotspotTier, number>;
 }
 
 export function createHotspotSystem(opts: HotspotSystemOptions): HotspotSystem {
-  const { grid, hotspots, essence, yieldChains, regenPerSec } = opts;
+  const { grid, hotspots, essence, yieldChains, regenPerSec, tierYieldMul } = opts;
 
   const hotspotById = new Map<string, HotspotDef>();
   for (const h of hotspots) hotspotById.set(h.id, h);
@@ -85,7 +88,8 @@ export function createHotspotSystem(opts: HotspotSystemOptions): HotspotSystem {
     reservoir: DecimalSource,
   ): DecimalSource {
     const reservoirFactor = Decimal.div(reservoir, h.capacity);
-    const base = Decimal.mul(h.baseYield, reservoirFactor);
+    const tierMul = tierYieldMul[h.tier];
+    const base = Decimal.mul(Decimal.mul(h.baseYield, reservoirFactor), tierMul);
     return yieldChains[faction].apply(base);
   }
 

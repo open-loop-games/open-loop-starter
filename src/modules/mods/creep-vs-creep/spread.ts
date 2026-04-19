@@ -14,8 +14,21 @@
  *
  * Cadence is driven by an accumulator over the engine's main `onTick` —
  * the engine's `createLoop` is a constrained-replay primitive (Idle
- * Loops, Increlution), not a sub-tick scheduler. Flow-field coupling
- * (OL-608) will further bias the picker once OL-606 lands.
+ * Loops, Increlution), not a sub-tick scheduler.
+ *
+ * Flow-field coupling (OL-608) biases the picker toward expansions
+ * launched from well-supplied territory. The flow field lives on owned
+ * cells only (see flow.ts) so the candidate cell's intensity is always
+ * zero — we therefore bias by the *supplier* cell's flow instead:
+ *
+ *   weight *= 1 + flowToSpreadWeight × (flow(faction, sx, sy) / maxFlow)
+ *
+ * where (sx, sy) is the owned cell this candidate was expanded from and
+ * maxFlow is the faction's per-tick field maximum. A candidate pushed by
+ * multiple supplier cells accumulates multiple weighted entries — the
+ * more well-supplied sources you have, the stronger the bias. Bounded
+ * per-push at `1 + flowToSpreadWeight`; zero-everywhere field is a no-op
+ * (the `maxFlow > 0` guard collapses the branch).
  */
 
 import {
@@ -26,6 +39,7 @@ import {
   type SpatialGrid,
 } from 'open-loop-engine';
 import { FACTION_IDS, type CellState, type FactionId, type TerrainKind } from './content';
+import type { FlowField } from './flow';
 
 const SPREAD_INTERVAL_S = 1;
 
@@ -77,10 +91,19 @@ export interface SpreadSystemOptions {
   grid: SpatialGrid<CellState>;
   chains: SpreadChains;
   baseHp: DecimalSource;
+  /**
+   * Optional flow-field coupling. When present, candidate weights are
+   * multiplied by `1 + flowToSpreadWeight × (flow.intensity / maxIntensity)`
+   * per MAP.md § 3 / director.md § 5. Tests that exercise spread in isolation
+   * can omit both fields to run against a zero-flow baseline.
+   */
+  flow?: FlowField;
+  flowToSpreadWeight?: number;
 }
 
 export function createSpreadSystem(opts: SpreadSystemOptions): SpreadSystem {
-  const { grid, chains, baseHp } = opts;
+  const { grid, chains, baseHp, flow, flowToSpreadWeight = 0 } = opts;
+  const flowActive = flow !== undefined && flowToSpreadWeight > 0;
 
   const totalClaimed: Record<FactionId, number> = {
     red: 0,
@@ -97,9 +120,18 @@ export function createSpreadSystem(opts: SpreadSystemOptions): SpreadSystem {
     const h = grid.height;
     for (const faction of FACTION_IDS) {
       candidates.length = 0;
+      // Normalize against the faction's current max so the bias stays in
+      // [1, 1 + flowToSpreadWeight]. A zero-everywhere field falls through
+      // as `flowMul = 1` — no change.
+      const maxFlow = flowActive ? flow!.maxIntensity(faction) : 0;
+      const normDenom = maxFlow > 0 ? maxFlow : 1;
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           if (grid.at(x, y).owner !== faction) continue;
+          // Supplier flow is read per-owned-cell so repeated pushes of the
+          // same candidate via different suppliers get each supplier's bias.
+          const supplierFlow =
+            flowActive && maxFlow > 0 ? flow!.intensity(faction, x, y) / normDenom : 0;
           for (const n of grid.neighbors(x, y)) {
             const i = n.y * w + n.x;
             if (!grid.passable[i]) continue;
@@ -111,7 +143,11 @@ export function createSpreadSystem(opts: SpreadSystemOptions): SpreadSystem {
             for (const nn of grid.neighbors(n.x, n.y)) {
               if (grid.at(nn.x, nn.y).owner === faction) influence++;
             }
-            candidates.push({ x: n.x, y: n.y, weight: baseW * influence });
+            let weight = baseW * influence;
+            if (supplierFlow > 0) {
+              weight *= 1 + flowToSpreadWeight * supplierFlow;
+            }
+            candidates.push({ x: n.x, y: n.y, weight });
           }
         }
       }

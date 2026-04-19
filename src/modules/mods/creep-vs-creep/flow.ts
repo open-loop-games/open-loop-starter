@@ -40,6 +40,13 @@ const DIFFUSE_COEFF = 0.25;
 export interface FlowField {
   /** Read the flow intensity for a faction at a cell. Zero-returns for out-of-bounds. */
   intensity(faction: FactionId, x: number, y: number): number;
+  /**
+   * Current maximum intensity across the faction's field. Consumers divide by
+   * this to normalize a cell's intensity into `[0, 1]` for bounded couplings
+   * (spread bias, defense modifier). Returns `0` when the field is all-zero
+   * so callers can treat "no flow anywhere" as "no bias" uniformly.
+   */
+  maxIntensity(faction: FactionId): number;
   /** Add reinforcement at every owned cell (self + diffuse to same-faction neighbours). */
   applyReinforcement(): void;
   /** Multiply every cell by `exp(-decayPerSec × dt)`. */
@@ -78,6 +85,16 @@ export function createFlowField(opts: FlowFieldOptions): FlowField {
     return fields[faction][y * w + x];
   }
 
+  function maxIntensity(faction: FactionId): number {
+    const field = fields[faction];
+    let max = 0;
+    for (let i = 0; i < size; i++) {
+      const v = field[i];
+      if (v > max) max = v;
+    }
+    return max;
+  }
+
   function applyReinforcement(): void {
     const selfAdd = flowReinforcementPerTick;
     const neighbourAdd = flowReinforcementPerTick * DIFFUSE_COEFF;
@@ -114,5 +131,5 @@ export function createFlowField(opts: FlowFieldOptions): FlowField {
     }
   }
 
-  return { intensity, applyReinforcement, applyDecay, onEngineTick };
+  return { intensity, maxIntensity, applyReinforcement, applyDecay, onEngineTick };
 }

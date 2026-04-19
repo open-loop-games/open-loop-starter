@@ -124,11 +124,6 @@ export function createCreepWarfareModule(): EngineModule {
 
       const pes = createPersistentEffectSystem({ id: 'creep-warfare-effects' });
 
-      const spread = createSpreadSystem({
-        grid: grid.grid,
-        chains: spreadChains,
-        baseHp: vars.balance.baseHp,
-      });
       const flow = createFlowField({
         grid: grid.grid,
         balance: {
@@ -136,12 +131,21 @@ export function createCreepWarfareModule(): EngineModule {
           flowReinforcementPerTick: vars.balance.flowReinforcementPerTick,
         },
       });
+      const spread = createSpreadSystem({
+        grid: grid.grid,
+        chains: spreadChains,
+        baseHp: vars.balance.baseHp,
+        flow,
+        flowToSpreadWeight: vars.balance.flowToSpreadWeight,
+      });
       const combat = createCombatSystem({
         grid: grid.grid,
         chains: combatChains,
         baseHp: vars.balance.baseHp,
         baseAttack: vars.balance.baseAttack,
         baseDefense: vars.balance.baseDefense,
+        flow,
+        flowToDefenseModifier: vars.balance.flowToDefenseModifier,
       });
       const goals = createGoalSystem({
         pes,
@@ -166,6 +170,12 @@ export function createCreepWarfareModule(): EngineModule {
         essence,
         yieldChains,
         regenPerSec: vars.balance.hotspotRegenPerSec,
+        tierYieldMul: {
+          near: vars.balance.nearHotspotYieldMul,
+          natural: vars.balance.naturalHotspotYieldMul,
+          contested: vars.balance.contestedHotspotYieldMul,
+          center: vars.balance.centerHotspotYieldMul,
+        },
       });
       const upgrades = createUpgradeSystem({
         essence,
