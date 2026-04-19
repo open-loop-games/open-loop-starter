@@ -75,7 +75,7 @@ boundary. Each round proceeds as follows:
    synergy activation, and placement decisions made during prep.
 
 **Defining commitments** (all four must be present; absence of any one shifts the
-archetype toward Packer or Phase-Alternation):
+archetype toward Packer or Cycler):
 
 - **Draft pool acquisition.** Unit supply is shared and limited. Players compete for
   the same pool. Gold-based rerolling lets players fish for specific units at cost.
@@ -133,7 +133,7 @@ in taxonomy § 2D:
 - **Loop 6 (Resource Accumulation)** is the economic spine. Gold accumulates between
   rounds; interest on hoarding rewards patient play; round-end spending creates
   sawtooth economy rhythm. The interest mechanic is Auto-Battler's most distinctive
-  economic invention — it is not present in Packer, Phase-Alternation, or any
+  economic invention — it is not present in Packer, Cycler, or any
   Wave-1 archetype.
 
 - **Loop 14 (Cooldown/Energy)** provides pacing. The round timer gates the prep
@@ -154,7 +154,7 @@ in taxonomy § 2D:
 **Zero pre-2019 presence.** This is the critical finding from Phase 1 (scratch
 § "Critical finding #5: Auto-battler is 2019-native"). WC3 UMS corpus (101 maps):
 zero Auto-battler hits. Flash era corpus (45 entries): zero Auto-battler hits.
-The closest WC3 UMS candidate, Hero Line Wars Starlight, is Phase-Alternation-shaped
+The closest WC3 UMS candidate, Hero Line Wars Starlight, is Cycler-shaped
 (build-phase + wave-defense cyclical), not Auto-Battler-shaped. No artistic heritage
 from pre-2019 connects to the Auto-Battler structure.
 

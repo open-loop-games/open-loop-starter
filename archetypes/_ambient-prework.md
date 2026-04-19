@@ -20,7 +20,7 @@
 ## Source context
 
 **Umbrella ticket:** OL-558 — Arcade + Market Archetype Corpus Survey (seven
-Wave-2 candidates: Defender, Survivor, Packer, Ambient, Phase-Alternation,
+Wave-2 candidates: Defender, Survivor, Packer, Ambient, Cycler,
 Tug, Auto-battler).
 
 **Phase 1 (OL-559):** Five-corpus evidence pass (WC3 UMS, SC2 Arcade, Dota 2

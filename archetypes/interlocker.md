@@ -37,7 +37,7 @@ A thirty-minute session in Interlocker is a sequence of structural moments: *"I 
 
 - **Paragon-style soft prestige** — Kittens Game's paragon-at-reset layer. A single-tier prestige over the graph that grants permanent multipliers. Keeps the spirit without turning into Scaler (which makes prestige the axis, not a layer).
 - **Spatial placement** — Industry Idle's hex/square grid with tile modifiers and adjacency bonuses. Promotes Interlocker toward Explorer territory but stays Interlocker-shaped if the grid is decorative rather than the core lever.
-- **Seasonal / cyclical modifiers** — Kittens Game's winter catnip penalty. Phase-alternation cross-pattern layer on top of the static graph; cheap to add, high flavour yield.
+- **Seasonal / cyclical modifiers** — Kittens Game's winter catnip penalty. A cyclical-phase modifier layer on top of the static graph; cheap to add, high flavour yield.
 
 **Novel-patterns cluster alignment:** n/a — Interlocker is a baseline composition. It is the archetype cluster 4b (Variable Interaction Grids) and cluster 7 (Resource Graph Depth) describe deviations from. If the graph gains spatial placement as the core lever, it has become a Director / Explorer hybrid and should be reshaped rather than themed.
 
