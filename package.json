@@ -13,7 +13,12 @@
     "validate:archetypes": "vitest run scripts/validate-archetypes/",
     "lint": "eslint src/",
     "format": "prettier --write \"src/**/*.{ts,vue,css,html}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,vue,css,html}\""
+    "format:check": "prettier --check \"src/**/*.{ts,vue,css,html}\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,vue,css,html,json}": "prettier --write",
+    "*.{ts,vue}": "eslint --fix"
   },
   "dependencies": {
     "break_eternity.js": "^2.1.3",
@@ -30,7 +35,9 @@
     "eslint": "^10.1.0",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.4.0",
+    "husky": "^9.1.7",
     "jsdom": "^24.1.1",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.58.0",
