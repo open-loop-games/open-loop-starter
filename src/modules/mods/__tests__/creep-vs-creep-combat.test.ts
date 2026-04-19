@@ -6,17 +6,15 @@ import {
   withPersistentContext,
   type ModifierChain,
 } from 'open-loop-engine';
-import {
-  BASE_HP,
-  FACTION_IDS,
-  type CellState,
-  type FactionId,
-} from '../creep-vs-creep/content';
+import { FACTION_IDS, type CellState, type FactionId } from '../creep-vs-creep/content';
 import { createCombatSystem } from '../creep-vs-creep/combat';
 import { createCreepGrid, type CreepGrid } from '../creep-vs-creep/grid';
+import { loadCreepVsCreepVars } from '../creep-vs-creep/vars';
+
+const vars = loadCreepVsCreepVars();
 
 function buildGrid(): CreepGrid {
-  return withPersistentContext('test-creep-warfare-combat', () => createCreepGrid());
+  return withPersistentContext('test-creep-warfare-combat', () => createCreepGrid(vars));
 }
 
 function buildChains(): {
@@ -34,6 +32,16 @@ function buildChains(): {
   });
 }
 
+function buildCombat(cg: CreepGrid, chains: ReturnType<typeof buildChains>) {
+  return createCombatSystem({
+    grid: cg.grid,
+    chains,
+    baseHp: vars.balance.baseHp,
+    baseAttack: vars.balance.baseAttack,
+    baseDefense: vars.balance.baseDefense,
+  });
+}
+
 function seedPair(
   cg: CreepGrid,
   ax: number,
@@ -42,7 +50,7 @@ function seedPair(
   by: number,
   aOwner: FactionId,
   bOwner: FactionId,
-  hp: string = BASE_HP as string,
+  hp: string = vars.balance.baseHp.toString(),
 ): void {
   const a: CellState = { ...cg.grid.at(ax, ay), owner: aOwner, hp };
   const b: CellState = { ...cg.grid.at(bx, by), owner: bOwner, hp };
@@ -52,10 +60,10 @@ function seedPair(
 
 describe('creep-vs-creep combat', () => {
   it('frontier defender loses HP per tick at the expected rate', () => {
-    // Baseline damage with no chain bindings: BASE_ATTACK(10) × 1 neighbour
-    //  − BASE_DEFENSE(5) = 5/tick. One edge only; no asymmetry.
+    // Baseline damage with no chain bindings: baseAttack(10) × 1 neighbour
+    //  − baseDefense(5) = 5/tick. One edge only; no asymmetry.
     const cg = buildGrid();
-    const combat = createCombatSystem(cg.grid, buildChains());
+    const combat = buildCombat(cg, buildChains());
     seedPair(cg, 10, 10, 11, 10, 'red', 'blue');
 
     combat.tickOnce();
@@ -67,7 +75,7 @@ describe('creep-vs-creep combat', () => {
     expect(new Decimal(cg.grid.at(11, 10).hp).toNumber()).toBe(75);
   });
 
-  it('flips a cell to the killing attacker and resets HP to BASE_HP', () => {
+  it('flips a cell to the killing attacker and resets HP to baseHp', () => {
     // Red buffed enough to one-shot through base defense. Blue is unbuffed,
     // so red's cell survives the first tick and claims blue on the second.
     const cg = buildGrid();
@@ -79,16 +87,16 @@ describe('creep-vs-creep combat', () => {
           description: 'test:red one-shot',
         }),
     });
-    const combat = createCombatSystem(cg.grid, chains);
+    const combat = buildCombat(cg, chains);
     seedPair(cg, 10, 10, 11, 10, 'red', 'blue');
 
     combat.tickOnce();
-    // Blue dies this tick (damage 205 > HP 100), flips to red at BASE_HP.
+    // Blue dies this tick (damage 205 > HP 100), flips to red at baseHp.
     // Red also takes a tick of damage from blue before the frontier scan
     // sees the flip, so red's HP drops normally this tick.
     expect(cg.grid.at(11, 10).owner).toBe('red');
     expect(new Decimal(cg.grid.at(11, 10).hp).toString()).toBe(
-      new Decimal(BASE_HP).toString(),
+      new Decimal(vars.balance.baseHp).toString(),
     );
     expect(combat.totalFlipped.red).toBe(1);
   });
@@ -96,7 +104,7 @@ describe('creep-vs-creep combat', () => {
   it('chain.bind on attackChain measurably accelerates flip cadence', () => {
     const baseline = buildGrid();
     const baselineChains = buildChains();
-    const baselineCombat = createCombatSystem(baseline.grid, baselineChains);
+    const baselineCombat = buildCombat(baseline, baselineChains);
     seedPair(baseline, 10, 10, 11, 10, 'red', 'blue');
 
     const buffed = buildGrid();
@@ -105,7 +113,7 @@ describe('creep-vs-creep combat', () => {
       modifier: () =>
         createAdditiveModifier({ addend: 45, description: 'test:red buff' }),
     });
-    const buffedCombat = createCombatSystem(buffed.grid, buffedChains);
+    const buffedCombat = buildCombat(buffed, buffedChains);
     seedPair(buffed, 10, 10, 11, 10, 'red', 'blue');
 
     // Baseline: 5 dmg/tick against blue → blue survives for 20 ticks.
@@ -125,12 +133,12 @@ describe('creep-vs-creep combat', () => {
       modifier: () =>
         createAdditiveModifier({ addend: 100, description: 'test:blue wall' }),
     });
-    const combat = createCombatSystem(cg.grid, chains);
+    const combat = buildCombat(cg, chains);
     seedPair(cg, 10, 10, 11, 10, 'red', 'blue');
 
     for (let t = 0; t < 5; t++) combat.tickOnce();
     expect(new Decimal(cg.grid.at(11, 10).hp).toNumber()).toBe(
-      new Decimal(BASE_HP).toNumber(),
+      new Decimal(vars.balance.baseHp).toNumber(),
     );
     expect(cg.grid.at(11, 10).owner).toBe('blue');
   });

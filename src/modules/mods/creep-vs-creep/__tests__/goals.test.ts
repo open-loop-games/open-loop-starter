@@ -25,12 +25,15 @@ import {
 import { createGoalSystem, type GoalChains, type GoalSystem } from '../goals';
 import {
   FACTION_IDS,
-  MAP_HEIGHT,
-  MAP_WIDTH,
   type CellState,
   type FactionId,
   type HotspotDef,
 } from '../content';
+import { loadCreepVsCreepVars } from '../vars';
+
+const vars = loadCreepVsCreepVars();
+const MAP_WIDTH = vars.archetype.mapWidth;
+const MAP_HEIGHT = vars.archetype.mapHeight;
 
 function makeChains(namespace: string): GoalChains {
   const build = (kind: string): Record<FactionId, ModifierChain> => {
@@ -73,7 +76,14 @@ describe('goal-slot system', () => {
     chains = makeChains('test-goals');
     grid = makeTestGrid();
     const pes = createPersistentEffectSystem({ id: 'test-goal-effects' });
-    goals = createGoalSystem(pes, chains, HOTSPOTS, grid);
+    goals = createGoalSystem({
+      pes,
+      chains,
+      hotspots: HOTSPOTS,
+      grid,
+      startingGoalSlots: vars.archetype.startingGoalSlots,
+      goalMultiplier: vars.balance.goalMultiplier,
+    });
   });
 
   beforeEach(async () => {

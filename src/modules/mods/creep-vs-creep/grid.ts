@@ -2,8 +2,8 @@
  * SpatialGrid wiring + structure-level snapshot persistence.
  *
  * Per OL-493 spec: one `persistent()` ref holds the entire serialized grid
- * state. Per-cell `persistent()` is explicitly rejected — at MAP_WIDTH ×
- * MAP_HEIGHT = 3600 cells that would balloon the save schema.
+ * state. Per-cell `persistent()` is explicitly rejected — at width × height
+ * cells that would balloon the save schema.
  *
  * The plain-data grid mutates in place during ticks; we capture into the
  * snapshot ref on save and restore from it on load.
@@ -22,9 +22,8 @@ import {
   type SpatialGrid,
   type SpatialGridSnapshot,
 } from 'open-loop-engine';
+import type { DirectorVars } from '@/archetypes/director';
 import {
-  MAP_HEIGHT,
-  MAP_WIDTH,
   type CellState,
   type FactionId,
   type PersistedCellState,
@@ -92,12 +91,15 @@ function fromPersisted(
   };
 }
 
-export function createCreepGrid(): CreepGrid {
-  const blueprint = generateSymmetricMap();
+export function createCreepGrid(vars: DirectorVars): CreepGrid {
+  const blueprint = generateSymmetricMap({
+    archetype: vars.archetype,
+    balance: vars.balance,
+  });
   const grid = createSpatialGrid<CellState>({
-    width: MAP_WIDTH,
-    height: MAP_HEIGHT,
-    initializer: (x, y) => blueprint.cells[y * MAP_WIDTH + x],
+    width: blueprint.width,
+    height: blueprint.height,
+    initializer: (x, y) => blueprint.cells[y * blueprint.width + x],
   });
   for (let i = 0; i < grid.passable.length; i++) {
     grid.passable[i] = blueprint.passable[i];
@@ -110,7 +112,11 @@ export function createCreepGrid(): CreepGrid {
   );
 
   function regenerate(factionOrder: readonly FactionId[]): void {
-    const fresh = generateSymmetricMap(factionOrder);
+    const fresh = generateSymmetricMap({
+      archetype: vars.archetype,
+      balance: vars.balance,
+      factionOrder,
+    });
     // Mutate in place so AI spawn-proximity lookups (ai.ts `spawns()` getter)
     // and any external consumers holding `blueprint.cells` etc. see the new
     // geometry without re-capturing references.
@@ -125,10 +131,10 @@ export function createCreepGrid(): CreepGrid {
     // Re-seed the spatial grid from the fresh blueprint. Using restore rather
     // than per-cell set avoids firing one `cellChanged` emit per cell; the
     // round transition is not an incremental mutation.
-    const size = MAP_WIDTH * MAP_HEIGHT;
+    const size = grid.width * grid.height;
     grid.restore({
-      width: MAP_WIDTH,
-      height: MAP_HEIGHT,
+      width: grid.width,
+      height: grid.height,
       cells: blueprint.cells.map((c) => ({ ...c })),
       passable: [...blueprint.passable],
       explored: new Array(size).fill(0),

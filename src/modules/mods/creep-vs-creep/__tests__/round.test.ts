@@ -32,15 +32,19 @@ import { createUpgradeSystem, type UpgradeSystem } from '../upgrades';
 import { createRoundSystem, type RoundSystem } from '../round';
 import { createMetaSystem, type MetaSystem } from '../meta';
 import {
-  BASE_HP,
-  FACTION_ESSENCE_NAMES,
   FACTION_IDS,
-  META_UPGRADE_DEFS,
-  PLAYER_FACTION,
-  STARTING_GOAL_SLOTS,
   UPGRADE_DEFS,
+  metaUpgradeDefs,
   type FactionId,
 } from '../content';
+import { loadCreepVsCreepVars } from '../vars';
+
+const vars = loadCreepVsCreepVars();
+const BASE_HP = vars.balance.baseHp;
+const PLAYER_FACTION = vars.archetype.playerFaction;
+const STARTING_GOAL_SLOTS = vars.archetype.startingGoalSlots;
+const META_UPGRADE_DEFS = metaUpgradeDefs(vars.archetype.maxGoalSlots, vars.archetype.startingGoalSlots);
+const FACTION_ESSENCE_NAMES = vars.theme.factionEssenceNames;
 
 interface AllChains {
   attack: Record<FactionId, ModifierChain>;
@@ -72,7 +76,7 @@ describe('round lifecycle + reset', () => {
   let meta: MetaSystem;
 
   beforeAll(() => {
-    grid = createCreepGrid();
+    grid = createCreepGrid(vars);
     chains = buildChains();
 
     essence = withPersistentContext('creep-warfare-essence', () => {
@@ -84,8 +88,19 @@ describe('round lifecycle + reset', () => {
     });
 
     const pes = createPersistentEffectSystem({ id: 'round-test-effects' });
-    goals = createGoalSystem(pes, chains, grid.blueprint.hotspots, grid.grid);
-    upgrades = createUpgradeSystem({ essence, chains });
+    goals = createGoalSystem({
+      pes,
+      chains,
+      hotspots: grid.blueprint.hotspots,
+      grid: grid.grid,
+      startingGoalSlots: vars.archetype.startingGoalSlots,
+      goalMultiplier: vars.balance.goalMultiplier,
+    });
+    upgrades = createUpgradeSystem({
+      essence,
+      chains,
+      maxLevel: vars.balance.essenceUpgradeMaxLevel,
+    });
     const upgradeAmounts = FACTION_IDS.flatMap((f) => {
       const cat = upgrades.categoriesByFaction[f];
       return UPGRADE_DEFS.map((def) => cat.getPurchasable(def.id)!.amount);
@@ -95,11 +110,20 @@ describe('round lifecycle + reset', () => {
       creepGrid: grid,
       hotspots: grid.blueprint.hotspots,
       extraResettables: upgradeAmounts,
+      roundLengthSec: vars.archetype.roundLengthSec,
+      endOfRoundCountdownSec: vars.archetype.endOfRoundCountdownSec,
+      metaCurrencyPerCell: vars.balance.metaCurrencyPerCell,
+      metaCurrencyPerHotspot: vars.balance.metaCurrencyPerHotspot,
+      metaCurrencyName: vars.theme.metaCurrencyName,
+      playerFaction: vars.archetype.playerFaction,
     });
     meta = createMetaSystem({
       metaCurrency: round.metaCurrency,
       chains,
       slotCapacity: goals.capacity,
+      playerFaction: vars.archetype.playerFaction,
+      maxGoalSlots: vars.archetype.maxGoalSlots,
+      metaUpgradeDefs: META_UPGRADE_DEFS,
     });
   });
 

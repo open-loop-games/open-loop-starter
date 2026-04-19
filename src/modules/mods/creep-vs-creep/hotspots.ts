@@ -39,7 +39,6 @@ import {
   type SpatialGrid,
 } from 'open-loop-engine';
 import {
-  HOTSPOT_REGEN_PER_SEC,
   type CellState,
   type FactionId,
   type HotspotDef,
@@ -64,10 +63,12 @@ export interface HotspotSystemOptions {
   hotspots: readonly HotspotDef[];
   essence: Record<FactionId, Resource<DecimalSource>>;
   yieldChains: Record<FactionId, ModifierChain>;
+  /** Fraction of capacity per second; 10% per minute in the default tuning. */
+  regenPerSec: number;
 }
 
 export function createHotspotSystem(opts: HotspotSystemOptions): HotspotSystem {
-  const { grid, hotspots, essence, yieldChains } = opts;
+  const { grid, hotspots, essence, yieldChains, regenPerSec } = opts;
 
   const hotspotById = new Map<string, HotspotDef>();
   for (const h of hotspots) hotspotById.set(h.id, h);
@@ -112,7 +113,7 @@ export function createHotspotSystem(opts: HotspotSystemOptions): HotspotSystem {
         }
       }
 
-      const regen = Decimal.mul(h.capacity, HOTSPOT_REGEN_PER_SEC * dt);
+      const regen = Decimal.mul(h.capacity, regenPerSec * dt);
       next = Decimal.min(h.capacity, Decimal.add(next, regen));
 
       // Direct field write — reservoir is per-tick state, not a semantic cell

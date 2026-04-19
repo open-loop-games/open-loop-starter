@@ -30,15 +30,18 @@ import { createUpgradeSystem, type UpgradeSystem } from '../upgrades';
 import { createRoundSystem, type RoundSystem } from '../round';
 import { createAchievementSystem, type AchievementSystem } from '../achievements';
 import {
-  BASE_HP,
-  FACTION_ESSENCE_NAMES,
   FACTION_IDS,
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  PLAYER_FACTION,
   UPGRADE_DEFS,
   type FactionId,
 } from '../content';
+import { loadCreepVsCreepVars } from '../vars';
+
+const vars = loadCreepVsCreepVars();
+const MAP_WIDTH = vars.archetype.mapWidth;
+const MAP_HEIGHT = vars.archetype.mapHeight;
+const BASE_HP = vars.balance.baseHp;
+const PLAYER_FACTION = vars.archetype.playerFaction;
+const FACTION_ESSENCE_NAMES = vars.theme.factionEssenceNames;
 
 interface AllChains {
   attack: Record<FactionId, ModifierChain>;
@@ -96,7 +99,7 @@ describe('creep-warfare achievements', () => {
   let sys: AchievementSystem;
 
   beforeAll(() => {
-    grid = createCreepGrid();
+    grid = createCreepGrid(vars);
     const chains = buildChains();
 
     const essence = withPersistentContext('creep-warfare-essence', () => {
@@ -108,8 +111,19 @@ describe('creep-warfare achievements', () => {
     });
 
     const pes = createPersistentEffectSystem({ id: 'achievements-test-effects' });
-    createGoalSystem(pes, chains, grid.blueprint.hotspots, grid.grid);
-    upgrades = createUpgradeSystem({ essence, chains });
+    createGoalSystem({
+      pes,
+      chains,
+      hotspots: grid.blueprint.hotspots,
+      grid: grid.grid,
+      startingGoalSlots: vars.archetype.startingGoalSlots,
+      goalMultiplier: vars.balance.goalMultiplier,
+    });
+    upgrades = createUpgradeSystem({
+      essence,
+      chains,
+      maxLevel: vars.balance.essenceUpgradeMaxLevel,
+    });
     const upgradeAmounts = FACTION_IDS.flatMap((f) => {
       const cat = upgrades.categoriesByFaction[f];
       return UPGRADE_DEFS.map((def) => cat.getPurchasable(def.id)!.amount);
@@ -119,11 +133,18 @@ describe('creep-warfare achievements', () => {
       creepGrid: grid,
       hotspots: grid.blueprint.hotspots,
       extraResettables: upgradeAmounts,
+      roundLengthSec: vars.archetype.roundLengthSec,
+      endOfRoundCountdownSec: vars.archetype.endOfRoundCountdownSec,
+      metaCurrencyPerCell: vars.balance.metaCurrencyPerCell,
+      metaCurrencyPerHotspot: vars.balance.metaCurrencyPerHotspot,
+      metaCurrencyName: vars.theme.metaCurrencyName,
+      playerFaction: vars.archetype.playerFaction,
     });
     sys = createAchievementSystem({
       grid: grid.grid,
       hotspots: grid.blueprint.hotspots,
       round,
+      playerFaction: vars.archetype.playerFaction,
     });
   });
 

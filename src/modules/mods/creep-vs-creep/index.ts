@@ -15,6 +15,11 @@
  * is driven by completion predicates, not by slot callbacks — load
  * reconstruction is implicit and stale goals drop their multiplier the
  * tick they complete.
+ *
+ * OL-605 layered vars over the mod: mechanical tuning moves to
+ * `vars/{archetype,theme,balance}.ts` against the Director archetype
+ * default set. `install()` resolves vars once and passes slices to each
+ * sub-system constructor.
  */
 
 import {
@@ -29,7 +34,13 @@ import {
   type ModifierChain,
   type Resource,
 } from 'open-loop-engine';
-import { FACTION_ESSENCE_NAMES, FACTION_IDS, UPGRADE_DEFS, type FactionId } from './content';
+import type { DirectorVars } from '@/archetypes/director';
+import {
+  FACTION_IDS,
+  UPGRADE_DEFS,
+  metaUpgradeDefs,
+  type FactionId,
+} from './content';
 import {
   createCombatSystem,
   type CombatChains,
@@ -44,6 +55,7 @@ import { createUpgradeSystem, type UpgradeSystem } from './upgrades';
 import { createRoundSystem, type RoundSystem } from './round';
 import { createMetaSystem, type MetaSystem } from './meta';
 import { createAchievementSystem, type AchievementSystem } from './achievements';
+import { loadCreepVsCreepVars } from './vars';
 import { setSlot } from '@/modules/ui-registry';
 import CreepWarfareLayout from '@/ui/layouts/CreepWarfareLayout.vue';
 
@@ -66,6 +78,8 @@ export interface CreepWarfareState {
     yield: Record<FactionId, ModifierChain>;
   };
   factions: readonly FactionId[];
+  /** Merged Director vars the sub-systems are running against. */
+  vars: DirectorVars;
 }
 
 export const CreepWarfareKey: InjectionKey<CreepWarfareState> = Symbol(
@@ -87,7 +101,8 @@ export function createCreepWarfareModule(): EngineModule {
     id: 'creep-warfare',
     dependencies: ['settings', 'ui-registry'],
     install(ctx: EngineContext) {
-      const grid = withPersistentContext('creep-warfare-map', () => createCreepGrid());
+      const vars = loadCreepVsCreepVars();
+      const grid = withPersistentContext('creep-warfare-map', () => createCreepGrid(vars));
 
       const attack = buildFactionChains('attack');
       const defense = buildFactionChains('defense');
@@ -99,7 +114,7 @@ export function createCreepWarfareModule(): EngineModule {
         const out = {} as Record<FactionId, Resource<DecimalSource>>;
         for (const f of FACTION_IDS) {
           out[f] = createResource<DecimalSource>(0, {
-            displayName: FACTION_ESSENCE_NAMES[f],
+            displayName: vars.theme.factionEssenceNames[f],
           });
         }
         return out;
@@ -107,25 +122,41 @@ export function createCreepWarfareModule(): EngineModule {
 
       const pes = createPersistentEffectSystem({ id: 'creep-warfare-effects' });
 
-      const spread = createSpreadSystem(grid.grid, spreadChains);
-      const combat = createCombatSystem(grid.grid, combatChains);
-      const goals = createGoalSystem(
+      const spread = createSpreadSystem({
+        grid: grid.grid,
+        chains: spreadChains,
+        baseHp: vars.balance.baseHp,
+      });
+      const combat = createCombatSystem({
+        grid: grid.grid,
+        chains: combatChains,
+        baseHp: vars.balance.baseHp,
+        baseAttack: vars.balance.baseAttack,
+        baseDefense: vars.balance.baseDefense,
+      });
+      const goals = createGoalSystem({
         pes,
-        { attack, defense, spread: spreadChains },
-        grid.blueprint.hotspots,
-        grid.grid,
-      );
+        chains: { attack, defense, spread: spreadChains },
+        hotspots: grid.blueprint.hotspots,
+        grid: grid.grid,
+        startingGoalSlots: vars.archetype.startingGoalSlots,
+        goalMultiplier: vars.balance.goalMultiplier,
+      });
       const ai = createAiSystem({
         grid: grid.grid,
         goals,
         hotspots: grid.blueprint.hotspots,
         spawns: () => grid.blueprint.spawns,
+        playerFaction: vars.archetype.playerFaction,
+        factionPersonalities: vars.balance.factionPersonalities,
+        aiIntervalSec: vars.balance.aiIntervalSec,
       });
       const hotspots = createHotspotSystem({
         grid: grid.grid,
         hotspots: grid.blueprint.hotspots,
         essence,
         yieldChains,
+        regenPerSec: vars.balance.hotspotRegenPerSec,
       });
       const upgrades = createUpgradeSystem({
         essence,
@@ -135,6 +166,7 @@ export function createCreepWarfareModule(): EngineModule {
           attack,
           defense,
         },
+        maxLevel: vars.balance.essenceUpgradeMaxLevel,
       });
 
       // Round-scoped per-faction essence upgrade amounts (OL-510). The
@@ -153,6 +185,12 @@ export function createCreepWarfareModule(): EngineModule {
         creepGrid: grid,
         hotspots: grid.blueprint.hotspots,
         extraResettables: upgradeAmounts,
+        roundLengthSec: vars.archetype.roundLengthSec,
+        endOfRoundCountdownSec: vars.archetype.endOfRoundCountdownSec,
+        metaCurrencyPerCell: vars.balance.metaCurrencyPerCell,
+        metaCurrencyPerHotspot: vars.balance.metaCurrencyPerHotspot,
+        metaCurrencyName: vars.theme.metaCurrencyName,
+        playerFaction: vars.archetype.playerFaction,
       });
 
       const meta = createMetaSystem({
@@ -164,12 +202,19 @@ export function createCreepWarfareModule(): EngineModule {
           defense,
         },
         slotCapacity: goals.capacity,
+        playerFaction: vars.archetype.playerFaction,
+        maxGoalSlots: vars.archetype.maxGoalSlots,
+        metaUpgradeDefs: metaUpgradeDefs(
+          vars.archetype.maxGoalSlots,
+          vars.archetype.startingGoalSlots,
+        ),
       });
 
       const achievements = createAchievementSystem({
         grid: grid.grid,
         hotspots: grid.blueprint.hotspots,
         round,
+        playerFaction: vars.archetype.playerFaction,
       });
 
       // Bridge plain-data grid mutations into the persistent snapshot ref.
@@ -208,6 +253,7 @@ export function createCreepWarfareModule(): EngineModule {
         essence,
         chains: { attack, defense, spread: spreadChains, yield: yieldChains },
         factions: FACTION_IDS,
+        vars,
       };
       ctx.provide(CreepWarfareKey, state);
       setSlot('game-layout', CreepWarfareLayout);

@@ -27,6 +27,9 @@ import {
   type FactionId,
   type UpgradeTarget,
 } from '../content';
+import { loadCreepVsCreepVars } from '../vars';
+
+const vars = loadCreepVsCreepVars();
 
 function buildChains(): UpgradeChains {
   const kinds: UpgradeTarget[] = ['yield', 'spread', 'attack', 'defense'];
@@ -48,7 +51,11 @@ describe('upgrade system', () => {
     essence = {} as Record<FactionId, Resource<DecimalSource>>;
     for (const f of FACTION_IDS) essence[f] = createResource<DecimalSource>(0);
     chains = buildChains();
-    upgrades = createUpgradeSystem({ essence, chains });
+    upgrades = createUpgradeSystem({
+      essence,
+      chains,
+      maxLevel: vars.balance.essenceUpgradeMaxLevel,
+    });
   });
 
   it('registers one purchasable per upgrade def per faction', () => {

@@ -43,7 +43,6 @@ import {
 import {
   FACTION_IDS,
   UPGRADE_DEFS,
-  UPGRADE_MAX_LEVEL,
   type FactionId,
   type UpgradeDef,
   type UpgradeTarget,
@@ -66,6 +65,8 @@ export interface UpgradeSystem {
 export interface UpgradeSystemOptions {
   essence: Record<FactionId, Resource<DecimalSource>>;
   chains: UpgradeChains;
+  /** Max level per essence-tier upgrade row; defaults to Director's `balance.essenceUpgradeMaxLevel`. */
+  maxLevel: DecimalSource;
 }
 
 function chainFor(chains: UpgradeChains, faction: FactionId, target: UpgradeTarget): ModifierChain {
@@ -73,7 +74,7 @@ function chainFor(chains: UpgradeChains, faction: FactionId, target: UpgradeTarg
 }
 
 export function createUpgradeSystem(opts: UpgradeSystemOptions): UpgradeSystem {
-  const { essence, chains } = opts;
+  const { essence, chains, maxLevel } = opts;
 
   const categoriesByFaction = {} as Record<FactionId, PurchasableCategory<UpgradeDef>>;
 
@@ -97,7 +98,7 @@ export function createUpgradeSystem(opts: UpgradeSystemOptions): UpgradeSystem {
             },
             description: `${def.name} cost`,
           }),
-          limit: UPGRADE_MAX_LEVEL,
+          limit: maxLevel,
         }),
       }),
     );

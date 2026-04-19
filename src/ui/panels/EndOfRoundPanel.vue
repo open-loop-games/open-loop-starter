@@ -3,7 +3,7 @@ import { computed, toValue } from 'vue';
 import { Decimal, format, type DecimalSource, type Purchasable } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { CreepWarfareKey } from '@/modules/mods/creep-vs-creep';
-import { META_CURRENCY_NAME, META_UPGRADE_DEFS } from '@/modules/mods/creep-vs-creep/content';
+import { metaUpgradeDefs } from '@/modules/mods/creep-vs-creep/content';
 
 const state = useModule(CreepWarfareKey);
 
@@ -12,12 +12,19 @@ const meta = computed(() => format(Decimal.floor(state.round.metaCurrency.value)
 const awarded = computed(() => format(state.round.awardedReward.value));
 const stats = computed(() => state.round.stats.value);
 const capacity = computed(() => state.goals.capacity.value);
+const metaCurrencyName = computed(() => state.vars.theme.metaCurrencyName);
+
+const upgradeDefs = computed(() =>
+  metaUpgradeDefs(state.vars.archetype.maxGoalSlots, state.vars.archetype.startingGoalSlots),
+);
 
 const entries = computed(() =>
-  META_UPGRADE_DEFS.map((def) => {
-    const p = state.meta.get(def.id);
-    return { def, p };
-  }).filter((e): e is { def: typeof e.def; p: Purchasable } => e.p != null),
+  upgradeDefs.value
+    .map((def) => {
+      const p = state.meta.get(def.id);
+      return { def, p };
+    })
+    .filter((e): e is { def: typeof e.def; p: Purchasable } => e.p != null),
 );
 
 function buy(p: Purchasable) {
@@ -50,11 +57,11 @@ function startNext() {
         <span class="value">{{ stats.survivingFactions }}</span>
       </div>
       <div class="row reward">
-        <span class="label">{{ META_CURRENCY_NAME }} earned</span>
+        <span class="label">{{ metaCurrencyName }} earned</span>
         <span class="value">+{{ awarded }}</span>
       </div>
       <div class="row">
-        <span class="label">Total {{ META_CURRENCY_NAME }}</span>
+        <span class="label">Total {{ metaCurrencyName }}</span>
         <span class="value">{{ meta }}</span>
       </div>
       <div class="row">

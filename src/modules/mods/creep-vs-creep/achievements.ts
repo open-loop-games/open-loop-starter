@@ -31,13 +31,8 @@ import {
   type SpatialGrid,
 } from 'open-loop-engine';
 import { ref } from 'vue';
-import {
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  PLAYER_FACTION,
-  type CellState,
-  type HotspotDef,
-} from './content';
+import type { DirectorFactionId } from '@/archetypes/director';
+import { type CellState, type HotspotDef } from './content';
 import type { RoundSystem } from './round';
 
 export interface AchievementDef {
@@ -46,39 +41,40 @@ export interface AchievementDef {
   description: string;
 }
 
-const TOTAL_CELLS = MAP_WIDTH * MAP_HEIGHT;
 const FIRST_QUARTER_THRESHOLD = 0.25;
 const LANDSLIDE_THRESHOLD = 0.75;
 const BLITZKRIEG_MAX_ELAPSED_S = 60;
 const TOTAL_DOMINANCE_REQUIRED_S = 30;
 
-export const ACHIEVEMENT_DEFS: readonly AchievementDef[] = [
-  {
-    id: 'first-quarter',
-    title: 'Staked a Claim',
-    description: `Own 25% of the map as the ${PLAYER_FACTION} faction.`,
-  },
-  {
-    id: 'landslide',
-    title: 'Landslide Victory',
-    description: 'End a round holding 75% or more of the map.',
-  },
-  {
-    id: 'sole-survivor',
-    title: 'Sole Survivor',
-    description: 'End a round as the only surviving faction.',
-  },
-  {
-    id: 'blitzkrieg',
-    title: 'Blitzkrieg',
-    description: `Wipe out every rival faction in under ${BLITZKRIEG_MAX_ELAPSED_S} seconds.`,
-  },
-  {
-    id: 'total-dominance',
-    title: 'Total Dominance',
-    description: `Hold every hotspot simultaneously for ${TOTAL_DOMINANCE_REQUIRED_S} continuous seconds.`,
-  },
-];
+export function achievementDefs(playerFaction: DirectorFactionId): readonly AchievementDef[] {
+  return [
+    {
+      id: 'first-quarter',
+      title: 'Staked a Claim',
+      description: `Own 25% of the map as the ${playerFaction} faction.`,
+    },
+    {
+      id: 'landslide',
+      title: 'Landslide Victory',
+      description: 'End a round holding 75% or more of the map.',
+    },
+    {
+      id: 'sole-survivor',
+      title: 'Sole Survivor',
+      description: 'End a round as the only surviving faction.',
+    },
+    {
+      id: 'blitzkrieg',
+      title: 'Blitzkrieg',
+      description: `Wipe out every rival faction in under ${BLITZKRIEG_MAX_ELAPSED_S} seconds.`,
+    },
+    {
+      id: 'total-dominance',
+      title: 'Total Dominance',
+      description: `Hold every hotspot simultaneously for ${TOTAL_DOMINANCE_REQUIRED_S} continuous seconds.`,
+    },
+  ];
+}
 
 export interface AchievementSystem {
   readonly achievements: AchievementCategory<AchievementDef>;
@@ -89,10 +85,11 @@ export interface AchievementSystemOptions {
   grid: SpatialGrid<CellState>;
   hotspots: readonly HotspotDef[];
   round: RoundSystem;
+  playerFaction: DirectorFactionId;
 }
 
 export function createAchievementSystem(opts: AchievementSystemOptions): AchievementSystem {
-  const { grid, hotspots, round } = opts;
+  const { grid, hotspots, round, playerFaction } = opts;
 
   const playerTerritory = ref(0);
   const dominanceHoldS = ref(0);
@@ -102,13 +99,14 @@ export function createAchievementSystem(opts: AchievementSystemOptions): Achieve
     mapAchievement: (def) => ({
       display: { title: def.title, description: def.description },
       requirement: () => {
+        const totalCells = grid.width * grid.height;
         switch (def.id) {
           case 'first-quarter':
-            return playerTerritory.value / TOTAL_CELLS >= FIRST_QUARTER_THRESHOLD;
+            return playerTerritory.value / totalCells >= FIRST_QUARTER_THRESHOLD;
           case 'landslide':
             return (
               round.phase.value === 'ended' &&
-              round.stats.value.territory / TOTAL_CELLS >= LANDSLIDE_THRESHOLD
+              round.stats.value.territory / totalCells >= LANDSLIDE_THRESHOLD
             );
           case 'sole-survivor':
             return round.phase.value === 'ended' && round.stats.value.survivingFactions === 1;
@@ -126,13 +124,15 @@ export function createAchievementSystem(opts: AchievementSystemOptions): Achieve
       },
     }),
   });
-  achievements.register([...ACHIEVEMENT_DEFS]);
+  achievements.register(achievementDefs(playerFaction).map((d) => ({ ...d })));
 
   function countPlayerTerritory(): number {
     let n = 0;
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-      for (let x = 0; x < MAP_WIDTH; x++) {
-        if (grid.at(x, y).owner === PLAYER_FACTION) n++;
+    const w = grid.width;
+    const h = grid.height;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (grid.at(x, y).owner === playerFaction) n++;
       }
     }
     return n;
@@ -140,7 +140,7 @@ export function createAchievementSystem(opts: AchievementSystemOptions): Achieve
 
   function playerHoldsAllHotspots(): boolean {
     for (const h of hotspots) {
-      if (grid.at(h.x, h.y).owner !== PLAYER_FACTION) return false;
+      if (grid.at(h.x, h.y).owner !== playerFaction) return false;
     }
     return true;
   }

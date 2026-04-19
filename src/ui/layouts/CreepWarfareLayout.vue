@@ -5,10 +5,6 @@ import { useModule } from '@/composables/useModule';
 import { CreepWarfareKey } from '@/modules/mods/creep-vs-creep';
 import {
   FACTION_IDS,
-  FACTION_NAMES,
-  META_CURRENCY_NAME,
-  PLAYER_FACTION,
-  ROUND_LENGTH_S,
   type CellState,
   type FactionId,
   type GoalId,
@@ -20,7 +16,7 @@ const state = useModule(CreepWarfareKey);
 
 const phase = computed(() => state.round.phase.value);
 const timeLeft = computed(() =>
-  Math.max(0, Math.ceil(ROUND_LENGTH_S - state.round.elapsed.value)),
+  Math.max(0, Math.ceil(state.vars.archetype.roundLengthSec - state.round.elapsed.value)),
 );
 const meta = computed(() => format(Decimal.floor(state.round.metaCurrency.value)));
 const capacity = computed(() => state.goals.capacity.value);
@@ -47,13 +43,13 @@ const territory = computed(() => {
 });
 
 const playerEssence = computed(() =>
-  format(Decimal.floor(state.essence[PLAYER_FACTION].value)),
+  format(Decimal.floor(state.essence[state.vars.archetype.playerFaction].value)),
 );
 
 const selectedGoals = computed(
-  () => state.goals.slots[PLAYER_FACTION].selected.value as readonly GoalId[],
+  () => state.goals.slots[state.vars.archetype.playerFaction].selected.value as readonly GoalId[],
 );
-const goalPool = computed(() => state.goals.goalPoolFor(PLAYER_FACTION));
+const goalPool = computed(() => state.goals.goalPoolFor(state.vars.archetype.playerFaction));
 
 function cellClass(cell: CellState): string[] {
   const classes: string[] = [`cw-cell-terrain-${cell.terrain}`];
@@ -63,7 +59,7 @@ function cellClass(cell: CellState): string[] {
 }
 
 function toggleGoal(goalId: GoalId) {
-  const slot = state.goals.slots[PLAYER_FACTION];
+  const slot = state.goals.slots[state.vars.archetype.playerFaction];
   if (slot.isSelected(goalId)) {
     slot.deselect(goalId);
   } else {
@@ -90,7 +86,7 @@ function endRoundNow() {
           <span class="value">{{ timeLeft }}s</span>
         </div>
         <div class="stat">
-          <span class="label">{{ META_CURRENCY_NAME }}</span>
+          <span class="label">{{ state.vars.theme.metaCurrencyName }}</span>
           <span class="value">{{ meta }}</span>
         </div>
         <div class="stat">
@@ -120,9 +116,9 @@ function endRoundNow() {
           v-for="f in FACTION_IDS"
           :key="f"
           class="row"
-          :class="{ player: f === PLAYER_FACTION }"
+          :class="{ player: f === state.vars.archetype.playerFaction }"
         >
-          <span class="label">{{ FACTION_NAMES[f] }}</span>
+          <span class="label">{{ state.vars.theme.factionNames[f] }}</span>
           <span class="value">{{ territory[f] }} cells</span>
         </div>
       </section>

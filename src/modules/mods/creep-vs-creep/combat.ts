@@ -7,10 +7,10 @@
  *
  *   1. Group attacking neighbours by faction.
  *   2. For each attacking faction, damage = max(0,
- *        attackChain[attacker].apply(BASE_ATTACK × neighbourCount)
- *        − defenseChain[defender].apply(BASE_DEFENSE))
+ *        attackChain[attacker].apply(baseAttack × neighbourCount)
+ *        − defenseChain[defender].apply(baseDefense))
  *   3. Subtract the largest per-faction damage from cell HP this tick.
- *      Flip the cell to that attacker when HP ≤ 0, resetting HP to BASE_HP.
+ *      Flip the cell to that attacker when HP ≤ 0, resetting HP to baseHp.
  *
  * Strongest-attacker-wins keeps the per-tick attacker-defender pair singular
  * (matching the singular "attackChain/defenseChain" phrasing in OL-507), and
@@ -28,16 +28,7 @@ import {
   type Modifier,
   type SpatialGrid,
 } from 'open-loop-engine';
-import {
-  BASE_ATTACK,
-  BASE_DEFENSE,
-  BASE_HP,
-  FACTION_IDS,
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  type CellState,
-  type FactionId,
-} from './content';
+import { FACTION_IDS, type CellState, type FactionId } from './content';
 
 const COMBAT_INTERVAL_S = 1;
 
@@ -57,10 +48,17 @@ export interface CombatSystem {
   onEngineTick(dt: number): void;
 }
 
-export function createCombatSystem(
-  grid: SpatialGrid<CellState>,
-  chains: CombatChains,
-): CombatSystem {
+export interface CombatSystemOptions {
+  grid: SpatialGrid<CellState>;
+  chains: CombatChains;
+  baseHp: DecimalSource;
+  baseAttack: DecimalSource;
+  baseDefense: DecimalSource;
+}
+
+export function createCombatSystem(opts: CombatSystemOptions): CombatSystem {
+  const { grid, chains, baseHp, baseAttack, baseDefense } = opts;
+
   const totalFlipped: Record<FactionId, number> = {
     red: 0,
     blue: 0,
@@ -74,18 +72,20 @@ export function createCombatSystem(
   const attackerCounts: Partial<Record<FactionId, number>> = {};
 
   function tickOnce(): void {
+    const w = grid.width;
+    const h = grid.height;
     frontier.length = 0;
 
     // Single whole-grid scan builds the frontier set. "No per-faction-pair
     // scan" is the goal — this is O(W·H) once per tick, not O(W·H) × 4.
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-      for (let x = 0; x < MAP_WIDTH; x++) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
         const cell = grid.at(x, y);
         const owner = cell.owner;
         if (owner === null) continue;
         let isFrontier = false;
         for (const n of grid.neighbors(x, y)) {
-          const i = n.y * MAP_WIDTH + n.x;
+          const i = n.y * w + n.x;
           if (!grid.passable[i]) continue;
           const nOwner = grid.at(n.x, n.y).owner;
           if (nOwner !== null && nOwner !== owner) {
@@ -101,14 +101,14 @@ export function createCombatSystem(
       // Group attacking neighbours by faction.
       for (const f of FACTION_IDS) attackerCounts[f] = 0;
       for (const n of grid.neighbors(x, y)) {
-        const i = n.y * MAP_WIDTH + n.x;
+        const i = n.y * w + n.x;
         if (!grid.passable[i]) continue;
         const nOwner = grid.at(n.x, n.y).owner;
         if (nOwner === null || nOwner === defender) continue;
         attackerCounts[nOwner] = (attackerCounts[nOwner] ?? 0) + 1;
       }
 
-      const defense = chains.defense[defender].apply(BASE_DEFENSE);
+      const defense = chains.defense[defender].apply(baseDefense);
 
       // Strongest attacker (largest damage) claims the tick.
       let bestDamage: Decimal = new Decimal(0);
@@ -116,7 +116,7 @@ export function createCombatSystem(
       for (const f of FACTION_IDS) {
         const count = attackerCounts[f] ?? 0;
         if (count === 0 || f === defender) continue;
-        const rawAttack: DecimalSource = Decimal.mul(BASE_ATTACK, count);
+        const rawAttack: DecimalSource = Decimal.mul(baseAttack, count);
         const attack = chains.attack[f].apply(rawAttack);
         const dmg = Decimal.max(0, Decimal.sub(attack, defense));
         if (Decimal.gt(dmg, bestDamage)) {
@@ -130,7 +130,7 @@ export function createCombatSystem(
       const cell = grid.at(x, y);
       const nextHp = Decimal.sub(cell.hp, bestDamage);
       if (Decimal.lte(nextHp, 0)) {
-        grid.set(x, y, { ...cell, owner: bestAttacker, hp: BASE_HP });
+        grid.set(x, y, { ...cell, owner: bestAttacker, hp: baseHp });
         totalFlipped[bestAttacker]++;
       } else {
         grid.set(x, y, { ...cell, hp: nextHp });

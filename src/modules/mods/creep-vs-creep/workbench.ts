@@ -40,9 +40,7 @@ import {
   type RunContext,
 } from 'open-loop-engine';
 import { CreepWarfareKey } from './index';
-import { FACTION_IDS, MAP_HEIGHT, MAP_WIDTH, type FactionId } from './content';
-
-const TOTAL_CELLS = MAP_WIDTH * MAP_HEIGHT;
+import { FACTION_IDS, type FactionId } from './content';
 
 export function creepWorkbenchPrepare(engine: Engine, ctx: RunContext): void {
   const state = engine.tryInject(CreepWarfareKey);
@@ -63,9 +61,10 @@ export function creepWorkbenchTick(engine: Engine, _dt: number): void {
 function countOwnership(engine: Engine): Record<FactionId, number> {
   const state = engine.tryInject(CreepWarfareKey)!;
   const counts = { red: 0, blue: 0, green: 0, yellow: 0 } as Record<FactionId, number>;
-  for (let y = 0; y < MAP_HEIGHT; y++) {
-    for (let x = 0; x < MAP_WIDTH; x++) {
-      const o = state.grid.grid.at(x, y).owner;
+  const g = state.grid.grid;
+  for (let y = 0; y < g.height; y++) {
+    for (let x = 0; x < g.width; x++) {
+      const o = g.at(x, y).owner;
       if (o !== null) counts[o]++;
     }
   }
@@ -83,11 +82,12 @@ export function createCreepOutcomeAnalyzer(engine: Engine): Analyzer {
         if (counts[f] > counts[leader]) leader = f;
       }
       const metrics: Record<string, number> = {};
+      const state = engine.tryInject(CreepWarfareKey);
+      const totalCells = state ? state.grid.grid.width * state.grid.grid.height : 0;
       for (const f of FACTION_IDS) {
-        metrics[`territoryShare.${f}`] = counts[f] / TOTAL_CELLS;
+        metrics[`territoryShare.${f}`] = totalCells > 0 ? counts[f] / totalCells : 0;
         metrics[`win.${f}`] = f === leader ? 1 : 0;
       }
-      const state = engine.tryInject(CreepWarfareKey);
       if (state) {
         metrics['elapsedAtFinalize'] = state.round.elapsed.value;
       }

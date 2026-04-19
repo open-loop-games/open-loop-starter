@@ -17,13 +17,14 @@ import { createCreepOutcomeAnalyzer } from '../workbench';
 import { CreepWarfareKey, createCreepWarfareModule } from '../index';
 import { settingsModule } from '@/modules/settings';
 import { uiRegistryModule } from '@/modules/ui-registry';
-import {
-  BASE_HP,
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  PLAYER_FACTION,
-  type FactionId,
-} from '../content';
+import { type FactionId } from '../content';
+import { loadCreepVsCreepVars } from '../vars';
+
+const vars = loadCreepVsCreepVars();
+const MAP_WIDTH = vars.archetype.mapWidth;
+const MAP_HEIGHT = vars.archetype.mapHeight;
+const BASE_HP = vars.balance.baseHp;
+const PLAYER_FACTION = vars.archetype.playerFaction;
 
 function paintFaction(
   engine: Engine,

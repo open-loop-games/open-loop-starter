@@ -18,14 +18,11 @@
  */
 
 import type { SpatialGrid } from 'open-loop-engine';
+import type { DirectorAiPersonality, DirectorFactionId } from '@/archetypes/director';
 import {
-  AI_INTERVAL_S,
   AI_PERSONALITIES,
   FACTION_IDS,
-  FACTION_PERSONALITIES,
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  PLAYER_FACTION,
+  type AiPersonality,
   type AiWeights,
   type CellState,
   type FactionId,
@@ -35,10 +32,6 @@ import {
   type SpawnDef,
 } from './content';
 import type { GoalSystem } from './goals';
-
-const NON_PLAYER_FACTIONS = FACTION_IDS.filter(
-  (f): f is Exclude<FactionId, typeof PLAYER_FACTION> => f !== PLAYER_FACTION,
-);
 
 interface WorldView {
   /** Territory cell count per faction. */
@@ -59,6 +52,9 @@ export interface AiSystemOptions {
    * free at 0.25 Hz.
    */
   spawns: () => readonly SpawnDef[];
+  playerFaction: DirectorFactionId;
+  factionPersonalities: Record<Exclude<DirectorFactionId, 'red'>, DirectorAiPersonality>;
+  aiIntervalSec: number;
 }
 
 export interface AiSystem {
@@ -68,9 +64,9 @@ export interface AiSystem {
   onEngineTick(dt: number): void;
 }
 
-function sectorOf(x: number, y: number): SectorId {
-  const midX = Math.floor(MAP_WIDTH / 2);
-  const midY = Math.floor(MAP_HEIGHT / 2);
+function sectorOf(x: number, y: number, width: number, height: number): SectorId {
+  const midX = Math.floor(width / 2);
+  const midY = Math.floor(height / 2);
   if (x < midX && y < midY) return 'nw';
   if (x >= midX && y < midY) return 'ne';
   if (x < midX && y >= midY) return 'sw';
@@ -89,8 +85,10 @@ function buildWorldView(
     yellow: { nw: 0, ne: 0, sw: 0, se: 0 },
   };
 
-  for (let y = 0; y < MAP_HEIGHT; y++) {
-    for (let x = 0; x < MAP_WIDTH; x++) {
+  const w = grid.width;
+  const h = grid.height;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       const cell = grid.at(x, y);
       if (cell.owner === null) continue;
       territory[cell.owner]++;
@@ -102,7 +100,7 @@ function buildWorldView(
           break;
         }
       }
-      if (threatened) sectorThreat[cell.owner][sectorOf(x, y)]++;
+      if (threatened) sectorThreat[cell.owner][sectorOf(x, y, w, h)]++;
     }
   }
 
@@ -124,6 +122,7 @@ function scoreGoal(
   hotspots: readonly HotspotDef[],
   spawn: SpawnDef,
   nearestUnclaimedHotspot: HotspotDef | null,
+  mapDiagonalNorm: number,
 ): number {
   if (goalId.startsWith('claim:hotspot-')) {
     const hid = goalId.slice('claim:hotspot-'.length);
@@ -131,7 +130,7 @@ function scoreGoal(
     if (h == null) return 0;
     // Proximity term: farther = lower score. Normalise against map diagonal.
     const dist = manhattan(spawn.x, spawn.y, h.x, h.y);
-    const proximity = 1 - dist / (MAP_WIDTH + MAP_HEIGHT);
+    const proximity = 1 - dist / mapDiagonalNorm;
     const nearestBonus = nearestUnclaimedHotspot?.id === hid ? 1 : 0;
     return weights.hotspotProximity * proximity + weights.hotspotNearestBias * nearestBonus;
   }
@@ -148,17 +147,25 @@ function scoreGoal(
 }
 
 export function createAiSystem(options: AiSystemOptions): AiSystem {
-  const { grid, goals, hotspots, spawns } = options;
+  const { grid, goals, hotspots, spawns, playerFaction, factionPersonalities, aiIntervalSec } =
+    options;
   let acc = 0;
+
+  const nonPlayerFactions = FACTION_IDS.filter((f): f is FactionId => f !== playerFaction);
 
   function tickOnce(): void {
     goals.sweepCompleted();
     const world = buildWorldView(grid, hotspots);
     const spawnByFaction = new Map<FactionId, SpawnDef>();
     for (const s of spawns()) spawnByFaction.set(s.faction, s);
+    const mapDiagonalNorm = grid.width + grid.height;
 
-    for (const faction of NON_PLAYER_FACTIONS) {
-      const personality = FACTION_PERSONALITIES[faction];
+    for (const faction of nonPlayerFactions) {
+      // The factionPersonalities record is keyed by Exclude<FactionId, 'red'>
+      // in the Director schema; this lookup is safe because the non-player
+      // set never contains the player's colour. OL-609 revisits when
+      // playerFaction becomes non-default.
+      const personality = (factionPersonalities as Record<FactionId, AiPersonality>)[faction];
       const weights = AI_PERSONALITIES[personality];
       const slot = goals.slots[faction];
       const spawn = spawnByFaction.get(faction);
@@ -181,7 +188,16 @@ export function createAiSystem(options: AiSystemOptions): AiSystem {
       for (const goalId of goals.goalPoolFor(faction)) {
         if (selected.has(goalId)) continue;
         if (goals.isGoalCompleted(faction, goalId)) continue;
-        const score = scoreGoal(faction, goalId, world, weights, hotspots, spawn, nearest);
+        const score = scoreGoal(
+          faction,
+          goalId,
+          world,
+          weights,
+          hotspots,
+          spawn,
+          nearest,
+          mapDiagonalNorm,
+        );
         candidates.push({ id: goalId, score });
       }
       candidates.sort((a, b) => b.score - a.score);
@@ -196,8 +212,8 @@ export function createAiSystem(options: AiSystemOptions): AiSystem {
 
   function onEngineTick(dt: number): void {
     acc += dt;
-    while (acc >= AI_INTERVAL_S) {
-      acc -= AI_INTERVAL_S;
+    while (acc >= aiIntervalSec) {
+      acc -= aiIntervalSec;
       tickOnce();
     }
   }

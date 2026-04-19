@@ -46,16 +46,9 @@ import {
   type SpatialGrid,
 } from 'open-loop-engine';
 import { computed, ref, type Ref } from 'vue';
+import type { DirectorFactionId } from '@/archetypes/director';
 import {
-  END_OF_ROUND_COUNTDOWN_S,
   FACTION_IDS,
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  META_CURRENCY_NAME,
-  META_CURRENCY_PER_CELL,
-  META_CURRENCY_PER_HOTSPOT,
-  PLAYER_FACTION,
-  ROUND_LENGTH_S,
   type CellState,
   type FactionId,
   type HotspotDef,
@@ -115,6 +108,12 @@ export interface RoundSystemOptions {
    * its [Resettable] implementation.
    */
   extraResettables?: readonly unknown[];
+  roundLengthSec: number;
+  endOfRoundCountdownSec: number;
+  metaCurrencyPerCell: number;
+  metaCurrencyPerHotspot: number;
+  metaCurrencyName: string;
+  playerFaction: DirectorFactionId;
 }
 
 function countTerritoryAndHotspots(
@@ -123,22 +122,26 @@ function countTerritoryAndHotspots(
   faction: FactionId,
 ): { territory: number; hotspotsHeld: number } {
   let territory = 0;
-  for (let y = 0; y < MAP_HEIGHT; y++) {
-    for (let x = 0; x < MAP_WIDTH; x++) {
+  const w = grid.width;
+  const h = grid.height;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       if (grid.at(x, y).owner === faction) territory++;
     }
   }
   let hotspotsHeld = 0;
-  for (const h of hotspots) {
-    if (grid.at(h.x, h.y).owner === faction) hotspotsHeld++;
+  for (const hs of hotspots) {
+    if (grid.at(hs.x, hs.y).owner === faction) hotspotsHeld++;
   }
   return { territory, hotspotsHeld };
 }
 
 function countSurvivingFactions(grid: SpatialGrid<CellState>): number {
   const live = new Set<FactionId>();
-  for (let y = 0; y < MAP_HEIGHT; y++) {
-    for (let x = 0; x < MAP_WIDTH; x++) {
+  const w = grid.width;
+  const h = grid.height;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       const o = grid.at(x, y).owner;
       if (o !== null) {
         live.add(o);
@@ -149,16 +152,27 @@ function countSurvivingFactions(grid: SpatialGrid<CellState>): number {
   return live.size;
 }
 
-function computeReward(territory: number, hotspotsHeld: number): DecimalSource {
-  const raw = Decimal.add(
-    Decimal.mul(territory, META_CURRENCY_PER_CELL),
-    Decimal.mul(hotspotsHeld, META_CURRENCY_PER_HOTSPOT),
-  );
-  return Decimal.floor(raw);
-}
-
 export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
-  const { grid, creepGrid, hotspots, extraResettables } = opts;
+  const {
+    grid,
+    creepGrid,
+    hotspots,
+    extraResettables,
+    roundLengthSec,
+    endOfRoundCountdownSec,
+    metaCurrencyPerCell,
+    metaCurrencyPerHotspot,
+    metaCurrencyName,
+    playerFaction,
+  } = opts;
+
+  function computeReward(territory: number, hotspotsHeld: number): DecimalSource {
+    const raw = Decimal.add(
+      Decimal.mul(territory, metaCurrencyPerCell),
+      Decimal.mul(hotspotsHeld, metaCurrencyPerHotspot),
+    );
+    return Decimal.floor(raw);
+  }
 
   const phase = ref<'active' | 'ended'>('active');
   const elapsed = ref(0);
@@ -167,7 +181,7 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
   const seed = withPersistentContext('creep-warfare-round-seed', () => persistent<number>(1));
 
   const metaCurrency = withPersistentContext('creep-warfare-meta', () =>
-    createResource<DecimalSource>(0, { displayName: META_CURRENCY_NAME }),
+    createResource<DecimalSource>(0, { displayName: metaCurrencyName }),
   );
 
   const stats = ref<RoundStats>({
@@ -186,7 +200,7 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
     const { territory, hotspotsHeld } = countTerritoryAndHotspots(
       grid,
       hotspots,
-      PLAYER_FACTION,
+      playerFaction,
     );
     return computeReward(territory, hotspotsHeld);
   });
@@ -208,7 +222,7 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
 
   function isTerminated(): boolean {
     if (phase.value !== 'active') return false;
-    if (elapsed.value >= ROUND_LENGTH_S) return true;
+    if (elapsed.value >= roundLengthSec) return true;
     return countSurvivingFactions(grid) <= 1;
   }
 
@@ -218,7 +232,7 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
     const { territory, hotspotsHeld } = countTerritoryAndHotspots(
       grid,
       hotspots,
-      PLAYER_FACTION,
+      playerFaction,
     );
     const surviving = countSurvivingFactions(grid);
     const reward = computeReward(territory, hotspotsHeld);
@@ -235,7 +249,7 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
     }
 
     phase.value = 'ended';
-    countdown.value = END_OF_ROUND_COUNTDOWN_S;
+    countdown.value = endOfRoundCountdownSec;
   }
 
   function startNextRound(): void {

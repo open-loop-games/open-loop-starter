@@ -29,6 +29,7 @@ import {
   createSlot,
   persistent,
   withPersistentContext,
+  type DecimalSource,
   type ModifierChain,
   type Persistent,
   type PersistentEffectSystem,
@@ -37,11 +38,7 @@ import {
 } from 'open-loop-engine';
 import {
   FACTION_IDS,
-  GOAL_MULT,
-  MAP_HEIGHT,
-  MAP_WIDTH,
   SECTOR_IDS,
-  STARTING_GOAL_SLOTS,
   type CellState,
   type FactionId,
   type GoalId,
@@ -76,6 +73,15 @@ export interface GoalSystem {
   sweepCompleted(): void;
 }
 
+export interface GoalSystemOptions {
+  pes: PersistentEffectSystem;
+  chains: GoalChains;
+  hotspots: readonly HotspotDef[];
+  grid: SpatialGrid<CellState>;
+  startingGoalSlots: number;
+  goalMultiplier: DecimalSource;
+}
+
 function goalPool(faction: FactionId, hotspots: readonly HotspotDef[]): GoalId[] {
   const out: GoalId[] = [];
   for (const h of hotspots) out.push(`claim:hotspot-${h.id}`);
@@ -98,9 +104,15 @@ function resolveGoalChain(
 }
 
 /** Half-plane tests for quadrant membership. Matches map.ts's cross divider. */
-function cellInSector(x: number, y: number, sector: SectorId): boolean {
-  const midX = Math.floor(MAP_WIDTH / 2);
-  const midY = Math.floor(MAP_HEIGHT / 2);
+function cellInSector(
+  x: number,
+  y: number,
+  sector: SectorId,
+  width: number,
+  height: number,
+): boolean {
+  const midX = Math.floor(width / 2);
+  const midY = Math.floor(height / 2);
   switch (sector) {
     case 'nw':
       return x < midX && y < midY;
@@ -113,14 +125,11 @@ function cellInSector(x: number, y: number, sector: SectorId): boolean {
   }
 }
 
-export function createGoalSystem(
-  pes: PersistentEffectSystem,
-  chains: GoalChains,
-  hotspots: readonly HotspotDef[],
-  grid: SpatialGrid<CellState>,
-): GoalSystem {
+export function createGoalSystem(opts: GoalSystemOptions): GoalSystem {
+  const { pes, chains, hotspots, grid, startingGoalSlots, goalMultiplier } = opts;
+
   const capacity = withPersistentContext('creep-warfare-goal-capacity', () =>
-    persistent(STARTING_GOAL_SLOTS),
+    persistent(startingGoalSlots),
   );
   const slots = {} as Record<FactionId, Slot>;
   const hotspotById = new Map<string, HotspotDef>();
@@ -141,8 +150,10 @@ export function createGoalSystem(
 
   function territoryCount(faction: FactionId): number {
     let count = 0;
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-      for (let x = 0; x < MAP_WIDTH; x++) {
+    const w = grid.width;
+    const h = grid.height;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
         if (grid.at(x, y).owner === faction) count++;
       }
     }
@@ -150,9 +161,11 @@ export function createGoalSystem(
   }
 
   function sectorHasFrontier(faction: FactionId, sector: SectorId): boolean {
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-      for (let x = 0; x < MAP_WIDTH; x++) {
-        if (!cellInSector(x, y, sector)) continue;
+    const w = grid.width;
+    const h = grid.height;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (!cellInSector(x, y, sector, w, h)) continue;
         const cell = grid.at(x, y);
         if (cell.owner !== faction) continue;
         for (const n of grid.neighbors(x, y)) {
@@ -199,7 +212,7 @@ export function createGoalSystem(
             {
               chain,
               modifier: () =>
-                createMultiplicativeModifier({ multiplier: GOAL_MULT, description: goalId }),
+                createMultiplicativeModifier({ multiplier: goalMultiplier, description: goalId }),
             },
           ],
         }),

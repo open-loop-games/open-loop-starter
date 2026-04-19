@@ -14,22 +14,18 @@
  *
  * Cadence is driven by an accumulator over the engine's main `onTick` —
  * the engine's `createLoop` is a constrained-replay primitive (Idle
- * Loops, Increlution), not a sub-tick scheduler.
- *
- * Combat (OL-507) lands the steal/flip path; for now spread only claims
- * cells with `owner === null`.
+ * Loops, Increlution), not a sub-tick scheduler. Flow-field coupling
+ * (OL-608) will further bias the picker once OL-606 lands.
  */
 
-import { Decimal, random, type Modifier, type SpatialGrid } from 'open-loop-engine';
 import {
-  BASE_HP,
-  FACTION_IDS,
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  type CellState,
-  type FactionId,
-  type TerrainKind,
-} from './content';
+  Decimal,
+  random,
+  type DecimalSource,
+  type Modifier,
+  type SpatialGrid,
+} from 'open-loop-engine';
+import { FACTION_IDS, type CellState, type FactionId, type TerrainKind } from './content';
 
 const SPREAD_INTERVAL_S = 1;
 
@@ -77,10 +73,15 @@ export interface SpreadSystem {
   onEngineTick(dt: number): void;
 }
 
-export function createSpreadSystem(
-  grid: SpatialGrid<CellState>,
-  chains: SpreadChains,
-): SpreadSystem {
+export interface SpreadSystemOptions {
+  grid: SpatialGrid<CellState>;
+  chains: SpreadChains;
+  baseHp: DecimalSource;
+}
+
+export function createSpreadSystem(opts: SpreadSystemOptions): SpreadSystem {
+  const { grid, chains, baseHp } = opts;
+
   const totalClaimed: Record<FactionId, number> = {
     red: 0,
     blue: 0,
@@ -92,13 +93,15 @@ export function createSpreadSystem(
   const candidates: Candidate[] = [];
 
   function tickOnce(): void {
+    const w = grid.width;
+    const h = grid.height;
     for (const faction of FACTION_IDS) {
       candidates.length = 0;
-      for (let y = 0; y < MAP_HEIGHT; y++) {
-        for (let x = 0; x < MAP_WIDTH; x++) {
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
           if (grid.at(x, y).owner !== faction) continue;
           for (const n of grid.neighbors(x, y)) {
-            const i = n.y * MAP_WIDTH + n.x;
+            const i = n.y * w + n.x;
             if (!grid.passable[i]) continue;
             const ncell = grid.at(n.x, n.y);
             if (ncell.owner !== null) continue;
@@ -123,7 +126,7 @@ export function createSpreadSystem(
         // Re-check ownership in case spread power >1 and an earlier pick this
         // tick already claimed the same cell.
         if (target.owner !== null) continue;
-        grid.set(picked.x, picked.y, { ...target, owner: faction, hp: BASE_HP });
+        grid.set(picked.x, picked.y, { ...target, owner: faction, hp: baseHp });
         totalClaimed[faction]++;
       }
     }

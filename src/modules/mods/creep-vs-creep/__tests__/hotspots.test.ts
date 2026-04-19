@@ -28,13 +28,16 @@ import {
 import { createHotspotSystem, type HotspotSystem } from '../hotspots';
 import {
   FACTION_IDS,
-  HOTSPOT_REGEN_PER_SEC,
-  MAP_HEIGHT,
-  MAP_WIDTH,
   type CellState,
   type FactionId,
   type HotspotDef,
 } from '../content';
+import { loadCreepVsCreepVars } from '../vars';
+
+const vars = loadCreepVsCreepVars();
+const MAP_WIDTH = vars.archetype.mapWidth;
+const MAP_HEIGHT = vars.archetype.mapHeight;
+const HOTSPOT_REGEN_PER_SEC = vars.balance.hotspotRegenPerSec;
 
 const HOTSPOTS: HotspotDef[] = [
   { id: 'hs-a', x: 10, y: 10, baseYield: 1, capacity: 100 },
@@ -88,6 +91,7 @@ describe('hotspot producers + reservoir', () => {
       hotspots: HOTSPOTS,
       essence,
       yieldChains,
+      regenPerSec: HOTSPOT_REGEN_PER_SEC,
     });
   });
 

@@ -29,10 +29,8 @@ import {
   type PurchasableCategory,
   type Resource,
 } from 'open-loop-engine';
+import type { DirectorFactionId } from '@/archetypes/director';
 import {
-  MAX_GOAL_SLOTS,
-  META_UPGRADE_DEFS,
-  PLAYER_FACTION,
   type FactionId,
   type MetaUpgradeDef,
   type MetaUpgradeId,
@@ -57,28 +55,35 @@ export interface MetaSystemOptions {
   /**
    * Persistent slot-capacity ref. Written directly by the slot-capacity
    * purchasable's `onPurchase` so the ratchet is side-effect-ful rather
-   * than chain-bound. Capped at {@link MAX_GOAL_SLOTS}.
+   * than chain-bound. Capped at `maxGoalSlots`.
    */
   slotCapacity: Persistent<number>;
+  playerFaction: DirectorFactionId;
+  maxGoalSlots: number;
+  metaUpgradeDefs: readonly MetaUpgradeDef[];
 }
 
-function chainFor(chains: MetaChains, id: MetaUpgradeId): ModifierChain | null {
+function chainFor(
+  chains: MetaChains,
+  id: MetaUpgradeId,
+  playerFaction: DirectorFactionId,
+): ModifierChain | null {
   switch (id) {
     case 'yield':
-      return chains.yield[PLAYER_FACTION];
+      return chains.yield[playerFaction];
     case 'spread':
-      return chains.spread[PLAYER_FACTION];
+      return chains.spread[playerFaction];
     case 'attack':
-      return chains.attack[PLAYER_FACTION];
+      return chains.attack[playerFaction];
     case 'defense':
-      return chains.defense[PLAYER_FACTION];
+      return chains.defense[playerFaction];
     case 'slot-capacity':
       return null;
   }
 }
 
 export function createMetaSystem(opts: MetaSystemOptions): MetaSystem {
-  const { metaCurrency, chains, slotCapacity } = opts;
+  const { metaCurrency, chains, slotCapacity, playerFaction, maxGoalSlots, metaUpgradeDefs } = opts;
   const categoryId = 'creep-warfare-meta-upgrades';
 
   const category: PurchasableCategory<MetaUpgradeDef> = withPersistentContext(
@@ -101,21 +106,21 @@ export function createMetaSystem(opts: MetaSystemOptions): MetaSystem {
             def.id === 'slot-capacity'
               ? () => {
                   // Ratchet slot capacity one step per purchase, clamped at
-                  // MAX_GOAL_SLOTS. The purchasable's own `limit` already
+                  // maxGoalSlots. The purchasable's own `limit` already
                   // enforces this upstream — the clamp here is a belt-and-
                   // suspenders guard since the ref is shared with
                   // `goals.capacity` and tolerates no out-of-band writes.
-                  slotCapacity.value = Math.min(MAX_GOAL_SLOTS, slotCapacity.value + 1);
+                  slotCapacity.value = Math.min(maxGoalSlots, slotCapacity.value + 1);
                 }
               : undefined,
         }),
       }),
   );
 
-  category.register(META_UPGRADE_DEFS as MetaUpgradeDef[]);
+  category.register([...metaUpgradeDefs]);
 
-  for (const def of META_UPGRADE_DEFS) {
-    const chain = chainFor(chains, def.id);
+  for (const def of metaUpgradeDefs) {
+    const chain = chainFor(chains, def.id, playerFaction);
     if (chain == null) continue;
     const p = category.getPurchasable(def.id);
     if (p == null) {

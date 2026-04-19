@@ -32,16 +32,19 @@ import { createAiSystem } from '../ai';
 import { createSpreadSystem } from '../spread';
 import { createCombatSystem } from '../combat';
 import {
-  BASE_HP,
   FACTION_IDS,
-  MAP_HEIGHT,
-  MAP_WIDTH,
   type AiPersonality,
   type CellState,
   type FactionId,
   type HotspotDef,
   type SpawnDef,
 } from '../content';
+import { loadCreepVsCreepVars } from '../vars';
+
+const vars = loadCreepVsCreepVars();
+const MAP_WIDTH = vars.archetype.mapWidth;
+const MAP_HEIGHT = vars.archetype.mapHeight;
+const BASE_HP = vars.balance.baseHp;
 
 function makeChains(namespace: string): GoalChains {
   const build = (kind: string): Record<FactionId, ModifierChain> => {
@@ -116,8 +119,23 @@ describe('AI goal-picker', () => {
     chains = makeChains('ai-test');
     grid = makeGrid();
     const pes = createPersistentEffectSystem({ id: 'ai-test-effects' });
-    goals = createGoalSystem(pes, chains, HOTSPOTS, grid);
-    ai = createAiSystem({ grid, goals, hotspots: HOTSPOTS, spawns: () => SPAWNS });
+    goals = createGoalSystem({
+      pes,
+      chains,
+      hotspots: HOTSPOTS,
+      grid,
+      startingGoalSlots: vars.archetype.startingGoalSlots,
+      goalMultiplier: vars.balance.goalMultiplier,
+    });
+    ai = createAiSystem({
+      grid,
+      goals,
+      hotspots: HOTSPOTS,
+      spawns: () => SPAWNS,
+      playerFaction: vars.archetype.playerFaction,
+      factionPersonalities: vars.balance.factionPersonalities,
+      aiIntervalSec: vars.balance.aiIntervalSec,
+    });
   });
 
   beforeEach(async () => {
@@ -236,8 +254,14 @@ describe('AI personality matchup acceptance', () => {
     grid.set(55, 30, { terrain: 'spawn', owner: 'blue', hp: BASE_HP, reservoir: 0 });
 
     const chains = makeChains(`matchup-${a}-${b}-${seed}`);
-    const spread = createSpreadSystem(grid, chains.spread);
-    const combat = createCombatSystem(grid, { attack: chains.attack, defense: chains.defense });
+    const spread = createSpreadSystem({ grid, chains: chains.spread, baseHp: BASE_HP });
+    const combat = createCombatSystem({
+      grid,
+      chains: { attack: chains.attack, defense: chains.defense },
+      baseHp: BASE_HP,
+      baseAttack: vars.balance.baseAttack,
+      baseDefense: vars.balance.baseDefense,
+    });
 
     const aBonus = FLAGSHIP_BONUS[a];
     const bBonus = FLAGSHIP_BONUS[b];

@@ -4,13 +4,17 @@
  * — no procedural generation). Optional `factionOrder` rotates which faction
  * spawns at which corner; pass the default `FACTION_IDS` for a stable layout
  * and a shuffled array for per-round variation (OL-511).
+ *
+ * The OL-607 rewrite replaces this pipeline with the vault-template +
+ * 4-fold-rotational + rock-scatter pipeline specified in `MAP.md`. Until then
+ * the generator runs at whatever width/height `vars.archetype.map{Width,Height}`
+ * resolves to (60×60 in this fork; the rotated-quadrant math in `MAP.md`
+ * assumes an even width and height).
  */
 
+import type { DirectorArchetypeVars, DirectorBalanceVars } from '@/archetypes/director';
 import {
-  BASE_HP,
   FACTION_IDS,
-  MAP_HEIGHT,
-  MAP_WIDTH,
   type CellState,
   type FactionId,
   type HotspotDef,
@@ -18,7 +22,9 @@ import {
 } from './content';
 
 export interface MapBlueprint {
-  /** Row-major dense cell array, length = MAP_WIDTH * MAP_HEIGHT. */
+  width: number;
+  height: number;
+  /** Row-major dense cell array, length = width * height. */
   cells: CellState[];
   /** Row-major passability bitmap (1 passable, 0 blocked). */
   passable: number[];
@@ -28,11 +34,19 @@ export interface MapBlueprint {
 
 const SPAWN_INSET = 4;
 
-export function generateSymmetricMap(
-  factionOrder: readonly FactionId[] = FACTION_IDS,
-): MapBlueprint {
-  const w = MAP_WIDTH;
-  const h = MAP_HEIGHT;
+export interface MapGenOptions {
+  archetype: Pick<DirectorArchetypeVars, 'mapWidth' | 'mapHeight'>;
+  balance: Pick<DirectorBalanceVars, 'baseHp' | 'hotspotCapacity'>;
+  factionOrder?: readonly FactionId[];
+}
+
+export function generateSymmetricMap(opts: MapGenOptions): MapBlueprint {
+  const {
+    archetype: { mapWidth: w, mapHeight: h },
+    balance: { baseHp, hotspotCapacity },
+    factionOrder = FACTION_IDS,
+  } = opts;
+
   const size = w * h;
 
   const cells: CellState[] = new Array(size);
@@ -78,13 +92,13 @@ export function generateSymmetricMap(
   const spawns: SpawnDef[] = factionOrder.map((faction: FactionId, idx) => {
     const [x, y] = spawnCoords[idx];
     const i = y * w + x;
-    cells[i] = { terrain: 'spawn', owner: faction, hp: BASE_HP, reservoir: 0 };
+    cells[i] = { terrain: 'spawn', owner: faction, hp: baseHp, reservoir: 0 };
     passable[i] = 1;
     return { faction, x, y };
   });
 
-  // 4 mirrored hotspots + 1 centre. Yields/capacity are placeholders;
-  // OL-510 wires real producer rates and depletion/regen.
+  // 4 mirrored hotspots + 1 centre. Per-tier yield + 13-hotspot tiering
+  // land in OL-607 alongside the vault-template rewrite.
   const hotspotCoords: Array<[string, number, number]> = [
     ['hs-nw', Math.floor(w * 0.3), Math.floor(h * 0.3)],
     ['hs-ne', w - 1 - Math.floor(w * 0.3), Math.floor(h * 0.3)],
@@ -94,17 +108,16 @@ export function generateSymmetricMap(
   ];
   const hotspots: HotspotDef[] = hotspotCoords.map(([id, x, y]) => {
     const i = y * w + x;
-    const capacity = 100;
     cells[i] = {
       terrain: 'hotspot',
       owner: null,
       hp: 0,
       hotspotId: id,
-      reservoir: capacity,
+      reservoir: hotspotCapacity,
     };
     passable[i] = 1;
-    return { id, x, y, baseYield: 1, capacity };
+    return { id, x, y, baseYield: 1, capacity: hotspotCapacity };
   });
 
-  return { cells, passable, spawns, hotspots };
+  return { width: w, height: h, cells, passable, spawns, hotspots };
 }
