@@ -327,7 +327,7 @@ describe('director — outcome-distribution balance', () => {
       seeds: Array.from({ length: 50 }, (_, i) => i),
     });
     for (const cell of matrix.cells) {
-      const stddev = cell.aggregate.metrics['territory-share.stddev'];
+      const stddev = cell.aggregate.metrics['territory-share']!.stddev;
       expect(stddev).toBeGreaterThanOrEqual(0.10);
       expect(stddev).toBeLessThanOrEqual(0.25);
     }
