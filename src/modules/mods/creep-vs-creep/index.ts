@@ -48,6 +48,7 @@ import {
 } from './combat';
 import { createCreepGrid, type CreepGrid } from './grid';
 import { createSpreadSystem, type SpreadSystem } from './spread';
+import { createFlowField, type FlowField } from './flow';
 import { createGoalSystem, type GoalSystem } from './goals';
 import { createAiSystem, type AiSystem } from './ai';
 import { createHotspotSystem, type HotspotSystem } from './hotspots';
@@ -62,6 +63,7 @@ import CreepWarfareLayout from '@/ui/layouts/CreepWarfareLayout.vue';
 export interface CreepWarfareState {
   grid: CreepGrid;
   spread: SpreadSystem;
+  flow: FlowField;
   combat: CombatSystem;
   goals: GoalSystem;
   ai: AiSystem;
@@ -126,6 +128,13 @@ export function createCreepWarfareModule(): EngineModule {
         grid: grid.grid,
         chains: spreadChains,
         baseHp: vars.balance.baseHp,
+      });
+      const flow = createFlowField({
+        grid: grid.grid,
+        balance: {
+          flowDecayPerSec: vars.balance.flowDecayPerSec,
+          flowReinforcementPerTick: vars.balance.flowReinforcementPerTick,
+        },
       });
       const combat = createCombatSystem({
         grid: grid.grid,
@@ -230,6 +239,7 @@ export function createCreepWarfareModule(): EngineModule {
         round.onEngineTick(dt);
         if (round.phase.value === 'active') {
           spread.onEngineTick(dt);
+          flow.onEngineTick(dt);
           combat.onEngineTick(dt);
           ai.onEngineTick(dt);
           hotspots.onEngineTick(dt);
@@ -242,6 +252,7 @@ export function createCreepWarfareModule(): EngineModule {
       const state: CreepWarfareState = {
         grid,
         spread,
+        flow,
         combat,
         goals,
         ai,
