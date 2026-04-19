@@ -156,8 +156,8 @@ describe('creep-warfare achievements', () => {
     const firstQuarter = sys.achievements.getAchievement('first-quarter')!;
     expect(firstQuarter.earned.value).toBe(false);
 
-    // 25% of 3600 cells = 900. Paint 910 for headroom over rock exclusions.
-    paintPlayer(grid.grid, 910);
+    // 25% of MAP_WIDTH × MAP_HEIGHT with a small margin for rock exclusions.
+    paintPlayer(grid.grid, Math.ceil(MAP_WIDTH * MAP_HEIGHT * 0.26));
     sys.onEngineTick(1);
     await nextTick();
     expect(firstQuarter.earned.value).toBe(true);

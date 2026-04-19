@@ -47,8 +47,8 @@ function makeChains(namespace: string): GoalChains {
 }
 
 const HOTSPOTS: HotspotDef[] = [
-  { id: 'hs-nw', x: 18, y: 18, baseYield: 1, capacity: 100 },
-  { id: 'hs-mid', x: 30, y: 30, baseYield: 1, capacity: 100 },
+  { id: 'hs-nw', x: 18, y: 18, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-mid', x: 30, y: 30, baseYield: 1, capacity: 100, tier: 'center' },
 ];
 
 function makeTestGrid(): SpatialGrid<CellState> {

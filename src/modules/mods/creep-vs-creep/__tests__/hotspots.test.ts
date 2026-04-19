@@ -40,8 +40,8 @@ const MAP_HEIGHT = vars.archetype.mapHeight;
 const HOTSPOT_REGEN_PER_SEC = vars.balance.hotspotRegenPerSec;
 
 const HOTSPOTS: HotspotDef[] = [
-  { id: 'hs-a', x: 10, y: 10, baseYield: 1, capacity: 100 },
-  { id: 'hs-b', x: 40, y: 40, baseYield: 1, capacity: 100 },
+  { id: 'hs-a', x: 10, y: 10, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-b', x: 40, y: 40, baseYield: 1, capacity: 100, tier: 'near' },
 ];
 
 function makeGrid(): SpatialGrid<CellState> {

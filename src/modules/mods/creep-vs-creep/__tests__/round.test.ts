@@ -138,12 +138,12 @@ describe('round lifecycle + reset', () => {
     // goal selected; essence accumulated; per-faction upgrade purchased.
     grid.grid.set(10, 10, { terrain: 'open', owner: PLAYER_FACTION, hp: BASE_HP, reservoir: 0 });
     grid.grid.set(10, 11, { terrain: 'open', owner: PLAYER_FACTION, hp: BASE_HP, reservoir: 0 });
-    const midHotspot = grid.blueprint.hotspots.find((h) => h.id === 'hs-mid')!;
+    const midHotspot = grid.blueprint.hotspots.find((h) => h.id === 'hs-center')!;
     grid.grid.set(midHotspot.x, midHotspot.y, {
       terrain: 'hotspot',
       owner: PLAYER_FACTION,
       hp: 0,
-      hotspotId: 'hs-mid',
+      hotspotId: 'hs-center',
       reservoir: 100,
     });
 

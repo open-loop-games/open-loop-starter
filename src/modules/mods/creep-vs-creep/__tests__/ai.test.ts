@@ -58,10 +58,10 @@ function makeChains(namespace: string): GoalChains {
 }
 
 const HOTSPOTS: HotspotDef[] = [
-  { id: 'hs-nw', x: 10, y: 10, baseYield: 1, capacity: 100 },
-  { id: 'hs-ne', x: 50, y: 10, baseYield: 1, capacity: 100 },
-  { id: 'hs-sw', x: 10, y: 50, baseYield: 1, capacity: 100 },
-  { id: 'hs-se', x: 50, y: 50, baseYield: 1, capacity: 100 },
+  { id: 'hs-nw', x: 10, y: 10, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-ne', x: 50, y: 10, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-sw', x: 10, y: 50, baseYield: 1, capacity: 100, tier: 'near' },
+  { id: 'hs-se', x: 50, y: 50, baseYield: 1, capacity: 100, tier: 'near' },
 ];
 
 const SPAWNS: SpawnDef[] = [
