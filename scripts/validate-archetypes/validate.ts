@@ -59,6 +59,7 @@ export interface ArchetypeDoc {
   name: string;
   markdown: string;
   status: string | null;
+  exemplarLine: string | null;
   exemplarPaths: string[];
   sections: Map<number, ParsedSection>;
 }
@@ -83,6 +84,7 @@ export function parseArchetypeDoc(filePath: string): ArchetypeDoc {
     name: basename(filePath, '.md'),
     markdown,
     status: extractStatus(markdown),
+    exemplarLine: extractExemplarLine(markdown),
     exemplarPaths: extractExemplarPaths(markdown),
     sections: extractSections(markdown),
   };
@@ -91,6 +93,11 @@ export function parseArchetypeDoc(filePath: string): ArchetypeDoc {
 function extractStatus(md: string): string | null {
   const match = md.match(/>\s*\*\*Status:\*\*\s*`([^`]+)`/);
   return match ? match[1] : null;
+}
+
+function extractExemplarLine(md: string): string | null {
+  const line = md.match(/\*\*Exemplars[^*]*\*\*:?\s*([^\n]+)/);
+  return line ? line[0] : null;
 }
 
 function extractExemplarPaths(md: string): string[] {
@@ -195,10 +202,16 @@ function ruleStatus(doc: ArchetypeDoc): Violation[] {
 }
 
 function ruleExemplars(doc: ArchetypeDoc): Violation[] {
+  // `declared invention` escape hatch: bottom-up archetypes with no direct
+  // corpus analogues name a validation tradition in prose and carry the tag.
+  // Mirrors the § 9 UI prescription escape hatch.
+  if (doc.exemplarLine && /`declared invention`/.test(doc.exemplarLine)) {
+    return [];
+  }
   const corpus = loadCorpusGames();
   const v: Violation[] = [];
   if (doc.exemplarPaths.length === 0) {
-    v.push({ rule: 'exemplars', message: 'no exemplar links found' });
+    v.push({ rule: 'exemplars', message: 'no exemplar links found (tag `declared invention` if no corpus analogues exist)' });
   }
   for (const p of doc.exemplarPaths) {
     const leaf = basename(p);

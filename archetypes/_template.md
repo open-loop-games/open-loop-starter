@@ -15,7 +15,7 @@
 >
 > **Status:** `canonical` | `candidate` | `deprecated`
 
-**Exemplars (validation, not clone targets):** {{3–5 corpus games that prove this composition viable, linked to `open-loop-research/analyses/complete/<name>-analysis.md`}}
+**Exemplars (validation, not clone targets):** {{3–5 corpus games that prove this composition viable, linked to `open-loop-research/analyses/complete/<name>-analysis.md`. Bottom-up / declared-invention archetypes with no direct corpus analogues may substitute a `` `declared invention` `` tag with a named validation tradition in prose — see § 9's shell escape hatch for the parallel pattern.}}
 
 ---
 
@@ -360,7 +360,7 @@ The validator (run via `pnpm validate:archetypes`) enforces:
 - [ ] § 9 shell names resolve to files in `open-loop-starter/src/lib/shells/*.vue`, unless tagged `` `declared invention` ``.
 - [ ] § 9 contains both an "ARIA-aligned widgets" list and a "Domain widgets" list; each may be empty but both headers must be present.
 - [ ] § 11 has 3–5 themes.
-- [ ] All corpus games in the Exemplars line resolve to files under `analyses/complete/`.
+- [ ] All corpus games in the Exemplars line resolve to files under `analyses/complete/`, **or** the Exemplars line carries a `` `declared invention` `` tag with a named validation tradition.
 - [ ] Status is one of `canonical` / `candidate` / `deprecated`.
 
 A doc that fails any check is not a canonical archetype spec.
