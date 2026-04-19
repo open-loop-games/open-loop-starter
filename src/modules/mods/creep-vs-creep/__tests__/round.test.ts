@@ -27,6 +27,7 @@ import {
   type Resource,
 } from 'open-loop-engine';
 import { createCreepGrid, type CreepGrid } from '../grid';
+import { createFlowField, type FlowField } from '../flow';
 import { createGoalSystem, type GoalSystem } from '../goals';
 import { createUpgradeSystem, type UpgradeSystem } from '../upgrades';
 import { createRoundSystem, type RoundSystem } from '../round';
@@ -68,6 +69,7 @@ function buildChains(): AllChains {
 
 describe('round lifecycle + reset', () => {
   let grid: CreepGrid;
+  let flow: FlowField;
   let chains: AllChains;
   let essence: Record<FactionId, Resource<DecimalSource>>;
   let goals: GoalSystem;
@@ -105,9 +107,17 @@ describe('round lifecycle + reset', () => {
       const cat = upgrades.categoriesByFaction[f];
       return UPGRADE_DEFS.map((def) => cat.getPurchasable(def.id)!.amount);
     });
+    flow = createFlowField({
+      grid: grid.grid,
+      balance: {
+        flowDecayPerSec: vars.balance.flowDecayPerSec,
+        flowReinforcementPerTick: vars.balance.flowReinforcementPerTick,
+      },
+    });
     round = createRoundSystem({
       grid: grid.grid,
       creepGrid: grid,
+      flow,
       hotspots: grid.blueprint.hotspots,
       extraResettables: upgradeAmounts,
       roundLengthSec: vars.archetype.roundLengthSec,

@@ -204,6 +204,7 @@ export function createCreepWarfareModule(): EngineModule {
       const round = createRoundSystem({
         grid: grid.grid,
         creepGrid: grid,
+        flow,
         hotspots: grid.blueprint.hotspots,
         extraResettables: upgradeAmounts,
         roundLengthSec: vars.archetype.roundLengthSec,

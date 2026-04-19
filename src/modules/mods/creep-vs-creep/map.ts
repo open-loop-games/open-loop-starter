@@ -10,10 +10,10 @@
  * flood-fill connectivity validation, retry-with-next-seed on failure.
  *
  * Determinism: a single `createSeededRNG(seed)` stream drives every random
- * choice. The one `Math.random()` escape hatch is the genesis seed pick
- * when `balance.mapSeed === 'random'`, executed once via
- * {@link resolveSeed} which mutates `balance.mapSeed` to the picked
- * uint32 so reloads / `regenerate` calls reuse the same layout.
+ * choice. The caller (grid.ts) resolves `balance.mapSeed === 'random'` to a
+ * concrete uint32 once, stores it in a persistent ref, and passes it in via
+ * `opts.seed` on every call — so reloads and `regenerate` reuse the same
+ * arena.
  *
  * `factionOrder` rotates which faction owns which corner (`[0] → NW`,
  * `[1] → NE`, `[2] → SE`, `[3] → SW`, following the § 1 rotation cycle).
@@ -45,8 +45,14 @@ export interface MapGenOptions {
   archetype: Pick<DirectorArchetypeVars, 'mapWidth' | 'mapHeight'>;
   balance: Pick<
     DirectorBalanceVars,
-    'baseHp' | 'hotspotCapacity' | 'hotspotBaseYield' | 'mapSeed' | 'rockDensity'
+    'baseHp' | 'hotspotCapacity' | 'hotspotBaseYield' | 'rockDensity'
   >;
+  /**
+   * Resolved numeric seed. The `'random'` sentinel is handled by the caller
+   * (grid.ts) so the resolved value can be stored in a persistent ref and
+   * survive reload — keeps this function pure and reproducible.
+   */
+  seed: number;
   factionOrder?: readonly FactionId[];
 }
 
@@ -155,22 +161,6 @@ function rotatedPosition(
 }
 
 const QUADRANT_SUFFIX = ['nw', 'ne', 'se', 'sw'] as const;
-
-// ---------------------------------------------------------------------------
-// Seed resolution
-// ---------------------------------------------------------------------------
-
-function resolveSeed(opts: MapGenOptions): number {
-  const s = opts.balance.mapSeed;
-  if (s === 'random') {
-    const picked = Math.floor(Math.random() * 0x100000000) >>> 0;
-    // Persist so regenerate() + reload produce the same arena within a save.
-    // Full persistence of this value across reloads lands in OL-610.
-    (opts.balance as { mapSeed: number | 'random' }).mapSeed = picked;
-    return picked;
-  }
-  return s >>> 0;
-}
 
 // ---------------------------------------------------------------------------
 // Cell / passable painting
@@ -478,8 +468,7 @@ function validateConnectivity(blueprint: MapBlueprint): boolean {
 const MAX_RETRIES = 16;
 
 export function generateSymmetricMap(opts: MapGenOptions): MapBlueprint {
-  const seed = resolveSeed(opts);
-  return generateWithSeed(opts, seed, MAX_RETRIES);
+  return generateWithSeed(opts, opts.seed >>> 0, MAX_RETRIES);
 }
 
 function generateWithSeed(opts: MapGenOptions, seed: number, retriesLeft: number): MapBlueprint {

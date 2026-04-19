@@ -13,8 +13,13 @@ import { loadCreepVsCreepVars } from '../creep-vs-creep/vars';
 
 const vars = loadCreepVsCreepVars();
 
+let gridCounter = 0;
 function buildGrid(): CreepGrid {
-  return withPersistentContext('test-creep-warfare-combat', () => createCreepGrid(vars));
+  // Each call gets a unique context id so named persistent refs inside
+  // createCreepGrid (`mapSeed`, plus the unnamed snapshot blob) don't collide
+  // on re-registration — tests intentionally build multiple independent grids.
+  const id = `test-creep-warfare-combat-${gridCounter++}`;
+  return withPersistentContext(id, () => createCreepGrid(vars));
 }
 
 function buildChains(): {

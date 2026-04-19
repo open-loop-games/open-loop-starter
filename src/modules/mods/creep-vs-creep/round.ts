@@ -54,6 +54,7 @@ import {
   type HotspotDef,
 } from './content';
 import type { CreepGrid } from './grid';
+import type { FlowField } from './flow';
 
 export interface RoundStats {
   territory: number;
@@ -97,6 +98,12 @@ export interface RoundSystem {
 export interface RoundSystemOptions {
   grid: SpatialGrid<CellState>;
   creepGrid: CreepGrid;
+  /**
+   * The flow field is zeroed on round reset. Stale cross-round flow would
+   * linger for ~`1/flowDecayPerSec` seconds after `startNextRound`, biasing
+   * fresh-round spread/combat against the new faction-to-corner shuffle.
+   */
+  flow: FlowField;
   hotspots: readonly HotspotDef[];
   /**
    * Extra resettable objects (typically {@link PurchasableCategory}s via the
@@ -156,6 +163,7 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
   const {
     grid,
     creepGrid,
+    flow,
     hotspots,
     extraResettables,
     roundLengthSec,
@@ -264,6 +272,7 @@ export function createRoundSystem(opts: RoundSystemOptions): RoundSystem {
     seedRNG(seed.value);
     const order = shuffle(FACTION_IDS) as FactionId[];
     creepGrid.regenerate(order);
+    flow.reset();
 
     elapsed.value = 0;
     countdown.value = 0;

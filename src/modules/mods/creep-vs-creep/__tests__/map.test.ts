@@ -15,7 +15,7 @@ const vars = loadCreepVsCreepVars();
 const W = vars.archetype.mapWidth;
 const H = vars.archetype.mapHeight;
 
-function makeOpts(seedOverride: number): MapGenOptions {
+function makeOpts(seed: number): MapGenOptions {
   return {
     archetype: { mapWidth: W, mapHeight: H },
     balance: {
@@ -23,8 +23,8 @@ function makeOpts(seedOverride: number): MapGenOptions {
       hotspotCapacity: vars.balance.hotspotCapacity,
       hotspotBaseYield: vars.balance.hotspotBaseYield,
       rockDensity: vars.balance.rockDensity,
-      mapSeed: seedOverride,
     },
+    seed,
   };
 }
 
@@ -53,23 +53,6 @@ describe('generateSymmetricMap — determinism', () => {
     const a = generateSymmetricMap(makeOpts(42));
     const b = generateSymmetricMap(makeOpts(43));
     expect(cellFingerprint(a)).not.toBe(cellFingerprint(b));
-  });
-
-  it('resolves `mapSeed: "random"` to a numeric seed and pins it in-place', () => {
-    const opts: MapGenOptions = {
-      archetype: { mapWidth: W, mapHeight: H },
-      balance: {
-        baseHp: vars.balance.baseHp,
-        hotspotCapacity: vars.balance.hotspotCapacity,
-        hotspotBaseYield: vars.balance.hotspotBaseYield,
-        rockDensity: vars.balance.rockDensity,
-        mapSeed: 'random',
-      },
-    };
-    const first = generateSymmetricMap(opts);
-    expect(typeof opts.balance.mapSeed).toBe('number');
-    const second = generateSymmetricMap(opts);
-    expect(cellFingerprint(first)).toBe(cellFingerprint(second));
   });
 });
 

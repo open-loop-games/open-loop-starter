@@ -103,6 +103,7 @@ function endRoundNow() {
         <h3>Battlefield</h3>
         <div class="map-viewport">
           <DomGrid
+            :key="state.round.seed.value"
             :grid="state.grid.grid"
             :cell-class="cellClass"
             :cell-size="6"

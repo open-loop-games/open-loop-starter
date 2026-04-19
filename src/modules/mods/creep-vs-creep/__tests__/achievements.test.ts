@@ -25,6 +25,7 @@ import {
   type Resource,
 } from 'open-loop-engine';
 import { createCreepGrid, type CreepGrid } from '../grid';
+import { createFlowField } from '../flow';
 import { createGoalSystem } from '../goals';
 import { createUpgradeSystem, type UpgradeSystem } from '../upgrades';
 import { createRoundSystem, type RoundSystem } from '../round';
@@ -128,9 +129,17 @@ describe('creep-warfare achievements', () => {
       const cat = upgrades.categoriesByFaction[f];
       return UPGRADE_DEFS.map((def) => cat.getPurchasable(def.id)!.amount);
     });
+    const flow = createFlowField({
+      grid: grid.grid,
+      balance: {
+        flowDecayPerSec: vars.balance.flowDecayPerSec,
+        flowReinforcementPerTick: vars.balance.flowReinforcementPerTick,
+      },
+    });
     round = createRoundSystem({
       grid: grid.grid,
       creepGrid: grid,
+      flow,
       hotspots: grid.blueprint.hotspots,
       extraResettables: upgradeAmounts,
       roundLengthSec: vars.archetype.roundLengthSec,

@@ -18,9 +18,10 @@
  * continuous-time feel survives variable dt and speed multipliers.
  *
  * Flow is not persisted and not coupled to spread or combat in this
- * subtask — OL-590.D wires the couplings. Round reset is handled by
- * OL-590.F (the width × height shape is stable, so reconstruction is the
- * expected reset mechanism).
+ * subtask — OL-590.D wires the couplings. Round reset zeroes the four
+ * per-faction buffers in place ({@link FlowField.reset}), called by the
+ * round system after `creepGrid.regenerate`; the width × height shape is
+ * stable so the buffer allocation survives.
  */
 
 import { FACTION_IDS, type CellState, type FactionId } from './content';
@@ -51,6 +52,14 @@ export interface FlowField {
   applyReinforcement(): void;
   /** Multiply every cell by `exp(-decayPerSec × dt)`. */
   applyDecay(dt: number): void;
+  /**
+   * Zero every cell across every faction. Called by the round system on round
+   * reset — without this, stale flow from the previous round lingers for
+   * ~`1/flowDecayPerSec` seconds and incorrectly biases fresh-round spread /
+   * combat. Also drops the tick accumulator so the first reinforcement beat
+   * lands one interval after reset.
+   */
+  reset(): void;
   /** Engine `onTick` handler — accumulates dt and fires reinforcement + decay at 1 Hz. */
   onEngineTick(dt: number): void;
 }
@@ -122,6 +131,13 @@ export function createFlowField(opts: FlowFieldOptions): FlowField {
     }
   }
 
+  function reset(): void {
+    for (const f of FACTION_IDS) {
+      fields[f].fill(0);
+    }
+    acc = 0;
+  }
+
   function onEngineTick(dt: number): void {
     acc += dt;
     while (acc >= FLOW_INTERVAL_S) {
@@ -131,5 +147,5 @@ export function createFlowField(opts: FlowFieldOptions): FlowField {
     }
   }
 
-  return { intensity, maxIntensity, applyReinforcement, applyDecay, onEngineTick };
+  return { intensity, maxIntensity, applyReinforcement, applyDecay, reset, onEngineTick };
 }

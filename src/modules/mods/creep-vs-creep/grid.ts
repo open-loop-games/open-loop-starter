@@ -92,9 +92,26 @@ function fromPersisted(
 }
 
 export function createCreepGrid(vars: DirectorVars): CreepGrid {
+  // Resolve `balance.mapSeed` once per save and persist the concrete uint32,
+  // so reloads produce the same arena even when the vars hint is `'random'`.
+  // `null` sentinel means "not yet resolved" — any prior-session save replays
+  // the picked seed verbatim.
+  const persistedSeed = persistent<number | null>(null, { name: 'mapSeed' });
+  const resolveSeed = (): number => {
+    if (persistedSeed.value !== null) return persistedSeed.value;
+    const hint = vars.balance.mapSeed;
+    const picked =
+      hint === 'random'
+        ? Math.floor(Math.random() * 0x100000000) >>> 0
+        : hint >>> 0;
+    persistedSeed.value = picked;
+    return picked;
+  };
+
   const blueprint = generateSymmetricMap({
     archetype: vars.archetype,
     balance: vars.balance,
+    seed: resolveSeed(),
   });
   const grid = createSpatialGrid<CellState>({
     width: blueprint.width,
@@ -115,6 +132,7 @@ export function createCreepGrid(vars: DirectorVars): CreepGrid {
     const fresh = generateSymmetricMap({
       archetype: vars.archetype,
       balance: vars.balance,
+      seed: resolveSeed(),
       factionOrder,
     });
     // Mutate in place so AI spawn-proximity lookups (ai.ts `spawns()` getter)

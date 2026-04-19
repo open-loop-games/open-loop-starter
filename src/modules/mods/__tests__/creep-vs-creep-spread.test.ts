@@ -16,8 +16,10 @@ function ownership(snapshot: SpatialGridSnapshot<CellState>): Array<FactionId | 
   return snapshot.cells.map((c) => c.owner ?? '');
 }
 
+let gridCounter = 0;
 function buildGrid(): ReturnType<typeof createCreepGrid> {
-  return withPersistentContext('test-creep-warfare', () => createCreepGrid(vars));
+  const id = `test-creep-warfare-${gridCounter++}`;
+  return withPersistentContext(id, () => createCreepGrid(vars));
 }
 
 let chainCounter = 0;
