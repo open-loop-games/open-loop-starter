@@ -35,17 +35,8 @@ import {
   type Resource,
 } from 'open-loop-engine';
 import type { DirectorVars } from '@/archetypes/director';
-import {
-  FACTION_IDS,
-  UPGRADE_DEFS,
-  metaUpgradeDefs,
-  type FactionId,
-} from './content';
-import {
-  createCombatSystem,
-  type CombatChains,
-  type CombatSystem,
-} from './combat';
+import { FACTION_IDS, UPGRADE_DEFS, metaUpgradeDefs, type FactionId } from './content';
+import { createCombatSystem, type CombatChains, type CombatSystem } from './combat';
 import { createCreepGrid, type CreepGrid } from './grid';
 import { createSpreadSystem, type SpreadSystem } from './spread';
 import { createFlowField, type FlowField } from './flow';
@@ -56,7 +47,7 @@ import { createUpgradeSystem, type UpgradeSystem } from './upgrades';
 import { createRoundSystem, type RoundSystem } from './round';
 import { createMetaSystem, type MetaSystem } from './meta';
 import { createAchievementSystem, type AchievementSystem } from './achievements';
-import { loadCreepVsCreepVars } from './vars';
+import { loadCreepVsCreepVars, type DirectorVarsOverride } from './vars';
 import { setSlot } from '@/modules/ui-registry';
 import CreepWarfareLayout from '@/ui/layouts/CreepWarfareLayout.vue';
 
@@ -98,12 +89,12 @@ function buildFactionChains(
   return out;
 }
 
-export function createCreepWarfareModule(): EngineModule {
+export function createCreepWarfareModule(varsOverride: DirectorVarsOverride = {}): EngineModule {
   return {
     id: 'creep-warfare',
     dependencies: ['settings', 'ui-registry'],
     install(ctx: EngineContext) {
-      const vars = loadCreepVsCreepVars();
+      const vars = loadCreepVsCreepVars(varsOverride);
       const grid = withPersistentContext('creep-warfare-map', () => createCreepGrid(vars));
 
       const attack = buildFactionChains('attack');
