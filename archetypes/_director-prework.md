@@ -93,12 +93,6 @@ and proving composition viable.
 
 **Exemplar lineage to cite in § 2 of the archetype doc:**
 
-- Footmen Frenzy / Footmen Wars (WC3 mod) — 4-corner FFA, open arena,
-  rounds with upgrades, autonomous unit flow.
-- Castle Fight (WC3 mod) — build-don't-control philosophy; auto-spawners
-  from economy; terrain-shaped-not-lane-forced routing.
-- X Hero Siege (WC3 mod) — wave pacing, power-ramp between structured
-  episodes.
 - Warcraft III / StarCraft II melee — underlying map-design tradition:
   main + natural + third + contested middle + chokepoints. Vocabulary
   anchor.
@@ -106,6 +100,24 @@ and proving composition viable.
 Cite as "validation tradition", not clone targets, consistent with the
 template's framing and producer.md's Cookie Clicker/AdVenture
 Capitalist/Derivative Clicker line.
+
+> **Note on Footmen Frenzy / Castle Fight / X Hero Siege:** earlier
+> framings of this prework (and OL-558 umbrella priors) cited these WC3
+> maps as Director exemplars. OL-558 Phase 1 + Phase 2 research
+> (`open-loop-research/reports/studies/arcade-market-archetypes/`) found
+> triple-platform-taxonomy corroboration for **Tug** as a distinct
+> Wave-2 archetype: WC3 Hive's "Offense / Auto-send" thread category,
+> SC2 Blizzard's first-class `{code: "TugOfWar"}` platform category, and
+> Armor Games' independent Flash lane-push subgenre each named the
+> cluster without coordination. Footmen Frenzy, Castle Fight, and X
+> Hero Siege are **Tug exemplars** (adversarial-pressure topology worth
+> authoring around), **not Director implementations**. Director operates
+> at the meta-mechanic level (author / tune / curate adversarial
+> pressure); Tug is a first-order competitive commitment (out-produce
+> the opponent). A Director experience might tune a TD- or Tug-shaped
+> level; that does not make TD or Tug into Director variants. See
+> `_tug-prework.md` and the Phase 2 taxonomy's § 3B Tug ↔ Director
+> section for the full relationship.
 
 **Novel-patterns cluster alignment (to verify in drafting session):** unknown
 whether `novel-patterns-synthesis-v4.md` has a cluster that covers
