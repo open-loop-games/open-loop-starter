@@ -170,6 +170,5 @@ The overlay is a top-level sibling of `AppFrame`, not pushed through `useModalSt
 
 ## Research Inputs
 
-- `/work/studio/open-loop-research/patterns/ui-ux/layout-spray-2026-04.md` — 42-game spray that validated the 5-shell set and killed the 2×2 idea. Primary reference for shell design.
-- `/work/studio/open-loop-research/patterns/ui-ux/game-layout-patterns.md` — deep dives on Cookie Clicker, Progress Knight, Kittens Game.
-- `/work/studio/open-loop-research/patterns/ui-ux/{interactive-elements,progress-indicators,number-formatting}.md` — widget inputs.
+- `/work/studio/open-loop-research/practical/ui-ux/layout-spray-2026-04.md` — 42-game spray that validated the 5-shell set and killed the 2×2 idea. Primary reference for shell design.
+- `/work/studio/open-loop-research/practical/ui-ux/game-layout-patterns.md` — deep dives on Cookie Clicker, Progress Knight, Kittens Game.

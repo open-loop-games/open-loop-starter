@@ -310,6 +310,6 @@ real shapes to synthesise from.
 - **Composition cookbook:** `/work/studio/open-loop-research/practical/composition-cookbook/`
   — predecessor aspirational list; superseded by this doc
 - **Engine API:** `/work/studio/open-loop-engine/docs/api/INDEX.md`
-- **Layout research:** `/work/studio/open-loop-research/patterns/ui-ux/layout-spray-2026-04.md`
+- **Layout research:** `/work/studio/open-loop-research/practical/ui-ux/layout-spray-2026-04.md`
 - **Per-archetype template:** `archetypes/_template.md` *(Phase 0, pending)*
 - **Per-archetype specs:** `archetypes/<name>.md` *(Phase 1–3, pending)*
