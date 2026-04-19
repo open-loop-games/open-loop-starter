@@ -476,3 +476,23 @@ Prework did not resolve these. Each needs a call before or during the
 - OL-558 umbrella + OL-559 Phase 1 + OL-563 Phase 2 LIBRARY filing
 - OL-567 (this subtask) + OL-568 (Phase 3b engine posture, Opus scope)
 - OL-560 (mobile corpus umbrella — Neko Atsume Ambient validation pending)
+
+---
+
+## UI prescription hook (OL-582)
+
+The archetype-doc drafting session must fill § 9 UI prescription against `archetypes/_template.md`. Prescriptions must cite one of three data artifacts under `open-loop-research/practical/ui-ux/`, or carry a `` `declared invention` `` tag with rationale.
+
+**Data artifacts:**
+
+- `layout-audit-2026.md` — per-game classification rows (69 games; shell, nav pattern, notable widgets, form-factor intent).
+- `subgenre-shell-mapping-2026.md` — sub-genre × shell majority cross-tab. Only `incremental-math` has a strong single-shell majority; every other mid-size sub-genre offers a primary + secondary shell pair.
+- `widget-vocabulary.md` — 10 ARIA-aligned widgets (lift targets for reka-ui primitives in `@/lib`) + 9 domain widgets (per-fork implementation; no pre-abstraction per OL-273 Phase 2 lift-first policy).
+
+**Sub-genre mapping for Ambient:** Ambient Progression is an engagement-model commitment, not a mechanic family. Formation-era exemplars (Cookie Clicker, Universal Paperclips, A Dark Room Phase 1) map to `narrative clicker` in the audit (primary shell single-column; secondary three-panel). The Steam-era resurgence cluster (Rusty's Retirement, Chillquarium, Chill with You) implies the persistent-strip / desktop-overlay form, which is `` `declared invention` `` against starter — no `AmbientStrip` / `CompanionFrame` shell ships in `src/lib/shells/`. Flag this explicitly in § 9 declared-invention notes (see open question #9 in this prework).
+
+**Shell name resolution.** `{{ShellName}}` must resolve to a file in `open-loop-starter/src/lib/shells/*.vue`. Starter ships five of the audit's six shells (`MultiColumnShell`, `SidebarMainShell`, `SingleColumnShell`, `TabsBarShell`, `ThreePanelShell`); `free-form` shell shapes are always `declared invention` against starter today.
+
+**Form-factor intent.** Mobile-native / touch-primary / persistent-strip commitments are `` `declared invention` `` against the corpus — the rationale must be in § 9, not an implicit assumption. Audit mobile-aware coverage is ~32% of 69 rows; most sub-genres have no mobile majority.
+
+**Reference retrofits.** `archetypes/producer.md` (three-panel primary, narrative clicker), `archetypes/looper.md` (three-panel primary, time-loop), `archetypes/scaler.md` (sidebar-main primary, prestige idle) show the § 9 shape against canonical-sub-genre-majority archetypes.

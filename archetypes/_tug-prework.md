@@ -373,3 +373,23 @@ the `archetypes/tug.md` draft:
 - Engine API index: `open-loop-engine/docs/api/INDEX.md`
 - OL-558 (umbrella), OL-559 (Phase 1 extraction), OL-564 (Phase 2 taxonomy),
   OL-567 (this subtask: Phase 3a Tug prework)
+
+---
+
+## UI prescription hook (OL-582)
+
+The archetype-doc drafting session must fill § 9 UI prescription against `archetypes/_template.md`. Prescriptions must cite one of three data artifacts under `open-loop-research/practical/ui-ux/`, or carry a `` `declared invention` `` tag with rationale.
+
+**Data artifacts:**
+
+- `layout-audit-2026.md` — per-game classification rows (69 games; shell, nav pattern, notable widgets, form-factor intent).
+- `subgenre-shell-mapping-2026.md` — sub-genre × shell majority cross-tab. Only `incremental-math` has a strong single-shell majority; every other mid-size sub-genre offers a primary + secondary shell pair.
+- `widget-vocabulary.md` — 10 ARIA-aligned widgets (lift targets for reka-ui primitives in `@/lib`) + 9 domain widgets (per-fork implementation; no pre-abstraction per OL-273 Phase 2 lift-first policy).
+
+**Sub-genre mapping for Tug:** Tug (adversarial auto-send lane push) is mobile-native / touch-primary (triple-platform-taxonomy corroboration per OL-559 Phase 1). No audit sub-genre match. Primary shell is `` `declared invention` ``: compact HUD with touch-primary push-pull lane indicator. Form-factor intent is `mobile-first` as `` `declared invention` `` — the audit has ~3 mobile-first rows, none with tug-shape precedent.
+
+**Shell name resolution.** `{{ShellName}}` must resolve to a file in `open-loop-starter/src/lib/shells/*.vue`. Starter ships five of the audit's six shells (`MultiColumnShell`, `SidebarMainShell`, `SingleColumnShell`, `TabsBarShell`, `ThreePanelShell`); `free-form` shell shapes are always `declared invention` against starter today.
+
+**Form-factor intent.** `mobile-first` as declared invention. Cite the triple-platform-taxonomy evidence from OL-559 (this prework's source) rather than the audit — the audit does not cover Tug games.
+
+**Reference retrofits.** `archetypes/producer.md`, `archetypes/looper.md`, `archetypes/scaler.md` show the § 9 shape against canonical-sub-genre-majority archetypes.

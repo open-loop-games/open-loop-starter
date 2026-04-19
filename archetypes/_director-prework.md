@@ -510,3 +510,23 @@ archetypes/director.md draft:
 - Engine harness: `open-loop-engine/src/harness/run-matrix.ts`,
   `run-sensitivity.ts`, `src/core/headless.ts`.
 - DomGrid renderer: `src/ui/components/spatial/DomGrid.vue`
+
+---
+
+## UI prescription hook (OL-582)
+
+The archetype-doc drafting session must fill § 9 UI prescription against `archetypes/_template.md`. Prescriptions must cite one of three data artifacts under `open-loop-research/practical/ui-ux/`, or carry a `` `declared invention` `` tag with rationale.
+
+**Data artifacts:**
+
+- `layout-audit-2026.md` — per-game classification rows (69 games; shell, nav pattern, notable widgets, form-factor intent).
+- `subgenre-shell-mapping-2026.md` — sub-genre × shell majority cross-tab. Only `incremental-math` has a strong single-shell majority; every other mid-size sub-genre offers a primary + secondary shell pair.
+- `widget-vocabulary.md` — 10 ARIA-aligned widgets (lift targets for reka-ui primitives in `@/lib`) + 9 domain widgets (per-fork implementation; no pre-abstraction per OL-273 Phase 2 lift-first policy).
+
+**Sub-genre mapping for Director:** Director emerged bottom-up from OL-504 (creep-vs-creep spatial arena); no audit sub-genre maps directly. Reference the LIBRARY Placement-Adjacency + Routing-Traversal cluster (OL-562 / OL-563 Phase 2 v4 synthesis). Primary shell is `` `declared invention` ``: adversarial-arena layout. Rendering goes through `src/ui/components/spatial/DomGrid.vue` (see this prework's references). Form-factor intent is `desktop` as declared invention (pointer-primary spatial interaction).
+
+**Shell name resolution.** `{{ShellName}}` must resolve to a file in `open-loop-starter/src/lib/shells/*.vue`. Starter ships five of the audit's six shells (`MultiColumnShell`, `SidebarMainShell`, `SingleColumnShell`, `TabsBarShell`, `ThreePanelShell`); `free-form` shell shapes are always `declared invention` against starter today.
+
+**Form-factor intent.** Desktop, declared-invention — spatial-arena pointer interaction has no corpus precedent in the audit's ~32% mobile-aware rows.
+
+**Reference retrofits.** `archetypes/producer.md`, `archetypes/looper.md`, `archetypes/scaler.md` show the § 9 shape against canonical-sub-genre-majority archetypes.

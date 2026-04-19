@@ -21,6 +21,7 @@ export const ARCHETYPES_DIR = resolve(STARTER_ROOT, 'archetypes');
 export const LIBRARY_MD = resolve(RESEARCH_ROOT, 'LIBRARY.md');
 export const ENGINE_INDEX_MD = resolve(ENGINE_ROOT, 'docs/api/INDEX.md');
 export const CORPUS_DIR = resolve(RESEARCH_ROOT, 'analyses/complete');
+export const SHELLS_DIR = resolve(STARTER_ROOT, 'src/lib/shells');
 
 // ─── Canonical section titles (order matters) ──────────────────────────────
 
@@ -33,11 +34,23 @@ export const CANONICAL_SECTIONS: Readonly<Record<number, string>> = Object.freez
   6: 'Balance probes',
   7: 'Sim assertions',
   8: 'Content sketch',
-  9: 'Predicted engine gaps',
-  10: 'Themes',
+  9: 'UI prescription',
+  10: 'Predicted engine gaps',
+  11: 'Themes',
 });
 
 export const ALLOWED_STATUSES = new Set(['canonical', 'candidate', 'deprecated']);
+
+// Form-factor intent values accepted by ruleFormFactor. Order: audit taxonomy.
+export const ALLOWED_FORM_FACTORS = new Set(['desktop', 'mobile-first', 'responsive']);
+
+// The three ui-ux data artifacts § 9 prescriptions must cite (or tag `declared invention`).
+export const UI_CITATION_TOKENS = [
+  'layout-audit-2026.md',
+  'subgenre-shell-mapping-2026.md',
+  'widget-vocabulary.md',
+  '`declared invention`',
+] as const;
 
 // ─── Parsed doc model ──────────────────────────────────────────────────────
 
@@ -105,6 +118,7 @@ function extractSections(md: string): Map<number, ParsedSection> {
 
 let _enginePrimitives: Set<string> | null = null;
 let _corpusGames: Set<string> | null = null;
+let _starterShells: Set<string> | null = null;
 
 export function loadEnginePrimitives(indexPath = ENGINE_INDEX_MD): Set<string> {
   if (_enginePrimitives) return _enginePrimitives;
@@ -125,6 +139,17 @@ export function loadCorpusGames(dirPath = CORPUS_DIR): Set<string> {
   return _corpusGames;
 }
 
+export function loadStarterShells(dirPath = SHELLS_DIR): Set<string> {
+  if (_starterShells) return _starterShells;
+  if (!existsSync(dirPath)) return new Set();
+  _starterShells = new Set(
+    readdirSync(dirPath)
+      .filter((f) => f.endsWith('Shell.vue'))
+      .map((f) => f.replace(/\.vue$/, '')),
+  );
+  return _starterShells;
+}
+
 // ─── Rule runners ──────────────────────────────────────────────────────────
 
 export function runAllRules(doc: ArchetypeDoc): Violation[] {
@@ -138,6 +163,7 @@ export function runAllRules(doc: ArchetypeDoc): Violation[] {
     ...ruleVarsSchema(doc),
     ...ruleProbes(doc),
     ...ruleSimAssertions(doc),
+    ...ruleUIPrescription(doc),
     ...ruleThemes(doc),
   ];
 }
@@ -312,13 +338,124 @@ function ruleSimAssertions(doc: ArchetypeDoc): Violation[] {
 }
 
 function ruleThemes(doc: ArchetypeDoc): Violation[] {
-  const section = doc.sections.get(10);
+  const section = doc.sections.get(11);
   if (!section) return [];
   const themeHeadings = Array.from(section.content.matchAll(/^### Theme /gm)).length;
   if (themeHeadings < 3 || themeHeadings > 5) {
-    return [{ rule: 'themes', message: `§ 10 has ${themeHeadings} theme(s), need 3–5` }];
+    return [{ rule: 'themes', message: `§ 11 has ${themeHeadings} theme(s), need 3–5` }];
   }
   return [];
+}
+
+// Extracts the inline-code-wrapped shell name from a bolded prescription line.
+// Example match: `**Primary shell:** \`SidebarMainShell\` — …` → `SidebarMainShell`.
+function extractShellName(line: string): string | null {
+  const m = line.match(/`([A-Z]\w*Shell)`/);
+  return m ? m[1] : null;
+}
+
+// Is the line tagged `declared invention` (as an escape-hatch for the validator)?
+function isDeclaredInvention(line: string): boolean {
+  return /`declared invention`/.test(line);
+}
+
+// Does the line carry at least one of the required UI citation tokens?
+function hasUICitation(line: string): boolean {
+  return UI_CITATION_TOKENS.some((token) => line.includes(token));
+}
+
+// Extract the full line containing a bolded field label from § 9 content.
+// Returns the raw line including the label, or null if not found.
+function findFieldLine(content: string, label: string): string | null {
+  const pattern = new RegExp(`^[-*]?\\s*\\*\\*${label}:\\*\\*.*$`, 'm');
+  const m = content.match(pattern);
+  return m ? m[0] : null;
+}
+
+function ruleUIPrescription(doc: ArchetypeDoc): Violation[] {
+  const section = doc.sections.get(9);
+  if (!section) return []; // covered by ruleSections
+  const v: Violation[] = [];
+  const shells = loadStarterShells();
+
+  // Required field lines.
+  const primaryLine = findFieldLine(section.content, 'Primary shell');
+  const secondaryLine = findFieldLine(section.content, 'Secondary shell');
+  const formFactorLine = findFieldLine(section.content, 'Form-factor intent');
+
+  if (!primaryLine) {
+    v.push({ rule: 'ui-prescription', message: '§ 9 missing `**Primary shell:**` line' });
+  }
+  if (!secondaryLine) {
+    v.push({ rule: 'ui-prescription', message: '§ 9 missing `**Secondary shell:**` line' });
+  }
+  if (!formFactorLine) {
+    v.push({ rule: 'ui-prescription', message: '§ 9 missing `**Form-factor intent:**` line' });
+  }
+
+  // Shell resolution (primary + secondary if not `—`).
+  for (const [label, line] of [
+    ['Primary shell', primaryLine],
+    ['Secondary shell', secondaryLine],
+  ] as const) {
+    if (!line) continue;
+    if (isDeclaredInvention(line)) continue;
+    const shellName = extractShellName(line);
+    if (shellName === null) {
+      // Secondary may carry a literal em-dash meaning "no secondary, single-shell prescription".
+      // Accept `—` as a sentinel after the colon.
+      if (label === 'Secondary shell' && /:\s*`?—`?/.test(line)) continue;
+      v.push({
+        rule: 'ui-prescription',
+        message: `§ 9 ${label} line has no backticked \`ShellName\` and no \`declared invention\` tag`,
+      });
+      continue;
+    }
+    if (!shells.has(shellName)) {
+      v.push({
+        rule: 'ui-prescription',
+        message: `§ 9 ${label} "${shellName}" not found in ${SHELLS_DIR} (and not tagged \`declared invention\`)`,
+      });
+    }
+  }
+
+  // Form-factor value check.
+  if (formFactorLine && !isDeclaredInvention(formFactorLine)) {
+    const ffMatch = formFactorLine.match(/`(desktop|mobile-first|responsive)`/);
+    if (!ffMatch) {
+      v.push({
+        rule: 'ui-prescription',
+        message: `§ 9 Form-factor intent line missing a backticked value from {${[...ALLOWED_FORM_FACTORS].join(', ')}} and not tagged \`declared invention\``,
+      });
+    }
+  }
+
+  // Citation discipline on the three prescription lines.
+  for (const [label, line] of [
+    ['Primary shell', primaryLine],
+    ['Secondary shell', secondaryLine],
+    ['Form-factor intent', formFactorLine],
+  ] as const) {
+    if (!line) continue;
+    // Single-shell-prescription sentinel on Secondary exempts the citation check.
+    if (label === 'Secondary shell' && /:\s*`?—`?/.test(line) && !extractShellName(line)) continue;
+    if (!hasUICitation(line)) {
+      v.push({
+        rule: 'ui-prescription',
+        message: `§ 9 ${label} line has no citation (expect one of: ${UI_CITATION_TOKENS.join(', ')})`,
+      });
+    }
+  }
+
+  // Widget-list header presence (content may be empty; header must not).
+  if (!/\*\*ARIA-aligned widgets\b/.test(section.content)) {
+    v.push({ rule: 'ui-prescription', message: '§ 9 missing `**ARIA-aligned widgets**` list header' });
+  }
+  if (!/\*\*Domain widgets\b/.test(section.content)) {
+    v.push({ rule: 'ui-prescription', message: '§ 9 missing `**Domain widgets**` list header' });
+  }
+
+  return v;
 }
 
 // ─── Discovery ─────────────────────────────────────────────────────────────

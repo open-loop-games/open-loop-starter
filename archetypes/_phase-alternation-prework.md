@@ -454,3 +454,23 @@ the `archetypes/phase-alternation.md` draft.
 - Phase 3b primitive-surface: OL-568 (blocking ticket for archetype doc)
 - Archetype template: `archetypes/_template.md`
 - Format reference: `archetypes/producer.md`
+
+---
+
+## UI prescription hook (OL-582)
+
+The archetype-doc drafting session must fill § 9 UI prescription against `archetypes/_template.md`. Prescriptions must cite one of three data artifacts under `open-loop-research/practical/ui-ux/`, or carry a `` `declared invention` `` tag with rationale.
+
+**Data artifacts:**
+
+- `layout-audit-2026.md` — per-game classification rows (69 games; shell, nav pattern, notable widgets, form-factor intent).
+- `subgenre-shell-mapping-2026.md` — sub-genre × shell majority cross-tab. Only `incremental-math` has a strong single-shell majority; every other mid-size sub-genre offers a primary + secondary shell pair.
+- `widget-vocabulary.md` — 10 ARIA-aligned widgets (lift targets for reka-ui primitives in `@/lib`) + 9 domain widgets (per-fork implementation; no pre-abstraction per OL-273 Phase 2 lift-first policy).
+
+**Sub-genre mapping for Phase-Alternation:** Phase-Alternation is cyclical-phase archetype (contrast with OL-544 Phase-shifter's one-way transition). No direct audit sub-genre match. Reference `time-loop` sub-genre rows (three-panel weak majority: Idle Loops, Omsi Loops) for cyclical-phase UI patterns; the phase-alternation-specific mode-switch widget is `` `declared invention` ``. Primary shell candidates: `ThreePanelShell` (idle-loops precedent) or `SidebarMainShell` (if one phase is dominant-mode).
+
+**Shell name resolution.** `{{ShellName}}` must resolve to a file in `open-loop-starter/src/lib/shells/*.vue`. Starter ships five of the audit's six shells (`MultiColumnShell`, `SidebarMainShell`, `SingleColumnShell`, `TabsBarShell`, `ThreePanelShell`); `free-form` shell shapes are always `declared invention` against starter today.
+
+**Form-factor intent.** Desktop per time-loop corpus distribution. Mobile-native commitments are `` `declared invention` ``.
+
+**Reference retrofits.** `archetypes/producer.md` (three-panel, narrative clicker), `archetypes/looper.md` (three-panel, time-loop), `archetypes/scaler.md` (sidebar-main, prestige idle). Soft coupling with Phase-shifter (OL-544) — the cyclical-vs-one-way contrast should be symmetric between the two docs' § 9 sections.

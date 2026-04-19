@@ -263,13 +263,33 @@ describe('looper — balance robustness', () => {
 - **Actions:** 20 across zones. Minimum cadence: each zone has ≥1 action that grants each skill's XP.
 - **Progression gates:** zone unlocks via action-completion count or skill threshold; automation tier 1 via loop count.
 - **Queue:** single or dual (edit + active); drag-drop reorder; per-item loop count; auto-repeat toggle.
-- **UI layout:** `ThreePanelShell` from `src/lib/shells/` — left: action drawer (zone-filtered); centre: queue editor + current-run readout; right: skills panel + retention tracks.
 
 **Density target:** beat 1 → queue + first action ticking; beats 2–3 → loop & within-loop progression (actions + skills); beat 4 → retention-track readout; beat 5 → second zone + its actions; beat 6 → queue re-editing affordance (drag handles, loop-count inputs); beat 7 → automation toggle; beat 8 → final zone + end-of-arc flavour event.
 
 ---
 
-## 9. Predicted engine gaps
+## 9. UI prescription
+
+- **Primary shell:** `ThreePanelShell` — time-loop weak majority per `subgenre-shell-mapping-2026.md` § "time-loop" (2/5 classifiable, at the 40% threshold). Shell matches both primary idle-loops-lineage exemplars. Exemplar rows from `layout-audit-2026.md`: Idle Loops, Omsi Loops.
+- **Secondary shell:** `MultiColumnShell` — extension shape for Cavernous-style per-clone queue richness; one classifiable time-loop row per `subgenre-shell-mapping-2026.md`. Use when the fork adds parallel-clone or parallel-loop content that outgrows three columns. Exemplar row: Cavernous II.
+- **Form-factor intent:** `desktop` — time-loop corpus is desktop-dominant per `layout-audit-2026.md` distribution (no mobile-aware majority in the sub-genre). Queue-editing interaction is pointer-primary; touch-first is a declared-invention territory Looper does not claim.
+- **ARIA-aligned widgets (lift targets):**
+  - `Tooltip` — skill-row breakdowns, action prereqs, retention-track explanations. Cites `widget-vocabulary.md` Layer 1 (frequency 5).
+  - `Dialog` — automation config, prestige/soulstone tree, saved-loadout picker. Cites `widget-vocabulary.md` Layer 1 (frequency 6).
+  - `Progress` — per-action completion ticks (beat 1 signal), loop time-budget gauge, skill-XP bars. Cites `widget-vocabulary.md` Layer 1 (highest frequency, 12).
+  - `Tabs` — zone switching in the action drawer. Cites `widget-vocabulary.md` Layer 1 (≥30 corpus rows carry tab-nav).
+  - `Accordion` — collapsible skill groupings / zone-completion detail. Cites `widget-vocabulary.md` Layer 1 (frequency 4).
+- **Domain widgets (per-fork implementation):**
+  - action queue — the Looper-signature widget. Drag-to-reorder list with per-item loop count + auto-repeat toggle. Cites `widget-vocabulary.md` Layer 2 (frequency 5; Idle Loops and Cavernous II exemplify drag-to-reorder).
+  - resource bar — time-budget gauge (mana / health / ticks) as the always-visible pacing readout. Cites `widget-vocabulary.md` Layer 2 (frequency 11).
+  - progress track — embedded per-queue-item progress bars for the currently-ticking action and look-ahead preview. Cites `widget-vocabulary.md` Layer 2 (frequency 7).
+  - stat panel — right-column read-only display of skill levels + retention-track accumulators. Cites `widget-vocabulary.md` Layer 2 (frequency 6; right-column fixture in three-panel layouts).
+- **Layout detail:** three-panel region assignment — left column holds the action drawer (zone-filtered, `Tabs`-gated by current zone), centre holds the queue editor + current-run readout (time-budget gauge, current action `Progress`), right column holds skills panel + retention tracks. Modal (`Dialog`) hosts automation config and loadout picker per beat 6 / beat 7.
+- **Nav pattern:** horizontal tab bar for zones (within the left column, not at shell level). Matches idle-loops lineage per `layout-audit-2026.md` row: Idle Loops ("top tabs (town location switching)").
+
+---
+
+## 10. Predicted engine gaps
 
 Both live consumers flag overlapping gaps; convergent TODOs get higher severity.
 
@@ -286,7 +306,7 @@ Both live consumers flag overlapping gaps; convergent TODOs get higher severity.
 
 ---
 
-## 10. Themes
+## 11. Themes
 
 ### Theme A — Classic adventuring
 

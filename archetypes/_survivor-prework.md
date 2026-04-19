@@ -379,3 +379,23 @@ the `archetypes/survivor.md` draft:
 - Novel-patterns synthesis: `open-loop-research/reports/novel-patterns/novel-patterns-synthesis-v4.md`
 - Engine API index: `open-loop-engine/docs/api/INDEX.md`
 - OL-558 umbrella, OL-559 Phase 1, OL-564 Phase 2 taxonomy, OL-567 this prework, OL-568 Phase 3b engine posture
+
+---
+
+## UI prescription hook (OL-582)
+
+The archetype-doc drafting session must fill § 9 UI prescription against `archetypes/_template.md`. Prescriptions must cite one of three data artifacts under `open-loop-research/practical/ui-ux/`, or carry a `` `declared invention` `` tag with rationale.
+
+**Data artifacts:**
+
+- `layout-audit-2026.md` — per-game classification rows (69 games; shell, nav pattern, notable widgets, form-factor intent).
+- `subgenre-shell-mapping-2026.md` — sub-genre × shell majority cross-tab. Only `incremental-math` has a strong single-shell majority; every other mid-size sub-genre offers a primary + secondary shell pair.
+- `widget-vocabulary.md` — 10 ARIA-aligned widgets (lift targets for reka-ui primitives in `@/lib`) + 9 domain widgets (per-fork implementation; no pre-abstraction per OL-273 Phase 2 lift-first policy).
+
+**Sub-genre mapping for Survivor:** Survivor (Vampire Survivors lineage) is fullscreen-arena + HUD overlay. The audit corpus has no survivor rows. Primary shell is `` `declared invention` ``: fullscreen canvas play area + HUD chrome. Form-factor intent is `` `declared invention` `` — the audit has ~3 mobile-first rows, none with survivor-shape precedent. Soft coupling with Defender (OL-574): boundary-contrast note cites Defender's placement-before-threat vs Survivor's response-to-threat framing.
+
+**Shell name resolution.** `{{ShellName}}` must resolve to a file in `open-loop-starter/src/lib/shells/*.vue`. Starter ships five of the audit's six shells (`MultiColumnShell`, `SidebarMainShell`, `SingleColumnShell`, `TabsBarShell`, `ThreePanelShell`); `free-form` shell shapes are always `declared invention` against starter today. Survivor's canvas-arena-with-HUD-overlay is `free-form` category in the audit vocabulary — thus `declared invention` against starter.
+
+**Form-factor intent.** Mobile-first likely (Vampire Survivors has strong mobile presence), but `declared invention` against the audit corpus; flag explicitly.
+
+**Reference retrofits.** `archetypes/producer.md`, `archetypes/looper.md`, `archetypes/scaler.md` show the § 9 shape. Pair-review reference: `archetypes/_defender-prework.md` for the boundary-contrast framing.

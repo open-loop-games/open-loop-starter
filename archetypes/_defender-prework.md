@@ -497,3 +497,23 @@ Prework did not resolve these. Each needs a call before or during the
 - Engine API index: `open-loop-engine/docs/api/INDEX.md`
 - Novel-patterns synthesis: `open-loop-research/reports/novel-patterns/novel-patterns-synthesis-v4.md`
 - OL-558 (umbrella), OL-567 (this prework subtask), OL-568 (Phase 3b engine surface)
+
+---
+
+## UI prescription hook (OL-582)
+
+The archetype-doc drafting session must fill § 9 UI prescription against `archetypes/_template.md`. Prescriptions must cite one of three data artifacts under `open-loop-research/practical/ui-ux/`, or carry a `` `declared invention` `` tag with rationale.
+
+**Data artifacts:**
+
+- `layout-audit-2026.md` — per-game classification rows (69 games; shell, nav pattern, notable widgets, form-factor intent).
+- `subgenre-shell-mapping-2026.md` — sub-genre × shell majority cross-tab. Only `incremental-math` has a strong single-shell majority; every other mid-size sub-genre offers a primary + secondary shell pair.
+- `widget-vocabulary.md` — 10 ARIA-aligned widgets (lift targets for reka-ui primitives in `@/lib`) + 9 domain widgets (per-fork implementation; no pre-abstraction per OL-273 Phase 2 lift-first policy).
+
+**Sub-genre mapping for Defender:** Defender (TD lineage) has no audit sub-genre — the 69-row corpus contains no pure tower-defense game. Primary shell is `` `declared invention` ``: grid-placement + wave-path layout. Closest partial-corpus references: Industry Idle (`free-form`, `sandbox-city`, canvas with bottom resource bar + position:fixed overlays) and Cavernous II (`multi-column-dashboard`, `time-loop`, grid-based map view). Mobile TD (Plants vs. Zombies lineage) is `` `declared invention` `` for form-factor — corpus has ~3 mobile-first rows, no TD-shape precedent.
+
+**Shell name resolution.** `{{ShellName}}` must resolve to a file in `open-loop-starter/src/lib/shells/*.vue`. Starter ships five of the audit's six shells (`MultiColumnShell`, `SidebarMainShell`, `SingleColumnShell`, `TabsBarShell`, `ThreePanelShell`); `free-form` shell shapes are always `declared invention` against starter today.
+
+**Form-factor intent.** Mobile-native / touch-primary commitments are `` `declared invention` `` against the corpus. Audit mobile-aware coverage is ~32% of 69 rows; no sub-genre has a mobile majority.
+
+**Reference retrofits.** `archetypes/producer.md` (three-panel, narrative clicker), `archetypes/looper.md` (three-panel, time-loop), `archetypes/scaler.md` (sidebar-main, prestige idle) show the § 9 shape against canonical-sub-genre-majority archetypes. Soft coupling with Survivor (OL-575) — boundary-contrast note on placement-before-threat vs response-to-threat framing.

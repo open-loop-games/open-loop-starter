@@ -216,13 +216,33 @@ describe('producer — balance robustness', () => {
 - **Upgrades / Purchasables:** 3 per producer × 7 = 21 producer-scoped multiplier upgrades; 6 global upgrades (click multipliers, cross-producer multipliers, bulk-buy unlocks). Total 27.
 - **Progression gates:** resource-threshold unlocks for each producer tier (visibility gate, not hard block); upgrade visibility scoped by owning ≥1 of the relevant producer.
 - **Achievements:** 30 — 10 production-milestone (reach N/sec), 10 building-count milestone (own N of producer X), 10 hidden (e.g. *first minute without clicking*, *bought all T1 upgrades*). All 30 grant `achievementMultiplier` contribution to the modifier chain.
-- **UI layout:** `SidebarMainShell` from `src/lib/shells/`. Main column: big click target + producer list. Sidebar: upgrades tray + stats. Modal: achievements grid.
 
 **Density target:** every beat in § 4 has at least one corresponding content entry above (beats 1–3 → producers; 4 → upgrades; 5 → achievements; 6 → bulk-buy affordance; 7 → modifier chain readout; 8 → top tier + flavour event).
 
 ---
 
-## 9. Predicted engine gaps
+## 9. UI prescription
+
+- **Primary shell:** `ThreePanelShell` — Producer's modifier-chain depth (§ 3 stress axis 1) and 7-tier producer hierarchy consume enough UI surface that the three-panel form is defensible over the narrative-clicker majority. Cites `subgenre-shell-mapping-2026.md` § "narrative clicker" (secondary cluster 3/12 classifiable). Exemplar rows from `layout-audit-2026.md`: Cookie Clicker, Universal Paperclips, A Dark Forest.
+- **Secondary shell:** `SingleColumnShell` — narrative-clicker strict majority per `subgenre-shell-mapping-2026.md` (5/12 classifiable). Use for minimalist / mobile-leaning Producer forks. Exemplar rows: AdVenture Capitalist, A Dark Room, Candy Box 2.
+- **Form-factor intent:** `desktop` — narrative-clicker corpus is desktop-dominant per `layout-audit-2026.md` distribution; AdVenture Capitalist (`mobile-aware: yes`) is the outlier, not the rule. Responsive is a fork-level choice, not a skeleton-level claim.
+- **ARIA-aligned widgets (lift targets):**
+  - `Tooltip` — modifier-chain factor breakdowns on hover; upgrade affordability previews. Cites `widget-vocabulary.md` Layer 1 (frequency 5).
+  - `Dialog` — achievement grid modal; settings modal. Cites `widget-vocabulary.md` Layer 1 (frequency 6).
+  - `Progress` — per-producer cooldown / auto-production tick indicators. Cites `widget-vocabulary.md` Layer 1 (highest frequency, 12).
+  - `Toast` — achievement-unlock notifications (beat 5 signal). Cites `widget-vocabulary.md` Layer 1 (frequency 3).
+
+  Lift from `@/lib` / reka-ui primitives; forks do not reimplement focus, portal, or a11y.
+- **Domain widgets (per-fork implementation):**
+  - resource bar — persistent top or sidebar strip showing the primary currency + current rate. Cites `widget-vocabulary.md` Layer 2 (frequency 11; 9 distinct shapes across 3 games per OL-273 Phase 2 — no pre-abstraction).
+  - action card / building card — per-producer row with icon, name, count, cost, per-unit rate, buy-1/10/max affordances. Cites `widget-vocabulary.md` Layer 2 (frequency 4; AdVenture Capitalist and Fundamental exemplify the field set).
+  - progress track — embedded per-row cooldown bars for auto-production visibility. Cites `widget-vocabulary.md` Layer 2 (frequency 7).
+- **Layout detail:** three-panel region assignment — left column holds the producer list (7 tiers, scroll-as-needed), centre holds the primary click target + headline resource readout + modifier-chain expansion, right column holds upgrades tray + stats + achievement-button. Modal (`Dialog`) hosts the achievement grid per beat 5.
+- **Nav pattern:** none at the shell level — Producer is single-screen. Expansion tabs for the modifier-chain readout (centre column) and achievement-category filters (right column) are widget-internal, not shell navigation.
+
+---
+
+## 10. Predicted engine gaps
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
@@ -234,7 +254,7 @@ describe('producer — balance robustness', () => {
 
 ---
 
-## 10. Themes
+## 11. Themes
 
 ### Theme A — Bakery
 

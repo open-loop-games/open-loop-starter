@@ -501,3 +501,23 @@ The following need a call during the `archetypes/packer.md` drafting session:
 - Archetype template: `archetypes/_template.md`
 - Format reference: `archetypes/producer.md`
 - Engine API index: `open-loop-engine/docs/api/INDEX.md`
+
+---
+
+## UI prescription hook (OL-582)
+
+The archetype-doc drafting session must fill § 9 UI prescription against `archetypes/_template.md`. Prescriptions must cite one of three data artifacts under `open-loop-research/practical/ui-ux/`, or carry a `` `declared invention` `` tag with rationale.
+
+**Data artifacts:**
+
+- `layout-audit-2026.md` — per-game classification rows (69 games; shell, nav pattern, notable widgets, form-factor intent).
+- `subgenre-shell-mapping-2026.md` — sub-genre × shell majority cross-tab. Only `incremental-math` has a strong single-shell majority; every other mid-size sub-genre offers a primary + secondary shell pair.
+- `widget-vocabulary.md` — 10 ARIA-aligned widgets (lift targets for reka-ui primitives in `@/lib`) + 9 domain widgets (per-fork implementation; no pre-abstraction per OL-273 Phase 2 lift-first policy).
+
+**Sub-genre mapping for Packer:** Packer shares `grid-placement-auto-resolve` substrate with Auto-battler (pair-review per OL-537 Wave-2 comment). The audit corpus has no packer / placement-puzzle row. Primary shell is `` `declared invention` ``: grid-placement with resolve-phase toggle. Closest partial-corpus references are Industry Idle (grid factory with hex/square tiles + bottom resource bar) and Cavernous II (grid map with zone tiles) — both are spatial-canvas precedents for the grid widget, not the full packer shell.
+
+**Shell name resolution.** `{{ShellName}}` must resolve to a file in `open-loop-starter/src/lib/shells/*.vue`. Starter ships five of the audit's six shells (`MultiColumnShell`, `SidebarMainShell`, `SingleColumnShell`, `TabsBarShell`, `ThreePanelShell`); `free-form` shell shapes are always `declared invention` against starter today.
+
+**Form-factor intent.** Pointer-primary desktop by default; touch-primary mobile variants are `` `declared invention` ``.
+
+**Reference retrofits.** `archetypes/producer.md`, `archetypes/looper.md`, `archetypes/scaler.md` show the § 9 shape. Pair-review reference: `archetypes/_auto-battler-prework.md` shares the `grid-placement-auto-resolve` substrate.

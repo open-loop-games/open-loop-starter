@@ -297,13 +297,34 @@ describe('scaler — balance robustness', () => {
 - **Challenges:** 8 per prestige tier × 3 tiers = 24. Each nerfs production or caps something (e.g. *"8th Dimension disabled," "cost multiplier doubled," "no purchase of upgrade X"*); completion grants a stacking multiplier feeding the chain.
 - **Achievements:** 40 — 15 production-milestone (reach N/sec in layer X), 15 layer-progress (complete N challenges in layer X, reach layer X), 10 hidden (e.g. *first prestige within 10 min*, *complete a challenge without buying upgrade Y*).
 - **Progression gates:** resource-threshold unlocks for each layer; per-layer challenge availability gated by the layer's currency; auto-prestige automation tier unlocks after 5 layer-1 prestiges.
-- **UI layout:** `SidebarMainShell` from `src/lib/shells/`. Main column: tabbed view, one tab per prestige layer — each tab holds its producers/upgrades/challenges. Sidebar: modifier-chain readout (expandable to show 10+ factors with named sources), resource list, achievements button. Modal: achievement grid.
 
 **Density target:** every beat in § 4 maps to at least one content entry. Beats 1–2 → base dimensions; beat 3 → primary-resource threshold + layer-1 prestige button; beat 4 → first prestige currency; beat 5 → layer-1 upgrade tree; beat 6 → layer-1 challenge; beat 7 → layer-2 tab + layer-2 currency; beat 8 → modifier-chain expansion view + layer-3 teaser tab.
 
 ---
 
-## 9. Predicted engine gaps
+## 9. UI prescription
+
+- **Primary shell:** `SidebarMainShell` — prestige-idle weak majority per `subgenre-shell-mapping-2026.md` § "prestige idle" (5/12 classifiable; Antimatter Dimensions is the cluster anchor). Shell matches Scaler's canonical exemplar. Exemplar rows from `layout-audit-2026.md`: Antimatter Dimensions, Advent Incremental, The Game Dev Tree.
+- **Secondary shell:** `MultiColumnShell` — for forks that outgrow a single main column due to the 3-layer × (producers + upgrades + challenges + achievements) UI surface flagged as § 3 stress axis #4. Classifiable prestige-idle row per `subgenre-shell-mapping-2026.md`: Trimps (4 Bootstrap columns). Use when layer density demands parallel visibility rather than tabbed switching.
+- **Form-factor intent:** `desktop` — prestige-idle corpus is desktop-dominant per `layout-audit-2026.md` distribution; Antimatter Dimensions and Trimps both desktop. The 10+-factor modifier chain readout and 3-layer layered UI do not shrink gracefully to mobile without a fork-level redesign.
+- **ARIA-aligned widgets (lift targets):**
+  - `Tooltip` — dimension / upgrade / challenge tooltips + modifier-factor attribution on hover. Cites `widget-vocabulary.md` Layer 1 (frequency 5).
+  - `Dialog` — achievement grid, challenge-entry confirmation, settings. Cites `widget-vocabulary.md` Layer 1 (frequency 6).
+  - `Progress` — prestige-currency accumulation toward next-layer threshold, dimension-affordability indicators. Cites `widget-vocabulary.md` Layer 1 (highest frequency, 12).
+  - `Tabs` — per-prestige-layer navigation (signature layered-UI shape). Cites `widget-vocabulary.md` Layer 1.
+  - `Accordion` — expand/collapse the 10+-factor modifier-chain readout with named sources (beat 8 signal). Cites `widget-vocabulary.md` Layer 1 (frequency 4).
+- **Domain widgets (per-fork implementation):**
+  - resource bar — persistent strip showing base currency + all active prestige currencies. Cites `widget-vocabulary.md` Layer 2 (frequency 11; 9 distinct shapes across 3 games per OL-273 — no pre-abstraction).
+  - layer tree — visual node-and-branch graph for Time-Study-style upgrade trees (optional per fork; Antimatter Dimensions' Time Study is the canonical form). Cites `widget-vocabulary.md` Layer 2 (frequency 5; AD is the Scaler exemplar row for this widget).
+  - action card / dimension row — per-dimension row with icon, amount, multiplier, cost, buy affordances. Cites `widget-vocabulary.md` Layer 2 (frequency 4).
+  - stat panel — sidebar-column modifier-chain readout with named factor sources + resource totals. Cites `widget-vocabulary.md` Layer 2 (frequency 6).
+  - progress track — embedded prestige-threshold progress on the prestige button; embedded affordability on dimension rows. Cites `widget-vocabulary.md` Layer 2 (frequency 7).
+- **Layout detail:** sidebar-main region assignment — sidebar holds the modifier-chain readout (expandable `Accordion` when chain grows past ~5 factors), resource list, achievements-button. Main column holds `Tabs` — one tab per prestige layer, each tab containing that layer's dimensions / upgrades / challenges. Modal (`Dialog`) hosts the achievement grid.
+- **Nav pattern:** horizontal tab bar (prestige layers) with nested subtabs (per-layer content categories). Matches Antimatter Dimensions' "sidebar with icons, nested tabs" per `layout-audit-2026.md` row: Antimatter Dimensions.
+
+---
+
+## 10. Predicted engine gaps
 
 Scaler is the archetype that stress-tests the engine hardest. Expected friction is broader than any other archetype because of the reset × modifier × formula interactions.
 
@@ -320,7 +341,7 @@ Scaler is the archetype that stress-tests the engine hardest. Expected friction 
 
 ---
 
-## 10. Themes
+## 11. Themes
 
 ### Theme A — Antimatter physics
 

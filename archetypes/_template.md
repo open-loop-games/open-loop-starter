@@ -225,13 +225,55 @@ describe('{{name}} balance robustness', () => {
 - **Upgrades / Purchasables:** {{list with count}}
 - **Progression gates:** {{zones, unlocks, prestige tiers — whichever apply}}
 - **Achievements:** {{count + theme}}
-- **UI layout:** {{which `src/lib/shells/` shell, which panels}}
 
 **Density target:** every beat in § 4 must correspond to at least one content entry above. Enumerate the mapping inline (e.g. "beats 1–3 → producers; 4 → upgrades; 5 → achievements") — don't leave it implicit.
 
 ---
 
-## 9. Predicted engine gaps
+## 9. UI prescription
+
+<!--
+  The archetype's visual shape — shell, widgets, form-factor — grounded in
+  the 2026 stratified audit. Every field either cites one of three data
+  artifacts under `open-loop-research/practical/ui-ux/`, or carries a
+  `declared invention` tag with a one-line rationale. No free-floating
+  claims.
+
+  Citation sources:
+  - `layout-audit-2026.md` — per-game classification rows
+  - `subgenre-shell-mapping-2026.md` — sub-genre shell majorities
+  - `widget-vocabulary.md` — ARIA + domain widget vocabularies
+
+  Shell choice is archetype-shape-centric and invariant across themes
+  (§ 11). Costume does not change shell; neither does theme change beat
+  map.
+
+  The validator hard-fails on missing cites or unresolved shell names.
+  The escape hatch is an explicit `declared invention` tag.
+-->
+
+- **Primary shell:** `{{ShellName}}` — {{citation into `subgenre-shell-mapping-2026.md § <sub-genre>`, or `` `declared invention` `` with rationale. Exemplar rows from `layout-audit-2026.md`: {{game, game, game}}}}.
+- **Secondary shell:** `{{ShellName}}` — {{citation with rationale; `—` if the archetype warrants a single-shell prescription as in incremental-math's strong majority}}.
+- **Form-factor intent:** `{{desktop | mobile-first | responsive}}` — {{citation from `layout-audit-2026.md`, or `` `declared invention` `` if the sub-genre has no mobile-aware corpus majority and the archetype claims a non-desktop commitment}}.
+- **ARIA-aligned widgets (lift targets):**
+  - `{{WidgetName}}` — {{role in this archetype}}
+  - …
+
+  Lift from `@/lib` / reka-ui primitives where available; forks do not reimplement focus, portal, or a11y. Cite `widget-vocabulary.md` Layer 1.
+- **Domain widgets (per-fork implementation):**
+  - {{widget name}} — {{role}}
+  - …
+
+  Per-fork implementation — no pre-abstraction. Lift-first policy (OL-273 Phase 2): 9 distinct ResourceBar layouts across 3 games proved no generalizable shape. Cite `widget-vocabulary.md` Layer 2.
+- **Layout detail (optional):** {{one paragraph mapping named content from § 8 into shell regions — "main column holds X, sidebar Y, modal Z." Include when the shell-to-content mapping is not obvious from shell name alone}}.
+- **Nav pattern (optional):** {{horizontal tab bar / sidebar nav / nested subtabs / footer nav}}. Include when nav widget differs meaningfully from shell structure.
+- **Declared-invention notes (optional):** {{expand rationale if any field above carries `` `declared invention` ``. Cite cross-corpus absence and name the hypothesis}}.
+
+**Shell name resolution:** `{{ShellName}}` must resolve to a file in `open-loop-starter/src/lib/shells/*.vue` (e.g., `SidebarMainShell`, `ThreePanelShell`, `TabsBarShell`, `SingleColumnShell`, `MultiColumnShell`) unless tagged `` `declared invention` ``. Starter ships five of the audit's six shells; `free-form` is always `declared invention` against starter today.
+
+---
+
+## 10. Predicted engine gaps
 
 <!--
   Friction this archetype is expected to surface. Each row is a hypothesis
@@ -246,7 +288,7 @@ describe('{{name}} balance robustness', () => {
 
 ---
 
-## 10. Themes
+## 11. Themes
 
 <!--
   3–5 costume options over the skeleton. Each proves the mechanical shape
@@ -305,16 +347,19 @@ reshape the archetype to use existing vocabulary.
 
 ## Validator rules
 
-The validator (run via `pnpm validate:archetypes` — to be built) enforces:
+The validator (run via `pnpm validate:archetypes`) enforces:
 
-- [ ] All 10 numbered sections present, in order, with the canonical heading text.
+- [ ] All 11 numbered sections present, in order, with the canonical heading text.
 - [ ] § 2 cites at least 2 patterns, each resolving in `LIBRARY.md`.
 - [ ] § 3 cites at least 3 engine primitives, each resolving in `INDEX.md`.
 - [ ] § 4 beat map has 5–8 rows, each row has non-empty sim-time window.
 - [ ] § 5 vars schema parses as valid TypeScript, declares all three expected interfaces with the conventional names (`{{Name}}ArchetypeVars`, `{{Name}}ThemeVars`, `{{Name}}BalanceVars`).
 - [ ] § 6 has at least 4 probes, covering the 4 required axes.
 - [ ] § 7 has at least one test stub per beat and per probe.
-- [ ] § 10 has 3–5 themes.
+- [ ] § 9 primary-shell / secondary-shell / form-factor-intent lines each carry a citation into one of the three `practical/ui-ux/*.md` data artifacts, or a `` `declared invention` `` tag.
+- [ ] § 9 shell names resolve to files in `open-loop-starter/src/lib/shells/*.vue`, unless tagged `` `declared invention` ``.
+- [ ] § 9 contains both an "ARIA-aligned widgets" list and a "Domain widgets" list; each may be empty but both headers must be present.
+- [ ] § 11 has 3–5 themes.
 - [ ] All corpus games in the Exemplars line resolve to files under `analyses/complete/`.
 - [ ] Status is one of `canonical` / `candidate` / `deprecated`.
 
