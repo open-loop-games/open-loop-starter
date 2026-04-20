@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  runUntil,
-  runMatrixUntil,
-  setupAutoPurchaseProducers,
-  Decimal,
-  type Engine,
-} from 'open-loop-engine';
+import { runUntil, setupAutoPurchaseProducers, Decimal, type Engine } from 'open-loop-engine';
 import {
   createProducerEngine,
   BuildingsKey,
@@ -15,6 +9,9 @@ import {
   PrimaryResourceKey,
   PrimaryLifetimeKey,
   HeadlineRateKey,
+  CONTINUOUS_PRODUCER_IDS,
+  PRODUCERS,
+  type ProducerDef,
   type ProducerOverrides,
 } from '..';
 
@@ -209,53 +206,41 @@ describe('producer — beat map (default Bakery balance)', () => {
 // ─── Balance probes (§ 6) ─────────────────────────────────────────────────
 
 describe('producer — balance robustness', () => {
-  const SEEDS = [1];
-
   it('probe: cost-scaling growth ±15% keeps beat 3 within tolerance', () => {
     const growths: number[] = [0.98, 1.15, 1.32];
-    const result = runMatrixUntil({
-      cells: growths.map((g) => ({
-        name: `growth=${g}`,
-        buildEngine: () =>
-          buildSimEngine({
-            producers: overrideAllContinuous((p) => ({
-              purchase: p.purchase ? { baseCost: p.purchase.baseCost, costScaling: g } : undefined,
-            })),
-          }),
-      })),
-      seeds: SEEDS,
-      until: ({ simTime }) => simTime >= minutes(20),
-      maxSimTime: minutes(20),
-    });
-    // All three cells should drive beat 3 (first grandma) within 20 min.
-    for (const cell of result.cells) {
-      expect(cell.runs.length).toBeGreaterThan(0);
-      for (const run of cell.runs) {
-        expect(run.elapsedSimulated).toBeGreaterThan(0);
-      }
+    for (const g of growths) {
+      const engine = buildSimEngine({
+        producers: overrideAllContinuous((def) =>
+          def.purchase ? { purchase: { baseCost: def.purchase.baseCost, costScaling: g } } : {},
+        ),
+      });
+      const state = snapshots(engine);
+      const result = runUntil({
+        engine,
+        until: () => state.producerCount('grandma').gte(1),
+        maxSimTime: minutes(20),
+      });
+      expect(result.terminated, `growth=${g} never reached beat 3`).toBe('predicate');
     }
   });
 
   it('probe: tier1 base rate ±25% still completes beat 2 under 5min', () => {
+    // Cursor baseRate sets how long the manual-click burst carries the
+    // player before the first auto-producer purchase covers itself. The
+    // ±25% sweep checks the window stays inside the § 4 beat 2 budget.
     const rates = [0.075, 0.1, 0.125];
-    const result = runMatrixUntil({
-      cells: rates.map((r) => ({
-        name: `cursorRate=${r}`,
-        buildEngine: () => {
-          const engine = buildSimEngine({
-            producers: [{ id: 'cursor', baseRate: r }],
-            balance: { tier1BaseRate: r },
-          });
-          return engine;
-        },
-      })),
-      seeds: SEEDS,
-      until: () => {
-        return false;
-      },
-      maxSimTime: minutes(5),
-    });
-    expect(result.cells.length).toBe(3);
+    for (const r of rates) {
+      const engine = buildSimEngine({
+        producers: [{ id: 'cursor', baseRate: r }],
+      });
+      const state = snapshots(engine);
+      const result = runUntil({
+        engine,
+        until: () => state.producerCount('cursor').gte(1),
+        maxSimTime: minutes(5),
+      });
+      expect(result.terminated, `cursorRate=${r} never reached beat 2`).toBe('predicate');
+    }
   });
 
   it('probe: modifier-stack correctness — headline chain compounds upgrades', () => {
@@ -278,50 +263,57 @@ describe('producer — balance robustness', () => {
     expect(Decimal.gte(computed, 0.2)).toBe(true);
   });
 
-  it('probe: achievement density ±50% — beats 5 still lands within 10min', () => {
-    const result = runMatrixUntil({
-      cells: [0.5, 1.0, 1.5].map((mult) => ({
-        name: `ach=${mult}x`,
-        buildEngine: () =>
-          buildSimEngine({
-            balance: { achievementMultiplier: 1 + (1.02 - 1) * mult },
-          }),
-      })),
-      seeds: SEEDS,
-      until: ({ simTime }) => simTime >= minutes(10),
-      maxSimTime: minutes(10),
-    });
-    expect(result.cells.length).toBe(3);
+  it('probe: achievement density ±50% — beat 5 still lands within 10min', () => {
+    // Reward multiplier compounds per achievement. Sweeping it ±50% tests
+    // the beat 5 window (first achievement earned) doesn't depend on the
+    // exact reward value — achievements fire off the requirement predicate,
+    // not off the multiplier.
+    const multipliers = [1.01, 1.02, 1.03];
+    for (const m of multipliers) {
+      const engine = buildSimEngine({
+        balance: { achievementMultiplier: m },
+      });
+      const state = snapshots(engine);
+      const result = runUntil({
+        engine,
+        until: () => state.achievementCount() >= 1,
+        maxSimTime: minutes(10),
+      });
+      expect(result.terminated, `achievementMultiplier=${m} never reached beat 5`).toBe(
+        'predicate',
+      );
+    }
   });
 
   it('probe: bulk-buy formula correctness at 1e50 / 1e100 / 1e200', () => {
+    // Scale the resource directly to each magnitude and sanity-check
+    // getCost returns a finite Decimal — the tetration transition is where
+    // break_eternity historically drops precision.
     const engine = buildSimEngine();
+    const primary = engine.tryInject(PrimaryResourceKey)!;
     const buildings = engine.tryInject(BuildingsKey)!;
     const cursor = buildings.getProducer('cursor')!;
     const repeatable = cursor.repeatable!;
-    // Scale resource up and sanity-check getCost returns a finite Decimal
-    // at each magnitude — the tetration transition is where break_eternity
-    // historically drops precision.
     for (const mag of ['1e50', '1e100', '1e200']) {
+      primary.value = new Decimal(mag);
       const cost = repeatable.getCost(1);
-      expect(Decimal.isFinite(cost)).toBe(true);
-      void mag;
+      expect(Decimal.isFinite(cost), `cost at mag=${mag} was not finite`).toBe(true);
     }
   });
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
+/**
+ * Build a per-producer override entry for every continuous producer.
+ * `transform` receives the baseline ProducerDef so callers can partially
+ * rewrite nested fields (e.g. `purchase.costScaling`) without having to
+ * re-specify the unchanged ones — `applyProducerOverrides` shallow-merges
+ * top-level fields, so `purchase` patches must be full objects.
+ */
 function overrideAllContinuous(
-  transform: (def: {
-    id: string;
-    purchase?: { baseCost: unknown; costScaling: unknown };
-  }) => Partial<{
-    purchase?: { baseCost: unknown; costScaling: unknown };
-  }>,
+  transform: (def: ProducerDef) => Partial<NonNullable<ProducerOverrides['producers']>[number]>,
 ): ProducerOverrides['producers'] {
-  return ['cursor', 'grandma', 'farm', 'mine', 'factory', 'bank', 'temple'].map((id) => {
-    const transformed = transform({ id });
-    return { id, ...transformed } as NonNullable<ProducerOverrides['producers']>[number];
-  });
+  const byId = new Map(PRODUCERS.map((p) => [p.id, p] as const));
+  return CONTINUOUS_PRODUCER_IDS.map((id) => ({ id, ...transform(byId.get(id)!) }));
 }
