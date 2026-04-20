@@ -3,17 +3,12 @@ import { computed } from 'vue';
 import { AppFrame, SingleColumnShell, useModalStack } from '@/lib';
 import Popover from '@/ui/components/Popover.vue';
 import { getSlot } from '@/modules/ui-registry';
-import VanillaLayout from '@/ui/layouts/VanillaLayout.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 import { useGame } from '@/composables/useGame';
 import { Screen } from '@/types';
 
-/**
- * The active mod contributes the `game-layout` slot during its install.
- * Fall back to the vanilla layout if nothing is registered.
- */
-const layout = computed(() => getSlot('game-layout') ?? VanillaLayout);
+const layout = computed(() => getSlot('game-layout'));
 
 const stack = useModalStack();
 const { engine, currentScreen } = useGame();
@@ -65,8 +60,8 @@ function returnToSlots() {
               About
             </h4>
             <p>
-              A minimal open-loop-engine consumer. Uses the starter's
-              built-in shells, modal stack, and widget layer.
+              A minimal open-loop-engine consumer. Uses the starter's built-in shells, modal stack,
+              and widget layer.
             </p>
           </Popover>
           <button

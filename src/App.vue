@@ -1,52 +1,34 @@
 <script setup lang="ts">
 import { ref, provide, onMounted, onUnmounted } from 'vue';
-import { Decimal, createEngine, processOfflineTime, format } from 'open-loop-engine';
+import { createEngine } from 'open-loop-engine';
+import { DevPanelOverlay } from '@/lib';
 import { Screen } from '@/types';
-import { modDefs } from '@/modules';
-import { SettingsKey } from '@/modules/settings';
-import { GatheringKey } from '@/modules/village-gatherer/gathering';
-import { useTheme } from '@/composables/useTheme';
-import { useNotation } from '@/composables/useNotation';
-import { useSaveEvents } from '@/composables/useSaveEvents';
-import { useTimeBank } from '@/composables/useTimeBank';
+import { sharedBase } from '@/modules';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import GameScreen from '@/ui/screens/GameScreen.vue';
-import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
-import OfflineReportModal from '@/ui/components/OfflineReportModal.vue';
-import TimeBankDrawer from '@/ui/components/TimeBankDrawer.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
-import { DevPanelOverlay } from '@/lib';
+import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import {
-  creepAnalyzerPack,
-  creepWorkbenchPrepare,
-  creepWorkbenchTick,
-} from '@/modules/mods/creep-vs-creep/workbench';
 
 const currentScreen = ref<Screen>(Screen.Slots);
 const isDev = import.meta.env.DEV;
 
+// Phase 1 placeholder: engine with only the shared baseline modules.
+// Phase 2 replaces this with per-archetype boot.ts factories that create
+// and provide the engine; App.vue becomes a generic consumer.
 const engine = createEngine({
   gameId: 'open-loop-starter',
   tickRate: 20,
-  autoSaveInterval: 60000,
+  autoSaveInterval: 60_000,
   maxSaveSlots: 30,
-  mods: modDefs,
+  mods: [{ id: 'default', name: 'Open Loop', modules: sharedBase }],
 });
-
-useSaveEvents(engine.saveManager!);
 
 provide('engine', engine);
 provide('currentScreen', currentScreen);
 
-// Offline report state
-const offlineReport = ref<{ elapsed: number; gains: Record<string, string> } | null>(null);
-
-// F12-toggled BalanceWorkbench dev panel. Wired here in the base starter for
-// dogfooding — forks replicate this block and can strip mod-specific hooks.
-// The creep-* hooks gracefully degrade on non-creep mods (tryInject returns
-// undefined), so the panel stays useful across the demo spray.
 const showDevPanel = ref(false);
+
 function onDevPanelKey(e: KeyboardEvent): void {
   if (!isDev) return;
   if (e.key === 'F12') {
@@ -54,6 +36,7 @@ function onDevPanelKey(e: KeyboardEvent): void {
     showDevPanel.value = !showDevPanel.value;
   }
 }
+
 onMounted(() => window.addEventListener('keydown', onDevPanelKey));
 onUnmounted(() => window.removeEventListener('keydown', onDevPanelKey));
 
@@ -64,55 +47,11 @@ function activeModules() {
   return mod ? mod.modules : [];
 }
 
-function startGame(slotId: number, modId?: string) {
+function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
   if (modId) engine.selectMod(modId);
   engine.start();
-
-  // Wire up composables that depend on engine being started
-  useTheme(engine);
-  useNotation(engine);
-
-  const settingsState = engine.tryInject(SettingsKey);
-  const timeBank = useTimeBank(engine);
-
-  const result = engine.load();
-  if (result.success && result.timestamp) {
-    const elapsed = (Date.now() - result.timestamp) / 1000;
-    if (timeBank) {
-      // Bank model: credit offline time, never simulate.
-      if (elapsed > 5) timeBank.grant(elapsed * 1000);
-    } else if (elapsed > 60 && settingsState?.settings.offlineProgress.value) {
-      const gatheringState = engine.tryInject(GatheringKey);
-
-      // Snapshot before
-      const woodBefore = gatheringState
-        ? Decimal.floor(gatheringState.resources.wood.value)
-        : Decimal.dZero;
-      const stoneBefore = gatheringState
-        ? Decimal.floor(gatheringState.resources.stone.value)
-        : Decimal.dZero;
-      const goldBefore = gatheringState
-        ? Decimal.floor(gatheringState.resources.gold.value)
-        : Decimal.dZero;
-
-      const processed = processOfflineTime(engine.loop, elapsed);
-
-      if (processed > 0 && gatheringState) {
-        const gains: Record<string, string> = {};
-        const woodGain = Decimal.floor(gatheringState.resources.wood.value).sub(woodBefore);
-        const stoneGain = Decimal.floor(gatheringState.resources.stone.value).sub(stoneBefore);
-        const goldGain = Decimal.floor(gatheringState.resources.gold.value).sub(goldBefore);
-        if (woodGain.gt(0)) gains['Wood'] = '+' + format(woodGain);
-        if (stoneGain.gt(0)) gains['Stone'] = '+' + format(stoneGain);
-        if (goldGain.gt(0)) gains['Gold'] = '+' + format(goldGain);
-        if (Object.keys(gains).length > 0) {
-          offlineReport.value = { elapsed: processed, gains };
-        }
-      }
-    }
-  }
-
+  engine.load();
   currentScreen.value = Screen.Game;
 }
 </script>
@@ -124,56 +63,16 @@ function startGame(slotId: number, modId?: string) {
     @start="startGame"
   />
   <GameScreen v-else-if="currentScreen === Screen.Game" />
-  <OfflineReportModal
-    v-if="offlineReport"
-    :elapsed="offlineReport.elapsed"
-    :gains="offlineReport.gains"
-    @close="offlineReport = null"
-  />
-  <TimeBankDrawer v-if="currentScreen === Screen.Game" />
   <ToastContainer />
   <DevDiagnostics v-if="isDev" />
-  <button
-    v-if="isDev && currentScreen === Screen.Game"
-    class="dev-workbench-button"
-    type="button"
-    title="Open Balance Workbench (F12)"
-    @click="showDevPanel = true"
-  >
-    Workbench
-  </button>
   <DevPanelOverlay
-    v-if="isDev && showDevPanel && currentScreen === Screen.Game"
+    v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
     <BalanceWorkbench
       :engine="engine"
       :modules="activeModules"
-      :tick="creepWorkbenchTick"
-      :analyzer-pack="creepAnalyzerPack"
-      :prepare="creepWorkbenchPrepare"
     />
   </DevPanelOverlay>
 </template>
-
-<style scoped>
-.dev-workbench-button {
-  position: fixed;
-  bottom: 8px;
-  right: 140px;
-  z-index: 9998;
-  background: rgba(10, 10, 20, 0.88);
-  border: 1px solid #2a2a3a;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 11px;
-  color: #aaccee;
-  cursor: pointer;
-}
-.dev-workbench-button:hover {
-  background: rgba(20, 20, 36, 0.95);
-  color: #cceeff;
-}
-</style>

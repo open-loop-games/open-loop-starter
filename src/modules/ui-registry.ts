@@ -7,16 +7,7 @@
 import { shallowReactive, markRaw, type Component } from 'vue';
 import type { EngineModule } from 'open-loop-engine';
 
-export type SlotId =
-  | 'game-layout'
-  | 'resources-panel'
-  | 'actions-panel'
-  | 'producers-panel'
-  | 'upgrades-panel'
-  | 'achievements-panel'
-  | 'loop-panel'
-  | 'prestige-panel'
-  | 'ledger-panel';
+export type SlotId = 'game-layout' | (string & {});
 
 const slots = shallowReactive<Partial<Record<SlotId, Component>>>({});
 
