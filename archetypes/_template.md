@@ -116,47 +116,50 @@ Naming what's *absent* is part of the contract: it's how a sparse-surface archet
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 <!--
-  This section is the source of truth for the generated vars types in
-  src/modules/<game>/vars/*.ts. Codegen extracts these interfaces; keep them
-  syntactically valid TypeScript. Three files, three interfaces:
+  Documents the intended TypeScript data shape for the archetype's
+  implementation under `src/archetypes/<name>/data/`. Prose-first: the
+  code is the source of truth; this section is design reference, not a
+  codegen input.
 
-    archetype.ts → {{Name}}ArchetypeVars   — skeleton defaults, rarely edited
-    theme.ts     → {{Name}}ThemeVars       — costume, zero mechanical impact
-    balance.ts   → {{Name}}BalanceVars     — mechanical overrides
+  Archetype code follows the data-first convention from
+  `/work/studio/incloneution`: flat typed-array exports under `data/*.ts`
+  with the skeleton/theme/balance lens as comment sections inside files.
 
-  Rule: anything that changes beat timing lives in BalanceVars. Anything
-  cosmetic lives in ThemeVars. Anything that changes engine-surface
-  composition (adds a new pattern, removes a primitive) lives in
-  ArchetypeVars — and a fork that edits ArchetypeVars is explicitly forking
-  the skeleton, not tuning it.
+  Lens discipline (comment sections inside each data file):
+  - Skeleton — structural counts and shape. Editing these forks the
+    archetype; not a tuning surface.
+  - Balance — numbers that drive beat timing. Workbench perturbation
+    target. Sim tests probe these.
+  - Costume — names, flavour, copy. Zero mechanical impact; swap freely
+    per theme/fork.
 -->
 
 ```ts
-// archetype.ts — skeleton defaults
-export interface {{Name}}ArchetypeVars {
-  // {{describe each field with a one-line comment}}
-  {{exampleField}}: {{type}};
+// data/types.ts — typed definitions for this archetype's content
+export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primary entity)
+  id: string;
+  name: string;
+  // {{describe each field with a one-line comment — mixed mechanical + costume is fine}}
 }
 
-// theme.ts — costume, no mechanical impact
-export interface {{Name}}ThemeVars {
-  resourceNames: Record<string, string>;
-  // {{other cosmetic knobs}}
-}
-
-// balance.ts — mechanical overrides
-export interface {{Name}}BalanceVars {
-  // {{every balance lever a fork might want to tune}}
-  {{exampleField}}: {{type}};
-}
+// data/<entity>.ts — inline constants + flat arrays, organized by lens
+//
+//   // ─── Skeleton ─────────────────────────────────────
+//   export const {{NAME}}_PRIMARY_COUNT = 7;
+//
+//   // ─── Balance ──────────────────────────────────────
+//   export const {{NAME}}_COST_GROWTH = 1.15;
+//
+//   // ─── Costume ──────────────────────────────────────
+//   export const {{NAME}}_ENTRIES: {{Name}}PrimaryDef[] = [ ... ];
 ```
 
-**Override semantics:** deep-merge at load order `archetype → theme → balance`. Tests pass an override object to `runSim`.
+**Override semantics:** `boot.ts` exports `create{{Name}}Engine(overrides?)` that accepts a deep-partial over the archetype's data shape. Sim tests and workbench perturbation route through this factory — the addressable shape *is* the TypeScript type over the data, not a synthetic vars layer. Forks change behaviour by editing `data/*.ts` in place; they don't need a runtime override path.
 
-**Codegen contract:** `pnpm codegen:archetype-vars <name>` (pending) reads this section and emits `src/modules/mods/<game>/vars/archetype.ts` / `theme.ts` / `balance.ts` with matching defaults wired up. The archetype-level shared types and defaults live at `src/archetypes/<name>/` — games under `src/modules/mods/<game>/vars/` import types from there.
+**Archetype code lives in** `src/archetypes/<name>/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract.
 
 ---
 
@@ -349,10 +352,10 @@ reshape the archetype to use existing vocabulary.
 2. **No new pattern names.** Cite, don't invent.
 3. **No new engine primitives.** If this archetype needs a primitive that doesn't exist, that's a predicted gap (§ 9), not an invented name in § 3. This applies to the "explicitly not used" list too — every primitive named must resolve.
 4. **Beats are sim-time, not clock-time.** All targets assume continuous simulation; offline time is out of scope for the beat map.
-5. **Vars are typed TS, no loose objects.** The vars schema block must be syntactically valid TypeScript — codegen reads it.
+5. **Data shapes are typed TS.** § 5 TS-signature examples must be syntactically valid TypeScript — they are reference material for the archetype's implementation under `src/archetypes/<name>/data/`.
 6. **Themes are costume-only.** If a theme changes beat timing or pattern composition, it is a different archetype, not a theme.
 7. **Keep the 1–2h arc honest.** If you can't fit your beat map into 2 hours of simulated time, either cut beats or reshape the archetype — do not let scope drift.
-8. **Archetype code lives colocated.** Archetype-level types + default-vars constants live at `src/archetypes/<name>/` — shared types in `types.ts`, generated defaults under `vars/{archetype,theme,balance}.ts` (emitted by `pnpm codegen:archetype-vars <name>`). Forks clone the archetype directory wholesale; per-fork tuning edits happen in place, not in a separate `src/modules/mods/<game>/vars/` tree. This doc is the source of truth: types.ts mirrors § 5 interfaces; codegen emits defaults from the `// default X` comments.
+8. **Archetype code lives colocated.** Each archetype lives at `src/archetypes/<name>/` as a self-bootable tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). Data is hand-authored TypeScript, not codegen output. Forks clone the archetype directory wholesale; per-fork tuning edits happen in place. This doc describes design intent; the code is the source of truth.
 
 ---
 
@@ -364,7 +367,7 @@ The validator (run via `pnpm validate:archetypes`) enforces:
 - [ ] § 2 cites at least 2 patterns, each resolving in `LIBRARY.md`.
 - [ ] § 3 cites at least 3 engine primitives, each resolving in `INDEX.md`.
 - [ ] § 4 beat map has 5–8 rows, each row has non-empty sim-time window.
-- [ ] § 5 vars schema parses as valid TypeScript, declares all three expected interfaces with the conventional names (`{{Name}}ArchetypeVars`, `{{Name}}ThemeVars`, `{{Name}}BalanceVars`).
+- [ ] § 5 data shape parses as valid TypeScript, declares at least one typed definition interface for the archetype's primary entity.
 - [ ] § 6 has at least 4 probes, covering the 4 required axes.
 - [ ] § 7 has at least one test stub per beat and per probe.
 - [ ] § 9 primary-shell / secondary-shell / form-factor-intent lines each carry a citation into one of the three `practical/ui-ux/*.md` data artifacts, or a `` `declared invention` `` tag.

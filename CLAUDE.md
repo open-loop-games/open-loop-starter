@@ -10,7 +10,7 @@ Three jobs:
 
 1. **Scaffold layout/theme layer (`src/lib/`)** — layout shells, AppFrame, modal stack, default CSS tokens, reset. Presentational-only; no engine imports. Not an importable cross-package library.
 2. **Default theme (`src/styles/`)** — opinionated CSS-variable values and widget-level selectors layered over the token defaults. Forks override per-variable or swap wholesale.
-3. **Quick-copy scaffold (`src/modules/`, `src/composables/`, `src/ui/`)** — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, slot helpers, layout wrappers, and a demo village-gathering game across 4 mod variants. Everything a new game would re-derive from scratch. Fork the repo, rename, strip the demo module, start building content.
+3. **Archetype demos (`src/archetypes/<name>/`)** — each archetype is a self-bootable demo with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts`. Pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton. Fork the repo, pick one archetype, delete the other nine + the gallery, start building content in place.
 
 Starter is not a library — it's a template. Downstream games consume it by *forking*, not by depending on it. The bar for code here is "would a new game want this on day one?" If yes, ship it; if no, cut it.
 
@@ -31,36 +31,57 @@ pnpm format           # prettier --write
 
 ```
 src/
-├── main.ts           # Vue entry + engine creation + CSS import order
-├── App.vue           # Root component
-├── types.ts          # Shared starter types
-├── lib/              # Scaffold layout/theme layer
-│   ├── shells/       # 5 layout shells validated by the 42-game spray
-│   ├── frame/        # AppFrame: header + shell + modal stack + toasts + theme
-│   ├── modal/        # useModalStack composable + ModalStack mount (reka-ui Dialog)
-│   ├── dev/          # DevPanelOverlay — presentational fullscreen dev surface
-│   ├── styles/       # tokens.css (default CSS custom properties) + reset.css
-│   └── index.ts      # Barrel — import via '@/lib'
-├── modules/
-│   ├── index.ts      # allModules[] — registered with createEngine()
-│   ├── core.ts       # Demo module (resources, skills, zones, actions, producers)
-│   ├── settings.ts   # Settings module (theme, notation, autosave)
-│   ├── ui-registry.ts # UI slot registry (panel/screen registration)
-│   └── mods/         # Mod-layer extension point (idle-loops-ng pattern)
-├── composables/      # Vue composables — bridge engine refs to UI
-│                       useGame, useSave, useSettings, useTheme, useToasts,
-│                       useSlots, useNotation, useFormatting, useAutomation,
-│                       useSaveEvents, useUI
+├── main.ts              # Mounts the active archetype via its createApp() factory
+├── App.vue              # Transitional shell; replaced by archetype-owned root on fork
+├── types.ts             # Shared starter types
+├── archetypes/          # Self-bootable archetype demos (see § Archetype convention)
+│   ├── producer/
+│   ├── looper/
+│   ├── scaler/
+│   └── …                # one directory per canonical + candidate archetype
+├── lib/                 # Scaffold layout/theme layer
+│   ├── shells/          # 5 layout shells validated by the 42-game spray
+│   ├── frame/           # AppFrame: header + shell + modal stack + toasts + theme
+│   ├── modal/           # useModalStack composable + ModalStack mount (reka-ui Dialog)
+│   ├── dev/             # DevPanelOverlay — presentational fullscreen dev surface
+│   ├── styles/          # tokens.css (default CSS custom properties) + reset.css
+│   └── index.ts         # Barrel — import via '@/lib'
+├── modules/             # Shared-base modules used by every archetype
+│   ├── index.ts         # sharedBase = [settingsModule, uiRegistryModule]
+│   ├── settings.ts      # Settings module (theme, notation, autosave)
+│   └── ui-registry.ts   # UI slot registry (panel/screen registration)
+├── composables/         # Starter-level Vue composables — bridge shared-base refs to UI
+│                          useGame, useSave, useSettings, useTheme, useToasts,
+│                          useSlots, useNotation, useFormatting, useAutomation,
+│                          useSaveEvents, useUI
 ├── styles/
-│   ├── base.css          # Consumer theme — fills in --color-*, --gap-*, etc.
-│   └── theme-widgets.css # Widget-specific theme (progress, tooltip, popover, panel)
+│   ├── base.css             # Consumer theme — fills in --color-*, --gap-*, etc.
+│   └── theme-widgets.css    # Widget-specific theme (progress, tooltip, popover, panel)
 └── ui/
-    ├── layouts/      # Layout wrappers (Vanilla/Clicker/Ledger) around lib shells
-    ├── screens/      # Page-level views (GameScreen, SlotScreen)
-    ├── panels/       # Mountable panels registered via ui-registry
-    └── components/   # Widgets (PanelLayout, Tooltip, Popover, ProgressBar)
-                      # + game-specific SFCs (SavePanel, SettingsPanel, etc.)
+    ├── screens/         # Cross-archetype screens (SlotScreen, GameScreen)
+    ├── panels/          # Cross-archetype panels (BalanceWorkbench)
+    └── components/      # Shared primitives (Tooltip, ProgressBar, BaseModal, Tabs, …)
+                         # Archetype-specific SFCs live under src/archetypes/<name>/ui/
 ```
+
+### Archetype convention
+
+Each archetype under `src/archetypes/<name>/` is self-bootable and follows the same colocated shape (matches `/work/studio/incloneution`):
+
+```
+src/archetypes/<name>/
+├── data/            # Pure config. Typed defs + balance constants. Skeleton/theme/
+│                    # balance lens lives here as comment sections, not separate files.
+├── modules/         # Engine modules; factory-constructed, closing over data.
+├── composables/     # Vue composables that bridge archetype modules to UI.
+├── ui/              # Archetype-colocated screens + panels + components.
+├── sim/             # Beat + probe vitest suite per archetype doc § 7.
+└── boot.ts          # createApp(overrides?) → { app, engine, mount }.
+```
+
+**Dependency direction (strict):** `data → modules → composables → ui`. Data never imports from modules; composables and components never contain game logic. Lens inside data files uses comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`) — not separate files, not a codegen round-trip.
+
+**Fork workflow:** clone the repo, pick one archetype, delete the others + `src/gallery/` (when it lands), keep your one archetype as the whole app.
 
 ### Layering
 
@@ -138,6 +159,8 @@ The overlay is a top-level sibling of `AppFrame`, not pushed through `useModalSt
 **Must:**
 - All game quantities use `Decimal` from `open-loop-engine`
 - Declare engine state inside `withPersistentContext(id, () => ({ ... }))` in `install(ctx)` — or use bare `persistent()` calls when the module context is already active (the engine wraps `install()` in its own `withPersistentContext`)
+- Keep archetype `data/` as pure config — no engine imports, no logic beyond constant-level computation; modules read data at construction via factory closure
+- Follow the `data → modules → composables → ui` direction inside each archetype; do not reverse
 - Use `src/lib/` shells and frame for layout — don't hand-roll
 - Theme by setting CSS variables, not by writing component-level styles
 - Type all public component props and composable APIs explicitly
@@ -148,8 +171,8 @@ The overlay is a top-level sibling of `AppFrame`, not pushed through `useModalSt
 
 **Must Not:**
 - Import `break_eternity.js` directly (use engine re-exports)
-- Add game-specific content to the base starter — it stays generic
-- Bake in a particular game loop shape; the demo is illustrative, not prescriptive
+- Add game-specific content to the base starter — archetype content lives under `src/archetypes/<name>/`, not in the cross-archetype `src/modules/` / `src/ui/` directories
+- Extract archetype data into a parallel `vars/` layer with codegen round-trips — data is inline in `data/*.ts`; the skeleton/theme/balance lens lives as comment sections
 - Add Tailwind or shadcn-vue
 - Depend on `open-loop-engine` from `src/lib/` (keep it presentational)
 - Add a 2×2 quadrant shell to `src/lib/` (zero prior art — see layout-spray research)
