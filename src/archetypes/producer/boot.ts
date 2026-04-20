@@ -1,7 +1,5 @@
-import { createApp as createVueApp, type App } from 'vue';
-import { createEngine, type Engine } from 'open-loop-engine';
-import { sharedBase } from '@/modules';
-import { vHoldRepeat } from '@/lib';
+import { type Engine } from 'open-loop-engine';
+import { bootApp, bootEngine } from '@/boot';
 import ProducerAppRoot from './ui/ProducerAppRoot.vue';
 import { createProducerModules } from './modules';
 import { DEFAULT_PRODUCER_DATA } from './data';
@@ -13,7 +11,6 @@ const MOD_ID = 'bakery';
 const MOD_NAME = 'Bakery';
 
 export interface ProducerBootResult {
-  app: App;
   engine: Engine;
   data: ProducerData;
   mount: (selector: string | Element) => void;
@@ -42,17 +39,14 @@ export function createProducerEngine(
   data: ProducerData;
 } {
   const data = applyProducerOverrides(DEFAULT_PRODUCER_DATA, overrides);
-  const engine = createEngine({
+  const engine = bootEngine({
     gameId: GAME_ID,
-    tickRate: 20,
-    autoSaveInterval: 60_000,
-    maxSaveSlots: 30,
     persistenceNamespace: options?.persistenceNamespace,
     mods: [
       {
         id: MOD_ID,
         name: MOD_NAME,
-        modules: [...sharedBase, ...createProducerModules(data)],
+        modules: createProducerModules(data),
       },
     ],
   });
@@ -60,8 +54,7 @@ export function createProducerEngine(
 }
 
 /**
- * Build a ready-to-mount Vue app. Injects the engine + click directive and
- * wires screen routing through `ProducerAppRoot.vue`.
+ * Build a ready-to-mount Vue app via the shared starter boot factory.
  *
  * Usage:
  * ```ts
@@ -71,18 +64,10 @@ export function createProducerEngine(
  */
 export function createApp(overrides?: ProducerOverrides): ProducerBootResult {
   const { engine, data } = createProducerEngine(overrides);
-
-  const app = createVueApp(ProducerAppRoot);
-  app.directive('hold-repeat', vHoldRepeat);
-  app.provide('engine', engine);
-  app.provide('producer:data', data);
-
-  return {
-    app,
+  const { mount } = bootApp({
+    root: ProducerAppRoot,
     engine,
-    data,
-    mount(target) {
-      app.mount(target);
-    },
-  };
+    provides: [['producer:data', data]],
+  });
+  return { engine, data, mount };
 }
