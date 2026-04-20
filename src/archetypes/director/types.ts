@@ -46,6 +46,7 @@ export interface DirectorArchetypeVars {
   maxGoalSlots: number;
 
   playerFaction: DirectorFactionId;
+  aiPersonalities: DirectorAiPersonality;
 
   spreadLoopHz: number;
   combatLoopHz: number;

@@ -17,6 +17,8 @@
 
 **Exemplars (validation, not clone targets):** {{3–5 corpus games that prove this composition viable, linked to `open-loop-research/analyses/complete/<name>-analysis.md`. Bottom-up / declared-invention archetypes with no direct corpus analogues may substitute a `` `declared invention` `` tag with a named validation tradition in prose — see § 9's shell escape hatch for the parallel pattern.}}
 
+**Live consumer references (engine-usage grounding):** {{Optional but load-bearing when it applies. Cite `/work/studio/<name>/` paths of games already built on this archetype — they demonstrate real engine usage alongside the research corpus. When no consumer exists yet, write `none in the ecosystem today` and explain what the first fork will confirm or reject. When a gap appears in ≥ 2 live consumers, it's *convergent* — record that fact in § 10 and default its severity to High.}}
+
 ---
 
 ## 1. Player experience
@@ -26,6 +28,10 @@
   - What does the moment-to-moment loop feel like?
   - What is the shape of a 30-minute session?
   - What is the long-term pull that makes a player come back?
+
+  The first paragraph is load-bearing — downstream gallery cards summarize
+  from it verbatim. Keep it 300–1200 chars, prose-only (no markdown links,
+  no code fences); it must read as a self-contained pitch.
 
   This is the only section that is prose-only. Every later section has
   formal structure the validator and codegen consume.
@@ -279,6 +285,11 @@ describe('{{name}} balance robustness', () => {
   Friction this archetype is expected to surface. Each row is a hypothesis
   the implementation will confirm or reject. Confirmed gaps become engine
   tickets; rejected ones get deleted from a later revision of this doc.
+
+  Convergent-gap rule: if a gap appears in ≥ 2 live consumers (see
+  identity-block "Live consumer references"), include the phrase
+  "convergent across N consumers" in the Notes column and set severity = High.
+  The validator enforces this pairing.
 -->
 
 | Gap | Severity | Notes |
@@ -341,7 +352,7 @@ reshape the archetype to use existing vocabulary.
 5. **Vars are typed TS, no loose objects.** The vars schema block must be syntactically valid TypeScript — codegen reads it.
 6. **Themes are costume-only.** If a theme changes beat timing or pattern composition, it is a different archetype, not a theme.
 7. **Keep the 1–2h arc honest.** If you can't fit your beat map into 2 hours of simulated time, either cut beats or reshape the archetype — do not let scope drift.
-8. **Two homes for archetype code.** Archetype-level types + default-vars constants live at `src/archetypes/<name>/` (shared, one copy, imported by every game of this archetype). Per-game overrides live at `src/modules/mods/<game>/vars/` (copied-in, editable per fork). This doc is the source of truth for both — types for the former, default values for the codegen output to the latter.
+8. **Archetype code lives colocated.** Archetype-level types + default-vars constants live at `src/archetypes/<name>/` — shared types in `types.ts`, generated defaults under `vars/{archetype,theme,balance}.ts` (emitted by `pnpm codegen:archetype-vars <name>`). Forks clone the archetype directory wholesale; per-fork tuning edits happen in place, not in a separate `src/modules/mods/<game>/vars/` tree. This doc is the source of truth: types.ts mirrors § 5 interfaces; codegen emits defaults from the `// default X` comments.
 
 ---
 
@@ -362,5 +373,8 @@ The validator (run via `pnpm validate:archetypes`) enforces:
 - [ ] § 11 has 3–5 themes.
 - [ ] All corpus games in the Exemplars line resolve to files under `analyses/complete/`, **or** the Exemplars line carries a `` `declared invention` `` tag with a named validation tradition.
 - [ ] Status is one of `canonical` / `candidate` / `deprecated`.
+- [ ] § 1 first paragraph ("pitch") is 300–1200 chars, contains no markdown links or code fences.
+- [ ] If a `**Live consumer references**` line is present, each cited `` `/work/studio/<name>/` `` path resolves on disk, OR the line starts with `none` as an explicit-absence sentinel.
+- [ ] § 10 rows self-declaring "convergent across N consumers" (N ≥ 2) carry severity = High.
 
 A doc that fails any check is not a canonical archetype spec.
