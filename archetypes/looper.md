@@ -104,7 +104,7 @@ The 1–2h arc compresses the reference-game scope (Idle Loops' 4–8h time-to-f
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 ```ts
 // archetype.ts — skeleton defaults

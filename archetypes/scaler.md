@@ -105,7 +105,7 @@ The 1–2h arc compresses the reference-game scopes (Antimatter Dimensions' ~8h 
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 ```ts
 // archetype.ts — skeleton defaults

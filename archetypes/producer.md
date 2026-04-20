@@ -82,50 +82,60 @@ A thirty-minute session is a sequence of threshold moments — *"I can finally a
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
+
+Producer's content lives under `src/archetypes/producer/data/` as three flat typed-array exports (`producers.ts`, `upgrades.ts`, `achievements.ts`) plus a `types.ts` that names the definition interfaces. Inline `effect` and `requirement` callbacks colocate the mechanics with the definition — no separate effect tables, no codegen. Lens discipline is enforced by comment sections inside each data file (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`): skeleton counts (tier-count, upgrade-count, achievement-count) are a fork-of-skeleton decision; balance constants (cost-growth, tier-cost-ratios, base rates, multipliers) are the tuning surface sim tests probe; costumes (resource name, producer names, upgrade/achievement labels, end-of-arc message) are theme-scoped.
 
 ```ts
-// archetype.ts — skeleton defaults
-export interface ProducerArchetypeVars {
-  // Structural shape of the producer hierarchy — changing these is a fork-of-skeleton decision.
-  producerTierCount: number;        // default 7
-  upgradesPerProducer: number;      // default 3 (per-producer multiplier upgrades)
-  globalUpgradeCount: number;       // default 6 (click & global multiplier upgrades)
-  achievementCount: number;         // default 30 (10 production + 10 building-count + 10 hidden)
-  bulkBuyEnabled: boolean;          // default true
-  softCapClickContributionAt: number | null; // default null (no softcap); Decimal string if enabled
-}
+// data/types.ts — typed definitions
 
-// theme.ts — costume, no mechanical impact
-export interface ProducerThemeVars {
-  resourceName: { singular: string; plural: string };
-  producerNames: string[];          // length must equal ProducerArchetypeVars.producerTierCount
-  upgradeFlavour: { label: string; description: string }[];
-  achievementFlavour: { label: string; description: string; hidden?: boolean }[];
-  clickButtonLabel: string;
-  endOfArcMessage: string;          // fires at beat 8
-}
-
-// balance.ts — mechanical overrides; drives beat timing
-export interface ProducerBalanceVars {
-  clickBaseValue: string;           // Decimal — default "1"
-  tier1BaseRate: string;            // Decimal/sec — default "0.1"
-  tierCostRatios: number[];         // inter-tier cost multipliers; length = producerTierCount
-  producerCostScaling: {            // per-producer exponential curve
-    baseCost: string;               // Decimal — tier-1 first-unit cost, default "15"
-    growth: number;                 // multiplier per purchase, default 1.15
+export interface ProducerDef {
+  id: string;                      // stable; used as save key
+  name: string;                    // display name (costume)
+  trigger: 'continuous' | 'manual';
+  baseRate: DecimalSource;         // per-second for continuous; per-activation for manual
+  purchase?: {                     // absent on the click producer
+    baseCost: DecimalSource;       // tier-1 first-unit cost
+    costScaling: DecimalSource;    // per-purchase multiplier (default 1.15)
   };
-  upgradeMultiplier: number;        // default 2 (doubling per per-producer upgrade)
-  globalUpgradeMultiplier: number;  // default 2
-  achievementMultiplier: number;    // default 1.02 (per achievement)
-  milestoneThresholds: number[];    // quantity-tracking thresholds per producer, default [1, 10, 25, 50, 100, 150, 200, 300, 400, 500]
-  milestoneBonusPerTier: number;    // multiplicative bonus per threshold hit, default 2
+}
+
+export interface UpgradeDef {
+  id: string;
+  name: string;                    // display name (costume)
+  description: string;
+  cost: DecimalSource;
+  /** Which producer this scopes to. Null → global upgrade (binds on headline chain). */
+  targetProducerId: string | null;
+  /** Multiplicative effect value (e.g. 2 for doubling). */
+  multiplier: DecimalSource;
+}
+
+export interface AchievementDef {
+  id: string;
+  name: string;
+  description: string;
+  hidden?: boolean;
+  /** State-predicate — true when the achievement's trigger condition is met. */
+  requirement: (state: ProducerGameState) => boolean;
+  /** Headline multiplicative reward. Default 1.02 per achievement. */
+  rewardMultiplier?: DecimalSource;
+}
+
+export interface ProducerBalance {
+  clickBaseValue: DecimalSource;           // default 1
+  tier1BaseRate: DecimalSource;            // default 0.1
+  producerCostGrowth: DecimalSource;       // default 1.15
+  tierCostRatios: DecimalSource[];         // inter-tier step multipliers
+  upgradeMultiplier: DecimalSource;        // default 2
+  globalUpgradeMultiplier: DecimalSource;  // default 2
+  achievementMultiplier: DecimalSource;    // default 1.02
+  milestoneThresholds: number[];           // default [1, 10, 25, 50, 100, 150, 200, 300, 400, 500]
+  milestoneBonusPerTier: DecimalSource;    // default 2
 }
 ```
 
-**Override semantics:** deep-merge at load order `archetype → theme → balance`. Tests pass an override object to `runSim`.
-
-**Codegen contract:** `pnpm codegen:archetype-vars producer` reads this block and emits `src/modules/<game>/vars/archetype.ts` / `theme.ts` / `balance.ts` with matching defaults wired up.
+**Override semantics:** `boot.ts` exports `createProducerEngine(overrides?)` that accepts a flat-category deep-partial — `{ producers?, upgrades?, achievements?, balance? }` — with per-entity replacement keyed by `id` and deep-merge over balance. Sim tests and workbench perturbation route through this factory. The addressable shape *is* the TypeScript type over the data; there is no synthetic vars layer and no codegen round-trip.
 
 ---
 

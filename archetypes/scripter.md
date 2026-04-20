@@ -109,7 +109,7 @@ The 1–2 h arc compresses Bitburner's ~20 h time-to-first-Augmentation and Anti
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 ```ts
 // archetype.ts — skeleton defaults

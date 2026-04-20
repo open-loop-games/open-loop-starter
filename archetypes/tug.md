@@ -97,7 +97,7 @@ This beat is deliberately a **bimodal** arc closure — one branch for `metaProg
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 ```ts
 // archetype.ts — skeleton defaults

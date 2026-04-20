@@ -102,7 +102,7 @@ The 1–2h arc compresses Kittens Game's 100+-hour scope honestly. Eight resourc
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 ```ts
 // archetype.ts — skeleton defaults

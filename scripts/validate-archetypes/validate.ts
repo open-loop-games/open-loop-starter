@@ -56,7 +56,6 @@ export function runAllRules(doc: ArchetypeManifest): Violation[] {
     ...rulePatterns(doc),
     ...rulePrimitives(doc),
     ...ruleBeatMap(doc),
-    ...ruleVarsSchema(doc),
     ...ruleProbes(doc),
     ...ruleSimAssertions(doc),
     ...ruleUIPrescription(doc),
@@ -194,20 +193,6 @@ function ruleBeatMap(doc: ArchetypeManifest): Violation[] {
     return [{ rule: 'beat-map', message: `§ 4 has ${rows} beats, need 5–8` }];
   }
   return [];
-}
-
-function ruleVarsSchema(doc: ArchetypeManifest): Violation[] {
-  const vars = doc.varsSchema;
-  if (!vars) return [{ rule: 'vars-schema', message: '§ 5 has no ```ts code block' }];
-  if (vars.archetype === null && vars.theme === null && vars.balance === null) {
-    return [{ rule: 'vars-schema', message: '§ 5 has no ```ts code block' }];
-  }
-  const v: Violation[] = [];
-  if (!vars.archetype)
-    v.push({ rule: 'vars-schema', message: '§ 5 missing interface *ArchetypeVars' });
-  if (!vars.theme) v.push({ rule: 'vars-schema', message: '§ 5 missing interface *ThemeVars' });
-  if (!vars.balance) v.push({ rule: 'vars-schema', message: '§ 5 missing interface *BalanceVars' });
-  return v;
 }
 
 function ruleProbes(doc: ArchetypeManifest): Violation[] {

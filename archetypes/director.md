@@ -114,7 +114,7 @@ The 1–2 h first-completion arc is a meta-arc across ~22–24 rounds of ~5 min 
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 ```ts
 import type { DecimalSource } from 'open-loop-engine';

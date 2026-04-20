@@ -109,7 +109,7 @@ The 1–2 h arc compresses A Dark Room's 3–6 hour time-to-escape and Paperclip
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 ```ts
 // archetype.ts — skeleton defaults

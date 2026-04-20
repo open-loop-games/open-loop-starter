@@ -367,7 +367,6 @@ The validator (run via `pnpm validate:archetypes`) enforces:
 - [ ] § 2 cites at least 2 patterns, each resolving in `LIBRARY.md`.
 - [ ] § 3 cites at least 3 engine primitives, each resolving in `INDEX.md`.
 - [ ] § 4 beat map has 5–8 rows, each row has non-empty sim-time window.
-- [ ] § 5 data shape parses as valid TypeScript, declares at least one typed definition interface for the archetype's primary entity.
 - [ ] § 6 has at least 4 probes, covering the 4 required axes.
 - [ ] § 7 has at least one test stub per beat and per probe.
 - [ ] § 9 primary-shell / secondary-shell / form-factor-intent lines each carry a citation into one of the three `practical/ui-ux/*.md` data artifacts, or a `` `declared invention` `` tag.

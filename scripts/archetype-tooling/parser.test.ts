@@ -37,41 +37,6 @@ describe('archetype parser', () => {
       it('preserves raw markdown', () => {
         expect(manifest.markdown.length).toBeGreaterThan(0);
       });
-
-      it('parses § 5 into three named interfaces', () => {
-        const vars = manifest.varsSchema;
-        expect(vars).toBeDefined();
-        expect(vars!.archetype, 'archetype interface').not.toBeNull();
-        expect(vars!.theme, 'theme interface').not.toBeNull();
-        expect(vars!.balance, 'balance interface').not.toBeNull();
-      });
-
-      it('§ 5 interfaces expose at least one field each', () => {
-        const vars = manifest.varsSchema!;
-        expect(vars.archetype!.fields.length).toBeGreaterThan(0);
-        expect(vars.theme!.fields.length).toBeGreaterThan(0);
-        expect(vars.balance!.fields.length).toBeGreaterThan(0);
-      });
     });
   }
-});
-
-describe('producer § 5 default extraction (spot check)', () => {
-  it('pulls numeric + boolean + quoted defaults out of comments', () => {
-    const producerPath = findArchetypeDocs().find((p) => p.endsWith('producer.md'))!;
-    const manifest = parseArchetypeDoc(producerPath);
-    const arch = manifest.varsSchema!.archetype!;
-    const balance = manifest.varsSchema!.balance!;
-
-    const tierCount = arch.fields.find((f) => f.name === 'producerTierCount')!;
-    expect(tierCount.defaultExpr).toBe('7');
-    expect(tierCount.typeText).toBe('number');
-
-    const bulkBuy = arch.fields.find((f) => f.name === 'bulkBuyEnabled')!;
-    expect(bulkBuy.defaultExpr).toBe('true');
-
-    const clickBase = balance.fields.find((f) => f.name === 'clickBaseValue')!;
-    // Trailing comment is `Decimal — default "1"`; extractor should pull "1".
-    expect(clickBase.defaultExpr).toBe('"1"');
-  });
 });

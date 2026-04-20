@@ -33,7 +33,7 @@ export const CANONICAL_SECTIONS: Readonly<Record<number, string>> = Object.freez
   2: 'Pattern composition',
   3: 'Engine surface',
   4: 'Beat map',
-  5: 'Vars schema',
+  5: 'Data shape',
   6: 'Balance probes',
   7: 'Sim assertions',
   8: 'Content sketch',

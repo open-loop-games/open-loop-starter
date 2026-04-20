@@ -92,7 +92,7 @@ The prework's "beat 8 if prestige enabled" option is deliberately omitted — th
 
 ---
 
-## 5. Vars schema
+## 5. Data shape
 
 ```ts
 // archetype.ts — skeleton defaults
