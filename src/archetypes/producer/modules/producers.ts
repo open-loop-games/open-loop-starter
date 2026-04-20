@@ -7,6 +7,7 @@ import {
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
+  type ModifierChain,
   type Producer,
   type ProducerCategory,
   type Resource,
@@ -41,6 +42,14 @@ export const ClickStateKey: InjectionKey<ClickState> = Symbol(
 export const HeadlineRateKey: InjectionKey<ComputedRef<DecimalSource>> = Symbol(
   'producer/headline-rate',
 ) as InjectionKey<ComputedRef<DecimalSource>>;
+
+// Ordered `[click, ...continuous]` rateChains — the grant target for any
+// effect that wants to modify every production stream at once (global
+// upgrades, achievement rewards). Built once in the producers module so
+// downstream modules inject instead of re-walking `data.producers`.
+export const AllRateChainsKey: InjectionKey<ModifierChain[]> = Symbol(
+  'producer/all-rate-chains',
+) as InjectionKey<ModifierChain[]>;
 
 export const ProducerDataKey: InjectionKey<ProducerData> = Symbol(
   'producer/data',
@@ -126,11 +135,20 @@ export function createProducersModule(data: ProducerData): EngineModule {
 
       const headlineRate = computed(() => buildings.getTotalRate(primaryResource));
 
+      const continuousChains: ModifierChain[] = [];
+      for (const p of data.producers) {
+        if (p.trigger !== 'continuous') continue;
+        const producer = buildings.getProducer(p.id);
+        if (producer) continuousChains.push(producer.rateChain);
+      }
+      const allChains: ModifierChain[] = [clickProducer.rateChain, ...continuousChains];
+
       ctx.provide(PrimaryResourceKey, primaryResource);
       ctx.provide(PrimaryLifetimeKey, asRef(primaryLifetime));
       ctx.provide(BuildingsKey, buildings);
       ctx.provide(ClickStateKey, clickState);
       ctx.provide(HeadlineRateKey, headlineRate);
+      ctx.provide(AllRateChainsKey, allChains);
       ctx.provide(ProducerDataKey, data);
     },
   };

@@ -8,10 +8,10 @@ import {
   type EngineModule,
   type Grant,
   type InjectionKey,
-  type ModifierChain,
 } from 'open-loop-engine';
 import type { AchievementDef, ProducerData, ProducerGameState } from '../data/types';
 import {
+  AllRateChainsKey,
   BuildingsKey,
   ClickStateKey,
   PrimaryLifetimeKey,
@@ -35,17 +35,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
       const primaryLifetime = ctx.inject(PrimaryLifetimeKey);
       const headlineRate = ctx.inject(HeadlineRateKey);
       const clickState = ctx.inject(ClickStateKey);
-
-      // Every producer rateChain receives achievement grants — same shape as
-      // global upgrades. Building this once keeps the Grant config trivial per def.
-      const clickChain = buildings.getProducer('click')!.rateChain;
-      const continuousChains: ModifierChain[] = [];
-      for (const p of data.producers) {
-        if (p.trigger !== 'continuous') continue;
-        const producer = buildings.getProducer(p.id);
-        if (producer) continuousChains.push(producer.rateChain);
-      }
-      const allChains: ModifierChain[] = [clickChain, ...continuousChains];
+      const allChains = ctx.inject(AllRateChainsKey);
 
       // Live read view of module state, passed to data predicates. Methods
       // encapsulate Decimal comparisons so data/*.ts stays engine-free.
