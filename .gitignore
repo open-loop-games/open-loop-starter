@@ -4,3 +4,4 @@ dist
 .vite
 .mcp.json
 .claude/
+src/components.d.ts
