@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useHeadlineRate } from '../../composables/useHeadlineRate';
 import { useClickState } from '../../composables/useClickState';
+import { useProducerChainBreakdown } from '../../composables/useChainBreakdown';
 import { useFormatting } from '@/composables/useFormatting';
 
 const { primary, lifetime, perSecond } = useHeadlineRate();
 const click = useClickState();
 const { format, formatWhole } = useFormatting();
 
-// primary is a Resource<DecimalSource> (Ref subtype). Vue auto-unwraps refs
-// in templates at runtime, but the template type-checker doesn't peel the
-// Resource brand, so we materialise the inner value here for a clean pass.
 const cookies = computed(() => primary.value);
+
+// Cursor carries the richest stack (globals + achievements + cursor upgrades
+// + cursor milestones) so it reads as the headline factor list. If cursor is
+// missing the breakdown simply resolves to an empty list.
+const breakdown = useProducerChainBreakdown('cursor');
+const expanded = ref(false);
 </script>
 
 <template>
@@ -31,18 +35,54 @@ const cookies = computed(() => primary.value);
       </div>
     </div>
 
-    <button
+    <Button
       class="big-cookie-button"
       data-testid="click-cookie"
       @click="click.click"
     >
       <span class="cookie-glyph">🍪</span>
       <span class="cookie-label">Bake</span>
-    </button>
+    </Button>
 
     <div class="click-stats">
       <span>{{ formatWhole(click.clickCount.value) }} clicks</span>
     </div>
+
+    <section class="chain-breakdown">
+      <Button
+        class="chain-toggle"
+        data-testid="toggle-chain-breakdown"
+        @click="expanded = !expanded"
+      >
+        <span>Multipliers</span>
+        <span class="chain-count">
+          {{ breakdown.activeCount }} / {{ breakdown.factors.length }}
+        </span>
+        <span class="chain-caret">{{ expanded ? '▲' : '▼' }}</span>
+      </Button>
+      <ul
+        v-if="expanded"
+        class="chain-list"
+        data-testid="chain-breakdown"
+      >
+        <li
+          v-for="factor in breakdown.factors"
+          :key="factor.id"
+          class="chain-factor"
+          :class="{ 'is-inactive': !factor.active, 'is-bad': factor.isBad }"
+          :data-testid="`chain-factor-${factor.id}`"
+        >
+          <span class="chain-factor__text">{{ factor.text }}</span>
+          <span class="chain-factor__value">{{ factor.formattedValue }}</span>
+        </li>
+        <li
+          v-if="breakdown.factors.length === 0"
+          class="chain-empty"
+        >
+          No upgrades or achievements applied yet.
+        </li>
+      </ul>
+    </section>
   </div>
 </template>
 
@@ -119,5 +159,88 @@ const cookies = computed(() => primary.value);
 .click-stats {
   color: var(--color-text-muted);
   font-size: 0.85em;
+}
+
+.chain-breakdown {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+}
+
+.chain-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+}
+
+.chain-count {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chain-caret {
+  font-size: 0.75em;
+  color: var(--color-text-muted);
+}
+
+.chain-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--gap-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.chain-factor {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  padding: 2px 4px;
+  font-size: 0.82em;
+}
+
+.chain-factor__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chain-factor__value {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.chain-factor.is-inactive {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.chain-factor.is-inactive .chain-factor__value {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.chain-factor.is-bad .chain-factor__value {
+  color: var(--color-danger, var(--color-text-muted));
+}
+
+.chain-empty {
+  font-size: 0.82em;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 4px;
 }
 </style>
