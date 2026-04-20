@@ -22,6 +22,6 @@ export {
   DEFAULT_DIRECTOR_THEME_VARS,
   DEFAULT_DIRECTOR_BALANCE_VARS,
   DEFAULT_DIRECTOR_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadDirectorVars } from './load';

@@ -5,7 +5,7 @@
  * a game's three vars files (and optional test overrides) and get a
  * fully-resolved TugVars back.
  */
-import { DEFAULT_TUG_VARS } from './defaults';
+import { DEFAULT_TUG_VARS } from './vars';
 import type { TugVars, TugVarsOverride } from './types';
 
 export function loadTugVars(...overrides: TugVarsOverride[]): TugVars {
@@ -23,10 +23,7 @@ function mergeTugVars(base: TugVars, override: TugVarsOverride): TugVars {
   };
 }
 
-function mergeTheme(
-  base: TugVars['theme'],
-  override: TugVarsOverride['theme'],
-): TugVars['theme'] {
+function mergeTheme(base: TugVars['theme'], override: TugVarsOverride['theme']): TugVars['theme'] {
   if (!override) return base;
   return {
     ...base,
@@ -53,7 +50,6 @@ function mergeBalance(
       ...(base.abilityCosts ?? {}),
       ...(override.abilityCosts ?? {}),
     },
-    metaProgressionThresholds:
-      override.metaProgressionThresholds ?? base.metaProgressionThresholds,
+    metaProgressionThresholds: override.metaProgressionThresholds ?? base.metaProgressionThresholds,
   };
 }

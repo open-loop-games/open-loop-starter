@@ -24,6 +24,6 @@ export {
   DEFAULT_LOOPER_THEME_VARS,
   DEFAULT_LOOPER_BALANCE_VARS,
   DEFAULT_LOOPER_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadLooperVars } from './load';

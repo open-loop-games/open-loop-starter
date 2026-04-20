@@ -27,6 +27,6 @@ export {
   DEFAULT_SCALER_THEME_VARS,
   DEFAULT_SCALER_BALANCE_VARS,
   DEFAULT_SCALER_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadScalerVars } from './load';

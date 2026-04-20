@@ -26,6 +26,6 @@ export {
   DEFAULT_EXPLORER_THEME_VARS,
   DEFAULT_EXPLORER_BALANCE_VARS,
   DEFAULT_EXPLORER_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadExplorerVars } from './load';

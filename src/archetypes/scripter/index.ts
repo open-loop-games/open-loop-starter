@@ -28,6 +28,6 @@ export {
   DEFAULT_SCRIPTER_THEME_VARS,
   DEFAULT_SCRIPTER_BALANCE_VARS,
   DEFAULT_SCRIPTER_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadScripterVars } from './load';

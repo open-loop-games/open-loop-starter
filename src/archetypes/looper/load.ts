@@ -5,7 +5,7 @@
  * producer loader — kept deliberately unabstracted so each archetype's
  * merge semantics stay local.
  */
-import { DEFAULT_LOOPER_VARS } from './defaults';
+import { DEFAULT_LOOPER_VARS } from './vars';
 import type { LooperVars, LooperVarsOverride } from './types';
 
 export function loadLooperVars(...overrides: LooperVarsOverride[]): LooperVars {

@@ -5,7 +5,7 @@
  * a game's three vars files (and optional test overrides) and get a
  * fully-resolved AmbientVars back.
  */
-import { DEFAULT_AMBIENT_VARS } from './defaults';
+import { DEFAULT_AMBIENT_VARS } from './vars';
 import type { AmbientVars, AmbientVarsOverride } from './types';
 
 export function loadAmbientVars(...overrides: AmbientVarsOverride[]): AmbientVars {

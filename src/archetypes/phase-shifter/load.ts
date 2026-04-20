@@ -14,15 +14,10 @@
  * array explicitly. `softCarryOver` is a single-shape struct that
  * merges shallowly.
  */
-import { DEFAULT_PHASE_SHIFTER_VARS } from './defaults';
-import type {
-  PhaseShifterVars,
-  PhaseShifterVarsOverride,
-} from './types';
+import { DEFAULT_PHASE_SHIFTER_VARS } from './vars';
+import type { PhaseShifterVars, PhaseShifterVarsOverride } from './types';
 
-export function loadPhaseShifterVars(
-  ...overrides: PhaseShifterVarsOverride[]
-): PhaseShifterVars {
+export function loadPhaseShifterVars(...overrides: PhaseShifterVarsOverride[]): PhaseShifterVars {
   return overrides.reduce<PhaseShifterVars>(
     (acc, override) => mergePhaseShifterVars(acc, override),
     DEFAULT_PHASE_SHIFTER_VARS,

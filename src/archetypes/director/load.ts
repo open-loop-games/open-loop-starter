@@ -9,7 +9,7 @@
  * richer merge semantics (per-field precedence, environment overlays) fork
  * this file rather than growing it.
  */
-import { DEFAULT_DIRECTOR_VARS } from './defaults';
+import { DEFAULT_DIRECTOR_VARS } from './vars';
 import type { DirectorVars, DirectorVarsOverride } from './types';
 
 export function loadDirectorVars(...overrides: DirectorVarsOverride[]): DirectorVars {
@@ -51,6 +51,9 @@ function mergeBalance(
     ...base,
     ...override,
     spreadTerrainMul: { ...base.spreadTerrainMul, ...(override.spreadTerrainMul ?? {}) },
-    factionPersonalities: { ...base.factionPersonalities, ...(override.factionPersonalities ?? {}) },
+    factionPersonalities: {
+      ...base.factionPersonalities,
+      ...(override.factionPersonalities ?? {}),
+    },
   };
 }

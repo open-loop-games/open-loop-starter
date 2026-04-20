@@ -18,6 +18,6 @@ export {
   DEFAULT_AMBIENT_THEME_VARS,
   DEFAULT_AMBIENT_BALANCE_VARS,
   DEFAULT_AMBIENT_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadAmbientVars } from './load';

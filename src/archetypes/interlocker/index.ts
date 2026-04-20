@@ -24,6 +24,6 @@ export {
   DEFAULT_INTERLOCKER_THEME_VARS,
   DEFAULT_INTERLOCKER_BALANCE_VARS,
   DEFAULT_INTERLOCKER_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadInterlockerVars } from './load';

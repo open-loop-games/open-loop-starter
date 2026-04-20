@@ -10,7 +10,7 @@
  * archetype-level `sectorsPerZone`) replace wholesale — a fork that
  * wants partial-array tuning rebuilds the array explicitly.
  */
-import { DEFAULT_EXPLORER_VARS } from './defaults';
+import { DEFAULT_EXPLORER_VARS } from './vars';
 import type { ExplorerVars, ExplorerVarsOverride } from './types';
 
 export function loadExplorerVars(...overrides: ExplorerVarsOverride[]): ExplorerVars {
@@ -20,10 +20,7 @@ export function loadExplorerVars(...overrides: ExplorerVarsOverride[]): Explorer
   );
 }
 
-function mergeExplorerVars(
-  base: ExplorerVars,
-  override: ExplorerVarsOverride,
-): ExplorerVars {
+function mergeExplorerVars(base: ExplorerVars, override: ExplorerVarsOverride): ExplorerVars {
   return {
     archetype: { ...base.archetype, ...(override.archetype ?? {}) },
     theme: { ...base.theme, ...(override.theme ?? {}) },

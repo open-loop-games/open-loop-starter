@@ -9,7 +9,7 @@
  * replace wholesale — a fork that wants partial-array tuning rebuilds
  * the array explicitly.
  */
-import { DEFAULT_SCALER_VARS } from './defaults';
+import { DEFAULT_SCALER_VARS } from './vars';
 import type { ScalerVars, ScalerVarsOverride } from './types';
 
 export function loadScalerVars(...overrides: ScalerVarsOverride[]): ScalerVars {

@@ -18,6 +18,6 @@ export {
   DEFAULT_PRODUCER_THEME_VARS,
   DEFAULT_PRODUCER_BALANCE_VARS,
   DEFAULT_PRODUCER_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadProducerVars } from './load';

@@ -35,6 +35,6 @@ export {
   DEFAULT_PHASE_SHIFTER_THEME_VARS,
   DEFAULT_PHASE_SHIFTER_BALANCE_VARS,
   DEFAULT_PHASE_SHIFTER_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadPhaseShifterVars } from './load';

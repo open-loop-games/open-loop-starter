@@ -9,7 +9,7 @@
  * `actionTimings` replaces wholesale when supplied (command-vocab
  * tuning is all-or-nothing per command set).
  */
-import { DEFAULT_SCRIPTER_VARS } from './defaults';
+import { DEFAULT_SCRIPTER_VARS } from './vars';
 import type { ScripterVars, ScripterVarsOverride } from './types';
 
 export function loadScripterVars(...overrides: ScripterVarsOverride[]): ScripterVars {
@@ -19,10 +19,7 @@ export function loadScripterVars(...overrides: ScripterVarsOverride[]): Scripter
   );
 }
 
-function mergeScripterVars(
-  base: ScripterVars,
-  override: ScripterVarsOverride,
-): ScripterVars {
+function mergeScripterVars(base: ScripterVars, override: ScripterVarsOverride): ScripterVars {
   return {
     archetype: { ...base.archetype, ...(override.archetype ?? {}) },
     theme: { ...base.theme, ...(override.theme ?? {}) },

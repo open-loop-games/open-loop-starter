@@ -18,6 +18,6 @@ export {
   DEFAULT_TUG_THEME_VARS,
   DEFAULT_TUG_BALANCE_VARS,
   DEFAULT_TUG_VARS,
-} from './defaults';
+} from './vars';
 
 export { loadTugVars } from './load';

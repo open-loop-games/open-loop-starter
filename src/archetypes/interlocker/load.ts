@@ -9,12 +9,10 @@
  * `buildingCountPerTier`) replace wholesale — a fork that wants partial-
  * array tuning rebuilds the array explicitly.
  */
-import { DEFAULT_INTERLOCKER_VARS } from './defaults';
+import { DEFAULT_INTERLOCKER_VARS } from './vars';
 import type { InterlockerVars, InterlockerVarsOverride } from './types';
 
-export function loadInterlockerVars(
-  ...overrides: InterlockerVarsOverride[]
-): InterlockerVars {
+export function loadInterlockerVars(...overrides: InterlockerVarsOverride[]): InterlockerVars {
   return overrides.reduce<InterlockerVars>(
     (acc, override) => mergeInterlockerVars(acc, override),
     DEFAULT_INTERLOCKER_VARS,

@@ -9,7 +9,7 @@
  * richer merge semantics (per-field precedence, environment overlays) fork
  * this file rather than growing it.
  */
-import { DEFAULT_PRODUCER_VARS } from './defaults';
+import { DEFAULT_PRODUCER_VARS } from './vars';
 import type { ProducerVars, ProducerVarsOverride } from './types';
 
 export function loadProducerVars(...overrides: ProducerVarsOverride[]): ProducerVars {
