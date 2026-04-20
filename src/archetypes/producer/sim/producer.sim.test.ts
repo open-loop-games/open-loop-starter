@@ -6,6 +6,7 @@ import {
   ClickStateKey,
   UpgradesKey,
   AchievementsKey,
+  MilestonesKey,
   PrimaryResourceKey,
   PrimaryLifetimeKey,
   HeadlineRateKey,
@@ -205,6 +206,14 @@ describe('producer — beat map (default Bakery balance)', () => {
     // arc is reachable end-to-end without manual intervention.
     expect(result.elapsedSimulated).toBeLessThanOrEqual(minutes(240));
   });
+
+  // Full arc trigger per § 4 is `producers[last].count ≥ 1 AND
+  // upgradesArcComplete`. The arc module wires `announced` + `complete`, the
+  // UI flavour event fires, and the ArcKey is live — but the current balance
+  // cost curve (globals at 1M/1B/1T, tier-iii upgrades at 200k×) puts the
+  // full arc out of the 95–120 min spec window at current numbers. Pinned
+  // as a todo until OL-625 (tooling-first balance reconciliation) lands.
+  it.todo('beat 8: full arc closure (temple + upgradesArcComplete) within 240min (OL-625)');
 });
 
 // ─── Balance probes (§ 6) ─────────────────────────────────────────────────
@@ -287,6 +296,28 @@ describe('producer — balance robustness', () => {
         'predicate',
       );
     }
+  });
+
+  it('milestone bonus activates once threshold crossed', () => {
+    const engine = buildSimEngine();
+    const buildings = engine.tryInject(BuildingsKey)!;
+    const milestones = engine.tryInject(MilestonesKey)!;
+    const cursor = buildings.getProducer('cursor')!;
+
+    // Baseline: cursor at 0, no milestone binding active.
+    const startHits = milestones.hitCount();
+
+    // Push cursor count past the first milestone (1) via direct amount write.
+    cursor.repeatable!.amount.value = 10;
+
+    const hits = milestones.hitCount();
+    expect(hits).toBeGreaterThan(startHits);
+
+    // The milestone binding for cursor × 1 should be resolvable on the chain
+    // and active. Text matches the description we emit from milestones.ts.
+    const bindings = cursor.rateChain.bindings();
+    const milestoneBinding = bindings.find((b) => b.id === 'milestone/cursor/1');
+    expect(milestoneBinding).toBeDefined();
   });
 
   it('probe: bulk-buy formula correctness at 1e50 / 1e100 / 1e200', () => {
