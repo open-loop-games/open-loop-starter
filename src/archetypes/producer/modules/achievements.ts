@@ -66,18 +66,6 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
 
       const defaultReward: DecimalSource = data.balance.achievementMultiplier;
 
-      // Per-achievement `requirement` closures so a tick-level poller can
-      // synchronously complete earned achievements. The Vue watch that
-      // `createAchievement` wires up runs on the async scheduler — sim
-      // tests drive `stepOnce` in a tight loop where that scheduler
-      // never flushes, so we tick-poll instead. Reference is kept per-id
-      // because the declarative category wraps each achievement in its
-      // own persistent context and complete() is idempotent.
-      const requirements = new Map<string, (s: ProducerGameState) => boolean>();
-      for (const def of data.achievements) {
-        requirements.set(def.id, def.requirement);
-      }
-
       const achievements = createAchievementCategory<AchievementDef>({
         id: 'producer/achievements',
         mapAchievement: (def) => {
@@ -100,16 +88,6 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
         },
       });
       achievements.register(data.achievements);
-
-      ctx.onTick(() => {
-        for (const entry of achievements.getAll()) {
-          if (entry.achievement.earned.value) continue;
-          const req = requirements.get(entry.def.id);
-          if (req && req(state)) {
-            entry.achievement.complete();
-          }
-        }
-      });
 
       ctx.provide(AchievementsKey, achievements);
     },

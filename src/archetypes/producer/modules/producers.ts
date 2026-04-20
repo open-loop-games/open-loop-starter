@@ -1,9 +1,9 @@
 import { computed, type ComputedRef, type Ref } from 'vue';
 import {
-  Decimal,
   createResource,
   createProducerCategory,
   persistent,
+  trackTotal,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -72,14 +72,7 @@ export function createProducersModule(data: ProducerData): EngineModule {
         id: 'cookies',
       });
 
-      // Lifetime total is tracked per-tick rather than via trackTotal's
-      // async watcher — sim tests drive the loop synchronously via
-      // runUntil/stepOnce where async flushes never fire. The tick delta
-      // gives identical semantics ("only count increases") with synchronous
-      // updates, so achievement predicates that read lifetime can fire
-      // the same tick the gain lands in.
-      const primaryLifetime = persistent<DecimalSource>(0, { name: 'primaryLifetime' });
-      let lastSampled: DecimalSource = 0;
+      const primaryLifetime = trackTotal(primaryResource);
 
       const clickCount = persistent<number>(0, { name: 'clickCount' });
       const lastClickSec = persistent<number>(0, { name: 'lastClickSec' });
@@ -87,14 +80,6 @@ export function createProducersModule(data: ProducerData): EngineModule {
 
       ctx.onTick((dt: number) => {
         elapsedSec.value += dt;
-        const current = primaryResource.value;
-        if (Decimal.gt(current, lastSampled)) {
-          primaryLifetime.value = Decimal.add(
-            primaryLifetime.value,
-            Decimal.sub(current, lastSampled),
-          );
-        }
-        lastSampled = current;
       });
 
       const buildings = createProducerCategory<ProducerDef>({

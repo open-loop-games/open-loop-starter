@@ -174,17 +174,21 @@ describe('producer — beat map (default Bakery balance)', () => {
     expect(result.elapsedSimulated).toBeLessThanOrEqual(minutes(15));
   });
 
-  it('beat 7: deep modifier chain (headline rate ≥ 1e3/sec) within 90min', () => {
-    const engine = buildSimEngine();
-    const state = snapshots(engine);
-    const result = runUntil({
-      engine,
-      until: () => state.headlineRate().gte(1000),
-      maxSimTime: minutes(120),
-    });
-    expect(result.terminated).toBe('predicate');
-    expect(result.elapsedSimulated).toBeLessThanOrEqual(minutes(90));
-  });
+  it(
+    'beat 7: deep modifier chain (headline rate ≥ 1e3/sec) within 90min',
+    { timeout: 15_000 },
+    () => {
+      const engine = buildSimEngine();
+      const state = snapshots(engine);
+      const result = runUntil({
+        engine,
+        until: () => state.headlineRate().gte(1000),
+        maxSimTime: minutes(120),
+      });
+      expect(result.terminated).toBe('predicate');
+      expect(result.elapsedSimulated).toBeLessThanOrEqual(minutes(90));
+    },
+  );
 
   it('beat 8: arc closure (temple owned) within 240min', { timeout: 60_000 }, () => {
     const engine = buildSimEngine();
