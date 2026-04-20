@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { type Engine } from 'open-loop-engine';
-import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
+import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
+import { type Engine, type EngineModule } from 'open-loop-engine';
+import { AppFrame, DevPanelOverlay, ThreePanelShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
@@ -14,7 +14,6 @@ import HeadlinePanel from './panels/HeadlinePanel.vue';
 import ProducerPanel from './panels/ProducerPanel.vue';
 import UpgradeTray from './panels/UpgradeTray.vue';
 import AchievementGridDialog from './components/AchievementGridDialog.vue';
-import { ThreePanelShell } from '@/lib';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -57,12 +56,15 @@ function returnToSlots(): void {
   currentScreen.value = Screen.Slots;
 }
 
-const activeModules = computed(() => {
+// BalanceWorkbench takes a thunk so it can re-evaluate if the active mod
+// swaps at runtime. The module list itself is static for the lifetime of
+// the mounted engine, so no `computed` is needed — a plain lookup inside
+// the thunk keeps the cost at zero until the dev overlay actually opens.
+function getActiveModules(): EngineModule[] {
   const activeId = engine.activeModId;
   if (!activeId) return [];
-  const mod = engine.mods.find((m) => m.id === activeId);
-  return mod ? mod.modules : [];
-});
+  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
+}
 </script>
 
 <template>
@@ -151,7 +153,7 @@ const activeModules = computed(() => {
   >
     <BalanceWorkbench
       :engine="engine"
-      :modules="() => activeModules"
+      :modules="getActiveModules"
     />
   </DevPanelOverlay>
 </template>
