@@ -10,7 +10,7 @@ export const PRODUCER_BALANCE: ProducerBalance = {
   producerCostGrowth: 1.15,
   achievementMultiplier: 1.02,
   milestoneThresholds: [1, 10, 25, 50, 100, 150, 200, 300, 400, 500],
-  milestoneBonusPerTier: 2,
+  milestoneBonusPerTier: 5,
 };
 
 // ─── Skeleton + Costume ────────────────────────────────────────────────────

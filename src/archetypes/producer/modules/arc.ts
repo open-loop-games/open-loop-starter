@@ -34,8 +34,13 @@ export function createArcModule(data: ProducerData): EngineModule {
       const continuousIds = data.producers
         .filter((p) => p.trigger === 'continuous')
         .map((p) => p.id);
-      const globalUpgradeIds = data.upgrades
-        .filter((u) => u.targetProducerId === null)
+      // Arc-close requires owning every continuous producer AND buying every
+      // in-arc upgrade. Tier-iii per-producer upgrades are post-arc content
+      // (producer.md § 4: "fork extends beyond this; skeleton stops here");
+      // globals + tier-i/ii/iia per-producer are all required. Aligns beat-8
+      // firing condition with the full in-arc content slate.
+      const arcUpgradeIds = data.upgrades
+        .filter((u) => !u.id.endsWith('-boost-iii'))
         .map((u) => u.id);
 
       const complete = computed(() => {
@@ -44,7 +49,7 @@ export function createArcModule(data: ProducerData): EngineModule {
           if (!producer) return false;
           if (!Decimal.gte(producer.count.value, 1)) return false;
         }
-        for (const id of globalUpgradeIds) {
+        for (const id of arcUpgradeIds) {
           const purchasable = upgrades.getPurchasable(id);
           if (!purchasable?.bought.value) return false;
         }

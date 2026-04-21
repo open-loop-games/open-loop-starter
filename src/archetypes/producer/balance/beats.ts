@@ -22,7 +22,7 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-2': [min(1), min(3)],
   'beat-3': [min(5), min(10)],
   'beat-4': [min(12), min(20)],
-  'beat-5': [min(25), min(40)],
+  'beat-5': [min(40), min(55)],
   'beat-6': [min(40), min(65)],
   'beat-7': [min(65), min(95)],
   'beat-8': [min(95), min(120)],
@@ -50,15 +50,16 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  * - 2: cursor (tier 1) owned.
  * - 3: grandma (tier 2) owned.
  * - 4: first per-producer upgrade bought (cursor-boost-i is cheapest in current data).
- * - 5: ≥5 achievements earned. § 4 says "first achievement-driven
- *   multiplier" — but every achievement currently grants the default
- *   1.02× headline, so the first one (`First Crumb`, fires on lifetime ≥ 1)
- *   triggers in seconds. The *perceptible* multiplier moment is when
- *   the stack starts compounding visibly; 5 is where 1.02⁵ ≈ 1.10× lifts
- *   the headline noticeably.
- * - 6: bulk-buy meaningful — at least one owned producer's
- *   `calculateMaxAffordable ≥ 10`, i.e. the player could now click
- *   "Buy 10" and have it land. Stresses formula inversion under load.
+ * - 5: ≥10 achievements earned. § 4 says "first achievement-driven
+ *   multiplier". 1.02¹⁰ ≈ 1.22× is where the compounding is visibly felt.
+ *   Lower counts fire in onboarding (hidden-first-click at t=0s + a few
+ *   early production/building milestones); the threshold is set where the
+ *   *perceptible* stack lands, not where it first exists.
+ * - 6: two distinct producers each at count ≥ 10 — the "you have a lot
+ *   of several things" moment where Buy-10 / Buy-max becomes the dominant
+ *   action. State-based (doesn't require the bot to hoard primary for a
+ *   single getCost(10) affordability check); fires naturally as the bot
+ *   buys producers through hybrid-payback.
  * - 7: top-owned producer's rateChain compounds to ≥1e6× its base. The
  *   archetype-signature "watch the multiplier scroll" moment, scoped to
  *   whichever tier the player is producing on.
@@ -92,12 +93,12 @@ export const ARC_BEATS: ArcBeatProbe[] = [
   {
     id: 'beat-5',
     specWindow: BEAT_WINDOWS['beat-5']!,
-    predicate: (engine) => achievementsEarnedAtLeast(engine, 5),
+    predicate: (engine) => achievementsEarnedAtLeast(engine, 10),
   },
   {
     id: 'beat-6',
     specWindow: BEAT_WINDOWS['beat-6']!,
-    predicate: (engine) => bulkBuyMeaningful(engine, 10),
+    predicate: (engine) => distinctProducersAtCount(engine, 2, 10),
   },
   {
     id: 'beat-7',
@@ -130,22 +131,24 @@ function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {
 }
 
 /**
- * True when at least one owned continuous producer has a `getCost(10)` the
- * player can afford. The "buy 10" affordance is what beat 6 codifies.
+ * True when ≥ `minDistinct` continuous producers each have count ≥ `minCount`.
+ * The "bulk-buy feels useful" moment — player has stock of multiple producers
+ * and benefits from Buy-10/Buy-max as the dominant action. State-based (not
+ * formula-inversion-based), so it fires naturally under hybrid-payback without
+ * contorting the bot to hoard primary for a getCost(10) affordability check.
  */
-function bulkBuyMeaningful(engine: Engine, bulk: number): boolean {
+function distinctProducersAtCount(engine: Engine, minDistinct: number, minCount: number): boolean {
   const buildings = engine.tryInject(BuildingsKey);
-  const primary = engine.tryInject(PrimaryResourceKey);
   const data = engine.tryInject(ProducerDataKey);
-  if (!buildings || !primary || !data) return false;
+  if (!buildings || !data) return false;
 
+  let hits = 0;
   for (const def of data.producers) {
     if (def.trigger !== 'continuous') continue;
     const p = buildings.getProducer(def.id);
-    if (!p?.repeatable) continue;
-    if (Decimal.lt(p.count.value, 1)) continue;
-    const cost10 = p.repeatable.getCost(bulk);
-    if (Decimal.gte(primary.value, cost10)) return true;
+    if (!p) continue;
+    if (Decimal.gte(p.count.value, minCount)) hits++;
+    if (hits >= minDistinct) return true;
   }
   return false;
 }
@@ -183,7 +186,7 @@ function arcComplete(engine: Engine): boolean {
 // (e.g. the regression test pinning the chosen p50).
 export {
   topProducerHeadlineAtLeast,
-  bulkBuyMeaningful,
+  distinctProducersAtCount,
   achievementsEarnedAtLeast,
   producerCountAtLeast,
   upgradeBought,

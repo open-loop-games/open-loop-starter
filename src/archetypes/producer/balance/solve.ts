@@ -83,10 +83,12 @@ function bisect({
   const tLo = sampler(lo);
   const tHi = sampler(hi);
 
-  // Infinite = beat never fires at that value. Clamp into direction detection:
-  // if hi-side never fires it's effectively "much later", forward. If lo-side
-  // never fires it's an infeasible bracket regardless.
-  const tLoFinite = isFinite(tLo) ? tLo : -Infinity;
+  // Infinite = beat never fires at that value. That's "the threshold can't be
+  // hit at this setting" — semantically a *late* fire (infinitely late), not
+  // an early one. Both endpoints map ∞ → +∞ for direction detection. Forward
+  // = higher value → later fire (cost-like); inverted = higher value → earlier
+  // fire (multiplier/bonus-like).
+  const tLoFinite = isFinite(tLo) ? tLo : +Infinity;
   const tHiFinite = isFinite(tHi) ? tHi : +Infinity;
   const direction: 'forward' | 'inverted' = tHiFinite >= tLoFinite ? 'forward' : 'inverted';
 
@@ -121,9 +123,22 @@ function bisect({
 // ─── Override composition ────────────────────────────────────────────────
 
 /**
+ * Current costScaling for a producer given `proposed`. Uses the proposed value
+ * if the producer has been overridden (e.g. by a prior growth pass), otherwise
+ * the default. Keeps per-producer override patches internally consistent —
+ * tuning cursor.baseCost shouldn't accidentally reset its costScaling to the
+ * default after a growth pre-pass stretched the ladder.
+ */
+function currentCostScaling(proposed: ProducerOverrides, id: string): number {
+  const existing = proposed.producers?.find((p) => p.id === id)?.purchase?.costScaling;
+  return existing !== undefined ? Number(existing) : COST_SCALING;
+}
+
+/**
  * Merge a producer purchase override into `proposed`, preserving prior entries.
  * Writes both baseCost + costScaling so the override merge sees a complete
  * `purchase` block (shallow merge by id doesn't recurse into nested fields).
+ * Preserves any prior costScaling override on the same producer.
  */
 function withProducerCost(
   proposed: ProducerOverrides,
@@ -131,7 +146,7 @@ function withProducerCost(
   baseCost: number,
 ): ProducerOverrides {
   const producers = [...(proposed.producers ?? [])];
-  const patch = { id, purchase: { baseCost, costScaling: COST_SCALING } };
+  const patch = { id, purchase: { baseCost, costScaling: currentCostScaling(proposed, id) } };
   const existing = producers.findIndex((p) => p.id === id);
   if (existing >= 0) producers[existing] = patch;
   else producers.push(patch);
@@ -279,16 +294,18 @@ function currentProducerBaseCost(id: string): number {
   return Number(DEFAULT_PRODUCER_DATA.producers.find((p) => p.id === id)!.purchase!.baseCost);
 }
 
-function main(): void {
-  const t0 = Date.now();
-
-  console.log('# Producer balance solver — engine as oracle\n');
-  console.log(`Run at ${new Date().toISOString()}\n`);
-  console.log('Bisects one parameter per beat against `runArcProbe` + `buildProducerSimEngine`.');
-  console.log("Proposals chain — each beat solves against earlier beats' proposed values.");
-  console.log('No data files mutated. Review below.\n');
-
-  let proposed: ProducerOverrides = {};
+/**
+ * One Gauss-Seidel pass: solve beats 2, 3, 4, 7 in order against the current
+ * proposal, updating proposal after each solve so later beats see the latest.
+ * Called in an outer loop to converge coupling between beats (beat-7's choice
+ * of milestoneBonusPerTier slows rate ramp, which affects beats 3/4's fire
+ * times; re-solving those against the updated rate shape is what closes the
+ * drift).
+ */
+function solvePass(proposed: ProducerOverrides): {
+  proposed: ProducerOverrides;
+  solves: BeatSolve[];
+} {
   const solves: BeatSolve[] = [];
 
   // Beat 2 — cursor.baseCost
@@ -344,7 +361,7 @@ function main(): void {
     solves.push({
       beatId: 'beat-4',
       field: 'tier-i multiplier',
-      current: 20, // current data value; PER_PRODUCER_TIERS[0].multiplier in upgrades.ts
+      current: 20,
       currentFireTime: currentFire,
       proposed: value,
       proposedFireTime: sol.time,
@@ -375,29 +392,56 @@ function main(): void {
     });
   }
 
-  // ─── Report ─────────────────────────────────────────────────────────────
-  console.log('## Per-beat solves\n');
-  console.log(
-    renderTable(
-      ['beat', 'field', 'window', 'current', 'currT', 'proposed', 'propT', 'dir', 'it'],
-      solves.map((s) => [
-        s.beatId,
-        s.field,
-        fmtWindow(s.window),
-        String(s.current),
-        fmt(s.currentFireTime),
-        String(s.proposed),
-        fmt(s.proposedFireTime),
-        s.direction,
-        String(s.iterations),
-      ]),
-    ),
-  );
-  console.log();
+  return { proposed, solves };
+}
+
+const PASSES = 3;
+
+function main(): void {
+  const t0 = Date.now();
+
+  console.log('# Producer balance solver — engine as oracle\n');
+  console.log(`Run at ${new Date().toISOString()}\n`);
+  console.log('Bisects one parameter per beat against `runArcProbe` + `buildProducerSimEngine`.');
+  console.log(`Gauss-Seidel outer loop (${PASSES} passes) converges beat coupling.`);
+  console.log('No data files mutated. Review below.\n');
+
+  let proposed: ProducerOverrides = {};
+
+  for (let pass = 1; pass <= PASSES; pass++) {
+    const result = solvePass(proposed);
+    proposed = result.proposed;
+    console.log(`## Pass ${pass}\n`);
+    console.log(
+      renderTable(
+        ['beat', 'field', 'window', 'current', 'currT', 'proposed', 'propT', 'dir', 'it'],
+        result.solves.map((s) => [
+          s.beatId,
+          s.field,
+          fmtWindow(s.window),
+          String(s.current),
+          fmt(s.currentFireTime),
+          String(s.proposed),
+          fmt(s.proposedFireTime),
+          s.direction,
+          String(s.iterations),
+        ]),
+      ),
+    );
+    console.log();
+  }
 
   // ─── Verification ───────────────────────────────────────────────────────
   console.log('## Verification — all proposals applied together\n');
-  const verified = verifyAll(proposed, ['beat-2', 'beat-3', 'beat-4', 'beat-7']);
+  const verified = verifyAll(proposed, [
+    'beat-2',
+    'beat-3',
+    'beat-4',
+    'beat-5',
+    'beat-6',
+    'beat-7',
+    'beat-8',
+  ]);
   console.log(
     renderTable(
       ['beat', 'window', 'fired at', 'in window'],
