@@ -10,9 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:sim": "SIM_PROBES=1 vitest run src/modules/mods/creep-vs-creep/sim/",
-    "validate:archetypes": "vitest run scripts/validate-archetypes/ scripts/archetype-tooling/",
-    "codegen:archetype-vars": "tsx scripts/archetype-tooling/bin/codegen.ts",
+    "balance:producer": "vite-node src/archetypes/producer/balance/run.ts",
     "lint": "eslint src/",
     "format": "prettier --write \"src/**/*.{ts,vue,css,html}\"",
     "format:check": "prettier --check \"src/**/*.{ts,vue,css,html}\"",
@@ -47,6 +45,7 @@
     "typescript-eslint": "^8.58.0",
     "unplugin-vue-components": "^32.0.0",
     "vite": "^8.0.1",
+    "vite-node": "^6.0.0",
     "vitest": "^3.0.0",
     "vue-tsc": "^3.2.5"
   }
