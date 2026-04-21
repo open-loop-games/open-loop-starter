@@ -1,5 +1,10 @@
 import type { UpgradeDef } from './types';
-import { PRODUCERS, CONTINUOUS_PRODUCER_IDS, CLICK_PRODUCER_ID } from './producers';
+import {
+  PRODUCERS,
+  PRODUCER_BALANCE,
+  CONTINUOUS_PRODUCER_IDS,
+  CLICK_PRODUCER_ID,
+} from './producers';
 
 // ─── Balance ───────────────────────────────────────────────────────────────
 // Per-producer upgrade costs scale with the producer's baseCost × cost-multiplier.
@@ -8,14 +13,19 @@ import { PRODUCERS, CONTINUOUS_PRODUCER_IDS, CLICK_PRODUCER_ID } from './produce
 // Each tier has its own rate multiplier — tier-ii is ×3 (the "big upgrade"
 // rung), the others ×2.
 //
+// Tier-i's multiplier lives in PRODUCER_BALANCE.tier1UpgradeMultiplier — it's
+// the balance-solver's knob for beat-4. Runtime scope-push retunes it via
+// `tunable('balance/tier1UpgradeMultiplier', ...)` inside
+// `modules/upgrades.ts`; the static cost here is the default / data-file view.
+//
 // Tiers in-arc: i, ii, iia. Tier-iii is post-arc per producer.md § 4.
 
 const PER_PRODUCER_TIERS = [
-  { suffix: 'i', costMul: 20, rateMul: 2 },
+  { suffix: 'i', costMul: Number(PRODUCER_BALANCE.tier1UpgradeMultiplier), rateMul: 2 },
   { suffix: 'ii', costMul: 2000, rateMul: 3 },
   { suffix: 'iia', costMul: 20_000, rateMul: 2 },
   { suffix: 'iii', costMul: 200_000, rateMul: 2 },
-] as const;
+];
 
 // ─── Costume + Skeleton ────────────────────────────────────────────────────
 // 28 per-producer upgrades (4 tiers × 7 producers) + 8 global upgrades.

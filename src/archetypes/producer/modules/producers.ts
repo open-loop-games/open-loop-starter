@@ -1,13 +1,16 @@
 import { computed, type ComputedRef, type Ref } from 'vue';
 import {
+  createOverrideRegistry,
   createResource,
   createProducerCategory,
   persistent,
   trackTotal,
+  tunable,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type ModifierChain,
+  type OverrideRegistry,
   type Producer,
   type ProducerCategory,
   type Resource,
@@ -55,6 +58,30 @@ export const ProducerDataKey: InjectionKey<ProducerData> = Symbol(
   'producer/data',
 ) as InjectionKey<ProducerData>;
 
+/**
+ * Typed surface for scoped balance/sim/tuning overrides. Keys represent the
+ * knobs the balance solver bisects and the workbench / devtools can retune
+ * at runtime via `registry.pushScope`. Each reader site registers its key
+ * with `tunable(registry, key, () => defaultFromData)`; a scope-push swaps
+ * the reader without mutating data.
+ *
+ * Typed as a `Record` (not an interface with named keys) to satisfy
+ * `OverrideRegistry`'s generic constraint. The canonical key list lives as
+ * the `ProducerTunableKey` union and is enforced at push-scope call sites
+ * via `Partial<Record<ProducerTunableKey, () => DecimalSource>>`.
+ */
+export type ProducerTunableKey =
+  | 'producers/cursor/purchase/baseCost'
+  | 'producers/grandma/purchase/baseCost'
+  | 'balance/milestoneBonusPerTier'
+  | 'balance/tier1UpgradeMultiplier';
+
+export type ProducerTunables = Record<string, () => DecimalSource>;
+
+export const ProducerTuningRegistryKey: InjectionKey<OverrideRegistry<ProducerTunables>> = Symbol(
+  'producer/tuning-registry',
+) as InjectionKey<OverrideRegistry<ProducerTunables>>;
+
 // The engine's Persistent<T> and trackTotal() return types use a Vue Ref
 // brand from their own vue install; the starter's Vue declares a separate
 // brand. Both are structurally identical `{ value: T }` reactive refs at
@@ -66,6 +93,8 @@ export function createProducersModule(data: ProducerData): EngineModule {
   return {
     id: 'producer/producers',
     install(ctx) {
+      const tuningRegistry = createOverrideRegistry<ProducerTunables>('producer-tuning');
+
       const primaryResource = createResource<DecimalSource>(0, {
         displayName: 'Cookies',
         precision: 0,
@@ -93,7 +122,7 @@ export function createProducersModule(data: ProducerData): EngineModule {
           purchase: def.purchase
             ? {
                 costResource: primaryResource,
-                baseCost: def.purchase.baseCost,
+                baseCost: wrapBaseCost(tuningRegistry, def),
                 costScaling: def.purchase.costScaling,
               }
             : undefined,
@@ -135,6 +164,28 @@ export function createProducersModule(data: ProducerData): EngineModule {
       ctx.provide(HeadlineRateKey, headlineRate);
       ctx.provide(AllRateChainsKey, allChains);
       ctx.provide(ProducerDataKey, data);
+      ctx.provide(ProducerTuningRegistryKey, tuningRegistry);
     },
   };
+}
+
+// Producers whose baseCost is registered with the tuning registry. Others
+// pass their baseCost through unchanged — tunable adoption is opt-in per
+// engine convention (grep for `tunable(` to audit the tuning surface).
+const TUNABLE_BASE_COST_IDS = new Set(['cursor', 'grandma']);
+
+/**
+ * Wrap a producer's static baseCost behind a tunable key so scope-push can
+ * retune it without mutating data. The tunable's default closure reads
+ * `def.purchase.baseCost`, so unscoped runs behave identically to the
+ * pre-tunable direct path.
+ */
+function wrapBaseCost(
+  registry: OverrideRegistry<ProducerTunables>,
+  def: ProducerDef,
+): DecimalSource | ReturnType<typeof tunable<DecimalSource>> {
+  if (!def.purchase) throw new Error(`wrapBaseCost called on ${def.id} without purchase config`);
+  if (!TUNABLE_BASE_COST_IDS.has(def.id)) return def.purchase.baseCost;
+  const key = `producers/${def.id}/purchase/baseCost` as keyof ProducerTunables;
+  return tunable(registry, key, () => def.purchase!.baseCost);
 }

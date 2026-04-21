@@ -42,6 +42,8 @@ export interface ProducerBalance {
   achievementMultiplier: DecimalSource;
   milestoneThresholds: number[];
   milestoneBonusPerTier: DecimalSource;
+  /** Tier-i upgrade cost as a multiple of the targeted producer's baseCost. */
+  tier1UpgradeMultiplier: DecimalSource;
 }
 
 /**

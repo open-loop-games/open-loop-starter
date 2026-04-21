@@ -1,11 +1,12 @@
 import {
   Decimal,
   createMultiplicativeModifier,
+  tunable,
   type EngineModule,
   type InjectionKey,
 } from 'open-loop-engine';
 import type { ProducerData } from '../data/types';
-import { BuildingsKey } from './producers';
+import { BuildingsKey, ProducerTuningRegistryKey } from './producers';
 
 export interface MilestoneInfo {
   producerId: string;
@@ -29,7 +30,13 @@ export function createMilestonesModule(data: ProducerData): EngineModule {
     dependencies: ['producer/producers'],
     install(ctx) {
       const buildings = ctx.inject(BuildingsKey);
-      const { milestoneThresholds, milestoneBonusPerTier } = data.balance;
+      const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
+      const { milestoneThresholds } = data.balance;
+      const bonusPerTier = tunable(
+        tuningRegistry,
+        'balance/milestoneBonusPerTier',
+        () => data.balance.milestoneBonusPerTier,
+      );
 
       const entries: MilestoneInfo[] = [];
       const isHit: Array<() => boolean> = [];
@@ -44,7 +51,7 @@ export function createMilestonesModule(data: ProducerData): EngineModule {
           producer.rateChain.bind({
             id: `milestone/${def.id}/${threshold}`,
             modifier: createMultiplicativeModifier({
-              multiplier: milestoneBonusPerTier,
+              multiplier: bonusPerTier,
               description,
             }),
             active: isAtOrAbove,
