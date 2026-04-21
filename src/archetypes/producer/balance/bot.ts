@@ -71,12 +71,20 @@ export function buildProducerSimEngine(overrides?: ProducerOverrides): Engine {
   );
 
   let upgradeAccum = 0;
+  const upgradeInterval = 2;
   engine.loop.onTick((dt: number) => {
     upgradeAccum += dt;
-    if (upgradeAccum < 2) return;
-    upgradeAccum = 0;
-    for (const p of upgrades.getAffordable()) {
-      p.purchase();
+    // Drain-while-≥-interval: each drained slot runs an "affordable sweep."
+    // Matches the engine-side setupAutoPurchaseProducers drain semantics so
+    // coarse-dt probes (dt > interval) see N passes instead of 1. Without
+    // this, a `dt = 3×interval` advance would fire one sweep and discard
+    // the remainder — correct at tickDelta=1s today, broken under OL-633's
+    // coarseFineProbe.
+    while (upgradeAccum >= upgradeInterval) {
+      for (const p of upgrades.getAffordable()) {
+        p.purchase();
+      }
+      upgradeAccum -= upgradeInterval;
     }
   });
 
