@@ -55,6 +55,10 @@ export function buildProducerSimEngine(overrides?: ProducerOverrides): Engine {
   const buildings = engine.tryInject(BuildingsKey)!;
   const upgrades = engine.tryInject(UpgradesKey)!;
 
+  // TODO(expansion): click-taper is a TimedInput — expectedClicksAt is a
+  // pure (simTime) → cumulativeCount the bot differences per tick. See
+  // open-loop-engine/docs/candidate-primitives.md § TimedInput. Graduates
+  // when a second archetype's balance bot hits the same shape.
   let clicksFired = 0;
   engine.loop.onTick(() => {
     const target = expectedClicksAt(clickState.elapsedSec.value);

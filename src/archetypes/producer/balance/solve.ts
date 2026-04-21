@@ -15,6 +15,7 @@
  */
 
 import { runArcProbe } from '@/balance';
+import { bisectTuner, type TunerResult } from 'open-loop-engine/harness';
 import type { ProducerOverrides } from '..';
 import { DEFAULT_PRODUCER_DATA } from '../data';
 import { PRODUCERS } from '../data/producers';
@@ -44,80 +45,6 @@ function runSingleBeat(overrides: ProducerOverrides, beatId: string): number {
   });
   if (!result || result.counts.predicate === 0) return Infinity;
   return result.terminationTime?.p50 ?? Infinity;
-}
-
-// ─── Search ───────────────────────────────────────────────────────────────
-
-interface BisectResult {
-  value: number;
-  time: number;
-  iterations: number;
-  /** Detected slope: 'forward' means higher value → later fire time. */
-  direction: 'forward' | 'inverted';
-}
-
-/**
- * Bisect a 1-D parameter against a sampler that returns fire time.
- *
- * Auto-detects direction from `sampler(lo)` vs `sampler(hi)`. That costs two
- * calibration runs up front but removes a per-beat decision the caller would
- * otherwise have to make correctly (and getting it wrong silently gives a
- * wrong answer). For producer params, most are 'forward' (higher cost → later
- * fire), but multiplier-like knobs (milestoneBonus) are 'inverted'.
- */
-function bisect({
-  lo,
-  hi,
-  targetSec,
-  sampler,
-  tolSec = 1,
-  maxIters = 22,
-}: {
-  lo: number;
-  hi: number;
-  targetSec: number;
-  sampler: (value: number) => number;
-  tolSec?: number;
-  maxIters?: number;
-}): BisectResult {
-  const tLo = sampler(lo);
-  const tHi = sampler(hi);
-
-  // Infinite = beat never fires at that value. That's "the threshold can't be
-  // hit at this setting" — semantically a *late* fire (infinitely late), not
-  // an early one. Both endpoints map ∞ → +∞ for direction detection. Forward
-  // = higher value → later fire (cost-like); inverted = higher value → earlier
-  // fire (multiplier/bonus-like).
-  const tLoFinite = isFinite(tLo) ? tLo : +Infinity;
-  const tHiFinite = isFinite(tHi) ? tHi : +Infinity;
-  const direction: 'forward' | 'inverted' = tHiFinite >= tLoFinite ? 'forward' : 'inverted';
-
-  let a = lo;
-  let b = hi;
-  let best = { value: (lo + hi) / 2, time: Infinity, iterations: 0 };
-  for (let i = 1; i <= maxIters; i++) {
-    const mid = (a + b) / 2;
-    const t = sampler(mid);
-    const delta = Math.abs((isFinite(t) ? t : Number.MAX_SAFE_INTEGER) - targetSec);
-    const bestDelta = Math.abs(
-      (isFinite(best.time) ? best.time : Number.MAX_SAFE_INTEGER) - targetSec,
-    );
-    if (delta < bestDelta) best = { value: mid, time: t, iterations: i };
-    if (isFinite(t) && Math.abs(t - targetSec) <= tolSec) {
-      return { value: mid, time: t, iterations: i, direction };
-    }
-
-    const tooEarly = isFinite(t) ? t < targetSec : false;
-    const tooLate = !isFinite(t) || t > targetSec;
-    if (direction === 'forward') {
-      if (tooEarly) a = mid;
-      else if (tooLate) b = mid;
-    } else {
-      if (tooEarly) b = mid;
-      else if (tooLate) a = mid;
-    }
-  }
-  return { ...best, direction };
 }
 
 // ─── Override composition ────────────────────────────────────────────────
@@ -201,8 +128,8 @@ function withBalance(
  * fire at all — surfacing the "unreachable under this bot" signal as the
  * bisector hits maxIters without converging.
  */
-function solveBeat2(proposed: ProducerOverrides, targetSec: number): BisectResult {
-  return bisect({
+function solveBeat2(proposed: ProducerOverrides, targetSec: number): TunerResult {
+  return bisectTuner({
     lo: 1,
     hi: 400,
     targetSec,
@@ -215,8 +142,8 @@ function solveBeat2(proposed: ProducerOverrides, targetSec: number): BisectResul
  * Bracket wider than beat-2's — cursor income builds into the window, so
  * 5–10min affordability spans a broader cost range.
  */
-function solveBeat3(proposed: ProducerOverrides, targetSec: number): BisectResult {
-  return bisect({
+function solveBeat3(proposed: ProducerOverrides, targetSec: number): TunerResult {
+  return bisectTuner({
     lo: 20,
     hi: 5000,
     targetSec,
@@ -230,8 +157,8 @@ function solveBeat3(proposed: ProducerOverrides, targetSec: number): BisectResul
  * is the data's knob, not any individual upgrade cost. The multi-upgrade
  * perturbation helper rewrites every `*-boost-i` entry per candidate.
  */
-function solveBeat4(proposed: ProducerOverrides, targetSec: number): BisectResult {
-  return bisect({
+function solveBeat4(proposed: ProducerOverrides, targetSec: number): TunerResult {
+  return bisectTuner({
     lo: 1,
     hi: 500,
     targetSec,
@@ -242,10 +169,10 @@ function solveBeat4(proposed: ProducerOverrides, targetSec: number): BisectResul
 /**
  * Beat-7 fires when top-owned producer's rateChain compounds to ≥1e6× base.
  * `milestoneBonusPerTier` is inverted — higher bonus → faster rate ramp →
- * earlier fire. Auto-direction detection in `bisect` handles this.
+ * earlier fire. Auto-direction detection in `bisectTuner` handles this.
  */
-function solveBeat7(proposed: ProducerOverrides, targetSec: number): BisectResult {
-  return bisect({
+function solveBeat7(proposed: ProducerOverrides, targetSec: number): TunerResult {
+  return bisectTuner({
     lo: 1.1,
     hi: 10,
     targetSec,
