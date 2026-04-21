@@ -11,7 +11,7 @@ import Popover from '@/ui/components/Popover.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 import { useToasts } from '@/composables/useToasts';
-import { useArc } from '../composables/useArc';
+import { ArcKey } from '../modules';
 import HeadlinePanel from './panels/HeadlinePanel.vue';
 import ProducerPanel from './panels/ProducerPanel.vue';
 import UpgradeTray from './panels/UpgradeTray.vue';
@@ -47,11 +47,14 @@ function openSettings(): void {
 const { addToast } = useToasts();
 // Watcher is installed lazily once the player enters the game, so the arc
 // module's `announced` flag reflects the just-loaded save slot rather than
-// any earlier session.
+// any earlier session. Reads ArcKey off the captured engine directly because
+// this runs inside an event handler where Vue's inject() has no active
+// instance — the setup-scoped `useArc()` composable only works in setup.
 let stopArcWatcher: (() => void) | null = null;
 function armArcFlavourEvent(): void {
   stopArcWatcher?.();
-  const arc = useArc();
+  const arc = engine.tryInject(ArcKey);
+  if (!arc) return;
   const announcedAtStart = arc.announced.value;
   stopArcWatcher = watch(
     arc.announced,
