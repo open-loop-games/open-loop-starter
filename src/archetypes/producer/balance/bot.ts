@@ -66,7 +66,7 @@ export function buildProducerSimEngine(overrides?: ProducerOverrides): Engine {
 
   setupAutoPurchaseProducers(
     buildings,
-    { enabled: true, interval: 1, policy: 'payback-period' },
+    { enabled: true, interval: 1, policy: 'hybrid-payback' },
     (cb) => engine.loop.onTick(cb),
   );
 
