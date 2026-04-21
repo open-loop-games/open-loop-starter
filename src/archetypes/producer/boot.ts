@@ -1,4 +1,4 @@
-import { type Engine } from 'open-loop-engine';
+import { type Engine, type EngineModule } from 'open-loop-engine';
 import { bootApp, bootEngine } from '@/boot';
 import ProducerAppRoot from './ui/ProducerAppRoot.vue';
 import { createProducerModules } from './modules';
@@ -24,6 +24,13 @@ export interface ProducerEngineOptions {
    * runs that share a process (persistent refs collide otherwise).
    */
   persistenceNamespace?: string;
+  /**
+   * Extra modules registered into the Bakery mod alongside the default
+   * producer modules. Used by the balance bot (balance/bot.ts) and sim
+   * harnesses to attach tick handlers / persistent state inside the
+   * engine's namespace so `saveManager.import/export` reach them.
+   */
+  extraModules?: EngineModule[];
 }
 
 /**
@@ -39,6 +46,7 @@ export function createProducerEngine(
   data: ProducerData;
 } {
   const data = applyProducerOverrides(DEFAULT_PRODUCER_DATA, overrides);
+  const modules = [...createProducerModules(data), ...(options?.extraModules ?? [])];
   const engine = bootEngine({
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
@@ -46,7 +54,7 @@ export function createProducerEngine(
       {
         id: MOD_ID,
         name: MOD_NAME,
-        modules: createProducerModules(data),
+        modules,
       },
     ],
   });

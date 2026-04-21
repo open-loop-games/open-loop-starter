@@ -1,10 +1,12 @@
 /**
  * Producer balance solver — engine as oracle.
  *
- * Each beat gets bisected against `runArcProbe` driving the production bot
- * (`buildProducerSimEngine`). The engine plays the game; the solver tunes a
- * parameter until the beat's fire time lands on target. No parallel mechanics
- * model, no closed-form inversions — the bot's behaviour *is* the model.
+ * Each beat gets bisected against the bot-driven engine (`buildProducerSimEngine`)
+ * by pushing the candidate value onto the archetype's tuning `OverrideRegistry`
+ * and running `runUntil` against a shared engine. One engine per solve-pass
+ * — bisection iterations reset state via `saveManager.importSave(initialBlob)`
+ * instead of rebuilding. The engine plays the game; the solver tunes a
+ * parameter until the beat's fire time lands on target.
  *
  * Run: `pnpm balance:solve:producer`. Prints a proposed-patch report. Does
  * NOT mutate data files.
@@ -14,155 +16,133 @@
  * tuning. Beats 5, 6, 8 deferred pending design decisions (see ticket).
  */
 
-import { runArcProbe } from '@/balance';
-import { bisectTuner, type TunerResult } from 'open-loop-engine/harness';
-import type { ProducerOverrides } from '..';
+import {
+  bisectTuner,
+  runUntil,
+  type DecimalSource,
+  type Engine,
+  type OverrideRegistry,
+  type TunerResult,
+} from 'open-loop-engine';
+import { ProducerTuningRegistryKey, type ProducerTunables } from '../modules/producers';
 import { DEFAULT_PRODUCER_DATA } from '../data';
 import { PRODUCERS } from '../data/producers';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { buildProducerSimEngine } from './bot';
 
 const BUDGET_SEC = BEAT_WINDOWS['beat-8']![1] * 2.5;
-const COST_SCALING = Number(DEFAULT_PRODUCER_DATA.balance.producerCostGrowth);
 
-// ─── Oracle ───────────────────────────────────────────────────────────────
+// ─── Proposal state ──────────────────────────────────────────────────────
+//
+// Accumulated per-beat proposals. Re-pushed as part of every sampler's
+// scope so later beats see earlier beats' solutions. When a sampler
+// bisects a new candidate for its own beat, that key overwrites the
+// accumulated value inside the single per-sample scope.
+
+type Proposed = Partial<Record<keyof ProducerTunables, DecimalSource>>;
+
+function toScope(p: Proposed): Partial<ProducerTunables> {
+  const scope: Partial<ProducerTunables> = {};
+  for (const [key, value] of Object.entries(p) as Array<[keyof ProducerTunables, DecimalSource]>) {
+    scope[key] = () => value;
+  }
+  return scope;
+}
+
+// ─── Sampler ─────────────────────────────────────────────────────────────
+
+interface SamplerContext {
+  engine: Engine;
+  registry: OverrideRegistry<ProducerTunables>;
+  initialBlob: string;
+  proposed: Proposed;
+}
 
 /**
- * Run a single beat's predicate against the engine with the given overrides.
- * Returns the sim-second the beat first fired, or `Infinity` if it didn't.
- * Single seed — the bot is deterministic, extra seeds would only confirm it.
+ * Sample a beat's fire-time under the current accumulated proposal plus a
+ * single candidate override. Resets engine state via `importSave`, pushes
+ * `{...proposed, [candidateKey]: candidate}` as one scope, runs `runUntil`,
+ * and tears the scope down in a `finally` so scope leaks don't silently
+ * contaminate the next iteration.
  */
-function runSingleBeat(overrides: ProducerOverrides, beatId: string): number {
+function sampleBeat(
+  ctx: SamplerContext,
+  beatId: string,
+  candidateKey: keyof ProducerTunables,
+  candidateValue: number,
+): number {
   const beat = ARC_BEATS.find((b) => b.id === beatId);
   if (!beat) throw new Error(`no beat ${beatId} in ARC_BEATS`);
 
-  const [result] = runArcProbe({
-    buildEngine: () => buildProducerSimEngine(overrides),
-    beats: [beat],
-    seeds: [0],
-    maxSimTime: BUDGET_SEC,
-    tickDelta: 1,
+  const result = ctx.engine.saveManager!.importSave(ctx.initialBlob);
+  if (!result.success) throw new Error(`importSave failed for beat ${beatId}`);
+
+  const cleanup = ctx.registry.pushScope(`solver:${beatId}`, {
+    ...toScope(ctx.proposed),
+    [candidateKey]: () => candidateValue,
   });
-  if (!result || result.counts.predicate === 0) return Infinity;
-  return result.terminationTime?.p50 ?? Infinity;
-}
 
-// ─── Override composition ────────────────────────────────────────────────
-
-/**
- * Current costScaling for a producer given `proposed`. Uses the proposed value
- * if the producer has been overridden (e.g. by a prior growth pass), otherwise
- * the default. Keeps per-producer override patches internally consistent —
- * tuning cursor.baseCost shouldn't accidentally reset its costScaling to the
- * default after a growth pre-pass stretched the ladder.
- */
-function currentCostScaling(proposed: ProducerOverrides, id: string): number {
-  const existing = proposed.producers?.find((p) => p.id === id)?.purchase?.costScaling;
-  return existing !== undefined ? Number(existing) : COST_SCALING;
-}
-
-/**
- * Merge a producer purchase override into `proposed`, preserving prior entries.
- * Writes both baseCost + costScaling so the override merge sees a complete
- * `purchase` block (shallow merge by id doesn't recurse into nested fields).
- * Preserves any prior costScaling override on the same producer.
- */
-function withProducerCost(
-  proposed: ProducerOverrides,
-  id: string,
-  baseCost: number,
-): ProducerOverrides {
-  const producers = [...(proposed.producers ?? [])];
-  const patch = { id, purchase: { baseCost, costScaling: currentCostScaling(proposed, id) } };
-  const existing = producers.findIndex((p) => p.id === id);
-  if (existing >= 0) producers[existing] = patch;
-  else producers.push(patch);
-  return { ...proposed, producers };
-}
-
-/**
- * Rewrite all tier-i upgrade costs given a candidate multiplier M. Each cost
- * is computed from the proposed producer baseCost (so beat-4 respects earlier
- * beat-2/3 proposals). Replaces every `*-boost-i` entry in `proposed.upgrades`.
- *
- * The data file derives tier-i costs from `producer.baseCost × 20` today; this
- * helper is the solver's knob on the shared multiplier, not on individual rows.
- */
-function withTier1UpgradeMultiplier(
-  proposed: ProducerOverrides,
-  multiplier: number,
-): ProducerOverrides {
-  const producerCostFor = (id: string): number => {
-    const overridden = proposed.producers?.find((p) => p.id === id)?.purchase?.baseCost;
-    if (overridden !== undefined) return Number(overridden);
-    return Number(PRODUCERS.find((p) => p.id === id)!.purchase!.baseCost);
-  };
-
-  const patches = PRODUCERS.filter((p) => p.trigger === 'continuous' && p.purchase).map((p) => ({
-    id: `${p.id}-boost-i`,
-    cost: producerCostFor(p.id) * multiplier,
-  }));
-
-  const upgrades = [
-    ...(proposed.upgrades ?? []).filter((u) => !u.id.endsWith('-boost-i')),
-    ...patches,
-  ];
-  return { ...proposed, upgrades };
-}
-
-function withBalance(
-  proposed: ProducerOverrides,
-  patch: Partial<typeof DEFAULT_PRODUCER_DATA.balance>,
-): ProducerOverrides {
-  return { ...proposed, balance: { ...proposed.balance, ...patch } };
+  let fireTime: number;
+  try {
+    const { terminated, elapsedSimulated } = runUntil({
+      engine: ctx.engine,
+      until: () => beat.predicate(ctx.engine),
+      maxSimTime: BUDGET_SEC,
+      tickDelta: 1,
+    });
+    fireTime = terminated === 'predicate' ? elapsedSimulated : Infinity;
+  } finally {
+    cleanup();
+  }
+  if (ctx.registry.scopeDepth !== 0) {
+    throw new Error(`scope leak after ${beatId} sampler: depth=${ctx.registry.scopeDepth}`);
+  }
+  return fireTime;
 }
 
 // ─── Per-beat solvers ─────────────────────────────────────────────────────
 
 /**
- * cursor.baseCost controls when beat-2 fires (auto-buy purchases cursor the
- * tick `primary ≥ baseCost` first holds). Higher cost → later fire.
- *
- * Bracket: 1..400. Low end guarantees beat-2 fires at t=1 under the taper;
- * high end exceeds the click-taper cap (~48 clicks total) so beat-2 won't
- * fire at all — surfacing the "unreachable under this bot" signal as the
+ * cursor.baseCost controls when beat-2 fires. Bracket 1..400: low end
+ * guarantees beat-2 fires at t=1 under the taper; high end exceeds the
+ * click-taper cap so beat-2 won't fire — surfacing "unreachable" as the
  * bisector hits maxIters without converging.
  */
-function solveBeat2(proposed: ProducerOverrides, targetSec: number): TunerResult {
+function solveBeat2(ctx: SamplerContext, targetSec: number): TunerResult {
   return bisectTuner({
     lo: 1,
     hi: 400,
     targetSec,
-    sampler: (value) => runSingleBeat(withProducerCost(proposed, 'cursor', value), 'beat-2'),
+    sampler: (v) => sampleBeat(ctx, 'beat-2', 'producers/cursor/purchase/baseCost', v),
   });
 }
 
 /**
- * grandma.baseCost controls beat-3 given the post-beat-2 income trajectory.
- * Bracket wider than beat-2's — cursor income builds into the window, so
- * 5–10min affordability spans a broader cost range.
+ * grandma.baseCost controls beat-3. Bracket wider than beat-2's — cursor
+ * income builds into the window, so 5–10min affordability spans a broader
+ * cost range.
  */
-function solveBeat3(proposed: ProducerOverrides, targetSec: number): TunerResult {
+function solveBeat3(ctx: SamplerContext, targetSec: number): TunerResult {
   return bisectTuner({
     lo: 20,
     hi: 5000,
     targetSec,
-    sampler: (value) => runSingleBeat(withProducerCost(proposed, 'grandma', value), 'beat-3'),
+    sampler: (v) => sampleBeat(ctx, 'beat-3', 'producers/grandma/purchase/baseCost', v),
   });
 }
 
 /**
- * Beat-4 fires on `cursor-boost-i` purchased. The tier-i upgrade multiplier
- * (default 20× producer baseCost) drives *all* tier-i costs together — that
- * is the data's knob, not any individual upgrade cost. The multi-upgrade
- * perturbation helper rewrites every `*-boost-i` entry per candidate.
+ * Beat-4 fires on `cursor-boost-i` purchased. The tier-1 upgrade multiplier
+ * drives all `*-boost-i` costs together via
+ * `balance/tier1UpgradeMultiplier` — one tunable key, module-side cost
+ * derivation does the fan-out (`modules/upgrades.ts resolveUpgradeCost`).
  */
-function solveBeat4(proposed: ProducerOverrides, targetSec: number): TunerResult {
+function solveBeat4(ctx: SamplerContext, targetSec: number): TunerResult {
   return bisectTuner({
     lo: 1,
     hi: 500,
     targetSec,
-    sampler: (value) => runSingleBeat(withTier1UpgradeMultiplier(proposed, value), 'beat-4'),
+    sampler: (v) => sampleBeat(ctx, 'beat-4', 'balance/tier1UpgradeMultiplier', v),
   });
 }
 
@@ -171,13 +151,12 @@ function solveBeat4(proposed: ProducerOverrides, targetSec: number): TunerResult
  * `milestoneBonusPerTier` is inverted — higher bonus → faster rate ramp →
  * earlier fire. Auto-direction detection in `bisectTuner` handles this.
  */
-function solveBeat7(proposed: ProducerOverrides, targetSec: number): TunerResult {
+function solveBeat7(ctx: SamplerContext, targetSec: number): TunerResult {
   return bisectTuner({
     lo: 1.1,
     hi: 10,
     targetSec,
-    sampler: (value) =>
-      runSingleBeat(withBalance(proposed, { milestoneBonusPerTier: value }), 'beat-7'),
+    sampler: (v) => sampleBeat(ctx, 'beat-7', 'balance/milestoneBonusPerTier', v),
   });
 }
 
@@ -190,16 +169,30 @@ interface VerifyRow {
   inWindow: boolean;
 }
 
-function verifyAll(proposed: ProducerOverrides, beats: readonly string[]): VerifyRow[] {
+function verifyAll(ctx: SamplerContext, beats: readonly string[]): VerifyRow[] {
   return beats.map((beatId) => {
     const window = BEAT_WINDOWS[beatId]!;
-    const firedAt = runSingleBeat(proposed, beatId);
-    return {
-      beatId,
-      window,
-      firedAt,
-      inWindow: isFinite(firedAt) && firedAt >= window[0] && firedAt <= window[1],
-    };
+    const beat = ARC_BEATS.find((b) => b.id === beatId)!;
+    const result = ctx.engine.saveManager!.importSave(ctx.initialBlob);
+    if (!result.success) throw new Error(`importSave failed for verify ${beatId}`);
+    const cleanup = ctx.registry.pushScope(`verify:${beatId}`, toScope(ctx.proposed));
+    try {
+      const { terminated, elapsedSimulated } = runUntil({
+        engine: ctx.engine,
+        until: () => beat.predicate(ctx.engine),
+        maxSimTime: BUDGET_SEC,
+        tickDelta: 1,
+      });
+      const firedAt = terminated === 'predicate' ? elapsedSimulated : Infinity;
+      return {
+        beatId,
+        window,
+        firedAt,
+        inWindow: isFinite(firedAt) && firedAt >= window[0] && firedAt <= window[1],
+      };
+    } finally {
+      cleanup();
+    }
   });
 }
 
@@ -218,31 +211,40 @@ interface BeatSolve {
 }
 
 function currentProducerBaseCost(id: string): number {
-  return Number(DEFAULT_PRODUCER_DATA.producers.find((p) => p.id === id)!.purchase!.baseCost);
+  return Number(PRODUCERS.find((p) => p.id === id)!.purchase!.baseCost);
 }
 
 /**
  * One Gauss-Seidel pass: solve beats 2, 3, 4, 7 in order against the current
- * proposal, updating proposal after each solve so later beats see the latest.
- * Called in an outer loop to converge coupling between beats (beat-7's choice
- * of milestoneBonusPerTier slows rate ramp, which affects beats 3/4's fire
- * times; re-solving those against the updated rate shape is what closes the
- * drift).
+ * proposal. Called in an outer loop to converge coupling between beats.
+ * Same Gauss-Seidel shape as pre-OL-632; the difference is that each beat's
+ * sampler reads the accumulated proposal via a single scope-push per
+ * iteration instead of rebuilding the engine with a merged overrides object.
  */
-function solvePass(proposed: ProducerOverrides): {
-  proposed: ProducerOverrides;
+function solvePass(proposed: Proposed): {
+  proposed: Proposed;
   solves: BeatSolve[];
 } {
+  const engine = buildProducerSimEngine();
+  const registry = engine.tryInject(ProducerTuningRegistryKey)!;
+  const initialBlob = engine.saveManager!.exportSave();
+  const ctx: SamplerContext = { engine, registry, initialBlob, proposed };
+
   const solves: BeatSolve[] = [];
 
   // Beat 2 — cursor.baseCost
   {
     const [lo, hi] = BEAT_WINDOWS['beat-2']!;
     const target = (lo + hi) / 2;
-    const currentFire = runSingleBeat(proposed, 'beat-2');
-    const sol = solveBeat2(proposed, target);
+    const currentFire = sampleBeat(
+      ctx,
+      'beat-2',
+      'producers/cursor/purchase/baseCost',
+      Number(proposed['producers/cursor/purchase/baseCost'] ?? currentProducerBaseCost('cursor')),
+    );
+    const sol = solveBeat2(ctx, target);
     const value = Math.round(sol.value);
-    proposed = withProducerCost(proposed, 'cursor', value);
+    ctx.proposed['producers/cursor/purchase/baseCost'] = value;
     solves.push({
       beatId: 'beat-2',
       field: 'cursor.baseCost',
@@ -260,10 +262,15 @@ function solvePass(proposed: ProducerOverrides): {
   {
     const [lo, hi] = BEAT_WINDOWS['beat-3']!;
     const target = (lo + hi) / 2;
-    const currentFire = runSingleBeat(proposed, 'beat-3');
-    const sol = solveBeat3(proposed, target);
+    const currentFire = sampleBeat(
+      ctx,
+      'beat-3',
+      'producers/grandma/purchase/baseCost',
+      Number(proposed['producers/grandma/purchase/baseCost'] ?? currentProducerBaseCost('grandma')),
+    );
+    const sol = solveBeat3(ctx, target);
     const value = Math.round(sol.value);
-    proposed = withProducerCost(proposed, 'grandma', value);
+    ctx.proposed['producers/grandma/purchase/baseCost'] = value;
     solves.push({
       beatId: 'beat-3',
       field: 'grandma.baseCost',
@@ -277,18 +284,26 @@ function solvePass(proposed: ProducerOverrides): {
     });
   }
 
-  // Beat 4 — tier-i upgrade multiplier
+  // Beat 4 — tier-1 upgrade multiplier
   {
     const [lo, hi] = BEAT_WINDOWS['beat-4']!;
     const target = (lo + hi) / 2;
-    const currentFire = runSingleBeat(proposed, 'beat-4');
-    const sol = solveBeat4(proposed, target);
+    const currentFire = sampleBeat(
+      ctx,
+      'beat-4',
+      'balance/tier1UpgradeMultiplier',
+      Number(
+        proposed['balance/tier1UpgradeMultiplier'] ??
+          DEFAULT_PRODUCER_DATA.balance.tier1UpgradeMultiplier,
+      ),
+    );
+    const sol = solveBeat4(ctx, target);
     const value = Math.round(sol.value);
-    proposed = withTier1UpgradeMultiplier(proposed, value);
+    ctx.proposed['balance/tier1UpgradeMultiplier'] = value;
     solves.push({
       beatId: 'beat-4',
       field: 'tier-i multiplier',
-      current: 20,
+      current: Number(DEFAULT_PRODUCER_DATA.balance.tier1UpgradeMultiplier),
       currentFireTime: currentFire,
       proposed: value,
       proposedFireTime: sol.time,
@@ -302,10 +317,18 @@ function solvePass(proposed: ProducerOverrides): {
   {
     const [lo, hi] = BEAT_WINDOWS['beat-7']!;
     const target = (lo + hi) / 2;
-    const currentFire = runSingleBeat(proposed, 'beat-7');
-    const sol = solveBeat7(proposed, target);
+    const currentFire = sampleBeat(
+      ctx,
+      'beat-7',
+      'balance/milestoneBonusPerTier',
+      Number(
+        proposed['balance/milestoneBonusPerTier'] ??
+          DEFAULT_PRODUCER_DATA.balance.milestoneBonusPerTier,
+      ),
+    );
+    const sol = solveBeat7(ctx, target);
     const value = round3(sol.value);
-    proposed = withBalance(proposed, { milestoneBonusPerTier: value });
+    ctx.proposed['balance/milestoneBonusPerTier'] = value;
     solves.push({
       beatId: 'beat-7',
       field: 'milestoneBonusPerTier',
@@ -319,7 +342,7 @@ function solvePass(proposed: ProducerOverrides): {
     });
   }
 
-  return { proposed, solves };
+  return { proposed: ctx.proposed, solves };
 }
 
 const PASSES = 3;
@@ -329,11 +352,12 @@ function main(): void {
 
   console.log('# Producer balance solver — engine as oracle\n');
   console.log(`Run at ${new Date().toISOString()}\n`);
-  console.log('Bisects one parameter per beat against `runArcProbe` + `buildProducerSimEngine`.');
+  console.log('Bisects one parameter per beat against `runUntil` + `buildProducerSimEngine`');
+  console.log('under a shared engine reset via `saveManager.importSave` per sample.');
   console.log(`Gauss-Seidel outer loop (${PASSES} passes) converges beat coupling.`);
   console.log('No data files mutated. Review below.\n');
 
-  let proposed: ProducerOverrides = {};
+  let proposed: Proposed = {};
 
   for (let pass = 1; pass <= PASSES; pass++) {
     const result = solvePass(proposed);
@@ -360,7 +384,16 @@ function main(): void {
 
   // ─── Verification ───────────────────────────────────────────────────────
   console.log('## Verification — all proposals applied together\n');
-  const verified = verifyAll(proposed, [
+  const verifyEngine = buildProducerSimEngine();
+  const verifyRegistry = verifyEngine.tryInject(ProducerTuningRegistryKey)!;
+  const verifyBlob = verifyEngine.saveManager!.exportSave();
+  const verifyCtx: SamplerContext = {
+    engine: verifyEngine,
+    registry: verifyRegistry,
+    initialBlob: verifyBlob,
+    proposed,
+  };
+  const verified = verifyAll(verifyCtx, [
     'beat-2',
     'beat-3',
     'beat-4',

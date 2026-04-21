@@ -1,4 +1,9 @@
-import { setupAutoPurchaseProducers, type Engine } from 'open-loop-engine';
+import {
+  persistent,
+  setupAutoPurchaseProducers,
+  type Engine,
+  type EngineModule,
+} from 'open-loop-engine';
 import {
   BuildingsKey,
   ClickStateKey,
@@ -33,6 +38,69 @@ function expectedClicksAt(simTimeSec: number): number {
 let engineCounter = 0;
 
 /**
+ * Bot behaviour as an EngineModule. Installing the bot through the engine's
+ * module system (rather than as post-`start()` wiring) lets its persistent
+ * accumulators live inside the engine's namespace so
+ * `saveManager.exportSave` / `importSave` reach them — load-bearing for the
+ * balance solver's build-once + importSave-per-iteration flow.
+ */
+function createBalanceBotModule(): EngineModule {
+  return {
+    id: 'balance-bot',
+    dependencies: ['producer/producers', 'producer/upgrades'],
+    install(ctx) {
+      const clickState = ctx.inject(ClickStateKey);
+      const buildings = ctx.inject(BuildingsKey);
+      const upgrades = ctx.inject(UpgradesKey);
+
+      // Accumulators live in persistent refs so `importSave(initialBlob)`
+      // resets them alongside game state. Under build-once-reuse (OL-632
+      // solver flow), the bot module installs once but many probe
+      // iterations run against the same engine; closure-local `let` state
+      // would leak across iterations silently.
+      const clicksFired = persistent<number>(0, { name: 'clicksFired' });
+      const upgradeAccum = persistent<number>(0, { name: 'upgradeAccum' });
+
+      // TODO(expansion): click-taper is a TimedInput — expectedClicksAt is
+      // a pure (simTime) → cumulativeCount the bot differences per tick.
+      // See open-loop-engine/docs/candidate-primitives.md § TimedInput.
+      // Graduates when a second archetype's balance bot hits the same
+      // shape.
+      ctx.onTick(() => {
+        const target = expectedClicksAt(clickState.elapsedSec.value);
+        while (clicksFired.value < target) {
+          clickState.click();
+          clicksFired.value++;
+        }
+      });
+
+      setupAutoPurchaseProducers(
+        buildings,
+        { enabled: true, interval: 1, policy: 'hybrid-payback' },
+        ctx.onTick,
+      );
+
+      const upgradeInterval = 2;
+      ctx.onTick((dt: number) => {
+        upgradeAccum.value += dt;
+        // Drain-while-≥-interval: each drained slot runs an "affordable
+        // sweep." Matches the engine-side setupAutoPurchaseProducers drain
+        // semantics so coarse-dt probes (dt > interval) see N passes
+        // instead of 1. Without this, a `dt = 3×interval` advance would
+        // fire one sweep and discard the remainder — correct at
+        // tickDelta=1s today, broken under OL-633's coarseFineProbe.
+        while (upgradeAccum.value >= upgradeInterval) {
+          for (const p of upgrades.getAffordable()) {
+            p.purchase();
+          }
+          upgradeAccum.value -= upgradeInterval;
+        }
+      });
+    },
+  };
+}
+
+/**
  * Build a started, sim-bot-driven engine for the Producer archetype.
  *
  * Wires:
@@ -46,52 +114,13 @@ let engineCounter = 0;
  */
 export function buildProducerSimEngine(overrides?: ProducerOverrides): Engine {
   const namespace = `balance-${++engineCounter}`;
-  const { engine } = createProducerEngine(overrides, { persistenceNamespace: namespace });
+  const { engine } = createProducerEngine(overrides, {
+    persistenceNamespace: namespace,
+    extraModules: [createBalanceBotModule()],
+  });
   engine.selectMod('bakery');
   engine.start();
   engine.stop();
-
-  const clickState = engine.tryInject(ClickStateKey)!;
-  const buildings = engine.tryInject(BuildingsKey)!;
-  const upgrades = engine.tryInject(UpgradesKey)!;
-
-  // TODO(expansion): click-taper is a TimedInput — expectedClicksAt is a
-  // pure (simTime) → cumulativeCount the bot differences per tick. See
-  // open-loop-engine/docs/candidate-primitives.md § TimedInput. Graduates
-  // when a second archetype's balance bot hits the same shape.
-  let clicksFired = 0;
-  engine.loop.onTick(() => {
-    const target = expectedClicksAt(clickState.elapsedSec.value);
-    while (clicksFired < target) {
-      clickState.click();
-      clicksFired++;
-    }
-  });
-
-  setupAutoPurchaseProducers(
-    buildings,
-    { enabled: true, interval: 1, policy: 'hybrid-payback' },
-    (cb) => engine.loop.onTick(cb),
-  );
-
-  let upgradeAccum = 0;
-  const upgradeInterval = 2;
-  engine.loop.onTick((dt: number) => {
-    upgradeAccum += dt;
-    // Drain-while-≥-interval: each drained slot runs an "affordable sweep."
-    // Matches the engine-side setupAutoPurchaseProducers drain semantics so
-    // coarse-dt probes (dt > interval) see N passes instead of 1. Without
-    // this, a `dt = 3×interval` advance would fire one sweep and discard
-    // the remainder — correct at tickDelta=1s today, broken under OL-633's
-    // coarseFineProbe.
-    while (upgradeAccum >= upgradeInterval) {
-      for (const p of upgrades.getAffordable()) {
-        p.purchase();
-      }
-      upgradeAccum -= upgradeInterval;
-    }
-  });
-
   return engine;
 }
 
