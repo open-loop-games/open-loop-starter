@@ -84,6 +84,7 @@ Also cited as contextual helpers: `random` (primitives layer, faction-scoped RNG
 - `createChallengeCategory` — no opt-in nerfs per round. Round variance comes from AI-personality permutations + seed, not from challenge-modifier overlays.
 - `createCumulativeConversion` — no prestige-currency logarithmic conversion. Meta-currency accrues linearly from cell + hotspot ownership; the ratchet is on the upgrade tree, not on the currency formula.
 - `createTieredAchievement` — achievements are flat-category, not tier-ladder. Director's milestones are binary (reached territory threshold, completed N rounds), not graded.
+- `createSpatialGraph` / `scope-stack` — considered and deferred. An overlay graph (hotspots + own-mass-cluster centroids as nodes, supply relationships as edges, recomputed at AI-picker cadence) would give explicit "cut off from supply" semantics on top of the grid's drift-based mass decay. Director v1 ships grid-only; graph layer graduates to a director follow-up only if playtest shows drift-based starvation reads mushy. See § 10.
 
 Every primitive named above resolves in `open-loop-engine/docs/api/INDEX.md`.
 
@@ -138,10 +139,10 @@ export interface DirectorArchetypeVars {
   contestedHotspots: number;             // default 4 (shared, at radial midpoints)
   centerHotspots: 0 | 1;                  // default 1
 
-  // Flow-field mechanic (Option C representation).
-  flowFieldEnabled: boolean;             // default true
-  flowCouplesToSpread: boolean;          // default true
-  flowCouplesToCombat: boolean;          // default true
+  // Supply-field mechanic (Dijkstra gradient + scalar mass over SpatialGrid).
+  supplyFieldEnabled: boolean;           // default true
+  supplyCouplesToSpread: boolean;        // default true
+  supplyCouplesToCombat: boolean;        // default true
 
   // Goal-system shape.
   startingGoalSlots: number;             // default 1
@@ -213,11 +214,14 @@ export interface DirectorBalanceVars {
   spreadBaseRatePerSec: number;           // base cells-claimed-per-sec per faction
   spreadTerrainMul: Record<'rock' | 'open' | 'spawn' | 'hotspot', number>;
 
-  // Flow-field tuning.
-  flowDecayPerSec: number;                // default 0.2 (primary feel knob)
-  flowReinforcementPerTick: number;       // default 1.0
-  flowToSpreadWeight: number;             // default 0.5 (flow-biased spread cell selection)
-  flowToDefenseModifier: number;          // default 0.5 (max +50% defense at full flow)
+  // Supply-field tuning (Dijkstra + mass advection + nonlinear permeability).
+  supplyRecomputeCadenceSec: number;       // default 1.0 — ceiling for periodic rebuild; event-driven on ownership change
+  massDiffusion: number;                   // default 0.05 — lateral smoothing
+  massPermeabilityExponent: number;        // default 2.0 — (primary feel knob) D(m) ~ m^α; <1.5 blobs, >3.0 over-sharp fingers
+  massSourceRatePerSec: number;            // default 1.0 — hotspot injection
+  massSinkRatePerSec: number;              // default 0.1 — drain at own-mass cells
+  supplyToSpreadWeight: number;            // default 0.5 (gradient-biased spread cell selection)
+  supplyToDefenseModifier: number;         // default 0.5 (max +50% defense at full |∇d|·mass)
 
   // Map generation.
   mapSeed: number | 'random';              // default 'random' (per save)
@@ -244,13 +248,14 @@ Director uses outcome-distribution probes, not cost-curve probes. Every probe ru
 | Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
 |-------|--------------|----------------|-----------|-----------|
 | `hotspot-yield-scaling` | `contestedHotspotYieldMul × [0.8, 1.2]`, 50 seeds | 3, 6 | Beat-3 (first win) shifts ≤ ±1 round at median; Beat-6 (strategy-identity) lands in 80–120 min window | Hotspot economy is the dominant meta-arc lever; controls how fast meta-currency accrues |
-| `flow-field-decay-primary-feel` | `flowDecayPerSec × [0.5, 2.0]`, 50 seeds, single round | within-round W4 frontier contact | Round-end territory distribution stddev stays within [10%, 25%] of map | *The* archetype-specific probe. Under-decay → blobs (tendrils thicken into paint); over-decay → twitchy filaments (no supply-path pressure). This probe is what separates Director from a creep-vs-creep demo |
+| `permeability-exponent-vein-structure` | `massPermeabilityExponent × [1.0, 4.0]`, 50 seeds, single round | within-round W4 frontier contact | Round-end territory distribution stddev stays within [10%, 25%] of map | *The* archetype-specific probe. Under-α → blobs (mass spreads uniformly, no fingering); over-α → over-sharp filaments (numerical instability, no supply-path legibility). This probe is what separates Director from a uniform-intensity creep demo |
+| `frontier-roughness-kpz-class` | seed set, 50 seeds, single round | within-round W4 onward | Two-faction frontier width `w(L, t)` fits `w ~ t^β` with `β ∈ [0.25, 0.40]` | Validation probe: does the spread + supply coupling produce slime-mold-class frontier statistics? Edwards-Wilkinson exponent (β ≈ 0.25) means diffusion-only collapse — supply coupling isn't biting. KPZ exponent (β ≈ 0.33) is the biological signature; the probe fails cleanly when the permeability exponent is misconfigured |
 | `ai-personality-swap` | swap personality of any non-player faction (3 perms × 50 seeds) | 3, 5 | Player-faction win rate over 150 runs stays in `[35%, 55%]` | The fairness probe. If Director's sim is skill-sensitive to AI-personality assignment, the game isn't the meta-arc — it's RNG |
 | `spread-base-rate-pacing` | `spreadBaseRatePerSec × [0.8, 1.2]`, 50 seeds | within-round W4 | Beat W4 (first regional contact) lands in 90–180 sim-seconds | Within-round pacing feel — if spread is too fast/slow, rounds stop teaching the player anything |
 | `meta-upgrade-cost-scaling` | `essenceUpgradeCostScaling × [0.85, 1.15]` | 4, 7 | Beat-4 (slot-2 unlock) shifts ≤ ±2 rounds; Beat-7 (arc closure) lands in 100–140 min | Meta-arc pacing — controls whether the 1–2 h arc is reachable without grind or vanishes into trivial-upgrade territory |
 | `meta-currency-accumulation-rate` | `metaCurrencyPerCell × [0.75, 1.25]` + `metaCurrencyPerHotspot × [0.75, 1.25]` | 2, 4, 7 | Beat-7 (arc closure) sim-time within [100, 140] min | Meta-currency is the pacing bottleneck for the entire meta-arc; this probe bounds the arc length |
 
-**Minimum probe count:** 6 (meets ≥ 4 requirement; covers cost scaling, production rate, modifier-chain depth via goal-binding, archetype-specific flow-field axis, and two distributional-fairness axes AI-personality-swap + spread-base-rate).
+**Minimum probe count:** 7 (meets ≥ 4 requirement; covers cost scaling, production rate, modifier-chain depth via goal-binding, archetype-specific permeability axis, KPZ-class frontier-roughness validation, and two distributional-fairness axes AI-personality-swap + spread-base-rate).
 
 ---
 
@@ -378,6 +383,7 @@ describe('director — outcome-distribution balance', () => {
   - upgrade row — meta-upgrade + essence-upgrade rows with icon, level, next cost, per-level effect. Cites `widget-vocabulary.md` Layer 2 (frequency 4; action-card analog).
   - faction-legend strip — 4 faction chips with colour, name, territory share, essence balance. `` `declared invention` `` adapter over `widget-vocabulary.md` Layer 2 stat-panel.
 - **Layout detail:** centre holds `DomGrid.vue` at its native aspect (the 100×100 arena); top strip holds round clock + faction-legend; left column holds goal-slot editor + personality indicators; right column holds chain readout + essence balances + meta-currency. Modal (`Dialog`) hosts end-of-round panel + meta-upgrade tree + achievement grid.
+- **Flow visualization:** supply Dijkstra-gradient (`-∇d`) + mass intensity render as a canvas overlay layered on top of `DomGrid.vue`, not through DOM cells — 10k cells × per-cell arrow glyphs would bottleneck the DomGrid entry-array rebuild path. The canvas layer redraws on supply-field recompute (event-driven from ownership change), not per tick. The DOM layer keeps interaction (hover, tooltip hit-testing, ownership visual); canvas carries flow-only visuals. Theme-level toggle: Creep and Ecology themes render flowlines; Baronies and Corporate may skip the overlay and read mass-intensity only (see § 11).
 - **Nav pattern:** none at the shell level — Director is single-screen by design. Tabs inside the meta-upgrade modal are widget-internal.
 - **Declared-invention notes:** the archetype is declared-invention in three dimensions — primary shell (adversarial-arena has no corpus row), form-factor intent (no mobile-aware arena row in the audit), and arena-canvas widget (no Layer-1 / Layer-2 row). Each of the three is independent-enough to upgrade to corpus-backed on its own once a second Director consumer lands an analyses/complete row. The LIBRARY cluster 7b-α + 7b-β filings are the closest substrate citation.
 
@@ -389,10 +395,12 @@ Director is the widest-surface archetype, and it surfaces overlapping gaps from 
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Flow-field primitive | Medium | Director introduces a per-cell per-faction influence map (reinforces along supply paths, decays, couples to spread + combat). If a second consumer (Explorer, Defender, a future RTS-shaped archetype) needs an influence map, graduate a `createInfluenceField` primitive. File research follow-up to check corpus precedent before extracting. |
+| `createFlowField` / `createInfluenceField` primitives | **High** | Promoted from Medium after cross-consumer convergence. Borglike already ships both shapes consumer-side: `src/game/bot/flow.ts` (multi-source navigation flow) + `src/game/bot/danger.ts` (threat-influence map). Director needs matching shapes for supply-Dijkstra-gradient + scalar mass-density. Defender (enemy pathing) and Survivor (threat density) are strong N=3/N=4 candidates from `_identity.md`. Filed as a combined entry in `open-loop-engine/docs/candidate-primitives.md` — graduation trigger met at N=2 (Borglike + Director). Blocks § 5 numeric defaults. Next step: research ticket on whether flow-field and influence-field unify under one primitive with modes or split. |
+| Per-edge conductance (Tero/Physarum) | **Rejected** | Biology-accurate tube-adaptation model (per-edge `D_ij` adapting under Poiseuille flow). 4× storage, dual-update (pressure solve + conductance adaptation), low game-legibility. Rejected as over-engineered — Director's Dijkstra-gradient + scalar mass + nonlinear permeability achieves the same vein-structure read at a quarter the cost. Recorded here so future spatial archetypes don't relitigate. |
+| `SpatialGraph`-backed supply-topology (Director follow-up) | Low | Grid + flow field gives drift-based starvation (cut-off cells' mass decays). An overlay graph — hotspots + own-mass-cluster centroids as nodes, supply relationships as edges, recomputed at AI-picker cadence (0.25 Hz) — would provide explicit graph-cut semantics for "cut off from supply" reads. `createSpatialGraph` already exists in `core/spatial/`; cost is small. Deferred to wait for playtest signal that drift-based starvation reads mushy. Graduate to a director ticket if the signal arrives. |
 | `createLoop` vs. accumulator-over-onTick | High | OL-506's `spread.ts` header comment: the current `createLoop` is a constrained-replay primitive, not a scheduler. Director wants ~1 Hz / ~0.25 Hz / standard-tick coordination *scheduled against sim time*, and the accumulator-over-onTick workaround gets re-derived consumer-side. Looper hits this; Director amplifies it; Interlocker will too. Engine ticket candidate. |
 | `runMatrix` percentile/histogram aggregates | Medium | Director's outcome-distribution probes want not only mean / stddev but also p5 / p50 / p95 percentiles across the seed batch. Currently `aggregateCell` returns mean/stddev only. A harness-side analyzer enhancement (not an engine primitive), but worth scoping before it blocks outcome-distribution work in other archetypes. |
-| DomGrid flow-version split | Low | `DomGrid.vue` emits cell-change events and rebuilds the entry array per event-bucket tick. At 100×100 with *both* ownership and flow-field visuals mutating at 1 Hz, soft perf risk. Mitigation: split flow into a separate `flowVersion` shallow-ref so flow-only ticks don't trigger entry-array rebuild. Small patch at the DomGrid boundary; file when it bites. |
+| DomGrid flow-version split | Low (mitigated) | Original concern: `DomGrid.vue` rebuilds entry array per cell-change event bucket; flow-field visuals at 1 Hz would thrash. § 9's canvas-overlay decision supersedes: flow renders outside DomGrid, so DomGrid rebuilds only on ownership/HP changes. Original `flowVersion` shallow-ref mitigation remains available if flow ever re-enters DomGrid. |
 | `SpatialGrid.restore()` event emission | Medium | `restore()` deliberately doesn't emit events (design choice); consumers handle this via `v-if` key bump on the DomGrid at round-reset. Worth explicit docs, and worth a helper that wraps the common "reset → v-if key bump → rebind" pattern. |
 | Goal-system binding ergonomics | Medium | Director binds up to 5 simultaneous goal multipliers into per-faction chains via `createSlot` + `chain.bind`. The wiring is correct but verbose; a `createGoalSlot({ targetChain, computeMultiplier })` helper could save every future Director consumer from re-deriving it. Graduate after second consumer. |
 | Per-faction modifier-chain registry | Medium | Director wires 16 chains (4 factions × 4 axes). No single primitive groups "a faction's resources + chains + reset" today; each is wired individually. A `createFaction({ id, chainAxes })` facade could land here after a second consumer proves the shape. |
@@ -438,4 +446,4 @@ Every name cited in this doc must resolve to one of:
 - **Engine primitives** → `open-loop-engine/docs/api/INDEX.md` + the four `*.api.md` files
 - **Corpus games** → `open-loop-research/analyses/complete/*-analysis.md` (Director carries `declared invention` on the Exemplars line — no corpus analogues)
 - **Layout shells** → `open-loop-starter/src/lib/shells/` (Director's primary shell is `declared invention` — adversarial-arena layout; secondary `MultiColumnShell` carries `declared invention` as an adapter)
-- **Live consumer (engine-usage grounding)** → `/work/studio/open-loop-starter/src/modules/mods/creep-vs-creep/` (first consumer; demonstrates SpatialGrid + producer + slot + retention + chain-bind goal binding in one composition)
+- **Live consumer (engine-usage grounding)** → *pending reinstantiation*. Theme A (Creep vs Creep) previously shipped at `/work/studio/open-loop-starter/src/modules/mods/creep-vs-creep/` as OL-504's output — the consumer demonstrating SpatialGrid + producer + slot + retention + chain-bind goal binding in one composition. Code deleted; archetype doc retained as the design target for the rebuild. Rebuilding the consumer reinstates empirical grounding for the `candidate` status.
