@@ -4,11 +4,11 @@ import { DEFAULT_PRODUCER_DATA } from '../data';
 /**
  * Balance regression probe — math-only pins on the default Bakery data.
  *
- * Runs in milliseconds, no sim. Catches regressions that the slower arc
- * probe in `producer.sim.test.ts` also catches, but long before the arc
- * probe finishes. Any change that breaks a receipt here should be
- * intentional and land together with a solver re-run + updated p50 bounds
- * in the arc test.
+ * Runs in milliseconds, no sim. Reachability is discovered and re-verified
+ * by `pnpm balance:solve:producer` (engine-as-oracle bisection) and
+ * `pnpm balance:producer` (5-seed arc probe). This file is the receipt:
+ * any intentional change to a solver knob or content stack lands here
+ * together with the commit that moves it.
  *
  * Content-math receipts (§ 4, Bakery content set):
  * 1. Top-producer rateChain ceiling reaches ≥ 1e6× base (beat-7 reachable).
