@@ -31,6 +31,14 @@ export interface ProducerEngineOptions {
    * engine's namespace so `saveManager.import/export` reach them.
    */
   extraModules?: EngineModule[];
+  /**
+   * Raise the loop's `maxDeltaTime` cap. Used by benches profiling
+   * `eventDrivenProbe`, which calls `simulateTick(dt)` with dt equal to the
+   * smallest walker-visible event distance — often hundreds of seconds.
+   * Default (1s) silently clamps those advances and collapses the probe to
+   * fixed-tick. See OL-673.
+   */
+  maxDeltaTime?: number;
 }
 
 /**
@@ -50,6 +58,7 @@ export function createProducerEngine(
   const engine = bootEngine({
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
+    maxDeltaTime: options?.maxDeltaTime,
     mods: [
       {
         id: MOD_ID,

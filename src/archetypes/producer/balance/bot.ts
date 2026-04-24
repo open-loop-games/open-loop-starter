@@ -1,12 +1,17 @@
 import {
+  bn,
   persistent,
   setupAutoPurchaseProducers,
+  type DecimalSource,
   type Engine,
   type EngineModule,
+  type GameStateAccessor,
 } from 'open-loop-engine';
 import {
   BuildingsKey,
   ClickStateKey,
+  HeadlineRateKey,
+  PrimaryResourceKey,
   UpgradesKey,
   createProducerEngine,
   type ProducerOverrides,
@@ -101,6 +106,22 @@ function createBalanceBotModule(): EngineModule {
 }
 
 /**
+ * Accessor for `eventDrivenProbe` benches and anything that drives the
+ * content walker over a Producer engine. Keyed by `resource.id` per OL-669.
+ * Lives here so the solver and the OL-673 bench share one shape.
+ */
+export function buildProducerAccessor(engine: Engine): GameStateAccessor {
+  const cookies = engine.tryInject(PrimaryResourceKey)!;
+  const rate = engine.tryInject(HeadlineRateKey)!;
+  return {
+    getResource: (id: string) => (id === 'cookies' ? bn(cookies.value as DecimalSource) : bn(0)),
+    getRate: (id: string) => (id === 'cookies' ? bn(rate.value as DecimalSource) : bn(0)),
+    isUnlocked: () => false,
+    getState: () => undefined,
+  };
+}
+
+/**
  * Build a started, sim-bot-driven engine for the Producer archetype.
  *
  * Wires:
@@ -111,12 +132,19 @@ function createBalanceBotModule(): EngineModule {
  * Caller drives the engine via `runUntil` / `runMatrixUntil` (which call
  * `engine.loop.stepOnce()` internally). The engine has been `start()`ed
  * and immediately `stop()`ped so the real-time interval doesn't fire.
+ *
+ * `maxDeltaTime` override is for `eventDrivenProbe` benches (OL-673) —
+ * keep the option narrow until the probe adoption decision lands.
  */
-export function buildProducerSimEngine(overrides?: ProducerOverrides): Engine {
+export function buildProducerSimEngine(
+  overrides?: ProducerOverrides,
+  options?: { maxDeltaTime?: number },
+): Engine {
   const namespace = `balance-${++engineCounter}`;
   const { engine } = createProducerEngine(overrides, {
     persistenceNamespace: namespace,
     extraModules: [createBalanceBotModule()],
+    maxDeltaTime: options?.maxDeltaTime,
   });
   engine.selectMod('bakery');
   engine.start();
