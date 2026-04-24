@@ -122,7 +122,11 @@ const GLOBAL_UPGRADES: UpgradeDef[] = [
     id: 'global-x480',
     name: 'Cosmic Yeast',
     description: 'All production ×5',
-    cost: 10_000_000_000_000,
+    // Capstone cost — gates beat-8 (ArcKey.complete) past beat-7's headline
+    // climax. At current plateau rate the jump from global-x96 (100B) buys
+    // 15–30min of post-climax accumulation before the arc closes, matching
+    // producer.md § 4's 95–120min window.
+    cost: 100_000_000_000_000,
     targetProducerId: null,
     multiplier: 5,
   },

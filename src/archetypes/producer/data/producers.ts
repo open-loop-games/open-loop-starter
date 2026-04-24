@@ -10,8 +10,8 @@ export const PRODUCER_BALANCE: ProducerBalance = {
   producerCostGrowth: 1.15,
   achievementMultiplier: 1.02,
   milestoneThresholds: [1, 10, 25, 50, 100, 150, 200, 300, 400, 500],
-  milestoneBonusPerTier: 5,
-  tier1UpgradeMultiplier: 20,
+  milestoneBonusPerTier: 3,
+  tier1UpgradeMultiplier: 496,
 };
 
 // ─── Skeleton + Costume ────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ export const PRODUCERS: ProducerDef[] = [
     name: 'Cursor',
     trigger: 'continuous',
     baseRate: 0.1,
-    purchase: { baseCost: 15, costScaling: PRODUCER_BALANCE.producerCostGrowth },
+    purchase: { baseCost: 46, costScaling: PRODUCER_BALANCE.producerCostGrowth },
   },
 
   // Tier 2 — grandma
@@ -42,7 +42,7 @@ export const PRODUCERS: ProducerDef[] = [
     name: 'Grandma',
     trigger: 'continuous',
     baseRate: 1,
-    purchase: { baseCost: 100, costScaling: PRODUCER_BALANCE.producerCostGrowth },
+    purchase: { baseCost: 70, costScaling: PRODUCER_BALANCE.producerCostGrowth },
   },
 
   // Tier 3 — farm

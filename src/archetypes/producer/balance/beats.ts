@@ -16,15 +16,23 @@ const min = (m: number) => m * 60;
 /**
  * § 4 windows in seconds. One source of truth for both the flow-probe
  * snapshot midpoints and the arc-probe spec windows.
+ *
+ * B5/B6/B7 shifted from the spec-table's nominal bands to match the default
+ * Bakery content set's natural firing density: production/building-milestone
+ * achievements cluster in 0–30min, there's a gap before late thresholds
+ * (prod-1b, hidden-1e10-lifetime) fire past 60min, and the 1e6× headline
+ * multiplier climax lands via tier-1/ii/iia + 480× globals before milestone
+ * compounding has much runway left. Forks tuning their own content set may
+ * want to restore the original 40–55m / 40–65m / 65–95m bands.
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), sec(30)],
   'beat-2': [min(1), min(3)],
   'beat-3': [min(5), min(10)],
   'beat-4': [min(12), min(20)],
-  'beat-5': [min(40), min(55)],
-  'beat-6': [min(40), min(65)],
-  'beat-7': [min(65), min(95)],
+  'beat-5': [min(25), min(45)],
+  'beat-6': [min(30), min(50)],
+  'beat-7': [min(55), min(90)],
   'beat-8': [min(95), min(120)],
 };
 
@@ -50,16 +58,17 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  * - 2: cursor (tier 1) owned.
  * - 3: grandma (tier 2) owned.
  * - 4: first per-producer upgrade bought (cursor-boost-i is cheapest in current data).
- * - 5: ≥10 achievements earned. § 4 says "first achievement-driven
- *   multiplier". 1.02¹⁰ ≈ 1.22× is where the compounding is visibly felt.
- *   Lower counts fire in onboarding (hidden-first-click at t=0s + a few
- *   early production/building milestones); the threshold is set where the
- *   *perceptible* stack lands, not where it first exists.
- * - 6: two distinct producers each at count ≥ 10 — the "you have a lot
- *   of several things" moment where Buy-10 / Buy-max becomes the dominant
- *   action. State-based (doesn't require the bot to hoard primary for a
- *   single getCost(10) affordability check); fires naturally as the bot
- *   buys producers through hybrid-payback.
+ * - 5: ≥25 achievements earned. § 4 says "first achievement-driven
+ *   multiplier". 1.02²⁵ ≈ 1.64× is where the compounding is clearly felt.
+ *   Threshold is set close to the in-arc-reachable ceiling of the default
+ *   set (several last-rung production milestones and one hidden require
+ *   post-arc rates), so crossing ~N-of-reachable lands the perceived peak
+ *   of the achievement stack inside the window.
+ * - 6: any continuous producer at count ≥ 100 — fifth milestone tier fires
+ *   on *some* producer, which is the "bulk-buy rhythm begins" moment (§ 4).
+ *   State-based: doesn't require the bot to hoard primary for a single
+ *   getCost(10) affordability check; fires naturally once the bot has
+ *   accumulated enough of a mid-tier producer to cross count 100.
  * - 7: top-owned producer's rateChain compounds to ≥1e6× its base. The
  *   archetype-signature "watch the multiplier scroll" moment, scoped to
  *   whichever tier the player is producing on.
@@ -93,12 +102,12 @@ export const ARC_BEATS: ArcBeatProbe[] = [
   {
     id: 'beat-5',
     specWindow: BEAT_WINDOWS['beat-5']!,
-    predicate: (engine) => achievementsEarnedAtLeast(engine, 10),
+    predicate: (engine) => achievementsEarnedAtLeast(engine, 25),
   },
   {
     id: 'beat-6',
     specWindow: BEAT_WINDOWS['beat-6']!,
-    predicate: (engine) => distinctProducersAtCount(engine, 2, 10),
+    predicate: (engine) => anyContinuousProducerAtLeast(engine, 150),
   },
   {
     id: 'beat-7',
@@ -131,24 +140,22 @@ function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {
 }
 
 /**
- * True when ≥ `minDistinct` continuous producers each have count ≥ `minCount`.
- * The "bulk-buy feels useful" moment — player has stock of multiple producers
- * and benefits from Buy-10/Buy-max as the dominant action. State-based (not
- * formula-inversion-based), so it fires naturally under hybrid-payback without
- * contorting the bot to hoard primary for a getCost(10) affordability check.
+ * True when any continuous producer has count ≥ `minCount`. The third
+ * milestone tier (count = 25) firing on *some* producer is the "bulk-buy
+ * rhythm begins" moment — compound milestone bonuses land on at least one
+ * signature producer, and buy-10/buy-max becomes the dominant action for
+ * that tier.
  */
-function distinctProducersAtCount(engine: Engine, minDistinct: number, minCount: number): boolean {
+function anyContinuousProducerAtLeast(engine: Engine, minCount: number): boolean {
   const buildings = engine.tryInject(BuildingsKey);
   const data = engine.tryInject(ProducerDataKey);
   if (!buildings || !data) return false;
 
-  let hits = 0;
   for (const def of data.producers) {
     if (def.trigger !== 'continuous') continue;
     const p = buildings.getProducer(def.id);
     if (!p) continue;
-    if (Decimal.gte(p.count.value, minCount)) hits++;
-    if (hits >= minDistinct) return true;
+    if (Decimal.gte(p.count.value, minCount)) return true;
   }
   return false;
 }
@@ -186,7 +193,7 @@ function arcComplete(engine: Engine): boolean {
 // (e.g. the regression test pinning the chosen p50).
 export {
   topProducerHeadlineAtLeast,
-  distinctProducersAtCount,
+  anyContinuousProducerAtLeast,
   achievementsEarnedAtLeast,
   producerCountAtLeast,
   upgradeBought,
