@@ -4,6 +4,7 @@ import { useHeadlineRate } from '../../composables/useHeadlineRate';
 import { useScene } from '../../composables/useScene';
 import { useAmbientData } from '../../composables/useAmbientData';
 import { useFormatting } from '@/composables/useFormatting';
+import Tooltip from '@/ui/components/Tooltip.vue';
 
 const { primary, lifetime, perSecond } = useHeadlineRate();
 const scene = useScene();
@@ -29,20 +30,42 @@ const variant = computed(() => {
     >
       <span class="scene-label">{{ variant.label }}</span>
     </div>
-    <div class="headline-stats">
+    <Tooltip :side-offset="8">
       <div
-        class="primary"
-        data-testid="primary-count"
+        class="headline-stats"
+        tabindex="0"
       >
-        {{ format(sprouts, 0) }}
+        <div
+          class="primary"
+          data-testid="primary-count"
+        >
+          {{ format(sprouts, 0) }}
+        </div>
+        <div class="primary-label">
+          sprouts
+        </div>
+        <div class="rate">
+          {{ format(perSecond, 1) }} / sec
+        </div>
+        <div class="lifetime">
+          Lifetime: {{ format(lifetime, 0) }}
+        </div>
       </div>
-      <div class="rate">
-        {{ format(perSecond, 1) }} / sec
-      </div>
-      <div class="lifetime">
-        Lifetime: {{ format(lifetime, 0) }}
-      </div>
-    </div>
+      <template #content>
+        <div class="headline-tip">
+          <div class="headline-tip__name">
+            Sprouts
+          </div>
+          <div class="headline-tip__line">
+            Spend on producers to grow the garden.
+          </div>
+          <div class="headline-tip__line">
+            <strong>Lifetime</strong> tracks every sprout ever grown — discoveries gate on lifetime,
+            not current count.
+          </div>
+        </div>
+      </template>
+    </Tooltip>
   </section>
 </template>
 
@@ -78,12 +101,28 @@ const variant = computed(() => {
 
 .headline-stats {
   text-align: center;
+  cursor: default;
+}
+
+.headline-stats:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .primary {
   font-size: 2.4em;
   font-weight: 700;
   color: var(--color-primary);
+  line-height: 1;
+}
+
+.primary-label {
+  font-size: 0.78em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-top: 2px;
 }
 
 .rate {
@@ -96,5 +135,19 @@ const variant = computed(() => {
   font-size: 0.85em;
   color: var(--color-text-muted);
   margin-top: 2px;
+}
+
+.headline-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.headline-tip__name {
+  font-weight: 600;
+}
+
+.headline-tip__line {
+  opacity: 0.9;
 }
 </style>

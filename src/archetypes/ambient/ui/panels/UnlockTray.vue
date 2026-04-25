@@ -1,15 +1,44 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Decimal } from 'open-loop-engine';
 import { useUnlocks } from '../../composables/useUnlocks';
 import { useAmbientData } from '../../composables/useAmbientData';
+import { useHeadlineRate } from '../../composables/useHeadlineRate';
+import { useFormatting } from '@/composables/useFormatting';
+import Tooltip from '@/ui/components/Tooltip.vue';
+import type { UnlockDef } from '../../data/types';
 
 const unlocks = useUnlocks();
 const data = useAmbientData();
+const { lifetime } = useHeadlineRate();
+const { format } = useFormatting();
 
 interface Cell {
   id: string;
+  def: UnlockDef;
   label: string;
   earned: boolean;
+  reveals: string;
+}
+
+function describeReveals(def: UnlockDef): string {
+  const r = def.reveals;
+  if (r.kind === 'producer') {
+    const producer = data.producers.find((p) => p.id === r.producerId);
+    return producer ? `Reveals the ${producer.name}` : `Reveals producer ${r.producerId}`;
+  }
+  if (r.kind === 'scene-variant') {
+    const variant = data.sceneVariants.find((v) => v.id === r.variantId);
+    return variant ? `Reveals the ${variant.label} scene` : `Reveals scene ${r.variantId}`;
+  }
+  switch (r.affordance) {
+    case 'achievement-grid':
+      return 'Opens the Garden Almanac';
+    case 'welcome-back':
+      return 'Welcomes you back after time away';
+    case 'prestige':
+      return 'Unlocks prestige';
+  }
 }
 
 const cells = computed<Cell[]>(() =>
@@ -18,13 +47,23 @@ const cells = computed<Cell[]>(() =>
     const earned = purchasable?.bought.value === true;
     return {
       id: def.id,
+      def,
       label: earned ? def.label : '?',
       earned,
+      reveals: describeReveals(def),
     };
   }),
 );
 
 const earnedCount = computed(() => cells.value.filter((c) => c.earned).length);
+
+function progressLabel(def: UnlockDef, earned: boolean): string {
+  const current = Decimal.fromValue(lifetime.value);
+  const target = Decimal.fromValue(def.threshold);
+  if (current.gte(target)) return 'Reached';
+  const targetText = earned ? format(target, 0) : '??';
+  return `${format(current, 0)} / ${targetText} sprouts lifetime`;
+}
 </script>
 
 <template>
@@ -33,15 +72,36 @@ const earnedCount = computed(() => cells.value.filter((c) => c.earned).length);
       Discoveries · {{ earnedCount }} / {{ cells.length }}
     </h3>
     <ul class="cells">
-      <li
+      <Tooltip
         v-for="c in cells"
         :key="c.id"
-        class="cell"
-        :data-earned="c.earned ? 'true' : 'false'"
-        :data-testid="`unlock-${c.id}`"
+        :side-offset="6"
       >
-        {{ c.label }}
-      </li>
+        <li
+          class="cell"
+          :data-earned="c.earned ? 'true' : 'false'"
+          :data-testid="`unlock-${c.id}`"
+          tabindex="0"
+        >
+          {{ c.label }}
+        </li>
+        <template #content>
+          <div class="cell-tip">
+            <div class="cell-tip__name">
+              {{ c.earned ? c.def.label : 'Hidden discovery' }}
+            </div>
+            <div
+              v-if="c.earned"
+              class="cell-tip__reveals"
+            >
+              {{ c.reveals }}
+            </div>
+            <div class="cell-tip__progress">
+              {{ progressLabel(c.def, c.earned) }}
+            </div>
+          </div>
+        </template>
+      </Tooltip>
     </ul>
   </section>
 </template>
@@ -80,11 +140,37 @@ const earnedCount = computed(() => cells.value.filter((c) => c.earned).length);
   font-size: 0.82em;
   text-align: center;
   color: var(--color-text-muted);
+  cursor: default;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .cell[data-earned='true'] {
   color: var(--color-text);
   border-color: var(--color-primary);
   background: var(--color-surface);
+}
+
+.cell-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cell-tip__name {
+  font-weight: 600;
+}
+
+.cell-tip__reveals {
+  opacity: 0.85;
+}
+
+.cell-tip__progress {
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
 }
 </style>

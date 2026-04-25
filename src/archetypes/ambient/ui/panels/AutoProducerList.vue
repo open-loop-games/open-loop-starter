@@ -4,11 +4,14 @@ import { Decimal } from 'open-loop-engine';
 import { useAutoProducers, type AutoProducerRow } from '../../composables/useAutoProducers';
 import { useUnlocks } from '../../composables/useUnlocks';
 import { useAmbientData } from '../../composables/useAmbientData';
+import { useHeadlineRate } from '../../composables/useHeadlineRate';
 import { useFormatting } from '@/composables/useFormatting';
+import AutoProducerTooltip from '../components/AutoProducerTooltip.vue';
 
 const rows = useAutoProducers();
 const unlocks = useUnlocks();
 const data = useAmbientData();
+const { perSecond: totalRate } = useHeadlineRate();
 const { format } = useFormatting();
 
 // Producer → unlock-id lookup (each producer reveal in data.unlocks).
@@ -45,30 +48,35 @@ function totalPerSecond(row: AutoProducerRow) {
       v-if="visibleRows.length"
       class="rows"
     >
-      <li
+      <AutoProducerTooltip
         v-for="row in visibleRows"
         :key="row.def.id"
-        class="row"
-        :data-testid="`producer-${row.def.id}`"
+        :row="row"
+        :total-rate="totalRate"
       >
-        <div class="row-head">
-          <span class="row-name">{{ row.def.name }}</span>
-          <span class="row-count">{{ format(row.count.value, 0) }}</span>
-        </div>
-        <div class="row-meta">
-          <span>{{ format(row.rate.value, 1) }} /sec each</span>
-          <span>total {{ format(totalPerSecond(row), 1) }} /sec</span>
-        </div>
-        <button
-          class="buy-button"
-          :disabled="!row.canAfford(1)"
-          :data-testid="`buy-${row.def.id}`"
-          @click="buy(row)"
+        <li
+          class="row"
+          :data-testid="`producer-${row.def.id}`"
         >
-          <span class="buy-label">Buy</span>
-          <span class="buy-cost">{{ format(row.getCost(1), 0) }}</span>
-        </button>
-      </li>
+          <div class="row-head">
+            <span class="row-name">{{ row.def.name }}</span>
+            <span class="row-count">{{ format(row.count.value, 0) }}</span>
+          </div>
+          <div class="row-meta">
+            <span>{{ format(row.rate.value, 1) }} /sec each</span>
+            <span>total {{ format(totalPerSecond(row), 1) }} /sec</span>
+          </div>
+          <button
+            class="buy-button"
+            :disabled="!row.canAfford(1)"
+            :data-testid="`buy-${row.def.id}`"
+            @click="buy(row)"
+          >
+            <span class="buy-label">Buy</span>
+            <span class="buy-cost">{{ format(row.getCost(1), 0) }}</span>
+          </button>
+        </li>
+      </AutoProducerTooltip>
     </ul>
     <p
       v-else
