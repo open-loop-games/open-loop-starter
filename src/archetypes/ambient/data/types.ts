@@ -78,7 +78,14 @@ export interface SceneVariantDef {
 // ─── Balance ───
 
 export interface AmbientBalance {
-  /** Per-second on the lowest tier. Default 0.5. */
+  /**
+   * Multiplicative scaling on tier-1 (planter) base rate. Default 1.0
+   * (identity). Bound to planter's `rateChain` in `modules/auto-producers.ts`
+   * so the solver can perturb it via `pushScope('balance/tier1BaseRate', ...)`
+   * without rebuilding the engine. `ProducerMapping.baseRate` is static
+   * `DecimalSource`, so scaling rides a chain modifier rather than wrapping
+   * the producer's `baseRate` field directly.
+   */
   tier1BaseRate: DecimalSource;
   /** Multiplicative cost growth per producer purchase. Default 1.08. */
   producerCostGrowth: DecimalSource;

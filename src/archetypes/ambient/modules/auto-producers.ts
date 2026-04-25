@@ -1,5 +1,6 @@
 import { computed, type ComputedRef, type Ref } from 'vue';
 import {
+  createMultiplicativeModifier,
   createOverrideRegistry,
   createProducerCategory,
   createResource,
@@ -91,18 +92,13 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
     install(ctx) {
       const tuningRegistry = createOverrideRegistry<AmbientTunables>('ambient-tuning');
 
-      // Register the solver-bisected balance knobs. Reader-site plumbing
-      // (achievements multiplier grant, planter rateChain modifier) is
-      // wired by sibling modules — the registration here exists so
-      // `pushScope` from balance scripts can perturb defaults that
-      // sibling modules consume via `.value`.
-      tunable(tuningRegistry, 'balance/tier1BaseRate', () => data.balance.tier1BaseRate);
-      tunable(tuningRegistry, 'balance/producerCostGrowth', () => data.balance.producerCostGrowth);
-      tunable(
-        tuningRegistry,
-        'balance/achievementMultiplier',
-        () => data.balance.achievementMultiplier,
-      );
+      // Tunables are registered at their consumer sites (where the value is
+      // actually read) — `tunable()` registers on first call, no upfront
+      // declaration needed. `producers/{id}/purchase/baseCost` is registered
+      // via `wrapBaseCost` below; `balance/tier1BaseRate` is registered
+      // below at the planter rateChain bind site. `balance/producerCostGrowth`
+      // and `balance/achievementMultiplier` are registered by their consumer
+      // modules.
 
       const primaryResource = createResource<DecimalSource>(0, {
         displayName: 'Sprouts',
@@ -134,6 +130,27 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
         }),
       });
       buildings.register(data.producers);
+
+      // Bind tier-1 base-rate scaling to planter's rateChain. The tunable's
+      // default is 1.0 (identity); scope-pushes via
+      // `pushScope('balance/tier1BaseRate', ...)` retune planter's effective
+      // rate without rebuilding the engine. `ProducerMapping.baseRate` is
+      // static `DecimalSource` (not Computable), so scaling has to ride a
+      // chain modifier — this is the only reactive path.
+      const planter = buildings.getProducer('planter');
+      if (planter) {
+        const tier1BaseRate = tunable(
+          tuningRegistry,
+          'balance/tier1BaseRate',
+          () => data.balance.tier1BaseRate,
+        );
+        planter.rateChain.bind({
+          modifier: createMultiplicativeModifier({
+            multiplier: tier1BaseRate,
+            description: 'Tier-1 base-rate scaling',
+          }),
+        });
+      }
 
       const headlineRate = computed(() => buildings.getTotalRate(primaryResource));
 

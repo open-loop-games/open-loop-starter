@@ -21,10 +21,11 @@ export function createCategoriesModule(): EngineModule {
     install(ctx) {
       const buildings = ctx.inject(AutoProducersKey);
       const unlocks = ctx.inject(UnlocksKey);
-      ctx.provide(CategoriesKey, {
+      const categories: EngineCategories = {
         producers: [buildings],
         purchasables: [unlocks],
-      } as EngineCategories);
+      };
+      ctx.provide(CategoriesKey, categories);
     },
   };
 }
