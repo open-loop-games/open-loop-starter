@@ -25,7 +25,7 @@ export const UNLOCKS: UnlockDef[] = [
   {
     id: 'coop-built',
     label: 'Henhouse Plans',
-    threshold: 30,
+    threshold: 30_810_558,
     reveals: { kind: 'producer', producerId: 'coop' },
   },
   {
@@ -51,31 +51,31 @@ export const UNLOCKS: UnlockDef[] = [
   {
     id: 'spring-arrives',
     label: 'Spring Arrives',
-    threshold: 5_000,
+    threshold: 1_045_994_938,
     reveals: { kind: 'scene-variant', variantId: 'spring' },
   },
   {
     id: 'summer-warmth',
     label: 'Summer Warmth',
-    threshold: 50_000,
+    threshold: 1_487_616_326,
     reveals: { kind: 'scene-variant', variantId: 'summer' },
   },
   {
     id: 'harvest-light',
     label: 'Harvest Light',
-    threshold: 500_000,
+    threshold: 2_115_691_245,
     reveals: { kind: 'scene-variant', variantId: 'autumn' },
   },
   {
     id: 'winter-quiet',
     label: 'Winter Quiet',
-    threshold: 5_000_000,
+    threshold: 3_008_940_791,
     reveals: { kind: 'scene-variant', variantId: 'winter' },
   },
   {
     id: 'year-cycles',
     label: 'Year-Round Garden',
-    threshold: 50_000_000,
+    threshold: 4_279_322_281,
     reveals: { kind: 'scene-variant', variantId: 'year-cycles' },
   },
 

@@ -22,31 +22,31 @@ export const SCENE_VARIANTS: SceneVariantDef[] = [
   {
     id: 'spring',
     label: 'Spring Bloom',
-    threshold: 5_000,
+    threshold: 1_045_994_938,
     visualKey: 'scene/spring',
   },
   {
     id: 'summer',
     label: 'Summer Warmth',
-    threshold: 50_000,
+    threshold: 1_487_616_326,
     visualKey: 'scene/summer',
   },
   {
     id: 'autumn',
     label: 'Harvest Light',
-    threshold: 500_000,
+    threshold: 2_115_691_245,
     visualKey: 'scene/autumn',
   },
   {
     id: 'winter',
     label: 'Winter Quiet',
-    threshold: 5_000_000,
+    threshold: 3_008_940_791,
     visualKey: 'scene/winter',
   },
   {
     id: 'year-cycles',
     label: 'Year-Round Garden',
-    threshold: 50_000_000,
+    threshold: 4_279_322_281,
     visualKey: 'scene/year-cycles',
   },
 ];

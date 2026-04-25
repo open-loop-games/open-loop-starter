@@ -1,6 +1,6 @@
 # Balancing
 
-How to reconcile an archetype's numbers against its beat map. Applies to every archetype; worked example is Producer's `src/archetypes/producer/balance/`.
+How to reconcile an archetype's numbers against its beat map. Applies to every archetype; worked examples are Producer's `src/archetypes/producer/balance/` and Ambient's `src/archetypes/ambient/balance/`.
 
 ## The framing
 
@@ -80,7 +80,7 @@ A Tier-A archetype clears all four questions with "yes / 1-D / deterministic / n
 
 Current expected tiering across the 15:
 
-- **Tier A** (direct template clone): Producer ✓, Ambient, Looper.
+- **Tier A** (direct template clone): Producer ✓, Ambient ✓, Looper.
 - **Tier B** (template + mode-specific extensions): Scaler (Decimal-aware tuner), Interlocker (multi-dim solver), Cycler (B-with-MC on wave-survivability), Phase-shifter (per-phase A replays stitched together).
 - **Tier C** (genuinely different tools, template provides the three-layer discipline only): Defender, Survivor, Packer, Auto-battler, Tug, Director, Explorer, Scripter.
 

@@ -3,16 +3,48 @@ import {
   createBooleanRequirement,
   createPurchasableCategory,
   setupAutoPurchase,
+  tunable,
+  type DecimalSource,
   type EngineModule,
   type InjectionKey,
+  type OverrideRegistry,
   type PurchasableCategory,
 } from 'open-loop-engine';
 import type { AmbientData, UnlockDef } from '../data/types';
-import { PrimaryLifetimeKey } from './auto-producers';
+import {
+  AmbientTuningRegistryKey,
+  PrimaryLifetimeKey,
+  type AmbientTunables,
+} from './auto-producers';
 
 export const UnlocksKey: InjectionKey<PurchasableCategory<UnlockDef>> = Symbol(
   'ambient/unlocks',
 ) as InjectionKey<PurchasableCategory<UnlockDef>>;
+
+// Unlocks whose threshold is registered with the tuning registry. Mirrors
+// auto-producers' opt-in baseCost wrapping — the solver bisects against
+// these threshold knobs to land beats 3 and 5 in window without rebuilding
+// the engine. Other unlocks pass their threshold through unchanged.
+const TUNABLE_THRESHOLD_IDS = new Set<string>(['coop-built', 'spring-arrives', 'year-cycles']);
+
+// Engine's tunable() returns a ComputedRef branded against its own Vue
+// install; the starter's Vue declares a separate brand. Both are
+// structurally identical `{ value: T }` reactive refs at runtime. Use a
+// structural type so the brand mismatch doesn't surface here. Same trick
+// the producer module uses for trackTotal/persistent crossings.
+type Ref2<T> = { value: T };
+type Threshold = DecimalSource | Ref2<DecimalSource>;
+
+function wrapThreshold(registry: OverrideRegistry<AmbientTunables>, def: UnlockDef): Threshold {
+  if (!TUNABLE_THRESHOLD_IDS.has(def.id)) return def.threshold;
+  const key = `unlocks/${def.id}/threshold`;
+  return tunable<DecimalSource>(registry, key, () => def.threshold) as Ref2<DecimalSource>;
+}
+
+const readThreshold = (threshold: Threshold): DecimalSource =>
+  typeof threshold === 'object' && threshold !== null && 'value' in threshold
+    ? threshold.value
+    : threshold;
 
 /**
  * Visibility unlocks gate on cumulative produced (lifetime), not the current
@@ -35,17 +67,21 @@ export function createUnlocksModule(data: AmbientData): EngineModule {
     dependencies: ['ambient/auto-producers'],
     install(ctx) {
       const lifetime = ctx.inject(PrimaryLifetimeKey);
+      const tuningRegistry = ctx.inject(AmbientTuningRegistryKey);
 
       const unlocks = createPurchasableCategory<UnlockDef>({
         id: 'ambient/unlocks',
-        mapPurchasable: (def) => ({
-          display: { title: def.label, description: def.description ?? def.label },
-          requirements: createBooleanRequirement({
-            requirement: () => Decimal.gte(lifetime.value, def.threshold),
-            description: def.description ?? def.label,
-          }),
-          limit: 1,
-        }),
+        mapPurchasable: (def) => {
+          const threshold = wrapThreshold(tuningRegistry, def);
+          return {
+            display: { title: def.label, description: def.description ?? def.label },
+            requirements: createBooleanRequirement({
+              requirement: () => Decimal.gte(lifetime.value, readThreshold(threshold)),
+              description: def.description ?? def.label,
+            }),
+            limit: 1,
+          };
+        },
       });
       unlocks.register(data.unlocks);
 

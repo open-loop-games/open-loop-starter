@@ -1,7 +1,14 @@
 import { computed, watch, type ComputedRef, type Ref } from 'vue';
-import { Decimal, persistent, type EngineModule, type InjectionKey } from 'open-loop-engine';
+import {
+  Decimal,
+  persistent,
+  tunable,
+  type DecimalSource,
+  type EngineModule,
+  type InjectionKey,
+} from 'open-loop-engine';
 import type { AmbientData } from '../data/types';
-import { PrimaryResourceKey } from './auto-producers';
+import { AmbientTuningRegistryKey, PrimaryResourceKey } from './auto-producers';
 import { UnlocksKey } from './unlocks';
 
 export interface ArcState {
@@ -37,8 +44,15 @@ export function createArcModule(data: AmbientData): EngineModule {
     install(ctx) {
       const primary = ctx.inject(PrimaryResourceKey);
       const unlocks = ctx.inject(UnlocksKey);
+      const tuningRegistry = ctx.inject(AmbientTuningRegistryKey);
 
       const announced = persistent<boolean>(false, { name: 'arcAnnounced' });
+
+      const prestigeThreshold = tunable<DecimalSource>(
+        tuningRegistry,
+        'balance/prestigeEligibleThreshold',
+        () => data.balance.prestigeEligibleThreshold,
+      );
 
       // Deepest scene-variant unlock = the closure target ("year-cycles" in
       // default data). Filter to scene-variant kind so a future fork adding
@@ -50,7 +64,7 @@ export function createArcModule(data: AmbientData): EngineModule {
         .sort((a, b) => Number(b.threshold) - Number(a.threshold))[0]?.id;
 
       const complete = computed(() => {
-        if (!Decimal.gte(primary.value, data.balance.prestigeEligibleThreshold)) return false;
+        if (!Decimal.gte(primary.value, prestigeThreshold.value)) return false;
         if (!deepestUnlockId) return false;
         const purchasable = unlocks.getPurchasable(deepestUnlockId);
         return purchasable?.bought.value ?? false;

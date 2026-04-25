@@ -17,7 +17,7 @@ export const AUTO_PRODUCERS: AutoProducerDef[] = [
     id: 'planter',
     name: 'Planter',
     baseRate: 0.5,
-    purchase: { baseCost: 10, costScaling: COST_SCALING, initialAmount: 1 },
+    purchase: { baseCost: 55, costScaling: COST_SCALING, initialAmount: 1 },
   },
   {
     id: 'coop',

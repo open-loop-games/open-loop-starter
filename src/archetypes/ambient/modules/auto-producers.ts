@@ -28,8 +28,12 @@ export type AmbientTunableKey =
   | 'balance/tier1BaseRate'
   | 'balance/producerCostGrowth'
   | 'balance/achievementMultiplier'
+  | 'balance/prestigeEligibleThreshold'
   | 'producers/planter/purchase/baseCost'
-  | 'producers/coop/purchase/baseCost';
+  | 'producers/coop/purchase/baseCost'
+  | 'unlocks/coop-built/threshold'
+  | 'unlocks/spring-arrives/threshold'
+  | 'unlocks/year-cycles/threshold';
 
 export type AmbientTunables = Record<string, () => DecimalSource>;
 
