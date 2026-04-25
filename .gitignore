@@ -5,3 +5,5 @@ dist
 .mcp.json
 .claude/
 src/components.d.ts
+.codex
+profiles/
