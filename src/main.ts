@@ -1,4 +1,4 @@
-import { createApp } from '@/archetypes/producer';
+import { createApp } from '@/archetypes/ambient';
 import '@/lib/styles/reset.css';
 import '@/lib/styles/tokens.css';
 import './styles/base.css';
