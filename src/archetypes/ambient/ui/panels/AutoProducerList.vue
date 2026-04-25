@@ -66,7 +66,7 @@ function totalPerSecond(row: AutoProducerRow) {
             <span>{{ format(row.rate.value, 1) }} /sec each</span>
             <span>total {{ format(totalPerSecond(row), 1) }} /sec</span>
           </div>
-          <button
+          <Button
             class="buy-button"
             :disabled="!row.canAfford(1)"
             :data-testid="`buy-${row.def.id}`"
@@ -74,7 +74,7 @@ function totalPerSecond(row: AutoProducerRow) {
           >
             <span class="buy-label">Buy</span>
             <span class="buy-cost">{{ format(row.getCost(1), 0) }}</span>
-          </button>
+          </Button>
         </li>
       </AutoProducerTooltip>
     </ul>
