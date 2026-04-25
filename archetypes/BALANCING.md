@@ -65,6 +65,40 @@ Not every archetype suits the engine-as-oracle + 1-D bisection pattern. A rough 
 
 Producer's `balance/` folder is the Tier A template. Tier B archetypes should copy its shape with the per-beat perturbations they need; Tier C archetypes document what tool they chose and why.
 
+## Tier decision
+
+Pick the tier during the first balance ticket and record the call in `shape.ts` (it's already the right home — "what's fixed about this archetype"). Default to the most conservative tier the archetype passes — Tier A if it does, Tier B only if A can't close, Tier C only if B's perturbation primitives don't fit.
+
+The rubric is four questions, answered in order:
+
+1. **Is the objective a single fire-time per beat?** If yes → A or B candidate. If the objective is an outcome distribution (pass-rate at wave N, run-length p50, score distribution, win-rate vs opponent) → Tier C.
+2. **Does one 1-D scalar per beat close it?** If yes → Tier A. If a beat needs joint tuning across ≥ 2 knobs (ratio targets, graph balance) or across Decimal-tetrational magnitudes → Tier B.
+3. **Is the bot deterministic under a fixed policy?** If yes → A or B. If the archetype's moment-to-moment play is stochastic in a way that affects beat timing meaningfully (seeded content layout, RNG-driven enemy spawns, opponent adaptation) → solver objective becomes a distribution statistic (p50, p90, expected) not a point; plan multi-seed from day one.
+4. **Is there an adversary in the simulation?** If yes → Tier C with best-response iteration or self-play convergence. Solo-archetype B stays B.
+
+A Tier-A archetype clears all four questions with "yes / 1-D / deterministic / no." Every "no" drops one tier.
+
+Current expected tiering across the 15:
+
+- **Tier A** (direct template clone): Producer ✓, Ambient, Looper.
+- **Tier B** (template + mode-specific extensions): Scaler (Decimal-aware tuner), Interlocker (multi-dim solver), Cycler (B-with-MC on wave-survivability), Phase-shifter (per-phase A replays stitched together).
+- **Tier C** (genuinely different tools, template provides the three-layer discipline only): Defender, Survivor, Packer, Auto-battler, Tug, Director, Explorer, Scripter.
+
+When an archetype's tier isn't obvious at authoring time, write down the first answer that failed and which primitive would close it — that's the forcing function for the next candidate-primitive graduation.
+
+## Template scaffold
+
+`src/archetypes/_template/balance/` is a scaffold of the four-file Tier-A stack (`shape.ts`, `beats.ts`, `bot.ts`, `solve.ts`) with the load-bearing ceremony pre-wired:
+
+- `persistent()` discipline in `bot.ts` (importSave-safe accumulators).
+- `pushScope` + `importSave` + `scopeDepth === 0` assertion in `solve.ts` (the invariants that make "one engine, many bisection iterations" sound).
+- Gauss-Seidel pass loop skeleton — chained proposals so beat-N's sampler sees earlier beats' solutions.
+- `TODO(fill-in)` markers at every archetype-specific site.
+
+The template is excluded from `tsconfig.app.json` because its placeholders don't resolve. Copy the whole directory to `src/archetypes/<archetype>/balance/`, replace placeholder imports with the archetype's own keys + data, and fill in each `TODO(fill-in)` block. The concrete reference for every pattern the template points at is `src/archetypes/producer/balance/` — read it alongside the template when filling in.
+
+Tier B and Tier C archetypes still benefit from the template's `shape.ts` (identity separation is universal) and the ceremony discipline in `bot.ts` (any bot + solver pairing wants it). Tier C archetypes document in `shape.ts` what tool replaces the solver and why.
+
 ## What lives in an archetype's `balance/` folder
 
 - `shape.ts` — identity (fixed). Ordered phases, budget, signature metric, min cardinality, flow-band weights.
