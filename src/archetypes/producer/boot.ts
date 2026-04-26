@@ -36,7 +36,7 @@ export interface ProducerEngineOptions {
    * `eventDrivenProbe`, which calls `simulateTick(dt)` with dt equal to the
    * smallest walker-visible event distance — often hundreds of seconds.
    * Default (1s) silently clamps those advances and collapses the probe to
-   * fixed-tick. See OL-673.
+   * fixed-tick.
    */
   maxDeltaTime?: number;
 }

@@ -5,9 +5,9 @@
  * Sibling of `NodeWireBoard.vue` (node-and-wire boards). Together they are
  * the starter's two "fast path, no imperative renderer" spatial views.
  *
- * **E1 resolution (OL-512).** The `spatial-systems-family-study` deferred
+ * **Two-consumer extraction.** The `spatial-systems-family-study` deferred
  * this component in 2026-04 because Primordia's 5×5 upgrade grid was the
- * only consumer — below the two-consumer extraction threshold. OL-504's
+ * only consumer — below the two-consumer extraction threshold. The
  * 60×60 creep-vs-creep map is the second forcing-function consumer at
  * ~3600-cell scale; extraction now clears the bar. The rendering-boundary
  * warning against bikeshed-over-tile-styling still applies: the component

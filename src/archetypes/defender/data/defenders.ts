@@ -3,7 +3,7 @@ import type { DefenderDef } from './types';
 // ─── Balance ───────────────────────────────────────────────────────────────
 // Tower-cost and per-instance scaling constants. Workbench perturbation
 // target. Sim tests in `../sim/defender.sim.test.ts` probe these against
-// the § 4 beat map (lands during OL-547 rebuild).
+// the § 4 beat map (lands during the defender sim rebuild).
 
 export const DEFENDER_COST_SCALING_DEFAULT = 1.0; // TD convention: fixed per-instance price
 

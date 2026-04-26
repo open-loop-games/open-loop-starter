@@ -1,7 +1,7 @@
 /**
- * OL-673 — profile `eventDrivenProbe` wall time on Producer never-fires legs.
+ * Targeted bench: profile `eventDrivenProbe` wall time on Producer never-fires legs.
  *
- * Targeted bench, not part of the solver. Compares `runProbe` against an
+ * Not part of the solver. Compares `runProbe` against an
  * instrumented event-stepping loop (lifted from `harness/probe/event.ts`)
  * so we can count advances, refuses, min/max advance distance, and
  * decompose wall time into walker-snapshot vs simulateTick components.
@@ -126,7 +126,7 @@ function instrumentedEventLoop(
       if (advanced > stats.maxAdvanceSec) stats.maxAdvanceSec = advanced;
       simTime += advanced;
     } else if ('reason' in result && result.reason === 'no-finite-transition') {
-      // Stasis fast-tick (OL-675). Mirror `eventDrivenProbe`: tick at
+      // Stasis fast-tick. Mirror `eventDrivenProbe`: tick at
       // `tickDelta` without rebuilding the walker each iteration; rebuild
       // every STASIS_PROBE_INTERVAL ticks to detect exit-from-stasis.
       stats.refusesNoFinite++;
@@ -163,7 +163,7 @@ function instrumentedEventLoop(
       stats.tickMs += performance.now() - t1;
       simTime += dt;
     } else {
-      // Zero-distance tie: `{ advanced: 0, fired: [...] }`. OL-676 territory.
+      // Zero-distance tie: `{ advanced: 0, fired: [...] }`. Handle with fixed-delta fallback.
       stats.zeroTies++;
       const remaining = maxSimTime - simTime;
       const dt = Math.min(tickDelta, remaining);

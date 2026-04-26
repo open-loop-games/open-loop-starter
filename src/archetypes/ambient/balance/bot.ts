@@ -8,7 +8,7 @@ import { AutoProducersKey, createAmbientEngine, type AmbientOverrides } from '..
 
 /**
  * Zero-click activity model. Ambient's identity is "auto-production runs
- * without input" (doc § 8 surface 9 — pinned by OL-695). The bot fires zero
+ * without input" (doc § 8 surface 9). The bot fires zero
  * clicks at all sim-times; this function is here for symmetry with
  * Producer's `expectedClicksAt` and to make the contract explicit.
  *
@@ -30,7 +30,7 @@ let engineCounter = 0;
  *
  * Auto-purchase scope:
  *   - Producers: wired here via `setupAutoPurchaseProducers` (hybrid-payback,
- *     1s interval — matches Producer's bot policy and OL-627's defaults).
+ *     1s interval — matches Producer's bot policy defaults).
  *   - Unlocks: already auto-purchased by `modules/unlocks.ts` itself
  *     (`setupAutoPurchase` in the install path) — soft reveals fire on
  *     threshold cross independently of the bot.

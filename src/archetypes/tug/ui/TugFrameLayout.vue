@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /**
- * Three-region desktop grid for the Tug skeleton — declared invention per
- * OL-703 leaf-1 decision 10. Layout structure:
+ * Three-region desktop grid for the Tug skeleton. Layout structure:
  *
  *   ┌──────────────────────────────────────────────┐
  *   │ lane (full-width, ~30% height)               │
@@ -90,8 +89,8 @@
 }
 
 /* Below 900px, collapse to a single column so a narrow window stays usable.
-   Mobile-first declared-invention is fork-extension territory (per OL-703
-   decision 11) — this is just a "don't crash on a smaller window" floor. */
+   Mobile-first responsive layout is fork-extension territory — this is just
+   a "don't crash on a smaller window" floor. */
 @media (max-width: 900px) {
   .tug-frame {
     grid-template-areas:

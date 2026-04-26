@@ -21,7 +21,7 @@
  *     production curve set by B2/B3/B5 + content cardinality. Verified
  *     after combined overrides; if it falls outside its window, decision is
  *     content-reshape (add achievements or shift their thresholds), not a
- *     dedicated knob — same precedent as Producer's B5 in OL-625.
+ *     dedicated knob — same precedent as Producer's B5 treatment.
  *
  * Proposals chain forward — each beat solves against the prior beats'
  * proposed values via a single scope-push per sample. Mirrors
@@ -241,9 +241,9 @@ function currentUnlockThreshold(id: string): number {
   return Number(UNLOCKS.find((u) => u.id === id)!.threshold);
 }
 
-// Solver ramp-up gate. Step up one beat at a time per OL-697 session-2
-// methodology — never run the full multi-beat × multi-pass sweep on the
-// first try. Toggle this and PASSES below as the ramp progresses.
+// Solver ramp-up gate. Step up one beat at a time — never run the full
+// multi-beat × multi-pass sweep on the first try. Toggle this and PASSES
+// below as the ramp progresses.
 const ENABLED_BEATS = new Set<string>(['beat-2', 'beat-3', 'beat-5', 'beat-7']);
 
 function solvePass(proposed: Proposed): {

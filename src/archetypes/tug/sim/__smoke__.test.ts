@@ -15,8 +15,8 @@ import {
 } from '../modules';
 
 /**
- * Smoke gate matching the OL-708 acceptance contract. Mirrors Ambient's
- * `__smoke__.test.ts` shape: boot the engine, assert the injection-key
+ * Smoke gate. Mirrors Ambient's `__smoke__.test.ts` shape: boot the engine,
+ * assert the injection-key
  * surface and tuning registry contents that the BalanceWorkbench relies on,
  * then drive a short live simulation to confirm the wiring composes at
  * runtime (no install-time crashes, sequencers fire, lane spawns units,

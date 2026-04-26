@@ -217,9 +217,9 @@ function currentProducerBaseCost(id: string): number {
 /**
  * One Gauss-Seidel pass: solve beats 2, 3, 4, 7 in order against the current
  * proposal. Called in an outer loop to converge coupling between beats.
- * Same Gauss-Seidel shape as pre-OL-632; the difference is that each beat's
- * sampler reads the accumulated proposal via a single scope-push per
- * iteration instead of rebuilding the engine with a merged overrides object.
+ * Same Gauss-Seidel shape as the previous iteration; the difference is that
+ * each beat's sampler reads the accumulated proposal via a single scope-push
+ * per iteration instead of rebuilding the engine with a merged overrides object.
  */
 function solvePass(proposed: Proposed): {
   proposed: Proposed;

@@ -3,8 +3,8 @@ import type { DecimalSource } from 'open-loop-engine';
 // ─── Skeleton ───
 // 6 unit archetypes; 6×6 counter matrix; 3 income upgrade tiers; 2 spendable
 // abilities (artillery + reinforcement); per-side fortress HP; 30 min match
-// time limit. Cardinality is the skeleton baseline per OL-703 leaf-2 handoff;
-// editing any of these counts forks the skeleton, not tunes it.
+// time limit. These counts are the skeleton baseline; editing any of them
+// forks the skeleton, not tunes it.
 //
 // `archetypeTag` on UnitDef is the engineering tag used to construct the
 // counter matrix's rock-paper-scissors+2-axis structure (see § 8). Runtime

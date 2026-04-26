@@ -6,8 +6,8 @@ import type { ShopConfig } from './types';
 // single round. Sell-back at half of purchase price is the corpus standard.
 //
 // Packer's skeleton deliberately leaves `interestPerUnit` unset: the
-// interest-bearing round economy is Auto-battler's distinguishing mechanic
-// (OL-578); Packer forks that want Backpack Battles' small interest variant
+// interest-bearing round economy is Auto-battler's distinguishing mechanic;
+// Packer forks that want Backpack Battles' small interest variant
 // can set `interestPerUnit: 3` and `interestCap: 2` or similar.
 
 export const DEFAULT_SLOTS_PER_ROUND = [4, 5, 5, 6, 6];

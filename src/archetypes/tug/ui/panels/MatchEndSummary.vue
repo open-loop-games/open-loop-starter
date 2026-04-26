@@ -5,7 +5,7 @@ import { useMatch, useMeta, useTugData } from '../../composables';
 /**
  * Match-end overlay. Sources its display state from `useMatch().lastMatchEnd`
  * (the latched `'matchEnded'` event payload), NOT from `match.outcome.value` —
- * which is null again post-reset (per OL-707 leaf-4 contract). Restart
+ * which is null again post-reset (outcome is null after every reset). Restart
  * button calls `match.start()` then clears the latch.
  */
 const match = useMatch();

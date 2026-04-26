@@ -133,7 +133,7 @@ export const FLOW_BAND_SCORE = {
  *   - `./beats.ts`                 BEAT_WINDOWS, predicate shapes
  *   - `./bot.ts`                   zero-click bot, auto-purchase cadence
  *
- * All generated in one pass under OL-695. All subject to co-reshape when a
- * phase from `AMBIENT_PHASES` can't be expressed under the current
- * scaffolding (per BALANCING.md § Retune vs reshape).
+ * All subject to co-reshape when a phase from `AMBIENT_PHASES` can't be
+ * expressed under the current scaffolding (per BALANCING.md § Retune vs
+ * reshape).
  */

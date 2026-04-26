@@ -1,10 +1,10 @@
 /**
- * OL-674 — capture inspector cpuprofile over the b2 scenario of the
+ * Capture inspector cpuprofile over the b2 scenario of the
  * event-driven bench, for archetype-vs-synthetic flame-graph diff.
  *
  * Runs ONE scenario (b2 — cursor unreachable) with the inspector Profiler
  * wrapped around the hot loop. No comparison, no sweep — this is a one-shot
- * to capture a Producer-shaped call stack for OL-673 attribution.
+ * to capture a Producer-shaped call stack for event-driven bench attribution.
  *
  * Run via `vite-node` (Node runtime). The bench imports Node built-ins via
  * untyped dynamic requires because the starter doesn't depend on

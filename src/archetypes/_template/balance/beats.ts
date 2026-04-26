@@ -26,7 +26,7 @@ const min = (m: number) => m * 60;
  * Windows are an LLM guess on first pass — fully expect to shift them
  * during the first balance reconciliation (see `BALANCING.md` § Retune vs
  * reshape → "move the phase"). Producer's B5/B6/B7 shifted by 15–25
- * minutes during OL-625 to match natural firing density.
+ * minutes during prior tuning to match natural firing density.
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   // TODO(fill-in): one entry per beat from <archetype>.md § 4.
@@ -58,8 +58,8 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  * (e.g. "can afford `getCost(10)`" without actually buying) force the bot
  * into unnatural behavior and warp the fire time. Prefer state-based
  * predicates ("count ≥ N", "any X ≥ threshold"). See producer's
- * `anyContinuousProducerAtLeast` for a state-based reshape (OL-625) that
- * replaced a hoard-gated predicate.
+ * `anyContinuousProducerAtLeast` for a state-based reshape that replaced a
+ * hoard-gated predicate.
  */
 export const ARC_BEATS: ArcBeatProbe[] = [
   // TODO(fill-in):

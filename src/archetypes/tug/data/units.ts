@@ -16,7 +16,7 @@ import type { UnitDef } from './types';
 // Theme C SciFi Armada per archetypes/tug.md § 11. unitNames + unitRoles
 // follow the Direct Strike / Nexus Wars idiom. Numbers below are first-cut
 // placeholders chosen for ratio shape (light-fast-cheap → capital-slow-
-// expensive), not for arc-correctness; OL-704's leaf-6 successor retunes.
+// expensive), not for arc-correctness; the tuner retunes against beat bands.
 
 export const UNITS: UnitDef[] = [
   {

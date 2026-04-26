@@ -2,7 +2,7 @@
   SingleColumnShell — centered column, max-width clamped, gap padding.
   Covers ~19% of the 42-game layout corpus. Slot-based, pure CSS.
 
-  Shell API conventions (see OL-263, inherited by all sibling shells):
+  Shell API conventions (inherited by all sibling shells):
     1. Slot naming: `default` for the obvious "main" region; descriptive
        names (`sidebar`, `left`, `right`) for auxiliary regions.
     2. Width props: `{slotName}Width` as a CSS length string.

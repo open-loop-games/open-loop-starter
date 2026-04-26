@@ -59,7 +59,7 @@ function createBalanceBotModule(): EngineModule {
       const upgrades = ctx.inject(UpgradesKey);
 
       // Accumulators live in persistent refs so `importSave(initialBlob)`
-      // resets them alongside game state. Under build-once-reuse (OL-632
+      // resets them alongside game state. Under build-once-reuse (the
       // solver flow), the bot module installs once but many probe
       // iterations run against the same engine; closure-local `let` state
       // would leak across iterations silently.
@@ -93,7 +93,7 @@ function createBalanceBotModule(): EngineModule {
         // semantics so coarse-dt probes (dt > interval) see N passes
         // instead of 1. Without this, a `dt = 3×interval` advance would
         // fire one sweep and discard the remainder — correct at
-        // tickDelta=1s today, broken under OL-633's coarseFineProbe.
+        // tickDelta=1s today, broken under coarseFineProbe with large dt.
         while (upgradeAccum.value >= upgradeInterval) {
           for (const p of upgrades.getAffordable()) {
             p.purchase();
@@ -107,8 +107,8 @@ function createBalanceBotModule(): EngineModule {
 
 /**
  * Accessor for `eventDrivenProbe` benches and anything that drives the
- * content walker over a Producer engine. Keyed by `resource.id` per OL-669.
- * Lives here so the solver and the OL-673 bench share one shape.
+ * content walker over a Producer engine. Keyed by `resource.id`.
+ * Lives here so the solver and the event-driven bench share one shape.
  */
 export function buildProducerAccessor(engine: Engine): GameStateAccessor {
   const cookies = engine.tryInject(PrimaryResourceKey)!;
@@ -133,7 +133,7 @@ export function buildProducerAccessor(engine: Engine): GameStateAccessor {
  * `engine.loop.stepOnce()` internally). The engine has been `start()`ed
  * and immediately `stop()`ped so the real-time interval doesn't fire.
  *
- * `maxDeltaTime` override is for `eventDrivenProbe` benches (OL-673) —
+ * `maxDeltaTime` override is for `eventDrivenProbe` benches —
  * keep the option narrow until the probe adoption decision lands.
  */
 export function buildProducerSimEngine(

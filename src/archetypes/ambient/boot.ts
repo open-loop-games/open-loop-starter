@@ -21,16 +21,16 @@ export interface AmbientEngineOptions {
   persistenceNamespace?: string;
   /** Extra modules registered into the Cozy Farm mod alongside the default ambient modules. */
   extraModules?: EngineModule[];
-  /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context (OL-673). */
+  /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context. */
   maxDeltaTime?: number;
 }
 
 /**
  * Create an engine instance pre-wired with the Ambient archetype modules.
  * Does NOT call `engine.load()` or `processOfflineTime` — AppRoot owns the
- * resume sequence (OL-700: AmbientAppRoot.vue::startGame writes
+ * resume sequence: `AmbientAppRoot.vue::startGame` writes
  * `sessionClock.lastResumeGapSec`, calls `processOfflineTime`, then
- * `refreshElapsedAtResume()`).
+ * `refreshElapsedAtResume()`.
  */
 export function createAmbientEngine(
   overrides?: AmbientOverrides,

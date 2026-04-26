@@ -13,8 +13,8 @@ const min = (m: number) => m * 60;
 const hr = (h: number) => h * 60 * 60;
 
 /**
- * § 4 windows in seconds. Lifted from `archetypes/ambient.md` § 4 (post-
- * OL-695 12h-cumulative reshape). One source of truth for both flow-probe
+ * § 4 windows in seconds. Lifted from `archetypes/ambient.md` § 4 (after
+ * the 12h-cumulative reshape). One source of truth for both flow-probe
  * snapshot midpoints and arc-probe spec windows.
  *
  * Beat 4 ("glance-check value proposition proven") is resume-driven and
@@ -26,9 +26,9 @@ const hr = (h: number) => h * 60 * 60;
  *
  * Windows are an LLM guess on first pass — fully expect to shift them
  * during balance reconciliation (BALANCING.md § Retune vs reshape → "move
- * the phase"). Producer's B5/B6/B7 shifted 15–25 minutes in OL-625; record
- * the same kind of shifts here in commit notes if they happen, and sync
- * `archetypes/ambient.md` § 4 to match.
+ * the phase"). Producer's B5/B6/B7 shifted 15–25 minutes during prior
+ * tuning; record the same kind of shifts here in commit notes if they happen,
+ * and sync `archetypes/ambient.md` § 4 to match.
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), sec(30)],
@@ -73,8 +73,8 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  *   unlock by threshold. Conjunction matches doc § 4: "producers[mid].count
  *   ≥ 1 AND ≥1 idle-scene-variant unlocked".
  * - 6: ≥ 8 achievements earned — 1.02⁸ ≈ 1.17× is the "first felt
- *   multiplier" threshold (Producer's beat-5 used a similar count threshold
- *   per OL-625). Headless bot can fire 12 of 20 achievements (10 milestone
+ *   multiplier" threshold (Producer's beat-5 used a similar count threshold).
+ *   Headless bot can fire 12 of 20 achievements (10 milestone
  *   + 2 tick-time); 8 sits comfortably in the reachable middle.
  * - 7: `ArcKey.complete` — `primary >= prestigeEligibleThreshold` AND
  *   deepest scene-variant unlock visible. Wired in `modules/arc.ts` via

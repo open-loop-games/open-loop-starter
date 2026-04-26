@@ -71,8 +71,8 @@ function startGame(slotId: number, modId?: string): void {
   const result = engine.load();
 
   // Catch-up advance for offline gap, then auto-start a match if none in
-  // progress (per OL-707 leaf-4 close: skeleton plays-by-default; explicit
-  // "Start Match" lives only on the match-end overlay).
+  // progress (skeleton plays-by-default; explicit "Start Match" lives only
+  // on the match-end overlay).
   if (result.success && result.timestamp != null) {
     const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
     if (gap > 0) processOfflineTime(engine.loop, gap);

@@ -15,9 +15,9 @@
  * Probe 5 — no-pressure invariant. 24h sim against the default Ambient
  * build; reports any tick at which the player-visible primary resource
  * shrinks (negative delta), the headline rate drops to zero unexpectedly,
- * or any explicit fail-state flag is observed. Per OL-695 surface 6, the
- * three pressure analyzers are inline (no engine analyzer infrastructure;
- * graduate to harness once a second consumer wants them).
+ * or any explicit fail-state flag is observed. The three pressure analyzers
+ * are inline (no engine analyzer infrastructure; graduate to harness once a
+ * second consumer wants them).
  */
 
 import { Decimal, processOfflineTime, runUntil, type Engine } from 'open-loop-engine';

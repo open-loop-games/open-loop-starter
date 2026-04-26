@@ -21,7 +21,7 @@ export interface TugEngineOptions {
   persistenceNamespace?: string;
   /** Extra modules registered into the SciFi Armada mod alongside the default tug modules. */
   extraModules?: EngineModule[];
-  /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context (OL-673). */
+  /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context. */
   maxDeltaTime?: number;
 }
 

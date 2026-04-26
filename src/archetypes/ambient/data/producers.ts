@@ -47,7 +47,7 @@ export const AUTO_PRODUCERS: AutoProducerDef[] = [
 
 // ─── Balance ───
 // Numbers below are first-cut placeholders chosen for ratio shape, not for
-// arc-correctness. OL-697's solver re-pins them.
+// arc-correctness. The solver re-pins them.
 
 export const AMBIENT_BALANCE: AmbientBalance = {
   tier1BaseRate: 1.0,
