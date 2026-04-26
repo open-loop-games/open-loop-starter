@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useUpgrades, type UpgradeRow } from '../../composables/useUpgrades';
 import { useProducerData } from '../../composables/useProducerData';
 import { useFormatting } from '@/composables/useFormatting';
+import Tooltip from '@/ui/components/Tooltip.vue';
 
 const data = useProducerData();
 const groups = useUpgrades();
@@ -29,8 +30,8 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
     if (avail.length) sections.push({ key, title, rows: avail });
   };
 
-  if (groups.value.click.length) push('click', 'Click', groups.value.click);
-  if (groups.value.global.length) push('global', 'Global', groups.value.global);
+  if (groups.value.click.length) push('click', 'Hand Tools', groups.value.click);
+  if (groups.value.global.length) push('global', 'Pantry', groups.value.global);
   for (const p of continuousProducers) {
     const rows = groups.value.perProducer.get(p.id) ?? [];
     if (rows.length) push(p.id, p.name, rows);
@@ -41,30 +42,46 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
 </script>
 
 <template>
-  <div class="upgrade-tray">
+  <div class="recipe-index">
+    <header class="recipe-index__head">
+      <h3 class="recipe-index__title">
+        <span class="recipe-index__title-mark">&#10097;</span>
+        Recipes
+      </h3>
+      <span class="recipe-index__hint">tap to bake in</span>
+    </header>
+
     <section
       v-for="section in view.sections"
       :key="section.key"
-      class="upgrade-section"
+      class="recipe-section"
     >
-      <h3 class="panel-title">
-        {{ section.title }}
-      </h3>
-      <ul class="upgrade-list">
+      <h4 class="recipe-section__title">
+        <span class="recipe-section__name">{{ section.title }}</span>
+        <span class="recipe-section__rule" />
+        <span class="recipe-section__count">{{ section.rows.length }}</span>
+      </h4>
+      <ul class="recipe-list">
         <li
           v-for="row in section.rows"
           :key="row.def.id"
         >
           <Tooltip>
             <button
-              class="upgrade-row"
+              type="button"
+              class="recipe-row"
               :class="{ 'is-affordable': row.canPurchase.value }"
               :disabled="!row.canPurchase.value"
               :data-testid="`upgrade-${row.def.id}`"
               @click="row.purchase()"
             >
-              <span class="upgrade-row__name">{{ row.def.name }}</span>
-              <span class="upgrade-row__cost">{{ format(row.def.cost, 0) }}</span>
+              <span
+                class="recipe-row__bullet"
+                aria-hidden="true"
+              >&middot;</span>
+              <span class="recipe-row__name">{{ row.def.name }}</span>
+              <span class="recipe-row__dots" />
+              <span class="recipe-row__cost">{{ format(row.def.cost, 0) }}</span>
             </button>
             <template #content>
               <div class="tip-name">
@@ -74,7 +91,7 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
                 {{ row.def.description }}
               </div>
               <div class="tip-cost">
-                Cost: {{ format(row.def.cost, 0) }}
+                Cost &middot; {{ format(row.def.cost, 0) }}
               </div>
             </template>
           </Tooltip>
@@ -84,12 +101,13 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
 
     <section
       v-if="view.owned.length"
-      class="upgrade-section upgrade-section--owned"
+      class="recipe-pantry"
     >
-      <h3 class="panel-title">
-        Owned · {{ view.owned.length }}
-      </h3>
-      <ul class="owned-strip">
+      <h4 class="recipe-pantry__title">
+        <span class="recipe-pantry__title-text">Bought &amp; Baked</span>
+        <span class="recipe-pantry__count">{{ view.owned.length }}</span>
+      </h4>
+      <ul class="recipe-pantry__list">
         <li
           v-for="row in view.owned"
           :key="row.def.id"
@@ -97,11 +115,14 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
         >
           <Tooltip>
             <span
-              class="owned-pill"
+              class="seal"
               tabindex="0"
             >
-              <span class="owned-pill__check">✓</span>
-              <span class="owned-pill__name">{{ row.def.name }}</span>
+              <span
+                class="seal__check"
+                aria-hidden="true"
+              >&#10003;</span>
+              <span class="seal__name">{{ row.def.name }}</span>
             </span>
             <template #content>
               <div class="tip-name">
@@ -115,139 +136,322 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
         </li>
       </ul>
     </section>
+
+    <p
+      v-if="!view.sections.length && !view.owned.length"
+      class="recipe-empty"
+    >
+      No recipes in the book yet. Bake a few cookies first.
+    </p>
   </div>
 </template>
 
 <style scoped>
-.upgrade-tray {
+.recipe-index {
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: 18px;
   min-height: 0;
+  font-family: var(--font-body, Georgia, serif);
+  color: var(--bakery-cocoa, #2d1d10);
 }
 
-.panel-title {
-  font-size: 0.85em;
-  letter-spacing: 0.08em;
+/* ─── Top header ─────────────────────────────────────────────────────── */
+.recipe-index__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.18));
+}
+
+.recipe-index__title {
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 24,
+    'SOFT' 100,
+    'wght' 700;
+  font-size: 0.92em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
-  margin-bottom: var(--gap-sm);
-}
-
-.upgrade-section {
-  display: flex;
-  flex-direction: column;
-}
-
-.upgrade-section--owned {
-  margin-top: var(--gap-sm);
-  padding-top: var(--gap-sm);
-  border-top: 1px dashed var(--color-border);
-}
-
-.owned-strip {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.owned-pill {
+  color: var(--bakery-mahogany, #5a2f10);
+  margin: 0;
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  background: var(--color-badge);
-  border-radius: 999px;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.recipe-index__title-mark {
+  color: var(--bakery-brass, #b1782a);
+}
+
+.recipe-index__hint {
+  font-style: italic;
   font-size: 0.72em;
-  color: var(--color-text-muted);
-  opacity: 0.7;
-  cursor: default;
-  transition: opacity 120ms;
+  color: var(--bakery-cocoa-mute, #7a5d3d);
 }
 
-.owned-pill:hover,
-.owned-pill:focus-visible {
-  opacity: 1;
-  outline: none;
+/* ─── Section (one per recipe family) ────────────────────────────────── */
+.recipe-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.owned-pill__check {
-  color: var(--color-success);
-  font-weight: 700;
+.recipe-section__title {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-family: var(--font-display, Georgia, serif);
+  color: var(--bakery-mahogany, #5a2f10);
 }
 
-.upgrade-list {
+.recipe-section__name {
+  font-variation-settings:
+    'opsz' 14,
+    'SOFT' 100,
+    'wght' 600;
+  font-style: italic;
+  font-size: 0.88em;
+  letter-spacing: 0.04em;
+}
+
+.recipe-section__rule {
+  height: 0;
+  border-top: 1px solid var(--bakery-rye-line, #b89a6a);
+  border-bottom: 1px solid var(--bakery-rye-line, #b89a6a);
+  padding: 1px 0;
+  opacity: 0.55;
+  transform: translateY(-3px);
+}
+
+.recipe-section__count {
+  font-variation-settings:
+    'opsz' 12,
+    'SOFT' 100,
+    'wght' 700;
+  font-size: 0.7em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bakery-brass, #b1782a);
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-list {
   list-style: none;
   display: flex;
   flex-direction: column;
 }
 
-.upgrade-row {
+/* ─── Recipe row ─────────────────────────────────────────────────────── */
+.recipe-row {
   width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--gap-sm);
-  padding: 5px 8px;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 8px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
+  border-radius: 3px;
+  color: var(--bakery-cocoa, #2d1d10);
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition:
-    background 80ms,
-    border-color 80ms;
+    background 100ms ease-out,
+    color 100ms ease-out;
 }
 
-.upgrade-row:hover:not(:disabled) {
-  background: var(--color-surface-hover);
-  border-color: var(--color-border);
+.recipe-row:hover:not(:disabled) {
+  background: rgba(177, 120, 42, 0.1);
 }
 
-.upgrade-row:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
+.recipe-row:focus-visible {
+  outline: none;
+  background: rgba(177, 120, 42, 0.16);
+  border-color: var(--bakery-brass, #b1782a);
 }
 
-.upgrade-row:disabled {
+.recipe-row:disabled {
   cursor: default;
-  color: var(--color-text-muted);
+  color: var(--bakery-cocoa-mute, #7a5d3d);
+  opacity: 0.7;
 }
 
-.upgrade-row__name {
-  flex: 1;
+.recipe-row__bullet {
+  color: var(--bakery-brass, #b1782a);
+  font-size: 1.4em;
+  line-height: 0;
+  transform: translateY(-2px);
+  opacity: 0.75;
+}
+
+.recipe-row__name {
+  font-family: var(--font-body, Georgia, serif);
+  font-style: italic;
+  font-size: 0.92em;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.85em;
+  letter-spacing: 0.01em;
 }
 
-.upgrade-row__cost {
-  font-size: 0.8em;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-muted);
+.recipe-row__dots {
+  border-bottom: 1px dotted var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.45));
+  transform: translateY(-3px);
+  min-width: 12px;
+}
+
+.recipe-row__cost {
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 12,
+    'SOFT' 100,
+    'wght' 600;
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums oldstyle-nums;
+  color: var(--bakery-cocoa-mute, #7a5d3d);
   flex-shrink: 0;
 }
 
-.upgrade-row.is-affordable .upgrade-row__cost {
-  color: var(--color-success);
-  font-weight: 600;
+.recipe-row.is-affordable .recipe-row__cost {
+  color: var(--bakery-sage, #5d7a3a);
+  font-weight: 700;
 }
 
+.recipe-row.is-affordable .recipe-row__name {
+  color: var(--bakery-mahogany, #5a2f10);
+  font-style: italic;
+}
+
+.recipe-row.is-affordable .recipe-row__bullet {
+  color: var(--bakery-sage, #5d7a3a);
+  opacity: 1;
+  animation: recipe-pulse 2200ms ease-in-out infinite;
+}
+
+@keyframes recipe-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ─── Pantry strip — purchased upgrades as wax seals ─────────────────── */
+.recipe-pantry {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--bakery-rye-line, #b89a6a);
+}
+
+.recipe-pantry__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 8px;
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 12,
+    'SOFT' 100,
+    'wght' 600;
+  font-size: 0.72em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bakery-cocoa-mute, #7a5d3d);
+}
+
+.recipe-pantry__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--bakery-brass, #b1782a);
+}
+
+.recipe-pantry__list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  background: linear-gradient(180deg, rgba(177, 120, 42, 0.18) 0%, rgba(177, 120, 42, 0.08) 100%);
+  border: 1px solid var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.3));
+  border-radius: 999px;
+  font-family: var(--font-body, Georgia, serif);
+  font-style: italic;
+  font-size: 0.74em;
+  color: var(--bakery-cocoa-soft, #4a3422);
+  cursor: default;
+  transition:
+    background 140ms,
+    border-color 140ms,
+    color 140ms;
+}
+
+.seal:hover,
+.seal:focus-visible {
+  outline: none;
+  background: linear-gradient(180deg, rgba(177, 120, 42, 0.32) 0%, rgba(177, 120, 42, 0.18) 100%);
+  color: var(--bakery-mahogany, #5a2f10);
+  border-color: var(--bakery-brass, #b1782a);
+}
+
+.seal__check {
+  color: var(--bakery-brass, #b1782a);
+  font-weight: 700;
+  font-style: normal;
+  font-size: 0.95em;
+}
+
+.recipe-empty {
+  font-style: italic;
+  font-size: 0.85em;
+  color: var(--bakery-cocoa-mute, #7a5d3d);
+  text-align: center;
+  padding: 16px 8px;
+  margin: 0;
+}
+
+/* ─── Tooltip body styling (lives inside reka portal — uses :global) ──── */
 .tip-name {
-  font-weight: 600;
-  margin-bottom: 2px;
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 14,
+    'SOFT' 100,
+    'wght' 700;
+  font-style: normal;
+  font-size: 0.95em;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+  color: var(--bakery-cream, #f3e7cc);
 }
 
 .tip-desc {
-  color: var(--color-text-muted);
+  font-style: italic;
+  color: var(--bakery-cream, #f3e7cc);
+  opacity: 0.85;
 }
 
 .tip-cost {
-  margin-top: 4px;
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(243, 231, 204, 0.2);
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 12,
+    'SOFT' 100,
+    'wght' 600;
   font-variant-numeric: tabular-nums;
-  font-size: 0.9em;
+  font-size: 0.85em;
+  color: var(--bakery-brass-bright, #d99846);
 }
 </style>

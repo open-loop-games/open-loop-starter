@@ -16,6 +16,7 @@ import HeadlinePanel from './panels/HeadlinePanel.vue';
 import ProducerPanel from './panels/ProducerPanel.vue';
 import UpgradeTray from './panels/UpgradeTray.vue';
 import AchievementGridDialog from './components/AchievementGridDialog.vue';
+import './producer-theme.css';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -33,8 +34,38 @@ function onKey(e: KeyboardEvent): void {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onKey));
-onUnmounted(() => window.removeEventListener('keydown', onKey));
+const FONTS_HREF =
+  'https://fonts.googleapis.com/css2?' +
+  'family=Fraunces:ital,opsz,wght,SOFT@0,9..144,500..900,100;1,9..144,500..900,100&' +
+  'family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&' +
+  'display=swap';
+
+function ensureBakeryFonts(): void {
+  if (document.getElementById('bakery-fonts')) return;
+  const preconnect1 = document.createElement('link');
+  preconnect1.rel = 'preconnect';
+  preconnect1.href = 'https://fonts.googleapis.com';
+  const preconnect2 = document.createElement('link');
+  preconnect2.rel = 'preconnect';
+  preconnect2.href = 'https://fonts.gstatic.com';
+  preconnect2.crossOrigin = 'anonymous';
+  const stylesheet = document.createElement('link');
+  stylesheet.id = 'bakery-fonts';
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = FONTS_HREF;
+  document.head.append(preconnect1, preconnect2, stylesheet);
+}
+
+onMounted(() => {
+  document.body.dataset.archetype = 'producer';
+  ensureBakeryFonts();
+  window.addEventListener('keydown', onKey);
+});
+
+onUnmounted(() => {
+  delete document.body.dataset.archetype;
+  window.removeEventListener('keydown', onKey);
+});
 
 const stack = useModalStack();
 function openSave(): void {
@@ -45,11 +76,6 @@ function openSettings(): void {
 }
 
 const { addToast } = useToasts();
-// Watcher is installed lazily once the player enters the game, so the arc
-// module's `announced` flag reflects the just-loaded save slot rather than
-// any earlier session. Reads ArcKey off the captured engine directly because
-// this runs inside an event handler where Vue's inject() has no active
-// instance — the setup-scoped `useArc()` composable only works in setup.
 let stopArcWatcher: (() => void) | null = null;
 function armArcFlavourEvent(): void {
   stopArcWatcher?.();
@@ -83,10 +109,6 @@ function returnToSlots(): void {
   currentScreen.value = Screen.Slots;
 }
 
-// BalanceWorkbench takes a thunk so it can re-evaluate if the active mod
-// swaps at runtime. The module list itself is static for the lifetime of
-// the mounted engine, so no `computed` is needed — a plain lookup inside
-// the thunk keeps the cost at zero until the dev overlay actually opens.
 function getActiveModules(): EngineModule[] {
   const activeId = engine.activeModId;
   if (!activeId) return [];
@@ -106,56 +128,62 @@ function getActiveModules(): EngineModule[] {
     :tooltip-delay="400"
   >
     <template #header>
-      <div class="producer-header">
+      <header class="bakery-header">
         <button
-          class="title-button"
+          class="bakery-shopfront"
           data-testid="return-to-slots"
           title="Save and return to save picker"
           @click="returnToSlots"
         >
-          <h2>Bakery</h2>
+          <span class="bakery-shopfront__rule" />
+          <span class="bakery-shopfront__name">Bakery</span>
+          <span class="bakery-shopfront__sub">est. just now &middot; flour, sugar, ambition</span>
         </button>
-        <div class="header-actions">
+        <nav class="bakery-actions">
           <Popover
             align="end"
-            :side-offset="8"
+            :side-offset="10"
           >
             <template #trigger>
               <button
-                class="btn-sm"
+                class="btn-sm bakery-actions__btn"
                 data-testid="open-info"
+                aria-label="About"
               >
                 ?
               </button>
             </template>
-            <h4 style="margin-bottom: 6px">
-              Producer — Bakery
-            </h4>
-            <p>
-              Click to bake cookies. Buy producers to bake automatically. Stack upgrades +
-              achievements for the compounding multiplier that makes the curve go.
-            </p>
+            <div class="bakery-info">
+              <h4 class="bakery-info__title">
+                The House Specialty
+              </h4>
+              <p>
+                Click the dough to bake. Hire bakers, then assemble the kitchen that bakes itself.
+                Every upgrade and milestone compounds onto the next — that&rsquo;s the loop, served
+                warm.
+              </p>
+            </div>
           </Popover>
           <button
-            class="btn-sm"
+            class="btn-sm bakery-actions__btn"
             @click="showAchievements = true"
           >
             Achievements
           </button>
           <button
-            class="btn-sm"
+            class="btn-sm bakery-actions__btn"
             @click="openSave"
           >
             Save
           </button>
           <button
-            class="btn-sm"
+            class="btn-sm bakery-actions__btn"
             @click="openSettings"
           >
             Settings
           </button>
-        </div>
-      </div>
+        </nav>
+      </header>
     </template>
     <ThreePanelShell>
       <template #left>
@@ -186,34 +214,129 @@ function getActiveModules(): EngineModule[] {
 </template>
 
 <style scoped>
-.producer-header {
-  display: flex;
-  justify-content: space-between;
+/* ─── Awning header ──────────────────────────────────────────────────── */
+.bakery-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  padding: var(--gap) var(--gap-lg);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  gap: var(--gap-lg);
+  padding: 18px var(--gap-lg) 14px;
+  position: relative;
+  border-bottom: 1px solid var(--bakery-rye-line, #b89a6a);
+  background:
+    var(--bakery-grain),
+    linear-gradient(180deg, rgba(248, 239, 214, 0.7) 0%, rgba(243, 231, 204, 0.95) 100%);
 }
 
-.producer-header h2 {
-  font-size: 1.1em;
+.bakery-header::after {
+  /* second hairline below the main border for the double-rule shopfront feel */
+  content: '';
+  position: absolute;
+  left: var(--gap-lg);
+  right: var(--gap-lg);
+  bottom: -4px;
+  height: 1px;
+  background: var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.18));
 }
 
-.title-button {
+/* ─── Shopfront title — clickable "exit to slots" ─────────────────────── */
+.bakery-shopfront {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
-  color: inherit;
-  font: inherit;
+  font-family: var(--font-display, Georgia, serif);
+  color: var(--bakery-cocoa, #2d1d10);
+  text-align: left;
+  position: relative;
+  transition: color 140ms ease-out;
 }
 
-.title-button:hover h2 {
-  color: var(--color-primary);
+.bakery-shopfront:hover {
+  color: var(--bakery-mahogany, #5a2f10);
+  background: none;
 }
 
-.header-actions {
-  display: flex;
-  gap: var(--gap-sm);
+.bakery-shopfront__rule {
+  display: block;
+  width: 56px;
+  height: 1px;
+  background: var(--bakery-brass, #b1782a);
+  margin-bottom: 4px;
+  opacity: 0.7;
+}
+
+.bakery-shopfront__name {
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 96,
+    'SOFT' 100,
+    'wght' 800;
+  font-weight: 800;
+  font-size: 1.85em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--bakery-mahogany, #5a2f10);
+}
+
+.bakery-shopfront__sub {
+  font-family: var(--font-body, Georgia, serif);
+  font-style: italic;
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+  color: var(--bakery-cocoa-mute, #7a5d3d);
+}
+
+/* Header action row */
+.bakery-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bakery-actions__btn[aria-label='About'] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95em;
+  letter-spacing: 0;
+  font-family: var(--font-display, Georgia, serif);
+}
+
+/* ─── About popover content ──────────────────────────────────────────── */
+.bakery-info {
+  font-family: var(--font-body, Georgia, serif);
+  max-width: 280px;
+  color: var(--bakery-cocoa, #2d1d10);
+  line-height: 1.55;
+  font-size: 0.92em;
+}
+
+.bakery-info__title {
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 24,
+    'SOFT' 100,
+    'wght' 700;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.78em;
+  color: var(--bakery-brass, #b1782a);
+  margin: 0 0 8px;
+  border-bottom: 1px solid var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.18));
+  padding-bottom: 6px;
+}
+
+.bakery-info p {
+  margin: 0;
 }
 </style>

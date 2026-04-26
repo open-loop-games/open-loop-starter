@@ -2,7 +2,7 @@
   ProducerTooltip — Paradox-style hover breakdown for a single producer row.
   Wraps the card body in a RichTooltip; content shows the modifier chain,
   payback period, current contribution, and the marginal impact of the
-  pending purchase.
+  pending purchase. Bakery-themed parchment surface.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -50,44 +50,46 @@ const beatFinite = computed(() => Number.isFinite(props.row.beatSeconds.value));
   >
     <slot />
     <template #content>
-      <div class="producer-tooltip">
-        <div class="producer-tooltip__head">
-          <span class="producer-tooltip__name">{{ row.def.name }}</span>
-          <span class="producer-tooltip__count">{{ format(row.count.value, 0) }} owned</span>
+      <div class="bakery-card">
+        <div class="bakery-card__head">
+          <span class="bakery-card__eyebrow">Station</span>
+          <span class="bakery-card__name">{{ row.def.name }}</span>
+          <span class="bakery-card__owned">
+            <span class="bakery-card__owned-num">{{ format(row.count.value, 0) }}</span>
+            <span class="bakery-card__owned-label">on staff</span>
+          </span>
         </div>
 
         <ChainBreakdown
-          title="Rate each"
+          title="Output each"
           :modifier="row.rateChain"
           :base="row.def.baseRate"
           unit=" /sec"
         />
 
-        <dl class="producer-tooltip__stats">
-          <div class="producer-tooltip__stat">
+        <dl class="bakery-card__stats">
+          <div class="bakery-card__stat">
             <dt>Contributes</dt>
             <dd>
-              {{ format(contribution, 2) }} /sec
-              <span class="producer-tooltip__muted">
-                ({{ formatPercent(contributionPct, 1) }})
-              </span>
+              <span>{{ format(contribution, 2) }} /sec</span>
+              <span class="bakery-card__muted"> ({{ formatPercent(contributionPct, 1) }}) </span>
             </dd>
           </div>
           <div
             v-if="beatFinite"
-            class="producer-tooltip__stat"
+            class="bakery-card__stat"
           >
             <dt>Pays off in</dt>
             <dd>{{ formatPurchaseBeat(row.beatSeconds.value) }}</dd>
           </div>
           <div
             v-if="pendingIsPositive"
-            class="producer-tooltip__stat producer-tooltip__stat--marginal"
+            class="bakery-card__stat bakery-card__stat--marginal"
           >
-            <dt>Next purchase</dt>
+            <dt>Next hire</dt>
             <dd>
-              +{{ formatWhole(pendingAmount) }} · +{{ format(marginalDelta, 2) }} /sec
-              <span class="producer-tooltip__muted"> ({{ formatPercent(marginalPct, 1) }}) </span>
+              +{{ formatWhole(pendingAmount) }} &middot; +{{ format(marginalDelta, 2) }} /sec
+              <span class="bakery-card__muted">({{ formatPercent(marginalPct, 1) }})</span>
             </dd>
           </div>
         </dl>
@@ -97,59 +99,123 @@ const beatFinite = computed(() => Number.isFinite(props.row.beatSeconds.value));
 </template>
 
 <style scoped>
-.producer-tooltip {
+.bakery-card {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-sm);
-  min-width: 260px;
+  gap: 12px;
+  min-width: 280px;
+  font-family: var(--font-body, Georgia, serif);
+  color: var(--bakery-cocoa, #2d1d10);
 }
 
-.producer-tooltip__head {
-  display: flex;
-  justify-content: space-between;
+.bakery-card__head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.3));
+}
+
+.bakery-card__eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 9,
+    'SOFT' 100,
+    'wght' 600;
+  font-size: 0.6em;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--bakery-brass, #b1782a);
+}
+
+.bakery-card__name {
+  grid-column: 1;
+  grid-row: 2;
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 28,
+    'SOFT' 100,
+    'wght' 700;
+  font-style: italic;
+  font-size: 1.15em;
+  color: var(--bakery-mahogany, #5a2f10);
+  letter-spacing: 0.01em;
+}
+
+.bakery-card__owned {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: end;
+  display: inline-flex;
   align-items: baseline;
-  font-weight: 600;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--color-border);
+  gap: 4px;
+  white-space: nowrap;
 }
 
-.producer-tooltip__count {
-  font-size: 0.85em;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
+.bakery-card__owned-num {
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 24,
+    'SOFT' 100,
+    'wght' 700;
+  font-size: 1.15em;
+  font-variant-numeric: tabular-nums oldstyle-nums;
+  color: var(--bakery-cocoa, #2d1d10);
 }
 
-.producer-tooltip__stats {
+.bakery-card__owned-label {
+  font-style: italic;
+  font-size: 0.75em;
+  color: var(--bakery-cocoa-mute, #7a5d3d);
+}
+
+.bakery-card__stats {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   margin: 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.18));
 }
 
-.producer-tooltip__stat {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--gap-sm);
-  font-size: 0.9em;
+.bakery-card__stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 0.88em;
 }
 
-.producer-tooltip__stat dt {
-  color: var(--color-text-muted);
+.bakery-card__stat dt {
+  font-family: var(--font-body, Georgia, serif);
+  font-style: italic;
+  color: var(--bakery-cocoa-mute, #7a5d3d);
+  white-space: nowrap;
 }
 
-.producer-tooltip__stat dd {
+.bakery-card__stat dd {
   margin: 0;
+  text-align: right;
   font-variant-numeric: tabular-nums;
+  font-family: var(--font-display, Georgia, serif);
+  font-variation-settings:
+    'opsz' 12,
+    'SOFT' 100,
+    'wght' 600;
 }
 
-.producer-tooltip__stat--marginal dd {
-  color: var(--color-success, var(--color-primary));
-  font-weight: 600;
+.bakery-card__stat--marginal dd {
+  color: var(--bakery-sage, #5d7a3a);
+  font-weight: 700;
 }
 
-.producer-tooltip__muted {
-  color: var(--color-text-muted);
+.bakery-card__muted {
+  color: var(--bakery-cocoa-mute, #7a5d3d);
   font-weight: 400;
+  font-style: italic;
   margin-left: 4px;
 }
 </style>
