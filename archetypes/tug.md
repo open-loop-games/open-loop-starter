@@ -53,33 +53,36 @@ A first 1–2 hours of play unfolds across 2–4 matches (each 15–30 minutes).
 
 | Layer | Primitive | Role in this archetype |
 |-------|-----------|------------------------|
-| core | `createResource` | Primary income currency (gold/minerals/faith). Mirrored instance for the AI/opponent side. Fortress HP tracked as a bounded resource. |
-| core | `applyModifiers` | Counter-type matrix resolution (attacker-archetype × defender-archetype → damage multiplier); global-upgrade modifier application on unit stats. |
+| core | `createResource` | Primary income currency (minerals). Mirrored per side via a `'player'`/`'ai'` parameter on the side-module factory. Fortress HP tracked as a bounded resource per side. |
+| core | `applyModifiers` / `chain.bind` | **Global** unit and income upgrades only — bound conditionally via `chain.bind({active, modifier})` on shared `combat-output` / `income-rate` chains. **Not** the counter matrix; see § 8. |
 | core | `calculateCost` | Unit cost scaling and income-upgrade tier cost lookup. |
-| core | `createSequencer` | Auto-send queues — timed unit production from the player's and opponent's spawns. Per-unit-archetype cooldowns. |
-| core | `runHeadless` | Beat-timing sim tests, match-outcome probes, counter-matrix sensitivity sweeps. |
-| systems | `createLoop` | Tick-driven income accrual and front-line position integration. |
-| systems | `createZoneSystem` | Lane topology — zones for lane segments (spawn → front → target-fortress) and per-side fortress zones. Front-line position is a zone-scoped query. |
-| systems | `createPurchasableCategory` | Unit shop (per-archetype purchases), income-upgrade tiers, spendable-ability purchases. |
+| core | `createSequencer` | One sequencer per side. Player and AI both enqueue `{archetypeId}` send items; per-archetype cooldown is enforced via `canRun` returning `'notNow'` while the archetype's cooldown ref is positive (sequencer's hold-retry path waits and re-checks each tick). One sequencer-per-side, not one-per-archetype-per-side. |
+| core | `runHeadless` | Beat-timing sim tests at `tickDelta: 1`. The harness `setup` returns the engine-build closure; analyzers reset between runs. |
+| core | `withPersistentContext` + `createReset` | Match-scope boundary. All match-scoped refs (per-side resources, fortress HP, sequencer state, counter-pivot tracker) are created under a `tug/match` parent context. `createReset({ resetModules: ['tug/match'] })` resolves the context tree at match end. Persistent meta-progression state lives in `tug/meta` and is not touched by the match reset. |
+| core | `tunable` + `createOverrideRegistry` | Solver perturbation surface. Income rate, AI income multiplier, unit costs, counter-matrix scalar multipliers wrapped via `tunable()` so leaf-6's tuner can `pushScope(...)` without rebuilding the engine. |
+| systems | `createLoop` | Tick-driven income accrual + lane integration (per-tick: advance unit positions, resolve combat between adjacent unit pairs, decrement archetype cooldowns). |
+| systems | `createPurchasableCategory` | Unit shop (per-archetype send affordance), income-upgrade tiers, spendable-ability purchases. The shop is shared between sides — both query the same `units` category for archetype defs. |
 | systems | `createChallengeCategory` | Match / mission definitions when `matchMode` is `pve` or `campaign`; Co-Op difficulty tiers (Easy/Normal/Hard/Brutal per Direct Strike's Co-Op Classic shape). |
-| harness | `runMatrix` | Counter-matrix robustness sweeps, income/cost sensitivity, AI-difficulty tuning. |
+| harness | `runMatrixUntil` | **Tier-C distribution-statistic probes** — N seeds per cell, predicate-bounded termination, `aggregateUntilCell` exposes `terminationTime` distribution natively. The signature primitive for "across 20 matches, does player-win-rate land in [0.4, 0.6]?" Replaces the Tier-A `runUntil`-driven `solve.ts` flow. |
 
-**Engine systems explicitly not used (required):** `createProducerCategory` — unit production is a `createSequencer`-driven queue with per-archetype cooldowns, not a compounding-producer tree; using `createProducerCategory` would mis-shape the "each send is a discrete timed commitment" semantics. `createAchievementCategory` — per Direct Strike's zero-meta-progression purity the skeleton default omits achievements; forks that enable `metaProgressionEnabled` may re-enable them but the no-meta shape must remain first-class. `createWorker` / `createInventory` — no per-worker assignment or inventory management; composition decisions feed the send queue directly.
+**Engine systems explicitly not used (required):** `createProducerCategory` — unit sends are discrete timed commitments via `createSequencer`, not a compounding producer tree; `createProducerCategory` would mis-shape the per-send-cost / per-archetype-cooldown semantics. `createAchievementCategory` — per Direct Strike's zero-meta-progression purity the skeleton default omits achievements; forks that enable `metaProgressionEnabled` may re-enable them but the no-meta shape must remain first-class. `createWorker` / `createInventory` — no per-worker assignment or inventory management; composition decisions feed the send queue directly. `createZoneSystem` — earlier drafts of this doc claimed ZoneSystem provided "lane topology" with "zone-scoped front-line queries"; that was structurally wrong. ZoneSystem is content-grouping with progressive unlock (Idle Loops zones, Increlution chapters, Ambient costume cycling), not a live spatial-state container. Tug's lane is hand-rolled in v1 — see § 8 and § 10.
 
-Naming what's absent is part of the contract: a reader inspecting a Tug mod should see `createResource` + `createSequencer` + `createZoneSystem` + `createLoop` as the core spine and `createPurchasableCategory` + `createChallengeCategory` + `applyModifiers` as the content layer. No `createProducerCategory`, no compounding-resource tree. That sparseness is structurally meaningful — Tug's depth lives in the counter matrix and opponent adaptation, not in resource-tree arithmetic.
+**Spine reading:** a reader inspecting a Tug mod should see `createResource` + `createSequencer` + `createPurchasableCategory` + `createLoop` as the core spine, hand-rolled `units: Persistent<UnitInstance[]>` per side as the lane substrate, and `createChallengeCategory` + `chain.bind` (for global upgrades only) as the content layer. No `createProducerCategory`, no `createZoneSystem`, no compounding-resource tree. That sparseness is structurally meaningful — Tug's depth lives in the counter matrix (data-table lookup) and opponent adaptation (parallel module instance), not in resource-tree arithmetic.
 
 **Primary stress axes:**
 
-1. **Mirrored-instance ergonomics.** Every primitive the player side uses has a mirrored opponent-side instance: player resource + AI resource, player sequencer + AI sequencer, player fortress zone + AI fortress zone. If building the mirror requires more than a pattern-level mirror helper in the consumer, that's an ergonomics signal worth acting on. Measure on first implementation; candidate for a symmetric-game-state harness helper if convergent.
-2. **Counter-matrix expressiveness.** Modifier chains must express N×N damage-type multipliers cleanly. If a 6-archetype counter matrix becomes a 36-line series of manually-registered modifiers, the engine has a data-shape gap that warrants either a new primitive or a consumer-level convention. The Direct Strike analysis's damage-type-vs-armor-type observation (analysis lines 280–313) is the real-world comparison point.
-3. **Zone-scoped front-line queries.** The front-line position is a derived query: "in which zone are the frontmost units of each side?" If this requires iterating every unit on every tick, zone indexing has a performance gap. Batch this through `createZoneSystem` and measure; propose an indexed front-line query if convergent across forks.
-4. **Match-scoped vs. persistent state separation.** The skeleton expects match-scoped state (resources reset per match) to coexist with optional persistent meta-progression state (faction unlocks carry across matches). The persistence seam is a place ergonomics can grow; watch for the first fork that needs both and name the gap if it surfaces.
+1. **Mirrored-instance ergonomics.** Every per-side primitive the player has is mirrored on the AI side: resource, sequencer, fortress HP, unit array, archetype-cooldown table. v1 hand-rolls by passing a `side: 'player' | 'ai'` parameter to each per-side module factory and namespacing persistent contexts as `tug/match/<side>/<module>`. Candidate for a `createSymmetricModuleSet({ sides, build })` helper if a second symmetric-state consumer (a Tug fork or Auto-battler PvP variant) hand-rolls the same shape; until then, lives in `candidate-primitives.md`.
+2. **Lane state substrate.** The lane is a 1D continuous spatial axis; units have a `position: number` per instance. Front-line position per side is `Math.max(...units[side].map(u => u.position))`. Combat resolution per tick iterates both arrays. v1 hand-rolls as `Persistent<UnitInstance[]>` per side — `createSpatialGrid` is 2D-grid-with-FOV machinery, oversized for a 1D walking-positions axis, and ZoneSystem doesn't track moving entities. If a future Tug fork (deckbuilder-shape, multi-lane) finds the hand-roll growing, that's the convergence signal for a `createLane` / `create1DSpatialField` candidate.
+3. **Counter-matrix expressiveness.** N×N damage-type multipliers are **not** a modifier chain — they're a 2D data-table lookup (`data.counterMatrix[attackerIdx][defenderIdx]: number`) read by the per-tick combat resolver. Modifier chains (`chain.bind`) are reserved for global per-archetype damage upgrades and global income multipliers. The Direct Strike analysis's damage-type-vs-armor-type observation (analysis lines 280–313) is data, not chain plumbing.
+4. **Match-scoped vs. persistent state separation.** Match-scoped state (per-side resources, fortress HP, sequencer state, unit arrays, cooldown table, counter-pivot tracker) lives under the `tug/match` parent persistent context; `createReset({ resetModules: ['tug/match'] })` collects the context tree via `getModulePersistentRefs` at match boundary. Persistent meta-progression state (faction unlocks, ladder tier) lives in `tug/meta`. No new primitive needed — engine's existing context-tree + reset combo covers it cleanly.
 
 ---
 
 ## 4. Beat map
 
-Arc framing: **cumulative across matches, not continuous within one.** A Tug match is 15–30 sim-minutes; the 1–2 hour beat-map arc covers 2–4 matches' worth of cumulative play. Beats 1–4 land within the first match (onboarding through first match completion); beats 5–7 land across matches 2–3+ (composition mastery, first meta-progression milestone when enabled). This mirrors the Ambient precedent of measuring cumulative sim-time regardless of within-session distribution. Forks that enable `metaProgressionEnabled` see beat 7 fire when the first cross-match unlock lands; forks that leave it off see beat 7 fire at the "counter-mastery demonstrated" invariant (2+ successful counter-pivots in a single match) without a persistence event.
+Arc framing: **cumulative across matches, not continuous within one.** A Tug match is 15–30 sim-minutes; the beat-map arc covers 2–4 matches' worth of cumulative play. **Skeleton baseline: 2 hours cumulative sim-time** — pinned at this value so leaf-6's `arcBudgetSec` and the Tier-C distribution probes have a single source of truth. Beats 1–4 land within the first match (onboarding through first match completion); beats 5–7 land across matches 2–3+ (composition mastery, first meta-progression milestone when enabled). This mirrors the Ambient precedent of measuring cumulative sim-time regardless of within-session distribution. Forks that enable `metaProgressionEnabled` see beat 7 fire when the first cross-match unlock lands; forks that leave it off see beat 7 fire at the "counter-mastery demonstrated" invariant (3+ successful counter-pivots in any single match) without a persistence event.
+
+The `2h` baseline is cumulative sim-time, **not** wall-clock; for Tier-C `runMatrixUntil` runs, sim-time = match-time × match-count where match-time is bounded by `matchTimeLimitMinutes`. A `runMatrixUntil` cell terminating on `match.outcome.value !== null` produces one match's worth of sim-time per seed; a 2h cumulative arc is a 4-match Monte Carlo run at default content. Forks that extend `metaProgressionEnabled` with deeper meta layers may extend the arc proportionally (e.g. 6h for a 6-match faction-unlock arc); the `2h` value is the no-meta default, not a ceiling.
 
 | # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
 |---|------|-----------------|-------------------|------------------------|-----------------|
@@ -89,112 +92,74 @@ Arc framing: **cumulative across matches, not continuous within one.** A Tug mat
 | 4 | First match completion | 15:00–30:00 | One fortress HP reaches 0 (or match time-limit score resolution) | Victory / defeat screen; match stats (units sent, income earned, counter pivots) | Arc half-way point; proves the match-loop closes cleanly regardless of outcome |
 | 5 | Second-match composition pivot | 30:00–50:00 | In match 2+, player opens with a different unit archetype than in match 1 (tracked in session state) | Shop selection reflects a deliberate posture (e.g. "early air" vs. match-1's "early ground") | Demonstrates that learning transfers across matches; a single-match skeleton would end here without this signal |
 | 6 | Counter-type mastery demonstrated | 45:00–75:00 | 2+ successful counter-pivots within a single match AND that match won | Match-end stats highlight counter-pivot count; achievement/notification fires if achievements are enabled | Depth probe — the player has internalized at least two counter matchups |
-| 7 | First meta-progression milestone OR counter-mastery invariant (arc closure) | 60:00–120:00 | **If `metaProgressionEnabled`:** first faction unlock / ladder tier advance. **If off:** 3+ successful counter-pivots across any single match | Meta-progression: unlock flavour event. No-meta: match-end "mastery demonstrated" flag | The "you've seen the shape once" moment. Skeleton supports both meta and no-meta arcs as first-class |
+| 7 | First meta-progression milestone OR counter-mastery invariant (arc closure) | 60:00–120:00 | **If `metaProgressionEnabled`:** first faction unlock / ladder tier advance, predicate `meta.factionsUnlocked.value > 0`. **If off:** `match.maxCounterPivotsAnyMatch.value >= 3` — running max of `counterPivotsThisMatch` across matches, lives in `tug/meta` so it survives match boundary | Meta-progression: unlock flavour event. No-meta: match-end "mastery demonstrated" flag | The "you've seen the shape once" moment. Skeleton supports both meta and no-meta arcs as first-class |
 
 **Arc closure beat:** #7.
 
-This beat is deliberately a **bimodal** arc closure — one branch for `metaProgressionEnabled: true` (Legion TD 2 / Warfare 1917 campaign shape), one for `metaProgressionEnabled: false` (Direct Strike shape, where the "arc closure" is purely in-session skill demonstration). Both paths fire within the 60–120 minute cumulative window. A fork that wants a cleaner, one-path arc closure picks one mode and treats the other's beat-7 invariant as out-of-scope.
+This beat is deliberately a **bimodal** arc closure — one branch for `metaProgressionEnabled: true` (Legion TD 2 / Warfare 1917 campaign shape), one for `metaProgressionEnabled: false` (Direct Strike skeleton-default shape, where the "arc closure" is purely in-session skill demonstration). Both paths fire within the 60–120 minute cumulative window. A fork that wants a cleaner, one-path arc closure picks one mode and treats the other's beat-7 invariant as out-of-scope.
+
+**Engine-state expressions** (load-bearing for `balance/shape.ts` `signatureMetric` slot):
+
+- Meta-on branch: `meta.factionsUnlocked.value > 0` reading `MetaProgressionKey`. Latched once via `watch` + `announced` flag mirrored on Producer/Ambient `arc.ts`.
+- Meta-off branch: `meta.maxCounterPivotsAnyMatch.value >= 3`. The `counterPivotsThisMatch` ref is per-match-scoped (resets on match boundary); the `maxCounterPivotsAnyMatch` ref is meta-scoped (survives match boundary, updates on match end via `match.afterMatch` event with `Math.max`). The tracker increments inside `modules/match.ts` whenever a `counter-pivot` event fires — the event is emitted by the unit-shop module when the player buys an archetype that strong-counters the AI's current dominant archetype within a 90s window.
 
 ---
 
 ## 5. Data shape
 
-```ts
-// archetype.ts — skeleton defaults
-export interface TugArchetypeVars {
-  // Structural fork decisions. Editing these constitutes forking the skeleton, not tuning.
+Per the post-2026-04-20 data-first convention (see Producer + Ambient `data/types.ts`), data lives in flat `data/*.ts` files inside the archetype directory. The skeleton/theme/balance lens lives as comment sections inside those files (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`), not as separate vars/ files. The TS shapes below are reference prose — leaf 2 lifts them into `src/archetypes/tug/data/types.ts` directly, naming each interface and field as it lands.
 
-  /**
-   * Spatial composition:
-   * - 'pure-routing' (default): Direct Strike / Age of War / Warfare 1917 — Routing-Traversal only.
-   * - 'with-placement-grid': Legion TD 2 — adds Placement-Adjacency as a secondary spatial axis.
-   *   Grid geometry lives in a companion fork config; this flag toggles skeleton support.
-   */
-  spatialMode: 'pure-routing' | 'with-placement-grid'; // default 'pure-routing'
-  /** Number of parallel lanes. 1 = Direct Strike / Age of War default; 2–3 = Warfare 1944-style flanks. */
-  laneCount: number;                                    // default 1
-  /** Baseline match flow. Campaign implies a scripted mission sequence. */
-  matchMode: 'pvp' | 'pve' | 'campaign';                // default 'pve'
-  /**
-   * AI opponent behaviour. 'off' is valid only when matchMode === 'pvp'.
-   * 'symmetric-mirror' is the skeleton default — income, cooldowns, and unit distribution mirror player state.
-   * 'counter-aware' is a fork extension: AI reads player composition and biases toward counters.
-   */
-  aiOpponentMode: 'symmetric-mirror' | 'counter-aware' | 'off'; // default 'symmetric-mirror'
-  /** Number of unit archetypes participating in the counter matrix. 4 = minimal; 6–8 = corpus-typical. */
-  unitArchetypeCount: number;                           // default 6
-  /** Cross-match meta-progression (faction unlocks, ladder tiers, campaign missions). */
-  metaProgressionEnabled: boolean;                      // default false
-  /** Off-map spendable abilities (artillery, reinforcement, air support). */
-  spendableAbilitiesEnabled: boolean;                   // default true
-  /** Number of match-internal income upgrade tiers. */
-  incomeUpgradeTiers: number;                           // default 3
-}
+**Skeleton (structural fork decisions; editing these forks the skeleton, not tunes it):**
 
-// theme.ts — costume, no mechanical impact
-export interface TugThemeVars {
-  resourceName: { singular: string; plural: string };   // e.g. { singular: 'mineral', plural: 'minerals' }
-  factionNames: [string, string];                       // player faction, opponent faction
-  fortressName: string;                                 // e.g. 'Nexus', 'trench HQ', 'King'
-  /** Length must equal TugArchetypeVars.unitArchetypeCount. */
-  unitNames: string[];
-  /** Counter-matrix role labels displayed in the shop UI (e.g. "Light infantry", "Heavy armor"). */
-  unitRoles: string[];
-  /** Optional ability labels when spendableAbilitiesEnabled. */
-  abilityLabels: { artillery?: string; reinforcement?: string };
-  matchEndMessage: { victory: string; defeat: string };
-  /** Optional campaign-mission titles when matchMode === 'campaign'. */
-  missionTitles?: string[];
-}
+- `spatialMode: 'pure-routing' | 'with-placement-grid'` (default `'pure-routing'`). Direct Strike / Age of War / Warfare 1917 shape vs Legion TD 2 hybrid. Flag toggles skeleton support; grid geometry lives in a companion fork config.
+- `laneCount: number` (default `1`). 1 = Direct Strike / Age of War; 2–3 = Warfare 1944 flanks.
+- `matchMode: 'pvp' | 'pve' | 'campaign'` (default `'pve'`).
+- `aiOpponentMode: 'symmetric-mirror' | 'counter-aware' | 'off'` (default `'symmetric-mirror'`; `'off'` valid only when `matchMode === 'pvp'`).
+- `unitArchetypeCount: number` (default `6`). 4 = minimal; 6–8 = corpus-typical.
+- `metaProgressionEnabled: boolean` (default `false`, Direct Strike posture).
+- `spendableAbilitiesEnabled: boolean` (default `true`).
+- `incomeUpgradeTiers: number` (default `3`).
 
-// balance.ts — mechanical overrides
-export interface TugBalanceVars {
-  /** Per-second income rate in the player's currency. */
-  baseIncomeRate: DecimalSource;                        // e.g. "5"
-  /** Upgrade multipliers applied sequentially as each income tier is purchased. Length = incomeUpgradeTiers. */
-  incomeUpgradeMultipliers: number[];                   // e.g. [1.5, 1.4, 1.3]
-  /** Cost of each income upgrade tier. Length = incomeUpgradeTiers. */
-  incomeUpgradeCosts: DecimalSource[];
-  /** Per-unit-archetype purchase cost. Length = unitArchetypeCount. */
-  unitCosts: DecimalSource[];
-  /**
-   * Counter matrix: counterMatrix[attackerIndex][defenderIndex] = damage multiplier.
-   * Square, side length = unitArchetypeCount. Diagonal is 1.0 by convention (unit vs. self).
-   * Strong counter = 1.5–2.0; weak = 0.5–0.7; neutral = 1.0.
-   */
-  counterMatrix: number[][];
-  /** Fortress starting HP. Match ends when either side reaches 0. */
-  fortressHp: DecimalSource;
-  /** Seconds between consecutive sends of the same unit archetype (cooldown). */
-  sendCooldownSeconds: number;                          // default 3
-  /** Match time limit in minutes. 0 = no limit (Direct Strike); >0 triggers score-based resolution. */
-  matchTimeLimitMinutes: number;                        // default 30
-  /** AI income multiplier relative to player. 1.0 = symmetric; >1 scales AI difficulty. */
-  aiIncomeMultiplier: number;                           // default 1.0
-  /** Optional ability costs (artillery, reinforcement) when spendableAbilitiesEnabled. */
-  abilityCosts?: { artillery?: DecimalSource; reinforcement?: DecimalSource };
-  /** Meta-progression thresholds (e.g. matches-won-to-unlock-faction-2) when metaProgressionEnabled. */
-  metaProgressionThresholds?: number[];
-}
-```
+**Per-archetype unit defs** (`data/units.ts`, length = `unitArchetypeCount`): each `UnitDef` carries `id`, `name` (costume), `role` (costume label), `archetypeTag` (matrix lookup key), `cost: DecimalSource`, `sendCooldownSec: number`, `damagePerHit: number`, `hp: number`, `walkSpeed: number`, optional `abilityRefs: string[]`. Diagonal of `counterMatrix[id][id]` is `1.0` by convention (unit vs. self).
 
-**Override semantics:** deep-merge at load order `archetype → theme → balance`. Tests pass an override object to `runMatrix`.
+**Counter matrix** (`data/counter-matrix.ts`, `number[][]` square `unitArchetypeCount × unitArchetypeCount`): `counterMatrix[attackerIdx][defenderIdx]` = damage multiplier applied at the data-lookup site inside the per-tick combat resolver. Strong counter = `1.75`; weak counter = `0.6`; neutral = `1.0`. Diagonal is `1.0`. **This is plain data, not a modifier chain** — see § 3 stress axis 3.
 
-**Codegen contract:** `pnpm codegen:archetype-vars tug` (pending OL-546) reads this block and emits `src/modules/mods/<game>/vars/archetype.ts` / `theme.ts` / `balance.ts` with matching defaults. Archetype-level shared types and defaults live at `src/archetypes/tug/`.
+**Income & upgrades** (`data/income.ts`):
+- `baseIncomeRate: DecimalSource` (per-second; default ~5 minerals/s, retuned by leaf 6).
+- `incomeUpgradeMultipliers: number[]` (length = `incomeUpgradeTiers`; default `[1.5, 1.4, 1.3]`, applied sequentially).
+- `incomeUpgradeCosts: DecimalSource[]` (length = `incomeUpgradeTiers`).
+
+**Abilities** (`data/abilities.ts`, when `spendableAbilitiesEnabled`): `AbilityDef[]` carrying `id`, `label`, `cost: DecimalSource`, `effect` (artillery: AOE damage at lane-x; reinforcement: free-spawn N units of archetype X).
+
+**Match balance** (`data/balance.ts`):
+- `fortressHp: DecimalSource` (per-side starting HP; match ends when either side hits 0).
+- `matchTimeLimitMinutes: number` (default `30`; `0` = no limit, score resolution at limit).
+- `aiIncomeMultiplier: number` (default `1.0`; primary leaf-6 tuning knob via `tunable()`).
+- `metaProgressionThresholds: number[]` (when `metaProgressionEnabled`).
+
+**Predicate interface** (`data/types.ts` — `TugGameState`, mirrors Ambient's `AmbientGameState` pattern from consumer-guide § "Data and runtime separation"). Methods bridge data-side predicates to live engine state: `playerFortressHpAtLeast(amount)`, `aiFortressHpAtLeast(amount)`, `unitsSentByPlayerAtLeast(archetypeId, n)`, `counterPivotsThisMatchAtLeast(n)`, `factionsUnlockedAtLeast(n)`, `matchOutcomeIs('player-win' | 'ai-win' | 'time-limit' | null)`, `secondsSinceMatchStart()`, `secondsSinceArcStart()`. Modules implement the interface over live injection-key refs.
+
+**Override surface** (`data/overrides.ts` — mirrors `applyAmbientOverrides` semantics): a flat-category `TugOverrides` shape with optional partials per category (`units`, `incomeUpgrades`, `abilities`, `balance`). `applyTugOverrides(base, overrides)` deep-merges category-by-category; entries merge by `id` and unknown ids throw. The factory `createTugEngine(overrides?)` runs `applyTugOverrides` before module composition; leaf 6's `buildTugSimEngine(overrides?)` is the same surface with the bot module appended.
+
+**Theme (costume, zero mechanical impact)** lives inline in each data file as `// ─── Costume ───` comment sections. The skeleton ships with Theme C SciFi Armada baked in: `unitNames` for the 6 archetypes carry sci-fi labels (marine, vulture, siege-tank, wraith, battlecruiser, ghost), `factionNames = ['Terran', 'Protoss']`, `fortressName = 'Nexus'`, `resourceName = { singular: 'mineral', plural: 'minerals' }`. Forks override per-id via `applyTugOverrides({ units: [{id: 'marine', name: 'squire'}, ...] })` to swap to Theme A / B / D — see § 11.
 
 ---
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `income-rate-baseline` | `baseIncomeRate` ×[0.75, 1.25] | 1, 2, 4 | Beat sim-time ±20% | Onboarding and first-match length pivot off income; off-tune makes beat 1 feel instant or beat 4 feel endless |
-| `unit-cost-scaling` | `unitCosts` ×[0.85, 1.15] (uniform across archetypes) | 2, 3, 5 | Beat sim-time ±25% | Cost scaling determines send cadence; too cheap collapses counter-reads; too expensive stalls the match |
-| `counter-matrix-sharpness` | Strong-counter multiplier ×[0.75, 1.25], weak-counter divisor symmetric | 3, 6 | Beat sim-time ±30%; counter-pivot success-rate ≥ 55% | Modifier-chain depth probe — if counters are too shallow, beat 3 never fires; if too sharp, every match is decided in one pivot |
-| `ai-difficulty-symmetry` | `aiIncomeMultiplier` ×[0.9, 1.1] | 4 | Player-win-rate in the 40–60% band across 20 sim matches | AI symmetry is the load-bearing fairness probe; drift here is how PvE becomes unplayable or trivially easy |
-| `match-duration-bound` | Run 30-match sample at default vars; assert median match length ≤ `matchTimeLimitMinutes` | 4 | Median match length in [50%, 95%] of match time limit; zero time-limit-triggered scores | If matches routinely hit the time limit, the game's win condition is failing and the core loop is broken |
+Tug is the **first Tier-C archetype** per `archetypes/BALANCING.md` § Tier C — adversarial, distribution-statistic balance, no Gauss-Seidel single-knob solver. Probes split into two classes by what tool reads them: math-only locks (single `runUntil` call, deterministic bot, fire-time band) and Monte Carlo distribution-statistic probes (multi-seed `runMatrixUntil`, win-rate / match-length distributions).
 
-**Minimum probe count:** 5 (exceeds ≥4 requirement). Covers cost scaling (`unit-cost-scaling`), production rate (`income-rate-baseline`), modifier chain depth (`counter-matrix-sharpness`), and two archetype-specific axes (`ai-difficulty-symmetry`, `match-duration-bound`). The counter matrix is the archetype's signature depth generator; `counter-matrix-sharpness` is the signature probe and the one most likely to catch tuning drift across forks.
+| Probe | Class | Perturbation | Target beat(s) | Tolerance | Rationale |
+|-------|-------|--------------|----------------|-----------|-----------|
+| `income-rate-baseline` | math-only lock | `baseIncomeRate` ×[0.75, 1.25] | 1, 2, 4 | Beat sim-time ±20% | Onboarding and first-match length pivot off income; deterministic fire-time band — no MC needed |
+| `unit-cost-scaling` | math-only lock | `unitCosts` ×[0.85, 1.15] (uniform across archetypes) | 2, 3, 5 | Beat sim-time ±25% | Cost scaling determines send cadence; deterministic under fixed-policy bot |
+| `counter-matrix-sharpness` | distribution-statistic (MC) | Strong-counter multiplier ×[0.75, 1.25], weak-counter divisor symmetric | 3, 6 | counter-pivot success-rate ≥ 0.55 across 20 seeds; beat 3 mean fire-time ±30% | The matrix interacts with the AI's send choices; outcomes are stochastic. Replaces "modifier-chain depth" framing — counter matrix is data-table lookup (§ 3) |
+| `ai-difficulty-symmetry` | distribution-statistic (MC) | `aiIncomeMultiplier` ×[0.9, 1.1] | 4 | Player-win-rate ∈ [0.4, 0.6] across **20 seeds** | The signature Tier-C probe. Bernoulli outcome over multi-seed MC; binomial CI half-width ≈ 0.22 at p=0.5 with N=20, so the tolerance band is wider than the CI by design. Leaf 6 may bump to N=50 if convergence is loose |
+| `match-duration-bound` | distribution-statistic (MC) | Default vars, **30 seeds** | 4 | Median (p50) match length ∈ [50%, 95%] of `matchTimeLimitMinutes`; zero time-limit-triggered outcomes | Read off `aggregateUntilCell.terminationTime.p50`; any time-limit termination signals broken win-condition |
+
+**Minimum probe count:** 5 (exceeds ≥4 requirement). Math-only locks (probes 1–2) ride the same vitest-suite pattern as Producer/Ambient: a `runUntil`-driven single-pass beat-time assertion in `sim/balance.probe.test.ts`. Distribution-statistic probes (probes 3–5) cannot ride the math-only lock pattern — they require multi-seed `runMatrixUntil` runs and assert on aggregate distributions. Leaf 6 documents the split explicitly in `balance/probes.ts`; the regression-lock layer in `sim/balance.probe.test.ts` carries fixed-seed `runMatrixUntil` calls so distribution probes are reproducible.
+
+The counter matrix is the archetype's signature depth generator; `ai-difficulty-symmetry` is the signature probe and the one most likely to catch tuning drift across forks. `counter-matrix-sharpness` is the depth-probe (does the matrix actually create counter-reads, or do players win without pivoting?).
 
 ---
 
@@ -202,63 +167,94 @@ export interface TugBalanceVars {
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { runHeadless } from 'open-loop-engine';
-import { runMatrix } from 'open-loop-engine/harness';
+import { runUntil } from 'open-loop-engine';
+import { runMatrixUntil } from 'open-loop-engine/harness';
 import { minutes } from '@/test/time';
-import { loadTugVars } from '../vars';
-import { buildTugEngine } from '../engine';
+import { buildTugSimEngine } from '../balance/bot';
+import { MatchKey, ArcKey } from '../modules';
 
-describe('tug — beat map', () => {
-  const vars = loadTugVars();
-
-  it('beat 1: first unit purchased within 0–1 min', async () => {
-    const result = runHeadless({
-      engine: buildTugEngine(vars),
-      until: (state) => state.player.unitsPurchased >= 1,
+describe('tug — beat map (math-only locks)', () => {
+  it('beat 1: first unit purchased within 0–1 min', () => {
+    const engine = buildTugSimEngine();
+    const match = engine.tryInject(MatchKey)!;
+    const { terminated, elapsedSimulated } = runUntil({
+      engine,
+      until: () => match.unitsSentByPlayer.value >= 1,
       maxSimTime: minutes(2),
-      inputs: 'auto-first-purchase',
+      tickDelta: 1,
     });
-    expect(result.simTime).toBeBetween(0, minutes(1));
+    expect(terminated).toBe('predicate');
+    expect(elapsedSimulated).toBeGreaterThanOrEqual(0);
+    expect(elapsedSimulated).toBeLessThanOrEqual(minutes(1));
   });
 
-  it('beat 3: first counter-pivot within 5–15 min', async () => {
-    const result = runHeadless({
-      engine: buildTugEngine(vars),
-      until: (state) => state.player.counterPivotsThisMatch >= 1,
+  it('beat 3: first counter-pivot within 5–15 min', () => {
+    const engine = buildTugSimEngine();
+    const match = engine.tryInject(MatchKey)!;
+    const { terminated, elapsedSimulated } = runUntil({
+      engine,
+      until: () => match.counterPivotsThisMatch.value >= 1,
       maxSimTime: minutes(20),
+      tickDelta: 1,
     });
-    expect(result.simTime).toBeBetween(minutes(5), minutes(15));
+    expect(terminated).toBe('predicate');
+    expect(elapsedSimulated).toBeGreaterThanOrEqual(minutes(5));
+    expect(elapsedSimulated).toBeLessThanOrEqual(minutes(15));
   });
 
-  // one it() per beat — full enumeration in the checked-in test file
+  // one it() per math-only beat — full enumeration in the checked-in test file
 });
 
-describe('tug — balance robustness', () => {
-  it('ai-difficulty-symmetry: player-win-rate in 40–60% band at default vars', async () => {
-    const matches = await runMatrix({
-      engine: buildTugEngine(loadTugVars()),
-      runs: 20,
-      maxSimTime: minutes(30),
-      until: (state) => state.match.outcome !== null,
+describe('tug — distribution-statistic probes (Tier-C, multi-seed)', () => {
+  it('ai-difficulty-symmetry: player-win-rate in [0.4, 0.6] across 20 seeds at default vars', () => {
+    const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
+    const result = runMatrixUntil({
+      cells: [
+        {
+          name: 'default',
+          buildEngine: ({ seed }) => buildTugSimEngine({}, { seed }),
+        },
+      ],
+      seeds: SEEDS,
+      until: ({ engine }) => engine.tryInject(MatchKey)!.outcome.value !== null,
+      maxSimTime: minutes(35),
     });
-    const wins = matches.filter((m) => m.state.match.outcome === 'player-win').length;
-    const winRate = wins / matches.length;
+    const cell = result.cells[0]!;
+    const wins = cell.runs.filter((r) => {
+      // outcome read off the engine via the run's final-state injection-key access
+      const match = r.engine.tryInject(MatchKey)!;
+      return match.outcome.value === 'player-win';
+    }).length;
+    const winRate = wins / cell.runs.length;
     expect(winRate).toBeGreaterThanOrEqual(0.4);
     expect(winRate).toBeLessThanOrEqual(0.6);
   });
 
-  it('counter-matrix-sharpness: beat 3 lands within ±30% at strong-counter ×[0.75, 1.25]', async () => {
-    // runMatrix over counterMatrix strong-counter multiplier range
-    // assert beat 3 sim-time tolerance + counter-pivot success-rate threshold
+  it('match-duration-bound: median match length in [50%, 95%] of time limit, zero time-limit terminations', () => {
+    const SEEDS = Array.from({ length: 30 }, (_, i) => i + 1);
+    const result = runMatrixUntil({
+      cells: [{ name: 'default', buildEngine: ({ seed }) => buildTugSimEngine({}, { seed }) }],
+      seeds: SEEDS,
+      until: ({ engine }) => engine.tryInject(MatchKey)!.outcome.value !== null,
+      maxSimTime: minutes(35),
+      aggregate: { terminationTimeHistogram: { edges: [10, 15, 20, 25, 30, 35] } },
+    });
+    const agg = result.cells[0]!.aggregate;
+    const limitSec = 30 * 60;
+    expect(agg.terminationTime!.p50).toBeGreaterThanOrEqual(limitSec * 0.5);
+    expect(agg.terminationTime!.p50).toBeLessThanOrEqual(limitSec * 0.95);
+    expect(agg.terminationCounts.maxSimTime).toBe(0);
   });
 
-  // one it() per probe from § 6
+  // one it() per distribution probe from § 6
 });
 ```
 
-**Required test count:** 7 beats + 5 probes = 12 tests minimum. Tests checked into `src/modules/mods/<game>/sim/tug.sim.test.ts`.
+**Required test count:** 6 beats + 5 probes = 11 tests minimum (beat 4 omitted for the no-meta default per Ambient precedent — match-completion fires inline in the run; explicit beat-4 lock is redundant). Tests checked into `src/archetypes/tug/sim/balance.probe.test.ts`. Beat-shape tests live in `src/archetypes/tug/sim/tug.sim.test.ts` as `it.todo()` placeholders per Producer/Ambient convention until leaf 6's tuner converges; full beat verification rides the harness probes, not the vitest suite.
 
-**Representative-stubs escape hatch:** this doc shows 3 worked stubs (beat 1, beat 3, the signature AI-symmetry probe) and a `// one it() per beat` / `// one it() per probe` comment. Full enumeration lives in the test file.
+**Representative-stubs escape hatch:** this doc shows 4 worked stubs (beat 1, beat 3, the signature AI-symmetry probe, match-duration-bound) and a `// one it() per ...` comment. Full enumeration lives in the test file.
+
+**API contract:** sim tests use `runUntil` (engine harness) for math-only locks and `runMatrixUntil` for distribution probes. `runHeadless` is the pure-tick variant (returns `HeadlineResult`); for predicate-bounded runs use `runUntil` + `runMatrixUntil` (returns `RunUntilResult` / `MatrixUntilResult` with `terminated`, `elapsedSimulated`, `terminationCounts`). The pre-2026-04-20 `runHeadless({ engine, until, maxSimTime, inputs })` signature does not exist — that was a doc-only sketch; the real API is the post-OL-661 `setup`/`tick`/`ticks`/`tickDelta`/`seed` shape for `runHeadless`, and `engine`/`until`/`maxSimTime`/`tickDelta`/`setup`/`seed` for `runUntil`.
 
 ---
 
@@ -277,9 +273,9 @@ describe('tug — balance robustness', () => {
 
 ## 9. UI prescription
 
-- **Primary shell:** `` `declared invention` `` — compact HUD shell with a persistent push-pull lane indicator as the visual centre. No starter shell matches the layout requirements: `SidebarMainShell` / `ThreePanelShell` / `MultiColumnShell` / `SingleColumnShell` / `TabsBarShell` all prescribe document-style region hierarchies; Tug wants an always-visible lane strip above/below a shop panel with real-time front-line drift. Mobile-first layout is load-bearing per the triple-platform-taxonomy evidence (see Form-factor intent below). A fork claiming this commitment authors a `LaneHudShell` or `TugFrameShell` at `src/lib/shells/` and upgrades the `src/lib/` layer accordingly. Graduate to a canonical starter shell when ≥2 independent Tug consumers converge on the same layout. Cite: prework § "UI prescription hook (OL-582)" (OL-559 Phase 1 evidence base), which supersedes `layout-audit-2026.md` for Tug since the audit has no Tug rows.
-- **Secondary shell:** `` `declared invention` `` — for desktop-standalone forks (Legion TD 2 shape), a `ThreePanelShell`-inspired layout with lane view centre, shop left, match-stats/counter-matrix right. Still declared invention because the audit doesn't cover standalone-Tug desktop games; `layout-audit-2026.md` general strategy-HUD observations are informative but not a direct match. Forks targeting Steam-desktop may fork `ThreePanelShell` as a base; forks targeting mobile fall back to the primary declared-invention shell. Cite: prework § "UI prescription hook (OL-582)".
-- **Form-factor intent:** `mobile-first` — `` `declared invention` ``. OL-559 Phase 1 evidence: triple-platform-taxonomy corroboration across SC2 Arcade (PC), Flash (browser, mouse + touch compatible), and Steam (PC + mobile ports via Legion TD 2's touch-primary UI in informal reports). The archetype's low-APM decision surface (composition + timing, no per-unit commands) makes it structurally touch-friendly — this is the basis for the mobile-first claim. The audit has ~3 mobile-first rows and none with a Tug precedent, so the declared-invention tag applies. Cite: prework § "UI prescription hook (OL-582)".
+- **Form-factor (skeleton demo):** `desktop-first` — the demo defers the mobile-first claim explicitly. Theme C SciFi Armada (default skeleton bake — Direct Strike shape) is desktop-leaning in its corpus exemplar; matching the exemplar's form-factor for the demo lets leaf 5 ship a working skeleton without re-litigating shell affordances. The mobile-first declared-invention intent (below) survives in the doc as a forward-looking commitment for production-fork consumers, but the demo is desktop-only.
+- **Primary shell (skeleton demo):** **inline desktop layout under `src/archetypes/tug/ui/`**, no `src/lib/shells/` addition for v1. Three-region layout authored as a single `TugAppRoot.vue` mounting `TugFrameLayout.vue` (archetype-local): persistent lane strip across the top ~30% of viewport (always visible, includes both fortresses + unit streams + front-line indicator), shop + counter-matrix in the centre-left ~50% (scrollable archetype grid + lookup panel), income / cooldown / match-stats column on the right ~20% (always visible). Match-end summary overlays the lane view via the modal stack. Inline-under-archetype is chosen over `src/lib/shells/LaneHudShell.vue` because (a) Tug is the only consumer and authoring it in `src/lib/` would pre-extract a shell against a single use-case, (b) `src/lib/` carries no engine imports and the lane strip's reactive bindings to per-side unit arrays are engine-aware, (c) graduation to `src/lib/shells/` happens at N=2 if a second Tug-shape consumer (deckbuilder fork, packing in a hybrid auto-battler) converges on the same layout.
+- **Mobile-first declared-invention intent (forks only):** retained in the doc per `OL-559` Phase 1 evidence — triple-platform-taxonomy corroboration across SC2 Arcade (PC), Flash (browser + touch-compatible), and Steam (PC + mobile ports via Legion TD 2's touch-primary UI in informal reports). The archetype's low-APM decision surface (composition + timing, no per-unit commands) makes it structurally touch-friendly. A production fork claiming the mobile-first commitment authors a `LaneHudShell` at `src/lib/shells/` (or under their own fork's UI tree) with a top lane strip ~30% / shop centre ~50% / cooldown bottom ~20% layout. The audit has ~3 mobile-first rows and none with a Tug precedent, so the declared-invention tag applies. Cite: prework § "UI prescription hook (OL-582)".
 - **ARIA-aligned widgets (lift targets):**
   - `Tooltip` — unit stat readouts on hover, counter-type explanation on matrix cells, upgrade descriptions. Cites `widget-vocabulary.md` Layer 1.
   - `Dialog` — match-end summary modal, settings modal, optional meta-progression unlock modal. Cites `widget-vocabulary.md` Layer 1.
@@ -294,37 +290,50 @@ describe('tug — balance robustness', () => {
   - **Fortress HP bars** — per-side HP with damage animations. Cites `widget-vocabulary.md` Layer 2.
   - **Send-cooldown timer** — per-unit-archetype cooldown with ready/not-ready states. Per-fork implementation.
   - **Match-end summary panel** — stats breakdown (units sent, income earned, counter pivots, outcome). Per-fork; analogous to Ambient's welcome-back panel but match-scoped.
-- **Layout detail:** mobile-first primary form puts the lane strip across the top ~30% of the viewport (always visible), the unit shop in the middle ~50% (scrollable archetype grid), and the income/cooldown/ability bar across the bottom ~20% (always visible). Match-end summary overlays the lane view on completion and auto-dismisses. Desktop-secondary form uses three panels as in the Secondary shell description.
+- **Layout detail (demo desktop):** lane strip top ~30% (both fortresses + unit streams + front-line indicator); shop + counter-matrix centre-left ~50% (6-archetype card grid + interactive matrix lookup); income/cooldown/match-stats column right ~20% (income accrual, per-archetype cooldown timers, match-time-elapsed, counter-pivot count). Match-end summary overlays the lane view on completion via `useModalStack`. Mobile-first reflow described above is fork-territory.
 - **Nav pattern:** none at shell level within a match — Tug is single-screen-per-match by design. Between matches or in campaign mode, a mission-select or ladder-browse surface lives outside the match frame (sub-shell concern). This honors the low-cognitive-load commitment during play.
 - **Declared-invention notes:**
-  - **Lane-HUD shell**: no cross-corpus starter shell precedent. Zero rows in `layout-audit-2026.md` for Tug-shaped games. Starter ships no such shell; a fork claiming the mobile-first lane-HUD commitment authors it at `src/lib/shells/LaneHudShell.vue`. `TODO(expansion)` in the LIBRARY pattern (`routing-traversal.md`): promote the shell primitive when ≥2 independent Tug consumers converge.
-  - **Mobile-first form-factor claim**: grounded in OL-559 Phase 1 triple-platform evidence rather than `layout-audit-2026.md` (the audit has no Tug rows). This is a declared-invention form-factor intent; graduation to audit-cited happens when Tug games enter the audit corpus.
-  - **Counter-type matrix panel**: widget shape varies substantially across the three exemplars; keep as per-fork implementation per lift-first policy. Graduate to `widget-vocabulary.md` Layer 2 when three independent Tug consumers converge on the same presentation.
+  - **Lane strip / front-line indicator**: archetype-local in v1 (`src/archetypes/tug/ui/panels/LaneStrip.vue`). No cross-corpus starter shell precedent; zero rows in `layout-audit-2026.md` for Tug-shaped games. `TODO(expansion)` in the LIBRARY pattern (`routing-traversal.md`): promote to a `src/lib/shells/LaneHudShell.vue` when ≥2 independent Tug consumers converge.
+  - **Mobile-first form-factor claim** (deferred for demo, retained for forks): grounded in OL-559 Phase 1 triple-platform evidence rather than `layout-audit-2026.md` (the audit has no Tug rows). Declared-invention form-factor intent; graduation to audit-cited happens when Tug games enter the audit corpus.
+  - **Counter-type matrix panel**: archetype-local v1 (`src/archetypes/tug/ui/panels/CounterMatrixPanel.vue`). Widget shape varies substantially across the three exemplars; keep per-fork per lift-first policy. Graduate to `widget-vocabulary.md` Layer 2 when three independent Tug consumers converge on the same presentation.
 
 ---
 
 ## 10. Predicted engine gaps
 
-Zero correctness gaps predicted — engine posture is settled per taxonomy § 2C and the prework's "COPY AS-IS" directive (prework lines 247–268). All entries below are ergonomics hypotheses the first Tug-archetype fork will confirm or reject.
+Zero correctness gaps predicted — engine posture is settled per taxonomy § 2C. All entries below are ergonomics hypotheses post-OL-703 investigation. Severity column updated against engine source reads (sequencer, zone, modifier, persistence, override-registry, run-matrix-until).
 
-| Gap | Severity | Notes |
-|-----|----------|-------|
-| Mirrored-instance ergonomics (player + AI state) | Medium | Every player-side primitive is cloned for the AI: resource, sequencer, fortress-zone, upgrade state. If consumer code becomes repetitive symmetric-setup blocks, graduate a symmetric-game-state harness helper (working name; naming deferred to proposal). Direct Strike, Warfare 1917, and Legion TD 2 all exhibit this shape at the consumer layer — high convergence likelihood. |
-| N×N counter-matrix as first-class primitive | Medium | The counter matrix is currently hand-registered as N² modifiers (attacker × defender → damage multiplier) via `applyModifiers`. If this becomes verbose or error-prone, propose a counter-matrix primitive that wraps the modifier-chain plumbing. Deferred until the first Tug consumer implementation measures the real ergonomics cost. |
-| Zone-scoped front-line query performance | Low | The front-line position is derived per-tick by finding the frontmost units of each side within the lane zones. If this is O(units) per tick with no indexing, the performance budget at high unit counts may pressure the zone system. Likely fine for the 20–50 concurrent-unit counts corpus games exhibit; flag if a fork hits it. |
-| AI opponent mode implementation | Low | `aiOpponentMode: 'counter-aware'` requires reading opponent composition and biasing sends toward counters. This is consumer-layer logic, not an engine primitive, but the pattern may want an `AIOpponentHarness` helper if multiple forks converge on the same "read opponent, pick counter" loop. Defer until second consumer. |
-| Match-scoped + persistent state separation | Low | The skeleton assumes match-scoped state (reset per match) with optional persistent meta-progression state (carried across). The persistence seam is a consumer concern today; if two forks struggle with the same "which state resets when" boundary, a `createMatchScope()` or similar helper is a candidate. Measure first. |
-| Spendable-ability cooldown coordination | Low | Artillery / reinforcement abilities have independent cooldowns separate from unit send cooldowns. These are `createSequencer` instances but with different semantics (one-shot activation vs. continuous queue). If coordination becomes tangled, propose a `createCooldown` primitive layered above `createSequencer`. Not urgent. |
+| Gap | Severity | Status (post-OL-703) | Notes |
+|-----|----------|----------------------|-------|
+| Mirrored-instance ergonomics (player + AI state) | Medium | **Confirmed candidate** | v1 hand-rolls per-side modules with `side: 'player' \| 'ai'` parameter; persistent contexts namespace as `tug/match/<side>/<module>`. Each per-side module factory is called twice. The duplication is 4–5 modules × 2 sides; 8–10 factory call sites. Graduate to `createSymmetricModuleSet({ sides, build })` when a second symmetric-state consumer (Tug fork, PvP Auto-battler) hand-rolls the same shape. **Cross-reference: `candidate-primitives.md` entry filed by leaf 1 — see § Filing notes below.** Direct Strike, Warfare 1917, and Legion TD 2 all exhibit this shape at the consumer layer — high convergence likelihood. |
+| ~~N×N counter-matrix as first-class primitive~~ | **Resolved (downgrade)** | **Removed as a gap** | Counter matrix is plain data-table lookup (`number[][]`), read directly by the per-tick combat resolver. Not a modifier-chain pattern. The earlier framing mistakenly suggested 36 `chain.bind` calls — that's the wrong primitive. Tug uses `chain.bind` only for **global** unit/income upgrades (variable count, not 36). No candidate-primitive entry; no engine ergonomics gap. |
+| **1D lane spatial state substrate** | Low | **New gap (post-investigation)** | `createZoneSystem` is content-grouping/unlock (Idle Loops zones, Increlution chapters, Ambient costume cycling), not a live moving-entity spatial container. `createSpatialGrid` is 2D-grid-with-FOV machinery, oversized for a 1D walking-positions axis. Tug v1 hand-rolls a per-side `Persistent<UnitInstance[]>` with `position: number` per unit. If a future Tug fork (deckbuilder shape, multi-lane variants, Hero Line Wars hybrid) finds the hand-roll growing, that's the convergence signal for a `createLane` / `create1DSpatialField` candidate. **Defer pending second consumer.** |
+| AI opponent mode implementation | Low | **Confirmed (consumer-layer)** | `aiOpponentMode: 'counter-aware'` requires reading opponent composition and biasing sends toward counters. This is consumer-layer logic; the parallel `createAiOpponentModule(data)` reads the player-side units injection key and drives the AI-side sequencer's enqueue. Pattern may want an `AIOpponentHarness` helper if multiple forks converge on the same "read opponent, pick counter" loop. Defer until second consumer. |
+| ~~Match-scoped + persistent state separation~~ | **Resolved (no new primitive)** | **Removed as a gap** | Engine's existing `withPersistentContext` + `getModulePersistentRefs` + `createReset({ resetModules })` covers this cleanly. Per-match state lives under `tug/match` parent context (the context-tree walker collects nested category/sequencer/zone child contexts automatically); meta state lives under `tug/meta`; `createReset({ resetModules: ['tug/match'] })` resolves the match-scope on call. No `createMatchScope` candidate-primitive needed. |
+| Spendable-ability cooldown coordination | Low | **Folded into sequencer hold-retry** | Per-archetype unit-send cooldown enforced via `canRun` returning `'notNow'` + `registerTick` retry on the same sequencer. Spendable abilities (artillery, reinforcement) when enabled use the same sequencer pattern (`canRun: () => abilityCooldownReady('artillery') ? 'now' : 'notNow'`). No `createCooldown` primitive needed for v1; engine's existing tri-state hold-retry path covers it. |
+| `runMatrixUntil` distribution-statistic UX | Low | **Confirmed adequate** | Tier-C distribution probes (`ai-difficulty-symmetry`, `match-duration-bound`, `counter-matrix-sharpness`) read off `aggregateUntilCell.terminationTime.{avg,p50,p95}` and `terminationCounts.{predicate,maxSimTime}`. Win-rate is computed per-cell from `cell.runs[].engine.tryInject(MatchKey)!.outcome.value` — straightforward. If a future Tier-C archetype needs a richer aggregate (e.g. per-outcome bucket counts as first-class), file a candidate-primitive entry then. |
 
-The one-line rule for this section: **if implementing a Tug fork requires a correctness-level engine change, the gap is severity `high` and this table must be updated.** Current hypothesis is that no such gap exists — the taxonomy pins the engine posture as settled and the three exemplars validate it at the consumer layer.
+**Filing notes (post-OL-703):**
+
+- `candidate-primitives.md` entry to file: `createSymmetricModuleSet({ sides, build })` — cross-reference Tug's mirrored-instance hand-roll site as the first receipt; cite Auto-battler PvP variant + future Tug forks as N=2 trigger.
+- `candidate-primitives.md` entry **NOT** to file: counter-matrix-as-modifier-chain (the gap was a framing error) and `createMatchScope` (engine covers it).
+- No `scope:engine` prerequisite leaves filed. Investigation showed every named primitive composes against engine current surface without correctness gaps. If leaf 3 / leaf 4 hits an unexpected gap during implementation, file then with concrete evidence.
+
+The one-line rule for this section: **if implementing a Tug fork requires a correctness-level engine change, the gap is severity `high` and this table must be updated.** Current hypothesis confirmed by OL-703 investigation — no such gap exists.
 
 ---
 
 ## 11. Themes
 
+### Theme C — SciFi Armada (skeleton default)
+
+- **Hook:** The Direct Strike / Nexus Wars shape. Multiple alien races, symmetric economy, fortress = Nexus / Command Center / Hive. Deep counter-type matrix leveraging damage-type vs. armor-type conventions. **Skeleton default per OL-703 decision** — chosen over Theme A because Direct Strike is the canonical zero-meta-progression purity reference and `metaProgressionEnabled: false` is the skeleton default; Theme C and the meta-default are structurally consistent. Producer + Ambient defaulted to their Theme A; Tug defaults to Theme C because Theme A here (Fantasy Legion / Legion TD 2) is meta-progression-on by exemplar, which would create theme-vs-meta-default tension.
+- **Resource mapping:** resource = minerals; factionNames = ["Terran", "Protoss"] (or three-faction pick in the shop); fortressName = "Nexus"; unitNames = ["marine", "vulture", "siege-tank", "wraith", "battlecruiser", "ghost"]; unitRoles = ["Light infantry", "Fast skirmish", "Siege artillery", "Air", "Capital ship", "Special ability"].
+- **Narrative framing:** none — pure mechanical fidelity per Direct Strike. No narrative overlay; the theme relies on race fidelity as the aesthetic. Optional Co-Op PvE variant with AI difficulty tiers.
+
 ### Theme A — Fantasy Legion
 
-- **Hook:** The Legion TD 2 shape. Mages, fighters, elementalists; a King anchors each side; mercenaries are the cross-lane pressure send. Fantasy unit roster with elemental counter relationships.
+- **Hook:** The Legion TD 2 shape. Mages, fighters, elementalists; a King anchors each side; mercenaries are the cross-lane pressure send. Fantasy unit roster with elemental counter relationships. Forks toggling `metaProgressionEnabled: true` (the Legion TD 2 ladder posture) typically swap to this theme.
 - **Resource mapping:** resource = gold (singular: "gold", plural: "gold"); factionNames = ["Gold Legion", "Crimson Horde"]; fortressName = "King"; unitNames = ["squire", "pikeman", "mage", "archer", "knight", "dragon"]; unitRoles = ["Light melee", "Anti-cavalry", "Area damage", "Ranged", "Heavy armor", "Flying"].
 - **Narrative framing:** light — between-match flavour events as King dialogue; campaign mode (when enabled) chains missions via a kingdom-conquest arc.
 
@@ -333,12 +342,6 @@ The one-line rule for this section: **if implementing a Tug fork requires a corr
 - **Hook:** The Warfare 1917 / Age of War shape. Infantry, machine gunners, tanks, artillery. Historical specificity (WW1, WW2, or era-spanning from stone-age to modern). Era-progression variant: unit-archetype unlocks gate by in-match milestones rather than arriving at match start.
 - **Resource mapping:** resource = currency (singular: "soldier", plural: "soldiers" — the Warfare 1917 idiom); factionNames = ["Allied Forces", "German Empire"] (WW1) or ["Blue Coalition", "Red Coalition"] (generic); fortressName = "trench HQ"; unitNames = ["rifleman", "mg-gunner", "mortar", "sniper", "tank", "officer"]; unitRoles = ["Basic infantry", "Suppression", "Area indirect", "Precision", "Heavy armor", "Morale buff"].
 - **Narrative framing:** prose — campaign missions as historical setpieces; spendable abilities (artillery, air support) framed as off-map commanders. Warfare 1917's campaign structure is the direct precedent.
-
-### Theme C — SciFi Armada
-
-- **Hook:** The Direct Strike / Nexus Wars shape. Multiple alien races, symmetric economy, fortress = Nexus / Command Center / Hive. Deep counter-type matrix leveraging damage-type vs. armor-type conventions.
-- **Resource mapping:** resource = minerals; factionNames = ["Terran", "Protoss"] (or three-faction pick in the shop); fortressName = "Nexus"; unitNames = ["marine", "vulture", "siege-tank", "wraith", "battlecruiser", "ghost"]; unitRoles = ["Light infantry", "Fast skirmish", "Siege artillery", "Air", "Capital ship", "Special ability"].
-- **Narrative framing:** none — pure mechanical fidelity per Direct Strike. No narrative overlay; the theme relies on race fidelity as the aesthetic. Optional Co-Op PvE variant with AI difficulty tiers.
 
 ### Theme D — Minimalist Abstract (declared invention, deckbuilder-compatible)
 
