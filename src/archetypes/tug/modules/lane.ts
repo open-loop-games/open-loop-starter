@@ -9,23 +9,33 @@ import {
   type InjectionKey,
   type Persistent,
 } from 'open-loop-engine';
-import type { TugData } from '../data/types';
-import { SIDES, type Side, TugTuningRegistryKey } from './tuning';
+import type { TugData, UnitArchetypeTag } from '../data/types';
+import { FortressKey } from './fortress';
+import { LANE_LENGTH, SIDES, type Side, TugTuningRegistryKey } from './tuning';
 
-/** Length of the lane in lane-units. Direct-Strike-typical fixed length;
- *  structural, not a tunable. Both sides' units traverse this axis. */
-const LANE_LENGTH = 100;
-
-/** Engagement radius — opposing units within this distance trade combat
- *  damage each tick. Structural; if combat dynamics need retuning, that
- *  becomes a `data/balance.ts` field, not a hidden constant. */
+/** Engagement radius — opposing units within this distance acquire each
+ *  other as engagement targets and trade combat damage each tick.
+ *  Structural; if combat dynamics need retuning, that becomes a
+ *  `data/balance.ts` field, not a hidden constant. */
 const ENGAGE_RADIUS = 2;
 
+/** archetypeId sentinel for fortress UnitInstances. The fortress unit's
+ *  archetypeId is `'fortress'` rather than a `data.units` id, so combat
+ *  branches off this string to apply fortress damage / resistance lookup
+ *  instead of counter-matrix indexing. */
+const FORTRESS_ARCHETYPE = 'fortress';
+
 /**
- * One unit instance on the lane. Lane mutates `position` and `hp` per tick;
- * `id` is generated at spawn so save/load round-trips identify the same
- * instance. `archetypeId` keys into `data.units` (and the side-local
- * matrix-index map) for damage + counter-matrix lookups.
+ * One unit instance on the lane. Lane mutates `position`, `hp`, and
+ * `engagedWith` per tick; `id` is generated at spawn so save/load
+ * round-trips identify the same instance. `archetypeId` keys into
+ * `data.units` (and the side-local matrix-index map) for damage +
+ * counter-matrix lookups.
+ *
+ * `engagedWith` carries the id of the opposing unit this unit is locked
+ * onto. While set, the unit stops walking (front-line semantics: stop and
+ * fight). Targets are sticky — re-acquisition only happens after the
+ * current target dies or leaves range.
  */
 export interface UnitInstance {
   id: string;
@@ -35,14 +45,16 @@ export interface UnitInstance {
   position: number;
   hp: number;
   side: Side;
+  /** Id of the opposing unit this one is engaged with. Walk movement is
+   *  gated off while set. */
+  engagedWith?: string;
 }
 
 export interface LaneEvents {
-  /** A unit reached the opposing fortress. Leaf-4 `match.ts` subscribes and
-   *  decrements that side's `fortressHp` by `damage`. */
-  'fortress-reached': (payload: { side: Side; archetypeId: string; damage: number }) => void;
   /** A unit's hp dropped to ≤0 in combat. Currently unused by leaf-4 wiring;
-   *  exposed so VFX / scoring can hook in without further engine ceremony. */
+   *  exposed so VFX / scoring can hook in without further engine ceremony.
+   *  Fortress units (`archetypeId === 'fortress'`) do not emit this — match
+   *  end-of-match detection watches the fortress hp resource directly. */
   'unit-killed': (payload: { side: Side; archetypeId: string }) => void;
 }
 
@@ -81,9 +93,10 @@ export const LaneKey: InjectionKey<LaneApi> = Symbol('tug/match/lane') as Inject
 export function createLaneModule(data: TugData): EngineModule {
   return {
     id: 'tug/match/lane',
-    dependencies: ['tug/tuning'],
+    dependencies: ['tug/tuning', 'tug/match/fortress'],
     install(ctx) {
       const registry = ctx.inject(TugTuningRegistryKey);
+      const fortress = ctx.inject(FortressKey);
 
       // Counter-matrix sharpness scalars. Default 1.0 is identity (no
       // perturbation). Leaf 6's tuner pushes scopes to compress/expand the
@@ -99,6 +112,11 @@ export function createLaneModule(data: TugData): EngineModule {
       // (fixes counter-matrix row/column order; see data/units.ts comment).
       const idxOf = new Map<string, number>();
       for (let i = 0; i < data.units.length; i++) idxOf.set(data.units[i].id, i);
+
+      // archetypeId → archetypeTag, for fortress-resistance lookup when
+      // the defender is a fortress (skips counter-matrix entirely).
+      const tagOf = new Map<string, UnitArchetypeTag>();
+      for (const u of data.units) tagOf.set(u.id, u.archetypeTag);
 
       const units: Record<Side, Persistent<UnitInstance[]>> = {
         player: persistent<UnitInstance[]>([], { name: 'player-units' }),
@@ -127,49 +145,116 @@ export function createLaneModule(data: TugData): EngineModule {
       ctx.onTick((dt) => {
         const strong = Number(strongCounter.value);
         const weak = Number(weakCounter.value);
+        const fortressDmg = Number(data.fortress.damagePerHit);
 
-        // 1) Walk units. Player toward LANE_LENGTH, AI toward 0.
+        const playerArr = units.player.value;
+        const aiArr = units.ai.value;
+
+        // Opposing-target views — regular units plus the opposing
+        // fortress. Engagement and combat loops iterate these uniformly so
+        // a fortress is just-another opposing unit (stop-on-engage works,
+        // all-pairs damage applies). Per-tick array allocs are negligible
+        // at typical lane unit counts.
+        const playerTargets: UnitInstance[] = [...playerArr, fortress.unit.player];
+        const aiTargets: UnitInstance[] = [...aiArr, fortress.unit.ai];
+
+        // 1) Validate prior engagements. Clear `engagedWith` if the target
+        //    is dead, removed, or out of range. Fortress engagement clears
+        //    when fortress hp ≤ 0, which is what triggers the
+        //    end-of-match cleanup walk in step 3.
+        for (const side of SIDES) {
+          const arr = units[side].value;
+          if (arr.length === 0) continue;
+          const opp = side === 'player' ? aiTargets : playerTargets;
+          for (const u of arr) {
+            if (u.engagedWith == null) continue;
+            const target = opp.find((t) => t.id === u.engagedWith);
+            if (
+              !target ||
+              target.hp <= 0 ||
+              Math.abs(u.position - target.position) > ENGAGE_RADIUS
+            ) {
+              u.engagedWith = undefined;
+            }
+          }
+        }
+
+        // 2) Acquire engagements. Any un-engaged living unit picks the first
+        //    opposing target found in range — including the opposing
+        //    fortress — as its sticky engagement. Acquisition is symmetric:
+        //    if the target has no engagement yet, it locks back onto this
+        //    unit. Fortresses receive the back-link too (harmless; they
+        //    don't move and don't act on engagedWith). We iterate
+        //    `units[side]` rather than `*Targets` since fortresses don't
+        //    initiate engagement — they only get engaged.
+        for (const p of playerArr) {
+          if (p.hp <= 0 || p.engagedWith != null) continue;
+          for (const a of aiTargets) {
+            if (a.hp <= 0) continue;
+            if (Math.abs(p.position - a.position) > ENGAGE_RADIUS) continue;
+            p.engagedWith = a.id;
+            if (a.engagedWith == null) a.engagedWith = p.id;
+            break;
+          }
+        }
+        for (const a of aiArr) {
+          if (a.hp <= 0 || a.engagedWith != null) continue;
+          for (const p of playerTargets) {
+            if (p.hp <= 0) continue;
+            if (Math.abs(p.position - a.position) > ENGAGE_RADIUS) continue;
+            a.engagedWith = p.id;
+            if (p.engagedWith == null) p.engagedWith = a.id;
+            break;
+          }
+        }
+
+        // 3) Walk un-engaged units. Engaged units stop and fight — that's
+        //    what turns the front line into a real thing the simulation
+        //    tracks. Position clamps at lane bounds so a unit walking past
+        //    a destroyed fortress (engagement cleared, no enemy in front)
+        //    doesn't fly off the lane edge before match-scope reset wipes
+        //    it.
         for (const side of SIDES) {
           const arr = units[side].value;
           if (arr.length === 0) continue;
           const dir = side === 'player' ? 1 : -1;
           for (const u of arr) {
+            if (u.hp <= 0) continue;
+            if (u.engagedWith != null) continue;
             const def = data.units.find((d) => d.id === u.archetypeId);
             if (!def) continue;
             u.position += dir * def.walkSpeed * dt;
+            if (u.position < 0) u.position = 0;
+            else if (u.position > LANE_LENGTH) u.position = LANE_LENGTH;
           }
         }
 
-        // 2) Cross-side combat. Pairs within ENGAGE_RADIUS trade damage in
-        //    both directions, scaled by counter-matrix lookup × the strong /
-        //    weak / neutral perturbation scalar from the tunable surface.
-        const playerArr = units.player.value;
-        const aiArr = units.ai.value;
-        for (const p of playerArr) {
+        // 4) Cross-side combat. Damage applies to all opposing pairs in
+        //    range — not just the sticky engagement target — so a tank
+        //    surrounded by three marines takes damage from all three.
+        //    Damage formula branches by attacker/defender shape:
+        //
+        //    - unit → unit:     attDef.damagePerHit × matrix[att][def] × dt
+        //    - unit → fortress: attDef.damagePerHit × resistance[attTag] × dt
+        //    - fortress → unit: data.fortress.damagePerHit × dt (no matrix)
+        //    - fortress → fortress: impossible (positions are 0 vs LANE_LENGTH)
+        for (const p of playerTargets) {
           if (p.hp <= 0) continue;
-          const pIdx = idxOf.get(p.archetypeId);
-          if (pIdx === undefined) continue;
-          const pDef = data.units.find((d) => d.id === p.archetypeId);
-          if (!pDef) continue;
-          for (const a of aiArr) {
+          for (const a of aiTargets) {
             if (a.hp <= 0) continue;
             if (Math.abs(p.position - a.position) > ENGAGE_RADIUS) continue;
-            const aIdx = idxOf.get(a.archetypeId);
-            if (aIdx === undefined) continue;
-            const aDef = data.units.find((d) => d.id === a.archetypeId);
-            if (!aDef) continue;
-
-            const pCell = adjustCell(data.counterMatrix[pIdx][aIdx], strong, weak);
-            const aCell = adjustCell(data.counterMatrix[aIdx][pIdx], strong, weak);
-            a.hp -= pDef.damagePerHit * pCell * dt;
-            p.hp -= aDef.damagePerHit * aCell * dt;
+            a.hp -= damageFrom(p, a, dt);
+            p.hp -= damageFrom(a, p, dt);
           }
         }
 
-        // 3) Resolve fortress-reached + unit-killed. Mutate in-place via a
-        //    filter pass; emit events as we drop entries. Reassigning the
-        //    `.value` array refreshes Vue dependents (frontline computeds,
-        //    consumer composables).
+        // 5) Resolve unit-killed. Filter dead entries out of each side's
+        //    units array; emit events as we drop them. Fortresses live in
+        //    a separate slot (FortressKey) and are NOT removed — when a
+        //    fortress hp hits 0, match.ts watches the resource and ends
+        //    the match, then the match-scope reset wipes everything.
+        //    Reassigning the `.value` array refreshes Vue dependents
+        //    (frontline computeds, consumer composables).
         for (const side of SIDES) {
           const arr = units[side].value;
           if (arr.length === 0) continue;
@@ -179,22 +264,34 @@ export function createLaneModule(data: TugData): EngineModule {
               handle.emit('unit-killed', { side: u.side, archetypeId: u.archetypeId });
               continue;
             }
-            const reachedFortress = side === 'player' ? u.position >= LANE_LENGTH : u.position <= 0;
-            if (reachedFortress) {
-              const def = data.units.find((d) => d.id === u.archetypeId);
-              const damage = def ? def.damagePerHit : 0;
-              handle.emit('fortress-reached', {
-                side: u.side,
-                archetypeId: u.archetypeId,
-                damage,
-              });
-              continue;
-            }
             survivors.push(u);
           }
           if (survivors.length !== arr.length) {
             units[side].value = survivors;
           }
+        }
+
+        // Damage helper — closes over the current tick's strong/weak
+        // perturbation scalars + fortressDmg; defined inside the tick to
+        // capture them without a per-call lookup.
+        function damageFrom(attacker: UnitInstance, defender: UnitInstance, dt: number): number {
+          if (attacker.archetypeId === FORTRESS_ARCHETYPE) {
+            // Fortress return-fire is flat; no matrix, no per-target
+            // resistance (the defender is a unit, not a fortress).
+            return fortressDmg * dt;
+          }
+          const attDef = data.units.find((d) => d.id === attacker.archetypeId);
+          if (!attDef) return 0;
+          if (defender.archetypeId === FORTRESS_ARCHETYPE) {
+            const tag = tagOf.get(attacker.archetypeId);
+            const resist = tag != null ? (data.fortress.resistance[tag] ?? 1) : 1;
+            return attDef.damagePerHit * resist * dt;
+          }
+          const attIdx = idxOf.get(attacker.archetypeId);
+          const defIdx = idxOf.get(defender.archetypeId);
+          if (attIdx === undefined || defIdx === undefined) return 0;
+          const cell = adjustCell(data.counterMatrix[attIdx][defIdx], strong, weak);
+          return attDef.damagePerHit * cell * dt;
         }
       });
 

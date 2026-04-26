@@ -1,5 +1,7 @@
 import { persistent, randomItem, type EngineModule } from 'open-loop-engine';
 import type { TugData } from '../data/types';
+import { IncomeKey } from './income';
+import { IncomeUpgradesKey } from './income-upgrades';
 import { LaneKey } from './lane';
 import { MatchKey } from './match';
 import { UnitsKey } from './units';
@@ -30,7 +32,13 @@ import { UnitsKey } from './units';
 export function createAiOpponentModule(data: TugData): EngineModule {
   return {
     id: 'tug/match/ai-opponent',
-    dependencies: ['tug/match', 'tug/match/lane', 'tug/match/ai/units'],
+    dependencies: [
+      'tug/match',
+      'tug/match/lane',
+      'tug/match/ai/units',
+      'tug/match/ai/income',
+      'tug/match/ai/income-upgrades',
+    ],
     install(ctx) {
       const mode = data.balance.aiOpponentMode;
       if (mode === 'off') return;
@@ -38,6 +46,8 @@ export function createAiOpponentModule(data: TugData): EngineModule {
       const match = ctx.inject(MatchKey);
       const lane = ctx.inject(LaneKey);
       const aiShop = ctx.inject(UnitsKey.ai);
+      const aiIncome = ctx.inject(IncomeKey.ai);
+      const aiUpgrades = ctx.inject(IncomeUpgradesKey.ai);
 
       // archetypeId → matrix-index map. Same convention as lane.ts and
       // match.ts: data.units order is load-bearing.
@@ -92,6 +102,29 @@ export function createAiOpponentModule(data: TugData): EngineModule {
         if (!match.inMatch.value) return;
         lastSendSec.value += dt;
         if (lastSendSec.value < data.balance.aiSendCadenceSec) return;
+
+        // Income-upgrade spend branch. Walk tiers in order; first
+        // un-bought purchasable tier is the next candidate. Sequential
+        // gating means later tiers won't be canPurchase until earlier
+        // tiers buy in, so we stop walking on the first un-bought entry.
+        // Surplus heuristic: only buy if cost ≤ ½ current AI income —
+        // keeps the AI from starving its unit production with greedy
+        // upgrade buys. Mirrors corpus AI policies (don't spend until
+        // income > N×cost).
+        for (const def of data.incomeUpgrades) {
+          const p = aiUpgrades.getPurchasable(def.id);
+          if (!p) break;
+          if (p.bought.value) continue;
+          if (!p.canPurchase.value) break;
+          const cost = Number(p.getCost(1));
+          const inc = Number(aiIncome.value);
+          if (inc >= 2 * cost) {
+            p.purchase();
+            lastSendSec.value = 0;
+            return; // Spent on upgrade this cadence; unit-buy waits for next.
+          }
+          break; // Affordable but not surplus — wait.
+        }
 
         const affordable = aiShop.getAffordable();
         // Hold the cadence accumulator if nothing affordable — when income

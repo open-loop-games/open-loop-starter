@@ -1,0 +1,122 @@
+import {
+  createResource,
+  tunable,
+  type DecimalSource,
+  type EngineModule,
+  type InjectionKey,
+  type Resource,
+} from 'open-loop-engine';
+import type { TugData } from '../data/types';
+import type { UnitInstance } from './lane';
+import { LANE_LENGTH, type Side, TugTuningRegistryKey } from './tuning';
+
+// Engine's `tunable()` returns a ComputedRef branded against its bundled
+// Vue install; the starter's Vue declares a separate brand. Both are
+// structurally identical `{ value: T }` reactive refs at runtime — match
+// the structural shape on the public API surface so the brand mismatch
+// doesn't surface to consumers. Same trick the ambient module uses.
+type Ref2<T> = { value: T };
+
+export interface FortressApi {
+  /** Per-side fortress HP. Match.ts watches this for end-of-match
+   *  detection; lane.ts decrements via the unit's `hp` accessor when
+   *  opposing units damage it in the combat loop. */
+  hp: Record<Side, Resource<DecimalSource>>;
+  /** Per-side fortress unit. Satisfies the lane's `UnitInstance` shape so
+   *  the engagement + combat loops can iterate over it uniformly with
+   *  regular units. The `hp` field is a getter/setter accessor against
+   *  the corresponding `hp` Resource — combat's `u.hp -= dmg` reads/writes
+   *  the resource without lane needing to special-case fortresses for
+   *  damage routing. */
+  unit: Record<Side, UnitInstance>;
+  /** Tunable hp max. UI reads for bar scale; `start()` reads for initial
+   *  hp on each match boundary. Structural `{ value }` shape so the
+   *  cross-Vue-brand mismatch on engine's tunable return doesn't leak. */
+  max: Ref2<DecimalSource>;
+  /** Initialize both fortresses' hp to `max.value`. Called from
+   *  `match.start()` after the match-scope reset clears match state. */
+  start(): void;
+}
+
+export const FortressKey: InjectionKey<FortressApi> = Symbol(
+  'tug/match/fortress',
+) as InjectionKey<FortressApi>;
+
+/**
+ * Fortress module. Per the fortress-as-unit engagement model, each side's
+ * fortress is an immobile `UnitInstance` at the lane endpoint that
+ * opposing units engage and damage like any other opposing unit. This
+ * module owns the per-side hp Resource and constructs the unit objects;
+ * lane.ts injects them into its engagement + combat loops, and match.ts
+ * injects the resources for end-of-match detection.
+ *
+ * 3c topology — sits between `tuning` (deps) and `lane` / `match`
+ * (consumers). No cycle: lane and match both inject fortress; fortress
+ * injects only tuning. Match-scope reset enumerates this module so hp
+ * resets to 0 between matches; `start()` re-initializes to `max.value`.
+ */
+export function createFortressModule(data: TugData): EngineModule {
+  return {
+    id: 'tug/match/fortress',
+    dependencies: ['tug/tuning'],
+    install(ctx) {
+      const registry = ctx.inject(TugTuningRegistryKey);
+
+      // Tunable wrap for the per-side fortress cap. Default closure reads
+      // `data.fortress.hp`; leaf 6's tuner pushes scopes against
+      // `'fortress/hp'` to bisect against match-duration probes. Single
+      // tunable shared by both sides — fortresses are symmetric.
+      const max = tunable<DecimalSource>(registry, 'fortress/hp', () => data.fortress.hp);
+
+      const hp: Record<Side, Resource<DecimalSource>> = {
+        player: createResource<DecimalSource>(0, {
+          id: 'fortress-hp-player',
+          displayName: `${data.theme.fortressName} (${data.theme.factionNames[0]})`,
+        }),
+        ai: createResource<DecimalSource>(0, {
+          id: 'fortress-hp-ai',
+          displayName: `${data.theme.fortressName} (${data.theme.factionNames[1]})`,
+        }),
+      };
+
+      const unit: Record<Side, UnitInstance> = {
+        player: createFortressUnit('player', hp.player),
+        ai: createFortressUnit('ai', hp.ai),
+      };
+
+      function start(): void {
+        hp.player.value = max.value;
+        hp.ai.value = max.value;
+        // Clear lingering engagement on the unit objects. They're not
+        // persistent; this only matters within a session if a previous
+        // match left a stale engagedWith pointer.
+        unit.player.engagedWith = undefined;
+        unit.ai.engagedWith = undefined;
+      }
+
+      ctx.provide(FortressKey, { hp, unit, max, start });
+    },
+  };
+}
+
+/**
+ * Build a fortress UnitInstance whose `hp` field accessor delegates to
+ * the corresponding hp Resource. Lane combat does `u.hp -= dmg` uniformly
+ * across regular units and fortresses — for a fortress, that read-modify-
+ * write routes through the resource's reactive setter (clamped at 0).
+ */
+function createFortressUnit(side: Side, hpRes: Resource<DecimalSource>): UnitInstance {
+  const position = side === 'player' ? 0 : LANE_LENGTH;
+  return {
+    id: `fortress-${side}`,
+    archetypeId: 'fortress',
+    position,
+    side,
+    get hp(): number {
+      return Number(hpRes.value);
+    },
+    set hp(v: number) {
+      hpRes.value = Math.max(0, v);
+    },
+  };
+}

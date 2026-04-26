@@ -49,6 +49,29 @@ export interface IncomeUpgradeDef {
   multiplier: number;
 }
 
+/**
+ * Fortress definition. Modeled as an immobile unit at each side's lane
+ * endpoint — opposing units engage it like any other opposing unit (stop +
+ * fight) once within `ENGAGE_RADIUS`. Damage from attacking units is scaled
+ * by `resistance` (per attacker `archetypeTag`); fortress return-fire (if
+ * `damagePerHit > 0`) bypasses the unit counter-matrix.
+ *
+ * SC2 Direct Strike variants ship per-archetype-tag resistance and base
+ * damage; this shape supports both. v1 baseline ships pure damage-sponge:
+ * `damagePerHit: 0`, `resistance: {}` (all 1.0).
+ */
+export interface FortressDef {
+  /** Per-side starting HP. Both fortresses spawn with this value. */
+  hp: DecimalSource;
+  /** Damage dealt per second to each opposing unit in engagement range.
+   *  0 means no return fire — pure damage sponge. */
+  damagePerHit: DecimalSource;
+  /** Per-archetype-tag damage multiplier applied to incoming damage from
+   *  units of that tag. Missing keys default to 1.0 (no resistance).
+   *  Mirrors SC2 armor-type / damage-type interaction. */
+  resistance: Partial<Record<UnitArchetypeTag, number>>;
+}
+
 export type AbilityEffect =
   | { kind: 'artillery'; damage: DecimalSource; radius: number }
   | { kind: 'reinforcement'; archetypeId: string; count: number };
@@ -71,8 +94,6 @@ export type CounterMatrix = number[][];
 export interface TugBalance {
   /** Per-side per-second mineral accrual at default income tier. */
   baseIncomeRate: DecimalSource;
-  /** Per-side starting fortress HP; match ends when either side hits 0. */
-  fortressHp: DecimalSource;
   /** 0 = no time limit (Direct Strike); >0 = score resolution at limit. */
   matchTimeLimitMinutes: number;
   /** 1.0 = symmetric; primary leaf-6 tuning knob. */
@@ -131,6 +152,7 @@ export interface TugData {
   incomeUpgrades: IncomeUpgradeDef[];
   abilities: AbilityDef[];
   counterMatrix: CounterMatrix;
+  fortress: FortressDef;
   balance: TugBalance;
   theme: TugTheme;
 }

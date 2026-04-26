@@ -3,10 +3,7 @@ import {
   Decimal,
   createEmitHandle,
   createReset,
-  createResource,
   persistent,
-  subtractResource,
-  tunable,
   type DecimalSource,
   type Emittable,
   type EngineModule,
@@ -16,9 +13,10 @@ import {
   type Resource,
 } from 'open-loop-engine';
 import type { TugData } from '../data/types';
+import { FortressKey } from './fortress';
 import { LaneKey } from './lane';
 import { SequencerKey } from './units';
-import { type Side, TugTuningRegistryKey } from './tuning';
+import { type Side } from './tuning';
 
 export type MatchOutcome = 'player-win' | 'ai-win' | 'time-limit' | null;
 
@@ -73,54 +71,47 @@ export const MatchKey: InjectionKey<MatchApi> = Symbol('tug/match') as Injection
 export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
   'tug/match',
   'tug/match/ai-opponent',
+  'tug/match/fortress',
   'tug/match/lane',
   'tug/match/player/income',
   'tug/match/ai/income',
+  'tug/match/player/income-upgrades',
+  'tug/match/ai/income-upgrades',
   'tug/match/player/units',
   'tug/match/ai/units',
 ];
 
 /**
- * Match orchestrator. Owns per-side fortress HP resources, match outcome,
- * counter-pivot tally, time-elapsed clock, units-sent counter, and the
- * match-boundary `Reset`. Subscribes to lane fortress-reached events and to
- * both side sequencers' `'start'` events for cross-side counter-pivot
- * inference + the player units-sent counter.
+ * Match orchestrator. Owns match outcome, counter-pivot tally, time-elapsed
+ * clock, units-sent counter, and the match-boundary `Reset`. Reads fortress
+ * HP from `FortressKey` (3c topology — fortress module owns the resources)
+ * and ends the match when either side's HP falls to 0. Subscribes to both
+ * side sequencers' `'start'` events for cross-side counter-pivot inference +
+ * the player units-sent counter.
  */
 export function createMatchModule(data: TugData): EngineModule {
   return {
     id: 'tug/match',
-    dependencies: ['tug/tuning', 'tug/match/lane', 'tug/match/player/units', 'tug/match/ai/units'],
+    dependencies: [
+      'tug/tuning',
+      'tug/match/fortress',
+      'tug/match/lane',
+      'tug/match/player/units',
+      'tug/match/ai/units',
+    ],
     install(ctx) {
-      const registry = ctx.inject(TugTuningRegistryKey);
       const lane = ctx.inject(LaneKey);
+      const fortress = ctx.inject(FortressKey);
       const playerSequencer = ctx.inject(SequencerKey.player);
       const aiSequencer = ctx.inject(SequencerKey.ai);
 
-      // Tunable wrap for the per-side fortress cap. Default closure reads
-      // `data.balance.fortressHp`; leaf 6's tuner pushes scopes against
-      // `'balance/fortressHp'` to bisect against match-duration probes.
-      // Single tunable shared by both sides — fortresses are symmetric.
-      const fortressMax = tunable<DecimalSource>(
-        registry,
-        'balance/fortressHp',
-        () => data.balance.fortressHp,
-      );
-
-      // Fortress HP starts at 0 (default). `start()` initializes both sides
-      // to `fortressMax.value` so a freshly-reset match runs with the
-      // currently-tuned cap. Resource registry registration is automatic via
-      // `createResource`.
-      const fortressHp: Record<Side, Resource<DecimalSource>> = {
-        player: createResource<DecimalSource>(0, {
-          id: 'fortress-hp-player',
-          displayName: `${data.theme.fortressName} (${data.theme.factionNames[0]})`,
-        }),
-        ai: createResource<DecimalSource>(0, {
-          id: 'fortress-hp-ai',
-          displayName: `${data.theme.fortressName} (${data.theme.factionNames[1]})`,
-        }),
-      };
+      // Fortress HP and the tunable hp max live in the fortress module
+      // (3c topology) — match injects via `FortressKey` so both lane (for
+      // engagement + damage) and match (for end-of-match detection) read
+      // the same per-side resources. Match-scope reset clears these via
+      // `TUG_MATCH_SCOPE_MODULES`; `start()` re-initializes through
+      // `fortress.start()`.
+      const fortressHp = fortress.hp;
 
       const outcome = persistent<MatchOutcome>(null, { name: 'outcome' });
       const matchTimeElapsed = persistent<number>(0, { name: 'matchTimeElapsed' });
@@ -143,9 +134,9 @@ export function createMatchModule(data: TugData): EngineModule {
       });
 
       function start(): void {
-        const cap = fortressMax.value;
-        fortressHp.player.value = cap;
-        fortressHp.ai.value = cap;
+        // Fortress hp init lives in the fortress module — keeps the
+        // resource owner authoritative for its own initialization.
+        fortress.start();
         // outcome / matchTimeElapsed / counters all sit at default after the
         // most-recent reset; explicit zero-set is redundant but harmless on
         // an initial-boot start() before any match has run.
@@ -168,20 +159,13 @@ export function createMatchModule(data: TugData): EngineModule {
         reset.reset();
       }
 
-      // Fortress damage wiring. Lane emits with the side that REACHED the
-      // opposing fortress; we decrement the OPPOSITE side's HP. When a side's
-      // HP hits zero, that side loses (`'ai-win'` if player fortress fell,
-      // `'player-win'` if AI fortress fell). Subscriptions live for engine
-      // lifetime — no per-module cleanup hook needed.
-      lane.on('fortress-reached', ({ side, damage }) => {
-        if (outcome.value !== null) return;
-        const target: Side = side === 'player' ? 'ai' : 'player';
-        const ok = subtractResource(fortressHp[target], damage);
-        if (!ok) fortressHp[target].value = 0;
-        if (Decimal.lte(fortressHp[target].value, 0)) {
-          end(target === 'ai' ? 'player-win' : 'ai-win');
-        }
-      });
+      // End-of-match detection. With fortress-as-unit, lane mutates
+      // `fortress.hp[side]` directly via the fortress unit's hp accessor
+      // when opposing units damage it in combat. Match doesn't subscribe
+      // to a `fortress-reached` event anymore — instead, the per-tick
+      // watcher below polls hp ≤ 0 and triggers `end()`. Polling beats a
+      // Vue `watch()` here since we already have an onTick hook for
+      // match-time elapsed; one effect chain instead of two.
 
       // Counter-pivot inference. Detection is intentionally placeholder —
       // simple "buy strong-counters AI's current dominant archetype"
@@ -228,10 +212,21 @@ export function createMatchModule(data: TugData): EngineModule {
       // measurement. No-op for now; subscribed so the wiring is in place.
       aiSequencer.on('start', () => {});
 
-      // Match-time clock + time-limit watcher.
+      // Match-time clock + fortress-fall + time-limit watcher.
       ctx.onTick((dt) => {
         if (outcome.value !== null) return;
         if (!inMatch.value) return;
+        // Fortress fell? The side whose fortress hits 0 loses. Lane
+        // damages the resources directly each tick via the fortress
+        // unit's hp accessor; we just observe.
+        if (Decimal.lte(fortressHp.player.value, 0)) {
+          end('ai-win');
+          return;
+        }
+        if (Decimal.lte(fortressHp.ai.value, 0)) {
+          end('player-win');
+          return;
+        }
         matchTimeElapsed.value += dt;
         const limitMin = data.balance.matchTimeLimitMinutes;
         if (limitMin > 0 && matchTimeElapsed.value >= limitMin * 60) {

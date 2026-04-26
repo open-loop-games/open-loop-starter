@@ -18,7 +18,6 @@ import type { TugBalance, TugTheme } from './types';
 
 export const TUG_BALANCE: TugBalance = {
   baseIncomeRate: 5,
-  fortressHp: 5_000,
   matchTimeLimitMinutes: 30,
   aiIncomeMultiplier: 1.0,
   aiSendCadenceSec: 4,

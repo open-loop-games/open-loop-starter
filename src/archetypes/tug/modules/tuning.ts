@@ -12,6 +12,13 @@ export type Side = 'player' | 'ai';
 
 export const SIDES: readonly Side[] = ['player', 'ai'];
 
+/** Length of the lane in lane-units. Direct-Strike-typical fixed length;
+ *  structural, not a tunable. Player spawns at 0, AI at `LANE_LENGTH`;
+ *  fortress positions mirror those endpoints. Shared between `lane.ts`
+ *  (movement/combat) and `fortress.ts` (fortress unit positioning) to
+ *  avoid drift between the two. */
+export const LANE_LENGTH = 100;
+
 /**
  * The keys leaf 6's Tier-C tuner perturbs via `pushScope`. Add new keys here
  * AND register them at the consumer site via `tunable(registry, key, ...)`.
@@ -20,9 +27,11 @@ export const SIDES: readonly Side[] = ['player', 'ai'];
 export type TugTunableKey =
   | 'balance/baseIncomeRate'
   | 'balance/aiIncomeMultiplier'
-  | 'balance/fortressHp'
+  | 'fortress/hp'
   | 'units/marine/cost'
   | 'units/siege-tank/cost'
+  | 'income-upgrades/refinery-1/cost'
+  | 'income-upgrades/refinery-1/multiplier'
   | 'counter-matrix/strongCounter'
   | 'counter-matrix/weakCounter';
 

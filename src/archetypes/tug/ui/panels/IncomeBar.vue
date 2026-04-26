@@ -1,20 +1,26 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useIncome, useTugData } from '../../composables';
+import { useIncome, useIncomeUpgrades, useTugData } from '../../composables';
 import { useFormatting } from '@/composables/useFormatting';
 
 /**
- * Income display. Shows player + AI accrual rates and current balances.
+ * Income display + player income-upgrade shop.
  *
- * Income upgrades are out of scope per OL-708 — the data layer carries
- * `incomeUpgrades` defs, but no engine module instantiates a purchasable
- * category for them yet. When the income-upgrades module lands as a
- * fork-extension or follow-up, render the upgrade tiles inside this panel
- * gated on `IncomeUpgradesKey` / category presence.
+ * Top row: per-side accrual rates and current balances. AI rate shown is
+ * the displayed multiplier × baseRate; the runtime rate flows through
+ * `incomeRateChain` and includes any AI upgrade multipliers it has bought,
+ * but rendering the chain'd rate per side requires injecting the chain
+ * here. Keeping the displayed rate as the static-config preview avoids the
+ * cross-Vue-brand chain unwrap; live balances reflect actual accrual.
+ *
+ * Tile row: player income-upgrade tiers — sequential, tier N requires
+ * tier N-1 bought. Disabled state covers both unaffordable AND
+ * sequentially-gated cases; engine's `canPurchase` is the unified flag.
  */
 const data = useTugData();
 const player = useIncome('player');
 const ai = useIncome('ai');
+const playerUpgrades = useIncomeUpgrades('player');
 const { format } = useFormatting();
 
 const baseRate = computed(() => Number(data.balance.baseIncomeRate));
@@ -26,19 +32,50 @@ const resourceLabel = computed(() => data.theme.resourceName.plural);
 
 <template>
   <div class="income-bar">
-    <div class="income-bar__row income-bar__row--player">
-      <span class="income-bar__label">{{ data.theme.factionNames[0] }}</span>
-      <span class="income-bar__rate">+{{ format(baseRate, 1) }} {{ resourceLabel }}/s</span>
-      <span class="income-bar__balance">
-        {{ format(player.value.value, 0) }}
-      </span>
+    <div class="income-bar__rows">
+      <div class="income-bar__row income-bar__row--player">
+        <span class="income-bar__label">{{ data.theme.factionNames[0] }}</span>
+        <span class="income-bar__rate">+{{ format(baseRate, 1) }} {{ resourceLabel }}/s</span>
+        <span class="income-bar__balance">
+          {{ format(player.value.value, 0) }}
+        </span>
+      </div>
+      <div class="income-bar__row income-bar__row--ai">
+        <span class="income-bar__label">{{ data.theme.factionNames[1] }}</span>
+        <span class="income-bar__rate">+{{ format(aiRate, 1) }} {{ resourceLabel }}/s</span>
+        <span class="income-bar__balance">
+          {{ format(ai.value.value, 0) }}
+        </span>
+      </div>
     </div>
-    <div class="income-bar__row income-bar__row--ai">
-      <span class="income-bar__label">{{ data.theme.factionNames[1] }}</span>
-      <span class="income-bar__rate">+{{ format(aiRate, 1) }} {{ resourceLabel }}/s</span>
-      <span class="income-bar__balance">
-        {{ format(ai.value.value, 0) }}
-      </span>
+    <div class="income-bar__upgrades">
+      <button
+        v-for="row in playerUpgrades.rows.value"
+        :key="row.def.id"
+        class="upgrade-tile"
+        :class="{
+          'upgrade-tile--bought': row.bought.value,
+          'upgrade-tile--ready': row.canPurchase.value && !row.bought.value,
+        }"
+        :disabled="!row.canPurchase.value || row.bought.value"
+        :title="`×${row.def.multiplier} income`"
+        @click="row.buy()"
+      >
+        <div class="upgrade-tile__title">
+          {{ row.def.name }}
+        </div>
+        <div class="upgrade-tile__effect">
+          ×{{ row.def.multiplier }}
+        </div>
+        <div class="upgrade-tile__cost">
+          <template v-if="row.bought.value">
+            bought
+          </template>
+          <template v-else>
+            {{ format(row.cost.value, 0) }} {{ resourceLabel }}
+          </template>
+        </div>
+      </button>
     </div>
   </div>
 </template>
@@ -46,11 +83,17 @@ const resourceLabel = computed(() => data.theme.resourceName.plural);
 <style scoped>
 .income-bar {
   display: flex;
-  gap: var(--gap);
+  flex-direction: column;
+  gap: var(--gap-sm);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: var(--gap-sm) var(--gap);
+}
+
+.income-bar__rows {
+  display: flex;
+  gap: var(--gap);
 }
 
 .income-bar__row {
@@ -81,5 +124,62 @@ const resourceLabel = computed(() => data.theme.resourceName.plural);
 .income-bar__balance {
   margin-left: auto;
   font-weight: 600;
+}
+
+.income-bar__upgrades {
+  display: flex;
+  gap: var(--gap-sm);
+}
+
+.upgrade-tile {
+  flex: 1 1 0;
+  text-align: left;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius) * 0.75);
+  padding: var(--gap-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.upgrade-tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.upgrade-tile:not(:disabled):hover {
+  border-color: var(--color-primary, #4a9eff);
+}
+
+.upgrade-tile--ready {
+  border-color: var(--color-primary, #4a9eff);
+}
+
+.upgrade-tile--bought {
+  border-color: var(--color-success, #4caf50);
+  background: color-mix(in srgb, var(--color-success, #4caf50) 12%, var(--color-bg));
+  opacity: 1;
+}
+
+.upgrade-tile__title {
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.upgrade-tile__effect {
+  font-size: 0.85em;
+  color: var(--color-text-muted, var(--color-text));
+}
+
+.upgrade-tile__cost {
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
 }
 </style>

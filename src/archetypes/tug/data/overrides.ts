@@ -1,6 +1,7 @@
 import type {
   AbilityDef,
   CounterMatrix,
+  FortressDef,
   IncomeUpgradeDef,
   TugBalance,
   TugData,
@@ -27,6 +28,7 @@ export interface TugOverrides {
   incomeUpgrades?: Array<Partial<IncomeUpgradeDef> & { id: string }>;
   abilities?: Array<Partial<AbilityDef> & { id: string }>;
   counterMatrix?: CounterMatrix;
+  fortress?: Partial<FortressDef>;
   balance?: Partial<TugBalance>;
   theme?: Partial<TugTheme>;
 }
@@ -38,6 +40,7 @@ export function applyTugOverrides(base: TugData, overrides: TugOverrides | undef
     incomeUpgrades: mergeById(base.incomeUpgrades, overrides.incomeUpgrades, 'incomeUpgrades'),
     abilities: mergeById(base.abilities, overrides.abilities, 'abilities'),
     counterMatrix: overrides.counterMatrix ?? base.counterMatrix,
+    fortress: overrides.fortress ? { ...base.fortress, ...overrides.fortress } : base.fortress,
     balance: overrides.balance ? { ...base.balance, ...overrides.balance } : base.balance,
     theme: overrides.theme ? { ...base.theme, ...overrides.theme } : base.theme,
   };

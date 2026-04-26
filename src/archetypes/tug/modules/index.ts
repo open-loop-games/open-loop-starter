@@ -1,7 +1,9 @@
 import type { EngineModule } from 'open-loop-engine';
 import type { TugData } from '../data/types';
 import { createTuningModule } from './tuning';
+import { createFortressModule } from './fortress';
 import { createIncomeSideModule } from './income';
+import { createIncomeUpgradesSideModule } from './income-upgrades';
 import { createLaneModule } from './lane';
 import { createUnitsSideModule } from './units';
 import { createCategoriesModule } from './categories';
@@ -12,6 +14,7 @@ import { createArcModule } from './arc';
 import { createPrestigeModule } from './prestige';
 
 export {
+  LANE_LENGTH,
   SIDES,
   TugDataKey,
   TugTuningRegistryKey,
@@ -19,7 +22,9 @@ export {
   type TugTunableKey,
   type TugTunables,
 } from './tuning';
-export { IncomeKey } from './income';
+export { FortressKey, type FortressApi } from './fortress';
+export { IncomeKey, IncomeRateChainKey } from './income';
+export { IncomeUpgradesKey } from './income-upgrades';
 export { LaneKey, type LaneApi, type LaneEvents, type UnitInstance } from './lane';
 export { UnitsKey, SequencerKey, UnitsCooldownKey, type UnitSendMeta } from './units';
 export {
@@ -51,22 +56,29 @@ export { PrestigeKey } from './prestige';
  *  1. `tug/tuning` — registry + data publish; OUTSIDE match-scope so leaf-6
  *     pushed scopes survive match resets.
  *  2. `tug/match/<side>/income` — per-side mineral resources.
- *  3. `tug/match/lane` — single shared module; both sides' unit arrays +
- *     cross-side combat.
- *  4. `tug/match/<side>/units` — per-side shop + sequencer + cooldowns.
- *  5. `tug/categories` — aggregator; both sides' unit shops.
- *  6. `tug/match` — match orchestrator; subscribes to lane + sequencers.
- *  7. `tug/match/ai-opponent` — AI policy. Strict-after-units ordering so
+ *  3. `tug/match/fortress` — per-side fortress HP resources + fortress
+ *     `UnitInstance` for the lane's engagement model. Lives between
+ *     income and lane so lane can inject the fortress units.
+ *  4. `tug/match/lane` — single shared module; both sides' unit arrays +
+ *     cross-side combat (fortress treated as just-another opposing unit).
+ *  5. `tug/match/<side>/units` — per-side shop + sequencer + cooldowns.
+ *  6. `tug/categories` — aggregator; both sides' unit shops.
+ *  7. `tug/match` — match orchestrator; injects fortress + lane +
+ *     sequencers.
+ *  8. `tug/match/ai-opponent` — AI policy. Strict-after-units ordering so
  *     `UnitsKey.ai` is provided before the AI tries to read it.
- *  8. `tug/meta` — cross-match state container.
- *  9. `tug/meta/arc` — beat-7 closure predicate.
- * 10. `tug/meta/prestige` — conditional; only when meta-progression is on.
+ *  9. `tug/meta` — cross-match state container.
+ * 10. `tug/meta/arc` — beat-7 closure predicate.
+ * 11. `tug/meta/prestige` — conditional; only when meta-progression is on.
  */
 export function createTugModules(data: TugData): EngineModule[] {
   const modules: EngineModule[] = [
     createTuningModule(data),
     createIncomeSideModule(data, 'player'),
     createIncomeSideModule(data, 'ai'),
+    createIncomeUpgradesSideModule(data, 'player'),
+    createIncomeUpgradesSideModule(data, 'ai'),
+    createFortressModule(data),
     createLaneModule(data),
     createUnitsSideModule(data, 'player'),
     createUnitsSideModule(data, 'ai'),

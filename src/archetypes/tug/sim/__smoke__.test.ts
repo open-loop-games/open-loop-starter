@@ -47,13 +47,14 @@ describe('tug engine smoke', () => {
     expect(engine.tryInject(UnitsCooldownKey.ai)).toBeDefined();
 
     const cats = engine.tryInject(CategoriesKey);
-    expect(cats?.purchasables?.length).toBe(2);
+    // Two unit shops + two income-upgrade shops.
+    expect(cats?.purchasables?.length).toBe(4);
 
     const reg = engine.tryInject(TugTuningRegistryKey);
     for (const key of [
       'balance/baseIncomeRate',
       'balance/aiIncomeMultiplier',
-      'balance/fortressHp',
+      'fortress/hp',
       'units/marine/cost',
       'units/siege-tank/cost',
       'counter-matrix/strongCounter',

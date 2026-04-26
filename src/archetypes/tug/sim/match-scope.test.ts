@@ -12,6 +12,7 @@ import { DEFAULT_TUG_DATA, applyTugOverrides, type TugOverrides } from '../data'
 import {
   createTugModules,
   IncomeKey,
+  IncomeUpgradesKey,
   LaneKey,
   MatchKey,
   MetaKey,
@@ -44,7 +45,9 @@ describe('tug engine smoke', () => {
     const cats = engine.tryInject(CategoriesKey);
     const playerUnits = engine.tryInject(UnitsKey.player);
     const aiUnits = engine.tryInject(UnitsKey.ai);
-    expect(cats?.purchasables).toEqual([playerUnits, aiUnits]);
+    const playerUpgrades = engine.tryInject(IncomeUpgradesKey.player);
+    const aiUpgrades = engine.tryInject(IncomeUpgradesKey.ai);
+    expect(cats?.purchasables).toEqual([playerUnits, aiUnits, playerUpgrades, aiUpgrades]);
     expect(engine.tryInject(LaneKey)).toBeDefined();
     expect(engine.tryInject(SequencerKey.player)).toBeDefined();
     expect(engine.tryInject(SequencerKey.ai)).toBeDefined();
@@ -62,13 +65,16 @@ describe('tug engine smoke', () => {
     expect(engine.tryInject(PrestigeKey)).toBeDefined();
   });
 
-  it('TUG_MATCH_SCOPE_MODULES enumerates the seven match-scope module ids', () => {
+  it('TUG_MATCH_SCOPE_MODULES enumerates the ten match-scope module ids', () => {
     expect(TUG_MATCH_SCOPE_MODULES).toEqual([
       'tug/match',
       'tug/match/ai-opponent',
+      'tug/match/fortress',
       'tug/match/lane',
       'tug/match/player/income',
       'tug/match/ai/income',
+      'tug/match/player/income-upgrades',
+      'tug/match/ai/income-upgrades',
       'tug/match/player/units',
       'tug/match/ai/units',
     ]);

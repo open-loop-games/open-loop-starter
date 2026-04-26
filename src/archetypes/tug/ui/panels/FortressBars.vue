@@ -8,7 +8,7 @@ const data = useTugData();
 const match = useMatch();
 const { format } = useFormatting();
 
-const fortressMax = computed(() => Number(data.balance.fortressHp));
+const fortressMax = computed(() => Number(data.fortress.hp));
 
 const playerHp = computed(() => Number(match.fortressHp.player.value));
 const aiHp = computed(() => Number(match.fortressHp.ai.value));

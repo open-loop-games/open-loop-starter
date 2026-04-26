@@ -1,11 +1,14 @@
 import {
   Decimal,
   addResource,
+  createModifierChain,
+  createMultiplicativeModifier,
   createResource,
   tunable,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
+  type ModifierChain,
   type Resource,
 } from 'open-loop-engine';
 import type { TugData } from '../data/types';
@@ -13,14 +16,27 @@ import { type Side, TugTuningRegistryKey } from './tuning';
 
 /**
  * Per-side mineral resource. Player side spends from the unit shop's cost
- * requirement; AI side spends from `createAiOpponentModule` (leaf 4). Both
- * sides accrue at `data.balance.baseIncomeRate * dt`, AI side multiplied
- * additionally by `data.balance.aiIncomeMultiplier` — the primary leaf-6
- * Tier-C bisection axis.
+ * requirement; AI side spends from `createAiOpponentModule` (leaf 4).
  */
 export const IncomeKey: Record<Side, InjectionKey<Resource<DecimalSource>>> = {
   player: Symbol('tug/match/player/income') as InjectionKey<Resource<DecimalSource>>,
   ai: Symbol('tug/match/ai/income') as InjectionKey<Resource<DecimalSource>>,
+};
+
+/**
+ * Per-side income-rate modifier chain. Sibling modules (`income-upgrades`,
+ * future buffs/penalties) bind multiplicative modifiers onto this chain
+ * instead of folding state into the income tick by hand. The tick reads
+ * `chain.apply(baseRate)` each frame; chain registry membership is
+ * automatic via `createModifierChain`.
+ *
+ * AI side's `aiIncomeMultiplier` is itself a bound modifier on this chain
+ * — a single composition path, no special-cased branches in the tick
+ * callback.
+ */
+export const IncomeRateChainKey: Record<Side, InjectionKey<ModifierChain>> = {
+  player: Symbol('tug/match/player/income-rate-chain') as InjectionKey<ModifierChain>,
+  ai: Symbol('tug/match/ai/income-rate-chain') as InjectionKey<ModifierChain>,
 };
 
 export function createIncomeSideModule(data: TugData, side: Side): EngineModule {
@@ -39,34 +55,39 @@ export function createIncomeSideModule(data: TugData, side: Side): EngineModule 
       // Both sides register `balance/baseIncomeRate` against the shared
       // registry — `tunable()` is built on `setDefault`, which no-ops on the
       // second call, so the first install wins and both sides read the same
-      // (scope-perturbable) value. Only the AI side registers
-      // `balance/aiIncomeMultiplier`; the player side has no AI multiplier.
-      //
-      // No `chain.bind` here — Ambient's `tier1BaseRate` idiom binds onto a
-      // pre-existing `producer.rateChain`. Tug's income has no producer
-      // category to bind against; reading both tunables directly inside the
-      // tick callback covers the same `pushScope` perturbation surface.
+      // (scope-perturbable) value. The chain composes the rest: AI side
+      // binds `aiIncomeMultiplier` as a multiplicative modifier; income-
+      // upgrades binds per-tier multipliers per-side. Tick reads
+      // `chain.apply(baseRate.value) * dt` for the per-tick accrual.
       const baseRate = tunable<DecimalSource>(
         registry,
         'balance/baseIncomeRate',
         () => data.balance.baseIncomeRate,
       );
-      const aiMult =
-        side === 'ai'
-          ? tunable<DecimalSource>(
-              registry,
-              'balance/aiIncomeMultiplier',
-              () => data.balance.aiIncomeMultiplier,
-            )
-          : null;
+
+      const incomeRateChain = createModifierChain(`tug/match/${side}/income-rate`);
+
+      if (side === 'ai') {
+        const aiMult = tunable<DecimalSource>(
+          registry,
+          'balance/aiIncomeMultiplier',
+          () => data.balance.aiIncomeMultiplier,
+        );
+        incomeRateChain.bind({
+          modifier: createMultiplicativeModifier({
+            multiplier: aiMult,
+            description: 'AI income multiplier',
+          }),
+        });
+      }
 
       ctx.onTick((dt) => {
-        const base: DecimalSource = baseRate.value;
-        const mult: DecimalSource = aiMult ? aiMult.value : 1;
-        addResource(income, Decimal.mul(Decimal.mul(base, mult), dt));
+        const rate = incomeRateChain.apply(baseRate.value);
+        addResource(income, Decimal.mul(rate, dt));
       });
 
       ctx.provide(IncomeKey[side], income);
+      ctx.provide(IncomeRateChainKey[side], incomeRateChain);
     },
   };
 }

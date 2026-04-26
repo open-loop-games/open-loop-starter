@@ -13,7 +13,9 @@ export interface LaneView {
   /** Normalize an absolute lane position into 0..1 left-to-right.
    *  Player spawns at 0 (left), AI spawns at laneLength (right). */
   normalize(position: number): number;
-  /** Subscribe to lane events (fortress-reached / unit-killed). */
+  /** Subscribe to lane events (`unit-killed`). Fortress damage is no
+   *  longer event-routed — it flows through the fortress unit's hp
+   *  accessor in lane combat; match.ts watches the resource directly. */
   on: LaneApi['on'];
 }
 
