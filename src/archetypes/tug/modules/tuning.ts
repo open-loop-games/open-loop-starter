@@ -20,6 +20,7 @@ export const SIDES: readonly Side[] = ['player', 'ai'];
 export type TugTunableKey =
   | 'balance/baseIncomeRate'
   | 'balance/aiIncomeMultiplier'
+  | 'balance/fortressHp'
   | 'units/marine/cost'
   | 'units/siege-tank/cost'
   | 'counter-matrix/strongCounter'
