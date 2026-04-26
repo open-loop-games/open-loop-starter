@@ -1,0 +1,28 @@
+import { inject, computed, type ComputedRef } from 'vue';
+import type { DecimalSource, Engine, Resource } from 'open-loop-engine';
+import { IncomeKey, type Side } from '../modules';
+
+export interface IncomeRow {
+  side: Side;
+  resource: Resource<DecimalSource>;
+  /** Convenience: resource value as a reactive computed for templates. */
+  value: ComputedRef<DecimalSource>;
+}
+
+/**
+ * Per-side mineral resource. Player consumes via the unit shop's cost
+ * requirement; AI consumes via `ai-opponent.ts`. Both sides accrue inside
+ * `income.ts` ticks; readers here just inject and surface the live ref.
+ */
+export function useIncome(side: Side): IncomeRow {
+  const engine = inject<Engine>('engine');
+  const resource = engine?.tryInject(IncomeKey[side]);
+  if (!resource) {
+    throw new Error(`useIncome(${side}) called outside an active tug engine`);
+  }
+  return {
+    side,
+    resource,
+    value: computed(() => resource.value),
+  };
+}

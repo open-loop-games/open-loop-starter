@@ -21,7 +21,7 @@ export {
 } from './tuning';
 export { IncomeKey } from './income';
 export { LaneKey, type LaneApi, type LaneEvents, type UnitInstance } from './lane';
-export { UnitsKey, SequencerKey, type UnitSendMeta } from './units';
+export { UnitsKey, SequencerKey, UnitsCooldownKey, type UnitSendMeta } from './units';
 export {
   MatchKey,
   TUG_MATCH_SCOPE_MODULES,

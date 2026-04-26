@@ -35,6 +35,16 @@ export const SequencerKey: Record<Side, InjectionKey<Sequencer<UnitSendMeta>>> =
   ai: Symbol('tug/match/ai/sequencer') as InjectionKey<Sequencer<UnitSendMeta>>,
 };
 
+/** Per-archetype send cooldown timers, exposed so the UI's UnitShop can render
+ *  cooldown progress reactively. The sequencer's `canRun` already gates dispatch
+ *  via these refs — exposure is consumer-side display only. */
+export const UnitsCooldownKey: Record<Side, InjectionKey<Record<string, Persistent<number>>>> = {
+  player: Symbol('tug/match/player/units-cooldown') as InjectionKey<
+    Record<string, Persistent<number>>
+  >,
+  ai: Symbol('tug/match/ai/units-cooldown') as InjectionKey<Record<string, Persistent<number>>>,
+};
+
 // Unit ids whose `cost` is registered with the tuning registry. Other units
 // pass `def.cost` through unchanged. Mirrors Ambient's `TUNABLE_BASE_COST_IDS`
 // pattern — opt-in keeps the leaf-6 bisection surface narrow and greppable.
@@ -134,6 +144,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
 
       ctx.provide(UnitsKey[side], shop);
       ctx.provide(SequencerKey[side], sequencer);
+      ctx.provide(UnitsCooldownKey[side], cooldown);
     },
   };
 }
