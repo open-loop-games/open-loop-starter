@@ -4,6 +4,7 @@ export {
   type ProducerBootResult,
   type ProducerEngineOptions,
 } from './boot';
+export { manifest } from './manifest';
 export {
   DEFAULT_PRODUCER_DATA,
   PRODUCERS,

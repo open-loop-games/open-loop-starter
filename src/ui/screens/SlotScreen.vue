@@ -7,6 +7,7 @@ import ModPicker from '@/ui/components/ModPicker.vue';
 
 const props = defineProps<{
   engine: Engine;
+  appName: string;
 }>();
 
 const emit = defineEmits<{
@@ -59,7 +60,7 @@ function handleDeleteSlot(slotId: number) {
 <template>
   <div class="slot-screen">
     <h1 class="title">
-      Open Loop Starter
+      {{ props.appName }}
     </h1>
 
     <div

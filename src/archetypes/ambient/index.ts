@@ -4,6 +4,7 @@ export {
   type AmbientBootResult,
   type AmbientEngineOptions,
 } from './boot';
+export { manifest } from './manifest';
 export {
   DEFAULT_AMBIENT_DATA,
   ACHIEVEMENTS,

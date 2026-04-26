@@ -11,6 +11,7 @@ import Popover from '@/ui/components/Popover.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 import { useToasts } from '@/composables/useToasts';
+import { manifest } from '../manifest';
 import { ArcKey } from '../modules';
 import HeadlinePanel from './panels/HeadlinePanel.vue';
 import ProducerPanel from './panels/ProducerPanel.vue';
@@ -120,6 +121,7 @@ function getActiveModules(): EngineModule[] {
   <SlotScreen
     v-if="currentScreen === Screen.Slots"
     :engine="engine"
+    :app-name="manifest.name"
     @start="startGame"
   />
   <AppFrame

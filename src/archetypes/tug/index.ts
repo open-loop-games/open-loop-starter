@@ -1,4 +1,5 @@
 export { createApp, createTugEngine, type TugBootResult, type TugEngineOptions } from './boot';
+export { manifest } from './manifest';
 export {
   DEFAULT_TUG_DATA,
   ABILITIES,
