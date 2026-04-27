@@ -134,7 +134,8 @@ Per the post-2026-04-20 data-first convention (see Producer + Ambient `data/type
 **Match balance** (`data/balance.ts`):
 - `fortressHp: DecimalSource` (per-side starting HP; match ends when either side hits 0).
 - `matchTimeLimitMinutes: number` (default `30`; `0` = no limit, score resolution at limit).
-- `aiIncomeMultiplier: number` (default `1.0`; primary leaf-6 tuning knob via `tunable()`).
+- `aiIncomeMultiplier: number` (default `1.0`). Side-symmetric default; AI-quirk knob (one-side throughput tax), not a balance lever.
+- `believability: TugBelievability` (default `{ suboptimalityRate: 0, cadenceJitterScale: 0 }`). Calibration constraint on bot decision execution per `composition-cookbook/parameterized-personality.md` § Believability-calibration discipline. Suboptimality wraps the picker with a probability of swapping best→second-best; cadence jitter applies multiplicative ±noise to the persona-scaled cadence threshold. Production = 0/0 (deterministic, predictable for human player); sim default = 0.20/0.25 (set by `buildTugSimEngine`). Separate from `Persona` (different design semantics, different tuning timelines).
 - `metaProgressionThresholds: number[]` (when `metaProgressionEnabled`).
 
 **Predicate interface** (`data/types.ts` — `TugGameState`, mirrors Ambient's `AmbientGameState` pattern from consumer-guide § "Data and runtime separation"). Methods bridge data-side predicates to live engine state: `playerFortressHpAtLeast(amount)`, `aiFortressHpAtLeast(amount)`, `unitsSentByPlayerAtLeast(archetypeId, n)`, `counterPivotsThisMatchAtLeast(n)`, `factionsUnlockedAtLeast(n)`, `matchOutcomeIs('player-win' | 'ai-win' | 'time-limit' | null)`, `secondsSinceMatchStart()`, `secondsSinceArcStart()`. Modules implement the interface over live injection-key refs.
@@ -147,19 +148,22 @@ Per the post-2026-04-20 data-first convention (see Producer + Ambient `data/type
 
 ## 6. Balance probes
 
-Tug is the **first Tier-C archetype** per `archetypes/BALANCING.md` § Tier C — adversarial, distribution-statistic balance, no Gauss-Seidel single-knob solver. Probes split into two classes by what tool reads them: math-only locks (single `runUntil` call, deterministic bot, fire-time band) and Monte Carlo distribution-statistic probes (multi-seed `runMatrixUntil`, win-rate / match-length distributions).
+> **History marker (2026-04-27):** an earlier probe table listed `ai-difficulty-symmetry` as the SIGNATURE probe (perturbing `aiIncomeMultiplier` against a player-win-rate band). Rolled back as a category error per OL-711 reopen / OL-730 rescope — `aiIncomeMultiplier` is an AI-quirk knob, not a balance lever. Replaced by `counter-strong-sensitivity` (sweeps `counter-matrix/strongCounter`, a real design parameter). The math-only / MC split and test-stub patterns below stand.
+
+Tug is the **first Tier-C archetype** per `archetypes/BALANCING.md` § Tier C — adversarial, distribution-statistic balance, no Gauss-Seidel single-knob solver. Probes split into two classes by what tool reads them: math-only locks (single `runUntil` call, deterministic bot at `believability: 0/0`, fire-time band) and Monte Carlo distribution-statistic probes (multi-seed `runMatrixUntil` with sim-default believability noise, win-rate / match-length distributions).
 
 | Probe | Class | Perturbation | Target beat(s) | Tolerance | Rationale |
 |-------|-------|--------------|----------------|-----------|-----------|
-| `income-rate-baseline` | math-only lock | `baseIncomeRate` ×[0.75, 1.25] | 1, 2, 4 | Beat sim-time ±20% | Onboarding and first-match length pivot off income; deterministic fire-time band — no MC needed |
-| `unit-cost-scaling` | math-only lock | `unitCosts` ×[0.85, 1.15] (uniform across archetypes) | 2, 3, 5 | Beat sim-time ±25% | Cost scaling determines send cadence; deterministic under fixed-policy bot |
-| `counter-matrix-sharpness` | distribution-statistic (MC) | Strong-counter multiplier ×[0.75, 1.25], weak-counter divisor symmetric | 3, 6 | counter-pivot success-rate ≥ 0.55 across 20 seeds; beat 3 mean fire-time ±30% | The matrix interacts with the AI's send choices; outcomes are stochastic. Replaces "modifier-chain depth" framing — counter matrix is data-table lookup (§ 3) |
-| `ai-difficulty-symmetry` | distribution-statistic (MC) | `aiIncomeMultiplier` ×[0.9, 1.1] | 4 | Player-win-rate ∈ [0.4, 0.6] across **20 seeds** | The signature Tier-C probe. Bernoulli outcome over multi-seed MC; binomial CI half-width ≈ 0.22 at p=0.5 with N=20, so the tolerance band is wider than the CI by design. Leaf 6 may bump to N=50 if convergence is loose |
-| `match-duration-bound` | distribution-statistic (MC) | Default vars, **30 seeds** | 4 | Median (p50) match length ∈ [50%, 95%] of `matchTimeLimitMinutes`; zero time-limit-triggered outcomes | Read off `aggregateUntilCell.terminationTime.p50`; any time-limit termination signals broken win-condition |
+| `income-rate-baseline` | math-only lock | `baseIncomeRate` ×[0.75, 1.25], believability=0 | 1, 2, 4 | Beat sim-time ±20% | Onboarding and first-match length pivot off income; deterministic fire-time band — no MC needed |
+| `unit-cost-scaling` | math-only lock | `unitCosts` ×[0.85, 1.15] (uniform across archetypes), believability=0 | 2, 3, 5 | Beat sim-time ±25% | Cost scaling determines send cadence; deterministic under fixed-policy bot |
+| `counter-strong-sensitivity` | distribution-statistic (MC) **[SIGNATURE]** | `counter-matrix/strongCounter` sweep ∈ {0.5, 0.75, 1.0, 1.25, 1.5}, sim-default believability | n/a (curve-shaped) | Curve is non-decreasing across sweep; depth target is counter-side win-rate ≥ 0.5 with elbow-room before saturation (≥5pp absolute Δ to next variant) | The signature Tier-C probe. Sweeps a real design parameter (matrix decisiveness) against counter-side win-rate via a local `runSensitivityUntil` helper that emulates engine `runSensitivity` over `runMatrixUntil + diffAggregates` (predicate-bounded termination). Reports curve + proposed `strongCounter` scalar |
+| `match-duration-bound` | distribution-statistic (MC) | Default vars, **30 seeds** | 4 | Median (p50) match length ∈ [50%, 95%] of `matchTimeLimitMinutes`; in-match `time-limit` outcome rate = 0 | Read p50 off `aggregateUntilCell.terminationTime.p50`; time-limit rate via `tug-outcome.isFirstTimeLimit.avg` (not engine `terminationCounts.maxSimTime` — engine reports `predicate` once `matchEnded` fires regardless of in-game outcome) |
 
-**Minimum probe count:** 5 (exceeds ≥4 requirement). Math-only locks (probes 1–2) ride the same vitest-suite pattern as Producer/Ambient: a `runUntil`-driven single-pass beat-time assertion in `sim/balance.probe.test.ts`. Distribution-statistic probes (probes 3–5) cannot ride the math-only lock pattern — they require multi-seed `runMatrixUntil` runs and assert on aggregate distributions. Leaf 6 documents the split explicitly in `balance/probes.ts`; the regression-lock layer in `sim/balance.probe.test.ts` carries fixed-seed `runMatrixUntil` calls so distribution probes are reproducible.
+**Believability calibration bundle.** `TugBelievability { suboptimalityRate, cadenceJitterScale }` on `TugBalance` per `composition-cookbook/parameterized-personality.md` § Believability-calibration discipline. Production = 0/0 (deterministic AI, predictable for the human player); sim default = 0.20/0.25. Suboptimality wraps the bot's picker with a probability of swapping best→second-best; cadence jitter applies multiplicative ±noise to the persona-scaled cadence threshold. Each side has an independent seeded RNG stream (lazy-initialized in `onTick` after `seedRNG` runs, side-keyed offset) so toggling believability never shifts the global `random()` state.
 
-The counter matrix is the archetype's signature depth generator; `ai-difficulty-symmetry` is the signature probe and the one most likely to catch tuning drift across forks. `counter-matrix-sharpness` is the depth-probe (does the matrix actually create counter-reads, or do players win without pivoting?).
+**Probe count:** 4 (exceeds ≥4 requirement). The `counter-matrix-sharpness` probe from the earlier table merges into `counter-strong-sensitivity` as the SIGNATURE probe — the sweep characterizes matrix sharpness as a sensitivity curve rather than a fixed-perturbation pass/fail. Math-only locks (probes 1, 2) ride the same vitest-suite pattern as Producer/Ambient. Distribution-statistic probes (probes 3, 5) require multi-seed `runMatrixUntil` runs and assert on aggregate distributions. The split is documented inline in `balance/probes.ts`.
+
+**SIGNATURE matchup balance is a follow-up.** At current data balance, `counter-strong-sensitivity` reports a flat curve with `proposed strongCounter ≈ null` because the underlying matchup imbalance dominates the matrix sensitivity signal. The framework primitives (`TugBelievability` bundle, `runSensitivityUntil` helper, lazy seeded RNG) all work; balance discovery for the SIGNATURE matchup is filed as the procedural-persona tester-seat agent follow-up (`procedural-personas.md` § Tester-seat primary use).
 
 ---
 
@@ -210,44 +214,50 @@ describe('tug — beat map (math-only locks)', () => {
 });
 
 describe('tug — distribution-statistic probes (Tier-C, multi-seed)', () => {
-  it('ai-difficulty-symmetry: playerScore in [0.4, 0.6] across 20 seeds at default vars', () => {
+  it('counter-strong-sensitivity: monotonic curve across the strongCounter sweep', () => {
     const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
     let activeCapture: OutcomeCapture | null = null;
-    const result = runMatrixUntil({
-      cells: [
-        {
-          name: 'default',
-          buildEngine: () => buildTugSimEngine(),
-          analyzers: (engine) => {
-            const cap = createOutcomeCapture(engine);
-            activeCapture = cap;
-            return [createOutcomeAnalyzer(cap)];
-          },
+    function cellAtStrong(strong: number) {
+      return {
+        name: `strong=${strong}`,
+        buildEngine: () => buildTugSimEngine(),
+        analyzers: (engine: Engine) => {
+          const cap = createOutcomeCapture(engine);
+          activeCapture = cap;
+          const reg = engine.tryInject(TugTuningRegistryKey)!;
+          const cleanup = reg.pushScope(`probe:strong=${strong}`, {
+            'counter-matrix/strongCounter': () => strong,
+          });
+          return [
+            createOutcomeAnalyzer(cap),
+            { name: 'cleanup', onEnd: cleanup, summarize: () => ({ name: 'cleanup', metrics: {}, issues: [] }) },
+          ];
         },
-      ],
+        tickDelta: 1.0,
+      };
+    }
+    const lo = runMatrixUntil({
+      cells: [cellAtStrong(0.5)],
       seeds: SEEDS,
-      // `cell.runs[i]` has no `engine` field — `runMatrixUntil` builds a
-      // fresh engine per (cell, seed) and discards it. AND `match.end()`
-      // synchronously calls `reset.reset()` which wipes `outcome.value`
-      // back to `null` before the next predicate eval. The analyzer-side
-      // capture (`OutcomeCapture` subscribing to `match.on('matchEnded',
-      // ...)` pre-reset) bridges both gaps. `activeCapture` is module-
-      // local mutable indirection — safe because runMatrixUntil runs
-      // sequentially, one (cell, seed) at a time.
       until: () => activeCapture?.firstMatchEnded ?? false,
       maxSimTime: minutes(35),
     });
-    const cell = result.cells[0]!;
-    // Composite score: 1.0 = player-win, 0.5 = time-limit (neutral —
-    // neither side won), 0.0 = ai-win. With deterministic bots producing
-    // a step transition through the calibrated multiplier, time-limit
-    // terminations cluster at the band center. See bot.ts.
-    const playerScore = cell.aggregate.metrics['tug-outcome.playerScore']?.avg ?? 0;
-    expect(playerScore).toBeGreaterThanOrEqual(0.4);
-    expect(playerScore).toBeLessThanOrEqual(0.6);
+    const hi = runMatrixUntil({
+      cells: [cellAtStrong(1.5)],
+      seeds: SEEDS,
+      until: () => activeCapture?.firstMatchEnded ?? false,
+      maxSimTime: minutes(35),
+    });
+    // Coarse monotonicity: increasing matrix decisiveness should not
+    // decrease counter-side win-rate. Loose acceptance permits equality
+    // (flat curve at imbalanced data — see § 6 SIGNATURE follow-up note)
+    // but catches a regression where matrix wiring breaks.
+    const wrLo = lo.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0;
+    const wrHi = hi.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0;
+    expect(wrHi + 1e-9).toBeGreaterThanOrEqual(wrLo);
   });
 
-  it('match-duration-bound: median match length tracks the calibrated transition', () => {
+  it('match-duration-bound: matches resolve before the time limit', () => {
     const SEEDS = Array.from({ length: 30 }, (_, i) => i + 1);
     let activeCapture: OutcomeCapture | null = null;
     const result = runMatrixUntil({
@@ -268,23 +278,21 @@ describe('tug — distribution-statistic probes (Tier-C, multi-seed)', () => {
     });
     const agg = result.cells[0]!.aggregate;
     const limitSec = 30 * 60;
-    // At the calibrated multiplier (counter-vs-greed at 0.711) matches
-    // stalemate to the game's 30-min time-limit. p50 sits at the limit;
-    // `terminationCounts.maxSimTime` is 0 because the predicate fires
-    // when the GAME ends (not the harness) — the harness's 35-min
-    // ceiling is a buffer.
     expect(agg.terminationTime!.p50).toBeGreaterThanOrEqual(limitSec * 0.5);
     expect(agg.terminationTime!.p50).toBeLessThanOrEqual(limitSec);
-    expect(agg.terminationCounts.maxSimTime).toBe(0);
+    // In-match time-limit rate via analyzer (NOT engine-level
+    // `terminationCounts.maxSimTime` — that reads `predicate` once
+    // `matchEnded` fires, regardless of in-game outcome).
+    expect(agg.metrics['tug-outcome.isFirstTimeLimit']?.avg ?? 0).toBe(0);
   });
 
   // one it() per distribution probe from § 6
 });
 ```
 
-**Required test count:** 6 beats + 5 probes = 11 tests minimum (beat 4 omitted for the no-meta default per Ambient precedent — match-completion fires inline in the run; explicit beat-4 lock is redundant). Tests checked into `src/archetypes/tug/sim/balance.probe.test.ts`. Beat-shape tests live in `src/archetypes/tug/sim/tug.sim.test.ts` as `it.todo()` placeholders per Producer/Ambient convention until leaf 6's tuner converges; full beat verification rides the harness probes, not the vitest suite.
+**Required test count:** beat-shape tests + framework-correctness probes. Tests checked into `src/archetypes/tug/sim/balance.probe.test.ts`. Beat-shape tests live in `src/archetypes/tug/sim/tug.sim.test.ts` as `it.todo()` placeholders per Producer/Ambient convention until balance numbers converge; full beat verification rides the harness probes, not the vitest suite.
 
-**Representative-stubs escape hatch:** this doc shows 4 worked stubs (beat 1, beat 3, the signature AI-symmetry probe, match-duration-bound) and a `// one it() per ...` comment. Full enumeration lives in the test file.
+**Representative-stubs escape hatch:** this doc shows 3 worked stubs (beat 1, beat 3, the SIGNATURE counter-strong-sensitivity, match-duration-bound) and a `// one it() per ...` comment. Full enumeration lives in the test file.
 
 **API contract:** sim tests use `runUntil` (engine harness) for math-only locks and `runMatrixUntil` for distribution probes. `runHeadless` is the pure-tick variant (returns `HeadlineResult`); for predicate-bounded runs use `runUntil` + `runMatrixUntil` (returns `RunUntilResult` / `MatrixUntilResult` with `terminated`, `elapsedSimulated`, `terminationCounts`). The pre-2026-04-20 `runHeadless({ engine, until, maxSimTime, inputs })` signature does not exist — that was a doc-only sketch; the real API is the post-OL-661 `setup`/`tick`/`ticks`/`tickDelta`/`seed` shape for `runHeadless`, and `engine`/`until`/`maxSimTime`/`tickDelta`/`setup`/`seed` for `runUntil`.
 

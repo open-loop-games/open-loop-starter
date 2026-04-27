@@ -99,24 +99,21 @@ The template is excluded from `tsconfig.app.json` because its placeholders don't
 
 Tier B and Tier C archetypes still benefit from the template's `shape.ts` (identity separation is universal) and the ceremony discipline in `bot.ts` (any bot + solver pairing wants it). Tier C archetypes document in `shape.ts` what tool replaces the solver and why.
 
-### Tier-C worked example: Tug (OL-711)
+### Tier-C worked example: Tug (OL-711, rescoped via OL-730)
 
-Tug is the first concrete Tier-C archetype in the codebase. The four-file Tier-C template (`shape.ts` / `beats.ts` / `bot.ts` / `tune.ts`) lives at `src/archetypes/tug/balance/`. Cross-reference `shape.ts` Tier-C prose for the per-tool rationale.
+> **History marker (2026-04-27):** an earlier OL-711 close-out landed `aiIncomeMultiplier = 0.711` calibrated against `playerScore` (composite). Rolled back as a category error — `aiIncomeMultiplier` is an AI-quirk knob, not a balance lever, and `playerScore` was a step-function-smoothing composite. OL-730 rescoped to **counter-strong-sensitivity** as the SIGNATURE probe (sweeps `counter-matrix/strongCounter`, a real design parameter) gated on a believability calibration bundle (suboptimality + cadence jitter) at the bot's decision layer per cookbook discipline.
+
+Tug is the first concrete Tier-C archetype in the codebase. The four-file template (`shape.ts` / `beats.ts` / `bot.ts` / `tune.ts`) lives at `src/archetypes/tug/balance/`. Cross-reference `shape.ts` Tier-C prose for the per-tool rationale.
 
 Substitutions vs. Tier A:
 
-- `solve.ts` → `tune.ts`. `bisectTuner` over a `runMatrixUntil` distribution-statistic sampler, not a single-engine `runUntil` chain. Each cell = N-seed Monte Carlo; the sampler reduces to a scalar (win-rate, match-length p50) so 1-D bisection still applies.
+- `solve.ts` → `tune.ts`. **Sensitivity-shaped, not bisection-shaped.** Tug's signature is the matrix-sharpness response curve, not a single number found by 1-D bisection. `tune.ts` runs a sample sweep over `counter-matrix/strongCounter` and reports the curve plus a depth-target proposal. The four-file template stays intact for archetypes whose signature *is* bisection-shaped; Tug shows the sensitivity variant.
 - Single deterministic policy → bilateral-symmetric sim-bot (per-side install of the production opponent policy via `createOpponentBotModule(data, side)`). Per-side perturbation isolation seam documented in `open-loop-engine/docs/candidate-primitives.md` "Tier-C bilateral-symmetric sim-bot pattern".
-- Single bot policy → parameterized-personality roster (`data/personality.ts`). Sim sets a calibrated pair (`counter` player vs `greed` ai) via `buildTugSimEngine` overrides; production sets `data.balance.opponentPersona.ai`.
-- Win-rate band targeting + step-function bots → composite `playerScore` metric (treats time-limit termination as 0.5 — neutral outcome). Lets `bisectTuner` converge on the transition multiplier even though deterministic bots produce binary per-seed outcomes.
+- Single bot policy → **parameterized-personality roster + believability calibration bundle**. Personality (`data/personality.ts`) selects "what the agent wants to do"; believability (`TugBelievability` on `TugBalance`, suboptimality + cadence jitter) calibrates "how precisely it executes" per `composition-cookbook/parameterized-personality.md` § Believability-calibration discipline. Production runs deterministic (`believability: 0/0`); sim defaults > 0.
+- Local `runSensitivityUntil` helper. Engine `runSensitivity` runs fixed ticks via `runMatrix`; Tug needs match-end predicate termination, so `probes.ts` ships a local helper emulating the contract over `runMatrixUntil + diffAggregates`. Filed as engine candidate-primitive when a second consumer surfaces.
 - No `run.ts` script (per OL-625 carry-forward gotcha). `pnpm balance:tune:tug` and `pnpm balance:probes:tug` are the entry points.
 
-OL-711 closure landed `aiIncomeMultiplier = 0.711` against the sim default pair (counter-vs-greed). `bisectTuner` converged in 6 iterations to `playerScore = 0.500`. Probes pin the calibration as Tier-C locks in `sim/balance.probe.test.ts`; the comprehensive sweep with diagnostics lives behind `pnpm balance:probes:tug`.
-
-Known structural limitations (documented inline in `sim/balance.probe.test.ts`):
-
-- `meanCp` reads 0 because no current persona saves for counter units (siege-tank cost 150 unaffordable on baseline 5/sec at counter's tempo-first posture). Counter-pivot probe reports 0 by structure, not data drift.
-- Match resolutions cluster around two attractors: fast (~3-5min) wins or full game time-limit (30min) stalemates. Adding stochastic persona elements is a future ticket.
+**SIGNATURE matchup balance is a follow-up.** At current data balance, the SIGNATURE probe (`counter-strong-sensitivity`) reports a flat curve with `proposed strongCounter ≈ null` because the underlying matchup imbalance (counter-vs-greed at default `aiIncomeMultiplier=1.0` is heavily AI-favored; at OL-711's `0.711` it stalemates) dominates the matrix sensitivity signal. The framework primitives land cleanly; balance discovery for the SIGNATURE matchup is filed as the procedural-persona tester-seat agent follow-up per `procedural-personas.md` § Tester-seat primary use.
 
 ## What lives in an archetype's `balance/` folder
 
@@ -131,3 +128,6 @@ The sibling `sim/` folder holds the regression-lock tests that pin the numbers c
 
 - `src/balance/` — shared balance primitives (`runArcProbe`, `runFlowProbe`, `bisect`-like helpers) consumed by per-archetype solvers.
 - `_template.md` in this folder — archetype authoring template; references this doc in § 6.
+- `open-loop-research/practical/composition-cookbook/parameterized-personality.md` — believability-calibration discipline (suboptimality toggle + reaction/cadence calibration), separation of personality params from calibration params, decision-layer placement. The recipe for breaking parameterized-vs-parameterized mirror-cell stalemate without manufacturing the answer.
+- `open-loop-research/practical/composition-cookbook/procedural-personas.md` — tester-seat search-based agent with objective variation. Cookbook-canonical balance-probe agent for adversarial Tier-C archetypes; divergence between objectives reveals the strategy space.
+- `open-loop-engine/docs/api/INDEX.md` § harness — full Tier-C balance toolkit beyond `bisectTuner`: `runSensitivity`, `runMatrix`, `diffAggregates`, `coarseFineProbe`, `eventDrivenProbe`.
