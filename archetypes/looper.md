@@ -87,7 +87,7 @@ A thirty-minute session is a sequence of queue edits. You notice a skill that's 
 
 ## 4. Beat map
 
-The 1–2h arc compresses the reference-game scope (Idle Loops' 4–8h time-to-first-prestige becomes Looper's ~30–50 min time-to-first-meaningful-retention). Forks that want longer pacing tune up the time-resource pool and retention-curve slope.
+The 2h arc compresses the reference-game scope (Idle Loops' 4–8h time-to-first-prestige becomes Looper's ~12–22 min time-to-first-meaningful-retention). The arc is **continuous**, not cumulative: Looper's identity is *visible compounding within a session*, not "play forever." Forks extending past ~3h or compressing below ~90min are reshaping, not retuning. Forks that want longer pacing tune up the time-resource pool and retention-curve slope.
 
 | # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
 |---|------|-----------------|-------------------|------------------------|-----------------|
@@ -106,165 +106,255 @@ The 1–2h arc compresses the reference-game scope (Idle Loops' 4–8h time-to-f
 
 ## 5. Data shape
 
+Per the data-first archetype convention (`open-loop-starter/CLAUDE.md` § Archetype convention), the demo's content lives flat in `src/archetypes/looper/data/*.ts` as plain typed arrays + balance constants. The skeleton/theme/balance lens lives as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`) inside each data file, not as a parallel filesystem layer. Mechanical fields and theme strings are co-located per def — what idle-loops-ng's `vanilla-actions.ts` and incloneution's `data/jobs.ts` already ship, what Producer's `data/producers.ts` and Ambient's `data/auto-producers.ts` formalize for the archetype demos. No `vars/` extraction layer, no codegen round-trip.
+
+### File split
+
+| File | What it owns |
+|---|---|
+| `data/types.ts` | All `*Def` interfaces, the `LooperBalance` constants shape, the `LooperGameState` typed read-view interface, the `LooperData` barrel type. |
+| `data/skills.ts` | `SKILLS: SkillDef[]` — the gen+instinct two-tier skill registry (Combat / Magic / Practical / Alchemy / Crafting per Theme A). |
+| `data/zones.ts` | `ZONES: ZoneDef[]` — ordered zone defs with per-zone unlock predicates (`requires: ZoneRequirement[]`). Zone 0 is `initiallyUnlocked`. |
+| `data/actions.ts` | `ACTIONS: ActionDef[]` — flat array, each action carries its zone, its mana cost, and its XP-grant table (`xpGrants: { skillId, xp }[]`). |
+| `data/balance.ts` | `LOOPER_BALANCE: LooperBalance` — the constants set the solver bisects against. |
+| `data/index.ts` | `DEFAULT_LOOPER_DATA` barrel + per-file re-exports. |
+| `data/overrides.ts` | `LooperOverrides` flat-category override shape + `applyLooperOverrides(base, overrides)` (throws on unknown id; mirrors `applyProducerOverrides` / `applyAmbientOverrides`). |
+
+### Definition shapes (TS-signature reference)
+
+The interfaces below describe the demo's data; they are not a contract for fork-day-one consumers. Forks restructure freely as long as the layering rule (`data → modules → composables → ui`) and the engine-runtime-free invariant on `data/*.ts` are preserved.
+
 ```ts
-// archetype.ts — skeleton defaults
-export interface LooperArchetypeVars {
-  // Loop mechanics — structural choices that distinguish sub-archetypes.
-  loopTriggerMode: 'resource-depletion' | 'death' | 'manual' | 'hybrid';
-  queueMode: 'single' | 'dual-edit-active';
+// data/types.ts (illustrative)
 
-  // Content shape.
-  zoneCount: number;                // default 4
-  skillCount: number;               // default 5
-  actionCount: number;              // default 20 (across zones)
-
-  // Retention architecture.
-  retentionTrackCount: number;      // default 2 (loop-xp + permanent-xp; optionally + soulstones)
-  automationUnlockTier: 'beat-6' | 'beat-7' | 'beat-8' | 'disabled';
+export interface SkillDef {
+  id: string;            // 'combat' | 'magic' | 'practical' | 'alchemy' | 'crafting'
+  name: string;
+  description: string;
 }
 
-// theme.ts — costume, no mechanical impact
-export interface LooperThemeVars {
-  timeResourceName: { singular: string; plural: string };     // 'mana' / 'mana' / 'heartbeat' / 'ticks'
-  loopCompletionVerb: string;                                 // 'reset' / 'reincarnate' / 'wake up' / 'rewind'
-  retentionTrackNames: string[];                              // ['soulstone', 'instinct', 'talent']
-  zoneNames: string[];                                        // length = zoneCount
-  skillNames: string[];                                       // length = skillCount
-  actionFlavour: Array<{ label: string; description: string; zone: string }>;
-  endOfArcMessage: string;                                    // fires at beat 8
+export type ZoneRequirement =
+  | { trigger: 'action-completion-count'; actionId: string; value: number }
+  | { trigger: 'skill-level'; skillId: string; tier: 'gen' | 'instinct'; value: number }
+  | { trigger: 'loop-count'; value: number };
+
+export interface ZoneDef {
+  id: string;            // 'beginnersville' | 'forest-path' | 'merchanton' | 'ruined-keep'
+  name: string;
+  description: string;
+  /** Zone 0 has empty requires; later zones list one or more. */
+  requires: ZoneRequirement[];
 }
 
-// balance.ts — mechanical overrides; drives beat timing
-export interface LooperBalanceVars {
-  timeResourcePoolBase: DecimalSource;     // default '4000' (idle-loops-ng baseline)
-  firstLoopTargetDuration: number;         // seconds sim-time, default 180
+export interface ActionDef {
+  id: string;
+  name: string;
+  description: string;
+  zoneId: string;
+  /** Mana cost at skill level 0. Effective cost divides by (1 + skillLevel / skillLevelDivisor). */
+  baseCost: DecimalSource;
+  /** XP grants at completion. One entry per affected skill. */
+  xpGrants: { skillId: string; xp: DecimalSource }[];
+}
 
-  actionCostScaling: {
-    baseCost: DecimalSource;               // first-zone first-action base
-    skillLevelDivisor: number;             // e.g. 100 (cost = base / (1 + level/100))
-  };
-
-  skillLeveling: {
-    xpPerAction: DecimalSource;            // base XP rate
-    xpToLevelFormula: 'sqrt' | 'log2' | 'linear';
-    xpToLevelDivisor: number;              // formula parameter, default 100
-  };
-
-  retentionCurve: {
-    // Canonical form: multiplier = 1 + (track^exponent) / divisor
-    exponent: number;                      // default 0.8 (idle-loops-ng soulstones)
-    divisor: number;                       // default 30
-  };
-
-  zoneUnlockThresholds: Array<{
-    zone: string;
-    trigger: 'action-completion-count' | 'skill-level' | 'loop-count';
-    value: number;
-  }>;
-
-  automationUnlockLoop: number;            // loop N at which automation tier 1 appears, default 8
+export interface LooperBalance {
+  /** Time-budget pool size at loop start. Bisection target for beat-2. */
+  timeResourcePoolBase: DecimalSource;
+  /** cost = baseCost / (1 + skillLevel.gen / skillLevelDivisor). */
+  skillLevelDivisor: DecimalSource;
+  /** Instinct XP grant per gen XP earned. Default 0.01 (PK pattern). */
+  instinctXpRatio: DecimalSource;
+  /** Retention multiplier shape: 1 + (instinctLevel / retentionDivisor) ^ retentionExponent. */
+  retentionDivisor: DecimalSource;
+  retentionExponent: DecimalSource;
+  /** Default `true` — the loop reset *is* the retention/prestige tier; toggling this off makes the demo a one-loop game. Documented in `balance/shape.ts`. */
+  loopResetEnabled: boolean;
 }
 ```
 
-**Override semantics:** deep-merge at load order `archetype → theme → balance`. Tests pass an override object to `runSim`.
+### Typed read view (predicate interface)
 
-**Codegen contract:** `pnpm codegen:archetype-vars looper` (pending) reads this section and emits `src/modules/mods/<game>/vars/{archetype,theme,balance}.ts` with matching defaults. Shared archetype-level types + defaults live at `src/archetypes/looper/`.
+Achievement / unlock / arc predicates close over a `LooperGameState` typed-read-view (Ambient pattern). The interface is implemented by modules over live injection-key refs; `data/*.ts` never imports the engine runtime.
+
+```ts
+export interface LooperGameState {
+  manaAtLeast(amount: DecimalSource): boolean;
+  skillLevelAtLeast(skillId: string, tier: 'gen' | 'instinct', n: number): boolean;
+  actionCompletedAtLeast(actionId: string, count: number): boolean;
+  zoneUnlocked(zoneId: string): boolean;
+  currentZoneIs(zoneId: string): boolean;
+  loopCountAtLeast(n: number): boolean;
+  /** Ratio of effective skill multiplier loop-N+1 vs loop-N at the same XP point. */
+  retentionMultiplier(skillId: string): number;
+  secondsSinceLoopStart(): number;
+}
+```
+
+### Override surface
+
+`createLooperEngine(overrides?)` accepts a flat-category `LooperOverrides`:
+
+```ts
+export interface LooperOverrides {
+  skills?:  Array<Partial<SkillDef>  & { id: string }>;
+  zones?:   Array<Partial<ZoneDef>   & { id: string }>;
+  actions?: Array<Partial<ActionDef> & { id: string }>;
+  balance?: Partial<LooperBalance>;
+}
+```
+
+`applyLooperOverrides` deep-merges `balance` and id-merges the three array categories; unknown ids throw. To wholesale-replace a category, supply the full array. The override surface is what the balance solver perturbs via `pushScope`. Tunable balance constants and solver-bisected per-action / per-zone knobs are wrapped via `tunable()` at consumer sites.
+
+### Mechanical-vs-costume separation
+
+What's mechanical and lives in `data/balance.ts`: `timeResourcePoolBase`, `skillLevelDivisor`, `instinctXpRatio`, `retentionDivisor`, `retentionExponent`, `loopResetEnabled`. What's costume and lives co-located inline per def: action / zone / skill `name` and `description`, the time-resource displayName ("mana"), the loop-completion verb ("reset"), the end-of-arc flavour string. Forks that want a different mood swap costume strings without touching anything else; forks reshaping the archetype touch balance constants and possibly cardinality.
 
 ---
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `time-pool-base` | `timeResourcePoolBase` ×[0.80, 1.20] | 1, 2, 8 | Beat sim-time ±25% | Time-budget shape is the dominant pacing lever — it sets every beat's ceiling. |
-| `retention-curve-exponent` | `retentionCurve.exponent` ×[0.90, 1.10] (≈±10% on 0.8 baseline) | 4, 8 | Retention multiplier at beat 4 within [1.02×, 1.25×] | Enforces the design assertion: *retention must be perceptible in first 10 actions of next loop.* If this probe violates, the archetype's core compulsion is broken. |
-| `skill-level-divisor` | `actionCostScaling.skillLevelDivisor` ×[0.80, 1.20] | 3, 6 | Beat sim-time ±20% | Cost-divisor shape governs within-loop speedup — if wrong, skills don't feel earned. |
-| `zone-unlock-threshold-first` | first-zone unlock threshold ×[0.75, 1.25] | 5 | Beat sim-time ±30% | Mid-arc pacing — earliest zone unlock is the most visible pacing moment. |
-| `queue-reorder-friction` | simulate auto-repeat vs. forced-replan between loops | 6, 7 | beat-6 lands with fewer reorders when auto-repeat enabled | Validates automation tier payoff — players should feel the automation unlock shorten their planning load. |
+The Locator column splits the probe table per the Tier-A scaffold convention (`open-loop-starter/archetypes/BALANCING.md` § Scripts discover, tests lock + § Engine as oracle): math-only locks live in `sim/balance.probe.test.ts` (vitest, milliseconds, no `runHeadless`); sim-driven probes live in `balance/probes.ts` (vite-node script, tens of seconds, drives the engine through `runUntil`/`runMatrix`). Solver bisections themselves live in `balance/solve.ts` and don't appear in the probe table — they're the discovery tool, not a regression.
 
-**Minimum probe count:** 5 (meets ≥4 requirement; covers time pool, retention curve, skill-level effect, zone pacing, and automation payoff).
+| Probe | Perturbation | Target beat(s) | Tolerance | Locator | Rationale |
+|-------|--------------|----------------|-----------|---------|-----------|
+| `time-pool-base` | `timeResourcePoolBase` ×[0.80, 1.20] | 1, 2, 8 | Beat sim-time ±25% | `balance/solve.ts` (B2 bisect target) + `sim/balance.probe.test.ts` (math-only receipt of solver-converged value) | Time-budget shape is the dominant pacing lever — it sets every beat's ceiling. |
+| `retention-perceptibility` | `retentionExponent` ×[0.90, 1.10] (≈±10% on 0.8 baseline) | 4, 8 | At beat 4, retentionMultiplier(loop=2, first 10 actions) ≥ 1.02× | `balance/probes.ts` (sim-driven; runs loop N + loop N+1's first 10 actions, measures sim-time delta) | The archetype's design-assertion probe: *retention must be perceptible in first 10 actions of next loop.* Sim-shaped because it requires a full reset boundary. If this probe violates, the archetype's core compulsion is broken. |
+| `skill-level-divisor` | `skillLevelDivisor` ×[0.80, 1.20] | 3, 6 | Beat sim-time ±20% | `balance/solve.ts` (verify-only, content-coupled) + `sim/balance.probe.test.ts` (math-only divisor receipt) | Cost-divisor shape governs within-loop speedup — if wrong, skills don't feel earned. |
+| `zone-unlock-threshold-first` | first-zone unlock predicate value ×[0.75, 1.25] | 5 | Beat sim-time ±30% | `balance/solve.ts` (B5 bisect target via `tunable('zones/forest-path/threshold', ...)`) + `sim/balance.probe.test.ts` (receipt) | Mid-arc pacing — earliest zone unlock is the most visible pacing moment. |
+| `loop-reset-correctness` | run 5 consecutive loops; assert `keep`-listed instinct refs survive and `thingsToReset` refs zero | every loop | Zero state drift over ≥5 loops | `balance/probes.ts` (sim-driven; mirrors Ambient probe-3's structural-invariant role) | The archetype's structural correctness probe — `createLoop` + `createRetentionPolicy` must produce identical observable behaviour across resets. Sim-shaped because it spans reset boundaries. |
+
+**Minimum probe count:** 5 (meets ≥4 requirement; covers time pool, retention perceptibility, skill-level effect, zone pacing, and reset correctness).
+
+**Probe-scope note for the balance leaf.** `retention-perceptibility` and `loop-reset-correctness` are sim-driven — both span reset boundaries and can't be expressed as math-only receipts. Math-only `sim/balance.probe.test.ts` pins the solver-converged constants (mana pool, skill divisor, zone-unlock thresholds, retention exponent/divisor). Sim-driven `balance/probes.ts` runs the two reset-spanning probes as scripts; failures surface contract breakage.
 
 ---
 
 ## 7. Sim assertions
 
+The vitest suite under `src/archetypes/looper/sim/` never calls `runHeadless` / `runUntil` / `runMatrix`. Beat verification — anything that requires running the engine forward through real sim-time — lives in the balance lane (`src/archetypes/looper/balance/`). Vitest holds two suites:
+
+- `looper.sim.test.ts` — 8 beats as `it.todo()`. Each `it.todo` carries the beat id and its target window from § 4, naming the predicate the balance lane verifies. Producer / Ambient precedent: the rebuild leaf ships `it.todo()`; the balance leaf converts to bisect-against-windows.
+- `balance.probe.test.ts` — math-only regression locks. Receipts on solver-converged knobs and structural sanity checks (e.g. retention multiplier at convergence, content-cardinality minimums). Imports `DEFAULT_LOOPER_DATA` and asserts numeric equality. Runs in milliseconds.
+
+Sim-driven probes (`balance/probes.ts`) and the solver (`balance/solve.ts`) sit alongside, run via `pnpm balance:probes:looper` / `pnpm balance:solve:looper`. They drive the engine through `runUntil` and report findings; they don't run inside vitest.
+
+### Vitest beat suite (illustrative)
+
 ```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless } from 'open-loop-engine';
-import { runMatrix } from 'open-loop-engine/harness';
-import { minutes, seconds } from '@/test/time';
-import { loadLooperVars } from '../vars';
-import { buildLooperEngine } from '../engine';
+// src/archetypes/looper/sim/looper.sim.test.ts
+import { describe, it } from 'vitest';
 
 describe('looper — beat map', () => {
-  const vars = loadLooperVars();
-
-  it('beat 1: first action ticks and budget drains within 0–30 s', async () => {
-    const result = runHeadless({
-      engine: buildLooperEngine(vars),
-      until: (state) => state.queue.current !== null && state.timeResource.lt(state.timeResourceMax.mul(0.95)),
-      maxSimTime: minutes(1),
-    });
-    expect(result.simTime).toBeBetween(seconds(0), seconds(30));
-  });
-
-  it('beat 2: first loop ends within 2–6 min', async () => {
-    const result = runHeadless({
-      engine: buildLooperEngine(vars),
-      until: (state) => state.loopCount >= 1,
-      maxSimTime: minutes(10),
-    });
-    expect(result.simTime).toBeBetween(minutes(2), minutes(6));
-  });
-
-  it('beat 4: first permanent retention visible within 12–22 min', async () => {
-    const result = runHeadless({
-      engine: buildLooperEngine(vars),
-      until: (state) => state.retentionTracks[0].gt(0),
-      maxSimTime: minutes(30),
-    });
-    expect(result.simTime).toBeBetween(minutes(12), minutes(22));
-  });
-
-  // one it() per beat — full enumeration in the checked-in test file
-});
-
-describe('looper — balance robustness', () => {
-  it('retention is perceptible in first 10 actions of next loop', async () => {
-    // The design-assertion probe. Runs loop N to completion, starts loop N+1,
-    // measures cost/speed of first 10 actions. Retention bonus must yield
-    // a ≥2% improvement over loop N's first 10 actions.
-    const matrix = runMatrix({
-      engine: (v) => buildLooperEngine(v),
-      baseVars: loadLooperVars(),
-      perturbations: [
-        { path: 'balance.retentionCurve.exponent', values: [0.72, 0.80, 0.88] },
-      ],
-      beats: ['retention-perceptibility'],
-    });
-    for (const cell of matrix.cells) {
-      expect(cell.retentionGainAtLoop2FirstTen).toBeGreaterThan(0.02);
-    }
-  });
-
-  // one it() per probe from § 6
+  it.todo('beat 1: first action ticks and budget drains within 0–30 s');
+  it.todo('beat 2: first loop ends within 2–6 min');
+  it.todo('beat 3: first skill level within a run, 6–12 min');
+  it.todo('beat 4: first permanent retention visible, 12–22 min');
+  it.todo('beat 5: first zone unlock, 18–32 min');
+  it.todo('beat 6: first action-queue reorder to exploit retention, 32–55 min');
+  it.todo('beat 7: first automation tier unlock, 55–85 min');
+  it.todo('beat 8: arc closure (final zone reachable + retention compound visible), 85–120 min');
 });
 ```
 
-**Required test count:** 8 beats + 5 probes = 13 tests minimum. Tests checked into `src/modules/mods/<game>/sim/looper.sim.test.ts`.
+### Math-only regression locks (illustrative)
+
+```ts
+// src/archetypes/looper/sim/balance.probe.test.ts
+import { describe, it, expect } from 'vitest';
+import { DEFAULT_LOOPER_DATA } from '../data';
+
+const { balance, actions, zones, skills } = DEFAULT_LOOPER_DATA;
+
+describe('balance probe — solver-knob receipts', () => {
+  it('timeResourcePoolBase matches beat-2 solver convergence', () => {
+    expect(Number(balance.timeResourcePoolBase)).toBe(/* solver-pinned */ 4000);
+  });
+
+  it('skillLevelDivisor held at the locked value', () => {
+    expect(Number(balance.skillLevelDivisor)).toBe(100);
+  });
+
+  it('instinctXpRatio held at 0.01 — PK/incloneution baseline', () => {
+    expect(Number(balance.instinctXpRatio)).toBe(0.01);
+  });
+
+  it('retention curve constants pinned for design-assertion probe', () => {
+    expect(Number(balance.retentionExponent)).toBeCloseTo(0.8);
+    expect(Number(balance.retentionDivisor)).toBe(30);
+  });
+});
+
+describe('balance probe — content cardinality minimums', () => {
+  it('skill registry meets two-tier minimum (≥ 4 skills)', () => {
+    expect(skills.length).toBeGreaterThanOrEqual(4);
+  });
+  it('zone ladder meets minimum (≥ 3 zones with at least one gated)', () => {
+    expect(zones.length).toBeGreaterThanOrEqual(3);
+    expect(zones.filter((z) => z.requires.length > 0).length).toBeGreaterThanOrEqual(2);
+  });
+  it('action set covers every skill at least once', () => {
+    const skillIds = new Set(skills.map((s) => s.id));
+    const granted = new Set(actions.flatMap((a) => a.xpGrants.map((g) => g.skillId)));
+    for (const id of skillIds) expect(granted.has(id)).toBe(true);
+  });
+});
+```
+
+### Sim-driven probes — interface (illustrative)
+
+```ts
+// src/archetypes/looper/balance/probes.ts (vite-node script — `pnpm balance:probes:looper`)
+import { Decimal, runUntil } from 'open-loop-engine';
+import { LoopKey, ManaKey, SkillsKey } from '../modules';
+import { buildLooperSimEngine } from './bot';
+
+// Probe: retention perceptibility at beat 4
+function retentionPerceptibilityProbe(): { gainPct: number; passed: boolean } {
+  const engine = buildLooperSimEngine();
+  // Run loop N to completion, snapshot, run loop N+1 for first 10 actions, compare sim-times
+  // ... (sim-driven; spans a reset boundary)
+}
+
+// Probe: loop reset correctness
+function loopResetCorrectnessProbe(): { driftDetected: boolean; loopCount: number } {
+  // Run 5 consecutive loops; assert keep-listed instinct refs survive and thingsToReset zero
+}
+```
+
+### Bot + solver — interface (illustrative)
+
+```ts
+// src/archetypes/looper/balance/bot.ts (greedy-queue bot)
+export function buildLooperSimEngine(overrides?: LooperOverrides): Engine {
+  // mirrors buildAmbientSimEngine; install a balance-bot module that fills
+  // the queue with current-zone actions at loop start and toggles auto-restart.
+}
+
+// src/archetypes/looper/balance/solve.ts (Gauss-Seidel bisection)
+// per-beat bisects on tunable() keys: timeResourcePoolBase, zone unlock thresholds,
+// skillLevelDivisor. Mirrors ambient/balance/solve.ts shape exactly.
+```
+
+**Required test count:** 8 beat tests (as `it.todo()` after rebuild leaf; balance leaf converts to active assertions where window-driven verification fits) + 5+ math-only probe locks. Tests live at `src/archetypes/looper/sim/{looper.sim.test.ts, balance.probe.test.ts}`.
 
 ---
 
 ## 8. Content sketch
 
-- **Resources:** 1 primary time-budget resource (mana/health/ticks) + 1–3 retention tracks (soulstones, instinct, optional talents).
-- **Zones:** 4 — progressively unlocked. Example naming scale: starting-town, wilderness-path, second-town, threshold-region. Each zone exposes 4–6 actions.
-- **Skills:** 5 — cover distinct action families (combat, magic, craft, diplomacy, exploration).
-- **Actions:** 20 across zones. Minimum cadence: each zone has ≥1 action that grants each skill's XP.
-- **Progression gates:** zone unlocks via action-completion count or skill threshold; automation tier 1 via loop count.
-- **Queue:** single or dual (edit + active); drag-drop reorder; per-item loop count; auto-repeat toggle.
+The converged minimum across the three in-studio Looper clones (`incloneution`, `idle-loops-ng`, `progress-knight-ng`):
 
-**Density target:** beat 1 → queue + first action ticking; beats 2–3 → loop & within-loop progression (actions + skills); beat 4 → retention-track readout; beat 5 → second zone + its actions; beat 6 → queue re-editing affordance (drag handles, loop-count inputs); beat 7 → automation toggle; beat 8 → final zone + end-of-arc flavour event.
+- **Resources:** 1 primary time-budget resource (mana). Per-skill `instinct` XP retains across loops via `createRetentionPolicy` (the engine's reset primitive snapshot/restore mechanism — same pattern all three clones use). NO separate "soulstone" / "talent-point" resource in the demo; those are fork-extension territory.
+- **Skills:** 5 — Combat, Magic, Practical, Alchemy, Crafting (idle-loops-ng vanilla shape; the Theme A bake). Each skill is two-tier (`gen` resets per loop, `instinct` persists) via `createSkillCategory<SkillDef>` with `mapSkill` building two `LevelDrivenSkill` instances + a composite modifier chain. Mirrors `incloneution/src/modules/skills.ts`.
+- **Zones:** 4 — Beginnersville → Forest Path → Merchanton → Ruined Keep. Zone 0 `initiallyUnlocked`; zones 1–3 carry `requires: ZoneRequirement[]` predicates evaluated by a `modules/zones.ts` watch bridge over `createZoneSystem`. Each zone exposes 4–5 actions.
+- **Actions:** 16–20 across zones. Each `ActionDef` carries `zoneId`, `baseCost` (mana), and `xpGrants: { skillId, xp }[]` (one or more skills granted XP at completion). Minimum cadence: every skill is granted XP by ≥1 action in every zone. Single-tick actions only; multi-part is filed as a high-severity engine gap (§ 10) and the demo doesn't exercise it.
+- **Progression gates:** zone unlocks via `action-completion-count` (cumulative across loops) or `skill-level` (gen or instinct, threshold tier). `loop-count` is supported by the type but unused by the default zone ladder.
+- **Queue:** single `Sequencer<ActionMeta>` via `createSequencer({ id: 'looper/queue' })`. Drag-drop reorder; per-item loop count; auto-repeat toggle. The dual-queue (edit-active separation) idle-loops-ng ships is a Lloyd-mod-era UX feature; documented as fork-extension territory but not in the demo.
+- **Loop reset:** `createLoop({ endCondition: () => mana.lte(0), thingsToReset, onBeforeRestart, onRestart })` + `createRetentionPolicy({ keep: [...skills.getAll().map(s => s.instinct.xp)] })`. Snapshot/restore around the reset preserves instinct XP; gen XP, action progress, mana, and queue position zero. Mirrors `idle-loops-ng/src/modules/loop.ts` + `incloneution/src/modules/reincarnation.ts`.
+- **No separate prestige tier.** The loop *is* the retention-tier reset. Fork-extension territory: a Lloyd-shaped talent-tree (spendable points from instinct levels) or a PK-2-shaped multi-layer soulstone tree.
+
+**Density target:** beat 1 → queue + first action ticking; beats 2–3 → loop completes & within-loop progression (gen-XP gains visible); beat 4 → instinct-XP track readout shows numbers > 0 between loops; beat 5 → second zone unlock fires (Forest Path), its actions appear in the action drawer; beat 6 → between-loops queue reorder UX exercised (drag handles, loop-count inputs); beat 7 → automation tier 1 unlock (loop-count gate, default 8); beat 8 → final zone (Ruined Keep) reachable AND retention compound visible (≥ 5% sim-time delta over 5-loop window).
+
+**Cardinality cross-check.** The three-clone reference lineage operates at much higher cardinality (idle-loops-ng vanilla = 11 progress-vars + 8 regular-vars per zone, ~30+ actions per arc; PK = ~40 jobs/skills across 4 lifetime tracks). The demo deliberately ships the converged floor — enough to exercise the engine surface and beat map, not enough to be a real game. Forks raise cardinality in `data/actions.ts` + `data/zones.ts` without touching the engine wiring.
 
 ---
 
