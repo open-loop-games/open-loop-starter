@@ -70,7 +70,6 @@ export const MatchKey: InjectionKey<MatchApi> = Symbol('tug/match') as Injection
  */
 export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
   'tug/match',
-  'tug/match/ai-opponent',
   'tug/match/fortress',
   'tug/match/lane',
   'tug/match/player/income',
@@ -79,6 +78,12 @@ export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
   'tug/match/ai/income-upgrades',
   'tug/match/player/units',
   'tug/match/ai/units',
+  // Per-side opponent bot. Production installs only the `'ai'` instance;
+  // `buildTugSimEngine` adds the `'player'` instance for unattended balance
+  // harnesses. Enumerating both is safe — `getModulePersistentRefs` returns
+  // empty for ids with no installed module.
+  'tug/match/player/opponent-bot',
+  'tug/match/ai/opponent-bot',
 ];
 
 /**

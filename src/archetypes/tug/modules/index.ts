@@ -8,7 +8,7 @@ import { createLaneModule } from './lane';
 import { createUnitsSideModule } from './units';
 import { createCategoriesModule } from './categories';
 import { createMatchModule } from './match';
-import { createAiOpponentModule } from './ai-opponent';
+import { createOpponentBotModule } from './opponent-bot';
 import { createMetaModule } from './meta';
 import { createArcModule } from './arc';
 import { createPrestigeModule } from './prestige';
@@ -65,8 +65,11 @@ export { PrestigeKey } from './prestige';
  *  6. `tug/categories` — aggregator; both sides' unit shops.
  *  7. `tug/match` — match orchestrator; injects fortress + lane +
  *     sequencers.
- *  8. `tug/match/ai-opponent` — AI policy. Strict-after-units ordering so
- *     `UnitsKey.ai` is provided before the AI tries to read it.
+ *  8. `tug/match/ai/opponent-bot` — AI policy. Strict-after-units ordering
+ *     so `UnitsKey.ai` is provided before the AI tries to read it.
+ *     Side-parameterized so sim engines can install a second instance for
+ *     `'player'` (unattended balance harnesses); production installs only
+ *     the `'ai'` instance and leaves player input to the UI.
  *  9. `tug/meta` — cross-match state container.
  * 10. `tug/meta/arc` — beat-7 closure predicate.
  * 11. `tug/meta/prestige` — conditional; only when meta-progression is on.
@@ -84,7 +87,7 @@ export function createTugModules(data: TugData): EngineModule[] {
     createUnitsSideModule(data, 'ai'),
     createCategoriesModule(),
     createMatchModule(data),
-    createAiOpponentModule(data),
+    createOpponentBotModule(data, 'ai'),
     createMetaModule(data),
     createArcModule(data),
   ];

@@ -71,7 +71,7 @@ export interface LaneApi {
   /** Spawn a unit. Player spawns at 0, AI at `laneLength`. Called by
    *  `units.ts` on the sequencer's `'start'` event. */
   spawn(side: Side, archetypeId: string): void;
-  /** Subscribe to lane events. Leaf-4 `match.ts` and `ai-opponent.ts` consume. */
+  /** Subscribe to lane events. Leaf-4 `match.ts` and `opponent-bot.ts` consume. */
   on: Emittable<LaneEvents>['on'];
 }
 

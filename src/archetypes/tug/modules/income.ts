@@ -16,7 +16,7 @@ import { type Side, TugTuningRegistryKey } from './tuning';
 
 /**
  * Per-side mineral resource. Player side spends from the unit shop's cost
- * requirement; AI side spends from `createAiOpponentModule` (leaf 4).
+ * requirement; AI side spends from `createOpponentBotModule(data, 'ai')`.
  */
 export const IncomeKey: Record<Side, InjectionKey<Resource<DecimalSource>>> = {
   player: Symbol('tug/match/player/income') as InjectionKey<Resource<DecimalSource>>,

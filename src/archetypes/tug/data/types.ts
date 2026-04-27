@@ -1,4 +1,5 @@
 import type { DecimalSource } from 'open-loop-engine';
+import type { PersonaKey } from './personality';
 
 // ─── Skeleton ───
 // 6 unit archetypes; 6×6 counter matrix; 3 income upgrade tiers; 2 spendable
@@ -98,7 +99,8 @@ export interface TugBalance {
   matchTimeLimitMinutes: number;
   /** 1.0 = symmetric; primary leaf-6 tuning knob. */
   aiIncomeMultiplier: number;
-  /** Seconds between AI symmetric-mirror enqueue ticks. */
+  /** Baseline seconds between bot spend attempts; per-persona
+   *  `cadenceMultiplier` scales this at decision time. */
   aiSendCadenceSec: number;
   /** Cross-match meta-progression layer (faction unlocks, ladder). */
   metaProgressionEnabled: boolean;
@@ -108,8 +110,10 @@ export interface TugBalance {
   spatialMode: 'pure-routing' | 'with-placement-grid';
   /** 1 = corpus-typical Direct Strike shape; 2–3 = Warfare 1944 flanks. */
   laneCount: number;
-  /** AI policy mode. `'off'` valid only when `matchMode === 'pvp'`. */
-  aiOpponentMode: 'symmetric-mirror' | 'counter-aware' | 'off';
+  /** Active opponent-bot persona per side. Production reads only `ai`;
+   *  the `player` slot exists for sim/balance bilateral runs. PvP mode is
+   *  expressed by not installing the bot module, not by a sentinel value. */
+  opponentPersona: { player: PersonaKey; ai: PersonaKey };
   matchMode: 'pvp' | 'pve' | 'campaign';
   /** Length of the unit roster; matrix is `unitArchetypeCount × unitArchetypeCount`. */
   unitArchetypeCount: number;

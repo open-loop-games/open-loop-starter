@@ -11,7 +11,7 @@ export interface IncomeRow {
 
 /**
  * Per-side mineral resource. Player consumes via the unit shop's cost
- * requirement; AI consumes via `ai-opponent.ts`. Both sides accrue inside
+ * requirement; AI consumes via `opponent-bot.ts`. Both sides accrue inside
  * `income.ts` ticks; readers here just inject and surface the live ref.
  */
 export function useIncome(side: Side): IncomeRow {
