@@ -1,7 +1,10 @@
+import { computed, type ComputedRef } from 'vue';
 import {
   createBooleanRequirement,
   createCostRequirement,
   createPurchasableCategory,
+  Decimal,
+  resolveComputable,
   tunable,
   type Computable,
   type DecimalSource,
@@ -24,6 +27,42 @@ export const IncomeUpgradesKey: Record<
     PurchasableCategory<IncomeUpgradeDef>
   >,
   ai: Symbol('tug/match/ai/income-upgrades') as InjectionKey<PurchasableCategory<IncomeUpgradeDef>>,
+};
+
+/**
+ * Per-tier engine-side ROI metrics. Reactive against live cost (post-
+ * tunable), live multiplier (post-tunable), and the side's
+ * `incomeRateChain.apply(baseRate)` (which reflects already-bought prior
+ * tiers via the chain's grant binds, plus AI-side scalars like
+ * `aiIncomeMultiplier`).
+ *
+ * Lives at module scope rather than on a composable because
+ * {@link wrapMultiplier} and the `baseRate` tunable are install-private —
+ * pulling them into a Vue layer would re-plumb privates. Mirrors the
+ * shape of producer's `purchaseBeatSeconds`
+ * (`open-loop-engine/src/systems/producer-category.ts:347`).
+ *
+ * TODO(expansion): a generic engine-side `purchasablePaybackSeconds`
+ * helper for one-shot multiplicative-rate-multiplier upgrades. Tug is
+ * N=1; ambient unlocks/upgrades is the obvious second consumer. See
+ * `open-loop-engine/docs/candidate-primitives.md`.
+ */
+export interface RoiMetrics {
+  /** Pure payback: time after purchase for the extra income to recoup
+   *  the cost. Mirrors producer "Pays off in X" vocabulary. `Infinity`
+   *  when current rate ≤ 0 or multiplier ≤ 1. */
+  paybackSeconds: ComputedRef<number>;
+  /** Eco-vs-rush crossover: total elapsed time (including save-up)
+   *  until the eco-then-rush strategy reaches the same cumulative
+   *  spendable as pure-rush. Equals `paybackSeconds × multiplier`.
+   *  The strategically meaningful break-even — answers OL-733's
+   *  "macro vs rush" framing. `Infinity` in the same edge cases. */
+  crossoverSeconds: ComputedRef<number>;
+}
+
+export const IncomeUpgradeRoiKey: Record<Side, InjectionKey<Map<string, RoiMetrics>>> = {
+  player: Symbol('tug/match/player/income-upgrade-roi') as InjectionKey<Map<string, RoiMetrics>>,
+  ai: Symbol('tug/match/ai/income-upgrade-roi') as InjectionKey<Map<string, RoiMetrics>>,
 };
 
 // Income-upgrade ids whose `cost` / `multiplier` are registered with the
@@ -54,6 +93,17 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
       const registry = ctx.inject(TugTuningRegistryKey);
       const income = ctx.inject(IncomeKey[side]);
       const incomeRateChain = ctx.inject(IncomeRateChainKey[side]);
+      // Same key as `income.ts:62` — `tunable()` uses `setDefault`, so this
+      // second call returns whatever the income module already registered
+      // rather than overwriting it. We need it here to compute live ROI
+      // metrics without re-plumbing module privates.
+      const baseRate = tunable<DecimalSource>(
+        registry,
+        'balance/baseIncomeRate',
+        () => data.balance.baseIncomeRate,
+      );
+
+      const roiMap = new Map<string, RoiMetrics>();
 
       const incomeUpgrades = createPurchasableCategory<IncomeUpgradeDef>({
         id: `tug/match/${side}/income-upgrades`,
@@ -64,6 +114,33 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
 
           const cost = wrapCost(registry, def);
           const multiplier = wrapMultiplier(registry, def);
+
+          // Extra income per second the upgrade would add at current rate:
+          // `currentRate × (multiplier − 1)`. `currentRate` evaluates the
+          // chain *now*, so already-bought prior tiers (and AI scalars) are
+          // already folded in. Returns 0 in degenerate cases so payback
+          // surfaces as Infinity below.
+          const extraRatePerSec = computed<Decimal>(() => {
+            const base = Decimal.fromValue(resolveComputable(baseRate));
+            const currentRate = Decimal.fromValue(incomeRateChain.apply(base));
+            const m = Decimal.fromValue(resolveComputable(multiplier));
+            const minusOne = m.sub(1);
+            if (currentRate.lte(0) || minusOne.lte(0)) return Decimal.dZero;
+            return currentRate.mul(minusOne);
+          });
+          const paybackSeconds = computed<number>(() => {
+            const extra = extraRatePerSec.value;
+            if (extra.lte(0)) return Infinity;
+            const c = Decimal.fromValue(resolveComputable(cost));
+            return c.div(extra).toNumber();
+          });
+          const crossoverSeconds = computed<number>(() => {
+            const payback = paybackSeconds.value;
+            if (!Number.isFinite(payback)) return Infinity;
+            const m = Decimal.fromValue(resolveComputable(multiplier)).toNumber();
+            return payback * m;
+          });
+          roiMap.set(def.id, { paybackSeconds, crossoverSeconds });
 
           const requirements: Requirement[] = [createCostRequirement({ resource: income, cost })];
           if (priorId != null) {
@@ -93,6 +170,7 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
       incomeUpgrades.register(data.incomeUpgrades);
 
       ctx.provide(IncomeUpgradesKey[side], incomeUpgrades);
+      ctx.provide(IncomeUpgradeRoiKey[side], roiMap);
     },
   };
 }

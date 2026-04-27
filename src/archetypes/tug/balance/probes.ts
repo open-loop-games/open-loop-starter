@@ -42,7 +42,7 @@ import {
   type MetricDelta,
   type UntilCell,
 } from 'open-loop-engine';
-import { TugTuningRegistryKey, type TugTunables } from '../modules';
+import { IncomeUpgradeRoiKey, TugTuningRegistryKey, type TugTunables } from '../modules';
 import {
   buildTugSimEngine,
   createOutcomeAnalyzer,
@@ -374,6 +374,173 @@ function runCounterStrongSensitivityProbe(): CounterStrongResult {
   };
 }
 
+// ─── Probe 4 — income-upgrade-roi (math-only) ────────────────────────────
+
+const REFINERY_1_COST_SWEEP = [50, 100, 200, 400, 1000];
+
+/** Conservative gate: half the match time limit. Probe 5 asserts the
+ *  empirical p50 lands in [50%, 95%] of the limit, so anything that fails
+ *  to cross over by this threshold definitely doesn't pay off in a
+ *  typical match. Coupling probe 4's gate to probe 5's runtime p50 is
+ *  possible but adds shared state — punted unless useful. */
+const MATCH_DURATION_P50_SEC = DEFAULT_TUG_DATA.balance.matchTimeLimitMinutes * 60 * 0.5;
+
+/** Analytical defaults at engine-build state (no tiers bought, so
+ *  `currentRate = baseRate = 5/s` for every tier). These are what the
+ *  ROI ComputedRefs return at `buildTugSimEngine()`. Post-buy values
+ *  (refinery-2 ≈ 117s once refinery-1 is active) are exercised in the
+ *  buy-chain test in `sim/balance.probe.test.ts` — they're the
+ *  realistic strategic numbers but only appear once priors are bought.
+ *  The "elbow" gate below uses refinery-1 only (the entry-tier
+ *  decision); higher tiers are conditional on prior purchases. */
+const ANALYTICAL_DEFAULT_PAYBACK: Record<string, number> = {
+  'refinery-1': 100 / (5 * 0.5), // 40s
+  'refinery-2': 350 / (5 * 0.4), // 175s
+  'refinery-3': 1200 / (5 * 0.3), // 800s
+};
+const ANALYTICAL_DEFAULT_CROSSOVER: Record<string, number> = {
+  'refinery-1': (100 / (5 * 0.5)) * 1.5, // 60s
+  'refinery-2': (350 / (5 * 0.4)) * 1.4, // 245s
+  'refinery-3': (1200 / (5 * 0.3)) * 1.3, // 1040s
+};
+const ROI_TOLERANCE = 0.05;
+
+const REFINERY_1_DEFAULT_COST = Number(
+  DEFAULT_TUG_DATA.incomeUpgrades.find((u) => u.id === 'refinery-1')!.cost,
+);
+
+interface RoiTierRow {
+  tierId: string;
+  paybackSec: number;
+  crossoverSec: number;
+  /** Within ±ROI_TOLERANCE of analytical default. `null` for perturbed
+   *  tiers (analytical baseline doesn't apply). */
+  paybackInTolerance: boolean | null;
+  crossoverInTolerance: boolean | null;
+  /** Crossover within the match-duration gate. Informational only for
+   *  tiers 2/3 (their default values assume baseRate=5, but realistically
+   *  the player only buys them after prior tiers raise the rate); the
+   *  pass criterion uses refinery-1 only — see `pass` field below. */
+  crossoverWithinMatch: boolean;
+}
+
+interface RoiVariantRow {
+  variant: string;
+  refinery1Cost: number;
+  tiers: RoiTierRow[];
+  pass: boolean;
+}
+
+interface RoiResult {
+  rows: RoiVariantRow[];
+  /** Smallest swept refinery-1 cost where crossover exceeds the match-
+   *  duration gate. The analytical "elbow" — replaces what
+   *  `coarseFineProbe` was meant to find via cost sweep in OL-733. `null`
+   *  when no swept value trips the gate (current data is well below the
+   *  elbow). */
+  proposedMaxCost: number | null;
+  proposedReason: string;
+  pass: boolean;
+}
+
+function readRoiSnapshot(
+  overrides?: TugOverrides,
+): { tierId: string; paybackSec: number; crossoverSec: number }[] {
+  // No simulation needed — `IncomeUpgradeRoiKey.player` carries
+  // ComputedRefs that read directly from the engine state at call time.
+  const engine = buildTugSimEngine(overrides);
+  const roi = engine.tryInject(IncomeUpgradeRoiKey.player);
+  if (!roi) throw new Error('IncomeUpgradeRoiKey.player not provided by engine');
+  return DEFAULT_TUG_DATA.incomeUpgrades.map((def) => {
+    const m = roi.get(def.id);
+    if (!m) throw new Error(`No ROI metrics for ${def.id}`);
+    return {
+      tierId: def.id,
+      paybackSec: m.paybackSeconds.value,
+      crossoverSec: m.crossoverSeconds.value,
+    };
+  });
+}
+
+function runIncomeUpgradeRoiProbe(): RoiResult {
+  const rows: RoiVariantRow[] = [];
+
+  // Default variant — all tiers locked against analytical baselines.
+  const defaultSnap = readRoiSnapshot();
+  const defaultTiers: RoiTierRow[] = defaultSnap.map(({ tierId, paybackSec, crossoverSec }) => {
+    const expectedP = ANALYTICAL_DEFAULT_PAYBACK[tierId]!;
+    const expectedC = ANALYTICAL_DEFAULT_CROSSOVER[tierId]!;
+    return {
+      tierId,
+      paybackSec,
+      crossoverSec,
+      paybackInTolerance: Math.abs(paybackSec - expectedP) / expectedP <= ROI_TOLERANCE,
+      crossoverInTolerance: Math.abs(crossoverSec - expectedC) / expectedC <= ROI_TOLERANCE,
+      crossoverWithinMatch: crossoverSec < MATCH_DURATION_P50_SEC,
+    };
+  });
+  rows.push({
+    variant: 'default',
+    refinery1Cost: REFINERY_1_DEFAULT_COST,
+    tiers: defaultTiers,
+    // Default-variant pass: all tiers in tolerance + refinery-1
+    // crossover within the match gate (entry-tier decision). Tiers 2/3
+    // crossover at default-state (no priors bought) inflates because
+    // currentRate is just baseRate; the realistic strategic numbers
+    // appear once priors are active and are exercised in the test
+    // suite's buy-chain lock.
+    pass:
+      defaultTiers.every((t) => t.paybackInTolerance && t.crossoverInTolerance) &&
+      defaultTiers.find((t) => t.tierId === 'refinery-1')!.crossoverWithinMatch,
+  });
+
+  // Cost-perturbed variants — only refinery-1 is perturbed; tiers 2/3
+  // are unchanged (so analytical-tolerance fields are null).
+  for (const cost of REFINERY_1_COST_SWEEP) {
+    if (cost === REFINERY_1_DEFAULT_COST) continue;
+    const overrides: TugOverrides = { incomeUpgrades: [{ id: 'refinery-1', cost }] };
+    const snap = readRoiSnapshot(overrides);
+    const tiers: RoiTierRow[] = snap.map(({ tierId, paybackSec, crossoverSec }) => ({
+      tierId,
+      paybackSec,
+      crossoverSec,
+      paybackInTolerance: tierId === 'refinery-1' ? null : true,
+      crossoverInTolerance: tierId === 'refinery-1' ? null : true,
+      crossoverWithinMatch: crossoverSec < MATCH_DURATION_P50_SEC,
+    }));
+    rows.push({
+      variant: `cost=${cost}`,
+      refinery1Cost: cost,
+      tiers,
+      // Variants gate on refinery-1 only — the swept axis.
+      pass: tiers.find((t) => t.tierId === 'refinery-1')!.crossoverWithinMatch,
+    });
+  }
+
+  // Find the elbow: smallest sweep cost where refinery-1 crossover
+  // exceeds the match-duration gate. Surfaces the analytical answer to
+  // OL-733's "above what cost does macro-vs-rush collapse" question.
+  let proposedMaxCost: number | null = null;
+  let proposedReason = `all swept costs cross over within ${MATCH_DURATION_P50_SEC.toFixed(0)}s`;
+  for (const row of rows) {
+    const r1 = row.tiers.find((t) => t.tierId === 'refinery-1')!;
+    if (!r1.crossoverWithinMatch) {
+      proposedMaxCost = row.refinery1Cost;
+      proposedReason = `refinery-1 crossover ${r1.crossoverSec.toFixed(1)}s ≥ match-p50 ${MATCH_DURATION_P50_SEC.toFixed(0)}s`;
+      break;
+    }
+  }
+
+  return {
+    rows,
+    proposedMaxCost,
+    proposedReason,
+    // Pass criterion: default variant in tolerance; all variants cross
+    // within the match gate. The elbow is informational — null is fine.
+    pass: rows[0]!.pass && rows.every((r) => r.pass),
+  };
+}
+
 // ─── Probe 5 — match-duration-bound (MC) ─────────────────────────────────
 
 interface DurationResult {
@@ -520,6 +687,33 @@ function main(): void {
     reading: `win-rate@strong=1.0 = ${fmt(p3.baselineWinRate)}; proposed strong = ${p3.proposedStrong != null ? p3.proposedStrong.toFixed(2) : 'null'}`,
     expected: 'monotonic non-decreasing curve across sweep',
     pass: p3.pass,
+  });
+
+  console.log('## Probe 4 — income-upgrade-roi (math-only)\n');
+  const p4 = runIncomeUpgradeRoiProbe();
+  const roiHeader = ['variant', 'tier', 'payback', 'crossover', 'in match?'];
+  const roiRows: string[][] = [];
+  for (const v of p4.rows) {
+    for (const t of v.tiers) {
+      const inMatch = t.crossoverWithinMatch ? 'yes' : 'NO';
+      roiRows.push([v.variant, t.tierId, fmtSec(t.paybackSec), fmtSec(t.crossoverSec), inMatch]);
+    }
+  }
+  console.log(renderTable(roiHeader, roiRows));
+  console.log();
+  console.log(
+    `match-duration gate = ${fmtSec(MATCH_DURATION_P50_SEC)} (50% of ${DEFAULT_TUG_DATA.balance.matchTimeLimitMinutes}m limit)`,
+  );
+  console.log(
+    `proposed max refinery-1 cost ≈ ${p4.proposedMaxCost != null ? p4.proposedMaxCost.toFixed(0) : 'unbounded in sweep range'}`,
+  );
+  console.log(`reason: ${p4.proposedReason}`);
+  console.log(`pass: ${p4.pass ? 'yes' : 'NO'}\n`);
+  summary.push({
+    name: 'income-upgrade-roi',
+    reading: `default tiers in tolerance; elbow ≈ ${p4.proposedMaxCost != null ? p4.proposedMaxCost.toFixed(0) : 'unbounded'}`,
+    expected: 'all variants cross over within match-p50 gate',
+    pass: p4.pass,
   });
 
   console.log('## Probe 5 — match-duration-bound (MC, N=30)\n');

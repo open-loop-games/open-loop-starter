@@ -24,7 +24,7 @@ export {
 } from './tuning';
 export { FortressKey, type FortressApi } from './fortress';
 export { IncomeKey, IncomeRateChainKey } from './income';
-export { IncomeUpgradesKey } from './income-upgrades';
+export { IncomeUpgradesKey, IncomeUpgradeRoiKey, type RoiMetrics } from './income-upgrades';
 export { LaneKey, type LaneApi, type LaneEvents, type UnitInstance } from './lane';
 export { UnitsKey, SequencerKey, UnitsCooldownKey, type UnitSendMeta } from './units';
 export {

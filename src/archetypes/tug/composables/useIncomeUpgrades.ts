@@ -1,7 +1,7 @@
 import { inject, computed, type ComputedRef } from 'vue';
 import type { Engine, Purchasable } from 'open-loop-engine';
 import type { IncomeUpgradeDef } from '../data/types';
-import { IncomeUpgradesKey, type Side } from '../modules';
+import { IncomeUpgradesKey, IncomeUpgradeRoiKey, type Side } from '../modules';
 import { useTugData } from './useTugData';
 
 export interface IncomeUpgradeRow {
@@ -19,6 +19,15 @@ export interface IncomeUpgradeRow {
   /** Cost of the next purchase, in resource units. Reactive against the
    *  tunable wrap (when applicable) — leaf-6 scope-pushes propagate. */
   cost: ComputedRef<number>;
+  /** Time after purchase for the extra income to recoup the cost, in
+   *  seconds. Mirrors producer's `purchaseBeatSeconds` vocabulary
+   *  ("Pays off in 40s"). Sourced from `IncomeUpgradeRoiKey`. */
+  paybackSeconds: ComputedRef<number>;
+  /** Total elapsed time until the eco-then-rush strategy catches a
+   *  pure-rush strategy in cumulative spendable, in seconds. The
+   *  strategically meaningful break-even ("Catches rush at 60s").
+   *  Sourced from `IncomeUpgradeRoiKey`. */
+  crossoverSeconds: ComputedRef<number>;
   /** Buy this tier. Engine no-ops when `canPurchase` is false; UI uses
    *  the disabled state to avoid the click. */
   buy(): void;
@@ -38,7 +47,8 @@ export interface IncomeUpgradesView {
 export function useIncomeUpgrades(side: Side): IncomeUpgradesView {
   const engine = inject<Engine>('engine');
   const shop = engine?.tryInject(IncomeUpgradesKey[side]);
-  if (!shop) {
+  const roi = engine?.tryInject(IncomeUpgradeRoiKey[side]);
+  if (!shop || !roi) {
     throw new Error(`useIncomeUpgrades(${side}) called outside an active tug engine`);
   }
   const data = useTugData();
@@ -47,13 +57,16 @@ export function useIncomeUpgrades(side: Side): IncomeUpgradesView {
     const out: IncomeUpgradeRow[] = [];
     for (const def of data.incomeUpgrades) {
       const purchasable = shop.getPurchasable(def.id);
-      if (!purchasable) continue;
+      const metrics = roi.get(def.id);
+      if (!purchasable || !metrics) continue;
       out.push({
         def,
         purchasable,
         bought: computed(() => purchasable.bought.value),
         canPurchase: computed(() => purchasable.canPurchase.value),
         cost: computed(() => Number(purchasable.getCost(1))),
+        paybackSeconds: metrics.paybackSeconds,
+        crossoverSeconds: metrics.crossoverSeconds,
         buy: () => {
           purchasable.purchase(1);
         },

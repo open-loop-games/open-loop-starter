@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useIncome, useIncomeUpgrades, useTugData } from '../../composables';
 import { useFormatting } from '@/composables/useFormatting';
+import type { IncomeUpgradeRow } from '../../composables/useIncomeUpgrades';
 
 /**
  * Income display + player income-upgrade shop.
@@ -21,13 +22,31 @@ const data = useTugData();
 const player = useIncome('player');
 const ai = useIncome('ai');
 const playerUpgrades = useIncomeUpgrades('player');
-const { format } = useFormatting();
+const { format, formatTime } = useFormatting();
 
 const baseRate = computed(() => Number(data.balance.baseIncomeRate));
 const aiMult = computed(() => data.balance.aiIncomeMultiplier);
 const aiRate = computed(() => baseRate.value * aiMult.value);
 
 const resourceLabel = computed(() => data.theme.resourceName.plural);
+
+function fmtSec(s: number): string {
+  if (!Number.isFinite(s)) return '∞';
+  return formatTime(s);
+}
+
+// Two-line ROI tooltip: "Pays off in X" mirrors producer vocabulary;
+// "Catches rush at Y" answers OL-733's macro-vs-rush framing directly.
+// Native `:title` attribute renders `\n` as a line break — cheapest
+// landing without pulling in a tooltip component.
+function rowTooltip(row: IncomeUpgradeRow): string {
+  if (row.bought.value) return `×${row.def.multiplier} income (active)`;
+  return [
+    `×${row.def.multiplier} income`,
+    `Pays off in ${fmtSec(row.paybackSeconds.value)}`,
+    `Catches rush at ${fmtSec(row.crossoverSeconds.value)}`,
+  ].join('\n');
+}
 </script>
 
 <template>
@@ -58,7 +77,7 @@ const resourceLabel = computed(() => data.theme.resourceName.plural);
           'upgrade-tile--ready': row.canPurchase.value && !row.bought.value,
         }"
         :disabled="!row.canPurchase.value || row.bought.value"
-        :title="`×${row.def.multiplier} income`"
+        :title="rowTooltip(row)"
         @click="row.buy()"
       >
         <div class="upgrade-tile__title">
@@ -74,6 +93,13 @@ const resourceLabel = computed(() => data.theme.resourceName.plural);
           <template v-else>
             {{ format(row.cost.value, 0) }} {{ resourceLabel }}
           </template>
+        </div>
+        <div
+          v-if="!row.bought.value"
+          class="upgrade-tile__roi"
+        >
+          pays {{ fmtSec(row.paybackSeconds.value) }} · catches
+          {{ fmtSec(row.crossoverSeconds.value) }}
         </div>
       </button>
     </div>
@@ -181,5 +207,12 @@ const resourceLabel = computed(() => data.theme.resourceName.plural);
 .upgrade-tile__cost {
   font-size: 0.85em;
   font-variant-numeric: tabular-nums;
+}
+
+.upgrade-tile__roi {
+  font-size: 0.75em;
+  color: var(--color-text-muted, var(--color-text));
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
 }
 </style>
