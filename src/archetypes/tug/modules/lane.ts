@@ -51,6 +51,10 @@ export interface UnitInstance {
 }
 
 export interface LaneEvents {
+  /** A unit was spawned into the lane. Mirrors `'unit-killed'`. Fortress
+   *  units don't pass through `lane.spawn()` (they live in `FortressKey`)
+   *  so this fires only for unit-archetype spawns. */
+  'unit-spawned': (payload: { side: Side; archetypeId: string }) => void;
   /** A unit's hp dropped to ≤0 in combat. Currently unused by leaf-4 wiring;
    *  exposed so VFX / scoring can hook in without further engine ceremony.
    *  Fortress units (`archetypeId === 'fortress'`) do not emit this — match
@@ -140,6 +144,7 @@ export function createLaneModule(data: TugData): EngineModule {
         const position = side === 'player' ? 0 : LANE_LENGTH;
         const id = `${side}-${archetypeId}-${nextUnitId.value++}`;
         units[side].value = [...units[side].value, { id, archetypeId, position, hp: def.hp, side }];
+        handle.emit('unit-spawned', { side, archetypeId });
       }
 
       ctx.onTick((dt) => {

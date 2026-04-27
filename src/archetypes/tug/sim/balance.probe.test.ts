@@ -256,3 +256,105 @@ describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
     expect(r1.paybackSeconds.value).toBeCloseTo(40, 1);
   });
 });
+
+describe('tug Tier-C balance locks — per-archetype dominance framework', () => {
+  // OL-732 framework-correctness locks. Verifies the per-archetype kill +
+  // spawn instrumentation wires through `OutcomeCapture` → analyzer
+  // metrics → cell aggregate. Numerical thresholds (e.g. max-share ≤ 0.4)
+  // are NOT locked — at current data balance, the SIGNATURE matchup
+  // imbalance dominates the dominance signal too (same constraint OL-731
+  // exists to address). Locks guard the framework against silent
+  // regression while balance discovery proceeds in parallel.
+
+  let activeCapture: OutcomeCapture | null = null;
+
+  it('lane unit-spawned + unit-killed events accumulate into OutcomeCapture buckets', () => {
+    const engine = buildTugSimEngine();
+    const cap = createOutcomeCapture(engine);
+    activeCapture = cap;
+    // Run one match end-to-end so the lane fires spawn/kill events for
+    // both sides under the bilateral-symmetric sim-bot.
+    const result = runUntil({
+      engine,
+      until: () => cap.firstMatchEnded,
+      maxSimTime: MAX_SIM,
+      tickDelta: 1.0,
+    });
+    expect(result.terminated).toBe('predicate');
+    expect(cap.firstMatchEnded).toBe(true);
+    // Both sides must have spawned at least one unit by the time match-1
+    // resolves (otherwise the match couldn't have ended on combat).
+    const playerSpawns = Object.values(cap.firstMatchSpawnsByArchetype.player);
+    const aiSpawns = Object.values(cap.firstMatchSpawnsByArchetype.ai);
+    expect(playerSpawns.reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
+    expect(aiSpawns.reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
+    // Spawn-key archetypes must be a subset of the data roster.
+    const rosterIds = new Set(DEFAULT_TUG_DATA.units.map((u) => u.id));
+    for (const id of Object.keys(cap.firstMatchSpawnsByArchetype.player)) {
+      expect(rosterIds.has(id)).toBe(true);
+    }
+  }, 30_000);
+
+  it('persona-Cartesian runMatrixUntil exposes per-archetype spawn + spawnsInWin metrics', () => {
+    // Tiny 2×2 sub-Cartesian (greed/counter × greed/counter) with N=2
+    // seeds — enough to confirm the metric pipeline; the full 4×4 × 12-
+    // seed sweep lives in the probe runner, not in vitest.
+    const personas: Array<'greed' | 'counter'> = ['greed', 'counter'];
+    const cells = personas.flatMap((player) =>
+      personas.map((ai) => ({
+        name: `p=${player}/ai=${ai}`,
+        buildEngine: () =>
+          buildTugSimEngine({
+            balance: { opponentPersona: { player, ai } },
+          }),
+        analyzers: (engine: ReturnType<typeof buildTugSimEngine>) => {
+          const cap = createOutcomeCapture(engine);
+          activeCapture = cap;
+          return [createOutcomeAnalyzer(cap)];
+        },
+        tickDelta: 1.0,
+      })),
+    );
+    const result = runMatrixUntil({
+      cells,
+      seeds: [1, 2],
+      until: () => activeCapture?.firstMatchEnded ?? false,
+      maxSimTime: MAX_SIM,
+    });
+    expect(result.cells.length).toBe(4);
+    // Every cell must run to completion across both seeds.
+    for (const cell of result.cells) {
+      expect(cell.runs.length).toBe(2);
+    }
+    // At least one cell must have player wins so the spawnsInWin
+    // aggregator has signal. Greed-vs-counter at default data should
+    // hit this trivially per OL-732 probe runs.
+    const someCellHasWins = result.cells.some(
+      (cell) => (cell.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0) > 0,
+    );
+    expect(someCellHasWins).toBe(true);
+    // Per-archetype spawn metric keys flatten into the aggregate. The
+    // *winning* cell(s) must expose at least one spawnsInWin.player.* key
+    // with non-zero avg — that's the dominance probe's read surface.
+    const winningCell = result.cells.find(
+      (cell) => (cell.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0) > 0,
+    )!;
+    const rosterIds = DEFAULT_TUG_DATA.units.map((u) => u.id);
+    const anyWinSpawn = rosterIds.some(
+      (id) => (winningCell.aggregate.metrics[`tug-outcome.spawnsInWin.player.${id}`]?.avg ?? 0) > 0,
+    );
+    expect(anyWinSpawn).toBe(true);
+    // Total spawns metric (across all matches, win or loss) is also
+    // populated for both sides on every cell.
+    for (const cell of result.cells) {
+      const playerHasSpawns = rosterIds.some(
+        (id) => (cell.aggregate.metrics[`tug-outcome.spawns.player.${id}`]?.avg ?? 0) > 0,
+      );
+      const aiHasSpawns = rosterIds.some(
+        (id) => (cell.aggregate.metrics[`tug-outcome.spawns.ai.${id}`]?.avg ?? 0) > 0,
+      );
+      expect(playerHasSpawns).toBe(true);
+      expect(aiHasSpawns).toBe(true);
+    }
+  }, 90_000);
+});

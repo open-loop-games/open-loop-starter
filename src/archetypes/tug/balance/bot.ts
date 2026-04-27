@@ -1,5 +1,5 @@
 import { type Analyzer, type Engine } from 'open-loop-engine';
-import { MatchKey } from '../modules';
+import { LaneKey, MatchKey } from '../modules';
 import { createOpponentBotModule } from '../modules/opponent-bot';
 import { createTugEngine } from '../boot';
 import { DEFAULT_TUG_DATA } from '../data';
@@ -153,6 +153,17 @@ export interface OutcomeCapture {
   firstMatchCounterPivots: number;
   firstMatchUnitsSent: number;
   firstMatchLengthSec: number;
+  /** Per-side, per-archetype spawn counts during match 1. `archetypeId →
+   *  count`. Side keys both populated; absent archetype ids read as 0
+   *  via `?? 0` at consumer sites. Used by the per-archetype dominance
+   *  probe (OL-732) to compute composition share in winning matches. */
+  firstMatchSpawnsByArchetype: Record<'player' | 'ai', Record<string, number>>;
+  /** Per-side, per-archetype death counts during match 1. Mirror of spawns;
+   *  death counts the side of the killed unit (i.e. `deaths.player.marine`
+   *  is how many of the player's marines died). Combat is all-pairs in
+   *  the lane, so attacker attribution isn't single-source — deaths are
+   *  the cleaner survivability indicator. */
+  firstMatchDeathsByArchetype: Record<'player' | 'ai', Record<string, number>>;
   matchesPlayed: number;
   matchesWon: number;
   totalCounterPivots: number;
@@ -166,12 +177,15 @@ export function createOutcomeCapture(engine: Engine): OutcomeCapture {
     firstMatchCounterPivots: 0,
     firstMatchUnitsSent: 0,
     firstMatchLengthSec: 0,
+    firstMatchSpawnsByArchetype: { player: {}, ai: {} },
+    firstMatchDeathsByArchetype: { player: {}, ai: {} },
     matchesPlayed: 0,
     matchesWon: 0,
     totalCounterPivots: 0,
     totalMatchTimeSec: 0,
   };
   const match = engine.tryInject(MatchKey)!;
+  const lane = engine.tryInject(LaneKey)!;
   match.on('matchEnded', (payload) => {
     capture.matchesPlayed += 1;
     capture.totalCounterPivots += payload.counterPivots;
@@ -184,6 +198,20 @@ export function createOutcomeCapture(engine: Engine): OutcomeCapture {
       capture.firstMatchUnitsSent = payload.unitsSent;
       capture.firstMatchLengthSec = payload.elapsedSec;
     }
+  });
+  // Spawns + deaths only accumulate during match 1. Lane events keep firing
+  // for match-2+ runs (driven by createMatchDriverModule) but those are
+  // dropped — first-match aggregates are the contract for predicate-bounded
+  // probes. Cross-match composition tracking would be a future addition.
+  lane.on('unit-spawned', ({ side, archetypeId }) => {
+    if (capture.firstMatchEnded) return;
+    const bucket = capture.firstMatchSpawnsByArchetype[side];
+    bucket[archetypeId] = (bucket[archetypeId] ?? 0) + 1;
+  });
+  lane.on('unit-killed', ({ side, archetypeId }) => {
+    if (capture.firstMatchEnded) return;
+    const bucket = capture.firstMatchDeathsByArchetype[side];
+    bucket[archetypeId] = (bucket[archetypeId] ?? 0) + 1;
   });
   return capture;
 }
@@ -211,28 +239,44 @@ export function createOutcomeAnalyzer(capture: OutcomeCapture): Analyzer {
       const isPlayerWin = capture.firstMatchOutcome === 'player-win' ? 1 : 0;
       const isAiWin = capture.firstMatchOutcome === 'ai-win' ? 1 : 0;
       const isTimeLimit = capture.firstMatchOutcome === 'time-limit' ? 1 : 0;
+      const metrics: Record<string, number | string> = {
+        firstMatchOutcome: capture.firstMatchOutcome ?? 'none',
+        isFirstPlayerWin: isPlayerWin,
+        isFirstAiWin: isAiWin,
+        isFirstTimeLimit: isTimeLimit,
+        // Composite "player score" treating timeout as 0.5 (neutral).
+        // Diagnostic only — no probe currently reads it.
+        playerScore: isPlayerWin + 0.5 * isTimeLimit,
+        firstMatchCounterPivots: capture.firstMatchCounterPivots,
+        firstMatchUnitsSent: capture.firstMatchUnitsSent,
+        firstMatchLengthSec: capture.firstMatchLengthSec,
+        matchesPlayed: capture.matchesPlayed,
+        matchesWon: capture.matchesWon,
+        totalCounterPivots: capture.totalCounterPivots,
+        totalMatchTimeSec: capture.totalMatchTimeSec,
+      };
+      // Per-archetype spawn / death counts. Flat metric keys
+      // `tug-outcome.spawns.<side>.<archetypeId>` and `.deaths.<side>.<id>`
+      // so `runMatrixUntil`'s aggregator averages them across seeds. The
+      // per-archetype-dominance probe (OL-732) reads these directly to
+      // compute the composition-share histogram per Cartesian cell.
+      // Conditional emit: a winning-match gets a separate `.spawnsInWin`
+      // bucket so the dominance aggregator can weight by win-only shares
+      // (Direct Strike tier-list framing — pick_freq × win_rate). Losing
+      // and timeout matches contribute 0 to the win bucket but still
+      // contribute to total spawns.
+      for (const side of ['player', 'ai'] as const) {
+        for (const [id, count] of Object.entries(capture.firstMatchSpawnsByArchetype[side])) {
+          metrics[`spawns.${side}.${id}`] = count;
+          metrics[`spawnsInWin.${side}.${id}`] = isPlayerWin === 1 ? count : 0;
+        }
+        for (const [id, count] of Object.entries(capture.firstMatchDeathsByArchetype[side])) {
+          metrics[`deaths.${side}.${id}`] = count;
+        }
+      }
       return {
         name: 'tug-outcome',
-        metrics: {
-          firstMatchOutcome: capture.firstMatchOutcome ?? 'none',
-          isFirstPlayerWin: isPlayerWin,
-          isFirstAiWin: isAiWin,
-          isFirstTimeLimit: isTimeLimit,
-          // Composite "player score" treating timeout as 0.5 (neutral).
-          // Diagnostic only — no probe currently reads it. Preserved
-          // because future Candidate B (per-archetype dominance) /
-          // Candidate C (income-upgrade ROI) probes may want a smoothed
-          // outcome metric, and removing churns the analyzer interface
-          // for no benefit.
-          playerScore: isPlayerWin + 0.5 * isTimeLimit,
-          firstMatchCounterPivots: capture.firstMatchCounterPivots,
-          firstMatchUnitsSent: capture.firstMatchUnitsSent,
-          firstMatchLengthSec: capture.firstMatchLengthSec,
-          matchesPlayed: capture.matchesPlayed,
-          matchesWon: capture.matchesWon,
-          totalCounterPivots: capture.totalCounterPivots,
-          totalMatchTimeSec: capture.totalMatchTimeSec,
-        },
+        metrics,
         issues: [],
       };
     },

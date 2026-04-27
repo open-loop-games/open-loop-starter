@@ -52,6 +52,7 @@ import {
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { DEFAULT_TUG_DATA } from '../data';
 import type { TugOverrides } from '../data/overrides';
+import type { PersonaKey } from '../data/personality';
 
 const PRIMARY_SEEDS = 20;
 const DURATION_PROBE_SEEDS = 30;
@@ -577,6 +578,164 @@ function runMatchDurationBoundProbe(): DurationResult {
   };
 }
 
+// ─── Probe 6 — per-archetype dominance (MC Cartesian) ────────────────────
+
+const DOMINANCE_PERSONAS: PersonaKey[] = ['mass', 'greed', 'counter', 'tech'];
+const DOMINANCE_SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+/** Threshold for `max single-archetype share` across the persona meta.
+ *  No corpus anchor exists for this number — Direct Strike's tier-list
+ *  framing measures dominance via human curation (pick_freq × win_rate
+ *  rankings), not algorithmic thresholds. The 0.40 derivation is from
+ *  uniform expectation: with 6 unit archetypes, uniform = 1/6 ≈ 0.167;
+ *  2.4× over-representation lands at ≈ 0.40 — the boundary where one
+ *  archetype is meaningfully over-represented in winning compositions
+ *  without being absolutely degenerate. The probe `pass` criterion is
+ *  framework-correctness (Cartesian runs end-to-end, histogram populated)
+ *  per OL-730 pattern; the threshold reading is informational. */
+const MAX_ARCHETYPE_SHARE_TARGET = 0.4;
+
+interface DominanceCellRow {
+  playerPersona: PersonaKey;
+  aiPersona: PersonaKey;
+  winRate: number;
+  /** Per-archetype share within the winning matches of this cell. Empty
+   *  when win-rate is 0 (no winning matches → no composition signal). */
+  spawnShareInWin: Record<string, number>;
+  /** Total player spawns across winning matches in this cell (= avg ×
+   *  seeds). Used as the cell's weight in cross-cell aggregation. */
+  totalSpawnsInWin: number;
+  /** Most-spawned archetype in winning matches; null when the cell has
+   *  no wins. */
+  topArchetype: string | null;
+  topShare: number;
+}
+
+interface DominanceResult {
+  cells: DominanceCellRow[];
+  /** Aggregate share across the persona meta. share[X] = total spawns
+   *  of X in winning matches across all cells, divided by total player
+   *  spawns in winning matches across all cells. Direct Strike tier-
+   *  list shape (pick_freq × win_rate) translated to sim. */
+  aggregateShare: Record<string, number>;
+  /** Headline scalar: highest share across all archetypes. */
+  maxShare: number;
+  maxShareArchetype: string | null;
+  /** Per-cell win-rate matrix (4×4) for the persona-pair readout. */
+  winRateMatrix: Record<PersonaKey, Record<PersonaKey, number>>;
+  pass: boolean;
+}
+
+function runArchetypeDominanceProbe(): DominanceResult {
+  const archetypeIds = DEFAULT_TUG_DATA.units.map((u) => u.id);
+  const cells: UntilCell[] = [];
+  for (const playerPersona of DOMINANCE_PERSONAS) {
+    for (const aiPersona of DOMINANCE_PERSONAS) {
+      cells.push(
+        buildCell(`p=${playerPersona}/ai=${aiPersona}`, {
+          balance: { opponentPersona: { player: playerPersona, ai: aiPersona } },
+        }),
+      );
+    }
+  }
+  const result = runMatrixUntil({
+    cells,
+    seeds: DOMINANCE_SEEDS,
+    until: () => activeCapture?.firstMatchEnded ?? false,
+    maxSimTime: MAX_MATCH_SIM_TIME_SEC,
+  });
+
+  const cellRows: DominanceCellRow[] = [];
+  const winRateMatrix: Record<PersonaKey, Record<PersonaKey, number>> = {
+    mass: {} as Record<PersonaKey, number>,
+    greed: {} as Record<PersonaKey, number>,
+    counter: {} as Record<PersonaKey, number>,
+    tech: {} as Record<PersonaKey, number>,
+  };
+  // Aggregate-share accumulators. Sum the per-cell `avg(spawnsInWin)`
+  // across cells; the seed-count cancels out in the share ratio.
+  const totalByArchetype: Record<string, number> = Object.fromEntries(
+    archetypeIds.map((id) => [id, 0]),
+  );
+  let grandTotal = 0;
+
+  let cellIdx = 0;
+  for (const playerPersona of DOMINANCE_PERSONAS) {
+    for (const aiPersona of DOMINANCE_PERSONAS) {
+      const cell = result.cells[cellIdx++]!;
+      const winRate = cell.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0;
+      winRateMatrix[playerPersona][aiPersona] = winRate;
+
+      // Per-archetype avg-spawns-in-win, summed to a cell total then
+      // turned into a normalized share (within winning matches only).
+      const spawnsInWinByArchetype: Record<string, number> = {};
+      let cellTotalInWin = 0;
+      for (const id of archetypeIds) {
+        const avg = cell.aggregate.metrics[`tug-outcome.spawnsInWin.player.${id}`]?.avg ?? 0;
+        spawnsInWinByArchetype[id] = avg;
+        cellTotalInWin += avg;
+        totalByArchetype[id] += avg;
+      }
+      grandTotal += cellTotalInWin;
+
+      const shareInWin: Record<string, number> = {};
+      for (const id of archetypeIds) {
+        shareInWin[id] = cellTotalInWin > 0 ? spawnsInWinByArchetype[id]! / cellTotalInWin : 0;
+      }
+      let topArchetype: string | null = null;
+      let topShare = 0;
+      if (cellTotalInWin > 0) {
+        for (const id of archetypeIds) {
+          if (shareInWin[id]! > topShare) {
+            topShare = shareInWin[id]!;
+            topArchetype = id;
+          }
+        }
+      }
+      cellRows.push({
+        playerPersona,
+        aiPersona,
+        winRate,
+        spawnShareInWin: shareInWin,
+        totalSpawnsInWin: cellTotalInWin * DOMINANCE_SEEDS.length,
+        topArchetype,
+        topShare,
+      });
+    }
+  }
+
+  const aggregateShare: Record<string, number> = {};
+  for (const id of archetypeIds) {
+    aggregateShare[id] = grandTotal > 0 ? totalByArchetype[id]! / grandTotal : 0;
+  }
+  let maxShare = 0;
+  let maxShareArchetype: string | null = null;
+  for (const id of archetypeIds) {
+    if (aggregateShare[id]! > maxShare) {
+      maxShare = aggregateShare[id]!;
+      maxShareArchetype = id;
+    }
+  }
+
+  // Pass criterion is framework-correctness: every cell ran to completion,
+  // and at least one cell has wins (signal floor — if zero cells have any
+  // player-wins, the aggregate share is undefined and the data is so
+  // imbalanced that the dominance question isn't answerable). The
+  // threshold reading is informational; flag it in the reporter.
+  const allCellsCompleted = result.cells.every((c) => c.runs.length === DOMINANCE_SEEDS.length);
+  const someCellHasWins = grandTotal > 0;
+  const pass = allCellsCompleted && someCellHasWins;
+
+  return {
+    cells: cellRows,
+    aggregateShare,
+    maxShare,
+    maxShareArchetype,
+    winRateMatrix,
+    pass,
+  };
+}
+
 // ─── Reporter ────────────────────────────────────────────────────────────
 
 function fmt(n: number, decimals = 2): string {
@@ -730,6 +889,61 @@ function main(): void {
     reading: `p50=${fmtSec(p5.p50Sec)}, time-limit-rate=${fmt(p5.timeLimitRate)}`,
     expected: 'p50 ∈ [50%, 95%] of limit, time-limit rate = 0',
     pass: p5.pass,
+  });
+
+  console.log(
+    `## Probe 6 — per-archetype dominance (MC Cartesian, ${DOMINANCE_PERSONAS.length}×${DOMINANCE_PERSONAS.length} personas, N=${DOMINANCE_SEEDS.length})\n`,
+  );
+  const p6 = runArchetypeDominanceProbe();
+  console.log('### Win-rate matrix (player rows × ai cols)\n');
+  console.log(
+    renderTable(
+      ['player ↓ / ai →', ...DOMINANCE_PERSONAS],
+      DOMINANCE_PERSONAS.map((pp) => [
+        pp,
+        ...DOMINANCE_PERSONAS.map((ap) => fmt(p6.winRateMatrix[pp][ap])),
+      ]),
+    ),
+  );
+  console.log();
+
+  console.log('### Aggregate share (player-side spawns in winning matches)\n');
+  const archetypeIds = DEFAULT_TUG_DATA.units.map((u) => u.id);
+  const uniformExpectation = 1 / archetypeIds.length;
+  console.log(
+    renderTable(
+      ['archetype', 'agg share', 'vs uniform', 'over-rep?'],
+      archetypeIds.map((id) => {
+        const share = p6.aggregateShare[id] ?? 0;
+        const ratio = uniformExpectation > 0 ? share / uniformExpectation : 0;
+        return [
+          id,
+          fmt(share),
+          `${ratio.toFixed(2)}×`,
+          share >= MAX_ARCHETYPE_SHARE_TARGET ? 'YES' : 'no',
+        ];
+      }),
+    ),
+  );
+  console.log();
+  console.log(
+    `uniform expectation = 1/${archetypeIds.length} ≈ ${uniformExpectation.toFixed(3)}; threshold = ${MAX_ARCHETYPE_SHARE_TARGET.toFixed(2)} (≈ ${(MAX_ARCHETYPE_SHARE_TARGET / uniformExpectation).toFixed(1)}× uniform)`,
+  );
+  console.log(
+    `max single-archetype share = ${fmt(p6.maxShare)} (${p6.maxShareArchetype ?? 'none'})`,
+  );
+  const dominanceVerdict =
+    p6.maxShare >= MAX_ARCHETYPE_SHARE_TARGET
+      ? `dominant: ${p6.maxShareArchetype} carries ≥${(MAX_ARCHETYPE_SHARE_TARGET * 100).toFixed(0)}% of player wins across the meta`
+      : 'no archetype exceeds threshold';
+  console.log(`reading: ${dominanceVerdict}`);
+  console.log(`pass (framework-correctness): ${p6.pass ? 'yes' : 'NO'}\n`);
+  summary.push({
+    name: 'per-archetype-dominance',
+    reading: `max share = ${fmt(p6.maxShare)} (${p6.maxShareArchetype ?? 'none'}); threshold ${MAX_ARCHETYPE_SHARE_TARGET.toFixed(2)}`,
+    expected: 'all cells run, ≥1 cell has wins (framework-correctness)',
+    pass: p6.pass,
+    details: dominanceVerdict,
   });
 
   console.log('## Summary\n');
