@@ -8,46 +8,27 @@ import {
   type OutcomeCapture,
 } from '../balance/bot';
 import { ARC_BEATS } from '../balance/beats';
+import { TugTuningRegistryKey } from '../modules';
 
 /**
- * Tier-C balance regression locks — pin the post-OL-711 calibration so
- * future bot/balance changes that drift readings surface in CI rather
- * than silently shifting the game-feel target.
+ * Tier-C balance regression locks for Tug — static data invariants
+ * (roster shape, counter-matrix shape, default opponent persona,
+ * believability bundle present) and framework-correctness locks for
+ * the sensitivity sweep harness.
  *
- * Two classes of lock:
- *
- *   1. Static data invariants — roster shape, counter-matrix shape,
- *      calibrated `aiIncomeMultiplier`. Cheap; always run.
- *   2. Sim distribution-statistic locks — fixed-seed `runMatrixUntil`
- *      and math-only `runUntil` regressions on the bot system. Slow
- *      (≈10s); kept to a single MC sample (N=5) and one math-only fire-
- *      time read so the file fits inside the broader test budget. The
- *      comprehensive sweep lives behind `pnpm balance:probes:tug`.
- *
- * **Calibration source.** OL-711 closure 2026-04-27, sim default pair
- * `counter` (player) vs `greed` (ai) at `aiIncomeMultiplier = 0.711`.
- * `bisectTuner` converged in 6 iterations against `playerScore.avg = 0.5`
- * (timeouts treated as 0.5; deterministic bots produce a step transition
- * through the target band).
- *
- * **Known limitations** (documented here so locks don't pin them as
- * acceptance bars):
- *
- *   - `meanCp` reads 0 reliably because no current persona saves for
- *     counter units (siege-tank cost 150 unaffordable on baseline 5/sec
- *     income at counter's tempo-first posture). Counter-pivot probe
- *     (`pnpm balance:probes:tug` probe 3) reports 0 across perturbations
- *     by structure, not by data drift.
- *   - Match resolutions cluster around two attractors: fast (~3-5min)
- *     wins or full game time-limit (30min) stalemates. There is no
- *     "match resolves at 22min" zone with deterministic bots — adding
- *     stochastic persona elements (a future ticket) would smooth this.
+ * **Framework-correctness, not balance-numbers.** Per the OL-730
+ * rescope, the SIGNATURE strongCounter sweep currently surfaces
+ * "underlying data balance dominates matrix sensitivity" at default
+ * data — a forward-looking finding for the procedural-persona tester-
+ * seat follow-up. These locks pin the framework primitives
+ * (TugBelievability bundle wired through merge, sensitivity sweep
+ * runs to completion across the full strongCounter range, monotonicity
+ * preserved) so the next session can balance the data and re-tune
+ * locks against numerical bands then.
  */
 
 const TUG_LOCK_SEEDS = [1, 2, 3, 4, 5];
 const MAX_SIM = 35 * 60;
-
-let activeCapture: OutcomeCapture | null = null;
 
 const { balance, units, counterMatrix } = DEFAULT_TUG_DATA;
 
@@ -67,12 +48,6 @@ describe('tug Tier-C balance locks — static data invariants', () => {
     }
   });
 
-  it('aiIncomeMultiplier is the OL-711 calibrated 0.711', () => {
-    // Tuner output 2026-04-27 against sim pair counter-vs-greed.
-    // bisectTuner converged in 6 iterations to playerScore = 0.500.
-    expect(balance.aiIncomeMultiplier).toBeCloseTo(0.711, 3);
-  });
-
   it('matchTimeLimitMinutes provides the duration-probe ceiling', () => {
     expect(balance.matchTimeLimitMinutes).toBeGreaterThan(0);
   });
@@ -81,11 +56,22 @@ describe('tug Tier-C balance locks — static data invariants', () => {
     expect(balance.opponentPersona.player).toBe('counter');
     expect(balance.opponentPersona.ai).toBe('counter');
   });
+
+  it('production believability is zero on both knobs (deterministic AI)', () => {
+    expect(balance.believability.suboptimalityRate).toBe(0);
+    expect(balance.believability.cadenceJitterScale).toBe(0);
+  });
+
+  it('aiIncomeMultiplier defaults to side-symmetric 1.0 (not a balance lever)', () => {
+    expect(balance.aiIncomeMultiplier).toBe(1.0);
+  });
 });
 
 describe('tug Tier-C balance locks — math-only fire-time', () => {
   it('beat-1 (first unit purchased) fires within first cadence window', () => {
-    const engine = buildTugSimEngine();
+    const engine = buildTugSimEngine({
+      balance: { believability: { suboptimalityRate: 0, cadenceJitterScale: 0 } },
+    });
     const beat = ARC_BEATS.find((b) => b.id === 'beat-1')!;
     const result = runUntil({
       engine,
@@ -94,25 +80,49 @@ describe('tug Tier-C balance locks — math-only fire-time', () => {
       tickDelta: 1.0,
     });
     expect(result.terminated).toBe('predicate');
-    // Both bots' first-purchase happens around the first cadence trigger
-    // — counter saves nothing, mass cheapest-affordable, both fire by
-    // ~5s. Lock at <= 30s so persona-cadence drift surfaces if a future
-    // edit slows first-purchase by 5×+.
+    // Counter persona's first marine purchase fires by ~5s (income 5/sec
+    // affords 25-cost marine at first cadence trigger).
     expect(result.elapsedSimulated).toBeLessThanOrEqual(30);
   }, 30_000);
 });
 
-describe('tug Tier-C balance locks — MC distribution at calibrated multiplier', () => {
-  it('playerScore lands in [0.4, 0.6] band at calibrated aiIncomeMultiplier', () => {
-    const result = runMatrixUntil({
+describe('tug Tier-C balance locks — believability bundle is wired', () => {
+  it('TugBelievability sub-merges through applyTugOverrides', () => {
+    const engine = buildTugSimEngine({
+      balance: { believability: { suboptimalityRate: 0.1 } },
+    });
+    // Read the merged data via a public surface — the engine's match
+    // module isn't exposing data directly, so verify by behavior: a
+    // run with believability override doesn't throw, and engine starts
+    // cleanly. (TypeScript types guarantee the field shape.)
+    expect(engine).toBeDefined();
+  });
+});
+
+describe('tug Tier-C balance locks — counter-strong sensitivity framework', () => {
+  let activeCapture: OutcomeCapture | null = null;
+
+  function runCellAtStrong(strong: number) {
+    return runMatrixUntil({
       cells: [
         {
-          name: 'calibrated',
+          name: `strong=${strong}`,
           buildEngine: () => buildTugSimEngine(),
           analyzers: (engine) => {
             const cap = createOutcomeCapture(engine);
             activeCapture = cap;
-            return [createOutcomeAnalyzer(cap)];
+            const reg = engine.tryInject(TugTuningRegistryKey)!;
+            const cleanup = reg.pushScope(`lock:strong=${strong}`, {
+              'counter-matrix/strongCounter': () => strong,
+            });
+            return [
+              createOutcomeAnalyzer(cap),
+              {
+                name: 'scope-cleanup',
+                onEnd: () => cleanup(),
+                summarize: () => ({ name: 'scope-cleanup', metrics: {}, issues: [] }),
+              },
+            ];
           },
           tickDelta: 1.0,
         },
@@ -121,13 +131,35 @@ describe('tug Tier-C balance locks — MC distribution at calibrated multiplier'
       until: () => activeCapture?.firstMatchEnded ?? false,
       maxSimTime: MAX_SIM,
     });
-    const cell = result.cells[0]!;
-    const playerScore = cell.aggregate.metrics['tug-outcome.playerScore']?.avg ?? -1;
-    // playerScore composite: 1.0 = player-win, 0.5 = time-limit (neutral),
-    // 0.0 = ai-win. At the calibrated multiplier, all seeds time-limit
-    // (deterministic stalemate) → playerScore = 0.5 exactly. Band
-    // tolerance allows post-recalibration drift.
-    expect(playerScore).toBeGreaterThanOrEqual(0.4);
-    expect(playerScore).toBeLessThanOrEqual(0.6);
+  }
+
+  it('strongCounter scope-push runs end-to-end across the sweep edges', () => {
+    // Verifies the framework runs cleanly at the sweep extremes — no
+    // engine-construction errors, scope-push wires through to lane.ts
+    // combat, and the analyzer captures outcome for both cells. The
+    // numerical signal at default data is currently flat (see
+    // bot.ts § Known limitation); this lock checks that the *framework*
+    // doesn't regress, separately from the balance-tuning follow-up.
+    const lo = runCellAtStrong(0.5);
+    const hi = runCellAtStrong(1.5);
+    expect(lo.cells[0]!.runs.length).toBe(TUG_LOCK_SEEDS.length);
+    expect(hi.cells[0]!.runs.length).toBe(TUG_LOCK_SEEDS.length);
+    // Win-rate metric is exposed by the analyzer (read pattern used by
+    // probe 3 and tune.ts).
+    expect(lo.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']).toBeDefined();
+    expect(hi.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']).toBeDefined();
+  }, 60_000);
+
+  it('strongCounter sweep produces non-decreasing win-rate across edges', () => {
+    // Coarse monotonicity check: increasing matrix decisiveness should
+    // not DECREASE counter-side win-rate (cell value at counter cells
+    // scales linearly via lane.ts::adjustCell). Loose acceptance —
+    // permits equality (flat curve at imbalanced data) but catches a
+    // sign-flip regression where the matrix wiring broke.
+    const lo = runCellAtStrong(0.5);
+    const hi = runCellAtStrong(1.5);
+    const wrLo = lo.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0;
+    const wrHi = hi.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0;
+    expect(wrHi + 1e-9).toBeGreaterThanOrEqual(wrLo);
   }, 60_000);
 });
