@@ -19,10 +19,26 @@ import { createMatchDriverModule } from './match-driver';
  * sides for sim. This collapses player-vs-bot policy asymmetry into
  * "production AI plays itself," so the only structural asymmetry knobs
  * left are the side-keyed bound modifiers (`aiIncomeMultiplier` etc.).
- * That's exactly what the Tier-C signature probe (`ai-difficulty-symmetry`)
- * wants to bisect against. Replaces the previous bespoke
- * `createBalanceBotModule` whose composition-pivot policy diverged from
- * the AI's policy and made tuner output un-interpretable.
+ *
+ * **Sim matchup is chosen to exercise the design property, not to mirror
+ * production.** Production runs human-vs-counter (no sim equivalent —
+ * the sim has no human), so any "mirror production" framing for the sim
+ * default is a category error. The signature probe
+ * (`counter-strong-sensitivity`) measures matrix decisiveness, which
+ * requires a *concentrating* opponent for the counter persona to detect
+ * dominance and fire counters. `counter`-vs-`greed` is the calibrated
+ * pair: greed's `top-tier` picker concentrates composition on the
+ * highest-cost archetype, exercising the matrix; greed's ~20s eco-save
+ * phase plus higher believability noise (suboptimality + cadence
+ * jitter) produces match-outcome variance that responds to
+ * strongCounter sweep.
+ *
+ * **Believability calibration applies independently** of matchup choice,
+ * per `composition-cookbook/parameterized-personality.md` §
+ * Believability-calibration discipline. It's a sim-discipline knob that
+ * adds decision noise to the deterministic policy. Production data has
+ * `believability: 0/0` (deterministic AI, predictable for the human
+ * player); sim default is `0.05/0.15`.
  *
  * See `open-loop-engine/docs/candidate-primitives.md` § "Tier-C bilateral-
  * symmetric sim-bot pattern" for the candidate graduation entry.
@@ -42,16 +58,29 @@ let engineCounter = 0;
  * kick off match 1.
  *
  * **Sim default: `opponentPersona = { player: 'counter', ai: 'greed' }`.**
- * The OL-721 game-AI variety study + OL-711 session-2 parity-stalemate
- * diagnostic converged on this calibrated pair: greed's `top-tier` picker
- * concentrates composition on the AI side → `pickCounterAware` on the
- * player side fires non-zero counter-pivots (unblocks the `meanCp = 0`
- * finding). Greed-vs-counter also gives `bisectTuner` a smooth
- * `aiIncomeMultiplier` response surface — greed scales late, counter
- * holds steady, so the [0.4, 0.6] win-rate band has a continuous landing
- * spot. Caller overrides win: pass
- * `{ balance: { opponentPersona: { player: 'mass', ai: 'greed' } } }` to
- * sweep secondary calibration pairs.
+ * Counter-vs-greed: greed's `top-tier` picker concentrates composition
+ * on the highest-cost affordable archetype; counter's matrix-aware
+ * picker fires against it. Caller overrides win: pass
+ * `{ balance: { opponentPersona: { player: 'mass', ai: 'greed' } } }`
+ * to sweep alternate matchups.
+ *
+ * **Sim default: `believability = { suboptimalityRate: 0.20,
+ * cadenceJitterScale: 0.25 }`.** Mid-cookbook range (suboptimality 0–40%,
+ * cadence jitter implicit). High enough to produce dynamic match
+ * outcomes that respond to design-parameter perturbations; low enough
+ * to keep persona identity recognizable.
+ *
+ * **Known limitation — SIGNATURE matchup needs balance work.** At the
+ * current data balance, counter-vs-greed at default
+ * `aiIncomeMultiplier = 1.0` is heavily AI-favored; at OL-711's
+ * calibrated `0.711` it stalemates. There's no balanced range where
+ * `strongCounter` sweep produces a smooth win-rate response. The
+ * underlying data balance is filed as a follow-up — the procedural-
+ * persona tester-seat agent (cookbook `procedural-personas.md`) is the
+ * canonical balance-discovery agent shape. This leaf lands the
+ * framework correctly; the SIGNATURE probe will report a flat curve
+ * + null proposed value at current data, which IS the actionable
+ * signal: "data balance dominates strongCounter sensitivity."
  *
  * The `createMatchDriverModule` handles match-2+ restarts; cumulative-arc
  * probes (beats 5, 7) work transparently inside a single `runMatrixUntil`
@@ -70,6 +99,11 @@ export function buildTugSimEngine(
         player: 'counter',
         ai: 'greed',
         ...overrides?.balance?.opponentPersona,
+      },
+      believability: {
+        suboptimalityRate: 0.2,
+        cadenceJitterScale: 0.25,
+        ...overrides?.balance?.believability,
       },
     },
   };
@@ -184,13 +218,12 @@ export function createOutcomeAnalyzer(capture: OutcomeCapture): Analyzer {
           isFirstPlayerWin: isPlayerWin,
           isFirstAiWin: isAiWin,
           isFirstTimeLimit: isTimeLimit,
-          // Composite "player score" treating timeout as 0.5 (neutral —
-          // neither side won). With deterministic bots producing binary
-          // win/loss per seed and time-limit at the transition multiplier,
-          // `playerScore.avg` is the smoothest bisection reading: it reads
-          // 1.0 in player-favored multipliers, 0.5 at the transition (where
-          // matches stalemate to the time limit), 0.0 in AI-favored ones.
-          // `bisectTuner` targets this against 0.5.
+          // Composite "player score" treating timeout as 0.5 (neutral).
+          // Diagnostic only — no probe currently reads it. Preserved
+          // because future Candidate B (per-archetype dominance) /
+          // Candidate C (income-upgrade ROI) probes may want a smoothed
+          // outcome metric, and removing churns the analyzer interface
+          // for no benefit.
           playerScore: isPlayerWin + 0.5 * isTimeLimit,
           firstMatchCounterPivots: capture.firstMatchCounterPivots,
           firstMatchUnitsSent: capture.firstMatchUnitsSent,

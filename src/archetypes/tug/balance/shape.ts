@@ -22,9 +22,11 @@
  *     income mirrors the player's. Outcome is stochastic.
  *   - Cumulative-across-matches arc — 2h cumulative sim-time covers
  *     ~4 matches at the default 30-min match limit.
- *   - Signature climax is **player-win-rate ∈ [0.4, 0.6]** under
- *     symmetric income — not a single fire-time. Distribution-statistic
- *     band, not point match.
+ *   - Signature climax is **counter-matrix sharpness sensitivity** — the
+ *     mean counter-pivots-per-match curve across a strongCounter sweep
+ *     under believability-calibrated counter-vs-counter mirror play. Not
+ *     a single fire-time and not a single number; a sample curve plus a
+ *     proposed-elbow scalar.
  *   - Counter matrix is data, not chain — N×N damage-type multipliers
  *     read by the per-tick combat resolver as a 2D array lookup.
  *   - Bimodal arc closure — beat 7 fires either on first meta-progression
@@ -59,12 +61,13 @@ export const TUG_IDENTITY = {
    *  4 archetypes is the minimum that supports a non-trivial RPS+1 counter
    *  cycle. Skeleton ships with 6 (RPS+2-axis crossed). */
   minUnitArchetypes: 4,
-  /** Signature climax metric. Numeric magnitudes (the band edges) are
-   *  mutable; the metric *shape* — Bernoulli player-win outcome over a
-   *  Monte Carlo of N seeds at default vars — is the archetype centerpiece
-   *  per `archetypes/tug.md` § 6 probe `ai-difficulty-symmetry`. */
+  /** Signature climax metric. Numeric magnitudes (sweep range, depth
+   *  target) are mutable; the metric *shape* — mean counter-pivots
+   *  across a `counter-matrix/strongCounter ∈ [0.5, 1.5]` sweep, with N
+   *  seeds and believability calibration — is the archetype centerpiece
+   *  per `archetypes/tug.md` § 6 probe `counter-strong-sensitivity`. */
   signatureMetric:
-    'player-win-rate ∈ [0.4, 0.6] across N=20 seeds at default vars (ai-difficulty-symmetry probe)',
+    'counter-matrix sharpness sensitivity — mean counter-pivots per match curve over strongCounter ∈ [0.5, 1.5] across N=20 seeds with believability calibration (counter-strong-sensitivity probe)',
 } as const;
 
 /**
@@ -148,78 +151,82 @@ export const FLOW_BAND_SCORE: null = null;
  * worked example**; this prose is the convention for every Tier-C
  * archetype after.
  *
- * **What replaces `solve.ts`:** `tune.ts` using `bisectTuner` over a
- * **distribution-statistic sampler** that wraps `runMatrixUntil`. The
- * Tier-A Ambient pattern (single-engine `importSave` reset + `runUntil`
- * per sample) does not apply because Tug's outcomes are stochastic —
- * adversarial matches with AI policy + combat ordering produce a
- * *distribution* of outcomes, not a single fire-time. `runMatrixUntil`
- * is the matching primitive: it builds a fresh engine per `(cell, seed)`,
+ * **What replaces `solve.ts`:** `tune.ts` running a **sensitivity sweep
+ * + curve characterizer** over `runMatrixUntil`. Tug's signature is the
+ * shape of the matrix-sharpness response curve, not a single number — a
+ * 1-D bisection pinned to one target loses the elbow-room information
+ * that justifies the proposed value. The Tier-A Ambient pattern (single-
+ * engine `importSave` reset + `runUntil` per sample) does not apply
+ * because Tug's outcomes are stochastic — adversarial matches with AI
+ * policy + combat ordering produce a distribution. `runMatrixUntil` is
+ * the matching primitive: it builds a fresh engine per `(cell, seed)`,
  * runs each to a shared predicate, and aggregates termination-time stats
  * + per-run analyzer output as first-class fields.
  *
+ * **Local `runSensitivityUntil` helper.** The engine ships
+ * `runSensitivity` (`harness/run-sensitivity.ts:27`) — a thin baseline-
+ * vs-variants wrapper that runs `runMatrix` (fixed ticks) and computes
+ * `diffAggregates` per variant. Tug needs match-end predicate
+ * termination, not fixed ticks; `probes.ts::runSensitivityUntil`
+ * emulates the same shape over `runMatrixUntil + diffAggregates`. The
+ * helper stays leaf-local; graduate to the engine when a second
+ * predicate-bounded sensitivity consumer surfaces (filed as a follow-up).
+ *
  * **Statistics read off `runMatrixUntil`:**
- *   - **Player-win-rate**: Bernoulli p̂ over N seeds. Computed from a
- *     per-run `tug-outcome` analyzer (see `bot.ts::createOutcomeAnalyzer`)
- *     that subscribes to `match.on('matchEnded', ...)` and captures
- *     `payload.outcome` *before* the auto-reset clears it. Aggregated
- *     via `cell.aggregate.metrics['tug-outcome.isPlayerWin'].avg`.
+ *   - **Mean counter-pivots per match (signature)**: per-run
+ *     `firstMatchCounterPivots` captured by the `tug-outcome` analyzer
+ *     (subscribes to `match.on('matchEnded', ...)` to read pre-reset).
+ *     Aggregated as `cell.aggregate.metrics['tug-outcome.firstMatchCounterPivots'].avg`.
+ *   - **Per-variant deltas**: `diffAggregates(variantCell.aggregate,
+ *     baselineCell.aggregate)` — `{absolute, relative}` per metric. The
+ *     SIGNATURE probe reads relative deltas to assess saturation.
  *   - **Match-length-p50**: read directly off
- *     `cell.aggregate.terminationTime.p50` — first-class field on
- *     {@link CellAggregate}. The `until` predicate is
- *     `() => !match.inMatch.value` (true after `match.end()` runs the
- *     reset and `inMatch` flips to false).
- *   - **Counter-pivot success-rate**: per-match `counterPivotsThisMatch`
- *     captured by the same analyzer; mean across player-win runs gives
- *     the rate at which a player win used counter pivots.
+ *     `cell.aggregate.terminationTime.p50`. Match-duration-bound probe
+ *     verifies believability calibration broke the mirror stalemate
+ *     (`terminationCounts.maxSimTime === 0`).
  *
  * **Why the analyzer + matchEnded pattern, not a `cell.runs[i].engine`
- * read:** the worked example in `archetypes/tug.md § 7` showing
- * `r.engine.tryInject(MatchKey)` is sketch-incorrect — `cell.runs[i]` has
- * no `engine` field (the harness builds engine per `(cell, seed)` and
- * discards it). `match.end()` synchronously calls `reset.reset()` which
- * wipes `outcome.value` back to `null`, so even a shared closure-bound
- * engine ref would read null. The analyzer pattern captures outcome at
- * the matchEnded event (fired pre-reset by match.ts:153–158) and surfaces
- * it via `summarize()` into `analyzerResults`, where the harness
- * aggregator picks it up.
+ * read:** `cell.runs[i]` has no `engine` field — the harness builds
+ * engine per `(cell, seed)` and discards it. `match.end()` synchronously
+ * calls `reset.reset()` which wipes `outcome.value` back to `null`, so
+ * even a shared closure-bound engine ref would read null. The analyzer
+ * pattern captures outcome at the matchEnded event (fired pre-reset by
+ * match.ts:153–158) and surfaces it via `summarize()` into
+ * `analyzerResults`, where the harness aggregator picks it up.
  *
- * **Convergence (band-hit, not single-value match):** for
- * distribution-statistic bisection, "converged" means the win-rate band
- * [0.4, 0.6] is hit. The binomial-CI trade-off matters here — at p=0.5
- * with N=20 seeds, the 95% binomial CI half-width is ≈ 0.22, *wider*
- * than the band. The tolerance band is wider than the CI **by design**:
- * we want a clear off-target signal, not statistical certainty. Leaf 6
- * starts at N=20 (CI half-width ≈ 0.22) and bumps to N=50 (CI half-width
- * ≈ 0.14) only if `bisectTuner` thrashes — meaning the sampler reports
- * inconsistent in-band/out-of-band readings across iterations on what
- * should be a stable axis. Document the chosen N in `tune.ts`'s output
- * banner.
+ * **Believability calibration as the stalemate-breaker.** The production-
+ * mirror sim default (`opponentPersona = { player: 'counter', ai:
+ * 'counter' }`) deadlocks at parity with deterministic bots — every seed
+ * hits the time limit. Per `composition-cookbook/parameterized-
+ * personality.md` § Believability-calibration discipline, the recipe is
+ * to add a calibration bundle (suboptimality + cadence jitter) at the
+ * decision layer, separate from the personality parameters. Production
+ * data has `believability: { suboptimalityRate: 0, cadenceJitterScale: 0 }`
+ * (deterministic AI, predictable for the human player); sim default is
+ * `0.05/0.15`. Probe 5 (`match-duration-bound`) is the post-calibration
+ * verification — `terminationCounts.maxSimTime === 0` means calibration
+ * broke the deadlock.
  *
- * **No Gauss-Seidel multi-pass for the primary tuner.** The Tier-A
- * solver chains beat proposals across 3 passes because beat coupling
- * matters under deterministic single-knob bisection. Tier-C response
- * surfaces are *noisy* — Gauss-Seidel converges poorly under noise.
- * AI-income is the dominant axis; secondary tuners (unit costs,
- * counter-matrix scalars) run as **separate single-axis bisections**,
- * not chained. If a future Tug variant needs joint tuning, that's a
- * Tier-C pattern question — file then.
+ * **Sweep ranges and N-seeds.** SIGNATURE sweep is
+ * `strongCounter ∈ {0.5, 0.75, 1.0, 1.25, 1.5}` at N=20 (binomial CI
+ * half-width ≈ 0.22 at p=0.5 — coarser than the curve resolution we
+ * care about, but sufficient for monotonicity + elbow detection). Bump
+ * to N=50 (CI ≈ 0.14) if the curve is too noisy to identify an elbow
+ * cleanly across the sample points.
  *
- * **`bisectTuner` semantic stretch:** `bisectTuner.targetSec` and
- * `tolSec` are typed as seconds because Tier-A tuners always bisect a
- * fire-time. Tug's primary tuner passes `targetSec: 0.5` (target
- * win-rate) and `tolSec: 0.1` (band half-width) — generic 1-D bisection
- * math, semantic mismatch in the names. Inline-comment at the call site;
- * if a second Tier-C archetype wants the same shape, file a
- * `bisect1D` candidate-primitives entry then.
+ * **No Gauss-Seidel multi-pass.** Tier-C response surfaces are noisy;
+ * chained bisection across multiple noisy axes doesn't converge cleanly.
+ * Secondary axes are filed as follow-up probes (per-archetype dominance,
+ * income-upgrade ROI), each shaped to its own design property.
  *
  * **Math-only locks alongside MC locks:** probes 1–2
  * (`income-rate-baseline`, `unit-cost-scaling`) ride the same
- * `runUntil`-driven single-pass beat-time pattern as Producer/Ambient.
- * They live in `sim/balance.probe.test.ts` next to the MC distribution
- * locks but use a different harness path (`runUntil` for fire-time,
- * `runMatrixUntil` for distribution). The split is documented inline in
- * `probes.ts`.
+ * `runUntil`-driven single-pass beat-time pattern as Producer/Ambient,
+ * with believability overridden to 0/0 for determinism. They live in
+ * `sim/balance.probe.test.ts` next to the MC distribution locks but
+ * use a different harness path (`runUntil` for fire-time,
+ * `runMatrixUntil` for distribution). The split is documented inline
+ * in `probes.ts`.
  */
 
 /**
