@@ -65,10 +65,9 @@ describe('tug engine smoke', () => {
     expect(engine.tryInject(PrestigeKey)).toBeDefined();
   });
 
-  it('TUG_MATCH_SCOPE_MODULES enumerates the ten match-scope module ids', () => {
+  it('TUG_MATCH_SCOPE_MODULES enumerates the match-scope module ids', () => {
     expect(TUG_MATCH_SCOPE_MODULES).toEqual([
       'tug/match',
-      'tug/match/ai-opponent',
       'tug/match/fortress',
       'tug/match/lane',
       'tug/match/player/income',
@@ -77,6 +76,8 @@ describe('tug engine smoke', () => {
       'tug/match/ai/income-upgrades',
       'tug/match/player/units',
       'tug/match/ai/units',
+      'tug/match/player/opponent-bot',
+      'tug/match/ai/opponent-bot',
     ]);
   });
 });
@@ -154,8 +155,8 @@ describe('tug match-scope reset (structural invariant)', () => {
   });
 });
 
-describe('tug AI opponent (symmetric-mirror)', () => {
-  it('produces sends in symmetric-mirror mode at default cadence under 60s', () => {
+describe('tug AI opponent (default counter persona)', () => {
+  it('produces sends with default persona at default cadence under 60s', () => {
     const engine = bootTug(undefined, 'ai-mirror');
     const match = mustInject(engine, MatchKey);
     const playerSequencer = mustInject(engine, SequencerKey.player);

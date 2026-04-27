@@ -15,7 +15,9 @@ import { LaneKey } from '../modules';
  *   (a) The player-side `createOpponentBotModule(data, 'player')` instance
  *       installs and ticks — `lane.units.player` populates within a 60s
  *       sim window. If this fails, the bot is silent (install ordering,
- *       missing dependency id, or `aiOpponentMode` collapsed to 'off').
+ *       missing dependency id, or persona's `minSpendCost` floor + slow
+ *       cadence happens to gate every spend in the window — see `tech` if
+ *       a future smoke test pairs against it).
  *
  *   (b) The dominant axis (`aiIncomeMultiplier`) shows monotonic response
  *       in `player-win-rate` across [0.5, 1.0, 2.0]. Low multiplier should
@@ -30,7 +32,20 @@ import { LaneKey } from '../modules';
  */
 describe('tug bilateral sim-bot smoke', () => {
   it('player-side opponent bot purchases units within 60s sim', () => {
-    const engine = buildTugSimEngine();
+    // Use a symmetric persona pair (mass vs mass at parity income) for
+    // the wiring sanity gate. The post-OL-711 sim default
+    // (counter-vs-greed at 0.711 multiplier) is intentionally asymmetric:
+    // greed sits silent ~28s saving for refinery-1 and its first
+    // marines die in the player's onslaught at lane center, so AI's
+    // lane is plausibly empty at t=60s. mass-vs-mass at parity has both
+    // bots spamming from t=5s — bilateral install + tick + dispatch are
+    // verified without persona-asymmetry confounding the signal.
+    const engine = buildTugSimEngine({
+      balance: {
+        aiIncomeMultiplier: 1.0,
+        opponentPersona: { player: 'mass', ai: 'mass' },
+      },
+    });
     for (let i = 0; i < 60; i++) engine.loop.simulateTick(1);
     const lane = engine.tryInject(LaneKey)!;
     expect(lane.units.player.value.length).toBeGreaterThan(0);
