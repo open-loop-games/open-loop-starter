@@ -92,12 +92,32 @@ export type CounterMatrix = number[][];
 
 // ─── Balance ───
 
+/**
+ * Believability calibration bundle. Per `composition-cookbook/
+ * parameterized-personality.md` § Believability-calibration discipline:
+ * separate from `Persona` because the design semantics differ — personas
+ * say *what the agent wants to do*; believability says *how precisely it
+ * executes*. Production = 0/0 (deterministic, predictable for the human
+ * player); sim defaults > 0 break parameterized-vs-parameterized mirror
+ * stalemates without manufacturing the answer.
+ */
+export interface TugBelievability {
+  /** Probability per decision of picking second-best instead of optimal.
+   *  Cookbook range 0–40%; sim default 0.05. */
+  suboptimalityRate: number;
+  /** ±fraction of multiplicative noise on the cadence threshold. 0 = no
+   *  jitter; sim default 0.15 (±15% of the persona-scaled cadence). */
+  cadenceJitterScale: number;
+}
+
 export interface TugBalance {
   /** Per-side per-second mineral accrual at default income tier. */
   baseIncomeRate: DecimalSource;
   /** 0 = no time limit (Direct Strike); >0 = score resolution at limit. */
   matchTimeLimitMinutes: number;
-  /** 1.0 = symmetric; primary leaf-6 tuning knob. */
+  /** 1.0 = symmetric. AI-quirk knob (one-side throughput tax), not a
+   *  balance lever; reserved for difficulty-dial work that requires
+   *  playtest data. */
   aiIncomeMultiplier: number;
   /** Baseline seconds between bot spend attempts; per-persona
    *  `cadenceMultiplier` scales this at decision time. */
@@ -114,6 +134,11 @@ export interface TugBalance {
    *  the `player` slot exists for sim/balance bilateral runs. PvP mode is
    *  expressed by not installing the bot module, not by a sentinel value. */
   opponentPersona: { player: PersonaKey; ai: PersonaKey };
+  /** Calibration constraint on bot decision execution; see
+   *  {@link TugBelievability}. Distinct from `opponentPersona` because the
+   *  tuning timelines differ (player perception research vs. balance
+   *  metrics). */
+  believability: TugBelievability;
   matchMode: 'pvp' | 'pve' | 'campaign';
   /** Length of the unit roster; matrix is `unitArchetypeCount × unitArchetypeCount`. */
   unitArchetypeCount: number;

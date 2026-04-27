@@ -4,10 +4,18 @@ import type {
   FortressDef,
   IncomeUpgradeDef,
   TugBalance,
+  TugBelievability,
   TugData,
   TugTheme,
   UnitDef,
 } from './types';
+
+/** Override shape for the believability sub-bundle — partial so callers
+ *  can override one knob without restating both. The applyTugOverrides
+ *  sub-merge fills missing fields from the base. */
+export type TugBalanceOverrides = Partial<Omit<TugBalance, 'believability'>> & {
+  believability?: Partial<TugBelievability>;
+};
 
 /**
  * Flat-category override shape accepted by `createTugEngine`.
@@ -29,19 +37,33 @@ export interface TugOverrides {
   abilities?: Array<Partial<AbilityDef> & { id: string }>;
   counterMatrix?: CounterMatrix;
   fortress?: Partial<FortressDef>;
-  balance?: Partial<TugBalance>;
+  balance?: TugBalanceOverrides;
   theme?: Partial<TugTheme>;
 }
 
 export function applyTugOverrides(base: TugData, overrides: TugOverrides | undefined): TugData {
   if (!overrides) return base;
+  let balance: TugBalance = base.balance;
+  if (overrides.balance) {
+    const { believability: bOverride, ...rest } = overrides.balance;
+    balance = { ...base.balance, ...rest };
+    // Sub-merge believability so partial overrides ({ suboptimalityRate: 0.1 })
+    // don't drop the cadenceJitterScale field. Same pattern as the
+    // opponentPersona sub-merge in `buildTugSimEngine`.
+    if (bOverride) {
+      balance = {
+        ...balance,
+        believability: { ...base.balance.believability, ...bOverride },
+      };
+    }
+  }
   return {
     units: mergeById(base.units, overrides.units, 'units'),
     incomeUpgrades: mergeById(base.incomeUpgrades, overrides.incomeUpgrades, 'incomeUpgrades'),
     abilities: mergeById(base.abilities, overrides.abilities, 'abilities'),
     counterMatrix: overrides.counterMatrix ?? base.counterMatrix,
     fortress: overrides.fortress ? { ...base.fortress, ...overrides.fortress } : base.fortress,
-    balance: overrides.balance ? { ...base.balance, ...overrides.balance } : base.balance,
+    balance,
     theme: overrides.theme ? { ...base.theme, ...overrides.theme } : base.theme,
   };
 }

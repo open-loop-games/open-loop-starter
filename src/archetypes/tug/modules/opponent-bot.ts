@@ -1,4 +1,10 @@
-import { persistent, randomItem, type EngineModule } from 'open-loop-engine';
+import {
+  createSeededRNG,
+  getSeed,
+  persistent,
+  randomItem,
+  type EngineModule,
+} from 'open-loop-engine';
 import { PERSONAS, type Persona } from '../data/personality';
 import type { TugData } from '../data/types';
 import { IncomeKey } from './income';
@@ -37,12 +43,19 @@ const OPPOSITE: Record<Side, Side> = { player: 'ai', ai: 'player' };
  *
  * **Per-side perturbation isolation seam.** All policy reads from
  * `data.balance.*` are shared across both side instances by construction
- * EXCEPT `opponentPersona[side]`, which is the legitimately asymmetric
- * field. Asymmetric perturbation of `aiSendCadenceSec` or upgrade thresholds
- * requires per-side keying — see `open-loop-engine/docs/candidate-
- * primitives.md` "Tier-C bilateral-symmetric sim-bot pattern". The
- * existing asymmetric income knob (`'balance/aiIncomeMultiplier'`) is
- * bound to the AI side's income chain by key, not read here.
+ * EXCEPT three legitimately-asymmetric channels:
+ *
+ *   - `opponentPersona[side]` — per-side persona key (data field).
+ *   - `'balance/aiIncomeMultiplier'` — bound modifier on the AI side's
+ *     income chain by key, not read here.
+ *   - `believability` — calibration constraint (suboptimality + cadence
+ *     jitter), driven by an independent per-side seeded RNG stream so
+ *     toggling believability on one side doesn't shift global RNG state
+ *     used by the other side's `randomItem(eligible)` fallback.
+ *
+ * Asymmetric perturbation of cadence/upgrade thresholds (not currently
+ * required) would need per-side keying — see `open-loop-engine/docs/
+ * candidate-primitives.md` "Tier-C bilateral-symmetric sim-bot pattern".
  *
  * **PvP / no-bot.** PvP mode (or any "no AI on this side" config) is
  * expressed by not installing the module for that side, not by a sentinel
@@ -81,6 +94,21 @@ export function createOpponentBotModule(data: TugData, side: Side): EngineModule
       // module).
       const lastSendSec = persistent<number>(0, { name: 'lastSendSec' });
 
+      // Lazy per-side seeded RNG for believability calibration. Lazy
+      // because `runHeadless`/`runUntil` calls `seedRNG(config.seed)` after
+      // module install but before the tick loop — initializing in `install`
+      // would read the previous run's seed. Side-keyed offset so player and
+      // ai streams are deterministic-but-distinct given the global seed.
+      // Independent stream from the module-level `random()` used by
+      // `randomItem(eligible)` below — toggling believability never shifts
+      // the global RNG state.
+      let botRng: (() => number) | null = null;
+      const sideOffset = side === 'player' ? 1 : 2;
+      function rng(): number {
+        if (!botRng) botRng = createSeededRNG(getSeed() + sideOffset);
+        return botRng();
+      }
+
       function dominantOpponentArchetype(): string | null {
         const arr = lane.units[opposite].value;
         if (arr.length === 0) return null;
@@ -97,25 +125,35 @@ export function createOpponentBotModule(data: TugData, side: Side): EngineModule
         return bestCount >= 2 ? bestId : null;
       }
 
-      function pickCounterAware(eligible: Array<{ id: string }>): string | null {
+      /** Rank eligible archetypes by counter-strength against the
+       *  opponent's dominant. Returns up to two ids (best, second-best),
+       *  filtered to strict counters (cell > 1.0). Empty list when no
+       *  dominance is detected, no eligible counter exists, or only one
+       *  candidate qualifies — caller falls back to `randomItem` semantics. */
+      function pickCounterRanked(eligible: Array<{ id: string }>): string[] {
         const dominant = dominantOpponentArchetype();
-        if (!dominant) return null;
+        if (!dominant) return [];
         const dIdx = idxOf.get(dominant);
-        if (dIdx === undefined) return null;
-        // Find the eligible archetype with the strongest matrix cell
-        // against the opponent's dominant. Strict > 1 to count as a counter.
-        let bestId: string | null = null;
-        let bestCell = 1;
+        if (dIdx === undefined) return [];
+        const scored: Array<{ id: string; cell: number }> = [];
         for (const p of eligible) {
           const aIdx = idxOf.get(p.id);
           if (aIdx === undefined) continue;
           const cell = data.counterMatrix[aIdx][dIdx];
-          if (cell > bestCell) {
-            bestCell = cell;
-            bestId = p.id;
-          }
+          if (cell > 1) scored.push({ id: p.id, cell });
         }
-        return bestId;
+        scored.sort((a, b) => b.cell - a.cell);
+        return scored.slice(0, 2).map((s) => s.id);
+      }
+
+      /** Believability suboptimality wrap: with probability `rate`, return
+       *  the second-best item from a ranked list (descending preference);
+       *  else return the best. Length-0 short-circuits to null; length-1
+       *  always returns the only option (no swap to make). */
+      function pickWithSuboptimality<T>(ranked: T[], rate: number): T | null {
+        if (ranked.length === 0) return null;
+        if (rate > 0 && ranked.length >= 2 && rng() < rate) return ranked[1];
+        return ranked[0];
       }
 
       function pickByPersona(persona: Persona, affordable: Array<{ id: string }>): string | null {
@@ -128,36 +166,32 @@ export function createOpponentBotModule(data: TugData, side: Side): EngineModule
             : affordable;
         if (eligible.length === 0) return null;
 
+        const subRate = data.balance.believability.suboptimalityRate;
+
         switch (persona.unitPicker) {
           case 'cheapest': {
-            let bestId: string | null = null;
-            let bestCost = Infinity;
-            for (const p of eligible) {
-              const c = costOf.get(p.id) ?? Infinity;
-              if (c < bestCost) {
-                bestCost = c;
-                bestId = p.id;
-              }
-            }
-            return bestId;
+            const ranked = [...eligible].sort(
+              (a, b) => (costOf.get(a.id) ?? Infinity) - (costOf.get(b.id) ?? Infinity),
+            );
+            return pickWithSuboptimality(ranked, subRate)?.id ?? null;
           }
           case 'top-tier': {
-            let bestId: string | null = null;
-            let bestCost = -Infinity;
-            for (const p of eligible) {
-              const c = costOf.get(p.id) ?? -Infinity;
-              if (c > bestCost) {
-                bestCost = c;
-                bestId = p.id;
-              }
-            }
-            return bestId;
+            const ranked = [...eligible].sort(
+              (a, b) => (costOf.get(b.id) ?? -Infinity) - (costOf.get(a.id) ?? -Infinity),
+            );
+            return pickWithSuboptimality(ranked, subRate)?.id ?? null;
           }
           case 'counter': {
-            // Counter-aware with random-affordable fallback when no
-            // dominance is detected. randomItem uses the engine's seeded
-            // RNG so sim runs are deterministic given a seed.
-            return pickCounterAware(eligible) ?? randomItem(eligible)?.id ?? null;
+            // Believability suboptimality applies to the matrix-ranked
+            // counter pick (best vs second-best counter). Random-affordable
+            // fallback when no dominance is detected stays untouched —
+            // its semantics are already legitimate decision noise from the
+            // production policy and aren't believability calibration.
+            const counterRanked = pickCounterRanked(eligible);
+            if (counterRanked.length > 0) {
+              return pickWithSuboptimality(counterRanked, subRate);
+            }
+            return randomItem(eligible)?.id ?? null;
           }
         }
       }
@@ -171,7 +205,13 @@ export function createOpponentBotModule(data: TugData, side: Side): EngineModule
         const persona = PERSONAS[data.balance.opponentPersona[side]];
 
         lastSendSec.value += dt;
-        if (lastSendSec.value < data.balance.aiSendCadenceSec * persona.cadenceMultiplier) return;
+        const baseThreshold = data.balance.aiSendCadenceSec * persona.cadenceMultiplier;
+        const jitter = data.balance.believability.cadenceJitterScale;
+        // Multiplicative ±jitter; one knob covers all persona cadence
+        // shapes. Production has jitter=0 so the threshold is exact.
+        const threshold =
+          jitter > 0 ? baseThreshold * (1 + (rng() * 2 - 1) * jitter) : baseThreshold;
+        if (lastSendSec.value < threshold) return;
 
         // Income-upgrade spend branch. Walk tiers in order; first un-bought
         // tier is the next candidate. Sequential gating means later tiers
