@@ -9,9 +9,18 @@ import {
   type InjectionKey,
   type Persistent,
 } from 'open-loop-engine';
-import type { ActionDef, LooperData } from '../data/types';
+import type {
+  ActionDef,
+  CompletionEffect,
+  LooperData,
+  LooperGameState,
+  RewardEffect,
+} from '../data/types';
 import { LooperTuningRegistryKey, ManaModuleKey, type LooperTunables } from './mana';
 import { CapabilitiesKey, grantCapabilityXp } from './capabilities';
+import { GoldKey, GoldModuleKey } from './gold';
+import { ProgressVarsKey } from './progress-vars';
+import { RegularVarsKey } from './regular-vars';
 
 export interface ActionState {
   /** Ticks of progress accrued on the current attempt. Resets to 0 on completion or loop reset. */
@@ -38,10 +47,12 @@ export interface ActionsModule {
   getTimesCompleted(id: string): number;
   /**
    * Advance an action's progress by `ticks` ticks. On completion grants
-   * capability XP per the canonical formula, applies `manaGrant` (extends
-   * the loop pool, NOT clamped), increments `timesCompleted`, resets
-   * `progress` to 0, and returns `true` (queue dispatcher uses this to call
-   * `sequencer.complete()`). Returns `false` while still in progress.
+   * capability XP per the canonical formula, applies the type-discriminated
+   * completion path (progress: addXp to progressVar; regular: checkOne pool +
+   * conditional rewardEffects; basic: completionEffects batch with pre-batch
+   * state snapshot for function-form amounts), increments `timesCompleted`,
+   * resets `progress` to 0, and returns `true` (queue dispatcher uses this
+   * to call `sequencer.complete()`). Returns `false` while still in progress.
    */
   tick(id: string, ticks: number): boolean;
 }
@@ -53,7 +64,9 @@ export const ActionsKey: InjectionKey<ActionsModule> = Symbol(
 // Per-zone solver representative: one action per zone whose `manaCost` is
 // wrapped via `tunable()`. Satisfies the at-least-one-per-zone bisect minimum
 // while keeping the tunable surface small. Other actions pass through unwrapped.
-const TUNABLE_MANA_COST_IDS = new Set<string>(['stretch', 'trek', 'apprentice', 'confront']);
+// Updated for the 2-zone canonical: stretch (Hearth entry training) + trek
+// (Wilds bridge action).
+const TUNABLE_MANA_COST_IDS = new Set<string>(['stretch', 'trek']);
 
 type Ref2<T> = { value: T };
 const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
@@ -73,10 +86,20 @@ const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 export function createActionsModule(data: LooperData): EngineModule {
   return {
     id: 'looper/actions',
-    dependencies: ['looper/mana', 'looper/capabilities'],
+    dependencies: [
+      'looper/mana',
+      'looper/gold',
+      'looper/capabilities',
+      'looper/progress-vars',
+      'looper/regular-vars',
+    ],
     install(ctx) {
       const capabilities = ctx.inject(CapabilitiesKey);
       const manaModule = ctx.inject(ManaModuleKey);
+      const gold = ctx.inject(GoldKey);
+      const goldModule = ctx.inject(GoldModuleKey);
+      const progressVars = ctx.inject(ProgressVarsKey);
+      const regularVars = ctx.inject(RegularVarsKey);
       const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
 
       // Cost-reduction divisor + Talent accrual ratio wrapped once so
@@ -141,40 +164,110 @@ export function createActionsModule(data: LooperData): EngineModule {
         });
       }
 
+      // Pre-batch snapshot view for function-form CompletionEffect amounts.
+      // Effects resolve all function amounts BEFORE applying any effect, so
+      // the state read here reflects pre-batch values. The Trade exchange
+      // (`[spend-gold:'all', add-mana:state=>state.gold()*50]`) relies on
+      // this: the function captures `currentGold * 50`, then spend-gold zeros
+      // gold, then add-mana adds the captured amount.
+      // Pre-batch state snapshot for function-form CompletionEffect amounts.
+      // Only the readers actually consulted by demo effects are wired up — the
+      // rest stay binary stubs (`false`) since basic-action completionEffects
+      // don't currently read prereq predicates. Forks adding richer effect
+      // function-forms can extend this snapshot.
+      const effectStateView: LooperGameState = {
+        manaAtLeast: () => false,
+        goldAtLeast: () => false,
+        gold: () => gold.value,
+        capabilityLevelAtLeast: () => false,
+        progressVarLevelAtLeast: () => false,
+        actionCompletedAtLeast: () => false,
+        loopCountAtLeast: () => false,
+      };
+
+      function applyRewardEffect(effect: RewardEffect): void {
+        if (effect.kind === 'add-mana') {
+          manaModule.addMana(effect.amount);
+        } else if (effect.kind === 'add-gold') {
+          goldModule.addGold(effect.amount);
+        }
+      }
+
+      function applyCompletionEffects(effects: CompletionEffect[]): void {
+        // Resolve all function-form amounts against the pre-batch snapshot so
+        // effect-application order doesn't change the captured values. After
+        // resolution, apply effects in declaration order.
+        const resolved: CompletionEffect[] = effects.map((effect) => {
+          if (effect.kind === 'add-mana' && typeof effect.amount === 'function') {
+            const fn = effect.amount;
+            return { kind: 'add-mana', amount: fn(effectStateView) };
+          }
+          return effect;
+        });
+        for (const effect of resolved) {
+          if (effect.kind === 'add-mana') {
+            manaModule.addMana(effect.amount as DecimalSource);
+          } else if (effect.kind === 'add-gold') {
+            goldModule.addGold(effect.amount);
+          } else if (effect.kind === 'spend-gold') {
+            goldModule.spendGold(effect.amount);
+          }
+        }
+      }
+
       function tick(id: string, ticks: number): boolean {
         const state = states.get(id);
         if (!state) return false;
 
         const newProgress = Decimal.add(state.progress.value, ticks);
         const cost = state.adjustedTicks.value;
-        if (Decimal.gte(newProgress, cost)) {
-          state.progress.value = 0;
-          state.timesCompleted.value += 1;
-          const def = defsById.get(id);
-          if (def) {
-            // Canonical XP grant (idle-loops-ng action-formulas.ts:48-61):
-            //   adjustedExp = expMult × (manaCost / adjustedTicks)
-            //   for each (cap, weight) in weights:
-            //     xpGain = weight × adjustedExp × talentMult
-            //     level.addXp(xpGain); talent.addXp(xpGain × talentAccrualRatio)
-            const adjustedExp = Decimal.mul(def.expMult, Decimal.div(state.manaCost.value, cost));
-            for (const [capId, weight] of Object.entries(def.weights)) {
-              const capState = capabilities.getState(capId);
-              if (!capState) continue;
-              const xpGain = Decimal.mul(
-                Decimal.mul(weight, adjustedExp),
-                capState.talentMult.value,
-              );
-              grantCapabilityXp(capabilities, capId, xpGain, talentAccrualRatio.value);
-            }
-            if (def.manaGrant !== undefined) {
-              manaModule.addMana(def.manaGrant);
+        if (Decimal.lt(newProgress, cost)) {
+          state.progress.value = newProgress;
+          return false;
+        }
+
+        // Completion path: capability XP for all types, then type-discriminated
+        // secondary effect.
+        state.progress.value = 0;
+        state.timesCompleted.value += 1;
+        const def = defsById.get(id);
+        if (!def) return true;
+
+        // Canonical XP grant (idle-loops-ng action-formulas.ts:48-61):
+        //   adjustedExp = expMult × (manaCost / adjustedTicks)
+        //   for each (cap, weight) in weights:
+        //     xpGain = weight × adjustedExp × talentMult
+        //     level.addXp(xpGain); talent.addXp(xpGain × talentAccrualRatio)
+        const adjustedExp = Decimal.mul(def.expMult, Decimal.div(state.manaCost.value, cost));
+        for (const [capId, weight] of Object.entries(def.weights)) {
+          const capState = capabilities.getState(capId);
+          if (!capState) continue;
+          const xpGain = Decimal.mul(Decimal.mul(weight, adjustedExp), capState.talentMult.value);
+          grantCapabilityXp(capabilities, capId, xpGain, talentAccrualRatio.value);
+        }
+
+        // Type-discriminated secondary effect.
+        if (def.type === 'progress') {
+          const pvDef = progressVars.getDef(def.progressVarId);
+          if (pvDef) {
+            // ProgressVar XP = progressVar.expMult × adjustedExp.
+            const xpGrant = Decimal.mul(pvDef.expMult, adjustedExp);
+            progressVars.addXP(def.progressVarId, xpGrant);
+          }
+        } else if (def.type === 'regular') {
+          const outcome = regularVars.checkOne(def.regularVarId, def.rewardRatio);
+          if (outcome.goodFound) {
+            for (const reward of def.rewardEffects) {
+              applyRewardEffect(reward);
             }
           }
-          return true;
+        } else if (def.type === 'basic') {
+          if (def.completionEffects && def.completionEffects.length > 0) {
+            applyCompletionEffects(def.completionEffects);
+          }
         }
-        state.progress.value = newProgress;
-        return false;
+
+        return true;
       }
 
       const moduleApi: ActionsModule = {

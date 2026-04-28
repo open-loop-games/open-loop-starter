@@ -16,8 +16,10 @@ import {
 import type { LooperData, LooperGameState } from '../data/types';
 import { ActionsKey } from './actions';
 import { CapabilitiesKey } from './capabilities';
+import { GoldKey } from './gold';
 import { LoopKey } from './loop';
 import { ManaKey } from './mana';
+import { ProgressVarsKey } from './progress-vars';
 
 /**
  * Per-queue-item metadata. The queue is a cursor-walked plan (idle-loops
@@ -111,12 +113,21 @@ export const QueueModuleKey: InjectionKey<LooperQueueModule> = Symbol(
 export function createQueueModule(_data: LooperData): EngineModule {
   return {
     id: 'looper/queue',
-    dependencies: ['looper/actions', 'looper/capabilities', 'looper/mana', 'looper/loop'],
+    dependencies: [
+      'looper/actions',
+      'looper/capabilities',
+      'looper/mana',
+      'looper/gold',
+      'looper/progress-vars',
+      'looper/loop',
+    ],
     install(ctx) {
       const actions = ctx.inject(ActionsKey);
       const mana = ctx.inject(ManaKey);
+      const gold = ctx.inject(GoldKey);
       const loop: Loop = ctx.inject(LoopKey);
       const capabilities = ctx.inject(CapabilitiesKey);
+      const progressVars = ctx.inject(ProgressVarsKey);
       const gameLoop: GameLoop = ctx.inject(GameLoopKey);
 
       const queueVersion = ref(0);
@@ -130,11 +141,18 @@ export function createQueueModule(_data: LooperData): EngineModule {
       // live module refs so data files don't import modules.
       const stateView: LooperGameState = {
         manaAtLeast: (amount) => Decimal.gte(mana.value, amount),
+        goldAtLeast: (amount) => Decimal.gte(gold.value, amount),
+        gold: () => gold.value,
         capabilityLevelAtLeast: (capabilityId, tier, n) => {
           const state = capabilities.getState(capabilityId);
           if (!state) return false;
           const level = tier === 'level' ? state.level.level.value : state.talent.level.value;
           return Decimal.gte(level, n);
+        },
+        progressVarLevelAtLeast: (progressVarId, n) => {
+          const skill = progressVars.getSkill(progressVarId);
+          if (!skill) return false;
+          return Decimal.gte(skill.level.value, n);
         },
         actionCompletedAtLeast: (actionId, count) => actions.getTimesCompleted(actionId) >= count,
         loopCountAtLeast: (n) => loop.count.value >= n,

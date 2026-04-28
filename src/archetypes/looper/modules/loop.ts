@@ -15,7 +15,10 @@ import type { Ref } from 'vue';
 import type { LooperData } from '../data/types';
 import { ActionsKey, getActionProgressRefs, getActionTimesCompletedRefs } from './actions';
 import { CapabilitiesKey, getTalentXpRefs } from './capabilities';
+import { GoldModuleKey } from './gold';
 import { ManaKey, ManaModuleKey } from './mana';
+import { ProgressVarsKey, getProgressVarXpRefs } from './progress-vars';
+import { RegularVarsKey, getRegularVarPerLoopRefs, getRegularVarTotalRefs } from './regular-vars';
 import {
   QueueKey,
   QueueModuleKey,
@@ -63,11 +66,21 @@ export function createLoopModule(_data: LooperData): EngineModule {
 
   return {
     id: 'looper/loop',
-    dependencies: ['looper/mana', 'looper/capabilities', 'looper/actions'],
+    dependencies: [
+      'looper/mana',
+      'looper/gold',
+      'looper/capabilities',
+      'looper/progress-vars',
+      'looper/regular-vars',
+      'looper/actions',
+    ],
     install(ctx) {
       const mana = ctx.inject(ManaKey);
       const manaModule = ctx.inject(ManaModuleKey);
+      const goldModule = ctx.inject(GoldModuleKey);
       const capabilities = ctx.inject(CapabilitiesKey);
+      const progressVars = ctx.inject(ProgressVarsKey);
+      const regularVars = ctx.inject(RegularVarsKey);
       const actions = ctx.inject(ActionsKey);
       const gameLoop: GameLoop = ctx.inject(GameLoopKey);
 
@@ -76,12 +89,18 @@ export function createLoopModule(_data: LooperData): EngineModule {
 
       function ensureRetention(): RetentionPolicy {
         if (!retentionBuilt) {
-          // Talent XP persists; action timesCompleted persists (drives
-          // action-completion-count prereqs). Level XP and action progress
-          // reset (handled by thingsToReset below).
+          // Persists across loops: capability Talent XP, action
+          // timesCompleted (action-completion-count prereqs), progressVar XP
+          // (Wander-shape persistent exploration), regularVar `total`
+          // (derived from progressVar levels — cached so save/load doesn't
+          // need to walk the level-up emitter pre-rehydration).
+          // Per-loop refs (capability Level XP, action progress, regularVar
+          // checked/good, gold, mana) clear via thingsToReset / onRestart.
           const keep: Persistent[] = [
             ...getTalentXpRefs(capabilities),
             ...getActionTimesCompletedRefs(actions),
+            ...getProgressVarXpRefs(progressVars),
+            ...getRegularVarTotalRefs(regularVars),
           ];
           retention = createRetentionPolicy({ keep });
           retentionBuilt = true;
@@ -93,9 +112,14 @@ export function createLoopModule(_data: LooperData): EngineModule {
         id: 'looper/loop',
         endCondition: () => Decimal.lte(mana.value, 0) || shouldRestart?.value === true,
 
-        // Level.xp resets each loop; talent.xp survives via retention.
-        // Action progress refs reset; action timesCompleted is in retention's
-        // keep list so it survives the reset → restore round-trip.
+        // Per-loop reset scope. Capability Level XP zeros (Talent survives via
+        // retention); action progress zeros; regularVar checked/good zero
+        // (`total` survives via retention). Action timesCompleted is also
+        // pushed here AND kept in retention — the engine snapshots-then-
+        // restores from the retention `keep` list, so the reset+restore
+        // round-trip preserves it. Gold and mana clear via onRestart's
+        // imperative resets, NOT here, so save-reset (zero out) and
+        // loop-restart (refill / zero) stay distinguishable.
         thingsToReset: () => {
           const things: unknown[] = [];
           for (const entry of capabilities.getAll()) {
@@ -107,6 +131,9 @@ export function createLoopModule(_data: LooperData): EngineModule {
           for (const ref of getActionTimesCompletedRefs(actions)) {
             things.push(ref);
           }
+          for (const ref of getRegularVarPerLoopRefs(regularVars)) {
+            things.push(ref);
+          }
           return things;
         },
 
@@ -116,10 +143,12 @@ export function createLoopModule(_data: LooperData): EngineModule {
 
         onRestart: () => {
           ensureRetention().restore();
-          // Reset mana to initialMana and clear manaAdded BEFORE the queue
-          // auto-dispatches — the queue's `canRun` checks mana, so this
-          // order matters.
+          // Reset mana to initialMana, clear manaAdded, and zero gold BEFORE
+          // the queue auto-dispatches — the queue's `canRun` checks mana, so
+          // this order matters. Gold resets to 0 (vanilla idle-loops shape:
+          // per-loop currency, no cross-loop compounding).
           manaModule.resetMana();
+          goldModule.resetGold();
           // Walk per-item loopsLeft → loops, cursor → 0, clear
           // shouldRestart. resetCursor auto-dispatches if items[0] is
           // runnable; if empty, dispatch is a no-op.

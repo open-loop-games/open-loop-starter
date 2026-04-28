@@ -1,0 +1,124 @@
+import {
+  Decimal,
+  Formula,
+  createSkillCategory,
+  type DecimalSource,
+  type EngineModule,
+  type InjectionKey,
+  type LevelDrivenSkill,
+  type Persistent,
+  type SkillCategory,
+} from 'open-loop-engine';
+import type { LooperData, ProgressVarDef } from '../data/types';
+import { RegularVarsKey } from './regular-vars';
+
+/**
+ * Per-progressVar state. ProgressVars are level-driven skills with persistent
+ * XP that survives the loop reset (kept by retention policy in `loop.ts`).
+ * Unlike capabilities, level does NOT multiply cost or XP rate — it sizes
+ * regularVar pools via the def's `scales` table. Wander-shape, generalized.
+ *
+ * `level.modifier` is unused (we only read `level.level.value`); the
+ * `levelToMultiplier: (level) => level` curve exists to satisfy the
+ * level-driven skill contract — the canonical Looper coupling reads the bare
+ * level rather than a multiplier.
+ */
+export interface LooperProgressVarState {
+  level: LevelDrivenSkill;
+}
+
+export const ProgressVarsKey: InjectionKey<SkillCategory<ProgressVarDef, LooperProgressVarState>> =
+  Symbol('looper/progress-vars') as InjectionKey<
+    SkillCategory<ProgressVarDef, LooperProgressVarState>
+  >;
+
+/**
+ * ProgressVars use a second `createSkillCategory` instance — same engine
+ * primitive as capabilities, different role:
+ *
+ * - **Capabilities** — Level resets per loop and multiplies cost reduction;
+ *   Talent persists and multiplies XP gain rate.
+ * - **ProgressVars** — XP persists across loops; level sizes regularVar pools
+ *   via the `scales` table (Wander × 5 → Pots; Forest × 5 + Shortcut × 2 → Herbs).
+ *
+ * The XP curve mirrors capabilities (`level = floor(sqrt(xp) / 2)` — vanilla
+ * idle-loops shape). The level-up callback closes over the regularVars
+ * module's `setRegularTotal`; on any contributor's level-up, every affected
+ * regularVar (every entry in the changed progressVar's `scales` table)
+ * recomputes its `total` by summing `level × perLevel` across all
+ * contributors.
+ *
+ * Multi-axis: when `forage` has two contributors (`trail × 5` + `mark × 2`),
+ * either contributor's level-up triggers a recompute; the recompute walks
+ * every progressVar's `scales` table and sums all entries that reference
+ * `forage`. Mirrors `idle-loops-ng/src/modules/zones.ts:441,445` — both
+ * `Forest` and `Shortcut` callbacks compute `setRegularTotal('Herbs',
+ * Forest * 5 + Shortcut * 2)`.
+ */
+export function createProgressVarsModule(data: LooperData): EngineModule {
+  return {
+    id: 'looper/progress-vars',
+    dependencies: ['looper/regular-vars'],
+    install(ctx) {
+      const regularVars = ctx.inject(RegularVarsKey);
+
+      // Capture data in closure so the level-up callback can iterate every
+      // progressVar's scales table at recompute time. Local lookup is faster
+      // than category traversal during recompute.
+      const allDefs = data.progressVars;
+
+      function recomputeRegularVarTotal(regularVarId: string): void {
+        let total = new Decimal(0);
+        for (const def of allDefs) {
+          const scale = def.scales.find((s) => s.regularVarId === regularVarId);
+          if (!scale) continue;
+          const skill = progressVars.getSkill(def.id);
+          if (!skill) continue;
+          total = total.add(Decimal.mul(skill.level.value, scale.perLevel));
+        }
+        regularVars.setRegularTotal(regularVarId, total);
+      }
+
+      function onProgressVarLevelUp(progressVarId: string): void {
+        const def = allDefs.find((d) => d.id === progressVarId);
+        if (!def) return;
+        for (const scale of def.scales) {
+          recomputeRegularVarTotal(scale.regularVarId);
+        }
+      }
+
+      const progressVars = createSkillCategory<ProgressVarDef, LooperProgressVarState>({
+        id: 'looper/progress-vars',
+        mapSkill: (def) => ({
+          xpToLevel: (xp) => Formula.variable(xp).max(1).sqrt().div(2).floor(),
+          levelToMultiplier: (level) => level,
+          description: `${def.name} (Progress)`,
+          onLevelUp: () => onProgressVarLevelUp(def.id),
+        }),
+        mapState: (_def, levelSkill) => ({
+          level: levelSkill as LevelDrivenSkill,
+        }),
+      });
+
+      progressVars.register(data.progressVars);
+
+      // After save/load rehydration, levels jump from 0 to whatever the save
+      // contained without firing the levelUp event (per engine docs:
+      // "Events fire only on gameplay XP gain, not on save-load"). Recompute
+      // every regularVar's total once at install so the persistent-derived
+      // total stays consistent with the rehydrated progressVar levels.
+      for (const def of data.regularVars) {
+        recomputeRegularVarTotal(def.id);
+      }
+
+      ctx.provide(ProgressVarsKey, progressVars);
+    },
+  };
+}
+
+/** Helper for cross-module retention-key collection — progressVar.xp refs (kept across loops). */
+export function getProgressVarXpRefs(
+  category: SkillCategory<ProgressVarDef, LooperProgressVarState>,
+): Persistent<DecimalSource>[] {
+  return category.getAll().map((entry) => entry.skill.xp);
+}

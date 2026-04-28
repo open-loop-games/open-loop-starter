@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_LOOPER_DATA } from '../data';
 
-const { balance, actions, zones, capabilities } = DEFAULT_LOOPER_DATA;
+const { balance, actions, zones, capabilities, progressVars, regularVars } = DEFAULT_LOOPER_DATA;
 
 /**
  * Math-only regression locks — milliseconds, no engine boot. The balance
@@ -21,20 +21,30 @@ describe('balance probe — solver-knob receipts', () => {
     expect(Number(balance.talentAccrualRatio)).toBe(0.01);
   });
 
-  it('loopResetEnabled defaults true — the demo always ships with reset enabled', () => {
+  it('loopResetEnabled defaults true', () => {
     expect(balance.loopResetEnabled).toBe(true);
   });
 });
 
 describe('balance probe — content cardinality minimums', () => {
-  it('capability registry meets minimum (≥ 4 capabilities)', () => {
-    expect(capabilities.length).toBeGreaterThanOrEqual(4);
+  it('capability registry locked at 4 (single-axis canonical)', () => {
+    expect(capabilities.length).toBe(4);
   });
 
-  it('zone ladder meets minimum (≥ 3 zones, all initially visible)', () => {
-    expect(zones.length).toBeGreaterThanOrEqual(3);
-    // Zones are UI grouping only — no per-zone gating field; per-action
-    // prereqs handle bridge-action visibility instead.
+  it('zone count locked at 2 (Hearth + Wilds — UI grouping only)', () => {
+    expect(zones.length).toBe(2);
+  });
+
+  it('progressVar registry: 4 total, 2 per zone', () => {
+    expect(progressVars.length).toBe(4);
+    for (const zone of zones) {
+      const inZone = progressVars.filter((p) => p.zoneId === zone.id);
+      expect(inZone.length).toBe(2);
+    }
+  });
+
+  it('regularVar registry: ≥1 per progressVar (some shared via multi-axis scaling)', () => {
+    expect(regularVars.length).toBeGreaterThanOrEqual(progressVars.length);
   });
 
   it('action set covers every capability via `weights` at least once', () => {
@@ -43,35 +53,68 @@ describe('balance probe — content cardinality minimums', () => {
     for (const id of capIds) expect(weighted.has(id)).toBe(true);
   });
 
-  it('every zone has at least one action targeted at it', () => {
-    const zoneIds = new Set(zones.map((z) => z.id));
-    const targetedZones = new Set(actions.map((a) => a.zoneId));
-    for (const id of zoneIds) expect(targetedZones.has(id)).toBe(true);
+  it('every action-type variant is exercised', () => {
+    const types = new Set(actions.map((a) => a.type));
+    expect(types.has('progress')).toBe(true);
+    expect(types.has('regular')).toBe(true);
+    expect(types.has('basic')).toBe(true);
+  });
+
+  it('every progressVar has ≥1 progress-type action targeting it', () => {
+    const targeted = new Set(
+      actions.filter((a) => a.type === 'progress').map((a) => a.progressVarId),
+    );
+    for (const pv of progressVars) expect(targeted.has(pv.id)).toBe(true);
+  });
+
+  it('every regularVar has ≥1 regular-type action checking against it', () => {
+    const checked = new Set(actions.filter((a) => a.type === 'regular').map((a) => a.regularVarId));
+    for (const rv of regularVars) expect(checked.has(rv.id)).toBe(true);
+  });
+
+  it('manapot frame: ≥1 regular action grants mana via rewardEffects', () => {
+    const manaGranters = actions.filter(
+      (a) => a.type === 'regular' && a.rewardEffects.some((e) => e.kind === 'add-mana'),
+    );
+    expect(manaGranters.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('gold↔mana exchange frame: ≥1 regular action grants gold AND ≥1 basic action spends gold for mana', () => {
+    const goldGranters = actions.filter(
+      (a) => a.type === 'regular' && a.rewardEffects.some((e) => e.kind === 'add-gold'),
+    );
+    const goldSpenders = actions.filter(
+      (a) =>
+        a.type === 'basic' &&
+        a.completionEffects?.some((e) => e.kind === 'spend-gold') &&
+        a.completionEffects?.some((e) => e.kind === 'add-mana'),
+    );
+    expect(goldGranters.length).toBeGreaterThanOrEqual(1);
+    expect(goldSpenders.length).toBeGreaterThanOrEqual(1);
   });
 });
 
 describe('balance probe — prereq graph shape', () => {
-  it('exercises all four ActionPrereq variants across the action set', () => {
+  it('exercises all five ActionPrereq variants across the action set', () => {
     const variants = new Set<string>();
     for (const action of actions) {
       if (!action.prereqs) {
-        // Unguarded actions are the implicit "always" variant.
         variants.add('always-implicit');
         continue;
       }
-      for (const prereq of action.prereqs) {
-        variants.add(prereq.kind);
-      }
+      for (const prereq of action.prereqs) variants.add(prereq.kind);
     }
     expect(variants.has('always-implicit')).toBe(true);
     expect(variants.has('action-completion-count')).toBe(true);
     expect(variants.has('capability-tier-level')).toBe(true);
+    expect(variants.has('progress-var-level')).toBe(true);
     expect(variants.has('loop-count')).toBe(true);
   });
 
-  it('every prereq references a defined action / capability id', () => {
+  it('every prereq references a defined action / capability / progressVar id', () => {
     const actionIds = new Set(actions.map((a) => a.id));
     const capIds = new Set(capabilities.map((c) => c.id));
+    const progressVarIds = new Set(progressVars.map((p) => p.id));
     for (const action of actions) {
       if (!action.prereqs) continue;
       for (const prereq of action.prereqs) {
@@ -79,8 +122,35 @@ describe('balance probe — prereq graph shape', () => {
           expect(actionIds.has(prereq.actionId)).toBe(true);
         } else if (prereq.kind === 'capability-tier-level') {
           expect(capIds.has(prereq.capabilityId)).toBe(true);
+        } else if (prereq.kind === 'progress-var-level') {
+          expect(progressVarIds.has(prereq.progressVarId)).toBe(true);
         }
       }
     }
+  });
+});
+
+describe('balance probe — multi-axis scaling shape', () => {
+  it('every progressVar `scales` entry references a defined regularVar id', () => {
+    const regularVarIds = new Set(regularVars.map((r) => r.id));
+    for (const pv of progressVars) {
+      for (const scale of pv.scales) {
+        expect(regularVarIds.has(scale.regularVarId)).toBe(true);
+      }
+    }
+  });
+
+  it('multi-axis scaling exists — ≥1 regularVar has ≥2 progressVar contributors', () => {
+    const contributorCount = new Map<string, number>();
+    for (const pv of progressVars) {
+      for (const scale of pv.scales) {
+        contributorCount.set(
+          scale.regularVarId,
+          (contributorCount.get(scale.regularVarId) ?? 0) + 1,
+        );
+      }
+    }
+    const multiAxis = [...contributorCount.values()].filter((n) => n >= 2);
+    expect(multiAxis.length).toBeGreaterThanOrEqual(1);
   });
 });

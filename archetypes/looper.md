@@ -113,8 +113,6 @@ Beat ordering note: beats 6 (Talent perceptible) and 7 (zone-2 visible) cluster 
 
 Per the data-first archetype convention (`open-loop-starter/CLAUDE.md` § Archetype convention), the demo's content lives flat in `src/archetypes/looper/data/*.ts` as plain typed arrays + balance constants. The skeleton/theme/balance lens lives as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`) inside each data file, not as a parallel filesystem layer. Mechanical fields and theme strings are co-located per def. No `vars/` extraction layer, no codegen round-trip.
 
-> **Implementation status.** The rebuilt code shipped in OL-743/744 carries the **Capabilities + cursor-walked queue + loop + Talent retention** half of the canonical shape. The **manapot frame, gold currency, gold↔mana exchange, persistent progressVars, regularVar pools, zone consolidation (4 → 2 zones), and the discriminated `ActionDef` union** described below are the canonical shape the next code leaf will land alongside the data-shape evolution. The doc is forward-canonical; § 8 marks which content is currently encoded vs. pending.
-
 ### Drain semantics
 
 Mana drains `round(tickRate × dt)` per engine tick — at 20 TPS that's 1 mana per tick, the canonical "1 mana = 1 tick" coupling that makes `manaCost` directly comparable to the pool. Drain is gated on `loop.running` (`modules/loop.ts:141-147`): an empty queue with the loop paused (boot, post-restart) does NOT drain mana.
@@ -549,8 +547,6 @@ export function buildLooperSimEngine(overrides?: LooperOverrides): Engine {
 ## 8. Content sketch
 
 The converged minimum across the in-studio Looper exemplars (`incloneution`, `idle-loops-ng`, `progress-knight-ng`) plus the canonical idle-loops vanilla shape:
-
-> **Implementation status.** The rebuilt code (post-OL-743/744) ships **Capabilities + cursor-walked queue + loop + Talent retention + flat per-action `manaGrant` placeholder** with 4 zones and 16 actions. The canonical shape described below — **2 zones, 4 progressVars, 5 regularVars, discriminated `ActionDef` union, gold currency, manapot + gold↔mana frames** — is what the next code leaf lands. Zones consolidate (Market + Spire drop in favour of denser content in Hearth + Wilds), action set re-authors against the new types, manapot mechanics replace flat `manaGrant`, gold↔mana exchange enters.
 
 ### Resources & currencies
 
