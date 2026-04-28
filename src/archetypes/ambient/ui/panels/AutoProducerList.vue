@@ -6,7 +6,7 @@ import { useUnlocks } from '../../composables/useUnlocks';
 import { useAmbientData } from '../../composables/useAmbientData';
 import { useHeadlineRate } from '../../composables/useHeadlineRate';
 import { useFormatting } from '@/composables/useFormatting';
-import AutoProducerTooltip from '../components/AutoProducerTooltip.vue';
+import RateBreakdownTooltip from '@/ui/components/RateBreakdownTooltip.vue';
 
 const rows = useAutoProducers();
 const unlocks = useUnlocks();
@@ -48,11 +48,12 @@ function totalPerSecond(row: AutoProducerRow) {
       v-if="visibleRows.length"
       class="rows"
     >
-      <AutoProducerTooltip
+      <RateBreakdownTooltip
         v-for="row in visibleRows"
         :key="row.def.id"
         :row="row"
         :total-rate="totalRate"
+        breakdown-title="Rate each"
       >
         <li
           class="row"
@@ -76,7 +77,7 @@ function totalPerSecond(row: AutoProducerRow) {
             <span class="buy-cost">{{ format(row.getCost(1), 0) }}</span>
           </Button>
         </li>
-      </AutoProducerTooltip>
+      </RateBreakdownTooltip>
     </ul>
     <p
       v-else

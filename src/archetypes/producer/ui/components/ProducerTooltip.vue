@@ -5,11 +5,11 @@
   pending purchase. Bakery-themed parchment surface.
 -->
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { type DecimalSource } from 'open-loop-engine';
 import RichTooltip from '@/ui/components/RichTooltip.vue';
 import ChainBreakdown from '@/ui/components/ChainBreakdown.vue';
 import { useFormatting } from '@/composables/useFormatting';
+import { useRateBreakdown } from '@/composables/useRateBreakdown';
 import type { ProducerRow } from '../../composables/useProducers';
 
 const props = defineProps<{
@@ -22,24 +22,12 @@ const props = defineProps<{
 
 const { format, formatPurchaseBeat, formatPercent, formatWhole } = useFormatting();
 
-const contribution = computed(() => Decimal.mul(props.row.rate.value, props.row.count.value));
-
-const contributionPct = computed(() => {
-  const total = Decimal.fromValue(props.totalRate);
-  if (!total.gt(0)) return 0;
-  return contribution.value.div(total).toNumber();
-});
-
-const marginalDelta = computed(() => Decimal.mul(props.row.rate.value, props.pendingAmount));
-
-const marginalPct = computed(() => {
-  const total = Decimal.fromValue(props.totalRate);
-  if (!total.gt(0)) return 0;
-  return marginalDelta.value.div(total).toNumber();
-});
-
-const pendingIsPositive = computed(() => Decimal.gt(props.pendingAmount, 0));
-const beatFinite = computed(() => Number.isFinite(props.row.beatSeconds.value));
+const { contribution, contributionPct, marginalDelta, marginalPct, pendingPositive, beatFinite } =
+  useRateBreakdown(
+    props.row,
+    () => props.totalRate,
+    () => props.pendingAmount,
+  );
 </script>
 
 <template>
@@ -83,7 +71,7 @@ const beatFinite = computed(() => Number.isFinite(props.row.beatSeconds.value));
             <dd>{{ formatPurchaseBeat(row.beatSeconds.value) }}</dd>
           </div>
           <div
-            v-if="pendingIsPositive"
+            v-if="pendingPositive"
             class="bakery-card__stat bakery-card__stat--marginal"
           >
             <dt>Next hire</dt>

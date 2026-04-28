@@ -25,7 +25,6 @@ provide('currentScreen', currentScreen);
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-const showAchievements = ref(false);
 
 function onKey(e: KeyboardEvent): void {
   if (!isDev) return;
@@ -74,6 +73,9 @@ function openSave(): void {
 }
 function openSettings(): void {
   const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
+}
+function openAchievements(): void {
+  const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
 }
 
 const { addToast } = useToasts();
@@ -168,7 +170,7 @@ function getActiveModules(): EngineModule[] {
           </Popover>
           <button
             class="btn-sm bakery-actions__btn"
-            @click="showAchievements = true"
+            @click="openAchievements"
           >
             Achievements
           </button>
@@ -199,10 +201,6 @@ function getActiveModules(): EngineModule[] {
   </AppFrame>
   <ToastContainer />
   <DevDiagnostics v-if="isDev" />
-  <AchievementGridDialog
-    v-if="showAchievements"
-    @close="showAchievements = false"
-  />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"

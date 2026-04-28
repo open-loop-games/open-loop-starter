@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import BaseModal from '@/ui/components/BaseModal.vue';
+import AchievementGrid, { type AchievementGridCell } from '@/ui/components/AchievementGrid.vue';
 import { useAchievements } from '../../composables/useAchievements';
 
 const summary = useAchievements();
 defineEmits<{ close: [] }>();
 
-const cells = computed(() =>
+const cells = computed<AchievementGridCell[]>(() =>
   summary.value.rows.map((row) => ({
     id: row.def.id,
     name: row.visible.value ? row.def.name : '???',
@@ -15,62 +15,54 @@ const cells = computed(() =>
     hidden: !row.visible.value,
   })),
 );
-
-const earnedCount = computed(() => summary.value.earnedCount.value);
-const total = computed(() => summary.value.total);
-const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / total.value) * 100));
 </script>
 
 <template>
-  <BaseModal
+  <AchievementGrid
+    class="bakery-awards"
     title="Recipe Awards"
+    :cells="cells"
     @close="$emit('close')"
   >
-    <div class="awards-summary">
-      <div class="awards-summary__count">
-        <span class="awards-summary__earned">{{ earnedCount }}</span>
-        <span class="awards-summary__sep">of</span>
-        <span class="awards-summary__total">{{ total }}</span>
-        <span class="awards-summary__label">awards earned</span>
-      </div>
-      <div
-        class="awards-summary__bar"
-        role="progressbar"
-        :aria-valuenow="earnedCount"
-        :aria-valuemax="total"
-      >
+    <template #summary="{ earnedCount, total, fillPct }">
+      <div class="awards-summary">
+        <div class="awards-summary__count">
+          <span class="awards-summary__earned">{{ earnedCount }}</span>
+          <span class="awards-summary__sep">of</span>
+          <span class="awards-summary__total">{{ total }}</span>
+          <span class="awards-summary__label">awards earned</span>
+        </div>
         <div
-          class="awards-summary__bar-fill"
-          :style="{ width: `${fillPct}%` }"
-        />
-      </div>
-    </div>
-    <ul class="awards-grid">
-      <li
-        v-for="c in cells"
-        :key="c.id"
-        class="award-card"
-        :data-earned="c.earned ? 'true' : 'false'"
-        :data-hidden-cell="c.hidden ? 'true' : 'false'"
-        :data-testid="`achievement-${c.id}`"
-      >
-        <div
-          class="award-card__seal"
-          aria-hidden="true"
+          class="awards-summary__bar"
+          role="progressbar"
+          :aria-valuenow="earnedCount"
+          :aria-valuemax="total"
         >
-          <span class="award-card__seal-mark">&#10038;</span>
+          <div
+            class="awards-summary__bar-fill"
+            :style="{ width: `${fillPct}%` }"
+          />
         </div>
-        <div class="award-card__body">
-          <div class="award-card__name">
-            {{ c.name }}
-          </div>
-          <div class="award-card__desc">
-            {{ c.description }}
-          </div>
+      </div>
+    </template>
+
+    <template #cell="{ cell }">
+      <div
+        class="award-card__seal"
+        aria-hidden="true"
+      >
+        <span class="award-card__seal-mark">&#10038;</span>
+      </div>
+      <div class="award-card__body">
+        <div class="award-card__name">
+          {{ cell.name }}
         </div>
-      </li>
-    </ul>
-  </BaseModal>
+        <div class="award-card__desc">
+          {{ cell.description }}
+        </div>
+      </div>
+    </template>
+  </AchievementGrid>
 </template>
 
 <style scoped>
@@ -146,16 +138,13 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
   transition: width 320ms ease-out;
 }
 
-/* ─── Grid ───────────────────────────────────────────────────────────── */
-.awards-grid {
-  list-style: none;
-  display: grid;
+/* ─── Costume override on the shared cell chrome ─────────────────────── */
+.bakery-awards :deep(.olui-achievement-grid__cells) {
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 10px;
 }
 
-/* ─── Award card ─────────────────────────────────────────────────────── */
-.award-card {
+.bakery-awards :deep(.olui-achievement-grid__cell) {
   position: relative;
   display: grid;
   grid-template-columns: 36px 1fr;
@@ -172,7 +161,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
     border-color 140ms ease-out;
 }
 
-.award-card[data-earned='true'] {
+.bakery-awards :deep(.olui-achievement-grid__cell[data-earned='true']) {
   border-color: var(--bakery-brass, #b1782a);
   background:
     radial-gradient(circle at top right, rgba(217, 152, 70, 0.18) 0%, transparent 65%),
@@ -182,7 +171,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
     0 4px 12px -6px rgba(177, 120, 42, 0.4);
 }
 
-.award-card[data-hidden-cell='true'] {
+.bakery-awards :deep(.olui-achievement-grid__cell[data-hidden-cell='true']) {
   background:
     repeating-linear-gradient(
       45deg,
@@ -222,7 +211,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
   transition: color 200ms ease-out;
 }
 
-.award-card[data-earned='true'] .award-card__seal {
+.bakery-awards :deep(.olui-achievement-grid__cell[data-earned='true']) .award-card__seal {
   background:
     radial-gradient(circle at 30% 25%, rgba(255, 230, 175, 0.7) 0%, rgba(255, 230, 175, 0) 50%),
     radial-gradient(circle at 50% 50%, var(--bakery-cherry, #a8341a) 0%, #6f1f0e 90%);
@@ -233,7 +222,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
     0 4px 8px -3px rgba(110, 30, 14, 0.55);
 }
 
-.award-card[data-earned='true'] .award-card__seal-mark {
+.bakery-awards :deep(.olui-achievement-grid__cell[data-earned='true']) .award-card__seal-mark {
   color: rgba(255, 240, 210, 0.92);
   text-shadow: 0 1px 1px rgba(40, 10, 0, 0.3);
 }
@@ -258,7 +247,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
   letter-spacing: 0.01em;
 }
 
-.award-card[data-earned='false'] .award-card__name {
+.bakery-awards :deep(.olui-achievement-grid__cell[data-earned='false']) .award-card__name {
   color: var(--bakery-cocoa-mute, #7a5d3d);
 }
 
@@ -270,7 +259,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
   line-height: 1.35;
 }
 
-.award-card[data-earned='true'] .award-card__desc {
+.bakery-awards :deep(.olui-achievement-grid__cell[data-earned='true']) .award-card__desc {
   color: var(--bakery-cocoa-soft, #4a3422);
 }
 </style>
