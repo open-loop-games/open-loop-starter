@@ -1,12 +1,31 @@
-import { computed, inject, type ComputedRef } from 'vue';
-import type { Engine, SequencerItem } from 'open-loop-engine';
-import { QueueKey, QueueVersionKey, type QueueItemMeta } from '../modules';
+import { computed, inject, type ComputedRef, type Ref } from 'vue';
+import type { DecimalSource, Engine, Persistent, SequencerItem } from 'open-loop-engine';
+import {
+  QueueKey,
+  QueueManaNeededKey,
+  QueueRepeatLastActionKey,
+  QueueShouldRestartKey,
+  QueueVersionKey,
+  type QueueItemMeta,
+} from '../modules';
+
+type Ref2<T> = { value: T };
+const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 
 export interface QueueView {
   items: ComputedRef<SequencerItem<QueueItemMeta>[]>;
   current: ComputedRef<SequencerItem<QueueItemMeta> | null>;
+  cursor: ComputedRef<number>;
   isPaused: ComputedRef<boolean>;
   isHolding: ComputedRef<boolean>;
+  /** Mana sim-seconds needed to finish the *active* run from the cursor onward. */
+  manaNeededFromCursor: ComputedRef<DecimalSource>;
+  /** Mana sim-seconds needed for one full pass of the plan. */
+  manaNeededTotal: ComputedRef<DecimalSource>;
+  /** Plan is exhausted; loop's endCondition will fire on the next tick. */
+  shouldRestart: Ref<boolean>;
+  /** Vanilla "Repeat Last Action" toggle (`actions.js:137-147`). */
+  repeatLastAction: Persistent<boolean>;
   enqueue(actionId: string, loops?: number): void;
   remove(index: number): void;
   reorder(from: number, to: number): void;
@@ -18,7 +37,10 @@ export function useQueue(): QueueView {
   const engine = inject<Engine>('engine');
   const seq = engine?.tryInject(QueueKey);
   const ver = engine?.tryInject(QueueVersionKey);
-  if (!seq || !ver) {
+  const sr = engine?.tryInject(QueueShouldRestartKey);
+  const repeat = engine?.tryInject(QueueRepeatLastActionKey);
+  const needed = engine?.tryInject(QueueManaNeededKey);
+  if (!seq || !ver || !sr || !repeat || !needed) {
     throw new Error('useQueue() called outside an active looper engine');
   }
   const sequencer = seq;
@@ -38,6 +60,11 @@ export function useQueue(): QueueView {
     return sequencer.currentItem;
   });
 
+  const cursor = computed<number>(() => {
+    void queueVersion.value;
+    return sequencer.cursor;
+  });
+
   const isPaused = computed(() => sequencer.paused.value);
   const isHolding = computed(() => {
     void queueVersion.value;
@@ -45,14 +72,19 @@ export function useQueue(): QueueView {
   });
 
   function enqueue(actionId: string, loops = 1): void {
-    sequencer.enqueue({ id: actionId, metadata: { loops, remaining: loops } });
+    sequencer.enqueue({ id: actionId, metadata: { loops, loopsLeft: loops } });
   }
 
   return {
     items,
     current,
+    cursor,
     isPaused,
     isHolding,
+    manaNeededFromCursor: needed.fromCursor,
+    manaNeededTotal: needed.total,
+    shouldRestart: asRef(sr),
+    repeatLastAction: repeat,
     enqueue,
     remove: (index) => {
       sequencer.remove(index);

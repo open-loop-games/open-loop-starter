@@ -1,6 +1,6 @@
 export { useLooperData } from './useLooperData';
 export { useMana, type ManaView } from './useMana';
-export { useSkills, type SkillRow } from './useSkills';
+export { useCapabilities, type CapabilityRow } from './useCapabilities';
 export { useZones, type ZoneRow, type ZonesView } from './useZones';
 export { useActions, type ActionRow, type ActionsView } from './useActions';
 export { useQueue, type QueueView } from './useQueue';

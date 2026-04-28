@@ -7,14 +7,14 @@ import { useLoop } from '../../composables/useLoop';
 import { useQueue } from '../../composables/useQueue';
 import { useActions } from '../../composables/useActions';
 
-const { manaRef, fillRatio, poolMax } = useMana();
+const { manaRef, fillRatio, totalBudget } = useMana();
 const loop = useLoop();
 const queue = useQueue();
 const actions = useActions();
 const { format } = useFormatting();
 
 // Materialised refs for the template Ref-brand peel.
-const poolMaxRef = computed(() => poolMax.value);
+const totalBudgetRef = computed(() => totalBudget.value);
 
 const currentRow = computed(() => {
   const item = queue.current.value;
@@ -45,7 +45,7 @@ const currentRow = computed(() => {
           class="mana-gauge__value"
           data-testid="mana-readout"
         >
-          {{ format(manaRef, 0) }} / {{ format(poolMaxRef, 0) }}
+          {{ format(manaRef, 0) }} / {{ format(totalBudgetRef, 0) }}
         </span>
       </div>
       <ProgressBar
@@ -74,8 +74,8 @@ const currentRow = computed(() => {
         data-testid="current-action-progress"
       />
       <div class="current-action__meta">
-        <span>{{ format(currentRow.progress.value, 1) }} /
-          {{ format(currentRow.effectiveCost.value, 1) }}s</span>
+        <span>{{ format(currentRow.progress.value, 0) }} /
+          {{ format(currentRow.adjustedTicks.value, 0) }}t</span>
         <span class="current-action__zone">{{ currentRow.def.zoneId }}</span>
       </div>
     </div>

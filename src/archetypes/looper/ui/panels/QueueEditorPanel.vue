@@ -15,9 +15,10 @@ const items = computed(() =>
       index,
       id: item.id,
       name: row?.def.name ?? item.id,
-      effectiveCost: row?.effectiveCost.value ?? 0,
-      remaining: item.metadata.remaining ?? 1,
+      adjustedTicks: row?.adjustedTicks.value ?? 0,
+      loopsLeft: item.metadata.loopsLeft ?? 1,
       loops: item.metadata.loops ?? 1,
+      isCursor: index === queue.cursor.value,
     };
   }),
 );
@@ -45,6 +46,16 @@ function remove(index: number): void {
     <header class="queue-editor__header">
       <h3>Queue</h3>
       <div class="queue-editor__actions">
+        <label
+          class="queue-editor__toggle"
+          data-testid="queue-repeat-last"
+        >
+          <input
+            v-model="queue.repeatLastAction.value"
+            type="checkbox"
+          >
+          Repeat last
+        </label>
         <button
           class="btn-sm"
           :data-testid="queue.isPaused.value ? 'queue-resume' : 'queue-pause'"
@@ -63,6 +74,15 @@ function remove(index: number): void {
       </div>
     </header>
 
+    <p
+      v-if="items.length > 0"
+      class="queue-editor__budget"
+      data-testid="queue-budget"
+    >
+      Plan budget: {{ format(queue.manaNeededFromCursor.value, 0) }}t remaining /
+      {{ format(queue.manaNeededTotal.value, 0) }}t per pass
+    </p>
+
     <ol
       v-if="items.length > 0"
       class="queue-list"
@@ -71,11 +91,15 @@ function remove(index: number): void {
         v-for="item in items"
         :key="`${item.index}:${item.id}`"
         class="queue-list__item"
+        :class="{ 'queue-list__item--cursor': item.isCursor }"
       >
         <span class="queue-list__index">{{ item.index + 1 }}</span>
         <div class="queue-list__main">
           <span class="queue-list__name">{{ item.name }}</span>
-          <span class="queue-list__cost">{{ format(item.effectiveCost, 0) }}s</span>
+          <span class="queue-list__meta">
+            <span class="queue-list__cost">{{ format(item.adjustedTicks, 0) }}t</span>
+            <span class="queue-list__loops">×{{ item.loopsLeft }}/{{ item.loops }}</span>
+          </span>
         </div>
         <div class="queue-list__controls">
           <button
@@ -108,7 +132,7 @@ function remove(index: number): void {
       v-else
       class="queue-empty"
     >
-      Queue is empty. Pick actions from the drawer to fill it.
+      Queue is empty. Pick actions from the drawer — the loop starts when you do.
     </p>
 
     <p
@@ -186,8 +210,37 @@ function remove(index: number): void {
   font-weight: 500;
 }
 
-.queue-list__cost {
+.queue-list__meta {
+  display: flex;
+  gap: var(--gap-sm);
+  align-items: baseline;
   font-size: 0.8em;
+  color: var(--color-text-muted, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.queue-list__loops {
+  color: var(--color-text-muted, var(--color-text));
+}
+
+.queue-list__item--cursor {
+  border-color: var(--color-primary, var(--color-text));
+  background: var(--color-primary-soft, transparent);
+}
+
+.queue-editor__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78em;
+  color: var(--color-text-muted, var(--color-text));
+  cursor: pointer;
+  user-select: none;
+}
+
+.queue-editor__budget {
+  margin: 0 0 4px 0;
+  font-size: 0.78em;
   color: var(--color-text-muted, var(--color-text));
   font-variant-numeric: tabular-nums;
 }

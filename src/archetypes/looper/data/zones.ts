@@ -1,38 +1,35 @@
 import type { ZoneDef } from './types';
 
 // ─── Skeleton ───
-// 4 zones in linear-unlock order. Zone 0 is initiallyUnlocked; zones 1–3 carry
-// `requires` predicates evaluated by `modules/zones.ts`'s watch-and-bridge.
-// AND across all entries in `requires`. Threshold values are placeholders for
-// the balance leaf (OL-737) to bisect against beat-5 windowing.
+// 4 zones. UI grouping only — zones do NOT gate content in the canonical
+// shape; per-action `prereqs` handle visibility. The cursor-walked queue is
+// not zone-aware. Forks that want zone-level unlocks layer extra prereqs onto
+// each zone's entry actions instead of reviving a `requires` field.
 
 // ─── Costume ───
-// Theme A — Classic Adventuring zone ladder (Beginnersville → Forest Path →
-// Merchanton → Ruined Keep).
+// Theme-fresh progression: Hearth (starting safety) → Wilds (transit, rural)
+// → Market (urban, social) → Spire (high-stakes endgame). Generic enough to
+// retheme as a city tour, dungeon descent, planar climb, etc.
 
 export const ZONES: ZoneDef[] = [
   {
-    id: 'beginnersville',
-    name: 'Beginnersville',
-    description: 'A sleepy village. Every loop begins here.',
-    requires: [],
+    id: 'hearth',
+    name: 'Hearth',
+    description: 'A small home and the village around it. Where every loop begins.',
   },
   {
-    id: 'forest-path',
-    name: 'Forest Path',
-    description: 'A winding road between the towns.',
-    requires: [{ trigger: 'action-completion-count', actionId: 'wander', value: 50 }],
+    id: 'wilds',
+    name: 'Wilds',
+    description: 'Open road, deer trails, leyline-thin places between settlements.',
   },
   {
-    id: 'merchanton',
-    name: 'Merchanton',
-    description: 'A bustling merchant city full of apprenticeships.',
-    requires: [{ trigger: 'action-completion-count', actionId: 'forest-walk', value: 30 }],
+    id: 'market',
+    name: 'Market',
+    description: 'A city of guilds, contracts, gossip, and apprenticeships.',
   },
   {
-    id: 'ruined-keep',
-    name: 'Ruined Keep',
-    description: 'Crumbling stone, restless dead, the deepest secrets.',
-    requires: [{ trigger: 'skill-level', skillId: 'combat', tier: 'gen', value: 25 }],
+    id: 'spire',
+    name: 'Spire',
+    description: 'A tower of ruined work — old wards, restless echoes, deepest secrets.',
   },
 ];

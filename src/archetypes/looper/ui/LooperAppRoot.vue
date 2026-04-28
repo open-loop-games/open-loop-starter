@@ -16,7 +16,7 @@ import { ArcKey } from '../modules';
 import ActionDrawerPanel from './panels/ActionDrawerPanel.vue';
 import QueueEditorPanel from './panels/QueueEditorPanel.vue';
 import CurrentLoopPanel from './panels/CurrentLoopPanel.vue';
-import SkillsRetentionPanel from './panels/SkillsRetentionPanel.vue';
+import CapabilitiesPanel from './panels/CapabilitiesPanel.vue';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -162,7 +162,7 @@ function getActiveModules(): EngineModule[] {
         <QueueEditorPanel />
       </div>
       <template #right>
-        <SkillsRetentionPanel />
+        <CapabilitiesPanel />
       </template>
     </ThreePanelShell>
   </AppFrame>

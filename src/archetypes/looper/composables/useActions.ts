@@ -5,9 +5,13 @@ import { ActionsKey, type ActionsModule } from '../modules';
 
 export interface ActionRow {
   def: ActionDef;
-  effectiveCost: ComputedRef<DecimalSource>;
+  /** Adjusted ticks needed at the current Level — drives the "X ticks remaining" readout. */
+  adjustedTicks: ComputedRef<DecimalSource>;
+  /** Current ticks of progress on this attempt. */
   progress: ComputedRef<DecimalSource>;
+  /** Progress fraction (0..1) for the per-action gauge. */
   progressFraction: ComputedRef<number>;
+  /** Cumulative completion count across loops (drives prereq predicates + UI count). */
   timesCompleted: ComputedRef<number>;
 }
 
@@ -32,11 +36,11 @@ export function useActions(): ActionsView {
     const state = m.getState(def.id);
     return {
       def,
-      effectiveCost: computed(() => state?.effectiveCost.value ?? def.baseCost),
+      adjustedTicks: computed(() => state?.adjustedTicks.value ?? def.manaCost),
       progress: computed(() => state?.progress.value ?? 0),
       progressFraction: computed(() => {
         if (!state) return 0;
-        const cost = state.effectiveCost.value;
+        const cost = state.adjustedTicks.value;
         if (Decimal.lte(cost, 0)) return 0;
         return Math.max(0, Math.min(1, Decimal.div(state.progress.value, cost).toNumber()));
       }),

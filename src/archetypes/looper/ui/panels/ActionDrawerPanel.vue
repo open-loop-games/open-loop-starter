@@ -68,7 +68,7 @@ function enqueue(actionId: string): void {
               @click="enqueue(actionRow.def.id)"
             >
               <span class="action-button__name">{{ actionRow.def.name }}</span>
-              <span class="action-button__cost">{{ format(actionRow.effectiveCost.value, 0) }}s</span>
+              <span class="action-button__cost">{{ format(actionRow.adjustedTicks.value, 0) }}t</span>
             </button>
             <p class="action-list__desc">
               {{ actionRow.def.description }}

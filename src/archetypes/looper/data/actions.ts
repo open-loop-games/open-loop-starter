@@ -1,173 +1,199 @@
 import type { ActionDef } from './types';
 
 // ─── Skeleton ───
-// 16 actions across 4 zones, 4 actions per zone. Every skill is granted XP by
-// at least one action in every zone (cardinality-cross-check enforced by
-// `sim/balance.probe.test.ts`). Single-tick actions only — multi-part is
-// engine-gap territory (looper.md § 10) and the demo doesn't exercise it.
-
+// 16 actions across 4 zones, 4 actions per zone. Every capability is granted
+// XP by at least one action in every zone (cardinality-cross-check enforced
+// by the smoke-test suite). Single-tick actions only — multi-part action
+// support is engine-gap territory tracked separately as a candidate primitive.
+//
+// Cost shape: weight-coupled per canonical (see types.ts § ActionDef.weights).
+// Same weight controls cost contribution AND XP gain. Sums of weights are
+// nominally ≈ 1 but not enforced — fractional totals scale all derived
+// numbers proportionally.
+//
+// Prereq web: 5 chains exercising the four ActionPrereq variants.
+//   Stretch ≥ 3            → Patrol      visible (Hearth internal)
+//   Patrol ≥ 5             → Trek        visible (Hearth → Wilds bridge)
+//   Trek ≥ 5               → Hunt        visible (Wilds internal)
+//   Drift ≥ 3 AND loops≥1  → Apprentice  visible (Wilds → Market bridge,
+//                                                 AND-shape with loop-count)
+//   Vigor Level ≥ 8        → Confront    visible (Market → Spire bridge,
+//                                                 capability-tier-level variant)
+// Actions without `prereqs` are always-visible by default.
+//
 // ─── Costume ───
-// Theme A — Classic Adventuring action set. Names lifted from the idle-loops
-// lineage; descriptions abbreviated. Forks rename freely.
-
+// Theme-fresh action set — an everyday-craft adventure stack. Names lean
+// short verbs over noun-phrases for queue legibility. Forks rename freely.
+//
 // ─── Balance ───
-// Mana costs, XP grants, and the per-zone mana-positive grants are
-// placeholders for OL-737 to bisect against beat windows. The skill-cost
-// divisor + retention-curve wire are in balance.ts. Mana-positive actions
-// shape per-loop strategy: queue them up to a mana floor, then drive zone
-// gates with mana-negative content.
+// `manaCost` magnitudes are vanilla-canonical-shaped placeholders against the
+// 250-tick `initialMana` baseline: entry actions 60-150 (multiple completions
+// per fresh loop), mid actions 200-450 (one per fresh loop, several with
+// trained Levels), heavy/late actions 600-800 (out of reach pre-Talent
+// compounding). `expMult` is uniform 1 — solver tunes per-action in the
+// balance leaf. `manaGrant` magnitudes are per-zone-tier (50 / 100 / 150).
 
 export const ACTIONS: ActionDef[] = [
-  // ─── Beginnersville ───
+  // ─── Hearth ───
   {
-    id: 'wander',
-    name: 'Wander',
-    description: 'Stroll through the village. Cheap practice for the road.',
-    zoneId: 'beginnersville',
-    baseCost: 100,
-    xpGrants: [{ skillId: 'combat', xp: 5 }],
+    id: 'stretch',
+    name: 'Stretch',
+    description: 'Wake the body. Shake out the night, find the day.',
+    zoneId: 'hearth',
+    manaCost: 60,
+    expMult: 1,
+    weights: { vigor: 1 },
   },
   {
-    id: 'meet-people',
-    name: 'Meet People',
-    description: 'Chat with villagers. Practical magic helps the small things.',
-    zoneId: 'beginnersville',
-    baseCost: 200,
-    xpGrants: [{ skillId: 'practical', xp: 10 }],
+    id: 'listen',
+    name: 'Listen',
+    description: 'Sit by the hearth and let the village talk. Stories settle into you.',
+    zoneId: 'hearth',
+    manaCost: 100,
+    expMult: 1,
+    weights: { lore: 1 },
+    manaGrant: 50,
   },
   {
-    id: 'attune-shrine',
-    name: 'Attune at Shrine',
-    description: 'Sit in quiet at the village shrine. The local aether settles around you.',
-    zoneId: 'beginnersville',
-    baseCost: 150,
-    xpGrants: [{ skillId: 'magic', xp: 8 }],
-    manaGrant: 250,
+    id: 'tend',
+    name: 'Tend',
+    description: 'Mend a fence, sharpen a blade, patch a roof. Small, useful work.',
+    zoneId: 'hearth',
+    manaCost: 80,
+    expMult: 1,
+    weights: { craft: 1 },
   },
   {
-    id: 'short-quest',
-    name: 'Short Quest',
-    description: 'A villager needs a wolf chased off. Light combat training.',
-    zoneId: 'beginnersville',
-    baseCost: 400,
-    xpGrants: [
-      { skillId: 'combat', xp: 20 },
-      { skillId: 'practical', xp: 4 },
-    ],
+    id: 'patrol',
+    name: 'Patrol',
+    description: 'Walk the edge of the village with eyes and ears open.',
+    zoneId: 'hearth',
+    manaCost: 150,
+    expMult: 1,
+    weights: { vigor: 0.6, lore: 0.4 },
+    prereqs: [{ kind: 'action-completion-count', actionId: 'stretch', value: 3 }],
   },
 
-  // ─── Forest Path ───
+  // ─── Wilds ───
   {
-    id: 'forest-walk',
-    name: 'Forest Walk',
-    description: 'Cross between settlements. Deer trails, watchful eyes.',
-    zoneId: 'forest-path',
-    baseCost: 250,
-    xpGrants: [{ skillId: 'combat', xp: 15 }],
+    id: 'trek',
+    name: 'Trek',
+    description: 'Cross between settlements on foot. Watchful trails, real distance.',
+    zoneId: 'wilds',
+    manaCost: 200,
+    expMult: 1,
+    weights: { vigor: 1 },
+    prereqs: [{ kind: 'action-completion-count', actionId: 'patrol', value: 5 }],
   },
   {
-    id: 'leyline-tap',
-    name: 'Tap the Leyline',
-    description: 'Old druids walked these paths. The roots still carry a thin thread of power.',
-    zoneId: 'forest-path',
-    baseCost: 300,
-    xpGrants: [{ skillId: 'magic', xp: 18 }],
-    manaGrant: 500,
+    id: 'drift',
+    name: 'Drift',
+    description: 'Step off the path. The aether runs thinner here, easier to feel.',
+    zoneId: 'wilds',
+    manaCost: 220,
+    expMult: 1,
+    weights: { aether: 1 },
+    manaGrant: 100,
   },
   {
-    id: 'gather-herbs',
-    name: 'Gather Herbs',
-    description: 'Pick reagents in the forest understory.',
-    zoneId: 'forest-path',
-    baseCost: 200,
-    xpGrants: [{ skillId: 'alchemy', xp: 12 }],
+    id: 'forage',
+    name: 'Forage',
+    description: 'Pick reagents in the understory. Roots, bark, the right kind of moss.',
+    zoneId: 'wilds',
+    manaCost: 180,
+    expMult: 1,
+    weights: { craft: 1 },
   },
   {
     id: 'hunt',
     name: 'Hunt',
-    description: 'Track and dispatch wild game. Tougher fights pay better.',
-    zoneId: 'forest-path',
-    baseCost: 600,
-    xpGrants: [
-      { skillId: 'combat', xp: 30 },
-      { skillId: 'crafting', xp: 6 },
-    ],
+    description: 'Track and dispatch wild game. Tougher quarry, longer chase.',
+    zoneId: 'wilds',
+    manaCost: 350,
+    expMult: 1,
+    weights: { vigor: 0.7, craft: 0.3 },
+    prereqs: [{ kind: 'action-completion-count', actionId: 'trek', value: 5 }],
   },
 
-  // ─── Merchanton ───
+  // ─── Market ───
   {
-    id: 'apprentice-mason',
-    name: 'Apprentice Mason',
-    description: 'Lay block, cut stone, drive nails. Long apprenticeship.',
-    zoneId: 'merchanton',
-    baseCost: 500,
-    xpGrants: [{ skillId: 'crafting', xp: 30 }],
-  },
-  {
-    id: 'apprentice-alchemist',
-    name: 'Apprentice Alchemist',
-    description: 'Brewing under a master alchemist. Long, fume-soaked hours.',
-    zoneId: 'merchanton',
-    baseCost: 500,
-    xpGrants: [{ skillId: 'alchemy', xp: 30 }],
-  },
-  {
-    id: 'practical-magic',
-    name: 'Practical Magic',
-    description: 'Mage Hand for sheaves, Detect Magic for spoiled wares.',
-    zoneId: 'merchanton',
-    baseCost: 400,
-    xpGrants: [{ skillId: 'practical', xp: 25 }],
-  },
-  {
-    id: 'long-quest',
-    name: 'Long Quest',
-    description: 'Tracking a band of bandits across two days. Real combat.',
-    zoneId: 'merchanton',
-    baseCost: 1500,
-    xpGrants: [
-      { skillId: 'combat', xp: 80 },
-      { skillId: 'practical', xp: 10 },
+    id: 'apprentice',
+    name: 'Apprentice',
+    description: 'Long days under a master craftsman. Hands learn what mouths cannot teach.',
+    zoneId: 'market',
+    manaCost: 400,
+    expMult: 1,
+    weights: { craft: 1 },
+    prereqs: [
+      { kind: 'action-completion-count', actionId: 'drift', value: 3 },
+      { kind: 'loop-count', value: 1 },
     ],
+  },
+  {
+    id: 'court',
+    name: 'Court',
+    description: 'Move among guildmasters and clerks. Names attached to faces, debts to names.',
+    zoneId: 'market',
+    manaCost: 350,
+    expMult: 1,
+    weights: { lore: 1 },
+  },
+  {
+    id: 'channel',
+    name: 'Channel',
+    description: 'Draw the city aether through chalked sigils. Dense, controlled.',
+    zoneId: 'market',
+    manaCost: 300,
+    expMult: 1,
+    weights: { aether: 1 },
+    manaGrant: 150,
+  },
+  {
+    id: 'errand',
+    name: 'Errand',
+    description: 'A guild contract: fetch, escort, witness. Mixed, unsupervised work.',
+    zoneId: 'market',
+    manaCost: 450,
+    expMult: 1,
+    weights: { vigor: 0.5, lore: 0.5 },
   },
 
-  // ─── Ruined Keep ───
+  // ─── Spire ───
   {
-    id: 'face-undead',
-    name: 'Face Undead',
-    description: 'Wraiths in the cellars. Bring iron, bring light.',
-    zoneId: 'ruined-keep',
-    baseCost: 1200,
-    xpGrants: [
-      { skillId: 'combat', xp: 70 },
-      { skillId: 'magic', xp: 10 },
-    ],
+    id: 'confront',
+    name: 'Confront',
+    description: "Step into the Spire's lower halls. Iron and aether, both at once.",
+    zoneId: 'spire',
+    manaCost: 800,
+    expMult: 1,
+    weights: { vigor: 0.6, aether: 0.4 },
+    prereqs: [{ kind: 'capability-tier-level', capabilityId: 'vigor', tier: 'level', value: 8 }],
   },
   {
-    id: 'ritual-magic',
-    name: 'Ritual Magic',
-    description: 'Sealing wards on broken stone. Aether thick with old grief.',
-    zoneId: 'ruined-keep',
-    baseCost: 1000,
-    xpGrants: [{ skillId: 'magic', xp: 60 }],
+    id: 'inscribe',
+    name: 'Inscribe',
+    description: 'Reseal broken wards on cracked stone. Aether thick with old grief.',
+    zoneId: 'spire',
+    manaCost: 700,
+    expMult: 1,
+    weights: { aether: 1 },
   },
   {
-    id: 'forge-relic',
-    name: 'Forge Relic',
-    description: 'Reforge a blade from keep-iron. Crafting at its limit.',
-    zoneId: 'ruined-keep',
-    baseCost: 1500,
-    xpGrants: [
-      { skillId: 'crafting', xp: 80 },
-      { skillId: 'alchemy', xp: 10 },
-    ],
+    id: 'forge',
+    name: 'Forge',
+    description: 'Reforge a blade from spire-iron. Crafting at its limit.',
+    zoneId: 'spire',
+    manaCost: 800,
+    expMult: 1,
+    weights: { craft: 1 },
   },
   {
-    id: 'unlock-secret',
-    name: 'Unlock Secret',
-    description: "Trace the keep's last spell-circuit. Practical magic, dense.",
-    zoneId: 'ruined-keep',
-    baseCost: 800,
-    xpGrants: [{ skillId: 'practical', xp: 50 }],
+    id: 'decipher',
+    name: 'Decipher',
+    description: "Trace the spire's last spell-circuit. Slow, deliberate reading.",
+    zoneId: 'spire',
+    manaCost: 600,
+    expMult: 1,
+    weights: { lore: 1 },
   },
 ];
