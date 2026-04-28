@@ -1,3 +1,4 @@
+import { type App } from 'vue';
 import { type Engine, type EngineModule } from 'open-loop-engine';
 import { bootApp, bootEngine } from '@/boot';
 import ProducerAppRoot from './ui/ProducerAppRoot.vue';
@@ -13,6 +14,8 @@ const MOD_NAME = 'Bakery';
 export interface ProducerBootResult {
   engine: Engine;
   data: ProducerData;
+  /** Underlying Vue app — exposed so the gallery sandbox can call `app.unmount()`. */
+  app: App;
   mount: (selector: string | Element) => void;
 }
 
@@ -81,10 +84,10 @@ export function createProducerEngine(
  */
 export function createApp(overrides?: ProducerOverrides): ProducerBootResult {
   const { engine, data } = createProducerEngine(overrides);
-  const { mount } = bootApp({
+  const { app, mount } = bootApp({
     root: ProducerAppRoot,
     engine,
     provides: [['producer:data', data]],
   });
-  return { engine, data, mount };
+  return { engine, data, app, mount };
 }

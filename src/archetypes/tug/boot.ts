@@ -1,3 +1,4 @@
+import { type App } from 'vue';
 import { type Engine, type EngineModule } from 'open-loop-engine';
 import { bootApp, bootEngine } from '@/boot';
 import TugAppRoot from './ui/TugAppRoot.vue';
@@ -13,6 +14,8 @@ const MOD_NAME = 'SciFi Armada';
 export interface TugBootResult {
   engine: Engine;
   data: TugData;
+  /** Underlying Vue app — exposed so the gallery sandbox can call `app.unmount()`. */
+  app: App;
   mount: (selector: string | Element) => void;
 }
 
@@ -66,10 +69,10 @@ export function createTugEngine(
  */
 export function createApp(overrides?: TugOverrides): TugBootResult {
   const { engine, data } = createTugEngine(overrides);
-  const { mount } = bootApp({
+  const { app, mount } = bootApp({
     root: TugAppRoot,
     engine,
     provides: [['tug:data', data]],
   });
-  return { engine, data, mount };
+  return { engine, data, app, mount };
 }

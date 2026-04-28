@@ -1,3 +1,4 @@
+import { type App } from 'vue';
 import { type Engine, type EngineModule } from 'open-loop-engine';
 import { bootApp, bootEngine } from '@/boot';
 import AmbientAppRoot from './ui/AmbientAppRoot.vue';
@@ -13,6 +14,8 @@ const MOD_NAME = 'Cozy Farm';
 export interface AmbientBootResult {
   engine: Engine;
   data: AmbientData;
+  /** Underlying Vue app — exposed so the gallery sandbox can call `app.unmount()`. */
+  app: App;
   mount: (selector: string | Element) => void;
 }
 
@@ -67,10 +70,10 @@ export function createAmbientEngine(
  */
 export function createApp(overrides?: AmbientOverrides): AmbientBootResult {
   const { engine, data } = createAmbientEngine(overrides);
-  const { mount } = bootApp({
+  const { app, mount } = bootApp({
     root: AmbientAppRoot,
     engine,
     provides: [['ambient:data', data]],
   });
-  return { engine, data, mount };
+  return { engine, data, app, mount };
 }
