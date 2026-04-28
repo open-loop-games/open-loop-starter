@@ -1,10 +1,11 @@
-import { computed, type ComputedRef } from 'vue';
+import { computed, type ComputedRef, type Ref } from 'vue';
 import {
   createSkill,
   createSkillCategory,
   createSequentialModifier,
   Decimal,
   Formula,
+  tunable,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -14,6 +15,7 @@ import {
   type SkillCategory,
 } from 'open-loop-engine';
 import type { LooperData, SkillDef } from '../data/types';
+import { LooperTuningRegistryKey } from './mana';
 
 /**
  * Per-skill state attached to each registered SkillDef. `gen` and `instinct`
@@ -37,6 +39,9 @@ export const SkillsKey: InjectionKey<SkillCategory<SkillDef, LooperSkillState>> 
   'looper/skills',
 ) as InjectionKey<SkillCategory<SkillDef, LooperSkillState>>;
 
+type Ref2<T> = { value: T };
+const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
+
 /**
  * Two-tier (gen + instinct) skill category — the load-bearing shape lifted
  * from `incloneution/src/modules/skills.ts:47-118`. `mapSkill` builds the gen
@@ -48,8 +53,12 @@ export const SkillsKey: InjectionKey<SkillCategory<SkillDef, LooperSkillState>> 
  * primitive.
  *
  * The XP curves are sqrt-based — `level = floor(sqrt(xp / divisor))` —
- * matching idle-loops vanilla. The level-to-multiplier curve is `1.05^level`,
- * a gentle baseline that the retention curve in OL-737 will tune against.
+ * matching idle-loops vanilla. The level-to-multiplier curve is the doc
+ * retention shape `1 + (level / retentionDivisor) ^ retentionExponent`,
+ * applied uniformly to both tiers; gen and instinct differ only in which
+ * level feeds the curve. The cost-acceleration path in `actions.ts` consumes
+ * `instinct.modifier` directly so retentionExponent perturbations flow into
+ * sim-time.
  *
  * `gen.xp` is added to retention's `thingsToReset` indirectly via the engine's
  * `Loop` reset walking persistent refs; `instinct.xp` is included in the
@@ -58,19 +67,42 @@ export const SkillsKey: InjectionKey<SkillCategory<SkillDef, LooperSkillState>> 
 export function createSkillsModule(data: LooperData): EngineModule {
   return {
     id: 'looper/skills',
+    dependencies: ['looper/mana'],
     install(ctx) {
+      const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
+
+      // Retention curve constants — wrapped once so both gen and instinct
+      // Formula instances close over the same scope-aware refs. pushScope
+      // on either key retunes the curve everywhere it's evaluated.
+      const retentionDivisor = asRef(
+        tunable<DecimalSource>(
+          tuningRegistry,
+          'balance/retentionDivisor',
+          () => data.balance.retentionDivisor,
+        ),
+      );
+      const retentionExponent = asRef(
+        tunable<DecimalSource>(
+          tuningRegistry,
+          'balance/retentionExponent',
+          () => data.balance.retentionExponent,
+        ),
+      );
+
       const skills = createSkillCategory<SkillDef, LooperSkillState>({
         id: 'looper/skills',
         mapSkill: (def) => ({
           xpToLevel: (xp) => Formula.variable(xp).div(50).max(1).sqrt().floor(),
-          levelToMultiplier: (level) => Formula.variable(level).pow_base(1.05),
+          levelToMultiplier: (level) =>
+            Formula.variable(level).div(retentionDivisor).pow(retentionExponent).add(1),
           description: `${def.name} (gen)`,
         }),
         mapState: (def, genSkill) => {
           const instinct = createSkill({
             id: `${def.id}-instinct`,
             xpToLevel: (xp) => Formula.variable(xp).div(50).max(1).sqrt().floor(),
-            levelToMultiplier: (level) => Formula.variable(level).pow_base(1.05),
+            levelToMultiplier: (level) =>
+              Formula.variable(level).div(retentionDivisor).pow(retentionExponent).add(1),
             description: `${def.name} (instinct)`,
           });
 

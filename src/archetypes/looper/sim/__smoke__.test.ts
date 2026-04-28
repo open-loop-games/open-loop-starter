@@ -86,6 +86,67 @@ describe('looper engine smoke', () => {
     expect(actions.getTimesCompleted('wander')).toBeGreaterThanOrEqual(1);
   });
 
+  it('loop N+1 first-action sim-time < loop N first-action after instinct accrual', () => {
+    // Verifies the cost-side retention wiring closes (OL-738 deliverable 6).
+    // Overrides accelerate the effect's visibility so a smoke-scale run lands
+    // a non-zero instinct.level inside loop 1 — at default `instinctXpRatio:
+    // 0.01` and `retentionDivisor: 30`, an observable delta would need
+    // dozens of natural loops. Default constants exercise the same code
+    // path; this just compresses the timeline.
+    const { engine } = createLooperEngine(
+      { balance: { instinctXpRatio: 1.0, retentionDivisor: 10 } },
+      { persistenceNamespace: 'smoke-retention-wiring' },
+    );
+    engine.selectMod('classic-adventuring');
+    engine.start();
+
+    const queue = engine.tryInject(QueueKey)!;
+    const loop = engine.tryInject(LoopKey)!;
+    const skills = engine.tryInject(SkillsKey)!;
+    const actions = engine.tryInject(ActionsKey)!;
+
+    // Loop 1: enough queued wanders to outlast the mana pool.
+    queue.enqueue({ id: 'wander', metadata: { loops: 100, remaining: 100 } });
+
+    let loop1FirstCompletionTicks = 0;
+    for (let t = 1; t <= 200; t++) {
+      engine.loop.simulateTick(1);
+      if (actions.getTimesCompleted('wander') >= 1) {
+        loop1FirstCompletionTicks = t;
+        break;
+      }
+    }
+    expect(loop1FirstCompletionTicks).toBeGreaterThan(0);
+
+    // Drain remaining mana to natural loop end + auto-restart. createLoop's
+    // onRestart runs in the engine's tick path (no explicit loop.run()).
+    let safety = 0;
+    while (loop.count.value < 1 && safety++ < 10000) {
+      engine.loop.simulateTick(1);
+    }
+    expect(loop.count.value).toBeGreaterThanOrEqual(1);
+
+    // Retention precondition — no instinct, no observable delta.
+    expect(Number(skills.getState('combat')!.instinct.level.value)).toBeGreaterThan(0);
+
+    // Loop 2: snapshot cumulative count, measure ticks to next completion.
+    const completionsBeforeLoop2 = actions.getTimesCompleted('wander');
+    let loop2FirstCompletionTicks = 0;
+    for (let t = 1; t <= 200; t++) {
+      engine.loop.simulateTick(1);
+      if (actions.getTimesCompleted('wander') > completionsBeforeLoop2) {
+        loop2FirstCompletionTicks = t;
+        break;
+      }
+    }
+    expect(loop2FirstCompletionTicks).toBeGreaterThan(0);
+
+    // The wiring closure: loop 2's first wander completes faster because
+    // instinct.level > 0 → instinct.modifier.apply(1) > 1 → effectiveCost
+    // is smaller. Asserts the path; calibration probe stays in OL-737.
+    expect(loop2FirstCompletionTicks).toBeLessThan(loop1FirstCompletionTicks);
+  });
+
   it('instinct XP persists across loop reset (retention policy)', () => {
     const { engine } = createLooperEngine(undefined, {
       persistenceNamespace: 'smoke-retention',

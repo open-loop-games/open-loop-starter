@@ -82,6 +82,25 @@ export function createActionsModule(data: LooperData): EngineModule {
       const skills = ctx.inject(SkillsKey);
       const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
 
+      // Wrap the two balance constants this module reads at runtime so
+      // pushScope on either key retunes the cost path without rebooting.
+      // skillLevelDivisor governs within-loop cost reduction (gen tier);
+      // instinctXpRatio scales the per-completion instinct grant.
+      const skillLevelDivisor = asRef(
+        tunable<DecimalSource>(
+          tuningRegistry,
+          'balance/skillLevelDivisor',
+          () => data.balance.skillLevelDivisor,
+        ),
+      );
+      const instinctXpRatio = asRef(
+        tunable<DecimalSource>(
+          tuningRegistry,
+          'balance/instinctXpRatio',
+          () => data.balance.instinctXpRatio,
+        ),
+      );
+
       const states = new Map<string, ActionState>();
       const defsById = new Map<string, ActionDef>(data.actions.map((d) => [d.id, d]));
 
@@ -103,20 +122,26 @@ export function createActionsModule(data: LooperData): EngineModule {
         );
 
         const effectiveCost = computed<DecimalSource>(() => {
-          // First grant goes to the action's headlining skill; pick the same
-          // skill the cost-divisor reads (the skill granted the most XP).
-          // For multi-skill grants we sum gen levels (idle-loops vanilla
-          // does this implicitly — every skill at the action contributes).
-          let totalLevel = new Decimal(0);
+          // Two stacked accelerations on the per-action cost:
+          //   - within-loop:   `1 + sumGenLevel / skillLevelDivisor` (gen
+          //                    levels reset per loop; this is the inside-a-run
+          //                    "skills get cheaper as you level them" feel)
+          //   - cross-loop:    `Π instinct.modifier.apply(1)` over xpGrants
+          //                    (instinct levels persist via retention policy;
+          //                    this is the "loop N+1 starts faster" feel)
+          // Multiplying the two factors composes the divisor at the cost site
+          // so retentionExponent perturbations flow into observable sim-time
+          // (OL-737 probe-1 perturbs retentionExponent against this path).
+          let totalGenLevel = new Decimal(0);
+          let retentionMult = new Decimal(1);
           for (const grant of def.xpGrants) {
             const state = skills.getState(grant.skillId);
             if (!state) continue;
-            totalLevel = totalLevel.add(state.gen.level.value);
+            totalGenLevel = totalGenLevel.add(state.gen.level.value);
+            retentionMult = Decimal.mul(retentionMult, state.instinct.modifier.apply(1));
           }
-          const divisor = data.balance.skillLevelDivisor;
-          // cost = baseCost / (1 + sumLevel / divisor)
-          const factor = Decimal.add(1, Decimal.div(totalLevel, divisor));
-          return Decimal.div(baseCost.value, factor);
+          const factor = Decimal.add(1, Decimal.div(totalGenLevel, skillLevelDivisor.value));
+          return Decimal.div(Decimal.div(baseCost.value, factor), retentionMult);
         });
 
         states.set(def.id, {
@@ -139,7 +164,7 @@ export function createActionsModule(data: LooperData): EngineModule {
           const def = defsById.get(id);
           if (def) {
             for (const grant of def.xpGrants) {
-              grantSkillXp(skills, grant.skillId, grant.xp, data.balance.instinctXpRatio);
+              grantSkillXp(skills, grant.skillId, grant.xp, instinctXpRatio.value);
             }
           }
           return true;
