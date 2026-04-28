@@ -21,7 +21,14 @@
  */
 
 import { Decimal, processOfflineTime, runUntil, type Engine } from 'open-loop-engine';
-import { ArcKey, HeadlineRateKey, PrimaryLifetimeKey, PrimaryResourceKey } from '../modules';
+import {
+  ArcKey,
+  AutoProducersKey,
+  HeadlineRateKey,
+  PrimaryLifetimeKey,
+  PrimaryResourceKey,
+  UnlocksKey,
+} from '../modules';
 import { buildAmbientSimEngine } from './bot';
 
 // ─── Probe 3 — offline round-trip ────────────────────────────────────────
@@ -84,10 +91,24 @@ function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] }
   const primary = engine.tryInject(PrimaryResourceKey)!;
   const headline = engine.tryInject(HeadlineRateKey)!;
   const arc = engine.tryInject(ArcKey)!;
+  const producers = engine.tryInject(AutoProducersKey)!;
+  const unlocks = engine.tryInject(UnlocksKey)!;
+
+  // Sum-of-counts is monotonically non-decreasing during a 24h sim with no
+  // resets, so any per-tick increase signals at least one bot purchase.
+  // Cheaper than tapping every producer's onPurchase, and uses public refs
+  // so no engine change is needed. unlocks.purchasedCount covers soft
+  // reveals fired by `setupAutoPurchase` on threshold cross.
+  const sumProducerCounts = (): Decimal =>
+    producers
+      .getAll()
+      .reduce((acc, e) => acc.add(new Decimal(e.producer.count.value)), Decimal.dZero);
 
   const findings: PressureFinding[] = [];
   let lastPrimary = new Decimal(primary.value);
   let lastRate = new Decimal(headline.value);
+  let lastProducerSum = sumProducerCounts();
+  let lastUnlocksBought = unlocks.purchasedCount.value;
 
   // 24h at tickDelta = 1s. Asserts run between ticks via the until-callback;
   // analyzer instances aren't available cheaply here, but the closure
@@ -97,13 +118,22 @@ function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] }
     until: ({ tick }) => {
       const cur = new Decimal(primary.value);
       const rate = new Decimal(headline.value);
+      const curProducerSum = sumProducerCounts();
+      const curUnlocksBought = unlocks.purchasedCount.value;
+      const purchasedThisTick =
+        curProducerSum.gt(lastProducerSum) || curUnlocksBought > lastUnlocksBought;
 
       // Negative delta on the player-visible primary resource. Auto-purchase
-      // ticks legitimately spend resource, so a temporary dip is expected.
-      // The Ambient invariant is "no fail state" — for the audit we treat
-      // any drop > 1% of the prior reading as a pressure event worth
-      // surfacing. Tighter checks belong in dedicated analyzers.
-      if (cur.lt(lastPrimary)) {
+      // ticks legitimately spend resource, so a temporary dip is expected
+      // and we mask any drop coincident with a producer/unlock purchase on
+      // the same tick. The drain-while-≥-interval inner loop in
+      // `setupAutoPurchaseProducers` can land multiple buys in one tick under
+      // coarse `tickDelta`; masking the whole tick covers that.
+      // TODO(expansion): graduate to a dedicated analyzer in
+      // `open-loop-engine/src/harness/analyzers/no-pressure.ts` once a
+      // second consumer (Looper balance leaf) wants the same shape — see
+      // `open-loop-engine/docs/candidate-primitives.md`.
+      if (!purchasedThisTick && cur.lt(lastPrimary)) {
         const dropFrac = lastPrimary.sub(cur).div(lastPrimary.eq(0) ? 1 : lastPrimary);
         if (dropFrac.gt(0.01)) {
           findings.push({
@@ -139,6 +169,8 @@ function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] }
 
       lastPrimary = cur;
       lastRate = rate;
+      lastProducerSum = curProducerSum;
+      lastUnlocksBought = curUnlocksBought;
       return false;
     },
     maxSimTime: 24 * 3600,
