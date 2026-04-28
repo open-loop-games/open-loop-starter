@@ -11,8 +11,11 @@ import type { ActionDef } from './types';
 // lineage; descriptions abbreviated. Forks rename freely.
 
 // ─── Balance ───
-// Mana costs and XP grants are placeholders for OL-737 to bisect against beat
-// windows. The skill-cost divisor + retention-curve wire are in balance.ts.
+// Mana costs, XP grants, and the per-zone mana-positive grants are
+// placeholders for OL-737 to bisect against beat windows. The skill-cost
+// divisor + retention-curve wire are in balance.ts. Mana-positive actions
+// shape per-loop strategy: queue them up to a mana floor, then drive zone
+// gates with mana-negative content.
 
 export const ACTIONS: ActionDef[] = [
   // ─── Beginnersville ───
@@ -33,12 +36,13 @@ export const ACTIONS: ActionDef[] = [
     xpGrants: [{ skillId: 'practical', xp: 10 }],
   },
   {
-    id: 'pots',
-    name: 'Light Pots',
-    description: 'Kindle wicks with a flicker of mana. Beginner magic drills.',
+    id: 'attune-shrine',
+    name: 'Attune at Shrine',
+    description: 'Sit in quiet at the village shrine. The local aether settles around you.',
     zoneId: 'beginnersville',
     baseCost: 150,
     xpGrants: [{ skillId: 'magic', xp: 8 }],
+    manaGrant: 250,
   },
   {
     id: 'short-quest',
@@ -62,12 +66,13 @@ export const ACTIONS: ActionDef[] = [
     xpGrants: [{ skillId: 'combat', xp: 15 }],
   },
   {
-    id: 'wild-mana',
-    name: 'Wild Mana',
-    description: 'Touch the unstable currents under the trees.',
+    id: 'leyline-tap',
+    name: 'Tap the Leyline',
+    description: 'Old druids walked these paths. The roots still carry a thin thread of power.',
     zoneId: 'forest-path',
     baseCost: 300,
     xpGrants: [{ skillId: 'magic', xp: 18 }],
+    manaGrant: 500,
   },
   {
     id: 'gather-herbs',

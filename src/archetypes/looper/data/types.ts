@@ -41,10 +41,24 @@ export interface ActionDef {
   name: string;
   description: string;
   zoneId: string;
-  /** Mana cost at skill level 0. Effective cost divides by (1 + genLevel / skillLevelDivisor). */
+  /**
+   * Sim-seconds the action takes to complete at skill level 0. Effective
+   * duration divides by `(1 + genLevel / skillLevelDivisor)`. Mana drains
+   * wall-clock at 1/sec while the loop runs (idle-loops-ng vanilla shape) —
+   * so an action with `baseCost: 100` ticks for ~100 sim-seconds of mana
+   * spend, but the field names duration, not spend.
+   */
   baseCost: DecimalSource;
   /** XP grants at completion. One entry per affected skill. */
   xpGrants: { skillId: string; xp: DecimalSource }[];
+  /**
+   * Flat mana added on completion, clamped at `manaPoolMax`. Mana-positive
+   * actions extend the loop budget — the canonical Looper shape pairs them
+   * with mana-negative content so the per-loop choice "extend the budget vs
+   * spend it on the gate" is real. Omit for mana-neutral / mana-negative
+   * actions.
+   */
+  manaGrant?: DecimalSource;
 }
 
 // ─── Balance ───

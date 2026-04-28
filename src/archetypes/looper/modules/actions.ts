@@ -10,7 +10,7 @@ import {
   type Persistent,
 } from 'open-loop-engine';
 import type { ActionDef, LooperData } from '../data/types';
-import { LooperTuningRegistryKey, type LooperTunables } from './mana';
+import { LooperTuningRegistryKey, ManaKey, ManaPoolMaxKey, type LooperTunables } from './mana';
 import { SkillsKey, grantSkillXp } from './skills';
 
 export interface ActionState {
@@ -35,13 +35,15 @@ export interface ActionsModule {
   getTimesCompleted(id: string): number;
   /**
    * Advance an action's progress by `dt` sim-seconds. On completion grants
-   * skill XP, increments `timesCompleted`, resets `progress` to 0, and
-   * returns `true` (queue dispatcher uses this to call `sequencer.complete()`).
+   * skill XP, applies `manaGrant` (clamped at `manaPoolMax`), increments
+   * `timesCompleted`, resets `progress` to 0, and returns `true` (queue
+   * dispatcher uses this to call `sequencer.complete()`).
    *
-   * Mana drains independently in `loop.ts` at 1/sec — each action's
-   * `effectiveCost` is in sim-seconds, so a 100-mana action takes 100s of
-   * sim-time at level 0. Action progress and mana drain are decoupled:
-   * mana is the global "sand running out" while the queue dispatches work.
+   * Mana drains wall-clock at 1/sec in `loop.ts` while the loop runs — the
+   * canonical Looper shape, idle-penalty included. `effectiveCost` is
+   * sim-seconds-of-duration, not mana-spend; a 100-cost action takes 100s
+   * and the mana drain happens in step. Mana-positive actions extend the
+   * budget on completion via `manaGrant`.
    */
   tick(id: string, dt: number): boolean;
 }
@@ -80,6 +82,8 @@ export function createActionsModule(data: LooperData): EngineModule {
     dependencies: ['looper/mana', 'looper/skills'],
     install(ctx) {
       const skills = ctx.inject(SkillsKey);
+      const mana = ctx.inject(ManaKey);
+      const manaPoolMax = ctx.inject(ManaPoolMaxKey);
       const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
 
       // Wrap the two balance constants this module reads at runtime so
@@ -165,6 +169,10 @@ export function createActionsModule(data: LooperData): EngineModule {
           if (def) {
             for (const grant of def.xpGrants) {
               grantSkillXp(skills, grant.skillId, grant.xp, instinctXpRatio.value);
+            }
+            if (def.manaGrant !== undefined) {
+              const next = Decimal.add(mana.value, def.manaGrant);
+              mana.value = Decimal.min(next, manaPoolMax.value);
             }
           }
           return true;

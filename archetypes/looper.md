@@ -108,6 +108,14 @@ The 2h arc compresses the reference-game scope (Idle Loops' 4–8h time-to-first
 
 Per the data-first archetype convention (`open-loop-starter/CLAUDE.md` § Archetype convention), the demo's content lives flat in `src/archetypes/looper/data/*.ts` as plain typed arrays + balance constants. The skeleton/theme/balance lens lives as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`) inside each data file, not as a parallel filesystem layer. Mechanical fields and theme strings are co-located per def — what idle-loops-ng's `vanilla-actions.ts` and incloneution's `data/jobs.ts` already ship, what Producer's `data/producers.ts` and Ambient's `data/auto-producers.ts` formalize for the archetype demos. No `vars/` extraction layer, no codegen round-trip.
 
+### Drain semantics
+
+Mana drains wall-clock at 1/sec sim-time while `loop.running` is true. Drain is *not* gated on whether an action is currently dispatching; an empty queue or a queue stalled on a `notNow` slot still drains. This is canonical for the archetype: time-pressure on planning is the pacing lever, and idle-queue penalty is part of the cost surface. The validated exemplars (idle-loops, omsi loops, increlution, cavernous, PK2) all share this shape — the demo matches the *shape*, it doesn't lift any one exemplar's content.
+
+`baseCost` on `ActionDef` is **sim-seconds-of-duration**, not mana-spend. A 100-cost action takes ~100s at level 0, and the mana spend during those 100s is the wall-clock drain itself. The two coincide in magnitude because both advance per dt; they are not separate accounting paths. `effectiveCost = baseCost / (1 + sumGenLevel / skillLevelDivisor)` divides duration, which transitively reduces mana spent on the action because the action ends sooner.
+
+`manaGrant?: DecimalSource` is the budget-extension lever. Mana-positive actions add `manaGrant` to the resource on completion, clamped at `manaPoolMax`. Flat per-completion (no scaling by skill level — slim-demo default; forks may scale). The canonical "queue mana-positive content up to a floor, then spend the budget on the zone gate" strategic concern emerges from mixing mana-positive and mana-negative actions inside one wall-clock budget. The demo's specific mana-positive entries are theme-A authored content, not lifts from any one exemplar's content set.
+
 ### File split
 
 | File | What it owns |
@@ -151,10 +159,12 @@ export interface ActionDef {
   name: string;
   description: string;
   zoneId: string;
-  /** Mana cost at skill level 0. Effective cost divides by (1 + skillLevel / skillLevelDivisor). */
+  /** Sim-seconds-of-duration at skill level 0. Effective duration divides by (1 + skillLevel / skillLevelDivisor). Mana spend during the action is the wall-clock drain. */
   baseCost: DecimalSource;
   /** XP grants at completion. One entry per affected skill. */
   xpGrants: { skillId: string; xp: DecimalSource }[];
+  /** Flat mana added on completion, clamped at `manaPoolMax`. Omit for mana-neutral actions. */
+  manaGrant?: DecimalSource;
 }
 
 export interface LooperBalance {
@@ -346,7 +356,8 @@ The converged minimum across the three in-studio Looper clones (`incloneution`, 
 - **Resources:** 1 primary time-budget resource (mana). Per-skill `instinct` XP retains across loops via `createRetentionPolicy` (the engine's reset primitive snapshot/restore mechanism — same pattern all three clones use). NO separate "soulstone" / "talent-point" resource in the demo; those are fork-extension territory.
 - **Skills:** 5 — Combat, Magic, Practical, Alchemy, Crafting (idle-loops-ng vanilla shape; the Theme A bake). Each skill is two-tier (`gen` resets per loop, `instinct` persists) via `createSkillCategory<SkillDef>` with `mapSkill` building two `LevelDrivenSkill` instances + a composite modifier chain. Mirrors `incloneution/src/modules/skills.ts`.
 - **Zones:** 4 — Beginnersville → Forest Path → Merchanton → Ruined Keep. Zone 0 `initiallyUnlocked`; zones 1–3 carry `requires: ZoneRequirement[]` predicates evaluated by a `modules/zones.ts` watch bridge over `createZoneSystem`. Each zone exposes 4–5 actions.
-- **Actions:** 16–20 across zones. Each `ActionDef` carries `zoneId`, `baseCost` (mana), and `xpGrants: { skillId, xp }[]` (one or more skills granted XP at completion). Minimum cadence: every skill is granted XP by ≥1 action in every zone. Single-tick actions only; multi-part is filed as a high-severity engine gap (§ 10) and the demo doesn't exercise it.
+- **Actions:** 16–20 across zones. Each `ActionDef` carries `zoneId`, `baseCost` (sim-seconds-of-duration), and `xpGrants: { skillId, xp }[]` (one or more skills granted XP at completion). Minimum cadence: every skill is granted XP by ≥1 action in every zone. Single-tick actions only; multi-part is filed as a high-severity engine gap (§ 10) and the demo doesn't exercise it.
+- **Mana-positive actions:** at least one `manaGrant` action per early zone (zone 0 + zone 1) is canonical-floor — without them, action choice collapses to `xp/baseCost` ratio and the per-loop strategy degenerates. The demo's slots are filled with theme-A-native content (currently `attune-shrine` in Beginnersville, `leyline-tap` in Forest Path); forks rename and scale up the mana-positive set as they grow content depth. Don't lift action names from a single exemplar's content set — the canonical *shape* is the slot, not the name.
 - **Progression gates:** zone unlocks via `action-completion-count` (cumulative across loops) or `skill-level` (gen or instinct, threshold tier). `loop-count` is supported by the type but unused by the default zone ladder.
 - **Queue:** single `Sequencer<ActionMeta>` via `createSequencer({ id: 'looper/queue' })`. Drag-drop reorder; per-item loop count; auto-repeat toggle. The dual-queue (edit-active separation) idle-loops-ng ships is a Lloyd-mod-era UX feature; documented as fork-extension territory but not in the demo.
 - **Loop reset:** `createLoop({ endCondition: () => mana.lte(0), thingsToReset, onBeforeRestart, onRestart })` + `createRetentionPolicy({ keep: [...skills.getAll().map(s => s.instinct.xp)] })`. Snapshot/restore around the reset preserves instinct XP; gen XP, action progress, mana, and queue position zero. Mirrors `idle-loops-ng/src/modules/loop.ts` + `incloneution/src/modules/reincarnation.ts`.

@@ -147,6 +147,51 @@ describe('looper engine smoke', () => {
     expect(loop2FirstCompletionTicks).toBeLessThan(loop1FirstCompletionTicks);
   });
 
+  it('manaGrant on a mana-positive action adds mana, clamped at poolMax', () => {
+    const { engine } = createLooperEngine(undefined, {
+      persistenceNamespace: 'smoke-mana-grant',
+    });
+    engine.selectMod('classic-adventuring');
+    engine.start();
+
+    const queue = engine.tryInject(QueueKey)!;
+    const mana = engine.tryInject(ManaKey)!;
+    const poolMax = engine.tryInject(ManaPoolMaxKey)!;
+    const actions = engine.tryInject(ActionsKey)!;
+
+    // Drain mana below pool max so the grant has headroom to land observably.
+    for (let i = 0; i < 300; i++) engine.loop.simulateTick(1);
+    const manaBefore = new Decimal(mana.value);
+    expect(Decimal.lt(manaBefore, poolMax.value)).toBe(true);
+
+    // attune-shrine: baseCost 150 (duration), manaGrant 250. Drain over 150s
+    // costs 150 mana; grant adds 250 → net +100 across the completion.
+    queue.enqueue({ id: 'attune-shrine', metadata: { loops: 1, remaining: 1 } });
+    for (let i = 0; i < 160; i++) engine.loop.simulateTick(1);
+    expect(actions.getTimesCompleted('attune-shrine')).toBeGreaterThanOrEqual(1);
+    expect(Decimal.gt(mana.value, manaBefore)).toBe(true);
+    expect(Decimal.lte(mana.value, poolMax.value)).toBe(true);
+  });
+
+  it('mana drains wall-clock with empty queue (canonical idle-penalty)', () => {
+    const { engine } = createLooperEngine(undefined, {
+      persistenceNamespace: 'smoke-empty-queue-drain',
+    });
+    engine.selectMod('classic-adventuring');
+    engine.start();
+
+    const mana = engine.tryInject(ManaKey)!;
+    const poolMax = engine.tryInject(ManaPoolMaxKey)!;
+    const start = new Decimal(mana.value);
+    expect(Decimal.eq(start, poolMax.value)).toBe(true);
+
+    // No queue items dispatched. Drain still happens because it's wall-clock.
+    for (let i = 0; i < 50; i++) engine.loop.simulateTick(1);
+    const after = new Decimal(mana.value);
+    expect(Decimal.lt(after, start)).toBe(true);
+    expect(Number(start.sub(after))).toBeCloseTo(50, 0);
+  });
+
   it('instinct XP persists across loop reset (retention policy)', () => {
     const { engine } = createLooperEngine(undefined, {
       persistenceNamespace: 'smoke-retention',
