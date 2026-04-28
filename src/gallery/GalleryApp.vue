@@ -1,15 +1,27 @@
 <!--
   GalleryApp — root component for the showcase. Sidebar lists archetypes
   (canonical above candidate; deprecated hidden); main is either the home
-  card grid or a sandbox-mounted live demo + detail pane.
+  card grid or an "entered" view for one archetype.
+
+  Layout primitives are the lib/ shells; gallery contributes only
+  composition. The hamburger drives the shell's existing `data-collapsed`
+  attribute hook (the shell publishes this hook for mobile responsive
+  collapse; gallery-scoped CSS extends it to desktop without editing the
+  shell — see "wrap it yourself" guidance in SidebarMainShell.vue).
+
+  Entered controls (Back, archetype name, Details ↔ Live demo toggle)
+  live in the gallery header — no second header row in the entered view.
+  The toggle is contextual: "Live demo →" on details; "← Details" on
+  demo. The sandbox stays mounted across toggles via v-show, so engine
+  state survives flipping back to docs.
 
   Forks delete `src/gallery/` and `src/about/` and revert `main.ts` to a
   single archetype `createApp().mount('#app')`. The strip-cleanliness lint
   asserts nothing here hard-imports `@/archetypes/<name>`.
 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { AppFrame, SidebarMainShell } from '@/lib';
+import { computed, ref, watch } from 'vue';
+import { SidebarMainShell } from '@/lib';
 import { listArchetypes, findArchetype, type GalleryArchetype } from './useArchetypes';
 import Card from './Card.vue';
 import DetailPane from './DetailPane.vue';
@@ -17,10 +29,13 @@ import AboutPanel from './AboutPanel.vue';
 import { SandboxWrapper } from '@/ui/sandbox';
 
 type View = 'home' | 'about';
+type EnteredTab = 'demo' | 'details';
 
 const archetypes = listArchetypes();
 const enteredId = ref<string | null>(null);
 const view = ref<View>('home');
+const enteredTab = ref<EnteredTab>('details');
+const sidebarOpen = ref(true);
 
 const canonical = computed(() => archetypes.filter((a) => a.manifest.status === 'canonical'));
 const candidates = computed(() => archetypes.filter((a) => a.manifest.status === 'candidate'));
@@ -33,50 +48,104 @@ const entered = computed<GalleryArchetype | null>(() => {
 function enterArchetype(id: string): void {
   enteredId.value = id;
   view.value = 'home';
+  enteredTab.value = 'details';
+  sidebarOpen.value = false;
 }
+
+watch(enteredId, () => {
+  enteredTab.value = 'details';
+});
 
 function exitArchetype(): void {
   enteredId.value = null;
+  sidebarOpen.value = true;
 }
 
 function showAbout(): void {
   enteredId.value = null;
   view.value = 'about';
+  sidebarOpen.value = true;
 }
 
 function showHome(): void {
   enteredId.value = null;
   view.value = 'home';
+  sidebarOpen.value = true;
+}
+
+function toggleSidebar(): void {
+  sidebarOpen.value = !sidebarOpen.value;
+}
+
+function flipTab(): void {
+  enteredTab.value = enteredTab.value === 'details' ? 'demo' : 'details';
 }
 </script>
 
 <template>
-  <AppFrame>
-    <template #header>
-      <div class="gallery-header">
-        <button
-          class="gallery-header__title"
-          type="button"
-          @click="showHome"
-        >
-          <strong>Open Loop Starter</strong>
-          <span class="gallery-header__sub">Archetype gallery</span>
-        </button>
-        <nav class="gallery-header__nav">
-          <button
-            class="btn-sm"
-            type="button"
-            @click="showAbout"
-          >
-            About
-          </button>
-        </nav>
-      </div>
-    </template>
+  <div class="gallery-shell">
+    <header class="gallery-header">
+      <button
+        class="gallery-header__hamburger btn-sm"
+        type="button"
+        :aria-label="sidebarOpen ? 'Hide archetype list' : 'Show archetype list'"
+        :aria-expanded="sidebarOpen"
+        @click="toggleSidebar"
+      >
+        ☰
+      </button>
+      <button
+        class="gallery-header__title"
+        type="button"
+        @click="showHome"
+      >
+        <strong>Open Loop Starter</strong>
+        <span class="gallery-header__sub">Archetype gallery</span>
+      </button>
 
-    <SidebarMainShell sidebar-width="260px">
+      <div
+        v-if="entered"
+        class="gallery-header__entered"
+      >
+        <button
+          class="btn-sm"
+          type="button"
+          @click="exitArchetype"
+        >
+          ← Back
+        </button>
+        <span class="gallery-header__entered-name">{{ entered.manifest.name }}</span>
+        <button
+          class="btn-sm"
+          type="button"
+          @click="flipTab"
+        >
+          {{ enteredTab === 'details' ? 'Live demo →' : '← Details' }}
+        </button>
+      </div>
+
+      <nav class="gallery-header__nav">
+        <button
+          class="btn-sm"
+          type="button"
+          @click="showAbout"
+        >
+          About
+        </button>
+      </nav>
+    </header>
+
+    <SidebarMainShell
+      class="gallery-shell__shell"
+      :sidebar-width="sidebarOpen ? '240px' : '0px'"
+      collapsible
+      :data-collapsed="!sidebarOpen ? 'true' : null"
+    >
       <template #sidebar>
-        <div class="gallery-sidebar">
+        <div
+          v-if="sidebarOpen"
+          class="gallery-sidebar"
+        >
           <button
             class="gallery-sidebar__home"
             type="button"
@@ -127,26 +196,35 @@ function showHome(): void {
         v-if="entered"
         class="gallery-entered"
       >
-        <header class="gallery-entered__header">
-          <button
-            class="btn-sm"
-            type="button"
-            @click="exitArchetype"
-          >
-            ← Back to gallery
-          </button>
-          <h2>{{ entered.manifest.name }}</h2>
-        </header>
-        <div class="gallery-entered__body">
-          <div class="gallery-entered__demo">
-            <SandboxWrapper
-              :archetype="entered.manifest"
-              :boot="entered.boot"
-            />
-          </div>
-          <aside class="gallery-entered__detail">
-            <DetailPane :manifest="entered.manifest" />
-          </aside>
+        <!-- Demo + details are mutually exclusive in the main column so each
+             gets the full available width. The sandbox stays mounted across
+             toggles via v-show so engine state survives. -->
+        <div
+          v-show="enteredTab === 'demo'"
+          class="gallery-entered__demo"
+        >
+          <SandboxWrapper
+            :archetype="entered.manifest"
+            :boot="entered.boot"
+          />
+        </div>
+        <div
+          v-show="enteredTab === 'details'"
+          class="gallery-entered__detail"
+        >
+          <section class="gallery-entered__cta">
+            <button
+              class="btn-primary gallery-entered__cta-btn"
+              type="button"
+              @click="enteredTab = 'demo'"
+            >
+              ▶ Try {{ entered.manifest.name }} live
+            </button>
+            <span class="gallery-entered__cta-hint">
+              Mounts the {{ entered.manifest.id }} engine in an isolated sandbox.
+            </span>
+          </section>
+          <DetailPane :manifest="entered.manifest" />
         </div>
       </div>
       <AboutPanel v-else-if="view === 'about'" />
@@ -158,7 +236,8 @@ function showHome(): void {
           <h2>Archetype gallery</h2>
           <p>
             Each archetype is a self-bootable demo of a validated game pattern. Click any card to
-            enter the live demo. Forks pick one and delete the rest.
+            see its details — patterns, primitives, beats, themes, exemplars, and the doc body. From
+            there, toggle to Live demo to mount the sandbox. Forks pick one and delete the rest.
           </p>
         </header>
         <h3 class="gallery-home__group">
@@ -185,17 +264,42 @@ function showHome(): void {
         </div>
       </div>
     </SidebarMainShell>
-  </AppFrame>
+  </div>
 </template>
 
 <style>
+.gallery-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Activate SidebarMainShell's `data-collapsed='true'` hook on desktop too.
+   The shell publishes this attribute hook for its own responsive collapse
+   below 720px; gallery-scoped CSS lifts it to all viewport widths so the
+   hamburger toggle can drive collapse without lib/ changes. */
+.gallery-shell .olui-sidebar-main[data-collapsed='true'] {
+  grid-template-columns: 1fr;
+}
+.gallery-shell .olui-sidebar-main[data-collapsed='true'] .olui-sidebar-main__sidebar {
+  display: none;
+}
+
 .gallery-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem;
+  gap: 0.6rem;
+  padding: 0.4rem 0.8rem;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
+  flex: 0 0 auto;
+}
+.gallery-header__hamburger {
+  flex: 0 0 auto;
+  font-size: 1.05rem;
+  line-height: 1;
 }
 .gallery-header__title {
   display: flex;
@@ -203,16 +307,40 @@ function showHome(): void {
   align-items: flex-start;
   background: transparent;
   border: none;
-  padding: 0.25rem 0.5rem;
+  padding: 0.2rem 0.4rem;
   cursor: pointer;
   color: inherit;
+  flex: 0 0 auto;
 }
 .gallery-header__title strong {
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .gallery-header__sub {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--color-text-muted);
+}
+.gallery-header__entered {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 auto;
+  margin-left: 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--color-border);
+  min-width: 0;
+}
+.gallery-header__entered-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gallery-header__nav {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .gallery-sidebar {
@@ -285,45 +413,45 @@ function showHome(): void {
 .gallery-entered {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
   flex: 1 1 auto;
   min-height: 0;
-}
-.gallery-entered__header {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-.gallery-entered__body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 0.8rem;
-  flex: 1 1 auto;
-  min-height: 0;
+  margin: calc(var(--gap) * -1);
 }
 .gallery-entered__demo {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  overflow: hidden;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 .gallery-entered__detail {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  padding: 0.8rem;
+  flex: 1 1 auto;
   overflow: auto;
   min-height: 0;
+  padding: 1rem 1.2rem;
+  background: var(--color-surface);
 }
-
-@media (max-width: 1100px) {
-  .gallery-entered__body {
-    grid-template-columns: 1fr;
-  }
-  .gallery-entered__detail {
-    max-height: 50vh;
-  }
+.gallery-entered__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 1.2rem;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  border-radius: var(--radius);
+}
+.gallery-entered__cta-btn {
+  font-size: 0.95rem;
+  padding: 8px 18px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+.gallery-entered__cta-hint {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 </style>
