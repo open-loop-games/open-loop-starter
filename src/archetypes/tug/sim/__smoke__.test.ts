@@ -72,13 +72,15 @@ describe('tug engine smoke', () => {
     match.start();
     expect(match.inMatch.value).toBe(true);
 
-    // 30s of sim. Player accrues (no spend); AI runs its default `counter`
-    // persona which queues sends as it can afford under 4s cadence × 30s
+    // 10s of sim. Player accrues (no spend); AI runs its default `counter`
+    // persona which queues sends as it can afford under 4s cadence × 10s
     // — AI income sits near 0 between sends because the AI spends what
-    // it earns.
-    for (let i = 0; i < 30; i++) engine.loop.simulateTick(1);
+    // it earns. Window kept short so the AI doesn't end the match before
+    // the player-purchase assertion below.
+    for (let i = 0; i < 10; i++) engine.loop.simulateTick(1);
     expect(Number(incomeP.value)).toBeGreaterThan(0);
     expect(lane.units.ai.value.length).toBeGreaterThan(0);
+    expect(match.inMatch.value).toBe(true);
     void incomeA;
 
     // Player buys a marine — ends up in the lane after the sequencer

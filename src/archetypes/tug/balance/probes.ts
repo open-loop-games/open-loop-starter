@@ -377,7 +377,7 @@ function runCounterStrongSensitivityProbe(): CounterStrongResult {
 
 // ─── Probe 4 — income-upgrade-roi (math-only) ────────────────────────────
 
-const REFINERY_1_COST_SWEEP = [50, 100, 200, 400, 1000];
+const REFINERY_1_COST_SWEEP = [200, 400, 800, 1600, 3200];
 
 /** Conservative gate: half the match time limit. Probe 5 asserts the
  *  empirical p50 lands in [50%, 95%] of the limit, so anything that fails
@@ -387,22 +387,22 @@ const REFINERY_1_COST_SWEEP = [50, 100, 200, 400, 1000];
 const MATCH_DURATION_P50_SEC = DEFAULT_TUG_DATA.balance.matchTimeLimitMinutes * 60 * 0.5;
 
 /** Analytical defaults at engine-build state (no tiers bought, so
- *  `currentRate = baseRate = 5/s` for every tier). These are what the
+ *  `currentRate = baseRate = 8/s` for every tier). These are what the
  *  ROI ComputedRefs return at `buildTugSimEngine()`. Post-buy values
- *  (refinery-2 ≈ 117s once refinery-1 is active) are exercised in the
+ *  (refinery-2 ≈ 87.5s once refinery-1 is active) are exercised in the
  *  buy-chain test in `sim/balance.probe.test.ts` — they're the
  *  realistic strategic numbers but only appear once priors are bought.
  *  The "elbow" gate below uses refinery-1 only (the entry-tier
  *  decision); higher tiers are conditional on prior purchases. */
 const ANALYTICAL_DEFAULT_PAYBACK: Record<string, number> = {
-  'refinery-1': 100 / (5 * 0.5), // 40s
-  'refinery-2': 350 / (5 * 0.4), // 175s
-  'refinery-3': 1200 / (5 * 0.3), // 800s
+  'refinery-1': 400 / (8 * 0.25), // 200s
+  'refinery-2': 350 / (8 * 0.4), // 109.375s
+  'refinery-3': 1200 / (8 * 0.3), // 500s
 };
 const ANALYTICAL_DEFAULT_CROSSOVER: Record<string, number> = {
-  'refinery-1': (100 / (5 * 0.5)) * 1.5, // 60s
-  'refinery-2': (350 / (5 * 0.4)) * 1.4, // 245s
-  'refinery-3': (1200 / (5 * 0.3)) * 1.3, // 1040s
+  'refinery-1': (400 / (8 * 0.25)) * 1.25, // 250s
+  'refinery-2': (350 / (8 * 0.4)) * 1.4, // 153.125s
+  'refinery-3': (1200 / (8 * 0.3)) * 1.3, // 650s
 };
 const ROI_TOLERANCE = 0.05;
 

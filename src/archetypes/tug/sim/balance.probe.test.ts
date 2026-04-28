@@ -171,19 +171,18 @@ describe('tug Tier-C balance locks — counter-strong sensitivity framework', ()
 
 describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
   // Default-state values: no tiers bought, so `currentRate = baseRate
-  // = 5/s` for every tier. The post-buy values (refinery-2 at ~117s
-  // once refinery-1 is bought) are exercised in the buy-chain test
-  // below — they're the realistic strategic numbers but only appear
-  // once the chain has the prior tier's grant active.
+  // = 8/s` for every tier. The post-buy values are exercised in the
+  // buy-chain test below — they're the realistic strategic numbers but
+  // only appear once the chain has the prior tier's grant active.
   const EXPECTED_PAYBACK_DEFAULT = {
-    'refinery-1': 100 / (5 * 0.5), // 40
-    'refinery-2': 350 / (5 * 0.4), // 175
-    'refinery-3': 1200 / (5 * 0.3), // 800
+    'refinery-1': 400 / (8 * 0.25), // 200
+    'refinery-2': 350 / (8 * 0.4), // 109.375
+    'refinery-3': 1200 / (8 * 0.3), // 500
   };
   const EXPECTED_CROSSOVER_DEFAULT = {
-    'refinery-1': (100 / (5 * 0.5)) * 1.5, // 60
-    'refinery-2': (350 / (5 * 0.4)) * 1.4, // 245
-    'refinery-3': (1200 / (5 * 0.3)) * 1.3, // 1040
+    'refinery-1': (400 / (8 * 0.25)) * 1.25, // 250
+    'refinery-2': (350 / (8 * 0.4)) * 1.4, // 153.125
+    'refinery-3': (1200 / (8 * 0.3)) * 1.3, // 650
   };
 
   it('player-side ROI metrics match analytical at default state (no tiers bought)', () => {
@@ -205,37 +204,37 @@ describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
   });
 
   it('AI-side payback scales inversely with aiIncomeMultiplier perturbation', () => {
-    // At aiIncomeMultiplier=0.7, AI's chain-applied baseRate is 5*0.7
-    // = 3.5/s, so refinery-1 payback becomes 100/(3.5*0.5) ≈ 57.14s
-    // (vs 40s at the symmetric default). Player-side is unchanged.
+    // At aiIncomeMultiplier=0.7, AI's chain-applied baseRate is 8*0.7
+    // = 5.6/s, so refinery-1 payback becomes 400/(5.6*0.25) ≈ 285.71s
+    // (vs 200s at the symmetric default). Player-side is unchanged.
     const engine = buildTugSimEngine({ balance: { aiIncomeMultiplier: 0.7 } });
     const roiAi = engine.tryInject(IncomeUpgradeRoiKey.ai)!;
     const roiPlayer = engine.tryInject(IncomeUpgradeRoiKey.player)!;
     const aiPayback = roiAi.get('refinery-1')!.paybackSeconds.value;
     const playerPayback = roiPlayer.get('refinery-1')!.paybackSeconds.value;
-    expect(aiPayback).toBeCloseTo(100 / (5 * 0.7 * 0.5), 1);
-    expect(playerPayback).toBeCloseTo(40, 1);
+    expect(aiPayback).toBeCloseTo(400 / (8 * 0.7 * 0.25), 1);
+    expect(playerPayback).toBeCloseTo(200, 1);
   });
 
   it('refinery-2 payback drops when refinery-1 is bought (chain reactivity)', () => {
-    // Pre-buy: refinery-2 sees baseRate (5/s), payback = 350/(5*0.4) = 175s.
+    // Pre-buy: refinery-2 sees baseRate (8/s), payback = 350/(8*0.4) ≈ 109.4s.
     // Post-buy: refinery-1's grant binds onto incomeRateChain, currentRate
-    // becomes 7.5/s, payback drops to 350/(7.5*0.4) ≈ 116.67s. This is
-    // the realistic strategic number a player sees in the IncomeBar
-    // tooltip once refinery-2 unlocks.
+    // becomes 10/s, payback drops to 350/(10*0.4) = 87.5s. This is the
+    // realistic strategic number a player sees in the IncomeBar tooltip
+    // once refinery-2 unlocks.
     const engine = buildTugSimEngine();
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player)!;
     const shop = engine.tryInject(IncomeUpgradesKey.player)!;
     const income = engine.tryInject(IncomeKey.player)!;
     const r2 = roi.get('refinery-2')!;
-    expect(r2.paybackSeconds.value).toBeCloseTo(175, 1);
+    expect(r2.paybackSeconds.value).toBeCloseTo(350 / (8 * 0.4), 1);
     // Inject enough minerals to satisfy refinery-1's cost requirement,
     // then purchase. Bypasses normal accrual — no need to tick the loop.
-    addResource(income, Decimal.fromValue(200));
+    addResource(income, Decimal.fromValue(500));
     const r1 = shop.getPurchasable('refinery-1')!;
     r1.purchase(1);
     expect(r1.bought.value).toBe(true);
-    expect(r2.paybackSeconds.value).toBeCloseTo(350 / (7.5 * 0.4), 1);
+    expect(r2.paybackSeconds.value).toBeCloseTo(350 / (10 * 0.4), 1);
   });
 
   it('payback recomputes when baseRate tunable is perturbed at runtime', () => {
@@ -243,17 +242,17 @@ describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player)!;
     const reg = engine.tryInject(TugTuningRegistryKey)!;
     const r1 = roi.get('refinery-1')!;
-    expect(r1.paybackSeconds.value).toBeCloseTo(40, 1);
-    const cleanup = reg.pushScope('lock:baseRate=10', {
-      'balance/baseIncomeRate': () => 10,
+    expect(r1.paybackSeconds.value).toBeCloseTo(200, 1);
+    const cleanup = reg.pushScope('lock:baseRate=16', {
+      'balance/baseIncomeRate': () => 16,
     });
     try {
-      // baseRate doubles → payback halves: 100/(10*0.5) = 20s.
-      expect(r1.paybackSeconds.value).toBeCloseTo(20, 1);
+      // baseRate doubles → payback halves: 400/(16*0.25) = 100s.
+      expect(r1.paybackSeconds.value).toBeCloseTo(100, 1);
     } finally {
       cleanup();
     }
-    expect(r1.paybackSeconds.value).toBeCloseTo(40, 1);
+    expect(r1.paybackSeconds.value).toBeCloseTo(200, 1);
   });
 });
 

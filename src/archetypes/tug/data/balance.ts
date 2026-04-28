@@ -18,7 +18,7 @@ import type { TugBalance, TugTheme } from './types';
 // below is a tuner perturbation surface.
 
 export const TUG_BALANCE: TugBalance = {
-  baseIncomeRate: 5,
+  baseIncomeRate: 8,
   matchTimeLimitMinutes: 30,
   // Side-symmetric default. Player-facing difficulty knob, not a balance
   // lever — the AI's *behavior* (persona, decision quality) is the

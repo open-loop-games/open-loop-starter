@@ -19,8 +19,8 @@ export const INCOME_UPGRADES: IncomeUpgradeDef[] = [
   {
     id: 'refinery-1',
     name: 'Refinery I',
-    cost: 100,
-    multiplier: 1.5,
+    cost: 400,
+    multiplier: 1.25,
   },
   {
     id: 'refinery-2',
