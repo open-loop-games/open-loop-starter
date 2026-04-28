@@ -1,29 +1,40 @@
-/**
- * Looper archetype — public API.
- *
- * Games under src/modules/mods/<game>/vars/ import types and defaults from
- * here, or (once codegen lands) receive copies emitted by
- * `pnpm codegen:archetype-vars looper`.
- */
-export type {
-  LooperArchetypeVars,
-  LooperThemeVars,
-  LooperBalanceVars,
-  LooperVars,
-  LooperVarsOverride,
-  LoopTriggerMode,
-  QueueMode,
-  AutomationUnlockTier,
-  XpToLevelFormula,
-  ZoneUnlockTrigger,
-  ZoneUnlockThreshold,
-} from './types';
-
+export { createApp, createLooperEngine } from './boot';
+export type { LooperBootResult, LooperEngineOptions } from './boot';
+export { manifest } from './manifest';
 export {
-  DEFAULT_LOOPER_ARCHETYPE_VARS,
-  DEFAULT_LOOPER_THEME_VARS,
-  DEFAULT_LOOPER_BALANCE_VARS,
-  DEFAULT_LOOPER_VARS,
-} from './vars';
-
-export { loadLooperVars } from './load';
+  DEFAULT_LOOPER_DATA,
+  ACTIONS,
+  LOOPER_BALANCE,
+  SKILLS,
+  ZONES,
+  applyLooperOverrides,
+  type LooperOverrides,
+  type LooperData,
+  type LooperBalance,
+  type LooperGameState,
+  type SkillDef,
+  type ZoneDef,
+  type ZoneRequirement,
+  type ActionDef,
+} from './data';
+export {
+  ActionsKey,
+  ArcKey,
+  LooperDataKey,
+  LooperTuningRegistryKey,
+  LoopKey,
+  ManaKey,
+  ManaPoolMaxKey,
+  QueueKey,
+  QueueVersionKey,
+  SkillsKey,
+  TimeSystemKey,
+  ZonesKey,
+  type ActionState,
+  type ActionsModule,
+  type ArcState,
+  type LooperSkillState,
+  type LooperTunableKey,
+  type LooperTunables,
+  type QueueItemMeta,
+} from './modules';

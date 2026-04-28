@@ -1,0 +1,90 @@
+import { computed, watch, type ComputedRef, type Ref } from 'vue';
+import { persistent, type EngineModule, type InjectionKey } from 'open-loop-engine';
+import type { LooperData } from '../data/types';
+import { LoopKey } from './loop';
+import { SkillsKey } from './skills';
+import { ZonesKey } from './zones';
+
+export interface ArcState {
+  /** True when arc-closure conditions are currently satisfied. */
+  complete: ComputedRef<boolean>;
+  /** Latches true the first time `complete` flips true — survives save/load. */
+  announced: Ref<boolean>;
+  /** End-of-arc flavour line — surfaced by the UI on first crossing. */
+  flavour: string;
+  /**
+   * Retention multiplier averaged across skills. Window-aware delta of
+   * recent loops vs older loops drives the closure check.
+   */
+  averageRetentionMultiplier: ComputedRef<number>;
+}
+
+export const ArcKey: InjectionKey<ArcState> = Symbol('looper/arc') as InjectionKey<ArcState>;
+
+const DEFAULT_FLAVOUR =
+  'The keep falls quiet. You stand where the loop began and feel the difference — every gesture rehearsed, every fight remembered.';
+
+type Ref2<T> = { value: T };
+const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
+
+/**
+ * Arc closure: `currentZone === finalZone AND retention compound visible
+ * over a window of ≥ 5 loops`. The retention compound check uses the
+ * loop counter and a running window of "average retention multiplier across
+ * skills"; once `loop.count >= 5` and the multiplier exceeds 1.05 (gentle
+ * threshold over a flat baseline of 1.0), the closure latches.
+ *
+ * The window math is intentionally simple — the design-assertion probe
+ * (looper.md § 6 `retention-perceptibility`) is the formal verification of
+ * "retention is perceptible"; this latch is the player-visible counterpart.
+ */
+export function createArcModule(_data: LooperData): EngineModule {
+  return {
+    id: 'looper/arc',
+    dependencies: ['looper/loop', 'looper/skills', 'looper/zones'],
+    install(ctx) {
+      const loop = ctx.inject(LoopKey);
+      const skills = ctx.inject(SkillsKey);
+      const zones = ctx.inject(ZonesKey);
+
+      const announced = persistent<boolean>(false, { name: 'arcAnnounced' });
+
+      // Average effective multiplier across all skills — a single scalar the
+      // player can read in the retention panel and the arc-close predicate
+      // compares against a threshold.
+      const averageRetentionMultiplier = computed<number>(() => {
+        const entries = skills.getAll();
+        if (entries.length === 0) return 1;
+        let sum = 0;
+        for (const entry of entries) {
+          sum += Number(entry.state.effectiveMultiplier.value);
+        }
+        return sum / entries.length;
+      });
+
+      const finalZoneId = zones.ordered.value[zones.ordered.value.length - 1]?.id ?? '';
+
+      const complete = computed(() => {
+        if (!finalZoneId) return false;
+        if (!zones.isUnlocked(finalZoneId)) return false;
+        if (loop.count.value < 5) return false;
+        return averageRetentionMultiplier.value > 1.05;
+      });
+
+      watch(
+        complete,
+        (isComplete) => {
+          if (isComplete && !announced.value) announced.value = true;
+        },
+        { immediate: true },
+      );
+
+      ctx.provide(ArcKey, {
+        complete,
+        announced: asRef(announced),
+        flavour: DEFAULT_FLAVOUR,
+        averageRetentionMultiplier,
+      });
+    },
+  };
+}
