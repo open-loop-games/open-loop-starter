@@ -94,6 +94,37 @@ describe('balance probe — content cardinality minimums', () => {
   });
 });
 
+describe('balance probe — gold↔mana exchange algebraic identity', () => {
+  // Per archetypes/looper.md § 6 row `gold-mana-exchange-correctness`:
+  // `manaAdded = goldSpent × exchangeMult` per completion of the basic
+  // exchange. The dispatcher in modules/actions.ts snapshots pre-batch gold
+  // before applying completionEffects, so spend-gold/exchange ordering
+  // doesn't affect the identity. This receipt locks the identity by
+  // construction: every basic exchange action carries `spend-gold: 'all'`
+  // followed by `exchange-gold-to-mana`, and a positive exchangeMult.
+  it('every gold→mana exchange action declares spend-gold:all + exchange-gold-to-mana with a positive exchangeMult', () => {
+    const exchanges = actions.filter(
+      (a): a is typeof a & { type: 'basic' } =>
+        a.type === 'basic' &&
+        !!a.completionEffects?.some((e) => e.kind === 'exchange-gold-to-mana'),
+    );
+    expect(exchanges.length).toBeGreaterThanOrEqual(1);
+    for (const action of exchanges) {
+      const effects = action.completionEffects ?? [];
+      const spendIdx = effects.findIndex((e) => e.kind === 'spend-gold');
+      const exchangeIdx = effects.findIndex((e) => e.kind === 'exchange-gold-to-mana');
+      expect(spendIdx).toBeGreaterThanOrEqual(0);
+      expect(exchangeIdx).toBeGreaterThanOrEqual(0);
+      const spend = effects[spendIdx];
+      if (spend.kind === 'spend-gold') {
+        expect(spend.amount).toBe('all');
+      }
+      expect(action.exchangeMult).toBeDefined();
+      expect(Number(action.exchangeMult!)).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe('balance probe — prereq graph shape', () => {
   it('exercises all five ActionPrereq variants across the action set', () => {
     const variants = new Set<string>();
