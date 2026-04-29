@@ -1,11 +1,6 @@
 import { computed } from 'vue';
-import type {
-  ComputedRef,
-  DecimalSource,
-  EngineRef,
-  Persistent,
-  SequencerItem,
-} from 'open-loop-engine';
+import type { ComputedRef, Ref } from 'vue';
+import type { DecimalSource, Persistent, SequencerItem } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import {
   QueueKey,
@@ -27,7 +22,7 @@ export interface QueueView {
   /** Mana sim-seconds needed for one full pass of the plan. */
   manaNeededTotal: ComputedRef<DecimalSource>;
   /** Plan is exhausted; loop's endCondition will fire on the next tick. */
-  shouldRestart: EngineRef<boolean>;
+  shouldRestart: Ref<boolean>;
   /** Vanilla "Repeat Last Action" toggle (`actions.js:137-147`). */
   repeatLastAction: Persistent<boolean>;
   enqueue(actionId: string, loops?: number): void;

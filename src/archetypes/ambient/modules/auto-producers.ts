@@ -1,4 +1,5 @@
 import { computed } from 'vue';
+import type { ComputedRef, Ref } from 'vue';
 import {
   createMultiplicativeModifier,
   createOverrideRegistry,
@@ -7,10 +8,8 @@ import {
   createTimeSystem,
   trackTotal,
   tunable,
-  type ComputedRef,
   type DecimalSource,
   type EngineModule,
-  type EngineRef,
   type InjectionKey,
   type ModifierChain,
   type OverrideRegistry,
@@ -45,9 +44,9 @@ export const PrimaryResourceKey: InjectionKey<Resource<DecimalSource>> = Symbol(
   'ambient/primary-resource',
 ) as InjectionKey<Resource<DecimalSource>>;
 
-export const PrimaryLifetimeKey: InjectionKey<EngineRef<DecimalSource>> = Symbol(
+export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
   'ambient/primary-lifetime',
-) as InjectionKey<EngineRef<DecimalSource>>;
+) as InjectionKey<Ref<DecimalSource>>;
 
 export const AutoProducersKey: InjectionKey<ProducerCategory<AutoProducerDef>> = Symbol(
   'ambient/auto-producers',

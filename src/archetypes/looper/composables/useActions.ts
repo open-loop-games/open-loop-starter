@@ -1,5 +1,6 @@
 import { computed } from 'vue';
-import { Decimal, type ComputedRef, type DecimalSource } from 'open-loop-engine';
+import type { ComputedRef } from 'vue';
+import { Decimal, type DecimalSource } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import type { ActionDef } from '../data/types';
 import { ActionsKey, type ActionsModule } from '../modules';

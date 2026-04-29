@@ -25,7 +25,7 @@ const averageTalent = computed(() => arc.averageTalentMultiplier.value);
 
     <ul class="capabilities-list">
       <li
-        v-for="row in capabilities.value"
+        v-for="row in capabilities"
         :key="row.def.id"
         class="capabilities-list__item"
         :data-testid="`capability-${row.def.id}`"

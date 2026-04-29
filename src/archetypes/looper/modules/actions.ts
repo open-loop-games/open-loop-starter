@@ -1,10 +1,10 @@
 import { computed } from 'vue';
+import type { ComputedRef } from 'vue';
 import {
   Decimal,
   persistent,
   tunable,
   withPersistentContext,
-  type ComputedRef,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -132,7 +132,7 @@ export function createActionsModule(data: LooperData): EngineModule {
               `actions/${def.id}/manaCost` as keyof LooperTunables,
               () => def.manaCost,
             )
-          : { value: def.manaCost };
+          : computed(() => def.manaCost);
 
         let rewardRatio: ComputedRef<DecimalSource> | undefined;
         if (def.type === 'regular') {
@@ -142,7 +142,7 @@ export function createActionsModule(data: LooperData): EngineModule {
                 `actions/${def.id}/rewardRatio` as keyof LooperTunables,
                 () => def.rewardRatio,
               )
-            : { value: def.rewardRatio };
+            : computed(() => def.rewardRatio);
         }
 
         let exchangeMult: ComputedRef<DecimalSource> | undefined;
@@ -154,7 +154,7 @@ export function createActionsModule(data: LooperData): EngineModule {
                 `actions/${def.id}/exchangeMult` as keyof LooperTunables,
                 () => mult,
               )
-            : { value: mult };
+            : computed(() => mult);
         }
 
         const { progress, timesCompleted } = withPersistentContext(

@@ -1,10 +1,11 @@
-import type { ComputedRef, DecimalSource, EngineRef, Resource } from 'open-loop-engine';
+import type { ComputedRef, Ref } from 'vue';
+import type { DecimalSource, Resource } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { HeadlineRateKey, PrimaryLifetimeKey, PrimaryResourceKey } from '../modules';
 
 export interface HeadlineStats {
   primary: Resource<DecimalSource>;
-  lifetime: EngineRef<DecimalSource>;
+  lifetime: Ref<DecimalSource>;
   perSecond: ComputedRef<DecimalSource>;
 }
 

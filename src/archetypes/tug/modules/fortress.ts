@@ -1,7 +1,7 @@
+import type { ComputedRef } from 'vue';
 import {
   createResource,
   tunable,
-  type ComputedRef,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,

@@ -1,10 +1,10 @@
+import type { ComputedRef } from 'vue';
 import {
   Decimal,
   createBooleanRequirement,
   createPurchasableCategory,
   setupAutoPurchase,
   tunable,
-  type ComputedRef,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,

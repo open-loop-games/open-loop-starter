@@ -1,4 +1,5 @@
 import { computed } from 'vue';
+import type { ComputedRef, Ref } from 'vue';
 import {
   createOverrideRegistry,
   createResource,
@@ -6,10 +7,8 @@ import {
   persistent,
   trackTotal,
   tunable,
-  type ComputedRef,
   type DecimalSource,
   type EngineModule,
-  type EngineRef,
   type InjectionKey,
   type ModifierChain,
   type OverrideRegistry,
@@ -22,9 +21,9 @@ import type { ProducerData, ProducerDef } from '../data/types';
 // Injection keys — consumed by upgrades, achievements, composables, sim tests.
 
 export interface ClickState {
-  clickCount: EngineRef<number>;
-  lastClickSec: EngineRef<number>;
-  elapsedSec: EngineRef<number>;
+  clickCount: Ref<number>;
+  lastClickSec: Ref<number>;
+  elapsedSec: Ref<number>;
   click: () => void;
 }
 
@@ -32,9 +31,9 @@ export const PrimaryResourceKey: InjectionKey<Resource<DecimalSource>> = Symbol(
   'producer/primary-resource',
 ) as InjectionKey<Resource<DecimalSource>>;
 
-export const PrimaryLifetimeKey: InjectionKey<EngineRef<DecimalSource>> = Symbol(
+export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
   'producer/primary-lifetime',
-) as InjectionKey<EngineRef<DecimalSource>>;
+) as InjectionKey<Ref<DecimalSource>>;
 
 export const BuildingsKey: InjectionKey<ProducerCategory<ProducerDef>> = Symbol(
   'producer/buildings',

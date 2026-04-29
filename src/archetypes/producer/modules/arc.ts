@@ -1,12 +1,6 @@
 import { computed, watch } from 'vue';
-import {
-  Decimal,
-  persistent,
-  type ComputedRef,
-  type EngineModule,
-  type EngineRef,
-  type InjectionKey,
-} from 'open-loop-engine';
+import type { ComputedRef, Ref } from 'vue';
+import { Decimal, persistent, type EngineModule, type InjectionKey } from 'open-loop-engine';
 import type { ProducerData } from '../data/types';
 import { BuildingsKey } from './producers';
 import { UpgradesKey } from './upgrades';
@@ -15,7 +9,7 @@ export interface ArcState {
   /** True when all arc-closure conditions are currently satisfied. */
   complete: ComputedRef<boolean>;
   /** Latches true the first time `complete` flips true — survives save/load. */
-  announced: EngineRef<boolean>;
+  announced: Ref<boolean>;
   /** End-of-arc flavour line — surfaced by the UI layer on first crossing. */
   flavour: string;
 }

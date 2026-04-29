@@ -1,5 +1,6 @@
 import { computed } from 'vue';
-import type { ComputedRef, Persistent, Purchasable } from 'open-loop-engine';
+import type { ComputedRef } from 'vue';
+import type { Persistent, Purchasable } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import type { UnitDef } from '../data/types';
 import { UnitsKey, UnitsCooldownKey, type Side } from '../modules';

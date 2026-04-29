@@ -52,7 +52,7 @@ function totalPerSecond(row: AutoProducerRow) {
         v-for="row in visibleRows"
         :key="row.def.id"
         :row="row"
-        :total-rate="totalRate.value"
+        :total-rate="totalRate"
         breakdown-title="Rate each"
       >
         <li

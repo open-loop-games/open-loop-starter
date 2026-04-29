@@ -1,7 +1,7 @@
 import { computed } from 'vue';
+import type { ComputedRef } from 'vue';
 import {
   Decimal,
-  type ComputedRef,
   type DecimalSource,
   type ModifierChain,
   type Purchasable,

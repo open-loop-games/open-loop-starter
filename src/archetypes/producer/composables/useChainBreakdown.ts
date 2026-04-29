@@ -1,5 +1,6 @@
 import { computed } from 'vue';
-import type { ComputedRef, ModifierChain } from 'open-loop-engine';
+import type { ComputedRef } from 'vue';
+import type { ModifierChain } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { BuildingsKey } from '../modules';
 

@@ -1,5 +1,6 @@
 import { computed } from 'vue';
-import { Decimal, type ComputedRef, type DecimalSource, type Resource } from 'open-loop-engine';
+import type { ComputedRef } from 'vue';
+import { Decimal, type DecimalSource, type Resource } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { InitialManaKey, ManaKey, TotalManaBudgetKey } from '../modules';
 

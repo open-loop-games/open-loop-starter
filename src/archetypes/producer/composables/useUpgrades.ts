@@ -1,5 +1,6 @@
 import { computed } from 'vue';
-import type { ComputedRef, Purchasable } from 'open-loop-engine';
+import type { ComputedRef } from 'vue';
+import type { Purchasable } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import type { UpgradeDef } from '../data/types';
 import { UpgradesKey } from '../modules';

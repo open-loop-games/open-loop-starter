@@ -31,7 +31,11 @@ const { contribution, contributionPct, marginalDelta, marginalPct, pendingPositi
 </script>
 
 <template>
-  <RichTooltip :open-delay="250" :close-delay="100" side="right">
+  <RichTooltip
+    :open-delay="250"
+    :close-delay="100"
+    side="right"
+  >
     <slot />
     <template #content>
       <div class="bakery-card">
@@ -55,21 +59,25 @@ const { contribution, contributionPct, marginalDelta, marginalPct, pendingPositi
           <div class="bakery-card__stat">
             <dt>Contributes</dt>
             <dd>
-              <span>{{ format(contribution.value, 2) }} /sec</span>
-              <span class="bakery-card__muted">
-                ({{ formatPercent(contributionPct.value, 1) }})
-              </span>
+              <span>{{ format(contribution, 2) }} /sec</span>
+              <span class="bakery-card__muted"> ({{ formatPercent(contributionPct, 1) }}) </span>
             </dd>
           </div>
-          <div v-if="beatFinite" class="bakery-card__stat">
+          <div
+            v-if="beatFinite"
+            class="bakery-card__stat"
+          >
             <dt>Pays off in</dt>
             <dd>{{ formatPurchaseBeat(row.beatSeconds.value) }}</dd>
           </div>
-          <div v-if="pendingPositive" class="bakery-card__stat bakery-card__stat--marginal">
+          <div
+            v-if="pendingPositive"
+            class="bakery-card__stat bakery-card__stat--marginal"
+          >
             <dt>Next hire</dt>
             <dd>
-              +{{ formatWhole(pendingAmount) }} &middot; +{{ format(marginalDelta.value, 2) }} /sec
-              <span class="bakery-card__muted">({{ formatPercent(marginalPct.value, 1) }})</span>
+              +{{ formatWhole(pendingAmount) }} &middot; +{{ format(marginalDelta, 2) }} /sec
+              <span class="bakery-card__muted">({{ formatPercent(marginalPct, 1) }})</span>
             </dd>
           </div>
         </dl>

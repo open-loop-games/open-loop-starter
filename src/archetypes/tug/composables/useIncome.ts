@@ -1,5 +1,6 @@
 import { computed } from 'vue';
-import type { ComputedRef, DecimalSource, Resource } from 'open-loop-engine';
+import type { ComputedRef } from 'vue';
+import type { DecimalSource, Resource } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { IncomeKey, type Side } from '../modules';
 

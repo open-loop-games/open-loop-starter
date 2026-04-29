@@ -1,11 +1,6 @@
 import { computed, watch } from 'vue';
-import {
-  persistent,
-  type ComputedRef,
-  type EngineModule,
-  type EngineRef,
-  type InjectionKey,
-} from 'open-loop-engine';
+import type { ComputedRef, Ref } from 'vue';
+import { persistent, type EngineModule, type InjectionKey } from 'open-loop-engine';
 import type { TugData } from '../data/types';
 import { MetaKey } from './meta';
 
@@ -13,7 +8,7 @@ export interface ArcState {
   /** True when arc-closure conditions are currently satisfied. */
   complete: ComputedRef<boolean>;
   /** Latches true the first time `complete` flips true; survives save/load. */
-  announced: EngineRef<boolean>;
+  announced: Ref<boolean>;
   /** End-of-arc flavour line — surfaced by the UI on first crossing. */
   flavour: string;
 }

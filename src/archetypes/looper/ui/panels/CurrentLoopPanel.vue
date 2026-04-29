@@ -27,7 +27,7 @@ const currentRow = computed(() => {
         <span
           class="loop-header__value"
           data-testid="loop-count"
-        >{{ loop.count.value }}</span>
+        >{{ loop.count }}</span>
       </div>
       <div class="loop-header__elapsed">
         elapsed
@@ -42,11 +42,11 @@ const currentRow = computed(() => {
           class="mana-gauge__value"
           data-testid="mana-readout"
         >
-          {{ format(mana.value, 0) }} / {{ format(totalBudget.value, 0) }}
+          {{ format(mana, 0) }} / {{ format(totalBudget, 0) }}
         </span>
       </div>
       <ProgressBar
-        :value="fillRatio.value"
+        :value="fillRatio"
         :max="1"
         data-testid="mana-bar"
       />

@@ -1,10 +1,10 @@
+import type { Ref } from 'vue';
 import {
   Decimal,
   GameLoopKey,
   createLoop,
   createRetentionPolicy,
   type EngineModule,
-  type EngineRef,
   type GameLoop,
   type InjectionKey,
   type Loop,
@@ -59,7 +59,7 @@ export function createLoopModule(_data: LooperData): EngineModule {
   // Cross-module refs assigned in connect() (queue installs after loop, so
   // these can't be injected during install — endCondition / onRestart
   // closures read them lazily at tick time).
-  let shouldRestart: EngineRef<boolean> | null = null;
+  let shouldRestart: Ref<boolean> | null = null;
   let queueModule: LooperQueueModule | null = null;
   let queueSequencer: Sequencer<QueueItemMeta> | null = null;
   let createdLoop: Loop | null = null;

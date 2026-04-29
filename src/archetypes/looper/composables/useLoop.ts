@@ -1,17 +1,17 @@
 import { computed } from 'vue';
-import type { ComputedRef, EngineRef } from 'open-loop-engine';
+import type { ComputedRef, Ref } from 'vue';
 import { useModule } from '@/composables/useModule';
 import { LoopKey } from '../modules';
 
 export interface LoopView {
   /** Sim-seconds elapsed in the current loop. */
-  elapsed: EngineRef<number>;
+  elapsed: Ref<number>;
   /** Total completed loops (persistent). */
   count: ComputedRef<number>;
   /** Fastest loop completion in seconds (Infinity until first loop). */
   bestTime: ComputedRef<number>;
   /** Whether the loop is actively ticking. */
-  running: EngineRef<boolean>;
+  running: Ref<boolean>;
   /** Manually trigger the restart sequence (mana exhaustion path). */
   end(): boolean;
   run(): void;

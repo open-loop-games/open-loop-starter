@@ -1,13 +1,14 @@
 import { computed } from 'vue';
-import type { Achievement, ComputedRef, EngineRef } from 'open-loop-engine';
+import type { ComputedRef, Ref } from 'vue';
+import type { Achievement } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import type { AchievementDef } from '../data/types';
 import { AchievementsKey } from '../modules';
 
 export interface AchievementRow {
   def: AchievementDef;
-  earned: EngineRef<boolean>;
-  earnedAt: EngineRef<number | null>;
+  earned: Ref<boolean>;
+  earnedAt: Ref<number | null>;
   /** Visible to the player — false for hidden-until-earned when not yet earned. */
   visible: ComputedRef<boolean>;
   achievement: Achievement;

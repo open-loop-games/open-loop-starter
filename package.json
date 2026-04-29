@@ -31,7 +31,7 @@
     "dompurify": "^3.4.1",
     "eternal_notations": "^1.1.1",
     "marked": "^18.0.2",
-    "open-loop-engine": "link:../open-loop-engine",
+    "open-loop-engine": "workspace:*",
     "reka-ui": "^2.9.0",
     "vue": "^3.5.30"
   },

@@ -2,15 +2,18 @@
 import { computed } from 'vue';
 import { SwitchRoot, SwitchThumb } from 'reka-ui';
 import { useFormatting } from '@/composables/useFormatting';
+import type { SequencerItem } from 'open-loop-engine';
 import { useQueue } from '../../composables/useQueue';
 import { useActions } from '../../composables/useActions';
+import type { QueueItemMeta } from '../../modules/queue';
 
 const queue = useQueue();
 const actions = useActions();
 const { format } = useFormatting();
 
-const items = computed(() =>
-  queue.items.value.map((item, index) => {
+const items = computed(() => {
+  const queueItems = queue.items.value;
+  return queueItems.map((item: SequencerItem<QueueItemMeta>, index: number) => {
     const row = actions.getRow(item.id);
     return {
       index,
@@ -21,8 +24,8 @@ const items = computed(() =>
       loops: item.metadata.loops ?? 1,
       isCursor: index === queue.cursor.value,
     };
-  }),
-);
+  });
+});
 
 function moveUp(index: number): void {
   if (index <= 0) return;

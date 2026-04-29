@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import type { ComputedRef } from 'open-loop-engine';
+import type { ComputedRef } from 'vue';
 import { useModule } from '@/composables/useModule';
 import type { ZoneDef } from '../data/types';
 import { useLooperData } from './useLooperData';

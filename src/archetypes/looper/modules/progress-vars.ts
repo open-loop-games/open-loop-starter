@@ -1,9 +1,9 @@
+import { computed, type ComputedRef } from 'vue';
 import {
   Decimal,
   Formula,
   createSkillCategory,
   tunable,
-  type ComputedRef,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -94,7 +94,7 @@ export function createProgressVarsModule(data: LooperData): EngineModule {
                 `progressVars/${def.id}/scales/${scale.regularVarId}/perLevel` as keyof LooperTunables,
                 () => scale.perLevel,
               )
-            : { value: scale.perLevel };
+            : computed(() => scale.perLevel);
           perLevelReaders.set(key, reader);
         }
       }
