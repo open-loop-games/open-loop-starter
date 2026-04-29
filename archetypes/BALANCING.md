@@ -80,7 +80,7 @@ A Tier-A archetype clears all four questions with "yes / 1-D / deterministic / n
 
 Current expected tiering across the 15:
 
-- **Tier A** (direct template clone): Producer ✓, Ambient ✓, Looper.
+- **Tier A** (direct template clone): Producer ✓, Ambient ✓, Looper (in progress).
 - **Tier B** (template + mode-specific extensions): Scaler (Decimal-aware tuner), Interlocker (multi-dim solver), Cycler (B-with-MC on wave-survivability), Phase-shifter (per-phase A replays stitched together).
 - **Tier C** (genuinely different tools, template provides the three-layer discipline only): Defender, Survivor, Packer, Auto-battler, Tug, Director, Explorer, Scripter.
 
