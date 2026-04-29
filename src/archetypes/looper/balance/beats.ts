@@ -28,9 +28,11 @@ const min = (m: number) => m * 60;
  * material moves in commit notes and sync `archetypes/looper.md` § 4 to
  * match per BALANCING.md § Retune vs reshape → "move the phase".
  *
- * Beat-1 ("queue ticks + mana drains within 10s") and Beat-6 ("talent
- * perceptibility, multi-loop") are likely verify-only — the bracket lo/hi
- * already brackets the answer under canonical content. Leaf 4 confirms.
+ * Verify-only set lives in `solve.ts:VERIFY_ONLY_BEATS` — beat-1, beat-3,
+ * beat-6 are content-shape-determined (xp curves, action ticks, prereq
+ * web), not knob-tunable. Sim-verified under converged proposals but not
+ * bisected against. If a verify-only beat lands out-of-window, the
+ * resolution surface is content rebalance, not solver extension.
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), sec(10)],

@@ -4,9 +4,9 @@
  * Per-strategy outer loop × per-beat inner bisection. Each farm strategy
  * (`farm-mana-pool`, `farm-gold-buffer`, `farm-talent`) gets its own
  * `PlannerParams` set; for each enabled beat, the solver bisects a
- * relevant tunable against `projectArc` (closed-form, fast) targeting the
+ * relevant knob against `projectArc` (closed-form, fast) targeting the
  * beat window midpoint, then sim-verifies the converged proposals via
- * `runUntil` + `pushScope` against `LooperTuningRegistryKey`.
+ * `runUntil` against `LooperTuningRegistryKey` + `plannerParamsOverride`.
  *
  * Discipline (per `archetypes/BALANCING.md` § scripts-discover-tests-lock):
  *
@@ -23,6 +23,39 @@
  *     are sim-only per the OL-746 override-flow contract — solver tunes
  *     those in a separate sim pass after per-phase params converge (not
  *     wired in this rung).
+ *
+ * # Knob kinds — tunables vs planner-params
+ *
+ * Two perturbation surfaces, dispatched by `KnobAssignment.kind`:
+ *
+ *   - `tunable` — keys in `LooperTunableKey` (subset wired through the
+ *     projector). Routed via the resolved `tuning` snapshot at
+ *     `projectArc` call time and via `tunableScope: toScope(...)` at
+ *     `buildLooperSimEngine` call time. The historical surface.
+ *   - `planner-param` — paths into `PlannerParams`
+ *     (`manaUpOversupplyFactor`, `progressionTarget.<id>`,
+ *     `talentOverflowThreshold`). Routed via the strategy's per-evaluation
+ *     `params` clone at `projectArc` call time and via
+ *     `plannerParamsOverride` at `buildLooperSimEngine` call time. Opens
+ *     the planner's own dials to bisection — the strategy's content-shape
+ *     intent is part of the tunable surface, not just the data baseline.
+ *
+ * Both kinds share `bisectTuner`'s 1-D scalar contract — the discriminator
+ * routes inside the sampler closure. `tradeThreshold` is intentionally
+ * excluded (its `'never'` literal doesn't fit a scalar bracket); file as
+ * expansion when needed.
+ *
+ * # Verify-only beats
+ *
+ * Some beats are content-shape-determined, not knob-tunable: their fire
+ * time is dominated by xp curves, action ticks, and prereq web rather than
+ * any single dial. `bisectTuner`-driven search produces a step-function
+ * surface (∞ until a fit-threshold, then snaps to a near-constant) that
+ * doesn't meaningfully tune to a window midpoint. `VERIFY_ONLY_BEATS`
+ * names these — they're sim-verified under the converged proposals but
+ * not bisected against. If a verify-only beat lands out-of-window, the
+ * resolution surface is content rebalance (action manaCost, xp-curve
+ * shape, prereq web), not solver extension.
  *
  * Run: `pnpm balance:solve:looper`. Skip `run.ts` per the OL-625
  * carry-forward gotcha. Companion script `pnpm balance:validate-projector:
@@ -46,6 +79,7 @@ import {
   projectArc,
   resolveTunables,
   type ProjectorProposal,
+  type ResolvedLooperTunables,
 } from './projector';
 import { type PlannerParams } from './planner';
 
@@ -74,55 +108,98 @@ const STRATEGY_PARAMS: Record<string, PlannerParams> = {
 
 // ─── Per-strategy × per-beat knob assignment ──────────────────────────────
 //
-// Lock during ramp per OL-758's open uncertainty: standard starting
-// candidates from the task body, refined as each rung lands. Each entry
-// names the LooperTunableKey the bisector perturbs and its bracket.
+// Lock during ramp per OL-758's open uncertainty. Each entry names the
+// knob the bisector perturbs and its bracket. Two kinds:
+//
+//   - `tunable` — `key: LooperTunableKey` (subset wired through projector)
+//   - `planner-param` — `path: 'manaUpOversupplyFactor'
+//                            | 'talentOverflowThreshold'
+//                            | 'progressionTarget.<id>'`
 //
 // Brackets are wide on purpose — bisectTuner returns best-effort with
 // direction-detection on the endpoints, so an over-wide bracket surfaces
 // "unreachable" as the high endpoint rather than silently picking a
 // degenerate value.
 
-interface KnobAssignment {
+interface TunableKnob {
+  kind: 'tunable';
   /** Key in LooperTunableKey (subset wired through projector). */
   key: string;
-  /** Bisection bracket. lo / hi must be finite numbers. */
   lo: number;
   hi: number;
   /** Human-readable field for the report. */
   field: string;
 }
 
+interface PlannerParamKnob {
+  kind: 'planner-param';
+  /** Path into PlannerParams. Supported: `manaUpOversupplyFactor`,
+   *  `talentOverflowThreshold`, `progressionTarget.<id>`. */
+  path: string;
+  lo: number;
+  hi: number;
+  /** Human-readable field for the report. */
+  field: string;
+}
+
+type KnobAssignment = TunableKnob | PlannerParamKnob;
+
 const KNOBS: Record<string, Record<string, KnobAssignment>> = {
   'farm-mana-pool': {
     // Beat-2 — "first loop ends". Cost-like knob: higher initialMana →
     // later loop end. Forward-direction bisect.
     'beat-2': {
+      kind: 'tunable',
       key: 'balance/initialMana',
       lo: 50,
       hi: 2000,
       field: 'balance.initialMana',
     },
-    // 'beat-3': { key: 'progressVars/roam/scales/cache/perLevel', ... }, // ramp ↑
-    // 'beat-4': { key: 'actions/stretch/manaCost', ... },                 // ramp ↑
+    // 'beat-4': { kind: 'tunable', key: 'actions/crack/rewardRatio', ... }, // ramp ↑
+    // 'beat-5': { kind: 'planner-param', path: 'manaUpOversupplyFactor', ... }, // ramp ↑
   },
   'farm-gold-buffer': {
-    // 'beat-5': { key: 'actions/trade/exchangeMult', ... },               // ramp ↑
-    // 'beat-?': { key: 'progressVars/acquaint/scales/errand/perLevel' },  // ramp ↑
+    // 'beat-5': { kind: 'tunable', key: 'actions/trade/exchangeMult', ... }, // ramp ↑
   },
   'farm-talent': {
-    // 'beat-6': { key: 'balance/talentAccrualRatio', ... },               // ramp ↑
+    // 'beat-?': { kind: 'tunable', key: 'balance/talentAccrualRatio', ... }, // ramp ↑
   },
 };
 
+// ─── Verify-only beats ────────────────────────────────────────────────────
+//
+// Beats whose fire time is content-shape-determined (xp curves, action
+// ticks, prereq web), not knob-tunable. Sim-verified under the converged
+// proposals but not bisected against:
+//
+//   - beat-1 — "queue ticks AND mana < initialMana": fires within ~1 tick
+//     of any non-empty queue under any reasonable initialMana. Onboarding
+//     signal, not a tuning surface.
+//   - beat-3 — "any progressVar level ≥ 1": determined by the moment a
+//     visible progression action's xp curve crosses level 0→1 (4 completions
+//     under the canonical curve). f(initialMana), f(progressionTarget.<id>),
+//     f(manaUpOversupplyFactor) are all step functions — ∞ until the plan
+//     admits a roam(L1) chunk, then snaps to ~30s and stays there. No
+//     midpoint to bisect to.
+//   - beat-6 — "any talent.level ≥ 1 AND loop.count ≥ 2": multi-loop
+//     strategy-arbitration territory per OL-746 leaf-3a synthesis. Phase-
+//     arbitration knobs (`bot/...`) are sim-only; talent accrual is content-
+//     shape-driven across the strategy roster.
+//
+// If a verify-only beat lands out-of-window, the resolution surface is
+// content rebalance (manaCost magnitudes, xp curve shape, prereq web), not
+// solver extension.
+
+const VERIFY_ONLY_BEATS = new Set<string>(['beat-1', 'beat-3', 'beat-6']);
+
 // ─── Ramp gates ──────────────────────────────────────────────────────────
 //
-// First viable rung per per-project memory (`step solvers incrementally`):
-// one strategy, one beat, one pass. Each rung should flush a log under
+// Per per-project memory (`step solvers incrementally`): one strategy,
+// one tuned beat + verify-only beats. Each rung should flush a log under
 // two minutes. Lift gates as each level converges.
 
 const ENABLED_STRATEGIES = new Set<string>(['farm-mana-pool']);
-const ENABLED_BEATS = new Set<string>(['beat-2']);
+const ENABLED_BEATS = new Set<string>(['beat-1', 'beat-2', 'beat-3', 'beat-6']);
 const PASSES = 1;
 
 /** maxLoops cap per `projectArc` evaluation. Generous so beats 6-8 reach. */
@@ -132,41 +209,91 @@ const BUDGET_SEC = BEAT_WINDOWS['beat-8']![1] * 2.5;
 
 // ─── Proposal state ──────────────────────────────────────────────────────
 
-type Proposed = ProjectorProposal;
+interface Proposed {
+  /** Tunable proposals — keyed by `LooperTunableKey` path. */
+  tunables: ProjectorProposal;
+  /** Planner-param proposals — keyed by dotted PlannerParams path. */
+  params: Record<string, number>;
+}
 
-function toScope(p: Proposed): Partial<LooperTunables> {
+function emptyProposed(): Proposed {
+  return { tunables: {}, params: {} };
+}
+
+function toScope(t: ProjectorProposal): Partial<LooperTunables> {
   const scope: Partial<LooperTunables> = {};
-  for (const [key, value] of Object.entries(p)) {
+  for (const [key, value] of Object.entries(t)) {
     if (value === undefined) continue;
     scope[key as keyof LooperTunables] = () => value;
   }
   return scope;
 }
 
+/**
+ * Apply a flat dotted-path map of param overrides onto the strategy's
+ * baseline. Supports the three path shapes the solver perturbs:
+ * `manaUpOversupplyFactor`, `talentOverflowThreshold`,
+ * `progressionTarget.<id>`. tradeThreshold's `'never'` literal isn't
+ * scalar-bracket-friendly so it's intentionally not in scope.
+ */
+function mergeParams(base: PlannerParams, overrides: Record<string, number>): PlannerParams {
+  const out: PlannerParams = {
+    ...base,
+    progressionTarget: { ...base.progressionTarget },
+  };
+  for (const [path, value] of Object.entries(overrides)) {
+    if (path === 'manaUpOversupplyFactor') {
+      out.manaUpOversupplyFactor = value;
+    } else if (path === 'talentOverflowThreshold') {
+      out.talentOverflowThreshold = value;
+    } else if (path.startsWith('progressionTarget.')) {
+      const id = path.slice('progressionTarget.'.length);
+      out.progressionTarget[id] = value;
+    } else {
+      throw new Error(`unknown planner-param path: ${path}`);
+    }
+  }
+  return out;
+}
+
 // ─── Projector sampler ───────────────────────────────────────────────────
 
 interface SamplerContext {
   proposed: Proposed;
-  params: PlannerParams;
+  /** Strategy baseline; planner-param proposals are merged onto this per evaluation. */
+  baseParams: PlannerParams;
 }
 
 /**
- * Sample a beat's projected fire time under `proposed ∪ {candidateKey:
- * candidateValue}` against the strategy's `params`. Closed-form via
- * `projectArc` — orders of magnitude faster than the engine-as-oracle path
- * Ambient's solver uses.
+ * Sample a beat's projected fire time under the proposal map ∪
+ * {knob-target: candidateValue}. Closed-form via `projectArc` — orders of
+ * magnitude faster than the engine-as-oracle path Ambient's solver uses.
+ *
+ * Dispatch on `knob.kind` routes the candidate into the right surface:
+ * tunable → resolved snapshot, planner-param → params clone.
  */
 function projectBeatFire(
   ctx: SamplerContext,
   beatId: string,
-  candidateKey: string,
+  knob: KnobAssignment,
   candidateValue: number,
 ): number {
-  const tuning = resolveTunables({ ...ctx.proposed, [candidateKey]: candidateValue });
+  let tuning: ResolvedLooperTunables;
+  let params: PlannerParams;
+  if (knob.kind === 'tunable') {
+    tuning = resolveTunables({ ...ctx.proposed.tunables, [knob.key]: candidateValue });
+    params = mergeParams(ctx.baseParams, ctx.proposed.params);
+  } else {
+    tuning = resolveTunables(ctx.proposed.tunables);
+    params = mergeParams(ctx.baseParams, {
+      ...ctx.proposed.params,
+      [knob.path]: candidateValue,
+    });
+  }
   const predicates = createBeatPredicates(DEFAULT_LOOPER_DATA, tuning);
   const predicate = predicates[beatId];
   if (!predicate) throw new Error(`no synth predicate for ${beatId}`);
-  const arc = projectArc(DEFAULT_LOOPER_DATA, ctx.params, {
+  const arc = projectArc(DEFAULT_LOOPER_DATA, params, {
     breakPredicate: predicate,
     maxLoops: ARC_MAX_LOOPS,
     tuning,
@@ -181,14 +308,17 @@ interface VerifyRow {
   window: [number, number];
   firedAt: number;
   inWindow: boolean;
+  /** Verify-only beats are flagged so the report can distinguish from tuned beats. */
+  verifyOnly: boolean;
 }
 
 /**
- * Sim-verify the converged proposals under the strategy's planner-params.
- * Seeds both `plannerParamsOverride` and `tunableScope` at engine build time
- * so connect()'s initial applyPlan reflects them on loop 1. Freezes the bot
- * at the strategy's params (autoApply off) so phase arbitration doesn't
- * shift the bot mid-arc, runs `runUntil` per beat predicate.
+ * Sim-verify the converged proposals under the strategy's baseline merged
+ * with planner-param proposals. Seeds both `plannerParamsOverride` and
+ * `tunableScope` at engine build time so connect()'s initial applyPlan
+ * reflects them on loop 1. Freezes the bot at the merged params (autoApply
+ * off) so phase arbitration doesn't shift the bot mid-arc, runs `runUntil`
+ * per beat predicate.
  *
  * Per-strategy proposals are uniform across all verified beats, so a single
  * engine + scope-push works; importSave between beats resets the within-arc
@@ -196,13 +326,13 @@ interface VerifyRow {
  */
 function simVerifyStrategy(
   strategyId: string,
-  params: PlannerParams,
+  baseParams: PlannerParams,
   proposed: Proposed,
   beats: readonly string[],
 ): VerifyRow[] {
   const engine = buildLooperSimEngine(undefined, {
-    plannerParamsOverride: params,
-    tunableScope: toScope(proposed),
+    plannerParamsOverride: mergeParams(baseParams, proposed.params),
+    tunableScope: toScope(proposed.tunables),
   });
   const rec = engine.tryInject(BalanceBotRecommendationKey)!;
 
@@ -227,6 +357,7 @@ function simVerifyStrategy(
       window,
       firedAt,
       inWindow: isFinite(firedAt) && firedAt >= window[0] && firedAt <= window[1],
+      verifyOnly: VERIFY_ONLY_BEATS.has(beatId),
     };
   });
 
@@ -259,17 +390,21 @@ function solveBeat(
   if (!window) return undefined;
   const target = (window[0] + window[1]) / 2;
 
-  const currentValue = Number(ctx.proposed[knob.key] ?? readDataDefault(knob.key));
-  const currentFire = projectBeatFire(ctx, beatId, knob.key, currentValue);
+  const currentValue = currentKnobValue(strategyId, knob, ctx.proposed);
+  const currentFire = projectBeatFire(ctx, beatId, knob, currentValue);
 
   const result: TunerResult = bisectTuner({
     lo: knob.lo,
     hi: knob.hi,
     targetSec: target,
-    sampler: (v) => projectBeatFire(ctx, beatId, knob.key, v),
+    sampler: (v) => projectBeatFire(ctx, beatId, knob, v),
   });
-  const proposedValue = roundProposal(knob.key, result.value);
-  ctx.proposed[knob.key] = proposedValue;
+  const proposedValue = roundProposal(knob, result.value);
+  if (knob.kind === 'tunable') {
+    ctx.proposed.tunables[knob.key] = proposedValue;
+  } else {
+    ctx.proposed.params[knob.path] = proposedValue;
+  }
 
   return {
     strategyId,
@@ -283,6 +418,21 @@ function solveBeat(
     iterations: result.iterations,
     window,
   };
+}
+
+/**
+ * Read the current knob value from the proposal map, falling back to the
+ * data baseline (tunables) or the strategy baseline (planner-params).
+ */
+function currentKnobValue(strategyId: string, knob: KnobAssignment, proposed: Proposed): number {
+  if (knob.kind === 'tunable') {
+    const v = proposed.tunables[knob.key];
+    if (v !== undefined) return Number(v);
+    return Number(readDataDefault(knob.key));
+  }
+  const v = proposed.params[knob.path];
+  if (v !== undefined) return v;
+  return readStrategyParamDefault(strategyId, knob.path);
 }
 
 /**
@@ -321,13 +471,36 @@ function readDataDefault(key: string): DecimalSource {
 }
 
 /**
- * Round a bisection midpoint to a sensible patch value. Integer-valued
- * tunables (mana costs, pool magnitudes, reward ratios) clamp to integers;
- * ratio-shaped tunables (talentAccrualRatio, exchangeMult) keep 4 sig figs.
+ * Read the strategy baseline for a planner-param path. Mirrors
+ * `STRATEGY_PARAMS[strategyId]`; throws on unrecognized paths so KNOBS
+ * authoring errors surface loudly rather than silently using `0`.
  */
-function roundProposal(key: string, value: number): number {
-  if (key === 'balance/talentAccrualRatio') return Number(value.toFixed(4));
-  if (key.endsWith('/exchangeMult')) return Number(value.toFixed(2));
+function readStrategyParamDefault(strategyId: string, path: string): number {
+  const params = STRATEGY_PARAMS[strategyId];
+  if (!params) throw new Error(`unknown strategy ${strategyId}`);
+  if (path === 'manaUpOversupplyFactor') return params.manaUpOversupplyFactor;
+  if (path === 'talentOverflowThreshold') return params.talentOverflowThreshold;
+  if (path.startsWith('progressionTarget.')) {
+    const id = path.slice('progressionTarget.'.length);
+    return params.progressionTarget[id] ?? 0;
+  }
+  throw new Error(`unrecognized planner-param path: ${path}`);
+}
+
+/**
+ * Round a bisection midpoint to a sensible patch value:
+ *   - `progressionTarget.*` → integer (target deltas are integer-valued).
+ *   - Other planner-params (`manaUpOversupplyFactor`, etc.) → 4 sig figs.
+ *   - `balance/talentAccrualRatio`, `actions/<id>/exchangeMult` → ratio rounding.
+ *   - Other tunables → integer.
+ */
+function roundProposal(knob: KnobAssignment, value: number): number {
+  if (knob.kind === 'planner-param') {
+    if (knob.path.startsWith('progressionTarget.')) return Math.round(value);
+    return Number(value.toFixed(4));
+  }
+  if (knob.key === 'balance/talentAccrualRatio') return Number(value.toFixed(4));
+  if (knob.key.endsWith('/exchangeMult')) return Number(value.toFixed(2));
   return Math.round(value);
 }
 
@@ -338,24 +511,35 @@ function solveStrategy(strategyId: string): {
   solves: BeatSolve[];
   verified: VerifyRow[];
 } {
-  const params = STRATEGY_PARAMS[strategyId];
-  if (!params) throw new Error(`unknown strategy ${strategyId}`);
-  const proposed: Proposed = {};
-  const ctx: SamplerContext = { proposed, params };
+  const baseParams = STRATEGY_PARAMS[strategyId];
+  if (!baseParams) throw new Error(`unknown strategy ${strategyId}`);
+  const proposed = emptyProposed();
+  const ctx: SamplerContext = { proposed, baseParams };
   const solves: BeatSolve[] = [];
 
+  const knobsForStrategy = KNOBS[strategyId] ?? {};
+
   for (let pass = 1; pass <= PASSES; pass++) {
-    for (const beatId of Object.keys(KNOBS[strategyId] ?? {})) {
+    for (const beatId of Object.keys(knobsForStrategy)) {
       if (!ENABLED_BEATS.has(beatId)) continue;
-      const knob = KNOBS[strategyId]![beatId]!;
+      const knob = knobsForStrategy[beatId]!;
       const solve = solveBeat(ctx, strategyId, beatId, knob);
       if (solve) solves.push({ ...solve, beatId: `${beatId}#p${pass}` });
     }
   }
 
-  const verifyBeats = Object.keys(KNOBS[strategyId] ?? {}).filter((b) => ENABLED_BEATS.has(b));
+  // Sim-verify covers tuned beats AND verify-only beats — both are
+  // evaluated under the same converged proposal map.
+  const verifyBeatSet = new Set<string>();
+  for (const beatId of Object.keys(knobsForStrategy)) {
+    if (ENABLED_BEATS.has(beatId)) verifyBeatSet.add(beatId);
+  }
+  for (const beatId of VERIFY_ONLY_BEATS) {
+    if (ENABLED_BEATS.has(beatId)) verifyBeatSet.add(beatId);
+  }
+  const verifyBeats = [...verifyBeatSet].sort();
   const verified =
-    verifyBeats.length > 0 ? simVerifyStrategy(strategyId, params, proposed, verifyBeats) : [];
+    verifyBeats.length > 0 ? simVerifyStrategy(strategyId, baseParams, proposed, verifyBeats) : [];
 
   return { proposed, solves, verified };
 }
@@ -400,56 +584,60 @@ function main(): void {
   console.log('# Looper balance solver — projector inner / sim verify\n');
   console.log(`Run at ${new Date().toISOString()}\n`);
   console.log('Per-strategy bisection over `projectArc` (closed-form). Sim-verifies');
-  console.log('via `runUntil` + `pushScope` after each strategy converges.');
+  console.log('via `runUntil` after each strategy converges.');
   console.log(`Outer Gauss-Seidel passes: ${PASSES}.`);
   console.log('No data files mutated — proposed-patch report only.\n');
 
   console.log(
     `Enabled strategies: ${[...ENABLED_STRATEGIES].join(', ') || '(none)'}\n` +
-      `Enabled beats:      ${[...ENABLED_BEATS].join(', ') || '(none)'}\n`,
+      `Enabled beats:      ${[...ENABLED_BEATS].join(', ') || '(none)'}\n` +
+      `Verify-only beats:  ${[...VERIFY_ONLY_BEATS].join(', ') || '(none)'}\n`,
   );
 
   const allProposals: Array<{ strategy: string; proposed: Proposed }> = [];
+  const enabledVerifyOnly = [...VERIFY_ONLY_BEATS].some((b) => ENABLED_BEATS.has(b));
 
   for (const strategyId of ENABLED_STRATEGIES) {
-    if (!(strategyId in KNOBS)) {
-      console.log(`## ${strategyId}\n\n  no KNOBS entry — skip.\n`);
+    const knobsForStrategy = KNOBS[strategyId] ?? {};
+    const hasEnabledKnobs = Object.keys(knobsForStrategy).some((b) => ENABLED_BEATS.has(b));
+    if (!hasEnabledKnobs && !enabledVerifyOnly) {
+      console.log(`## ${strategyId}\n\n  no enabled beats — skip.\n`);
       continue;
     }
     console.log(`## ${strategyId}\n`);
     const { proposed, solves, verified } = solveStrategy(strategyId);
     allProposals.push({ strategy: strategyId, proposed });
 
-    if (solves.length === 0) {
-      console.log('  no enabled beats matched — skip.\n');
-      continue;
+    if (solves.length > 0) {
+      console.log(
+        renderTable(
+          ['beat', 'field', 'window', 'current', 'currT', 'proposed', 'propT', 'dir', 'it'],
+          solves.map((s) => [
+            s.beatId,
+            s.field,
+            fmtWindow(s.window),
+            fmtNum(s.current),
+            fmt(s.currentFireTime),
+            fmtNum(s.proposed),
+            fmt(s.proposedFireTime),
+            s.direction,
+            String(s.iterations),
+          ]),
+        ),
+      );
+      console.log();
+    } else {
+      console.log('  (no tuned beats — verify-only run)\n');
     }
-
-    console.log(
-      renderTable(
-        ['beat', 'field', 'window', 'current', 'currT', 'proposed', 'propT', 'dir', 'it'],
-        solves.map((s) => [
-          s.beatId,
-          s.field,
-          fmtWindow(s.window),
-          fmtNum(s.current),
-          fmt(s.currentFireTime),
-          fmtNum(s.proposed),
-          fmt(s.proposedFireTime),
-          s.direction,
-          String(s.iterations),
-        ]),
-      ),
-    );
-    console.log();
 
     if (verified.length > 0) {
       console.log(`### sim-verify (${strategyId})\n`);
       console.log(
         renderTable(
-          ['beat', 'window', 'fired at', 'in window'],
+          ['beat', 'kind', 'window', 'fired at', 'in window'],
           verified.map((v) => [
             v.beatId,
+            v.verifyOnly ? 'verify-only' : 'tuned',
             fmtWindow(v.window),
             fmt(v.firedAt),
             v.inWindow ? 'yes' : 'NO',
@@ -459,22 +647,37 @@ function main(): void {
       console.log();
       const offTarget = verified.filter((v) => !v.inWindow);
       if (offTarget.length > 0) {
-        console.log(
-          `Sim-vs-projector drift: ${offTarget.length} beat(s) in projector ` +
-            `convergence are out-of-window under engine truth. Surface for the ` +
-            `\`balance:validate-projector:looper\` script to characterize.\n`,
-        );
+        const tunedOff = offTarget.filter((v) => !v.verifyOnly);
+        const verifyOff = offTarget.filter((v) => v.verifyOnly);
+        if (tunedOff.length > 0) {
+          console.log(
+            `Sim-vs-projector drift: ${tunedOff.length} tuned beat(s) out-of-window ` +
+              `under engine truth. Surface for the ` +
+              `\`balance:validate-projector:looper\` script to characterize.\n`,
+          );
+        }
+        if (verifyOff.length > 0) {
+          console.log(
+            `Verify-only out-of-window: ${verifyOff.length} beat(s). Resolution ` +
+              `surface is content rebalance (manaCost magnitudes, xp curve shape, ` +
+              `prereq web), not solver extension.\n`,
+          );
+        }
       }
     }
   }
 
   console.log('## Apply patch — exact values\n');
   for (const { strategy, proposed } of allProposals) {
-    if (Object.keys(proposed).length === 0) continue;
+    const tunableEntries = Object.entries(proposed.tunables).filter(([, v]) => v !== undefined);
+    const paramEntries = Object.entries(proposed.params);
+    if (tunableEntries.length === 0 && paramEntries.length === 0) continue;
     console.log(`### ${strategy}`);
-    for (const [key, value] of Object.entries(proposed)) {
-      if (value === undefined) continue;
+    for (const [key, value] of tunableEntries) {
       console.log(`  ${key} = ${fmtNum(Number(value))}`);
+    }
+    for (const [path, value] of paramEntries) {
+      console.log(`  params/${path} = ${fmtNum(value)}`);
     }
     console.log();
   }
