@@ -142,12 +142,21 @@ export const BalanceBotRecommendationKey: InjectionKey<RecommendationSystem> = S
  *
  * `acquaint: 0` and `mark: 0` skip those progressVars entirely (the
  * planner's `if (targetDelta <= 0) continue;` branch).
+ *
+ * `progressionChunkSize: 4` splits each progressVar's target delta into
+ * 4-loop pieces so Pass 6 can trim partially under tight initial budgets.
+ * Without chunking, the canonical {roam:2, trail:2} target emits 16-loop
+ * items that trim all-or-nothing — under the rung-1 budget the trim drops
+ * everything, leaving the plan trainer-only and beat-3 unfireable. Chunked
+ * trim drops trail-tail chunks first while keeping the leading roam chunk
+ * intact, restoring beat-3 fire inside its [30s, 2m] window. Per OL-768.
  */
 const FARM_MANA_POOL_PARAMS: PlannerParams = {
   progressionTarget: { roam: 2, trail: 2, acquaint: 0, mark: 0 },
   manaUpOversupplyFactor: 1.0,
   tradeThreshold: 100,
   talentOverflowThreshold: 0,
+  progressionChunkSize: 4,
 };
 
 /**

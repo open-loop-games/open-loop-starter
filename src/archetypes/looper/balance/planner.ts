@@ -140,6 +140,21 @@ export interface PlannerParams {
    * `PlannerParams`. Default `0` = disabled (other strategies leave it off).
    */
   talentOverflowThreshold: number;
+  /**
+   * Per-progressVar chunk size for Pass 5. When set, each progressionTarget
+   * delta is emitted as multiple `chunkSize`-loop items rather than a single
+   * monolithic item. Pass 6 trims tail items in chunk-sized increments,
+   * preserving partial progression under tight budgets instead of dropping
+   * the entire delta when the full block doesn't fit.
+   *
+   * Default `undefined` = no chunking (single item per progressVar). Strategies
+   * with progression deltas exceeding the loop-1 budget should set this so
+   * Pass 6 trims partially — `farm-mana-pool`'s canonical `{roam:2, trail:2}`
+   * emits 16-loop items that trim all-or-nothing under the rung-1 budget,
+   * making beat-3 unfireable; chunking to 4 trims partially and lands beat-3
+   * inside its [30s, 2m] window.
+   */
+  progressionChunkSize?: number;
 }
 
 /** A planned plan-segment item — `{actionId, loops}` ordered for queue write. */
@@ -485,8 +500,12 @@ export function generatePlan(
 
   // ─── Pass 5: progression ────────────────────────────────────────────
   // For each visible progress-action, allocate loops to gain the per-id
-  // progressionTarget level delta. Default delta = +1.
+  // progressionTarget level delta. Default delta = +1. When
+  // `progressionChunkSize` is set, the per-progressVar delta is split
+  // across multiple chunkSize-loop items so Pass 6 can trim partially —
+  // see param doc for rationale.
   const progressVars = engine.tryInject(ProgressVarsKey);
+  const chunkSize = params.progressionChunkSize;
   for (const v of visible) {
     if (v.passSegment !== 'progression' || v.def.type !== 'progress') continue;
     if (v.progressVarXpPerCompletion <= 0) continue;
@@ -499,7 +518,16 @@ export function generatePlan(
     const currentXp = Number(skill.xp.value);
     const xpNeeded = xpToReachLevel(currentLevel, currentXp, currentLevel + targetDelta);
     const loops = Math.ceil(xpNeeded / v.progressVarXpPerCompletion);
-    pushItem(planState, v, loops);
+    if (chunkSize && chunkSize > 0 && loops > chunkSize) {
+      let remaining = loops;
+      while (remaining > 0) {
+        const c = Math.min(chunkSize, remaining);
+        pushItem(planState, v, c);
+        remaining -= c;
+      }
+    } else {
+      pushItem(planState, v, loops);
+    }
   }
 
   // ─── Pass 6: budget trim ────────────────────────────────────────────
