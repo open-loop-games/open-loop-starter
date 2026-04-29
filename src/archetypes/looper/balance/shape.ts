@@ -21,9 +21,34 @@
  *   - 8 beats — the first three (action ticking, first loop ends, first
  *     persistent-progress tick) live inside the first 2 minutes; beats 6 + 7
  *     cluster in the 25–60 min mid-late zone; B8 is the 60–120min closure.
- *   - Tier-A — clears all four BALANCING.md § Tier-decision questions (single
- *     fire-time per beat, 1-D scalar bisection, deterministic bot under fixed
- *     phase weights, no adversary).
+ *   - Tier-B Phase-Shifter — per-phase Tier-A replays stitched by the bot's
+ *     best-replay strategy. See § Why-not-Tier-A below.
+ *
+ * # Why-not-Tier-A
+ *
+ * The original shape.ts call (and the OL-746 umbrella's "Tier-A" framing
+ * pre-reshape) was wrong. With leaves 3a/3b/3c landed and the bot stack
+ * visible, the surface fails BALANCING.md § Tier decision Q2 ("joint
+ * tuning across ≥2 knobs") at multiple beats:
+ *
+ *   - Beat-3 (first progressVar level) — depends on which actions the
+ *     planner picks (driven by `progressionTarget`), how many fit per
+ *     loop, and the progressVar exp curve. Not monotone in any single
+ *     tunable.
+ *   - Beat-6 (talent ≥ 1, loop ≥ 2) — talent integrates over EVERY action
+ *     across loops. Late-arc beats are downstream of which strategy "won"
+ *     the BestOf in early loops.
+ *   - Beat-7 (wilds reached) — capability×progressVar prereq. Two-axis
+ *     gate.
+ *   - Bot itself runs three farm-strategy phases plus best-replay; the
+ *     arc isn't homogenous. Each phase IS a Tier-A surface (single
+ *     metric, deterministic bot under fixed planner-params), but the
+ *     full arc stitches them via best-replay — the Phase-Shifter shape.
+ *
+ * Solver implication: search per-phase against Tier-A surfaces, then let
+ * best-replay arbitrate the full arc. OL-757's projector lets the solver
+ * iterate at closed-form speed, so phase-Tier-A replays + cross-phase
+ * coupling stays tractable.
  */
 
 export interface PhaseIntent {
