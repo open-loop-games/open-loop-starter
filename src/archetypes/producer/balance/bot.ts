@@ -1,7 +1,8 @@
 import {
   bn,
   persistent,
-  setupAutoPurchaseProducers,
+  selectionHybridPayback,
+  setupPolicyAutoPurchase,
   type DecimalSource,
   type Engine,
   type EngineModule,
@@ -79,9 +80,19 @@ function createBalanceBotModule(): EngineModule {
         }
       });
 
-      setupAutoPurchaseProducers(
+      setupPolicyAutoPurchase(
         buildings,
-        { enabled: true, interval: 1, policy: 'hybrid-payback' },
+        {
+          enabled: true,
+          interval: 1,
+          policy: selectionHybridPayback({
+            getCost: (p) => p.repeatable!.getCost(1),
+            getRate: (p) => p.computedRate.value,
+            getResource: (p) => p.resource.value,
+            getReserve: () => 0,
+            getHeadlineRate: (p) => buildings.getTotalRate(p.resource),
+          }),
+        },
         ctx.onTick,
       );
 
@@ -89,7 +100,7 @@ function createBalanceBotModule(): EngineModule {
       ctx.onTick((dt: number) => {
         upgradeAccum.value += dt;
         // Drain-while-≥-interval: each drained slot runs an "affordable
-        // sweep." Matches the engine-side setupAutoPurchaseProducers drain
+        // sweep." Matches the engine-side setupPolicyAutoPurchase drain
         // semantics so coarse-dt probes (dt > interval) see N passes
         // instead of 1. Without this, a `dt = 3×interval` advance would
         // fire one sweep and discard the remainder — correct at
@@ -126,7 +137,7 @@ export function buildProducerAccessor(engine: Engine): GameStateAccessor {
  *
  * Wires:
  * - Click taper per `expectedClicksAt`.
- * - `setupAutoPurchaseProducers` on payback-period policy, interval 1s.
+ * - `setupPolicyAutoPurchase` with `selectionHybridPayback`, interval 1s.
  * - Auto-buy every affordable upgrade every 2s.
  *
  * Caller drives the engine via `runUntil` / `runMatrixUntil` (which call
