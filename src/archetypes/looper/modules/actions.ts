@@ -258,7 +258,7 @@ export function createActionsModule(data: LooperData): EngineModule {
           if (pvDef) {
             // ProgressVar XP = progressVar.expMult × adjustedExp.
             const xpGrant = Decimal.mul(pvDef.expMult, adjustedExp);
-            progressVars.addXP(def.progressVarId, xpGrant);
+            progressVars.addXp(def.progressVarId, xpGrant);
           }
         } else if (def.type === 'regular') {
           const ratio = Number(state.rewardRatio?.value ?? def.rewardRatio);
