@@ -39,8 +39,8 @@
 import { bisectTuner, runUntil, type DecimalSource, type TunerResult } from 'open-loop-engine';
 import { DEFAULT_LOOPER_DATA } from '../data';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
-import { buildLooperSimEngine, BalanceBotParamsKey, BalanceBotRecommendationKey } from './bot';
-import { LooperTuningRegistryKey, type LooperTunables } from '../modules';
+import { buildLooperSimEngine, BalanceBotRecommendationKey } from './bot';
+import { type LooperTunables } from '../modules';
 import {
   createBeatPredicates,
   projectArc,
@@ -163,7 +163,7 @@ function projectBeatFire(
   candidateValue: number,
 ): number {
   const tuning = resolveTunables({ ...ctx.proposed, [candidateKey]: candidateValue });
-  const predicates = createBeatPredicates(DEFAULT_LOOPER_DATA);
+  const predicates = createBeatPredicates(DEFAULT_LOOPER_DATA, tuning);
   const predicate = predicates[beatId];
   if (!predicate) throw new Error(`no synth predicate for ${beatId}`);
   const arc = projectArc(DEFAULT_LOOPER_DATA, ctx.params, {
@@ -185,13 +185,14 @@ interface VerifyRow {
 
 /**
  * Sim-verify the converged proposals under the strategy's planner-params.
- * Pushes the resolved tuning onto `LooperTuningRegistryKey`, freezes the
- * bot at the strategy's params (autoApply off) so phase arbitration
- * doesn't shift the bot mid-arc, runs `runUntil` per beat predicate.
+ * Seeds both `plannerParamsOverride` and `tunableScope` at engine build time
+ * so connect()'s initial applyPlan reflects them on loop 1. Freezes the bot
+ * at the strategy's params (autoApply off) so phase arbitration doesn't
+ * shift the bot mid-arc, runs `runUntil` per beat predicate.
  *
- * Single engine per call — `importSave` resets between predicates so
- * fire-time samples are independent. Mirrors Ambient's pattern; the
- * scope-leak guard catches an asymmetric push/pop.
+ * Per-strategy proposals are uniform across all verified beats, so a single
+ * engine + scope-push works; importSave between beats resets the within-arc
+ * mutable state without disturbing the install-time tuning scope.
  */
 function simVerifyStrategy(
   strategyId: string,
@@ -199,13 +200,13 @@ function simVerifyStrategy(
   proposed: Proposed,
   beats: readonly string[],
 ): VerifyRow[] {
-  const engine = buildLooperSimEngine();
-  const registry = engine.tryInject(LooperTuningRegistryKey)!;
+  const engine = buildLooperSimEngine(undefined, {
+    plannerParamsOverride: params,
+    tunableScope: toScope(proposed),
+  });
   const rec = engine.tryInject(BalanceBotRecommendationKey)!;
-  const paramsHandle = engine.tryInject(BalanceBotParamsKey)!;
 
   rec.autoApply.value = false;
-  paramsHandle.write(params);
   const initialBlob = engine.saveManager!.exportSave();
 
   const rows: VerifyRow[] = beats.map((beatId) => {
@@ -213,31 +214,23 @@ function simVerifyStrategy(
     const beat = ARC_BEATS.find((b) => b.id === beatId)!;
     const result = engine.saveManager!.importSave(initialBlob);
     if (!result.success) throw new Error(`importSave failed for verify ${beatId}`);
-    paramsHandle.write(params);
     rec.autoApply.value = false;
-    const cleanup = registry.pushScope(`verify:${strategyId}/${beatId}`, toScope(proposed));
-    try {
-      const { terminated, elapsedSimulated } = runUntil({
-        engine,
-        until: () => beat.predicate(engine),
-        maxSimTime: BUDGET_SEC,
-        tickDelta: 1,
-      });
-      const firedAt = terminated === 'predicate' ? elapsedSimulated : Infinity;
-      return {
-        beatId,
-        window,
-        firedAt,
-        inWindow: isFinite(firedAt) && firedAt >= window[0] && firedAt <= window[1],
-      };
-    } finally {
-      cleanup();
-    }
+    const { terminated, elapsedSimulated } = runUntil({
+      engine,
+      until: () => beat.predicate(engine),
+      maxSimTime: BUDGET_SEC,
+      tickDelta: 1,
+    });
+    const firedAt = terminated === 'predicate' ? elapsedSimulated : Infinity;
+    return {
+      beatId,
+      window,
+      firedAt,
+      inWindow: isFinite(firedAt) && firedAt >= window[0] && firedAt <= window[1],
+    };
   });
 
-  if (registry.scopeDepth !== 0) {
-    throw new Error(`scope leak after ${strategyId} verify: depth=${registry.scopeDepth}`);
-  }
+  void strategyId;
   return rows;
 }
 

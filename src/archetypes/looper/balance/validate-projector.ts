@@ -29,8 +29,8 @@
 import { runUntil } from 'open-loop-engine';
 import { DEFAULT_LOOPER_DATA } from '../data';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
-import { buildLooperSimEngine, BalanceBotParamsKey, BalanceBotRecommendationKey } from './bot';
-import { LooperTuningRegistryKey, type LooperTunables } from '../modules';
+import { buildLooperSimEngine, BalanceBotRecommendationKey } from './bot';
+import { type LooperTunables } from '../modules';
 import {
   arcSimulatedFireSeconds,
   createBeatPredicates,
@@ -81,18 +81,30 @@ const VALIDATE_STRATEGY = 'farm-mana-pool';
  * under the chosen knob set rather than under data defaults.
  */
 const PROPOSED: ProjectorProposal = {
-  // Rung 1 farm-mana-pool — uncomment after solve:looper converges:
-  // 'balance/initialMana': 1025,
+  // Rung 1 farm-mana-pool — solver output from `pnpm balance:solve:looper`.
+  'balance/initialMana': 1025,
 };
 
 const ENABLED_BEATS: readonly string[] = [
+  'beat-1',
   'beat-2',
-  // 'beat-3', 'beat-4', 'beat-5', 'beat-6', 'beat-7', 'beat-8',  // ramp ↑
+  'beat-3',
+  'beat-4',
+  'beat-5',
+  'beat-6',
+  'beat-7',
+  'beat-8',
 ];
 
-const ARC_MAX_LOOPS = 50;
 const BUDGET_SEC = BEAT_WINDOWS['beat-8']![1] * 2.5;
 const TICK_DELTA = 1;
+/**
+ * Generous cap so the projector can match the sim's BUDGET_SEC envelope
+ * even under fast-loop strategies (data baseline + farm-mana-pool produce
+ * ~12s loops, which would truncate at maxLoops=50 well before late beats).
+ * Late beats requiring talent accumulation can take 90+ loops in sim.
+ */
+const ARC_MAX_LOOPS = 2000;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -152,7 +164,7 @@ function diffBeat(beatId: string, params: PlannerParams, proposed: ProjectorProp
   const tuning = resolveTunables(proposed);
 
   // Projector
-  const predicates = createBeatPredicates(DEFAULT_LOOPER_DATA);
+  const predicates = createBeatPredicates(DEFAULT_LOOPER_DATA, tuning);
   const predicate = predicates[beatId];
   if (!predicate) throw new Error(`no synth predicate for ${beatId}`);
   const arc = projectArc(DEFAULT_LOOPER_DATA, params, {
@@ -162,31 +174,25 @@ function diffBeat(beatId: string, params: PlannerParams, proposed: ProjectorProp
   });
   const projected = arc.fireSec === undefined ? Infinity : arcSimulatedFireSeconds(arc, TICK_DELTA);
 
-  // Sim — same params + same tunables, engine-truth oracle.
-  const engine = buildLooperSimEngine();
-  const registry = engine.tryInject(LooperTuningRegistryKey)!;
+  // Sim — same params + same tunables, engine-truth oracle. Seed both params
+  // and tunable scope at engine build time so connect()'s initial applyPlan
+  // reflects them. Post-start writes/pushes only affect loop 2+; loop 1's
+  // plan is built once at connect from whatever state exists then.
+  const engine = buildLooperSimEngine(undefined, {
+    plannerParamsOverride: params,
+    tunableScope: toScope(proposed),
+  });
   const rec = engine.tryInject(BalanceBotRecommendationKey)!;
-  const paramsHandle = engine.tryInject(BalanceBotParamsKey)!;
 
   rec.autoApply.value = false;
-  paramsHandle.write(params);
-  const cleanup = registry.pushScope(`validate:${beatId}`, toScope(proposed));
-  let sim: number;
-  try {
-    const beat = ARC_BEATS.find((b) => b.id === beatId)!;
-    const { terminated, elapsedSimulated } = runUntil({
-      engine,
-      until: () => beat.predicate(engine),
-      maxSimTime: BUDGET_SEC,
-      tickDelta: TICK_DELTA,
-    });
-    sim = terminated === 'predicate' ? elapsedSimulated : Infinity;
-  } finally {
-    cleanup();
-  }
-  if (registry.scopeDepth !== 0) {
-    throw new Error(`scope leak after ${beatId} diff: depth=${registry.scopeDepth}`);
-  }
+  const beat = ARC_BEATS.find((b) => b.id === beatId)!;
+  const { terminated, elapsedSimulated } = runUntil({
+    engine,
+    until: () => beat.predicate(engine),
+    maxSimTime: BUDGET_SEC,
+    tickDelta: TICK_DELTA,
+  });
+  const sim = terminated === 'predicate' ? elapsedSimulated : Infinity;
 
   const diffSec = isFinite(projected) && isFinite(sim) ? sim - projected : Infinity;
   const notes: string[] = [];

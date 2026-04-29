@@ -977,8 +977,11 @@ export function simulatedFireSeconds(
  */
 export type SyntheticBeatPredicates = Record<string, ArcPredicate>;
 
-export function createBeatPredicates(data: LooperData): SyntheticBeatPredicates {
-  const initialMana = Number(data.balance.initialMana);
+export function createBeatPredicates(
+  data: LooperData,
+  tuning?: ResolvedLooperTunables,
+): SyntheticBeatPredicates {
+  const initialMana = readTunable(tuning, 'balance/initialMana', data.balance.initialMana);
   const actionsById = new Map(data.actions.map((d) => [d.id, d]));
   const actionsByZone = new Map<string, Set<string>>();
   for (const def of data.actions) {

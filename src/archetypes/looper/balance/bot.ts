@@ -95,7 +95,9 @@ import {
   LoopKey,
   LooperTuningRegistryKey,
   ManaAddedKey,
+  ManaModuleKey,
   QueueKey,
+  type LooperTunables,
   type QueueItemMeta,
 } from '../modules';
 import { createLooperEngine, type LooperEngineOptions } from '../boot';
@@ -306,7 +308,10 @@ function createFarmTalentStrategy(trigger: ComputedRef<DecimalSource>): Recommen
  * on `ambient/auto-producers`) but every dependency is load-bearing for
  * plan correctness — the planner can't reason about content it can't see.
  */
-export function createBalanceBotModule(): EngineModule {
+export function createBalanceBotModule(
+  initialParams?: Partial<PlannerParams>,
+  initialTuning?: Partial<LooperTunables>,
+): EngineModule {
   // Per-instance closure — applyPlan is defined in install() and called
   // from connect(). Hoisting it out of install() lets the connect() phase
   // call the function created during that same module instance's install,
@@ -334,6 +339,25 @@ export function createBalanceBotModule(): EngineModule {
       const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
       // Touch ActionsKey early so a missing-dep error surfaces at install.
       ctx.inject(ActionsKey);
+
+      // Initial-tuning push — runs in install, BEFORE connect()'s applyPlan,
+      // so loop 1's plan reflects the override. Scope persists for engine
+      // lifetime (no cleanup); sim-engines are ephemeral and GC takes care
+      // of teardown. The named scope is informational for `scopeDepth`
+      // diagnostics.
+      //
+      // After pushing scope, re-sync mana via `manaModule.resetMana()`. The
+      // mana module's install captured `Number(initialMana.value)` BEFORE
+      // this scope was pushed (mana installs first per dep order), so its
+      // resource starts at the data baseline — wrong if `initialTuning`
+      // shifts `balance/initialMana`. resetMana reads `initialMana.value`
+      // reactively, picking up the now-scoped value. Sim-only path; the
+      // production game never sets `initialTuning`.
+      if (initialTuning && Object.keys(initialTuning).length > 0) {
+        tuningRegistry.pushScope('balance-bot/initial', initialTuning);
+        const manaModule = ctx.inject(ManaModuleKey);
+        manaModule.resetMana();
+      }
 
       // Phase-window tunables — registered on the shared `looper-tuning`
       // registry so solver pushScope perturbs them alongside balance/...
@@ -367,9 +391,15 @@ export function createBalanceBotModule(): EngineModule {
         ),
       };
 
-      // Persistent planner-params — survives importSave round-trips.
+      // Persistent planner-params — survives importSave round-trips. The
+      // initial value is captured BEFORE connect() runs applyPlan(), so
+      // loop 1's queued plan reflects `initialParams`. Solvers/validators
+      // pass per-strategy params here (rather than writing paramsHandle
+      // post-start) — the post-start write would only affect loop 2+ since
+      // connect() has already enqueued loop 1's plan from the persistent ref.
+      const seedParams: PlannerParams = { ...DEFAULT_PARAMS, ...initialParams };
       const { plannerParams } = withPersistentContext('balance-bot', () => ({
-        plannerParams: persistent<PlannerParams>(DEFAULT_PARAMS, {
+        plannerParams: persistent<PlannerParams>(seedParams, {
           name: 'plannerParams',
         }),
       }));
@@ -535,8 +565,23 @@ export function createBalanceBotModule(): EngineModule {
 let engineCounter = 0;
 
 export interface BuildLooperSimEngineOptions extends LooperEngineOptions {
-  /** Planner-param overrides written into the persistent ref AFTER engine.start(). */
+  /**
+   * Planner-param overrides seeded into the persistent ref BEFORE connect()
+   * runs the initial applyPlan, so loop 1's queued plan reflects the
+   * override. Equivalent to writing `paramsHandle` + rebuilding, but doesn't
+   * require manual rebuild plumbing.
+   */
   plannerParamsOverride?: Partial<PlannerParams>;
+  /**
+   * Tunable-scope overrides pushed onto `LooperTuningRegistryKey` during
+   * the bot module's install — BEFORE connect()'s applyPlan and BEFORE the
+   * loop module computes initial pool capacities. Same shape as
+   * `LooperTuningRegistryKey.pushScope`'s second arg. Use this when loop 1
+   * needs to see scoped values like `balance/initialMana`; post-start
+   * `pushScope` only affects loop 2+ since loop 1's plan was built at
+   * connect time.
+   */
+  tunableScope?: Partial<LooperTunables>;
 }
 
 /**
@@ -555,7 +600,10 @@ export function buildLooperSimEngine(
   const namespace = options?.persistenceNamespace ?? `balance-${++engineCounter}`;
   const { engine } = createLooperEngine(overrides, {
     persistenceNamespace: namespace,
-    extraModules: [createBalanceBotModule(), ...(options?.extraModules ?? [])],
+    extraModules: [
+      createBalanceBotModule(options?.plannerParamsOverride, options?.tunableScope),
+      ...(options?.extraModules ?? []),
+    ],
     maxDeltaTime: options?.maxDeltaTime,
   });
   // Mirror Producer/Ambient bot pattern: select the canonical mod, start
@@ -564,14 +612,6 @@ export function buildLooperSimEngine(
   engine.selectMod('classic-adventuring');
   engine.start();
   engine.stop();
-
-  // Planner-param overrides after start so the persistent ref exists.
-  if (options?.plannerParamsOverride) {
-    const handle = engine.tryInject(BalanceBotParamsKey);
-    if (handle) {
-      handle.write({ ...handle.read(), ...options.plannerParamsOverride });
-    }
-  }
 
   return engine;
 }
