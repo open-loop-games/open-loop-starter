@@ -41,7 +41,7 @@ describe('looper engine smoke', () => {
     expect(engine.tryInject(ZonesKey)?.ordered.value.length).toBe(2);
     expect(engine.tryInject(ProgressVarsKey)?.getAll().length).toBe(4);
     expect(engine.tryInject(RegularVarsKey)?.getAll().length).toBe(5);
-    expect(engine.tryInject(ActionsKey)?.getAll().length).toBe(14);
+    expect(engine.tryInject(ActionsKey)?.getAll().length).toBe(15);
     expect(engine.tryInject(LoopKey)).toBeDefined();
     expect(engine.tryInject(ArcKey)).toBeDefined();
     expect(engine.tryInject(QueueKey)).toBeDefined();
@@ -103,10 +103,11 @@ describe('looper engine smoke', () => {
     const capabilities = engine.tryInject(CapabilitiesKey)!;
     const actions = engine.tryInject(ActionsKey)!;
 
-    // Stretch: manaCost 60, weights {vigor: 1}, expMult 1. At Level 0:
+    // Stretch: manaCost 60, weights {vigor: 1}, expMult 4 (training multiplier).
+    // At Level 0:
     //   adjustedTicks = ceil(60 × 1) = 60
-    //   adjustedExp   = 1 × (60/60) = 1
-    //   vigor xp gain = 1 × 1 × 1 (talentMult initial) = 1
+    //   adjustedExp   = 4 × (60/60) = 4
+    //   vigor xp gain = 1 × 4 × 1 (talentMult initial) = 4
     queue.enqueue({ id: 'stretch', metadata: { loops: 1, loopsLeft: 1 } });
 
     const vigorState = capabilities.getState('vigor')!;

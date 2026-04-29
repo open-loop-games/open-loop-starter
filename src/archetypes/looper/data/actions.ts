@@ -1,7 +1,7 @@
 import type { ActionDef } from './types';
 
 // ─── Skeleton ───
-// 14 actions across 2 zones, discriminated over `type: 'progress' | 'regular'
+// 15 actions across 2 zones, discriminated over `type: 'progress' | 'regular'
 // | 'basic'`. Every capability is granted XP by at least one action in every
 // zone (cardinality-cross-check enforced by the smoke-test suite).
 // Single-tick actions only — multi-part action support is engine-gap territory
@@ -13,9 +13,19 @@ import type { ActionDef } from './types';
 // numbers proportionally.
 //
 // Action-type mix:
-//   - 5 basic   (stretch, tend, listen, trade, trek)   — entry training + bridge + exchange
+//   - 6 basic   (stretch, tend, listen, attune, trade, trek)
+//                                                      — capability training (×4 expMult), exchange, bridge
 //   - 4 progress (roam, acquaint, trail, mark)         — drive progressVar XP
 //   - 5 regular  (crack, slip, run, drink, gather)     — drain regularVar pools
+//
+// Capability-training basics carry `expMult: 4` per the idle-loops canonical
+// shape — training-style activities have a 4-5× XP multiplier so spending
+// mana on them is worthwhile vs. progression actions which pay 1×. Drives
+// farm-talent's planner Pass 7 (talent overflow) — mana-rich loops soak
+// excess into rotating trainer iterations for compounded talent gain.
+// Aether gets its own dedicated trainer (Attune) for symmetric four-cap
+// coverage; without it the rotation would leave aether's talent track
+// trailing the other three.
 //
 // Prereq web: 5 chains exercising all five `ActionPrereq` variants.
 //   Roam ≥ level 3        → Trade   visible  (Hearth gold-spend exchange,
@@ -54,7 +64,7 @@ export const ACTIONS: ActionDef[] = [
     zoneId: 'hearth',
     type: 'basic',
     manaCost: 60,
-    expMult: 1,
+    expMult: 4,
     weights: { vigor: 1 },
   },
   {
@@ -64,7 +74,7 @@ export const ACTIONS: ActionDef[] = [
     zoneId: 'hearth',
     type: 'basic',
     manaCost: 80,
-    expMult: 1,
+    expMult: 4,
     weights: { craft: 1 },
   },
   {
@@ -74,8 +84,18 @@ export const ACTIONS: ActionDef[] = [
     zoneId: 'hearth',
     type: 'basic',
     manaCost: 80,
-    expMult: 1,
+    expMult: 4,
     weights: { lore: 1 },
+  },
+  {
+    id: 'attune',
+    name: 'Attune',
+    description: 'Sit with the hearth-stone. Listen to what the room remembers.',
+    zoneId: 'hearth',
+    type: 'basic',
+    manaCost: 80,
+    expMult: 4,
+    weights: { aether: 1 },
   },
   {
     id: 'roam',

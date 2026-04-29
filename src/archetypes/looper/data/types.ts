@@ -5,7 +5,7 @@ import type { DecimalSource } from 'open-loop-engine';
 // lives module-side); 2 zones as UI grouping only (no content gating); 4
 // progressVars (persistent exploration tracks, Wander-shape) coupled via a
 // `scales` table to 5 regularVars (per-loop pools whose `total` derives from
-// summed `level × perLevel` contributions); ~14 actions discriminated over
+// summed `level × perLevel` contributions); ~15 actions discriminated over
 // `type: 'progress' | 'regular' | 'basic'` with weight-coupled cost + XP and
 // per-action prereq web. Skeleton counts and prereq topology are
 // fork-of-skeleton decisions; balance constants live in `balance.ts`; costume

@@ -51,7 +51,7 @@ export const LOOPER_IDENTITY = {
   /**
    * Minimum content cardinality the canonical Looper shape depends on. Soft
    * floors — scaffolding ships with 4 capabilities, 2 zones, 4 progressVars,
-   * ≥5 regularVars, ~14 actions across all three type variants and all five
+   * ≥5 regularVars, ~15 actions across all three type variants and all five
    * ActionPrereq variants. Already encoded as math-only locks in
    * `sim/balance.probe.test.ts`; mirrored here so shape.ts is self-describing.
    */
