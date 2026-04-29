@@ -513,18 +513,76 @@ function roundProposal(knob: KnobAssignment, value: number): number {
   return Math.round(value);
 }
 
+// ─── Strategy well-formedness smoke ──────────────────────────────────────
+//
+// Pre-bisection bootstrap check per OL-770 in-scope foundation: walk N
+// loops via `projectArc` against the strategy baseline and surface
+// per-loop `manaAdded`. Catches OL-756 farm-mana-pool's
+// `progressionTarget: {}`-class bug where the strategy compiles + runs but
+// never bootstraps mana growth (planner-empty-progression → no
+// progressVar level-ups → regularVar pool stays at zero capacity → no
+// manapot harvests possible). Closed-form via `projectArc` so it adds
+// negligible cost.
+//
+// Advisory, not blocking. Some strategies (notably farm-mana-pool) have
+// a multi-arc bootstrap profile under canonical content: crack's cycle
+// cost (rewardRatio × manaCost = 2000 ticks) exceeds the fresh-loop
+// budget by a wide margin until Talent compounds adjustedTicks low
+// enough that the cycle becomes positive-EV. For those strategies,
+// 10-loop manaAdded == 0 is structural, not buggy. The smoke prints the
+// per-loop array as a discovery artifact and lets the ramp proceed; the
+// human reads the array against strategy intent.
+
+const SMOKE_LOOPS = 10;
+
+interface SmokeResult {
+  ok: boolean;
+  manaAddedPerLoop: number[];
+  reason?: string;
+}
+
+function smokeStrategy(strategyId: string, baseParams: PlannerParams): SmokeResult {
+  void strategyId;
+  const arc = projectArc(DEFAULT_LOOPER_DATA, baseParams, {
+    breakPredicate: () => false,
+    maxLoops: SMOKE_LOOPS,
+  });
+  const manaAddedPerLoop = arc.loops.map((l) => l.manaAdded);
+  const maxManaAdded = manaAddedPerLoop.length > 0 ? Math.max(...manaAddedPerLoop) : 0;
+  if (maxManaAdded <= 0) {
+    return {
+      ok: false,
+      manaAddedPerLoop,
+      reason:
+        'manaAdded === 0 across all loops — strategy bootstrap broken. ' +
+        'Likely progressionTarget:{} (no progression actions enqueued), ' +
+        'or unreachable manapot harvest under canonical content (regularVar ' +
+        'pool stays at zero capacity, no good-checks fire).',
+    };
+  }
+  return { ok: true, manaAddedPerLoop };
+}
+
 // ─── Orchestrator ────────────────────────────────────────────────────────
 
 function solveStrategy(strategyId: string): {
   proposed: Proposed;
   solves: BeatSolve[];
   verified: VerifyRow[];
+  smoke: SmokeResult;
 } {
   const baseParams = STRATEGY_PARAMS[strategyId];
   if (!baseParams) throw new Error(`unknown strategy ${strategyId}`);
   const proposed = emptyProposed();
   const ctx: SamplerContext = { proposed, baseParams };
   const solves: BeatSolve[] = [];
+
+  // Smoke is advisory — failure surfaces as an ADVISORY note in the
+  // report, but the ramp continues. Strategies with multi-arc bootstrap
+  // profiles (manaAdded growth gated on Talent compounding) need the
+  // ramp's later beats to characterize them; pre-blocking would prevent
+  // solver discovery from progressing.
+  const smoke = smokeStrategy(strategyId, baseParams);
 
   const knobsForStrategy = KNOBS[strategyId] ?? {};
 
@@ -550,7 +608,7 @@ function solveStrategy(strategyId: string): {
   const verified =
     verifyBeats.length > 0 ? simVerifyStrategy(strategyId, baseParams, proposed, verifyBeats) : [];
 
-  return { proposed, solves, verified };
+  return { proposed, solves, verified, smoke };
 }
 
 // ─── Rendering ───────────────────────────────────────────────────────────
@@ -614,8 +672,20 @@ function main(): void {
       continue;
     }
     console.log(`## ${strategyId}\n`);
-    const { proposed, solves, verified } = solveStrategy(strategyId);
+    const { proposed, solves, verified, smoke } = solveStrategy(strategyId);
     allProposals.push({ strategy: strategyId, proposed });
+
+    console.log(
+      `### smoke (${strategyId})\n\n` +
+        `manaAdded per loop (${smoke.manaAddedPerLoop.length} loops): ` +
+        smoke.manaAddedPerLoop.map((v) => v.toFixed(0)).join(', ') +
+        '\n',
+    );
+    if (!smoke.ok) {
+      console.log(`SMOKE FAILED: ${smoke.reason}\n`);
+      console.log(`Skipping bisection — fix strategy params before re-running.\n`);
+      continue;
+    }
 
     if (solves.length > 0) {
       console.log(

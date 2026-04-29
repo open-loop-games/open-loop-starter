@@ -465,7 +465,17 @@ export function generatePlan(
   }
 
   // ─── Pass 3: mana extension (productive regulars + basic mana grants) ─
-  // Drain each productive mana-pool to its rewardRatio-aligned capacity.
+  // Drain each productive mana-pool to its rewardRatio-aligned capacity,
+  // emitted as one item per reward cycle. Per-cycle chunking mirrors the
+  // (γ) Pass-5 fix (OL-768): the natural granule for partial Pass-6 trim
+  // is one full rewardRatio cycle (rewardRatio loops produce 1 reward
+  // grant on average). Sub-cycle splits don't yield rewards, so the
+  // smallest meaningful chunk == rewardRatio loops. With multi-cycle
+  // pools (poolCapacity > rewardRatio), Pass 6 can drop cycles one at a
+  // time instead of all-or-nothing. Single-cycle pools (poolCapacity ==
+  // rewardRatio) still drop wholesale; that's a content-rebalance
+  // signal, not a planner trim issue.
+  //
   // Basic-type mana grants (e.g., a future "Drink Tonic" basic that adds
   // mana flat) get one execution.
   const manaSources = visible
@@ -474,9 +484,10 @@ export function generatePlan(
     .sort((a, b) => b.manaPerCompletion / b.adjustedTicks - a.manaPerCompletion / a.adjustedTicks);
   for (const v of manaSources) {
     if (v.def.type === 'regular') {
-      // Drain pool to the largest rewardRatio multiple ≤ poolCapacity.
-      const aligned = Math.floor(v.poolCapacity / v.rewardRatio) * v.rewardRatio;
-      pushItem(planState, v, aligned);
+      const cycles = Math.floor(v.poolCapacity / v.rewardRatio);
+      for (let i = 0; i < cycles; i++) {
+        pushItem(planState, v, v.rewardRatio);
+      }
     } else {
       // Basic mana grant — one execution.
       pushItem(planState, v, 1);
