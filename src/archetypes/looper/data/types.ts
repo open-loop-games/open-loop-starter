@@ -115,21 +115,18 @@ export type RewardEffect =
  * Effect applied immediately on completion of a basic-type action. Resolution
  * order in the dispatcher:
  *
- *   1. Snapshot the pre-batch state (mana/gold readings).
- *   2. Resolve every function-form `add-mana` amount against the snapshot
- *      (so `state.gold()` returns the pre-batch gold balance).
- *   3. Apply effects in declaration order.
+ *   1. Snapshot pre-batch gold (for the `exchange-gold-to-mana` reader).
+ *   2. Apply effects in declaration order.
  *
- * The `Trade` exchange (`[{spend-gold:'all'}, {add-mana: state => state.gold()*50}]`)
- * relies on this order: the `add-mana` amount captures `currentGold × 50`
- * before `spend-gold: 'all'` zeros gold, so `manaAdded = goldSpent × 50`
- * holds (the algebraic identity asserted by the `gold-mana-exchange-correctness`
- * probe in OL-746).
+ * The `Trade` exchange uses `[{spend-gold:'all'}, {exchange-gold-to-mana}]` —
+ * the exchange effect reads pre-batch gold × the action def's `exchangeMult`,
+ * so `manaAdded = goldSpent × exchangeMult` holds regardless of order.
  */
 export type CompletionEffect =
-  | { kind: 'add-mana'; amount: DecimalSource | ((state: LooperGameState) => DecimalSource) }
+  | { kind: 'add-mana'; amount: DecimalSource }
   | { kind: 'add-gold'; amount: DecimalSource }
-  | { kind: 'spend-gold'; amount: DecimalSource | 'all' };
+  | { kind: 'spend-gold'; amount: DecimalSource | 'all' }
+  | { kind: 'exchange-gold-to-mana' };
 
 /** Fields shared across all action-type variants. */
 interface ActionDefBase {
@@ -212,6 +209,12 @@ export type ActionDef =
       type: 'basic';
       /** Optional. Applied on completion. Gold-spend → mana, gold-add, etc. */
       completionEffects?: CompletionEffect[];
+      /**
+       * Multiplier consumed by `exchange-gold-to-mana` completion effects:
+       * `manaAdded = preBatchGold × exchangeMult`. Surfaced as a tunable so
+       * the balance solver can perturb the gold↔mana exchange perceptibility.
+       */
+      exchangeMult?: DecimalSource;
     });
 
 // ─── Balance ───
@@ -250,21 +253,15 @@ export interface LooperBalance {
 
 /**
  * Typed read view of module state, exposed to predicate closures (per-action
- * prereqs, `canStart` gates, `CompletionEffect` function-form amounts).
- * Methods encapsulate Decimal comparisons / reads so `data/*.ts` never imports
- * the engine runtime. Modules implement helpers over live injection-key refs.
+ * prereqs, `canStart` gates). Methods encapsulate Decimal comparisons / reads
+ * so `data/*.ts` never imports the engine runtime. Modules implement helpers
+ * over live injection-key refs.
  */
 export interface LooperGameState {
   /** Current mana remaining ≥ amount. */
   manaAtLeast(amount: DecimalSource): boolean;
   /** Current gold ≥ amount. */
   goldAtLeast(amount: DecimalSource): boolean;
-  /**
-   * Raw current gold — read by function-form `CompletionEffect.add-mana`
-   * amounts so the `Trade` exchange can compute `gold × exchangeRate` from a
-   * pre-batch snapshot.
-   */
-  gold(): DecimalSource;
   /** Capability tier Level (resets per loop) or Talent (persistent) ≥ n. */
   capabilityLevelAtLeast(capabilityId: string, tier: 'level' | 'talent', n: number): boolean;
   /** ProgressVar level (persistent across loops) ≥ n. */

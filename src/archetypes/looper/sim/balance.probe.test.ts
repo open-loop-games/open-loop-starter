@@ -87,7 +87,7 @@ describe('balance probe — content cardinality minimums', () => {
       (a) =>
         a.type === 'basic' &&
         a.completionEffects?.some((e) => e.kind === 'spend-gold') &&
-        a.completionEffects?.some((e) => e.kind === 'add-mana'),
+        a.completionEffects?.some((e) => e.kind === 'exchange-gold-to-mana'),
     );
     expect(goldGranters.length).toBeGreaterThanOrEqual(1);
     expect(goldSpenders.length).toBeGreaterThanOrEqual(1);

@@ -498,9 +498,9 @@ describe('looper engine smoke', () => {
   });
 
   it('basic gold-spend exchange burns gold and grants mana (Trade)', () => {
-    // Trade: completionEffects [spend-gold 'all', add-mana state=>state.gold()*50].
-    // Pre-batch snapshot resolves add-mana to currentGold × 50, then spend-gold
-    // zeros gold, then add-mana adds the captured amount.
+    // Trade: completionEffects [spend-gold 'all', exchange-gold-to-mana].
+    // The dispatcher snapshots pre-batch gold; spend-gold zeros gold;
+    // exchange-gold-to-mana grants `preBatchGold × exchangeMult` (= 50).
     //
     // Setup: Trade has prereq `progressVarLevel(roam, 3)` — drive roam.level ≥ 3
     // first. Then add some gold (via slip or directly) and queue Trade.

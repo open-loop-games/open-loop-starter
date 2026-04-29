@@ -20,9 +20,9 @@ import type { LooperData } from '../data/types';
  * regularVar `total` (derived), and action `timesCompleted`.
  *
  * `spendGold('all')` returns the actual amount spent so dispatchers can thread
- * it forward — but the demo's `Trade` exchange uses the resolve-before-apply
- * pattern (function-form `add-mana` captures pre-batch `state.gold()`), so the
- * return value is informational rather than load-bearing.
+ * it forward — informational only in the canonical demo, since the `Trade`
+ * exchange snapshots pre-batch gold inside the completion-effects batch
+ * before any spend-gold runs (`actions.ts::applyCompletionEffects`).
  */
 
 export interface LooperGoldModule {

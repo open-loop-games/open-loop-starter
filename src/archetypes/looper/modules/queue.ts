@@ -144,7 +144,6 @@ export function createQueueModule(_data: LooperData): EngineModule {
       const stateView: LooperGameState = {
         manaAtLeast: (amount) => Decimal.gte(mana.value, amount),
         goldAtLeast: (amount) => Decimal.gte(gold.value, amount),
-        gold: () => gold.value,
         capabilityLevelAtLeast: (capabilityId, tier, n) => {
           const state = capabilities.getState(capabilityId);
           if (!state) return false;

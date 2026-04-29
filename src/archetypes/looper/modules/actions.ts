@@ -10,13 +10,7 @@ import {
   type InjectionKey,
   type Persistent,
 } from 'open-loop-engine';
-import type {
-  ActionDef,
-  CompletionEffect,
-  LooperData,
-  LooperGameState,
-  RewardEffect,
-} from '../data/types';
+import type { ActionDef, CompletionEffect, LooperData, RewardEffect } from '../data/types';
 import { LooperTuningRegistryKey, ManaModuleKey, type LooperTunables } from './mana';
 import { CapabilitiesKey, grantCapabilityXp } from './capabilities';
 import { GoldKey, GoldModuleKey } from './gold';
@@ -35,6 +29,10 @@ export interface ActionState {
   adjustedTicks: ComputedRef<DecimalSource>;
   /** Tunable-wrapped manaCost for this action. */
   manaCost: ComputedRef<DecimalSource>;
+  /** Tunable-wrapped rewardRatio. Set on regular-type actions only. */
+  rewardRatio?: ComputedRef<DecimalSource>;
+  /** Tunable-wrapped exchangeMult. Set on basic-type actions that declare the field. */
+  exchangeMult?: ComputedRef<DecimalSource>;
 }
 
 export interface ActionsModule {
@@ -51,9 +49,10 @@ export interface ActionsModule {
    * capability XP per the canonical formula, applies the type-discriminated
    * completion path (progress: addXp to progressVar; regular: checkOne pool +
    * conditional rewardEffects; basic: completionEffects batch with pre-batch
-   * state snapshot for function-form amounts), increments `timesCompleted`,
-   * resets `progress` to 0, and returns `true` (queue dispatcher uses this
-   * to call `sequencer.complete()`). Returns `false` while still in progress.
+   * gold snapshot for `exchange-gold-to-mana` effects), increments
+   * `timesCompleted`, resets `progress` to 0, and returns `true` (queue
+   * dispatcher uses this to call `sequencer.complete()`). Returns `false`
+   * while still in progress.
    */
   tick(id: string, ticks: number): boolean;
 }
@@ -68,6 +67,16 @@ export const ActionsKey: InjectionKey<ActionsModule> = Symbol(
 // Updated for the 2-zone canonical: stretch (Hearth entry training) + trek
 // (Wilds bridge action).
 const TUNABLE_MANA_COST_IDS = new Set<string>(['stretch', 'trek']);
+
+// Manapot-driver action: `crack` is the only Hearth manapot harvester, so it
+// is the sole rewardRatio perturbation channel for the leaf-5
+// `manapot-perceptibility` probe. Other regular-type actions pass through
+// unwrapped.
+const TUNABLE_REWARD_RATIO_IDS = new Set<string>(['crack']);
+
+// Sole basic-type exchange. Consumed by `exchange-gold-to-mana` completion
+// effects; the action def carries `exchangeMult` as a sibling field.
+const TUNABLE_EXCHANGE_MULT_IDS = new Set<string>(['trade']);
 
 /**
  * Per-action state with progress accumulator and cumulative completion count.
@@ -125,6 +134,29 @@ export function createActionsModule(data: LooperData): EngineModule {
             )
           : { value: def.manaCost };
 
+        let rewardRatio: ComputedRef<DecimalSource> | undefined;
+        if (def.type === 'regular') {
+          rewardRatio = TUNABLE_REWARD_RATIO_IDS.has(def.id)
+            ? tunable<DecimalSource>(
+                tuningRegistry,
+                `actions/${def.id}/rewardRatio` as keyof LooperTunables,
+                () => def.rewardRatio,
+              )
+            : { value: def.rewardRatio };
+        }
+
+        let exchangeMult: ComputedRef<DecimalSource> | undefined;
+        if (def.type === 'basic' && def.exchangeMult !== undefined) {
+          const mult = def.exchangeMult;
+          exchangeMult = TUNABLE_EXCHANGE_MULT_IDS.has(def.id)
+            ? tunable<DecimalSource>(
+                tuningRegistry,
+                `actions/${def.id}/exchangeMult` as keyof LooperTunables,
+                () => mult,
+              )
+            : { value: mult };
+        }
+
         const { progress, timesCompleted } = withPersistentContext(
           `looper/actions:${def.id}`,
           () => ({
@@ -155,29 +187,10 @@ export function createActionsModule(data: LooperData): EngineModule {
           timesCompleted,
           adjustedTicks,
           manaCost,
+          rewardRatio,
+          exchangeMult,
         });
       }
-
-      // Pre-batch snapshot view for function-form CompletionEffect amounts.
-      // Effects resolve all function amounts BEFORE applying any effect, so
-      // the state read here reflects pre-batch values. The Trade exchange
-      // (`[spend-gold:'all', add-mana:state=>state.gold()*50]`) relies on
-      // this: the function captures `currentGold * 50`, then spend-gold zeros
-      // gold, then add-mana adds the captured amount.
-      // Pre-batch state snapshot for function-form CompletionEffect amounts.
-      // Only the readers actually consulted by demo effects are wired up — the
-      // rest stay binary stubs (`false`) since basic-action completionEffects
-      // don't currently read prereq predicates. Forks adding richer effect
-      // function-forms can extend this snapshot.
-      const effectStateView: LooperGameState = {
-        manaAtLeast: () => false,
-        goldAtLeast: () => false,
-        gold: () => gold.value,
-        capabilityLevelAtLeast: () => false,
-        progressVarLevelAtLeast: () => false,
-        actionCompletedAtLeast: () => false,
-        loopCountAtLeast: () => false,
-      };
 
       function applyRewardEffect(effect: RewardEffect): void {
         if (effect.kind === 'add-mana') {
@@ -187,24 +200,23 @@ export function createActionsModule(data: LooperData): EngineModule {
         }
       }
 
-      function applyCompletionEffects(effects: CompletionEffect[]): void {
-        // Resolve all function-form amounts against the pre-batch snapshot so
-        // effect-application order doesn't change the captured values. After
-        // resolution, apply effects in declaration order.
-        const resolved: CompletionEffect[] = effects.map((effect) => {
-          if (effect.kind === 'add-mana' && typeof effect.amount === 'function') {
-            const fn = effect.amount;
-            return { kind: 'add-mana', amount: fn(effectStateView) };
-          }
-          return effect;
-        });
-        for (const effect of resolved) {
+      function applyCompletionEffects(actionId: string, effects: CompletionEffect[]): void {
+        // Snapshot pre-batch gold once so `exchange-gold-to-mana` captures the
+        // gold balance from before any spend-gold in the same batch ran. The
+        // Trade canonical relies on this — `[spend-gold:'all', exchange-gold-to-mana]`
+        // resolves `manaAdded = preBatchGold × exchangeMult`.
+        const preBatchGold = gold.value;
+        const state = states.get(actionId);
+        for (const effect of effects) {
           if (effect.kind === 'add-mana') {
-            manaModule.addMana(effect.amount as DecimalSource);
+            manaModule.addMana(effect.amount);
           } else if (effect.kind === 'add-gold') {
             goldModule.addGold(effect.amount);
           } else if (effect.kind === 'spend-gold') {
             goldModule.spendGold(effect.amount);
+          } else if (effect.kind === 'exchange-gold-to-mana') {
+            const mult = state?.exchangeMult?.value ?? 0;
+            manaModule.addMana(Decimal.mul(preBatchGold, mult));
           }
         }
       }
@@ -249,7 +261,8 @@ export function createActionsModule(data: LooperData): EngineModule {
             progressVars.addXP(def.progressVarId, xpGrant);
           }
         } else if (def.type === 'regular') {
-          const outcome = regularVars.checkOne(def.regularVarId, def.rewardRatio);
+          const ratio = Number(state.rewardRatio?.value ?? def.rewardRatio);
+          const outcome = regularVars.checkOne(def.regularVarId, ratio);
           if (outcome.goodFound) {
             for (const reward of def.rewardEffects) {
               applyRewardEffect(reward);
@@ -257,7 +270,7 @@ export function createActionsModule(data: LooperData): EngineModule {
           }
         } else if (def.type === 'basic') {
           if (def.completionEffects && def.completionEffects.length > 0) {
-            applyCompletionEffects(def.completionEffects);
+            applyCompletionEffects(def.id, def.completionEffects);
           }
         }
 

@@ -148,15 +148,13 @@ export const ACTIONS: ActionDef[] = [
     manaCost: 300,
     expMult: 1,
     weights: { lore: 1 },
-    // Doc § 8: gold↔mana exchange. Exchange rate × 50 is a solver placeholder
-    // (OL-746 retunes). Effects resolve as a batch — function-form `add-mana`
-    // captures pre-batch `state.gold()` so `spend-gold: 'all'` ordering does
-    // not affect the captured amount. Algebraic identity:
-    //   manaAdded = goldSpent × 50
-    completionEffects: [
-      { kind: 'spend-gold', amount: 'all' },
-      { kind: 'add-mana', amount: (state) => Number(state.gold()) * 50 },
-    ],
+    // Doc § 8: gold↔mana exchange. `exchangeMult` is a solver-tunable
+    // multiplier; the dispatcher snapshots pre-batch gold for the
+    // exchange-gold-to-mana effect, so `spend-gold: 'all'` ordering does not
+    // affect the captured amount. Algebraic identity:
+    //   manaAdded = goldSpent × exchangeMult
+    completionEffects: [{ kind: 'spend-gold', amount: 'all' }, { kind: 'exchange-gold-to-mana' }],
+    exchangeMult: 50,
     prereqs: [{ kind: 'progress-var-level', progressVarId: 'roam', value: 3 }],
   },
 
