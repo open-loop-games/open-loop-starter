@@ -41,7 +41,7 @@
  * sites, different accessor.
  */
 
-import type { InjectionKey } from 'open-loop-engine';
+import type { DecimalSource, InjectionKey } from 'open-loop-engine';
 import {
   type ActionDef,
   type CapabilityDef,
@@ -70,6 +70,56 @@ import {
 
 /** Engine TPS — mana drains at 1 per engine tick while a queue action runs. */
 export const DEFAULT_TPS = 20;
+
+// ─── Tunable resolution ──────────────────────────────────────────────────
+
+/**
+ * Resolved tunable snapshot — a flat key→number map mirroring
+ * `LooperTunableKey`. Solver merges its `Partial<LooperTunables>` proposal
+ * onto the data baseline once per evaluation, hands the snapshot to
+ * `projectArc` via `options.tuning`. Read sites use `tuning?.[key] ??
+ * <data fallback>`, so the data baseline stays the source of truth when
+ * `tuning` is omitted (preserves the existing projector tests).
+ *
+ * Strict subset of the sim's `LooperTunables` surface — phase-arbitration
+ * knobs (`bot/phases/...`, `bot/manaOverflowTrigger`) are sim-only because
+ * the projector doesn't model bot arbitration. `resolveTunables` drops
+ * those keys at narrow time so callers can hand the same proposal to both
+ * sim (`pushScope`) and projector (`tuning`).
+ */
+export type ResolvedLooperTunables = Record<string, number>;
+
+/** Solver-side proposal map, keyed by `LooperTunableKey`. */
+export type ProjectorProposal = Partial<Record<string, DecimalSource>>;
+
+/**
+ * Narrow a solver proposal to the projector's resolved-number surface.
+ * Drops `bot/...` keys (sim-only phase-arbitration) so a single proposal
+ * map drives both verification paths cleanly.
+ */
+export function resolveTunables(proposed: ProjectorProposal): ResolvedLooperTunables {
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(proposed)) {
+    if (value === undefined) continue;
+    if (key.startsWith('bot/')) continue;
+    out[key] = Number(value);
+  }
+  return out;
+}
+
+/**
+ * Read a tunable with explicit `undefined` check — `?? fallback` would
+ * collapse a deliberately-zero proposed value (e.g., `perLevel: 0` to
+ * disable a regularVar contribution) onto the data baseline.
+ */
+function readTunable(
+  tuning: ResolvedLooperTunables | undefined,
+  key: string,
+  fallback: DecimalSource,
+): number {
+  const t = tuning?.[key];
+  return t === undefined ? Number(fallback) : t;
+}
 
 // ─── Synthetic state ─────────────────────────────────────────────────────
 
@@ -147,7 +197,10 @@ function talentMultFromXp(talentXp: number): number {
  * initialMana, gold = 0, loop count = 0. Pure data-driven — no engine
  * accessor needed because every value is the engine's documented baseline.
  */
-export function createSyntheticInitialState(data: LooperData): SyntheticLooperState {
+export function createSyntheticInitialState(
+  data: LooperData,
+  tuning?: ResolvedLooperTunables,
+): SyntheticLooperState {
   const capabilities = new Map<string, { levelXp: number; talentXp: number }>();
   for (const def of data.capabilities) {
     capabilities.set(def.id, { levelXp: 0, talentXp: 0 });
@@ -170,7 +223,7 @@ export function createSyntheticInitialState(data: LooperData): SyntheticLooperSt
     regularVars,
     actions,
     loop: { count: 0, arcElapsedSec: 0, manaAddedThisLoop: 0 },
-    mana: Number(data.balance.initialMana),
+    mana: readTunable(tuning, 'balance/initialMana', data.balance.initialMana),
     gold: 0,
   };
 }
@@ -185,13 +238,19 @@ function recomputeRegularVarTotal(
   state: SyntheticLooperState,
   regularVarId: string,
   progressVarDefs: ProgressVarDef[],
+  tuning?: ResolvedLooperTunables,
 ): void {
   let total = 0;
   for (const def of progressVarDefs) {
     const scale = def.scales.find((s) => s.regularVarId === regularVarId);
     if (!scale) continue;
     const xp = state.progressVars.get(def.id) ?? 0;
-    total += levelFromXp(xp) * Number(scale.perLevel);
+    const perLevel = readTunable(
+      tuning,
+      `progressVars/${def.id}/scales/${regularVarId}/perLevel`,
+      scale.perLevel,
+    );
+    total += levelFromXp(xp) * perLevel;
   }
   const rv = state.regularVars.get(regularVarId);
   if (rv) rv.total = total;
@@ -224,12 +283,18 @@ function applyCompletion(
     progressVarXpGains: Map<string, number>;
     manaAdded: number;
   },
+  tuning?: ResolvedLooperTunables,
 ): { manaGrantThisCompletion: number } {
   state.actions.set(def.id, (state.actions.get(def.id) ?? 0) + 1);
 
   // Capability XP grant — canonical formula (idle-loops-ng action-formulas.ts:48-61).
-  const adjustedExp = Number(def.expMult) * (Number(def.manaCost) / vector.adjustedTicks);
-  const talentAccrualRatio = Number(data.balance.talentAccrualRatio);
+  const manaCost = readTunable(tuning, `actions/${def.id}/manaCost`, def.manaCost);
+  const adjustedExp = Number(def.expMult) * (manaCost / vector.adjustedTicks);
+  const talentAccrualRatio = readTunable(
+    tuning,
+    'balance/talentAccrualRatio',
+    data.balance.talentAccrualRatio,
+  );
   for (const [capId, weightSrc] of Object.entries(def.weights)) {
     const cap = state.capabilities.get(capId);
     if (!cap) continue;
@@ -257,7 +322,7 @@ function applyCompletion(
       const afterLevel = levelFromXp(after);
       if (afterLevel > beforeLevel) {
         for (const scale of pvDef.scales) {
-          recomputeRegularVarTotal(state, scale.regularVarId, data.progressVars);
+          recomputeRegularVarTotal(state, scale.regularVarId, data.progressVars, tuning);
         }
       }
     }
@@ -301,7 +366,7 @@ function applyCompletion(
             state.gold = Math.max(0, state.gold - Number(effect.amount));
           }
         } else if (effect.kind === 'exchange-gold-to-mana') {
-          const mult = Number(def.exchangeMult ?? 0);
+          const mult = readTunable(tuning, `actions/${def.id}/exchangeMult`, def.exchangeMult ?? 0);
           const grant = preBatchGold * mult;
           state.mana += grant;
           manaGrantThisCompletion += grant;
@@ -344,15 +409,17 @@ export function integrateLoop(
       cumulative: { manaConsumed: number; manaAdded: number; loopElapsedSec: number },
     ) => boolean;
     tps?: number;
+    tuning?: ResolvedLooperTunables;
   },
 ): LoopIntegrationResult {
   const tps = options?.tps ?? DEFAULT_TPS;
+  const tuning = options?.tuning;
   void params; // params is the surface the plan was generated from; integrator reads only the plan.
 
   const vectorById = new Map<string, ActionVector>();
   for (const v of vectors) vectorById.set(v.def.id, v);
 
-  const initialMana = Number(data.balance.initialMana);
+  const initialMana = readTunable(tuning, 'balance/initialMana', data.balance.initialMana);
   const startMana = state.mana;
   let manaConsumed = 0;
   let manaAdded = 0;
@@ -389,7 +456,7 @@ export function integrateLoop(
       manaConsumed += v.adjustedTicks;
       loopsCompleted += 1;
       const deltas = { capabilityXpGains, progressVarXpGains, manaAdded };
-      applyCompletion(state, def, v, data, deltas);
+      applyCompletion(state, def, v, data, deltas, tuning);
       manaAdded = deltas.manaAdded;
       state.mana = startMana + manaAdded - manaConsumed;
       state.loop.manaAddedThisLoop = manaAdded;
@@ -455,17 +522,20 @@ export function integrateLoop(
 export function createSyntheticAccessor(
   state: SyntheticLooperState,
   data: LooperData,
+  tuning?: ResolvedLooperTunables,
 ): PlannerAccessor {
   const computeAdjustedTicks = (def: ActionDef): number => {
+    const costDivisor = readTunable(tuning, 'balance/costDivisor', data.balance.costDivisor);
+    const manaCost = readTunable(tuning, `actions/${def.id}/manaCost`, def.manaCost);
     let costMult = 0;
     for (const [capId, weightSrc] of Object.entries(def.weights)) {
       const cap = state.capabilities.get(capId);
       if (!cap) continue;
       const level = levelFromXp(cap.levelXp);
-      const factor = 1 + level / Number(data.balance.costDivisor);
+      const factor = 1 + level / costDivisor;
       costMult += Number(weightSrc) / factor;
     }
-    return Math.max(1, Math.ceil(Number(def.manaCost) * costMult - 0.000001));
+    return Math.max(1, Math.ceil(manaCost * costMult - 0.000001));
   };
 
   const actionsModule = {
@@ -474,6 +544,7 @@ export function createSyntheticAccessor(
     getState: (id: string) => {
       const def = data.actions.find((d) => d.id === id);
       if (!def) return undefined;
+      const manaCost = readTunable(tuning, `actions/${def.id}/manaCost`, def.manaCost);
       const result: {
         adjustedTicks: { value: number };
         manaCost: { value: number };
@@ -481,13 +552,17 @@ export function createSyntheticAccessor(
         exchangeMult?: { value: number };
       } = {
         adjustedTicks: { value: computeAdjustedTicks(def) },
-        manaCost: { value: Number(def.manaCost) },
+        manaCost: { value: manaCost },
       };
       if (def.type === 'regular') {
-        result.rewardRatio = { value: def.rewardRatio };
+        result.rewardRatio = {
+          value: readTunable(tuning, `actions/${def.id}/rewardRatio`, def.rewardRatio),
+        };
       }
       if (def.type === 'basic' && def.exchangeMult !== undefined) {
-        result.exchangeMult = { value: Number(def.exchangeMult) };
+        result.exchangeMult = {
+          value: readTunable(tuning, `actions/${def.id}/exchangeMult`, def.exchangeMult),
+        };
       }
       return result;
     },
@@ -549,7 +624,9 @@ export function createSyntheticAccessor(
     },
   };
 
-  const initialManaRef = { value: Number(data.balance.initialMana) };
+  const initialManaRef = {
+    value: readTunable(tuning, 'balance/initialMana', data.balance.initialMana),
+  };
   const loopRef = { count: { value: state.loop.count } };
 
   // Symbol-keyed dispatch — an InjectionKey is a typed Symbol, so equality
@@ -590,7 +667,11 @@ export function createSyntheticAccessor(
  * - Gold → 0
  * - Loop count incremented
  */
-function applyLoopBoundary(state: SyntheticLooperState, data: LooperData): void {
+function applyLoopBoundary(
+  state: SyntheticLooperState,
+  data: LooperData,
+  tuning?: ResolvedLooperTunables,
+): void {
   for (const cap of state.capabilities.values()) {
     cap.levelXp = 0;
   }
@@ -598,7 +679,7 @@ function applyLoopBoundary(state: SyntheticLooperState, data: LooperData): void 
     rv.checked = 0;
     rv.good = 0;
   }
-  state.mana = Number(data.balance.initialMana);
+  state.mana = readTunable(tuning, 'balance/initialMana', data.balance.initialMana);
   state.gold = 0;
   state.loop.count += 1;
   state.loop.manaAddedThisLoop = 0;
@@ -654,11 +735,13 @@ export function projectArc(
     maxLoops?: number;
     tps?: number;
     initialState?: SyntheticLooperState;
+    tuning?: ResolvedLooperTunables;
   },
 ): ArcProjectionResult {
   const tps = options?.tps ?? DEFAULT_TPS;
   const maxLoops = options?.maxLoops ?? 100;
-  const state = options?.initialState ?? createSyntheticInitialState(data);
+  const tuning = options?.tuning;
+  const state = options?.initialState ?? createSyntheticInitialState(data, tuning);
   const loops: LoopIntegrationResult[] = [];
   let totalElapsedSec = 0;
 
@@ -676,7 +759,7 @@ export function projectArc(
   }
 
   for (let i = 0; i < maxLoops; i++) {
-    const accessor = createSyntheticAccessor(state, data);
+    const accessor = createSyntheticAccessor(state, data, tuning);
     const plan = generatePlan(accessor, params);
     const vectors = projectActionVectors(accessor);
 
@@ -686,6 +769,7 @@ export function projectArc(
 
     const result = integrateLoop(state, params, plan, vectors, data, {
       tps,
+      tuning,
       breakPredicate: options?.breakPredicate ? (s) => options.breakPredicate!(s) : undefined,
     });
     loops.push(result);
@@ -711,7 +795,7 @@ export function projectArc(
     // reset zeros Level XP, regularVar checked/good, mana, gold; increments
     // loop.count.
     const endedQueueEmpty = result.endMode === 'queue-empty';
-    applyLoopBoundary(state, data);
+    applyLoopBoundary(state, data, tuning);
 
     // Boundary predicate check — fire-time inherits loop's detection lag.
     if (options?.breakPredicate && options.breakPredicate(state)) {

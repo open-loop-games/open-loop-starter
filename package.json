@@ -14,6 +14,8 @@
     "balance:solve:producer": "vite-node src/archetypes/producer/balance/solve.ts",
     "balance:solve:ambient": "vite-node src/archetypes/ambient/balance/solve.ts",
     "balance:probes:ambient": "vite-node src/archetypes/ambient/balance/probes.ts",
+    "balance:solve:looper": "vite-node src/archetypes/looper/balance/solve.ts",
+    "balance:validate-projector:looper": "vite-node src/archetypes/looper/balance/validate-projector.ts",
     "balance:tune:tug": "vite-node src/archetypes/tug/balance/tune.ts",
     "balance:probes:tug": "vite-node src/archetypes/tug/balance/probes.ts",
     "balance:sweep:tug-retune": "vite-node src/archetypes/tug/balance/retune-sweep.ts",
