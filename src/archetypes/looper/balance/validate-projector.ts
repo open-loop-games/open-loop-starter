@@ -82,8 +82,10 @@ const VALIDATE_STRATEGY = 'farm-mana-pool';
  * under the chosen knob set rather than under data defaults.
  */
 const PROPOSED: ProjectorProposal = {
-  // Rung 1 farm-mana-pool — solver output from `pnpm balance:solve:looper`.
-  'balance/initialMana': 1025,
+  // OL-770 rung-1 retune: beat-2 demoted to VERIFY_ONLY under (γ);
+  // `balance/initialMana` is no longer a tuned knob (step-function
+  // surface). Validator now runs against the data baseline; tuned
+  // proposals from beats 4/5 land here as the ramp progresses.
 };
 
 const ENABLED_BEATS: readonly string[] = [

@@ -36,7 +36,16 @@ const min = (m: number) => m * 60;
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), sec(10)],
-  'beat-2': [sec(10), sec(45)],
+  // Widened from 45s to 60s during OL-770's rung-1 retune. Under (γ)
+  // chunked Pass-5 (OL-768) with farm-mana-pool's canonical
+  // {roam:2, trail:2} target and chunkSize=4, the first loop fits
+  // trainers (300 ticks) + 1 roam-chunk (600 ticks) = 900 ticks = 45s
+  // exact at 20 TPS. 45s leaves zero headroom for engine-lag, pushing
+  // sim-truth to 48s and out of [10, 45]. The 60s upper bound is the
+  // "move the phase" retune per BALANCING.md — preserves the "first
+  // loop ends" semantic with margin for the (γ)-induced structural
+  // floor. Ordering with B3 [30s, 2m00s] preserved.
+  'beat-2': [sec(10), sec(60)],
   'beat-3': [sec(30), min(2)],
   'beat-4': [min(1), min(4)],
   'beat-5': [min(3), min(10)],

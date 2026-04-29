@@ -27,12 +27,23 @@ import {
   createSyntheticInitialState,
   projectArc,
   projectBeatFireTime,
+  resolveTunables,
   simulatedFireSeconds,
 } from '../balance/projector';
 
-describe('looper balance projector — beat-2 closed-form vs sim', () => {
+// Pin both projector and sim to initialMana=250 for the EXACT-match
+// contract: at the data baseline (1025 from OL-770), the plan extends past
+// the small-plan regime where static-cost projection is exact — capability
+// XP from Pass-1 trainers reduces subsequent action ticks mid-loop, so the
+// projector overshoots actual sim by ~200ms (~4 ticks). The bounded-drift
+// case is locked separately below; this contract holds for the small-plan
+// envelope where static-cost == truth.
+const SMALL_PLAN_OVERRIDE = { 'balance/initialMana': () => 250 };
+const SMALL_PLAN_TUNING = resolveTunables({ 'balance/initialMana': 250 });
+
+describe('looper balance projector — beat-2 closed-form vs sim (small plan)', () => {
   it('projects a finite fire time under DEFAULT_PARAMS', () => {
-    const engine = buildLooperSimEngine();
+    const engine = buildLooperSimEngine(undefined, { tunableScope: SMALL_PLAN_OVERRIDE });
     const projection = projectBeatFireTime(engine, DEFAULT_PARAMS, 'beat-2');
     expect(projection.seconds).toBeGreaterThan(0);
     expect(projection.seconds).toBeLessThan(60);
@@ -42,11 +53,11 @@ describe('looper balance projector — beat-2 closed-form vs sim', () => {
 
   for (const tickDelta of [1, 0.1, 0.05]) {
     it(`simulatedFireSeconds matches runUntil exactly at tickDelta=${tickDelta}s`, () => {
-      const projEngine = buildLooperSimEngine();
+      const projEngine = buildLooperSimEngine(undefined, { tunableScope: SMALL_PLAN_OVERRIDE });
       const projection = projectBeatFireTime(projEngine, DEFAULT_PARAMS, 'beat-2');
       const corrected = simulatedFireSeconds(projection, tickDelta);
 
-      const simEngine = buildLooperSimEngine();
+      const simEngine = buildLooperSimEngine(undefined, { tunableScope: SMALL_PLAN_OVERRIDE });
       const beat2 = ARC_BEATS.find((b) => b.id === 'beat-2');
       expect(beat2).toBeDefined();
       const { terminated, elapsedSimulated } = runUntil({
@@ -61,12 +72,41 @@ describe('looper balance projector — beat-2 closed-form vs sim', () => {
   }
 
   it('simulatedFireSeconds reflects engine-detection lag for queue-empty mode', () => {
-    const engine = buildLooperSimEngine();
+    const engine = buildLooperSimEngine(undefined, { tunableScope: SMALL_PLAN_OVERRIDE });
     const projection = projectBeatFireTime(engine, DEFAULT_PARAMS, 'beat-2');
     expect(projection.breakdown.endMode).toBe('queue-empty');
     // 1 engine tick = 1/20 = 0.05s lag for queue-empty mode.
     const fineTick = simulatedFireSeconds(projection, 0.05);
     expect(fineTick - projection.seconds).toBeCloseTo(0.05, 6);
+  });
+});
+
+// Bounded-drift contract under the OL-770 data baseline (initialMana=1025).
+// Static-cost projector overshoots by ≤ 5 ticks (250ms) due to capability
+// XP accumulation mid-loop reducing subsequent adjustedTicks. This is the
+// option-(B) iterative-cost trigger threshold per OL-746 leaf-3a synthesis;
+// if drift exceeds 5 ticks under any future content shift, that's signal
+// to graduate to iterative-cost projection.
+describe('looper balance projector — beat-2 bounded drift (data baseline)', () => {
+  it('projector overshoots sim by ≤ 5 ticks under DEFAULT_PARAMS', () => {
+    const projEngine = buildLooperSimEngine();
+    const projection = projectBeatFireTime(projEngine, DEFAULT_PARAMS, 'beat-2');
+
+    const simEngine = buildLooperSimEngine();
+    const beat2 = ARC_BEATS.find((b) => b.id === 'beat-2')!;
+    const { elapsedSimulated } = runUntil({
+      engine: simEngine,
+      until: () => beat2.predicate(simEngine),
+      maxSimTime: 600,
+      tickDelta: 0.05,
+    });
+
+    const corrected = simulatedFireSeconds(projection, 0.05);
+    const driftSec = corrected - elapsedSimulated;
+    // Projector should overshoot (slack from static-cost), not undershoot.
+    expect(driftSec).toBeGreaterThanOrEqual(0);
+    // 5 ticks @ 20 TPS = 250ms.
+    expect(driftSec).toBeLessThanOrEqual(0.25);
   });
 });
 
@@ -116,12 +156,13 @@ describe('looper balance projector — projectArc beat-2 (loop boundary fire)', 
       const arc = projectArc(DEFAULT_LOOPER_DATA, DEFAULT_PARAMS, {
         breakPredicate: beat2Predicate(1),
         maxLoops: 5,
+        tuning: SMALL_PLAN_TUNING,
       });
       expect(arc.endMode).toBe('predicate');
       expect(arc.fireSec).toBeGreaterThan(0);
       const corrected = arcSimulatedFireSeconds(arc, tickDelta);
 
-      const simEngine = buildLooperSimEngine();
+      const simEngine = buildLooperSimEngine(undefined, { tunableScope: SMALL_PLAN_OVERRIDE });
       const beat2 = ARC_BEATS.find((b) => b.id === 'beat-2');
       const { terminated, elapsedSimulated } = runUntil({
         engine: simEngine,

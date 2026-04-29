@@ -147,15 +147,14 @@ type KnobAssignment = TunableKnob | PlannerParamKnob;
 
 const KNOBS: Record<string, Record<string, KnobAssignment>> = {
   'farm-mana-pool': {
-    // Beat-2 — "first loop ends". Cost-like knob: higher initialMana →
-    // later loop end. Forward-direction bisect.
-    'beat-2': {
-      kind: 'tunable',
-      key: 'balance/initialMana',
-      lo: 50,
-      hi: 2000,
-      field: 'balance.initialMana',
-    },
+    // Beat-2 demoted to VERIFY_ONLY by OL-770 rung-1 retune — under (γ)
+    // chunked Pass-5 (OL-768), `balance/initialMana` becomes a
+    // step-function surface (15s plateau ↦ 45s plateau ↦ 75s plateau as
+    // budget admits successive roam-chunks); no midpoint to bisect to.
+    // Beats 4/5 are this strategy's tuned beats; 7/8 require wilds-zone
+    // engagement which farm-mana-pool doesn't pursue (verified during
+    // OL-770 ramp by sweeping initialMana up to 5000 — beat-7 only fires
+    // at unrealistic budgets and out-of-window low).
     // 'beat-4': { kind: 'tunable', key: 'actions/crack/rewardRatio', ... }, // ramp ↑
     // 'beat-5': { kind: 'planner-param', path: 'manaUpOversupplyFactor', ... }, // ramp ↑
   },
@@ -176,6 +175,15 @@ const KNOBS: Record<string, Record<string, KnobAssignment>> = {
 //   - beat-1 — "queue ticks AND mana < initialMana": fires within ~1 tick
 //     of any non-empty queue under any reasonable initialMana. Onboarding
 //     signal, not a tuning surface.
+//   - beat-2 — "first loop ends": under (γ) chunked Pass-5 (OL-768),
+//     `balance/initialMana` becomes a step-function surface (15s plateau ↦
+//     45s plateau ↦ 75s plateau as budget admits successive roam-chunks).
+//     The 45s plateau corresponds to the canonical {roam:2, trail:2} +
+//     chunkSize=4 plan: trainers (300 ticks) + 1 roam-chunk (600 ticks) =
+//     900 ticks = 45s — fitted exactly. No continuous-knob alternative
+//     found in rung-1 sweep: `actions/roam/manaCost` shifts beat-2
+//     monotonically but cross-couples beats 7/8 too strongly (driving
+//     them out of [30m, 60m] / [60m, 120m] windows).
 //   - beat-3 — "any progressVar level ≥ 1": determined by the moment a
 //     visible progression action's xp curve crosses level 0→1 (4 completions
 //     under the canonical curve). f(initialMana), f(progressionTarget.<id>),
@@ -191,7 +199,7 @@ const KNOBS: Record<string, Record<string, KnobAssignment>> = {
 // content rebalance (manaCost magnitudes, xp curve shape, prereq web), not
 // solver extension.
 
-const VERIFY_ONLY_BEATS = new Set<string>(['beat-1', 'beat-3', 'beat-6']);
+const VERIFY_ONLY_BEATS = new Set<string>(['beat-1', 'beat-2', 'beat-3', 'beat-6']);
 
 // ─── Ramp gates ──────────────────────────────────────────────────────────
 //

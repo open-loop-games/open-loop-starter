@@ -95,7 +95,7 @@ Automation has **no beat** in this archetype: queue auto-dispatch, plan-survives
 | # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
 |---|------|-----------------|-------------------|------------------------|-----------------|
 | 1 | First action ticking, mana visibly draining | 0:00–0:10 | `queue.current !== null` AND `mana < initialMana` | Action progress bar advances; mana gauge ticks down | Onboarding — confirms the core "actions cost time" feedback |
-| 2 | First loop ends | 0:10–0:45 | `loopCount >= 1` | Reset flash; queue plan re-readies; capability Talent XP shows tiny non-zero | Introduces the reset cadence — Level XP cleared, Talent XP carries, plan survives |
+| 2 | First loop ends | 0:10–1:00 | `loopCount >= 1` | Reset flash; queue plan re-readies; capability Talent XP shows tiny non-zero | Introduces the reset cadence — Level XP cleared, Talent XP carries, plan survives |
 | 3 | First persistent-progress tick | 0:30–2:00 | any progressVar `level >= 1` (e.g., 1% Roam) | Progress readout ticks past first whole percent; first regularVar pool unlocks (e.g., first cache available to crack) | Persistent track introduced — the cross-loop accumulator that drives manapot pool sizing |
 | 4 | First manapot harvest | 1:00–4:00 | first "good" hit on a regular-pool action grants mana (every Nth check, vanilla `rewardRatio: 10`) | Mana pool extends mid-loop; gauge climbs above `initialMana`; `manaAdded` readout updates | The canonical mid-loop budget extension — turns the 12.5s fresh loop into a habitable arc |
 | 5 | First gold→mana exchange used | 3:00–10:00 | basic exchange action completes with `gold > 0` consumed | Gold readout zeroes; mana extends in one burst rather than per-completion drip | Secondary budget-extension axis — gold accumulator from regular pool, basic action converts to mana |
@@ -375,7 +375,7 @@ import { describe, it } from 'vitest';
 
 describe('looper — beat map', () => {
   it.todo('beat 1: first action ticks and mana drains within 0–10 s');
-  it.todo('beat 2: first loop ends within 10–45 s');
+  it.todo('beat 2: first loop ends within 10 s – 1 min');
   it.todo('beat 3: first persistent-progress tick within 30 s – 2 min');
   it.todo('beat 4: first manapot harvest within 1–4 min');
   it.todo('beat 5: first gold→mana exchange used within 3–10 min');
