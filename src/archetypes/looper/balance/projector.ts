@@ -736,11 +736,17 @@ export function projectArc(
     tps?: number;
     initialState?: SyntheticLooperState;
     tuning?: ResolvedLooperTunables;
+    /**
+     * Plan generator override. Discovery seam for fork-characterization
+     * scripts (OL-768 (γ) chunked-Pass-5 variant). Default: `generatePlan`.
+     */
+    planFn?: (accessor: PlannerAccessor, params: PlannerParams) => PlannedItem[];
   },
 ): ArcProjectionResult {
   const tps = options?.tps ?? DEFAULT_TPS;
   const maxLoops = options?.maxLoops ?? 100;
   const tuning = options?.tuning;
+  const planFn = options?.planFn ?? generatePlan;
   const state = options?.initialState ?? createSyntheticInitialState(data, tuning);
   const loops: LoopIntegrationResult[] = [];
   let totalElapsedSec = 0;
@@ -760,7 +766,7 @@ export function projectArc(
 
   for (let i = 0; i < maxLoops; i++) {
     const accessor = createSyntheticAccessor(state, data, tuning);
-    const plan = generatePlan(accessor, params);
+    const plan = planFn(accessor, params);
     const vectors = projectActionVectors(accessor);
 
     if (plan.length === 0) {
