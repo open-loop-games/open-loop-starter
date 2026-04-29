@@ -65,7 +65,7 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
           if (!p) return false;
           return Decimal.gte(p.count.value, count);
         },
-        unlockVisible: (id) => unlocks.getPurchasable(id)?.bought.value ?? false,
+        unlockVisible: (id) => unlocks.getPurchasable(id)?.active.value ?? false,
         sceneVariantUnlocked: (id) => scene.zones.isUnlocked(id),
         ownsEveryProducer: () =>
           data.producers.every((p) => {

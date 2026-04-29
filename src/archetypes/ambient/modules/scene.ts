@@ -73,7 +73,7 @@ export function createSceneModule(data: AmbientData): EngineModule {
         const purchasable = unlocks.getPurchasable(def.id);
         if (!purchasable) continue;
         watch(
-          () => purchasable.bought.value,
+          () => purchasable.active.value,
           (bought) => {
             if (bought) zones.unlock(variantId);
           },

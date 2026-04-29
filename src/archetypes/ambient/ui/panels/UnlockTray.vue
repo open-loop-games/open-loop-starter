@@ -44,7 +44,7 @@ function describeReveals(def: UnlockDef): string {
 const cells = computed<Cell[]>(() =>
   data.unlocks.map((def) => {
     const purchasable = unlocks.getPurchasable(def.id);
-    const earned = purchasable?.bought.value === true;
+    const earned = purchasable?.active.value === true;
     return {
       id: def.id,
       def,

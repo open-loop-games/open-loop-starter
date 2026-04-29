@@ -67,7 +67,7 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  *   first cost paid is the second planter unit.
  * - 3: first non-default-visible unlock fires — the `coop-built` unlock by
  *   default content (smallest threshold > 0 among non-default unlocks).
- *   Reads via `unlocks.getPurchasable('coop-built').bought.value`.
+ *   Reads via `unlocks.getPurchasable('coop-built').active.value`.
  * - 5: mid producer owned AND first scene-variant unlocked — pond is the
  *   middle tier (index 2 of 5); spring-arrives is the first scene-variant
  *   unlock by threshold. Conjunction matches doc § 4: "producers[mid].count
@@ -129,7 +129,7 @@ function producerCountAtLeast(engine: Engine, id: string, n: number): boolean {
 
 function unlockBought(engine: Engine, id: string): boolean {
   const unlocks = engine.tryInject(UnlocksKey);
-  return unlocks?.getPurchasable(id)?.bought.value ?? false;
+  return unlocks?.getPurchasable(id)?.active.value ?? false;
 }
 
 function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {

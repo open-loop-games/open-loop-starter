@@ -53,7 +53,7 @@ export const AMBIENT_IDENTITY = {
    * shape (resource ≥ threshold AND deepest scene-variant unlock visible)
    * is the archetype centerpiece per ambient.md § 4 beat 7.
    */
-  signatureMetric: 'primary >= balance.prestigeEligibleThreshold AND deepestSceneUnlock.bought',
+  signatureMetric: 'primary >= balance.prestigeEligibleThreshold AND deepestSceneUnlock.active',
 } as const;
 
 /**

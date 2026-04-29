@@ -233,7 +233,7 @@ describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
     addResource(income, Decimal.fromValue(500));
     const r1 = shop.getPurchasable('refinery-1')!;
     r1.purchase(1);
-    expect(r1.bought.value).toBe(true);
+    expect(r1.active.value).toBe(true);
     expect(r2.paybackSeconds.value).toBeCloseTo(350 / (10 * 0.4), 1);
   });
 

@@ -49,7 +49,7 @@ export function createArcModule(data: ProducerData): EngineModule {
         }
         for (const id of arcUpgradeIds) {
           const purchasable = upgrades.getPurchasable(id);
-          if (!purchasable?.bought.value) return false;
+          if (!purchasable?.active.value) return false;
         }
         return true;
       });

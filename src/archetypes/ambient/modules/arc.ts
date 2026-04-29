@@ -65,7 +65,7 @@ export function createArcModule(data: AmbientData): EngineModule {
         if (!Decimal.gte(primary.value, prestigeThreshold.value)) return false;
         if (!deepestUnlockId) return false;
         const purchasable = unlocks.getPurchasable(deepestUnlockId);
-        return purchasable?.bought.value ?? false;
+        return purchasable?.active.value ?? false;
       });
 
       watch(

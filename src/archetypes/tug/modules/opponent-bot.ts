@@ -234,7 +234,7 @@ export function createOpponentBotModule(data: TugData, side: Side): EngineModule
           const def = data.incomeUpgrades[tierIdx];
           const p = upgrades.getPurchasable(def.id);
           if (!p) break;
-          if (p.bought.value) continue;
+          if (p.active.value) continue;
           const cost = Number(p.getCost(1));
           const inc = Number(income.value);
           if (tierIdx < persona.saveForUpgradeTiers) {

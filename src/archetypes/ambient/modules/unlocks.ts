@@ -45,12 +45,12 @@ const readThreshold = (threshold: Threshold): DecimalSource =>
  * Visibility unlocks gate on cumulative produced (lifetime), not the current
  * resource value — spending sprouts on producers must not re-hide unlocked
  * content. Each unlock is a `Purchasable` whose only requirement is a
- * boolean lifetime threshold; `setupAutoPurchase` flips `bought.value = true`
+ * boolean lifetime threshold; `setupAutoPurchase` flips `active.value = true`
  * the first tick the requirement is met. No cost is charged — soft reveal,
  * not hard gate.
  *
- * Once `bought.value` flips, sibling modules read it directly:
- * - `arc.ts` reads `unlocks.getPurchasable(deepestUnlockId).bought.value` for
+ * Once `active.value` flips, sibling modules read it directly:
+ * - `arc.ts` reads `unlocks.getPurchasable(deepestUnlockId).active.value` for
  *   beat-7 closure detection.
  * - `scene.ts` watches scene-variant-reveal entries and bridges to ZoneSystem.
  * - `achievements.ts`'s `unlockVisible(id)` predicate routes through the

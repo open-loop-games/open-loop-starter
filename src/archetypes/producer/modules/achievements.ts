@@ -50,7 +50,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
           if (!p) return false;
           return Decimal.gte(p.count.value, count);
         },
-        upgradeBought: (id) => upgrades.getPurchasable(id)?.bought.value ?? false,
+        upgradeBought: (id) => upgrades.getPurchasable(id)?.active.value ?? false,
         clickCountAtLeast: (count) => clickState.clickCount.value >= count,
         ownsEveryProducer: () =>
           data.producers
@@ -62,7 +62,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
         allTier1UpgradesBought: () =>
           data.producers
             .filter((p) => p.trigger === 'continuous')
-            .every((p) => upgrades.getPurchasable(`${p.id}-boost-i`)?.bought.value ?? false),
+            .every((p) => upgrades.getPurchasable(`${p.id}-boost-i`)?.active.value ?? false),
         secondsSinceLastClick: () => clickState.elapsedSec.value - clickState.lastClickSec.value,
       };
 

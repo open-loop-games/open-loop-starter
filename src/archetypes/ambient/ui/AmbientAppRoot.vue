@@ -53,7 +53,7 @@ const WELCOME_BACK_UNLOCK_ID = 'returns-welcomed';
 function maybeShowWelcomeBack(gapSec: number): void {
   if (gapSec < WELCOME_BACK_MIN_GAP_SEC) return;
   const unlocks = engine.tryInject(UnlocksKey);
-  if (unlocks?.getPurchasable(WELCOME_BACK_UNLOCK_ID)?.bought.value !== true) return;
+  if (unlocks?.getPurchasable(WELCOME_BACK_UNLOCK_ID)?.active.value !== true) return;
   const id = stack.push(WelcomeBackOverlay, {
     gapSec,
     onClose: () => stack.remove(id),
@@ -121,7 +121,7 @@ function returnToSlots(): void {
 const almanacUnlocked = computed(() => {
   if (currentScreen.value !== Screen.Game) return false;
   const unlocks = engine.tryInject(UnlocksKey);
-  return unlocks?.getPurchasable('garden-almanac')?.bought.value === true;
+  return unlocks?.getPurchasable('garden-almanac')?.active.value === true;
 });
 
 function getActiveModules(): EngineModule[] {

@@ -60,7 +60,7 @@ export function useIncomeUpgrades(side: Side): IncomeUpgradesView {
       out.push({
         def,
         purchasable,
-        bought: computed(() => purchasable.bought.value),
+        bought: computed(() => purchasable.active.value),
         canPurchase: computed(() => purchasable.canPurchase.value),
         cost: computed(() => Number(purchasable.getCost(1))),
         paybackSeconds: metrics.paybackSeconds,

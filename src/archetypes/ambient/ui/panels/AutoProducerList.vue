@@ -25,7 +25,7 @@ for (const unlock of data.unlocks) {
 function isVisible(row: AutoProducerRow): boolean {
   const unlockId = producerUnlockId.get(row.def.id);
   if (!unlockId) return true;
-  return unlocks.getPurchasable(unlockId)?.bought.value === true;
+  return unlocks.getPurchasable(unlockId)?.active.value === true;
 }
 
 const visibleRows = computed(() => rows.value.filter(isVisible));

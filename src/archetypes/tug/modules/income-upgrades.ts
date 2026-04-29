@@ -148,7 +148,7 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
               createBooleanRequirement({
                 requirement: () => {
                   const prior = incomeUpgrades.getPurchasable(priorId);
-                  return prior != null && prior.bought.value;
+                  return prior != null && prior.active.value;
                 },
                 description: `Requires ${priorName}`,
               }),

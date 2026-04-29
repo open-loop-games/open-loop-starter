@@ -32,7 +32,7 @@ export function useUpgrades(): ComputedRef<UpgradeGroups> {
     for (const entry of upgrades.getAll()) {
       const row: UpgradeRow = {
         def: entry.def,
-        bought: entry.purchasable.bought,
+        bought: entry.purchasable.active,
         canPurchase: entry.purchasable.canPurchase,
         purchase: () => {
           entry.purchasable.purchase();

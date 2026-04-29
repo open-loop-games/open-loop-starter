@@ -131,7 +131,7 @@ function producerCountAtLeast(engine: Engine, id: string, n: number): boolean {
 
 function upgradeBought(engine: Engine, id: string): boolean {
   const upgrades = engine.tryInject(UpgradesKey);
-  return upgrades?.getPurchasable(id)?.bought.value ?? false;
+  return upgrades?.getPurchasable(id)?.active.value ?? false;
 }
 
 function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {
