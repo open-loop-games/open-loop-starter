@@ -1,7 +1,7 @@
 /**
  * Looper sim-bot — phase-conditioned plan generator + engine-systems substrate.
  *
- * Wires three layers:
+ * Wires four layers:
  *   1. **Planner** (`./planner.ts`) — closed-form backward-induction over
  *      visible actions, parameterized by `PlannerParams`. Produces a queue
  *      plan on every `loop.afterRestart`.
@@ -9,22 +9,38 @@
  *      `talentLevelSum`) feeding solver verification + BestOf.
  *   3. **BestOf** — per-metric high-water marks with `captureStrategy`
  *      returning the planner-params snapshot that produced the run.
+ *   4. **RecommendationSystem** — per-loop strategy arbitration on
+ *      `loop.afterRestart`. autoApply pushes the winning strategy's
+ *      planner-param snapshot into `paramsHandle`, so the next loop's
+ *      `applyPlan` reads the recommended params.
  *
- * Goal-strategies + RecommendationSystem are deferred to leaf 3b. The 3a
- * canonical bot ships with a single planner-params set (`DEFAULT_PARAMS`)
- * stored as a Persistent ref in the bot module's namespace; the solver
- * perturbs values via `pushScope('bot/params/...')` and the snapshot
- * captures the perturbed values for replay arbitration when 3b lands.
+ * Strategy roster (3b — minimum-viable 1+1; expansion tracked in OL-756):
+ *   - `farm-mana-pool` (bespoke override) — phase-gated to loops 1–4.
+ *      Biases progression toward mana-feeding progressVars (roam→cache,
+ *      trail→wellspring); skips errand-feeding acquaint and trail-prereq'd
+ *      mark. Drives exploration of the mana-pool growth axis.
+ *   - `best-replay:manaAdded` (engine-native via `createBestReplayStrategy`)
+ *     — phase-gated to loops 5+ via `minLoops: 5`. Replays the snapshot
+ *      that produced the highest `manaAdded` so far. Cavernous II shape
+ *      lifted to params-replay (the planner regenerates the plan against
+ *      richer state, so replay improves monotonically).
+ *
+ * **Why bespoke for the override strategy:** the engine's
+ * `createGoalStrategy` is per-metric best-replay (`recommend()` returns
+ * `entry.strategySnapshot`), not fixed-params override. To force "use
+ * THESE specific params next loop" we author a `RecommendationStrategyDef`
+ * directly with a custom `recommend()` returning the override snapshot.
  *
  * Persistence layout:
  *
  * ```
  * balance-bot/
- *   plannerParams: PlannerParams  // baseline = DEFAULT_PARAMS
+ *   plannerParams: PlannerParams  // baseline = DEFAULT_PARAMS, mutated
+ *                                 //   by RecommendationSystem.applySnapshot
  * balance-bot/best-of/
  *   store: Record<metricKey, SerializedBestOfEntry>
- * balance-bot/loop-log/
- *   (uses LoopLog's internal in-memory ring; no persistent state)
+ * balance-bot/recommendation-system/  (auto-namespaced)
+ *   storedRecommendation, autoApply: true
  * ```
  *
  * Each `buildLooperSimEngine()` call gets a unique `persistenceNamespace`
@@ -34,7 +50,9 @@
 import {
   Decimal,
   createBestOf,
+  createBestReplayStrategy,
   createLoopLog,
+  createRecommendationSystem,
   persistent,
   withPersistentContext,
   type BestOf,
@@ -43,6 +61,10 @@ import {
   type EngineModule,
   type InjectionKey,
   type LoopLog,
+  type RecommendationContext,
+  type RecommendationStrategyDef,
+  type RecommendationSystem,
+  type State,
 } from 'open-loop-engine';
 import {
   ActionsKey,
@@ -80,6 +102,84 @@ export interface BalanceBotParamsHandle {
 export const BalanceBotParamsKey: InjectionKey<BalanceBotParamsHandle> = Symbol(
   'looper/balance-bot/params',
 ) as InjectionKey<BalanceBotParamsHandle>;
+
+export const BalanceBotRecommendationKey: InjectionKey<RecommendationSystem> = Symbol(
+  'looper/balance-bot/recommendation',
+) as InjectionKey<RecommendationSystem>;
+
+// ─── Strategy override params ─────────────────────────────────────────────
+
+/**
+ * `farm-mana-pool` override — bias progression toward mana-feeding
+ * progressVars (roam → cache, trail → wellspring + forage), skip the
+ * errand-feeding acquaint track. Stretches the mana-pool growth axis
+ * across early loops so subsequent loops have productive manapot pools.
+ *
+ * `acquaint: 0` and `mark: 0` skip those progressVars entirely (the
+ * planner's `if (targetDelta <= 0) continue;` branch). `mark` is
+ * trail-prereq'd anyway in the canonical content set so it usually
+ * isn't visible during this strategy's phase, but the explicit zero
+ * makes the intent legible and survives content reshapes.
+ *
+ * Setting `manaUpOversupplyFactor` higher would just add slack to the
+ * static-cost budget cap — orthogonal to mana-pool farming. Stays at
+ * 1.0; if probes show benefit from slack here, perturb separately via
+ * solver pushScope.
+ */
+const FARM_MANA_POOL_PARAMS: PlannerParams = {
+  progressionTarget: { roam: 2, trail: 2, acquaint: 0, mark: 0 },
+  manaUpOversupplyFactor: 1.0,
+  tradeThreshold: 100,
+};
+
+// ─── Strategy factories ───────────────────────────────────────────────────
+
+/**
+ * Phase-gate boundaries for the 3b roster. Hardcoded first-cut constants
+ * — refinement (and possible promotion to a tunable surface) tracked in
+ * OL-756. The numbers are picked so farm-mana-pool's exploration window
+ * is disjoint from best-replay's exploitation window: no overlap, no
+ * magnitude conflict between fixed-score override strategies and
+ * best-replay's metric-perSecond score.
+ */
+const PHASE_FARM_MANA_POOL_MAX_LOOP = 4;
+const PHASE_BEST_REPLAY_MIN_LOOPS = 5;
+
+/**
+ * Bespoke override strategy: recommends a fixed `PlannerParams` snapshot
+ * during a phase-gated window. Not engine-native (`createGoalStrategy`
+ * replays best-of-metric snapshots, doesn't override) — written directly
+ * against `RecommendationStrategyDef` so we can return arbitrary params.
+ *
+ * `score: () => 100` is a fixed weight chosen below typical best-replay
+ * `entry.perSecond.toNumber()` magnitudes; combined with disjoint phase
+ * gates it's belt-and-suspenders against accidental overlap.
+ */
+function createFarmManaPoolStrategy(): RecommendationStrategyDef {
+  const params = FARM_MANA_POOL_PARAMS;
+  return {
+    id: 'farm-mana-pool',
+    canApply(ctx: RecommendationContext) {
+      return ctx.loop.count.value >= 1 && ctx.loop.count.value <= PHASE_FARM_MANA_POOL_MAX_LOOP;
+    },
+    score: () => 100,
+    recommend(ctx: RecommendationContext) {
+      const lastEntry = ctx.loopLog.history.value[ctx.loopLog.history.value.length - 1];
+      const lastManaAdded = lastEntry?.deltas.find((d) => d.key === 'manaAdded');
+      const current = lastManaAdded?.delta ?? Decimal.dZero;
+      return {
+        snapshot: { plannerParams: params } as unknown as State,
+        rationale: {
+          strategyId: 'farm-mana-pool',
+          metrics: {
+            manaAdded: { current, projected: current, delta: Decimal.dZero },
+          },
+          summary: 'Bias progression to mana-feeding progressVars; skip errand track.',
+        },
+      };
+    },
+  };
+}
 
 // ─── EngineModule factory ─────────────────────────────────────────────────
 
@@ -170,6 +270,43 @@ export function createBalanceBotModule(): EngineModule {
         captureStrategy: () => ({ plannerParams: plannerParams.value }),
       });
 
+      // RecommendationSystem — composes LoopLog + BestOf + Loop into
+      // strategy arbitration on `loop.afterRestart`. Subscribes to the loop
+      // INSIDE its constructor (recommendation.ts:466), so the order of
+      // operations on each restart becomes:
+      //
+      //   1. loop emits afterRestart
+      //   2. RecommendationSystem.evaluate() picks winner, applySnapshot
+      //      writes new params via paramsHandle (autoApply = true)
+      //   3. Bot's afterRestart subscriber (registered AFTER, below) fires
+      //      applyPlan → reads the (possibly updated) params → writes new
+      //      queue plan
+      //
+      // Order is load-bearing: if applyPlan ran before evaluate, the plan
+      // would use stale params for the loop the recommendation was meant
+      // to influence.
+      const recommendation = createRecommendationSystem({
+        id: 'balance-bot/recommendation',
+        loop,
+        loopLog,
+        bestOf,
+        getCurrentSnapshot: () => ({ plannerParams: plannerParams.value }) as unknown as State,
+        applySnapshot: (snap: State) => {
+          // Snapshot shape: { plannerParams: PlannerParams }. Engine treats
+          // State as opaque; we trust our own captureStrategy + strategy
+          // recommend() to put plannerParams at the expected path.
+          const next = (snap as unknown as { plannerParams?: PlannerParams }).plannerParams;
+          if (next) plannerParams.value = next;
+        },
+        strategies: [
+          createFarmManaPoolStrategy(),
+          createBestReplayStrategy('manaAdded', { minLoops: PHASE_BEST_REPLAY_MIN_LOOPS }),
+        ],
+      });
+      // Sim-bot mode: auto-apply the winning recommendation. Production
+      // play-assist would surface advisorily and let the player apply.
+      recommendation.autoApply.value = true;
+
       // Plan trigger — fire after each restart. The fresh restart has
       // already run thingsToReset + onRestart in loop.ts, so action
       // adjustedTicks now reflects the post-retention state. Generate plan
@@ -189,8 +326,9 @@ export function createBalanceBotModule(): EngineModule {
       };
 
       // Subsequent-loop trigger: regenerate on every afterRestart. State
-      // has shifted (talent compounded, progressVar levels persisted), so
-      // the planner sees richer content and produces a better plan.
+      // has shifted (talent compounded, progressVar levels persisted) AND
+      // RecommendationSystem may have just rewritten plannerParams, so
+      // the planner reads the latest view.
       loop.on('afterRestart', () => {
         applyPlan?.();
       });
@@ -198,6 +336,7 @@ export function createBalanceBotModule(): EngineModule {
       ctx.provide(BalanceBotLoopLogKey, loopLog);
       ctx.provide(BalanceBotBestOfKey, bestOf);
       ctx.provide(BalanceBotParamsKey, paramsHandle);
+      ctx.provide(BalanceBotRecommendationKey, recommendation);
     },
     connect() {
       // Initial plan — fires after all module connects have run, so the

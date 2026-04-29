@@ -11,7 +11,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { runUntil } from 'open-loop-engine';
-import { buildLooperSimEngine, BalanceBotBestOfKey, BalanceBotLoopLogKey } from '../balance/bot';
+import {
+  buildLooperSimEngine,
+  BalanceBotBestOfKey,
+  BalanceBotLoopLogKey,
+  BalanceBotParamsKey,
+  BalanceBotRecommendationKey,
+} from '../balance/bot';
 import { LoopKey, QueueKey } from '../modules';
 
 describe('looper balance bot — wiring smoke', () => {
@@ -91,5 +97,60 @@ describe('looper balance bot — wiring smoke', () => {
     // queue still has items, planner ran without throwing.
     expect(queue.items.value.length).toBeGreaterThan(0);
     void initialPlanIds;
+  });
+
+  // ─── 3b — RecommendationSystem wiring ─────────────────────────────────
+
+  it('RecommendationSystem is provided with autoApply enabled', () => {
+    const engine = buildLooperSimEngine();
+    const rec = engine.tryInject(BalanceBotRecommendationKey);
+    expect(rec).toBeDefined();
+    expect(rec!.autoApply.value).toBe(true);
+    // Two strategies: farm-mana-pool override + best-replay:manaAdded.
+    expect(rec!.strategies.length).toBe(2);
+    const ids = rec!.strategies.map((s) => s.id).sort();
+    expect(ids).toEqual(['best-replay:manaAdded', 'farm-mana-pool']);
+  });
+
+  it('farm-mana-pool override applies and rewrites planner-params during early loops', () => {
+    const engine = buildLooperSimEngine();
+    const params = engine.tryInject(BalanceBotParamsKey)!;
+    const loop = engine.tryInject(LoopKey)!;
+    // Default at install: progressionTarget = {} (planner falls through to
+    // default +1 per visible progressVar).
+    expect(params.read().progressionTarget).toEqual({});
+    runUntil({
+      engine,
+      until: () => loop.count.value >= 2,
+      maxSimTime: 120,
+      tickDelta: 1,
+    });
+    // farm-mana-pool's canApply is `loop.count >= 1 && <= 4` — it fires
+    // after loop 1 ends (afterRestart for loop 2). The override snapshot
+    // sets progressionTarget = {roam: 2, trail: 2, acquaint: 0, mark: 0}.
+    expect(params.read().progressionTarget).toEqual({
+      roam: 2,
+      trail: 2,
+      acquaint: 0,
+      mark: 0,
+    });
+  });
+
+  it('lastRecommendation populated after first applicable strategy fires', () => {
+    const engine = buildLooperSimEngine();
+    const loop = engine.tryInject(LoopKey)!;
+    const rec = engine.tryInject(BalanceBotRecommendationKey)!;
+    runUntil({
+      engine,
+      until: () => loop.count.value >= 2,
+      maxSimTime: 120,
+      tickDelta: 1,
+    });
+    const last = rec.lastRecommendation.value;
+    expect(last).not.toBeNull();
+    // farm-mana-pool fires first (loops 1-4); best-replay needs minLoops=5
+    // and won't apply until loop 6+.
+    expect(last!.strategyId).toBe('farm-mana-pool');
+    expect(last!.applied).toBe(true);
   });
 });
