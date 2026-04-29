@@ -1,5 +1,4 @@
-import { inject } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { LooperData } from '../data/types';
 import { LooperDataKey } from '../modules';
 
@@ -9,10 +8,5 @@ import { LooperDataKey } from '../modules';
  * skill / zone lookups, workbench picker labels.
  */
 export function useLooperData(): LooperData {
-  const engine = inject<Engine>('engine');
-  const data = engine?.tryInject(LooperDataKey);
-  if (!data) {
-    throw new Error('useLooperData() called outside an active looper engine');
-  }
-  return data;
+  return useModule(LooperDataKey);
 }

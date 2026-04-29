@@ -1,12 +1,14 @@
-import { computed, ref, type ComputedRef, type Ref } from 'vue';
+import { computed, ref } from 'vue';
 import {
   Decimal,
   GameLoopKey,
   createSequencer,
   persistent,
   withPersistentContext,
+  type ComputedRef,
   type DecimalSource,
   type EngineModule,
+  type EngineRef,
   type GameLoop,
   type InjectionKey,
   type Loop,
@@ -44,9 +46,9 @@ export const QueueKey: InjectionKey<Sequencer<QueueItemMeta>> = Symbol(
  * mutations (incloneution `actions.ts:78-80` documents the same hack).
  * Components watching this counter re-render on enqueue / remove / reorder.
  */
-export const QueueVersionKey: InjectionKey<Ref<number>> = Symbol(
+export const QueueVersionKey: InjectionKey<EngineRef<number>> = Symbol(
   'looper/queue-version',
-) as InjectionKey<Ref<number>>;
+) as InjectionKey<EngineRef<number>>;
 
 /**
  * Set true when the cursor exhausts the plan with no fallback available.
@@ -54,9 +56,9 @@ export const QueueVersionKey: InjectionKey<Ref<number>> = Symbol(
  * "empty queue ⇒ loop ends" matches vanilla idle-loops `actions.js:103-108`.
  * Cleared in `LooperQueueModule.resetForLoop` on loop restart.
  */
-export const QueueShouldRestartKey: InjectionKey<Ref<boolean>> = Symbol(
+export const QueueShouldRestartKey: InjectionKey<EngineRef<boolean>> = Symbol(
   'looper/queue-should-restart',
-) as InjectionKey<Ref<boolean>>;
+) as InjectionKey<EngineRef<boolean>>;
 
 /** Persistent toggle for the canonical "Repeat Last Action" UX (vanilla `actions.js:137-147`). */
 export const QueueRepeatLastActionKey: InjectionKey<Persistent<boolean>> = Symbol(

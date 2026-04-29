@@ -1,5 +1,6 @@
-import { computed, inject, type ComputedRef } from 'vue';
-import type { Engine, Purchasable } from 'open-loop-engine';
+import { computed } from 'vue';
+import type { ComputedRef, Purchasable } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { UpgradeDef } from '../data/types';
 import { UpgradesKey } from '../modules';
 
@@ -20,11 +21,7 @@ export interface UpgradeGroups {
 /** Grouped upgrade rows — per-producer upgrades keyed by producer id,
  *  plus click-targeted and global groups. */
 export function useUpgrades(): ComputedRef<UpgradeGroups> {
-  const engine = inject<Engine>('engine');
-  const upgrades = engine?.tryInject(UpgradesKey);
-  if (!upgrades) {
-    throw new Error('useUpgrades() called outside an active producer engine');
-  }
+  const upgrades = useModule(UpgradesKey);
 
   return computed(() => {
     const perProducer = new Map<string, UpgradeRow[]>();
@@ -34,8 +31,8 @@ export function useUpgrades(): ComputedRef<UpgradeGroups> {
     for (const entry of upgrades.getAll()) {
       const row: UpgradeRow = {
         def: entry.def,
-        bought: entry.purchasable.bought as unknown as ComputedRef<boolean>,
-        canPurchase: entry.purchasable.canPurchase as unknown as ComputedRef<boolean>,
+        bought: entry.purchasable.bought,
+        canPurchase: entry.purchasable.canPurchase,
         purchase: () => {
           entry.purchasable.purchase();
         },

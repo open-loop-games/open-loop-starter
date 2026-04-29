@@ -1,5 +1,5 @@
-import { inject, type ComputedRef } from 'vue';
-import type { Engine, Persistent } from 'open-loop-engine';
+import type { ComputedRef, Persistent } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import { LaneKey, type LaneApi, type Side, type UnitInstance } from '../modules';
 
 export interface LaneView {
@@ -24,11 +24,7 @@ export interface LaneView {
  * a position-normalizer for the LaneStrip's left→right rendering.
  */
 export function useLane(): LaneView {
-  const engine = inject<Engine>('engine');
-  const lane = engine?.tryInject(LaneKey);
-  if (!lane) {
-    throw new Error('useLane() called outside an active tug engine');
-  }
+  const lane = useModule(LaneKey);
   return {
     units: lane.units,
     frontline: lane.frontline,

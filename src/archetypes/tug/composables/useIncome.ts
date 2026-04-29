@@ -1,5 +1,6 @@
-import { inject, computed, type ComputedRef } from 'vue';
-import type { DecimalSource, Engine, Resource } from 'open-loop-engine';
+import { computed } from 'vue';
+import type { ComputedRef, DecimalSource, Resource } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import { IncomeKey, type Side } from '../modules';
 
 export interface IncomeRow {
@@ -15,11 +16,7 @@ export interface IncomeRow {
  * `income.ts` ticks; readers here just inject and surface the live ref.
  */
 export function useIncome(side: Side): IncomeRow {
-  const engine = inject<Engine>('engine');
-  const resource = engine?.tryInject(IncomeKey[side]);
-  if (!resource) {
-    throw new Error(`useIncome(${side}) called outside an active tug engine`);
-  }
+  const resource = useModule(IncomeKey[side]);
   return {
     side,
     resource,

@@ -1,5 +1,6 @@
-import { computed, inject, type ComputedRef } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { computed } from 'vue';
+import type { ComputedRef } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { ZoneDef } from '../data/types';
 import { useLooperData } from './useLooperData';
 import { ZonesKey } from '../modules';
@@ -20,11 +21,7 @@ export interface ZonesView {
 }
 
 export function useZones(): ZonesView {
-  const engine = inject<Engine>('engine');
-  const zones = engine?.tryInject(ZonesKey);
-  if (!zones) {
-    throw new Error('useZones() called outside an active looper engine');
-  }
+  const zones = useModule(ZonesKey);
   const data = useLooperData();
 
   const rows = computed<ZoneRow[]>(() =>

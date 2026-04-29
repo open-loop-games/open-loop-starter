@@ -1,11 +1,12 @@
-import { computed, inject, type ComputedRef } from 'vue';
+import { computed } from 'vue';
 import {
   Decimal,
+  type ComputedRef,
   type DecimalSource,
-  type Engine,
   type ModifierChain,
   type Purchasable,
 } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { ProducerDef } from '../data/types';
 import { BuildingsKey } from '../modules';
 
@@ -33,11 +34,7 @@ export interface ProducerRow {
  * or call `purchaseMax()` for the full affordable amount.
  */
 export function useProducers(): ComputedRef<ProducerRow[]> {
-  const engine = inject<Engine>('engine');
-  const buildings = engine?.tryInject(BuildingsKey);
-  if (!buildings) {
-    throw new Error('useProducers() called outside an active producer engine');
-  }
+  const buildings = useModule(BuildingsKey);
 
   return computed(() => {
     const rows: ProducerRow[] = [];
@@ -48,9 +45,9 @@ export function useProducers(): ComputedRef<ProducerRow[]> {
       const maxAffordable = computed(() => repeatable?.amountToPurchase.value ?? Decimal.dZero);
       rows.push({
         def: entry.def,
-        rate: producer.computedRate as unknown as ComputedRef<DecimalSource>,
+        rate: producer.computedRate,
         rateChain: producer.rateChain,
-        count: producer.count as unknown as ComputedRef<DecimalSource>,
+        count: producer.count,
         beatSeconds: computed(() => producer.purchaseBeatSeconds.value),
         maxAffordable,
         getCost: (amount) => repeatable?.getCost(amount) ?? Decimal.dInf,

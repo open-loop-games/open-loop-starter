@@ -1,6 +1,7 @@
 import {
   createResource,
   tunable,
+  type ComputedRef,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -9,13 +10,6 @@ import {
 import type { TugData } from '../data/types';
 import type { UnitInstance } from './lane';
 import { LANE_LENGTH, type Side, TugTuningRegistryKey } from './tuning';
-
-// Engine's `tunable()` returns a ComputedRef branded against its bundled
-// Vue install; the starter's Vue declares a separate brand. Both are
-// structurally identical `{ value: T }` reactive refs at runtime — match
-// the structural shape on the public API surface so the brand mismatch
-// doesn't surface to consumers. Same trick the ambient module uses.
-type Ref2<T> = { value: T };
 
 export interface FortressApi {
   /** Per-side fortress HP. Match.ts watches this for end-of-match
@@ -30,9 +24,8 @@ export interface FortressApi {
    *  damage routing. */
   unit: Record<Side, UnitInstance>;
   /** Tunable hp max. UI reads for bar scale; `start()` reads for initial
-   *  hp on each match boundary. Structural `{ value }` shape so the
-   *  cross-Vue-brand mismatch on engine's tunable return doesn't leak. */
-  max: Ref2<DecimalSource>;
+   *  hp on each match boundary. */
+  max: ComputedRef<DecimalSource>;
   /** Initialize both fortresses' hp to `max.value`. Called from
    *  `match.start()` after the match-scope reset clears match state. */
   start(): void;

@@ -1,5 +1,4 @@
-import { inject } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import { ArcKey, type ArcState } from '../modules';
 
 /**
@@ -8,10 +7,5 @@ import { ArcKey, type ArcState } from '../modules';
  * >= 3`). UI watches `announced` to fire the closure flavour toast.
  */
 export function useArc(): ArcState {
-  const engine = inject<Engine>('engine');
-  const arc = engine?.tryInject(ArcKey);
-  if (!arc) {
-    throw new Error('useArc() called outside an active tug engine');
-  }
-  return arc;
+  return useModule(ArcKey);
 }

@@ -1,5 +1,4 @@
-import { inject } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import { MetaKey, type MetaApi } from '../modules';
 
 /**
@@ -9,10 +8,5 @@ import { MetaKey, type MetaApi } from '../modules';
  * lifetime stat row.
  */
 export function useMeta(): MetaApi {
-  const engine = inject<Engine>('engine');
-  const meta = engine?.tryInject(MetaKey);
-  if (!meta) {
-    throw new Error('useMeta() called outside an active tug engine');
-  }
-  return meta;
+  return useModule(MetaKey);
 }

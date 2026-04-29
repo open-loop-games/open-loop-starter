@@ -1,5 +1,4 @@
-import { inject } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { ProducerData } from '../data/types';
 import { ProducerDataKey } from '../modules';
 
@@ -9,10 +8,5 @@ import { ProducerDataKey } from '../modules';
  * (tooltip copy, gallery cards, workbench picker labels).
  */
 export function useProducerData(): ProducerData {
-  const engine = inject<Engine>('engine');
-  const data = engine?.tryInject(ProducerDataKey);
-  if (!data) {
-    throw new Error('useProducerData() called outside an active producer engine');
-  }
-  return data;
+  return useModule(ProducerDataKey);
 }

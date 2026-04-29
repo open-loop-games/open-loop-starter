@@ -4,6 +4,7 @@ import {
   createLoop,
   createRetentionPolicy,
   type EngineModule,
+  type EngineRef,
   type GameLoop,
   type InjectionKey,
   type Loop,
@@ -11,7 +12,6 @@ import {
   type RetentionPolicy,
   type Sequencer,
 } from 'open-loop-engine';
-import type { Ref } from 'vue';
 import type { LooperData } from '../data/types';
 import { ActionsKey, getActionProgressRefs, getActionTimesCompletedRefs } from './actions';
 import { CapabilitiesKey, getTalentXpRefs } from './capabilities';
@@ -59,7 +59,7 @@ export function createLoopModule(_data: LooperData): EngineModule {
   // Cross-module refs assigned in connect() (queue installs after loop, so
   // these can't be injected during install — endCondition / onRestart
   // closures read them lazily at tick time).
-  let shouldRestart: Ref<boolean> | null = null;
+  let shouldRestart: EngineRef<boolean> | null = null;
   let queueModule: LooperQueueModule | null = null;
   let queueSequencer: Sequencer<QueueItemMeta> | null = null;
   let createdLoop: Loop | null = null;

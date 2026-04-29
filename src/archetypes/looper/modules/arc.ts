@@ -1,5 +1,12 @@
-import { computed, watch, type ComputedRef, type Ref } from 'vue';
-import { Decimal, persistent, type EngineModule, type InjectionKey } from 'open-loop-engine';
+import { computed, watch } from 'vue';
+import {
+  Decimal,
+  persistent,
+  type ComputedRef,
+  type EngineModule,
+  type EngineRef,
+  type InjectionKey,
+} from 'open-loop-engine';
 import type { LooperData } from '../data/types';
 import { LoopKey } from './loop';
 import { CapabilitiesKey } from './capabilities';
@@ -9,7 +16,7 @@ export interface ArcState {
   /** True when arc-closure conditions are currently satisfied. */
   complete: ComputedRef<boolean>;
   /** Latches true the first time `complete` flips true — survives save/load. */
-  announced: Ref<boolean>;
+  announced: EngineRef<boolean>;
   /** End-of-arc flavour line — surfaced by the UI on first crossing. */
   flavour: string;
   /** Average Talent multiplier across capabilities. Drives the closure check. */
@@ -20,9 +27,6 @@ export const ArcKey: InjectionKey<ArcState> = Symbol('looper/arc') as InjectionK
 
 const DEFAULT_FLAVOUR =
   'The spire falls quiet. You stand where the loop began and feel the difference — every gesture rehearsed, every fight remembered.';
-
-type Ref2<T> = { value: T };
-const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 
 /**
  * Arc closure: `currentZone === finalZone AND retention compound visible
@@ -76,7 +80,7 @@ export function createArcModule(_data: LooperData): EngineModule {
 
       ctx.provide(ArcKey, {
         complete,
-        announced: asRef(announced),
+        announced,
         flavour: DEFAULT_FLAVOUR,
         averageTalentMultiplier,
       });

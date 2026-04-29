@@ -1,5 +1,4 @@
-import { inject } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import { SceneKey, type SceneState } from '../modules';
 
 /**
@@ -7,10 +6,5 @@ import { SceneKey, type SceneState } from '../modules';
  * `currentVariantId` for the canvas's active-variant binding.
  */
 export function useScene(): SceneState {
-  const engine = inject<Engine>('engine');
-  const scene = engine?.tryInject(SceneKey);
-  if (!scene) {
-    throw new Error('useScene() called outside an active ambient engine');
-  }
-  return scene;
+  return useModule(SceneKey);
 }

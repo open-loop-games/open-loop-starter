@@ -1,5 +1,12 @@
-import { computed, watch, type ComputedRef, type Ref } from 'vue';
-import { Decimal, persistent, type EngineModule, type InjectionKey } from 'open-loop-engine';
+import { computed, watch } from 'vue';
+import {
+  Decimal,
+  persistent,
+  type ComputedRef,
+  type EngineModule,
+  type EngineRef,
+  type InjectionKey,
+} from 'open-loop-engine';
 import type { ProducerData } from '../data/types';
 import { BuildingsKey } from './producers';
 import { UpgradesKey } from './upgrades';
@@ -8,7 +15,7 @@ export interface ArcState {
   /** True when all arc-closure conditions are currently satisfied. */
   complete: ComputedRef<boolean>;
   /** Latches true the first time `complete` flips true — survives save/load. */
-  announced: Ref<boolean>;
+  announced: EngineRef<boolean>;
   /** End-of-arc flavour line — surfaced by the UI layer on first crossing. */
   flavour: string;
 }
@@ -17,9 +24,6 @@ export const ArcKey: InjectionKey<ArcState> = Symbol('producer/arc') as Injectio
 
 const DEFAULT_FLAVOUR =
   'The Bakery hums. Every tier purrs; every upgrade is paid off; the cookie tide is irreversible.';
-
-type Ref2<T> = { value: T };
-const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 
 export function createArcModule(data: ProducerData): EngineModule {
   return {
@@ -66,7 +70,7 @@ export function createArcModule(data: ProducerData): EngineModule {
 
       ctx.provide(ArcKey, {
         complete,
-        announced: asRef(announced),
+        announced,
         flavour: DEFAULT_FLAVOUR,
       });
     },

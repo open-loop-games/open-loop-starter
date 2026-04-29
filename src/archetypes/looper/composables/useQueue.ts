@@ -1,5 +1,12 @@
-import { computed, inject, type ComputedRef, type Ref } from 'vue';
-import type { DecimalSource, Engine, Persistent, SequencerItem } from 'open-loop-engine';
+import { computed } from 'vue';
+import type {
+  ComputedRef,
+  DecimalSource,
+  EngineRef,
+  Persistent,
+  SequencerItem,
+} from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import {
   QueueKey,
   QueueManaNeededKey,
@@ -8,9 +15,6 @@ import {
   QueueVersionKey,
   type QueueItemMeta,
 } from '../modules';
-
-type Ref2<T> = { value: T };
-const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 
 export interface QueueView {
   items: ComputedRef<SequencerItem<QueueItemMeta>[]>;
@@ -23,7 +27,7 @@ export interface QueueView {
   /** Mana sim-seconds needed for one full pass of the plan. */
   manaNeededTotal: ComputedRef<DecimalSource>;
   /** Plan is exhausted; loop's endCondition will fire on the next tick. */
-  shouldRestart: Ref<boolean>;
+  shouldRestart: EngineRef<boolean>;
   /** Vanilla "Repeat Last Action" toggle (`actions.js:137-147`). */
   repeatLastAction: Persistent<boolean>;
   enqueue(actionId: string, loops?: number): void;
@@ -34,17 +38,11 @@ export interface QueueView {
 }
 
 export function useQueue(): QueueView {
-  const engine = inject<Engine>('engine');
-  const seq = engine?.tryInject(QueueKey);
-  const ver = engine?.tryInject(QueueVersionKey);
-  const sr = engine?.tryInject(QueueShouldRestartKey);
-  const repeat = engine?.tryInject(QueueRepeatLastActionKey);
-  const needed = engine?.tryInject(QueueManaNeededKey);
-  if (!seq || !ver || !sr || !repeat || !needed) {
-    throw new Error('useQueue() called outside an active looper engine');
-  }
-  const sequencer = seq;
-  const queueVersion = ver;
+  const sequencer = useModule(QueueKey);
+  const queueVersion = useModule(QueueVersionKey);
+  const sr = useModule(QueueShouldRestartKey);
+  const repeat = useModule(QueueRepeatLastActionKey);
+  const needed = useModule(QueueManaNeededKey);
 
   // Bind reads to queueVersion so re-orders / removes / enqueues invalidate
   // the computed even though `sequencer.items` is a non-Vue-ref shallow ref
@@ -83,7 +81,7 @@ export function useQueue(): QueueView {
     isHolding,
     manaNeededFromCursor: needed.fromCursor,
     manaNeededTotal: needed.total,
-    shouldRestart: asRef(sr),
+    shouldRestart: sr,
     repeatLastAction: repeat,
     enqueue,
     remove: (index) => {

@@ -59,10 +59,10 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
     </header>
     <ul class="kitchen-roster__list">
       <ProducerTooltip
-        v-for="row in rows"
+        v-for="row in rows.value"
         :key="row.def.id"
         :row="row"
-        :total-rate="totalRate"
+        :total-rate="totalRate.value"
         :pending-amount="pendingAmount(row)"
       >
         <li

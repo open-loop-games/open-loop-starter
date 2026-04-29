@@ -4,6 +4,7 @@ import {
   createPurchasableCategory,
   setupAutoPurchase,
   tunable,
+  type ComputedRef,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -27,18 +28,12 @@ export const UnlocksKey: InjectionKey<PurchasableCategory<UnlockDef>> = Symbol(
 // the engine. Other unlocks pass their threshold through unchanged.
 const TUNABLE_THRESHOLD_IDS = new Set<string>(['coop-built', 'spring-arrives', 'year-cycles']);
 
-// Engine's tunable() returns a ComputedRef branded against its own Vue
-// install; the starter's Vue declares a separate brand. Both are
-// structurally identical `{ value: T }` reactive refs at runtime. Use a
-// structural type so the brand mismatch doesn't surface here. Same trick
-// the producer module uses for trackTotal/persistent crossings.
-type Ref2<T> = { value: T };
-type Threshold = DecimalSource | Ref2<DecimalSource>;
+type Threshold = DecimalSource | ComputedRef<DecimalSource>;
 
 function wrapThreshold(registry: OverrideRegistry<AmbientTunables>, def: UnlockDef): Threshold {
   if (!TUNABLE_THRESHOLD_IDS.has(def.id)) return def.threshold;
   const key = `unlocks/${def.id}/threshold`;
-  return tunable<DecimalSource>(registry, key, () => def.threshold) as Ref2<DecimalSource>;
+  return tunable<DecimalSource>(registry, key, () => def.threshold);
 }
 
 const readThreshold = (threshold: Threshold): DecimalSource =>

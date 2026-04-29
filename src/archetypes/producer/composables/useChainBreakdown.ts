@@ -1,5 +1,6 @@
-import { computed, inject, type ComputedRef } from 'vue';
-import type { Engine, ModifierChain } from 'open-loop-engine';
+import { computed } from 'vue';
+import type { ComputedRef, ModifierChain } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import { BuildingsKey } from '../modules';
 
 // Engine's `MaybeRef<T>` uses a different Vue Ref brand than the starter's
@@ -70,11 +71,7 @@ export function useChainBreakdown(chain: ModifierChain): ComputedRef<ChainBreakd
  * missing entry is a setup error, not runtime data.
  */
 export function useProducerChainBreakdown(producerId: string): ComputedRef<ChainBreakdown> {
-  const engine = inject<Engine>('engine');
-  const buildings = engine?.tryInject(BuildingsKey);
-  if (!buildings) {
-    throw new Error('useProducerChainBreakdown() called outside an active producer engine');
-  }
+  const buildings = useModule(BuildingsKey);
   const producer = buildings.getProducer(producerId);
   if (!producer) {
     throw new Error(`useProducerChainBreakdown: no producer "${producerId}"`);

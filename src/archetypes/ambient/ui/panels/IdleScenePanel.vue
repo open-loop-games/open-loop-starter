@@ -45,10 +45,10 @@ const variant = computed(() => {
           sprouts
         </div>
         <div class="rate">
-          {{ format(perSecond, 1) }} / sec
+          {{ format(perSecond.value, 1) }} / sec
         </div>
         <div class="lifetime">
-          Lifetime: {{ format(lifetime, 0) }}
+          Lifetime: {{ format(lifetime.value, 0) }}
         </div>
       </div>
       <template #content>

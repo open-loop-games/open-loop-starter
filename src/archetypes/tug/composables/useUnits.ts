@@ -1,5 +1,6 @@
-import { inject, computed, type ComputedRef } from 'vue';
-import type { Engine, Persistent, Purchasable } from 'open-loop-engine';
+import { computed } from 'vue';
+import type { ComputedRef, Persistent, Purchasable } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { UnitDef } from '../data/types';
 import { UnitsKey, UnitsCooldownKey, type Side } from '../modules';
 import { useTugData } from './useTugData';
@@ -31,12 +32,8 @@ export interface UnitsView {
  * affordability, and cooldown progress without re-injecting separately.
  */
 export function useUnits(side: Side): UnitsView {
-  const engine = inject<Engine>('engine');
-  const shop = engine?.tryInject(UnitsKey[side]);
-  const cooldown = engine?.tryInject(UnitsCooldownKey[side]);
-  if (!shop || !cooldown) {
-    throw new Error(`useUnits(${side}) called outside an active tug engine`);
-  }
+  const shop = useModule(UnitsKey[side]);
+  const cooldown = useModule(UnitsCooldownKey[side]);
   const data = useTugData();
 
   const rows = computed<UnitRow[]>(() => {

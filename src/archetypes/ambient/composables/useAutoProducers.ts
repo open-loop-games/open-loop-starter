@@ -1,11 +1,12 @@
-import { computed, inject, type ComputedRef } from 'vue';
+import { computed } from 'vue';
 import {
   Decimal,
+  type ComputedRef,
   type DecimalSource,
-  type Engine,
   type ModifierChain,
   type Purchasable,
 } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { AutoProducerDef } from '../data/types';
 import { AutoProducersKey } from '../modules';
 
@@ -31,11 +32,7 @@ export interface AutoProducerRow {
  * to filter out.
  */
 export function useAutoProducers(): ComputedRef<AutoProducerRow[]> {
-  const engine = inject<Engine>('engine');
-  const buildings = engine?.tryInject(AutoProducersKey);
-  if (!buildings) {
-    throw new Error('useAutoProducers() called outside an active ambient engine');
-  }
+  const buildings = useModule(AutoProducersKey);
 
   return computed(() => {
     const rows: AutoProducerRow[] = [];
@@ -45,9 +42,9 @@ export function useAutoProducers(): ComputedRef<AutoProducerRow[]> {
       const maxAffordable = computed(() => repeatable?.amountToPurchase.value ?? Decimal.dZero);
       rows.push({
         def: entry.def,
-        rate: producer.computedRate as unknown as ComputedRef<DecimalSource>,
+        rate: producer.computedRate,
         rateChain: producer.rateChain,
-        count: producer.count as unknown as ComputedRef<DecimalSource>,
+        count: producer.count,
         beatSeconds: computed(() => producer.purchaseBeatSeconds.value),
         maxAffordable,
         getCost: (amount) => repeatable?.getCost(amount) ?? Decimal.dInf,

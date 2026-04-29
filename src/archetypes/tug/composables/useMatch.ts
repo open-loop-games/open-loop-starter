@@ -1,5 +1,5 @@
-import { inject, ref, onScopeDispose, type Ref } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { ref, onScopeDispose, type Ref } from 'vue';
+import { useModule } from '@/composables/useModule';
 import { MatchKey, type MatchApi, type MatchEndedPayload } from '../modules';
 
 export interface MatchView extends MatchApi {
@@ -21,11 +21,7 @@ export interface MatchView extends MatchApi {
  * `useMatch().lastMatchEnd.value` and renders / hides on null.
  */
 export function useMatch(): MatchView {
-  const engine = inject<Engine>('engine');
-  const match = engine?.tryInject(MatchKey);
-  if (!match) {
-    throw new Error('useMatch() called outside an active tug engine');
-  }
+  const match = useModule(MatchKey);
 
   const lastMatchEnd = ref<MatchEndedPayload | null>(null);
   const unsubscribe = match.on('matchEnded', (payload) => {

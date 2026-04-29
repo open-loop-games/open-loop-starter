@@ -1,4 +1,4 @@
-import { computed, type ComputedRef, type Ref } from 'vue';
+import { computed } from 'vue';
 import {
   createMultiplicativeModifier,
   createOverrideRegistry,
@@ -7,8 +7,10 @@ import {
   createTimeSystem,
   trackTotal,
   tunable,
+  type ComputedRef,
   type DecimalSource,
   type EngineModule,
+  type EngineRef,
   type InjectionKey,
   type ModifierChain,
   type OverrideRegistry,
@@ -43,9 +45,9 @@ export const PrimaryResourceKey: InjectionKey<Resource<DecimalSource>> = Symbol(
   'ambient/primary-resource',
 ) as InjectionKey<Resource<DecimalSource>>;
 
-export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
+export const PrimaryLifetimeKey: InjectionKey<EngineRef<DecimalSource>> = Symbol(
   'ambient/primary-lifetime',
-) as InjectionKey<Ref<DecimalSource>>;
+) as InjectionKey<EngineRef<DecimalSource>>;
 
 export const AutoProducersKey: InjectionKey<ProducerCategory<AutoProducerDef>> = Symbol(
   'ambient/auto-producers',
@@ -82,13 +84,6 @@ export const TimeSystemKey: InjectionKey<TimeSystem> = Symbol(
 // solver's bisection surface narrow. Mirrors producer's pattern (cursor +
 // grandma); ambient bisects against planter + coop minimum.
 const TUNABLE_BASE_COST_IDS = new Set<string>(['planter', 'coop']);
-
-// The engine's Persistent<T> and trackTotal() return types use a Vue Ref
-// brand from their own vue install; the starter's Vue declares a separate
-// brand. Both are structurally identical `{ value: T }` reactive refs at
-// runtime, so we cross the boundary once via structural casts.
-type Ref2<T> = { value: T };
-const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 
 export function createAutoProducersModule(data: AmbientData): EngineModule {
   return {
@@ -165,7 +160,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
       }
 
       ctx.provide(PrimaryResourceKey, primaryResource);
-      ctx.provide(PrimaryLifetimeKey, asRef(primaryLifetime));
+      ctx.provide(PrimaryLifetimeKey, primaryLifetime);
       ctx.provide(AutoProducersKey, buildings);
       ctx.provide(HeadlineRateKey, headlineRate);
       ctx.provide(AllRateChainsKey, allChains);

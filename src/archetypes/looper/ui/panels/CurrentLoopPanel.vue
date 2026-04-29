@@ -7,14 +7,11 @@ import { useLoop } from '../../composables/useLoop';
 import { useQueue } from '../../composables/useQueue';
 import { useActions } from '../../composables/useActions';
 
-const { manaRef, fillRatio, totalBudget } = useMana();
+const { mana, fillRatio, totalBudget } = useMana();
 const loop = useLoop();
 const queue = useQueue();
 const actions = useActions();
 const { format } = useFormatting();
-
-// Materialised refs for the template Ref-brand peel.
-const totalBudgetRef = computed(() => totalBudget.value);
 
 const currentRow = computed(() => {
   const item = queue.current.value;
@@ -45,11 +42,11 @@ const currentRow = computed(() => {
           class="mana-gauge__value"
           data-testid="mana-readout"
         >
-          {{ format(manaRef, 0) }} / {{ format(totalBudgetRef, 0) }}
+          {{ format(mana.value, 0) }} / {{ format(totalBudget.value, 0) }}
         </span>
       </div>
       <ProgressBar
-        :value="fillRatio"
+        :value="fillRatio.value"
         :max="1"
         data-testid="mana-bar"
       />

@@ -1,9 +1,10 @@
-import { computed, type ComputedRef, type Ref } from 'vue';
+import { computed } from 'vue';
 import {
   Decimal,
   persistent,
   tunable,
   withPersistentContext,
+  type ComputedRef,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -33,7 +34,7 @@ export interface ActionState {
    */
   adjustedTicks: ComputedRef<DecimalSource>;
   /** Tunable-wrapped manaCost for this action. */
-  manaCost: Ref<DecimalSource>;
+  manaCost: ComputedRef<DecimalSource>;
 }
 
 export interface ActionsModule {
@@ -68,9 +69,6 @@ export const ActionsKey: InjectionKey<ActionsModule> = Symbol(
 // (Wilds bridge action).
 const TUNABLE_MANA_COST_IDS = new Set<string>(['stretch', 'trek']);
 
-type Ref2<T> = { value: T };
-const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
-
 /**
  * Per-action state with progress accumulator and cumulative completion count.
  * Action category in the engine sense doesn't fit — actions aren't
@@ -104,32 +102,28 @@ export function createActionsModule(data: LooperData): EngineModule {
 
       // Cost-reduction divisor + Talent accrual ratio wrapped once so
       // pushScope retunes cost path / XP split without rebooting.
-      const costDivisor = asRef(
-        tunable<DecimalSource>(
-          tuningRegistry,
-          'balance/costDivisor',
-          () => data.balance.costDivisor,
-        ),
+      const costDivisor = tunable<DecimalSource>(
+        tuningRegistry,
+        'balance/costDivisor',
+        () => data.balance.costDivisor,
       );
-      const talentAccrualRatio = asRef(
-        tunable<DecimalSource>(
-          tuningRegistry,
-          'balance/talentAccrualRatio',
-          () => data.balance.talentAccrualRatio,
-        ),
+      const talentAccrualRatio = tunable<DecimalSource>(
+        tuningRegistry,
+        'balance/talentAccrualRatio',
+        () => data.balance.talentAccrualRatio,
       );
 
       const states = new Map<string, ActionState>();
       const defsById = new Map<string, ActionDef>(data.actions.map((d) => [d.id, d]));
 
       for (const def of data.actions) {
-        const manaCost: Ref<DecimalSource> = TUNABLE_MANA_COST_IDS.has(def.id)
-          ? (tunable<DecimalSource>(
+        const manaCost: ComputedRef<DecimalSource> = TUNABLE_MANA_COST_IDS.has(def.id)
+          ? tunable<DecimalSource>(
               tuningRegistry,
               `actions/${def.id}/manaCost` as keyof LooperTunables,
               () => def.manaCost,
-            ) as unknown as Ref<DecimalSource>)
-          : asRef({ value: def.manaCost });
+            )
+          : { value: def.manaCost };
 
         const { progress, timesCompleted } = withPersistentContext(
           `looper/actions:${def.id}`,

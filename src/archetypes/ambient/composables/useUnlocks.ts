@@ -1,5 +1,5 @@
-import { inject } from 'vue';
-import type { Engine, PurchasableCategory } from 'open-loop-engine';
+import type { PurchasableCategory } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { UnlockDef } from '../data/types';
 import { UnlocksKey } from '../modules';
 
@@ -10,10 +10,5 @@ import { UnlocksKey } from '../modules';
  * affordance gated by `garden-almanac`, etc.).
  */
 export function useUnlocks(): PurchasableCategory<UnlockDef> {
-  const engine = inject<Engine>('engine');
-  const unlocks = engine?.tryInject(UnlocksKey);
-  if (!unlocks) {
-    throw new Error('useUnlocks() called outside an active ambient engine');
-  }
-  return unlocks;
+  return useModule(UnlocksKey);
 }

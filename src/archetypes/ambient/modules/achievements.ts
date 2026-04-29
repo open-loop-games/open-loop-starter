@@ -4,7 +4,6 @@ import {
   createAchievementCategory,
   tunable,
   type AchievementCategory,
-  type Computable,
   type EngineModule,
   type Grant,
   type InjectionKey,
@@ -99,7 +98,7 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
               title: def.name,
               description: def.description,
             },
-            requirement: computed(() => def.requirement(state)) as unknown as Computable<boolean>,
+            requirement: computed(() => def.requirement(state)),
             hidden: def.hidden ?? false,
             grants,
           };

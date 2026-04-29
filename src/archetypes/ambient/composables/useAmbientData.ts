@@ -1,5 +1,4 @@
-import { inject } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { AmbientData } from '../data/types';
 import { AmbientDataKey } from '../modules';
 
@@ -9,10 +8,5 @@ import { AmbientDataKey } from '../modules';
  * (tooltip copy, scene-variant lookups, workbench picker labels).
  */
 export function useAmbientData(): AmbientData {
-  const engine = inject<Engine>('engine');
-  const data = engine?.tryInject(AmbientDataKey);
-  if (!data) {
-    throw new Error('useAmbientData() called outside an active ambient engine');
-  }
-  return data;
+  return useModule(AmbientDataKey);
 }

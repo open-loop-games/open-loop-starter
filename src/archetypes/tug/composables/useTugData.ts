@@ -1,5 +1,4 @@
-import { inject } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { TugData } from '../data/types';
 import { TugDataKey } from '../modules';
 
@@ -10,10 +9,5 @@ import { TugDataKey } from '../modules';
  * labels, workbench picker labels).
  */
 export function useTugData(): TugData {
-  const engine = inject<Engine>('engine');
-  const data = engine?.tryInject(TugDataKey);
-  if (!data) {
-    throw new Error('useTugData() called outside an active tug engine');
-  }
-  return data;
+  return useModule(TugDataKey);
 }

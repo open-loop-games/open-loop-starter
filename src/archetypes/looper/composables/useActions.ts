@@ -1,5 +1,6 @@
-import { computed, inject, type ComputedRef } from 'vue';
-import { Decimal, type DecimalSource, type Engine } from 'open-loop-engine';
+import { computed } from 'vue';
+import { Decimal, type ComputedRef, type DecimalSource } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { ActionDef } from '../data/types';
 import { ActionsKey, type ActionsModule } from '../modules';
 
@@ -23,12 +24,7 @@ export interface ActionsView {
 }
 
 export function useActions(): ActionsView {
-  const engine = inject<Engine>('engine');
-  const actions = engine?.tryInject(ActionsKey);
-  if (!actions) {
-    throw new Error('useActions() called outside an active looper engine');
-  }
-  const mod: ActionsModule = actions;
+  const mod: ActionsModule = useModule(ActionsKey);
 
   const rows = computed<ActionRow[]>(() => mod.getAll().map((def) => buildRow(def, mod)));
 

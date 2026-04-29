@@ -1,5 +1,6 @@
-import { computed, inject, type ComputedRef } from 'vue';
-import { type DecimalSource, type Engine } from 'open-loop-engine';
+import { computed } from 'vue';
+import { type ComputedRef, type DecimalSource } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { CapabilityDef } from '../data/types';
 import { CapabilitiesKey } from '../modules';
 
@@ -14,11 +15,7 @@ export interface CapabilityRow {
 }
 
 export function useCapabilities(): ComputedRef<CapabilityRow[]> {
-  const engine = inject<Engine>('engine');
-  const capabilities = engine?.tryInject(CapabilitiesKey);
-  if (!capabilities) {
-    throw new Error('useCapabilities() called outside an active looper engine');
-  }
+  const capabilities = useModule(CapabilitiesKey);
 
   return computed<CapabilityRow[]>(() => {
     const rows: CapabilityRow[] = [];

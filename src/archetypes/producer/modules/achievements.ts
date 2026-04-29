@@ -2,8 +2,8 @@ import { computed } from 'vue';
 import {
   Decimal,
   createAchievementCategory,
+  tunable,
   type AchievementCategory,
-  type Computable,
   type DecimalSource,
   type EngineModule,
   type Grant,
@@ -17,6 +17,7 @@ import {
   PrimaryLifetimeKey,
   PrimaryResourceKey,
   HeadlineRateKey,
+  ProducerTuningRegistryKey,
 } from './producers';
 import { UpgradesKey } from './upgrades';
 
@@ -36,6 +37,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
       const headlineRate = ctx.inject(HeadlineRateKey);
       const clickState = ctx.inject(ClickStateKey);
       const allChains = ctx.inject(AllRateChainsKey);
+      const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
 
       // Live read view of module state, passed to data predicates. Methods
       // encapsulate Decimal comparisons so data/*.ts stays engine-free.
@@ -64,7 +66,11 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
         secondsSinceLastClick: () => clickState.elapsedSec.value - clickState.lastClickSec.value,
       };
 
-      const defaultReward: DecimalSource = data.balance.achievementMultiplier;
+      const achievementMultiplier = tunable<DecimalSource>(
+        tuningRegistry,
+        'balance/achievementMultiplier',
+        () => data.balance.achievementMultiplier,
+      );
 
       const achievements = createAchievementCategory<AchievementDef>({
         id: 'producer/achievements',
@@ -72,7 +78,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
           const grants: Grant[] = [
             {
               chain: allChains,
-              mult: def.rewardMultiplier ?? defaultReward,
+              mult: def.rewardMultiplier ?? achievementMultiplier,
               description: def.name,
             },
           ];
@@ -81,7 +87,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
               title: def.name,
               description: def.description,
             },
-            requirement: computed(() => def.requirement(state)) as unknown as Computable<boolean>,
+            requirement: computed(() => def.requirement(state)),
             hidden: def.hidden ?? false,
             grants,
           };

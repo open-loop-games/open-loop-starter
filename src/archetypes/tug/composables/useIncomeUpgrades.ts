@@ -1,5 +1,6 @@
-import { inject, computed, type ComputedRef } from 'vue';
-import type { Engine, Purchasable } from 'open-loop-engine';
+import { computed } from 'vue';
+import type { ComputedRef, Purchasable } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import type { IncomeUpgradeDef } from '../data/types';
 import { IncomeUpgradesKey, IncomeUpgradeRoiKey, type Side } from '../modules';
 import { useTugData } from './useTugData';
@@ -45,12 +46,8 @@ export interface IncomeUpgradesView {
  * the engine's purchasable requirement; UI only consumes `canPurchase`.
  */
 export function useIncomeUpgrades(side: Side): IncomeUpgradesView {
-  const engine = inject<Engine>('engine');
-  const shop = engine?.tryInject(IncomeUpgradesKey[side]);
-  const roi = engine?.tryInject(IncomeUpgradeRoiKey[side]);
-  if (!shop || !roi) {
-    throw new Error(`useIncomeUpgrades(${side}) called outside an active tug engine`);
-  }
+  const shop = useModule(IncomeUpgradesKey[side]);
+  const roi = useModule(IncomeUpgradeRoiKey[side]);
   const data = useTugData();
 
   const rows = computed<IncomeUpgradeRow[]>(() => {

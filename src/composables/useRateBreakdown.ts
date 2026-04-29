@@ -1,5 +1,10 @@
-import { computed, type ComputedRef } from 'vue';
-import { Decimal, type DecimalSource, type ModifierChain } from 'open-loop-engine';
+import { computed } from 'vue';
+import {
+  Decimal,
+  type ComputedRef,
+  type DecimalSource,
+  type ModifierChain,
+} from 'open-loop-engine';
 
 export interface RateBreakdownRow {
   def: { name: string; baseRate: DecimalSource };

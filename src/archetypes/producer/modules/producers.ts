@@ -1,4 +1,4 @@
-import { computed, type ComputedRef, type Ref } from 'vue';
+import { computed } from 'vue';
 import {
   createOverrideRegistry,
   createResource,
@@ -6,8 +6,10 @@ import {
   persistent,
   trackTotal,
   tunable,
+  type ComputedRef,
   type DecimalSource,
   type EngineModule,
+  type EngineRef,
   type InjectionKey,
   type ModifierChain,
   type OverrideRegistry,
@@ -20,9 +22,9 @@ import type { ProducerData, ProducerDef } from '../data/types';
 // Injection keys — consumed by upgrades, achievements, composables, sim tests.
 
 export interface ClickState {
-  clickCount: Ref<number>;
-  lastClickSec: Ref<number>;
-  elapsedSec: Ref<number>;
+  clickCount: EngineRef<number>;
+  lastClickSec: EngineRef<number>;
+  elapsedSec: EngineRef<number>;
   click: () => void;
 }
 
@@ -30,9 +32,9 @@ export const PrimaryResourceKey: InjectionKey<Resource<DecimalSource>> = Symbol(
   'producer/primary-resource',
 ) as InjectionKey<Resource<DecimalSource>>;
 
-export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
+export const PrimaryLifetimeKey: InjectionKey<EngineRef<DecimalSource>> = Symbol(
   'producer/primary-lifetime',
-) as InjectionKey<Ref<DecimalSource>>;
+) as InjectionKey<EngineRef<DecimalSource>>;
 
 export const BuildingsKey: InjectionKey<ProducerCategory<ProducerDef>> = Symbol(
   'producer/buildings',
@@ -74,20 +76,19 @@ export type ProducerTunableKey =
   | 'producers/cursor/purchase/baseCost'
   | 'producers/grandma/purchase/baseCost'
   | 'balance/milestoneBonusPerTier'
-  | 'balance/tier1UpgradeMultiplier';
+  | 'balance/tier1UpgradeMultiplier'
+  | 'balance/achievementMultiplier';
+// `balance/producerCostGrowth` is intentionally absent: the engine's
+// ProducerMapping.purchase.costScaling is static `DecimalSource`, not
+// Computable — the value is read once at producer registration and can't
+// be retuned via tunable() without an engine change. File as candidate
+// primitive when a fork wants to bisect this knob.
 
 export type ProducerTunables = Record<string, () => DecimalSource>;
 
 export const ProducerTuningRegistryKey: InjectionKey<OverrideRegistry<ProducerTunables>> = Symbol(
   'producer/tuning-registry',
 ) as InjectionKey<OverrideRegistry<ProducerTunables>>;
-
-// The engine's Persistent<T> and trackTotal() return types use a Vue Ref
-// brand from their own vue install; the starter's Vue declares a separate
-// brand. Both are structurally identical `{ value: T }` reactive refs at
-// runtime, so we cross the boundary once via structural casts.
-type Ref2<T> = { value: T };
-const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 
 export function createProducersModule(data: ProducerData): EngineModule {
   return {
@@ -137,9 +138,9 @@ export function createProducersModule(data: ProducerData): EngineModule {
       const activate = clickProducer.activate;
 
       const clickState: ClickState = {
-        clickCount: asRef(clickCount),
-        lastClickSec: asRef(lastClickSec),
-        elapsedSec: asRef(elapsedSec),
+        clickCount,
+        lastClickSec,
+        elapsedSec,
         click: () => {
           activate();
           clickCount.value += 1;
@@ -158,7 +159,7 @@ export function createProducersModule(data: ProducerData): EngineModule {
       const allChains: ModifierChain[] = [clickProducer.rateChain, ...continuousChains];
 
       ctx.provide(PrimaryResourceKey, primaryResource);
-      ctx.provide(PrimaryLifetimeKey, asRef(primaryLifetime));
+      ctx.provide(PrimaryLifetimeKey, primaryLifetime);
       ctx.provide(BuildingsKey, buildings);
       ctx.provide(ClickStateKey, clickState);
       ctx.provide(HeadlineRateKey, headlineRate);

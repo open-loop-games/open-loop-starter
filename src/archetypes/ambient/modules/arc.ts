@@ -1,10 +1,12 @@
-import { computed, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, watch } from 'vue';
 import {
   Decimal,
   persistent,
   tunable,
+  type ComputedRef,
   type DecimalSource,
   type EngineModule,
+  type EngineRef,
   type InjectionKey,
 } from 'open-loop-engine';
 import type { AmbientData } from '../data/types';
@@ -15,7 +17,7 @@ export interface ArcState {
   /** True when arc-closure conditions are currently satisfied. */
   complete: ComputedRef<boolean>;
   /** Latches true the first time `complete` flips true — survives save/load. */
-  announced: Ref<boolean>;
+  announced: EngineRef<boolean>;
   /** End-of-arc flavour line — surfaced by the UI on first crossing. */
   flavour: string;
 }
@@ -24,9 +26,6 @@ export const ArcKey: InjectionKey<ArcState> = Symbol('ambient/arc') as Injection
 
 const DEFAULT_FLAVOUR =
   'A full year, kept patiently. The garden hums on its own — no urgency, just continuance.';
-
-type Ref2<T> = { value: T };
-const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 
 /**
  * Arc-closure detection for Ambient. Beat 7's "prestige-eligible state
@@ -80,7 +79,7 @@ export function createArcModule(data: AmbientData): EngineModule {
 
       ctx.provide(ArcKey, {
         complete,
-        announced: asRef(announced),
+        announced,
         flavour: DEFAULT_FLAVOUR,
       });
     },

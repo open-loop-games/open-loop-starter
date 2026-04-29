@@ -1,5 +1,11 @@
-import { computed, watch, type ComputedRef, type Ref } from 'vue';
-import { persistent, type EngineModule, type InjectionKey } from 'open-loop-engine';
+import { computed, watch } from 'vue';
+import {
+  persistent,
+  type ComputedRef,
+  type EngineModule,
+  type EngineRef,
+  type InjectionKey,
+} from 'open-loop-engine';
 import type { TugData } from '../data/types';
 import { MetaKey } from './meta';
 
@@ -7,7 +13,7 @@ export interface ArcState {
   /** True when arc-closure conditions are currently satisfied. */
   complete: ComputedRef<boolean>;
   /** Latches true the first time `complete` flips true; survives save/load. */
-  announced: Ref<boolean>;
+  announced: EngineRef<boolean>;
   /** End-of-arc flavour line — surfaced by the UI on first crossing. */
   flavour: string;
 }
@@ -16,9 +22,6 @@ export const ArcKey: InjectionKey<ArcState> = Symbol('tug/meta/arc') as Injectio
 
 const DEFAULT_FLAVOUR =
   'The fleets fall silent. Counter-strategy mastered; the rotation is yours to shape.';
-
-type Ref2<T> = { value: T };
-const asRef = <T>(r: Ref2<T>): Ref<T> => r as unknown as Ref<T>;
 
 /**
  * Bimodal beat-7 arc-closure predicate, branching at install time on
@@ -57,7 +60,7 @@ export function createArcModule(data: TugData): EngineModule {
 
       ctx.provide(ArcKey, {
         complete,
-        announced: asRef(announced),
+        announced,
         flavour: DEFAULT_FLAVOUR,
       });
     },
