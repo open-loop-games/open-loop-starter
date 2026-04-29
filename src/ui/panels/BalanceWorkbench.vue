@@ -1,5 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import {
+  ListboxContent,
+  ListboxGroup,
+  ListboxGroupLabel,
+  ListboxItem,
+  ListboxRoot,
+  NumberFieldDecrement,
+  NumberFieldIncrement,
+  NumberFieldInput,
+  NumberFieldRoot,
+  ToggleGroupItem,
+  ToggleGroupRoot,
+} from 'reka-ui';
 import type { Analyzer, Engine, EngineModule, RunContext } from 'open-loop-engine';
 import type { PickerEntry } from 'open-loop-engine/harness';
 import { useBalanceWorkbench } from '@/composables/useBalanceWorkbench';
@@ -43,14 +56,35 @@ const groups = computed<Group[]>(() => {
   ];
 });
 
-function isSelected(entry: PickerEntry): boolean {
-  const sel = wb.selectedEntry.value;
-  return sel !== null && sel.label === entry.label && sel.address.source === entry.address.source;
+function entryKey(group: Group, entry: PickerEntry): string {
+  return `${group.key}|${entry.label}`;
 }
 
-function pickEntry(entry: PickerEntry, disabled: boolean): void {
-  if (disabled) return;
-  wb.selectEntry(entry);
+const selectedKey = computed<string | null>(() => {
+  const sel = wb.selectedEntry.value;
+  if (!sel) return null;
+  for (const group of groups.value) {
+    if (group.disabled) continue;
+    for (const entry of group.entries) {
+      if (entry.label === sel.label && entry.address.source === sel.address.source) {
+        return entryKey(group, entry);
+      }
+    }
+  }
+  return null;
+});
+
+function pickByKey(value: unknown): void {
+  if (typeof value !== 'string') return;
+  for (const group of groups.value) {
+    if (group.disabled) continue;
+    for (const entry of group.entries) {
+      if (entryKey(group, entry) === value) {
+        wb.selectEntry(entry);
+        return;
+      }
+    }
+  }
 }
 
 function formatNumber(n: number): string {
@@ -65,51 +99,43 @@ function formatPct(n: number): string {
   if (!Number.isFinite(n)) return String(n);
   return `${(n * 100).toFixed(1)}%`;
 }
+
+const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
+  get: () => wb.form.kind,
+  set: (next) => {
+    if (next) wb.form.kind = next;
+  },
+});
 </script>
 
 <template>
   <div class="balance-workbench">
     <section class="bw-pane bw-pane--picker">
-      <header class="bw-pane__header">
-        Picker
-      </header>
+      <header class="bw-pane__header">Picker</header>
       <div class="bw-pane__body">
-        <div
-          v-for="group in groups"
-          :key="group.key"
-          class="picker-group"
-        >
-          <div class="picker-group-title">
-            {{ group.title }}
-          </div>
-          <div
-            v-if="group.entries.length === 0"
-            class="picker-empty"
-          >
-            — none —
-          </div>
-          <button
-            v-for="entry in group.entries"
-            :key="`${group.key}-${entry.label}`"
-            type="button"
-            class="picker-row"
-            :class="{
-              'picker-row--selected': isSelected(entry),
-              'picker-row--disabled': group.disabled,
-            }"
-            :disabled="group.disabled"
-            :title="group.disabled ? 'Skills perturbation is unsupported in v1' : entry.label"
-            @click="pickEntry(entry, group.disabled)"
-          >
-            {{ entry.label }}
-          </button>
-        </div>
+        <ListboxRoot :model-value="selectedKey" @update:model-value="pickByKey">
+          <ListboxContent>
+            <ListboxGroup v-for="group in groups" :key="group.key" class="picker-group">
+              <ListboxGroupLabel class="picker-group-title">
+                {{ group.title }}
+              </ListboxGroupLabel>
+              <div v-if="group.entries.length === 0" class="picker-empty">— none —</div>
+              <ListboxItem
+                v-for="entry in group.entries"
+                :key="entryKey(group, entry)"
+                :value="entryKey(group, entry)"
+                :disabled="group.disabled"
+                class="picker-row"
+                :class="{ 'picker-row--disabled': group.disabled }"
+                :title="group.disabled ? 'Skills perturbation is unsupported in v1' : entry.label"
+              >
+                {{ entry.label }}
+              </ListboxItem>
+            </ListboxGroup>
+          </ListboxContent>
+        </ListboxRoot>
         <div class="picker-actions">
-          <button
-            type="button"
-            class="bw-btn bw-btn--ghost"
-            @click="wb.refreshPicker()"
-          >
+          <button type="button" class="bw-btn bw-btn--ghost" @click="wb.refreshPicker()">
             Refresh
           </button>
         </div>
@@ -117,9 +143,7 @@ function formatPct(n: number): string {
     </section>
 
     <section class="bw-pane bw-pane--form">
-      <header class="bw-pane__header">
-        Perturbation
-      </header>
+      <header class="bw-pane__header">Perturbation</header>
       <div class="bw-pane__body">
         <div class="form-grid">
           <div class="form-row">
@@ -131,85 +155,51 @@ function formatPct(n: number): string {
 
           <div class="form-row">
             <label class="bw-label">Kind</label>
-            <div class="kind-toggle">
-              <button
-                type="button"
-                class="bw-btn"
-                :class="{ 'bw-btn--active': wb.form.kind === 'scalar-multiply' }"
-                @click="wb.form.kind = 'scalar-multiply'"
-              >
-                ×
-              </button>
-              <button
-                type="button"
-                class="bw-btn"
-                :class="{ 'bw-btn--active': wb.form.kind === 'scalar-add' }"
-                @click="wb.form.kind = 'scalar-add'"
-              >
-                +
-              </button>
-            </div>
+            <ToggleGroupRoot
+              v-model="kindModel"
+              type="single"
+              :roving-focus="true"
+              class="kind-toggle"
+              aria-label="Perturbation kind"
+            >
+              <ToggleGroupItem value="scalar-multiply" class="bw-btn"> × </ToggleGroupItem>
+              <ToggleGroupItem value="scalar-add" class="bw-btn"> + </ToggleGroupItem>
+            </ToggleGroupRoot>
           </div>
 
-          <div
-            v-if="wb.form.kind === 'scalar-multiply'"
-            class="form-row"
-          >
-            <label
-              class="bw-label"
-              for="bw-factor"
-            >Factor</label>
-            <input
-              id="bw-factor"
-              v-model.number="wb.form.factor"
-              type="number"
-              step="0.1"
-              class="bw-input"
-            >
+          <div v-if="wb.form.kind === 'scalar-multiply'" class="form-row">
+            <label class="bw-label" for="bw-factor">Factor</label>
+            <NumberFieldRoot v-model="wb.form.factor" :step="0.1" class="bw-numberfield">
+              <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
+              <NumberFieldInput id="bw-factor" class="bw-input" />
+              <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
+            </NumberFieldRoot>
           </div>
-          <div
-            v-else
-            class="form-row"
-          >
-            <label
-              class="bw-label"
-              for="bw-delta"
-            >Delta</label>
-            <input
-              id="bw-delta"
-              v-model.number="wb.form.delta"
-              type="number"
-              step="0.1"
-              class="bw-input"
-            >
+          <div v-else class="form-row">
+            <label class="bw-label" for="bw-delta">Delta</label>
+            <NumberFieldRoot v-model="wb.form.delta" :step="0.1" class="bw-numberfield">
+              <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
+              <NumberFieldInput id="bw-delta" class="bw-input" />
+              <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
+            </NumberFieldRoot>
           </div>
 
           <div class="form-row">
-            <label
-              class="bw-label"
-              for="bw-seeds"
-            >Seeds</label>
-            <input
-              id="bw-seeds"
-              v-model.number="wb.form.seedCount"
-              type="number"
-              min="1"
-              class="bw-input"
-            >
+            <label class="bw-label" for="bw-seeds">Seeds</label>
+            <NumberFieldRoot v-model="wb.form.seedCount" :min="1" :step="1" class="bw-numberfield">
+              <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
+              <NumberFieldInput id="bw-seeds" class="bw-input" />
+              <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
+            </NumberFieldRoot>
           </div>
 
           <div class="form-row">
-            <label
-              class="bw-label"
-              for="bw-ticks"
-            >Ticks</label>
-            <input
-              id="bw-ticks"
-              v-model.number="wb.form.ticks"
-              type="number"
-              min="1"
-              class="bw-input"
-            >
+            <label class="bw-label" for="bw-ticks">Ticks</label>
+            <NumberFieldRoot v-model="wb.form.ticks" :min="1" :step="1" class="bw-numberfield">
+              <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
+              <NumberFieldInput id="bw-ticks" class="bw-input" />
+              <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
+            </NumberFieldRoot>
           </div>
         </div>
 
@@ -240,30 +230,19 @@ function formatPct(n: number): string {
           </button>
         </div>
 
-        <div
-          v-if="wb.committed.value"
-          class="form-status"
-        >
+        <div v-if="wb.committed.value" class="form-status">
           <span class="bw-badge">Live engine has uncommitted perturbation</span>
         </div>
-        <div
-          v-if="wb.error.value"
-          class="form-error"
-        >
+        <div v-if="wb.error.value" class="form-error">
           {{ wb.error.value }}
         </div>
       </div>
     </section>
 
     <section class="bw-pane bw-pane--delta">
-      <header class="bw-pane__header">
-        Delta
-      </header>
+      <header class="bw-pane__header">Delta</header>
       <div class="bw-pane__body">
-        <div
-          v-if="wb.headline.value"
-          class="delta-headline"
-        >
+        <div v-if="wb.headline.value" class="delta-headline">
           <div class="delta-headline-metric">
             {{ wb.headline.value.metric }}
           </div>
@@ -271,23 +250,12 @@ function formatPct(n: number): string {
             {{ formatPct(wb.headline.value.delta.relative) }}
           </div>
         </div>
-        <div
-          v-else-if="wb.running.value"
-          class="delta-empty"
-        >
+        <div v-else-if="wb.running.value" class="delta-empty">
           Running… {{ wb.progress.value.completedRuns }} / {{ wb.progress.value.totalRuns }}
         </div>
-        <div
-          v-else
-          class="delta-empty"
-        >
-          No run yet.
-        </div>
+        <div v-else class="delta-empty">No run yet.</div>
 
-        <table
-          v-if="wb.rows.value.length > 0"
-          class="delta-table"
-        >
+        <table v-if="wb.rows.value.length > 0" class="delta-table">
           <thead>
             <tr>
               <th>Metric</th>
@@ -298,10 +266,7 @@ function formatPct(n: number): string {
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="row in wb.rows.value"
-              :key="row.metric"
-            >
+            <tr v-for="row in wb.rows.value" :key="row.metric">
               <td>{{ row.metric }}</td>
               <td>{{ formatNumber(row.baselineAvg) }}</td>
               <td>{{ formatNumber(row.variantAvg) }}</td>
@@ -394,9 +359,39 @@ function formatPct(n: number): string {
   background: var(--color-surface-hover);
 }
 
-.picker-row--selected {
+.picker-row[data-state='checked'] {
   background: var(--color-surface-hover);
   border-color: var(--color-primary);
+}
+
+.bw-numberfield {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.bw-numberfield .bw-input {
+  border: none;
+  border-radius: 0;
+  text-align: center;
+  width: 5em;
+  font-variant-numeric: tabular-nums;
+}
+.bw-numberfield__btn {
+  padding: 0 8px;
+  background: var(--color-surface);
+  border: none;
+  cursor: pointer;
+  font-size: 1em;
+  line-height: 1;
+}
+.bw-numberfield__btn:hover {
+  background: var(--color-surface-hover);
+}
+.bw-numberfield__btn[data-disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .picker-row--disabled {

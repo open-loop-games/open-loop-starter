@@ -8,3 +8,8 @@
 import { vi } from 'vitest';
 
 vi.stubGlobal('performance', globalThis.performance ?? { now: () => Date.now() });
+
+// jsdom doesn't implement scrollIntoView; reka-ui Listbox calls it after selection.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}

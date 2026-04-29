@@ -58,12 +58,22 @@
 }
 
 @keyframes olui-tooltip-in {
-  from { opacity: 0; transform: translateY(2px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes olui-tooltip-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -79,18 +89,38 @@
   animation: olui-popover-out 100ms ease-in;
 }
 
-.olui-popover__content[data-side='bottom'] { transform-origin: top center; }
-.olui-popover__content[data-side='top']    { transform-origin: bottom center; }
-.olui-popover__content[data-side='left']   { transform-origin: right center; }
-.olui-popover__content[data-side='right']  { transform-origin: left center; }
+.olui-popover__content[data-side='bottom'] {
+  transform-origin: top center;
+}
+.olui-popover__content[data-side='top'] {
+  transform-origin: bottom center;
+}
+.olui-popover__content[data-side='left'] {
+  transform-origin: right center;
+}
+.olui-popover__content[data-side='right'] {
+  transform-origin: left center;
+}
 
 @keyframes olui-popover-in {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 @keyframes olui-popover-out {
-  from { opacity: 1; transform: scale(1); }
-  to   { opacity: 0; transform: scale(0.96); }
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -217,10 +247,58 @@
 }
 
 @keyframes olui-select-in {
-  from { opacity: 0; transform: translateY(-2px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes olui-select-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Switch — instant-effect boolean preference. reka-ui SwitchRoot/SwitchThumb. */
+.olui-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  padding: 0;
+  transition: background 120ms ease-out;
+}
+
+.olui-switch[data-state='checked'] {
+  background: var(--color-primary, #4a9eff);
+  border-color: var(--color-primary, #4a9eff);
+}
+
+.olui-switch[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.olui-switch__thumb {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: var(--color-on-primary, white);
+  border-radius: 50%;
+  transition: transform 120ms ease-out;
+  transform: translateX(2px);
+  will-change: transform;
+}
+
+.olui-switch[data-state='checked'] .olui-switch__thumb {
+  transform: translateX(18px);
 }

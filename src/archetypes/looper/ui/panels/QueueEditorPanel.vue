@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { SwitchRoot, SwitchThumb } from 'reka-ui';
 import { useFormatting } from '@/composables/useFormatting';
 import { useQueue } from '../../composables/useQueue';
 import { useActions } from '../../composables/useActions';
@@ -50,10 +51,12 @@ function remove(index: number): void {
           class="queue-editor__toggle"
           data-testid="queue-repeat-last"
         >
-          <input
+          <SwitchRoot
             v-model="queue.repeatLastAction.value"
-            type="checkbox"
+            class="olui-switch"
           >
+            <SwitchThumb class="olui-switch__thumb" />
+          </SwitchRoot>
           Repeat last
         </label>
         <button

@@ -21,6 +21,7 @@
 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { ListboxContent, ListboxGroup, ListboxGroupLabel, ListboxItem, ListboxRoot } from 'reka-ui';
 import { SidebarMainShell } from '@/lib';
 import { listArchetypes, findArchetype, type GalleryArchetype } from './useArchetypes';
 import Card from './Card.vue';
@@ -73,6 +74,10 @@ function showHome(): void {
   sidebarOpen.value = true;
 }
 
+function onSidebarPick(value: unknown): void {
+  if (typeof value === 'string') enterArchetype(value);
+}
+
 function toggleSidebar(): void {
   sidebarOpen.value = !sidebarOpen.value;
 }
@@ -94,44 +99,21 @@ function flipTab(): void {
       >
         ☰
       </button>
-      <button
-        class="gallery-header__title"
-        type="button"
-        @click="showHome"
-      >
+      <button class="gallery-header__title" type="button" @click="showHome">
         <strong>Open Loop Starter</strong>
         <span class="gallery-header__sub">Archetype gallery</span>
       </button>
 
-      <div
-        v-if="entered"
-        class="gallery-header__entered"
-      >
-        <button
-          class="btn-sm"
-          type="button"
-          @click="exitArchetype"
-        >
-          ← Back
-        </button>
+      <div v-if="entered" class="gallery-header__entered">
+        <button class="btn-sm" type="button" @click="exitArchetype">← Back</button>
         <span class="gallery-header__entered-name">{{ entered.manifest.name }}</span>
-        <button
-          class="btn-sm"
-          type="button"
-          @click="flipTab"
-        >
+        <button class="btn-sm" type="button" @click="flipTab">
           {{ enteredTab === 'details' ? 'Live demo →' : '← Details' }}
         </button>
       </div>
 
       <nav class="gallery-header__nav">
-        <button
-          class="btn-sm"
-          type="button"
-          @click="showAbout"
-        >
-          About
-        </button>
+        <button class="btn-sm" type="button" @click="showAbout">About</button>
       </nav>
     </header>
 
@@ -142,76 +124,46 @@ function flipTab(): void {
       :data-collapsed="!sidebarOpen ? 'true' : null"
     >
       <template #sidebar>
-        <div
-          v-if="sidebarOpen"
-          class="gallery-sidebar"
-        >
-          <button
-            class="gallery-sidebar__home"
-            type="button"
-            @click="showHome"
-          >
-            Home
-          </button>
+        <div v-if="sidebarOpen" class="gallery-sidebar">
+          <button class="gallery-sidebar__home" type="button" @click="showHome">Home</button>
 
-          <h4 class="gallery-sidebar__group">
-            Canonical
-          </h4>
-          <ul class="gallery-sidebar__list">
-            <li
-              v-for="a in canonical"
-              :key="a.manifest.id"
-            >
-              <button
-                type="button"
-                :data-active="enteredId === a.manifest.id || null"
-                @click="enterArchetype(a.manifest.id)"
-              >
-                {{ a.manifest.name }}
-              </button>
-            </li>
-          </ul>
-
-          <h4 class="gallery-sidebar__group">
-            Candidate
-          </h4>
-          <ul class="gallery-sidebar__list">
-            <li
-              v-for="a in candidates"
-              :key="a.manifest.id"
-            >
-              <button
-                type="button"
-                :data-active="enteredId === a.manifest.id || null"
-                @click="enterArchetype(a.manifest.id)"
-              >
-                {{ a.manifest.name }}
-              </button>
-            </li>
-          </ul>
+          <ListboxRoot :model-value="enteredId" @update:model-value="onSidebarPick">
+            <ListboxContent>
+              <ListboxGroup class="gallery-sidebar__list">
+                <ListboxGroupLabel class="gallery-sidebar__group"> Canonical </ListboxGroupLabel>
+                <ListboxItem
+                  v-for="a in canonical"
+                  :key="a.manifest.id"
+                  :value="a.manifest.id"
+                  class="gallery-sidebar__item"
+                >
+                  {{ a.manifest.name }}
+                </ListboxItem>
+              </ListboxGroup>
+              <ListboxGroup class="gallery-sidebar__list">
+                <ListboxGroupLabel class="gallery-sidebar__group"> Candidate </ListboxGroupLabel>
+                <ListboxItem
+                  v-for="a in candidates"
+                  :key="a.manifest.id"
+                  :value="a.manifest.id"
+                  class="gallery-sidebar__item"
+                >
+                  {{ a.manifest.name }}
+                </ListboxItem>
+              </ListboxGroup>
+            </ListboxContent>
+          </ListboxRoot>
         </div>
       </template>
 
-      <div
-        v-if="entered"
-        class="gallery-entered"
-      >
+      <div v-if="entered" class="gallery-entered">
         <!-- Demo + details are mutually exclusive in the main column so each
              gets the full available width. The sandbox stays mounted across
              toggles via v-show so engine state survives. -->
-        <div
-          v-show="enteredTab === 'demo'"
-          class="gallery-entered__demo"
-        >
-          <SandboxWrapper
-            :archetype="entered.manifest"
-            :boot="entered.boot"
-          />
+        <div v-show="enteredTab === 'demo'" class="gallery-entered__demo">
+          <SandboxWrapper :archetype="entered.manifest" :boot="entered.boot" />
         </div>
-        <div
-          v-show="enteredTab === 'details'"
-          class="gallery-entered__detail"
-        >
+        <div v-show="enteredTab === 'details'" class="gallery-entered__detail">
           <section class="gallery-entered__cta">
             <button
               class="btn-primary gallery-entered__cta-btn"
@@ -228,10 +180,7 @@ function flipTab(): void {
         </div>
       </div>
       <AboutPanel v-else-if="view === 'about'" />
-      <div
-        v-else
-        class="gallery-home"
-      >
+      <div v-else class="gallery-home">
         <header class="gallery-home__header">
           <h2>Archetype gallery</h2>
           <p>
@@ -240,9 +189,7 @@ function flipTab(): void {
             there, toggle to Live demo to mount the sandbox. Forks pick one and delete the rest.
           </p>
         </header>
-        <h3 class="gallery-home__group">
-          Canonical
-        </h3>
+        <h3 class="gallery-home__group">Canonical</h3>
         <div class="gallery-home__grid">
           <Card
             v-for="a in canonical"
@@ -251,9 +198,7 @@ function flipTab(): void {
             @enter="enterArchetype(a.manifest.id)"
           />
         </div>
-        <h3 class="gallery-home__group">
-          Candidate
-        </h3>
+        <h3 class="gallery-home__group">Candidate</h3>
         <div class="gallery-home__grid">
           <Card
             v-for="a in candidates"
@@ -361,12 +306,11 @@ function flipTab(): void {
   margin-top: 0.6rem;
 }
 .gallery-sidebar__list {
-  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.gallery-sidebar__list button {
+.gallery-sidebar__item {
   width: 100%;
   text-align: left;
   background: transparent;
@@ -374,12 +318,13 @@ function flipTab(): void {
   padding: 6px 10px;
   border-radius: var(--radius);
   font-size: 0.9rem;
+  cursor: pointer;
 }
-.gallery-sidebar__list button:hover {
+.gallery-sidebar__item:hover {
   background: var(--color-surface-hover);
   border-color: var(--color-border);
 }
-.gallery-sidebar__list button[data-active='true'] {
+.gallery-sidebar__item[data-state='checked'] {
   background: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface));
   border-color: var(--color-primary);
   color: var(--color-text);
