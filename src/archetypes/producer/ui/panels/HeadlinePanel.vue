@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui';
 import { useHeadlineRate } from '../../composables/useHeadlineRate';
 import { useClickState } from '../../composables/useClickState';
 import { useProducerChainBreakdown } from '../../composables/useChainBreakdown';
@@ -36,78 +37,57 @@ const expanded = ref(false);
 
     <header class="hero-yield">
       <span class="hero-yield__eyebrow">Today&rsquo;s Yield</span>
-      <span
-        class="hero-yield__count"
-        data-testid="cookie-count"
-      >
+      <span class="hero-yield__count" data-testid="cookie-count">
         {{ format(cookies, 0) }}
       </span>
       <span class="hero-yield__unit">cookies on hand</span>
       <div class="hero-yield__rate">
-        <span class="hero-yield__rate-value">{{ format(perSecond, 1) }}</span>
+        <span class="hero-yield__rate-value">{{ format(perSecond.value, 1) }}</span>
         <span class="hero-yield__rate-unit">per second</span>
       </div>
     </header>
 
-    <ClickCookieButton
-      data-testid="click-cookie"
-      label="Bake"
-      @click="click.click"
-    />
+    <ClickCookieButton data-testid="click-cookie" label="Bake" @click="click.click" />
 
     <footer class="hero-footnote">
       <div class="hero-footnote__rule" />
-      <span class="hero-footnote__line"> lifetime &middot; {{ format(lifetime, 0) }} </span>
+      <span class="hero-footnote__line"> lifetime &middot; {{ format(lifetime.value, 0) }} </span>
       <span class="hero-footnote__line hero-footnote__line--clicks">
         {{ formatWhole(click.clickCount.value) }} hand-baked
       </span>
     </footer>
 
-    <section class="multipliers">
-      <button
-        type="button"
-        class="multipliers__toggle"
-        data-testid="toggle-chain-breakdown"
-        :aria-expanded="expanded"
-        @click="expanded = !expanded"
-      >
+    <CollapsibleRoot v-model:open="expanded" class="multipliers">
+      <CollapsibleTrigger class="multipliers__toggle" data-testid="toggle-chain-breakdown">
         <span class="multipliers__title">Compounding Stack</span>
         <span class="multipliers__count">
-          {{ breakdown.activeCount }} <span class="multipliers__count-of">of</span>
-          {{ breakdown.factors.length }}
+          {{ breakdown.value.activeCount }} <span class="multipliers__count-of">of</span>
+          {{ breakdown.value.factors.length }}
         </span>
-        <span
-          class="multipliers__caret"
-          :data-state="expanded ? 'open' : 'closed'"
-        >▾</span>
-      </button>
-      <ul
-        v-if="expanded"
-        class="multipliers__list"
-        data-testid="chain-breakdown"
-      >
-        <li
-          v-for="factor in breakdown.factors"
-          :key="factor.id"
-          class="multipliers__factor"
-          :class="{
-            'is-inactive': !factor.active,
-            'is-bad': factor.isBad,
-          }"
-          :data-testid="`chain-factor-${factor.id}`"
-        >
-          <span class="multipliers__factor-text">{{ factor.text }}</span>
-          <span class="multipliers__factor-dots" />
-          <span class="multipliers__factor-value">{{ factor.formattedValue }}</span>
-        </li>
-        <li
-          v-if="breakdown.factors.length === 0"
-          class="multipliers__empty"
-        >
-          No upgrades or achievements applied yet.
-        </li>
-      </ul>
-    </section>
+        <span class="multipliers__caret">▾</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <ul class="multipliers__list" data-testid="chain-breakdown">
+          <li
+            v-for="factor in breakdown.value.factors"
+            :key="factor.id"
+            class="multipliers__factor"
+            :class="{
+              'is-inactive': !factor.active,
+              'is-bad': factor.isBad,
+            }"
+            :data-testid="`chain-factor-${factor.id}`"
+          >
+            <span class="multipliers__factor-text">{{ factor.text }}</span>
+            <span class="multipliers__factor-dots" />
+            <span class="multipliers__factor-value">{{ factor.formattedValue }}</span>
+          </li>
+          <li v-if="breakdown.value.factors.length === 0" class="multipliers__empty">
+            No upgrades or achievements applied yet.
+          </li>
+        </ul>
+      </CollapsibleContent>
+    </CollapsibleRoot>
   </section>
 </template>
 
@@ -353,7 +333,7 @@ const expanded = ref(false);
   color: var(--bakery-cocoa-mute, #7a5d3d);
   transition: transform 160ms ease-out;
 }
-.multipliers__caret[data-state='open'] {
+.multipliers__toggle[data-state='open'] .multipliers__caret {
   transform: rotate(-180deg);
 }
 

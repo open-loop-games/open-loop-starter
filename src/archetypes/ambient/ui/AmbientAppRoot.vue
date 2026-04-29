@@ -48,6 +48,18 @@ function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
 }
 
+const WELCOME_BACK_MIN_GAP_SEC = 60;
+const WELCOME_BACK_UNLOCK_ID = 'returns-welcomed';
+function maybeShowWelcomeBack(gapSec: number): void {
+  if (gapSec < WELCOME_BACK_MIN_GAP_SEC) return;
+  const unlocks = engine.tryInject(UnlocksKey);
+  if (unlocks?.getPurchasable(WELCOME_BACK_UNLOCK_ID)?.bought.value !== true) return;
+  const id = stack.push(WelcomeBackOverlay, {
+    gapSec,
+    onClose: () => stack.remove(id),
+  });
+}
+
 const { addToast } = useToasts();
 let stopArcWatcher: (() => void) | null = null;
 function armArcFlavourEvent(): void {
@@ -76,10 +88,12 @@ function startGame(slotId: number, modId?: string): void {
   // the correct gap during the catch-up advance, then refresh
   // elapsedAtResume so secondsSinceLastResume measures live-session time
   // only (excluding the catch-up).
+  let resumeGapSec = 0;
   if (result.success && result.timestamp != null) {
     const sessionClock = engine.tryInject(SessionClockKey);
     const data = engine.tryInject(AmbientDataKey);
     const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
+    resumeGapSec = gap;
     if (sessionClock) sessionClock.lastResumeGapSec.value = gap;
     if (gap > 0) {
       const cap = data ? Number(data.balance.offlineCapHours) * 3600 : undefined;
@@ -90,6 +104,7 @@ function startGame(slotId: number, modId?: string): void {
 
   armArcFlavourEvent();
   currentScreen.value = Screen.Game;
+  maybeShowWelcomeBack(resumeGapSec);
 }
 
 function returnToSlots(): void {
@@ -190,7 +205,6 @@ function getActiveModules(): EngineModule[] {
   </AppFrame>
   <ToastContainer />
   <DevDiagnostics v-if="isDev" />
-  <WelcomeBackOverlay v-if="currentScreen === Screen.Game" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"

@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import {
+  AlertDialogRoot,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogAction,
+} from 'reka-ui';
 import { useMatch, useMeta, useTugData } from '../../composables';
 
 /**
@@ -7,6 +15,9 @@ import { useMatch, useMeta, useTugData } from '../../composables';
  * (the latched `'matchEnded'` event payload), NOT from `match.outcome.value` —
  * which is null again post-reset (outcome is null after every reset). Restart
  * button calls `match.start()` then clears the latch.
+ *
+ * AlertDialog (not Dialog): match-end is a blocking action — no ESC, no
+ * overlay-click dismiss. Player must click "Start next match" to proceed.
  */
 const match = useMatch();
 const meta = useMeta();
@@ -36,69 +47,67 @@ function restart(): void {
 </script>
 
 <template>
-  <div
-    v-if="visible"
-    class="match-end"
-    role="dialog"
-    aria-modal="true"
-  >
-    <div class="match-end__panel">
-      <h2 class="match-end__title">
-        {{ outcomeLabel }}
-      </h2>
-      <dl class="match-end__stats">
-        <div>
-          <dt>Match length</dt>
-          <dd>{{ elapsedLabel(payload!.elapsedSec) }}</dd>
-        </div>
-        <div>
-          <dt>Units sent</dt>
-          <dd>{{ payload!.unitsSent }}</dd>
-        </div>
-        <div>
-          <dt>Counter pivots</dt>
-          <dd>{{ payload!.counterPivots }}</dd>
-        </div>
-        <div>
-          <dt>Lifetime matches</dt>
-          <dd>{{ meta.matchesPlayed.value }}</dd>
-        </div>
-        <div>
-          <dt>Best counter pivots</dt>
-          <dd>{{ meta.maxCounterPivotsAnyMatch.value }}</dd>
-        </div>
-      </dl>
-      <button
-        class="match-end__restart"
-        @click="restart"
-      >
-        Start next match
-      </button>
-    </div>
-  </div>
+  <AlertDialogRoot :open="visible">
+    <AlertDialogPortal>
+      <AlertDialogOverlay class="match-end__overlay" />
+      <AlertDialogContent class="match-end__panel">
+        <AlertDialogTitle class="match-end__title">
+          {{ outcomeLabel }}
+        </AlertDialogTitle>
+        <dl class="match-end__stats">
+          <div>
+            <dt>Match length</dt>
+            <dd>{{ elapsedLabel(payload!.elapsedSec) }}</dd>
+          </div>
+          <div>
+            <dt>Units sent</dt>
+            <dd>{{ payload!.unitsSent }}</dd>
+          </div>
+          <div>
+            <dt>Counter pivots</dt>
+            <dd>{{ payload!.counterPivots }}</dd>
+          </div>
+          <div>
+            <dt>Lifetime matches</dt>
+            <dd>{{ meta.matchesPlayed.value }}</dd>
+          </div>
+          <div>
+            <dt>Best counter pivots</dt>
+            <dd>{{ meta.maxCounterPivotsAnyMatch.value }}</dd>
+          </div>
+        </dl>
+        <AlertDialogAction class="match-end__restart" @click="restart">
+          Start next match
+        </AlertDialogAction>
+      </AlertDialogContent>
+    </AlertDialogPortal>
+  </AlertDialogRoot>
 </template>
 
 <style scoped>
-.match-end {
+.match-end__overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--modal-z-base, 100);
+  background: var(--modal-backdrop);
+  z-index: var(--modal-z-base);
 }
 
 .match-end__panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   min-width: 320px;
   max-width: 480px;
-  background: var(--color-surface);
+  background: var(--modal-surface);
+  color: var(--color-text);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: var(--gap-lg);
+  border-radius: var(--modal-radius);
+  padding: var(--modal-padding);
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  z-index: calc(var(--modal-z-base) + 1);
 }
 
 .match-end__title {
