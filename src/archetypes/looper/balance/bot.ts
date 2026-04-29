@@ -14,22 +14,42 @@
  *      planner-param snapshot into `paramsHandle`, so the next loop's
  *      `applyPlan` reads the recommended params.
  *
- * Strategy roster (3b — minimum-viable 1+1; expansion tracked in OL-756):
- *   - `farm-mana-pool` (bespoke override) — phase-gated to loops 1–4.
+ * Strategy roster (3c — full canonical roster):
+ *   - `farm-mana-pool` (bespoke override, score 100, loop-window gated) —
  *      Biases progression toward mana-feeding progressVars (roam→cache,
  *      trail→wellspring); skips errand-feeding acquaint and trail-prereq'd
- *      mark. Drives exploration of the mana-pool growth axis.
+ *      mark. Drives exploration of the mana-pool growth axis. Default
+ *      window: loops 1–4.
+ *   - `farm-gold-buffer` (bespoke override, score 100, loop-window gated) —
+ *      Alternate harvest path: bias progression toward acquaint+roam
+ *      (errand+latch pool growers), trade aggressively to convert gold
+ *      bursts into mana. Differentiates from farm-mana-pool by harvest
+ *      timing (gold→Trade burst vs cache→Crack stream). Default window:
+ *      loops 5–9.
+ *   - `farm-talent` (bespoke override, score 50, mana-headroom gated) —
+ *      Self-gating gap-filler: applies whenever last loop's `manaAdded`
+ *      exceeds `bot/manaOverflowTrigger`. Engages planner Pass 7
+ *      (talent overflow) to soak excess mana into rotating capability
+ *      trainers (expMult 4 basics: Stretch/Tend/Listen/Attune). Score 50
+ *      means it loses arbitration to loop-window-gated farms when both
+ *      apply — only fills phase gaps where no loop-gated farm is active.
  *   - `best-replay:manaAdded` (engine-native via `createBestReplayStrategy`)
- *     — phase-gated to loops 5+ via `minLoops: 5`. Replays the snapshot
- *      that produced the highest `manaAdded` so far. Cavernous II shape
- *      lifted to params-replay (the planner regenerates the plan against
- *      richer state, so replay improves monotonically).
+ *      — phase-gated via `bot/phases/best-replay/minLoops`. Replays the
+ *      snapshot that produced the highest `manaAdded`. Cavernous II shape
+ *      lifted to params-replay (planner regenerates against richer state).
  *
- * **Why bespoke for the override strategy:** the engine's
+ * **Why bespoke for the override strategies:** the engine's
  * `createGoalStrategy` is per-metric best-replay (`recommend()` returns
  * `entry.strategySnapshot`), not fixed-params override. To force "use
- * THESE specific params next loop" we author a `RecommendationStrategyDef`
+ * THESE specific params next loop" we author `RecommendationStrategyDef`
  * directly with a custom `recommend()` returning the override snapshot.
+ *
+ * **Phase boundaries are tunable.** Each strategy's `canApply` window
+ * reads from the shared `looper-tuning` override registry via
+ * `tunable('bot/phases/<strategy>/<bound>', ...)`. Solver `pushScope`
+ * retunes partition boundaries without reboot. First-cut defaults are
+ * placeholders pending probe telemetry — see leaf-4 (OL-746 solver) for
+ * calibration; static-data derivation is the long-term goal.
  *
  * Persistence layout:
  *
@@ -47,6 +67,7 @@
  * so parallel matrix-cell sims don't collide in storage. Mirrors Ambient.
  */
 
+import { computed, type ComputedRef } from 'vue';
 import {
   Decimal,
   createBestOf,
@@ -54,6 +75,7 @@ import {
   createLoopLog,
   createRecommendationSystem,
   persistent,
+  tunable,
   withPersistentContext,
   type BestOf,
   type DecimalSource,
@@ -71,6 +93,7 @@ import {
   CapabilitiesKey,
   GoldKey,
   LoopKey,
+  LooperTuningRegistryKey,
   ManaAddedKey,
   QueueKey,
   type QueueItemMeta,
@@ -110,57 +133,111 @@ export const BalanceBotRecommendationKey: InjectionKey<RecommendationSystem> = S
 // ─── Strategy override params ─────────────────────────────────────────────
 
 /**
- * `farm-mana-pool` override — bias progression toward mana-feeding
- * progressVars (roam → cache, trail → wellspring + forage), skip the
- * errand-feeding acquaint track. Stretches the mana-pool growth axis
- * across early loops so subsequent loops have productive manapot pools.
+ * `farm-mana-pool` — bias progression toward mana-feeding progressVars
+ * (roam → cache, trail → wellspring + forage), skip the errand-feeding
+ * acquaint track. Stretches the mana-pool growth axis across early loops
+ * so subsequent loops have productive manapot pools.
  *
  * `acquaint: 0` and `mark: 0` skip those progressVars entirely (the
- * planner's `if (targetDelta <= 0) continue;` branch). `mark` is
- * trail-prereq'd anyway in the canonical content set so it usually
- * isn't visible during this strategy's phase, but the explicit zero
- * makes the intent legible and survives content reshapes.
- *
- * Setting `manaUpOversupplyFactor` higher would just add slack to the
- * static-cost budget cap — orthogonal to mana-pool farming. Stays at
- * 1.0; if probes show benefit from slack here, perturb separately via
- * solver pushScope.
+ * planner's `if (targetDelta <= 0) continue;` branch).
  */
 const FARM_MANA_POOL_PARAMS: PlannerParams = {
   progressionTarget: { roam: 2, trail: 2, acquaint: 0, mark: 0 },
   manaUpOversupplyFactor: 1.0,
   tradeThreshold: 100,
+  talentOverflowThreshold: 0,
 };
+
+/**
+ * `farm-gold-buffer` — alternate harvest path emphasizing the gold→mana
+ * conversion route. Bias progression toward acquaint (errand pool) and
+ * lightly toward roam (latch pool — roam scales latch×1 secondary). Trade
+ * fires earlier (`tradeThreshold: 50`) than farm-mana-pool's 100 so the
+ * gold-burst rhythm is the differentiator: cache→Crack drips mana every
+ * 10th completion, gold→Trade dumps a single burst once the pouch is full.
+ *
+ * Skips trail+mark progression (Wilds content) — this strategy is
+ * Hearth-anchored. By the time Wilds opens, best-replay's loop window
+ * will be active anyway.
+ *
+ * Note on tradeThreshold semantics: `'never'` skips Pass 2 (gold accum)
+ * AND Pass 4 (trade) entirely, which would make this strategy a no-op for
+ * gold harvesting. Use `'never'` only when stockpiling gold for a
+ * persistent-purchase fork (no consumer of that shape today).
+ */
+const FARM_GOLD_BUFFER_PARAMS: PlannerParams = {
+  progressionTarget: { acquaint: 2, roam: 1, trail: 0, mark: 0 },
+  manaUpOversupplyFactor: 1.0,
+  tradeThreshold: 50,
+  talentOverflowThreshold: 0,
+};
+
+/**
+ * `farm-talent` — talent-soak mode for mana-rich loops. Engages planner
+ * Pass 7: after the canonical plan completes, remaining budget headroom
+ * is filled with rotating capability trainers (Stretch/Tend/Listen/Attune,
+ * the four `expMult: 4` basics). Each trainer iteration grants
+ * `weight × adjustedExp = 1 × 4 = 4` capability XP, all of which accrues
+ * to Talent at `talentAccrualRatio` — the cross-loop slow-burn axis.
+ *
+ * `talentOverflowThreshold: 50` = "engage Pass 7 only if at least 50 mana
+ * of headroom remains after the canonical plan." Below that the trainer
+ * cycle wouldn't fit one full rotation. Tune via probe telemetry.
+ *
+ * Modest progression bias keeps the loop bootstrapping (without any
+ * progression, mana-extending regulars never see their pools grow).
+ */
+const FARM_TALENT_PARAMS: PlannerParams = {
+  progressionTarget: { roam: 1, acquaint: 1, trail: 0, mark: 0 },
+  manaUpOversupplyFactor: 1.0,
+  tradeThreshold: 100,
+  talentOverflowThreshold: 50,
+};
+
+// ─── Phase-window tunables ────────────────────────────────────────────────
+
+/**
+ * Reactive handles to the four phase-window endpoints (and the mana-overflow
+ * trigger) that strategy `canApply`/`recommend` predicates close over.
+ * Wired at `install()` time against the shared `looper-tuning` registry.
+ *
+ * Defaults are first-cut placeholders. The "static-data determines these"
+ * goal lives in OL-746 leaf-4 (solver) and a future planner-shape research
+ * leaf — until then, probes converge them and pushScope perturbs them.
+ */
+interface PhaseRefs {
+  farmManaPoolMaxLoop: ComputedRef<DecimalSource>;
+  farmGoldBufferMinLoop: ComputedRef<DecimalSource>;
+  farmGoldBufferMaxLoop: ComputedRef<DecimalSource>;
+  bestReplayMinLoops: ComputedRef<DecimalSource>;
+  manaOverflowTrigger: ComputedRef<DecimalSource>;
+}
 
 // ─── Strategy factories ───────────────────────────────────────────────────
 
 /**
- * Phase-gate boundaries for the 3b roster. Hardcoded first-cut constants
- * — refinement (and possible promotion to a tunable surface) tracked in
- * OL-756. The numbers are picked so farm-mana-pool's exploration window
- * is disjoint from best-replay's exploitation window: no overlap, no
- * magnitude conflict between fixed-score override strategies and
- * best-replay's metric-perSecond score.
- */
-const PHASE_FARM_MANA_POOL_MAX_LOOP = 4;
-const PHASE_BEST_REPLAY_MIN_LOOPS = 5;
-
-/**
- * Bespoke override strategy: recommends a fixed `PlannerParams` snapshot
- * during a phase-gated window. Not engine-native (`createGoalStrategy`
- * replays best-of-metric snapshots, doesn't override) — written directly
- * against `RecommendationStrategyDef` so we can return arbitrary params.
- *
+ * Bespoke loop-window override strategy. Recommends a fixed
+ * `PlannerParams` snapshot when `loop.count` falls in `[minLoop, maxLoop]`.
  * `score: () => 100` is a fixed weight chosen below typical best-replay
  * `entry.perSecond.toNumber()` magnitudes; combined with disjoint phase
  * gates it's belt-and-suspenders against accidental overlap.
+ *
+ * Three loop-window override strategies share this shape (farm-mana-pool,
+ * farm-gold-buffer, and any future loop-gated farm); the factory captures
+ * the boilerplate so each strategy is a one-line registration.
  */
-function createFarmManaPoolStrategy(): RecommendationStrategyDef {
-  const params = FARM_MANA_POOL_PARAMS;
+function createLoopWindowStrategy(
+  id: string,
+  params: PlannerParams,
+  minLoop: ComputedRef<DecimalSource>,
+  maxLoop: ComputedRef<DecimalSource>,
+  summary: string,
+): RecommendationStrategyDef {
   return {
-    id: 'farm-mana-pool',
+    id,
     canApply(ctx: RecommendationContext) {
-      return ctx.loop.count.value >= 1 && ctx.loop.count.value <= PHASE_FARM_MANA_POOL_MAX_LOOP;
+      const c = ctx.loop.count.value;
+      return c >= Number(minLoop.value) && c <= Number(maxLoop.value);
     },
     score: () => 100,
     recommend(ctx: RecommendationContext) {
@@ -170,11 +247,48 @@ function createFarmManaPoolStrategy(): RecommendationStrategyDef {
       return {
         snapshot: { plannerParams: params } as unknown as State,
         rationale: {
-          strategyId: 'farm-mana-pool',
+          strategyId: id,
           metrics: {
             manaAdded: { current, projected: current, delta: Decimal.dZero },
           },
-          summary: 'Bias progression to mana-feeding progressVars; skip errand track.',
+          summary,
+        },
+      };
+    },
+  };
+}
+
+/**
+ * `farm-talent` factory — mana-headroom gating instead of loop-count.
+ * Self-applies whenever the previous loop's `manaAdded` delta exceeds the
+ * `bot/manaOverflowTrigger` tunable. `score: 50` means it loses arbitration
+ * to any loop-window-gated farm (score 100) when both apply — only fills
+ * gaps where no loop-gated strategy is active.
+ *
+ * The override engages planner Pass 7 via `talentOverflowThreshold > 0`,
+ * which soaks remaining budget headroom into rotating trainer iterations.
+ */
+function createFarmTalentStrategy(trigger: ComputedRef<DecimalSource>): RecommendationStrategyDef {
+  return {
+    id: 'farm-talent',
+    canApply(ctx: RecommendationContext) {
+      const last = ctx.loopLog.history.value[ctx.loopLog.history.value.length - 1];
+      const lastManaAdded = last?.deltas.find((d) => d.key === 'manaAdded')?.delta;
+      if (!lastManaAdded) return false;
+      return Decimal.gte(lastManaAdded, trigger.value);
+    },
+    score: () => 50,
+    recommend(ctx: RecommendationContext) {
+      const last = ctx.loopLog.history.value[ctx.loopLog.history.value.length - 1];
+      const current = last?.deltas.find((d) => d.key === 'manaAdded')?.delta ?? Decimal.dZero;
+      return {
+        snapshot: { plannerParams: FARM_TALENT_PARAMS } as unknown as State,
+        rationale: {
+          strategyId: 'farm-talent',
+          metrics: {
+            manaAdded: { current, projected: current, delta: Decimal.dZero },
+          },
+          summary: 'Soak excess mana into rotating trainer iterations for talent gain.',
         },
       };
     },
@@ -217,8 +331,41 @@ export function createBalanceBotModule(): EngineModule {
       const capabilities = ctx.inject(CapabilitiesKey);
       const manaAdded = ctx.inject(ManaAddedKey);
       const gold = ctx.inject(GoldKey);
+      const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
       // Touch ActionsKey early so a missing-dep error surfaces at install.
       ctx.inject(ActionsKey);
+
+      // Phase-window tunables — registered on the shared `looper-tuning`
+      // registry so solver pushScope perturbs them alongside balance/...
+      // and actions/<id>/... keys. Defaults are placeholders until probes
+      // converge them.
+      const phases: PhaseRefs = {
+        farmManaPoolMaxLoop: tunable<DecimalSource>(
+          tuningRegistry,
+          'bot/phases/farm-mana-pool/maxLoop',
+          () => 4,
+        ),
+        farmGoldBufferMinLoop: tunable<DecimalSource>(
+          tuningRegistry,
+          'bot/phases/farm-gold-buffer/minLoop',
+          () => 5,
+        ),
+        farmGoldBufferMaxLoop: tunable<DecimalSource>(
+          tuningRegistry,
+          'bot/phases/farm-gold-buffer/maxLoop',
+          () => 9,
+        ),
+        bestReplayMinLoops: tunable<DecimalSource>(
+          tuningRegistry,
+          'bot/phases/best-replay/minLoops',
+          () => 10,
+        ),
+        manaOverflowTrigger: tunable<DecimalSource>(
+          tuningRegistry,
+          'bot/manaOverflowTrigger',
+          () => 200,
+        ),
+      };
 
       // Persistent planner-params — survives importSave round-trips.
       const { plannerParams } = withPersistentContext('balance-bot', () => ({
@@ -270,6 +417,22 @@ export function createBalanceBotModule(): EngineModule {
         captureStrategy: () => ({ plannerParams: plannerParams.value }),
       });
 
+      // best-replay with reactive minLoops gate. Engine-native factory
+      // captures minLoops at construction; we delegate score+recommend to
+      // it but override canApply to read the tunable reactively, so solver
+      // pushScope on `bot/phases/best-replay/minLoops` retunes without
+      // engine reboot.
+      const innerBestReplay = createBestReplayStrategy('manaAdded', { minLoops: 0 });
+      const bestReplayStrategy: RecommendationStrategyDef = {
+        id: innerBestReplay.id,
+        canApply(ctx: RecommendationContext) {
+          if (ctx.loop.count.value < Number(phases.bestReplayMinLoops.value)) return false;
+          return innerBestReplay.canApply(ctx);
+        },
+        score: innerBestReplay.score,
+        recommend: innerBestReplay.recommend,
+      };
+
       // RecommendationSystem — composes LoopLog + BestOf + Loop into
       // strategy arbitration on `loop.afterRestart`. Subscribes to the loop
       // INSIDE its constructor (recommendation.ts:466), so the order of
@@ -299,8 +462,25 @@ export function createBalanceBotModule(): EngineModule {
           if (next) plannerParams.value = next;
         },
         strategies: [
-          createFarmManaPoolStrategy(),
-          createBestReplayStrategy('manaAdded', { minLoops: PHASE_BEST_REPLAY_MIN_LOOPS }),
+          createLoopWindowStrategy(
+            'farm-mana-pool',
+            FARM_MANA_POOL_PARAMS,
+            // farm-mana-pool's minLoop is a structural 1 (not solver-tuned);
+            // only its maxLoop floats. A static computed keeps the factory
+            // signature uniform across strategies without a tunable channel.
+            computed(() => 1 as DecimalSource),
+            phases.farmManaPoolMaxLoop,
+            'Bias progression to mana-feeding progressVars; cache-stream harvest path.',
+          ),
+          createLoopWindowStrategy(
+            'farm-gold-buffer',
+            FARM_GOLD_BUFFER_PARAMS,
+            phases.farmGoldBufferMinLoop,
+            phases.farmGoldBufferMaxLoop,
+            'Bias progression to gold-feeding progressVars; gold→Trade burst harvest path.',
+          ),
+          createFarmTalentStrategy(phases.manaOverflowTrigger),
+          bestReplayStrategy,
         ],
       });
       // Sim-bot mode: auto-apply the winning recommendation. Production

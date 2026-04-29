@@ -18,7 +18,8 @@ import {
   BalanceBotParamsKey,
   BalanceBotRecommendationKey,
 } from '../balance/bot';
-import { LoopKey, QueueKey } from '../modules';
+import { generatePlan, type PlannerParams } from '../balance/planner';
+import { LoopKey, LooperTuningRegistryKey, QueueKey } from '../modules';
 
 describe('looper balance bot — wiring smoke', () => {
   it('initial plan is enqueued during engine start (queue non-empty before any tick)', () => {
@@ -99,25 +100,29 @@ describe('looper balance bot — wiring smoke', () => {
     void initialPlanIds;
   });
 
-  // ─── 3b — RecommendationSystem wiring ─────────────────────────────────
+  // ─── 3c — RecommendationSystem wiring ─────────────────────────────────
 
-  it('RecommendationSystem is provided with autoApply enabled', () => {
+  it('RecommendationSystem is provided with autoApply and full strategy roster', () => {
     const engine = buildLooperSimEngine();
     const rec = engine.tryInject(BalanceBotRecommendationKey);
     expect(rec).toBeDefined();
     expect(rec!.autoApply.value).toBe(true);
-    // Two strategies: farm-mana-pool override + best-replay:manaAdded.
-    expect(rec!.strategies.length).toBe(2);
+    // Four strategies: 3 bespoke overrides (loop-window or mana-gated) +
+    // 1 engine-native best-replay reactive wrapper.
+    expect(rec!.strategies.length).toBe(4);
     const ids = rec!.strategies.map((s) => s.id).sort();
-    expect(ids).toEqual(['best-replay:manaAdded', 'farm-mana-pool']);
+    expect(ids).toEqual([
+      'best-replay:manaAdded',
+      'farm-gold-buffer',
+      'farm-mana-pool',
+      'farm-talent',
+    ]);
   });
 
   it('farm-mana-pool override applies and rewrites planner-params during early loops', () => {
     const engine = buildLooperSimEngine();
     const params = engine.tryInject(BalanceBotParamsKey)!;
     const loop = engine.tryInject(LoopKey)!;
-    // Default at install: progressionTarget = {} (planner falls through to
-    // default +1 per visible progressVar).
     expect(params.read().progressionTarget).toEqual({});
     runUntil({
       engine,
@@ -125,9 +130,9 @@ describe('looper balance bot — wiring smoke', () => {
       maxSimTime: 120,
       tickDelta: 1,
     });
-    // farm-mana-pool's canApply is `loop.count >= 1 && <= 4` — it fires
-    // after loop 1 ends (afterRestart for loop 2). The override snapshot
-    // sets progressionTarget = {roam: 2, trail: 2, acquaint: 0, mark: 0}.
+    // farm-mana-pool's window is loops 1..maxLoop (default 4). Fires after
+    // loop 1 → afterRestart for loop 2. Override sets the canonical
+    // mana-feeder-bias progression.
     expect(params.read().progressionTarget).toEqual({
       roam: 2,
       trail: 2,
@@ -148,9 +153,91 @@ describe('looper balance bot — wiring smoke', () => {
     });
     const last = rec.lastRecommendation.value;
     expect(last).not.toBeNull();
-    // farm-mana-pool fires first (loops 1-4); best-replay needs minLoops=5
-    // and won't apply until loop 6+.
+    // farm-mana-pool wins arbitration at loop 2 (loop-window 1..4, score 100).
+    // best-replay can't fire (minLoops 10). farm-talent gates on
+    // manaOverflowTrigger which is too high to engage in early loops.
     expect(last!.strategyId).toBe('farm-mana-pool');
     expect(last!.applied).toBe(true);
+  });
+
+  // ─── 3c — phase-window disjointness + Pass 7 ───────────────────────
+
+  it('phase windows are disjoint: each loop has exactly one canApply farm winner', () => {
+    // Pin manaOverflowTrigger sky-high so farm-talent never gates and the
+    // walk only tests loop-window-gated farms + best-replay.
+    const engine = buildLooperSimEngine();
+    const tuning = engine.tryInject(LooperTuningRegistryKey)!;
+    tuning.pushScope('test/disjointness', {
+      'bot/manaOverflowTrigger': () => 1e9,
+    });
+    const loop = engine.tryInject(LoopKey)!;
+    const rec = engine.tryInject(BalanceBotRecommendationKey)!;
+
+    const observed: Array<{ loop: number; strategy: string }> = [];
+    const unsub = rec.on('apply', (r) => {
+      observed.push({ loop: loop.count.value, strategy: r.strategyId });
+    });
+
+    runUntil({
+      engine,
+      until: () => loop.count.value >= 12,
+      maxSimTime: 1800,
+      tickDelta: 1,
+    });
+    unsub();
+
+    // Default windows: farm-mana-pool 1..4, farm-gold-buffer 5..9,
+    // best-replay minLoops 10. At each restart boundary the recommendation
+    // matches the strategy whose window contains the new loop.count.
+    const expectedFor = (n: number): string => {
+      if (n >= 1 && n <= 4) return 'farm-mana-pool';
+      if (n >= 5 && n <= 9) return 'farm-gold-buffer';
+      return 'best-replay:manaAdded';
+    };
+    expect(observed.length).toBeGreaterThan(0);
+    for (const { loop: lc, strategy } of observed) {
+      expect(strategy).toBe(expectedFor(lc));
+    }
+  });
+
+  it('Pass 7 (talent overflow) appends rotating trainers when threshold > 0', () => {
+    const engine = buildLooperSimEngine();
+    const baseParams: PlannerParams = {
+      progressionTarget: {},
+      manaUpOversupplyFactor: 1.0,
+      tradeThreshold: 100,
+      talentOverflowThreshold: 0,
+    };
+    const overflowParams: PlannerParams = {
+      ...baseParams,
+      talentOverflowThreshold: 50,
+      manaUpOversupplyFactor: 2.0, // ample headroom to soak
+    };
+
+    const basePlan = generatePlan(engine, baseParams);
+    const overflowPlan = generatePlan(engine, overflowParams);
+
+    expect(overflowPlan.length).toBeGreaterThan(basePlan.length);
+
+    const trainerIds = new Set(['stretch', 'tend', 'listen', 'attune']);
+    const baseTrainers = basePlan.filter((i) => trainerIds.has(i.actionId));
+    const overflowTrainers = overflowPlan.filter((i) => trainerIds.has(i.actionId));
+    expect(overflowTrainers.length).toBeGreaterThan(baseTrainers.length);
+  });
+
+  it('Pass 7 stays disabled by default (talentOverflowThreshold: 0)', () => {
+    const engine = buildLooperSimEngine();
+    const params: PlannerParams = {
+      progressionTarget: {},
+      manaUpOversupplyFactor: 4.0, // huge headroom — would soak if Pass 7 fired
+      tradeThreshold: 100,
+      talentOverflowThreshold: 0,
+    };
+    const plan = generatePlan(engine, params);
+    const trainerIds = new Set(['stretch', 'tend', 'listen', 'attune']);
+    const trainers = plan.filter((i) => trainerIds.has(i.actionId));
+    // Pass 1 adds each visible trainer once. With 4 trainers and Pass 7
+    // disabled, the count is exactly 4.
+    expect(trainers.length).toBe(4);
   });
 });

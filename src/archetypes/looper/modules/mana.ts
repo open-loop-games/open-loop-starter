@@ -34,6 +34,17 @@ import type { LooperData } from '../data/types';
  *                                  — additive contribution from a progressVar
  *                                     level to a regularVar pool size. Wired
  *                                     for the manapot-driver pair only.
+ *   - bot/phases/<strategyId>/<bound>
+ *                                  — sim-bot phase-window endpoints. Defaults
+ *                                     are first-cut placeholders pending
+ *                                     solver telemetry; the override registry
+ *                                     lets `pushScope` retune partition
+ *                                     boundaries without reboot.
+ *   - bot/manaOverflowTrigger      — minimum last-loop `manaAdded` for
+ *                                     `farm-talent` to engage. Mana-rich
+ *                                     loops trigger talent-soak; the
+ *                                     placeholder default is refined when
+ *                                     probes run.
  */
 export type LooperTunableKey =
   | 'balance/initialMana'
@@ -42,7 +53,11 @@ export type LooperTunableKey =
   | `actions/${string}/manaCost`
   | `actions/${string}/rewardRatio`
   | `actions/${string}/exchangeMult`
-  | `progressVars/${string}/scales/${string}/perLevel`;
+  | `progressVars/${string}/scales/${string}/perLevel`
+  | `bot/phases/${string}/maxLoop`
+  | `bot/phases/${string}/minLoop`
+  | `bot/phases/${string}/minLoops`
+  | 'bot/manaOverflowTrigger';
 
 export type LooperTunables = Record<string, () => DecimalSource>;
 

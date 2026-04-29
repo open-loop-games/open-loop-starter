@@ -30,11 +30,11 @@
  *
  * # Plan layering
  *
- * The plan composes five passes, in order, against a live action-vector
+ * The plan composes seven passes, in order, against a live action-vector
  * snapshot:
  *
  *   1. **Capability training** — basic actions with no rewards (Stretch,
- *      Tend, Listen). One iteration each. Cheap, builds early
+ *      Tend, Listen, Attune). One iteration each. Cheap, builds early
  *      cost-reduction. Pruned in over-budget trim if necessary.
  *
  *   2. **Gold accumulation** — regular-type actions emitting `add-gold`
@@ -49,6 +49,15 @@
  *   5. **Progression** — progress-type actions targeting visible
  *      progressVars. Allocated by `progressionTarget[id]` level deltas
  *      (default: +1 per visible progressVar).
+ *
+ *   6. **Budget trim** — drops tail items until total cost fits the
+ *      `initialMana × manaUpOversupplyFactor + projectedManaAdded` cap.
+ *
+ *   7. **Talent overflow** *(opt-in via `talentOverflowThreshold > 0`)* —
+ *      if remaining headroom exceeds the threshold, append rotating
+ *      capability-trainer iterations (`expMult ≥ 4` basics) until consumed.
+ *      Disabled by default; `farm-talent`'s override engages this pass to
+ *      soak mana-rich loops into compounded talent gain.
  *
  * Productive-zero actions (regular pools below `rewardRatio` threshold,
  * progress actions whose target is at level cap) are excluded at vector-
@@ -115,9 +124,22 @@ export interface PlannerParams {
   manaUpOversupplyFactor: number;
   /**
    * Minimum gold buffer at which Trade fires. Set to `'never'` to skip
-   * Trade entirely (used by the future `farm-gold-buffer` goal strategy).
+   * Trade entirely (used by `farm-gold-buffer` when stockpiling gold for
+   * persistent-purchase forks; canonical in-loop accumulation pairs with a
+   * numeric threshold).
    */
   tradeThreshold: number | 'never';
+  /**
+   * When `> 0`, after Pass 6 (budget trim) the planner runs Pass 7 (talent
+   * overflow): if remaining headroom in the budget cap exceeds this
+   * threshold, the planner appends rotating capability-trainer iterations
+   * (basic actions classified `'capability'` with `expMult ≥ 4` — the
+   * canonical idle-loops training-multiplier signature) until the budget
+   * is consumed. Drives `farm-talent`'s "swap to talent-soak when mana is
+   * plentiful" mode without growing the override surface beyond
+   * `PlannerParams`. Default `0` = disabled (other strategies leave it off).
+   */
+  talentOverflowThreshold: number;
 }
 
 /** A planned plan-segment item — `{actionId, loops}` ordered for queue write. */
@@ -165,6 +187,7 @@ export const DEFAULT_PARAMS: PlannerParams = {
   progressionTarget: {},
   manaUpOversupplyFactor: 1.0,
   tradeThreshold: 100,
+  talentOverflowThreshold: 0,
 };
 
 // ─── XP curve helpers ─────────────────────────────────────────────────────
@@ -490,5 +513,54 @@ export function generatePlan(
     planState.plan.pop();
   }
 
+  // ─── Pass 7: talent overflow ────────────────────────────────────────
+  // Opt-in via params.talentOverflowThreshold > 0. After trim, any leftover
+  // headroom up to the budget cap can be soaked by rotating capability
+  // trainers — basic actions classified 'capability' with expMult ≥ 4. The
+  // expMult floor matches the canonical idle-loops training-multiplier
+  // signature, so Trek (basic, capability-pass-classified, expMult 1)
+  // doesn't get pulled into the rotation as a high-cost bridge action.
+  if (params.talentOverflowThreshold > 0) {
+    const remaining = budgetCap - planCost(planState.plan, vectorById);
+    if (remaining >= params.talentOverflowThreshold) {
+      fillWithRotatingTrainers(planState, remaining, visible);
+    }
+  }
+
   return planState.plan;
+}
+
+/**
+ * Pass 7 helper. Round-robins through visible trainers (basic + capability-
+ * segment + expMult ≥ 4), appending one loop per cycle, until either the
+ * remaining budget is consumed or no trainer fits the leftover headroom.
+ *
+ * The "consecutive skip" guard exits cleanly when the only-remaining-budget
+ * fits no trainer's adjustedTicks — without it the rotation would loop
+ * forever skipping over too-expensive trainers.
+ */
+function fillWithRotatingTrainers(
+  planState: PlanState,
+  remainingBudget: number,
+  visible: ActionVector[],
+): void {
+  const trainers = visible.filter(
+    (v) => v.def.type === 'basic' && v.passSegment === 'capability' && Number(v.def.expMult) >= 4,
+  );
+  if (trainers.length === 0) return;
+
+  let budget = remainingBudget;
+  let i = 0;
+  let consecutiveSkips = 0;
+  while (budget > 0 && consecutiveSkips < trainers.length) {
+    const v = trainers[i % trainers.length];
+    i++;
+    if (v.adjustedTicks > budget) {
+      consecutiveSkips++;
+      continue;
+    }
+    consecutiveSkips = 0;
+    pushItem(planState, v, 1);
+    budget -= v.adjustedTicks;
+  }
 }
