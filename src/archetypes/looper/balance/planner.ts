@@ -266,7 +266,7 @@ export interface ActionVector {
 export const DEFAULT_PARAMS: PlannerParams = {
   progressionTarget: {},
   manaUpOversupplyFactor: 1.0,
-  progressionChunkTicks: 200,
+  progressionChunkTicks: 250,
   talentOverflowThreshold: 0,
 };
 

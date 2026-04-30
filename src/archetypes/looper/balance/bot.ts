@@ -148,7 +148,7 @@ export const BalanceBotRecommendationKey: InjectionKey<RecommendationSystem> = S
 const FARM_MANA_POOL_PARAMS: PlannerParams = {
   progressionTarget: { roam: 2, trail: 2, acquaint: 0, mark: 0 },
   manaUpOversupplyFactor: 1.0,
-  progressionChunkTicks: 200,
+  progressionChunkTicks: 250,
   talentOverflowThreshold: 0,
 };
 
@@ -170,7 +170,7 @@ const FARM_MANA_POOL_PARAMS: PlannerParams = {
 const FARM_TALENT_PARAMS: PlannerParams = {
   progressionTarget: { roam: 1, acquaint: 1, trail: 0, mark: 0 },
   manaUpOversupplyFactor: 1.0,
-  progressionChunkTicks: 200,
+  progressionChunkTicks: 250,
   talentOverflowThreshold: 50,
 };
 
