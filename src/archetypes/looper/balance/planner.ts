@@ -275,9 +275,13 @@ export const DEFAULT_PARAMS: PlannerParams = {
 
 // ─── XP curve helpers ─────────────────────────────────────────────────────
 
-/** Inverse of `level = floor(sqrt(xp) / 2)`: `xp_for_level_N = 4N²`. */
+/**
+ * Inverse of `level = floor((sqrt(8x/100 + 1) - 1) / 2)`: solving for the XP
+ * threshold gives `xp_for_level_N = 50 × N × (N + 1)`. Vanilla idle-loops
+ * progress-var curve (zones.ts:476).
+ */
 function xpForLevel(level: number): number {
-  return 4 * level * level;
+  return 50 * level * (level + 1);
 }
 
 /** XP needed to advance from current state to `targetLevel`. */
@@ -379,10 +383,6 @@ export function projectActionVectors(engine: PlannerAccessor): ActionVector[] {
     if (!state) continue;
 
     const adjustedTicks = Math.max(1, Number(state.adjustedTicks.value));
-    const manaCost = Number(state.manaCost.value);
-    // adjustedExp = expMult × (manaCost / adjustedTicks). expMult=1 across the
-    // canonical action set; the multiply preserves shape for forks that retune.
-    const adjustedExp = Decimal.mul(def.expMult, Decimal.div(manaCost, adjustedTicks));
 
     let progressVarXpPerCompletion = 0;
     let manaPerCompletion = 0;
@@ -395,7 +395,8 @@ export function projectActionVectors(engine: PlannerAccessor): ActionVector[] {
     if (def.type === 'progress') {
       const pvDef = progressVars.getDef(def.progressVarId);
       if (pvDef) {
-        progressVarXpPerCompletion = Number(Decimal.mul(pvDef.expMult, adjustedExp));
+        // Mirror modules/actions.ts grant: progressAmount × pvDef.expMult.
+        progressVarXpPerCompletion = Number(Decimal.mul(def.progressAmount, pvDef.expMult));
       }
     } else if (def.type === 'regular') {
       rewardRatio = Number(state.rewardRatio?.value ?? def.rewardRatio);

@@ -256,8 +256,11 @@ export function createActionsModule(data: LooperData): EngineModule {
         if (def.type === 'progress') {
           const pvDef = progressVars.getDef(def.progressVarId);
           if (pvDef) {
-            // ProgressVar XP = progressVar.expMult × adjustedExp.
-            const xpGrant = Decimal.mul(pvDef.expMult, adjustedExp);
+            // ProgressVar XP = action.progressAmount × pvDef.expMult.
+            // Vanilla idle-loops shape (idle-loops-ng/src/modules/action-runner.ts:241):
+            // explicit per-action progressAmount, decoupled from manaCost so
+            // forks can retune cost without affecting progression rate.
+            const xpGrant = Decimal.mul(def.progressAmount, pvDef.expMult);
             progressVars.addXp(def.progressVarId, xpGrant);
           }
         } else if (def.type === 'regular') {

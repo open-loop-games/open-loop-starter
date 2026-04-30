@@ -27,11 +27,11 @@ import type { ActionDef } from './types';
 // coverage; without it the rotation would leave aether's talent track
 // trailing the other three.
 //
-// Prereq web: 5 chains exercising all five `ActionPrereq` variants.
+// Prereq web: chains exercising all five `ActionPrereq` variants.
+//   Acquaint ≥ 3 done     → Slip    visible  (Hearth gold pool entry,
+//                                              action-completion-count)
 //   Roam ≥ level 3        → Trade   visible  (Hearth gold-spend exchange,
 //                                              progress-var-level)
-//   Stretch ≥ 5 done      → Crack   visible  (Hearth manapot harvest entry,
-//                                              action-completion-count)
 //   Roam ≥ level 5        → Trek    visible  (Hearth → Wilds bridge,
 //                                              progress-var-level)
 //   Trail ≥ level 1       → Mark    visible  (Wilds internal,
@@ -40,8 +40,8 @@ import type { ActionDef } from './types';
 //     AND loops ≥ 3       → Gather  visible  (Wilds late-game,
 //                                              capability-tier-level + loop-count)
 // Actions without `prereqs` are always-visible by default (the implicit
-// `always` variant — exercised by stretch/tend/listen/roam/acquaint/slip/run/
-// trail/drink).
+// `always` variant — exercised by stretch/tend/listen/attune/roam/acquaint/
+// crack/run/trail/drink).
 //
 // ─── Costume ───
 // Theme-fresh action set — an everyday-craft adventure stack. Names lean
@@ -104,6 +104,7 @@ export const ACTIONS: ActionDef[] = [
     zoneId: 'hearth',
     type: 'progress',
     progressVarId: 'roam',
+    progressAmount: 200,
     manaCost: 150,
     expMult: 1,
     weights: { vigor: 0.4, lore: 0.4, aether: 0.2 },
@@ -115,6 +116,7 @@ export const ACTIONS: ActionDef[] = [
     zoneId: 'hearth',
     type: 'progress',
     progressVarId: 'acquaint',
+    progressAmount: 200,
     manaCost: 150,
     expMult: 1,
     weights: { lore: 0.6, aether: 0.4 },
@@ -201,6 +203,7 @@ export const ACTIONS: ActionDef[] = [
     zoneId: 'wilds',
     type: 'progress',
     progressVarId: 'trail',
+    progressAmount: 200,
     manaCost: 250,
     expMult: 1,
     weights: { vigor: 0.6, aether: 0.4 },
@@ -212,6 +215,7 @@ export const ACTIONS: ActionDef[] = [
     zoneId: 'wilds',
     type: 'progress',
     progressVarId: 'mark',
+    progressAmount: 200,
     manaCost: 280,
     expMult: 1,
     weights: { aether: 0.6, lore: 0.4 },

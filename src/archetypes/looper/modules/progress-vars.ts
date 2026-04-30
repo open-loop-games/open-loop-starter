@@ -55,8 +55,12 @@ export const ProgressVarsKey: InjectionKey<SkillCategory<ProgressVarDef, LooperP
  * - **ProgressVars** — XP persists across loops; level sizes regularVar pools
  *   via the `scales` table (Wander × 5 → Pots; Forest × 5 + Shortcut × 2 → Herbs).
  *
- * The XP curve mirrors capabilities (`level = floor(sqrt(xp) / 2)` — vanilla
- * idle-loops shape). The level-up callback closes over the regularVars
+ * The XP curve mirrors vanilla idle-loops progress vars (`zones.ts:476`):
+ * `level = floor((sqrt(8 × xp / 100 + 1) - 1) / 2)` → `xpForLevel(N) = 50N(N+1)`.
+ * Distinct from capabilities' `floor(sqrt(xp)/2)` curve (`xpForLevel(N) = 4N²`)
+ * — progress vars need a flatter ramp because their XP grants are large
+ * fixed values (`progressAmount: 200`/completion) rather than the
+ * cost-derived sub-1 capability XP. The level-up callback closes over the regularVars
  * module's `setRegularTotal`; on any contributor's level-up, every affected
  * regularVar (every entry in the changed progressVar's `scales` table)
  * recomputes its `total` by summing `level × perLevel` across all
@@ -123,7 +127,8 @@ export function createProgressVarsModule(data: LooperData): EngineModule {
       const progressVars = createSkillCategory<ProgressVarDef, LooperProgressVarState>({
         id: 'looper/progress-vars',
         mapSkill: (def) => ({
-          xpToLevel: (xp) => Formula.variable(xp).max(1).sqrt().div(2).floor(),
+          xpToLevel: (xp) =>
+            Formula.variable(xp).mul(8).div(100).add(1).sqrt().sub(1).div(2).floor(),
           levelToMultiplier: (level) => level,
           description: `${def.name} (Progress)`,
           onLevelUp: () => onProgressVarLevelUp(def.id),

@@ -2,11 +2,10 @@
  * Looper sim-bot — phase-conditioned plan generator + engine-systems substrate.
  *
  * Wires four layers:
- *   1. **Planner** (`./planner.ts`) — closed-form backward-induction over
- *      visible actions, parameterized by `PlannerParams`. Produces a queue
- *      plan on every `loop.afterRestart`.
+ *   1. **Planner** (`./planner.ts`) — closed-form per-loop plan generator,
+ *      parameterized by `PlannerParams`. Runs on every `loop.afterRestart`.
  *   2. **LoopLog** — per-loop deltas (`manaAdded`, `goldAccumulated`,
- *      `talentLevelSum`) feeding solver verification + BestOf.
+ *      `talentLevelSum`, `loopElapsed`) feeding BestOf + arbitration.
  *   3. **BestOf** — per-metric high-water marks with `captureStrategy`
  *      returning the planner-params snapshot that produced the run.
  *   4. **RecommendationSystem** — per-loop strategy arbitration on
@@ -14,29 +13,20 @@
  *      planner-param snapshot into `paramsHandle`, so the next loop's
  *      `applyPlan` reads the recommended params.
  *
- * Strategy roster (3c — full canonical roster):
+ * Strategy roster:
  *   - `farm-mana-pool` (bespoke override, score 100, loop-window gated) —
- *      Biases progression toward mana-feeding progressVars (roam→cache,
- *      trail→wellspring); skips errand-feeding acquaint and trail-prereq'd
- *      mark. Drives exploration of the mana-pool growth axis. Default
- *      window: loops 1–4.
+ *      biases progression toward mana-feeding progressVars (roam→cache,
+ *      trail→wellspring); skips errand-feeding acquaint.
  *   - `farm-gold-buffer` (bespoke override, score 100, loop-window gated) —
- *      Alternate harvest path: bias progression toward acquaint+roam
- *      (errand+latch pool growers), trade aggressively to convert gold
- *      bursts into mana. Differentiates from farm-mana-pool by harvest
- *      timing (gold→Trade burst vs cache→Crack stream). Default window:
- *      loops 5–9.
+ *      biases progression toward acquaint+roam (errand+latch pool growers);
+ *      gold-routed harvest emerges via the slip/run→trade chain.
  *   - `farm-talent` (bespoke override, score 50, mana-headroom gated) —
- *      Self-gating gap-filler: applies whenever last loop's `manaAdded`
- *      exceeds `bot/manaOverflowTrigger`. Engages planner Pass 7
- *      (talent overflow) to soak excess mana into rotating capability
- *      trainers (expMult 4 basics: Stretch/Tend/Listen/Attune). Score 50
- *      means it loses arbitration to loop-window-gated farms when both
- *      apply — only fills phase gaps where no loop-gated farm is active.
- *   - `best-replay:manaAdded` (engine-native via `createBestReplayStrategy`)
- *      — phase-gated via `bot/phases/best-replay/minLoops`. Replays the
- *      snapshot that produced the highest `manaAdded`. Cavernous II shape
- *      lifted to params-replay (planner regenerates against richer state).
+ *      self-gates on last loop's `manaAdded` exceeding `bot/manaOverflowTrigger`.
+ *      Engages planner Pass 7 (talent overflow) to soak excess mana into
+ *      rotating capability trainers (expMult-4 basics).
+ *   - `best-replay:manaAdded` (engine-native via `createBestReplayStrategy`) —
+ *      phase-gated via `bot/phases/best-replay/minLoops`. Replays the snapshot
+ *      that produced the highest `manaAdded`.
  *
  * **Why bespoke for the override strategies:** the engine's
  * `createGoalStrategy` is per-metric best-replay (`recommend()` returns
@@ -46,49 +36,24 @@
  *
  * **Phase boundaries are tunable.** Each strategy's `canApply` window
  * reads from the shared `looper-tuning` override registry via
- * `tunable('bot/phases/<strategy>/<bound>', ...)`. Solver `pushScope`
- * retunes partition boundaries without reboot. First-cut defaults are
- * placeholders pending probe telemetry — see leaf-4 (OL-746 solver) for
- * calibration; static-data derivation is the long-term goal.
+ * `tunable('bot/phases/<strategy>/<bound>', ...)`. `pushScope` retunes
+ * partition boundaries without engine reboot.
  *
  * # Parameterized-personality framing
  *
- * The strategy roster is also the looper's parameterized-personality
- * variety surface — same decision architecture (planner.ts), different
- * param bundles producing different play styles at the same capability
- * level (style axis, not difficulty axis). The dimensions that vary
- * across personalities live in `PlannerParams`:
- *
- *   - `progressionTarget` — role focus: which progressVar tracks the
- *     personality pursues. farm-mana-pool weights roam+trail (mana-pool
- *     growers); farm-gold-buffer weights acquaint+roam (errand-pool
- *     growers); farm-talent biases neither hard.
- *   - `tradeThreshold` — gold-burst timing: 50 = trade aggressively when
- *     a small pouch is full (gold→Trade burst); 100 = bank larger before
- *     trading; `'never'` = no trade pass.
- *   - `talentOverflowThreshold` — mana-soak disposition: 0 = no trainer
- *     soak (default); >0 = engage planner Pass 7 when remaining headroom
- *     exceeds the threshold. The "swap to talent when mana is plentiful"
- *     personality dial without growing the override surface.
- *   - `manaUpOversupplyFactor` — budget tightness vs. slack.
- *
- * Per-strategy phase windows (`bot/phases/<strategy>/<bound>`) are the
- * activation-range hybrid: each personality has a loop-count window
- * where its `canApply` returns true, equivalent to min/max activation
- * ranges over a personality's context. Switching personalities at a
- * phase boundary is the canonical boundary-deferred apply — the next
- * `loop.afterRestart` calls reconcileQueue with the winner's params,
- * producing a queue-shape diff against the previous personality's
- * emission, not a wholesale rebuild.
+ * The strategy roster is the looper's parameterized-personality variety
+ * surface — same decision architecture (planner.ts), different param
+ * bundles producing different play styles at the same capability level
+ * (style axis, not difficulty axis). Per-strategy phase windows
+ * (`bot/phases/<strategy>/<bound>`) gate which personality runs at which
+ * loop count.
  *
  * Selection policy and action space stay separable: param bundles
  * (`FARM_*_PARAMS`) are the action space; the recommendation system's
- * `score` + `canApply` arbitration is the policy. Neither side reads
- * across — the policy writes `plannerParams` via `applySnapshot`, the
- * planner reads it. A fork can rebalance personalities without touching
- * the policy, or swap the policy without touching personalities.
- *
- * Research: `open-loop-research/reports/studies/game-ai-variety/`.
+ * `score` + `canApply` arbitration is the policy. The policy writes
+ * `plannerParams` via `applySnapshot`; the planner reads it. A fork can
+ * rebalance personalities without touching the policy, or swap the
+ * policy without touching personalities.
  *
  * Persistence layout:
  *
@@ -103,7 +68,7 @@
  * ```
  *
  * Each `buildLooperSimEngine()` call gets a unique `persistenceNamespace`
- * so parallel matrix-cell sims don't collide in storage. Mirrors Ambient.
+ * so parallel matrix-cell sims don't collide in storage.
  */
 
 import { computed, type ComputedRef } from 'vue';
@@ -177,19 +142,11 @@ export const BalanceBotRecommendationKey: InjectionKey<RecommendationSystem> = S
 
 /**
  * `farm-mana-pool` — bias progression toward mana-feeding progressVars
- * (roam → cache, trail → wellspring + forage), skip the errand-feeding
- * acquaint track. Stretches the mana-pool growth axis across early loops
- * so subsequent loops have productive manapot pools.
+ * (roam → cache, trail → wellspring + forage). Skips errand-feeding
+ * acquaint and trail-prereq'd mark.
  *
  * `acquaint: 0` and `mark: 0` skip those progressVars entirely (the
  * planner's `if (targetDelta <= 0) continue;` branch).
- *
- * Per-loop chunking is the planner default (`progressionChunkSize`
- * unset → 1 loop per item). At canonical `initialMana: 250`, only one or
- * two roam loops fit per arc-loop's budget — exactly the "first 2 loops
- * are exploration" bootstrap shape. Pass-7 trims surplus chunks to fit;
- * surviving roam loops bank progressVar XP toward the level-up that
- * extends `cache.total` past `rewardRatio` for cracking to begin.
  */
 const FARM_MANA_POOL_PARAMS: PlannerParams = {
   progressionTarget: { roam: 2, trail: 2, acquaint: 0, mark: 0 },
@@ -199,21 +156,10 @@ const FARM_MANA_POOL_PARAMS: PlannerParams = {
 };
 
 /**
- * `farm-gold-buffer` — alternate harvest path emphasizing the gold→mana
- * conversion route. Bias progression toward acquaint (errand pool) and
- * lightly toward roam (latch pool — roam scales latch×1 secondary). Trade
- * fires earlier (`tradeThreshold: 50`) than farm-mana-pool's 100 so the
- * gold-burst rhythm is the differentiator: cache→Crack drips mana every
- * 10th completion, gold→Trade dumps a single burst once the pouch is full.
- *
- * Skips trail+mark progression (Wilds content) — this strategy is
- * Hearth-anchored. By the time Wilds opens, best-replay's loop window
- * will be active anyway.
- *
- * Note on tradeThreshold semantics: `'never'` skips Pass 2 (gold accum)
- * AND Pass 4 (trade) entirely, which would make this strategy a no-op for
- * gold harvesting. Use `'never'` only when stockpiling gold for a
- * persistent-purchase fork (no consumer of that shape today).
+ * `farm-gold-buffer` — bias progression toward acquaint (errand pool) and
+ * roam (latch pool — roam scales latch×1 secondary). Differentiates from
+ * farm-mana-pool by harvest chain: gold-routed (run/slip → trade) vs
+ * direct (crack). Hearth-anchored; skips trail+mark progression.
  */
 const FARM_GOLD_BUFFER_PARAMS: PlannerParams = {
   progressionTarget: { acquaint: 2, roam: 3, trail: 0, mark: 0 },
@@ -232,7 +178,7 @@ const FARM_GOLD_BUFFER_PARAMS: PlannerParams = {
  *
  * `talentOverflowThreshold: 50` = "engage Pass 7 only if at least 50 mana
  * of headroom remains after the canonical plan." Below that the trainer
- * cycle wouldn't fit one full rotation. Tune via probe telemetry.
+ * cycle wouldn't fit one full rotation.
  *
  * Modest progression bias keeps the loop bootstrapping (without any
  * progression, mana-extending regulars never see their pools grow).

@@ -197,7 +197,17 @@ interface ActionDefBase {
  * new engine surface; modules wire each type's secondary path internally.
  */
 export type ActionDef =
-  | (ActionDefBase & { type: 'progress'; progressVarId: string })
+  | (ActionDefBase & {
+      type: 'progress';
+      progressVarId: string;
+      /**
+       * XP added to the target progressVar per completion. Vanilla idle-loops
+       * canonical 200 (`vanilla-actions.ts` Wander). Decoupled from `manaCost`
+       * by design — forks can retune cost without affecting progression rate.
+       * Multiplied by `pvDef.expMult` at grant time.
+       */
+      progressAmount: DecimalSource;
+    })
   | (ActionDefBase & {
       type: 'regular';
       regularVarId: string;
