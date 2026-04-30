@@ -14,8 +14,8 @@ export interface ZonesView {
   rows: ComputedRef<ZoneRow[]>;
   /** Currently selected zone id (drives the action drawer's tab focus). */
   current: ComputedRef<string>;
-  /** Highest-ordered unlocked zone — defaults the picker on fresh load / loop reset. */
-  highestUnlocked: ComputedRef<ZoneDef | null>;
+  /** First zone in registration order — the boot default. */
+  defaultZone: ComputedRef<ZoneDef | null>;
   select(zoneId: string): void;
   isUnlocked(zoneId: string): boolean;
 }
@@ -33,21 +33,18 @@ export function useZones(): ZonesView {
 
   const current = computed(() => zones.current.value);
 
-  const highestUnlocked = computed<ZoneDef | null>(() => {
-    const ordered = zones.ordered.value;
-    for (let i = ordered.length - 1; i >= 0; i--) {
-      const ordDef = ordered[i];
-      if (zones.isUnlocked(ordDef.id)) {
-        return data.zones.find((d) => d.id === ordDef.id) ?? null;
-      }
-    }
-    return data.zones[0] ?? null;
-  });
+  // Boot default. Zones don't gate content in the canonical Looper shape
+  // (per-action `prereqs` handle gating; `ZoneDef.requires` is dropped), so
+  // every zone reports `isUnlocked === true`. The pre-reground "highest
+  // unlocked" auto-snap heuristic produced the wrong UX (drawer opening on
+  // Wilds at boot); progressive disclosure now lives in the per-action
+  // visibility filter, not zone selection.
+  const defaultZone = computed<ZoneDef | null>(() => data.zones[0] ?? null);
 
   return {
     rows,
     current,
-    highestUnlocked,
+    defaultZone,
     select: (zoneId) => {
       zones.select(zoneId);
     },

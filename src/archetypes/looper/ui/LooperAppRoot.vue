@@ -13,8 +13,8 @@ import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 import { useToasts } from '@/composables/useToasts';
 import { manifest } from '../manifest';
 import { ArcKey } from '../modules';
-import ActionDrawerPanel from './panels/ActionDrawerPanel.vue';
-import QueueEditorPanel from './panels/QueueEditorPanel.vue';
+import TownColumnPanel from './panels/TownColumnPanel.vue';
+import ActionColumnPanel from './panels/ActionColumnPanel.vue';
 import CurrentLoopPanel from './panels/CurrentLoopPanel.vue';
 import CapabilitiesPanel from './panels/CapabilitiesPanel.vue';
 
@@ -151,18 +151,18 @@ function getActiveModules(): EngineModule[] {
       </div>
     </template>
     <ThreePanelShell
-      left-width="260px"
-      right-width="320px"
+      left-width="280px"
+      right-width="360px"
     >
       <template #left>
-        <ActionDrawerPanel />
-      </template>
-      <div class="looper-main">
-        <CurrentLoopPanel />
-        <QueueEditorPanel />
-      </div>
-      <template #right>
         <CapabilitiesPanel />
+      </template>
+      <TownColumnPanel />
+      <template #right>
+        <div class="looper-main">
+          <CurrentLoopPanel />
+          <ActionColumnPanel />
+        </div>
       </template>
     </ThreePanelShell>
   </AppFrame>

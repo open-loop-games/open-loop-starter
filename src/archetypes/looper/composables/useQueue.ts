@@ -3,47 +3,72 @@ import type { ComputedRef, Ref } from 'vue';
 import type { DecimalSource, Persistent, SequencerItem } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import {
+  QueueAddToTopKey,
+  QueueEditListKey,
+  QueueKeepActiveKey,
   QueueKey,
   QueueManaNeededKey,
+  QueueModuleKey,
   QueueRepeatLastActionKey,
   QueueShouldRestartKey,
   QueueVersionKey,
+  type QueueEditEntry,
   type QueueItemMeta,
 } from '../modules';
 
 export interface QueueView {
-  items: ComputedRef<SequencerItem<QueueItemMeta>[]>;
+  /** Player's plan — mutated by enqueue / reorder / remove / clear. */
+  editItems: ComputedRef<QueueEditEntry[]>;
+  /** Cursor-walked dispatch list. Refreshed from editItems at loop start. */
+  activeItems: ComputedRef<SequencerItem<QueueItemMeta>[]>;
+  /** Currently-dispatched item from the active list. */
   current: ComputedRef<SequencerItem<QueueItemMeta> | null>;
+  /** Cursor position in the active list. */
   cursor: ComputedRef<number>;
   isPaused: ComputedRef<boolean>;
   isHolding: ComputedRef<boolean>;
-  /** Mana sim-seconds needed to finish the *active* run from the cursor onward. */
-  manaNeededFromCursor: ComputedRef<DecimalSource>;
-  /** Mana sim-seconds needed for one full pass of the plan. */
-  manaNeededTotal: ComputedRef<DecimalSource>;
+  /** Σ adjustedTicks × loopsLeft over activeList from cursor — what's left this run. */
+  manaActiveFromCursor: ComputedRef<DecimalSource>;
+  /** Σ adjustedTicks × loops over editList — full-pass cost of the player's plan. */
+  manaEditTotal: ComputedRef<DecimalSource>;
   /** Plan is exhausted; loop's endCondition will fire on the next tick. */
   shouldRestart: Ref<boolean>;
   /** Vanilla "Repeat Last Action" toggle (`actions.js:137-147`). */
   repeatLastAction: Persistent<boolean>;
+  /** Vanilla "Keep Current List Active" toggle — preserve activeList across loop reset. */
+  keepActiveLoopActive: Persistent<boolean>;
+  /** Vanilla "Add to Top" toggle — enqueue prepends instead of appending. */
+  addToTop: Persistent<boolean>;
   enqueue(actionId: string, loops?: number): void;
+  insertAt(index: number, actionId: string, loops?: number): void;
   remove(index: number): void;
   reorder(from: number, to: number): void;
   clear(): void;
   togglePause(): void;
+  /** Snapshot editList → activeList immediately, cursor → 0. */
+  applyEditToActive(): void;
 }
 
 export function useQueue(): QueueView {
   const sequencer = useModule(QueueKey);
+  const editList = useModule(QueueEditListKey);
+  const queueModule = useModule(QueueModuleKey);
   const queueVersion = useModule(QueueVersionKey);
   const sr = useModule(QueueShouldRestartKey);
   const repeat = useModule(QueueRepeatLastActionKey);
+  const keepActive = useModule(QueueKeepActiveKey);
+  const addToTop = useModule(QueueAddToTopKey);
   const needed = useModule(QueueManaNeededKey);
 
-  // Bind reads to queueVersion so re-orders / removes / enqueues invalidate
-  // the computed even though `sequencer.items` is a non-Vue-ref shallow ref
-  // that doesn't always trigger downstream computeds reliably (incloneution
-  // hits the same issue).
-  const items = computed<SequencerItem<QueueItemMeta>[]>(() => {
+  // Bind reads to queueVersion so re-orders / removes / enqueues / dispatch
+  // ticks invalidate the computed even though the engine's shallow refs
+  // don't always trigger downstream computeds reliably.
+  const editItems = computed<QueueEditEntry[]>(() => {
+    void queueVersion.value;
+    return [...editList.value];
+  });
+
+  const activeItems = computed<SequencerItem<QueueItemMeta>[]>(() => {
     void queueVersion.value;
     return [...sequencer.items.value];
   });
@@ -64,33 +89,25 @@ export function useQueue(): QueueView {
     return sequencer.holding;
   });
 
-  function enqueue(actionId: string, loops = 1): void {
-    sequencer.enqueue({ id: actionId, metadata: { loops, loopsLeft: loops } });
-  }
-
   return {
-    items,
+    editItems,
+    activeItems,
     current,
     cursor,
     isPaused,
     isHolding,
-    manaNeededFromCursor: needed.fromCursor,
-    manaNeededTotal: needed.total,
+    manaActiveFromCursor: needed.activeFromCursor,
+    manaEditTotal: needed.editTotal,
     shouldRestart: sr,
     repeatLastAction: repeat,
-    enqueue,
-    remove: (index) => {
-      sequencer.remove(index);
-      queueVersion.value += 1;
-    },
-    reorder: (from, to) => {
-      sequencer.reorder(from, to);
-      queueVersion.value += 1;
-    },
-    clear: () => {
-      sequencer.clear();
-      queueVersion.value += 1;
-    },
+    keepActiveLoopActive: keepActive,
+    addToTop,
+    enqueue: (actionId, loops = 1) => queueModule.enqueue(actionId, loops),
+    insertAt: (index, actionId, loops = 1) => queueModule.insertAt(index, actionId, loops),
+    remove: (index) => queueModule.remove(index),
+    reorder: (from, to) => queueModule.reorder(from, to),
+    clear: () => queueModule.clear(),
     togglePause: () => sequencer.togglePause(),
+    applyEditToActive: () => queueModule.applyEditToActive(),
   };
 }

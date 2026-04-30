@@ -38,11 +38,15 @@ export { ZonesKey } from './zones';
 export { ActionsKey, type ActionState, type ActionsModule } from './actions';
 export {
   QueueKey,
+  QueueEditListKey,
   QueueVersionKey,
   QueueShouldRestartKey,
   QueueRepeatLastActionKey,
+  QueueKeepActiveKey,
+  QueueAddToTopKey,
   QueueManaNeededKey,
   QueueModuleKey,
+  type QueueEditEntry,
   type QueueItemMeta,
   type QueueManaNeeded,
   type LooperQueueModule,
