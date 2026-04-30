@@ -96,7 +96,7 @@ Automation has **no beat** in this archetype: queue auto-dispatch, plan-survives
 |---|------|-----------------|-------------------|------------------------|-----------------|
 | 1 | First action ticking, mana visibly draining | 0:00–0:10 | `queue.current !== null` AND `mana < initialMana` | Action progress bar advances; mana gauge ticks down | Onboarding — confirms the core "actions cost time" feedback |
 | 2 | First loop ends | 0:10–1:00 | `loopCount >= 1` | Reset flash; queue plan re-readies; capability Talent XP shows tiny non-zero | Introduces the reset cadence — Level XP cleared, Talent XP carries, plan survives |
-| 3 | First persistent-progress tick | 0:30–2:00 | any progressVar `level >= 1` (e.g., 1% Roam) | Progress readout ticks past first whole percent; first regularVar pool unlocks (e.g., first cache available to crack) | Persistent track introduced — the cross-loop accumulator that drives manapot pool sizing |
+| 3 | First persistent-progress tick | 0:10–2:00 | any progressVar `level >= 1` (e.g., 1% Roam) | Progress readout ticks past first whole percent; first regularVar pool unlocks (e.g., first cache available to crack) | Persistent track introduced — the cross-loop accumulator that drives manapot pool sizing |
 | 4 | First manapot harvest | 1:00–4:00 | first "good" hit on a regular-pool action grants mana (every Nth check, vanilla `rewardRatio: 10`) | Mana pool extends mid-loop; gauge climbs above `initialMana`; `manaAdded` readout updates | The canonical mid-loop budget extension — turns the 12.5s fresh loop into a habitable arc |
 | 5 | First gold→mana exchange used | 3:00–10:00 | basic exchange action completes with `gold > 0` consumed | Gold readout zeroes; mana extends in one burst rather than per-completion drip | Secondary budget-extension axis — gold accumulator from regular pool, basic action converts to mana |
 | 6 | First Talent multiplier perceptible | 25:00–55:00 | any capability `talent.level >= 1` AND loop N+1's first-N actions complete in fewer ticks than loop N | Talent readout shows `1.20×` multiplier; same plan visibly faster across the reset | The slow-ramp cross-loop axis — the canonical role-split payoff (Talent → faster Level → cheaper actions) |
@@ -269,7 +269,7 @@ export type ActionDef =
   | (ActionDefBase & {
       type: 'regular';
       regularVarId: string;
-      /** Every Nth check fires rewardEffects (idle-loops `rewardRatio`, vanilla 10). */
+      /** Every Nth check fires rewardEffects (vanilla `rewardRatio: 10`, e.g. Smash Pots `actionList.js:206`, Pick Locks `actionList.js:245`). */
       rewardRatio: number;
       rewardEffects: RewardEffect[];
     })
@@ -349,7 +349,7 @@ The Locator column splits the probe table per the Tier-A scaffold convention (`o
 | `cost-reduction-perceptibility` | `balance.talentAccrualRatio` ×[0.5, 2.0] | 6 | Once any capability `talent.level >= 1`: loop N+1's first-N actions complete in fewer sim-ticks than loop N | `balance/probes.ts` (sim-driven; spans reset boundaries) | Per task §6 framing: the canonical role-separated tier perceptibility — Talent → faster Level → cheaper actions, the slow-pace cross-loop axis. |
 | `gold-mana-exchange-correctness` | `weights` and `completionEffects.amount` formulas across the gold accumulator + the basic gold-spend exchange | 5 | Algebraic equality: `manaAdded = goldSpent × exchangeRate` per completion of the basic exchange | `sim/balance.probe.test.ts` (math) | Algebraic correctness of the gold↔mana coupling — the exchange path doesn't go through sim, it's a closed-form receipt. |
 | `loop-reset-correctness` | run 5 consecutive loops; assert per-loop refs zero and persistent refs survive (Talent XP, progressVar XP, action `timesCompleted`, regularVar `total`, queue plan, `repeatLastAction` toggle) | every loop | Zero state drift over ≥5 loops | `balance/probes.ts` (sim-driven) | Structural reset invariant — `createLoop` + `createRetentionPolicy` must produce identical observable behaviour across resets. Sim-shaped because it spans reset boundaries. |
-| `prereq-graph-shape` | enumerate all action prereqs | — (invariant) | All four `ActionPrereq` variants exercised; every reference resolves to a defined id | `sim/balance.probe.test.ts` (math) | Prereq-web sanity — typo-class regression catch. |
+| `prereq-graph-shape` | enumerate all action prereqs | — (invariant) | Every `ActionPrereq` reference resolves to a defined id; variants used by the slim demo (always-implicit, progress-var-level, capability-tier-level, loop-count — 4 of 5; action-completion-count is engine-supported but unexercised post-reground) all appear at least once | `sim/balance.probe.test.ts` (math) | Prereq-web sanity — typo-class regression catch. |
 | `content-cardinality` | enumerate the data layer | — (invariant) | 2 zones, 4 progressVars (2 per zone), 4 capabilities, ≥5 regularVars, ≥1 action per capability per zone, ≥1 progress-type action per progressVar, ≥1 regular-type action per regularVar, ≥1 basic-type exchange action | `sim/balance.probe.test.ts` (math) | Content-cardinality minimum — keeps the demo from drifting below its frame-coverage floor. |
 
 **Minimum probe count:** 7 (well above the ≥4 requirement). The two cross-loop perceptibility probes (`manapot-perceptibility` + `cost-reduction-perceptibility`) cover the two compounding axes distinctly — collapsing them would lose the ability to attribute pacing failures to the right axis.
@@ -483,7 +483,7 @@ describe('balance probe — content cardinality minimums', () => {
 });
 
 describe('balance probe — prereq graph shape', () => {
-  it('exercises all four ActionPrereq variants across the action set', () => {
+  it('exercises the four ActionPrereq variants present in the slim demo', () => {
     const variants = new Set<string>();
     for (const action of actions) {
       if (!action.prereqs) {
@@ -493,10 +493,11 @@ describe('balance probe — prereq graph shape', () => {
       for (const prereq of action.prereqs) variants.add(prereq.kind);
     }
     expect(variants.has('always-implicit')).toBe(true);
-    expect(variants.has('action-completion-count')).toBe(true);
     expect(variants.has('capability-tier-level')).toBe(true);
     expect(variants.has('progress-var-level')).toBe(true);
     expect(variants.has('loop-count')).toBe(true);
+    // action-completion-count is engine-supported but unexercised post-reground;
+    // forks adding content can use it. Not asserted here.
   });
 });
 ```
@@ -567,52 +568,48 @@ Vigor / Aether / Craft / Lore. Each carries Level (resets per loop, reduces cost
 | Zone | ProgressVar | Scales (regularVar × perLevel) |
 |---|---|---|
 | Hearth | `roam` (the explore-equivalent) | `cache` × 5 (manapot pool); `latch` × 1 (gold pool) |
-| Hearth | `acquaint` (the social-equivalent) | `errand` × 1 (gold pool from social work) |
+| Hearth | `acquaint` (the social-equivalent) | (no scales — pool-less, mirrors vanilla Met which sizes `sQuests × 1` fed by Short Quest, an action the slim demo doesn't include — see `actionList.js:389-391`) |
 | Wilds | `trail` (the explore-equivalent in Wilds) | `wellspring` × 5 (alt-manapot pool); `forage` × 5 |
 | Wilds | `mark` (the leyline-equivalent) | `forage` × 2 (multi-axis: contributes additively alongside `trail`) |
 
-The `roam` × 5 → `cache` mapping mirrors vanilla idle-loops' `Wander × 5 → Pots`. Multi-axis: `forage.total = trail.level × 5 + mark.level × 2` (mirrors vanilla's `Herbs = Forest × 5 + Shortcut × 2`). The `scales` table on `ProgressVarDef` carries this as data; modules wire the `skill.on('levelUp', ...)` listener to invoke `setRegularTotal(...)`.
+The `roam` × 5 → `cache` mapping mirrors vanilla idle-loops' `Wander × 5 → Pots` (`actionList.js:195-197`). Multi-axis: `forage.total = trail.level × 5 + mark.level × 2` (mirrors vanilla's `Herbs = Forest × 5 + Shortcut × 2`, dropping the third `flowers × 13` contributor — `actionList.js:1125-1127`). The `scales` table on `ProgressVarDef` carries this as data; modules wire the `skill.on('levelUp', ...)` listener to invoke `setRegularTotal(...)`.
 
-### RegularVars (5, per-loop pools — `total` derived persistent, `checked`/`good` per-loop)
+### RegularVars (4, per-loop pools — `total` derived persistent, `checked`/`good` per-loop)
 
-- **`cache`** (Hearth, manapot) — `rewardRatio: 10`, `rewardEffects: [{ kind: 'add-mana', amount: 100 }]`
-- **`latch`** (Hearth, gold pool) — `rewardRatio: 10`, `rewardEffects: [{ kind: 'add-gold', amount: 10 }]`
-- **`errand`** (Hearth, gold pool from social) — `rewardRatio: 5`, `rewardEffects: [{ kind: 'add-gold', amount: 20 }]`
-- **`wellspring`** (Wilds, alt-manapot) — `rewardRatio: 10`, `rewardEffects: [{ kind: 'add-mana', amount: 250 }]`
-- **`forage`** (Wilds, multi-axis pool) — `rewardRatio: 5`, `rewardEffects: [{ kind: 'add-mana', amount: 50 }, { kind: 'add-gold', amount: 5 }]`
+- **`cache`** (Hearth, manapot) — `rewardRatio: 10`, `rewardEffects: [{ kind: 'add-mana', amount: 100 }]`. Vanilla Pots, drained by Crack (`actionList.js:202-239`).
+- **`latch`** (Hearth, gold pool) — `rewardRatio: 10`, `rewardEffects: [{ kind: 'add-gold', amount: 10 }]`. Vanilla Locks, drained by Slip (`actionList.js:241-284`).
+- **`wellspring`** (Wilds, alt-manapot) — `rewardRatio: 10`, `rewardEffects: [{ kind: 'add-mana', amount: 250 }]`. Vanilla Wild Mana, drained by Drink (`actionList.js:1129-1164`).
+- **`forage`** (Wilds, multi-axis pool) — `rewardRatio: 10`, `rewardEffects: [{ kind: 'add-mana', amount: 50 }, { kind: 'add-gold', amount: 5 }]`. Vanilla Herbs, drained by Gather (`actionList.js:1166-1198`); multi-axis reward (mana + gold) is a declared invention since the slim demo doesn't model the inventory `herbs` resource vanilla grants.
 
-Reward magnitudes are vanilla-canonical-shaped placeholders; OL-746 solver-converges them.
+Reward magnitudes are vanilla canonical (cited per-action in `data/actions.ts` and `data/regular-vars.ts`); not solver-tunable — perturbing them would deform the canonical economy.
 
-### Actions (~14 across 2 zones)
+### Actions (9 across 2 zones)
 
-| Zone | Action | Type | Notes |
+Reground to vanilla idle-loops town 0 (Hearth) and town 1 (Wilds) per OL-805. Every numerical claim cites `actionList.js:line`; full per-action grounding lives inline in `data/actions.ts`. Capability-trainer basics (single-stat `expMult: 4` actions like vanilla Train Strength) are deliberately absent — capability XP comes from world-action `weights`, matching vanilla town 0.
+
+| Zone | Action | Type | Notes (vanilla source) |
 |---|---|---|---|
-| Hearth | Stretch | basic | weights `{vigor: 1}`; entry training, no secondary effect |
-| Hearth | Tend | basic | weights `{craft: 1}`; entry training |
-| Hearth | Listen | basic | weights `{lore: 1}`; entry training |
-| Hearth | Roam | progress | weights `{vigor: 0.4, lore: 0.4, aether: 0.2}`; targets `roam` progressVar |
-| Hearth | Acquaint | progress | weights `{lore: 0.6, aether: 0.4}`; targets `acquaint` progressVar |
-| Hearth | Crack | regular | weights `{craft: 0.5, vigor: 0.5}`; targets `cache`; manapot reward |
-| Hearth | Slip | regular | weights `{craft: 0.7, lore: 0.3}`; targets `latch`; gold reward |
-| Hearth | Run | regular | weights `{vigor: 0.5, lore: 0.5}`; targets `errand`; gold reward |
-| Hearth | Trade | basic | weights `{lore: 1}`; `completionEffects: [{ spend-gold: 'all' }, { add-mana: gold × 50 }]`; prereq Roam ≥ level 3 |
-| Wilds | Trek | basic | weights `{vigor: 0.6, lore: 0.4}`; bridge action; prereq Roam ≥ level 5 |
-| Wilds | Trail | progress | weights `{vigor: 0.6, aether: 0.4}`; targets `trail` progressVar |
-| Wilds | Mark | progress | weights `{aether: 0.6, lore: 0.4}`; targets `mark` progressVar; prereq Trail ≥ level 1 |
-| Wilds | Drink | regular | weights `{aether: 1}`; targets `wellspring`; alt-manapot reward |
-| Wilds | Gather | regular | weights `{craft: 0.5, lore: 0.5}`; targets `forage`; multi-axis-scaled pool |
+| Hearth | Roam | progress | manaCost 250, weights `{vigor: 0.4, lore: 0.4, aether: 0.2}`; targets `roam` progressVar (Wander, `actionList.js:155-194`) |
+| Hearth | Acquaint | progress | manaCost 800, weights `{lore: 0.6, aether: 0.4}`; targets `acquaint`; prereq Roam ≥ level 10 (Meet People, `actionList.js:349-388`) |
+| Hearth | Crack | regular | manaCost 50, weights `{craft: 0.5, vigor: 0.5}`; targets `cache`; manapot reward (Smash Pots, `actionList.js:202-239`) |
+| Hearth | Slip | regular | manaCost 400, weights `{craft: 0.7, lore: 0.3}`; targets `latch`; gold reward; prereq Roam ≥ level 3 (Pick Locks, `actionList.js:241-284`) |
+| Hearth | Trade | basic | manaCost 100, weights `{lore: 0.7, aether: 0.2, craft: 0.1}`; `completionEffects: [{ spend-gold: 'all' }, { exchange-gold-to-mana }]` with `exchangeMult: 50`; prereq Roam ≥ level 3 (Buy Mana, `actionList.js:325-347`) |
+| Wilds | Trail | progress | manaCost 400, weights `{vigor: 0.6, aether: 0.4}`; targets `trail` progressVar; prereq Roam ≥ level 5 (Explore Forest, `actionList.js:1077-1118`) |
+| Wilds | Mark | progress | manaCost 800, weights `{aether: 0.6, lore: 0.4}`; targets `mark` progressVar; prereq Roam ≥ 5 + Trail ≥ level 1 (Old Shortcut, `actionList.js:1270-1313`) |
+| Wilds | Drink | regular | manaCost 150, weights `{aether: 0.6, lore: 0.2, craft: 0.2}`; targets `wellspring`; alt-manapot reward; prereq Roam ≥ level 5 (Wild Mana, `actionList.js:1129-1164`) |
+| Wilds | Gather | regular | manaCost 200, weights `{craft: 0.5, lore: 0.5}`; targets `forage`; multi-axis-scaled pool; prereq Roam ≥ 5 + Vigor.Talent ≥ 1 + loops ≥ 3 (Gather Herbs, `actionList.js:1166-1198`) |
 
 Coverage:
 
-- All four capabilities exercised in both zones.
-- All three action types present in Hearth; progress + regular present in Wilds (basic Trek bridges).
+- All four capabilities exercised in both zones (vigor/aether/craft/lore appear in `weights` of at least one Hearth action and one Wilds action).
+- All three action types present in Hearth (progress, regular, basic); progress + regular present in Wilds (no basic action in Wilds — vanilla town 1 has no equivalent of Trade).
 - All four progressVars have a corresponding progress-type action targeting them.
-- All five regularVars have a corresponding regular-type action.
+- All four regularVars have a corresponding regular-type action draining them.
 - **Manapot frame:** Roam → `cache.total` grows → Crack harvests → mana extends.
-- **Gold↔mana frame:** Roam → `latch.total` grows + Acquaint → `errand.total` grows → Slip / Run accumulate gold → Trade burns gold-for-mana.
+- **Gold↔mana frame:** Roam → `latch.total` grows → Slip accumulates gold → Trade burns gold-for-mana in one burst.
 - **Alt-manapot in zone 2:** Trail → `wellspring.total` grows → Drink harvests → mana extends. Same shape as Hearth's Roam→Crack, different progressVar.
 - **Multi-axis scaling:** `forage.total = trail.level × 5 + mark.level × 2`; Gather harvests it. Demonstrates compositional progressVar coupling.
-- All four `ActionPrereq` variants exercised (action-completion-count, capability-tier-level, progress-var-level, loop-count via late-game gating).
+- Four of five `ActionPrereq` variants exercised: always-implicit (Roam, Crack), progress-var-level (most prereqs), capability-tier-level (Gather), loop-count (Gather). The `action-completion-count` variant is engine-supported but unexercised in the slim demo — forks adding content can use it.
 
 ### Loop start trigger & restart
 
@@ -635,13 +632,13 @@ The loop *is* the retention-tier reset. Fork-extension territory: a Lloyd-shaped
 
 ### Density target
 
-- Beat 1 → Stretch / Tend / Listen entry training visible from loop 1.
+- Beat 1 → Roam visible from loop 1; queue auto-dispatches the canonical bootstrap (Roam first to size the manapot pool, then Crack against the resulting `cache`).
 - Beat 2 → first loop ends; reset cadence introduced.
-- Beat 3 → first Roam completion brings `roam` progressVar to level 1 (1% Roam) → cache pool unlocks (`cache.total` jumps from 0 to 5).
+- Beat 3 → first Roam completion brings `roam` progressVar to level 1 → `cache.total` jumps from 0 to 5; first Crack now possible against the unlocked pool.
 - Beat 4 → repeated Crack completions hit the 10th-check threshold → first manapot harvest extends mana pool mid-loop.
-- Beat 5 → repeated Slip / Run completions accumulate gold → Trade burns gold for mana in one burst.
+- Beat 5 → repeated Slip completions accumulate gold → Trade burns gold for mana in one burst (visibility gates: Roam ≥ 3 unlocks both Slip and Trade).
 - Beat 6 → Talent on at least one capability reaches level 1 → talentMult 1.20× → noticeable cost reduction in subsequent loops.
-- Beat 7 → Roam (or Acquaint, depending on plan) crosses prereq threshold → Trek visible → Wilds tab populates → Trail / Drink / Gather authorable into the queue.
+- Beat 7 → Roam reaches level 5 → Trail / Drink visible (Wilds tab populates); Mark gates on Trail ≥ 1; Gather adds capability-Talent + loop-count gates for the late-game multi-axis pool.
 - Beat 8 → multi-axis compounding (Trail+Mark scaling on Forage, Talent across multiple capabilities, sustained mana-pool extension); arc-closure latch fires.
 
 ### Cardinality cross-check

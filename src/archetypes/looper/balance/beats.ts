@@ -46,7 +46,11 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
   // loop ends" semantic with margin for the (γ)-induced structural
   // floor. Ordering with B3 [30s, 2m00s] preserved.
   'beat-2': [sec(10), sec(60)],
-  'beat-3': [sec(30), min(2)],
+  // Lower bound 30s → 10s after OL-805 reground: Roam at 250 mana is a
+  // single-action first loop; roam.level=1 lands at end of loop 0 (~0:14
+  // sim-time) under the canonical bootstrap arc, well before the prior
+  // 30s floor. Upper bound preserved.
+  'beat-3': [sec(10), min(2)],
   'beat-4': [min(1), min(4)],
   'beat-5': [min(3), min(10)],
   'beat-6': [min(25), min(55)],
