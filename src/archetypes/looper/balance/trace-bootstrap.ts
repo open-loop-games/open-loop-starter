@@ -1,20 +1,20 @@
 /**
- * Per-loop trace — farm-errand-pool strategy under canonical content.
+ * Per-loop bootstrap trace — natural strategy arbitration under canonical content.
  *
- * One-off discovery script. Replays the strategy loop-by-loop and prints,
- * for each loop:
+ * Replays the bot's recommendation roster loop-by-loop (no strategy-forcing)
+ * and prints, for each loop:
  *
  *   - the reconciled queue (what the planner emitted + reconciled into the
  *     queue at loop start)
  *   - LoopLog deltas (manaAdded, goldAccumulated, loopElapsed)
- *   - per-action timesCompleted deltas (especially `trade`, `run`, `slip`)
- *   - per-progressVar level (roam, acquaint, …) — gates trade visibility
- *   - per-regularVar checked / total / good / goodTemp (errand pool feeds
- *     gold-source candidates in the planner's unified harvest pass)
+ *   - per-action timesCompleted deltas (esp. `trade`, `slip`)
+ *   - per-progressVar level (roam, acquaint, trail, mark) — gates Wilds
+ *     visibility and trade visibility
+ *   - per-regularVar checked / total / good / goodTemp
  *   - planner action-vector projections for `trade` + gold sources (visible /
  *     productive flags, projected goldPerCompletion × rewardRatio)
  *
- * Run: `pnpm exec vite-node src/archetypes/looper/balance/trace-farm-errand-pool.ts`
+ * Run: `pnpm exec vite-node src/archetypes/looper/balance/trace-bootstrap.ts`
  */
 
 import { runUntil, type Engine } from 'open-loop-engine';
@@ -28,32 +28,20 @@ import {
   QueueKey,
   RegularVarsKey,
 } from '../modules';
-import {
-  buildLooperSimEngine,
-  BalanceBotLoopLogKey,
-  BalanceBotParamsKey,
-  BalanceBotRecommendationKey,
-} from './bot';
+import { buildLooperSimEngine, BalanceBotLoopLogKey, BalanceBotParamsKey } from './bot';
 import { generatePlan, projectActionVectors, type PlannerParams } from './planner';
 
-// ─── Strategy params (mirrors bot.ts FARM_ERRAND_POOL_PARAMS) ─────────────
+// ─── Trace params ────────────────────────────────────────────────────────
 
-const FARM_ERRAND_POOL_PARAMS: PlannerParams = {
-  progressionTarget: { acquaint: 2, roam: 3, trail: 0, mark: 0 },
-  manaUpOversupplyFactor: 1.0,
-  progressionChunkTicks: 200,
-  talentOverflowThreshold: 0,
-};
-
-const TRACE_LOOPS = 12;
+const TRACE_LOOPS = 50;
 const MAX_SIM_SEC = 60 * 60 * 3; // 3h ceiling — beat-6 lands at ~2h13m
 const TICK_DELTA = 1;
 
 // Verification phase ceiling. After the per-loop trace finishes its first
 // `TRACE_LOOPS` of bootstrap visibility, runUntil drives the same engine
 // further with a predicate `plannerEmittedTrade || cap` to answer "does
-// the planner ever emit a trade item under canonical farm-errand-pool
-// content?" — without burning sample-rendering cycles per loop.
+// the planner ever emit a trade item under canonical content?" — without
+// burning sample-rendering cycles per loop.
 const VERIFY_MAX_SIM_SEC = 60 * 60 * 6; // 6h ceiling for trade-emission probe
 
 // ─── Per-loop sample ─────────────────────────────────────────────────────
@@ -367,31 +355,17 @@ function reportLoop(s: LoopSample): void {
 
 function main(): void {
   const t0 = Date.now();
-  console.log('# Looper farm-errand-pool per-loop trace\n');
+  console.log('# Looper bootstrap per-loop trace\n');
   console.log(`Run at ${new Date().toISOString()}\n`);
-  console.log(`Strategy: farm-errand-pool (override seeded at engine build)`);
+  console.log(
+    `Strategy: natural recommendation arbitration (farm-mana-pool, farm-talent, best-replay)`,
+  );
   console.log(`Trace loops: ${TRACE_LOOPS} (or until ${fmtTime(MAX_SIM_SEC)} cap)`);
   console.log(`tickDelta: ${TICK_DELTA}s\n`);
-  console.log(
-    `Params: progressionTarget=${JSON.stringify(FARM_ERRAND_POOL_PARAMS.progressionTarget)} ` +
-      `progressionChunkTicks=${FARM_ERRAND_POOL_PARAMS.progressionChunkTicks} ` +
-      `oversupply=${FARM_ERRAND_POOL_PARAMS.manaUpOversupplyFactor}\n`,
-  );
 
-  const engine = buildLooperSimEngine(undefined, {
-    plannerParamsOverride: FARM_ERRAND_POOL_PARAMS,
-  });
+  const engine = buildLooperSimEngine();
 
-  // Force the farm-errand-pool strategy to win every loop. Without this, the
-  // recommendation system would arbitrate between farm-mana-pool (loops 1-4)
-  // and farm-errand-pool (loops 5-9) per the canonical phase windows. We
-  // want a clean trace under farm-errand-pool's params from loop 1, so we
-  // disable autoApply and write the params manually each restart.
-  const rec = engine.tryInject(BalanceBotRecommendationKey)!;
-  rec.autoApply.value = false;
   const paramsHandle = engine.tryInject(BalanceBotParamsKey)!;
-  paramsHandle.write(FARM_ERRAND_POOL_PARAMS);
-
   const loop = engine.tryInject(LoopKey)!;
   const manaAdded = engine.tryInject(ManaAddedKey)!;
   const gold = engine.tryInject(GoldKey)!;
@@ -400,8 +374,9 @@ function main(): void {
   engine.tryInject(CapabilitiesKey)!;
 
   const samples: LoopSample[] = [];
+  let currentParams: PlannerParams = paramsHandle.read();
   let pendingPlan: QueueRow[] = snapshotQueue(engine);
-  let pendingVectorSnapshot = snapshotVectorView(engine, FARM_ERRAND_POOL_PARAMS);
+  let pendingVectorSnapshot = snapshotVectorView(engine, currentParams);
   let preTimesCompleted = snapshotTimesCompleted(engine);
 
   // beforeRestart fires at end-of-loop, before the loop counter advances.
@@ -426,19 +401,18 @@ function main(): void {
       progressVarLevels: snapshotProgressVarLevels(engine),
       regularVars: snapshotRegularVars(engine),
       vectorSnapshot: pendingVectorSnapshot,
-      strategyId: 'farm-errand-pool',
+      strategyId: 'auto',
     });
     preTimesCompleted = post;
   });
 
   // afterRestart fires after the bot's applyPlan has reconciled the queue
-  // for the *next* loop. Snapshot the planned queue + vector projection then.
+  // for the *next* loop. Snapshot the planned queue + vector projection then,
+  // reading whichever params the recommendation system applied.
   loop.on('afterRestart', () => {
-    // Re-pin params each loop in case anything tries to overwrite via
-    // recommendation. (autoApply is off, but defense in depth.)
-    paramsHandle.write(FARM_ERRAND_POOL_PARAMS);
+    currentParams = paramsHandle.read();
     pendingPlan = snapshotQueue(engine);
-    pendingVectorSnapshot = snapshotVectorView(engine, FARM_ERRAND_POOL_PARAMS);
+    pendingVectorSnapshot = snapshotVectorView(engine, currentParams);
   });
 
   const result = runUntil({
@@ -460,7 +434,7 @@ function main(): void {
   let firstTradeEmitLoop: number | null = null;
   loop.on('afterRestart', () => {
     if (firstTradeEmitLoop !== null) return;
-    const plan = generatePlan(engine, FARM_ERRAND_POOL_PARAMS);
+    const plan = generatePlan(engine, paramsHandle.read());
     if (plan.some((p) => p.actionId === 'trade')) {
       firstTradeEmitLoop = loop.count.value;
     }

@@ -16,13 +16,7 @@
  * Strategy roster:
  *   - `farm-mana-pool` (bespoke override, score 100, loop-window gated) —
  *      biases progression toward mana-feeding progressVars (roam→cache,
- *      trail→wellspring); skips errand-feeding acquaint.
- *   - `farm-errand-pool` (bespoke override, score 100, loop-window gated) —
- *      biases progression toward acquaint+roam (errand+latch pool growers).
- *      Under unified harvest, gold-routed (run/slip → trade) candidates
- *      emerge from planner ranking once the errand pool is productive —
- *      strategy identity is the progressionTarget bias, not a separate
- *      harvest path.
+ *      trail→wellspring).
  *   - `farm-talent` (bespoke override, score 50, mana-headroom gated) —
  *      self-gates on last loop's `manaAdded` exceeding `bot/manaOverflowTrigger`.
  *      Engages planner Pass 4 (talent overflow) to soak excess mana into
@@ -145,29 +139,14 @@ export const BalanceBotRecommendationKey: InjectionKey<RecommendationSystem> = S
 
 /**
  * `farm-mana-pool` — bias progression toward mana-feeding progressVars
- * (roam → cache, trail → wellspring + forage). Skips errand-feeding
- * acquaint and trail-prereq'd mark.
+ * (roam → cache, trail → wellspring + forage). Skips trail-prereq'd mark
+ * and the pool-less acquaint track.
  *
  * `acquaint: 0` and `mark: 0` skip those progressVars entirely (the
  * planner's `if (targetWeight <= 0) continue;` branch).
  */
 const FARM_MANA_POOL_PARAMS: PlannerParams = {
   progressionTarget: { roam: 2, trail: 2, acquaint: 0, mark: 0 },
-  manaUpOversupplyFactor: 1.0,
-  progressionChunkTicks: 200,
-  talentOverflowThreshold: 0,
-};
-
-/**
- * `farm-errand-pool` — bias progression toward acquaint (errand pool) and
- * roam (latch pool — roam scales latch×1 secondary). Hearth-anchored;
- * skips trail+mark progression. Under unified harvest, gold-routed
- * (run/slip → trade) candidates emerge naturally as the errand pool
- * becomes productive — the strategy's identity is the progressionTarget
- * bias toward gold-bearing pools, not a different harvest mechanism.
- */
-const FARM_ERRAND_POOL_PARAMS: PlannerParams = {
-  progressionTarget: { acquaint: 2, roam: 3, trail: 0, mark: 0 },
   manaUpOversupplyFactor: 1.0,
   progressionChunkTicks: 200,
   talentOverflowThreshold: 0,
@@ -208,8 +187,6 @@ const FARM_TALENT_PARAMS: PlannerParams = {
  */
 interface PhaseRefs {
   farmManaPoolMaxLoop: ComputedRef<DecimalSource>;
-  farmErrandPoolMinLoop: ComputedRef<DecimalSource>;
-  farmErrandPoolMaxLoop: ComputedRef<DecimalSource>;
   bestReplayMinLoops: ComputedRef<DecimalSource>;
   manaOverflowTrigger: ComputedRef<DecimalSource>;
 }
@@ -417,16 +394,6 @@ export function createBalanceBotModule(
           'bot/phases/farm-mana-pool/maxLoop',
           () => 4,
         ),
-        farmErrandPoolMinLoop: tunable<DecimalSource>(
-          tuningRegistry,
-          'bot/phases/farm-errand-pool/minLoop',
-          () => 5,
-        ),
-        farmErrandPoolMaxLoop: tunable<DecimalSource>(
-          tuningRegistry,
-          'bot/phases/farm-errand-pool/maxLoop',
-          () => 9,
-        ),
         bestReplayMinLoops: tunable<DecimalSource>(
           tuningRegistry,
           'bot/phases/best-replay/minLoops',
@@ -549,13 +516,6 @@ export function createBalanceBotModule(
             computed(() => 1 as DecimalSource),
             phases.farmManaPoolMaxLoop,
             'Bias progression to mana-feeding progressVars; cache-stream harvest path.',
-          ),
-          createLoopWindowStrategy(
-            'farm-errand-pool',
-            FARM_ERRAND_POOL_PARAMS,
-            phases.farmErrandPoolMinLoop,
-            phases.farmErrandPoolMaxLoop,
-            'Bias progression to errand-feeding progressVars; gold-routed harvest emerges via unified ranking.',
           ),
           createFarmTalentStrategy(phases.manaOverflowTrigger),
           bestReplayStrategy,

@@ -11,7 +11,7 @@ import {
   type Persistent,
 } from 'open-loop-engine';
 import type { ActionDef, CompletionEffect, LooperData, RewardEffect } from '../data/types';
-import { LooperTuningRegistryKey, ManaModuleKey, type LooperTunables } from './mana';
+import { LooperTuningRegistryKey, ManaModuleKey } from './mana';
 import { CapabilitiesKey, grantCapabilityXp } from './capabilities';
 import { GoldKey, GoldModuleKey } from './gold';
 import { ProgressVarsKey } from './progress-vars';
@@ -27,11 +27,11 @@ export interface ActionState {
    * Drives queue cost-readout, gauge fill rates, and the per-tick completion check.
    */
   adjustedTicks: ComputedRef<DecimalSource>;
-  /** Tunable-wrapped manaCost for this action. */
+  /** manaCost reader (canonical, non-perturbable). */
   manaCost: ComputedRef<DecimalSource>;
-  /** Tunable-wrapped rewardRatio. Set on regular-type actions only. */
+  /** rewardRatio reader. Set on regular-type actions only. */
   rewardRatio?: ComputedRef<DecimalSource>;
-  /** Tunable-wrapped exchangeMult. Set on basic-type actions that declare the field. */
+  /** exchangeMult reader. Set on basic-type actions that declare the field. */
   exchangeMult?: ComputedRef<DecimalSource>;
 }
 
@@ -60,23 +60,6 @@ export interface ActionsModule {
 export const ActionsKey: InjectionKey<ActionsModule> = Symbol(
   'looper/actions',
 ) as InjectionKey<ActionsModule>;
-
-// Per-zone solver representative: one action per zone whose `manaCost` is
-// wrapped via `tunable()`. Satisfies the at-least-one-per-zone bisect minimum
-// while keeping the tunable surface small. Other actions pass through unwrapped.
-// Updated for the 2-zone canonical: stretch (Hearth entry training) + trek
-// (Wilds bridge action).
-const TUNABLE_MANA_COST_IDS = new Set<string>(['stretch', 'trek']);
-
-// Manapot-driver action: `crack` is the only Hearth manapot harvester, so it
-// is the sole rewardRatio perturbation channel for the leaf-5
-// `manapot-perceptibility` probe. Other regular-type actions pass through
-// unwrapped.
-const TUNABLE_REWARD_RATIO_IDS = new Set<string>(['crack']);
-
-// Sole basic-type exchange. Consumed by `exchange-gold-to-mana` completion
-// effects; the action def carries `exchangeMult` as a sibling field.
-const TUNABLE_EXCHANGE_MULT_IDS = new Set<string>(['trade']);
 
 /**
  * Per-action state with progress accumulator and cumulative completion count.
@@ -126,35 +109,17 @@ export function createActionsModule(data: LooperData): EngineModule {
       const defsById = new Map<string, ActionDef>(data.actions.map((d) => [d.id, d]));
 
       for (const def of data.actions) {
-        const manaCost: ComputedRef<DecimalSource> = TUNABLE_MANA_COST_IDS.has(def.id)
-          ? tunable<DecimalSource>(
-              tuningRegistry,
-              `actions/${def.id}/manaCost` as keyof LooperTunables,
-              () => def.manaCost,
-            )
-          : computed(() => def.manaCost);
+        const manaCost: ComputedRef<DecimalSource> = computed(() => def.manaCost);
 
         let rewardRatio: ComputedRef<DecimalSource> | undefined;
         if (def.type === 'regular') {
-          rewardRatio = TUNABLE_REWARD_RATIO_IDS.has(def.id)
-            ? tunable<DecimalSource>(
-                tuningRegistry,
-                `actions/${def.id}/rewardRatio` as keyof LooperTunables,
-                () => def.rewardRatio,
-              )
-            : computed(() => def.rewardRatio);
+          rewardRatio = computed(() => def.rewardRatio);
         }
 
         let exchangeMult: ComputedRef<DecimalSource> | undefined;
         if (def.type === 'basic' && def.exchangeMult !== undefined) {
           const mult = def.exchangeMult;
-          exchangeMult = TUNABLE_EXCHANGE_MULT_IDS.has(def.id)
-            ? tunable<DecimalSource>(
-                tuningRegistry,
-                `actions/${def.id}/exchangeMult` as keyof LooperTunables,
-                () => mult,
-              )
-            : computed(() => mult);
+          exchangeMult = computed(() => mult);
         }
 
         const { progress, timesCompleted } = withPersistentContext(

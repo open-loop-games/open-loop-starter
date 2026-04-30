@@ -3,7 +3,6 @@ import {
   Decimal,
   Formula,
   createSkillCategory,
-  tunable,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -12,15 +11,7 @@ import {
   type SkillCategory,
 } from 'open-loop-engine';
 import type { LooperData, ProgressVarDef } from '../data/types';
-import { LooperTuningRegistryKey, type LooperTunables } from './mana';
 import { RegularVarsKey } from './regular-vars';
-
-// Manapot-driver pair: `roam → cache` carries the manapot pool's primary
-// sizing contribution. Wrapped via `tunable()` so the leaf-5
-// `manapot-perceptibility` probe has a perturbation channel. Other (progressVar,
-// regularVar) pairs pass through unwrapped — keeps the tunable surface tight
-// (mirrors the `TUNABLE_MANA_COST_IDS` selectivity in `actions.ts`).
-const TUNABLE_PERLEVEL_PAIRS = new Set<string>(['roam:cache']);
 
 function pairKey(progressVarId: string, regularVarId: string): string {
   return `${progressVarId}:${regularVarId}`;
@@ -79,27 +70,19 @@ export function createProgressVarsModule(data: LooperData): EngineModule {
     dependencies: ['looper/regular-vars'],
     install(ctx) {
       const regularVars = ctx.inject(RegularVarsKey);
-      const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
 
       // Capture data in closure so the level-up callback can iterate every
       // progressVar's scales table at recompute time. Local lookup is faster
       // than category traversal during recompute.
       const allDefs = data.progressVars;
 
-      // Pre-build per-pair perLevel readers. Gated entries route through
-      // `tunable()` for solver pushScope; ungated entries are static refs.
       const perLevelReaders = new Map<string, ComputedRef<DecimalSource>>();
       for (const def of allDefs) {
         for (const scale of def.scales) {
-          const key = pairKey(def.id, scale.regularVarId);
-          const reader: ComputedRef<DecimalSource> = TUNABLE_PERLEVEL_PAIRS.has(key)
-            ? tunable<DecimalSource>(
-                tuningRegistry,
-                `progressVars/${def.id}/scales/${scale.regularVarId}/perLevel` as keyof LooperTunables,
-                () => scale.perLevel,
-              )
-            : computed(() => scale.perLevel);
-          perLevelReaders.set(key, reader);
+          perLevelReaders.set(
+            pairKey(def.id, scale.regularVarId),
+            computed(() => scale.perLevel),
+          );
         }
       }
 
