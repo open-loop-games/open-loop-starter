@@ -59,13 +59,15 @@ A thirty-minute session is a sequence of threshold moments — *"I can finally a
 **Engine systems explicitly not used:** `createReset` / `createLoop` / `createZoneSystem` / `createInventory` / `createWorker` — all absent. Producer is deliberately the 30%-surface archetype; if the engine does not feel clean when only these primitives are wired, the engine has an ergonomics problem to fix.
 
 **Primary stress axes:**
-1. **Modifier chain depth.** A mature Producer game runs 10+ multipliers stacked (base × 7 upgrade tiers × achievement-count-bonus × global-click-multiplier × milestone-bonus × …). The chain must evaluate in one tick without performance degradation and produce correct results as Decimal values.
-2. **Cost-formula inversion at scale.** `calculateMaxAffordable` must return correct results when resource counts and cost exponents push values past `1e100` — the regime where `break_eternity.js` transitions to tetration. Bulk-buy UX depends on this being correct.
+1. **Modifier chain depth.** A mature Producer game runs 10+ multipliers stacked (base × 7 upgrade tiers × achievement-count-bonus × global-click-multiplier × milestone-bonus × …). The chain must evaluate in one tick without performance degradation and produce correct results as Decimal values. — *declared invention: count informed by Cookie Clicker's observed multiplier sources (prestige × tier-upgrades × kittens × building-levels × dragon-auras × golden-cookie buffs — 6+ stacking layers, `reference-code/cookie-clicker/main.js:5241-5285`); 10+ is the expected depth at skeleton scale.*
+2. **Cost-formula inversion at scale.** `calculateMaxAffordable` must return correct results when resource counts and cost exponents push values past `1e100` — the regime where `break_eternity.js` transitions to tetration. Bulk-buy UX depends on this being correct. — *`1e100` threshold: declared invention — the tetration boundary in `break_eternity.js` is an engine implementation detail, not a Cookie Clicker constant; the probe at §6 is designed to surface any failure.*
 3. **Ergonomic sparsity.** Producer uses ~30% of the engine's systems surface. If writing a Producer mod requires imports from every layer or verbose category-options blocks, the engine needs helpers.
 
 ---
 
 ## 4. Beat map
+
+All beat windows are declared inventions — pacing targets for the skeleton's 2h arc, informed by Cookie Clicker's pacing rhythm (exponential cost curve at `reference-code/cookie-clicker/main.js:7972`, building list at `main.js:8979+`). Cookie Clicker's early pacing reaches the first building in ~3 min and second tier in ~10–15 min at natural play; the windows below are calibrated to match that rhythm under the skeleton's reduced tier count (7 tiers vs 20).
 
 | # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
 |---|------|-----------------|-------------------|------------------------|-----------------|
@@ -77,6 +79,8 @@ A thirty-minute session is a sequence of threshold moments — *"I can finally a
 | 6 | Bulk-buy becomes meaningful | 40:00–65:00 | `calculateMaxAffordable(producers[n]) ≥ 10` | "Buy 10 / Buy max" button becomes the dominant action | Stress-tests formula inversion under load; UX inflection |
 | 7 | Deep modifier chain visible | 65:00–95:00 | headline multiplier ≥ 1e6× base | Chain expansion UI shows 8+ stacked factors with named sources | The moment the player *sees* the compounded stack that is the archetype's reward |
 | 8 | Top producer tier owned + base arc closed | 95:00–120:00 | `producers[last].count ≥ 1` AND `upgradesArcComplete` | Top-tier row lights up; end-of-arc flavour event fires | The 1–2h arc closure. Fork extends beyond this; skeleton stops here |
+
+Beat 7 threshold (`1e6× base`): declared invention — pacing target for when the chain readout becomes dramatically legible. Beat 6 threshold (`≥ 10` affordable): declared invention — the point where bulk-buy UX supersedes single-buy. Both informed by Cookie Clicker's observed CpS growth shape (mid-game phase defined by `analyses/systems-extractions/cookie-clicker-systems-analysis.md` § 5.1).
 
 **Arc closure beat:** #8.
 
@@ -123,15 +127,15 @@ export interface AchievementDef {
 }
 
 export interface ProducerBalance {
-  clickBaseValue: DecimalSource;           // default 1
-  tier1BaseRate: DecimalSource;            // default 0.1
-  producerCostGrowth: DecimalSource;       // default 1.15
-  tierCostRatios: DecimalSource[];         // inter-tier step multipliers
-  upgradeMultiplier: DecimalSource;        // default 2
-  globalUpgradeMultiplier: DecimalSource;  // default 2
-  achievementMultiplier: DecimalSource;    // default 1.02
-  milestoneThresholds: number[];           // default [1, 10, 25, 50, 100, 150, 200, 300, 400, 500]
-  milestoneBonusPerTier: DecimalSource;    // default 2
+  clickBaseValue: DecimalSource;           // default 1 — declared invention: Cookie Clicker base click yields 1 cookie (main.js:9001 `Game.ComputeCps(0.1, …)` is the passive rate; click base is additive on top)
+  tier1BaseRate: DecimalSource;            // default 0.1 — lifted from Cookie Clicker Cursor baseCps 0.1 cps (main.js:9001)
+  producerCostGrowth: DecimalSource;       // default 1.15 — lifted from Cookie Clicker Game.priceIncrease = 1.15 (main.js:7972); same formula: price = basePrice × 1.15^owned
+  tierCostRatios: DecimalSource[];         // inter-tier step multipliers — declared invention: informed by Cookie Clicker's building basePrice progression (main.js:8024); specific ratios are skeleton design choices
+  upgradeMultiplier: DecimalSource;        // default 2 — lifted from Cookie Clicker tier upgrades (×2 each per building, analyses/complete/cookie-clicker-analysis.md § Building System)
+  globalUpgradeMultiplier: DecimalSource;  // default 2 — declared invention: mirrors per-producer upgrade multiplier; Cookie Clicker global upgrades vary but doubling is the common tier-1 effect
+  achievementMultiplier: DecimalSource;    // default 1.02 — declared invention: informed by AdVenture Capitalist's 2% per Angel Investor (analyses/complete/adventure-capitalist-analysis.md § Angel Investors); applied per-achievement as a flat mechanical reward rather than per-count multiplier
+  milestoneThresholds: number[];           // default [1, 10, 25, 50, 100, 150, 200, 300, 400, 500] — [25, 50, 100] lifted from AdVenture Capitalist milestone multipliers (analyses/complete/adventure-capitalist-analysis.md § Multiplier System); [1, 10] prepend and [150, 200, 300, 400, 500] extension are declared invention for 7-tier skeleton density
+  milestoneBonusPerTier: DecimalSource;    // default 2 — lifted from AdVenture Capitalist's 2× milestone multiplier at 25/50/100 owned (analyses/complete/adventure-capitalist-analysis.md § Multiplier System)
 }
 ```
 
@@ -141,19 +145,23 @@ export interface ProducerBalance {
 
 ## 6. Balance probes
 
+All perturbation magnitudes and tolerances are declared inventions — skeleton design choices for how large a swing the archetype's balance should absorb before beats slip out of window. Perturbation ranges are anchored to the tunable constants in §5: `producerCostGrowth` (lifted at 1.15 from `main.js:7972`) and `achievementMultiplier` (declared at 1.02 informed by AdVenture Capitalist's 2% pattern).
+
 | Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
 |-------|--------------|----------------|-----------|-----------|
-| `cost-scaling-growth` | `producerCostScaling.growth` ×[0.85, 1.15] (≈±15% on 1.15 baseline) | 3, 6 | Beat sim-time ±20% | Inter-tier cost is the dominant pacing lever; most sensitive axis |
-| `tier1-base-rate` | `tier1BaseRate` ×[0.75, 1.25] | 1, 2 | Beat sim-time ±25% | Onboarding pacing — beats 1–2 feel terrible if wrong |
-| `modifier-stack-depth` | enable/disable every third upgrade | 7 | Headline-multiplier error ≤0.1% vs. ground truth | Modifier chain correctness — not timing, *arithmetic* |
-| `achievement-density` | `achievementMultiplier` ×[0.95, 1.05] + count ×[0.5, 1.5] | 5, 7 | Beat sim-time ±30% | Achievement pacing drives mid-arc acceleration; high-sensitivity for this archetype |
-| `bulk-buy-formula-scale` | run at resource magnitudes 1e50 / 1e200 / 1e500 | 6 | `calculateMaxAffordable` returns correct N for all scales | `break_eternity.js` tetration edge cases; correctness over timing |
+| `cost-scaling-growth` | `producerCostScaling.growth` ×[0.85, 1.15] (≈±15% on 1.15 baseline — declared invention: ±15% on a canonical constant explores the neighbourhood without leaving the producer-archetype regime) | 3, 6 | Beat sim-time ±20% (declared invention — timing tolerance for dominant pacing lever) | Inter-tier cost is the dominant pacing lever; most sensitive axis |
+| `tier1-base-rate` | `tier1BaseRate` ×[0.75, 1.25] (declared invention: ±25% swing on the 0.1 baseline lifted from Cursor baseCps) | 1, 2 | Beat sim-time ±25% (declared invention) | Onboarding pacing — beats 1–2 feel terrible if wrong |
+| `modifier-stack-depth` | enable/disable every third upgrade | 7 | Headline-multiplier error ≤0.1% vs. ground truth (declared invention: arithmetic correctness probe, not timing) | Modifier chain correctness — not timing, *arithmetic* |
+| `achievement-density` | `achievementMultiplier` ×[0.95, 1.05] + count ×[0.5, 1.5] (declared invention: ±5% on the 1.02 per-achievement multiplier; ±50% on count exercises sparse-to-dense achievement fills) | 5, 7 | Beat sim-time ±30% (declared invention — achievement pacing is inherently high-variance) | Achievement pacing drives mid-arc acceleration; high-sensitivity for this archetype |
+| `bulk-buy-formula-scale` | run at resource magnitudes 1e50 / 1e200 / 1e500 (declared invention: magnitudes chosen to bracket and exceed the `break_eternity.js` tetration boundary; §3 stress axis 2) | 6 | `calculateMaxAffordable` returns correct N for all scales | `break_eternity.js` tetration edge cases; correctness over timing |
 
 **Minimum probe count:** 5 (meets ≥4 requirement; covers cost scaling, production rate, modifier chain, achievement density, and bulk-buy correctness).
 
 ---
 
 ## 7. Sim assertions
+
+Beat window thresholds in the test stubs mirror §4 directly (see §4 for citation and rationale). The `[0.98, 1.15, 1.32]` perturbation values in the robustness suite implement the §6 `cost-scaling-growth` probe's ×[0.85, 1.15] range on the 1.15 baseline (`producerCostGrowth` lifted from `main.js:7972`): `1.15 × 0.85 ≈ 0.98`, `1.15 × 1.15 ≈ 1.32`.
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -167,6 +175,7 @@ describe('producer — beat map', () => {
   const vars = loadProducerVars();
 
   it('beat 1: first production visible within 0–30 s', async () => {
+    // window: §4 beat 1 (declared invention — pacing target)
     const result = runHeadless({
       engine: buildProducerEngine(vars),
       until: (state) => state.resource.gte(1),
@@ -176,6 +185,7 @@ describe('producer — beat map', () => {
   });
 
   it('beat 2: first T1 producer purchased within 1–3 min', async () => {
+    // window: §4 beat 2 (declared invention — pacing target)
     const result = runHeadless({
       engine: buildProducerEngine(vars),
       until: (state) => state.producers[0].count >= 1,
@@ -187,6 +197,7 @@ describe('producer — beat map', () => {
   // ... one `it` per beat through beat 8
 
   it('beat 8: arc closure within 95–120 min', async () => {
+    // window: §4 beat 8 (declared invention — 1–2h arc closure target)
     const result = runHeadless({
       engine: buildProducerEngine(vars),
       until: (state) => state.producers.at(-1)!.count >= 1 && state.arcComplete,
@@ -198,6 +209,8 @@ describe('producer — beat map', () => {
 
 describe('producer — balance robustness', () => {
   it('beats 3 and 6 stay in tolerance under cost-scaling growth ±15%', async () => {
+    // perturbation range: §6 `cost-scaling-growth` probe (declared invention)
+    // values: 1.15 baseline × [0.85, 1.00, 1.15] ≈ [0.98, 1.15, 1.32]
     const matrix = runMatrix({
       engine: (v) => buildProducerEngine(v),
       baseVars: loadProducerVars(),
