@@ -9,8 +9,8 @@ const { balance, actions, zones, capabilities, progressVars, regularVars } = DEF
  * numbers acceptable until then.
  */
 describe('balance probe — solver-knob receipts', () => {
-  it('initialMana set to 1025 — OL-770 rung-1 retune for (γ) chunked Pass-5', () => {
-    expect(Number(balance.initialMana)).toBe(1025);
+  it('initialMana held at vanilla canonical 250 (OL-782 reverted OL-770 rung-1 retune)', () => {
+    expect(Number(balance.initialMana)).toBe(250);
   });
 
   it('costDivisor held at vanilla canonical 100', () => {

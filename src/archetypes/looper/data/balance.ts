@@ -9,17 +9,26 @@ import type { LooperBalance } from './types';
 
 export const LOOPER_BALANCE: LooperBalance = {
   /**
-   * 1025 ticks (~51 sim-seconds at 20 TPS). Bumped from vanilla canonical
-   * 250 by OL-770's rung-1 retune to admit one roam-chunk per first loop
-   * under OL-768's (γ) chunked Pass-5: trainers (300 ticks) + 1 roam-chunk
-   * (600 ticks) = 900 ticks, leaving 125-tick margin. At the canonical
-   * 250 baseline beat-3 (any progressVar level ≥ 1) and beat-6 (talent
-   * accrual) never fire under farm-mana-pool because no progression
-   * chunk fits the budget. Content-rebalance, not solver output —
-   * `balance/initialMana` is verify-only under (γ) due to step-function
-   * surface (see `balance/solve.ts:VERIFY_ONLY_BEATS`).
+   * 250 ticks (~12.5 sim-seconds at 20 TPS) — vanilla canonical baseline.
+   *
+   * The OL-770 rung-1 retune bumped this to 1025 to compensate for
+   * planner correctness gaps that made farm-mana-pool's bootstrap
+   * impossible: Pass-1 unconditionally pushed trainers regardless of
+   * strategy, Pass-3 only emitted full-rewardRatio crack cycles ignoring
+   * lifetime `checked` accumulation, and Pass-6 trim dropped progression
+   * before trainers — every loop's plan was trainers + maybe-progression,
+   * with crack never enqueued. The 1025 baseline papered over the bug.
+   *
+   * OL-782 fixed the planner (mana-gen-first ordering, closed-form chunk
+   * decomposition, trainers as opt-in via `talentOverflowThreshold > 0`,
+   * tail explores that bank lifetime checked across loops). With the
+   * planner correct, the canonical 250 baseline matches design reality:
+   * bootstrap is a multi-loop arc — early loops grow `cache.total` past
+   * `rewardRatio`, mid loops bank lifetime checked toward the first
+   * boundary crossing, later loops cash in goodTemp cheaply and the
+   * flywheel builds.
    */
-  initialMana: 1025,
+  initialMana: 250,
   /** Vanilla canonical: cost = base × (weight / (1 + level / 100)). */
   costDivisor: 100,
   /** Vanilla canonical: 1% of every Level XP gain accrues to Talent XP. */

@@ -48,7 +48,6 @@ const STRATEGY_PARAMS: Record<string, PlannerParams> = {
     manaUpOversupplyFactor: 1.0,
     tradeThreshold: 100,
     talentOverflowThreshold: 0,
-    progressionChunkSize: 4,
   },
   'farm-gold-buffer': {
     progressionTarget: { acquaint: 2, roam: 1, trail: 0, mark: 0 },

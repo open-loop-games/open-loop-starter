@@ -28,7 +28,7 @@ function bootProd(ns: string): Engine {
 }
 
 describe('looper boot state — production module composition', () => {
-  it('mana = initialMana = 1025 at fresh boot; totalBudget = 1025', () => {
+  it('mana = initialMana = 250 at fresh boot; totalBudget = 250', () => {
     const engine = bootProd('boot-probe-1');
     const mana = engine.tryInject(ManaKey)!;
     const initialMana = engine.tryInject(InitialManaKey)!;
@@ -36,9 +36,9 @@ describe('looper boot state — production module composition', () => {
     expect(mana).toBeDefined();
     expect(initialMana).toBeDefined();
     expect(totalBudget).toBeDefined();
-    expect(Number(initialMana.value)).toBe(1025);
-    expect(Decimal.eq(mana.value, 1025)).toBe(true);
-    expect(Decimal.eq(totalBudget.value, 1025)).toBe(true);
+    expect(Number(initialMana.value)).toBe(250);
+    expect(Decimal.eq(mana.value, 250)).toBe(true);
+    expect(Decimal.eq(totalBudget.value, 250)).toBe(true);
   });
 
   it('capabilities registry has 4 entries at fresh boot', () => {
@@ -104,6 +104,6 @@ describe('looper boot state — production module composition', () => {
     // Vue's runtime auto-unwraps top-level refs marked __v_isRef: true.
     // We assert on what we observe so the probe is self-documenting.
     expect(out.lr).toBe('42'); // native Vue ref is unwrapped
-    expect(out.lc).toBe('1025'); // native Vue computed is unwrapped to its value
+    expect(out.lc).toBe('250'); // native Vue computed is unwrapped to its value
   });
 });

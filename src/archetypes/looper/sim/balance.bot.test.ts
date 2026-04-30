@@ -81,19 +81,24 @@ describe('looper balance bot — wiring smoke', () => {
     ]);
   });
 
-  it('Pass 7 stays disabled by default (talentOverflowThreshold: 0)', () => {
+  it('trainers are absent from default plans (talentOverflowThreshold: 0)', () => {
+    // OL-782: trainers are strategic, not bootstrap. Canonical idle-loops
+    // shape: trainers cost more than multiple explores; the player picks
+    // them deliberately for stat building, not as default fill. Default
+    // plans contain zero trainers regardless of slack budget — only
+    // strategies with `talentOverflowThreshold > 0` engage Pass-8 trainer
+    // rotation.
     const engine = buildLooperSimEngine();
     const params: PlannerParams = {
       progressionTarget: {},
-      manaUpOversupplyFactor: 4.0, // huge headroom — would soak if Pass 7 fired
+      manaUpOversupplyFactor: 4.0, // huge headroom that the OLD planner
+      // would have soaked into trainers; new planner ignores slack.
       tradeThreshold: 100,
       talentOverflowThreshold: 0,
     };
     const plan = generatePlan(engine, params);
     const trainerIds = new Set(['stretch', 'tend', 'listen', 'attune']);
     const trainers = plan.filter((i) => trainerIds.has(i.actionId));
-    // Pass 1 adds each visible trainer once. With 4 trainers and Pass 7
-    // disabled, the count is exactly 4.
-    expect(trainers.length).toBe(4);
+    expect(trainers.length).toBe(0);
   });
 });
