@@ -131,7 +131,6 @@ export const ACTIONS: ActionDef[] = [
     weights: { craft: 0.5, vigor: 0.5 },
     rewardRatio: 10,
     rewardEffects: [{ kind: 'add-mana', amount: 100 }],
-    prereqs: [{ kind: 'action-completion-count', actionId: 'stretch', value: 5 }],
   },
   {
     id: 'slip',
@@ -145,6 +144,11 @@ export const ACTIONS: ActionDef[] = [
     weights: { craft: 0.7, lore: 0.3 },
     rewardRatio: 10,
     rewardEffects: [{ kind: 'add-gold', amount: 10 }],
+    // Gold-side gate; mana spine (crack) is unprereq'd so exploration-led
+    // mana generation isn't blocked behind side-economy onboarding. Carries
+    // the action-completion-count prereq variant for `prereq-graph-shape`
+    // coverage.
+    prereqs: [{ kind: 'action-completion-count', actionId: 'acquaint', value: 3 }],
   },
   {
     id: 'run',
