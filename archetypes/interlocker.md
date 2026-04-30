@@ -2,7 +2,7 @@
 
 > **One-line identity:** Wide multi-resource graph + multi-input/output Conversion Chains + building-to-building Synergy — the wide-not-deep resource-management incremental.
 >
-> **Status:** `canonical`
+> **Status:** `candidate`
 
 **Exemplars (validation, not clone targets):** [Kittens Game](../../open-loop-research/analyses/complete/kittens-game-analysis.md), [Evolve](../../open-loop-research/analyses/complete/evolve-analysis.md), [Industry Idle](../../open-loop-research/analyses/complete/industry-idle-analysis.md).
 
@@ -85,203 +85,25 @@ Naming what is absent is half the Interlocker contract: the archetype refuses pr
 
 ## 4. Beat map
 
-The 1–2h arc compresses Kittens Game's 100+-hour scope honestly. Eight resources at baseline; four conversion chains; two synergy reveals. The pacing inverts Scaler's "each beat reveals a new layer" rhythm — Interlocker's beats are structural moments *inside one layer*: a new edge in the graph, a new synergy multiplier, a new tech-gated column of buildings.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First raw producer purchased | 0:00–1:00 | `resources.raw[0].count >= 1` AND `buildings.raw[0].count >= 1` | Auto-production starts; rate readout appears in the resource table | Onboarding — the familiar Producer footing before the graph branches |
-| 2 | First conversion chain closed (first T1 resource produced) | 3:00–8:00 | `resources.basic[0].produced >= 1` | A T1 resource row appears in the always-visible table with a positive per-sec rate; the first "input → output" edge lights up | The archetype's first structural moment — the graph has an edge |
-| 3 | First bottleneck felt | 12:00–20:00 | any basic resource's per-sec rate flips negative for ≥30 s OR affordability of the next building blocks on a second resource | Red per-sec indicator; missing-resource tooltip on the next building's cost | The first time the player cannot just *buy the next thing* — must balance inputs |
-| 4 | First synergy effect visible | 25:00–40:00 | `modifierChain[someResource].namedFactors.includes('synergy:someSource')` | Tooltip on the affected resource shows a named synergy source contributing a multiplier | Synergy Systems integration — the first edge between two buildings that is *not* a raw input flow |
-| 5 | First tech-gate opened; new building tier visible | 40:00–60:00 | `techs.completed.count >= 1` AND a new building tier's visibility flag is true | Tech-tree entry checks off; a new column of buildings appears as locked-then-purchasable | The Progression Systems spine. Tech unlocks more graph, not bigger numbers |
-| 6 | First T2 resource produced | 65:00–85:00 | `resources.advanced[0].produced >= 1` | A T2 row enters the resource table; it requires two T1 resources as inputs; the full tier-ladder is now visible | Width progression — the graph has three tiers, the 1–2h arc's promised breadth |
-| 7 | Second synergy chain activated (cross-tier bonus) | 85:00–105:00 | `modifierChain[someT2Resource].namedFactors.length >= 3` | Stat panel shows a T2 resource's production chain with 3+ named sources, at least one crossing a tier | The "wide-graph mature play" signal — synergies now reach across tiers, not just within them |
-| 8 | Arc closure: complete-graph achievement AND every-resource-positive readout | 105:00–120:00 | `achievement('graph-complete').unlocked` AND `∀ resource: rate > 0 for 60 s` | Completion toast; resource table shows all 8 resources green; end-of-arc flavour event | The 1–2h showcase closure. The player sees the whole woven graph running. Fork extends beyond here; skeleton stops |
-
-**Arc closure beat:** #8.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 5. Data shape
 
-```ts
-// archetype.ts — skeleton defaults
-export interface InterlockerArchetypeVars {
-  // Graph shape — changing these is a fork-of-skeleton decision.
-  resourceTierCount: number;                 // default 3 (raw, basic, advanced)
-  resourcesPerTier: number[];                // default [3, 3, 2] — length === resourceTierCount
-  buildingCountPerTier: number[];            // default [3, 4, 2] — one building family per conversion chain
-  conversionChainCount: number;              // default 4 — T0→T1 edges + T1→T2 edges
-  synergyCount: number;                      // default 6 — cross-building multipliers
-  techGateCount: number;                     // default 4 — tech-tree nodes gating tier transitions
-  achievementCount: number;                  // default 24 — production + completeness + hidden
-  allowNegativeRates: boolean;               // default true — bottlenecks are gameplay, not errors
-
-  // Graph-width escape hatch for the "widest honest 1–2h arc" claim.
-  arcClosureGraphCompletenessPolicy: 'every-resource-positive' | 'every-building-active' | 'both';
-}
-
-// theme.ts — costume, no mechanical impact
-export interface InterlockerThemeVars {
-  // Length of each per-tier name array must equal resourcesPerTier[tier].
-  resourceNames: Array<Array<{ singular: string; plural: string }>>;
-  buildingNames: string[];                   // flattened across tiers; length === sum(buildingCountPerTier)
-  techNames: string[];                       // length === techGateCount
-  synergyFlavour: Array<{ label: string; description: string; sourceBuilding: string; targetResource: string }>;
-  recipeFlavour: Array<{ label: string; description: string }>;
-  achievementFlavour: Array<{ label: string; description: string; hidden?: boolean }>;
-  endOfArcMessage: string;                   // fires at beat 8
-}
-
-// balance.ts — mechanical overrides; drives beat timing
-export interface InterlockerBalanceVars {
-  // Per-building cost curve. Milder than Producer's 1.15 default — the graph-width lever replaces the cost-growth lever.
-  buildingCostScaling: {
-    baseCost: Record<string, DecimalSource>;   // keyed by resource id; first-unit cost per input resource
-    perPurchaseGrowth: number;                 // default 1.10 (vs 1.15 for Producer)
-  };
-
-  // Recipes — the headline balance surface. One entry per conversion chain.
-  recipes: Array<{
-    id: string;
-    buildingId: string;
-    inputs: Record<string, DecimalSource>;     // per-sec consumption at one building
-    outputs: Record<string, DecimalSource>;    // per-sec production at one building
-    unlockedByTech: string | null;             // null means always unlocked
-  }>;
-
-  // Synergies — one entry per cross-building multiplier.
-  synergies: Array<{
-    id: string;
-    sourceBuildingId: string;                  // the "from" side (every unit of this building contributes)
-    targetResourceId: string;                  // affects this resource's production chain
-    effect: 'multiplicative' | 'additive';
-    perSourceUnitMagnitude: number;            // default 0.01 (1% per source unit, e.g. Kittens-Workshop shape)
-    cap: number | null;                        // soft cap on total contribution; null = uncapped
-  }>;
-
-  // Tech-gate costs (multi-resource).
-  techCosts: Array<{
-    techId: string;
-    requires: Record<string, DecimalSource>;   // vector of resource costs
-    unlocksTier: number;                       // which resource/building tier this tech reveals
-  }>;
-
-  // Achievement threshold knobs.
-  achievementMultiplier: number;               // default 1.03 — per-achievement contribution to modifier chains
-  graphCompletenessAchievementThreshold: number; // default 1.0 — fraction of resources with positive rate for closure
-}
-```
-
-**Override semantics:** deep-merge at load order `archetype → theme → balance`. Array fields (`recipes`, `synergies`, `techCosts`, `resourcesPerTier`) replace wholesale; forks that want partial array tuning rebuild the array explicitly.
-
-**Codegen contract:** `pnpm codegen:archetype-vars interlocker` (pending) reads this section and emits `src/modules/mods/<game>/vars/{archetype,theme,balance}.ts` with matching defaults. Shared archetype-level types + defaults live at `src/archetypes/interlocker/`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `conversion-ratio` | each recipe's `outputs / inputs` ratio ×[0.80, 1.20] | 2, 3, 6 | Beat sim-time ±20% | Recipe ratios are the archetype's dominant pacing lever; the wide-graph equivalent of Producer's cost-scaling growth |
-| `building-cost-growth` | `buildingCostScaling.perPurchaseGrowth` ×[0.90, 1.10] | 1, 2, 5 | Beat sim-time ±20% | Cost curve governs onboarding and early-mid pacing. Milder than Producer's sensitivity because the graph-width lever competes |
-| `synergy-strength` | every `synergies[i].perSourceUnitMagnitude` ×[0.70, 1.30] | 4, 7, 8 | Beat sim-time ±25%; headline modifier-chain depth at beat 7 stays within [3, 7] named factors | Synergy multipliers define mid-to-late pacing. Too weak → graph feels flat; too strong → one synergy dominates |
-| `tech-gate-threshold` | every `techCosts[i].requires` ×[0.75, 1.25] | 5, 6 | Beat sim-time ±25% | Tech-gate costs control the gap between "first building tier saturated" and "next tier unlocked" — the rhythm of graph reveal |
-| `bottleneck-severity` | one raw resource's base production rate ×[0.50, 2.00] | 3 | beat 3 trigger fires at least once within beat window under all perturbations | Bottleneck beat is designed to fire. The probe validates that this remains true when one node's rate is varied — i.e. the bottleneck isn't a balance accident |
-| `graph-width-invariance` | `resourcesPerTier = [3,3,2]` baseline vs `[2,2,2]` narrow vs `[4,4,3]` wide | 8 | Arc-closure beat 8 sim-time within [90 min, 130 min] across all widths | Width is the archetype's structural axis. If the arc closes in 60 min at narrow width, the archetype is under-scoped; if it doesn't close in 2h at wide, the 1–2h honesty is broken |
-
-**Minimum probe count:** 6 (meets ≥4 requirement; covers conversion ratios, cost scaling, synergy strength, tech gating, bottleneck severity, and graph-width scope).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless } from 'open-loop-engine';
-import { runMatrix } from 'open-loop-engine/harness';
-import { minutes } from '@/test/time';
-import { loadInterlockerVars } from '../vars';
-import { buildInterlockerEngine } from '../engine';
-
-describe('interlocker — beat map', () => {
-  const vars = loadInterlockerVars();
-
-  it('beat 1: first raw producer purchased within 0–60 s', () => {
-    const result = runHeadless({
-      engine: buildInterlockerEngine(vars),
-      until: (state) => state.buildings.raw[0].count >= 1,
-      maxSimTime: minutes(2),
-    });
-    expect(result.simTime).toBeBetween(0, 60);
-  });
-
-  it('beat 2: first conversion chain closed within 3–8 min', () => {
-    const result = runHeadless({
-      engine: buildInterlockerEngine(vars),
-      until: (state) => state.resources.basic[0].produced.gte(1),
-      maxSimTime: minutes(10),
-    });
-    expect(result.simTime).toBeBetween(minutes(3), minutes(8));
-  });
-
-  it('beat 3: first bottleneck fires within 12–20 min', () => {
-    const result = runHeadless({
-      engine: buildInterlockerEngine(vars),
-      until: (state) => state.history.anyResourceWentNegativeFor(30).happened,
-      maxSimTime: minutes(25),
-    });
-    expect(result.simTime).toBeBetween(minutes(12), minutes(20));
-  });
-
-  // ... one `it` per beat through beat 8 in the checked-in test file
-
-  it('beat 8: arc closure within 105–120 min', () => {
-    const result = runHeadless({
-      engine: buildInterlockerEngine(vars),
-      until: (state) => state.achievements.has('graph-complete') && state.everyResourceRateHasBeenPositiveFor(60),
-      maxSimTime: minutes(130),
-    });
-    expect(result.simTime).toBeBetween(minutes(105), minutes(120));
-  });
-});
-
-describe('interlocker — balance robustness', () => {
-  it('graph-width invariance: arc closes within 90–130 min at narrow / baseline / wide', () => {
-    const matrix = runMatrix({
-      engine: (v) => buildInterlockerEngine(v),
-      baseVars: loadInterlockerVars(),
-      perturbations: [
-        { path: 'archetype.resourcesPerTier', values: [[2, 2, 2], [3, 3, 2], [4, 4, 3]] },
-      ],
-      beats: ['beat-8'],
-    });
-    for (const cell of matrix.cells) {
-      expect(cell.beat('beat-8').simTime).toBeBetween(minutes(90), minutes(130));
-    }
-  });
-
-  it('synergy strength: chain depth at beat 7 stays within [3, 7] named factors', () => {
-    const matrix = runMatrix({
-      engine: (v) => buildInterlockerEngine(v),
-      baseVars: loadInterlockerVars(),
-      perturbations: [
-        { path: 'balance.synergies.*.perSourceUnitMagnitude', multiplier: [0.70, 1.00, 1.30] },
-      ],
-      beats: ['beat-7'],
-    });
-    for (const cell of matrix.cells) {
-      const depth = cell.beat('beat-7').modifierChainNamedFactorCount;
-      expect(depth).toBeGreaterThanOrEqual(3);
-      expect(depth).toBeLessThanOrEqual(7);
-    }
-  });
-
-  // one `it` per probe from § 6 — full enumeration in the checked-in test file
-});
-```
-
-**Required test count:** 8 beats + 6 probes = 14 tests minimum. Tests checked into `src/modules/mods/<game>/sim/interlocker.sim.test.ts`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

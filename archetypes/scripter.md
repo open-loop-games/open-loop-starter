@@ -2,7 +2,7 @@
 
 > **One-line identity:** Programmable action queue + Automation gradient + DSL / meta-programming surface — the artifact-is-code incremental.
 >
-> **Status:** `canonical`
+> **Status:** `candidate`
 
 **Exemplars (validation, not clone targets):** [Bitburner](../../open-loop-research/analyses/complete/bitburner-analysis.md) (tier-3 meta-programming, JavaScript VM, 300+ API functions), [Antimatter Dimensions](../../open-loop-research/analyses/complete/antimatter-dimensions-analysis.md) (tier-2 DSL — the Automator's visual + text dual mode), [Profectus](../../open-loop-research/analyses/complete/profectus-analysis.md) (framework-level DSL + invertible formulas), [Cavernous II](../../open-loop-research/analyses/complete/cavernous-ii-analysis.md) (tier-1 spatial queue programming with control-flow primitives — `<` repeat, `=` sync), [Points Progression](../../open-loop-research/analyses/complete/points-progression-analysis.md) (tier-1 manual strategic allocation — typed-input-as-code).
 
@@ -92,221 +92,25 @@ Naming what is absent is half the Scripter contract: the archetype refuses loop 
 
 ## 4. Beat map
 
-The 1–2 h arc compresses Bitburner's ~20 h time-to-first-Augmentation and Antimatter Dimensions' ~50 h time-to-first-Automator-unlock into a showcase of the archetype's authoring rhythm. The compression trick: skeleton forks unlock tier-1 (queue) within minutes, tier-2 (text DSL) by mid-arc, and demonstrate tier-3-like script persistence across a prestige-adjacent event by arc closure. Forks that want longer onboarding raise `tier2UnlockThreshold` and stretch the whole tier-gradient accordingly.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First manual action | 0:00–1:00 | `actionsDispatched >= 1` (player-dispatched) | Action-log entry appears; resource counter ticks | Onboarding — the player learns the action vocabulary before automating it |
-| 2 | First queue authored (tier-1 entry) | 1:00–5:00 | `queue.authored === true` AND `queue.length >= 2` | Queue builder unlocked; two-step sequence visible in edit panel | First authorship — the player commits to *writing* a plan instead of clicking it |
-| 3 | First queue execution with loop primitive | 5:00–12:00 | `queue.includes('<')` (repeat marker) AND `queue.executionCount >= 1` | Loop marker visible in queue; repeat count readout ticks | The repeat primitive is the queue-to-program transition — a queue that repeats is the first "program" |
-| 4 | First conditional wait / guard | 12:00–25:00 | script uses `if` / `wait until` / resource-gated step | Conditional row visible in queue; wait-state banner appears while guard holds | The branch is the second control-flow primitive; together with repeat it's Turing-incomplete but program-shaped |
-| 5 | First unattended progress run | 25:00–45:00 | player AFKs ≥ 5 min of sim-time AND resource accumulation ≥ threshold | Progress since last interaction readout; "you earned X while idle" toast | The archetype's core compulsion — *the program plays the game* — is felt for the first time |
-| 6 | Tier-2 unlock (text DSL appears) | 45:00–70:00 | tier-2 threshold met (resource / skill / script-execution-count) | Text editor panel opens; first DSL keyword reference visible | The jump from queue to code is the archetype's signature progression beat |
-| 7 | First DSL script runs a multi-step strategy | 70:00–95:00 | DSL script with ≥ 3 statements executes ≥ 1 full cycle | Execution log shows multi-command trace; resources update in burst | Validates the DSL surface — "I wrote code, the game responded" is the tier-2 aha moment |
-| 8 | Arc closure: script executes a prestige-adjacent milestone | 100:00–120:00 | script dispatches a milestone-unlock action (e.g. `prestige` or tier-3-unlock) AND script survives | Milestone toast; script remains authored in editor post-event | The 1–2 h showcase closure — the script outlived the reset, which is the script-persistence proof |
-
-**Arc closure beat:** #8.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 5. Data shape
 
-```ts
-// archetype.ts — skeleton defaults
-export interface ScripterArchetypeVars {
-  // Tier ceiling for the skeleton. 'queue' = tier-1 only (Cavernous II shape);
-  // 'dsl' = tier-2 unlocked mid-arc (Antimatter Automator shape);
-  // 'meta' = tier-3 unlocked late-arc (Bitburner shape). Default 'dsl'.
-  tierCeiling: 'queue' | 'dsl' | 'meta';
-
-  // Authoring surface — 'text' is the default for DSL+; 'visual-blocks'
-  // adds an Antimatter-Automator-style block mode that compiles to the
-  // same AST; 'hybrid' ships both.
-  authoringSurface: 'text' | 'visual-blocks' | 'hybrid';
-
-  // Command-registry shape.
-  commandCount: number;          // default 12 — dispatchable commands at tier-1
-  tier2CommandCount: number;     // default 24 — additional commands unlocked at tier-2
-  tier3CommandCount: number;     // default 0 — unset unless tierCeiling === 'meta'
-
-  // Persistence shape.
-  scriptSlotCount: number;       // default 5 — saved script slots
-  persistAcrossPrestige: boolean; // default true — signature archetype commitment
-
-  // Execution shape.
-  concurrentScripts: number;     // default 1; > 1 activates Bitburner-style multi-agent
-  safetyMode: 'strict' | 'lenient'; // default 'strict' — lenient disables iteration caps for debugging
-}
-
-// theme.ts — costume, no mechanical impact
-export interface ScripterThemeVars {
-  // Command-name mapping. Length ≈ commandCount + tier2CommandCount.
-  commandNames: Array<{ id: string; label: string; description: string; tier: 1 | 2 | 3 }>;
-  // Keyword mapping for the DSL — 'buy' could become 'cast', 'acquire', 'dispatch'.
-  dslKeywords: Record<string, string>;
-  // Execution verb ('run' / 'execute' / 'invoke' / 'dispatch').
-  runVerb: string;
-  // Editor label ('Script Editor' / 'Spellbook' / 'Command Grimoire' / 'Terminal').
-  editorLabel: string;
-  // End-of-arc flavour text; fires at beat 8.
-  endOfArcMessage: string;
-}
-
-// balance.ts — mechanical overrides; drives beat timing
-export interface ScripterBalanceVars {
-  // Tier-unlock thresholds — the beat-6 pacing lever.
-  tier2UnlockThreshold: {
-    trigger: 'action-count' | 'resource' | 'script-execution-count';
-    value: DecimalSource;
-  };
-  tier3UnlockThreshold?: {
-    trigger: 'prestige-count' | 'resource' | 'augmentations-owned';
-    value: DecimalSource;
-  };
-
-  // Action dispatch timing — the archetype's dominant pacing lever.
-  actionTimings: Record<string, {
-    baseDuration: number;                // sim-seconds
-    costs: Record<string, DecimalSource>;
-    yield?: Record<string, DecimalSource>;
-  }>;
-
-  // Safety limits — the sandboxing surface.
-  maxIterationsPerFrame: number;         // default 10_000
-  maxLoopDepth: number;                  // default 10
-  maxScriptRuntimeMs: number;            // default 5_000 per invocation
-  maxConcurrentActions: number;          // default 1 at tier-1, relaxes at tier-2+
-
-  // Augmentation / multiplier progression.
-  augmentationCurve: {
-    // Canonical form: multiplier = 1 + (augs^exponent) / divisor
-    exponent: number;                    // default 0.75
-    divisor: number;                     // default 20
-  };
-  augmentationCostScaling: {
-    baseCost: DecimalSource;
-    costGrowth: number;                  // multiplier per purchase; default 1.5
-  };
-
-  // Script efficiency scaling — how script quality compounds.
-  scriptEfficiencyBonus: {
-    perStatementBonus: number;           // default 0.002 — 0.2% per statement in a running script
-    perUniqueCommandBonus: number;       // default 0.05 — 5% per distinct command used
-    efficiencyCap: number;               // default 3.0 — bonuses capped at 3× at default balance
-  };
-}
-```
-
-**Override semantics:** deep-merge at load order `archetype → theme → balance`. Arrays (`commandNames`) replace wholesale; forks that want partial command-vocab tuning rebuild the array explicitly. `tier3UnlockThreshold` is optional — `undefined` disables tier-3 regardless of `tierCeiling`.
-
-**Codegen contract:** `pnpm codegen:archetype-vars scripter` (pending) reads this section and emits `src/modules/mods/<game>/vars/{archetype,theme,balance}.ts` with matching defaults. Shared archetype-level types + defaults live at `src/archetypes/scripter/`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `tier2-unlock-timing` | `tier2UnlockThreshold.value` ×[0.75, 1.25] | 6 | Beat 6 sim-time ±20% | Tier-2 unlock is the signature progression beat; governs whether the arc showcases the queue→code jump or stalls before it |
-| `action-duration` | `actionTimings.*.baseDuration` ×[0.80, 1.20] | 1, 3, 7 | All three beats sim-time ±25% | Action timing governs early onboarding pace and the execution-trace readability of tier-2 multi-step scripts |
-| `augmentation-curve` | `augmentationCurve.exponent` ×[0.90, 1.10] (≈±10% on 0.75) | 5, 8 | Beat 5 idle-gain rate within [1.5×, 4×] baseline; beat 8 still fires within arc | Augmentation curve shape defines whether script efficiency feels like compounding or plateauing |
-| `script-efficiency-bonus` | `scriptEfficiencyBonus.perUniqueCommandBonus` ×[0.50, 1.50] | 7 | Arc closure at beat 8 lands within [100, 120] min across perturbations | Validates the "better script = more progress" design assertion — too weak breaks mastery signal, too strong trivialises content |
-| `safety-limit` | `maxIterationsPerFrame` ∈ {1_000, 10_000, 100_000} | 5, 7 | No frame-rate drop >10% at 100k; no premature timeout at 1k for baseline scripts | Sandbox safety — the engine must not freeze the browser at high iteration caps, must not deny legitimate scripts at low caps |
-| `concurrent-scripts` | `concurrentScripts` ∈ {1, 2, 4} AND `maxConcurrentActions` matched | 5, 7, 8 | All beats land within 2× baseline sim-time; no deadlock | Multi-agent stress — tests the scheduler-shaped primitive gap (§ 10); Bitburner-shape forks live or die on this |
-| `command-vocab-size` | `commandCount` ∈ {6, 12, 24} | 2, 4, 7 | Beat 2 authorship within tolerance at 6 commands; beat 7 multi-step within tolerance at 24 | Command-vocab probe stresses registry ergonomics — too small starves tier-2 scripts, too large overwhelms tier-1 onboarding |
-
-**Minimum probe count:** 7 (meets ≥4 requirement; covers tier-unlock timing, action-duration pacing, augmentation curve, script-efficiency multiplier, sandbox safety, concurrent-script scheduling, and command-vocab sizing).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless } from 'open-loop-engine';
-import { runMatrix } from 'open-loop-engine/harness';
-import { minutes, seconds } from '@/test/time';
-import { loadScripterVars } from '../vars';
-import { buildScripterEngine } from '../engine';
-
-describe('scripter — beat map', () => {
-  const vars = loadScripterVars();
-
-  it('beat 2: first queue authored within 1–5 min', () => {
-    const result = runHeadless({
-      engine: buildScripterEngine(vars),
-      until: (state) => state.queue.authored && state.queue.length >= 2,
-      maxSimTime: minutes(10),
-    });
-    expect(result.simTime).toBeBetween(minutes(1), minutes(5));
-  });
-
-  it('beat 5: first unattended progress run — AFK gain ≥ threshold', () => {
-    const result = runHeadless({
-      engine: buildScripterEngine(vars),
-      until: (state) =>
-        state.lastPlayerInteractionSimTime !== undefined &&
-        state.simTime - state.lastPlayerInteractionSimTime >= minutes(5) &&
-        state.resources.primary.gte(state.beats.beat5Threshold),
-      maxSimTime: minutes(60),
-    });
-    expect(result.simTime).toBeBetween(minutes(25), minutes(45));
-  });
-
-  it('beat 6: tier-2 (text DSL) unlocks within 45–70 min', () => {
-    const result = runHeadless({
-      engine: buildScripterEngine(vars),
-      until: (state) => state.scriptingTier >= 2,
-      maxSimTime: minutes(80),
-    });
-    expect(result.simTime).toBeBetween(minutes(45), minutes(70));
-  });
-
-  it('beat 8: prestige-adjacent milestone — script survives post-event', () => {
-    const result = runHeadless({
-      engine: buildScripterEngine(vars),
-      until: (state) => state.milestones.has('arc-closure'),
-      maxSimTime: minutes(130),
-    });
-    expect(result.simTime).toBeBetween(minutes(100), minutes(120));
-    expect(result.state.scripts.slot[0].code).not.toBe('');
-  });
-
-  // one it() per beat — full enumeration in the checked-in test file
-});
-
-describe('scripter — balance robustness', () => {
-  it('script-efficiency bonus: arc closure lands in tolerance at ±50% perUniqueCommandBonus', () => {
-    const matrix = runMatrix({
-      engine: (v) => buildScripterEngine(v),
-      baseVars: loadScripterVars(),
-      perturbations: [
-        { path: 'balance.scriptEfficiencyBonus.perUniqueCommandBonus', values: [0.025, 0.050, 0.075] },
-      ],
-      beats: ['beat-8'],
-    });
-    for (const cell of matrix.cells) {
-      expect(cell.beat('beat-8').simTime).toBeBetween(minutes(100), minutes(120));
-    }
-  });
-
-  it('safety-limit: 100k iterations per frame does not stall headless runner', () => {
-    const result = runHeadless({
-      engine: buildScripterEngine(loadScripterVars({
-        balance: { maxIterationsPerFrame: 100_000 },
-      })),
-      until: (state) => state.scriptingTier >= 2,
-      maxSimTime: minutes(80),
-      maxWallclockMs: 10_000,  // harness-level real-time cap
-    });
-    expect(result.terminatedBy).not.toBe('wallclock-exceeded');
-  });
-
-  // one it() per probe from § 6 — full enumeration in the checked-in test file
-});
-```
-
-**Required test count:** 8 beats + 7 probes = 15 tests minimum. Tests checked into `src/modules/mods/<game>/sim/scripter.sim.test.ts`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

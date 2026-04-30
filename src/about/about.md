@@ -29,7 +29,7 @@ gh repo create my-game --template open-loop/starter --private --clone
 cd my-game
 
 # 2. Pick one archetype (here: producer) — delete the rest + the gallery
-rm -rf src/archetypes/{ambient,tug,looper,scaler,...}
+rm -rf src/archetypes/{ambient,tug,looper}
 rm -rf src/gallery src/about
 
 # 3. Wire main.ts to your one archetype

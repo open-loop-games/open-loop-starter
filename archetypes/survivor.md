@@ -77,17 +77,7 @@ A thirty-minute session is roughly one complete run. Enemy composition escalates
 
 ## 4. Beat map
 
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First weapon auto-fired, first kill | 0:00–0:15 | `weapons.anyCooldownFired && kills >= 1` | Starting weapon swings; first enemy falls; first XP gem spawns | Onboarding — validates auto-attack cadence and kill-feedback loop without requiring attack input |
-| 2 | First level-up choice resolved | 0:15–1:30 | `levelUps.resolved >= 1` | Combat pauses; 3–4 choice cards appear; selection applied; arena resumes | First exposure to the in-run build surface; validates Progression Systems gate |
-| 3 | First weapon reaches level 8 | 4:00–12:00 | `weapons.anyLevel >= 8` | Target weapon visibly stronger; "ready to evolve" state in inventory icon | Sets up the evolution anticipation that carries the mid-run; validates XP curve + modifier chain depth |
-| 4 | First evolution triggered | 8:00–18:00 | `evolutions.triggered >= 1` | Full-screen visual + distinctive audio sting; evolved weapon behavior visibly distinct | Archetype-defining moment — the composition surface delivering its payoff. Arc closure for `prestigeMode === 'none'` forks |
-| 5 | First run completed (timer or death) | 18:00–30:00 (Vampire Survivors); 12:00–25:00 (Brotato-style round-based) | `run.ended` | Run-end summary; gold banked; unlocks dropped; return to menu | Validates the full 30-minute arc + gold-accrual continuity + unlock-cascade triggers |
-| 6 | First Power-Up purchased | (immediately post-run at beat 5) | `powerUps.purchasedAny >= 1` | Menu-screen Power-Up tile ticks up; next-run baseline strengthened | Validates meta-progression shop wiring + per-Power-Up scaling cost |
-| 7 | First optimized second run — visible compound | 45:00–90:00 total | `runsCompleted >= 2 AND nextRunFirstEvolutionTime < firstRunFirstEvolutionTime` | Second run hits beat 4 faster than first run did; visible Power-Up advantage | The archetype's long-term pull: meta-compounds across runs. Arc closure for `prestigeMode !== 'none'` forks |
-
-**Arc closure beat:** #7 when `prestigeMode !== 'none'`, #4 when `prestigeMode === 'none'`. Bimodal closure precedent from Tug (OL-573) beat 7 and Defender (OL-574) beat 6 — both first-class.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
@@ -263,71 +253,13 @@ export interface SurvivorData {
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `xp-curve` | `balance.xpCurve` scaled ×[0.80, 1.20] | 2, 3 | Beat sim-time ±20% | XP-to-level is the dominant in-run-pacing lever; too steep and beat 3 never lands; too shallow and the build is assembled before enemy density matters |
-| `enemy-hp-curve` | `stages[0].hpCurve[*]` ×[0.85, 1.15] | 4, 5 | Beat sim-time ±15% | Enemy HP governs whether mid-run weapons can keep up with spawn rate; a ±15% error tips runs from "knife-edge survive" to "faceroll" or "impossible" |
-| `modifier-chain-depth` | enable `balance.modifierStackOrder` subsets (base+level only / +passive / +character / +power-up / full) | 3, 4 | Beat 4 sim-time ±25% + modifier-chain damage output ≥ expected minimum | Upgrade depth is the archetype's vertical stress; validates `createModifierChain` correctness across stack permutations |
-| `power-up-cost-scaling` | `powerUps[*].costCurve` ×[0.5, 2.0] | 6, 7 | Beat 7 sim-time ±30% when `prestigeMode !== 'none'` | Cross-run pull depends on Power-Up bite feeling earned by run 2; 0.5× makes meta trivial, 2× makes meta feel like grinding |
-| `luck-offer-weighting` | `balance.luckWeight` ×[0.5, 1.5] | 3, 4 | Fraction of runs reaching beat 4 stays within ±10% | Luck controls level-up-pool variance; probe ensures Luck shifts outcome distribution without removing the archetype's stochastic shape |
-| `wave-density` | sum of `stages[0].waveSchedule[*].add[*].density` ×[0.9, 1.1] | 1, 5 | Beat 1 sim-time ±15%, beat 5 completion rate ±10% | Spawn density drives the core threat pressure; validates `createSequencer` tick schedule correctness under load |
-
-**Minimum probe count:** 6 (meets ≥4 requirement; covers cost scaling, production rate — via wave-density, modifier chain, and three archetype-specific axes: XP curve, enemy-HP curve, Luck weighting).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless, runMatrix } from 'open-loop-engine/harness';
-import { minutes, seconds } from '@/test/time';
-import { createSurvivorEngine, DEFAULT_SURVIVOR_DATA } from '../boot';
-
-describe('survivor — beat map', () => {
-  it('beat 1: first weapon fires and first kill within 0:00–0:15', () => {
-    const { engine } = createSurvivorEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.weapons.anyCooldownFired && state.kills >= 1,
-      maxSimTime: minutes(1),
-    });
-    expect(result.simTime).toBeBetween(0, seconds(15));
-  });
-
-  it('beat 4: first evolution triggered within 8–18 min', () => {
-    const { engine } = createSurvivorEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.evolutions.triggered >= 1,
-      maxSimTime: minutes(25),
-    });
-    expect(result.simTime).toBeBetween(minutes(8), minutes(18));
-  });
-
-  // one `it` per beat through beat 7 — full enumeration in survivor.sim.test.ts.
-});
-
-describe('survivor — balance robustness', () => {
-  it('beats 2 and 3 stay in tolerance under xp-curve ±20%', () => {
-    const matrix = runMatrix({
-      engine: (overrides) => createSurvivorEngine(overrides).engine,
-      baseOverrides: DEFAULT_SURVIVOR_DATA,
-      perturbations: [
-        { path: 'balance.xpCurve', scale: [0.80, 1.0, 1.20] },
-      ],
-      beats: ['beat-2', 'beat-3'],
-    });
-    for (const beat of ['beat-2', 'beat-3']) {
-      expect(matrix.tolerance(beat, '±20%')).toBe(true);
-    }
-  });
-
-  // one `it` per probe from § 6.
-});
-```
-
-**Required test count:** 7 beats + 6 probes = 13 tests minimum. Tests checked into `src/archetypes/survivor/sim/survivor.sim.test.ts` (lands during the OL-547 Survivor rebuild; this doc describes design intent).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

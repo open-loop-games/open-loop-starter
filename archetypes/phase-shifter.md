@@ -93,19 +93,7 @@ Naming what is absent is half the Phase-shifter contract: the archetype refuses 
 
 ## 4. Beat map
 
-The 1–2 h arc compresses A Dark Room's 3–6 hour time-to-escape and Paperclips' 5–8 hour 3-act arc into a showcase of the archetype's transition rhythm. The compression trick: skeleton forks land Phase 1 in the first 15 minutes, the first phase transition within the first hour, and at least one more transition within the two-hour window. Forks that want the classic multi-phase escalation raise the phase-transition thresholds and stretch the phase-duration budget across the whole arc.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | Onset — Phase 1 opens with minimal context | 0:00–2:00 | fresh save; `phase.value === phases[0].id`; no tutorial shown | Sparse interface: one action button, one resource readout, narrative log entry | Mystery-first onboarding — the player learns to act before they learn what the game is |
-| 2 | First Phase-1 loop established | 2:00–10:00 | player has dispatched Phase-1 action ≥ 5 times AND first narrative-milestone flag set | Secondary affordance appears in margin (fire lit → stranger arrives; first paperclip made → market panel unlocks; 10 candies → throw button) | First reveal — the archetype's "the game watches you" moment |
-| 3 | Phase-1 rhythm + first intra-phase expansion | 10:00–25:00 | Phase-1 purchasable category populated AND ≥ 3 distinct narrative-milestone flags set | Multiple action buttons visible; narrative log has multi-line arc; resource counters branch | Intra-phase depth — the player stops wondering "is this all there is?" and starts optimising |
-| 4 | Foreshadowing — Phase 2 hinted | 25:00–45:00 | Phase-1 progression reaches transition-readiness predicate AND foreshadowing-narrative-beat fires | Narrative log entry hints at scope expansion; a new panel appears greyed-out; a project / building reveals transition cost | The archetype's Phase-Transition-Anticipation loop (Narrative Systems loop-3) engages; anticipation builds |
-| 5 | First phase transition — the signature "aha" pivot | 45:00–75:00 | transition-predicate met (e.g. `trust >= 100` AND `project.hypnoDrones.complete`) | Transition animation plays; UI shell or region shifts; content-registry visibility flips; narrative beat lands | Archetype-signature moment — Dark Room world opens / Paperclips goes space / Candy Box ASCII adventure unlocks |
-| 6 | Phase-2 rhythm + mechanic-lifecycle proof | 75:00–105:00 | player has dispatched ≥ 5 Phase-2 actions; at least one Phase-1 mechanic confirmed disabled/absorbed | Phase-2 content fully active; Phase-1 content either hidden, disabled, or absorbed; modifier chain query emits Phase-2 values | Validates the lifecycle primitive — Phase-1 modifiers no longer firing; Phase-2 modifiers active |
-| 7 | Second transition OR arc closure | 105:00–120:00 | second phase-transition fires OR arc-closure-milestone reached within Phase-2 | Second transition animation OR arc-closure narrative beat + credits | The 1–2 h showcase closure — proves the skeleton supports multiple transitions OR cleanly ends the arc |
-
-**Arc closure beat:** #7.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
@@ -248,126 +236,13 @@ export interface PhaseShifterBalanceVars {
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `phase-1-transition-threshold` | `transitionThresholds[phases[0].id].spec.value` ×[0.75, 1.25] | 4, 5 | Beat 5 sim-time ±20% | The first transition is the signature "aha" pivot. If it fires too early the mystery window is squandered; if it fires too late the player abandons. |
-| `phase-cost-scaling` | `phaseCostScaling.*.growth` ×[0.85, 1.15] | 3, 6 | Beats within ±15% sim-time | Intra-phase cost curves govern whether the phase rhythm feels tight or grindy. Cross-phase probe: tests both early and late phase formulas. |
-| `phase-duration-targets` | `phaseDurationTargets.*.{min,max}` widen / narrow by 25% | 5, 7 | Transitions still fire within sim-time targets | Validates the 1–2h arc constraint — forks that add content beyond duration targets must widen the budget or cut content. |
-| `carry-over-ratio` | `softCarryOver.perUnitBonus` ×[0.50, 1.50] (when carryOverMode='soft-prestige') | 6, 7 | Post-transition Phase-2 progression rate within [1.5×, 4×] Phase-1 baseline | Only applies when soft-prestige is active. Paperclips +10% per prestigeU is the canonical; too weak makes the carry-over invisible, too strong trivialises Phase-2. |
-| `narrative-milestone-density` | `narrativeMilestones[].trigger.spec` ×[0.75, 1.25] on quantity-triggers | 2, 3, 4 | Intra-phase reveals land at ≥ 3 per phase in the target window | Milestone density governs the Phased Storytelling loop (Narrative Systems loop-2). Probe catches forks that cluster all reveals at phase boundaries — the Phase-Transition-Anticipation loop needs intra-phase reveals to build anticipation. |
-| `transition-mode-swap` | `transitionMode[phaseId]` ∈ {'replace', 'layer'} | 6 | Phase-1 modifier chains inactive (replace) OR still firing at reduced weight (layer) | Validates the mechanic-lifecycle primitive's correctness under both modes. The probe sweeps every phase's transition mode and asserts the modifier-chain visibility matches the declared mode. |
-
-**Minimum probe count:** 6 (meets ≥4 requirement; covers phase-transition threshold, intra-phase cost scaling, phase-duration pacing, carry-over multiplier, narrative-milestone density, and transition-mode lifecycle).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless } from 'open-loop-engine';
-import { runMatrix } from 'open-loop-engine/harness';
-import { minutes, seconds } from '@/test/time';
-import { loadPhaseShifterVars } from '../vars';
-import { buildPhaseShifterEngine } from '../engine';
-
-describe('phase-shifter — beat map', () => {
-  const vars = loadPhaseShifterVars();
-
-  it('beat 2: first Phase-1 loop established within 2–10 min', () => {
-    const result = runHeadless({
-      engine: buildPhaseShifterEngine(vars),
-      until: (state) =>
-        state.actionsDispatched.phase1 >= 5 &&
-        state.narrativeMilestones.size >= 1,
-      maxSimTime: minutes(15),
-    });
-    expect(result.simTime).toBeBetween(minutes(2), minutes(10));
-  });
-
-  it('beat 5: first phase transition fires within 45–75 min', () => {
-    const result = runHeadless({
-      engine: buildPhaseShifterEngine(vars),
-      until: (state) => state.phase.value !== vars.archetype.phases[0].id,
-      maxSimTime: minutes(90),
-    });
-    expect(result.simTime).toBeBetween(minutes(45), minutes(75));
-  });
-
-  it('beat 6: Phase-2 rhythm + Phase-1 lifecycle verified', () => {
-    const result = runHeadless({
-      engine: buildPhaseShifterEngine(vars),
-      until: (state) =>
-        state.phase.value === vars.archetype.phases[1].id &&
-        state.actionsDispatched.phase2 >= 5,
-      maxSimTime: minutes(110),
-    });
-    expect(result.simTime).toBeBetween(minutes(75), minutes(105));
-
-    // Under 'replace' transitionMode, Phase-1 modifiers must be inactive.
-    if (vars.balance.transitionMode[vars.archetype.phases[0].id] === 'replace') {
-      expect(result.state.modifierChain.phase1.active).toBe(false);
-    }
-    // Under 'layer' transitionMode, Phase-1 modifiers may still fire.
-    if (vars.balance.transitionMode[vars.archetype.phases[0].id] === 'layer') {
-      expect(result.state.modifierChain.phase1.active).toBe(true);
-    }
-  });
-
-  it('beat 7: arc-closure beat fires within 105–120 min', () => {
-    const result = runHeadless({
-      engine: buildPhaseShifterEngine(vars),
-      until: (state) =>
-        state.milestones.has('arc-closure') ||
-        state.phase.value === vars.archetype.phases[vars.archetype.phases.length - 1].id,
-      maxSimTime: minutes(130),
-    });
-    expect(result.simTime).toBeBetween(minutes(105), minutes(120));
-  });
-
-  // one it() per beat — full enumeration in the checked-in test file
-});
-
-describe('phase-shifter — balance robustness', () => {
-  it('phase-1-transition-threshold: beat 5 lands in tolerance at ±25%', () => {
-    const matrix = runMatrix({
-      engine: (v) => buildPhaseShifterEngine(v),
-      baseVars: loadPhaseShifterVars(),
-      perturbations: [
-        {
-          path: 'balance.transitionThresholds.phase1.spec.value',
-          values: ['75', '100', '125'],
-        },
-      ],
-      beats: ['beat-5'],
-    });
-    for (const cell of matrix.cells) {
-      expect(cell.beat('beat-5').simTime).toBeBetween(minutes(45), minutes(75));
-    }
-  });
-
-  it('transition-mode-swap: modifier-chain visibility matches declared mode', () => {
-    for (const mode of ['replace', 'layer'] as const) {
-      const vars = loadPhaseShifterVars({
-        balance: {
-          transitionMode: { [vars.archetype.phases[0].id]: mode },
-        },
-      });
-      const result = runHeadless({
-        engine: buildPhaseShifterEngine(vars),
-        until: (state) => state.phase.value === vars.archetype.phases[1].id,
-        maxSimTime: minutes(90),
-      });
-      const expectActive = mode === 'layer';
-      expect(result.state.modifierChain.phase1.active).toBe(expectActive);
-    }
-  });
-
-  // one it() per probe from § 6 — full enumeration in the checked-in test file
-});
-```
-
-**Required test count:** 7 beats + 6 probes = 13 tests minimum. Tests checked into `src/modules/mods/<game>/sim/phase-shifter.sim.test.ts`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

@@ -71,16 +71,7 @@ A thirty-minute session is a sequence of wave-clear moments separated by build-p
 
 ## 4. Beat map
 
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First tower placed | 0:00–2:00 | `towerInstances.count >= 1` | Tower appears on grid; range circle shows; build-currency ticks down | Onboarding — confirms placement mechanic + currency feedback |
-| 2 | First wave survived | 2:00–5:00 | `waves.cleared >= 1` | Wave-clear banner; bounty income arrives; next-wave countdown starts | Validates tower-damage vs wave-HP baseline; reveals auto-resolve feel |
-| 3 | First tower upgraded OR second tower type placed | 5:00–12:00 | `anyTowerUpgraded || towerTypesOwned >= 2` | Upgraded tower visibly stronger; new tower type icon lights | First exposure to the archetype's vertical depth; build-phase economic choice |
-| 4 | First stage cleared | 12:00–25:00 | `stages.cleared >= 1` | Stage-complete screen; star rating OR next-stage unlock | Validates inter-wave bounty curve + late-wave HP scaling tension |
-| 5 | First meta-progression signal | 25:00–50:00 | `metaCurrency > 0` OR `campaignNodeUnlocked` | Meta-currency counter visible; world-map / skill-tree node revealed | Transitions player from in-run tension to cross-run pull |
-| 6 | First optimized second run | 50:00–80:00 | `runsCompleted >= 2 AND metaBonusApplied` | Second-run tower is stronger than first-run equivalent; visible delta | The archetype's long-term reward — meta-bonus compounds across runs. Arc closure |
-
-**Arc closure beat:** #6 when `prestigeMode !== 'none'`, #4 when `prestigeMode === 'none'`. Bimodal closure precedent from Tug (OL-573) beat 7 — both first-class.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
@@ -177,70 +168,13 @@ export interface DefenderData {
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `tower-cost-curve` | `defenders[*].purchase.baseCost` ×[0.80, 1.20] | 1, 3 | Beat sim-time ±20% | Tower-price is the dominant build-phase lever; if too cheap beat 1 lands at 0:00; if too expensive beat 3 never lands within 12 min |
-| `wave-hp-curve` | `stages[0].hpCurve[*]` ×[0.85, 1.15] | 2, 4 | Beat sim-time ±15% | Wave HP is the dominant auto-resolve lever; a ±15% error shifts whether tower placement is "comfortable" or "knife-edge" |
-| `bounty-income-rate` | `enemies[*].bounty + waveEndBountyBonus` ×[0.75, 1.25] | 3, 4 | Beat sim-time ±25% | Bounty-income drives upgrade pacing; mid-run the player should have just enough to buy one upgrade per 1–2 waves |
-| `upgrade-chain-depth` | enable tier-1 only / tier-1-2 / tier-1-2-3 | 3, 6 | Modifier-chain damage output ≥ expected minimum for wave N | Upgrade depth is the archetype's vertical stress; validates `createModifierChain` correctness across upgrade tiers |
-| `meta-progression-rate` | `stageClearMetaReward` ×[0.5, 2.0] | 5, 6 | Beat 6 sim-time ±30% when `prestigeMode !== 'none'` | Cross-run pull depends on meta-bonus feeling earned at run 2; 0.5× makes prestige feel like grinding, 2× collapses the long tail |
-
-**Minimum probe count:** 5 (meets ≥4 requirement; covers cost scaling, production rate, modifier chain, and archetype-specific axes bounty + meta-progression).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless, runMatrix } from 'open-loop-engine/harness';
-import { minutes } from '@/test/time';
-import { createDefenderEngine, DEFAULT_DEFENDER_DATA } from '../boot';
-
-describe('defender — beat map', () => {
-  it('beat 1: first tower placed within 0–2 min', async () => {
-    const { engine } = createDefenderEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.towerInstances.count >= 1,
-      maxSimTime: minutes(5),
-    });
-    expect(result.simTime).toBeBetween(0, minutes(2));
-  });
-
-  it('beat 2: first wave survived within 2–5 min', async () => {
-    const { engine } = createDefenderEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.waves.cleared >= 1,
-      maxSimTime: minutes(10),
-    });
-    expect(result.simTime).toBeBetween(minutes(2), minutes(5));
-  });
-
-  // one `it` per beat through beat 6 — full enumeration in defender.sim.test.ts.
-});
-
-describe('defender — balance robustness', () => {
-  it('beats 2 and 4 stay in tolerance under wave-hp-curve ±15%', async () => {
-    const matrix = runMatrix({
-      engine: (overrides) => createDefenderEngine(overrides).engine,
-      baseOverrides: DEFAULT_DEFENDER_DATA,
-      perturbations: [
-        { path: 'stages.0.hpCurve', multiply: [0.85, 1.0, 1.15] },
-      ],
-      beats: ['beat-2', 'beat-4'],
-    });
-    for (const beat of ['beat-2', 'beat-4']) {
-      expect(matrix.tolerance(beat, '±15%')).toBe(true);
-    }
-  });
-
-  // one `it` per probe from § 6.
-});
-```
-
-**Required test count:** 6 beats + 5 probes = 11 tests minimum. Tests checked into `src/archetypes/defender/sim/defender.sim.test.ts` (lands during the OL-547 Defender rebuild; this doc describes design intent).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

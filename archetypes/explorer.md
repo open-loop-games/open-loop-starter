@@ -2,7 +2,7 @@
 
 > **One-line identity:** Spatial zone-as-gameplay + fog-of-war Discovery + item-identity Inventory over a resource-scarce action substrate — the map-IS-the-game incremental.
 >
-> **Status:** `canonical`
+> **Status:** `candidate`
 
 **Exemplars (validation, not clone targets):** [Level 13](../../open-loop-research/analyses/complete/level13-analysis.md), [Cavernous II](../../open-loop-research/analyses/complete/cavernous-ii-analysis.md), [Trimps](../../open-loop-research/analyses/complete/trimps-analysis.md) (spatial-traversal slice — zone progression + map-exploration sub-zones, not the Portal/Helium prestige axis).
 
@@ -92,222 +92,25 @@ Naming what is absent is half the Explorer contract: the archetype refuses loop 
 
 ## 4. Beat map
 
-The 1–2 h arc compresses Level 13's multi-hour underground-city arc (reaching the second level with a full base) and the Trimps spatial-slice equivalent (reaching zone 10 with map-explored equipment) into a showcase of the archetype's structural rhythm. Forks that want a longer persistent-world arc extend zone count and per-zone sector density past the defaults.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First sector revealed (first scout action completes) | 0:00–2:00 | `sectors.explored.count >= 1` | Adjacent fog tile flips to visible; resource/landmark glyph appears | Onboarding — confirms the scout → reveal → adjacency loop that *is* the game |
-| 2 | First resource threshold reached from scavenging | 3:00–8:00 | any resource's lifetime count exceeds the first camp-build cost bracket | Resource counter hits the affordance threshold for the first camp action | The resource-scarcity pacing is felt; player understands the scavenge→use loop |
-| 3 | First camp / base built | 10:00–18:00 | `structures.camp.count >= 1` | Camp tile appears on the map; camp-local actions unlock (rest, store, craft) | Introduces the persistent-anchor pattern — map has a home node now, not just a you-are-here marker |
-| 4 | First item-identity acquisition (equipment item with properties, not fungible resource) | 18:00–30:00 | `inventory.items.any(kind === 'equipment')` | Equipment slot readout appears; bag row shows the new item with properties (attack, warmth, scavenge bonus) | The item-vs-resource discriminator is felt for the first time — items are *things*, not counts |
-| 5 | First environmental-gate passed (zone-adjacent sector unlocked via equipment) | 30:00–50:00 | a previously-locked sector becomes enterable because equipment satisfied its gate (e.g. torch → dark sector) | Previously-greyed sector flips enterable; entry-requirement tooltip shows the satisfying item | The equipment-gates-territory axis is felt; content gating is spatial, not linear |
-| 6 | First full-zone coverage (zone-1 exploration reaches threshold) | 50:00–75:00 | `zone(1).explored / zone(1).total >= 0.80` AND zone-2 unlocks | Zone-2 tab / map frame appears; zone-completion readout fires | The archetype's 7a cluster moment — territory charted, next territory revealed |
-| 7 | First cross-zone transition with equipment carry-over | 70:00–95:00 | player enters zone 2 AND bag retains ≥3 items from zone 1 | Zone-2 map appears with a personal avatar carrying the same bag | Validates persistent-progression framing — the gear you built in zone 1 is the gear you explore zone 2 with (this is what distinguishes Explorer from Looper) |
-| 8 | Arc closure: territory-charted milestone + second-zone landmark investigated | 100:00–120:00 | `achievement('cartographer').unlocked` AND `zone(2).landmarks.investigated >= 1` | Completion toast; map view shows ≥80% of zone-1 charted and first zone-2 landmark marker revealed | The 1–2h showcase closure. The map is the achievement; the fork extends with more zones, more landmarks, more items |
-
-**Arc closure beat:** #8.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 5. Data shape
 
-```ts
-// archetype.ts — skeleton defaults
-export interface ExplorerArchetypeVars {
-  // Map shape — changing these is a fork-of-skeleton decision.
-  zoneCount: number;                          // default 4 (surface, underground, ruins, deep)
-  sectorsPerZone: number[];                   // default [12, 16, 20, 24] — length === zoneCount
-  adjacencyTopology: 'grid-4' | 'grid-8' | 'graph';  // default 'grid-4' — how sectors connect
-  fogOfWarEnabled: boolean;                   // default true
-  seedBasedWorld: boolean;                    // default false — true adopts Level 13's deterministic regen
-
-  // Inventory shape.
-  itemIdentityMode: 'typed-fungible' | 'per-instance'; // default 'typed-fungible'
-  baseBagCapacity: number;                    // default 5
-  equipmentSlotCount: number;                 // default 3 (weapon, tool, warmth-garment)
-
-  // Party / worker shape.
-  partySize: number;                          // default 1 — solo avatar; > 1 adds Level-13-style explorers
-  companionsEnabled: boolean;                 // default false
-
-  // Resource shape.
-  coreResourceCount: number;                  // default 5 (food, water, metal, rope, concrete)
-  consumableResourceCount: number;            // subset of coreResourceCount that drains during expeditions; default 2 (food, water)
-}
-
-// theme.ts — costume, no mechanical impact
-export interface ExplorerThemeVars {
-  // Length must equal ExplorerArchetypeVars.zoneCount.
-  zoneNames: Array<{ singular: string; plural: string; flavour: string }>;
-  // Length must equal ExplorerArchetypeVars.coreResourceCount.
-  resourceNames: Array<{ singular: string; plural: string }>;
-  avatarName: string;                         // 'Survivor', 'Spelunker', 'Captain', etc.
-  mapStyleHint: 'ascii' | 'tile-iconic' | 'schematic' | 'narrative-text';
-  landmarkFlavour: Array<{ label: string; description: string; zone: number }>;
-  equipmentFlavour: Array<{ label: string; description: string; slot: string }>;
-  endOfArcMessage: string;                    // fires at beat 8
-}
-
-// balance.ts — mechanical overrides; drives beat timing
-export interface ExplorerBalanceVars {
-  // Action costs — the archetype's dominant pacing lever.
-  actionCosts: {
-    scout: { duration: number; costs: Record<string, DecimalSource> };
-    scavenge: { duration: number; costs: Record<string, DecimalSource>; yield: Record<string, DecimalSource> };
-    investigate: { duration: number; costs: Record<string, DecimalSource> };
-    clearWaste: { duration: number; costs: Record<string, DecimalSource> };
-  };
-
-  // Zone-unlock thresholds — the beat-6 / beat-7 timing lever.
-  zoneUnlockThresholds: Array<{
-    zone: number;                             // which zone unlocks (1-indexed beyond the starting zone)
-    requires: 'exploration-fraction' | 'landmark-investigated' | 'equipment-acquired';
-    value: number | string;                   // fraction for 'exploration-fraction', count for 'landmark-investigated', item-id for 'equipment-acquired'
-  }>;
-
-  // Item drop shape — the item-identity pacing lever.
-  itemDropRates: {
-    perScavengeBaseRate: number;              // default 0.08 — 8% of scavenges produce an item
-    perSectorFirstScavengeBonus: number;      // default 0.40 — first scavenge of a sector gets 40% bonus
-    rarityDistribution: Record<string, number>; // weights per rarity tier; sum must === 1
-  };
-
-  // Inventory / equipment progression.
-  bagCapacityUpgradeSteps: number[];          // e.g. [5, 8, 12, 18, 25] — capacity at each upgrade tier
-  bagCapacityUpgradeCosts: Array<Record<string, DecimalSource>>; // length === bagCapacityUpgradeSteps.length - 1
-
-  // Fog-of-war reveal shape.
-  scoutRevealRadius: number;                  // default 1 (adjacent tile); bumps with equipment
-  fogRevealDecayPerSector: number;            // default 1.02 — scout actions get slightly more expensive per already-explored sector (sub-linear discovery curve)
-
-  // Camp / crafting costs.
-  campConstructionCost: Record<string, DecimalSource>;
-  equipmentCraftingCosts: Array<{ id: string; slot: string; requires: Record<string, DecimalSource> }>;
-
-  // Achievement thresholds.
-  territoryChartedThreshold: number;          // fraction of all sectors across all zones; default 0.35 (beat-8 trigger)
-  achievementMultiplier: number;              // default 1.02 — per-achievement contribution to action-bonus chain
-}
-```
-
-**Override semantics:** deep-merge at load order `archetype → theme → balance`. Array fields (`sectorsPerZone`, `zoneUnlockThresholds`, `bagCapacityUpgradeSteps`, `equipmentCraftingCosts`) replace wholesale; forks that want partial array tuning rebuild the array explicitly.
-
-**Codegen contract:** `pnpm codegen:archetype-vars explorer` (pending) reads this section and emits `src/modules/mods/<game>/vars/{archetype,theme,balance}.ts` with matching defaults. Shared archetype-level types + defaults live at `src/archetypes/explorer/`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `scout-cost` | `actionCosts.scout.costs.*` ×[0.80, 1.20] | 1, 5, 6 | Beat sim-time ±20% | Scout action cost governs onboarding pace and overall zone-coverage time — Explorer's equivalent of Producer's cost-scaling growth |
-| `fog-reveal-rate` | `scoutRevealRadius` ∈ [1, 2] AND `fogRevealDecayPerSector` ∈ [1.00, 1.05] | 1, 6 | Beat 6 sim-time ±25%; zone-1 coverage curve monotonic-non-decreasing | Fog-of-war reveal shape defines whether mid-expedition feels like *discovery* or *slog* |
-| `item-drop-rate` | `itemDropRates.perScavengeBaseRate` ×[0.50, 1.50] | 4, 5, 7 | Beat 4 sim-time ±20%; bag overflow never occurs before beat 7 | Item-identity pacing — too slow breaks beat 4 onboarding, too fast makes bag capacity trivial |
-| `bag-capacity-growth` | `baseBagCapacity` ∈ [3, 8] AND `bagCapacityUpgradeSteps` ×[0.75, 1.25] | 4, 7 | Beat 4 still lands in 18–30 min; beat 7 inventory carry-over ≥3 items holds | Inventory shape governs equipment economy; the probe validates the bag capacity does not silently deny beat 7 |
-| `zone-unlock-threshold` | `zoneUnlockThresholds[0].value` ∈ [0.60, 0.90] (exploration-fraction) | 6, 7 | Beat 6 sim-time ±25%; beat 7 still fires within arc | Zone-unlock gate governs the beat-6-to-beat-7 transition; the archetype's *territory completion* rhythm |
-| `party-size-scaling` | `partySize` ∈ {1, 2, 4} AND `companionsEnabled` toggled | 1, 6, 8 | All beats land within 2× sim-time of baseline; no soft-lock | Party-size probe stresses the worker+position primitive gap — with party ≥ 2, if the engine has no position-aware worker, the tests will show game-side code paths diverge |
-| `world-seed-determinism` | 5 seeds × 3 runs per seed, `seedBasedWorld: true` | 1, 3, 6, 8 | All 3 runs of a given seed produce identical beat sim-times | Seeded-world correctness — regeneration must be deterministic across save/load cycles (Level 13 shape) |
-
-**Minimum probe count:** 7 (meets ≥4 requirement; covers scout cost, fog-of-war reveal, item drops, bag capacity, zone gating, party-size stress, and seed determinism).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless } from 'open-loop-engine';
-import { runMatrix } from 'open-loop-engine/harness';
-import { minutes } from '@/test/time';
-import { loadExplorerVars } from '../vars';
-import { buildExplorerEngine } from '../engine';
-
-describe('explorer — beat map', () => {
-  const vars = loadExplorerVars();
-
-  it('beat 1: first sector revealed within 0–2 min', () => {
-    const result = runHeadless({
-      engine: buildExplorerEngine(vars),
-      until: (state) => state.sectors.exploredCount >= 1,
-      maxSimTime: minutes(5),
-    });
-    expect(result.simTime).toBeBetween(0, minutes(2));
-  });
-
-  it('beat 4: first equipment item in bag within 18–30 min', () => {
-    const result = runHeadless({
-      engine: buildExplorerEngine(vars),
-      until: (state) => state.inventory.items.some((i) => i.kind === 'equipment'),
-      maxSimTime: minutes(40),
-    });
-    expect(result.simTime).toBeBetween(minutes(18), minutes(30));
-  });
-
-  it('beat 6: zone-1 coverage crosses 80% within 50–75 min', () => {
-    const result = runHeadless({
-      engine: buildExplorerEngine(vars),
-      until: (state) => state.zones[1].exploredFraction >= 0.80,
-      maxSimTime: minutes(85),
-    });
-    expect(result.simTime).toBeBetween(minutes(50), minutes(75));
-  });
-
-  it('beat 7: cross-zone transition preserves ≥3 items', () => {
-    const result = runHeadless({
-      engine: buildExplorerEngine(vars),
-      until: (state) => state.zones.current === 'zone-2' && state.inventory.itemCount >= 3,
-      maxSimTime: minutes(100),
-    });
-    expect(result.simTime).toBeBetween(minutes(70), minutes(95));
-  });
-
-  // ... one `it` per beat through beat 8 in the checked-in test file
-
-  it('beat 8: territory-charted milestone within 100–120 min', () => {
-    const result = runHeadless({
-      engine: buildExplorerEngine(vars),
-      until: (state) => state.achievements.has('cartographer') && state.zones[2].landmarks.investigated >= 1,
-      maxSimTime: minutes(130),
-    });
-    expect(result.simTime).toBeBetween(minutes(100), minutes(120));
-  });
-});
-
-describe('explorer — balance robustness', () => {
-  it('party-size scaling: all beats land within 2× baseline at partySize ∈ {1, 2, 4}', () => {
-    const matrix = runMatrix({
-      engine: (v) => buildExplorerEngine(v),
-      baseVars: loadExplorerVars(),
-      perturbations: [
-        { path: 'archetype.partySize', values: [1, 2, 4] },
-        { path: 'archetype.companionsEnabled', values: [false, true, true] },
-      ],
-      beats: ['beat-1', 'beat-6', 'beat-8'],
-    });
-    for (const beat of ['beat-1', 'beat-6', 'beat-8']) {
-      const baseline = matrix.cell({ partySize: 1 }).beat(beat).simTime;
-      for (const cell of matrix.cells) {
-        expect(cell.beat(beat).simTime).toBeLessThan(baseline * 2);
-      }
-    }
-  });
-
-  it('seed determinism: 3 runs of a given seed produce identical beat timings', () => {
-    const seed = 0xC0FFEE;
-    const runs = [0, 1, 2].map(() => runHeadless({
-      engine: buildExplorerEngine(loadExplorerVars({ archetype: { seedBasedWorld: true }, balance: { worldSeed: seed } })),
-      until: (state) => state.zones[1].exploredFraction >= 0.80,
-      maxSimTime: minutes(85),
-    }));
-    expect(runs[1].simTime).toBe(runs[0].simTime);
-    expect(runs[2].simTime).toBe(runs[0].simTime);
-  });
-
-  // one `it` per probe from § 6 — full enumeration in the checked-in test file
-});
-```
-
-**Required test count:** 8 beats + 7 probes = 15 tests minimum. Tests checked into `src/modules/mods/<game>/sim/explorer.sim.test.ts`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

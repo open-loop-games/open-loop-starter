@@ -88,19 +88,7 @@ A thirty-minute session is one full run — arrange, resolve, adjust, repeat for
 
 ## 4. Beat map
 
-The 1–2h arc covers one full run across six to twelve rounds (PvP-auto-resolve variants) or three to five Defender-hybrid stages. Backpack Battles' 20–60 minute run window and GemCraft's ~45 minute campaign stage both compress to a skeleton that lands the first neighbour-bonus trigger at ~2 min, the first combine-up at ~8 min, and arc closure at 60–120 min depending on `combatSubstrate` and `prestigeMode`.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First item placed in grid | 0:00–2:00 | `grid.occupiedCells >= 1` | Item visible on grid; starting gold reduced; empty cells highlight available placement area | Onboarding — validates `createSpatialGrid` placement surface + currency feedback. Sets up the "position matters" commitment before the synergy fires |
-| 2 | First neighbour-bonus trigger fires | 2:00–6:00 | `grid.synergyContributions.anyActive` AND at least one cell shows a positive bonus number | Cell highlight with synergy readout ("+10% from 1 matching neighbour"); modifier chain visible on inspector | The archetype's signature moment — arrangement produced a measurable bonus. Validates Placement-Adjacency scoring pass + `createModifierChain` composition |
-| 3 | First auto-resolve completes | 6:00–12:00 | `rounds.cleared >= 1` OR `waves.cleared >= 1` (by `combatSubstrate`) | Resolve-phase animation; reward banked (gold / HP-ladder advance / wave-clear banner); return to acquisition phase | Validates the full Placement-Adjacency pattern cycle — arrange, resolve, observe, adjust. Auto-resolve reads grid state correctly; score maps to reward |
-| 4 | First combine-up produces upgraded occupant | 8:00–18:00 | `items.combined >= 1` OR `items.anyAtGrade >= 2` | Combine animation; occupant sprite/icon upgrades; chain picks up a new factor (multiplier, named-adjacency, aura radius) | Validates the Progression Systems vertical — item-tier escalation is the archetype's second optimisation axis. Unlocks qualitative shifts beyond arrangement tuning |
-| 5 | First compositional discovery — named-adjacency or shape-fit chain | 15:00–30:00 | Player intentionally triggers a specific named-adjacency or shape-fit combination not available in earlier rounds | Visible chain effect (particle, animation, big bonus readout); player inspects to understand the trigger; arrangement around that combination shifts | The "Discovery" aesthetic moment — the synergy surface rewarding experimentation. If this beat doesn't land within tolerance, the pool is too small or the compositions too shallow |
-| 6 | Escalation threshold forces compositional optimisation | 30:00–70:00 | Wave/opponent HP exceeds linear projection from round 1; linear stat-stacking insufficient; player must reshape arrangement | New enemy/opponent type appears (Defender-hybrid) or HP-ladder reaches a threshold (PvP); previous build loses to optimal-arrangement opponents; item-pool or combine-up becomes dominant economic choice | Mid-run pacing shift — the "arrangement matters" tension sharpens. Validates cross-round escalation wiring + compounding synergy bonuses |
-| 7 | Arc closure | 60:00–120:00 | `prestigeMode !== 'none'`: first post-run meta-unlock visible on second-run startup AND second-run beat 2 lands faster than first-run beat 2. `prestigeMode === 'none'`: first full-run completion at the target win-condition (Backpack Battles ladder win / GemCraft campaign-node clear) | Meta-progression tile ticks up (hero unlocked, item-pool expanded) OR run-complete screen with run-stats summary | Bimodal arc closure — meta-compound precedent for run-reset / campaign variants; clean run-completion for single-run variants. Both are first-class skeleton outcomes |
-
-**Arc closure beat:** #7. Bimodal closure precedent from Tug (OL-573, beat 7), Defender (OL-574, beat 6 or beat 4), Survivor (OL-575, beat 7 or beat 4), and Cycler (OL-576, beat 6 bimodal on `endgameMode`). Packer's bimodal axis is `prestigeMode` — the pre-2020 Packer lineage (GemCraft campaign, Gem TD WC3 ladder) shipped `prestigeMode: 'campaign'` or `'run-reset'`; Backpack Battles' single-run PvP ladder with per-hero trophy is a 2024-native variant that can ship `prestigeMode: 'none'` and close the arc on beat 5 or 6 without the meta-compound signal.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
@@ -274,82 +262,13 @@ export interface PackerData {
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `per-neighbour-bonus` | `items[*].adjacencyRules[*].bonus.damageMul` ×[0.80, 1.20] | 2, 5, 6 | Beat sim-time ±20% | The archetype's signature tuning lever — per-neighbour bonus magnitude decides whether clustering is visibly worth doing. Industry Idle's +10% baseline + policy-gated +50% is the calibrated two-tier reference; ±20% covers the territory between "grid is a bin" and "maximum-density runaway" per the Placement-Adjacency pattern's Failure Mode #1 |
-| `grid-size` | `balance.gridRows × gridCols` step through [4×4, 6×6, 6×8, 8×10] | 1, 3, 5 | Beat sim-time ±25% | Grid size is the structural capacity lever — smaller grids force optimisation tension earlier (beat 5 lands sooner), larger grids delay it. Validates the skeleton supports the full exemplar range (GemCraft's ~8-amplifier-slot form → Backpack Battles' 8×10 late-game bag) |
-| `combine-copies-curve` | `balance.combineCopiesByGrade[*]` ×[0.75, 1.5] | 4 | Beat sim-time ±25% | Combine-up is the Progression-Systems vertical; pacing copies-required decides whether beat 4 (first upgraded occupant) lands in 8–18 min window. Too few copies = instant endgame; too many = run never compounds |
-| `shop-cost-curve` | `items[*].baseCost` ×[0.80, 1.20] | 1, 4 | Beat sim-time ±20% | Item acquisition cost drives how many items land in the grid by beat 4; validates shop-economy pacing against the combine-up threshold |
-| `modifier-chain-depth` | enable adjacency rules subsets (same-category only / +named-pair / +aura / full) | 2, 5, 6 | Modifier-chain output ≥ expected minimum for round N | Upgrade depth is the archetype's vertical stress; validates `createModifierChain` correctness under dynamic chain composition (combine-up adds factors mid-run) |
-| `round-hp-curve` | `rounds.hpCurve[*]` ×[0.85, 1.15] | 3, 6 | Beat sim-time ±15% when `combatSubstrate !== 'none'` | Wave / opponent HP governs whether mid-run arrangements can keep up with round-N pressure; ±15% tips runs from "knife-edge" to "trivial" or "unwinnable" |
-| `meta-progression-rate` | `metaUpgradeNodeCount` grant-per-run ×[0.5, 2.0] | 7 | Beat 7 sim-time ±30% when `prestigeMode !== 'none'` | Cross-run compound pull; analogous to Defender / Survivor / Cycler probes. Orthogonal to `combatSubstrate` — pvp-auto-resolve and wave-defender forks both ship prestige variants |
-
-**Minimum probe count:** 7 (meets ≥4 requirement; covers cost scaling via `shop-cost-curve`, production rate via `per-neighbour-bonus`, modifier chain via `modifier-chain-depth`, and four archetype-specific axes: grid-size, combine-copies-curve, round-hp-curve, meta-progression-rate).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless, runMatrix } from 'open-loop-engine/harness';
-import { minutes, seconds } from '@/test/time';
-import { createPackerEngine, DEFAULT_PACKER_DATA } from '../boot';
-
-describe('packer — beat map', () => {
-  it('beat 1: first item placed within 0–2 min', () => {
-    const { engine } = createPackerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.grid.occupiedCells >= 1,
-      maxSimTime: minutes(5),
-    });
-    expect(result.simTime).toBeBetween(0, minutes(2));
-  });
-
-  it('beat 2: first neighbour-bonus trigger within 2–6 min', () => {
-    const { engine } = createPackerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.grid.synergyContributions.anyActive,
-      maxSimTime: minutes(10),
-    });
-    expect(result.simTime).toBeBetween(minutes(2), minutes(6));
-  });
-
-  it('beat 4: first combine-up within 8–18 min', () => {
-    const { engine } = createPackerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.items.combined >= 1,
-      maxSimTime: minutes(25),
-    });
-    expect(result.simTime).toBeBetween(minutes(8), minutes(18));
-  });
-
-  // one `it` per beat through beat 7 — full enumeration in packer.sim.test.ts.
-});
-
-describe('packer — balance robustness', () => {
-  it('beats 2 and 5 stay in tolerance under per-neighbour-bonus ±20%', () => {
-    const matrix = runMatrix({
-      engine: (overrides) => createPackerEngine(overrides).engine,
-      baseOverrides: DEFAULT_PACKER_DATA,
-      perturbations: [
-        { path: 'items.*.adjacencyRules.*.bonus.damageMul', multiply: [0.80, 1.0, 1.20] },
-      ],
-      beats: ['beat-2', 'beat-5'],
-    });
-    for (const beat of ['beat-2', 'beat-5']) {
-      expect(matrix.tolerance(beat, '±20%')).toBe(true);
-    }
-  });
-
-  // one `it` per probe from § 6.
-});
-```
-
-**Required test count:** 7 beats + 7 probes = 14 tests minimum. Tests checked into `src/archetypes/packer/sim/packer.sim.test.ts` (lands during the OL-547 Packer rebuild; this doc describes design intent).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

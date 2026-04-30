@@ -86,18 +86,7 @@ A thirty-minute session spans three to six full cycles. The signature moments ar
 
 ## 4. Beat map
 
-The 1–2h arc covers three to six full build/defend cycles. Kingdom Two Crowns' 3–8 hour first-crown arc compresses to a skeleton that lands the first cycle at ~3 min, the first spatial-consequential defend at ~12 min, and either macro-closure (`endgameMode === 'campaign-closure'`) or equilibrium-cycle-established (`endgameMode === 'open-ended'`) by the 75–120 min mark.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First build phase opens | 0:00–2:00 | fresh save; `phase.value === 'build'`; `cycles.count === 0` | Phase-timer visible (sun arc / round countdown / wave-distance indicator); one building type unlocked; starting gold allocated | Mystery-first onboarding — the player learns the archetype's rhythm from the calm side first, so the defend phase feels earned |
-| 2 | First phase transition fires | 2:00–5:00 | `phase.value === 'defend'` transitions fire for the first time | Transition signal (palette shift / horn / "wave incoming" toast); any pre-placed buildings begin firing | The archetype's signature moment — "your preparation is now being tested." Validates `createSequencer` phase-turn wiring |
-| 3 | First defend phase survived | 5:00–10:00 | `cycles.count >= 1` AND `fortress.hp > 0` at transition back to build | Cycle-clear banner; income accrues from surviving buildings; next-cycle countdown starts | Investment-effect lands — the fortress is *yours* now. Validates phase-scoped `Grant.when` gates fired both directions correctly |
-| 4 | First spatial-consequential defend | 10:00–25:00 | A defend phase where `buildingsPlaced[currentRound] > buildingsPlaced[previousRound]` AND wave HP at cycle-N baseline | Visible adjacency aura / lane-reshape / dig-path-channel effect on the wave | Validates the Placement-Adjacency optional-modifier surface — spatial decisions during the calm phase had mechanical consequence in the pressure phase |
-| 5 | Escalation threshold forces optimization | 25:00–60:00 | Wave HP exceeds linear projection from cycle 1; player must choose upgrade paths rather than add-buildings-broadly | New enemy type appears; previous tower loadout insufficient; upgrade tier becomes dominant economic choice | Mid-game pacing shift — the "breathe-then-squeeze" tension sharpens. Validates cross-cycle escalation parameter wiring in `createLoop` |
-| 6 | Arc closure | 60:00–120:00 | `endgameMode === 'campaign-closure'`: final wave cleared OR campaign-day reached. `endgameMode === 'open-ended'`: three consecutive cycles with net-positive resource income (equilibrium established) | Campaign-complete screen OR equilibrium-signal (e.g., "Your kingdom is stable — play on or reset") | Bimodal arc closure — campaign-closure termination for campaign variants; equilibrium-established signal for open-ended variants. Both are first-class skeleton outcomes |
-
-**Arc closure beat:** #6. Bimodal closure precedent from Tug (OL-573, beat 7), Defender (OL-574, beat 6 OR beat 4 bimodal on `prestigeMode`), and Survivor (OL-575, beat 7 OR beat 4 bimodal on `prestigeMode`). Cycler's bimodal axis is `endgameMode` rather than `prestigeMode` — prestige is orthogonal to whether the run has a terminator. A Cycler fork with both `prestigeMode !== 'none'` and `endgameMode === 'campaign-closure'` gets a compound closure (campaign end → meta-currency banked); the beat still fires at #6.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
@@ -224,81 +213,13 @@ export interface CyclerData {
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `phase-duration-ratio` | `buildPhaseDurationSec / defendPhaseDurationSec` ×[0.67, 1.50] | 2, 3 | Beat sim-time ±20% | The archetype's signature tuning lever — build-to-defend ratio controls "breathe-then-squeeze" rhythm. ±50% spread covers Kingdom's long-day-short-night vs Thronefall's balanced-round shapes |
-| `enemy-hp-escalation` | `cycles.hpCurve[*]` ×[0.85, 1.15] | 3, 5 | Beat sim-time ±15% | Wave-HP curve is the dominant defend-phase pressure lever; at ±15% error the late-cycle optimization tension becomes either trivial or unwinnable |
-| `income-curve` | `buildings[role='income'].phaseContribution.build.goldPerTick` ×[0.80, 1.20] | 3, 4, 5 | Beat sim-time ±20% | Income-vs-escalation balance — if income too fast, Phase A loses its "earning the upgrade" feel; too slow and players can't keep pace with cycle-N scaling |
-| `upgrade-chain-depth` | enable tier-1 only / tier-1-2 / tier-1-2-3 | 4, 5 | Modifier-chain damage output ≥ expected minimum for cycle N defend phase | Validates `createModifierChain` correctness under phase-scoped composition. Tier 3 availability is the vertical-depth lever for beat 5's optimization threshold |
-| `cycle-escalation-coefficient` | `perCycleEnemyHpGrowth` ×[0.95, 1.20] | 5, 6 | Beat 5 sim-time ±25%; beat 6 sim-time ±30% on `endgameMode === 'open-ended'` equilibrium | Cross-cycle compounding — the coefficient that decides how long the arc can run before the player's income curve falls behind. Load-bearing for open-ended arc closure |
-| `meta-progression-rate` | `metaUpgradeNodeCount` grant-per-run ×[0.5, 2.0] | 6 | Beat 6 sim-time ±30% when `prestigeMode !== 'none'` | Cross-run compound pull; analogous to Defender's probe. Orthogonal to `endgameMode` — both open-ended and campaign-closure variants may ship prestige |
-
-**Minimum probe count:** 6 (meets ≥4 requirement; covers cost scaling via `upgrade-chain-depth`, production rate via `income-curve`, modifier chain via `upgrade-chain-depth`, and four archetype-specific axes: phase-duration-ratio, enemy-hp-escalation, cycle-escalation-coefficient, meta-progression-rate).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless, runMatrix } from 'open-loop-engine/harness';
-import { minutes } from '@/test/time';
-import { createCyclerEngine, DEFAULT_CYCLER_DATA } from '../boot';
-
-describe('cycler — beat map', () => {
-  it('beat 1: first build phase opens within 0–2 min', async () => {
-    const { engine } = createCyclerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.phase.value === 'build' && state.cycles.count === 0,
-      maxSimTime: minutes(5),
-    });
-    expect(result.simTime).toBeBetween(0, minutes(2));
-  });
-
-  it('beat 2: first phase transition fires within 2–5 min', async () => {
-    const { engine } = createCyclerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.phase.value === 'defend',
-      maxSimTime: minutes(10),
-    });
-    expect(result.simTime).toBeBetween(minutes(2), minutes(5));
-  });
-
-  it('beat 3: first defend phase survived within 5–10 min', async () => {
-    const { engine } = createCyclerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.cycles.count >= 1 && state.fortress.hp.gt(0),
-      maxSimTime: minutes(15),
-    });
-    expect(result.simTime).toBeBetween(minutes(5), minutes(10));
-  });
-
-  // one `it` per beat through beat 6 — full enumeration in cycler.sim.test.ts.
-});
-
-describe('cycler — balance robustness', () => {
-  it('beats 2 and 3 stay in tolerance under phase-duration-ratio ×[0.67, 1.50]', async () => {
-    const matrix = runMatrix({
-      engine: (overrides) => createCyclerEngine(overrides).engine,
-      baseOverrides: DEFAULT_CYCLER_DATA,
-      perturbations: [
-        { path: 'balance.buildPhaseDurationSec', multiply: [0.67, 1.0, 1.5] },
-      ],
-      beats: ['beat-2', 'beat-3'],
-    });
-    for (const beat of ['beat-2', 'beat-3']) {
-      expect(matrix.tolerance(beat, '±20%')).toBe(true);
-    }
-  });
-
-  // one `it` per probe from § 6.
-});
-```
-
-**Required test count:** 6 beats + 6 probes = 12 tests minimum. Tests checked into `src/archetypes/cycler/sim/cycler.sim.test.ts` (lands during the OL-547 Cycler rebuild; this doc describes design intent).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

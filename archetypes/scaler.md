@@ -2,7 +2,7 @@
 
 > **One-line identity:** Multi-layer nested Prestige + prestige-integrated Challenge layers + deep Modifier Chains at extreme scale — the layered-compression incremental.
 >
-> **Status:** `canonical`
+> **Status:** `candidate`
 
 **Exemplars (validation, not clone targets):** [Antimatter Dimensions](../../open-loop-research/analyses/complete/antimatter-dimensions-analysis.md), [Synergism](../../open-loop-research/analyses/complete/synergism-analysis.md), [NGU Idle](../../open-loop-research/analyses/complete/ngu-idle-analysis.md).
 
@@ -88,204 +88,25 @@ Naming what's *absent* is part of the Scaler contract: it refuses the spatial an
 
 ## 4. Beat map
 
-The 1–2h arc compresses the reference-game scopes (Antimatter Dimensions' ~8h time-to-Infinity, Synergism's ~1h time-to-Transcension, NGU Idle's ~2h time-to-Rebirth) into a single showcase. First prestige lands around 20 min; second layer unlocks around the one-hour mark; third layer is teased but not required for arc closure.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First producer purchased (Dimension 1) | 0:00–1:00 | `dimensions[0].count >= 1` | Auto-production starts; rate readout appears | Onboarding — Scaler's base layer is Producer-shaped, players need the familiar footing |
-| 2 | Higher-tier dimension owned (first cascading production) | 3:00–8:00 | `dimensions[2].count >= 1` | Mid-tier row lights up; tier-over-tier production chain visible | Validates the core producer-cascade — production of tier N boosts tier N-1 |
-| 3 | First prestige threshold reached (Layer-1 button lights up) | 12:00–20:00 | `primaryResource >= tier1PrestigeThreshold` | Big prestige button becomes active; projected reward shown | The archetype's signature moment — the promise of compression appears |
-| 4 | First prestige executed (Layer-1 reset) | 18:00–25:00 | `layer1Currency >= 1 after reset` | Full reset flash; new currency counter appears; first multiplier ticks in | Introduces the headline loop — build up, ascend, restart faster |
-| 5 | First Layer-1 upgrade purchased; second prestige visibly faster than first | 30:00–45:00 | `layer1Upgrades.owned >= 1 AND loopCount >= 2 AND loop[2].simTime < loop[1].simTime * 0.6` | Upgrade tree visible; next run reaches beat 3 in ≤60% of first-run time | Validates the compression claim — *this time it was faster* |
-| 6 | First challenge completed; permanent multiplier earned | 45:00–70:00 | `challenges.completedCount >= 1` | Challenge toast; headline multiplier ticks up with a named "Challenge Completions" source | Challenge Systems integration — challenges are not a side mode, they feed the chain |
-| 7 | Second prestige layer unlocked | 70:00–95:00 | `layer2Currency is visible AND >= 1` | New tab/panel appears; second currency begins accumulating; layer-1 progress feels small | The "there was a whole other game on top" reveal that defines Scaler |
-| 8 | Arc closure: modifier chain shows 8+ named factors AND Layer-3 preview visible | 95:00–120:00 | `modifierChain.visibleFactors.length >= 8 AND layer3.teased` | Expanded chain readout; third-layer panel hints at content behind an L2-currency gate | The 1–2h showcase closure. The player sees the compounded stack and knows there is further depth. Fork extends beyond here; skeleton stops |
-
-**Arc closure beat:** #8.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 5. Data shape
 
-```ts
-// archetype.ts — skeleton defaults
-export interface ScalerArchetypeVars {
-  // Structural shape of the prestige stack — changing these is a fork-of-skeleton decision.
-  prestigeLayerCount: number;          // default 3 (AD-like); range 2–5
-  dimensionCount: number;              // default 8 (base-layer producer tiers)
-  upgradesPerLayer: number;            // default 6 (per-layer upgrade-tree size)
-  challengesPerLayer: number;          // default 8 (challenges attached to each prestige tier)
-  achievementCount: number;            // default 40 (production + layer-completion + hidden)
-  modifierEvaluationOrder: 'layered-multiplicative' | 'sequential-layered';
-
-  // Challenge composition.
-  challengeRewardShape: 'linear-stack' | 'ecc-softcap';  // ECC = Effective Challenge Completions
-
-  // Automation tier (disabled by default; unlocks in mid-arc).
-  autoPrestigeUnlockLayer: 1 | 2 | 3 | 'disabled';      // at what layer auto-prestige becomes available
-}
-
-// theme.ts — costume, no mechanical impact
-export interface ScalerThemeVars {
-  baseResourceName: { singular: string; plural: string };
-  /** Length must equal ScalerArchetypeVars.prestigeLayerCount. */
-  layerCurrencyNames: Array<{ singular: string; plural: string }>;
-  /** Length must equal ScalerArchetypeVars.prestigeLayerCount. */
-  prestigeButtonLabels: string[];                         // e.g. ['Big Crunch', 'Eternity', 'Reality']
-  dimensionNames: string[];                               // length = dimensionCount
-  upgradeFlavour: Array<{ label: string; description: string; layer: number }>;
-  challengeFlavour: Array<{ label: string; description: string; layer: number }>;
-  endOfArcMessage: string;                                // fires at beat 8
-}
-
-// balance.ts — mechanical overrides; drives beat timing
-export interface ScalerBalanceVars {
-  // Base-layer producer cost curve (Producer-shaped).
-  baseDimensionCost: {
-    firstTierBaseCost: DecimalSource;                     // default '10'
-    interTierMultiplier: DecimalSource;                   // inter-tier cost jump, default '1000'
-    perPurchaseGrowth: number;                            // exponential per purchase, default 1.15
-  };
-
-  // Prestige-currency conversion formulas, one per layer.
-  prestigeConversions: Array<{
-    layer: number;
-    family: 'log' | 'sqrt' | 'polynomial';
-    /** For 'log' / 'polynomial' families. */
-    scale: DecimalSource;
-    /** For 'polynomial' family. */
-    exponent?: number;
-    /** The base-resource value at which the conversion yields currency = 1. */
-    threshold: DecimalSource;
-  }>;
-
-  // Piecewise softcap thresholds on the prestige formulas.
-  softcapThresholds: Array<{
-    layer: number;
-    /** Currency value above which the formula softens. */
-    at: DecimalSource;
-    /** Softening shape after threshold. */
-    afterShape: 'sqrt' | 'log' | 'linear-slow';
-  }>;
-
-  // Per-layer upgrade multiplier step.
-  layerUpgradeMultiplier: number;                         // default 2 (upgrades double something)
-  challengeCompletionMultiplier: number;                  // per-completion multiplier, default 1.02
-  eccSoftcapAt: number;                                   // ECC stops stacking linearly after N completions, default 8
-
-  // Inter-layer unlock thresholds.
-  layerUnlockThresholds: Array<{
-    layer: number;                                        // which layer unlocks
-    requires: 'layer-n-currency' | 'challenges-completed' | 'layer-n-total';
-    value: DecimalSource;
-  }>;
-
-  autoPrestigeUnlockLoopCount: number;                    // default 5 (after 5 layer-1 prestiges)
-}
-```
-
-**Override semantics:** deep-merge at load order `archetype → theme → balance`. Tests pass an override object to `runSim`.
-
-**Codegen contract:** `pnpm codegen:archetype-vars scaler` (pending) reads this section and emits `src/modules/mods/<game>/vars/{archetype,theme,balance}.ts` with matching defaults. Shared archetype-level types + defaults live at `src/archetypes/scaler/`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `prestige-formula-scale` | `prestigeConversions[0].scale` ×[0.80, 1.20] | 3, 4, 7 | Beat sim-time ±25% | First-prestige pacing is the archetype's dominant lever; if it misses, the whole arc mistimes |
-| `softcap-threshold` | `softcapThresholds[0].at` ×[0.5, 2.0] | 5, 7, 8 | Headline multiplier at beat 7 within [8×, 40×] | Softcap placement governs whether mid-arc feels compressive or stalling |
-| `modifier-order-invariance` | swap `modifierEvaluationOrder` between the two allowed shapes | 8 | Headline-multiplier delta ≤0.5% at beat 7 | The chain arithmetic must produce the same (or near-same) value regardless of order, modulo sequential-only multipliers. If violated, chain composition has a semantic bug |
-| `cost-growth-rate` | `baseDimensionCost.perPurchaseGrowth` ×[0.90, 1.10] | 1, 2, 3 | Beat sim-time ±20% | Producer-layer pacing; controls time-to-first-prestige |
-| `extreme-scale-inversion` | run beats 6–8 at `prestigeConversions` scales that push layer-2 currency to `1e200`, `1e500`, `1e1500` | 6, 7, 8 | `calculateMaxAffordable` returns correct integer N at every scale; no `NaN` / `Infinity` | `break_eternity.js` tetration-regime correctness; the defect-hunting probe |
-| `challenge-reward-stack` | `challengeCompletionMultiplier` ×[0.98, 1.05] AND `eccSoftcapAt` ×[0.5, 1.5] | 6, 8 | Beat-8 headline multiplier stays within [1e6×, 1e12×] band | ECC-softcap shape governs whether challenge grinding is rewarding or runaway |
-
-**Minimum probe count:** 6 (meets ≥4 requirement; covers prestige formula, softcap, modifier order, cost growth, extreme-scale inversion, and challenge-reward stacking).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless } from 'open-loop-engine';
-import { runMatrix } from 'open-loop-engine/harness';
-import { minutes } from '@/test/time';
-import { loadScalerVars } from '../vars';
-import { buildScalerEngine } from '../engine';
-
-describe('scaler — beat map', () => {
-  const vars = loadScalerVars();
-
-  it('beat 1: first dimension purchased within 0–60 s', async () => {
-    const result = runHeadless({
-      engine: buildScalerEngine(vars),
-      until: (state) => state.dimensions[0].count.gte(1),
-      maxSimTime: minutes(2),
-    });
-    expect(result.simTime).toBeBetween(0, 60);
-  });
-
-  it('beat 4: first prestige executed within 18–25 min', async () => {
-    const result = runHeadless({
-      engine: buildScalerEngine(vars),
-      until: (state) => state.prestigeCount >= 1 && state.layer1Currency.gte(1),
-      maxSimTime: minutes(30),
-    });
-    expect(result.simTime).toBeBetween(minutes(18), minutes(25));
-  });
-
-  it('beat 5: second prestige is ≥40% faster than first', async () => {
-    const result = runHeadless({
-      engine: buildScalerEngine(vars),
-      until: (state) => state.prestigeCount >= 2,
-      maxSimTime: minutes(60),
-      capture: ['prestigeTimestamps'],
-    });
-    const [first, second] = result.prestigeTimestamps;
-    expect(second - first).toBeLessThan(first * 0.60);
-  });
-
-  // one `it` per beat — full enumeration in the checked-in test file
-});
-
-describe('scaler — balance robustness', () => {
-  it('modifier-chain order invariance: layered vs sequential differ by ≤0.5%', async () => {
-    const layered = runHeadless({
-      engine: buildScalerEngine(loadScalerVars({ archetype: { modifierEvaluationOrder: 'layered-multiplicative' } })),
-      until: (state) => state.simTime >= minutes(95),
-      maxSimTime: minutes(100),
-    });
-    const sequential = runHeadless({
-      engine: buildScalerEngine(loadScalerVars({ archetype: { modifierEvaluationOrder: 'sequential-layered' } })),
-      until: (state) => state.simTime >= minutes(95),
-      maxSimTime: minutes(100),
-    });
-    const delta = Math.abs(layered.headlineMultiplier.log10().toNumber() - sequential.headlineMultiplier.log10().toNumber());
-    expect(delta / layered.headlineMultiplier.log10().toNumber()).toBeLessThan(0.005);
-  });
-
-  it('extreme-scale inversion: calculateMaxAffordable holds at 1e500+', async () => {
-    const matrix = runMatrix({
-      engine: (v) => buildScalerEngine(v),
-      baseVars: loadScalerVars(),
-      perturbations: [
-        { path: 'balance.prestigeConversions.0.scale', values: ['1', '1e200', '1e1000'] },
-      ],
-      beats: ['beat-6', 'beat-7', 'beat-8'],
-    });
-    for (const cell of matrix.cells) {
-      expect(Number.isFinite(cell.bulkBuyN)).toBe(true);
-      expect(cell.bulkBuyN).toBeGreaterThan(0);
-    }
-  });
-
-  // one `it` per probe from § 6
-});
-```
-
-**Required test count:** 8 beats + 6 probes = 14 tests minimum. Tests checked into `src/modules/mods/<game>/sim/scaler.sim.test.ts`.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 

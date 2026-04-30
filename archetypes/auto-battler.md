@@ -93,19 +93,7 @@ A thirty- to forty-minute session is one full match — eight to twelve rounds, 
 
 ## 4. Beat map
 
-The 1–2h arc covers one full match (roughly 30–45 min across 8–15 rounds) plus the first portion of a second match, so the player sees the compositional surface resolve *and* feels the meta-progression compound. Dota Auto Chess's 35–45 min single-match and Super Auto Pets' ~25–35 min 12-turn match both compress to a skeleton that lands the first draft at 0:15, the first synergy threshold at ~6 min, the first match completion at 25–45 min, and arc closure (second match first-combat landing faster than first match's did) at 60–90 min.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First unit drafted | 0:00–0:30 | `roster.count >= 1` | Purchased unit appears in staging / board; gold reduced | Onboarding — validates shop purchase + roster state + `createPurchasableCategory` plumbing |
-| 2 | First combat round resolves | 0:30–2:00 | `rounds.cleared >= 1` | Combat animation plays; win/loss signal; HP damage (on loss) or opponent-HP-damage (on win); gold awarded | Validates the shop → prep → combat → resolve cycle + `createSequencer` round-timer wiring |
-| 3 | First synergy threshold crosses | 3:00–8:00 | `traits.anyAtThreshold >= 1` | Synergy panel lights up; active-synergy readout visible; affected units' chain picks up threshold modifier | The archetype's signature moment — composition produced a measurable synergy bonus. Validates `createSkillCategory` threshold counters + `createModifierChain` dynamic composition |
-| 4 | First combine-up fires | 5:00–12:00 | `units.anyAtStar >= 2` | Three-copy merge animation; 2-star unit visible; unit's damage chain updated with star-tier multiplier | Validates Progression Systems combine-up — the second power-scaling vertical beyond within-round drafting. Threshold for compositional escalation |
-| 5 | First interest payout lands | 6:00–10:00 | `gold.interestEarnedThisMatch >= 1` | Round-end gold readout shows base income + "+N interest" line item | Validates the distinguishing economic mechanic — interest-bearing round economy (the Auto-battler-defining invention absent in all OL-537 Wave-1 archetypes). First exposure to the hoard-vs-spend meta-tension |
-| 6 | First match completion | 25:00–45:00 | `match.ended` | Match-end screen with placement / trophy award / meta-currency bank; return to main menu | Validates the full match arc: all 8–15 rounds fire correctly, elimination or round-cap closes the match, trophy / meta-currency banks cross-match. Arc closure for `prestigeMode === 'none'` forks |
-| 7 | First optimised second match — visible meta-compound | 45:00–90:00 total | `matchesCompleted >= 2 AND secondMatchFirstSynergyTime < firstMatchFirstSynergyTime` OR (second match has at least one meta-unlocked hero / item / challenge available that the first did not) | Second match hits beat 3 faster than first match did, OR hero-select shows a newly unlocked option, OR item pool includes a new unlock | The archetype's long-term pull: meta-progression compounds across matches. Arc closure for `prestigeMode !== 'none'` forks |
-
-**Arc closure beat:** #7 when `prestigeMode !== 'none'`, #6 when `prestigeMode === 'none'`. Bimodal closure precedent from Tug (OL-573, beat 7), Defender (OL-574, beat 6 or beat 4), Survivor (OL-575, beat 7 or beat 4), Cycler (OL-576, beat 6 bimodal on `endgameMode`), and Packer (OL-577, beat 7 bimodal on `prestigeMode`). Auto-battler's bimodal axis is `prestigeMode` — matching Survivor and Packer's precedents rather than Cycler's orthogonal `endgameMode` axis.
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
@@ -285,82 +273,13 @@ export interface AutoBattlerData {
 
 ## 6. Balance probes
 
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `tier-gate-schedule` | `balance.shopTierUnlockLevel` ×[0.8, 1.3] step (earlier / later tier unlocks) | 3, 4, 6 | Beat sim-time ±20% | Tier-gate pacing is the archetype's dominant escalation lever — too early and late-round units trivialise mid-round combats; too late and matches resolve on tier-1 stat-stacks with no composition depth |
-| `interest-rate-schedule` | `interest.goldPerInterestUnit` ×[0.67, 1.5] AND `interest.cap` ×[0.5, 1.5] | 5, 6, 7 | Beat 5 sim-time ±30%; beat 6/7 sim-time ±20% | Interest is the archetype's distinguishing economic mechanic; probe ensures the hoard-vs-spend tension stays material. 0.5× cap collapses econ to irrelevance; 2× cap dominates strategy |
-| `synergy-threshold-bonus` | `synergies[*].thresholds[*].effect.damageMul` ×[0.80, 1.20] | 3, 6 | Beat sim-time ±20% | Synergy magnitude is the archetype's signature power-scaling axis. Too weak and players ignore trait composition; too strong and 6-Warriors becomes a one-trick meta |
-| `combine-up-copy-curve` | `units[*].combineRule.copiesToStar2` step through [2, 3, 4] | 4, 6 | Beat 4 sim-time ±25% | Combine-up pacing decides how fast 2-star units appear. 3 is canonical (DAC/TFT/SAP); 2 collapses the chain to triviality, 4+ pushes 3-star beyond match length |
-| `hp-damage-per-round-curve` | `rounds.hpDamagePerRound[*]` ×[0.75, 1.25] | 6 | Beat 6 sim-time ±15% | HP-damage-on-loss curve governs match length. ±25% tips matches from "drawn-out attrition" to "sudden elimination" |
-| `modifier-chain-depth` | enable modifier-chain subsets (base+star only / +trait / +item / full) | 3, 6 | Modifier-chain damage output ≥ expected minimum for round N | Upgrade depth is the archetype's vertical stress; validates `createModifierChain` correctness under dynamic composition across trait-threshold + star-tier + item stacking |
-| `meta-progression-rate` | `metaUnlockNodeCount` grant-per-match ×[0.5, 2.0] | 7 | Beat 7 sim-time ±30% when `prestigeMode !== 'none'` | Cross-match compound pull; analogous to Survivor / Defender / Packer probes. Orthogonal to `combatMode` — PvP and PvE-roguelike variants both ship meta-progression |
-
-**Minimum probe count:** 7 (meets ≥4 requirement; covers cost scaling via `tier-gate-schedule`, production rate via `hp-damage-per-round-curve`, modifier chain via `modifier-chain-depth`, and four archetype-specific axes: interest-rate-schedule, synergy-threshold-bonus, combine-up-copy-curve, meta-progression-rate).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
 ## 7. Sim assertions
 
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless, runMatrix } from 'open-loop-engine/harness';
-import { minutes, seconds } from '@/test/time';
-import { createAutoBattlerEngine, DEFAULT_AUTO_BATTLER_DATA } from '../boot';
-
-describe('auto-battler — beat map', () => {
-  it('beat 1: first unit drafted within 0–0:30', () => {
-    const { engine } = createAutoBattlerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.roster.count >= 1,
-      maxSimTime: minutes(2),
-    });
-    expect(result.simTime).toBeBetween(0, seconds(30));
-  });
-
-  it('beat 3: first synergy threshold crosses within 3–8 min', () => {
-    const { engine } = createAutoBattlerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.traits.anyAtThreshold >= 1,
-      maxSimTime: minutes(12),
-    });
-    expect(result.simTime).toBeBetween(minutes(3), minutes(8));
-  });
-
-  it('beat 5: first interest payout within 6–10 min', () => {
-    const { engine } = createAutoBattlerEngine();
-    const result = runHeadless({
-      engine,
-      until: (state) => state.gold.interestEarnedThisMatch.gte(1),
-      maxSimTime: minutes(15),
-    });
-    expect(result.simTime).toBeBetween(minutes(6), minutes(10));
-  });
-
-  // one `it` per beat through beat 7 — full enumeration in auto-battler.sim.test.ts.
-});
-
-describe('auto-battler — balance robustness', () => {
-  it('beats 5 and 6 stay in tolerance under interest-rate ×[0.67, 1.5]', () => {
-    const matrix = runMatrix({
-      engine: (overrides) => createAutoBattlerEngine(overrides).engine,
-      baseOverrides: DEFAULT_AUTO_BATTLER_DATA,
-      perturbations: [
-        { path: 'interest.goldPerInterestUnit', multiply: [0.67, 1.0, 1.5] },
-      ],
-      beats: ['beat-5', 'beat-6'],
-    });
-    for (const beat of ['beat-5', 'beat-6']) {
-      expect(matrix.tolerance(beat, '±20%')).toBe(true);
-    }
-  });
-
-  // one `it` per probe from § 6.
-});
-```
-
-**Required test count:** 7 beats + 7 probes = 14 tests minimum. Tests checked into `src/archetypes/auto-battler/sim/auto-battler.sim.test.ts` (lands during the OL-547 Auto-battler rebuild; this doc describes design intent).
+_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
