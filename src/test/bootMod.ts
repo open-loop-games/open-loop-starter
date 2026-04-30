@@ -80,10 +80,7 @@ export function bootMod(options: BootModOptions): BootHandle {
     }
   };
 
-  const tickUntil = async (
-    condition: () => boolean,
-    maxTicks = 50_000,
-  ): Promise<number> => {
+  const tickUntil = async (condition: () => boolean, maxTicks = 50_000): Promise<number> => {
     for (let i = 0; i < maxTicks; i++) {
       if (condition()) return i;
       engine.loop.stepOnce();

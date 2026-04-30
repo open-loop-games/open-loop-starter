@@ -11,7 +11,10 @@ interface Edge {
   kind: string;
 }
 
-function seed(): { graph: SpatialGraph<Node, Edge>; positions: Map<string, { x: number; y: number }> } {
+function seed(): {
+  graph: SpatialGraph<Node, Edge>;
+  positions: Map<string, { x: number; y: number }>;
+} {
   const graph = createSpatialGraph<Node, Edge>();
   graph.addNode({ name: 'a' }, { id: 'a' });
   graph.addNode({ name: 'b' }, { id: 'b' });

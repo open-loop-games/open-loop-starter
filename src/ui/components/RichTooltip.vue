@@ -16,12 +16,7 @@
   into the content when nesting).
 -->
 <script setup lang="ts">
-import {
-  HoverCardRoot,
-  HoverCardTrigger,
-  HoverCardPortal,
-  HoverCardContent,
-} from 'reka-ui';
+import { HoverCardRoot, HoverCardTrigger, HoverCardPortal, HoverCardContent } from 'reka-ui';
 
 withDefaults(
   defineProps<{

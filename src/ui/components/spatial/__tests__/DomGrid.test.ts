@@ -52,8 +52,7 @@ describe('DomGrid', () => {
     const wrapper = mount(DomGrid<Tile>, {
       props: {
         grid,
-        cellClass: (cell: Tile) =>
-          cell.owner ? `owner-${cell.owner}` : 'owner-none',
+        cellClass: (cell: Tile) => (cell.owner ? `owner-${cell.owner}` : 'owner-none'),
       },
     });
 

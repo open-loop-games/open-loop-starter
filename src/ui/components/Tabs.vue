@@ -96,7 +96,9 @@ const model = defineModel<string>({ required: true });
   font-size: 0.9em;
   font-weight: 500;
   margin-bottom: -1px;
-  transition: color 0.1s, background 0.1s;
+  transition:
+    color 0.1s,
+    background 0.1s;
 }
 .olui-tabs__trigger:hover:not([data-disabled]) {
   color: var(--tabs-trigger-color-active);

@@ -9,11 +9,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-  createModifierSection,
-  type DecimalSource,
-  type Modifier,
-} from 'open-loop-engine';
+import { createModifierSection, type DecimalSource, type Modifier } from 'open-loop-engine';
 
 const props = withDefaults(
   defineProps<{
@@ -126,7 +122,10 @@ const section = computed(() =>
   color: var(--chain-breakdown-bad);
 }
 
-.olui-chain-breakdown__row:not(.olui-chain-breakdown__row--base):not(.olui-chain-breakdown__row--bad):not(.olui-chain-breakdown__row--muted) .olui-chain-breakdown__value {
+.olui-chain-breakdown__row:not(.olui-chain-breakdown__row--base):not(
+    .olui-chain-breakdown__row--bad
+  ):not(.olui-chain-breakdown__row--muted)
+  .olui-chain-breakdown__value {
   color: var(--chain-breakdown-good);
 }
 

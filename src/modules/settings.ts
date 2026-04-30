@@ -13,7 +13,9 @@ export interface SettingsState {
   lastSaveTimestamp: Ref<number>;
 }
 
-export const SettingsKey: InjectionKey<SettingsState> = Symbol('settings') as InjectionKey<SettingsState>;
+export const SettingsKey: InjectionKey<SettingsState> = Symbol(
+  'settings',
+) as InjectionKey<SettingsState>;
 
 export const settingsModule: EngineModule = {
   id: 'settings',

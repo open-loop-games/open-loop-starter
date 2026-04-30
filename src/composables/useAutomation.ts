@@ -136,9 +136,7 @@ export interface UseAutomationReturn<M = void> {
 // Composable
 // ============================================================================
 
-export function useAutomation<M = void>(
-  options: UseAutomationOptions<M>,
-): UseAutomationReturn<M> {
+export function useAutomation<M = void>(options: UseAutomationOptions<M>): UseAutomationReturn<M> {
   const {
     id,
     tiers: tierDefs,
