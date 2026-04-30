@@ -18,7 +18,7 @@ import { CapabilitiesKey, getTalentXpRefs } from './capabilities';
 import { GoldModuleKey } from './gold';
 import { ManaKey, ManaModuleKey } from './mana';
 import { ProgressVarsKey, getProgressVarXpRefs } from './progress-vars';
-import { RegularVarsKey, getRegularVarPerLoopRefs, getRegularVarTotalRefs } from './regular-vars';
+import { RegularVarsKey, getRegularVarLifetimeRefs, getRegularVarTotalRefs } from './regular-vars';
 import {
   QueueKey,
   QueueModuleKey,
@@ -93,14 +93,20 @@ export function createLoopModule(_data: LooperData): EngineModule {
           // timesCompleted (action-completion-count prereqs), progressVar XP
           // (Wander-shape persistent exploration), regularVar `total`
           // (derived from progressVar levels — cached so save/load doesn't
-          // need to walk the level-up emitter pre-rehydration).
-          // Per-loop refs (capability Level XP, action progress, regularVar
-          // checked/good, gold, mana) clear via thingsToReset / onRestart.
+          // need to walk the level-up emitter pre-rehydration), regularVar
+          // lifetime `checked` + `good` (manapot accumulation — vanilla
+          // idle-loops `town.js:finishRegular` shape; reset would break
+          // the investment-then-payoff loop that lets later loops cash in
+          // known-goods discovered earlier).
+          // Per-loop refs (capability Level XP, action progress, gold,
+          // mana) clear via thingsToReset / onRestart. `goodTemp` is
+          // reseeded imperatively in onRestart.
           const keep: Persistent[] = [
             ...getTalentXpRefs(capabilities),
             ...getActionTimesCompletedRefs(actions),
             ...getProgressVarXpRefs(progressVars),
             ...getRegularVarTotalRefs(regularVars),
+            ...getRegularVarLifetimeRefs(regularVars),
           ];
           retention = createRetentionPolicy({ keep });
           retentionBuilt = true;
@@ -112,14 +118,16 @@ export function createLoopModule(_data: LooperData): EngineModule {
         id: 'looper/loop',
         endCondition: () => Decimal.lte(mana.value, 0) || shouldRestart?.value === true,
 
-        // Per-loop reset scope. Capability Level XP zeros (Talent survives via
-        // retention); action progress zeros; regularVar checked/good zero
-        // (`total` survives via retention). Action timesCompleted is also
-        // pushed here AND kept in retention — the engine snapshots-then-
-        // restores from the retention `keep` list, so the reset+restore
-        // round-trip preserves it. Gold and mana clear via onRestart's
-        // imperative resets, NOT here, so save-reset (zero out) and
-        // loop-restart (refill / zero) stay distinguishable.
+        // Per-loop reset scope. Capability Level XP zeros (Talent survives
+        // via retention); action progress zeros; regularVar `total`,
+        // `checked`, `good` survive via retention (manapot accumulation).
+        // Action timesCompleted is also pushed here AND kept in retention
+        // — the engine snapshots-then-restores from the retention `keep`
+        // list, so the reset+restore round-trip preserves it. Gold and
+        // mana clear via onRestart's imperative resets, NOT here, so
+        // save-reset (zero out) and loop-restart (refill / zero) stay
+        // distinguishable. `goodTemp` is reseeded from `good` in
+        // onRestart, not zeroed here.
         thingsToReset: () => {
           const things: unknown[] = [];
           for (const entry of capabilities.getAll()) {
@@ -131,9 +139,6 @@ export function createLoopModule(_data: LooperData): EngineModule {
           for (const ref of getActionTimesCompletedRefs(actions)) {
             things.push(ref);
           }
-          for (const ref of getRegularVarPerLoopRefs(regularVars)) {
-            things.push(ref);
-          }
           return things;
         },
 
@@ -143,6 +148,13 @@ export function createLoopModule(_data: LooperData): EngineModule {
 
         onRestart: () => {
           ensureRetention().restore();
+          // Reseed `goodTemp` from `good`'s post-restoration value
+          // (vanilla `town.js:restartZones` shape). Lifetime `checked` +
+          // `good` rode the retention round-trip; `goodTemp` is the
+          // per-loop consumption counter.
+          for (const rv of regularVars.getAll()) {
+            rv.goodTemp.value = rv.good.value;
+          }
           // Reset mana to initialMana, clear manaAdded, and zero gold BEFORE
           // the queue auto-dispatches — the queue's `canRun` checks mana, so
           // this order matters. Gold resets to 0 (vanilla idle-loops shape:

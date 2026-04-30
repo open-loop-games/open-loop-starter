@@ -453,6 +453,76 @@ describe('looper engine smoke', () => {
     expect(Number(mana.value) - Number(manaBefore)).toBeGreaterThan(50);
   });
 
+  it('manapot: known-goods discovered in loop 1 cash in immediately on loop 2', () => {
+    // Vanilla `town.js:finishRegular` shape. Loop 1 explores 10 cracks
+    // → discovers 1 good (good=1, checked=10). Loop end + queue clear
+    // seeds goodTemp=1. Loop 2's first crack consumes goodTemp via the
+    // goodTemp branch and fires +100 mana on completion 1 (vs. requiring
+    // 10 completions for a fresh-discovery cycle).
+    const { engine } = createLooperEngine(
+      {
+        actions: [
+          { id: 'roam', manaCost: 5 },
+          { id: 'crack', manaCost: 5 },
+        ],
+        balance: { initialMana: 5_000 },
+      },
+      { persistenceNamespace: 'smoke-manapot-cross-loop' },
+    );
+    engine.selectMod('classic-adventuring');
+    engine.start();
+
+    const queue = engine.tryInject(QueueKey)!;
+    const progressVars = engine.tryInject(ProgressVarsKey)!;
+    const regularVars = engine.tryInject(RegularVarsKey)!;
+    const loop = engine.tryInject(LoopKey)!;
+    const mana = engine.tryInject(ManaKey)!;
+
+    // 40 roam → roam.level = 3, cache.total = 15 (≥ 10 for one fresh
+    // cycle). Crack 10 to discover one good.
+    queue.enqueue({ id: 'roam', metadata: { loops: 40, loopsLeft: 40 } });
+    queue.enqueue({ id: 'crack', metadata: { loops: 10, loopsLeft: 10 } });
+
+    const roamSkill = progressVars.getSkill('roam')!;
+    const cacheState = regularVars.getState('cache')!;
+
+    let safety = 0;
+    while (cacheState.good.value < 1 && safety++ < 10000) {
+      engine.loop.simulateTick(1);
+    }
+    expect(cacheState.checked.value).toBe(10);
+    expect(cacheState.good.value).toBe(1);
+    expect(cacheState.goodTemp.value).toBe(0); // Mid-loop 1 — not yet seeded.
+
+    // Clear queue → shouldRestart fires → loop 1 ends. onRestart sees an
+    // empty queue and parks the loop (per loop.ts:159). Retention
+    // round-trip preserves checked + good; goodTemp is reseeded from
+    // good. Capability Level XP zeros (Talent persists), but progressVar
+    // XP persists, so roam.level stays at 3 → cache.total stays at 15.
+    queue.clear();
+    // Drive a tick to flush shouldRestart through the loop's endCondition.
+    engine.loop.simulateTick(1);
+    expect(loop.running.value).toBe(false);
+    expect(cacheState.checked.value).toBe(10);
+    expect(cacheState.good.value).toBe(1);
+    expect(cacheState.goodTemp.value).toBe(1);
+    expect(Number(roamSkill.level.value)).toBeGreaterThanOrEqual(3);
+
+    // Loop 2: enqueue 1 crack. The first checkOne hits the goodTemp
+    // branch (no new exploration, fires +100 mana immediately).
+    queue.enqueue({ id: 'crack', metadata: { loops: 1, loopsLeft: 1 } });
+    expect(loop.running.value).toBe(true);
+    const manaBefore = new Decimal(mana.value);
+    const checkedBefore = cacheState.checked.value;
+    safety = 0;
+    while (cacheState.goodTemp.value === 1 && safety++ < 200) {
+      engine.loop.simulateTick(0.05);
+    }
+    expect(cacheState.goodTemp.value).toBe(0);
+    expect(cacheState.checked.value).toBe(checkedBefore); // No new check.
+    expect(Number(mana.value) - Number(manaBefore)).toBeGreaterThan(50);
+  });
+
   it('regular-action every-Nth completion fires `add-gold` rewardEffect', () => {
     // Slip: regularVarId 'latch', rewardRatio 10, rewardEffects [add-gold 10].
     // Drive roam.level to ≥ 10 so latch.total = 10 (Roam scales latch × 1) —
@@ -596,7 +666,12 @@ describe('looper engine smoke', () => {
     expect(Decimal.eq(roamSkill.xp.value, xpBeforeReset)).toBe(true);
   });
 
-  it('regularVar `total` persists (derived) while `checked`/`good` reset per loop', () => {
+  it('regularVar `total`/`checked`/`good` persist across loop reset; `goodTemp` reseeds from `good`', () => {
+    // Manapot model (vanilla `town.js:finishRegular`): lifetime `checked`
+    // and `good` accumulate across loops so investment-then-payoff
+    // bootstraps mana growth — the empty checks paid for this loop become
+    // known-goods cashed in cheaply on later loops. `goodTemp` is the
+    // per-loop consumption counter; reseeded to `good` in `onRestart`.
     const { engine } = createLooperEngine(
       {
         actions: [
@@ -634,15 +709,19 @@ describe('looper engine smoke', () => {
     while (cacheState.checked.value < 3 && safety++ < 1000) {
       engine.loop.simulateTick(1);
     }
-    expect(cacheState.checked.value).toBeGreaterThanOrEqual(3);
+    const checkedBefore = cacheState.checked.value;
+    const goodBefore = cacheState.good.value;
+    expect(checkedBefore).toBeGreaterThanOrEqual(3);
 
     loop.end();
 
-    // total persists (derived from roam.level which is in retention's keep);
-    // checked + good zero per loop.
+    // total persists (derived from roam.level, in retention's keep).
+    // checked + good are now lifetime-persistent (manapot accumulation).
+    // goodTemp reseeds to good on every restart.
     expect(Number(cacheState.total.value)).toBe(totalBefore);
-    expect(cacheState.checked.value).toBe(0);
-    expect(cacheState.good.value).toBe(0);
+    expect(cacheState.checked.value).toBe(checkedBefore);
+    expect(cacheState.good.value).toBe(goodBefore);
+    expect(cacheState.goodTemp.value).toBe(goodBefore);
   });
 
   it('progress-var-level prereqs gate visibility (Trade carries roam ≥ 3)', () => {

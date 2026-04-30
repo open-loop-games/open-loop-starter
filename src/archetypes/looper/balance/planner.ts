@@ -179,17 +179,24 @@ export interface ActionVector {
   manaPerCompletion: number;
   /** Projected per-completion direct gold grant (regular: averaged; basic: completion effect amount). */
   goldPerCompletion: number;
-  /** Pool capacity in completions before exhaustion (regular-type only). */
+  /** Unchecked-pool capacity in completions before exhaustion (regular-type only; equals `total - checked`). */
   poolCapacity: number;
+  /**
+   * Known-goods available at plan time (regular-type only; equals
+   * `goodTemp` post-loop-restart). Each known-good fires one reward on
+   * a single `checkOne` call without consuming pool capacity.
+   */
+  knownGoodCount: number;
   /** rewardRatio (regular-type only) — required loop granularity to fire any reward. */
   rewardRatio: number;
   /** True iff the action's prereqs all match against current state. */
   visible: boolean;
   /**
-   * "Productive" — for regular actions, true iff `poolCapacity ≥ rewardRatio`
-   * (i.e., at least one reward can fire); for non-regular, true iff visible.
-   * Productive-zero actions are still in the vector list but the planner
-   * skips them in passes 2 + 3.
+   * "Productive" — for regular actions, true iff at least one reward can
+   * fire this loop (`poolCapacity ≥ rewardRatio` for fresh-discovery OR
+   * `knownGoodCount > 0` for known-good consumption); for non-regular,
+   * true iff visible. Productive-zero actions are still in the vector
+   * list but the planner skips them in passes 2 + 3.
    */
   productive: boolean;
   /** Fast-classifier for plan-pass dispatch. */
@@ -320,6 +327,7 @@ export function projectActionVectors(engine: PlannerAccessor): ActionVector[] {
     let manaPerCompletion = 0;
     let goldPerCompletion = 0;
     let poolCapacity = 0;
+    let knownGoodCount = 0;
     let rewardRatio = 0;
 
     if (def.type === 'progress') {
@@ -329,11 +337,20 @@ export function projectActionVectors(engine: PlannerAccessor): ActionVector[] {
       }
     } else if (def.type === 'regular') {
       rewardRatio = Number(state.rewardRatio?.value ?? def.rewardRatio);
-      const rvState = regularVars.getState(def.regularVarId);
+      const rvState = regularVars.getState(def.regularVarId) as
+        | {
+            total: { value: number };
+            checked: { value: number };
+            goodTemp?: { value: number };
+          }
+        | undefined;
       if (rvState) {
         const total = Number(rvState.total.value);
         const checked = Number(rvState.checked.value);
         poolCapacity = Math.max(0, total - checked);
+        // `goodTemp` is the post-restart known-good count. Old engine
+        // builds without the field default to 0 — same as a fresh pool.
+        knownGoodCount = Math.max(0, Number(rvState.goodTemp?.value ?? 0));
       }
       // Average per-completion grant: rewardAmount fires every Nth completion.
       const manaReward = rewardEffectAmount(def.rewardEffects, 'add-mana');
@@ -350,11 +367,15 @@ export function projectActionVectors(engine: PlannerAccessor): ActionVector[] {
 
     const visible = isVisible(engine, def);
 
-    // Productive: regular actions need pool ≥ rewardRatio to fire any reward.
-    // Non-regular: productive iff visible (basic + progress are immediately
-    // productive when visible).
+    // Productive: regular actions fire at least one reward this loop iff
+    // the pool admits a fresh-discovery cycle (`poolCapacity >=
+    // rewardRatio`) OR known-goods are queued for cheap consumption.
+    // Non-regular: productive iff visible (basic + progress are
+    // immediately productive when visible).
     const productive =
-      visible && (def.type !== 'regular' || (rewardRatio > 0 && poolCapacity >= rewardRatio));
+      visible &&
+      (def.type !== 'regular' ||
+        (rewardRatio > 0 && (poolCapacity >= rewardRatio || knownGoodCount > 0)));
 
     vectors.push({
       def,
@@ -363,6 +384,7 @@ export function projectActionVectors(engine: PlannerAccessor): ActionVector[] {
       manaPerCompletion,
       goldPerCompletion,
       poolCapacity,
+      knownGoodCount,
       rewardRatio,
       visible,
       productive,
@@ -397,6 +419,22 @@ function pushItem(planState: PlanState, vector: ActionVector, loops: number): vo
   planState.plan.push({ actionId: vector.def.id, loops });
   planState.projectedManaAdded += vector.manaPerCompletion * loops;
   planState.projectedGold += vector.goldPerCompletion * loops;
+}
+
+/**
+ * Push an item whose `loops` consume known-goods (`goodTemp` branch). Each
+ * completion fires `rewardAmount` directly (not the averaged
+ * `rewardAmount / rewardRatio`), so projected mana / gold add at the full
+ * reward per loop. Caller must guarantee `loops <= vector.knownGoodCount`.
+ */
+function pushKnownGoodItem(planState: PlanState, vector: ActionVector, loops: number): void {
+  if (loops <= 0) return;
+  planState.plan.push({ actionId: vector.def.id, loops });
+  // Effective per-completion grant on the goodTemp branch = averaged ×
+  // rewardRatio = full rewardAmount per fired reward.
+  const ratio = vector.rewardRatio;
+  planState.projectedManaAdded += vector.manaPerCompletion * ratio * loops;
+  planState.projectedGold += vector.goldPerCompletion * ratio * loops;
 }
 
 /**
@@ -447,6 +485,8 @@ export function generatePlan(
   // ─── Pass 2: gold accumulation ──────────────────────────────────────
   // Productive gold-emitting regulars. Allocated to fund the trade
   // threshold. Multiple gold sources sum into the projected pouch.
+  // Two-phase per source: cash in known-goods first (1 loop = 1 full
+  // rewardAmount), then explore cycles for the remainder.
   if (params.tradeThreshold !== 'never') {
     const goldSources = visible
       .filter((v) => v.passSegment === 'gold' && v.productive)
@@ -457,24 +497,49 @@ export function generatePlan(
     let goldRemaining = params.tradeThreshold;
     for (const v of goldSources) {
       if (goldRemaining <= 0) break;
-      const loops = loopsForRegularGrant(v, goldRemaining, v.goldPerCompletion);
-      if (loops <= 0) continue;
-      pushItem(planState, v, loops);
-      goldRemaining -= v.goldPerCompletion * loops;
+
+      if (v.knownGoodCount > 0) {
+        const goldPerKnownGood = v.goldPerCompletion * v.rewardRatio;
+        if (goldPerKnownGood > 0) {
+          const knownNeeded = Math.ceil(goldRemaining / goldPerKnownGood);
+          const knownLoops = Math.min(v.knownGoodCount, knownNeeded);
+          if (knownLoops > 0) {
+            pushKnownGoodItem(planState, v, knownLoops);
+            goldRemaining -= goldPerKnownGood * knownLoops;
+          }
+        }
+      }
+
+      if (goldRemaining <= 0) continue;
+      const exploreLoops = loopsForRegularGrant(v, goldRemaining, v.goldPerCompletion);
+      if (exploreLoops <= 0) continue;
+      pushItem(planState, v, exploreLoops);
+      goldRemaining -= v.goldPerCompletion * exploreLoops;
     }
   }
 
   // ─── Pass 3: mana extension (productive regulars + basic mana grants) ─
-  // Drain each productive mana-pool to its rewardRatio-aligned capacity,
-  // emitted as one item per reward cycle. Per-cycle chunking mirrors the
-  // (γ) Pass-5 fix (OL-768): the natural granule for partial Pass-6 trim
-  // is one full rewardRatio cycle (rewardRatio loops produce 1 reward
-  // grant on average). Sub-cycle splits don't yield rewards, so the
-  // smallest meaningful chunk == rewardRatio loops. With multi-cycle
-  // pools (poolCapacity > rewardRatio), Pass 6 can drop cycles one at a
-  // time instead of all-or-nothing. Single-cycle pools (poolCapacity ==
-  // rewardRatio) still drop wholesale; that's a content-rebalance
-  // signal, not a planner trim issue.
+  // Two-phase enqueue per regular pool, mirroring `regular-vars.ts:checkOne`
+  // dispatch order (vanilla `town.js:finishRegular` shape):
+  //
+  //   1. Cash in known-goods (`goodTemp`): one item with `loops =
+  //      knownGoodCount`. Each completion fires a reward at 1 mana cost
+  //      via the `goodTemp > 0` branch — high-EV, no exploration.
+  //   2. Explore unchecked: one item per reward cycle (`loops =
+  //      rewardRatio`), `floor(poolCapacity / rewardRatio)` items total.
+  //      Per-cycle chunking mirrors the (γ) Pass-5 fix (OL-768): the
+  //      natural granule for partial Pass-6 trim is one full rewardRatio
+  //      cycle (rewardRatio loops → 1 reward grant). Sub-cycle splits
+  //      don't yield rewards, so the smallest meaningful chunk =
+  //      rewardRatio loops. With multi-cycle pools (poolCapacity >
+  //      rewardRatio), Pass 6 can drop cycles one at a time instead of
+  //      all-or-nothing.
+  //
+  // The known-good item is split out so Pass-6 can trim explore cycles
+  // without sacrificing the cheap cash-in step. With searchToggle = true
+  // (hardcoded in `checkOne`), the engine consumes known-goods first
+  // when both branches are available; queue ordering is informational
+  // here, not load-bearing.
   //
   // Basic-type mana grants (e.g., a future "Drink Tonic" basic that adds
   // mana flat) get one execution.
@@ -484,6 +549,9 @@ export function generatePlan(
     .sort((a, b) => b.manaPerCompletion / b.adjustedTicks - a.manaPerCompletion / a.adjustedTicks);
   for (const v of manaSources) {
     if (v.def.type === 'regular') {
+      if (v.knownGoodCount > 0) {
+        pushKnownGoodItem(planState, v, v.knownGoodCount);
+      }
       const cycles = Math.floor(v.poolCapacity / v.rewardRatio);
       for (let i = 0; i < cycles; i++) {
         pushItem(planState, v, v.rewardRatio);

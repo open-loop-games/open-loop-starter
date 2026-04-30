@@ -135,8 +135,12 @@ export interface SyntheticLooperState {
   capabilities: Map<string, { levelXp: number; talentXp: number }>;
   /** ProgressVar XP — persistent across loops. */
   progressVars: Map<string, number>;
-  /** RegularVar pool state. `total` is persistent (derived from progressVar levels); `checked`/`good` reset per loop. */
-  regularVars: Map<string, { total: number; checked: number; good: number }>;
+  /**
+   * RegularVar pool state. `total`, `checked`, `good` persist across loops
+   * (manapot accumulation). `goodTemp` reseeds to `good` at every loop
+   * boundary; decrements as known-goods are consumed mid-loop.
+   */
+  regularVars: Map<string, { total: number; checked: number; good: number; goodTemp: number }>;
   /** Action `timesCompleted` — persistent. */
   actions: Map<string, number>;
   /**
@@ -209,9 +213,12 @@ export function createSyntheticInitialState(
   for (const def of data.progressVars) {
     progressVars.set(def.id, 0);
   }
-  const regularVars = new Map<string, { total: number; checked: number; good: number }>();
+  const regularVars = new Map<
+    string,
+    { total: number; checked: number; good: number; goodTemp: number }
+  >();
   for (const def of data.regularVars) {
-    regularVars.set(def.id, { total: 0, checked: 0, good: 0 });
+    regularVars.set(def.id, { total: 0, checked: 0, good: 0, goodTemp: 0 });
   }
   const actions = new Map<string, number>();
   for (const def of data.actions) {
@@ -328,13 +335,24 @@ function applyCompletion(
     }
   } else if (def.type === 'regular') {
     const rv = state.regularVars.get(def.regularVarId);
-    if (rv && rv.checked < rv.total) {
-      rv.checked += 1;
-      // Use the vector's snapshot rewardRatio (post-tunable) — same value
-      // the planner used to decide loop allocation, so projector and
-      // engine-truth converge under static-cost discipline.
-      if (rv.checked % vector.rewardRatio === 0) {
-        rv.good += 1;
+    if (rv) {
+      // Mirrors `regular-vars.ts:checkOne`. Pool-shrink branch is omitted
+      // — projector never shrinks `total` mid-arc (progressVar level-ups
+      // only grow). Vector's snapshot `rewardRatio` is the post-tunable
+      // value the planner consumed.
+      const hasUnchecked = rv.checked < rv.total;
+      let goodFound = false;
+      if (hasUnchecked && rv.goodTemp <= 0) {
+        rv.checked += 1;
+        if (rv.checked % vector.rewardRatio === 0) {
+          rv.good += 1;
+          goodFound = true;
+        }
+      } else if (rv.goodTemp > 0) {
+        rv.goodTemp -= 1;
+        goodFound = true;
+      }
+      if (goodFound) {
         for (const reward of def.rewardEffects) {
           const amount = Number(reward.amount);
           if (reward.kind === 'add-mana') {
@@ -595,7 +613,12 @@ export function createSyntheticAccessor(
     getState: (id: string) => {
       const rv = state.regularVars.get(id);
       if (!rv) return undefined;
-      return { total: { value: rv.total }, checked: { value: rv.checked } };
+      return {
+        total: { value: rv.total },
+        checked: { value: rv.checked },
+        good: { value: rv.good },
+        goodTemp: { value: rv.goodTemp },
+      };
     },
   };
 
@@ -658,11 +681,12 @@ export function createSyntheticAccessor(
  * Mirrors `looper/modules/loop.ts:99-156`:
  *
  * **Retained** (no-op here — already in state across loops): Talent XP,
- * action timesCompleted, progressVar XP, regularVar `total`.
+ * action timesCompleted, progressVar XP, regularVar `total` / `checked` /
+ * `good` (manapot accumulation).
  *
  * **Reset**:
  * - Capability Level XP → 0
- * - RegularVar `checked` / `good` → 0 (total persists)
+ * - RegularVar `goodTemp` → `good` (vanilla `town.js:restartZones` shape)
  * - Mana → `initialMana`, manaAdded counter → 0
  * - Gold → 0
  * - Loop count incremented
@@ -676,8 +700,7 @@ function applyLoopBoundary(
     cap.levelXp = 0;
   }
   for (const rv of state.regularVars.values()) {
-    rv.checked = 0;
-    rv.good = 0;
+    rv.goodTemp = rv.good;
   }
   state.mana = readTunable(tuning, 'balance/initialMana', data.balance.initialMana);
   state.gold = 0;
