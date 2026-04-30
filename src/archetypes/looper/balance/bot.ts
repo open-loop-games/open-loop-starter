@@ -51,6 +51,45 @@
  * placeholders pending probe telemetry — see leaf-4 (OL-746 solver) for
  * calibration; static-data derivation is the long-term goal.
  *
+ * # Parameterized-personality framing
+ *
+ * The strategy roster is also the looper's parameterized-personality
+ * variety surface — same decision architecture (planner.ts), different
+ * param bundles producing different play styles at the same capability
+ * level (style axis, not difficulty axis). The dimensions that vary
+ * across personalities live in `PlannerParams`:
+ *
+ *   - `progressionTarget` — role focus: which progressVar tracks the
+ *     personality pursues. farm-mana-pool weights roam+trail (mana-pool
+ *     growers); farm-gold-buffer weights acquaint+roam (errand-pool
+ *     growers); farm-talent biases neither hard.
+ *   - `tradeThreshold` — gold-burst timing: 50 = trade aggressively when
+ *     a small pouch is full (gold→Trade burst); 100 = bank larger before
+ *     trading; `'never'` = no trade pass.
+ *   - `talentOverflowThreshold` — mana-soak disposition: 0 = no trainer
+ *     soak (default); >0 = engage planner Pass 7 when remaining headroom
+ *     exceeds the threshold. The "swap to talent when mana is plentiful"
+ *     personality dial without growing the override surface.
+ *   - `manaUpOversupplyFactor` — budget tightness vs. slack.
+ *
+ * Per-strategy phase windows (`bot/phases/<strategy>/<bound>`) are the
+ * activation-range hybrid: each personality has a loop-count window
+ * where its `canApply` returns true, equivalent to min/max activation
+ * ranges over a personality's context. Switching personalities at a
+ * phase boundary is the canonical boundary-deferred apply — the next
+ * `loop.afterRestart` calls reconcileQueue with the winner's params,
+ * producing a queue-shape diff against the previous personality's
+ * emission, not a wholesale rebuild.
+ *
+ * Selection policy and action space stay separable: param bundles
+ * (`FARM_*_PARAMS`) are the action space; the recommendation system's
+ * `score` + `canApply` arbitration is the policy. Neither side reads
+ * across — the policy writes `plannerParams` via `applySnapshot`, the
+ * planner reads it. A fork can rebalance personalities without touching
+ * the policy, or swap the policy without touching personalities.
+ *
+ * Research: `open-loop-research/reports/studies/game-ai-variety/`.
+ *
  * Persistence layout:
  *
  * ```
