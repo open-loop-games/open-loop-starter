@@ -49,6 +49,13 @@ const TRACE_LOOPS = 12;
 const MAX_SIM_SEC = 60 * 60 * 3; // 3h ceiling — beat-6 lands at ~2h13m
 const TICK_DELTA = 1;
 
+// Verification phase ceiling. After the per-loop trace finishes its first
+// `TRACE_LOOPS` of bootstrap visibility, runUntil drives the same engine
+// further with a predicate `plannerEmittedTrade || cap` to answer "does
+// the planner ever emit a trade item under canonical farm-errand-pool
+// content?" — without burning sample-rendering cycles per loop.
+const VERIFY_MAX_SIM_SEC = 60 * 60 * 6; // 6h ceiling for trade-emission probe
+
 // ─── Per-loop sample ─────────────────────────────────────────────────────
 
 interface QueueRow {
@@ -442,12 +449,37 @@ function main(): void {
   });
 
   for (const s of samples) reportLoop(s);
+  const bootstrapSamples = samples.length;
+
+  // ─── Verification phase ────────────────────────────────────────────────
+  // Drive past the bootstrap-sample window with a predicate that fires
+  // on first trade-item emission. This answers "does the planner ever
+  // emit a trade item under canonical content?" without per-loop
+  // sampling overhead. The bootstrap-window samples already cover the
+  // arc shape; this phase covers the long-tail emission question.
+  let firstTradeEmitLoop: number | null = null;
+  loop.on('afterRestart', () => {
+    if (firstTradeEmitLoop !== null) return;
+    const plan = generatePlan(engine, FARM_ERRAND_POOL_PARAMS);
+    if (plan.some((p) => p.actionId === 'trade')) {
+      firstTradeEmitLoop = loop.count.value;
+    }
+  });
+
+  const verifyResult = runUntil({
+    engine,
+    until: () => firstTradeEmitLoop !== null,
+    maxSimTime: VERIFY_MAX_SIM_SEC,
+    tickDelta: TICK_DELTA,
+  });
 
   // ─── Summary ────────────────────────────────────────────────────────────
   console.log('## Summary\n');
   const tradeCompleted = samples.reduce((a, s) => a + (s.timesCompletedDelta.trade ?? 0), 0);
-  console.log(`Loops sampled: ${samples.length}`);
-  console.log(`Total trade completions: ${tradeCompleted}`);
+  console.log(
+    `Bootstrap samples: ${bootstrapSamples} (verification phase ran silent through loop ${loop.count.value})`,
+  );
+  console.log(`Total trade completions (bootstrap window): ${tradeCompleted}`);
   console.log(
     `Final state: mana=${Number(manaAdded.value).toFixed(1)} gold=${Number(gold.value).toFixed(1)} loop.count=${loop.count.value}`,
   );
@@ -455,24 +487,39 @@ function main(): void {
     `runUntil terminated: ${result.terminated} after ${fmtTime(result.elapsedSimulated)}`,
   );
 
-  // First loop where roam ≥ 3 (trade visibility threshold)
-  const tradeVisibleAt = samples.findIndex((s) => (s.progressVarLevels.roam ?? 0) >= 3);
+  // First loop where roam ≥ 3 (trade visibility threshold). Only checked
+  // against bootstrap samples; verification phase doesn't snapshot levels.
+  const bootstrapWindowSamples = samples.slice(0, bootstrapSamples);
+  const tradeVisibleAt = bootstrapWindowSamples.findIndex(
+    (s) => (s.progressVarLevels.roam ?? 0) >= 3,
+  );
   if (tradeVisibleAt >= 0) {
     console.log(
-      `Trade visibility (roam ≥ 3) first reached at loop ${samples[tradeVisibleAt]!.loopNumber}.`,
+      `Trade visibility (roam ≥ 3) first reached at loop ${bootstrapWindowSamples[tradeVisibleAt]!.loopNumber}.`,
     );
   } else {
-    console.log(`Trade never reached visibility (roam ≥ 3) within ${samples.length} loops.`);
+    console.log(
+      `Trade never reached visibility (roam ≥ 3) within bootstrap window (${bootstrapSamples} loops).`,
+    );
   }
 
-  // First loop the planner emitted a trade item
-  const plannerEmittedAt = samples.findIndex((s) => s.vectorSnapshot.plannerEmittedTrade);
-  if (plannerEmittedAt >= 0) {
+  // First loop the planner emitted a trade item — bootstrap-window and
+  // verification-phase combined.
+  const plannerEmittedInWindow = bootstrapWindowSamples.findIndex(
+    (s) => s.vectorSnapshot.plannerEmittedTrade,
+  );
+  if (plannerEmittedInWindow >= 0) {
     console.log(
-      `Planner first emitted a trade item at loop ${samples[plannerEmittedAt]!.loopNumber}.`,
+      `Planner first emitted a trade item at loop ${bootstrapWindowSamples[plannerEmittedInWindow]!.loopNumber} (within bootstrap window).`,
+    );
+  } else if (firstTradeEmitLoop !== null) {
+    console.log(
+      `Planner first emitted a trade item at loop ${firstTradeEmitLoop} (verification phase, sim-time ${fmtTime(verifyResult.elapsedSimulated + result.elapsedSimulated)}).`,
     );
   } else {
-    console.log(`Planner never emitted a trade item within ${samples.length} loops.`);
+    console.log(
+      `Planner never emitted a trade item — verification phase ran ${fmtTime(verifyResult.elapsedSimulated)} past bootstrap window (cap ${fmtTime(VERIFY_MAX_SIM_SEC)}, terminated: ${verifyResult.terminated}). Reached loop ${loop.count.value}.`,
+    );
   }
 
   console.log(`\n(total ${((Date.now() - t0) / 1000).toFixed(1)}s)`);

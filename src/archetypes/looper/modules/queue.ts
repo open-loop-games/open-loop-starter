@@ -200,11 +200,13 @@ export function createQueueModule(_data: LooperData): EngineModule {
         sequencer.items.value = updated;
       }
 
-      // Per-tick dispatch. Mana drain is owned by `loop.ts`; this handler
-      // only advances the active action's progress and walks the cursor.
+      // Per-tick dispatch. Gate is `loop.running` only — a live `mana > 0`
+      // check here would short-circuit dispatch on the cutoff tick after
+      // drain (registered earlier) has taken mana to 0, dropping a
+      // completion whose progress lands on the same tick. The loop
+      // primitive's endCondition flips running→false on the next tick.
       ctx.onTick((dt: number) => {
         if (!loop.running.value) return;
-        if (Decimal.lte(mana.value, 0)) return;
 
         const items = sequencer.items.value;
         if (items.length === 0 || sequencer.cursor >= items.length) {
