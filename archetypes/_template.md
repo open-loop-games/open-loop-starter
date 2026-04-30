@@ -108,9 +108,11 @@ Naming what's *absent* is part of the contract: it's how a sparse-surface archet
 
 | # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
 |---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | {{e.g. "First producer purchased"}} | 0–2 min | {{e.g. "cookies ≥ 15"}} | {{e.g. "cursor icon appears in producer panel"}} | {{e.g. "validates cost curve onboarding"}} |
+| 1 | {{e.g. "First producer purchased"}} | 0–2 min | {{e.g. "cookies ≥ 15"}} | {{e.g. "cursor icon appears in producer panel"}} | {{e.g. "validates cost curve onboarding — `reference-code/cookie-clicker/main.js:1234`"}} |
 | 2 | … | … | … | … | … |
 | … | … | … | … | … | … |
+
+Each row's "Why it matters" cell carries the citation for any numerical claim in the row. Cite as `` `reference-code/<game>/<file>:line` `` (Tier-A archetypes — exemplar source on disk under `open-loop-research/reference-code/`) or `` `wiki:<url>` `` (Tier-B — closed-source corpus). For invented numbers without exemplar — e.g. zone-bridge actions composed for the demo — use `` `declared invention — <rationale>` `` (parallels § 1 / § 9). For pre-implementation `candidate`-status drafts, mark unfounded numbers as `` `aspirational — pending implementation` ``; the validator accepts this only on `candidate` status, never `canonical`.
 
 **Arc closure beat:** {{which beat number is the "you've seen the skeleton once" moment — usually the last one}}
 
@@ -174,10 +176,12 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
 
 | Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
 |-------|--------------|----------------|-----------|-----------|
-| {{name}} | {{e.g. "cost-scaling exponent ±20%"}} | {{beat #s}} | {{e.g. "±15% sim-time window"}} | {{why this probe matters for this archetype}} |
+| {{name}} | {{e.g. "cost-scaling exponent ±20%"}} | {{beat #s}} | {{e.g. "±15% sim-time window"}} | {{why this probe matters — cite `reference-code/<game>/<file>:line` or `wiki:<url>` for the tolerance / perturbation magnitude when grounded; otherwise `declared invention — <rationale>` or, on `candidate` status only, `aspirational — pending implementation`}} |
 | … | … | … | … | … |
 
 **Minimum probe count:** 4. Must cover at least one probe each for: cost scaling, production rate, modifier chain depth, and one archetype-specific axis.
+
+Probe tolerances and perturbation magnitudes are numerical claims — every probe row's Rationale cell must carry a citation back to the exemplar that justifies the chosen tolerance, or one of the two escape hatches (`declared invention` for invented thresholds, `aspirational — pending implementation` for pre-implementation `candidate` drafts).
 
 ---
 
@@ -218,6 +222,8 @@ describe('{{name}} balance robustness', () => {
 **Required test count:** one `it` per beat (beat-timing), one `it` per probe (robustness). Minimum total = beat count + probe count.
 
 **Representative-stubs escape hatch:** the doc may show 2–3 worked test stubs and a `// one it() per beat` / `// one it() per probe` comment indicating full enumeration happens at the checked-in test file rather than in the doc. The validator accepts either (a) full enumeration in the doc, or (b) ≥ 2 stubs + the coverage note. Either form is fine as long as the actual test file ships with beat+probe coverage.
+
+Numerical bounds inside test stubs (window minimums, expected magnitudes, tolerance ratios) are subject to the same citation discipline as § 4 / § 6: ground the bound to `reference-code/<game>/<file>:line` or `wiki:<url>`, or tag with `declared invention — <rationale>`, or — on `candidate` status only — `aspirational — pending implementation`.
 
 ---
 
@@ -357,6 +363,7 @@ reshape the archetype to use existing vocabulary.
 7. **Keep the 1–2h arc honest.** If you can't fit your beat map into 2 hours of simulated time, either cut beats or reshape the archetype — do not let scope drift.
 8. **Archetype code lives colocated.** Each archetype lives at `src/archetypes/<name>/` as a self-bootable tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). Data is hand-authored TypeScript, not codegen output. Forks clone the archetype directory wholesale; per-fork tuning edits happen in place. This doc describes design intent; the code is the source of truth.
 9. **Canonical, not novel — but canonical means *shape*, not *content*.** Starter demos are *canonical-for-forking*: forks copy them as the spine. The exemplars in § 1 (Exemplars + Live consumer references) validate that the archetype's *structural shape* exists in the wild — drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Match those structural decisions; flag any deliberate divergence in § 5 with a slim-demo justification. **Do NOT lift content names from any one exemplar.** "Light Pots," "Wild Mana," "Buy Mana," "Smash Pots" coming straight from idle-loops vanilla into a Theme-A demo is the failure mode: content is per-theme costume the demo authors fresh against the canonical slots. Same for action verbs, item names, NPC names, zone names. § 5 names the canonical slot set (e.g. "at least one mana-positive action per early zone"); § 8 fills those slots with theme-native content; the exemplar source stays a *shape* reference, not a content donor.
+10. **Lift numbers, don't invent.** Tier-A archetypes (those with `reference-code/<game>/...` source on disk) must cite source for every numerical claim in § 3 / § 4 / § 5 / § 6 / § 7. Cite as `` `reference-code/<game>/<file>:line` `` (preferred) or `` `wiki:<url>` `` (Tier-B archetypes with closed-source exemplars). For numbers without exemplar (e.g. invented zone-bridge actions), use `` `declared invention — <rationale>` `` (already valid in § 1 / § 9) or `` `aspirational — pending implementation` `` (in § 4 / § 6 / § 7) to mark them explicitly. The validator hard-fails on confident numbers without one of these markers; see § Validator rules for per-status gates.
 
 ---
 
@@ -379,5 +386,11 @@ The validator (run via `pnpm validate:archetypes`) enforces:
 - [ ] § 1 first paragraph ("pitch") is 300–1200 chars, contains no markdown links or code fences.
 - [ ] If a `**Live consumer references**` line is present, each cited `` `/work/studio/<name>/` `` path resolves on disk, OR the line starts with `none` as an explicit-absence sentinel.
 - [ ] § 10 rows self-declaring "convergent across N consumers" (N ≥ 2) carry severity = High.
+- [ ] **§ 4 / § 6 / § 7 numerical-claim grounding.** Per-status gates:
+  - **`canonical`** — every § 4 row's sim-time/timing claim and every § 6 probe tolerance must have a citation in reach: `` `reference-code/<game>/<file>:line` ``, `` `wiki:<url>` ``, an inline `<file>.<ext>:<line>` short-form reference, or one of the keyword markers `vanilla` / `canonical` (used in surrounding section prose to anchor the source). The `` `declared invention — <rationale>` `` tag is the explicit escape hatch for invented numbers without exemplar. `` `aspirational — pending implementation` `` is **not** a valid marker on `canonical` status.
+  - **`candidate`** — § 4 / § 6 / § 7 rows must be either empty (placeholder) or all carry `` `aspirational — pending implementation` `` or `` `declared invention — <rationale>` `` or one of the canonical-grade citation forms. A confident number without one of those markers fails validation. Stripped sections (a single italicized placeholder paragraph referencing the validator + reground tickets) pass trivially as long as the placeholder text mentions `aspirational — pending implementation`.
+  - **`deprecated`** — § 4 / § 6 / § 7 are not validated.
+
+  Detection heuristic: a "confident number" is any digit-bearing token in a row's text after stripping pure design-window patterns (sim-time windows like `0:00–0:10`, tolerances like `±25%`, perturbation specs like `×[0.80, 1.20]`) and inline backtick-quoted code spans. Section-level grounding fallback: if the section's prose contains rich citation density (any of the keyword markers above), table rows with otherwise-bare numbers count as grounded — the validator's purpose is to catch authoring-discipline failure ("no thought given to source"), not to police every individual claim.
 
 A doc that fails any check is not a canonical archetype spec.
