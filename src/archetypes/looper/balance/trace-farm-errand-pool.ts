@@ -1,10 +1,8 @@
 /**
- * Per-loop trace — farm-gold-buffer strategy under canonical content.
+ * Per-loop trace — farm-errand-pool strategy under canonical content.
  *
- * One-off discovery script. The b3/b4/b6 windows hit under farm-gold-buffer
- * but b5 (trade) shows ∞ — visible at roam ≥ 3 but the action never
- * completes. This script replays the strategy loop-by-loop and prints, for
- * each loop:
+ * One-off discovery script. Replays the strategy loop-by-loop and prints,
+ * for each loop:
  *
  *   - the reconciled queue (what the planner emitted + reconciled into the
  *     queue at loop start)
@@ -12,11 +10,11 @@
  *   - per-action timesCompleted deltas (especially `trade`, `run`, `slip`)
  *   - per-progressVar level (roam, acquaint, …) — gates trade visibility
  *   - per-regularVar checked / total / good / goodTemp (errand pool feeds
- *     gold-source projection in planner Pass 4)
+ *     gold-source candidates in the planner's unified harvest pass)
  *   - planner action-vector projections for `trade` + gold sources (visible /
  *     productive flags, projected goldPerCompletion × rewardRatio)
  *
- * Run: `pnpm balance:trace:looper-farm-gold-buffer`
+ * Run: `pnpm exec vite-node src/archetypes/looper/balance/trace-farm-errand-pool.ts`
  */
 
 import { runUntil, type Engine } from 'open-loop-engine';
@@ -38,12 +36,12 @@ import {
 } from './bot';
 import { generatePlan, projectActionVectors, type PlannerParams } from './planner';
 
-// ─── Strategy params (mirrors bot.ts FARM_GOLD_BUFFER_PARAMS) ─────────────
+// ─── Strategy params (mirrors bot.ts FARM_ERRAND_POOL_PARAMS) ─────────────
 
-const FARM_GOLD_BUFFER_PARAMS: PlannerParams = {
+const FARM_ERRAND_POOL_PARAMS: PlannerParams = {
   progressionTarget: { acquaint: 2, roam: 3, trail: 0, mark: 0 },
   manaUpOversupplyFactor: 1.0,
-  tradeThreshold: 50,
+  progressionChunkTicks: 200,
   talentOverflowThreshold: 0,
 };
 
@@ -78,7 +76,6 @@ interface LoopSample {
     tradeVisible: boolean;
     tradeAdjustedTicks: number;
     tradeExchangeMult: number;
-    breakevenGold: number; // tradeAdjustedTicks / exchangeMult — EV-positive floor
     goldSources: Array<{
       id: string;
       visible: boolean;
@@ -91,10 +88,6 @@ interface LoopSample {
     }>;
     plannerEmittedTrade: boolean; // generatePlan output contains a trade item
     projectedGoldFromPlan: number; // goldPerCompletion × rewardRatio × loops summed across goldSources in plan
-    // OL-799 uncertainty 1: trade-emission gate
-    policyA_emit: boolean; // auto-emit-after-gold-emitter — true if any visible+productive gold-emitter is in plan
-    policyB_emit: boolean; // cost-of-trade floor — true iff projectedGoldFromPlan × exchangeMult > tradeAdjustedTicks
-    // OL-799 uncertainty 2: progression-headroom sizing
     planDecomposition: {
       harvestCost: number; // cost of mana + gold (regular) items
       progressionCost: number; // cost of progress-type items
@@ -106,7 +99,7 @@ interface LoopSample {
       pvId: string;
       pvAdjTicks: number; // current adjusted-ticks-to-complete one progress-action
       currentLevel: number;
-      targetDelta: number; // from FARM_GOLD_BUFFER_PARAMS.progressionTarget
+      targetWeight: number; // from FARM_ERRAND_POOL_PARAMS.progressionTarget
     }>;
   };
   strategyId: string; // recommendation winner for this loop
@@ -182,22 +175,10 @@ function snapshotVectorView(engine: Engine, params: PlannerParams): LoopSample['
     projectedGoldFromPlan += v.goldPerCompletion * item.loops;
   }
 
-  // ── Trade emission policy projections (OL-799 uncertainty 1) ──
   const tradeAdjustedTicks = trade?.adjustedTicks ?? 0;
   const tradeExchangeMult = Number(trade?.def.type === 'basic' ? (trade.def.exchangeMult ?? 0) : 0);
-  const breakevenGold =
-    tradeExchangeMult > 0 ? tradeAdjustedTicks / tradeExchangeMult : Number.POSITIVE_INFINITY;
-  // policyA: auto-emit if any visible+productive gold emitter ran (i.e., is in
-  // the plan). Approximation: gold-source vector that's visible+productive AND
-  // has a corresponding plan item.
-  const goldEmitterIds = new Set(
-    goldVectors.filter((v) => v.visible && v.productive).map((v) => v.def.id),
-  );
-  const policyA_emit = plannedItems.some((p) => goldEmitterIds.has(p.actionId));
-  // policyB: cost-of-trade floor.
-  const policyB_emit = projectedGoldFromPlan * tradeExchangeMult > tradeAdjustedTicks;
 
-  // ── Plan-cost decomposition (OL-799 uncertainty 2) ──
+  // ── Plan-cost decomposition ──
   let harvestCost = 0;
   let progressionCost = 0;
   let trainerCost = 0;
@@ -232,7 +213,7 @@ function snapshotVectorView(engine: Engine, params: PlannerParams): LoopSample['
         pvId,
         pvAdjTicks: v.adjustedTicks,
         currentLevel: 0, // filled at sample-time when ProgressVarsKey is read
-        targetDelta: params.progressionTarget[pvId] ?? 1,
+        targetWeight: params.progressionTarget[pvId] ?? 1,
       };
     });
 
@@ -240,7 +221,6 @@ function snapshotVectorView(engine: Engine, params: PlannerParams): LoopSample['
     tradeVisible: trade?.visible ?? false,
     tradeAdjustedTicks,
     tradeExchangeMult,
-    breakevenGold,
     goldSources: goldVectors.map((v) => ({
       id: v.def.id,
       visible: v.visible,
@@ -253,8 +233,6 @@ function snapshotVectorView(engine: Engine, params: PlannerParams): LoopSample['
     })),
     plannerEmittedTrade,
     projectedGoldFromPlan,
-    policyA_emit,
-    policyB_emit,
     planDecomposition: { harvestCost, progressionCost, trainerCost, tradeCost, totalCost },
     progressionVectors,
   };
@@ -358,40 +336,20 @@ function reportLoop(s: LoopSample): void {
     );
   }
 
-  // ─── OL-799 uncertainty resolution ────────────────────────────────
+  // Plan-cost decomposition + per-progressVar chunk view.
   const v = s.vectorSnapshot;
-  console.log(`\n### OL-799 uncertainty resolution`);
-  // Uncertainty 1: trade emission gate
-  console.log(
-    `  trade-emit: tradeAdjTicks=${v.tradeAdjustedTicks} exchangeMult=${v.tradeExchangeMult} breakevenGold=${v.breakevenGold.toFixed(2)} | projectedGold=${v.projectedGoldFromPlan.toFixed(2)} → policyA(any-gold-emitter)=${v.policyA_emit} policyB(cost-of-trade-floor)=${v.policyB_emit} | planner(static-50)=${v.plannerEmittedTrade}`,
-  );
-  // Uncertainty 2: progression headroom
-  // Use realized-budget = initialMana(=250) + manaAdded as proxy for budgetCap.
-  // post-harvest remainder = budgetCap - harvestCost - tradeCost (mana returned
-  // by trade contributes to budget, but the cost of the trade item itself is
-  // structural overhead; treat it as harvest-side here).
   const initialMana = 250;
   const oversupply = 1.0;
   const budgetCap = initialMana * oversupply + s.manaAdded;
   const decomp = v.planDecomposition;
-  const remainder = budgetCap - decomp.harvestCost - decomp.tradeCost;
   console.log(
-    `  budget: initialMana×${oversupply}=${initialMana * oversupply} + manaAdded=${s.manaAdded.toFixed(1)} → cap=${budgetCap.toFixed(1)} | decomp: harvest=${decomp.harvestCost} progression=${decomp.progressionCost} trainer=${decomp.trainerCost} trade=${decomp.tradeCost} (Σ=${decomp.totalCost}) | post-harvest remainder=${remainder.toFixed(1)}`,
+    `  budget: initialMana×${oversupply}=${initialMana * oversupply} + manaAdded=${s.manaAdded.toFixed(1)} → cap=${budgetCap.toFixed(1)} | decomp: harvest=${decomp.harvestCost} progression=${decomp.progressionCost} trainer=${decomp.trainerCost} trade=${decomp.tradeCost} (Σ=${decomp.totalCost})`,
   );
-  // Per-progressVar candidate chunk sizes.
   for (const pv of v.progressionVectors) {
-    if (pv.targetDelta <= 0) continue; // skip skipped progressVars under this strategy
-    const t = pv.pvAdjTicks;
-    // mana-fraction policies — frac × remainder / pvAdjTicks
-    const f10 = Math.floor((0.1 * remainder) / t);
-    const f20 = Math.floor((0.2 * remainder) / t);
-    const f30 = Math.floor((0.3 * remainder) / t);
-    // ticks-budget policies — fixed budget / pvAdjTicks
-    const t200 = Math.floor(200 / t);
-    const t400 = Math.floor(400 / t);
-    const t800 = Math.floor(800 / t);
+    if (pv.targetWeight <= 0) continue;
+    const loopsPerChunk = Math.floor(200 / pv.pvAdjTicks);
     console.log(
-      `  pv-chunk ${pv.pvId} (target=${pv.targetDelta}, pvAdjTicks=${t}): mana-frac{0.1=${f10}, 0.2=${f20}, 0.3=${f30}} | ticks-budget{200=${t200}, 400=${t400}, 800=${t800}}`,
+      `  pv-chunk ${pv.pvId} (target=${pv.targetWeight}, pvAdjTicks=${pv.pvAdjTicks}): loopsPerChunk=${loopsPerChunk}`,
     );
   }
 
@@ -402,30 +360,30 @@ function reportLoop(s: LoopSample): void {
 
 function main(): void {
   const t0 = Date.now();
-  console.log('# Looper farm-gold-buffer per-loop trace\n');
+  console.log('# Looper farm-errand-pool per-loop trace\n');
   console.log(`Run at ${new Date().toISOString()}\n`);
-  console.log(`Strategy: farm-gold-buffer (override seeded at engine build)`);
+  console.log(`Strategy: farm-errand-pool (override seeded at engine build)`);
   console.log(`Trace loops: ${TRACE_LOOPS} (or until ${fmtTime(MAX_SIM_SEC)} cap)`);
   console.log(`tickDelta: ${TICK_DELTA}s\n`);
   console.log(
-    `Params: progressionTarget=${JSON.stringify(FARM_GOLD_BUFFER_PARAMS.progressionTarget)} ` +
-      `tradeThreshold=${FARM_GOLD_BUFFER_PARAMS.tradeThreshold} ` +
-      `oversupply=${FARM_GOLD_BUFFER_PARAMS.manaUpOversupplyFactor}\n`,
+    `Params: progressionTarget=${JSON.stringify(FARM_ERRAND_POOL_PARAMS.progressionTarget)} ` +
+      `progressionChunkTicks=${FARM_ERRAND_POOL_PARAMS.progressionChunkTicks} ` +
+      `oversupply=${FARM_ERRAND_POOL_PARAMS.manaUpOversupplyFactor}\n`,
   );
 
   const engine = buildLooperSimEngine(undefined, {
-    plannerParamsOverride: FARM_GOLD_BUFFER_PARAMS,
+    plannerParamsOverride: FARM_ERRAND_POOL_PARAMS,
   });
 
-  // Force the farm-gold-buffer strategy to win every loop. Without this, the
+  // Force the farm-errand-pool strategy to win every loop. Without this, the
   // recommendation system would arbitrate between farm-mana-pool (loops 1-4)
-  // and farm-gold-buffer (loops 5-9) per the canonical phase windows. We
-  // want a clean trace under farm-gold-buffer's params from loop 1, so we
+  // and farm-errand-pool (loops 5-9) per the canonical phase windows. We
+  // want a clean trace under farm-errand-pool's params from loop 1, so we
   // disable autoApply and write the params manually each restart.
   const rec = engine.tryInject(BalanceBotRecommendationKey)!;
   rec.autoApply.value = false;
   const paramsHandle = engine.tryInject(BalanceBotParamsKey)!;
-  paramsHandle.write(FARM_GOLD_BUFFER_PARAMS);
+  paramsHandle.write(FARM_ERRAND_POOL_PARAMS);
 
   const loop = engine.tryInject(LoopKey)!;
   const manaAdded = engine.tryInject(ManaAddedKey)!;
@@ -436,7 +394,7 @@ function main(): void {
 
   const samples: LoopSample[] = [];
   let pendingPlan: QueueRow[] = snapshotQueue(engine);
-  let pendingVectorSnapshot = snapshotVectorView(engine, FARM_GOLD_BUFFER_PARAMS);
+  let pendingVectorSnapshot = snapshotVectorView(engine, FARM_ERRAND_POOL_PARAMS);
   let preTimesCompleted = snapshotTimesCompleted(engine);
 
   // beforeRestart fires at end-of-loop, before the loop counter advances.
@@ -461,7 +419,7 @@ function main(): void {
       progressVarLevels: snapshotProgressVarLevels(engine),
       regularVars: snapshotRegularVars(engine),
       vectorSnapshot: pendingVectorSnapshot,
-      strategyId: 'farm-gold-buffer',
+      strategyId: 'farm-errand-pool',
     });
     preTimesCompleted = post;
   });
@@ -471,9 +429,9 @@ function main(): void {
   loop.on('afterRestart', () => {
     // Re-pin params each loop in case anything tries to overwrite via
     // recommendation. (autoApply is off, but defense in depth.)
-    paramsHandle.write(FARM_GOLD_BUFFER_PARAMS);
+    paramsHandle.write(FARM_ERRAND_POOL_PARAMS);
     pendingPlan = snapshotQueue(engine);
-    pendingVectorSnapshot = snapshotVectorView(engine, FARM_GOLD_BUFFER_PARAMS);
+    pendingVectorSnapshot = snapshotVectorView(engine, FARM_ERRAND_POOL_PARAMS);
   });
 
   const result = runUntil({

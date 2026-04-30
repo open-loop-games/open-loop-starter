@@ -9,11 +9,11 @@
  *
  * # Principles
  *
- * 1. **Mana gen is the priority.** Plan emission order ranks mana-
- *    generating actions ahead of everything else. Cracking the manapot
- *    (cash-in known-goods + reward-firing explores) is the loop's primary
- *    work; progression supports it; trade is conditional; trainers are
- *    strategic.
+ * 1. **Mana gen is the priority.** A single unified harvest pass ranks
+ *    every mana-bearing whole-item — direct (regular→add-mana) and gold-
+ *    routed (regular→add-gold + trade closer) — by per-tick mana-
+ *    equivalent EV. Cracking the manapot is the loop's primary work;
+ *    progression supports it; trainers are strategic.
  *
  * 2. **Trainers are strategic, not bootstrap.** Capability-training
  *    basics (`expMult ≥ 4`) are specialized runs the player chooses
@@ -39,7 +39,7 @@
  *    compensate for planner correctness gaps, the planner is the bug —
  *    not the tunable. Fix the planner; restore the canonical baseline.
  *
- * # Whole-item emission (OL-788)
+ * # Whole-item emission
  *
  * Each pool source emits AT MOST two queue items per loop:
  *   - one `{actionId, loops: knownGoodCount}` for the cash-in portion
@@ -69,45 +69,50 @@
  * predictable budget. Iterative-cost would walk the plan once forward,
  * accumulating per-step XP gain into a projected level, and recompute
  * adjustedTicks per step — closer to dmchurch's predictor shape. Upgrade
- * to (B) is single-file, ~20 lines; the trigger is leaf-4 solver finding
+ * to (B) is single-file, ~20 lines; the trigger is the solver finding
  * it can't tune to a beat window because static budgeting is too slack.
  *
  * # Plan passes
  *
- * Emission order = execution order = trim-survivability order. Pass-6
+ * Emission order = execution order = trim-survivability order. Pass-3
  * tail-shrink trim reduces worst-EV items first by virtue of plan being
  * built best-first.
  *
- *   1. **Mana cash-in (known-good)** — `goodTemp > 0` consumption on
- *      mana-emitting regulars. One item per source: `{actionId, loops:
- *      knownGoodCount}`. Cheapest mana per tick.
+ *   1. **Unified mana harvest** — single priority class, two chain forms:
+ *      - **Direct**: regular actions emitting `add-mana` (e.g. `crack`).
+ *        Two candidates per source — known-good (`goodTemp` cash-in) and
+ *        explore (`poolCapacity` cracking). Plus basic-type one-shot mana
+ *        grants (completion-effect emitters).
+ *      - **Gold-routed**: regular actions emitting `add-gold` (e.g.
+ *        `run`, `slip`) followed by a `trade` whole-item that converts
+ *        via `exchange-gold-to-mana`. PolicyB cost-of-trade gate: emit
+ *        the chain iff `chainGoldProjected × exchangeMult >
+ *        tradeAdjustedTicks` (breakeven `tradeAdjTicks / exchangeMult`).
+ *        Trade is the closing step of the gold chain, not a banking gate
+ *        — strictly dominates a `tradeThreshold` knob (same outcome
+ *        EV-positive, better EV-negative, no false positives).
  *
- *   2. **Mana explore** — `{actionId, loops: poolCapacity}` per visible
- *      mana-regular. Engine's per-completion `checkOne` accumulates
- *      lifetime `checked` and fires rewards on R-boundaries naturally.
+ *      All candidates rank by per-tick mana-equivalent EV; emit
+ *      best-first. Gold-routed chains share a single trade closer
+ *      (subsequent gold-routed candidates ride the already-emitted
+ *      trade; their gold projection accumulates into one settlement).
  *
- *   3. **Progression** — progress-type actions targeting visible
- *      progressVars per `progressionTarget` deltas. Optionally chunked
- *      via `progressionChunkSize` so trim can drop partially. Multi-
- *      loop investment (grows pools / unlocks zones for future loops).
+ *   2. **Progression** — progress-type actions targeting visible
+ *      progressVars admitted by `progressionTarget[pvId] > 0`. Each
+ *      admitted progressVar emits one `{progress, loops:
+ *      floor(progressionChunkTicks / pvAdjustedTicks)}` item per loop.
+ *      Budget-shaped (not target-shaped): cross-loop XP accumulates
+ *      naturally, no closed-form `xpToReachLevel` math.
  *
- *   4. **Gold sources toward Trade** — same whole-item emission as mana.
- *      Bounded at emission by `tradeThreshold` — emit only enough loops
- *      per source to project meeting the threshold. Cross-loop banking
- *      past threshold is left to future-loop chains.
- *
- *   5. **Trade** — basic-type `exchange-gold-to-mana` if projected gold
- *      meets the threshold.
- *
- *   6. **Budget trim** — shrinks the tail item's `loops` until total cost
+ *   3. **Budget trim** — shrinks the tail item's `loops` until total cost
  *      fits `initialMana × manaUpOversupplyFactor + projectedManaAdded`,
  *      removing items only when their `loops` reaches 0. Reward-projection
  *      drops as `loops` shrinks past R-boundaries; budget cap is computed
- *      once at the start of trim and held fixed (matches pre-OL-788
- *      conservatism — over-keeps slightly when reward-firing items get
- *      trimmed but their projection contribution doesn't unwind).
+ *      once at the start of trim and held fixed (over-keeps slightly when
+ *      reward-firing items get trimmed but their projection contribution
+ *      doesn't unwind — acceptable conservatism).
  *
- *   7. **Strategic trainers** *(opt-in, `talentOverflowThreshold > 0`)* —
+ *   4. **Strategic trainers** *(opt-in, `talentOverflowThreshold > 0`)* —
  *      after trim, if remaining headroom exceeds the threshold, append
  *      rotating capability-trainer iterations (`expMult ≥ 4` basics)
  *      until consumed. Default `0` = disabled (trainers absent from
@@ -159,9 +164,13 @@ export interface PlannerAccessor {
  */
 export interface PlannerParams {
   /**
-   * Per-progressVar level-delta target. Default applied at plan time:
-   * `+1` for every visible progressVar with a visible progress-action.
-   * Solver perturbs per-id; goal-strategies (3b) override wholesale.
+   * Per-progressVar level-delta weighting. Strategies differ on this axis
+   * only — `progressionTarget[pvId] > 0` admits the progressVar to the
+   * progression pass; `0` skips it. Default applied at plan time: `+1`
+   * for every visible progressVar with a visible progress-action.
+   *
+   * The numeric weight does not scale chunk size (chunks are budget-
+   * shaped via `progressionChunkTicks`); it gates inclusion only.
    */
   progressionTarget: Record<string, number>;
   /**
@@ -172,14 +181,20 @@ export interface PlannerParams {
    */
   manaUpOversupplyFactor: number;
   /**
-   * Minimum gold buffer at which Trade fires. Set to `'never'` to skip
-   * Trade entirely (used by `farm-gold-buffer` when stockpiling gold for
-   * persistent-purchase forks; canonical in-loop accumulation pairs with a
-   * numeric threshold).
+   * Per-progressVar tick budget for the progression pass. Each visible
+   * progress-action with `progressionTarget[pvId] > 0` emits one
+   * `{progress, loops: floor(chunkTicks / pvAdjustedTicks)}` item per
+   * loop. Budget-shaped (not target-shaped): targets accumulate across
+   * loops via lifetime XP rather than being closed-form solved per loop.
+   *
+   * Default `200` produces 1 acquaint/roam (pvAdjTicks=150) per loop at
+   * canonical content; trail/mark (250/280) get 0 chunks until late-arc
+   * cost reduction. Scales naturally as capability levels reduce
+   * pvAdjTicks across the arc.
    */
-  tradeThreshold: number | 'never';
+  progressionChunkTicks: number;
   /**
-   * When `> 0`, after Pass 6 (budget trim) the planner runs Pass 7 (talent
+   * When `> 0`, after Pass 3 (budget trim) the planner runs Pass 4 (talent
    * overflow): if remaining headroom in the budget cap exceeds this
    * threshold, the planner appends rotating capability-trainer iterations
    * (basic actions classified `'capability'` with `expMult ≥ 4` — the
@@ -189,24 +204,6 @@ export interface PlannerParams {
    * `PlannerParams`. Default `0` = disabled (other strategies leave it off).
    */
   talentOverflowThreshold: number;
-  /**
-   * Per-progressVar chunk size for the progression pass. Each
-   * `progressionTarget` delta emits as multiple `chunkSize`-loop items
-   * rather than one monolithic item, so Pass-7 trim drops chunks at this
-   * granularity instead of all-or-nothing.
-   *
-   * Default `undefined` resolves to **1** at plan time — single-loop
-   * chunks. This matches the "no loop is standalone" principle: bootstrap
-   * arcs span many loops with small per-loop progress, and single-loop
-   * trim granularity lets tight initial budgets admit one progression
-   * step per loop rather than dropping the entire delta.
-   *
-   * Strategies that prefer coarser-grained trim can set this higher
-   * (e.g., `4` to drop 4 loops at a time), but the cost is risk of
-   * dropping the whole chunk when it doesn't fit. `0` is treated as
-   * "no chunking" (single big item) — discouraged outside debugging.
-   */
-  progressionChunkSize?: number;
 }
 
 /** A planned plan-segment item — `{actionId, loops}` ordered for queue write. */
@@ -269,26 +266,9 @@ export interface ActionVector {
 export const DEFAULT_PARAMS: PlannerParams = {
   progressionTarget: {},
   manaUpOversupplyFactor: 1.0,
-  tradeThreshold: 100,
+  progressionChunkTicks: 200,
   talentOverflowThreshold: 0,
 };
-
-// ─── XP curve helpers ─────────────────────────────────────────────────────
-
-/**
- * Inverse of `level = floor((sqrt(8x/100 + 1) - 1) / 2)`: solving for the XP
- * threshold gives `xp_for_level_N = 50 × N × (N + 1)`. Vanilla idle-loops
- * progress-var curve (zones.ts:476).
- */
-function xpForLevel(level: number): number {
-  return 50 * level * (level + 1);
-}
-
-/** XP needed to advance from current state to `targetLevel`. */
-function xpToReachLevel(currentLevel: number, currentXp: number, targetLevel: number): number {
-  if (targetLevel <= currentLevel) return 0;
-  return Math.max(0, xpForLevel(targetLevel) - currentXp);
-}
 
 // ─── Visibility (mirrors queue.ts's stateView shape) ──────────────────────
 
@@ -648,156 +628,149 @@ export function generatePlan(
     projectedGold: 0,
   };
 
-  const manaSources = visible
-    .filter((v) => v.passSegment === 'mana' && v.productive && v.def.type === 'regular')
-    .sort((a, b) => b.manaPerCompletion / b.adjustedTicks - a.manaPerCompletion / a.adjustedTicks);
+  // ─── Pass 1: unified mana harvest ───────────────────────────────────
+  // Single priority class spanning direct-mana (regular→add-mana, plus
+  // basic completion-effect mana grants) and gold-routed (regular→add-
+  // gold + trade closer). Each source contributes 0–2 candidates
+  // (known-good cash-in and/or explore). Sort by per-tick mana-equivalent
+  // EV; emit best-first. Subsequent gold-routed candidates ride the same
+  // trade closer, which appends once at end-of-pass under the PolicyB
+  // cost-of-trade gate.
+  interface HarvestCandidate {
+    vector: ActionVector;
+    loops: number;
+    kind: 'known-good-mana' | 'explore-mana' | 'basic-mana' | 'known-good-gold' | 'explore-gold';
+    evPerTick: number;
+  }
 
-  // Basic mana grants are non-regular completion-effect emitters (e.g., a
-  // future "Drink Tonic"). Treat as best-EV alongside known-goods.
-  const basicManaGrants = visible.filter(
-    (v) => v.passSegment === 'mana' && v.productive && v.def.type !== 'regular',
-  );
+  const trade = visible.find((v) => v.passSegment === 'trade');
+  const exchangeMult =
+    trade && trade.def.type === 'basic' ? Number(trade.def.exchangeMult ?? 0) : 0;
 
-  // ─── Pass 1: mana cash-in (known-good) ──────────────────────────────
-  // `goodTemp > 0` consumption — cheapest mana per tick. One whole-item
-  // per source: `{actionId, loops: knownGoodCount}`. Engine's checkOne
-  // consumes goodTemp first per completion, so the item runs as
-  // knownGoodCount full reward fires with no `checked` accumulation.
-  for (const v of manaSources) {
-    if (v.knownGoodCount > 0) {
-      pushRegularItem(planState, v, v.knownGoodCount, 'known-good-mana', v.lifetimeChecked);
+  const candidates: HarvestCandidate[] = [];
+  for (const v of visible) {
+    if (!v.productive || v.adjustedTicks <= 0) continue;
+    if (v.passSegment === 'mana') {
+      if (v.def.type === 'regular') {
+        const rewardMana = v.manaPerCompletion * v.rewardRatio;
+        if (v.knownGoodCount > 0) {
+          // Known-good fires a full reward per loop — EV = rewardMana / tick.
+          candidates.push({
+            vector: v,
+            loops: v.knownGoodCount,
+            kind: 'known-good-mana',
+            evPerTick: rewardMana / v.adjustedTicks,
+          });
+        }
+        if (v.poolCapacity > 0) {
+          const fired = exploreRewardsFired(v.lifetimeChecked, v.poolCapacity, v.rewardRatio);
+          const totalMana = rewardMana * fired;
+          const totalCost = v.adjustedTicks * v.poolCapacity;
+          candidates.push({
+            vector: v,
+            loops: v.poolCapacity,
+            kind: 'explore-mana',
+            evPerTick: totalCost > 0 ? totalMana / totalCost : 0,
+          });
+        }
+      } else {
+        // Basic mana grant — one-shot completion-effect.
+        candidates.push({
+          vector: v,
+          loops: 1,
+          kind: 'basic-mana',
+          evPerTick: v.manaPerCompletion / v.adjustedTicks,
+        });
+      }
+    } else if (v.passSegment === 'gold' && v.def.type === 'regular' && exchangeMult > 0) {
+      // Gold-routed candidates only emerge once trade is visible (otherwise
+      // exchangeMult = 0, gold has no mana-equivalent value). Trade overhead
+      // is amortized across all gold candidates that emit in a single loop:
+      // ranking ignores the trade tax, the PolicyB gate at end-of-pass
+      // applies it once. Net effect under canonical content (50× exchange):
+      // gold-routed dominates direct mana once errand/latch pools bear
+      // rewards.
+      const rewardGold = v.goldPerCompletion * v.rewardRatio;
+      if (v.knownGoodCount > 0) {
+        candidates.push({
+          vector: v,
+          loops: v.knownGoodCount,
+          kind: 'known-good-gold',
+          evPerTick: (rewardGold * exchangeMult) / v.adjustedTicks,
+        });
+      }
+      if (v.poolCapacity > 0) {
+        const fired = exploreRewardsFired(v.lifetimeChecked, v.poolCapacity, v.rewardRatio);
+        const totalMana = rewardGold * exchangeMult * fired;
+        const totalCost = v.adjustedTicks * v.poolCapacity;
+        candidates.push({
+          vector: v,
+          loops: v.poolCapacity,
+          kind: 'explore-gold',
+          evPerTick: totalCost > 0 ? totalMana / totalCost : 0,
+        });
+      }
     }
   }
-  // Basic mana grants (one-shot completion-effect emitters) ride alongside
-  // known-goods in priority — they're direct grants, not exploration.
-  for (const v of basicManaGrants) {
-    pushNonRegular(planState, v, 1, 'basic-mana');
-  }
 
-  // ─── Pass 2: mana explore ───────────────────────────────────────────
-  // One whole-item per source: `{actionId, loops: poolCapacity}`. Engine's
-  // checkOne increments lifetime `checked` per completion and fires
-  // rewards on R-boundaries naturally — no atom decomposition needed.
-  // Pass-6 trim shrinks the item's `loops` if budget can't afford the
-  // full pool.
-  for (const v of manaSources) {
-    if (v.poolCapacity > 0) {
-      pushRegularItem(planState, v, v.poolCapacity, 'explore-mana', v.lifetimeChecked);
+  candidates.sort((a, b) => b.evPerTick - a.evPerTick);
+
+  let goldRoutedEmitted = false;
+  for (const c of candidates) {
+    if (c.kind === 'basic-mana') {
+      pushNonRegular(planState, c.vector, c.loops, 'basic-mana');
+    } else {
+      pushRegularItem(planState, c.vector, c.loops, c.kind, c.vector.lifetimeChecked);
+      if (c.kind === 'known-good-gold' || c.kind === 'explore-gold') goldRoutedEmitted = true;
     }
   }
 
-  // ─── Pass 3: progression ────────────────────────────────────────────
-  // For each visible progress-action, allocate loops to gain the per-id
-  // `progressionTarget` level delta. Default delta = +1. When
-  // `progressionChunkSize` is set, the per-progressVar delta is split
-  // across multiple chunkSize-loop items so Pass-6 trim can drop partially
-  // (see `progressionChunkSize` doc for rationale).
-  //
-  // Multi-loop investment: progression grows regularVar pools and unlocks
-  // gated content for future loops.
-  const progressVars = engine.tryInject(ProgressVarsKey);
-  // `undefined` = default per-loop chunks. `0` = no chunking (single item).
-  // `> 0` = explicit chunk size.
-  const chunkSize = params.progressionChunkSize ?? 1;
+  // PolicyB cost-of-trade gate. Closed-form-dominant over a static
+  // tradeThreshold knob: emit iff `projectedGold × exchangeMult >
+  // tradeAdjustedTicks`. Same outcome EV-positive, strictly better
+  // EV-negative (saves trade overhead on chains that wouldn't pay for
+  // themselves), no false positives.
+  if (goldRoutedEmitted && trade && planState.projectedGold * exchangeMult > trade.adjustedTicks) {
+    pushNonRegular(planState, trade, 1, 'trade');
+    planState.projectedManaAdded += planState.projectedGold * exchangeMult;
+    planState.projectedGold = 0;
+  }
+
+  // ─── Pass 2: progression (ticks-budget chunks) ──────────────────────
+  // For each visible progress-action with `progressionTarget[pvId] > 0`,
+  // emit one `{progress, loops: floor(chunkTicks / pvAdjustedTicks)}`
+  // item per loop. Budget-shaped (not target-shaped): cross-loop XP
+  // accumulates naturally, no closed-form `xpToReachLevel` math.
+  // Late-arc cost reduction shrinks pvAdjustedTicks, so chunks scale up
+  // automatically as the arc progresses.
+  const chunkTicks = params.progressionChunkTicks;
   for (const v of visible) {
     if (v.passSegment !== 'progression' || v.def.type !== 'progress') continue;
-    if (v.progressVarXpPerCompletion <= 0) continue;
-    const pvId = v.def.progressVarId;
-    const targetDelta = params.progressionTarget[pvId] ?? 1;
-    if (targetDelta <= 0) continue;
-    const skill = progressVars?.getSkill(pvId);
-    if (!skill) continue;
-    const currentLevel = Number(skill.level.value);
-    const currentXp = Number(skill.xp.value);
-    const xpNeeded = xpToReachLevel(currentLevel, currentXp, currentLevel + targetDelta);
-    const loops = Math.ceil(xpNeeded / v.progressVarXpPerCompletion);
-    if (chunkSize > 0 && loops > chunkSize) {
-      const fullChunks = Math.floor(loops / chunkSize);
-      const tail = loops - fullChunks * chunkSize;
-      for (let i = 0; i < fullChunks; i++) pushNonRegular(planState, v, chunkSize, 'progression');
-      if (tail > 0) pushNonRegular(planState, v, tail, 'progression');
-    } else {
-      pushNonRegular(planState, v, loops, 'progression');
-    }
+    if (v.progressVarXpPerCompletion <= 0 || v.adjustedTicks <= 0) continue;
+    const targetWeight = params.progressionTarget[v.def.progressVarId] ?? 1;
+    if (targetWeight <= 0) continue;
+    const loopsPerChunk = Math.floor(chunkTicks / v.adjustedTicks);
+    if (loopsPerChunk <= 0) continue;
+    pushNonRegular(planState, v, loopsPerChunk, 'progression');
   }
 
-  // ─── Pass 4: gold sources toward Trade ──────────────────────────────
-  // Whole-item emission, capped per source so projected gold meets
-  // `tradeThreshold` without overshoot. Cross-loop gold banking past
-  // threshold is left to future-loop chains. Gold's lifetime `checked`
-  // accumulates across loops post-OL-778, so reward firing migrates
-  // earlier in the chain naturally as later loops crack into the same
-  // pool.
-  if (params.tradeThreshold !== 'never') {
-    const goldSources = visible
-      .filter((v) => v.passSegment === 'gold' && v.productive && v.def.type === 'regular')
-      .sort(
-        (a, b) => b.goldPerCompletion / b.adjustedTicks - a.goldPerCompletion / a.adjustedTicks,
-      );
-    let goldRemaining = params.tradeThreshold;
-    for (const v of goldSources) {
-      if (goldRemaining <= 0) break;
-      const goldPerReward = v.goldPerCompletion * v.rewardRatio;
-      if (goldPerReward <= 0) continue;
-
-      // Known-good portion: each loop fires a reward.
-      if (v.knownGoodCount > 0 && goldRemaining > 0) {
-        const rewardsNeeded = Math.ceil(goldRemaining / goldPerReward);
-        const knownGoodLoops = Math.min(v.knownGoodCount, rewardsNeeded);
-        pushRegularItem(planState, v, knownGoodLoops, 'known-good-gold', v.lifetimeChecked);
-        goldRemaining -= goldPerReward * knownGoodLoops;
-      }
-
-      // Explore portion: kth reward fires at `k * R - (lifetimeChecked % R)`
-      // completions. Cap at poolCapacity.
-      if (v.poolCapacity > 0 && goldRemaining > 0) {
-        const R = v.rewardRatio;
-        const offset = v.lifetimeChecked % R;
-        const rewardsNeeded = Math.ceil(goldRemaining / goldPerReward);
-        const loopsForRewards = rewardsNeeded * R - offset;
-        const exploreLoops = Math.min(v.poolCapacity, Math.max(0, loopsForRewards));
-        if (exploreLoops > 0) {
-          pushRegularItem(planState, v, exploreLoops, 'explore-gold', v.lifetimeChecked);
-          const fired = exploreRewardsFired(v.lifetimeChecked, exploreLoops, R);
-          goldRemaining -= goldPerReward * fired;
-        }
-      }
-    }
-  }
-
-  // ─── Pass 5: trade ──────────────────────────────────────────────────
-  if (params.tradeThreshold !== 'never') {
-    const tradeVector = visible.find((v) => v.passSegment === 'trade');
-    if (tradeVector && planState.projectedGold >= params.tradeThreshold) {
-      pushNonRegular(planState, tradeVector, 1, 'trade');
-      const exchangeMult = Number(
-        tradeVector.def.type === 'basic' ? (tradeVector.def.exchangeMult ?? 0) : 0,
-      );
-      planState.projectedManaAdded += planState.projectedGold * exchangeMult;
-      planState.projectedGold = 0;
-    }
-  }
-
-  // ─── Pass 6: budget trim ────────────────────────────────────────────
+  // ─── Pass 3: budget trim ────────────────────────────────────────────
   // Tail-shrink: reduce the last item's `loops` until total cost fits
   // `initialMana × oversupplyFactor + projectedManaAdded`. Items only
   // disappear when their `loops` reaches 0. Reward projection unwinds as
   // loops shrink past R-boundaries, but the budget cap is computed once
   // and held fixed — over-keeps slightly when reward-firing items get
-  // trimmed (matches pre-OL-788 conservatism).
+  // trimmed (acceptable conservatism).
   const oversupply = params.manaUpOversupplyFactor;
   const budgetCap = Number(initialMana.value) * oversupply + planState.projectedManaAdded;
   while (planCost(planState.plan, vectorById) > budgetCap && planState.plan.length > 0) {
     if (!shrinkTailByOne(planState)) break;
   }
 
-  // ─── Pass 7: strategic trainers (opt-in) ────────────────────────────
-  // Trainers are strategic, not bootstrap. Canonically (idle-loops
-  // vanilla), trainers cost MORE than multiple explores — the player
-  // chooses them deliberately for stat building or as late-arc boosters.
-  // Default plans contain zero trainers; only strategies with
-  // `talentOverflowThreshold > 0` engage this pass to soak slack budget
-  // into rotating capability training.
+  // ─── Pass 4: strategic trainers (opt-in) ────────────────────────────
+  // Trainers are strategic, not bootstrap. Default plans contain zero
+  // trainers; only strategies with `talentOverflowThreshold > 0` engage
+  // this pass to soak slack budget into rotating capability training.
   if (params.talentOverflowThreshold > 0) {
     const remaining = budgetCap - planCost(planState.plan, vectorById);
     if (remaining >= params.talentOverflowThreshold) {
