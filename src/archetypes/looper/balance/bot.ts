@@ -216,7 +216,7 @@ const FARM_MANA_POOL_PARAMS: PlannerParams = {
  * persistent-purchase fork (no consumer of that shape today).
  */
 const FARM_GOLD_BUFFER_PARAMS: PlannerParams = {
-  progressionTarget: { acquaint: 2, roam: 1, trail: 0, mark: 0 },
+  progressionTarget: { acquaint: 2, roam: 3, trail: 0, mark: 0 },
   manaUpOversupplyFactor: 1.0,
   tradeThreshold: 50,
   talentOverflowThreshold: 0,

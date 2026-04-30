@@ -50,7 +50,7 @@ const STRATEGY_PARAMS: Record<string, PlannerParams> = {
     talentOverflowThreshold: 0,
   },
   'farm-gold-buffer': {
-    progressionTarget: { acquaint: 2, roam: 1, trail: 0, mark: 0 },
+    progressionTarget: { acquaint: 2, roam: 3, trail: 0, mark: 0 },
     manaUpOversupplyFactor: 1.0,
     tradeThreshold: 50,
     talentOverflowThreshold: 0,
