@@ -86,6 +86,8 @@ import {
   type RecommendationContext,
   type RecommendationStrategyDef,
   type RecommendationSystem,
+  type Sequencer,
+  type SequencerItem,
   type State,
 } from 'open-loop-engine';
 import {
@@ -102,7 +104,7 @@ import {
 } from '../modules';
 import { createLooperEngine, type LooperEngineOptions } from '../boot';
 import type { LooperOverrides } from '../data/overrides';
-import { DEFAULT_PARAMS, generatePlan, type PlannerParams } from './planner';
+import { DEFAULT_PARAMS, generatePlan, type PlannedItem, type PlannerParams } from './planner';
 
 // ─── Discovery keys (sim-time introspection) ──────────────────────────────
 
@@ -302,6 +304,55 @@ function createFarmTalentStrategy(trigger: ComputedRef<DecimalSource>): Recommen
       };
     },
   };
+}
+
+// ─── Queue reconciliation (OL-788 iterative-queue) ────────────────────────
+
+/**
+ * Reconcile the live queue against the planner's desired plan, mutating
+ * items in place rather than clearing and rebuilding (per OL-788).
+ *
+ * Greedy in-order match by `actionId`: each desired item takes the first
+ * unused current queue entry with the same id; otherwise creates a fresh
+ * entry. Items whose `actionId` no longer appears in the desired plan are
+ * dropped. Metadata (`loops`, `loopsLeft`) reseeds from the desired plan
+ * — `loopsLeft = loops` because reconcileQueue runs at `afterRestart`,
+ * after `resetForLoop` already reset the cursor and any preserved items'
+ * `loopsLeft` to their `loops`.
+ *
+ * The win over the prior `queue.clear()` + re-enqueue shape: items that
+ * the planner re-emits across loops keep their identity (and any future
+ * UI-side state). Strategy switches and content unlocks produce big
+ * diffs (prune A's items, append B's); steady-state loops are no-ops.
+ *
+ * Cursor: `items.value = arr` doesn't reset the list-mode cursor, so we
+ * call `resetCursor()` defensively. Belt-and-suspenders against
+ * `resetForLoop`'s own reset — both end at cursor=0, which is correct.
+ */
+function reconcileQueue(queue: Sequencer<QueueItemMeta>, desired: PlannedItem[]): void {
+  const current = queue.items.value;
+  const newItems: SequencerItem<QueueItemMeta>[] = [];
+  const used = new Set<number>();
+
+  for (const want of desired) {
+    let matchIdx = -1;
+    for (let i = 0; i < current.length; i++) {
+      if (used.has(i)) continue;
+      if (current[i].id !== want.actionId) continue;
+      matchIdx = i;
+      break;
+    }
+    const meta: QueueItemMeta = { loops: want.loops, loopsLeft: want.loops };
+    if (matchIdx >= 0) {
+      used.add(matchIdx);
+      newItems.push({ ...current[matchIdx], metadata: meta });
+    } else {
+      newItems.push({ id: want.actionId, metadata: meta });
+    }
+  }
+
+  queue.items.value = newItems;
+  queue.resetCursor();
 }
 
 // ─── EngineModule factory ─────────────────────────────────────────────────
@@ -527,19 +578,11 @@ export function createBalanceBotModule(
       // Plan trigger — fire after each restart. The fresh restart has
       // already run thingsToReset + onRestart in loop.ts, so action
       // adjustedTicks now reflects the post-retention state. Generate plan
-      // against THAT view, then write to queue.
+      // against THAT view, then reconcile onto the queue (additive — keep
+      // matching items in place, append new, drop obsolete; per OL-788).
       applyPlan = (): void => {
-        const items = generatePlan(ctx, plannerParams.value);
-        queue.clear();
-        for (const item of items) {
-          queue.enqueue({
-            id: item.actionId,
-            metadata: {
-              loops: item.loops,
-              loopsLeft: item.loops,
-            } as QueueItemMeta,
-          });
-        }
+        const desired = generatePlan(ctx, plannerParams.value);
+        reconcileQueue(queue, desired);
       };
 
       // Subsequent-loop trigger: regenerate on every afterRestart. State
