@@ -19,13 +19,24 @@ import type { ProgressVarDef } from './types';
 // Forks rename freely.
 //
 // ─── Balance ───
-// `expMult: 1` uniform — solver may retune per-progressVar in OL-746.
-// `perLevel` magnitudes are vanilla-canonical placeholders:
-//   roam × 5 → cache    mirrors vanilla Wander × 5 → Pots
-//   roam × 1 → latch    secondary contribution (gold pool sizing)
-//   acquaint × 1 → errand   social-channel gold pool
-//   trail × 5 → wellspring  alt-manapot (mirrors Forest × 5 → WildMana)
-//   trail × 5 + mark × 2 → forage  multi-axis (mirrors Forest×5 + Shortcut×2 → Herbs)
+// `expMult: 1` uniform — matches vanilla all-`expMult:1` for town-0/town-1
+// progress actions. `perLevel` magnitudes are vanilla canonical:
+//   roam × 5  → cache       mirrors vanilla pots = wander × 5
+//                            (actionList.js:195-197).
+//   roam × 1  → latch       mirrors vanilla locks = wander × 1
+//                            (actionList.js:198-200).
+//   trail × 5 → wellspring  mirrors vanilla wildMana = forest × 5 + thicket × 5
+//                            (slim demo: only forest-contributor; trail × 5)
+//                            (actionList.js:1119-1121).
+//   trail × 5 → forage      mirrors vanilla herbs = forest × 5 + shortcut × 2
+//   + mark × 2                + flowers × 13 (slim demo: forest + shortcut;
+//                              trail × 5 + mark × 2) (actionList.js:1125-1127).
+//
+// Acquaint has no `scales` entry — vanilla Met is a pure progress track that
+// sizes sQuests = met × 1 fed by Short Quest (actionList.js:389-391); the
+// slim demo doesn't include Short Quest, so Met-equivalent acquaint stays
+// pool-less. (Pre-reground we had errand = acquaint × 1 fed by Run, which
+// was an invented action; both are removed per OL-804.)
 
 export const PROGRESS_VARS: ProgressVarDef[] = [
   {
@@ -45,7 +56,7 @@ export const PROGRESS_VARS: ProgressVarDef[] = [
     description: 'Sit with neighbours. Names settle, errands surface.',
     zoneId: 'hearth',
     expMult: 1,
-    scales: [{ regularVarId: 'errand', perLevel: 1 }],
+    scales: [],
   },
   {
     id: 'trail',
