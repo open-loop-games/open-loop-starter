@@ -11,10 +11,10 @@ import Popover from '@/ui/components/Popover.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 import { manifest } from '../manifest';
-import TownColumnPanel from './panels/TownColumnPanel.vue';
-import ActionColumnPanel from './panels/ActionColumnPanel.vue';
-import CurrentLoopPanel from './panels/CurrentLoopPanel.vue';
-import CapabilitiesPanel from './panels/CapabilitiesPanel.vue';
+import TownColumn from './components/TownColumn.vue';
+import ActionColumn from './components/ActionColumn.vue';
+import HeaderBand from './components/HeaderBand.vue';
+import StatsPanel from './components/StatsPanel.vue';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -133,13 +133,13 @@ function getActiveModules(): EngineModule[] {
       right-width="480px"
     >
       <template #left>
-        <CapabilitiesPanel />
+        <StatsPanel />
       </template>
-      <TownColumnPanel />
+      <TownColumn />
       <template #right>
         <div class="looper-main">
-          <CurrentLoopPanel />
-          <ActionColumnPanel />
+          <HeaderBand />
+          <ActionColumn />
         </div>
       </template>
     </ThreePanelShell>

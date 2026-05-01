@@ -56,7 +56,7 @@ import type { ActionDef } from './types';
 //                                                   pure progress-var-level
 //                                                   web)
 //
-// Variants exercised: progress-var-level (most), capability-tier-level
+// Variants exercised: progress-var-level (most), stat-tier-level
 // (Gather Herbs), loop-count (Gather Herbs). Always-implicit (no `prereqs`):
 // Wander, Smash Pots. The action-completion-count and always-explicit
 // variants are implemented in the engine but unexercised by the slim demo's
@@ -272,7 +272,7 @@ export const ACTIONS: ActionDef[] = [
     ],
     prereqs: [
       { kind: 'progress-var-level', progressVarId: 'wander', value: 5 },
-      { kind: 'capability-tier-level', capabilityId: 'Per', tier: 'talent', value: 1 },
+      { kind: 'stat-tier-level', statId: 'Per', tier: 'talent', value: 1 },
       { kind: 'loop-count', value: 3 },
     ],
   },

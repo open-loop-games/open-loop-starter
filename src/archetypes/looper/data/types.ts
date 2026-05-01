@@ -1,7 +1,7 @@
 import type { DecimalSource } from 'open-loop-engine';
 
 // ─── Skeleton ───
-// 9 capabilities (single axis; canonical Level + Talent two-tier role split
+// 9 stats (single axis; canonical Level + Talent two-tier role split
 // lives module-side); 2 zones as UI grouping only (no content gating);
 // 4 progressVars (persistent exploration tracks, Wander-shape) coupled via a
 // `scales` table to 4 regularVars (per-loop pools whose `total` derives from
@@ -12,7 +12,7 @@ import type { DecimalSource } from 'open-loop-engine';
 // 1:1 from `idle-loops-ng/src/data/{stats,zones,vanilla-actions}.ts` and
 // `idle-loops-ng/src/modules/zones.ts`.
 
-export interface CapabilityDef {
+export interface StatDef {
   id: string;
   name: string;
   description: string;
@@ -34,7 +34,7 @@ export interface ZoneDef {
  * Persistent exploration track — Wander-shape. Survives the loop reset (kept
  * by the retention policy). Each level-up emits a callback that re-totals one
  * or more regularVars (the manapot frame's load-bearing coupling). Reuses
- * `createSkillCategory` engine primitive — same surface as capabilities,
+ * `createSkillCategory` engine primitive — same surface as stats,
  * different role.
  */
 export interface ProgressVarDef {
@@ -78,7 +78,7 @@ export interface RegularVarDef {
  * intentional always-visible status (omitting `prereqs` has the same effect;
  * the variant exists for explicit annotation).
  *
- * `capability-tier-level` references the canonical Level + Talent two-tier
+ * `stat-tier-level` references the canonical Level + Talent two-tier
  * shape (module-side); data uses the discriminated tier field to address either.
  *
  * `progress-var-level` references a persistent progressVar's level — the
@@ -87,8 +87,8 @@ export interface RegularVarDef {
 export type ActionPrereq =
   | { kind: 'action-completion-count'; actionId: string; value: number }
   | {
-      kind: 'capability-tier-level';
-      capabilityId: string;
+      kind: 'stat-tier-level';
+      statId: string;
       tier: 'level' | 'talent';
       value: number;
     }
@@ -141,14 +141,14 @@ interface ActionDefBase {
   /** Base XP multiplier folded into the per-completion XP grant formula. */
   expMult: DecimalSource;
   /**
-   * Capability weight map. Same weight controls cost contribution AND XP
+   * Stat weight map. Same weight controls cost contribution AND XP
    * gain — replaces the previous split `baseCost` + `xpGrants` shape. Per
    * canonical (idle-loops-ng/src/modules/action-formulas.ts:48-61):
    *
    * ```
    * adjustedExp = expMult × (manaCost / adjustedTicks)
-   * for each (capabilityId, weight) in weights:
-   *   xpGain = weight × adjustedExp × talentMult(capabilityId)
+   * for each (statId, weight) in weights:
+   *   xpGain = weight × adjustedExp × talentMult(statId)
    *   level.addXp(xpGain)
    *   talent.addXp(xpGain × talentAccrualRatio)
    * ```
@@ -230,12 +230,12 @@ export interface LooperBalance {
    * extend mid-loop via regular-action `rewardEffects` (manapot harvests) and
    * basic-action `completionEffects` (gold→mana exchanges); cross-loop the
    * budget always resets to `initialMana` (mana does NOT compound across
-   * loops — cross-loop persistence is on capabilities, progressVars, and
+   * loops — cross-loop persistence is on stats, progressVars, and
    * regularVar `total`).
    */
   initialMana: DecimalSource;
   /**
-   * Cost-reduction divisor on capability Level. Per-capability cost
+   * Cost-reduction divisor on stat Level. Per-stat cost
    * contribution is `weight / (1 + level / costDivisor)`. Vanilla canonical
    * 100 (`1 + level / 100`).
    */
@@ -265,8 +265,8 @@ export interface LooperGameState {
   manaAtLeast(amount: DecimalSource): boolean;
   /** Current gold ≥ amount. */
   goldAtLeast(amount: DecimalSource): boolean;
-  /** Capability tier Level (resets per loop) or Talent (persistent) ≥ n. */
-  capabilityLevelAtLeast(capabilityId: string, tier: 'level' | 'talent', n: number): boolean;
+  /** Stat tier Level (resets per loop) or Talent (persistent) ≥ n. */
+  statLevelAtLeast(statId: string, tier: 'level' | 'talent', n: number): boolean;
   /** ProgressVar level (persistent across loops) ≥ n. */
   progressVarLevelAtLeast(progressVarId: string, n: number): boolean;
   /** Action's persistent timesCompleted counter ≥ count. */
@@ -276,7 +276,7 @@ export interface LooperGameState {
 }
 
 export interface LooperData {
-  capabilities: CapabilityDef[];
+  stats: StatDef[];
   zones: ZoneDef[];
   progressVars: ProgressVarDef[];
   regularVars: RegularVarDef[];

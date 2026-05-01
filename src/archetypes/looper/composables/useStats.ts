@@ -2,7 +2,7 @@
  * Vue bridge for the stats module.
  */
 
-import { CAPABILITIES } from '../data/capabilities';
+import { STATS } from '../data/stats';
 import {
   getAllStatStates,
   getStatState,
@@ -17,8 +17,8 @@ import {
 
 export function useStats() {
   return {
-    /** Static capability definitions */
-    capabilities: CAPABILITIES,
+    /** Static stat definitions */
+    stats: STATS,
     /** All stat states (reactive map) */
     allStats: getAllStatStates(),
     /** Get state for one stat */

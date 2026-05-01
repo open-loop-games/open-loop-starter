@@ -1,6 +1,6 @@
 import type {
   ActionDef,
-  CapabilityDef,
+  StatDef,
   LooperBalance,
   LooperData,
   ProgressVarDef,
@@ -29,7 +29,7 @@ export type ActionOverride =
  * Flat-category override shape accepted by `createLooperEngine`.
  *
  * - `balance` shallow-merges over `DEFAULT_LOOPER_DATA.balance`.
- * - `capabilities` / `zones` / `progressVars` / `regularVars` / `actions`
+ * - `stats` / `zones` / `progressVars` / `regularVars` / `actions`
  *   replace entries by id; unknown ids throw so typos surface fast. To
  *   wholesale-replace a category, supply the full array (all existing ids
  *   plus any new ones).
@@ -37,7 +37,7 @@ export type ActionOverride =
  * Mirrors `applyAmbientOverrides` / `applyProducerOverrides` semantics.
  */
 export interface LooperOverrides {
-  capabilities?: Array<Partial<CapabilityDef> & { id: string }>;
+  stats?: Array<Partial<StatDef> & { id: string }>;
   zones?: Array<Partial<ZoneDef> & { id: string }>;
   progressVars?: Array<Partial<ProgressVarDef> & { id: string }>;
   regularVars?: Array<Partial<RegularVarDef> & { id: string }>;
@@ -51,7 +51,7 @@ export function applyLooperOverrides(
 ): LooperData {
   if (!overrides) return base;
   return {
-    capabilities: mergeById(base.capabilities, overrides.capabilities, 'capabilities'),
+    stats: mergeById(base.stats, overrides.stats, 'stats'),
     zones: mergeById(base.zones, overrides.zones, 'zones'),
     progressVars: mergeById(base.progressVars, overrides.progressVars, 'progressVars'),
     regularVars: mergeById(base.regularVars, overrides.regularVars, 'regularVars'),

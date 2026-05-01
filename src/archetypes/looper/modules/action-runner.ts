@@ -156,9 +156,9 @@ function evaluatePrereq(prereq: ActionPrereq): boolean {
       return true;
     case 'action-completion-count':
       return Decimal.gte(getTimesCompleted(prereq.actionId), prereq.value);
-    case 'capability-tier-level': {
+    case 'stat-tier-level': {
       try {
-        const s = getStatState(prereq.capabilityId);
+        const s = getStatState(prereq.statId);
         const level = prereq.tier === 'level' ? s.level.value : s.talentLevel.value;
         return Decimal.gte(level, prereq.value);
       } catch {
@@ -193,9 +193,9 @@ function buildLooperGameState(): LooperGameState {
     goldAtLeast(amount) {
       return hasEnough('gold', amount);
     },
-    capabilityLevelAtLeast(capId, tier, n) {
+    statLevelAtLeast(statId, tier, n) {
       try {
-        const s = getStatState(capId);
+        const s = getStatState(statId);
         const level = tier === 'level' ? s.level.value : s.talentLevel.value;
         return Decimal.gte(level, n);
       } catch {

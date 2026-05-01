@@ -3,7 +3,7 @@ import type { ProgressVarDef } from './types';
 // ─── Skeleton ───
 // 4 progressVars (2 per zone). Each is a persistent exploration track that
 // survives the loop reset (kept by retention policy). Module-side via a second
-// `createSkillCategory<ProgressVarDef, …>` instance that mirrors capabilities'
+// `createSkillCategory<ProgressVarDef, …>` instance that mirrors stats'
 // shape but with a different role: progressVar level NEVER multiplies cost or
 // XP rate — it sizes per-loop pools (regularVar `total`s) via the `scales`
 // table. Vanilla idle-loops Wander-shape, generalized.

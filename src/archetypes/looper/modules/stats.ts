@@ -1,5 +1,5 @@
 /**
- * Stat system module — 9 capabilities with XP, levels, and talents.
+ * Stat system module — 9 stats with XP, levels, and talents.
  *
  * Two tiers per stat:
  * - **XP** (temporary): Gained from actions, resets each loop. Drives stat
@@ -29,7 +29,7 @@ import {
   withPersistentContext,
   type Persistent,
 } from 'open-loop-engine';
-import { CAPABILITIES, levelFromXP, xpForLevel, calcTalentMult } from '../data/capabilities';
+import { STATS, levelFromXP, xpForLevel, calcTalentMult } from '../data/stats';
 
 // ============================================================================
 // Types
@@ -174,10 +174,10 @@ export function getTalentXPProgress(stat: string): number {
 export const statsModule: EngineModule = {
   id: 'stats',
   install(_ctx: EngineContext) {
-    for (const cap of CAPABILITIES) {
-      const { xp, talentXP } = withPersistentContext(`stat:${cap.id}`, () => ({
+    for (const stat of STATS) {
+      const { xp, talentXP } = withPersistentContext(`stat:${stat.id}`, () => ({
         // Tier 1: XP (temporary, resets each loop)
-        xp: createResource(0, { displayName: `${cap.name} XP`, precision: 0 }),
+        xp: createResource(0, { displayName: `${stat.name} XP`, precision: 0 }),
         // Tier 2: Talent XP (persistent, accumulates 1% of every XP gain)
         talentXP: persistent<DecimalSource>(0),
       }));
@@ -190,7 +190,7 @@ export const statsModule: EngineModule = {
       const talentMult = computed(() => calcTalentMult(talentLevel.value));
       const totalBonusXP = computed(() => talentMult.value);
 
-      states.set(cap.id, {
+      states.set(stat.id, {
         xp,
         level,
         talentXP,
