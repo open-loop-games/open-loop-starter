@@ -134,6 +134,15 @@ const zonePoolRows = computed<PoolRow[]>(() => {
     });
 });
 
+function poolValuablesFirst(poolId: string): boolean {
+  return regularVars.getState(poolId)?.valuablesFirst.value ?? true;
+}
+
+function setPoolValuablesFirst(poolId: string, value: boolean): void {
+  const state = regularVars.getState(poolId);
+  if (state) state.valuablesFirst.value = value;
+}
+
 // ─── Action tiles ───────────────────────────────────────────────────────────
 
 const visibleActionRows = computed(() => actions.visibleRowsByZone(currentZoneId.value).value);
@@ -270,6 +279,30 @@ onBeforeUnmount(() => {
           <span class="town-pools__counts-sep">←</span>
           <span :data-testid="`pool-${row.id}-unchecked`">{{ row.unchecked }}</span>
         </span>
+        <Tooltip>
+          <label
+            class="town-pools__toggle"
+            :data-testid="`pool-${row.id}-valuables-first`"
+          >
+            <input
+              type="checkbox"
+              :checked="poolValuablesFirst(row.id)"
+              @change="(e) => setPoolValuablesFirst(row.id, (e.target as HTMLInputElement).checked)"
+            >
+            <span>★</span>
+          </label>
+          <template #content>
+            <strong>Valuables first</strong>
+            <p style="font-size: 0.85em; margin: 4px 0">
+              When on, this pool burns known-goods (★) before exploring new items — cheap reward
+              firings.
+            </p>
+            <p style="font-size: 0.85em; margin: 4px 0">
+              When off, the action explores new items first; falls back to known-goods only when
+              nothing left to find.
+            </p>
+          </template>
+        </Tooltip>
       </div>
     </div>
 
@@ -489,6 +522,26 @@ onBeforeUnmount(() => {
 .town-pools__counts-now.is-zero {
   color: var(--color-text-muted, var(--color-text));
   font-weight: 500;
+}
+
+.town-pools__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.85em;
+  cursor: pointer;
+  user-select: none;
+  margin-left: var(--gap-sm);
+}
+
+.town-pools__toggle input {
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.town-pools__toggle input:not(:checked) ~ span {
+  color: var(--color-text-muted, var(--color-text));
+  opacity: 0.45;
 }
 
 .town-pools__counts-sep {

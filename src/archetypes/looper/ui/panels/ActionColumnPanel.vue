@@ -250,6 +250,26 @@ function moveDown(index: number): void {
   if (index >= editRows.value.length - 1) return;
   queue.reorder(index, index + 1);
 }
+
+// ── Amount selector + per-row +/- ───────────────────────────────────────────
+
+const QUICK_AMOUNTS = [1, 5, 10] as const;
+
+function setAmount(n: number): void {
+  queue.addAmount.value = Math.max(1, Math.min(Math.floor(n || 1), 1e6));
+}
+
+function onAmountInput(e: Event): void {
+  const v = Number((e.target as HTMLInputElement).value);
+  if (!Number.isFinite(v)) return;
+  setAmount(v);
+}
+
+function bumpLoops(index: number, delta: number): void {
+  const row = editItems.value[index];
+  if (!row) return;
+  queue.adjustLoops(index, row.metadata.loops + delta);
+}
 </script>
 
 <template>
@@ -274,6 +294,31 @@ function moveDown(index: number): void {
         </span>
       </div>
     </header>
+
+    <div
+      class="action-column__amount"
+      data-testid="amount-selector"
+    >
+      <span class="action-column__amount-label">Amount</span>
+      <button
+        v-for="n in QUICK_AMOUNTS"
+        :key="n"
+        class="btn-tiny action-column__amount-btn"
+        :class="{ 'action-column__amount-btn--active': queue.addAmount.value === n }"
+        :data-testid="`amount-${n}`"
+        @click="setAmount(n)"
+      >
+        {{ n }}
+      </button>
+      <input
+        type="number"
+        class="action-column__amount-input"
+        min="1"
+        :value="queue.addAmount.value"
+        data-testid="amount-input"
+        @change="onAmountInput"
+      >
+    </div>
 
     <div
       class="action-column__list action-column__list--active"
@@ -322,15 +367,6 @@ function moveDown(index: number): void {
         <h4 class="action-column__list-heading">
           Next plan
         </h4>
-        <button
-          v-if="isDiverged && editItems.length > 0"
-          class="btn-tiny"
-          data-testid="apply-edit-now"
-          title="Replace current dispatch with the next plan"
-          @click="queue.applyEditToActive"
-        >
-          Apply now
-        </button>
       </header>
 
       <div
@@ -366,6 +402,23 @@ function moveDown(index: number): void {
               <span class="qrow__loops">×{{ row.loops }}</span>
             </span>
             <div class="qrow__controls">
+              <button
+                class="btn-tiny"
+                :data-testid="`edit-plus-${row.index}`"
+                :title="`Add ${queue.addAmount.value} loops`"
+                @click="bumpLoops(row.index, queue.addAmount.value)"
+              >
+                +
+              </button>
+              <button
+                class="btn-tiny"
+                :data-testid="`edit-minus-${row.index}`"
+                :disabled="row.loops <= 1"
+                :title="`Remove ${queue.addAmount.value} loops`"
+                @click="bumpLoops(row.index, -queue.addAmount.value)"
+              >
+                −
+              </button>
               <button
                 class="btn-tiny"
                 :disabled="row.index === 0"
@@ -442,19 +495,29 @@ function moveDown(index: number): void {
 
     <div class="action-column__actions">
       <button
-        class="btn-sm"
+        class="btn-sm action-column__actions-btn"
         :data-testid="queue.isPaused.value ? 'queue-resume' : 'queue-pause'"
         @click="queue.togglePause"
       >
         {{ queue.isPaused.value ? 'Resume' : 'Pause' }}
       </button>
       <button
-        class="btn-sm"
+        class="btn-sm action-column__actions-btn"
+        :class="{ 'btn-sm--primary': isDiverged && editItems.length > 0 }"
+        data-testid="apply-now"
+        :disabled="editItems.length === 0"
+        title="Restart the loop with this plan applied (resets mana, gold, and Level XP)"
+        @click="queue.requestRestart"
+      >
+        Apply now
+      </button>
+      <button
+        class="btn-sm action-column__actions-btn"
         data-testid="queue-clear"
         :disabled="editItems.length === 0"
         @click="queue.clear"
       >
-        Clear plan
+        Clear
       </button>
     </div>
   </section>
@@ -694,7 +757,61 @@ function moveDown(index: number): void {
   gap: var(--gap-sm);
 }
 
-.action-column__actions .btn-sm {
+.action-column__actions-btn {
   flex: 1 1 auto;
+  min-width: 0;
+}
+
+.btn-sm--primary {
+  border-color: var(--color-primary, var(--color-text));
+  color: var(--color-primary, var(--color-text));
+  font-weight: 600;
+}
+
+.action-column__amount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.action-column__amount-label {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted, var(--color-text));
+  margin-right: 4px;
+}
+
+.action-column__amount-btn {
+  min-width: 26px;
+}
+
+.action-column__amount-btn--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-soft, transparent);
+}
+
+.action-column__amount-input {
+  width: 64px;
+  padding: 2px 6px;
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, var(--radius));
+  color: var(--color-text);
+  margin-left: 4px;
+}
+
+.action-column__amount-input::-webkit-inner-spin-button,
+.action-column__amount-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.action-column__amount-input[type='number'] {
+  -moz-appearance: textfield;
 }
 </style>

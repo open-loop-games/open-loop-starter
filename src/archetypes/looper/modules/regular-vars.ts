@@ -48,6 +48,18 @@ export interface RegularVarState {
   readonly checked: Persistent<number>;
   readonly good: Persistent<number>;
   readonly goodTemp: Persistent<number>;
+  /**
+   * Per-pool dispatch toggle. When `true` (default, vanilla shape), checkOne
+   * consumes known-goods (`goodTemp`) before exploring unchecked items —
+   * cheap reward firings on already-discovered goods. When `false`, the
+   * action skips `goodTemp` consumption entirely and goes straight to
+   * exploring new items — the player commits mana to find new goods.
+   *
+   * Persistent so the choice survives saves; per-pool so the player can
+   * tune Hearth's Cache (cheap goods → consume) and Wilds's Wellspring
+   * (manapot harvest → explore for fresh goods) independently.
+   */
+  readonly valuablesFirst: Persistent<boolean>;
 }
 
 /**
@@ -117,16 +129,17 @@ export function createRegularVarsModule(data: LooperData): EngineModule {
       const states = new Map<string, RegularVarState>();
 
       for (const def of data.regularVars) {
-        const { total, checked, good, goodTemp } = withPersistentContext(
+        const { total, checked, good, goodTemp, valuablesFirst } = withPersistentContext(
           `regular:${def.id}`,
           () => ({
             total: persistent<DecimalSource>(0, { name: 'total' }),
             checked: persistent<number>(0, { name: 'checked' }),
             good: persistent<number>(0, { name: 'good' }),
             goodTemp: persistent<number>(0, { name: 'goodTemp' }),
+            valuablesFirst: persistent<boolean>(true, { name: 'valuablesFirst' }),
           }),
         );
-        states.set(def.id, { def, total, checked, good, goodTemp });
+        states.set(def.id, { def, total, checked, good, goodTemp, valuablesFirst });
       }
 
       const moduleApi: LooperRegularVarsModule = {
@@ -152,8 +165,31 @@ export function createRegularVarsModule(data: LooperData): EngineModule {
           }
 
           const hasUnchecked = Decimal.gt(state.total.value, state.checked.value);
+          const hasGoodTemp = state.goodTemp.value > 0;
 
-          if (hasUnchecked && state.goodTemp.value <= 0) {
+          // Dispatch order depends on the per-pool `valuablesFirst` toggle.
+          // valuablesFirst=true (default) — consume goodTemp first, then
+          // explore unchecked. Cheap-reward harvest mode.
+          // valuablesFirst=false — explore unchecked first, then fall back
+          // to goodTemp. New-discovery mode (mana-positive when rewardRatio
+          // converges; useful early-loop when goodTemp is empty anyway).
+          if (state.valuablesFirst.value) {
+            if (hasGoodTemp) {
+              state.goodTemp.value -= 1;
+              return { exhausted: false, goodFound: true };
+            }
+            if (hasUnchecked) {
+              state.checked.value += 1;
+              if (state.checked.value % rewardRatio === 0) {
+                state.good.value += 1;
+                return { exhausted: false, goodFound: true };
+              }
+              return { exhausted: false, goodFound: false };
+            }
+            return { exhausted: true, goodFound: false };
+          }
+
+          if (hasUnchecked) {
             state.checked.value += 1;
             if (state.checked.value % rewardRatio === 0) {
               state.good.value += 1;
@@ -161,12 +197,10 @@ export function createRegularVarsModule(data: LooperData): EngineModule {
             }
             return { exhausted: false, goodFound: false };
           }
-
-          if (state.goodTemp.value > 0) {
+          if (hasGoodTemp) {
             state.goodTemp.value -= 1;
             return { exhausted: false, goodFound: true };
           }
-
           return { exhausted: true, goodFound: false };
         },
       };

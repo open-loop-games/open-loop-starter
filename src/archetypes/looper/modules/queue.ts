@@ -106,6 +106,16 @@ export const QueueAddToTopKey: InjectionKey<Persistent<boolean>> = Symbol(
 ) as InjectionKey<Persistent<boolean>>;
 
 /**
+ * Persistent loops-delta for per-row `+` / `-` and amount-aware enqueue.
+ * Default 1 (vanilla idle-loops shape — 1 / 5 / 10 quick selectors live in
+ * the UI). Each `+` bumps loops by this much; each `-` decrements (clamped
+ * at 1 — 0 would mean "remove" and the player should use the ✕ control).
+ */
+export const QueueAddAmountKey: InjectionKey<Persistent<number>> = Symbol(
+  'looper/queue-add-amount',
+) as InjectionKey<Persistent<number>>;
+
+/**
  * Plan-budget readouts. `editTotal` reflects the player's plan being
  * authored; `activeFromCursor` reflects what's still to dispatch on this
  * run. Both shown side-by-side in the queue UI so edits to editList don't
@@ -143,13 +153,23 @@ export interface LooperQueueModule {
   insertAt(index: number, actionId: string, loops?: number): void;
   /** Clear editList. The active list keeps running until exhausted. */
   clear(): void;
+  /** Set an editList entry's `loops` count directly (clamped to [1, ∞)). */
+  adjustLoops(index: number, loops: number): void;
   /**
    * Replace activeList with a fresh snapshot of editList, cursor → 0. The
-   * canonical "apply now" action — the loop's `onRestart` calls this when
-   * `keepActiveLoopActive` is off, and it runs eagerly at boot/post-load
-   * when the active list is empty but editList has items.
+   * loop's `onRestart` calls this when `keepActiveLoopActive` is off, and
+   * it runs eagerly at boot/post-load when the active list is empty but
+   * editList has items.
    */
   applyEditToActive(): void;
+  /**
+   * Player-facing "Apply now" — flag the loop for restart so the next
+   * onRestart cycle resets mana/gold/Level XP/action progress AND syncs
+   * editList → activeList (via resetForLoop). Distinct from
+   * `applyEditToActive` which only swaps items mid-run; this is the
+   * canonical "the plan changed, start over" action.
+   */
+  requestRestart(): void;
 }
 
 export const QueueModuleKey: InjectionKey<LooperQueueModule> = Symbol(
@@ -202,15 +222,14 @@ export function createQueueModule(_data: LooperData): EngineModule {
       const queueVersion = ref(0);
       const shouldRestart = ref(false);
 
-      const { repeatLastAction, keepActiveLoopActive, addToTop, editList } = withPersistentContext(
-        'looper/queue',
-        () => ({
+      const { repeatLastAction, keepActiveLoopActive, addToTop, addAmount, editList } =
+        withPersistentContext('looper/queue', () => ({
           repeatLastAction: persistent<boolean>(false, { name: 'repeatLastAction' }),
           keepActiveLoopActive: persistent<boolean>(false, { name: 'keepActiveLoopActive' }),
           addToTop: persistent<boolean>(false, { name: 'addToTop' }),
+          addAmount: persistent<number>(1, { name: 'addAmount' }),
           editList: persistent<QueueEditEntry[]>([], { name: 'editList' }),
-        }),
-      );
+        }));
 
       // State view passed to `def.canStart(state)` predicates. Built via the
       // shared `createLooperGameState` so the queue dispatcher and UI-side
@@ -297,6 +316,31 @@ export function createQueueModule(_data: LooperData): EngineModule {
         if (editList.value.length === 0) return;
         editList.value = [];
         bumpVersion();
+      }
+
+      function adjustLoops(index: number, loops: number): void {
+        const list = editList.value;
+        if (index < 0 || index >= list.length) return;
+        const safe = Math.max(1, Math.floor(loops || 1));
+        if (list[index].metadata.loops === safe) return;
+        const next = [...list];
+        next[index] = {
+          ...next[index],
+          metadata: { loops: safe, loopsLeft: safe },
+        };
+        editList.value = next;
+        bumpVersion();
+      }
+
+      function requestRestart(): void {
+        // Synchronous restart — calls `loop.end()` directly so the player's
+        // "Apply now" click resolves the same tick: pre-hook → stats → reset
+        // Level XP / action progress / mana / gold → onRestart →
+        // resetForLoop → applyEditToActive (when keepActive is off).
+        // shouldRestart is the deferred path used when the queue itself
+        // observes plan exhaustion mid-tick; user-initiated restarts go
+        // through end() so "now" means now.
+        loop.end();
       }
 
       // ── Active-list snapshot from edit list ─────────────────────────────
@@ -489,7 +533,9 @@ export function createQueueModule(_data: LooperData): EngineModule {
         reorder,
         insertAt,
         clear,
+        adjustLoops,
         applyEditToActive,
+        requestRestart,
       };
 
       ctx.provide(QueueKey, sequencer);
@@ -499,6 +545,7 @@ export function createQueueModule(_data: LooperData): EngineModule {
       ctx.provide(QueueRepeatLastActionKey, repeatLastAction);
       ctx.provide(QueueKeepActiveKey, keepActiveLoopActive);
       ctx.provide(QueueAddToTopKey, addToTop);
+      ctx.provide(QueueAddAmountKey, addAmount);
       ctx.provide(QueueManaNeededKey, manaNeeded);
       ctx.provide(QueueModuleKey, moduleApi);
     },

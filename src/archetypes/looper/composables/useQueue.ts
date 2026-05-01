@@ -3,6 +3,7 @@ import type { ComputedRef, Ref } from 'vue';
 import type { DecimalSource, Persistent, SequencerItem } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import {
+  QueueAddAmountKey,
   QueueAddToTopKey,
   QueueEditListKey,
   QueueKeepActiveKey,
@@ -39,14 +40,25 @@ export interface QueueView {
   keepActiveLoopActive: Persistent<boolean>;
   /** Vanilla "Add to Top" toggle — enqueue prepends instead of appending. */
   addToTop: Persistent<boolean>;
+  /** Loops-delta for per-row +/- and amount-aware enqueue. Default 1. */
+  addAmount: Persistent<number>;
   enqueue(actionId: string, loops?: number): void;
   insertAt(index: number, actionId: string, loops?: number): void;
   remove(index: number): void;
   reorder(from: number, to: number): void;
   clear(): void;
+  /** Set an editList row's loops count (clamped to ≥1). */
+  adjustLoops(index: number, loops: number): void;
   togglePause(): void;
-  /** Snapshot editList → activeList immediately, cursor → 0. */
-  applyEditToActive(): void;
+  /**
+   * Player-facing "Apply now" — flag the loop for restart so the next
+   * `onRestart` cycle resets mana, gold, Level XP, and action progress AND
+   * snapshots editList → activeList (when keepActive is off). The
+   * non-resetting mid-run swap (`applyEditToActive` on the module) is
+   * internal — it's how the watch + loop machinery wire the snapshot —
+   * and intentionally not exposed as a UI affordance.
+   */
+  requestRestart(): void;
 }
 
 export function useQueue(): QueueView {
@@ -58,6 +70,7 @@ export function useQueue(): QueueView {
   const repeat = useModule(QueueRepeatLastActionKey);
   const keepActive = useModule(QueueKeepActiveKey);
   const addToTop = useModule(QueueAddToTopKey);
+  const addAmount = useModule(QueueAddAmountKey);
   const needed = useModule(QueueManaNeededKey);
 
   // Bind reads to queueVersion so re-orders / removes / enqueues / dispatch
@@ -102,12 +115,14 @@ export function useQueue(): QueueView {
     repeatLastAction: repeat,
     keepActiveLoopActive: keepActive,
     addToTop,
+    addAmount,
     enqueue: (actionId, loops = 1) => queueModule.enqueue(actionId, loops),
     insertAt: (index, actionId, loops = 1) => queueModule.insertAt(index, actionId, loops),
     remove: (index) => queueModule.remove(index),
     reorder: (from, to) => queueModule.reorder(from, to),
     clear: () => queueModule.clear(),
+    adjustLoops: (index, loops) => queueModule.adjustLoops(index, loops),
     togglePause: () => sequencer.togglePause(),
-    applyEditToActive: () => queueModule.applyEditToActive(),
+    requestRestart: () => queueModule.requestRestart(),
   };
 }

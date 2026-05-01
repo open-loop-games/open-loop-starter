@@ -151,8 +151,8 @@ function getActiveModules(): EngineModule[] {
       </div>
     </template>
     <ThreePanelShell
-      left-width="280px"
-      right-width="360px"
+      left-width="240px"
+      right-width="480px"
     >
       <template #left>
         <CapabilitiesPanel />
