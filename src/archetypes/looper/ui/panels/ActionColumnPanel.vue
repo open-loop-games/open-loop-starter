@@ -38,8 +38,9 @@ import {
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { SwitchRoot, SwitchThumb } from 'reka-ui';
 import { useFormatting } from '@/composables/useFormatting';
-import { useActions } from '../../composables/useActions';
-import { useQueue } from '../../composables/useQueue';
+import { useActionQueue } from '../../composables/useActionQueue';
+import { useActionRunner } from '../../composables/useActionRunner';
+import { useLoop } from '../../composables/useLoop';
 import {
   AVAILABLE_ACTION_DRAG_TYPE,
   ROW_DRAG_TYPE,
@@ -47,8 +48,10 @@ import {
   type DragState,
 } from '../queue-drag';
 
-const queue = useQueue();
-const actions = useActions();
+const queue = useActionQueue();
+const runner = useActionRunner();
+const loop = useLoop();
+const isPaused = computed(() => !loop.isLoopRunning());
 const { format } = useFormatting();
 
 const dragState = reactive<DragState>({
@@ -91,9 +94,9 @@ onMounted(() => {
         let insertAt = edge === 'bottom' ? rawTo + 1 : rawTo;
         if (from < insertAt) insertAt -= 1;
 
-        const len = queue.editItems.value.length;
+        const len = queue.editQueue.items.value.length;
         if (from !== insertAt && insertAt >= 0 && insertAt < len) {
-          queue.reorder(from, insertAt);
+          queue.reorderAction(from, insertAt);
         }
         resetDrag();
         return;
@@ -109,10 +112,10 @@ onMounted(() => {
         const rawTo = rowTarget.data.index as number;
         const edge = extractClosestEdge(rowTarget.data);
         const insertAt = edge === 'bottom' ? rawTo + 1 : rawTo;
-        queue.insertAt(insertAt, actionId, 1);
+        queue.insertActionAt(insertAt, actionId, 1);
       } else if (location.current.dropTargets.length > 0) {
         // Container-level drop — append.
-        queue.insertAt(queue.editItems.value.length, actionId, 1);
+        queue.insertActionAt(queue.editQueue.items.value.length, actionId, 1);
       }
       resetDrag();
     },
@@ -187,8 +190,8 @@ onBeforeUnmount(() => {
 
 // ── Active vs edit divergence detector ──────────────────────────────────────
 
-const editItems = computed(() => queue.editItems.value);
-const activeItems = computed(() => queue.activeItems.value);
+const editItems = computed(() => queue.editQueue.items.value);
+const activeItems = computed(() => queue.activeQueue.items.value);
 
 const isDiverged = computed(() => {
   const e = editItems.value;
@@ -213,29 +216,32 @@ interface RowDisplay {
   isCursor?: boolean;
 }
 
-const activeRows = computed<RowDisplay[]>(() =>
-  activeItems.value.map((item, idx) => {
-    const row = actions.getRow(item.id);
+const activeRows = computed<RowDisplay[]>(() => {
+  const cursorIdx = queue.getActiveCursor();
+  return activeItems.value.map((item, idx) => {
+    const def = runner.getActionDef(item.id);
+    const adjustedTicks = def ? runner.computeAdjustedTicks(def).toNumber() : 0;
     return {
       index: idx,
       id: item.id,
-      name: row?.def.name ?? item.id,
-      cost: format(row?.adjustedTicks.value ?? 0, 0),
+      name: def?.name ?? item.id,
+      cost: format(adjustedTicks, 0),
       loops: item.metadata.loops,
       loopsLeft: item.metadata.loopsLeft,
-      isCursor: idx === queue.cursor.value,
+      isCursor: idx === cursorIdx,
     };
-  }),
-);
+  });
+});
 
 const editRows = computed<RowDisplay[]>(() =>
   editItems.value.map((item, idx) => {
-    const row = actions.getRow(item.id);
+    const def = runner.getActionDef(item.id);
+    const adjustedTicks = def ? runner.computeAdjustedTicks(def).toNumber() : 0;
     return {
       index: idx,
       id: item.id,
-      name: row?.def.name ?? item.id,
-      cost: format(row?.adjustedTicks.value ?? 0, 0),
+      name: def?.name ?? item.id,
+      cost: format(adjustedTicks, 0),
       loops: item.metadata.loops,
     };
   }),
@@ -243,12 +249,12 @@ const editRows = computed<RowDisplay[]>(() =>
 
 function moveUp(index: number): void {
   if (index <= 0) return;
-  queue.reorder(index, index - 1);
+  queue.reorderAction(index, index - 1);
 }
 
 function moveDown(index: number): void {
   if (index >= editRows.value.length - 1) return;
-  queue.reorder(index, index + 1);
+  queue.reorderAction(index, index + 1);
 }
 
 // ── Amount selector + per-row +/- ───────────────────────────────────────────
@@ -256,7 +262,7 @@ function moveDown(index: number): void {
 const QUICK_AMOUNTS = [1, 5, 10] as const;
 
 function setAmount(n: number): void {
-  queue.addAmount.value = Math.max(1, Math.min(Math.floor(n || 1), 1e6));
+  queue.queueAddAmount.value = Math.max(1, Math.min(Math.floor(n || 1), 1e6));
 }
 
 function onAmountInput(e: Event): void {
@@ -268,8 +274,33 @@ function onAmountInput(e: Event): void {
 function bumpLoops(index: number, delta: number): void {
   const row = editItems.value[index];
   if (!row) return;
-  queue.adjustLoops(index, row.metadata.loops + delta);
+  queue.adjustLoops(index, Math.max(1, row.metadata.loops + delta));
 }
+
+// ── Budget displays ─────────────────────────────────────────────────────────
+
+const manaEditTotal = computed(() => {
+  let total = 0;
+  for (const item of editItems.value) {
+    if (item.metadata.disabled) continue;
+    const def = runner.getActionDef(item.id);
+    if (def) total += runner.computeAdjustedTicks(def).toNumber() * item.metadata.loops;
+  }
+  return total;
+});
+
+const manaActiveFromCursor = computed(() => {
+  const items = activeItems.value;
+  const cursor = queue.getActiveCursor();
+  let total = 0;
+  for (let i = cursor; i < items.length; i++) {
+    const item = items[i];
+    const loopsLeft = i === cursor ? item.metadata.loopsLeft : item.metadata.loops;
+    const def = runner.getActionDef(item.id);
+    if (def) total += runner.computeAdjustedTicks(def).toNumber() * loopsLeft;
+  }
+  return total;
+});
 </script>
 
 <template>
@@ -284,13 +315,13 @@ function bumpLoops(index: number, delta: number): void {
           class="action-column__budget"
           data-testid="active-from-cursor"
         >
-          run: {{ format(queue.manaActiveFromCursor.value, 0) }} mana
+          run: {{ format(manaActiveFromCursor, 0) }} mana
         </span>
         <span
           class="action-column__budget action-column__budget--edit"
           data-testid="edit-total"
         >
-          plan: {{ format(queue.manaEditTotal.value, 0) }} mana
+          plan: {{ format(manaEditTotal, 0) }} mana
         </span>
       </div>
     </header>
@@ -304,7 +335,7 @@ function bumpLoops(index: number, delta: number): void {
         v-for="n in QUICK_AMOUNTS"
         :key="n"
         class="btn-tiny action-column__amount-btn"
-        :class="{ 'action-column__amount-btn--active': queue.addAmount.value === n }"
+        :class="{ 'action-column__amount-btn--active': queue.queueAddAmount.value === n }"
         :data-testid="`amount-${n}`"
         @click="setAmount(n)"
       >
@@ -314,7 +345,7 @@ function bumpLoops(index: number, delta: number): void {
         type="number"
         class="action-column__amount-input"
         min="1"
-        :value="queue.addAmount.value"
+        :value="queue.queueAddAmount.value"
         data-testid="amount-input"
         @change="onAmountInput"
       >
@@ -350,12 +381,6 @@ function bumpLoops(index: number, delta: number): void {
         class="qrow-list__empty"
       >
         Loop paused — add an action to start.
-      </p>
-      <p
-        v-if="queue.isHolding.value"
-        class="qrow-status qrow-status--holding"
-      >
-        Waiting on mana / unlock — try resetting the loop.
       </p>
     </div>
 
@@ -405,8 +430,8 @@ function bumpLoops(index: number, delta: number): void {
               <button
                 class="btn-tiny"
                 :data-testid="`edit-plus-${row.index}`"
-                :title="`Add ${queue.addAmount.value} loops`"
-                @click="bumpLoops(row.index, queue.addAmount.value)"
+                :title="`Add ${queue.queueAddAmount.value} loops`"
+                @click="bumpLoops(row.index, queue.queueAddAmount.value)"
               >
                 +
               </button>
@@ -414,8 +439,8 @@ function bumpLoops(index: number, delta: number): void {
                 class="btn-tiny"
                 :data-testid="`edit-minus-${row.index}`"
                 :disabled="row.loops <= 1"
-                :title="`Remove ${queue.addAmount.value} loops`"
-                @click="bumpLoops(row.index, -queue.addAmount.value)"
+                :title="`Remove ${queue.queueAddAmount.value} loops`"
+                @click="bumpLoops(row.index, -queue.queueAddAmount.value)"
               >
                 −
               </button>
@@ -438,7 +463,7 @@ function bumpLoops(index: number, delta: number): void {
               <button
                 class="btn-tiny btn-tiny--danger"
                 :data-testid="`edit-remove-${row.index}`"
-                @click="queue.remove(row.index)"
+                @click="queue.removeAction(row.index)"
               >
                 ✕
               </button>
@@ -460,7 +485,7 @@ function bumpLoops(index: number, delta: number): void {
         data-testid="toggle-keep-active"
       >
         <SwitchRoot
-          v-model="queue.keepActiveLoopActive.value"
+          v-model="queue.keepActiveLoopActive"
           class="olui-switch"
         >
           <SwitchThumb class="olui-switch__thumb" />
@@ -472,7 +497,7 @@ function bumpLoops(index: number, delta: number): void {
         data-testid="toggle-repeat-last"
       >
         <SwitchRoot
-          v-model="queue.repeatLastAction.value"
+          v-model="queue.repeatLastAction"
           class="olui-switch"
         >
           <SwitchThumb class="olui-switch__thumb" />
@@ -484,7 +509,7 @@ function bumpLoops(index: number, delta: number): void {
         data-testid="toggle-add-to-top"
       >
         <SwitchRoot
-          v-model="queue.addToTop.value"
+          v-model="queue.addToTop"
           class="olui-switch"
         >
           <SwitchThumb class="olui-switch__thumb" />
@@ -496,10 +521,10 @@ function bumpLoops(index: number, delta: number): void {
     <div class="action-column__actions">
       <button
         class="btn-sm action-column__actions-btn"
-        :data-testid="queue.isPaused.value ? 'queue-resume' : 'queue-pause'"
-        @click="queue.togglePause"
+        :data-testid="isPaused ? 'queue-resume' : 'queue-pause'"
+        @click="loop.togglePause"
       >
-        {{ queue.isPaused.value ? 'Resume' : 'Pause' }}
+        {{ isPaused ? 'Resume' : 'Pause' }}
       </button>
       <button
         class="btn-sm action-column__actions-btn"
@@ -507,7 +532,7 @@ function bumpLoops(index: number, delta: number): void {
         data-testid="apply-now"
         :disabled="editItems.length === 0"
         title="Restart the loop with this plan applied (resets mana, gold, and Level XP)"
-        @click="queue.requestRestart"
+        @click="loop.manualRestart"
       >
         Apply now
       </button>
@@ -515,7 +540,7 @@ function bumpLoops(index: number, delta: number): void {
         class="btn-sm action-column__actions-btn"
         data-testid="queue-clear"
         :disabled="editItems.length === 0"
-        @click="queue.clear"
+        @click="queue.clearActions"
       >
         Clear
       </button>

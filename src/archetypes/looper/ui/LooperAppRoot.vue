@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
 import { type Engine, type EngineModule } from 'open-loop-engine';
 import { AppFrame, DevPanelOverlay, ThreePanelShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
@@ -10,9 +10,7 @@ import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import Popover from '@/ui/components/Popover.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
-import { useToasts } from '@/composables/useToasts';
 import { manifest } from '../manifest';
-import { ArcKey } from '../modules';
 import TownColumnPanel from './panels/TownColumnPanel.vue';
 import ActionColumnPanel from './panels/ActionColumnPanel.vue';
 import CurrentLoopPanel from './panels/CurrentLoopPanel.vue';
@@ -50,37 +48,17 @@ function openSettings(): void {
   const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
 }
 
-const { addToast } = useToasts();
-let stopArcWatcher: (() => void) | null = null;
-function armArcFlavourEvent(): void {
-  stopArcWatcher?.();
-  const arc = engine.tryInject(ArcKey);
-  if (!arc) return;
-  const announcedAtStart = arc.announced.value;
-  stopArcWatcher = watch(
-    arc.announced,
-    (isAnnounced, wasAnnounced) => {
-      if (!isAnnounced || wasAnnounced || announcedAtStart) return;
-      addToast('Arc closed — Looper', arc.flavour, false);
-    },
-    { flush: 'sync' },
-  );
-}
-
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
   if (modId) engine.selectMod(modId);
   engine.start();
   engine.load();
-  armArcFlavourEvent();
   currentScreen.value = Screen.Game;
 }
 
 function returnToSlots(): void {
   engine.saveManager?.save();
   engine.stop();
-  stopArcWatcher?.();
-  stopArcWatcher = null;
   currentScreen.value = Screen.Slots;
 }
 

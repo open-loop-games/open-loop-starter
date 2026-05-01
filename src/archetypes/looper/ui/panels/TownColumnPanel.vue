@@ -23,18 +23,16 @@ import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
 import { useFormatting } from '@/composables/useFormatting';
-import { useModule } from '@/composables/useModule';
-import { ProgressVarsKey, RegularVarsKey } from '../../modules';
-import { useActions } from '../../composables/useActions';
+import { useZones } from '../../composables/useZones';
+import { useActionRunner } from '../../composables/useActionRunner';
+import { useActionQueue } from '../../composables/useActionQueue';
 import { useLooperData } from '../../composables/useLooperData';
-import { useQueue } from '../../composables/useQueue';
 import { AVAILABLE_ACTION_DRAG_TYPE } from '../queue-drag';
 
 const data = useLooperData();
-const progressVars = useModule(ProgressVarsKey);
-const regularVars = useModule(RegularVarsKey);
-const actions = useActions();
-const queue = useQueue();
+const zones = useZones();
+const runner = useActionRunner();
+const queue = useActionQueue();
 const { format } = useFormatting();
 
 // Boot default — first zone in registration order. Zone selection is local
@@ -79,9 +77,9 @@ const zoneProgressRows = computed<ProgressRow[]>(() => {
   return data.progressVars
     .filter((def) => def.zoneId === zoneId)
     .map((def) => {
-      const skill = progressVars.getSkill(def.id);
-      const xpRaw = skill ? new Decimal(skill.xp.value).toNumber() : 0;
-      const lvlRaw = skill ? Math.floor(new Decimal(skill.level.value).toNumber()) : 0;
+      const pv = zones.getProgressVar(def.id);
+      const lvlRaw = pv ? Math.floor(new Decimal(pv.level.value).toNumber()) : 0;
+      const xpRaw = pv ? new Decimal(pv.skill.xp.value).toNumber() : 0;
       const base = xpForLevel(lvlRaw);
       const next = xpForLevel(lvlRaw + 1);
       const span = Math.max(1, next - base);
@@ -116,8 +114,13 @@ const zonePoolRows = computed<PoolRow[]>(() => {
   return data.regularVars
     .filter((def) => def.zoneId === zoneId)
     .map((def) => {
-      const state = regularVars.getState(def.id);
-      const total = state ? new Decimal(state.total.value).toNumber() : 0;
+      let state;
+      try {
+        state = zones.getRegularVar(def.id);
+      } catch {
+        state = undefined;
+      }
+      const total = state ? state.total.value : 0;
       const checked = state?.checked.value ?? 0;
       const good = state?.good.value ?? 0;
       const goodTemp = state?.goodTemp.value ?? 0;
@@ -135,20 +138,50 @@ const zonePoolRows = computed<PoolRow[]>(() => {
 });
 
 function poolValuablesFirst(poolId: string): boolean {
-  return regularVars.getState(poolId)?.valuablesFirst.value ?? true;
+  try {
+    return zones.getRegularVar(poolId).valuablesFirst.value;
+  } catch {
+    return true;
+  }
 }
 
 function setPoolValuablesFirst(poolId: string, value: boolean): void {
-  const state = regularVars.getState(poolId);
-  if (state) state.valuablesFirst.value = value;
+  try {
+    zones.getRegularVar(poolId).valuablesFirst.value = value;
+  } catch {
+    // pool not initialized yet
+  }
 }
 
 // ─── Action tiles ───────────────────────────────────────────────────────────
 
-const visibleActionRows = computed(() => actions.visibleRowsByZone(currentZoneId.value).value);
+import type { ActionDef } from '../../data/types';
+
+interface ActionTileRow {
+  def: ActionDef;
+  adjustedTicks: { value: number };
+  timesCompleted: { value: number };
+  unlocked: { value: boolean };
+}
+
+const visibleActionRows = computed<ActionTileRow[]>(() => {
+  const zoneId = currentZoneId.value;
+  const rows: ActionTileRow[] = [];
+  for (const def of data.actions) {
+    if (def.zoneId !== zoneId) continue;
+    if (!runner.isActionVisible(def)) continue;
+    rows.push({
+      def,
+      adjustedTicks: { value: runner.computeAdjustedTicks(def).toNumber() },
+      timesCompleted: { value: runner.getTimesCompleted(def.id).toNumber() },
+      unlocked: { value: true },
+    });
+  }
+  return rows;
+});
 
 function enqueue(actionId: string): void {
-  queue.enqueue(actionId, 1);
+  queue.addAction(actionId, 1);
 }
 
 // Cross-column drag: each tile registers as a pdnd draggable source carrying

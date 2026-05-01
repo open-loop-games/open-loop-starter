@@ -1,33 +1,53 @@
-import { computed } from 'vue';
-import type { ComputedRef, Ref } from 'vue';
-import { useModule } from '@/composables/useModule';
-import { LoopKey } from '../modules';
+/**
+ * Vue bridge for the loop module.
+ */
 
-export interface LoopView {
-  /** Sim-seconds elapsed in the current loop. */
-  elapsed: Ref<number>;
-  /** Total completed loops (persistent). */
-  count: ComputedRef<number>;
-  /** Fastest loop completion in seconds (Infinity until first loop). */
-  bestTime: ComputedRef<number>;
-  /** Whether the loop is actively ticking. */
-  running: Ref<boolean>;
-  /** Manually trigger the restart sequence (mana exhaustion path). */
-  end(): boolean;
-  run(): void;
-  pause(): void;
-}
+import {
+  getLoop,
+  getLoopCount,
+  isLoopRunning,
+  getElapsed,
+  startLoop,
+  pauseLoop,
+  togglePause,
+  manualRestart,
+  getPauseBeforeRestart,
+  getPauseOnFailedLoop,
+  setGameSpeed,
+  getGameSpeed,
+  SPEED_OPTIONS,
+  type SpeedMultiplier,
+} from '../modules/loop';
 
-export function useLoop(): LoopView {
-  const loop = useModule(LoopKey);
-
+export function useLoop() {
   return {
-    elapsed: loop.elapsed,
-    count: computed(() => loop.count.value),
-    bestTime: computed(() => loop.bestTime.value),
-    running: loop.running,
-    end: () => loop.end(),
-    run: () => loop.run(),
-    pause: () => loop.pause(),
+    /** Engine Loop instance */
+    loop: getLoop(),
+    /** Loop count (persistent ref) */
+    loopCount: getLoopCount(),
+    /** Is the loop currently running */
+    isLoopRunning,
+    /** Elapsed time in current loop (seconds) */
+    getElapsed,
+    /** Start ticking */
+    startLoop,
+    /** Pause ticking */
+    pauseLoop,
+    /** Toggle pause */
+    togglePause,
+    /** Manual restart (player-initiated) */
+    manualRestart,
+    /** Pause-before-restart toggle (persistent ref) */
+    pauseBeforeRestart: getPauseBeforeRestart(),
+    /** Pause-on-failed-loop toggle (persistent ref) */
+    pauseOnFailedLoop: getPauseOnFailedLoop(),
+    /** Set game speed multiplier */
+    setGameSpeed,
+    /** Get current speed multiplier */
+    getGameSpeed,
+    /** Available speed options */
+    SPEED_OPTIONS,
   };
 }
+
+export type { SpeedMultiplier };

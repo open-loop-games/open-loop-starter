@@ -1,173 +1,121 @@
-import { type ComputedRef, computed } from 'vue';
+/**
+ * Mana module — the loop time budget resource.
+ *
+ * Mana IS time in Idle Loops. The pool starts at `INITIAL_MANA` (250
+ * ticks = 5 seconds at 50 FPS) and can be extended mid-loop by actions like
+ * Buy Mana, Smash Pots, and Wild Mana via `addMana()`.
+ *
+ * This module only owns the resource and the add helper. The per-tick drain
+ * and end condition (`mana <= 0`) live in the loop module.
+ *
+ * Reference: idleLoops/saving.js (timeNeededInitial), idleLoops/driver.js
+ * (addMana, timer/timeNeeded relationship)
+ */
+
 import {
   Decimal,
-  createOverrideRegistry,
-  createResource,
-  createTimeSystem,
-  persistent,
-  tunable,
   type DecimalSource,
   type EngineModule,
-  type InjectionKey,
-  type OverrideRegistry,
-  type Persistent,
+  type EngineContext,
+  createResource,
+  addResource,
+  resetResource,
   type Resource,
-  type TimeSystem,
+  persistent,
+  type Persistent,
+  withPersistentContext,
 } from 'open-loop-engine';
-import type { LooperData } from '../data/types';
+
+// ============================================================================
+// Constants
+// ============================================================================
 
 /**
- * Push-scope key list. Push-targets:
- *   - balance/initialMana          — pool size at loop start (ticks)
- *   - balance/costDivisor          — cost-reduction divisor on capability Level
- *   - balance/talentAccrualRatio   — fraction of Level XP accruing to Talent
- *   - bot/phases/<strategyId>/<bound>
- *                                  — sim-bot phase-window endpoints.
- *   - bot/manaOverflowTrigger      — minimum last-loop `manaAdded` for
- *                                     `farm-talent` to engage.
+ * Initial mana pool in ticks. Vanilla: `5 * 50 = 250`.
  *
- * Per-action numerical fields (manaCost, rewardRatio, exchangeMult) and
- * per-progressVar scaling (scales/<rvId>/perLevel) are NOT tunable — those
- * values cite vanilla canonical (`actionList.js:NNN`) and perturbing them
- * would deform the canonical economy.
+ * In vanilla this is `timeNeededInitial` — the starting value of `timeNeeded`
+ * before any Buy Mana actions extend it.
  */
-export type LooperTunableKey =
-  | 'balance/initialMana'
-  | 'balance/costDivisor'
-  | 'balance/talentAccrualRatio'
-  | `bot/phases/${string}/maxLoop`
-  | `bot/phases/${string}/minLoop`
-  | `bot/phases/${string}/minLoops`
-  | 'bot/manaOverflowTrigger';
+export const INITIAL_MANA = 250;
 
-export type LooperTunables = Record<string, () => DecimalSource>;
+// ============================================================================
+// Module State (populated in install)
+// ============================================================================
 
-// Injection keys consumed by sibling modules + composables.
-
-/** Live mana value (decreases as the loop ticks; can rise via mana-grant actions). */
-export const ManaKey: InjectionKey<Resource<DecimalSource>> = Symbol('looper/mana') as InjectionKey<
-  Resource<DecimalSource>
->;
-
-/** Pool size at loop start (ticks). Reset target on every loop restart. */
-export const InitialManaKey: InjectionKey<ComputedRef<DecimalSource>> = Symbol(
-  'looper/initial-mana',
-) as InjectionKey<ComputedRef<DecimalSource>>;
-
-/** Sum of mana-grants this loop. Resets to 0 on loop restart; persists mid-loop. */
-export const ManaAddedKey: InjectionKey<Persistent<DecimalSource>> = Symbol(
-  'looper/mana-added',
-) as InjectionKey<Persistent<DecimalSource>>;
+/** Current mana remaining this loop (counts down from pool). Resets each loop. */
+let manaResource: Resource<DecimalSource>;
 
 /**
- * `initialMana + manaAdded` — the *total* budget visible to the player this
- * loop. Drives the gauge fill denominator and the queue-budget readout.
+ * Total mana added this loop via addMana() calls (Buy Mana, Smash Pots, etc.).
+ * Resets each loop. Used for display: total budget = INITIAL_MANA + manaAdded.
  */
-export const TotalManaBudgetKey: InjectionKey<ComputedRef<DecimalSource>> = Symbol(
-  'looper/total-mana-budget',
-) as InjectionKey<ComputedRef<DecimalSource>>;
+let manaAdded: Persistent<DecimalSource>;
 
-/**
- * Imperative mana operations. Drain runs from `loop.ts` at `tickRate × dt`
- * per engine tick; addMana from action completions in `actions.ts`; resetMana
- * from the loop restart sequence.
- */
-export interface LooperManaModule {
-  /** Subtract from mana, clamped at 0. */
-  drainMana(amount: DecimalSource): void;
-  /**
-   * Extend the current loop's pool. Tracked separately as `manaAdded` so the
-   * total budget readout stays accurate; mana-positive actions extend, but
-   * the pool always resets to `initialMana` on loop restart (mana does NOT
-   * compound across loops — cross-loop progress is on capabilities only).
-   */
-  addMana(amount: DecimalSource): void;
-  /** Restore mana to `initialMana`, manaAdded → 0. Called from loop onRestart. */
-  resetMana(): void;
+// ============================================================================
+// Public API
+// ============================================================================
+
+/** Get the mana resource (for loop end condition checks, UI display, etc.) */
+export function getMana(): Resource<DecimalSource> {
+  return manaResource;
 }
 
-export const ManaModuleKey: InjectionKey<LooperManaModule> = Symbol(
-  'looper/mana-module',
-) as InjectionKey<LooperManaModule>;
-
-/**
- * Engine TimeSystem — `elapsed` is sim-seconds since the last `time.reset`,
- * `totalPlayTime` is cumulative across all resets. `loop.elapsed` covers the
- * "since loop start" need; `totalPlayTime` is here so a future achievement /
- * arc layer can read cumulative play.
- */
-export const TimeSystemKey: InjectionKey<TimeSystem> = Symbol(
-  'looper/time-system',
-) as InjectionKey<TimeSystem>;
-
-export const LooperDataKey: InjectionKey<LooperData> = Symbol(
-  'looper/data',
-) as InjectionKey<LooperData>;
-
-export const LooperTuningRegistryKey: InjectionKey<OverrideRegistry<LooperTunables>> = Symbol(
-  'looper/tuning-registry',
-) as InjectionKey<OverrideRegistry<LooperTunables>>;
-
-/**
- * Mana = the loop time-budget resource, denominated in ticks. The drain
- * (`round(tickRate × dt)` per engine tick) lives in `loop.ts` where it can
- * be gated on `loop.running`. This module owns the resource, the pool-size
- * computed, the mana-added counter, the imperative ops surface, and the
- * tuning registry shared across all looper modules.
- *
- * Mana resets to `initialMana` on loop restart via `loop.ts`'s `onRestart`
- * hook (calls `manaModule.resetMana()`); NOT via `thingsToReset`, so we can
- * distinguish "loop ended ⇒ refill" from "save reset ⇒ zero out".
- */
-export function createManaModule(data: LooperData): EngineModule {
-  return {
-    id: 'looper/mana',
-    install(ctx) {
-      const tuningRegistry = createOverrideRegistry<LooperTunables>('looper-tuning');
-
-      const initialManaTunable = tunable<DecimalSource>(
-        tuningRegistry,
-        'balance/initialMana',
-        () => data.balance.initialMana,
-      );
-      const initialMana = computed<DecimalSource>(() => initialManaTunable.value);
-
-      const mana = createResource<DecimalSource>(Number(initialMana.value), {
-        displayName: 'Mana',
-        precision: 0,
-        id: 'mana',
-      });
-      const manaAdded = persistent<DecimalSource>(0, { name: 'manaAdded' });
-
-      const totalBudget = computed<DecimalSource>(() =>
-        Decimal.add(initialMana.value, manaAdded.value),
-      );
-
-      const moduleApi: LooperManaModule = {
-        drainMana(amount) {
-          mana.value = Decimal.max(Decimal.sub(mana.value, amount), 0);
-        },
-        addMana(amount) {
-          mana.value = Decimal.add(mana.value, amount);
-          manaAdded.value = Decimal.add(manaAdded.value, amount);
-        },
-        resetMana() {
-          mana.value = initialMana.value;
-          manaAdded.value = 0;
-        },
-      };
-
-      const time = createTimeSystem();
-      ctx.onTick((dt: number) => time.tick(dt));
-
-      ctx.provide(ManaKey, mana);
-      ctx.provide(InitialManaKey, initialMana);
-      ctx.provide(ManaAddedKey, manaAdded);
-      ctx.provide(TotalManaBudgetKey, totalBudget);
-      ctx.provide(ManaModuleKey, moduleApi);
-      ctx.provide(TimeSystemKey, time);
-      ctx.provide(LooperDataKey, data);
-      ctx.provide(LooperTuningRegistryKey, tuningRegistry);
-    },
-  };
+/** Current mana remaining */
+export function getManaValue(): Decimal {
+  return new Decimal(manaResource.value);
 }
+
+/**
+ * Total mana budget this loop: initial pool + all addMana() calls.
+ *
+ * In vanilla this is `timeNeeded` (starts at 250, grows with Buy Mana).
+ * We track it as initial + added rather than a single counter.
+ */
+export function getTotalManaBudget(): Decimal {
+  return Decimal.add(INITIAL_MANA, manaAdded.value);
+}
+
+/**
+ * Add mana to the pool (extends the loop budget).
+ *
+ * Called by actions: Buy Mana (gold * 50), Smash Pots, Wild Mana, etc.
+ * Reference: idleLoops/driver.js addMana
+ */
+export function addMana(amount: DecimalSource): void {
+  addResource(manaResource, amount);
+  manaAdded.value = Decimal.add(manaAdded.value, amount);
+}
+
+/**
+ * Drain mana by a given amount.
+ *
+ * Called by the loop module's tick callback (1 per tick while running).
+ */
+export function drainMana(amount: DecimalSource): void {
+  manaResource.value = Decimal.sub(manaResource.value, amount);
+}
+
+/**
+ * Reset mana to initial pool for a new loop.
+ */
+export function resetMana(): void {
+  resetResource(manaResource);
+  manaResource.value = Decimal.fromValue(INITIAL_MANA);
+  manaAdded.value = 0;
+}
+
+// ============================================================================
+// Module
+// ============================================================================
+
+export const manaModule: EngineModule = {
+  id: 'mana',
+  install(_ctx: EngineContext) {
+    ({ manaResource, manaAdded } = withPersistentContext('mana', () => ({
+      // Mana starts at INITIAL_MANA each loop, drains toward 0
+      manaResource: createResource(INITIAL_MANA, { displayName: 'Mana', precision: 0 }),
+      // Track how much was added mid-loop (for total budget display)
+      manaAdded: persistent<DecimalSource>(0),
+    })));
+  },
+};

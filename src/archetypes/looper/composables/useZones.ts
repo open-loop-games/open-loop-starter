@@ -1,53 +1,47 @@
-import { computed } from 'vue';
-import type { ComputedRef } from 'vue';
-import { useModule } from '@/composables/useModule';
-import type { ZoneDef } from '../data/types';
-import { useLooperData } from './useLooperData';
-import { ZonesKey } from '../modules';
+/**
+ * Vue bridge for the zones module.
+ */
 
-export interface ZoneRow {
-  def: ZoneDef;
-  unlocked: ComputedRef<boolean>;
-}
+import { ZONES } from '../data/zones';
+import {
+  getZoneSystem,
+  getCurrentZone,
+  unlockZone,
+  getProgressVar,
+  getProgressVarsForZone,
+  getProgressPercent,
+  getRegularVar,
+  getRegularVarsForZone,
+  getRegularGood,
+  type ProgressVarState,
+  type RegularVarState,
+} from '../modules/zones';
 
-export interface ZonesView {
-  rows: ComputedRef<ZoneRow[]>;
-  /** Currently selected zone id (drives the action drawer's tab focus). */
-  current: ComputedRef<string>;
-  /** First zone in registration order — the boot default. */
-  defaultZone: ComputedRef<ZoneDef | null>;
-  select(zoneId: string): void;
-  isUnlocked(zoneId: string): boolean;
-}
-
-export function useZones(): ZonesView {
-  const zones = useModule(ZonesKey);
-  const data = useLooperData();
-
-  const rows = computed<ZoneRow[]>(() =>
-    data.zones.map((def) => ({
-      def,
-      unlocked: computed(() => zones.isUnlocked(def.id)),
-    })),
-  );
-
-  const current = computed(() => zones.current.value);
-
-  // Boot default. Zones don't gate content in the canonical Looper shape
-  // (per-action `prereqs` handle gating; `ZoneDef.requires` is dropped), so
-  // every zone reports `isUnlocked === true`. The pre-reground "highest
-  // unlocked" auto-snap heuristic produced the wrong UX (drawer opening on
-  // Forest Path at boot); progressive disclosure now lives in the per-action
-  // visibility filter, not zone selection.
-  const defaultZone = computed<ZoneDef | null>(() => data.zones[0] ?? null);
+export function useZones() {
+  const zones = getZoneSystem();
 
   return {
-    rows,
-    current,
-    defaultZone,
-    select: (zoneId) => {
-      zones.select(zoneId);
-    },
-    isUnlocked: (zoneId) => zones.isUnlocked(zoneId),
+    /** Static zone definitions */
+    zoneDefs: ZONES,
+    /** Engine zone system (for ordered, unlocked, current refs) */
+    zones,
+    /** Currently selected zone ID */
+    getCurrentZone,
+    /** Unlock (and optionally select) a zone */
+    unlockZone,
+    /** Get a progress var by id */
+    getProgressVar,
+    /** Get all progress vars for a zone */
+    getProgressVarsForZone,
+    /** Progress to next level (0-1) */
+    getProgressPercent,
+    /** Get a regular var by id */
+    getRegularVar,
+    /** Get all regular vars for a zone */
+    getRegularVarsForZone,
+    /** Current good count for a regular var */
+    getRegularGood,
   };
 }
+
+export type { ProgressVarState, RegularVarState };

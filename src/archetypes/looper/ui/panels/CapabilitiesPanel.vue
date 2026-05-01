@@ -4,16 +4,22 @@ import { Decimal } from 'open-loop-engine';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
 import { useFormatting } from '@/composables/useFormatting';
-import { useCapabilities } from '../../composables/useCapabilities';
-import { useArc } from '../../composables/useArc';
+import { useStats } from '../../composables/useStats';
 import { useLooperData } from '../../composables/useLooperData';
 
-const capabilities = useCapabilities();
-const arc = useArc();
+const stats = useStats();
 const data = useLooperData();
 const { format } = useFormatting();
 
-const averageTalent = computed(() => arc.averageTalentMultiplier.value);
+const averageTalent = computed(() => {
+  const caps = data.capabilities;
+  if (caps.length === 0) return 0;
+  const sum = caps.reduce((acc, c) => {
+    const s = stats.getStatState(c.id);
+    return acc + new Decimal(s.talentMult.value).toNumber();
+  }, 0);
+  return sum / caps.length;
+});
 const costDivisor = computed(() => new Decimal(data.balance.costDivisor).toNumber());
 
 interface TierStats {
@@ -62,22 +68,23 @@ interface DisplayRow {
 }
 
 const displayRows = computed<DisplayRow[]>(() =>
-  capabilities.value.map((row) => {
+  data.capabilities.map((cap) => {
+    const s = stats.getStatState(cap.id);
     const lvl = tierStats(
-      new Decimal(row.levelLevel.value).toNumber(),
-      new Decimal(row.levelXp.value).toNumber(),
+      new Decimal(s.level.value).toNumber(),
+      new Decimal(s.xp.value).toNumber(),
     );
     const tal = tierStats(
-      new Decimal(row.talentLevel.value).toNumber(),
-      new Decimal(row.talentXp.value).toNumber(),
+      new Decimal(s.talentLevel.value).toNumber(),
+      new Decimal(s.talentXP.value).toNumber(),
     );
     return {
-      id: row.def.id,
-      name: row.def.name,
-      description: row.def.description ?? '',
+      id: cap.id,
+      name: cap.name,
+      description: cap.description ?? '',
       level: lvl,
       talent: tal,
-      talentMultiplier: new Decimal(row.talentMultiplier.value).toNumber(),
+      talentMultiplier: new Decimal(s.talentMult.value).toNumber(),
       costReduction: 1 + lvl.level / costDivisor.value,
     };
   }),
@@ -133,8 +140,7 @@ const displayRows = computed<DisplayRow[]>(() =>
               :data-testid="`capability-level-bar-${row.id}`"
             />
             <p class="capabilities-list__xp">
-              {{ format(row.level.intoSegment, 2) }} /
-              {{ format(row.level.segment, 0) }} xp
+              {{ format(row.level.intoSegment, 2) }} / {{ format(row.level.segment, 0) }} xp
             </p>
           </div>
           <template #content>
@@ -150,8 +156,7 @@ const displayRows = computed<DisplayRow[]>(() =>
               <dd>
                 {{ row.level.level }}
                 <span class="muted">
-                  · {{ format(row.level.intoSegment, 2) }} /
-                  {{ format(row.level.segment, 0) }} xp
+                  · {{ format(row.level.intoSegment, 2) }} / {{ format(row.level.segment, 0) }} xp
                 </span>
               </dd>
               <dt>Cost ÷</dt>
@@ -160,16 +165,15 @@ const displayRows = computed<DisplayRow[]>(() =>
               <dd>
                 {{ row.talent.level }}
                 <span class="muted">
-                  · {{ format(row.talent.intoSegment, 3) }} /
-                  {{ format(row.talent.segment, 0) }} xp
+                  · {{ format(row.talent.intoSegment, 3) }} / {{ format(row.talent.segment, 0) }} xp
                 </span>
               </dd>
               <dt>XP rate</dt>
               <dd>×{{ format(row.talentMultiplier, 3) }}</dd>
             </dl>
             <p class="cap-tooltip__hint">
-              Level resets each loop and cuts action cost. Talent persists and
-              speeds up XP-gain — faster Level training next loop.
+              Level resets each loop and cuts action cost. Talent persists and speeds up XP-gain —
+              faster Level training next loop.
             </p>
           </template>
         </Tooltip>

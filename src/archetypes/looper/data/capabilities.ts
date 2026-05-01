@@ -1,3 +1,4 @@
+import { Decimal, type DecimalSource } from 'open-loop-engine';
 import type { CapabilityDef } from './types';
 
 // ─── Skeleton ───
@@ -31,3 +32,40 @@ export const CAPABILITIES: CapabilityDef[] = [
   { id: 'Luck', name: 'Luck', description: 'Luck — favorable variance.' },
   { id: 'Soul', name: 'Soul', description: 'Soul — spirit, willpower, resolve.' },
 ];
+
+// ─── Level Formulas ───
+// Shared quadratic level formula from vanilla idle-loops.
+// Reference: idle-loops-ng/src/data/stats.ts
+
+/**
+ * Quadratic level from XP: `floor((sqrt(8 * xp / 100 + 1) - 1) / 2)`
+ *
+ * Used for stat levels and talent levels.
+ * Reference: idleLoops/stats.js getLevelFromExp / getLevelFromTalent
+ */
+export function levelFromXP(xp: DecimalSource): Decimal {
+  return Decimal.floor(
+    Decimal.div(
+      Decimal.sub(Decimal.sqrt(Decimal.add(Decimal.mul(8, Decimal.div(xp, 100)), 1)), 1),
+      2,
+    ),
+  );
+}
+
+/**
+ * XP required to reach a given level: `level * (level + 1) * 50`
+ *
+ * Reference: idleLoops/stats.js getExpOfLevel / getExpOfTalent
+ */
+export function xpForLevel(level: DecimalSource): Decimal {
+  return Decimal.mul(Decimal.mul(level, Decimal.add(level, 1)), 50);
+}
+
+/**
+ * Talent level → XP multiplier: `1 + talent^0.5 / 5`
+ *
+ * Reference: idleLoops/actions.js calcTalentMult
+ */
+export function calcTalentMult(talentLevel: DecimalSource): Decimal {
+  return Decimal.add(1, Decimal.div(Decimal.pow(talentLevel, 0.5), 5));
+}

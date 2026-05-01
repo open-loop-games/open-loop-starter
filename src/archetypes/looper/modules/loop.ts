@@ -1,210 +1,274 @@
-import type { Ref } from 'vue';
+/**
+ * Loop module — ties the restart sequence together.
+ *
+ * Each tick: drain mana. When mana depletes (or action queue exhausts), fire
+ * the restart sequence: reset stats/resources/zones/queue/action-progress,
+ * preserve talents/progressVar XP/loadouts via retention.
+ *
+ * Uses engine's createLoop for lifecycle (endCondition, thingsToReset,
+ * onBeforeRestart, onRestart, loop counter, best time) and
+ * createRetentionPolicy for declarative carryover.
+ *
+ * Reference: idleLoops/driver.js (tick loop, restart, prepareRestart),
+ * idle-loops-ng/src/modules/loop.ts
+ */
+
 import {
   Decimal,
-  GameLoopKey,
+  type EngineModule,
+  type EngineContext,
+  type Loop,
+  type GameLoop,
   createLoop,
   createRetentionPolicy,
-  type EngineModule,
-  type GameLoop,
-  type InjectionKey,
-  type Loop,
-  type Persistent,
   type RetentionPolicy,
-  type Sequencer,
+  persistent,
+  type Persistent,
+  withPersistentContext,
+  GameLoopKey,
 } from 'open-loop-engine';
-import type { LooperData } from '../data/types';
-import { ActionsKey, getActionProgressRefs, getActionTimesCompletedRefs } from './actions';
-import { CapabilitiesKey, getTalentXpRefs } from './capabilities';
-import { GoldModuleKey } from './gold';
-import { ManaKey, ManaModuleKey } from './mana';
-import { ProgressVarsKey, getProgressVarXpRefs } from './progress-vars';
-import { RegularVarsKey, getRegularVarLifetimeRefs, getRegularVarTotalRefs } from './regular-vars';
+import { getMana, drainMana, resetMana } from './mana';
+import { getAllStatStates } from './stats';
+import { resetAllResources } from './resources';
+import { restartZones, getProgressVarsForZone } from './zones';
 import {
-  QueueKey,
-  QueueModuleKey,
-  QueueShouldRestartKey,
-  type LooperQueueModule,
-  type QueueItemMeta,
-} from './queue';
+  restartActionQueue,
+  bootstrapActiveFromSave,
+  getLoadouts,
+  getLoadoutNames,
+  getActiveList,
+} from './action-queue';
+import {
+  setCanTick,
+  setLoopCountGetter,
+  resetAllActionProgress,
+  consumeRestartFlag,
+  isRestartFlagged,
+} from './action-runner';
 
-export const LoopKey: InjectionKey<Loop> = Symbol('looper/loop') as InjectionKey<Loop>;
+// ============================================================================
+// Module State
+// ============================================================================
+
+let loop: Loop;
+let retention: RetentionPolicy;
+let gameLoop: GameLoop;
+let pauseBeforeRestart: Persistent<boolean>;
+let pauseOnFailedLoop: Persistent<boolean>;
+
+/** Available speed multipliers */
+export const SPEED_OPTIONS = [1, 2, 5, 20] as const;
+export type SpeedMultiplier = (typeof SPEED_OPTIONS)[number];
+
+// ============================================================================
+// Public API — loop access
+// ============================================================================
+
+/** Get the engine Loop instance */
+export function getLoop(): Loop {
+  return loop;
+}
+
+/** Get the loop count persistent ref */
+export function getLoopCount(): Persistent<number> {
+  return loop.count;
+}
+
+/** Whether the loop is currently running */
+export function isLoopRunning(): boolean {
+  return loop.running.value;
+}
+
+/** Get elapsed time in current loop (seconds) */
+export function getElapsed(): number {
+  return loop.elapsed.value;
+}
+
+// ============================================================================
+// Public API — loop control
+// ============================================================================
 
 /**
- * Loop orchestration — engine `createLoop` + `createRetentionPolicy`.
- *
- * Boot is paused (no `loop.run()` at install). The first time the queue
- * dispatches an item, the queue's `'start'` event flips the loop on (wired
- * in `connect()`). When the queue plan exhausts or the player clears it
- * mid-run, the queue sets `shouldRestart`; the loop's `endCondition` reads
- * that alongside `mana <= 0`, so "empty queue ⇒ loop ends" matches vanilla
- * idle-loops `actions.js:103-108`.
- *
- * Per-tick (only while running): drain mana `round(tickRate × dt)` per tick.
- * At engine 20 TPS that's 1 mana per engine tick — the canonical "1 mana =
- * 1 tick" coupling that makes manaCost directly comparable to the pool.
- *
- * Restart sequence:
- *   onBeforeRestart — snapshot retention (Talent XP, action timesCompleted)
- *   reset.execute  — zero Level XP, action progress (mana refilled in onRestart)
- *   onRestart      — restore retention, reset mana to initialMana, reset
- *                     queue (per-item loopsLeft, cursor → 0, shouldRestart
- *                     cleared); if the queue is empty, pause the loop so it
- *                     waits for the next enqueue.
- *
- * The retention policy is built lazily on first reset (idle-loops-ng's
- * pattern). The reason: Talent refs only exist after `capabilities.install`
- * runs; building lazily on the first `onBeforeRestart` is the safe choice.
+ * Start the loop (begin ticking).
  */
-export function createLoopModule(_data: LooperData): EngineModule {
-  // Cross-module refs assigned in connect() (queue installs after loop, so
-  // these can't be injected during install — endCondition / onRestart
-  // closures read them lazily at tick time).
-  let shouldRestart: Ref<boolean> | null = null;
-  let queueModule: LooperQueueModule | null = null;
-  let queueSequencer: Sequencer<QueueItemMeta> | null = null;
-  let createdLoop: Loop | null = null;
-
-  return {
-    id: 'looper/loop',
-    dependencies: [
-      'looper/mana',
-      'looper/gold',
-      'looper/capabilities',
-      'looper/progress-vars',
-      'looper/regular-vars',
-      'looper/actions',
-    ],
-    install(ctx) {
-      const mana = ctx.inject(ManaKey);
-      const manaModule = ctx.inject(ManaModuleKey);
-      const goldModule = ctx.inject(GoldModuleKey);
-      const capabilities = ctx.inject(CapabilitiesKey);
-      const progressVars = ctx.inject(ProgressVarsKey);
-      const regularVars = ctx.inject(RegularVarsKey);
-      const actions = ctx.inject(ActionsKey);
-      const gameLoop: GameLoop = ctx.inject(GameLoopKey);
-
-      let retention: RetentionPolicy | null = null;
-      let retentionBuilt = false;
-
-      function ensureRetention(): RetentionPolicy {
-        if (!retentionBuilt) {
-          // Persists across loops: capability Talent XP, action
-          // timesCompleted (action-completion-count prereqs), progressVar XP
-          // (Wander-shape persistent exploration), regularVar `total`
-          // (derived from progressVar levels — cached so save/load doesn't
-          // need to walk the level-up emitter pre-rehydration), regularVar
-          // lifetime `checked` + `good` (manapot accumulation — vanilla
-          // idle-loops `town.js:finishRegular` shape; reset would break
-          // the investment-then-payoff loop that lets later loops cash in
-          // known-goods discovered earlier).
-          // Per-loop refs (capability Level XP, action progress, gold,
-          // mana) clear via thingsToReset / onRestart. `goodTemp` is
-          // reseeded imperatively in onRestart.
-          const keep: Persistent[] = [
-            ...getTalentXpRefs(capabilities),
-            ...getActionTimesCompletedRefs(actions),
-            ...getProgressVarXpRefs(progressVars),
-            ...getRegularVarTotalRefs(regularVars),
-            ...getRegularVarLifetimeRefs(regularVars),
-          ];
-          retention = createRetentionPolicy({ keep });
-          retentionBuilt = true;
-        }
-        return retention!;
-      }
-
-      const loop = createLoop({
-        id: 'looper/loop',
-        endCondition: () => Decimal.lte(mana.value, 0) || shouldRestart?.value === true,
-
-        // Per-loop reset scope. Capability Level XP zeros (Talent survives
-        // via retention); action progress zeros; regularVar `total`,
-        // `checked`, `good` survive via retention (manapot accumulation).
-        // Action timesCompleted is also pushed here AND kept in retention
-        // — the engine snapshots-then-restores from the retention `keep`
-        // list, so the reset+restore round-trip preserves it. Gold and
-        // mana clear via onRestart's imperative resets, NOT here, so
-        // save-reset (zero out) and loop-restart (refill / zero) stay
-        // distinguishable. `goodTemp` is reseeded from `good` in
-        // onRestart, not zeroed here.
-        thingsToReset: () => {
-          const things: unknown[] = [];
-          for (const entry of capabilities.getAll()) {
-            things.push(entry.state.level.xp);
-          }
-          for (const ref of getActionProgressRefs(actions)) {
-            things.push(ref);
-          }
-          for (const ref of getActionTimesCompletedRefs(actions)) {
-            things.push(ref);
-          }
-          return things;
-        },
-
-        onBeforeRestart: () => {
-          ensureRetention().snapshot();
-        },
-
-        onRestart: () => {
-          ensureRetention().restore();
-          // Reseed `goodTemp` from `good`'s post-restoration value
-          // (vanilla `town.js:restartZones` shape). Lifetime `checked` +
-          // `good` rode the retention round-trip; `goodTemp` is the
-          // per-loop consumption counter.
-          for (const rv of regularVars.getAll()) {
-            rv.goodTemp.value = rv.good.value;
-          }
-          // Reset mana to initialMana, clear manaAdded, and zero gold BEFORE
-          // the queue auto-dispatches — the queue's `canRun` checks mana, so
-          // this order matters. Gold resets to 0 (vanilla idle-loops shape:
-          // per-loop currency, no cross-loop compounding).
-          manaModule.resetMana();
-          goldModule.resetGold();
-          // Walk per-item loopsLeft → loops, cursor → 0, clear
-          // shouldRestart. resetCursor auto-dispatches if items[0] is
-          // runnable; if empty, dispatch is a no-op.
-          queueModule?.resetForLoop();
-          // Empty-plan boot/restart: park the loop until the player
-          // enqueues something. The 'start' event subscription (connect)
-          // resumes us when the next dispatch fires.
-          if (queueSequencer && queueSequencer.items.value.length === 0) {
-            loop.pause();
-          }
-        },
-
-        registerTick: ctx.onTick,
-      });
-
-      // Mana drain — `round(tickRate × dt)` per tick, only while loop is
-      // running. Gated here so an empty queue with the loop paused (boot,
-      // post-restart) does NOT drain mana.
-      ctx.onTick((dt: number) => {
-        if (!loop.running.value) return;
-        if (Decimal.lte(mana.value, 0)) return;
-        const drainAmount = Math.round(gameLoop.tickRate * dt);
-        if (drainAmount <= 0) return;
-        manaModule.drainMana(drainAmount);
-      });
-
-      createdLoop = loop;
-      ctx.provide(LoopKey, loop);
-    },
-    connect(ctx) {
-      shouldRestart = ctx.inject(QueueShouldRestartKey);
-      queueModule = ctx.inject(QueueModuleKey);
-      queueSequencer = ctx.inject(QueueKey);
-
-      // Auto-start on first dispatch. Sequencer fires 'start' whenever it
-      // transitions an item to current — first enqueue from idle, mana
-      // refill resolving 'notNow', cursor advance into a runnable item.
-      // Calling run() on an already-running loop is a no-op; calling it
-      // after a paused boot/restart is what kicks the loop back on.
-      queueSequencer.on('start', () => {
-        if (createdLoop && !createdLoop.running.value) {
-          createdLoop.run();
-        }
-      });
-    },
-  };
+export function startLoop(): void {
+  bootstrapActiveFromSave();
+  loop.run();
 }
+
+/**
+ * Pause the loop.
+ */
+export function pauseLoop(): void {
+  loop.pause();
+}
+
+/**
+ * Toggle pause.
+ */
+export function togglePause(): void {
+  if (loop.running.value) {
+    loop.pause();
+  } else {
+    bootstrapActiveFromSave();
+    loop.run();
+  }
+}
+
+/**
+ * Manual restart — player clicks restart button.
+ */
+export function manualRestart(): void {
+  loop.end();
+}
+
+// ============================================================================
+// Public API — pause settings
+// ============================================================================
+
+/** Get the pause-before-restart toggle (persistent ref) */
+export function getPauseBeforeRestart(): Persistent<boolean> {
+  return pauseBeforeRestart;
+}
+
+/** Get the pause-on-failed-loop toggle (persistent ref) */
+export function getPauseOnFailedLoop(): Persistent<boolean> {
+  return pauseOnFailedLoop;
+}
+
+// ============================================================================
+// Public API — game speed
+// ============================================================================
+
+/**
+ * Set game speed multiplier. Scales dt during live play via engine speedMultiplier.
+ */
+export function setGameSpeed(multiplier: SpeedMultiplier): void {
+  gameLoop.speedMultiplier = multiplier;
+}
+
+/** Get current speed multiplier */
+export function getGameSpeed(): SpeedMultiplier {
+  const mult = gameLoop.speedMultiplier;
+  if (mult >= 20) return 20;
+  if (mult >= 5) return 5;
+  if (mult >= 2) return 2;
+  return 1;
+}
+
+// ============================================================================
+// Restart Sequence
+// ============================================================================
+
+/**
+ * Build the retention policy — declares what survives the reset.
+ *
+ * What persists:
+ * - Stat talent XP (accumulates 1% per XP gain, never reset)
+ * - Town progress var exploration XP
+ * - Loadout slots
+ * - Loop counter + best time (handled by Loop internally)
+ */
+function buildRetention(): RetentionPolicy {
+  const keep: Persistent[] = [];
+
+  // Stat talent XP — persists across loops
+  for (const state of getAllStatStates().values()) {
+    keep.push(state.talentXP);
+  }
+
+  // Town progress var XP — persists across loops
+  for (const zoneId of ['beginnersville', 'forest-path'] as const) {
+    for (const pv of getProgressVarsForZone(zoneId)) {
+      keep.push(pv.skill.xp);
+    }
+  }
+
+  // Loadouts — persist across loops
+  keep.push(getLoadouts());
+  keep.push(getLoadoutNames());
+
+  return createRetentionPolicy({ keep });
+}
+
+// ============================================================================
+// Module
+// ============================================================================
+
+export const loopModule: EngineModule = {
+  id: 'loop',
+  dependencies: ['stats', 'mana', 'resources', 'zones', 'action-queue'],
+  install(ctx: EngineContext) {
+    gameLoop = ctx.inject(GameLoopKey);
+
+    ({ pauseBeforeRestart, pauseOnFailedLoop } = withPersistentContext('loop', () => ({
+      pauseBeforeRestart: persistent(false),
+      pauseOnFailedLoop: persistent(false),
+    })));
+
+    let retentionBuilt = false;
+    function ensureRetention(): void {
+      if (!retentionBuilt) {
+        retention = buildRetention();
+        retentionBuilt = true;
+      }
+    }
+
+    loop = createLoop({
+      endCondition: () => Decimal.lte(getMana().value, 0) || isRestartFlagged(),
+
+      thingsToReset: () => {
+        const things: unknown[] = [];
+        // Stat XP resources reset each loop (talent XP is retained)
+        for (const state of getAllStatStates().values()) {
+          things.push(state.xp);
+        }
+        return things;
+      },
+
+      onBeforeRestart: () => {
+        ensureRetention();
+        retention.snapshot();
+
+        const shouldPause =
+          (pauseBeforeRestart.value ||
+            (pauseOnFailedLoop.value &&
+              getActiveList().some(
+                (item) => !!item.metadata.errorMessage || item.metadata.failedCount > 0,
+              ))) &&
+          loop.running.value;
+
+        if (shouldPause) {
+          loop.pause();
+          retention.restore(); // undo snapshot — not resetting yet
+          return false; // cancel the restart
+        }
+      },
+
+      onRestart: () => {
+        consumeRestartFlag();
+        ensureRetention();
+        retention.restore();
+        resetMana();
+        resetAllResources();
+        restartZones();
+        restartActionQueue();
+        resetAllActionProgress();
+      },
+
+      registerTick: ctx.onTick,
+    });
+
+    // Gate action progress on loop.running
+    setCanTick(() => loop.running.value);
+
+    // Wire loop count into action-runner for prereq evaluation
+    setLoopCountGetter(() => loop.count.value);
+
+    // Per-tick: drain mana (tickRate * dt ≈ 1 per frame, scales with speed)
+    ctx.onTick((dt: number) => {
+      if (!loop.running.value) return;
+      drainMana(Math.round(gameLoop.tickRate * dt));
+    });
+  },
+};

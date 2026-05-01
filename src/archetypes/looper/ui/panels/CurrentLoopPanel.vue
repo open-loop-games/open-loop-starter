@@ -4,18 +4,38 @@ import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { useFormatting } from '@/composables/useFormatting';
 import { useMana } from '../../composables/useMana';
 import { useLoop } from '../../composables/useLoop';
-import { useQueue } from '../../composables/useQueue';
-import { useActions } from '../../composables/useActions';
+import { useActionQueue } from '../../composables/useActionQueue';
+import { useActionRunner } from '../../composables/useActionRunner';
 
-const { mana, fillRatio, totalBudget } = useMana();
+const manaApi = useMana();
 const loop = useLoop();
-const queue = useQueue();
-const actions = useActions();
+const queue = useActionQueue();
+const runner = useActionRunner();
 const { format } = useFormatting();
 
+const manaValue = computed(() => manaApi.getManaValue());
+const totalBudget = computed(() => manaApi.getTotalManaBudget());
+const fillRatio = computed(() => {
+  const budget = manaApi.getTotalManaBudget();
+  if (budget.lte(0)) return 0;
+  return Math.min(1, manaApi.getManaValue().div(budget).toNumber());
+});
+
 const currentRow = computed(() => {
-  const item = queue.current.value;
-  return item ? actions.getRow(item.id) : undefined;
+  const items = queue.activeQueue.items.value;
+  const cursorIdx = queue.getActiveCursor();
+  const item = items[cursorIdx];
+  if (!item) return undefined;
+  const def = runner.getActionDef(item.id);
+  if (!def) return undefined;
+  const fraction = runner.getActionProgress(item.id);
+  const adjustedTicks = runner.computeAdjustedTicks(def).toNumber();
+  return {
+    def,
+    progressFraction: { value: fraction },
+    progress: { value: Math.floor(fraction * adjustedTicks) },
+    adjustedTicks: { value: adjustedTicks },
+  };
 });
 </script>
 
@@ -27,11 +47,11 @@ const currentRow = computed(() => {
         <span
           class="loop-header__value"
           data-testid="loop-count"
-        >{{ loop.count }}</span>
+        >{{ loop.loopCount.value }}</span>
       </div>
       <div class="loop-header__elapsed">
         elapsed
-        <strong data-testid="loop-elapsed">{{ Math.floor(loop.elapsed.value) }}s</strong>
+        <strong data-testid="loop-elapsed">{{ Math.floor(loop.getElapsed()) }}s</strong>
       </div>
     </header>
 
@@ -42,7 +62,7 @@ const currentRow = computed(() => {
           class="mana-gauge__value"
           data-testid="mana-readout"
         >
-          {{ format(mana, 0) }} / {{ format(totalBudget, 0) }}
+          {{ format(manaValue, 0) }} / {{ format(totalBudget, 0) }}
         </span>
       </div>
       <ProgressBar
