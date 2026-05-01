@@ -168,7 +168,7 @@ export function createActionsModule(data: LooperData): EngineModule {
       function applyCompletionEffects(actionId: string, effects: CompletionEffect[]): void {
         // Snapshot pre-batch gold once so `exchange-gold-to-mana` captures the
         // gold balance from before any spend-gold in the same batch ran. The
-        // Trade canonical relies on this — `[spend-gold:'all', exchange-gold-to-mana]`
+        // Buy Mana canonical relies on this — `[spend-gold:'all', exchange-gold-to-mana]`
         // resolves `manaAdded = preBatchGold × exchangeMult`.
         const preBatchGold = gold.value;
         const state = states.get(actionId);

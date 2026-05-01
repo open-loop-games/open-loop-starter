@@ -72,7 +72,7 @@ const currentRow = computed(() => {
       />
       <div class="current-action__meta">
         <span>{{ format(currentRow.progress.value, 0) }} /
-          {{ format(currentRow.adjustedTicks.value, 0) }}t</span>
+          {{ format(currentRow.adjustedTicks.value, 0) }} mana</span>
         <span class="current-action__zone">{{ currentRow.def.zoneId }}</span>
       </div>
     </div>

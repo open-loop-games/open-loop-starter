@@ -57,10 +57,10 @@ export const ProgressVarsKey: InjectionKey<SkillCategory<ProgressVarDef, LooperP
  * recomputes its `total` by summing `level × perLevel` across all
  * contributors.
  *
- * Multi-axis: when `forage` has two contributors (`trail × 5` + `mark × 2`),
+ * Multi-axis: when `herbs` has two contributors (`forest × 5` + `shortcut × 2`),
  * either contributor's level-up triggers a recompute; the recompute walks
  * every progressVar's `scales` table and sums all entries that reference
- * `forage`. Mirrors `idle-loops-ng/src/modules/zones.ts:441,445` — both
+ * `herbs`. Mirrors `idle-loops-ng/src/modules/zones.ts:441,445` — both
  * `Forest` and `Shortcut` callbacks compute `setRegularTotal('Herbs',
  * Forest * 5 + Shortcut * 2)`.
  */

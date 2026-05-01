@@ -9,8 +9,12 @@ export interface CapabilityRow {
   def: CapabilityDef;
   /** Level-tier level (resets per loop). Drives within-loop cost reduction. */
   levelLevel: ComputedRef<DecimalSource>;
+  /** Level-tier raw XP. */
+  levelXp: ComputedRef<DecimalSource>;
   /** Talent-tier level (persists across loops). Drives XP-rate compounding. */
   talentLevel: ComputedRef<DecimalSource>;
+  /** Talent-tier raw XP. */
+  talentXp: ComputedRef<DecimalSource>;
   /** Live Talent multiplier — `1 + sqrt(talentLevel) / 5`, vanilla canonical. */
   talentMultiplier: ComputedRef<DecimalSource>;
 }
@@ -25,7 +29,9 @@ export function useCapabilities(): ComputedRef<CapabilityRow[]> {
       rows.push({
         def: entry.def,
         levelLevel: computed(() => state.level.level.value),
+        levelXp: computed(() => state.level.xp.value),
         talentLevel: computed(() => state.talent.level.value),
+        talentXp: computed(() => state.talent.xp.value),
         talentMultiplier: computed(() => state.talentMult.value),
       });
     }

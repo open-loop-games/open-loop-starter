@@ -37,7 +37,7 @@ export function useZones(): ZonesView {
   // (per-action `prereqs` handle gating; `ZoneDef.requires` is dropped), so
   // every zone reports `isUnlocked === true`. The pre-reground "highest
   // unlocked" auto-snap heuristic produced the wrong UX (drawer opening on
-  // Wilds at boot); progressive disclosure now lives in the per-action
+  // Forest Path at boot); progressive disclosure now lives in the per-action
   // visibility filter, not zone selection.
   const defaultZone = computed<ZoneDef | null>(() => data.zones[0] ?? null);
 

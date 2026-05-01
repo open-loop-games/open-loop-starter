@@ -1,23 +1,16 @@
 import type { DecimalSource } from 'open-loop-engine';
 
 // ─── Skeleton ───
-// 4 capabilities (single axis; canonical Level + Talent two-tier role split
-// lives module-side); 2 zones as UI grouping only (no content gating); 4
-// progressVars (persistent exploration tracks, Wander-shape) coupled via a
-// `scales` table to 5 regularVars (per-loop pools whose `total` derives from
-// summed `level × perLevel` contributions); ~15 actions discriminated over
+// 9 capabilities (single axis; canonical Level + Talent two-tier role split
+// lives module-side); 2 zones as UI grouping only (no content gating);
+// 4 progressVars (persistent exploration tracks, Wander-shape) coupled via a
+// `scales` table to 4 regularVars (per-loop pools whose `total` derives from
+// summed `level × perLevel` contributions); 9 actions discriminated over
 // `type: 'progress' | 'regular' | 'basic'` with weight-coupled cost + XP and
-// per-action prereq web. Skeleton counts and prereq topology are
-// fork-of-skeleton decisions; balance constants live in `balance.ts`; costume
-// strings (capability / zone / progressVar / regularVar / action names +
-// descriptions) are co-located on each definition entry.
-
-// ─── Costume ───
-// Theme-fresh palette: Vigor / Aether / Craft / Lore capabilities; Hearth →
-// Wilds zone progression; Roam / Acquaint / Trail / Mark progressVars; Cache /
-// Latch / Errand / Wellspring / Forage regularVars. Generic enough to retheme,
-// distinct enough to give the demo a recognizable shape — not lifted from any
-// single idle-loops exemplar.
+// per-action prereq web. Slim slice of vanilla idle-loops town 0
+// (Beginnersville) + town 1 (Forest Path) — ids, names, and numbers carried
+// 1:1 from `idle-loops-ng/src/data/{stats,zones,vanilla-actions}.ts` and
+// `idle-loops-ng/src/modules/zones.ts`.
 
 export interface CapabilityDef {
   id: string;
@@ -55,7 +48,7 @@ export interface ProgressVarDef {
    * Level-up scaling table — which regularVars' totals re-derive on each
    * level gain, and by what additive contribution. Sums when multiple
    * progressVars contribute to the same regularVar (multi-axis scaling:
-   * `forage.total = trail.level × 5 + mark.level × 2`).
+   * `herbs.total = forest.level × 5 + shortcut.level × 2`).
    */
   scales: Array<{
     regularVarId: string;
@@ -89,7 +82,7 @@ export interface RegularVarDef {
  * shape (module-side); data uses the discriminated tier field to address either.
  *
  * `progress-var-level` references a persistent progressVar's level — the
- * cross-loop unlock surface (e.g., `Roam ≥ 5` gates Trek into Wilds).
+ * cross-loop unlock surface (e.g., `wander ≥ 5` gates Forest Path entries).
  */
 export type ActionPrereq =
   | { kind: 'action-completion-count'; actionId: string; value: number }
@@ -118,7 +111,7 @@ export type RewardEffect =
  *   1. Snapshot pre-batch gold (for the `exchange-gold-to-mana` reader).
  *   2. Apply effects in declaration order.
  *
- * The `Trade` exchange uses `[{spend-gold:'all'}, {exchange-gold-to-mana}]` —
+ * The `Buy Mana` exchange uses `[{spend-gold:'all'}, {exchange-gold-to-mana}]` —
  * the exchange effect reads pre-batch gold × the action def's `exchangeMult`,
  * so `manaAdded = goldSpent × exchangeMult` holds regardless of order.
  */

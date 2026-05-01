@@ -7,60 +7,56 @@ import type { RegularVarDef } from './types';
 // value). Per-loop counters `checked` and `good` live on the module side and
 // reset via `thingsToReset`.
 //
-// Pool roster reground per OL-802. Vanilla town-0 / town-1 source map:
-//   manapot (Hearth):     cache       — vanilla Pots; pool = wander × 5
-//                                       (actionList.js:195-197) → roam × 5.
-//                                       Drained by Crack (mana +100 / 10).
-//   gold pool (Hearth):   latch       — vanilla Locks; pool = wander × 1
-//                                       (actionList.js:198-200) → roam × 1.
-//                                       Drained by Slip (gold +10 / 10).
-//   alt-manapot (Wilds):  wellspring  — vanilla Wild Mana; pool = forest × 5
-//                                       + thicket × 5 (actionList.js:1119-1121)
-//                                       → trail × 5 (slim demo drops thicket
-//                                       contributor). Drained by Drink (mana
-//                                       +250 / 10).
-//   multi-axis pool       forage      — vanilla Herbs; pool = forest × 5 +
-//   (Wilds):                            shortcut × 2 + flowers × 13
-//                                       (actionList.js:1125-1127) → trail × 5
-//                                       + mark × 2 (slim demo drops flowers
-//                                       contributor). Drained by Gather
-//                                       (multi-axis mana +50 + gold +5 / 10
-//                                       — declared invention; vanilla grants
-//                                       1 herb per reward, an inventory
-//                                       resource the slim demo doesn't model).
+// Pool roster anchored to vanilla idle-loops-ng (the live engine port):
+//   manapot (Beginnersville):  pots       — pool = Wander × 5
+//                                            (idle-loops-ng/src/modules/zones.ts:427).
+//                                            Drained by Smash Pots
+//                                            (mana +100 / rewardRatio 10).
+//   gold pool (Beginnersville): locks     — pool = Wander × 1
+//                                            (idle-loops-ng/src/modules/zones.ts:428).
+//                                            Drained by Pick Locks
+//                                            (gold +10 / rewardRatio 10).
+//   alt-manapot (Forest Path): wild-mana  — pool = Forest × 5
+//                                            (idle-loops-ng/src/modules/zones.ts:439).
+//                                            Drained by Wild Mana
+//                                            (mana +250 / rewardRatio 10).
+//   multi-axis pool            herbs      — pool = Forest × 5 + Shortcut × 2
+//   (Forest Path):                          (idle-loops-ng/src/modules/zones.ts
+//                                            :441,445).
+//                                            Drained by Gather Herbs (multi-
+//                                            axis mana +50 + gold +5 /
+//                                            rewardRatio 10 — declared
+//                                            invention; vanilla grants 1 herb
+//                                            per reward, an inventory resource
+//                                            the slim demo doesn't model).
 //
 // `rewardRatio` and `rewardEffect` payloads live on the regular-type ACTION
 // def (not here) — multiple actions can target the same regularVar with
 // different reward shapes. The regularVarDef carries identity + zone tag only.
-//
-// ─── Costume ───
-// Theme-fresh names: cache (the pots-equivalent), latch (the locks-
-// equivalent), wellspring (alt-manapot pool), forage (multi-axis-scaled
-// reagent pool). Forks rename freely.
 
 export const REGULAR_VARS: RegularVarDef[] = [
   {
-    id: 'cache',
-    name: 'Cache',
+    id: 'pots',
+    name: 'Pots',
     description: 'Hidden stores in the village brush — small, easy, manapot-shaped.',
-    zoneId: 'hearth',
+    zoneId: 'beginnersville',
   },
   {
-    id: 'latch',
-    name: 'Latch',
+    id: 'locks',
+    name: 'Locks',
     description: 'Loose latches and unattended boxes around the village.',
-    zoneId: 'hearth',
+    zoneId: 'beginnersville',
   },
   {
-    id: 'wellspring',
-    name: 'Wellspring',
+    id: 'wild-mana',
+    name: 'Wild Mana',
     description: 'Aether-thin spots in the wilds. Drinking from them refills the pool.',
-    zoneId: 'wilds',
+    zoneId: 'forest-path',
   },
   {
-    id: 'forage',
-    name: 'Forage',
+    id: 'herbs',
+    name: 'Herbs',
     description: 'Reagent finds in the understory — moss, root, bark, the right kind of bone.',
-    zoneId: 'wilds',
+    zoneId: 'forest-path',
   },
 ];

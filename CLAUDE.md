@@ -70,8 +70,8 @@ Each archetype under `src/archetypes/<name>/` is self-bootable and follows the s
 
 ```
 src/archetypes/<name>/
-├── data/            # Pure config. Typed defs + balance constants. Skeleton/theme/
-│                    # balance lens lives here as comment sections, not separate files.
+├── data/            # Pure config. Typed defs + balance constants. Skeleton + balance
+│                    # lens lives here as comment sections, not separate files.
 ├── modules/         # Engine modules; factory-constructed, closing over data.
 ├── composables/     # Vue composables that bridge archetype modules to UI.
 ├── ui/              # Archetype-colocated screens + panels + components.
@@ -79,9 +79,9 @@ src/archetypes/<name>/
 └── boot.ts          # createApp(overrides?) → { app, engine, mount }.
 ```
 
-**Dependency direction (strict):** `data → modules → composables → ui`. Data never imports from modules; composables and components never contain game logic. Lens inside data files uses comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`) — not separate files, not a codegen round-trip.
+**Dependency direction (strict):** `data → modules → composables → ui`. Data never imports from modules; composables and components never contain game logic. Lens inside data files uses comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`) — not separate files, not a codegen round-trip.
 
-**Demo content is themed, not lifted.** Structural decisions (drain semantics, cost shape, queue dispatch, slot patterns) are canonical — validated by exemplars. Content names (action ids, item names, zone names) are per-theme costume authored fresh for the demo. Direct lifts from any exemplar's content set are a bug: forks copy the demo wholesale, so lifted names propagate the exemplar's identity into every fork. Use exemplars to resolve structural questions; author new names per theme.
+**Demo content is a slim slice of one canonical exemplar.** Pick a single Tier-A exemplar — either a frozen fork under `reference-code/<game>/` or a live engine port in a sibling repo (e.g. `idle-loops-ng/` for the looper). Take a slim slice of its content set; carry ids, display names, and numbers 1:1 with per-row citations (`// vanilla canonical: <file>:<line> — <description>`). When both a frozen fork and a live port exist, prefer the live port — it tracks the canonical balance going forward. No rename pass, no fresh authoring of names or numbers. Declared inventions are tagged at row level only where the slim demo's substrate genuinely diverges from the exemplar (e.g. dropped contributors in pool sizing, omitted resource types, mechanics-layer features the slim demo doesn't yet model) — each invention names the slim-demo reason. Citation work happens at implementation time, not as a separate spec-authoring pass. Forks rename for theme; the starter ships as transparent slim-port.
 
 **Fork workflow:** clone the repo, pick one archetype, delete the others + `src/gallery/` (when it lands), keep your one archetype as the whole app.
 
@@ -182,7 +182,7 @@ The overlay is a top-level sibling of `AppFrame`, not pushed through `useModalSt
 **Must Not:**
 - Import `break_eternity.js` directly (use engine re-exports)
 - Add game-specific content to the base starter — archetype content lives under `src/archetypes/<name>/`, not in the cross-archetype `src/modules/` / `src/ui/` directories
-- Extract archetype data into a parallel `vars/` layer with codegen round-trips — data is inline in `data/*.ts`; the skeleton/theme/balance lens lives as comment sections
+- Extract archetype data into a parallel `vars/` layer with codegen round-trips — data is inline in `data/*.ts`; the skeleton + balance lens lives as comment sections
 - Add Tailwind or shadcn-vue
 - Depend on `open-loop-engine` from `src/lib/` (keep it presentational)
 - Add a 2×2 quadrant shell to `src/lib/` (zero prior art — see layout-spray research)

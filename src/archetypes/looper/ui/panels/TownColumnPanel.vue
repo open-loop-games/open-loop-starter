@@ -328,7 +328,7 @@ onBeforeUnmount(() => {
               @click="enqueue(row.def.id)"
             >
               <span class="action-tile__name">{{ row.def.name }}</span>
-              <span class="action-tile__cost">{{ format(row.adjustedTicks.value, 0) }}t</span>
+              <span class="action-tile__cost">{{ format(row.adjustedTicks.value, 0) }} mana</span>
             </button>
             <template #content>
               <strong>{{ row.def.name }}</strong>
@@ -336,7 +336,7 @@ onBeforeUnmount(() => {
                 {{ row.def.description }}
               </p>
               <p class="tile-tooltip__cost">
-                <span>cost {{ format(row.adjustedTicks.value, 0) }}t</span>
+                <span>cost {{ format(row.adjustedTicks.value, 0) }} mana</span>
                 <span class="muted">(base {{ format(row.def.manaCost, 0) }})</span>
               </p>
               <p class="tile-tooltip__weights">

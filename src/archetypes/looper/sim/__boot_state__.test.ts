@@ -41,11 +41,11 @@ describe('looper boot state — production module composition', () => {
     expect(Decimal.eq(totalBudget.value, 250)).toBe(true);
   });
 
-  it('capabilities registry has 4 entries at fresh boot', () => {
+  it('capabilities registry has 9 entries at fresh boot', () => {
     const engine = bootProd('boot-probe-2');
     const capabilities = engine.tryInject(CapabilitiesKey)!;
     expect(capabilities).toBeDefined();
-    expect(capabilities.getAll().length).toBe(4);
+    expect(capabilities.getAll().length).toBe(9);
   });
 
   it('loop is paused at boot (not running)', () => {

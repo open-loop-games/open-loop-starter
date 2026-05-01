@@ -284,13 +284,13 @@ function bumpLoops(index: number, delta: number): void {
           class="action-column__budget"
           data-testid="active-from-cursor"
         >
-          run: {{ format(queue.manaActiveFromCursor.value, 0) }}t
+          run: {{ format(queue.manaActiveFromCursor.value, 0) }} mana
         </span>
         <span
           class="action-column__budget action-column__budget--edit"
           data-testid="edit-total"
         >
-          plan: {{ format(queue.manaEditTotal.value, 0) }}t
+          plan: {{ format(queue.manaEditTotal.value, 0) }} mana
         </span>
       </div>
     </header>
@@ -340,7 +340,7 @@ function bumpLoops(index: number, delta: number): void {
           <span class="qrow__index">{{ row.index + 1 }}</span>
           <span class="qrow__name">{{ row.name }}</span>
           <span class="qrow__meta">
-            <span class="qrow__cost">{{ row.cost }}t</span>
+            <span class="qrow__cost">{{ row.cost }} mana</span>
             <span class="qrow__loops">×{{ row.loopsLeft }}/{{ row.loops }}</span>
           </span>
         </li>
@@ -398,7 +398,7 @@ function bumpLoops(index: number, delta: number): void {
             <span class="qrow__index">{{ row.index + 1 }}</span>
             <span class="qrow__name">{{ row.name }}</span>
             <span class="qrow__meta">
-              <span class="qrow__cost">{{ row.cost }}t</span>
+              <span class="qrow__cost">{{ row.cost }} mana</span>
               <span class="qrow__loops">×{{ row.loops }}</span>
             </span>
             <div class="qrow__controls">

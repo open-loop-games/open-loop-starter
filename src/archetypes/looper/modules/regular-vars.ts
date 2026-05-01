@@ -56,8 +56,8 @@ export interface RegularVarState {
    * exploring new items — the player commits mana to find new goods.
    *
    * Persistent so the choice survives saves; per-pool so the player can
-   * tune Hearth's Cache (cheap goods → consume) and Wilds's Wellspring
-   * (manapot harvest → explore for fresh goods) independently.
+   * tune Beginnersville's Pots (cheap goods → consume) and Forest Path's
+   * Wild Mana (manapot harvest → explore for fresh goods) independently.
    */
   readonly valuablesFirst: Persistent<boolean>;
 }
