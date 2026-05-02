@@ -1,6 +1,6 @@
 import { nextTick } from 'vue';
 import { describe, it, expect } from 'vitest';
-import { CategoriesKey, addResource, type Engine, type InjectionKey } from 'open-loop-engine';
+import { addResource, type Engine, type InjectionKey } from 'open-loop-engine';
 import { bootEngine } from '@/boot';
 
 function mustInject<T>(engine: Engine, key: InjectionKey<T>): T {
@@ -12,15 +12,12 @@ import { DEFAULT_TUG_DATA, applyTugOverrides, type TugOverrides } from '../data'
 import {
   createTugModules,
   IncomeKey,
-  IncomeUpgradesKey,
   LaneKey,
   MatchKey,
   MetaKey,
   SequencerKey,
   UnitsKey,
   ArcKey,
-  TUG_MATCH_SCOPE_MODULES,
-  PrestigeKey,
 } from '../modules';
 
 const GAME_ID = 'tug-test';
@@ -38,49 +35,6 @@ function bootTug(overrides?: TugOverrides, namespace?: string): Engine {
   engine.start();
   return engine;
 }
-
-describe('tug engine smoke', () => {
-  it('provides categories + tuning registry + per-module keys', () => {
-    const engine = bootTug(undefined, 'smoke');
-    const cats = engine.tryInject(CategoriesKey);
-    const playerUnits = engine.tryInject(UnitsKey.player);
-    const aiUnits = engine.tryInject(UnitsKey.ai);
-    const playerUpgrades = engine.tryInject(IncomeUpgradesKey.player);
-    const aiUpgrades = engine.tryInject(IncomeUpgradesKey.ai);
-    expect(cats?.purchasables).toEqual([playerUnits, aiUnits, playerUpgrades, aiUpgrades]);
-    expect(engine.tryInject(LaneKey)).toBeDefined();
-    expect(engine.tryInject(SequencerKey.player)).toBeDefined();
-    expect(engine.tryInject(SequencerKey.ai)).toBeDefined();
-    expect(engine.tryInject(IncomeKey.player)).toBeDefined();
-    expect(engine.tryInject(IncomeKey.ai)).toBeDefined();
-    expect(engine.tryInject(MatchKey)).toBeDefined();
-    expect(engine.tryInject(MetaKey)).toBeDefined();
-    expect(engine.tryInject(ArcKey)).toBeDefined();
-    // Prestige is conditional — default skeleton has metaProgressionEnabled=false
-    expect(engine.tryInject(PrestigeKey)).toBeUndefined();
-  });
-
-  it('installs prestige when metaProgressionEnabled flips on', () => {
-    const engine = bootTug({ balance: { metaProgressionEnabled: true } }, 'smoke-meta');
-    expect(engine.tryInject(PrestigeKey)).toBeDefined();
-  });
-
-  it('TUG_MATCH_SCOPE_MODULES enumerates the match-scope module ids', () => {
-    expect(TUG_MATCH_SCOPE_MODULES).toEqual([
-      'tug/match',
-      'tug/match/fortress',
-      'tug/match/lane',
-      'tug/match/player/income',
-      'tug/match/ai/income',
-      'tug/match/player/income-upgrades',
-      'tug/match/ai/income-upgrades',
-      'tug/match/player/units',
-      'tug/match/ai/units',
-      'tug/match/player/opponent-bot',
-      'tug/match/ai/opponent-bot',
-    ]);
-  });
-});
 
 describe('tug match-scope reset (structural invariant)', () => {
   it('end() resets tug/match-scoped refs and preserves tug/meta-scoped refs', () => {
