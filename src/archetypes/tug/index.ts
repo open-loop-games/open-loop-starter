@@ -33,7 +33,6 @@ export {
   UnitsCooldownKey,
   MatchKey,
   MetaKey,
-  ArcKey,
   PrestigeKey,
   TUG_MATCH_SCOPE_MODULES,
   createTugModules,
@@ -49,5 +48,4 @@ export {
   type MatchEndedPayload,
   type MatchOutcome,
   type MetaApi,
-  type ArcState,
 } from './modules';

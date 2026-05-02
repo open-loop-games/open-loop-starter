@@ -36,7 +36,6 @@ export {
   UnlocksKey,
   SceneKey,
   SessionClockKey,
-  ArcKey,
   AchievementsKey,
   PrestigeKey,
   createAmbientModules,
@@ -44,5 +43,4 @@ export {
   type AmbientTunables,
   type SceneState,
   type SessionClock,
-  type ArcState,
 } from './modules';

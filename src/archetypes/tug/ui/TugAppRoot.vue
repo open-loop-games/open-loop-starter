@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
 import { processOfflineTime, type Engine, type EngineModule } from 'open-loop-engine';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
@@ -8,9 +8,8 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import { useToasts } from '@/composables/useToasts';
 import { manifest } from '../manifest';
-import { ArcKey, MatchKey } from '../modules';
+import { MatchKey } from '../modules';
 import TugFrameLayout from './TugFrameLayout.vue';
 import LaneStrip from './panels/LaneStrip.vue';
 import UnitShop from './panels/UnitShop.vue';
@@ -39,23 +38,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
 
 const stack = useModalStack();
 
-const { addToast } = useToasts();
-let stopArcWatcher: (() => void) | null = null;
-function armArcFlavourEvent(): void {
-  stopArcWatcher?.();
-  const arc = engine.tryInject(ArcKey);
-  if (!arc) return;
-  const announcedAtStart = arc.announced.value;
-  stopArcWatcher = watch(
-    arc.announced,
-    (isAnnounced, wasAnnounced) => {
-      if (!isAnnounced || wasAnnounced || announcedAtStart) return;
-      addToast('Arc closed — SciFi Armada', arc.flavour, false);
-    },
-    { flush: 'sync' },
-  );
-}
-
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
   if (modId) engine.selectMod(modId);
@@ -72,15 +54,12 @@ function startGame(slotId: number, modId?: string): void {
   const match = engine.tryInject(MatchKey);
   if (match && !match.inMatch.value) match.start();
 
-  armArcFlavourEvent();
   currentScreen.value = Screen.Game;
 }
 
 function returnToSlots(): void {
   engine.saveManager?.save();
   engine.stop();
-  stopArcWatcher?.();
-  stopArcWatcher = null;
   currentScreen.value = Screen.Slots;
 }
 
@@ -98,20 +77,11 @@ function getActiveModules(): EngineModule[] {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
-    v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
+  <AppFrame v-else :stack="stack" :tooltip-delay="400">
     <template #header>
-      <SystemHeader
-        app-name="Tug — SciFi Armada"
-        @return-to-slots="returnToSlots"
-      >
+      <SystemHeader app-name="Tug — SciFi Armada" @return-to-slots="returnToSlots">
         <template #about>
-          <h4 style="margin-bottom: 6px">
-            Tug — SciFi Armada
-          </h4>
+          <h4 style="margin-bottom: 6px">Tug — SciFi Armada</h4>
           <p>
             Spend minerals to send units down the lane. Counter the AI's composition by picking
             archetypes that beat its dominant unit. Reduce the enemy fortress to zero before yours
@@ -146,9 +116,6 @@ function getActiveModules(): EngineModule[] {
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench
-      :engine="engine"
-      :modules="getActiveModules"
-    />
+    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
   </DevPanelOverlay>
 </template>

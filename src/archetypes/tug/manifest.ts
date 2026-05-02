@@ -100,7 +100,6 @@ export const manifest: ArchetypeManifest = {
     { n: 4, label: 'First match completion', targetSimRange: [900, 1800] },
     { n: 5, label: 'Second-match composition pivot', targetSimRange: [1800, 3000] },
     { n: 6, label: 'Counter-type mastery demonstrated', targetSimRange: [2700, 4500] },
-    { n: 7, label: 'Counter-mastery invariant (arc closure)', targetSimRange: [3600, 7200] },
   ],
   themes: [
     { name: 'SciFi Armada', isDefault: true, status: 'baked' },

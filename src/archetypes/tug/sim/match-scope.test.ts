@@ -1,4 +1,3 @@
-import { nextTick } from 'vue';
 import { describe, it, expect } from 'vitest';
 import { addResource, type Engine, type InjectionKey } from 'open-loop-engine';
 import { bootEngine } from '@/boot';
@@ -17,7 +16,6 @@ import {
   MetaKey,
   SequencerKey,
   UnitsKey,
-  ArcKey,
 } from '../modules';
 
 const GAME_ID = 'tug-test';
@@ -142,50 +140,5 @@ describe('tug AI opponent (default counter persona)', () => {
 
     expect(playerStarts).toBeGreaterThan(0);
     expect(aiStarts).toBeGreaterThan(0);
-  });
-});
-
-describe('tug arc closure', () => {
-  it('meta-off branch fires when maxCounterPivotsAnyMatch >= 3', async () => {
-    const engine = bootTug(undefined, 'arc-meta-off');
-    const meta = mustInject(engine, MetaKey);
-    const arc = mustInject(engine, ArcKey);
-
-    expect(arc.complete.value).toBe(false);
-    expect(arc.announced.value).toBe(false);
-
-    meta.maxCounterPivotsAnyMatch.value = 3;
-    expect(arc.complete.value).toBe(true);
-    // announced latches via a Vue `watch` — async-flush by default, so wait
-    // a microtask before reading. Matches Producer/Ambient arc shape;
-    // production UI naturally hits nextTick during render.
-    await nextTick();
-    expect(arc.announced.value).toBe(true);
-  });
-
-  it('meta-on branch fires when factionsUnlocked > 0', async () => {
-    const engine = bootTug({ balance: { metaProgressionEnabled: true } }, 'arc-meta-on');
-    const meta = mustInject(engine, MetaKey);
-    const arc = mustInject(engine, ArcKey);
-
-    expect(arc.complete.value).toBe(false);
-    expect(arc.announced.value).toBe(false);
-
-    meta.factionsUnlocked.value = 1;
-    expect(arc.complete.value).toBe(true);
-    await nextTick();
-    expect(arc.announced.value).toBe(true);
-  });
-
-  it('meta-on branch ignores counter-pivot mastery', () => {
-    const engine = bootTug(
-      { balance: { metaProgressionEnabled: true } },
-      'arc-meta-on-ignores-pivots',
-    );
-    const meta = mustInject(engine, MetaKey);
-    const arc = mustInject(engine, ArcKey);
-
-    meta.maxCounterPivotsAnyMatch.value = 99;
-    expect(arc.complete.value).toBe(false);
   });
 });

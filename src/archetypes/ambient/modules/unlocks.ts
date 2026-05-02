@@ -50,8 +50,6 @@ const readThreshold = (threshold: Threshold): DecimalSource =>
  * reveal, not hard gate.
  *
  * Once `active.value` flips, sibling modules read it directly:
- * - `arc.ts` reads `unlocks.getPurchasable(deepestUnlockId).active.value` for
- *   beat-7 closure detection.
  * - `scene.ts` watches scene-variant-reveal entries and bridges to ZoneSystem.
  * - `achievements.ts`'s `unlockVisible(id)` predicate routes through the
  *   category, not a hand-rolled visibility map.

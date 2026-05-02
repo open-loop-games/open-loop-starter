@@ -8,13 +8,11 @@ import type { TugData } from '../data/types';
 import { MatchKey } from './match';
 
 export interface MetaApi {
-  /** Number of factions unlocked via meta-progression. Drives the
-   *  `metaProgressionEnabled` arc-closure branch. Increments are owned by
-   *  prestige.ts (when installed) or fork extensions. */
+  /** Number of factions unlocked via meta-progression. Increments are
+   *  owned by prestige.ts (when installed) or fork extensions. */
   factionsUnlocked: Persistent<number>;
   /** All-time best counter-pivot count across any single match. Updated on
-   *  the `'matchEnded'` event with `Math.max(prev, counterPivots)`. Drives
-   *  the meta-off skeleton arc-closure branch (`>= 3`). */
+   *  the `'matchEnded'` event with `Math.max(prev, counterPivots)`. */
   maxCounterPivotsAnyMatch: Persistent<number>;
   /** Total completed matches across the lifetime of this save. Increments on
    *  `'matchEnded'` regardless of outcome — survives match resets. */

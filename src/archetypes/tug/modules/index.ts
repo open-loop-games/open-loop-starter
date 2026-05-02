@@ -10,7 +10,6 @@ import { createCategoriesModule } from './categories';
 import { createMatchModule } from './match';
 import { createOpponentBotModule } from './opponent-bot';
 import { createMetaModule } from './meta';
-import { createArcModule } from './arc';
 import { createPrestigeModule } from './prestige';
 
 export {
@@ -36,7 +35,6 @@ export {
   type MatchOutcome,
 } from './match';
 export { MetaKey, type MetaApi } from './meta';
-export { ArcKey, type ArcState } from './arc';
 export { PrestigeKey } from './prestige';
 
 /**
@@ -71,8 +69,7 @@ export { PrestigeKey } from './prestige';
  *     `'player'` (unattended balance harnesses); production installs only
  *     the `'ai'` instance and leaves player input to the UI.
  *  9. `tug/meta` — cross-match state container.
- * 10. `tug/meta/arc` — beat-7 closure predicate.
- * 11. `tug/meta/prestige` — conditional; only when meta-progression is on.
+ * 10. `tug/meta/prestige` — conditional; only when meta-progression is on.
  */
 export function createTugModules(data: TugData): EngineModule[] {
   const modules: EngineModule[] = [
@@ -89,7 +86,6 @@ export function createTugModules(data: TugData): EngineModule[] {
     createMatchModule(data),
     createOpponentBotModule(data, 'ai'),
     createMetaModule(data),
-    createArcModule(data),
   ];
   if (data.balance.metaProgressionEnabled) {
     modules.push(createPrestigeModule(data));

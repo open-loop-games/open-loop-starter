@@ -5,9 +5,9 @@ export const PrestigeKey: InjectionKey<Reset> = Symbol('tug/meta/prestige') as I
 
 /**
  * Meta-progression reset. Conditionally installed by the composer when
- * `data.balance.metaProgressionEnabled === true`. Resets the `tug/meta` and
- * `tug/meta/arc` contexts back to defaults — clears `factionsUnlocked`,
- * `maxCounterPivotsAnyMatch`, `matchesPlayed`, and `arcAnnounced`.
+ * `data.balance.metaProgressionEnabled === true`. Resets the `tug/meta`
+ * context back to defaults — clears `factionsUnlocked`,
+ * `maxCounterPivotsAnyMatch`, and `matchesPlayed`.
  *
  * Mirrors Ambient's `prestige.ts` shape: thin `createReset` provider; any
  * conversion currency / multiplier accrual lives at the call site (a fork
@@ -17,10 +17,10 @@ export const PrestigeKey: InjectionKey<Reset> = Symbol('tug/meta/prestige') as I
 export function createPrestigeModule(_data: TugData): EngineModule {
   return {
     id: 'tug/meta/prestige',
-    dependencies: ['tug/meta', 'tug/meta/arc'],
+    dependencies: ['tug/meta'],
     install(ctx) {
       const reset = createReset({
-        resetModules: ['tug/meta', 'tug/meta/arc'],
+        resetModules: ['tug/meta'],
       });
       ctx.provide(PrestigeKey, reset);
     },

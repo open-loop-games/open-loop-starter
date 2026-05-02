@@ -23,7 +23,6 @@
 
 import { Decimal, processOfflineTime, runUntil, type Engine } from 'open-loop-engine';
 import {
-  ArcKey,
   AutoProducersKey,
   HeadlineRateKey,
   PrimaryLifetimeKey,
@@ -91,7 +90,6 @@ function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] }
   const engine = buildAmbientSimEngine();
   const primary = engine.tryInject(PrimaryResourceKey)!;
   const headline = engine.tryInject(HeadlineRateKey)!;
-  const arc = engine.tryInject(ArcKey)!;
   const producers = engine.tryInject(AutoProducersKey)!;
   const unlocks = engine.tryInject(UnlocksKey)!;
 
@@ -157,15 +155,6 @@ function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] }
           tick,
           detail: `headline ${lastRate.toString()} → ${rate.toString()}`,
         });
-      }
-
-      // Fail-state flag: Ambient declares no fail-state surface, so the
-      // ArcKey.complete latch flipping back from true to false would be a
-      // structural break. Track via the announced ref instead — once
-      // announced is true, it must stay true.
-      if (arc.announced.value === false && arc.complete.value === true) {
-        // Race window during the same tick — informational only, not a
-        // finding. announced latches via watch().
       }
 
       lastPrimary = cur;

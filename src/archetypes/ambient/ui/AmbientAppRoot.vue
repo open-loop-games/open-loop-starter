@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
 import { processOfflineTime, type Engine, type EngineModule } from 'open-loop-engine';
 import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
@@ -8,9 +8,8 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import { useToasts } from '@/composables/useToasts';
 import { manifest } from '../manifest';
-import { AmbientDataKey, ArcKey, SessionClockKey, UnlocksKey } from '../modules';
+import { AmbientDataKey, SessionClockKey, UnlocksKey } from '../modules';
 import IdleScenePanel from './panels/IdleScenePanel.vue';
 import AutoProducerList from './panels/AutoProducerList.vue';
 import UnlockTray from './panels/UnlockTray.vue';
@@ -52,23 +51,6 @@ function maybeShowWelcomeBack(gapSec: number): void {
   });
 }
 
-const { addToast } = useToasts();
-let stopArcWatcher: (() => void) | null = null;
-function armArcFlavourEvent(): void {
-  stopArcWatcher?.();
-  const arc = engine.tryInject(ArcKey);
-  if (!arc) return;
-  const announcedAtStart = arc.announced.value;
-  stopArcWatcher = watch(
-    arc.announced,
-    (isAnnounced, wasAnnounced) => {
-      if (!isAnnounced || wasAnnounced || announcedAtStart) return;
-      addToast('Arc closed — Cozy Farm', arc.flavour, false);
-    },
-    { flush: 'sync' },
-  );
-}
-
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
   if (modId) engine.selectMod(modId);
@@ -94,7 +76,6 @@ function startGame(slotId: number, modId?: string): void {
     sessionClock?.refreshElapsedAtResume();
   }
 
-  armArcFlavourEvent();
   currentScreen.value = Screen.Game;
   maybeShowWelcomeBack(resumeGapSec);
 }
@@ -102,8 +83,6 @@ function startGame(slotId: number, modId?: string): void {
 function returnToSlots(): void {
   engine.saveManager?.save();
   engine.stop();
-  stopArcWatcher?.();
-  stopArcWatcher = null;
   currentScreen.value = Screen.Slots;
 }
 

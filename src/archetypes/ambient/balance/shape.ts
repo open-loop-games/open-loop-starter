@@ -10,16 +10,14 @@
  * Worked example for cross-reference: `src/archetypes/producer/balance/`.
  *
  * Key Ambient identity points (vs Producer):
- *   - Arc is 12h cumulative — not continuous. Sessions in reality are
+ *   - Arc is multi-hour cumulative — not continuous. Sessions in reality are
  *     distributed; the beat map measures accumulated sim-time regardless of
  *     wall-clock distribution. For headless sim, wall-clock = sim-clock.
- *   - Signature climax is the prestige-eligible state, not a multiplier
- *     ceiling. Arc closes when the player *could* prestige, whether they do
- *     or not (Rusty's-Retirement / Chillquarium / Tiny-Pasture identity).
+ *   - Signature climax is mid-arc scene diversification — visual depth
+ *     without engagement demand (Rusty's-Retirement / Chillquarium /
+ *     Tiny-Pasture identity).
  *   - Zero-click contract — auto-production runs without input. Manual
  *     clicking is a bonus, not a requirement.
- *   - 7 beats, not 8 — Ambient deliberately omits a separate "first prestige
- *     completed" milestone.
  */
 
 export interface PhaseIntent {
@@ -39,20 +37,21 @@ export interface PhaseIntent {
  */
 export const AMBIENT_IDENTITY = {
   archetypeId: 'ambient' as const,
-  /** 12 sim-hours, cumulative. Matches `offlineCapHours: 12` so a single
-   *  overnight session yields at most one arc-completion. */
+  /** Cumulative sim-time budget for the headless beat span. Matches
+   *  `offlineCapHours: 12` so a single overnight session can land the
+   *  full beat span. */
   arcBudgetSec: 12 * 60 * 60,
-  /** Minimum content cardinality the beat-7 closure depends on. Soft
-   *  floor — scaffolding ships with 5 producers + 12 unlocks + 6 scene
-   *  variants + 20 achievements. */
+  /** Minimum content cardinality the mid-arc beats lean on. Soft floor —
+   *  scaffolding ships with 5 producers + 12 unlocks + 6 scene variants
+   *  + 20 achievements. */
   minAutoProducers: 3,
   minSceneVariants: 3,
   /**
    * Signature climax metric. Numeric magnitudes are mutable; the metric
-   * shape (resource ≥ threshold AND deepest scene-variant unlock visible)
-   * is the archetype centerpiece — beat-7 "arc closure" per AMBIENT_PHASES.
+   * shape (mid-arc scene-variant unlocked alongside a mid-tier producer
+   * owned) is the archetype centerpiece per AMBIENT_PHASES § beat-5.
    */
-  signatureMetric: 'primary >= balance.prestigeEligibleThreshold AND deepestSceneUnlock.active',
+  signatureMetric: 'midSceneUnlock.active AND midProducerOwned',
 } as const;
 
 /**
@@ -99,12 +98,6 @@ export const AMBIENT_PHASES: readonly PhaseIntent[] = [
     order: 6,
     intent: 'First low-urgency achievement multiplier — pacing markers, not pressure',
     currentBeatId: 'beat-6',
-  },
-  {
-    id: 'arc-closure',
-    order: 7,
-    intent: 'Prestige-eligible state reached — the "one-loop-seen" moment',
-    currentBeatId: 'beat-7',
   },
 ] as const;
 

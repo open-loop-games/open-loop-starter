@@ -1,11 +1,5 @@
 import { Decimal, type Engine } from 'open-loop-engine';
-import {
-  ArcKey,
-  AchievementsKey,
-  AutoProducersKey,
-  PrimaryResourceKey,
-  UnlocksKey,
-} from '../modules';
+import { AchievementsKey, AutoProducersKey, PrimaryResourceKey, UnlocksKey } from '../modules';
 import type { ArcBeatProbe, BeatProbe } from '@/balance';
 
 const sec = (s: number) => s;
@@ -37,7 +31,6 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-3': [min(30), hr(1) + min(30)],
   'beat-5': [hr(3), hr(5)],
   'beat-6': [hr(5), hr(8)],
-  'beat-7': [hr(8), hr(12)],
 };
 
 const midpoint = (id: string): number => {
@@ -76,9 +69,6 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  *   multiplier" threshold (Producer's beat-5 used a similar count threshold).
  *   Headless bot can fire 12 of 20 achievements (10 milestone
  *   + 2 tick-time); 8 sits comfortably in the reachable middle.
- * - 7: `ArcKey.complete` — `primary >= prestigeEligibleThreshold` AND
- *   deepest scene-variant unlock visible. Wired in `modules/arc.ts` via
- *   the watch-and-latch pattern (mirrors producer's arc.ts).
  *
  * Beat 4 is resume-driven, not bisected — verify-only at runtime.
  */
@@ -112,11 +102,6 @@ export const ARC_BEATS: ArcBeatProbe[] = [
     specWindow: BEAT_WINDOWS['beat-6']!,
     predicate: (engine) => achievementsEarnedAtLeast(engine, 8),
   },
-  {
-    id: 'beat-7',
-    specWindow: BEAT_WINDOWS['beat-7']!,
-    predicate: (engine) => arcComplete(engine),
-  },
 ];
 
 // ─── Predicate helpers ────────────────────────────────────────────────────
@@ -137,9 +122,4 @@ function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {
   return (a?.earnedCount.value ?? 0) >= n;
 }
 
-function arcComplete(engine: Engine): boolean {
-  const arc = engine.tryInject(ArcKey);
-  return arc?.complete.value ?? false;
-}
-
-export { producerCountAtLeast, unlockBought, achievementsEarnedAtLeast, arcComplete };
+export { producerCountAtLeast, unlockBought, achievementsEarnedAtLeast };

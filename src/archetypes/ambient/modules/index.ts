@@ -5,7 +5,6 @@ import { createUnlocksModule } from './unlocks';
 import { createSceneModule } from './scene';
 import { createCategoriesModule } from './categories';
 import { createSessionClockModule } from './session-clock';
-import { createArcModule } from './arc';
 import { createAchievementsModule } from './achievements';
 import { createPrestigeModule } from './prestige';
 
@@ -24,7 +23,6 @@ export {
 export { UnlocksKey } from './unlocks';
 export { SceneKey, type SceneState } from './scene';
 export { SessionClockKey, type SessionClock } from './session-clock';
-export { ArcKey, type ArcState } from './arc';
 export { AchievementsKey } from './achievements';
 export { PrestigeKey } from './prestige';
 
@@ -43,7 +41,6 @@ export function createAmbientModules(data: AmbientData): EngineModule[] {
     createSceneModule(data),
     createCategoriesModule(),
     createSessionClockModule(),
-    createArcModule(data),
     createAchievementsModule(data),
   ];
   if (data.balance.prestigeEnabled) {

@@ -88,7 +88,6 @@ export const manifest: ArchetypeManifest = {
     { n: 4, label: 'Glance-check value proposition proven', targetSimRange: [5400, 10800] },
     { n: 5, label: 'Mid-arc scene diversification', targetSimRange: [10800, 18000] },
     { n: 6, label: 'First low-urgency achievement multiplier', targetSimRange: [18000, 28800] },
-    { n: 7, label: 'Prestige-eligible state reached', targetSimRange: [28800, 43200] },
   ],
   themes: [
     { name: 'Cozy Farm', isDefault: true, status: 'baked' },

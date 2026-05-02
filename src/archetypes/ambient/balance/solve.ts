@@ -12,7 +12,7 @@
  * picks and edits scaffolding based on the output, per
  * `archetypes/BALANCING.md`.
  *
- * Scope: beats 2, 3, 5, 7. Beats 1, 4, 6 are verify-only:
+ * Scope: beats 2, 3, 5. Beats 1, 4, 6 are verify-only:
  *   - Beat 1 ("first passive production") fires on planter's seeded
  *     `initialAmount: 1` producing primary ≥ 1 in seconds. No knob to bisect
  *     against under default content.
@@ -43,7 +43,7 @@ import { UNLOCKS } from '../data/unlocks';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { buildAmbientSimEngine } from './bot';
 
-const BUDGET_SEC = BEAT_WINDOWS['beat-7']![1] * 2.5;
+const BUDGET_SEC = BEAT_WINDOWS['beat-6']![1] * 2.5;
 
 // ─── Proposal state ──────────────────────────────────────────────────────
 
@@ -158,32 +158,6 @@ function solveBeat5(ctx: SamplerContext, targetSec: number): TunerResult {
   });
 }
 
-/**
- * year-cycles unlock threshold controls beat-7. The arc-close predicate
- * gates on BOTH `primary >= prestigeEligibleThreshold` AND `year-cycles`
- * unlock bought (lifetime >= year-cycles.threshold). With B2/B3/B5 applied,
- * year-cycles is the binding term — primary current value crosses
- * prestigeEligibleThreshold (default 1e6) well before lifetime reaches the
- * year-cycles threshold under any sensible balance. So the solver bisects
- * year-cycles directly; prestigeEligibleThreshold stays at its hand-picked
- * default and the gate it controls is dominated by year-cycles.
- *
- * If a future Ambient design wants prestigeEligibleThreshold to be the
- * binding term, swap year-cycles to a low fixed value and bisect prestige
- * here instead. The framing is "whichever fires last, that's the variable."
- *
- * Bracket [5e6, 5e10] — lifetime accumulates fast at late-arc rates with
- * pasture/orchard owned, so the upper bound exceeds any sane window.
- */
-function solveBeat7(ctx: SamplerContext, targetSec: number): TunerResult {
-  return bisectTuner({
-    lo: 5e6,
-    hi: 5e10,
-    targetSec,
-    sampler: (v) => sampleBeat(ctx, 'beat-7', 'unlocks/year-cycles/threshold', v),
-  });
-}
-
 // ─── Verification ────────────────────────────────────────────────────────
 
 interface VerifyRow {
@@ -245,7 +219,7 @@ function currentUnlockThreshold(id: string): number {
 // Solver ramp-up gate. Step up one beat at a time — never run the full
 // multi-beat × multi-pass sweep on the first try. Toggle this and PASSES
 // below as the ramp progresses.
-const ENABLED_BEATS = new Set<string>(['beat-2', 'beat-3', 'beat-5', 'beat-7']);
+const ENABLED_BEATS = new Set<string>(['beat-2', 'beat-3', 'beat-5']);
 
 function solvePass(proposed: Proposed): {
   proposed: Proposed;
@@ -338,32 +312,6 @@ function solvePass(proposed: Proposed): {
     });
   }
 
-  // Beat 7 — year-cycles unlock threshold (the binding term)
-  if (ENABLED_BEATS.has('beat-7')) {
-    const [lo, hi] = BEAT_WINDOWS['beat-7']!;
-    const target = (lo + hi) / 2;
-    const currentFire = sampleBeat(
-      ctx,
-      'beat-7',
-      'unlocks/year-cycles/threshold',
-      Number(proposed['unlocks/year-cycles/threshold'] ?? currentUnlockThreshold('year-cycles')),
-    );
-    const sol = solveBeat7(ctx, target);
-    const value = Math.round(sol.value);
-    ctx.proposed['unlocks/year-cycles/threshold'] = value;
-    solves.push({
-      beatId: 'beat-7',
-      field: 'year-cycles.threshold',
-      current: currentUnlockThreshold('year-cycles'),
-      currentFireTime: currentFire,
-      proposed: value,
-      proposedFireTime: sol.time,
-      direction: sol.direction,
-      iterations: sol.iterations,
-      window: [lo, hi],
-    });
-  }
-
   return { proposed: ctx.proposed, solves };
 }
 
@@ -415,7 +363,7 @@ function main(): void {
     initialBlob: verifyBlob,
     proposed,
   };
-  const verifyBeats = ['beat-1', 'beat-2', 'beat-3', 'beat-5', 'beat-6', 'beat-7'].filter(
+  const verifyBeats = ['beat-1', 'beat-2', 'beat-3', 'beat-5', 'beat-6'].filter(
     (b) => b === 'beat-1' || b === 'beat-6' || ENABLED_BEATS.has(b),
   );
   const verified = verifyAll(verifyCtx, verifyBeats);

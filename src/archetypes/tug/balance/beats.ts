@@ -10,10 +10,10 @@ const min = (m: number) => m * 60;
  * truth for both the math-only `runUntil` fire-time bisection and the MC
  * distribution-statistic probes' aggregate p50 windows.
  *
- * Cumulative-across-matches arc — beats 1–4 land within match 1; beats 5–7
+ * Cumulative-across-matches arc — beats 1–4 land within match 1; beats 5–6
  * span 2–4 matches' worth of cumulative sim-time. The headless sim does
  * not auto-restart matches between `match.end()` and the next
- * `match.start()`, so beats 5 + 7 require a multi-match driver in the
+ * `match.start()`, so beat 5 requires a multi-match driver in the
  * sampler — handled by `bot.ts::createBalanceBotModule` which subscribes
  * to `match.on('matchEnded', ...)` and calls `match.start()` on the next
  * tick (after the auto-reset settles).
@@ -31,7 +31,6 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-4': [min(15), min(30)],
   'beat-5': [min(30), min(50)],
   'beat-6': [min(45), min(75)],
-  'beat-7': [min(60), min(120)],
 };
 
 /**
@@ -66,12 +65,6 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
  *   Conservative — drops the original "AND match won" conjunction so
  *   the predicate is testable inside a single `runUntil` call without
  *   the post-reset capture problem.
- * - 7 (MC distribution-statistic, cross-match): meta-off arc closure —
- *   `meta.maxCounterPivotsAnyMatch.value >= 3`. Cross-match running max,
- *   updated in meta.ts on each `match.on('matchEnded', ...)` event with
- *   `Math.max(prev, payload.counterPivots)`. Requires the bot's
- *   multi-match driver to keep starting matches until the meta-side ref
- *   accumulates to 3.
  *
  * Fire-time predicates are evaluated once per tick before each
  * simulateTick (per `runUntil` semantics); MC predicates use
@@ -109,11 +102,6 @@ export const ARC_BEATS: ArcBeatProbe[] = [
     specWindow: BEAT_WINDOWS['beat-6']!,
     predicate: (engine) => counterPivotsAtLeast(engine, 2),
   },
-  {
-    id: 'beat-7',
-    specWindow: BEAT_WINDOWS['beat-7']!,
-    predicate: (engine) => maxCounterPivotsAnyMatchAtLeast(engine, 3),
-  },
 ];
 
 // ─── Predicate helpers ────────────────────────────────────────────────────
@@ -147,11 +135,6 @@ function matchEnded(engine: Engine): boolean {
   return !match.inMatch.value;
 }
 
-function maxCounterPivotsAnyMatchAtLeast(engine: Engine, n: number): boolean {
-  const meta = engine.tryInject(MetaKey);
-  return meta ? meta.maxCounterPivotsAnyMatch.value >= n : false;
-}
-
 /**
  * Beat-5 predicate. The bot's deterministic policy opens with `marine` in
  * match 1 and `wraith` in match 2 (see `bot.ts::openArchetypeId`), so once
@@ -172,6 +155,5 @@ export {
   firstCombatEngaged,
   counterPivotsAtLeast,
   matchEnded,
-  maxCounterPivotsAnyMatchAtLeast,
   secondMatchPivotMade,
 };

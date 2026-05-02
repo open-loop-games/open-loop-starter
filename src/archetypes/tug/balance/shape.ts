@@ -20,8 +20,8 @@
  * Key Tug identity points (vs Ambient / Tier A):
  *   - Adversarial — every match is the player vs an AI policy whose
  *     income mirrors the player's. Outcome is stochastic.
- *   - Cumulative-across-matches arc — 2h cumulative sim-time covers
- *     ~4 matches at the default 30-min match limit.
+ *   - Cumulative-across-matches arc — ~75min cumulative sim-time covers
+ *     2–4 matches at the default 30-min match limit.
  *   - Signature climax is **counter-matrix sharpness sensitivity** — the
  *     mean counter-pivots-per-match curve across a strongCounter sweep
  *     under believability-calibrated counter-vs-counter mirror play. Not
@@ -29,10 +29,6 @@
  *     proposed-elbow scalar.
  *   - Counter matrix is data, not chain — N×N damage-type multipliers
  *     read by the per-tick combat resolver as a 2D array lookup.
- *   - Bimodal arc closure — beat 7 fires either on first meta-progression
- *     unlock (`metaProgressionEnabled: true`) or on counter-mastery
- *     invariant (3+ counter-pivots in any single match) for the no-meta
- *     skeleton default.
  */
 
 export interface PhaseIntent {
@@ -53,10 +49,9 @@ export interface PhaseIntent {
  */
 export const TUG_IDENTITY = {
   archetypeId: 'tug' as const,
-  /** 2 sim-hours, cumulative across matches per `archetypes/tug.md` § 4.
-   *  At the default 30-min match limit and ~5–25 min mean match-length,
-   *  2h covers roughly 4–10 matches' worth of cumulative play. */
-  arcBudgetSec: 2 * 60 * 60,
+  /** ~75min cumulative across matches; covers the headless beat span at
+   *  the default 30-min match limit and ~5–25 min mean match-length. */
+  arcBudgetSec: 75 * 60,
   /** Minimum content cardinality the counter-matrix depth depends on.
    *  4 archetypes is the minimum that supports a non-trivial RPS+1 counter
    *  cycle. Skeleton ships with 6 (RPS+2-axis crossed). */
@@ -116,13 +111,6 @@ export const TUG_PHASES: readonly PhaseIntent[] = [
     intent:
       'Counter-type mastery demonstrated — the player has internalized at least two counter matchups',
     currentBeatId: 'beat-6',
-  },
-  {
-    id: 'arc-closure',
-    order: 7,
-    intent:
-      "Arc closure — first meta-progression milestone OR counter-mastery invariant; the 'one-loop-seen' moment",
-    currentBeatId: 'beat-7',
   },
 ] as const;
 

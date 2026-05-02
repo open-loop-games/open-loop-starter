@@ -101,7 +101,7 @@ export interface AmbientBalance {
    */
   prestigeEnabled: boolean;
   prestigeMultiplierBase: DecimalSource;
-  /** Resource threshold gating beat-7 closure. */
+  /** Resource threshold at which the prestige action becomes available. */
   prestigeEligibleThreshold: DecimalSource;
 }
 
