@@ -2,7 +2,7 @@ import type { AmbientBalance, AutoProducerDef } from './types';
 
 // ─── Skeleton ───
 // 5 continuous tiers. No click-producer entry — Ambient's zero-click
-// contract (archetype doc § 9 surface 9) means there is no manual trigger.
+// contract means there is no manual trigger.
 // Planter seeds at initialAmount: 1 so beat-1 ("First passive production
 // visible") is reachable on cold boot. Other tiers gate on lifetime
 // thresholds via `unlocks.ts`.

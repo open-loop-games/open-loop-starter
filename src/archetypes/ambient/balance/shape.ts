@@ -17,17 +17,16 @@
  *     ceiling. Arc closes when the player *could* prestige, whether they do
  *     or not (Rusty's-Retirement / Chillquarium / Tiny-Pasture identity).
  *   - Zero-click contract — auto-production runs without input. Manual
- *     clicking is a bonus, not a requirement (doc § 8 surface 9).
+ *     clicking is a bonus, not a requirement.
  *   - 7 beats, not 8 — Ambient deliberately omits a separate "first prestige
- *     completed" milestone (doc § 4 closing note).
+ *     completed" milestone.
  */
 
 export interface PhaseIntent {
   id: string;
   /** Strict position in the arc. The archetype *is* this sequence. */
   order: number;
-  /** One-line player-experience description. Lifted verbatim from
-   *  `archetypes/ambient.md` § 4. */
+  /** One-line player-experience description. */
   intent: string;
   /** Beat id in `beats.ts` currently expressing this phase. Mutable — a
    *  phase may migrate between beats as predicates/windows reshape. */
@@ -51,15 +50,15 @@ export const AMBIENT_IDENTITY = {
   /**
    * Signature climax metric. Numeric magnitudes are mutable; the metric
    * shape (resource ≥ threshold AND deepest scene-variant unlock visible)
-   * is the archetype centerpiece per ambient.md § 4 beat 7.
+   * is the archetype centerpiece — beat-7 "arc closure" per AMBIENT_PHASES.
    */
   signatureMetric: 'primary >= balance.prestigeEligibleThreshold AND deepestSceneUnlock.active',
 } as const;
 
 /**
- * Ordered player-experience phases, from `ambient.md` § 4. The order and
- * intent of each are part of the identity; the concrete beat predicate and
- * minute-window expressing each phase live in `beats.ts` and are mutable.
+ * Ordered player-experience phases. The order and intent of each are part
+ * of the identity; the concrete beat predicate and minute-window expressing
+ * each phase live in `beats.ts` and are mutable.
  */
 export const AMBIENT_PHASES: readonly PhaseIntent[] = [
   {

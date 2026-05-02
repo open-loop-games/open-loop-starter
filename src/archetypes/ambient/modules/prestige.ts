@@ -9,9 +9,9 @@ export const PrestigeKey: InjectionKey<Reset> = Symbol('ambient/prestige') as In
  * resolves these to every `persistent()` ref the listed modules registered.
  *
  * Skipped at engine construction when `data.balance.prestigeEnabled === false`
- * (the default — Ambient ships zero prestige code paths active per archetype
- * doc § 11). When enabled, consumers inject `PrestigeKey` and call `.reset()`
- * to drop the run; currency / multiplier accrual lives at the call site.
+ * (the default — Ambient ships zero prestige code paths active). When
+ * enabled, consumers inject `PrestigeKey` and call `.reset()` to drop the
+ * run; currency / multiplier accrual lives at the call site.
  */
 export function createPrestigeModule(_data: AmbientData): EngineModule {
   return {

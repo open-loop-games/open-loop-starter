@@ -7,9 +7,10 @@
  * per solve-pass — bisection iterations reset state via
  * `saveManager.importSave(initialBlob)` instead of rebuilding.
  *
- * Run: `pnpm balance:solve:ambient`. Prints a proposed-patch report. Does
- * NOT mutate data files — the human picks and edits scaffolding based on
- * the output, per `archetypes/BALANCING.md`.
+ * Run: `pnpm exec vite-node src/archetypes/ambient/balance/solve.ts`.
+ * Prints a proposed-patch report. Does NOT mutate data files — the human
+ * picks and edits scaffolding based on the output, per
+ * `archetypes/BALANCING.md`.
  *
  * Scope: beats 2, 3, 5, 7. Beats 1, 4, 6 are verify-only:
  *   - Beat 1 ("first passive production") fires on planter's seeded

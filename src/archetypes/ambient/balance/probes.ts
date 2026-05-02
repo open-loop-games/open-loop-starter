@@ -1,10 +1,11 @@
 /**
- * Ambient sim-driven balance probes — probe-3 + probe-5 from
- * `archetypes/ambient.md` § 6. Sits in the Tier-A balance lane (not the
- * vitest suite — § 7 is explicit that the test suite never calls
- * `runHeadless`); mod authors run this when content shape changes.
+ * Ambient sim-driven balance probes — offline-round-trip + no-pressure
+ * invariant. Sits in the vite-node discovery lane per
+ * `archetypes/BALANCING.md` § Theme 5 ("Scripts discover, tests lock"); the
+ * vitest suite never drives sim runs.
  *
- * Run: `pnpm balance:probes:ambient`. Prints two report sections.
+ * Run: `pnpm exec vite-node src/archetypes/ambient/balance/probes.ts`.
+ * Prints two report sections.
  *
  * Probe 3 — offline-round-trip correctness. The Ambient contract requires
  * a 4h / 12h / 24h offline gap to yield (within 0.5%) the same primary-

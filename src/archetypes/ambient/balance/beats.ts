@@ -13,9 +13,10 @@ const min = (m: number) => m * 60;
 const hr = (h: number) => h * 60 * 60;
 
 /**
- * § 4 windows in seconds. Lifted from `archetypes/ambient.md` § 4 (after
- * the 12h-cumulative reshape). One source of truth for both flow-probe
- * snapshot midpoints and arc-probe spec windows.
+ * Beat windows in seconds, against the 12h-cumulative arc. One source of
+ * truth for both flow-probe snapshot midpoints and arc-probe spec windows;
+ * `shape.ts` AMBIENT_PHASES holds the player-experience intents these
+ * predicates express.
  *
  * Beat 4 ("glance-check value proposition proven") is resume-driven and
  * not testable in continuous headless sim. It's omitted from BEAT_WINDOWS
@@ -25,10 +26,10 @@ const hr = (h: number) => h * 60 * 60;
  * null for the same reason.
  *
  * Windows are an LLM guess on first pass — fully expect to shift them
- * during balance reconciliation (BALANCING.md § Retune vs reshape → "move
- * the phase"). Producer's B5/B6/B7 shifted 15–25 minutes during prior
- * tuning; record the same kind of shifts here in commit notes if they happen,
- * and sync `archetypes/ambient.md` § 4 to match.
+ * during balance reconciliation (BALANCING.md § "Retune vs reshape" →
+ * "move the phase"). Producer's B5/B6/B7 shifted 15–25 minutes during
+ * prior tuning; record the same kind of shifts here in commit notes if
+ * they happen.
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), sec(30)],
@@ -55,23 +56,22 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
 }));
 
 /**
- * Predicates for arc-probe. § 4 triggers, decoded for the headless bot
- * (zero-click, auto-purchase producers + unlocks + scene-variants):
+ * Arc-probe predicates, decoded for the headless bot (zero-click,
+ * auto-purchase producers + unlocks + scene-variants):
  *
- * - 1: `primary >= 1` (doc § 4: "primary ≥ 1 without any clicks"). The
- *   planter seeds at initialAmount: 1, so primary crosses 1 in seconds —
+ * - 1: `primary >= 1` ("first passive production visible"). The planter
+ *   seeds at initialAmount: 1, so primary crosses 1 in seconds —
  *   verify-only beat under default content.
  * - 2: planter count ≥ 2 — first *purchased* auto-producer (planter starts
- *   at count 1 from initialAmount). Doc § 4: "first auto-producer
- *   purchased (T1)"; under zero-click the planter is the only T1, and the
- *   first cost paid is the second planter unit.
+ *   at count 1 from initialAmount). Under zero-click the planter is the
+ *   only T1, and the first cost paid is the second planter unit.
  * - 3: first non-default-visible unlock fires — the `coop-built` unlock by
  *   default content (smallest threshold > 0 among non-default unlocks).
  *   Reads via `unlocks.getPurchasable('coop-built').active.value`.
  * - 5: mid producer owned AND first scene-variant unlocked — pond is the
  *   middle tier (index 2 of 5); spring-arrives is the first scene-variant
- *   unlock by threshold. Conjunction matches doc § 4: "producers[mid].count
- *   ≥ 1 AND ≥1 idle-scene-variant unlocked".
+ *   unlock by threshold. Conjunction expresses "mid-arc scene
+ *   diversification" — visual depth without engagement demand.
  * - 6: ≥ 8 achievements earned — 1.02⁸ ≈ 1.17× is the "first felt
  *   multiplier" threshold (Producer's beat-5 used a similar count threshold).
  *   Headless bot can fire 12 of 20 achievements (10 milestone

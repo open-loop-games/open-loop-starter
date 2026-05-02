@@ -9,9 +9,9 @@ import { AutoProducersKey, createAmbientEngine, type AmbientOverrides } from '..
 
 /**
  * Zero-click activity model. Ambient's identity is "auto-production runs
- * without input" (doc § 8 surface 9). The bot fires zero
- * clicks at all sim-times; this function is here for symmetry with
- * Producer's `expectedClicksAt` and to make the contract explicit.
+ * without input." The bot fires zero clicks at all sim-times; this function
+ * is here for symmetry with Producer's `expectedClicksAt` and to make the
+ * contract explicit.
  *
  * If a fork later adds a click affordance, this becomes the Ambient-side
  * taper. Until then, returning 0 documents the deliberate absence.
