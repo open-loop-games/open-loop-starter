@@ -6,13 +6,23 @@ open-loop-starter — quick-copy scaffold for prototyping games on `open-loop-en
 
 ## Purpose
 
-Three jobs:
+Dual character in one repo (see `/work/studio/CLAUDE.md` § Studio components). Forks consume both halves by forking the repo and deleting what they don't need. Not a library — a template.
 
-1. **Scaffold layout/theme layer (`src/lib/`)** — layout shells, AppFrame, modal stack, default CSS tokens, reset. Presentational-only; no engine imports. Not an importable cross-package library.
-2. **Default theme (`src/styles/`)** — opinionated CSS-variable values and widget-level selectors layered over the token defaults. Forks override per-variable or swap wholesale.
-3. **Archetype demos (`src/archetypes/<name>/`)** — each archetype is a self-bootable demo with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts`. Pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton. Fork the repo, pick one archetype, delete the other nine + the gallery, start building content in place.
+### Scaffold (`src/lib/`, `src/styles/`, AppFrame, composables)
 
-Starter is not a library — it's a template. Downstream games consume it by *forking*, not by depending on it. The bar for code here is "would a new game want this on day one?" If yes, ship it; if no, cut it.
+Layout shells, AppFrame, modal stack, default CSS tokens, reset, and the bridge composables that connect engine state to UI. `src/lib/` is presentational-only — no engine imports — and is **not** an importable cross-package library. `src/styles/` provides opinionated CSS-variable values and widget-level selectors layered over the token defaults; forks override per-variable or swap wholesale.
+
+Maintenance discipline: stability. Forks copy this and don't want it shifting under them. The bar for new scaffold code is "would every new game want this on day one?"
+
+### Archetype demos (`src/archetypes/<name>/`)
+
+Forkable best-practice implementations of validated archetypes, slim-ported from canonical games with row-level citations. Each archetype is self-bootable with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts` — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton.
+
+This half is a research-output surface that happens to live inside starter. Maintenance discipline: canonical-fidelity + research-grounding. Slim-ports trace ids/numbers 1:1 from a canonical exemplar (live engine port preferred over frozen fork) with per-row citations. The bar for new archetype content is "would a new game forking this archetype want this on day one, traceable to a canonical exemplar?"
+
+### Fork workflow
+
+Clone the repo, pick one archetype, delete the others + `src/gallery/` (when it lands), keep your one archetype as the whole app.
 
 ## Commands
 
