@@ -9,12 +9,17 @@
     idempotent on the same value, and the wrapper's clear runs after the
     AppRoot's `onUnmounted` so a missed teardown is still cleaned up.
 
-  - Vue app is fully unmounted between archetypes — `engine.stop()` halts
-    the loop, then `app.unmount()` fires `onUnmounted` on the AppRoot.
+  - Vue app is fully unmounted between archetypes — `engine.dispose()`
+    stops the loop and releases the engine's persistent-context registry,
+    then `app.unmount()` fires `onUnmounted` on the AppRoot. Dispose (not
+    stop) is required because the gallery remounts the same archetype
+    in-page; without it the second mount throws on persistent-name
+    collisions (engine assumes single-instance-per-lifetime otherwise).
 
   Save isolation rides on each archetype's unique `gameId` (producer-pilot,
   ambient-pilot, tug-pilot); save-manager prefixes storage keys with it, so
-  no `manifest.id`-as-namespace push/pop is needed.
+  no `manifest.id`-as-namespace push/pop is needed. Saves persist across
+  remounts because dispose only touches the in-memory ref registry.
 -->
 <script setup lang="ts">
 import { onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } from 'vue';
@@ -61,7 +66,7 @@ function unmountArchetype(): void {
   current.value = null;
   if (result) {
     try {
-      result.engine.stop();
+      result.engine.dispose();
     } catch {
       // engine may not be running; swallowing is fine
     }
