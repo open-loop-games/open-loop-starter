@@ -3,15 +3,14 @@
   buy-1 / buy-max buttons. Mode-agnostic: callers pick the bulk semantics
   via `getCost` / `purchase` / `purchaseMax` from `ProducerRow`.
 
-  Tooltip-side compute deferred to a follow-on pass — the slim port
-  starts with inline rate / cost text. Producer's ProducerTooltip.vue
-  is adoptable later but routes through `useRateBreakdown`, which the
-  scaler tooltip-pass can lift wholesale.
+  Each row is wrapped in ProducerTooltip — the modifier chain breakdown
+  surfaces on hover, the same data that previously squatted in the sidebar.
 -->
 <script setup lang="ts">
 import { Decimal } from 'open-loop-engine';
 import { format, formatWhole } from 'open-loop-engine';
 import type { ProducerRow } from '../../composables/useProducers';
+import ProducerTooltip from './ProducerTooltip.vue';
 
 defineProps<{
   rows: ProducerRow[];
@@ -30,39 +29,43 @@ function buyMax(row: ProducerRow): void {
 
 <template>
   <div class="scaler-producer-grid">
-    <div
+    <ProducerTooltip
       v-for="row in rows"
       :key="row.def.id"
-      class="scaler-producer-row"
-      :data-affordable="row.canAfford(1)"
+      :row="row"
     >
-      <div class="scaler-producer-row__name">
-        {{ row.def.name }}
-        <span class="scaler-producer-row__count">×{{ formatWhole(row.count.value) }}</span>
+      <div
+        class="scaler-producer-row"
+        :data-affordable="row.canAfford(1)"
+      >
+        <div class="scaler-producer-row__name">
+          {{ row.def.name }}
+          <span class="scaler-producer-row__count">×{{ formatWhole(row.count.value) }}</span>
+        </div>
+        <div class="scaler-producer-row__rate">
+          {{ format(row.rate.value, 2) }}/s
+        </div>
+        <div class="scaler-producer-row__cost">
+          Cost {{ format(row.getCost(1), 2) }}
+        </div>
+        <div class="scaler-producer-row__actions">
+          <button
+            class="btn-sm"
+            :disabled="!row.canAfford(1)"
+            @click="buyOne(row)"
+          >
+            Buy 1
+          </button>
+          <button
+            class="btn-sm"
+            :disabled="!Decimal.gt(row.maxAffordable.value, 0)"
+            @click="buyMax(row)"
+          >
+            Buy Max ({{ formatWhole(row.maxAffordable.value) }})
+          </button>
+        </div>
       </div>
-      <div class="scaler-producer-row__rate">
-        {{ format(row.rate.value, 2) }}/s
-      </div>
-      <div class="scaler-producer-row__cost">
-        Cost {{ format(row.getCost(1), 2) }}
-      </div>
-      <div class="scaler-producer-row__actions">
-        <button
-          class="btn-sm"
-          :disabled="!row.canAfford(1)"
-          @click="buyOne(row)"
-        >
-          Buy 1
-        </button>
-        <button
-          class="btn-sm"
-          :disabled="!Decimal.gt(row.maxAffordable.value, 0)"
-          @click="buyMax(row)"
-        >
-          Buy Max ({{ formatWhole(row.maxAffordable.value) }})
-        </button>
-      </div>
-    </div>
+    </ProducerTooltip>
     <p
       v-if="rows.length === 0"
       class="scaler-producer-grid__empty"

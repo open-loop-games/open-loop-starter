@@ -1,13 +1,12 @@
 <!--
   Scaler app root. Mounts SidebarMainShell with:
     #sidebarResources → ResourceBar (always-visible 5-currency strip)
-    #sidebar          → SidebarChainReadout + Achievements button (2b.3)
+    #sidebar          → Achievements button
     default           → Tabs over the 3 tier panels
-  Header: SystemHeader with appName='Scaler' + about copy from § 1.
 
-  Sub-leaf 2b.2 wires Antimatter fully + structural Prestige/Transcend.
-  Sub-leaf 2b.3 fills in the Transcend `#extras` slot with AccBoostRow +
-  ChallengeStrip and wires the Achievements button to AchievementGridDialog.
+  Modifier-chain breakdowns live in the per-row ProducerTooltip — the
+  sidebar can't fit 5 chains × 12+ factors per tier without monopolising
+  the screen, and the data is naturally per-producer anyway.
 -->
 <script setup lang="ts">
 import { inject, onMounted, onUnmounted, provide, ref, watch } from 'vue';
@@ -27,7 +26,6 @@ import { ANTIMATTER_TIER, PRESTIGE_TIER, TRANSCEND_TIER } from './tier-configs';
 import type { ExtraPurchasableRef } from '../composables/useTier';
 import TierPanel from './components/TierPanel.vue';
 import ResourceBar from './components/ResourceBar.vue';
-import SidebarChainReadout from './components/SidebarChainReadout.vue';
 import AccBoostRow from './components/AccBoostRow.vue';
 import ChallengeStrip from './components/ChallengeStrip.vue';
 import AchievementGridDialog from './components/AchievementGridDialog.vue';
@@ -137,7 +135,6 @@ function getActiveModules(): EngineModule[] {
         <ResourceBar />
       </template>
       <template #sidebar>
-        <SidebarChainReadout />
         <button
           class="btn-sm scaler-achievements-btn"
           @click="openAchievements"
