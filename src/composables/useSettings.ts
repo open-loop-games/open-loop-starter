@@ -2,11 +2,13 @@ import type { Persistent } from 'open-loop-engine';
 import { useModule } from './useModule';
 import { SettingsKey } from '@/modules/settings';
 
+/**
+ * Demo-level toggles that persist with the engine save (per-demo, per-slot).
+ * Player-level prefs (theme, notation, ui scale, autosave) live in
+ * `usePlayerPrefs` and are shared across every demo in the gallery.
+ */
 export interface StockSettings {
-  autoSave: Persistent<boolean>;
   offlineProgress: Persistent<boolean>;
-  theme: Persistent<string>;
-  notation: Persistent<string>;
 }
 
 export function useSettings(): StockSettings {

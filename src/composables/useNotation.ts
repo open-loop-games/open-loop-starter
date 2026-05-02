@@ -1,6 +1,6 @@
-import { watchEffect } from 'vue';
-import { notationManager, Presets, type Engine } from 'open-loop-engine';
-import { SettingsKey } from '@/modules/settings';
+import { watch } from 'vue';
+import { notationManager, Presets } from 'open-loop-engine';
+import { usePlayerPrefs } from './usePlayerPrefs';
 
 /** Curated notation options for the settings picker */
 export const NOTATION_OPTIONS = [
@@ -12,22 +12,29 @@ export const NOTATION_OPTIONS = [
   { key: 'mixed-scientific', label: 'Mixed Scientific' },
 ] as const;
 
-/**
- * Registers extra eternal presets and syncs the active notation to the setting.
- * Call once after engine start.
- */
-export function useNotation(engine: Engine) {
-  const settings = engine.tryInject(SettingsKey)!.settings;
-
-  // Register presets beyond the 3 defaults (standard, scientific, engineering)
+let presetsRegistered = false;
+function ensurePresetsRegistered(): void {
+  if (presetsRegistered) return;
   notationManager.register('logarithm', Presets.Logarithm);
   notationManager.register('letters', Presets.Letters);
   notationManager.register('mixed-scientific', Presets.MixedScientific);
+  presetsRegistered = true;
+}
 
-  watchEffect(() => {
-    const key = settings.notation.value;
-    if (notationManager.getAvailable().includes(key)) {
-      notationManager.setActive(key);
-    }
-  });
+/**
+ * Registers extra notation presets and binds the active notation to the
+ * player-level pref. Idempotent across demo switches.
+ */
+export function useNotation(): void {
+  ensurePresetsRegistered();
+  const prefs = usePlayerPrefs();
+  watch(
+    prefs.notation,
+    (key) => {
+      if (notationManager.getAvailable().includes(key)) {
+        notationManager.setActive(key);
+      }
+    },
+    { immediate: true },
+  );
 }

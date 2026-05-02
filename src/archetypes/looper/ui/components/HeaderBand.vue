@@ -1,24 +1,16 @@
 <script setup lang="ts">
 /**
- * HeaderBand — global header strip above the three-column game body.
+ * HeaderBand — in-game header strip above the three-column game body.
  *
- * Layout matches OMSI reference (idle-loops-omsi/loops/index.html #timeInfo
- * + #trackedResources + #timeControls + #menu) with a modern read:
+ *   Row 1 — thin loop-progress bar (shrinks as mana drains)
+ *   Row 2 — tracked resources | loop# | pause/play · restart · toggles
  *
- *   Row 1 — thin loop-progress bar (shrinks as mana drains, cornflower blue)
- *   Row 2 — tracked resources | loop# | pause/play · restart · toggles · menu
- *
- * Menu is a reka DropdownMenu grouping Save / Settings / FAQ / Changelog.
- * Restart uses a reka Dialog confirm.
+ * Save / Settings live in the starter's SystemHeader (above this bar);
+ * Restart uses a reka Dialog confirm owned here.
  */
 
 import { ref, computed } from 'vue';
 import {
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-  DropdownMenuPortal,
-  DropdownMenuContent,
-  DropdownMenuItem,
   DialogRoot,
   DialogPortal,
   DialogOverlay,
@@ -32,10 +24,7 @@ import { Decimal, formatWhole } from 'open-loop-engine';
 import { useLoop } from '../../composables/useLoop';
 import { useMana } from '../../composables/useMana';
 import { useTrackedResources } from '../../composables/useTrackedResources';
-import { useModalStack } from '@/lib';
 import PanelLayout from '@/ui/components/PanelLayout.vue';
-import SavePanel from '@/ui/components/SavePanel.vue';
-import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 
 const loop = useLoop();
 const { isLoopRunning, togglePause, manualRestart } = loop;
@@ -52,15 +41,6 @@ const timeBarPercent = computed(() => {
   if (Decimal.lte(total, 0)) return 0;
   return Decimal.div(getManaValue(), total).clamp(0, 1).mul(100).toNumber();
 });
-
-// Save / Settings open through the looper's modal stack pattern.
-const stack = useModalStack();
-function openSave(): void {
-  const id = stack.push(SavePanel, { onClose: () => stack.remove(id) });
-}
-function openSettings(): void {
-  const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
-}
 
 const showRestartConfirm = ref(false);
 
@@ -147,34 +127,6 @@ function formatResource(id: string): string {
             <span>Pause on failed loop</span>
           </label>
         </AppTooltip>
-        <DropdownMenuRoot>
-          <DropdownMenuTrigger
-            class="btn-sm menu-trigger"
-            style="display: none"
-          >
-            Menu ▾
-          </DropdownMenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuContent
-              class="dropdown-content"
-              :side-offset="4"
-              align="end"
-            >
-              <DropdownMenuItem
-                class="dropdown-item"
-                @select="openSave"
-              >
-                Save
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                class="dropdown-item"
-                @select="openSettings"
-              >
-                Settings
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenuPortal>
-        </DropdownMenuRoot>
       </div>
     </div>
 
@@ -323,34 +275,8 @@ function formatResource(id: string): string {
   cursor: pointer;
 }
 
-.menu-trigger {
-  cursor: pointer;
-}
-
 .btn-disabled-wrap {
   display: inline-flex;
-}
-
-/* Dropdown menu content (rendered in a portal) */
-:global(.dropdown-content) {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 4px 0;
-  min-width: 140px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  z-index: 100;
-}
-
-:global(.dropdown-item) {
-  padding: 6px 14px;
-  font-size: 0.85em;
-  cursor: pointer;
-  outline: none;
-}
-
-:global(.dropdown-item[data-highlighted]) {
-  background: var(--color-surface-hover);
 }
 
 /* Restart confirm body */

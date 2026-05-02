@@ -7,9 +7,7 @@ import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import Popover from '@/ui/components/Popover.vue';
-import SavePanel from '@/ui/components/SavePanel.vue';
-import SettingsPanel from '@/ui/components/SettingsPanel.vue';
+import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { useToasts } from '@/composables/useToasts';
 import { manifest } from '../manifest';
 import { ArcKey } from '../modules';
@@ -68,12 +66,6 @@ onUnmounted(() => {
 });
 
 const stack = useModalStack();
-function openSave(): void {
-  const id = stack.push(SavePanel, { onClose: () => stack.remove(id) });
-}
-function openSettings(): void {
-  const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
-}
 function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
 }
@@ -132,62 +124,40 @@ function getActiveModules(): EngineModule[] {
     :tooltip-delay="400"
   >
     <template #header>
-      <header class="bakery-header">
-        <button
-          class="bakery-shopfront"
-          data-testid="return-to-slots"
-          title="Save and return to save picker"
-          @click="returnToSlots"
-        >
-          <span class="bakery-shopfront__rule" />
-          <span class="bakery-shopfront__name">Bakery</span>
-          <span class="bakery-shopfront__sub">est. just now &middot; flour, sugar, ambition</span>
-        </button>
-        <nav class="bakery-actions">
-          <Popover
-            align="end"
-            :side-offset="10"
-          >
-            <template #trigger>
-              <button
-                class="btn-sm bakery-actions__btn"
-                data-testid="open-info"
-                aria-label="About"
-              >
-                ?
-              </button>
-            </template>
-            <div class="bakery-info">
-              <h4 class="bakery-info__title">
-                The House Specialty
-              </h4>
-              <p>
-                Click the dough to bake. Hire bakers, then assemble the kitchen that bakes itself.
-                Every upgrade and milestone compounds onto the next — that&rsquo;s the loop, served
-                warm.
-              </p>
-            </div>
-          </Popover>
+      <SystemHeader @return-to-slots="returnToSlots">
+        <template #title>
           <button
-            class="btn-sm bakery-actions__btn"
+            class="bakery-shopfront"
+            data-testid="return-to-slots"
+            title="Save and return to save picker"
+            @click="returnToSlots"
+          >
+            <span class="bakery-shopfront__rule" />
+            <span class="bakery-shopfront__name">Bakery</span>
+            <span class="bakery-shopfront__sub">est. just now &middot; flour, sugar, ambition</span>
+          </button>
+        </template>
+        <template #about>
+          <div class="bakery-info">
+            <h4 class="bakery-info__title">
+              The House Specialty
+            </h4>
+            <p>
+              Click the dough to bake. Hire bakers, then assemble the kitchen that bakes itself.
+              Every upgrade and milestone compounds onto the next — that&rsquo;s the loop, served
+              warm.
+            </p>
+          </div>
+        </template>
+        <template #extra-actions>
+          <button
+            class="btn-sm"
             @click="openAchievements"
           >
             Achievements
           </button>
-          <button
-            class="btn-sm bakery-actions__btn"
-            @click="openSave"
-          >
-            Save
-          </button>
-          <button
-            class="btn-sm bakery-actions__btn"
-            @click="openSettings"
-          >
-            Settings
-          </button>
-        </nav>
-      </header>
+        </template>
+      </SystemHeader>
     </template>
     <ThreePanelShell>
       <template #left>
@@ -214,32 +184,12 @@ function getActiveModules(): EngineModule[] {
 </template>
 
 <style scoped>
-/* ─── Awning header ──────────────────────────────────────────────────── */
-.bakery-header {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: var(--gap-lg);
-  padding: 18px var(--gap-lg) 14px;
-  position: relative;
-  border-bottom: 1px solid var(--bakery-rye-line, #b89a6a);
-  background:
-    var(--bakery-grain),
-    linear-gradient(180deg, rgba(248, 239, 214, 0.7) 0%, rgba(243, 231, 204, 0.95) 100%);
-}
-
-.bakery-header::after {
-  /* second hairline below the main border for the double-rule shopfront feel */
-  content: '';
-  position: absolute;
-  left: var(--gap-lg);
-  right: var(--gap-lg);
-  bottom: -4px;
-  height: 1px;
-  background: var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.18));
-}
-
-/* ─── Shopfront title — clickable "exit to slots" ─────────────────────── */
+/*
+ * Bakery shopfront title — passed via SystemHeader's #title slot.
+ * Styles target slotted content; outer header skin lives in
+ * producer-theme.css, since the .olui-system-header element is rendered
+ * by SystemHeader and not reachable from this component's scoped CSS.
+ */
 .bakery-shopfront {
   display: inline-flex;
   flex-direction: column;
@@ -290,25 +240,6 @@ function getActiveModules(): EngineModule[] {
   letter-spacing: 0.04em;
   margin-top: 4px;
   color: var(--bakery-cocoa-mute, #7a5d3d);
-}
-
-/* Header action row */
-.bakery-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.bakery-actions__btn[aria-label='About'] {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.95em;
-  letter-spacing: 0;
-  font-family: var(--font-display, Georgia, serif);
 }
 
 /* ─── About popover content ──────────────────────────────────────────── */

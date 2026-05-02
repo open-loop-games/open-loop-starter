@@ -9,6 +9,14 @@
  *
  * Archetype `boot.ts` files flow through these — there is no other supported
  * way to wire an engine + app. Fork at your own peril.
+ *
+ * Invariant: every demo's `gameId` must be unique within the gallery —
+ * SaveManager keys storage by `gameId`, so collisions cross-contaminate
+ * saves between sibling demos. Forks rename `gameId` when forking.
+ *
+ * Autosave: engine-side autosave is off by default (interval 0). The
+ * starter drives autosave from the player-pref refs via SystemHeader's
+ * runtime, so the cadence is user-configurable at runtime.
  */
 
 import { createApp as createVueApp, type App, type Component } from 'vue';
@@ -16,7 +24,7 @@ import { createEngine, type Engine, type EngineConfig, type ModDef } from 'open-
 import { sharedBase } from '@/modules';
 
 const DEFAULT_TICK_RATE = 20;
-const DEFAULT_AUTOSAVE_MS = 60_000;
+const DEFAULT_AUTOSAVE_MS = 0;
 const DEFAULT_MAX_SAVE_SLOTS = 30;
 
 export interface BootEngineOptions extends Omit<EngineConfig, 'mods'> {

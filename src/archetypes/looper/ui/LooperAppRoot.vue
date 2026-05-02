@@ -7,14 +7,13 @@ import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import Popover from '@/ui/components/Popover.vue';
-import SavePanel from '@/ui/components/SavePanel.vue';
-import SettingsPanel from '@/ui/components/SettingsPanel.vue';
+import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 import TownColumn from './components/TownColumn.vue';
 import ActionColumn from './components/ActionColumn.vue';
 import HeaderBand from './components/HeaderBand.vue';
 import StatsPanel from './components/StatsPanel.vue';
+import './looper-theme.css';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -41,12 +40,6 @@ onUnmounted(() => {
 });
 
 const stack = useModalStack();
-function openSave(): void {
-  const id = stack.push(SavePanel, { onClose: () => stack.remove(id) });
-}
-function openSettings(): void {
-  const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
-}
 
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
@@ -82,51 +75,20 @@ function getActiveModules(): EngineModule[] {
     :tooltip-delay="400"
   >
     <template #header>
-      <div class="looper-header">
-        <button
-          class="title-button"
-          data-testid="return-to-slots"
-          title="Save and return to save picker"
-          @click="returnToSlots"
-        >
-          <h2>{{ manifest.name }}</h2>
-        </button>
-        <div class="header-actions">
-          <Popover
-            align="end"
-            :side-offset="8"
-          >
-            <template #trigger>
-              <button
-                class="btn-sm"
-                data-testid="open-info"
-                aria-label="About"
-              >
-                ?
-              </button>
-            </template>
-            <h4 style="margin-bottom: 6px">
-              Looper — Classic Adventuring
-            </h4>
-            <p>
-              Queue up actions, watch your mana drain, and feel the difference next loop. Skills
-              carry; the road remembers; you do too.
-            </p>
-          </Popover>
-          <button
-            class="btn-sm"
-            @click="openSave"
-          >
-            Save
-          </button>
-          <button
-            class="btn-sm"
-            @click="openSettings"
-          >
-            Settings
-          </button>
-        </div>
-      </div>
+      <SystemHeader
+        :app-name="manifest.name"
+        @return-to-slots="returnToSlots"
+      >
+        <template #about>
+          <h4 style="margin-bottom: 6px">
+            Looper — Classic Adventuring
+          </h4>
+          <p>
+            Queue up actions, watch your mana drain, and feel the difference next loop. Skills
+            carry; the road remembers; you do too.
+          </p>
+        </template>
+      </SystemHeader>
     </template>
     <ThreePanelShell
       left-width="240px"
@@ -159,37 +121,6 @@ function getActiveModules(): EngineModule[] {
 </template>
 
 <style scoped>
-.looper-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--gap) var(--gap-lg);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.looper-header h2 {
-  font-size: 1.1em;
-}
-
-.title-button {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-}
-
-.title-button:hover h2 {
-  color: var(--color-primary);
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--gap-sm);
-}
-
 .looper-main {
   display: flex;
   flex-direction: column;

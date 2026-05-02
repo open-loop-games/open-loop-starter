@@ -158,6 +158,42 @@ body[data-archetype='producer'] .btn-sm:hover {
   border-color: var(--bakery-brass);
 }
 
+/* ─── SystemHeader: awning shopfront skin ───────────────────────────── */
+body[data-archetype='producer'] .olui-system-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--gap-lg);
+  padding: 18px var(--gap-lg) 14px;
+  position: relative;
+  border-bottom: 1px solid var(--bakery-rye-line);
+  background:
+    var(--bakery-grain),
+    linear-gradient(180deg, rgba(248, 239, 214, 0.7) 0%, rgba(243, 231, 204, 0.95) 100%);
+}
+
+body[data-archetype='producer'] .olui-system-header::after {
+  content: '';
+  position: absolute;
+  left: var(--gap-lg);
+  right: var(--gap-lg);
+  bottom: -4px;
+  height: 1px;
+  background: var(--bakery-rye-line-soft);
+}
+
+body[data-archetype='producer'] .olui-system-header__actions button[aria-label='About'] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95em;
+  letter-spacing: 0;
+  font-family: var(--font-display);
+}
+
 /* ─── ThreePanelShell: parchment columns ─────────────────────────────── */
 body[data-archetype='producer'] .olui-three-panel {
   gap: var(--gap-lg);

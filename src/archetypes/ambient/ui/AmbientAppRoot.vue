@@ -7,9 +7,7 @@ import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import Popover from '@/ui/components/Popover.vue';
-import SavePanel from '@/ui/components/SavePanel.vue';
-import SettingsPanel from '@/ui/components/SettingsPanel.vue';
+import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { useToasts } from '@/composables/useToasts';
 import { manifest } from '../manifest';
 import { AmbientDataKey, ArcKey, SessionClockKey, UnlocksKey } from '../modules';
@@ -38,12 +36,6 @@ onMounted(() => window.addEventListener('keydown', onKey));
 onUnmounted(() => window.removeEventListener('keydown', onKey));
 
 const stack = useModalStack();
-function openSave(): void {
-  const id = stack.push(SavePanel, { onClose: () => stack.remove(id) });
-}
-function openSettings(): void {
-  const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
-}
 function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
 }
@@ -144,36 +136,20 @@ function getActiveModules(): EngineModule[] {
     :tooltip-delay="400"
   >
     <template #header>
-      <div class="ambient-header">
-        <button
-          class="title-button"
-          data-testid="return-to-slots"
-          title="Save and return to save picker"
-          @click="returnToSlots"
-        >
-          <h2>Cozy Farm</h2>
-        </button>
-        <div class="header-actions">
-          <Popover
-            align="end"
-            :side-offset="8"
-          >
-            <template #trigger>
-              <button
-                class="btn-sm"
-                data-testid="open-info"
-              >
-                ?
-              </button>
-            </template>
-            <h4 style="margin-bottom: 6px">
-              Ambient — Cozy Farm
-            </h4>
-            <p>
-              Tend a quiet garden that grows on its own. Producers buy themselves into view as
-              sprouts pile up. Come back later and watch the seasons turn.
-            </p>
-          </Popover>
+      <SystemHeader
+        app-name="Cozy Farm"
+        @return-to-slots="returnToSlots"
+      >
+        <template #about>
+          <h4 style="margin-bottom: 6px">
+            Ambient — Cozy Farm
+          </h4>
+          <p>
+            Tend a quiet garden that grows on its own. Producers buy themselves into view as sprouts
+            pile up. Come back later and watch the seasons turn.
+          </p>
+        </template>
+        <template #extra-actions>
           <button
             v-if="almanacUnlocked"
             class="btn-sm"
@@ -182,20 +158,8 @@ function getActiveModules(): EngineModule[] {
           >
             Almanac
           </button>
-          <button
-            class="btn-sm"
-            @click="openSave"
-          >
-            Save
-          </button>
-          <button
-            class="btn-sm"
-            @click="openSettings"
-          >
-            Settings
-          </button>
-        </div>
-      </div>
+        </template>
+      </SystemHeader>
     </template>
     <SingleColumnShell max-width="720px">
       <IdleScenePanel />
@@ -216,36 +180,3 @@ function getActiveModules(): EngineModule[] {
     />
   </DevPanelOverlay>
 </template>
-
-<style scoped>
-.ambient-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--gap) var(--gap-lg);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.ambient-header h2 {
-  font-size: 1.1em;
-}
-
-.title-button {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-}
-
-.title-button:hover h2 {
-  color: var(--color-primary);
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--gap-sm);
-}
-</style>

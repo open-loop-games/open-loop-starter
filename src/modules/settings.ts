@@ -21,10 +21,7 @@ export const settingsModule: EngineModule = {
   id: 'settings',
   install(ctx: EngineContext) {
     const settings: StockSettings = {
-      autoSave: persistent(true, { name: 'autoSave' }),
       offlineProgress: persistent(true, { name: 'offlineProgress' }),
-      theme: persistent('dark', { name: 'theme' }),
-      notation: persistent('standard', { name: 'notation' }),
     };
     const lastSaveTimestamp: Ref<number> = ref(0);
 
