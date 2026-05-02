@@ -80,15 +80,83 @@ Naming what's *absent* is part of the Scaler contract: it refuses the spatial an
 **Primary stress axes:**
 
 1. **Multi-layer reset coordination.** A 3-layer Scaler has three `createReset`s with overlapping-but-not-identical `thingsToReset` sets. Reset(L2) must wipe every L1 producer and upgrade, preserve every L1-and-L2 currency, and not clobber L3 state. Reset correctness under repeated ascensions is *the* correctness test for this archetype — one off-by-one in a retention list corrupts save state for every future run.
-2. **Modifier chain ordering.** A mature Scaler evaluates 10+ factors per tick per dimension. Multiplicative-within-category + additive-across-category + sequential-across-layers is the default composition, and the results diverge meaningfully when the order shifts. Scaler is the archetype that forces `createSequentialModifier` to carry weight.
-3. **Formula correctness at extreme scale.** Prestige currencies cross `1e100` within the 1–2h arc; `calculateMaxAffordable` and the logarithmic prestige formulas must remain correct as `break_eternity.js` crosses into tetration. Scaler is the archetype that will find the tetration-regime defect if one exists.
+2. **Modifier chain order-sensitivity.** A 3-layer slim-port chain runs ~5–6 named factors per layer (per-tier producer multipliers + per-tier upgrade grants + cross-layer challenge-completion stacks + achievement contributions). Multiplicative-within-category + additive-across-category + sequential-across-layers is the default composition, and the results diverge meaningfully when the layer-order shifts. Scaler is the archetype that forces `createSequentialModifier` to carry weight without needing the 10+-factor depths a deep-prestige fork would reach.
+3. **Formula correctness at extreme scale.** Prestige currencies cross `1e100` within the 1–2h arc; `calculateMaxAffordable` and the logarithmic prestige formulas must remain correct across a wide dynamic range that exercises `break_eternity.js`. Tetration-regime stress is fork-territory — the slim port exits well below it.
 4. **Per-layer UI density.** 3 layers × (producers + upgrades + challenges + achievements) is the largest UI surface of any archetype. The shell choice and tab organisation are the difference between "comprehensible mid-game" and "players quit at layer 2."
 
 ---
 
 ## 4. Data shape
 
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
+The archetype's slim-port data lives at `src/archetypes/scaler/data/` as flat typed-array exports with comment-section lensing per `_template.md` § 4. The shape is per-tier vertical: shared interface and balance files plus one file per prestige tier.
+
+```ts
+// data/types.ts — shared interfaces
+
+export type Tier = 'antimatter' | 'prestige' | 'transcend';
+
+export interface ProducerDef {
+  id: string;            // e.g. 'antimatter-1', 'prestige-1', 'transcend-1'
+  name: string;
+  tier: Tier;
+  position: 1 | 2 | 3 | 4 | 5;
+  baseCost: DecimalSource;
+}
+
+export interface AntimatterUpgradeDef {
+  id: string; name: string; description: string;
+  baseCost: DecimalSource;  // cumulative-buy initial cost
+}
+
+export interface CrystalUpgradeDef {
+  id: string; name: string; description: string;
+  position: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  baseLogCost: number;      // log10-scale base cost on prestigeShards
+  costIncrement: number;    // quadratic coefficient
+}
+
+export interface TranscendUpgradeDef {
+  id: string; name: string; description: string;
+  baseCost: DecimalSource;
+  costCurrency: 'prestigePoints' | 'transcendPoints';  // layered cost source
+}
+
+export interface ChallengeDef {
+  id: string; name: string;
+  position: 1 | 2 | 3 | 4 | 5;
+  effect: string; reward: string;
+}
+
+export interface AchievementDef {
+  id: string; name: string; description: string;
+  tier: Tier; hidden?: boolean;
+  requirement: (state: ScalerGameState) => boolean;
+  rewardMultiplier?: DecimalSource;
+}
+```
+
+**Canonical file split:**
+
+| File | What it owns |
+|------|-------------|
+| `data/types.ts` | All `*Def` interfaces, the `ScalerBalance` shape, the `ScalerGameState` typed read-view |
+| `data/balance.ts` | `SCALER_BALANCE` cross-tier numeric anchors (currency-conversion log bases, default achievement / challenge multipliers) |
+| `data/antimatter.ts` | Antimatter tier (5 coin producers, Accelerator, Multiplier) — lifts `Buy.ts:336`, `Reset.ts:430-433` |
+| `data/prestige.ts` | Prestige tier (5 diamond producers, 8 crystal upgrades) — lifts `Buy.ts:337`, `Synergism.ts:544`, `Variables.ts:32` |
+| `data/transcend.ts` | Transcend tier (5 mythos producers, accelerator boost + 4 named upgrades, 5 challenges) — lifts `Buy.ts:338`, `Variables.ts:27`, `Challenges.ts:209-236, 541` |
+| `data/achievements.ts` | ~35 cross-tier achievements (production/reset-count/challenge-completion/hidden ladders) — lifts `Achievements.ts:groupedAchievementData`, `ungroupedAchievementData` |
+| `data/overrides.ts` | `ScalerOverrides` per-tier flat-category shape + `applyScalerOverrides(base, overrides)` (deep-merge per tier, throws on unknown id) |
+| `data/index.ts` | `DEFAULT_SCALER_DATA` barrel + per-file re-exports |
+
+**Override semantics:** `boot.ts` exports `createScalerEngine(overrides?)` that accepts a deep-partial over the archetype's data shape. Sim tests and workbench perturbation route through this factory — the addressable shape *is* the TypeScript type over the data, not a synthetic vars layer. Forks change behaviour by editing `data/*.ts` in place; they don't need a runtime override path.
+
+**Lens discipline (comment sections inside each tier file):**
+
+- *Skeleton* — structural counts and shape (producer count, upgrade count, challenge count). Editing these forks the archetype.
+- *Balance* — numbers that drive arc pacing (per-tier baseCosts, cost-scaling exponents, conversion log bases, challenge effect coefficients). Workbench perturbation target — *but only on declared-invention surfaces*; values lifted 1:1 from Synergism source are not solver perturbation surface per `BALANCING.md § Canonical numbers are not tunable`.
+- *Costume* — names and flavour. Producer display names (Worker, Compressor, Insight Engine, etc.) are placeholder slot fillers; forks override per theme.
+
+**Archetype code lives in** `src/archetypes/scaler/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract.
 
 ---
 
@@ -102,6 +170,17 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 - **Progression gates:** resource-threshold unlocks for each layer; per-layer challenge availability gated by the layer's currency; auto-prestige automation tier unlocks after 5 layer-1 prestiges.
 
 **Density target:** every beat in § 4 maps to at least one content entry. Beats 1–2 → base dimensions; beat 3 → primary-resource threshold + layer-1 prestige button; beat 4 → first prestige currency; beat 5 → layer-1 upgrade tree; beat 6 → layer-1 challenge; beat 7 → layer-2 tab + layer-2 currency; beat 8 → modifier-chain expansion view + layer-3 teaser tab.
+
+### Substrate divergences from vanilla, not applied in the slim demo
+
+Synergism ships 6 prestige tiers (Prestige / Transcension / Reincarnation / Ascension / Singularity / Hepteracts) plus side systems (Cubes, Corruptions, Talismans, Runes, Research, Blueberry, RedAmbrosia). The slim demo declares the following dropped wholesale:
+
+- **Reincarnate / Ascend / Singularity tiers** — out of scope for a 3-layer slim slice. Slim port stops at Transcend; forks adding deeper prestige extend from there.
+- **Hepteracts** — late-game prestige currency family with 10+-factor modifier chains. Out of scope; the order-sensitivity claim in § 3 stress axis 2 reframes around modest-depth chains the slim port actually reaches.
+- **Cubes, Corruptions, Talismans, Runes** — meta-progression substrate that bridges Reincarnation and Ascension. No surface in slim port.
+- **Research, Blueberry upgrades, RedAmbrosia** — orthogonal economy substrates. No surface in slim port.
+
+These omissions are slim-port-substrate decisions, not declared inventions — Synergism's full economy stays canonical for any fork that wants to build it out. Per-row citations in `data/*.ts` track 1:1 to canonical Synergism source for the content the slim port keeps.
 
 ---
 
