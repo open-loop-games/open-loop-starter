@@ -90,31 +90,13 @@ Naming what is absent is half the Explorer contract: the archetype refuses loop 
 
 ---
 
-## 4. Beat map
+## 4. Data shape
 
 _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
-## 5. Data shape
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 5 at baseline — food, water, metal, rope, concrete (Level 13 direct). Food and water are consumable (drain during expeditions); metal/rope/concrete are gatherable-and-stockpiled. Each has a `trackTotal` accumulator.
 - **Zones:** 4 — zone-1 (surface, 12 sectors), zone-2 (underground, 16 sectors), zone-3 (ruins, 20 sectors), zone-4 (deep, 24 sectors). Total 72 sectors across the arc.
@@ -130,7 +112,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `MultiColumnShell` — `declared invention`. No `map-exploration` or `spatial-exploration` sub-genre exists in `subgenre-shell-mapping-2026.md`; the three Explorer exemplars do not anchor a majority (Cavernous II is `multi-column-dashboard` per `layout-audit-2026.md` time-loop row; Trimps is classified as `three-panel` by UX / `multi-column-dashboard` by DOM per `layout-audit-2026.md` L187; Level 13 is not in the 2026 audit, only light-inspected in `layout-spray-2026-04.md` line 421 as mobile-header + grid). The multi-column cluster (N=3: Trimps, Arcanum, Cavernous II per `subgenre-shell-mapping-2026.md` line 211) is the closest corpus anchor for Explorer's need to surface the map, a persistent resource panel, and a bag/inventory pane simultaneously. Tag `declared invention` because no sub-genre majority supports this; the claim rests on the three exemplars' convergent multi-column-for-spatial-content shape.
 - **Secondary shell:** `ThreePanelShell` — `declared invention`. For narrative-text Explorer forks (Level 13 / A Dark Room lineage), the three-panel shape (left: zone/nav, centre: current-sector description + actions, right: inventory/log) is closer to the narrative-clicker secondary cluster per `subgenre-shell-mapping-2026.md` § "narrative clicker" (three-panel 3/13 = 23%). Tag `declared invention` because Level 13 is not in the audit and A Dark Room is single-column, not three-panel, in the narrative-clicker majority row; the claim is a cross-cluster inference. Use for Explorer forks whose content is *described* more than shown.
@@ -158,7 +140,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 Explorer is designed to surface the engine's spatial ergonomics. Each row below is a hypothesis; the implementation will confirm or reject. Confirmed gaps become engine tickets; rejected ones get deleted from a later revision of this doc.
 
@@ -175,7 +157,7 @@ Explorer is designed to surface the engine's spatial ergonomics. Each row below 
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Post-apocalyptic city (the Level 13 baseline)
 

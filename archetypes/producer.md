@@ -65,24 +65,7 @@ A thirty-minute session is a sequence of threshold moments — *"I can finally a
 
 ---
 
-## 4. Beat map
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First click production visible | 0:00–0:30 | `resource ≥ 1` | Big number ticks up, click button animates | Onboarding — confirms core feedback loop |
-| 2 | First producer purchased (T1) | 1:00–3:00 | `producers[0].count ≥ 1` | Auto-production indicator starts; rate readout appears | Transitions player from clicking to idling |
-| 3 | Second-tier producer purchased (T2) | 5:00–10:00 | `producers[1].count ≥ 1` | Production rate jumps visibly; T2 row activates | Validates the inter-tier cost ratio and reveals pacing cadence |
-| 4 | First multiplier upgrade | 12:00–20:00 | `upgrades[0].owned` | Headline multiplier increments; affected producer row shows boost | First exposure to the modifier chain that becomes the long-term pull |
-| 5 | First achievement-driven multiplier | 25:00–40:00 | achievement with mechanical reward unlocks | Achievement toast; multiplier visibly ticks up in chain readout | Achievements as mechanics, not decoration — the archetype's signature |
-| 6 | Bulk-buy becomes meaningful | 40:00–65:00 | `calculateMaxAffordable(producers[n]) ≥ 10` | "Buy 10 / Buy max" button becomes the dominant action | Stress-tests formula inversion under load; UX inflection |
-| 7 | Deep modifier chain visible | 65:00–95:00 | headline multiplier ≥ 1e6× base | Chain expansion UI shows 8+ stacked factors with named sources | The moment the player *sees* the compounded stack that is the archetype's reward |
-| 8 | Top producer tier owned + base arc closed | 95:00–120:00 | `producers[last].count ≥ 1` AND `upgradesArcComplete` | Top-tier row lights up; end-of-arc flavour event fires | The 1–2h arc closure. Fork extends beyond this; skeleton stops here |
-
-**Arc closure beat:** #8.
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Producer's content lives under `src/archetypes/producer/data/` as three flat typed-array exports (`producers.ts`, `upgrades.ts`, `achievements.ts`) plus a `types.ts` that names the definition interfaces. Inline `effect` and `requirement` callbacks colocate the mechanics with the definition — no separate effect tables, no codegen. Lens discipline is enforced by comment sections inside each data file (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`): skeleton counts (tier-count, upgrade-count, achievement-count) are a fork-of-skeleton decision; balance constants (cost-growth, tier-cost-ratios, base rates, multipliers) are the tuning surface sim tests probe; costumes (resource name, producer names, upgrade/achievement labels, end-of-arc message) are theme-scoped.
 
@@ -139,87 +122,7 @@ export interface ProducerBalance {
 
 ---
 
-## 6. Balance probes
-
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| `cost-scaling-growth` | `producerCostScaling.growth` ×[0.85, 1.15] (≈±15% on 1.15 baseline) | 3, 6 | Beat sim-time ±20% | Inter-tier cost is the dominant pacing lever; most sensitive axis |
-| `tier1-base-rate` | `tier1BaseRate` ×[0.75, 1.25] | 1, 2 | Beat sim-time ±25% | Onboarding pacing — beats 1–2 feel terrible if wrong |
-| `modifier-stack-depth` | enable/disable every third upgrade | 7 | Headline-multiplier error ≤0.1% vs. ground truth | Modifier chain correctness — not timing, *arithmetic* |
-| `achievement-density` | `achievementMultiplier` ×[0.95, 1.05] + count ×[0.5, 1.5] | 5, 7 | Beat sim-time ±30% | Achievement pacing drives mid-arc acceleration; high-sensitivity for this archetype |
-| `bulk-buy-formula-scale` | run at resource magnitudes 1e50 / 1e200 / 1e500 | 6 | `calculateMaxAffordable` returns correct N for all scales | `break_eternity.js` tetration edge cases; correctness over timing |
-
-**Minimum probe count:** 5 (meets ≥4 requirement; covers cost scaling, production rate, modifier chain, achievement density, and bulk-buy correctness).
-
----
-
-## 7. Sim assertions
-
-```ts
-import { describe, it, expect } from 'vitest';
-import { runHeadless } from 'open-loop-engine';
-import { runMatrix } from 'open-loop-engine/harness';
-import { minutes } from '@/test/time';
-import { loadProducerVars } from '../vars';
-import { buildProducerEngine } from '../engine';
-
-describe('producer — beat map', () => {
-  const vars = loadProducerVars();
-
-  it('beat 1: first production visible within 0–30 s', async () => {
-    const result = runHeadless({
-      engine: buildProducerEngine(vars),
-      until: (state) => state.resource.gte(1),
-      maxSimTime: minutes(1),
-    });
-    expect(result.simTime).toBeBetween(0, 30);
-  });
-
-  it('beat 2: first T1 producer purchased within 1–3 min', async () => {
-    const result = runHeadless({
-      engine: buildProducerEngine(vars),
-      until: (state) => state.producers[0].count >= 1,
-      maxSimTime: minutes(5),
-    });
-    expect(result.simTime).toBeBetween(minutes(1), minutes(3));
-  });
-
-  // ... one `it` per beat through beat 8
-
-  it('beat 8: arc closure within 95–120 min', async () => {
-    const result = runHeadless({
-      engine: buildProducerEngine(vars),
-      until: (state) => state.producers.at(-1)!.count >= 1 && state.arcComplete,
-      maxSimTime: minutes(150),
-    });
-    expect(result.simTime).toBeBetween(minutes(95), minutes(120));
-  });
-});
-
-describe('producer — balance robustness', () => {
-  it('beats 3 and 6 stay in tolerance under cost-scaling growth ±15%', async () => {
-    const matrix = runMatrix({
-      engine: (v) => buildProducerEngine(v),
-      baseVars: loadProducerVars(),
-      perturbations: [
-        { path: 'balance.producerCostScaling.growth', values: [0.98, 1.15, 1.32] },
-      ],
-      beats: ['beat-3', 'beat-6'],
-    });
-    for (const beat of ['beat-3', 'beat-6']) {
-      expect(matrix.tolerance(beat, '±20%')).toBe(true);
-    }
-  });
-
-  // one `it` per probe from § 6
-});
-```
-
-**Required test count:** 8 beats + 5 probes = 13 tests minimum. Tests checked into `src/modules/<game>/sim/producer.sim.test.ts`.
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 1 — the primary currency.
 - **Producers / Activities:** 1 click activity + 7 producer tiers. Example naming scale (bakery theme): cursor, grandma, farm, mine, factory, bank, temple.
@@ -231,7 +134,7 @@ describe('producer — balance robustness', () => {
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `ThreePanelShell` — Producer's modifier-chain depth (§ 3 stress axis 1) and 7-tier producer hierarchy consume enough UI surface that the three-panel form is defensible over the narrative-clicker majority. Cites `subgenre-shell-mapping-2026.md` § "narrative clicker" (secondary cluster 3/12 classifiable). Exemplar rows from `layout-audit-2026.md`: Cookie Clicker, Universal Paperclips, A Dark Forest.
 - **Secondary shell:** `SingleColumnShell` — narrative-clicker strict majority per `subgenre-shell-mapping-2026.md` (5/12 classifiable). Use for minimalist / mobile-leaning Producer forks. Exemplar rows: AdVenture Capitalist, A Dark Room, Candy Box 2.
@@ -252,7 +155,7 @@ describe('producer — balance robustness', () => {
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
@@ -264,7 +167,7 @@ describe('producer — balance robustness', () => {
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Bakery
 

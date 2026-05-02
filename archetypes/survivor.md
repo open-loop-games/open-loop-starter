@@ -75,13 +75,7 @@ A thirty-minute session is roughly one complete run. Enemy composition escalates
 
 ---
 
-## 4. Beat map
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Survivor's content lives under `src/archetypes/survivor/data/` as flat typed-array exports (`weapons.ts`, `passives.ts`, `enemies.ts`, `stages.ts`, `power-ups.ts`, `evolutions.ts`, `progression.ts`) plus a `types.ts` that names the definition interfaces. Weapon firing behaviour, passive stat deltas, and enemy spawn schedules colocate with their definitions — no separate effect tables, no codegen. Lens discipline is enforced by comment sections inside each data file (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`): skeleton counts (weapon-roster size, passive-roster size, stage count, `runMode`, `shopMode`, `prestigeMode`) are fork-of-skeleton decisions; balance constants (XP curve, Power-Up scaling, enemy HP schedule, weapon cooldown defaults) are the tuning surface sim tests probe; costumes (weapon names, enemy names, stage flavour) are theme-scoped.
 
@@ -251,19 +245,7 @@ export interface SurvivorData {
 
 ---
 
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 3 — HP (per-run, resets), XP (per-run, resets on level-up), gold (persistent cross-run). Plus per-run pickup currency (chests, magnet triggers) if the fork adds Brotato-style materials.
 - **Weapons:** 8 archetypes — baseline arsenal spanning VS's firing-pattern taxonomy. Example naming (gothic theme): whip (arc), magic wand (homing projectile), garlic (area ring), king-bible (orbital), knife (forward throw), axe (lobbed AoE), cross (boomerang), lightning-ring (area burst). Eight is enough to support 4–5 evolution pairings at skeleton density; VS ships 45+ in base game — forks expand freely.
@@ -280,7 +262,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `` `declared invention` `` — cites `subgenre-shell-mapping-2026.md § survivor-like (N=3, N_classifiable=2)`. Both classifiable exemplars (Vampire Survivors, Brotato) share a fullscreen-arena-canvas + peripheral-overlay-HUD shape; Halls of Torment lands `ambiguous` but visually matches. N_classifiable=2 is below the N=3 threshold for a named majority, so the sub-genre carries an "insufficient corpus" caveat — but the observed pattern is consistent and the methodology's own commentary tags Survivor alongside Defender as a candidate for declaring a canvas-centric structural primitive rather than forcing one of the existing shell buckets. None of starter's 5 shells (`SidebarMainShell`, `ThreePanelShell`, `SingleColumnShell`, `TabsBarShell`, `MultiColumnShell`) captures that; the audit's `free-form` bucket is consistently `declared invention` against starter today. Exemplar rows from `layout-audit-2026.md`: Vampire Survivors (free-form), Brotato (free-form), Halls of Torment (ambiguous).
 - **Secondary shell:** `SingleColumnShell` — the weakest partial fit in starter for forks that want to trade the fullscreen canvas for a stacked HUD (wave timer on top, weapon strip in a band, stats below). No corpus row supports it directly, but it is the closest starter-native shape to the peripheral-HUD reading of the survivor-like layout; treat as a fallback for forks that explicitly decline the canvas-centric declared-invention primitive. `` `declared invention` `` on the secondary prescription as well.
@@ -307,7 +289,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
@@ -323,7 +305,7 @@ Convergent-gap rule: N/A — no live consumers yet. All gaps are hypotheses the 
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Gothic Horror
 

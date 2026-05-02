@@ -69,13 +69,7 @@ A thirty-minute session is a sequence of wave-clear moments separated by build-p
 
 ---
 
-## 4. Beat map
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Defender's content lives under `src/archetypes/defender/data/` as flat typed-array exports (`defenders.ts`, `enemies.ts`, `stages.ts`, `progression.ts`) plus a `types.ts` that names the definition interfaces. Inline tower-behaviour and enemy-resistance fields colocate with the definitions — no separate effect tables, no codegen. Lens discipline is enforced by comment sections inside each data file (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`): skeleton counts (tower-archetype count, enemy-archetype count, stage count, prestige mode) are a fork-of-skeleton decision; balance constants (HP growth, cost curves, bounty income, upgrade multipliers) are the tuning surface sim tests probe; costumes (tower names, enemy names, stage names, narrative flavour) are theme-scoped.
 
@@ -166,19 +160,7 @@ export interface DefenderData {
 
 ---
 
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 2 — build currency (per-run, resets on stage entry) + optional meta-currency (cross-run, `persistent` when `prestigeMode !== 'none'`).
 - **Producers / Activities:** 4 tower archetypes. Example naming (Tower Defense theme): archer (pierce, early-game baseline), mage (magic, armor-piercing), splash (AoE, crowd-control), support (adjacency-aura, no direct damage). Four is the Kingdom Rush baseline; BTD6 expands to 26 in commercial scale. Forks add types.
@@ -191,7 +173,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `` `declared invention` `` — cites `subgenre-shell-mapping-2026.md § tower-defense (N=5, N_classifiable=4)`. The TD sub-genre has a weak `single-column` tendency (Desktop Tower Defense, Gem TD — 2/4 classifiable, 50%) with high variance across the remaining rows: Kingdom Rush `free-form`, Bloons TD 6 `tabs-resource-bar`, GemCraft `ambiguous`. The methodology commentary for this row ("An archetype prescription for Defender should probably declare the canvas-centric structural primitive rather than one of the existing shell buckets") is load-bearing here — all 5 TD corpus games share a canvas-centric play surface with peripheral HUD, and none of starter's 5 shells (`SidebarMainShell`, `ThreePanelShell`, `SingleColumnShell`, `TabsBarShell`, `MultiColumnShell`) captures that. Starter's 6th audit shell `free-form` is consistently `declared invention` against starter today; the Defender primary shell graduates to starter when two independent forks converge on the same canvas+HUD geometry. Exemplar rows from `layout-audit-2026.md`: Kingdom Rush (free-form), Bloons TD 6 (tabs-resource-bar), Desktop Tower Defense (single-column), Gem TD (single-column), GemCraft (ambiguous).
 - **Secondary shell:** `TabsBarShell` with `navPosition='bottom'` — the strongest partial fit in starter for the BTD6 shape (`tabs-resource-bar` in the audit: horizontal tower-category tabs docked at bottom, top HUD strip for round/lives/cash). Per `layout-audit-2026.md` BTD6 row (`mobile_aware: yes`, form-factor `responsive`). Use when a fork wants to trade the canvas-centric declared-invention primitive for a starter-supported shape. Forks following Desktop TD / Gem TD's flat-layout posture may prefer `SingleColumnShell` (the weak `tower-defense` majority, 2/4 classifiable) instead; both are legitimate partial-fit fallbacks.
@@ -215,7 +197,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
@@ -229,7 +211,7 @@ Convergent-gap rule: N/A — no live consumers yet. All gaps are hypotheses the 
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Tower Defense
 

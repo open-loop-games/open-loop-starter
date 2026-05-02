@@ -90,31 +90,13 @@ Naming what is absent is half the Scripter contract: the archetype refuses loop 
 
 ---
 
-## 4. Beat map
+## 4. Data shape
 
 _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
-## 5. Data shape
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 3–5 at baseline — a primary game-state resource (money / antimatter / points) + a script-execution budget (RAM / tickspeed / mana-per-script) + 1–3 prestige-multiplier currencies (augmentations / source-files / glyphs). Each has a `trackTotal` accumulator for meta-achievements.
 - **Commands (tier-1):** 12 — `buy`, `sell`, `wait`, `waitUntil`, `prestige`, `click`, `toggle`, `set`, `increment`, `log`, `halt`, `noop`. Every command has cost schema + validator + execution hook. Repeat (`<`) and sync (`=`) are control-flow primitives, not commands.
@@ -129,7 +111,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `SidebarMainShell` — automation-idle 2/2 convergent per `subgenre-shell-mapping-2026.md § "automation-idle"` (N=2, insufficient corpus flag but 100% convergent — Bitburner, The Farmer Was Replaced). Exemplar rows from `layout-audit-2026.md`: Bitburner (sidebar-main, Monaco Editor as main panel), The Farmer Was Replaced (sidebar-main, code editor panel). Also matched by Antimatter Dimensions' sidebar-main shape in the prestige-idle sub-genre — its Automator surface lives inside the main panel, consistent with the Scripter prescription.
 - **Secondary shell:** `ThreePanelShell` — `declared invention` for tier-1-only Scripter forks. Tier-1 Scripters (Cavernous II, Idle Loops family, Omsi Loops) appear in the `time-loop` sub-genre's three-panel cluster per `subgenre-shell-mapping-2026.md § "time-loop"` (Idle Loops, Omsi Loops as three-panel). Tag `declared invention` because the sub-genre is time-loop not automation-idle — the prescription relies on the structural-shape match (left: command drawer, centre: queue, right: stats/log) rather than a Scripter-labelled corpus row. Use when the fork caps at `tierCeiling: 'queue'`.
@@ -158,7 +140,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 Scripter is designed to surface the engine's DSL / script-execution surface. Each row below is a hypothesis; the first fork that adopts the skeleton will confirm or reject. Confirmed gaps become engine tickets; rejected ones get deleted from a later revision of this doc.
 
@@ -175,7 +157,7 @@ Scripter is designed to surface the engine's DSL / script-execution surface. Eac
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Hacker sandbox (the Bitburner baseline)
 

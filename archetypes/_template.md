@@ -15,9 +15,9 @@
 >
 > **Status:** `canonical` | `candidate` | `deprecated`
 
-**Exemplars (validation, not clone targets):** {{3–5 corpus games that prove this composition viable, linked to `open-loop-research/analyses/complete/<name>-analysis.md`. Bottom-up / declared-invention archetypes with no direct corpus analogues may substitute a `` `declared invention` `` tag with a named validation tradition in prose — see § 9's shell escape hatch for the parallel pattern.}}
+**Exemplars (validation, not clone targets):** {{3–5 corpus games that prove this composition viable, linked to `open-loop-research/analyses/complete/<name>-analysis.md`. Bottom-up / declared-invention archetypes with no direct corpus analogues may substitute a `` `declared invention` `` tag with a named validation tradition in prose — see § 6's shell escape hatch for the parallel pattern.}}
 
-**Live consumer references (engine-usage grounding):** {{Optional but load-bearing when it applies. Cite `/work/studio/<name>/` paths of games already built on this archetype — they demonstrate real engine usage alongside the research corpus. When no consumer exists yet, write `none in the ecosystem today` and explain what the first fork will confirm or reject. When a gap appears in ≥ 2 live consumers, it's *convergent* — record that fact in § 10 and default its severity to High.}}
+**Live consumer references (engine-usage grounding):** {{Optional but load-bearing when it applies. Cite `/work/studio/<name>/` paths of games already built on this archetype — they demonstrate real engine usage alongside the research corpus. When no consumer exists yet, write `none in the ecosystem today` and explain what the first fork will confirm or reject. When a gap appears in ≥ 2 live consumers, it's *convergent* — record that fact in § 7 and default its severity to High.}}
 
 ---
 
@@ -97,28 +97,7 @@ Naming what's *absent* is part of the contract: it's how a sparse-surface archet
 
 ---
 
-## 4. Beat map
-
-<!--
-  5–8 beats, ordered, covering the 1–2 hour first-completion arc. Each beat
-  is a concrete progression moment the player will experience. Target
-  sim-time is the window (min–max minutes of accumulated simulated time)
-  within which the beat should land at default balance.
--->
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | {{e.g. "First producer purchased"}} | 0–2 min | {{e.g. "cookies ≥ 15"}} | {{e.g. "cursor icon appears in producer panel"}} | {{e.g. "validates cost curve onboarding — `reference-code/cookie-clicker/main.js:1234`"}} |
-| 2 | … | … | … | … | … |
-| … | … | … | … | … | … |
-
-Each row's "Why it matters" cell carries the citation for any numerical claim in the row. Cite as `` `reference-code/<game>/<file>:line` `` (Tier-A archetypes — exemplar source on disk under `open-loop-research/reference-code/`) or `` `wiki:<url>` `` (Tier-B — closed-source corpus). For invented numbers without exemplar — e.g. zone-bridge actions composed for the demo — use `` `declared invention — <rationale>` `` (parallels § 1 / § 9). For pre-implementation `candidate`-status drafts, mark unfounded numbers as `` `aspirational — pending implementation` ``; the validator accepts this only on `candidate` status, never `canonical`.
-
-**Arc closure beat:** {{which beat number is the "you've seen the skeleton once" moment — usually the last one}}
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 <!--
   Documents the intended TypeScript data shape for the archetype's
@@ -159,75 +138,23 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
 //   export const {{NAME}}_ENTRIES: {{Name}}PrimaryDef[] = [ ... ];
 ```
 
+**Canonical file split:**
+
+| File | What it owns |
+|------|-------------|
+| `data/types.ts` | All `*Def` interfaces, the `{{Name}}Balance` shape, the `{{Name}}GameState` typed read-view |
+| `data/<entity>.ts` | Flat typed arrays + balance constants for each major entity group; one file per entity type |
+| `data/balance.ts` | `{{NAME}}_BALANCE: {{Name}}Balance` — all tunable numeric constants |
+| `data/overrides.ts` | `{{Name}}Overrides` flat-category shape + `apply{{Name}}Overrides(base, overrides)` (throws on unknown id) |
+| `data/index.ts` | `DEFAULT_{{NAME}}_DATA` barrel + per-file re-exports |
+
 **Override semantics:** `boot.ts` exports `create{{Name}}Engine(overrides?)` that accepts a deep-partial over the archetype's data shape. Sim tests and workbench perturbation route through this factory — the addressable shape *is* the TypeScript type over the data, not a synthetic vars layer. Forks change behaviour by editing `data/*.ts` in place; they don't need a runtime override path.
 
 **Archetype code lives in** `src/archetypes/<name>/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract.
 
 ---
 
-## 6. Balance probes
-
-<!--
-  Each probe is a perturbation the Workbench can apply, paired with the beat
-  it targets and the tolerance within which that beat must still land. The
-  discipline: if a probe moves a beat outside tolerance at default balance,
-  the archetype is not robustly tuned.
--->
-
-| Probe | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|--------------|----------------|-----------|-----------|
-| {{name}} | {{e.g. "cost-scaling exponent ±20%"}} | {{beat #s}} | {{e.g. "±15% sim-time window"}} | {{why this probe matters — cite `reference-code/<game>/<file>:line` or `wiki:<url>` for the tolerance / perturbation magnitude when grounded; otherwise `declared invention — <rationale>` or, on `candidate` status only, `aspirational — pending implementation`}} |
-| … | … | … | … | … |
-
-**Minimum probe count:** 4. Must cover at least one probe each for: cost scaling, production rate, modifier chain depth, and one archetype-specific axis.
-
-Probe tolerances and perturbation magnitudes are numerical claims — every probe row's Rationale cell must carry a citation back to the exemplar that justifies the chosen tolerance, or one of the two escape hatches (`declared invention` for invented thresholds, `aspirational — pending implementation` for pre-implementation `candidate` drafts).
-
----
-
-## 7. Sim assertions
-
-<!--
-  TypeScript test stubs using runHeadless / runMatrix / runSensitivity.
-  These are what a fork author will run (or have CI run) to know whether
-  their tuning is within tolerance. Checked in alongside the archetype
-  under src/modules/<game>/sim/*.test.ts or similar.
--->
-
-```ts
-import { runHeadless } from 'open-loop-engine/harness';
-import { describe, it, expect } from 'vitest';
-import { loadVars } from '../vars';
-
-describe('{{name}} beat map', () => {
-  it('beat 1 lands in 0–2 min window', async () => {
-    const result = await runHeadless({
-      vars: loadVars(),
-      until: (state) => {{/* beat-1 trigger predicate */}},
-      maxSimTime: minutes(5),
-    });
-    expect(result.simTime).toBeWithin(minutes(0), minutes(2));
-  });
-
-  // one test per beat at minimum
-});
-
-describe('{{name}} balance robustness', () => {
-  it('beat N still lands in tolerance at ±20% cost scaling', async () => {
-    // runMatrix over probe range, assert tolerance
-  });
-});
-```
-
-**Required test count:** one `it` per beat (beat-timing), one `it` per probe (robustness). Minimum total = beat count + probe count.
-
-**Representative-stubs escape hatch:** the doc may show 2–3 worked test stubs and a `// one it() per beat` / `// one it() per probe` comment indicating full enumeration happens at the checked-in test file rather than in the doc. The validator accepts either (a) full enumeration in the doc, or (b) ≥ 2 stubs + the coverage note. Either form is fine as long as the actual test file ships with beat+probe coverage.
-
-Numerical bounds inside test stubs (window minimums, expected magnitudes, tolerance ratios) are subject to the same citation discipline as § 4 / § 6: ground the bound to `reference-code/<game>/<file>:line` or `wiki:<url>`, or tag with `declared invention — <rationale>`, or — on `candidate` status only — `aspirational — pending implementation`.
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 <!--
   Minimum-viable content catalog for the 1–2h arc. Not a ceiling — forks
@@ -241,11 +168,16 @@ Numerical bounds inside test stubs (window minimums, expected magnitudes, tolera
 - **Progression gates:** {{zones, unlocks, prestige tiers — whichever apply}}
 - **Achievements:** {{count + theme}}
 
-**Density target:** every beat in § 4 must correspond to at least one content entry above. Enumerate the mapping inline (e.g. "beats 1–3 → producers; 4 → upgrades; 5 → achievements") — don't leave it implicit.
+### Substrate divergences from vanilla, not applied in the slim demo
+
+Mechanics-layer features the slim demo intentionally omits — base values or declared-invention
+substitutes used in their place:
+
+- {{feature present in the exemplar}} — {{reason omitted from slim demo; what replaces it}}
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 <!--
   The archetype's visual shape — shell, widgets, form-factor — grounded in
@@ -260,8 +192,8 @@ Numerical bounds inside test stubs (window minimums, expected magnitudes, tolera
   - `widget-vocabulary.md` — ARIA + domain widget vocabularies
 
   Shell choice is archetype-shape-centric and invariant across themes
-  (§ 11). Costume does not change shell; neither does theme change beat
-  map.
+  (§ 8). Costume does not change shell; neither does theme change arc
+  pacing.
 
   The validator hard-fails on missing cites or unresolved shell names.
   The escape hatch is an explicit `declared invention` tag.
@@ -280,7 +212,7 @@ Numerical bounds inside test stubs (window minimums, expected magnitudes, tolera
   - …
 
   Per-fork implementation — no pre-abstraction. Lift-first policy (OL-273 Phase 2): 9 distinct ResourceBar layouts across 3 games proved no generalizable shape. Cite `widget-vocabulary.md` Layer 2.
-- **Layout detail (optional):** {{one paragraph mapping named content from § 8 into shell regions — "main column holds X, sidebar Y, modal Z." Include when the shell-to-content mapping is not obvious from shell name alone}}.
+- **Layout detail (optional):** {{one paragraph mapping named content from § 5 into shell regions — "main column holds X, sidebar Y, modal Z." Include when the shell-to-content mapping is not obvious from shell name alone}}.
 - **Nav pattern (optional):** {{horizontal tab bar / sidebar nav / nested subtabs / footer nav}}. Include when nav widget differs meaningfully from shell structure.
 - **Declared-invention notes (optional):** {{expand rationale if any field above carries `` `declared invention` ``. Cite cross-corpus absence and name the hypothesis}}.
 
@@ -288,7 +220,7 @@ Numerical bounds inside test stubs (window minimums, expected magnitudes, tolera
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 <!--
   Friction this archetype is expected to surface. Each row is a hypothesis
@@ -308,7 +240,7 @@ Numerical bounds inside test stubs (window minimums, expected magnitudes, tolera
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 <!--
   3–5 costume options over the skeleton. Each proves the mechanical shape
@@ -354,16 +286,14 @@ reshape the archetype to use existing vocabulary.
 
 ## Writer rules
 
-1. **Prose-primary, formal-where-it-counts.** Section 1 is prose; sections 4, 5, 6, 7 have strict formal shape; the rest are tables + short prose.
+1. **Prose-primary, formal-where-it-counts.** Section 1 is prose; sections 3, 4, 5 have strict formal shape; the rest are tables + short prose.
 2. **No new pattern names.** Cite, don't invent.
-3. **No new engine primitives.** If this archetype needs a primitive that doesn't exist, that's a predicted gap (§ 9), not an invented name in § 3. This applies to the "explicitly not used" list too — every primitive named must resolve.
-4. **Beats are sim-time, not clock-time.** All targets assume continuous simulation; offline time is out of scope for the beat map.
-5. **Data shapes are typed TS.** § 5 TS-signature examples must be syntactically valid TypeScript — they are reference material for the archetype's implementation under `src/archetypes/<name>/data/`.
-6. **Themes are costume-only.** If a theme changes beat timing or pattern composition, it is a different archetype, not a theme.
-7. **Keep the 1–2h arc honest.** If you can't fit your beat map into 2 hours of simulated time, either cut beats or reshape the archetype — do not let scope drift.
-8. **Archetype code lives colocated.** Each archetype lives at `src/archetypes/<name>/` as a self-bootable tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). Data is hand-authored TypeScript, not codegen output. Forks clone the archetype directory wholesale; per-fork tuning edits happen in place. This doc describes design intent; the code is the source of truth.
-9. **Canonical, not novel — but canonical means *shape*, not *content*.** Starter demos are *canonical-for-forking*: forks copy them as the spine. The exemplars in § 1 (Exemplars + Live consumer references) validate that the archetype's *structural shape* exists in the wild — drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Match those structural decisions; flag any deliberate divergence in § 5 with a slim-demo justification. **Do NOT lift content names from any one exemplar.** "Light Pots," "Wild Mana," "Buy Mana," "Smash Pots" coming straight from idle-loops vanilla into a Theme-A demo is the failure mode: content is per-theme costume the demo authors fresh against the canonical slots. Same for action verbs, item names, NPC names, zone names. § 5 names the canonical slot set (e.g. "at least one mana-positive action per early zone"); § 8 fills those slots with theme-native content; the exemplar source stays a *shape* reference, not a content donor.
-10. **Lift numbers, don't invent.** Tier-A archetypes (those with `reference-code/<game>/...` source on disk) must cite source for every numerical claim in § 3 / § 4 / § 5 / § 6 / § 7. Cite as `` `reference-code/<game>/<file>:line` `` (preferred) or `` `wiki:<url>` `` (Tier-B archetypes with closed-source exemplars). For numbers without exemplar (e.g. invented zone-bridge actions), use `` `declared invention — <rationale>` `` (already valid in § 1 / § 9) or `` `aspirational — pending implementation` `` (in § 4 / § 6 / § 7) to mark them explicitly. The validator hard-fails on confident numbers without one of these markers; see § Validator rules for per-status gates.
+3. **No new engine primitives.** If this archetype needs a primitive that doesn't exist, that's a predicted gap (§ 6), not an invented name in § 3. This applies to the "explicitly not used" list too — every primitive named must resolve.
+4. **Data shapes are typed TS.** § 4 TS-signature examples must be syntactically valid TypeScript — they are reference material for the archetype's implementation under `src/archetypes/<name>/data/`.
+5. **Themes are costume-only.** If a theme changes pattern composition or arc pacing, it is a different archetype, not a theme.
+6. **Archetype code lives colocated.** Each archetype lives at `src/archetypes/<name>/` as a self-bootable tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). Data is hand-authored TypeScript, not codegen output. Forks clone the archetype directory wholesale; per-fork tuning edits happen in place. This doc describes design intent; the code is the source of truth.
+7. **Canonical, not novel — but canonical means *shape*, not *content*.** Starter demos are *canonical-for-forking*: forks copy them as the spine. The exemplars in § 1 (Exemplars + Live consumer references) validate that the archetype's *structural shape* exists in the wild — drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Match those structural decisions; flag any deliberate divergence in § 4 with a slim-demo justification. **Do NOT lift content names from any one exemplar.** "Light Pots," "Wild Mana," "Buy Mana," "Smash Pots" coming straight from idle-loops vanilla into a Theme-A demo is the failure mode: content is per-theme costume the demo authors fresh against the canonical slots. Same for action verbs, item names, NPC names, zone names. § 4 names the canonical slot set (e.g. "at least one mana-positive action per early zone"); § 5 fills those slots with theme-native content; the exemplar source stays a *shape* reference, not a content donor.
+8. **Lift numbers, don't invent.** Tier-A archetypes (those with `reference-code/<game>/...` source on disk) must cite source for every numerical claim in § 3 / § 4 / § 5. Cite as `` `reference-code/<game>/<file>:line` `` (preferred) or `` `wiki:<url>` `` (Tier-B archetypes with closed-source exemplars). For numbers without exemplar (e.g. invented zone-bridge actions), use `` `declared invention — <rationale>` `` (already valid in § 1 / § 6) to mark them explicitly. The validator hard-fails on confident numbers without one of these markers; see § Validator rules for per-status gates.
 
 ---
 
@@ -371,26 +301,17 @@ reshape the archetype to use existing vocabulary.
 
 The validator (run via `pnpm validate:archetypes`) enforces:
 
-- [ ] All 11 numbered sections present, in order, with the canonical heading text.
+- [ ] All 8 numbered sections present, in order, with the canonical heading text.
 - [ ] § 2 cites at least 2 patterns, each resolving in `LIBRARY.md`.
 - [ ] § 3 cites at least 3 engine primitives, each resolving in `INDEX.md`.
-- [ ] § 4 beat map has 5–8 rows, each row has non-empty sim-time window.
-- [ ] § 6 has at least 4 probes, covering the 4 required axes.
-- [ ] § 7 has at least one test stub per beat and per probe.
-- [ ] § 9 primary-shell / secondary-shell / form-factor-intent lines each carry a citation into one of the three `practical/ui-ux/*.md` data artifacts, or a `` `declared invention` `` tag.
-- [ ] § 9 shell names resolve to files in `open-loop-starter/src/lib/shells/*.vue`, unless tagged `` `declared invention` ``.
-- [ ] § 9 contains both an "ARIA-aligned widgets" list and a "Domain widgets" list; each may be empty but both headers must be present.
-- [ ] § 11 has 3–5 themes.
+- [ ] § 6 primary-shell / secondary-shell / form-factor-intent lines each carry a citation into one of the three `practical/ui-ux/*.md` data artifacts, or a `` `declared invention` `` tag.
+- [ ] § 6 shell names resolve to files in `open-loop-starter/src/lib/shells/*.vue`, unless tagged `` `declared invention` ``.
+- [ ] § 6 contains both an "ARIA-aligned widgets" list and a "Domain widgets" list; each may be empty but both headers must be present.
+- [ ] § 8 has 3–5 themes.
 - [ ] All corpus games in the Exemplars line resolve to files under `analyses/complete/`, **or** the Exemplars line carries a `` `declared invention` `` tag with a named validation tradition.
 - [ ] Status is one of `canonical` / `candidate` / `deprecated`.
 - [ ] § 1 first paragraph ("pitch") is 300–1200 chars, contains no markdown links or code fences.
 - [ ] If a `**Live consumer references**` line is present, each cited `` `/work/studio/<name>/` `` path resolves on disk, OR the line starts with `none` as an explicit-absence sentinel.
-- [ ] § 10 rows self-declaring "convergent across N consumers" (N ≥ 2) carry severity = High.
-- [ ] **§ 4 / § 6 / § 7 numerical-claim grounding.** Per-status gates:
-  - **`canonical`** — every § 4 row's sim-time/timing claim and every § 6 probe tolerance must have a citation in reach: `` `reference-code/<game>/<file>:line` ``, `` `wiki:<url>` ``, an inline `<file>.<ext>:<line>` short-form reference, or one of the keyword markers `vanilla` / `canonical` (used in surrounding section prose to anchor the source). The `` `declared invention — <rationale>` `` tag is the explicit escape hatch for invented numbers without exemplar. `` `aspirational — pending implementation` `` is **not** a valid marker on `canonical` status.
-  - **`candidate`** — § 4 / § 6 / § 7 rows must be either empty (placeholder) or all carry `` `aspirational — pending implementation` `` or `` `declared invention — <rationale>` `` or one of the canonical-grade citation forms. A confident number without one of those markers fails validation. Stripped sections (a single italicized placeholder paragraph referencing the validator + reground tickets) pass trivially as long as the placeholder text mentions `aspirational — pending implementation`.
-  - **`deprecated`** — § 4 / § 6 / § 7 are not validated.
-
-  Detection heuristic: a "confident number" is any digit-bearing token in a row's text after stripping pure design-window patterns (sim-time windows like `0:00–0:10`, tolerances like `±25%`, perturbation specs like `×[0.80, 1.20]`) and inline backtick-quoted code spans. Section-level grounding fallback: if the section's prose contains rich citation density (any of the keyword markers above), table rows with otherwise-bare numbers count as grounded — the validator's purpose is to catch authoring-discipline failure ("no thought given to source"), not to police every individual claim.
+- [ ] § 7 rows self-declaring "convergent across N consumers" (N ≥ 2) carry severity = High.
 
 A doc that fails any check is not a canonical archetype spec.

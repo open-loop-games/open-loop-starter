@@ -84,13 +84,7 @@ A thirty-minute session is a sequence of queue edits. You notice a skill that's 
 
 ---
 
-## 4. Beat map
-
-_Not authored at this layer. Beat windows are downstream of balance work against a fork's content set, not part of the archetype substrate. See `BALANCING.md` for the Tier-A scaffold._
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Per the data-first archetype convention (`open-loop-starter/CLAUDE.md` § Archetype convention), the demo's content lives flat in `src/archetypes/looper/data/*.ts` as plain typed arrays + balance constants. The skeleton/theme/balance lens lives as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`) inside each data file, not as a parallel filesystem layer. Mechanical fields and theme strings are co-located per def. No `vars/` extraction layer, no codegen round-trip.
 
@@ -336,19 +330,7 @@ What's mechanical and lives in `data/balance.ts`: `initialMana`, `costDivisor`, 
 
 ---
 
-## 6. Balance probes
-
-_Not authored at this layer. Probe definitions are per-fork balance scaffolding, not part of the archetype substrate. See `BALANCING.md` § Scripts discover, tests lock._
-
----
-
-## 7. Sim assertions
-
-_Not authored at this layer. Beat-suite and regression-lock tests are per-fork balance scaffolding, not part of the archetype substrate. The `sim/` folder carries a boot smoke (`__boot_state__.test.ts`) only._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 The slim demo carries vanilla idle-loops town 0 (Beginnersville) + town 1 (Forest Path) — substrate (mechanics + UI) cloned 1:1 from `idle-loops-ng/src/`. Every numerical claim cites the canonical port at `idle-loops-ng/src/data/vanilla-actions.ts` and `idle-loops-ng/src/modules/zones.ts`; full per-row grounding lives inline in `data/*.ts`. Forks rename for theme; the starter ships transparently as the slim port.
 
@@ -449,7 +431,7 @@ The exemplar lineage operates at much higher cardinality (vanilla idle-loops-ng:
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `ThreePanelShell` — time-loop weak majority per `subgenre-shell-mapping-2026.md` § "time-loop" (2/5 classifiable, at the 40% threshold). Shell matches both primary idle-loops-lineage exemplars. Exemplar rows from `layout-audit-2026.md`: Idle Loops, Omsi Loops.
 - **Secondary shell:** `MultiColumnShell` — extension shape for Cavernous-style per-clone queue richness; one classifiable time-loop row per `subgenre-shell-mapping-2026.md`. Use when the fork adds parallel-clone or parallel-loop content that outgrows three columns. Exemplar row: Cavernous II.
@@ -470,7 +452,7 @@ The exemplar lineage operates at much higher cardinality (vanilla idle-loops-ng:
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 Both live consumers flag overlapping gaps; convergent TODOs get higher severity.
 
@@ -487,7 +469,7 @@ Both live consumers flag overlapping gaps; convergent TODOs get higher severity.
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Slim vanilla idle-loops (the demo's costume)
 

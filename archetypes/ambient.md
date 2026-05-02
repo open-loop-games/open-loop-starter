@@ -72,27 +72,7 @@ The absence is the contract. A reader inspecting an Ambient mod should see Loop 
 
 ---
 
-## 4. Beat map
-
-Arc framing: **first session to first prestige-eligible state.** Ambient has no completion state by design; the skeleton's "you've seen the shape once" moment is the moment the player *could* prestige, whether they do or not. The arc target is **8–12 sim-hours, cumulative** — not continuous. Sessions in reality are distributed; the beat map measures accumulated sim-time regardless of wall-clock distribution. The 12h ceiling matches the default `offlineCapHours` so a single overnight session yields at most one arc-completion's worth of accumulation; this is the structural brace the contemporary cluster (Rusty's Retirement, Chillquarium, Tiny Pasture, Chill with You) shares. The windows below are **suggested initial targets** — the balance leaf's solver iterates them within the arc-budget envelope.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First passive production visible | 0:00–0:30 | `primary ≥ 1` without any clicks | Resource readout starts ticking; first scene element pulses | Onboarding — confirms the game produces *without* the player, establishing the Ambient contract in the first 30 seconds |
-| 2 | First auto-producer purchased (T1) | 1:00–3:00 | `producers[0].count ≥ 1` | Producer appears in the scene; per-second rate increments visibly | Validates cost onboarding + makes the passive-chain commitment physical |
-| 3 | First visibility unlock revealed | 30:00–1:30:00 | `unlocks[firstNonDefault].visible` | Previously-hidden UI element or scene element becomes visible | Establishes the gentle unfold cadence — content arrives without urgency, paced for between-glance reveals |
-| 4 | Glance-check value proposition proven | 1:30:00–3:00:00 | return from backgrounded state with `Δprimary ≥ meaningfulThreshold` AND ≥1 affordable purchase queued | Welcome-back summary: "accumulated X, Y affordable" | The archetype's signature moment — the first time the player leaves and returns *rewarded*; distinguishes Ambient from a foreground game with idle padding. Window matches a half-day-of-work absence. |
-| 5 | Mid-arc scene diversification | 3:00:00–5:00:00 | `producers[mid].count ≥ 1` AND ≥1 idle-scene-variant unlocked | New scene-variant takes over the canvas | Sensation-aesthetic payoff — visual state confirms depth without demanding engagement |
-| 6 | First low-urgency achievement multiplier | 5:00:00–8:00:00 | milestone-count achievement fires with passive-multiplier reward | Achievement toast (non-modal); multiplier applies quietly | Achievements as pacing markers, not pressure — fires at the player's cadence, not theirs |
-| 7 | Prestige-eligible state reached (arc closure) | 8:00:00–12:00:00 | `primary ≥ balance.prestigeEligibleThreshold` AND deepest unlock visible | Prestige affordance unlocks *if enabled*; end-of-arc flavour event fires regardless | The "one-loop-seen" moment. Player may prestige or continue; skeleton's baseline story is complete either way. 12h ceiling matches `offlineCapHours`. |
-
-**Arc closure beat:** #7.
-
-The prework's "beat 8 if prestige enabled" option is deliberately omitted — the skeleton's arc ends at beat 7 whether the player prestiges or not. A fork that adds prestige and wants a distinct "first prestige completed" milestone should author it as a balance-tuned beat-8 of its own, not as a skeleton default. This keeps the no-prestige Ambient (Rusty's Retirement shape) a first-class default.
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Ambient's content lives under `src/archetypes/ambient/data/` as four flat typed-array exports (`producers.ts`, `unlocks.ts`, `achievements.ts`, `scene-variants.ts`) plus a `types.ts` that names the definition interfaces. Inline `requirement` callbacks colocate the mechanics with the definition — no separate effect tables, no codegen. Lens discipline is enforced by comment sections inside each data file (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`): skeleton counts (tier-count, unlock-count, achievement-count, scene-variant-count) are a fork-of-skeleton decision; balance constants (cost growth, tier-cost ratios, base rates, multipliers, prestige threshold, offline cap) are the tuning surface sim tests probe; costumes (resource name, producer names, unlock labels, achievement labels, scene-variant labels, welcome-back template, end-of-arc message) are theme-scoped.
 
@@ -183,128 +163,7 @@ export interface AmbientGameState {
 
 ---
 
-## 6. Balance probes
-
-| Probe | Locator | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|---------|--------------|----------------|-----------|-----------|
-| `production-rate-baseline` | `sim/balance.probe.test.ts` (math) | `tier1BaseRate` ×[0.75, 1.25] | 1, 2 | Beat sim-time ±25% | Onboarding pacing — beats 1–2 feel broken if off |
-| `cost-scaling-growth` | `sim/balance.probe.test.ts` (math) | `producerCostGrowth` ×[0.93, 1.08] (≈±7% on 1.08 baseline) | 3, 5 | Beat sim-time ±20% | Ambient's gentle growth means this axis is *more* sensitive than Producer's — small shifts move mid-arc beats noticeably |
-| `offline-round-trip-correctness` | `balance/offline-probe.ts` (sim) | Simulate 4h / 12h / 24h offline gaps vs. continuous equivalent | — (invariant, not a beat) | Resource delta ≤ 0.5% of continuous reference | The mechanical prerequisite for the Ambient contract; correctness over timing. Hand-rolled around `processOfflineTime` chunking + matched continuous `runHeadless`. |
-| `achievement-multiplier-density` | `sim/balance.probe.test.ts` (math) | `achievementMultiplier` ×[0.98, 1.06] + reachable count ×[0.5, 1.5] | 6 | Beat sim-time ±30% | Achievement pacing is the mid-arc acceleration axis; sparse-surface archetype needs this tuned |
-| `no-pressure-audit` | `balance/no-pressure-audit.ts` (sim) | Run 24h sim at default balance; assert no negative state transitions | — (invariant, binary) | Zero resource cap-and-waste events, zero fail-state flags raised, zero negative deltas on player-visible resources | The archetype's signature probe. Catches mod-author drift that introduces pressure loops by accident. The three event names above are *script-defined* `Analyzer` instances built from `harness/analyzers/` primitives — engine ships no string-keyed equivalent, so the script implements them inline. |
-
-**Probe split (per the OL-625 "scripts discover, tests lock" methodology):**
-
-- **Math-only regression locks** (`sim/balance.probe.test.ts`) — the three timing/density probes above. Pure JS arithmetic on `DEFAULT_AMBIENT_DATA`, no `runHeadless` call. Each `it()` pins a number that the balance leaf's solver converged on, so any future change moves the test together with the data.
-- **Sim-driven balance scripts** (`balance/offline-probe.ts`, `balance/no-pressure-audit.ts`) — the two structurally-definitional invariants. They run inside the Tier-A balance lane (`pnpm balance:ambient`-shaped), not as `*.test.ts`. They take wall-clock minutes, perturb against `runMatrix`, and produce report output rather than assertions; mod authors run them when content shape changes.
-
-**Minimum probe count:** 5 (exceeds ≥4 requirement). Covers cost scaling, production rate, offline correctness, achievement density, and the Ambient-specific no-pressure audit. The fourth-axis "archetype-specific" slot is filled by two probes (offline round-trip + no-pressure audit) because both are structurally definitional for the archetype.
-
----
-
-## 7. Sim assertions
-
-Two lanes — math-only regression locks (`sim/balance.probe.test.ts`) and sim-driven balance scripts (`balance/*.ts`). The vitest suite never calls `runHeadless`; engine-driven verification lives in the balance lane.
-
-```ts
-// sim/balance.probe.test.ts — math-only regression locks (Producer precedent: OL-625)
-import { describe, it, expect } from 'vitest';
-import { DEFAULT_AMBIENT_DATA } from '../data';
-
-describe('balance probe — solver-knob receipts', () => {
-  // Numbers below are placeholders; the balance leaf's solver pins them.
-  it('tier1BaseRate matches beat-1 solver convergence', () => {
-    const { balance } = DEFAULT_AMBIENT_DATA;
-    expect(Number(balance.tier1BaseRate)).toBe(0.5);
-  });
-
-  it('producerCostGrowth matches beat-3/5 solver convergence', () => {
-    const { balance } = DEFAULT_AMBIENT_DATA;
-    expect(Number(balance.producerCostGrowth)).toBe(1.08);
-  });
-
-  // one it() per pinned solver knob (production rate, cost growth, achievement
-  // multiplier, prestige threshold) — full enumeration in the checked-in file.
-});
-
-describe('balance probe — content-math receipts', () => {
-  it('achievement headline contribution at full unlock is in the expected range', () => {
-    const { balance, achievements } = DEFAULT_AMBIENT_DATA;
-    // Reachable in-arc count tuned by the balance leaf; placeholder math here.
-    const reachableInArc = achievements.filter((a) => !a.triggeredOnResume).length;
-    const stack = Math.pow(Number(balance.achievementMultiplier), reachableInArc);
-    expect(stack).toBeGreaterThan(1);
-    expect(stack).toBeLessThan(10); // sanity ceiling — Ambient is gentle
-  });
-});
-```
-
-```ts
-// balance/offline-probe.ts — sim-driven offline-round-trip correctness
-import { runHeadless, processOfflineTime } from 'open-loop-engine';
-import { createAmbientEngine } from '../boot';
-
-/**
- * Compares N sim-hours of continuous accumulation against the same N hours
- * delivered through `processOfflineTime` chunking. The Ambient contract
- * requires equivalence within 0.5%.
- *
- * Lives outside the vitest suite — `pnpm balance:ambient` runs it; mod
- * authors invoke it when content shape changes.
- */
-export function runOfflineRoundTripProbe(gapHours: number) {
-  const { engine: continuous } = createAmbientEngine();
-  const continuousResult = runHeadlessForHours(continuous, gapHours);
-
-  const { engine: offline } = createAmbientEngine();
-  // Drive a single tick to settle module install, then deliver the gap as
-  // wall-clock-faithful chunks via the engine's offline primitive.
-  offline.start();
-  processOfflineTime(offline.loop, gapHours * 3600, { chunkSize: 1 });
-  offline.stop();
-
-  return {
-    continuous: continuousResult.headlineResource,
-    offline: snapshotHeadline(offline),
-    deltaPct: relativeDelta(continuousResult.headlineResource, snapshotHeadline(offline)),
-  };
-}
-```
-
-```ts
-// balance/no-pressure-audit.ts — sim-driven no-pressure invariant
-import { runHeadless, type Analyzer } from 'open-loop-engine';
-import { createAmbientEngine } from '../boot';
-
-/**
- * 24h sim against the default Ambient build; reports zero pressure events
- * or surfaces the offending tick. Analyzers are script-defined `Analyzer`
- * instances; engine ships no string-keyed equivalent.
- */
-export function runNoPressureAudit() {
-  const { engine } = createAmbientEngine();
-  return runHeadless({
-    setup: () => [
-      buildResourceCapWasteAnalyzer(engine),
-      buildFailStateFlagAnalyzer(engine),
-      buildNegativeDeltaAnalyzer(engine),
-    ] satisfies Analyzer[],
-    tick: (dt) => engine.loop.simulateTick(dt),
-    ticks: 24 * 60 * 60, // 24h at tickDelta = 1s
-    tickDelta: 1,
-  });
-}
-```
-
-The three analyzers (`buildResourceCapWasteAnalyzer`, `buildFailStateFlagAnalyzer`, `buildNegativeDeltaAnalyzer`) are script-defined — they implement the `Analyzer` interface from `open-loop-engine` (`onStart` / `onTick` / `onEnd` / `summarize`). The engine does not ship them. If a second Ambient consumer authors the same three, graduate them to `harness/analyzers/` per the LIBRARY pattern's ≥2-consumers rule.
-
-**Required test count:** 5 math-only probe `it()`s in `sim/balance.probe.test.ts` (one per pinned solver knob plus content-math receipts), checked into the vitest suite. **Required script count:** 2 sim-driven probes (`balance/offline-probe.ts`, `balance/no-pressure-audit.ts`), invoked through the Tier-A balance lane, not vitest.
-
-**Representative-stubs escape hatch:** this doc shows three stubs (math regression, offline round-trip, no-pressure audit). Full enumeration lives in the checked-in files.
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 1 primary accumulating currency (+1 prestige token if `prestigeEnabled`).
 - **Producers / Activities:** 5 auto-producer tiers. Manual click affordance optional (theme-dependent); if present, clicks are a bonus, not required. Example naming (cozy-farm theme): planter, coop, pond, pasture, orchard.
@@ -317,7 +176,7 @@ The three analyzers (`buildResourceCapWasteAnalyzer`, `buildFailStateFlagAnalyze
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `SingleColumnShell` — narrative-clicker strict majority per `subgenre-shell-mapping-2026.md` § "narrative clicker" (5/12 classifiable). Exemplar rows from `layout-audit-2026.md`: A Dark Room, Candy Box 2. The single-column form honors Ambient's reduced-chrome ethos: scene-dominant presentation, minimal navigation, legible at a glance.
 - **Secondary shell:** `ThreePanelShell` — narrative-clicker secondary cluster (3/12 classifiable) per `subgenre-shell-mapping-2026.md`. Use when the fork surfaces auto-producer lists, upgrade trays, and achievement grids alongside the idle scene. Exemplar rows: Cookie Clicker, Universal Paperclips.
@@ -342,7 +201,7 @@ The three analyzers (`buildResourceCapWasteAnalyzer`, `buildFailStateFlagAnalyze
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 Zero correctness gaps predicted — engine posture is settled (see LIBRARY pattern § Engine Posture and the taxonomy's `§ 2G`). All entries below are low-severity ergonomics hypotheses the first Ambient-archetype fork will confirm or reject.
 
@@ -358,7 +217,7 @@ The one-line rule for this section: **if implementing an Ambient fork requires a
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Cozy Farm
 

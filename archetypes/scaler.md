@@ -86,31 +86,13 @@ Naming what's *absent* is part of the Scaler contract: it refuses the spatial an
 
 ---
 
-## 4. Beat map
+## 4. Data shape
 
 _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
-## 5. Data shape
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 1 base currency + 1 currency per prestige layer. Default 3 layers → 4 total resources. Plus `trackTotal` / `trackBest` accumulators on each.
 - **Producers / Dimensions:** 8 base-layer dimension tiers in a cascading production chain (tier N produces tier N-1). Example naming scale (antimatter theme): 1st Dimension through 8th Dimension.
@@ -123,7 +105,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `SidebarMainShell` — prestige-idle weak majority per `subgenre-shell-mapping-2026.md` § "prestige idle" (5/12 classifiable; Antimatter Dimensions is the cluster anchor). Shell matches Scaler's canonical exemplar. Exemplar rows from `layout-audit-2026.md`: Antimatter Dimensions, Advent Incremental, The Game Dev Tree.
 - **Secondary shell:** `MultiColumnShell` — for forks that outgrow a single main column due to the 3-layer × (producers + upgrades + challenges + achievements) UI surface flagged as § 3 stress axis #4. Classifiable prestige-idle row per `subgenre-shell-mapping-2026.md`: Trimps (4 Bootstrap columns). Use when layer density demands parallel visibility rather than tabbed switching.
@@ -145,7 +127,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 Scaler is the archetype that stress-tests the engine hardest. Expected friction is broader than any other archetype because of the reset × modifier × formula interactions.
 
@@ -162,7 +144,7 @@ Scaler is the archetype that stress-tests the engine hardest. Expected friction 
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Antimatter physics
 

@@ -84,13 +84,7 @@ A thirty-minute session spans three to six full cycles. The signature moments ar
 
 ---
 
-## 4. Beat map
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Cycler's content lives under `src/archetypes/cycler/data/` as flat typed-array exports (`buildings.ts`, `enemies.ts`, `cycles.ts`, `progression.ts`, `themes.ts` if needed) plus a `types.ts` that names the definition interfaces. Inline building-behaviour, enemy-composition, and per-cycle escalation fields colocate with the definitions — no separate effect tables, no codegen. Lens discipline is enforced by comment sections inside each data file (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`): skeleton counts (building-archetype count, enemy-archetype count, cycle-escalation-table length, `phaseCycleMode`, `endgameMode`, `prestigeMode`) are fork-of-skeleton decisions; balance constants (phase durations, HP curves, income curves, upgrade multipliers) are the tuning surface sim tests probe; costumes (building names, enemy names, phase-transition flavour copy) are theme-scoped.
 
@@ -211,19 +205,7 @@ export interface CyclerData {
 
 ---
 
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 3 — gold (per-run, persistent across cycles, resets on run end when `prestigeMode !== 'none'`); population (per-run, feeds income + defender staffing); fortress HP (per-run, loss condition). Optional 4th: meta-currency (cross-run, `persistent`, only when `prestigeMode !== 'none'`).
 - **Producers / Activities (buildings):** 6 building archetypes covering the four roles. Example naming (Day/Night Kingdom theme): farm (income), archer-tower (defense), barracks (support-adjacency), wall-segment (infrastructure), watchtower (support-range), workshop (income-compound). Six is slightly richer than Defender's 4 because Cycler needs both build-phase-active and defend-phase-active kinds; forks compress or expand.
@@ -236,7 +218,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `SingleColumnShell` — cites `subgenre-shell-mapping-2026.md § build-defend-cycler (N=3, N_classifiable=3)`. The `build-defend-cycler` sub-genre shows a moderate majority (2/3, 67%) for `single-column`: Kingdom Two Crowns and Thronefall both foreground the spatial substrate as a primarily horizontal or top-down canvas with minimal peripheral chrome. Starter's `SingleColumnShell` is the direct partial fit; the spatial substrate itself (the kingdom, the map) is the shell's main region with HUD chrome (cycle counter, resource readouts, phase-timer) docked top or bottom. Exemplar rows from `layout-audit-2026.md`: Kingdom Two Crowns (single-column, mobile-confirmed iOS/Android 2020), Thronefall (single-column, desktop), Dome Keeper (free-form, desktop).
 - **Secondary shell:** `` `declared invention` `` — dual-zone canvas shape per Dome Keeper's `free-form` audit row. Dome Keeper's vertical shaft + separate dome zone registers as `free-form` in the audit because the two zones are spatially distinct but share one vertical canvas; no starter shell captures a two-zone single-canvas layout. Forks following the dig-and-defend pattern (or any variant where build-space and defend-space are spatially distinct but linked) adopt the declared-invention shape. Graduation threshold: two independent Cycler forks sharing dual-zone geometry. Until then, single-zone forks use `SingleColumnShell` and dual-zone forks carry the declared-invention tag with a one-line rationale.
@@ -261,7 +243,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
@@ -276,7 +258,7 @@ Convergent-gap rule: N/A — no live consumers yet. All gaps are hypotheses the 
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Day/Night Kingdom
 

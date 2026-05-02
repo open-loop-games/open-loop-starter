@@ -78,34 +78,7 @@ A first 1–2 hours of play unfolds across 2–4 matches (each 15–30 minutes).
 
 ---
 
-## 4. Beat map
-
-Arc framing: **cumulative across matches, not continuous within one.** A Tug match is 15–30 sim-minutes; the beat-map arc covers 2–4 matches' worth of cumulative play. **Skeleton baseline: 2 hours cumulative sim-time** — pinned at this value so leaf-6's `arcBudgetSec` and the Tier-C distribution probes have a single source of truth. Beats 1–4 land within the first match (onboarding through first match completion); beats 5–7 land across matches 2–3+ (composition mastery, first meta-progression milestone when enabled). This mirrors the Ambient precedent of measuring cumulative sim-time regardless of within-session distribution. Forks that enable `metaProgressionEnabled` see beat 7 fire when the first cross-match unlock lands; forks that leave it off see beat 7 fire at the "counter-mastery demonstrated" invariant (3+ successful counter-pivots in any single match) without a persistence event.
-
-The `2h` baseline is cumulative sim-time, **not** wall-clock; for Tier-C `runMatrixUntil` runs, sim-time = match-time × match-count where match-time is bounded by `matchTimeLimitMinutes`. A `runMatrixUntil` cell terminating on `match.outcome.value !== null` produces one match's worth of sim-time per seed; a 2h cumulative arc is a 4-match Monte Carlo run at default content. Forks that extend `metaProgressionEnabled` with deeper meta layers may extend the arc proportionally (e.g. 6h for a 6-match faction-unlock arc); the `2h` value is the no-meta default, not a ceiling.
-
-| # | Beat | Target sim-time | Trigger condition | Player-visible signal | Why it matters |
-|---|------|-----------------|-------------------|------------------------|-----------------|
-| 1 | First unit purchased | 0:00–1:00 | `player.units.purchased ≥ 1` | Unit icon appears in the spawn queue; income ticks visibly | Onboarding — the shop → send loop becomes concrete in under a minute |
-| 2 | First auto-resolve combat observed | 1:00–3:00 | Opposing unit streams meet in the lane for the first time | Combat animation + front-line position updates | The archetype's defining moment — validates "set composition, watch it play out" |
-| 3 | First counter-pivot | 5:00–15:00 | Player switches to a unit archetype that counters the opponent's dominant unit for the first time | New unit icon first-appearance in the queue; front-line shifts toward opponent within next 90s | Introduces the counter-matrix depth — this is where the archetype stops being an auto-battler and starts being a strategy game |
-| 4 | First match completion | 15:00–30:00 | One fortress HP reaches 0 (or match time-limit score resolution) | Victory / defeat screen; match stats (units sent, income earned, counter pivots) | Arc half-way point; proves the match-loop closes cleanly regardless of outcome |
-| 5 | Second-match composition pivot | 30:00–50:00 | In match 2+, player opens with a different unit archetype than in match 1 (tracked in session state) | Shop selection reflects a deliberate posture (e.g. "early air" vs. match-1's "early ground") | Demonstrates that learning transfers across matches; a single-match skeleton would end here without this signal |
-| 6 | Counter-type mastery demonstrated | 45:00–75:00 | 2+ successful counter-pivots within a single match AND that match won | Match-end stats highlight counter-pivot count; achievement/notification fires if achievements are enabled | Depth probe — the player has internalized at least two counter matchups |
-| 7 | First meta-progression milestone OR counter-mastery invariant (arc closure) | 60:00–120:00 | **If `metaProgressionEnabled`:** first faction unlock / ladder tier advance, predicate `meta.factionsUnlocked.value > 0`. **If off:** `match.maxCounterPivotsAnyMatch.value >= 3` — running max of `counterPivotsThisMatch` across matches, lives in `tug/meta` so it survives match boundary | Meta-progression: unlock flavour event. No-meta: match-end "mastery demonstrated" flag | The "you've seen the shape once" moment. Skeleton supports both meta and no-meta arcs as first-class |
-
-**Arc closure beat:** #7.
-
-This beat is deliberately a **bimodal** arc closure — one branch for `metaProgressionEnabled: true` (Legion TD 2 / Warfare 1917 campaign shape), one for `metaProgressionEnabled: false` (Direct Strike skeleton-default shape, where the "arc closure" is purely in-session skill demonstration). Both paths fire within the 60–120 minute cumulative window. A fork that wants a cleaner, one-path arc closure picks one mode and treats the other's beat-7 invariant as out-of-scope.
-
-**Engine-state expressions** (load-bearing for `balance/shape.ts` `signatureMetric` slot):
-
-- Meta-on branch: `meta.factionsUnlocked.value > 0` reading `MetaProgressionKey`. Latched once via `watch` + `announced` flag mirrored on Producer/Ambient `arc.ts`.
-- Meta-off branch: `meta.maxCounterPivotsAnyMatch.value >= 3`. The `counterPivotsThisMatch` ref is per-match-scoped (resets on match boundary); the `maxCounterPivotsAnyMatch` ref is meta-scoped (survives match boundary, updates on match end via `match.afterMatch` event with `Math.max`). The tracker increments inside `modules/match.ts` whenever a `counter-pivot` event fires — the event is emitted by the unit-shop module when the player buys an archetype that strong-counters the AI's current dominant archetype within a 90s window.
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Per the post-2026-04-20 data-first convention (see Producer + Ambient `data/types.ts`), data lives in flat `data/*.ts` files inside the archetype directory. The skeleton/theme/balance lens lives as comment sections inside those files (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`), not as separate vars/ files. The TS shapes below are reference prose — leaf 2 lifts them into `src/archetypes/tug/data/types.ts` directly, naming each interface and field as it lands.
 
@@ -146,165 +119,7 @@ Per the post-2026-04-20 data-first convention (see Producer + Ambient `data/type
 
 ---
 
-## 6. Balance probes
-
-> **History marker (2026-04-27):** an earlier probe table listed `ai-difficulty-symmetry` as the SIGNATURE probe (perturbing `aiIncomeMultiplier` against a player-win-rate band). Rolled back as a category error per OL-711 reopen / OL-730 rescope — `aiIncomeMultiplier` is an AI-quirk knob, not a balance lever. Replaced by `counter-strong-sensitivity` (sweeps `counter-matrix/strongCounter`, a real design parameter). The math-only / MC split and test-stub patterns below stand.
-
-Tug is the **first Tier-C archetype** per `archetypes/BALANCING.md` § Tier C — adversarial, distribution-statistic balance, no Gauss-Seidel single-knob solver. Probes split into two classes by what tool reads them: math-only locks (single `runUntil` call, deterministic bot at `believability: 0/0`, fire-time band) and Monte Carlo distribution-statistic probes (multi-seed `runMatrixUntil` with sim-default believability noise, win-rate / match-length distributions).
-
-| Probe | Class | Perturbation | Target beat(s) | Tolerance | Rationale |
-|-------|-------|--------------|----------------|-----------|-----------|
-| `income-rate-baseline` | math-only lock | `baseIncomeRate` ×[0.75, 1.25], believability=0 | 1, 2, 4 | Beat sim-time ±20% | Onboarding and first-match length pivot off income; deterministic fire-time band — no MC needed |
-| `unit-cost-scaling` | math-only lock | `unitCosts` ×[0.85, 1.15] (uniform across archetypes), believability=0 | 2, 3, 5 | Beat sim-time ±25% | Cost scaling determines send cadence; deterministic under fixed-policy bot |
-| `counter-strong-sensitivity` | distribution-statistic (MC) **[SIGNATURE]** | `counter-matrix/strongCounter` sweep ∈ {0.5, 0.75, 1.0, 1.25, 1.5}, sim-default believability | n/a (curve-shaped) | Curve is non-decreasing across sweep; depth target is counter-side win-rate ≥ 0.5 with elbow-room before saturation (≥5pp absolute Δ to next variant) | The signature Tier-C probe. Sweeps a real design parameter (matrix decisiveness) against counter-side win-rate via a local `runSensitivityUntil` helper that emulates engine `runSensitivity` over `runMatrixUntil + diffAggregates` (predicate-bounded termination). Reports curve + proposed `strongCounter` scalar |
-| `income-upgrade-roi` | math-only snapshot | `incomeUpgrades.refinery-1.cost` sweep ∈ {50, 100, 200, 400, 1000} | n/a (closed-form) | Default-state `paybackSeconds` and `crossoverSeconds` per tier within ±5% of analytical; refinery-1 `crossoverSeconds < matchTimeLimitMinutes × 60 × 0.5` across the sweep | Closed-form `paybackSeconds = cost / (currentRate × (multiplier−1))` and `crossoverSeconds = paybackSeconds × multiplier`. Lives engine-side as `IncomeUpgradeRoiKey[side]: Map<defId, RoiMetrics>` (`modules/income-upgrades.ts`); IncomeBar tooltip reads it for "Pays off in X / catches rush at Y". Probe builds engines via `buildTugSimEngine(overrides)`, snapshots the ComputedRefs — no MC needed. Surfaces the analytical "elbow" cost above which refinery-1 stops paying off in a typical match |
-| `match-duration-bound` | distribution-statistic (MC) | Default vars, **30 seeds** | 4 | Median (p50) match length ∈ [50%, 95%] of `matchTimeLimitMinutes`; in-match `time-limit` outcome rate = 0 | Read p50 off `aggregateUntilCell.terminationTime.p50`; time-limit rate via `tug-outcome.isFirstTimeLimit.avg` (not engine `terminationCounts.maxSimTime` — engine reports `predicate` once `matchEnded` fires regardless of in-game outcome) |
-| `per-archetype-dominance` | distribution-statistic (MC Cartesian) | 4×4 persona Cartesian (mass / greed / counter / tech each side), **12 seeds** per cell | n/a (design-property scalar) | Framework-correctness: every cell runs to completion; ≥1 cell has player wins. Reading: `max single-archetype share ≤ 0.40` across the persona meta (≈ 2.4× uniform expectation 1/6). Threshold derivation in `probes.ts::MAX_ARCHETYPE_SHARE_TARGET` — no corpus anchor; Direct Strike uses tier-list curation. | Composition-share readout via `OutcomeCapture` extension (per-side, per-archetype spawn + death counts via `lane.on('unit-spawned' \| 'unit-killed')`). Aggregator computes `playerSpawnShareInWin(X) := Σ_cells avg(spawnsInWin.player.X) / Σ_cells Σ_X avg(spawnsInWin.player.X)` — Direct Strike tier-list framing (`pick_freq × win_rate`) translated to sim. Per-cell win-rate matrix surfaces persona-pair imbalance separately from archetype dominance. Threshold reading is informational; pass criterion is framework-correctness. |
-
-**Believability calibration bundle.** `TugBelievability { suboptimalityRate, cadenceJitterScale }` on `TugBalance` per `composition-cookbook/parameterized-personality.md` § Believability-calibration discipline. Production = 0/0 (deterministic AI, predictable for the human player); sim default = 0.20/0.25. Suboptimality wraps the bot's picker with a probability of swapping best→second-best; cadence jitter applies multiplicative ±noise to the persona-scaled cadence threshold. Each side has an independent seeded RNG stream (lazy-initialized in `onTick` after `seedRNG` runs, side-keyed offset) so toggling believability never shifts the global `random()` state.
-
-**Probe count:** 6 (exceeds ≥4 requirement). The `counter-matrix-sharpness` probe from the earlier table merges into `counter-strong-sensitivity` as the SIGNATURE probe — the sweep characterizes matrix sharpness as a sensitivity curve rather than a fixed-perturbation pass/fail. Math-only locks (probes 1, 2, 4) ride the same vitest-suite pattern as Producer/Ambient. Distribution-statistic probes (probes 3, 5, 6) require multi-seed `runMatrixUntil` runs and assert on aggregate distributions. The split is documented inline in `balance/probes.ts`.
-
-**`income-upgrade-roi` is closed-form, not sim-iterated.** Per `open-loop-starter/CLAUDE.md` § Balance discipline ("math-first, sim only verifies"), refinery payback is the closed-form analog of producer's `purchaseBeatSeconds` (`open-loop-engine/src/systems/producer-category.ts:347`) lifted into `IncomeUpgradeRoiKey[side]` as a per-tier `RoiMetrics { paybackSeconds, crossoverSeconds }`. Reactive against live cost (post-tunable), live multiplier (post-tunable), and `incomeRateChain.apply(baseRate)` — already-bought tiers shift the chain rate and the tooltip recomputes (covered by the buy-chain test in `sim/balance.probe.test.ts`). The probe replaces what the original `coarseFineProbe` cost sweep was meant to find: above what cost does refinery-1 stop crossing over within a typical match?
-
-**SIGNATURE matchup balance is a follow-up.** At current data balance, `counter-strong-sensitivity` reports a flat curve with `proposed strongCounter ≈ null` because the underlying matchup imbalance dominates the matrix sensitivity signal. The framework primitives (`TugBelievability` bundle, `runSensitivityUntil` helper, lazy seeded RNG) all work; balance discovery for the SIGNATURE matchup is filed as the procedural-persona tester-seat agent follow-up (`procedural-personas.md` § Tester-seat primary use).
-
-**`per-archetype-dominance` reading at current data.** Same Known Limitation surfaces here: greed sweeps the persona meta (4/4 cells reach win-rate 1.0 as the player persona; counter / mass only beat tech), so the aggregate share concentrates on early-cheap units (marine ~0.73 share at default data — ~4.4× uniform). The reading IS the actionable signal — it tells the procedural-persona tester-seat follow-up that the matchup imbalance dominates archetype dominance too, and balanced data is a precondition for a clean per-archetype dominance histogram. The framework primitives (lane `'unit-spawned'` event, `OutcomeCapture` per-archetype buckets, persona-Cartesian `runMatrixUntil`, share aggregator with Direct Strike tier-list weighting) ship cleanly.
-
----
-
-## 7. Sim assertions
-
-```ts
-import { describe, it, expect } from 'vitest';
-import { runUntil, runMatrixUntil } from 'open-loop-engine';
-import { minutes } from '@/test/time';
-import {
-  buildTugSimEngine,
-  createOutcomeAnalyzer,
-  createOutcomeCapture,
-  type OutcomeCapture,
-} from '../balance/bot';
-import { MatchKey, ArcKey } from '../modules';
-
-describe('tug — beat map (math-only locks)', () => {
-  it('beat 1: first unit purchased within 0–1 min', () => {
-    const engine = buildTugSimEngine();
-    const match = engine.tryInject(MatchKey)!;
-    const { terminated, elapsedSimulated } = runUntil({
-      engine,
-      until: () => match.unitsSentByPlayer.value >= 1,
-      maxSimTime: minutes(2),
-      tickDelta: 1,
-    });
-    expect(terminated).toBe('predicate');
-    expect(elapsedSimulated).toBeGreaterThanOrEqual(0);
-    expect(elapsedSimulated).toBeLessThanOrEqual(minutes(1));
-  });
-
-  it('beat 3: first counter-pivot within 5–15 min', () => {
-    const engine = buildTugSimEngine();
-    const match = engine.tryInject(MatchKey)!;
-    const { terminated, elapsedSimulated } = runUntil({
-      engine,
-      until: () => match.counterPivotsThisMatch.value >= 1,
-      maxSimTime: minutes(20),
-      tickDelta: 1,
-    });
-    expect(terminated).toBe('predicate');
-    expect(elapsedSimulated).toBeGreaterThanOrEqual(minutes(5));
-    expect(elapsedSimulated).toBeLessThanOrEqual(minutes(15));
-  });
-
-  // one it() per math-only beat — full enumeration in the checked-in test file
-});
-
-describe('tug — distribution-statistic probes (Tier-C, multi-seed)', () => {
-  it('counter-strong-sensitivity: monotonic curve across the strongCounter sweep', () => {
-    const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
-    let activeCapture: OutcomeCapture | null = null;
-    function cellAtStrong(strong: number) {
-      return {
-        name: `strong=${strong}`,
-        buildEngine: () => buildTugSimEngine(),
-        analyzers: (engine: Engine) => {
-          const cap = createOutcomeCapture(engine);
-          activeCapture = cap;
-          const reg = engine.tryInject(TugTuningRegistryKey)!;
-          const cleanup = reg.pushScope(`probe:strong=${strong}`, {
-            'counter-matrix/strongCounter': () => strong,
-          });
-          return [
-            createOutcomeAnalyzer(cap),
-            { name: 'cleanup', onEnd: cleanup, summarize: () => ({ name: 'cleanup', metrics: {}, issues: [] }) },
-          ];
-        },
-        tickDelta: 1.0,
-      };
-    }
-    const lo = runMatrixUntil({
-      cells: [cellAtStrong(0.5)],
-      seeds: SEEDS,
-      until: () => activeCapture?.firstMatchEnded ?? false,
-      maxSimTime: minutes(35),
-    });
-    const hi = runMatrixUntil({
-      cells: [cellAtStrong(1.5)],
-      seeds: SEEDS,
-      until: () => activeCapture?.firstMatchEnded ?? false,
-      maxSimTime: minutes(35),
-    });
-    // Coarse monotonicity: increasing matrix decisiveness should not
-    // decrease counter-side win-rate. Loose acceptance permits equality
-    // (flat curve at imbalanced data — see § 6 SIGNATURE follow-up note)
-    // but catches a regression where matrix wiring breaks.
-    const wrLo = lo.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0;
-    const wrHi = hi.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0;
-    expect(wrHi + 1e-9).toBeGreaterThanOrEqual(wrLo);
-  });
-
-  it('match-duration-bound: matches resolve before the time limit', () => {
-    const SEEDS = Array.from({ length: 30 }, (_, i) => i + 1);
-    let activeCapture: OutcomeCapture | null = null;
-    const result = runMatrixUntil({
-      cells: [
-        {
-          name: 'default',
-          buildEngine: () => buildTugSimEngine(),
-          analyzers: (engine) => {
-            const cap = createOutcomeCapture(engine);
-            activeCapture = cap;
-            return [createOutcomeAnalyzer(cap)];
-          },
-        },
-      ],
-      seeds: SEEDS,
-      until: () => activeCapture?.firstMatchEnded ?? false,
-      maxSimTime: minutes(35),
-    });
-    const agg = result.cells[0]!.aggregate;
-    const limitSec = 30 * 60;
-    expect(agg.terminationTime!.p50).toBeGreaterThanOrEqual(limitSec * 0.5);
-    expect(agg.terminationTime!.p50).toBeLessThanOrEqual(limitSec);
-    // In-match time-limit rate via analyzer (NOT engine-level
-    // `terminationCounts.maxSimTime` — that reads `predicate` once
-    // `matchEnded` fires, regardless of in-game outcome).
-    expect(agg.metrics['tug-outcome.isFirstTimeLimit']?.avg ?? 0).toBe(0);
-  });
-
-  // one it() per distribution probe from § 6
-});
-```
-
-**Required test count:** beat-shape tests + framework-correctness probes. Tests checked into `src/archetypes/tug/sim/balance.probe.test.ts`. Beat-shape tests live in `src/archetypes/tug/sim/tug.sim.test.ts` as `it.todo()` placeholders per Producer/Ambient convention until balance numbers converge; full beat verification rides the harness probes, not the vitest suite.
-
-**Representative-stubs escape hatch:** this doc shows 3 worked stubs (beat 1, beat 3, the SIGNATURE counter-strong-sensitivity, match-duration-bound) and a `// one it() per ...` comment. Full enumeration lives in the test file.
-
-**API contract:** sim tests use `runUntil` (engine harness) for math-only locks and `runMatrixUntil` for distribution probes. `runHeadless` is the pure-tick variant (returns `HeadlineResult`); for predicate-bounded runs use `runUntil` + `runMatrixUntil` (returns `RunUntilResult` / `MatrixUntilResult` with `terminated`, `elapsedSimulated`, `terminationCounts`). The pre-2026-04-20 `runHeadless({ engine, until, maxSimTime, inputs })` signature does not exist — that was a doc-only sketch; the real API is the post-OL-661 `setup`/`tick`/`ticks`/`tickDelta`/`seed` shape for `runHeadless`, and `engine`/`until`/`maxSimTime`/`tickDelta`/`setup`/`seed` for `runUntil`.
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 1 primary match-scoped currency (gold / minerals / faith). Fortress HP as a bounded resource per side. Optional match-level score when `matchTimeLimitMinutes > 0` triggers score-based resolution.
 - **Producers / Activities:** unit shop with 6 archetypes (default), each with a send cooldown. Income accrual is a `createLoop` ticker, not a producer tier. Optional: 2 spendable off-map abilities (artillery, reinforcement) when `spendableAbilitiesEnabled`.
@@ -317,7 +132,7 @@ describe('tug — distribution-statistic probes (Tier-C, multi-seed)', () => {
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Form-factor (skeleton demo):** `desktop-first` — the demo defers the mobile-first claim explicitly. Theme C SciFi Armada (default skeleton bake — Direct Strike shape) is desktop-leaning in its corpus exemplar; matching the exemplar's form-factor for the demo lets leaf 5 ship a working skeleton without re-litigating shell affordances. The mobile-first declared-invention intent (below) survives in the doc as a forward-looking commitment for production-fork consumers, but the demo is desktop-only.
 - **Primary shell (skeleton demo):** **inline desktop layout under `src/archetypes/tug/ui/`**, no `src/lib/shells/` addition for v1. Three-region layout authored as a single `TugAppRoot.vue` mounting `TugFrameLayout.vue` (archetype-local): persistent lane strip across the top ~30% of viewport (always visible, includes both fortresses + unit streams + front-line indicator), shop + counter-matrix in the centre-left ~50% (scrollable archetype grid + lookup panel), income / cooldown / match-stats column on the right ~20% (always visible). Match-end summary overlays the lane view via the modal stack. Inline-under-archetype is chosen over `src/lib/shells/LaneHudShell.vue` because (a) Tug is the only consumer and authoring it in `src/lib/` would pre-extract a shell against a single use-case, (b) `src/lib/` carries no engine imports and the lane strip's reactive bindings to per-side unit arrays are engine-aware, (c) graduation to `src/lib/shells/` happens at N=2 if a second Tug-shape consumer (deckbuilder fork, packing in a hybrid auto-battler) converges on the same layout.
@@ -345,7 +160,7 @@ describe('tug — distribution-statistic probes (Tier-C, multi-seed)', () => {
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 Zero correctness gaps predicted — engine posture is settled per taxonomy § 2C. All entries below are ergonomics hypotheses post-OL-703 investigation. Severity column updated against engine source reads (sequencer, zone, modifier, persistence, override-registry, run-matrix-until).
 
@@ -369,7 +184,7 @@ The one-line rule for this section: **if implementing a Tug fork requires a corr
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme C — SciFi Armada (skeleton default)
 

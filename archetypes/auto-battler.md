@@ -91,13 +91,7 @@ A thirty- to forty-minute session is one full match — eight to twelve rounds, 
 
 ---
 
-## 4. Beat map
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Auto-battler's content lives under `src/archetypes/auto-battler/data/` as flat typed-array exports (`units.ts`, `synergies.ts`, `shop.ts`, `rounds.ts`, `progression.ts`) plus a `types.ts` that names the definition interfaces. Unit tag lists, synergy threshold tables, shop-tier schedules, and per-round gold/HP curves colocate with their definitions — no separate effect tables, no codegen. Lens discipline is enforced by comment sections inside each data file (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`): skeleton counts (unit roster size, synergy family count, `gridMode`, `poolMode`, `combatMode`, `prestigeMode`) are fork-of-skeleton decisions; balance constants (interest-rate schedule, tier-gate unlock rounds, synergy-threshold bonuses, HP-damage-on-loss curve) are the tuning surface sim tests probe; costumes (unit names, trait labels, flavour copy) are theme-scoped.
 
@@ -271,19 +265,7 @@ export interface AutoBattlerData {
 
 ---
 
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 3 — gold (per-match, interest-bearing, resets on match end), HP (per-match, elimination threshold), meta-currency / trophy points (cross-match, `persistent`, only when `prestigeMode !== 'none'`). Optional 4th: items (TFT-style per-unit equipment) when the fork layers on an item system.
 - **Units (the archetype's primary content axis):** 18 units at skeleton density — three per shop tier across tiers 1–6, enough to support 5–7 synergy families with meaningful threshold counts. Example naming (Heroes & Beasts theme): tier-1 [initiate (Human/Warrior), pup (Beast/Assassin), sapling (Elf/Druid)]; tier-2 [squire (Human/Knight), wolf (Beast/Warrior), cub (Beast/Druid)]; tier-3 [ranger (Elf/Hunter), iron-soldier (Human/Knight), firebeetle (Demon/Assassin)]; tier-4 [archmage (Elf/Mage), armoured-bear (Beast/Warrior), flame-summoner (Demon/Mage)]; tier-5 [paladin (Human/Knight), wyvern (Dragon/Hunter), druid-archon (Elf/Druid)]; tier-6 [ancient-dragon (Dragon/Mage), demon-lord (Demon/Assassin), world-tree (Elf/Druid/Knight)]. Eighteen supports 6 Species × 5 Classes with 4–6 threshold tiers per synergy.
@@ -298,7 +280,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `` `declared invention` `` — central-board-with-peripheral-panel layout per `subgenre-shell-mapping-2026.md § auto-battler (N=3, N_classifiable=3)`. The `auto-battler` sub-genre has a moderate `free-form` majority (2/3, 67%: Dota Auto Chess + Backpack Battles), with Super Auto Pets' `single-column` as the 1D-degenerate-case outlier. The sub-genre commentary is explicit: "Auto-battler shells are characterized by a central placement-grid play surface (hex board, backpack grid, pet bench) with peripheral panels (shop, synergy, health bar list)… An archetype prescription for Auto-battler should probably lead with the central-grid + peripheral-panel primitive, with the shell-bucket assignment following viewport shape." None of starter's 5 shells (`SidebarMainShell`, `ThreePanelShell`, `SingleColumnShell`, `TabsBarShell`, `MultiColumnShell`) captures that pattern. Starter's 6th audit shell `free-form` is consistently `declared invention` against starter today. Exemplar rows from `layout-audit-2026.md`: Dota Auto Chess (free-form; hex-grid board + bench row + shop panel + synergy panel + multi-player health-list), Backpack Battles (free-form; central backpack grid + synergy indicators + side-by-side grids during combat), Super Auto Pets (single-column; pet-slot row + shop row + synergy panel stacking vertically for mobile-first viewport). Graduation threshold: two independent Auto-battler forks sharing central-board + peripheral-panel geometry.
 - **Secondary shell:** `SingleColumnShell` — cites `layout-audit-2026.md` for Super Auto Pets (`single-column`; pet row + shop row + synergy panel stacking vertically for narrow-viewport). The strongest partial fit in starter for forks that collapse peripheral panels into a narrow-viewport stacked column, following the SAP precedent. SAP's single-column classification reads as the mobile-first reading of the central-board + peripheral-panel primitive: the same content primitives (pet row / shop row / synergy panel) stack vertically when viewport width doesn't accommodate horizontal peripheral placement. Forks adopting the SAP degenerate case (`gridMode: '1d-slot'`) or explicitly mobile-first forks adopt this shell; desktop forks with 2D hex / rectangular grids adopt the declared-invention primary.
@@ -327,7 +309,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
@@ -344,7 +326,7 @@ Convergent-gap rule: N/A — no live consumers yet. All gaps are hypotheses the 
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Heroes & Beasts (Classic Fantasy)
 

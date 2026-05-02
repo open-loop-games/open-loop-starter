@@ -86,13 +86,7 @@ A thirty-minute session is one full run — arrange, resolve, adjust, repeat for
 
 ---
 
-## 4. Beat map
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 Packer's content lives under `src/archetypes/packer/data/` as flat typed-array exports (`items.ts`, `enemies.ts`, `shop.ts`, `progression.ts`, `upgrades.ts`) plus a `types.ts` that names the definition interfaces. Item shape footprints, neighbour-bonus rules, combine-up recipes, and synergy predicates colocate with their definitions — no separate effect tables, no codegen. Lens discipline is enforced by comment sections inside each data file (`// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───`): skeleton counts (item-pool size, grid dimensions, `spatialMode`, `combatSubstrate`, `prestigeMode`) are fork-of-skeleton decisions; balance constants (per-neighbour bonus magnitudes, combine-up XP curve, shop costs, wave HP scaling when applicable) are the tuning surface sim tests probe; costumes (item names, flavour copy, gem/item visual theme) are theme-scoped.
 
@@ -260,19 +254,7 @@ export interface PackerData {
 
 ---
 
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 3 — gold / currency (per-run, resets on run end when `prestigeMode !== 'none'`), HP (per-run, loss condition for pvp-auto-resolve and wave-defender variants), meta-currency (cross-run, `persistent`, only when `prestigeMode !== 'none'`). Optional 4th: crafting components (gem colour + grade, armor / weapon material) for `spatialMode === 'gem-assignment'` variants.
 - **Items (the archetype's primary content axis):** 12 item archetypes at skeleton density — enough to force real compositional choice, small enough to fit one session's first exposure. Example naming (Fantasy Adventurer theme): iron-sword (1×3 weapon, +damage per adjacent weapon), round-shield (2×2 armor, +HP per adjacent armor), crystal-gem (1×1 utility, colour-chain named-pair), healing-potion (1×2 consumable, triggers on-kill), ruby-ring (1×1 trinket, multiplicative damage aura radius 1), leather-armor (2×3 armor, flat HP), composite-bow (1×3 weapon, bonus per adjacent trinket), enchantment-tome (2×2 utility, buffs adjacent weapons), stamina-flask (1×1 consumable, regens on-hurt), kite-shield (2×2 armor, blocks first hit), amulet-of-might (1×1 trinket, +all-damage), spiked-gauntlets (1×2 weapon, counter-damage). Twelve supports 4–5 named-adjacency combinations and one combine-up chain per category.
@@ -285,7 +267,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `` `declared invention` `` — central grid-with-peripheral-HUD layout per `subgenre-shell-mapping-2026.md § auto-battler (N=3, N_classifiable=3)` read through the Packer archetype lens. The audit has no `packer` / `placement-puzzle` sub-genre row; Backpack Battles (the flagship Packer) is classified under `auto-battler` with `free-form` shell, and Gem TD (the lineage origin) sits under `tower-defense` with `single-column`. The auto-battler sub-genre commentary ("An archetype prescription for Auto-battler should probably lead with the central-grid + peripheral-panel primitive") applies equally to Packer: the defining visual shape is a central placement grid with peripheral shop / synergy / HP panels, and none of starter's 5 shells (`SidebarMainShell`, `ThreePanelShell`, `SingleColumnShell`, `TabsBarShell`, `MultiColumnShell`) captures it. Starter's 6th audit shell `free-form` is consistently `declared invention` against starter today. Graduation threshold: two independent Packer forks converging on the same grid-centric + peripheral-panel geometry. Exemplar rows from `layout-audit-2026.md`: Backpack Battles (free-form; central backpack grid, synergy-highlight indicators, combat-phase side-by-side grids), Gem TD (single-column; map-as-inventory visualisation, tower-slot grid on map = portfolio), Super Auto Pets (single-column; 1D pet-slot row with shop row), GemCraft (ambiguous — prose describes gem-combining UI + amplifier spatial-bonus visualisation without explicit shell naming).
 - **Secondary shell:** `SingleColumnShell` — cites `layout-audit-2026.md` for Gem TD (`single-column`; map-centric UMS with tower-slot grid + resource bar) and Super Auto Pets (`single-column`; narrow-viewport pet row + shop row stacking). The strongest partial fit in starter for forks that collapse peripheral panels into a stacked column (viable for `spatialMode === '1d-slot'` or narrow-viewport variants). Forks following the 2D-inventory pure-Packer form will almost always prefer the declared-invention primary; the single-column fallback serves degenerate-case (1D-slot) or narrow-viewport needs.
@@ -312,7 +294,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
@@ -328,7 +310,7 @@ Convergent-gap rule: N/A — no live consumers yet. All gaps are hypotheses the 
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Fantasy Adventurer (Backpack-shaped)
 

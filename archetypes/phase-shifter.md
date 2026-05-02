@@ -91,13 +91,7 @@ Naming what is absent is half the Phase-shifter contract: the archetype refuses 
 
 ---
 
-## 4. Beat map
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 5. Data shape
+## 4. Data shape
 
 ```ts
 // archetype.ts — skeleton defaults
@@ -234,19 +228,7 @@ export interface PhaseShifterBalanceVars {
 
 ---
 
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 4–7 at baseline. 1 phase-state resource (`phase` enum); 2–3 narrative-quantity resources (trust / temperature / candies-thrown — feed phase-transition predicates + milestone triggers); 2–4 per-phase primary resources (wood in Phase-1, paperclips/funds/operations in Paperclips Phase-1, lollipops/candies in Candy Box 2). Each has a `trackTotal` accumulator for meta-achievements.
 - **Phases:** 3 at baseline (Paperclips shape). 2-phase skeleton is the minimum legal skeleton; 4-phase is the Dark Room shape and recommended for forks that want a full phase-shifter arc.
@@ -261,7 +243,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `SingleColumnShell` — narrative clicker weak majority per `subgenre-shell-mapping-2026.md § "narrative clicker"` (6/13 classifiable, 46%). Exemplar rows from `layout-audit-2026.md`: A Dark Room (single-column, key-value resource pairs), Candy Box 2 (single-column with fixed-width ASCII canvas), AdVenture Capitalist (single-column with business cards), Candy Box (single-column ASCII).
 - **Secondary shell:** `ThreePanelShell` — narrative clicker strong secondary per `subgenre-shell-mapping-2026.md § "narrative clicker"` (3/13 classifiable, 23%). Exemplar rows from `layout-audit-2026.md`: Universal Paperclips (three-panel with canvas-based battle arena in late phase), Cookie Clicker (three-panel with left producers / centre clicker / right stats), A Dark Forest (three-panel, Dark Room narrative successor). Use when the fork's Phase-1 has a persistent resource panel or stats readout alongside the narrative surface.
@@ -289,7 +271,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 Phase-shifter is designed to surface the engine's mechanic-lifecycle and phase-aware-content-registry surfaces. Each row below is a hypothesis; the first fork that adopts the skeleton will confirm or reject. Confirmed gaps become engine tickets; rejected ones get deleted from a later revision of this doc.
 
@@ -306,7 +288,7 @@ Phase-shifter is designed to surface the engine's mechanic-lifecycle and phase-a
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Post-apocalyptic survival-to-escape (the Dark Room baseline)
 

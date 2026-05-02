@@ -97,31 +97,13 @@ Every primitive named above resolves in `open-loop-engine/docs/api/INDEX.md`.
 
 ---
 
-## 4. Beat map
+## 4. Data shape
 
 _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
-## 5. Data shape
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 1 meta-currency (persistent) + 4 faction essences (round-scoped) + 4 faction goal-resources. Plus per-cell `hp` + `reservoir` inside the SpatialGrid snapshot.
 - **Arena:** 1 × 100×100 SpatialGrid with terrain palette `rock | open | spawn | hotspot`. Generated from seeded 4-fold rotational symmetry (see `MAP.md` in each consumer).
@@ -138,7 +120,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `` `declared invention` `` — adversarial-arena layout. No sub-genre in `subgenre-shell-mapping-2026.md` maps directly (Director emerged bottom-up from OL-504 and lacks a corpus sub-genre assignment); reference the LIBRARY Placement-Adjacency + Routing-Traversal cluster substrate (OL-562 Phase 2 v4 synthesis). Rendering goes through `src/ui/components/spatial/DomGrid.vue`, which owns the arena surface end-to-end. Arena occupies the centre of the layout; HUD (goal slots, chain readout, round clock, meta-currency) orbits it. No row in `layout-audit-2026.md` carries an adversarial-arena commitment — this is declared invention pending second-consumer validation.
 - **Secondary shell:** `MultiColumnShell` — `` `declared invention` `` adapter for forks that want to slot Director into an existing starter shell rather than invent chrome. Main column holds `DomGrid.vue`; side columns hold HUD fragments (goal-slot editor left, chain readout / meta-currency right). Cites `subgenre-shell-mapping-2026.md` by negative precedent (no adversarial-arena row). Use when a fork wants the declared-invention-to-starter-shell glide path; raw `DomGrid.vue` + flex chrome is still the primary.
@@ -164,7 +146,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 Director is the widest-surface archetype, and it surfaces overlapping gaps from every layer. Severity reflects how many archetypes would benefit — a gap that affects only Director is Medium; a cross-archetype gap is High.
 
@@ -183,7 +165,7 @@ Director is the widest-surface archetype, and it surfaces overlapping gaps from 
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Creep vs Creep
 

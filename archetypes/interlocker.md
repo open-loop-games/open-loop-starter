@@ -83,31 +83,13 @@ Naming what is absent is half the Interlocker contract: the archetype refuses pr
 
 ---
 
-## 4. Beat map
+## 4. Data shape
 
 _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
 
 ---
 
-## 5. Data shape
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 6. Balance probes
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 7. Sim assertions
-
-_Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident numbers here were unsourced; restore via citations or `aspirational — pending implementation` tag once those subtasks land._
-
----
-
-## 8. Content sketch
+## 5. Content sketch
 
 - **Resources:** 8 at baseline. 3 raw (e.g. catnip, wood, minerals) + 3 basic (e.g. planks, beams, iron) + 2 advanced (e.g. machines, science). Each resource carries a `trackTotal` accumulator for achievements.
 - **Producers / Buildings:** 3 raw (hut, sawpit, minepit) + 4 basic (lumber mill, smelter, workshop, library) + 2 advanced (factory, academy) = 9 total. Each consumes 0–3 input resources per tick and produces 1–2 output resources per tick. Multiple buildings share resources — the graph's interlock.
@@ -121,7 +103,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 9. UI prescription
+## 6. UI prescription
 
 - **Primary shell:** `ThreePanelShell` — anchored by Kittens Game's three-panel shell row in `layout-audit-2026.md` (L100: `#leftColumn` resource table + tab buttons / `#midColumn` content / `#rightColumn` log). Sub-genre `village-management` is N=1 per `subgenre-shell-mapping-2026.md` § "village-management" (2026-04 audit), so the sub-genre itself does not earn a majority; the shell choice is `declared invention` for the Interlocker archetype, anchored to Kittens Game's mature three-column shape as the single canonical exemplar. Exemplar rows: Kittens Game. Industry Idle and Evolve are `free-form`/unaudited and do not generalise into a starter shell.
 - **Secondary shell:** `MultiColumnShell` — `declared invention`. For forks whose graph grows past 8 resources or whose recipe count exceeds 4, the three-panel ceiling on parallel visibility breaks down and Trimps-style four-Bootstrap-columns becomes defensible. Cites the multi-column-dashboard cluster flagged in `subgenre-shell-mapping-2026.md` line 211 (N=3: Trimps, Arcanum, Cavernous II). No Interlocker-specific corpus row; hence the declared-invention tag.
@@ -147,7 +129,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 10. Predicted engine gaps
+## 7. Predicted engine gaps
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
@@ -161,7 +143,7 @@ _Stripped pending validator (OL-809) and Pass-1 reground (OL-810). Confident num
 
 ---
 
-## 11. Themes
+## 8. Themes
 
 ### Theme A — Kitten village (the Kittens Game baseline)
 
