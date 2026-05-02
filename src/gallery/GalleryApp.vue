@@ -99,21 +99,44 @@ function flipTab(): void {
       >
         ☰
       </button>
-      <button class="gallery-header__title" type="button" @click="showHome">
+      <button
+        class="gallery-header__title"
+        type="button"
+        @click="showHome"
+      >
         <strong>Open Loop Starter</strong>
         <span class="gallery-header__sub">Archetype gallery</span>
       </button>
 
-      <div v-if="entered" class="gallery-header__entered">
-        <button class="btn-sm" type="button" @click="exitArchetype">← Back</button>
+      <div
+        v-if="entered"
+        class="gallery-header__entered"
+      >
+        <button
+          class="btn-sm"
+          type="button"
+          @click="exitArchetype"
+        >
+          ← Back
+        </button>
         <span class="gallery-header__entered-name">{{ entered.manifest.name }}</span>
-        <button class="btn-sm" type="button" @click="flipTab">
+        <button
+          class="btn-sm"
+          type="button"
+          @click="flipTab"
+        >
           {{ enteredTab === 'details' ? 'Live demo →' : '← Details' }}
         </button>
       </div>
 
       <nav class="gallery-header__nav">
-        <button class="btn-sm" type="button" @click="showAbout">About</button>
+        <button
+          class="btn-sm"
+          type="button"
+          @click="showAbout"
+        >
+          About
+        </button>
       </nav>
     </header>
 
@@ -124,13 +147,27 @@ function flipTab(): void {
       :data-collapsed="!sidebarOpen ? 'true' : null"
     >
       <template #sidebar>
-        <div v-if="sidebarOpen" class="gallery-sidebar">
-          <button class="gallery-sidebar__home" type="button" @click="showHome">Home</button>
+        <div
+          v-if="sidebarOpen"
+          class="gallery-sidebar"
+        >
+          <button
+            class="gallery-sidebar__home"
+            type="button"
+            @click="showHome"
+          >
+            Home
+          </button>
 
-          <ListboxRoot :model-value="enteredId" @update:model-value="onSidebarPick">
+          <ListboxRoot
+            :model-value="enteredId"
+            @update:model-value="onSidebarPick"
+          >
             <ListboxContent>
               <ListboxGroup class="gallery-sidebar__list">
-                <ListboxGroupLabel class="gallery-sidebar__group"> Canonical </ListboxGroupLabel>
+                <ListboxGroupLabel class="gallery-sidebar__group">
+                  Canonical
+                </ListboxGroupLabel>
                 <ListboxItem
                   v-for="a in canonical"
                   :key="a.manifest.id"
@@ -141,7 +178,9 @@ function flipTab(): void {
                 </ListboxItem>
               </ListboxGroup>
               <ListboxGroup class="gallery-sidebar__list">
-                <ListboxGroupLabel class="gallery-sidebar__group"> Candidate </ListboxGroupLabel>
+                <ListboxGroupLabel class="gallery-sidebar__group">
+                  Candidate
+                </ListboxGroupLabel>
                 <ListboxItem
                   v-for="a in candidates"
                   :key="a.manifest.id"
@@ -156,14 +195,26 @@ function flipTab(): void {
         </div>
       </template>
 
-      <div v-if="entered" class="gallery-entered">
+      <div
+        v-if="entered"
+        class="gallery-entered"
+      >
         <!-- Demo + details are mutually exclusive in the main column so each
              gets the full available width. The sandbox stays mounted across
              toggles via v-show so engine state survives. -->
-        <div v-show="enteredTab === 'demo'" class="gallery-entered__demo">
-          <SandboxWrapper :archetype="entered.manifest" :boot="entered.boot" />
+        <div
+          v-show="enteredTab === 'demo'"
+          class="gallery-entered__demo"
+        >
+          <SandboxWrapper
+            :archetype="entered.manifest"
+            :boot="entered.boot"
+          />
         </div>
-        <div v-show="enteredTab === 'details'" class="gallery-entered__detail">
+        <div
+          v-show="enteredTab === 'details'"
+          class="gallery-entered__detail"
+        >
           <section class="gallery-entered__cta">
             <button
               class="btn-primary gallery-entered__cta-btn"
@@ -180,7 +231,10 @@ function flipTab(): void {
         </div>
       </div>
       <AboutPanel v-else-if="view === 'about'" />
-      <div v-else class="gallery-home">
+      <div
+        v-else
+        class="gallery-home"
+      >
         <header class="gallery-home__header">
           <h2>Archetype gallery</h2>
           <p>
@@ -189,7 +243,9 @@ function flipTab(): void {
             there, toggle to Live demo to mount the sandbox. Forks pick one and delete the rest.
           </p>
         </header>
-        <h3 class="gallery-home__group">Canonical</h3>
+        <h3 class="gallery-home__group">
+          Canonical
+        </h3>
         <div class="gallery-home__grid">
           <Card
             v-for="a in canonical"
@@ -198,7 +254,9 @@ function flipTab(): void {
             @enter="enterArchetype(a.manifest.id)"
           />
         </div>
-        <h3 class="gallery-home__group">Candidate</h3>
+        <h3 class="gallery-home__group">
+          Candidate
+        </h3>
         <div class="gallery-home__grid">
           <Card
             v-for="a in candidates"
@@ -224,11 +282,16 @@ function flipTab(): void {
 /* Activate SidebarMainShell's `data-collapsed='true'` hook on desktop too.
    The shell publishes this attribute hook for its own responsive collapse
    below 720px; gallery-scoped CSS lifts it to all viewport widths so the
-   hamburger toggle can drive collapse without lib/ changes. */
-.gallery-shell .olui-sidebar-main[data-collapsed='true'] {
+   hamburger toggle can drive collapse without lib/ changes.
+
+   Direct-child combinators are load-bearing: an archetype that itself uses
+   SidebarMainShell (e.g. scaler) would otherwise inherit `display: none`
+   on its inner __sidebar via descendant match, and the surviving __main
+   would auto-place into the 260px first track. */
+.gallery-shell > .gallery-shell__shell[data-collapsed='true'] {
   grid-template-columns: 1fr;
 }
-.gallery-shell .olui-sidebar-main[data-collapsed='true'] .olui-sidebar-main__sidebar {
+.gallery-shell > .gallery-shell__shell[data-collapsed='true'] > .olui-sidebar-main__sidebar {
   display: none;
 }
 
