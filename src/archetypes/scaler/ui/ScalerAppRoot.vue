@@ -24,10 +24,18 @@ import { manifest } from '../manifest';
 import { useTierNav } from '../composables/useTierNav';
 import type { Tier } from '../data/types';
 import { ANTIMATTER_TIER, PRESTIGE_TIER, TRANSCEND_TIER } from './tier-configs';
+import type { ExtraPurchasableRef } from '../composables/useTier';
 import TierPanel from './components/TierPanel.vue';
 import ResourceBar from './components/ResourceBar.vue';
 import SidebarChainReadout from './components/SidebarChainReadout.vue';
+import AccBoostRow from './components/AccBoostRow.vue';
+import ChallengeStrip from './components/ChallengeStrip.vue';
+import AchievementGridDialog from './components/AchievementGridDialog.vue';
 import './scaler-theme.css';
+
+// Hide AccBoost from Transcend's UpgradeGrid — it owns its own row in the
+// #extras slot below for the cross-currency UI cue.
+const transcendVisibleExtras = (ref: ExtraPurchasableRef): boolean => ref.role !== 'acc-boost';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -69,6 +77,10 @@ onUnmounted(() => {
 });
 
 const stack = useModalStack();
+
+function openAchievements(): void {
+  const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
+}
 
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
@@ -128,10 +140,9 @@ function getActiveModules(): EngineModule[] {
         <SidebarChainReadout />
         <button
           class="btn-sm scaler-achievements-btn"
-          disabled
-          title="Achievements grid lands in sub-leaf 2b.3"
+          @click="openAchievements"
         >
-          Achievements (2b.3)
+          Achievements
         </button>
       </template>
       <Tabs
@@ -146,7 +157,15 @@ function getActiveModules(): EngineModule[] {
           <TierPanel :config="PRESTIGE_TIER" />
         </template>
         <template #panel-transcend>
-          <TierPanel :config="TRANSCEND_TIER" />
+          <TierPanel
+            :config="TRANSCEND_TIER"
+            :visible-extras="transcendVisibleExtras"
+          >
+            <template #extras>
+              <AccBoostRow />
+              <ChallengeStrip />
+            </template>
+          </TierPanel>
         </template>
       </Tabs>
     </SidebarMainShell>
