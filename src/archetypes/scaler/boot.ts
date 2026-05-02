@@ -1,10 +1,12 @@
-import { type App, defineComponent, h } from 'vue';
+import { type App } from 'vue';
 import { type Engine, type EngineModule } from 'open-loop-engine';
 import { bootApp, bootEngine } from '@/boot';
 import { createScalerModules } from './modules';
 import { DEFAULT_SCALER_DATA } from './data';
 import { applyScalerOverrides, type ScalerOverrides } from './data/overrides';
 import type { ScalerData } from './data/types';
+import { SCALER_DATA_KEY } from './composables/useScalerData';
+import ScalerAppRoot from './ui/ScalerAppRoot.vue';
 
 const GAME_ID = 'scaler-pilot';
 const MOD_ID = 'synergism-slim';
@@ -54,21 +56,6 @@ export function createScalerEngine(
   return { engine, data };
 }
 
-// Placeholder root component. Leaf 2b replaces this with ScalerAppRoot.vue
-// (3-tier panel layout per archetypes/scaler.md § 6). The placeholder lets
-// boot.ts + the smoke test land in 2c without blocking on the UI surface.
-const ScalerAppRoot = defineComponent({
-  name: 'ScalerAppRoot',
-  setup() {
-    return () =>
-      h(
-        'div',
-        { style: 'padding: 1rem; font-family: system-ui;' },
-        'Scaler archetype — UI lands in leaf 2b. Engine is running; inspect via dev panel.',
-      );
-  },
-});
-
 /**
  * Build a ready-to-mount Vue app via the shared starter boot factory.
  *
@@ -83,7 +70,7 @@ export function createApp(overrides?: ScalerOverrides): ScalerBootResult {
   const { app, mount } = bootApp({
     root: ScalerAppRoot,
     engine,
-    provides: [['scaler:data', data]],
+    provides: [[SCALER_DATA_KEY, data]],
   });
   return { engine, data, app, mount };
 }
