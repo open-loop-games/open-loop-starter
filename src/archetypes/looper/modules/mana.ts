@@ -115,7 +115,7 @@ export const manaModule: EngineModule = {
       // Mana starts at INITIAL_MANA each loop, drains toward 0
       manaResource: createResource(INITIAL_MANA, { displayName: 'Mana', precision: 0 }),
       // Track how much was added mid-loop (for total budget display)
-      manaAdded: persistent<DecimalSource>(0),
+      manaAdded: persistent<DecimalSource>(0, { name: 'manaAdded' }),
     })));
   },
 };

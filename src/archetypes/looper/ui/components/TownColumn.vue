@@ -245,10 +245,22 @@ onBeforeUnmount(() => {
       >
         <div class="tsr-header">
           <span class="tsr-name">{{ rv.name }}</span>
-          <span class="tsr-flow">
-            {{ rv.goodTemp.value }} &larr; {{ rv.good.value }} &larr;
-            {{ rv.total.value - rv.checked.value }}
-          </span>
+          <div class="tsr-right">
+            <span class="tsr-flow">
+              {{ rv.goodTemp.value }} &larr; {{ rv.good.value }} &larr;
+              {{ rv.total.value - rv.checked.value }}
+            </span>
+            <label
+              class="tsr-toggle"
+              :title="`Burn known-good ${rv.name.toLowerCase()} before exploring new ones.`"
+            >
+              <input
+                v-model="rv.valuablesFirst.value"
+                type="checkbox"
+              >
+              <span>Lootable first</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -393,6 +405,31 @@ onBeforeUnmount(() => {
   font-size: 0.82em;
   font-weight: 600;
   color: var(--color-text-muted);
+}
+
+.tsr-right {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.tsr-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: var(--gap-sm);
+  font-size: 0.75em;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tsr-toggle input {
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
 }
 
 .tsr-bars {

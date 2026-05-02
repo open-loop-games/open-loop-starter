@@ -202,8 +202,8 @@ export const loopModule: EngineModule = {
     gameLoop = ctx.inject(GameLoopKey);
 
     ({ pauseBeforeRestart, pauseOnFailedLoop } = withPersistentContext('loop', () => ({
-      pauseBeforeRestart: persistent(false),
-      pauseOnFailedLoop: persistent(false),
+      pauseBeforeRestart: persistent(false, { name: 'pauseBeforeRestart' }),
+      pauseOnFailedLoop: persistent(false, { name: 'pauseOnFailedLoop' }),
     })));
 
     let retentionBuilt = false;

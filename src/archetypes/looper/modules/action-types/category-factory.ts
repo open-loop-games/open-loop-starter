@@ -13,7 +13,13 @@
  * don't collapse to a shared shape.
  */
 
-import { withPersistentContext } from 'open-loop-engine';
+import {
+  withPersistentContext,
+  isPersistent,
+  setPersistentName,
+  PersistentName,
+  type Persistent,
+} from 'open-loop-engine';
 import type { ActionDef } from '../../data/types';
 
 export interface ActionTypeCategory<TState> {
@@ -43,6 +49,15 @@ export function createActionTypeCategory<TState>(params: {
     const state = withPersistentContext('action-runner', () =>
       withPersistentContext(`${params.typeTag}:${def.id}`, () => params.build(def)),
     );
+    // Auto-name top-level Persistent fields by their key so save data survives
+    // field reordering inside `build`. Mirrors `createDefinitionStates`.
+    if (state !== null && typeof state === 'object') {
+      for (const [key, value] of Object.entries(state as Record<string, unknown>)) {
+        if (isPersistent(value) && (value as Persistent)[PersistentName] === undefined) {
+          setPersistentName(value as Persistent, key);
+        }
+      }
+    }
     states.set(def.id, state);
     params.onInstall?.(def, state);
   }

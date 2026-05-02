@@ -331,11 +331,11 @@ export const zonesModule: EngineModule = {
         const { total, good, goodTemp, checked, valuablesFirst } = withPersistentContext(
           `regular:${def.id}`,
           () => ({
-            total: persistent(0),
-            good: persistent(0),
-            goodTemp: persistent(0),
-            checked: persistent(0),
-            valuablesFirst: persistent(true),
+            total: persistent(0, { name: 'total' }),
+            good: persistent(0, { name: 'good' }),
+            goodTemp: persistent(0, { name: 'goodTemp' }),
+            checked: persistent(0, { name: 'checked' }),
+            valuablesFirst: persistent(true, { name: 'valuablesFirst' }),
           }),
         );
 

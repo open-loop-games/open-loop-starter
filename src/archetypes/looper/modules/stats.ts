@@ -179,7 +179,7 @@ export const statsModule: EngineModule = {
         // Tier 1: XP (temporary, resets each loop)
         xp: createResource(0, { displayName: `${stat.name} XP`, precision: 0 }),
         // Tier 2: Talent XP (persistent, accumulates 1% of every XP gain)
-        talentXP: persistent<DecimalSource>(0),
+        talentXP: persistent<DecimalSource>(0, { name: 'talentXP' }),
       }));
 
       // Computed levels

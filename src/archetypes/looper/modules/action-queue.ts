@@ -606,13 +606,17 @@ export const actionQueueModule: EngineModule = {
     } = withPersistentContext('action-queue', () => ({
       loadouts: persistent<LoadoutEntry[][]>(
         Array.from({ length: MAX_LOADOUT_SLOTS + 1 }, () => []),
+        { name: 'loadouts' },
       ),
-      loadoutNames: persistent<string[]>(Array.from({ length: MAX_LOADOUT_SLOTS }, () => '')),
-      currentLoadout: persistent(0),
-      repeatLastAction: persistent(false),
-      addToTop: persistent(false),
-      keepActiveLoopActive: persistent(false),
-      queueAddAmount: persistent(1),
+      loadoutNames: persistent<string[]>(
+        Array.from({ length: MAX_LOADOUT_SLOTS }, () => ''),
+        { name: 'loadoutNames' },
+      ),
+      currentLoadout: persistent(0, { name: 'currentLoadout' }),
+      repeatLastAction: persistent(false, { name: 'repeatLastAction' }),
+      addToTop: persistent(false, { name: 'addToTop' }),
+      keepActiveLoopActive: persistent(false, { name: 'keepActiveLoopActive' }),
+      queueAddAmount: persistent(1, { name: 'queueAddAmount' }),
     })));
   },
 };
