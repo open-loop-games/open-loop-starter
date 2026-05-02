@@ -23,7 +23,7 @@ import { useTierReset, type TierResetApi } from './useTierReset';
  * through reactively. Lives next to the composable rather than in
  * `data/` because it's UI-presentation, not engine-construction config.
  */
-export interface TierConfig<UpgradeDef extends { id: string } = never> {
+export interface TierConfig<UpgradeDef extends { id: string } = { id: string }> {
   id: Tier;
   /** Title shown on the tier-header band and on the tab trigger. */
   title: string;
@@ -61,7 +61,7 @@ export interface ExtraPurchasableRef {
 
 export interface TierState {
   id: Tier;
-  config: TierConfig<never>;
+  config: TierConfig;
   currency: Resource<DecimalSource>;
   shards?: Resource<DecimalSource>;
   producers: ComputedRef<ProducerRow[]>;
@@ -104,7 +104,7 @@ export function useTier<
 
   return {
     id: config.id,
-    config: config as TierConfig<never>,
+    config: config as TierConfig,
     currency,
     shards,
     producers,

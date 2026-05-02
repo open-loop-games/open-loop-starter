@@ -1,18 +1,74 @@
 <!--
-  Scaler app root — placeholder.
-  Sub-leaf 2b.2 replaces this with the SidebarMainShell + Tabs composition.
-  Exists as a real SFC at the planned location so boot.ts can already import
-  it; the gallery card surfaces and the engine ticks even before the UI lands.
+  Scaler app root. Mounts SidebarMainShell with:
+    #sidebarResources → ResourceBar (always-visible 5-currency strip)
+    #sidebar          → SidebarChainReadout + Achievements button (2b.3)
+    default           → Tabs over the 3 tier panels
+  Header: SystemHeader with appName='Scaler' + about copy from § 1.
+
+  Sub-leaf 2b.2 wires Antimatter fully + structural Prestige/Transcend.
+  Sub-leaf 2b.3 fills in the Transcend `#extras` slot with AccBoostRow +
+  ChallengeStrip and wires the Achievements button to AchievementGridDialog.
 -->
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, ref } from 'vue';
-import { type Engine } from 'open-loop-engine';
+import { inject, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import { type Engine, type EngineModule } from 'open-loop-engine';
+import { AppFrame, DevPanelOverlay, SidebarMainShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
+import ToastContainer from '@/ui/components/ToastContainer.vue';
+import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
+import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
+import SystemHeader from '@/ui/components/SystemHeader.vue';
+import Tabs from '@/ui/components/Tabs.vue';
 import { manifest } from '../manifest';
+import { useTierNav } from '../composables/useTierNav';
+import type { Tier } from '../data/types';
+import { ANTIMATTER_TIER, PRESTIGE_TIER, TRANSCEND_TIER } from './tier-configs';
+import TierPanel from './components/TierPanel.vue';
+import ResourceBar from './components/ResourceBar.vue';
+import SidebarChainReadout from './components/SidebarChainReadout.vue';
+import './scaler-theme.css';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
+provide('currentScreen', currentScreen);
+
+const { activeTier, setTier } = useTierNav();
+
+const TIER_TABS = [
+  { value: 'antimatter', label: 'Antimatter' },
+  { value: 'prestige', label: 'Prestige' },
+  { value: 'transcend', label: 'Transcend' },
+];
+
+// Tabs binds with v-model:string; map through the typed Tier ref.
+const tabValue = ref<string>(activeTier.value);
+watch(tabValue, (v) => setTier(v as Tier));
+watch(activeTier, (v) => {
+  if (tabValue.value !== v) tabValue.value = v;
+});
+
+const isDev = import.meta.env.DEV;
+const showDevPanel = ref(false);
+
+function onKey(e: KeyboardEvent): void {
+  if (!isDev) return;
+  if (e.key === 'F12') {
+    e.preventDefault();
+    showDevPanel.value = !showDevPanel.value;
+  }
+}
+
+onMounted(() => {
+  document.body.dataset.archetype = 'scaler';
+  window.addEventListener('keydown', onKey);
+});
+onUnmounted(() => {
+  delete document.body.dataset.archetype;
+  window.removeEventListener('keydown', onKey);
+});
+
+const stack = useModalStack();
 
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
@@ -28,12 +84,11 @@ function returnToSlots(): void {
   currentScreen.value = Screen.Slots;
 }
 
-onMounted(() => {
-  document.body.dataset.archetype = 'scaler';
-});
-onUnmounted(() => {
-  delete document.body.dataset.archetype;
-});
+function getActiveModules(): EngineModule[] {
+  const activeId = engine.activeModId;
+  if (!activeId) return [];
+  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
+}
 </script>
 
 <template>
@@ -43,46 +98,80 @@ onUnmounted(() => {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <div
+  <AppFrame
     v-else
-    class="scaler-stub"
+    :stack="stack"
+    :tooltip-delay="400"
   >
-    <header class="scaler-stub__header">
-      <h2>{{ manifest.name }}</h2>
-      <button
-        class="btn-sm"
-        @click="returnToSlots"
+    <template #header>
+      <SystemHeader
+        :app-name="manifest.name"
+        @return-to-slots="returnToSlots"
       >
-        Save & exit
-      </button>
-    </header>
-    <main class="scaler-stub__body">
-      <p>Composables ready. Tier panels land in sub-leaf 2b.2.</p>
-      <p>Engine is running — open the dev panel (F12) to inspect via the Balance Workbench.</p>
-    </main>
-  </div>
+        <template #about>
+          <h4 style="margin-bottom: 6px">
+            Scaler — Synergism (slim port)
+          </h4>
+          <p>
+            Buy producers, watch coins climb, prestige to convert into a stacking multiplier. A
+            second layer compresses the first; a third compresses both. Modifier chains stack into
+            the headline rate; Transcend challenges grant permanent bonuses.
+          </p>
+        </template>
+      </SystemHeader>
+    </template>
+    <SidebarMainShell sidebar-width="260px">
+      <template #sidebarResources>
+        <ResourceBar />
+      </template>
+      <template #sidebar>
+        <SidebarChainReadout />
+        <button
+          class="btn-sm scaler-achievements-btn"
+          disabled
+          title="Achievements grid lands in sub-leaf 2b.3"
+        >
+          Achievements (2b.3)
+        </button>
+      </template>
+      <Tabs
+        v-model="tabValue"
+        :items="TIER_TABS"
+        class="scaler-tier-tabs"
+      >
+        <template #panel-antimatter>
+          <TierPanel :config="ANTIMATTER_TIER" />
+        </template>
+        <template #panel-prestige>
+          <TierPanel :config="PRESTIGE_TIER" />
+        </template>
+        <template #panel-transcend>
+          <TierPanel :config="TRANSCEND_TIER" />
+        </template>
+      </Tabs>
+    </SidebarMainShell>
+  </AppFrame>
+  <ToastContainer />
+  <DevDiagnostics v-if="isDev" />
+  <DevPanelOverlay
+    v-if="isDev && showDevPanel"
+    title="Balance Workbench"
+    @close="showDevPanel = false"
+  >
+    <BalanceWorkbench
+      :engine="engine"
+      :modules="getActiveModules"
+    />
+  </DevPanelOverlay>
 </template>
 
 <style scoped>
-.scaler-stub {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-body);
+.scaler-tier-tabs {
+  flex: 1;
+  min-height: 0;
 }
-.scaler-stub__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--gap);
-  border-bottom: 1px solid var(--color-border);
-}
-.scaler-stub__body {
-  padding: var(--gap);
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-sm);
+.scaler-achievements-btn {
+  align-self: stretch;
+  margin-top: var(--gap-sm);
 }
 </style>
