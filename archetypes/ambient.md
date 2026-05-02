@@ -4,9 +4,9 @@
 >
 > **Status:** `candidate`
 
-**Exemplars (validation, not clone targets):** [Cookie Clicker](../../open-loop-research/analyses/complete/cookie-clicker-analysis.md), [Candy Box](../../open-loop-research/analyses/complete/candy-box-analysis.md), [A Dark Room](../../open-loop-research/analyses/complete/a-dark-room-analysis.md) (Phase 1 only — the full game is a Phase-shifter instance), [Trimps](../../open-loop-research/analyses/complete/trimps-analysis.md), [Realm Grinder](../../open-loop-research/analyses/complete/realm-grinder-analysis.md).
+**Exemplars (validation, not clone targets):** [Cookie Clicker](../../open-loop-research/analyses/complete/cookie-clicker-analysis.md), [Candy Box](../../open-loop-research/analyses/complete/candy-box-analysis.md), [A Dark Room](../../open-loop-research/analyses/complete/a-dark-room-analysis.md) (Phase 1 only — the full game is a Phase-shifter instance), [Trimps](../../open-loop-research/analyses/complete/trimps-analysis.md), [Realm Grinder](../../open-loop-research/analyses/complete/realm-grinder-analysis.md), [Rusty's Retirement](../../open-loop-research/analyses/complete/rustys-retirement-analysis.md), [Chillquarium](../../open-loop-research/analyses/complete/chillquarium-analysis.md), [Tiny Pasture](../../open-loop-research/analyses/complete/tiny-pasture-analysis.md), [Chill with You](../../open-loop-research/analyses/complete/chill-with-you-lo-fi-story-analysis.md).
 
-All five are web-formation-era (2009–2015). The 2024+ Steam resurgence cluster (Rusty's Retirement, Chillquarium, Chill with You, Tiny Pasture) is cited in § 1 and § 11 without `analyses/complete/` links — those titles have not been analyzed yet. The formation-era corpus is sufficient for validation; the resurgence cluster confirms the pattern's contemporary viability.
+The first five are web-formation-era (2009–2015); the latter four are the 2024+ Steam resurgence cluster. The formation-era corpus established the pattern; the resurgence cluster confirms its contemporary viability.
 
 ---
 
