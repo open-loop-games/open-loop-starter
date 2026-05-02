@@ -99,7 +99,11 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
   return {
     id: 'scaler/antimatter',
     install(ctx: EngineContext): void {
-      const coin = createResource<DecimalSource>(0, {
+      // vanilla canonical: SynergismOfficial/src/Synergism.ts:250 —
+      //   coins: new Decimal('1e2')
+      // Bootstrap grant: the cheapest producer (Worker) costs 100 coins, so
+      // a 0-coin start hardlocks the player. Synergism seeds the same amount.
+      const coin = createResource<DecimalSource>('1e2', {
         displayName: 'Coins',
         precision: 0,
         id: 'scaler/coins',
