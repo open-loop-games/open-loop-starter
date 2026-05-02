@@ -2,18 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_AMBIENT_DATA } from '../data';
 
 /**
- * Balance regression probe — math-only pins on the default Cozy Farm data.
+ * Structural-invariant locks on the default Cozy Farm data.
  *
- * Runs in milliseconds, no sim. Reachability is discovered and re-verified
- * by `pnpm balance:solve:ambient` (engine-as-oracle bisection over the four
- * solver beats: B2, B3, B5, B7) and surface-checked by `pnpm
- * balance:probes:ambient` (offline-round-trip + no-pressure invariants).
- * This file is the receipt: any intentional change to a solver knob or to
- * the scene-variant ladder lands here together with the commit that moves
- * it.
- *
- * Forbidden by archetype doc § 7: any sim driver. This file does not import
- * from `open-loop-engine/harness`.
+ * Runs in milliseconds, no sim. Pins relationships that hold regardless of
+ * solver-output rounding: scene-variant ↔ unlock threshold parity, monotonic
+ * threshold order, and headline-multiplier sanity ranges. Beat-fire-time
+ * locks belong on `runMatrixUntil` with `toBeBetween` bounds, not here —
+ * see `archetypes/BALANCING.md` § Theme 5.
  */
 
 const { balance, achievements, producers, unlocks, sceneVariants } = DEFAULT_AMBIENT_DATA;
@@ -21,36 +16,6 @@ const { balance, achievements, producers, unlocks, sceneVariants } = DEFAULT_AMB
 const findUnlock = (id: string) => unlocks.find((u) => u.id === id)!;
 const findScene = (id: string) => sceneVariants.find((s) => s.id === id)!;
 const findProducer = (id: string) => producers.find((p) => p.id === id)!;
-
-describe('balance probe — solver-knob receipts', () => {
-  it('planter.baseCost matches beat-2 solver convergence', () => {
-    expect(Number(findProducer('planter').purchase!.baseCost)).toBe(55);
-  });
-
-  it('coop-built.threshold matches beat-3 solver convergence', () => {
-    expect(Number(findUnlock('coop-built').threshold)).toBe(30_810_558);
-  });
-
-  it('spring-arrives.threshold matches beat-5 solver convergence', () => {
-    expect(Number(findUnlock('spring-arrives').threshold)).toBe(1_045_994_938);
-  });
-
-  it('year-cycles.threshold matches beat-7 solver convergence', () => {
-    expect(Number(findUnlock('year-cycles').threshold)).toBe(4_279_322_281);
-  });
-
-  it('tier1BaseRate held at 1.0 — beat-1 fires off planter initialAmount', () => {
-    expect(Number(balance.tier1BaseRate)).toBe(1.0);
-  });
-
-  it('achievementMultiplier held at 1.02 — beat-6 multiplier ladder', () => {
-    expect(Number(balance.achievementMultiplier)).toBe(1.02);
-  });
-
-  it('prestigeEligibleThreshold held at 1e6 — dominated by year-cycles gate', () => {
-    expect(Number(balance.prestigeEligibleThreshold)).toBe(1_000_000);
-  });
-});
 
 describe('balance probe — scene-variant ↔ unlock threshold parity', () => {
   // The inline comment in scene-variants.ts mandates parity; receipts here
