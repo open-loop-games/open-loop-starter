@@ -5,12 +5,13 @@ import { DEFAULT_PRODUCER_DATA } from '../data';
  * Balance regression probe — math-only pins on the default Bakery data.
  *
  * Runs in milliseconds, no sim. Reachability is discovered and re-verified
- * by `pnpm balance:solve:producer` (engine-as-oracle bisection) and
- * `pnpm balance:producer` (5-seed arc probe). This file is the receipt:
- * any intentional change to a solver knob or content stack lands here
- * together with the commit that moves it.
+ * by `pnpm exec vite-node src/archetypes/producer/balance/solve.ts`
+ * (engine-as-oracle bisection) and `pnpm exec vite-node
+ * src/archetypes/producer/balance/run.ts` (5-seed arc probe). This file is
+ * the receipt: any intentional change to a solver knob or content stack
+ * lands here together with the commit that moves it.
  *
- * Content-math receipts (§ 4, Bakery content set):
+ * Content-math receipts (Bakery content set):
  * 1. Top-producer rateChain ceiling reaches ≥ 1e6× base (beat-7 reachable).
  * 2. Per-producer in-arc stack (tier-i + tier-ii + tier-iia) = 12× on any
  *    continuous producer.

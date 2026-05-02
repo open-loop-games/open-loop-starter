@@ -14,10 +14,10 @@ const sec = (s: number) => s;
 const min = (m: number) => m * 60;
 
 /**
- * § 4 windows in seconds. One source of truth for both the flow-probe
+ * Beat windows in seconds. One source of truth for both the flow-probe
  * snapshot midpoints and the arc-probe spec windows.
  *
- * B5/B6/B7 shifted from the spec-table's nominal bands to match the default
+ * B5/B6/B7 shifted from the original nominal bands to match the default
  * Bakery content set's natural firing density: production/building-milestone
  * achievements cluster in 0–30min, there's a gap before late thresholds
  * (prod-1b, hidden-1e10-lifetime) fire past 60min, and the 1e6× headline
@@ -52,20 +52,20 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
 }));
 
 /**
- * Predicates for arc-probe. § 4 triggers, decoded:
+ * Predicates for arc-probe. Trigger decoding:
  *
  * - 1: primary resource ≥ 1 (first click registers).
  * - 2: cursor (tier 1) owned.
  * - 3: grandma (tier 2) owned.
  * - 4: first per-producer upgrade bought (cursor-boost-i is cheapest in current data).
- * - 5: ≥25 achievements earned. § 4 says "first achievement-driven
+ * - 5: ≥25 achievements earned — proxy for "first achievement-driven
  *   multiplier". 1.02²⁵ ≈ 1.64× is where the compounding is clearly felt.
  *   Threshold is set close to the in-arc-reachable ceiling of the default
  *   set (several last-rung production milestones and one hidden require
  *   post-arc rates), so crossing ~N-of-reachable lands the perceived peak
  *   of the achievement stack inside the window.
  * - 6: any continuous producer at count ≥ 100 — fifth milestone tier fires
- *   on *some* producer, which is the "bulk-buy rhythm begins" moment (§ 4).
+ *   on *some* producer, which is the "bulk-buy rhythm begins" moment.
  *   State-based: doesn't require the bot to hoard primary for a single
  *   getCost(10) affordability check; fires naturally once the bot has
  *   accumulated enough of a mid-tier producer to cross count 100.

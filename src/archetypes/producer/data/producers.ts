@@ -1,8 +1,9 @@
 import type { ProducerDef, ProducerBalance } from './types';
 
 // ─── Balance ───────────────────────────────────────────────────────────────
-// Numbers that drive beat timing. Workbench perturbation target. Sim tests
-// in `../sim/producer.sim.test.ts` probe these against the § 4 beat map.
+// Numbers that drive beat timing. Workbench perturbation target. The
+// regression probe in `../sim/balance.probe.test.ts` pins these as math-only
+// receipts; `../balance/run.ts` and `../balance/solve.ts` discover.
 
 export const PRODUCER_BALANCE: ProducerBalance = {
   clickBaseValue: 1,
@@ -16,7 +17,7 @@ export const PRODUCER_BALANCE: ProducerBalance = {
 
 // ─── Skeleton + Costume ────────────────────────────────────────────────────
 // 7 producer tiers + 1 manual click producer. Bakery theme baked inline
-// (producer.md § 11 Theme A). Forks override names in place.
+// (producer.md § 8 Theme A). Forks override names in place.
 
 export const PRODUCERS: ProducerDef[] = [
   // The click activity — manual trigger, no purchase cost.

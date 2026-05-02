@@ -19,7 +19,7 @@ export interface PhaseIntent {
   id: string;
   /** Strict position in the arc; the archetype *is* this sequence. */
   order: number;
-  /** One-line player-experience description, from producer.md § 4. */
+  /** One-line player-experience description. */
   intent: string;
   /** Beat id in `beats.ts` currently expressing this phase. Mutable — a phase
    *  may migrate between beats as predicates/windows reshape. */
@@ -47,9 +47,9 @@ export const PRODUCER_IDENTITY = {
 } as const;
 
 /**
- * Ordered player-experience phases, from producer.md § 4. The order and the
- * intent of each are part of the identity; the concrete beat predicate and
- * minute-window expressing each phase live in `beats.ts` and are mutable.
+ * Ordered player-experience phases. The order and the intent of each are
+ * part of the identity; the concrete beat predicate and minute-window
+ * expressing each phase live in `beats.ts` and are mutable.
  */
 export const PRODUCER_PHASES: readonly PhaseIntent[] = [
   {

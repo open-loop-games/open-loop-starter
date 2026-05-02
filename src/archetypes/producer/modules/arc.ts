@@ -33,8 +33,7 @@ export function createArcModule(data: ProducerData): EngineModule {
         .filter((p) => p.trigger === 'continuous')
         .map((p) => p.id);
       // Arc-close requires owning every continuous producer AND buying every
-      // in-arc upgrade. Tier-iii per-producer upgrades are post-arc content
-      // (producer.md § 4: "fork extends beyond this; skeleton stops here");
+      // in-arc upgrade. Tier-iii per-producer upgrades are post-arc content;
       // globals + tier-i/ii/iia per-producer are all required. Aligns beat-8
       // firing condition with the full in-arc content slate.
       const arcUpgradeIds = data.upgrades

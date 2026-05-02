@@ -3,7 +3,7 @@
  *
  * Iteration loop:
  *   1. tweak `data/{producers,upgrades,achievements}.ts` or `PRODUCER_BALANCE`
- *   2. `pnpm balance:producer`
+ *   2. `pnpm exec vite-node src/archetypes/producer/balance/run.ts`
  *   3. read the punch list — find the red rows
  *   4. tweak again
  *
@@ -88,7 +88,7 @@ function main(): void {
   console.log('## Punch list\n');
   const simFailed = arcResults.filter((r) => !r.inWindow);
   if (simFailed.length === 0) {
-    console.log('All arc beats land inside their § 4 windows.');
+    console.log('All arc beats land inside their spec windows.');
   } else {
     for (const r of simFailed) {
       const p50 = r.terminationTime?.p50;

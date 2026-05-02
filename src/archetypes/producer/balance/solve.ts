@@ -8,8 +8,8 @@
  * instead of rebuilding. The engine plays the game; the solver tunes a
  * parameter until the beat's fire time lands on target.
  *
- * Run: `pnpm balance:solve:producer`. Prints a proposed-patch report. Does
- * NOT mutate data files.
+ * Run: `pnpm exec vite-node src/archetypes/producer/balance/solve.ts`.
+ * Prints a proposed-patch report. Does NOT mutate data files.
  *
  * Scope: beats 2, 3, 4, 7. Proposals chain forward — each beat solves against
  * the prior beats' proposed values so later numbers account for earlier

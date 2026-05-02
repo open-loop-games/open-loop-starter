@@ -18,7 +18,7 @@ import {
 // `tunable('balance/tier1UpgradeMultiplier', ...)` inside
 // `modules/upgrades.ts`; the static cost here is the default / data-file view.
 //
-// Tiers in-arc: i, ii, iia. Tier-iii is post-arc per producer.md § 4.
+// Tiers in-arc: i, ii, iia. Tier-iii is post-arc.
 
 const PER_PRODUCER_TIERS = [
   { suffix: 'i', costMul: Number(PRODUCER_BALANCE.tier1UpgradeMultiplier), rateMul: 2 },
@@ -125,7 +125,7 @@ const GLOBAL_UPGRADES: UpgradeDef[] = [
     // Capstone cost — gates beat-8 (ArcKey.complete) past beat-7's headline
     // climax. At current plateau rate the jump from global-x96 (100B) buys
     // 15–30min of post-climax accumulation before the arc closes, matching
-    // producer.md § 4's 95–120min window.
+    // beat-8's 95–120min window in `../balance/beats.ts`.
     cost: 100_000_000_000_000,
     targetProducerId: null,
     multiplier: 5,
