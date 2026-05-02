@@ -1,5 +1,4 @@
-import { computed } from 'vue';
-import type { ComputedRef, Ref } from 'vue';
+import type { Ref } from 'vue';
 import {
   createOverrideRegistry,
   createResource,
@@ -10,22 +9,24 @@ import {
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
-  type ModifierChain,
   type OverrideRegistry,
-  type Producer,
   type ProducerCategory,
   type Resource,
 } from 'open-loop-engine';
 import type { ProducerData, ProducerDef } from '../data/types';
 
-// Injection keys — consumed by upgrades, achievements, composables, sim tests.
-
-export interface ClickState {
-  clickCount: Ref<number>;
-  lastClickSec: Ref<number>;
-  elapsedSec: Ref<number>;
-  click: () => void;
-}
+/**
+ * Per-producer state. Manual-trigger producers (click) use this for an
+ * activation-count tracker — the engine's `producer.count` is `1` for
+ * non-purchasable producers, so click activations need their own counter.
+ * Continuous producers return `undefined`.
+ */
+export type ProducerInstanceState =
+  | {
+      count: Ref<number>;
+      activate: () => void;
+    }
+  | undefined;
 
 export const PrimaryResourceKey: InjectionKey<Resource<DecimalSource>> = Symbol(
   'producer/primary-resource',
@@ -35,41 +36,15 @@ export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
   'producer/primary-lifetime',
 ) as InjectionKey<Ref<DecimalSource>>;
 
-export const BuildingsKey: InjectionKey<ProducerCategory<ProducerDef>> = Symbol(
-  'producer/buildings',
-) as InjectionKey<ProducerCategory<ProducerDef>>;
-
-export const ClickStateKey: InjectionKey<ClickState> = Symbol(
-  'producer/click-state',
-) as InjectionKey<ClickState>;
-
-export const HeadlineRateKey: InjectionKey<ComputedRef<DecimalSource>> = Symbol(
-  'producer/headline-rate',
-) as InjectionKey<ComputedRef<DecimalSource>>;
-
-// Ordered `[click, ...continuous]` rateChains — the grant target for any
-// effect that wants to modify every production stream at once (global
-// upgrades, achievement rewards). Built once in the producers module so
-// downstream modules inject instead of re-walking `data.producers`.
-export const AllRateChainsKey: InjectionKey<ModifierChain[]> = Symbol(
-  'producer/all-rate-chains',
-) as InjectionKey<ModifierChain[]>;
-
-export const ProducerDataKey: InjectionKey<ProducerData> = Symbol(
-  'producer/data',
-) as InjectionKey<ProducerData>;
+export const BuildingsKey: InjectionKey<ProducerCategory<ProducerDef, ProducerInstanceState>> =
+  Symbol('producer/buildings') as InjectionKey<
+    ProducerCategory<ProducerDef, ProducerInstanceState>
+  >;
 
 /**
  * Typed surface for scoped balance/sim/tuning overrides. Keys represent the
  * knobs the balance solver bisects and the workbench / devtools can retune
- * at runtime via `registry.pushScope`. Each reader site registers its key
- * with `tunable(registry, key, () => defaultFromData)`; a scope-push swaps
- * the reader without mutating data.
- *
- * Typed as a `Record` (not an interface with named keys) to satisfy
- * `OverrideRegistry`'s generic constraint. The canonical key list lives as
- * the `ProducerTunableKey` union and is enforced at push-scope call sites
- * via `Partial<Record<ProducerTunableKey, () => DecimalSource>>`.
+ * at runtime via `registry.pushScope`.
  */
 export type ProducerTunableKey =
   | 'producers/cursor/purchase/baseCost'
@@ -103,15 +78,7 @@ export function createProducersModule(data: ProducerData): EngineModule {
 
       const primaryLifetime = trackTotal(primaryResource);
 
-      const clickCount = persistent<number>(0, { name: 'clickCount' });
-      const lastClickSec = persistent<number>(0, { name: 'lastClickSec' });
-      const elapsedSec = persistent<number>(0, { name: 'elapsedSec' });
-
-      ctx.onTick((dt: number) => {
-        elapsedSec.value += dt;
-      });
-
-      const buildings = createProducerCategory<ProducerDef>({
+      const buildings = createProducerCategory<ProducerDef, ProducerInstanceState>({
         id: 'producer/buildings',
         registerTick: ctx.onTick,
         mapProducer: (def) => ({
@@ -127,43 +94,24 @@ export function createProducersModule(data: ProducerData): EngineModule {
               }
             : undefined,
         }),
+        mapState: (def, producer) => {
+          if (def.trigger !== 'manual' || !producer.activate) return undefined;
+          const count = persistent<number>(0, { name: 'activations' });
+          const fire = producer.activate;
+          return {
+            count,
+            activate: () => {
+              fire();
+              count.value += 1;
+            },
+          };
+        },
       });
       buildings.register(data.producers);
-
-      const clickProducer: Producer | undefined = buildings.getProducer('click');
-      if (!clickProducer || !clickProducer.activate) {
-        throw new Error('Producer "click" missing or not manual — expected trigger: "manual"');
-      }
-      const activate = clickProducer.activate;
-
-      const clickState: ClickState = {
-        clickCount,
-        lastClickSec,
-        elapsedSec,
-        click: () => {
-          activate();
-          clickCount.value += 1;
-          lastClickSec.value = elapsedSec.value;
-        },
-      };
-
-      const headlineRate = computed(() => buildings.getTotalRate(primaryResource));
-
-      const continuousChains: ModifierChain[] = [];
-      for (const p of data.producers) {
-        if (p.trigger !== 'continuous') continue;
-        const producer = buildings.getProducer(p.id);
-        if (producer) continuousChains.push(producer.rateChain);
-      }
-      const allChains: ModifierChain[] = [clickProducer.rateChain, ...continuousChains];
 
       ctx.provide(PrimaryResourceKey, primaryResource);
       ctx.provide(PrimaryLifetimeKey, primaryLifetime);
       ctx.provide(BuildingsKey, buildings);
-      ctx.provide(ClickStateKey, clickState);
-      ctx.provide(HeadlineRateKey, headlineRate);
-      ctx.provide(AllRateChainsKey, allChains);
-      ctx.provide(ProducerDataKey, data);
       ctx.provide(ProducerTuningRegistryKey, tuningRegistry);
     },
   };

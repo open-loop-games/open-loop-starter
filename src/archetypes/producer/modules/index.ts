@@ -4,23 +4,17 @@ import { createProducersModule } from './producers';
 import { createUpgradesModule } from './upgrades';
 import { createMilestonesModule } from './milestones';
 import { createAchievementsModule } from './achievements';
-import { createArcModule } from './arc';
-import { createCategoriesModule } from './categories';
+import { createCategoriesPublishModule } from './categories-publish';
 
 export {
   PrimaryResourceKey,
   PrimaryLifetimeKey,
   BuildingsKey,
-  ClickStateKey,
-  HeadlineRateKey,
-  AllRateChainsKey,
-  ProducerDataKey,
-  type ClickState,
+  ProducerTuningRegistryKey,
+  type ProducerInstanceState,
 } from './producers';
 export { UpgradesKey } from './upgrades';
-export { MilestonesKey, type MilestoneInfo, type MilestonesState } from './milestones';
 export { AchievementsKey } from './achievements';
-export { ArcKey, type ArcState } from './arc';
 
 /**
  * Compose the producer modules in dependency order.
@@ -33,7 +27,6 @@ export function createProducerModules(data: ProducerData): EngineModule[] {
     createUpgradesModule(data),
     createMilestonesModule(data),
     createAchievementsModule(data),
-    createArcModule(data),
-    createCategoriesModule(),
+    createCategoriesPublishModule(),
   ];
 }

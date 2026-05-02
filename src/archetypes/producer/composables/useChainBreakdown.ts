@@ -1,19 +1,8 @@
-import { computed } from 'vue';
+import { computed, unref } from 'vue';
 import type { ComputedRef } from 'vue';
 import type { ModifierChain } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import { BuildingsKey } from '../modules';
-
-// Engine's `MaybeRef<T>` uses a different Vue Ref brand than the starter's
-// Vue. Resolving it through our `unref` loses the boolean unwrap, so we
-// structurally peel `.value` when the input looks ref-shaped.
-function resolveMaybe<T>(value: T | { value: T } | undefined): T | undefined {
-  if (value == null) return undefined;
-  if (typeof value === 'object' && value !== null && 'value' in value) {
-    return (value as { value: T }).value;
-  }
-  return value as T;
-}
 
 export interface ChainFactor {
   /** Stable id of the binding — auto-derived from scope + description. */
@@ -48,10 +37,8 @@ export function useChainBreakdown(chain: ModifierChain): ComputedRef<ChainBreakd
       if (!desc) continue;
       const resolved = typeof desc === 'function' ? desc() : desc;
       const active =
-        (binding.active == null ? true : (resolveMaybe(binding.active) ?? false)) &&
-        (binding.modifier.enabled == null
-          ? true
-          : (resolveMaybe(binding.modifier.enabled) ?? false));
+        (binding.active == null ? true : (unref(binding.active) ?? false)) &&
+        (binding.modifier.enabled == null ? true : (unref(binding.modifier.enabled) ?? false));
       if (active) activeCount += 1;
       factors.push({
         id: binding.id,

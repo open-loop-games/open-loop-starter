@@ -1,3 +1,5 @@
+import { computed } from 'vue';
+import type { ComputedRef } from 'vue';
 import {
   Decimal,
   createPurchasableCategory,
@@ -15,10 +17,10 @@ import {
 } from 'open-loop-engine';
 import type { ProducerData, ProducerDef, UpgradeDef } from '../data/types';
 import {
-  AllRateChainsKey,
   BuildingsKey,
   PrimaryResourceKey,
   ProducerTuningRegistryKey,
+  type ProducerInstanceState,
   type ProducerTunables,
 } from './producers';
 
@@ -33,7 +35,6 @@ export function createUpgradesModule(data: ProducerData): EngineModule {
     install(ctx) {
       const buildings = ctx.inject(BuildingsKey);
       const primary = ctx.inject(PrimaryResourceKey);
-      const allChains = ctx.inject(AllRateChainsKey);
       const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
 
       const tier1Multiplier = tunable(
@@ -45,7 +46,7 @@ export function createUpgradesModule(data: ProducerData): EngineModule {
       const upgrades = createPurchasableCategory<UpgradeDef>({
         id: 'producer/upgrades',
         mapPurchasable: (def) => {
-          const chain = resolveUpgradeTarget(def, buildings, allChains);
+          const chain = resolveUpgradeTarget(def, buildings);
           const grants: Grant[] = [{ chain, mult: def.multiplier, description: def.name }];
           return {
             display: { title: def.name, description: def.description },
@@ -68,43 +69,35 @@ export function createUpgradesModule(data: ProducerData): EngineModule {
 // Tier-i upgrade cost is `producer.baseCost × balance.tier1UpgradeMultiplier`.
 // Routing through a computed against the tunables lets the balance solver
 // retune either axis via `pushScope` without mutating data or re-baking
-// upgrade rows. The producer baseCost lookup prefers the registry (so
-// scope-pushed producer costs flow through to tier-i upgrade cost, matching
-// the solver's existing proposal-threading). Non-tier-i upgrades pass their
-// static cost through unchanged.
+// upgrade rows.
 function resolveUpgradeCost(
   def: UpgradeDef,
   data: ProducerData,
   registry: OverrideRegistry<ProducerTunables>,
-  tier1Multiplier: Computable<DecimalSource>,
+  tier1Multiplier: ComputedRef<DecimalSource>,
 ): Computable<DecimalSource> {
   if (!def.id.endsWith('-boost-i')) return def.cost;
   const producerId = def.id.slice(0, -'-boost-i'.length);
   const producer = data.producers.find((p) => p.id === producerId);
   if (!producer?.purchase) return def.cost;
   const baseCostKey = `producers/${producerId}/purchase/baseCost` as keyof ProducerTunables;
-  // Getter form of Computable, not computed(). Avoids cross-brand Ref coerce
-  // between the engine's bundled Vue and the starter's Vue — engine's
-  // OverrideRegistry.scopeVersion already tracks reactivity via registry.get,
-  // and the downstream Formula evaluator calls this getter on demand.
-  return () => {
-    void registry.scopeVersion.value;
+  return computed(() => {
     const baseCost = registry.has(baseCostKey)
       ? registry.get(baseCostKey)()
       : producer.purchase!.baseCost;
-    return Decimal.mul(baseCost, (tier1Multiplier as { value: DecimalSource }).value);
-  };
+    return Decimal.mul(baseCost, tier1Multiplier.value);
+  });
 }
 
 // `null` → all rate chains (headline). Any other id (including the click
-// producer) routes to that producer's rate chain — the click producer is
-// just a manual-trigger entry in `data.producers`, so no special case.
+// producer) routes to that producer's rate chain.
 function resolveUpgradeTarget(
   def: UpgradeDef,
-  buildings: ProducerCategory<ProducerDef>,
-  allChains: ModifierChain[],
+  buildings: ProducerCategory<ProducerDef, ProducerInstanceState>,
 ): ModifierChain | ModifierChain[] {
-  if (def.targetProducerId === null) return allChains;
+  if (def.targetProducerId === null) {
+    return buildings.getAll().map((entry) => entry.producer.rateChain);
+  }
   const producer = buildings.getProducer(def.targetProducerId);
   if (!producer) {
     throw new Error(`Upgrade "${def.id}" targets unknown producer "${def.targetProducerId}"`);

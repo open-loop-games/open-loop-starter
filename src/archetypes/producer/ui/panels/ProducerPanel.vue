@@ -1,23 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
+import { BuildingsKey, PrimaryResourceKey } from '../../modules';
 import { useProducers, type ProducerRow } from '../../composables/useProducers';
-import { useArc } from '../../composables/useArc';
-import { useHeadlineRate } from '../../composables/useHeadlineRate';
 import { useBulkMode, type BulkMode } from '@/composables/useBulkMode';
 import { useFormatting } from '@/composables/useFormatting';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
 import ProducerTooltip from '../components/ProducerTooltip.vue';
 
+const buildings = useModule(BuildingsKey);
+const primary = useModule(PrimaryResourceKey);
 const rows = useProducers();
-const arc = useArc();
-const { perSecond: totalRate } = useHeadlineRate();
+const totalRate = computed(() => buildings.getTotalRate(primary));
 const { mode, resolveAmount } = useBulkMode();
 const { format, formatWhole } = useFormatting();
 
 const LADDER: BulkMode[] = [1, 10, 100, 'max'];
-
-const topTierId = computed(() => rows.value[rows.value.length - 1]?.def.id ?? null);
 
 function pendingAmount(row: ProducerRow): DecimalSource {
   return resolveAmount(row.maxAffordable.value);
@@ -68,7 +67,6 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
         <li
           class="roster-card"
           :class="{
-            'is-arc-closer': row.def.id === topTierId && arc.complete.value,
             'is-empty': Decimal.eq(row.count.value, 0),
           }"
           :data-testid="`producer-${row.def.id}`"
@@ -216,36 +214,6 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
 
 .roster-card.is-empty .roster-card__name {
   color: var(--bakery-cocoa-mute, #7a5d3d);
-}
-
-.roster-card.is-arc-closer {
-  border-color: var(--bakery-brass, #b1782a);
-  background:
-    radial-gradient(ellipse at top right, rgba(217, 152, 70, 0.25) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(255, 245, 215, 0.6) 0%, rgba(241, 226, 188, 0.4) 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(217, 152, 70, 0.4),
-    0 8px 22px -10px rgba(177, 120, 42, 0.5);
-}
-
-.roster-card.is-arc-closer::after {
-  content: 'House Specialty';
-  position: absolute;
-  top: -8px;
-  right: 12px;
-  background: var(--bakery-brass, #b1782a);
-  color: var(--bakery-parchment, #f8efd6);
-  padding: 1px 8px;
-  font-family: var(--font-display, Georgia, serif);
-  font-variation-settings:
-    'opsz' 9,
-    'SOFT' 100,
-    'wght' 700;
-  font-size: 0.6em;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  border-radius: 2px;
-  box-shadow: 0 2px 6px -2px rgba(80, 40, 10, 0.4);
 }
 
 /* ─── Name row ───────────────────────────────────────────────────────── */

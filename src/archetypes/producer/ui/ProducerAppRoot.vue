@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
 import { type Engine, type EngineModule } from 'open-loop-engine';
 import { AppFrame, DevPanelOverlay, ThreePanelShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
@@ -8,9 +8,7 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import { useToasts } from '@/composables/useToasts';
 import { manifest } from '../manifest';
-import { ArcKey } from '../modules';
 import HeadlinePanel from './panels/HeadlinePanel.vue';
 import ProducerPanel from './panels/ProducerPanel.vue';
 import UpgradeTray from './panels/UpgradeTray.vue';
@@ -70,37 +68,17 @@ function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
 }
 
-const { addToast } = useToasts();
-let stopArcWatcher: (() => void) | null = null;
-function armArcFlavourEvent(): void {
-  stopArcWatcher?.();
-  const arc = engine.tryInject(ArcKey);
-  if (!arc) return;
-  const announcedAtStart = arc.announced.value;
-  stopArcWatcher = watch(
-    arc.announced,
-    (isAnnounced, wasAnnounced) => {
-      if (!isAnnounced || wasAnnounced || announcedAtStart) return;
-      addToast('Arc closed — Bakery', arc.flavour, false);
-    },
-    { flush: 'sync' },
-  );
-}
-
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
   if (modId) engine.selectMod(modId);
   engine.start();
   engine.load();
-  armArcFlavourEvent();
   currentScreen.value = Screen.Game;
 }
 
 function returnToSlots(): void {
   engine.saveManager?.save();
   engine.stop();
-  stopArcWatcher?.();
-  stopArcWatcher = null;
   currentScreen.value = Screen.Slots;
 }
 

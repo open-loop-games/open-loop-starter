@@ -74,17 +74,22 @@ export const manifest: ArchetypeManifest = {
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
     {
-      name: 'createScalingPurchasable',
-      layer: 'systems',
-      path: 'open-loop-engine/docs/api/INDEX.md',
-    },
-    {
       name: 'createPurchasableCategory',
       layer: 'systems',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
     {
       name: 'createAchievementCategory',
+      layer: 'systems',
+      path: 'open-loop-engine/docs/api/INDEX.md',
+    },
+    {
+      name: 'createTieredAchievement',
+      layer: 'systems',
+      path: 'open-loop-engine/docs/api/INDEX.md',
+    },
+    {
+      name: 'getCombinedAchievementEffect',
       layer: 'systems',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
@@ -99,7 +104,6 @@ export const manifest: ArchetypeManifest = {
     { n: 5, label: 'First achievement-driven multiplier', targetSimRange: [1500, 2400] },
     { n: 6, label: 'Bulk-buy becomes meaningful', targetSimRange: [2400, 3900] },
     { n: 7, label: 'Deep modifier chain visible', targetSimRange: [3900, 5700] },
-    { n: 8, label: 'Top producer tier owned + base arc closed', targetSimRange: [5700, 7200] },
   ],
   themes: [
     { name: 'Bakery', isDefault: true, status: 'baked' },

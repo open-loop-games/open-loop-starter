@@ -1,9 +1,8 @@
 import type { AchievementDef } from './types';
 
 // ─── Skeleton + Costume ────────────────────────────────────────────────────
-// 10 production milestones + 10 building-count milestones + 10 hidden = 30.
-// Each grants the default 1.02× headline multiplier unless `rewardMultiplier`
-// is set explicitly.
+// 11 production milestones + 12 building-count milestones + 9 hidden + arc-close = 33.
+// Each grants the default multiplicative headline reward unless `reward` is set.
 
 // ─── Production milestones ────────────────────────────────────────────────
 
@@ -25,7 +24,7 @@ const productionMilestones: AchievementDef[] = PRODUCTION_THRESHOLDS.map((t) => 
   id: t.id,
   name: t.name,
   description: `Bake ${typeof t.total === 'number' ? t.total.toLocaleString() : t.total} cookies in total`,
-  requirement: (s) => s.primaryLifetimeAtLeast(t.total),
+  spec: { kind: 'lifetime-at-least', threshold: t.total },
 }));
 
 // ─── Building-count milestones ────────────────────────────────────────────
@@ -49,7 +48,7 @@ const buildingMilestones: AchievementDef[] = BUILDING_MILESTONES.map((m) => ({
   id: m.id,
   name: m.name,
   description: `Own ${m.count} ${m.producer}${m.count === 1 ? '' : 's'}`,
-  requirement: (s) => s.producerCountAtLeast(m.producer, m.count),
+  spec: { kind: 'producer-count-at-least', producer: m.producer, count: m.count },
 }));
 
 // ─── Hidden achievements ──────────────────────────────────────────────────
@@ -60,70 +59,70 @@ const hidden: AchievementDef[] = [
     name: 'And so it begins',
     description: 'Click the dough for the first time',
     hidden: true,
-    requirement: (s) => s.clickCountAtLeast(1),
+    spec: { kind: 'click-count-at-least', count: 1 },
   },
   {
     id: 'hidden-100-clicks',
     name: 'Repetitive Strain',
     description: 'Click 100 times',
     hidden: true,
-    requirement: (s) => s.clickCountAtLeast(100),
+    spec: { kind: 'click-count-at-least', count: 100 },
   },
   {
     id: 'hidden-1000-clicks',
     name: 'Carpal Champion',
     description: 'Click 1000 times',
     hidden: true,
-    requirement: (s) => s.clickCountAtLeast(1000),
+    spec: { kind: 'click-count-at-least', count: 1000 },
   },
   {
     id: 'hidden-first-upgrade',
     name: 'Upgrade Habit',
     description: 'Buy your first cursor upgrade',
     hidden: true,
-    requirement: (s) => s.upgradeBought('cursor-boost-i'),
+    spec: { kind: 'upgrade-bought', upgradeId: 'cursor-boost-i' },
   },
   {
     id: 'hidden-first-global',
     name: 'Big Picture',
     description: 'Buy your first global upgrade',
     hidden: true,
-    requirement: (s) => s.upgradeBought('click-x2') || s.upgradeBought('global-x2'),
+    spec: { kind: 'any-upgrade-bought', upgradeIds: ['click-x2', 'global-x2'] },
   },
   {
     id: 'hidden-owns-everything',
     name: 'Full Stack',
     description: 'Own at least one of every producer tier',
     hidden: true,
-    requirement: (s) => s.ownsEveryProducer(),
+    spec: { kind: 'all-producers-owned' },
   },
   {
     id: 'hidden-all-tier1',
     name: 'Tier One Tourist',
     description: 'Buy every tier-1 boost upgrade',
     hidden: true,
-    requirement: (s) => s.allTier1UpgradesBought(),
-  },
-  {
-    id: 'hidden-no-click-60',
-    name: 'Hands Off',
-    description: 'Go 60 seconds without clicking',
-    hidden: true,
-    requirement: (s) => s.secondsSinceLastClick() >= 60,
+    spec: { kind: 'all-tier1-upgrades' },
   },
   {
     id: 'hidden-1e10-lifetime',
     name: 'Billionaire Baker',
     description: 'Reach 10 billion total cookies',
     hidden: true,
-    requirement: (s) => s.primaryLifetimeAtLeast('1e10'),
+    spec: { kind: 'lifetime-at-least', threshold: '1e10' },
   },
   {
     id: 'hidden-1e30-lifetime',
     name: 'Cosmic Confection',
     description: 'Reach 1e30 total cookies',
     hidden: true,
-    requirement: (s) => s.primaryLifetimeAtLeast('1e30'),
+    spec: { kind: 'lifetime-at-least', threshold: '1e30' },
+  },
+  {
+    id: 'hidden-arc-close',
+    name: 'The Bakery Hums',
+    description: 'Own every producer tier and buy every in-arc upgrade',
+    hidden: true,
+    spec: { kind: 'arc-close' },
   },
 ];
 

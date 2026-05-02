@@ -19,26 +19,24 @@ import {
   runFlowProbe,
   type ProducerInspector,
 } from '@/balance';
-import { BuildingsKey, ProducerDataKey } from '../modules';
+import { BuildingsKey } from '../modules';
 import { ARC_BEATS, BEAT_WINDOWS, FLOW_BEATS } from './beats';
 import { buildProducerSimEngine } from './bot';
 
 const inspect: ProducerInspector = {
   ownedProducers: (engine: Engine) => {
     const buildings = engine.tryInject(BuildingsKey);
-    const data = engine.tryInject(ProducerDataKey);
-    if (!buildings || !data) return [];
+    if (!buildings) return [];
 
     const out: ReturnType<ProducerInspector['ownedProducers']> = [];
-    for (const def of data.producers) {
+    for (const entry of buildings.getAll()) {
+      const { def, producer } = entry;
       if (def.trigger !== 'continuous' || !def.purchase) continue;
-      const p = buildings.getProducer(def.id);
-      if (!p) continue;
-      const count = Number(p.count.value);
+      const count = Number(producer.count.value);
       if (count < 1) continue;
 
       const baseRate = Number(def.baseRate);
-      const stackedPerUnit = Number(p.rateChain.apply(baseRate));
+      const stackedPerUnit = Number(producer.rateChain.apply(baseRate));
 
       out.push({
         id: def.id,
@@ -64,7 +62,7 @@ function main(): void {
     buildEngine: () => buildProducerSimEngine(),
     beats: ARC_BEATS,
     seeds: [0, 1, 2, 3, 4],
-    maxSimTime: BEAT_WINDOWS['beat-8']![1] * 2.5,
+    maxSimTime: BEAT_WINDOWS['beat-7']![1] * 2.5,
     tickDelta: 1,
   });
   console.log(renderArcTable(arcResults));

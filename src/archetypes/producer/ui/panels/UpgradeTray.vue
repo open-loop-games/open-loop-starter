@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useModule } from '@/composables/useModule';
+import { BuildingsKey } from '../../modules';
 import { useUpgrades, type UpgradeRow } from '../../composables/useUpgrades';
-import { useProducerData } from '../../composables/useProducerData';
 import { useFormatting } from '@/composables/useFormatting';
 import Tooltip from '@/ui/components/Tooltip.vue';
 
-const data = useProducerData();
+const buildings = useModule(BuildingsKey);
 const groups = useUpgrades();
 const { format } = useFormatting();
 
-const continuousProducers = data.producers.filter((p) => p.trigger === 'continuous');
+const continuousProducers = buildings
+  .getAll()
+  .filter((entry) => entry.def.trigger === 'continuous')
+  .map((entry) => entry.def);
 
 interface Section {
   key: string;
@@ -51,21 +55,14 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
       <span class="recipe-index__hint">tap to bake in</span>
     </header>
 
-    <section
-      v-for="section in view.sections"
-      :key="section.key"
-      class="recipe-section"
-    >
+    <section v-for="section in view.sections" :key="section.key" class="recipe-section">
       <h4 class="recipe-section__title">
         <span class="recipe-section__name">{{ section.title }}</span>
         <span class="recipe-section__rule" />
         <span class="recipe-section__count">{{ section.rows.length }}</span>
       </h4>
       <ul class="recipe-list">
-        <li
-          v-for="row in section.rows"
-          :key="row.def.id"
-        >
+        <li v-for="row in section.rows" :key="row.def.id">
           <Tooltip>
             <button
               type="button"
@@ -75,10 +72,7 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
               :data-testid="`upgrade-${row.def.id}`"
               @click="row.purchase()"
             >
-              <span
-                class="recipe-row__bullet"
-                aria-hidden="true"
-              >&middot;</span>
+              <span class="recipe-row__bullet" aria-hidden="true">&middot;</span>
               <span class="recipe-row__name">{{ row.def.name }}</span>
               <span class="recipe-row__dots" />
               <span class="recipe-row__cost">{{ format(row.def.cost, 0) }}</span>
@@ -90,38 +84,23 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
               <div class="tip-desc">
                 {{ row.def.description }}
               </div>
-              <div class="tip-cost">
-                Cost &middot; {{ format(row.def.cost, 0) }}
-              </div>
+              <div class="tip-cost">Cost &middot; {{ format(row.def.cost, 0) }}</div>
             </template>
           </Tooltip>
         </li>
       </ul>
     </section>
 
-    <section
-      v-if="view.owned.length"
-      class="recipe-pantry"
-    >
+    <section v-if="view.owned.length" class="recipe-pantry">
       <h4 class="recipe-pantry__title">
         <span class="recipe-pantry__title-text">Bought &amp; Baked</span>
         <span class="recipe-pantry__count">{{ view.owned.length }}</span>
       </h4>
       <ul class="recipe-pantry__list">
-        <li
-          v-for="row in view.owned"
-          :key="row.def.id"
-          :data-testid="`upgrade-${row.def.id}`"
-        >
+        <li v-for="row in view.owned" :key="row.def.id" :data-testid="`upgrade-${row.def.id}`">
           <Tooltip>
-            <span
-              class="seal"
-              tabindex="0"
-            >
-              <span
-                class="seal__check"
-                aria-hidden="true"
-              >&#10003;</span>
+            <span class="seal" tabindex="0">
+              <span class="seal__check" aria-hidden="true">&#10003;</span>
               <span class="seal__name">{{ row.def.name }}</span>
             </span>
             <template #content>
@@ -137,10 +116,7 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
       </ul>
     </section>
 
-    <p
-      v-if="!view.sections.length && !view.owned.length"
-      class="recipe-empty"
-    >
+    <p v-if="!view.sections.length && !view.owned.length" class="recipe-empty">
       No recipes in the book yet. Bake a few cookies first.
     </p>
   </div>

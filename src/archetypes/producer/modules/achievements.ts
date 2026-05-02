@@ -1,29 +1,83 @@
-import { computed } from 'vue';
+import { unref } from 'vue';
+import type { Ref } from 'vue';
 import {
   Decimal,
   createAchievementCategory,
+  createMultiplicativeModifier,
+  getCombinedAchievementEffect,
   tunable,
+  type Achievement,
   type AchievementCategory,
   type DecimalSource,
   type EngineModule,
-  type Grant,
   type InjectionKey,
+  type PurchasableCategory,
+  type Resource,
 } from 'open-loop-engine';
-import type { AchievementDef, ProducerData, ProducerGameState } from '../data/types';
+import type {
+  AchievementDef,
+  AchievementSpec,
+  ProducerData,
+  ProducerDef,
+  UpgradeDef,
+} from '../data/types';
 import {
-  AllRateChainsKey,
   BuildingsKey,
-  ClickStateKey,
   PrimaryLifetimeKey,
   PrimaryResourceKey,
-  HeadlineRateKey,
   ProducerTuningRegistryKey,
+  type ProducerInstanceState,
 } from './producers';
 import { UpgradesKey } from './upgrades';
 
-export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef>> = Symbol(
+export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef, unknown>> = Symbol(
   'producer/achievements',
-) as InjectionKey<AchievementCategory<AchievementDef>>;
+) as InjectionKey<AchievementCategory<AchievementDef, unknown>>;
+
+interface RequirementHandles {
+  primary: Resource<DecimalSource>;
+  primaryLifetime: Ref<DecimalSource>;
+  buildings: import('open-loop-engine').ProducerCategory<ProducerDef, ProducerInstanceState>;
+  upgrades: PurchasableCategory<UpgradeDef>;
+  continuousIds: string[];
+  tier1Ids: string[];
+  arcUpgradeIds: string[];
+}
+
+function requirementForSpec(spec: AchievementSpec, h: RequirementHandles): () => boolean {
+  switch (spec.kind) {
+    case 'lifetime-at-least':
+      return () => Decimal.gte(h.primaryLifetime.value, spec.threshold);
+    case 'producer-count-at-least':
+      return () => {
+        const p = h.buildings.getProducer(spec.producer);
+        return p ? Decimal.gte(p.count.value, spec.count) : false;
+      };
+    case 'click-count-at-least': {
+      const state = h.buildings.getState('click');
+      return () => (state?.count.value ?? 0) >= spec.count;
+    }
+    case 'upgrade-bought':
+      return () => h.upgrades.getPurchasable(spec.upgradeId)?.active.value ?? false;
+    case 'any-upgrade-bought':
+      return () =>
+        spec.upgradeIds.some((id) => h.upgrades.getPurchasable(id)?.active.value ?? false);
+    case 'all-producers-owned':
+      return () =>
+        h.continuousIds.every((id) => {
+          const p = h.buildings.getProducer(id);
+          return p ? Decimal.gte(p.count.value, 1) : false;
+        });
+    case 'all-tier1-upgrades':
+      return () => h.tier1Ids.every((id) => h.upgrades.getPurchasable(id)?.active.value ?? false);
+    case 'arc-close':
+      return () =>
+        h.continuousIds.every((id) => {
+          const p = h.buildings.getProducer(id);
+          return p ? Decimal.gte(p.count.value, 1) : false;
+        }) && h.arcUpgradeIds.every((id) => h.upgrades.getPurchasable(id)?.active.value ?? false);
+  }
+}
 
 export function createAchievementsModule(data: ProducerData): EngineModule {
   return {
@@ -34,37 +88,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
       const upgrades = ctx.inject(UpgradesKey);
       const primary = ctx.inject(PrimaryResourceKey);
       const primaryLifetime = ctx.inject(PrimaryLifetimeKey);
-      const headlineRate = ctx.inject(HeadlineRateKey);
-      const clickState = ctx.inject(ClickStateKey);
-      const allChains = ctx.inject(AllRateChainsKey);
       const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
-
-      // Live read view of module state, passed to data predicates. Methods
-      // encapsulate Decimal comparisons so data/*.ts stays engine-free.
-      const state: ProducerGameState = {
-        primaryAtLeast: (amount) => Decimal.gte(primary.value, amount),
-        primaryLifetimeAtLeast: (amount) => Decimal.gte(primaryLifetime.value, amount),
-        perSecondAtLeast: (amount) => Decimal.gte(headlineRate.value, amount),
-        producerCountAtLeast: (id, count) => {
-          const p = buildings.getProducer(id);
-          if (!p) return false;
-          return Decimal.gte(p.count.value, count);
-        },
-        upgradeBought: (id) => upgrades.getPurchasable(id)?.active.value ?? false,
-        clickCountAtLeast: (count) => clickState.clickCount.value >= count,
-        ownsEveryProducer: () =>
-          data.producers
-            .filter((p) => p.trigger === 'continuous')
-            .every((p) => {
-              const producer = buildings.getProducer(p.id);
-              return producer ? Decimal.gte(producer.count.value, 1) : false;
-            }),
-        allTier1UpgradesBought: () =>
-          data.producers
-            .filter((p) => p.trigger === 'continuous')
-            .every((p) => upgrades.getPurchasable(`${p.id}-boost-i`)?.active.value ?? false),
-        secondsSinceLastClick: () => clickState.elapsedSec.value - clickState.lastClickSec.value,
-      };
 
       const achievementMultiplier = tunable<DecimalSource>(
         tuningRegistry,
@@ -72,28 +96,58 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
         () => data.balance.achievementMultiplier,
       );
 
+      const continuousIds = data.producers
+        .filter((p) => p.trigger === 'continuous')
+        .map((p) => p.id);
+      const tier1Ids = continuousIds.map((id) => `${id}-boost-i`);
+      // Tier-iii per-producer upgrades are post-arc; everything else (per-producer
+      // i/ii/iia + globals + clicks) is in-arc.
+      const arcUpgradeIds = data.upgrades
+        .filter((u) => !u.id.endsWith('-boost-iii'))
+        .map((u) => u.id);
+
+      const handles: RequirementHandles = {
+        primary,
+        primaryLifetime,
+        buildings,
+        upgrades,
+        continuousIds,
+        tier1Ids,
+        arcUpgradeIds,
+      };
+
       const achievements = createAchievementCategory<AchievementDef>({
         id: 'producer/achievements',
-        mapAchievement: (def) => {
-          const grants: Grant[] = [
-            {
-              chain: allChains,
-              mult: def.rewardMultiplier ?? achievementMultiplier,
-              description: def.name,
-            },
-          ];
-          return {
-            display: {
-              title: def.name,
-              description: def.description,
-            },
-            requirement: computed(() => def.requirement(state)),
-            hidden: def.hidden ?? false,
-            grants,
-          };
-        },
+        mapAchievement: (def) => ({
+          display: { title: def.name, description: def.description },
+          requirement: requirementForSpec(def.spec, handles),
+          hidden: def.hidden ?? false,
+          effect: (): number => {
+            const raw = def.reward ?? unref(achievementMultiplier);
+            return new Decimal(raw).toNumber();
+          },
+        }),
       });
       achievements.register(data.achievements);
+
+      // G-M10 — one multiplicative modifier per rate chain over the cumulative
+      // earned-achievement product. Replaces 30 per-achievement Grants on each
+      // chain with a single binding whose getter folds the active set.
+      const allAchievements = achievements
+        .getAll()
+        .map((entry) => entry.achievement) as Achievement<number>[];
+
+      for (const def of data.producers) {
+        const producer = buildings.getProducer(def.id);
+        if (!producer) continue;
+        producer.rateChain.bind({
+          id: `achievements/${def.id}`,
+          modifier: createMultiplicativeModifier({
+            multiplier: () => getCombinedAchievementEffect(allAchievements),
+            description: 'Achievements',
+          }),
+        });
+      }
 
       ctx.provide(AchievementsKey, achievements);
     },

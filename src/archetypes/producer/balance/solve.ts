@@ -30,7 +30,7 @@ import { PRODUCERS } from '../data/producers';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { buildProducerSimEngine } from './bot';
 
-const BUDGET_SEC = BEAT_WINDOWS['beat-8']![1] * 2.5;
+const BUDGET_SEC = BEAT_WINDOWS['beat-7']![1] * 2.5;
 
 // ─── Proposal state ──────────────────────────────────────────────────────
 //
@@ -400,7 +400,6 @@ function main(): void {
     'beat-5',
     'beat-6',
     'beat-7',
-    'beat-8',
   ]);
   console.log(
     renderTable(

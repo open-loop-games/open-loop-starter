@@ -32,10 +32,11 @@ export interface PhaseIntent {
  */
 export const PRODUCER_IDENTITY = {
   archetypeId: 'producer' as const,
-  /** Arc budget in sim-seconds. Producer is a 1–2h archetype; the scaffolding
-   *  targets the upper bound. Forks compressing below ~90min or extending
-   *  past ~180min are re-shaping, not re-tuning. */
-  arcBudgetSec: 120 * 60,
+  /** Arc budget in sim-seconds. Producer is a ~1.5h archetype; the
+   *  scaffolding targets the signature-compound phase upper bound. Forks
+   *  compressing below ~60min or extending past ~180min are re-shaping,
+   *  not re-tuning. */
+  arcBudgetSec: 90 * 60,
   /** Minimum content cardinality below which the tier-up feel breaks down.
    *  Soft floor — the scaffolding currently ships with more on both. */
   minContinuousProducers: 5,
@@ -93,12 +94,6 @@ export const PRODUCER_PHASES: readonly PhaseIntent[] = [
     order: 7,
     intent: 'Stacked rate-chain visible — the compounded stack that is the reward',
     currentBeatId: 'beat-7',
-  },
-  {
-    id: 'arc-close',
-    order: 8,
-    intent: 'Top-tier owned, global ladder complete — base arc closed',
-    currentBeatId: 'beat-8',
   },
 ] as const;
 

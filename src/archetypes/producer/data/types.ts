@@ -25,14 +25,29 @@ export interface UpgradeDef {
   multiplier: DecimalSource;
 }
 
+/**
+ * Discriminated requirement spec. Data files stay engine-free by emitting
+ * structured kind+args; the achievements module dispatches on `kind` and
+ * builds reactive predicates that close over engine handles.
+ */
+export type AchievementSpec =
+  | { kind: 'lifetime-at-least'; threshold: DecimalSource }
+  | { kind: 'producer-count-at-least'; producer: string; count: number }
+  | { kind: 'click-count-at-least'; count: number }
+  | { kind: 'upgrade-bought'; upgradeId: string }
+  | { kind: 'any-upgrade-bought'; upgradeIds: string[] }
+  | { kind: 'all-producers-owned' }
+  | { kind: 'all-tier1-upgrades' }
+  | { kind: 'arc-close' };
+
 export interface AchievementDef {
   id: string;
   name: string;
   description: string;
   hidden?: boolean;
-  requirement: (state: ProducerGameState) => boolean;
-  /** Headline-chain multiplicative reward. Defaults to `balance.achievementMultiplier`. */
-  rewardMultiplier?: DecimalSource;
+  /** Multiplicative reward when earned. Defaults to `balance.achievementMultiplier`. */
+  reward?: DecimalSource;
+  spec: AchievementSpec;
 }
 
 export interface ProducerBalance {
@@ -44,23 +59,6 @@ export interface ProducerBalance {
   milestoneBonusPerTier: DecimalSource;
   /** Tier-i upgrade cost as a multiple of the targeted producer's baseCost. */
   tier1UpgradeMultiplier: DecimalSource;
-}
-
-/**
- * Typed read view of module state, exposed to achievement predicates.
- * Methods encapsulate Decimal comparisons so `data/*.ts` never imports
- * the engine runtime.
- */
-export interface ProducerGameState {
-  primaryAtLeast: (amount: DecimalSource) => boolean;
-  primaryLifetimeAtLeast: (amount: DecimalSource) => boolean;
-  perSecondAtLeast: (amount: DecimalSource) => boolean;
-  producerCountAtLeast: (id: string, count: number) => boolean;
-  upgradeBought: (id: string) => boolean;
-  clickCountAtLeast: (count: number) => boolean;
-  ownsEveryProducer: () => boolean;
-  allTier1UpgradesBought: () => boolean;
-  secondsSinceLastClick: () => number;
 }
 
 export interface ProducerData {

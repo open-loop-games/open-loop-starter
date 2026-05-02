@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui';
-import { useHeadlineRate } from '../../composables/useHeadlineRate';
-import { useClickState } from '../../composables/useClickState';
-import { useProducerChainBreakdown } from '../../composables/useChainBreakdown';
+import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
+import { BuildingsKey, PrimaryLifetimeKey, PrimaryResourceKey } from '../../modules';
+import { useProducerChainBreakdown } from '../../composables/useChainBreakdown';
 import ClickCookieButton from '../components/ClickCookieButton.vue';
 
-const { primary, lifetime, perSecond } = useHeadlineRate();
-const click = useClickState();
+const buildings = useModule(BuildingsKey);
+const primary = useModule(PrimaryResourceKey);
+const lifetime = useModule(PrimaryLifetimeKey);
 const { format, formatWhole } = useFormatting();
 
 const cookies = computed(() => primary.value);
+const perSecond = computed(() => buildings.getTotalRate(primary));
+const click = computed(() => buildings.getState('click')!);
 
 // Cursor carries the richest stack (globals + achievements + cursor upgrades
 // + cursor milestones) so it reads as the headline factor list. If cursor is
@@ -53,14 +56,14 @@ const expanded = ref(false);
     <ClickCookieButton
       data-testid="click-cookie"
       label="Bake"
-      @click="click.click"
+      @click="click.activate"
     />
 
     <footer class="hero-footnote">
       <div class="hero-footnote__rule" />
       <span class="hero-footnote__line"> lifetime &middot; {{ format(lifetime, 0) }} </span>
       <span class="hero-footnote__line hero-footnote__line--clicks">
-        {{ formatWhole(click.clickCount.value) }} hand-baked
+        {{ formatWhole(click.count.value) }} hand-baked
       </span>
     </footer>
 

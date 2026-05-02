@@ -10,8 +10,6 @@ import {
 } from 'open-loop-engine';
 import {
   BuildingsKey,
-  ClickStateKey,
-  HeadlineRateKey,
   PrimaryResourceKey,
   UpgradesKey,
   createProducerEngine,
@@ -55,15 +53,17 @@ function createBalanceBotModule(): EngineModule {
     id: 'balance-bot',
     dependencies: ['producer/producers', 'producer/upgrades'],
     install(ctx) {
-      const clickState = ctx.inject(ClickStateKey);
       const buildings = ctx.inject(BuildingsKey);
       const upgrades = ctx.inject(UpgradesKey);
+      const clickState = buildings.getState('click');
+      if (!clickState) throw new Error('balance-bot: click producer state missing');
 
       // Accumulators live in persistent refs so `importSave(initialBlob)`
       // resets them alongside game state. Under build-once-reuse (the
       // solver flow), the bot module installs once but many probe
       // iterations run against the same engine; closure-local `let` state
       // would leak across iterations silently.
+      const simTime = persistent<number>(0, { name: 'simTime' });
       const clicksFired = persistent<number>(0, { name: 'clicksFired' });
       const upgradeAccum = persistent<number>(0, { name: 'upgradeAccum' });
 
@@ -72,10 +72,11 @@ function createBalanceBotModule(): EngineModule {
       // See open-loop-engine/docs/candidate-primitives.md § TimedInput.
       // Graduates when a second archetype's balance bot hits the same
       // shape.
-      ctx.onTick(() => {
-        const target = expectedClicksAt(clickState.elapsedSec.value);
+      ctx.onTick((dt: number) => {
+        simTime.value += dt;
+        const target = expectedClicksAt(simTime.value);
         while (clicksFired.value < target) {
-          clickState.click();
+          clickState.activate();
           clicksFired.value++;
         }
       });
@@ -123,10 +124,11 @@ function createBalanceBotModule(): EngineModule {
  */
 export function buildProducerAccessor(engine: Engine): GameStateAccessor {
   const cookies = engine.tryInject(PrimaryResourceKey)!;
-  const rate = engine.tryInject(HeadlineRateKey)!;
+  const buildings = engine.tryInject(BuildingsKey)!;
   return {
     getResource: (id: string) => (id === 'cookies' ? bn(cookies.value as DecimalSource) : bn(0)),
-    getRate: (id: string) => (id === 'cookies' ? bn(rate.value as DecimalSource) : bn(0)),
+    getRate: (id: string) =>
+      id === 'cookies' ? bn(buildings.getTotalRate(cookies) as DecimalSource) : bn(0),
     isUnlocked: () => false,
     getState: () => undefined,
   };

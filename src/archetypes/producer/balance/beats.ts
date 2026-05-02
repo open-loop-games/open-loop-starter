@@ -1,13 +1,5 @@
 import { Decimal, type Engine } from 'open-loop-engine';
-import {
-  AchievementsKey,
-  ArcKey,
-  BuildingsKey,
-  HeadlineRateKey,
-  PrimaryResourceKey,
-  ProducerDataKey,
-  UpgradesKey,
-} from '../modules';
+import { AchievementsKey, BuildingsKey, PrimaryResourceKey, UpgradesKey } from '../modules';
 import type { ArcBeatProbe, BeatProbe } from '@/balance';
 
 const sec = (s: number) => s;
@@ -33,7 +25,6 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-5': [min(25), min(45)],
   'beat-6': [min(30), min(50)],
   'beat-7': [min(55), min(90)],
-  'beat-8': [min(95), min(120)],
 };
 
 const midpoint = (id: string): number => {
@@ -72,8 +63,6 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  * - 7: top-owned producer's rateChain compounds to ≥1e6× its base. The
  *   archetype-signature "watch the multiplier scroll" moment, scoped to
  *   whichever tier the player is producing on.
- * - 8: `ArcKey.complete` — every continuous producer owned ≥1 AND every
- *   global upgrade bought. Wired in `modules/arc.ts`.
  */
 export const ARC_BEATS: ArcBeatProbe[] = [
   {
@@ -114,11 +103,6 @@ export const ARC_BEATS: ArcBeatProbe[] = [
     specWindow: BEAT_WINDOWS['beat-7']!,
     predicate: (engine) => topProducerHeadlineAtLeast(engine, 1e6),
   },
-  {
-    id: 'beat-8',
-    specWindow: BEAT_WINDOWS['beat-8']!,
-    predicate: (engine) => arcComplete(engine),
-  },
 ];
 
 // ─── Predicate helpers ────────────────────────────────────────────────────
@@ -148,14 +132,11 @@ function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {
  */
 function anyContinuousProducerAtLeast(engine: Engine, minCount: number): boolean {
   const buildings = engine.tryInject(BuildingsKey);
-  const data = engine.tryInject(ProducerDataKey);
-  if (!buildings || !data) return false;
+  if (!buildings) return false;
 
-  for (const def of data.producers) {
-    if (def.trigger !== 'continuous') continue;
-    const p = buildings.getProducer(def.id);
-    if (!p) continue;
-    if (Decimal.gte(p.count.value, minCount)) return true;
+  for (const entry of buildings.getAll()) {
+    if (entry.def.trigger !== 'continuous') continue;
+    if (Decimal.gte(entry.producer.count.value, minCount)) return true;
   }
   return false;
 }
@@ -166,27 +147,19 @@ function anyContinuousProducerAtLeast(engine: Engine, minCount: number): boolean
  */
 function topProducerHeadlineAtLeast(engine: Engine, factor: number): boolean {
   const buildings = engine.tryInject(BuildingsKey);
-  const data = engine.tryInject(ProducerDataKey);
-  if (!buildings || !data) return false;
+  if (!buildings) return false;
 
-  let topDef: (typeof data.producers)[number] | undefined;
-  for (const def of data.producers) {
-    if (def.trigger !== 'continuous') continue;
-    const p = buildings.getProducer(def.id);
-    if (p && Decimal.gte(p.count.value, 1)) topDef = def;
+  let topEntry: ReturnType<typeof buildings.getAll>[number] | undefined;
+  for (const entry of buildings.getAll()) {
+    if (entry.def.trigger !== 'continuous') continue;
+    if (Decimal.gte(entry.producer.count.value, 1)) topEntry = entry;
   }
-  if (!topDef) return false;
+  if (!topEntry) return false;
 
-  const top = buildings.getProducer(topDef.id)!;
-  const base = new Decimal(topDef.baseRate);
-  const stacked = new Decimal(top.rateChain.apply(base));
+  const base = new Decimal(topEntry.def.baseRate);
+  const stacked = new Decimal(topEntry.producer.rateChain.apply(base));
   if (base.lte(0)) return false;
   return stacked.div(base).gte(factor);
-}
-
-function arcComplete(engine: Engine): boolean {
-  const arc = engine.tryInject(ArcKey);
-  return arc?.complete.value ?? false;
 }
 
 // Re-export for callers that want to compute the beat 7 headline directly
@@ -197,10 +170,4 @@ export {
   achievementsEarnedAtLeast,
   producerCountAtLeast,
   upgradeBought,
-  arcComplete,
 };
-
-// HeadlineRateKey is re-imported above only to keep it in the module's
-// import surface for downstream consumers that want the live rate ref;
-// the predicates themselves go through rateChain.apply for explicitness.
-void HeadlineRateKey;
