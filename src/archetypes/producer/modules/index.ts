@@ -4,7 +4,6 @@ import { createProducersModule } from './producers';
 import { createUpgradesModule } from './upgrades';
 import { createMilestonesModule } from './milestones';
 import { createAchievementsModule } from './achievements';
-import { createCategoriesPublishModule } from './categories-publish';
 
 export {
   PrimaryResourceKey,
@@ -27,6 +26,5 @@ export function createProducerModules(data: ProducerData): EngineModule[] {
     createUpgradesModule(data),
     createMilestonesModule(data),
     createAchievementsModule(data),
-    createCategoriesPublishModule(),
   ];
 }
