@@ -1,15 +1,10 @@
 /**
  * Progress action type — per-def persistent state + tick handler + category shim.
  *
- * Shape mirrors `basic.ts`. The difference is at completion: progress-type
- * actions grant exploration XP into a progress var through `addProgressXP`,
- * multiplied by a per-def `gainChain`. `affectedBy` entries bind onto that
- * chain via `registerAffectedByEffects`.
- *
- * The gainChain lives on ProgressState — it was previously on the engine
- * Action instance, but dispatcher-owned action types no longer instantiate
- * Action objects, so ownership moved here. The engine's ModifierChain
- * primitive is standalone (createModifierChain), no Action required.
+ * Shape mirrors `basic.ts`. At completion, progress-type actions grant
+ * exploration XP into a progress var through `addProgressXP`, multiplied by a
+ * per-def `gainChain`. `affectedBy` entries bind onto that chain via
+ * `registerAffectedByEffects`.
  *
  * Per-def state tracks tick-wise progress toward `computeAdjustedTicks(def)`
  * (same mechanic as basic), plus `timesCompleted` for UI. The progress-var

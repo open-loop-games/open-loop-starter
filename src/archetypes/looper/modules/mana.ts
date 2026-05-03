@@ -19,6 +19,7 @@ import {
   type EngineContext,
   createResource,
   addResource,
+  subtractResource,
   resetResource,
   type Resource,
   persistent,
@@ -89,10 +90,12 @@ export function addMana(amount: DecimalSource): void {
 /**
  * Drain mana by a given amount.
  *
- * Called by the loop module's tick callback (1 per tick while running).
+ * Called by the loop module's tick callback (1 per tick while running). Allows
+ * negative — the loop's `endCondition` reads `mana <= 0` and a single tick
+ * may overshoot the remaining budget.
  */
 export function drainMana(amount: DecimalSource): void {
-  manaResource.value = Decimal.sub(manaResource.value, amount);
+  subtractResource(manaResource, amount, { allowNegative: true });
 }
 
 /**
@@ -100,7 +103,6 @@ export function drainMana(amount: DecimalSource): void {
  */
 export function resetMana(): void {
   resetResource(manaResource);
-  manaResource.value = Decimal.fromValue(INITIAL_MANA);
   manaAdded.value = 0;
 }
 

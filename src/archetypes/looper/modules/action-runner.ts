@@ -137,7 +137,7 @@ export function addCompletionHook(hook: CompletionHook): void {
 }
 
 // ============================================================================
-// Prereq evaluation (inlined from deleted modules/prereqs.ts)
+// Prereq evaluation
 // ============================================================================
 
 export function getTimesCompleted(actionId: string): Decimal {
@@ -172,10 +172,7 @@ function evaluatePrereq(prereq: ActionPrereq): boolean {
   }
 }
 
-/**
- * Check if an action is visible (all prereqs match).
- * Replaces the deleted modules/prereqs.ts `isActionVisible`.
- */
+/** Check if an action is visible (all prereqs match). */
 export function isActionVisible(def: ActionDef): boolean {
   if (!def.prereqs || def.prereqs.length === 0) return true;
   return def.prereqs.every(evaluatePrereq);
@@ -221,6 +218,12 @@ function buildLooperGameState(): LooperGameState {
 /**
  * Apply looper CompletionEffect array (basic-type actions).
  * Snapshot gold before the batch so exchange-gold-to-mana reads pre-spend gold.
+ *
+ * TODO(expansion): bypasses engine `applyEffect` per AUDITING.md § 9. The
+ * `spend-gold: 'all'` and `exchange-gold-to-mana` (pre-batch read)
+ * semantics need composite/conditional `IEffect` shapes or a
+ * snapshot-aware `GameStateAccessorMutator`. Defer pending engine-side
+ * mutator/composite-effect design.
  */
 function applyLooperCompletionEffects(def: ActionDef): void {
   if (def.type !== 'basic' || !def.completionEffects?.length) return;

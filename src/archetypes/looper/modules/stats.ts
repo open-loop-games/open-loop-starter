@@ -29,7 +29,44 @@ import {
   withPersistentContext,
   type Persistent,
 } from 'open-loop-engine';
-import { STATS, levelFromXP, xpForLevel, calcTalentMult } from '../data/stats';
+import { STATS } from '../data/stats';
+
+// ============================================================================
+// Formulas (shared quadratic shape from vanilla idle-loops)
+// ============================================================================
+
+/**
+ * Quadratic level from XP: `floor((sqrt(8 * xp / 100 + 1) - 1) / 2)`
+ *
+ * Used for stat levels and talent levels.
+ * Reference: idleLoops/stats.js getLevelFromExp / getLevelFromTalent
+ */
+export function levelFromXP(xp: DecimalSource): Decimal {
+  return Decimal.floor(
+    Decimal.div(
+      Decimal.sub(Decimal.sqrt(Decimal.add(Decimal.mul(8, Decimal.div(xp, 100)), 1)), 1),
+      2,
+    ),
+  );
+}
+
+/**
+ * XP required to reach a given level: `level * (level + 1) * 50`
+ *
+ * Reference: idleLoops/stats.js getExpOfLevel / getExpOfTalent
+ */
+export function xpForLevel(level: DecimalSource): Decimal {
+  return Decimal.mul(Decimal.mul(level, Decimal.add(level, 1)), 50);
+}
+
+/**
+ * Talent level → XP multiplier: `1 + talent^0.5 / 5`
+ *
+ * Reference: idleLoops/actions.js calcTalentMult
+ */
+export function calcTalentMult(talentLevel: DecimalSource): Decimal {
+  return Decimal.add(1, Decimal.div(Decimal.pow(talentLevel, 0.5), 5));
+}
 
 // ============================================================================
 // Types

@@ -11,6 +11,14 @@
  * file becomes a thin call site that provides the type tag and a builder
  * closure — the helper stays type-parametric so `ProgressState`/`MultipartState`
  * don't collapse to a shared shape.
+ *
+ * TODO(expansion): this mirrors `createDefinitionStates` (engine
+ * `src/core/persistence.ts:783`) plus typeTag dispatch + eager `installOne`
+ * for late mod registration. No engine category fits actions (skill /
+ * purchasable / achievement / producer / challenge each carry semantics
+ * actions don't share). N=1 today; promote to a starter-shared
+ * createDefinitionStates-with-typeTag-dispatch helper if a second consumer
+ * hand-rolls the same shape.
  */
 
 import {
