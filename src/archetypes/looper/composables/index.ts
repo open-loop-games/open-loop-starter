@@ -1,6 +1,6 @@
 export { useLooperData } from './useLooperData';
 export { useMana } from './useMana';
-export { useStats, type StatState } from './useStats';
+export { useStats } from './useStats';
 export { useZones, type ProgressVarState, type RegularVarState } from './useZones';
 export { useResources, type ResourceId } from './useResources';
 export { useTrackedResources } from './useTrackedResources';

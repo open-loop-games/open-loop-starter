@@ -10,7 +10,7 @@
 
 import { Decimal, type DecimalSource } from 'open-loop-engine';
 import type { ActionDef } from '../data/types';
-import { getStatLevel, getTotalBonusXP, addStatXP } from './stats';
+import { getStatLevel, getTalentMult, addStatXP } from './stats';
 import { getActiveLoopQueue, accumulateCurrentItemStatExp } from './action-queue';
 
 /** Evaluate a manaCost field (static number or Decimal-compatible source) */
@@ -41,7 +41,12 @@ export function computeAdjustedTicks(def: ActionDef): Decimal {
 /**
  * Grant stat XP from an action's tick.
  *
- * Per stat with weight: `xp = weight * expMult * (manaCost / adjustedTicks) * totalBonusXP`
+ * Per stat with weight: pass the raw `weight * adjustedExp` to `addStatXP`.
+ * The stat-level + talent gainChains apply the talent multiplier (bound in
+ * `statsModule.connect()`), so the boosted amount lands on the level skill
+ * and `boosted * talentAccrualRatio` lands on the talent skill — matching
+ * the canonical idle-loops formula without manual talentMult application
+ * at this call site.
  *
  * Reference: idleLoops/actions.js addExpFromAction
  */
@@ -52,10 +57,12 @@ export function addExpFromAction(def: ActionDef, adjustedTicks: DecimalSource): 
   const statExpGains: Record<string, number> = {};
   for (const [stat, weight] of Object.entries(def.weights)) {
     if (!weight) continue;
-    const bonusXP = getTotalBonusXP(stat);
-    const xpToAdd = Decimal.mul(Decimal.mul(weight, adjustedExp), bonusXP);
-    addStatXP(stat, xpToAdd);
-    statExpGains[stat] = xpToAdd.toNumber();
+    const raw = Decimal.mul(weight, adjustedExp);
+    // Boosted = what gainChain applies inside addStatXP — surface it for the
+    // per-item statExp display ("actual XP accumulated this loop").
+    const boosted = Decimal.mul(raw, getTalentMult(stat));
+    addStatXP(stat, raw);
+    statExpGains[stat] = boosted.toNumber();
   }
   accumulateCurrentItemStatExp(statExpGains);
 }

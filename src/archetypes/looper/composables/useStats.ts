@@ -4,29 +4,37 @@
 
 import { STATS } from '../data/stats';
 import {
-  getAllStatStates,
-  getStatState,
+  getStatLevelSkills,
+  getTalentSkills,
+  getStatLevelSkill,
+  getTalentSkill,
   getStatLevel,
-  getTotalBonusXP,
+  getTalentLevel,
+  getTalentMult,
   getStatXPProgress,
   getTalentXPProgress,
   getLevelXPWindow,
   getTalentXPWindow,
-  type StatState,
 } from '../modules/stats';
 
 export function useStats() {
   return {
     /** Static stat definitions */
     stats: STATS,
-    /** All stat states (reactive map) */
-    allStats: getAllStatStates(),
-    /** Get state for one stat */
-    getStatState,
-    /** Get computed level for a stat */
+    /** SkillCategory of per-loop stat-XP skills */
+    statLevelSkills: getStatLevelSkills(),
+    /** SkillCategory of cross-loop talent skills */
+    talentSkills: getTalentSkills(),
+    /** Get the stat-level Skill for a stat (per-loop xp/level) */
+    getStatLevelSkill,
+    /** Get the talent Skill for a stat (cross-loop xp/level/multiplier) */
+    getTalentSkill,
+    /** Stat level (per-loop xp → level) */
     getStatLevel,
-    /** Get total bonus XP multiplier */
-    getTotalBonusXP,
+    /** Talent level (cross-loop xp → level) */
+    getTalentLevel,
+    /** Talent multiplier (1 + talentLevel^0.5 / 5) */
+    getTalentMult,
     /** XP progress to next level (0-1) */
     getStatXPProgress,
     /** Talent XP progress to next level (0-1) */
@@ -37,5 +45,3 @@ export function useStats() {
     getTalentXPWindow,
   };
 }
-
-export type { StatState };

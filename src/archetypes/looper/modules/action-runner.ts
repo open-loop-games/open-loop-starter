@@ -20,6 +20,7 @@ import {
   type EngineModule,
   type EngineContext,
   type ContentRegistry,
+  type Loop,
   createContentRegistry,
   GameLoopKey,
 } from 'open-loop-engine';
@@ -40,7 +41,8 @@ import { computeAdjustedTicks, addExpFromAction } from './action-formulas';
 import { installBasicOne, dispatchBasic, basicCategory } from './action-types/basic';
 import { installProgressOne, dispatchProgress, progressCategory } from './action-types/progress';
 import { installRegularOne, dispatchRegular, regularCategory } from './action-types/regular';
-import { getStatState } from './stats';
+import { getStatLevel, getTalentLevel } from './stats';
+import { LoopKey } from './loop';
 import { getManaValue, addMana } from './mana';
 import {
   getResourceValue,
@@ -58,27 +60,8 @@ export { basicCategory, progressCategory, regularCategory };
 /** Bare content registry — per-type state and dispatch live in action-types/. */
 let actions: ContentRegistry<ActionDef>;
 
-/**
- * Progress gate — actions only tick when this returns true.
- * Set by the loop module to check loop.running.value.
- */
-let _canTick: (() => boolean) | null = null;
-
-/** Set the progress gate (called by loop module after install) */
-export function setCanTick(gate: () => boolean): void {
-  _canTick = gate;
-}
-
-/**
- * Loop count getter — set by the loop module so prereq evaluation can check
- * loopCount without a circular import. Defaults to always-0 until set.
- */
-let _getLoopCount: (() => number) | null = null;
-
-/** Set the loop count getter (called by loop module after install) */
-export function setLoopCountGetter(fn: () => number): void {
-  _getLoopCount = fn;
-}
+/** Loop handle — captured at install via ctx.inject(LoopKey). */
+let loop: Loop;
 
 /**
  * Restart flag — set when the dispatcher observes an exhausted active queue.
@@ -158,8 +141,8 @@ function evaluatePrereq(prereq: ActionPrereq): boolean {
       return Decimal.gte(getTimesCompleted(prereq.actionId), prereq.value);
     case 'stat-tier-level': {
       try {
-        const s = getStatState(prereq.statId);
-        const level = prereq.tier === 'level' ? s.level.value : s.talentLevel.value;
+        const level =
+          prereq.tier === 'level' ? getStatLevel(prereq.statId) : getTalentLevel(prereq.statId);
         return Decimal.gte(level, prereq.value);
       } catch {
         return false;
@@ -168,7 +151,7 @@ function evaluatePrereq(prereq: ActionPrereq): boolean {
     case 'progress-var-level':
       return Decimal.gte(getProgressLevel(prereq.progressVarId), prereq.value);
     case 'loop-count':
-      return (_getLoopCount?.() ?? 0) >= prereq.value;
+      return loop.count.value >= prereq.value;
   }
 }
 
@@ -192,8 +175,7 @@ function buildLooperGameState(): LooperGameState {
     },
     statLevelAtLeast(statId, tier, n) {
       try {
-        const s = getStatState(statId);
-        const level = tier === 'level' ? s.level.value : s.talentLevel.value;
+        const level = tier === 'level' ? getStatLevel(statId) : getTalentLevel(statId);
         return Decimal.gte(level, n);
       } catch {
         return false;
@@ -206,7 +188,7 @@ function buildLooperGameState(): LooperGameState {
       return Decimal.gte(getTimesCompleted(actionId), count);
     },
     loopCountAtLeast(n) {
-      return (_getLoopCount?.() ?? 0) >= n;
+      return loop.count.value >= n;
     },
   };
 }
@@ -323,7 +305,7 @@ function finishRegularCompletion(def: ActionDef): void {
 }
 
 function dispatchTick(dt: number): void {
-  if (!(_canTick?.() ?? false)) return;
+  if (!loop.running.value) return;
   const queue = getActiveLoopQueue();
   const item = queue.currentItem;
   if (!item) {
@@ -491,10 +473,11 @@ export function resetAllActionProgress(): void {
 
 export const actionRunnerModule: EngineModule = {
   id: 'action-runner',
-  dependencies: ['stats', 'mana', 'resources', 'zones', 'action-queue'],
+  dependencies: ['stats', 'mana', 'resources', 'zones', 'action-queue', 'loop'],
   install(ctx: EngineContext) {
     const gameLoop = ctx.inject(GameLoopKey);
     _dispatcherTickRate = gameLoop.tickRate;
+    loop = ctx.inject(LoopKey);
 
     actions = createContentRegistry<ActionDef>('actions');
     registerActions(ACTIONS);

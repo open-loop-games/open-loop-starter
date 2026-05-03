@@ -19,6 +19,7 @@ import {
   type EngineContext,
   type Loop,
   type GameLoop,
+  type InjectionKey,
   createLoop,
   createRetentionPolicy,
   type RetentionPolicy,
@@ -28,7 +29,7 @@ import {
   GameLoopKey,
 } from 'open-loop-engine';
 import { getMana, drainMana, resetMana } from './mana';
-import { getAllStatStates } from './stats';
+import { getStatLevelSkills } from './stats';
 import { resetAllResources } from './resources';
 import { restartZones, getProgressVarsForZone } from './zones';
 import {
@@ -38,13 +39,11 @@ import {
   getLoadoutNames,
   getActiveList,
 } from './action-queue';
-import {
-  setCanTick,
-  setLoopCountGetter,
-  resetAllActionProgress,
-  consumeRestartFlag,
-  isRestartFlagged,
-} from './action-runner';
+import { resetAllActionProgress, consumeRestartFlag, isRestartFlagged } from './action-runner';
+
+// Inline-in-publisher injection key so action-runner (and any future reader)
+// can `ctx.inject(LoopKey)` rather than sibling-importing module-scope state.
+export const LoopKey: InjectionKey<Loop> = Symbol('looper:loop');
 
 // ============================================================================
 // Module State
@@ -164,18 +163,15 @@ export function getGameSpeed(): SpeedMultiplier {
  * Build the retention policy — declares what survives the reset.
  *
  * What persists:
- * - Stat talent XP (accumulates 1% per XP gain, never reset)
  * - Town progress var exploration XP
  * - Loadout slots
  * - Loop counter + best time (handled by Loop internally)
+ *
+ * Talent skill XP isn't listed because talent skills aren't in
+ * `thingsToReset` — they're never reset, so retention is unnecessary.
  */
 function buildRetention(): RetentionPolicy {
   const keep: Persistent[] = [];
-
-  // Stat talent XP — persists across loops
-  for (const state of getAllStatStates().values()) {
-    keep.push(state.talentXP);
-  }
 
   // Town progress var XP — persists across loops
   for (const zoneId of ['beginnersville', 'forest-path'] as const) {
@@ -218,12 +214,11 @@ export const loopModule: EngineModule = {
       endCondition: () => Decimal.lte(getMana().value, 0) || isRestartFlagged(),
 
       thingsToReset: () => {
-        const things: unknown[] = [];
-        // Stat XP resources reset each loop (talent XP is retained)
-        for (const state of getAllStatStates().values()) {
-          things.push(state.xp);
-        }
-        return things;
+        // Stat-level SkillCategory resets each loop. Its `[Resettable]()` yields
+        // each skill instance; the recursive walker resets `xp` (LevelDriven
+        // mode has no other persistent ref). Talent SkillCategory is omitted
+        // here — its xp survives across loops.
+        return [getStatLevelSkills()];
       },
 
       onBeforeRestart: () => {
@@ -259,11 +254,7 @@ export const loopModule: EngineModule = {
       registerTick: ctx.onTick,
     });
 
-    // Gate action progress on loop.running
-    setCanTick(() => loop.running.value);
-
-    // Wire loop count into action-runner for prereq evaluation
-    setLoopCountGetter(() => loop.count.value);
+    ctx.provide(LoopKey, loop);
 
     // Per-tick: drain mana (tickRate * dt ≈ 1 per frame, scales with speed)
     ctx.onTick((dt: number) => {

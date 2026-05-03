@@ -49,5 +49,4 @@ export {
   type RegularVarState,
   type ActionMeta,
   type LoadoutEntry,
-  type StatState,
 } from './modules';

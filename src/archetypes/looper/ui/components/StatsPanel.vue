@@ -24,12 +24,14 @@ import {
   RadioGroupItem,
   RadioGroupRoot,
 } from 'reka-ui';
-import { Decimal, formatWhole } from 'open-loop-engine';
+import { formatWhole } from 'open-loop-engine';
 import { useStats } from '../../composables/useStats';
 
 const {
   stats: statDefs,
-  allStats,
+  getStatLevel,
+  getTalentLevel,
+  getTalentMult,
   getStatXPProgress,
   getTalentXPProgress,
   getLevelXPWindow,
@@ -56,20 +58,20 @@ interface StatTooltip {
 const statTooltips = computed<Record<string, StatTooltip>>(() => {
   const out: Record<string, StatTooltip> = {};
   for (const name of statList) {
-    const s = allStats.get(name);
-    if (!s) continue;
     const levelXP = getLevelXPWindow(name);
     const talentXP = getTalentXPWindow(name);
+    const talentMult = getTalentMult(name);
     out[name] = {
       name,
-      level: formatWhole(s.level.value),
+      level: formatWhole(getStatLevel(name)),
       levelXp: `${formatWhole(levelXP.current)} / ${formatWhole(levelXP.needed)}`,
       levelPct: `${(getStatXPProgress(name) * 100).toFixed(1)}%`,
-      talentLevel: formatWhole(s.talentLevel.value),
+      talentLevel: formatWhole(getTalentLevel(name)),
       talentXp: `${formatWhole(talentXP.current)} / ${formatWhole(talentXP.needed)}`,
       talentPct: `${(getTalentXPProgress(name) * 100).toFixed(1)}%`,
-      talentMult: `×${new Decimal(s.talentMult.value).toFixed(2)}`,
-      totalMult: `×${new Decimal(s.totalBonusXP.value).toFixed(2)}`,
+      talentMult: `×${talentMult.toFixed(2)}`,
+      // Slim demo: no soulstones, so totalBonusXP === talentMult.
+      totalMult: `×${talentMult.toFixed(2)}`,
     };
   }
   return out;
@@ -108,14 +110,8 @@ function drawRadar() {
   let highestLevel = 0;
   let highestXP = 0;
   for (const name of statList) {
-    const s = allStats.get(name);
-    if (!s) {
-      levels.push(0);
-      bonusPcts.push(0);
-      continue;
-    }
-    const lvl = Number(s.level.value.toString());
-    const bonusPct = (Number(new Decimal(s.totalBonusXP.value).toString()) - 1) * 100;
+    const lvl = getStatLevel(name).toNumber();
+    const bonusPct = (getTalentMult(name).toNumber() - 1) * 100;
     levels.push(lvl);
     bonusPcts.push(bonusPct);
     if (lvl > highestLevel) highestLevel = lvl;
@@ -192,9 +188,7 @@ watch(viewMode, (mode) => {
 const radarPulse = computed(() => {
   let acc = 0;
   for (const name of statList) {
-    const s = allStats.get(name);
-    if (!s) continue;
-    acc += Number(s.level.value.toString()) + Number(new Decimal(s.totalBonusXP.value).toString());
+    acc += getStatLevel(name).toNumber() + getTalentMult(name).toNumber();
   }
   return acc;
 });
@@ -256,13 +250,13 @@ watch(radarPulse, () => {
                 class="stat-level"
                 :data-testid="`stat-level-${name}`"
               >{{
-                formatWhole(allStats.get(name)?.level.value ?? 0)
+                formatWhole(getStatLevel(name))
               }}</span>
               <span
                 class="stat-talent"
                 :data-testid="`stat-talent-${name}`"
               >
-                T{{ formatWhole(allStats.get(name)?.talentLevel.value ?? 0) }}
+                T{{ formatWhole(getTalentLevel(name)) }}
               </span>
             </div>
             <div class="stat-bars">

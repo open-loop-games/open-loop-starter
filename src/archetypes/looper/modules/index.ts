@@ -34,17 +34,17 @@ export {
 } from './loop';
 export type { ProgressVarState, RegularVarState } from './zones';
 export type { ActionMeta, LoadoutEntry } from './action-queue';
-export type { StatState } from './stats';
 
 /**
  * Compose the looper modules in dependency order:
  *
  *   mana → resources → stats → zones →
- *   action-queue → action-runner → loop
+ *   action-queue → loop → action-runner
  *
- * The `action-runner` module declares its own dependencies so the engine
- * installs them in the right order. `initRunner()` and `registerActions()`
- * must be called from boot.ts after install.
+ * Each module declares its own `dependencies` so the engine installs them
+ * in the right order regardless of array position. `action-runner` depends
+ * on `loop` so it can `ctx.inject(LoopKey)` for `running` / `count` reads
+ * (no callback-injection shadows).
  */
 export function createLooperModules(): EngineModule[] {
   return [
@@ -53,7 +53,7 @@ export function createLooperModules(): EngineModule[] {
     statsModule,
     zonesModule,
     actionQueueModule,
-    actionRunnerModule,
     loopModule,
+    actionRunnerModule,
   ];
 }
