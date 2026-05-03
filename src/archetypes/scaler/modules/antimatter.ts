@@ -1,27 +1,20 @@
-import { computed, type ComputedRef } from 'vue';
 import {
   Decimal,
   type DecimalSource,
   type EngineContext,
   type EngineModule,
   type InjectionKey,
-  type ModifierChain,
-  type Producer,
   type ProducerCategory,
   type Purchasable,
+  type PurchasableGroup,
   type Resource,
-  createCostRequirement,
   createMultiplicativeModifier,
   createProducerCategory,
-  createPurchasable,
+  createPurchasableGroup,
   createResource,
+  createScalingPurchasable,
 } from 'open-loop-engine';
-import type {
-  AntimatterTierData,
-  AntimatterUpgradeDef,
-  ProducerDef,
-  ScalerData,
-} from '../data/types';
+import type { AntimatterUpgradeDef, ProducerDef, ScalerData } from '../data/types';
 
 // === Injection keys ===
 
@@ -41,13 +34,9 @@ export const AntimatterMultiplierKey: InjectionKey<Purchasable> = Symbol(
   'scaler/antimatter/multiplier',
 ) as InjectionKey<Purchasable>;
 
-export const AntimatterRateChainsKey: InjectionKey<ModifierChain[]> = Symbol(
-  'scaler/antimatter/rate-chains',
-) as InjectionKey<ModifierChain[]>;
-
-export const AntimatterTotalRateKey: InjectionKey<ComputedRef<DecimalSource>> = Symbol(
-  'scaler/antimatter/total-rate',
-) as InjectionKey<ComputedRef<DecimalSource>>;
+export const AntimatterUpgradeGroupKey: InjectionKey<PurchasableGroup> = Symbol(
+  'scaler/antimatter/upgrade-group',
+) as InjectionKey<PurchasableGroup>;
 
 // === Slim-port balance constants ===
 //
@@ -129,78 +118,61 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
       });
       producers.register(tier.producers);
 
-      const rateChains = collectRateChains(producers, tier);
-
       const accelerator = buildScalingUpgrade({
         def: findUpgrade(tier.upgrades, 'accelerator'),
         coin,
-        rateChains,
+        producers,
         costScaling: ACCELERATOR_COST_SCALING,
         perLevelMult: ACCELERATOR_PER_LEVEL_MULT,
       });
       const multiplier = buildScalingUpgrade({
         def: findUpgrade(tier.upgrades, 'multiplier'),
         coin,
-        rateChains,
+        producers,
         costScaling: MULTIPLIER_COST_SCALING,
         perLevelMult: MULTIPLIER_PER_LEVEL_MULT,
       });
 
-      const totalRate = computed(() => producers.getTotalRate(coin));
+      const upgradeGroup = createPurchasableGroup({
+        purchasables: [accelerator, multiplier],
+      });
 
       ctx.provide(AntimatterCoinKey, coin);
       ctx.provide(AntimatterProducersKey, producers);
       ctx.provide(AntimatterAcceleratorKey, accelerator);
       ctx.provide(AntimatterMultiplierKey, multiplier);
-      ctx.provide(AntimatterRateChainsKey, rateChains);
-      ctx.provide(AntimatterTotalRateKey, totalRate);
+      ctx.provide(AntimatterUpgradeGroupKey, upgradeGroup);
     },
   };
-}
-
-function collectRateChains(
-  producers: ProducerCategory<ProducerDef>,
-  tier: AntimatterTierData,
-): ModifierChain[] {
-  const chains: ModifierChain[] = [];
-  for (const def of tier.producers) {
-    const producer: Producer | undefined = producers.getProducer(def.id);
-    if (producer) chains.push(producer.rateChain);
-  }
-  return chains;
 }
 
 interface BuildScalingUpgradeOptions {
   def: AntimatterUpgradeDef;
   coin: Resource<DecimalSource>;
-  rateChains: ModifierChain[];
+  producers: ProducerCategory<ProducerDef>;
   costScaling: DecimalSource;
   perLevelMult: DecimalSource;
 }
 
-// Cumulative-buy upgrade (Accelerator / Multiplier). Cost is geometric in
-// the bought count; effect compounds into every antimatter rateChain via a
-// chain-bound multiplicative modifier. createPurchasableCategory's
-// `mapPurchasable` doesn't fit cleanly because the cost closure needs to
-// read the purchasable's own `amount.value` — the category's `mapPurchasable`
-// runs before the per-def Purchasable exists.
+// Cumulative-buy upgrade (Accelerator / Multiplier). Geometric cost is the
+// native createScalingPurchasable shape; per-level effect compounds into
+// every antimatter rateChain via post-creation chain.bind closing over the
+// returned Purchasable.
 function buildScalingUpgrade(opts: BuildScalingUpgradeOptions): Purchasable {
-  const { def, coin, rateChains, costScaling, perLevelMult } = opts;
+  const { def, coin, producers, costScaling, perLevelMult } = opts;
 
-  let purchasable: Purchasable;
-  // eslint-disable-next-line prefer-const
-  purchasable = createPurchasable({
+  const purchasable = createScalingPurchasable({
     id: def.id,
-    display: { title: def.name, description: def.description },
-    requirements: createCostRequirement({
-      resource: coin,
-      cost: () => Decimal.mul(def.baseCost, Decimal.pow(costScaling, purchasable.amount.value)),
-    }),
+    title: def.name,
+    description: def.description,
+    resource: coin,
+    baseCost: def.baseCost,
+    costScaling,
     effect: (amount: DecimalSource) => Decimal.pow(perLevelMult, amount),
   });
 
-  for (const chain of rateChains) {
-    chain.bind({
+  for (const entry of producers.getAll()) {
+    entry.producer.rateChain.bind({
       active: () => Decimal.gt(purchasable.amount.value, 0),
       modifier: createMultiplicativeModifier({
         multiplier: () => purchasable.effect.value,

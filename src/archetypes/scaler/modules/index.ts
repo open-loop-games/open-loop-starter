@@ -5,7 +5,6 @@ import { createPrestigeModule } from './prestige';
 import { createTranscendModule } from './transcend';
 import { createResetsModule } from './resets';
 import { createAchievementsModule } from './achievements';
-import { createCategoriesModule } from './categories';
 
 // Re-exports for the composables / UI layer.
 export {
@@ -13,17 +12,15 @@ export {
   AntimatterCoinKey,
   AntimatterMultiplierKey,
   AntimatterProducersKey,
-  AntimatterRateChainsKey,
-  AntimatterTotalRateKey,
+  AntimatterUpgradeGroupKey,
 } from './antimatter';
 export {
   CrystalUpgradesKey,
   PrestigeConversionKey,
   PrestigePointsKey,
   PrestigeProducersKey,
-  PrestigeRateChainsKey,
-  PrestigeShardRateKey,
   PrestigeShardsKey,
+  type UpgradeRoster,
 } from './prestige';
 export {
   AcceleratorBoostKey,
@@ -31,8 +28,6 @@ export {
   TranscendConversionKey,
   TranscendPointsKey,
   TranscendProducersKey,
-  TranscendRateChainsKey,
-  TranscendShardRateKey,
   TranscendShardsKey,
   TranscendUpgradesKey,
 } from './transcend';
@@ -48,7 +43,7 @@ export { AchievementsKey } from './achievements';
  *   antimatter
  *      │
  *      ▼
- *   prestige  ──→ resets ──→ achievements ──→ categories
+ *   prestige  ──→ resets ──→ achievements
  *      │
  *      ▼
  *   transcend
@@ -58,6 +53,11 @@ export { AchievementsKey } from './achievements';
  * scaler/resets). Cross-tier orchestration (reset composition, modifier
  * chain composition for cross-tier achievement / challenge effects) lives
  * in resets.ts + the per-tier modules' rateChain wiring.
+ *
+ * `CategoriesKey` is auto-published by the engine — every category factory
+ * (createProducerCategory, createPurchasableCategory, createAchievementCategory,
+ * createChallengeCategory) appends to a per-engine accumulator at construction
+ * time. No consumer-side aggregator module needed.
  */
 export function createScalerModules(data: ScalerData): EngineModule[] {
   return [
@@ -66,6 +66,5 @@ export function createScalerModules(data: ScalerData): EngineModule[] {
     createTranscendModule(data),
     createResetsModule(),
     createAchievementsModule(data),
-    createCategoriesModule(),
   ];
 }

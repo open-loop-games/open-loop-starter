@@ -10,18 +10,12 @@ import {
   createAchievementCategory,
 } from 'open-loop-engine';
 import type { AchievementDef, ScalerData, ScalerGameState, Tier } from '../data/types';
-import { AntimatterCoinKey, AntimatterProducersKey, AntimatterRateChainsKey } from './antimatter';
-import {
-  PrestigePointsKey,
-  PrestigeProducersKey,
-  PrestigeRateChainsKey,
-  PrestigeShardsKey,
-} from './prestige';
+import { AntimatterCoinKey, AntimatterProducersKey } from './antimatter';
+import { PrestigePointsKey, PrestigeProducersKey, PrestigeShardsKey } from './prestige';
 import {
   ChallengesKey,
   TranscendPointsKey,
   TranscendProducersKey,
-  TranscendRateChainsKey,
   TranscendShardsKey,
 } from './transcend';
 
@@ -51,17 +45,23 @@ export function createAchievementsModule(data: ScalerData): EngineModule {
     install(ctx: EngineContext): void {
       const coin = ctx.inject(AntimatterCoinKey);
       const antimatterProducers = ctx.inject(AntimatterProducersKey);
-      const antimatterRateChains = ctx.inject(AntimatterRateChainsKey);
+      const antimatterRateChains = antimatterProducers
+        .getAll()
+        .map((entry) => entry.producer.rateChain);
 
       const prestigePoints = ctx.inject(PrestigePointsKey);
       const prestigeShards = ctx.inject(PrestigeShardsKey);
       const prestigeProducers = ctx.inject(PrestigeProducersKey);
-      const prestigeRateChains = ctx.inject(PrestigeRateChainsKey);
+      const prestigeRateChains = prestigeProducers
+        .getAll()
+        .map((entry) => entry.producer.rateChain);
 
       const transcendPoints = ctx.inject(TranscendPointsKey);
       const transcendShards = ctx.inject(TranscendShardsKey);
       const transcendProducers = ctx.inject(TranscendProducersKey);
-      const transcendRateChains = ctx.inject(TranscendRateChainsKey);
+      const transcendRateChains = transcendProducers
+        .getAll()
+        .map((entry) => entry.producer.rateChain);
 
       const challenges = ctx.inject(ChallengesKey);
 

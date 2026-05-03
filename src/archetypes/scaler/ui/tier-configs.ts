@@ -6,21 +6,15 @@ import {
   AntimatterCoinKey,
   AntimatterMultiplierKey,
   AntimatterProducersKey,
-  AntimatterRateChainsKey,
-  AntimatterTotalRateKey,
   ChallengesKey,
   CrystalUpgradesKey,
   PrestigeConversionKey,
   PrestigePointsKey,
   PrestigeProducersKey,
-  PrestigeRateChainsKey,
-  PrestigeShardRateKey,
   PrestigeShardsKey,
   TranscendConversionKey,
   TranscendPointsKey,
   TranscendProducersKey,
-  TranscendRateChainsKey,
-  TranscendShardRateKey,
   TranscendShardsKey,
   TranscendUpgradesKey,
 } from '../modules';
@@ -31,8 +25,6 @@ export const ANTIMATTER_TIER: TierConfig = {
   currencyDisplay: 'Coins',
   currencyKey: AntimatterCoinKey,
   producerCategoryKey: AntimatterProducersKey,
-  rateChainsKey: AntimatterRateChainsKey,
-  totalRateKey: AntimatterTotalRateKey,
   extraPurchasables: [
     {
       key: AntimatterAcceleratorKey,
@@ -55,9 +47,7 @@ export const PRESTIGE_TIER: TierConfig<CrystalUpgradeDef> = {
   currencyKey: PrestigePointsKey,
   shardsKey: PrestigeShardsKey,
   producerCategoryKey: PrestigeProducersKey,
-  rateChainsKey: PrestigeRateChainsKey,
-  totalRateKey: PrestigeShardRateKey,
-  upgradeCategoryKey: CrystalUpgradesKey,
+  upgradeRosterKey: CrystalUpgradesKey,
   conversionKey: PrestigeConversionKey,
 };
 
@@ -69,9 +59,7 @@ export const TRANSCEND_TIER: TierConfig<TranscendUpgradeDef> = {
   currencyKey: TranscendPointsKey,
   shardsKey: TranscendShardsKey,
   producerCategoryKey: TranscendProducersKey,
-  rateChainsKey: TranscendRateChainsKey,
-  totalRateKey: TranscendShardRateKey,
-  upgradeCategoryKey: TranscendUpgradesKey,
+  upgradeRosterKey: TranscendUpgradesKey,
   conversionKey: TranscendConversionKey,
   challengesKey: ChallengesKey,
   // Acc Boost is the cross-currency standalone purchasable. The TierPanel's

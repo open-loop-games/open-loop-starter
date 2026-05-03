@@ -1,7 +1,8 @@
 import { computed } from 'vue';
 import type { ComputedRef } from 'vue';
-import type { InjectionKey, Purchasable, PurchasableCategory } from 'open-loop-engine';
+import type { InjectionKey, Purchasable } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
+import type { UpgradeRoster } from '../modules';
 
 // TODO(expansion): producer/composables/useUpgrades.ts has additional
 // per-producer/global/click grouping; scaler upgrades are flat per category.
@@ -17,18 +18,19 @@ export interface UpgradeRow<Def> {
 }
 
 /**
- * Flat reactive rows for every upgrade in the given category. Scaler
- * categories (CrystalUpgrades, TranscendUpgrades) don't need the
- * per-producer / global / click split that the producer archetype's
- * shape carries — every entry is rendered uniformly per tier.
+ * Flat reactive rows for every upgrade in the given roster. Scaler rosters
+ * (CrystalUpgrades, TranscendUpgrades) wrap per-def Purchasables in a
+ * createPurchasableGroup with a side-table of `{ def, purchasable }` entries
+ * — the per-def post-creation chain.bind closures don't fit
+ * createPurchasableCategory's mapPurchasable shape.
  */
 export function useUpgrades<Def extends { id: string }>(
-  categoryKey: InjectionKey<PurchasableCategory<Def>>,
+  rosterKey: InjectionKey<UpgradeRoster<Def>>,
 ): ComputedRef<UpgradeRow<Def>[]> {
-  const category = useModule(categoryKey);
+  const roster = useModule(rosterKey);
 
   return computed(() =>
-    category.getAll().map((entry) => ({
+    roster.entries.map((entry) => ({
       def: entry.def,
       bought: entry.purchasable.active,
       canPurchase: entry.purchasable.canPurchase,

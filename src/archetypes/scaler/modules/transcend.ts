@@ -1,4 +1,3 @@
-import { computed, type ComputedRef } from 'vue';
 import {
   Decimal,
   type ChallengeCategory,
@@ -10,35 +9,32 @@ import {
   type Grant,
   type InjectionKey,
   type ModifierChain,
-  type Producer,
   type ProducerCategory,
   type Purchasable,
-  type PurchasableCategory,
   type Resource,
   createChallengeCategory,
-  createCostRequirement,
   createCumulativeConversion,
   createLogFormula,
   createMultiplicativeModifier,
   createProducerCategory,
-  createPurchasable,
-  createPurchasableCategory,
+  createPurchasableGroup,
   createResource,
+  createScalingPurchasable,
 } from 'open-loop-engine';
 import type {
   ChallengeDef as ScalerChallengeDef,
   ProducerDef,
   ScalerData,
-  TranscendTierData,
   TranscendUpgradeDef,
 } from '../data/types';
 import {
   AntimatterAcceleratorKey,
   AntimatterMultiplierKey,
-  AntimatterRateChainsKey,
+  AntimatterProducersKey,
 } from './antimatter';
-import { PrestigePointsKey, PrestigeRateChainsKey, PrestigeShardsKey } from './prestige';
+import { PrestigePointsKey, PrestigeProducersKey, PrestigeShardsKey } from './prestige';
 import { TranscendResetKey } from './resets';
+import type { UpgradeRoster } from './prestige';
 
 // === Injection keys ===
 
@@ -58,9 +54,9 @@ export const AcceleratorBoostKey: InjectionKey<Purchasable> = Symbol(
   'scaler/transcend/accelerator-boost',
 ) as InjectionKey<Purchasable>;
 
-export const TranscendUpgradesKey: InjectionKey<PurchasableCategory<TranscendUpgradeDef>> = Symbol(
+export const TranscendUpgradesKey: InjectionKey<UpgradeRoster<TranscendUpgradeDef>> = Symbol(
   'scaler/transcend/upgrades',
-) as InjectionKey<PurchasableCategory<TranscendUpgradeDef>>;
+) as InjectionKey<UpgradeRoster<TranscendUpgradeDef>>;
 
 // Engine ChallengeDef carries the engine-side fields (overrides, grants,
 // reset hooks); the scaler challenge def lives in data and threads through
@@ -69,14 +65,6 @@ export const TranscendUpgradesKey: InjectionKey<PurchasableCategory<TranscendUpg
 export const ChallengesKey: InjectionKey<ChallengeCategory<EngineChallengeDef>> = Symbol(
   'scaler/transcend/challenges',
 ) as InjectionKey<ChallengeCategory<EngineChallengeDef>>;
-
-export const TranscendRateChainsKey: InjectionKey<ModifierChain[]> = Symbol(
-  'scaler/transcend/rate-chains',
-) as InjectionKey<ModifierChain[]>;
-
-export const TranscendShardRateKey: InjectionKey<ComputedRef<DecimalSource>> = Symbol(
-  'scaler/transcend/shard-rate',
-) as InjectionKey<ComputedRef<DecimalSource>>;
 
 // vanilla canonical: SynergismOfficial/src/Calculate.ts:2460 —
 //   transcendPointGain = floor(log_{10}(prestigeShards + 1))
@@ -120,6 +108,13 @@ const ACCELERATOR_BOOST_PER_LEVEL_MULT = 1.05;
 // flattens to a uniform per-level grant per upgrade.
 const TRANSCEND_UPGRADE_PER_LEVEL_MULT = 1.1;
 
+// Per-level local cost ramp for the slim-port transcend upgrades. Synergism's
+// upgradeCosts table grows ~1000x per upgrade slot (Variables.ts:27), but
+// each individual upgrade is one-shot in the source. Slim port lets you buy
+// multiple levels with a 10x-per-level local ramp on top of the data-pinned
+// baseCost.
+const TRANSCEND_UPGRADE_COST_SCALING = 10;
+
 // === Module ===
 
 export function createTranscendModule(data: ScalerData): EngineModule {
@@ -159,17 +154,24 @@ export function createTranscendModule(data: ScalerData): EngineModule {
       });
       producers.register(tier.producers);
 
-      const rateChains = collectRateChains(producers, tier);
+      const transcendRateChains = producers.getAll().map((entry) => entry.producer.rateChain);
+      const antimatterProducers = ctx.inject(AntimatterProducersKey);
+      const antimatterRateChains = antimatterProducers
+        .getAll()
+        .map((entry) => entry.producer.rateChain);
+      const prestigeProducers = ctx.inject(PrestigeProducersKey);
+      const prestigeRateChains = prestigeProducers
+        .getAll()
+        .map((entry) => entry.producer.rateChain);
 
       // Acc Boost — cross-currency upgrade. Lives at Transcend tier but
       // costs prestigePoints (Reset.ts:498-499, Buy.ts:705). Boosts every
       // antimatter rate chain.
       //
-      // The cross-currency case is just a parameter on createCostRequirement:
-      // pass the prestigePoints resource as the cost source. No new
-      // primitive needed — see triage discussion at OL-823.
+      // The cross-currency case is just a parameter on createScalingPurchasable's
+      // `resource` field — pass prestigePoints as the spend source. No new
+      // primitive needed (per OL-823 triage).
       const prestigePoints = ctx.inject(PrestigePointsKey);
-      const antimatterRateChains = ctx.inject(AntimatterRateChainsKey);
       const acceleratorBoost = buildAcceleratorBoost({
         def: findUpgrade(tier.upgrades, 'acc-boost'),
         prestigePoints,
@@ -179,23 +181,20 @@ export function createTranscendModule(data: ScalerData): EngineModule {
       const upgrades = buildTranscendUpgrades({
         defs: tier.upgrades.filter((u) => u.id !== 'acc-boost'),
         transcendPoints,
-        rateChains,
+        rateChains: transcendRateChains,
       });
 
       const antimatterAccelerator = ctx.inject(AntimatterAcceleratorKey);
       const antimatterMultiplier = ctx.inject(AntimatterMultiplierKey);
-      const prestigeRateChains = ctx.inject(PrestigeRateChainsKey);
       const challenges = buildChallenges({
         defs: tier.challenges,
         rewardCoefficient: data.balance.challengeCompletionMultiplier,
         antimatterRateChains,
         prestigeRateChains,
-        transcendRateChains: rateChains,
+        transcendRateChains,
         acceleratorEffect: () => antimatterAccelerator.effect.value,
         multiplierEffect: () => antimatterMultiplier.effect.value,
       });
-
-      const shardRate = computed(() => producers.getTotalRate(transcendShards));
 
       ctx.provide(TranscendPointsKey, transcendPoints);
       ctx.provide(TranscendShardsKey, transcendShards);
@@ -203,8 +202,6 @@ export function createTranscendModule(data: ScalerData): EngineModule {
       ctx.provide(AcceleratorBoostKey, acceleratorBoost);
       ctx.provide(TranscendUpgradesKey, upgrades);
       ctx.provide(ChallengesKey, challenges);
-      ctx.provide(TranscendRateChainsKey, rateChains);
-      ctx.provide(TranscendShardRateKey, shardRate);
     },
     connect(ctx: EngineContext): void {
       const prestigeShards = ctx.inject(PrestigeShardsKey);
@@ -218,18 +215,6 @@ export function createTranscendModule(data: ScalerData): EngineModule {
       ctx.provide(TranscendConversionKey, conversion);
     },
   };
-}
-
-function collectRateChains(
-  producers: ProducerCategory<ProducerDef>,
-  tier: TranscendTierData,
-): ModifierChain[] {
-  const chains: ModifierChain[] = [];
-  for (const def of tier.producers) {
-    const producer: Producer | undefined = producers.getProducer(def.id);
-    if (producer) chains.push(producer.rateChain);
-  }
-  return chains;
 }
 
 function findUpgrade(upgrades: TranscendUpgradeDef[], id: string): TranscendUpgradeDef {
@@ -250,19 +235,13 @@ function buildAcceleratorBoost(opts: BuildAcceleratorBoostOptions): Purchasable 
     throw new Error(`scaler/transcend: acc-boost expected costCurrency='prestigePoints'`);
   }
 
-  let purchasable: Purchasable;
-  // eslint-disable-next-line prefer-const
-  purchasable = createPurchasable({
+  const purchasable = createScalingPurchasable({
     id: def.id,
-    display: { title: def.name, description: def.description },
-    requirements: createCostRequirement({
-      resource: prestigePoints,
-      cost: () =>
-        Decimal.mul(
-          def.baseCost,
-          Decimal.pow(ACCELERATOR_BOOST_COST_SCALING, purchasable.amount.value),
-        ),
-    }),
+    title: def.name,
+    description: def.description,
+    resource: prestigePoints,
+    baseCost: def.baseCost,
+    costScaling: ACCELERATOR_BOOST_COST_SCALING,
     effect: (amount: DecimalSource) => Decimal.pow(ACCELERATOR_BOOST_PER_LEVEL_MULT, amount),
   });
 
@@ -285,41 +264,52 @@ interface BuildTranscendUpgradesOptions {
   rateChains: ModifierChain[];
 }
 
+// Per-def createScalingPurchasable + createPurchasableGroup. Geometric cost
+// (def.baseCost · 10^level) + per-def post-creation chain.bind closing over
+// the purchasable's live effect. PurchasableCategory's mapPurchasable can't
+// natively express "geometric cost varying per-def by baseCost" without a
+// forward-declared category reference, so per-def raw createScalingPurchasable
+// + group is the correct shape here.
 function buildTranscendUpgrades(
   opts: BuildTranscendUpgradesOptions,
-): PurchasableCategory<TranscendUpgradeDef> {
+): UpgradeRoster<TranscendUpgradeDef> {
   const { defs, transcendPoints, rateChains } = opts;
+  const entries: { def: TranscendUpgradeDef; purchasable: Purchasable }[] = [];
+  const purchasables: Purchasable[] = [];
 
-  let category: PurchasableCategory<TranscendUpgradeDef>;
-  // eslint-disable-next-line prefer-const
-  category = createPurchasableCategory<TranscendUpgradeDef>({
-    id: 'scaler/transcend/upgrades',
-    mapPurchasable: (def) => ({
-      display: { title: def.name, description: def.description },
-      requirements: createCostRequirement({
-        resource: transcendPoints,
-        cost: () => {
-          const current = category.getPurchasable(def.id)?.amount.value ?? 0;
-          // Single-rung-of-10 cost growth per buy. Synergism's
-          // upgradeCosts table grows ~1000x per upgrade slot
-          // (Variables.ts:27), but each individual upgrade is one-shot in
-          // the source. Slim port lets you buy multiple levels with a
-          // 10x-per-level local ramp on top of the data-pinned baseCost.
-          return Decimal.mul(def.baseCost, Decimal.pow(10, current));
-        },
-      }),
+  for (const def of defs) {
+    const purchasable = createScalingPurchasable({
+      id: def.id,
+      title: def.name,
+      description: def.description,
+      resource: transcendPoints,
+      baseCost: def.baseCost,
+      costScaling: TRANSCEND_UPGRADE_COST_SCALING,
       effect: (amount: DecimalSource) => Decimal.pow(TRANSCEND_UPGRADE_PER_LEVEL_MULT, amount),
-      grants: [
-        {
-          chain: rateChains,
-          mult: () => category.getPurchasable(def.id)?.effect.value ?? 1,
+    });
+
+    for (const chain of rateChains) {
+      chain.bind({
+        active: () => Decimal.gt(purchasable.amount.value, 0),
+        modifier: createMultiplicativeModifier({
+          multiplier: () => purchasable.effect.value,
           description: def.name,
-        },
-      ],
-    }),
-  });
-  category.register(defs);
-  return category;
+        }),
+      });
+    }
+
+    purchasables.push(purchasable);
+    entries.push({ def, purchasable });
+  }
+
+  const group = createPurchasableGroup({ purchasables });
+  const byId = new Map(entries.map((e) => [e.def.id, e] as const));
+
+  return {
+    group,
+    entries,
+    getEntry: (id) => byId.get(id),
+  };
 }
 
 interface BuildChallengesOptions {
@@ -358,9 +348,7 @@ function buildChallenges(opts: BuildChallengesOptions): ChallengeCategory<Engine
     multiplierEffect,
   } = opts;
 
-  let category: ChallengeCategory<EngineChallengeDef>;
-  // eslint-disable-next-line prefer-const
-  category = createChallengeCategory<EngineChallengeDef>({
+  const category = createChallengeCategory<EngineChallengeDef>({
     id: 'scaler/transcend/challenges',
     mutuallyExclusive: true,
   });

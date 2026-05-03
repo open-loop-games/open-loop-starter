@@ -1,25 +1,29 @@
-import { computed, type ComputedRef } from 'vue';
+import { watch } from 'vue';
 import {
   Decimal,
+  Formula,
   type Conversion,
   type DecimalSource,
   type EngineContext,
   type EngineModule,
   type InjectionKey,
   type ModifierChain,
-  type Producer,
   type ProducerCategory,
   type Purchasable,
-  type PurchasableCategory,
+  type PurchasableGroup,
   type Resource,
   createCostRequirement,
   createCumulativeConversion,
   createLogFormula,
+  createMultiplicativeModifier,
   createProducerCategory,
-  createPurchasableCategory,
+  createPurchasable,
+  createPurchasableGroup,
   createResource,
+  persistent,
+  withPersistentContext,
 } from 'open-loop-engine';
-import type { CrystalUpgradeDef, PrestigeTierData, ProducerDef, ScalerData } from '../data/types';
+import type { CrystalUpgradeDef, ProducerDef, ScalerData } from '../data/types';
 import { AntimatterCoinKey } from './antimatter';
 import { PrestigeResetKey } from './resets';
 
@@ -37,17 +41,15 @@ export const PrestigeProducersKey: InjectionKey<ProducerCategory<ProducerDef>> =
   'scaler/prestige/producers',
 ) as InjectionKey<ProducerCategory<ProducerDef>>;
 
-export const CrystalUpgradesKey: InjectionKey<PurchasableCategory<CrystalUpgradeDef>> = Symbol(
+export interface UpgradeRoster<Def extends { id: string }> {
+  group: PurchasableGroup;
+  entries: ReadonlyArray<{ def: Def; purchasable: Purchasable }>;
+  getEntry: (id: string) => { def: Def; purchasable: Purchasable } | undefined;
+}
+
+export const CrystalUpgradesKey: InjectionKey<UpgradeRoster<CrystalUpgradeDef>> = Symbol(
   'scaler/prestige/crystal-upgrades',
-) as InjectionKey<PurchasableCategory<CrystalUpgradeDef>>;
-
-export const PrestigeRateChainsKey: InjectionKey<ModifierChain[]> = Symbol(
-  'scaler/prestige/rate-chains',
-) as InjectionKey<ModifierChain[]>;
-
-export const PrestigeShardRateKey: InjectionKey<ComputedRef<DecimalSource>> = Symbol(
-  'scaler/prestige/shard-rate',
-) as InjectionKey<ComputedRef<DecimalSource>>;
+) as InjectionKey<UpgradeRoster<CrystalUpgradeDef>>;
 
 // vanilla canonical: SynergismOfficial/src/Calculate.ts:2454 —
 //   prestigePointGain = floor(log_{1e25}(coins + 1))
@@ -75,6 +77,8 @@ const DIAMOND_BASE_RATES: Record<string, DecimalSource> = {
   'prestige-4': '2e19',
   'prestige-5': '5e49',
 };
+
+const CRYSTAL_PER_LEVEL_BONUS = 0.05;
 
 // === Module ===
 
@@ -129,18 +133,18 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
       });
       producers.register(tier.producers);
 
-      const rateChains = collectRateChains(producers, tier);
+      const rateChains = producers.getAll().map((entry) => entry.producer.rateChain);
 
-      const crystalUpgrades = buildCrystalUpgrades(prestigeShards, tier, rateChains);
-
-      const shardRate = computed(() => producers.getTotalRate(prestigeShards));
+      const crystalUpgrades = buildCrystalUpgrades(
+        prestigeShards,
+        tier.crystalUpgrades,
+        rateChains,
+      );
 
       ctx.provide(PrestigePointsKey, prestigePoints);
       ctx.provide(PrestigeShardsKey, prestigeShards);
       ctx.provide(PrestigeProducersKey, producers);
       ctx.provide(CrystalUpgradesKey, crystalUpgrades);
-      ctx.provide(PrestigeRateChainsKey, rateChains);
-      ctx.provide(PrestigeShardRateKey, shardRate);
     },
     connect(ctx: EngineContext): void {
       // Conversion construction is deferred to connect() because it pairs
@@ -161,82 +165,85 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
   };
 }
 
-function collectRateChains(
-  producers: ProducerCategory<ProducerDef>,
-  tier: PrestigeTierData,
-): ModifierChain[] {
-  const chains: ModifierChain[] = [];
-  for (const def of tier.producers) {
-    const producer: Producer | undefined = producers.getProducer(def.id);
-    if (producer) chains.push(producer.rateChain);
-  }
-  return chains;
-}
-
 // vanilla canonical: SynergismOfficial/src/Buy.ts:657 (calculateCrystalBuy) +
 // Buy.ts:689-694 (cost paid in prestigeShards):
 //   cost(level=n) = 10^(baseLogCost + costIncrement * ((n - 0.5)^2 / 2 - 1/8))
 // Cost grows super-exponentially in level (the exponent itself grows
-// quadratically) — geometric `createScalingPurchasable` doesn't fit. Use
-// raw createPurchasable + custom Computable cost reading the purchasable's
-// own amount. Each Crystal upgrade also feeds a per-level multiplicative
-// modifier into all prestige rateChains.
+// quadratically) — geometric `createScalingPurchasable` doesn't fit.
+//
+// TODO(expansion): `costScaling: { threshold, scale }` candidate (see
+// open-loop-engine/docs/candidate-primitives.md) would absorb this AD-shaped
+// piecewise-quadratic-in-log cost ladder once it graduates. Until then, this
+// is the engine-prescribed shape: per-def raw createPurchasable with a
+// Formula expression over an external amount mirror — same internal pattern
+// as createScalingPurchasable (purchasable.ts:672-728), adapted for
+// non-geometric cost. The mirror keeps the cost closure const-safe (no
+// forward-declare workaround).
 function buildCrystalUpgrades(
   prestigeShards: Resource<DecimalSource>,
-  tier: PrestigeTierData,
+  defs: CrystalUpgradeDef[],
   rateChains: ModifierChain[],
-): PurchasableCategory<CrystalUpgradeDef> {
-  // Forward-declared via `let` so the per-def `mapPurchasable` closures can
-  // read `category.getPurchasable(def.id)?.amount.value` for the cost +
-  // grant lookups. Closures only fire after createPurchasableCategory has
-  // returned and assigned `category`, so the mid-construction reference is
-  // safe at runtime.
-  let category: PurchasableCategory<CrystalUpgradeDef>;
-  // eslint-disable-next-line prefer-const
-  category = createPurchasableCategory<CrystalUpgradeDef>({
-    id: 'scaler/prestige/crystal-upgrades',
-    mapPurchasable: (def) => ({
+): UpgradeRoster<CrystalUpgradeDef> {
+  const entries: { def: CrystalUpgradeDef; purchasable: Purchasable }[] = [];
+  const purchasables: Purchasable[] = [];
+
+  for (const def of defs) {
+    // External amount mirror — same shape as createScalingPurchasable's
+    // internal `scalingAmount` (purchasable.ts:672-676). Sub-context per
+    // upgrade keeps persistence partitioned.
+    const amount = withPersistentContext(`scaler/prestige/crystal:${def.id}`, () =>
+      persistent<DecimalSource>(0, { name: 'amountMirror' }),
+    );
+
+    // Formula expression over the variable: 10 ^ (baseLogCost + costIncrement * ((n - 0.5)^2 / 2 - 1/8))
+    const halfBack = Formula.variable(amount).sub(0.5);
+    const exponent = halfBack.pow(2).div(2).sub(0.125).mul(def.costIncrement).add(def.baseLogCost);
+    const cost = Formula.constant(10).pow(exponent);
+
+    const purchasable = createPurchasable({
+      id: def.id,
       display: { title: def.name, description: def.description },
-      // The cost requirement reads the purchasable's amount via the entry
-      // lookup — by the time the requirement is evaluated, the purchasable
-      // has been registered into the category's entry map.
-      requirements: createCostRequirement({
-        resource: prestigeShards,
-        cost: () => crystalNextCost(def, category.getPurchasable(def.id)),
-      }),
+      requirements: createCostRequirement({ resource: prestigeShards, cost }),
       // Slim-port effect: per-level fractional bonus. Synergism's actual
       // crystal effects route through globalCoinMultiplier with per-upgrade
       // formulas (Variables.ts:131 onwards); the slim port collapses each
       // Crystal to a +CRYSTAL_PER_LEVEL_BONUS multiplicative-per-level grant
       // onto every prestige rateChain. Balance leaf will refine.
-      effect: (amount: DecimalSource) =>
-        Decimal.add(1, Decimal.mul(amount, CRYSTAL_PER_LEVEL_BONUS)),
-      grants: [
-        {
-          chain: rateChains,
-          mult: () => category.getPurchasable(def.id)?.effect.value ?? 1,
+      effect: (a) => Decimal.add(1, Decimal.mul(a, CRYSTAL_PER_LEVEL_BONUS)),
+    });
+
+    // Mirror purchasable.amount → external amount so the cost Formula
+    // re-evaluates after each purchase. Same `flush: 'sync'` discipline as
+    // createScalingPurchasable (consumers read getCost(1) immediately after
+    // purchase() returns, before Vue's default scheduler flushes).
+    watch(
+      () => purchasable.amount.value,
+      (v) => {
+        amount.value = v;
+      },
+      { immediate: true, flush: 'sync' },
+    );
+
+    for (const chain of rateChains) {
+      chain.bind({
+        active: () => Decimal.gt(purchasable.amount.value, 0),
+        modifier: createMultiplicativeModifier({
+          multiplier: () => purchasable.effect.value,
           description: def.name,
-        },
-      ],
-    }),
-  });
-  category.register(tier.crystalUpgrades);
-  return category;
-}
+        }),
+      });
+    }
 
-const CRYSTAL_PER_LEVEL_BONUS = 0.05;
+    purchasables.push(purchasable);
+    entries.push({ def, purchasable });
+  }
 
-function crystalNextCost(
-  def: CrystalUpgradeDef,
-  purchasable: Purchasable | undefined,
-): DecimalSource {
-  const current = purchasable ? purchasable.amount.value : 0;
-  const next = Decimal.add(current, 1);
-  // Per Buy.ts:693 — cost(toBuy) = 10^(baseLogCost + costIncrement * (1/2 * (toBuy - 0.5)^2 - 1/8))
-  const halfNext = Decimal.sub(next, 0.5);
-  const exponent = Decimal.add(
-    def.baseLogCost,
-    Decimal.mul(def.costIncrement, Decimal.sub(Decimal.div(Decimal.pow(halfNext, 2), 2), 0.125)),
-  );
-  return Decimal.pow(10, exponent);
+  const group = createPurchasableGroup({ purchasables });
+  const byId = new Map(entries.map((e) => [e.def.id, e] as const));
+
+  return {
+    group,
+    entries,
+    getEntry: (id) => byId.get(id),
+  };
 }
