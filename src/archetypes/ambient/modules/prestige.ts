@@ -20,7 +20,6 @@ export function createPrestigeModule(_data: AmbientData): EngineModule {
       'ambient/auto-producers',
       'ambient/unlocks',
       'ambient/scene',
-      'ambient/arc',
       'ambient/session-clock',
     ],
     install(ctx) {
@@ -29,7 +28,6 @@ export function createPrestigeModule(_data: AmbientData): EngineModule {
           'ambient/auto-producers',
           'ambient/unlocks',
           'ambient/scene',
-          'ambient/arc',
           'ambient/session-clock',
         ],
       });

@@ -9,7 +9,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
-import { AmbientDataKey, SessionClockKey, UnlocksKey } from '../modules';
+import { SessionClockKey, UnlocksKey } from '../modules';
 import IdleScenePanel from './panels/IdleScenePanel.vue';
 import AutoProducerList from './panels/AutoProducerList.vue';
 import UnlockTray from './panels/UnlockTray.vue';
@@ -65,13 +65,13 @@ function startGame(slotId: number, modId?: string): void {
   let resumeGapSec = 0;
   if (result.success && result.timestamp != null) {
     const sessionClock = engine.tryInject(SessionClockKey);
-    const data = engine.tryInject(AmbientDataKey);
     const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
     resumeGapSec = gap;
     if (sessionClock) sessionClock.lastResumeGapSec.value = gap;
     if (gap > 0) {
-      const cap = data ? Number(data.balance.offlineCapHours) * 3600 : undefined;
-      processOfflineTime(engine.loop, gap, { maxOfflineSeconds: cap });
+      processOfflineTime(engine.loop, gap, {
+        maxOfflineSeconds: sessionClock?.offlineCapSeconds,
+      });
     }
     sessionClock?.refreshElapsedAtResume();
   }

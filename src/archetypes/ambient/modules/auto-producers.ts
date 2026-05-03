@@ -1,5 +1,4 @@
-import { computed } from 'vue';
-import type { ComputedRef, Ref } from 'vue';
+import type { Ref } from 'vue';
 import {
   createMultiplicativeModifier,
   createOverrideRegistry,
@@ -11,7 +10,6 @@ import {
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
-  type ModifierChain,
   type OverrideRegistry,
   type ProducerCategory,
   type Resource,
@@ -52,21 +50,6 @@ export const AutoProducersKey: InjectionKey<ProducerCategory<AutoProducerDef>> =
   'ambient/auto-producers',
 ) as InjectionKey<ProducerCategory<AutoProducerDef>>;
 
-export const HeadlineRateKey: InjectionKey<ComputedRef<DecimalSource>> = Symbol(
-  'ambient/headline-rate',
-) as InjectionKey<ComputedRef<DecimalSource>>;
-
-/** Ordered rateChains across all continuous producers — grant target for
- *  effects that modify every production stream at once (achievement
- *  multipliers, prestige bonuses). */
-export const AllRateChainsKey: InjectionKey<ModifierChain[]> = Symbol(
-  'ambient/all-rate-chains',
-) as InjectionKey<ModifierChain[]>;
-
-export const AmbientDataKey: InjectionKey<AmbientData> = Symbol(
-  'ambient/data',
-) as InjectionKey<AmbientData>;
-
 export const AmbientTuningRegistryKey: InjectionKey<OverrideRegistry<AmbientTunables>> = Symbol(
   'ambient/tuning-registry',
 ) as InjectionKey<OverrideRegistry<AmbientTunables>>;
@@ -92,10 +75,9 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
 
       // Tunables are registered at their consumer sites (where the value is
       // actually read) — `tunable()` registers on first call, no upfront
-      // declaration needed. `producers/{id}/purchase/baseCost` is registered
-      // via `wrapBaseCost` below; `balance/tier1BaseRate` is registered
-      // below at the planter rateChain bind site. `balance/producerCostGrowth`
-      // and `balance/achievementMultiplier` are registered by their consumer
+      // declaration needed. `balance/tier1BaseRate` is registered below at
+      // the planter rateChain bind site. `balance/producerCostGrowth` and
+      // `balance/achievementMultiplier` are registered by their consumer
       // modules.
 
       const primaryResource = createResource<DecimalSource>(0, {
@@ -106,8 +88,8 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
       const primaryLifetime = trackTotal(primaryResource);
 
       // TimeSystem provides persistent `elapsed` + `totalPlayTime`. Wired
-      // into the loop here so `tick(dt)` advances both fields. Sibling
-      // modules (arc.ts) compose session-clock predicates on top.
+      // into the loop here so `tick(dt)` advances both fields. The
+      // session-clock module composes predicates on top.
       const time = createTimeSystem();
       ctx.onTick((dt) => time.tick(dt));
 
@@ -121,7 +103,13 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
           display: def.name,
           purchase: {
             costResource: primaryResource,
-            baseCost: wrapBaseCost(tuningRegistry, def),
+            baseCost: TUNABLE_BASE_COST_IDS.has(def.id)
+              ? tunable(
+                  tuningRegistry,
+                  `producers/${def.id}/purchase/baseCost`,
+                  () => def.purchase.baseCost,
+                )
+              : def.purchase.baseCost,
             costScaling: def.purchase.costScaling,
             initialAmount: def.purchase.initialAmount,
           },
@@ -150,37 +138,11 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
         });
       }
 
-      const headlineRate = computed(() => buildings.getTotalRate(primaryResource));
-
-      const allChains: ModifierChain[] = [];
-      for (const def of data.producers) {
-        const producer = buildings.getProducer(def.id);
-        if (producer) allChains.push(producer.rateChain);
-      }
-
       ctx.provide(PrimaryResourceKey, primaryResource);
       ctx.provide(PrimaryLifetimeKey, primaryLifetime);
       ctx.provide(AutoProducersKey, buildings);
-      ctx.provide(HeadlineRateKey, headlineRate);
-      ctx.provide(AllRateChainsKey, allChains);
-      ctx.provide(AmbientDataKey, data);
       ctx.provide(AmbientTuningRegistryKey, tuningRegistry);
       ctx.provide(TimeSystemKey, time);
     },
   };
-}
-
-/**
- * Wrap a producer's static baseCost behind a tunable key so scope-push can
- * retune it without mutating data. The tunable's default closure reads
- * `def.purchase.baseCost`, so unscoped runs behave identically to the
- * pre-tunable direct path.
- */
-function wrapBaseCost(
-  registry: OverrideRegistry<AmbientTunables>,
-  def: AutoProducerDef,
-): DecimalSource | ReturnType<typeof tunable<DecimalSource>> {
-  if (!TUNABLE_BASE_COST_IDS.has(def.id)) return def.purchase.baseCost;
-  const key = `producers/${def.id}/purchase/baseCost`;
-  return tunable(registry, key, () => def.purchase.baseCost);
 }

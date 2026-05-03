@@ -91,8 +91,6 @@ export interface AmbientBalance {
   producerCostGrowth: DecimalSource;
   /** Per-achievement headline contribution. Default 1.02. */
   achievementMultiplier: DecimalSource;
-  /** 1.0 = full offline accumulation, 0.5 = half. */
-  offlineEfficiency: DecimalSource;
   /** Caps the wall-clock gap delivered to processOfflineTime. Default 12h. */
   offlineCapHours: DecimalSource;
   /**

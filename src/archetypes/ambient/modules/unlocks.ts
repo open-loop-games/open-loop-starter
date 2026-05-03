@@ -1,22 +1,16 @@
-import type { ComputedRef } from 'vue';
+import { unref } from 'vue';
 import {
   Decimal,
   createBooleanRequirement,
   createPurchasableCategory,
   setupSweepAutoPurchase,
   tunable,
-  type DecimalSource,
   type EngineModule,
   type InjectionKey,
-  type OverrideRegistry,
   type PurchasableCategory,
 } from 'open-loop-engine';
 import type { AmbientData, UnlockDef } from '../data/types';
-import {
-  AmbientTuningRegistryKey,
-  PrimaryLifetimeKey,
-  type AmbientTunables,
-} from './auto-producers';
+import { AmbientTuningRegistryKey, PrimaryLifetimeKey } from './auto-producers';
 
 export const UnlocksKey: InjectionKey<PurchasableCategory<UnlockDef>> = Symbol(
   'ambient/unlocks',
@@ -27,19 +21,6 @@ export const UnlocksKey: InjectionKey<PurchasableCategory<UnlockDef>> = Symbol(
 // these threshold knobs to land beats 3 and 5 in window without rebuilding
 // the engine. Other unlocks pass their threshold through unchanged.
 const TUNABLE_THRESHOLD_IDS = new Set<string>(['coop-built', 'spring-arrives', 'year-cycles']);
-
-type Threshold = DecimalSource | ComputedRef<DecimalSource>;
-
-function wrapThreshold(registry: OverrideRegistry<AmbientTunables>, def: UnlockDef): Threshold {
-  if (!TUNABLE_THRESHOLD_IDS.has(def.id)) return def.threshold;
-  const key = `unlocks/${def.id}/threshold`;
-  return tunable<DecimalSource>(registry, key, () => def.threshold);
-}
-
-const readThreshold = (threshold: Threshold): DecimalSource =>
-  typeof threshold === 'object' && threshold !== null && 'value' in threshold
-    ? threshold.value
-    : threshold;
 
 /**
  * Visibility unlocks gate on cumulative produced (lifetime), not the current
@@ -65,11 +46,13 @@ export function createUnlocksModule(data: AmbientData): EngineModule {
       const unlocks = createPurchasableCategory<UnlockDef>({
         id: 'ambient/unlocks',
         mapPurchasable: (def) => {
-          const threshold = wrapThreshold(tuningRegistry, def);
+          const threshold = TUNABLE_THRESHOLD_IDS.has(def.id)
+            ? tunable(tuningRegistry, `unlocks/${def.id}/threshold`, () => def.threshold)
+            : def.threshold;
           return {
             display: { title: def.label, description: def.description ?? def.label },
             requirements: createBooleanRequirement({
-              requirement: () => Decimal.gte(lifetime.value, readThreshold(threshold)),
+              requirement: () => Decimal.gte(lifetime.value, unref(threshold)),
               description: def.description ?? def.label,
             }),
             limit: 1,

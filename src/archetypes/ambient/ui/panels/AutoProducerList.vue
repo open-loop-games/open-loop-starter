@@ -1,24 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal } from 'open-loop-engine';
+import { useModule } from '@/composables/useModule';
 import { useAutoProducers, type AutoProducerRow } from '../../composables/useAutoProducers';
-import { useUnlocks } from '../../composables/useUnlocks';
-import { useAmbientData } from '../../composables/useAmbientData';
+import { UnlocksKey } from '../../modules';
 import { useHeadlineRate } from '../../composables/useHeadlineRate';
 import { useFormatting } from '@/composables/useFormatting';
 import RateBreakdownTooltip from '@/ui/components/RateBreakdownTooltip.vue';
 
 const rows = useAutoProducers();
-const unlocks = useUnlocks();
-const data = useAmbientData();
+const unlocks = useModule(UnlocksKey);
 const { perSecond: totalRate } = useHeadlineRate();
 const { format } = useFormatting();
 
-// Producer → unlock-id lookup (each producer reveal in data.unlocks).
+// Producer → unlock-id lookup (each producer reveal in the unlock category).
 const producerUnlockId = new Map<string, string>();
-for (const unlock of data.unlocks) {
-  if (unlock.reveals.kind === 'producer') {
-    producerUnlockId.set(unlock.reveals.producerId, unlock.id);
+for (const entry of unlocks.getAll()) {
+  if (entry.def.reveals.kind === 'producer') {
+    producerUnlockId.set(entry.def.reveals.producerId, entry.def.id);
   }
 }
 

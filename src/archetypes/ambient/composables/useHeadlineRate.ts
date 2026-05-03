@@ -1,7 +1,8 @@
+import { computed } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
 import type { DecimalSource, Resource } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
-import { HeadlineRateKey, PrimaryLifetimeKey, PrimaryResourceKey } from '../modules';
+import { AutoProducersKey, PrimaryLifetimeKey, PrimaryResourceKey } from '../modules';
 
 export interface HeadlineStats {
   primary: Resource<DecimalSource>;
@@ -10,9 +11,11 @@ export interface HeadlineStats {
 }
 
 export function useHeadlineRate(): HeadlineStats {
+  const primary = useModule(PrimaryResourceKey);
+  const buildings = useModule(AutoProducersKey);
   return {
-    primary: useModule(PrimaryResourceKey),
+    primary,
     lifetime: useModule(PrimaryLifetimeKey),
-    perSecond: useModule(HeadlineRateKey),
+    perSecond: computed(() => buildings.getTotalRate(primary)),
   };
 }

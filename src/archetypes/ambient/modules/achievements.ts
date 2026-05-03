@@ -1,19 +1,20 @@
-import { computed } from 'vue';
+import { computed, unref } from 'vue';
 import {
   Decimal,
   createAchievementCategory,
+  createMultiplicativeModifier,
+  getCombinedAchievementEffect,
   tunable,
+  type Achievement,
   type AchievementCategory,
+  type DecimalSource,
   type EngineModule,
-  type Grant,
   type InjectionKey,
 } from 'open-loop-engine';
 import type { AchievementDef, AmbientData, AmbientGameState } from '../data/types';
 import {
-  AllRateChainsKey,
   AmbientTuningRegistryKey,
   AutoProducersKey,
-  HeadlineRateKey,
   PrimaryLifetimeKey,
   PrimaryResourceKey,
 } from './auto-producers';
@@ -21,9 +22,9 @@ import { UnlocksKey } from './unlocks';
 import { SceneKey } from './scene';
 import { SessionClockKey } from './session-clock';
 
-export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef>> = Symbol(
+export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef, unknown>> = Symbol(
   'ambient/achievements',
-) as InjectionKey<AchievementCategory<AchievementDef>>;
+) as InjectionKey<AchievementCategory<AchievementDef, unknown>>;
 
 /**
  * Ambient's achievement category. Each `AchievementDef.requirement` closure is
@@ -35,6 +36,11 @@ export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef>> 
  * predicates re-evaluate, and the category fires earned through its existing
  * watcher path. The flag is data-side metadata (a hint about *when* the
  * predicate becomes true), not a separate evaluation channel.
+ *
+ * Rate-bonus shape is G-M10: each achievement's `effect` returns its per-
+ * achievement multiplier (`def.rewardMultiplier ?? balance.achievementMultiplier`),
+ * and a single multiplicative modifier per producer rateChain folds the active
+ * set via `getCombinedAchievementEffect`. Mirrors `producer/achievements.ts`.
  */
 export function createAchievementsModule(data: AmbientData): EngineModule {
   return {
@@ -51,10 +57,10 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
       const scene = ctx.inject(SceneKey);
       const primary = ctx.inject(PrimaryResourceKey);
       const primaryLifetime = ctx.inject(PrimaryLifetimeKey);
-      const headlineRate = ctx.inject(HeadlineRateKey);
       const sessionClock = ctx.inject(SessionClockKey);
-      const allChains = ctx.inject(AllRateChainsKey);
       const tuningRegistry = ctx.inject(AmbientTuningRegistryKey);
+
+      const headlineRate = computed(() => buildings.getTotalRate(primary));
 
       const state: AmbientGameState = {
         primaryAtLeast: (amount) => Decimal.gte(primary.value, amount),
@@ -77,7 +83,7 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
         offlineGapAtLeast: (seconds) => sessionClock.lastResumeGapSec.value >= seconds,
       };
 
-      const achievementMultiplier = tunable(
+      const achievementMultiplier = tunable<DecimalSource>(
         tuningRegistry,
         'balance/achievementMultiplier',
         () => data.balance.achievementMultiplier,
@@ -85,26 +91,36 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
 
       const achievements = createAchievementCategory<AchievementDef>({
         id: 'ambient/achievements',
-        mapAchievement: (def) => {
-          const grants: Grant[] = [
-            {
-              chain: allChains,
-              mult: def.rewardMultiplier ?? achievementMultiplier,
-              description: def.name,
-            },
-          ];
-          return {
-            display: {
-              title: def.name,
-              description: def.description,
-            },
-            requirement: computed(() => def.requirement(state)),
-            hidden: def.hidden ?? false,
-            grants,
-          };
-        },
+        mapAchievement: (def) => ({
+          display: { title: def.name, description: def.description },
+          requirement: computed(() => def.requirement(state)),
+          hidden: def.hidden ?? false,
+          effect: (): number => {
+            const raw = def.rewardMultiplier ?? unref(achievementMultiplier);
+            return new Decimal(raw).toNumber();
+          },
+        }),
       });
       achievements.register(data.achievements);
+
+      // G-M10 — one multiplicative modifier per producer rateChain over the
+      // cumulative earned-achievement product. Replaces per-achievement Grants
+      // with a single binding whose getter folds the active set.
+      const allAchievements = achievements
+        .getAll()
+        .map((entry) => entry.achievement) as Achievement<number>[];
+
+      for (const def of data.producers) {
+        const producer = buildings.getProducer(def.id);
+        if (!producer) continue;
+        producer.rateChain.bind({
+          id: `achievements/${def.id}`,
+          modifier: createMultiplicativeModifier({
+            multiplier: () => getCombinedAchievementEffect(allAchievements),
+            description: 'Achievements',
+          }),
+        });
+      }
 
       ctx.provide(AchievementsKey, achievements);
     },

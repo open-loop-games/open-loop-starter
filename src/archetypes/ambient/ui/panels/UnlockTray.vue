@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal } from 'open-loop-engine';
-import { useUnlocks } from '../../composables/useUnlocks';
-import { useAmbientData } from '../../composables/useAmbientData';
+import { useModule } from '@/composables/useModule';
+import { AutoProducersKey, SceneKey, UnlocksKey } from '../../modules';
 import { useHeadlineRate } from '../../composables/useHeadlineRate';
 import { useFormatting } from '@/composables/useFormatting';
 import Tooltip from '@/ui/components/Tooltip.vue';
 import type { UnlockDef } from '../../data/types';
 
-const unlocks = useUnlocks();
-const data = useAmbientData();
+const unlocks = useModule(UnlocksKey);
+const buildings = useModule(AutoProducersKey);
+const scene = useModule(SceneKey);
 const { lifetime } = useHeadlineRate();
 const { format } = useFormatting();
 
@@ -24,11 +25,11 @@ interface Cell {
 function describeReveals(def: UnlockDef): string {
   const r = def.reveals;
   if (r.kind === 'producer') {
-    const producer = data.producers.find((p) => p.id === r.producerId);
+    const producer = buildings.getEntry(r.producerId)?.def;
     return producer ? `Reveals the ${producer.name}` : `Reveals producer ${r.producerId}`;
   }
   if (r.kind === 'scene-variant') {
-    const variant = data.sceneVariants.find((v) => v.id === r.variantId);
+    const variant = scene.getVariant(r.variantId);
     return variant ? `Reveals the ${variant.label} scene` : `Reveals scene ${r.variantId}`;
   }
   switch (r.affordance) {
@@ -42,9 +43,9 @@ function describeReveals(def: UnlockDef): string {
 }
 
 const cells = computed<Cell[]>(() =>
-  data.unlocks.map((def) => {
-    const purchasable = unlocks.getPurchasable(def.id);
-    const earned = purchasable?.active.value === true;
+  unlocks.getAll().map((entry) => {
+    const def = entry.def;
+    const earned = entry.purchasable.active.value === true;
     return {
       id: def.id,
       def,

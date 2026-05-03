@@ -1,21 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useModule } from '@/composables/useModule';
 import { useHeadlineRate } from '../../composables/useHeadlineRate';
-import { useScene } from '../../composables/useScene';
-import { useAmbientData } from '../../composables/useAmbientData';
+import { SceneKey } from '../../modules';
 import { useFormatting } from '@/composables/useFormatting';
 import Tooltip from '@/ui/components/Tooltip.vue';
 
 const { primary, lifetime, perSecond } = useHeadlineRate();
-const scene = useScene();
-const data = useAmbientData();
+const scene = useModule(SceneKey);
 const { format } = useFormatting();
 
 const sprouts = computed(() => primary.value);
-const variant = computed(() => {
-  const id = scene.currentVariantId.value;
-  return data.sceneVariants.find((v) => v.id === id) ?? data.sceneVariants[0];
-});
+const variant = scene.currentVariant;
 </script>
 
 <template>

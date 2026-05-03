@@ -3,17 +3,13 @@ import type { AmbientData } from '../data/types';
 import { createAutoProducersModule } from './auto-producers';
 import { createUnlocksModule } from './unlocks';
 import { createSceneModule } from './scene';
-import { createCategoriesModule } from './categories';
 import { createSessionClockModule } from './session-clock';
 import { createAchievementsModule } from './achievements';
 import { createPrestigeModule } from './prestige';
 
 export {
-  AmbientDataKey,
   AmbientTuningRegistryKey,
-  AllRateChainsKey,
   AutoProducersKey,
-  HeadlineRateKey,
   PrimaryLifetimeKey,
   PrimaryResourceKey,
   TimeSystemKey,
@@ -39,8 +35,7 @@ export function createAmbientModules(data: AmbientData): EngineModule[] {
     createAutoProducersModule(data),
     createUnlocksModule(data),
     createSceneModule(data),
-    createCategoriesModule(),
-    createSessionClockModule(),
+    createSessionClockModule(data),
     createAchievementsModule(data),
   ];
   if (data.balance.prestigeEnabled) {

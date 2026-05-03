@@ -21,14 +21,9 @@
  * second consumer wants them).
  */
 
+import { computed } from 'vue';
 import { Decimal, processOfflineTime, runUntil, type Engine } from 'open-loop-engine';
-import {
-  AutoProducersKey,
-  HeadlineRateKey,
-  PrimaryLifetimeKey,
-  PrimaryResourceKey,
-  UnlocksKey,
-} from '../modules';
+import { AutoProducersKey, PrimaryLifetimeKey, PrimaryResourceKey, UnlocksKey } from '../modules';
 import { buildAmbientSimEngine } from './bot';
 
 // ─── Probe 3 — offline round-trip ────────────────────────────────────────
@@ -89,9 +84,9 @@ interface PressureFinding {
 function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] } {
   const engine = buildAmbientSimEngine();
   const primary = engine.tryInject(PrimaryResourceKey)!;
-  const headline = engine.tryInject(HeadlineRateKey)!;
   const producers = engine.tryInject(AutoProducersKey)!;
   const unlocks = engine.tryInject(UnlocksKey)!;
+  const headline = computed(() => producers.getTotalRate(primary));
 
   // Sum-of-counts is monotonically non-decreasing during a 24h sim with no
   // resets, so any per-tick increase signals at least one bot purchase.

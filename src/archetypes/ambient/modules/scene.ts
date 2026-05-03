@@ -5,7 +5,7 @@ import {
   type InjectionKey,
   type ZoneSystem,
 } from 'open-loop-engine';
-import type { AmbientData } from '../data/types';
+import type { AmbientData, SceneVariantDef } from '../data/types';
 import { UnlocksKey } from './unlocks';
 
 export interface SceneState {
@@ -18,6 +18,10 @@ export interface SceneState {
    * outside `current`.
    */
   currentVariantId: ComputedRef<string>;
+  /** Current variant def — closes over the registered scene-variant set. */
+  currentVariant: ComputedRef<SceneVariantDef>;
+  /** Look up a variant def by id; UI panels use this to render reveal labels. */
+  getVariant(id: string): SceneVariantDef | undefined;
 }
 
 export const SceneKey: InjectionKey<SceneState> = Symbol(
@@ -81,16 +85,27 @@ export function createSceneModule(data: AmbientData): EngineModule {
         );
       }
 
-      const defaultVariantId = data.sceneVariants[0].id;
+      const variantsById = new Map<string, SceneVariantDef>(
+        data.sceneVariants.map((v) => [v.id, v]),
+      );
+      const defaultVariant = data.sceneVariants[0];
       const currentVariantId = computed(() => {
         const ordered = zones.ordered.value;
         for (let i = ordered.length - 1; i >= 0; i--) {
           if (zones.isUnlocked(ordered[i].id)) return ordered[i].id;
         }
-        return defaultVariantId;
+        return defaultVariant.id;
       });
+      const currentVariant = computed(
+        () => variantsById.get(currentVariantId.value) ?? defaultVariant,
+      );
 
-      ctx.provide(SceneKey, { zones, currentVariantId });
+      ctx.provide(SceneKey, {
+        zones,
+        currentVariantId,
+        currentVariant,
+        getVariant: (id) => variantsById.get(id),
+      });
     },
   };
 }

@@ -53,7 +53,6 @@ export const AMBIENT_BALANCE: AmbientBalance = {
   tier1BaseRate: 1.0,
   producerCostGrowth: COST_SCALING,
   achievementMultiplier: 1.02,
-  offlineEfficiency: 1.0,
   offlineCapHours: 12,
   prestigeEnabled: false,
   prestigeMultiplierBase: 1.2,

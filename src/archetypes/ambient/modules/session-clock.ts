@@ -1,5 +1,6 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { type EngineModule, type InjectionKey } from 'open-loop-engine';
+import type { AmbientData } from '../data/types';
 import { TimeSystemKey } from './auto-producers';
 
 export interface SessionClock {
@@ -20,6 +21,8 @@ export interface SessionClock {
    * cold boot.
    */
   lastResumeGapSec: Ref<number>;
+  /** Cap (seconds) on the wall-clock gap delivered to processOfflineTime. */
+  offlineCapSeconds: number;
   /**
    * Re-snap `elapsedAtResume` to the current `time.elapsed`. AppRoot calls
    * this after `processOfflineTime` returns so subsequent reads of
@@ -49,7 +52,7 @@ export const SessionClockKey: InjectionKey<SessionClock> = Symbol(
  *   4. AppRoot calls `sessionClock.refreshElapsedAtResume()` so
  *      `secondsSinceLastResume` resumes measuring live-session time.
  */
-export function createSessionClockModule(): EngineModule {
+export function createSessionClockModule(data: AmbientData): EngineModule {
   return {
     id: 'ambient/session-clock',
     dependencies: ['ambient/auto-producers'],
@@ -57,6 +60,7 @@ export function createSessionClockModule(): EngineModule {
       const time = ctx.inject(TimeSystemKey);
       const elapsedAtResume = ref(time.elapsed.value);
       const lastResumeGapSec = ref(0);
+      const offlineCapSeconds = Number(data.balance.offlineCapHours) * 3600;
 
       const secondsSinceCreation = computed(() => time.totalPlayTime.value);
       const secondsSinceLastResume = computed(() => time.elapsed.value - elapsedAtResume.value);
@@ -69,6 +73,7 @@ export function createSessionClockModule(): EngineModule {
         secondsSinceCreation,
         secondsSinceLastResume,
         lastResumeGapSec,
+        offlineCapSeconds,
         refreshElapsedAtResume: () => {
           elapsedAtResume.value = time.elapsed.value;
         },

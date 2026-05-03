@@ -73,7 +73,6 @@ export function createApp(overrides?: AmbientOverrides): AmbientBootResult {
   const { app, mount } = bootApp({
     root: AmbientAppRoot,
     engine,
-    provides: [['ambient:data', data]],
   });
   return { engine, data, app, mount };
 }

@@ -25,11 +25,8 @@ export type {
 } from './data/types';
 export { applyAmbientOverrides, type AmbientOverrides } from './data/overrides';
 export {
-  AmbientDataKey,
   AmbientTuningRegistryKey,
-  AllRateChainsKey,
   AutoProducersKey,
-  HeadlineRateKey,
   PrimaryLifetimeKey,
   PrimaryResourceKey,
   TimeSystemKey,
