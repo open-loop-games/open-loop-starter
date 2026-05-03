@@ -130,19 +130,19 @@ A passthrough composable (`useFooKey() { return useModule(FooKey) }` with nothin
 
 **Rule.** Use the engine's category factories for content domains: `createSkillCategory`, `createPurchasableCategory`, `createProducerCategory`, `createAchievementCategory`, `createChallengeCategory`. Each factory opens a per-definition persistent context automatically (`{categoryId}/{def.id}`); register defs via `category.register(defs)`. Per-instance state beyond the category's standard def shape goes in the `mapState: (def, instance) => State` callback — both `PurchasableCategory` and `ProducerCategory` accept it as a second generic parameter on `Options`. Read with `category.getState(id)`.
 
-**`CategoriesKey` is opt-in convention, not engine machinery.** Per [`open-loop-engine/src/index.ts:131–133`](../../open-loop-engine/src/index.ts), the engine "does not auto-register anything, does not enforce publication, and does not fail if the key is absent." When the harness or workbench tooling needs cross-category enumeration, the right shape is for owner modules to participate in publication directly, not for the archetype to grow a separate `categories.ts` aggregator that re-injects every owner module and re-publishes the union under `CategoriesKey`. The aggregator pattern papers over a wrong-surface adoption: it forces a hand-maintained inventory of categories that drifts from the actual module set.
+**`CategoriesKey` is engine self-published.** Per [`open-loop-engine/src/systems/engine-categories.ts`](../../open-loop-engine/src/systems/engine-categories.ts), the five category factories (`createProducerCategory`, `createPurchasableCategory`, `createAchievementCategory`, `createChallengeCategory`, `createSkillCategory`) auto-append to a per-engine accumulator at construction time, parallel to how `createModifierChain` auto-registers into `ChainRegistry`. The accumulator is pre-provided under `CategoriesKey` before any module installs. Harness tooling and external introspection (BalanceWorkbench, sim pickers, content walkers) read the inventory via `engine.tryInject(CategoriesKey)` without any archetype-side publication step. Consumer-side `engine.provide(CategoriesKey, ...)` continues to work via `Map.set` overwrite — back-compat, not the prescribed shape. Any archetype-side `ctx.provide(CategoriesKey, ...)` is flag-local: the engine already covers the ground.
 
 **Anti-pattern.**
 - Hand-rolled `Map<string, T>` shadow registries for jobs/upgrades/skills/achievements that the engine has a category factory for.
 - Hand-rolled per-def `withPersistentContext(def.id, () => …)` blocks for what `mapState` on a category factory would scope automatically. Calling code typically appears as a `createCategoryShim(...)`-style helper — a strong signal the author didn't find `mapState`.
-- `categories.ts` aggregator modules that exist solely to re-publish owner modules' categories under `CategoriesKey`. Each instance is a flag regardless of how many archetypes ship one.
+- `categories.ts` (or `categories-publish.ts`) aggregator modules that re-inject owner modules and re-publish the union under `CategoriesKey`. Redundant with engine self-publish; the back-compat `Map.set` overwrite keeps them working but the engine pre-provides the same inventory. Each instance is flag-local — drop the module and remove its registration from the module list.
 
 **Audit criterion.**
 - For each content domain (skills, upgrades, achievements, jobs, producers, challenges): is there a `createXCategory` call, or a hand-rolled `Map`/`Array` doing the same job?
 - For per-def state beyond the category's standard fields: is `mapState` used, or is there a hand-rolled per-def persistent block?
-- Does a `categories.ts` aggregator module exist?
+- `grep -rn "ctx.provide(CategoriesKey" src/archetypes/<name>/`: any hit is a flag-local; the engine already self-publishes.
 
-**Threshold.** Zero hand-rolled `Map<string, ContentDef>` shadow registries for content the engine has a category for. Zero per-def persistent blocks where `mapState` would suffice. Zero `categories.ts` aggregator modules — presence is a flag.
+**Threshold.** Zero hand-rolled `Map<string, ContentDef>` shadow registries for content the engine has a category for. Zero per-def persistent blocks where `mapState` would suffice. Any archetype-side `ctx.provide(CategoriesKey, ...)` is a flag-local — the engine pre-provides.
 
 ---
 
@@ -223,15 +223,31 @@ For single-tier resets without lifecycle (a prestige conversion, a one-shot rein
 
 Apply the canonical-numbers rule: cited-from-vanilla balance values are not perturbable. The tunable surface is for declared-invention numbers. Mass-wrapping every balance constant fudges the canonical balance.
 
+The prescribed shape: keep a module-level `TUNABLE_*_IDS: Set<string>` constant naming the entities whose knob is registered, and inline the conditional at the mapper site:
+
+```ts
+const TUNABLE_BASE_COST_IDS = new Set(['cursor', 'grandma']);
+// ...
+mapProducer: (def) => ({
+  // ...
+  baseCost: TUNABLE_BASE_COST_IDS.has(def.id)
+    ? tunable(registry, `producers/${def.id}/purchase/baseCost`, () => def.purchase.baseCost)
+    : def.purchase.baseCost,
+  // ...
+}),
+```
+
+The Set survives as the greppable knob inventory; the conditional rides the mapper closure. No helper, no wrapper return-type union to thread through.
+
 **Anti-pattern.**
-- Hand-rolled `wrapBaseCost` / `TUNABLE_BASE_COST_IDS` shims around `tunable()` that conditionally swap between a tunable ref and the raw def value. The engine's `Computable<T>` already accepts `T | Readonly<Ref<T>> | (() => T)` — pass `tunable(...)` directly when the def is in the tunable set, otherwise pass `def.cost`. The conditional belongs at the call site, not in a helper.
+- Hand-rolled `wrapBaseCost` / `wrapThreshold` shims around `tunable()` that conditionally swap between a tunable ref and the raw def value. The engine's `Computable<T>` already accepts `T | Readonly<Ref<T>> | (() => T)` — the conditional belongs at the mapper site, not in a helper that returns a discriminated union.
 - `createOverrideRegistry` exists, but reads happen via manual `overrides.get('key')()` thunks at every read site — losing the no-default-fallback story `tunable()` provides.
 - Wrapping cited-from-vanilla numbers, perturbing them, and treating sim output as balance signal.
 
 **Audit criterion.**
 - Wrapped values are declared inventions or genuinely-tuning-bearing knobs.
 - Read sites use the wrapped `ComputedRef` (or pass it directly into a `Computable`-typed engine option), not manual registry-get thunks.
-- No `wrapBaseCost`-shaped helper exists in the archetype.
+- No `wrapBaseCost` / `wrapThreshold`-shaped helper exists in the archetype; the inline shape is the prescribed pattern.
 
 **Threshold.** ≤10% of balance constants are tunable-wrapped (rough guide — varies by archetype). All wrapped values either have a row-level invention tag or a co-located comment naming the tuning purpose.
 
@@ -366,7 +382,6 @@ The OL-826 corpus harvest surfaced a list of "NEW candidate-primitives" the doc 
 | `MaybeRef<T>` brand fix | **Confabulated.** Engine's `MaybeRef` is imported from `vue` (`src/core/computed.ts:9`) — same brand the starter uses. The hand-rolled `resolveMaybe` is a buggy substitute for `unref`. Fix is replacing it with `unref()`. |
 | `category.allRateChains()` accessor | **Trivial.** `producers.getAll().map(e => e.producer.rateChain)` is a one-liner. The 4-site `collectRateChains(producers, tier)` helper is dust, not a missing primitive. Inline at the call site. |
 | `ChainRegistry` adoption | **Already shipped.** `ChainRegistryKey`, `createChainRegistry`, and `walkChainRegistry` exist (`src/core/chain-registry.ts`, `src/harness/picker/walk-chain-registry.ts`); the engine auto-publishes the registry (`src/index.ts:529`); chains auto-register on creation (`src/core/modifier.ts:524`). The "adoption pattern" gap is doc/audit, not primitive. |
-| `createCategoriesPublisherModule` | **Wrong-surface adoption.** `CategoriesKey` is documented as opt-in convention (`src/index.ts:131–133`), not auto-aggregation. The 4 `categories.ts` aggregator modules are a bad shape regardless of the convention — they force a hand-maintained inventory of categories that drifts from the actual module set. N=4 is N=4 wrong adoptions, not validation of a missing primitive. |
 | `withSelf` / `mapPurchasable: (def, self) => …` | **Confabulated.** Both observed cases are wrong-surface adoptions: scaler/antimatter uses raw `createPurchasable` with a hand-rolled geometric cost where `createScalingPurchasable`'s `baseCost * costScaling^amount` shape already fits (`src/systems/purchasable.ts:148–192`); scaler/prestige forward-declares the category to read per-def state where `mapState: (def, purchasable) => State` would supply the instance handle without forward-reference. |
 | Cross-phase install/connect state | **Misdiagnosed.** A `let X!: T` declared inside `install()` and assigned later, with cross-module reads still going through `ctx.provide` / `ctx.inject`, is closure-local — not a cross-phase shadow registry. The eslint-disable on `prefer-const` is style. The genuine § 3 anti-pattern is `export let X: State \| null = null` cross-module exports; that's spell-compiler / incloneution shape, not scaler. |
 | `createArcLatch({ id, complete, flavour })` | **Starter UI artifact.** Three archetypes' `arc.ts` files latch a "completion announced" boolean for a one-shot popup. Predicate body varies; the latch+watch+persistent skeleton is Vue + `persistent()` basics. Not engine; arguably not even a starter composable (single-UI-affordance scope per § 14). |
