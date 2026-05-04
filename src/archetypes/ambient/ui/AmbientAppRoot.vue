@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
+import { computed, inject, provide, ref } from 'vue';
 import { processOfflineTime, type Engine, type EngineModule } from 'open-loop-engine';
 import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
@@ -22,17 +22,6 @@ provide('currentScreen', currentScreen);
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-
-function onKey(e: KeyboardEvent): void {
-  if (!isDev) return;
-  if (e.key === 'F12') {
-    e.preventDefault();
-    showDevPanel.value = !showDevPanel.value;
-  }
-}
-
-onMounted(() => window.addEventListener('keydown', onKey));
-onUnmounted(() => window.removeEventListener('keydown', onKey));
 
 const stack = useModalStack();
 function openAchievements(): void {
@@ -147,7 +136,10 @@ function getActiveModules(): EngineModule[] {
     </SingleColumnShell>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics v-if="isDev" />
+  <DevDiagnostics
+    v-if="isDev"
+    v-model:workbench-open="showDevPanel"
+  />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"

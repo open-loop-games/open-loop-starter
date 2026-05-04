@@ -22,14 +22,6 @@ provide('currentScreen', currentScreen);
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
 
-function onKey(e: KeyboardEvent): void {
-  if (!isDev) return;
-  if (e.key === 'F12') {
-    e.preventDefault();
-    showDevPanel.value = !showDevPanel.value;
-  }
-}
-
 const FONTS_HREF =
   'https://fonts.googleapis.com/css2?' +
   'family=Fraunces:ital,opsz,wght,SOFT@0,9..144,500..900,100;1,9..144,500..900,100&' +
@@ -55,12 +47,10 @@ function ensureBakeryFonts(): void {
 onMounted(() => {
   document.body.dataset.archetype = 'producer';
   ensureBakeryFonts();
-  window.addEventListener('keydown', onKey);
 });
 
 onUnmounted(() => {
   delete document.body.dataset.archetype;
-  window.removeEventListener('keydown', onKey);
 });
 
 const stack = useModalStack();
@@ -148,7 +138,10 @@ function getActiveModules(): EngineModule[] {
     </ThreePanelShell>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics v-if="isDev" />
+  <DevDiagnostics
+    v-if="isDev"
+    v-model:workbench-open="showDevPanel"
+  />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"

@@ -20,6 +20,8 @@ import type { Engine } from 'open-loop-engine';
 
 const engine = inject<Engine>('engine');
 
+const workbenchOpen = defineModel<boolean>('workbenchOpen', { default: false });
+
 const fps = ref(0);
 const tps = ref(0);
 
@@ -65,6 +67,17 @@ onUnmounted(() => {
 
 <template>
   <div class="dev-diag">
+    <div class="dev-diag-row dev-diag-row--workbench">
+      <button
+        type="button"
+        class="dev-diag-speed"
+        :class="{ active: workbenchOpen }"
+        data-testid="dev-workbench-toggle"
+        @click="workbenchOpen = !workbenchOpen"
+      >
+        Workbench
+      </button>
+    </div>
     <div class="dev-diag-row">
       <span class="dev-diag-label">FPS</span>
       <span class="dev-diag-value">{{ fps }}</span>
@@ -114,8 +127,12 @@ onUnmounted(() => {
   gap: 6px;
   pointer-events: none;
 }
-.dev-diag-row--speed {
+.dev-diag-row--speed,
+.dev-diag-row--workbench {
   pointer-events: auto;
+}
+.dev-diag-row--workbench .dev-diag-speed {
+  flex: 1 1 0;
 }
 .dev-diag-label {
   color: #667788;

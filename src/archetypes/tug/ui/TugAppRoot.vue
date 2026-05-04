@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
+import { inject, provide, ref } from 'vue';
 import { processOfflineTime, type Engine, type EngineModule } from 'open-loop-engine';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
@@ -24,17 +24,6 @@ provide('currentScreen', currentScreen);
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-
-function onKey(e: KeyboardEvent): void {
-  if (!isDev) return;
-  if (e.key === 'F12') {
-    e.preventDefault();
-    showDevPanel.value = !showDevPanel.value;
-  }
-}
-
-onMounted(() => window.addEventListener('keydown', onKey));
-onUnmounted(() => window.removeEventListener('keydown', onKey));
 
 const stack = useModalStack();
 
@@ -118,7 +107,10 @@ function getActiveModules(): EngineModule[] {
     </TugFrameLayout>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics v-if="isDev" />
+  <DevDiagnostics
+    v-if="isDev"
+    v-model:workbench-open="showDevPanel"
+  />
   <MatchEndSummary v-if="currentScreen === Screen.Game" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"

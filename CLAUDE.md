@@ -147,27 +147,27 @@ Typical fork wiring in `App.vue`:
 
 ```vue
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref } from 'vue';
 import { DevPanelOverlay } from '@/lib';
+import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import { engine } from './main';
 import { allModules } from './modules';
 
+const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-const onKey = (e: KeyboardEvent) => { if (e.key === 'F12') { e.preventDefault(); showDevPanel.value = !showDevPanel.value; } };
-onMounted(() => window.addEventListener('keydown', onKey));
-onUnmounted(() => window.removeEventListener('keydown', onKey));
 </script>
 
 <template>
   <AppFrame>…</AppFrame>
-  <DevPanelOverlay v-if="showDevPanel" title="Balance Workbench" @close="showDevPanel = false">
+  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
+  <DevPanelOverlay v-if="isDev && showDevPanel" title="Balance Workbench" @close="showDevPanel = false">
     <BalanceWorkbench :engine="engine" :modules="() => allModules" />
   </DevPanelOverlay>
 </template>
 ```
 
-The overlay is a top-level sibling of `AppFrame`, not pushed through `useModalStack` — it owns its own fullscreen chrome and doesn't need the modal stack's Dialog wrapping.
+`DevDiagnostics` is the always-on dev dock (FPS/TPS readout, speed buttons, Workbench toggle). `DevPanelOverlay` is a top-level sibling of `AppFrame`, not pushed through `useModalStack` — it owns its own fullscreen chrome and doesn't need the modal stack's Dialog wrapping.
 
 ## Code Rules
 

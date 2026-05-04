@@ -22,21 +22,11 @@ provide('currentScreen', currentScreen);
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
 
-function onKey(e: KeyboardEvent): void {
-  if (!isDev) return;
-  if (e.key === 'F12') {
-    e.preventDefault();
-    showDevPanel.value = !showDevPanel.value;
-  }
-}
-
 onMounted(() => {
   document.body.dataset.archetype = 'looper';
-  window.addEventListener('keydown', onKey);
 });
 onUnmounted(() => {
   delete document.body.dataset.archetype;
-  window.removeEventListener('keydown', onKey);
 });
 
 const stack = useModalStack();
@@ -107,7 +97,10 @@ function getActiveModules(): EngineModule[] {
     </ThreePanelShell>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics v-if="isDev" />
+  <DevDiagnostics
+    v-if="isDev"
+    v-model:workbench-open="showDevPanel"
+  />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
