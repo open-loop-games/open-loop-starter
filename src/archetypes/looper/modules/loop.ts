@@ -39,7 +39,13 @@ import {
   getLoadoutNames,
   getActiveList,
 } from './action-queue';
-import { resetAllActionProgress, consumeRestartFlag, isRestartFlagged } from './action-runner';
+import {
+  consumeRestartFlag,
+  isRestartFlagged,
+  basicCategory,
+  progressCategory,
+  regularCategory,
+} from './action-runner';
 
 // Inline-in-publisher injection key so action-runner (and any future reader)
 // can `ctx.inject(LoopKey)` rather than sibling-importing module-scope state.
@@ -218,7 +224,12 @@ export const loopModule: EngineModule = {
         // each skill instance; the recursive walker resets `xp` (LevelDriven
         // mode has no other persistent ref). Talent SkillCategory is omitted
         // here — its xp survives across loops.
-        return [getStatLevelSkills()];
+        //
+        // Action-type categories: each entry's state holds `progress` and
+        // `timesCompleted` Persistent refs that the walker zaps. progress
+        // category's `gainChain` is walked but holds no Persistent refs, so
+        // it survives untouched.
+        return [getStatLevelSkills(), basicCategory, progressCategory, regularCategory];
       },
 
       onBeforeRestart: () => {
@@ -248,7 +259,6 @@ export const loopModule: EngineModule = {
         resetAllResources();
         restartZones();
         restartActionQueue();
-        resetAllActionProgress();
       },
 
       registerTick: ctx.onTick,

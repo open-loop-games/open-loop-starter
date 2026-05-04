@@ -17,30 +17,34 @@ import {
   type DecimalSource,
   type ModifierChain,
   type Persistent,
+  createCategoryBase,
   createModifierChain,
   persistent,
 } from 'open-loop-engine';
 import type { ActionDef } from '../../data/types';
-import { createActionTypeCategory } from './category-factory';
 
 export interface ProgressState {
   progress: Persistent<DecimalSource>;
   timesCompleted: Persistent<DecimalSource>;
+  // gainChain is reset-walked but holds no Persistent refs (modifier closures
+  // + computed refs only) — no-op under the Resettable walker.
   gainChain: ModifierChain;
 }
 
 export type ProgressTickStatus = 'progressing' | 'completed';
 
-export const progressCategory = createActionTypeCategory<ProgressState>({
-  typeTag: 'progress',
-  build: (def) => ({
+export const progressCategory = createCategoryBase<ActionDef, void, ProgressState>({
+  id: 'action-runner/progress',
+  buildState: (def) => ({
     progress: persistent<DecimalSource>(0),
     timesCompleted: persistent<DecimalSource>(0),
     gainChain: createModifierChain(`progress:${def.id}:gain`),
   }),
 });
 
-export const installProgressOne = progressCategory.installOne;
+export function installProgressOne(def: ActionDef): void {
+  if (def.type === 'progress') progressCategory.register(def);
+}
 
 /**
  * Advance a progress action's tick counter. On crossing `adjusted`, resets
@@ -53,7 +57,7 @@ export function dispatchProgress(
   gainPerTick: number,
   adjusted: Decimal,
 ): ProgressTickStatus {
-  const state = progressCategory.getState(def.id);
+  const state = progressCategory.getEntry(def.id)?.state;
   if (!state) return 'progressing';
   const next = Decimal.add(state.progress.value, gainPerTick);
   if (Decimal.gte(next, adjusted)) {

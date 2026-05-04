@@ -26,11 +26,11 @@ function getActionProgress(id: string): number {
   if (Decimal.lte(adjusted, 0)) return 0;
   const state =
     def.type === 'basic'
-      ? basicCategory.getState(id)
+      ? basicCategory.getEntry(id)?.state
       : def.type === 'progress'
-        ? progressCategory.getState(id)
+        ? progressCategory.getEntry(id)?.state
         : def.type === 'regular'
-          ? regularCategory.getState(id)
+          ? regularCategory.getEntry(id)?.state
           : undefined;
   if (!state) return 0;
   return Math.min(1, Math.max(0, Decimal.div(state.progress.value, adjusted).toNumber()));

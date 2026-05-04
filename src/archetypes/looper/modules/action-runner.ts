@@ -124,11 +124,11 @@ export function addCompletionHook(hook: CompletionHook): void {
 // ============================================================================
 
 export function getTimesCompleted(actionId: string): Decimal {
-  const bs = basicCategory.getState(actionId);
+  const bs = basicCategory.getEntry(actionId)?.state;
   if (bs) return new Decimal(bs.timesCompleted.value);
-  const ps = progressCategory.getState(actionId);
+  const ps = progressCategory.getEntry(actionId)?.state;
   if (ps) return new Decimal(ps.timesCompleted.value);
-  const rs = regularCategory.getState(actionId);
+  const rs = regularCategory.getEntry(actionId)?.state;
   if (rs) return new Decimal(rs.timesCompleted.value);
   return Decimal.dZero;
 }
@@ -286,7 +286,7 @@ function grantProgressXP(def: ActionDef): void {
   const pvDef = PROGRESS_VARS.find((pv) => pv.id === def.progressVarId);
   const expMult = pvDef ? new Decimal(pvDef.expMult) : Decimal.dOne;
   const base = Decimal.mul(def.progressAmount, expMult);
-  const state = progressCategory.getState(def.id);
+  const state = progressCategory.getEntry(def.id)?.state;
   const multiplied = state ? state.gainChain.apply(base) : base;
   addProgressXP(def.progressVarId, multiplied);
 }
@@ -442,29 +442,6 @@ export function calcTotalTicksNeeded(): Decimal {
   }
 
   return total;
-}
-
-// ============================================================================
-// Loop-restart reset
-// ============================================================================
-
-/**
- * Reset all per-def action progress and completion counters.
- * Called by the loop module's onLoopRestart.
- */
-export function resetAllActionProgress(): void {
-  for (const { state } of basicCategory.getAll()) {
-    state.progress.value = 0;
-    state.timesCompleted.value = 0;
-  }
-  for (const { state } of progressCategory.getAll()) {
-    state.progress.value = 0;
-    state.timesCompleted.value = 0;
-  }
-  for (const { state } of regularCategory.getAll()) {
-    state.progress.value = 0;
-    state.timesCompleted.value = 0;
-  }
 }
 
 // ============================================================================

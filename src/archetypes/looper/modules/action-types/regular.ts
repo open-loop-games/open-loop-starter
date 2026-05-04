@@ -13,9 +13,14 @@
  * by any regular def. No loopStats either — those are multipart-only.
  */
 
-import { Decimal, type DecimalSource, type Persistent, persistent } from 'open-loop-engine';
+import {
+  Decimal,
+  type DecimalSource,
+  type Persistent,
+  persistent,
+  createCategoryBase,
+} from 'open-loop-engine';
 import type { ActionDef } from '../../data/types';
-import { createActionTypeCategory } from './category-factory';
 
 export interface RegularState {
   progress: Persistent<DecimalSource>;
@@ -24,15 +29,17 @@ export interface RegularState {
 
 export type RegularTickStatus = 'progressing' | 'completed';
 
-export const regularCategory = createActionTypeCategory<RegularState>({
-  typeTag: 'regular',
-  build: () => ({
+export const regularCategory = createCategoryBase<ActionDef, void, RegularState>({
+  id: 'action-runner/regular',
+  buildState: () => ({
     progress: persistent<DecimalSource>(0),
     timesCompleted: persistent<DecimalSource>(0),
   }),
 });
 
-export const installRegularOne = regularCategory.installOne;
+export function installRegularOne(def: ActionDef): void {
+  if (def.type === 'regular') regularCategory.register(def);
+}
 
 /**
  * Advance a regular action's tick counter. On crossing `adjusted`, resets
@@ -45,7 +52,7 @@ export function dispatchRegular(
   gainPerTick: number,
   adjusted: Decimal,
 ): RegularTickStatus {
-  const state = regularCategory.getState(def.id);
+  const state = regularCategory.getEntry(def.id)?.state;
   if (!state) return 'progressing';
   const next = Decimal.add(state.progress.value, gainPerTick);
   if (Decimal.gte(next, adjusted)) {

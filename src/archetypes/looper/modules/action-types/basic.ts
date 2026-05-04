@@ -8,9 +8,14 @@
  * dispatcher calls `queue.complete()`.
  */
 
-import { Decimal, type DecimalSource, type Persistent, persistent } from 'open-loop-engine';
+import {
+  Decimal,
+  type DecimalSource,
+  type Persistent,
+  persistent,
+  createCategoryBase,
+} from 'open-loop-engine';
 import type { ActionDef } from '../../data/types';
-import { createActionTypeCategory } from './category-factory';
 
 export interface BasicState {
   progress: Persistent<DecimalSource>;
@@ -19,15 +24,17 @@ export interface BasicState {
 
 export type BasicTickStatus = 'progressing' | 'completed';
 
-export const basicCategory = createActionTypeCategory<BasicState>({
-  typeTag: 'basic',
-  build: () => ({
+export const basicCategory = createCategoryBase<ActionDef, void, BasicState>({
+  id: 'action-runner/basic',
+  buildState: () => ({
     progress: persistent<DecimalSource>(0),
     timesCompleted: persistent<DecimalSource>(0),
   }),
 });
 
-export const installBasicOne = basicCategory.installOne;
+export function installBasicOne(def: ActionDef): void {
+  if (def.type === 'basic') basicCategory.register(def);
+}
 
 /**
  * Advance a basic action's progress by one tick.
@@ -41,7 +48,7 @@ export function dispatchBasic(
   gainPerTick: number,
   adjusted: Decimal,
 ): BasicTickStatus {
-  const state = basicCategory.getState(def.id);
+  const state = basicCategory.getEntry(def.id)?.state;
   if (!state) return 'progressing';
   const next = Decimal.add(state.progress.value, gainPerTick);
   if (Decimal.gte(next, adjusted)) {
