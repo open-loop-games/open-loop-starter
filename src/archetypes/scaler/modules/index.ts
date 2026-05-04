@@ -3,35 +3,10 @@ import type { ScalerData } from '../data/types';
 import { createAntimatterModule } from './antimatter';
 import { createPrestigeModule } from './prestige';
 import { createTranscendModule } from './transcend';
-import { createResetsModule } from './resets';
 import { createAchievementsModule } from './achievements';
 
 // Re-exports for the composables / UI layer.
-export {
-  AntimatterAcceleratorKey,
-  AntimatterCoinKey,
-  AntimatterMultiplierKey,
-  AntimatterProducersKey,
-  AntimatterUpgradeGroupKey,
-} from './antimatter';
-export {
-  CrystalUpgradesKey,
-  PrestigeConversionKey,
-  PrestigePointsKey,
-  PrestigeProducersKey,
-  PrestigeShardsKey,
-  type UpgradeRoster,
-} from './prestige';
-export {
-  AcceleratorBoostKey,
-  ChallengesKey,
-  TranscendConversionKey,
-  TranscendPointsKey,
-  TranscendProducersKey,
-  TranscendShardsKey,
-  TranscendUpgradesKey,
-} from './transcend';
-export { AntimatterResetKey, PrestigeResetKey, TranscendResetKey } from './resets';
+export { ScalerTiersKey, type ScalerTier } from './tiers';
 export { AchievementsKey } from './achievements';
 
 /**
@@ -43,28 +18,24 @@ export { AchievementsKey } from './achievements';
  *   antimatter
  *      │
  *      ▼
- *   prestige  ──→ resets ──→ achievements
+ *   prestige  ──→ achievements
  *      │
  *      ▼
  *   transcend
  *
- * Modules close over `data` at construction. Per-tier conversion lives in
- * the tier module's connect() phase (paired with the matching reset from
- * scaler/resets). Cross-tier orchestration (reset composition, modifier
- * chain composition for cross-tier achievement / challenge effects) lives
- * in resets.ts + the per-tier modules' rateChain wiring.
- *
- * `CategoriesKey` is auto-published by the engine — every category factory
- * (createProducerCategory, createPurchasableCategory, createAchievementCategory,
- * createChallengeCategory) appends to a per-engine accumulator at construction
- * time. No consumer-side aggregator module needed.
+ * Each tier module owns its own Reset (created locally in connect() with the
+ * appropriate scope + `keep:` exemption for its currency). The tier API for
+ * each is published into `ScalerTiersKey` — a single archetype-specific key
+ * carrying the per-tier bundle. Engine-native types (Resource, Categories,
+ * Conversion, Reset) flow through the engine's discovery surfaces
+ * (`ResourceRegistryKey`, `CategoriesKey`) — no per-resource / per-category
+ * keys.
  */
 export function createScalerModules(data: ScalerData): EngineModule[] {
   return [
     createAntimatterModule(data),
     createPrestigeModule(data),
     createTranscendModule(data),
-    createResetsModule(),
     createAchievementsModule(data),
   ];
 }

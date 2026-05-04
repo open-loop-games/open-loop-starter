@@ -21,8 +21,7 @@ import SystemHeader from '@/ui/components/SystemHeader.vue';
 import Tabs from '@/ui/components/Tabs.vue';
 import { manifest } from '../manifest';
 import type { Tier } from '../data/types';
-import { ANTIMATTER_TIER, PRESTIGE_TIER, TRANSCEND_TIER } from './tier-configs';
-import type { ExtraPurchasableRef } from '../composables/useTier';
+import { ANTIMATTER_DISPLAY, PRESTIGE_DISPLAY, TRANSCEND_DISPLAY } from './tier-configs';
 import TierPanel from './components/TierPanel.vue';
 import ResourceBar from './components/ResourceBar.vue';
 import AccBoostRow from './components/AccBoostRow.vue';
@@ -30,9 +29,8 @@ import ChallengeStrip from './components/ChallengeStrip.vue';
 import AchievementGridDialog from './components/AchievementGridDialog.vue';
 import './scaler-theme.css';
 
-// Hide AccBoost from Transcend's UpgradeGrid — it owns its own row in the
-// #extras slot below for the cross-currency UI cue.
-const transcendVisibleExtras = (ref: ExtraPurchasableRef): boolean => ref.role !== 'acc-boost';
+// Transcend's acc-boost is rendered separately by AccBoostRow (cross-currency
+// label); UpgradeGrid skips it via TRANSCEND_DISPLAY.externalUpgradeIds.
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -139,16 +137,13 @@ function getActiveModules(): EngineModule[] {
         class="scaler-tier-tabs"
       >
         <template #panel-antimatter>
-          <TierPanel :config="ANTIMATTER_TIER" />
+          <TierPanel :display="ANTIMATTER_DISPLAY" />
         </template>
         <template #panel-prestige>
-          <TierPanel :config="PRESTIGE_TIER" />
+          <TierPanel :display="PRESTIGE_DISPLAY" />
         </template>
         <template #panel-transcend>
-          <TierPanel
-            :config="TRANSCEND_TIER"
-            :visible-extras="transcendVisibleExtras"
-          >
+          <TierPanel :display="TRANSCEND_DISPLAY">
             <template #extras>
               <AccBoostRow />
               <ChallengeStrip />

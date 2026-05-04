@@ -15,9 +15,14 @@
 import { computed } from 'vue';
 import type { Challenge, ChallengeDef as EngineChallengeDef } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
-import { ChallengesKey } from '../../modules';
+import { ScalerTiersKey } from '../../modules';
 
-const challenges = useModule(ChallengesKey);
+const tiers = useModule(ScalerTiersKey);
+const transcend = tiers.find((t) => t.id === 'transcend');
+if (!transcend?.challenges) {
+  throw new Error('ChallengeStrip: transcend tier missing challenges');
+}
+const challenges = transcend.challenges;
 
 interface ChallengeRow {
   def: EngineChallengeDef & { name?: string; effect?: string; reward?: string };

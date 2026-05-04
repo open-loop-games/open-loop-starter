@@ -1,14 +1,15 @@
 <!--
-  Per-tier upgrades + standalone purchasables (Acc / Mult / AccBoost-shaped
-  cumulative purchases). The Transcend AccBoost is rendered via TierPanel's
-  `#extras` slot in 2b.3 (cross-currency price, plus the row needs the
-  transcend-side label "spend prestigePoints"); UpgradeGrid here covers the
-  uniform shape — Antimatter Acc/Mult + Crystal/Transcend category upgrades.
+  Per-tier upgrades. All entries live in the tier's PurchasableCategory
+  (acc + mult on antimatter; crystal upgrades on prestige; acc-boost +
+  4 mythos upgrades on transcend). Entries listed in
+  `tier.display.externalUpgradeIds` are skipped here so a bespoke UI
+  component (e.g. AccBoostRow on transcend) can render them in the
+  TierPanel #extras slot.
 -->
 <script setup lang="ts">
 import { computed, unref } from 'vue';
 import { format, formatWhole } from 'open-loop-engine';
-import type { TierState, ExtraPurchasableRef } from '../../composables/useTier';
+import type { TierState } from '../../composables/useTier';
 
 function title(t: { display: { title: unknown } }): string {
   return (unref(t.display.title) as string | undefined) ?? '';
@@ -19,56 +20,22 @@ function description(t: { display: { description: unknown } }): string {
 
 const props = defineProps<{
   tier: TierState;
-  /** Pass `false` to suppress an extra purchasable (e.g. Transcend AccBoost
-   *  rendered via the per-tier extras slot in 2b.3). */
-  visibleExtras?: (ref: ExtraPurchasableRef) => boolean;
 }>();
 
-const upgradeRows = computed(() => props.tier.upgrades?.value ?? []);
-
-const extras = computed(() =>
-  props.tier.extraPurchasables.filter((entry) =>
-    props.visibleExtras ? props.visibleExtras(entry.ref) : true,
-  ),
-);
+const upgradeRows = computed(() => {
+  const all = props.tier.upgrades?.value ?? [];
+  const exclude = props.tier.display.externalUpgradeIds;
+  if (!exclude || exclude.length === 0) return all;
+  const excludeSet = new Set(exclude);
+  return all.filter((row) => !excludeSet.has(row.def.id));
+});
 </script>
 
 <template>
   <section
-    v-if="extras.length > 0 || upgradeRows.length > 0"
+    v-if="upgradeRows.length > 0"
     class="scaler-upgrade-grid"
   >
-    <div
-      v-for="entry in extras"
-      :key="entry.ref.role"
-      class="scaler-upgrade-row scaler-upgrade-row--extra"
-      :data-role="entry.ref.role"
-    >
-      <div class="scaler-upgrade-row__title">
-        <span>{{ title(entry.purchasable) || entry.ref.role }}</span>
-        <span class="scaler-upgrade-row__level">Level {{ formatWhole(entry.purchasable.amount.value) }}</span>
-      </div>
-      <div
-        v-if="description(entry.purchasable)"
-        class="scaler-upgrade-row__desc"
-      >
-        {{ description(entry.purchasable) }}
-      </div>
-      <div class="scaler-upgrade-row__effect">
-        ×{{ format(entry.purchasable.effect.value, 2) }}
-      </div>
-      <div class="scaler-upgrade-row__cost">
-        Cost {{ format(entry.purchasable.getCost(1), 2) }} {{ entry.ref.costCurrencyDisplay }}
-      </div>
-      <button
-        class="btn-sm scaler-upgrade-row__buy"
-        :disabled="!entry.purchasable.canPurchase.value"
-        @click="entry.purchasable.purchase(1)"
-      >
-        Buy
-      </button>
-    </div>
-
     <div
       v-for="row in upgradeRows"
       :key="row.def.id"

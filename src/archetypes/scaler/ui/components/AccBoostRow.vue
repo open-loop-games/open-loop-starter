@@ -1,32 +1,44 @@
 <!--
-  Transcend Accelerator Boost — cross-currency standalone purchasable.
+  Transcend Accelerator Boost — cross-currency upgrade rendered separately
+  from the standard UpgradeGrid for a focused cross-currency price label.
   Cost lives at Transcend tier but pays in prestigePoints (per Synergism's
-  Reset.ts:498-499 + Buy.ts:705). The engine enforces the cost via
-  createCostRequirement against the prestigePoints resource — a parameter,
-  not a new primitive. See triage discussion at OL-823.
+  Reset.ts:498-499 + Buy.ts:705); the engine enforces it via
+  createCostRequirement against the prestigePoints resource — a parameter
+  on `createPurchasableCategory`'s `mapPurchasable`, not a separate
+  primitive (see triage discussion at OL-823).
 
-  TierPanel's #extras slot renders this row separately so the cross-
-  currency price gets a focused label rather than getting lost inside
-  UpgradeGrid's transcend-tier upgrade grid.
+  acc-boost lives inside the transcend upgrades category as a regular
+  entry; tier-configs marks its id in `externalUpgradeIds` so UpgradeGrid
+  skips it and AccBoostRow renders it here in the #extras slot.
 -->
 <script setup lang="ts">
-import { unref } from 'vue';
+import { computed, unref } from 'vue';
 import { format, formatWhole } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
-import { AcceleratorBoostKey } from '../../modules';
+import { ScalerTiersKey } from '../../modules';
 
-const accBoost = useModule(AcceleratorBoostKey);
+const tiers = useModule(ScalerTiersKey);
+const transcend = tiers.find((t) => t.id === 'transcend');
+const accBoostEntry = computed(() => transcend?.upgrades?.getEntry('acc-boost'));
+const accBoost = computed(() => accBoostEntry.value?.purchasable);
 
 function title(): string {
-  return (unref(accBoost.display.title) as string | undefined) ?? 'Accelerator Boost';
+  const p = accBoost.value;
+  if (!p) return 'Accelerator Boost';
+  return (unref(p.display.title) as string | undefined) ?? 'Accelerator Boost';
 }
 function description(): string {
-  return (unref(accBoost.display.description) as string | undefined) ?? '';
+  const p = accBoost.value;
+  if (!p) return '';
+  return (unref(p.display.description) as string | undefined) ?? '';
 }
 </script>
 
 <template>
-  <section class="scaler-acc-boost">
+  <section
+    v-if="accBoost"
+    class="scaler-acc-boost"
+  >
     <header class="scaler-acc-boost__head">
       <h4>{{ title() }}</h4>
       <span class="scaler-acc-boost__level">Level {{ formatWhole(accBoost.amount.value) }}</span>

@@ -2,121 +2,71 @@ import { computed, type ComputedRef } from 'vue';
 import type {
   ChallengeCategory,
   ChallengeDef as EngineChallengeDef,
-  Conversion,
   DecimalSource,
-  InjectionKey,
   ModifierChain,
-  ProducerCategory,
-  Purchasable,
   Resource,
 } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
-import type { CrystalUpgradeDef, ProducerDef, Tier, TranscendUpgradeDef } from '../data/types';
-import type { UpgradeRoster } from '../modules';
+import type { Tier } from '../data/types';
+import { ScalerTiersKey } from '../modules';
+import type { TierDisplay } from '../ui/tier-configs';
 import { useProducers, type ProducerRow } from './useProducers';
 import { useUpgrades, type UpgradeRow } from './useUpgrades';
 import { useTierReset, type TierResetApi } from './useTierReset';
 
-/**
- * UI-presentation config for one prestige tier. Inject keys are referenced
- * here — `useTier` reads them at render time so the engine state flows
- * through reactively. Lives next to the composable rather than in
- * `data/` because it's UI-presentation, not engine-construction config.
- */
-export interface TierConfig<UpgradeDef extends { id: string } = { id: string }> {
-  id: Tier;
-  /** Title shown on the tier-header band and on the tab trigger. */
-  title: string;
-  /** Display label for the cumulative currency (e.g. 'Coins', 'Prestige Points'). */
-  currencyDisplay: string;
-  /** Optional shards display label, present on Prestige + Transcend. */
-  shardsDisplay?: string;
-
-  currencyKey: InjectionKey<Resource<DecimalSource>>;
-  shardsKey?: InjectionKey<Resource<DecimalSource>>;
-  producerCategoryKey: InjectionKey<ProducerCategory<ProducerDef>>;
-
-  /** Roster-shaped upgrades (Crystal / Transcend). Antimatter omits this. */
-  upgradeRosterKey?: InjectionKey<UpgradeRoster<UpgradeDef>>;
-  /** Standalone purchasables outside any roster (Acc, Mult, AccBoost). */
-  extraPurchasables?: ExtraPurchasableRef[];
-
-  /** Conversion that drives the reset button (Prestige + Transcend only). */
-  conversionKey?: InjectionKey<Conversion>;
-
-  /** Transcend-only — challenges live solely on the outermost tier. */
-  challengesKey?: InjectionKey<ChallengeCategory<EngineChallengeDef>>;
-}
-
-export interface ExtraPurchasableRef {
-  key: InjectionKey<Purchasable>;
-  /** Display role; UI grouping driven by this. */
-  role: 'accelerator' | 'multiplier' | 'acc-boost';
-  /** Currency the purchasable spends. UI uses this only for label/tooltip
-   *  context — engine enforces the actual cost via `createCostRequirement`. */
-  costCurrencyDisplay: string;
-}
-
 export interface TierState {
   id: Tier;
-  config: TierConfig;
+  display: TierDisplay;
   currency: Resource<DecimalSource>;
   shards?: Resource<DecimalSource>;
   producers: ComputedRef<ProducerRow[]>;
   rateChains: ModifierChain[];
   totalRate: ComputedRef<DecimalSource>;
   upgrades?: ComputedRef<UpgradeRow<{ id: string }>[]>;
-  extraPurchasables: { ref: ExtraPurchasableRef; purchasable: Purchasable }[];
   reset?: TierResetApi;
   challenges?: ChallengeCategory<EngineChallengeDef>;
 }
 
 /**
- * Compose a tier's UI-facing state bag from its config. Internally calls
- * the parameterized composables (`useProducers`, `useUpgrades`,
- * `useTierReset`) and resolves any standalone purchasables via
- * `useModule`. Components that need only one slice (e.g. a sidebar
- * chain readout) can call the building blocks directly — `useTier` is
- * for any consumer that wants the whole bag.
+ * Compose a tier's UI-facing state bag from its display config. Resolves
+ * the tier from the engine's `ScalerTiersKey` (the archetype-specific
+ * tier registry) and pairs the engine-side bundle with display-side
+ * labels. Internally calls the parameterized composables (`useProducers`,
+ * `useUpgrades`, `useTierReset`); components that need only one slice
+ * (e.g. a sidebar chain readout) can call the building blocks directly.
  *
  * `rateChains` and `totalRate` derive from the producer category — they're
- * one-liners off `producerCategory.getAll()` rather than separate injection
- * keys, since the category is already in scope.
+ * one-liners off `producers.getAll()` rather than separate fields, since
+ * the category is already in scope via the tier bundle.
  */
-export function useTier<
-  UpgradeDef extends { id: string } = CrystalUpgradeDef | TranscendUpgradeDef,
->(config: TierConfig<UpgradeDef>): TierState {
-  const currency = useModule(config.currencyKey);
-  const shards = config.shardsKey ? useModule(config.shardsKey) : undefined;
-  const producerCategory = useModule(config.producerCategoryKey);
-  const rateChains = producerCategory.getAll().map((entry) => entry.producer.rateChain);
+export function useTier(display: TierDisplay): TierState {
+  const tiers = useModule(ScalerTiersKey);
+  const tier = tiers.find((t) => t.id === display.id);
+  if (!tier) {
+    throw new Error(`useTier: tier '${display.id}' missing from ScalerTiersKey`);
+  }
+
+  const rateChains = tier.producers.getAll().map((entry) => entry.producer.rateChain);
   // Producers in scaler always emit into shards (when present) or the tier's
   // own currency (antimatter case where coins are both currency and output).
-  const outputResource = shards ?? currency;
-  const totalRate = computed(() => producerCategory.getTotalRate(outputResource));
-  const producers = useProducers(config.producerCategoryKey);
-  const upgrades = config.upgradeRosterKey
-    ? (useUpgrades(config.upgradeRosterKey) as unknown as ComputedRef<UpgradeRow<{ id: string }>[]>)
+  const outputResource = tier.shards ?? tier.currency;
+  const totalRate = computed(() => tier.producers.getTotalRate(outputResource));
+  const producers = useProducers(tier.producers);
+  const upgrades = tier.upgrades
+    ? (useUpgrades(tier.upgrades) as unknown as ComputedRef<UpgradeRow<{ id: string }>[]>)
     : undefined;
-  const reset = config.conversionKey ? useTierReset(config.conversionKey) : undefined;
-  const challenges = config.challengesKey ? useModule(config.challengesKey) : undefined;
-
-  const extraPurchasables = (config.extraPurchasables ?? []).map((ref) => ({
-    ref,
-    purchasable: useModule(ref.key),
-  }));
+  const reset = tier.conversion ? useTierReset(tier.conversion) : undefined;
 
   return {
-    id: config.id,
-    config: config as TierConfig,
-    currency,
-    shards,
+    id: tier.id,
+    display,
+    currency: tier.currency,
+    shards: tier.shards,
     producers,
     rateChains,
     totalRate,
     upgrades,
-    extraPurchasables,
     reset,
-    challenges,
+    challenges: tier.challenges,
   };
 }

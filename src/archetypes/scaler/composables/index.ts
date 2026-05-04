@@ -4,4 +4,4 @@ export { useProducers, type ProducerRow } from './useProducers';
 export { useUpgrades, type UpgradeRow } from './useUpgrades';
 export { useAchievements, type AchievementRow, type AchievementSummary } from './useAchievements';
 export { useTierReset, type TierResetApi } from './useTierReset';
-export { useTier, type TierConfig, type TierState, type ExtraPurchasableRef } from './useTier';
+export { useTier, type TierState } from './useTier';

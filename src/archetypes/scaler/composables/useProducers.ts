@@ -3,12 +3,10 @@ import type { ComputedRef } from 'vue';
 import {
   Decimal,
   type DecimalSource,
-  type InjectionKey,
   type ModifierChain,
   type ProducerCategory,
   type Purchasable,
 } from 'open-loop-engine';
-import { useModule } from '@/composables/useModule';
 import type { ProducerDef } from '../data/types';
 
 // TODO(expansion): near-identical to producer/composables/useProducers.ts;
@@ -36,12 +34,11 @@ export interface ProducerRow {
  * Reactive rows for every continuous producer in the given category.
  * Mode-agnostic: callers pick how many to buy via `getCost(n)` /
  * `canAfford(n)`, or call `purchaseMax()` for the full affordable amount.
+ *
+ * Takes the category instance directly rather than an InjectionKey —
+ * scaler tier APIs expose categories as fields on the bundle.
  */
-export function useProducers(
-  categoryKey: InjectionKey<ProducerCategory<ProducerDef>>,
-): ComputedRef<ProducerRow[]> {
-  const category = useModule(categoryKey);
-
+export function useProducers(category: ProducerCategory<ProducerDef>): ComputedRef<ProducerRow[]> {
   return computed(() => {
     const rows: ProducerRow[] = [];
     for (const entry of category.getAll()) {

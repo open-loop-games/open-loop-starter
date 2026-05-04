@@ -1,82 +1,52 @@
-import type { TierConfig } from '../composables/useTier';
-import type { CrystalUpgradeDef, TranscendUpgradeDef } from '../data/types';
-import {
-  AcceleratorBoostKey,
-  AntimatterAcceleratorKey,
-  AntimatterCoinKey,
-  AntimatterMultiplierKey,
-  AntimatterProducersKey,
-  ChallengesKey,
-  CrystalUpgradesKey,
-  PrestigeConversionKey,
-  PrestigePointsKey,
-  PrestigeProducersKey,
-  PrestigeShardsKey,
-  TranscendConversionKey,
-  TranscendPointsKey,
-  TranscendProducersKey,
-  TranscendShardsKey,
-  TranscendUpgradesKey,
-} from '../modules';
+import type { Tier } from '../data/types';
 
-export const ANTIMATTER_TIER: TierConfig = {
+/**
+ * Per-tier display data. Pure presentation config — labels and a small
+ * carve-out list for entries that bespoke UI components render outside
+ * the standard UpgradeGrid. The engine-side composition (resources,
+ * categories, conversion, reset) flows through `ScalerTiersKey`; this
+ * file does not reference any injection key.
+ */
+export interface TierDisplay {
+  id: Tier;
+  /** Title shown on the tier-header band and on the tab trigger. */
+  title: string;
+  /** Display label for the cumulative currency (e.g. 'Coins', 'Prestige Points'). */
+  currencyDisplay: string;
+  /** Optional shards display label, present on Prestige + Transcend. */
+  shardsDisplay?: string;
+  /**
+   * Entries in the tier's upgrades category that are rendered by bespoke
+   * UI components outside the standard UpgradeGrid. Transcend lists
+   * 'acc-boost' here because `AccBoostRow.vue` renders it inline in the
+   * #extras slot for the cross-currency price cue.
+   */
+  externalUpgradeIds?: string[];
+}
+
+export const ANTIMATTER_DISPLAY: TierDisplay = {
   id: 'antimatter',
   title: 'Antimatter',
   currencyDisplay: 'Coins',
-  currencyKey: AntimatterCoinKey,
-  producerCategoryKey: AntimatterProducersKey,
-  extraPurchasables: [
-    {
-      key: AntimatterAcceleratorKey,
-      role: 'accelerator',
-      costCurrencyDisplay: 'Coins',
-    },
-    {
-      key: AntimatterMultiplierKey,
-      role: 'multiplier',
-      costCurrencyDisplay: 'Coins',
-    },
-  ],
 };
 
-export const PRESTIGE_TIER: TierConfig<CrystalUpgradeDef> = {
+export const PRESTIGE_DISPLAY: TierDisplay = {
   id: 'prestige',
   title: 'Prestige',
   currencyDisplay: 'Prestige Points',
   shardsDisplay: 'Prestige Shards',
-  currencyKey: PrestigePointsKey,
-  shardsKey: PrestigeShardsKey,
-  producerCategoryKey: PrestigeProducersKey,
-  upgradeRosterKey: CrystalUpgradesKey,
-  conversionKey: PrestigeConversionKey,
 };
 
-export const TRANSCEND_TIER: TierConfig<TranscendUpgradeDef> = {
+export const TRANSCEND_DISPLAY: TierDisplay = {
   id: 'transcend',
   title: 'Transcendence',
   currencyDisplay: 'Transcend Points',
   shardsDisplay: 'Transcend Shards',
-  currencyKey: TranscendPointsKey,
-  shardsKey: TranscendShardsKey,
-  producerCategoryKey: TranscendProducersKey,
-  upgradeRosterKey: TranscendUpgradesKey,
-  conversionKey: TranscendConversionKey,
-  challengesKey: ChallengesKey,
-  // Acc Boost is the cross-currency standalone purchasable. The TierPanel's
-  // #extras slot owns its rendering in 2b.3 (cost in prestigePoints, not
-  // transcendPoints — engine enforces via createCostRequirement; the display
-  // hint here is for the UI label only).
-  extraPurchasables: [
-    {
-      key: AcceleratorBoostKey,
-      role: 'acc-boost',
-      costCurrencyDisplay: 'Prestige Points',
-    },
-  ],
+  externalUpgradeIds: ['acc-boost'],
 };
 
-export const TIER_CONFIGS = {
-  antimatter: ANTIMATTER_TIER,
-  prestige: PRESTIGE_TIER,
-  transcend: TRANSCEND_TIER,
+export const TIER_DISPLAYS = {
+  antimatter: ANTIMATTER_DISPLAY,
+  prestige: PRESTIGE_DISPLAY,
+  transcend: TRANSCEND_DISPLAY,
 } as const;

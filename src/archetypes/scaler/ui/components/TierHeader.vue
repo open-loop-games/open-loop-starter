@@ -38,10 +38,10 @@ function performReset(): void {
 <template>
   <header class="scaler-tier-header">
     <div class="scaler-tier-header__title">
-      <h3>{{ tier.config.title }}</h3>
+      <h3>{{ tier.display.title }}</h3>
       <div class="scaler-tier-header__currency">
         <span class="scaler-tier-header__currency-amount">{{ currencyAmount }}</span>
-        <span class="scaler-tier-header__currency-label">{{ tier.config.currencyDisplay }}</span>
+        <span class="scaler-tier-header__currency-label">{{ tier.display.currencyDisplay }}</span>
       </div>
       <div
         v-if="shardRate !== null"
@@ -62,11 +62,11 @@ function performReset(): void {
         @click="performReset"
       >
         <span class="scaler-tier-header__reset-label">
-          {{ tier.config.title }}
+          {{ tier.display.title }}
           <span
             v-if="resetReady && projectedGain !== null"
             class="scaler-tier-header__reset-gain"
-          >+{{ projectedGain }} {{ tier.config.currencyDisplay }}</span>
+          >+{{ projectedGain }} {{ tier.display.currencyDisplay }}</span>
           <span
             v-else
             class="scaler-tier-header__reset-next"

@@ -10,14 +10,7 @@ import {
   createAchievementCategory,
 } from 'open-loop-engine';
 import type { AchievementDef, ScalerData, ScalerGameState, Tier } from '../data/types';
-import { AntimatterCoinKey, AntimatterProducersKey } from './antimatter';
-import { PrestigePointsKey, PrestigeProducersKey, PrestigeShardsKey } from './prestige';
-import {
-  ChallengesKey,
-  TranscendPointsKey,
-  TranscendProducersKey,
-  TranscendShardsKey,
-} from './transcend';
+import { ScalerTiersKey, type ScalerTier } from './tiers';
 
 // === Injection keys ===
 
@@ -34,6 +27,9 @@ export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef>> 
 // per-tier modifier-chain factor (e.g. coinBoost → globalCoinMultiplier
 // for antimatter-tier achievements).
 //
+// Lives entirely in connect() because it reads ScalerTiersKey, which is
+// fully populated only after every tier's connect() has run.
+//
 // vanilla canonical: SynergismOfficial/src/Achievements.ts (per-tier
 // achievement groups + reward formulas). Slim port carries the milestone
 // thresholds + tier classification 1:1 from leaf-1 data; reward shape is
@@ -42,28 +38,35 @@ export function createAchievementsModule(data: ScalerData): EngineModule {
   return {
     id: 'scaler/achievements',
     dependencies: ['scaler/antimatter', 'scaler/prestige', 'scaler/transcend'],
-    install(ctx: EngineContext): void {
-      const coin = ctx.inject(AntimatterCoinKey);
-      const antimatterProducers = ctx.inject(AntimatterProducersKey);
-      const antimatterRateChains = antimatterProducers
-        .getAll()
-        .map((entry) => entry.producer.rateChain);
+    install(): void {
+      // All wiring is connect-time (achievements read every tier's bundle
+      // from ScalerTiersKey, which only fully populates after every tier's
+      // connect() has run).
+    },
+    connect(ctx: EngineContext): void {
+      const tiers = ctx.inject(ScalerTiersKey);
+      const antimatter = mustFindTier(tiers, 'antimatter');
+      const prestige = mustFindTier(tiers, 'prestige');
+      const transcend = mustFindTier(tiers, 'transcend');
 
-      const prestigePoints = ctx.inject(PrestigePointsKey);
-      const prestigeShards = ctx.inject(PrestigeShardsKey);
-      const prestigeProducers = ctx.inject(PrestigeProducersKey);
-      const prestigeRateChains = prestigeProducers
-        .getAll()
-        .map((entry) => entry.producer.rateChain);
+      const coin = antimatter.currency;
+      const prestigePoints = prestige.currency;
+      const transcendPoints = transcend.currency;
+      if (!prestige.shards || !transcend.shards) {
+        throw new Error('scaler/achievements: prestige/transcend tier missing shards');
+      }
+      const prestigeShards = prestige.shards;
+      const transcendShards = transcend.shards;
+      if (!transcend.challenges) {
+        throw new Error('scaler/achievements: transcend tier missing challenges');
+      }
+      const challenges = transcend.challenges;
 
-      const transcendPoints = ctx.inject(TranscendPointsKey);
-      const transcendShards = ctx.inject(TranscendShardsKey);
-      const transcendProducers = ctx.inject(TranscendProducersKey);
-      const transcendRateChains = transcendProducers
-        .getAll()
-        .map((entry) => entry.producer.rateChain);
-
-      const challenges = ctx.inject(ChallengesKey);
+      const tierChains: Record<Tier, ModifierChain[]> = {
+        antimatter: antimatter.producers.getAll().map((entry) => entry.producer.rateChain),
+        prestige: prestige.producers.getAll().map((entry) => entry.producer.rateChain),
+        transcend: transcend.producers.getAll().map((entry) => entry.producer.rateChain),
+      };
 
       // Live read view of cross-tier state, passed to data predicates.
       // Methods encapsulate Decimal comparisons so data/*.ts stays
@@ -82,11 +85,11 @@ export function createAchievementsModule(data: ScalerData): EngineModule {
         prestigeShardsAtLeast: (amount) => Decimal.gte(prestigeShards.value, amount),
         transcendShardsAtLeast: (amount) => Decimal.gte(transcendShards.value, amount),
         producerCountAtLeast: (id, count) => {
-          const a = antimatterProducers.getProducer(id);
+          const a = antimatter.producers.getProducer(id);
           if (a) return Decimal.gte(a.count.value, count);
-          const p = prestigeProducers.getProducer(id);
+          const p = prestige.producers.getProducer(id);
           if (p) return Decimal.gte(p.count.value, count);
-          const t = transcendProducers.getProducer(id);
+          const t = transcend.producers.getProducer(id);
           if (t) return Decimal.gte(t.count.value, count);
           return false;
         },
@@ -95,12 +98,6 @@ export function createAchievementsModule(data: ScalerData): EngineModule {
         challengeCompletionsAtLeast: (id, count) =>
           (challenges.getChallenge(id)?.completions.value ?? 0) >= count,
         fastestPrestigeUnder: () => false,
-      };
-
-      const tierChains: Record<Tier, ModifierChain[]> = {
-        antimatter: antimatterRateChains,
-        prestige: prestigeRateChains,
-        transcend: transcendRateChains,
       };
 
       const achievements = createAchievementCategory<AchievementDef>({
@@ -126,4 +123,10 @@ export function createAchievementsModule(data: ScalerData): EngineModule {
       ctx.provide(AchievementsKey, achievements);
     },
   };
+}
+
+function mustFindTier(tiers: ScalerTier[], id: Tier): ScalerTier {
+  const t = tiers.find((x) => x.id === id);
+  if (!t) throw new Error(`scaler/achievements: tier '${id}' missing from ScalerTiersKey`);
+  return t;
 }

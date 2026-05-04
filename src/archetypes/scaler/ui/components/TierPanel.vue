@@ -1,34 +1,31 @@
 <!--
   Slot-driven base for any prestige tier (Antimatter / Prestige / Transcend).
-  Composes useTier(config) once and lays out:
+  Composes useTier(display) once and lays out:
     [TierHeader]
     [ProducerGrid]
-    [UpgradeGrid] (when upgrades or extra purchasables exist)
+    [UpgradeGrid] (when upgrades exist)
     [#extras slot] — Transcend fills with <ChallengeStrip /> + <AccBoostRow />
 
   Forks specialize tier presentation by:
-    - editing tier-configs.ts (which keys, costume names)
+    - editing tier-configs.ts (titles, currency labels, externalUpgradeIds)
     - filling #extras at the call site (tier-specific affordances)
   Tier-irrelevant slots simply render nothing — Antimatter has no upgrades
-  category and no reset button, so those sections collapse out.
+  category external entries and no reset button, so those sections collapse
+  out automatically.
 -->
 <script setup lang="ts">
-import type { TierConfig } from '../../composables/useTier';
-import type { ExtraPurchasableRef, TierState } from '../../composables/useTier';
+import type { TierState } from '../../composables/useTier';
 import { useTier } from '../../composables/useTier';
+import type { TierDisplay } from '../tier-configs';
 import TierHeader from './TierHeader.vue';
 import ProducerGrid from './ProducerGrid.vue';
 import UpgradeGrid from './UpgradeGrid.vue';
 
 const props = defineProps<{
-  config: TierConfig;
-  /** Filter for which extra purchasables UpgradeGrid renders. Transcend
-   *  passes a filter that hides AccBoost so its bespoke #extras slot
-   *  owns it (cross-currency UI cue). */
-  visibleExtras?: (ref: ExtraPurchasableRef) => boolean;
+  display: TierDisplay;
 }>();
 
-const tier: TierState = useTier(props.config);
+const tier: TierState = useTier(props.display);
 </script>
 
 <template>
@@ -39,10 +36,7 @@ const tier: TierState = useTier(props.config);
     <TierHeader :tier="tier" />
     <div class="scaler-tier-panel__body">
       <ProducerGrid :rows="tier.producers.value" />
-      <UpgradeGrid
-        :tier="tier"
-        :visible-extras="visibleExtras"
-      />
+      <UpgradeGrid :tier="tier" />
       <slot
         name="extras"
         :tier="tier"

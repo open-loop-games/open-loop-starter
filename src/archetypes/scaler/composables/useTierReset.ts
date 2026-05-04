@@ -1,6 +1,5 @@
 import { computed, type ComputedRef } from 'vue';
-import { Decimal, type Conversion, type DecimalSource, type InjectionKey } from 'open-loop-engine';
-import { useModule } from '@/composables/useModule';
+import { Decimal, type Conversion, type DecimalSource } from 'open-loop-engine';
 
 export interface TierResetApi {
   /** Conversion gain available right now. Display as `+ N <currency>`. */
@@ -18,18 +17,18 @@ export interface TierResetApi {
 
 /**
  * Wrap a tier's `Conversion` for UI consumption. The conversion's
- * `afterConvert` hook fires the matching `Reset` (per
- * scaler/prestige.connect + scaler/transcend.connect).
+ * `afterConvert` hook fires the matching `Reset` (created locally inside
+ * the tier's connect() — `keep: [tier.currency]` exempts the gain from
+ * being zeroed by its own afterConvert).
  *
  * Antimatter has no UI reset button — its reset cascades from Prestige —
- * so this helper is only used for Prestige + Transcend tiers.
+ * so this helper is only used for Prestige + Transcend tiers (the ones
+ * whose tier API carries a `conversion`).
  *
  * Both prestige + transcend conversions have a single output; we read the
  * first/only entry from `currentGain`'s `Record<string, Decimal>`.
  */
-export function useTierReset(conversionKey: InjectionKey<Conversion>): TierResetApi {
-  const conversion = useModule(conversionKey);
-
+export function useTierReset(conversion: Conversion): TierResetApi {
   const currentGain = computed<DecimalSource>(() => {
     const gains = Object.values(conversion.currentGain.value);
     return gains.length > 0 ? gains[0] : Decimal.dZero;

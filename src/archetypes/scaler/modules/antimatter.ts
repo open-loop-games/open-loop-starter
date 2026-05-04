@@ -1,42 +1,23 @@
+import { watch } from 'vue';
 import {
   Decimal,
+  Formula,
   type DecimalSource,
   type EngineContext,
   type EngineModule,
-  type InjectionKey,
+  type Persistent,
   type ProducerCategory,
-  type Purchasable,
-  type PurchasableGroup,
+  type PurchasableCategory,
   type Resource,
+  createCostRequirement,
   createMultiplicativeModifier,
   createProducerCategory,
-  createPurchasableGroup,
+  createPurchasableCategory,
   createResource,
-  createScalingPurchasable,
+  persistent,
 } from 'open-loop-engine';
 import type { AntimatterUpgradeDef, ProducerDef, ScalerData } from '../data/types';
-
-// === Injection keys ===
-
-export const AntimatterCoinKey: InjectionKey<Resource<DecimalSource>> = Symbol(
-  'scaler/antimatter/coin',
-) as InjectionKey<Resource<DecimalSource>>;
-
-export const AntimatterProducersKey: InjectionKey<ProducerCategory<ProducerDef>> = Symbol(
-  'scaler/antimatter/producers',
-) as InjectionKey<ProducerCategory<ProducerDef>>;
-
-export const AntimatterAcceleratorKey: InjectionKey<Purchasable> = Symbol(
-  'scaler/antimatter/accelerator',
-) as InjectionKey<Purchasable>;
-
-export const AntimatterMultiplierKey: InjectionKey<Purchasable> = Symbol(
-  'scaler/antimatter/multiplier',
-) as InjectionKey<Purchasable>;
-
-export const AntimatterUpgradeGroupKey: InjectionKey<PurchasableGroup> = Symbol(
-  'scaler/antimatter/upgrade-group',
-) as InjectionKey<PurchasableGroup>;
+import { ScalerTiersKey, type ScalerTier } from './tiers';
 
 // === Slim-port balance constants ===
 //
@@ -56,34 +37,40 @@ const PRODUCER_BASE_RATES: Record<string, DecimalSource> = {
   'antimatter-5': '8000',
 };
 
-// vanilla canonical: SynergismOfficial/src/Buy.ts:32 —
+// Per-upgrade cost ramp. Slim port treats G.costDivisor = 1 (no rune/research
+// cost reductions yet) and stays under Synergism's n=125 threshold where the
+// factorial branch kicks in — pure geometric scaling.
+//
+// vanilla canonical (accelerator): SynergismOfficial/src/Buy.ts:32 —
 //   cost = 500 * (4/G.costDivisor)^buyingTo
-// Slim port treats G.costDivisor = 1 (no rune/research cost reductions yet)
-// and stays under Synergism's n=125 threshold where the factorial branch
-// kicks in. Pure geometric scaling.
-const ACCELERATOR_COST_SCALING = 4;
-
-// vanilla canonical: SynergismOfficial/src/Buy.ts:161 —
+// vanilla canonical (multiplier): SynergismOfficial/src/Buy.ts:161 —
 //   cost = 1e4 * 10^(buyingTo / G.costDivisor)
-// Same simplification as Accelerator — geometric in level.
-const MULTIPLIER_COST_SCALING = 10;
+const UPGRADE_COST_SCALING: Record<string, DecimalSource> = {
+  accelerator: 4,
+  multiplier: 10,
+};
 
 // Per-bought-level multiplier into the antimatter rate chains. Synergism's
 // effect is the product of acceleratorEffect * multiplierEffect feeding
 // `globalCoinMultiplier` through `updateAllTick` / `updateAllMultiplier`.
-// Slim port models each upgrade as a flat multiplicative-per-level grant
-// onto every antimatter producer's rateChain.
+// Slim port models each upgrade as a flat multiplicative-per-level grant.
 //
 // vanilla canonical: SynergismOfficial/src/Calculate.ts — getAcceleratorPower()
 // (linear-then-thresholded effect that compounds against count). Slim-port
 // constant approximates the early-game payout shape; balance leaf refines.
-const ACCELERATOR_PER_LEVEL_MULT = 1.05;
-const MULTIPLIER_PER_LEVEL_MULT = 2;
+const UPGRADE_PER_LEVEL_MULT: Record<string, DecimalSource> = {
+  accelerator: 1.05,
+  multiplier: 2,
+};
 
 // === Module ===
 
 export function createAntimatterModule(data: ScalerData): EngineModule {
   const tier = data.antimatter;
+
+  let coin!: Resource<DecimalSource>;
+  let producers!: ProducerCategory<ProducerDef>;
+  let upgrades!: PurchasableCategory<AntimatterUpgradeDef>;
 
   return {
     id: 'scaler/antimatter',
@@ -92,13 +79,13 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
       //   coins: new Decimal('1e2')
       // Bootstrap grant: the cheapest producer (Worker) costs 100 coins, so
       // a 0-coin start hardlocks the player. Synergism seeds the same amount.
-      const coin = createResource<DecimalSource>('1e2', {
+      coin = createResource<DecimalSource>('1e2', {
         displayName: 'Coins',
         precision: 0,
         id: 'scaler/coins',
       });
 
-      const producers = createProducerCategory<ProducerDef>({
+      producers = createProducerCategory<ProducerDef>({
         id: 'scaler/antimatter/producers',
         registerTick: ctx.onTick,
         mapProducer: (def) => ({
@@ -118,74 +105,82 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
       });
       producers.register(tier.producers);
 
-      const accelerator = buildScalingUpgrade({
-        def: findUpgrade(tier.upgrades, 'accelerator'),
-        coin,
+      upgrades = buildUpgrades(coin, producers);
+      upgrades.register(tier.upgrades);
+    },
+    connect(ctx: EngineContext): void {
+      // antimatter is the leaf currency tier — no Conversion (no Prestige-
+      // -into-antimatter action; coins are the input to Prestige, not the
+      // output of any Conversion at this layer) and no consumer-facing
+      // Reset (Synergism's Prestige clears antimatter; the prestige module
+      // owns that Reset and includes 'scaler/antimatter' in its scope).
+      // Antimatter is the first-installed tier, so it owns the
+      // ScalerTiersKey provide; downstream tiers inject and push.
+      const antimatterTier: ScalerTier = {
+        id: 'antimatter',
+        currency: coin,
         producers,
-        costScaling: ACCELERATOR_COST_SCALING,
-        perLevelMult: ACCELERATOR_PER_LEVEL_MULT,
-      });
-      const multiplier = buildScalingUpgrade({
-        def: findUpgrade(tier.upgrades, 'multiplier'),
-        coin,
-        producers,
-        costScaling: MULTIPLIER_COST_SCALING,
-        perLevelMult: MULTIPLIER_PER_LEVEL_MULT,
-      });
-
-      const upgradeGroup = createPurchasableGroup({
-        purchasables: [accelerator, multiplier],
-      });
-
-      ctx.provide(AntimatterCoinKey, coin);
-      ctx.provide(AntimatterProducersKey, producers);
-      ctx.provide(AntimatterAcceleratorKey, accelerator);
-      ctx.provide(AntimatterMultiplierKey, multiplier);
-      ctx.provide(AntimatterUpgradeGroupKey, upgradeGroup);
+        upgrades,
+      };
+      ctx.provide(ScalerTiersKey, [antimatterTier]);
     },
   };
 }
 
-interface BuildScalingUpgradeOptions {
-  def: AntimatterUpgradeDef;
-  coin: Resource<DecimalSource>;
-  producers: ProducerCategory<ProducerDef>;
-  costScaling: DecimalSource;
-  perLevelMult: DecimalSource;
-}
+// Cumulative-buy upgrades (Accelerator + Multiplier) as a PurchasableCategory.
+// Geometric cost via Formula.exponential — same internal shape as
+// createScalingPurchasable (purchasable.ts:672-728), authored inline because
+// mapPurchasable returns options rather than a constructed Purchasable. The
+// chain.bind loop runs in mapState because the multiplier reads
+// `purchasable.effect.value`, only available post-construction.
+function buildUpgrades(
+  coin: Resource<DecimalSource>,
+  producers: ProducerCategory<ProducerDef>,
+): PurchasableCategory<AntimatterUpgradeDef> {
+  const mirrors = new Map<string, Persistent<DecimalSource>>();
 
-// Cumulative-buy upgrade (Accelerator / Multiplier). Geometric cost is the
-// native createScalingPurchasable shape; per-level effect compounds into
-// every antimatter rateChain via post-creation chain.bind closing over the
-// returned Purchasable.
-function buildScalingUpgrade(opts: BuildScalingUpgradeOptions): Purchasable {
-  const { def, coin, producers, costScaling, perLevelMult } = opts;
+  return createPurchasableCategory<AntimatterUpgradeDef>({
+    id: 'scaler/antimatter/upgrades',
+    mapPurchasable: (def) => {
+      const amount = persistent<DecimalSource>(0, { name: 'amountMirror' });
+      mirrors.set(def.id, amount);
 
-  const purchasable = createScalingPurchasable({
-    id: def.id,
-    title: def.name,
-    description: def.description,
-    resource: coin,
-    baseCost: def.baseCost,
-    costScaling,
-    effect: (amount: DecimalSource) => Decimal.pow(perLevelMult, amount),
+      const costScaling = UPGRADE_COST_SCALING[def.id] ?? 1;
+      const perLevelMult = UPGRADE_PER_LEVEL_MULT[def.id] ?? 1;
+
+      const cost = Formula.exponential(amount, def.baseCost, costScaling);
+
+      return {
+        display: { title: def.name, description: def.description },
+        requirements: createCostRequirement({ resource: coin, cost }),
+        effect: (a: DecimalSource) => Decimal.pow(perLevelMult, a),
+      };
+    },
+    mapState: (def, purchasable) => {
+      const amount = mirrors.get(def.id);
+      if (!amount) throw new Error(`scaler/antimatter: missing amount mirror for ${def.id}`);
+
+      // Mirror purchasable.amount → external amount so the cost Formula
+      // re-evaluates after each purchase. `flush: 'sync'` matches
+      // createScalingPurchasable's discipline (purchasable.ts:722-728).
+      watch(
+        () => purchasable.amount.value,
+        (v) => {
+          amount.value = v;
+        },
+        { immediate: true, flush: 'sync' },
+      );
+
+      // Per-level multiplicative grant onto every antimatter rate chain.
+      for (const entry of producers.getAll()) {
+        entry.producer.rateChain.bind({
+          active: () => Decimal.gt(purchasable.amount.value, 0),
+          modifier: createMultiplicativeModifier({
+            multiplier: () => purchasable.effect.value,
+            description: def.name,
+          }),
+        });
+      }
+    },
   });
-
-  for (const entry of producers.getAll()) {
-    entry.producer.rateChain.bind({
-      active: () => Decimal.gt(purchasable.amount.value, 0),
-      modifier: createMultiplicativeModifier({
-        multiplier: () => purchasable.effect.value,
-        description: def.name,
-      }),
-    });
-  }
-
-  return purchasable;
-}
-
-function findUpgrade(upgrades: AntimatterUpgradeDef[], id: string): AntimatterUpgradeDef {
-  const def = upgrades.find((u) => u.id === id);
-  if (!def) throw new Error(`scaler/antimatter: missing upgrade definition "${id}"`);
-  return def;
 }

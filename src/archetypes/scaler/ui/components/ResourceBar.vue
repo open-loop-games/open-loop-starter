@@ -8,49 +8,48 @@
 import { computed } from 'vue';
 import { format, formatWhole } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
-import {
-  AntimatterCoinKey,
-  PrestigePointsKey,
-  PrestigeShardsKey,
-  TranscendPointsKey,
-  TranscendShardsKey,
-} from '../../modules';
+import { ScalerTiersKey } from '../../modules';
 
-const coin = useModule(AntimatterCoinKey);
-const prestigePoints = useModule(PrestigePointsKey);
-const prestigeShards = useModule(PrestigeShardsKey);
-const transcendPoints = useModule(TranscendPointsKey);
-const transcendShards = useModule(TranscendShardsKey);
+const tiers = useModule(ScalerTiersKey);
+
+const antimatter = tiers.find((t) => t.id === 'antimatter');
+const prestige = tiers.find((t) => t.id === 'prestige');
+const transcend = tiers.find((t) => t.id === 'transcend');
 
 const rows = computed(() => [
-  { label: 'Coins', value: formatWhole(coin.value), key: 'coins' },
+  {
+    label: 'Coins',
+    value: antimatter ? formatWhole(antimatter.currency.value) : '0',
+    key: 'coins',
+  },
   {
     label: 'Prestige Points',
-    value: format(prestigePoints.value, 2),
+    value: prestige ? format(prestige.currency.value, 2) : '0',
     key: 'pp',
-    dim: !hasAny(prestigePoints.value),
+    dim: !hasAny(prestige?.currency.value),
   },
   {
     label: 'Prestige Shards',
-    value: format(prestigeShards.value, 2),
+    value: prestige?.shards ? format(prestige.shards.value, 2) : '0',
     key: 'ps',
-    dim: !hasAny(prestigeShards.value),
+    dim: !hasAny(prestige?.shards?.value),
   },
   {
     label: 'Transcend Points',
-    value: format(transcendPoints.value, 2),
+    value: transcend ? format(transcend.currency.value, 2) : '0',
     key: 'tp',
-    dim: !hasAny(transcendPoints.value),
+    dim: !hasAny(transcend?.currency.value),
   },
   {
     label: 'Transcend Shards',
-    value: format(transcendShards.value, 2),
+    value: transcend?.shards ? format(transcend.shards.value, 2) : '0',
     key: 'ts',
-    dim: !hasAny(transcendShards.value),
+    dim: !hasAny(transcend?.shards?.value),
   },
 ]);
 
 function hasAny(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
   if (typeof value === 'number') return value > 0;
   if (typeof value === 'string') return value !== '0' && value !== '';
   if (value && typeof value === 'object' && 'sign' in (value as Record<string, unknown>)) {
