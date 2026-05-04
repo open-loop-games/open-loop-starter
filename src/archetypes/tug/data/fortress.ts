@@ -15,12 +15,10 @@ import type { FortressDef } from './types';
 // numbers live here.
 
 // ─── Balance ───
-// `hp: 5_000` matches the pre-fortress-as-unit constant the match module
-// pinned to `data.balance.fortressHp`. `damagePerHit: 0` and empty
-// resistance keep v1 gameplay identical to the prior shape (damage sponge,
-// no return fire). Leaf 6's tuner perturbs `'fortress/hp'` against
-// match-duration probes; resistance entries become tuner axes only when
-// variants ship a non-empty default.
+// `hp: 5_000` is the skeleton-default fortress cap. `damagePerHit: 0` and
+// empty resistance keep the skeleton in pure damage-sponge mode. Leaf 6's
+// tuner perturbs `'fortress/hp'` against match-duration probes; resistance
+// entries become tuner axes only when variants ship a non-empty default.
 
 export const TUG_FORTRESS: FortressDef = {
   hp: 5_000,

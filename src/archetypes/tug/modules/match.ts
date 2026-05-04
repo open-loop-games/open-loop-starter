@@ -63,10 +63,9 @@ export const MatchKey: InjectionKey<MatchApi> = Symbol('tug/match') as Injection
  * empty. We enumerate each module id explicitly. Sub-contexts created INSIDE
  * each install (sequencer ids, per-def category contexts) DO get parent
  * linkage to that module's id at registration time, so the walk picks them
- * up via each enumerated entry. `tug/tuning` and `tug/categories` are
- * deliberately excluded — tuning's override registry must survive match
- * resets (otherwise leaf-6 pushed scopes evaporate every match), and
- * categories holds no persistents.
+ * up via each enumerated entry. `tug/tuning` is deliberately excluded — its
+ * override registry must survive match resets (otherwise leaf-6 pushed
+ * scopes evaporate every match).
  */
 export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
   'tug/match',

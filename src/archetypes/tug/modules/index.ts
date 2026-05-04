@@ -6,7 +6,6 @@ import { createIncomeSideModule } from './income';
 import { createIncomeUpgradesSideModule } from './income-upgrades';
 import { createLaneModule } from './lane';
 import { createUnitsSideModule } from './units';
-import { createCategoriesModule } from './categories';
 import { createMatchModule } from './match';
 import { createOpponentBotModule } from './opponent-bot';
 import { createMetaModule } from './meta';
@@ -60,16 +59,17 @@ export { PrestigeKey } from './prestige';
  *  4. `tug/match/lane` — single shared module; both sides' unit arrays +
  *     cross-side combat (fortress treated as just-another opposing unit).
  *  5. `tug/match/<side>/units` — per-side shop + sequencer + cooldowns.
- *  6. `tug/categories` — aggregator; both sides' unit shops.
- *  7. `tug/match` — match orchestrator; injects fortress + lane +
+ *     The engine self-publishes `CategoriesKey` from the unit + income-
+ *     upgrade category factories at construction time; no aggregator.
+ *  6. `tug/match` — match orchestrator; injects fortress + lane +
  *     sequencers.
- *  8. `tug/match/ai/opponent-bot` — AI policy. Strict-after-units ordering
+ *  7. `tug/match/ai/opponent-bot` — AI policy. Strict-after-units ordering
  *     so `UnitsKey.ai` is provided before the AI tries to read it.
  *     Side-parameterized so sim engines can install a second instance for
  *     `'player'` (unattended balance harnesses); production installs only
  *     the `'ai'` instance and leaves player input to the UI.
- *  9. `tug/meta` — cross-match state container.
- * 10. `tug/meta/prestige` — conditional; only when meta-progression is on.
+ *  8. `tug/meta` — cross-match state container.
+ *  9. `tug/meta/prestige` — conditional; only when meta-progression is on.
  */
 export function createTugModules(data: TugData): EngineModule[] {
   const modules: EngineModule[] = [
@@ -82,7 +82,6 @@ export function createTugModules(data: TugData): EngineModule[] {
     createLaneModule(data),
     createUnitsSideModule(data, 'player'),
     createUnitsSideModule(data, 'ai'),
-    createCategoriesModule(),
     createMatchModule(data),
     createOpponentBotModule(data, 'ai'),
     createMetaModule(data),

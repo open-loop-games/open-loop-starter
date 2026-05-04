@@ -58,8 +58,9 @@ export interface IncomeUpgradeDef {
  * `damagePerHit > 0`) bypasses the unit counter-matrix.
  *
  * SC2 Direct Strike variants ship per-archetype-tag resistance and base
- * damage; this shape supports both. v1 baseline ships pure damage-sponge:
- * `damagePerHit: 0`, `resistance: {}` (all 1.0).
+ * damage; this shape supports both. The skeleton default is pure damage-
+ * sponge (`damagePerHit: 0`, `resistance: {}` — all 1.0); forks toggle into
+ * armored/return-fire variants by populating those fields.
  */
 export interface FortressDef {
   /** Per-side starting HP. Both fortresses spawn with this value. */

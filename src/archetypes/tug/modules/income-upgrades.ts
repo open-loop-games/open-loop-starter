@@ -6,18 +6,16 @@ import {
   Decimal,
   resolveComputable,
   tunable,
-  type Computable,
   type DecimalSource,
   type EngineModule,
   type Grant,
   type InjectionKey,
-  type OverrideRegistry,
   type PurchasableCategory,
   type Requirement,
 } from 'open-loop-engine';
 import type { IncomeUpgradeDef, TugData } from '../data/types';
 import { IncomeKey, IncomeRateChainKey } from './income';
-import { type Side, type TugTunables, TugTuningRegistryKey } from './tuning';
+import { type Side, TugTuningRegistryKey } from './tuning';
 
 export const IncomeUpgradesKey: Record<
   Side,
@@ -36,8 +34,8 @@ export const IncomeUpgradesKey: Record<
  * tiers via the chain's grant binds, plus AI-side scalars like
  * `aiIncomeMultiplier`).
  *
- * Lives at module scope rather than on a composable because
- * {@link wrapMultiplier} and the `baseRate` tunable are install-private —
+ * Lives at module scope rather than on a composable because the per-def
+ * tunable multiplier and the `baseRate` tunable are install-private —
  * pulling them into a Vue layer would re-plumb privates. Mirrors the
  * shape of producer's `purchaseBeatSeconds`
  * (`open-loop-engine/src/systems/producer-category.ts:347`).
@@ -112,8 +110,12 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
           const priorId = idx > 0 ? data.incomeUpgrades[idx - 1].id : null;
           const priorName = idx > 0 ? data.incomeUpgrades[idx - 1].name : null;
 
-          const cost = wrapCost(registry, def);
-          const multiplier = wrapMultiplier(registry, def);
+          const cost = TUNABLE_COST_IDS.has(def.id)
+            ? tunable(registry, `income-upgrades/${def.id}/cost`, () => def.cost)
+            : def.cost;
+          const multiplier = TUNABLE_MULTIPLIER_IDS.has(def.id)
+            ? tunable(registry, `income-upgrades/${def.id}/multiplier`, () => def.multiplier)
+            : def.multiplier;
 
           // Extra income per second the upgrade would add at current rate:
           // `currentRate × (multiplier − 1)`. `currentRate` evaluates the
@@ -173,35 +175,4 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
       ctx.provide(IncomeUpgradeRoiKey[side], roiMap);
     },
   };
-}
-
-/**
- * Wrap a tier's static cost behind a tunable key for representative ids.
- * Default closure reads `def.cost`, so unscoped runs match the data layer;
- * leaf 6's tuner pushes scopes against `income-upgrades/<id>/cost` to
- * bisect against beat fire-time bands. Both sides share the same registry,
- * so a single scope-push affects both — symmetric perturbation matches
- * the leaf-6 win-rate probe shape.
- */
-function wrapCost(
-  registry: OverrideRegistry<TugTunables>,
-  def: IncomeUpgradeDef,
-): Computable<DecimalSource> {
-  if (!TUNABLE_COST_IDS.has(def.id)) return def.cost;
-  const key = `income-upgrades/${def.id}/cost`;
-  return tunable<DecimalSource>(registry, key, () => def.cost);
-}
-
-/**
- * Wrap a tier's multiplier behind a tunable key for representative ids.
- * Same reasoning as `wrapCost` — opt-in tunability for the bisection
- * axes leaf 6 actually needs.
- */
-function wrapMultiplier(
-  registry: OverrideRegistry<TugTunables>,
-  def: IncomeUpgradeDef,
-): Computable<DecimalSource> {
-  if (!TUNABLE_MULTIPLIER_IDS.has(def.id)) return def.multiplier;
-  const key = `income-upgrades/${def.id}/multiplier`;
-  return tunable<DecimalSource>(registry, key, () => def.multiplier);
 }

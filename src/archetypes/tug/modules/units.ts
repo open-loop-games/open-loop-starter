@@ -4,11 +4,8 @@ import {
   createSequencer,
   persistent,
   tunable,
-  type Computable,
-  type DecimalSource,
   type EngineModule,
   type InjectionKey,
-  type OverrideRegistry,
   type Persistent,
   type PurchasableCategory,
   type Sequencer,
@@ -16,7 +13,7 @@ import {
 import type { TugData, UnitDef } from '../data/types';
 import { IncomeKey } from './income';
 import { LaneKey } from './lane';
-import { type Side, TugTuningRegistryKey, type TugTunables } from './tuning';
+import { type Side, TugTuningRegistryKey } from './tuning';
 
 /** Sequencer metadata — single field carrying the unit's archetype id so
  *  `canRun` can route to the right cooldown bucket and `'start'` handlers
@@ -50,12 +47,11 @@ export const UnitsCooldownKey: Record<Side, InjectionKey<Record<string, Persiste
 // pattern — opt-in keeps the leaf-6 bisection surface narrow and greppable.
 const TUNABLE_COST_IDS = new Set<string>(['marine', 'siege-tank']);
 
-// TODO(expansion): mirrored-instance — `createUnitsSideModule(data, side)` is
-// hand-rolled v1 for both sides. Engine candidate `createSymmetricModuleSet`
-// (open-loop-engine `candidate-primitives.md`, commit `0860b7d`) collapses
-// this pair of installs into one factory call once a second adversarial-state
-// consumer lands (Auto-battler PvP / Tug fork). Drop the marker here — first
-// hand-roll site in leaf-3's module tree.
+// TODO(expansion): mirrored-instance — `createUnitsSideModule(data, side)`
+// hand-rolls a per-side install pair. Engine candidate
+// `createSymmetricModuleSet` (open-loop-engine `candidate-primitives.md`)
+// collapses the pair into one factory call once a second adversarial-state
+// consumer lands.
 
 export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
   return {
@@ -88,7 +84,9 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
           display: { title: def.name, description: def.role },
           requirements: createCostRequirement({
             resource: income,
-            cost: wrapCost(registry, def),
+            cost: TUNABLE_COST_IDS.has(def.id)
+              ? tunable(registry, `units/${def.id}/cost`, () => def.cost)
+              : def.cost,
           }),
           limit: Infinity,
           onPurchase: (amount) => {
@@ -147,20 +145,4 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       ctx.provide(UnitsCooldownKey[side], cooldown);
     },
   };
-}
-
-/**
- * Wrap a unit's static cost behind a tunable key for representative archetypes
- * (marine, siege-tank). The default closure reads `def.cost`, so unscoped
- * runs match the data layer; leaf 6's tuner pushes scopes against
- * `units/<id>/cost` to bisect against beat fire-time bands without mutating
- * data.
- */
-function wrapCost(
-  registry: OverrideRegistry<TugTunables>,
-  def: UnitDef,
-): Computable<DecimalSource> {
-  if (!TUNABLE_COST_IDS.has(def.id)) return def.cost;
-  const key = `units/${def.id}/cost`;
-  return tunable<DecimalSource>(registry, key, () => def.cost);
 }

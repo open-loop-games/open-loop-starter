@@ -3,22 +3,17 @@
  * matrix to find a data slice where mass / counter / tech personas have
  * viable strategies, not just greed.
  *
- * v2 (2026-04-27 evening): adds refinery-1 cost / multiplier / baseIncomeRate
- * axes after v1 surfaced that the strategy space collapses to a binary
- * (greed-dominant vs tech-dominant) under the original axis set, and
- * mass/counter rows were uniformly 0 across all 36 slices. v1 didn't
- * perturb the actual lever for greed dominance — refinery-1's +50%
- * multiplier — so the sweep was downstream of the un-perturbed mechanism.
- *
- * Per BALANCING.md § Retune vs reshape: before reshape, perturb the
- * constants the existing harness already exposes, including the ones the
- * dominance mechanism is gated on.
+ * Axes include refinery-1 cost / multiplier and baseIncomeRate — these are
+ * the levers the dominance mechanism (greed's economic compound via
+ * refinery-1) is gated on. Per BALANCING.md § Retune vs reshape: before
+ * reshape, perturb the constants the existing harness already exposes,
+ * including the ones the dominance mechanism is gated on.
  *
  * Acceptance bar: for some slice, mass-row-max > 0.3 OR counter-row-max
  * > 0.3 — i.e. mass or counter has a viable matchup against at least one
- * opponent. Stronger than v1's "non-degenerate matrix" because the
- * structural failure mode in v1 was a uniform-zero row, not just a
- * uniform-zero column.
+ * opponent. The structural failure mode this catches is a uniform-zero
+ * row (a persona has no viable opponent), not just a uniform-zero column
+ * (a persona is universally dominant).
  *
  * If found → small data PR retunes refinery economics; OL-731 closes
  * or rescopes. If not → reshape territory (cardinality, predicate, or
@@ -62,11 +57,10 @@ const REFINERY_COST_AXIS = [100, 400, 1600];
 const BASE_INCOME_AXIS = [3, 5, 8];
 
 /** `cost` mult applied to units with base cost ≥ 150 (siege-tank,
- *  battlecruiser, ghost). Compressed from v1's {0.7, 1.0, 1.4, 2.0}. */
+ *  battlecruiser, ghost). */
 const TOP_TIER_COST_AXIS = [1.0, 2.0];
 
-/** `counter-matrix/strongCounter` tunable scope. Compressed from v1's
- *  {1.0, 1.5, 2.0}. */
+/** `counter-matrix/strongCounter` tunable scope. */
 const STRONG_AXIS = [1.0, 2.0];
 
 const TOP_TIER_COST_FLOOR = 150;
@@ -299,7 +293,7 @@ function main(): void {
     STRONG_AXIS.length;
   const totalRuns = totalSlices * 16 * SEEDS.length;
 
-  console.log('# OL-731 step 1 — multi-axis retune sweep (v2)\n');
+  console.log('# OL-731 step 1 — multi-axis retune sweep\n');
   console.log(`Run at ${new Date().toISOString()}`);
   console.log(`Axes:`);
   console.log(`  refinery-1 multiplier ∈ {${REFINERY_MULT_AXIS.join(', ')}}`);

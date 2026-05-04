@@ -26,17 +26,17 @@ import { MatchKey } from '../modules';
  * `createMatchDriverModule({ matchKey })` once a second match-shaped
  * Tier-C archetype lands and the match-key shape converges.
  *
- * **Persona-switch seam (v1: no-op).** The between-match window inside
- * the deferred-tick block is the natural insertion point for opponent-
- * persona rotation across matches. v1 has no rotation logic — production
- * holds a fixed AI persona for the session; sim sets a per-engine pair
- * via `buildTugSimEngine` overrides. When auto-rotation lands (player-
- * facing "rotate opponents per match" toggle, or tuner sweeping persona
- * pairs Cartesian within one engine), the canonical composition per
- * `parameterized-personality-extraction-sketch.md` §3.2 is `createSequencer`
- * with `canRun: () => matchEnded.value ? 'now' : 'notNow'` plus
- * `createRoundRobinStrategy` as the `FillStrategy`. Selection-policy
- * writes a queued `PersonaKey` to that sequencer; the apply step mutates
+ * **Persona-switch seam.** The between-match window inside the deferred-
+ * tick block is the natural insertion point for opponent-persona rotation
+ * across matches. Production holds a fixed AI persona for the session;
+ * sim sets a per-engine pair via `buildTugSimEngine` overrides. When
+ * auto-rotation lands (player-facing "rotate opponents per match" toggle,
+ * or tuner sweeping persona pairs Cartesian within one engine), the
+ * canonical composition per `parameterized-personality-extraction-sketch.md`
+ * §3.2 is `createSequencer` with
+ * `canRun: () => matchEnded.value ? 'now' : 'notNow'` plus
+ * `createRoundRobinStrategy` as the `FillStrategy`. Selection-policy writes
+ * a queued `PersonaKey` to that sequencer; the apply step mutates
  * `data.balance.opponentPersona[side]` here, before `match.start()`.
  */
 export function createMatchDriverModule(): EngineModule {
