@@ -9,8 +9,11 @@
  * - Weight-based multi-stat XP (def.weights replaces def.stats)
  * - Prereq array visibility (def.prereqs replaces def.visible/unlocked)
  * - canStart(LooperGameState) runnability gate (passes module-backed state)
- * - Type-specific completionEffects/rewardEffects dispatch via direct module calls
- *   (not engine's applyEffect)
+ *
+ * Effect dispatch is direct: per-completion arithmetic ('add this many of X')
+ * calls the resource module helpers in a small switch on `effect.kind`. No
+ * engine accessor/IEffect indirection — the per-effect math is too small
+ * for the engine pipeline to earn its weight.
  *
  * Reference: idleLoops/actions.js, idle-loops-ng/src/modules/action-runner.ts
  */
@@ -26,7 +29,13 @@ import {
 } from 'open-loop-engine';
 import { ACTIONS } from '../data/actions';
 import { ref } from 'vue';
-import type { ActionDef, ActionPrereq, LooperGameState } from '../data/types';
+import type {
+  ActionDef,
+  ActionPrereq,
+  CompletionEffect,
+  RewardEffect,
+  LooperGameState,
+} from '../data/types';
 import { PROGRESS_VARS } from '../data/progress-vars';
 import {
   getActiveLoopQueue,
@@ -194,52 +203,49 @@ function buildLooperGameState(): LooperGameState {
 }
 
 // ============================================================================
-// Bespoke looper completion effects
+// Completion / reward effect dispatch
 // ============================================================================
 
 /**
- * Apply looper CompletionEffect array (basic-type actions).
- * Snapshot gold before the batch so exchange-gold-to-mana reads pre-spend gold.
- *
- * TODO(expansion): bypasses engine `applyEffect` per AUDITING.md § 9. The
- * `spend-gold: 'all'` and `exchange-gold-to-mana` (pre-batch read)
- * semantics need composite/conditional `IEffect` shapes or a
- * snapshot-aware `GameStateAccessorMutator`. Defer pending engine-side
- * mutator/composite-effect design.
+ * Apply a basic-type action's CompletionEffect array. Pre-snapshot gold so
+ * `exchange-gold-to-mana` reads pre-spend value regardless of effect order
+ * inside the array — mirrors vanilla `addMana(gold * 50); addGold(-gold)`.
  */
-function applyLooperCompletionEffects(def: ActionDef): void {
-  if (def.type !== 'basic' || !def.completionEffects?.length) return;
+function applyCompletionEffects(def: ActionDef & { type: 'basic' }): void {
+  if (!def.completionEffects?.length) return;
   const preBatchGold = getResourceValue('gold');
-  for (const effect of def.completionEffects) {
-    if (effect.kind === 'add-mana') {
+  for (const effect of def.completionEffects) applyOneCompletionEffect(effect, def, preBatchGold);
+}
+
+function applyOneCompletionEffect(
+  effect: CompletionEffect,
+  def: ActionDef & { type: 'basic' },
+  preBatchGold: Decimal,
+): void {
+  switch (effect.kind) {
+    case 'add-mana':
       addMana(effect.amount);
-    } else if (effect.kind === 'add-gold') {
+      return;
+    case 'add-gold':
       addResourceAmount('gold', effect.amount);
-    } else if (effect.kind === 'spend-gold') {
-      if (effect.amount === 'all') {
-        subtractResourceAmount('gold', getResourceValue('gold'));
-      } else {
-        subtractResourceAmount('gold', effect.amount);
-      }
-    } else if (effect.kind === 'exchange-gold-to-mana') {
-      const exchangeMult = def.exchangeMult ?? 50;
-      addMana(Decimal.mul(preBatchGold, exchangeMult));
-    }
+      return;
+    case 'spend-gold':
+      subtractResourceAmount(
+        'gold',
+        effect.amount === 'all' ? getResourceValue('gold') : effect.amount,
+      );
+      return;
+    case 'exchange-gold-to-mana':
+      addMana(Decimal.mul(preBatchGold, def.exchangeMult ?? 50));
+      return;
   }
 }
 
-/**
- * Apply looper RewardEffect array (regular-type actions, on good-finds).
- */
-function applyLooperRewardEffects(
-  effects: Array<{ kind: 'add-mana' | 'add-gold'; amount: Decimal | number | string }>,
-): void {
+/** Apply a regular-type action's RewardEffect array (fired on good-finds). */
+function applyRewardEffects(effects: readonly RewardEffect[]): void {
   for (const effect of effects) {
-    if (effect.kind === 'add-mana') {
-      addMana(effect.amount);
-    } else if (effect.kind === 'add-gold') {
-      addResourceAmount('gold', effect.amount);
-    }
+    if (effect.kind === 'add-mana') addMana(effect.amount);
+    else addResourceAmount('gold', effect.amount);
   }
 }
 
@@ -297,9 +303,7 @@ function grantProgressXP(def: ActionDef): void {
 function finishRegularCompletion(def: ActionDef): void {
   if (def.type !== 'regular') return;
   finishRegular(def.regularVarId, def.rewardRatio, () => {
-    if (def.rewardEffects?.length) {
-      applyLooperRewardEffects(def.rewardEffects as Parameters<typeof applyLooperRewardEffects>[0]);
-    }
+    if (def.rewardEffects?.length) applyRewardEffects(def.rewardEffects);
     return 1;
   });
 }
@@ -344,7 +348,7 @@ function dispatchTick(dt: number): void {
     } else if (def.type === 'regular') {
       finishRegularCompletion(def);
     } else if (def.type === 'basic') {
-      applyLooperCompletionEffects(def);
+      applyCompletionEffects(def);
     }
   };
 

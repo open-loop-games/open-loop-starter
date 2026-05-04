@@ -41,7 +41,7 @@ Engine-derived rules cite the engine symbol the rule maps to and the cookbook re
 | 6 | Per-instance scaling: `createScalingPurchasable` with the `effect: (amount) => Formula` shape; `createPurchasableGroup` for batch ops | `createScalingPurchasable`, `createPurchasableGroup`, `Formula`, `FormulaSource` | G-S5 |
 | 7 | Conditional modifiers: declarative `grants` → `chain.bind` → `createPersistentEffectSystem` | `Grant`, `ModifierChain.bind`, `replacementBinding`, `createPersistentEffectSystem` | G-M7 / G-M8 / G-M9 |
 | 8 | Lifecycle: `createLoop` + `createRetentionPolicy` for multi-tier; `createReset` for single-tier | `createLoop`, `createRetentionPolicy`, `createReset`, `fractional` | G-S1 (multi-tier sub-section) |
-| 9 | Effect dispatch: `applyEffect` against captured `GameStateAccessorMutator` | `applyEffect`, `GameStateAccessorMutator`, `IEffect`, `E` | G-S7 |
+| 9 | Effect dispatch: reach for `applyEffect` / `Conversion` only when their semantics earn it; direct module-helper calls are correct for simple per-completion arithmetic | `applyEffect`, `createConversion`, `GameStateAccessorMutator`, `IEffect`, `E` | G-S7 |
 | 10 | Tunables: `tunable()` over manual override-registry thunks | `tunable`, `createOverrideRegistry`, `OverrideRegistry` | G-S6 |
 | 11 | Cross-tier modifier targeting: `ChainRegistry` over wide `ctx.inject` piles | `ChainRegistry`, `ChainRegistryKey`, `createChainRegistry`, `walkChainRegistry` | G-S8 |
 | 12 | Multi-currency tier domains: `createResourceBag` over loose `createResource` | `createResourceBag`, `ResourceBag`, `bulkTransfer`, `transferBetweenBags` | G-S9 |
@@ -205,15 +205,21 @@ For single-tier resets without lifecycle (a prestige conversion, a one-shot rein
 
 ### § 9 — Effect dispatch
 
-**Rule.** Declarative effects (`IEffect`, `E.resource`, `E.state`, `E.composite`) dispatch through `applyEffect(effect, mutator, mutator)` against a `GameStateAccessorMutator` captured at install time. The mutator is the adapter from declarative effect shape to live module mutators.
+**Rule.** Reach for an engine effect primitive when its semantics earn the indirection — not by default. Two earned cases:
 
-**Anti-pattern.** Effect dispatch bypasses `applyEffect` — direct switch on effect kind, raw module function calls, hand-rolled adapter that reimplements `applyEffect`'s walk. Convergence in canonical-balance references doesn't redeem the shape; the engine surface owns the rule.
+- **`applyEffect` against `GameStateAccessorMutator`.** Use when the data layer authentically declares `IEffect` arrays (engine-shaped declarative effects with `E.resource` / `E.state` / `E.composite` builders), or when a third party — a mod, a content authoring tool, a save-replay layer — needs to hand the dispatcher effect data without knowing the consumer's module shape. The accessor is the boundary between declarative and imperative.
+- **`createConversion`.** Use for atomic multi-input → multi-output transforms whose math reads pre-mutation values (recipes, exchanges, market trades, prestige). Conversion's snapshot semantics are the load-bearing feature; nothing else in the engine gives them.
+
+For everything else — a 4-line `switch (effect.kind)` calling module helpers (`addMana(amt)`, `addResourceAmount('gold', amt)`) — the direct shape is correct. Per-completion arithmetic is too small for the engine pipeline to earn its weight, and the indirection actively hides the math.
+
+**Anti-pattern.** Building a `GameStateAccessorMutator` purely to satisfy a § 9 dogma when no caller benefits — the accessor becomes 90 lines of unused interface methods adapting domain-tagged data unions into `IEffect` and back into the same module helpers the original direct call already invoked. Equally: hand-rolling a snapshot-and-credit pipeline for a multi-input atomic transform when `createConversion` would express it.
 
 **Audit criterion.**
-- Effect lists declared in `data/` are `IEffect[]` and dispatched via `applyEffect`.
-- The `GameStateAccessorMutator` is captured once per module-install and reused at tick time.
+- Multi-input atomic transforms use `createConversion` (or surface a `flag-primitive` if the engine path is genuinely missing).
+- Hand-rolled effect dispatchers handling 1–6 cases with direct module-helper calls are pass — not anti-pattern.
+- Routes to `applyEffect` exist only where the data truly carries `IEffect[]` or a third party needs the boundary.
 
-**Threshold.** Zero effect dispatch sites that bypass `applyEffect`.
+**Threshold.** Pass unless: a multi-input snapshot is hand-rolled (Conversion-shape miss), or a `GameStateAccessorMutator` is built without a justifying consumer (over-application of the rule).
 
 ---
 
