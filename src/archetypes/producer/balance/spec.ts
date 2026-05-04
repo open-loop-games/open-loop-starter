@@ -1,170 +1,176 @@
 /**
- * Closed-form spec layer — per-tier first-passage and triangular composition.
+ * Closed-form spec layer — engine as oracle, queried as pure math.
  *
- * Single-tier shape: cost geometric in count, production linear in count,
- * no upgrades, no global modifiers, no cross-tier production. Triangular
- * composition (`arcTimeUnderTierOrder`) chains tiers under a strict
- * purchase order: lower tiers' frozen counts feed the rate while a higher
- * tier expands. The lowest-tier bootstrap (count 0 → 1 with no external
- * rate, e.g. cursor seeded by clicks) stays bot territory.
+ * Builds a producer engine instance once (no bot, no ticks running) and
+ * mutates persistent refs into hypothetical states; the engine's own
+ * `repeatable.getCost(1)`, `computedRate`, and `getTotalRate` answer cost
+ * and production at each step with the full modifier chain applied. No
+ * spec-side reimplementation of cost / rate / chain math.
  *
- *   rate-function-algebra.md §2.4   geometric cost
- *   rate-function-algebra.md §2.10  rate × state-independent modifier
- *   rate-function-algebra.md §3.1   sum composition
- *   rate-function-algebra.md §6.3   triangular systems
- *   rate-function-algebra.md §6.6   series composition
- *   rate-function-algebra.md §7.2   last-K-levels lemma (cost-side)
- *   case-studies/core-timing-formula.md §4.1, §5, §6
- *
- * Forward sums close per §3.1; the inverse N(T) does not in elementary
- * terms because the m^k / k mix is polylog territory — caller either
- * evaluates the forward sum or bisects.
+ * The triangular composer walks a strict-tier-order schedule (algebra
+ * §6.3 / §6.6); per-step Δt is `Cost / total_rate` per
+ * `case-studies/core-timing-formula.md §4.1`. The lowest-tier bootstrap
+ * (count 0 → 1, no production yet, e.g. cursor seeded by clicks) stays
+ * bot territory: with `getTotalRate` zero the spec correctly returns +∞.
  */
 
-import { PRODUCERS } from '../data/producers';
+import { Decimal, type Engine } from 'open-loop-engine';
+import {
+  BuildingsKey,
+  CONTINUOUS_PRODUCER_IDS,
+  PrimaryResourceKey,
+  UpgradesKey,
+  createProducerEngine,
+} from '..';
 
-export interface SingleTierShape {
-  id: string;
-  /** Geometric cost growth m. */
-  costScaling: number;
-  /** First-purchase cost C₀ (currency). */
-  baseCost: number;
-  /** Per-unit rate r (currency/sec). */
-  baseRate: number;
+let counter = 0;
+
+let cachedEngine: Engine | undefined;
+
+function getSpecEngine(): Engine {
+  if (cachedEngine) return cachedEngine;
+  const { engine } = createProducerEngine(undefined, {
+    persistenceNamespace: `spec-${++counter}`,
+  });
+  engine.selectMod('bakery');
+  engine.start();
+  engine.stop();
+  cachedEngine = engine;
+  return engine;
 }
 
-/** Cost(n) = C₀ · m^(n-1) for the n-th purchase (1-indexed). algebra §2.4. */
-export function costAt(shape: SingleTierShape, n: number): number {
-  return shape.baseCost * Math.pow(shape.costScaling, n - 1);
-}
-
-/** Production(count) = count · r. algebra §2.10 with identity modifier. */
-export function productionAtCount(shape: SingleTierShape, count: number): number {
-  return count * shape.baseRate;
-}
-
-/**
- * Beat interval with an external rate from frozen lower tiers added in:
- *   r_total = count · r + externalRate
- *   Δt = Cost(count+1) / r_total
- * Sum composition per algebra §3.1. Reduces to the single-tier `intervalAtCount`
- * when externalRate = 0. count = 0 with externalRate > 0 models the bootstrap
- * of a higher tier seeded by lower-tier production.
- */
-export function intervalAtCountWithBase(
-  shape: SingleTierShape,
-  count: number,
-  externalRate: number,
-): number {
-  const rate = count * shape.baseRate + externalRate;
-  if (rate <= 0) return Number.POSITIVE_INFINITY;
-  return costAt(shape, count + 1) / rate;
-}
-
-/**
- * Beat interval Δt(count) = Cost(count+1) / Production(count). The genre's
- * core timing formula (core-timing-formula §4.1). Diverges at count = 0.
- */
-export function intervalAtCount(shape: SingleTierShape, count: number): number {
-  return intervalAtCountWithBase(shape, count, 0);
-}
-
-/** Cumulative steady-state time `from` → `to`. Forward sum, no closed-form inverse. */
-export function cumulativeTimeFrom(shape: SingleTierShape, from: number, to: number): number {
-  if (from < 1 || to <= from) return 0;
-  let total = 0;
-  for (let k = from; k < to; k++) total += intervalAtCount(shape, k);
-  return total;
-}
-
-/** Doubling level d = ln 2 / ln m. algebra §2.4 characteristic timescale. */
-export function doublingLevels(shape: SingleTierShape): number {
-  return Math.log(2) / Math.log(shape.costScaling);
-}
-
-/** Beat-expansion T(n) / T(1) on the steady-state interval. core-timing-formula §5. */
-export function beatExpansion(shape: SingleTierShape, n: number): number {
-  return intervalAtCount(shape, n) / intervalAtCount(shape, 1);
-}
-
-/**
- * Fraction of cumulative steady-state time spent in the last K of N
- * purchases. Computed from the forward sum because production growing
- * linearly in count breaks the pure-geometric form of algebra §7.2;
- * collapses to (1 − m^-K) when production is constant.
- */
-export function lastKShare(shape: SingleTierShape, N: number, K: number): number {
-  const total = cumulativeTimeFrom(shape, 1, N);
-  if (total === 0) return 0;
-  const tail = cumulativeTimeFrom(shape, Math.max(1, N - K), N);
-  return tail / total;
-}
-
-/**
- * Per-tier shapes pulled from `data/producers.ts` — single source of truth.
- * One row per continuous producer. The triangular composer below assembles
- * these per algebra §6.3 / §6.6.
- */
-export const TIER_SHAPES: Readonly<Record<string, SingleTierShape>> = (() => {
-  const shapes: Record<string, SingleTierShape> = {};
-  for (const p of PRODUCERS) {
-    if (p.trigger !== 'continuous' || !p.purchase) continue;
-    shapes[p.id] = {
-      id: p.id,
-      costScaling: Number(p.purchase.costScaling),
-      baseCost: Number(p.purchase.baseCost),
-      baseRate: Number(p.baseRate),
-    };
+function setCounts(counts: Readonly<Record<string, number>>): void {
+  const buildings = getSpecEngine().tryInject(BuildingsKey)!;
+  for (const entry of buildings.getAll()) {
+    if (entry.def.trigger !== 'continuous' || !entry.producer.repeatable) continue;
+    entry.producer.repeatable.amount.value = counts[entry.def.id] ?? 0;
   }
-  return shapes;
-})();
-
-export function tierShape(id: string): SingleTierShape {
-  const s = TIER_SHAPES[id];
-  if (!s) throw new Error(`tierShape: no continuous tier '${id}'`);
-  return s;
 }
 
 export interface TierStep {
+  kind: 'tier';
   /** Continuous tier id to expand. */
   id: string;
   /** Count to grow to. No-op if not strictly greater than the current accumulated count. */
   to: number;
 }
 
+export interface UpgradeStep {
+  kind: 'upgrade';
+  /** Upgrade id from `data/upgrades.ts`. No-op if already active. */
+  id: string;
+}
+
+export type ScheduleStep = TierStep | UpgradeStep;
+
+export interface ArcWaypoint {
+  /** The schedule step this waypoint corresponds to (one waypoint per step, no-ops included). */
+  step: ScheduleStep;
+  /** Cumulative time at the moment the step's effect lands. */
+  atSec: number;
+  /** Tier counts after the step is applied. Upgrade steps do not change counts. */
+  counts: Readonly<Record<string, number>>;
+}
+
 /**
- * Cumulative time under a strict-tier-order schedule. Each step grows one
- * tier's count to `to`; counts established by earlier steps freeze and
- * contribute as `externalRate` for later steps.
+ * Per-step waypoints under a strict-tier-order schedule. Tier steps grow
+ * a producer's count; upgrade steps activate an upgrade (its modifier
+ * binding fires reactively via `purchasable.active`, feeding the rate
+ * chain for subsequent steps). One waypoint per schedule entry (no-ops
+ * included).
  *
- * Triangular per algebra §6.3 — the production of step i depends only on
- * counts established by steps 1..i. Series composition per §6.6 — total
- * is Σ per-step first-passages.
+ * Triangular per algebra §6.3 — production at step i depends only on
+ * counts and modifiers established by steps 1..i. Series composition
+ * per §6.6 — total is Σ per-step first-passages. Each per-step Δt is
+ * queried from the engine: `repeatable.getCost(1)` (or `upgrade.getCost(1)`)
+ * for cost, `getTotalRate` for the rate.
  *
- * `initial` seeds counts before the first step; pass `{ cursor: 1 }` (or
- * similar) to skip the click-driven bootstrap. A schedule whose first
- * step grows the lowest tier from 0 with empty `initial` returns `+∞`
- * for that segment — the spec correctly refusing to model bot territory.
+ * `initial` seeds counts before the first step; pass `{ cursor: 1 }` to
+ * skip the click-driven bootstrap. The spec does not seed bought
+ * upgrades; if a fork wants pre-bought modifiers it can place them as
+ * leading upgrade steps.
  */
+export function arcWaypoints(
+  schedule: readonly ScheduleStep[],
+  initial: Readonly<Record<string, number>> = {},
+): ArcWaypoint[] {
+  const engine = getSpecEngine();
+  const buildings = engine.tryInject(BuildingsKey)!;
+  const upgrades = engine.tryInject(UpgradesKey)!;
+  const primary = engine.tryInject(PrimaryResourceKey)!;
+
+  const counts: Record<string, number> = { ...initial };
+  setCounts(counts);
+  resetUpgrades();
+
+  const out: ArcWaypoint[] = [];
+  let total = 0;
+
+  for (const step of schedule) {
+    if (step.kind === 'tier') {
+      const from = counts[step.id] ?? 0;
+      if (step.to > from) {
+        const p = buildings.getProducer(step.id);
+        if (!p?.repeatable) throw new Error(`arcWaypoints: no continuous producer '${step.id}'`);
+
+        for (let k = from; k < step.to; k++) {
+          counts[step.id] = k;
+          setCounts(counts);
+          const cost = Decimal.fromValue(p.repeatable.getCost(1)).toNumber();
+          const rate = Decimal.fromValue(buildings.getTotalRate(primary)).toNumber();
+          total += rate > 0 ? cost / rate : Number.POSITIVE_INFINITY;
+        }
+        counts[step.id] = step.to;
+        setCounts(counts);
+      }
+    } else {
+      const u = upgrades.getPurchasable(step.id);
+      if (!u) throw new Error(`arcWaypoints: no upgrade '${step.id}'`);
+      if (!u.active.value) {
+        const cost = Decimal.fromValue(u.getCost(1)).toNumber();
+        const rate = Decimal.fromValue(buildings.getTotalRate(primary)).toNumber();
+        total += rate > 0 ? cost / rate : Number.POSITIVE_INFINITY;
+        // Set amount directly — bypasses cost/onPurchase, but `active` is
+        // computed from `amount >= 1` and the grants bound via
+        // `setupDeclarativeBindings(grants, purchasable.active)` watch
+        // active reactively, so the modifier joins the rate chain
+        // immediately.
+        u.amount.value = 1;
+      }
+    }
+    out.push({ step, atSec: total, counts: { ...counts } });
+  }
+  return out;
+}
+
+function resetUpgrades(): void {
+  const upgrades = getSpecEngine().tryInject(UpgradesKey)!;
+  for (const entry of upgrades.getAll()) {
+    if (entry.purchasable.active.value) entry.purchasable.amount.value = 0;
+  }
+}
+
+/** Total schedule time. Convenience wrapper over `arcWaypoints`. */
 export function arcTimeUnderTierOrder(
-  schedule: readonly TierStep[],
+  schedule: readonly ScheduleStep[],
   initial: Readonly<Record<string, number>> = {},
 ): number {
-  const counts: Record<string, number> = { ...initial };
-  let total = 0;
-  for (const step of schedule) {
-    const shape = tierShape(step.id);
-    const from = counts[step.id] ?? 0;
-    if (step.to <= from) continue;
-    let externalRate = 0;
-    for (const [id, c] of Object.entries(counts)) {
-      if (id === step.id) continue;
-      externalRate += c * tierShape(id).baseRate;
-    }
-    for (let k = from; k < step.to; k++) {
-      total += intervalAtCountWithBase(shape, k, externalRate);
-    }
-    counts[step.id] = step.to;
+  const wps = arcWaypoints(schedule, initial);
+  return wps.length === 0 ? 0 : wps[wps.length - 1]!.atSec;
+}
+
+/**
+ * Default strict-tier-order schedule derived from data: for each continuous
+ * producer in registration order, expand to `perTierCount`, then activate
+ * its `-boost-i` upgrade (the producer-archetype naming convention surfaced
+ * via `TIER1_UPGRADE_IDS`). Globals are not included — they're a strategy
+ * choice, callers append where they want them.
+ */
+export function strictTierOrderSchedule(opts: { perTierCount: number }): ScheduleStep[] {
+  const out: ScheduleStep[] = [];
+  for (const id of CONTINUOUS_PRODUCER_IDS) {
+    out.push({ kind: 'tier', id, to: opts.perTierCount });
+    out.push({ kind: 'upgrade', id: `${id}-boost-i` });
   }
-  return total;
+  return out;
 }
