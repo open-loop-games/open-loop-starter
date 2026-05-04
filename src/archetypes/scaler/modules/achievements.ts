@@ -1,22 +1,14 @@
 import { computed } from 'vue';
 import {
   Decimal,
-  type AchievementCategory,
   type EngineContext,
   type EngineModule,
   type Grant,
-  type InjectionKey,
   type ModifierChain,
   createAchievementCategory,
 } from 'open-loop-engine';
 import type { AchievementDef, ScalerData, ScalerGameState, Tier } from '../data/types';
 import { ScalerTiersKey, type ScalerTier } from './tiers';
-
-// === Injection keys ===
-
-export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef>> = Symbol(
-  'scaler/achievements',
-) as InjectionKey<AchievementCategory<AchievementDef>>;
 
 // === Module ===
 //
@@ -119,8 +111,6 @@ export function createAchievementsModule(data: ScalerData): EngineModule {
         },
       });
       achievements.register(data.achievements);
-
-      ctx.provide(AchievementsKey, achievements);
     },
   };
 }

@@ -7,7 +7,6 @@ import { createAchievementsModule } from './achievements';
 
 // Re-exports for the composables / UI layer.
 export { ScalerTiersKey, type ScalerTier } from './tiers';
-export { AchievementsKey } from './achievements';
 
 /**
  * Compose the scaler modules in dependency order. Engine topological-sort

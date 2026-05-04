@@ -1,26 +1,38 @@
 <!--
   Scaler-side achievements modal. Wraps the shared AchievementGrid widget
-  and feeds it cells from useAchievements(AchievementsKey). Theming is
+  and feeds it cells straight from the engine's AchievementCategory, which
+  exposes Vue-reactive earned/earnedAt/getAll out of the box. Theming is
   intentionally minimal — the cell styles inherit from AchievementGrid's
   defaults; a costume pass overlays scaler-specific visuals later.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
+import { CategoriesKey, type AchievementCategory } from 'open-loop-engine';
 import AchievementGrid, { type AchievementGridCell } from '@/ui/components/AchievementGrid.vue';
-import { useAchievements } from '../../composables/useAchievements';
-import { AchievementsKey } from '../../modules';
+import { useModule } from '@/composables/useModule';
+import type { AchievementDef } from '../../data/types';
 
-const summary = useAchievements(AchievementsKey);
+const cats = useModule(CategoriesKey);
+const category = (cats.achievements ?? []).find(
+  (c) => c.registry.name === 'scaler/achievements',
+) as AchievementCategory<AchievementDef> | undefined;
+if (!category) {
+  throw new Error('scaler/achievements: category missing from CategoriesKey');
+}
+
 defineEmits<{ close: [] }>();
 
 const cells = computed<AchievementGridCell[]>(() =>
-  summary.value.rows.map((row) => ({
-    id: row.def.id,
-    name: row.visible.value ? row.def.name : '???',
-    description: row.visible.value ? row.def.description : 'Hidden — keep ascending to reveal',
-    earned: row.earned.value,
-    hidden: !row.visible.value,
-  })),
+  category.getAll().map((entry) => {
+    const visible = !entry.def.hidden || entry.achievement.earned.value;
+    return {
+      id: entry.def.id,
+      name: visible ? entry.def.name : '???',
+      description: visible ? entry.def.description : 'Hidden — keep ascending to reveal',
+      earned: entry.achievement.earned.value,
+      hidden: !visible,
+    };
+  }),
 );
 </script>
 

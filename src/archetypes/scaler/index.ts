@@ -28,4 +28,4 @@ export type {
   ChallengeDef,
   AchievementDef,
 } from './data/types';
-export { createScalerModules, ScalerTiersKey, type ScalerTier, AchievementsKey } from './modules';
+export { createScalerModules, ScalerTiersKey, type ScalerTier } from './modules';
