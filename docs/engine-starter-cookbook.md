@@ -194,6 +194,32 @@ Engine path: `createTieredAchievement` with explicit threshold array and per-tie
 **G-S14. Time-gated cooldowns and progress timers.**
 Engine path: `createTimedProgress` with `Computable<DecimalSource>` duration. The duration getter closes over reactive refs — adaptive timers (Dome Keeper formula) feed the duration directly. Phase-shifter #15, Cycler #11.
 
+**G-S15. Numeric type discipline — Pattern D as default.**
+Engine path: `DecimalSource` for game quantities (data fields, persistent refs, function signatures). The engine's `Decimal.{add,sub,mul,div,min,max,eq,gt,gte,lt,lte}` statics dispatch on `typeof number` operands and run native math when the result fits IEEE 754 double precision (`< 1e15`), then promote to a fresh `Decimal` so chain calls (`.clamp().toNumber()`) keep working; predicates skip even the wrap (`open-loop-engine/src/primitives/decimal.ts:80–161`). Storage graduation to `break_eternity` is automatic past the fast-path threshold. The combination — fast on small values, correct at every scale, the same code surviving fork-side scale-extension — makes Pattern D the universal default.
+
+Universal helpers:
+
+- `Decimal.<op>` statics — preferred over instance methods for the typeof-dispatched fast path.
+- `bn(x: DecimalSource): Decimal` — canonical Decimal constructor; preferred over manual `new Decimal(x)`.
+- `toNumber(x: DecimalSource): number` — fast-path identity on raw `number`; preferred over `Number(new Decimal(x).toString())` round-trips.
+- `Computable<DecimalSource>` — engine factory option type accepting `T | Readonly<Ref<T>> | (() => T)`. Pattern D consumers pass raw `number` literals, refs, or getters interchangeably; no conversion needed at the engine boundary.
+
+Reduce-on-Decimal accumulators (`for (...) { acc = Decimal.add(acc, x) }`) miss the fast path on every iter after iter 0, since `acc` becomes a Decimal instance. The engine ships layer-0 renorm helpers internally for the few hot-path call sites that need them, but they're intentionally not part of the public surface — for consumer code, the per-iter cost (one allocation + a layer-0 native-math call) is microseconds, well below the threshold where it would justify trading away Pattern D's drift-resistance. Leave reduces in their natural Decimal shape; refactor to native-number only with profiler evidence of a measured hot path.
+
+Two named off-default patterns:
+
+- **Pattern L (log-space inner) — per-formula escalation.** Inner math runs `Math.pow` / `Math.log10` / `Math.exp` on plain numbers carrying logs; materialize via `Decimal.pow(10, logVal)` at the boundary. Adopt per-formula when (a) intermediates would saturate even break_eternity's storage at the target scale, OR (b) the closed-form inverse is materially simpler in log-space (AD's `getMaxBought` inverts a quadratic in log-money). Document the boundary with a co-located comment naming the reason. Don't escalate the surrounding archetype — Pattern D for everything else; Pattern L only for the specific formula. Reference: [`incremental-math/src/pages/modern/big-numbers.mdx`](../../incremental-math/src/pages/modern/big-numbers.mdx) (AD's bulk-purchase log-space cost spine; "What this enabled" → "Cost acceleration past the seesaw").
+
+- **Pattern N (native `number`) — off-default, perf-budget-justified.** Data fields and internal math typed `number`. Engine boundary takes `Computable<DecimalSource>`, which accepts raw `number` directly. Adopt only when an archetype has a documented per-tick perf budget that justifies giving up forwards-compatibility with NG+ / scale-extension layers. Most archetypes shouldn't — Pattern D fast-paths down to roughly N-cost on small values without forfeiting the graduation path. Co-locate a comment naming the perf budget. Reference: vanilla `idleLoops` / cavernous-ii (deliberate "no big number libraries" — natural caps prevent overflow; documented in `open-loop-research/inbox/numeric-scale/idle-loops.md` and `cavernous-ii.md`).
+
+**Cross-pattern hygiene (universal — applies to D, L, N).**
+
+- No boundary round-trips: `Number(new Decimal(x).toString())` → `toNumber(x)`. The chain form `new Decimal(x).toNumber()` is the same hazard with one less allocation — also use `toNumber(x)`.
+- No raw `<` / `>` / `<=` / `>=` on Decimal-typed values — past `1e308` both sides saturate to `Infinity` and the comparison silently returns `false`. Always `.lt/.gt/.lte/.gte` or `Decimal.<op>` static. Lint-enforced via the starter's `no-decimal-relational-operator` ESLint rule.
+- `bn(x)` over `new Decimal(x)` for single-argument construction.
+
+These are greppable / lintable; AUDITING § 17 carries the audit criterion + threshold detail.
+
 ### 4.3 Component grain — bindings, closures, per-instance
 
 **G-C1. Cross-action / cross-content bonuses.**
@@ -248,6 +274,7 @@ The two docs are companions: this cookbook owns positive recipes (goal → engin
 | § 14       | Composable graduation              | —                                    | Audit-only (starter convention)                                        |
 | § 15       | Manifest hygiene                   | —                                    | Audit-only (starter convention)                                        |
 | § 16       | Comment hygiene                    | —                                    | Audit-only (studio convention)                                         |
+| § 17       | Numeric type discipline (Decimal hygiene) | G-S15                         | Agree (joint authoring; AUDITING owns hygiene criterion + threshold, cookbook owns pattern discrimination + escalation conditions) |
 | —          | Math grain (rate-function spine)   | G-M1 through G-M15                   | **Cookbook-extends** — audit § 4 covers Level-1 helpers; cookbook adds the rate-function composition prescriptions (producer rate spines, skill curves, conversions, soft caps) |
 | —          | Sequencer + scheduled content      | G-S10                                | **Cookbook-extends** — audit doc didn't pin a Sequencer rule           |
 | —          | Phase-scoped gating                | G-S11                                | **Cookbook-extends** — audit § 7 covers conditional modifiers; cookbook names phase-axis ergonomics explicitly |
@@ -314,5 +341,6 @@ Live questions from the engine-first walk. The first five are coverage notes for
 - [`open-loop-research/methodology/techniques/closed-form-progression/subsystem-inventory.md`](../../open-loop-research/methodology/techniques/closed-form-progression/subsystem-inventory.md) — the structural template this doc mirrors, with the closed-form-decomposability classification replacing engine-path-adoption classification on the same 212-row corpus.
 - [`open-loop-engine/docs/api/INDEX.md`](../../open-loop-engine/docs/api/INDEX.md) — per-symbol engine surface authority. Every recipe in this doc cites a symbol from here.
 - [`open-loop-engine/docs/consumer-guide.md`](../../open-loop-engine/docs/consumer-guide.md) — narrative companion; the abstraction-spectrum framing (Levels 1–4) underlies G-S3 / G-S4 / G-S5.
+- [`incremental-math/src/pages/modern/big-numbers.mdx`](../../incremental-math/src/pages/modern/big-numbers.mdx) — research synthesis on `break_infinity.js` / `break_eternity.js` adoption, the AD log-space exemplar, comparison-operator hazards, and presentation/notation as a downstream design surface. Cited from G-S15 (Pattern L escalation reference).
 - [`open-loop-engine/docs/candidate-primitives.md`](../../open-loop-engine/docs/candidate-primitives.md) — filing target for engine gaps. Every `partial` verdict in § 7 of this doc cites an entry here.
 - [`extracts/`](engine-starter-cookbook/extracts/) — per-chunk source extracts (chunk-1-economy-spine.md, chunk-2-loop-driven.md, chunk-3-sim-adversarial.md). The 212 individual rows live there.

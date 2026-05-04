@@ -49,6 +49,7 @@ Engine-derived rules cite the engine symbol the rule maps to and the cookbook re
 | 14 | Composable graduation: 3+ identical hand-rolls across **independent archetypes** → promote to `src/composables/` | — (starter convention) | — |
 | 15 | Manifest hygiene: shells reference real `src/lib/shells/` names | — (starter convention) | — |
 | 16 | Comment hygiene: invariants only, no phase markers, no refactor history | — (studio CLAUDE.md § Comment hygiene) | — |
+| 17 | Numeric type discipline — Pattern D (`DecimalSource`) default; cross-pattern hygiene (round-trips, reduce-renorm, relational operators) | `Decimal`, `bn`, `toNumber`, `renormIfLayer0`, `toFinalDecimal`, `Computable` | G-S15 |
 
 ---
 
@@ -352,6 +353,36 @@ These rules don't derive from engine surface — they live in starter convention
 - TODO markers use the qualified form: `TODO(expansion)`, `TODO(ergonomics)`.
 
 **Threshold.** Zero phase markers / refactor history comments. Every `TODO` is qualified.
+
+---
+
+### § 17 — Numeric type discipline (Decimal hygiene)
+
+**Rule.** Game quantities default to `DecimalSource` (Pattern D). The engine's `Decimal.{add,sub,mul,div,min,max,eq,gt,gte,lt,lte}` statics dispatch on `typeof number` operands and run native math when the result fits IEEE 754 double precision (sub-`1e15`), then promote to a fresh `Decimal` so chain calls (`.clamp().toNumber()`) keep working; predicates skip even the wrap (`open-loop-engine/src/primitives/decimal.ts:80–161`). Pattern D fast-paths down to roughly native cost on small values and graduates to `break_eternity` storage past `1e15` — drift-resistance is the load-bearing property: the same code keeps working as a fork extends an archetype's value range past JS Number territory.
+
+Construction: `bn(x: DecimalSource): Decimal` is the canonical wrapper. Native conversion at boundaries: `toNumber(x: DecimalSource): number` (fast-path identity on raw `number`, single `.toNumber()` on Decimal/string).
+
+**Pattern L (log-space inner) — off-default escalation, per-formula.** Inner math on plain numbers carrying logs; `Decimal.pow(10, logVal)` at the materialization boundary. Adopt only when (a) intermediates would saturate even break_eternity's storage at the target scale, OR (b) the closed-form inverse is materially simpler in log-space (AD's `getMaxBought` inverts a quadratic in log-money). Co-locate a comment naming the reason. Don't escalate the surrounding archetype — Pattern D for everything else, Pattern L only for the specific formula. Reference: `incremental-math/src/pages/modern/big-numbers.mdx`.
+
+**Pattern N (native `number`) — off-default, perf-budget-justified.** Data fields and internal math typed `number`; engine boundary takes `Computable<DecimalSource>` which accepts raw `number`. Adopt only with a documented per-tick perf budget that justifies forwards-incompatibility with NG+ / scale-extension layers. Most archetypes shouldn't.
+
+**Anti-pattern.**
+
+- *Boundary round-trips.* `Number(new Decimal(x).toString())` allocates, serializes, re-parses. Use `toNumber(x)`. The chain form `new Decimal(x).toNumber()` is the same hazard with one less allocation — also use `toNumber(x)`.
+- *Raw relational operators on Decimal-typed values.* `a < b` / `a > b` / `a <= b` / `a >= b`. Past `1e308` both sides saturate to JS `Infinity` and the comparison silently returns `false`. Always `Decimal.lt/gt/lte/gte` (static) or instance method form. The starter ESLint config carries a `no-decimal-relational-operator` custom rule enforcing this.
+- *Manual `new Decimal(x)`* for single-argument construction where `bn(x)` reads the same and matches the engine's canonical wrapper. Multi-argument constructions stay.
+- Pattern L or Pattern N adoption without a co-located comment naming the reason (saturation / inverse ergonomics for L; perf budget for N).
+
+**Reduce-on-Decimal.** `for (...) { acc = Decimal.add(acc, x) }` promotes `acc` to a Decimal instance after iter 0, so subsequent iterations miss the typeof fast path. The cost is one `new Decimal(...)` allocation plus a layer-0 native-math call per iter — microseconds in absolute terms, irrelevant for the loop sizes that show up in incremental-game code (queue items, stat-weight maps, producer lists — all under ~50 iters). Pattern D's drift-resistance is more valuable than the perf delta. Leave reduces in their natural Decimal shape; don't refactor for hygiene. Audit only flags reduce sites if profiling shows them in a measured hot path.
+
+**Audit criterion.**
+
+- `grep -rn 'Number(new Decimal(' src/archetypes/<name>/` returns zero hits.
+- `grep -rn 'new Decimal(' src/archetypes/<name>/` returns near-zero hits — every remaining hit is multi-argument or carries a justification comment. New code uses `bn(x)`.
+- The starter ESLint config's `no-decimal-relational-operator` custom rule lints raw relational operators on Decimal-typed values to error.
+- Pattern L and Pattern N adoption sites carry a co-located comment naming the reason. Sites without justification revert to Pattern D.
+
+**Threshold.** Zero round-trips. Zero raw relational operators on Decimal-typed values (lint-enforced). Pattern L and Pattern N sites without justification comments are flag-local toward Pattern D.
 
 ---
 
