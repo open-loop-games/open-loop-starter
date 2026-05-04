@@ -1,14 +1,4 @@
-import type {
-  AbilityDef,
-  CounterMatrix,
-  FortressDef,
-  IncomeUpgradeDef,
-  TugBalance,
-  TugBelievability,
-  TugData,
-  TugTheme,
-  UnitDef,
-} from './types';
+import type { IncomeUpgradeDef, TugBalance, TugBelievability, TugData, UnitDef } from './types';
 
 /** Override shape for the believability sub-bundle — partial so callers
  *  can override one knob without restating both. The applyTugOverrides
@@ -18,62 +8,53 @@ export type TugBalanceOverrides = Partial<Omit<TugBalance, 'believability'>> & {
 };
 
 /**
- * Flat-category override shape accepted by `createTugEngine`.
+ * Override shape accepted by `createTugEngine`. `balance` shallow-merges
+ * over `DEFAULT_TUG_DATA.balance`, with a sub-merge for `believability`.
  *
- * - `balance` and `theme` deep-merge over their defaults.
- * - `units` / `incomeUpgrades` / `abilities` replace entries by id; unknown
- *   ids throw so typos surface fast. Wholesale-replace by supplying the
- *   full array.
- * - `counterMatrix` wholesale-replaces (no id structure to merge by). Leaf 6
- *   perturbs counter sharpness via the `counter-matrix/strongCounter` and
- *   `counter-matrix/weakCounter` tunables at the resolver site, not through
- *   this override surface.
- *
- * Mirrors `applyAmbientOverrides` semantics.
+ * `units` and `incomeUpgrades` are id-keyed partials used by balance probes
+ * (cost/multiplier sensitivity sweeps). Unknown ids throw so typos surface
+ * fast. Other content categories (abilities, counterMatrix, fortress, theme)
+ * are not overridable here — forks edit `data/*.ts` in place; live mods
+ * compose at module install time via `ContentRegistry.patch`.
  */
 export interface TugOverrides {
+  balance?: TugBalanceOverrides;
   units?: Array<Partial<UnitDef> & { id: string }>;
   incomeUpgrades?: Array<Partial<IncomeUpgradeDef> & { id: string }>;
-  abilities?: Array<Partial<AbilityDef> & { id: string }>;
-  counterMatrix?: CounterMatrix;
-  fortress?: Partial<FortressDef>;
-  balance?: TugBalanceOverrides;
-  theme?: Partial<TugTheme>;
 }
 
 export function applyTugOverrides(base: TugData, overrides: TugOverrides | undefined): TugData {
   if (!overrides) return base;
-  let balance: TugBalance = base.balance;
+  let result: TugData = base;
   if (overrides.balance) {
     const { believability: bOverride, ...rest } = overrides.balance;
-    balance = { ...base.balance, ...rest };
-    // Sub-merge believability so partial overrides ({ suboptimalityRate: 0.1 })
-    // don't drop the cadenceJitterScale field. Same pattern as the
-    // opponentPersona sub-merge in `buildTugSimEngine`.
+    let balance: TugBalance = { ...base.balance, ...rest };
     if (bOverride) {
       balance = {
         ...balance,
         believability: { ...base.balance.believability, ...bOverride },
       };
     }
+    result = { ...result, balance };
   }
-  return {
-    units: mergeById(base.units, overrides.units, 'units'),
-    incomeUpgrades: mergeById(base.incomeUpgrades, overrides.incomeUpgrades, 'incomeUpgrades'),
-    abilities: mergeById(base.abilities, overrides.abilities, 'abilities'),
-    counterMatrix: overrides.counterMatrix ?? base.counterMatrix,
-    fortress: overrides.fortress ? { ...base.fortress, ...overrides.fortress } : base.fortress,
-    balance,
-    theme: overrides.theme ? { ...base.theme, ...overrides.theme } : base.theme,
-  };
+  if (overrides.units) {
+    result = { ...result, units: mergeById(result.units, overrides.units, 'units') };
+  }
+  if (overrides.incomeUpgrades) {
+    result = {
+      ...result,
+      incomeUpgrades: mergeById(result.incomeUpgrades, overrides.incomeUpgrades, 'incomeUpgrades'),
+    };
+  }
+  return result;
 }
 
 function mergeById<T extends { id: string }>(
   base: T[],
-  patches: Array<Partial<T> & { id: string }> | undefined,
+  patches: Array<Partial<T> & { id: string }>,
   label: string,
 ): T[] {
-  if (!patches || patches.length === 0) return base;
+  if (patches.length === 0) return base;
   const byId = new Map(base.map((entry) => [entry.id, entry] as const));
   const result = [...base];
   for (const patch of patches) {

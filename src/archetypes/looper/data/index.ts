@@ -13,7 +13,6 @@ export { STATS } from './stats';
 export { PROGRESS_VARS } from './progress-vars';
 export { REGULAR_VARS } from './regular-vars';
 export { ZONES } from './zones';
-export { applyLooperOverrides, type ActionOverride, type LooperOverrides } from './overrides';
 
 export const DEFAULT_LOOPER_DATA: LooperData = {
   stats: STATS,

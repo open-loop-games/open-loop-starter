@@ -144,7 +144,8 @@ export interface TranscendTierData {
 
 /**
  * Aggregate data shape. `DEFAULT_SCALER_DATA` (in `index.ts`) is the
- * authored slim-port; `applyScalerOverrides` deep-merges patches on top.
+ * authored slim-port; `applyScalerOverrides` shallow-merges balance
+ * tweaks on top.
  */
 export interface ScalerData {
   antimatter: AntimatterTierData;

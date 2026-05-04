@@ -42,8 +42,7 @@ export const TUG_BALANCE: TugBalance = {
 
 // ─── Costume ───
 // Theme C SciFi Armada: minerals as the resource, Terran/Protoss as the
-// faction labels, Nexus as the fortress. Forks override via
-// `applyTugOverrides({ theme: { ... } })`.
+// faction labels, Nexus as the fortress. Forks edit this constant in place.
 
 export const TUG_THEME: TugTheme = {
   resourceName: { singular: 'mineral', plural: 'minerals' },
