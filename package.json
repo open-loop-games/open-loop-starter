@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@typescript-eslint/utils": "^8.58.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.9.0",
