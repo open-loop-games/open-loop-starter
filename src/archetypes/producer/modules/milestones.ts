@@ -8,14 +8,14 @@ import {
   type EngineModule,
 } from 'open-loop-engine';
 import type { ProducerData } from '../data/types';
-import { BuildingsKey, ProducerTuningRegistryKey } from './producers';
+import { ProducerTuningRegistryKey, getBuildings } from './producers';
 
 export function createMilestonesModule(data: ProducerData): EngineModule {
   return {
     id: 'producer/milestones',
     dependencies: ['producer/producers'],
     install(ctx) {
-      const buildings = ctx.inject(BuildingsKey);
+      const buildings = getBuildings();
       const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
       const bonusPerTier = tunable(
         tuningRegistry,

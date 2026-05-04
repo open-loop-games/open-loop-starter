@@ -9,7 +9,6 @@ import {
   type DecimalSource,
   type EngineModule,
   type Grant,
-  type InjectionKey,
   type ModifierChain,
   type OverrideRegistry,
   type ProducerCategory,
@@ -17,24 +16,26 @@ import {
 } from 'open-loop-engine';
 import type { ProducerData, ProducerDef, UpgradeDef } from '../data/types';
 import {
-  BuildingsKey,
-  PrimaryResourceKey,
   ProducerTuningRegistryKey,
+  getBuildings,
+  getPrimaryResource,
   type ProducerInstanceState,
   type ProducerTunables,
 } from './producers';
 
-export const UpgradesKey: InjectionKey<PurchasableCategory<UpgradeDef>> = Symbol(
-  'producer/upgrades',
-) as InjectionKey<PurchasableCategory<UpgradeDef>>;
+let upgrades: PurchasableCategory<UpgradeDef>;
+
+export function getUpgrades(): PurchasableCategory<UpgradeDef> {
+  return upgrades;
+}
 
 export function createUpgradesModule(data: ProducerData): EngineModule {
   return {
     id: 'producer/upgrades',
     dependencies: ['producer/producers'],
     install(ctx) {
-      const buildings = ctx.inject(BuildingsKey);
-      const primary = ctx.inject(PrimaryResourceKey);
+      const buildings = getBuildings();
+      const primary = getPrimaryResource();
       const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
 
       const tier1Multiplier = tunable(
@@ -43,7 +44,7 @@ export function createUpgradesModule(data: ProducerData): EngineModule {
         () => data.balance.tier1UpgradeMultiplier,
       );
 
-      const upgrades = createPurchasableCategory<UpgradeDef>({
+      upgrades = createPurchasableCategory<UpgradeDef>({
         id: 'producer/upgrades',
         mapPurchasable: (def) => {
           const chain = resolveUpgradeTarget(def, buildings);
@@ -60,8 +61,6 @@ export function createUpgradesModule(data: ProducerData): EngineModule {
         },
       });
       upgrades.register(data.upgrades);
-
-      ctx.provide(UpgradesKey, upgrades);
     },
   };
 }

@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import AchievementGrid, { type AchievementGridCell } from '@/ui/components/AchievementGrid.vue';
-import { useAchievements } from '../../composables/useAchievements';
+import { getAchievements } from '../../modules';
 
-const summary = useAchievements();
+const achievements = getAchievements();
 defineEmits<{ close: [] }>();
 
 const cells = computed<AchievementGridCell[]>(() =>
-  summary.value.rows.map((row) => ({
-    id: row.def.id,
-    name: row.visible.value ? row.def.name : '???',
-    description: row.visible.value ? row.def.description : 'Hidden — bake to reveal',
-    earned: row.earned.value,
-    hidden: !row.visible.value,
-  })),
+  achievements.getAll().map((entry) => {
+    const visible = !entry.def.hidden || entry.achievement.earned.value;
+    return {
+      id: entry.def.id,
+      name: visible ? entry.def.name : '???',
+      description: visible ? entry.def.description : 'Hidden — bake to reveal',
+      earned: entry.achievement.earned.value,
+      hidden: !visible,
+    };
+  }),
 );
 </script>
 

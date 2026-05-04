@@ -1,8 +1,7 @@
 import { computed, unref } from 'vue';
 import type { ComputedRef } from 'vue';
 import type { ModifierChain } from 'open-loop-engine';
-import { useModule } from '@/composables/useModule';
-import { BuildingsKey } from '../modules';
+import { getBuildings } from '../modules';
 
 export interface ChainFactor {
   /** Stable id of the binding — auto-derived from scope + description. */
@@ -59,7 +58,7 @@ export function useChainBreakdown(chain: ModifierChain): ComputedRef<ChainBreakd
  * missing entry is a setup error, not runtime data.
  */
 export function useProducerChainBreakdown(producerId: string): ComputedRef<ChainBreakdown> {
-  const buildings = useModule(BuildingsKey);
+  const buildings = getBuildings();
   const producer = buildings.getProducer(producerId);
   if (!producer) {
     throw new Error(`useProducerChainBreakdown: no producer "${producerId}"`);

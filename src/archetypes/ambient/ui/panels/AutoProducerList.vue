@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal } from 'open-loop-engine';
-import { useModule } from '@/composables/useModule';
 import { useAutoProducers, type AutoProducerRow } from '../../composables/useAutoProducers';
-import { UnlocksKey } from '../../modules';
-import { useHeadlineRate } from '../../composables/useHeadlineRate';
+import { getAutoProducers, getPrimaryResource, getUnlocks } from '../../modules';
 import { useFormatting } from '@/composables/useFormatting';
 import RateBreakdownTooltip from '@/ui/components/RateBreakdownTooltip.vue';
 
 const rows = useAutoProducers();
-const unlocks = useModule(UnlocksKey);
-const { perSecond: totalRate } = useHeadlineRate();
+const unlocks = getUnlocks();
+const buildings = getAutoProducers();
+const primary = getPrimaryResource();
+const totalRate = computed(() => buildings.getTotalRate(primary));
 const { format } = useFormatting();
 
 // Producer → unlock-id lookup (each producer reveal in the unlock category).

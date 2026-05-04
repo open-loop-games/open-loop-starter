@@ -36,23 +36,28 @@ export type AmbientTunableKey =
 
 export type AmbientTunables = Record<string, () => DecimalSource>;
 
-// Injection keys consumed by sibling modules, composables, sim tests.
-
-export const PrimaryResourceKey: InjectionKey<Resource<DecimalSource>> = Symbol(
-  'ambient/primary-resource',
-) as InjectionKey<Resource<DecimalSource>>;
-
 export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
   'ambient/primary-lifetime',
 ) as InjectionKey<Ref<DecimalSource>>;
 
-export const AutoProducersKey: InjectionKey<ProducerCategory<AutoProducerDef>> = Symbol(
-  'ambient/auto-producers',
-) as InjectionKey<ProducerCategory<AutoProducerDef>>;
-
 export const AmbientTuningRegistryKey: InjectionKey<OverrideRegistry<AmbientTunables>> = Symbol(
   'ambient/tuning-registry',
 ) as InjectionKey<OverrideRegistry<AmbientTunables>>;
+
+// Module-scope handles set during install. Sibling modules + composables
+// + UI import the typed accessors below; balance scripts that must thread
+// through an `engine: Engine` parameter still use those getters since
+// only one ambient engine is active per process.
+let primaryResource: Resource<DecimalSource>;
+let autoProducers: ProducerCategory<AutoProducerDef>;
+
+export function getPrimaryResource(): Resource<DecimalSource> {
+  return primaryResource;
+}
+
+export function getAutoProducers(): ProducerCategory<AutoProducerDef> {
+  return autoProducers;
+}
 
 /** Engine TimeSystem — `elapsed` is sim-seconds since last reset,
  *  `totalPlayTime` is sim-seconds across all resets. `arc.ts` composes
@@ -80,7 +85,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
       // `balance/achievementMultiplier` are registered by their consumer
       // modules.
 
-      const primaryResource = createResource<DecimalSource>(0, {
+      primaryResource = createResource<DecimalSource>(0, {
         displayName: 'Sprouts',
         precision: 0,
         id: 'sprouts',
@@ -93,7 +98,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
       const time = createTimeSystem();
       ctx.onTick((dt) => time.tick(dt));
 
-      const buildings = createProducerCategory<AutoProducerDef>({
+      autoProducers = createProducerCategory<AutoProducerDef>({
         id: 'ambient/auto-producers',
         registerTick: ctx.onTick,
         mapProducer: (def) => ({
@@ -115,7 +120,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
           },
         }),
       });
-      buildings.register(data.producers);
+      autoProducers.register(data.producers);
 
       // Bind tier-1 base-rate scaling to planter's rateChain. The tunable's
       // default is 1.0 (identity); scope-pushes via
@@ -123,7 +128,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
       // rate without rebuilding the engine. `ProducerMapping.baseRate` is
       // static `DecimalSource` (not Computable), so scaling has to ride a
       // chain modifier — this is the only reactive path.
-      const planter = buildings.getProducer('planter');
+      const planter = autoProducers.getProducer('planter');
       if (planter) {
         const tier1BaseRate = tunable(
           tuningRegistry,
@@ -138,9 +143,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
         });
       }
 
-      ctx.provide(PrimaryResourceKey, primaryResource);
       ctx.provide(PrimaryLifetimeKey, primaryLifetime);
-      ctx.provide(AutoProducersKey, buildings);
       ctx.provide(AmbientTuningRegistryKey, tuningRegistry);
       ctx.provide(TimeSystemKey, time);
     },

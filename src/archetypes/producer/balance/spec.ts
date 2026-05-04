@@ -16,11 +16,11 @@
 
 import { Decimal, type Engine } from 'open-loop-engine';
 import {
-  BuildingsKey,
   CONTINUOUS_PRODUCER_IDS,
-  PrimaryResourceKey,
-  UpgradesKey,
   createProducerEngine,
+  getBuildings,
+  getPrimaryResource,
+  getUpgrades,
 } from '..';
 
 let counter = 0;
@@ -40,8 +40,7 @@ function getSpecEngine(): Engine {
 }
 
 function setCounts(counts: Readonly<Record<string, number>>): void {
-  const buildings = getSpecEngine().tryInject(BuildingsKey)!;
-  for (const entry of buildings.getAll()) {
+  for (const entry of getBuildings().getAll()) {
     if (entry.def.trigger !== 'continuous' || !entry.producer.repeatable) continue;
     entry.producer.repeatable.amount.value = counts[entry.def.id] ?? 0;
   }
@@ -94,10 +93,10 @@ export function arcWaypoints(
   schedule: readonly ScheduleStep[],
   initial: Readonly<Record<string, number>> = {},
 ): ArcWaypoint[] {
-  const engine = getSpecEngine();
-  const buildings = engine.tryInject(BuildingsKey)!;
-  const upgrades = engine.tryInject(UpgradesKey)!;
-  const primary = engine.tryInject(PrimaryResourceKey)!;
+  getSpecEngine();
+  const buildings = getBuildings();
+  const upgrades = getUpgrades();
+  const primary = getPrimaryResource();
 
   const counts: Record<string, number> = { ...initial };
   setCounts(counts);
@@ -144,8 +143,7 @@ export function arcWaypoints(
 }
 
 function resetUpgrades(): void {
-  const upgrades = getSpecEngine().tryInject(UpgradesKey)!;
-  for (const entry of upgrades.getAll()) {
+  for (const entry of getUpgrades().getAll()) {
     if (entry.purchasable.active.value) entry.purchasable.amount.value = 0;
   }
 }

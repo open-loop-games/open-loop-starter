@@ -6,9 +6,8 @@ import {
   type ModifierChain,
   type Purchasable,
 } from 'open-loop-engine';
-import { useModule } from '@/composables/useModule';
 import type { ProducerDef } from '../data/types';
-import { BuildingsKey } from '../modules';
+import { getBuildings } from '../modules';
 
 export interface ProducerRow {
   def: ProducerDef;
@@ -34,7 +33,7 @@ export interface ProducerRow {
  * or call `purchaseMax()` for the full affordable amount.
  */
 export function useProducers(): ComputedRef<ProducerRow[]> {
-  const buildings = useModule(BuildingsKey);
+  const buildings = getBuildings();
 
   return computed(() => {
     const rows: ProducerRow[] = [];

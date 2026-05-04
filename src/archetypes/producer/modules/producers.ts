@@ -28,18 +28,9 @@ export type ProducerInstanceState =
     }
   | undefined;
 
-export const PrimaryResourceKey: InjectionKey<Resource<DecimalSource>> = Symbol(
-  'producer/primary-resource',
-) as InjectionKey<Resource<DecimalSource>>;
-
 export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
   'producer/primary-lifetime',
 ) as InjectionKey<Ref<DecimalSource>>;
-
-export const BuildingsKey: InjectionKey<ProducerCategory<ProducerDef, ProducerInstanceState>> =
-  Symbol('producer/buildings') as InjectionKey<
-    ProducerCategory<ProducerDef, ProducerInstanceState>
-  >;
 
 /**
  * Typed surface for scoped balance/sim/tuning overrides. Keys represent the
@@ -64,13 +55,28 @@ export const ProducerTuningRegistryKey: InjectionKey<OverrideRegistry<ProducerTu
   'producer/tuning-registry',
 ) as InjectionKey<OverrideRegistry<ProducerTunables>>;
 
+// Module-scope handles set during install. Sibling modules + composables
+// + UI import the typed accessors below; balance scripts that take an
+// `engine: Engine` parameter use `engine.tryInject(ResourceRegistryKey)`
+// or `CategoriesKey` instead.
+let primaryResource: Resource<DecimalSource>;
+let buildings: ProducerCategory<ProducerDef, ProducerInstanceState>;
+
+export function getPrimaryResource(): Resource<DecimalSource> {
+  return primaryResource;
+}
+
+export function getBuildings(): ProducerCategory<ProducerDef, ProducerInstanceState> {
+  return buildings;
+}
+
 export function createProducersModule(data: ProducerData): EngineModule {
   return {
     id: 'producer/producers',
     install(ctx) {
       const tuningRegistry = createOverrideRegistry<ProducerTunables>('producer-tuning');
 
-      const primaryResource = createResource<DecimalSource>(0, {
+      primaryResource = createResource<DecimalSource>(0, {
         displayName: 'Cookies',
         precision: 0,
         id: 'cookies',
@@ -78,7 +84,7 @@ export function createProducersModule(data: ProducerData): EngineModule {
 
       const primaryLifetime = trackTotal(primaryResource);
 
-      const buildings = createProducerCategory<ProducerDef, ProducerInstanceState>({
+      buildings = createProducerCategory<ProducerDef, ProducerInstanceState>({
         id: 'producer/buildings',
         registerTick: ctx.onTick,
         mapProducer: (def) => ({
@@ -115,9 +121,7 @@ export function createProducersModule(data: ProducerData): EngineModule {
       });
       buildings.register(data.producers);
 
-      ctx.provide(PrimaryResourceKey, primaryResource);
       ctx.provide(PrimaryLifetimeKey, primaryLifetime);
-      ctx.provide(BuildingsKey, buildings);
       ctx.provide(ProducerTuningRegistryKey, tuningRegistry);
     },
   };

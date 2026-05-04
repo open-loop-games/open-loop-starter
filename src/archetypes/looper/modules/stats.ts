@@ -24,7 +24,6 @@ import {
   type EngineContext,
   type SkillCategory,
   type Skill,
-  type InjectionKey,
   bn,
   createSkillCategory,
   Formula,
@@ -35,16 +34,6 @@ import type { MaybeRef } from 'vue';
 import { STATS } from '../data/stats';
 import { LOOPER_BALANCE } from '../data/balance';
 import type { StatDef } from '../data/types';
-
-// ============================================================================
-// Injection keys (inline-in-publisher)
-// ============================================================================
-
-export const StatLevelCategoryKey: InjectionKey<SkillCategory<StatDef>> = Symbol(
-  'looper:stat-level-skills',
-);
-export const TalentCategoryKey: InjectionKey<SkillCategory<StatDef>> =
-  Symbol('looper:talent-skills');
 
 // ============================================================================
 // Curves (Formula factories — bind to skill-internal refs)
@@ -165,7 +154,7 @@ export function getTalentXPWindow(stat: string): { current: Decimal; needed: Dec
 
 export const statsModule: EngineModule = {
   id: 'stats',
-  install(ctx: EngineContext) {
+  install(_ctx: EngineContext) {
     statLevelSkills = createSkillCategory<StatDef>({
       id: 'stat-level',
       mapSkill: (def) => ({
@@ -188,9 +177,6 @@ export const statsModule: EngineModule = {
 
     statLevelSkills.register(STATS);
     talentSkills.register(STATS);
-
-    ctx.provide(StatLevelCategoryKey, statLevelSkills);
-    ctx.provide(TalentCategoryKey, talentSkills);
   },
 
   connect(_ctx: EngineContext) {

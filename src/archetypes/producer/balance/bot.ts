@@ -9,10 +9,10 @@ import {
   type GameStateAccessor,
 } from 'open-loop-engine';
 import {
-  BuildingsKey,
-  PrimaryResourceKey,
-  UpgradesKey,
   createProducerEngine,
+  getBuildings,
+  getPrimaryResource,
+  getUpgrades,
   type ProducerOverrides,
 } from '..';
 
@@ -53,8 +53,8 @@ function createBalanceBotModule(): EngineModule {
     id: 'balance-bot',
     dependencies: ['producer/producers', 'producer/upgrades'],
     install(ctx) {
-      const buildings = ctx.inject(BuildingsKey);
-      const upgrades = ctx.inject(UpgradesKey);
+      const buildings = getBuildings();
+      const upgrades = getUpgrades();
       const clickState = buildings.getState('click');
       if (!clickState) throw new Error('balance-bot: click producer state missing');
 
@@ -122,9 +122,9 @@ function createBalanceBotModule(): EngineModule {
  * content walker over a Producer engine. Keyed by `resource.id`.
  * Lives here so the solver and the event-driven bench share one shape.
  */
-export function buildProducerAccessor(engine: Engine): GameStateAccessor {
-  const cookies = engine.tryInject(PrimaryResourceKey)!;
-  const buildings = engine.tryInject(BuildingsKey)!;
+export function buildProducerAccessor(_engine: Engine): GameStateAccessor {
+  const cookies = getPrimaryResource();
+  const buildings = getBuildings();
   return {
     getResource: (id: string) => (id === 'cookies' ? bn(cookies.value as DecimalSource) : bn(0)),
     getRate: (id: string) =>

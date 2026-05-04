@@ -6,14 +6,14 @@ import { createMilestonesModule } from './milestones';
 import { createAchievementsModule } from './achievements';
 
 export {
-  PrimaryResourceKey,
   PrimaryLifetimeKey,
-  BuildingsKey,
   ProducerTuningRegistryKey,
+  getBuildings,
+  getPrimaryResource,
   type ProducerInstanceState,
 } from './producers';
-export { UpgradesKey } from './upgrades';
-export { AchievementsKey } from './achievements';
+export { getUpgrades } from './upgrades';
+export { getAchievements } from './achievements';
 
 /**
  * Compose the producer modules in dependency order.

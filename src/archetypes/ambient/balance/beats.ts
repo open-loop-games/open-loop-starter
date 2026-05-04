@@ -1,5 +1,5 @@
-import { Decimal, type Engine } from 'open-loop-engine';
-import { AchievementsKey, AutoProducersKey, PrimaryResourceKey, UnlocksKey } from '../modules';
+import { Decimal } from 'open-loop-engine';
+import { getAchievements, getAutoProducers, getPrimaryResource, getUnlocks } from '../modules';
 import type { ArcBeatProbe, BeatProbe } from '@/balance';
 
 const sec = (s: number) => s;
@@ -76,50 +76,43 @@ export const ARC_BEATS: ArcBeatProbe[] = [
   {
     id: 'beat-1',
     specWindow: BEAT_WINDOWS['beat-1']!,
-    predicate: (engine) => {
-      const primary = engine.tryInject(PrimaryResourceKey);
-      return primary ? Decimal.gte(primary.value, 1) : false;
-    },
+    predicate: () => Decimal.gte(getPrimaryResource().value, 1),
   },
   {
     id: 'beat-2',
     specWindow: BEAT_WINDOWS['beat-2']!,
-    predicate: (engine) => producerCountAtLeast(engine, 'planter', 2),
+    predicate: () => producerCountAtLeast('planter', 2),
   },
   {
     id: 'beat-3',
     specWindow: BEAT_WINDOWS['beat-3']!,
-    predicate: (engine) => unlockBought(engine, 'coop-built'),
+    predicate: () => unlockBought('coop-built'),
   },
   {
     id: 'beat-5',
     specWindow: BEAT_WINDOWS['beat-5']!,
-    predicate: (engine) =>
-      producerCountAtLeast(engine, 'pond', 1) && unlockBought(engine, 'spring-arrives'),
+    predicate: () => producerCountAtLeast('pond', 1) && unlockBought('spring-arrives'),
   },
   {
     id: 'beat-6',
     specWindow: BEAT_WINDOWS['beat-6']!,
-    predicate: (engine) => achievementsEarnedAtLeast(engine, 8),
+    predicate: () => achievementsEarnedAtLeast(8),
   },
 ];
 
 // ─── Predicate helpers ────────────────────────────────────────────────────
 
-function producerCountAtLeast(engine: Engine, id: string, n: number): boolean {
-  const buildings = engine.tryInject(AutoProducersKey);
-  const p = buildings?.getProducer(id);
+function producerCountAtLeast(id: string, n: number): boolean {
+  const p = getAutoProducers().getProducer(id);
   return p ? Decimal.gte(p.count.value, n) : false;
 }
 
-function unlockBought(engine: Engine, id: string): boolean {
-  const unlocks = engine.tryInject(UnlocksKey);
-  return unlocks?.getPurchasable(id)?.active.value ?? false;
+function unlockBought(id: string): boolean {
+  return getUnlocks().getPurchasable(id)?.active.value ?? false;
 }
 
-function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {
-  const a = engine.tryInject(AchievementsKey);
-  return (a?.earnedCount.value ?? 0) >= n;
+function achievementsEarnedAtLeast(n: number): boolean {
+  return getAchievements().earnedCount.value >= n;
 }
 
 export { producerCountAtLeast, unlockBought, achievementsEarnedAtLeast };

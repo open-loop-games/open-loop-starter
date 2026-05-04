@@ -6,9 +6,8 @@ import {
   type ModifierChain,
   type Purchasable,
 } from 'open-loop-engine';
-import { useModule } from '@/composables/useModule';
 import type { AutoProducerDef } from '../data/types';
-import { AutoProducersKey } from '../modules';
+import { getAutoProducers } from '../modules';
 
 export interface AutoProducerRow {
   def: AutoProducerDef;
@@ -32,7 +31,7 @@ export interface AutoProducerRow {
  * to filter out.
  */
 export function useAutoProducers(): ComputedRef<AutoProducerRow[]> {
-  const buildings = useModule(AutoProducersKey);
+  const buildings = getAutoProducers();
 
   return computed(() => {
     const rows: AutoProducerRow[] = [];

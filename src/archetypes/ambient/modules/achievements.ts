@@ -10,22 +10,23 @@ import {
   type AchievementCategory,
   type DecimalSource,
   type EngineModule,
-  type InjectionKey,
 } from 'open-loop-engine';
 import type { AchievementDef, AmbientData, AmbientGameState } from '../data/types';
 import {
   AmbientTuningRegistryKey,
-  AutoProducersKey,
   PrimaryLifetimeKey,
-  PrimaryResourceKey,
+  getAutoProducers,
+  getPrimaryResource,
 } from './auto-producers';
-import { UnlocksKey } from './unlocks';
+import { getUnlocks } from './unlocks';
 import { SceneKey } from './scene';
 import { SessionClockKey } from './session-clock';
 
-export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef, unknown>> = Symbol(
-  'ambient/achievements',
-) as InjectionKey<AchievementCategory<AchievementDef, unknown>>;
+let achievements: AchievementCategory<AchievementDef, unknown>;
+
+export function getAchievements(): AchievementCategory<AchievementDef, unknown> {
+  return achievements;
+}
 
 /**
  * Ambient's achievement category. Each `AchievementDef.requirement` closure is
@@ -53,10 +54,10 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
       'ambient/session-clock',
     ],
     install(ctx) {
-      const buildings = ctx.inject(AutoProducersKey);
-      const unlocks = ctx.inject(UnlocksKey);
+      const buildings = getAutoProducers();
+      const unlocks = getUnlocks();
       const scene = ctx.inject(SceneKey);
-      const primary = ctx.inject(PrimaryResourceKey);
+      const primary = getPrimaryResource();
       const primaryLifetime = ctx.inject(PrimaryLifetimeKey);
       const sessionClock = ctx.inject(SessionClockKey);
       const tuningRegistry = ctx.inject(AmbientTuningRegistryKey);
@@ -90,7 +91,7 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
         () => data.balance.achievementMultiplier,
       );
 
-      const achievements = createAchievementCategory<AchievementDef>({
+      achievements = createAchievementCategory<AchievementDef>({
         id: 'ambient/achievements',
         mapAchievement: (def) => ({
           display: { title: def.name, description: def.description },
@@ -122,8 +123,6 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
           }),
         });
       }
-
-      ctx.provide(AchievementsKey, achievements);
     },
   };
 }

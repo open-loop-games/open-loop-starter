@@ -11,7 +11,6 @@
  * Methodology is documented in `archetypes/BALANCING.md`.
  */
 
-import { type Engine } from 'open-loop-engine';
 import {
   renderArcTable,
   renderFlowTable,
@@ -19,15 +18,13 @@ import {
   runFlowProbe,
   type ProducerInspector,
 } from '@/balance';
-import { BuildingsKey } from '../modules';
+import { getBuildings } from '../modules';
 import { ARC_BEATS, BEAT_WINDOWS, FLOW_BEATS } from './beats';
 import { buildProducerSimEngine } from './bot';
 
 const inspect: ProducerInspector = {
-  ownedProducers: (engine: Engine) => {
-    const buildings = engine.tryInject(BuildingsKey);
-    if (!buildings) return [];
-
+  ownedProducers: (_engine) => {
+    const buildings = getBuildings();
     const out: ReturnType<ProducerInspector['ownedProducers']> = [];
     for (const entry of buildings.getAll()) {
       const { def, producer } = entry;

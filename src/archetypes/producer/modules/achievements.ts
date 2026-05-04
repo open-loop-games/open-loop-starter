@@ -11,7 +11,7 @@ import {
   type AchievementCategory,
   type DecimalSource,
   type EngineModule,
-  type InjectionKey,
+  type ProducerCategory,
   type PurchasableCategory,
   type Resource,
 } from 'open-loop-engine';
@@ -23,22 +23,18 @@ import type {
   UpgradeDef,
 } from '../data/types';
 import {
-  BuildingsKey,
   PrimaryLifetimeKey,
-  PrimaryResourceKey,
   ProducerTuningRegistryKey,
+  getBuildings,
+  getPrimaryResource,
   type ProducerInstanceState,
 } from './producers';
-import { UpgradesKey } from './upgrades';
-
-export const AchievementsKey: InjectionKey<AchievementCategory<AchievementDef, unknown>> = Symbol(
-  'producer/achievements',
-) as InjectionKey<AchievementCategory<AchievementDef, unknown>>;
+import { getUpgrades } from './upgrades';
 
 interface RequirementHandles {
   primary: Resource<DecimalSource>;
   primaryLifetime: Ref<DecimalSource>;
-  buildings: import('open-loop-engine').ProducerCategory<ProducerDef, ProducerInstanceState>;
+  buildings: ProducerCategory<ProducerDef, ProducerInstanceState>;
   upgrades: PurchasableCategory<UpgradeDef>;
   continuousIds: string[];
   tier1Ids: string[];
@@ -80,14 +76,20 @@ function requirementForSpec(spec: AchievementSpec, h: RequirementHandles): () =>
   }
 }
 
+let achievements: AchievementCategory<AchievementDef, unknown>;
+
+export function getAchievements(): AchievementCategory<AchievementDef, unknown> {
+  return achievements;
+}
+
 export function createAchievementsModule(data: ProducerData): EngineModule {
   return {
     id: 'producer/achievements',
     dependencies: ['producer/producers', 'producer/upgrades'],
     install(ctx) {
-      const buildings = ctx.inject(BuildingsKey);
-      const upgrades = ctx.inject(UpgradesKey);
-      const primary = ctx.inject(PrimaryResourceKey);
+      const buildings = getBuildings();
+      const upgrades = getUpgrades();
+      const primary = getPrimaryResource();
       const primaryLifetime = ctx.inject(PrimaryLifetimeKey);
       const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
 
@@ -117,7 +119,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
         arcUpgradeIds,
       };
 
-      const achievements = createAchievementCategory<AchievementDef>({
+      achievements = createAchievementCategory<AchievementDef>({
         id: 'producer/achievements',
         mapAchievement: (def) => ({
           display: { title: def.name, description: def.description },
@@ -149,8 +151,6 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
           }),
         });
       }
-
-      ctx.provide(AchievementsKey, achievements);
     },
   };
 }

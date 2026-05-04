@@ -9,17 +9,17 @@ import { createPrestigeModule } from './prestige';
 
 export {
   AmbientTuningRegistryKey,
-  AutoProducersKey,
   PrimaryLifetimeKey,
-  PrimaryResourceKey,
   TimeSystemKey,
+  getAutoProducers,
+  getPrimaryResource,
   type AmbientTunableKey,
   type AmbientTunables,
 } from './auto-producers';
-export { UnlocksKey } from './unlocks';
+export { getUnlocks } from './unlocks';
 export { SceneKey, type SceneState } from './scene';
 export { SessionClockKey, type SessionClock } from './session-clock';
-export { AchievementsKey } from './achievements';
+export { getAchievements } from './achievements';
 export { PrestigeKey } from './prestige';
 
 /**

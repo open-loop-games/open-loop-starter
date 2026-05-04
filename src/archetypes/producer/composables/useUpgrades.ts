@@ -1,9 +1,8 @@
 import { computed } from 'vue';
 import type { ComputedRef } from 'vue';
 import type { Purchasable } from 'open-loop-engine';
-import { useModule } from '@/composables/useModule';
 import type { UpgradeDef } from '../data/types';
-import { UpgradesKey } from '../modules';
+import { getUpgrades } from '../modules';
 
 export interface UpgradeRow {
   def: UpgradeDef;
@@ -22,7 +21,7 @@ export interface UpgradeGroups {
 /** Grouped upgrade rows — per-producer upgrades keyed by producer id,
  *  plus click-targeted and global groups. */
 export function useUpgrades(): ComputedRef<UpgradeGroups> {
-  const upgrades = useModule(UpgradesKey);
+  const upgrades = getUpgrades();
 
   return computed(() => {
     const perProducer = new Map<string, UpgradeRow[]>();

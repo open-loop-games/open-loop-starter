@@ -6,7 +6,7 @@ import {
   type ZoneSystem,
 } from 'open-loop-engine';
 import type { AmbientData, SceneVariantDef } from '../data/types';
-import { UnlocksKey } from './unlocks';
+import { getUnlocks } from './unlocks';
 
 export interface SceneState {
   zones: ZoneSystem;
@@ -54,7 +54,7 @@ export function createSceneModule(data: AmbientData): EngineModule {
     id: 'ambient/scene',
     dependencies: ['ambient/unlocks'],
     install(ctx) {
-      const unlocks = ctx.inject(UnlocksKey);
+      const unlocks = getUnlocks();
 
       const zones = createZoneSystem({
         id: SCENE_CONTEXT_ID,

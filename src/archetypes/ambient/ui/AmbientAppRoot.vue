@@ -9,7 +9,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
-import { SessionClockKey, UnlocksKey } from '../modules';
+import { SessionClockKey, getUnlocks } from '../modules';
 import IdleScenePanel from './panels/IdleScenePanel.vue';
 import AutoProducerList from './panels/AutoProducerList.vue';
 import UnlockTray from './panels/UnlockTray.vue';
@@ -32,8 +32,7 @@ const WELCOME_BACK_MIN_GAP_SEC = 60;
 const WELCOME_BACK_UNLOCK_ID = 'returns-welcomed';
 function maybeShowWelcomeBack(gapSec: number): void {
   if (gapSec < WELCOME_BACK_MIN_GAP_SEC) return;
-  const unlocks = engine.tryInject(UnlocksKey);
-  if (unlocks?.getPurchasable(WELCOME_BACK_UNLOCK_ID)?.active.value !== true) return;
+  if (getUnlocks().getPurchasable(WELCOME_BACK_UNLOCK_ID)?.active.value !== true) return;
   const id = stack.push(WelcomeBackOverlay, {
     gapSec,
     onClose: () => stack.remove(id),
@@ -76,12 +75,12 @@ function returnToSlots(): void {
 }
 
 // Almanac (achievement-grid) is gated by the `garden-almanac` UI-affordance
-// unlock. Inline tryInject — the unlocks category is only injectable after
-// engine.start(), and Screen.Game is the gate that guarantees that's run.
+// unlock. Reads through the module-scope getter — the unlocks category is
+// only populated after engine.start(), and Screen.Game is the gate that
+// guarantees that's run.
 const almanacUnlocked = computed(() => {
   if (currentScreen.value !== Screen.Game) return false;
-  const unlocks = engine.tryInject(UnlocksKey);
-  return unlocks?.getPurchasable('garden-almanac')?.active.value === true;
+  return getUnlocks().getPurchasable('garden-almanac')?.active.value === true;
 });
 
 function getActiveModules(): EngineModule[] {

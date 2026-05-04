@@ -3,12 +3,12 @@ import { computed, ref } from 'vue';
 import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui';
 import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
-import { BuildingsKey, PrimaryLifetimeKey, PrimaryResourceKey } from '../../modules';
+import { PrimaryLifetimeKey, getBuildings, getPrimaryResource } from '../../modules';
 import { useProducerChainBreakdown } from '../../composables/useChainBreakdown';
 import ClickCookieButton from '../components/ClickCookieButton.vue';
 
-const buildings = useModule(BuildingsKey);
-const primary = useModule(PrimaryResourceKey);
+const buildings = getBuildings();
+const primary = getPrimaryResource();
 const lifetime = useModule(PrimaryLifetimeKey);
 const { format, formatWhole } = useFormatting();
 

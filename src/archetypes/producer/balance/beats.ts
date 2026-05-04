@@ -1,5 +1,5 @@
-import { Decimal, bn, type Engine } from 'open-loop-engine';
-import { AchievementsKey, BuildingsKey, PrimaryResourceKey, UpgradesKey } from '../modules';
+import { Decimal, bn } from 'open-loop-engine';
+import { getAchievements, getBuildings, getPrimaryResource, getUpgrades } from '../modules';
 import type { ArcBeatProbe, BeatProbe } from '@/balance';
 
 const sec = (s: number) => s;
@@ -68,59 +68,53 @@ export const ARC_BEATS: ArcBeatProbe[] = [
   {
     id: 'beat-1',
     specWindow: BEAT_WINDOWS['beat-1']!,
-    predicate: (engine) => {
-      const primary = engine.tryInject(PrimaryResourceKey);
-      return primary ? Decimal.gte(primary.value, 1) : false;
-    },
+    predicate: () => Decimal.gte(getPrimaryResource().value, 1),
   },
   {
     id: 'beat-2',
     specWindow: BEAT_WINDOWS['beat-2']!,
-    predicate: (engine) => producerCountAtLeast(engine, 'cursor', 1),
+    predicate: () => producerCountAtLeast('cursor', 1),
   },
   {
     id: 'beat-3',
     specWindow: BEAT_WINDOWS['beat-3']!,
-    predicate: (engine) => producerCountAtLeast(engine, 'grandma', 1),
+    predicate: () => producerCountAtLeast('grandma', 1),
   },
   {
     id: 'beat-4',
     specWindow: BEAT_WINDOWS['beat-4']!,
-    predicate: (engine) => upgradeBought(engine, 'cursor-boost-i'),
+    predicate: () => upgradeBought('cursor-boost-i'),
   },
   {
     id: 'beat-5',
     specWindow: BEAT_WINDOWS['beat-5']!,
-    predicate: (engine) => achievementsEarnedAtLeast(engine, 25),
+    predicate: () => achievementsEarnedAtLeast(25),
   },
   {
     id: 'beat-6',
     specWindow: BEAT_WINDOWS['beat-6']!,
-    predicate: (engine) => anyContinuousProducerAtLeast(engine, 150),
+    predicate: () => anyContinuousProducerAtLeast(150),
   },
   {
     id: 'beat-7',
     specWindow: BEAT_WINDOWS['beat-7']!,
-    predicate: (engine) => topProducerHeadlineAtLeast(engine, 1e6),
+    predicate: () => topProducerHeadlineAtLeast(1e6),
   },
 ];
 
 // ─── Predicate helpers ────────────────────────────────────────────────────
 
-function producerCountAtLeast(engine: Engine, id: string, n: number): boolean {
-  const buildings = engine.tryInject(BuildingsKey);
-  const p = buildings?.getProducer(id);
+function producerCountAtLeast(id: string, n: number): boolean {
+  const p = getBuildings().getProducer(id);
   return p ? Decimal.gte(p.count.value, n) : false;
 }
 
-function upgradeBought(engine: Engine, id: string): boolean {
-  const upgrades = engine.tryInject(UpgradesKey);
-  return upgrades?.getPurchasable(id)?.active.value ?? false;
+function upgradeBought(id: string): boolean {
+  return getUpgrades().getPurchasable(id)?.active.value ?? false;
 }
 
-function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {
-  const a = engine.tryInject(AchievementsKey);
-  return (a?.earnedCount.value ?? 0) >= n;
+function achievementsEarnedAtLeast(n: number): boolean {
+  return getAchievements().earnedCount.value >= n;
 }
 
 /**
@@ -130,10 +124,8 @@ function achievementsEarnedAtLeast(engine: Engine, n: number): boolean {
  * signature producer, and buy-10/buy-max becomes the dominant action for
  * that tier.
  */
-function anyContinuousProducerAtLeast(engine: Engine, minCount: number): boolean {
-  const buildings = engine.tryInject(BuildingsKey);
-  if (!buildings) return false;
-
+function anyContinuousProducerAtLeast(minCount: number): boolean {
+  const buildings = getBuildings();
   for (const entry of buildings.getAll()) {
     if (entry.def.trigger !== 'continuous') continue;
     if (Decimal.gte(entry.producer.count.value, minCount)) return true;
@@ -145,10 +137,8 @@ function anyContinuousProducerAtLeast(engine: Engine, minCount: number): boolean
  * Headline multiplier defined as `topOwnedProducer.rateChain.apply(baseRate)
  * / baseRate`. Top-owned = highest-tier continuous producer with count ≥ 1.
  */
-function topProducerHeadlineAtLeast(engine: Engine, factor: number): boolean {
-  const buildings = engine.tryInject(BuildingsKey);
-  if (!buildings) return false;
-
+function topProducerHeadlineAtLeast(factor: number): boolean {
+  const buildings = getBuildings();
   let topEntry: ReturnType<typeof buildings.getAll>[number] | undefined;
   for (const entry of buildings.getAll()) {
     if (entry.def.trigger !== 'continuous') continue;

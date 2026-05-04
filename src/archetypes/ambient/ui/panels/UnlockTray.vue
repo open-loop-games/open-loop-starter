@@ -2,16 +2,15 @@
 import { computed } from 'vue';
 import { Decimal } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
-import { AutoProducersKey, SceneKey, UnlocksKey } from '../../modules';
-import { useHeadlineRate } from '../../composables/useHeadlineRate';
+import { PrimaryLifetimeKey, SceneKey, getAutoProducers, getUnlocks } from '../../modules';
 import { useFormatting } from '@/composables/useFormatting';
 import Tooltip from '@/ui/components/Tooltip.vue';
 import type { UnlockDef } from '../../data/types';
 
-const unlocks = useModule(UnlocksKey);
-const buildings = useModule(AutoProducersKey);
+const unlocks = getUnlocks();
+const buildings = getAutoProducers();
 const scene = useModule(SceneKey);
-const { lifetime } = useHeadlineRate();
+const lifetime = useModule(PrimaryLifetimeKey);
 const { format } = useFormatting();
 
 interface Cell {

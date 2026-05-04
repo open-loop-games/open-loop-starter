@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal, type DecimalSource } from 'open-loop-engine';
-import { useModule } from '@/composables/useModule';
-import { BuildingsKey, PrimaryResourceKey } from '../../modules';
+import { getBuildings, getPrimaryResource } from '../../modules';
 import { useProducers, type ProducerRow } from '../../composables/useProducers';
 import { useBulkMode, type BulkMode } from '@/composables/useBulkMode';
 import { useFormatting } from '@/composables/useFormatting';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
 import ProducerTooltip from '../components/ProducerTooltip.vue';
 
-const buildings = useModule(BuildingsKey);
-const primary = useModule(PrimaryResourceKey);
+const buildings = getBuildings();
+const primary = getPrimaryResource();
 const rows = useProducers();
 const totalRate = computed(() => buildings.getTotalRate(primary));
 const { mode, resolveAmount } = useBulkMode();

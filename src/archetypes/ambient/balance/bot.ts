@@ -5,7 +5,7 @@ import {
   type Engine,
   type EngineModule,
 } from 'open-loop-engine';
-import { AutoProducersKey, createAmbientEngine, type AmbientOverrides } from '..';
+import { createAmbientEngine, getAutoProducers, type AmbientOverrides } from '..';
 
 /**
  * Zero-click activity model. Ambient's identity is "auto-production runs
@@ -46,7 +46,7 @@ function createBalanceBotModule(): EngineModule {
     id: 'balance-bot',
     dependencies: ['ambient/auto-producers'],
     install(ctx) {
-      const buildings = ctx.inject(AutoProducersKey);
+      const buildings = getAutoProducers();
 
       // Persistent accumulators live inside the engine namespace so
       // `importSave` resets them alongside game state. Even though

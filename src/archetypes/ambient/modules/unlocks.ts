@@ -6,15 +6,16 @@ import {
   setupSweepAutoPurchase,
   tunable,
   type EngineModule,
-  type InjectionKey,
   type PurchasableCategory,
 } from 'open-loop-engine';
 import type { AmbientData, UnlockDef } from '../data/types';
 import { AmbientTuningRegistryKey, PrimaryLifetimeKey } from './auto-producers';
 
-export const UnlocksKey: InjectionKey<PurchasableCategory<UnlockDef>> = Symbol(
-  'ambient/unlocks',
-) as InjectionKey<PurchasableCategory<UnlockDef>>;
+let unlocks: PurchasableCategory<UnlockDef>;
+
+export function getUnlocks(): PurchasableCategory<UnlockDef> {
+  return unlocks;
+}
 
 // Unlocks whose threshold is registered with the tuning registry. Mirrors
 // auto-producers' opt-in baseCost wrapping — the solver bisects against
@@ -43,7 +44,7 @@ export function createUnlocksModule(data: AmbientData): EngineModule {
       const lifetime = ctx.inject(PrimaryLifetimeKey);
       const tuningRegistry = ctx.inject(AmbientTuningRegistryKey);
 
-      const unlocks = createPurchasableCategory<UnlockDef>({
+      unlocks = createPurchasableCategory<UnlockDef>({
         id: 'ambient/unlocks',
         mapPurchasable: (def) => {
           const threshold = TUNABLE_THRESHOLD_IDS.has(def.id)
@@ -70,8 +71,6 @@ export function createUnlocksModule(data: AmbientData): EngineModule {
         () => true,
         ctx.onTick,
       );
-
-      ctx.provide(UnlocksKey, unlocks);
     },
   };
 }

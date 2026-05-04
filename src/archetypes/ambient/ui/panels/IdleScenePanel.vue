@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useModule } from '@/composables/useModule';
-import { useHeadlineRate } from '../../composables/useHeadlineRate';
-import { SceneKey } from '../../modules';
+import { PrimaryLifetimeKey, SceneKey, getAutoProducers, getPrimaryResource } from '../../modules';
 import { useFormatting } from '@/composables/useFormatting';
 import Tooltip from '@/ui/components/Tooltip.vue';
 
-const { primary, lifetime, perSecond } = useHeadlineRate();
+const primary = getPrimaryResource();
+const buildings = getAutoProducers();
+const lifetime = useModule(PrimaryLifetimeKey);
+const perSecond = computed(() => buildings.getTotalRate(primary));
 const scene = useModule(SceneKey);
 const { format } = useFormatting();
 

@@ -23,7 +23,7 @@
 
 import { computed } from 'vue';
 import { Decimal, bn, processOfflineTime, runUntil, type Engine } from 'open-loop-engine';
-import { AutoProducersKey, PrimaryLifetimeKey, PrimaryResourceKey, UnlocksKey } from '../modules';
+import { PrimaryLifetimeKey, getAutoProducers, getPrimaryResource, getUnlocks } from '../modules';
 import { buildAmbientSimEngine } from './bot';
 
 // ─── Probe 3 — offline round-trip ────────────────────────────────────────
@@ -83,9 +83,9 @@ interface PressureFinding {
 
 function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] } {
   const engine = buildAmbientSimEngine();
-  const primary = engine.tryInject(PrimaryResourceKey)!;
-  const producers = engine.tryInject(AutoProducersKey)!;
-  const unlocks = engine.tryInject(UnlocksKey)!;
+  const primary = getPrimaryResource();
+  const producers = getAutoProducers();
+  const unlocks = getUnlocks();
   const headline = computed(() => producers.getTotalRate(primary));
 
   // Sum-of-counts is monotonically non-decreasing during a 24h sim with no

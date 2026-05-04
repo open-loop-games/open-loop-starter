@@ -25,12 +25,12 @@ export type {
 } from './data/types';
 export { applyProducerOverrides, type ProducerOverrides } from './data/overrides';
 export {
-  PrimaryResourceKey,
   PrimaryLifetimeKey,
-  BuildingsKey,
   ProducerTuningRegistryKey,
-  UpgradesKey,
-  AchievementsKey,
+  getBuildings,
+  getPrimaryResource,
+  getUpgrades,
+  getAchievements,
   createProducerModules,
   type ProducerInstanceState,
 } from './modules';
