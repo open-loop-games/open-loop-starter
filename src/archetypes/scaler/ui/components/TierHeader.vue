@@ -9,7 +9,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { format, formatWhole } from 'open-loop-engine';
-import ProgressBar from '@/ui/components/ProgressBar.vue';
 import type { TierState } from '../../composables/useTier';
 
 const props = defineProps<{ tier: TierState }>();
@@ -28,13 +27,6 @@ const projectedGain = computed(() => {
   const gain = props.tier.reset?.currentGain.value;
   if (gain === undefined) return null;
   return formatWhole(gain);
-});
-
-const nextAtLabel = computed(() => {
-  const nextAt = props.tier.reset?.nextAt.value;
-  if (nextAt === undefined) return null;
-  // Pre-first-gain: show the threshold needed.
-  return format(nextAt, 2);
 });
 
 function performReset(): void {
@@ -76,15 +68,10 @@ function performReset(): void {
             class="scaler-tier-header__reset-gain"
           >+{{ projectedGain }} {{ tier.config.currencyDisplay }}</span>
           <span
-            v-else-if="nextAtLabel !== null"
+            v-else
             class="scaler-tier-header__reset-next"
-          >Need {{ nextAtLabel }} to start</span>
+          >Not yet ready</span>
         </span>
-        <ProgressBar
-          :value="tier.reset.progressFraction.value"
-          :max="1"
-          class="scaler-tier-header__reset-progress"
-        />
       </button>
     </div>
   </header>

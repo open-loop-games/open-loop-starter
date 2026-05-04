@@ -1,5 +1,6 @@
 import {
   Decimal,
+  bn,
   type ChallengeCategory,
   type ChallengeDef as EngineChallengeDef,
   type Conversion,
@@ -13,7 +14,8 @@ import {
   type Purchasable,
   type Resource,
   createChallengeCategory,
-  createCumulativeConversion,
+  createConversion,
+  createCostRequirement,
   createLogFormula,
   createMultiplicativeModifier,
   createProducerCategory,
@@ -206,11 +208,26 @@ export function createTranscendModule(data: ScalerData): EngineModule {
     connect(ctx: EngineContext): void {
       const prestigeShards = ctx.inject(PrestigeShardsKey);
       const reset = ctx.inject(TranscendResetKey);
-      const conversion = createCumulativeConversion({
-        baseResource: prestigeShards,
-        gainResource: transcendPoints,
-        formula: createLogFormula(data.balance.transcendConversionLog),
-        reset,
+      const formula = createLogFormula(data.balance.transcendConversionLog);
+      const conversion = createConversion({
+        inputs: {
+          prestigeShards: createCostRequirement({
+            resource: prestigeShards,
+            cost: () => prestigeShards.value,
+            pay: () => {
+              prestigeShards.value = bn(0);
+            },
+          }),
+        },
+        outputs: {
+          transcendPoints: {
+            resource: transcendPoints,
+            amount: ({ prestigeShards }) => formula(prestigeShards),
+          },
+        },
+        afterConvert: () => {
+          reset.reset();
+        },
       });
       ctx.provide(TranscendConversionKey, conversion);
     },

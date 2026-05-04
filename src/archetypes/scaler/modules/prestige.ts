@@ -2,6 +2,7 @@ import { watch } from 'vue';
 import {
   Decimal,
   Formula,
+  bn,
   type Conversion,
   type DecimalSource,
   type EngineContext,
@@ -12,8 +13,8 @@ import {
   type Purchasable,
   type PurchasableGroup,
   type Resource,
+  createConversion,
   createCostRequirement,
-  createCumulativeConversion,
   createLogFormula,
   createMultiplicativeModifier,
   createProducerCategory,
@@ -154,11 +155,26 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
       // resets.install has provided every reset key.
       const coin = ctx.inject(AntimatterCoinKey);
       const reset = ctx.inject(PrestigeResetKey);
-      const conversion = createCumulativeConversion({
-        baseResource: coin,
-        gainResource: prestigePoints,
-        formula: createLogFormula(data.balance.prestigeConversionLog),
-        reset,
+      const formula = createLogFormula(data.balance.prestigeConversionLog);
+      const conversion = createConversion({
+        inputs: {
+          coin: createCostRequirement({
+            resource: coin,
+            cost: () => coin.value,
+            pay: () => {
+              coin.value = bn(0);
+            },
+          }),
+        },
+        outputs: {
+          prestigePoints: {
+            resource: prestigePoints,
+            amount: ({ coin }) => formula(coin),
+          },
+        },
+        afterConvert: () => {
+          reset.reset();
+        },
       });
       ctx.provide(PrestigeConversionKey, conversion);
     },
