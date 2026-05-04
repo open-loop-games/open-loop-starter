@@ -3,7 +3,7 @@ import type { ComputedRef } from 'vue';
 import type { Purchasable } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import type { IncomeUpgradeDef } from '../data/types';
-import { IncomeUpgradesKey, IncomeUpgradeRoiKey, TugDataKey, type Side } from '../modules';
+import { getIncomeUpgrades, IncomeUpgradeRoiKey, TugDataKey, type Side } from '../modules';
 
 export interface IncomeUpgradeRow {
   def: IncomeUpgradeDef;
@@ -46,7 +46,7 @@ export interface IncomeUpgradesView {
  * the engine's purchasable requirement; UI only consumes `canPurchase`.
  */
 export function useIncomeUpgrades(side: Side): IncomeUpgradesView {
-  const shop = useModule(IncomeUpgradesKey[side]);
+  const shop = getIncomeUpgrades(side);
   const roi = useModule(IncomeUpgradeRoiKey[side]);
   const data = useModule(TugDataKey);
 

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useIncomeUpgrades } from '../../composables';
 import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
-import { IncomeKey, TugDataKey } from '../../modules';
+import { getIncome, TugDataKey } from '../../modules';
 import type { IncomeUpgradeRow } from '../../composables/useIncomeUpgrades';
 
 /**
@@ -21,8 +21,8 @@ import type { IncomeUpgradeRow } from '../../composables/useIncomeUpgrades';
  * sequentially-gated cases; engine's `canPurchase` is the unified flag.
  */
 const data = useModule(TugDataKey);
-const player = useModule(IncomeKey.player);
-const ai = useModule(IncomeKey.ai);
+const player = getIncome('player');
+const ai = getIncome('ai');
 const playerUpgrades = useIncomeUpgrades('player');
 const { format, formatTime } = useFormatting();
 

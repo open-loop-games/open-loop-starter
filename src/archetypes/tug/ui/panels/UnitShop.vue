@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useUnits, useCounterMatrix } from '../../composables';
 import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
-import { IncomeKey, TugDataKey, type Side } from '../../modules';
+import { getIncome, TugDataKey, type Side } from '../../modules';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 
 const props = withDefaults(
@@ -15,7 +15,7 @@ const props = withDefaults(
 
 const data = useModule(TugDataKey);
 const units = useUnits(props.side);
-const income = useModule(IncomeKey[props.side]);
+const income = getIncome(props.side);
 const matrix = useCounterMatrix();
 const { format } = useFormatting();
 

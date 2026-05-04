@@ -9,8 +9,8 @@ import {
 } from '../balance/bot';
 import { ARC_BEATS } from '../balance/beats';
 import {
-  IncomeKey,
-  IncomeUpgradesKey,
+  getIncome,
+  getIncomeUpgrades,
   IncomeUpgradeRoiKey,
   TugTuningRegistryKey,
 } from '../modules';
@@ -224,8 +224,8 @@ describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
     // once refinery-2 unlocks.
     const engine = buildTugSimEngine();
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player)!;
-    const shop = engine.tryInject(IncomeUpgradesKey.player)!;
-    const income = engine.tryInject(IncomeKey.player)!;
+    const shop = getIncomeUpgrades('player');
+    const income = getIncome('player');
     const r2 = roi.get('refinery-2')!;
     expect(r2.paybackSeconds.value).toBeCloseTo(350 / (8 * 0.4), 1);
     // Inject enough minerals to satisfy refinery-1's cost requirement,

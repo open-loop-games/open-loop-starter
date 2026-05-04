@@ -14,18 +14,14 @@ import {
   type Requirement,
 } from 'open-loop-engine';
 import type { IncomeUpgradeDef, TugData } from '../data/types';
-import { IncomeKey, IncomeRateChainKey } from './income';
+import { getIncome, getIncomeRateChain } from './income';
 import { type Side, TugTuningRegistryKey } from './tuning';
 
-export const IncomeUpgradesKey: Record<
-  Side,
-  InjectionKey<PurchasableCategory<IncomeUpgradeDef>>
-> = {
-  player: Symbol('tug/match/player/income-upgrades') as InjectionKey<
-    PurchasableCategory<IncomeUpgradeDef>
-  >,
-  ai: Symbol('tug/match/ai/income-upgrades') as InjectionKey<PurchasableCategory<IncomeUpgradeDef>>,
-};
+const incomeUpgradesBySide = {} as Record<Side, PurchasableCategory<IncomeUpgradeDef>>;
+
+export function getIncomeUpgrades(side: Side): PurchasableCategory<IncomeUpgradeDef> {
+  return incomeUpgradesBySide[side];
+}
 
 /**
  * Per-tier engine-side ROI metrics. Reactive against live cost (post-
@@ -89,8 +85,8 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
     dependencies: ['tug/tuning', `tug/match/${side}/income`],
     install(ctx) {
       const registry = ctx.inject(TugTuningRegistryKey);
-      const income = ctx.inject(IncomeKey[side]);
-      const incomeRateChain = ctx.inject(IncomeRateChainKey[side]);
+      const income = getIncome(side);
+      const incomeRateChain = getIncomeRateChain(side);
       // Same key as `income.ts:62` — `tunable()` uses `setDefault`, so this
       // second call returns whatever the income module already registered
       // rather than overwriting it. We need it here to compute live ROI
@@ -171,7 +167,7 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
       });
       incomeUpgrades.register(data.incomeUpgrades);
 
-      ctx.provide(IncomeUpgradesKey[side], incomeUpgrades);
+      incomeUpgradesBySide[side] = incomeUpgrades;
       ctx.provide(IncomeUpgradeRoiKey[side], roiMap);
     },
   };

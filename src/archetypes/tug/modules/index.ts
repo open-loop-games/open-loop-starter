@@ -21,10 +21,10 @@ export {
   type TugTunables,
 } from './tuning';
 export { FortressKey, type FortressApi } from './fortress';
-export { IncomeKey, IncomeRateChainKey } from './income';
-export { IncomeUpgradesKey, IncomeUpgradeRoiKey, type RoiMetrics } from './income-upgrades';
+export { getIncome, getIncomeRateChain } from './income';
+export { getIncomeUpgrades, IncomeUpgradeRoiKey, type RoiMetrics } from './income-upgrades';
 export { LaneKey, type LaneApi, type LaneEvents, type UnitInstance } from './lane';
-export { UnitsKey, SequencerKey, UnitsCooldownKey, type UnitSendMeta } from './units';
+export { getUnits, SequencerKey, UnitsCooldownKey, type UnitSendMeta } from './units';
 export {
   MatchKey,
   TUG_MATCH_SCOPE_MODULES,
@@ -64,7 +64,7 @@ export { PrestigeKey } from './prestige';
  *  6. `tug/match` — match orchestrator; injects fortress + lane +
  *     sequencers.
  *  7. `tug/match/ai/opponent-bot` — AI policy. Strict-after-units ordering
- *     so `UnitsKey.ai` is provided before the AI tries to read it.
+ *     so `getUnits('ai')` returns a populated handle before the AI reads it.
  *     Side-parameterized so sim engines can install a second instance for
  *     `'player'` (unattended balance harnesses); production installs only
  *     the `'ai'` instance and leaves player input to the UI.

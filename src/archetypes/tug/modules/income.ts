@@ -7,37 +7,26 @@ import {
   tunable,
   type DecimalSource,
   type EngineModule,
-  type InjectionKey,
   type ModifierChain,
   type Resource,
 } from 'open-loop-engine';
 import type { TugData } from '../data/types';
 import { type Side, TugTuningRegistryKey } from './tuning';
 
-/**
- * Per-side mineral resource. Player side spends from the unit shop's cost
- * requirement; AI side spends from `createOpponentBotModule(data, 'ai')`.
- */
-export const IncomeKey: Record<Side, InjectionKey<Resource<DecimalSource>>> = {
-  player: Symbol('tug/match/player/income') as InjectionKey<Resource<DecimalSource>>,
-  ai: Symbol('tug/match/ai/income') as InjectionKey<Resource<DecimalSource>>,
-};
+// Module-scope per-side handles set during install. Sibling modules +
+// composables + UI import the typed accessors below; engine self-publishes
+// these via ResourceRegistryKey + ChainRegistryKey for cross-archetype /
+// external consumers (sim harness, devtools).
+const incomeBySide = {} as Record<Side, Resource<DecimalSource>>;
+const incomeRateChainBySide = {} as Record<Side, ModifierChain>;
 
-/**
- * Per-side income-rate modifier chain. Sibling modules (`income-upgrades`,
- * future buffs/penalties) bind multiplicative modifiers onto this chain
- * instead of folding state into the income tick by hand. The tick reads
- * `chain.apply(baseRate)` each frame; chain registry membership is
- * automatic via `createModifierChain`.
- *
- * AI side's `aiIncomeMultiplier` is itself a bound modifier on this chain
- * — a single composition path, no special-cased branches in the tick
- * callback.
- */
-export const IncomeRateChainKey: Record<Side, InjectionKey<ModifierChain>> = {
-  player: Symbol('tug/match/player/income-rate-chain') as InjectionKey<ModifierChain>,
-  ai: Symbol('tug/match/ai/income-rate-chain') as InjectionKey<ModifierChain>,
-};
+export function getIncome(side: Side): Resource<DecimalSource> {
+  return incomeBySide[side];
+}
+
+export function getIncomeRateChain(side: Side): ModifierChain {
+  return incomeRateChainBySide[side];
+}
 
 export function createIncomeSideModule(data: TugData, side: Side): EngineModule {
   return {
@@ -47,7 +36,7 @@ export function createIncomeSideModule(data: TugData, side: Side): EngineModule 
       const registry = ctx.inject(TugTuningRegistryKey);
 
       const income = createResource<DecimalSource>(0, {
-        id: data.theme.resourceName.singular,
+        id: `tug/match/${side}/income`,
         displayName: data.theme.resourceName.plural,
         precision: 0,
       });
@@ -86,8 +75,8 @@ export function createIncomeSideModule(data: TugData, side: Side): EngineModule 
         addResource(income, Decimal.mul(rate, dt));
       });
 
-      ctx.provide(IncomeKey[side], income);
-      ctx.provide(IncomeRateChainKey[side], incomeRateChain);
+      incomeBySide[side] = income;
+      incomeRateChainBySide[side] = incomeRateChain;
     },
   };
 }

@@ -11,7 +11,7 @@ import {
   type Sequencer,
 } from 'open-loop-engine';
 import type { TugData, UnitDef } from '../data/types';
-import { IncomeKey } from './income';
+import { getIncome } from './income';
 import { LaneKey } from './lane';
 import { type Side, TugTuningRegistryKey } from './tuning';
 
@@ -22,10 +22,11 @@ export interface UnitSendMeta {
   archetypeId: string;
 }
 
-export const UnitsKey: Record<Side, InjectionKey<PurchasableCategory<UnitDef>>> = {
-  player: Symbol('tug/match/player/units') as InjectionKey<PurchasableCategory<UnitDef>>,
-  ai: Symbol('tug/match/ai/units') as InjectionKey<PurchasableCategory<UnitDef>>,
-};
+const unitsBySide = {} as Record<Side, PurchasableCategory<UnitDef>>;
+
+export function getUnits(side: Side): PurchasableCategory<UnitDef> {
+  return unitsBySide[side];
+}
 
 export const SequencerKey: Record<Side, InjectionKey<Sequencer<UnitSendMeta>>> = {
   player: Symbol('tug/match/player/sequencer') as InjectionKey<Sequencer<UnitSendMeta>>,
@@ -59,7 +60,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
     dependencies: ['tug/tuning', `tug/match/${side}/income`, 'tug/match/lane'],
     install(ctx) {
       const registry = ctx.inject(TugTuningRegistryKey);
-      const income = ctx.inject(IncomeKey[side]);
+      const income = getIncome(side);
       const lane = ctx.inject(LaneKey);
 
       // Per-archetype send cooldown. One persistent ref per archetype, named
@@ -140,7 +141,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
         }
       });
 
-      ctx.provide(UnitsKey[side], shop);
+      unitsBySide[side] = shop;
       ctx.provide(SequencerKey[side], sequencer);
       ctx.provide(UnitsCooldownKey[side], cooldown);
     },

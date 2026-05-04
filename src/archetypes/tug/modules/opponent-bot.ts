@@ -7,12 +7,12 @@ import {
 } from 'open-loop-engine';
 import { PERSONAS, type Persona } from '../data/personality';
 import type { TugData } from '../data/types';
-import { IncomeKey } from './income';
-import { IncomeUpgradesKey } from './income-upgrades';
+import { getIncome } from './income';
+import { getIncomeUpgrades } from './income-upgrades';
 import { LaneKey } from './lane';
 import { MatchKey } from './match';
 import { type Side } from './tuning';
-import { UnitsKey } from './units';
+import { getUnits } from './units';
 
 const OPPOSITE: Record<Side, Side> = { player: 'ai', ai: 'player' };
 
@@ -75,9 +75,9 @@ export function createOpponentBotModule(data: TugData, side: Side): EngineModule
     install(ctx) {
       const match = ctx.inject(MatchKey);
       const lane = ctx.inject(LaneKey);
-      const shop = ctx.inject(UnitsKey[side]);
-      const income = ctx.inject(IncomeKey[side]);
-      const upgrades = ctx.inject(IncomeUpgradesKey[side]);
+      const shop = getUnits(side);
+      const income = getIncome(side);
+      const upgrades = getIncomeUpgrades(side);
 
       // archetypeId → matrix-index map. Same convention as lane.ts and
       // match.ts: data.units order is load-bearing.
@@ -275,7 +275,7 @@ export function createOpponentBotModule(data: TugData, side: Side): EngineModule
         // the unit into SequencerKey[side]; the sequencer's canRun + tick
         // loop dispatches against per-archetype cooldowns. Opponent
         // composition is read off lane.units[opposite] above, not via
-        // UnitsKey[opposite] — live-on-field counts reflect strategy
+        // getUnits(opposite) — live-on-field counts reflect strategy
         // better than cumulative buys.
         const purchasable = shop.getPurchasable(chosenId);
         purchasable?.purchase();

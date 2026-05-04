@@ -10,12 +10,12 @@ function mustInject<T>(engine: Engine, key: InjectionKey<T>): T {
 import { DEFAULT_TUG_DATA, applyTugOverrides, type TugOverrides } from '../data';
 import {
   createTugModules,
-  IncomeKey,
+  getIncome,
+  getUnits,
   LaneKey,
   MatchKey,
   MetaKey,
   SequencerKey,
-  UnitsKey,
 } from '../modules';
 
 const GAME_ID = 'tug-test';
@@ -40,8 +40,8 @@ describe('tug match-scope reset (structural invariant)', () => {
     const match = mustInject(engine, MatchKey);
     const meta = mustInject(engine, MetaKey);
     const lane = mustInject(engine, LaneKey);
-    const playerIncome = mustInject(engine, IncomeKey.player);
-    const aiIncome = mustInject(engine, IncomeKey.ai);
+    const playerIncome = getIncome('player');
+    const aiIncome = getIncome('ai');
 
     // 1. start() — match-scope state should populate.
     match.start();
@@ -113,8 +113,8 @@ describe('tug AI opponent (default counter persona)', () => {
     const match = mustInject(engine, MatchKey);
     const playerSequencer = mustInject(engine, SequencerKey.player);
     const aiSequencer = mustInject(engine, SequencerKey.ai);
-    const playerShop = mustInject(engine, UnitsKey.player);
-    const playerIncome = mustInject(engine, IncomeKey.player);
+    const playerShop = getUnits('player');
+    const playerIncome = getIncome('player');
 
     let playerStarts = 0;
     let aiStarts = 0;
