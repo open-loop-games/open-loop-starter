@@ -83,13 +83,13 @@ src/archetypes/<name>/
 ├── data/            # Pure config. Typed defs + balance constants. Skeleton + balance
 │                    # lens lives here as comment sections, not separate files.
 ├── modules/         # Engine modules; factory-constructed, closing over data.
-├── composables/     # Vue composables that bridge archetype modules to UI.
+├── composables/     # Vue composables when there's scoped Vue work or cross-module synthesis. Optional layer.
 ├── ui/              # Archetype-colocated screens + panels + components.
 ├── sim/             # Beat + probe vitest suite per archetype doc § 7.
 └── boot.ts          # createApp(overrides?) → { app, engine, mount }.
 ```
 
-**Dependency direction (strict):** `data → modules → composables → ui`. Data never imports from modules; composables and components never contain game logic. Lens inside data files uses comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`) — not separate files, not a codegen round-trip.
+**Dependency direction (strict):** `data → modules → ui`, with composables between modules and ui when they earn the layer (see § Layering). Data never imports from modules; composables and components never contain game logic. Lens inside data files uses comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`) — not separate files, not a codegen round-trip.
 
 **Demo content is a slim slice of one canonical exemplar.** Pick a single Tier-A exemplar — either a frozen fork under `reference-code/<game>/` or a live engine port in a sibling repo (e.g. `idle-loops-ng/` for the looper). Take a slim slice of its content set; carry ids, display names, and numbers 1:1 with per-row citations (`// vanilla canonical: <file>:<line> — <description>`). When both a frozen fork and a live port exist, prefer the live port — it tracks the canonical balance going forward. No rename pass, no fresh authoring of names or numbers. Declared inventions are tagged at row level only where the slim demo's substrate genuinely diverges from the exemplar (e.g. dropped contributors in pool sizing, omitted resource types, mechanics-layer features the slim demo doesn't yet model) — each invention names the slim-demo reason. Citation work happens at implementation time, not as a separate spec-authoring pass. Forks rename for theme; the starter ships as transparent slim-port.
 
@@ -98,14 +98,14 @@ src/archetypes/<name>/
 ### Layering
 
 ```
-modules (engine logic) → composables (Vue bridge) → ui (game rendering)
+modules (engine logic) → composables (when earned) → ui (game rendering)
 lib/styles → lib/shells → lib/frame → lib/modal
 styles (scaffold theme) → ui + lib (via CSS custom properties)
 ```
 
 - **`src/lib/`** — scaffold layout/theme layer. No engine imports. Consumed by `src/ui/` via `@/lib`.
 - **`src/modules/`** own engine state via `persistent()` refs; no UI imports.
-- **`src/composables/`** are the only `ui → modules` bridge.
+- **`src/composables/`** — UI consumes module public API, never internals. Composables earn their layer with `computed` / `watch` / lifecycle, per-component state, or cross-module synthesis. Pure re-export composables are wallpaper — UI imports from `modules/` directly.
 - **`src/styles/`** sets token defaults and widget-level selectors consumed by `src/lib/` and `src/ui/components/`.
 
 ### Key Patterns
@@ -132,7 +132,7 @@ Rules that apply inside `src/lib/`, and that forks should carry forward by defau
 
 1. **Styling: CSS custom properties only.** No Tailwind, no shadcn-vue. Theme by variable override.
 2. **Behavioral primitives via reka-ui.** a11y, focus trap, portal, positioning come from reka-ui. `src/lib/` layers classes and custom-property defaults on top; it never reimplements the behavior.
-3. **Presentational only.** No engine imports. `src/ui/` owns engine bridging via composables.
+3. **Presentational only.** No engine imports. `src/ui/` owns engine bridging.
 4. **What lives here.** Shells (5 validated layout patterns), AppFrame (header + shell + modal + theme glue), `useModalStack` + `ModalStack`, `DevPanelOverlay` (fullscreen dev surface), `styles/tokens.css`, `styles/reset.css`. Widget components — PanelLayout, Tooltip, Popover, ProgressBar, and future additions — live in `src/ui/components/` alongside game components, not here. The cut line: `src/lib/` owns layout and cross-cutting surfaces (modals, theme root); concrete widgets are scaffold components forks adapt in place.
 
 Extraction to a real shared library is deferred until multiple independent game UI passes converge on the same shape. Don't pre-extract against a single consumer.
