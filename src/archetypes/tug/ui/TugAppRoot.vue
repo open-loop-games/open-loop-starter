@@ -77,11 +77,20 @@ function getActiveModules(): EngineModule[] {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame v-else :stack="stack" :tooltip-delay="400">
+  <AppFrame
+    v-else
+    :stack="stack"
+    :tooltip-delay="400"
+  >
     <template #header>
-      <SystemHeader app-name="Tug — SciFi Armada" @return-to-slots="returnToSlots">
+      <SystemHeader
+        app-name="Tug — SciFi Armada"
+        @return-to-slots="returnToSlots"
+      >
         <template #about>
-          <h4 style="margin-bottom: 6px">Tug — SciFi Armada</h4>
+          <h4 style="margin-bottom: 6px">
+            Tug — SciFi Armada
+          </h4>
           <p>
             Spend minerals to send units down the lane. Counter the AI's composition by picking
             archetypes that beat its dominant unit. Reduce the enemy fortress to zero before yours
@@ -116,6 +125,9 @@ function getActiveModules(): EngineModule[] {
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+    <BalanceWorkbench
+      :engine="engine"
+      :modules="getActiveModules"
+    />
   </DevPanelOverlay>
 </template>

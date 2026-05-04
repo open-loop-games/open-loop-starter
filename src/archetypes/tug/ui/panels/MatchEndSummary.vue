@@ -78,7 +78,10 @@ function restart(): void {
             <dd>{{ meta.maxCounterPivotsAnyMatch.value }}</dd>
           </div>
         </dl>
-        <AlertDialogAction class="match-end__restart" @click="restart">
+        <AlertDialogAction
+          class="match-end__restart"
+          @click="restart"
+        >
           Start next match
         </AlertDialogAction>
       </AlertDialogContent>
