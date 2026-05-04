@@ -8,7 +8,9 @@ import {
   AlertDialogTitle,
   AlertDialogAction,
 } from 'reka-ui';
-import { useMatch, useMeta, useTugData } from '../../composables';
+import { useMatch } from '../../composables';
+import { useModule } from '@/composables/useModule';
+import { MetaKey, TugDataKey } from '../../modules';
 
 /**
  * Match-end overlay. Sources its display state from `useMatch().lastMatchEnd`
@@ -20,8 +22,8 @@ import { useMatch, useMeta, useTugData } from '../../composables';
  * overlay-click dismiss. Player must click "Start next match" to proceed.
  */
 const match = useMatch();
-const meta = useMeta();
-const data = useTugData();
+const meta = useModule(MetaKey);
+const data = useModule(TugDataKey);
 
 const payload = computed(() => match.lastMatchEnd.value);
 const visible = computed(() => payload.value !== null);

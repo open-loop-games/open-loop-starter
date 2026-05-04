@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useMatch, useTugData } from '../../composables';
+import { useMatch } from '../../composables';
+import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
+import { TugDataKey } from '../../modules';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 
-const data = useTugData();
+const data = useModule(TugDataKey);
 const match = useMatch();
 const { format } = useFormatting();
 

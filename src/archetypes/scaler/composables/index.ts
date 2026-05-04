@@ -1,5 +1,4 @@
 export { useScalerData, SCALER_DATA_KEY } from './useScalerData';
-export { useTierNav, type TierNavApi } from './useTierNav';
 export { useChainBreakdown, type ChainBreakdown, type ChainFactor } from './useChainBreakdown';
 export { useProducers, type ProducerRow } from './useProducers';
 export { useUpgrades, type UpgradeRow } from './useUpgrades';

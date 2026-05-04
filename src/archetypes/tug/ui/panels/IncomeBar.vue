@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useIncome, useIncomeUpgrades, useTugData } from '../../composables';
+import { useIncomeUpgrades } from '../../composables';
+import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
+import { IncomeKey, TugDataKey } from '../../modules';
 import type { IncomeUpgradeRow } from '../../composables/useIncomeUpgrades';
 
 /**
@@ -18,9 +20,9 @@ import type { IncomeUpgradeRow } from '../../composables/useIncomeUpgrades';
  * tier N-1 bought. Disabled state covers both unaffordable AND
  * sequentially-gated cases; engine's `canPurchase` is the unified flag.
  */
-const data = useTugData();
-const player = useIncome('player');
-const ai = useIncome('ai');
+const data = useModule(TugDataKey);
+const player = useModule(IncomeKey.player);
+const ai = useModule(IncomeKey.ai);
 const playerUpgrades = useIncomeUpgrades('player');
 const { format, formatTime } = useFormatting();
 
@@ -56,14 +58,14 @@ function rowTooltip(row: IncomeUpgradeRow): string {
         <span class="income-bar__label">{{ data.theme.factionNames[0] }}</span>
         <span class="income-bar__rate">+{{ format(baseRate, 1) }} {{ resourceLabel }}/s</span>
         <span class="income-bar__balance">
-          {{ format(player.value.value, 0) }}
+          {{ format(player, 0) }}
         </span>
       </div>
       <div class="income-bar__row income-bar__row--ai">
         <span class="income-bar__label">{{ data.theme.factionNames[1] }}</span>
         <span class="income-bar__rate">+{{ format(aiRate, 1) }} {{ resourceLabel }}/s</span>
         <span class="income-bar__balance">
-          {{ format(ai.value.value, 0) }}
+          {{ format(ai, 0) }}
         </span>
       </div>
     </div>

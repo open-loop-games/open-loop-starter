@@ -1,6 +1,7 @@
 import { computed, type ComputedRef } from 'vue';
+import { useModule } from '@/composables/useModule';
 import type { CounterMatrix, UnitDef } from '../data/types';
-import { useTugData } from './useTugData';
+import { TugDataKey } from '../modules';
 
 export type CounterRelation = 'strong' | 'weak' | 'neutral';
 
@@ -26,7 +27,7 @@ export interface CounterMatrixView {
  * the 6×6 grid and by `UnitShop.vue` for the per-card "strong vs X" hints.
  */
 export function useCounterMatrix(): CounterMatrixView {
-  const data = useTugData();
+  const data = useModule(TugDataKey);
 
   const idxOf = computed(() => {
     const m = new Map<string, number>();

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useLane, useTugData, useMatch } from '../../composables';
-import type { Side, UnitInstance } from '../../modules';
+import { useLane, useMatch } from '../../composables';
+import { useModule } from '@/composables/useModule';
+import { TugDataKey, type Side, type UnitInstance } from '../../modules';
 
 /**
  * Declared-invention front-line indicator. Renders a horizontal lane with
@@ -13,7 +14,7 @@ import type { Side, UnitInstance } from '../../modules';
  * 0..1 left→right.
  */
 const lane = useLane();
-const data = useTugData();
+const data = useModule(TugDataKey);
 const match = useMatch();
 
 const playerLabel = computed(() => data.theme.factionNames[0]);

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useCounterMatrix, useTugData } from '../../composables';
+import { useCounterMatrix } from '../../composables';
+import { useModule } from '@/composables/useModule';
+import { TugDataKey } from '../../modules';
 import type { UnitDef } from '../../data/types';
 
 /**
@@ -9,7 +11,7 @@ import type { UnitDef } from '../../data/types';
  * details below the grid.
  */
 const matrix = useCounterMatrix();
-const data = useTugData();
+const data = useModule(TugDataKey);
 
 const units = computed<UnitDef[]>(() => data.units);
 
@@ -46,24 +48,14 @@ function selectCell(attacker: UnitDef, defender: UnitDef): void {
       <thead>
         <tr>
           <th />
-          <th
-            v-for="defender in units"
-            :key="`d-${defender.id}`"
-            :title="defender.role"
-          >
+          <th v-for="defender in units" :key="`d-${defender.id}`" :title="defender.role">
             {{ defender.name.slice(0, 4) }}
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr
-          v-for="attacker in units"
-          :key="`r-${attacker.id}`"
-        >
-          <th
-            scope="row"
-            :title="attacker.role"
-          >
+        <tr v-for="attacker in units" :key="`r-${attacker.id}`">
+          <th scope="row" :title="attacker.role">
             {{ attacker.name.slice(0, 4) }}
           </th>
           <td
@@ -79,10 +71,7 @@ function selectCell(attacker: UnitDef, defender: UnitDef): void {
         </tr>
       </tbody>
     </table>
-    <div
-      v-if="selected"
-      class="counter-matrix__detail"
-    >
+    <div v-if="selected" class="counter-matrix__detail">
       <strong>{{ selected.attacker.name }}</strong>
       → {{ selected.defender.name }}: ×{{ selected.value.toFixed(2) }} ({{ selected.relation }})
     </div>

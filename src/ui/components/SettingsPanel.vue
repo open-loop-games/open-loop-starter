@@ -3,12 +3,13 @@ import { computed } from 'vue';
 import { DialogTitle, SwitchRoot, SwitchThumb } from 'reka-ui';
 import PanelLayout from '@/ui/components/PanelLayout.vue';
 import Select, { type SelectOption } from '@/ui/components/Select.vue';
-import { useSettings } from '@/composables/useSettings';
+import { useModule } from '@/composables/useModule';
+import { SettingsKey } from '@/modules/settings';
 import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
 import { NOTATION_OPTIONS } from '@/composables/useNotation';
 
 const emit = defineEmits<{ close: [] }>();
-const settings = useSettings();
+const settings = useModule(SettingsKey).settings;
 const prefs = usePlayerPrefs();
 
 const themeOptions: ReadonlyArray<SelectOption> = [

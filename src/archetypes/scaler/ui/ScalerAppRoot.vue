@@ -20,7 +20,6 @@ import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import Tabs from '@/ui/components/Tabs.vue';
 import { manifest } from '../manifest';
-import { useTierNav } from '../composables/useTierNav';
 import type { Tier } from '../data/types';
 import { ANTIMATTER_TIER, PRESTIGE_TIER, TRANSCEND_TIER } from './tier-configs';
 import type { ExtraPurchasableRef } from '../composables/useTier';
@@ -39,7 +38,7 @@ const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
 provide('currentScreen', currentScreen);
 
-const { activeTier, setTier } = useTierNav();
+const activeTier = ref<Tier>('antimatter');
 
 const TIER_TABS = [
   { value: 'antimatter', label: 'Antimatter' },
@@ -49,7 +48,9 @@ const TIER_TABS = [
 
 // Tabs binds with v-model:string; map through the typed Tier ref.
 const tabValue = ref<string>(activeTier.value);
-watch(tabValue, (v) => setTier(v as Tier));
+watch(tabValue, (v) => {
+  activeTier.value = v as Tier;
+});
 watch(activeTier, (v) => {
   if (tabValue.value !== v) tabValue.value = v;
 });

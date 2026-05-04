@@ -3,8 +3,7 @@ import type { ComputedRef } from 'vue';
 import type { Persistent, Purchasable } from 'open-loop-engine';
 import { useModule } from '@/composables/useModule';
 import type { UnitDef } from '../data/types';
-import { UnitsKey, UnitsCooldownKey, type Side } from '../modules';
-import { useTugData } from './useTugData';
+import { UnitsKey, UnitsCooldownKey, TugDataKey, type Side } from '../modules';
 
 export interface UnitRow {
   def: UnitDef;
@@ -35,7 +34,7 @@ export interface UnitsView {
 export function useUnits(side: Side): UnitsView {
   const shop = useModule(UnitsKey[side]);
   const cooldown = useModule(UnitsCooldownKey[side]);
-  const data = useTugData();
+  const data = useModule(TugDataKey);
 
   const rows = computed<UnitRow[]>(() => {
     const out: UnitRow[] = [];

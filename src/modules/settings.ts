@@ -4,9 +4,18 @@ import {
   type InjectionKey,
   type EngineModule,
   type EngineContext,
+  type Persistent,
 } from 'open-loop-engine';
-import type { StockSettings } from '@/composables/useSettings';
 import { useToasts } from '@/composables/useToasts';
+
+/**
+ * Demo-level toggles that persist with the engine save (per-demo, per-slot).
+ * Player-level prefs (theme, notation, ui scale, autosave) live in
+ * `usePlayerPrefs` and are shared across every demo in the gallery.
+ */
+export interface StockSettings {
+  offlineProgress: Persistent<boolean>;
+}
 
 export interface SettingsState {
   settings: StockSettings;

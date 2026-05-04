@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useUnits, useIncome, useCounterMatrix, useTugData } from '../../composables';
+import { useUnits, useCounterMatrix } from '../../composables';
+import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
-import type { Side } from '../../modules';
+import { IncomeKey, TugDataKey, type Side } from '../../modules';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 
 const props = withDefaults(
@@ -12,14 +13,14 @@ const props = withDefaults(
   { side: 'player' },
 );
 
-const data = useTugData();
+const data = useModule(TugDataKey);
 const units = useUnits(props.side);
-const income = useIncome(props.side);
+const income = useModule(IncomeKey[props.side]);
 const matrix = useCounterMatrix();
 const { format } = useFormatting();
 
 const resourceLabel = computed(() => data.theme.resourceName.plural);
-const balance = computed(() => format(income.value.value, 0));
+const balance = computed(() => format(income.value, 0));
 
 function counterHints(archetypeId: string): string {
   const top = matrix.topStrongCounters(archetypeId, 2);
