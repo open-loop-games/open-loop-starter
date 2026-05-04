@@ -19,24 +19,28 @@ import { computed, onBeforeUnmount } from 'vue';
 import { Decimal, type DecimalSource, formatWhole } from 'open-loop-engine';
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { HoverCardRoot, HoverCardTrigger, HoverCardPortal, HoverCardContent } from 'reka-ui';
-import { useZones } from '../../composables/useZones';
-import { useActionRunner } from '../../composables/useActionRunner';
-import { useActionQueue } from '../../composables/useActionQueue';
-import { useLooperData } from '../../composables/useLooperData';
+import {
+  getZoneSystem,
+  getCurrentZone,
+  getProgressVarsForZone,
+  getProgressPercent,
+  getRegularVarsForZone,
+} from '../../modules/zones';
+import { getActionRegistry, isActionVisible } from '../../modules/action-runner';
+import { computeAdjustedTicks } from '../../modules/action-formulas';
+import { addAction, getQueueAddAmount } from '../../modules/action-queue';
+import { ZONES } from '../../data/zones';
 import type { ActionDef } from '../../data/types';
 import { ActionTooltipContent } from '../../composables/tooltips/actionTooltips';
 import { AVAILABLE_ACTION_DRAG_TYPE } from '../next-action-drag';
 
-const { zones, getCurrentZone, getProgressVarsForZone, getProgressPercent, getRegularVarsForZone } =
-  useZones();
-
-const { actionRegistry, isActionVisible, computeAdjustedTicks } = useActionRunner();
-const { addAction, queueAddAmount } = useActionQueue();
-const looperData = useLooperData();
+const zones = getZoneSystem();
+const actionRegistry = getActionRegistry();
+const queueAddAmount = getQueueAddAmount();
 
 const zoneDescriptions = computed<Record<string, string>>(() => {
   const out: Record<string, string> = {};
-  for (const z of looperData.zones) out[z.id] = z.description;
+  for (const z of ZONES) out[z.id] = z.description;
   return out;
 });
 

@@ -25,10 +25,8 @@ import {
   RadioGroupRoot,
 } from 'reka-ui';
 import { formatWhole } from 'open-loop-engine';
-import { useStats } from '../../composables/useStats';
-
-const {
-  stats: statDefs,
+import { STATS } from '../../data/stats';
+import {
   getStatLevel,
   getTalentLevel,
   getTalentMult,
@@ -36,9 +34,9 @@ const {
   getTalentXPProgress,
   getLevelXPWindow,
   getTalentXPWindow,
-} = useStats();
+} from '../../modules/stats';
 
-const statList = statDefs.map((s) => s.id);
+const statList = STATS.map((s) => s.id);
 
 type ViewMode = 'grid' | 'radar';
 const viewMode = ref<ViewMode>('grid');

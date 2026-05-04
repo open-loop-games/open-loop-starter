@@ -17,17 +17,13 @@
 import { computed } from 'vue';
 import { Icon } from '@iconify/vue';
 import { formatWhole } from 'open-loop-engine';
-import { useActionQueue } from '../../composables/useActionQueue';
-import { useActionRunner } from '../../composables/useActionRunner';
+import { getActiveList, getActiveCursor, type ActionMeta } from '../../modules/action-queue';
+import { getActionDef, getActionProgress } from '../../modules/action-runner';
 import { getActionIcon } from '../../data/action-icons';
-import type { ActionMeta } from '../../composables/useActionQueue';
 import type { SequencerItem } from 'open-loop-engine';
 
 const props = defineProps<{ hoveredIndex: number | null }>();
 const emit = defineEmits<{ (e: 'hover', index: number | null): void }>();
-
-const { getActiveList, getActiveCursor } = useActionQueue();
-const { getActionDef, getActionProgress } = useActionRunner();
 
 const items = computed(() => getActiveList());
 const cursor = computed(() => getActiveCursor());

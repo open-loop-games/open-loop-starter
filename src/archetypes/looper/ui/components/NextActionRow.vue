@@ -30,9 +30,18 @@ import {
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { formatWhole } from 'open-loop-engine';
 import type { SequencerItem } from 'open-loop-engine';
-import { useActionQueue, type ActionMeta } from '../../composables/useActionQueue';
-import { useActionRunner } from '../../composables/useActionRunner';
-import { useZones } from '../../composables/useZones';
+import {
+  reorderAction,
+  adjustLoops,
+  toggleActionDisabled,
+  splitAction,
+  capActionAdditive,
+  removeAction,
+  getQueueAddAmount,
+  type ActionMeta,
+} from '../../modules/action-queue';
+import { getActionDef } from '../../modules/action-runner';
+import { getRegularGood } from '../../modules/zones';
 import { getActionIcon } from '../../data/action-icons';
 import { getZoneColor } from '../../data/zone-colors';
 import { dragStateKey, ROW_DRAG_TYPE, AVAILABLE_ACTION_DRAG_TYPE } from '../next-action-drag';
@@ -46,18 +55,7 @@ const props = defineProps<{
 }>();
 
 const dragState = inject(dragStateKey)!;
-
-const {
-  queueAddAmount,
-  reorderAction,
-  adjustLoops,
-  toggleActionDisabled,
-  splitAction,
-  capActionAdditive,
-  removeAction,
-} = useActionQueue();
-const { getActionDef } = useActionRunner();
-const { getRegularGood } = useZones();
+const queueAddAmount = getQueueAddAmount();
 
 // ── Derived display ────────────────────────────────────────────────────────
 

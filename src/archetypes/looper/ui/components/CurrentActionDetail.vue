@@ -13,13 +13,11 @@
 
 import { computed } from 'vue';
 import { Decimal, formatWhole, formatTime } from 'open-loop-engine';
-import { useActionQueue } from '../../composables/useActionQueue';
-import { useActionRunner } from '../../composables/useActionRunner';
+import { getActiveList } from '../../modules/action-queue';
+import { getActionDef } from '../../modules/action-runner';
+import { computeAdjustedTicks } from '../../modules/action-formulas';
 
 const props = defineProps<{ index: number | null }>();
-
-const { getActiveList } = useActionQueue();
-const { getActionDef, computeAdjustedTicks } = useActionRunner();
 
 const item = computed(() => {
   if (props.index === null) return null;

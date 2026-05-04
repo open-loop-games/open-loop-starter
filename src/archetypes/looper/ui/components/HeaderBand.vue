@@ -21,15 +21,22 @@ import {
 } from 'reka-ui';
 import AppTooltip from './AppTooltip.vue';
 import { Decimal, formatWhole } from 'open-loop-engine';
-import { useLoop } from '../../composables/useLoop';
-import { useMana } from '../../composables/useMana';
+import {
+  isLoopRunning,
+  togglePause,
+  manualRestart,
+  getLoopCount,
+  getPauseBeforeRestart,
+  getPauseOnFailedLoop,
+} from '../../modules/loop';
+import { getManaValue, getTotalManaBudget } from '../../modules/mana';
 import { useTrackedResources } from '../../composables/useTrackedResources';
 import PanelLayout from '@/ui/components/PanelLayout.vue';
 
-const loop = useLoop();
-const { isLoopRunning, togglePause, manualRestart } = loop;
-const { getManaValue, getTotalManaBudget } = useMana();
 const { visibleResources, getResourceValue } = useTrackedResources();
+const loopCount = getLoopCount();
+const pauseBeforeRestart = getPauseBeforeRestart();
+const pauseOnFailedLoop = getPauseOnFailedLoop();
 
 const manaRemaining = computed(() => formatWhole(getManaValue()));
 const manaBudget = computed(() => formatWhole(getTotalManaBudget()));
@@ -91,7 +98,7 @@ function formatResource(id: string): string {
       </div>
 
       <div class="loop-count">
-        Loop #{{ loop.loopCount.value }}
+        Loop #{{ loopCount }}
       </div>
 
       <div class="time-controls">
@@ -112,7 +119,7 @@ function formatResource(id: string): string {
         <AppTooltip text="Pause the loop before each automatic restart.">
           <label class="toggle">
             <input
-              v-model="loop.pauseBeforeRestart.value"
+              v-model="pauseBeforeRestart"
               type="checkbox"
             >
             <span>Pause before restart</span>
@@ -121,7 +128,7 @@ function formatResource(id: string): string {
         <AppTooltip text="Pause the loop after any action in the queue fails.">
           <label class="toggle">
             <input
-              v-model="loop.pauseOnFailedLoop.value"
+              v-model="pauseOnFailedLoop"
               type="checkbox"
             >
             <span>Pause on failed loop</span>

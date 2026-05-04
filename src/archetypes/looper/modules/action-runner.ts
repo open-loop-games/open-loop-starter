@@ -142,6 +142,23 @@ export function getTimesCompleted(actionId: string): Decimal {
   return Decimal.dZero;
 }
 
+export function getActionProgress(id: string): number {
+  const def = getActionDef(id);
+  if (!def) return 0;
+  const adjusted = computeAdjustedTicks(def);
+  if (Decimal.lte(adjusted, 0)) return 0;
+  const state =
+    def.type === 'basic'
+      ? basicCategory.getEntry(id)?.state
+      : def.type === 'progress'
+        ? progressCategory.getEntry(id)?.state
+        : def.type === 'regular'
+          ? regularCategory.getEntry(id)?.state
+          : undefined;
+  if (!state) return 0;
+  return Math.min(1, Math.max(0, Decimal.div(state.progress.value, adjusted).toNumber()));
+}
+
 function evaluatePrereq(prereq: ActionPrereq): boolean {
   switch (prereq.kind) {
     case 'always':

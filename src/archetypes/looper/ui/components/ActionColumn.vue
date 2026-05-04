@@ -28,19 +28,25 @@
 import { computed, ref } from 'vue';
 import { Icon } from '@iconify/vue';
 import { formatWhole } from 'open-loop-engine';
-import { useActionQueue } from '../../composables/useActionQueue';
-import { useActionRunner } from '../../composables/useActionRunner';
-import { useLoop } from '../../composables/useLoop';
+import {
+  getRepeatLastAction,
+  getAddToTop,
+  getKeepActiveLoopActive,
+  getQueueAddAmount,
+  clearActions,
+} from '../../modules/action-queue';
+import { calcTotalTicksNeeded } from '../../modules/action-runner';
+import { isLoopRunning, togglePause, manualRestart } from '../../modules/loop';
 import CurrentActionList from './CurrentActionList.vue';
 import NextActionList from './NextActionList.vue';
 import CurrentActionDetail from './CurrentActionDetail.vue';
 import AppTooltip from './AppTooltip.vue';
 
-const { repeatLastAction, addToTop, keepActiveLoopActive, queueAddAmount, clearActions } =
-  useActionQueue();
-const { calcTotalTicksNeeded } = useActionRunner();
-const loop = useLoop();
-const isPaused = computed(() => !loop.isLoopRunning());
+const repeatLastAction = getRepeatLastAction();
+const addToTop = getAddToTop();
+const keepActiveLoopActive = getKeepActiveLoopActive();
+const queueAddAmount = getQueueAddAmount();
+const isPaused = computed(() => !isLoopRunning());
 
 const totalMana = computed(() => formatWhole(calcTotalTicksNeeded()));
 
@@ -155,14 +161,14 @@ function onCustomInput(e: Event) {
       <button
         class="btn-sm"
         :data-testid="isPaused ? 'queue-resume' : 'queue-pause'"
-        @click="loop.togglePause"
+        @click="togglePause"
       >
         {{ isPaused ? 'Resume' : 'Pause' }}
       </button>
       <button
         class="btn-sm"
         data-testid="queue-apply"
-        @click="loop.manualRestart"
+        @click="manualRestart"
       >
         Apply now
       </button>

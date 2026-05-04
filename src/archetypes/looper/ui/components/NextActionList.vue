@@ -22,7 +22,12 @@ import {
   monitorForElements,
 } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-import { useActionQueue } from '../../composables/useActionQueue';
+import {
+  getEditList,
+  reorderAction,
+  insertActionAt,
+  getQueueAddAmount,
+} from '../../modules/action-queue';
 import NextActionRow from './NextActionRow.vue';
 import {
   dragStateKey,
@@ -31,7 +36,7 @@ import {
   type DragState,
 } from '../next-action-drag';
 
-const { getEditList, reorderAction, insertActionAt, queueAddAmount } = useActionQueue();
+const queueAddAmount = getQueueAddAmount();
 
 const items = computed(() => getEditList());
 
