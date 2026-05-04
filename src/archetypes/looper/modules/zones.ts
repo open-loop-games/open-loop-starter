@@ -35,6 +35,7 @@ import {
   getSkillProgress,
   Formula,
   persistent,
+  toNumber,
   withPersistentContext,
 } from 'open-loop-engine';
 import { ZONES } from '../data/zones';
@@ -135,7 +136,7 @@ export function getProgressVar(id: string): ProgressVarState {
 export function getProgressLevel(id: string): number {
   const skill = progressSkills.getSkill(id);
   if (!skill) return 0;
-  return new Decimal(skill.level.value).toNumber();
+  return toNumber(skill.level.value);
 }
 
 /** Get all progress vars for a zone */
@@ -235,7 +236,7 @@ export function setRegularTotal(id: string, total: number): void {
   if (!rv) return;
   rv.base = total;
   const chain = regularChains.get(id);
-  rv.total.value = chain ? Math.floor(new Decimal(chain.apply(total)).toNumber()) : total;
+  rv.total.value = chain ? Math.floor(toNumber(chain.apply(total))) : total;
 }
 
 // ============================================================================
@@ -275,7 +276,7 @@ function resizeRegularVar(rvId: string): void {
   for (const pv of PROGRESS_VARS) {
     const scale = pv.scales.find((s) => s.regularVarId === rvId);
     if (!scale) continue;
-    total += getProgressLevel(pv.id) * new Decimal(scale.perLevel).toNumber();
+    total += getProgressLevel(pv.id) * toNumber(scale.perLevel);
   }
   setRegularTotal(rvId, total);
 }

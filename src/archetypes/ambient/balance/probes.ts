@@ -22,7 +22,7 @@
  */
 
 import { computed } from 'vue';
-import { Decimal, processOfflineTime, runUntil, type Engine } from 'open-loop-engine';
+import { Decimal, bn, processOfflineTime, runUntil, type Engine } from 'open-loop-engine';
 import { AutoProducersKey, PrimaryLifetimeKey, PrimaryResourceKey, UnlocksKey } from '../modules';
 import { buildAmbientSimEngine } from './bot';
 
@@ -94,13 +94,11 @@ function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] }
   // so no engine change is needed. unlocks.purchasedCount covers soft
   // reveals fired by `setupAutoPurchase` on threshold cross.
   const sumProducerCounts = (): Decimal =>
-    producers
-      .getAll()
-      .reduce((acc, e) => acc.add(new Decimal(e.producer.count.value)), Decimal.dZero);
+    producers.getAll().reduce((acc, e) => acc.add(bn(e.producer.count.value)), Decimal.dZero);
 
   const findings: PressureFinding[] = [];
-  let lastPrimary = new Decimal(primary.value);
-  let lastRate = new Decimal(headline.value);
+  let lastPrimary = bn(primary.value);
+  let lastRate = bn(headline.value);
   let lastProducerSum = sumProducerCounts();
   let lastUnlocksBought = unlocks.purchasedCount.value;
 
@@ -110,8 +108,8 @@ function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] }
   const result = runUntil({
     engine,
     until: ({ tick }) => {
-      const cur = new Decimal(primary.value);
-      const rate = new Decimal(headline.value);
+      const cur = bn(primary.value);
+      const rate = bn(headline.value);
       const curProducerSum = sumProducerCounts();
       const curUnlocksBought = unlocks.purchasedCount.value;
       const purchasedThisTick =

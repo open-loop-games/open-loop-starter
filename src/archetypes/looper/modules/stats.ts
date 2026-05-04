@@ -25,6 +25,7 @@ import {
   type SkillCategory,
   type Skill,
   type InjectionKey,
+  bn,
   createSkillCategory,
   Formula,
   getSkillProgress,
@@ -104,11 +105,11 @@ export function getTalentSkill(stat: string): Skill {
 // ============================================================================
 
 export function getStatLevel(stat: string): Decimal {
-  return new Decimal(getStatLevelSkill(stat).level.value);
+  return bn(getStatLevelSkill(stat).level.value);
 }
 
 export function getTalentLevel(stat: string): Decimal {
-  return new Decimal(getTalentSkill(stat).level.value);
+  return bn(getTalentSkill(stat).level.value);
 }
 
 /**
@@ -150,12 +151,12 @@ export function getTalentXPProgress(stat: string): number {
 
 export function getLevelXPWindow(stat: string): { current: Decimal; needed: Decimal } {
   const w = getSkillXPWindow(getStatLevelSkill(stat));
-  return { current: new Decimal(w.current), needed: new Decimal(w.needed) };
+  return { current: bn(w.current), needed: bn(w.needed) };
 }
 
 export function getTalentXPWindow(stat: string): { current: Decimal; needed: Decimal } {
   const w = getSkillXPWindow(getTalentSkill(stat));
-  return { current: new Decimal(w.current), needed: new Decimal(w.needed) };
+  return { current: bn(w.current), needed: bn(w.needed) };
 }
 
 // ============================================================================

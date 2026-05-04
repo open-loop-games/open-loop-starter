@@ -5,6 +5,7 @@ import {
   createAchievementCategory,
   createMultiplicativeModifier,
   getCombinedAchievementEffect,
+  toNumber,
   tunable,
   type Achievement,
   type AchievementCategory,
@@ -124,7 +125,7 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
           hidden: def.hidden ?? false,
           effect: (): number => {
             const raw = def.reward ?? unref(achievementMultiplier);
-            return new Decimal(raw).toNumber();
+            return toNumber(raw);
           },
         }),
       });

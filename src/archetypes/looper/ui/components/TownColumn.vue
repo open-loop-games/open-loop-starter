@@ -16,7 +16,7 @@
  */
 
 import { computed, onBeforeUnmount } from 'vue';
-import { Decimal, type DecimalSource, formatWhole } from 'open-loop-engine';
+import { Decimal, type DecimalSource, formatWhole, toNumber } from 'open-loop-engine';
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { HoverCardRoot, HoverCardTrigger, HoverCardPortal, HoverCardContent } from 'reka-ui';
 import {
@@ -101,7 +101,7 @@ interface PieSlice {
  */
 function buildStatPie(weights: Record<string, DecimalSource>): PieSlice[] {
   const entries = Object.entries(weights)
-    .map(([s, w]) => [s, Number(new Decimal(w).toString())] as const)
+    .map(([s, w]) => [s, toNumber(w)] as const)
     .filter(([, w]) => w > 0)
     .sort(([, a], [, b]) => b - a);
 

@@ -1,4 +1,4 @@
-import { Decimal, type Engine } from 'open-loop-engine';
+import { Decimal, bn, type Engine } from 'open-loop-engine';
 import { AchievementsKey, BuildingsKey, PrimaryResourceKey, UpgradesKey } from '../modules';
 import type { ArcBeatProbe, BeatProbe } from '@/balance';
 
@@ -156,8 +156,8 @@ function topProducerHeadlineAtLeast(engine: Engine, factor: number): boolean {
   }
   if (!topEntry) return false;
 
-  const base = new Decimal(topEntry.def.baseRate);
-  const stacked = new Decimal(topEntry.producer.rateChain.apply(base));
+  const base = bn(topEntry.def.baseRate);
+  const stacked = bn(topEntry.producer.rateChain.apply(base));
   if (base.lte(0)) return false;
   return stacked.div(base).gte(factor);
 }

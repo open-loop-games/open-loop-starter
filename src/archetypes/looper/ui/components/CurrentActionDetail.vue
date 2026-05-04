@@ -12,7 +12,7 @@
  */
 
 import { computed } from 'vue';
-import { Decimal, formatWhole, formatTime } from 'open-loop-engine';
+import { Decimal, formatWhole, formatTime, toNumber } from 'open-loop-engine';
 import { getActiveList } from '../../modules/action-queue';
 import { getActionDef } from '../../modules/action-runner';
 import { computeAdjustedTicks } from '../../modules/action-formulas';
@@ -61,7 +61,7 @@ const statExpRows = computed<Array<{ name: string; value: string }>>(() => {
   if (!def.value || !item.value) return [];
   const statExp = item.value.metadata.statExp as Record<string, number | undefined>;
   return Object.entries(def.value.weights)
-    .filter(([, w]) => w && Number(new Decimal(w).toString()) > 0)
+    .filter(([, w]) => w && toNumber(w) > 0)
     .map(([s]) => ({
       name: s,
       value: formatWhole(statExp[s] ?? 0),

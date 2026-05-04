@@ -17,6 +17,7 @@ import {
   type DecimalSource,
   type EngineModule,
   type EngineContext,
+  bn,
   createResource,
   addResource,
   subtractResource,
@@ -63,7 +64,7 @@ export function getMana(): Resource<DecimalSource> {
 
 /** Current mana remaining */
 export function getManaValue(): Decimal {
-  return new Decimal(manaResource.value);
+  return bn(manaResource.value);
 }
 
 /**

@@ -24,6 +24,7 @@ import {
   type EngineContext,
   type ContentRegistry,
   type Loop,
+  bn,
   createContentRegistry,
   GameLoopKey,
 } from 'open-loop-engine';
@@ -134,11 +135,11 @@ export function addCompletionHook(hook: CompletionHook): void {
 
 export function getTimesCompleted(actionId: string): Decimal {
   const bs = basicCategory.getEntry(actionId)?.state;
-  if (bs) return new Decimal(bs.timesCompleted.value);
+  if (bs) return bn(bs.timesCompleted.value);
   const ps = progressCategory.getEntry(actionId)?.state;
-  if (ps) return new Decimal(ps.timesCompleted.value);
+  if (ps) return bn(ps.timesCompleted.value);
   const rs = regularCategory.getEntry(actionId)?.state;
-  if (rs) return new Decimal(rs.timesCompleted.value);
+  if (rs) return bn(rs.timesCompleted.value);
   return Decimal.dZero;
 }
 
@@ -307,7 +308,7 @@ function onDispatchedComplete(adjusted: number): void {
 function grantProgressXP(def: ActionDef): void {
   if (def.type !== 'progress' || def.progressAmount == null) return;
   const pvDef = PROGRESS_VARS.find((pv) => pv.id === def.progressVarId);
-  const expMult = pvDef ? new Decimal(pvDef.expMult) : Decimal.dOne;
+  const expMult = pvDef ? bn(pvDef.expMult) : Decimal.dOne;
   const base = Decimal.mul(def.progressAmount, expMult);
   const state = progressCategory.getEntry(def.id)?.state;
   const multiplied = state ? state.gainChain.apply(base) : base;

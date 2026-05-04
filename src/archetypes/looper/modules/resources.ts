@@ -8,11 +8,12 @@
  */
 
 import {
-  Decimal,
+  type Decimal,
   type DecimalSource,
   type EngineModule,
   type EngineContext,
   type Resource,
+  bn,
   createResource,
   addResource,
   subtractResource,
@@ -46,7 +47,7 @@ export function getAllResources(): ReadonlyMap<ResourceId, Resource<DecimalSourc
 
 /** Get the current value of a resource */
 export function getResourceValue(id: ResourceId): Decimal {
-  return new Decimal(getResource(id).value);
+  return bn(getResource(id).value);
 }
 
 /** Check if player has at least `amount` of a resource */

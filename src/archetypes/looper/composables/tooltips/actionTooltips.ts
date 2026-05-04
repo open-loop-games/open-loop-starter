@@ -12,7 +12,7 @@
  */
 
 import { defineComponent, h, type PropType, type VNodeChild } from 'vue';
-import { Decimal, formatWhole } from 'open-loop-engine';
+import { formatWhole, toNumber } from 'open-loop-engine';
 import type { ActionDef } from '../../data/types';
 import { getStatLevel } from '../../modules/stats';
 import { computeAdjustedTicks } from '../../modules/action-formulas';
@@ -22,12 +22,12 @@ function statFactor(stat: string): number {
 }
 
 function baseCost(def: ActionDef): number {
-  return Number(new Decimal(def.manaCost).toString());
+  return toNumber(def.manaCost);
 }
 
 function renderLocked(def: ActionDef): VNodeChild {
   const entries = Object.entries(def.weights)
-    .map(([s, w]) => [s, Number(new Decimal(w).toString())] as const)
+    .map(([s, w]) => [s, toNumber(w)] as const)
     .filter(([, w]) => w > 0)
     .sort(([, a], [, b]) => b - a);
   const maxWeight = entries[0]?.[1] ?? 0;
@@ -58,7 +58,7 @@ function renderUnlocked(def: ActionDef): VNodeChild {
   }
 
   const statEntries = Object.entries(def.weights)
-    .map(([s, w]) => [s, Number(new Decimal(w).toString())] as const)
+    .map(([s, w]) => [s, toNumber(w)] as const)
     .filter(([, w]) => w > 0)
     .sort(([, a], [, b]) => b - a);
 
@@ -86,7 +86,7 @@ function renderUnlocked(def: ActionDef): VNodeChild {
     nodes.push(h('div', { class: 'att-mana' }, costLabel));
   }
 
-  if (Number(new Decimal(def.expMult).toString()) !== 1) {
+  if (toNumber(def.expMult) !== 1) {
     nodes.push(
       h('div', { class: 'att-row' }, [
         h('span', { class: 'att-label' }, 'Exp mult'),
