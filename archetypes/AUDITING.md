@@ -35,7 +35,7 @@ Engine-derived rules cite the engine symbol the rule maps to and the cookbook re
 |---|---|---|---|
 | 1 | Layering: `data → modules → composables → ui` | — (consumer convention) | — |
 | 2 | Persistence: `withPersistentContext` + category-scoped resets via `Resettable` | `withPersistentContext`, `persistent`, `Resettable`, `ResettableObject`, `createReset` | G-S1 |
-| 3 | Cross-module reads: typed `ctx.provide` / `ctx.inject` keys; key discrimination (handles, not glue) | `EngineContext.provide`, `EngineContext.inject`, `InjectionKey` | G-S2 |
+| 3 | Cross-module reads: typed `ctx.provide` / `ctx.inject` keys; key discrimination (handles, not glue, not engine-registry duplicates) | `EngineContext.provide`, `EngineContext.inject`, `InjectionKey`, `ResourceRegistryKey`, `CategoriesKey`, `ChainRegistryKey` | G-S2 |
 | 4 | Resource arithmetic: Level-1 helpers | `addResource`, `subtractResource`, `hasResource`, `displayResource`, `trackBest`, `trackTotal`, `resetResource` | G-S3 |
 | 5 | Content registration: category factories with `mapState` for per-instance state | `createSkillCategory`, `createPurchasableCategory` (`mapState`), `createAchievementCategory`, `createProducerCategory` (`mapState`), `createChallengeCategory` | G-S4 |
 | 6 | Per-instance scaling: `createScalingPurchasable` with the `effect: (amount) => Formula` shape; `createPurchasableGroup` for batch ops | `createScalingPurchasable`, `createPurchasableGroup`, `Formula`, `FormulaSource` | G-S5 |
@@ -87,16 +87,25 @@ Engine-derived rules cite the engine symbol the rule maps to and the cookbook re
 
 **Rule.** Cross-module state reads go through `ctx.provide(StateKey, state)` at install time and `ctx.inject(StateKey)` at the consuming site. `StateKey: InjectionKey<StateAPI>` lives in a per-archetype `injection-keys.ts`. The injection key exposes a narrow `StateAPI` interface — typically getters and methods, not the raw module's internal `let` slots.
 
-**Rule (key discrimination).** Each provided key is a *typed handle to engine-managed state* — a category instance from `createXCategory`, a resource from `createResource`, an `OverrideRegistry` from `createOverrideRegistry`, a long-lived ref derived by an engine helper like `trackTotal`. Values that can be derived from another key in a one-liner, thin `computed()` wrappers, raw config bags exposed to UI, and `persistent()` refs that shadow engine-tracked state do **not** earn keys. The discrimination test: if the value can be derived from another key's handle in a one-liner, inline it at the call site or make it a composable; minting a key freezes a derived shape into the cross-module contract and propagates by copy-paste once it exists.
+**Rule (key discrimination).** Each provided key is a *typed handle to engine-managed state without a parallel engine-published registry* — an `OverrideRegistry` from `createOverrideRegistry`, a `Sequencer`, a `Loop`, a long-lived ref derived by an engine helper like `trackTotal`, a custom composite `*Api` interface that aggregates module exports. Values that can be derived from another key in a one-liner, thin `computed()` wrappers, raw config bags exposed to UI, and `persistent()` refs that shadow engine-tracked state do **not** earn keys. The discrimination test: if the value can be derived from another key's handle in a one-liner, inline it at the call site or make it a composable; minting a key freezes a derived shape into the cross-module contract and propagates by copy-paste once it exists.
+
+**Rule (engine-published registries).** Three engine-managed handle types are auto-published on a per-engine registry, parallel to how `createModifierChain` auto-registers in `ChainRegistry`:
+
+- `Resource` → `ResourceRegistryKey`
+- `ProducerCategory` / `PurchasableCategory` / `AchievementCategory` / `ChallengeCategory` / `SkillCategory` → `CategoriesKey`
+- `ModifierChain` → `ChainRegistryKey`
+
+Consumer-side lookup goes through the registry by id, not via a parallel archetype-side `InjectionKey<T>`. The find-by-id helper shape is one helper at the top of the consumer module — `findCategoryById(cats, id)` in `scaler/modules/transcend.ts` is the post-OL-837 canonical example. Other engine handles that *don't* self-publish (`Reset`, `Sequencer`, `Loop`, `OverrideRegistry`, custom `*Api` aggregators) remain legitimate key values per the discrimination rule above.
 
 **Anti-pattern.** `export let stateName: State | null = null` populated inside `install()` and read across modules via `import { stateName } from './foo'`. Adjacent variants: `import { getMana } from './mana'` calling a top-level export function that closes over module-scope state. Both bypass typed injection — order-of-init becomes load-bearing, every read needs `?.` against a possibly-null shadow registry, HMR can stale-bind. The fact that an archetype's `let X` slot holds an engine-primitive handle doesn't redeem the export channel.
 
-**Anti-pattern (glue keys).** Four recurring shapes, all flag-local refactors:
+**Anti-pattern (glue keys).** Five recurring shapes, all flag-local refactors:
 
 - *Derivable wrapper.* Key whose value is a one-line transformation of another key's handle. Example: `AllRateChainsKey: ModifierChain[]` constructed as `buildings.getAll().map(e => e.producer.rateChain)`. Inline at the call site.
 - *Thin computed wrapper.* Key whose value is a `computed()` that thinly wraps an engine method. Example: `HeadlineRateKey: ComputedRef<DecimalSource>` constructed as `computed(() => buildings.getTotalRate(primary))`. Composable-local scope is correct; the cross-module contract isn't.
 - *Config exposure.* Key whose value is the archetype's raw data bag (e.g. `ProducerDataKey: ProducerData`). UI should reach engine instances (`upgrades.getEntry(id).def`), not the config that fed registration.
 - *Engine-state duplicate.* Key wrapping a `persistent()` ref whose semantics are already tracked by an engine object. Example: a `ClickStateKey` exposing `persistent('clickCount')` when `clickProducer.count` (or, for activation counts not engine-tracked, a `mapState`-scoped counter on the click def) is the authoritative track. The fix is `mapState`, not a flat parallel persistent.
+- *Engine-registry duplicate.* Key whose value is a handle the engine already self-publishes — `Resource` (in `ResourceRegistryKey`), any `XCategory` (in `CategoriesKey`), `ModifierChain` (in `ChainRegistryKey`). Examples: `PrimaryResourceKey: InjectionKey<Resource<DecimalSource>>`, `BuildingsKey: InjectionKey<ProducerCategory<…>>`, `IncomeRateChainKey: InjectionKey<ModifierChain>`. The handle is legitimate; the parallel injection key is redundant. Drop the key and the `ctx.provide`; consumers look up the specific instance through the registry by id (the `findCategoryById(cats, id)` helper in `scaler/modules/transcend.ts` is the canonical shape). Side-keyed records (`Record<Side, InjectionKey<XCategory<…>>>`) are the same anti-pattern with a per-side wrapper — collapse to per-side `findByName` lookups against the registry.
 
 A passthrough composable (`useFooKey() { return useModule(FooKey) }` with nothing else in the body) is the downstream tell: when a composable adds nothing beyond `inject`, either the composable disappears (callers `useModule(FooKey)` directly) or the key disappears (and the composable derives from a kept handle). Names ending in `Data` / `All*` / `*State` / `*Rate` / `*Stats` warrant a discrimination check — they tag glue shapes more often than they tag legitimate handles.
 
@@ -105,11 +114,12 @@ A passthrough composable (`useFooKey() { return useModule(FooKey) }` with nothin
 **Audit criterion.**
 - `grep -rn "^export let.*State\|^export let.*: .* | null" src/archetypes/<name>/modules/` returns zero hits, or only legitimately-ephemeral state with co-located transience comments.
 - Every `ctx.inject(Key)` call site has a corresponding `ctx.provide(Key, ...)` somewhere in the archetype.
-- For each `ctx.provide(Key, value)`: either `value` is a direct engine object (a category, a resource, an `OverrideRegistry`, the result of `createX(...)`), or its construction lines are not derivable from another provided key. The four glue shapes above are the falsification list.
+- For each `ctx.provide(Key, value)`: `value` is not a `Resource`, an `XCategory`, or a `ModifierChain` — those go through the engine-published registries, not parallel keys. The five glue shapes above are the falsification list.
+- `grep -rn "InjectionKey<\(Resource\|.*Category\|ModifierChain\)" src/archetypes/<name>/`: zero hits. These three handle types are engine-self-published; archetype-side keys for them are flag-local.
 - Per-module `ctx.provide` count: a single module providing 5+ keys is a likely flag — re-evaluate which are typed handles vs which are wrappers.
 - `grep -rn "return useModule(" src/archetypes/<name>/composables/`: each one-line passthrough composable points at either a key worth deleting or a composable worth deleting.
 
-**Threshold.** Zero cross-module shadow-registry exports. Zero glue-shape keys. A module providing keys for engine-managed state instances passes regardless of count; a module providing 5+ keys with values that pattern-match the four glue shapes is a structural flag.
+**Threshold.** Zero cross-module shadow-registry exports. Zero glue-shape keys (including engine-registry duplicates: `Resource`, `XCategory`, `ModifierChain` go through `ResourceRegistryKey` / `CategoriesKey` / `ChainRegistryKey`). A module providing keys for engine-managed state *not* covered by an engine-published registry — `OverrideRegistry`, `Sequencer`, `Loop`, `Reset`, custom `*Api` aggregators — passes regardless of count; a module providing 5+ keys with values that pattern-match the five glue shapes is a structural flag.
 
 ---
 
@@ -137,6 +147,7 @@ A passthrough composable (`useFooKey() { return useModule(FooKey) }` with nothin
 - Hand-rolled `Map<string, T>` shadow registries for jobs/upgrades/skills/achievements that the engine has a category factory for.
 - Hand-rolled per-def `withPersistentContext(def.id, () => …)` blocks for what `mapState` on a category factory would scope automatically. Calling code typically appears as a `createCategoryShim(...)`-style helper — a strong signal the author didn't find `mapState`.
 - `categories.ts` (or `categories-publish.ts`) aggregator modules that re-inject owner modules and re-publish the union under `CategoriesKey`. Redundant with engine self-publish; the back-compat `Map.set` overwrite keeps them working but the engine pre-provides the same inventory. Each instance is flag-local — drop the module and remove its registration from the module list.
+- Per-category injection keys — `UpgradesKey: InjectionKey<PurchasableCategory<…>>`, `BuildingsKey: InjectionKey<ProducerCategory<…>>`, `AchievementsKey: InjectionKey<AchievementCategory<…>>`, etc. The consume-side mirror of the aggregator-overwrite anti-pattern: see § 3's *engine-registry duplicate* — the engine's `CategoriesKey` self-publish makes both shapes redundant. Consumers look up specific categories via `findCategoryById(cats, id)`.
 
 **Audit criterion.**
 - For each content domain (skills, upgrades, achievements, jobs, producers, challenges): is there a `createXCategory` call, or a hand-rolled `Map`/`Array` doing the same job?
