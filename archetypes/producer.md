@@ -120,6 +120,8 @@ export interface ProducerBalance {
 
 **Override semantics:** `boot.ts` exports `createProducerEngine(overrides?)` that accepts a flat-category deep-partial — `{ producers?, upgrades?, achievements?, balance? }` — with per-entity replacement keyed by `id` and deep-merge over balance. Sim tests and workbench perturbation route through this factory. The addressable shape *is* the TypeScript type over the data; there is no synthetic vars layer and no codegen round-trip.
 
+**Balance methodology:** Producer's `balance/` directory is the in-tree reference for methodology #1 (`solve.ts`: spec/calibrate/lock via Gauss-Seidel bisection) and methodology #2 (`predict.ts` + `spec.ts`: triangular multi-resource walker over engine-as-oracle queries; `verify.ts`: predictor-vs-sim diff for engine-side primitive drift detection). See `archetypes/BALANCING.md § Theme 3` for the full methodology kit and `§ Engine as oracle` for the unifying primitive that ties #1 and #2. Subsystem classification: Pure closed-form, triangular composition row — `balance/shape.ts § PRODUCER_SUBSYSTEMS`.
+
 ---
 
 ## 5. Content sketch
