@@ -1,15 +1,24 @@
 /**
- * <Archetype> balance solver — engine as oracle.
+ * <Archetype> balance solver — methodology #1 (spec/calibrate/lock).
  *
- * Scaffold for the Gauss-Seidel + scope-push solver pattern. Each beat
- * gets bisected against the bot-driven engine by pushing the candidate
- * value onto the archetype's tuning `OverrideRegistry` and running
- * `runUntil`. One engine per solve-pass — bisection iterations reset state
- * via `saveManager.importSave(initialBlob)` instead of rebuilding.
+ * Scaffold for the Gauss-Seidel + scope-push bisection pattern, per
+ * `archetypes/BALANCING.md § Theme 3 #1`. Each beat gets bisected against
+ * the bot-driven engine by pushing the candidate value onto the
+ * archetype's tuning `OverrideRegistry` and running `runUntil`. One engine
+ * per solve-pass — bisection iterations reset state via
+ * `saveManager.importSave(initialBlob)` instead of rebuilding.
  *
- * Invoke as a vite-node script: `pnpm balance:solve:<archetype>`. Prints a
- * proposed-patch report. Does NOT mutate data files — the human picks and
- * edits scaffolding based on the output, per `archetypes/BALANCING.md`.
+ * Methodology #1 vs #2: this file runs the bot via `runUntil` per
+ * bisection sample (slow but correct). For archetypes with closed-form
+ * predictors (#2 in `predict.ts`), `BALANCING.md § Engine as oracle`
+ * describes a future bridge that bisects against the predictor instead,
+ * with sim runs only at verify (`verify.ts`). For now, this solver
+ * remains the production loop; #2 is additive.
+ *
+ * Invoke as a vite-node script: `pnpm exec vite-node
+ * src/archetypes/<archetype>/balance/solve.ts`. Prints a proposed-patch
+ * report. Does NOT mutate data files — the human picks and edits
+ * scaffolding based on the output, per `archetypes/BALANCING.md`.
  *
  * Worked example: `src/archetypes/producer/balance/solve.ts`. Read it for
  * the concrete bracket sizing (bisectTuner `lo`/`hi` per beat), chained

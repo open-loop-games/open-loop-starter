@@ -1,9 +1,20 @@
 /**
  * <Archetype> balance bot — deterministic EngineModule.
  *
- * Scaffold. The bot plays the archetype under a fixed policy so the solver
- * in `solve.ts` can bisect a parameter until a beat lands on target. The
- * policy is deterministic: extra seeds confirm determinism, not correctness.
+ * Scaffold. The bot plays the archetype under a fixed policy. Two consumers:
+ *
+ *   - **Methodology #1** (`solve.ts`): bisect a parameter until a beat lands
+ *     on target. The bot drives the engine via `runUntil` per sample.
+ *   - **Methodology #2** (`verify.ts`): walk the bot's actual purchase
+ *     sequence under sim, then compare against `predict.ts`'s closed-form
+ *     prediction of the same sequence. The diff per-waypoint is the
+ *     regression catch for engine-side `getCost`/`getTotalRate` drift.
+ *
+ * For methodology-#1-only archetypes (ambient), this bot's deterministic
+ * policy is the whole solver loop. For #1+#2 archetypes (producer, scaler
+ * antimatter), the bot also feeds the verify-driver.
+ *
+ * Policy is deterministic: extra seeds confirm determinism, not correctness.
  *
  * Load-bearing invariants — the solver's `build-once + importSave`
  * iteration flow depends on all three:
