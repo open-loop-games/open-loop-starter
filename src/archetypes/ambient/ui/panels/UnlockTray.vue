@@ -13,12 +13,21 @@ const scene = useModule(SceneKey);
 const lifetime = useModule(PrimaryLifetimeKey);
 const { format } = useFormatting();
 
+type Kind = 'producer' | 'scene' | 'affordance';
+
 interface Cell {
   id: string;
   def: UnlockDef;
   label: string;
   earned: boolean;
   reveals: string;
+  kind: Kind;
+}
+
+function kindOf(def: UnlockDef): Kind {
+  if (def.reveals.kind === 'producer') return 'producer';
+  if (def.reveals.kind === 'scene-variant') return 'scene';
+  return 'affordance';
 }
 
 function describeReveals(def: UnlockDef): string {
@@ -48,9 +57,10 @@ const cells = computed<Cell[]>(() =>
     return {
       id: def.id,
       def,
-      label: earned ? def.label : '?',
+      label: earned ? def.label : 'unfound',
       earned,
       reveals: describeReveals(def),
+      kind: kindOf(def),
     };
   }),
 );
@@ -67,23 +77,83 @@ function progressLabel(def: UnlockDef, earned: boolean): string {
 </script>
 
 <template>
-  <section class="unlock-tray">
-    <h3 class="panel-title">
-      Discoveries · {{ earnedCount }} / {{ cells.length }}
-    </h3>
-    <ul class="cells">
+  <section class="discoveries">
+    <header class="discoveries__head">
+      <h3 class="discoveries__title">
+        Discoveries
+      </h3>
+      <span class="discoveries__count">
+        <span class="discoveries__count-value">{{ earnedCount }}</span>
+        <span class="discoveries__count-of">of</span>
+        <span class="discoveries__count-value">{{ cells.length }}</span>
+      </span>
+    </header>
+    <ul class="discoveries__cells">
       <Tooltip
         v-for="c in cells"
         :key="c.id"
         :side-offset="6"
       >
         <li
-          class="cell"
+          class="specimen"
           :data-earned="c.earned ? 'true' : 'false'"
+          :data-kind="c.kind"
           :data-testid="`unlock-${c.id}`"
           tabindex="0"
         >
-          {{ c.label }}
+          <span
+            class="specimen__kind"
+            aria-hidden="true"
+          >
+            <svg
+              v-if="c.kind === 'producer'"
+              viewBox="0 0 16 16"
+            >
+              <path
+                d="M8 14 V 6 M5 9 Q 8 6 8 9 M11 9 Q 8 6 8 9"
+                stroke="currentColor"
+                stroke-width="1.1"
+                fill="none"
+              />
+            </svg>
+            <svg
+              v-else-if="c.kind === 'scene'"
+              viewBox="0 0 16 16"
+            >
+              <rect
+                x="2"
+                y="3"
+                width="12"
+                height="10"
+                stroke="currentColor"
+                stroke-width="1"
+                fill="none"
+              />
+              <path
+                d="M3 11 L 7 7 L 9 9 L 13 6"
+                stroke="currentColor"
+                stroke-width="1"
+                fill="none"
+              />
+            </svg>
+            <svg
+              v-else
+              viewBox="0 0 16 16"
+            >
+              <path
+                d="M3 4 H 13 V 11 L 8 14 L 3 11 Z"
+                stroke="currentColor"
+                stroke-width="1"
+                fill="none"
+              />
+            </svg>
+          </span>
+          <span class="specimen__label">{{ c.label }}</span>
+          <span
+            v-if="c.earned"
+            class="specimen__stamp"
+            aria-hidden="true"
+          >&#10003;</span>
         </li>
         <template #content>
           <div class="cell-tip">
@@ -107,70 +177,209 @@ function progressLabel(def: UnlockDef, earned: boolean): string {
 </template>
 
 <style scoped>
-.unlock-tray {
+.discoveries {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-sm);
-  padding: var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
-.panel-title {
-  font-size: 0.85em;
-  letter-spacing: 0.08em;
+.discoveries__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 14px;
+  padding: 4px 0 6px;
+}
+
+.discoveries__title {
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 0.78em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--almanac-moss, var(--color-text-muted));
   margin: 0;
 }
 
-.cells {
+.discoveries__count {
+  font-family: var(--font-body, Georgia, serif);
+  font-style: italic;
+  font-size: 1em;
+  color: var(--almanac-pencil, var(--color-text-muted));
+  font-variant-numeric: tabular-nums oldstyle-nums;
+}
+
+.discoveries__count-value {
+  color: var(--almanac-evergreen, var(--color-text));
+  font-weight: 600;
+}
+
+.discoveries__count-of {
+  margin: 0 4px;
+  opacity: 0.7;
+}
+
+.discoveries__head::after {
+  content: '';
+}
+
+.discoveries__cells {
   list-style: none;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--gap-sm);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
 }
 
-.cell {
-  padding: 6px 8px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 0.82em;
-  text-align: center;
-  color: var(--color-text-muted);
+.discoveries__head {
+  position: relative;
+}
+
+.discoveries__head + .discoveries__cells::before {
+  content: '';
+  display: block;
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--almanac-rule, var(--color-border));
+  opacity: 0.5;
+  margin-bottom: 6px;
+}
+
+/* ─── Specimen card ──────────────────────────────────────────────────── */
+.specimen {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  min-height: 48px;
+  background: var(--almanac-cream, var(--color-surface));
+  border: 1px solid var(--almanac-rule, var(--color-border));
+  border-radius: 2px;
+  font-family: var(--font-body, Georgia, serif);
+  font-size: 1em;
+  color: var(--almanac-pencil, var(--color-text-muted));
   cursor: default;
+  transition:
+    color 140ms ease-out,
+    border-color 140ms ease-out;
 }
 
-.cell:focus-visible {
-  outline: 2px solid var(--color-primary);
+.specimen:focus-visible {
+  outline: 2px solid var(--almanac-evergreen, var(--color-primary));
   outline-offset: -2px;
 }
 
-.cell[data-earned='true'] {
-  color: var(--color-text);
-  border-color: var(--color-primary);
-  background: var(--color-surface);
+.specimen[data-earned='false'] {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0,
+      transparent 6px,
+      rgba(168, 158, 139, 0.06) 6px,
+      rgba(168, 158, 139, 0.06) 7px
+    ),
+    var(--almanac-paper, var(--color-bg));
+  border-style: dashed;
+  border-color: var(--almanac-rule-soft, rgba(168, 158, 139, 0.32));
 }
 
+.specimen[data-earned='false'] .specimen__label {
+  font-style: italic;
+  color: var(--almanac-pencil, var(--color-text-muted));
+  opacity: 0.65;
+}
+
+.specimen[data-earned='true'] {
+  color: var(--almanac-evergreen, var(--color-text));
+  border-color: var(--almanac-rule, var(--color-border));
+}
+
+.specimen[data-earned='true'] .specimen__label {
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--almanac-evergreen, var(--color-text));
+}
+
+.specimen__kind {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: inherit;
+}
+
+.specimen__kind svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.specimen[data-earned='true'][data-kind='producer'] .specimen__kind {
+  color: var(--almanac-moss-bright, var(--color-success));
+}
+
+.specimen[data-earned='true'][data-kind='scene'] .specimen__kind {
+  color: var(--almanac-moss, var(--color-text-muted));
+}
+
+.specimen[data-earned='true'][data-kind='affordance'] .specimen__kind {
+  color: var(--almanac-stamp, var(--color-danger));
+}
+
+.specimen__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.95em;
+}
+
+.specimen__stamp {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 0.85em;
+  color: var(--almanac-stamp, var(--color-danger));
+  opacity: 0.65;
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+
+/* ─── Tooltip body ───────────────────────────────────────────────────── */
 .cell-tip {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  font-family: var(--font-body, Georgia, serif);
 }
 
 .cell-tip__name {
-  font-weight: 600;
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.05em;
 }
 
 .cell-tip__reveals {
-  opacity: 0.85;
+  opacity: 0.92;
+  font-size: 1em;
 }
 
 .cell-tip__progress {
   margin-top: 4px;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.75;
+  padding-top: 4px;
+  border-top: 1px solid var(--almanac-rule-soft, rgba(168, 158, 139, 0.32));
+  font-style: italic;
+  font-variant-numeric: tabular-nums oldstyle-nums;
+  font-size: 0.92em;
+  opacity: 0.85;
 }
 </style>

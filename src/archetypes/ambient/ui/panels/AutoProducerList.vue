@@ -5,6 +5,8 @@ import { useAutoProducers, type AutoProducerRow } from '../../composables/useAut
 import { getAutoProducers, getPrimaryResource, getUnlocks } from '../../modules';
 import { useFormatting } from '@/composables/useFormatting';
 import RateBreakdownTooltip from '@/ui/components/RateBreakdownTooltip.vue';
+import Button from '@/ui/components/Button.vue';
+import PlantingGlyph from '../components/PlantingGlyph.vue';
 
 const rows = useAutoProducers();
 const unlocks = getUnlocks();
@@ -13,7 +15,6 @@ const primary = getPrimaryResource();
 const totalRate = computed(() => buildings.getTotalRate(primary));
 const { format } = useFormatting();
 
-// Producer → unlock-id lookup (each producer reveal in the unlock category).
 const producerUnlockId = new Map<string, string>();
 for (const entry of unlocks.getAll()) {
   if (entry.def.reveals.kind === 'producer') {
@@ -36,16 +37,27 @@ function buy(row: AutoProducerRow): void {
 function totalPerSecond(row: AutoProducerRow) {
   return Decimal.mul(row.rate.value, row.count.value);
 }
+
+const VERBS: Record<string, string> = {
+  planter: 'Plant',
+  coop: 'Build',
+  pond: 'Dig',
+  pasture: 'Open',
+  orchard: 'Sow',
+};
+function verbFor(id: string): string {
+  return VERBS[id] ?? 'Add';
+}
 </script>
 
 <template>
-  <section class="producer-list">
-    <h3 class="panel-title">
-      Garden
+  <section class="plantings">
+    <h3 class="plantings__title">
+      Plantings
     </h3>
     <ul
       v-if="visibleRows.length"
-      class="rows"
+      class="plantings__rows"
     >
       <RateBreakdownTooltip
         v-for="row in visibleRows"
@@ -55,125 +67,215 @@ function totalPerSecond(row: AutoProducerRow) {
         breakdown-title="Rate each"
       >
         <li
-          class="row"
+          class="planting"
           :data-testid="`producer-${row.def.id}`"
         >
-          <div class="row-head">
-            <span class="row-name">{{ row.def.name }}</span>
-            <span class="row-count">{{ format(row.count.value, 0) }}</span>
+          <span class="planting__glyph">
+            <PlantingGlyph :producer-id="row.def.id" />
+          </span>
+          <div class="planting__head">
+            <span class="planting__name">{{ row.def.name }}</span>
+            <span
+              class="planting__leader"
+              aria-hidden="true"
+            />
+            <span class="planting__count">{{ format(row.count.value, 0) }}</span>
           </div>
-          <div class="row-meta">
-            <span>{{ format(row.rate.value, 1) }} /sec each</span>
-            <span>total {{ format(totalPerSecond(row), 1) }} /sec</span>
+          <div class="planting__meta">
+            {{ format(row.rate.value, 1) }} /sec each &middot; {{ format(totalPerSecond(row), 1) }}
+            total
           </div>
           <Button
-            class="buy-button"
+            class="planting__buy"
             :disabled="!row.canAfford(1)"
             :data-testid="`buy-${row.def.id}`"
             @click="buy(row)"
           >
-            <span class="buy-label">Buy</span>
-            <span class="buy-cost">{{ format(row.getCost(1), 0) }}</span>
+            <span class="planting__buy-label">{{ verbFor(row.def.id) }}</span>
+            <span class="planting__buy-cost">{{ format(row.getCost(1), 0) }}</span>
           </Button>
         </li>
       </RateBreakdownTooltip>
     </ul>
     <p
       v-else
-      class="empty"
+      class="plantings__empty"
     >
-      Tilling the earth…
+      Tilling the earth&hellip;
     </p>
   </section>
 </template>
 
 <style scoped>
-.producer-list {
+.plantings {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-sm);
-  padding: var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
-.panel-title {
-  font-size: 0.85em;
-  letter-spacing: 0.08em;
+.plantings__title {
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 0.78em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
-  margin: 0 0 var(--gap-sm);
+  color: var(--almanac-moss, var(--color-text-muted));
+  text-align: center;
+  margin: 0;
 }
 
-.rows {
+.plantings__title::after {
+  content: '';
+  display: block;
+  width: 80px;
+  height: 1px;
+  background: var(--almanac-rule, var(--color-border));
+  margin: 6px auto 12px;
+}
+
+.plantings__rows {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--gap-sm);
+  gap: 0;
+  margin: 0;
+  padding: 0;
 }
 
-.row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--gap-sm);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-}
-
-.row-head {
-  display: flex;
-  justify-content: space-between;
-  font-weight: 600;
-}
-
-.row-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.78em;
-  color: var(--color-text-muted);
-}
-
-.buy-button {
-  display: flex;
-  justify-content: space-between;
+.planting {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
   align-items: baseline;
-  gap: var(--gap-sm);
-  margin-top: 4px;
-  padding: 6px 10px;
-  font-size: 0.85em;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
-  cursor: pointer;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--almanac-rule-soft, rgba(168, 158, 139, 0.32));
 }
 
-.buy-button:disabled {
-  cursor: default;
-  color: var(--color-text-muted);
-  opacity: 0.6;
+.planting:last-child {
+  border-bottom: none;
 }
 
-.buy-button:not(:disabled):hover {
-  background: var(--color-surface-hover);
+.planting__glyph {
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--almanac-moss, var(--color-text-muted));
 }
 
-.buy-label {
-  font-weight: 600;
-  letter-spacing: 0.04em;
+.planting__head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
 }
 
-.buy-cost {
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.empty {
-  color: var(--color-text-muted);
-  font-size: 0.85em;
+.planting__name {
+  font-family: var(--font-display, Georgia, serif);
   font-style: italic;
+  font-weight: 500;
+  font-size: 1.2em;
+  color: var(--almanac-evergreen, var(--color-text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.planting__leader {
+  border-bottom: 1px dotted var(--almanac-rule, var(--color-border));
+  transform: translateY(-3px);
+  min-width: 12px;
+  opacity: 0.55;
+}
+
+.planting__count {
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 1.05em;
+  color: var(--almanac-evergreen, var(--color-text));
+  font-variant-numeric: tabular-nums oldstyle-nums;
+}
+
+.planting__meta {
+  font-family: var(--font-body, Georgia, serif);
+  font-style: italic;
+  font-size: 0.95em;
+  color: var(--almanac-moss, var(--color-text-muted));
+  font-variant-numeric: tabular-nums oldstyle-nums;
+  grid-column: 2;
+}
+
+.planting__buy {
+  grid-row: 1 / span 2;
+  align-self: center;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--almanac-rule, var(--color-border));
+  border-radius: 2px;
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1em;
+  color: var(--almanac-evergreen, var(--color-text));
+  cursor: pointer;
+  transition:
+    background 140ms ease-out,
+    color 140ms ease-out,
+    border-color 140ms ease-out;
+}
+
+.planting__buy:hover:not(:disabled) {
+  background: var(--almanac-evergreen, var(--color-primary));
+  color: var(--almanac-paper, var(--color-bg));
+  border-color: var(--almanac-evergreen, var(--color-primary));
+}
+
+.planting__buy:disabled {
+  cursor: default;
+  color: var(--almanac-pencil, var(--color-text-muted));
+  border-color: var(--almanac-rule-soft, rgba(168, 158, 139, 0.32));
+  opacity: 0.7;
+}
+
+.planting__buy-label {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.planting__buy-cost {
+  font-style: italic;
+  font-variant-numeric: tabular-nums oldstyle-nums;
+  color: var(--almanac-moss, var(--color-text-muted));
+}
+
+.planting__buy:hover:not(:disabled) .planting__buy-cost {
+  color: var(--almanac-paper, var(--color-bg));
+  opacity: 0.85;
+}
+
+.planting__buy:disabled .planting__buy-cost {
+  color: var(--almanac-pencil, var(--color-text-muted));
+}
+
+.plantings__empty {
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  font-size: 0.95em;
+  color: var(--almanac-moss, var(--color-text-muted));
+  text-align: center;
+  padding: var(--gap);
+  margin: 0;
 }
 </style>
