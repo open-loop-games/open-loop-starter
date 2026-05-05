@@ -71,7 +71,7 @@ describe('ScopeBreadcrumb', () => {
     await nextTick();
 
     const outerCrumb = wrapper.find('[data-crumb-depth="1"] .scope-breadcrumb__crumb');
-    await outerCrumb.trigger('click');
+    await outerCrumb.trigger('pointerdown');
 
     expect(stack.depth).toBe(1);
     expect(stack.path).toEqual(['outer']);
@@ -91,7 +91,7 @@ describe('ScopeBreadcrumb', () => {
 
     const rootCrumb = wrapper.find('[data-crumb-depth="0"] .scope-breadcrumb__crumb');
     expect(rootCrumb.text()).toBe('Home');
-    await rootCrumb.trigger('click');
+    await rootCrumb.trigger('pointerdown');
 
     expect(stack.depth).toBe(0);
 
@@ -118,7 +118,7 @@ describe('ScopeBreadcrumb', () => {
     const wrapper = mount(ScopeBreadcrumb, { props: { stack } });
     await nextTick();
 
-    await wrapper.find('.scope-breadcrumb__back').trigger('click');
+    await wrapper.find('.scope-breadcrumb__back').trigger('pointerdown');
     expect(stack.depth).toBe(1);
 
     wrapper.unmount();

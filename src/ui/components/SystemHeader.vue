@@ -14,6 +14,7 @@
 <script setup lang="ts">
 import { inject, onUnmounted, watch } from 'vue';
 import type { Engine } from 'open-loop-engine';
+import Button from '@/ui/components/Button.vue';
 import Popover from '@/ui/components/Popover.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
@@ -62,20 +63,32 @@ function openSettings(): void {
 
 <template>
   <header class="olui-system-header">
-    <slot name="title" :return-to-slots="() => emit('returnToSlots')">
-      <button
+    <slot
+      name="title"
+      :return-to-slots="() => emit('returnToSlots')"
+    >
+      <Button
         class="olui-system-header__title-btn"
         data-testid="return-to-slots"
         title="Save and return to save picker"
         @click="emit('returnToSlots')"
       >
         <h2>{{ appName }}</h2>
-      </button>
+      </Button>
     </slot>
     <div class="olui-system-header__actions">
-      <Popover align="end" :side-offset="8">
+      <Popover
+        align="end"
+        :side-offset="8"
+      >
         <template #trigger>
-          <button class="btn-sm" data-testid="open-info" aria-label="About">?</button>
+          <Button
+            class="btn-sm"
+            data-testid="open-info"
+            aria-label="About"
+          >
+            ?
+          </Button>
         </template>
         <slot name="about">
           <h4 style="margin-bottom: 6px">
@@ -84,8 +97,20 @@ function openSettings(): void {
         </slot>
       </Popover>
       <slot name="extra-actions" />
-      <button class="btn-sm" data-testid="open-save" @click="openSave">Save</button>
-      <button class="btn-sm" data-testid="open-settings" @click="openSettings">Settings</button>
+      <Button
+        class="btn-sm"
+        data-testid="open-save"
+        @click="openSave"
+      >
+        Save
+      </Button>
+      <Button
+        class="btn-sm"
+        data-testid="open-settings"
+        @click="openSettings"
+      >
+        Settings
+      </Button>
     </div>
   </header>
 </template>

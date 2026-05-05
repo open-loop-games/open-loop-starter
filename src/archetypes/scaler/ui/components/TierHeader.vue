@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { format, formatWhole } from 'open-loop-engine';
+import Button from '@/ui/components/Button.vue';
 import type { TierState } from '../../composables/useTier';
 
 const props = defineProps<{ tier: TierState }>();
@@ -43,19 +44,13 @@ function performReset(): void {
         <span class="scaler-tier-header__currency-amount">{{ currencyAmount }}</span>
         <span class="scaler-tier-header__currency-label">{{ tier.display.currencyDisplay }}</span>
       </div>
-      <div
-        v-if="shardRate !== null"
-        class="scaler-tier-header__rate"
-      >
+      <div v-if="shardRate !== null" class="scaler-tier-header__rate">
         {{ shardRate }}
       </div>
     </div>
 
-    <div
-      v-if="tier.reset"
-      class="scaler-tier-header__reset"
-    >
-      <button
+    <div v-if="tier.reset" class="scaler-tier-header__reset">
+      <Button
         class="scaler-tier-header__reset-btn"
         :disabled="!resetReady"
         :data-state="resetReady ? 'ready' : 'pending'"
@@ -63,16 +58,12 @@ function performReset(): void {
       >
         <span class="scaler-tier-header__reset-label">
           {{ tier.display.title }}
-          <span
-            v-if="resetReady && projectedGain !== null"
-            class="scaler-tier-header__reset-gain"
-          >+{{ projectedGain }} {{ tier.display.currencyDisplay }}</span>
-          <span
-            v-else
-            class="scaler-tier-header__reset-next"
-          >Not yet ready</span>
+          <span v-if="resetReady && projectedGain !== null" class="scaler-tier-header__reset-gain"
+            >+{{ projectedGain }} {{ tier.display.currencyDisplay }}</span
+          >
+          <span v-else class="scaler-tier-header__reset-next">Not yet ready</span>
         </span>
-      </button>
+      </Button>
     </div>
   </header>
 </template>

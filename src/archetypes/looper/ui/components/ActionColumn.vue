@@ -27,6 +27,7 @@
 
 import { computed, ref } from 'vue';
 import { Icon } from '@iconify/vue';
+import Button from '@/ui/components/Button.vue';
 import { formatWhole } from 'open-loop-engine';
 import {
   getRepeatLastAction,
@@ -113,7 +114,7 @@ function onCustomInput(e: Event) {
 
     <div class="ac-amount">
       <span class="ac-amount-label">Amount</span>
-      <button
+      <Button
         v-for="n in QUICK_AMOUNTS"
         :key="n"
         class="btn-sm"
@@ -121,7 +122,7 @@ function onCustomInput(e: Event) {
         @click="setAmount(n)"
       >
         {{ n }}
-      </button>
+      </Button>
       <input
         type="number"
         class="ac-amount-input"
@@ -158,27 +159,27 @@ function onCustomInput(e: Event) {
     <!-- TODO(expansion): canonical idle-loops-ng moves these to HeaderBand;
          keep here until HeaderBand lands so play/pause/apply remain usable. -->
     <div class="ac-controls">
-      <button
+      <Button
         class="btn-sm"
         :data-testid="isPaused ? 'queue-resume' : 'queue-pause'"
         @click="togglePause"
       >
         {{ isPaused ? 'Resume' : 'Pause' }}
-      </button>
-      <button
+      </Button>
+      <Button
         class="btn-sm"
         data-testid="queue-apply"
         @click="manualRestart"
       >
         Apply now
-      </button>
-      <button
+      </Button>
+      <Button
         class="btn-sm"
         data-testid="queue-clear"
         @click="clearActions"
       >
         Clear
-      </button>
+      </Button>
     </div>
   </div>
 </template>

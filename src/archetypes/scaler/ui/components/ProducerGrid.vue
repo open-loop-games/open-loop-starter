@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import { Decimal } from 'open-loop-engine';
 import { format, formatWhole } from 'open-loop-engine';
+import Button from '@/ui/components/Button.vue';
 import type { ProducerRow } from '../../composables/useProducers';
 import ProducerTooltip from './ProducerTooltip.vue';
 
@@ -29,47 +30,27 @@ function buyMax(row: ProducerRow): void {
 
 <template>
   <div class="scaler-producer-grid">
-    <ProducerTooltip
-      v-for="row in rows"
-      :key="row.def.id"
-      :row="row"
-    >
-      <div
-        class="scaler-producer-row"
-        :data-affordable="row.canAfford(1)"
-      >
+    <ProducerTooltip v-for="row in rows" :key="row.def.id" :row="row">
+      <div class="scaler-producer-row" :data-affordable="row.canAfford(1)">
         <div class="scaler-producer-row__name">
           {{ row.def.name }}
           <span class="scaler-producer-row__count">×{{ formatWhole(row.count.value) }}</span>
         </div>
-        <div class="scaler-producer-row__rate">
-          {{ format(row.rate.value, 2) }}/s
-        </div>
-        <div class="scaler-producer-row__cost">
-          Cost {{ format(row.getCost(1), 2) }}
-        </div>
+        <div class="scaler-producer-row__rate">{{ format(row.rate.value, 2) }}/s</div>
+        <div class="scaler-producer-row__cost">Cost {{ format(row.getCost(1), 2) }}</div>
         <div class="scaler-producer-row__actions">
-          <button
-            class="btn-sm"
-            :disabled="!row.canAfford(1)"
-            @click="buyOne(row)"
-          >
-            Buy 1
-          </button>
-          <button
+          <Button class="btn-sm" :disabled="!row.canAfford(1)" @click="buyOne(row)"> Buy 1 </Button>
+          <Button
             class="btn-sm"
             :disabled="!Decimal.gt(row.maxAffordable.value, 0)"
             @click="buyMax(row)"
           >
             Buy Max ({{ formatWhole(row.maxAffordable.value) }})
-          </button>
+          </Button>
         </div>
       </div>
     </ProducerTooltip>
-    <p
-      v-if="rows.length === 0"
-      class="scaler-producer-grid__empty"
-    >
+    <p v-if="rows.length === 0" class="scaler-producer-grid__empty">
       No producers in this tier yet.
     </p>
   </div>

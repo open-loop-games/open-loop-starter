@@ -14,6 +14,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Challenge, ChallengeDef as EngineChallengeDef } from 'open-loop-engine';
+import Button from '@/ui/components/Button.vue';
 import { useModule } from '@/composables/useModule';
 import { ScalerTiersKey } from '../../modules';
 
@@ -78,7 +79,9 @@ function performAction(row: ChallengeRow): void {
   <section class="scaler-challenges">
     <header class="scaler-challenges__head">
       <h4>Challenges</h4>
-      <span class="scaler-challenges__total">{{ challenges.completedCount.value }} / {{ challenges.size }} completed</span>
+      <span class="scaler-challenges__total"
+        >{{ challenges.completedCount.value }} / {{ challenges.size }} completed</span
+      >
     </header>
     <ul class="scaler-challenges__list">
       <li
@@ -93,19 +96,13 @@ function performAction(row: ChallengeRow): void {
             {{ row.challenge.completions.value }} completed
           </span>
         </div>
-        <p
-          v-if="row.def.effect"
-          class="scaler-challenges__row-effect"
-        >
+        <p v-if="row.def.effect" class="scaler-challenges__row-effect">
           <em>Inside:</em> {{ row.def.effect }}
         </p>
-        <p
-          v-if="row.def.reward"
-          class="scaler-challenges__row-reward"
-        >
+        <p v-if="row.def.reward" class="scaler-challenges__row-reward">
           <em>Reward:</em> {{ row.def.reward }}
         </p>
-        <button
+        <Button
           class="btn-sm scaler-challenges__row-action"
           :disabled="
             rowState(row) === 'maxed' || (rowState(row) === 'idle' && !row.challenge.canStart.value)
@@ -113,7 +110,7 @@ function performAction(row: ChallengeRow): void {
           @click="performAction(row)"
         >
           {{ actionLabel(row) }}
-        </button>
+        </Button>
       </li>
     </ul>
   </section>

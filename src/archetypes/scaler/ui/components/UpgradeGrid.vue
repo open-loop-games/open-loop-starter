@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import { computed, unref } from 'vue';
 import { format, formatWhole } from 'open-loop-engine';
+import Button from '@/ui/components/Button.vue';
 import type { TierState } from '../../composables/useTier';
 
 function title(t: { display: { title: unknown } }): string {
@@ -32,10 +33,7 @@ const upgradeRows = computed(() => {
 </script>
 
 <template>
-  <section
-    v-if="upgradeRows.length > 0"
-    class="scaler-upgrade-grid"
-  >
+  <section v-if="upgradeRows.length > 0" class="scaler-upgrade-grid">
     <div
       v-for="row in upgradeRows"
       :key="row.def.id"
@@ -44,30 +42,22 @@ const upgradeRows = computed(() => {
     >
       <div class="scaler-upgrade-row__title">
         <span>{{ title(row.purchasable) || row.def.id }}</span>
-        <span
-          v-if="row.bought.value"
-          class="scaler-upgrade-row__level"
-        >Level {{ formatWhole(row.purchasable.amount.value) }}</span>
+        <span v-if="row.bought.value" class="scaler-upgrade-row__level"
+          >Level {{ formatWhole(row.purchasable.amount.value) }}</span
+        >
       </div>
-      <div
-        v-if="description(row.purchasable)"
-        class="scaler-upgrade-row__desc"
-      >
+      <div v-if="description(row.purchasable)" class="scaler-upgrade-row__desc">
         {{ description(row.purchasable) }}
       </div>
-      <div class="scaler-upgrade-row__effect">
-        ×{{ format(row.purchasable.effect.value, 2) }}
-      </div>
-      <div class="scaler-upgrade-row__cost">
-        Cost {{ format(row.purchasable.getCost(1), 2) }}
-      </div>
-      <button
+      <div class="scaler-upgrade-row__effect">×{{ format(row.purchasable.effect.value, 2) }}</div>
+      <div class="scaler-upgrade-row__cost">Cost {{ format(row.purchasable.getCost(1), 2) }}</div>
+      <Button
         class="btn-sm scaler-upgrade-row__buy"
         :disabled="!row.canPurchase.value"
         @click="row.purchase()"
       >
         Buy
-      </button>
+      </Button>
     </div>
   </section>
 </template>

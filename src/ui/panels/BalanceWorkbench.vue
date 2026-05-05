@@ -15,6 +15,7 @@ import {
 } from 'reka-ui';
 import type { Analyzer, Engine, EngineModule, RunContext } from 'open-loop-engine';
 import type { PickerEntry } from 'open-loop-engine/harness';
+import Button from '@/ui/components/Button.vue';
 import { useBalanceWorkbench } from '@/composables/useBalanceWorkbench';
 
 const props = defineProps<{
@@ -111,15 +112,29 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
 <template>
   <div class="balance-workbench">
     <section class="bw-pane bw-pane--picker">
-      <header class="bw-pane__header">Picker</header>
+      <header class="bw-pane__header">
+        Picker
+      </header>
       <div class="bw-pane__body">
-        <ListboxRoot :model-value="selectedKey" @update:model-value="pickByKey">
+        <ListboxRoot
+          :model-value="selectedKey"
+          @update:model-value="pickByKey"
+        >
           <ListboxContent>
-            <ListboxGroup v-for="group in groups" :key="group.key" class="picker-group">
+            <ListboxGroup
+              v-for="group in groups"
+              :key="group.key"
+              class="picker-group"
+            >
               <ListboxGroupLabel class="picker-group-title">
                 {{ group.title }}
               </ListboxGroupLabel>
-              <div v-if="group.entries.length === 0" class="picker-empty">— none —</div>
+              <div
+                v-if="group.entries.length === 0"
+                class="picker-empty"
+              >
+                — none —
+              </div>
               <ListboxItem
                 v-for="entry in group.entries"
                 :key="entryKey(group, entry)"
@@ -135,15 +150,21 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
           </ListboxContent>
         </ListboxRoot>
         <div class="picker-actions">
-          <button type="button" class="bw-btn bw-btn--ghost" @click="wb.refreshPicker()">
+          <Button
+            type="button"
+            class="bw-btn bw-btn--ghost"
+            @click="wb.refreshPicker()"
+          >
             Refresh
-          </button>
+          </Button>
         </div>
       </div>
     </section>
 
     <section class="bw-pane bw-pane--form">
-      <header class="bw-pane__header">Perturbation</header>
+      <header class="bw-pane__header">
+        Perturbation
+      </header>
       <div class="bw-pane__body">
         <div class="form-grid">
           <div class="form-row">
@@ -162,87 +183,172 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
               class="kind-toggle"
               aria-label="Perturbation kind"
             >
-              <ToggleGroupItem value="scalar-multiply" class="bw-btn"> × </ToggleGroupItem>
-              <ToggleGroupItem value="scalar-add" class="bw-btn"> + </ToggleGroupItem>
+              <ToggleGroupItem
+                value="scalar-multiply"
+                class="bw-btn"
+              >
+                ×
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="scalar-add"
+                class="bw-btn"
+              >
+                +
+              </ToggleGroupItem>
             </ToggleGroupRoot>
           </div>
 
-          <div v-if="wb.form.kind === 'scalar-multiply'" class="form-row">
-            <label class="bw-label" for="bw-factor">Factor</label>
-            <NumberFieldRoot v-model="wb.form.factor" :step="0.1" class="bw-numberfield">
-              <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
-              <NumberFieldInput id="bw-factor" class="bw-input" />
-              <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
+          <div
+            v-if="wb.form.kind === 'scalar-multiply'"
+            class="form-row"
+          >
+            <label
+              class="bw-label"
+              for="bw-factor"
+            >Factor</label>
+            <NumberFieldRoot
+              v-model="wb.form.factor"
+              :step="0.1"
+              class="bw-numberfield"
+            >
+              <NumberFieldDecrement class="bw-numberfield__btn">
+                −
+              </NumberFieldDecrement>
+              <NumberFieldInput
+                id="bw-factor"
+                class="bw-input"
+              />
+              <NumberFieldIncrement class="bw-numberfield__btn">
+                +
+              </NumberFieldIncrement>
             </NumberFieldRoot>
           </div>
-          <div v-else class="form-row">
-            <label class="bw-label" for="bw-delta">Delta</label>
-            <NumberFieldRoot v-model="wb.form.delta" :step="0.1" class="bw-numberfield">
-              <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
-              <NumberFieldInput id="bw-delta" class="bw-input" />
-              <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
+          <div
+            v-else
+            class="form-row"
+          >
+            <label
+              class="bw-label"
+              for="bw-delta"
+            >Delta</label>
+            <NumberFieldRoot
+              v-model="wb.form.delta"
+              :step="0.1"
+              class="bw-numberfield"
+            >
+              <NumberFieldDecrement class="bw-numberfield__btn">
+                −
+              </NumberFieldDecrement>
+              <NumberFieldInput
+                id="bw-delta"
+                class="bw-input"
+              />
+              <NumberFieldIncrement class="bw-numberfield__btn">
+                +
+              </NumberFieldIncrement>
             </NumberFieldRoot>
           </div>
 
           <div class="form-row">
-            <label class="bw-label" for="bw-seeds">Seeds</label>
-            <NumberFieldRoot v-model="wb.form.seedCount" :min="1" :step="1" class="bw-numberfield">
-              <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
-              <NumberFieldInput id="bw-seeds" class="bw-input" />
-              <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
+            <label
+              class="bw-label"
+              for="bw-seeds"
+            >Seeds</label>
+            <NumberFieldRoot
+              v-model="wb.form.seedCount"
+              :min="1"
+              :step="1"
+              class="bw-numberfield"
+            >
+              <NumberFieldDecrement class="bw-numberfield__btn">
+                −
+              </NumberFieldDecrement>
+              <NumberFieldInput
+                id="bw-seeds"
+                class="bw-input"
+              />
+              <NumberFieldIncrement class="bw-numberfield__btn">
+                +
+              </NumberFieldIncrement>
             </NumberFieldRoot>
           </div>
 
           <div class="form-row">
-            <label class="bw-label" for="bw-ticks">Ticks</label>
-            <NumberFieldRoot v-model="wb.form.ticks" :min="1" :step="1" class="bw-numberfield">
-              <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
-              <NumberFieldInput id="bw-ticks" class="bw-input" />
-              <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
+            <label
+              class="bw-label"
+              for="bw-ticks"
+            >Ticks</label>
+            <NumberFieldRoot
+              v-model="wb.form.ticks"
+              :min="1"
+              :step="1"
+              class="bw-numberfield"
+            >
+              <NumberFieldDecrement class="bw-numberfield__btn">
+                −
+              </NumberFieldDecrement>
+              <NumberFieldInput
+                id="bw-ticks"
+                class="bw-input"
+              />
+              <NumberFieldIncrement class="bw-numberfield__btn">
+                +
+              </NumberFieldIncrement>
             </NumberFieldRoot>
           </div>
         </div>
 
         <div class="form-actions">
-          <button
+          <Button
             type="button"
             class="bw-btn bw-btn--primary"
             :disabled="!wb.canPerturb.value || wb.running.value"
             @click="wb.run()"
           >
             {{ wb.running.value ? 'Running…' : 'Run sensitivity' }}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             class="bw-btn"
             :disabled="!wb.canPerturb.value || wb.running.value"
             @click="wb.commit()"
           >
             Commit to live
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             class="bw-btn bw-btn--ghost"
             :disabled="!wb.committed.value"
             @click="wb.discard()"
           >
             Discard
-          </button>
+          </Button>
         </div>
 
-        <div v-if="wb.committed.value" class="form-status">
+        <div
+          v-if="wb.committed.value"
+          class="form-status"
+        >
           <span class="bw-badge">Live engine has uncommitted perturbation</span>
         </div>
-        <div v-if="wb.error.value" class="form-error">
+        <div
+          v-if="wb.error.value"
+          class="form-error"
+        >
           {{ wb.error.value }}
         </div>
       </div>
     </section>
 
     <section class="bw-pane bw-pane--delta">
-      <header class="bw-pane__header">Delta</header>
+      <header class="bw-pane__header">
+        Delta
+      </header>
       <div class="bw-pane__body">
-        <div v-if="wb.headline.value" class="delta-headline">
+        <div
+          v-if="wb.headline.value"
+          class="delta-headline"
+        >
           <div class="delta-headline-metric">
             {{ wb.headline.value.metric }}
           </div>
@@ -250,12 +356,23 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
             {{ formatPct(wb.headline.value.delta.relative) }}
           </div>
         </div>
-        <div v-else-if="wb.running.value" class="delta-empty">
+        <div
+          v-else-if="wb.running.value"
+          class="delta-empty"
+        >
           Running… {{ wb.progress.value.completedRuns }} / {{ wb.progress.value.totalRuns }}
         </div>
-        <div v-else class="delta-empty">No run yet.</div>
+        <div
+          v-else
+          class="delta-empty"
+        >
+          No run yet.
+        </div>
 
-        <table v-if="wb.rows.value.length > 0" class="delta-table">
+        <table
+          v-if="wb.rows.value.length > 0"
+          class="delta-table"
+        >
           <thead>
             <tr>
               <th>Metric</th>
@@ -266,7 +383,10 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in wb.rows.value" :key="row.metric">
+            <tr
+              v-for="row in wb.rows.value"
+              :key="row.metric"
+            >
               <td>{{ row.metric }}</td>
               <td>{{ formatNumber(row.baselineAvg) }}</td>
               <td>{{ formatNumber(row.variantAvg) }}</td>

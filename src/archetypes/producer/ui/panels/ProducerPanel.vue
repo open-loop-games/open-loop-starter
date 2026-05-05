@@ -7,6 +7,7 @@ import { useBulkMode, type BulkMode } from '@/composables/useBulkMode';
 import { useFormatting } from '@/composables/useFormatting';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
 import ProducerTooltip from '../components/ProducerTooltip.vue';
+import Button from '@/ui/components/Button.vue';
 
 const buildings = getBuildings();
 const primary = getPrimaryResource();
@@ -90,7 +91,7 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
             </span>
           </div>
 
-          <button
+          <Button
             type="button"
             class="ticket"
             :class="{ 'is-affordable': row.canAfford(1) }"
@@ -102,7 +103,7 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
             <span class="ticket__label">{{ buyLabel(row) }}</span>
             <span class="ticket__cost">{{ format(pendingCost(row), 0) }}</span>
             <span class="ticket__notch ticket__notch--right" />
-          </button>
+          </Button>
         </li>
       </ProducerTooltip>
     </ul>

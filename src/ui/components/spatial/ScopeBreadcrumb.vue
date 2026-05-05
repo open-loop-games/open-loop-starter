@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="N, E">
 import { computed } from 'vue';
 import type { GraphNode, ScopeStack, ScopeState } from 'open-loop-engine';
+import Button from '@/ui/components/Button.vue';
 import { useScopeStack } from '@/composables/useScopeStack';
 
 interface Props {
@@ -88,42 +89,25 @@ function stateFor(path: readonly string[]): ScopeState | undefined {
       name="back-button"
       :depth="view.depth.value"
     >
-      <button
+      <Button
         type="button"
         class="scope-breadcrumb__back"
         aria-label="Go back one level"
         @click="goTo(view.depth.value - 1)"
       >
         ← Back
-      </button>
+      </Button>
     </slot>
 
-    <ol
-      v-if="view.depth.value > 0"
-      class="scope-breadcrumb__trail"
-    >
-      <li
-        v-if="rootLabel"
-        class="scope-breadcrumb__item"
-        data-crumb-depth="0"
-      >
-        <slot
-          name="root"
-          :label="rootLabel"
-        >
-          <button
-            type="button"
-            class="scope-breadcrumb__crumb"
-            @click="goTo(0)"
-          >
+    <ol v-if="view.depth.value > 0" class="scope-breadcrumb__trail">
+      <li v-if="rootLabel" class="scope-breadcrumb__item" data-crumb-depth="0">
+        <slot name="root" :label="rootLabel">
+          <Button type="button" class="scope-breadcrumb__crumb" @click="goTo(0)">
             {{ rootLabel }}
-          </button>
+          </Button>
         </slot>
         <slot name="separator">
-          <span
-            class="scope-breadcrumb__sep"
-            aria-hidden="true"
-          >›</span>
+          <span class="scope-breadcrumb__sep" aria-hidden="true">›</span>
         </slot>
       </li>
       <li
@@ -140,7 +124,7 @@ function stateFor(path: readonly string[]): ScopeState | undefined {
           :is-current="c.isCurrent"
           :state="stateFor(c.path)"
         >
-          <button
+          <Button
             type="button"
             :class="[
               'scope-breadcrumb__crumb',
@@ -150,16 +134,10 @@ function stateFor(path: readonly string[]): ScopeState | undefined {
             @click="goTo(c.depth)"
           >
             {{ c.node.id }}
-          </button>
+          </Button>
         </slot>
-        <slot
-          v-if="!c.isCurrent"
-          name="separator"
-        >
-          <span
-            class="scope-breadcrumb__sep"
-            aria-hidden="true"
-          >›</span>
+        <slot v-if="!c.isCurrent" name="separator">
+          <span class="scope-breadcrumb__sep" aria-hidden="true">›</span>
         </slot>
       </li>
     </ol>

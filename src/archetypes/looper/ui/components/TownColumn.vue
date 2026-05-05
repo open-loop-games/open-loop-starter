@@ -19,6 +19,7 @@ import { computed, onBeforeUnmount } from 'vue';
 import { Decimal, type DecimalSource, formatWhole, toNumber } from 'open-loop-engine';
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { HoverCardRoot, HoverCardTrigger, HoverCardPortal, HoverCardContent } from 'reka-ui';
+import Button from '@/ui/components/Button.vue';
 import {
   getZoneSystem,
   getCurrentZone,
@@ -183,14 +184,14 @@ onBeforeUnmount(() => {
   <div class="town-column">
     <!-- Zone nav header -->
     <div class="zone-nav">
-      <button
+      <Button
         class="nav-arrow"
         :disabled="unlockedZones.length < 2"
         aria-label="Previous zone"
         @click="cycleZone(-1)"
       >
         ◀
-      </button>
+      </Button>
       <div class="zone-name-block">
         <div class="zone-name">
           {{ currentZoneDef?.name ?? '—' }}
@@ -202,14 +203,14 @@ onBeforeUnmount(() => {
           {{ currentZoneDescription }}
         </div>
       </div>
-      <button
+      <Button
         class="nav-arrow"
         :disabled="unlockedZones.length < 2"
         aria-label="Next zone"
         @click="cycleZone(1)"
       >
         ▶
-      </button>
+      </Button>
     </div>
 
     <!-- Town stat rows -->
@@ -279,7 +280,7 @@ onBeforeUnmount(() => {
           :close-delay="100"
         >
           <HoverCardTrigger as-child>
-            <button
+            <Button
               :ref="(el) => bindTile(el as Element | null, tile.def.id)"
               class="action-tile"
               :class="{ locked: tile.locked }"
@@ -300,7 +301,7 @@ onBeforeUnmount(() => {
               </svg>
               <span class="action-name">{{ tile.def.name }}</span>
               <span class="action-cost">{{ tile.manaCost }}</span>
-            </button>
+            </Button>
           </HoverCardTrigger>
           <HoverCardPortal>
             <HoverCardContent

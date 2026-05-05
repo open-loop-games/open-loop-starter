@@ -4,6 +4,7 @@ import { useIncomeUpgrades } from '../../composables';
 import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
 import { getIncome, TugDataKey } from '../../modules';
+import Button from '@/ui/components/Button.vue';
 import type { IncomeUpgradeRow } from '../../composables/useIncomeUpgrades';
 
 /**
@@ -70,7 +71,7 @@ function rowTooltip(row: IncomeUpgradeRow): string {
       </div>
     </div>
     <div class="income-bar__upgrades">
-      <button
+      <Button
         v-for="row in playerUpgrades.rows.value"
         :key="row.def.id"
         class="upgrade-tile"
@@ -85,25 +86,16 @@ function rowTooltip(row: IncomeUpgradeRow): string {
         <div class="upgrade-tile__title">
           {{ row.def.name }}
         </div>
-        <div class="upgrade-tile__effect">
-          ×{{ row.def.multiplier }}
-        </div>
+        <div class="upgrade-tile__effect">×{{ row.def.multiplier }}</div>
         <div class="upgrade-tile__cost">
-          <template v-if="row.bought.value">
-            bought
-          </template>
-          <template v-else>
-            {{ format(row.cost.value, 0) }} {{ resourceLabel }}
-          </template>
+          <template v-if="row.bought.value"> bought </template>
+          <template v-else> {{ format(row.cost.value, 0) }} {{ resourceLabel }} </template>
         </div>
-        <div
-          v-if="!row.bought.value"
-          class="upgrade-tile__roi"
-        >
+        <div v-if="!row.bought.value" class="upgrade-tile__roi">
           pays {{ fmtSec(row.paybackSeconds.value) }} · catches
           {{ fmtSec(row.crossoverSeconds.value) }}
         </div>
-      </button>
+      </Button>
     </div>
   </div>
 </template>

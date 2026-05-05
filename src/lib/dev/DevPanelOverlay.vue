@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import Button from '@/ui/components/Button.vue';
+
 withDefaults(
   defineProps<{
     title?: string;
@@ -10,22 +12,14 @@ defineEmits<{ close: [] }>();
 </script>
 
 <template>
-  <div
-    class="olui-devpanel-overlay"
-    tabindex="-1"
-    @keydown.escape="$emit('close')"
-  >
+  <div class="olui-devpanel-overlay" tabindex="-1" @keydown.escape="$emit('close')">
     <div class="olui-devpanel-overlay__toolbar">
       <span class="olui-devpanel-overlay__title">{{ title }}</span>
       <div class="olui-devpanel-overlay__actions">
         <slot name="toolbar" />
-        <button
-          type="button"
-          class="olui-devpanel-overlay__close"
-          @click="$emit('close')"
-        >
+        <Button type="button" class="olui-devpanel-overlay__close" @click="$emit('close')">
           ESC to close
-        </button>
+        </Button>
       </div>
     </div>
     <div class="olui-devpanel-overlay__content">

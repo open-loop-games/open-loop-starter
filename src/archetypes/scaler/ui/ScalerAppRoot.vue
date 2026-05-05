@@ -13,6 +13,7 @@ import { inject, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import { type Engine, type EngineModule } from 'open-loop-engine';
 import { AppFrame, DevPanelOverlay, SidebarMainShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import Button from '@/ui/components/Button.vue';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -97,20 +98,11 @@ function getActiveModules(): EngineModule[] {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
-    v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
+  <AppFrame v-else :stack="stack" :tooltip-delay="400">
     <template #header>
-      <SystemHeader
-        :app-name="manifest.name"
-        @return-to-slots="returnToSlots"
-      >
+      <SystemHeader :app-name="manifest.name" @return-to-slots="returnToSlots">
         <template #about>
-          <h4 style="margin-bottom: 6px">
-            Scaler — Synergism (slim port)
-          </h4>
+          <h4 style="margin-bottom: 6px">Scaler — Synergism (slim port)</h4>
           <p>
             Buy producers, watch coins climb, prestige to convert into a stacking multiplier. A
             second layer compresses the first; a third compresses both. Modifier chains stack into
@@ -124,18 +116,11 @@ function getActiveModules(): EngineModule[] {
         <ResourceBar />
       </template>
       <template #sidebar>
-        <button
-          class="btn-sm scaler-achievements-btn"
-          @click="openAchievements"
-        >
+        <Button class="btn-sm scaler-achievements-btn" @click="openAchievements">
           Achievements
-        </button>
+        </Button>
       </template>
-      <Tabs
-        v-model="tabValue"
-        :items="TIER_TABS"
-        class="scaler-tier-tabs"
-      >
+      <Tabs v-model="tabValue" :items="TIER_TABS" class="scaler-tier-tabs">
         <template #panel-antimatter>
           <TierPanel :display="ANTIMATTER_DISPLAY" />
         </template>
@@ -154,19 +139,13 @@ function getActiveModules(): EngineModule[] {
     </SidebarMainShell>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics
-    v-if="isDev"
-    v-model:workbench-open="showDevPanel"
-  />
+  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench
-      :engine="engine"
-      :modules="getActiveModules"
-    />
+    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
   </DevPanelOverlay>
 </template>
 

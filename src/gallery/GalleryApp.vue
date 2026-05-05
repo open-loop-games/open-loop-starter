@@ -23,6 +23,7 @@
 import { computed, ref, watch } from 'vue';
 import { ListboxContent, ListboxGroup, ListboxGroupLabel, ListboxItem, ListboxRoot } from 'reka-ui';
 import { SidebarMainShell } from '@/lib';
+import Button from '@/ui/components/Button.vue';
 import { listArchetypes, findArchetype, type GalleryArchetype } from './useArchetypes';
 import Card from './Card.vue';
 import DetailPane from './DetailPane.vue';
@@ -90,7 +91,7 @@ function flipTab(): void {
 <template>
   <div class="gallery-shell">
     <header class="gallery-header">
-      <button
+      <Button
         class="gallery-header__hamburger btn-sm"
         type="button"
         :aria-label="sidebarOpen ? 'Hide archetype list' : 'Show archetype list'"
@@ -98,45 +99,22 @@ function flipTab(): void {
         @click="toggleSidebar"
       >
         ☰
-      </button>
-      <button
-        class="gallery-header__title"
-        type="button"
-        @click="showHome"
-      >
+      </Button>
+      <Button class="gallery-header__title" type="button" @click="showHome">
         <strong>Open Loop Starter</strong>
         <span class="gallery-header__sub">Archetype gallery</span>
-      </button>
+      </Button>
 
-      <div
-        v-if="entered"
-        class="gallery-header__entered"
-      >
-        <button
-          class="btn-sm"
-          type="button"
-          @click="exitArchetype"
-        >
-          ← Back
-        </button>
+      <div v-if="entered" class="gallery-header__entered">
+        <Button class="btn-sm" type="button" @click="exitArchetype"> ← Back </Button>
         <span class="gallery-header__entered-name">{{ entered.manifest.name }}</span>
-        <button
-          class="btn-sm"
-          type="button"
-          @click="flipTab"
-        >
+        <Button class="btn-sm" type="button" @click="flipTab">
           {{ enteredTab === 'details' ? 'Live demo →' : '← Details' }}
-        </button>
+        </Button>
       </div>
 
       <nav class="gallery-header__nav">
-        <button
-          class="btn-sm"
-          type="button"
-          @click="showAbout"
-        >
-          About
-        </button>
+        <Button class="btn-sm" type="button" @click="showAbout"> About </Button>
       </nav>
     </header>
 
@@ -147,27 +125,13 @@ function flipTab(): void {
       :data-collapsed="!sidebarOpen ? 'true' : null"
     >
       <template #sidebar>
-        <div
-          v-if="sidebarOpen"
-          class="gallery-sidebar"
-        >
-          <button
-            class="gallery-sidebar__home"
-            type="button"
-            @click="showHome"
-          >
-            Home
-          </button>
+        <div v-if="sidebarOpen" class="gallery-sidebar">
+          <Button class="gallery-sidebar__home" type="button" @click="showHome"> Home </Button>
 
-          <ListboxRoot
-            :model-value="enteredId"
-            @update:model-value="onSidebarPick"
-          >
+          <ListboxRoot :model-value="enteredId" @update:model-value="onSidebarPick">
             <ListboxContent>
               <ListboxGroup class="gallery-sidebar__list">
-                <ListboxGroupLabel class="gallery-sidebar__group">
-                  Canonical
-                </ListboxGroupLabel>
+                <ListboxGroupLabel class="gallery-sidebar__group"> Canonical </ListboxGroupLabel>
                 <ListboxItem
                   v-for="a in canonical"
                   :key="a.manifest.id"
@@ -178,9 +142,7 @@ function flipTab(): void {
                 </ListboxItem>
               </ListboxGroup>
               <ListboxGroup class="gallery-sidebar__list">
-                <ListboxGroupLabel class="gallery-sidebar__group">
-                  Candidate
-                </ListboxGroupLabel>
+                <ListboxGroupLabel class="gallery-sidebar__group"> Candidate </ListboxGroupLabel>
                 <ListboxItem
                   v-for="a in candidates"
                   :key="a.manifest.id"
@@ -195,34 +157,22 @@ function flipTab(): void {
         </div>
       </template>
 
-      <div
-        v-if="entered"
-        class="gallery-entered"
-      >
+      <div v-if="entered" class="gallery-entered">
         <!-- Demo + details are mutually exclusive in the main column so each
              gets the full available width. The sandbox stays mounted across
              toggles via v-show so engine state survives. -->
-        <div
-          v-show="enteredTab === 'demo'"
-          class="gallery-entered__demo"
-        >
-          <SandboxWrapper
-            :archetype="entered.manifest"
-            :boot="entered.boot"
-          />
+        <div v-show="enteredTab === 'demo'" class="gallery-entered__demo">
+          <SandboxWrapper :archetype="entered.manifest" :boot="entered.boot" />
         </div>
-        <div
-          v-show="enteredTab === 'details'"
-          class="gallery-entered__detail"
-        >
+        <div v-show="enteredTab === 'details'" class="gallery-entered__detail">
           <section class="gallery-entered__cta">
-            <button
+            <Button
               class="btn-primary gallery-entered__cta-btn"
               type="button"
               @click="enteredTab = 'demo'"
             >
               ▶ Try {{ entered.manifest.name }} live
-            </button>
+            </Button>
             <span class="gallery-entered__cta-hint">
               Mounts the {{ entered.manifest.id }} engine in an isolated sandbox.
             </span>
@@ -231,10 +181,7 @@ function flipTab(): void {
         </div>
       </div>
       <AboutPanel v-else-if="view === 'about'" />
-      <div
-        v-else
-        class="gallery-home"
-      >
+      <div v-else class="gallery-home">
         <header class="gallery-home__header">
           <h2>Archetype gallery</h2>
           <p>
@@ -243,9 +190,7 @@ function flipTab(): void {
             there, toggle to Live demo to mount the sandbox. Forks pick one and delete the rest.
           </p>
         </header>
-        <h3 class="gallery-home__group">
-          Canonical
-        </h3>
+        <h3 class="gallery-home__group">Canonical</h3>
         <div class="gallery-home__grid">
           <Card
             v-for="a in canonical"
@@ -254,9 +199,7 @@ function flipTab(): void {
             @enter="enterArchetype(a.manifest.id)"
           />
         </div>
-        <h3 class="gallery-home__group">
-          Candidate
-        </h3>
+        <h3 class="gallery-home__group">Candidate</h3>
         <div class="gallery-home__grid">
           <Card
             v-for="a in candidates"

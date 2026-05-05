@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@/ui/components/Button.vue';
 import { useToasts } from '@/composables/useToasts';
 
 const { toasts, removeToast } = useToasts();
@@ -7,25 +8,14 @@ const { toasts, removeToast } = useToasts();
 <template>
   <div class="toast-container">
     <TransitionGroup name="toast">
-      <div
-        v-for="toast in toasts"
-        :key="toast.id"
-        class="toast-item"
-      >
+      <div v-for="toast in toasts" :key="toast.id" class="toast-item">
         <div class="toast-header">
           <strong>{{ toast.title }}</strong>
-          <button
-            class="toast-close"
-            aria-label="Dismiss"
-            @click="removeToast(toast.id)"
-          >
+          <Button class="toast-close" aria-label="Dismiss" @click="removeToast(toast.id)">
             ×
-          </button>
+          </Button>
         </div>
-        <div
-          v-if="toast.content"
-          class="toast-body"
-        >
+        <div v-if="toast.content" class="toast-body">
           {{ toast.content }}
         </div>
       </div>

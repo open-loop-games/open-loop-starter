@@ -18,6 +18,7 @@
 
 import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Icon } from '@iconify/vue';
+import Button from '@/ui/components/Button.vue';
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine';
 import {
   draggable,
@@ -200,70 +201,70 @@ onMounted(() => {
         v-if="hasLimit"
         text="Cap to good count"
       >
-        <button
+        <Button
           class="nar-btn"
           @click="onCap"
         >
           <Icon icon="mdi:circle-outline" />
-        </button>
+        </Button>
       </AppTooltip>
       <AppTooltip text="Add loops">
-        <button
+        <Button
           class="nar-btn"
           @click="onPlus"
         >
           <Icon icon="mdi:plus" />
-        </button>
+        </Button>
       </AppTooltip>
       <AppTooltip text="Remove loops">
-        <button
+        <Button
           class="nar-btn"
           @click="onMinus"
         >
           <Icon icon="mdi:minus" />
-        </button>
+        </Button>
       </AppTooltip>
       <AppTooltip text="Split in half">
-        <button
+        <Button
           class="nar-btn"
           @click="onSplit"
         >
           <Icon icon="mdi:arrow-split-vertical" />
-        </button>
+        </Button>
       </AppTooltip>
       <AppTooltip text="Move up">
-        <button
+        <Button
           class="nar-btn"
           :disabled="index <= 0"
           @click="onUp"
         >
           <Icon icon="mdi:chevron-up" />
-        </button>
+        </Button>
       </AppTooltip>
       <AppTooltip text="Move down">
-        <button
+        <Button
           class="nar-btn"
           :disabled="index >= total - 1"
           @click="onDown"
         >
           <Icon icon="mdi:chevron-down" />
-        </button>
+        </Button>
       </AppTooltip>
       <AppTooltip :text="isDisabled ? 'Enable' : 'Disable'">
-        <button
+        <Button
           class="nar-btn"
           @click="onDisable"
         >
           <Icon :icon="isDisabled ? 'mdi:check-circle-outline' : 'mdi:close-circle-outline'" />
-        </button>
+        </Button>
       </AppTooltip>
       <AppTooltip text="Remove">
-        <button
+        <Button
           class="nar-btn nar-btn-danger"
           @click="onRemove"
         >
           <Icon icon="mdi:close" />
-        </button>
+        </Button>
       </AppTooltip>
     </div>
   </div>

@@ -12,20 +12,21 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import CookieGlyph from './CookieGlyph.vue';
+import Button from '@/ui/components/Button.vue';
 
 defineProps<{ label?: string }>();
-const emit = defineEmits<{ click: [event: MouseEvent] }>();
+const emit = defineEmits<{ click: [] }>();
 
 const burstId = ref(0);
 
-function onClick(event: MouseEvent): void {
+function onClick(): void {
   burstId.value += 1;
-  emit('click', event);
+  emit('click');
 }
 </script>
 
 <template>
-  <button
+  <Button
     type="button"
     class="click-cookie"
     @click="onClick"
@@ -48,7 +49,7 @@ function onClick(event: MouseEvent): void {
       />
     </span>
     <span class="click-cookie__label">{{ label ?? 'Bake' }}</span>
-  </button>
+  </Button>
 </template>
 
 <style scoped>

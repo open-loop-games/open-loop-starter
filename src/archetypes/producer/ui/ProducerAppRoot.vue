@@ -8,6 +8,7 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
+import Button from '@/ui/components/Button.vue';
 import { manifest } from '../manifest';
 import HeadlinePanel from './panels/HeadlinePanel.vue';
 import ProducerPanel from './panels/ProducerPanel.vue';
@@ -94,7 +95,7 @@ function getActiveModules(): EngineModule[] {
     <template #header>
       <SystemHeader @return-to-slots="returnToSlots">
         <template #title>
-          <button
+          <Button
             class="bakery-shopfront"
             data-testid="return-to-slots"
             title="Save and return to save picker"
@@ -103,7 +104,7 @@ function getActiveModules(): EngineModule[] {
             <span class="bakery-shopfront__rule" />
             <span class="bakery-shopfront__name">Bakery</span>
             <span class="bakery-shopfront__sub">est. just now &middot; flour, sugar, ambition</span>
-          </button>
+          </Button>
         </template>
         <template #about>
           <div class="bakery-info">
@@ -118,12 +119,12 @@ function getActiveModules(): EngineModule[] {
           </div>
         </template>
         <template #extra-actions>
-          <button
+          <Button
             class="btn-sm"
             @click="openAchievements"
           >
             Achievements
-          </button>
+          </Button>
         </template>
       </SystemHeader>
     </template>

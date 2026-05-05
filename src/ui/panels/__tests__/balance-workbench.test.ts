@@ -196,7 +196,7 @@ describe('BalanceWorkbench.vue', () => {
 
     const runBtn = wrapper.findAll('button').find((b) => b.text().startsWith('Run'));
     expect(runBtn).toBeDefined();
-    await runBtn!.trigger('click');
+    await runBtn!.trigger('pointerdown');
     await nextTick();
 
     expect(wrapper.find('.delta-table').exists()).toBe(true);

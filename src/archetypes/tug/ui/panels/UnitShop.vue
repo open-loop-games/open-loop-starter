@@ -4,6 +4,7 @@ import { useUnits, useCounterMatrix } from '../../composables';
 import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
 import { getIncome, TugDataKey, type Side } from '../../modules';
+import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 
 const props = withDefaults(
@@ -36,7 +37,7 @@ function counterHints(archetypeId: string): string {
       <span class="unit-shop__balance"> {{ balance }} {{ resourceLabel }} </span>
     </div>
     <div class="unit-shop__grid">
-      <button
+      <Button
         v-for="row in units.rows.value"
         :key="row.def.id"
         class="unit-card"
@@ -57,20 +58,15 @@ function counterHints(archetypeId: string): string {
         <div class="unit-card__counter">
           {{ counterHints(row.def.id) }}
         </div>
-        <div class="unit-card__cost">
-          {{ format(row.def.cost, 0) }} {{ resourceLabel }}
-        </div>
-        <div
-          v-if="row.cooldownRemaining.value > 0"
-          class="unit-card__cooldown"
-        >
+        <div class="unit-card__cost">{{ format(row.def.cost, 0) }} {{ resourceLabel }}</div>
+        <div v-if="row.cooldownRemaining.value > 0" class="unit-card__cooldown">
           <ProgressBar
             :value="row.def.sendCooldownSec - row.cooldownRemaining.value"
             :max="row.def.sendCooldownSec"
             :label="`${row.cooldownRemaining.value.toFixed(1)}s`"
           />
         </div>
-      </button>
+      </Button>
     </div>
   </div>
 </template>

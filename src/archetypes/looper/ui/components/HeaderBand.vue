@@ -19,6 +19,7 @@ import {
   DialogDescription,
   VisuallyHidden,
 } from 'reka-ui';
+import Button from '@/ui/components/Button.vue';
 import AppTooltip from './AppTooltip.vue';
 import { Decimal, formatWhole } from 'open-loop-engine';
 import {
@@ -102,19 +103,19 @@ function formatResource(id: string): string {
       </div>
 
       <div class="time-controls">
-        <button
+        <Button
           class="btn-sm"
           :class="isLoopRunning() ? 'btn-danger' : 'btn-primary'"
           @click="togglePause()"
         >
           {{ isLoopRunning() ? 'Pause' : 'Play' }}
-        </button>
-        <button
+        </Button>
+        <Button
           class="btn-sm"
           @click="showRestartConfirm = true"
         >
           Restart
-        </button>
+        </Button>
 
         <AppTooltip text="Pause the loop before each automatic restart.">
           <label class="toggle">
@@ -153,18 +154,18 @@ function formatResource(id: string): string {
             <div class="restart-body">
               <p>This ends the current loop immediately. Skills and talents persist.</p>
               <div class="restart-actions">
-                <button
+                <Button
                   class="btn-sm"
                   @click="showRestartConfirm = false"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   class="btn-sm btn-danger"
                   @click="confirmRestart"
                 >
                   Restart
-                </button>
+                </Button>
               </div>
             </div>
           </PanelLayout>

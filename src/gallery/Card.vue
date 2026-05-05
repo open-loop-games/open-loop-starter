@@ -6,6 +6,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ArchetypeManifest } from '@/types';
+import Button from '@/ui/components/Button.vue';
 import { resolveShellComponent } from './useArchetypes';
 
 const props = defineProps<{
@@ -22,30 +23,18 @@ const shellResolved = computed(() => resolveShellComponent(props.manifest.shell)
 </script>
 
 <template>
-  <button
-    class="card"
-    type="button"
-    @click="$emit('enter')"
-  >
+  <Button class="card" type="button" @click="$emit('enter')">
     <header class="card__header">
       <h3 class="card__title">
         {{ manifest.name }}
       </h3>
-      <span
-        class="card__status"
-        :data-status="manifest.status"
-      >{{ manifest.status }}</span>
+      <span class="card__status" :data-status="manifest.status">{{ manifest.status }}</span>
     </header>
     <p class="card__pitch">
       {{ manifest.pitch }}
     </p>
     <ul class="card__chips">
-      <li
-        v-for="p in requiredChips"
-        :key="p.label"
-        class="chip"
-        :data-tier="p.tier"
-      >
+      <li v-for="p in requiredChips" :key="p.label" class="chip" :data-tier="p.tier">
         {{ p.label }}
       </li>
     </ul>
@@ -63,7 +52,7 @@ const shellResolved = computed(() => resolveShellComponent(props.manifest.shell)
         </span>
       </span>
     </footer>
-  </button>
+  </Button>
 </template>
 
 <style>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { ModDef } from 'open-loop-engine';
+import Button from '@/ui/components/Button.vue';
 
 const props = defineProps<{ mods: readonly ModDef[] }>();
 const emit = defineEmits<{ select: [modId: string] }>();
@@ -14,7 +15,7 @@ const selected = ref<string | null>(
   <div class="mod-picker">
     <h3>Select Game Variant</h3>
     <div class="mod-list">
-      <button
+      <Button
         v-for="mod in mods"
         :key="mod.id"
         class="mod-option"
@@ -22,25 +23,19 @@ const selected = ref<string | null>(
         @click="selected = mod.id"
       >
         <span class="mod-name">{{ mod.name }}</span>
-        <span
-          v-if="mod.recommended"
-          class="badge badge-primary"
-        >Recommended</span>
-        <p
-          v-if="mod.description"
-          class="mod-desc"
-        >
+        <span v-if="mod.recommended" class="badge badge-primary">Recommended</span>
+        <p v-if="mod.description" class="mod-desc">
           {{ mod.description }}
         </p>
-      </button>
+      </Button>
     </div>
-    <button
+    <Button
       class="btn-primary start-btn"
       :disabled="!selected"
       @click="selected && emit('select', selected)"
     >
       Start Game
-    </button>
+    </Button>
   </div>
 </template>
 

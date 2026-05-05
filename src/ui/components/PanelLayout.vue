@@ -13,6 +13,7 @@
 -->
 <script setup lang="ts">
 import { computed, useSlots } from 'vue';
+import Button from '@/ui/components/Button.vue';
 
 withDefaults(
   defineProps<{
@@ -30,19 +31,13 @@ const hasFooter = computed(() => !!slots.footer);
 
 <template>
   <div class="olui-panel">
-    <header
-      v-if="title || $slots.header || closable"
-      class="olui-panel__header"
-    >
+    <header v-if="title || $slots.header || closable" class="olui-panel__header">
       <slot name="header">
-        <h3
-          v-if="title"
-          class="olui-panel__title"
-        >
+        <h3 v-if="title" class="olui-panel__title">
           {{ title }}
         </h3>
       </slot>
-      <button
+      <Button
         v-if="closable"
         type="button"
         class="olui-panel__close"
@@ -50,15 +45,12 @@ const hasFooter = computed(() => !!slots.footer);
         @click="$emit('close')"
       >
         ×
-      </button>
+      </Button>
     </header>
     <div class="olui-panel__body">
       <slot />
     </div>
-    <footer
-      v-if="hasFooter"
-      class="olui-panel__footer"
-    >
+    <footer v-if="hasFooter" class="olui-panel__footer">
       <slot name="footer" />
     </footer>
   </div>

@@ -17,6 +17,7 @@
 
 import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
 import type { Engine } from 'open-loop-engine';
+import Button from '@/ui/components/Button.vue';
 
 const engine = inject<Engine>('engine');
 
@@ -68,7 +69,7 @@ onUnmounted(() => {
 <template>
   <div class="dev-diag">
     <div class="dev-diag-row dev-diag-row--workbench">
-      <button
+      <Button
         type="button"
         class="dev-diag-speed"
         :class="{ active: workbenchOpen }"
@@ -76,7 +77,7 @@ onUnmounted(() => {
         @click="workbenchOpen = !workbenchOpen"
       >
         Workbench
-      </button>
+      </Button>
     </div>
     <div class="dev-diag-row">
       <span class="dev-diag-label">FPS</span>
@@ -87,7 +88,7 @@ onUnmounted(() => {
     </div>
     <div class="dev-diag-row dev-diag-row--speed">
       <span class="dev-diag-label">Speed</span>
-      <button
+      <Button
         v-for="s in SPEEDS"
         :key="s"
         type="button"
@@ -97,7 +98,7 @@ onUnmounted(() => {
         @click="setSpeed(s)"
       >
         {{ s }}x
-      </button>
+      </Button>
     </div>
   </div>
 </template>
