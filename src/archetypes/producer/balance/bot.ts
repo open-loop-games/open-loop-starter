@@ -7,12 +7,17 @@ import {
   type Engine,
   type EngineModule,
   type GameStateAccessor,
+  type Producer,
+  type ProducerCategory,
+  type SelectionPolicy,
 } from 'open-loop-engine';
 import {
   createProducerEngine,
   getBuildings,
   getPrimaryResource,
   getUpgrades,
+  type ProducerDef,
+  type ProducerInstanceState,
   type ProducerOverrides,
 } from '..';
 
@@ -37,6 +42,29 @@ function expectedClicksAt(simTimeSec: number): number {
   if (simTimeSec <= 30) return Math.floor(simTimeSec);
   if (simTimeSec <= 120) return 30 + Math.floor((simTimeSec - 30) * 0.2);
   return 48;
+}
+
+/**
+ * Hybrid-payback selection policy for the producer balance bot — single source
+ * of truth shared by `createBalanceBotModule` (the bot installs it via
+ * `setupPolicyAutoPurchase`) and the closed-form bot-policy walker
+ * (`predict-bot-policy.ts`'s `arcWaypointsBotPolicy` queries it against
+ * frozen-state engine readouts).
+ *
+ * Reserve floor is fixed at zero — the producer balance bot doesn't bank.
+ * Forks that introduce a reserve must extend this signature; the predictor
+ * will then need to mirror the reserve in its candidate filter.
+ */
+export function buildBotPolicy(
+  buildings: ProducerCategory<ProducerDef, ProducerInstanceState>,
+): SelectionPolicy<Producer> {
+  return selectionHybridPayback({
+    getCost: (p) => p.repeatable!.getCost(1),
+    getRate: (p) => p.computedRate.value,
+    getResource: (p) => p.resource.value,
+    getReserve: () => 0,
+    getHeadlineRate: (p) => buildings.getTotalRate(p.resource),
+  });
 }
 
 let engineCounter = 0;
@@ -67,11 +95,6 @@ function createBalanceBotModule(): EngineModule {
       const clicksFired = persistent<number>(0, { name: 'clicksFired' });
       const upgradeAccum = persistent<number>(0, { name: 'upgradeAccum' });
 
-      // TODO(expansion): click-taper is a TimedInput — expectedClicksAt is
-      // a pure (simTime) → cumulativeCount the bot differences per tick.
-      // See open-loop-engine/docs/candidate-primitives.md § TimedInput.
-      // Graduates when a second archetype's balance bot hits the same
-      // shape.
       ctx.onTick((dt: number) => {
         simTime.value += dt;
         const target = expectedClicksAt(simTime.value);
@@ -86,13 +109,7 @@ function createBalanceBotModule(): EngineModule {
         {
           enabled: true,
           interval: 1,
-          policy: selectionHybridPayback({
-            getCost: (p) => p.repeatable!.getCost(1),
-            getRate: (p) => p.computedRate.value,
-            getResource: (p) => p.resource.value,
-            getReserve: () => 0,
-            getHeadlineRate: (p) => buildings.getTotalRate(p.resource),
-          }),
+          policy: buildBotPolicy(buildings),
         },
         ctx.onTick,
       );

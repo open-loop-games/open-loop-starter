@@ -43,6 +43,7 @@ import {
   createProducerEngine,
   getAchievements,
   getBuildings,
+  getClickCount,
   getPrimaryResource,
   getUpgrades,
 } from '..';
@@ -83,6 +84,34 @@ function resetAchievements(): void {
       entry.achievement.earnedAt.value = null;
     }
   }
+}
+
+/**
+ * Reset producer/upgrade/achievement world to baseline before a walker pass.
+ * Both the strict-tier-order walker (`arcWaypoints`) and the bot-policy walker
+ * (`arcWaypointsBotPolicy`) call this on entry.
+ *
+ * Order matters: counts/upgrades/lifetime first, then achievements — so when
+ * watchers re-evaluate after the reset, requirements see the baseline state
+ * and any always-true predicate (e.g. milestone-tier-1 against a seeded
+ * cursor count) re-fires correctly.
+ *
+ * `seedCounts` lets callers skip a bootstrap regime (e.g. `{ cursor: 1 }` to
+ * skip the click-driven first-cursor purchase). Click-count cumulative is
+ * always reset to zero — load-bearing for the bot walker's click-taper Gate
+ * splices; harmless for the strict-tier-order walker, which doesn't ride
+ * clicks.
+ */
+export function resetWalkerWorld(seedCounts: Readonly<Record<string, number>> = {}): void {
+  setCounts(seedCounts);
+  resetUpgrades();
+  const primary = getPrimaryResource();
+  if (primary.cumulative) primary.cumulative.value = Decimal.dZero;
+  primary.value = Decimal.dZero;
+  const clickCount = getClickCount();
+  if (clickCount.cumulative) clickCount.cumulative.value = Decimal.dZero;
+  clickCount.value = Decimal.dZero;
+  resetAchievements();
 }
 
 // Spec-side accessor — `timeUntilGateFlip` projects `cumulative-gte` against
@@ -141,6 +170,58 @@ export interface ArcWaypoint {
 }
 
 /**
+ * Per-walker hooks consumed by {@link accumulateUntilPay}'s splice loop.
+ *
+ * `getRate` and `getNextSpliceDistance` are re-read on every iteration so
+ * reactive rate-chain updates (achievement firings, regime transitions) feed
+ * the residual cost integration on the next pass. `advance` is the world-
+ * mutating effect — each walker plugs in its own cumulative/balance updates
+ * here.
+ */
+export interface AccumulateUntilPayOps {
+  /** Current production rate (cookies/sec) at frozen state. */
+  getRate: () => number;
+  /** Smallest distance until the next intra-step splice event, or `Infinity`. */
+  getNextSpliceDistance: () => number;
+  /** Advance the walker's world by `dt` seconds at `rate` cookies/sec. */
+  advance: (dt: number, rate: number) => void;
+}
+
+/**
+ * Splice-aware "save up cost cookies at the current rate" loop. Returns the
+ * elapsed dt; `Number.POSITIVE_INFINITY` when the rate is zero and no splice
+ * can change that.
+ *
+ * Splice semantics: when a splice (achievement firing, regime boundary, etc.)
+ * lands strictly before the residual cost is paid, the loop advances to that
+ * splice, lets `advance` mutate the world, then re-reads `getRate` so the
+ * post-splice rate (which may be higher under reactive modifier-chain
+ * bindings) integrates the rest of the residual cost. Identical to the
+ * original inline implementation per `core-timing-formula.md § 4` — extracted
+ * so both walkers share one splice loop.
+ */
+export function accumulateUntilPay(cost: number, ops: AccumulateUntilPayOps): number {
+  let remaining = cost;
+  let stepDt = 0;
+  while (remaining > 0) {
+    const rate = ops.getRate();
+    if (rate <= 0) return Number.POSITIVE_INFINITY;
+    const dtToBuy = remaining / rate;
+    const nextFireDt = ops.getNextSpliceDistance();
+    if (nextFireDt >= dtToBuy) {
+      stepDt += dtToBuy;
+      ops.advance(dtToBuy, rate);
+      remaining = 0;
+    } else {
+      stepDt += nextFireDt;
+      ops.advance(nextFireDt, rate);
+      remaining -= nextFireDt * rate;
+    }
+  }
+  return stepDt;
+}
+
+/**
  * Per-step waypoints under a strict-tier-order schedule. Tier steps grow
  * a producer's count; upgrade steps activate an upgrade (its modifier
  * binding fires reactively via `purchasable.active`, feeding the rate
@@ -174,47 +255,22 @@ export function arcWaypoints(
   }
 
   const runtime = buildGateRuntime(engine);
-
   const counts: Record<string, number> = { ...initial };
 
-  // Reset to baseline before walking. Order matters: counts/upgrades/lifetime
-  // first, then achievements — so when watchers re-evaluate after the reset,
-  // requirements see the baseline state and any always-true predicate (e.g.
-  // milestone-tier-1 against the seeded cursor count) re-fires correctly.
-  setCounts(counts);
-  resetUpgrades();
-  primaryCumulative.value = Decimal.dZero;
-  primary.value = Decimal.dZero;
-  resetAchievements();
+  resetWalkerWorld(counts);
 
-  const accumulateUntilPay = (cost: number): number => {
-    let remaining = cost;
-    let stepDt = 0;
-
-    while (remaining > 0) {
-      const rate = Decimal.fromValue(buildings.getTotalRate(primary)).toNumber();
-      if (rate <= 0) {
-        return Number.POSITIVE_INFINITY;
-      }
-      const dtToBuy = remaining / rate;
-      const nextFireDt = nextAchievementFireDistance(runtime);
-
-      if (nextFireDt >= dtToBuy) {
-        stepDt += dtToBuy;
-        primaryCumulative.value = Decimal.add(primaryCumulative.value, remaining);
-        remaining = 0;
-      } else {
-        const consumed = nextFireDt * rate;
-        stepDt += nextFireDt;
-        // Synchronous watcher fires complete() on the crossing achievement;
-        // earned flips, rate chain reactively reflects it on the next iter.
-        primaryCumulative.value = Decimal.add(primaryCumulative.value, consumed);
-        remaining -= consumed;
-      }
-    }
-
-    return stepDt;
-  };
+  // Strict-tier-order walker: cookie production is the only rate channel,
+  // achievement Gate flips the only splice source. Cost is "paid" by time-
+  // integration against cumulative; primary.value isn't tracked because no
+  // policy is reading it — the schedule is pre-computed.
+  const accumulate = (cost: number): number =>
+    accumulateUntilPay(cost, {
+      getRate: () => Decimal.fromValue(buildings.getTotalRate(primary)).toNumber(),
+      getNextSpliceDistance: () => nextAchievementFireDistance(runtime),
+      advance: (dt, rate) => {
+        primaryCumulative.value = Decimal.add(primaryCumulative.value, dt * rate);
+      },
+    });
 
   const out: ArcWaypoint[] = [];
   let total = 0;
@@ -230,7 +286,7 @@ export function arcWaypoints(
           counts[step.id] = k;
           setCounts(counts);
           const cost = Decimal.fromValue(p.repeatable.getCost(1)).toNumber();
-          total += accumulateUntilPay(cost);
+          total += accumulate(cost);
         }
         counts[step.id] = step.to;
         setCounts(counts);
@@ -240,7 +296,7 @@ export function arcWaypoints(
       if (!u) throw new Error(`arcWaypoints: no upgrade '${step.id}'`);
       if (!u.active.value) {
         const cost = Decimal.fromValue(u.getCost(1)).toNumber();
-        total += accumulateUntilPay(cost);
+        total += accumulate(cost);
         // Set amount directly — bypasses cost/onPurchase, but `active` is
         // computed from `amount >= 1` and the grants bound via
         // `setupDeclarativeBindings(grants, purchasable.active)` watch
@@ -264,7 +320,7 @@ export function arcWaypoints(
  * have no mechanical mid-step crossing. Only `'computed'` distances drive
  * the splice.
  */
-function nextAchievementFireDistance(runtime: GateRuntime): number {
+export function nextAchievementFireDistance(runtime: GateRuntime): number {
   let nearest = Number.POSITIVE_INFINITY;
   for (const entry of getAchievements().getAll()) {
     if (entry.achievement.earned.value) continue;
