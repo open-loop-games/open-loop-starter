@@ -6,9 +6,9 @@ import { createMilestonesModule } from './milestones';
 import { createAchievementsModule } from './achievements';
 
 export {
-  PrimaryLifetimeKey,
   ProducerTuningRegistryKey,
   getBuildings,
+  getClickCount,
   getPrimaryResource,
   type ProducerInstanceState,
 } from './producers';

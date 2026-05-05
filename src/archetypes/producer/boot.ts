@@ -1,5 +1,11 @@
 import { type App } from 'vue';
-import { type Engine, type EngineModule } from 'open-loop-engine';
+import {
+  Decimal,
+  type Engine,
+  type EngineModule,
+  type GameStateAccessor,
+  type GameStateMutator,
+} from 'open-loop-engine';
 import { bootApp, bootEngine } from '@/boot';
 import ProducerAppRoot from './ui/ProducerAppRoot.vue';
 import { createProducerModules } from './modules';
@@ -10,6 +16,20 @@ import type { ProducerData } from './data/types';
 const GAME_ID = 'producer-pilot';
 const MOD_ID = 'bakery';
 const MOD_NAME = 'Bakery';
+
+// Producer's Gates only use lifetime-gte / count-gte / unlock / combinators —
+// none of those reach into the accessor (they read through CategoryEntrySignals
+// and Resource.lifetime). The no-op satisfies getAmbientGateRuntime's non-
+// undefined contract without standing up an archetype-specific accessor.
+const NOOP_ACCESSOR: GameStateAccessor & GameStateMutator = {
+  getResource: () => Decimal.dZero,
+  getRate: () => Decimal.dZero,
+  isUnlocked: () => false,
+  getState: () => undefined,
+  applyResourceOp: () => {},
+  setUnlocked: () => {},
+  setState: () => {},
+};
 
 export interface ProducerBootResult {
   engine: Engine;
@@ -62,6 +82,7 @@ export function createProducerEngine(
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
     maxDeltaTime: options?.maxDeltaTime,
+    accessor: NOOP_ACCESSOR,
     mods: [
       {
         id: MOD_ID,

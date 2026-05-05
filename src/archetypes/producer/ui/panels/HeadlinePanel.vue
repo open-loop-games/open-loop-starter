@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui';
-import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
-import { PrimaryLifetimeKey, getBuildings, getPrimaryResource } from '../../modules';
+import { getBuildings, getClickCount, getPrimaryResource } from '../../modules';
 import { useProducerChainBreakdown } from '../../composables/useChainBreakdown';
 import ClickCookieButton from '../components/ClickCookieButton.vue';
 
 const buildings = getBuildings();
 const primary = getPrimaryResource();
-const lifetime = useModule(PrimaryLifetimeKey);
+const clickCount = getClickCount();
 const { format, formatWhole } = useFormatting();
 
 const cookies = computed(() => primary.value);
 const perSecond = computed(() => buildings.getTotalRate(primary));
 const click = computed(() => buildings.getState('click')!);
+const lifetime = computed(() => primary.lifetime?.value ?? 0);
 
 // Cursor carries the richest stack (globals + achievements + cursor upgrades
 // + cursor milestones) so it reads as the headline factor list. If cursor is
@@ -63,7 +63,7 @@ const expanded = ref(false);
       <div class="hero-footnote__rule" />
       <span class="hero-footnote__line"> lifetime &middot; {{ format(lifetime, 0) }} </span>
       <span class="hero-footnote__line hero-footnote__line--clicks">
-        {{ formatWhole(click.count.value) }} hand-baked
+        {{ formatWhole(clickCount) }} hand-baked
       </span>
     </footer>
 

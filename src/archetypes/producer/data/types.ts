@@ -1,4 +1,4 @@
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource, Gate } from 'open-loop-engine';
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
 // Definition interfaces shared across all data files. Editing these shapes
@@ -25,21 +25,6 @@ export interface UpgradeDef {
   multiplier: DecimalSource;
 }
 
-/**
- * Discriminated requirement spec. Data files stay engine-free by emitting
- * structured kind+args; the achievements module dispatches on `kind` and
- * builds reactive predicates that close over engine handles.
- */
-export type AchievementSpec =
-  | { kind: 'lifetime-at-least'; threshold: DecimalSource }
-  | { kind: 'producer-count-at-least'; producer: string; count: number }
-  | { kind: 'click-count-at-least'; count: number }
-  | { kind: 'upgrade-bought'; upgradeId: string }
-  | { kind: 'any-upgrade-bought'; upgradeIds: string[] }
-  | { kind: 'all-producers-owned' }
-  | { kind: 'all-tier1-upgrades' }
-  | { kind: 'arc-close' };
-
 export interface AchievementDef {
   id: string;
   name: string;
@@ -47,7 +32,13 @@ export interface AchievementDef {
   hidden?: boolean;
   /** Multiplicative reward when earned. Defaults to `balance.achievementMultiplier`. */
   reward?: DecimalSource;
-  spec: AchievementSpec;
+  /**
+   * Engine-typed declarative requirement. Aggregate predicates (every
+   * producer owned, every tier-1 upgrade bought, etc.) are expanded to
+   * `all`/`any` Gate combinators at content-authoring time using the
+   * structural ID lists in `data/`.
+   */
+  requirement: Gate;
 }
 
 export interface ProducerBalance {

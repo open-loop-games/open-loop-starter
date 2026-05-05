@@ -1,11 +1,11 @@
-import type { Ref } from 'vue';
 import {
+  addResource,
   createOverrideRegistry,
   createResource,
   createProducerCategory,
-  persistent,
   trackTotal,
   tunable,
+  withPersistentContext,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -16,21 +16,16 @@ import {
 import type { ProducerData, ProducerDef } from '../data/types';
 
 /**
- * Per-producer state. Manual-trigger producers (click) use this for an
- * activation-count tracker — the engine's `producer.count` is `1` for
- * non-purchasable producers, so click activations need their own counter.
- * Continuous producers return `undefined`.
+ * Per-producer state. Manual-trigger producers (click) expose the wrapped
+ * activate handler that grants the cookie yield and increments the click-
+ * count Resource. The count itself lives on the registered Resource so a
+ * Gate can read it via `lifetime-gte` over `'click-count'`.
  */
 export type ProducerInstanceState =
   | {
-      count: Ref<number>;
       activate: () => void;
     }
   | undefined;
-
-export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
-  'producer/primary-lifetime',
-) as InjectionKey<Ref<DecimalSource>>;
 
 /**
  * Typed surface for scoped balance/sim/tuning overrides. Keys represent the
@@ -61,6 +56,7 @@ export const ProducerTuningRegistryKey: InjectionKey<OverrideRegistry<ProducerTu
 // or `CategoriesKey` instead.
 let primaryResource: Resource<DecimalSource>;
 let buildings: ProducerCategory<ProducerDef, ProducerInstanceState>;
+let clickCountResource: Resource<DecimalSource>;
 
 export function getPrimaryResource(): Resource<DecimalSource> {
   return primaryResource;
@@ -68,6 +64,10 @@ export function getPrimaryResource(): Resource<DecimalSource> {
 
 export function getBuildings(): ProducerCategory<ProducerDef, ProducerInstanceState> {
   return buildings;
+}
+
+export function getClickCount(): Resource<DecimalSource> {
+  return clickCountResource;
 }
 
 export function createProducersModule(data: ProducerData): EngineModule {
@@ -82,7 +82,22 @@ export function createProducersModule(data: ProducerData): EngineModule {
         id: 'cookies',
       });
 
-      const primaryLifetime = trackTotal(primaryResource);
+      // Resource.lifetime slot (read by Gate's lifetime-gte over 'cookies')
+      // for the production-milestone achievements. Wrapped in its own
+      // persistence sub-context because trackTotal hardcodes the persistent
+      // name as 'lifetime' — multiple trackers in the module's context would
+      // collide on that key.
+      withPersistentContext('cookies', () => trackTotal(primaryResource));
+
+      // Click activations as a tracked Resource — Gate reads via
+      // lifetime-gte over 'click-count' for the hidden click-count
+      // achievements without standing up a per-archetype accessor.
+      clickCountResource = createResource<DecimalSource>(0, {
+        displayName: 'Clicks',
+        precision: 0,
+        id: 'click-count',
+      });
+      withPersistentContext('click-count', () => trackTotal(clickCountResource));
 
       buildings = createProducerCategory<ProducerDef, ProducerInstanceState>({
         id: 'producer/buildings',
@@ -108,20 +123,17 @@ export function createProducersModule(data: ProducerData): EngineModule {
         }),
         mapState: (def, producer) => {
           if (def.trigger !== 'manual' || !producer.activate) return undefined;
-          const count = persistent<number>(0, { name: 'activations' });
           const fire = producer.activate;
           return {
-            count,
             activate: () => {
               fire();
-              count.value += 1;
+              addResource(clickCountResource, 1);
             },
           };
         },
       });
       buildings.register(data.producers);
 
-      ctx.provide(PrimaryLifetimeKey, primaryLifetime);
       ctx.provide(ProducerTuningRegistryKey, tuningRegistry);
     },
   };

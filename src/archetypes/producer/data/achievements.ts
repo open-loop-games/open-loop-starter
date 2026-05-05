@@ -1,8 +1,15 @@
+import type { Gate } from 'open-loop-engine';
 import type { AchievementDef } from './types';
+import { CONTINUOUS_PRODUCER_IDS } from './producers';
+import { TIER1_UPGRADE_IDS, UPGRADES } from './upgrades';
 
 // ─── Skeleton + Costume ────────────────────────────────────────────────────
 // 11 production milestones + 12 building-count milestones + 9 hidden + arc-close = 33.
 // Each grants the default multiplicative headline reward unless `reward` is set.
+
+// In-arc upgrades are everything except the post-arc tier-iii rung, mirroring
+// the producer/{boost-iii} naming convention.
+const ARC_UPGRADE_IDS = UPGRADES.map((u) => u.id).filter((id) => !id.endsWith('-boost-iii'));
 
 // ─── Production milestones ────────────────────────────────────────────────
 
@@ -24,7 +31,7 @@ const productionMilestones: AchievementDef[] = PRODUCTION_THRESHOLDS.map((t) => 
   id: t.id,
   name: t.name,
   description: `Bake ${typeof t.total === 'number' ? t.total.toLocaleString() : t.total} cookies in total`,
-  spec: { kind: 'lifetime-at-least', threshold: t.total },
+  requirement: { kind: 'lifetime-gte', resource: 'cookies', value: t.total },
 }));
 
 // ─── Building-count milestones ────────────────────────────────────────────
@@ -48,10 +55,51 @@ const buildingMilestones: AchievementDef[] = BUILDING_MILESTONES.map((m) => ({
   id: m.id,
   name: m.name,
   description: `Own ${m.count} ${m.producer}${m.count === 1 ? '' : 's'}`,
-  spec: { kind: 'producer-count-at-least', producer: m.producer, count: m.count },
+  requirement: {
+    kind: 'count-gte',
+    category: 'producer/buildings',
+    entity: m.producer,
+    value: m.count,
+  },
 }));
 
 // ─── Hidden achievements ──────────────────────────────────────────────────
+
+const ownAllProducers: Gate = {
+  kind: 'all',
+  of: CONTINUOUS_PRODUCER_IDS.map((id) => ({
+    kind: 'count-gte' as const,
+    category: 'producer/buildings',
+    entity: id,
+    value: 1,
+  })),
+};
+
+const allTier1UpgradesBought: Gate = {
+  kind: 'all',
+  of: TIER1_UPGRADE_IDS.map((id) => ({
+    kind: 'unlock' as const,
+    category: 'producer/upgrades',
+    entity: id,
+  })),
+};
+
+const arcClose: Gate = {
+  kind: 'all',
+  of: [
+    ...CONTINUOUS_PRODUCER_IDS.map((id) => ({
+      kind: 'count-gte' as const,
+      category: 'producer/buildings',
+      entity: id,
+      value: 1,
+    })),
+    ...ARC_UPGRADE_IDS.map((id) => ({
+      kind: 'unlock' as const,
+      category: 'producer/upgrades',
+      entity: id,
+    })),
+  ],
+};
 
 const hidden: AchievementDef[] = [
   {
@@ -59,70 +107,76 @@ const hidden: AchievementDef[] = [
     name: 'And so it begins',
     description: 'Click the dough for the first time',
     hidden: true,
-    spec: { kind: 'click-count-at-least', count: 1 },
+    requirement: { kind: 'lifetime-gte', resource: 'click-count', value: 1 },
   },
   {
     id: 'hidden-100-clicks',
     name: 'Repetitive Strain',
     description: 'Click 100 times',
     hidden: true,
-    spec: { kind: 'click-count-at-least', count: 100 },
+    requirement: { kind: 'lifetime-gte', resource: 'click-count', value: 100 },
   },
   {
     id: 'hidden-1000-clicks',
     name: 'Carpal Champion',
     description: 'Click 1000 times',
     hidden: true,
-    spec: { kind: 'click-count-at-least', count: 1000 },
+    requirement: { kind: 'lifetime-gte', resource: 'click-count', value: 1000 },
   },
   {
     id: 'hidden-first-upgrade',
     name: 'Upgrade Habit',
     description: 'Buy your first cursor upgrade',
     hidden: true,
-    spec: { kind: 'upgrade-bought', upgradeId: 'cursor-boost-i' },
+    requirement: { kind: 'unlock', category: 'producer/upgrades', entity: 'cursor-boost-i' },
   },
   {
     id: 'hidden-first-global',
     name: 'Big Picture',
     description: 'Buy your first global upgrade',
     hidden: true,
-    spec: { kind: 'any-upgrade-bought', upgradeIds: ['click-x2', 'global-x2'] },
+    requirement: {
+      kind: 'any',
+      of: [
+        { kind: 'unlock', category: 'producer/upgrades', entity: 'click-x2' },
+        { kind: 'unlock', category: 'producer/upgrades', entity: 'global-x2' },
+      ],
+    },
   },
   {
     id: 'hidden-owns-everything',
     name: 'Full Stack',
     description: 'Own at least one of every producer tier',
     hidden: true,
-    spec: { kind: 'all-producers-owned' },
+    requirement: ownAllProducers,
   },
   {
     id: 'hidden-all-tier1',
     name: 'Tier One Tourist',
     description: 'Buy every tier-1 boost upgrade',
     hidden: true,
-    spec: { kind: 'all-tier1-upgrades' },
+    requirement: allTier1UpgradesBought,
   },
   {
     id: 'hidden-1e10-lifetime',
     name: 'Billionaire Baker',
     description: 'Reach 10 billion total cookies',
     hidden: true,
-    spec: { kind: 'lifetime-at-least', threshold: '1e10' },
+    requirement: { kind: 'lifetime-gte', resource: 'cookies', value: '1e10' },
   },
   {
     id: 'hidden-1e30-lifetime',
     name: 'Cosmic Confection',
     description: 'Reach 1e30 total cookies',
     hidden: true,
-    spec: { kind: 'lifetime-at-least', threshold: '1e30' },
+    requirement: { kind: 'lifetime-gte', resource: 'cookies', value: '1e30' },
   },
   {
     id: 'hidden-arc-close',
     name: 'The Bakery Hums',
     description: 'Own every producer tier and buy every in-arc upgrade',
     hidden: true,
-    spec: { kind: 'arc-close' },
+    requirement: arcClose,
   },
 ];
 

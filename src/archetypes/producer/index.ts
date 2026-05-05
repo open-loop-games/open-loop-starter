@@ -19,18 +19,17 @@ export type {
   ProducerDef,
   UpgradeDef,
   AchievementDef,
-  AchievementSpec,
   ProducerBalance,
   ProducerData,
 } from './data/types';
 export { applyProducerOverrides, type ProducerOverrides } from './data/overrides';
 export {
-  PrimaryLifetimeKey,
   ProducerTuningRegistryKey,
+  createProducerModules,
+  getAchievements,
   getBuildings,
+  getClickCount,
   getPrimaryResource,
   getUpgrades,
-  getAchievements,
-  createProducerModules,
   type ProducerInstanceState,
 } from './modules';
