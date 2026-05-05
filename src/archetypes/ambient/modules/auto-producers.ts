@@ -5,7 +5,6 @@ import {
   createProducerCategory,
   createResource,
   createTimeSystem,
-  trackTotal,
   tunable,
   type DecimalSource,
   type EngineModule,
@@ -90,7 +89,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
         precision: 0,
         id: 'sprouts',
       });
-      const primaryLifetime = trackTotal(primaryResource);
+      const primaryLifetime = primaryResource.cumulative!;
 
       // TimeSystem provides persistent `elapsed` + `totalPlayTime`. Wired
       // into the loop here so `tick(dt)` advances both fields. The

@@ -3,9 +3,7 @@ import {
   createOverrideRegistry,
   createResource,
   createProducerCategory,
-  trackTotal,
   tunable,
-  withPersistentContext,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -19,7 +17,7 @@ import type { ProducerData, ProducerDef } from '../data/types';
  * Per-producer state. Manual-trigger producers (click) expose the wrapped
  * activate handler that grants the cookie yield and increments the click-
  * count Resource. The count itself lives on the registered Resource so a
- * Gate can read it via `lifetime-gte` over `'click-count'`.
+ * Gate can read it via `cumulative-gte` over `'click-count'`.
  */
 export type ProducerInstanceState =
   | {
@@ -82,22 +80,15 @@ export function createProducersModule(data: ProducerData): EngineModule {
         id: 'cookies',
       });
 
-      // Resource.lifetime slot (read by Gate's lifetime-gte over 'cookies')
-      // for the production-milestone achievements. Wrapped in its own
-      // persistence sub-context because trackTotal hardcodes the persistent
-      // name as 'lifetime' — multiple trackers in the module's context would
-      // collide on that key.
-      withPersistentContext('cookies', () => trackTotal(primaryResource));
-
-      // Click activations as a tracked Resource — Gate reads via
-      // lifetime-gte over 'click-count' for the hidden click-count
-      // achievements without standing up a per-archetype accessor.
+      // Click activations as a tracked Resource — Gate's `cumulative-gte`
+      // reads `Resource.cumulative` (intrinsic to every persistent resource)
+      // for the hidden click-count achievements without an archetype
+      // accessor.
       clickCountResource = createResource<DecimalSource>(0, {
         displayName: 'Clicks',
         precision: 0,
         id: 'click-count',
       });
-      withPersistentContext('click-count', () => trackTotal(clickCountResource));
 
       buildings = createProducerCategory<ProducerDef, ProducerInstanceState>({
         id: 'producer/buildings',

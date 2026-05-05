@@ -17,9 +17,9 @@ const GAME_ID = 'producer-pilot';
 const MOD_ID = 'bakery';
 const MOD_NAME = 'Bakery';
 
-// Producer's Gates only use lifetime-gte / count-gte / unlock / combinators —
+// Producer's Gates only use cumulative-gte / count-gte / unlock / combinators —
 // none of those reach into the accessor (they read through CategoryEntrySignals
-// and Resource.lifetime). The no-op satisfies getAmbientGateRuntime's non-
+// and Resource.cumulative). The no-op satisfies getAmbientGateRuntime's non-
 // undefined contract without standing up an archetype-specific accessor.
 const NOOP_ACCESSOR: GameStateAccessor & GameStateMutator = {
   getResource: () => Decimal.dZero,

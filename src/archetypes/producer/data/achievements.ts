@@ -31,7 +31,7 @@ const productionMilestones: AchievementDef[] = PRODUCTION_THRESHOLDS.map((t) => 
   id: t.id,
   name: t.name,
   description: `Bake ${typeof t.total === 'number' ? t.total.toLocaleString() : t.total} cookies in total`,
-  requirement: { kind: 'lifetime-gte', resource: 'cookies', value: t.total },
+  requirement: { kind: 'cumulative-gte', resource: 'cookies', value: t.total },
 }));
 
 // ─── Building-count milestones ────────────────────────────────────────────
@@ -107,21 +107,21 @@ const hidden: AchievementDef[] = [
     name: 'And so it begins',
     description: 'Click the dough for the first time',
     hidden: true,
-    requirement: { kind: 'lifetime-gte', resource: 'click-count', value: 1 },
+    requirement: { kind: 'cumulative-gte', resource: 'click-count', value: 1 },
   },
   {
     id: 'hidden-100-clicks',
     name: 'Repetitive Strain',
     description: 'Click 100 times',
     hidden: true,
-    requirement: { kind: 'lifetime-gte', resource: 'click-count', value: 100 },
+    requirement: { kind: 'cumulative-gte', resource: 'click-count', value: 100 },
   },
   {
     id: 'hidden-1000-clicks',
     name: 'Carpal Champion',
     description: 'Click 1000 times',
     hidden: true,
-    requirement: { kind: 'lifetime-gte', resource: 'click-count', value: 1000 },
+    requirement: { kind: 'cumulative-gte', resource: 'click-count', value: 1000 },
   },
   {
     id: 'hidden-first-upgrade',
@@ -162,14 +162,14 @@ const hidden: AchievementDef[] = [
     name: 'Billionaire Baker',
     description: 'Reach 10 billion total cookies',
     hidden: true,
-    requirement: { kind: 'lifetime-gte', resource: 'cookies', value: '1e10' },
+    requirement: { kind: 'cumulative-gte', resource: 'cookies', value: '1e10' },
   },
   {
     id: 'hidden-1e30-lifetime',
     name: 'Cosmic Confection',
     description: 'Reach 1e30 total cookies',
     hidden: true,
-    requirement: { kind: 'lifetime-gte', resource: 'cookies', value: '1e30' },
+    requirement: { kind: 'cumulative-gte', resource: 'cookies', value: '1e30' },
   },
   {
     id: 'hidden-arc-close',

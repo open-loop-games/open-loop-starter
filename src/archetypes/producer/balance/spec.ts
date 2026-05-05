@@ -15,7 +15,7 @@
  * § 6.3 + § 6.6); per-step Δt is `Cost / total_rate` per
  * `closed-form-progression/case-studies/core-timing-formula.md § 4`.
  *
- * Mid-step rate transitions (achievement firings on lifetime-threshold
+ * Mid-step rate transitions (achievement firings on cumulative-threshold
  * crossings) are spliced via the engine's `timeUntilGateFlip` primitive
  * over each unfired achievement's `Gate` spec. The predictor advances
  * the cookies resource symbolically; the achievement watchers (sync-
@@ -85,7 +85,7 @@ function resetAchievements(): void {
   }
 }
 
-// Spec-side accessor — `timeUntilGateFlip` projects `lifetime-gte` against
+// Spec-side accessor — `timeUntilGateFlip` projects `cumulative-gte` against
 // the underlying resource's rate (via `runtime.accessor.getRate(resource)`),
 // so the splice walker needs a rate-bearing accessor over the cookies
 // resource specifically. Other surfaces aren't probed: `count-gte` /
@@ -168,9 +168,9 @@ export function arcWaypoints(
   const buildings = getBuildings();
   const upgrades = getUpgrades();
   const primary = getPrimaryResource();
-  const primaryLifetime = primary.lifetime;
-  if (!primaryLifetime) {
-    throw new Error("arcWaypoints: 'cookies' resource has no lifetime tracker");
+  const primaryCumulative = primary.cumulative;
+  if (!primaryCumulative) {
+    throw new Error("arcWaypoints: 'cookies' resource has no cumulative tracker");
   }
 
   const runtime = buildGateRuntime(engine);
@@ -183,7 +183,7 @@ export function arcWaypoints(
   // milestone-tier-1 against the seeded cursor count) re-fires correctly.
   setCounts(counts);
   resetUpgrades();
-  primaryLifetime.value = Decimal.dZero;
+  primaryCumulative.value = Decimal.dZero;
   primary.value = Decimal.dZero;
   resetAchievements();
 
@@ -201,14 +201,14 @@ export function arcWaypoints(
 
       if (nextFireDt >= dtToBuy) {
         stepDt += dtToBuy;
-        primaryLifetime.value = Decimal.add(primaryLifetime.value, remaining);
+        primaryCumulative.value = Decimal.add(primaryCumulative.value, remaining);
         remaining = 0;
       } else {
         const consumed = nextFireDt * rate;
         stepDt += nextFireDt;
         // Synchronous watcher fires complete() on the crossing achievement;
         // earned flips, rate chain reactively reflects it on the next iter.
-        primaryLifetime.value = Decimal.add(primaryLifetime.value, consumed);
+        primaryCumulative.value = Decimal.add(primaryCumulative.value, consumed);
         remaining -= consumed;
       }
     }

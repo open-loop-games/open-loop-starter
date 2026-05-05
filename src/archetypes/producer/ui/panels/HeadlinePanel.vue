@@ -14,7 +14,7 @@ const { format, formatWhole } = useFormatting();
 const cookies = computed(() => primary.value);
 const perSecond = computed(() => buildings.getTotalRate(primary));
 const click = computed(() => buildings.getState('click')!);
-const lifetime = computed(() => primary.lifetime?.value ?? 0);
+const lifetime = computed(() => primary.cumulative?.value ?? 0);
 
 // Cursor carries the richest stack (globals + achievements + cursor upgrades
 // + cursor milestones) so it reads as the headline factor list. If cursor is
