@@ -1,5 +1,14 @@
 /**
- * Closed-form spec inspection — pure math via engine queries, no sim.
+ * Producer balance predictor — methodology #2 prediction half.
+ *
+ * Closed-form spec inspection — pure math via engine queries, no sim. Per
+ * `archetypes/BALANCING.md § Theme 3 #2` and `§ Engine as oracle`.
+ *
+ * Triangular multi-resource walker per `rate-function-algebra.md § 6.3` +
+ * `§ 6.6` — strict-tier-order schedule, per-step Δt = `getCost(1) /
+ * getTotalRate` at frozen state, Σ-of-first-passages cumulative. The
+ * underlying primitive is `closed-form-progression/case-studies/core-timing-formula.md § 4`
+ * (`T(n) = Cost(n) / Production(n)`).
  *
  *   pnpm exec vite-node src/archetypes/producer/balance/predict.ts
  *
@@ -7,8 +16,8 @@
  * (no bot, no ticks). Each step's Δt is the engine's own
  * `repeatable.getCost(1)` divided by `getTotalRate` at the frozen state
  * — the full modifier chain applies. Bot policy walks a different path
- * through the same lattice; mismatch with `./run.ts` is the calibration
- * signal, not a defect.
+ * through the same lattice; `./verify.ts` walks the bot's actual path
+ * closed-form and diffs against the sim trajectory for drift detection.
  */
 
 import { PRODUCER_BALANCE } from '..';

@@ -13,6 +13,15 @@
  * modifier stack maxes at ~1e4×), the response is to propose coherent shifts
  * across scaffolding — move the beat, reshape content, relax the target —
  * not to contort one constant until the math closes.
+ *
+ * Engine-as-oracle posture (`archetypes/BALANCING.md § Engine as oracle`):
+ *   - Methodology #1 (`solve.ts`) — deterministic-bot-driven runs against
+ *     `runUntil`; bisects single tunables per beat.
+ *   - Methodology #2 (`predict.ts` + `spec.ts`) — frozen-state queries
+ *     against `getCost(1)` / `getTotalRate`; triangular multi-resource
+ *     walker per algebra § 6.3 / § 6.6.
+ *   - Bridge (`verify.ts`) — diffs predictor vs sim per-waypoint to catch
+ *     engine-side primitive drift.
  */
 
 export interface PhaseIntent {
@@ -98,6 +107,54 @@ export const PRODUCER_PHASES: readonly PhaseIntent[] = [
 ] as const;
 
 /**
+ * Per-subsystem methodology declaration. Producer is single-subsystem
+ * (continuous-producer-with-modifier-chain) and single-methodology (#1+#2
+ * over a triangular multi-resource composition row). See
+ * `archetypes/BALANCING.md § Bucket → methodology lookup` for the full
+ * bucket × methodology cross-reference.
+ *
+ * Subsystem inventory: `closed-form-progression/subsystem-inventory.md
+ * § 3.2` — Producer 8 rows, 7 Pure + 1 Optimal stopping (87.5% decomposable).
+ * The 1 OS row (single-tier prestige timing analog) is not modeled in this
+ * slim port; the modeled subsystem is the Pure row.
+ */
+export interface SubsystemMethodology {
+  id: string;
+  bucket:
+    | 'Pure'
+    | 'Piecewise'
+    | 'CoupledState'
+    | 'StrategySpace'
+    | 'Stochastic'
+    | 'DiscreteEvent'
+    | 'NetworkTopological'
+    | 'OptimalStopping'
+    | 'CombinatorialSelection';
+  methodology: '#1' | '#2' | '#1+#2' | '#3' | '#4' | '#5' | '#6';
+  compositionRow: 'triangular' | 'piecewise' | 'modifier-product' | 'series' | 'sum' | null;
+  canonicalSurface: 'cited' | 'invention' | 'mixed';
+  inventionKnobs: readonly string[];
+}
+
+export const PRODUCER_SUBSYSTEMS: readonly SubsystemMethodology[] = [
+  {
+    id: 'continuous-producers',
+    bucket: 'Pure',
+    methodology: '#1+#2',
+    compositionRow: 'triangular',
+    // Bakery slim-port content is declared invention (no canonical exemplar
+    // numbers carried 1:1). All numeric surfaces are perturbation surface.
+    canonicalSurface: 'invention',
+    inventionKnobs: [
+      'producers/cursor/purchase/baseCost',
+      'producers/grandma/purchase/baseCost',
+      'balance/tier1UpgradeMultiplier',
+      'balance/milestoneBonusPerTier',
+    ],
+  },
+] as const;
+
+/**
  * Flow-band weights for the eventual arc-scoring objective function. Scores
  * the full arc's minute-by-minute flow channel (from `flow-probe.ts`) into
  * a single number the solver can optimise against, decoupling good-feel from
@@ -105,6 +162,8 @@ export const PRODUCER_PHASES: readonly PhaseIntent[] = [
  *
  * Player-experience-calibrated, not engine-data-driven. Tune by playtest
  * feedback, not by sim output.
+ *
+ * 6-band keys map directly to `flow-channel-thresholds.md § 1.2` channels.
  */
 export const FLOW_BAND_SCORE = {
   arousal: 1,

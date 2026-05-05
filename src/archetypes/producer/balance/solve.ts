@@ -1,10 +1,11 @@
 /**
- * Producer balance solver — engine as oracle.
+ * Producer balance solver — methodology #1 (spec/calibrate/lock).
  *
- * Each beat gets bisected against the bot-driven engine (`buildProducerSimEngine`)
- * by pushing the candidate value onto the archetype's tuning `OverrideRegistry`
- * and running `runUntil` against a shared engine. One engine per solve-pass
- * — bisection iterations reset state via `saveManager.importSave(initialBlob)`
+ * Per `archetypes/BALANCING.md § Theme 3 #1`. Each beat gets bisected
+ * against the bot-driven engine (`buildProducerSimEngine`) by pushing the
+ * candidate value onto the archetype's tuning `OverrideRegistry` and
+ * running `runUntil` against a shared engine. One engine per solve-pass —
+ * bisection iterations reset state via `saveManager.importSave(initialBlob)`
  * instead of rebuilding. The engine plays the game; the solver tunes a
  * parameter until the beat's fire time lands on target.
  *
@@ -14,6 +15,14 @@
  * Scope: beats 2, 3, 4, 7. Proposals chain forward — each beat solves against
  * the prior beats' proposed values so later numbers account for earlier
  * tuning. Beats 5, 6, 8 deferred pending design decisions (see ticket).
+ *
+ * TODO(expansion): bisect against `predict.ts` `arcWaypoints` (closed-form
+ * predictor) instead of `runUntil` (sim) per sample, once `verify.ts` shows
+ * predictor and sim agree within tolerance. Per BALANCING.md § Theme 3 #2
+ * "Bridge to #1": the predictor is methodology #1's bisection inner loop
+ * when the spec admits one; sim runs only at the verify step. Refactor is
+ * order-of-magnitude faster but changes solver behavior; wants its own
+ * ticket.
  */
 
 import {

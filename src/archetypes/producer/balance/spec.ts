@@ -1,17 +1,22 @@
 /**
- * Closed-form spec layer — engine as oracle, queried as pure math.
+ * Producer engine-as-oracle helpers — methodology #2 spec layer.
+ *
+ * Per `archetypes/BALANCING.md § Engine as oracle`: frozen-state queries
+ * against `getCost(1)` / `computedRate` / `getTotalRate` for the triangular
+ * multi-resource walker. The engine *is* the math; this file does no
+ * spec-side reimplementation of cost / rate / chain composition.
  *
  * Builds a producer engine instance once (no bot, no ticks running) and
  * mutates persistent refs into hypothetical states; the engine's own
- * `repeatable.getCost(1)`, `computedRate`, and `getTotalRate` answer cost
- * and production at each step with the full modifier chain applied. No
- * spec-side reimplementation of cost / rate / chain math.
+ * primitives answer cost and production at each step with the full
+ * modifier chain applied.
  *
  * The triangular composer walks a strict-tier-order schedule (algebra
- * §6.3 / §6.6); per-step Δt is `Cost / total_rate` per
- * `case-studies/core-timing-formula.md §4.1`. The lowest-tier bootstrap
- * (count 0 → 1, no production yet, e.g. cursor seeded by clicks) stays
- * bot territory: with `getTotalRate` zero the spec correctly returns +∞.
+ * § 6.3 + § 6.6); per-step Δt is `Cost / total_rate` per
+ * `closed-form-progression/case-studies/core-timing-formula.md § 4`. The
+ * lowest-tier bootstrap (count 0 → 1, no production yet — cursor seeded by
+ * clicks) stays bot territory: with `getTotalRate` zero the spec correctly
+ * returns +∞.
  */
 
 import { Decimal, type Engine } from 'open-loop-engine';
