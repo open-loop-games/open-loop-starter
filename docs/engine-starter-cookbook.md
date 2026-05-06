@@ -307,7 +307,7 @@ The two docs are companions: this cookbook owns positive recipes (goal → engin
 | Packer #4        | Combine-up / merge mechanic                         | `Combine-up recipe primitive` (same entry as Interlocker #4)           |
 | Defender #10     | Gem combine mechanic                                | Same combine-up recipe candidate. Note: shape distinct from Auto-battler star-tier scaling (which is `createSkillCategory` accumulator, not N-in/M-out recipe). |
 | Survivor #5      | Level-up offer pool with pool-state tracking        | `Draft-pool weighted sampling`                                         |
-| Tug #2           | Income-upgrade payback ROI                          | `purchasablePaybackSeconds` (Tug N=1 — first-consumer filing)          |
+| Tug #2           | Income-upgrade payback ROI                          | `selectionHybridPayback` (`open-loop-engine/src/core/policy.ts:193`) — payback term `cost / Δrate` already shipped |
 | Tug #11          | Symmetric mirrored module instances                 | `createSymmetricModuleSet` (Tug N=1 — first-consumer filing)           |
 | Auto-battler #10 | Shop draft pool (private + multiplayer-shared)      | `createSharedPool` (multiplayer-pre-designed) + `Draft-pool weighted sampling` (sampling ergonomics) |
 | Auto-battler #16 | Grid placement auto-resolve                         | `createPlacementResolver` (Packer + Auto-battler cited)                |

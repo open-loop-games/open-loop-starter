@@ -209,7 +209,7 @@ The honest framing: subsystems close, equilibria don't. Game theory is the right
 > crossoverSeconds = paybackSeconds × multiplier
 > ```
 >
-> First derived during Tug's balance pass against an `incomeRateChain` of sequential multipliers; the formula is reactive against any live chain and lives engine-side as `IncomeUpgradeRoiKey[side]: Map<defId, RoiMetrics>`. The same shape fits any archetype with sequential rate-multiplier upgrades — filed as engine candidate-primitive `purchasablePaybackSeconds`. The strategy-space *integration* over what the player buys against an adapting opponent is what doesn't close. Both layers are math; the second one is `bifurcations.md` § 2.
+> First derived during Tug's balance pass against an `incomeRateChain` of sequential multipliers; the formula is reactive against any live chain and lives engine-side as `IncomeUpgradeRoiKey[side]: Map<defId, RoiMetrics>`. The same shape fits any archetype with sequential rate-multiplier upgrades and is exposed engine-side via `selectionHybridPayback` (`open-loop-engine/src/core/policy.ts:193`), whose payback term `cost / Δrate` is the same shape with `Δrate = currentRate × (multiplier − 1)`. Producers of all kinds also surface `Producer.purchaseBeatSeconds` (`src/systems/producer-category.ts:146`) — the producer-system analog of the same closed form. The strategy-space *integration* over what the player buys against an adapting opponent is what doesn't close. Both layers are math; the second one is `bifurcations.md` § 2.
 
 For tester-seat search-based agents driving objective variation against parameterized personalities, see `open-loop-research/practical/composition-cookbook/procedural-personas.md` and `parameterized-personality.md`.
 
@@ -248,7 +248,7 @@ Full surface at `open-loop-engine/docs/api/INDEX.md` (system-layer entries — n
 
 Engine-as-oracle posture makes balance work portable across engine refactors. The math is the spec; the engine is the truth; the solver glues them. When a primitive is missing — when consumers hand-roll a query the engine should own — file it as a candidate in `open-loop-engine/docs/candidate-primitives.md`. Co-locate a `TODO(expansion)` marker at the hand-roll site as the in-code receipt. The candidate file is the convergence channel; duplicate consumers (N=2) graduate the candidate to a research ticket.
 
-Current candidate-primitives relevant to balance work include `purchasablePaybackSeconds` (N=1, Tug; N=2 expected when Looper balance lands) and `costScaling: { threshold, scale }` (N=0, AD-shaped piecewise cost; first hand-roll site triggers).
+Current candidate-primitives relevant to balance work include `costScaling: { threshold, scale }` (N=0, AD-shaped piecewise cost; first hand-roll site triggers).
 
 ## Theme 4 — What engine surfaces help?
 
