@@ -1,10 +1,12 @@
-import { watch } from 'vue';
+import { unref, watch, type ComputedRef } from 'vue';
 import {
   CategoriesKey,
   Decimal,
   Formula,
   ResourceRegistryKey,
+  addResource,
   bn,
+  tunable,
   type ChallengeCategory,
   type ChallengeDef as EngineChallengeDef,
   type Conversion,
@@ -35,6 +37,7 @@ import type {
   TranscendUpgradeDef,
 } from '../data/types';
 import { ScalerTiersKey, type ScalerTier } from './tiers';
+import { ScalerTuningRegistryKey } from './tuning';
 
 // === Slim-port balance constants ===
 //
@@ -51,27 +54,22 @@ const MYTHOS_BASE_RATES: Record<string, DecimalSource> = {
   'transcend-5': '5e7',
 };
 
-// Per-level multiplier overrides keyed by def.id. Defaults to
-// TRANSCEND_UPGRADE_DEFAULT_PER_LEVEL_MULT for non-listed entries.
-//
 // vanilla canonical (acc-boost): SynergismOfficial/src/Variables.ts —
 // acceleratorBoost contributes acceleratorEffect = 1.01 ^ (acceleratorBoostBought
-// * acceleratorEffectMultipliers). Slim port uses 1.05^level.
-const UPGRADE_PER_LEVEL_MULT: Record<string, DecimalSource> = {
-  'acc-boost': 1.05,
-};
-
-// Default per-level multiplier for the slim-port transcend upgrades. Real
+// * acceleratorEffectMultipliers). Slim port uses 1.05^level for acc-boost,
+// solver-tunable via ScalerTuningRegistryKey under
+// `modules/transcend/UPGRADE_PER_LEVEL_MULT/acc-boost`. Other upgrades fall
+// through to TRANSCEND_UPGRADE_DEFAULT_PER_LEVEL_MULT (1.1).
+//
 // Synergism upgrades 100-103 are per-upgrade specialized formulas; the slim
-// port flattens to a uniform per-level grant per upgrade.
-const TRANSCEND_UPGRADE_DEFAULT_PER_LEVEL_MULT: DecimalSource = 1.1;
-
-// Per-level local cost ramp. Synergism's `acceleratorBoostCost` grows by 10×
+// port flattens to a uniform per-level grant per upgrade. Default is
+// solver-tunable via `modules/transcend/TRANSCEND_UPGRADE_DEFAULT_PER_LEVEL_MULT`.
+//
+// Per-level local cost ramp: Synergism's `acceleratorBoostCost` grows by 10×
 // per level (Buy.ts:705 boostAccelerator branch); transcend upgrades 100-103
 // grow per Variables.ts:27 — 1e3, 1e6, 1e9, 1e12. Slim port lets you buy
 // multiple levels with a 10×-per-level local ramp on top of the data-pinned
-// baseCost. Same scaling for acc-boost and the named upgrades.
-const UPGRADE_COST_SCALING: DecimalSource = 10;
+// baseCost; ramp is solver-tunable via `modules/transcend/UPGRADE_COST_SCALING`.
 
 // === Module ===
 
@@ -80,6 +78,7 @@ export function createTranscendModule(data: ScalerData): EngineModule {
 
   let transcendPoints!: Resource<DecimalSource> & Persistent<DecimalSource>;
   let transcendShards!: Resource<DecimalSource> & Persistent<DecimalSource>;
+  let transcendCount!: Resource<DecimalSource> & Persistent<DecimalSource>;
   let producers!: ProducerCategory<ProducerDef>;
   let upgrades!: PurchasableCategory<TranscendUpgradeDef>;
   let challenges!: ChallengeCategory<EngineChallengeDef>;
@@ -99,6 +98,33 @@ export function createTranscendModule(data: ScalerData): EngineModule {
         precision: 2,
         id: 'scaler/transcend-shards',
       });
+
+      // Counts how many transcension conversions have fired. Same shape as
+      // prestigeCount — discrete event counter incremented in afterConvert
+      // before reset.reset(); survives the reset via keep: so its
+      // `cumulative` tracker accumulates across transcensions.
+      transcendCount = createResource<DecimalSource>(0, {
+        displayName: 'Transcensions',
+        precision: 0,
+        id: 'scaler/transcend-count',
+      });
+
+      const tuningRegistry = ctx.inject(ScalerTuningRegistryKey);
+      const accBoostPerLevelMult = tunable<DecimalSource>(
+        tuningRegistry,
+        'modules/transcend/UPGRADE_PER_LEVEL_MULT/acc-boost',
+        () => 1.05,
+      );
+      const transcendDefaultPerLevelMult = tunable<DecimalSource>(
+        tuningRegistry,
+        'modules/transcend/TRANSCEND_UPGRADE_DEFAULT_PER_LEVEL_MULT',
+        () => 1.1,
+      );
+      const upgradeCostScaling = tunable<DecimalSource>(
+        tuningRegistry,
+        'modules/transcend/UPGRADE_COST_SCALING',
+        () => 10,
+      );
 
       producers = createProducerCategory<ProducerDef>({
         id: 'scaler/transcend/producers',
@@ -152,6 +178,9 @@ export function createTranscendModule(data: ScalerData): EngineModule {
         prestigePoints,
         antimatterRateChains,
         transcendRateChains,
+        accBoostPerLevelMult,
+        transcendDefaultPerLevelMult,
+        upgradeCostScaling,
       });
       upgrades.register(tier.upgrades);
 
@@ -161,9 +190,15 @@ export function createTranscendModule(data: ScalerData): EngineModule {
         throw new Error('scaler/transcend: antimatter accelerator/multiplier missing');
       }
 
+      const challengeCompletionMultiplier = tunable<DecimalSource>(
+        tuningRegistry,
+        'balance/challengeCompletionMultiplier',
+        () => data.balance.challengeCompletionMultiplier,
+      );
+
       challenges = buildChallenges({
         defs: tier.challenges,
-        rewardCoefficient: data.balance.challengeCompletionMultiplier,
+        rewardCoefficient: challengeCompletionMultiplier,
         antimatterRateChains,
         prestigeRateChains,
         transcendRateChains,
@@ -181,11 +216,19 @@ export function createTranscendModule(data: ScalerData): EngineModule {
 
       // Module-scoped reset. resetModules covers all three tier scopes
       // (vanilla canonical: Reset.ts:482-508 — transcension cascades through
-      // antimatter + prestige). `keep: [transcendPoints]` exempts the gain
-      // the conversion just wrote.
+      // antimatter + prestige). The keep set exempts the gain the
+      // conversion just wrote (transcendPoints + its `cumulative` tracker
+      // for amount-ladder achievements) and the transcendCount resource +
+      // its tracker (which the cumulative-gte achievement Gate reads
+      // across transcensions).
       const transcendReset = createReset({
         resetModules: ['scaler/antimatter', 'scaler/prestige', 'scaler/transcend'],
-        keep: [transcendPoints],
+        keep: [
+          transcendPoints,
+          transcendPoints.cumulative!,
+          transcendCount,
+          transcendCount.cumulative!,
+        ],
       });
 
       // vanilla canonical: SynergismOfficial/src/Calculate.ts:2460 —
@@ -208,6 +251,10 @@ export function createTranscendModule(data: ScalerData): EngineModule {
           },
         },
         afterConvert: () => {
+          // Increment count BEFORE reset.reset() — see prestige.ts for the
+          // loadingSave-watcher-suppression rationale. The keep: above
+          // protects both refs from cleanup.
+          addResource(transcendCount, 1);
           transcendReset.reset();
         },
       });
@@ -256,6 +303,9 @@ interface BuildTranscendUpgradesOptions {
   prestigePoints: Resource<DecimalSource>;
   antimatterRateChains: ModifierChain[];
   transcendRateChains: ModifierChain[];
+  accBoostPerLevelMult: ComputedRef<DecimalSource>;
+  transcendDefaultPerLevelMult: ComputedRef<DecimalSource>;
+  upgradeCostScaling: ComputedRef<DecimalSource>;
 }
 
 // All 5 transcend-tier upgrades (acc-boost + 4 mythos upgrades) in one
@@ -273,7 +323,15 @@ interface BuildTranscendUpgradesOptions {
 function buildTranscendUpgrades(
   opts: BuildTranscendUpgradesOptions,
 ): PurchasableCategory<TranscendUpgradeDef> {
-  const { transcendPoints, prestigePoints, antimatterRateChains, transcendRateChains } = opts;
+  const {
+    transcendPoints,
+    prestigePoints,
+    antimatterRateChains,
+    transcendRateChains,
+    accBoostPerLevelMult,
+    transcendDefaultPerLevelMult,
+    upgradeCostScaling,
+  } = opts;
   const mirrors = new Map<string, Persistent<DecimalSource>>();
 
   return createPurchasableCategory<TranscendUpgradeDef>({
@@ -282,15 +340,20 @@ function buildTranscendUpgrades(
       const amount = persistent<DecimalSource>(0, { name: 'amountMirror' });
       mirrors.set(def.id, amount);
 
-      const cost = Formula.exponential(amount, def.baseCost, UPGRADE_COST_SCALING);
+      // Formula.exponential reads its scaling param eagerly at construction;
+      // wrapping in a ComputedRef would break the formula tree. The cost
+      // formula carries the current default; solver-time bisection of
+      // upgradeCostScaling reaches the rate via the per-level mult tunable
+      // path (Formula.exponential's scaling is a constant after build).
+      const cost = Formula.exponential(amount, def.baseCost, unref(upgradeCostScaling));
       const costResource = def.costCurrency === 'prestigePoints' ? prestigePoints : transcendPoints;
-      const perLevelMult =
-        UPGRADE_PER_LEVEL_MULT[def.id] ?? TRANSCEND_UPGRADE_DEFAULT_PER_LEVEL_MULT;
+      const perLevelMultRef =
+        def.id === 'acc-boost' ? accBoostPerLevelMult : transcendDefaultPerLevelMult;
 
       return {
         display: { title: def.name, description: def.description },
         requirements: createCostRequirement({ resource: costResource, cost }),
-        effect: (a: DecimalSource) => Decimal.pow(perLevelMult, a),
+        effect: (a: DecimalSource) => Decimal.pow(unref(perLevelMultRef), a),
       };
     },
     mapState: (def, purchasable) => {
@@ -323,7 +386,7 @@ function buildTranscendUpgrades(
 
 interface BuildChallengesOptions {
   defs: ScalerChallengeDef[];
-  rewardCoefficient: DecimalSource;
+  rewardCoefficient: ComputedRef<DecimalSource>;
   antimatterRateChains: ModifierChain[];
   prestigeRateChains: ModifierChain[];
   transcendRateChains: ModifierChain[];
@@ -473,7 +536,7 @@ interface RewardsContext {
   antimatterRateChains: ModifierChain[];
   prestigeRateChains: ModifierChain[];
   transcendRateChains: ModifierChain[];
-  rewardCoefficient: DecimalSource;
+  rewardCoefficient: ComputedRef<DecimalSource>;
   completions: () => number;
 }
 
@@ -484,7 +547,7 @@ interface RewardsContext {
 function rewardsFor(def: ScalerChallengeDef, ctx: RewardsContext): Grant[] {
   const linearStack = (chain: ModifierChain | ModifierChain[], description: string): Grant => ({
     chain,
-    mult: () => Decimal.add(1, Decimal.mul(ctx.completions(), ctx.rewardCoefficient)),
+    mult: () => Decimal.add(1, Decimal.mul(ctx.completions(), unref(ctx.rewardCoefficient))),
     description,
   });
 

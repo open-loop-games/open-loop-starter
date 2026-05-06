@@ -18,14 +18,21 @@ export const SCALER_BALANCE: ScalerBalance = {
   // transcendPointGain = floor(log(transcendShards + 1, 10))
   transcendConversionLog: 10,
 
-  // Default multiplicative grant per achievement into headline chain.
-  // Synergism applies achievement rewards via `awardAchievement` → reward
-  // function → modifier-chain factor (per-achievement reward varies; this
-  // is the slim-port default for milestone-only achievements).
-  achievementMultiplier: 1.02,
+  // Multiplicative grant per achievement into the per-tier rate chain
+  // (modules/achievements.ts folds the active set via
+  // `getCombinedAchievementEffect`). Declared-invention surface per
+  // `balance/shape.ts` SCALER_SUBSYSTEMS antimatter inventionKnobs;
+  // calibrated by sub-leaf C's solver pass against the autobuyer-driven
+  // sim (beat-2 lands at 1m08s in the 15s-2min window). The magnitude is
+  // large because the autobuyer's producer-vs-upgrade competition forces
+  // a high per-achievement reward to land beat-2 in window — see
+  // `archetypes/scaler.balance.md` for the structural finding.
+  achievementMultiplier: 42.347,
 
   // Default multiplicative grant per challenge completion. Synergism's
   // CalcECC at Challenges.ts:541 applies linear-stacking-with-softcap;
   // this is the per-completion linear factor at the slim-port scale.
+  // Sub-leaf E (ECC softcap) calibrates this against the autobuyer-driven
+  // sim; sub-leaf C leaves it at the unperturbed default.
   challengeCompletionMultiplier: 1.05,
 };

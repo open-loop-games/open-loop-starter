@@ -11,6 +11,7 @@ import { createTranscendAutobuyersModule } from './autobuyers/transcend';
 
 // Re-exports for the composables / UI layer.
 export { ScalerTiersKey, type ScalerTier } from './tiers';
+export { ScalerTuningRegistryKey, type ScalerTunables } from './tuning';
 export { AutobuyerMasterToggleKey, AutobuyerRegistryKey, type AutobuyerSpec } from './autobuyers';
 
 /**

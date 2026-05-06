@@ -1,4 +1,4 @@
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource, Gate } from 'open-loop-engine';
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
 // Definition interfaces shared across all scaler data files. Editing these
@@ -97,7 +97,15 @@ export interface AchievementDef {
   /** Tier that unlocks this achievement; informs visibility / grouping. */
   tier: Tier;
   hidden?: boolean;
-  requirement: (state: ScalerGameState) => boolean;
+  /**
+   * Engine-typed declarative requirement. Aggregate predicates (own all
+   * five challenges, etc.) compose via `all`/`any` Gate combinators at
+   * content-authoring time using the structural ID lists in `data/`.
+   * Predictor reads this directly via `timeUntilGateFlip` for the
+   * cumulative/resource-bearing kinds; opaque-predicate kinds (count-gte,
+   * unlock) flush imperatively when the underlying category fires.
+   */
+  requirement: Gate;
   /** Headline-chain multiplicative reward. Defaults to
    * `balance.achievementMultiplier`. */
   rewardMultiplier?: DecimalSource;
@@ -153,24 +161,4 @@ export interface ScalerData {
   transcend: TranscendTierData;
   achievements: AchievementDef[];
   balance: ScalerBalance;
-}
-
-/**
- * Typed read view of module state, exposed to achievement predicates.
- * Methods encapsulate Decimal comparisons so `data/*.ts` never imports the
- * engine runtime. Shape mirrors `producer/data/types.ts ProducerGameState`
- * extended with per-tier currency reads + reset counts + challenge
- * completions.
- */
-export interface ScalerGameState {
-  coinsAtLeast: (amount: DecimalSource) => boolean;
-  prestigePointsAtLeast: (amount: DecimalSource) => boolean;
-  transcendPointsAtLeast: (amount: DecimalSource) => boolean;
-  prestigeShardsAtLeast: (amount: DecimalSource) => boolean;
-  transcendShardsAtLeast: (amount: DecimalSource) => boolean;
-  producerCountAtLeast: (id: string, count: number) => boolean;
-  prestigeCountAtLeast: (count: number) => boolean;
-  transcensionCountAtLeast: (count: number) => boolean;
-  challengeCompletionsAtLeast: (id: string, count: number) => boolean;
-  fastestPrestigeUnder: (seconds: number) => boolean;
 }

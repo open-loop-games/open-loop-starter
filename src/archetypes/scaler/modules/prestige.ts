@@ -1,8 +1,10 @@
-import { watch } from 'vue';
+import { unref, watch, type ComputedRef } from 'vue';
 import {
   Decimal,
   Formula,
+  addResource,
   bn,
+  tunable,
   type Conversion,
   type DecimalSource,
   type EngineContext,
@@ -24,6 +26,7 @@ import {
 } from 'open-loop-engine';
 import type { CrystalUpgradeDef, ProducerDef, ScalerData } from '../data/types';
 import { ScalerTiersKey, type ScalerTier } from './tiers';
+import { ScalerTuningRegistryKey } from './tuning';
 
 // === Slim-port balance constants ===
 //
@@ -41,8 +44,6 @@ const DIAMOND_BASE_RATES: Record<string, DecimalSource> = {
   'prestige-5': '5e49',
 };
 
-const CRYSTAL_PER_LEVEL_BONUS = 0.05;
-
 // === Module ===
 
 export function createPrestigeModule(data: ScalerData): EngineModule {
@@ -50,6 +51,7 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
 
   let prestigePoints!: Resource<DecimalSource> & Persistent<DecimalSource>;
   let prestigeShards!: Resource<DecimalSource> & Persistent<DecimalSource>;
+  let prestigeCount!: Resource<DecimalSource> & Persistent<DecimalSource>;
   let producers!: ProducerCategory<ProducerDef>;
   let crystalUpgrades!: PurchasableCategory<CrystalUpgradeDef>;
 
@@ -77,6 +79,24 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
         id: 'scaler/prestige-shards',
       });
 
+      // Counts how many prestige conversions have fired. Discrete event
+      // counter (no continuous tick adds), incremented in afterConvert
+      // before reset.reset() runs. Survives reset via keep: so the
+      // cumulative tracker accumulates across prestiges — read by
+      // achievement Gate `cumulative-gte` for the prestige-count ladder.
+      prestigeCount = createResource<DecimalSource>(0, {
+        displayName: 'Prestiges',
+        precision: 0,
+        id: 'scaler/prestige-count',
+      });
+
+      const tuningRegistry = ctx.inject(ScalerTuningRegistryKey);
+      const crystalPerLevelBonus = tunable(
+        tuningRegistry,
+        'modules/prestige/CRYSTAL_PER_LEVEL_BONUS',
+        () => 0.05,
+      );
+
       producers = createProducerCategory<ProducerDef>({
         id: 'scaler/prestige/producers',
         registerTick: ctx.onTick,
@@ -99,7 +119,7 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
 
       const rateChains = producers.getAll().map((entry) => entry.producer.rateChain);
 
-      crystalUpgrades = buildCrystalUpgrades(prestigeShards, rateChains);
+      crystalUpgrades = buildCrystalUpgrades(prestigeShards, rateChains, crystalPerLevelBonus);
       crystalUpgrades.register(tier.crystalUpgrades);
     },
     connect(ctx: EngineContext): void {
@@ -114,13 +134,22 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
       const coin = antimatter.currency;
 
       // Module-scoped reset. resetModules walks both antimatter + prestige
-      // persistent contexts; `keep: [prestigePoints]` exempts the cumulative
-      // currency the conversion just incremented. Without it, afterConvert
-      // → reset.reset() would zero the gain that was written one step
-      // earlier (conversion.ts:204-211).
+      // persistent contexts; the keep set exempts the cumulative currency
+      // the conversion just incremented (without it, afterConvert →
+      // reset.reset() would zero the gain that was written one step
+      // earlier — conversion.ts:204-211) plus its `cumulative` tracker
+      // (which Gate `cumulative-gte` reads for amount-ladder achievements;
+      // resetting it would break the "prestige points gained total"
+      // semantics) and the prestigeCount resource + its tracker (the
+      // count survives across prestiges by construction).
       const prestigeReset = createReset({
         resetModules: ['scaler/antimatter', 'scaler/prestige'],
-        keep: [prestigePoints],
+        keep: [
+          prestigePoints,
+          prestigePoints.cumulative!,
+          prestigeCount,
+          prestigeCount.cumulative!,
+        ],
       });
 
       // vanilla canonical: SynergismOfficial/src/Calculate.ts:2454 —
@@ -148,6 +177,12 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
           },
         },
         afterConvert: () => {
+          // Increment count BEFORE reset.reset(): the reset sets
+          // loadingSave=true around its scope walk, which suppresses the
+          // cumulative-tracker watcher (resource.ts:203). Incrementing
+          // outside the reset window keeps cumulative in lockstep with
+          // value, and the keep: above protects both refs from cleanup.
+          addResource(prestigeCount, 1);
           prestigeReset.reset();
         },
       });
@@ -182,6 +217,7 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
 function buildCrystalUpgrades(
   prestigeShards: Resource<DecimalSource>,
   rateChains: ModifierChain[],
+  crystalPerLevelBonus: ComputedRef<DecimalSource>,
 ): PurchasableCategory<CrystalUpgradeDef> {
   const mirrors = new Map<string, Persistent<DecimalSource>>();
 
@@ -206,9 +242,10 @@ function buildCrystalUpgrades(
         // Slim-port effect: per-level fractional bonus. Synergism's actual
         // crystal effects route through globalCoinMultiplier with per-upgrade
         // formulas (Variables.ts:131 onwards); the slim port collapses each
-        // Crystal to a +CRYSTAL_PER_LEVEL_BONUS multiplicative-per-level grant
-        // onto every prestige rateChain. Balance leaf will refine.
-        effect: (a) => Decimal.add(1, Decimal.mul(a, CRYSTAL_PER_LEVEL_BONUS)),
+        // Crystal to a uniform per-level multiplicative grant onto every
+        // prestige rateChain. The per-level bonus is solver-tunable via
+        // ScalerTuningRegistryKey under `modules/prestige/CRYSTAL_PER_LEVEL_BONUS`.
+        effect: (a) => Decimal.add(1, Decimal.mul(a, unref(crystalPerLevelBonus))),
       };
     },
     mapState: (def, purchasable) => {

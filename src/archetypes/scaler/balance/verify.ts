@@ -10,13 +10,14 @@
  * Diffs cumulative sim-time vs predicted-time per waypoint with tolerance.
  * Per `archetypes/BALANCING.md § Theme 3 #2` and `§ Engine as oracle`.
  *
- * Predictor and sim walk the *same* schedule — drift indicates an engine-
- * side primitive (`getCost`/`getTotalRate`) regression OR (at sub-leaf B)
- * the achievement-fire splice gap that closes when sub-leaf C migrates
- * achievements onto Gate. Until C lands, expect the same monotonic
- * ~3–6% per-waypoint drift producer surfaced pre-Gate.
+ * Predictor and sim walk the *same* schedule. After sub-leaf C's Gate
+ * migration the predictor reads real splice distances from
+ * `nextAchievementFireDistance` (cumulative-gte achievements project via
+ * `timeUntilGateFlip`); pre-fix the missing splice produced a monotonic
+ * ~3–6% per-waypoint underestimation. Drift now indicates an engine-side
+ * primitive regression rather than an archetype-side splice gap.
  *
- * Sub-leaf B scope: **antimatter slice only**. Prestige (D) and ECC (E)
+ * Sub-leaf C scope: **antimatter slice only**. Prestige (D) and ECC (E)
  * verify-drivers are TODO; their predictor halves don't exist yet.
  *
  *   pnpm exec vite-node src/archetypes/scaler/balance/verify.ts
@@ -32,13 +33,15 @@ import {
   type ScheduleStep,
 } from './spec';
 
-// Sub-leaf B uses a shallow per-tier walk so the no-bot sim can complete
-// across all 5 antimatter producers within budget. With baseRates 0.1 →
-// 8000 and a 1.15× cost ramp, perTierCount=25 across 5 tiers exhausts a
-// 4.5h budget at the deeper tiers; the deliverable here is "verify
-// produces a predictor↔sim diff," not a full canonical schedule. Sub-leaf
-// C will widen + retune as part of antimatter calibration.
-const PER_TIER_COUNT = 3;
+// Sub-leaf C widens PER_TIER_COUNT past 3 (sub-leaf B's interim) once the
+// Gate migration closed the splice gap and the autobuyer-aware sim became
+// the ground truth. Width 5 walks all 5 antimatter producers (full
+// canonical-tier schedule) — calibrated achievementMultiplier (42.347)
+// makes the rate ramp aggressive enough to keep deeper-tier waypoints in
+// budget. Wall-time stays well under BALANCING.md § Theme 4 #2's 2-min
+// budget rule (sub-second per pass at TICK_DELTA = 1s).
+const PER_TIER_COUNT = 5;
+const TIER_COUNT = 5;
 const TOLERANCE_PCT = 0.05;
 const BUDGET_SEC = 90 * 60 * 3; // 4.5h — generous within slim-port time scale
 
@@ -115,7 +118,7 @@ function simulateSchedule(
           engine,
           until: () => Decimal.gte(coin.value, cost),
           maxSimTime: remaining,
-          tickDelta: 1,
+          tickDelta: 0.1,
         });
         if (result.terminated !== 'predicate') {
           throw new Error(
@@ -137,7 +140,7 @@ function simulateSchedule(
           engine,
           until: () => Decimal.gte(coin.value, cost),
           maxSimTime: remaining,
-          tickDelta: 1,
+          tickDelta: 0.1,
         });
         if (result.terminated !== 'predicate') {
           throw new Error(
@@ -227,17 +230,14 @@ function main(): void {
   console.log(
     'Predictor (closed-form via spec.ts arcWaypoints) vs sim (runUntil per step). Same schedule, two execution paths.',
   );
-  console.log(`Tolerance: ${(TOLERANCE_PCT * 100).toFixed(1)}% per-waypoint.`);
-  console.log(
-    'Sub-leaf B note: scaler achievements still use legacy predicate vtable (modules/achievements.ts).',
-  );
-  console.log('Predictor splice loop will return +∞ until sub-leaf C migrates onto Gate.\n');
+  console.log(`Tolerance: ${(TOLERANCE_PCT * 100).toFixed(1)}% per-waypoint.\n`);
 
-  // Walk first 2 tiers at sub-leaf B — cost-vs-rate ratios past tier 3
-  // exceed budget under no-bot sim; full-tier walking is sub-leaf C.
+  // Sub-leaf C: all 5 antimatter producers, 5 buys each — the full
+  // canonical-tier walk now that the calibrated rate ramp keeps the
+  // deeper-tier waypoints within the no-bot sim's budget.
   const schedule = antimatterStrictTierOrderSchedule({
     perTierCount: PER_TIER_COUNT,
-    tierCount: 2,
+    tierCount: TIER_COUNT,
   });
   // Seed Worker=1 to skip the bootstrap regime: scaler antimatter has no
   // click bot, so production needs at least one Worker to start
@@ -276,9 +276,6 @@ function main(): void {
   if (failed.length > 0) {
     console.log(
       `Tolerance breach: ${failed.length}/${rows.length} waypoints exceed ${TOLERANCE_PCT * 100}%.`,
-    );
-    console.log(
-      'Pre-sub-leaf-C: drift is the expected signal — Gate migration closes the gap structurally.',
     );
     process.exitCode = 1;
   } else {

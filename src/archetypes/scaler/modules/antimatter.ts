@@ -1,7 +1,9 @@
-import { watch } from 'vue';
+import { unref, watch, type ComputedRef } from 'vue';
 import {
   Decimal,
   Formula,
+  createOverrideRegistry,
+  tunable,
   type DecimalSource,
   type EngineContext,
   type EngineModule,
@@ -18,6 +20,7 @@ import {
 } from 'open-loop-engine';
 import type { AntimatterUpgradeDef, ProducerDef, ScalerData } from '../data/types';
 import { ScalerTiersKey, type ScalerTier } from './tiers';
+import { ScalerTuningRegistryKey, type ScalerTunables } from './tuning';
 
 // === Slim-port balance constants ===
 //
@@ -57,11 +60,15 @@ const UPGRADE_COST_SCALING: Record<string, DecimalSource> = {
 //
 // vanilla canonical: SynergismOfficial/src/Calculate.ts — getAcceleratorPower()
 // (linear-then-thresholded effect that compounds against count). Slim-port
-// constant approximates the early-game payout shape; balance leaf refines.
-const UPGRADE_PER_LEVEL_MULT: Record<string, DecimalSource> = {
-  accelerator: 1.05,
-  multiplier: 2,
-};
+// constants approximate the early-game payout shape.
+//
+// `accelerator` is a declared invention (per `balance/shape.ts`
+// SCALER_SUBSYSTEMS antimatter inventionKnobs) and routes through
+// ScalerTuningRegistryKey so the balance solver can bisect it without
+// rebuilding the engine per iteration. `multiplier` stays static — the 2×
+// per-level shape is a slim-port choice tied to the rate-chain composition,
+// not a tunable beat-fire knob.
+const MULTIPLIER_PER_LEVEL: DecimalSource = 2;
 
 // === Module ===
 
@@ -75,6 +82,19 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
   return {
     id: 'scaler/antimatter',
     install(ctx: EngineContext): void {
+      // First-installed scaler tier owns the tuning registry. Sibling
+      // modules (prestige, transcend, achievements) inject and wrap their
+      // declared-invention knobs via `tunable(...)`. Mirrors producer's
+      // `ProducerTuningRegistryKey` shape.
+      const tuningRegistry = createOverrideRegistry<ScalerTunables>('scaler-tuning');
+      ctx.provide(ScalerTuningRegistryKey, tuningRegistry);
+
+      const acceleratorPerLevelMult = tunable<DecimalSource>(
+        tuningRegistry,
+        'modules/antimatter/UPGRADE_PER_LEVEL_MULT/accelerator',
+        () => 1.05,
+      );
+
       // vanilla canonical: SynergismOfficial/src/Synergism.ts:250 —
       //   coins: new Decimal('1e2')
       // Bootstrap grant: the cheapest producer (Worker) costs 100 coins, so
@@ -105,7 +125,7 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
       });
       producers.register(tier.producers);
 
-      upgrades = buildUpgrades(coin, producers);
+      upgrades = buildUpgrades(coin, producers, acceleratorPerLevelMult);
       upgrades.register(tier.upgrades);
     },
     connect(ctx: EngineContext): void {
@@ -136,6 +156,7 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
 function buildUpgrades(
   coin: Resource<DecimalSource>,
   producers: ProducerCategory<ProducerDef>,
+  acceleratorPerLevelMult: ComputedRef<DecimalSource>,
 ): PurchasableCategory<AntimatterUpgradeDef> {
   const mirrors = new Map<string, Persistent<DecimalSource>>();
 
@@ -146,14 +167,19 @@ function buildUpgrades(
       mirrors.set(def.id, amount);
 
       const costScaling = UPGRADE_COST_SCALING[def.id] ?? 1;
-      const perLevelMult = UPGRADE_PER_LEVEL_MULT[def.id] ?? 1;
-
       const cost = Formula.exponential(amount, def.baseCost, costScaling);
+
+      // accelerator is the declared-invention knob (see balance/shape.ts);
+      // multiplier stays a fixed slim-port shape.
+      const effect: (a: DecimalSource) => DecimalSource =
+        def.id === 'accelerator'
+          ? (a) => Decimal.pow(unref(acceleratorPerLevelMult), a)
+          : (a) => Decimal.pow(MULTIPLIER_PER_LEVEL, a);
 
       return {
         display: { title: def.name, description: def.description },
         requirements: createCostRequirement({ resource: coin, cost }),
-        effect: (a: DecimalSource) => Decimal.pow(perLevelMult, a),
+        effect,
       };
     },
     mapState: (def, purchasable) => {

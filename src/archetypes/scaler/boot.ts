@@ -1,5 +1,11 @@
 import { type App } from 'vue';
-import { type Engine, type EngineModule } from 'open-loop-engine';
+import {
+  Decimal,
+  type Engine,
+  type EngineModule,
+  type GameStateAccessor,
+  type GameStateMutator,
+} from 'open-loop-engine';
 import { bootApp, bootEngine } from '@/boot';
 import { createScalerModules } from './modules';
 import { DEFAULT_SCALER_DATA } from './data';
@@ -11,6 +17,21 @@ import ScalerAppRoot from './ui/ScalerAppRoot.vue';
 const GAME_ID = 'scaler-pilot';
 const MOD_ID = 'synergism-slim';
 const MOD_NAME = 'Synergism (slim port)';
+
+// Scaler Gates only use cumulative-gte / count-gte / unlock / combinators —
+// none of those reach into the accessor (they read through CategoryEntrySignals
+// and Resource.cumulative). NOOP satisfies getAmbientGateRuntime's non-
+// undefined contract without standing up an archetype-specific accessor.
+// Mirrors producer/boot.ts NOOP_ACCESSOR.
+const NOOP_ACCESSOR: GameStateAccessor & GameStateMutator = {
+  getResource: () => Decimal.dZero,
+  getRate: () => Decimal.dZero,
+  isUnlocked: () => false,
+  getState: () => undefined,
+  applyResourceOp: () => {},
+  setUnlocked: () => {},
+  setState: () => {},
+};
 
 export interface ScalerBootResult {
   engine: Engine;
@@ -45,6 +66,7 @@ export function createScalerEngine(
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
     maxDeltaTime: options?.maxDeltaTime,
+    accessor: NOOP_ACCESSOR,
     mods: [
       {
         id: MOD_ID,

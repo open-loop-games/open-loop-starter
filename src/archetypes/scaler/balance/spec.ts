@@ -7,7 +7,7 @@
  * engine *is* the math; this file does no spec-side reimplementation
  * of cost / rate / chain composition.
  *
- * Sub-leaf B scope: **antimatter slice only**. Pure / triangular per
+ * Sub-leaf C scope: **antimatter slice only**. Pure / triangular per
  * scaler.md § 3 stress axis 1 + body § 1 (matches producer's existing
  * triangular composition row). Prestige (Optimal stopping / ROI math)
  * and ECC (Piecewise) get their predictor halves at sub-leaves D and E
@@ -19,14 +19,9 @@
  *
  * Mid-step rate transitions (achievement firings on cumulative-threshold
  * crossings) are spliced via the engine's `timeUntilGateFlip` primitive
- * over each unfired achievement's `Gate` spec. **Scaler caveat at sub-
- * leaf B:** scaler achievements still use the legacy
- * `requirement: (state) => boolean` predicate vtable
- * (modules/achievements.ts), not Gate. Sub-leaf C migrates them per
- * OL-841 body § 4. Until then, `nextAchievementFireDistance` returns
- * +∞ for every step and the predictor systematically underestimates
- * sim — this is the expected drift signal in `verify.ts`. Documented
- * in `archetypes/scaler.balance.md` first finding.
+ * over each unfired achievement's `Gate` spec — scaler achievements
+ * migrated onto Gate at sub-leaf C, so `nextAchievementFireDistance`
+ * returns real splice distances (no more +∞ for every step).
  */
 
 import {
@@ -300,10 +295,11 @@ export function arcWaypoints(
 
 /**
  * Smallest computed flip-distance across unfired achievements with a
- * Gate-form requirement. **Returns +∞ at sub-leaf B** because scaler
- * achievements have not been migrated onto Gate yet — sub-leaf C
- * migration replaces the predicate vtable with Gate literals; until
- * then `entry.achievement.gate` is undefined for every entry.
+ * Gate-form requirement. Each achievement now ships pure Gate literals
+ * (sub-leaf C migration); `timeUntilGateFlip` projects `cumulative-gte`
+ * to a rate-driven flip-distance and returns `opaque-predicate` for
+ * `count-gte` / `unlock` / `state` kinds (which advance imperatively,
+ * not at a continuous rate).
  *
  * Lifted from producer/balance/spec.ts. Walks every achievement category
  * (scaler ships one — `'scaler/achievements'`); generalizes if forks
