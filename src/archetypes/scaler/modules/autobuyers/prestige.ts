@@ -4,11 +4,13 @@ import {
   persistent,
   setupPolicyAutoPurchase,
   setupSweepAutoPurchase,
+  tunable,
   type DecimalSource,
   type EngineContext,
   type EngineModule,
 } from 'open-loop-engine';
 import { ScalerTiersKey } from '../tiers';
+import { ScalerTuningRegistryKey } from '../tuning';
 import {
   AutobuyerMasterToggleKey,
   AutobuyerRegistryKey,
@@ -16,6 +18,7 @@ import {
   type AutobuyerSpec,
 } from './index';
 import { buildTierProducerPolicy } from './antimatter';
+import { computeRatioPolicyPayback } from './payback';
 
 // vanilla canonical (autobuyer set):
 //   SynergismOfficial/src/Automation.ts:33-48 — diamond-producer unlock
@@ -70,15 +73,39 @@ export function createPrestigeAutobuyersModule(): EngineModule {
 
       const master = ctx.inject(AutobuyerMasterToggleKey);
       const registry = ctx.inject(AutobuyerRegistryKey);
+      const tuningRegistry = ctx.inject(ScalerTuningRegistryKey);
 
-      // Tier-presence gate: prestige tier is "reached" once any prestigePoints
-      // have been awarded. cumulative is monotonic post-first-prestige; the
-      // gate stays unlocked across subsequent resets.
+      // Declared-invention knob: ROI payback threshold in sim-seconds.
+      // Sub-leaf D's solver (balance/solve.ts solveBeat3) bisects this to
+      // land beat-3 (first prestige fires) inside its window.
+      const roiThresholdSec = tunable<number>(
+        tuningRegistry,
+        'modules/autobuyers/prestige/ROI_THRESHOLD_SEC',
+        () => 60,
+      );
+
+      // Tier-presence gate for downstream autobuyers: prestige tier is
+      // "reached" once any prestigePoints have been awarded. cumulative is
+      // monotonic post-first-prestige; the gate stays unlocked across
+      // subsequent resets. Diamond producer + Crystal upgrade auto-buy can't
+      // do meaningful work pre-first-prestige (no producers / no upgrades to
+      // afford), so this gate naturally tracks the tier-arrival moment.
       const cumulative = tier.currency.cumulative;
       if (!cumulative) {
         throw new Error('scaler/autobuyers/prestige: prestigePoints missing cumulative slot');
       }
       const isUnlocked = () => Decimal.gt(cumulative.value, 0);
+
+      // Threshold-autobuyer unlock. The threshold autobuyer is the trigger
+      // for entering the tier — gating it on prestigePoints.cumulative > 0
+      // would deadlock the first prestige (autobuyer can't fire until prestige
+      // has fired). Vanilla canonical surfaces an equivalent UI-level gate
+      // via `player.upgrades[1...]` shop purchases (Synergism.ts:3942-3991),
+      // which slim-port drops per the shop-omitted substrate. Slim's
+      // threshold autobuyer is always available; the body's own ratio-policy
+      // ROI gate + Reset.canReset capability gate handle "should fire" and
+      // "can fire" respectively.
+      const thresholdUnlocked = () => true;
 
       // === producer auto-buy ===
       const producerAutoBuy: AutobuyerSpec = {
@@ -132,7 +159,7 @@ export function createPrestigeAutobuyersModule(): EngineModule {
         id: 'autobuyer/prestige/threshold',
         groupId: 'prestige',
         displayName: 'Auto-prestige',
-        isUnlocked,
+        isUnlocked: thresholdUnlocked,
         isActive: persistent<boolean>(false, { name: 'prestige-threshold-active' }),
         interval: 0.5,
         config: thresholdConfig,
@@ -164,8 +191,26 @@ export function createPrestigeAutobuyersModule(): EngineModule {
               }
               return;
             }
-            case 'roi':
+            case 'roi': {
+              // Closed-form ratio-policy ROI per BALANCING.md § Theme 3 #5,
+              // adapted via `paybackSeconds ≈ cycleElapsed / (gainRatio − 1)`.
+              // Maps onto Synergism `resettoggle1 mode 1` + AD `X_HIGHEST`
+              // ratio thresholds — see computeRatioPolicyPayback for the
+              // derivation. The capability gate (`canConvert` + gain > 0) is
+              // enforced by the prestigeReset's `canReset` Gate at fire time;
+              // this branch enforces only the policy-layer threshold.
+              if (!tier.conversion!.canConvert.value) return;
+              const gain = tier.conversion!.currentGain.value.prestigePoints;
+              if (!Decimal.gt(gain, 0)) return;
+              const cycleElapsed = elapsed - lastConvertAt.value;
+              const payback = computeRatioPolicyPayback(gain, tier.currency.value, cycleElapsed);
+              const threshold = thresholdConfig.roiPaybackSeconds ?? Number(unref(roiThresholdSec));
+              if (payback <= threshold) {
+                tier.conversion!.convert();
+                lastConvertAt.value = elapsed;
+              }
               return;
+            }
           }
         },
       };

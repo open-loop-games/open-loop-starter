@@ -4,10 +4,12 @@ import {
   persistent,
   setupPolicyAutoPurchase,
   setupSweepAutoPurchase,
+  tunable,
   type EngineContext,
   type EngineModule,
 } from 'open-loop-engine';
 import { ScalerTiersKey } from '../tiers';
+import { ScalerTuningRegistryKey } from '../tuning';
 import {
   AutobuyerMasterToggleKey,
   AutobuyerRegistryKey,
@@ -15,6 +17,7 @@ import {
   type AutobuyerSpec,
 } from './index';
 import { buildTierProducerPolicy } from './antimatter';
+import { computeRatioPolicyPayback } from './payback';
 import type { PrestigeThresholdConfig } from './prestige';
 
 // vanilla canonical:
@@ -65,15 +68,31 @@ export function createTranscendAutobuyersModule(): EngineModule {
 
       const master = ctx.inject(AutobuyerMasterToggleKey);
       const registry = ctx.inject(AutobuyerRegistryKey);
+      const tuningRegistry = ctx.inject(ScalerTuningRegistryKey);
 
-      // Tier-presence gate: transcend tier is "reached" once any
-      // transcendPoints have been awarded. cumulative is monotonic
-      // post-first-transcend.
+      // Declared-invention knob: transcend ROI payback threshold. Mirrors
+      // the prestige-side knob; sub-leaf E (OL-859) drives transcend-tier
+      // beats and may bisect this against beat-6 (first transcend fires).
+      const roiThresholdSec = tunable<number>(
+        tuningRegistry,
+        'modules/autobuyers/transcend/ROI_THRESHOLD_SEC',
+        () => 60,
+      );
+
+      // Tier-presence gate for downstream autobuyers (mythos producer +
+      // transcend upgrade auto-buy). transcendPoints.cumulative crosses zero
+      // at the first successful Transcend conversion and stays monotonic.
       const cumulative = tier.currency.cumulative;
       if (!cumulative) {
         throw new Error('scaler/autobuyers/transcend: transcendPoints missing cumulative slot');
       }
       const isUnlocked = () => Decimal.gt(cumulative.value, 0);
+
+      // Threshold-autobuyer unlock — same chicken-and-egg avoidance as the
+      // prestige tier (see autobuyers/prestige.ts). The body's ratio-policy
+      // ROI gate + transcendReset.canReset capability gate prevent
+      // premature firing.
+      const thresholdUnlocked = () => true;
 
       // === producer auto-buy ===
       const producerAutoBuy: AutobuyerSpec = {
@@ -119,7 +138,7 @@ export function createTranscendAutobuyersModule(): EngineModule {
         id: 'autobuyer/transcend/threshold',
         groupId: 'transcend',
         displayName: 'Auto-transcend',
-        isUnlocked,
+        isUnlocked: thresholdUnlocked,
         isActive: persistent<boolean>(false, { name: 'transcend-threshold-active' }),
         interval: 0.5,
         config: thresholdConfig,
@@ -148,8 +167,24 @@ export function createTranscendAutobuyersModule(): EngineModule {
               }
               return;
             }
-            case 'roi':
+            case 'roi': {
+              // Closed-form ratio-policy ROI mirroring the prestige-tier
+              // body — see autobuyers/prestige.ts and payback.ts for the
+              // derivation. Source resource is prestigeShards (the tier's
+              // input); target is transcendPoints. Capability gate
+              // (canConvert + gain > 0) is enforced by transcendReset.canReset.
+              if (!tier.conversion!.canConvert.value) return;
+              const gain = tier.conversion!.currentGain.value.transcendPoints;
+              if (!Decimal.gt(gain, 0)) return;
+              const cycleElapsed = elapsed - lastConvertAt.value;
+              const payback = computeRatioPolicyPayback(gain, tier.currency.value, cycleElapsed);
+              const threshold = thresholdConfig.roiPaybackSeconds ?? Number(unref(roiThresholdSec));
+              if (payback <= threshold) {
+                tier.conversion!.convert();
+                lastConvertAt.value = elapsed;
+              }
               return;
+            }
           }
         },
       };

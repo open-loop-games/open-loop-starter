@@ -1,6 +1,7 @@
 import type { Engine } from 'open-loop-engine';
 import { createScalerEngine } from '..';
 import { AutobuyerMasterToggleKey, AutobuyerRegistryKey } from '../modules';
+import type { PrestigeThresholdConfig } from '../modules/autobuyers/prestige';
 import type { ScalerOverrides } from '../data/overrides';
 import type { Tier } from '../data/types';
 
@@ -20,10 +21,12 @@ import type { Tier } from '../data/types';
  * progression ordering; `isActive: true` just means "the player checked
  * the box."
  *
- * Threshold + ECC autobuyers ship with `mode: 'never'` until sub-leaves
- * D / E rewrite their tick bodies. That is intentional — the bot setting
- * isActive on those autobuyers is a no-op until D / E land. Beats 1–2
- * (antimatter only) should fire in their windows; beats 3–8 require D / E.
+ * Threshold autobuyers ship with `mode: 'never'` so the player default is
+ * inert; the bot flips prestige + transcend threshold modes to `'roi'` so
+ * sub-leaf D's solver can bisect ROI_THRESHOLD_SEC against beats 3-5.
+ * Leaving `roiPaybackSeconds` unset lets the threshold flow through the
+ * scaler tuning registry, where solve.ts pushScope drives it. ECC sweep
+ * stays at `'never'` until sub-leaf E.
  *
  * vanilla canonical: AntimatterDimensionsSourceCode/src/core/autobuyers/
  *   autobuyers.js:122-137 (Autobuyers.tick — single sequential walk).
@@ -64,6 +67,15 @@ export function buildScalerSimEngine(
   master.value = true;
   for (const ab of registry) {
     ab.isActive.value = true;
+    if (ab.id === 'autobuyer/prestige/threshold' || ab.id === 'autobuyer/transcend/threshold') {
+      // config is the same object the autobuyer's tick reads from — mutating
+      // mode here flips the spec from inert ('never') to ROI-driven without
+      // touching the spec definition. roiPaybackSeconds stays undefined so
+      // the tunable fallthrough in the tick body lets solve.ts drive the
+      // threshold via pushScope.
+      const config = ab.config as PrestigeThresholdConfig;
+      config.mode = 'roi';
+    }
   }
 
   return engine;

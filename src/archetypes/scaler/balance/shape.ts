@@ -177,7 +177,10 @@ export const SCALER_SUBSYSTEMS: readonly SubsystemMethodology[] = [
     methodology: '#5',
     compositionRow: null,
     canonicalSurface: 'mixed',
-    inventionKnobs: ['modules/prestige/CRYSTAL_PER_LEVEL_BONUS'],
+    inventionKnobs: [
+      'modules/prestige/CRYSTAL_PER_LEVEL_BONUS',
+      'modules/autobuyers/prestige/ROI_THRESHOLD_SEC',
+    ],
   },
   {
     id: 'ecc-softcap',

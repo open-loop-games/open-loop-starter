@@ -9,6 +9,7 @@ import {
   type DecimalSource,
   type EngineContext,
   type EngineModule,
+  type Gate,
   type ModifierChain,
   type Persistent,
   type ProducerCategory,
@@ -28,21 +29,51 @@ import type { CrystalUpgradeDef, ProducerDef, ScalerData } from '../data/types';
 import { ScalerTiersKey, type ScalerTier } from './tiers';
 import { ScalerTuningRegistryKey } from './tuning';
 
-// === Slim-port balance constants ===
+// === Cascade structure ===
 //
-// Diamond producers generate prestigeShards. Synergism's diamond cascade
-// (Synergism.ts:3206-3239 — produceFifthDiamonds → ... → produceFirstDiamonds
-// → prestigeShards) is dropped per the antimatter rationale; flat per-second
-// rates sized so the late-tier producers pay back in ~2000s pre-multipliers.
+// Diamond cascade: T(N).count = ownedN + generatedN. Each tier's tick
+// emits `(owned + generated) × computedRate × dt` into the next-lower
+// tier's generated resource (T1 emits to prestigeShards, the headline
+// per-prestige currency). Acyclic — diamond canonical has no cyclic
+// feedback edge analogous to antimatter's upgrade[105] T1.owned →
+// T5.generated.
+//
+// vanilla canonical: SynergismOfficial/src/Synergism.ts:3206-3248 —
+//   produceFifthDiamonds  = (T5.gen + T5.owned) × player.fifthProduceDiamonds × G.globalCrystalMultiplier
+//   produceFourthDiamonds = (T4.gen + T4.owned) × player.fourthProduceDiamonds × G.globalCrystalMultiplier
+//   ...
+//   produceFirstDiamonds  = (T1.gen + T1.owned) × player.firstProduceDiamonds × G.globalCrystalMultiplier
+//   T4.gen += produceFifthDiamonds  × (dt / 0.025)
+//   T3.gen += produceFourthDiamonds × (dt / 0.025)
+//   T2.gen += produceThirdDiamonds  × (dt / 0.025)
+//   T1.gen += produceSecondDiamonds × (dt / 0.025)
+//   prestigeShards += produceFirstDiamonds × (dt / 0.025)   // gated on not-in-Challenge-3/Reincarnation-10
 //
 // vanilla canonical (cost): SynergismOfficial/src/Buy.ts:337 — diamondBuildingCosts
-const DIAMOND_BASE_RATES: Record<string, DecimalSource> = {
-  'prestige-1': '0.1',
-  'prestige-2': '50',
-  'prestige-3': '7.5e6',
-  'prestige-4': '2e19',
-  'prestige-5': '5e49',
-};
+//
+// Slim adopts implicit-1 baseRate per tier — engine-native per-second rate
+// (rate × count × dt → 1 unit of next-tier-generated per count per second).
+// Canonical's `dt/0.025` factor is a tick-cadence normalization to per-25ms
+// units; the slim engine's continuous-tick semantics absorb the conversion
+// uniformly across tiers. Per-tier `firstProduceDiamonds` etc. are not
+// constants in canonical (they are products of upgrade chains); slim's
+// modifier-chain multipliers (Crystal grants) carry the equivalent
+// per-tier amplification on top of implicit-1.
+//
+// Tick ordering (within-tick cascading vs. snapshot-then-apply): canonical
+// diamond pre-snapshots all `produceXDiamonds` from prior values then
+// applies the cascade, so T(N-1) sees pre-tick T(N) state within one
+// tick. Engine's continuous-tick fires producers sequentially in
+// registration order; T5..T1 registration gives within-tick cascading
+// (T(N-1) sees the just-updated T(N).generated). Divergence is sub-leading
+// O(dt) on per-tier counts — accepted uniformly across cascades for
+// engine-natural ordering rather than asymmetric snapshot machinery.
+//
+// TODO(expansion): graduates the wire-up to a managed primitive once
+// a second consumer hand-rolls the same generated-resource +
+// extraCount + cascade-emission shape across ≥3 tiers. See
+// `open-loop-engine/docs/candidate-primitives.md` § Producer cascade.
+const DIAMOND_BASE_RATE: DecimalSource = 1;
 
 // === Module ===
 
@@ -52,6 +83,7 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
   let prestigePoints!: Resource<DecimalSource> & Persistent<DecimalSource>;
   let prestigeShards!: Resource<DecimalSource> & Persistent<DecimalSource>;
   let prestigeCount!: Resource<DecimalSource> & Persistent<DecimalSource>;
+  let generated!: Resource<DecimalSource>[];
   let producers!: ProducerCategory<ProducerDef>;
   let crystalUpgrades!: PurchasableCategory<CrystalUpgradeDef>;
 
@@ -97,23 +129,41 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
         () => 0.05,
       );
 
+      // Per-tier "generated" tally — same shape as antimatter cascade.
+      // Lives in scaler/prestige scope so prestigeReset (which walks
+      // 'scaler/prestige') zeroes them per prestige cycle alongside
+      // prestigeShards. Five entries indexed [0..4] = positions [1..5].
+      generated = [1, 2, 3, 4, 5].map((position) =>
+        createResource<DecimalSource>(0, {
+          precision: 0,
+          id: `scaler/prestige/generated-${position}`,
+        }),
+      );
+
       producers = createProducerCategory<ProducerDef>({
         id: 'scaler/prestige/producers',
         registerTick: ctx.onTick,
-        mapProducer: (def) => ({
-          resource: prestigeShards,
-          baseRate: DIAMOND_BASE_RATES[def.id] ?? 0,
-          trigger: 'continuous',
-          display: def.name,
-          purchase: {
-            // Diamond producers cost prestigePoints — the cumulative-across-
-            // prestige currency. Players save up prestigePoints over many
-            // prestiges to afford higher-tier diamond producers.
-            costResource: prestigePoints,
-            baseCost: def.baseCost,
-            costScaling: 1.4,
-          },
-        }),
+        mapProducer: (def) => {
+          const idx = def.position - 1;
+          // Cascade emission: T(N>1) → generated[N-2]; T1 → prestigeShards.
+          const target = idx === 0 ? prestigeShards : generated[idx - 1]!;
+          const own = generated[idx]!;
+          return {
+            resource: target,
+            baseRate: DIAMOND_BASE_RATE,
+            trigger: 'continuous',
+            display: def.name,
+            extraCount: () => own.value,
+            purchase: {
+              // Diamond producers cost prestigePoints — the cumulative-across-
+              // prestige currency. Players save up prestigePoints over many
+              // prestiges to afford higher-tier diamond producers.
+              costResource: prestigePoints,
+              baseCost: def.baseCost,
+              costScaling: 1.4,
+            },
+          };
+        },
       });
       producers.register(tier.producers);
 
@@ -133,6 +183,22 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
       }
       const coin = antimatter.currency;
 
+      // Capability gate: "prestige produces a non-zero gain right now."
+      // vanilla canonical: SynergismOfficial/src/Synergism.ts:4784 —
+      //   coinsThisPrestige.gte(1e16) gates auto-prestige firing in mode 1.
+      // Slim-port equivalent: the floor of `floor(log_{prestigeConversionLog}
+      // (coin + 1))` first returns ≥ 1 at `coin == prestigeConversionLog`
+      // (1e25 per data.balance). Reads through coin's intrinsic `cumulative`
+      // slot — coin sits in the antimatter scope which prestigeReset walks,
+      // so cumulative resets on each prestige and tracks "earned this cycle"
+      // (autobuyer spends can dip coin.value below threshold mid-cycle, but
+      // cumulative is monotonic-within-cycle).
+      const canResetGate: Gate = {
+        kind: 'cumulative-gte',
+        resource: 'scaler/coins',
+        value: data.balance.prestigeConversionLog,
+      };
+
       // Module-scoped reset. resetModules walks both antimatter + prestige
       // persistent contexts; the keep set exempts the cumulative currency
       // the conversion just incremented (without it, afterConvert →
@@ -144,6 +210,7 @@ export function createPrestigeModule(data: ScalerData): EngineModule {
       // count survives across prestiges by construction).
       const prestigeReset = createReset({
         resetModules: ['scaler/antimatter', 'scaler/prestige'],
+        canReset: canResetGate,
         keep: [
           prestigePoints,
           prestigePoints.cumulative!,

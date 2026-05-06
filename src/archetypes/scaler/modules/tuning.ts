@@ -31,5 +31,7 @@ export const ScalerTuningRegistryKey: InjectionKey<OverrideRegistry<ScalerTunabl
 //   modules/transcend/UPGRADE_COST_SCALING
 //   modules/transcend/CHALLENGE_BASE_REQUIREMENT/<id>
 //   modules/transcend/CHALLENGE_COMPLETION_LIMIT
+//   modules/autobuyers/prestige/ROI_THRESHOLD_SEC
+//   modules/autobuyers/transcend/ROI_THRESHOLD_SEC
 //   balance/achievementMultiplier
 //   balance/challengeCompletionMultiplier

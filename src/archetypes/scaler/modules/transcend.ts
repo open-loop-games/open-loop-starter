@@ -13,6 +13,7 @@ import {
   type DecimalSource,
   type EngineContext,
   type EngineModule,
+  type Gate,
   type Grant,
   type ModifierChain,
   type Persistent,
@@ -256,8 +257,30 @@ export function createTranscendModule(data: ScalerData): EngineModule {
       //     all slim resets — the stacking arc spans transcend cycles, with
       //     `category.allMaxed` driving demo arc-closure once every
       //     challenge hits `completionLimit`.
+      // Capability gate: "transcend produces a non-zero gain right now."
+      // Slim-port equivalent of Synergism's `transcendShards.gte('1e300')`
+      // (Synergism.ts:4840) — both express "the floor where the conversion
+      // formula first returns ≥ 1." Slim's `floor(log_{transcendConversionLog}
+      // (prestigeShards + 1))` returns ≥ 1 at `prestigeShards ==
+      // transcendConversionLog` (10 per data.balance). The 1e300 canonical
+      // value is correct under Synergism's own log base; lifting it 1:1 to
+      // slim would make the gate unreachable.
+      //
+      // Reads through prestigeShards' intrinsic `cumulative` slot —
+      // prestigeShards sits in the prestige scope which transcendReset walks
+      // (and prestigeReset also walks), so cumulative tracks "shards earned
+      // this prestige cycle" and resets at each prestige. Crystal-upgrade
+      // spending can dip prestigeShards.value below threshold mid-cycle;
+      // cumulative is monotonic-within-cycle.
+      const canResetGate: Gate = {
+        kind: 'cumulative-gte',
+        resource: 'scaler/prestige-shards',
+        value: data.balance.transcendConversionLog,
+      };
+
       const transcendReset = createReset({
         resetModules: ['scaler/antimatter', 'scaler/prestige', 'scaler/transcend'],
+        canReset: canResetGate,
         keep: [
           transcendPoints,
           transcendPoints.cumulative!,

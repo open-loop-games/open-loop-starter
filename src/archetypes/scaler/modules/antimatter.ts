@@ -2,6 +2,7 @@ import { unref, watch, type ComputedRef } from 'vue';
 import {
   Decimal,
   Formula,
+  addResource,
   createOverrideRegistry,
   tunable,
   type DecimalSource,
@@ -22,23 +23,52 @@ import type { AntimatterUpgradeDef, ProducerDef, ScalerData } from '../data/type
 import { ScalerTiersKey, type ScalerTier } from './tiers';
 import { ScalerTuningRegistryKey, type ScalerTunables } from './tuning';
 
-// === Slim-port balance constants ===
+// === Cascade structure ===
 //
-// Synergism's coin tier baseRate is derived through the cascade machinery
-// (Synergism.ts:4370-4405 — produceFifth → produceFourth → ... → produceFirst
-// → coins, gated behind upgrades 101-105). Slim port drops the cascade and
-// gives each producer a flat per-second rate sized so the cost-payback time
-// stays roughly constant across tiers (cost / rate ≈ 1000s before any
-// Accelerator/Multiplier multipliers apply). Balance leaf will revisit.
+// Antimatter cascade: T(N).count = ownedN + generatedN. Each tier's tick
+// emits `(owned + generated) × computedRate × dt` into the next-lower
+// tier's generated resource (T1 emits to coin, the headline currency).
+// Plus the cyclic feedback edge T1.ownedCount → T5.generated (canonical
+// upgrade[105] in Synergism, always-on in slim — see § Always-on cascade
+// below).
+//
+// vanilla canonical: SynergismOfficial/src/Synergism.ts:4370-4404 —
+//   T4.gen += (T5.gen + T5.owned) × G.uFifteenMulti × G.generatorPower
+//   T3.gen += (T4.gen + T4.owned) × G.uFourteenMulti × G.generatorPower
+//   T2.gen += (T3.gen + T3.owned) × G.generatorPower
+//   T1.gen += (T2.gen + T2.owned) × G.generatorPower
+//   T5.gen += T1.owned                                 // cyclic edge
 //
 // vanilla canonical (cost): SynergismOfficial/src/Buy.ts:336 — coinBuildingCosts
-const PRODUCER_BASE_RATES: Record<string, DecimalSource> = {
-  'antimatter-1': '0.1',
-  'antimatter-2': '1',
-  'antimatter-3': '20',
-  'antimatter-4': '400',
-  'antimatter-5': '8000',
-};
+//
+// Slim adopts implicit-1 baseRate per tier (rate × count × dt → 1 unit of
+// next-tier-generated per count per second). Canonical lacks per-tier
+// baseRate constants; the cascade structure itself plus modifier-chain
+// multipliers (Accelerator, Multiplier, Crystal grants) carry pacing.
+// Per-second slim convention diverges from canonical's per-25ms-tick
+// implicit cadence — a 40× factor in raw rate that the declared-invention
+// multiplier surface (acceleratorPerLevelMult, MULTIPLIER_PER_LEVEL,
+// achievementMultiplier, CRYSTAL_PER_LEVEL_BONUS) absorbs at sub-leaf D
+// arc-fit. The previous slim shape (flat per-tier rates 0.1..8000)
+// dropped the cascade entirely — replacing those with implicit-1 here
+// is a *reduction* in slim invention.
+//
+// === Always-on cascade ===
+//
+// Canonical antimatter cascade is gated behind shop upgrades 101-105
+// (each unlocks one tier of cascade). Slim port omits the shop per
+// `archetypes/scaler.md § 5 substrate divergences`, so the cascade
+// is always-on from t=0. This is symmetric with the diamond cascade
+// (which is always-on in canonical too — Synergism.ts:3206-3248) and
+// matches the shop-omitted substrate without inventing replacement
+// gate content. The pacing arc the canonical shop gates would create
+// is absorbed by sub-leaf D's arc-fit calibration.
+//
+// TODO(expansion): graduates the wire-up to a managed primitive once
+// a second consumer hand-rolls the same generated-resource +
+// extraCount + cascade-emission shape across ≥3 tiers. See
+// `open-loop-engine/docs/candidate-primitives.md` § Producer cascade.
+const PRODUCER_BASE_RATE: DecimalSource = 1;
 
 // Per-upgrade cost ramp. Slim port treats G.costDivisor = 1 (no rune/research
 // cost reductions yet) and stays under Synergism's n=125 threshold where the
@@ -76,6 +106,7 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
   const tier = data.antimatter;
 
   let coin!: Resource<DecimalSource>;
+  let generated!: Resource<DecimalSource>[];
   let producers!: ProducerCategory<ProducerDef>;
   let upgrades!: PurchasableCategory<AntimatterUpgradeDef>;
 
@@ -105,25 +136,72 @@ export function createAntimatterModule(data: ScalerData): EngineModule {
         id: 'scaler/coins',
       });
 
+      // Per-tier "generated" tally — the cascade-feed counterpart to
+      // each producer's owned amount. T(N).extraCount reads
+      // generated[N-1].value so its tick output reflects (owned + generated).
+      // T(N>1)'s emission targets generated[N-2] (the next-lower tier);
+      // T1's emission targets coin. Lives in scaler/antimatter scope so
+      // prestigeReset (which walks 'scaler/antimatter') zeroes them per
+      // prestige cycle. Five entries indexed [0..4] = positions [1..5].
+      generated = [1, 2, 3, 4, 5].map((position) =>
+        createResource<DecimalSource>(0, {
+          precision: 0,
+          id: `scaler/antimatter/generated-${position}`,
+        }),
+      );
+
       producers = createProducerCategory<ProducerDef>({
         id: 'scaler/antimatter/producers',
         registerTick: ctx.onTick,
-        mapProducer: (def) => ({
-          resource: coin,
-          baseRate: PRODUCER_BASE_RATES[def.id] ?? 0,
-          trigger: 'continuous',
-          display: def.name,
-          purchase: {
-            costResource: coin,
-            baseCost: def.baseCost,
-            // Within-tier cost ramp. Per-tier baseCost gap from Synergism
-            // (100 → 1e3 → 2e4 → 4e5 → 8e6) does the heavy lifting for tier
-            // separation; per-buy ramp keeps tier-level pacing.
-            costScaling: 1.15,
-          },
-        }),
+        mapProducer: (def) => {
+          const idx = def.position - 1;
+          // Cascade emission: T(N>1).resource = generated[N-2]; T1.resource = coin.
+          const target = idx === 0 ? coin : generated[idx - 1]!;
+          // Cascade-feed: T(N).extraCount reads its own generated tally.
+          const own = generated[idx]!;
+          return {
+            resource: target,
+            baseRate: PRODUCER_BASE_RATE,
+            trigger: 'continuous',
+            display: def.name,
+            extraCount: () => own.value,
+            purchase: {
+              costResource: coin,
+              baseCost: def.baseCost,
+              // Within-tier cost ramp. Per-tier baseCost gap from Synergism
+              // (100 → 1e3 → 2e4 → 4e5 → 8e6) does the heavy lifting for tier
+              // separation; per-buy ramp keeps tier-level pacing.
+              costScaling: 1.15,
+            },
+          };
+        },
       });
       producers.register(tier.producers);
+
+      // Cyclic feedback edge: T5.generated += T1.ownedCount × dt.
+      // vanilla canonical: SynergismOfficial/src/Synergism.ts:4401-4404 —
+      //   if (player.upgrades[105] > 0.5) {
+      //     player.fifthGeneratedCoin = player.fifthGeneratedCoin
+      //       .add(player.firstOwnedCoin)
+      //   }
+      // Canonical fires per 25ms tick with no dt scaling (effectively
+      // T1.ownedCount × 40 per second of sim time). Slim per-second
+      // convention takes the implicit-1 form `T1.ownedCount × dt` per
+      // tick — the 40× canonical factor is a tick-cadence artifact, not
+      // a structural piece, and gets absorbed by the declared-invention
+      // multiplier surface at arc-fit. Always-on per the shop-omitted
+      // substrate (canonical gates this behind upgrade[105]). Registered
+      // after producers.register() so it fires after the per-tier cascade
+      // ticks within the same sequencer pass — matches canonical ordering
+      // (cascade first, then cyclic add).
+      const t1 = producers.getEntry('antimatter-1')!.producer;
+      const t5Generated = generated[4]!;
+      ctx.onTick((dt) => {
+        const owned = t1.ownedCount.value;
+        if (Decimal.gt(owned, 0)) {
+          addResource(t5Generated, Decimal.mul(owned, dt));
+        }
+      });
 
       upgrades = buildUpgrades(coin, producers, acceleratorPerLevelMult);
       upgrades.register(tier.upgrades);

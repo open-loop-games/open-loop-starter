@@ -12,14 +12,18 @@
  * Run: `pnpm exec vite-node src/archetypes/scaler/balance/solve.ts`.
  * Prints a proposed-patch report. Does NOT mutate data files.
  *
- * Sub-leaf C scope: **antimatter only** — beats 1-2. Beat-1 (first Worker
+ * Sub-leaf C scope: **antimatter** — beats 1-2. Beat-1 (first Worker
  * bought) lands at ~1s under the autobuyer-driven sim by construction
  * (cost 100 < 1e2 bootstrap, autobuyer interval 1s); beat-2 (first
- * antimatter upgrade bought) is the calibration target. Per
- * `balance/shape.ts` SCALER_SUBSYSTEMS antimatter inventionKnobs, the
- * declared-invention surface is `balance/achievementMultiplier` and
- * `modules/antimatter/UPGRADE_PER_LEVEL_MULT/accelerator`. Sub-leaves
- * D / E own beats 3-5 / 6-8.
+ * antimatter upgrade bought) is the calibration target.
+ *
+ * Sub-leaf D scope: **prestige timing** — beats 3-5. Beat-3 (first
+ * prestige fires) is bisected against `modules/autobuyers/prestige/
+ * ROI_THRESHOLD_SEC`; beats 4-5 are downstream verifications under the
+ * same knob (first Diamond producer + first Crystal upgrade fall out of
+ * post-prestige autobuyer cadence). The bot enables prestige threshold
+ * mode 'roi' so the autobuyer's ROI body fires under sim. Sub-leaf E
+ * owns beats 6-8.
  *
  * Adopts producer's pushScope/importSave bisection pattern over the new
  * `ScalerTuningRegistryKey`. Mirrors producer/balance/solve.ts shape so
@@ -138,6 +142,52 @@ function solveBeat2(ctx: SamplerContext, targetSec: number): TunerResult {
   });
 }
 
+/**
+ * Beat-3 fires when the prestige autobuyer's ROI body satisfies
+ * `paybackSeconds ≤ ROI_THRESHOLD_SEC` AND `prestigeReset.canReset`
+ * (cumulative coin earnings ≥ 1e25 — `Reset.canReset` Gate). The closed-
+ * form payback formula is `cycleElapsed / (gainRatio − 1)`; lower
+ * threshold means the autobuyer waits for a higher gainRatio (longer
+ * cycle, more antimatter accumulated), so lower threshold → later fire.
+ *
+ * Bracket [1, 1200]s covers very aggressive (1s payback acceptable) to
+ * very patient (20min payback acceptable). Auto-direction handles the
+ * inverted relationship.
+ */
+function solveBeat3(ctx: SamplerContext, targetSec: number): TunerResult {
+  return bisectTuner({
+    lo: 1,
+    hi: 1200,
+    targetSec,
+    sampler: (v) => sampleBeat(ctx, 'beat-3', 'modules/autobuyers/prestige/ROI_THRESHOLD_SEC', v),
+  });
+}
+
+/**
+ * Beats 4-5 share the same knob as beat-3 — Diamond producer auto-buy
+ * + Crystal upgrade auto-buy fire as derived consequences of the
+ * post-prestige cadence set by `ROI_THRESHOLD_SEC`. Each beat solver
+ * bisects independently to surface coupling: when beat-3 / -4 / -5
+ * propose disagreeing values, that is a finding (one knob can't
+ * simultaneously land all three windows).
+ *
+ * The orchestrator picks beat-3's value (the source beat) for the
+ * accumulated proposal; beats 4-5's solver outputs are reported for
+ * coupling visibility, then re-verified under beat-3's choice.
+ */
+function solveBeatViaPrestigeRoi(
+  ctx: SamplerContext,
+  beatId: 'beat-4' | 'beat-5',
+  targetSec: number,
+): TunerResult {
+  return bisectTuner({
+    lo: 1,
+    hi: 1200,
+    targetSec,
+    sampler: (v) => sampleBeat(ctx, beatId, 'modules/autobuyers/prestige/ROI_THRESHOLD_SEC', v),
+  });
+}
+
 // ─── Verification ─────────────────────────────────────────────────────────
 
 interface VerifyRow {
@@ -190,9 +240,8 @@ interface BeatSolve {
 
 /**
  * One Gauss-Seidel pass: solve beats in order against the current
- * proposal. Single beat at sub-leaf C (beat-2 — beat-1 fires in window
- * by construction). D / E extend with their per-subsystem solvers
- * against the same scaffolding.
+ * proposal. C: beat-2. D: beat-3 sets ROI_THRESHOLD_SEC; beats 4-5
+ * surface coupling against the same knob. E: beats 6-8.
  */
 function solvePass(proposed: Proposed): { proposed: Proposed; solves: BeatSolve[] } {
   const engine = buildScalerSimEngine();
@@ -227,6 +276,67 @@ function solvePass(proposed: Proposed): { proposed: Proposed; solves: BeatSolve[
     });
   }
 
+  // Beat 3 — ROI_THRESHOLD_SEC (prestige autobuyer). Default 60s lives
+  // in modules/autobuyers/prestige.ts; the bot flips threshold mode to
+  // 'roi' so the body fires under sim.
+  const ROI_DEFAULT = 60;
+  {
+    const [lo, hi] = BEAT_WINDOWS['beat-3']!;
+    const target = (lo + hi) / 2;
+    const current = Number(
+      proposed['modules/autobuyers/prestige/ROI_THRESHOLD_SEC'] ?? ROI_DEFAULT,
+    );
+    const currentFire = sampleBeat(
+      ctx,
+      'beat-3',
+      'modules/autobuyers/prestige/ROI_THRESHOLD_SEC',
+      current,
+    );
+    const sol = solveBeat3(ctx, target);
+    const value = round3(sol.value);
+    ctx.proposed['modules/autobuyers/prestige/ROI_THRESHOLD_SEC'] = value;
+    solves.push({
+      beatId: 'beat-3',
+      field: 'autobuyer/prestige/ROI_THRESHOLD_SEC',
+      current: ROI_DEFAULT,
+      currentFireTime: currentFire,
+      proposed: value,
+      proposedFireTime: sol.time,
+      direction: sol.direction,
+      iterations: sol.iterations,
+      window: [lo, hi],
+    });
+  }
+
+  // Beats 4-5 — independent bisection against the same ROI knob.
+  // Solver outputs are reported for coupling visibility but NOT folded
+  // into the accumulated proposal (beat-3's value wins for verification).
+  for (const beatId of ['beat-4', 'beat-5'] as const) {
+    const [lo, hi] = BEAT_WINDOWS[beatId]!;
+    const target = (lo + hi) / 2;
+    const current = Number(
+      proposed['modules/autobuyers/prestige/ROI_THRESHOLD_SEC'] ?? ROI_DEFAULT,
+    );
+    const currentFire = sampleBeat(
+      ctx,
+      beatId,
+      'modules/autobuyers/prestige/ROI_THRESHOLD_SEC',
+      current,
+    );
+    const sol = solveBeatViaPrestigeRoi(ctx, beatId, target);
+    solves.push({
+      beatId,
+      field: 'autobuyer/prestige/ROI_THRESHOLD_SEC (independent)',
+      current,
+      currentFireTime: currentFire,
+      proposed: round3(sol.value),
+      proposedFireTime: sol.time,
+      direction: sol.direction,
+      iterations: sol.iterations,
+      window: [lo, hi],
+    });
+  }
+
   return { proposed: ctx.proposed, solves };
 }
 
@@ -235,11 +345,12 @@ const PASSES = 1;
 function main(): void {
   const t0 = Date.now();
 
-  console.log('# Scaler balance solver — engine as oracle (sub-leaf C — antimatter)\n');
+  console.log('# Scaler balance solver — engine as oracle (sub-leaves C + D)\n');
   console.log(`Run at ${new Date().toISOString()}\n`);
   console.log('Bisects declared-invention knobs against `runUntil` + autobuyer-driven sim.');
-  console.log('Beat-1 (Worker bought) lands at ~1s by construction; beat-2 is the target.');
-  console.log(`Gauss-Seidel outer loop (${PASSES} pass — single-knob target).`);
+  console.log('Beat-1 (Worker bought) fires by construction. Beats 2-5 are targets.');
+  console.log('Beat-3 sets ROI_THRESHOLD_SEC; beats 4-5 surface coupling on the same knob.');
+  console.log(`Gauss-Seidel outer loop (${PASSES} pass).`);
   console.log('No data files mutated. Review below.\n');
 
   let proposed: Proposed = {};
@@ -278,8 +389,8 @@ function main(): void {
     initialBlob: verifyBlob,
     proposed,
   };
-  // Verify sub-leaf C's targets only (beats 1-2). Beats 3-8 covered by D/E.
-  const verified = verifyAll(verifyCtx, ['beat-1', 'beat-2']);
+  // Verify sub-leaves C + D targets (beats 1-5). Beats 6-8 covered by E.
+  const verified = verifyAll(verifyCtx, ['beat-1', 'beat-2', 'beat-3', 'beat-4', 'beat-5']);
   console.log(
     renderTable(
       ['beat', 'window', 'fired at', 'in window'],
