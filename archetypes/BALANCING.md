@@ -332,6 +332,20 @@ Tighter bounds catch more drift but pop on irrelevant noise. Looser bounds toler
 
 Cited-from-vanilla numbers — values carried 1:1 from a reference exemplar with per-row citations in the data files — are not solver perturbation surface. Solvers operate on the *declared-invention* surface where the slim-port substrate diverges from canonical. Perturbing canonical values is fudging, not balancing — the slim-port's job is to faithfully reproduce the exemplar's economy, and balance passes work *around* that economy, not against it.
 
+### Findings sidecars
+
+A balance pass generates observations this doc doesn't anticipate. Some are archetype-specific lore (numerical surprises, content-shape interactions, exemplar-substrate quirks). Some are generalizable signals (an instrument-earning moment that other archetypes will reproduce; a methodology stress that wants doc-level capture). Loop closure runs through a per-archetype sidecar.
+
+**File:** `archetypes/<archetype>.balance.md`. Created when the archetype's first balance leaf opens; lives alongside `archetypes/<archetype>.md` (the design doc).
+
+**What goes in:** instrument-earning moments (when an existing tool didn't answer a target question and a new one was added — what question, what shape), methodology stress (where this doc's framing felt inadequate against a real subsystem), engine-surface gaps (cross-link to `candidate-primitives.md`), drift signals (sim/predictor/walker disagreements and how they resolved), numerical surprises.
+
+**What does not go in:** chosen knob values (data files), beat windows (`beats.ts`), tickets (Vikunja), per-pass status — sidecars are for *what was learned*, not *what was decided*.
+
+**Promotion to BALANCING.md:** when an entry generalizes across archetypes, file a PR moving the abstracted rule into this doc. The sidecar entry stays as the worked example; this doc gets the cross-archetype framing. Don't over-promote — single-archetype findings stay sidecar-local.
+
+The sidecar exists because the alternative — burying findings in commit messages and Vikunja comments — loses them. A future balance pass on a sibling archetype starts from "read your archetype's sidecar, then read the others' sidecars to see what came up."
+
 ## Cite-out cut line
 
 | Question                                       | Goes to                                                              |
@@ -355,6 +369,7 @@ PR welcome. The cost of an outdated balance doc is tuning calls that read off st
 
 - `archetypes/BALANCING-TUG.md` — pre-research, single-archetype historical artifact for the Tug worked example. In-source citations referencing `§ Tier C` and `§ Retune vs reshape` resolve there, not in this doc.
 - `archetypes/<name>.md` — per-archetype doc; calls patterns and cross-pattern properties by name.
+- `archetypes/<name>.balance.md` — per-archetype balance findings sidecar. Loop-closure surface for the balance pass; entries promote into this doc when cross-archetype-generalizable. See § Theme 5 — Findings sidecars.
 - `open-loop-research/methodology/techniques/closed-form-progression/` — theory umbrella (thesis, rate-function algebra, bifurcations, math lineage, case studies, subsystem inventory).
 - `closed-form-progression/case-studies/` — applied references per subsystem shape:
     - `core-timing-formula.md` — `T(n) = Cost(n) / Production(n)` primitive; foundation for methodology #1 and #2 walkers.
