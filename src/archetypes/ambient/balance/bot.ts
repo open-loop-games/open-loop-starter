@@ -1,11 +1,6 @@
-import {
-  persistent,
-  selectionHybridPayback,
-  setupPolicyAutoPurchase,
-  type Engine,
-  type EngineModule,
-} from 'open-loop-engine';
-import { createAmbientEngine, getAutoProducers, type AmbientOverrides } from '..';
+import { persistent, type Engine, type EngineModule } from 'open-loop-engine';
+import { createAmbientEngine, type AmbientOverrides } from '..';
+import { AutobuyerMasterToggleKey, AutobuyerRegistryKey } from '../modules';
 
 /**
  * Zero-click activity model. Ambient's identity is "auto-production runs
@@ -30,46 +25,26 @@ let engineCounter = 0;
  * solver's build-once + importSave-per-iteration flow.
  *
  * Auto-purchase scope:
- *   - Producers: wired here via `setupPolicyAutoPurchase` with
- *     `selectionHybridPayback` (1s interval — matches Producer's bot policy
- *     defaults).
- *   - Unlocks: already auto-purchased by `modules/unlocks.ts` itself
- *     (`setupSweepAutoPurchase` in the install path) — soft reveals fire on
- *     threshold cross independently of the bot.
+ *   - Producers: installed by the canonical autobuyer under
+ *     `modules/autobuyers/auto-producers.ts`. The bot enables every spec at
+ *     sim-start; unlock predicates remain real.
+ *   - Unlocks: auto-fire on threshold cross via `modules/unlocks.ts`'s own
+ *     `setupSweepAutoPurchase` install. Deliberately not registered under
+ *     the autobuyer master — visibility soft-reveals are unconditional per
+ *     the Ambient no-pressure contract.
  *   - Scene-variants: derived from unlocks via `modules/scene.ts`'s watch
  *     bridge — also independent of the bot.
  *
- * The bot only needs to drive producer purchases.
+ * Click activation slot is preserved (zero today via `expectedInputAt`) so
+ * a future fork wiring a click taper drops in cleanly.
  */
 function createBalanceBotModule(): EngineModule {
   return {
     id: 'balance-bot',
-    dependencies: ['ambient/auto-producers'],
-    install(ctx) {
-      const buildings = getAutoProducers();
-
-      // Persistent accumulators live inside the engine namespace so
-      // `importSave` resets them alongside game state. Even though
-      // `expectedInputAt` returns zero today, the persistent ref is here
-      // so a future fork wiring a click taper drops in cleanly.
+    dependencies: ['ambient/auto-producers', 'ambient/autobuyers'],
+    install() {
       const inputsFired = persistent<number>(0, { name: 'inputsFired' });
       void inputsFired;
-
-      setupPolicyAutoPurchase(
-        buildings,
-        {
-          enabled: true,
-          interval: 1,
-          policy: selectionHybridPayback({
-            getCost: (p) => p.repeatable!.getCost(1),
-            getRate: (p) => p.computedRate.value,
-            getResource: (p) => p.resource.value,
-            getReserve: () => 0,
-            getHeadlineRate: (p) => buildings.getTotalRate(p.resource),
-          }),
-        },
-        ctx.onTick,
-      );
     },
   };
 }
@@ -79,8 +54,10 @@ function createBalanceBotModule(): EngineModule {
  *
  * Wires:
  * - Zero-click contract (no clicks fired by `expectedInputAt`).
- * - `setupPolicyAutoPurchase` with `selectionHybridPayback`, interval 1s.
- * - Unlocks auto-fire on threshold cross via `modules/unlocks.ts` itself.
+ * - Producer auto-buy via the canonical autobuyer registry. Master toggle
+ *   flipped on; every registered spec's `isActive` forced true.
+ * - Unlocks auto-fire on threshold cross via `modules/unlocks.ts` itself,
+ *   independent of the autobuyer master toggle (per Ambient contract).
  *
  * Caller drives the engine via `runUntil` from the engine harness. The
  * engine is `start()`ed and immediately `stop()`ped so the real-time
@@ -104,6 +81,17 @@ export function buildAmbientSimEngine(
   engine.selectMod('cozy-farm');
   engine.start();
   engine.stop();
+
+  const master = engine.tryInject(AutobuyerMasterToggleKey);
+  const registry = engine.tryInject(AutobuyerRegistryKey);
+  if (!master || !registry) {
+    throw new Error('ambient/balance/bot: autobuyer registry not provided');
+  }
+  master.value = true;
+  for (const ab of registry) {
+    ab.isActive.value = true;
+  }
+
   return engine;
 }
 

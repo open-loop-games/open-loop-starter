@@ -28,7 +28,7 @@ A thirty-minute session is actually seven three-minute glances distributed acros
 
 **Cross-pattern properties engaged:**
 
-- [Automation](../../open-loop-research/patterns/cross-pattern-properties/automation.md) — auto-production available early; load-bearing for the companion-software contract.
+- [Automation](../../open-loop-research/patterns/cross-pattern-properties/automation.md) — auto-production available early; load-bearing for the companion-software contract. Producer auto-buy ships as a canonical autobuyer module under `src/archetypes/ambient/modules/autobuyers/` with a master kill-switch + per-spec player toggle (the "Tending" button in the header). Visibility unlocks (`modules/unlocks.ts`) deliberately stay out of the registry — soft reveals fire unconditionally on threshold cross via `setupSweepAutoPurchase`, since the contract forbids player-pausable content reveals.
 - [Purchase Mechanics](../../open-loop-research/patterns/cross-pattern-properties/purchase-mechanics.md) — visibility unlocks + producer tier purchases + optional softened prestige purchase.
 - [Cost Scaling](../../open-loop-research/patterns/cross-pattern-properties/cost-scaling.md) — gentler exponents than Producer (growth closer to 1.08 than 1.15). Scaling is pacing, not the headline reward.
 - [Quantity Tracking](../../open-loop-research/patterns/cross-pattern-properties/quantity-tracking.md) — milestone thresholds gate visibility unlocks and low-urgency achievements.
