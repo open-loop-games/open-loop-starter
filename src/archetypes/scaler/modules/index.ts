@@ -4,9 +4,14 @@ import { createAntimatterModule } from './antimatter';
 import { createPrestigeModule } from './prestige';
 import { createTranscendModule } from './transcend';
 import { createAchievementsModule } from './achievements';
+import { createAutobuyerRegistryModule } from './autobuyers';
+import { createAntimatterAutobuyersModule } from './autobuyers/antimatter';
+import { createPrestigeAutobuyersModule } from './autobuyers/prestige';
+import { createTranscendAutobuyersModule } from './autobuyers/transcend';
 
 // Re-exports for the composables / UI layer.
 export { ScalerTiersKey, type ScalerTier } from './tiers';
+export { AutobuyerMasterToggleKey, AutobuyerRegistryKey, type AutobuyerSpec } from './autobuyers';
 
 /**
  * Compose the scaler modules in dependency order. Engine topological-sort
@@ -36,5 +41,9 @@ export function createScalerModules(data: ScalerData): EngineModule[] {
     createPrestigeModule(data),
     createTranscendModule(data),
     createAchievementsModule(data),
+    createAutobuyerRegistryModule(),
+    createAntimatterAutobuyersModule(),
+    createPrestigeAutobuyersModule(),
+    createTranscendAutobuyersModule(),
   ];
 }

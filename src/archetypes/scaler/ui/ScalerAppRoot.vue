@@ -22,6 +22,7 @@ import SystemHeader from '@/ui/components/SystemHeader.vue';
 import Tabs from '@/ui/components/Tabs.vue';
 import { manifest } from '../manifest';
 import type { Tier } from '../data/types';
+import { useAutobuyers } from '../composables';
 import { ANTIMATTER_DISPLAY, PRESTIGE_DISPLAY, TRANSCEND_DISPLAY } from './tier-configs';
 import TierPanel from './components/TierPanel.vue';
 import ResourceBar from './components/ResourceBar.vue';
@@ -65,6 +66,10 @@ onUnmounted(() => {
 });
 
 const stack = useModalStack();
+const autobuyers = useAutobuyers();
+function toggleMaster(): void {
+  autobuyers.master.value = !autobuyers.master.value;
+}
 
 function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
@@ -98,11 +103,20 @@ function getActiveModules(): EngineModule[] {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame v-else :stack="stack" :tooltip-delay="400">
+  <AppFrame
+    v-else
+    :stack="stack"
+    :tooltip-delay="400"
+  >
     <template #header>
-      <SystemHeader :app-name="manifest.name" @return-to-slots="returnToSlots">
+      <SystemHeader
+        :app-name="manifest.name"
+        @return-to-slots="returnToSlots"
+      >
         <template #about>
-          <h4 style="margin-bottom: 6px">Scaler — Synergism (slim port)</h4>
+          <h4 style="margin-bottom: 6px">
+            Scaler — Synergism (slim port)
+          </h4>
           <p>
             Buy producers, watch coins climb, prestige to convert into a stacking multiplier. A
             second layer compresses the first; a third compresses both. Modifier chains stack into
@@ -116,11 +130,26 @@ function getActiveModules(): EngineModule[] {
         <ResourceBar />
       </template>
       <template #sidebar>
-        <Button class="btn-sm scaler-achievements-btn" @click="openAchievements">
+        <Button
+          class="btn-sm scaler-achievements-btn"
+          @click="openAchievements"
+        >
           Achievements
         </Button>
+        <Button
+          class="btn-sm scaler-autobuyer-master"
+          :class="{ 'is-active': autobuyers.master.value }"
+          :title="autobuyers.master.value ? 'Pause all autobuyers' : 'Resume all autobuyers'"
+          @click="toggleMaster"
+        >
+          {{ autobuyers.master.value ? '☑' : '☐' }} Automation
+        </Button>
       </template>
-      <Tabs v-model="tabValue" :items="TIER_TABS" class="scaler-tier-tabs">
+      <Tabs
+        v-model="tabValue"
+        :items="TIER_TABS"
+        class="scaler-tier-tabs"
+      >
         <template #panel-antimatter>
           <TierPanel :display="ANTIMATTER_DISPLAY" />
         </template>
@@ -139,13 +168,19 @@ function getActiveModules(): EngineModule[] {
     </SidebarMainShell>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
+  <DevDiagnostics
+    v-if="isDev"
+    v-model:workbench-open="showDevPanel"
+  />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+    <BalanceWorkbench
+      :engine="engine"
+      :modules="getActiveModules"
+    />
   </DevPanelOverlay>
 </template>
 
@@ -157,5 +192,12 @@ function getActiveModules(): EngineModule[] {
 .scaler-achievements-btn {
   align-self: stretch;
   margin-top: var(--gap-sm);
+}
+.scaler-autobuyer-master {
+  align-self: stretch;
+  margin-top: var(--gap-xs);
+}
+.scaler-autobuyer-master.is-active {
+  border-color: var(--color-accent);
 }
 </style>

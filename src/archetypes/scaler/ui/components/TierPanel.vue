@@ -20,6 +20,7 @@ import type { TierDisplay } from '../tier-configs';
 import TierHeader from './TierHeader.vue';
 import ProducerGrid from './ProducerGrid.vue';
 import UpgradeGrid from './UpgradeGrid.vue';
+import AutobuyerToggles from './AutobuyerToggles.vue';
 
 const props = defineProps<{
   display: TierDisplay;
@@ -37,6 +38,7 @@ const tier: TierState = useTier(props.display);
     <div class="scaler-tier-panel__body">
       <ProducerGrid :rows="tier.producers.value" />
       <UpgradeGrid :tier="tier" />
+      <AutobuyerToggles :tier="tier.id" />
       <slot
         name="extras"
         :tier="tier"
