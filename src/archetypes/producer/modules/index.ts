@@ -4,6 +4,8 @@ import { createProducersModule } from './producers';
 import { createUpgradesModule } from './upgrades';
 import { createMilestonesModule } from './milestones';
 import { createAchievementsModule } from './achievements';
+import { createAutobuyerRegistryModule } from './autobuyers';
+import { createProducerAutobuyersModule } from './autobuyers/producers';
 
 export {
   ProducerTuningRegistryKey,
@@ -14,6 +16,7 @@ export {
 } from './producers';
 export { getUpgrades } from './upgrades';
 export { getAchievements } from './achievements';
+export { AutobuyerMasterToggleKey, AutobuyerRegistryKey, type AutobuyerSpec } from './autobuyers';
 
 /**
  * Compose the producer modules in dependency order.
@@ -26,5 +29,7 @@ export function createProducerModules(data: ProducerData): EngineModule[] {
     createUpgradesModule(data),
     createMilestonesModule(data),
     createAchievementsModule(data),
+    createAutobuyerRegistryModule(),
+    createProducerAutobuyersModule(),
   ];
 }

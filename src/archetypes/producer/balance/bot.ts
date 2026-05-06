@@ -2,7 +2,6 @@ import {
   bn,
   persistent,
   selectionHybridPayback,
-  setupPolicyAutoPurchase,
   type DecimalSource,
   type Engine,
   type EngineModule,
@@ -15,11 +14,11 @@ import {
   createProducerEngine,
   getBuildings,
   getPrimaryResource,
-  getUpgrades,
   type ProducerDef,
   type ProducerInstanceState,
   type ProducerOverrides,
 } from '..';
+import { AutobuyerMasterToggleKey, AutobuyerRegistryKey } from '../modules';
 
 /**
  * Click activity model. The previous bot did 20 clicks/s for 5s flat then
@@ -46,10 +45,10 @@ function expectedClicksAt(simTimeSec: number): number {
 
 /**
  * Hybrid-payback selection policy for the producer balance bot — single source
- * of truth shared by `createBalanceBotModule` (the bot installs it via
- * `setupPolicyAutoPurchase`) and the closed-form bot-policy walker
- * (`predict-bot-policy.ts`'s `arcWaypointsBotPolicy` queries it against
- * frozen-state engine readouts).
+ * of truth shared by the producer auto-buy autobuyer (installed in
+ * `modules/autobuyers/producers.ts` via `setupPolicyAutoPurchase`) and the
+ * closed-form bot-policy walker (`predict-bot-policy.ts`'s
+ * `arcWaypointsBotPolicy` queries it against frozen-state engine readouts).
  *
  * Reserve floor is fixed at zero — the producer balance bot doesn't bank.
  * Forks that introduce a reserve must extend this signature; the predictor
@@ -70,19 +69,27 @@ export function buildBotPolicy(
 let engineCounter = 0;
 
 /**
- * Bot behaviour as an EngineModule. Installing the bot through the engine's
+ * Bot behavior as an EngineModule. Installing the bot through the engine's
  * module system (rather than as post-`start()` wiring) lets its persistent
  * accumulators live inside the engine's namespace so
  * `saveManager.exportSave` / `importSave` reach them — load-bearing for the
  * balance solver's build-once + importSave-per-iteration flow.
+ *
+ * Auto-purchase scope:
+ *   - Producers + upgrades: installed by the canonical autobuyers under
+ *     `modules/autobuyers/`. The bot enables every spec at sim-start; unlock
+ *     gates remain real (currently `() => true` for producer's single-tier
+ *     economy).
+ *   - Click activation: bot-only. Models player click cadence via
+ *     `expectedClicksAt`'s taper — not promoted to canonical content because
+ *     it represents player behavior, not a player-facing automation.
  */
 function createBalanceBotModule(): EngineModule {
   return {
     id: 'balance-bot',
-    dependencies: ['producer/producers', 'producer/upgrades'],
+    dependencies: ['producer/producers', 'producer/autobuyers'],
     install(ctx) {
       const buildings = getBuildings();
-      const upgrades = getUpgrades();
       const clickState = buildings.getState('click');
       if (!clickState) throw new Error('balance-bot: click producer state missing');
 
@@ -93,7 +100,6 @@ function createBalanceBotModule(): EngineModule {
       // would leak across iterations silently.
       const simTime = persistent<number>(0, { name: 'simTime' });
       const clicksFired = persistent<number>(0, { name: 'clicksFired' });
-      const upgradeAccum = persistent<number>(0, { name: 'upgradeAccum' });
 
       ctx.onTick((dt: number) => {
         simTime.value += dt;
@@ -101,33 +107,6 @@ function createBalanceBotModule(): EngineModule {
         while (clicksFired.value < target) {
           clickState.activate();
           clicksFired.value++;
-        }
-      });
-
-      setupPolicyAutoPurchase(
-        buildings,
-        {
-          enabled: true,
-          interval: 1,
-          policy: buildBotPolicy(buildings),
-        },
-        ctx.onTick,
-      );
-
-      const upgradeInterval = 2;
-      ctx.onTick((dt: number) => {
-        upgradeAccum.value += dt;
-        // Drain-while-≥-interval: each drained slot runs an "affordable
-        // sweep." Matches the engine-side setupPolicyAutoPurchase drain
-        // semantics so coarse-dt probes (dt > interval) see N passes
-        // instead of 1. Without this, a `dt = 3×interval` advance would
-        // fire one sweep and discard the remainder — correct at
-        // tickDelta=1s today, broken under coarseFineProbe with large dt.
-        while (upgradeAccum.value >= upgradeInterval) {
-          for (const p of upgrades.getAffordable()) {
-            p.purchase();
-          }
-          upgradeAccum.value -= upgradeInterval;
         }
       });
     },
@@ -155,9 +134,11 @@ export function buildProducerAccessor(_engine: Engine): GameStateAccessor {
  * Build a started, sim-bot-driven engine for the Producer archetype.
  *
  * Wires:
- * - Click taper per `expectedClicksAt`.
- * - `setupPolicyAutoPurchase` with `selectionHybridPayback`, interval 1s.
- * - Auto-buy every affordable upgrade every 2s.
+ * - Click taper per `expectedClicksAt` (bot-only — models player click cadence).
+ * - Producer + upgrade auto-buy via the canonical autobuyer registry.
+ *   Master toggle is flipped on; every registered autobuyer's `isActive`
+ *   is forced true. Unlock predicates remain real, so the sim respects
+ *   any gating those autobuyers carry.
  *
  * Caller drives the engine via `runUntil` / `runMatrixUntil` (which call
  * `engine.loop.stepOnce()` internally). The engine has been `start()`ed
@@ -179,6 +160,17 @@ export function buildProducerSimEngine(
   engine.selectMod('bakery');
   engine.start();
   engine.stop();
+
+  const master = engine.tryInject(AutobuyerMasterToggleKey);
+  const registry = engine.tryInject(AutobuyerRegistryKey);
+  if (!master || !registry) {
+    throw new Error('producer/balance/bot: autobuyer registry not provided');
+  }
+  master.value = true;
+  for (const ab of registry) {
+    ab.isActive.value = true;
+  }
+
   return engine;
 }
 

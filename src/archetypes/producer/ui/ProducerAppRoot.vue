@@ -14,6 +14,8 @@ import HeadlinePanel from './panels/HeadlinePanel.vue';
 import ProducerPanel from './panels/ProducerPanel.vue';
 import UpgradeTray from './panels/UpgradeTray.vue';
 import AchievementGridDialog from './components/AchievementGridDialog.vue';
+import AutobuyerToggles from './components/AutobuyerToggles.vue';
+import { useAutobuyers } from '../composables';
 import './producer-theme.css';
 
 const engine = inject<Engine>('engine')!;
@@ -55,6 +57,10 @@ onUnmounted(() => {
 });
 
 const stack = useModalStack();
+const autobuyers = useAutobuyers();
+function toggleMaster(): void {
+  autobuyers.master.value = !autobuyers.master.value;
+}
 function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
 }
@@ -120,6 +126,14 @@ function getActiveModules(): EngineModule[] {
         </template>
         <template #extra-actions>
           <Button
+            class="btn-sm bakery-autobuyer-master"
+            :class="{ 'is-active': autobuyers.master.value }"
+            :title="autobuyers.master.value ? 'Pause all autobuyers' : 'Resume all autobuyers'"
+            @click="toggleMaster"
+          >
+            {{ autobuyers.master.value ? '☑' : '☐' }} Automation
+          </Button>
+          <Button
             class="btn-sm"
             @click="openAchievements"
           >
@@ -134,6 +148,7 @@ function getActiveModules(): EngineModule[] {
       </template>
       <HeadlinePanel />
       <template #right>
+        <AutobuyerToggles />
         <UpgradeTray />
       </template>
     </ThreePanelShell>
