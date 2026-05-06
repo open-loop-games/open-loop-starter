@@ -106,6 +106,15 @@ const upgrades: TranscendUpgradeDef[] = [
 // cost multipliers) and a per-completion reward described by the CalcECC outcome
 // multiplied by challenge-specific coefficients.
 
+// baseRequirement values below are slim-scaled placeholders. Canonical
+// Synergism ships `[10, 20, 60, 100, 200]` (Variables.ts:121) but those assume
+// the full Reincarnation+ multiplier stack absent in slim. Placeholder band
+// `[1, 2, 3, 5, 8]` keeps C1 completion 0 trivially reachable on first
+// transcend (`coin >= 10`) and ramps C5 to a meaningful late-arc threshold.
+// Sub-leaf E (OL-859) pins these via closed-form sweep + sim-verify against
+// the 6-12h arc-closure target. Tunable via
+// `modules/transcend/CHALLENGE_BASE_REQUIREMENT/<id>` registry path.
+
 const challenges: ChallengeDef[] = [
   {
     id: 'challenge-1',
@@ -117,6 +126,7 @@ const challenges: ChallengeDef[] = [
     // vanilla canonical: SynergismOfficial/src/Challenges.ts:541-548 (CalcECC); 210-212 show: 2× completion → Prestige Points, 0.75× → Accelerator Boost, 0.04× → Multiplier
     reward:
       'Per completion: ×2 Prestige Points gain, ×0.75 Accelerator Boost effectiveness, ×0.04 Multiplier effectiveness.',
+    baseRequirement: 1,
   },
   {
     id: 'challenge-2',
@@ -128,6 +138,7 @@ const challenges: ChallengeDef[] = [
     // vanilla canonical: SynergismOfficial/src/Challenges.ts:541-548 (CalcECC); 216-217 show: 5× completion → both Prestige Points and Accelerator generation
     reward:
       'Per completion: ×5 Prestige Points gain, ×5 Accelerator production, ×0.25 Multiplier power.',
+    baseRequirement: 2,
   },
   {
     id: 'challenge-3',
@@ -139,6 +150,7 @@ const challenges: ChallengeDef[] = [
     // vanilla canonical: SynergismOfficial/src/Challenges.ts:541-548 (CalcECC); 221-223 show: 0.04× completion (flat), 0.5× ECC → Accelerator, 0.01× ECC → Multiplier
     reward:
       'Per completion: ×0.04 flat bonus, ×0.5 Accelerator Boost, ×0.01 Multiplier Boost effectiveness.',
+    baseRequirement: 3,
   },
   {
     id: 'challenge-4',
@@ -149,6 +161,7 @@ const challenges: ChallengeDef[] = [
       'Accelerators are capped at a low level. Accelerator costs increase exponentially. Multipliers weakened.',
     // vanilla canonical: SynergismOfficial/src/Challenges.ts:541-548 (CalcECC); 227-229 show: 5× ECC → Prestige Points, 2× ECC → Accelerator, 0.5× ECC → Multiplier
     reward: 'Per completion: ×5 Prestige Points, ×2 Accelerator boost, ×0.5 Multiplier power.',
+    baseRequirement: 5,
   },
   {
     id: 'challenge-5',
@@ -160,6 +173,7 @@ const challenges: ChallengeDef[] = [
     // vanilla canonical: SynergismOfficial/src/Challenges.ts:541-548 (CalcECC); 233-235 show: 0.5 + ECC/100 linear→ prestige modifier, 10^ECC → coin scaling, 5× ECC → mythos production
     reward:
       'Per completion: +0.5 to prestige point multiplier, ×10^ECC coin exponent, ×5 Mythos production rate.',
+    baseRequirement: 8,
   },
 ];
 

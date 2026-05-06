@@ -88,6 +88,21 @@ export interface ChallengeDef {
   effect: string;
   /** Player-facing description of the completion reward. */
   reward: string;
+  /**
+   * Coin-threshold base for the auto-completion goal. Threshold per completion
+   * c is `coin >= 10^(baseRequirement × (1+c)²)` — same softcap shape as
+   * Synergism `calculateChallengeRequirementMultiplier('transcend', c)` at
+   * `Challenges.ts:457-459`, evaluated against `coinsThisTranscension` per
+   * `Synergism.ts:3496-3500`.
+   *
+   * **Declared invention.** Canonical Synergism `Variables.ts:121` ships
+   * `challengeBaseRequirements = [10, 20, 60, 100, 200]` for transcend tier,
+   * but those numbers assume the full Reincarnation+ multiplier stack
+   * (Particles, Runes, Talismans, Platonic, etc.) the slim port doesn't
+   * have. Slim-scaled placeholders here; sub-leaf E pins via closed-form
+   * sweep + sim-verify against the 6-12h arc-closure target.
+   */
+  baseRequirement: number;
 }
 
 export interface AchievementDef {

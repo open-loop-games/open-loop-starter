@@ -196,6 +196,29 @@ export function createTranscendModule(data: ScalerData): EngineModule {
         () => data.balance.challengeCompletionMultiplier,
       );
 
+      // Per-challenge declared-invention threshold base. Canonical scaling
+      // (Variables.ts:121: [10,20,60,100,200]) assumes Reincarnation+ stack
+      // absent in slim — sub-leaf E (OL-859) pins via closed-form sweep.
+      const challengeBaseRequirement = (def: ScalerChallengeDef) =>
+        tunable<DecimalSource>(
+          tuningRegistry,
+          `modules/transcend/CHALLENGE_BASE_REQUIREMENT/${def.id}`,
+          () => def.baseRequirement,
+        );
+
+      // Uniform completion cap per challenge — canonical Synergism's
+      // `getMaxChallenges` returns the same value for transcend tier i<=5
+      // (Challenges.ts:60-72). Slim-scaled placeholder for the 6-12h arc:
+      // 5 challenges × 10 completions × ~7-14min/completion ≈ 6-12h.
+      // Sub-leaf E pins.
+      const challengeCompletionLimit = tunable<DecimalSource>(
+        tuningRegistry,
+        'modules/transcend/CHALLENGE_COMPLETION_LIMIT',
+        () => 10,
+      );
+
+      const coin = findResourceById(registry.list(), 'scaler/coins');
+
       challenges = buildChallenges({
         defs: tier.challenges,
         rewardCoefficient: challengeCompletionMultiplier,
@@ -204,6 +227,10 @@ export function createTranscendModule(data: ScalerData): EngineModule {
         transcendRateChains,
         acceleratorEffect: () => accelerator.effect.value,
         multiplierEffect: () => multiplier.effect.value,
+        registerTick: ctx.onTick,
+        coin,
+        baseRequirementFor: challengeBaseRequirement,
+        completionLimit: challengeCompletionLimit,
       });
     },
     connect(ctx: EngineContext): void {
@@ -216,11 +243,19 @@ export function createTranscendModule(data: ScalerData): EngineModule {
 
       // Module-scoped reset. resetModules covers all three tier scopes
       // (vanilla canonical: Reset.ts:482-508 — transcension cascades through
-      // antimatter + prestige). The keep set exempts the gain the
-      // conversion just wrote (transcendPoints + its `cumulative` tracker
-      // for amount-ladder achievements) and the transcendCount resource +
-      // its tracker (which the cumulative-gte achievement Gate reads
-      // across transcensions).
+      // antimatter + prestige). The keep set exempts:
+      //   - transcendPoints (gain the conversion just wrote) + its
+      //     `cumulative` tracker for amount-ladder achievements
+      //   - transcendCount + its tracker (cumulative-gte achievement Gate
+      //     reads across transcensions)
+      //   - per-challenge `completions` refs. Canonical Synergism only zeroes
+      //     `challengecompletions[1..5]` at the Reincarnation reset
+      //     (Reset.ts:577-594, inside `input === 'reincarnation' || ...`),
+      //     never at plain transcension. Slim drops the Reincarnation tier
+      //     per § 5 substrate divergences, so completions persist across
+      //     all slim resets — the stacking arc spans transcend cycles, with
+      //     `category.allMaxed` driving demo arc-closure once every
+      //     challenge hits `completionLimit`.
       const transcendReset = createReset({
         resetModules: ['scaler/antimatter', 'scaler/prestige', 'scaler/transcend'],
         keep: [
@@ -228,6 +263,7 @@ export function createTranscendModule(data: ScalerData): EngineModule {
           transcendPoints.cumulative!,
           transcendCount,
           transcendCount.cumulative!,
+          ...challenges.getAll().map((e) => e.challenge.completions),
         ],
       });
 
@@ -392,6 +428,10 @@ interface BuildChallengesOptions {
   transcendRateChains: ModifierChain[];
   acceleratorEffect: () => DecimalSource;
   multiplierEffect: () => DecimalSource;
+  registerTick: (callback: (dt: number) => void) => () => void;
+  coin: Resource<DecimalSource>;
+  baseRequirementFor: (def: ScalerChallengeDef) => ComputedRef<DecimalSource>;
+  completionLimit: ComputedRef<DecimalSource>;
 }
 
 // Engine challenge category: 5 transcend challenges. While active, the
@@ -409,6 +449,12 @@ interface BuildChallengesOptions {
 // targeted chain. Restricts apply hand-picked per-challenge nerfs aligned
 // with each Synergism challenge's flavor (disable Accelerator, halve
 // prestige rate, raise costs, etc.).
+//
+// Auto-completion: `goal` closure reads `coin.value` against the canonical
+// softcap-shaped threshold (Synergism.ts:3496-3500 +
+// Challenges.ts:457-459). registerTick: ctx.onTick drives the engine's
+// per-tick `canComplete → complete()` dispatch
+// (challenge-category.ts:556-562).
 function buildChallenges(opts: BuildChallengesOptions): ChallengeCategory<EngineChallengeDef> {
   const {
     defs,
@@ -418,11 +464,16 @@ function buildChallenges(opts: BuildChallengesOptions): ChallengeCategory<Engine
     transcendRateChains,
     acceleratorEffect,
     multiplierEffect,
+    registerTick,
+    coin,
+    baseRequirementFor,
+    completionLimit,
   } = opts;
 
   const category = createChallengeCategory<EngineChallengeDef>({
     id: 'scaler/transcend/challenges',
     mutuallyExclusive: true,
+    registerTick,
   });
 
   for (const def of defs) {
@@ -440,11 +491,25 @@ function buildChallenges(opts: BuildChallengesOptions): ChallengeCategory<Engine
       completions: () => category.getChallenge(def.id)?.completions.value ?? 0,
     });
 
+    const baseRequirement = baseRequirementFor(def);
+    // vanilla canonical: SynergismOfficial/src/Synergism.ts:3496-3500 +
+    // Challenges.ts:457-459 — `coinsThisTranscension >= 10^(base × (1+c)²)`.
+    // Slim's `coin` resource plays the role of `coinsThisTranscension` (it's
+    // reset on transcend by the cascade, so its scope matches).
+    const goal = (): boolean => {
+      const completions = category.getChallenge(def.id)?.completions.value ?? 0;
+      const exponent = Decimal.mul(unref(baseRequirement), Decimal.pow(1 + completions, 2));
+      const threshold = Decimal.pow(10, exponent);
+      return Decimal.gte(coin.value, threshold);
+    };
+
     category.register({
       id: def.id,
       name: def.name,
       restricts,
       rewards,
+      goal,
+      completionLimit: bn(unref(completionLimit)).toNumber(),
     });
   }
 

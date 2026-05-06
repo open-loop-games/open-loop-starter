@@ -29,5 +29,7 @@ export const ScalerTuningRegistryKey: InjectionKey<OverrideRegistry<ScalerTunabl
 //   modules/transcend/UPGRADE_PER_LEVEL_MULT/acc-boost
 //   modules/transcend/TRANSCEND_UPGRADE_DEFAULT_PER_LEVEL_MULT
 //   modules/transcend/UPGRADE_COST_SCALING
+//   modules/transcend/CHALLENGE_BASE_REQUIREMENT/<id>
+//   modules/transcend/CHALLENGE_COMPLETION_LIMIT
 //   balance/achievementMultiplier
 //   balance/challengeCompletionMultiplier
