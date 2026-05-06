@@ -17,7 +17,7 @@ import UnlockTray from './panels/UnlockTray.vue';
 import WelcomeBackOverlay from './panels/WelcomeBackOverlay.vue';
 import AchievementGridDialog from './components/AchievementGridDialog.vue';
 import AutobuyerToggles from './components/AutobuyerToggles.vue';
-import { useAutobuyers } from '../composables';
+import AutobuyerMasterButton from './components/AutobuyerMasterButton.vue';
 import './ambient-theme.css';
 
 const engine = inject<Engine>('engine')!;
@@ -59,10 +59,6 @@ onUnmounted(() => {
 });
 
 const stack = useModalStack();
-const autobuyers = useAutobuyers();
-function toggleMaster(): void {
-  autobuyers.master.value = !autobuyers.master.value;
-}
 function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
 }
@@ -175,14 +171,7 @@ function getActiveModules(): EngineModule[] {
           </div>
         </template>
         <template #extra-actions>
-          <Button
-            class="btn-sm almanac-autobuyer-master"
-            :class="{ 'is-active': autobuyers.master.value }"
-            :title="autobuyers.master.value ? 'Pause tending' : 'Resume tending'"
-            @click="toggleMaster"
-          >
-            {{ autobuyers.master.value ? '☑' : '☐' }} Tending
-          </Button>
+          <AutobuyerMasterButton />
           <Button
             v-if="almanacUnlocked"
             class="btn-sm"

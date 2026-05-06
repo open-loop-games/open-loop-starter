@@ -22,13 +22,13 @@ import SystemHeader from '@/ui/components/SystemHeader.vue';
 import Tabs from '@/ui/components/Tabs.vue';
 import { manifest } from '../manifest';
 import type { Tier } from '../data/types';
-import { useAutobuyers } from '../composables';
 import { ANTIMATTER_DISPLAY, PRESTIGE_DISPLAY, TRANSCEND_DISPLAY } from './tier-configs';
 import TierPanel from './components/TierPanel.vue';
 import ResourceBar from './components/ResourceBar.vue';
 import AccBoostRow from './components/AccBoostRow.vue';
 import ChallengeStrip from './components/ChallengeStrip.vue';
 import AchievementGridDialog from './components/AchievementGridDialog.vue';
+import AutobuyerMasterButton from './components/AutobuyerMasterButton.vue';
 import './scaler-theme.css';
 
 // Transcend's acc-boost is rendered separately by AccBoostRow (cross-currency
@@ -66,10 +66,6 @@ onUnmounted(() => {
 });
 
 const stack = useModalStack();
-const autobuyers = useAutobuyers();
-function toggleMaster(): void {
-  autobuyers.master.value = !autobuyers.master.value;
-}
 
 function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
@@ -136,14 +132,7 @@ function getActiveModules(): EngineModule[] {
         >
           Achievements
         </Button>
-        <Button
-          class="btn-sm scaler-autobuyer-master"
-          :class="{ 'is-active': autobuyers.master.value }"
-          :title="autobuyers.master.value ? 'Pause all autobuyers' : 'Resume all autobuyers'"
-          @click="toggleMaster"
-        >
-          {{ autobuyers.master.value ? '☑' : '☐' }} Automation
-        </Button>
+        <AutobuyerMasterButton />
       </template>
       <Tabs
         v-model="tabValue"
@@ -192,12 +181,5 @@ function getActiveModules(): EngineModule[] {
 .scaler-achievements-btn {
   align-self: stretch;
   margin-top: var(--gap-sm);
-}
-.scaler-autobuyer-master {
-  align-self: stretch;
-  margin-top: var(--gap-xs);
-}
-.scaler-autobuyer-master.is-active {
-  border-color: var(--color-accent);
 }
 </style>
