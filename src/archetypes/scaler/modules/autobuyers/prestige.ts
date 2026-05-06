@@ -59,7 +59,7 @@ export interface PrestigeThresholdConfig {
 export function createPrestigeAutobuyersModule(): EngineModule {
   return {
     id: 'scaler/autobuyers/prestige',
-    dependencies: ['scaler/prestige', 'scaler/autobuyers'],
+    dependencies: ['scaler/prestige', 'scaler/prestige-vault', 'scaler/autobuyers'],
     install(): void {
       // Wiring lives in connect() — see antimatter autobuyer module for rationale.
     },

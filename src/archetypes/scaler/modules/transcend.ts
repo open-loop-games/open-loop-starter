@@ -86,7 +86,7 @@ export function createTranscendModule(data: ScalerData): EngineModule {
 
   return {
     id: 'scaler/transcend',
-    dependencies: ['scaler/prestige'],
+    dependencies: ['scaler/prestige', 'scaler/prestige-vault'],
     install(ctx: EngineContext): void {
       transcendPoints = createResource<DecimalSource>(0, {
         displayName: 'Transcend Points',
@@ -236,10 +236,15 @@ export function createTranscendModule(data: ScalerData): EngineModule {
     },
     connect(ctx: EngineContext): void {
       const tiers = ctx.inject(ScalerTiersKey);
+      const antimatter = tiers.find((t) => t.id === 'antimatter');
       const prestige = tiers.find((t) => t.id === 'prestige');
+      if (!antimatter) {
+        throw new Error('scaler/transcend: antimatter tier missing from registry');
+      }
       if (!prestige?.shards) {
         throw new Error('scaler/transcend: prestige tier (or its shards) missing from registry');
       }
+      const coin = antimatter.currency;
       const prestigeShards = prestige.shards;
 
       // Module-scoped reset. resetModules covers all three tier scopes
@@ -279,7 +284,12 @@ export function createTranscendModule(data: ScalerData): EngineModule {
       };
 
       const transcendReset = createReset({
-        resetModules: ['scaler/antimatter', 'scaler/prestige', 'scaler/transcend'],
+        resetModules: [
+          'scaler/antimatter',
+          'scaler/prestige',
+          'scaler/prestige-vault',
+          'scaler/transcend',
+        ],
         canReset: canResetGate,
         keep: [
           transcendPoints,
@@ -288,6 +298,13 @@ export function createTranscendModule(data: ScalerData): EngineModule {
           transcendCount.cumulative!,
           ...challenges.getAll().map((e) => e.challenge.completions),
         ],
+        // Coin bootstrap mirroring Reset.ts:408 — without it coin.value stays
+        // at 0 post-reset and the autobuyer hardlocks. loadingSave=true during
+        // onReset suppresses the cumulative-tracker watcher, so this write
+        // doesn't pollute coin.cumulative.
+        onReset: () => {
+          coin.value = 1e2;
+        },
       });
 
       // vanilla canonical: SynergismOfficial/src/Calculate.ts:2460 —

@@ -2,6 +2,7 @@ import type { EngineModule } from 'open-loop-engine';
 import type { ScalerData } from '../data/types';
 import { createAntimatterModule } from './antimatter';
 import { createPrestigeModule } from './prestige';
+import { createPrestigeVaultModule } from './prestige-vault';
 import { createTranscendModule } from './transcend';
 import { createAchievementsModule } from './achievements';
 import { createAutobuyerRegistryModule } from './autobuyers';
@@ -40,6 +41,7 @@ export function createScalerModules(data: ScalerData): EngineModule[] {
   return [
     createAntimatterModule(data),
     createPrestigeModule(data),
+    createPrestigeVaultModule(data),
     createTranscendModule(data),
     createAchievementsModule(data),
     createAutobuyerRegistryModule(),

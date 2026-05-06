@@ -36,7 +36,12 @@ import { ScalerTuningRegistryKey } from './tuning';
 export function createAchievementsModule(data: ScalerData): EngineModule {
   return {
     id: 'scaler/achievements',
-    dependencies: ['scaler/antimatter', 'scaler/prestige', 'scaler/transcend'],
+    dependencies: [
+      'scaler/antimatter',
+      'scaler/prestige',
+      'scaler/prestige-vault',
+      'scaler/transcend',
+    ],
     install(): void {
       // All wiring is connect-time — chain bindings need every tier's
       // producer rateChains, which are only fully present once dependent
