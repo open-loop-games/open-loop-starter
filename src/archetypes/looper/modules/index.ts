@@ -43,8 +43,7 @@ export type { ActionMeta, LoadoutEntry } from './action-queue';
  *
  * Each module declares its own `dependencies` so the engine installs them
  * in the right order regardless of array position. `action-runner` depends
- * on `loop` so it can `ctx.inject(LoopKey)` for `running` / `count` reads
- * (no callback-injection shadows).
+ * on `loop` so `getLoop()` returns a live handle at install time.
  */
 export function createLooperModules(): EngineModule[] {
   return [

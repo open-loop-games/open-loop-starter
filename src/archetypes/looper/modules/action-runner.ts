@@ -52,7 +52,7 @@ import { installBasicOne, dispatchBasic, basicCategory } from './action-types/ba
 import { installProgressOne, dispatchProgress, progressCategory } from './action-types/progress';
 import { installRegularOne, dispatchRegular, regularCategory } from './action-types/regular';
 import { getStatLevel, getTalentLevel } from './stats';
-import { LoopKey } from './loop';
+import { getLoop } from './loop';
 import { getManaValue, addMana } from './mana';
 import {
   getResourceValue,
@@ -70,7 +70,6 @@ export { basicCategory, progressCategory, regularCategory };
 /** Bare content registry — per-type state and dispatch live in action-types/. */
 let actions: ContentRegistry<ActionDef>;
 
-/** Loop handle — captured at install via ctx.inject(LoopKey). */
 let loop: Loop;
 
 /**
@@ -476,7 +475,7 @@ export const actionRunnerModule: EngineModule = {
   install(ctx: EngineContext) {
     const gameLoop = ctx.inject(GameLoopKey);
     _dispatcherTickRate = gameLoop.tickRate;
-    loop = ctx.inject(LoopKey);
+    loop = getLoop();
 
     actions = createContentRegistry<ActionDef>('actions');
     registerActions(ACTIONS);

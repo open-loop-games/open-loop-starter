@@ -19,7 +19,6 @@ import {
   type EngineContext,
   type Loop,
   type GameLoop,
-  type InjectionKey,
   createLoop,
   createRetentionPolicy,
   type RetentionPolicy,
@@ -46,10 +45,6 @@ import {
   progressCategory,
   regularCategory,
 } from './action-runner';
-
-// Inline-in-publisher injection key so action-runner (and any future reader)
-// can `ctx.inject(LoopKey)` rather than sibling-importing module-scope state.
-export const LoopKey: InjectionKey<Loop> = Symbol('looper:loop');
 
 // ============================================================================
 // Module State
@@ -263,8 +258,6 @@ export const loopModule: EngineModule = {
 
       registerTick: ctx.onTick,
     });
-
-    ctx.provide(LoopKey, loop);
 
     // Per-tick: drain mana (tickRate * dt ≈ 1 per frame, scales with speed)
     ctx.onTick((dt: number) => {
