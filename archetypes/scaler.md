@@ -129,7 +129,7 @@ export interface AchievementDef {
 }
 ```
 
-**Canonical file split:**
+**Eventual data-layer split** (phase 3 destinations; source ranges live in § 5):
 
 | File | What it owns |
 |------|-------------|
@@ -150,13 +150,13 @@ export interface AchievementDef {
 - *Balance* — numbers that drive arc pacing (per-tier baseCosts, cost-scaling exponents, conversion log bases, challenge effect coefficients). Workbench perturbation target on declared-invention rows only; values lifted 1:1 from Synergism are not solver perturbation surface per `BALANCING.md § Canonical numbers are not tunable`.
 - *Costume* — names and flavour. Producer display names lift from canonical (`translations/en.json buildings.{coin,diamond,mythos}` etc.); forks override per theme.
 
-**Archetype code lives in** `src/archetypes/scaler/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract.
+**Archetype code lives in** `src/archetypes/scaler/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). The layer split emerges through phase 3 integration as engine wiring lands; phase 2 stages canonical Synergism content at the archetype root using Synergism's source structure as the starting layout. See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract and `src/archetypes/CLAUDE.md` for port methodology (phases, discipline).
 
 ---
 
 ## 5. Content scope
 
-Each bullet names which canonical Synergism subsystems land in the first-arc port and where their source bytes live. Counts, names, thresholds, formulas, and reward values come from `cp + edit-in-place` against those ranges — never pinned in this doc. Code is truth.
+Each bullet names which canonical Synergism subsystems land in the first-arc port and where their source bytes live. The phase-2 snapshot lands those bytes locally per `src/archetypes/CLAUDE.md`; phase 3 integration applies engine substitutions and refactors toward the data-layer split named in § 4. Counts, names, thresholds, formulas, and reward values are not pinned in this doc — code is truth.
 
 - **Resources:** Base coin currency + per-prestige-tier currency families (cumulative-across-prestige + per-cycle shards). Resource declarations colocated with each tier's reset block in `Reset.ts`.
 - **Producers / Activities:** Coin / Diamond / Mythos building families per `Buy.ts:336-338`. Per-tier owned + generated mirror cascade per `Synergism.ts:4370-4400`.

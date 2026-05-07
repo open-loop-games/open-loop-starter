@@ -100,27 +100,24 @@ Naming what's *absent* is part of the contract: it's how a sparse-surface archet
 ## 4. Data shape
 
 <!--
-  Documents the intended TypeScript data shape for the archetype's
-  implementation under `src/archetypes/<name>/data/`. Prose-first: the
-  code is the source of truth; this section is design reference, not a
-  codegen input.
-
-  Archetype code follows the data-first convention from
-  `/work/studio/incloneution`: flat typed-array exports under `data/*.ts`
-  with the skeleton/theme/balance lens as comment sections inside files.
+  Documents the eventual TypeScript data shape for the archetype's
+  data layer under `src/archetypes/<name>/data/`. Prose-first: the
+  code is the source of truth; this section is design reference
+  showing what data files look like once phase 3 integration has
+  re-cut the canonical-mirror snapshot into the layered organization.
 
   Lens discipline (comment sections inside each data file):
-  - Skeleton — structural shape (entry kinds, relationships, dependency
-    graph). Editing these forks the archetype.
+  - Skeleton — structural shape (entry kinds, relationships,
+    dependency graph). Editing these forks the archetype.
   - Balance — numbers that drive beat timing. Workbench perturbation
-    target on declared-invention rows only; canonical-lifted values pass
-    through unchanged.
-  - Costume — names, flavour, copy. Zero mechanical impact; swap freely
-    per theme/fork.
+    target on declared-invention rows only; canonical-lifted values
+    pass through unchanged.
+  - Costume — names, flavour, copy. Zero mechanical impact; swap
+    freely per theme/fork.
 
-  Counts, names, thresholds, and formulas come from canonical exemplar
-  bytes via `cp + edit-in-place` — never pinned in this doc. Code is
-  truth; this section is structural reference, not target spec.
+  § 4 itself does not pin counts, names, thresholds, or formulas —
+  code is truth. Source bytes are citation-guarded via per-file
+  header blocks naming canonical source files and line ranges.
 -->
 
 ```ts
@@ -135,14 +132,14 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
 //
 //   // ─── Skeleton ─────────────────────────────────────
 //   export const {{NAME}}_ENTRIES: {{Name}}PrimaryDef[] = [
-//     // canonical content lifted via cp from <exemplar source range>
+//     // canonical content; file-header citation block names source ranges
 //   ];
 //
 //   // ─── Balance ──────────────────────────────────────
 //   export const {{NAME}}_COST_GROWTH = /* canonical or invention-tagged */;
 ```
 
-**Canonical file split:**
+**Eventual data-layer split:**
 
 | File | What it owns |
 |------|-------------|
@@ -154,7 +151,7 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
 
 **Override semantics:** `boot.ts` exports `create{{Name}}Engine(overrides?)` that accepts a deep-partial over the archetype's data shape. Sim tests and workbench perturbation route through this factory — the addressable shape *is* the TypeScript type over the data, not a synthetic vars layer. Forks change behaviour by editing `data/*.ts` in place; they don't need a runtime override path.
 
-**Archetype code lives in** `src/archetypes/<name>/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract.
+**Archetype code lives in** `src/archetypes/<name>/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). The `data/`/`modules/`/`composables/`/`ui/` layer split emerges through phase 3 integration as engine wiring lands; phase 2 stages canonical content using the exemplar's source structure as the starting layout. See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract and `src/archetypes/CLAUDE.md` for port methodology (phases, discipline).
 
 ---
 
@@ -162,11 +159,13 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
 
 <!--
   Names which canonical-exemplar subsystems land in the first-arc port
-  and cites their source ranges. Counts, names, thresholds, formulas,
-  and reward values come from `cp + edit-in-place` against those ranges
-  — never pinned in this doc. Code is truth; pinning canonical content
-  here creates duplicate-source-of-truth that drifts and primes
-  fabrication when implementers treat doc text as a target.
+  and cites their source ranges. The phase-2 snapshot lands those bytes
+  locally; phase 3 integration applies engine substitutions and
+  refactors toward the engine-layer organization. Counts, names,
+  thresholds, formulas, and reward values are not pinned in this doc —
+  code is truth. Pinning canonical content here creates duplicate-
+  source-of-truth that drifts and primes fabrication when implementers
+  treat doc text as a target.
 
   Each bullet names (a) which canonical subsystems are in first-arc
   scope, and (b) where their source bytes live. Pattern: "<subsystem
@@ -344,7 +343,7 @@ reshape the archetype to use existing vocabulary.
 4. **Data shapes are typed TS.** § 4 TS-signature examples must be syntactically valid TypeScript — they are reference material for the archetype's implementation under `src/archetypes/<name>/data/`.
 5. **Themes are costume-only.** If a theme changes pattern composition or arc pacing, it is a different archetype, not a theme.
 6. **Archetype code lives colocated.** Each archetype lives at `src/archetypes/<name>/` as a self-bootable tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). Data is hand-authored TypeScript, not codegen output. Forks clone the archetype directory wholesale; per-fork tuning edits happen in place. This doc describes design intent; the code is the source of truth.
-7. **Canonical, not novel — first-arc lifts shape and content from one exemplar.** Starter demos are transparent first-arc ports of one Tier-A exemplar from `open-loop-research/reference-code/<name>/` (studio paths per `/work/studio/CLAUDE.md`). The port lifts the exemplar's first-arc content verbatim — resource names, action names, item names, NPC names, zone names, numbers, and structural relationships — into `data/*.ts`. The exemplars in § 1 (Exemplars + Live consumer references) validate the archetype's structural shape exists in the wild: drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Forks rename for theme as a post-port costume pass; the starter ships transparent.
+7. **Canonical, not novel — first-arc lifts shape and content from one exemplar.** Starter demos are transparent first-arc ports of one Tier-A exemplar from `open-loop-research/reference-code/<name>/` (studio paths per `/work/studio/CLAUDE.md`). The port lifts the exemplar's first-arc content verbatim — resource names, action names, item names, NPC names, zone names, numbers, structural relationships, and behavior — into the archetype tree. The exemplars in § 1 (Exemplars + Live consumer references) validate the archetype's structural shape exists in the wild: drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Forks rename for theme as a post-port costume pass; the starter ships transparent.
 8. **Lift numbers, don't invent.** Tier-A archetypes (those with open-source exemplars under `open-loop-research/reference-code/<name>/`) must cite source for every numerical claim in § 3 / § 4 / § 5. Cite as `` `<file>:line` `` against the exemplar tree named in the file-header citation block (preferred) or `` `wiki:<url>` `` (Tier-B archetypes with closed-source exemplars). For numbers without exemplar (e.g. invented zone-bridge actions), use `` `declared invention — <rationale>` `` (already valid in § 1 / § 6) to mark them explicitly. The validator hard-fails on confident numbers without one of these markers; see § Validator rules for per-status gates.
 
 ---

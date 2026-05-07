@@ -2,27 +2,32 @@
 
 Each subdirectory `src/archetypes/<name>/` is a self-bootable first-arc port of one Tier-A canonical exemplar. Specs live at `archetypes/<name>.md` (relative to repo root); canonical template at `archetypes/_template.md`.
 
-Before touching any file under this subtree, read the spec's § 4 (byte-landing manifest + typed signatures) and § 5 (content scope + structural properties + demo arc beats).
+Before touching any file under this subtree, read the spec's § 5 (content scope + structural properties + demo arc beats). Spec § 5 names the canonical sources; the port runs against those bytes after they land locally.
 
-## Port phases
+## What the port is
 
-Each archetype port flows from canonical exemplar to running app through four phases. Each phase consumes a specific input and produces a specific artifact; later phases consume what earlier phases produce.
+A canonical-fidelity port of the exemplar's first-arc *behavior and data* into the archetype tree, running against `open-loop-engine`. The canonical signature — cost functions, scaling formulas, reset semantics, gate conditionals, cascade relations, modifier composition, conversion thresholds — comes over intact in canonical bytes. Substitutions touch only canonical-internal references that don't compile against the engine: exemplar state reads, exemplar globals, and cross-module imports against sibling exemplar files map to engine state, balance constants, sibling files in the port, or engine primitives where the engine has the shape.
 
-1. **Spec authoring.** `archetypes/<name>.md § 5` names which canonical subsystems land in first arc and where their source bytes live in the exemplar tree at `open-loop-research/reference-code/<name>/`. The spec phase runs upstream of any code work; subsequent phases consume what the spec names. Spec authoring is its own leaf — separate from the data port.
+The archetype's identity lives in canonical behavior. The port preserves shapes alongside values — byte-anchored, citation-guarded — so future readers can verify against canonical source.
 
-2. **Data layer (`data/`).** Each `data/*.ts` is populated from canonical exemplar source by `cp` (or `sed -n 'A,Bp' source > dest` for a line range) per the byte-landing manifest in spec § 4. After the bytes land at every destination, an edit-in-place pass over each file fits the canonical bytes to the typed signatures defined alongside the manifest, adds the file-header citation block naming the canonical source files and line ranges, and tags declared inventions inline where a row diverges from canonical with reason. Ids, display names, numbers, and structural relationships preserve canonical fidelity.
+## Phases
 
-3. **Engine layers (`modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`).** Engine modules construct from `data/` via factory closures. Composables bridge module refs to UI when they earn the layer (`computed` / `watch` / cross-module synthesis). UI renders engine state. Sim probes beat timing per the spec's § 7 expectations. Boot wires the singleton + module registration + save/load + UI mount. First-arc code that reads later-arc state copies the gate-conditional verbatim from canonical and evaluates inert against default state.
+1. **Spec authoring.** `archetypes/<name>.md § 5` enumerates the canonical subsystems in first-arc scope, source ranges in `open-loop-research/reference-code/<name>/`, structural properties the running app must demonstrate, and the demo arc beats that close the port. Spec is its own leaf, upstream of code.
 
-4. **Walkthrough verification.** Completion gate: every demo arc beat from spec § 5 reachable in the running app on a fresh save. Typecheck-clean is necessary but not sufficient — the gate is observable behaviour in the browser.
+2. **Subsystem snapshot.** Canonical exemplar files port into the archetype tree using the exemplar's own file structure as the starting layout. Mechanic: peek the source with `head`, copy with `cp`, work against the local copy. Each landed file gets a file-header citation block naming canonical source files and line ranges. The snapshot stages canonical content for phase 3's iterative integration; engine substitutions land on local bytes during phase 3.
+
+3. **Iterative integration.** Subsystem by subsystem, apply engine substitutions, integrate engine systems, and refactor toward the engine layer split. Substitutions touch what doesn't compile against the engine: exemplar state reads, globals, and cross-module imports map to engine state, balance constants, sibling files in the port, or engine primitives. The `data/modules/composables/ui` organization emerges through these refactors as engine wiring reveals where seams want to be cut. Inline tags mark declared inventions where a substitution diverges from canonical with reason.
+
+4. **Walkthrough verification.** Closure: every demo arc beat from spec § 5 reachable in the running app on a fresh save. Typecheck-clean is necessary but not sufficient — the gate is observable behavior in the browser.
 
 ## Discipline
 
-- **Bytes precede edits in the data phase.** Every canonical-lifted file under `data/` is populated by a copy operation before any edit-in-place pass. Typed signatures and citation conventions are fitting targets the edit pass converges on.
-- **Lens via comment sections.** Skeleton + Balance + Costume lenses inside each data file as `// ─── Skeleton ───`, `// ─── Balance ───`, `// ─── Costume ───` — not separate files, not codegen.
-- **Layering.** `data/ → modules/ → composables/ → ui/`. Data never imports modules; composables and components never contain game logic.
-- **Forks edit `data/*.ts` in place for tuning.** The runtime override path (`apply<Name>Overrides(base, overrides)`) exists for sim and workbench perturbation, not as a per-fork tuning surface.
-- **Spec-first reductions.** Reductions during implementation route through a § 5 update first, with stated reason. Demo arc beats are the source of truth for what the running app must demonstrate.
+- **Behavior ports with data.** Cost functions, scaling formulas, reset semantics, gate conditionals, modifier composition come over as canonical bytes alongside numeric anchors. The canonical signature lives in the shapes.
+- **Disk-to-disk byte landing.** `cp` lands canonical bytes locally before substitution work begins. `head` for a sanity peek of the source path; the local copy is the working surface from that point on. Reads against the local tree are cached.
+- **Iterative, not one-shot.** Refactor toward the engine layer split incrementally as engine integration proceeds, subsystem by subsystem.
+- **Substitutions touch what doesn't compile.** Replace exemplar-internal references — state, globals, cross-module imports — with engine equivalents per the archetype spec. Refactors and ergonomic passes are downstream of canonical fidelity.
+- **Later-arc state ports as inert refs.** First-arc code that reads later-arc state copies the gate-conditional verbatim from canonical; the gate evaluates inert against default state.
+- **Citation header on every ported file.** Names canonical source files and line ranges. Inline declared-invention tags where substitution diverges from canonical with reason. The header is the receipt — future readers verify the port via the cited bytes.
 - **Sibling references.** Engine primitives at `open-loop-engine/docs/api/INDEX.md`. Layout shells at `src/lib/shells/`. Starter-root cross-archetype surfaces (`src/modules/`, `src/composables/`, `src/ui/`) stay archetype-agnostic — game-specific content lives only under `src/archetypes/<name>/`.
 
 ## Where to look first
@@ -30,8 +35,7 @@ Each archetype port flows from canonical exemplar to running app through four ph
 | For | Read |
 |-----|------|
 | Which canonical subsystems are in first-arc scope | spec § 5 |
-| Which source ranges populate which destinations | spec § 4 byte-landing manifest |
-| Typed signatures the edit-in-place pass fits to | spec § 4 |
+| Source ranges for ported subsystems | spec § 5 |
 | Engine primitives the archetype uses | spec § 3 + `open-loop-engine/docs/api/INDEX.md` |
 | Demo arc beats (completion gate) | spec § 5 |
 | Predicted engine gaps surfacing during the port | spec § 7 |
