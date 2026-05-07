@@ -175,6 +175,33 @@ substitutes used in their place:
 
 - {{feature present in the exemplar}} — {{reason omitted from slim demo; what replaces it}}
 
+### Broken-by-drops inventory
+
+<!--
+  For every dropped subsystem listed above, enumerate the canonical gates that
+  reference it, and decide per-gate. The slim-port methodology silently invents
+  replacement behavior at every dropped gate — citations document what was
+  *transcribed*, not what was *broken by the drops*. This subsection is the
+  paired audit. Required before slim-port implementation begins (see
+  `open-loop-starter/CLAUDE.md § Archetype convention`).
+
+  Each row pairs a canonical gate-conditional with one of three closed-set
+  decisions. No fourth option, no synthesized slim-equivalent — those are the
+  confabulation surface this audit exists to close.
+-->
+
+| Canonical gate (file:line) | Behavior gated | Archetype property affected? | Decision | Rationale |
+| --- | --- | --- | --- | --- |
+| {{e.g. `player.upgrades[105]`, Synergism.ts:4401}} | {{e.g. cyclic edge `T5.gen += T1.owned` in antimatter cascade}} | {{archetype property name from § 2 / § 3, or `none`}} | {{`port-gate-as-default-false` / `port-the-subsystem` / `out-of-demo-scope`}} | {{one-line load-bearing reason for the decision}} |
+
+Decisions are a closed set:
+
+- **`port-gate-as-default-false`** — port the gate's read site (e.g. a boolean ref defaulting false), don't port the subsystem that flips it. The gated behavior is dormant in slim. Cheapest faithful option.
+- **`port-the-subsystem`** — pull the dependency in. The drop list shrinks. Reserved for cases where the gated behavior is structurally load-bearing on an archetype property the slim claims to demonstrate.
+- **`out-of-demo-scope`** — gated behavior dropped; the archetype property is not demonstrated by slim. Acceptable when the property is non-load-bearing, or covered by another subsystem the slim retains.
+
+Antipattern (the canonical confabulation): "always-on per shop-omitted substrate" / "slim equivalent of X" / "{{multiplier}} absorbs the gated factor at arc-fit." Every such phrase in a slim port is a missing inventory row. If a behavior depends on something the slim dropped and the inventory hasn't decided what to do, the answer is *not* "do it anyway, calibrated."
+
 ---
 
 ## 6. UI prescription
