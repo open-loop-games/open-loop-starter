@@ -1,0 +1,30 @@
+export { createApp, createScalerEngine } from './boot';
+export type { ScalerBootResult, ScalerEngineOptions } from './boot';
+export { manifest } from './manifest';
+export {
+  DEFAULT_SCALER_DATA,
+  COIN_PRODUCERS,
+  ACCELERATOR_DEF,
+  MULTIPLIER_DEF,
+  COIN_UPGRADES,
+  SCALER_BALANCE,
+  type ScalerData,
+  type ScalerBalance,
+  type ScalerGameState,
+  type ProducerDef,
+  type CumulativeUpgradeDef,
+  type UpgradeDef,
+  type UpgradeGrant,
+  type UpgradeEffectScope,
+  type Tier,
+} from './data';
+export {
+  coinModule,
+  createScalerModules,
+  getCoinResource,
+  getCoinProducers,
+  getAccelerator,
+  getMultiplier,
+  getCoinUpgrades,
+  getCoinReset,
+} from './modules';
