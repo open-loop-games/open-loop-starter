@@ -89,13 +89,9 @@ src/archetypes/<name>/
 └── boot.ts          # createApp(overrides?) → { app, engine, mount }.
 ```
 
-**Dependency direction (strict):** `data → modules → ui`, with composables between modules and ui when they earn the layer (see § Layering). Data never imports from modules; composables and components never contain game logic. Lens inside data files uses comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`) — not separate files, not a codegen round-trip.
+**Dependency direction (strict):** `data → modules → ui`, with composables between modules and ui when they earn the layer (see § Layering). Data never imports from modules; composables and components never contain game logic.
 
-**Demo content is the first arc of one canonical exemplar.** Pick a single Tier-A exemplar from `open-loop-research/reference-code/<name>/` (studio paths per `/work/studio/CLAUDE.md`). Lift its first-arc content — ids, display names, numbers, structural relationships — verbatim into `data/*.ts` as a copy-paste-and-edit-in-place starting point. File-header citation names the canonical source files and line ranges; per-row citations are reserved for declared inventions where a row diverges from canonical, with reason. Forks rename for theme as a post-port costume pass; the starter ships transparent first-arc ports.
-
-**Port operation.** "Copy-paste-and-edit-in-place" is the filesystem operation: `cp` (or block-copy of a source line range) lands canonical bytes at the destination first; `Edit` in place fits the typed defs, trims to first-arc scope, adds the file-header citation, and inline-tags declared inventions. Source bytes reach the destination before any keystroke. Type-shape, closure-shape, and import-shape adjustments are the edit-in-place pass — not authoring or translation.
-
-**First-arc scope is the spec's § 5 — Content sketch + Required structural properties + Demo arc beats.** Implementation matches the enumerated counts and structural properties. Reductions during implementation route through a § 5 update first, with stated reason. The completion gate is walking all § 5 demo arc beats in the running app on a fresh save. First-arc code that reads later-arc state (canonical gate-conditionals branching on subsystems out-of-arc) lifts the read-site as a default-zero/inert ref; the gate copies verbatim from canonical and evaluates inert against default state. Sibling discipline to `archetypes/BALANCING.md § Canonical numbers are not tunable`.
+**Port methodology lives next to the code** at `src/archetypes/CLAUDE.md` (mirrored to `archetypes/CLAUDE.md`) — phases, byte-landing discipline, walkthrough gate, lens conventions. Loaded automatically when an agent reads or writes under either subtree.
 
 **Fork workflow:** clone the repo, pick one archetype, delete the others + `src/gallery/` (when it lands), keep your one archetype as the whole app.
 

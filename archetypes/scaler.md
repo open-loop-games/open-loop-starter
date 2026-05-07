@@ -28,7 +28,7 @@ A thirty-minute session near the start is a prestige cycle: push the headline re
 
 **Cross-pattern properties engaged:**
 
-- [Modifier Chains](../../open-loop-research/patterns/cross-pattern-properties/modifier-chains.md) — the most layered of any archetype. Per-tier rateChains carry achievements × per-tier upgrades × prestige-layer multipliers × challenge completions × milestone bonuses, composed across 3 layers. Evaluation-order-sensitive at modest depth (~5–6 named factors per layer in the first arc); deep-prestige forks reaching 10+ factors per chain are fork-extension territory (see § 5 later-arc systems).
+- [Modifier Chains](../../open-loop-research/patterns/cross-pattern-properties/modifier-chains.md) — the most layered of any archetype. Per-tier rateChains carry achievements × per-tier upgrades × prestige-layer multipliers × challenge completions × milestone bonuses, composed across the first-arc tier set. Evaluation-order-sensitive; deep-prestige fork extensions push chain depth further (see § 5 later-arc systems).
 - [Cost Scaling](../../open-loop-research/patterns/cross-pattern-properties/cost-scaling.md) — exponential for base producers, piecewise-with-softcaps for prestige-layer purchases, polynomial/factorial in late-layer costs.
 - [Scaling Formulas](../../open-loop-research/patterns/cross-pattern-properties/scaling-formulas.md) — every family is used. Exponential for costs, logarithmic/sqrt for prestige conversions, piecewise for softcaps, tetration in late-layer regimes.
 - [Softcapping](../../open-loop-research/patterns/cross-pattern-properties/softcapping.md) — prestige formulas softcap at extreme values to keep the curve readable; challenge rewards softcap past N completions to bound Effective-Challenge-Completion stacks.
@@ -48,16 +48,16 @@ A thirty-minute session near the start is a prestige cycle: push the headline re
 
 | Layer | Primitive | Role in this archetype |
 |-------|-----------|------------------------|
-| core | `createResource` | One base currency + one currency per prestige layer; first-arc port runs 5 (coins, prestigePoints, prestigeShards, transcendPoints, transcendShards). |
+| core | `createResource` | Base coin currency + per-prestige-tier currency families (cumulative-across-prestige + per-cycle shards). Resource set per Synergism's coin / prestige / transcend tier scopes. |
 | core | `createMultiplicativeModifier` | Per-upgrade, per-achievement, per-crystal-level multipliers bound onto each tier's per-producer rateChain via `chain.bind`. |
-| core | `createLogFormula` | Base→prestige and prestige→transcend conversion formulas (logarithmic family). Synergism uses log₁ₑ₂₅ for prestigePoints. |
-| systems | `createProducerCategory` | Per-tier producer rows (5 per tier × 3 tiers = 15). Each producer's `rateChain` is the binding surface for tier-wide multipliers. |
-| systems | `createPurchasableCategory` | Antimatter / Crystal / Transcend upgrade categories — every purchasable flows through `mapPurchasable`. Cumulative-buy with self-referencing cost closures (Antimatter Accelerator + Multiplier geometric, Crystal upgrades super-exponential) builds the cost as a `Formula` over an external amount mirror per `purchasable.ts`'s internal `createScalingPurchasable` shape, since geometric default doesn't fit super-exponential. |
+| core | `createLogFormula` | Base→prestige and prestige→transcend conversion formulas (logarithmic family). |
+| systems | `createProducerCategory` | Per-tier producer rows (coin / prestige / transcend tier sets). Each producer's `rateChain` is the binding surface for tier-wide multipliers. |
+| systems | `createPurchasableCategory` | Coin / Crystal / Transcend upgrade categories — every purchasable flows through `mapPurchasable`. Cumulative-buy with self-referencing cost closures (geometric for coin upgrades, super-exponential for Crystal) builds the cost as a `Formula` over an external amount mirror per `purchasable.ts`'s internal `createScalingPurchasable` shape, since geometric default doesn't fit super-exponential. |
 | systems | `createCostRequirement` | Cost predicate inside purchasable `requirements` and inside `createConversion` `inputs`. Closure-friendly so the cost can read live state. |
-| systems | `createAchievementCategory` | 35 milestone + hidden achievements; multiplicative grants feed the per-tier rateChains. |
-| systems | `createChallengeCategory` | 5 transcend-tier challenges. Completion count feeds the modifier chain on each subsequent transcend run. |
+| systems | `createAchievementCategory` | First-arc achievement subset (grouped + ungrouped per `displayCondition` resolved at prestige + transcension reset levels); multiplicative grants feed the per-tier rateChains. |
+| systems | `createChallengeCategory` | Transcend-tier challenges (challenge1..5). Completion count feeds the modifier chain on each subsequent transcend run. |
 | systems | `createReset` | One reset per layer, declared inside the owning tier's `connect()` phase via `resetModules: [...]` listing the tier-IDs in scope plus `keep: [...]` exempting the gain currency the conversion just produced. The engine's per-module persistent-ref registry resolves the union; the `keep:` set is the load-bearing decision per layer (without it, `afterConvert → reset.reset()` zeros the currency one step after writing it). |
-| systems | `createConversion` | Multi-input/output conversion paired with the matching reset in the tier module's `connect()` phase. `inputs` consume the source currency via `createCostRequirement`; `outputs` produce the gain via `createLogFormula` (Synergism's log₁ₑ₂₅ for prestigePoints, log₁₀ for transcendPoints). `afterConvert: () => reset.reset()` chains the layer reset, which the gain currency's `keep:` exemption survives. |
+| systems | `createConversion` | Multi-input/output conversion paired with the matching reset in the tier module's `connect()` phase. `inputs` consume the source currency via `createCostRequirement`; `outputs` produce the gain via `createLogFormula`. `afterConvert: () => reset.reset()` chains the layer reset, which the gain currency's `keep:` exemption survives. |
 | harness | `runArcProbe` / `runMatrix` | Beat-timing sim and parameter-grid robustness for the balance leaf. Not yet wired (smoke tests removed; balance lane files separately). |
 
 **Engine systems explicitly not used (required):**
@@ -73,10 +73,10 @@ Naming what's *absent* is part of the Scaler contract: it refuses the spatial an
 
 **Primary stress axes:**
 
-1. **Multi-layer reset coordination via `resetModules` by ID + `keep:` exemptions.** A 3-layer Scaler declares three `createReset({ resetModules: [...], keep: [...] })` instances inside the owning tier's `connect()` phase; the `resetModules` lists nest (Antimatter ⊂ Antimatter+Prestige ⊂ Antimatter+Prestige+Transcend) and the engine's per-module persistent-ref registry resolves the union. The `keep:` set exempts the gain currency the conversion just produced — without it, `afterConvert → reset.reset()` zeros the currency one step after writing it (`conversion.ts:204-211`). Nested resets work without a hierarchy helper; the balance leaf exercises reset-correctness under repeated cycles, including which refs the `keep:` set preserves beyond the gain currency. The load-bearing case is **challenge-completion stacking across transcend cycles**: completions persist via per-challenge `keep:` exemptions, accumulating across every transcension until each challenge hits `completionLimit`; the demo arc closes when `category.allMaxed` flips true. Canonical Synergism only zeroes `challengecompletions[1..5]` at the Reincarnation reset (`Reset.ts:577-594`, inside `input === 'reincarnation' || ...`), never at plain transcension — the first arc stops at Transcend per § 5 later-arc systems, so completions persist across all first-arc resets.
-2. **Modifier chain order-sensitivity at modest depth.** A 3-layer first-arc chain runs ~5–6 named factors per layer (per-tier producer rates + Accelerator/Multiplier/Crystal/Transcend-upgrade grants + challenge-completion stacks + achievement contributions). The `chain.bind` composition stacks multiplicative grants per layer; whether sequential-across-layers vs. layered-multiplicative produces the same result for pure-multiplicative grants is the stress claim. Hepteract-class 10+-factor depth is fork-extension territory, not in first-arc scope.
-3. **Formula correctness across a wide dynamic range.** Prestige currencies cross `1e100` within the 1–2h arc (per `data/prestige.ts` baseCost ladder topping at `1e100` for the fifth diamond producer); the logarithmic conversion formula and the super-exponential Crystal cost (`10^(baseLogCost + costIncrement·((n-0.5)²/2 - 1/8))`, baseLogCost up to 1000) must remain correct across that range. Tetration-regime stress is fork-extension territory — the first-arc port exits well below it.
-4. **Per-layer UI density.** 3 layers × (producers + upgrades + challenges + achievements) is the largest UI surface of any archetype. The shell choice and tab organisation are the difference between "comprehensible mid-game" and "players quit at layer 2."
+1. **Multi-layer reset coordination via `resetModules` by ID + `keep:` exemptions.** Per-layer `createReset({ resetModules: [...], keep: [...] })` declared inside the owning tier's `connect()` phase; the `resetModules` lists nest (coin ⊂ coin+prestige ⊂ coin+prestige+transcend) and the engine's per-module persistent-ref registry resolves the union. The `keep:` set exempts the gain currency the conversion just produced — without it, `afterConvert → reset.reset()` zeros the currency one step after writing it (`conversion.ts:204-211`). Nested resets work without a hierarchy helper; the balance leaf exercises reset-correctness under repeated cycles. The load-bearing case is **challenge-completion stacking across transcend cycles**: completions persist via per-challenge `keep:` exemptions, accumulating across every transcension until each challenge hits its `completionLimit`; the demo arc closes when `category.allMaxed` flips true. Canonical Synergism's only zeroing site for `challengecompletions[1..5]` is the Reincarnation reset (`Reset.ts:577-594`); the first arc stops at Transcend per § 5 later-arc systems, so completions persist across all first-arc resets.
+2. **Modifier chain order-sensitivity.** The `chain.bind` composition stacks multiplicative grants per layer; whether sequential-across-layers vs. layered-multiplicative produces the same result for pure-multiplicative grants is the stress claim. Deep-prestige Hepteract-class chains are fork-extension territory.
+3. **Formula correctness across the canonical dynamic range.** The logarithmic conversion formula and the super-exponential Crystal cost (`Synergism.ts:544` + `Variables.ts:32`) must remain correct across the range Synergism's first arc reaches. Tetration-regime stress is fork-extension territory.
+4. **Per-layer UI density.** Multi-layer × per-layer-content UI surface — the largest of any archetype. The shell choice and tab organisation are the difference between "comprehensible mid-game" and "players quit at layer 2."
 
 ---
 
@@ -87,24 +87,24 @@ The archetype's first-arc data lives at `src/archetypes/scaler/data/` as flat ty
 ```ts
 // data/types.ts — shared interfaces
 
-export type Tier = 'antimatter' | 'prestige' | 'transcend';
+export type Tier = 'coin' | 'prestige' | 'transcend';
 
 export interface ProducerDef {
-  id: string;            // e.g. 'antimatter-1', 'prestige-1', 'transcend-1'
+  id: string;            // canonical id from exemplar (e.g. 'coin-1')
   name: string;
   tier: Tier;
-  position: 1 | 2 | 3 | 4 | 5;
+  position: number;      // intra-tier rank; values fall out of canonical content
   baseCost: DecimalSource;
 }
 
-export interface AntimatterUpgradeDef {
+export interface CoinUpgradeDef {
   id: string; name: string; description: string;
   baseCost: DecimalSource;  // cumulative-buy initial cost
 }
 
 export interface CrystalUpgradeDef {
   id: string; name: string; description: string;
-  position: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  position: number;
   baseLogCost: number;      // log10-scale base cost on prestigeShards
   costIncrement: number;    // quadratic coefficient
 }
@@ -117,7 +117,7 @@ export interface TranscendUpgradeDef {
 
 export interface ChallengeDef {
   id: string; name: string;
-  position: 1 | 2 | 3 | 4 | 5;
+  position: number;
   effect: string; reward: string;
 }
 
@@ -134,64 +134,96 @@ export interface AchievementDef {
 | File | What it owns |
 |------|-------------|
 | `data/types.ts` | All `*Def` interfaces, the `ScalerBalance` shape, the `ScalerGameState` typed read-view |
-| `data/balance.ts` | `SCALER_BALANCE` cross-tier numeric anchors (currency-conversion log bases, default achievement / challenge multipliers) |
-| `data/antimatter.ts` | Antimatter tier (5 coin producers, Accelerator, Multiplier) — lifts `Buy.ts:336`, `Reset.ts:430-433` |
-| `data/prestige.ts` | Prestige tier (5 diamond producers, 8 crystal upgrades) — lifts `Buy.ts:337`, `Synergism.ts:544`, `Variables.ts:32` |
-| `data/transcend.ts` | Transcend tier (5 mythos producers, accelerator boost + 4 named upgrades, 5 challenges) — lifts `Buy.ts:338`, `Variables.ts:27`, `Challenges.ts:209-236, 541` |
-| `data/achievements.ts` | ~35 cross-tier achievements (production/reset-count/challenge-completion/hidden ladders) — lifts `Achievements.ts:groupedAchievementData`, `ungroupedAchievementData` |
-| `data/overrides.ts` | `ScalerOverrides` per-tier flat-category shape + `applyScalerOverrides(base, overrides)` (deep-merge per tier, throws on unknown id) |
+| `data/balance.ts` | `SCALER_BALANCE` cross-tier numeric anchors |
+| `data/coin.ts` | Coin tier — producers per `Buy.ts:336`; Accelerator + Multiplier per `Buy.ts:26-69` + `Buy.ts:156-197`; reset baseline per `Reset.ts:418-433` |
+| `data/prestige.ts` | Prestige tier — diamond producers per `Buy.ts:337`; Crystal upgrades per `Synergism.ts:544` + `Variables.ts:32`; reset baseline per `Reset.ts:483-492` |
+| `data/transcend.ts` | Transcend tier — mythos producers per `Buy.ts:338`; Accelerator Boost per `Reset.ts:498-499`; tier-indexed transcend upgrades per `Variables.ts:21-26` first-arc subset; challenges per `Challenges.ts:209-236` + auto-completion goal per `Synergism.ts:3496-3500` + `Challenges.ts:457-459` + CalcECC softcap per `Challenges.ts:541-548` |
+| `data/achievements.ts` | First-arc subset of `Achievements.ts:516-2479` (`achievements: Achievement[]`) filtered by group `displayCondition` (`:2479+` grouped, `:2685+` ungrouped) resolving true at prestige + transcension reset levels |
+| `data/overrides.ts` | `ScalerOverrides` per-tier flat-category shape + `applyScalerOverrides(base, overrides)` |
 | `data/index.ts` | `DEFAULT_SCALER_DATA` barrel + per-file re-exports |
 
 **Override semantics:** `boot.ts` exports `createScalerEngine(overrides?)` that accepts a deep-partial over the archetype's data shape. Sim tests and workbench perturbation route through this factory — the addressable shape *is* the TypeScript type over the data, not a synthetic vars layer. Forks change behaviour by editing `data/*.ts` in place; they don't need a runtime override path.
 
 **Lens discipline (comment sections inside each tier file):**
 
-- *Skeleton* — structural counts and shape (producer count, upgrade count, challenge count). Editing these forks the archetype.
-- *Balance* — numbers that drive arc pacing (per-tier baseCosts, cost-scaling exponents, conversion log bases, challenge effect coefficients). Workbench perturbation target — *but only on declared-invention surfaces*; values lifted 1:1 from Synergism source are not solver perturbation surface per `BALANCING.md § Canonical numbers are not tunable`.
-- *Costume* — names and flavour. Producer display names (Worker, Compressor, Insight Engine, etc.) are placeholder slot fillers; forks override per theme.
+- *Skeleton* — structural shape (entry kinds, relationships, dependency graph). Editing these forks the archetype. Counts fall out of canonical content arrays — not pinned at this lens.
+- *Balance* — numbers that drive arc pacing (per-tier baseCosts, cost-scaling exponents, conversion log bases, challenge effect coefficients). Workbench perturbation target on declared-invention rows only; values lifted 1:1 from Synergism are not solver perturbation surface per `BALANCING.md § Canonical numbers are not tunable`.
+- *Costume* — names and flavour. Producer display names lift from canonical (`translations/en.json buildings.{coin,diamond,mythos}` etc.); forks override per theme.
 
 **Archetype code lives in** `src/archetypes/scaler/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract.
 
 ---
 
-## 5. Content sketch
+## 5. Content scope
 
-- **Resources:** 5. Base `coins` + per-tier pairs `prestigePoints` / `prestigeShards` (Prestige tier) and `transcendPoints` / `transcendShards` (Transcend tier). Cumulative-across-prestige currencies (`prestigePoints`, `transcendPoints`) survive the matching reset; per-prestige shards (`prestigeShards`, `transcendShards`) zero on each cycle.
-- **Producers:** 15 — 5 per tier × 3 tiers. Antimatter (Worker → Refinery, costing coins), Prestige (Compressor → Cosmic Conduit, diamond producers costing prestigePoints, generating prestigeShards), Transcend (Insight Engine → Mythos Cradle, mythos producers costing transcendPoints, generating transcendShards). Each tier's costs lift from Synergism's `coinBuildingCosts` / `diamondBuildingCosts` / `mythosAndParticleBuildingCosts` arrays in `Buy.ts:336-338`.
-- **Upgrades:** 15 — asymmetric per tier (mirrors Synergism's structure, not a uniform N-per-tier tree).
-  - Antimatter: 2 cumulative-buy (Accelerator, Multiplier) with geometric cost ramps (lifts `Buy.ts:26, 156` formulas).
-  - Prestige: 8 Crystal upgrades with super-exponential cost on `prestigeShards` (lifts `Synergism.ts:544` baseLogCosts and `Variables.ts:32` increments).
-  - Transcend: 5 — Accelerator Boost (cross-currency cost paid in `prestigePoints`, lift `Reset.ts:498-499`) + 4 named upgrades (Mythos Production I, Transcend Points Efficiency, Shards Acceleration, Cascade Amplification) on `transcendPoints` (lifts `Variables.ts:27` indices 100-103).
+Each bullet names which canonical Synergism subsystems land in the first-arc port and where their source bytes live. Counts, names, thresholds, formulas, and reward values come from `cp + edit-in-place` against those ranges — never pinned in this doc. Code is truth.
 
-  Crystal upgrade rate-effects ship as a uniform `CRYSTAL_PER_LEVEL_BONUS = 0.05` stub in `modules/prestige.ts`; per-upgrade Synergism formulas (Variables.ts:131+ — globalCoinMultiplier routes) are deferred to the balance leaf. Same posture for Transcend upgrades 1–4 — slot-filler effects awaiting balance-leaf refinement.
-- **Challenges:** 5 — Transcend tier only (Synergism's `challengecompletions[1..5]`). In-challenge effects are production nerfs / cost multipliers / locked mechanics; per-completion rewards feed challenge-completion stacks via Synergism's `CalcECC` formula (`Challenges.ts:541-548`). Auto-completion goal: `coin >= 10^(baseRequirement × (1+completions)²)` per `Synergism.ts:3496-3500` + `Challenges.ts:457-459`. Threshold base is declared invention (canonical `[10, 20, 60, 100, 200]` from `Variables.ts:121` calibrates against the full Reincarnation+ multiplier stack the first arc doesn't reach — pinned via closed-form sweep against the 6-12h arc target). Completions persist across transcensions; the only canonical zeroing site (`Reset.ts:577-594`) is the Reincarnation reset, which is fork-extension territory. Demo arc closes when every challenge hits `completionLimit`. Antimatter and Prestige tiers carry no challenges in first-arc scope (Synergism gates Reincarnation / Ascension challenges behind tiers in fork extension).
-- **Achievements:** 35 — production-milestone ladders for each tier's first producer (3×3 = 9), prestigePoints / transcendPoints amount ladders (3 each = 6), prestige-count and transcension-count ladders (3 each = 6), per-challenge first-completion (5), prestige and transcend producer-count ladders, plus a hidden "Challenge Master" entry. Ids reference `Achievements.ts:groupedAchievementData` (line 2479) and `ungroupedAchievementData` (line 2685).
-- **Progression gates:** `coins ≥ 1e25` thresholds the first prestige; `prestigePoints ≥ ~1e6` opens transcend (per Synergism's transcension unlock condition); per-challenge completion gating runs through the engine's challenge-active state. Autobuyer unlock gates read tier-presence from `Resource.cumulative` (prestige autobuyers unlock once `prestigePoints.cumulative > 0`; transcend autobuyers once `transcendPoints.cumulative > 0`).
-- **Autobuyers (9):** ship as engine-module content under `src/archetypes/scaler/modules/autobuyers/`, registered through a single `AutobuyerSpec` registry with one master kill-switch + per-spec player toggle. Lifts AD's class-hierarchy shape (`AutobuyerState` / `IntervaledAutobuyerState`) into engine-module idiom (`autobuyer.js:4-175`); collapses Synergism's per-currency-class `autoUpgrades` (`Automation.ts:73-125`) into per-tier sweeps. Set:
-  - **Antimatter producer auto-buy** — `setupPolicyAutoPurchase` × tier.producers, `selectionHybridPayback`. Ungated.
-  - **Antimatter upgrade auto-buy** — `setupSweepAutoPurchase` over Accelerator + Multiplier. Ungated.
-  - **Diamond producer auto-buy** — same shape, prestige tier. Gated on `prestigePoints.cumulative > 0`.
-  - **Crystal upgrade auto-buy** — same shape, prestige tier. Same gate.
-  - **Auto-prestige** — bespoke `tick(dt)` body with mode-tunable policy (`amount` / `time` / `roi`). Ships `mode: 'never'`; sub-leaf D plugs in BALANCING.md § Theme 3 #5 ROI math. Modeled on AD's `BigCrunchAutobuyerState.mode`.
-  - **Mythos producer auto-buy** — same shape, transcend tier. Gated on `transcendPoints.cumulative > 0`.
-  - **Transcend upgrade auto-buy** — same shape, transcend tier. Same gate.
-  - **Auto-transcend** — same threshold shape as auto-prestige, transcend tier.
-  - **Auto-ECC challenge attempts** — bespoke `tick(dt)` body modeled on Synergism's `runChallengeSweep` (`Challenges.ts:595-680`) collapsed to "auto-attempt next-priority unfinished challenge with cooldown." Ships `mode: 'never'`; sub-leaf E swaps in the attempt rule.
+- **Resources:** Base coin currency + per-prestige-tier currency families (cumulative-across-prestige + per-cycle shards). Resource declarations colocated with each tier's reset block in `Reset.ts`.
+- **Producers / Activities:** Coin / Diamond / Mythos building families per `Buy.ts:336-338`. Per-tier owned + generated mirror cascade per `Synergism.ts:4370-4400`.
+- **Upgrades / Purchasables:** Cumulative-buy upgrades (Accelerator + Multiplier per `Buy.ts:26-69` + `Buy.ts:156-197`; Accelerator Boost per `Reset.ts:498-499`); tier-indexed `player.upgrades[]` first-arc subset per `Variables.ts:21-26`; Crystal upgrades per `Synergism.ts:544` + `Variables.ts:32`. Per-upgrade rate-effect routes per `Variables.ts:131+` (`globalCoinMultiplier` and per-tier multiplier paths) — defer to the balance leaf for surfaces that don't lift cleanly.
+- **Challenges:** Transcend challenges (`challenge1..5`) per `Challenges.ts:209-236`. Per-completion CalcECC softcap per `Challenges.ts:541-548`. Auto-completion goal per `Synergism.ts:3496-3500` + `Challenges.ts:457-459`. baseRequirement per `Variables.ts:121`. Completions persist across transcensions; canonical zeroing site at the Reincarnation reset (`Reset.ts:577-594`) is fork-extension territory.
+- **Achievements:** First-arc subset of `Achievements.ts:516-2479` (`achievements: Achievement[]`) filtered by `groupedAchievementData` (`:2479+`) and `ungroupedAchievementData` (`:2685+`) `displayCondition` resolving true at prestige + transcension reset levels. Per-row `pointValue` / `unlockCondition` / `reward` shape lift verbatim.
+- **Progression gates:** Prestige / Transcend unlock checks per Synergism's `Reset.ts` + `Synergism.ts` threshold sites. Per-challenge entry/exit runs through engine challenge-active state. Autobuyer tier-presence gates read `Resource.cumulative`.
+- **Autobuyers:** AD class-hierarchy shape (`AutobuyerState` / `IntervaledAutobuyerState`) per `autobuyer.js:4-175`; Synergism per-currency-class `autoUpgrades` per `Automation.ts:73-125`; Synergism `runChallengeSweep` per `Challenges.ts:595-680`. Ship as engine-module content under `src/archetypes/scaler/modules/autobuyers/` with master kill-switch + per-spec player toggles. Tier-presence gates read `Resource.cumulative`.
 
 ### Required structural properties
 
-<!-- TODO(structural-properties): fill in before the scaler retry begins. -->
+The mechanical relationships that must function in the running app for the demo arc beats below to walk end-to-end. Grouped by theme; each property names the relationship and cites the canonical Synergism site that establishes its shape.
+
+**Production**
+
+- **Per-tier producer cascade.** Within a tier, producer N+1's owned-count contributes to producer N's amount per tick (intra-tier cascade per `Synergism.ts:4370-4400`). The lowest-rank producer's amount drives the tier's currency emission.
+- **Tier currency emission.** Each tier's lowest-rank producer drives the tier's emit currency per tick, modulated by the tier's `rateChain`.
+
+**Purchase and cost scaling**
+
+- **Geometric per-buy producer costs** (`Buy.ts:336-338`).
+- **Cumulative-buy self-referencing cost closures.** Accelerator, Multiplier, and Crystal upgrades read their own `amount.value` to compute next-buy cost via `Formula.variable(amount)` mirror plus a synchronous `mapState` `watch` flush — the `createScalingPurchasable` mirror pattern (`purchasable.ts:672-728`).
+- **Super-exponential Crystal cost on prestige-tier shards** (`Synergism.ts:544` + `Variables.ts:32`).
+
+**Modifier chain composition**
+
+- **Per-tier `rateChain` composes named multiplicative sources via `chain.bind`.** Each layer composes producer base rate with per-tier upgrade grants, cross-tier upgrade contributions, challenge-completion stacks, and achievement contributions. Modifier-chain attribution surface (per-row tooltip per § 6) reads each source by named label.
+- **Cross-tier modifier composition.** Crystal upgrades (prestige tier) bind into the coin rateChain; transcend upgrades bind into coin and prestige rateChains; achievement grants bind across tiers.
+- **Conditional modifier grants for in-challenge effects.** Production nerfs and cost multipliers gate via `active: () => challenge.isRunning` on the existing rateChain; no separate persistent-effect surface.
+
+**Conversion and progression gates**
+
+- **Threshold-gated conversions, player-paced.** Prestige and transcend conversions gate on canonical currency thresholds; no loop-paced prestige (`createLoop` unused per § 3).
+- **Logarithmic conversion outputs.** `createConversion` produces gain currency via `createLogFormula`; `inputs` consume the source currency through `createCostRequirement`.
+
+**Reset coordination**
+
+- **Per-layer reset declared inside owning tier's `connect()` phase.** `createReset({ resetModules: [...tier-IDs], keep: [...] })`; the engine's per-module persistent-ref registry resolves the union. Nested resetModules across coin / prestige / transcend tiers.
+- **`afterConvert: () => reset.reset()` chains conversion → reset.** Gain currency survives only because the matching `keep:` exemption preserves it (`conversion.ts:204-211`).
+- **Per-cycle vs cumulative currencies.** Cumulative-across-prestige currencies are listed in `keep:`; per-cycle shards are not, and zero on every reset.
+
+**Challenges**
+
+- **Challenge auto-completion goal flips on transcend-while-in-challenge** (`Synergism.ts:3496-3500` + `Challenges.ts:457-459`), incrementing the challenge's completion count.
+- **Challenge-completion count contributes to subsequent transcend modifier chain.** Consumer-side closure over `category.getChallenge(id)?.completions` feeds a multiplicative grant via Synergism's `CalcECC` softcap (`Challenges.ts:541-548`).
+- **Challenge completions persist across transcensions.** Transcend reset's `keep:` set carries the per-challenge completion refs; canonical Reincarnation reset is the only zeroing site (`Reset.ts:577-594`, fork-extension territory). Demo arc closes when `category.allMaxed` flips true.
+
+**Achievements and resource accumulation**
+
+- **Achievement requirements evaluate against typed `ScalerGameState`.** Predicate flip awards the achievement and binds its multiplicative grant into the relevant rateChain. Achievement state is not in any `resetModules` and persists across all first-arc resets without explicit `keep:`.
+- **`Resource.cumulative` survives all first-arc resets.** Consumed by autobuyer tier-presence gates and tier-presence-dependent achievement requirements.
+
+**Autobuyers**
+
+- **Master kill-switch + per-spec player toggle gate every autobuyer tick.** Both toggles must be on before any autobuyer acts.
+- **Tier-presence unlock gates from `Resource.cumulative`.** Coin autobuyers ungated; per-tier autobuyers gate on the matching cumulative threshold.
 
 ### Demo arc beats
 
-The first arc covers eight beats from § 1's player-experience prose, each mapped to at least one content entry. Beats 1–2 → Antimatter producer ladder + first Accelerator/Multiplier; beat 3 → coins-threshold prestige button; beat 4 → first prestigePoints + first Diamond producer; beat 5 → Crystal upgrades available; beat 6 → first Transcend → first transcend challenge; beat 7 → Transcend tab + first Mythos producer; beat 8 → cross-tier modifier-chain readout (achievements × crystals × challenges all stacking on the antimatter rateChain) + transcend-upgrade ladder. Each beat reaches the running app on a fresh save.
+The first arc walks player-observable milestones from § 1's player-experience prose, each mapped to at least one content entry: coin producer ladder + first Accelerator / Multiplier; coin-threshold prestige button; first prestigePoints + first Diamond producer; Crystal upgrades available; first Transcend → first transcend challenge; Transcend tab + first Mythos producer; cross-tier modifier-chain readout (achievements × crystals × challenges all stacking on the coin rateChain) + transcend-upgrade ladder. Each beat reaches the running app on a fresh save.
 
 ### Later-arc systems (fork extension territory)
 
-Synergism ships 6 prestige tiers (Prestige / Transcension / Reincarnation / Ascension / Singularity / Hepteracts) plus side systems (Cubes, Corruptions, Talismans, Runes, Research, Blueberry, RedAmbrosia). The first arc covers Prestige + Transcension; later arcs are fork extension territory:
+Synergism ships prestige tiers beyond Transcension (Reincarnation / Ascension / Singularity / Hepteracts) plus side systems (Cubes, Corruptions, Talismans, Runes, Research, Blueberry, RedAmbrosia). The first arc covers Prestige + Transcension; later arcs are fork extension territory:
 
-- **Reincarnate / Ascend / Singularity tiers** — fork extension from Transcend. Forks adding deeper prestige build on top of the existing tier-module shape. Side-effect on first arc: canonical Synergism zeroes `challengecompletions[1..5]` only at the Reincarnation reset (`Reset.ts:577-594`); first arc stops at Transcend, so completions accumulate across every transcend cycle until `completionLimit` per challenge. Arc closure runs through `category.allMaxed`.
-- **Hepteracts** — late-arc prestige currency family with 10+-factor modifier chains. Fork extension; the order-sensitivity claim in § 3 stress axis 2 frames around modest-depth chains the first arc reaches.
+- **Reincarnate / Ascend / Singularity tiers** — fork extension from Transcend. Forks adding deeper prestige build on top of the existing tier-module shape. Side-effect on first arc: canonical Synergism zeroes `challengecompletions[1..5]` only at the Reincarnation reset (`Reset.ts:577-594`); first arc stops at Transcend, so completions accumulate across every transcend cycle until each challenge's `completionLimit`. Arc closure runs through `category.allMaxed`.
+- **Hepteracts** — late-arc prestige currency family with deep-prestige modifier chains. Fork extension; the order-sensitivity claim in § 3 stress axis 2 frames around the chain depth the first arc reaches.
 - **Cubes, Corruptions, Talismans, Runes** — meta-progression substrate bridging Reincarnation and Ascension. Fork extension.
 - **Research, Blueberry upgrades, RedAmbrosia** — orthogonal economy substrates. Fork extension.
 
@@ -202,8 +234,8 @@ Synergism's full economy stays canonical for any fork that builds it out. File-h
 ## 6. UI prescription
 
 - **Primary shell:** `SidebarMainShell` — prestige-idle weak majority per `subgenre-shell-mapping-2026.md` § "prestige idle" (5/12 classifiable; Antimatter Dimensions is the cluster anchor). Shell matches Scaler's canonical exemplar. Exemplar rows from `layout-audit-2026.md`: Antimatter Dimensions, Advent Incremental, The Game Dev Tree.
-- **Secondary shell:** `MultiColumnShell` — for forks that outgrow a single main column due to the 3-layer × (producers + upgrades + challenges + achievements) UI surface flagged as § 3 stress axis #4. Classifiable prestige-idle row per `subgenre-shell-mapping-2026.md`: Trimps (4 Bootstrap columns). Use when layer density demands parallel visibility rather than tabbed switching.
-- **Form-factor intent:** `desktop` — prestige-idle corpus is desktop-dominant per `layout-audit-2026.md` distribution; Antimatter Dimensions and Trimps both desktop. The multi-tier rateChain attribution view and 3-layer layered UI do not shrink gracefully to mobile without a fork-level redesign.
+- **Secondary shell:** `MultiColumnShell` — for forks that outgrow a single main column due to the multi-layer × per-layer-content UI surface flagged as § 3 stress axis #4. Classifiable prestige-idle row per `subgenre-shell-mapping-2026.md`: Trimps (4 Bootstrap columns). Use when layer density demands parallel visibility rather than tabbed switching.
+- **Form-factor intent:** `desktop` — prestige-idle corpus is desktop-dominant per `layout-audit-2026.md` distribution; Antimatter Dimensions and Trimps both desktop. The multi-tier rateChain attribution view and layered UI do not shrink gracefully to mobile without a fork-level redesign.
 - **ARIA-aligned widgets (lift targets):**
   - `Tooltip` — producer / upgrade / challenge tooltips. Producer-row tooltip carries the modifier-chain attribution (sources + multipliers) per the first-arc's per-row design — see Layout detail. Cites `widget-vocabulary.md` Layer 1 (frequency 5).
   - `Dialog` — achievement grid, challenge-entry confirmation, settings. Cites `widget-vocabulary.md` Layer 1 (frequency 6).
@@ -225,19 +257,19 @@ Scaler is among the broader stress-test archetypes for the engine. Most pre-impl
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Self-referencing cost closures inside `mapPurchasable` | Low | Cumulative-buy upgrades whose cost reads the purchasable's own `amount.value` (Antimatter Accelerator/Multiplier, Crystal upgrades) need a `Formula.variable(amount)` mirror plus a `mapState` `watch` that flushes synchronously back into the mirror — the same internal pattern `createScalingPurchasable` uses (`purchasable.ts:672-728`). Works, but is mid-construction wiring. A `createCumulativePurchasable({ baseCost, costScaling, perLevelEffect })` helper covering the geometric/super-exponential cost-per-level-bought shape would graduate after a second consumer hand-rolls the same closure pattern. |
+| Self-referencing cost closures inside `mapPurchasable` | Low | Cumulative-buy upgrades whose cost reads the purchasable's own `amount.value` (Coin Accelerator/Multiplier, Crystal upgrades) need a `Formula.variable(amount)` mirror plus a `mapState` `watch` that flushes synchronously back into the mirror — the same internal pattern `createScalingPurchasable` uses (`purchasable.ts:672-728`). Works, but is mid-construction wiring. A `createCumulativePurchasable({ baseCost, costScaling, perLevelEffect })` helper covering the geometric/super-exponential cost-per-level-bought shape would graduate after a second consumer hand-rolls the same closure pattern. |
 | `createPiecewiseFormula` for super-exponential / softcapped costs | Medium | Crystal upgrade cost (`10^(baseLogCost + costIncrement·((n-0.5)²/2 - 1/8))`, lift `Buy.ts:657-694`) is super-exponential in level — `createScalingPurchasable`'s geometric default doesn't fit, and `createLogFormula` / `createSqrtFormula` / `createPolynomialFormula` don't compose into the piecewise softcap shape canonical for the corpus. A `createPiecewiseFormula({ under: X, over: Y })` (or super-exponential family) helper would land after a second consumer derives the same shape. |
 | Modifier chain evaluation-order contract | Medium | Whether layered-multiplicative `chain.bind` composition and a hypothetical sequential-across-layers composition produce the same result for pure-multiplicative grants is a documentation question the balance leaf will press on. If divergence surfaces under cross-tier challenge-completion stacks, document it explicitly in the modifier docs. |
 | Challenge-completion-count contribution to modifier chain | Medium | Scaler wires challenge completions into the chain as a named source via consumer-side closures over `category.getChallenge(id)?.completions`. `createChallengeCategory` exposes the count; the chain wiring is hand-rolled. If three archetypes need this (Scaler, Looper-with-challenge-mods, Producer-with-challenge-layer), graduate a `createChallengeBonusModifier` helper. |
-| Per-layer prestige-tier facade | Medium | Each tier-module wires currency + producer category + upgrade category + reset + conversion + rateChain composition independently — a 3-tier first-arc port runs ~700 lines of structurally repetitive setup across `modules/{antimatter,prestige,transcend}.ts`. No single primitive groups "a prestige layer's resources + reset + modifier chain + conversion." A `createPrestigeLayer({ ... })` facade could land after the second Scaler-shaped consumer proves the shape. |
+| Per-layer prestige-tier facade | Medium | Each tier-module wires currency + producer category + upgrade category + reset + conversion + rateChain composition independently — structurally repetitive setup across `modules/{coin,prestige,transcend}.ts`. No single primitive groups "a prestige layer's resources + reset + modifier chain + conversion." A `createPrestigeLayer({ ... })` facade could land after the second Scaler-shaped consumer proves the shape. |
 | ECC-softcap arithmetic | Low | "Linear stacking until N, then softcap" is the dominant challenge-reward shape per `Challenges.ts:541-548` (Synergism's `CalcECC`) and across the research corpus. Consumers hand-wire it today; a `createSoftcappedAccumulator` helper would match the scaling-formulas property's shape. The balance leaf will write this hand-rolled in the first pass — convergence-promotion candidate. |
 | `createAutoPurchaser` composition helper | Low | Scaler's autobuyer modules use the existing primitives directly — `setupPolicyAutoPurchase` for producer auto-buy, `setupSweepAutoPurchase` for upgrade auto-buy, bespoke `tick(dt)` bodies for threshold + ECC-sweep policies. AD's class hierarchy (`AutobuyerState` → `IntervaledAutobuyerState` → `UpgradeableAutobuyerState`) is the convergent shape; an engine-level facade could absorb the `AutobuyerSpec` interface + registry pattern after producer + ambient backport (OL-855). Currently N=1 — tracked in `open-loop-engine/docs/candidate-primitives.md`. |
 
 **Removed pre-implementation predictions (leaf 2 evidence):**
 
 - *Nested `createReset` coordination* (was High) — `createReset({ resetModules: [tier-id, ...], keep: [tier-currency] })` declared inside each owning tier's `connect()` phase resolves nested coordination cleanly. No hierarchy helper or separate resets module needed; tiers own their resets locally.
-- *`calculateMaxAffordable` at tetration scales* (was High) — tetration is fork-extension territory; the first arc exits well below `1e1000`. Falls out with the tetration claim in § 3 stress axis 3.
-- *Modifier-chain debug/trace view for 10+ factors* (was Low) — first-arc port runs ~5–6 factors per layer, not 10+. `withChain` attribution suffices for first-arc scope; the 10+-factor view is fork-extension territory for deep-prestige extensions.
+- *`calculateMaxAffordable` at tetration scales* (was High) — tetration is fork-extension territory; the first arc exits well below the tetration regime. Falls out with the tetration claim in § 3 stress axis 3.
+- *Modifier-chain debug/trace view for deep-prestige factor counts* (was Low) — first-arc port runs modest-depth modifier chains. `withChain` attribution suffices for first-arc scope; deep-prestige attribution is fork-extension territory.
 
 ---
 

@@ -14,7 +14,7 @@ framing, and build order.
 
 ```
 research corpus   ──→   engine primitives   ──→   archetype skeletons   ──→   forked games
-(78+ analyses,          (resource, reset,         (per-archetype               (themed,
+(analyses,              (resource, reset,         (per-archetype               (themed,
  12 patterns,            loop, challenge,          spec + vars +                tuned,
  novel clusters)         zone, inventory, …)       sim tests)                   extended)
 ```

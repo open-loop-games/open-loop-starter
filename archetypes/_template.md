@@ -110,12 +110,17 @@ Naming what's *absent* is part of the contract: it's how a sparse-surface archet
   with the skeleton/theme/balance lens as comment sections inside files.
 
   Lens discipline (comment sections inside each data file):
-  - Skeleton — structural counts and shape. Editing these forks the
-    archetype; not a tuning surface.
+  - Skeleton — structural shape (entry kinds, relationships, dependency
+    graph). Editing these forks the archetype.
   - Balance — numbers that drive beat timing. Workbench perturbation
-    target. Sim tests probe these.
+    target on declared-invention rows only; canonical-lifted values pass
+    through unchanged.
   - Costume — names, flavour, copy. Zero mechanical impact; swap freely
     per theme/fork.
+
+  Counts, names, thresholds, and formulas come from canonical exemplar
+  bytes via `cp + edit-in-place` — never pinned in this doc. Code is
+  truth; this section is structural reference, not target spec.
 -->
 
 ```ts
@@ -129,13 +134,12 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
 // data/<entity>.ts — inline constants + flat arrays, organized by lens
 //
 //   // ─── Skeleton ─────────────────────────────────────
-//   export const {{NAME}}_PRIMARY_COUNT = 7;
+//   export const {{NAME}}_ENTRIES: {{Name}}PrimaryDef[] = [
+//     // canonical content lifted via cp from <exemplar source range>
+//   ];
 //
 //   // ─── Balance ──────────────────────────────────────
-//   export const {{NAME}}_COST_GROWTH = 1.15;
-//
-//   // ─── Costume ──────────────────────────────────────
-//   export const {{NAME}}_ENTRIES: {{Name}}PrimaryDef[] = [ ... ];
+//   export const {{NAME}}_COST_GROWTH = /* canonical or invention-tagged */;
 ```
 
 **Canonical file split:**
@@ -154,40 +158,47 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
 
 ---
 
-## 5. Content sketch
+## 5. Content scope
 
 <!--
-  Minimum-viable content catalog for the 1–2h arc. Not a ceiling — forks
-  expand freely. This defines "what the default shipped archetype contains
-  on day one."
+  Names which canonical-exemplar subsystems land in the first-arc port
+  and cites their source ranges. Counts, names, thresholds, formulas,
+  and reward values come from `cp + edit-in-place` against those ranges
+  — never pinned in this doc. Code is truth; pinning canonical content
+  here creates duplicate-source-of-truth that drifts and primes
+  fabrication when implementers treat doc text as a target.
+
+  Each bullet names (a) which canonical subsystems are in first-arc
+  scope, and (b) where their source bytes live. Pattern: "<subsystem
+  name> per `<file>:<lines>`."
 -->
 
-- **Resources:** {{list with count}}
-- **Producers / Activities:** {{list with count}}
-- **Upgrades / Purchasables:** {{list with count}}
-- **Progression gates:** {{zones, unlocks, prestige tiers — whichever apply}}
-- **Achievements:** {{count + theme}}
+- **Resources:** {{which canonical resources are first-arc + source range}}
+- **Producers / Activities:** {{which canonical producer families are in scope + source ranges}}
+- **Upgrades / Purchasables:** {{which canonical upgrade families are in scope + source ranges}}
+- **Progression gates:** {{which canonical reset/unlock thresholds gate first-arc beats + source ranges}}
+- **Achievements:** {{which canonical achievement groups land in first-arc + source ranges}}
 
 ### Required structural properties
 
 <!--
   The mechanical relationships that make this archetype demonstrate its
-  namesake. The Content sketch above enumerates what's there; this
-  subsection enumerates what functions. Both together define a complete
-  first-arc port.
+  namesake. Content scope above names which canonical subsystems are in
+  scope; this subsection enumerates the relationships those subsystems
+  must demonstrate in the running app.
 
-  This is a complete enumeration, the dual of Content sketch — not a
-  curated subset. Walk each demo-arc beat below and name every mechanical
-  relationship the beat structurally requires. Sanity check: "is any
-  beat's mechanical prerequisite absent from the list," not "is the list
-  short."
+  Walk each demo-arc beat below and name every mechanical relationship
+  the beat structurally requires. Sanity check: "is any beat's
+  mechanical prerequisite absent from the list," not "is the list
+  short." Cite the canonical site that establishes each relationship's
+  shape; do not restate values, formulas, or counts that live there.
 
   Authors fill this in for new archetypes. Existing archetype docs
   predating this subsection may carry a `TODO(structural-properties)`
   marker; fill in when next touched.
 -->
 
-- {{Property name}} — {{the relationship that must function in the running app, e.g. "producer N+1's owned-count contributes to producer N's rate (cascading production)"}}
+- {{Property name}} — {{the relationship that must function in the running app, citing the canonical site that establishes its shape (e.g. "producer N+1's owned-count contributes to producer N's amount per tick — intra-tier cascade per `<file>:<lines>`")}}
 - {{...}}
 
 ### Demo arc beats
