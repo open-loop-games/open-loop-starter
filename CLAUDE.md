@@ -18,7 +18,7 @@ Maintenance discipline: stability. Forks copy this and don't want it shifting un
 
 Forkable best-practice implementations of validated archetypes, ported as the first arc of canonical games with file-header citations. Each archetype is self-bootable with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts` — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton.
 
-This half is a research-output surface that happens to live inside starter. Maintenance discipline: canonical-fidelity + research-grounding. First-arc ports lift ids, names, and numbers verbatim from one canonical exemplar pinned in `reference-code/<game>/`. The bar for new archetype content is "would a new game forking this archetype want this on day one, traceable to a canonical exemplar?"
+This half is a research-output surface that happens to live inside starter. Maintenance discipline: canonical-fidelity + research-grounding. First-arc ports lift ids, names, and numbers verbatim from one canonical exemplar — exemplars live under `open-loop-research/reference-code/<name>/`; studio paths per `/work/studio/CLAUDE.md`. The bar for new archetype content is "would a new game forking this archetype want this on day one, traceable to a canonical exemplar?"
 
 ### Fork workflow
 
@@ -91,7 +91,9 @@ src/archetypes/<name>/
 
 **Dependency direction (strict):** `data → modules → ui`, with composables between modules and ui when they earn the layer (see § Layering). Data never imports from modules; composables and components never contain game logic. Lens inside data files uses comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`) — not separate files, not a codegen round-trip.
 
-**Demo content is the first arc of one canonical exemplar.** Pick a single Tier-A exemplar pinned in `reference-code/<game>/`. Lift its first-arc content — ids, display names, numbers, structural relationships — verbatim into `data/*.ts` as a copy-paste-and-edit-in-place starting point. File-header citation names the canonical source files and line ranges; per-row citations are reserved for declared inventions where a row diverges from canonical, with reason. Forks rename for theme as a post-port costume pass; the starter ships transparent first-arc ports.
+**Demo content is the first arc of one canonical exemplar.** Pick a single Tier-A exemplar from `open-loop-research/reference-code/<name>/` (studio paths per `/work/studio/CLAUDE.md`). Lift its first-arc content — ids, display names, numbers, structural relationships — verbatim into `data/*.ts` as a copy-paste-and-edit-in-place starting point. File-header citation names the canonical source files and line ranges; per-row citations are reserved for declared inventions where a row diverges from canonical, with reason. Forks rename for theme as a post-port costume pass; the starter ships transparent first-arc ports.
+
+**Port operation.** "Copy-paste-and-edit-in-place" is the filesystem operation: `cp` (or block-copy of a source line range) lands canonical bytes at the destination first; `Edit` in place fits the typed defs, trims to first-arc scope, adds the file-header citation, and inline-tags declared inventions. Source bytes reach the destination before any keystroke. Type-shape, closure-shape, and import-shape adjustments are the edit-in-place pass — not authoring or translation.
 
 **First-arc scope is the spec's § 5 — Content sketch + Required structural properties + Demo arc beats.** Implementation matches the enumerated counts and structural properties. Reductions during implementation route through a § 5 update first, with stated reason. The completion gate is walking all § 5 demo arc beats in the running app on a fresh save. First-arc code that reads later-arc state (canonical gate-conditionals branching on subsystems out-of-arc) lifts the read-site as a default-zero/inert ref; the gate copies verbatim from canonical and evaluates inert against default state. Sibling discipline to `archetypes/BALANCING.md § Canonical numbers are not tunable`.
 
@@ -178,27 +180,22 @@ const showDevPanel = ref(false);
 - Composables: `use*` — `useModalStack`, `useGame`
 - CSS variables: one flat namespace. Palette (`--color-*`, `--gap-*`, `--radius-*`, `--font-*`) and scaffold knobs (`--shell-*`, `--modal-*`, `--panel-*`, `--tooltip-*`, `--popover-*`, `--progress-bar-*`) all live in `src/lib/styles/tokens.css`.
 
-**Must:**
-- All game quantities use `Decimal` from `open-loop-engine`
-- Declare engine state inside `withPersistentContext(id, () => ({ ... }))` in `install(ctx)` — or use bare `persistent()` calls when the module context is already active (the engine wraps `install()` in its own `withPersistentContext`)
-- Keep archetype `data/` as pure config — no engine imports, no logic beyond constant-level computation; modules read data at construction via factory closure
-- Follow the `data → modules → composables → ui` direction inside each archetype; do not reverse
-- Use `src/lib/` shells and frame for layout — don't hand-roll
-- Theme by setting CSS variables, not by writing component-level styles
-- Type all public component props and composable APIs explicitly
-- Slot-based shells — never prescribe content
-- Test `src/lib/` with Vitest + @vue/test-utils + jsdom
-- Prefer CSS over JS for anything visual
-- Use reka-ui primitives for focus/portal/a11y — do not hand-roll
-
-**Must Not:**
-- Import `break_eternity.js` directly (use engine re-exports)
-- Add game-specific content to the base starter — archetype content lives under `src/archetypes/<name>/`, not in the cross-archetype `src/modules/` / `src/ui/` directories
-- Extract archetype data into a parallel `vars/` layer with codegen round-trips — data is inline in `data/*.ts`; the skeleton + balance lens lives as comment sections
-- Add Tailwind or shadcn-vue
-- Depend on `open-loop-engine` from `src/lib/` (keep it presentational)
-- Add a 2×2 quadrant shell to `src/lib/` (zero prior art — see layout-spray research)
-- Hand-roll focus traps, ARIA, or portal mounting when reka-ui provides them
+**Rules:**
+- All game quantities use `Decimal` from `open-loop-engine` (engine re-exports `break_eternity`; consumers reach for the engine import, not the upstream package).
+- Declare engine state inside `withPersistentContext(id, () => ({ ... }))` in `install(ctx)` — or use bare `persistent()` calls when the module context is already active (the engine wraps `install()` in its own `withPersistentContext`).
+- Archetype `data/` is pure config — typed defs and balance constants only; modules read data at construction via factory closure.
+- Archetype data lives inline in `data/*.ts` with the skeleton + balance lens as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`) — no parallel `vars/` layer, no codegen round-trips.
+- Game-specific content lives under `src/archetypes/<name>/`; cross-archetype `src/modules/` and `src/ui/` stay archetype-agnostic.
+- Layering inside each archetype runs `data → modules → composables → ui`.
+- Layout uses `src/lib/` shells and AppFrame; `src/lib/` is presentational, with engine bridging in `src/ui/`.
+- Theme by setting CSS variables (no Tailwind, no shadcn-vue).
+- Public component props and composable APIs are typed explicitly.
+- Shells are slot-based — content fills slots, the shell doesn't prescribe.
+- Every clickable element imports `Button` from `@/ui/components/Button.vue` — the shared component wraps reka-ui Primitive with `v-hold-repeat` and centralizes disabled-suppression.
+- `src/lib/` test surface uses Vitest + @vue/test-utils + jsdom.
+- Visual behavior runs in CSS first; JS is for state and interaction only.
+- Focus, portal, and a11y come from reka-ui primitives.
+- Shell additions to `src/lib/` cite the layout-spray research; the 42-game spray established the 5-shell set, and 2×2 quadrant shells have zero prior art.
 
 ## Path Aliases
 

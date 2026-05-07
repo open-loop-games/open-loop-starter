@@ -176,6 +176,12 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
   subsection enumerates what functions. Both together define a complete
   first-arc port.
 
+  This is a complete enumeration, the dual of Content sketch — not a
+  curated subset. Walk each demo-arc beat below and name every mechanical
+  relationship the beat structurally requires. Sanity check: "is any
+  beat's mechanical prerequisite absent from the list," not "is the list
+  short."
+
   Authors fill this in for new archetypes. Existing archetype docs
   predating this subsection may carry a `TODO(structural-properties)`
   marker; fill in when next touched.
@@ -327,8 +333,8 @@ reshape the archetype to use existing vocabulary.
 4. **Data shapes are typed TS.** § 4 TS-signature examples must be syntactically valid TypeScript — they are reference material for the archetype's implementation under `src/archetypes/<name>/data/`.
 5. **Themes are costume-only.** If a theme changes pattern composition or arc pacing, it is a different archetype, not a theme.
 6. **Archetype code lives colocated.** Each archetype lives at `src/archetypes/<name>/` as a self-bootable tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). Data is hand-authored TypeScript, not codegen output. Forks clone the archetype directory wholesale; per-fork tuning edits happen in place. This doc describes design intent; the code is the source of truth.
-7. **Canonical, not novel — first-arc lifts shape and content from one exemplar.** Starter demos are transparent first-arc ports of one Tier-A exemplar pinned in `reference-code/<game>/`. The port lifts the exemplar's first-arc content verbatim — resource names, action names, item names, NPC names, zone names, numbers, and structural relationships — into `data/*.ts`. The exemplars in § 1 (Exemplars + Live consumer references) validate the archetype's structural shape exists in the wild: drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Forks rename for theme as a post-port costume pass; the starter ships transparent.
-8. **Lift numbers, don't invent.** Tier-A archetypes (those with `reference-code/<game>/...` source on disk) must cite source for every numerical claim in § 3 / § 4 / § 5. Cite as `` `reference-code/<game>/<file>:line` `` (preferred) or `` `wiki:<url>` `` (Tier-B archetypes with closed-source exemplars). For numbers without exemplar (e.g. invented zone-bridge actions), use `` `declared invention — <rationale>` `` (already valid in § 1 / § 6) to mark them explicitly. The validator hard-fails on confident numbers without one of these markers; see § Validator rules for per-status gates.
+7. **Canonical, not novel — first-arc lifts shape and content from one exemplar.** Starter demos are transparent first-arc ports of one Tier-A exemplar from `open-loop-research/reference-code/<name>/` (studio paths per `/work/studio/CLAUDE.md`). The port lifts the exemplar's first-arc content verbatim — resource names, action names, item names, NPC names, zone names, numbers, and structural relationships — into `data/*.ts`. The exemplars in § 1 (Exemplars + Live consumer references) validate the archetype's structural shape exists in the wild: drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Forks rename for theme as a post-port costume pass; the starter ships transparent.
+8. **Lift numbers, don't invent.** Tier-A archetypes (those with open-source exemplars under `open-loop-research/reference-code/<name>/`) must cite source for every numerical claim in § 3 / § 4 / § 5. Cite as `` `<file>:line` `` against the exemplar tree named in the file-header citation block (preferred) or `` `wiki:<url>` `` (Tier-B archetypes with closed-source exemplars). For numbers without exemplar (e.g. invented zone-bridge actions), use `` `declared invention — <rationale>` `` (already valid in § 1 / § 6) to mark them explicitly. The validator hard-fails on confident numbers without one of these markers; see § Validator rules for per-status gates.
 
 ---
 

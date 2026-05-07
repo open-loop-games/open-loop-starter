@@ -311,7 +311,7 @@ These rules don't derive from engine surface — they live in starter convention
 **Audit criterion.**
 - Every `data/*.ts` file with content lifted from a canonical exemplar carries a file-header citation block naming the canonical source files and line ranges.
 - Declared-invention rows carry an inline `// invention: <reason>` tag.
-- Citations resolve to a real file in the pinned exemplar under `reference-code/<game>/`.
+- Citations resolve to a real file in the named exemplar (studio paths per `/work/studio/CLAUDE.md`; corpus exemplars live under `open-loop-research/reference-code/<name>/`).
 
 **Threshold.** Every `data/*.ts` file with lifted content has a file-header citation block; declared-invention rows are inline-tagged.
 

@@ -332,6 +332,12 @@ Tighter bounds catch more drift but pop on irrelevant noise. Looser bounds toler
 
 Cited-from-vanilla numbers — values carried 1:1 from a reference exemplar with file-header citations in the data files — are not solver perturbation surface. Solvers operate on the *declared-invention* surface where the first-arc port diverges from canonical. Perturbing canonical values is fudging, not balancing — the first-arc port's job is to faithfully reproduce the exemplar's economy, and balance passes work *around* that economy, not against it.
 
+### AI knobs are not balance levers
+
+Balance probes target structural design parameters: cost curves, matrix sharpness across pair distributions, ROI on upgrade tiers, time-limit hit rate, fortress HP vs DPS, ability spend rates. AI tuning knobs (decision-quality, reaction-lag, cadence-jitter, persona choice, `aiIncomeMultiplier`) parameterize *how the bot plays*, not the design under test. The bisection scalar wants a design parameter — a unit cost, an income rate, a fortress HP — not an AI knob.
+
+Working test: would this number change if the AI were swapped for a different reasonable opponent? If yes, the probe measures the AI; reach for a design-parameter scalar instead.
+
 ### Findings sidecars
 
 A balance pass generates observations this doc doesn't anticipate. Some are archetype-specific lore (numerical surprises, content-shape interactions, exemplar-substrate quirks). Some are generalizable signals (an instrument-earning moment that other archetypes will reproduce; a methodology stress that wants doc-level capture). Loop closure runs through a per-archetype sidecar.
