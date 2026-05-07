@@ -15,5 +15,15 @@
     "noUncheckedSideEffectImports": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
-  "exclude": ["src/archetypes/_template"]
+  "exclude": [
+    "src/archetypes/_template",
+    "src/archetypes/scaler/achievements.ts",
+    "src/archetypes/scaler/buy.ts",
+    "src/archetypes/scaler/challenges.ts",
+    "src/archetypes/scaler/reset.ts",
+    "src/archetypes/scaler/runes.ts",
+    "src/archetypes/scaler/synergism.ts",
+    "src/archetypes/scaler/upgrades.ts",
+    "src/archetypes/scaler/variables.ts"
+  ]
 }

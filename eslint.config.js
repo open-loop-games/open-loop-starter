@@ -5,7 +5,24 @@ import globals from 'globals';
 import openLoopRules from './tools/eslint-rules/index.js';
 
 export default [
-  { ignores: ['dist', 'node_modules', 'coverage', 'tools/eslint-rules/**'] },
+  {
+    ignores: [
+      'dist',
+      'node_modules',
+      'coverage',
+      'tools/eslint-rules/**',
+      // Canonical Synergism snapshot files — kept verbatim as port reference;
+      // not on the build path. tsconfig.app.json excludes the same set.
+      'src/archetypes/scaler/achievements.ts',
+      'src/archetypes/scaler/buy.ts',
+      'src/archetypes/scaler/challenges.ts',
+      'src/archetypes/scaler/reset.ts',
+      'src/archetypes/scaler/runes.ts',
+      'src/archetypes/scaler/synergism.ts',
+      'src/archetypes/scaler/upgrades.ts',
+      'src/archetypes/scaler/variables.ts',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
