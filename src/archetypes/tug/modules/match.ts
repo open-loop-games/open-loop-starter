@@ -13,7 +13,7 @@ import {
   type Resource,
 } from 'open-loop-engine';
 import type { TugData } from '../data/types';
-import { FortressKey } from './fortress';
+import { getFortress } from './fortress';
 import { LaneKey } from './lane';
 import { SequencerKey } from './units';
 import { type Side } from './tuning';
@@ -88,7 +88,7 @@ export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
 /**
  * Match orchestrator. Owns match outcome, counter-pivot tally, time-elapsed
  * clock, units-sent counter, and the match-boundary `Reset`. Reads fortress
- * HP from `FortressKey` (3c topology — fortress module owns the resources)
+ * HP via `getFortress()` (3c topology — fortress module owns the resources)
  * and ends the match when either side's HP falls to 0. Subscribes to both
  * side sequencers' `'start'` events for cross-side counter-pivot inference +
  * the player units-sent counter.
@@ -105,12 +105,12 @@ export function createMatchModule(data: TugData): EngineModule {
     ],
     install(ctx) {
       const lane = ctx.inject(LaneKey);
-      const fortress = ctx.inject(FortressKey);
+      const fortress = getFortress();
       const playerSequencer = ctx.inject(SequencerKey.player);
       const aiSequencer = ctx.inject(SequencerKey.ai);
 
       // Fortress HP and the tunable hp max live in the fortress module
-      // (3c topology) — match injects via `FortressKey` so both lane (for
+      // (3c topology) — match reads via `getFortress()` so both lane (for
       // engagement + damage) and match (for end-of-match detection) read
       // the same per-side resources. Match-scope reset clears these via
       // `TUG_MATCH_SCOPE_MODULES`; `start()` re-initializes through

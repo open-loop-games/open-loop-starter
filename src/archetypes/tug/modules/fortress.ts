@@ -4,7 +4,6 @@ import {
   tunable,
   type DecimalSource,
   type EngineModule,
-  type InjectionKey,
   type Resource,
 } from 'open-loop-engine';
 import type { TugData } from '../data/types';
@@ -31,21 +30,23 @@ export interface FortressApi {
   start(): void;
 }
 
-export const FortressKey: InjectionKey<FortressApi> = Symbol(
-  'tug/match/fortress',
-) as InjectionKey<FortressApi>;
+let fortress: FortressApi;
+
+export function getFortress(): FortressApi {
+  return fortress;
+}
 
 /**
  * Fortress module. Per the fortress-as-unit engagement model, each side's
  * fortress is an immobile `UnitInstance` at the lane endpoint that
  * opposing units engage and damage like any other opposing unit. This
  * module owns the per-side hp Resource and constructs the unit objects;
- * lane.ts injects them into its engagement + combat loops, and match.ts
- * injects the resources for end-of-match detection.
+ * lane.ts and match.ts read via `getFortress()` for engagement + combat
+ * and end-of-match detection respectively.
  *
  * 3c topology — sits between `tuning` (deps) and `lane` / `match`
- * (consumers). No cycle: lane and match both inject fortress; fortress
- * injects only tuning. Match-scope reset enumerates this module so hp
+ * (consumers). No cycle: lane and match both read fortress; fortress
+ * reads only tuning. Match-scope reset enumerates this module so hp
  * resets to 0 between matches; `start()` re-initializes to `max.value`.
  */
 export function createFortressModule(data: TugData): EngineModule {
@@ -87,7 +88,7 @@ export function createFortressModule(data: TugData): EngineModule {
         unit.ai.engagedWith = undefined;
       }
 
-      ctx.provide(FortressKey, { hp, unit, max, start });
+      fortress = { hp, unit, max, start };
     },
   };
 }

@@ -20,7 +20,7 @@ export {
   type TugTunableKey,
   type TugTunables,
 } from './tuning';
-export { FortressKey, type FortressApi } from './fortress';
+export { getFortress, type FortressApi } from './fortress';
 export { getIncome, getIncomeRateChain } from './income';
 export { getIncomeUpgrades, IncomeUpgradeRoiKey, type RoiMetrics } from './income-upgrades';
 export { LaneKey, type LaneApi, type LaneEvents, type UnitInstance } from './lane';

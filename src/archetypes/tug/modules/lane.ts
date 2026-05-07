@@ -10,7 +10,7 @@ import {
   type Persistent,
 } from 'open-loop-engine';
 import type { TugData, UnitArchetypeTag } from '../data/types';
-import { FortressKey } from './fortress';
+import { getFortress } from './fortress';
 import { LANE_LENGTH, SIDES, type Side, TugTuningRegistryKey } from './tuning';
 
 /** Engagement radius — opposing units within this distance acquire each
@@ -52,7 +52,7 @@ export interface UnitInstance {
 
 export interface LaneEvents {
   /** A unit was spawned into the lane. Mirrors `'unit-killed'`. Fortress
-   *  units don't pass through `lane.spawn()` (they live in `FortressKey`)
+   *  units don't pass through `lane.spawn()` (they live in the fortress module)
    *  so this fires only for unit-archetype spawns. */
   'unit-spawned': (payload: { side: Side; archetypeId: string }) => void;
   /** A unit's hp dropped to ≤0 in combat. Currently unused by leaf-4 wiring;
@@ -100,7 +100,7 @@ export function createLaneModule(data: TugData): EngineModule {
     dependencies: ['tug/tuning', 'tug/match/fortress'],
     install(ctx) {
       const registry = ctx.inject(TugTuningRegistryKey);
-      const fortress = ctx.inject(FortressKey);
+      const fortress = getFortress();
 
       // Counter-matrix sharpness scalars. Default 1.0 is identity (no
       // perturbation). Leaf 6's tuner pushes scopes to compress/expand the
@@ -255,7 +255,7 @@ export function createLaneModule(data: TugData): EngineModule {
 
         // 5) Resolve unit-killed. Filter dead entries out of each side's
         //    units array; emit events as we drop them. Fortresses live in
-        //    a separate slot (FortressKey) and are NOT removed — when a
+        //    a separate slot (the fortress module) and are NOT removed — when a
         //    fortress hp hits 0, match.ts watches the resource and ends
         //    the match, then the match-scope reset wipes everything.
         //    Reassigning the `.value` array refreshes Vue dependents
