@@ -1,7 +1,7 @@
 <!--
   Ambient autobuyer toggle panel. Renders one Button row per autobuyer that
   has reached its unlock milestone; locked rows are hidden until unlocked.
-  The slim port ships a single registered spec (producer auto-buy);
+  The first-arc port ships a single registered spec (producer auto-buy);
   visibility unlocks fire unconditionally and live outside the registry.
 
   Master kill-switch lives in the ambient app root header — the contract

@@ -8,7 +8,7 @@
  * Control fan order (right → left, reference main.view.js:344-370):
  *   cap · +/− · split · up · down · disable · remove
  *
- * Slim demo: no travel actions, no training actions, no per-action `allowed`
+ * First-arc port: no travel actions, no training actions, no per-action `allowed`
  * gating — those branches from idle-loops-ng's NextActionRow are stripped
  * here. Cap is shown for regular-type actions only (caps to current good
  * count of the action's regularVar pool).

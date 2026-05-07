@@ -23,8 +23,8 @@ import type { ProgressVarDef } from './types';
 //   + shortcut × 2               + getProgressLevel('Shortcut') * 2)     :441,445
 //
 // Met has no `scales` entry — vanilla Met sizes SQuests = met × 1 fed by
-// Short Quest (`vanilla-actions.ts:166`, regularVar 'SQuests'); the slim
-// demo doesn't include Short Quest, so Met stays pool-less.
+// Short Quest (`vanilla-actions.ts:166`, regularVar 'SQuests'); the first-arc
+// port doesn't include Short Quest, so Met stays pool-less.
 
 export const PROGRESS_VARS: ProgressVarDef[] = [
   {

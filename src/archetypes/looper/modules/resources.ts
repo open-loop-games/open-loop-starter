@@ -1,7 +1,7 @@
 /**
  * Resource module — per-loop resources that reset each loop.
  *
- * Gold only in the slim demo. All resources are simple accumulators set to
+ * Gold only in the first-arc port. All resources are simple accumulators set to
  * 0 on loop restart. Actions add/subtract via the helper functions.
  *
  * Reference: idleLoops/saving.js lines 34-43, idleLoops/driver.js lines 102-131

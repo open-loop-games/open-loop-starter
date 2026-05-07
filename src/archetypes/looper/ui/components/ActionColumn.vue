@@ -17,9 +17,9 @@
  *   │  [ ] keep active  [ ] repeat last  [ ] add to top                │
  *   └──────────────────────────────────────────────────────────────────┘
  *
- * Slim demo: no LoadoutBar (loadout substrate not in slim demo), no
- * adjustable list height (no settings.actionListHeight knob in the slim
- * looper). TODO(expansion): wire a persistent height knob if forks need
+ * First-arc port: no LoadoutBar (loadout substrate not in first-arc port), no
+ * adjustable list height (no settings.actionListHeight knob in the
+ * looper demo). TODO(expansion): wire a persistent height knob if forks need
  * it — idle-loops-ng has it on a settings module.
  *
  * Reference: idle-loops-ng/src/ui/components/ActionColumn.vue.

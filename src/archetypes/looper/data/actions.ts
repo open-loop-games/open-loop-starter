@@ -2,7 +2,7 @@ import type { ActionDef } from './types';
 
 // ─── Skeleton ───
 // 9 actions across 2 zones, discriminated over `type: 'progress' | 'regular' |
-// 'basic'`. Slim slice of vanilla idle-loops town 0 (Beginnersville) and town
+// 'basic'`. First arc of vanilla idle-loops town 0 (Beginnersville) and town
 // 1 (Forest Path) — every numerical claim cites the canonical port at
 // `idle-loops-ng/src/data/vanilla-actions.ts:line` (the live engine port,
 // authoritative over the frozen `reference-code/idle-loops-omsi/`).
@@ -21,16 +21,16 @@ import type { ActionDef } from './types';
 // `expMult: 1` uniform across the entire action set — matches vanilla town 0
 // and town 1 baselines (vanilla reserves expMult > 1 for explicit
 // stat-trainer actions, e.g. Train Strength at 2000 mana behind `met ≥ 5`,
-// which the slim demo doesn't include).
+// which the first-arc port doesn't include).
 //
-// Prereq web (slim slice, vanilla-grounded):
+// Prereq web (first arc, vanilla-grounded):
 //   wander ≥ 3            → Pick Locks    visible  (vanilla `wander ≥ 3`,
 //                                                   vanilla-actions.ts:155)
 //   wander ≥ 3            → Buy Mana      visible  (vanilla `wander ≥ 3`,
 //                                                   vanilla-actions.ts:237)
 //   wander ≥ 5            → Explore Forest visible (Forest Path zone-gate;
 //                                                   declared invention — the
-//                                                   slim demo doesn't model
+//                                                   first-arc port doesn't model
 //                                                   vanilla's Buy Supplies +
 //                                                   Travel zone-bridge gate)
 //   wander ≥ 5            → Wild Mana     visible  (Forest Path zone-gate;
@@ -41,7 +41,7 @@ import type { ActionDef } from './types';
 //     AND forest ≥ 1      → Old Shortcut  visible  (declared invention —
 //                                                   prevents both Forest Path
 //                                                   progress actions appearing
-//                                                   simultaneously, slim-demo
+//                                                   simultaneously, first-arc
 //                                                   readability. Vanilla gates
 //                                                   only on `unlocked: forest
 //                                                   ≥ 20`.)
@@ -50,7 +50,7 @@ import type { ActionDef } from './types';
 //     AND loops ≥ 3       → Gather Herbs  visible  (declared invention —
 //                                                   exercises capability-tier-
 //                                                   level + loop-count prereq
-//                                                   variants the slim slice
+//                                                   variants the first arc
 //                                                   would otherwise leave
 //                                                   unexercised by vanilla's
 //                                                   pure progress-var-level
@@ -59,7 +59,7 @@ import type { ActionDef } from './types';
 // Variants exercised: progress-var-level (most), stat-tier-level
 // (Gather Herbs), loop-count (Gather Herbs). Always-implicit (no `prereqs`):
 // Wander, Smash Pots. The action-completion-count and always-explicit
-// variants are implemented in the engine but unexercised by the slim demo's
+// variants are implemented in the engine but unexercised by the first-arc port's
 // prereq web; forks adding content can use them.
 //
 // Wander and Smash Pots are always-visible (always-implicit) so the bootstrap
@@ -73,15 +73,15 @@ import type { ActionDef } from './types';
 // These values are not tunable — perturbing them deforms the canonical
 // economy. Solver work targets declared inventions, not these.
 //
-// Substrate divergences from vanilla, NOT applied here (mechanics-layer
-// features the slim demo doesn't yet model — tracked separately):
+// Later-arc systems from vanilla, NOT applied here (mechanics-layer
+// features the first-arc port doesn't yet model — tracked separately):
 //   - vanilla `practicalDiscount(50)` on Smash Pots / `practicalDiscount(150)`
-//     on Wild Mana — Practical skill not in slim demo, base values used.
+//     on Wild Mana — Practical skill not in first-arc port, base values used.
 //   - vanilla `levelDiscount(200, 'Hermit')` on Gather Herbs — Hermit progress
-//     not in slim demo, base value used.
+//     not in first-arc port, base value used.
 //   - vanilla `practicalScaledGold(...)` on Pick Locks gold reward — Practical
-//     skill not in slim demo, base 10 used.
-//   - vanilla Gather Herbs reward `+1 herb` — herbs resource not in slim demo.
+//     skill not in first-arc port, base 10 used.
+//   - vanilla Gather Herbs reward `+1 herb` — herbs resource not in first-arc port.
 //     Adapted to multi-axis `+50 mana / +5 gold` reward (declared invention).
 
 export const ACTIONS: ActionDef[] = [
@@ -121,7 +121,7 @@ export const ACTIONS: ActionDef[] = [
   {
     // vanilla canonical: Smash Pots
     // (idle-loops-ng/src/data/vanilla-actions.ts:129) — manaCost
-    // `practicalDiscount(50)` (slim demo: base 50, no Practical skill),
+    // `practicalDiscount(50)` (first-arc port: base 50, no Practical skill),
     // expMult 1, stats {Str:0.2, Per:0.2, Spd:0.6}, rewardEffects [+100 mana]
     // / rewardRatio 10. Pool: Pots = Wander × 5
     // (idle-loops-ng/src/modules/zones.ts:427).
@@ -182,7 +182,7 @@ export const ACTIONS: ActionDef[] = [
     // 1, stats {Per:0.4, Con:0.2, Spd:0.2, Luck:0.2}, finishProgress(varName,
     // 100). Vanilla town-1 progress is half the rate of town-0 (200 → 100) —
     // the late-game-progresses-slower curve. Zone-gate prereq `wander ≥ 5` is
-    // a declared invention since the slim demo doesn't model vanilla's
+    // a declared invention since the first-arc port doesn't model vanilla's
     // multi-step zone-bridge (Buy Supplies → Travel).
     id: 'explore-forest',
     name: 'Explore Forest',
@@ -201,9 +201,9 @@ export const ACTIONS: ActionDef[] = [
     // (idle-loops-ng/src/data/vanilla-actions.ts:498) — manaCost 1200,
     // expMult 1, stats {Per:0.3, Con:0.4, Spd:0.2, Luck:0.1},
     // finishProgress(varName, 100). Vanilla unlocks at `forest ≥ 20`; the
-    // slim demo's `forest ≥ 1` visibility prereq is a declared invention to
+    // first-arc port's `forest ≥ 1` visibility prereq is a declared invention to
     // prevent both Forest Path progress actions appearing simultaneously
-    // (slim-demo readability).
+    // (first-arc readability).
     id: 'old-shortcut',
     name: 'Old Shortcut',
     description: 'Sense the leylines crossing under the forest floor.',
@@ -222,7 +222,7 @@ export const ACTIONS: ActionDef[] = [
   {
     // vanilla canonical: Wild Mana
     // (idle-loops-ng/src/data/vanilla-actions.ts:538) — manaCost
-    // `practicalDiscount(150)` (slim demo: base 150, no Practical skill),
+    // `practicalDiscount(150)` (first-arc port: base 150, no Practical skill),
     // expMult 1, stats {Con:0.2, Int:0.6, Soul:0.2}, rewardEffects [+250 mana]
     // / rewardRatio 10. Pool: WildMana = Forest × 5
     // (idle-loops-ng/src/modules/zones.ts:439).
@@ -242,19 +242,19 @@ export const ACTIONS: ActionDef[] = [
   {
     // vanilla canonical: Gather Herbs
     // (idle-loops-ng/src/data/vanilla-actions.ts:557) — manaCost
-    // `levelDiscount(200, 'Hermit')` (slim demo: base 200, no Hermit skill),
+    // `levelDiscount(200, 'Hermit')` (first-arc port: base 200, no Hermit skill),
     // expMult 1, stats {Str:0.4, Dex:0.3, Int:0.3}, rewardEffects [+1 herb]
     // / rewardRatio 10. Pool: Herbs = Forest × 5 + Shortcut × 2
     // (idle-loops-ng/src/modules/zones.ts:441,445).
     //
     // Reward `add-mana 50 + add-gold 5` is a declared invention. Vanilla
-    // grants 1 herb (an inventory resource the slim demo doesn't model). We
+    // grants 1 herb (an inventory resource the first-arc port doesn't model). We
     // adapt the multi-axis pool slot to a multi-axis reward instead;
-    // magnitudes are slim — half a Smash Pots hit (50 mana) and half a Pick
+    // magnitudes are modest — half a Smash Pots hit (50 mana) and half a Pick
     // Locks gold (5 gold) per reward firing.
     //
     // Capability-tier-level + loop-count prereqs are declared inventions —
-    // they exercise prereq variants the slim slice would otherwise leave
+    // they exercise prereq variants the first arc would otherwise leave
     // unexercised by vanilla's pure progress-var-level web.
     id: 'gather-herbs',
     name: 'Gather Herbs',

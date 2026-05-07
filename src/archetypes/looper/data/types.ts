@@ -7,7 +7,7 @@ import type { DecimalSource } from 'open-loop-engine';
 // `scales` table to 4 regularVars (per-loop pools whose `total` derives from
 // summed `level × perLevel` contributions); 9 actions discriminated over
 // `type: 'progress' | 'regular' | 'basic'` with weight-coupled cost + XP and
-// per-action prereq web. Slim slice of vanilla idle-loops town 0
+// per-action prereq web. First arc of vanilla idle-loops town 0
 // (Beginnersville) + town 1 (Forest Path) — ids, names, and numbers carried
 // 1:1 from `idle-loops-ng/src/data/{stats,zones,vanilla-actions}.ts` and
 // `idle-loops-ng/src/modules/zones.ts`.

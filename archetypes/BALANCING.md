@@ -330,7 +330,7 @@ Tighter bounds catch more drift but pop on irrelevant noise. Looser bounds toler
 
 ### Canonical numbers are not tunable
 
-Cited-from-vanilla numbers — values carried 1:1 from a reference exemplar with per-row citations in the data files — are not solver perturbation surface. Solvers operate on the *declared-invention* surface where the slim-port substrate diverges from canonical. Perturbing canonical values is fudging, not balancing — the slim-port's job is to faithfully reproduce the exemplar's economy, and balance passes work *around* that economy, not against it.
+Cited-from-vanilla numbers — values carried 1:1 from a reference exemplar with file-header citations in the data files — are not solver perturbation surface. Solvers operate on the *declared-invention* surface where the first-arc port diverges from canonical. Perturbing canonical values is fudging, not balancing — the first-arc port's job is to faithfully reproduce the exemplar's economy, and balance passes work *around* that economy, not against it.
 
 ### Findings sidecars
 

@@ -116,7 +116,7 @@ export const PRODUCER_PHASES: readonly PhaseIntent[] = [
  * Subsystem inventory: `closed-form-progression/subsystem-inventory.md
  * § 3.2` — Producer 8 rows, 7 Pure + 1 Optimal stopping (87.5% decomposable).
  * The 1 OS row (single-tier prestige timing analog) is not modeled in this
- * slim port; the modeled subsystem is the Pure row.
+ * first-arc port; the modeled subsystem is the Pure row.
  */
 export interface SubsystemMethodology {
   id: string;
@@ -142,7 +142,7 @@ export const PRODUCER_SUBSYSTEMS: readonly SubsystemMethodology[] = [
     bucket: 'Pure',
     methodology: '#1+#2',
     compositionRow: 'triangular',
-    // Bakery slim-port content is declared invention (no canonical exemplar
+    // Bakery first-arc content is declared invention (no canonical exemplar
     // numbers carried 1:1). All numeric surfaces are perturbation surface.
     canonicalSurface: 'invention',
     inventionKnobs: [

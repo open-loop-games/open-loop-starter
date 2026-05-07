@@ -168,39 +168,47 @@ export interface {{Name}}PrimaryDef {   // (rename to fit the archetype's primar
 - **Progression gates:** {{zones, unlocks, prestige tiers — whichever apply}}
 - **Achievements:** {{count + theme}}
 
-### Substrate divergences from vanilla, not applied in the slim demo
-
-Mechanics-layer features the slim demo intentionally omits — base values or declared-invention
-substitutes used in their place:
-
-- {{feature present in the exemplar}} — {{reason omitted from slim demo; what replaces it}}
-
-### Broken-by-drops inventory
+### Required structural properties
 
 <!--
-  For every dropped subsystem listed above, enumerate the canonical gates that
-  reference it, and decide per-gate. The slim-port methodology silently invents
-  replacement behavior at every dropped gate — citations document what was
-  *transcribed*, not what was *broken by the drops*. This subsection is the
-  paired audit. Required before slim-port implementation begins (see
-  `open-loop-starter/CLAUDE.md § Archetype convention`).
+  The mechanical relationships that make this archetype demonstrate its
+  namesake. The Content sketch above enumerates what's there; this
+  subsection enumerates what functions. Both together define a complete
+  first-arc port.
 
-  Each row pairs a canonical gate-conditional with one of three closed-set
-  decisions. No fourth option, no synthesized slim-equivalent — those are the
-  confabulation surface this audit exists to close.
+  Authors fill this in for new archetypes. Existing archetype docs
+  predating this subsection may carry a `TODO(structural-properties)`
+  marker; fill in when next touched.
 -->
 
-| Canonical gate (file:line) | Behavior gated | Archetype property affected? | Decision | Rationale |
-| --- | --- | --- | --- | --- |
-| {{e.g. `player.upgrades[105]`, Synergism.ts:4401}} | {{e.g. cyclic edge `T5.gen += T1.owned` in antimatter cascade}} | {{archetype property name from § 2 / § 3, or `none`}} | {{`port-gate-as-default-false` / `port-the-subsystem` / `out-of-demo-scope`}} | {{one-line load-bearing reason for the decision}} |
+- {{Property name}} — {{the relationship that must function in the running app, e.g. "producer N+1's owned-count contributes to producer N's rate (cascading production)"}}
+- {{...}}
 
-Decisions are a closed set:
+### Demo arc beats
 
-- **`port-gate-as-default-false`** — port the gate's read site (e.g. a boolean ref defaulting false), don't port the subsystem that flips it. The gated behavior is dormant in slim. Cheapest faithful option.
-- **`port-the-subsystem`** — pull the dependency in. The drop list shrinks. Reserved for cases where the gated behavior is structurally load-bearing on an archetype property the slim claims to demonstrate.
-- **`out-of-demo-scope`** — gated behavior dropped; the archetype property is not demonstrated by slim. Acceptable when the property is non-load-bearing, or covered by another subsystem the slim retains.
+<!--
+  The 1–2h first-arc walkthrough, beat by beat. The completion gate for
+  the archetype port: every beat reachable in the running app on a fresh
+  save, in approximately the named time window. Each beat names a
+  player-observable outcome.
+-->
 
-Antipattern (the canonical confabulation): "always-on per shop-omitted substrate" / "slim equivalent of X" / "{{multiplier}} absorbs the gated factor at arc-fit." Every such phrase in a slim port is a missing inventory row. If a behavior depends on something the slim dropped and the inventory hasn't decided what to do, the answer is *not* "do it anyway, calibrated."
+1. {{beat 1 — what the player does + observable outcome, named time window}}
+2. {{beat 2 — ...}}
+3. {{...}}
+
+### Later-arc systems (fork extension territory)
+
+<!--
+  Mechanics in the canonical exemplar past the first arc. Forks extend
+  forward by building them on top of the existing tier/module shape.
+  First-arc code that reads later-arc state lifts the read-site as a
+  default-zero/inert ref — the gate copies verbatim from canonical and
+  evaluates inert against default state.
+-->
+
+- {{later-arc system name}} — {{what it does in the canonical; what fork-extension looks like}}
+- {{...}}
 
 ---
 
@@ -319,7 +327,7 @@ reshape the archetype to use existing vocabulary.
 4. **Data shapes are typed TS.** § 4 TS-signature examples must be syntactically valid TypeScript — they are reference material for the archetype's implementation under `src/archetypes/<name>/data/`.
 5. **Themes are costume-only.** If a theme changes pattern composition or arc pacing, it is a different archetype, not a theme.
 6. **Archetype code lives colocated.** Each archetype lives at `src/archetypes/<name>/` as a self-bootable tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). Data is hand-authored TypeScript, not codegen output. Forks clone the archetype directory wholesale; per-fork tuning edits happen in place. This doc describes design intent; the code is the source of truth.
-7. **Canonical, not novel — but canonical means *shape*, not *content*.** Starter demos are *canonical-for-forking*: forks copy them as the spine. The exemplars in § 1 (Exemplars + Live consumer references) validate that the archetype's *structural shape* exists in the wild — drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Match those structural decisions; flag any deliberate divergence in § 4 with a slim-demo justification. **Do NOT lift content names from any one exemplar.** "Light Pots," "Wild Mana," "Buy Mana," "Smash Pots" coming straight from idle-loops vanilla into a Theme-A demo is the failure mode: content is per-theme costume the demo authors fresh against the canonical slots. Same for action verbs, item names, NPC names, zone names. § 4 names the canonical slot set (e.g. "at least one mana-positive action per early zone"); § 5 fills those slots with theme-native content; the exemplar source stays a *shape* reference, not a content donor.
+7. **Canonical, not novel — first-arc lifts shape and content from one exemplar.** Starter demos are transparent first-arc ports of one Tier-A exemplar pinned in `reference-code/<game>/`. The port lifts the exemplar's first-arc content verbatim — resource names, action names, item names, NPC names, zone names, numbers, and structural relationships — into `data/*.ts`. The exemplars in § 1 (Exemplars + Live consumer references) validate the archetype's structural shape exists in the wild: drain semantics, cost-vs-spend, retention shape, queue dispatch, economy field set, mana-positive/mana-negative slot pattern. Forks rename for theme as a post-port costume pass; the starter ships transparent.
 8. **Lift numbers, don't invent.** Tier-A archetypes (those with `reference-code/<game>/...` source on disk) must cite source for every numerical claim in § 3 / § 4 / § 5. Cite as `` `reference-code/<game>/<file>:line` `` (preferred) or `` `wiki:<url>` `` (Tier-B archetypes with closed-source exemplars). For numbers without exemplar (e.g. invented zone-bridge actions), use `` `declared invention — <rationale>` `` (already valid in § 1 / § 6) to mark them explicitly. The validator hard-fails on confident numbers without one of these markers; see § Validator rules for per-status gates.
 
 ---

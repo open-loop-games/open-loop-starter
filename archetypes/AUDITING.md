@@ -45,7 +45,7 @@ Engine-derived rules cite the engine symbol the rule maps to and the cookbook re
 | 10 | Tunables: `tunable()` over manual override-registry thunks | `tunable`, `createOverrideRegistry`, `OverrideRegistry` | G-S6 |
 | 11 | Cross-tier modifier targeting: `ChainRegistry` over wide `ctx.inject` piles | `ChainRegistry`, `ChainRegistryKey`, `createChainRegistry`, `walkChainRegistry` | G-S8 |
 | 12 | Multi-currency tier domains: `createResourceBag` over loose `createResource` | `createResourceBag`, `ResourceBag`, `bulkTransfer`, `transferBetweenBags` | G-S9 |
-| 13 | Slim-port discipline: row-level vanilla citations + invention tags | — (starter convention) | — |
+| 13 | First-arc citation discipline: file-header citations + invention tags | — (starter convention) | — |
 | 14 | Composable graduation: 3+ identical hand-rolls across **independent archetypes** → promote to `src/composables/` | — (starter convention) | — |
 | 15 | Manifest hygiene: shells reference real `src/lib/shells/` names | — (starter convention) | — |
 | 16 | Comment hygiene: invariants only, no phase markers, no refactor history | — (studio CLAUDE.md § Comment hygiene) | — |
@@ -304,17 +304,16 @@ The hand-rolled `collectRateChains(producers, tier)` helper that scans `producer
 
 These rules don't derive from engine surface — they live in starter convention or studio process. The audit-scoring framework is the same, but the resolution is local-only (a `flag-primitive` outcome doesn't apply).
 
-### § 13 — Slim-port discipline
+### § 13 — First-arc citation discipline
 
-**Rule.** Per [`/work/studio/open-loop-starter/CLAUDE.md`](../CLAUDE.md) § Archetype convention: row-level citations to canonical exemplars. Format: `// vanilla canonical: <file>:<line> — <description>` for cited values; `// invention: <reason>` for declared inventions where the slim demo's substrate diverges. Carry ids, display names, and numbers 1:1 with the chosen exemplar.
-
-**Anti-pattern.** Slim-port files without row-level citations (the reader can't audit fidelity). Slim-port files with citations but no invention tags (declared inventions are invisible). Renamed values without citations. Mass-perturbed cited values (see § 10).
+**Rule.** Per [`/work/studio/open-loop-starter/CLAUDE.md`](../CLAUDE.md) § Archetype convention: file-header citation block at the top of each `data/*.ts` file naming the canonical source files and line ranges the file lifts from. Per-row inline tags (`// invention: <reason>`) are reserved for declared inventions where a row diverges from canonical. Ids, display names, and numbers carry 1:1 with the chosen exemplar.
 
 **Audit criterion.**
-- Every `data/<content>.ts` row that carries a number or a display string has a `// vanilla canonical:` citation OR a `// invention:` tag.
-- Citations resolve to a real file in the chosen exemplar (frozen fork under `reference-code/<game>/` or live engine port in a sibling repo).
+- Every `data/*.ts` file with content lifted from a canonical exemplar carries a file-header citation block naming the canonical source files and line ranges.
+- Declared-invention rows carry an inline `// invention: <reason>` tag.
+- Citations resolve to a real file in the pinned exemplar under `reference-code/<game>/`.
 
-**Threshold.** 100% citation OR invention tag coverage on rows carrying canonical numbers. Anything less is a slim-port-discipline flag.
+**Threshold.** Every `data/*.ts` file with lifted content has a file-header citation block; declared-invention rows are inline-tagged.
 
 ---
 

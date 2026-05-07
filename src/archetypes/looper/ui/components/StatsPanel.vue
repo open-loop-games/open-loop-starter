@@ -7,7 +7,7 @@
  * between a flex-wrap grid and a canvas radar chart (~60 LOC of
  * canvas 2d, no chart-library dep).
  *
- * Slim demo carries no skills, buffs, or soulstones — the Squirrel-style
+ * First-arc port carries no skills, buffs, or soulstones — the Squirrel-style
  * sections in the canonical idle-loops-ng panel are dropped here.
  *
  * Reference: idle-loops-ng/src/ui/components/StatsPanel.vue,
@@ -68,7 +68,7 @@ const statTooltips = computed<Record<string, StatTooltip>>(() => {
       talentXp: `${formatWhole(talentXP.current)} / ${formatWhole(talentXP.needed)}`,
       talentPct: `${(getTalentXPProgress(name) * 100).toFixed(1)}%`,
       talentMult: `×${talentMult.toFixed(2)}`,
-      // Slim demo: no soulstones, so totalBonusXP === talentMult.
+      // First-arc port: no soulstones, so totalBonusXP === talentMult.
       totalMult: `×${talentMult.toFixed(2)}`,
     };
   }

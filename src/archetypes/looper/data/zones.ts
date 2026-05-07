@@ -6,10 +6,10 @@ import type { ZoneDef } from './types';
 // not zone-aware. Forks that want zone-level unlocks layer extra prereqs onto
 // each zone's entry actions instead of reviving a `requires` field.
 //
-// 2-zone slim slice: ids carried 1:1 from
+// 2-zone first arc: ids carried 1:1 from
 // `idle-loops-ng/src/data/zones.ts:17` `vanillaZones` constant. Vanilla
 // idle-loops-ng ships 3 zones (Beginnersville + Forest Path + Merchanton);
-// the slim demo carries the first two unchanged. Forks raise cardinality
+// the first-arc port carries the first two unchanged. Forks raise cardinality
 // in `data/zones.ts` without touching modules.
 
 export const ZONES: ZoneDef[] = [

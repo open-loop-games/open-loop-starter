@@ -8,7 +8,7 @@
  *   ─── town stat rows (progress + regular vars) ───
  *   ─── action tile grid ───
  *
- * Slim demo: single Actions tab (no Stories/Guilds — the slim demo doesn't
+ * First-arc port: single Actions tab (no Stories/Guilds — the first-arc port doesn't
  * model the story system or DungeonGuildPanel). Tab switcher dropped.
  *
  * Reference: idle-loops-ng/src/ui/components/TownColumn.vue,

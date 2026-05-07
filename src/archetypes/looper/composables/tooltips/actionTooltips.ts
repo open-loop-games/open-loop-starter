@@ -5,7 +5,7 @@
  * the per-stat cost factor during play). Consumed in TownColumn's HoverCard
  * content slot.
  *
- * Slim demo: no skills, multipart, affectedBy, training, or unlock hints.
+ * First-arc port: no skills, multipart, affectedBy, training, or unlock hints.
  *
  * Reference: idle-loops-ng/src/composables/tooltips/actionTooltips.ts,
  * dmchurch views/main.view.js:1226 createTownAction.

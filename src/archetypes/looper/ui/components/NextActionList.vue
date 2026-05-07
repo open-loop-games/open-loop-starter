@@ -9,8 +9,8 @@
  * - The list-level pdnd monitor that translates a drop into a reorderAction.
  * - The shared drag state (fromIndex / overIndex / overEdge) provided to rows.
  *
- * Slim demo: no travel-collapse filter (no travel actions in the slim
- * 9-action set). The hidden-indices computation from idle-loops-ng's
+ * First-arc port: no travel-collapse filter (no travel actions in the
+ * first-arc 9-action set). The hidden-indices computation from idle-loops-ng's
  * NextActionList is dropped.
  *
  * Reference: idle-loops-ng/src/ui/components/NextActionList.vue.

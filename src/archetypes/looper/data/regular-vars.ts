@@ -28,7 +28,7 @@ import type { RegularVarDef } from './types';
 //                                            rewardRatio 10 — declared
 //                                            invention; vanilla grants 1 herb
 //                                            per reward, an inventory resource
-//                                            the slim demo doesn't model).
+//                                            the first-arc port doesn't model).
 //
 // `rewardRatio` and `rewardEffect` payloads live on the regular-type ACTION
 // def (not here) — multiple actions can target the same regularVar with

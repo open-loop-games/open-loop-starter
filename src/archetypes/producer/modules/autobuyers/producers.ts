@@ -20,12 +20,12 @@ import {
 // vanilla canonical (autobuyer set):
 //   CookieClickerSourceCode/main.js — Cookie Clicker has no in-game autobuyer
 //     surface; the canonical "autobuy upgrades" behavior lives in player-side
-//     mods (Frozen Cookies, Cookie Monster). The slim port treats the bot
+//     mods (Frozen Cookies, Cookie Monster). The first-arc port treats the bot
 //     behavior pre-OL-855 as the canonical reference point, since the bot
 //     was already the implementation site.
 //   SynergismOfficial/src/Automation.ts:73-86 — autoUpgrades sweep
 //     (gated on player.upgrades[91]) is the closest external precedent for
-//     the upgrade-sweep autobuyer; producer's slim port collapses to a
+//     the upgrade-sweep autobuyer; producer's first-arc port collapses to a
 //     single-category sweep across all unlocked upgrades.
 //
 // Producer is single-category (not tier-stratified like scaler), so unlock
