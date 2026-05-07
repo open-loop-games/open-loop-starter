@@ -49,6 +49,7 @@ export const AmbientTuningRegistryKey: InjectionKey<OverrideRegistry<AmbientTuna
 // only one ambient engine is active per process.
 let primaryResource: Resource<DecimalSource>;
 let autoProducers: ProducerCategory<AutoProducerDef>;
+let timeSystem: TimeSystem;
 
 export function getPrimaryResource(): Resource<DecimalSource> {
   return primaryResource;
@@ -61,9 +62,9 @@ export function getAutoProducers(): ProducerCategory<AutoProducerDef> {
 /** Engine TimeSystem — `elapsed` is sim-seconds since last reset,
  *  `totalPlayTime` is sim-seconds across all resets. `arc.ts` composes
  *  session-clock state on top; achievements module reads via predicates. */
-export const TimeSystemKey: InjectionKey<TimeSystem> = Symbol(
-  'ambient/time-system',
-) as InjectionKey<TimeSystem>;
+export function getTimeSystem(): TimeSystem {
+  return timeSystem;
+}
 
 // Producers whose baseCost is registered with the tuning registry. Other
 // producers pass their baseCost through unchanged — opt-in keeps the
@@ -94,8 +95,8 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
       // TimeSystem provides persistent `elapsed` + `totalPlayTime`. Wired
       // into the loop here so `tick(dt)` advances both fields. The
       // session-clock module composes predicates on top.
-      const time = createTimeSystem();
-      ctx.onTick((dt) => time.tick(dt));
+      timeSystem = createTimeSystem();
+      ctx.onTick((dt) => timeSystem.tick(dt));
 
       autoProducers = createProducerCategory<AutoProducerDef>({
         id: 'ambient/auto-producers',
@@ -144,7 +145,6 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
 
       ctx.provide(PrimaryLifetimeKey, primaryLifetime);
       ctx.provide(AmbientTuningRegistryKey, tuningRegistry);
-      ctx.provide(TimeSystemKey, time);
     },
   };
 }

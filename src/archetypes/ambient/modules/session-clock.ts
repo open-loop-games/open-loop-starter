@@ -1,7 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { type EngineModule, type InjectionKey } from 'open-loop-engine';
 import type { AmbientData } from '../data/types';
-import { TimeSystemKey } from './auto-producers';
+import { getTimeSystem } from './auto-producers';
 
 export interface SessionClock {
   /** Sim-time seconds the save has accumulated across all resets. */
@@ -57,7 +57,7 @@ export function createSessionClockModule(data: AmbientData): EngineModule {
     id: 'ambient/session-clock',
     dependencies: ['ambient/auto-producers'],
     install(ctx) {
-      const time = ctx.inject(TimeSystemKey);
+      const time = getTimeSystem();
       const elapsedAtResume = ref(time.elapsed.value);
       const lastResumeGapSec = ref(0);
       const offlineCapSeconds = Number(data.balance.offlineCapHours) * 3600;

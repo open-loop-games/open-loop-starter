@@ -12,9 +12,9 @@ import { createAutoProducerAutobuyersModule } from './autobuyers/auto-producers'
 export {
   AmbientTuningRegistryKey,
   PrimaryLifetimeKey,
-  TimeSystemKey,
   getAutoProducers,
   getPrimaryResource,
+  getTimeSystem,
   type AmbientTunableKey,
   type AmbientTunables,
 } from './auto-producers';
