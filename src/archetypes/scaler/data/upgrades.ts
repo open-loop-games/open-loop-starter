@@ -61,6 +61,7 @@ function first6CoinUp(state: ScalerGameState): DecimalSource {
 const grantsByPosition: Record<number, UpgradeGrant[]> = {
   1: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-1' },
       multiplier: first6CoinUp,
       description: 'Worker production / coin upgrade 1',
@@ -68,6 +69,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   2: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-2' },
       multiplier: first6CoinUp,
       description: 'Investment production / coin upgrade 2',
@@ -75,6 +77,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   3: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-3' },
       multiplier: first6CoinUp,
       description: 'Printer production / coin upgrade 3',
@@ -82,6 +85,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   4: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-4' },
       multiplier: first6CoinUp,
       description: 'Mint production / coin upgrade 4',
@@ -89,6 +93,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   5: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-5' },
       multiplier: first6CoinUp,
       description: 'Alchemy production / coin upgrade 5',
@@ -96,6 +101,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   6: [
     {
+      kind: 'multiplier',
       scope: { kind: 'tier-global', tier: 'coin' },
       multiplier: first6CoinUp,
       description: 'All coin production / coin upgrade 6',
@@ -104,6 +110,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   // 7, 8, 9: feed `freeMultiplier` / `freeAccelerator`; ports with Multiplier rework.
   10: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-1' },
       multiplier: (state) => {
         const inv = bn(state.producerOwned('coin', 'coin-2'));
@@ -115,6 +122,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   // 11: 1.02 ^ freeAccelerator — ports with Multiplier rework.
   12: [
     {
+      kind: 'multiplier',
       scope: { kind: 'tier-global', tier: 'coin' },
       multiplier: (state) => {
         // Inert until prestige tier lands and `prestigePoints` accumulates;
@@ -130,6 +138,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   13: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-2' },
       multiplier: (state) => {
         // Inert until transcend tier; canonical reads `firstGeneratedMythos +
@@ -143,6 +152,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   // 14, 15, 16: cascade-gate boosts. Inert until upgrades[101..105] land.
   17: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-4' },
       multiplier: () => 1e100,
       description: 'Mint × 1e100 / coin upgrade 17',
@@ -150,6 +160,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   18: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-3' },
       multiplier: (state) => {
         const shards = bn(state.resourceValue('transcend-shards'));
@@ -160,6 +171,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   19: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-2' },
       multiplier: (state) => {
         const tp = bn(state.resourceValue('transcendPoints'));
@@ -170,6 +182,7 @@ const grantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   20: [
     {
+      kind: 'multiplier',
       scope: { kind: 'tier-global', tier: 'coin' },
       multiplier: (state) => {
         const total = bn(state.totalOwned('coin')).toNumber();
@@ -271,6 +284,7 @@ const prestigeGrantsByPosition: Record<number, UpgradeGrant[]> = {
 
   36: [
     {
+      kind: 'multiplier',
       scope: { kind: 'tier-global', tier: 'prestige' },
       multiplier: (state) => {
         const pp = bn(state.resourceValue('prestigePoints'));
@@ -443,6 +457,7 @@ export const PRESTIGE_UPGRADES: UpgradeDef[] = Array.from({ length: 20 }, (_, i)
 const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   41: [
     {
+      kind: 'multiplier',
       scope: { kind: 'tier-global', tier: 'coin' },
       multiplier: (state) => {
         const tp = bn(state.resourceValue('transcendPoints'));
@@ -453,6 +468,7 @@ const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   42: [
     {
+      kind: 'multiplier',
       scope: { kind: 'tier-global', tier: 'transcend' },
       multiplier: (state) => {
         const pp = bn(state.resourceValue('prestigePoints'));
@@ -468,6 +484,7 @@ const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   43: [
     {
+      kind: 'multiplier',
       scope: { kind: 'tier-global', tier: 'coin' },
       multiplier: (state) => {
         const tc = state.transcendCount();
@@ -480,6 +497,7 @@ const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   // freeUpgradeAccelerator / acceleratorPower; ship inert).
   47: [
     {
+      kind: 'multiplier',
       scope: { kind: 'tier-global', tier: 'transcend' },
       multiplier: (state) => {
         // Inert until achievements (leaf 7) — `achievementPoints` is 0
@@ -495,6 +513,7 @@ const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   // acceleratorEffect / multiplierEffect / buildingPower; ship inert).
   56: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-1' },
       multiplier: () => '1e5000',
       description: 'Worker × 1e5000 / transcend upgrade 56',
@@ -502,6 +521,7 @@ const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   57: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-2' },
       multiplier: () => '1e7500',
       description: 'Investment × 1e7500 / transcend upgrade 57',
@@ -509,6 +529,7 @@ const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   58: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-3' },
       multiplier: () => '1e15000',
       description: 'Printer × 1e15000 / transcend upgrade 58',
@@ -516,6 +537,7 @@ const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   59: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-4' },
       multiplier: () => '1e25000',
       description: 'Mint × 1e25000 / transcend upgrade 59',
@@ -523,6 +545,7 @@ const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
   ],
   60: [
     {
+      kind: 'multiplier',
       scope: { kind: 'producer', tier: 'coin', producerId: 'coin-5' },
       multiplier: () => '1e35000',
       description: 'Alchemy × 1e35000 / transcend upgrade 60',

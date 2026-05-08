@@ -39,6 +39,7 @@ import {
   type Purchasable,
   type ProducerCategory,
   type PurchasableCategory,
+  type ModifierChain,
   bn,
   createResource,
   createProducerCategory,
@@ -46,6 +47,7 @@ import {
   createPurchasableCategory,
   createCostRequirement,
   createMultiplicativeModifier,
+  createModifierChain,
 } from 'open-loop-engine';
 import {
   COIN_PRODUCERS,
@@ -83,6 +85,9 @@ let coinProducerCategory: ProducerCategory<ProducerDef, void>;
 let acceleratorPurchasable: Purchasable;
 let multiplierPurchasable: Purchasable;
 let coinUpgradesCategory: PurchasableCategory<UpgradeDef, void>;
+let freeAcceleratorChain: ModifierChain;
+let freeMultiplierChain: ModifierChain;
+let acceleratorPowerBonusChain: ModifierChain;
 
 const ZERO: DecimalSource = 0;
 
@@ -117,6 +122,30 @@ export function getMultiplier(): Purchasable {
 /** Coin upgrades category (Upgrades-tab band 1-20). */
 export function getCoinUpgrades(): PurchasableCategory<UpgradeDef, void> {
   return coinUpgradesCategory;
+}
+
+/**
+ * Additive aggregator for free-Accelerator contributions. Achievement counter
+ * grants and (eventually) Upgrades 7/8/9/11 bind `add` modifiers; the
+ * Accelerator rate-effect closure reads `chain.apply(0)` into `bought + free`.
+ */
+export function getCoinFreeAcceleratorChain(): ModifierChain {
+  return freeAcceleratorChain;
+}
+
+/** Free-Multiplier additive aggregator. Mirrors `freeAccelerator`. */
+export function getCoinFreeMultiplierChain(): ModifierChain {
+  return freeMultiplierChain;
+}
+
+/**
+ * Additive bump to the canonical `acceleratorPower` coefficient. Achievement
+ * counter grants bind `add` modifiers; the Accelerator rate-effect closure
+ * reads `SCALER_BALANCE.acceleratorPower + chain.apply(0)` as the exponent
+ * base.
+ */
+export function getCoinAcceleratorPowerBonusChain(): ModifierChain {
+  return acceleratorPowerBonusChain;
 }
 
 // ============================================================================
@@ -267,28 +296,49 @@ export const coinModule: EngineModule = {
       bulkPurchase: false,
     });
 
+    // Free-X aggregators. Each chain composes additively: `apply(0)` returns
+    // the sum of `add`-bound modifiers (filtered by their `enabled` predicate).
+    // Achievement counter grants and (later) Upgrades 7/8/9/11 bind here.
+    freeAcceleratorChain = createModifierChain('coin/free-accelerator');
+    freeMultiplierChain = createModifierChain('coin/free-multiplier');
+    acceleratorPowerBonusChain = createModifierChain('coin/accelerator-power-bonus');
+
     // Accelerator + Multiplier rate-effect bindings into all 5 coin producers.
     // Canonical `acceleratorEffect` and `multiplierEffect` (Synergism.ts) compose
     // into globalCoinMultiplier; here they bind directly into per-producer
     // rateChains as the engine-idiomatic surface. First-arc math:
-    //   acceleratorEffect ≈ acceleratorPower ^ totalAccelerator
-    //   multiplierEffect  ≈ multiplierPower  ^ totalMultiplier
-    // Free-Accelerator and free-Multiplier contributions (canonical
-    // `freeAccelerator` / `freeMultiplier`) port with the upgrade rework that
-    // adds upgrades 7/8/9/11.
+    //   acceleratorEffect ≈ (acceleratorPower + powerBonus) ^ (bought + free)
+    //   multiplierEffect  ≈ multiplierPower  ^ (bought + free)
+    // Free-Accelerator / free-Multiplier / acceleratorPower-bonus aggregators
+    // come from achievement counter grants (leaf 7) and the cumulative-buy
+    // rework around upgrades 7/8/9/11.
     for (const entry of coinProducerCategory.getAll()) {
       const chain = entry.producer.rateChain;
       chain.bind({
         modifier: createMultiplicativeModifier({
-          multiplier: () =>
-            Decimal.pow(SCALER_BALANCE.acceleratorPower, acceleratorPurchasable.amount.value),
+          multiplier: () => {
+            const base = Decimal.add(
+              SCALER_BALANCE.acceleratorPower,
+              acceleratorPowerBonusChain.apply(0),
+            );
+            const total = Decimal.add(
+              acceleratorPurchasable.amount.value,
+              freeAcceleratorChain.apply(0),
+            );
+            return Decimal.pow(base, total);
+          },
           description: 'Accelerator',
         }),
       });
       chain.bind({
         modifier: createMultiplicativeModifier({
-          multiplier: () =>
-            Decimal.pow(SCALER_BALANCE.multiplierPower, multiplierPurchasable.amount.value),
+          multiplier: () => {
+            const total = Decimal.add(
+              multiplierPurchasable.amount.value,
+              freeMultiplierChain.apply(0),
+            );
+            return Decimal.pow(SCALER_BALANCE.multiplierPower, total);
+          },
           description: 'Multiplier',
         }),
       });

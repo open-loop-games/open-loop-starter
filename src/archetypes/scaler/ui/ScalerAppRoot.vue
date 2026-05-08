@@ -17,6 +17,7 @@ import PrestigePanel from './PrestigePanel.vue';
 import RunesPanel from './RunesPanel.vue';
 import TranscendPanel from './TranscendPanel.vue';
 import ChallengesPanel from './ChallengesPanel.vue';
+import AchievementsModal from './AchievementsModal.vue';
 import CoinReadout from './CoinReadout.vue';
 import PrestigeReadout from './PrestigeReadout.vue';
 import TranscendReadout from './TranscendReadout.vue';
@@ -63,6 +64,10 @@ const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.
 // transcend tab itself. Canonical Synergism gates the Challenges tab on the
 // transcension unlock; first-arc port collapses to the same one-way latch.
 const challengesUnlocked = transcendUnlocked;
+
+function openAchievements(): void {
+  const id = stack.push(AchievementsModal, { onClose: () => stack.remove(id) }, 'lg');
+}
 
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
@@ -168,6 +173,13 @@ function getActiveModules(): EngineModule[] {
               Challenges
             </TabsTrigger>
           </TabsList>
+          <button
+            type="button"
+            class="scaler-tabs__trigger scaler-tabs__trigger--button"
+            @click="openAchievements"
+          >
+            Achievements
+          </button>
         </template>
         <TabsContent
           value="buildings"

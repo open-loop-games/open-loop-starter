@@ -113,6 +113,7 @@ function inAnyTranscensionChallenge(): boolean {
 let prestigePoints: Resource<DecimalSource> & Persistent<DecimalSource>;
 let prestigeShards: Resource<DecimalSource> & Persistent<DecimalSource>;
 let coinsThisPrestige: Persistent<DecimalSource>;
+let prestigeCount: Persistent<number>;
 
 let firstGeneratedDiamonds: Persistent<DecimalSource>;
 let secondGeneratedDiamonds: Persistent<DecimalSource>;
@@ -139,6 +140,14 @@ export function getPrestigeShards(): Resource<DecimalSource> {
 
 export function getCoinsThisPrestige(): Persistent<DecimalSource> {
   return coinsThisPrestige;
+}
+
+/**
+ * Prestige conversion count. Increments inside `prestigeConversion.afterConvert`.
+ * Lifetime-tagged so it survives the prestige reset that fires immediately after.
+ */
+export function getPrestigeCount(): Persistent<number> {
+  return prestigeCount;
 }
 
 export function getDiamondProducers(): ProducerCategory<ProducerDef, void> {
@@ -212,6 +221,10 @@ export const prestigeModule: EngineModule = {
     // (resets to 100, not 0). Used as the input to `prestigePointGain` so
     // spending coins on producers doesn't disqualify the player from prestige.
     coinsThisPrestige = persistent<DecimalSource>(100, { name: 'coinsThisPrestige' });
+
+    // Conversion counter — incremented inside `afterConvert`. Lifetime-tagged
+    // so it survives the prestige reset that fires immediately after.
+    prestigeCount = persistent<number>(0, { name: 'prestigeCount', lifetime: true });
 
     // Cascade-feed accumulators per `Synergism.ts:3227-3238`. Diamond-1's
     // `extraCount` reads `firstGeneratedDiamonds`, etc. Diamond-5 has no
@@ -426,6 +439,7 @@ export const prestigeModule: EngineModule = {
         },
       },
       afterConvert: () => {
+        prestigeCount.value += 1;
         prestigeReset.reset();
       },
     });

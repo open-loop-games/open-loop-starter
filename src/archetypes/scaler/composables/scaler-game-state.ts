@@ -17,9 +17,17 @@
  */
 
 import { Decimal, type DecimalSource } from 'open-loop-engine';
-import type { RuneId, ScalerGameState, Tier, UpgradeGrant } from '../data';
+import type { CounterId, RuneId, ScalerGameState, Tier, UpgradeGrant } from '../data';
 import { COIN_UPGRADES, PRESTIGE_UPGRADES, TRANSCEND_UPGRADES } from '../data';
-import { getCoinProducers, getCoinUpgrades, getAccelerator, getMultiplier } from '../modules/coin';
+import {
+  getCoinProducers,
+  getCoinUpgrades,
+  getAccelerator,
+  getMultiplier,
+  getCoinFreeAcceleratorChain,
+  getCoinFreeMultiplierChain,
+  getCoinAcceleratorPowerBonusChain,
+} from '../modules/coin';
 import {
   getDiamondProducers,
   getCrystalUpgrades,
@@ -27,6 +35,8 @@ import {
   getPrestigePoints,
   getPrestigeShards,
   getCoinsThisPrestige,
+  getPrestigeCount,
+  getPrestigePointGain,
 } from '../modules/prestige';
 import {
   getMythosProducers,
@@ -35,9 +45,13 @@ import {
   getTranscendShards,
   getCoinsThisTranscension,
   getTranscendCount,
+  getTranscendPointGain,
+  getAcceleratorBoostBought,
+  getTranscendFreeAccelBoostChain,
 } from '../modules/transcend';
 import { getOfferings, getRuneLevel } from '../modules/runes';
 import { getChallengesCategory } from '../modules/challenges';
+import { getAchievementPoints } from '../modules/achievements';
 
 const ZERO: DecimalSource = 0;
 
@@ -131,6 +145,21 @@ export function buildScalerGameState(): ScalerGameState {
           } catch {
             return ZERO;
           }
+        case 'prestigePointGain':
+          // Reactive readout of the live prestige conversion gain — canonical
+          // `G.prestigePointGain` (`Synergism.ts:3563-3565`). Read by achievement
+          // predicates checking gain thresholds.
+          try {
+            return getPrestigePointGain()?.value ?? ZERO;
+          } catch {
+            return ZERO;
+          }
+        case 'transcendPointGain':
+          try {
+            return getTranscendPointGain()?.value ?? ZERO;
+          } catch {
+            return ZERO;
+          }
         default:
           // Reincarnation / ascension refs land in their leaves.
           return ZERO;
@@ -167,6 +196,13 @@ export function buildScalerGameState(): ScalerGameState {
     multiplierBought(): DecimalSource {
       return getMultiplier()?.amount.value ?? ZERO;
     },
+    acceleratorBoostBought(): number {
+      try {
+        return getAcceleratorBoostBought()?.value ?? 0;
+      } catch {
+        return 0;
+      }
+    },
 
     crystalLevel(position: number): DecimalSource {
       const id = `crystal-${position}`;
@@ -196,6 +232,14 @@ export function buildScalerGameState(): ScalerGameState {
       }
     },
 
+    prestigeCount(): number {
+      try {
+        return getPrestigeCount()?.value ?? 0;
+      } catch {
+        return 0;
+      }
+    },
+
     transcendCount(): number {
       try {
         return getTranscendCount()?.value ?? 0;
@@ -205,10 +249,11 @@ export function buildScalerGameState(): ScalerGameState {
     },
 
     achievementPoints(): number {
-      // Achievements (leaf 7) provides the live ref. Returns 0 pre-leaf-7 —
-      // transcend upgrade 47's closure (`Synergism.ts:3057-3061`) ports
-      // verbatim and evaluates to identity 1 against this default.
-      return 0;
+      try {
+        return getAchievementPoints()?.value ?? 0;
+      } catch {
+        return 0;
+      }
     },
 
     challengeCompletions(idx: 1 | 2 | 3 | 4 | 5): number {
@@ -235,13 +280,29 @@ export function buildScalerGameState(): ScalerGameState {
 /**
  * Resolve a data-side `UpgradeGrant` into one or more engine `Grant` entries.
  *
- * `tier-global` scope binds the same multiplier into every producer's
- * rateChain in the tier (array form of `Grant.chain`); `producer` scope
- * resolves to one chain by id. Cross-tier scopes — Crystal upgrades binding
- * into coin producers, transcend upgrades binding into coin/prestige — flow
- * through `scope.tier`, dispatching to the right category at expansion time.
+ * Multiplier grants: `tier-global` scope binds the same multiplier into every
+ * producer's rateChain in the tier (array form of `Grant.chain`); `producer`
+ * scope resolves to one chain by id. Cross-tier scopes — Crystal upgrades
+ * binding into coin producers, transcend upgrades binding into coin/prestige
+ * — flow through `scope.tier`, dispatching to the right category at expansion
+ * time.
+ *
+ * Counter grants: emit an `add` Grant onto the named free-X aggregator chain
+ * (`coin/free-accelerator`, etc). Coin/transcend modifier closures read each
+ * chain's `apply(0)` (the additive sum of all earned-and-purchased
+ * contributions) into `bought + free`-style totals.
  */
 export function expandUpgradeGrant(grant: UpgradeGrant, state: ScalerGameState) {
+  if (grant.kind === 'counter') {
+    const chain = resolveCounterChain(grant.counter);
+    if (chain == null) return undefined;
+    return {
+      chain,
+      add: () => grant.value(state),
+      description: grant.description,
+    };
+  }
+
   const { scope, multiplier, description } = grant;
 
   const resolveCategory = (tier: Tier) => {
@@ -263,7 +324,6 @@ export function expandUpgradeGrant(grant: UpgradeGrant, state: ScalerGameState) 
     if (scope.kind === 'producer') {
       return cat.getProducer(scope.producerId)?.rateChain;
     }
-    // tier-global — bind into every producer in the tier
     return cat.getAll().map((e) => e.producer.rateChain);
   })();
 
@@ -276,4 +336,16 @@ export function expandUpgradeGrant(grant: UpgradeGrant, state: ScalerGameState) 
     mult: () => multiplier(state),
     description,
   };
+}
+
+function resolveCounterChain(counter: CounterId) {
+  try {
+    if (counter === 'freeAccelerator') return getCoinFreeAcceleratorChain();
+    if (counter === 'freeMultiplier') return getCoinFreeMultiplierChain();
+    if (counter === 'acceleratorPowerBonus') return getCoinAcceleratorPowerBonusChain();
+    if (counter === 'freeAccelBoost') return getTranscendFreeAccelBoostChain();
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }

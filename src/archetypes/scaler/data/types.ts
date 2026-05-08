@@ -95,17 +95,49 @@ export type UpgradeEffectScope =
   | { kind: 'tier-global'; tier: Tier };
 
 /**
- * Multiplicative grant contributed by an upgrade while it is active.
- * `multiplier` is a closure over typed game state — modules resolve the
- * `ScalerGameState` accessor at install time and re-bind on tick.
+ * Named additive accumulator chain bound by counter-kind grants. Modeled as
+ * `ModifierChain`s whose `apply(0)` returns the sum of bound additive
+ * modifiers — coin/transcend modifier closures read `bought + chain.apply(0)`
+ * to fold free-X contributions into the canonical totals.
+ *
+ * - `freeAccelerator` / `freeMultiplier` — coin-tier free purchasable counts.
+ * - `freeAccelBoost` — transcend-tier free Accelerator Boost count.
+ * - `acceleratorPowerBonus` — additive bump to the canonical Accelerator
+ *   power coefficient (`SCALER_BALANCE.acceleratorPower`).
  */
-export interface UpgradeGrant {
-  scope: UpgradeEffectScope;
-  /** Active-state multiplier; identity-1 means no contribution. */
-  multiplier: (state: ScalerGameState) => DecimalSource;
-  /** Description used for chain-binding attribution (workbench / tooltip). */
-  description: string;
-}
+export type CounterId =
+  | 'freeAccelerator'
+  | 'freeMultiplier'
+  | 'freeAccelBoost'
+  | 'acceleratorPowerBonus';
+
+/**
+ * Grant contributed by an upgrade or achievement while it is active.
+ * Discriminated on `kind`:
+ * - `'multiplier'` — multiplicative chain.bind onto producer rateChain(s).
+ * - `'counter'` — additive contribution to a named counter chain (free-X
+ *   accumulators consumed by coin/transcend modifier closures).
+ *
+ * Closures resolve the `ScalerGameState` accessor at install time and
+ * re-evaluate on every chain read.
+ */
+export type UpgradeGrant =
+  | {
+      kind: 'multiplier';
+      scope: UpgradeEffectScope;
+      /** Active-state multiplier; identity-1 means no contribution. */
+      multiplier: (state: ScalerGameState) => DecimalSource;
+      /** Description used for chain-binding attribution (workbench / tooltip). */
+      description: string;
+    }
+  | {
+      kind: 'counter';
+      counter: CounterId;
+      /** Additive value contributed while active. */
+      value: (state: ScalerGameState) => DecimalSource;
+      /** Description used for chain-binding attribution. */
+      description: string;
+    };
 
 /**
  * One-time upgrade in the Upgrades-tab grid (positions 1–60). Canonical:
@@ -353,12 +385,19 @@ export interface ScalerGameState {
   acceleratorBought(): DecimalSource;
   /** Cumulative Multiplier purchases — `Buy.ts` calls this `totalMultiplier`. */
   multiplierBought(): DecimalSource;
+  /** Cumulative Accelerator Boost purchases — `Buy.ts` calls this `acceleratorBoostBought`. */
+  acceleratorBoostBought(): number;
   /** Crystal upgrade level for a position 1..8 (per-cycle, zero post-prestige). */
   crystalLevel(position: number): DecimalSource;
   /** Integer level of a rune (post `updateLevelsFromEXP`). */
   runeLevel(rune: RuneId): number;
   /** Live `offerings` resource value. */
   offeringsValue(): DecimalSource;
+  /**
+   * Number of prestige conversions completed (canonical `player.prestigeCount`).
+   * Increments inside `prestigeConversion.afterConvert`.
+   */
+  prestigeCount(): number;
   /**
    * Number of transcend conversions completed (canonical `player.transcendCount`).
    * Increments inside `transcendConversion.afterConvert`. Returns 0 pre-leaf 5.
@@ -423,6 +462,77 @@ export interface ScalerChallengeDef {
   completionLimit: number;
 }
 
+/**
+ * First-arc achievement group ids per `Achievements.ts:2479+ groupedAchievementData`.
+ * Filtered to groups whose `displayCondition` resolves true at default state with
+ * `prestigeCount > 0` or `transcendCount > 0` (`hasResetAtOrAboveLevel` of
+ * `prestige` / `transcension`). Reincarnation+ groups are excluded; rows from
+ * canonical groups outside this set port as fork-extension territory.
+ *
+ * The literal `'ungrouped'` slot is the canonical receipt for ungrouped rows
+ * (`Achievements.ts:2685+ ungroupedAchievementData`).
+ */
+export type AchievementGroupId =
+  | 'firstOwnedCoin'
+  | 'secondOwnedCoin'
+  | 'thirdOwnedCoin'
+  | 'fourthOwnedCoin'
+  | 'fifthOwnedCoin'
+  | 'prestigeCount'
+  | 'prestigePointGain'
+  | 'accelerators'
+  | 'multipliers'
+  | 'acceleratorBoosts'
+  | 'transcensionCount'
+  | 'transcendPointGain'
+  | 'challenge1'
+  | 'challenge2'
+  | 'challenge3'
+  | 'challenge4'
+  | 'challenge5'
+  | 'ungrouped';
+
+/**
+ * First-arc achievement definition. Canonical sites:
+ * - Row array: `Achievements.ts:516-2479` (`achievements: Achievement[]`).
+ * - Grouped definitions: `Achievements.ts:3077+ groupedAchievementData`.
+ * - Ungrouped definitions: `Achievements.ts:3360+ ungroupedAchievementData`
+ *   (filtered to those whose `displayCondition` resolves at prestige/
+ *   transcension reset levels).
+ *
+ * Per spec § 5: predicate flip awards the achievement, binds its grants into
+ * the relevant rateChain(s), and contributes `pointValue` into the global AP
+ * curve. Achievement state is not in any `resetModules` and persists across
+ * all first-arc resets without explicit `keep:`.
+ */
+export interface AchievementDef {
+  /** Stable id, lifted from canonical `Achievement[]` row index (e.g. `'ach-1'`). */
+  id: string;
+  /** Display name. Lifted from canonical `i18next` keys at first-arc port. */
+  name: string;
+  /** Display description. */
+  description: string;
+  /** Canonical group slot (`'ungrouped'` for the loose-set rows). */
+  group: AchievementGroupId;
+  /** Tier whose rateChain receives multiplicative grants. Derived from the group's reset level. */
+  tier: Tier;
+  /** Achievement points awarded on earn — fold into the global AP curve. */
+  pointValue: number;
+  /** Hide tile until earned. */
+  hidden?: boolean;
+  /**
+   * Predicate over typed game state. Vue `watch` auto-completes the
+   * achievement when this transitions to `true`.
+   */
+  requirement: (state: ScalerGameState) => boolean;
+  /**
+   * Grants applied while the achievement is earned. Multiplier grants bind
+   * into producer rateChain(s); counter grants contribute additively to the
+   * named free-X chains. Closures over `ScalerGameState` re-evaluate live.
+   */
+  effects: UpgradeGrant[];
+}
+
 /** Aggregate type for the archetype's data tree, consumed by `boot.ts`. */
 export interface ScalerData {
   producers: {
@@ -441,5 +551,6 @@ export interface ScalerData {
   };
   crystalUpgrades: CrystalUpgradeDef[];
   challenges: ScalerChallengeDef[];
+  achievements: AchievementDef[];
   balance: ScalerBalance;
 }

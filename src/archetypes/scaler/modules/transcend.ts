@@ -66,12 +66,14 @@ import {
   type Reset,
   type Conversion,
   type Persistent,
+  type ModifierChain,
   createResource,
   createProducerCategory,
   createPurchasableCategory,
   createCostRequirement,
   createBooleanRequirement,
   createMultiplicativeModifier,
+  createModifierChain,
   anyOf,
   allOf,
   createReset,
@@ -134,6 +136,7 @@ let mythosCategory: ProducerCategory<ProducerDef, void>;
 let transcendUpgradesCategory: PurchasableCategory<UpgradeDef, void>;
 let transcendResetRef: Reset;
 let transcendConversion: Conversion;
+let freeAccelBoostChain: ModifierChain;
 
 let transcendPointGainComputed: ComputedRef<DecimalSource>;
 
@@ -163,6 +166,15 @@ export function getAcceleratorBoostBought(): Persistent<number> {
 
 export function getAcceleratorBoostCost(): Persistent<DecimalSource> {
   return acceleratorBoostCost;
+}
+
+/**
+ * Additive aggregator for free Accelerator Boost contributions. Achievement
+ * counter grants bind `add` modifiers; the Accelerator Boost rate-effect
+ * closure reads `chain.apply(0)` into `bought + free`.
+ */
+export function getTranscendFreeAccelBoostChain(): ModifierChain {
+  return freeAccelBoostChain;
 }
 
 /**
@@ -272,6 +284,11 @@ export const transcendModule: EngineModule = {
     thirdGeneratedMythos = persistent<DecimalSource>(0, { name: 'thirdGeneratedMythos' });
     fourthGeneratedMythos = persistent<DecimalSource>(0, { name: 'fourthGeneratedMythos' });
 
+    // Free Accelerator Boost aggregator. Achievement counter grants bind
+    // `add` modifiers; the Accelerator Boost rate-effect closure folds
+    // `chain.apply(0)` into `bought + free`.
+    freeAccelBoostChain = createModifierChain('transcend/free-accel-boost');
+
     // ─── Mythos producer category ──────────────────────────────────────────
     // Mythos-1: `trigger: 'continuous'` emits to `transcendShards` via
     // tickContinuousProducer. Mythos-2..5: `trigger: 'manual'` so the
@@ -339,11 +356,16 @@ export const transcendModule: EngineModule = {
     for (const entry of getCoinProducers().getAll()) {
       entry.producer.rateChain.bind({
         modifier: createMultiplicativeModifier({
-          multiplier: () =>
-            Decimal.pow(
+          multiplier: () => {
+            const totalBoost = Decimal.add(
+              acceleratorBoostBought.value,
+              freeAccelBoostChain.apply(0),
+            );
+            return Decimal.pow(
               SCALER_BALANCE.acceleratorPower,
-              SCALER_BALANCE.acceleratorBoostFreeAccelPerBuy * acceleratorBoostBought.value,
-            ),
+              Decimal.mul(SCALER_BALANCE.acceleratorBoostFreeAccelPerBuy, totalBoost),
+            );
+          },
           description: 'Accelerator Boost',
         }),
       });
