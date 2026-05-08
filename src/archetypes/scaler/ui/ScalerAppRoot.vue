@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
+import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
 import { type Engine, type EngineModule } from 'open-loop-engine';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
 import { AppFrame, DevPanelOverlay, TabsBarShell, useModalStack } from '@/lib';
@@ -14,8 +14,12 @@ import { manifest } from '../manifest';
 import BuildingsPanel from './BuildingsPanel.vue';
 import UpgradesPanel from './UpgradesPanel.vue';
 import PrestigePanel from './PrestigePanel.vue';
+import RunesPanel from './RunesPanel.vue';
 import CoinReadout from './CoinReadout.vue';
 import PrestigeReadout from './PrestigeReadout.vue';
+import OfferingsReadout from './OfferingsReadout.vue';
+import { Decimal } from 'open-loop-engine';
+import { getPrestigePoints } from '../modules';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -39,6 +43,12 @@ const stack = useModalStack();
 // the trigger strip sits in the shell's top nav (`#tabs` slot) and the
 // content panels render in the main area.
 const activeTab = ref<string>('buildings');
+
+// Runes tab unlocks at first prestige. `prestigePoints.cumulative` is
+// `lifetime: true` so the latch is one-way once first prestige fires
+// (canonical `Tabs.ts:632-634` rides on `player.unlocks.prestige`).
+const prestigePoints = getPrestigePoints();
+const runesUnlocked = computed(() => Decimal.gt(prestigePoints.cumulative?.value ?? 0, 0));
 
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
@@ -98,6 +108,7 @@ function getActiveModules(): EngineModule[] {
           <HudBar>
             <CoinReadout />
             <PrestigeReadout />
+            <OfferingsReadout />
           </HudBar>
         </template>
         <template #tabs>
@@ -120,6 +131,13 @@ function getActiveModules(): EngineModule[] {
             >
               Prestige
             </TabsTrigger>
+            <TabsTrigger
+              v-if="runesUnlocked"
+              value="runes"
+              class="scaler-tabs__trigger"
+            >
+              Runes
+            </TabsTrigger>
           </TabsList>
         </template>
         <TabsContent
@@ -139,6 +157,13 @@ function getActiveModules(): EngineModule[] {
           class="scaler-tabs__content"
         >
           <PrestigePanel />
+        </TabsContent>
+        <TabsContent
+          v-if="runesUnlocked"
+          value="runes"
+          class="scaler-tabs__content"
+        >
+          <RunesPanel />
         </TabsContent>
       </TabsBarShell>
     </TabsRoot>

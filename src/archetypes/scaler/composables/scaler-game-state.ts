@@ -17,7 +17,7 @@
  */
 
 import { Decimal, type DecimalSource } from 'open-loop-engine';
-import type { ScalerGameState, Tier, UpgradeGrant } from '../data';
+import type { RuneId, ScalerGameState, Tier, UpgradeGrant } from '../data';
 import { COIN_UPGRADES, PRESTIGE_UPGRADES } from '../data';
 import { getCoinProducers, getCoinUpgrades, getAccelerator, getMultiplier } from '../modules/coin';
 import {
@@ -28,6 +28,7 @@ import {
   getPrestigeShards,
   getCoinsThisPrestige,
 } from '../modules/prestige';
+import { getOfferings, getRuneLevel } from '../modules/runes';
 
 const ZERO: DecimalSource = 0;
 
@@ -113,6 +114,26 @@ export function buildScalerGameState(): ScalerGameState {
       if (!crystals) return ZERO;
       const crystal = crystals.find((c) => c.id === id);
       return crystal?.amount.value ?? ZERO;
+    },
+
+    runeLevel(rune: RuneId): number {
+      // Tolerates "runes module not yet installed" — same call-time-resolution
+      // pattern as the cross-tier accessors above. Throws if accessed before
+      // install completes; callers should not reach here on the first
+      // category-register tick.
+      try {
+        return getRuneLevel(rune).value;
+      } catch {
+        return 0;
+      }
+    },
+
+    offeringsValue(): DecimalSource {
+      try {
+        return getOfferings().value;
+      } catch {
+        return ZERO;
+      }
     },
   };
 }

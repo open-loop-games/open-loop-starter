@@ -149,6 +149,21 @@ export interface ScalerBalance {
    */
   costDivisor: DecimalSource;
   /**
+   * Base offerings credited at the top of every reset (`Reset.ts:406`
+   * `resetOfferings()` → `Calculate.ts:114-142` `calculateOfferings`). Canonical
+   * computes a base + later-arc multipliers; first-arc port lifts a constant
+   * trickle that the SI rune multiplies via `getRuneEffects('SI').offeringMult`.
+   */
+  offeringBaseGain: DecimalSource;
+  /**
+   * Per-rune EXP-per-level schedule from `Variables.ts:15` `runeexpbase`.
+   * First arc only ports the first 5 entries (runes 6/7 deferred per spec § 5).
+   * Currently unused — `RuneDef.costCoefficient` + `levelsPerOOM` already
+   * encode the canonical curve; this constant ports as a back-pocket reference
+   * for later-arc systems that read `runeexpbase` directly.
+   */
+  runeexpbase: readonly DecimalSource[];
+  /**
    * Accelerator power per `Variables.ts:50` (1.10). Each owned Accelerator
    * contributes `acceleratorPower` × `(totalAccelerator + freeAccelerator)`
    * to the rate boost via `acceleratorEffect`.
@@ -182,6 +197,72 @@ export interface ScalerBalance {
 }
 
 /**
+ * Base 5 rune ids, lifted from canonical `Runes.ts:51-57` `indexToRune` minus
+ * the later-arc entries. Order is the canonical sacrifice / display order.
+ */
+export type RuneId = 'speed' | 'duplication' | 'prism' | 'thrift' | 'superiorIntellect';
+
+/**
+ * Effect map per rune. Mirrors canonical `RuneTypeMap` (`Runes.ts:65-110`)
+ * for the base 5 only; later-arc runes (infiniteAscent / antiquities /
+ * horseShoe / finiteDescent) are out of scope. Keys match canonical so the
+ * effect closures port verbatim.
+ */
+export interface RuneEffectMap {
+  speed: {
+    acceleratorPower: number;
+    multiplicativeAccelerators: number;
+    globalSpeed: number;
+  };
+  duplication: {
+    multiplierBoosts: number;
+    multiplicativeMultipliers: number;
+    taxReduction: number;
+  };
+  prism: {
+    productionLog10: number;
+    costDivisorLog10: number;
+  };
+  thrift: {
+    costDelay: number;
+    salvage: number;
+    taxReduction: number;
+  };
+  superiorIntellect: {
+    offeringMult: number;
+    obtainiumMult: number;
+    antSpeed: number;
+  };
+}
+
+/**
+ * Per-rune definition. Numeric anchors lift verbatim from canonical
+ * `Runes.ts:357-560` rune objects: `costCoefficient` + `levelsPerOOM` drive
+ * the EXP-per-level curve. `effects(level)` ports the canonical effect closure
+ * for the rune; the level argument is the *effective* level (post
+ * `firstFiveEffectiveRuneLevelMult`, which is identity-1 at first arc).
+ */
+export interface RuneDef<K extends RuneId = RuneId> {
+  /** Stable id, matching the canonical key in `runes` (`Runes.ts:353`). */
+  id: K;
+  /** Display name shown in UI. */
+  displayName: string;
+  /**
+   * Canonical EXP-per-level curve coefficient. Total EXP to reach level L is
+   * `costCoefficient × (10^(L / levelsPerOOM) − 1)` (`Runes.ts:791-794`
+   * `computeEXPToLevel`).
+   */
+  costCoefficient: DecimalSource;
+  /** Levels per order-of-magnitude in the EXP curve. */
+  levelsPerOOM: number;
+  /**
+   * Effect closure lifted from canonical. Returns the per-effect-key map
+   * for this rune at the given effective level.
+   */
+  effects(level: number): RuneEffectMap[K];
+}
+
+/**
  * Typed read view of module state, exposed to predicate / multiplier closures
  * inside `data/upgrades.ts` (and `data/prestige.ts` for Crystal effects).
  * The shared accessor at `composables/scaler-game-state.ts` fills the methods
@@ -210,6 +291,10 @@ export interface ScalerGameState {
   multiplierBought(): DecimalSource;
   /** Crystal upgrade level for a position 1..8 (per-cycle, zero post-prestige). */
   crystalLevel(position: number): DecimalSource;
+  /** Integer level of a rune (post `updateLevelsFromEXP`). */
+  runeLevel(rune: RuneId): number;
+  /** Live `offerings` resource value. */
+  offeringsValue(): DecimalSource;
 }
 
 /** Aggregate type for the archetype's data tree, consumed by `boot.ts`. */

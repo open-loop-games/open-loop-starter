@@ -48,6 +48,8 @@ import {
   getPrestigeConversion,
   getPrestigePoints,
 } from '../prestige';
+import { getOfferings, getRuneDefs, getRuneLevel, sacrificeRune } from '../runes';
+import type { RuneId } from '../../data';
 
 // ============================================================================
 // Module state (populated in install)
@@ -61,6 +63,7 @@ let togglePrestige: Persistent<boolean>;
 let toggleDiamondProducers: Persistent<boolean>;
 let togglePrestigeUpgrades: Persistent<boolean>;
 let toggleCrystalUpgrades: Persistent<boolean>;
+let toggleAutoSacrifice: Persistent<boolean>;
 
 // ============================================================================
 // Public access
@@ -74,6 +77,7 @@ export interface AutobuyerToggles {
   diamondProducers: Persistent<boolean>;
   prestigeUpgrades: Persistent<boolean>;
   crystalUpgrades: Persistent<boolean>;
+  autoSacrifice: Persistent<boolean>;
 }
 
 export function getAutoEnabled(): Persistent<boolean> {
@@ -89,6 +93,7 @@ export function getAutobuyerToggles(): AutobuyerToggles {
     diamondProducers: toggleDiamondProducers,
     prestigeUpgrades: togglePrestigeUpgrades,
     crystalUpgrades: toggleCrystalUpgrades,
+    autoSacrifice: toggleAutoSacrifice,
   };
 }
 
@@ -111,6 +116,7 @@ export const autobuyersModule: EngineModule = {
     toggleDiamondProducers = persistent<boolean>(true, { name: 'autoDiamondProducers' });
     togglePrestigeUpgrades = persistent<boolean>(true, { name: 'autoPrestigeUpgrades' });
     toggleCrystalUpgrades = persistent<boolean>(true, { name: 'autoCrystalUpgrades' });
+    toggleAutoSacrifice = persistent<boolean>(true, { name: 'autoSacrifice' });
 
     // Tier-presence: prestige autobuyers act once first prestige has fired.
     // `Resource.cumulative` is `lifetime: true` (engine-side; per
@@ -180,5 +186,41 @@ export const autobuyersModule: EngineModule = {
       () => autoEnabled.value && toggleCrystalUpgrades.value && prestigeUnlocked.value,
       ctx.onTick,
     );
+
+    // ─── Auto-sacrifice (tier-presence gated) ──────────────────────────────
+    // Single flat toggle per leaf-3 shape. Each tick picks the lowest-level
+    // rune and consumes the entire offerings pool into it. Canonical
+    // `Automation.ts` runs 5 separate per-rune autobuyers gated on
+    // `upgrades[83..87]`; the unlock-purchasable economy ships fork-extension
+    // per spec § 5, so the first-arc port collapses to a round-robin-by-
+    // lowest-level pick. No `setupSweep/PolicyAutoPurchase` fits — sacrifice
+    // is a single-button-with-budget action, not a sweep.
+    const offerings = getOfferings();
+    const runeDefs = getRuneDefs();
+    const runeLevels: ReadonlyArray<{ id: RuneId; level: () => number }> = runeDefs.map((def) => ({
+      id: def.id,
+      level: () => getRuneLevel(def.id).value,
+    }));
+
+    ctx.onTick(() => {
+      if (!autoEnabled.value || !toggleAutoSacrifice.value) return;
+      if (!prestigeUnlocked.value) return;
+      if (Decimal.lte(offerings.value, 0)) return;
+
+      // Pick the rune with the lowest current level. Ties resolve by canonical
+      // sacrifice order (Speed → Duplication → Prism → Thrift → SI), which is
+      // the array order from `getRuneDefs()`.
+      let target = runeLevels[0];
+      let minLevel = target.level();
+      for (let i = 1; i < runeLevels.length; i++) {
+        const l = runeLevels[i].level();
+        if (l < minLevel) {
+          minLevel = l;
+          target = runeLevels[i];
+        }
+      }
+
+      sacrificeRune(target.id, offerings.value);
+    });
   },
 };
