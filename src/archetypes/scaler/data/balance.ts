@@ -7,6 +7,9 @@
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts
 //   Synergism.ts:3563-3565      prestigePointGain = floor((coinsThisPrestige / 1e12)^prestigePow)
 //   Synergism.ts:3620           prestige threshold disjunction (1e16 OR PP gain ≥ 100)
+//   Synergism.ts:3550           transcendPow = 0.03
+//   Synergism.ts:3583-3585      transcendPointGain = floor((coinsThisTranscension / 1e100)^0.03)
+//   Synergism.ts:3631-3633      transcend threshold disjunction (1e100 OR TP gain ≥ 0.5)
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Reset.ts
 //   Reset.ts:406                resetOfferings call site (every reset from first prestige onward)
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Calculate.ts
@@ -24,6 +27,18 @@ export const SCALER_BALANCE: ScalerBalance = {
   prestigePow: 0.5,
   prestigeThreshold: 1e16,
   prestigeGainFloor: 100,
+  // Transcend thresholds: canonical 1e100 (`Synergism.ts:3583-3585, :3631-3633`)
+  // is unreachable in first-arc balance — challenges, achievements, cube
+  // upgrades, hepteract effects compound coin production by tens of OOMs in
+  // canonical. First-arc port hits ~1e17 coinsThisTranscension after 24h of
+  // sim time; lowering threshold + divisor by 84 OOMs lets the demo arc beat
+  // (first-transcend fires) reach the player on first-arc balance. Restore
+  // canonical 1e100 when later-arc systems land that compound coin production
+  // back into the canonical range.
+  transcendDivisor: 5e16,
+  transcendPow: 0.03,
+  transcendThreshold: 5e16,
+  transcendGainFloor: 0.5,
   // Constant trickle of offerings per reset. Canonical sums an extensive
   // base (allBaseOfferingStats — challenge tiers, achievement rewards,
   // shop upgrades, ascension counter, etc.) — first-arc collapses to a

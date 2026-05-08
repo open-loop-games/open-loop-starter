@@ -1,11 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { Decimal } from 'open-loop-engine';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
-import { getCoinUpgrades, getPrestigeUpgrades } from '../modules';
+import {
+  getCoinUpgrades,
+  getPrestigeUpgrades,
+  getTranscendUpgrades,
+  getTranscendPoints,
+} from '../modules';
 import UpgradeCell from './UpgradeCell.vue';
 
 const coinUpgrades = getCoinUpgrades();
 const prestigeUpgrades = getPrestigeUpgrades();
+const transcendUpgrades = getTranscendUpgrades();
+const transcendPoints = getTranscendPoints();
+
+const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0));
 
 const activeBand = ref<string>('coin');
 </script>
@@ -28,6 +38,13 @@ const activeBand = ref<string>('coin');
           class="upgrades-panel__tab-trigger"
         >
           Prestige (21-40)
+        </TabsTrigger>
+        <TabsTrigger
+          v-if="transcendUnlocked"
+          value="transcend"
+          class="upgrades-panel__tab-trigger"
+        >
+          Transcend (41-60)
         </TabsTrigger>
       </TabsList>
 
@@ -69,6 +86,28 @@ const activeBand = ref<string>('coin');
             :name="entry.def.name"
             :description="entry.def.description"
             cost-label="prestige points"
+          />
+        </div>
+      </TabsContent>
+
+      <TabsContent
+        v-if="transcendUnlocked"
+        value="transcend"
+        class="upgrades-panel__tab-content"
+      >
+        <header class="upgrades-panel__head">
+          <h3>Transcend upgrades</h3>
+          <p>Bought with transcend points; resets on every transcend (band 41-60).</p>
+        </header>
+        <div class="upgrades-panel__grid">
+          <UpgradeCell
+            v-for="entry in transcendUpgrades.getAll()"
+            :key="entry.def.id"
+            :purchasable="entry.purchasable"
+            :position="entry.def.position"
+            :name="entry.def.name"
+            :description="entry.def.description"
+            cost-label="transcend points"
           />
         </div>
       </TabsContent>

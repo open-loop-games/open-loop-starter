@@ -2,17 +2,27 @@
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Variables.ts
 //   Variables.ts:21        upgradeCosts row 1 (coin band 1-20, log10 grid)
 //   Variables.ts:22        upgradeCosts row 2 (prestige band 21-40, log10 grid)
+//   Variables.ts:23        upgradeCosts row 3 (transcend band 41-60, log10 grid)
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts
 //   Synergism.ts:2914-2982  per-upgrade rate-effect routing into coin{N}Multi
 //   Synergism.ts:2848-2870  global coin multiplier `s` (upgrade 6, 12, 20)
+//   Synergism.ts:2851-2862  globalCoinMultiplier base `s` (upgrades 41, 43, 48)
+//   Synergism.ts:2916-2974  coinOneMulti..coinFiveMulti (upgrades 56-60)
+//   Synergism.ts:3047-3081  globalMythosMultiplier (upgrades 42, 47, 51, 52)
+//   Synergism.ts:3099-3116  mythosupgrade13/14/15 (upgrades 53, 54, 55)
 //   Synergism.ts:4051-4059  upgrade 14/15 cascade-gate boosts (inert pre-cascade)
 //   Synergism.ts:2436-2462  upgrades 21-25/32/45 — feed `freeUpgradeAccelerator`
 //   Synergism.ts:2582-2627  upgrades 21-25/33/34/35/49/68 — feed `freeUpgradeMultiplier`
 //   Synergism.ts:2985-2988  upgrade 36 — globalCrystalMultiplier
 //                           ×= min(1e5000, prestigePoints^(1/500))
+//   Synergism.ts:3586-3594  upgrade 44 — transcendPointGain × min(1e6, 1.01^transcendCount)
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Reset.ts
 //   Reset.ts:1411-1413     resetUpgrades zeros 1-20 always
 //   Reset.ts:1430-1432     resetUpgrades(2+) zeros 21-40 on prestige
+//   Reset.ts:1376-1442     resetUpgrades(2) zeros 41-60 on transcend (via the
+//                          shared band-walk; transcend reset bundles
+//                          ['scaler-coin','scaler-prestige','scaler-transcend']
+//                          so band 41-60 falls out of module-scoped sweep)
 // Canonical: open-loop-research/reference-code/SynergismOfficial/translations/en.json
 //   upgrades.names + upgrades.descriptions  i18n strings
 // ─────────────────────────────────────────────────────────────────────────────
@@ -377,5 +387,227 @@ export const PRESTIGE_UPGRADES: UpgradeDef[] = Array.from({ length: 20 }, (_, i)
     name,
     description,
     effects: prestigeGrantsByPosition[position] ?? [],
+  };
+});
+
+// ─── Skeleton ───
+// Transcend band 41-60: cost = `10^costLog` of `transcendPoints`. Single-buy
+// (`Variables.ts:9` `Upgrade.transcend = 'transcendPoints'`). Reset on every
+// transcend (`Reset.ts:1376-1442`'s `resetUpgrades(2)` walks bands 21-40 and
+// 41-60 together — module-scoped sweep handles it via `resetModules:
+// ['scaler-coin','scaler-prestige','scaler-transcend']`).
+//
+// Effect fidelity at first arc — 9 active routes lift verbatim into rate-
+// chain bindings; 11 routes ship inert with documented reasons:
+//
+// - **Active (9):**
+//   - 41 → globalCoinMultiplier `s` × min(1e30, sqrt(transcendPoints+4))
+//          (`Synergism.ts:2851-2854`)
+//   - 42 → globalMythosMultiplier × min(1e50,
+//          ((prestigePoints+1)^(1/50))/2.5+1) (`:3047-3055`)
+//   - 43 → globalCoinMultiplier `s` × min(1e30, 1.01^transcendCount)
+//          (`:2856-2858`)
+//   - 47 → globalMythosMultiplier × 1.01^achievementPoints ×
+//          (achievementPoints/5+1) (`:3057-3061`) — closure ports
+//          verbatim; achievementPoints is 0 at first arc → identity 1.
+//   - 56-60 → coinOneMulti..coinFiveMulti × {1e5000, 1e7500, 1e15000,
+//          1e25000, 1e35000} (`:2916-2974`)
+//
+// - **Inert at first arc (11):**
+//   - 44 — modifies `transcendPointGain` (conversion output, not a chain bind);
+//     defer to balance leaf or transcend-conversion-modifier follow-up.
+//   - 45, 49 — feed `freeUpgradeAccelerator` / `freeUpgradeMultiplier`
+//     pipelines (`:2457-2462, :2600-2605`); pending the cumulative-buy free-
+//     amount rework that upgrades 7/8/9/11 also depend on.
+//   - 46 — sets `tuSevenMulti = 1.05` feeding `acceleratorPower` formula
+//     (`:2505-2507, :2516`); same blocker as 45/49.
+//   - 48 — globalCoinMultiplier `s` × ((totalAccelerator × totalMultiplier)
+//     /1000+1)^8 (`:2859-2862`); reaches into the cumulative-buy free-amount
+//     machinery (totalAccelerator/totalMultiplier counts include free
+//     amounts), defer with rework.
+//   - 50 — only fires inside a challenge (`:2649-2654`); leaf 6.
+//   - 51 — globalMythosMultiplier × totalAcceleratorBoost^2 (`:3062-3065`);
+//     totalAcceleratorBoost = 0 pre-OL-905 would zero mythos production.
+//   - 52 — globalMythosMultiplier × globalMythosMultiplier^0.025
+//     (`:3067-3070`); self-referencing recursion — cannot bind a chain to
+//     itself. Defer to a dedicated handler when the mythos-self-feedback
+//     pattern earns a primitive.
+//   - 53, 54 — mythosupgrade13/14 ×= acceleratorEffect^(1/125) /
+//     multiplierEffect^(1/180) (`:3102-3110`); these multipliers are
+//     per-mythos-producer (mythos-5 / mythos-4 in the cascade `:3253-3273`),
+//     reaching into the same `acceleratorEffect`/`multiplierEffect` machinery
+//     as the cumulative-buy rework.
+//   - 55 — mythosupgrade15 × 1e1000^min(1000, buildingPower-1) (`:3112-3115`);
+//     buildingPower lands with ascensions (later-arc).
+
+const transcendGrantsByPosition: Record<number, UpgradeGrant[]> = {
+  41: [
+    {
+      scope: { kind: 'tier-global', tier: 'coin' },
+      multiplier: (state) => {
+        const tp = bn(state.resourceValue('transcendPoints'));
+        return Decimal.min(1e30, Decimal.pow(tp.add(4), 1 / 2));
+      },
+      description: 'Coin multiplier from transcend points / transcend upgrade 41',
+    },
+  ],
+  42: [
+    {
+      scope: { kind: 'tier-global', tier: 'transcend' },
+      multiplier: (state) => {
+        const pp = bn(state.resourceValue('prestigePoints'));
+        return Decimal.min(
+          1e50,
+          Decimal.pow(pp.add(1), 1 / 50)
+            .div(2.5)
+            .add(1),
+        );
+      },
+      description: 'Mythos multiplier from prestige points / transcend upgrade 42',
+    },
+  ],
+  43: [
+    {
+      scope: { kind: 'tier-global', tier: 'coin' },
+      multiplier: (state) => {
+        const tc = state.transcendCount();
+        return Decimal.min(1e30, Decimal.pow(1.01, tc));
+      },
+      description: 'Coin multiplier from transcend count / transcend upgrade 43',
+    },
+  ],
+  // 44, 45, 46 — see citation block above (transcendPointGain modifier /
+  // freeUpgradeAccelerator / acceleratorPower; ship inert).
+  47: [
+    {
+      scope: { kind: 'tier-global', tier: 'transcend' },
+      multiplier: (state) => {
+        // Inert until achievements (leaf 7) — `achievementPoints` is 0
+        // pre-leaf-7 so 1.01^0 × (0/5+1) = 1. Closure ports verbatim.
+        const ap = state.achievementPoints();
+        return Decimal.mul(Decimal.pow(1.01, ap), ap / 5 + 1);
+      },
+      description: 'Mythos multiplier from achievements / transcend upgrade 47',
+    },
+  ],
+  // 48-55 — see citation block above (cumulative-buy machinery /
+  // challenge-conditional / Accelerator Boost / mythos-self-feedback /
+  // acceleratorEffect / multiplierEffect / buildingPower; ship inert).
+  56: [
+    {
+      scope: { kind: 'producer', tier: 'coin', producerId: 'coin-1' },
+      multiplier: () => '1e5000',
+      description: 'Worker × 1e5000 / transcend upgrade 56',
+    },
+  ],
+  57: [
+    {
+      scope: { kind: 'producer', tier: 'coin', producerId: 'coin-2' },
+      multiplier: () => '1e7500',
+      description: 'Investment × 1e7500 / transcend upgrade 57',
+    },
+  ],
+  58: [
+    {
+      scope: { kind: 'producer', tier: 'coin', producerId: 'coin-3' },
+      multiplier: () => '1e15000',
+      description: 'Printer × 1e15000 / transcend upgrade 58',
+    },
+  ],
+  59: [
+    {
+      scope: { kind: 'producer', tier: 'coin', producerId: 'coin-4' },
+      multiplier: () => '1e25000',
+      description: 'Mint × 1e25000 / transcend upgrade 59',
+    },
+  ],
+  60: [
+    {
+      scope: { kind: 'producer', tier: 'coin', producerId: 'coin-5' },
+      multiplier: () => '1e35000',
+      description: 'Alchemy × 1e35000 / transcend upgrade 60',
+    },
+  ],
+};
+
+const TRANSCEND_BAND_DESCRIPTIONS: Record<number, { name: string; description: string }> = {
+  41: { name: 'Mythos Upgrade 1', description: 'Coin multiplier scales with transcend points.' },
+  42: { name: 'Mythos Upgrade 2', description: 'Mythos multiplier scales with prestige points.' },
+  43: { name: 'Mythos Upgrade 3', description: 'Coin multiplier scales with transcend count.' },
+  44: {
+    name: 'Mythos Upgrade 4',
+    description: 'Transcend point gain ×= 1.01^transcendCount (deferred).',
+  },
+  45: {
+    name: 'Mythos Upgrade 5',
+    description: 'Free Accelerators from transcend shards (deferred).',
+  },
+  46: { name: 'Mythos Upgrade 6', description: 'Accelerator power bonus (deferred).' },
+  47: { name: 'Mythos Upgrade 7', description: 'Mythos multiplier from achievement points.' },
+  48: {
+    name: 'Mythos Upgrade 8',
+    description: 'Coin multiplier from accelerator/multiplier counts (deferred).',
+  },
+  49: {
+    name: 'Mythos Upgrade 9',
+    description: 'Free Multipliers from transcend points (deferred).',
+  },
+  50: { name: 'Mythos Upgrade 10', description: 'In-challenge Multiplier scaling (deferred).' },
+  51: {
+    name: 'Mythos Upgrade 11',
+    description: 'Mythos multiplier from accelerator boosts (deferred until OL-905).',
+  },
+  52: {
+    name: 'Mythos Upgrade 12',
+    description: 'Mythos multiplier compounds itself (deferred — self-recursive shape).',
+  },
+  53: { name: 'Mythos Upgrade 13', description: 'Mythos-5 boost from acceleration (deferred).' },
+  54: {
+    name: 'Mythos Upgrade 14',
+    description: 'Mythos-4 boost from multiplication (deferred).',
+  },
+  55: { name: 'Mythos Upgrade 15', description: 'Mythos-3 boost from building power (inert).' },
+  56: { name: 'Mythos Upgrade 16', description: 'Multiply Worker production by 1e5000.' },
+  57: { name: 'Mythos Upgrade 17', description: 'Multiply Investment production by 1e7500.' },
+  58: { name: 'Mythos Upgrade 18', description: 'Multiply Printer production by 1e15000.' },
+  59: { name: 'Mythos Upgrade 19', description: 'Multiply Mint production by 1e25000.' },
+  60: { name: 'Mythos Upgrade 20', description: 'Multiply Alchemy production by 1e35000.' },
+};
+
+// Cost-log row 3 of `Variables.ts:23`.
+const TRANSCEND_COST_LOG_BY_POSITION: Record<number, number> = {
+  41: 1,
+  42: 2,
+  43: 3,
+  44: 5,
+  45: 6,
+  46: 7,
+  47: 42,
+  48: 65,
+  49: 87,
+  50: 150,
+  51: 300,
+  52: 500,
+  53: 1000,
+  54: 1500,
+  55: 2000,
+  56: 3000,
+  57: 6000,
+  58: 12000,
+  59: 25000,
+  60: 75000,
+};
+
+export const TRANSCEND_UPGRADES: UpgradeDef[] = Array.from({ length: 20 }, (_, i): UpgradeDef => {
+  const position = i + 41;
+  const { name, description } = TRANSCEND_BAND_DESCRIPTIONS[position];
+  return {
+    id: `upgrade-${position}`,
+    position,
+    tier: 'transcend',
+    costLog: TRANSCEND_COST_LOG_BY_POSITION[position],
+    name,
+    description,
+    effects: transcendGrantsByPosition[position] ?? [],
   };
 });

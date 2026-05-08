@@ -48,6 +48,12 @@ import {
   getPrestigeConversion,
   getPrestigePoints,
 } from '../prestige';
+import {
+  getMythosProducers,
+  getTranscendUpgrades,
+  getTranscendConversion,
+  getTranscendPoints,
+} from '../transcend';
 import { getOfferings, getRuneDefs, getRuneLevel, sacrificeRune } from '../runes';
 import type { RuneId } from '../../data';
 
@@ -64,6 +70,9 @@ let toggleDiamondProducers: Persistent<boolean>;
 let togglePrestigeUpgrades: Persistent<boolean>;
 let toggleCrystalUpgrades: Persistent<boolean>;
 let toggleAutoSacrifice: Persistent<boolean>;
+let toggleTranscend: Persistent<boolean>;
+let toggleMythosProducers: Persistent<boolean>;
+let toggleTranscendUpgrades: Persistent<boolean>;
 
 // ============================================================================
 // Public access
@@ -78,6 +87,9 @@ export interface AutobuyerToggles {
   prestigeUpgrades: Persistent<boolean>;
   crystalUpgrades: Persistent<boolean>;
   autoSacrifice: Persistent<boolean>;
+  transcend: Persistent<boolean>;
+  mythosProducers: Persistent<boolean>;
+  transcendUpgrades: Persistent<boolean>;
 }
 
 export function getAutoEnabled(): Persistent<boolean> {
@@ -94,6 +106,9 @@ export function getAutobuyerToggles(): AutobuyerToggles {
     prestigeUpgrades: togglePrestigeUpgrades,
     crystalUpgrades: toggleCrystalUpgrades,
     autoSacrifice: toggleAutoSacrifice,
+    transcend: toggleTranscend,
+    mythosProducers: toggleMythosProducers,
+    transcendUpgrades: toggleTranscendUpgrades,
   };
 }
 
@@ -117,6 +132,9 @@ export const autobuyersModule: EngineModule = {
     togglePrestigeUpgrades = persistent<boolean>(true, { name: 'autoPrestigeUpgrades' });
     toggleCrystalUpgrades = persistent<boolean>(true, { name: 'autoCrystalUpgrades' });
     toggleAutoSacrifice = persistent<boolean>(true, { name: 'autoSacrifice' });
+    toggleTranscend = persistent<boolean>(true, { name: 'autoTranscend' });
+    toggleMythosProducers = persistent<boolean>(true, { name: 'autoMythosProducers' });
+    toggleTranscendUpgrades = persistent<boolean>(true, { name: 'autoTranscendUpgrades' });
 
     // Tier-presence: prestige autobuyers act once first prestige has fired.
     // `Resource.cumulative` is `lifetime: true` (engine-side; per
@@ -125,6 +143,12 @@ export const autobuyersModule: EngineModule = {
     // `cumulative > 0` a one-way latch from the first conversion fire onward.
     const prestigePoints = getPrestigePoints();
     const prestigeUnlocked = computed(() => Decimal.gt(prestigePoints.cumulative?.value ?? 0, 0));
+
+    // Transcend tier-presence — same one-way latch, gated on first transcend.
+    // Auto-transcend itself is NOT tier-presence gated (it trips this gate);
+    // mythos auto-buy + transcend upgrade sweep are gated.
+    const transcendPoints = getTranscendPoints();
+    const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0));
 
     // ─── Coin tier ─────────────────────────────────────────────────────────
     setupPolicyAutoPurchase(
@@ -163,6 +187,23 @@ export const autobuyersModule: EngineModule = {
       prestigeConversion.convert();
     });
 
+    // ─── Auto-transcend (NOT tier-presence gated — this trips the gate) ────
+    // Engine-side counterpart to `Synergism.ts:3629-3637`'s
+    // `resetCheck('transcension')`: the canonical
+    // `coinsThisTranscension.gte(1e100) || G.transcendPointGain.gte(0.5)`
+    // disjunction lives inside `transcendConversion.canConvert` via the
+    // `anyOf` requirement set in `modules/transcend.ts`, so the autobuyer
+    // collapses to a guard and a `convert()` call. Mirrors auto-prestige
+    // shape (line 159+ above): first transcend is manual, ratcheting begins
+    // on the second once `transcendPoints.cumulative > 0` opens the rest of
+    // the transcend automation.
+    const transcendConversion = getTranscendConversion();
+    ctx.onTick(() => {
+      if (!autoEnabled.value || !toggleTranscend.value) return;
+      if (!transcendConversion.canConvert.value) return;
+      transcendConversion.convert();
+    });
+
     // ─── Prestige tier (tier-presence gated) ───────────────────────────────
     setupPolicyAutoPurchase(
       getDiamondProducers(),
@@ -184,6 +225,24 @@ export const autobuyersModule: EngineModule = {
     setupSweepAutoPurchase(
       getCrystalUpgrades(),
       () => autoEnabled.value && toggleCrystalUpgrades.value && prestigeUnlocked.value,
+      ctx.onTick,
+    );
+
+    // ─── Transcend tier (tier-presence gated on transcendPoints.cumulative) ─
+    setupPolicyAutoPurchase(
+      getMythosProducers(),
+      {
+        enabled: () => autoEnabled.value && toggleMythosProducers.value && transcendUnlocked.value,
+        policy: selectionCheapest((p) => p.repeatable!.getCost(1)),
+      },
+      ctx.onTick,
+    );
+
+    setupSweepAutoPurchase(
+      getTranscendUpgrades()
+        .getAll()
+        .map((e) => e.purchasable),
+      () => autoEnabled.value && toggleTranscendUpgrades.value && transcendUnlocked.value,
       ctx.onTick,
     );
 

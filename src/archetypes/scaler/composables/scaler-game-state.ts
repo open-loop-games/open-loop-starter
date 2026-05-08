@@ -18,7 +18,7 @@
 
 import { Decimal, type DecimalSource } from 'open-loop-engine';
 import type { RuneId, ScalerGameState, Tier, UpgradeGrant } from '../data';
-import { COIN_UPGRADES, PRESTIGE_UPGRADES } from '../data';
+import { COIN_UPGRADES, PRESTIGE_UPGRADES, TRANSCEND_UPGRADES } from '../data';
 import { getCoinProducers, getCoinUpgrades, getAccelerator, getMultiplier } from '../modules/coin';
 import {
   getDiamondProducers,
@@ -28,6 +28,14 @@ import {
   getPrestigeShards,
   getCoinsThisPrestige,
 } from '../modules/prestige';
+import {
+  getMythosProducers,
+  getTranscendUpgrades,
+  getTranscendPoints,
+  getTranscendShards,
+  getCoinsThisTranscension,
+  getTranscendCount,
+} from '../modules/transcend';
 import { getOfferings, getRuneLevel } from '../modules/runes';
 
 const ZERO: DecimalSource = 0;
@@ -53,16 +61,29 @@ export function buildScalerGameState(): ScalerGameState {
       if (tier === 'prestige') {
         return getDiamondProducers()?.getProducer(producerId)?.ownedCount.value ?? ZERO;
       }
+      if (tier === 'transcend') {
+        try {
+          return getMythosProducers()?.getProducer(producerId)?.ownedCount.value ?? ZERO;
+        } catch {
+          return ZERO;
+        }
+      }
       return ZERO;
     },
 
     totalOwned(tier: Tier): DecimalSource {
-      const cat =
-        tier === 'coin'
-          ? getCoinProducers()
-          : tier === 'prestige'
-            ? getDiamondProducers()
-            : undefined;
+      const cat = (() => {
+        if (tier === 'coin') return getCoinProducers();
+        if (tier === 'prestige') return getDiamondProducers();
+        if (tier === 'transcend') {
+          try {
+            return getMythosProducers();
+          } catch {
+            return undefined;
+          }
+        }
+        return undefined;
+      })();
       if (!cat) return ZERO;
       let total: DecimalSource = ZERO;
       for (const entry of cat.getAll()) {
@@ -80,8 +101,37 @@ export function buildScalerGameState(): ScalerGameState {
           return getPrestigeShards()?.value ?? ZERO;
         case 'coinsThisPrestige':
           return getCoinsThisPrestige()?.value ?? ZERO;
+        case 'transcendPoints':
+          try {
+            return getTranscendPoints()?.value ?? ZERO;
+          } catch {
+            return ZERO;
+          }
+        case 'transcendShards':
+        case 'transcend-shards':
+          try {
+            return getTranscendShards()?.value ?? ZERO;
+          } catch {
+            return ZERO;
+          }
+        case 'coinsThisTranscension':
+          try {
+            return getCoinsThisTranscension()?.value ?? ZERO;
+          } catch {
+            return ZERO;
+          }
+        case 'mythos-1-owned':
+          // Coin upgrade 13 reads `firstGeneratedMythos + firstOwnedMythos + 1`
+          // canonically. First-arc port collapses to the owned count alone —
+          // the cascade-generated tally is mythos-internal and not load-bearing
+          // on the coin upgrade's intent (mythos-presence boost).
+          try {
+            return getMythosProducers()?.getProducer('mythos-1')?.ownedCount.value ?? ZERO;
+          } catch {
+            return ZERO;
+          }
         default:
-          // Transcend / reincarnation refs land in their own leaves.
+          // Reincarnation / ascension refs land in their leaves.
           return ZERO;
       }
     },
@@ -97,7 +147,16 @@ export function buildScalerGameState(): ScalerGameState {
         if (!def) return false;
         return getPrestigeUpgrades()?.getPurchasable(def.id)?.active.value ?? false;
       }
-      // Transcend band 41-60 lands in its leaf.
+      if (position <= 60) {
+        const def = TRANSCEND_UPGRADES.find((u) => u.position === position);
+        if (!def) return false;
+        try {
+          return getTranscendUpgrades()?.getPurchasable(def.id)?.active.value ?? false;
+        } catch {
+          return false;
+        }
+      }
+      // Reincarnation band 61-80 lands in its leaf.
       return false;
     },
 
@@ -135,6 +194,21 @@ export function buildScalerGameState(): ScalerGameState {
         return ZERO;
       }
     },
+
+    transcendCount(): number {
+      try {
+        return getTranscendCount()?.value ?? 0;
+      } catch {
+        return 0;
+      }
+    },
+
+    achievementPoints(): number {
+      // Achievements (leaf 7) provides the live ref. Returns 0 pre-leaf-7 —
+      // transcend upgrade 47's closure (`Synergism.ts:3057-3061`) ports
+      // verbatim and evaluates to identity 1 against this default.
+      return 0;
+    },
   };
 }
 
@@ -150,13 +224,26 @@ export function buildScalerGameState(): ScalerGameState {
 export function expandUpgradeGrant(grant: UpgradeGrant, state: ScalerGameState) {
   const { scope, multiplier, description } = grant;
 
+  const resolveCategory = (tier: Tier) => {
+    if (tier === 'coin') return getCoinProducers();
+    if (tier === 'prestige') return getDiamondProducers();
+    if (tier === 'transcend') {
+      try {
+        return getMythosProducers();
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  };
+
   const chains = (() => {
+    const cat = resolveCategory(scope.tier);
+    if (!cat) return undefined;
     if (scope.kind === 'producer') {
-      const cat = scope.tier === 'coin' ? getCoinProducers() : getDiamondProducers();
       return cat.getProducer(scope.producerId)?.rateChain;
     }
     // tier-global — bind into every producer in the tier
-    const cat = scope.tier === 'coin' ? getCoinProducers() : getDiamondProducers();
     return cat.getAll().map((e) => e.producer.rateChain);
   })();
 

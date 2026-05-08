@@ -1,6 +1,7 @@
 import type { EngineModule } from 'open-loop-engine';
 import { coinModule } from './coin';
 import { prestigeModule } from './prestige';
+import { transcendModule } from './transcend';
 import { runesModule } from './runes';
 import { autobuyersModule } from './autobuyers';
 
@@ -27,6 +28,19 @@ export {
 } from './prestige';
 
 export {
+  transcendModule,
+  getTranscendPoints,
+  getTranscendShards,
+  getCoinsThisTranscension,
+  getTranscendCount,
+  getMythosProducers,
+  getTranscendUpgrades,
+  getTranscendReset,
+  getTranscendConversion,
+  getTranscendPointGain,
+} from './transcend';
+
+export {
   runesModule,
   getOfferings,
   getRuneEXP,
@@ -46,12 +60,14 @@ export {
 
 /**
  * Compose the scaler modules in dependency order. Coin first; prestige
- * declares `dependencies: ['scaler-coin']`; runes declares
- * `dependencies: ['scaler-coin', 'scaler-prestige']`; autobuyers declares
- * `dependencies: ['scaler-coin', 'scaler-prestige']` (and reads runes-module
- * accessors at runtime — runes registers before autobuyers because the array
- * order tiebreaks identical dependency depths).
+ * declares `dependencies: ['scaler-coin']`; transcend declares
+ * `dependencies: ['scaler-coin', 'scaler-prestige']`; runes declares
+ * `dependencies: ['scaler-coin', 'scaler-prestige']` (doesn't gate on
+ * transcend, but registration order is coin → prestige → transcend → runes
+ * → autobuyers); autobuyers declares `dependencies: ['scaler-coin',
+ * 'scaler-prestige']` and reads the runes/transcend module accessors at
+ * runtime.
  */
 export function createScalerModules(): EngineModule[] {
-  return [coinModule, prestigeModule, runesModule, autobuyersModule];
+  return [coinModule, prestigeModule, transcendModule, runesModule, autobuyersModule];
 }

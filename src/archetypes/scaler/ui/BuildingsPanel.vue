@@ -1,14 +1,26 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { Decimal } from 'open-loop-engine';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
-import { getCoinProducers, getAccelerator, getMultiplier, getDiamondProducers } from '../modules';
+import {
+  getCoinProducers,
+  getAccelerator,
+  getMultiplier,
+  getDiamondProducers,
+  getMythosProducers,
+  getTranscendPoints,
+} from '../modules';
 import ProducerRow from './ProducerRow.vue';
 import CumulativeRow from './CumulativeRow.vue';
 
 const coinProducers = getCoinProducers();
 const diamondProducers = getDiamondProducers();
+const mythosProducers = getMythosProducers();
 const accelerator = getAccelerator();
 const multiplier = getMultiplier();
+const transcendPoints = getTranscendPoints();
+
+const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0));
 
 const activeTier = ref<string>('coin');
 </script>
@@ -31,6 +43,13 @@ const activeTier = ref<string>('coin');
           class="buildings-panel__tab-trigger"
         >
           Diamond
+        </TabsTrigger>
+        <TabsTrigger
+          v-if="transcendUnlocked"
+          value="mythos"
+          class="buildings-panel__tab-trigger"
+        >
+          Mythos
         </TabsTrigger>
       </TabsList>
 
@@ -86,6 +105,28 @@ const activeTier = ref<string>('coin');
               :producer="entry.producer"
               :name="entry.def.name"
               cost-label="prestige points"
+            />
+          </div>
+        </section>
+      </TabsContent>
+
+      <TabsContent
+        v-if="transcendUnlocked"
+        value="mythos"
+        class="buildings-panel__tab-content"
+      >
+        <section class="buildings-panel__section">
+          <h3>Mythos Producers</h3>
+          <p class="buildings-panel__hint">
+            Mythos 1 emits transcend shards each tick; Mythos 2-5 cascade into lower tiers.
+          </p>
+          <div class="buildings-panel__rows">
+            <ProducerRow
+              v-for="entry in mythosProducers.getAll()"
+              :key="entry.def.id"
+              :producer="entry.producer"
+              :name="entry.def.name"
+              cost-label="transcend points"
             />
           </div>
         </section>

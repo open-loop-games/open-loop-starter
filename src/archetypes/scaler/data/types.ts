@@ -194,6 +194,27 @@ export interface ScalerBalance {
   prestigeThreshold: DecimalSource;
   /** Computed-gain branch of the prestige gate — minimum PP gain to unlock. */
   prestigeGainFloor: DecimalSource;
+  /**
+   * Transcend conversion divisor per canonical `Synergism.ts:3583-3585`:
+   * `transcendPointGain = floor((coinsThisTranscension / transcendDivisor)^transcendPow)`.
+   * Canonical hard-codes `1e100`.
+   */
+  transcendDivisor: DecimalSource;
+  /**
+   * Transcend conversion exponent per canonical `Synergism.ts:3550`
+   * (`transcendPow = 0.03`).
+   */
+  transcendPow: number;
+  /**
+   * Coins-this-transcension branch of the transcend disjunctive gate per
+   * `Synergism.ts:3631-3633` (`coinsThisTranscension.gte(1e100)`).
+   */
+  transcendThreshold: DecimalSource;
+  /**
+   * Computed-gain branch of the transcend gate per `Synergism.ts:3631-3633`
+   * (`transcendPointGain.gte(0.5)`).
+   */
+  transcendGainFloor: DecimalSource;
 }
 
 /**
@@ -295,6 +316,16 @@ export interface ScalerGameState {
   runeLevel(rune: RuneId): number;
   /** Live `offerings` resource value. */
   offeringsValue(): DecimalSource;
+  /**
+   * Number of transcend conversions completed (canonical `player.transcendCount`).
+   * Increments inside `transcendConversion.afterConvert`. Returns 0 pre-leaf 5.
+   */
+  transcendCount(): number;
+  /**
+   * Achievement points (canonical `player.achievementPoints`). Inert at
+   * first arc — returns 0 until achievements (leaf 7) lands.
+   */
+  achievementPoints(): number;
 }
 
 /** Aggregate type for the archetype's data tree, consumed by `boot.ts`. */
@@ -302,6 +333,7 @@ export interface ScalerData {
   producers: {
     coin: ProducerDef[];
     prestige: ProducerDef[];
+    transcend: ProducerDef[];
   };
   cumulativeUpgrades: {
     accelerator: CumulativeUpgradeDef;
@@ -310,6 +342,7 @@ export interface ScalerData {
   upgrades: {
     coin: UpgradeDef[];
     prestige: UpgradeDef[];
+    transcend: UpgradeDef[];
   };
   crystalUpgrades: CrystalUpgradeDef[];
   balance: ScalerBalance;

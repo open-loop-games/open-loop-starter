@@ -15,11 +15,13 @@ import BuildingsPanel from './BuildingsPanel.vue';
 import UpgradesPanel from './UpgradesPanel.vue';
 import PrestigePanel from './PrestigePanel.vue';
 import RunesPanel from './RunesPanel.vue';
+import TranscendPanel from './TranscendPanel.vue';
 import CoinReadout from './CoinReadout.vue';
 import PrestigeReadout from './PrestigeReadout.vue';
+import TranscendReadout from './TranscendReadout.vue';
 import OfferingsReadout from './OfferingsReadout.vue';
 import { Decimal } from 'open-loop-engine';
-import { getPrestigePoints } from '../modules';
+import { getPrestigePoints, getTranscendPoints } from '../modules';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -49,6 +51,12 @@ const activeTab = ref<string>('buildings');
 // (canonical `Tabs.ts:632-634` rides on `player.unlocks.prestige`).
 const prestigePoints = getPrestigePoints();
 const runesUnlocked = computed(() => Decimal.gt(prestigePoints.cumulative?.value ?? 0, 0));
+
+// Transcend tab unlocks at first transcend — same one-way latch via
+// `transcendPoints.cumulative` (lifetime-tagged). Mirrors the runes-tab gate
+// shape with a different upstream trip-wire.
+const transcendPoints = getTranscendPoints();
+const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0));
 
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
@@ -108,6 +116,7 @@ function getActiveModules(): EngineModule[] {
           <HudBar>
             <CoinReadout />
             <PrestigeReadout />
+            <TranscendReadout />
             <OfferingsReadout />
           </HudBar>
         </template>
@@ -130,6 +139,13 @@ function getActiveModules(): EngineModule[] {
               class="scaler-tabs__trigger"
             >
               Prestige
+            </TabsTrigger>
+            <TabsTrigger
+              v-if="transcendUnlocked"
+              value="transcend"
+              class="scaler-tabs__trigger"
+            >
+              Transcend
             </TabsTrigger>
             <TabsTrigger
               v-if="runesUnlocked"
@@ -157,6 +173,13 @@ function getActiveModules(): EngineModule[] {
           class="scaler-tabs__content"
         >
           <PrestigePanel />
+        </TabsContent>
+        <TabsContent
+          v-if="transcendUnlocked"
+          value="transcend"
+          class="scaler-tabs__content"
+        >
+          <TranscendPanel />
         </TabsContent>
         <TabsContent
           v-if="runesUnlocked"
