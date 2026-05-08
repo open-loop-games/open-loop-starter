@@ -38,6 +38,9 @@ export {
   getTranscendReset,
   getTranscendConversion,
   getTranscendPointGain,
+  getAcceleratorBoostBought,
+  getAcceleratorBoostCost,
+  boostAccelerator,
 } from './transcend';
 
 export {

@@ -102,11 +102,20 @@ describe('scaler transcend-beat lock — beat-5 (first transcend fires)', () => 
     // Transcend upgrades 41/43/56 register bindings on coin-1's rateChain
     // even when inactive — confirms `expandUpgradeGrant` extension for
     // `tier: 'transcend'` dispatch and the 'transcend-upgrades' category
-    // lifted into the cross-tier wiring at install time.
+    // lifted into the cross-tier wiring at install time. Accelerator Boost
+    // binds alongside (transcend module install path).
     expect(coin1).toBeDefined();
     const bindingIds = coin1!.rateChain.bindings().map((b) => b.id);
     expect(bindingIds.some((id) => id.includes('upgrade-41'))).toBe(true);
     expect(bindingIds.some((id) => id.includes('upgrade-56'))).toBe(true);
+    expect(bindingIds.some((id) => id.includes('Accelerator Boost'))).toBe(true);
+
+    // Note: `acceleratorBoostBought` zeros on transcend reset (canonical
+    // `Reset.ts:498-499`), so sampling it post-`until` would observe 0
+    // regardless of how many boosts fired pre-transcend. A dedicated
+    // boost-beat test sampling pre-first-transcend is its own follow-up;
+    // this beat asserts the binding wiring (above) which is install-time
+    // permanent.
 
     engine.dispose();
   }, 90_000);

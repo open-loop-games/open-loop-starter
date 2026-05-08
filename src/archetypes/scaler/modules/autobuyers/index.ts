@@ -53,6 +53,8 @@ import {
   getTranscendUpgrades,
   getTranscendConversion,
   getTranscendPoints,
+  getAcceleratorBoostCost,
+  boostAccelerator,
 } from '../transcend';
 import { getOfferings, getRuneDefs, getRuneLevel, sacrificeRune } from '../runes';
 import type { RuneId } from '../../data';
@@ -73,6 +75,7 @@ let toggleAutoSacrifice: Persistent<boolean>;
 let toggleTranscend: Persistent<boolean>;
 let toggleMythosProducers: Persistent<boolean>;
 let toggleTranscendUpgrades: Persistent<boolean>;
+let toggleAcceleratorBoost: Persistent<boolean>;
 
 // ============================================================================
 // Public access
@@ -90,6 +93,7 @@ export interface AutobuyerToggles {
   transcend: Persistent<boolean>;
   mythosProducers: Persistent<boolean>;
   transcendUpgrades: Persistent<boolean>;
+  acceleratorBoost: Persistent<boolean>;
 }
 
 export function getAutoEnabled(): Persistent<boolean> {
@@ -109,6 +113,7 @@ export function getAutobuyerToggles(): AutobuyerToggles {
     transcend: toggleTranscend,
     mythosProducers: toggleMythosProducers,
     transcendUpgrades: toggleTranscendUpgrades,
+    acceleratorBoost: toggleAcceleratorBoost,
   };
 }
 
@@ -135,6 +140,7 @@ export const autobuyersModule: EngineModule = {
     toggleTranscend = persistent<boolean>(true, { name: 'autoTranscend' });
     toggleMythosProducers = persistent<boolean>(true, { name: 'autoMythosProducers' });
     toggleTranscendUpgrades = persistent<boolean>(true, { name: 'autoTranscendUpgrades' });
+    toggleAcceleratorBoost = persistent<boolean>(true, { name: 'autoAcceleratorBoost' });
 
     // Tier-presence: prestige autobuyers act once first prestige has fired.
     // `Resource.cumulative` is `lifetime: true` (engine-side; per
@@ -202,6 +208,28 @@ export const autobuyersModule: EngineModule = {
       if (!autoEnabled.value || !toggleTranscend.value) return;
       if (!transcendConversion.canConvert.value) return;
       transcendConversion.convert();
+    });
+
+    // ─── Auto-Accelerator-Boost (tier-presence gated on prestige) ──────────
+    // Bespoke action — `boostAccelerator()` spends prestigePoints and fires
+    // `prestigeReset.reset()`, so neither `setupPolicyAutoPurchase` nor
+    // `setupSweepAutoPurchase` fits. Mirrors auto-prestige / auto-transcend
+    // shape: guard + action call on tick.
+    //
+    // Gate: prestigeUnlocked. Boost depends on prestigePoints accruing, which
+    // happens after first prestige fires; gating on transcendUnlocked would
+    // deny the boost ratchet during the long prestige-cycle phase between
+    // first-prestige and first-transcend (which is exactly when the player
+    // most wants the boost contribution into coin rateChain). Auto-prestige
+    // races auto-boost cleanly — auto-boost zeros coins via the prestige
+    // reset side-effect, so auto-prestige finds nothing to convert on the
+    // immediate-next tick and waits for coins to rebuild.
+    const boostCost = getAcceleratorBoostCost();
+    ctx.onTick(() => {
+      if (!autoEnabled.value || !toggleAcceleratorBoost.value) return;
+      if (!prestigeUnlocked.value) return;
+      if (Decimal.lt(prestigePoints.value, boostCost.value)) return;
+      boostAccelerator();
     });
 
     // ─── Prestige tier (tier-presence gated) ───────────────────────────────

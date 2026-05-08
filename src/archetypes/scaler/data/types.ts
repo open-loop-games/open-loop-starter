@@ -215,6 +215,17 @@ export interface ScalerBalance {
    * (`transcendPointGain.gte(0.5)`).
    */
   transcendGainFloor: DecimalSource;
+  /**
+   * Initial Accelerator Boost cost in `prestigePoints` (`Synergism.ts:395-396`,
+   * `Buy.ts:816`). Cost grows super-exponentially per buy.
+   */
+  acceleratorBoostBaseCost: DecimalSource;
+  /**
+   * Free Accelerator levels granted per Accelerator Boost. Canonical
+   * `Synergism.ts:2467-2472` `totalAcceleratorBoost × (5 + research-band)`;
+   * first-arc port lifts the constant 5 (research-band reads default 0).
+   */
+  acceleratorBoostFreeAccelPerBuy: number;
 }
 
 /**

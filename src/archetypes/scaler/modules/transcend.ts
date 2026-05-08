@@ -4,6 +4,16 @@
  * Surfaces:
  * - `transcendPoints` (cumulative across transcend; in `keep:`).
  * - `transcendShards` (per-cycle; zeroes on every transcend reset).
+ * - `acceleratorBoostBought` + `acceleratorBoostCost` (per-transcend-cycle;
+ *   zero on transcend reset per `Reset.ts:498-499`). `boostAccelerator()`
+ *   action is bespoke — neither `createPurchasable` nor `createConversion`
+ *   fits the cumulative-buy-with-side-effect-reset shape (`Buy.ts:705-810`).
+ *   Cost grows super-exponentially per `Buy.ts:715-716`. Each buy fires
+ *   `prestigeReset.reset()` directly; the engine sweep on `scaler-prestige`
+ *   zeros prestige upgrades 21-40 automatically (no manual loop). Effect
+ *   binds into coin producer rateChains as a discrete "Accelerator Boost"
+ *   contribution `acceleratorPower ^ (5 × bought)` per `Synergism.ts:2467-2472`
+ *   first-arc — research-band coefficient defaults 0, cube blessing inert.
  * - `coinsThisTranscension` (per-cycle counter — accumulates per-tick coin
  *   emission so the transcend conversion's gain formula reads coins-earned-
  *   this-cycle, not the live coin balance, matching `Synergism.ts:3185`).
@@ -61,6 +71,7 @@ import {
   createPurchasableCategory,
   createCostRequirement,
   createBooleanRequirement,
+  createMultiplicativeModifier,
   anyOf,
   createReset,
   createConversion,
@@ -77,6 +88,7 @@ import {
 } from '../data';
 import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
 import { getCoinResource, getCoinProducers } from './coin';
+import { getPrestigePoints, getPrestigeReset } from './prestige';
 
 // ============================================================================
 // Module state (populated in install)
@@ -86,6 +98,8 @@ let transcendPoints: Resource<DecimalSource> & Persistent<DecimalSource>;
 let transcendShards: Resource<DecimalSource> & Persistent<DecimalSource>;
 let coinsThisTranscension: Persistent<DecimalSource>;
 let transcendCount: Persistent<number>;
+let acceleratorBoostBought: Persistent<number>;
+let acceleratorBoostCost: Persistent<DecimalSource>;
 
 let firstGeneratedMythos: Persistent<DecimalSource>;
 let secondGeneratedMythos: Persistent<DecimalSource>;
@@ -117,6 +131,52 @@ export function getCoinsThisTranscension(): Persistent<DecimalSource> {
 
 export function getTranscendCount(): Persistent<number> {
   return transcendCount;
+}
+
+export function getAcceleratorBoostBought(): Persistent<number> {
+  return acceleratorBoostBought;
+}
+
+export function getAcceleratorBoostCost(): Persistent<DecimalSource> {
+  return acceleratorBoostCost;
+}
+
+/**
+ * Cumulative-buy Accelerator Boost action — `Buy.ts:705-810` first-arc branch
+ * (`upgrades[46] < 1` defaults to single-buy).
+ *
+ * Returns whether the buy succeeded. Caller (UI / autobuyer) checks affordability
+ * via `prestigePoints.gte(acceleratorBoostCost)` and short-circuits when false.
+ *
+ * Side effects per canonical `Buy.ts:711-735`:
+ *   1. Increment `acceleratorBoostBought`.
+ *   2. Recompute `acceleratorBoostCost = cost × 1e10 × 10^bought` (super-exponential).
+ *   3. Fire `prestigeReset.reset()` — zeros coin tier, prestige tier (including
+ *      prestige upgrades 21-40 via the engine module sweep), then zeros
+ *      `prestigePoints` per the canonical extra `prestigePoints = 0` write
+ *      (`Buy.ts:734`). The reset's `keep: [prestigePoints]` would otherwise
+ *      preserve the spend currency — boost overrides that exemption inline.
+ *
+ * `transcendnoaccelerator` / `reincarnatenoaccelerator` flag clears (`Buy.ts:727-728`)
+ * port inert — those flags gate later-arc challenge completions.
+ */
+export function boostAccelerator(): boolean {
+  const pp = getPrestigePoints();
+  if (Decimal.lt(pp.value, acceleratorBoostCost.value)) return false;
+
+  pp.value = Decimal.sub(pp.value, acceleratorBoostCost.value);
+  acceleratorBoostBought.value += 1;
+  acceleratorBoostCost.value = Decimal.mul(
+    Decimal.mul(acceleratorBoostCost.value, 1e10),
+    Decimal.pow(10, acceleratorBoostBought.value),
+  );
+
+  getPrestigeReset().reset();
+  // Canonical writes `prestigePoints = new Decimal(0)` after `reset('prestige')`
+  // (`Buy.ts:734`), overriding the prestige reset's `keep: [prestigePoints]`
+  // exemption. Boost is a destructive prestige spend, not a preserve-and-cycle.
+  pp.value = Decimal.dZero;
+  return true;
 }
 
 export function getMythosProducers(): ProducerCategory<ProducerDef, void> {
@@ -169,6 +229,16 @@ export const transcendModule: EngineModule = {
     // Conversion counter — incremented inside `afterConvert`. Lifetime-tagged
     // so it survives the transcend reset that fires immediately after.
     transcendCount = persistent<number>(0, { name: 'transcendCount', lifetime: true });
+
+    // Accelerator Boost refs. Per-transcend-cycle (canonical `Reset.ts:498-499`
+    // zeros both on transcend); engine-side they live in `scaler-transcend`
+    // module and reset to defaults via the transcend reset's module sweep,
+    // matching canonical zero-on-transcend semantics. Initial cost lifts from
+    // `Synergism.ts:395-396`.
+    acceleratorBoostBought = persistent<number>(0, { name: 'acceleratorBoostBought' });
+    acceleratorBoostCost = persistent<DecimalSource>(SCALER_BALANCE.acceleratorBoostBaseCost, {
+      name: 'acceleratorBoostCost',
+    });
 
     // Cascade-feed accumulators per `Synergism.ts:3274-3285`. Mythos-1's
     // `extraCount` reads `firstGeneratedMythos`, etc. Mythos-5 has no
@@ -229,6 +299,31 @@ export const transcendModule: EngineModule = {
       },
     });
     transcendUpgradesCategory.register(TRANSCEND_UPGRADES);
+
+    // ─── Accelerator Boost rateChain bind ──────────────────────────────────
+    // Canonical `Synergism.ts:2467-2472`: each boost adds 5 free Accelerator
+    // levels to the totalAccelerator term that feeds `acceleratorEffect =
+    // acceleratorPower ^ totalAccelerator`. Mathematically equivalent to a
+    // separate multiplicative chain entry `acceleratorPower ^ (5 × bought)`
+    // alongside coin's existing 'Accelerator' bind (A^(x+y) = A^x × A^y).
+    // Discrete entry keeps the contribution named in workbench/tooltip readouts
+    // and avoids reaching across the coin module to mutate its bind closure.
+    //
+    // Cross-tier sibling-import pattern per `src/archetypes/CLAUDE.md`:
+    // transcend declares `dependencies: ['scaler-coin']`, so
+    // `getCoinProducers()` resolves to the live category at install time.
+    for (const entry of getCoinProducers().getAll()) {
+      entry.producer.rateChain.bind({
+        modifier: createMultiplicativeModifier({
+          multiplier: () =>
+            Decimal.pow(
+              SCALER_BALANCE.acceleratorPower,
+              SCALER_BALANCE.acceleratorBoostFreeAccelPerBuy * acceleratorBoostBought.value,
+            ),
+          description: 'Accelerator Boost',
+        }),
+      });
+    }
 
     // ─── Per-tick mirrors: coinsThisTranscension + mythos cascade ──────────
     // Coin emission mirror — every tick, accumulate sum-of-coin-rates × dt

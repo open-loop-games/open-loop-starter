@@ -15,6 +15,14 @@
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Calculate.ts
 //   Calculate.ts:114-142        calculateOfferings shape (base + later-arc modifiers).
 //                               First-arc port collapses to a constant base × SI.offeringMult.
+//   Calculate.ts:447-450        totalAcceleratorBoost = floor(acceleratorBoostBought + freeAcceleratorBoost)
+// Canonical: open-loop-research/reference-code/SynergismOfficial/src/Buy.ts
+//   Buy.ts:705-810              boostAccelerator action (first-arc branch upgrades[46] < 1)
+//   Buy.ts:715-716              cost growth: cost ×= 1e10 × 10^bought (super-exponential)
+// Canonical: open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts
+//   Synergism.ts:395-396        acceleratorBoostBought = 0; acceleratorBoostCost = 1e3
+//   Synergism.ts:2467-2472      totalAcceleratorBoost × (5 + research-band) → freeAccelerator
+//                               First arc: research[18-20] inert → 5 free Accelerator levels per boost
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { ScalerBalance } from './types';
@@ -39,6 +47,14 @@ export const SCALER_BALANCE: ScalerBalance = {
   transcendPow: 0.03,
   transcendThreshold: 5e16,
   transcendGainFloor: 0.5,
+  // Accelerator Boost — initial cost in `prestigePoints` per
+  // `Synergism.ts:395-396`. Each buy multiplies cost by `1e10 × 10^bought`
+  // (`Buy.ts:715-716`). Each boost grants 5 free Accelerator levels, composing
+  // multiplicatively into the coin producer rateChain as `acceleratorPower ^
+  // (5 × acceleratorBoostBought)` (`Synergism.ts:2467-2472`, first-arc; the
+  // research-band coefficient defaults to 0 and the cube blessing is inert).
+  acceleratorBoostBaseCost: 1e3,
+  acceleratorBoostFreeAccelPerBuy: 5,
   // Constant trickle of offerings per reset. Canonical sums an extensive
   // base (allBaseOfferingStats — challenge tiers, achievement rewards,
   // shop upgrades, ascension counter, etc.) — first-arc collapses to a

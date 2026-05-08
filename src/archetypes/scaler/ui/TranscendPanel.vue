@@ -1,26 +1,52 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format } from 'open-loop-engine';
+import { Decimal, format } from 'open-loop-engine';
 import Button from '@/ui/components/Button.vue';
 import {
   getTranscendPoints,
   getCoinsThisTranscension,
   getTranscendConversion,
   getTranscendPointGain,
+  getAcceleratorBoostBought,
+  getAcceleratorBoostCost,
+  getPrestigePoints,
+  boostAccelerator,
 } from '../modules';
+import { SCALER_BALANCE } from '../data';
 
 const transcendPoints = getTranscendPoints();
 const coinsThisTranscension = getCoinsThisTranscension();
 const conversion = getTranscendConversion();
 const gain = getTranscendPointGain();
+const prestigePoints = getPrestigePoints();
+const boostBought = getAcceleratorBoostBought();
+const boostCost = getAcceleratorBoostCost();
 
 const canConvert = computed(() => conversion.canConvert.value);
 const gainDisplay = computed(() => format(gain.value, 0));
 const earnedThisCycle = computed(() => format(coinsThisTranscension.value, 0));
+const boostCostDisplay = computed(() => format(boostCost.value, 0));
+const canBoost = computed(() => Decimal.gte(prestigePoints.value, boostCost.value));
+// Boost contributes acceleratorPower ^ (5 × bought) to coin rateChains —
+// readout shows the running multiplier so the player sees the discrete grant.
+const boostMultiplierDisplay = computed(() =>
+  format(
+    Decimal.pow(
+      SCALER_BALANCE.acceleratorPower,
+      SCALER_BALANCE.acceleratorBoostFreeAccelPerBuy * boostBought.value,
+    ),
+    2,
+  ),
+);
 
 function doTranscend(): void {
   if (!canConvert.value) return;
   conversion.convert();
+}
+
+function doBoost(): void {
+  if (!canBoost.value) return;
+  boostAccelerator();
 }
 </script>
 
@@ -60,6 +86,43 @@ function doTranscend(): void {
         class="transcend-panel__hint"
       >
         Need 1e100 coins this transcension, or TP gain ≥ 0.5.
+      </p>
+    </section>
+
+    <section class="transcend-panel__action">
+      <header class="transcend-panel__head">
+        <h3>Accelerator Boost</h3>
+        <p>
+          Spend prestige points to grant 5 free Accelerator levels per buy and reset prestige. Boost
+          count zeros on transcend.
+        </p>
+      </header>
+      <div class="transcend-panel__stats">
+        <div class="transcend-panel__stat">
+          <span class="transcend-panel__stat-label">Owned</span>
+          <span class="transcend-panel__stat-value">{{ boostBought }}</span>
+        </div>
+        <div class="transcend-panel__stat">
+          <span class="transcend-panel__stat-label">Multiplier</span>
+          <span class="transcend-panel__stat-value">×{{ boostMultiplierDisplay }}</span>
+        </div>
+        <div class="transcend-panel__stat">
+          <span class="transcend-panel__stat-label">Next cost (PP)</span>
+          <span class="transcend-panel__stat-value">{{ boostCostDisplay }}</span>
+        </div>
+      </div>
+      <Button
+        :disabled="!canBoost"
+        class="transcend-panel__button"
+        @click="doBoost"
+      >
+        Boost Accelerator
+      </Button>
+      <p
+        v-if="!canBoost"
+        class="transcend-panel__hint"
+      >
+        Need {{ boostCostDisplay }} prestige points; buy fires a prestige reset.
       </p>
     </section>
   </div>
