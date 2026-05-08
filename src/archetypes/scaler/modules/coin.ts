@@ -57,6 +57,22 @@ import {
   type UpgradeDef,
 } from '../data';
 import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
+import { getChallengesCategory } from './challenges';
+
+/**
+ * Lazy sibling-import accessor for Ch4's cost-inflation gate. Resolved at
+ * cost-closure call time (post-install), so the module-evaluation cycle
+ * (coin → composables → challenges → coin) doesn't load-fail. Returns false
+ * pre-install or when the challenges category hasn't yet registered Ch4 —
+ * the cost closure then runs the canonical (non-inflated) shape.
+ */
+function ch4Active(): boolean {
+  try {
+    return getChallengesCategory()?.getChallenge('challenge-4')?.active.value ?? false;
+  } catch {
+    return false;
+  }
+}
 
 // ============================================================================
 // Module state (populated in install)
@@ -128,6 +144,15 @@ function getAcceleratorCost(amount: DecimalSource): DecimalSource {
     cost = cost.mul(multBit).mul(factorialBit);
   }
 
+  // Ch4 cost inflation — `Buy.ts:73-77` super-exponential factor past 1000.
+  // Applies only to Accelerator + Multiplier (cumulative-buy mirror); coin
+  // producer costs are static-numeric `purchase.costScaling` and don't
+  // accept a runtime predicate at first arc — TODO(expansion).
+  const ch4Threshold = SCALER_BALANCE.ch4CostInflationThreshold;
+  if (ch4Active() && buyingTo > ch4Threshold) {
+    cost = cost.mul(Decimal.pow(SCALER_BALANCE.ch4CostInflationBase, buyingTo - ch4Threshold));
+  }
+
   return cost;
 }
 
@@ -144,6 +169,13 @@ function getMultiplierCost(amount: DecimalSource): DecimalSource {
     const factorialBit = factorialNum(num);
     const multBit = Decimal.pow(10, num);
     cost = cost.mul(multBit).mul(factorialBit);
+  }
+
+  // Ch4 cost inflation — `Buy.ts:209-211` super-exponential factor past 1000.
+  // See parallel branch in `getAcceleratorCost` for the matching scope note.
+  const ch4Threshold = SCALER_BALANCE.ch4CostInflationThreshold;
+  if (ch4Active() && buyingTo > ch4Threshold) {
+    cost = cost.mul(Decimal.pow(SCALER_BALANCE.ch4CostInflationBase, buyingTo - ch4Threshold));
   }
 
   return cost;

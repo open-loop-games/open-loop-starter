@@ -16,6 +16,7 @@ import UpgradesPanel from './UpgradesPanel.vue';
 import PrestigePanel from './PrestigePanel.vue';
 import RunesPanel from './RunesPanel.vue';
 import TranscendPanel from './TranscendPanel.vue';
+import ChallengesPanel from './ChallengesPanel.vue';
 import CoinReadout from './CoinReadout.vue';
 import PrestigeReadout from './PrestigeReadout.vue';
 import TranscendReadout from './TranscendReadout.vue';
@@ -57,6 +58,11 @@ const runesUnlocked = computed(() => Decimal.gt(prestigePoints.cumulative?.value
 // shape with a different upstream trip-wire.
 const transcendPoints = getTranscendPoints();
 const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0));
+
+// Challenges tab unlocks at first transcend — same one-way latch as the
+// transcend tab itself. Canonical Synergism gates the Challenges tab on the
+// transcension unlock; first-arc port collapses to the same one-way latch.
+const challengesUnlocked = transcendUnlocked;
 
 function startGame(slotId: number, modId?: string): void {
   engine.saveManager!.selectSlot(slotId);
@@ -154,6 +160,13 @@ function getActiveModules(): EngineModule[] {
             >
               Runes
             </TabsTrigger>
+            <TabsTrigger
+              v-if="challengesUnlocked"
+              value="challenges"
+              class="scaler-tabs__trigger"
+            >
+              Challenges
+            </TabsTrigger>
           </TabsList>
         </template>
         <TabsContent
@@ -187,6 +200,13 @@ function getActiveModules(): EngineModule[] {
           class="scaler-tabs__content"
         >
           <RunesPanel />
+        </TabsContent>
+        <TabsContent
+          v-if="challengesUnlocked"
+          value="challenges"
+          class="scaler-tabs__content"
+        >
+          <ChallengesPanel />
         </TabsContent>
       </TabsBarShell>
     </TabsRoot>

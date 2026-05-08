@@ -226,6 +226,38 @@ export interface ScalerBalance {
    * first-arc port lifts the constant 5 (research-band reads default 0).
    */
   acceleratorBoostFreeAccelPerBuy: number;
+  /**
+   * ECC softcap (Effective Challenge Completions) — canonical `Challenges.ts:599-617`
+   * `case 'transcend'` linear-then-softer-then-softest piecewise. First plateau
+   * caps the linear contribution at 100 completions; second segment divides by
+   * 20 between 100 and 1000; third divides by 100 above 1000.
+   */
+  eccTranscendLinearCap: number;
+  eccTranscendSoftDivisor: number;
+  eccTranscendSoftBreakpoint: number;
+  eccTranscendHardDivisor: number;
+  /**
+   * Per-challenge baseRequirement (first 5 entries of canonical
+   * `Variables.ts:121` `challengeBaseRequirements`). Feeds the
+   * `challengeRequirement(i, completion)` formula at `Challenges.ts:620-655`
+   * which scales each base by `(1 + completion)^2` (or piecewise past 75).
+   */
+  challengeBaseRequirements: readonly number[];
+  /**
+   * Ch4 cost-inflation parameters — canonical multiplier `1.25^(n − threshold)`
+   * applied to building / Accelerator / Multiplier costs once the per-purchase
+   * index crosses the threshold. First-arc port restricts to Accelerator +
+   * Multiplier (cumulative-buy mirror); coin / diamond producer cost inflation
+   * is a `TODO(expansion)` per the Ch4 def's port-citation header.
+   */
+  ch4CostInflationThreshold: number;
+  ch4CostInflationBase: DecimalSource;
+  /**
+   * Per-challenge completion limit. Canonical `getMaxChallenges(i ≤ 5)` starts
+   * at 25 and grows with later-arc researches (`researches[66..70]` etc.); all
+   * those reads default 0 at first arc, so the cap collapses to 25.
+   */
+  challengeCompletionLimit: number;
 }
 
 /**
@@ -337,6 +369,58 @@ export interface ScalerGameState {
    * first arc — returns 0 until achievements (leaf 7) lands.
    */
   achievementPoints(): number;
+  /**
+   * Number of completions for a given transcend challenge (1..5). Reads
+   * `getChallengesCategory().getChallenge('challenge-{idx}').completions.value`.
+   * Returns 0 before challenges module installs.
+   */
+  challengeCompletions(idx: 1 | 2 | 3 | 4 | 5): number;
+  /**
+   * True iff any transcend challenge is currently entered. Canonical
+   * `player.currentChallenge.transcension !== 0`. Used by prestige + transcend
+   * conversion guards to suppress auto-prestige / auto-transcend during a
+   * challenge run (Ch5 in particular crushes gain near zero).
+   */
+  inTranscensionChallenge(): boolean;
+}
+
+/**
+ * Transcend challenge definition. Canonical sites:
+ * - Definitions: `Challenges.ts:209-236` (challenge1..5 effect coefficients)
+ * - i18n strings: `translations/en.json` `challenges.{1..5}.{name,flavor,restrictions,goal}`
+ * - baseRequirement: `Variables.ts:121` `challengeBaseRequirements[0..4]`
+ * - Auto-completion gate: `Synergism.ts:3407, 3427, 3447, 3467, 3487` —
+ *   continuous goal-met-on-tick (`coins >= challengeRequirement(i, completions)`),
+ *   independent of transcending. Engine `goal + registerTick` matches semantics.
+ * - Per-completion ECC reward magnitudes: `Challenges.ts:223-255` per-challenge
+ *   `current{1,2,3}` display values.
+ *
+ * Restriction shapes (full-fidelity port; some routes flagged TODO(expansion)):
+ * - Ch1: multiplierPower = 1; acceleratorEffect reads totalAccelerator + totalMultiplier.
+ *   Algebraic neutralization via two `restricts` Grants — see comment in
+ *   `data/challenges.ts`.
+ * - Ch2: pure multiplicative — multiplierPower → 1.25, acceleratorPower → 1.
+ * - Ch3: pure multiplicative — acceleratorPower above 1 reduced 50%; mythos /
+ *   crystal shard production halted.
+ * - Ch4: cost-side restriction — Accelerator + Multiplier costs inflate
+ *   super-exponentially past 1000 purchases (canonical `1.25^(n - 1000)`).
+ *   Coin / diamond producer cost inflation is `TODO(expansion)` — engine
+ *   `createProducerCategory.purchase.costScaling` is static numeric.
+ * - Ch5: cross-tier exponent crush — prestigePow → 0.01/(1+completions),
+ *   transcendPow → 0.001 while active. Coordinated with the deferred-from-leaf-5
+ *   in-challenge transcend guard on prestige + transcend conversions.
+ */
+export interface ScalerChallengeDef {
+  /** Stable id, matching the canonical 1-indexed slot (`'challenge-1'`..`'challenge-5'`). */
+  id: 'challenge-1' | 'challenge-2' | 'challenge-3' | 'challenge-4' | 'challenge-5';
+  /** Canonical 1-indexed challenge slot. Indexes `challengeBaseRequirements` and `current{1,2,3}` arms. */
+  index: 1 | 2 | 3 | 4 | 5;
+  name: string;
+  flavor: string;
+  /** Free-form restriction summary (lifted from canonical i18n `challenges.N.restrictions`). */
+  restrictions: string;
+  /** Canonical first-arc cap, 25 (`getMaxChallenges(i ≤ 5)` baseline). */
+  completionLimit: number;
 }
 
 /** Aggregate type for the archetype's data tree, consumed by `boot.ts`. */
@@ -356,5 +440,6 @@ export interface ScalerData {
     transcend: UpgradeDef[];
   };
   crystalUpgrades: CrystalUpgradeDef[];
+  challenges: ScalerChallengeDef[];
   balance: ScalerBalance;
 }

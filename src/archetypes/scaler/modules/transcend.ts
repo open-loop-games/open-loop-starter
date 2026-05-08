@@ -73,9 +73,9 @@ import {
   createBooleanRequirement,
   createMultiplicativeModifier,
   anyOf,
+  allOf,
   createReset,
   createConversion,
-  createPolynomialFormula,
   persistent,
 } from 'open-loop-engine';
 import {
@@ -89,6 +89,30 @@ import {
 import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
 import { getCoinResource, getCoinProducers } from './coin';
 import { getPrestigePoints, getPrestigeReset } from './prestige';
+import { getChallengesCategory } from './challenges';
+
+/**
+ * Lazy sibling-import accessors mirroring `prestige.ts`. Ch5's exponent crush
+ * applies to BOTH conversion formulas; the in-challenge guard suppresses
+ * auto-transcend during any challenge run.
+ */
+function ch5State(): { active: boolean; completions: number } {
+  try {
+    const ch = getChallengesCategory()?.getChallenge('challenge-5');
+    if (!ch) return { active: false, completions: 0 };
+    return { active: ch.active.value, completions: ch.completions.value };
+  } catch {
+    return { active: false, completions: 0 };
+  }
+}
+
+function inAnyTranscensionChallenge(): boolean {
+  try {
+    return getChallengesCategory()?.active.value !== null;
+  } catch {
+    return false;
+  }
+}
 
 // ============================================================================
 // Module state (populated in install)
@@ -394,17 +418,25 @@ export const transcendModule: EngineModule = {
     // ─── transcendPointGain formula ────────────────────────────────────────
     // Canonical (`Synergism.ts:3583-3585`):
     //   transcendPointGain = floor((coinsThisTranscension / 1e100) ^ transcendPow)
-    // Engine's `createPolynomialFormula(exponent, scale)` evaluates
-    // `floor((x/scale)^exponent)` — exact match. First-arc port omits the
-    // upgrade-44 / corruption / deflation modifiers that compound on top in
-    // canonical (upgrade 44 deferred — see `data/upgrades.ts § Skeleton`).
-    const transcendGainFormula = createPolynomialFormula(
-      SCALER_BALANCE.transcendPow,
-      SCALER_BALANCE.transcendDivisor,
-    );
-    transcendPointGainComputed = computed(
-      (): DecimalSource => transcendGainFormula(coinsThisTranscension.value),
-    );
+    // Earlier leaves used `createPolynomialFormula(exponent, scale)` which
+    // captures the exponent at construction. Ch5 crushes `transcendPow` to
+    // 0.001 while active, so the formula goes inline as a hand-rolled computed
+    // mirroring the prestige shape (`prestige.ts § prestigePointGain formula`).
+    // First-arc port still omits the upgrade-44 / corruption / deflation
+    // modifiers that compound on top in canonical (upgrade 44 deferred — see
+    // `data/upgrades.ts § Skeleton`).
+    transcendPointGainComputed = computed((): DecimalSource => {
+      const c = coinsThisTranscension.value;
+      const ratio = Decimal.div(c, SCALER_BALANCE.transcendDivisor);
+      if (Decimal.lte(ratio, 0)) return Decimal.dZero;
+      const ch5 = ch5State();
+      // Canonical Ch5 transcendPow stays 0.001 regardless of completions —
+      // only the prestige-side exponent scales with `1 + completions[5]`
+      // (canonical `Synergism.ts:3583-3585` reads `G.transcendPow` which is
+      // a per-tick variable that flips to 0.001 during Ch5 unconditionally).
+      const pow = ch5.active ? 0.001 : SCALER_BALANCE.transcendPow;
+      return Decimal.floor(Decimal.pow(ratio, pow));
+    });
 
     // ─── Transcend reset ───────────────────────────────────────────────────
     // Bundles coin + prestige + transcend scope. `keep: [transcendPoints,
@@ -429,20 +461,27 @@ export const transcendModule: EngineModule = {
     // subtract coins on transcend; the reset zeros them via `resetModules`),
     // and the gain-floor branch is a pure boolean. Both branches are
     // non-pay, so anyOf invokes nothing at convert-time. The reset wipe is
-    // the actual "spend." First-arc port omits the in-challenge guard
-    // (`player.currentChallenge.transcension === 0`) — challenges land in
-    // leaf 6.
+    // the actual "spend."
+    //
+    // In-challenge guard (now load-bearing per leaf 6 — Ch5 crushes
+    // transcendPow to 0.001 while active, so auto-transcend would convert
+    // with crushed gain). Mirrors the prestige conversion's guard.
     transcendConversion = createConversion({
       inputs: {
-        threshold: anyOf(
-          createCostRequirement({
-            resource: coins,
-            cost: SCALER_BALANCE.transcendThreshold,
-            requiresPay: false,
-          }),
+        threshold: allOf(
+          anyOf(
+            createCostRequirement({
+              resource: coins,
+              cost: SCALER_BALANCE.transcendThreshold,
+              requiresPay: false,
+            }),
+            createBooleanRequirement({
+              requirement: () =>
+                Decimal.gte(transcendPointGainComputed.value, SCALER_BALANCE.transcendGainFloor),
+            }),
+          ),
           createBooleanRequirement({
-            requirement: () =>
-              Decimal.gte(transcendPointGainComputed.value, SCALER_BALANCE.transcendGainFloor),
+            requirement: () => !inAnyTranscensionChallenge(),
           }),
         ),
       },

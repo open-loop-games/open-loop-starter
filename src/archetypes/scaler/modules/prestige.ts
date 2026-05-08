@@ -55,6 +55,7 @@ import {
   createCostRequirement,
   createBooleanRequirement,
   anyOf,
+  allOf,
   createReset,
   createConversion,
   persistent,
@@ -70,6 +71,40 @@ import {
 } from '../data';
 import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
 import { getCoinResource, getCoinProducers } from './coin';
+import { getChallengesCategory } from './challenges';
+
+/**
+ * Lazy sibling-import accessor returning Ch5's active state + its completion
+ * count. Resolved at gain-formula call time (post-install) — challenges
+ * module installs after prestige but `prestigePointGainComputed` is a Vue
+ * `computed` evaluated lazily on `.value` reads, so first access happens after
+ * the engine's full install pass completes.
+ */
+function ch5State(): { active: boolean; completions: number } {
+  try {
+    const ch = getChallengesCategory()?.getChallenge('challenge-5');
+    if (!ch) return { active: false, completions: 0 };
+    return { active: ch.active.value, completions: ch.completions.value };
+  } catch {
+    return { active: false, completions: 0 };
+  }
+}
+
+/**
+ * Lazy guard for the in-challenge transcend disjunction. Returns true iff
+ * any transcend challenge is currently entered. Coordinated with leaf 5's
+ * deferred guard: prestige + transcend conversions short-circuit during
+ * any challenge run (Ch5 in particular crushes gain near zero, but the
+ * guard applies uniformly — canonical `Synergism.ts:3633` adds the
+ * `currentChallenge.transcension === 0` predicate to the prestige gate).
+ */
+function inAnyTranscensionChallenge(): boolean {
+  try {
+    return getChallengesCategory()?.active.value !== null;
+  } catch {
+    return false;
+  }
+}
 
 // ============================================================================
 // Module state (populated in install)
@@ -325,11 +360,20 @@ export const prestigeModule: EngineModule = {
     //   prestigePointGain = floor((coinsThisPrestige / 1e12) ^ prestigePow)
     // First-arc port omits the upgrade-16 / corruption / deflation modifiers
     // that compound on top in canonical — they bind in their respective leaves.
+    //
+    // Ch5 active crushes the exponent toward zero per canonical
+    // `Synergism.ts:3563-3565` (the `prestigePow` ref reads from a per-tick
+    // Variables update that swaps `0.5` for `0.01 / (1 + completions[5])`
+    // when `currentChallenge.transcension === 5`). Engine-side: read Ch5
+    // state at evaluation time and substitute the crushed exponent. Out of
+    // challenge, evaluates to canonical `prestigePow`.
     prestigePointGainComputed = computed((): DecimalSource => {
       const c = coinsThisPrestige.value;
       const ratio = Decimal.div(c, SCALER_BALANCE.prestigeDivisor);
       if (Decimal.lte(ratio, 0)) return Decimal.dZero;
-      return Decimal.floor(Decimal.pow(ratio, SCALER_BALANCE.prestigePow));
+      const ch5 = ch5State();
+      const pow = ch5.active ? 0.01 / (1 + ch5.completions) : SCALER_BALANCE.prestigePow;
+      return Decimal.floor(Decimal.pow(ratio, pow));
     });
 
     // ─── Prestige reset ────────────────────────────────────────────────────
@@ -349,17 +393,29 @@ export const prestigeModule: EngineModule = {
     // and the gain-floor branch is a pure boolean. `anyOf` first-satisfied-pays
     // semantics line up: both branches are non-pay, so anyOf invokes nothing
     // at convert-time. The reset wipe is the actual "spend."
+    //
+    // In-challenge guard (deferred from leaf 5; load-bearing once Ch5 lands).
+    // Canonical `Synergism.ts:3633` adds `&& player.currentChallenge.transcension === 0`
+    // to the prestige gate. AND-composed via `allOf` so the disjunction
+    // remains semantically anyOf-of-thresholds, gated overall on
+    // not-in-any-transcend-challenge. Without this, Ch5 active would
+    // auto-prestige with crushed gain (~0 PP per cycle).
     prestigeConversion = createConversion({
       inputs: {
-        threshold: anyOf(
-          createCostRequirement({
-            resource: coins,
-            cost: SCALER_BALANCE.prestigeThreshold,
-            requiresPay: false,
-          }),
+        threshold: allOf(
+          anyOf(
+            createCostRequirement({
+              resource: coins,
+              cost: SCALER_BALANCE.prestigeThreshold,
+              requiresPay: false,
+            }),
+            createBooleanRequirement({
+              requirement: () =>
+                Decimal.gte(prestigePointGainComputed.value, SCALER_BALANCE.prestigeGainFloor),
+            }),
+          ),
           createBooleanRequirement({
-            requirement: () =>
-              Decimal.gte(prestigePointGainComputed.value, SCALER_BALANCE.prestigeGainFloor),
+            requirement: () => !inAnyTranscensionChallenge(),
           }),
         ),
       },

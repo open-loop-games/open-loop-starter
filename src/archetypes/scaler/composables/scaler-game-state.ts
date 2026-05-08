@@ -37,6 +37,7 @@ import {
   getTranscendCount,
 } from '../modules/transcend';
 import { getOfferings, getRuneLevel } from '../modules/runes';
+import { getChallengesCategory } from '../modules/challenges';
 
 const ZERO: DecimalSource = 0;
 
@@ -208,6 +209,25 @@ export function buildScalerGameState(): ScalerGameState {
       // transcend upgrade 47's closure (`Synergism.ts:3057-3061`) ports
       // verbatim and evaluates to identity 1 against this default.
       return 0;
+    },
+
+    challengeCompletions(idx: 1 | 2 | 3 | 4 | 5): number {
+      // Challenges module installs after composables consumers are constructed
+      // (transcend depends on coin/prestige; challenges depends on transcend).
+      // Lazy accessor + try/catch tolerates pre-install reads.
+      try {
+        return getChallengesCategory()?.getChallenge(`challenge-${idx}`)?.completions.value ?? 0;
+      } catch {
+        return 0;
+      }
+    },
+
+    inTranscensionChallenge(): boolean {
+      try {
+        return getChallengesCategory()?.active.value !== null;
+      } catch {
+        return false;
+      }
     },
   };
 }

@@ -57,6 +57,7 @@ import {
   boostAccelerator,
 } from '../transcend';
 import { getOfferings, getRuneDefs, getRuneLevel, sacrificeRune } from '../runes';
+import { getChallengesCategory } from '../challenges';
 import type { RuneId } from '../../data';
 
 // ============================================================================
@@ -76,6 +77,7 @@ let toggleTranscend: Persistent<boolean>;
 let toggleMythosProducers: Persistent<boolean>;
 let toggleTranscendUpgrades: Persistent<boolean>;
 let toggleAcceleratorBoost: Persistent<boolean>;
+let toggleChallengeSweep: Persistent<boolean>;
 
 // ============================================================================
 // Public access
@@ -94,6 +96,7 @@ export interface AutobuyerToggles {
   mythosProducers: Persistent<boolean>;
   transcendUpgrades: Persistent<boolean>;
   acceleratorBoost: Persistent<boolean>;
+  challengeSweep: Persistent<boolean>;
 }
 
 export function getAutoEnabled(): Persistent<boolean> {
@@ -114,6 +117,7 @@ export function getAutobuyerToggles(): AutobuyerToggles {
     mythosProducers: toggleMythosProducers,
     transcendUpgrades: toggleTranscendUpgrades,
     acceleratorBoost: toggleAcceleratorBoost,
+    challengeSweep: toggleChallengeSweep,
   };
 }
 
@@ -141,6 +145,7 @@ export const autobuyersModule: EngineModule = {
     toggleMythosProducers = persistent<boolean>(true, { name: 'autoMythosProducers' });
     toggleTranscendUpgrades = persistent<boolean>(true, { name: 'autoTranscendUpgrades' });
     toggleAcceleratorBoost = persistent<boolean>(true, { name: 'autoAcceleratorBoost' });
+    toggleChallengeSweep = persistent<boolean>(true, { name: 'autoChallengeSweep' });
 
     // Tier-presence: prestige autobuyers act once first prestige has fired.
     // `Resource.cumulative` is `lifetime: true` (engine-side; per
@@ -208,6 +213,28 @@ export const autobuyersModule: EngineModule = {
       if (!autoEnabled.value || !toggleTranscend.value) return;
       if (!transcendConversion.canConvert.value) return;
       transcendConversion.convert();
+    });
+
+    // ─── Auto-Challenge-Sweep (tier-presence gated on transcend) ───────────
+    // Engine-side counterpart to canonical `Challenges.ts:664-769`'s
+    // `runChallengeSweep` state machine (enter / exit / start / wait). The
+    // engine's tick scan calls `complete(false)` on goal-met (auto-completes
+    // + auto-exits), so the consumer-side state machine collapses to a
+    // one-liner: when nothing is active and not all challenges are maxed,
+    // enter the next unmaxed challenge in registration order.
+    //
+    // Gate: transcendUnlocked. Mirror of auto-prestige / auto-transcend
+    // shape — first-challenge-entry is manual (player toggles on); engine
+    // ratchets through subsequent runs once the goal-met cycle completes.
+    ctx.onTick(() => {
+      if (!autoEnabled.value || !toggleChallengeSweep.value) return;
+      if (!transcendUnlocked.value) return;
+      const cat = getChallengesCategory();
+      if (!cat) return;
+      if (cat.active.value !== null) return;
+      if (cat.allMaxed.value) return;
+      const next = cat.getAll().find((e) => !e.challenge.maxed.value);
+      next?.challenge.enter();
     });
 
     // ─── Auto-Accelerator-Boost (tier-presence gated on prestige) ──────────
