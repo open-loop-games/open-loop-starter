@@ -1,5 +1,6 @@
 import type { EngineModule } from 'open-loop-engine';
 import { coinModule } from './coin';
+import { prestigeModule } from './prestige';
 
 export {
   coinModule,
@@ -8,14 +9,27 @@ export {
   getAccelerator,
   getMultiplier,
   getCoinUpgrades,
-  getCoinReset,
 } from './coin';
 
+export {
+  prestigeModule,
+  getPrestigePoints,
+  getPrestigeShards,
+  getCoinsThisPrestige,
+  getDiamondProducers,
+  getCrystalUpgrades,
+  getPrestigeUpgrades,
+  getPrestigeReset,
+  getPrestigeConversion,
+  getPrestigePointGain,
+} from './prestige';
+
 /**
- * Compose the scaler modules in dependency order. At leaf 1 only the coin
- * tier exists; later leaves register prestige / transcend / runes / challenges
- * / achievements / autobuyers alongside.
+ * Compose the scaler modules in dependency order. Coin first; prestige
+ * declares `dependencies: ['scaler-coin']` so the engine resolves the
+ * install order regardless of array order, but listing in install order
+ * here keeps the read clean.
  */
 export function createScalerModules(): EngineModule[] {
-  return [coinModule];
+  return [coinModule, prestigeModule];
 }

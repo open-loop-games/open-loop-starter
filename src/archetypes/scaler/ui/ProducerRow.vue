@@ -7,6 +7,7 @@ import Button from '@/ui/components/Button.vue';
 const props = defineProps<{
   producer: Producer;
   name: string;
+  costLabel: string;
 }>();
 
 const owned = computed(() => format(props.producer.ownedCount.value, 0));
@@ -35,7 +36,7 @@ function buy(): void {
         :disabled="!canBuy"
         @click="buy"
       >
-        Buy — {{ format(cost, 0) }} coins
+        Buy — {{ format(cost, 0) }} {{ costLabel }}
       </Button>
     </div>
   </div>

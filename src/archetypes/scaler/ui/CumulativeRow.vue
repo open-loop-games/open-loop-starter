@@ -8,6 +8,7 @@ const props = defineProps<{
   purchasable: Purchasable;
   name: string;
   description: string;
+  costLabel: string;
 }>();
 
 const owned = computed(() => format(props.purchasable.amount.value, 0));
@@ -32,7 +33,7 @@ function buy(): void {
       :disabled="!canBuy"
       @click="buy"
     >
-      Buy — {{ format(cost, 0) }} coins
+      Buy — {{ format(cost, 0) }} {{ costLabel }}
     </Button>
   </div>
 </template>

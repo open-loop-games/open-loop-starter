@@ -9,6 +9,7 @@ const props = defineProps<{
   position: number;
   name: string;
   description: string;
+  costLabel: string;
 }>();
 
 const cost = computed(() => props.purchasable.getCost(1));
@@ -39,7 +40,7 @@ function buy(): void {
         :disabled="!canBuy"
         @click="buy"
       >
-        {{ format(cost, 0) }} coins
+        {{ format(cost, 0) }} {{ costLabel }}
       </Button>
       <span
         v-else

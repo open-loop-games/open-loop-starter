@@ -8,30 +8,26 @@
  *   wires through `mapping.extraCount`, gated inert against `player.upgrades[101..105]`
  *   reading 0 until the cascade upgrades land in a later leaf.
  * - Accelerator + Multiplier — cumulative-buy upgrades whose canonical cost is
- *   piecewise-super-exponential (`Buy.ts:33-77` + `:163-197`), beyond
- *   `createScalingPurchasable`'s closed-form geometric scaling. Hand-rolled
- *   with the cost-mirror pattern lifted from `purchasable.ts:672-728`.
+ *   piecewise-with-factorial-bump (`Buy.ts:33-77` + `:163-197`), beyond
+ *   closed-form geometric. Use `createScalingPurchasable.costFormula` opaque
+ *   value-function path (OL-894): the factory hides the mirror+watch wiring
+ *   that this module previously hand-rolled. Crystal upgrades in the prestige
+ *   module use the same surface.
  * - `coinUpgrades` (createPurchasableCategory) — Upgrades-tab grid positions
  *   1-20. Each entry's `grants[]` resolves the data-side `UpgradeGrant.scope`
  *   into one or more producer rateChain bindings; `tier-global` scope binds
  *   into all 5 coin producers' chains via the array form of `Grant.chain`.
- * - `coinReset` — declared structurally; the prestige conversion that fires it
- *   lands in a later leaf.
  *
  * Cross-tier binding pattern (locked at this leaf, propagates forward):
  * sibling tier modules import `coinProducers` directly (ES import — no
  * injection key). Cross-tier upgrades grant via `coinProducers.getProducer(id)
  * .rateChain`. Engine `ChainRegistryKey` exists for balance-workbench
- * introspection only; binding lookups stay typed via direct import.
- *
- * Reset glob behavior: `getModulePersistentRefs('scaler-coin')` walks the
- * parent→child context tree (verified `persistence.ts:660-676`) — every
- * per-def category sub-context (`coin-producers/coin-1`, `coin-upgrades/upgrade-1`,
- * etc.) registers as a child of the module's context and is collected
- * automatically. `keep: []` because nothing in the coin tier survives the
- * coin-layer reset.
- *
- * Citation: `Reset.ts:418-433` for the canonical coin reset baseline.
+ * introspection only; binding lookups stay typed via direct import. The
+ * coin-layer reset is declared by the owning prestige module's
+ * `createReset({ resetModules: ['scaler-coin', 'scaler-prestige'], keep: [...] })`
+ * — the engine's `getModulePersistentRefs` walks the parent→child context
+ * tree (verified `persistence.ts:660-676`), so the prestige reset's union
+ * scope sweeps every coin-tier sub-context automatically.
  */
 
 import {
@@ -43,20 +39,14 @@ import {
   type Purchasable,
   type ProducerCategory,
   type PurchasableCategory,
-  type Reset,
   bn,
   createResource,
   createProducerCategory,
-  createPurchasable,
+  createScalingPurchasable,
   createPurchasableCategory,
   createCostRequirement,
   createMultiplicativeModifier,
-  createReset,
-  persistent,
-  type Persistent,
-  withPersistentContext,
 } from 'open-loop-engine';
-import { watch } from 'vue';
 import {
   COIN_PRODUCERS,
   ACCELERATOR_DEF,
@@ -65,10 +55,8 @@ import {
   SCALER_BALANCE,
   type ProducerDef,
   type UpgradeDef,
-  type ScalerGameState,
-  type Tier,
-  type UpgradeGrant,
 } from '../data';
+import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
 
 // ============================================================================
 // Module state (populated in install)
@@ -79,22 +67,7 @@ let coinProducerCategory: ProducerCategory<ProducerDef, void>;
 let acceleratorPurchasable: Purchasable;
 let multiplierPurchasable: Purchasable;
 let coinUpgradesCategory: PurchasableCategory<UpgradeDef, void>;
-let coinReset: Reset;
 
-// Persistent mirrors for cumulative-buy cost closures. Both refs save under
-// per-purchasable sub-contexts; the watch keeps each in lockstep with its
-// purchasable's `amount`.
-let acceleratorAmountMirror: Persistent<DecimalSource>;
-let multiplierAmountMirror: Persistent<DecimalSource>;
-
-// Inert later-arc state stand-ins. `player.upgrades[101..105]` (cascade gate)
-// and `transcendShards` / `firstGeneratedMythos` etc. are referenced by the
-// coin tier's canonical math but don't exist in leaf 1's module set. They
-// port as zero-default refs that other tier leaves can swap to live state.
-//
-// TODO(expansion): replace with real cross-tier reads when the prestige
-// (Crystal upgrades, prestigePoints), transcend (mythos producers,
-// transcendPoints), and upgrades-101..105 (cascade gate) leaves land.
 const ZERO: DecimalSource = 0;
 
 // ============================================================================
@@ -128,55 +101,6 @@ export function getMultiplier(): Purchasable {
 /** Coin upgrades category (Upgrades-tab band 1-20). */
 export function getCoinUpgrades(): PurchasableCategory<UpgradeDef, void> {
   return coinUpgradesCategory;
-}
-
-/** The coin layer reset. Fired by the prestige conversion when it lands. */
-export function getCoinReset(): Reset {
-  return coinReset;
-}
-
-// ============================================================================
-// Game-state accessor (typed read-view used by upgrade closures)
-// ============================================================================
-
-/**
- * Build a `ScalerGameState` over live engine refs. Captured once at install
- * time and threaded into upgrade-grant closures via the category mapper.
- *
- * Methods that reach into not-yet-ported tiers return `0` (inert) — the
- * upgrade math sees identity behavior until those tiers land.
- */
-function buildGameState(): ScalerGameState {
-  return {
-    producerOwned(tier: Tier, producerId: string): DecimalSource {
-      if (tier !== 'coin') return ZERO;
-      return coinProducerCategory.getProducer(producerId)?.ownedCount.value ?? ZERO;
-    },
-    totalOwned(tier: Tier): DecimalSource {
-      if (tier !== 'coin') return ZERO;
-      let total: DecimalSource = ZERO;
-      for (const entry of coinProducerCategory.getAll()) {
-        total = Decimal.add(total, entry.producer.ownedCount.value);
-      }
-      return total;
-    },
-    resourceValue(_id: string): DecimalSource {
-      // No prestige / transcend resources at leaf 1 — every cross-tier read
-      // resolves identity. Each later tier leaf wires its own resources here.
-      return ZERO;
-    },
-    upgradeBought(position: number): boolean {
-      const def = COIN_UPGRADES.find((u) => u.position === position);
-      if (!def) return false;
-      return coinUpgradesCategory.getPurchasable(def.id)?.active.value ?? false;
-    },
-    acceleratorBought(): DecimalSource {
-      return acceleratorPurchasable?.amount.value ?? ZERO;
-    },
-    multiplierBought(): DecimalSource {
-      return multiplierPurchasable?.amount.value ?? ZERO;
-    },
-  };
 }
 
 // ============================================================================
@@ -246,38 +170,6 @@ function factorialNum(n: number): Decimal {
 }
 
 // ============================================================================
-// Upgrade grant expansion (data → engine `Grant[]`)
-// ============================================================================
-
-/**
- * Resolve a data-side `UpgradeGrant` into one or more engine `Grant` entries.
- * `tier-global` scope binds the same multiplier into every producer's
- * rateChain in the tier (array form of `Grant.chain`); `producer` scope
- * resolves to one chain by id.
- */
-function expandUpgradeGrant(grant: UpgradeGrant, state: ScalerGameState) {
-  const { scope, multiplier, description } = grant;
-
-  const chains = (() => {
-    if (scope.kind === 'producer') {
-      return coinProducerCategory.getProducer(scope.producerId)?.rateChain;
-    }
-    // tier-global: array of all 5 producer rateChains
-    return coinProducerCategory.getAll().map((e) => e.producer.rateChain);
-  })();
-
-  if (chains == null || (Array.isArray(chains) && chains.length === 0)) {
-    return undefined;
-  }
-
-  return {
-    chain: chains,
-    mult: () => multiplier(state),
-    description,
-  };
-}
-
-// ============================================================================
 // Engine module
 // ============================================================================
 
@@ -285,7 +177,12 @@ export const coinModule: EngineModule = {
   id: 'scaler-coin',
 
   install(ctx: EngineContext) {
-    coins = createResource(0, { displayName: 'coins', precision: 0 });
+    // Canonical `Synergism.ts:250` initial = 100; `Reset.ts:408` resets to 102.
+    // First-arc port lifts the initial — exactly enough to bootstrap the
+    // first Worker (cost 100). Engine reset (post-leaf-2 prestige) writes
+    // `ref.value = ref[DefaultValue]`, so the same starting kit comes back
+    // every cycle.
+    coins = createResource(100, { displayName: 'coins', precision: 0 });
 
     // ─── Producers ─────────────────────────────────────────────────────────
     coinProducerCategory = createProducerCategory<ProducerDef>({
@@ -315,49 +212,28 @@ export const coinModule: EngineModule = {
     coinProducerCategory.register(COIN_PRODUCERS);
 
     // ─── Cumulative-buy upgrades (Accelerator + Multiplier) ────────────────
-    // Mirror pattern per `purchasable.ts:672-728`: the cost closure reads
-    // from a separate persistent ref written sync-flushed by a watch on the
-    // purchasable's amount. Both refs save; loading rehydrates the amount,
-    // and `immediate: true` syncs the mirror on the same tick.
-    acceleratorAmountMirror = withPersistentContext('scaler-coin/accelerator', () =>
-      persistent<DecimalSource>(0, { name: 'amountMirror' }),
-    );
-    acceleratorPurchasable = createPurchasable({
+    // `costFormula` opaque-value-function path (OL-894): the engine's
+    // `createScalingPurchasable` runs the closure against the live persistent
+    // level ref and handles mirror+sync internally. `bulkPurchase: false`
+    // because closure costs aren't bulk-aware (`maxBulkAmount: 1` inside
+    // `buildScalingCostRequirement`).
+    acceleratorPurchasable = createScalingPurchasable({
       id: ACCELERATOR_DEF.id,
-      display: { title: ACCELERATOR_DEF.name, description: ACCELERATOR_DEF.description },
-      requirements: createCostRequirement({
-        resource: coins,
-        cost: () => getAcceleratorCost(acceleratorAmountMirror.value),
-      }),
+      title: ACCELERATOR_DEF.name,
+      description: ACCELERATOR_DEF.description,
+      resource: coins,
+      costFormula: (level: DecimalSource) => getAcceleratorCost(level),
       bulkPurchase: false,
     });
-    watch(
-      () => acceleratorPurchasable.amount.value,
-      (v) => {
-        acceleratorAmountMirror.value = v;
-      },
-      { immediate: true, flush: 'sync' },
-    );
 
-    multiplierAmountMirror = withPersistentContext('scaler-coin/multiplier', () =>
-      persistent<DecimalSource>(0, { name: 'amountMirror' }),
-    );
-    multiplierPurchasable = createPurchasable({
+    multiplierPurchasable = createScalingPurchasable({
       id: MULTIPLIER_DEF.id,
-      display: { title: MULTIPLIER_DEF.name, description: MULTIPLIER_DEF.description },
-      requirements: createCostRequirement({
-        resource: coins,
-        cost: () => getMultiplierCost(multiplierAmountMirror.value),
-      }),
+      title: MULTIPLIER_DEF.name,
+      description: MULTIPLIER_DEF.description,
+      resource: coins,
+      costFormula: (level: DecimalSource) => getMultiplierCost(level),
       bulkPurchase: false,
     });
-    watch(
-      () => multiplierPurchasable.amount.value,
-      (v) => {
-        multiplierAmountMirror.value = v;
-      },
-      { immediate: true, flush: 'sync' },
-    );
 
     // Accelerator + Multiplier rate-effect bindings into all 5 coin producers.
     // Canonical `acceleratorEffect` and `multiplierEffect` (Synergism.ts) compose
@@ -387,7 +263,7 @@ export const coinModule: EngineModule = {
     }
 
     // ─── Upgrades-tab grid (positions 1-20) ────────────────────────────────
-    const gameState = buildGameState();
+    const gameState = buildScalerGameState();
     coinUpgradesCategory = createPurchasableCategory<UpgradeDef>({
       id: 'coin-upgrades',
       mapPurchasable: (def) => {
@@ -406,22 +282,5 @@ export const coinModule: EngineModule = {
       },
     });
     coinUpgradesCategory.register(COIN_UPGRADES);
-
-    // ─── Coin-layer reset ──────────────────────────────────────────────────
-    // Canonical baseline `Reset.ts:418-433` zeros the coin tier currency,
-    // producer owned + generated counts, producer cost mirrors, and
-    // Accelerator/Multiplier amounts. The engine's `getModulePersistentRefs`
-    // walks parent→child contexts (`scaler-coin` → `coin-producers/coin-N`,
-    // `scaler-coin/accelerator`, `scaler-coin/multiplier`, `coin-upgrades/upgrade-N`),
-    // so `resetModules: ['scaler-coin']` covers every per-def sub-context
-    // automatically.
-    //
-    // `keep: []` — nothing in the coin tier survives the coin-layer reset
-    // (canonical: prestige currencies are kept by the prestige module's
-    // reset, not here).
-    coinReset = createReset({
-      resetModules: ['scaler-coin'],
-      keep: [],
-    });
   },
 };

@@ -8,10 +8,10 @@
 import type { DecimalSource } from 'open-loop-engine';
 
 // ─── Skeleton ───
-// Three first-arc tiers (coin / prestige / transcend); coin tier is leaf 1 only.
-// Producer per tier carries a position 1..5 + intra-tier cascade per
-// `Synergism.ts:4370-4400` (gated on the canonical upgrades[101..105] grid; first
-// arc reads those gates inert until the upgrade band lands in a later leaf).
+// Three first-arc tiers (coin / prestige / transcend); leaf 2 lands prestige
+// alongside coin. Producer per tier carries a position 1..5 + intra-tier
+// cascade. Coin cascade is upgrade-gated (`upgrades[101..105]`, inert at first
+// arc); diamond cascade is unconditional canonical (`Synergism.ts:3227-3238`).
 
 export type Tier = 'coin' | 'prestige' | 'transcend';
 
@@ -51,6 +51,32 @@ export interface CumulativeUpgradeDef {
   tier: Tier;
   /** First-buy base cost; the canonical formula scales from here. */
   baseCost: DecimalSource;
+}
+
+/**
+ * Crystal upgrade — leveled, super-exponential cost on `prestigeShards`.
+ *
+ * Canonical cost (`Buy.ts:657-694`):
+ * `10^(baseLogCost + costIncrement · ((n - 0.5)² / 2 - 1/8))` where `n` is the
+ * next purchase index (current level + 1). Anchors lift verbatim from
+ * `Variables.ts:31-32` `G.crystalUpgradesCost` / `G.crystalUpgradeCostIncrement`
+ * (the active-cost arrays — distinct from `player.crystalUpgradesCost` at
+ * `Synergism.ts:544`, which is initial state and never read for buys).
+ *
+ * Crystal levels reset per-prestige (`Reset.ts:1442+1449`) — no `keep:` exemption.
+ * Forks raising the per-cycle ceiling extend `limit` here.
+ */
+export interface CrystalUpgradeDef {
+  /** Stable id, e.g. `'crystal-1'`. */
+  id: string;
+  /** 1-indexed position in canonical Crystal grid (1..8). */
+  position: number;
+  name: string;
+  description: string;
+  /** Log10 base cost — first row of `Variables.ts:31`. */
+  baseLogCost: number;
+  /** Quadratic-coefficient log10 increment per level — `Variables.ts:32`. */
+  costIncrement: number;
 }
 
 /**
@@ -112,14 +138,14 @@ export interface UpgradeDef {
 // ─── Balance ───
 // Cross-tier numeric anchors. Coin tier lifts `coinBuildingCosts` /
 // `acceleratorPower` / `multiplierPower` 1:1 from canonical (see
-// `Buy.ts:343` + `Variables.ts:50-58`). Prestige + transcend rows extend
-// in their leaves.
+// `Buy.ts:343` + `Variables.ts:50-58`). Prestige row extends with conversion
+// formula anchors + Crystal cost reduction; transcend extends in its leaf.
 
 export interface ScalerBalance {
   /**
    * Canonical `Variables.ts:44` — divides building costs across the corpus.
    * Default 1; later-arc effects modify (Crystal upgrade 5, achievement grants).
-   * Inert at leaf 1.
+   * Inert at leaf 2.
    */
   costDivisor: DecimalSource;
   /**
@@ -134,22 +160,47 @@ export interface ScalerBalance {
    * to the global coin multiplier via `multiplierEffect`.
    */
   multiplierPower: DecimalSource;
+  /**
+   * Prestige conversion divisor per canonical `Synergism.ts:3563-3565`:
+   * `prestigePointGain = floor((coinsThisPrestige / prestigeDivisor)^prestigePow)`.
+   * Canonical hard-codes `1e12`.
+   */
+  prestigeDivisor: DecimalSource;
+  /**
+   * Prestige conversion exponent per canonical (`prestigePow` baseline `1/2`,
+   * pre-corruption / pre-deflation modifiers).
+   */
+  prestigePow: number;
+  /**
+   * Threshold guard for the prestige button — canonical disjunctive gate
+   * `coinsThisPrestige.gte(prestigeThreshold) || prestigePointGain.gte(prestigeGainFloor)`
+   * per `Synergism.ts:3620`.
+   */
+  prestigeThreshold: DecimalSource;
+  /** Computed-gain branch of the prestige gate — minimum PP gain to unlock. */
+  prestigeGainFloor: DecimalSource;
 }
 
 /**
  * Typed read view of module state, exposed to predicate / multiplier closures
- * inside `data/upgrades.ts`. Module-side wiring fills the methods over live
- * engine refs so data files stay engine-runtime-free.
+ * inside `data/upgrades.ts` (and `data/prestige.ts` for Crystal effects).
+ * The shared accessor at `composables/scaler-game-state.ts` fills the methods
+ * over live engine refs so data files stay engine-runtime-free.
  *
  * Each method named here resolves to a single-arg accessor over the relevant
- * tier category or resource.
+ * tier category or resource. Per-tier methods dispatch on `tier`; cross-tier
+ * resource ids resolve through `resourceValue`.
  */
 export interface ScalerGameState {
   /** Owned count of a producer (purchasable amount only — not extraCount). */
   producerOwned(tier: Tier, producerId: string): DecimalSource;
-  /** Sum of owned counts across all producers in a tier — canonical `calculateTotalCoinOwned`. */
+  /** Sum of owned counts across all producers in a tier — canonical `calculateTotal{Coin,Diamond,...}Owned`. */
   totalOwned(tier: Tier): DecimalSource;
-  /** Cumulative-across-prestige resource value (e.g. `prestigePoints`). Inert pre-prestige. */
+  /**
+   * Resource lookup by id. Live in leaf 2 for: `prestigePoints` (cumulative),
+   * `prestigeShards` (per-cycle), `coinsThisPrestige` (per-cycle). Returns 0
+   * for unported resource ids (e.g. `transcendPoints`, `transcend-shards`).
+   */
   resourceValue(id: string): DecimalSource;
   /** Whether an Upgrades-tab entry has been bought (latch on `purchasable.active`). */
   upgradeBought(position: number): boolean;
@@ -157,12 +208,15 @@ export interface ScalerGameState {
   acceleratorBought(): DecimalSource;
   /** Cumulative Multiplier purchases — `Buy.ts` calls this `totalMultiplier`. */
   multiplierBought(): DecimalSource;
+  /** Crystal upgrade level for a position 1..8 (per-cycle, zero post-prestige). */
+  crystalLevel(position: number): DecimalSource;
 }
 
 /** Aggregate type for the archetype's data tree, consumed by `boot.ts`. */
 export interface ScalerData {
   producers: {
     coin: ProducerDef[];
+    prestige: ProducerDef[];
   };
   cumulativeUpgrades: {
     accelerator: CumulativeUpgradeDef;
@@ -170,6 +224,8 @@ export interface ScalerData {
   };
   upgrades: {
     coin: UpgradeDef[];
+    prestige: UpgradeDef[];
   };
+  crystalUpgrades: CrystalUpgradeDef[];
   balance: ScalerBalance;
 }

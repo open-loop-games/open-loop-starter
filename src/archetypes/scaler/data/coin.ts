@@ -3,7 +3,11 @@
 //   Buy.ts:336            coinBuildingCosts: [100, 1000, 2e4, 4e5, 8e6]
 //   Buy.ts:26-69          getCostAccelerator + buyAccelerator
 //   Buy.ts:156-197        Multiplier shape (parallel structure)
-//                         open-loop-research/reference-code/SynergismOfficial/src/Reset.ts
+// Canonical: open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts
+//   Synergism.ts:259-279  firstProduceCoin..fifthProduceCoin
+//                         [0.25, 2.5, 25, 250, 2500] per 0.025s tick → ×40 per sec
+//   Synergism.ts:3182     `dt / 0.025` tick normalization confirming the units
+// Canonical: open-loop-research/reference-code/SynergismOfficial/src/Reset.ts
 //   Reset.ts:418-433      coin reset baseline (firstOwnedCoin..fifthOwnedCoin
 //                         + costs + Accelerator/Multiplier amounts)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +28,7 @@ export const COIN_PRODUCERS: ProducerDef[] = [
     name: 'Worker',
     tier: 'coin',
     position: 1,
-    baseRate: 1,
+    baseRate: 10,
     baseCost: 100,
     costScaling: 4,
   },
@@ -33,7 +37,7 @@ export const COIN_PRODUCERS: ProducerDef[] = [
     name: 'Investment',
     tier: 'coin',
     position: 2,
-    baseRate: 1,
+    baseRate: 100,
     baseCost: 1_000,
     costScaling: 4,
   },
@@ -42,7 +46,7 @@ export const COIN_PRODUCERS: ProducerDef[] = [
     name: 'Printer',
     tier: 'coin',
     position: 3,
-    baseRate: 1,
+    baseRate: 1_000,
     baseCost: 2e4,
     costScaling: 4,
   },
@@ -51,7 +55,7 @@ export const COIN_PRODUCERS: ProducerDef[] = [
     name: 'Mint',
     tier: 'coin',
     position: 4,
-    baseRate: 1,
+    baseRate: 10_000,
     baseCost: 4e5,
     costScaling: 4,
   },
@@ -60,7 +64,7 @@ export const COIN_PRODUCERS: ProducerDef[] = [
     name: 'Alchemy',
     tier: 'coin',
     position: 5,
-    baseRate: 1,
+    baseRate: 100_000,
     baseCost: 8e6,
     costScaling: 4,
   },

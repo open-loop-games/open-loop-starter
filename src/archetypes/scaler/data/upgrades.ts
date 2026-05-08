@@ -1,10 +1,18 @@
 // ─── Port Citation ───────────────────────────────────────────────────────────
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Variables.ts
-//   Variables.ts:28-29   upgradeCosts row 1 (coin band, log10 grid)
+//   Variables.ts:21        upgradeCosts row 1 (coin band 1-20, log10 grid)
+//   Variables.ts:22        upgradeCosts row 2 (prestige band 21-40, log10 grid)
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts
 //   Synergism.ts:2914-2982  per-upgrade rate-effect routing into coin{N}Multi
 //   Synergism.ts:2848-2870  global coin multiplier `s` (upgrade 6, 12, 20)
 //   Synergism.ts:4051-4059  upgrade 14/15 cascade-gate boosts (inert pre-cascade)
+//   Synergism.ts:2436-2462  upgrades 21-25/32/45 — feed `freeUpgradeAccelerator`
+//   Synergism.ts:2582-2627  upgrades 21-25/33/34/35/49/68 — feed `freeUpgradeMultiplier`
+//   Synergism.ts:2985-2988  upgrade 36 — globalCrystalMultiplier
+//                           ×= min(1e5000, prestigePoints^(1/500))
+// Canonical: open-loop-research/reference-code/SynergismOfficial/src/Reset.ts
+//   Reset.ts:1411-1413     resetUpgrades zeros 1-20 always
+//   Reset.ts:1430-1432     resetUpgrades(2+) zeros 21-40 on prestige
 // Canonical: open-loop-research/reference-code/SynergismOfficial/translations/en.json
 //   upgrades.names + upgrades.descriptions  i18n strings
 // ─────────────────────────────────────────────────────────────────────────────
@@ -225,5 +233,149 @@ export const COIN_UPGRADES: UpgradeDef[] = Array.from({ length: 20 }, (_, i): Up
     name,
     description,
     effects: grantsByPosition[position] ?? [],
+  };
+});
+
+// ─── Skeleton ───
+// Prestige band 21-40: cost = `10^costLog` of `prestigePoints`. Reset on every
+// prestige (`Reset.ts:1430-1432`) — these are run-time loadout, distinct from
+// the cumulative-across-prestige `prestigePoints` currency that pays for them.
+//
+// Effect fidelity at first arc:
+// - Canonical lift: upgrade 36 (binds into globalCrystalMultiplier on the
+//   diamond rateChain via `min(1e5000, prestigePoints^(1/500))`).
+// - Inert-by-port: 21-25, 32-35, 37 — canonical math feeds free-Accelerator /
+//   free-Multiplier mechanism (deferred with leaf-1's Accelerator/Multiplier
+//   rework). 38, 39, 40 read from later-arc state. Empty effects[] until
+//   the relevant mechanisms land.
+
+const prestigeGrantsByPosition: Record<number, UpgradeGrant[]> = {
+  // 21-25: each grants `+5/+4/+3/+2/+1` free Accelerator and `+1` free
+  // Multiplier in canonical, then `1.01^sum` multiplies the result. Both
+  // contributions feed mechanisms that arrive with the upgrade-7/8/9/11
+  // free-amount rework. Inert-by-port until then.
+
+  // 32-35: feed free-Accelerator (`+min(500, log(PP+1, 1e25))` on 32) /
+  // free-Multiplier scalars (`+totalAcceleratorBoost` on 33, `0.03/0.02 *`
+  // scalars on 34/35). Inert-by-port — same blocker as 21-25.
+
+  36: [
+    {
+      scope: { kind: 'tier-global', tier: 'prestige' },
+      multiplier: (state) => {
+        const pp = bn(state.resourceValue('prestigePoints'));
+        if (pp.lte(0)) return 1;
+        return Decimal.min('1e5000', Decimal.pow(pp, 1 / 500));
+      },
+      description: 'Crystal multiplier from prestige points / prestige upgrade 36',
+    },
+  ],
+
+  // 37: globalCrystalMultiplier *= ` ... player.researches[X] / dilation ...`
+  // Inert at first arc (researches not ported).
+
+  // 38, 39, 40: read from `Statistics.ts` paths — Diamond 4×3 / Diamond 19 /
+  // miscellaneous. Inert until those bindings land.
+};
+
+const PRESTIGE_BAND_DESCRIPTIONS: Record<number, { name: string; description: string }> = {
+  21: {
+    name: 'Diamond Upgrade 1',
+    description: 'Gain free Accelerators / Multipliers (deferred).',
+  },
+  22: {
+    name: 'Diamond Upgrade 2',
+    description: 'Gain free Accelerators / Multipliers (deferred).',
+  },
+  23: {
+    name: 'Diamond Upgrade 3',
+    description: 'Gain free Accelerators / Multipliers (deferred).',
+  },
+  24: {
+    name: 'Diamond Upgrade 4',
+    description: 'Gain free Accelerators / Multipliers (deferred).',
+  },
+  25: {
+    name: 'Diamond Upgrade 5',
+    description: 'Gain free Accelerators / Multipliers (deferred).',
+  },
+  26: {
+    name: 'Diamond Upgrade 6',
+    description: 'Crystal upgrade scaling (inert until later-arc).',
+  },
+  27: {
+    name: 'Diamond Upgrade 7',
+    description: 'Crystal upgrade scaling (inert until later-arc).',
+  },
+  28: {
+    name: 'Diamond Upgrade 8',
+    description: 'Crystal upgrade scaling (inert until later-arc).',
+  },
+  29: {
+    name: 'Diamond Upgrade 9',
+    description: 'Crystal upgrade scaling (inert until later-arc).',
+  },
+  30: {
+    name: 'Diamond Upgrade 10',
+    description: 'Crystal upgrade scaling (inert until later-arc).',
+  },
+  31: {
+    name: 'Diamond Upgrade 11',
+    description: 'Reduces transcend requirements (inert until transcend).',
+  },
+  32: {
+    name: 'Diamond Upgrade 12',
+    description: 'Free Accelerators from prestige points (deferred).',
+  },
+  33: {
+    name: 'Diamond Upgrade 13',
+    description: 'Free Multiplier from Accelerator Boosts (deferred).',
+  },
+  34: { name: 'Diamond Upgrade 14', description: 'Free-Multiplier scalar (deferred).' },
+  35: { name: 'Diamond Upgrade 15', description: 'Free-Multiplier scalar (deferred).' },
+  36: {
+    name: 'Diamond Upgrade 16',
+    description: 'Crystal multiplier ×= min(1e5000, prestigePoints^(1/500)).',
+  },
+  37: { name: 'Diamond Upgrade 17', description: 'Crystal multiplier from researches (inert).' },
+  38: { name: 'Diamond Upgrade 18', description: 'Diamond production scalar (inert).' },
+  39: { name: 'Diamond Upgrade 19', description: 'Diamond production scalar (inert).' },
+  40: { name: 'Diamond Upgrade 20', description: 'Late-arc reincarnation tie-in (inert).' },
+};
+
+const PRESTIGE_COST_LOG_BY_POSITION: Record<number, number> = {
+  21: 5,
+  22: 15,
+  23: 25,
+  24: 40,
+  25: 60,
+  26: 45,
+  27: 75,
+  28: 100,
+  29: 125,
+  30: 150,
+  31: 150,
+  32: 400,
+  33: 800,
+  34: 1600,
+  35: 3200,
+  36: 10000,
+  37: 20000,
+  38: 50000,
+  39: 100000,
+  40: 200000,
+};
+
+export const PRESTIGE_UPGRADES: UpgradeDef[] = Array.from({ length: 20 }, (_, i): UpgradeDef => {
+  const position = i + 21;
+  const { name, description } = PRESTIGE_BAND_DESCRIPTIONS[position];
+  return {
+    id: `upgrade-${position}`,
+    position,
+    tier: 'prestige',
+    costLog: PRESTIGE_COST_LOG_BY_POSITION[position],
+    name,
+    description,
+    effects: prestigeGrantsByPosition[position] ?? [],
   };
 });

@@ -13,7 +13,9 @@ import HudBar from '@/ui/components/HudBar.vue';
 import { manifest } from '../manifest';
 import BuildingsPanel from './BuildingsPanel.vue';
 import UpgradesPanel from './UpgradesPanel.vue';
+import PrestigePanel from './PrestigePanel.vue';
 import CoinReadout from './CoinReadout.vue';
+import PrestigeReadout from './PrestigeReadout.vue';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -95,6 +97,7 @@ function getActiveModules(): EngineModule[] {
         <template #resources>
           <HudBar>
             <CoinReadout />
+            <PrestigeReadout />
           </HudBar>
         </template>
         <template #tabs>
@@ -111,6 +114,12 @@ function getActiveModules(): EngineModule[] {
             >
               Upgrades
             </TabsTrigger>
+            <TabsTrigger
+              value="prestige"
+              class="scaler-tabs__trigger"
+            >
+              Prestige
+            </TabsTrigger>
           </TabsList>
         </template>
         <TabsContent
@@ -124,6 +133,12 @@ function getActiveModules(): EngineModule[] {
           class="scaler-tabs__content"
         >
           <UpgradesPanel />
+        </TabsContent>
+        <TabsContent
+          value="prestige"
+          class="scaler-tabs__content"
+        >
+          <PrestigePanel />
         </TabsContent>
       </TabsBarShell>
     </TabsRoot>

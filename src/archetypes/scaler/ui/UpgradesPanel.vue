@@ -1,31 +1,112 @@
 <script setup lang="ts">
-import { getCoinUpgrades } from '../modules';
+import { ref } from 'vue';
+import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
+import { getCoinUpgrades, getPrestigeUpgrades } from '../modules';
 import UpgradeCell from './UpgradeCell.vue';
 
-const upgrades = getCoinUpgrades();
+const coinUpgrades = getCoinUpgrades();
+const prestigeUpgrades = getPrestigeUpgrades();
+
+const activeBand = ref<string>('coin');
 </script>
 
 <template>
   <div class="upgrades-panel">
-    <header class="upgrades-panel__head">
-      <h3>Coin upgrades</h3>
-      <p>One-time buys that boost coin production.</p>
-    </header>
-    <div class="upgrades-panel__grid">
-      <UpgradeCell
-        v-for="entry in upgrades.getAll()"
-        :key="entry.def.id"
-        :purchasable="entry.purchasable"
-        :position="entry.def.position"
-        :name="entry.def.name"
-        :description="entry.def.description"
-      />
-    </div>
+    <TabsRoot
+      v-model="activeBand"
+      class="upgrades-panel__tabs"
+    >
+      <TabsList class="upgrades-panel__tab-list">
+        <TabsTrigger
+          value="coin"
+          class="upgrades-panel__tab-trigger"
+        >
+          Coin (1-20)
+        </TabsTrigger>
+        <TabsTrigger
+          value="prestige"
+          class="upgrades-panel__tab-trigger"
+        >
+          Prestige (21-40)
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent
+        value="coin"
+        class="upgrades-panel__tab-content"
+      >
+        <header class="upgrades-panel__head">
+          <h3>Coin upgrades</h3>
+          <p>One-time buys that boost coin production.</p>
+        </header>
+        <div class="upgrades-panel__grid">
+          <UpgradeCell
+            v-for="entry in coinUpgrades.getAll()"
+            :key="entry.def.id"
+            :purchasable="entry.purchasable"
+            :position="entry.def.position"
+            :name="entry.def.name"
+            :description="entry.def.description"
+            cost-label="coins"
+          />
+        </div>
+      </TabsContent>
+
+      <TabsContent
+        value="prestige"
+        class="upgrades-panel__tab-content"
+      >
+        <header class="upgrades-panel__head">
+          <h3>Prestige upgrades</h3>
+          <p>Run-time loadout — bought with prestige points; resets on every prestige.</p>
+        </header>
+        <div class="upgrades-panel__grid">
+          <UpgradeCell
+            v-for="entry in prestigeUpgrades.getAll()"
+            :key="entry.def.id"
+            :purchasable="entry.purchasable"
+            :position="entry.def.position"
+            :name="entry.def.name"
+            :description="entry.def.description"
+            cost-label="prestige points"
+          />
+        </div>
+      </TabsContent>
+    </TabsRoot>
   </div>
 </template>
 
 <style scoped>
 .upgrades-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.upgrades-panel__tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.upgrades-panel__tab-list {
+  display: flex;
+  gap: var(--gap-sm);
+}
+.upgrades-panel__tab-trigger {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--gap-xs) var(--gap-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.85em;
+}
+.upgrades-panel__tab-trigger[data-state='active'] {
+  background: var(--color-accent, var(--color-surface));
+  color: var(--color-text);
+  border-color: var(--color-accent, var(--color-border));
+}
+.upgrades-panel__tab-content {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
