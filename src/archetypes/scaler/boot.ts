@@ -5,7 +5,7 @@ import ScalerAppRoot from './ui/ScalerAppRoot.vue';
 import { createScalerModules } from './modules';
 
 const GAME_ID = 'scaler-pilot';
-const MOD_ID = 'antimatter-physics';
+export const SCALER_MOD_ID = 'antimatter-physics';
 const MOD_NAME = 'Antimatter Physics';
 
 export interface ScalerBootResult {
@@ -36,7 +36,7 @@ export function createScalerEngine(options?: ScalerEngineOptions): { engine: Eng
     maxDeltaTime: options?.maxDeltaTime,
     mods: [
       {
-        id: MOD_ID,
+        id: SCALER_MOD_ID,
         name: MOD_NAME,
         modules,
       },
