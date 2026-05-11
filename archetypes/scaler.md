@@ -322,6 +322,6 @@ Every name cited in this doc must resolve to one of:
 - **Pattern names** → `open-loop-research/LIBRARY.md` + linked pattern files
 - **Cross-pattern properties** → `open-loop-research/patterns/cross-pattern-properties/*.md`
 - **Novel-patterns clusters** → `open-loop-research/reports/novel-patterns/novel-patterns-synthesis-v4.md`
-- **Engine primitives** → `open-loop-engine/docs/api/INDEX.md` + the four `*.api.md` files
+- **Engine primitives** → `open-loop-engine/docs/api/INDEX.md` (directory) + per-tier files (resources, mechanics, content, lifecycle, engine, advisors, spatial, harness)
 - **Corpus games** → `open-loop-research/analyses/complete/*-analysis.md`
 - **Layout shells** → `open-loop-starter/src/lib/shells/`

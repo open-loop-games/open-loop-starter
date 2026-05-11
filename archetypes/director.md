@@ -200,7 +200,7 @@ Every name cited in this doc must resolve to one of:
 - **Pattern names** → `open-loop-research/LIBRARY.md` + linked pattern files
 - **Cross-pattern properties** → `open-loop-research/patterns/cross-pattern-properties/*.md`
 - **Novel-patterns clusters** → `open-loop-research/reports/novel-patterns/novel-patterns-synthesis-v4.md`
-- **Engine primitives** → `open-loop-engine/docs/api/INDEX.md` + the four `*.api.md` files
+- **Engine primitives** → `open-loop-engine/docs/api/INDEX.md` (directory) + per-tier files (resources, mechanics, content, lifecycle, engine, advisors, spatial, harness)
 - **Corpus games** → `open-loop-research/analyses/complete/*-analysis.md` (Director carries `declared invention` on the Exemplars line — no corpus analogues)
 - **Layout shells** → `open-loop-starter/src/lib/shells/` (Director's primary shell is `declared invention` — adversarial-arena layout; secondary `MultiColumnShell` carries `declared invention` as an adapter)
 - **Live consumer (engine-usage grounding)** → *pending reinstantiation*. Theme A (Creep vs Creep) previously shipped at `/work/studio/open-loop-starter/src/modules/mods/creep-vs-creep/` as OL-504's output — the consumer demonstrating SpatialGrid + producer + slot + retention + chain-bind goal binding in one composition. Code deleted; archetype doc retained as the design target for the rebuild. Rebuilding the consumer reinstates empirical grounding for the `candidate` status.
