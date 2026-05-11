@@ -7,7 +7,7 @@
  * mounting Vue.
  *
  * Run model: each `run()` call exports the live engine's save blob, builds
- * a baseline cell + a single variant cell via `buildSensitivityCell`, and
+ * a baseline cell + a single variant cell via `createSensitivityCell`, and
  * passes both to `runSensitivity`. The variant's `perturb` hook calls
  * `applyPerturbation` against the *per-run* engine using the entry's
  * address — entries carry addresses, not refs, so this resolves correctly
@@ -22,7 +22,7 @@
 
 import { computed, reactive, ref, shallowRef, type Ref } from 'vue';
 import {
-  buildSensitivityCell,
+  createSensitivityCell,
   defaultAnalyzerPack,
   runSensitivity,
   type Analyzer,
@@ -34,7 +34,7 @@ import {
   type SensitivityResult,
 } from 'open-loop-engine';
 import {
-  buildPickerSnapshot,
+  createPickerSnapshot,
   applyPerturbation,
   type PickerEntry,
   type PickerSnapshot,
@@ -127,7 +127,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     prepare,
   } = options;
 
-  const snapshot = shallowRef<PickerSnapshot>(buildPickerSnapshot(engine));
+  const snapshot = shallowRef<PickerSnapshot>(createPickerSnapshot(engine));
   const selectedEntry = ref<PickerEntry | null>(null) as Ref<PickerEntry | null>;
 
   const form = reactive<PerturbationForm>({
@@ -173,7 +173,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
   const headline = computed<DeltaRow | null>(() => rows.value[0] ?? null);
 
   function refreshPicker(): void {
-    snapshot.value = buildPickerSnapshot(engine);
+    snapshot.value = createPickerSnapshot(engine);
   }
 
   function selectEntry(entry: PickerEntry | null): void {
@@ -215,7 +215,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       const blob = engine.saveManager.exportSave();
       const perturbation = buildPerturbation();
 
-      const baseline = buildSensitivityCell({
+      const baseline = createSensitivityCell({
         name: 'baseline',
         saveBlob: blob,
         modules,
@@ -224,7 +224,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         tick,
         ticks: form.ticks,
       });
-      const variant = buildSensitivityCell({
+      const variant = createSensitivityCell({
         name: 'variant',
         saveBlob: blob,
         modules,
