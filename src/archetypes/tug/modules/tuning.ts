@@ -1,9 +1,9 @@
 import {
-  createOverrideRegistry,
+  createTuningRegistry,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
-  type OverrideRegistry,
+  type TuningRegistry,
 } from 'open-loop-engine';
 import type { TugData } from '../data/types';
 
@@ -39,9 +39,9 @@ export type TugTunables = Record<string, () => DecimalSource>;
 
 export const TugDataKey: InjectionKey<TugData> = Symbol('tug/data') as InjectionKey<TugData>;
 
-export const TugTuningRegistryKey: InjectionKey<OverrideRegistry<TugTunables>> = Symbol(
+export const TugTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
   'tug/tuning-registry',
-) as InjectionKey<OverrideRegistry<TugTunables>>;
+) as InjectionKey<TuningRegistry>;
 
 /**
  * Cross-side foundation. Creates the override registry that all `tunable()`
@@ -63,7 +63,7 @@ export function createTuningModule(data: TugData): EngineModule {
   return {
     id: 'tug/tuning',
     install(ctx) {
-      const registry = createOverrideRegistry<TugTunables>('tug-tuning');
+      const registry = createTuningRegistry('tug-tuning');
       ctx.provide(TugDataKey, data);
       ctx.provide(TugTuningRegistryKey, registry);
     },

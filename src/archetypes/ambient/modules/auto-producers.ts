@@ -1,7 +1,7 @@
 import type { Ref } from 'vue';
 import {
   createMultiplicativeModifier,
-  createOverrideRegistry,
+  createTuningRegistry,
   createProducerCategory,
   createResource,
   createTimeSystem,
@@ -9,10 +9,10 @@ import {
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
-  type OverrideRegistry,
   type ProducerCategory,
   type Resource,
   type TimeSystem,
+  type TuningRegistry,
 } from 'open-loop-engine';
 import type { AmbientData, AutoProducerDef } from '../data/types';
 
@@ -39,9 +39,9 @@ export const PrimaryLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
   'ambient/primary-lifetime',
 ) as InjectionKey<Ref<DecimalSource>>;
 
-export const AmbientTuningRegistryKey: InjectionKey<OverrideRegistry<AmbientTunables>> = Symbol(
+export const AmbientTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
   'ambient/tuning-registry',
-) as InjectionKey<OverrideRegistry<AmbientTunables>>;
+) as InjectionKey<TuningRegistry>;
 
 // Module-scope handles set during install. Sibling modules + composables
 // + UI import the typed accessors below; balance scripts that must thread
@@ -76,7 +76,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
   return {
     id: 'ambient/auto-producers',
     install(ctx) {
-      const tuningRegistry = createOverrideRegistry<AmbientTunables>('ambient-tuning');
+      const tuningRegistry = createTuningRegistry('ambient-tuning');
 
       // Tunables are registered at their consumer sites (where the value is
       // actually read) — `tunable()` registers on first call, no upfront

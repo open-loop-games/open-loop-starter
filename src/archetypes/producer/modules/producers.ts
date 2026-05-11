@@ -1,15 +1,15 @@
 import {
   addResource,
-  createOverrideRegistry,
+  createTuningRegistry,
   createResource,
   createProducerCategory,
   tunable,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
-  type OverrideRegistry,
   type ProducerCategory,
   type Resource,
+  type TuningRegistry,
 } from 'open-loop-engine';
 import type { ProducerData, ProducerDef } from '../data/types';
 
@@ -44,9 +44,9 @@ export type ProducerTunableKey =
 
 export type ProducerTunables = Record<string, () => DecimalSource>;
 
-export const ProducerTuningRegistryKey: InjectionKey<OverrideRegistry<ProducerTunables>> = Symbol(
+export const ProducerTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
   'producer/tuning-registry',
-) as InjectionKey<OverrideRegistry<ProducerTunables>>;
+) as InjectionKey<TuningRegistry>;
 
 // Module-scope handles set during install. Sibling modules + composables
 // + UI import the typed accessors below; balance scripts that take an
@@ -72,7 +72,7 @@ export function createProducersModule(data: ProducerData): EngineModule {
   return {
     id: 'producer/producers',
     install(ctx) {
-      const tuningRegistry = createOverrideRegistry<ProducerTunables>('producer-tuning');
+      const tuningRegistry = createTuningRegistry('producer-tuning');
 
       primaryResource = createResource<DecimalSource>(0, {
         displayName: 'Cookies',

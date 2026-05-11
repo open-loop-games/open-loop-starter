@@ -79,7 +79,7 @@ export const manifest: ArchetypeManifest = {
     { name: 'withPersistentContext', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createReset', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'tunable', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
-    { name: 'createOverrideRegistry', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'createTuningRegistry', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createLoop', layer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
       name: 'createPurchasableCategory',

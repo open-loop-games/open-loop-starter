@@ -45,6 +45,7 @@ const groups = computed<Group[]>(() => {
   return [
     { key: 'content', title: 'Content', entries: snap.content },
     { key: 'chains', title: 'Chains', entries: snap.chains },
+    { key: 'tunables', title: 'Tunables', entries: snap.tunables },
   ];
 });
 

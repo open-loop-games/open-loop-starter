@@ -125,6 +125,7 @@ describe('useBalanceWorkbench composable', () => {
 
     const wb = useBalanceWorkbench({ engine: live, modules: () => [modFactory()] });
     const cursorEntry = wb.snapshot.value.all.find((e) => e.label.includes('cursor'))!;
+    if (cursorEntry.kind !== 'modifier') throw new Error('expected modifier entry for cursor');
     wb.selectEntry(cursorEntry);
     wb.form.kind = 'scalar-multiply';
     wb.form.factor = 5;
