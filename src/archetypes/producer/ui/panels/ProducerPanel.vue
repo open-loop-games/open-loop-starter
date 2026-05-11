@@ -1,112 +1,118 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { Decimal } from 'open-loop-engine';
 import { getBuildings, getPrimaryResource } from '../../modules';
 import { useProducers, type ProducerRow } from '../../composables/useProducers';
+import { toProducerRowData } from '../../composables/use-row-adapter';
 import { useBulkMode, type BulkMode } from '@/composables/useBulkMode';
 import { useFormatting } from '@/composables/useFormatting';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
 import ProducerTooltip from '../components/ProducerTooltip.vue';
-import Button from '@/ui/components/Button.vue';
+import { ProducerList, type ProducerRowData } from '@/ui/compositions';
 
 const buildings = getBuildings();
 const primary = getPrimaryResource();
-const rows = useProducers();
+const richRows = useProducers();
+const rows = computed(() => richRows.value.map(toProducerRowData));
 const totalRate = computed(() => buildings.getTotalRate(primary));
-const { mode, resolveAmount } = useBulkMode();
+const { mode } = useBulkMode();
 const { format, formatWhole } = useFormatting();
 
 const LADDER: BulkMode[] = [1, 10, 100, 'max'];
 
-function pendingAmount(row: ProducerRow): DecimalSource {
-  return resolveAmount(row.maxAffordable.value);
+function richRow(row: ProducerRowData): ProducerRow {
+  return row.extra as ProducerRow;
 }
 
-function pendingCost(row: ProducerRow): DecimalSource {
-  const amt = pendingAmount(row);
-  return Decimal.gt(amt, 0) ? row.getCost(amt) : row.getCost(1);
-}
-
-function buyLabel(row: ProducerRow): string {
-  const amt = Decimal.fromValue(pendingAmount(row));
+function buyLabel(pendingAmount: number | string | Decimal): string {
+  const amt = Decimal.fromValue(pendingAmount);
   if (mode.value === 1 || amt.lte(1)) return 'Hire';
   return `Hire ×${formatWhole(amt)}`;
 }
 
-function buy(row: ProducerRow): void {
-  if (mode.value === 'max') {
-    row.purchaseMax();
-    return;
-  }
-  const amt = resolveAmount(row.maxAffordable.value);
-  if (Decimal.gt(amt, 0)) row.purchase(amt);
+function totalPerSecond(row: ProducerRow): Decimal {
+  return Decimal.mul(row.rate.value, row.count.value);
 }
 
-function totalPerSecond(row: ProducerRow): DecimalSource {
-  return Decimal.mul(row.rate.value, row.count.value);
+function displayCost(row: ProducerRow, pendingAmount: Decimal | number | string): Decimal {
+  const amt = Decimal.fromValue(pendingAmount);
+  return Decimal.gt(amt, 0)
+    ? Decimal.fromValue(row.getCost(amt))
+    : Decimal.fromValue(row.getCost(1));
 }
 </script>
 
 <template>
   <div class="kitchen-roster">
-    <header class="kitchen-roster__header">
-      <h3 class="kitchen-roster__title">
-        <span class="kitchen-roster__title-mark">&#10086;</span>
-        The Roster
-      </h3>
-      <BulkModeSelector :ladder="LADDER" />
-    </header>
-    <ul class="kitchen-roster__list">
-      <ProducerTooltip
-        v-for="row in rows"
-        :key="row.def.id"
-        :row="row"
-        :total-rate="totalRate"
-        :pending-amount="pendingAmount(row)"
-      >
-        <li
-          class="roster-card"
-          :class="{
-            'is-empty': Decimal.eq(row.count.value, 0),
-          }"
-          :data-testid="`producer-${row.def.id}`"
+    <ProducerList
+      :rows="rows"
+      cost-label=""
+      bulk-mode-source="global"
+      density="row"
+    >
+      <template #header>
+        <header class="kitchen-roster__header">
+          <h3 class="kitchen-roster__title">
+            <span class="kitchen-roster__title-mark">&#10086;</span>
+            The Roster
+          </h3>
+          <BulkModeSelector :ladder="LADDER" />
+        </header>
+      </template>
+      <template #row="{ row, pendingAmount, buy }">
+        <ProducerTooltip
+          :row="richRow(row)"
+          :total-rate="totalRate"
+          :pending-amount="pendingAmount"
         >
-          <div class="roster-card__name-row">
-            <span class="roster-card__name">{{ row.def.name }}</span>
-            <span class="roster-card__count">
-              <span class="roster-card__count-number">{{ format(row.count.value, 0) }}</span>
-              <span class="roster-card__count-unit">on staff</span>
-            </span>
-          </div>
-
-          <div class="roster-card__meta">
-            <span class="roster-card__meta-cell">
-              <span class="roster-card__meta-value">{{ format(row.rate.value, 1) }}</span>
-              <span class="roster-card__meta-label">/sec ea</span>
-            </span>
-            <span class="roster-card__meta-divider" />
-            <span class="roster-card__meta-cell">
-              <span class="roster-card__meta-value">{{ format(totalPerSecond(row), 1) }}</span>
-              <span class="roster-card__meta-label">/sec total</span>
-            </span>
-          </div>
-
-          <Button
-            type="button"
-            class="ticket"
-            :class="{ 'is-affordable': row.canAfford(1) }"
-            :disabled="!row.canAfford(1)"
-            :data-testid="`buy-${row.def.id}`"
-            @click="buy(row)"
+          <div
+            class="roster-card"
+            :class="{ 'is-empty': Decimal.eq(row.count.value, 0) }"
+            :data-testid="`producer-${row.id}`"
           >
-            <span class="ticket__notch ticket__notch--left" />
-            <span class="ticket__label">{{ buyLabel(row) }}</span>
-            <span class="ticket__cost">{{ format(pendingCost(row), 0) }}</span>
-            <span class="ticket__notch ticket__notch--right" />
-          </Button>
-        </li>
-      </ProducerTooltip>
-    </ul>
+            <div class="roster-card__name-row">
+              <span class="roster-card__name">{{ row.name }}</span>
+              <span class="roster-card__count">
+                <span class="roster-card__count-number">{{ format(row.count.value, 0) }}</span>
+                <span class="roster-card__count-unit">on staff</span>
+              </span>
+            </div>
+
+            <div class="roster-card__meta">
+              <span class="roster-card__meta-cell">
+                <span class="roster-card__meta-value">{{
+                  format(richRow(row).rate.value, 1)
+                }}</span>
+                <span class="roster-card__meta-label">/sec ea</span>
+              </span>
+              <span class="roster-card__meta-divider" />
+              <span class="roster-card__meta-cell">
+                <span class="roster-card__meta-value">{{
+                  format(totalPerSecond(richRow(row)), 1)
+                }}</span>
+                <span class="roster-card__meta-label">/sec total</span>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              class="ticket"
+              :class="{ 'is-affordable': row.canBuy(1) }"
+              :disabled="!row.canBuy(1)"
+              :data-testid="`buy-${row.id}`"
+              @click="buy()"
+            >
+              <span class="ticket__notch ticket__notch--left" />
+              <span class="ticket__label">{{ buyLabel(pendingAmount) }}</span>
+              <span class="ticket__cost">{{
+                format(displayCost(richRow(row), pendingAmount), 0)
+              }}</span>
+              <span class="ticket__notch ticket__notch--right" />
+            </button>
+          </div>
+        </ProducerTooltip>
+      </template>
+    </ProducerList>
   </div>
 </template>
 
@@ -119,12 +125,22 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
   font-family: var(--font-body, Georgia, serif);
   color: var(--bakery-cocoa, #2d1d10);
 }
+.kitchen-roster :deep(.producer-list__header) {
+  justify-content: stretch;
+}
+.kitchen-roster :deep(.producer-list__rows) {
+  gap: 10px;
+}
+.kitchen-roster :deep(.producer-list__row) {
+  list-style: none;
+}
 
 .kitchen-roster__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  width: 100%;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.18));
 }
@@ -151,14 +167,6 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
   transform: translateY(2px);
 }
 
-.kitchen-roster__list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* ─── Roster card ────────────────────────────────────────────────────── */
 .roster-card {
   display: flex;
   flex-direction: column;
@@ -175,7 +183,6 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
 }
 
 .roster-card::before {
-  /* Hairline ledger-rule across the top */
   content: '';
   position: absolute;
   top: 0;
@@ -216,7 +223,6 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
   color: var(--bakery-cocoa-mute, #7a5d3d);
 }
 
-/* ─── Name row ───────────────────────────────────────────────────────── */
 .roster-card__name-row {
   display: flex;
   justify-content: space-between;
@@ -263,7 +269,6 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
   color: var(--bakery-cocoa-mute, #7a5d3d);
 }
 
-/* ─── Meta row (rate per producer + total) ───────────────────────────── */
 .roster-card__meta {
   display: flex;
   align-items: center;
@@ -305,7 +310,6 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
   background: var(--bakery-rye-line-soft, rgba(122, 84, 38, 0.18));
 }
 
-/* ─── Hire ticket — brass-edged "bakery box claim ticket" ────────────── */
 .ticket {
   position: relative;
   display: grid;
@@ -366,7 +370,6 @@ function totalPerSecond(row: ProducerRow): DecimalSource {
   box-shadow: none;
 }
 
-/* Punched-ticket notches on either side */
 .ticket__notch {
   position: absolute;
   top: 50%;

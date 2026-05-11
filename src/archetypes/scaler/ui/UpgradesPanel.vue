@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Decimal } from 'open-loop-engine';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
 import {
   getCoinUpgrades,
@@ -8,14 +7,59 @@ import {
   getTranscendUpgrades,
   getTranscendPoints,
 } from '../modules';
-import UpgradeCell from './UpgradeCell.vue';
+import { toUpgradeCellData } from '../composables/use-producer-row';
+import { useLatchOnce } from '@/composables/useLatchOnce';
+import { UpgradeGrid } from '@/ui/compositions';
 
 const coinUpgrades = getCoinUpgrades();
 const prestigeUpgrades = getPrestigeUpgrades();
 const transcendUpgrades = getTranscendUpgrades();
 const transcendPoints = getTranscendPoints();
 
-const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0));
+const transcendUnlocked = useLatchOnce(() => transcendPoints.cumulative?.value);
+
+const coinCells = computed(() =>
+  coinUpgrades
+    .getAll()
+    .map((e) =>
+      toUpgradeCellData(
+        e.purchasable,
+        e.def.id,
+        e.def.name,
+        e.def.description,
+        'coins',
+        e.def.position,
+      ),
+    ),
+);
+const prestigeCells = computed(() =>
+  prestigeUpgrades
+    .getAll()
+    .map((e) =>
+      toUpgradeCellData(
+        e.purchasable,
+        e.def.id,
+        e.def.name,
+        e.def.description,
+        'prestige points',
+        e.def.position,
+      ),
+    ),
+);
+const transcendCells = computed(() =>
+  transcendUpgrades
+    .getAll()
+    .map((e) =>
+      toUpgradeCellData(
+        e.purchasable,
+        e.def.id,
+        e.def.name,
+        e.def.description,
+        'transcend points',
+        e.def.position,
+      ),
+    ),
+);
 
 const activeBand = ref<string>('coin');
 </script>
@@ -56,17 +100,11 @@ const activeBand = ref<string>('coin');
           <h3>Coin upgrades</h3>
           <p>One-time buys that boost coin production.</p>
         </header>
-        <div class="upgrades-panel__grid">
-          <UpgradeCell
-            v-for="entry in coinUpgrades.getAll()"
-            :key="entry.def.id"
-            :purchasable="entry.purchasable"
-            :position="entry.def.position"
-            :name="entry.def.name"
-            :description="entry.def.description"
-            cost-label="coins"
-          />
-        </div>
+        <UpgradeGrid
+          :cells="coinCells"
+          :columns="5"
+          reveal="inline"
+        />
       </TabsContent>
 
       <TabsContent
@@ -77,17 +115,11 @@ const activeBand = ref<string>('coin');
           <h3>Prestige upgrades</h3>
           <p>Run-time loadout — bought with prestige points; resets on every prestige.</p>
         </header>
-        <div class="upgrades-panel__grid">
-          <UpgradeCell
-            v-for="entry in prestigeUpgrades.getAll()"
-            :key="entry.def.id"
-            :purchasable="entry.purchasable"
-            :position="entry.def.position"
-            :name="entry.def.name"
-            :description="entry.def.description"
-            cost-label="prestige points"
-          />
-        </div>
+        <UpgradeGrid
+          :cells="prestigeCells"
+          :columns="5"
+          reveal="inline"
+        />
       </TabsContent>
 
       <TabsContent
@@ -99,17 +131,11 @@ const activeBand = ref<string>('coin');
           <h3>Transcend upgrades</h3>
           <p>Bought with transcend points; resets on every transcend (band 41-60).</p>
         </header>
-        <div class="upgrades-panel__grid">
-          <UpgradeCell
-            v-for="entry in transcendUpgrades.getAll()"
-            :key="entry.def.id"
-            :purchasable="entry.purchasable"
-            :position="entry.def.position"
-            :name="entry.def.name"
-            :description="entry.def.description"
-            cost-label="transcend points"
-          />
-        </div>
+        <UpgradeGrid
+          :cells="transcendCells"
+          :columns="5"
+          reveal="inline"
+        />
       </TabsContent>
     </TabsRoot>
   </div>
@@ -162,14 +188,9 @@ const activeBand = ref<string>('coin');
   font-size: 0.85em;
   color: var(--color-text-muted);
 }
-.upgrades-panel__grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(140px, 1fr));
-  gap: var(--gap-sm);
-}
 @media (max-width: 720px) {
-  .upgrades-panel__grid {
-    grid-template-columns: repeat(2, 1fr);
+  .upgrades-panel :deep(.upgrade-grid) {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 </style>

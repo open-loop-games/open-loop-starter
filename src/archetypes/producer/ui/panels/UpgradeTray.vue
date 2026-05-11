@@ -2,9 +2,10 @@
 import { computed } from 'vue';
 import { getBuildings } from '../../modules';
 import { useUpgrades, type UpgradeRow } from '../../composables/useUpgrades';
+import { toUpgradeCellData } from '../../composables/use-row-adapter';
 import { useFormatting } from '@/composables/useFormatting';
 import Tooltip from '@/ui/components/Tooltip.vue';
-import Button from '@/ui/components/Button.vue';
+import { UpgradeGrid, type UpgradeCellData } from '@/ui/compositions';
 
 const buildings = getBuildings();
 const groups = useUpgrades();
@@ -18,6 +19,7 @@ const continuousProducers = buildings
 interface Section {
   key: string;
   title: string;
+  cells: UpgradeCellData[];
   rows: UpgradeRow[];
 }
 
@@ -31,7 +33,9 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
       if (r.bought.value) owned.push(r);
       else avail.push(r);
     }
-    if (avail.length) sections.push({ key, title, rows: avail });
+    if (avail.length) {
+      sections.push({ key, title, rows: avail, cells: avail.map(toUpgradeCellData) });
+    }
   };
 
   if (groups.value.click.length) push('click', 'Hand Tools', groups.value.click);
@@ -63,44 +67,44 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
       <h4 class="recipe-section__title">
         <span class="recipe-section__name">{{ section.title }}</span>
         <span class="recipe-section__rule" />
-        <span class="recipe-section__count">{{ section.rows.length }}</span>
+        <span class="recipe-section__count">{{ section.cells.length }}</span>
       </h4>
-      <ul class="recipe-list">
-        <li
-          v-for="row in section.rows"
-          :key="row.def.id"
-        >
-          <Tooltip>
-            <Button
-              type="button"
-              class="recipe-row"
-              :class="{ 'is-affordable': row.canPurchase.value }"
-              :disabled="!row.canPurchase.value"
-              :data-testid="`upgrade-${row.def.id}`"
-              @click="row.purchase()"
-            >
-              <span
-                class="recipe-row__bullet"
-                aria-hidden="true"
-              >&middot;</span>
-              <span class="recipe-row__name">{{ row.def.name }}</span>
-              <span class="recipe-row__dots" />
-              <span class="recipe-row__cost">{{ format(row.def.cost, 0) }}</span>
-            </Button>
-            <template #content>
-              <div class="tip-name">
-                {{ row.def.name }}
-              </div>
-              <div class="tip-desc">
-                {{ row.def.description }}
-              </div>
-              <div class="tip-cost">
-                Cost &middot; {{ format(row.def.cost, 0) }}
-              </div>
-            </template>
-          </Tooltip>
-        </li>
-      </ul>
+      <UpgradeGrid
+        :cells="section.cells"
+        :columns="1"
+        reveal="tooltip"
+        purchased-state="removed"
+      >
+        <template #cell="{ cell }">
+          <button
+            type="button"
+            class="recipe-row"
+            :class="{ 'is-affordable': cell.canBuy.value }"
+            :disabled="!cell.canBuy.value"
+            :data-testid="`upgrade-${cell.id}`"
+            @click="cell.buy()"
+          >
+            <span
+              class="recipe-row__bullet"
+              aria-hidden="true"
+            >&middot;</span>
+            <span class="recipe-row__name">{{ cell.name }}</span>
+            <span class="recipe-row__dots" />
+            <span class="recipe-row__cost">{{ format(cell.cost.value, 0) }}</span>
+          </button>
+        </template>
+        <template #reveal-content="{ cell }">
+          <div class="tip-name">
+            {{ cell.name }}
+          </div>
+          <div class="tip-desc">
+            {{ typeof cell.description === 'function' ? cell.description() : cell.description }}
+          </div>
+          <div class="tip-cost">
+            Cost &middot; {{ format(cell.cost.value, 0) }}
+          </div>
+        </template>
+      </UpgradeGrid>
     </section>
 
     <section
@@ -160,7 +164,15 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
   color: var(--bakery-cocoa, #2d1d10);
 }
 
-/* ─── Top header ─────────────────────────────────────────────────────── */
+/* UpgradeGrid is presented as a 1-column list per section. Its built-in
+   grid gap is too wide for the dense recipe-row aesthetic — collapse it. */
+.recipe-section :deep(.upgrade-grid) {
+  gap: 0;
+}
+.recipe-section :deep(.upgrade-grid__cell-wrap) {
+  background: transparent;
+}
+
 .recipe-index__head {
   display: flex;
   justify-content: space-between;
@@ -195,7 +207,6 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
   color: var(--bakery-cocoa-mute, #7a5d3d);
 }
 
-/* ─── Section (one per recipe family) ────────────────────────────────── */
 .recipe-section {
   display: flex;
   flex-direction: column;
@@ -243,13 +254,6 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.recipe-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ─── Recipe row ─────────────────────────────────────────────────────── */
 .recipe-row {
   width: 100%;
   display: grid;
@@ -347,7 +351,6 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
   }
 }
 
-/* ─── Pantry strip — purchased upgrades as wax seals ─────────────────── */
 .recipe-pantry {
   margin-top: 6px;
   padding-top: 14px;
@@ -425,7 +428,6 @@ const view = computed<{ sections: Section[]; owned: UpgradeRow[] }>(() => {
   margin: 0;
 }
 
-/* ─── Tooltip body styling (lives inside reka portal — uses :global) ──── */
 .tip-name {
   font-family: var(--font-display, Georgia, serif);
   font-variation-settings:

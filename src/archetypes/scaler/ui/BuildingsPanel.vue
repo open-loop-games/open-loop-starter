@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Decimal } from 'open-loop-engine';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
 import {
   getCoinProducers,
@@ -10,7 +9,9 @@ import {
   getMythosProducers,
   getTranscendPoints,
 } from '../modules';
-import ProducerRow from './ProducerRow.vue';
+import { toProducerRowData } from '../composables/use-producer-row';
+import { useLatchOnce } from '@/composables/useLatchOnce';
+import { ProducerList } from '@/ui/compositions';
 import CumulativeRow from './CumulativeRow.vue';
 
 const coinProducers = getCoinProducers();
@@ -20,7 +21,17 @@ const accelerator = getAccelerator();
 const multiplier = getMultiplier();
 const transcendPoints = getTranscendPoints();
 
-const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0));
+const transcendUnlocked = useLatchOnce(() => transcendPoints.cumulative?.value);
+
+const coinRows = computed(() =>
+  coinProducers.getAll().map((e) => toProducerRowData(e.producer, e.def.id, e.def.name)),
+);
+const diamondRows = computed(() =>
+  diamondProducers.getAll().map((e) => toProducerRowData(e.producer, e.def.id, e.def.name)),
+);
+const mythosRows = computed(() =>
+  mythosProducers.getAll().map((e) => toProducerRowData(e.producer, e.def.id, e.def.name)),
+);
 
 const activeTier = ref<string>('coin');
 </script>
@@ -59,15 +70,11 @@ const activeTier = ref<string>('coin');
       >
         <section class="buildings-panel__section">
           <h3>Producers</h3>
-          <div class="buildings-panel__rows">
-            <ProducerRow
-              v-for="entry in coinProducers.getAll()"
-              :key="entry.def.id"
-              :producer="entry.producer"
-              :name="entry.def.name"
-              cost-label="coins"
-            />
-          </div>
+          <ProducerList
+            :rows="coinRows"
+            cost-label="coins"
+            bulk-mode-source="none"
+          />
         </section>
 
         <section class="buildings-panel__section">
@@ -98,15 +105,11 @@ const activeTier = ref<string>('coin');
           <p class="buildings-panel__hint">
             Diamond 1 emits prestige shards each tick; Diamond 2-5 cascade into lower tiers.
           </p>
-          <div class="buildings-panel__rows">
-            <ProducerRow
-              v-for="entry in diamondProducers.getAll()"
-              :key="entry.def.id"
-              :producer="entry.producer"
-              :name="entry.def.name"
-              cost-label="prestige points"
-            />
-          </div>
+          <ProducerList
+            :rows="diamondRows"
+            cost-label="prestige points"
+            bulk-mode-source="none"
+          />
         </section>
       </TabsContent>
 
@@ -120,15 +123,11 @@ const activeTier = ref<string>('coin');
           <p class="buildings-panel__hint">
             Mythos 1 emits transcend shards each tick; Mythos 2-5 cascade into lower tiers.
           </p>
-          <div class="buildings-panel__rows">
-            <ProducerRow
-              v-for="entry in mythosProducers.getAll()"
-              :key="entry.def.id"
-              :producer="entry.producer"
-              :name="entry.def.name"
-              cost-label="transcend points"
-            />
-          </div>
+          <ProducerList
+            :rows="mythosRows"
+            cost-label="transcend points"
+            bulk-mode-source="none"
+          />
         </section>
       </TabsContent>
     </TabsRoot>

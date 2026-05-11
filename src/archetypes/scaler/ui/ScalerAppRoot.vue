@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { type Engine, type EngineModule } from 'open-loop-engine';
+import { Decimal, type Engine, type EngineModule } from 'open-loop-engine';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
 import { AppFrame, DevPanelOverlay, TabsBarShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
@@ -9,7 +9,8 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import HudBar from '@/ui/components/HudBar.vue';
+import { ResourceHeaderStrip, type ResourceReadout } from '@/ui/compositions';
+import { useLatchOnce } from '@/composables/useLatchOnce';
 import { manifest } from '../manifest';
 import BuildingsPanel from './BuildingsPanel.vue';
 import UpgradesPanel from './UpgradesPanel.vue';
@@ -18,12 +19,15 @@ import RunesPanel from './RunesPanel.vue';
 import TranscendPanel from './TranscendPanel.vue';
 import ChallengesPanel from './ChallengesPanel.vue';
 import AchievementsModal from './AchievementsModal.vue';
-import CoinReadout from './CoinReadout.vue';
-import PrestigeReadout from './PrestigeReadout.vue';
-import TranscendReadout from './TranscendReadout.vue';
-import OfferingsReadout from './OfferingsReadout.vue';
-import { Decimal } from 'open-loop-engine';
-import { getPrestigePoints, getTranscendPoints } from '../modules';
+import {
+  getCoinResource,
+  getCoinProducers,
+  getOfferings,
+  getPrestigePoints,
+  getPrestigeShards,
+  getTranscendPoints,
+  getTranscendShards,
+} from '../modules';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -41,29 +45,75 @@ onUnmounted(() => {
 
 const stack = useModalStack();
 
-// Top-tab navigation — Synergism's canonical surface lookup. At leaf 1 only
-// Buildings + Upgrades exist; later leaves add Achievements / Runes /
-// Challenges / Settings as their content lands. TabsRoot wraps the shell so
-// the trigger strip sits in the shell's top nav (`#tabs` slot) and the
-// content panels render in the main area.
 const activeTab = ref<string>('buildings');
 
-// Runes tab unlocks at first prestige. `prestigePoints.cumulative` is
-// `lifetime: true` so the latch is one-way once first prestige fires
-// (canonical `Tabs.ts:632-634` rides on `player.unlocks.prestige`).
 const prestigePoints = getPrestigePoints();
-const runesUnlocked = computed(() => Decimal.gt(prestigePoints.cumulative?.value ?? 0, 0));
-
-// Transcend tab unlocks at first transcend — same one-way latch via
-// `transcendPoints.cumulative` (lifetime-tagged). Mirrors the runes-tab gate
-// shape with a different upstream trip-wire.
+const prestigeShards = getPrestigeShards();
 const transcendPoints = getTranscendPoints();
-const transcendUnlocked = computed(() => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0));
+const transcendShards = getTranscendShards();
+const offerings = getOfferings();
+const coins = getCoinResource();
+const coinProducers = getCoinProducers();
 
-// Challenges tab unlocks at first transcend — same one-way latch as the
-// transcend tab itself. Canonical Synergism gates the Challenges tab on the
-// transcension unlock; first-arc port collapses to the same one-way latch.
+const runesUnlocked = useLatchOnce(() => prestigePoints.cumulative?.value);
+const transcendUnlocked = useLatchOnce(() => transcendPoints.cumulative?.value);
+const offeringsUnlocked = useLatchOnce(() => prestigePoints.cumulative?.value);
 const challengesUnlocked = transcendUnlocked;
+
+const coinRate = computed(() => {
+  let total = Decimal.dZero;
+  for (const entry of coinProducers.getAll()) {
+    total = Decimal.add(
+      total,
+      Decimal.mul(entry.producer.computedRate.value, entry.producer.count.value),
+    );
+  }
+  return total;
+});
+
+const readouts = computed<ResourceReadout[]>(() => [
+  {
+    id: 'coins',
+    label: 'coins',
+    value: coins,
+    rate: coinRate,
+    highlight: ref<'normal' | 'deficit' | 'surplus'>('surplus'),
+  },
+  {
+    id: 'prestige-points',
+    label: 'PP',
+    value: prestigePoints,
+    hidden: computed(
+      () => !(Decimal.gt(prestigePoints.value, 0) || Decimal.gt(prestigeShards.value, 0)),
+    ),
+  },
+  {
+    id: 'prestige-shards',
+    label: 'shards',
+    value: prestigeShards,
+    hidden: computed(() => !Decimal.gt(prestigeShards.value, 0)),
+  },
+  {
+    id: 'transcend-points',
+    label: 'TP',
+    value: transcendPoints,
+    hidden: computed(
+      () => !(Decimal.gt(transcendPoints.value, 0) || Decimal.gt(transcendShards.value, 0)),
+    ),
+  },
+  {
+    id: 'transcend-shards',
+    label: 'transcend shards',
+    value: transcendShards,
+    hidden: computed(() => !Decimal.gt(transcendShards.value, 0)),
+  },
+  {
+    id: 'offerings',
+    label: 'offerings',
+    value: offerings,
+    hidden: computed(() => !offeringsUnlocked.value),
+  },
+]);
 
 function openAchievements(): void {
   const id = stack.push(AchievementsModal, { onClose: () => stack.remove(id) }, 'lg');
@@ -124,12 +174,7 @@ function getActiveModules(): EngineModule[] {
     >
       <TabsBarShell>
         <template #resources>
-          <HudBar>
-            <CoinReadout />
-            <PrestigeReadout />
-            <TranscendReadout />
-            <OfferingsReadout />
-          </HudBar>
+          <ResourceHeaderStrip :readouts="readouts" />
         </template>
         <template #tabs>
           <TabsList class="scaler-tabs__list">
