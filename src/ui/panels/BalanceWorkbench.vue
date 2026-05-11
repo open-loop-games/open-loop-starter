@@ -38,22 +38,13 @@ interface Group {
   key: string;
   title: string;
   entries: readonly PickerEntry[];
-  disabled: boolean;
 }
 
 const groups = computed<Group[]>(() => {
   const snap = wb.snapshot.value;
-  const skillEntries = snap.categories.filter(
-    (e) => e.address.source === 'category' && e.address.category === 'skills',
-  );
-  const otherCategories = snap.categories.filter(
-    (e) => !(e.address.source === 'category' && e.address.category === 'skills'),
-  );
   return [
-    { key: 'content', title: 'Content', entries: snap.content, disabled: false },
-    { key: 'chains', title: 'Chains', entries: snap.chains, disabled: false },
-    { key: 'categories', title: 'Categories', entries: otherCategories, disabled: false },
-    { key: 'skills', title: 'Skills (unsupported in v1)', entries: skillEntries, disabled: true },
+    { key: 'content', title: 'Content', entries: snap.content },
+    { key: 'chains', title: 'Chains', entries: snap.chains },
   ];
 });
 
@@ -65,7 +56,6 @@ const selectedKey = computed<string | null>(() => {
   const sel = wb.selectedEntry.value;
   if (!sel) return null;
   for (const group of groups.value) {
-    if (group.disabled) continue;
     for (const entry of group.entries) {
       if (entry.label === sel.label && entry.address.source === sel.address.source) {
         return entryKey(group, entry);
@@ -78,7 +68,6 @@ const selectedKey = computed<string | null>(() => {
 function pickByKey(value: unknown): void {
   if (typeof value !== 'string') return;
   for (const group of groups.value) {
-    if (group.disabled) continue;
     for (const entry of group.entries) {
       if (entryKey(group, entry) === value) {
         wb.selectEntry(entry);
@@ -139,10 +128,8 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
                 v-for="entry in group.entries"
                 :key="entryKey(group, entry)"
                 :value="entryKey(group, entry)"
-                :disabled="group.disabled"
                 class="picker-row"
-                :class="{ 'picker-row--disabled': group.disabled }"
-                :title="group.disabled ? 'Skills perturbation is unsupported in v1' : entry.label"
+                :title="entry.label"
               >
                 {{ entry.label }}
               </ListboxItem>
@@ -510,11 +497,6 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
   background: var(--color-surface-hover);
 }
 .bw-numberfield__btn[data-disabled] {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.picker-row--disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }

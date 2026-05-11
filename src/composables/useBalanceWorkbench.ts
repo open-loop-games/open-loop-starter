@@ -148,12 +148,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
   let liveCleanup: (() => void) | null = null;
   const committed = ref(false);
 
-  const canPerturb = computed(() => {
-    const e = selectedEntry.value;
-    if (!e) return false;
-    if (e.address.source === 'category' && e.address.category === 'skills') return false;
-    return true;
-  });
+  const canPerturb = computed(() => selectedEntry.value !== null);
 
   const rows = computed<DeltaRow[]>(() => {
     const r = result.value;

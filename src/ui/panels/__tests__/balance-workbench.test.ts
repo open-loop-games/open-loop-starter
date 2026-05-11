@@ -3,7 +3,6 @@
  *
  * The mounting test exercises the integration shape inside Vue, asserting:
  *  - picker rows render grouped by source
- *  - skills group is disabled
  *  - run() populates progressive `progress` and final `rows`
  *  - commit() / discard() mutate the live engine and clean up
  */
@@ -148,7 +147,7 @@ describe('useBalanceWorkbench composable', () => {
 });
 
 describe('BalanceWorkbench.vue', () => {
-  it('renders picker rows and disables the skills group', async () => {
+  it('renders picker rows grouped by source', async () => {
     const displayName = 'bw-mount-gold';
     const modFactory = (): EngineModule => makeProducerModule(displayName);
     const live = buildLiveEngine('bw-mount', modFactory());
@@ -165,7 +164,7 @@ describe('BalanceWorkbench.vue', () => {
     expect(rows.length).toBeGreaterThan(0);
 
     const titles = wrapper.findAll('.picker-group-title').map((n) => n.text());
-    expect(titles).toContain('Skills (unsupported in v1)');
+    expect(titles).toContain('Chains');
 
     wrapper.unmount();
     live.stop();
