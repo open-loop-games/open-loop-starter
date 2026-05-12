@@ -114,7 +114,7 @@ function createBalanceBotModule(): EngineModule {
 }
 
 /**
- * Accessor for `eventDrivenProbe` benches and anything that drives the
+ * Accessor for `runProbe({mode: 'event'})` benches and anything that drives the
  * content walker over a Producer engine. Keyed by `resource.id`.
  * Lives here so the solver and the event-driven bench share one shape.
  */
@@ -144,7 +144,7 @@ export function buildProducerAccessor(_engine: Engine): GameStateAccessor {
  * `engine.loop.stepOnce()` internally). The engine has been `start()`ed
  * and immediately `stop()`ped so the real-time interval doesn't fire.
  *
- * `maxDeltaTime` override is for `eventDrivenProbe` benches —
+ * `maxDeltaTime` override is for `runProbe({mode: 'event'})` benches —
  * keep the option narrow until the probe adoption decision lands.
  */
 export function buildProducerSimEngine(

@@ -1,6 +1,6 @@
 import { Decimal, bn } from 'open-loop-engine';
 import { getAchievements, getBuildings, getPrimaryResource, getUpgrades } from '../modules';
-import type { ArcBeatProbe, BeatProbe } from '@/balance';
+import type { BeatProbe, Waypoint } from '@/balance';
 
 const sec = (s: number) => s;
 const min = (m: number) => m * 60;
@@ -37,7 +37,7 @@ const midpoint = (id: string): number => {
  * midpoint so the per-producer pacing reflects the player's likely
  * state during that beat, not at its earliest or latest possible moment.
  */
-export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
+export const FLOW_BEATS: Waypoint[] = Object.keys(BEAT_WINDOWS).map((id) => ({
   id,
   snapshotAtSec: midpoint(id),
 }));
@@ -64,40 +64,40 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  *   archetype-signature "watch the multiplier scroll" moment, scoped to
  *   whichever tier the player is producing on.
  */
-export const ARC_BEATS: ArcBeatProbe[] = [
+export const ARC_BEATS: BeatProbe[] = [
   {
     id: 'beat-1',
-    specWindow: BEAT_WINDOWS['beat-1']!,
+    targetWindow: BEAT_WINDOWS['beat-1']!,
     predicate: () => Decimal.gte(getPrimaryResource().value, 1),
   },
   {
     id: 'beat-2',
-    specWindow: BEAT_WINDOWS['beat-2']!,
+    targetWindow: BEAT_WINDOWS['beat-2']!,
     predicate: () => producerCountAtLeast('cursor', 1),
   },
   {
     id: 'beat-3',
-    specWindow: BEAT_WINDOWS['beat-3']!,
+    targetWindow: BEAT_WINDOWS['beat-3']!,
     predicate: () => producerCountAtLeast('grandma', 1),
   },
   {
     id: 'beat-4',
-    specWindow: BEAT_WINDOWS['beat-4']!,
+    targetWindow: BEAT_WINDOWS['beat-4']!,
     predicate: () => upgradeBought('cursor-boost-i'),
   },
   {
     id: 'beat-5',
-    specWindow: BEAT_WINDOWS['beat-5']!,
+    targetWindow: BEAT_WINDOWS['beat-5']!,
     predicate: () => achievementsEarnedAtLeast(25),
   },
   {
     id: 'beat-6',
-    specWindow: BEAT_WINDOWS['beat-6']!,
+    targetWindow: BEAT_WINDOWS['beat-6']!,
     predicate: () => anyContinuousProducerAtLeast(150),
   },
   {
     id: 'beat-7',
-    specWindow: BEAT_WINDOWS['beat-7']!,
+    targetWindow: BEAT_WINDOWS['beat-7']!,
     predicate: () => topProducerHeadlineAtLeast(1e6),
   },
 ];

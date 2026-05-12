@@ -1,5 +1,5 @@
-import type { BeatSnapshot } from './flow-probe';
-import type { BeatArcResult } from './arc-probe';
+import type { BeatResult, WaypointSnapshot } from 'open-loop-engine';
+import type { ProducerPacing } from './index';
 import type { SweepResult } from './sweep';
 
 /** Format a duration in seconds as `MM:SS` or `HH:MM:SS`. */
@@ -40,13 +40,13 @@ export function formatWindow(window: [number, number]): string {
 }
 
 /** Markdown table of arc-completion results. One row per beat. */
-export function renderArcTable(results: BeatArcResult[]): string {
+export function renderArcTable(results: BeatResult[]): string {
   const header = ['beat', 'spec window', 'p5', 'p50', 'p95', 'predicate / max', 'in window?'];
   const rows = results.map((r) => {
     const t = r.terminationTime;
     return [
       r.beatId,
-      formatWindow(r.specWindow),
+      r.targetWindow ? formatWindow(r.targetWindow) : '—',
       t ? formatDuration(t.p5) : '—',
       t ? formatDuration(t.p50) : '—',
       t ? formatDuration(t.p95) : '—',
@@ -58,7 +58,7 @@ export function renderArcTable(results: BeatArcResult[]): string {
 }
 
 /** Markdown table of per-beat per-producer pacing. */
-export function renderFlowTable(snapshots: BeatSnapshot[]): string {
+export function renderFlowTable(snapshots: WaypointSnapshot<ProducerPacing[]>[]): string {
   const header = [
     'beat',
     'snapshot @',
@@ -72,9 +72,9 @@ export function renderFlowTable(snapshots: BeatSnapshot[]): string {
   ];
   const rows: string[][] = [];
   for (const snap of snapshots) {
-    if (snap.perProducer.length === 0) {
+    if (snap.snapshot.length === 0) {
       rows.push([
-        snap.beatId,
+        snap.waypointId,
         formatDuration(snap.snapshotSimTime),
         '(none owned)',
         '',
@@ -87,9 +87,9 @@ export function renderFlowTable(snapshots: BeatSnapshot[]): string {
       continue;
     }
     let first = true;
-    for (const p of snap.perProducer) {
+    for (const p of snap.snapshot) {
       rows.push([
-        first ? snap.beatId : '',
+        first ? snap.waypointId : '',
         first ? formatDuration(snap.snapshotSimTime) : '',
         p.producerId,
         String(p.level),

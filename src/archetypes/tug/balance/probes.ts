@@ -435,8 +435,8 @@ interface RoiVariantRow {
 interface RoiResult {
   rows: RoiVariantRow[];
   /** Smallest swept refinery-1 cost where crossover exceeds the match-
-   *  duration gate. The analytical "elbow" — replaces what
-   *  `coarseFineProbe` was meant to find via cost sweep in OL-733. `null`
+   *  duration gate. The analytical "elbow" — replaces what the (since-removed)
+   *  `coarseFineProbe` probe was meant to find via cost sweep in OL-733. `null`
    *  when no swept value trips the gate (current data is well below the
    *  elbow). */
   proposedMaxCost: number | null;

@@ -1,6 +1,6 @@
 import { type Engine } from 'open-loop-engine';
 import { LaneKey, MatchKey, MetaKey } from '../modules';
-import type { ArcBeatProbe } from '@/balance';
+import type { BeatProbe } from '@/balance';
 
 const sec = (s: number) => s;
 const min = (m: number) => m * 60;
@@ -71,35 +71,35 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
  * `runMatrixUntil`'s shared `until` over `cell.aggregate.terminationTime`
  * + analyzer captures. See `probes.ts` for the MC probe implementations.
  */
-export const ARC_BEATS: ArcBeatProbe[] = [
+export const ARC_BEATS: BeatProbe[] = [
   {
     id: 'beat-1',
-    specWindow: BEAT_WINDOWS['beat-1']!,
+    targetWindow: BEAT_WINDOWS['beat-1']!,
     predicate: (engine) => unitsSentAtLeast(engine, 1),
   },
   {
     id: 'beat-2',
-    specWindow: BEAT_WINDOWS['beat-2']!,
+    targetWindow: BEAT_WINDOWS['beat-2']!,
     predicate: (engine) => firstCombatEngaged(engine),
   },
   {
     id: 'beat-3',
-    specWindow: BEAT_WINDOWS['beat-3']!,
+    targetWindow: BEAT_WINDOWS['beat-3']!,
     predicate: (engine) => counterPivotsAtLeast(engine, 1),
   },
   {
     id: 'beat-4',
-    specWindow: BEAT_WINDOWS['beat-4']!,
+    targetWindow: BEAT_WINDOWS['beat-4']!,
     predicate: (engine) => matchEnded(engine),
   },
   {
     id: 'beat-5',
-    specWindow: BEAT_WINDOWS['beat-5']!,
+    targetWindow: BEAT_WINDOWS['beat-5']!,
     predicate: (engine) => secondMatchPivotMade(engine),
   },
   {
     id: 'beat-6',
-    specWindow: BEAT_WINDOWS['beat-6']!,
+    targetWindow: BEAT_WINDOWS['beat-6']!,
     predicate: (engine) => counterPivotsAtLeast(engine, 2),
   },
 ];

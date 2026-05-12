@@ -43,7 +43,7 @@ interface DiffRow {
  * TODO(fill-in): hook into the bot's purchase events (or replay from a
  * sim run with event-driven probes). For triangular row: each purchase or
  * activation becomes one ScheduleStep entry, in firing order. The
- * `eventDrivenProbe` harness primitive (`open-loop-engine § harness`) is
+ * `runProbe({mode: 'event'})` harness mode (`open-loop-engine § harness`) is
  * one path; the other is direct subscription to the bot's purchase calls.
  */
 function extractBotSchedule(_engine: Engine): ScheduleStep[] {

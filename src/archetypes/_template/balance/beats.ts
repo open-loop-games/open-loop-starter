@@ -10,7 +10,7 @@
  */
 
 import { type Engine } from 'open-loop-engine';
-import type { ArcBeatProbe, BeatProbe } from '@/balance';
+import type { BeatProbe, Waypoint } from '@/balance';
 
 // TODO(fill-in): import archetype-specific injection keys from its
 // modules. Example from producer:
@@ -44,7 +44,7 @@ const midpoint = (id: string): number => {
  * per-archetype-equivalent) pacing reflects likely state during that beat,
  * not its earliest or latest moment.
  */
-export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
+export const FLOW_BEATS: Waypoint[] = Object.keys(BEAT_WINDOWS).map((id) => ({
   id,
   snapshotAtSec: midpoint(id),
 }));
@@ -61,11 +61,11 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  * `anyContinuousProducerAtLeast` for a state-based reshape that replaced a
  * hoard-gated predicate.
  */
-export const ARC_BEATS: ArcBeatProbe[] = [
+export const ARC_BEATS: BeatProbe[] = [
   // TODO(fill-in):
   // {
   //   id: 'beat-1',
-  //   specWindow: BEAT_WINDOWS['beat-1']!,
+  //   targetWindow: BEAT_WINDOWS['beat-1']!,
   //   predicate: (engine: Engine) => /* state check */,
   // },
 ];

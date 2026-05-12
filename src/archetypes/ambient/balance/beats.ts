@@ -1,6 +1,6 @@
 import { Decimal } from 'open-loop-engine';
 import { getAchievements, getAutoProducers, getPrimaryResource, getUnlocks } from '../modules';
-import type { ArcBeatProbe, BeatProbe } from '@/balance';
+import type { BeatProbe, Waypoint } from '@/balance';
 
 const sec = (s: number) => s;
 const min = (m: number) => m * 60;
@@ -43,7 +43,7 @@ const midpoint = (id: string): number => {
  * midpoint so per-producer pacing reflects the player's likely state
  * during that beat, not its earliest or latest moment.
  */
-export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
+export const FLOW_BEATS: Waypoint[] = Object.keys(BEAT_WINDOWS).map((id) => ({
   id,
   snapshotAtSec: midpoint(id),
 }));
@@ -72,30 +72,30 @@ export const FLOW_BEATS: BeatProbe[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  *
  * Beat 4 is resume-driven, not bisected — verify-only at runtime.
  */
-export const ARC_BEATS: ArcBeatProbe[] = [
+export const ARC_BEATS: BeatProbe[] = [
   {
     id: 'beat-1',
-    specWindow: BEAT_WINDOWS['beat-1']!,
+    targetWindow: BEAT_WINDOWS['beat-1']!,
     predicate: () => Decimal.gte(getPrimaryResource().value, 1),
   },
   {
     id: 'beat-2',
-    specWindow: BEAT_WINDOWS['beat-2']!,
+    targetWindow: BEAT_WINDOWS['beat-2']!,
     predicate: () => producerCountAtLeast('planter', 2),
   },
   {
     id: 'beat-3',
-    specWindow: BEAT_WINDOWS['beat-3']!,
+    targetWindow: BEAT_WINDOWS['beat-3']!,
     predicate: () => unlockBought('coop-built'),
   },
   {
     id: 'beat-5',
-    specWindow: BEAT_WINDOWS['beat-5']!,
+    targetWindow: BEAT_WINDOWS['beat-5']!,
     predicate: () => producerCountAtLeast('pond', 1) && unlockBought('spring-arrives'),
   },
   {
     id: 'beat-6',
-    specWindow: BEAT_WINDOWS['beat-6']!,
+    targetWindow: BEAT_WINDOWS['beat-6']!,
     predicate: () => achievementsEarnedAtLeast(8),
   },
 ];

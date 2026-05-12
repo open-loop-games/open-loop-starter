@@ -7,22 +7,24 @@
  *   3. read the punch list — find the red rows
  *   4. tweak again
  *
- * Drives `buildProducerSimEngine()` via `runArcProbe` at `tickDelta: 1s`.
- * Methodology is documented in `archetypes/BALANCING.md`.
+ * Drives `buildProducerSimEngine()` via `runProbe` (targetWindow-classified
+ * arc beats) and `runWaypointProbe` (snapshot-at-time per-producer pacing)
+ * at `tickDelta: 1s`. Methodology is documented in `archetypes/BALANCING.md`.
  */
 
 import {
+  producerPacingInspector,
   renderArcTable,
   renderFlowTable,
-  runArcProbe,
-  runFlowProbe,
+  runProbe,
+  runWaypointProbe,
   type ProducerInspector,
 } from '@/balance';
 import { getBuildings } from '../modules';
 import { ARC_BEATS, BEAT_WINDOWS, FLOW_BEATS } from './beats';
 import { buildProducerSimEngine } from './bot';
 
-const inspect: ProducerInspector = {
+const inspectorPolicy: ProducerInspector = {
   ownedProducers: (_engine) => {
     const buildings = getBuildings();
     const out: ReturnType<ProducerInspector['ownedProducers']> = [];
@@ -48,6 +50,8 @@ const inspect: ProducerInspector = {
   },
 };
 
+const inspect = producerPacingInspector(inspectorPolicy);
+
 function main(): void {
   const t0 = Date.now();
 
@@ -55,7 +59,7 @@ function main(): void {
   console.log(`Run at ${new Date().toISOString()}\n`);
 
   console.log('## Arc beats (engine sim, tickDelta 1s)\n');
-  const arcResults = runArcProbe({
+  const arcResults = runProbe({
     buildEngine: () => buildProducerSimEngine(),
     beats: ARC_BEATS,
     seeds: [0, 1, 2, 3, 4],
@@ -72,9 +76,9 @@ function main(): void {
   console.log(
     'arousal [5–30s) · FLOW [30s–2m) · flow-upper [2–5m) · ! boredom · !! frustration · !!! breakdown\n',
   );
-  const flowResults = runFlowProbe({
+  const flowResults = runWaypointProbe({
     buildEngine: () => buildProducerSimEngine(),
-    beats: FLOW_BEATS,
+    waypoints: FLOW_BEATS,
     inspect,
   });
   console.log(renderFlowTable(flowResults));
@@ -87,7 +91,8 @@ function main(): void {
   } else {
     for (const r of simFailed) {
       const p50 = r.terminationTime?.p50;
-      const [lo, hi] = r.specWindow;
+      // Every ARC_BEAT carries targetWindow, so it round-trips on the result.
+      const [lo, hi] = r.targetWindow!;
       let diag: string;
       if (p50 == null || r.counts.predicate === 0) {
         diag = `never fired across ${r.counts.maxSimTime} seeds`;
@@ -103,10 +108,10 @@ function main(): void {
 
   const outOfFlow: string[] = [];
   for (const snap of flowResults) {
-    for (const p of snap.perProducer) {
+    for (const p of snap.snapshot) {
       if (p.channel === 'boredom' || p.channel === 'frustration' || p.channel === 'breakdown') {
         outOfFlow.push(
-          `- ${snap.beatId}: ${p.producerId} payback ${fmt(p.beatTimeSeconds)} (${p.channel})`,
+          `- ${snap.waypointId}: ${p.producerId} payback ${fmt(p.beatTimeSeconds)} (${p.channel})`,
         );
       }
     }

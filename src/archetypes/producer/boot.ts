@@ -56,9 +56,9 @@ export interface ProducerEngineOptions {
   extraModules?: EngineModule[];
   /**
    * Raise the loop's `maxDeltaTime` cap. Used by benches profiling
-   * `eventDrivenProbe`, which calls `simulateTick(dt)` with dt equal to the
-   * smallest walker-visible event distance — often hundreds of seconds.
-   * Default (1s) silently clamps those advances and collapses the probe to
+   * `runProbe({mode: 'event'})`, which calls `simulateTick(dt)` with dt equal
+   * to the smallest walker-visible event distance — often hundreds of seconds.
+   * Default (1s) silently clamps those advances and collapses the run to
    * fixed-tick.
    */
   maxDeltaTime?: number;

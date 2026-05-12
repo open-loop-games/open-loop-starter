@@ -88,12 +88,12 @@ function createBalanceBotModule(): EngineModule {
 }
 
 /**
- * Accessor for `eventDrivenProbe` benches and anything that drives the
+ * Accessor for `runProbe({mode: 'event'})` benches and anything that drives the
  * content walker over this archetype's engine. Keyed by `resource.id`.
  * Keep this factory co-located with the bot so the solver and any profile
  * bench share one shape.
  *
- * Only needed if you plan to use `eventDrivenProbe` or the content-walker
+ * Only needed if you plan to use `runProbe({mode: 'event'})` or the content-walker
  * harness — both are optional for a balance pass. Delete if unused.
  */
 // TODO(fill-in): implement buildArchetypeAccessor(engine) → GameStateAccessor.
