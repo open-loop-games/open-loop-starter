@@ -58,7 +58,7 @@ A thirty-minute session near the start is a prestige cycle: push the headline re
 | systems | `createChallengeCategory` | Transcend-tier challenges (challenge1..5). Completion count feeds the modifier chain on each subsequent transcend run. |
 | systems | `createReset` | One reset per layer, declared inside the owning tier's `connect()` phase via `resetModules: [...]` listing the tier-IDs in scope plus `keep: [...]` exempting the gain currency the conversion just produced. The engine's per-module persistent-ref registry resolves the union; the `keep:` set is the load-bearing decision per layer (without it, `afterConvert → reset.reset()` zeros the currency one step after writing it). |
 | systems | `createConversion` | Multi-input/output conversion paired with the matching reset in the tier module's `connect()` phase. `inputs` consume the source currency via `createCostRequirement`; `outputs` produce the gain via `createLogFormula`. `afterConvert: () => reset.reset()` chains the layer reset, which the gain currency's `keep:` exemption survives. |
-| harness | `runArcProbe` / `runMatrix` | Beat-timing sim and parameter-grid robustness for the balance leaf. Not yet wired (smoke tests removed; balance lane files separately). |
+| harness | `runProbe` / `runMatrix` | Beat-timing sim and parameter-grid robustness for the balance leaf. Not yet wired (smoke tests removed; balance lane files separately). |
 
 **Engine systems explicitly not used (required):**
 

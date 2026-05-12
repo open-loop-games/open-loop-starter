@@ -41,7 +41,7 @@ The goal layer is *what you're aiming at*. Not "what numbers should this constan
 
 ### Beats, signature metric, flow bands
 
-A beat is a phase anchor — an ordered point in the player's experience where a *shape change* lands. Producer's "first compounding multiplier felt"; Looper's "first idle loop runs to completion without intervention"; Scaler's "first prestige currency unlocks a meaningful upgrade." Beats are not stopwatch targets; they are *predicates that mark a transition*, and `runArcProbe` records when each predicate fired during a sim run.
+A beat is a phase anchor — an ordered point in the player's experience where a *shape change* lands. Producer's "first compounding multiplier felt"; Looper's "first idle loop runs to completion without intervention"; Scaler's "first prestige currency unlocks a meaningful upgrade." Beats are not stopwatch targets; they are *predicates that mark a transition*, and `runProbe` records when each predicate fired during a sim run (target-window classification via `BeatProbe.targetWindow` → `BeatResult.{inWindow, targetWindow}`).
 
 The signature metric is what the archetype *climaxes on* — Producer's late-game rate-chain compounding, Scaler's prestige multiplier, Looper's queue depth running unattended. It identifies what "winning the arc" looks like in one number.
 
@@ -154,7 +154,7 @@ lock        regression tests pin coefficients      "no drift"
 
 Source: `closed-form-progression/thesis.md` § 2.
 
-Tightest fit when the subsystem is Pure or Piecewise closed-form. Spec is written down in math first (identifies which constants are independent, where the curve bends, what it converges to); the solver bisects on a single 1-D scalar per beat against `runArcProbe`; locks pin the chosen scalar with `toBeBetween` bounds.
+Tightest fit when the subsystem is Pure or Piecewise closed-form. Spec is written down in math first (identifies which constants are independent, where the curve bends, what it converges to); the solver bisects on a single 1-D scalar per beat against `runProbe`; locks pin the chosen scalar with `toBeBetween` bounds.
 
 The "no closed-form inversion in the solver" rule is correct *for the calibrate layer* — engine is truth at runtime, solver doesn't reimplement game mechanics. It does not bind the spec layer. Closed-form math is what you write *before* the oracle to know the *shape* of progression. The oracle then finds numbers within that shape.
 
@@ -182,7 +182,7 @@ One parameter swept across a range; report the response curve plus a depth-targe
 
 Fits subsystems where the *signature is the response*, not a single number. Tug's matrix-sharpness response curve over `counter-matrix/strongCounter` is the canonical case — there is no single "right" sharpness; there is a curve, and a chosen point on it that matches the design intent.
 
-Engine support: `runSensitivity` for fixed-tick sweeps, `runMatrixUntil` for predicate-terminated variants.
+Engine support: `runSensitivity` covers both fixed-tick (`Cell`) and predicate-bounded (`UntilCell`) sweeps via internal dispatch on `config.until`.
 
 ### 4. Distribution sampling
 
@@ -254,32 +254,26 @@ Current candidate-primitives relevant to balance work include `costScaling: { th
 
 The engine's `harness/` is the toolkit running the methodology choice. Curated entries below; full surface lives at `open-loop-engine/docs/api/INDEX.md § harness`.
 
-| Surface                    | Use for                                                                                       |
-| -------------------------- | --------------------------------------------------------------------------------------------- |
-| `runArcProbe`              | Time-budgeted arc with beat-fire-time recording. Standard input to a Tier-A solver.           |
-| `runFlowProbe`             | Flow-band occupation accounting across an arc. The "shape of play" probe.                     |
-| `runProbe`                 | Single-run tick-level introspection. The base layer below `runArcProbe` / `runFlowProbe`.     |
-| `bisectTuner`              | 1-D bisection per beat. Calibrate layer for spec/calibrate/lock.                              |
-| `runSensitivity`           | Fixed-tick sensitivity sweep across one parameter. Tier-B response curves.                    |
-| `runMatrix`                | Cartesian sims over a parameter grid. Persona dominance probes, multi-axis sweeps.            |
-| `runMatrixUntil`           | Predicate-terminated matrix variant. Match-end termination, drift detection.                  |
-| `coarseFineProbe`          | Coarse search over a parameter range, then fine search around the best coarse hit.            |
-| `eventDrivenProbe`         | Sample-on-event sampling rather than fixed-tick. Discrete-event-driven runs.                  |
-| `advanceToNextEvent`       | Event-level introspection — advance until next discrete event. Pairs with `eventDrivenProbe`. |
-| `stasisAwareTickProbe`     | Tick probe with stasis detection (engine-quiescence-aware termination).                       |
-| `applyPerturbation`        | Apply a perturbation to engine state. Foundation for sensitivity / Tier-B sweeps.             |
-| `diffAggregates`           | Compare aggregates across sims. Drift-vs-baseline core operator.                              |
-| `aggregateCell`            | Aggregate one cell of a matrix run. Building block for cross-sim comparison.                  |
-| `aggregateUntilCell`       | `aggregateCell` variant terminated by predicate.                                              |
-| `buildSensitivityCell`     | Build a cell for a sensitivity matrix. Pairs with `runSensitivity` + `aggregateCell`.         |
-| `buildPickerSnapshot`      | Snapshot the engine's picker state at frozen state. Methodology #2 input.                     |
-| `buildTransitionSnapshot`  | Snapshot transitions/changes between two engine states.                                       |
-| `createIncrementalSnapshot`| Incremental snapshot builder for time-series introspection.                                   |
-| `walkContent`              | Walk content registries (categories, chains, leaves) at frozen state. Methodology #2 input.   |
-| `walkCategories`           | Walk purchasable categories specifically.                                                     |
-| `walkChainRegistry`        | Walk modifier-chain registry; supports per-link attribution readouts.                         |
-| `buildEngineFromSave`      | Build an engine seeded from a save blob. Pairs with `pushScope` for one-engine many-iters.    |
-| `defaultAnalyzerPack`      | Standard analyzer pack (loop, peak, etc.); plug into a probe for default introspection.       |
+| Surface                       | Use for                                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `runProbe`                    | Mode-dispatching beat-arc probe. `BeatProbe.targetWindow` → `BeatResult.{inWindow, targetWindow}` first-class. Standard input to a Tier-A solver. |
+| `runWaypointProbe`            | Snapshot-at-time across an arc. Methodology #2's verify-step waypoint capture; flow-band occupation reads off the snapshot series. |
+| `bisectTuner`                 | 1-D bisection per beat. Calibrate layer for spec/calibrate/lock.                                           |
+| `runSensitivity`              | Sensitivity sweep across one parameter; generic over `Cell` (fixed-tick) and `UntilCell` (predicate-bounded) via `config.until` dispatch. Tier-B response curves. |
+| `runMatrix`                   | Cartesian sims over a parameter grid. Persona dominance probes, multi-axis sweeps.                         |
+| `runMatrixUntil`              | Predicate-terminated matrix variant; `mode: 'tick' \| 'event' \| 'stasis'` dispatches event-sampled and stasis-quiescent runs. |
+| `runUntil`                    | Predicate-bounded single-engine run; same `RunMode` dispatch as `runMatrixUntil`.                          |
+| `applyPerturbation`           | Apply a perturbation to engine state. Foundation for sensitivity / Tier-B sweeps.                          |
+| `diffAggregates`              | Compare aggregates across sims. Drift-vs-baseline core operator.                                           |
+| `createSensitivityCell`       | Build a cell for a sensitivity matrix. Pairs with `runSensitivity`.                                        |
+| `createPickerSnapshot`        | Snapshot the engine's picker state at frozen state. Methodology #2 input.                                  |
+| `createTransitionSnapshot`    | Snapshot transitions/changes between two engine states.                                                    |
+| `createIncrementalSnapshot`   | Incremental snapshot builder for time-series introspection.                                                |
+| `walker.walkContent`          | Walk content registries (categories, chains, leaves) at frozen state. Methodology #2 input.                |
+| `walker.walkCategories`       | Walk purchasable categories specifically.                                                                  |
+| `walker.walkChainRegistry`    | Walk modifier-chain registry; supports per-link attribution readouts.                                      |
+| `createEngineFromSave`        | Build an engine seeded from a save blob. Pairs with `pushScope` for one-engine many-iters.                 |
+| `defaultAnalyzerPack`         | Standard analyzer pack (loop, peak, etc.); plug into a probe for default introspection.                    |
 
 ### Load-bearing ceremony
 
