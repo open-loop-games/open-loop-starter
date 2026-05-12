@@ -24,7 +24,7 @@
  *   `keep: [prestigePoints]` — the load-bearing `keep:` exemption preserves
  *   the gain currency the conversion just wrote (`conversion.ts:204-211`).
  * - Prestige conversion gated via `anyOf(coinsThresholdRequirement,
- *   booleanRequirement(gainGteFloor))` — canonical disjunction lift from
+ *   createBooleanRequirement({ requirement: gainGteFloor }))` — canonical disjunction lift from
  *   `Synergism.ts:3620` enabled by the OL-893 combinators.
  *
  * Cross-tier modifier bindings (Crystal upgrades into coin / diamond

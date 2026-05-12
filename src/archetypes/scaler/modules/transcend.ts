@@ -40,7 +40,7 @@
  *   inversion from prestige reset's `keep: [prestigePoints]` — transcend
  *   reset zeros `prestigePoints` (`Reset.ts:504`).
  * - Transcend conversion gated via `anyOf(coinsThresholdRequirement,
- *   booleanRequirement(gainGteFloor))` — canonical disjunction lift from
+ *   createBooleanRequirement({ requirement: gainGteFloor }))` — canonical disjunction lift from
  *   `Synergism.ts:3631-3633` mirroring leaf 2's prestige conversion shape.
  *   Gain formula uses `createPolynomialFormula(transcendPow, transcendDivisor)`
  *   from the engine — `Synergism.ts:3583-3585` is `floor((c/1e100)^0.03)`,
