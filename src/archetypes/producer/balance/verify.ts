@@ -147,6 +147,9 @@ interface DiffRow {
   withinTolerance: boolean;
 }
 
+// TODO(expansion): diffTrajectories<TWaypoint>({ predicted, simulated, keys, tolerance })
+// — per-waypoint trajectory diff for methodology-#2 sim-verify, candidate at
+// open-loop-engine/docs/candidate-primitives.md. Graduate at N=2.
 function diff(predicted: readonly ArcWaypoint[], simulated: readonly ArcWaypoint[]): DiffRow[] {
   if (predicted.length !== simulated.length) {
     throw new Error(`length mismatch: predicted=${predicted.length} simulated=${simulated.length}`);
