@@ -30,7 +30,7 @@ import {
   persistent,
   type Persistent,
   withPersistentContext,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 // ============================================================================
 // Types
@@ -260,7 +260,7 @@ export function addAction(actionId: string, loops: number): void {
   if (itemDecorator) itemDecorator(item);
 
   if (addToTop.value) {
-    editLoopQueue.items.value = [item, ...editLoopQueue.items.value];
+    editLoopQueue.enqueue(item, { at: 0 });
   } else {
     editLoopQueue.enqueue(item);
   }
@@ -276,11 +276,8 @@ export function insertActionAt(index: number, actionId: string, loops: number): 
   const item: SequencerItem<ActionMeta> = { id: actionId, metadata: buildMeta(loops) };
   if (itemDecorator) itemDecorator(item);
 
-  const current = editLoopQueue.items.value;
-  const clamped = Math.max(0, Math.min(index, current.length));
-  const next = [...current];
-  next.splice(clamped, 0, item);
-  editLoopQueue.items.value = next;
+  const clamped = Math.max(0, Math.min(index, editLoopQueue.items.value.length));
+  editLoopQueue.enqueue(item, { at: clamped });
 }
 
 /** Remove an action from the edit queue by index */
