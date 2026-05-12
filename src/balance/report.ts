@@ -1,6 +1,5 @@
-import type { BeatResult, WaypointSnapshot } from 'open-loop-engine';
+import type { BeatResult, SensitivityResult, WaypointSnapshot } from 'open-loop-engine';
 import type { ProducerPacing } from './index';
-import type { SweepResult } from './sweep';
 
 /** Format a duration in seconds as `MM:SS` or `HH:MM:SS`. */
 export function formatDuration(sec: number): string {
@@ -105,8 +104,12 @@ export function renderFlowTable(snapshots: WaypointSnapshot<ProducerPacing[]>[])
   return renderMarkdownTable(header, rows);
 }
 
-/** Markdown table of sweep deltas (one per beat). */
-export function renderSweepTable(sweep: SweepResult, metricKey: string): string {
+/**
+ * Markdown table of sensitivity-sweep deltas, one row per variant. Reads
+ * the headline metric off `aggregate.metrics[metricKey].avg`, falling back
+ * to `aggregate.terminationTime.avg` for predicate-bounded sweeps.
+ */
+export function renderSensitivityTable(sweep: SensitivityResult, metricKey: string): string {
   const header = ['cell', metricKey, 'Δ vs baseline (abs)', 'Δ vs baseline (%)'];
   const baselineMetric =
     sweep.baseline.aggregate.metrics[metricKey]?.avg ??
@@ -114,12 +117,12 @@ export function renderSweepTable(sweep: SweepResult, metricKey: string): string 
   const rows = [
     ['baseline', baselineMetric != null ? formatDuration(baselineMetric) : '—', '—', '—'],
   ];
-  for (const cell of sweep.cells) {
-    const delta = cell.vsBaseline[metricKey];
+  for (const variant of sweep.variants) {
+    const delta = variant.deltas[metricKey];
     const cellMetric =
-      cell.aggregate.metrics[metricKey]?.avg ?? cell.aggregate.terminationTime?.avg;
+      variant.cell.aggregate.metrics[metricKey]?.avg ?? variant.cell.aggregate.terminationTime?.avg;
     rows.push([
-      `${cell.axis}=${String(cell.value)}`,
+      variant.name,
       cellMetric != null ? formatDuration(cellMetric) : '—',
       delta ? formatDuration(delta.absolute) : '—',
       delta ? `${(delta.relative * 100).toFixed(1)}%` : '—',

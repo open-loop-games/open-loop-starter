@@ -34,12 +34,11 @@
  */
 
 import {
-  diffAggregates,
   runMatrixUntil,
+  runSensitivity,
   runUntil,
   type CellResult,
   type Engine,
-  type MetricDelta,
   type UntilCell,
 } from 'open-loop-engine';
 import { IncomeUpgradeRoiKey, TugTuningRegistryKey, type TugTunables } from '../modules';
@@ -126,52 +125,6 @@ function runMatchScopeMC(
     maxSimTime: MAX_MATCH_SIM_TIME_SEC,
   });
   return result.cells[0]!;
-}
-
-interface SensitivityVariant {
-  name: string;
-  overrides?: TugOverrides;
-  scope?: Partial<TugTunables>;
-}
-
-interface SensitivityResultRow {
-  name: string;
-  cell: CellResult;
-  deltas: Record<string, MetricDelta>;
-}
-
-/** Local emulation of engine `runSensitivity`'s baseline-vs-variants +
- *  `diffAggregates` shape, but over `runMatrixUntil` (predicate-bounded
- *  termination) instead of `runMatrix` (fixed-tick). Engine
- *  `runSensitivity` (`harness/run-sensitivity.ts:27`) runs fixed ticks via
- *  `runMatrix`; Tug needs match-end predicate termination. Graduate to
- *  the engine when a second consumer wants the predicate-bounded sensitivity
- *  contract — filed in candidate-primitives.md as a follow-up. */
-function runSensitivityUntil(config: {
-  baseline: { name: string; overrides?: TugOverrides; scope?: Partial<TugTunables> };
-  variants: SensitivityVariant[];
-  seeds: number[];
-}): { baseline: CellResult; variants: SensitivityResultRow[] } {
-  const cells: UntilCell[] = [
-    buildCell(config.baseline.name, config.baseline.overrides, config.baseline.scope),
-    ...config.variants.map((v) => buildCell(v.name, v.overrides, v.scope)),
-  ];
-  const result = runMatrixUntil({
-    cells,
-    seeds: config.seeds,
-    until: () => activeCapture?.firstMatchEnded ?? false,
-    maxSimTime: MAX_MATCH_SIM_TIME_SEC,
-  });
-  const baselineCell = result.cells[0]!;
-  const variants: SensitivityResultRow[] = config.variants.map((v, i) => {
-    const cell = result.cells[i + 1]!;
-    return {
-      name: v.name,
-      cell,
-      deltas: diffAggregates(cell.aggregate, baselineCell.aggregate),
-    };
-  });
-  return { baseline: baselineCell, variants };
 }
 
 /** Time the first occurrence of a beat predicate under given overrides.
@@ -296,20 +249,26 @@ interface CounterStrongResult {
 }
 
 function runCounterStrongSensitivityProbe(): CounterStrongResult {
-  const baseline = {
-    name: `strong=${(1.0).toFixed(2)}`,
-    scope: { 'counter-matrix/strongCounter': () => 1.0 } as Partial<TugTunables>,
-  };
-  const variants: SensitivityVariant[] = STRONG_SWEEP.filter((s) => s !== 1.0).map((s) => ({
-    name: `strong=${s.toFixed(2)}`,
-    scope: { 'counter-matrix/strongCounter': () => s },
-  }));
-  const sweep = runSensitivityUntil({ baseline, variants, seeds: TUG_SEEDS });
+  const offValues = STRONG_SWEEP.filter((s) => s !== 1.0);
+  const sweep = runSensitivity({
+    baseline: buildCell(`strong=${(1.0).toFixed(2)}`, undefined, {
+      'counter-matrix/strongCounter': () => 1.0,
+    }),
+    variants: offValues.map((s) => ({
+      name: `strong=${s.toFixed(2)}`,
+      patch: () =>
+        buildCell(`strong=${s.toFixed(2)}`, undefined, {
+          'counter-matrix/strongCounter': () => s,
+        }),
+    })),
+    seeds: TUG_SEEDS,
+    until: () => activeCapture?.firstMatchEnded ?? false,
+    maxSimTime: MAX_MATCH_SIM_TIME_SEC,
+  });
 
   const winByStrong = new Map<number, number>();
   winByStrong.set(1.0, sweep.baseline.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0);
-  const offValues = STRONG_SWEEP.filter((s) => s !== 1.0);
-  for (let i = 0; i < variants.length; i++) {
+  for (let i = 0; i < offValues.length; i++) {
     const strong = offValues[i]!;
     const v = sweep.variants[i]!;
     winByStrong.set(strong, v.cell.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0);

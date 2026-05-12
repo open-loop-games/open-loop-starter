@@ -12,8 +12,9 @@
  * waypoints (own-income beat time, classified into Csikszentmihalyi flow
  * channels). `runProbe` with `BeatProbe.targetWindow` checks
  * beat-completion-time distributions across a seed sweep, with `inWindow`
- * classification.
- * `sweep` confirms ±%-perturbation robustness once a balance is chosen.
+ * classification. `runSensitivity` (with `until`/`axes` for predicate-
+ * bounded sweeps) confirms ±%-perturbation robustness once a balance is
+ * chosen.
  */
 
 import {
@@ -33,20 +34,12 @@ export {
 } from 'open-loop-engine';
 
 export {
-  runSweep,
-  type SweepAxis,
-  type SweepCellResult,
-  type SweepConfig,
-  type SweepResult,
-} from './sweep';
-
-export {
   formatChannel,
   formatDuration,
   formatWindow,
   renderArcTable,
   renderFlowTable,
-  renderSweepTable,
+  renderSensitivityTable,
 } from './report';
 
 /**
