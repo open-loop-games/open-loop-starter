@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format } from 'open-loop-engine';
+import { format } from '@open-loop/engine';
 import { getOfferings, getAutobuyerToggles, getRuneDefs } from '../modules';
 import RuneRow from './RuneRow.vue';
 
@@ -27,10 +27,7 @@ const offeringsLabel = computed(() => format(offerings.value, 0));
 
     <section class="runes-panel__autobuyer">
       <label class="runes-panel__toggle">
-        <input
-          v-model="toggles.autoSacrifice.value"
-          type="checkbox"
-        >
+        <input v-model="toggles.autoSacrifice.value" type="checkbox" />
         Auto-sacrifice (lowest-level rune each tick)
       </label>
     </section>

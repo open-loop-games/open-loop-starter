@@ -9,7 +9,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { createModifierSection, type DecimalSource, type Modifier } from 'open-loop-engine';
+import { createModifierSection, type DecimalSource, type Modifier } from '@open-loop/engine';
 
 const props = withDefaults(
   defineProps<{

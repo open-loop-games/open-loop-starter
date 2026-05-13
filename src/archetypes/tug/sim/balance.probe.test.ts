@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addResource, Decimal, runMatrixUntil, runUntil } from 'open-loop-engine';
+import { addResource, Decimal, runMatrixUntil, runUntil } from '@open-loop/engine';
 import { DEFAULT_TUG_DATA } from '../data';
 import {
   buildTugSimEngine,

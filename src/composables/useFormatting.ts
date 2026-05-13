@@ -6,7 +6,7 @@ import {
   formatTime,
   Decimal,
   type DecimalSource,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 const INFINITY_LABEL = '∞';
 

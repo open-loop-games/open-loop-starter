@@ -9,7 +9,7 @@ import {
   type Persistent,
   type PurchasableCategory,
   type Sequencer,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { TugData, UnitDef } from '../data/types';
 import { getIncome } from './income';
 import { LaneKey } from './lane';

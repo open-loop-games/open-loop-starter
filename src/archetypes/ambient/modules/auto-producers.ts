@@ -13,7 +13,7 @@ import {
   type Resource,
   type TimeSystem,
   type TuningRegistry,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { AmbientData, AutoProducerDef } from '../data/types';
 
 /**

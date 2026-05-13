@@ -1,4 +1,4 @@
-import { type Analyzer, type Engine } from 'open-loop-engine';
+import { type Analyzer, type Engine } from '@open-loop/engine';
 import { LaneKey, MatchKey } from '../modules';
 import { createOpponentBotModule } from '../modules/opponent-bot';
 import { createTugEngine } from '../boot';

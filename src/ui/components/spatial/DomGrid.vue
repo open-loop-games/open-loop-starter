@@ -31,7 +31,7 @@
  */
 
 import { computed, onScopeDispose, shallowRef, triggerRef } from 'vue';
-import type { SpatialGrid } from 'open-loop-engine';
+import type { SpatialGrid } from '@open-loop/engine';
 
 type CellClassValue = string | string[] | Record<string, boolean>;
 type CellStyleValue = Record<string, string>;

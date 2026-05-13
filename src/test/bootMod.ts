@@ -21,7 +21,7 @@ import {
   createMemoryStorage,
   type Engine,
   type EngineModule,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 export interface BootHandle {
   engine: Engine;

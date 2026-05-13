@@ -12,7 +12,7 @@
  * `deprecated` hides.
  */
 import type { Component } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import type { Engine } from '@open-loop/engine';
 import type { ArchetypeManifest } from '@/types';
 import type { ArchetypeBootResult } from '@/ui/sandbox';
 

@@ -13,8 +13,8 @@ import {
   ToggleGroupItem,
   ToggleGroupRoot,
 } from 'reka-ui';
-import type { Analyzer, Engine, EngineModule, RunContext } from 'open-loop-engine';
-import type { PickerEntry } from 'open-loop-engine/harness';
+import type { Analyzer, Engine, EngineModule, RunContext } from '@open-loop/engine';
+import type { PickerEntry } from '@open-loop/engine/harness';
 import Button from '@/ui/components/Button.vue';
 import { useBalanceWorkbench } from '@/composables/useBalanceWorkbench';
 

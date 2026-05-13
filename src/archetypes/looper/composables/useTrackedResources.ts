@@ -6,7 +6,7 @@
  */
 
 import { computed } from 'vue';
-import { Decimal } from 'open-loop-engine';
+import { Decimal } from '@open-loop/engine';
 import { RESOURCE_DEFS, type ResourceDef } from '../data/resources';
 import { getResourceValue } from '../modules/resources';
 

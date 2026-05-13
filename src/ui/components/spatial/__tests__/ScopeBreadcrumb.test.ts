@@ -6,7 +6,7 @@ import {
   createSpatialGraph,
   type ScopeStack,
   type SpatialGraph,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import ScopeBreadcrumb from '../ScopeBreadcrumb.vue';
 
 interface Pkg {

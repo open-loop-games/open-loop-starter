@@ -39,7 +39,7 @@ import {
   selectionCheapest,
   setupPolicyAutoPurchase,
   setupSweepAutoPurchase,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { getCoinProducers, getAccelerator, getMultiplier, getCoinUpgrades } from '../coin';
 import {
   getDiamondProducers,

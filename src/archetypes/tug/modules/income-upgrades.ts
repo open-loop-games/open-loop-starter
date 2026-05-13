@@ -12,7 +12,7 @@ import {
   type InjectionKey,
   type PurchasableCategory,
   type Requirement,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { IncomeUpgradeDef, TugData } from '../data/types';
 import { getIncome, getIncomeRateChain } from './income';
 import { type Side, TugTuningRegistryKey } from './tuning';

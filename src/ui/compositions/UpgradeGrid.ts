@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource } from '@open-loop/engine';
 
 export interface UpgradeCellData {
   id: string;

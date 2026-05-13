@@ -79,7 +79,7 @@ import {
   createReset,
   createConversion,
   persistent,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import {
   MYTHOS_PRODUCERS,
   TRANSCEND_UPGRADES,
@@ -350,7 +350,7 @@ export const transcendModule: EngineModule = {
     // Discrete entry keeps the contribution named in workbench/tooltip readouts
     // and avoids reaching across the coin module to mutate its bind closure.
     //
-    // Cross-tier sibling-import pattern per `src/archetypes/CLAUDE.md`:
+    // Cross-tier sibling-import pattern per `src/archetypes/README.md`:
     // transcend declares `dependencies: ['scaler-coin']`, so
     // `getCoinProducers()` resolves to the live category at install time.
     for (const entry of getCoinProducers().getAll()) {

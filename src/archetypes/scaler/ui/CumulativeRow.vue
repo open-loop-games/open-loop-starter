@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format } from 'open-loop-engine';
-import type { Purchasable } from 'open-loop-engine';
+import { format } from '@open-loop/engine';
+import type { Purchasable } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 
 const props = defineProps<{
@@ -29,12 +29,7 @@ function buy(): void {
     <p class="cumulative-row__description">
       {{ description }}
     </p>
-    <Button
-      :disabled="!canBuy"
-      @click="buy"
-    >
-      Buy — {{ format(cost, 0) }} {{ costLabel }}
-    </Button>
+    <Button :disabled="!canBuy" @click="buy"> Buy — {{ format(cost, 0) }} {{ costLabel }} </Button>
   </div>
 </template>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { Decimal, type Engine, type EngineModule } from 'open-loop-engine';
+import { Decimal, type Engine, type EngineModule } from '@open-loop/engine';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
 import { AppFrame, DevPanelOverlay, TabsBarShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
@@ -147,20 +147,11 @@ function getActiveModules(): EngineModule[] {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
-    v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
+  <AppFrame v-else :stack="stack" :tooltip-delay="400">
     <template #header>
-      <SystemHeader
-        :app-name="manifest.name"
-        @return-to-slots="returnToSlots"
-      >
+      <SystemHeader :app-name="manifest.name" @return-to-slots="returnToSlots">
         <template #about>
-          <h4 style="margin-bottom: 6px">
-            Scaler — Antimatter Physics
-          </h4>
+          <h4 style="margin-bottom: 6px">Scaler — Antimatter Physics</h4>
           <p>
             Buy producers, watch costs scale, hit a prestige threshold, ascend. Every tier
             compresses the one below it. The headline is the multiplier you build.
@@ -168,53 +159,23 @@ function getActiveModules(): EngineModule[] {
         </template>
       </SystemHeader>
     </template>
-    <TabsRoot
-      v-model="activeTab"
-      class="scaler-tabs"
-    >
+    <TabsRoot v-model="activeTab" class="scaler-tabs">
       <TabsBarShell>
         <template #resources>
           <ResourceHeaderStrip :readouts="readouts" />
         </template>
         <template #tabs>
           <TabsList class="scaler-tabs__list">
-            <TabsTrigger
-              value="buildings"
-              class="scaler-tabs__trigger"
-            >
-              Buildings
-            </TabsTrigger>
-            <TabsTrigger
-              value="upgrades"
-              class="scaler-tabs__trigger"
-            >
-              Upgrades
-            </TabsTrigger>
-            <TabsTrigger
-              value="prestige"
-              class="scaler-tabs__trigger"
-            >
-              Prestige
-            </TabsTrigger>
-            <TabsTrigger
-              v-if="transcendUnlocked"
-              value="transcend"
-              class="scaler-tabs__trigger"
-            >
+            <TabsTrigger value="buildings" class="scaler-tabs__trigger"> Buildings </TabsTrigger>
+            <TabsTrigger value="upgrades" class="scaler-tabs__trigger"> Upgrades </TabsTrigger>
+            <TabsTrigger value="prestige" class="scaler-tabs__trigger"> Prestige </TabsTrigger>
+            <TabsTrigger v-if="transcendUnlocked" value="transcend" class="scaler-tabs__trigger">
               Transcend
             </TabsTrigger>
-            <TabsTrigger
-              v-if="runesUnlocked"
-              value="runes"
-              class="scaler-tabs__trigger"
-            >
+            <TabsTrigger v-if="runesUnlocked" value="runes" class="scaler-tabs__trigger">
               Runes
             </TabsTrigger>
-            <TabsTrigger
-              v-if="challengesUnlocked"
-              value="challenges"
-              class="scaler-tabs__trigger"
-            >
+            <TabsTrigger v-if="challengesUnlocked" value="challenges" class="scaler-tabs__trigger">
               Challenges
             </TabsTrigger>
           </TabsList>
@@ -226,62 +187,35 @@ function getActiveModules(): EngineModule[] {
             Achievements
           </button>
         </template>
-        <TabsContent
-          value="buildings"
-          class="scaler-tabs__content"
-        >
+        <TabsContent value="buildings" class="scaler-tabs__content">
           <BuildingsPanel />
         </TabsContent>
-        <TabsContent
-          value="upgrades"
-          class="scaler-tabs__content"
-        >
+        <TabsContent value="upgrades" class="scaler-tabs__content">
           <UpgradesPanel />
         </TabsContent>
-        <TabsContent
-          value="prestige"
-          class="scaler-tabs__content"
-        >
+        <TabsContent value="prestige" class="scaler-tabs__content">
           <PrestigePanel />
         </TabsContent>
-        <TabsContent
-          v-if="transcendUnlocked"
-          value="transcend"
-          class="scaler-tabs__content"
-        >
+        <TabsContent v-if="transcendUnlocked" value="transcend" class="scaler-tabs__content">
           <TranscendPanel />
         </TabsContent>
-        <TabsContent
-          v-if="runesUnlocked"
-          value="runes"
-          class="scaler-tabs__content"
-        >
+        <TabsContent v-if="runesUnlocked" value="runes" class="scaler-tabs__content">
           <RunesPanel />
         </TabsContent>
-        <TabsContent
-          v-if="challengesUnlocked"
-          value="challenges"
-          class="scaler-tabs__content"
-        >
+        <TabsContent v-if="challengesUnlocked" value="challenges" class="scaler-tabs__content">
           <ChallengesPanel />
         </TabsContent>
       </TabsBarShell>
     </TabsRoot>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics
-    v-if="isDev"
-    v-model:workbench-open="showDevPanel"
-  />
+  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench
-      :engine="engine"
-      :modules="getActiveModules"
-    />
+    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
   </DevPanelOverlay>
 </template>
 

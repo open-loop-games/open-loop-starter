@@ -1,5 +1,5 @@
 import { watch } from 'vue';
-import { notationManager, Presets } from 'open-loop-engine';
+import { notationManager, Presets } from '@open-loop/engine';
 import { usePlayerPrefs } from './usePlayerPrefs';
 
 /** Curated notation options for the settings picker */

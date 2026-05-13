@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
-import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { Decimal, type DecimalSource } from '@open-loop/engine';
 
 vi.mock('@/composables/useBulkMode', () => {
   const mode = ref<number | 'max'>('max');

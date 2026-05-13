@@ -8,7 +8,7 @@ import {
   type EngineModule,
   type InjectionKey,
   type Persistent,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { TugData, UnitArchetypeTag } from '../data/types';
 import { getFortress } from './fortress';
 import { LANE_LENGTH, SIDES, type Side, TugTuningRegistryKey } from './tuning';

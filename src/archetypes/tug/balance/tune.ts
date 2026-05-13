@@ -25,7 +25,7 @@
  * follow-up).
  */
 
-import { bisectTuner, runMatrixUntil, type CellResult, type UntilCell } from 'open-loop-engine';
+import { bisectTuner, runMatrixUntil, type CellResult, type UntilCell } from '@open-loop/engine';
 import { TugTuningRegistryKey, type TugTunables } from '../modules';
 import {
   buildTugSimEngine,

@@ -4,7 +4,7 @@ import {
   persistent,
   randomItem,
   type EngineModule,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { PERSONAS, type Persona } from '../data/personality';
 import type { TugData } from '../data/types';
 import { getIncome } from './income';

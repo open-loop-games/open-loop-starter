@@ -10,7 +10,7 @@ import {
   type AchievementCategory,
   type DecimalSource,
   type EngineModule,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { AchievementDef, AmbientData, AmbientGameState } from '../data/types';
 import {
   AmbientTuningRegistryKey,

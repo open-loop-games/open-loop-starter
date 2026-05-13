@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format } from 'open-loop-engine';
-import type { Purchasable } from 'open-loop-engine';
+import { format } from '@open-loop/engine';
+import type { Purchasable } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 
 const props = defineProps<{
@@ -30,12 +30,7 @@ function buy(): void {
     <p class="crystal-row__desc">
       {{ description }}
     </p>
-    <Button
-      :disabled="!canBuy"
-      @click="buy"
-    >
-      {{ format(cost, 0) }} shards
-    </Button>
+    <Button :disabled="!canBuy" @click="buy"> {{ format(cost, 0) }} shards </Button>
   </div>
 </template>
 

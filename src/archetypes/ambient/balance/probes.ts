@@ -22,7 +22,7 @@
  */
 
 import { computed } from 'vue';
-import { Decimal, bn, processOfflineTime, runUntil, type Engine } from 'open-loop-engine';
+import { Decimal, bn, processOfflineTime, runUntil, type Engine } from '@open-loop/engine';
 import { PrimaryLifetimeKey, getAutoProducers, getPrimaryResource, getUnlocks } from '../modules';
 import { buildAmbientSimEngine } from './bot';
 

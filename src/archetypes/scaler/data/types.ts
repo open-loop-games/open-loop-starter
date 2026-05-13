@@ -5,7 +5,7 @@
 // First-arc shape per archetypes/scaler.md § 4 (data shape) and § 5 (content scope).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource } from '@open-loop/engine';
 
 // ─── Skeleton ───
 // Three first-arc tiers (coin / prestige / transcend); leaf 2 lands prestige

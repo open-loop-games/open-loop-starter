@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import type { ComputedRef } from 'vue';
-import type { Purchasable } from 'open-loop-engine';
+import type { Purchasable } from '@open-loop/engine';
 import { useModule } from '@/composables/useModule';
 import type { IncomeUpgradeDef } from '../data/types';
 import { getIncomeUpgrades, IncomeUpgradeRoiKey, TugDataKey, type Side } from '../modules';

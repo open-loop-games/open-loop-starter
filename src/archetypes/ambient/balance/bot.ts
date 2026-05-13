@@ -1,4 +1,4 @@
-import { persistent, type Engine, type EngineModule } from 'open-loop-engine';
+import { persistent, type Engine, type EngineModule } from '@open-loop/engine';
 import { createAmbientEngine, type AmbientOverrides } from '..';
 import { AutobuyerMasterToggleKey, AutobuyerRegistryKey } from '../modules';
 

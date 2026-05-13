@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal, format } from 'open-loop-engine';
+import { Decimal, format } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import {
   getPrestigePoints,
@@ -63,17 +63,10 @@ const totalCrystalLevels = computed(() =>
           <span class="prestige-panel__stat-value">{{ format(prestigePoints, 0) }}</span>
         </div>
       </div>
-      <Button
-        :disabled="!canConvert"
-        class="prestige-panel__button"
-        @click="doPrestige"
-      >
+      <Button :disabled="!canConvert" class="prestige-panel__button" @click="doPrestige">
         Prestige (+{{ gainDisplay }} PP)
       </Button>
-      <p
-        v-if="!canConvert"
-        class="prestige-panel__hint"
-      >
+      <p v-if="!canConvert" class="prestige-panel__hint">
         Need 1e16 coins this cycle, or PP gain ≥ 100.
       </p>
     </section>

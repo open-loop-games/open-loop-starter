@@ -1,5 +1,5 @@
 import { type App } from 'vue';
-import { type Engine, type EngineModule } from 'open-loop-engine';
+import { type Engine, type EngineModule } from '@open-loop/engine';
 import { bootApp, bootEngine } from '@/boot';
 import LooperAppRoot from './ui/LooperAppRoot.vue';
 import { createLooperModules } from './modules';

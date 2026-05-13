@@ -12,7 +12,7 @@
  */
 
 import { computed } from 'vue';
-import { Decimal, formatWhole, formatTime, toNumber } from 'open-loop-engine';
+import { Decimal, formatWhole, formatTime, toNumber } from '@open-loop/engine';
 import { getActiveList } from '../../modules/action-queue';
 import { getActionDef } from '../../modules/action-runner';
 import { computeAdjustedTicks } from '../../modules/action-formulas';
@@ -74,10 +74,7 @@ const failedCount = computed(() => item.value?.metadata.failedCount ?? 0);
 </script>
 
 <template>
-  <div
-    v-if="item"
-    class="cad"
-  >
+  <div v-if="item" class="cad">
     <div class="cad-name">
       {{ name }}
     </div>
@@ -98,23 +95,13 @@ const failedCount = computed(() => item.value?.metadata.failedCount ?? 0);
       <span>Time spent</span><b>{{ timeSpent }}</b>
     </div>
 
-    <div
-      v-if="statExpRows.length"
-      class="cad-stats"
-    >
-      <span
-        v-for="sx in statExpRows"
-        :key="sx.name"
-        class="cad-stat"
-      >
+    <div v-if="statExpRows.length" class="cad-stats">
+      <span v-for="sx in statExpRows" :key="sx.name" class="cad-stat">
         <b>{{ sx.name }}</b> {{ sx.value }}
       </span>
     </div>
 
-    <div
-      v-if="hasError"
-      class="cad-error"
-    >
+    <div v-if="hasError" class="cad-error">
       <div class="cad-row">
         <span>Failed attempts</span><b>{{ failedCount }}</b>
       </div>

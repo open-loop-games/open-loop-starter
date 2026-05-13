@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal, format } from 'open-loop-engine';
+import { Decimal, format } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import type { ScalerChallengeDef } from '../data';
 import {
@@ -38,17 +38,11 @@ function doToggle(): void {
 </script>
 
 <template>
-  <div
-    class="challenge-row"
-    :data-active="isActive"
-  >
+  <div class="challenge-row" :data-active="isActive">
     <div class="challenge-row__head">
       <strong class="challenge-row__name">{{ def.name }} ({{ def.index }})</strong>
       <span class="challenge-row__completions"> {{ completions }}/{{ def.completionLimit }} </span>
-      <span
-        v-if="isMaxed"
-        class="challenge-row__maxed"
-      >MAXED</span>
+      <span v-if="isMaxed" class="challenge-row__maxed">MAXED</span>
     </div>
     <p class="challenge-row__flavor">
       {{ def.flavor }}
@@ -65,11 +59,7 @@ function doToggle(): void {
       </span>
       <span class="challenge-row__progress"> progress {{ (goalProgress * 100).toFixed(1) }}% </span>
     </div>
-    <Button
-      :disabled="isMaxed"
-      class="challenge-row__action"
-      @click="doToggle"
-    >
+    <Button :disabled="isMaxed" class="challenge-row__action" @click="doToggle">
       <span v-if="isActive">Exit Challenge</span>
       <span v-else-if="isMaxed">Maxed</span>
       <span v-else>Enter Challenge</span>

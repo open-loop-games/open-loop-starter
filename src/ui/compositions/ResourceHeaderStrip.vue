@@ -7,7 +7,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format } from 'open-loop-engine';
+import { format } from '@open-loop/engine';
 import HudBar from '@/ui/components/HudBar.vue';
 import HudChip from '@/ui/components/HudChip.vue';
 import type { ResourceReadout, ResourceHighlight } from './ResourceHeaderStrip';

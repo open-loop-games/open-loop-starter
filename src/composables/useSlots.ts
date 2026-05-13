@@ -1,5 +1,5 @@
 import { ref, computed, type Ref } from 'vue';
-import type { SaveManager, SaveSlot, SavePeek, ModDef } from 'open-loop-engine';
+import type { SaveManager, SaveSlot, SavePeek, ModDef } from '@open-loop/engine';
 
 export interface SlotInfo extends SaveSlot {
   peek: SavePeek | null;

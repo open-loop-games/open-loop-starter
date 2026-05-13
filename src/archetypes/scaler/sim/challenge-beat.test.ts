@@ -22,7 +22,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { Decimal } from 'open-loop-engine';
+import { Decimal } from '@open-loop/engine';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
 import {
   getAccelerator,

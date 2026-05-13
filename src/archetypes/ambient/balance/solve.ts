@@ -36,7 +36,7 @@ import {
   type Engine,
   type OverrideRegistry,
   type TunerResult,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { AmbientTuningRegistryKey, type AmbientTunables } from '../modules';
 import { AUTO_PRODUCERS } from '../data/producers';
 import { UNLOCKS } from '../data/unlocks';

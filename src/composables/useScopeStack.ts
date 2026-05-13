@@ -1,5 +1,5 @@
 import { computed, onScopeDispose, shallowRef, triggerRef, type ComputedRef } from 'vue';
-import type { GraphNode, ScopeStack, ScopeState, SpatialGraph } from 'open-loop-engine';
+import type { GraphNode, ScopeStack, ScopeState, SpatialGraph } from '@open-loop/engine';
 
 export interface UseScopeStackReturn<N, E> {
   path: ComputedRef<readonly string[]>;

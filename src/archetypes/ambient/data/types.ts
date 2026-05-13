@@ -1,4 +1,4 @@
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource } from '@open-loop/engine';
 
 // ─── Skeleton ───
 // 5 auto-producer tiers; 12 visibility unlocks; 20 achievements

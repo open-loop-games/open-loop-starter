@@ -48,7 +48,7 @@ import {
   createCostRequirement,
   createMultiplicativeModifier,
   createModifierChain,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import {
   COIN_PRODUCERS,
   ACCELERATOR_DEF,

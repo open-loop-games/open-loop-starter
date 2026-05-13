@@ -21,7 +21,7 @@ import {
   type Engine,
   type EngineCategories,
   type EngineModule,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import { useBalanceWorkbench } from '@/composables/useBalanceWorkbench';
 

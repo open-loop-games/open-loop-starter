@@ -37,7 +37,7 @@ import {
   persistent,
   toNumber,
   withPersistentContext,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { ZONES } from '../data/zones';
 import { PROGRESS_VARS } from '../data/progress-vars';
 import { REGULAR_VARS } from '../data/regular-vars';

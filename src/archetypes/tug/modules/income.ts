@@ -9,7 +9,7 @@ import {
   type EngineModule,
   type ModifierChain,
   type Resource,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { TugData } from '../data/types';
 import { type Side, TugTuningRegistryKey } from './tuning';
 

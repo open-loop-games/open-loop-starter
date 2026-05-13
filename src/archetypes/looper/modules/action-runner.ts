@@ -27,7 +27,7 @@ import {
   bn,
   createContentRegistry,
   GameLoopKey,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { ACTIONS } from '../data/actions';
 import { ref } from 'vue';
 import type {

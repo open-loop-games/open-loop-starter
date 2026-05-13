@@ -1,5 +1,5 @@
 import { computed, onScopeDispose, shallowRef, triggerRef, type ComputedRef } from 'vue';
-import type { GridCoord, SpatialGrid } from 'open-loop-engine';
+import type { GridCoord, SpatialGrid } from '@open-loop/engine';
 
 export interface UseSpatialGridReturn<T> {
   cell: (x: number, y: number) => ComputedRef<T | undefined>;

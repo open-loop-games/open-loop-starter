@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal } from 'open-loop-engine';
+import { Decimal } from '@open-loop/engine';
 import { useModule } from '@/composables/useModule';
 import { PrimaryLifetimeKey, SceneKey, getAutoProducers, getUnlocks } from '../../modules';
 import { useFormatting } from '@/composables/useFormatting';

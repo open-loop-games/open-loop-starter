@@ -97,7 +97,7 @@ import {
   type ChallengeDef,
   createChallengeCategory,
   createMultiplicativeModifier,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { SCALER_BALANCE, SCALER_CHALLENGES, type ScalerChallengeDef } from '../data';
 import { getCoinResource, getCoinProducers, getAccelerator, getMultiplier } from './coin';
 import { getDiamondProducers } from './prestige';

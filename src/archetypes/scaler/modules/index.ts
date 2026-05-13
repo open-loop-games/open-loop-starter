@@ -1,4 +1,4 @@
-import type { EngineModule } from 'open-loop-engine';
+import type { EngineModule } from '@open-loop/engine';
 import { coinModule } from './coin';
 import { prestigeModule } from './prestige';
 import { transcendModule } from './transcend';

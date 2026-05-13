@@ -53,7 +53,7 @@ import {
   type FillStrategy,
   type SequencerItem,
   type Throttle,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 // ============================================================================
 // Types

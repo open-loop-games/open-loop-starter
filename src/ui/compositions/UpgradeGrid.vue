@@ -8,7 +8,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format } from 'open-loop-engine';
+import { format } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
 import Popover from '@/ui/components/Popover.vue';

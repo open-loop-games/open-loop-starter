@@ -71,7 +71,7 @@ import {
   addResource,
   subtractResource,
   createMultiplicativeModifier,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import {
   SCALER_RUNES,
   SCALER_BALANCE,

@@ -8,7 +8,7 @@
  * Reference: idleLoops/actions.js setAdjustedTicks, addExpFromAction, getNumOnList
  */
 
-import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { Decimal, type DecimalSource } from '@open-loop/engine';
 import type { ActionDef } from '../data/types';
 import { getStatLevel, getTalentMult, addStatXP } from './stats';
 import { getActiveLoopQueue, accumulateCurrentItemStatExp } from './action-queue';

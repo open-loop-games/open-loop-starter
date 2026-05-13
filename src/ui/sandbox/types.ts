@@ -1,5 +1,5 @@
 import type { App } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import type { Engine } from '@open-loop/engine';
 
 /**
  * Shape every archetype's `createApp()` must return so the gallery sandbox

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { effectScope } from 'vue';
-import { createSpatialGrid } from 'open-loop-engine';
+import { createSpatialGrid } from '@open-loop/engine';
 import { useSpatialGrid } from '../useSpatialGrid';
 
 interface Tile {

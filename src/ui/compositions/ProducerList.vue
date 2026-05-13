@@ -6,7 +6,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format, formatWhole, type DecimalSource } from 'open-loop-engine';
+import { format, formatWhole, type DecimalSource } from '@open-loop/engine';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
 import Button from '@/ui/components/Button.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';

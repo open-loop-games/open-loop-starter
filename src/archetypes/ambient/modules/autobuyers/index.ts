@@ -7,7 +7,7 @@ import {
   type EngineModule,
   type InjectionKey,
   type Persistent,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 // vanilla canonical (architecture):
 //   AntimatterDimensionsSourceCode/src/core/autobuyers/autobuyer.js — abstract

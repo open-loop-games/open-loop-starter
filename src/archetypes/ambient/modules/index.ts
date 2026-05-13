@@ -1,4 +1,4 @@
-import type { EngineModule } from 'open-loop-engine';
+import type { EngineModule } from '@open-loop/engine';
 import type { AmbientData } from '../data/types';
 import { createAutoProducersModule } from './auto-producers';
 import { createUnlocksModule } from './unlocks';

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { DialogTitle } from 'reka-ui';
-import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { Decimal, type DecimalSource } from '@open-loop/engine';
 import { useFormatting } from '@/composables/useFormatting';
 
 const props = defineProps<{

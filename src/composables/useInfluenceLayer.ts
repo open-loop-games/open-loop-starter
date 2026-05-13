@@ -1,5 +1,5 @@
 import { computed, onScopeDispose, shallowRef, triggerRef, type ComputedRef } from 'vue';
-import type { InfluenceLayer } from 'open-loop-engine';
+import type { InfluenceLayer } from '@open-loop/engine';
 
 export interface UseInfluenceLayerReturn {
   at: (x: number, y: number) => ComputedRef<number>;

@@ -1,4 +1,4 @@
-import type { InjectionKey } from 'open-loop-engine';
+import type { InjectionKey } from '@open-loop/engine';
 import { useGame } from './useGame';
 
 /**

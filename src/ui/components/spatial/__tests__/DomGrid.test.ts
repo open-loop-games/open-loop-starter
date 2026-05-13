@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick, h } from 'vue';
-import { createSpatialGrid, type SpatialGrid } from 'open-loop-engine';
+import { createSpatialGrid, type SpatialGrid } from '@open-loop/engine';
 import DomGrid from '../DomGrid.vue';
 
 interface Tile {

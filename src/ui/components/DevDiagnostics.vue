@@ -16,7 +16,7 @@
  */
 
 import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import type { Engine } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 
 const engine = inject<Engine>('engine');

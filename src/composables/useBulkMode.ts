@@ -1,5 +1,5 @@
 import { computed, type WritableComputedRef } from 'vue';
-import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { Decimal, type DecimalSource } from '@open-loop/engine';
 import { useModule } from './useModule';
 import { UIPrefsKey } from '@/modules/ui-prefs';
 

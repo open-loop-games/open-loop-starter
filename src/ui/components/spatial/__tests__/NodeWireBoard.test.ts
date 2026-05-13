@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { h, nextTick } from 'vue';
-import { createSpatialGraph, type SpatialGraph } from 'open-loop-engine';
+import { createSpatialGraph, type SpatialGraph } from '@open-loop/engine';
 import NodeWireBoard from '../NodeWireBoard.vue';
 
 interface Node {

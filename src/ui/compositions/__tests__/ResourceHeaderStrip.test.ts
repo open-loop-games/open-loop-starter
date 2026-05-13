@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource } from '@open-loop/engine';
 import ResourceHeaderStrip from '../ResourceHeaderStrip.vue';
 import type { ResourceReadout, ResourceHighlight } from '../ResourceHeaderStrip';
 

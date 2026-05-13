@@ -28,7 +28,7 @@
 import { computed, ref } from 'vue';
 import { Icon } from '@iconify/vue';
 import Button from '@/ui/components/Button.vue';
-import { formatWhole } from 'open-loop-engine';
+import { formatWhole } from '@open-loop/engine';
 import {
   getRepeatLastAction,
   getAddToTop,
@@ -98,16 +98,10 @@ function onCustomInput(e: Event) {
 
     <div class="ac-split">
       <div class="ac-current">
-        <CurrentActionList
-          :hovered-index="hoveredActiveIndex"
-          @hover="onHover"
-        />
+        <CurrentActionList :hovered-index="hoveredActiveIndex" @hover="onHover" />
       </div>
       <div class="ac-next">
-        <CurrentActionDetail
-          v-if="hoveredActiveIndex !== null"
-          :index="hoveredActiveIndex"
-        />
+        <CurrentActionDetail v-if="hoveredActiveIndex !== null" :index="hoveredActiveIndex" />
         <NextActionList v-else />
       </div>
     </div>
@@ -129,29 +123,20 @@ function onCustomInput(e: Event) {
         min="1"
         :value="amount"
         @change="onCustomInput"
-      >
+      />
     </div>
 
     <div class="ac-toggles">
       <label class="ac-toggle">
-        <input
-          v-model="keepActiveLoopActive"
-          type="checkbox"
-        >
+        <input v-model="keepActiveLoopActive" type="checkbox" />
         Keep current list active
       </label>
       <label class="ac-toggle">
-        <input
-          v-model="repeatLastAction"
-          type="checkbox"
-        >
+        <input v-model="repeatLastAction" type="checkbox" />
         Repeat last action
       </label>
       <label class="ac-toggle">
-        <input
-          v-model="addToTop"
-          type="checkbox"
-        >
+        <input v-model="addToTop" type="checkbox" />
         Add actions to top
       </label>
     </div>
@@ -166,20 +151,8 @@ function onCustomInput(e: Event) {
       >
         {{ isPaused ? 'Resume' : 'Pause' }}
       </Button>
-      <Button
-        class="btn-sm"
-        data-testid="queue-apply"
-        @click="manualRestart"
-      >
-        Apply now
-      </Button>
-      <Button
-        class="btn-sm"
-        data-testid="queue-clear"
-        @click="clearActions"
-      >
-        Clear
-      </Button>
+      <Button class="btn-sm" data-testid="queue-apply" @click="manualRestart"> Apply now </Button>
+      <Button class="btn-sm" data-testid="queue-clear" @click="clearActions"> Clear </Button>
     </div>
   </div>
 </template>

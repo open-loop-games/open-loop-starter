@@ -11,7 +11,7 @@
  * is to surface the closure value, not assume one.
  */
 
-import { Decimal, runUntil } from 'open-loop-engine';
+import { Decimal, runUntil } from '@open-loop/engine';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
 import {
   getCoinResource,

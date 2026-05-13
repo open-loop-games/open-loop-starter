@@ -1,4 +1,4 @@
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource } from '@open-loop/engine';
 
 // ─── Skeleton ───
 // 9 stats (single axis; canonical Level + Talent two-tier role split

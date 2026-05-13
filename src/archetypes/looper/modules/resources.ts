@@ -20,7 +20,7 @@ import {
   resetResource,
   hasResource,
   withPersistentContext,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { RESOURCE_DEFS, type ResourceId } from '../data/resources';
 
 // ============================================================================

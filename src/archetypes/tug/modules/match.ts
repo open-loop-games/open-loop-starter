@@ -11,7 +11,7 @@ import {
   type Persistent,
   type Reset,
   type Resource,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { TugData } from '../data/types';
 import { getFortress } from './fortress';
 import { LaneKey } from './lane';

@@ -1,4 +1,4 @@
-import { type Engine } from 'open-loop-engine';
+import { type Engine } from '@open-loop/engine';
 import { LaneKey, MatchKey, MetaKey } from '../modules';
 import type { BeatProbe } from '@/balance';
 

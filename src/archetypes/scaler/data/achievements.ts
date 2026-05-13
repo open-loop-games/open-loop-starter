@@ -25,7 +25,7 @@
 // first arc (no singularity surface yet). Fork extension territory.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { Decimal } from 'open-loop-engine';
+import { Decimal } from '@open-loop/engine';
 import type { AchievementDef, ScalerGameState, UpgradeGrant } from './types';
 
 // ─── Reward expansion helpers ────────────────────────────────────────────────

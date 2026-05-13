@@ -3,7 +3,7 @@ import {
   type EngineModule,
   type InjectionKey,
   type Persistent,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { TugData } from '../data/types';
 import { MatchKey } from './match';
 

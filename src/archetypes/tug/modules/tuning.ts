@@ -4,7 +4,7 @@ import {
   type EngineModule,
   type InjectionKey,
   type TuningRegistry,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { TugData } from '../data/types';
 
 /** Side discriminator for mirrored-instance modules (units, income). */

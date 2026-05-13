@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addResource, type Engine, type InjectionKey } from 'open-loop-engine';
+import { addResource, type Engine, type InjectionKey } from '@open-loop/engine';
 import { bootEngine } from '@/boot';
 
 function mustInject<T>(engine: Engine, key: InjectionKey<T>): T {

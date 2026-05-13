@@ -32,14 +32,14 @@ import {
   type MetricDelta,
   type RunContext,
   type SensitivityResult,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import {
   createPickerSnapshot,
   applyPerturbation,
   type PickerEntry,
   type PickerSnapshot,
   type Perturbation,
-} from 'open-loop-engine/harness';
+} from '@open-loop/engine/harness';
 
 export interface BalanceWorkbenchOptions {
   /** Live engine being inspected. Picker walks it; commit mutates it directly. */
@@ -188,10 +188,6 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       error.value = 'No picker entry selected';
       return;
     }
-    if (!canPerturb.value) {
-      error.value = 'Selected entry is not perturbable in v1';
-      return;
-    }
     if (!engine.saveManager) {
       error.value = 'Engine has no saveManager — persistence: true required';
       return;
@@ -263,10 +259,6 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     const entry = selectedEntry.value;
     if (!entry) {
       error.value = 'No picker entry selected';
-      return;
-    }
-    if (!canPerturb.value) {
-      error.value = 'Selected entry is not perturbable in v1';
       return;
     }
     discard();

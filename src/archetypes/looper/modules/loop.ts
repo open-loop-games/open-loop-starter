@@ -26,7 +26,7 @@ import {
   type Persistent,
   withPersistentContext,
   GameLoopKey,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { getMana, drainMana, resetMana } from './mana';
 import { getStatLevelSkills } from './stats';
 import { resetAllResources } from './resources';

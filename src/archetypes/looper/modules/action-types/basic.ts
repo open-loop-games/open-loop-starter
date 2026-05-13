@@ -14,7 +14,7 @@ import {
   type Persistent,
   persistent,
   createCategoryBase,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { ActionDef } from '../../data/types';
 
 export interface BasicState {

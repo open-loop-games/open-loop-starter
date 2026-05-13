@@ -1,4 +1,4 @@
-import type { EngineModule } from 'open-loop-engine';
+import type { EngineModule } from '@open-loop/engine';
 import { manaModule } from './mana';
 import { resourcesModule } from './resources';
 import { statsModule } from './stats';

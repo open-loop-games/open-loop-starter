@@ -1,4 +1,4 @@
-import { createReset, type EngineModule, type InjectionKey, type Reset } from 'open-loop-engine';
+import { createReset, type EngineModule, type InjectionKey, type Reset } from '@open-loop/engine';
 import type { AmbientData } from '../data/types';
 
 export const PrestigeKey: InjectionKey<Reset> = Symbol('ambient/prestige') as InjectionKey<Reset>;

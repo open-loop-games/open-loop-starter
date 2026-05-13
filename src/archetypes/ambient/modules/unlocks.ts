@@ -7,7 +7,7 @@ import {
   tunable,
   type EngineModule,
   type PurchasableCategory,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { AmbientData, UnlockDef } from '../data/types';
 import { AmbientTuningRegistryKey, PrimaryLifetimeKey } from './auto-producers';
 

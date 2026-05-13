@@ -5,7 +5,7 @@ import {
   type EngineModule,
   type EngineContext,
   type Persistent,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { useToasts } from '@/composables/useToasts';
 
 /**

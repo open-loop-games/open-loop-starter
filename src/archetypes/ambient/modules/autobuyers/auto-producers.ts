@@ -1,11 +1,11 @@
-import { persistent, type EngineContext, type EngineModule } from 'open-loop-engine';
+import { persistent, type EngineContext, type EngineModule } from '@open-loop/engine';
 import {
   setupPolicyAutoPurchase,
   selectionHybridPayback,
   type Producer,
   type ProducerCategory,
   type SelectionPolicy,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { getAutoProducers } from '../auto-producers';
 import type { AutoProducerDef } from '../../data/types';
 import {

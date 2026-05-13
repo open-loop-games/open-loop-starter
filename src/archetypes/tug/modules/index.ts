@@ -1,4 +1,4 @@
-import type { EngineModule } from 'open-loop-engine';
+import type { EngineModule } from '@open-loop/engine';
 import type { TugData } from '../data/types';
 import { createTuningModule } from './tuning';
 import { createFortressModule } from './fortress';

@@ -24,7 +24,7 @@ import {
   RadioGroupItem,
   RadioGroupRoot,
 } from 'reka-ui';
-import { formatWhole } from 'open-loop-engine';
+import { formatWhole } from '@open-loop/engine';
 import { STATS } from '../../data/stats';
 import {
   getStatLevel,
@@ -197,63 +197,31 @@ watch(radarPulse, () => {
 </script>
 
 <template>
-  <section
-    class="stats-panel"
-    data-testid="stats-panel"
-  >
+  <section class="stats-panel" data-testid="stats-panel">
     <header class="panel-header">
-      <h4 class="section-title">
-        Stats
-      </h4>
-      <RadioGroupRoot
-        v-model="viewMode"
-        class="view-toggle"
-        :default-value="'grid'"
-      >
-        <RadioGroupItem
-          value="grid"
-          class="view-button"
-          aria-label="Grid view"
-        >
+      <h4 class="section-title">Stats</h4>
+      <RadioGroupRoot v-model="viewMode" class="view-toggle" :default-value="'grid'">
+        <RadioGroupItem value="grid" class="view-button" aria-label="Grid view">
           <RadioGroupIndicator />
           Grid
         </RadioGroupItem>
-        <RadioGroupItem
-          value="radar"
-          class="view-button"
-          aria-label="Radar view"
-        >
+        <RadioGroupItem value="radar" class="view-button" aria-label="Radar view">
           <RadioGroupIndicator />
           Radar
         </RadioGroupItem>
       </RadioGroupRoot>
     </header>
 
-    <section
-      v-if="viewMode === 'grid'"
-      class="stats-grid"
-    >
-      <HoverCardRoot
-        v-for="name in statList"
-        :key="name"
-      >
+    <section v-if="viewMode === 'grid'" class="stats-grid">
+      <HoverCardRoot v-for="name in statList" :key="name">
         <HoverCardTrigger as-child>
-          <div
-            class="stat-tile"
-            :data-testid="`stat-${name}`"
-          >
+          <div class="stat-tile" :data-testid="`stat-${name}`">
             <div class="stat-tile-header">
               <span class="stat-name">{{ name }}</span>
-              <span
-                class="stat-level"
-                :data-testid="`stat-level-${name}`"
-              >{{
+              <span class="stat-level" :data-testid="`stat-level-${name}`">{{
                 formatWhole(getStatLevel(name))
               }}</span>
-              <span
-                class="stat-talent"
-                :data-testid="`stat-talent-${name}`"
-              >
+              <span class="stat-talent" :data-testid="`stat-talent-${name}`">
                 T{{ formatWhole(getTalentLevel(name)) }}
               </span>
             </div>
@@ -274,10 +242,7 @@ watch(radarPulse, () => {
           </div>
         </HoverCardTrigger>
         <HoverCardPortal>
-          <HoverCardContent
-            class="hovercard"
-            :side-offset="8"
-          >
+          <HoverCardContent class="hovercard" :side-offset="8">
             <div class="hc-title">
               {{ statTooltips[name]?.name }}
             </div>
@@ -308,24 +273,18 @@ watch(radarPulse, () => {
               </div>
             </dl>
             <p class="hc-note">
-              <em>Level resets each loop and cuts action cost. Talent persists and speeds up
-                XP-gain.</em>
+              <em
+                >Level resets each loop and cuts action cost. Talent persists and speeds up
+                XP-gain.</em
+              >
             </p>
           </HoverCardContent>
         </HoverCardPortal>
       </HoverCardRoot>
     </section>
 
-    <section
-      v-else
-      class="radar-view"
-    >
-      <canvas
-        ref="canvasRef"
-        :width="RADAR_SIZE"
-        :height="RADAR_SIZE"
-        class="radar-canvas"
-      />
+    <section v-else class="radar-view">
+      <canvas ref="canvasRef" :width="RADAR_SIZE" :height="RADAR_SIZE" class="radar-canvas" />
       <div class="radar-legend">
         <span class="legend-swatch level" /> Level <span class="legend-swatch talent" /> Bonus XP
         (%)

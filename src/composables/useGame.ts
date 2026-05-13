@@ -1,5 +1,5 @@
 import { inject, type Ref } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import type { Engine } from '@open-loop/engine';
 import type { Screen } from '@/types';
 
 export function useGame() {

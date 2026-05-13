@@ -1,4 +1,4 @@
-import { persistent, type EngineModule } from 'open-loop-engine';
+import { persistent, type EngineModule } from '@open-loop/engine';
 import { MatchKey } from '../modules';
 
 /**

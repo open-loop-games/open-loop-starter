@@ -13,7 +13,7 @@
 -->
 <script setup lang="ts">
 import { toRef } from 'vue';
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource } from '@open-loop/engine';
 import RichTooltip from './RichTooltip.vue';
 import ChainBreakdown from './ChainBreakdown.vue';
 import { useFormatting } from '@/composables/useFormatting';

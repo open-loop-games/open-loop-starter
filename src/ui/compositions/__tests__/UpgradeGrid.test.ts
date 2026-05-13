@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource } from '@open-loop/engine';
 import UpgradeGrid from '../UpgradeGrid.vue';
 import type { UpgradeCellData } from '../UpgradeGrid';
 

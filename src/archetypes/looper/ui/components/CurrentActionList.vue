@@ -16,11 +16,11 @@
 
 import { computed } from 'vue';
 import { Icon } from '@iconify/vue';
-import { formatWhole } from 'open-loop-engine';
+import { formatWhole } from '@open-loop/engine';
 import { getActiveList, getActiveCursor, type ActionMeta } from '../../modules/action-queue';
 import { getActionDef, getActionProgress } from '../../modules/action-runner';
 import { getActionIcon } from '../../data/action-icons';
-import type { SequencerItem } from 'open-loop-engine';
+import type { SequencerItem } from '@open-loop/engine';
 
 const props = defineProps<{ hoveredIndex: number | null }>();
 const emit = defineEmits<{ (e: 'hover', index: number | null): void }>();
@@ -61,12 +61,7 @@ function nameFor(item: Item): string {
 </script>
 
 <template>
-  <div
-    v-if="items.length === 0"
-    class="cal-empty"
-  >
-    No active actions.
-  </div>
+  <div v-if="items.length === 0" class="cal-empty">No active actions.</div>
   <div
     v-for="(item, index) in items"
     :key="`${item.id}-${index}`"
@@ -89,10 +84,7 @@ function nameFor(item: Item): string {
       }"
       :style="{ width: barWidthPercent(item, index) + '%' }"
     />
-    <Icon
-      class="cal-icon"
-      :icon="iconFor(item)"
-    />
+    <Icon class="cal-icon" :icon="iconFor(item)" />
     <span class="cal-name">{{ nameFor(item) }}</span>
     <span class="cal-loops">{{ loopCounter(item) }}</span>
   </div>

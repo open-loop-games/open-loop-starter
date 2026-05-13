@@ -26,7 +26,7 @@ import {
   persistent,
   type Persistent,
   withPersistentContext,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 // ============================================================================
 // Constants

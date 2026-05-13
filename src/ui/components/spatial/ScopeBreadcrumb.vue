@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="N, E">
 import { computed } from 'vue';
-import type { GraphNode, ScopeStack, ScopeState } from 'open-loop-engine';
+import type { GraphNode, ScopeStack, ScopeState } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import { useScopeStack } from '@/composables/useScopeStack';
 
@@ -99,15 +99,32 @@ function stateFor(path: readonly string[]): ScopeState | undefined {
       </Button>
     </slot>
 
-    <ol v-if="view.depth.value > 0" class="scope-breadcrumb__trail">
-      <li v-if="rootLabel" class="scope-breadcrumb__item" data-crumb-depth="0">
-        <slot name="root" :label="rootLabel">
-          <Button type="button" class="scope-breadcrumb__crumb" @click="goTo(0)">
+    <ol
+      v-if="view.depth.value > 0"
+      class="scope-breadcrumb__trail"
+    >
+      <li
+        v-if="rootLabel"
+        class="scope-breadcrumb__item"
+        data-crumb-depth="0"
+      >
+        <slot
+          name="root"
+          :label="rootLabel"
+        >
+          <Button
+            type="button"
+            class="scope-breadcrumb__crumb"
+            @click="goTo(0)"
+          >
             {{ rootLabel }}
           </Button>
         </slot>
         <slot name="separator">
-          <span class="scope-breadcrumb__sep" aria-hidden="true">›</span>
+          <span
+            class="scope-breadcrumb__sep"
+            aria-hidden="true"
+          >›</span>
         </slot>
       </li>
       <li
@@ -136,8 +153,14 @@ function stateFor(path: readonly string[]): ScopeState | undefined {
             {{ c.node.id }}
           </Button>
         </slot>
-        <slot v-if="!c.isCurrent" name="separator">
-          <span class="scope-breadcrumb__sep" aria-hidden="true">›</span>
+        <slot
+          v-if="!c.isCurrent"
+          name="separator"
+        >
+          <span
+            class="scope-breadcrumb__sep"
+            aria-hidden="true"
+          >›</span>
         </slot>
       </li>
     </ol>

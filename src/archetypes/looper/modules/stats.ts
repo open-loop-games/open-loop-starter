@@ -29,7 +29,7 @@ import {
   Formula,
   getSkillProgress,
   getSkillXPWindow,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { MaybeRef } from 'vue';
 import { STATS } from '../data/stats';
 import { LOOPER_BALANCE } from '../data/balance';

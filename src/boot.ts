@@ -20,7 +20,7 @@
  */
 
 import { createApp as createVueApp, type App, type Component } from 'vue';
-import { createEngine, type Engine, type EngineConfig, type ModDef } from 'open-loop-engine';
+import { createEngine, type Engine, type EngineConfig, type ModDef } from '@open-loop/engine';
 import { sharedBase } from '@/modules';
 
 const DEFAULT_TICK_RATE = 20;

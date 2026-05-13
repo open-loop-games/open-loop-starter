@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { effectScope } from 'vue';
-import { createSpatialGraph } from 'open-loop-engine';
+import { createSpatialGraph } from '@open-loop/engine';
 import { useSpatialGraph } from '../useSpatialGraph';
 
 interface Pkg {

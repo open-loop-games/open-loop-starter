@@ -40,7 +40,7 @@ import {
   type CellResult,
   type Engine,
   type UntilCell,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { IncomeUpgradeRoiKey, TugTuningRegistryKey, type TugTunables } from '../modules';
 import {
   buildTugSimEngine,

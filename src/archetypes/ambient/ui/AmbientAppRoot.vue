@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { Decimal, processOfflineTime, type Engine, type EngineModule } from 'open-loop-engine';
+import { Decimal, processOfflineTime, type Engine, type EngineModule } from '@open-loop/engine';
 import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';

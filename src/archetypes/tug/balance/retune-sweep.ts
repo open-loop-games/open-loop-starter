@@ -24,7 +24,7 @@
  * personas × 108 slices; tractable in one session at ~30 min wall.
  */
 
-import { runMatrixUntil, type Engine, type UntilCell } from 'open-loop-engine';
+import { runMatrixUntil, type Engine, type UntilCell } from '@open-loop/engine';
 import { TugTuningRegistryKey } from '../modules';
 import {
   buildTugSimEngine,

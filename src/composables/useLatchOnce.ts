@@ -1,5 +1,5 @@
 import { ref, watch, type Ref } from 'vue';
-import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { Decimal, type DecimalSource } from '@open-loop/engine';
 
 /**
  * Latches `true` the first time `source` strictly exceeds `threshold` and

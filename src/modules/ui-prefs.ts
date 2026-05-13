@@ -3,7 +3,7 @@ import {
   type EngineModule,
   type InjectionKey,
   type Persistent,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 export interface UIPrefsState {
   bulkMode: Persistent<string>;

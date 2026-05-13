@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import type { Engine } from '@open-loop/engine';
 import { useSlots } from '@/composables/useSlots';
 import Button from '@/ui/components/Button.vue';
 import SlotCard from '@/ui/components/SlotCard.vue';
@@ -64,12 +64,26 @@ function handleDeleteSlot(slotId: number) {
       {{ props.appName }}
     </h1>
 
-    <div v-if="showModPicker" class="picker-container">
-      <ModPicker :mods="engine.mods" @select="(modId) => startNewGame(modId)" />
-      <Button class="btn-sm" @click="showModPicker = false"> Back </Button>
+    <div
+      v-if="showModPicker"
+      class="picker-container"
+    >
+      <ModPicker
+        :mods="engine.mods"
+        @select="(modId) => startNewGame(modId)"
+      />
+      <Button
+        class="btn-sm"
+        @click="showModPicker = false"
+      >
+        Back
+      </Button>
     </div>
 
-    <div v-else class="slots-container">
+    <div
+      v-else
+      class="slots-container"
+    >
       <div class="slot-list">
         <SlotCard
           v-for="s in savedSlots"
@@ -84,7 +98,12 @@ function handleDeleteSlot(slotId: number) {
       </div>
 
       <div class="slot-actions">
-        <Button class="btn-primary" @click="handleNewGame"> New Game </Button>
+        <Button
+          class="btn-primary"
+          @click="handleNewGame"
+        >
+          New Game
+        </Button>
       </div>
     </div>
   </div>

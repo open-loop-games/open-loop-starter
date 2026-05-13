@@ -5,7 +5,7 @@
  * without the app shell knowing about them.
  */
 import { shallowReactive, markRaw, type Component } from 'vue';
-import type { EngineModule } from 'open-loop-engine';
+import type { EngineModule } from '@open-loop/engine';
 
 export type SlotId = 'game-layout' | (string & {});
 

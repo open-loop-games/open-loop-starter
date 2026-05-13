@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { effectScope } from 'vue';
-import { createSpatialGrid, createInfluenceLayer, linearFalloff } from 'open-loop-engine';
+import { createSpatialGrid, createInfluenceLayer, linearFalloff } from '@open-loop/engine';
 import { useInfluenceLayer } from '../useInfluenceLayer';
 
 function buildLayer(width = 5, height = 5) {

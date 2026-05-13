@@ -59,7 +59,7 @@ import {
   createReset,
   createConversion,
   persistent,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import {
   DIAMOND_PRODUCERS,
   CRYSTAL_UPGRADES,

@@ -13,7 +13,7 @@
 -->
 <script setup lang="ts">
 import { inject, onUnmounted, watch } from 'vue';
-import type { Engine } from 'open-loop-engine';
+import type { Engine } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import Popover from '@/ui/components/Popover.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';

@@ -15,7 +15,7 @@
  * in `sim/runes-beat.test.ts`.
  */
 
-import { Decimal, runUntil } from 'open-loop-engine';
+import { Decimal, runUntil } from '@open-loop/engine';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
 import {
   getCoinResource,

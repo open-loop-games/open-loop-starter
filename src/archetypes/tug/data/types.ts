@@ -1,4 +1,4 @@
-import type { DecimalSource } from 'open-loop-engine';
+import type { DecimalSource } from '@open-loop/engine';
 import type { PersonaKey } from './personality';
 
 // ─── Skeleton ───

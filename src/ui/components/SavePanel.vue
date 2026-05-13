@@ -9,7 +9,7 @@ import {
   DialogTitle,
   VisuallyHidden,
 } from 'reka-ui';
-import type { Engine } from 'open-loop-engine';
+import type { Engine } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import PanelLayout from '@/ui/components/PanelLayout.vue';
 import { useSave } from '@/composables/useSave';
@@ -81,10 +81,16 @@ function confirmDelete(): void {
 </script>
 
 <template>
-  <PanelLayout class="save-panel" data-testid="save-panel" @close="emit('close')">
+  <PanelLayout
+    class="save-panel"
+    data-testid="save-panel"
+    @close="emit('close')"
+  >
     <template #header>
       <DialogTitle as-child>
-        <h3 class="olui-panel__title">Save Management</h3>
+        <h3 class="olui-panel__title">
+          Save Management
+        </h3>
       </DialogTitle>
     </template>
 
@@ -93,18 +99,34 @@ function confirmDelete(): void {
         <span class="save-status__label">Last saved</span>
         <span class="save-status__value">{{ lastSavedLabel }}</span>
       </div>
-      <Button class="btn-primary" data-testid="manual-save" @click="manualSave"> Save now </Button>
+      <Button
+        class="btn-primary"
+        data-testid="manual-save"
+        @click="manualSave"
+      >
+        Save now
+      </Button>
     </section>
 
-    <hr class="save-divider" />
+    <hr class="save-divider">
 
     <section class="save-section save-section--data">
-      <h4 class="save-section__title">Data</h4>
+      <h4 class="save-section__title">
+        Data
+      </h4>
       <div class="actions">
-        <Button @click="doExport"> Export </Button>
-        <Button @click="showImport = !showImport"> Import </Button>
-        <Button @click="downloadSave"> Download File </Button>
-        <Button @click="uploadSave"> Upload File </Button>
+        <Button @click="doExport">
+          Export
+        </Button>
+        <Button @click="showImport = !showImport">
+          Import
+        </Button>
+        <Button @click="downloadSave">
+          Download File
+        </Button>
+        <Button @click="uploadSave">
+          Upload File
+        </Button>
         <Button
           class="btn-danger btn-sm"
           data-testid="open-delete"
@@ -114,14 +136,37 @@ function confirmDelete(): void {
         </Button>
       </div>
 
-      <div v-if="exportText" class="export-area">
-        <textarea readonly :value="exportText" rows="4" />
-        <Button class="btn-sm" @click="doCopy"> Copy to clipboard </Button>
+      <div
+        v-if="exportText"
+        class="export-area"
+      >
+        <textarea
+          readonly
+          :value="exportText"
+          rows="4"
+        />
+        <Button
+          class="btn-sm"
+          @click="doCopy"
+        >
+          Copy to clipboard
+        </Button>
       </div>
 
-      <div v-if="showImport" class="import-area">
-        <textarea v-model="importText" rows="4" placeholder="Paste save data here..." />
-        <Button class="btn-primary btn-sm" :disabled="!importText.trim()" @click="doImport">
+      <div
+        v-if="showImport"
+        class="import-area"
+      >
+        <textarea
+          v-model="importText"
+          rows="4"
+          placeholder="Paste save data here..."
+        />
+        <Button
+          class="btn-primary btn-sm"
+          :disabled="!importText.trim()"
+          @click="doImport"
+        >
           Import
         </Button>
       </div>
@@ -135,11 +180,19 @@ function confirmDelete(): void {
             <DialogTitle>Clear this save slot</DialogTitle>
             <DialogDescription>Confirm destructive save deletion</DialogDescription>
           </VisuallyHidden>
-          <PanelLayout title="Clear this slot?" @close="showDeleteConfirm = false">
+          <PanelLayout
+            title="Clear this slot?"
+            @close="showDeleteConfirm = false"
+          >
             <div class="confirm-body">
               <p>This wipes the active save slot. Other slots and other demos are untouched.</p>
               <div class="confirm-actions">
-                <Button class="btn-sm" @click="showDeleteConfirm = false"> Cancel </Button>
+                <Button
+                  class="btn-sm"
+                  @click="showDeleteConfirm = false"
+                >
+                  Cancel
+                </Button>
                 <Button
                   class="btn-sm btn-danger"
                   data-testid="confirm-delete"

@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="N, E">
 import { computed, ref } from 'vue';
-import type { GraphEdge, GraphNode, SpatialGraph } from 'open-loop-engine';
+import type { GraphEdge, GraphNode, SpatialGraph } from '@open-loop/engine';
 import { useSpatialGraph } from '@/composables/useSpatialGraph';
 
 interface Point {

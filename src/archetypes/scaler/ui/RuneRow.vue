@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal, format, type DecimalSource } from 'open-loop-engine';
+import { Decimal, format, type DecimalSource } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import type { RuneId } from '../data';
 import {
@@ -70,11 +70,7 @@ const effectSummary = computed((): string => {
       <span>· next at {{ format(expToNext, 0) }}</span>
       <span>· {{ format(expRemaining, 0) }} to go</span>
     </div>
-    <Button
-      :disabled="!canSacrifice"
-      class="rune-row__action"
-      @click="doSacrifice"
-    >
+    <Button :disabled="!canSacrifice" class="rune-row__action" @click="doSacrifice">
       Sacrifice all offerings
     </Button>
   </div>

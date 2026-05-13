@@ -1,5 +1,5 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
-import { type EngineModule, type InjectionKey } from 'open-loop-engine';
+import { type EngineModule, type InjectionKey } from '@open-loop/engine';
 import type { AmbientData } from '../data/types';
 import { getTimeSystem } from './auto-producers';
 

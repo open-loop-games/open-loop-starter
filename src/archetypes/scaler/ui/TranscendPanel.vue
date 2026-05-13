@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal, format } from 'open-loop-engine';
+import { Decimal, format } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import {
   getTranscendPoints,
@@ -74,17 +74,10 @@ function doBoost(): void {
           <span class="transcend-panel__stat-value">{{ format(transcendPoints, 0) }}</span>
         </div>
       </div>
-      <Button
-        :disabled="!canConvert"
-        class="transcend-panel__button"
-        @click="doTranscend"
-      >
+      <Button :disabled="!canConvert" class="transcend-panel__button" @click="doTranscend">
         Transcend (+{{ gainDisplay }} TP)
       </Button>
-      <p
-        v-if="!canConvert"
-        class="transcend-panel__hint"
-      >
+      <p v-if="!canConvert" class="transcend-panel__hint">
         Need 1e100 coins this transcension, or TP gain ≥ 0.5.
       </p>
     </section>
@@ -111,17 +104,10 @@ function doBoost(): void {
           <span class="transcend-panel__stat-value">{{ boostCostDisplay }}</span>
         </div>
       </div>
-      <Button
-        :disabled="!canBoost"
-        class="transcend-panel__button"
-        @click="doBoost"
-      >
+      <Button :disabled="!canBoost" class="transcend-panel__button" @click="doBoost">
         Boost Accelerator
       </Button>
-      <p
-        v-if="!canBoost"
-        class="transcend-panel__hint"
-      >
+      <p v-if="!canBoost" class="transcend-panel__hint">
         Need {{ boostCostDisplay }} prestige points; buy fires a prestige reset.
       </p>
     </section>

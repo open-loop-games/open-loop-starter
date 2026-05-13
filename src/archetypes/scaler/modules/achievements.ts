@@ -40,7 +40,7 @@ import {
   type AchievementCategory,
   createAchievementCategory,
   createMultiplicativeModifier,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { SCALER_ACHIEVEMENTS, type AchievementDef } from '../data';
 import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
 import { getCoinProducers } from './coin';

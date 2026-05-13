@@ -27,7 +27,7 @@
 //   upgrades.names + upgrades.descriptions  i18n strings
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { Decimal, type DecimalSource, bn } from 'open-loop-engine';
+import { Decimal, type DecimalSource, bn } from '@open-loop/engine';
 import type { UpgradeDef, UpgradeGrant, ScalerGameState } from './types';
 
 // ─── Skeleton ───

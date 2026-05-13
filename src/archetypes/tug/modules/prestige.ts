@@ -1,4 +1,4 @@
-import { createReset, type EngineModule, type InjectionKey, type Reset } from 'open-loop-engine';
+import { createReset, type EngineModule, type InjectionKey, type Reset } from '@open-loop/engine';
 import type { TugData } from '../data/types';
 
 export const PrestigeKey: InjectionKey<Reset> = Symbol('tug/meta/prestige') as InjectionKey<Reset>;

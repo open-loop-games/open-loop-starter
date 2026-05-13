@@ -29,8 +29,8 @@ import {
   extractClosestEdge,
   type Edge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-import { formatWhole } from 'open-loop-engine';
-import type { SequencerItem } from 'open-loop-engine';
+import { formatWhole } from '@open-loop/engine';
+import type { SequencerItem } from '@open-loop/engine';
 import {
   reorderAction,
   adjustLoops,
@@ -189,80 +189,50 @@ onMounted(() => {
     }"
     :style="{ background: rowBackground }"
   >
-    <Icon
-      class="nar-icon"
-      :icon="icon"
-    />
+    <Icon class="nar-icon" :icon="icon" />
     <span class="nar-name">{{ name }}</span>
-    <span class="nar-count">x<b>{{ loopsLabel }}</b></span>
+    <span class="nar-count"
+      >x<b>{{ loopsLabel }}</b></span
+    >
 
     <div class="nar-fan">
-      <AppTooltip
-        v-if="hasLimit"
-        text="Cap to good count"
-      >
-        <Button
-          class="nar-btn"
-          @click="onCap"
-        >
+      <AppTooltip v-if="hasLimit" text="Cap to good count">
+        <Button class="nar-btn" @click="onCap">
           <Icon icon="mdi:circle-outline" />
         </Button>
       </AppTooltip>
       <AppTooltip text="Add loops">
-        <Button
-          class="nar-btn"
-          @click="onPlus"
-        >
+        <Button class="nar-btn" @click="onPlus">
           <Icon icon="mdi:plus" />
         </Button>
       </AppTooltip>
       <AppTooltip text="Remove loops">
-        <Button
-          class="nar-btn"
-          @click="onMinus"
-        >
+        <Button class="nar-btn" @click="onMinus">
           <Icon icon="mdi:minus" />
         </Button>
       </AppTooltip>
       <AppTooltip text="Split in half">
-        <Button
-          class="nar-btn"
-          @click="onSplit"
-        >
+        <Button class="nar-btn" @click="onSplit">
           <Icon icon="mdi:arrow-split-vertical" />
         </Button>
       </AppTooltip>
       <AppTooltip text="Move up">
-        <Button
-          class="nar-btn"
-          :disabled="index <= 0"
-          @click="onUp"
-        >
+        <Button class="nar-btn" :disabled="index <= 0" @click="onUp">
           <Icon icon="mdi:chevron-up" />
         </Button>
       </AppTooltip>
       <AppTooltip text="Move down">
-        <Button
-          class="nar-btn"
-          :disabled="index >= total - 1"
-          @click="onDown"
-        >
+        <Button class="nar-btn" :disabled="index >= total - 1" @click="onDown">
           <Icon icon="mdi:chevron-down" />
         </Button>
       </AppTooltip>
       <AppTooltip :text="isDisabled ? 'Enable' : 'Disable'">
-        <Button
-          class="nar-btn"
-          @click="onDisable"
-        >
+        <Button class="nar-btn" @click="onDisable">
           <Icon :icon="isDisabled ? 'mdi:check-circle-outline' : 'mdi:close-circle-outline'" />
         </Button>
       </AppTooltip>
       <AppTooltip text="Remove">
-        <Button
-          class="nar-btn nar-btn-danger"
-          @click="onRemove"
-        >
+        <Button class="nar-btn nar-btn-danger" @click="onRemove">
           <Icon icon="mdi:close" />
         </Button>
       </AppTooltip>

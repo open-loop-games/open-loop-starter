@@ -5,7 +5,7 @@ import {
   type DecimalSource,
   type EngineModule,
   type Resource,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { TugData } from '../data/types';
 import type { UnitInstance } from './lane';
 import { LANE_LENGTH, type Side, TugTuningRegistryKey } from './tuning';

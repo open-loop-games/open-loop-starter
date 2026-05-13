@@ -1,4 +1,4 @@
-import type { BeatResult, SensitivityResult, WaypointSnapshot } from 'open-loop-engine';
+import type { BeatResult, SensitivityResult, WaypointSnapshot } from '@open-loop/engine';
 import type { ProducerPacing } from './index';
 
 /** Format a duration in seconds as `MM:SS` or `HH:MM:SS`. */

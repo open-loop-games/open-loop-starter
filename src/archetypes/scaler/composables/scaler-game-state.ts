@@ -16,7 +16,7 @@
  * gain formula see the same accessor surface as coin upgrades.
  */
 
-import { Decimal, type DecimalSource } from 'open-loop-engine';
+import { Decimal, type DecimalSource } from '@open-loop/engine';
 import type { CounterId, RuneId, ScalerGameState, Tier, UpgradeGrant } from '../data';
 import { COIN_UPGRADES, PRESTIGE_UPGRADES, TRANSCEND_UPGRADES } from '../data';
 import {

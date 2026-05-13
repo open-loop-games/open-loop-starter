@@ -5,7 +5,7 @@ import {
   type DecimalSource,
   type ModifierChain,
   type Purchasable,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { AutoProducerDef } from '../data/types';
 import { getAutoProducers } from '../modules';
 

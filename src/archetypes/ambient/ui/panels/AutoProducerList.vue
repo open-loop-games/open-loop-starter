@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal } from 'open-loop-engine';
+import { Decimal } from '@open-loop/engine';
 import { useAutoProducers, type AutoProducerRow } from '../../composables/useAutoProducers';
 import { getAutoProducers, getPrimaryResource, getUnlocks } from '../../modules';
 import { useFormatting } from '@/composables/useFormatting';

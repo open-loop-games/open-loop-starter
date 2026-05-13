@@ -4,7 +4,7 @@ import {
   type EngineModule,
   type InjectionKey,
   type ZoneSystem,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { AmbientData, SceneVariantDef } from '../data/types';
 import { getUnlocks } from './unlocks';
 

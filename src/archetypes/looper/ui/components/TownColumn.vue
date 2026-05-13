@@ -16,7 +16,7 @@
  */
 
 import { computed, onBeforeUnmount } from 'vue';
-import { Decimal, type DecimalSource, formatWhole, toNumber } from 'open-loop-engine';
+import { Decimal, type DecimalSource, formatWhole, toNumber } from '@open-loop/engine';
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { HoverCardRoot, HoverCardTrigger, HoverCardPortal, HoverCardContent } from 'reka-ui';
 import Button from '@/ui/components/Button.vue';
@@ -196,10 +196,7 @@ onBeforeUnmount(() => {
         <div class="zone-name">
           {{ currentZoneDef?.name ?? '—' }}
         </div>
-        <div
-          v-if="currentZoneDescription"
-          class="zone-description"
-        >
+        <div v-if="currentZoneDescription" class="zone-description">
           {{ currentZoneDescription }}
         </div>
       </div>
@@ -214,40 +211,23 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Town stat rows -->
-    <div
-      v-if="progressVars.length > 0 || regularVars.length > 0"
-      class="town-stats"
-    >
-      <div
-        v-for="pv in progressVars"
-        :key="pv.name"
-        class="town-stat-row"
-      >
+    <div v-if="progressVars.length > 0 || regularVars.length > 0" class="town-stats">
+      <div v-for="pv in progressVars" :key="pv.name" class="town-stat-row">
         <div class="tsr-header">
           <span class="tsr-name">{{ pv.name }}</span>
           <span class="tsr-level">{{ levelDisplay(pv) }}%</span>
         </div>
         <div class="tsr-bars">
           <div class="bar-track level-track">
-            <div
-              class="bar-fill level-fill"
-              :style="{ width: levelPercent(pv) + '%' }"
-            />
+            <div class="bar-fill level-fill" :style="{ width: levelPercent(pv) + '%' }" />
           </div>
           <div class="bar-track xp-track">
-            <div
-              class="bar-fill xp-fill"
-              :style="{ width: xpProgressPercent(pv.name) + '%' }"
-            />
+            <div class="bar-fill xp-fill" :style="{ width: xpProgressPercent(pv.name) + '%' }" />
           </div>
         </div>
       </div>
 
-      <div
-        v-for="rv in regularVars"
-        :key="rv.name"
-        class="town-stat-row regular"
-      >
+      <div v-for="rv in regularVars" :key="rv.name" class="town-stat-row regular">
         <div class="tsr-header">
           <span class="tsr-name">{{ rv.name }}</span>
           <div class="tsr-right">
@@ -259,10 +239,7 @@ onBeforeUnmount(() => {
               class="tsr-toggle"
               :title="`Burn known-good ${rv.name.toLowerCase()} before exploring new ones.`"
             >
-              <input
-                v-model="rv.valuablesFirst.value"
-                type="checkbox"
-              >
+              <input v-model="rv.valuablesFirst.value" type="checkbox" />
               <span>Lootable first</span>
             </label>
           </div>
@@ -287,11 +264,7 @@ onBeforeUnmount(() => {
               :disabled="tile.locked"
               @click="handleTileClick(tile)"
             >
-              <svg
-                class="action-stat-pie"
-                viewBox="-1 -1 2 2"
-                aria-hidden="true"
-              >
+              <svg class="action-stat-pie" viewBox="-1 -1 2 2" aria-hidden="true">
                 <path
                   v-for="slice in buildStatPie(tile.def.weights)"
                   :key="slice.stat"
@@ -304,21 +277,12 @@ onBeforeUnmount(() => {
             </Button>
           </HoverCardTrigger>
           <HoverCardPortal>
-            <HoverCardContent
-              class="hovercard action-hovercard"
-              :side-offset="8"
-            >
-              <ActionTooltipContent
-                :def="tile.def"
-                :locked="tile.locked"
-              />
+            <HoverCardContent class="hovercard action-hovercard" :side-offset="8">
+              <ActionTooltipContent :def="tile.def" :locked="tile.locked" />
             </HoverCardContent>
           </HoverCardPortal>
         </HoverCardRoot>
-        <div
-          v-if="actionTiles.length === 0"
-          class="empty-state"
-        >
+        <div v-if="actionTiles.length === 0" class="empty-state">
           No actions unlocked in this zone.
         </div>
       </div>

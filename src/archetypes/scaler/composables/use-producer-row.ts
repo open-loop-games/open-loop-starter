@@ -1,5 +1,5 @@
 import { computed, ref, type Ref } from 'vue';
-import { Decimal, type DecimalSource, type Producer, type Purchasable } from 'open-loop-engine';
+import { Decimal, type DecimalSource, type Producer, type Purchasable } from '@open-loop/engine';
 import type { ProducerRowData, UpgradeCellData } from '@/ui/compositions';
 
 /**

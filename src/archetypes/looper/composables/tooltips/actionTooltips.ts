@@ -12,7 +12,7 @@
  */
 
 import { defineComponent, h, type PropType, type VNodeChild } from 'vue';
-import { formatWhole, toNumber } from 'open-loop-engine';
+import { formatWhole, toNumber } from '@open-loop/engine';
 import type { ActionDef } from '../../data/types';
 import { getStatLevel } from '../../modules/stats';
 import { computeAdjustedTicks } from '../../modules/action-formulas';

@@ -1,5 +1,5 @@
 import type { ComputedRef } from 'vue';
-import type { Persistent } from 'open-loop-engine';
+import type { Persistent } from '@open-loop/engine';
 import { useModule } from '@/composables/useModule';
 import { LaneKey, type LaneApi, type Side, type UnitInstance } from '../modules';
 

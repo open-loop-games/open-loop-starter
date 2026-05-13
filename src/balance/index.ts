@@ -22,7 +22,7 @@ import {
   calculateBeatTiming,
   classifyFlowChannel,
   type FlowChannel,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 export {
   runProbe,
@@ -31,7 +31,7 @@ export {
   type BeatResult,
   type Waypoint,
   type WaypointSnapshot,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 
 export {
   formatChannel,

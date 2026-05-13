@@ -21,7 +21,7 @@ import {
 } from 'reka-ui';
 import Button from '@/ui/components/Button.vue';
 import AppTooltip from './AppTooltip.vue';
-import { Decimal, formatWhole } from 'open-loop-engine';
+import { Decimal, formatWhole } from '@open-loop/engine';
 import {
   isLoopRunning,
   togglePause,
@@ -66,41 +66,30 @@ function formatResource(id: string): string {
   <header class="header-band">
     <!-- Row 1: thin time bar -->
     <div class="time-bar-container">
-      <div
-        class="time-bar-fill"
-        :style="{ width: timeBarPercent + '%' }"
-      />
+      <div class="time-bar-fill" :style="{ width: timeBarPercent + '%' }" />
       <span class="time-bar-text">{{ manaRemaining }} / {{ manaBudget }} mana</span>
     </div>
 
     <!-- Row 2: tracked resources + controls -->
     <div class="header-row">
       <div class="tracked-resources">
-        <AppTooltip
-          v-for="def in visibleResources"
-          :key="def.id"
-        >
+        <AppTooltip v-for="def in visibleResources" :key="def.id">
           <div class="tracked-resource">
             <strong class="tr-name">{{ def.name }}:</strong>
             <span class="tr-value">{{ formatResource(def.id) }}</span>
           </div>
           <template #content>
             {{ def.name }}
-            <br>
+            <br />
             <em>Resets when the loop restarts.</em>
           </template>
         </AppTooltip>
-        <span
-          v-if="visibleResources.length === 0"
-          class="tracked-empty"
-        >
+        <span v-if="visibleResources.length === 0" class="tracked-empty">
           No tracked resources yet.
         </span>
       </div>
 
-      <div class="loop-count">
-        Loop #{{ loopCount }}
-      </div>
+      <div class="loop-count">Loop #{{ loopCount }}</div>
 
       <div class="time-controls">
         <Button
@@ -110,28 +99,17 @@ function formatResource(id: string): string {
         >
           {{ isLoopRunning() ? 'Pause' : 'Play' }}
         </Button>
-        <Button
-          class="btn-sm"
-          @click="showRestartConfirm = true"
-        >
-          Restart
-        </Button>
+        <Button class="btn-sm" @click="showRestartConfirm = true"> Restart </Button>
 
         <AppTooltip text="Pause the loop before each automatic restart.">
           <label class="toggle">
-            <input
-              v-model="pauseBeforeRestart"
-              type="checkbox"
-            >
+            <input v-model="pauseBeforeRestart" type="checkbox" />
             <span>Pause before restart</span>
           </label>
         </AppTooltip>
         <AppTooltip text="Pause the loop after any action in the queue fails.">
           <label class="toggle">
-            <input
-              v-model="pauseOnFailedLoop"
-              type="checkbox"
-            >
+            <input v-model="pauseOnFailedLoop" type="checkbox" />
             <span>Pause on failed loop</span>
           </label>
         </AppTooltip>
@@ -147,25 +125,12 @@ function formatResource(id: string): string {
             <DialogTitle>Confirm Restart</DialogTitle>
             <DialogDescription>Manually restart the current loop</DialogDescription>
           </VisuallyHidden>
-          <PanelLayout
-            title="Restart loop?"
-            @close="showRestartConfirm = false"
-          >
+          <PanelLayout title="Restart loop?" @close="showRestartConfirm = false">
             <div class="restart-body">
               <p>This ends the current loop immediately. Skills and talents persist.</p>
               <div class="restart-actions">
-                <Button
-                  class="btn-sm"
-                  @click="showRestartConfirm = false"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  class="btn-sm btn-danger"
-                  @click="confirmRestart"
-                >
-                  Restart
-                </Button>
+                <Button class="btn-sm" @click="showRestartConfirm = false"> Cancel </Button>
+                <Button class="btn-sm btn-danger" @click="confirmRestart"> Restart </Button>
               </div>
             </div>
           </PanelLayout>
