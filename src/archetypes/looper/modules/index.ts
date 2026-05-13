@@ -9,15 +9,16 @@ import { actionRunnerModule } from './action-runner';
 import { loopModule } from './loop';
 
 export { tuningModule, LooperTuningRegistryKey, type LooperTunableKey } from './tuning';
-export { manaModule } from './mana';
+export { manaModule, getMana } from './mana';
 export { resourcesModule } from './resources';
-export { statsModule } from './stats';
-export { zonesModule } from './zones';
-export { actionQueueModule } from './action-queue';
+export { statsModule, getStatLevel, getTalentLevel } from './stats';
+export { zonesModule, getProgressLevel } from './zones';
+export { actionQueueModule, addAction, clearActions } from './action-queue';
 export {
   actionRunnerModule,
   isActionVisible,
   getActionDef,
+  getTimesCompleted,
   initRunner,
   registerActions,
 } from './action-runner';
