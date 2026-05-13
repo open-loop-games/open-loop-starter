@@ -144,6 +144,7 @@ export function buildLooperSimEngine(
     extraModules: [createBalanceBotModule(schedule)],
     maxDeltaTime: options?.maxDeltaTime,
   });
+  engine.selectMod('classic-adventuring');
   engine.start();
   engine.stop();
   return engine;
