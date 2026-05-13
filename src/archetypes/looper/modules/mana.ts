@@ -1,9 +1,10 @@
 /**
  * Mana module — the loop time budget resource.
  *
- * Mana IS time in Idle Loops. The pool starts at `INITIAL_MANA` (250
- * ticks = 5 seconds at 50 FPS) and can be extended mid-loop by actions like
- * Buy Mana, Smash Pots, and Wild Mana via `addMana()`.
+ * Mana IS time in Idle Loops. The pool starts at the `balance/initialMana`
+ * tunable (vanilla canonical 250 ticks = 5 seconds at 50 FPS in vanilla
+ * idle-loops driver) and can be extended mid-loop by actions like Buy Mana,
+ * Smash Pots, and Wild Mana via `addMana()`.
  *
  * This module only owns the resource and the add helper. The per-tick drain
  * and end condition (`mana <= 0`) live in the loop module.
@@ -26,19 +27,9 @@ import {
   persistent,
   type Persistent,
   withPersistentContext,
+  tunable,
 } from '@open-loop/engine';
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-/**
- * Initial mana pool in ticks. Vanilla: `5 * 50 = 250`.
- *
- * In vanilla this is `timeNeededInitial` — the starting value of `timeNeeded`
- * before any Buy Mana actions extend it.
- */
-export const INITIAL_MANA = 250;
+import { LooperTuningRegistryKey } from './tuning';
 
 // ============================================================================
 // Module State (populated in install)
@@ -47,9 +38,14 @@ export const INITIAL_MANA = 250;
 /** Current mana remaining this loop (counts down from pool). Resets each loop. */
 let manaResource: Resource<DecimalSource>;
 
+/** Resolved initial-mana value captured at install time. Reads through the
+ *  tuning registry so balance scopes (`pushScope` before engine boot) take
+ *  effect on the fresh resource default. */
+let initialManaValue: DecimalSource = 250;
+
 /**
  * Total mana added this loop via addMana() calls (Buy Mana, Smash Pots, etc.).
- * Resets each loop. Used for display: total budget = INITIAL_MANA + manaAdded.
+ * Resets each loop. Used for display: total budget = initial pool + manaAdded.
  */
 let manaAdded: Persistent<DecimalSource>;
 
@@ -74,7 +70,7 @@ export function getManaValue(): Decimal {
  * We track it as initial + added rather than a single counter.
  */
 export function getTotalManaBudget(): Decimal {
-  return Decimal.add(INITIAL_MANA, manaAdded.value);
+  return Decimal.add(initialManaValue, manaAdded.value);
 }
 
 /**
@@ -113,11 +109,20 @@ export function resetMana(): void {
 
 export const manaModule: EngineModule = {
   id: 'mana',
-  install(_ctx: EngineContext) {
+  dependencies: ['tuning'],
+  install(ctx: EngineContext) {
+    const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
+    // Vanilla canonical: initial mana pool of 250 ticks (5 sec × 50 FPS in
+    // vanilla idle-loops driver; ~12.5 sim-seconds at the engine's 20 TPS).
+    // Read once at install — the resource default captures the current
+    // registry-scope value, so balance scopes pushed before engine boot
+    // take effect; live `pushScope` mid-run does not retroactively change
+    // the initial pool, which matches the vanilla reset semantics.
+    const initialManaRef = tunable(tuningRegistry, 'balance/initialMana', () => 250);
+    initialManaValue = initialManaRef.value;
+
     ({ manaResource, manaAdded } = withPersistentContext('mana', () => ({
-      // Mana starts at INITIAL_MANA each loop, drains toward 0
-      manaResource: createResource(INITIAL_MANA, { displayName: 'Mana', precision: 0 }),
-      // Track how much was added mid-loop (for total budget display)
+      manaResource: createResource(initialManaValue, { displayName: 'Mana', precision: 0 }),
       manaAdded: persistent<DecimalSource>(0, { name: 'manaAdded' }),
     })));
   },

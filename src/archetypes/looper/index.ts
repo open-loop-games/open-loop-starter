@@ -4,13 +4,11 @@ export { manifest } from './manifest';
 export {
   DEFAULT_LOOPER_DATA,
   ACTIONS,
-  LOOPER_BALANCE,
   STATS,
   ZONES,
   PROGRESS_VARS,
   REGULAR_VARS,
   type LooperData,
-  type LooperBalance,
   type LooperGameState,
   type StatDef,
   type ZoneDef,
@@ -21,6 +19,9 @@ export {
 } from './data';
 export {
   createLooperModules,
+  tuningModule,
+  LooperTuningRegistryKey,
+  type LooperTunableKey,
   manaModule,
   resourcesModule,
   statsModule,

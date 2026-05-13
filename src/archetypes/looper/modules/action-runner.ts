@@ -27,7 +27,9 @@ import {
   bn,
   createContentRegistry,
   GameLoopKey,
+  tunable,
 } from '@open-loop/engine';
+import { LooperTuningRegistryKey } from './tuning';
 import { ACTIONS } from '../data/actions';
 import { ref } from 'vue';
 import type {
@@ -47,7 +49,7 @@ import {
   getRepeatLastAction,
 } from './action-queue';
 import { getCurrentZone, addProgressXP, finishRegular, getProgressLevel } from './zones';
-import { computeAdjustedTicks, addExpFromAction } from './action-formulas';
+import { computeAdjustedTicks, addExpFromAction, setCostDivisorReader } from './action-formulas';
 import { installBasicOne, dispatchBasic, basicCategory } from './action-types/basic';
 import { installProgressOne, dispatchProgress, progressCategory } from './action-types/progress';
 import { installRegularOne, dispatchRegular, regularCategory } from './action-types/regular';
@@ -471,11 +473,17 @@ export function calcTotalTicksNeeded(): Decimal {
 
 export const actionRunnerModule: EngineModule = {
   id: 'action-runner',
-  dependencies: ['stats', 'mana', 'resources', 'zones', 'action-queue', 'loop'],
+  dependencies: ['tuning', 'stats', 'mana', 'resources', 'zones', 'action-queue', 'loop'],
   install(ctx: EngineContext) {
     const gameLoop = ctx.inject(GameLoopKey);
     _dispatcherTickRate = gameLoop.tickRate;
     loop = getLoop();
+
+    const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
+    // Vanilla canonical: `1 + level / 100` cost-reduction shape on stat Level.
+    // Reference: idleLoops/actions.js setAdjustedTicks.
+    const costDivisorRef = tunable(tuningRegistry, 'balance/costDivisor', () => 100);
+    setCostDivisorReader(() => costDivisorRef.value);
 
     actions = createContentRegistry<ActionDef>('actions');
     registerActions(ACTIONS);

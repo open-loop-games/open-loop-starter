@@ -18,22 +18,34 @@ function evalManaCost(def: ActionDef): DecimalSource {
   return typeof def.manaCost === 'number' ? def.manaCost : def.manaCost;
 }
 
+/** Cost-reduction divisor on stat Level. Vanilla canonical 100 (`1 + level/100`).
+ *  Bound by action-runner's install through the looper tuning registry so
+ *  balance scopes can perturb the cost-curve shape. */
+let costDivisor: () => DecimalSource = () => 100;
+
+export function setCostDivisorReader(read: () => DecimalSource): void {
+  costDivisor = read;
+}
+
 /**
  * Compute adjusted ticks (action cost after stat reduction).
  *
  * `adjustedTicks = ceil(manaCost * sum(weight / (1 + level/costDivisor)) - 0.000001)`
  *
  * The -0.000001 epsilon prevents floating point from rounding up at exact boundaries.
- * costDivisor is 100 (vanilla canonical, from LOOPER_BALANCE).
  *
  * Reference: idleLoops/actions.js setAdjustedTicks
  */
 export function computeAdjustedTicks(def: ActionDef): Decimal {
   let costMult = Decimal.dZero;
+  const divisor = costDivisor();
   for (const [stat, weight] of Object.entries(def.weights)) {
     if (!weight) continue;
     const level = getStatLevel(stat);
-    costMult = Decimal.add(costMult, Decimal.div(weight, Decimal.add(1, Decimal.div(level, 100))));
+    costMult = Decimal.add(
+      costMult,
+      Decimal.div(weight, Decimal.add(1, Decimal.div(level, divisor))),
+    );
   }
   return Decimal.ceil(Decimal.sub(Decimal.mul(evalManaCost(def), costMult), 0.000001));
 }

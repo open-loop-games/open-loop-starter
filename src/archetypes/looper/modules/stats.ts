@@ -29,11 +29,12 @@ import {
   Formula,
   getSkillProgress,
   getSkillXPWindow,
+  tunable,
 } from '@open-loop/engine';
 import type { MaybeRef } from 'vue';
 import { STATS } from '../data/stats';
-import { LOOPER_BALANCE } from '../data/balance';
 import type { StatDef } from '../data/types';
+import { LooperTuningRegistryKey } from './tuning';
 
 // ============================================================================
 // Curves (Formula factories — bind to skill-internal refs)
@@ -64,6 +65,7 @@ function talentLevelToMultiplier(level: MaybeRef<DecimalSource>) {
 
 let statLevelSkills: SkillCategory<StatDef>;
 let talentSkills: SkillCategory<StatDef>;
+let talentAccrualRatio: () => DecimalSource;
 
 // ============================================================================
 // Public API — direct skill access
@@ -123,7 +125,7 @@ export function getTalentMult(stat: string): Decimal {
  */
 export function addStatXP(stat: string, rawAmount: DecimalSource): void {
   statLevelSkills.addXp(stat, rawAmount);
-  talentSkills.addXp(stat, Decimal.mul(rawAmount, LOOPER_BALANCE.talentAccrualRatio));
+  talentSkills.addXp(stat, Decimal.mul(rawAmount, talentAccrualRatio()));
 }
 
 // ============================================================================
@@ -154,7 +156,14 @@ export function getTalentXPWindow(stat: string): { current: Decimal; needed: Dec
 
 export const statsModule: EngineModule = {
   id: 'stats',
-  install(_ctx: EngineContext) {
+  dependencies: ['tuning'],
+  install(ctx: EngineContext) {
+    const tuningRegistry = ctx.inject(LooperTuningRegistryKey);
+    // Vanilla canonical: 1% of every Level XP gain accrues to Talent XP.
+    // Reference: idleLoops/stats.js addExp (talent gain ratio).
+    const talentAccrualRatioRef = tunable(tuningRegistry, 'balance/talentAccrualRatio', () => 0.01);
+    talentAccrualRatio = () => talentAccrualRatioRef.value;
+
     statLevelSkills = createSkillCategory<StatDef>({
       id: 'stat-level',
       mapSkill: (def) => ({

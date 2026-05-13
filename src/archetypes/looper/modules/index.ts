@@ -1,4 +1,5 @@
 import type { EngineModule } from '@open-loop/engine';
+import { tuningModule } from './tuning';
 import { manaModule } from './mana';
 import { resourcesModule } from './resources';
 import { statsModule } from './stats';
@@ -7,6 +8,7 @@ import { actionQueueModule } from './action-queue';
 import { actionRunnerModule } from './action-runner';
 import { loopModule } from './loop';
 
+export { tuningModule, LooperTuningRegistryKey, type LooperTunableKey } from './tuning';
 export { manaModule } from './mana';
 export { resourcesModule } from './resources';
 export { statsModule } from './stats';
@@ -47,6 +49,7 @@ export type { ActionMeta, LoadoutEntry } from './action-queue';
  */
 export function createLooperModules(): EngineModule[] {
   return [
+    tuningModule,
     manaModule,
     resourcesModule,
     statsModule,

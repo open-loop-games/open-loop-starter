@@ -220,40 +220,6 @@ export type ActionDef =
       exchangeMult?: DecimalSource;
     });
 
-// ─── Balance ───
-
-export interface LooperBalance {
-  /**
-   * Mana pool size at loop start, denominated in ticks. Vanilla canonical 250
-   * (~12.5 sim-seconds at the engine's 20 TPS — the "short snappy first loop"
-   * texture). Pool resets to this value on every loop restart. The pool can
-   * extend mid-loop via regular-action `rewardEffects` (manapot harvests) and
-   * basic-action `completionEffects` (gold→mana exchanges); cross-loop the
-   * budget always resets to `initialMana` (mana does NOT compound across
-   * loops — cross-loop persistence is on stats, progressVars, and
-   * regularVar `total`).
-   */
-  initialMana: DecimalSource;
-  /**
-   * Cost-reduction divisor on stat Level. Per-stat cost
-   * contribution is `weight / (1 + level / costDivisor)`. Vanilla canonical
-   * 100 (`1 + level / 100`).
-   */
-  costDivisor: DecimalSource;
-  /**
-   * Fraction of every Level XP gain that accrues to Talent XP. Vanilla
-   * canonical 0.01 (1%). Talent does NOT directly reduce cost — it multiplies
-   * XP-gain rate, so cross-loop compounding flows through faster Level
-   * training in subsequent runs (canonical role separation).
-   */
-  talentAccrualRatio: DecimalSource;
-  /**
-   * Default `true` — the loop reset *is* the retention/prestige tier; toggling
-   * off makes the demo a one-loop game.
-   */
-  loopResetEnabled: boolean;
-}
-
 /**
  * Typed read view of module state, exposed to predicate closures (per-action
  * prereqs, `canStart` gates). Methods encapsulate Decimal comparisons / reads
@@ -281,5 +247,4 @@ export interface LooperData {
   progressVars: ProgressVarDef[];
   regularVars: RegularVarDef[];
   actions: ActionDef[];
-  balance: LooperBalance;
 }
