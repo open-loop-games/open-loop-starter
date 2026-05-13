@@ -127,5 +127,4 @@ export const manifest: ArchetypeManifest = {
       analysisPath: 'open-loop-research/analyses/complete/derivative-clicker-analysis.md',
     },
   ],
-  docPath: 'archetypes/producer.md',
 };

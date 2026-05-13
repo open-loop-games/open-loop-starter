@@ -1,5 +1,5 @@
 /**
- * Tug sim-driven balance probes — the probes from `archetypes/tug.md` § 6.
+ * Tug sim-driven balance probes.
  * Tier-C divergence: probes 1–2 are math-only locks (single-pass
  * `runUntil` with deterministic bot, fire-time within band), probes 3–5
  * are distribution-statistic via `runMatrixUntil` over N seeds.

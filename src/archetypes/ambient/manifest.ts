@@ -119,5 +119,4 @@ export const manifest: ArchetypeManifest = {
       analysisPath: 'open-loop-research/analyses/complete/realm-grinder-analysis.md',
     },
   ],
-  docPath: 'archetypes/ambient.md',
 };

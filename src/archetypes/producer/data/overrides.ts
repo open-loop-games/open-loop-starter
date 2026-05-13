@@ -1,5 +1,4 @@
 // ─── Overrides ───────────────────────────────────────────────────────────────
-// Spec: archetypes/producer.md § 4 — Override semantics
 // Role: Deep-partial perturbation surface over `ProducerData`. Sim tests
 //       (`balance/`) and the workbench route through `createProducerEngine`
 //       which calls `applyProducerOverrides(DEFAULT_PRODUCER_DATA, overrides)`

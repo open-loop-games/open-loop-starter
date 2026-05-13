@@ -110,8 +110,7 @@ import { getMythosProducers } from './transcend';
 // TODO(expansion): graduate to `createSoftcappedAccumulator({ linearCap,
 // softDivisor, softBreakpoint, hardDivisor })` engine helper after a second
 // consumer derives the same shape (Looper-with-challenge-mods, Producer-with-
-// challenge-layer). Predicted at `archetypes/scaler.md § 7` Low-severity gap.
-// See `open-loop-engine/docs/candidate-primitives.md`.
+// challenge-layer). See `open-loop-engine/docs/candidate-primitives.md`.
 
 /**
  * Effective Challenge Completions for the transcend tier.

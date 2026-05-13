@@ -123,5 +123,4 @@ export const manifest: ArchetypeManifest = {
       analysisPath: 'open-loop-research/analyses/complete/legion-td-2-analysis.md',
     },
   ],
-  docPath: 'archetypes/tug.md',
 };

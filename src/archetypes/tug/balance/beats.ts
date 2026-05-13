@@ -6,9 +6,9 @@ const sec = (s: number) => s;
 const min = (m: number) => m * 60;
 
 /**
- * § 4 windows in seconds. Lifted from `archetypes/tug.md` § 4. One source of
- * truth for both the math-only `runUntil` fire-time bisection and the MC
- * distribution-statistic probes' aggregate p50 windows.
+ * Phase windows in seconds. One source of truth for both the math-only
+ * `runUntil` fire-time bisection and the MC distribution-statistic probes'
+ * aggregate p50 windows.
  *
  * Cumulative-across-matches arc — beats 1–4 land within match 1; beats 5–6
  * span 2–4 matches' worth of cumulative sim-time. The headless sim does
@@ -22,7 +22,7 @@ const min = (m: number) => m * 60;
  * during balance reconciliation (BALANCING.md § Retune vs reshape →
  * "move the phase"). Producer's B5/B6/B7 shifted 15–25 minutes during
  * prior tuning; record the same kind of shifts here in commit notes if
- * they happen, and sync `archetypes/tug.md` § 4 to match.
+ * they happen.
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), min(1)],

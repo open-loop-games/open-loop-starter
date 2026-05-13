@@ -43,11 +43,9 @@ const SCENE_CONTEXT_ID = 'ambient/scenes';
  * label metadata the unlock doesn't — the unlock is the gate, the variant
  * is what it reveals.
  *
- * Engine surface caveat: `archetypes/ambient.md` § 3 lists `createZoneSystem`
- * as "typically implies depth (spatial progression, worker assignment)."
- * That warning applies to selection-gated content; the no-gate costume use
- * here doesn't move beat timing or cognitive load. Doc clarification is a
- * follow-up.
+ * `createZoneSystem` usually implies depth (spatial progression, worker
+ * assignment). That warning applies to selection-gated content; the
+ * no-gate costume use here doesn't move beat timing or cognitive load.
  */
 export function createSceneModule(data: AmbientData): EngineModule {
   return {

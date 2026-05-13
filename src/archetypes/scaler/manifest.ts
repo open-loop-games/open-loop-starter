@@ -129,5 +129,4 @@ export const manifest: ArchetypeManifest = {
       analysisPath: 'open-loop-research/analyses/complete/ngu-idle-analysis.md',
     },
   ],
-  docPath: 'archetypes/scaler.md',
 };

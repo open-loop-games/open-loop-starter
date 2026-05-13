@@ -2,7 +2,6 @@
 // Canonical: open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts
 //            open-loop-research/reference-code/SynergismOfficial/src/Buy.ts
 //            open-loop-research/reference-code/SynergismOfficial/src/Variables.ts
-// First-arc shape per archetypes/scaler.md § 4 (data shape) and § 5 (content scope).
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { DecimalSource } from '@open-loop/engine';

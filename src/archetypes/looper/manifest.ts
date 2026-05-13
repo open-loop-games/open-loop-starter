@@ -109,5 +109,4 @@ export const manifest: ArchetypeManifest = {
       analysisPath: 'open-loop-research/analyses/complete/progress-knight-2-analysis.md',
     },
   ],
-  docPath: 'archetypes/looper.md',
 };

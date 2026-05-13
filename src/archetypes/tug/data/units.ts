@@ -13,7 +13,7 @@ import type { UnitDef } from './types';
 // Strong/weak entries are emitted by counter-matrix.ts based on these tags.
 
 // ─── Costume ───
-// Theme C SciFi Armada per archetypes/tug.md § 11. unitNames + unitRoles
+// Theme C SciFi Armada. unitNames + unitRoles
 // follow the Direct Strike / Nexus Wars idiom. Numbers below are first-cut
 // placeholders chosen for ratio shape (light-fast-cheap → capital-slow-
 // expensive), not for arc-correctness; the tuner retunes against beat bands.

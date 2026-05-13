@@ -35,8 +35,7 @@ export interface PhaseIntent {
   id: string;
   /** Strict position in the arc. The archetype *is* this sequence. */
   order: number;
-  /** One-line player-experience description. Lifted verbatim from
-   *  `archetypes/tug.md` § 4. */
+  /** One-line player-experience description. */
   intent: string;
   /** Beat id in `beats.ts` currently expressing this phase. Mutable — a
    *  phase may migrate between beats as predicates/windows reshape. */
@@ -60,16 +59,15 @@ export const TUG_IDENTITY = {
    *  target) are mutable; the metric *shape* — mean counter-pivots
    *  across a `counter-matrix/strongCounter ∈ [0.5, 1.5]` sweep, with N
    *  seeds and believability calibration — is the archetype centerpiece
-   *  per `archetypes/tug.md` § 6 probe `counter-strong-sensitivity`. */
+   *  (`counter-strong-sensitivity` probe in `balance/probes.ts`). */
   signatureMetric:
     'counter-matrix sharpness sensitivity — mean counter-pivots per match curve over strongCounter ∈ [0.5, 1.5] across N=20 seeds with believability calibration (counter-strong-sensitivity probe)',
 } as const;
 
 /**
- * Ordered player-experience phases, from `archetypes/tug.md` § 4. The order
- * and intent of each are part of the identity; the concrete beat predicate
- * and minute-window expressing each phase live in `beats.ts` and are
- * mutable.
+ * Ordered player-experience phases. The order and intent of each are part
+ * of the identity; the concrete beat predicate and minute-window expressing
+ * each phase live in `beats.ts` and are mutable.
  */
 export const TUG_PHASES: readonly PhaseIntent[] = [
   {

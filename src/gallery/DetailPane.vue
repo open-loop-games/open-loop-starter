@@ -1,39 +1,16 @@
 <!--
-  Gallery detail pane — manifest fields rendered as structured data, plus
-  the doc body (`?raw` md → marked → DOMPurify).
+  Gallery detail pane — manifest fields rendered as structured data.
 
-  `path` fields are rendered as plain monospace text (no link affordance).
-  This is the v1 default chosen in the leaf-2 plan: the dev-time
-  monorepo-relative paths don't yet have a hosted-URL contract, so
-  rendering them as inline code is honest and forward-compatible.
+  `path` fields are rendered as plain monospace text (no link affordance):
+  the dev-time monorepo-relative paths don't yet have a hosted-URL
+  contract, so inline code is honest and forward-compatible.
 -->
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
 import type { ArchetypeManifest } from '@/types';
-import MarkdownDoc from './MarkdownDoc.vue';
-import { loadArchetypeDoc } from './useArchetypeDocs';
 
-const props = defineProps<{
+defineProps<{
   manifest: ArchetypeManifest;
 }>();
-
-const docSource = ref<string | null>(null);
-const docError = ref<string | null>(null);
-
-watchEffect(async () => {
-  docSource.value = null;
-  docError.value = null;
-  try {
-    const md = await loadArchetypeDoc(props.manifest.docPath);
-    if (md == null) {
-      docError.value = `No doc found at ${props.manifest.docPath}`;
-    } else {
-      docSource.value = md;
-    }
-  } catch (err) {
-    docError.value = err instanceof Error ? err.message : String(err);
-  }
-});
 </script>
 
 <template>
@@ -187,23 +164,6 @@ watchEffect(async () => {
     >
       <em>Declared invention — no listed exemplars.</em>
     </section>
-
-    <section class="detail__section">
-      <h3>Documentation</h3>
-      <p class="doc-source-line">
-        Source: <code class="path">{{ manifest.docPath }}</code>
-      </p>
-      <div
-        v-if="docError"
-        class="doc-error"
-      >
-        {{ docError }}
-      </div>
-      <MarkdownDoc
-        v-else-if="docSource"
-        :source="docSource"
-      />
-    </section>
   </div>
 </template>
 
@@ -323,16 +283,5 @@ watchEffect(async () => {
 }
 .chip[data-layer='harness'] {
   background: color-mix(in srgb, var(--color-danger) 12%, var(--color-badge));
-}
-.doc-source-line {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-.doc-error {
-  padding: 0.6rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-danger);
-  color: var(--color-danger);
-  border-radius: var(--radius);
 }
 </style>

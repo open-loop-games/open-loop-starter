@@ -10,7 +10,7 @@ import type { FortressDef } from './types';
 // damage-sponge: no return fire, no resistance.
 
 // ─── Costume ───
-// Theme C SciFi Armada per archetypes/tug.md § 11. The fortress is the
+// Theme C SciFi Armada. The fortress is the
 // `Nexus` (per `TUG_THEME.fortressName`) — labels live in the theme,
 // numbers live here.
 

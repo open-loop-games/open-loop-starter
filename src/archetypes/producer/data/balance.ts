@@ -1,5 +1,4 @@
 // ─── Balance ─────────────────────────────────────────────────────────────────
-// Spec:   archetypes/producer.md § 4 — Data shape (balance.ts destination)
 // Sources:
 //   - `defaultCostScaling = 1.15`     → `priceFunc` closure on
 //                                       `Game.Object` constructor

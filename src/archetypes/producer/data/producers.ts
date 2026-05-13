@@ -1,5 +1,4 @@
 // ─── Producers ────────────────────────────────────────────────────────────────
-// Spec:   archetypes/producer.md § 5 — Producers / Activities
 // Sources:
 //   - Click activity → `main.js:4988–5057` (`Game.ClickCookie`). The big
 //     cookie click grants `Game.computedMouseCps` per fire. Base click

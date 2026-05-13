@@ -1,5 +1,4 @@
 // ─── Achievements ────────────────────────────────────────────────────────────
-// Spec:   archetypes/producer.md § 5 — Achievements
 // Sources:
 //   - Production-total milestones → `BankAchievement` helper + calls,
 //     `main.js:12994–13037`. Triggered by cumulative cookies earned.

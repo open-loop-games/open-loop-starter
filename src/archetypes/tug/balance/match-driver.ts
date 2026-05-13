@@ -4,8 +4,8 @@ import { MatchKey } from '../modules';
 /**
  * Sim-only multi-match orchestration. Subscribes to `match.on('matchEnded')`
  * and re-starts the next match on the following tick. Enables cumulative-arc
- * beats (beats 5 + 7 in `archetypes/tug.md` § 5) to fire across multiple
- * matches inside a single `runUntil` / `runMatrixUntil` driver — without
+ * beats (beats 5 + 7) to fire across multiple matches inside a single
+ * `runUntil` / `runMatrixUntil` driver — without
  * this module the sim engine ends after match 1 and cumulative probes
  * never fire.
  *

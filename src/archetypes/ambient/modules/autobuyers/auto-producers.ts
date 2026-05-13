@@ -28,8 +28,8 @@ import {
 // — soft reveals fire unconditionally on threshold cross. The Ambient
 // archetype contract forbids player-pausable content reveals; gating them
 // behind the master toggle would let "pause automation" mute new content
-// reveals, which directly contradicts the no-pressure commitment in
-// `archetypes/ambient.md` § 1.
+// reveals, which directly contradicts the archetype's no-pressure
+// commitment.
 
 export function buildAutoProducerPolicy(
   buildings: ProducerCategory<AutoProducerDef>,

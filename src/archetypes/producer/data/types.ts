@@ -1,5 +1,4 @@
 // ─── Spec contract ────────────────────────────────────────────────────────────
-// Spec: archetypes/producer.md § 4 — Data shape
 // Role: typed contract for the producer archetype's data layer. Concrete
 //       values land in sibling data/* files; modules read these shapes.
 // ─────────────────────────────────────────────────────────────────────────────

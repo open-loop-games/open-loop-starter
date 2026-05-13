@@ -1,5 +1,4 @@
 // ─── Upgrades ────────────────────────────────────────────────────────────────
-// Spec:   archetypes/producer.md § 5 — Upgrades / Purchasables
 // Sources:
 //   - `Game.MakeTiered` / `Game.TieredUpgrade` helpers: `main.js:10145–10155`.
 //     Non-cursor tier-N cost = building.basePrice × `Game.Tiers[tier].price`;

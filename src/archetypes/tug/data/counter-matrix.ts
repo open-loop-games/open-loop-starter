@@ -6,7 +6,7 @@ import type { CounterMatrix, UnitArchetypeTag } from './types';
 // NOT a `chain.bind` modifier surface. The row/column order is fixed by
 // `units.ts` order; if that order changes, this file must be regenerated.
 //
-// Two crossed counter cycles per archetypes/tug.md § 8:
+// Two crossed counter cycles:
 //   primary cycle:   light > capital > siege > light
 //   secondary cycle: fast > air > special > fast
 //

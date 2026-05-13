@@ -55,8 +55,8 @@
 
 // TODO(expansion): graduate the offerings → per-rune EXP → integer level →
 // multiplicative grant loop to a `createSacrificeProgression` engine helper
-// once a 2nd consumer derives the same shape. Predicted at archetypes/scaler.md
-// § 7. See `open-loop-engine/docs/candidate-primitives.md`.
+// once a 2nd consumer derives the same shape. See
+// `open-loop-engine/docs/candidate-primitives.md`.
 
 import { computed, type ComputedRef } from 'vue';
 import {

@@ -8,18 +8,13 @@ export enum Screen {
  *
  * `ArchetypeManifest` is the gallery-surface contract every archetype satisfies.
  * Each `src/archetypes/<name>/manifest.ts` exports a typed `ArchetypeManifest`
- * value re-exported from the archetype's `index.ts`. The gallery (Phase 2)
- * enumerates archetypes via `import.meta.glob` and reads these manifests; it
- * does not parse `archetypes/<name>.md`. The manifest is the source of truth
- * for card/detail-pane presentation; the doc remains the source of truth for
- * authorial content.
+ * value re-exported from the archetype's `index.ts`. The gallery enumerates
+ * archetypes via `import.meta.glob` and reads these manifests; the manifest
+ * is the source of truth for card/detail-pane presentation.
  *
  * `path` fields below are dev-time placeholders: monorepo-root-relative paths
  * to the sibling-repo source on disk. They are real during local development
- * but do not yet describe a hosted-URL contract. Final URL resolution (single
- * combined site? separate gh-pages? raw github?) is post-deploy/release work;
- * the leaf-2 gallery renderer is responsible for translating these paths to
- * whatever the final hosting story turns out to be.
+ * but do not yet describe a hosted-URL contract.
  */
 
 export type ArchetypeStatus = 'canonical' | 'candidate' | 'deprecated';
@@ -114,7 +109,4 @@ export interface ArchetypeManifest {
   formFactor: FormFactor;
   /** Optional — declared-invention archetypes omit this. */
   exemplars?: ExemplarRef[];
-  /** Package-root-relative path to the archetype's doc, lowercase, no
-   * leading slash. Phase 2's gallery uses this to build a `?raw` md import. */
-  docPath: string;
 }

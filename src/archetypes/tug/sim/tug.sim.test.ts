@@ -1,12 +1,12 @@
 import { describe, it } from 'vitest';
 
 /**
- * Tug beat-map placeholder suite — one `it.todo` per beat in
- * `archetypes/tug.md` § 4. Engine-driven beat verification rides leaf 6's
- * Tier-C balance lane (`balance/probes.ts`, `balance/tune.ts`); § 7 forbids
- * sim drivers in this vitest suite. These todos exist so any future
- * shape-change to a beat surfaces here as a missing-test signal rather than
- * vanishing silently when the balance lane isn't running.
+ * Tug beat-map placeholder suite — one `it.todo` per beat. Engine-driven
+ * beat verification rides the Tier-C balance lane
+ * (`balance/probes.ts`, `balance/tune.ts`); sim drivers stay out of this
+ * vitest suite. These todos exist so any future shape-change to a beat
+ * surfaces here as a missing-test signal rather than vanishing silently
+ * when the balance lane isn't running.
  */
 
 describe('tug beats — structural placeholders (no runHeadless)', () => {
