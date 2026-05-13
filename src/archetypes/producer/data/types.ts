@@ -110,7 +110,9 @@ export interface AchievementDef {
   hidden?: boolean;
   /** State predicate — true when the achievement's trigger condition is met. */
   requirement: (state: ProducerGameState) => boolean;
-  /** Headline multiplicative reward. Default carries via `ProducerBalance`. */
+  /** Headline multiplicative reward. Default carries via the
+   *  `balance/achievementRewardMultiplier` tunable in
+   *  `modules/achievements.ts`. */
   rewardMultiplier?: DecimalSource;
 }
 
@@ -135,39 +137,15 @@ export interface ProducerGameState {
 }
 
 /**
- * Balance constants surfaced through the tuning registry. Values lifted
- * from canonical Cookie Clicker bytes (Object constructor, Upgrade
- * definitions); declared-invention rows where archetype simplification
- * diverges from canonical (e.g. direct per-achievement reward in place
- * of the milk/kitten chain).
- */
-export interface ProducerBalance {
-  /** Geometric per-unit cost growth — Cookie Clicker default 1.15. */
-  defaultCostScaling: DecimalSource;
-  /** `Game.MakeTiered` ×2 — per-building tiered upgrade multiplier. */
-  tieredUpgradeMultiplier: DecimalSource;
-  /** Default multiplicative reward for the bank/cps/click achievement
-   *  series and per-building milestone tiers. Declared-invention: stands
-   *  in for milk/kitten chain composition (spec § 5). */
-  achievementRewardMultiplier: DecimalSource;
-  /** Per-producer count thresholds that fire milestone achievements.
-   *  Canonical: `Game.Win` calls inside each building's callback
-   *  (`main.js:9019+`) — 1, 50, 100, 150, … per-building. */
-  milestoneThresholds: DecimalSource[];
-  /** Multiplier applied per-tier of milestone earned. Binds via
-   *  `Decimal.pow(bonusPerTier, getEarnedCount(tiers))` per
-   *  `modules/milestones.ts`. */
-  milestoneBonusPerTier: DecimalSource;
-}
-
-/**
  * Composed data bag — the unit `applyProducerOverrides` deep-merges over
  * and modules close over at install time. Sim tests and the workbench
  * perturb this object directly via the `createProducerEngine` factory.
+ * Balance constants live at their `tunable()` reader sites under
+ * `modules/`; perturbation routes through the producer module's
+ * `TuningRegistry` scope, not this data bag.
  */
 export interface ProducerData {
   producers: ProducerDef[];
   upgrades: UpgradeDef[];
   achievements: AchievementDef[];
-  balance: ProducerBalance;
 }

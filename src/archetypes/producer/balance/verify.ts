@@ -19,11 +19,16 @@
  */
 
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';
-import { createProducerEngine, getBuildings, getPrimaryResource, getUpgrades } from '..';
-import { PRODUCER_BALANCE } from '..';
+import {
+  MILESTONE_THRESHOLDS,
+  createProducerEngine,
+  getBuildings,
+  getPrimaryResource,
+  getUpgrades,
+} from '..';
 import { arcWaypoints, strictTierOrderSchedule, type ArcWaypoint, type ScheduleStep } from './spec';
 
-const PER_TIER_COUNT = Number(PRODUCER_BALANCE.milestoneThresholds[2] ?? 25);
+const PER_TIER_COUNT = Number(MILESTONE_THRESHOLDS[2] ?? 25);
 const TOLERANCE_PCT = 0.05;
 const BUDGET_SEC = 90 * 60 * 3; // generous budget — same scale as run.ts
 

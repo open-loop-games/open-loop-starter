@@ -16,6 +16,7 @@ export {
 } from './producers';
 export { getUpgrades } from './upgrades';
 export { getAchievements } from './achievements';
+export { MILESTONE_THRESHOLDS } from './milestones';
 export { AutobuyerMasterToggleKey, AutobuyerRegistryKey, type AutobuyerSpec } from './autobuyers';
 
 /**

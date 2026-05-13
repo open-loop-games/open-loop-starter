@@ -49,10 +49,15 @@ export function createAchievementsModule(data: ProducerData): EngineModule {
       const clickCount = getClickCount();
       const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
 
+      // Default multiplicative reward for the bank/cps/click achievement
+      // series and per-building milestone tiers. Declared invention: the
+      // ×1.02 per-achievement direct multiplier stands in for the canonical
+      // milk/kitten chain (`main.js:5240`, `:5256–5271`) per spec § 5 — the
+      // full chain ports if kitten upgrades enter first-arc scope.
       const defaultReward = tunable<DecimalSource>(
         tuningRegistry,
         'balance/achievementRewardMultiplier',
-        () => data.balance.achievementRewardMultiplier,
+        () => 1.02,
       );
 
       const readState = (): ProducerGameState => {

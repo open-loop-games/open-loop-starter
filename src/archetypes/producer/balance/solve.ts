@@ -34,12 +34,18 @@ import {
   type TunerResult,
 } from '@open-loop/engine';
 import { ProducerTuningRegistryKey, type ProducerTunables } from '../modules/producers';
-import { DEFAULT_PRODUCER_DATA } from '../data';
 import { PRODUCERS } from '../data/producers';
-import { ARC_BEATS, BEAT_WINDOWS } from './beats';
+import { ARC_BEATS, BEAT_WINDOWS } from './balance';
 import { buildProducerSimEngine } from './bot';
 
 const BUDGET_SEC = BEAT_WINDOWS['beat-7']![1] * 2.5;
+
+// Mirror the tunable() defaults declared at the reader sites
+// (`modules/upgrades.ts`, `modules/milestones.ts`). Used as the "current"
+// baseline for solver-proposed deltas — overwritten in the proposal map
+// once a beat solves.
+const TIERED_UPGRADE_MULTIPLIER_DEFAULT = 2;
+const MILESTONE_BONUS_PER_TIER_DEFAULT = 1.1;
 
 // ─── Proposal state ──────────────────────────────────────────────────────
 //
@@ -301,10 +307,7 @@ function solvePass(proposed: Proposed): {
       ctx,
       'beat-4',
       'balance/tieredUpgradeMultiplier',
-      Number(
-        proposed['balance/tieredUpgradeMultiplier'] ??
-          DEFAULT_PRODUCER_DATA.balance.tieredUpgradeMultiplier,
-      ),
+      Number(proposed['balance/tieredUpgradeMultiplier'] ?? TIERED_UPGRADE_MULTIPLIER_DEFAULT),
     );
     const sol = solveBeat4(ctx, target);
     const value = Math.round(sol.value);
@@ -312,7 +315,7 @@ function solvePass(proposed: Proposed): {
     solves.push({
       beatId: 'beat-4',
       field: 'tier-i multiplier',
-      current: Number(DEFAULT_PRODUCER_DATA.balance.tieredUpgradeMultiplier),
+      current: TIERED_UPGRADE_MULTIPLIER_DEFAULT,
       currentFireTime: currentFire,
       proposed: value,
       proposedFireTime: sol.time,
@@ -330,10 +333,7 @@ function solvePass(proposed: Proposed): {
       ctx,
       'beat-7',
       'balance/milestoneBonusPerTier',
-      Number(
-        proposed['balance/milestoneBonusPerTier'] ??
-          DEFAULT_PRODUCER_DATA.balance.milestoneBonusPerTier,
-      ),
+      Number(proposed['balance/milestoneBonusPerTier'] ?? MILESTONE_BONUS_PER_TIER_DEFAULT),
     );
     const sol = solveBeat7(ctx, target);
     const value = round3(sol.value);
@@ -341,7 +341,7 @@ function solvePass(proposed: Proposed): {
     solves.push({
       beatId: 'beat-7',
       field: 'milestoneBonusPerTier',
-      current: Number(DEFAULT_PRODUCER_DATA.balance.milestoneBonusPerTier),
+      current: MILESTONE_BONUS_PER_TIER_DEFAULT,
       currentFireTime: currentFire,
       proposed: value,
       proposedFireTime: sol.time,

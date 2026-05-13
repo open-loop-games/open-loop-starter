@@ -44,11 +44,9 @@ export function createUpgradesModule(data: ProducerData): EngineModule {
 
       // Wired through tunable() so balance scripts can retune the ×2
       // tiered-multiplier headline without rewriting every upgrade row.
-      tunable(
-        tuningRegistry,
-        'balance/tieredUpgradeMultiplier',
-        () => data.balance.tieredUpgradeMultiplier,
-      );
+      // Source: `Game.MakeTiered` wires ×2 into the building's rate
+      // function on upgrade purchase (`main.js:10145–10155`).
+      tunable(tuningRegistry, 'balance/tieredUpgradeMultiplier', () => 2);
 
       upgrades = createPurchasableCategory<UpgradeDef>({
         id: 'producer/upgrades',

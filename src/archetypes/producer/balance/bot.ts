@@ -47,8 +47,8 @@ function expectedClicksAt(simTimeSec: number): number {
  * Hybrid-payback selection policy for the producer balance bot — single source
  * of truth shared by the producer auto-buy autobuyer (installed in
  * `modules/autobuyers/producers.ts` via `setupPolicyAutoPurchase`) and the
- * closed-form bot-policy walker (`predict-bot-policy.ts`'s
- * `arcWaypointsBotPolicy` queries it against frozen-state engine readouts).
+ * closed-form bot-policy walker (`predict.ts`'s `arcWaypointsBotPolicy`
+ * queries it against frozen-state engine readouts).
  *
  * Reserve floor is fixed at zero — the producer balance bot doesn't bank.
  * Forks that introduce a reserve must extend this signature; the predictor

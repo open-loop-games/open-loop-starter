@@ -2,7 +2,8 @@
  * Producer balance discovery script.
  *
  * Iteration loop:
- *   1. tweak `data/{producers,upgrades,achievements}.ts` or `PRODUCER_BALANCE`
+ *   1. tweak `data/{producers,upgrades,achievements}.ts` or a `tunable()`
+ *      default at its reader site under `modules/`
  *   2. `pnpm exec vite-node src/archetypes/producer/balance/run.ts`
  *   3. read the punch list — find the red rows
  *   4. tweak again
@@ -21,7 +22,7 @@ import {
   type ProducerInspector,
 } from '@/balance';
 import { getBuildings } from '../modules';
-import { ARC_BEATS, BEAT_WINDOWS, FLOW_BEATS } from './beats';
+import { ARC_BEATS, BEAT_WINDOWS, FLOW_BEATS } from './balance';
 import { buildProducerSimEngine } from './bot';
 
 const inspectorPolicy: ProducerInspector = {

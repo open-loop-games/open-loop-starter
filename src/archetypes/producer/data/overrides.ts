@@ -5,23 +5,17 @@
 //       to land a fresh data bag the modules close over at install.
 //
 // Shape: flat-category, mirrors `ProducerData`. Producer / upgrade /
-//        achievement overrides keyed by definition id; balance overrides
-//        are a `Partial<ProducerBalance>` merge.
+//        achievement overrides keyed by definition id. Balance-constant
+//        overrides route through the producer module's `TuningRegistry`
+//        (`pushScope`), not this surface — see `modules/producers.ts`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type {
-  AchievementDef,
-  ProducerBalance,
-  ProducerData,
-  ProducerDef,
-  UpgradeDef,
-} from './types';
+import type { AchievementDef, ProducerData, ProducerDef, UpgradeDef } from './types';
 
 export interface ProducerOverrides {
   producers?: Record<string, Partial<ProducerDef>>;
   upgrades?: Record<string, Partial<UpgradeDef>>;
   achievements?: Record<string, Partial<AchievementDef>>;
-  balance?: Partial<ProducerBalance>;
 }
 
 function mergeById<T extends { id: string }>(
@@ -44,6 +38,5 @@ export function applyProducerOverrides(
     producers: mergeById(base.producers, overrides.producers),
     upgrades: mergeById(base.upgrades, overrides.upgrades),
     achievements: mergeById(base.achievements, overrides.achievements),
-    balance: overrides.balance ? { ...base.balance, ...overrides.balance } : base.balance,
   };
 }

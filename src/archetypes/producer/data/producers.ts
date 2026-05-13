@@ -32,14 +32,20 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { ProducerDef } from './types';
-import { PRODUCER_BALANCE } from './balance';
 
 /** Stable id for the click activity. Referenced as `targetProducerId` on
  *  cursor-scoped upgrades and as the manual-trigger producer's category
  *  entry id. */
 export const CLICK_PRODUCER_ID = 'click';
 
-const COST_SCALING = PRODUCER_BALANCE.defaultCostScaling;
+// Geometric per-unit cost growth — Cookie Clicker default 1.15. Source:
+// `defaultCostScaling = 1.15` → `priceFunc` closure on `Game.Object`
+// constructor (`main.js:7982`). Not tunable: the engine's
+// `ProducerMapping.purchase.costScaling` is static `DecimalSource`, not
+// Computable, so the value is read once at producer registration and
+// can't retune via tunable(). Filed as candidate primitive when a fork
+// wants to bisect this knob.
+const COST_SCALING = 1.15;
 
 const CLICK_PRODUCER: ProducerDef = {
   id: CLICK_PRODUCER_ID,
