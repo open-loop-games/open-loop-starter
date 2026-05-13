@@ -2,9 +2,9 @@
 
 Balance is rate-function design per subsystem. This doc names the goals, the diagnostic vocabulary, the methodology kit, and the engine surfaces a starter consumer reaches for during balance work, and points at upstream sources for theory and prescription.
 
-The reader is a designer or developer working on an archetype's balance pass — tuning a `balance/` directory, choosing methodologies, wiring solvers and probes against the engine, locking chosen numbers against drift.
+The reader is a designer or developer working on an archetype's balance pass — wiring solvers and probes against the engine, choosing methodologies, locking chosen numbers against drift.
 
-This is a living document. Per-archetype balance passes generate amendments; open the file and PR.
+This is a living document. Per-archetype balance passes generate amendments through the graduation flow (see § Graduating findings).
 
 ## Cite-out posture
 
@@ -12,28 +12,10 @@ This doc owns starter-side discipline. Theory, prescription, and pattern catalog
 
 - **Theory** — what shape the rate function takes, when it closes, what named adjacent math takes over when it doesn't — lives in `open-loop-research/methodology/techniques/closed-form-progression/`. Predictive validation across 12 corpus games at R² > 0.999 (cost formulas) and 100% design-intent match (flow channels) lives at `closed-form-progression/case-studies/corpus-model-validation.md`.
 - **Prescriptions** — doubling-time targets, beat-cadence calls, modifier-stack composition, prestige cycle math, soft-cap shapes, multi-resource extension — live in `incremental-math/src/pages/design-playbook/`.
-- **Patterns and cross-pattern properties** — feedback loops, interlocking loops, friction-and-relief, decision affordance density, the rest of the catalog and their corpus prevalence — live in your archetype's `archetypes/<name>.md` (which calls the patterns it composes by name) and `open-loop-research/LIBRARY.md` as the research entrypoint.
-- **Engine balance toolkit** — full list of harness primitives — lives in `open-loop-engine/docs/api/INDEX.md § harness`.
+- **Patterns and cross-pattern properties** — feedback loops, interlocking loops, friction-and-relief, decision affordance density, the rest of the catalog and their corpus prevalence — live in your archetype's `src/archetypes/<name>/overview.md` (which calls the patterns it composes by name) and `open-loop-research/LIBRARY.md` as the research entrypoint.
+- **Engine balance toolkit** — full list of harness primitives — lives in `open-loop-engine/docs/api/harness.md`.
 
 What's left for this doc: starter-side discipline running the full chain.
-
-## The five-layer flow
-
-Balance work in this stack runs top-down through five layers, each owned by a different theme of this doc:
-
-```
-identity (shape.ts)            theme 1 — what you're aiming at
-   ↓ constrains
-scaffolding (data, beats, bot) theme 2 — what you're tuning
-   ↓ what tools perturb
-methodology choice             theme 3 — which style fits the shape
-   ↓ runs against
-engine surfaces                theme 4 — what's in the harness
-   ↓ produces numbers pinned by
-regression locks               theme 5 — how drift gets caught
-```
-
-The diagram is the table of contents. The themes walk it top-down. Between themes 3 and 4 sits the unifying primitive — *engine as oracle* — that ties methodology choice to engine surfaces; it has its own section because it informs both.
 
 ## Theme 1 — What are the goals?
 
@@ -47,24 +29,26 @@ The signature metric is what the archetype *climaxes on* — Producer's late-gam
 
 Flow bands are the time-by-rate-state windows the player should occupy. `flow` and `flow-upper` are the engaged windows; `idle-low` and `over-ceiling` are the disengaged ones. The objective isn't "land beat 3 at minute 17" — it's "spend as much of the arc as possible in the engaged bands while beats fire in order, arc completes within budget."
 
-The full 6-band channel taxonomy (arousal / flow / flow-upper / boredom / frustration / breakdown), the channel-boundary equations (`m_min(channel, n) = (T_min / T₁)^(1/(n-1))`), and the optimal-multiplier derivation (`m = (T_target / T_base)^(1/(n-1))`) are in `closed-form-progression/case-studies/flow-channel-thresholds.md`. Per-archetype `FLOW_BAND_SCORE` weights in `shape.ts` use the 6-band keys directly; theme 1's 4-band shorthand here collapses three disengaged bands for the engaged-vs-disengaged binary read.
+The full 6-band channel taxonomy (arousal / flow / flow-upper / boredom / frustration / breakdown), the channel-boundary equations (`m_min(channel, n) = (T_min / T₁)^(1/(n-1))`), and the optimal-multiplier derivation (`m = (T_target / T_base)^(1/(n-1))`) are in `closed-form-progression/case-studies/flow-channel-thresholds.md`. The 4-band shorthand collapses the three disengaged bands for an engaged-vs-disengaged binary read.
 
 > **Objective is shape of play, not beat-second targets.** Beats are anchors for phase ordering and rough cadence. The real objective is flow-band occupation across the arc.
 
-### Identity vs scaffolding
+### Identity, scaffolding, tools, locks
 
-Code carries the goals when the goals are split out from the tuning surface:
+Four roles in a balance pass:
 
-- **Identity** lives in `shape.ts` — phases, budget, signature metric, min cardinality, flow-band weights. Fixed under retuning. Identity is what changing the constants *can't* change about the archetype.
-- **Scaffolding** lives in `data/`, `beats.ts`, `bot.ts` — the mutable surface tools perturb. Concrete cost numbers, predicate shapes, multiplier values, achievement thresholds, bot policy. The "first authoring pass" of the archetype, subject to co-reshape when a phase can't be expressed under it.
+- **Identity** is the shape of play the archetype is built around — phases, budget, signature metric, min cardinality, flow-band weights. Identity is what changing the constants *can't* change about the archetype.
+- **Scaffolding** is the mutable surface tools perturb — the cost numbers, predicate shapes, multiplier values, achievement thresholds, bot policy. The "first authoring pass" of the archetype, subject to co-reshape when a phase can't be expressed under it.
 - **Tools propose.** Solver scripts iterate against the engine and print proposals; humans pick.
 - **Locks pin chosen numbers,** last.
 
-This split is what makes balance choices *legible later*. A future reader who wants to know "what is this archetype actually trying to do" reads `shape.ts`. They don't need to reverse-engineer it from the constants.
+Identity is a *concept*, not a required file. When goals are stable enough and the archetype is predictor-seed-shaped (producer-style closed-form spec), it earns a `shape.ts` file — phases, budget, signature metric, flow-band weights captured as data the predictor and solver read. Otherwise the same content lives as comments at the relevant solver/predict sites or doesn't get written down separately at all. See § Where balance constants live.
+
+What makes balance choices *legible later* is that the identity layer — wherever it lives — names what the archetype is trying to do, separately from the constants achieving it. A future reader who wants to know "what is this archetype actually trying to do" reads the identity layer first. They don't reverse-engineer it from the constants.
 
 ### Patterns and cross-pattern properties
 
-Before subsystem-bucketing, name the patterns. Your archetype's `archetypes/<name>.md` calls the patterns it composes by name (Resource Accumulation, Modifier Chains, Prestige Cycle, Idle Income, Buildings, Achievement Systems, etc.) and points at the cross-pattern properties it carries (feedback loops, friction-and-relief, interlocking loops, decision affordance density). Patterns are the framing layer above subsystems — they tell you *what kind of game-shape* the archetype is.
+Before subsystem-bucketing, name the patterns. Your archetype's `src/archetypes/<name>/overview.md` calls the patterns it composes by name (Resource Accumulation, Modifier Chains, Prestige Cycle, Idle Income, Buildings, Achievement Systems, etc.) and points at the cross-pattern properties it carries (feedback loops, friction-and-relief, interlocking loops, decision affordance density). Patterns are the framing layer above subsystems — they tell you *what kind of game-shape* the archetype is.
 
 For prevalence, the catalog, and the cross-pattern property definitions, `open-loop-research/LIBRARY.md` is the research entrypoint.
 
@@ -85,6 +69,8 @@ An archetype is a composition of subsystems with their own rate functions. Walk 
 - **Network-topological** — resources flow through a directed graph; throughput is bounded by topology, not just rates. Min-cut / max-flow for linear capacities; NLP for nonlinear. Source: `bifurcations.md` § 5.
 - **Optimal stopping** — when-to-reset surfaces (prestige timing). Per-fixed-strategy ROI closes; the optimal threshold is Bellman. Source: `bifurcations.md` § 6.
 - **Combinatorial selection** — strategy-space lattice search across configurations (skill tree, equipment loadout, deck composition). Sibling shape to discrete-event-coupled per `subsystem-inventory.md` § 5.5.
+
+A 10th bucket — *Discrete planning / scheduling* — is in research per OL-960; methodology #7 below skeletons the starter-side response.
 
 For prevalence across the corpus and per-archetype distribution, see `closed-form-progression/subsystem-inventory.md` (208 rows across 15 archetypes; 79.8% decomposable into Pure or Piecewise).
 
@@ -118,7 +104,7 @@ When you walk *your* archetype's subsystems and find some closing and some bifur
 
 ### Bucket → methodology lookup
 
-The 9 buckets cross-reference to the 6 methodologies in theme 3. Each row identifies the primary methodology for a subsystem in that bucket, the upstream algebra/bifurcation reference, and the in-tree exemplar (if any).
+The buckets cross-reference to the methodologies in theme 3. Each row identifies the primary methodology for a subsystem in that bucket, the upstream algebra/bifurcation reference, and the in-tree exemplar (if any).
 
 | Bucket                      | Primary methodology                          | Algebra / bifurcation              | In-tree exemplar                                  |
 | --------------------------- | -------------------------------------------- | ---------------------------------- | ------------------------------------------------- |
@@ -131,14 +117,15 @@ The 9 buckets cross-reference to the 6 methodologies in theme 3. Each row identi
 | Network-topological         | structural (LP, min-cut)                     | `bifurcations.md § 5`              | (no in-tree yet)                                  |
 | Optimal stopping            | #5 + Bellman / threshold policy              | `bifurcations.md § 6`              | scaler prestige (target post-OL-841)              |
 | Combinatorial selection     | #5 + bounds                                  | `bifurcations.md § 4.4` sibling    | scaler Time Studies (target post-OL-841)          |
+| Discrete planning / scheduling | #7 solver-driven balance                  | TBD (OL-960 research)              | looper queue formation (target OL-959)            |
 
-A subsystem may map to multiple buckets in the inventory's dual classifications — e.g., `subsystem-inventory.md § 5.3`'s scaler row 12 is `Coupled-state deterministic` per fixed strategy and `Optimal stopping` across strategies. When the buckets disagree on methodology, name both per-subsystem in `shape.ts` so the solver/predictor knows which walker to use.
+A subsystem may map to multiple buckets in the inventory's dual classifications — e.g., `subsystem-inventory.md § 5.3`'s scaler row 12 is `Coupled-state deterministic` per fixed strategy and `Optimal stopping` across strategies. When the buckets disagree on methodology, name both per-subsystem in the identity layer so the solver/predictor knows which walker to use.
 
 For corpus-scope validation that no archetype reaches for unnamed adjacent math, see `closed-form-progression/case-studies/bifurcations-corpus-census.md`.
 
 ## Theme 3 — What methodologies are available?
 
-Given the bucket walk, methodology choice follows. The kit grows with feedback loops as more archetypes ship balance passes; the six below are what the ecosystem currently supports.
+Given the bucket walk, methodology choice follows. The kit grows with feedback loops as more archetypes ship balance passes; the seven below are what the ecosystem currently supports.
 
 ### 1. Spec / calibrate / lock
 
@@ -215,9 +202,29 @@ For tester-seat search-based agents driving objective variation against paramete
 
 ### 6. Pure sim discovery
 
-When no closed-form spec exists at all and no named bifurcation row applies cleanly. Document the tool you chose and why, in `shape.ts`. Locks still come last — even pure sim discovery wants regression bounds against a chosen distribution statistic.
+When no closed-form spec exists at all and no named bifurcation row applies cleanly. Document the tool you chose and why, in the archetype's identity layer. Locks still come last — even pure sim discovery wants regression bounds against a chosen distribution statistic.
 
 This is the bucket of last resort. Reaching for it is a signal to check the bucket walk again: are you sure no row from the bifurcation table names the math here?
+
+### 7. Solver-driven balance
+
+When the subsystem is **deterministic discrete optimization** — queue formation under finite slots, build order under capacity constraints, route planning over a sparse graph — neither closed-form rate algebra (#1, #2) nor strategy-space equilibrium (#5) fits. The adjacent math is planning / scheduling: find the optimal action sequence for a given parameter setting, sweep parameters across a designed range, characterize the response surface, retune so design intent lands on the right curve.
+
+The framework dodge — "this is discrete and combinatorial, no math available" — is not the right read. The math is here; it lives under planning, scheduling, and operations-research literature.
+
+**Algorithm-choice candidates:**
+
+- **A\*** — heuristic search over a state graph when an admissible heuristic exists. Tightest fit when state is enumerable and the heuristic underestimates remaining cost cheaply.
+- **Dynamic programming** — when the state space decomposes into overlapping subproblems with optimal substructure. Tightest fit for staged decisions with bounded backward dependencies.
+- **MCTS** — Monte Carlo tree search when the branching factor defeats exhaustive enumeration and rollouts are cheap. Tightest fit when the value function is hard to compute analytically but easy to sample.
+- **Beam search** — bounded-width heuristic when optimal isn't required and breadth-first growth would explode. Tightest fit when "good enough" plans are useful and the optimal plan is intractable.
+
+TBD — fills during the looper greenfield leaf (OL-959):
+
+- Worked example naming the algorithm Looper's queue-formation picks, and why.
+- Bucket-walk row body in Theme 2's lookup (`Discrete planning / scheduling` per OL-960).
+- Lock semantics: what gets locked when the answer is a solver output rather than a single scalar — likely the *response curve shape* under a sweep, not a point estimate.
+- Engine-surface gap: whether the harness grows a solver primitive (parameterized cost / transition / goal interface) or consumers compose solvers ad-hoc against engine-as-oracle.
 
 ---
 
@@ -242,44 +249,38 @@ These primitives expose the engine's compiled chain math without ticks. They liv
 - `Formula.calculateCost`, `Formula.calculateMaxAffordable` — core formula layer.
 - `ModifierChain` bindings + per-link contributions for attribution.
 
-Full surface at `open-loop-engine/docs/api/INDEX.md` (system-layer entries — not `§ harness`, which is the calibration toolkit on top of these).
+Full surface at `open-loop-engine/docs/api/INDEX.md` (system-layer entries — not the harness section, which is the calibration toolkit on top of these).
 
 ### Portability and the candidate-primitives loop
 
 Engine-as-oracle posture makes balance work portable across engine refactors. The math is the spec; the engine is the truth; the solver glues them. When a primitive is missing — when consumers hand-roll a query the engine should own — file it as a candidate in `open-loop-engine/docs/candidate-primitives.md`. Co-locate a `TODO(expansion)` marker at the hand-roll site as the in-code receipt. The candidate file is the convergence channel; duplicate consumers (N=2) graduate the candidate to a research ticket.
 
-Current candidate-primitives relevant to balance work include `costScaling: { threshold, scale }` (N=0, AD-shaped piecewise cost; first hand-roll site triggers).
-
 ## Theme 4 — What engine surfaces help?
 
-The engine's `harness/` is the toolkit running the methodology choice. Curated entries below; full surface lives at `open-loop-engine/docs/api/INDEX.md § harness`.
+The engine's `harness/` is the toolkit running the methodology choice. Curated entries below; full surface lives at `open-loop-engine/docs/api/harness.md`.
 
 | Surface                       | Use for                                                                                                    |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `runProbe`                    | Mode-dispatching beat-arc probe. `BeatProbe.targetWindow` → `BeatResult.{inWindow, targetWindow}` first-class. Standard input to a Tier-A solver. |
-| `runWaypointProbe`            | Snapshot-at-time across an arc. Methodology #2's verify-step waypoint capture; flow-band occupation reads off the snapshot series. |
+| `runProbe`                    | Per-beat termination-time distributions from a seed sweep. `BeatProbe.targetWindow` → `BeatResult.{inWindow, targetWindow}` first-class. Standard input to a methodology #1 solver. |
+| `runWaypointProbe`            | Snapshot-at-time across an arc per seed × waypoint. Methodology #2's verify-step capture; flow-band occupation reads off the snapshot series. |
 | `bisectTuner`                 | 1-D bisection per beat. Calibrate layer for spec/calibrate/lock.                                           |
-| `runSensitivity`              | Sensitivity sweep across one parameter; generic over `Cell` (fixed-tick) and `UntilCell` (predicate-bounded) via `config.until` dispatch. Tier-B response curves. |
-| `runMatrix`                   | Cartesian sims over a parameter grid. Persona dominance probes, multi-axis sweeps.                         |
-| `runMatrixUntil`              | Predicate-terminated matrix variant; `mode: 'tick' \| 'event' \| 'stasis'` dispatches event-sampled and stasis-quiescent runs. |
+| `runSensitivity`              | Sensitivity sweep across one parameter; generic over `Cell` (fixed-tick) and `UntilCell` (predicate-bounded) via `config.until` dispatch. Methodology #3 response curves. |
+| `runMatrix` / `runMatrixUntil`| Cartesian sims over a parameter grid. Persona dominance probes, multi-axis sweeps. `runMatrixUntil` dispatches on `RunMode` (`'tick' \| 'event' \| 'stasis-aware-tick'`). |
 | `runUntil`                    | Predicate-bounded single-engine run; same `RunMode` dispatch as `runMatrixUntil`.                          |
-| `applyPerturbation`           | Apply a perturbation to engine state. Foundation for sensitivity / Tier-B sweeps.                          |
-| `diffAggregates`              | Compare aggregates across sims. Drift-vs-baseline core operator.                                           |
-| `createSensitivityCell`       | Build a cell for a sensitivity matrix. Pairs with `runSensitivity`.                                        |
-| `createPickerSnapshot`        | Snapshot the engine's picker state at frozen state. Methodology #2 input.                                  |
-| `createTransitionSnapshot`    | Snapshot transitions/changes between two engine states.                                                    |
-| `createIncrementalSnapshot`   | Incremental snapshot builder for time-series introspection.                                                |
-| `walker.walkContent`          | Walk content registries (categories, chains, leaves) at frozen state. Methodology #2 input.                |
-| `walker.walkCategories`       | Walk purchasable categories specifically.                                                                  |
-| `walker.walkChainRegistry`    | Walk modifier-chain registry; supports per-link attribution readouts.                                      |
-| `createEngineFromSave`        | Build an engine seeded from a save blob. Pairs with `pushScope` for one-engine many-iters.                 |
-| `defaultAnalyzerPack`         | Standard analyzer pack (loop, peak, etc.); plug into a probe for default introspection.                    |
+| `runHeadless`                 | Synchronous fixed-tick-count run for deterministic simulation and tests.                                   |
+| `applyPerturbation`           | Apply a perturbation to a `PickerEntry` (tunable or modifier) and return an idempotent cleanup. Foundation for sensitivity sweeps. |
+| `createPickerSnapshot`        | Enumerate the engine's addressable choices (content / chain-registry / tunable) for solvers and UIs.       |
+| `createSensitivityCell`       | Build a cell for a sensitivity matrix from a save blob + per-run module factory + analyzer factory.        |
+| `diffAggregates`              | Per-metric delta between a variant cell and the baseline. Drift-vs-baseline core operator; the building block when `runSensitivity`'s canned shape doesn't fit. |
+| `createTransitionSnapshot`    | Single merged snapshot of pending state transitions across content (purchasables, producers, challenges).  |
+| `createIncrementalSnapshot`   | Caching overlay on the content-walker snapshot, for time-series introspection.                             |
+| `defaultAnalyzerPack`         | Standard analyzer pack (loop finalize, resource peak); plug into a probe for default introspection.        |
 
 ### Load-bearing ceremony
 
 `pushScope` + `importSave` + `scopeDepth === 0` assertion are the invariants that make "one engine instance, many bisection iterations" sound. The solver `pushScope`s the engine before each iteration, restores via `importSave` from a captured baseline, runs the iteration, and asserts the scope depth returns to zero before the next iteration.
 
-Don't bypass. The default `src/archetypes/_template/balance/solve.ts` ships this ceremony pre-wired with `TODO(fill-in)` markers at every archetype-specific site; downstream solvers replace the placeholder bisection logic, not the scope discipline. The template is excluded from `tsconfig.app.json` because its placeholders don't resolve — copy the directory to your archetype's folder and fill in.
+Don't bypass. Downstream solvers carry the scope discipline as load-bearing; the bisection logic is what changes per archetype, not the ceremony.
 
 ### `tickDelta` choice
 
@@ -296,8 +297,8 @@ Per-archetype `balance/` directory holds vite-node scripts run via `pnpm exec vi
 These scripts:
 
 - Iterate fast. A solver run prints proposals in seconds-to-minutes, not test-suite time.
-- Print proposals; never mutate data files. The human picks.
-- Live alongside `shape.ts`, `beats.ts`, `bot.ts` in the same folder so the closure between identity, scaffolding, and discovery is local.
+- Print proposals; never mutate code. The human picks; chosen numbers land at their `tunable()` reader sites (see § Where balance constants live).
+- Live alongside the identity layer and bot policy in the same folder so the closure between identity, scaffolding, and discovery is local.
 
 ### Tests lock
 
@@ -319,12 +320,13 @@ Per archetype, the locks pin:
 - Flow-band occupation percentages across the arc.
 - Signature-metric trajectory at chosen checkpoints.
 - Distribution statistics (mean, variance, p50, p90) for stochastic subsystems.
+- Response curve shape under sensitivity sweeps (methodology #3 and #7).
 
 Tighter bounds catch more drift but pop on irrelevant noise. Looser bounds tolerate noise but miss real drift. Find the band that catches what matters and don't tighten "for good measure."
 
 ### Canonical numbers are not tunable
 
-Cited-from-vanilla numbers — values carried 1:1 from a reference exemplar with file-header citations in the data files — are not solver perturbation surface. Solvers operate on the *declared-invention* surface where the first-arc port diverges from canonical. Perturbing canonical values is fudging, not balancing — the first-arc port's job is to faithfully reproduce the exemplar's economy, and balance passes work *around* that economy, not against it.
+Cited-from-vanilla numbers — values carried 1:1 from a reference exemplar with file-header citations — are not solver perturbation surface. Solvers operate on the *declared-invention* surface where the first-arc port diverges from canonical. Perturbing canonical values is fudging, not balancing — the first-arc port's job is to faithfully reproduce the exemplar's economy, and balance passes work *around* that economy, not against it.
 
 ### AI knobs are not balance levers
 
@@ -332,19 +334,34 @@ Balance probes target structural design parameters: cost curves, matrix sharpnes
 
 Working test: would this number change if the AI were swapped for a different reasonable opponent? If yes, the probe measures the AI; reach for a design-parameter scalar instead.
 
-### Findings sidecars
+## Where balance constants live
 
-A balance pass generates observations this doc doesn't anticipate. Some are archetype-specific lore (numerical surprises, content-shape interactions, exemplar-substrate quirks). Some are generalizable signals (an instrument-earning moment that other archetypes will reproduce; a methodology stress that wants doc-level capture). Loop closure runs through a per-archetype sidecar.
+The canonical answer is `tunable()` + `TuningRegistry`. Values declare at their reader sites against the archetype's `TuningRegistry`; the engine pattern is in `open-loop-engine/src/core/override-registry.ts:380` and surfaces through the picker (`open-loop-engine/docs/api/harness.md` § Picker).
 
-**File:** `archetypes/<archetype>.balance.md`. Created when the archetype's first balance leaf opens; lives alongside `archetypes/<archetype>.md` (the design doc).
+```ts
+// at the reader site — a producer module, an upgrade definition, an achievement threshold
+const effect = tunable(tuningRegistry, 'upgrades/double-gold/effect', () => baseEffect.times(amount));
+```
+
+The chosen number lives in the default closure. The `TuningRegistry` exposes the value to the picker (so solvers and the Balance Workbench can enumerate and perturb it) and to scope-push overrides (so a sim takeover can swap the value transiently and restore on cleanup). Citations co-locate at the `tunable()` site — the file-header citation pattern for vanilla-port values applies inline next to the closure that produces them.
+
+`data/balance.ts` as a per-archetype constants file retires. The deep-partial override path stays only for non-tunable consumer surfaces — theme tokens, content cardinality, IDs.
+
+**`shape.ts` is an optional artifact**, not a required identity-declaration file. When the archetype is predictor-seed-shaped (producer-style — a closed-form spec drives a predictor that walks the arc), `shape.ts` is where the identity layer lands as data the predictor and solver both consume. Otherwise, the identity content lives as comments adjacent to the solver/predict code or doesn't need its own file at all. File count tracks algorithmic surfaces, not framing artifacts.
+
+## Graduating findings — per-archetype logs to this doc
+
+Balance passes generate observations this doc doesn't anticipate. Some are archetype-specific lore (numerical surprises, content-shape interactions, exemplar-substrate quirks). Some are generalizable signals (an instrument-earning moment that other archetypes will reproduce; a methodology stress that wants doc-level capture). The graduation flow closes that loop.
+
+**File:** `archetypes/BALANCING-<name>.md`. Created when the archetype's first balance leaf opens; lives alongside this doc.
 
 **What goes in:** instrument-earning moments (when an existing tool didn't answer a target question and a new one was added — what question, what shape), methodology stress (where this doc's framing felt inadequate against a real subsystem), engine-surface gaps (cross-link to `candidate-primitives.md`), drift signals (sim/predictor/walker disagreements and how they resolved), numerical surprises.
 
-**What does not go in:** chosen knob values (data files), beat windows (`beats.ts`), tickets (Vikunja), per-pass status — sidecars are for *what was learned*, not *what was decided*.
+**What does not go in:** chosen knob values (live at `tunable()` sites), beat windows (`beats.ts`), tickets (Vikunja), per-pass status — logs are for *what was learned*, not *what was decided*.
 
-**Promotion to BALANCING.md:** when an entry generalizes across archetypes, file a PR moving the abstracted rule into this doc. The sidecar entry stays as the worked example; this doc gets the cross-archetype framing. Don't over-promote — single-archetype findings stay sidecar-local.
+**Promotion to BALANCING.md:** when an entry generalizes across archetypes, file a PR moving the abstracted rule into this doc. The per-archetype entry stays as the worked example; this doc gets the cross-archetype framing. Don't over-promote — single-archetype findings stay log-local.
 
-The sidecar exists because the alternative — burying findings in commit messages and Vikunja comments — loses them. A future balance pass on a sibling archetype starts from "read your archetype's sidecar, then read the others' sidecars to see what came up."
+The log exists because the alternative — burying findings in commit messages and Vikunja comments — loses them. A future balance pass on a sibling archetype starts from "read your archetype's log, then read the others' logs to see what came up."
 
 ## Cite-out cut line
 
@@ -354,22 +371,21 @@ The sidecar exists because the alternative — burying findings in commit messag
 | Which rate-function shape is my subsystem on?  | `incremental-math/src/pages/rate-functions/`                         |
 | Which composition row does my archetype walk?  | `rate-function-algebra.md § 6.7` recap + `rate-functions/composition.mdx` |
 | What number should I pick?                     | `incremental-math/src/pages/design-playbook/`                        |
-| What patterns does my archetype use?           | your archetype's `archetypes/<name>.md`                              |
+| What patterns does my archetype use?           | your archetype's `src/archetypes/<name>/overview.md`                 |
 | Where do those patterns come from?             | `open-loop-research/LIBRARY.md`                                      |
-| What engine primitive does X?                  | `open-loop-engine/docs/api/INDEX.md § harness`                       |
+| What engine primitive does X?                  | `open-loop-engine/docs/api/harness.md`                               |
 | How do I run discipline starter-side?          | this doc                                                             |
 
 ## Living-doc note
 
-This doc grows as archetypes ship balance passes. New methodology shapes that don't fit the current six get added to theme 3. New diagnostic vocabulary that surfaces during reshape calls gets added to theme 2. The engine surface table in theme 4 stays curated — when a primitive lands that earns a row, it earns one; otherwise the full INDEX is one click away.
+This doc grows as archetypes ship balance passes. New methodology shapes that don't fit the current seven get added to theme 3. New diagnostic vocabulary that surfaces during reshape calls gets added to theme 2. The engine surface table in theme 4 stays curated — when a primitive lands that earns a row, it earns one; otherwise the full surface is one click away.
 
 PR welcome. The cost of an outdated balance doc is tuning calls that read off stale framing.
 
 ## See also
 
-- `archetypes/BALANCING-TUG.md` — pre-research, single-archetype historical artifact for the Tug worked example. In-source citations referencing `§ Tier C` and `§ Retune vs reshape` resolve there, not in this doc.
-- `archetypes/<name>.md` — per-archetype doc; calls patterns and cross-pattern properties by name.
-- `archetypes/<name>.balance.md` — per-archetype balance findings sidecar. Loop-closure surface for the balance pass; entries promote into this doc when cross-archetype-generalizable. See § Theme 5 — Findings sidecars.
+- `src/archetypes/<name>/overview.md` — per-archetype doc; calls patterns and cross-pattern properties by name.
+- `archetypes/BALANCING-<name>.md` — per-archetype balance log. Loop-closure surface for the balance pass; entries promote into this doc when cross-archetype-generalizable. See § Graduating findings.
 - `open-loop-research/methodology/techniques/closed-form-progression/` — theory umbrella (thesis, rate-function algebra, bifurcations, math lineage, case studies, subsystem inventory).
 - `closed-form-progression/case-studies/` — applied references per subsystem shape:
     - `core-timing-formula.md` — `T(n) = Cost(n) / Production(n)` primitive; foundation for methodology #1 and #2 walkers.
@@ -382,7 +398,8 @@ PR welcome. The cost of an outdated balance doc is tuning calls that read off st
 - `closed-form-progression/math-lineage.md` — historical / glossary / books / open research directions for every named function and method in the algebra and bifurcation catalogs.
 - `incremental-math/src/pages/rate-functions/` — per-shape consumer-rendered catalog: composition, power-law, exponential, log-frontier, bounded-growth, bifurcations. Declare "my subsystem's rate is shape X" via these pages.
 - `incremental-math/src/pages/design-playbook/` — prescriptive design surfaces (pacing, composition, bending, modifier-chains, prestige, multi-resource).
-- `open-loop-engine/docs/api/INDEX.md § harness` — full engine balance toolkit.
+- `open-loop-engine/docs/api/harness.md` — full engine balance toolkit.
+- `open-loop-engine/docs/api/INDEX.md` — engine API per-symbol directory; system-layer engine-as-oracle primitives live here.
 - `open-loop-engine/docs/candidate-primitives.md` — observed-but-not-yet-graduated primitives raised by consumers.
 - `open-loop-research/LIBRARY.md` — pattern catalog, cross-pattern properties, prevalence.
 - `open-loop-research/practical/composition-cookbook/` — believability-calibration discipline, parameterized-personality recipes, procedural-personas tester-seat agent.
