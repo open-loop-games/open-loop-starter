@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_AMBIENT_DATA } from '../data';
+import { DEFAULT_ACHIEVEMENT_MULTIPLIER } from '../modules';
 
 /**
  * Structural-invariant locks on the default Cozy Farm data.
@@ -11,7 +12,7 @@ import { DEFAULT_AMBIENT_DATA } from '../data';
  * see `archetypes/BALANCING.md` § Theme 5.
  */
 
-const { balance, achievements, producers, unlocks, sceneVariants } = DEFAULT_AMBIENT_DATA;
+const { achievements, producers, unlocks, sceneVariants } = DEFAULT_AMBIENT_DATA;
 
 const findUnlock = (id: string) => unlocks.find((u) => u.id === id)!;
 const findScene = (id: string) => sceneVariants.find((s) => s.id === id)!;
@@ -41,7 +42,7 @@ describe('balance probe — scene-variant ↔ unlock threshold parity', () => {
 
 describe('balance probe — headline-multiplier sanity', () => {
   it('achievement-headline contribution stays within an idle-arc range', () => {
-    const total = Math.pow(Number(balance.achievementMultiplier), achievements.length);
+    const total = Math.pow(DEFAULT_ACHIEVEMENT_MULTIPLIER, achievements.length);
     expect(total).toBeGreaterThan(1);
     expect(total).toBeLessThan(2);
   });

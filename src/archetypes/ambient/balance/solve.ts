@@ -34,14 +34,15 @@ import {
   runUntil,
   type DecimalSource,
   type Engine,
+  type GameStateAccessor,
   type OverrideRegistry,
   type TunerResult,
 } from '@open-loop/engine';
 import { AmbientTuningRegistryKey, type AmbientTunables } from '../modules';
 import { AUTO_PRODUCERS } from '../data/producers';
 import { UNLOCKS } from '../data/unlocks';
-import { ARC_BEATS, BEAT_WINDOWS } from './beats';
-import { buildAmbientSimEngine } from './bot';
+import { ARC_BEATS, BEAT_WINDOWS } from './balance';
+import { buildAmbientAccessor, buildAmbientSimEngine } from './bot';
 
 const BUDGET_SEC = BEAT_WINDOWS['beat-6']![1] * 2.5;
 
@@ -64,6 +65,7 @@ interface SamplerContext {
   registry: OverrideRegistry<AmbientTunables>;
   initialBlob: string;
   proposed: Proposed;
+  accessor: GameStateAccessor;
 }
 
 /**
@@ -97,6 +99,8 @@ function sampleBeat(
       until: () => beat.predicate(ctx.engine),
       maxSimTime: BUDGET_SEC,
       tickDelta: 1,
+      mode: 'stasis-aware-tick',
+      accessor: ctx.accessor,
     });
     fireTime = terminated === 'predicate' ? elapsedSimulated : Infinity;
   } finally {
@@ -180,6 +184,8 @@ function verifyAll(ctx: SamplerContext, beats: readonly string[]): VerifyRow[] {
         until: () => beat.predicate(ctx.engine),
         maxSimTime: BUDGET_SEC,
         tickDelta: 1,
+        mode: 'stasis-aware-tick',
+        accessor: ctx.accessor,
       });
       const firedAt = terminated === 'predicate' ? elapsedSimulated : Infinity;
       return {
@@ -228,7 +234,8 @@ function solvePass(proposed: Proposed): {
   const engine = buildAmbientSimEngine();
   const registry = engine.tryInject(AmbientTuningRegistryKey)!;
   const initialBlob = engine.saveManager!.exportSave();
-  const ctx: SamplerContext = { engine, registry, initialBlob, proposed };
+  const accessor = buildAmbientAccessor(engine);
+  const ctx: SamplerContext = { engine, registry, initialBlob, proposed, accessor };
 
   const solves: BeatSolve[] = [];
 
@@ -357,11 +364,13 @@ function main(): void {
   const verifyEngine = buildAmbientSimEngine();
   const verifyRegistry = verifyEngine.tryInject(AmbientTuningRegistryKey)!;
   const verifyBlob = verifyEngine.saveManager!.exportSave();
+  const verifyAccessor = buildAmbientAccessor(verifyEngine);
   const verifyCtx: SamplerContext = {
     engine: verifyEngine,
     registry: verifyRegistry,
     initialBlob: verifyBlob,
     proposed,
+    accessor: verifyAccessor,
   };
   const verifyBeats = ['beat-1', 'beat-2', 'beat-3', 'beat-5', 'beat-6'].filter(
     (b) => b === 'beat-1' || b === 'beat-6' || ENABLED_BEATS.has(b),

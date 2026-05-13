@@ -1,4 +1,4 @@
-import type { AmbientBalance, AutoProducerDef } from './types';
+import type { AutoProducerDef } from './types';
 
 // ─── Skeleton ───
 // 5 continuous tiers. No click-producer entry — Ambient's zero-click
@@ -7,10 +7,17 @@ import type { AmbientBalance, AutoProducerDef } from './types';
 // visible") is reachable on cold boot. Other tiers gate on lifetime
 // thresholds via `unlocks.ts`.
 
-const COST_SCALING = 1.08;
-
 // ─── Costume ───
 // Cozy Farm theme: planter / coop / pond / pasture / orchard.
+
+// Multiplicative per-purchase cost growth. Inlined rather than wrapped in
+// `tunable()` because `ProducerMapping.purchase.costScaling` is static
+// `DecimalSource` (not Computable) — read once at producer registration,
+// not re-read on retune. Bisecting this knob requires an engine change
+// (Computable adoption on `costScaling` with `unref` at the read site).
+// Same negative criterion as producer's `defaultCostScaling = 1.15`; see
+// `BALANCING-producer.md` § first engine-surface gap.
+const COST_SCALING = 1.08;
 
 export const AUTO_PRODUCERS: AutoProducerDef[] = [
   {
@@ -44,17 +51,3 @@ export const AUTO_PRODUCERS: AutoProducerDef[] = [
     purchase: { baseCost: 320_000, costScaling: COST_SCALING },
   },
 ];
-
-// ─── Balance ───
-// Numbers below are first-cut placeholders chosen for ratio shape, not for
-// arc-correctness. The solver re-pins them.
-
-export const AMBIENT_BALANCE: AmbientBalance = {
-  tier1BaseRate: 1.0,
-  producerCostGrowth: COST_SCALING,
-  achievementMultiplier: 1.02,
-  offlineCapHours: 12,
-  prestigeEnabled: false,
-  prestigeMultiplierBase: 1.2,
-  prestigeEligibleThreshold: 1_000_000,
-};

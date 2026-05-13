@@ -8,14 +8,12 @@ export { manifest } from './manifest';
 export {
   DEFAULT_AMBIENT_DATA,
   ACHIEVEMENTS,
-  AMBIENT_BALANCE,
   AUTO_PRODUCERS,
   SCENE_VARIANTS,
   UNLOCKS,
 } from './data';
 export type {
   AchievementDef,
-  AmbientBalance,
   AmbientData,
   AmbientGameState,
   AutoProducerDef,
@@ -23,13 +21,13 @@ export type {
   UnlockDef,
   UnlockReveal,
 } from './data/types';
-export { applyAmbientOverrides, type AmbientOverrides } from './data/overrides';
 export {
   AmbientTuningRegistryKey,
   PrimaryLifetimeKey,
   SceneKey,
   SessionClockKey,
   PrestigeKey,
+  DEFAULT_ACHIEVEMENT_MULTIPLIER,
   createAmbientModules,
   getAutoProducers,
   getPrimaryResource,

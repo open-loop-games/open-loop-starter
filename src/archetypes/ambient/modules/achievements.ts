@@ -29,6 +29,14 @@ export function getAchievements(): AchievementCategory<AchievementDef, unknown> 
 }
 
 /**
+ * Default per-achievement headline contribution. Used as the fallback for
+ * `AchievementDef.rewardMultiplier` and as the default closure for the
+ * `balance/achievementMultiplier` tunable. The structural-invariant probe
+ * in `sim/balance.probe.test.ts` imports this directly.
+ */
+export const DEFAULT_ACHIEVEMENT_MULTIPLIER = 1.02;
+
+/**
  * Ambient's achievement category. Each `AchievementDef.requirement` closure is
  * lowered into a Vue `computed` that reads predicate methods on `state`; those
  * methods read `.value` on injection-key refs (primary, lifetime, scene zones,
@@ -40,7 +48,7 @@ export function getAchievements(): AchievementCategory<AchievementDef, unknown> 
  * predicate becomes true), not a separate evaluation channel.
  *
  * Rate-bonus shape is G-M10: each achievement's `effect` returns its per-
- * achievement multiplier (`def.rewardMultiplier ?? balance.achievementMultiplier`),
+ * achievement multiplier (`def.rewardMultiplier ?? DEFAULT_ACHIEVEMENT_MULTIPLIER`),
  * and a single multiplicative modifier per producer rateChain folds the active
  * set via `getCombinedAchievementEffect`. Mirrors `producer/achievements.ts`.
  */
@@ -88,7 +96,7 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
       const achievementMultiplier = tunable<DecimalSource>(
         tuningRegistry,
         'balance/achievementMultiplier',
-        () => data.balance.achievementMultiplier,
+        () => DEFAULT_ACHIEVEMENT_MULTIPLIER,
       );
 
       achievements = createAchievementCategory<AchievementDef>({

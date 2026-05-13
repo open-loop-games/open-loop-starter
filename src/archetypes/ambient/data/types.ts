@@ -3,8 +3,9 @@ import type { DecimalSource } from '@open-loop/engine';
 // ─── Skeleton ───
 // 5 auto-producer tiers; 12 visibility unlocks; 20 achievements
 // (10 milestone-count + 10 time-based); 6 scene variants. The skeleton
-// counts are a fork-of-skeleton decision; balance constants live in
-// `producers.ts` `AMBIENT_BALANCE`; costume strings live alongside each
+// counts are a fork-of-skeleton decision. Balance constants declare at
+// their `tunable()` reader sites in `../modules/*.ts` against
+// `AmbientTuningRegistryKey`; costume strings live alongside each
 // definition entry.
 
 export interface AutoProducerDef {
@@ -56,7 +57,8 @@ export interface AchievementDef {
    * after 12h absence"-style), not every tick. Default: tick-time.
    */
   triggeredOnResume?: boolean;
-  /** Headline multiplicative reward. Defaults to balance.achievementMultiplier. */
+  /** Headline multiplicative reward. Falls back to the achievements module's
+   *  `DEFAULT_ACHIEVEMENT_MULTIPLIER` when omitted. */
   rewardMultiplier?: DecimalSource;
   requirement: (state: AmbientGameState) => boolean;
 }
@@ -73,34 +75,6 @@ export interface SceneVariantDef {
   threshold: DecimalSource;
   /** Per-fork visual contract — keys a renderer asset/state. */
   visualKey: string;
-}
-
-// ─── Balance ───
-
-export interface AmbientBalance {
-  /**
-   * Multiplicative scaling on tier-1 (planter) base rate. Default 1.0
-   * (identity). Bound to planter's `rateChain` in `modules/auto-producers.ts`
-   * so the solver can perturb it via `pushScope('balance/tier1BaseRate', ...)`
-   * without rebuilding the engine. `ProducerMapping.baseRate` is static
-   * `DecimalSource`, so scaling rides a chain modifier rather than wrapping
-   * the producer's `baseRate` field directly.
-   */
-  tier1BaseRate: DecimalSource;
-  /** Multiplicative cost growth per producer purchase. Default 1.08. */
-  producerCostGrowth: DecimalSource;
-  /** Per-achievement headline contribution. Default 1.02. */
-  achievementMultiplier: DecimalSource;
-  /** Caps the wall-clock gap delivered to processOfflineTime. Default 12h. */
-  offlineCapHours: DecimalSource;
-  /**
-   * When false, modules/prestige is skipped at engine construction — default
-   * ships zero prestige code paths active.
-   */
-  prestigeEnabled: boolean;
-  prestigeMultiplierBase: DecimalSource;
-  /** Resource threshold at which the prestige action becomes available. */
-  prestigeEligibleThreshold: DecimalSource;
 }
 
 /**
@@ -129,5 +103,4 @@ export interface AmbientData {
   unlocks: UnlockDef[];
   achievements: AchievementDef[];
   sceneVariants: SceneVariantDef[];
-  balance: AmbientBalance;
 }

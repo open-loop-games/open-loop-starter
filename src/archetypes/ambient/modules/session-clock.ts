@@ -1,7 +1,14 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { type EngineModule, type InjectionKey } from '@open-loop/engine';
-import type { AmbientData } from '../data/types';
 import { getTimeSystem } from './auto-producers';
+
+/**
+ * Cap on the wall-clock gap delivered to `processOfflineTime` at session
+ * resume. Structural cardinality, not a `tunable()` knob — read once at
+ * module install to derive `offlineCapSeconds`. Forks change the ceiling
+ * by editing this constant (e.g. `4` for a tighter cozy contract).
+ */
+const OFFLINE_CAP_HOURS = 12;
 
 export interface SessionClock {
   /** Sim-time seconds the save has accumulated across all resets. */
@@ -52,7 +59,7 @@ export const SessionClockKey: InjectionKey<SessionClock> = Symbol(
  *   4. AppRoot calls `sessionClock.refreshElapsedAtResume()` so
  *      `secondsSinceLastResume` resumes measuring live-session time.
  */
-export function createSessionClockModule(data: AmbientData): EngineModule {
+export function createSessionClockModule(): EngineModule {
   return {
     id: 'ambient/session-clock',
     dependencies: ['ambient/auto-producers'],
@@ -60,7 +67,7 @@ export function createSessionClockModule(data: AmbientData): EngineModule {
       const time = getTimeSystem();
       const elapsedAtResume = ref(time.elapsed.value);
       const lastResumeGapSec = ref(0);
-      const offlineCapSeconds = Number(data.balance.offlineCapHours) * 3600;
+      const offlineCapSeconds = OFFLINE_CAP_HOURS * 3600;
 
       const secondsSinceCreation = computed(() => time.totalPlayTime.value);
       const secondsSinceLastResume = computed(() => time.elapsed.value - elapsedAtResume.value);

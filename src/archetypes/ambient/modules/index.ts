@@ -21,30 +21,35 @@ export {
 export { getUnlocks } from './unlocks';
 export { SceneKey, type SceneState } from './scene';
 export { SessionClockKey, type SessionClock } from './session-clock';
-export { getAchievements } from './achievements';
+export { getAchievements, DEFAULT_ACHIEVEMENT_MULTIPLIER } from './achievements';
 export { PrestigeKey } from './prestige';
 export { AutobuyerMasterToggleKey, AutobuyerRegistryKey, type AutobuyerSpec } from './autobuyers';
 
 /**
+ * Prestige code-path gate. Structural cardinality, not a runtime tunable —
+ * forks wiring prestige flip this to `true` and author currency / multiplier
+ * accrual at the `PrestigeKey` injection site. Default ships zero prestige
+ * code paths active (cozy contract).
+ */
+const PRESTIGE_ENABLED = false;
+
+/**
  * Compose the ambient modules in dependency order. Modules close over `data`
- * at construction; overrides applied upstream in `boot.ts::createAmbientEngine`
- * flow through unchanged.
- *
- * `prestige` is appended only when `data.balance.prestigeEnabled === true` —
- * the default ships with zero prestige code paths active.
+ * at construction; balance constants land at `tunable()` reader sites in
+ * their owning modules (see `AmbientTuningRegistryKey`).
  */
 export function createAmbientModules(data: AmbientData): EngineModule[] {
   const modules: EngineModule[] = [
     createAutoProducersModule(data),
     createUnlocksModule(data),
     createSceneModule(data),
-    createSessionClockModule(data),
+    createSessionClockModule(),
     createAchievementsModule(data),
     createAutobuyerRegistryModule(),
     createAutoProducerAutobuyersModule(),
   ];
-  if (data.balance.prestigeEnabled) {
-    modules.push(createPrestigeModule(data));
+  if (PRESTIGE_ENABLED) {
+    modules.push(createPrestigeModule());
   }
   return modules;
 }

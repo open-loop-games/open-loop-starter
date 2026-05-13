@@ -21,12 +21,15 @@ import type { AmbientData, AutoProducerDef } from '../data/types';
  * The canonical key list is the `AmbientTunableKey` union; push-scope sites
  * are typed via `Partial<Record<AmbientTunableKey, () => DecimalSource>>`
  * so typos surface at the call site.
+ *
+ * `balance/producerCostGrowth` is intentionally absent: `ProducerMapping.
+ * purchase.costScaling` is static `DecimalSource` (not Computable), read
+ * once at producer registration. See `data/producers.ts` `COST_SCALING`
+ * inline comment + `BALANCING-producer.md` § first engine-surface gap.
  */
 export type AmbientTunableKey =
   | 'balance/tier1BaseRate'
-  | 'balance/producerCostGrowth'
   | 'balance/achievementMultiplier'
-  | 'balance/prestigeEligibleThreshold'
   | 'producers/planter/purchase/baseCost'
   | 'producers/coop/purchase/baseCost'
   | 'unlocks/coop-built/threshold'
@@ -81,9 +84,8 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
       // Tunables are registered at their consumer sites (where the value is
       // actually read) — `tunable()` registers on first call, no upfront
       // declaration needed. `balance/tier1BaseRate` is registered below at
-      // the planter rateChain bind site. `balance/producerCostGrowth` and
-      // `balance/achievementMultiplier` are registered by their consumer
-      // modules.
+      // the planter rateChain bind site; `balance/achievementMultiplier` is
+      // registered by `modules/achievements.ts`.
 
       primaryResource = createResource<DecimalSource>(0, {
         displayName: 'Sprouts',
@@ -130,11 +132,7 @@ export function createAutoProducersModule(data: AmbientData): EngineModule {
       // chain modifier — this is the only reactive path.
       const planter = autoProducers.getProducer('planter');
       if (planter) {
-        const tier1BaseRate = tunable(
-          tuningRegistry,
-          'balance/tier1BaseRate',
-          () => data.balance.tier1BaseRate,
-        );
+        const tier1BaseRate = tunable(tuningRegistry, 'balance/tier1BaseRate', () => 1.0);
         planter.rateChain.bind({
           modifier: createMultiplicativeModifier({
             multiplier: tier1BaseRate,

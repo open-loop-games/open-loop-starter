@@ -1,5 +1,4 @@
 import { createReset, type EngineModule, type InjectionKey, type Reset } from '@open-loop/engine';
-import type { AmbientData } from '../data/types';
 
 export const PrestigeKey: InjectionKey<Reset> = Symbol('ambient/prestige') as InjectionKey<Reset>;
 
@@ -8,12 +7,12 @@ export const PrestigeKey: InjectionKey<Reset> = Symbol('ambient/prestige') as In
  * scope: the engine's persistent-ref registry (`createReset({ resetModules })`)
  * resolves these to every `persistent()` ref the listed modules registered.
  *
- * Skipped at engine construction when `data.balance.prestigeEnabled === false`
- * (the default — Ambient ships zero prestige code paths active). When
- * enabled, consumers inject `PrestigeKey` and call `.reset()` to drop the
- * run; currency / multiplier accrual lives at the call site.
+ * Skipped at engine construction when `PRESTIGE_ENABLED === false` in
+ * `modules/index.ts` (the default — Ambient ships zero prestige code paths
+ * active). When enabled, consumers inject `PrestigeKey` and call `.reset()`
+ * to drop the run; currency / multiplier accrual lives at the call site.
  */
-export function createPrestigeModule(_data: AmbientData): EngineModule {
+export function createPrestigeModule(): EngineModule {
   return {
     id: 'ambient/prestige',
     dependencies: [

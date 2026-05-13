@@ -1,6 +1,18 @@
-import { persistent, type Engine, type EngineModule } from '@open-loop/engine';
-import { createAmbientEngine, type AmbientOverrides } from '..';
-import { AutobuyerMasterToggleKey, AutobuyerRegistryKey } from '../modules';
+import {
+  bn,
+  persistent,
+  type DecimalSource,
+  type Engine,
+  type EngineModule,
+  type GameStateAccessor,
+} from '@open-loop/engine';
+import { createAmbientEngine } from '..';
+import {
+  AutobuyerMasterToggleKey,
+  AutobuyerRegistryKey,
+  getAutoProducers,
+  getPrimaryResource,
+} from '../modules';
 
 /**
  * Zero-click activity model. Ambient's identity is "auto-production runs
@@ -68,12 +80,9 @@ function createBalanceBotModule(): EngineModule {
  * (e.g. matrix-probe seeds, future runMatrix-driven sweeps) don't collide
  * in storage.
  */
-export function buildAmbientSimEngine(
-  overrides?: AmbientOverrides,
-  options?: { maxDeltaTime?: number },
-): Engine {
+export function buildAmbientSimEngine(options?: { maxDeltaTime?: number }): Engine {
   const namespace = `balance-${++engineCounter}`;
-  const { engine } = createAmbientEngine(overrides, {
+  const { engine } = createAmbientEngine({
     persistenceNamespace: namespace,
     extraModules: [createBalanceBotModule()],
     maxDeltaTime: options?.maxDeltaTime,
@@ -96,3 +105,24 @@ export function buildAmbientSimEngine(
 }
 
 export { expectedInputAt };
+
+/**
+ * Accessor for `runUntil({mode: 'stasis-aware-tick'})`. Reports the primary
+ * resource's current value + cumulative auto-producer rate keyed by
+ * resource id `'sprouts'`. Ambient has no click channel — all income flows
+ * through `ProducerCategory.getTotalRate`, so `getRate` faithfully captures
+ * what the engine simulates each tick. This is the structural difference
+ * from Producer (where `getRate` misses click-taper income, forcing the
+ * 'tick' mode default — see `BALANCING-producer.md` § stasis-aware-tick).
+ */
+export function buildAmbientAccessor(_engine: Engine): GameStateAccessor {
+  const sprouts = getPrimaryResource();
+  const producers = getAutoProducers();
+  return {
+    getResource: (id: string) => (id === 'sprouts' ? bn(sprouts.value as DecimalSource) : bn(0)),
+    getRate: (id: string) =>
+      id === 'sprouts' ? bn(producers.getTotalRate(sprouts) as DecimalSource) : bn(0),
+    isUnlocked: () => false,
+    getState: () => undefined,
+  };
+}

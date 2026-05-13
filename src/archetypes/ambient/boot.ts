@@ -4,7 +4,6 @@ import { bootApp, bootEngine } from '@/boot';
 import AmbientAppRoot from './ui/AmbientAppRoot.vue';
 import { createAmbientModules } from './modules';
 import { DEFAULT_AMBIENT_DATA } from './data';
-import { applyAmbientOverrides, type AmbientOverrides } from './data/overrides';
 import type { AmbientData } from './data/types';
 
 const GAME_ID = 'ambient-pilot';
@@ -34,15 +33,15 @@ export interface AmbientEngineOptions {
  * resume sequence: `AmbientAppRoot.vue::startGame` writes
  * `sessionClock.lastResumeGapSec`, calls `processOfflineTime`, then
  * `refreshElapsedAtResume()`.
+ *
+ * Balance-constant overrides route via `AmbientTuningRegistryKey.pushScope`,
+ * not through this entrypoint. Content-shape forks edit `data/*.ts` in place.
  */
-export function createAmbientEngine(
-  overrides?: AmbientOverrides,
-  options?: AmbientEngineOptions,
-): {
+export function createAmbientEngine(options?: AmbientEngineOptions): {
   engine: Engine;
   data: AmbientData;
 } {
-  const data = applyAmbientOverrides(DEFAULT_AMBIENT_DATA, overrides);
+  const data = DEFAULT_AMBIENT_DATA;
   const modules = [...createAmbientModules(data), ...(options?.extraModules ?? [])];
   const engine = bootEngine({
     gameId: GAME_ID,
@@ -68,8 +67,8 @@ export function createAmbientEngine(
  * mount('#app');
  * ```
  */
-export function createApp(overrides?: AmbientOverrides): AmbientBootResult {
-  const { engine, data } = createAmbientEngine(overrides);
+export function createApp(): AmbientBootResult {
+  const { engine, data } = createAmbientEngine();
   const { app, mount } = bootApp({
     root: AmbientAppRoot,
     engine,
