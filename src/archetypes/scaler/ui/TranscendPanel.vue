@@ -12,7 +12,10 @@ import {
   getPrestigePoints,
   boostAccelerator,
 } from '../modules';
-import { SCALER_BALANCE } from '../data';
+import {
+  CANONICAL_ACCELERATOR_POWER,
+  CANONICAL_ACCELERATOR_BOOST_FREE_ACCEL_PER_BUY,
+} from '../modules/canonical';
 
 const transcendPoints = getTranscendPoints();
 const coinsThisTranscension = getCoinsThisTranscension();
@@ -32,8 +35,8 @@ const canBoost = computed(() => Decimal.gte(prestigePoints.value, boostCost.valu
 const boostMultiplierDisplay = computed(() =>
   format(
     Decimal.pow(
-      SCALER_BALANCE.acceleratorPower,
-      SCALER_BALANCE.acceleratorBoostFreeAccelPerBuy * boostBought.value,
+      CANONICAL_ACCELERATOR_POWER,
+      CANONICAL_ACCELERATOR_BOOST_FREE_ACCEL_PER_BUY * boostBought.value,
     ),
     2,
   ),
@@ -74,10 +77,17 @@ function doBoost(): void {
           <span class="transcend-panel__stat-value">{{ format(transcendPoints, 0) }}</span>
         </div>
       </div>
-      <Button :disabled="!canConvert" class="transcend-panel__button" @click="doTranscend">
+      <Button
+        :disabled="!canConvert"
+        class="transcend-panel__button"
+        @click="doTranscend"
+      >
         Transcend (+{{ gainDisplay }} TP)
       </Button>
-      <p v-if="!canConvert" class="transcend-panel__hint">
+      <p
+        v-if="!canConvert"
+        class="transcend-panel__hint"
+      >
         Need 1e100 coins this transcension, or TP gain ≥ 0.5.
       </p>
     </section>
@@ -104,10 +114,17 @@ function doBoost(): void {
           <span class="transcend-panel__stat-value">{{ boostCostDisplay }}</span>
         </div>
       </div>
-      <Button :disabled="!canBoost" class="transcend-panel__button" @click="doBoost">
+      <Button
+        :disabled="!canBoost"
+        class="transcend-panel__button"
+        @click="doBoost"
+      >
         Boost Accelerator
       </Button>
-      <p v-if="!canBoost" class="transcend-panel__hint">
+      <p
+        v-if="!canBoost"
+        class="transcend-panel__hint"
+      >
         Need {{ boostCostDisplay }} prestige points; buy fires a prestige reset.
       </p>
     </section>

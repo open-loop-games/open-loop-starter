@@ -102,7 +102,7 @@ export type UpgradeEffectScope =
  * - `freeAccelerator` / `freeMultiplier` — coin-tier free purchasable counts.
  * - `freeAccelBoost` — transcend-tier free Accelerator Boost count.
  * - `acceleratorPowerBonus` — additive bump to the canonical Accelerator
- *   power coefficient (`SCALER_BALANCE.acceleratorPower`).
+ *   power coefficient (`CANONICAL_ACCELERATOR_POWER` in `modules/canonical.ts`).
  */
 export type CounterId =
   | 'freeAccelerator'
@@ -167,129 +167,15 @@ export interface UpgradeDef {
 }
 
 // ─── Balance ───
-// Cross-tier numeric anchors. Coin tier lifts `coinBuildingCosts` /
-// `acceleratorPower` / `multiplierPower` 1:1 from canonical (see
-// `Buy.ts:343` + `Variables.ts:50-58`). Prestige row extends with conversion
-// formula anchors + Crystal cost reduction; transcend extends in its leaf.
-
-export interface ScalerBalance {
-  /**
-   * Canonical `Variables.ts:44` — divides building costs across the corpus.
-   * Default 1; later-arc effects modify (Crystal upgrade 5, achievement grants).
-   * Inert at leaf 2.
-   */
-  costDivisor: DecimalSource;
-  /**
-   * Base offerings credited at the top of every reset (`Reset.ts:406`
-   * `resetOfferings()` → `Calculate.ts:114-142` `calculateOfferings`). Canonical
-   * computes a base + later-arc multipliers; first-arc port lifts a constant
-   * trickle that the SI rune multiplies via `getRuneEffects('SI').offeringMult`.
-   */
-  offeringBaseGain: DecimalSource;
-  /**
-   * Per-rune EXP-per-level schedule from `Variables.ts:15` `runeexpbase`.
-   * First arc only ports the first 5 entries (runes 6/7 deferred per spec § 5).
-   * Currently unused — `RuneDef.costCoefficient` + `levelsPerOOM` already
-   * encode the canonical curve; this constant ports as a back-pocket reference
-   * for later-arc systems that read `runeexpbase` directly.
-   */
-  runeexpbase: readonly DecimalSource[];
-  /**
-   * Accelerator power per `Variables.ts:50` (1.10). Each owned Accelerator
-   * contributes `acceleratorPower` × `(totalAccelerator + freeAccelerator)`
-   * to the rate boost via `acceleratorEffect`.
-   */
-  acceleratorPower: DecimalSource;
-  /**
-   * Multiplier power per `Variables.ts:57` (2). Each owned Multiplier
-   * contributes `multiplierPower` ^ `(totalMultiplier + freeMultiplier)`
-   * to the global coin multiplier via `multiplierEffect`.
-   */
-  multiplierPower: DecimalSource;
-  /**
-   * Prestige conversion divisor per canonical `Synergism.ts:3563-3565`:
-   * `prestigePointGain = floor((coinsThisPrestige / prestigeDivisor)^prestigePow)`.
-   * Canonical hard-codes `1e12`.
-   */
-  prestigeDivisor: DecimalSource;
-  /**
-   * Prestige conversion exponent per canonical (`prestigePow` baseline `1/2`,
-   * pre-corruption / pre-deflation modifiers).
-   */
-  prestigePow: number;
-  /**
-   * Threshold guard for the prestige button — canonical disjunctive gate
-   * `coinsThisPrestige.gte(prestigeThreshold) || prestigePointGain.gte(prestigeGainFloor)`
-   * per `Synergism.ts:3620`.
-   */
-  prestigeThreshold: DecimalSource;
-  /** Computed-gain branch of the prestige gate — minimum PP gain to unlock. */
-  prestigeGainFloor: DecimalSource;
-  /**
-   * Transcend conversion divisor per canonical `Synergism.ts:3583-3585`:
-   * `transcendPointGain = floor((coinsThisTranscension / transcendDivisor)^transcendPow)`.
-   * Canonical hard-codes `1e100`.
-   */
-  transcendDivisor: DecimalSource;
-  /**
-   * Transcend conversion exponent per canonical `Synergism.ts:3550`
-   * (`transcendPow = 0.03`).
-   */
-  transcendPow: number;
-  /**
-   * Coins-this-transcension branch of the transcend disjunctive gate per
-   * `Synergism.ts:3631-3633` (`coinsThisTranscension.gte(1e100)`).
-   */
-  transcendThreshold: DecimalSource;
-  /**
-   * Computed-gain branch of the transcend gate per `Synergism.ts:3631-3633`
-   * (`transcendPointGain.gte(0.5)`).
-   */
-  transcendGainFloor: DecimalSource;
-  /**
-   * Initial Accelerator Boost cost in `prestigePoints` (`Synergism.ts:395-396`,
-   * `Buy.ts:816`). Cost grows super-exponentially per buy.
-   */
-  acceleratorBoostBaseCost: DecimalSource;
-  /**
-   * Free Accelerator levels granted per Accelerator Boost. Canonical
-   * `Synergism.ts:2467-2472` `totalAcceleratorBoost × (5 + research-band)`;
-   * first-arc port lifts the constant 5 (research-band reads default 0).
-   */
-  acceleratorBoostFreeAccelPerBuy: number;
-  /**
-   * ECC softcap (Effective Challenge Completions) — canonical `Challenges.ts:599-617`
-   * `case 'transcend'` linear-then-softer-then-softest piecewise. First plateau
-   * caps the linear contribution at 100 completions; second segment divides by
-   * 20 between 100 and 1000; third divides by 100 above 1000.
-   */
-  eccTranscendLinearCap: number;
-  eccTranscendSoftDivisor: number;
-  eccTranscendSoftBreakpoint: number;
-  eccTranscendHardDivisor: number;
-  /**
-   * Per-challenge baseRequirement (first 5 entries of canonical
-   * `Variables.ts:121` `challengeBaseRequirements`). Feeds the
-   * `challengeRequirement(i, completion)` formula at `Challenges.ts:620-655`
-   * which scales each base by `(1 + completion)^2` (or piecewise past 75).
-   */
-  challengeBaseRequirements: readonly number[];
-  /**
-   * Ch4 cost-inflation parameters — canonical multiplier `1.25^(n − threshold)`
-   * applied to building / Accelerator / Multiplier costs once the per-purchase
-   * index crosses the threshold. First-arc port restricts to Accelerator +
-   * Multiplier (cumulative-buy mirror); coin / diamond producer cost inflation
-   * is a `TODO(expansion)` per the Ch4 def's port-citation header.
-   */
-  ch4CostInflationThreshold: number;
-  ch4CostInflationBase: DecimalSource;
-  /**
-   * Per-challenge completion limit. Canonical `getMaxChallenges(i ≤ 5)` starts
-   * at 25 and grows with later-arc researches (`researches[66..70]` etc.); all
-   * those reads default 0 at first arc, so the cap collapses to 25.
-   */
-  challengeCompletionLimit: number;
-}
+// Canonical-port numeric anchors live as inline `const`s at their owning
+// module's reader site with citations co-located. Cross-module-shared values
+// (acceleratorPower, multiplierPower, acceleratorBoostFreeAccelPerBuy) export
+// from `modules/canonical.ts`. The declared-invention surface — first-arc
+// deviations from canonical (transcendDivisor / transcendThreshold lowered
+// 84 OOMs to bypass unported compounding sources, offeringBaseGain stub) —
+// declares at `tunable()` reader sites against `ScalerTuningRegistryKey`
+// (`modules/tuning.ts`). See `archetypes/BALANCING.md § Where balance
+// constants live`.
 
 /**
  * Base 5 rune ids, lifted from canonical `Runes.ts:51-57` `indexToRune` minus
@@ -551,5 +437,4 @@ export interface ScalerData {
   crystalUpgrades: CrystalUpgradeDef[];
   challenges: ScalerChallengeDef[];
   achievements: AchievementDef[];
-  balance: ScalerBalance;
 }

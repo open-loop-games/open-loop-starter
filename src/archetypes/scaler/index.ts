@@ -10,9 +10,7 @@ export {
   COIN_UPGRADES,
   PRESTIGE_UPGRADES,
   CRYSTAL_UPGRADES,
-  SCALER_BALANCE,
   type ScalerData,
-  type ScalerBalance,
   type ScalerGameState,
   type ProducerDef,
   type CumulativeUpgradeDef,
@@ -22,6 +20,16 @@ export {
   type UpgradeEffectScope,
   type Tier,
 } from './data';
+export {
+  ScalerTuningRegistryKey,
+  type ScalerTunableKey,
+  type ScalerTunables,
+} from './modules/tuning';
+export {
+  CANONICAL_ACCELERATOR_POWER,
+  CANONICAL_MULTIPLIER_POWER,
+  CANONICAL_ACCELERATOR_BOOST_FREE_ACCEL_PER_BUY,
+} from './modules/canonical';
 export {
   coinModule,
   prestigeModule,

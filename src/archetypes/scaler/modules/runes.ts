@@ -71,16 +71,12 @@ import {
   addResource,
   subtractResource,
   createMultiplicativeModifier,
+  tunable,
 } from '@open-loop/engine';
-import {
-  SCALER_RUNES,
-  SCALER_BALANCE,
-  type RuneDef,
-  type RuneId,
-  type RuneEffectMap,
-} from '../data';
+import { SCALER_RUNES, type RuneDef, type RuneId, type RuneEffectMap } from '../data';
 import { getCoinProducers } from './coin';
 import { getPrestigeReset } from './prestige';
+import { ScalerTuningRegistryKey } from './tuning';
 
 // ============================================================================
 // Module state (populated in install)
@@ -207,9 +203,26 @@ export function sacrificeRune(runeId: RuneId, budget: DecimalSource): DecimalSou
 
 export const runesModule: EngineModule = {
   id: 'scaler-runes',
-  dependencies: ['scaler-coin', 'scaler-prestige'],
+  dependencies: ['scaler/tuning', 'scaler-coin', 'scaler-prestige'],
 
-  install(_ctx: EngineContext) {
+  install(ctx: EngineContext) {
+    const tuningRegistry = ctx.inject(ScalerTuningRegistryKey);
+
+    // ─── Declared-invention tunable surface ────────────────────────────────
+    // `offeringBaseGain` is a first-arc stand-in for the canonical extensive
+    // base — canonical `Calculate.ts:114-142` `calculateOfferings` sums
+    // challenge tiers, achievement rewards, shop upgrades, ascension counter,
+    // etc. None of those compounding sources are ported yet, so the constant
+    // 2 stands in as the floor that SI rune scales. Forks raising the gain
+    // as additional canonical sources port in tune via `pushScope` here.
+    //
+    // Per `archetypes/BALANCING.md` § Canonical numbers are not tunable:
+    // this is declared-invention (a first-arc compromise), so it earns a
+    // `tunable()` wrap. The other constants in this module
+    // (`costCoefficient`, `levelsPerOOM` per rune) stay canonical-port
+    // inline at `data/runes.ts`.
+    const offeringBaseGainReader = tunable(tuningRegistry, 'balance/offeringBaseGain', () => 2);
+
     // ─── Offerings resource ────────────────────────────────────────────────
     // `lifetime: true` on the underlying persistent so the prestige reset's
     // module-scoped sweep skips it. Wrap with `createResource`'s existing-ref
@@ -289,7 +302,7 @@ export const runesModule: EngineModule = {
     const prestigeReset = getPrestigeReset();
     const siFx = getRuneEffects('superiorIntellect');
     prestigeReset.on('afterReset', () => {
-      const gain = Decimal.mul(SCALER_BALANCE.offeringBaseGain, siFx.value.offeringMult);
+      const gain = Decimal.mul(offeringBaseGainReader.value, siFx.value.offeringMult);
       addResource(offerings, gain);
     });
   },

@@ -64,11 +64,22 @@ import {
   DIAMOND_PRODUCERS,
   CRYSTAL_UPGRADES,
   PRESTIGE_UPGRADES,
-  SCALER_BALANCE,
   type ProducerDef,
   type UpgradeDef,
   type ScalerGameState,
 } from '../data';
+
+// Canonical Synergism prestige conversion constants
+// (`open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts`):
+//   :3563-3565  prestigePointGain = floor((coinsThisPrestige / 1e12) ^ 0.5)
+//   :3620       prestige threshold disjunction
+//               (coinsThisPrestige ≥ 1e16 OR PP gain ≥ 100)
+// First-arc port omits upgrade-16 / corruption / deflation modifiers that
+// compound on top in canonical — they bind in their respective leaves.
+const CANONICAL_PRESTIGE_DIVISOR = 1e12;
+const CANONICAL_PRESTIGE_POW = 0.5;
+const CANONICAL_PRESTIGE_THRESHOLD = 1e16;
+const CANONICAL_PRESTIGE_GAIN_FLOOR = 100;
 import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
 import { getCoinResource, getCoinProducers } from './coin';
 import { getChallengesCategory } from './challenges';
@@ -382,10 +393,10 @@ export const prestigeModule: EngineModule = {
     // challenge, evaluates to canonical `prestigePow`.
     prestigePointGainComputed = computed((): DecimalSource => {
       const c = coinsThisPrestige.value;
-      const ratio = Decimal.div(c, SCALER_BALANCE.prestigeDivisor);
+      const ratio = Decimal.div(c, CANONICAL_PRESTIGE_DIVISOR);
       if (Decimal.lte(ratio, 0)) return Decimal.dZero;
       const ch5 = ch5State();
-      const pow = ch5.active ? 0.01 / (1 + ch5.completions) : SCALER_BALANCE.prestigePow;
+      const pow = ch5.active ? 0.01 / (1 + ch5.completions) : CANONICAL_PRESTIGE_POW;
       return Decimal.floor(Decimal.pow(ratio, pow));
     });
 
@@ -419,12 +430,12 @@ export const prestigeModule: EngineModule = {
           anyOf(
             createCostRequirement({
               resource: coins,
-              cost: SCALER_BALANCE.prestigeThreshold,
+              cost: CANONICAL_PRESTIGE_THRESHOLD,
               requiresPay: false,
             }),
             createBooleanRequirement({
               requirement: () =>
-                Decimal.gte(prestigePointGainComputed.value, SCALER_BALANCE.prestigeGainFloor),
+                Decimal.gte(prestigePointGainComputed.value, CANONICAL_PRESTIGE_GAIN_FLOOR),
             }),
           ),
           createBooleanRequirement({

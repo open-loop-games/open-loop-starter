@@ -5,7 +5,6 @@ import { DIAMOND_PRODUCERS, CRYSTAL_UPGRADES } from './prestige';
 import { MYTHOS_PRODUCERS } from './transcend';
 import { SCALER_CHALLENGES } from './challenges';
 import { SCALER_ACHIEVEMENTS } from './achievements';
-import { SCALER_BALANCE } from './balance';
 
 export * from './types';
 export { COIN_PRODUCERS, ACCELERATOR_DEF, MULTIPLIER_DEF } from './coin';
@@ -14,7 +13,6 @@ export { DIAMOND_PRODUCERS, CRYSTAL_UPGRADES } from './prestige';
 export { MYTHOS_PRODUCERS } from './transcend';
 export { SCALER_CHALLENGES } from './challenges';
 export { SCALER_ACHIEVEMENTS } from './achievements';
-export { SCALER_BALANCE } from './balance';
 export {
   RUNE_SPEED,
   RUNE_DUPLICATION,
@@ -31,5 +29,4 @@ export const DEFAULT_SCALER_DATA: ScalerData = {
   crystalUpgrades: CRYSTAL_UPGRADES,
   challenges: SCALER_CHALLENGES,
   achievements: SCALER_ACHIEVEMENTS,
-  balance: SCALER_BALANCE,
 };

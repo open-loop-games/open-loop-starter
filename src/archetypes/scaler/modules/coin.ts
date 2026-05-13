@@ -54,12 +54,27 @@ import {
   ACCELERATOR_DEF,
   MULTIPLIER_DEF,
   COIN_UPGRADES,
-  SCALER_BALANCE,
   type ProducerDef,
   type UpgradeDef,
 } from '../data';
 import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
 import { getChallengesCategory } from './challenges';
+import { CANONICAL_ACCELERATOR_POWER, CANONICAL_MULTIPLIER_POWER } from './canonical';
+
+// Canonical Synergism `Variables.ts:44` `G.costDivisor = 1`. Divides building
+// costs across the corpus; later-arc Crystal upgrade 5 + achievement grants
+// modify, port inert at first arc.
+const CANONICAL_COST_DIVISOR = 1;
+
+// Canonical Ch4 cost inflation
+// (`open-loop-research/reference-code/SynergismOfficial/src/Buy.ts:73-77` for
+// the Accelerator branch + `:209-211` for the Multiplier branch): inside
+// transcension challenge 4, cumulative-buy costs past `buyingTo > 1000`
+// multiply by `1.25^(buyingTo - 1000)`. Coin / Diamond / Mythos producer
+// cost inflation is `TODO(expansion)` — `purchase.costScaling` is static
+// numeric.
+const CANONICAL_CH4_COST_INFLATION_THRESHOLD = 1000;
+const CANONICAL_CH4_COST_INFLATION_BASE = 1.25;
 
 /**
  * Lazy sibling-import accessor for Ch4's cost-inflation gate. Resolved at
@@ -141,8 +156,7 @@ export function getCoinFreeMultiplierChain(): ModifierChain {
 /**
  * Additive bump to the canonical `acceleratorPower` coefficient. Achievement
  * counter grants bind `add` modifiers; the Accelerator rate-effect closure
- * reads `SCALER_BALANCE.acceleratorPower + chain.apply(0)` as the exponent
- * base.
+ * reads `CANONICAL_ACCELERATOR_POWER + chain.apply(0)` as the exponent base.
  */
 export function getCoinAcceleratorPowerBonusChain(): ModifierChain {
   return acceleratorPowerBonusChain;
@@ -163,8 +177,7 @@ export function getCoinAcceleratorPowerBonusChain(): ModifierChain {
  */
 function getAcceleratorCost(amount: DecimalSource): DecimalSource {
   const buyingTo = bn(amount).toNumber();
-  const cd = bn(SCALER_BALANCE.costDivisor).toNumber();
-  let cost: Decimal = Decimal.pow(4 / cd, buyingTo).mul(500);
+  let cost: Decimal = Decimal.pow(4 / CANONICAL_COST_DIVISOR, buyingTo).mul(500);
 
   if (buyingTo > 125) {
     const num = buyingTo - 125;
@@ -177,9 +190,13 @@ function getAcceleratorCost(amount: DecimalSource): DecimalSource {
   // Applies only to Accelerator + Multiplier (cumulative-buy mirror); coin
   // producer costs are static-numeric `purchase.costScaling` and don't
   // accept a runtime predicate at first arc — TODO(expansion).
-  const ch4Threshold = SCALER_BALANCE.ch4CostInflationThreshold;
-  if (ch4Active() && buyingTo > ch4Threshold) {
-    cost = cost.mul(Decimal.pow(SCALER_BALANCE.ch4CostInflationBase, buyingTo - ch4Threshold));
+  if (ch4Active() && buyingTo > CANONICAL_CH4_COST_INFLATION_THRESHOLD) {
+    cost = cost.mul(
+      Decimal.pow(
+        CANONICAL_CH4_COST_INFLATION_BASE,
+        buyingTo - CANONICAL_CH4_COST_INFLATION_THRESHOLD,
+      ),
+    );
   }
 
   return cost;
@@ -202,9 +219,13 @@ function getMultiplierCost(amount: DecimalSource): DecimalSource {
 
   // Ch4 cost inflation — `Buy.ts:209-211` super-exponential factor past 1000.
   // See parallel branch in `getAcceleratorCost` for the matching scope note.
-  const ch4Threshold = SCALER_BALANCE.ch4CostInflationThreshold;
-  if (ch4Active() && buyingTo > ch4Threshold) {
-    cost = cost.mul(Decimal.pow(SCALER_BALANCE.ch4CostInflationBase, buyingTo - ch4Threshold));
+  if (ch4Active() && buyingTo > CANONICAL_CH4_COST_INFLATION_THRESHOLD) {
+    cost = cost.mul(
+      Decimal.pow(
+        CANONICAL_CH4_COST_INFLATION_BASE,
+        buyingTo - CANONICAL_CH4_COST_INFLATION_THRESHOLD,
+      ),
+    );
   }
 
   return cost;
@@ -318,7 +339,7 @@ export const coinModule: EngineModule = {
         modifier: createMultiplicativeModifier({
           multiplier: () => {
             const base = Decimal.add(
-              SCALER_BALANCE.acceleratorPower,
+              CANONICAL_ACCELERATOR_POWER,
               acceleratorPowerBonusChain.apply(0),
             );
             const total = Decimal.add(
@@ -337,7 +358,7 @@ export const coinModule: EngineModule = {
               multiplierPurchasable.amount.value,
               freeMultiplierChain.apply(0),
             );
-            return Decimal.pow(SCALER_BALANCE.multiplierPower, total);
+            return Decimal.pow(CANONICAL_MULTIPLIER_POWER, total);
           },
           description: 'Multiplier',
         }),

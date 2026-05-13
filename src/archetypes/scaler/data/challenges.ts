@@ -58,12 +58,15 @@ import type { ScalerChallengeDef } from './types';
 // `completionLimit` lifts canonical `getMaxChallenges(i ≤ 5)` baseline 25 (the
 // research-band growth `+5 × researches[66+i]` ports inert at first arc — every
 // research read defaults 0). Forks raising the per-cycle ceiling extend the
-// limit here. The baseRequirement coefficients live in `data/balance.ts`
-// (`challengeBaseRequirements`); the per-challenge ECC scaling factors that
-// drive reward magnitude live in `modules/challenges.ts` per the per-challenge
-// `current{1,2,3}` arms at canonical `Challenges.ts:223-255`.
+// limit here. The baseRequirement coefficients live as a canonical-port const
+// at `modules/challenges.ts` (`CANONICAL_CHALLENGE_BASE_REQUIREMENTS`); the
+// per-challenge ECC scaling factors that drive reward magnitude live in the
+// same module per the per-challenge `current{1,2,3}` arms at canonical
+// `Challenges.ts:223-255`.
 
-import { SCALER_BALANCE } from './balance';
+// Canonical `getMaxChallenges(i ≤ 5)` baseline. Inline per
+// `archetypes/BALANCING.md` § Canonical numbers are not tunable.
+const CANONICAL_CHALLENGE_COMPLETION_LIMIT = 25;
 
 export const SCALER_CHALLENGES: ScalerChallengeDef[] = [
   {
@@ -72,7 +75,7 @@ export const SCALER_CHALLENGES: ScalerChallengeDef[] = [
     name: 'No Multipliers',
     flavor: 'Multipliers stop multiplying — they fuel Accelerators instead.',
     restrictions: 'Multiplier Power = 1. Each Multiplier owned acts as a free Accelerator level.',
-    completionLimit: SCALER_BALANCE.challengeCompletionLimit,
+    completionLimit: CANONICAL_CHALLENGE_COMPLETION_LIMIT,
   },
   {
     id: 'challenge-2',
@@ -81,7 +84,7 @@ export const SCALER_CHALLENGES: ScalerChallengeDef[] = [
     flavor: 'Pure multiplicative growth — Accelerators are dead weight.',
     restrictions:
       'Accelerator Power = 1. Multiplier Power reduced toward 1.25 (canonical 1.25 + 0.0012 × Multiplier Boost; first-arc port collapses the boost term).',
-    completionLimit: SCALER_BALANCE.challengeCompletionLimit,
+    completionLimit: CANONICAL_CHALLENGE_COMPLETION_LIMIT,
   },
   {
     id: 'challenge-3',
@@ -90,7 +93,7 @@ export const SCALER_CHALLENGES: ScalerChallengeDef[] = [
     flavor: 'Crystal and Mythos shard production halts.',
     restrictions:
       'No Crystal or Mythos Shard production. Accelerator Power above 1 is reduced by 50%.',
-    completionLimit: SCALER_BALANCE.challengeCompletionLimit,
+    completionLimit: CANONICAL_CHALLENGE_COMPLETION_LIMIT,
   },
   {
     id: 'challenge-4',
@@ -99,7 +102,7 @@ export const SCALER_CHALLENGES: ScalerChallengeDef[] = [
     flavor: 'Cumulative-buy costs go super-exponential past 1000.',
     restrictions:
       'Accelerator + Multiplier costs grow ×1.25 per buy past 1000. Coin / Diamond producer cost inflation is TODO(expansion) — see Ch4 port-citation header in `data/challenges.ts`.',
-    completionLimit: SCALER_BALANCE.challengeCompletionLimit,
+    completionLimit: CANONICAL_CHALLENGE_COMPLETION_LIMIT,
   },
   {
     id: 'challenge-5',
@@ -108,6 +111,6 @@ export const SCALER_CHALLENGES: ScalerChallengeDef[] = [
     flavor: 'Prestige and Transcend exponents crushed toward zero.',
     restrictions:
       'Prestige exponent → 0.01 / (1 + completions[5]). Transcend exponent → 0.001. Auto-prestige and auto-transcend gate off (manual exit only via goal-met auto-completion).',
-    completionLimit: SCALER_BALANCE.challengeCompletionLimit,
+    completionLimit: CANONICAL_CHALLENGE_COMPLETION_LIMIT,
   },
 ];

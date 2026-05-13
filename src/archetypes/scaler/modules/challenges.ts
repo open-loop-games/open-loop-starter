@@ -98,10 +98,24 @@ import {
   createChallengeCategory,
   createMultiplicativeModifier,
 } from '@open-loop/engine';
-import { SCALER_BALANCE, SCALER_CHALLENGES, type ScalerChallengeDef } from '../data';
+import { SCALER_CHALLENGES, type ScalerChallengeDef } from '../data';
 import { getCoinResource, getCoinProducers, getAccelerator, getMultiplier } from './coin';
 import { getDiamondProducers } from './prestige';
 import { getMythosProducers } from './transcend';
+import { CANONICAL_ACCELERATOR_POWER, CANONICAL_MULTIPLIER_POWER } from './canonical';
+
+// Canonical ECC softcap parameters
+// (`open-loop-research/reference-code/SynergismOfficial/src/Challenges.ts:599-617`
+// `case 'transcend'`): linear contribution up to 100 completions; between 100
+// and 1000 each contributes 1/20; above 1000 each contributes 1/100.
+const CANONICAL_ECC_TRANSCEND_LINEAR_CAP = 100;
+const CANONICAL_ECC_TRANSCEND_SOFT_DIVISOR = 20;
+const CANONICAL_ECC_TRANSCEND_SOFT_BREAKPOINT = 1000;
+const CANONICAL_ECC_TRANSCEND_HARD_DIVISOR = 100;
+
+// First 5 entries of canonical `Variables.ts:121` `challengeBaseRequirements`
+// — base log10 cost for `challengeRequirement(i, completion, special)`.
+const CANONICAL_CHALLENGE_BASE_REQUIREMENTS = [10, 20, 60, 100, 200];
 
 // ============================================================================
 // ECC softcap arithmetic — `Challenges.ts:599-617` `case 'transcend'` verbatim
@@ -117,10 +131,10 @@ import { getMythosProducers } from './transcend';
  * Linear ≤ 100; +1/20 per completion in [100, 1000]; +1/100 above 1000.
  */
 function eccTranscend(completions: number): number {
-  const linearCap = SCALER_BALANCE.eccTranscendLinearCap;
-  const softDivisor = SCALER_BALANCE.eccTranscendSoftDivisor;
-  const softBreakpoint = SCALER_BALANCE.eccTranscendSoftBreakpoint;
-  const hardDivisor = SCALER_BALANCE.eccTranscendHardDivisor;
+  const linearCap = CANONICAL_ECC_TRANSCEND_LINEAR_CAP;
+  const softDivisor = CANONICAL_ECC_TRANSCEND_SOFT_DIVISOR;
+  const softBreakpoint = CANONICAL_ECC_TRANSCEND_SOFT_BREAKPOINT;
+  const hardDivisor = CANONICAL_ECC_TRANSCEND_HARD_DIVISOR;
 
   let effective = 0;
   effective += Math.min(linearCap, completions);
@@ -145,7 +159,7 @@ function eccTranscend(completions: number): number {
 // First-arc completion cap is 25, so only the first branch is reachable.
 
 function challengeRequirement(index: 1 | 2 | 3 | 4 | 5, completion: number): DecimalSource {
-  const base = SCALER_BALANCE.challengeBaseRequirements[index - 1];
+  const base = CANONICAL_CHALLENGE_BASE_REQUIREMENTS[index - 1];
   const multiplier = Math.pow(1 + completion, 2);
   return Decimal.pow(10, base * multiplier);
 }
@@ -190,8 +204,8 @@ export const challengesModule: EngineModule = {
     const diamond1Chain = getDiamondProducers().getProducer('diamond-1')?.rateChain;
     const mythos1Chain = getMythosProducers().getProducer('mythos-1')?.rateChain;
 
-    const acceleratorPower = SCALER_BALANCE.acceleratorPower;
-    const multiplierPower = SCALER_BALANCE.multiplierPower;
+    const acceleratorPower = CANONICAL_ACCELERATOR_POWER;
+    const multiplierPower = CANONICAL_MULTIPLIER_POWER;
 
     // Helper: build the runtime ChallengeDef for a given data def, gluing on
     // restricts / goal / completionLimit per-challenge.

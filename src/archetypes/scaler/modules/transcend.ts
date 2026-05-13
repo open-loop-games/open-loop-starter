@@ -79,11 +79,11 @@ import {
   createReset,
   createConversion,
   persistent,
+  tunable,
 } from '@open-loop/engine';
 import {
   MYTHOS_PRODUCERS,
   TRANSCEND_UPGRADES,
-  SCALER_BALANCE,
   type ProducerDef,
   type UpgradeDef,
   type ScalerGameState,
@@ -92,6 +92,25 @@ import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-
 import { getCoinResource, getCoinProducers } from './coin';
 import { getPrestigePoints, getPrestigeReset } from './prestige';
 import { getChallengesCategory } from './challenges';
+import {
+  CANONICAL_ACCELERATOR_POWER,
+  CANONICAL_ACCELERATOR_BOOST_FREE_ACCEL_PER_BUY,
+} from './canonical';
+import { ScalerTuningRegistryKey } from './tuning';
+
+// Canonical Synergism transcend conversion constants
+// (`open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts`):
+//   :3550       transcendPow = 0.03
+//   :3583-3585  transcendPointGain = floor((coinsThisTranscension / 1e100) ^ 0.03)
+//   :3631-3633  transcend threshold disjunction
+//               (coinsThisTranscension ≥ 1e100 OR TP gain ≥ 0.5)
+const CANONICAL_TRANSCEND_POW = 0.03;
+const CANONICAL_TRANSCEND_GAIN_FLOOR = 0.5;
+
+// Canonical Accelerator Boost initial cost in `prestigePoints`
+// (`open-loop-research/reference-code/SynergismOfficial/src/Synergism.ts:395-396`).
+// Each buy multiplies cost by `1e10 × 10^bought` (`Buy.ts:715-716`).
+const CANONICAL_ACCELERATOR_BOOST_BASE_COST = 1e3;
 
 /**
  * Lazy sibling-import accessors mirroring `prestige.ts`. Ch5's exponent crush
@@ -247,10 +266,33 @@ export function getTranscendPointGain(): ComputedRef<DecimalSource> {
 
 export const transcendModule: EngineModule = {
   id: 'scaler-transcend',
-  dependencies: ['scaler-coin', 'scaler-prestige'],
+  dependencies: ['scaler/tuning', 'scaler-coin', 'scaler-prestige'],
 
   install(ctx: EngineContext) {
     const coins = getCoinResource();
+    const tuningRegistry = ctx.inject(ScalerTuningRegistryKey);
+
+    // ─── Declared-invention tunable surface ────────────────────────────────
+    // Both `transcendDivisor` and `transcendThreshold` deviate 84 OOMs below
+    // canonical `1e100` (`Synergism.ts:3583-3585, :3631-3633`). Canonical 1e100
+    // is unreachable in the first-arc port because the canonical compounding
+    // sources that lift coinsThisTranscension into that range — cube upgrades,
+    // hepteract effects, shop upgrades — haven't ported yet. Lowering to
+    // `5e16` lets the demo arc beat (first-transcend) fire within reasonable
+    // sim budget. Restore canonical when those compounding sources land
+    // (fork-extension territory; raise here at the `tunable()` site).
+    //
+    // These two values are the scaler-archetype's solver perturbation surface
+    // per `archetypes/BALANCING.md` § Canonical numbers are not tunable —
+    // canonical-cited values stay inline; first-arc deviations earn
+    // `tunable()` so forks tune them as they port additional compounding
+    // sources.
+    const transcendDivisorReader = tunable(tuningRegistry, 'balance/transcendDivisor', () => 5e16);
+    const transcendThresholdReader = tunable(
+      tuningRegistry,
+      'balance/transcendThreshold',
+      () => 5e16,
+    );
 
     // ─── Resources ─────────────────────────────────────────────────────────
     transcendPoints = createResource(0, { displayName: 'transcend points', precision: 0 });
@@ -272,7 +314,7 @@ export const transcendModule: EngineModule = {
     // matching canonical zero-on-transcend semantics. Initial cost lifts from
     // `Synergism.ts:395-396`.
     acceleratorBoostBought = persistent<number>(0, { name: 'acceleratorBoostBought' });
-    acceleratorBoostCost = persistent<DecimalSource>(SCALER_BALANCE.acceleratorBoostBaseCost, {
+    acceleratorBoostCost = persistent<DecimalSource>(CANONICAL_ACCELERATOR_BOOST_BASE_COST, {
       name: 'acceleratorBoostCost',
     });
 
@@ -362,8 +404,8 @@ export const transcendModule: EngineModule = {
               freeAccelBoostChain.apply(0),
             );
             return Decimal.pow(
-              SCALER_BALANCE.acceleratorPower,
-              Decimal.mul(SCALER_BALANCE.acceleratorBoostFreeAccelPerBuy, totalBoost),
+              CANONICAL_ACCELERATOR_POWER,
+              Decimal.mul(CANONICAL_ACCELERATOR_BOOST_FREE_ACCEL_PER_BUY, totalBoost),
             );
           },
           description: 'Accelerator Boost',
@@ -449,14 +491,14 @@ export const transcendModule: EngineModule = {
     // `data/upgrades.ts § Skeleton`).
     transcendPointGainComputed = computed((): DecimalSource => {
       const c = coinsThisTranscension.value;
-      const ratio = Decimal.div(c, SCALER_BALANCE.transcendDivisor);
+      const ratio = Decimal.div(c, transcendDivisorReader.value);
       if (Decimal.lte(ratio, 0)) return Decimal.dZero;
       const ch5 = ch5State();
       // Canonical Ch5 transcendPow stays 0.001 regardless of completions —
       // only the prestige-side exponent scales with `1 + completions[5]`
       // (canonical `Synergism.ts:3583-3585` reads `G.transcendPow` which is
       // a per-tick variable that flips to 0.001 during Ch5 unconditionally).
-      const pow = ch5.active ? 0.001 : SCALER_BALANCE.transcendPow;
+      const pow = ch5.active ? 0.001 : CANONICAL_TRANSCEND_POW;
       return Decimal.floor(Decimal.pow(ratio, pow));
     });
 
@@ -494,12 +536,12 @@ export const transcendModule: EngineModule = {
           anyOf(
             createCostRequirement({
               resource: coins,
-              cost: SCALER_BALANCE.transcendThreshold,
+              cost: () => transcendThresholdReader.value,
               requiresPay: false,
             }),
             createBooleanRequirement({
               requirement: () =>
-                Decimal.gte(transcendPointGainComputed.value, SCALER_BALANCE.transcendGainFloor),
+                Decimal.gte(transcendPointGainComputed.value, CANONICAL_TRANSCEND_GAIN_FLOOR),
             }),
           ),
           createBooleanRequirement({
