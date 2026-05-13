@@ -3,7 +3,6 @@ import type { ArchetypeManifest } from '@/types';
 export const manifest: ArchetypeManifest = {
   id: 'ambient',
   name: 'Cozy Farm',
-  status: 'canonical',
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'runHeadless', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
@@ -34,7 +33,6 @@ export const manifest: ArchetypeManifest = {
     { n: 5, label: 'Mid-arc scene diversification', targetSimRange: [10800, 18000] },
     { n: 6, label: 'First low-urgency achievement multiplier', targetSimRange: [18000, 28800] },
   ],
-  themes: [{ name: 'Cozy Farm', isDefault: true }],
   shell: 'SingleColumnShell',
   formFactor: 'desktop',
   exemplars: [

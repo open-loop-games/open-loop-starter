@@ -3,7 +3,6 @@ import type { ArchetypeManifest } from '@/types';
 export const manifest: ArchetypeManifest = {
   id: 'scaler',
   name: 'Antimatter Physics',
-  status: 'canonical',
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
@@ -54,7 +53,6 @@ export const manifest: ArchetypeManifest = {
     },
     { n: 8, label: 'Arc closure: every challenge maxed', targetSimRange: [14400, 21600] },
   ],
-  themes: [{ name: 'Antimatter Physics', isDefault: true }],
   shell: 'TabsBarShell',
   formFactor: 'desktop',
   exemplars: [

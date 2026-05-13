@@ -7,9 +7,6 @@
  * factory the same way. The `createApp()` access is wrapped in a per-id
  * lazy boot helper so the strip-cleanliness lint can confirm no static
  * `from '@/archetypes/<name>'` imports exist anywhere under `src/gallery/`.
- *
- * Visibility filter: `canonical` and `candidate` show by default;
- * `deprecated` hides.
  */
 import type { Component } from 'vue';
 import type { Engine } from '@open-loop/engine';
@@ -41,7 +38,6 @@ function buildEntries(): GalleryArchetype[] {
     if (!mod || typeof mod !== 'object') continue;
     const manifest = (mod as ArchetypeIndexModule).manifest;
     if (!manifest) continue;
-    if (manifest.status === 'deprecated') continue;
     const createApp = (mod as ArchetypeIndexModule).createApp;
     entries.push({
       manifest,
@@ -51,12 +47,7 @@ function buildEntries(): GalleryArchetype[] {
       },
     });
   }
-  entries.sort((a, b) => {
-    if (a.manifest.status !== b.manifest.status) {
-      return a.manifest.status === 'canonical' ? -1 : 1;
-    }
-    return a.manifest.id.localeCompare(b.manifest.id);
-  });
+  entries.sort((a, b) => a.manifest.id.localeCompare(b.manifest.id));
   return entries;
 }
 

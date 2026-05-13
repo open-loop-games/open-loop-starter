@@ -3,7 +3,6 @@ import type { ArchetypeManifest } from '@/types';
 export const manifest: ArchetypeManifest = {
   id: 'looper',
   name: 'Classic Adventuring',
-  status: 'canonical',
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createSequencer', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
@@ -31,7 +30,6 @@ export const manifest: ArchetypeManifest = {
       targetSimRange: [5100, 7200],
     },
   ],
-  themes: [{ name: 'Classic Adventuring', isDefault: true }],
   shell: 'ThreePanelShell',
   formFactor: 'desktop',
   exemplars: [

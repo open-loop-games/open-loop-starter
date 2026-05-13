@@ -1,7 +1,6 @@
 <!--
-  GalleryApp — root component for the showcase. Sidebar lists archetypes
-  (canonical above candidate; deprecated hidden); main is either the home
-  card grid or an "entered" view for one archetype.
+  GalleryApp — root component for the showcase. Sidebar lists archetypes;
+  main is either the home card grid or an "entered" view for one archetype.
 
   Layout primitives are the lib/ shells; gallery contributes only
   composition. The hamburger drives the shell's existing `data-collapsed`
@@ -21,7 +20,7 @@
 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ListboxContent, ListboxGroup, ListboxGroupLabel, ListboxItem, ListboxRoot } from 'reka-ui';
+import { ListboxContent, ListboxItem, ListboxRoot } from 'reka-ui';
 import { SidebarMainShell } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import { listArchetypes, findArchetype, type GalleryArchetype } from './useArchetypes';
@@ -38,9 +37,6 @@ const enteredId = ref<string | null>(null);
 const view = ref<View>('home');
 const enteredTab = ref<EnteredTab>('details');
 const sidebarOpen = ref(true);
-
-const canonical = computed(() => archetypes.filter((a) => a.manifest.status === 'canonical'));
-const candidates = computed(() => archetypes.filter((a) => a.manifest.status === 'candidate'));
 
 const entered = computed<GalleryArchetype | null>(() => {
   if (!enteredId.value) return null;
@@ -100,21 +96,44 @@ function flipTab(): void {
       >
         ☰
       </Button>
-      <Button class="gallery-header__title" type="button" @click="showHome">
+      <Button
+        class="gallery-header__title"
+        type="button"
+        @click="showHome"
+      >
         <strong>Open Loop Starter</strong>
         <span class="gallery-header__sub">Archetype gallery</span>
       </Button>
 
-      <div v-if="entered" class="gallery-header__entered">
-        <Button class="btn-sm" type="button" @click="exitArchetype"> ← Back </Button>
+      <div
+        v-if="entered"
+        class="gallery-header__entered"
+      >
+        <Button
+          class="btn-sm"
+          type="button"
+          @click="exitArchetype"
+        >
+          ← Back
+        </Button>
         <span class="gallery-header__entered-name">{{ entered.manifest.name }}</span>
-        <Button class="btn-sm" type="button" @click="flipTab">
+        <Button
+          class="btn-sm"
+          type="button"
+          @click="flipTab"
+        >
           {{ enteredTab === 'details' ? 'Live demo →' : '← Details' }}
         </Button>
       </div>
 
       <nav class="gallery-header__nav">
-        <Button class="btn-sm" type="button" @click="showAbout"> About </Button>
+        <Button
+          class="btn-sm"
+          type="button"
+          @click="showAbout"
+        >
+          About
+        </Button>
       </nav>
     </header>
 
@@ -125,46 +144,56 @@ function flipTab(): void {
       :data-collapsed="!sidebarOpen ? 'true' : null"
     >
       <template #sidebar>
-        <div v-if="sidebarOpen" class="gallery-sidebar">
-          <Button class="gallery-sidebar__home" type="button" @click="showHome"> Home </Button>
+        <div
+          v-if="sidebarOpen"
+          class="gallery-sidebar"
+        >
+          <Button
+            class="gallery-sidebar__home"
+            type="button"
+            @click="showHome"
+          >
+            Home
+          </Button>
 
-          <ListboxRoot :model-value="enteredId" @update:model-value="onSidebarPick">
-            <ListboxContent>
-              <ListboxGroup class="gallery-sidebar__list">
-                <ListboxGroupLabel class="gallery-sidebar__group"> Canonical </ListboxGroupLabel>
-                <ListboxItem
-                  v-for="a in canonical"
-                  :key="a.manifest.id"
-                  :value="a.manifest.id"
-                  class="gallery-sidebar__item"
-                >
-                  {{ a.manifest.name }}
-                </ListboxItem>
-              </ListboxGroup>
-              <ListboxGroup class="gallery-sidebar__list">
-                <ListboxGroupLabel class="gallery-sidebar__group"> Candidate </ListboxGroupLabel>
-                <ListboxItem
-                  v-for="a in candidates"
-                  :key="a.manifest.id"
-                  :value="a.manifest.id"
-                  class="gallery-sidebar__item"
-                >
-                  {{ a.manifest.name }}
-                </ListboxItem>
-              </ListboxGroup>
+          <ListboxRoot
+            :model-value="enteredId"
+            @update:model-value="onSidebarPick"
+          >
+            <ListboxContent class="gallery-sidebar__list">
+              <ListboxItem
+                v-for="a in archetypes"
+                :key="a.manifest.id"
+                :value="a.manifest.id"
+                class="gallery-sidebar__item"
+              >
+                {{ a.manifest.name }}
+              </ListboxItem>
             </ListboxContent>
           </ListboxRoot>
         </div>
       </template>
 
-      <div v-if="entered" class="gallery-entered">
+      <div
+        v-if="entered"
+        class="gallery-entered"
+      >
         <!-- Demo + details are mutually exclusive in the main column so each
              gets the full available width. The sandbox stays mounted across
              toggles via v-show so engine state survives. -->
-        <div v-show="enteredTab === 'demo'" class="gallery-entered__demo">
-          <SandboxWrapper :archetype="entered.manifest" :boot="entered.boot" />
+        <div
+          v-show="enteredTab === 'demo'"
+          class="gallery-entered__demo"
+        >
+          <SandboxWrapper
+            :archetype="entered.manifest"
+            :boot="entered.boot"
+          />
         </div>
-        <div v-show="enteredTab === 'details'" class="gallery-entered__detail">
+        <div
+          v-show="enteredTab === 'details'"
+          class="gallery-entered__detail"
+        >
           <section class="gallery-entered__cta">
             <Button
               class="btn-primary gallery-entered__cta-btn"
@@ -181,28 +210,20 @@ function flipTab(): void {
         </div>
       </div>
       <AboutPanel v-else-if="view === 'about'" />
-      <div v-else class="gallery-home">
+      <div
+        v-else
+        class="gallery-home"
+      >
         <header class="gallery-home__header">
           <h2>Archetype gallery</h2>
           <p>
             Each archetype is a self-bootable demo of a validated game pattern. Click any card to
-            see its details — patterns, primitives, beats, themes, exemplars, and the doc body. From
-            there, toggle to Live demo to mount the sandbox. Forks pick one and delete the rest.
+            see its details and toggle into the live sandbox. Forks pick one and delete the rest.
           </p>
         </header>
-        <h3 class="gallery-home__group">Canonical</h3>
         <div class="gallery-home__grid">
           <Card
-            v-for="a in canonical"
-            :key="a.manifest.id"
-            :manifest="a.manifest"
-            @enter="enterArchetype(a.manifest.id)"
-          />
-        </div>
-        <h3 class="gallery-home__group">Candidate</h3>
-        <div class="gallery-home__grid">
-          <Card
-            v-for="a in candidates"
+            v-for="a in archetypes"
             :key="a.manifest.id"
             :manifest="a.manifest"
             @enter="enterArchetype(a.manifest.id)"
@@ -304,13 +325,6 @@ function flipTab(): void {
   background: transparent;
   border: 1px solid var(--color-border);
 }
-.gallery-sidebar__group {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
-  margin-top: 0.6rem;
-}
 .gallery-sidebar__list {
   display: flex;
   flex-direction: column;
@@ -345,13 +359,6 @@ function flipTab(): void {
   font-size: 1.5rem;
 }
 .gallery-home__header p {
-  color: var(--color-text-muted);
-  margin-top: 0.4rem;
-}
-.gallery-home__group {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--color-text-muted);
   margin-top: 0.4rem;
 }

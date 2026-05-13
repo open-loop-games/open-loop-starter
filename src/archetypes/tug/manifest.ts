@@ -3,7 +3,6 @@ import type { ArchetypeManifest } from '@/types';
 export const manifest: ArchetypeManifest = {
   id: 'tug',
   name: 'Tug — SciFi Armada',
-  status: 'canonical',
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'chain.bind', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
@@ -35,7 +34,6 @@ export const manifest: ArchetypeManifest = {
     { n: 5, label: 'Second-match composition pivot', targetSimRange: [1800, 3000] },
     { n: 6, label: 'Counter-type mastery demonstrated', targetSimRange: [2700, 4500] },
   ],
-  themes: [{ name: 'SciFi Armada', isDefault: true }],
   shell: 'TugFrameLayout',
   formFactor: 'desktop',
   exemplars: [

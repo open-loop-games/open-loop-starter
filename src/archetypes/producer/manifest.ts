@@ -3,7 +3,6 @@ import type { ArchetypeManifest } from '@/types';
 export const manifest: ArchetypeManifest = {
   id: 'producer',
   name: 'Bakery',
-  status: 'canonical',
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createModifierChain', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
@@ -45,7 +44,6 @@ export const manifest: ArchetypeManifest = {
     { n: 6, label: 'Bulk-buy becomes meaningful', targetSimRange: [2400, 3900] },
     { n: 7, label: 'Deep modifier chain visible', targetSimRange: [3900, 5700] },
   ],
-  themes: [{ name: 'Bakery', isDefault: true }],
   shell: 'ThreePanelShell',
   formFactor: 'desktop',
   exemplars: [

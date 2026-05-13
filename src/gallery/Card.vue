@@ -91,15 +91,6 @@ const previewLine = computed(() => {
 .card__title {
   font-size: 1.1rem;
 }
-.card__status {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-}
-.card__status[data-status='canonical'] {
-  color: var(--color-primary);
-}
 .card__pitch {
   color: var(--color-text-muted);
   font-size: 0.9rem;
@@ -107,25 +98,6 @@ const previewLine = computed(() => {
   -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-.card__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  list-style: none;
-}
-.chip {
-  font-size: 0.72rem;
-  padding: 2px 8px;
-  background: var(--color-badge);
-  color: var(--color-text);
-  border-radius: 999px;
-}
-.chip[data-tier='tier-0-universal'] {
-  background: color-mix(in srgb, var(--color-primary) 18%, var(--color-badge));
-}
-.chip[data-tier='tier-4-specialized'] {
-  background: color-mix(in srgb, var(--color-danger) 18%, var(--color-badge));
 }
 .card__meta {
   display: flex;

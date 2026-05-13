@@ -78,22 +78,6 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
       </ol>
     </section>
 
-    <section class="detail__section">
-      <h3>Themes</h3>
-      <ul class="theme-list">
-        <li
-          v-for="t in manifest.themes"
-          :key="t.name"
-        >
-          {{ t.name }}
-          <span
-            v-if="t.isDefault"
-            class="badge badge-primary"
-          >default</span>
-        </li>
-      </ul>
-    </section>
-
     <section
       v-if="manifest.exemplars && manifest.exemplars.length"
       class="detail__section"
@@ -131,20 +115,6 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
 }
 .detail__header h2 {
   font-size: 1.4rem;
-}
-.detail__status {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-}
-.detail__status[data-status='canonical'] {
-  color: var(--color-primary);
-}
-.detail__pitch {
-  color: var(--color-text-muted);
-  font-size: 0.95rem;
-  line-height: 1.6;
 }
 .detail__section {
   display: flex;
@@ -207,27 +177,6 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
 .beat-window {
   color: var(--color-text-muted);
   font-size: 0.85em;
-}
-.theme-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  list-style: none;
-  font-size: 0.9rem;
-}
-.theme-list li {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 4px 10px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-}
-.chip[data-status='spec-only'] {
-  background: var(--color-badge);
-  color: var(--color-text-muted);
-  font-size: 0.7rem;
 }
 .chip[data-layer='primitives'] {
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-badge));

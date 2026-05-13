@@ -17,8 +17,6 @@ export enum Screen {
  * but do not yet describe a hosted-URL contract.
  */
 
-export type ArchetypeStatus = 'canonical' | 'candidate' | 'deprecated';
-
 export type FormFactor = 'desktop' | 'mobile-first' | 'responsive';
 
 export interface PrimitiveRef {
@@ -41,12 +39,6 @@ export interface BeatRef {
   targetSimRange: [number, number];
 }
 
-export interface ThemeRef {
-  /** Display name, e.g. "Bakery", "Cozy Farm", "SciFi Armada". */
-  name: string;
-  isDefault: boolean;
-}
-
 export interface ExemplarRef {
   /** Display title, e.g. "Cookie Clicker". */
   title: string;
@@ -59,11 +51,9 @@ export interface ArchetypeManifest {
   id: string;
   /** Display name forwarded as `appName` to SlotScreen. Costume-level. */
   name: string;
-  status: ArchetypeStatus;
   /** Engine primitives the archetype uses. */
   primitives: PrimitiveRef[];
   beats: BeatRef[];
-  themes: ThemeRef[];
   /** Prescribed shell name for gallery presentation. The gallery resolves at
    * render time whether this maps to `src/lib/shells/<name>.vue` or is a
    * declared-invention label. The archetype's actual mounted root component
