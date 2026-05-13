@@ -107,34 +107,91 @@ export interface AchievementDef {
   rewardMultiplier?: DecimalSource;
 }
 
-export interface ProducerBalance {
-  clickBaseValue: DecimalSource;           // default 1
-  tier1BaseRate: DecimalSource;            // default 0.1
-  producerCostGrowth: DecimalSource;       // default 1.15
-  tierCostRatios: DecimalSource[];         // inter-tier step multipliers
-  upgradeMultiplier: DecimalSource;        // default 2
-  globalUpgradeMultiplier: DecimalSource;  // default 2
-  achievementMultiplier: DecimalSource;    // default 1.02
-  milestoneThresholds: number[];           // default [1, 10, 25, 50, 100, 150, 200, 300, 400, 500]
-  milestoneBonusPerTier: DecimalSource;    // default 2
-}
 ```
 
-**Override semantics:** `boot.ts` exports `createProducerEngine(overrides?)` that accepts a flat-category deep-partial — `{ producers?, upgrades?, achievements?, balance? }` — with per-entity replacement keyed by `id` and deep-merge over balance. Sim tests and workbench perturbation route through this factory. The addressable shape *is* the TypeScript type over the data; there is no synthetic vars layer and no codegen round-trip.
+**Override semantics:** `boot.ts` exports `createProducerEngine(overrides?)` that accepts a deep-partial over the archetype's data shape. Sim tests and workbench perturbation route through this factory — the addressable shape *is* the TypeScript type over the data, not a synthetic vars layer. Forks change behaviour by editing `data/*.ts` in place; they don't need a runtime override path.
 
-**Balance methodology:** Producer's `balance/` directory is the in-tree reference for methodology #1 (`solve.ts`: spec/calibrate/lock via Gauss-Seidel bisection) and methodology #2 (`predict.ts` + `spec.ts`: triangular multi-resource walker over engine-as-oracle queries; `verify.ts`: predictor-vs-sim diff for engine-side primitive drift detection). See `archetypes/BALANCING.md § Theme 3` for the full methodology kit and `§ Engine as oracle` for the unifying primitive that ties #1 and #2. Subsystem classification: Pure closed-form, triangular composition row — `balance/shape.ts § PRODUCER_SUBSYSTEMS`.
+**Eventual data-layer split** (phase 3 destinations; source ranges live in § 5):
+
+| File | What it owns |
+|------|-------------|
+| `data/types.ts` | All `*Def` interfaces, the `ProducerBalance` shape, the `ProducerGameState` typed read-view |
+| `data/producers.ts` | Click activity + building tier definitions per `main.js:7982` (Object constructor) + `main.js:8979–9302` (Cursor through final building tier) |
+| `data/upgrades.ts` | Per-building tiered multiplier upgrades + global cross-building bonus series per `main.js:10145–10155` (`MakeTiered` / `TieredUpgrade` helpers) + `main.js:10236–10914` (pre-prestige upgrade definitions) |
+| `data/achievements.ts` | Building-count thresholds per building callbacks (`main.js:9004+`); production-total milestones per `main.js:12994–13037` (`BankAchievement` helper + calls); CPS-rate milestones per `main.js:13005–13048` (`CpsAchievement` helper + calls); click-count milestones per `main.js:13058–13065` |
+| `data/balance.ts` | `PRODUCER_BALANCE: ProducerBalance` — cost growth exponents, base rates, upgrade multipliers; canonical values lifted from Object + Upgrade definitions above; declared-invention rows for archetype-simplified mechanics (direct per-achievement multiplier in place of milk/kitten chain) |
+| `data/overrides.ts` | `ProducerOverrides` flat-category shape + `applyProducerOverrides(base, overrides)` |
+| `data/index.ts` | `DEFAULT_PRODUCER_DATA` barrel + per-file re-exports |
+
+**Archetype code lives in** `src/archetypes/producer/` as its own colocated tree (`data/`, `modules/`, `composables/`, `ui/`, `sim/`, `boot.ts`). The layer split emerges through phase 3 integration as engine wiring lands; phase 2 stages canonical Cookie Clicker content at the archetype root using Cookie Clicker's source structure as the starting layout. See `open-loop-starter/CLAUDE.md § Archetype convention` for the fork-workflow contract and `src/archetypes/CLAUDE.md` for port methodology (phases, discipline).
 
 ---
 
-## 5. Content sketch
+## 5. Content scope
 
-- **Resources:** 1 — the primary currency.
-- **Producers / Activities:** 1 click activity + 7 producer tiers. Example naming scale (bakery theme): cursor, grandma, farm, mine, factory, bank, temple.
-- **Upgrades / Purchasables:** 3 per producer × 7 = 21 producer-scoped multiplier upgrades; 6 global upgrades (click multipliers, cross-producer multipliers, bulk-buy unlocks). Total 27.
-- **Progression gates:** resource-threshold unlocks for each producer tier (visibility gate, not hard block); upgrade visibility scoped by owning ≥1 of the relevant producer.
-- **Achievements:** 30 — 10 production-milestone (reach N/sec), 10 building-count milestone (own N of producer X), 10 hidden (e.g. *first minute without clicking*, *bought all T1 upgrades*). All 30 grant `achievementMultiplier` contribution to the modifier chain.
+Each bullet names which canonical Cookie Clicker subsystems land in the first-arc port and where their source bytes live. The phase-2 snapshot lands those bytes locally per `src/archetypes/CLAUDE.md`; phase 3 integration applies engine substitutions and refactors toward the data-layer split named in § 4. Counts, names, thresholds, formulas, and reward values are not pinned in this doc — code is truth.
 
-**Density target:** every beat in § 4 has at least one corresponding content entry above (beats 1–3 → producers; 4 → upgrades; 5 → achievements; 6 → bulk-buy affordance; 7 → modifier chain readout; 8 → top tier + flavour event).
+- **Resources:** Primary cookie currency, accumulated via clicks and building output across ticks. `Game.cookiesEarned` / `Game.cookiesReset` state fields per `main.js:2134`; prestige-currency state (`Game.prestige`, `Game.heavenlyChips`) declared at `main.js:2146–2149` appears at the ascension gate boundary but stays inert before first ascend.
+- **Producers / Activities:** Click activity (big cookie → `Game.ClickCookie` per `main.js:4988–5057`) and building tier hierarchy (`Game.Object` constructor per `main.js:7982`; Cursor through final building tier per `main.js:8979–9302`). First-arc scope covers buildings accessible before first ascension.
+- **Upgrades / Purchasables:** Per-building tiered multiplier upgrades (`Game.MakeTiered` / `Game.TieredUpgrade` helpers per `main.js:10145–10155`; cursor upgrade block per `main.js:10236–10244`; per-building tiered upgrade calls per `main.js:10246–10914`); global cross-building bonus series (Thousand fingers through Septillion fingers per `main.js:10239–10243`); achievement-gated kitten upgrade chain (milk system per `main.js:5240`; kitten CPS multipliers per `main.js:5256–5271`).
+- **Achievements:** Building-count thresholds from within each building's callback (`Game.Win` calls per `main.js:9019+`); production-total milestones (`BankAchievement` helper + calls per `main.js:12994–13037`); CPS-rate milestones (`CpsAchievement` helper + calls per `main.js:13005–13048`); click-count milestones per `main.js:13058–13065`.
+- **Progression gates:** Per-building visibility unlock (`Game.Unlock` calls within each building callback per `main.js:9004+`); per-building upgrade visibility from owned-count thresholds per building callbacks; first ascension as arc boundary (`Game.HowMuchPrestige` per `main.js:4186`; `Game.Ascend` per `main.js:4371`).
+
+### Required structural properties
+
+The mechanical relationships that must function in the running app for the demo arc beats below to walk end-to-end. Grouped by theme; each property names the relationship and cites the canonical Cookie Clicker site that establishes its shape.
+
+**Production**
+
+- **Big cookie click drives immediate cookie gain.** Click value = cursor CPS × upgrade chain × cross-building bonus (Thousand fingers series) per `Game.ClickCookie` (`main.js:4988`) and the cursor's cps function (`main.js:9001–9015`).
+- **Per-building passive emission accumulates cookies per tick.** Each building's CPS = base CPS × upgrade multiplier grants × owned count; total ticks into `Game.cookies` each frame per `main.js:2982–3282`.
+
+**Purchase and cost scaling**
+
+- **Geometric per-unit building cost curve.** Each additional unit costs base × growth^owned; `priceFunc` closure on the `Game.Object` constructor (`main.js:7982`).
+- **Tiered upgrade unlock gates from owned-count.** When `this.amount >= N`, the matching upgrade becomes available via `Game.Unlock`; threshold checks inside each building callback per `main.js:9004+` (Cursor's first unlock at amount = 1).
+
+**Modifier chain composition**
+
+- **Per-building tiered multiplier upgrades double the building's CPS.** `Game.MakeTiered` wires a ×2 CPS multiplier into the building's rate function on upgrade purchase per `main.js:10145–10155`.
+- **Global cross-building bonus upgrades add a click + per-owned-building bonus.** The Thousand fingers series (`main.js:10239–10243`) contributes a flat per-click cookie bonus scaling with total non-cursor building count, composing multiplicatively with cursor CPS.
+- **Achievement count compounds CPS via milk/kitten chain.** `Game.milkProgress = Game.AchievementsOwned / 25` per `main.js:5240`; kitten upgrades multiply total CPS by `(1 + milkProgress × factor)` per `main.js:5256–5271`. First-arc port uses a direct per-achievement multiplier as a declared-invention simplification; the milk/kitten chain is the canonical Cookie Clicker shape and the full chain lands if kitten upgrades are included in the first-arc upgrade scope.
+
+**Achievements and accumulation**
+
+- **Achievement requirements evaluate against live game state each tick.** Building-count predicates (`amount >= N`) and production-milestone predicates fire on threshold crossing; `Game.Win` stamps the achievement per each building callback (`main.js:9019+`) and via `CpsAchievements` / `BankAchievements` threshold sweeps (`main.js:5323–5325`).
+- **Achievements persist across the run.** `AchievementsOwned` accumulates; milk progress and kitten multipliers carry forward.
+
+**Progression gates and arc boundary**
+
+- **Building visibility unlocks when the previous tier threshold is crossed.** Next-tier building row appears after `Game.Unlock` fires inside the prior building's owned-count callback per `main.js:9004+`.
+- **Upgrade visibility unlocks from per-building owned-count.** Upgrade row appears after the matching `Game.Unlock` threshold triggers per building callbacks.
+- **First ascension is the arc-close gate.** `Game.HowMuchPrestige(Game.cookiesReset + Game.cookiesEarned)` returns potential prestige gain per `main.js:4186`; `Game.Ascend` at `main.js:4371` closes the first-arc run. Demo arc beat 8 reaches this gate but does not cross it.
+
+### Demo arc beats
+
+The first arc walks player-observable milestones from § 1's player-experience prose, each mapped to at least one content entry. Every beat reachable in the running app on a fresh save.
+
+1. **First click → first cookie.** Big cookie click fires; resource bar increments. Cursor in the store; clicking repeatedly is the only production source.
+2. **First auto-producer purchased.** First passive building purchased; cookies tick upward continuously. Resource rate readout shows passive CPS.
+3. **First tiered upgrade unlocks.** Owned-count threshold crossed; first per-building upgrade appears in the store. Purchase doubles building CPS; modifier chain now has two factors visible.
+4. **Mid-tier buildings unlock sequentially.** Resource threshold crosses unlock next building tiers; bulk-buy affordance active for cheaper tiers.
+5. **First global bonus upgrade fires.** Thousand fingers (or equivalent) cross-building bonus becomes purchasable; click value increases visibly from cross-building bonus composition.
+6. **First achievement milestone fires.** Production-total or building-count threshold reached; achievement stamps and its multiplier composes into the headline CPS readout.
+7. **Modifier chain stacking visible.** Multiple upgrade tiers × achievement count compounding; headline CPS grows faster than any individual factor. Kitten upgrades active if first-arc upgrade scope includes them.
+8. **Top of first-arc building staircase + arc-close gate visible.** Upper building tiers accessible; ascension gate visible (prestige level readout and Ascend button appear). Demo arc closes without crossing the ascension gate.
+
+### Later-arc systems (fork extension territory)
+
+Cookie Clicker ships post-first-arc systems that extend the loop beyond the initial building staircase. The first arc covers the pre-ascension cookie economy; later arcs are fork extension territory:
+
+- **Heavenly Chips / Prestige upgrade tree** — `Game.Ascend` at `main.js:4371`; prestige-pool upgrades at `main.js:10915+` (`pool='prestige'`). Each ascension resets buildings + non-prestige upgrades for permanent prestige multipliers; the heavenly upgrade tree (Starter kit, Five-finger discount, etc.) grows with repeated ascensions. Forks extending the prestige loop build on the existing cookie accumulation baseline.
+- **Grandmapocalypse / Wrinklers** — `elderWrath` / `pledges` state at `main.js:2171–2180`; triggered by the Bingo center research upgrade at `main.js:10364`. Wrinklers suck CPS but return accumulated cookies with interest on pop; Elder Pledge temporarily halts the Grandmapocalypse. Fork extension from the research-unlock gate.
+- **Seasonal events** — `Game.baseSeason` detection at `main.js:1387–1401` (Halloween, Christmas, Easter, Valentine's, April Fools); season-specific drops and seasonal upgrade pools. Fork extension layering on top of the standard upgrade economy.
+- **Dragon (Krumblor)** — dragon management system unlocked via a prestige upgrade; auras compose into the CPS calculation. Fork extension from the prestige layer.
+- **Minigames** — Garden (`minigameGarden.js`), Grimoire (`minigameGrimoire.js`), Stock Market (`minigameMarket.js`), Pantheon (`minigamePantheon.js`), Dungeons (`dungeons.js`); each unlocks at building level thresholds after first ascension. Orthogonal economy substrates; fork extension.
+- **Golden cookies / Shimmers** — `Game.shimmer` at `main.js:5416`; timed click events granting temporary multiplicative bonuses (Frenzy, Lucky, etc.) or permanent upgrade reveals. Available from the start of a run with no prestige gate; first-arc inclusion is a fork-scope decision.
+- **Sugar lumps** — accumulate over real time after first ascension; spent on building levels and minigame unlocks. Post-ascension; fork extension.
 
 ---
 
@@ -167,7 +224,7 @@ export interface ProducerBalance {
 | Modifier-chain debug view | Low | A mature Producer run surfaces 10+ chain factors; developers need to introspect "where did this multiplier come from?" Could be a harness analyzer, not an engine primitive. |
 | `break_eternity` tetration correctness | Unknown | Probe 5 is designed to find this. May be nothing; may be the headline defect. |
 | Per-producer milestone bonus composition | Medium | Quantity-tracking milestone bonuses (beat 7's stacked factors) compose with modifier chains today via manual wiring. If Producer, Scaler, and Interlocker all hand-wire this, graduate a `createMilestoneBonus` helper. |
-| Achievement category ergonomics at scale | Low | 30 achievements with mechanical rewards means 30 option blocks. If verbose, a `defineAchievement()` helper would help — but measure first, don't pre-abstract. |
+| Achievement category ergonomics at scale | Low | A large achievement set with mechanical rewards means many option blocks. If verbose, a `defineAchievement()` helper would help — but measure first, don't pre-abstract. |
 
 ---
 

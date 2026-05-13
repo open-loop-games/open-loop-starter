@@ -350,7 +350,7 @@ reshape the archetype to use existing vocabulary.
 
 ## Validator rules
 
-The validator (run via `pnpm validate:archetypes`) enforces:
+The validator enforces:
 
 - [ ] All 8 numbered sections present, in order, with the canonical heading text.
 - [ ] § 2 cites at least 2 patterns, each resolving in `LIBRARY.md`.
