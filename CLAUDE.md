@@ -91,7 +91,7 @@ src/archetypes/<name>/
 
 **Dependency direction (strict):** `data → modules → ui`, with composables between modules and ui when they earn the layer (see § Layering). Data never imports from modules; composables and components never contain game logic.
 
-**Port methodology lives next to the code** at `src/archetypes/CLAUDE.md` (mirrored to `archetypes/CLAUDE.md`) — phases, byte-landing discipline, walkthrough gate, lens conventions. Loaded automatically when an agent reads or writes under either subtree.
+**Port methodology lives next to the code** at `src/archetypes/README.md` (mirrored at `archetypes/README.md`) — phases, byte-landing discipline, walkthrough gate, lens conventions. Reference reading, not auto-loaded; consult before starting a port.
 
 **Fork workflow:** clone the repo, pick one archetype, delete the others + `src/gallery/` (when it lands), keep your one archetype as the whole app.
 
