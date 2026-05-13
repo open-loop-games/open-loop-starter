@@ -1,13 +1,19 @@
 /**
  * Tug sim-driven balance probes.
- * Tier-C divergence: probes 1–2 are math-only locks (single-pass
- * `runUntil` with deterministic bot, fire-time within band), probes 3–5
- * are distribution-statistic via `runMatrixUntil` over N seeds.
+ *
+ * Methodology-#1 math-only locks (probes 1, 2) ride single-pass `runUntil`
+ * with deterministic bots (believability 0/0). Methodology-#3 (probe 3 —
+ * signature counter-strong sensitivity) and methodology-#5 (probe 4 —
+ * income-upgrade ROI snapshot) ride `runMatrixUntil` over N seeds.
+ * Probe 5 is a methodology-#1 distribution lock on match-duration p50;
+ * probe 6 is a framework-correctness archetype-dominance gate (no design
+ * knob; the methodology kit doesn't currently name this shape — see
+ * `archetypes/BALANCING-tug.md`).
  *
  * Run: `pnpm balance:probes:tug`. Prints per-probe pass/fail report;
  * surfaces drift for human inspection rather than blocking on it.
  *
- * **Math-only vs MC split** (mirrors `shape.ts` Tier-C prose):
+ * **Math-only vs MC split:**
  *   - math-only: `runUntil({engine, until, maxSimTime, tickDelta})` once
  *     per (perturbation, beat). Bot uses production-zero believability so
  *     the run is fully deterministic; one run suffices.
@@ -16,21 +22,19 @@
  *     `cell.aggregate.metrics['tug-outcome.<key>']` (per-run analyzer
  *     captures averaged) and `cell.aggregate.terminationTime.p50`
  *     (built-in termination distribution). MC probes use sim-default
- *     believability through `buildTugSimEngine` (suboptimality 0.05,
- *     cadence jitter 0.15) — the cookbook stalemate-breaker for the
- *     counter-vs-counter mirror cell.
+ *     believability through `buildTugSimEngine` (suboptimality 0.20,
+ *     cadence jitter 0.25) — the cookbook stalemate-breaker for the
+ *     counter-vs-greed cell.
  *
  * **Signature probe = counter-strong-sensitivity.** Sweeps
  * `counter-matrix/strongCounter ∈ [0.5, 1.5]` against player-side
- * (counter persona) win-rate vs a concentrating opponent (mass). Counter-
- * pick *count* is approximately invariant to the sweep (`pickCounterAware`
- * and `match.ts:212` both read the BASE matrix); the sweep affects
+ * (counter persona) win-rate vs a concentrating opponent (greed). Counter-
+ * pick *count* is approximately invariant to the sweep; the sweep affects
  * combat-damage scaling at counter-cells (`lane.ts::adjustCell`),
  * which shifts win-rate continuously. Emits a proposed `strongCounter`
  * scalar where win-rate clears a depth-floor with elbow-room before
- * saturation. Replaces the retired `ai-difficulty-symmetry` probe (which
- * measured AI behavior, not a design property); strongCounter is a
- * design parameter (matrix decisiveness), not an AI knob.
+ * saturation. strongCounter is a design parameter (matrix decisiveness),
+ * not an AI knob.
  */
 
 import {
@@ -47,16 +51,30 @@ import {
   createOutcomeAnalyzer,
   createOutcomeCapture,
   type OutcomeCapture,
+  type TugSimOptions,
 } from './bot';
-import { ARC_BEATS, BEAT_WINDOWS } from './beats';
+import { ARC_BEATS, BEAT_WINDOWS } from './balance';
 import { DEFAULT_TUG_DATA } from '../data';
-import type { TugOverrides } from '../data/overrides';
 import type { PersonaKey } from '../data/personality';
 
 const PRIMARY_SEEDS = 20;
 const DURATION_PROBE_SEEDS = 30;
 const MAX_MATCH_SIM_TIME_SEC = 35 * 60;
 const TICK_DELTA_SEC = 1.0;
+
+/** 30-min match limit (inlined in `modules/match.ts`). Cached here for
+ *  probe-side gating against match duration. */
+const MATCH_TIME_LIMIT_SEC = 30 * 60;
+
+/** Default base income rate (inlined in `modules/income.ts`). Probe 1's
+ *  multiplier sweep computes target perturbed values from this baseline. */
+const BASE_INCOME_RATE = 8;
+
+/** Deterministic-bot bundle for math-only probes — zero believability. */
+const DETERMINISTIC: Partial<import('../data/types').TugBelievability> = {
+  suboptimalityRate: 0,
+  cadenceJitterScale: 0,
+};
 
 /** Fixed seed list — locked here so the regression-lock layer in
  *  `sim/balance.probe.test.ts` can `runMatrixUntil({ seeds: TUG_SEEDS, ... })`
@@ -76,18 +94,16 @@ interface ProbeRow {
 
 let activeCapture: OutcomeCapture | null = null;
 
-/** Build an UntilCell that perturbs the engine via overrides + optional
- *  scope-pushed tunables. Mirrors `tune.ts::buildPerturbationCell` — the
- *  duplication between tune.ts + probes.ts is acceptable until a third
- *  consumer wants the same shape; at that point, lift to a shared file. */
+/** Build an UntilCell perturbed via `pushScope` on the tuning registry.
+ *  Engine-canonical pattern — no separate override path. */
 function buildCell(
   name: string,
-  overrides?: TugOverrides,
+  simOptions?: TugSimOptions,
   scopePerturbations?: Partial<TugTunables>,
 ): UntilCell {
   return {
     name,
-    buildEngine: () => buildTugSimEngine(overrides),
+    buildEngine: () => buildTugSimEngine(simOptions),
     analyzers: (engine: Engine) => {
       const capture = createOutcomeCapture(engine);
       activeCapture = capture;
@@ -115,11 +131,11 @@ function buildCell(
 function runMatchScopeMC(
   name: string,
   seeds: number[],
-  overrides?: TugOverrides,
+  simOptions?: TugSimOptions,
   scopePerturbations?: Partial<TugTunables>,
 ): CellResult {
   const result = runMatrixUntil({
-    cells: [buildCell(name, overrides, scopePerturbations)],
+    cells: [buildCell(name, simOptions, scopePerturbations)],
     seeds,
     until: () => activeCapture?.firstMatchEnded ?? false,
     maxSimTime: MAX_MATCH_SIM_TIME_SEC,
@@ -127,22 +143,29 @@ function runMatchScopeMC(
   return result.cells[0]!;
 }
 
-/** Time the first occurrence of a beat predicate under given overrides.
- *  Used by the math-only probes (1, 2). */
-function fireBeatUnderOverrides(beatId: string, overrides?: TugOverrides): number {
-  const engine = buildTugSimEngine(overrides);
+/** Time the first occurrence of a beat predicate under given tunable scope.
+ *  Used by the math-only probes (1, 2). Builds a deterministic engine,
+ *  pushes scope, runs to the predicate, restores. */
+function fireBeatUnderScope(beatId: string, scope: Partial<TugTunables>): number {
+  const engine = buildTugSimEngine({ believability: DETERMINISTIC });
   const beat = ARC_BEATS.find((b) => b.id === beatId);
   if (!beat) return Infinity;
-  const result = runUntil({
-    engine,
-    until: () => beat.predicate(engine),
-    maxSimTime: MAX_MATCH_SIM_TIME_SEC,
-    tickDelta: TICK_DELTA_SEC,
-  });
-  return result.terminated === 'predicate' ? result.elapsedSimulated : Infinity;
+  const reg = engine.tryInject(TugTuningRegistryKey)!;
+  const cleanup = reg.pushScope(`probe:beat-${beatId}`, scope);
+  try {
+    const result = runUntil({
+      engine,
+      until: () => beat.predicate(engine),
+      maxSimTime: MAX_MATCH_SIM_TIME_SEC,
+      tickDelta: TICK_DELTA_SEC,
+    });
+    return result.terminated === 'predicate' ? result.elapsedSimulated : Infinity;
+  } finally {
+    cleanup();
+  }
 }
 
-// ─── Probe 1 — income-rate-baseline (math-only) ──────────────────────────
+// ─── Probe 1 — income-rate-baseline (methodology #1 math-only) ───────────
 
 interface BeatFireRow {
   beatId: string;
@@ -154,22 +177,16 @@ interface BeatFireRow {
 }
 
 function runIncomeRateBaselineProbe(): { rows: BeatFireRow[]; pass: boolean } {
-  const baseRate = Number(DEFAULT_TUG_DATA.balance.baseIncomeRate);
   const multipliers = [0.75, 1.0, 1.25];
   const beats = ['beat-1', 'beat-2', 'beat-4'];
   const rows: BeatFireRow[] = [];
   for (const m of multipliers) {
-    // Math-only override: production-zero believability keeps the bot
-    // deterministic; pre-existing balance overrides apply unchanged.
-    const overrides: TugOverrides = {
-      balance: {
-        baseIncomeRate: baseRate * m,
-        believability: { suboptimalityRate: 0, cadenceJitterScale: 0 },
-      },
+    const scope: Partial<TugTunables> = {
+      'balance/baseIncomeRate': () => BASE_INCOME_RATE * m,
     };
     for (const beatId of beats) {
       const [windowLo, windowHi] = BEAT_WINDOWS[beatId]!;
-      const fireSec = fireBeatUnderOverrides(beatId, overrides);
+      const fireSec = fireBeatUnderScope(beatId, scope);
       const tolLo = windowLo * 0.8;
       const tolHi = windowHi * 1.2;
       rows.push({
@@ -186,23 +203,23 @@ function runIncomeRateBaselineProbe(): { rows: BeatFireRow[]; pass: boolean } {
   return { rows, pass };
 }
 
-// ─── Probe 2 — unit-cost-scaling (math-only) ─────────────────────────────
+// ─── Probe 2 — unit-cost-scaling (methodology #1 math-only) ──────────────
 
 function runUnitCostScalingProbe(): { rows: BeatFireRow[]; pass: boolean } {
   const multipliers = [0.85, 1.0, 1.15];
   const beats = ['beat-2', 'beat-3', 'beat-5'];
   const rows: BeatFireRow[] = [];
   for (const m of multipliers) {
-    const overrides: TugOverrides = {
-      balance: { believability: { suboptimalityRate: 0, cadenceJitterScale: 0 } },
-      units: DEFAULT_TUG_DATA.units.map((u) => ({
-        id: u.id,
-        cost: Number(u.cost) * m,
-      })),
-    };
+    // Sweep ALL units uniformly — multiplier applied to every unit's cost
+    // via per-unit scope key.
+    const scope: Partial<TugTunables> = {};
+    for (const u of DEFAULT_TUG_DATA.units) {
+      const baseCost = Number(u.cost);
+      scope[`units/${u.id}/cost`] = () => baseCost * m;
+    }
     for (const beatId of beats) {
       const [windowLo, windowHi] = BEAT_WINDOWS[beatId]!;
-      const fireSec = fireBeatUnderOverrides(beatId, overrides);
+      const fireSec = fireBeatUnderScope(beatId, scope);
       const tolLo = windowLo * 0.75;
       const tolHi = windowHi * 1.25;
       rows.push({
@@ -218,7 +235,7 @@ function runUnitCostScalingProbe(): { rows: BeatFireRow[]; pass: boolean } {
   return { rows, pass: rows.every((r) => r.inWindow) };
 }
 
-// ─── Probe 3/SIGNATURE — counter-strong-sensitivity (MC) ─────────────────
+// ─── Probe 3/SIGNATURE — counter-strong-sensitivity (methodology #3) ─────
 
 const STRONG_SWEEP = [0.5, 0.75, 1.0, 1.25, 1.5];
 /** Depth-floor target: counter-side wins more often than not at this
@@ -334,25 +351,19 @@ function runCounterStrongSensitivityProbe(): CounterStrongResult {
   };
 }
 
-// ─── Probe 4 — income-upgrade-roi (math-only) ────────────────────────────
+// ─── Probe 4 — income-upgrade-roi (methodology #5 fixed-strategy ROI) ────
 
 const REFINERY_1_COST_SWEEP = [200, 400, 800, 1600, 3200];
 
 /** Conservative gate: half the match time limit. Probe 5 asserts the
  *  empirical p50 lands in [50%, 95%] of the limit, so anything that fails
  *  to cross over by this threshold definitely doesn't pay off in a
- *  typical match. Coupling probe 4's gate to probe 5's runtime p50 is
- *  possible but adds shared state — punted unless useful. */
-const MATCH_DURATION_P50_SEC = DEFAULT_TUG_DATA.balance.matchTimeLimitMinutes * 60 * 0.5;
+ *  typical match. */
+const MATCH_DURATION_P50_SEC = MATCH_TIME_LIMIT_SEC * 0.5;
 
 /** Analytical defaults at engine-build state (no tiers bought, so
  *  `currentRate = baseRate = 8/s` for every tier). These are what the
- *  ROI ComputedRefs return at `buildTugSimEngine()`. Post-buy values
- *  (refinery-2 ≈ 87.5s once refinery-1 is active) are exercised in the
- *  buy-chain test in `sim/balance.probe.test.ts` — they're the
- *  realistic strategic numbers but only appear once priors are bought.
- *  The "elbow" gate below uses refinery-1 only (the entry-tier
- *  decision); higher tiers are conditional on prior purchases. */
+ *  ROI ComputedRefs return at `buildTugSimEngine()`. */
 const ANALYTICAL_DEFAULT_PAYBACK: Record<string, number> = {
   'refinery-1': 400 / (8 * 0.25), // 200s
   'refinery-2': 350 / (8 * 0.4), // 109.375s
@@ -377,10 +388,6 @@ interface RoiTierRow {
    *  tiers (analytical baseline doesn't apply). */
   paybackInTolerance: boolean | null;
   crossoverInTolerance: boolean | null;
-  /** Crossover within the match-duration gate. Informational only for
-   *  tiers 2/3 (their default values assume baseRate=5, but realistically
-   *  the player only buys them after prior tiers raise the rate); the
-   *  pass criterion uses refinery-1 only — see `pass` field below. */
   crossoverWithinMatch: boolean;
 }
 
@@ -394,32 +401,38 @@ interface RoiVariantRow {
 interface RoiResult {
   rows: RoiVariantRow[];
   /** Smallest swept refinery-1 cost where crossover exceeds the match-
-   *  duration gate. The analytical "elbow" — replaces what the (since-removed)
-   *  `coarseFineProbe` probe was meant to find via cost sweep in OL-733. `null`
-   *  when no swept value trips the gate (current data is well below the
-   *  elbow). */
+   *  duration gate. The analytical "elbow" — the answer to "above what
+   *  cost does macro-vs-rush collapse?" `null` when no swept value
+   *  trips the gate (current data is well below the elbow). */
   proposedMaxCost: number | null;
   proposedReason: string;
   pass: boolean;
 }
 
+/** Read ROI snapshot under optional cost perturbation. Builds an engine,
+ *  pushes scope if requested, reads computed-refs (no simulation), tears
+ *  down. */
 function readRoiSnapshot(
-  overrides?: TugOverrides,
+  scope?: Partial<TugTunables>,
 ): { tierId: string; paybackSec: number; crossoverSec: number }[] {
-  // No simulation needed — `IncomeUpgradeRoiKey.player` carries
-  // ComputedRefs that read directly from the engine state at call time.
-  const engine = buildTugSimEngine(overrides);
-  const roi = engine.tryInject(IncomeUpgradeRoiKey.player);
-  if (!roi) throw new Error('IncomeUpgradeRoiKey.player not provided by engine');
-  return DEFAULT_TUG_DATA.incomeUpgrades.map((def) => {
-    const m = roi.get(def.id);
-    if (!m) throw new Error(`No ROI metrics for ${def.id}`);
-    return {
-      tierId: def.id,
-      paybackSec: m.paybackSeconds.value,
-      crossoverSec: m.crossoverSeconds.value,
-    };
-  });
+  const engine = buildTugSimEngine();
+  const reg = engine.tryInject(TugTuningRegistryKey)!;
+  const cleanup = scope ? reg.pushScope('probe:roi-snapshot', scope) : null;
+  try {
+    const roi = engine.tryInject(IncomeUpgradeRoiKey.player);
+    if (!roi) throw new Error('IncomeUpgradeRoiKey.player not provided by engine');
+    return DEFAULT_TUG_DATA.incomeUpgrades.map((def) => {
+      const m = roi.get(def.id);
+      if (!m) throw new Error(`No ROI metrics for ${def.id}`);
+      return {
+        tierId: def.id,
+        paybackSec: m.paybackSeconds.value,
+        crossoverSec: m.crossoverSeconds.value,
+      };
+    });
+  } finally {
+    cleanup?.();
+  }
 }
 
 function runIncomeUpgradeRoiProbe(): RoiResult {
@@ -443,23 +456,19 @@ function runIncomeUpgradeRoiProbe(): RoiResult {
     variant: 'default',
     refinery1Cost: REFINERY_1_DEFAULT_COST,
     tiers: defaultTiers,
-    // Default-variant pass: all tiers in tolerance + refinery-1
-    // crossover within the match gate (entry-tier decision). Tiers 2/3
-    // crossover at default-state (no priors bought) inflates because
-    // currentRate is just baseRate; the realistic strategic numbers
-    // appear once priors are active and are exercised in the test
-    // suite's buy-chain lock.
     pass:
       defaultTiers.every((t) => t.paybackInTolerance && t.crossoverInTolerance) &&
       defaultTiers.find((t) => t.tierId === 'refinery-1')!.crossoverWithinMatch,
   });
 
-  // Cost-perturbed variants — only refinery-1 is perturbed; tiers 2/3
-  // are unchanged (so analytical-tolerance fields are null).
+  // Cost-perturbed variants — only refinery-1 perturbed; tiers 2/3 are
+  // unchanged (so analytical-tolerance fields are null).
   for (const cost of REFINERY_1_COST_SWEEP) {
     if (cost === REFINERY_1_DEFAULT_COST) continue;
-    const overrides: TugOverrides = { incomeUpgrades: [{ id: 'refinery-1', cost }] };
-    const snap = readRoiSnapshot(overrides);
+    const scope: Partial<TugTunables> = {
+      'income-upgrades/refinery-1/cost': () => cost,
+    };
+    const snap = readRoiSnapshot(scope);
     const tiers: RoiTierRow[] = snap.map(({ tierId, paybackSec, crossoverSec }) => ({
       tierId,
       paybackSec,
@@ -472,14 +481,10 @@ function runIncomeUpgradeRoiProbe(): RoiResult {
       variant: `cost=${cost}`,
       refinery1Cost: cost,
       tiers,
-      // Variants gate on refinery-1 only — the swept axis.
       pass: tiers.find((t) => t.tierId === 'refinery-1')!.crossoverWithinMatch,
     });
   }
 
-  // Find the elbow: smallest sweep cost where refinery-1 crossover
-  // exceeds the match-duration gate. Surfaces the analytical answer to
-  // OL-733's "above what cost does macro-vs-rush collapse" question.
   let proposedMaxCost: number | null = null;
   let proposedReason = `all swept costs cross over within ${MATCH_DURATION_P50_SEC.toFixed(0)}s`;
   for (const row of rows) {
@@ -495,13 +500,11 @@ function runIncomeUpgradeRoiProbe(): RoiResult {
     rows,
     proposedMaxCost,
     proposedReason,
-    // Pass criterion: default variant in tolerance; all variants cross
-    // within the match gate. The elbow is informational — null is fine.
     pass: rows[0]!.pass && rows.every((r) => r.pass),
   };
 }
 
-// ─── Probe 5 — match-duration-bound (MC) ─────────────────────────────────
+// ─── Probe 5 — match-duration-bound (methodology #1 distribution lock) ───
 
 interface DurationResult {
   p50Sec: number;
@@ -520,7 +523,7 @@ interface DurationResult {
 function runMatchDurationBoundProbe(): DurationResult {
   const cell = runMatchScopeMC('default', TUG_DURATION_SEEDS);
   const p50Sec = cell.aggregate.terminationTime?.p50 ?? 0;
-  const limitSec = DEFAULT_TUG_DATA.balance.matchTimeLimitMinutes * 60;
+  const limitSec = MATCH_TIME_LIMIT_SEC;
   const windowLo = limitSec * 0.5;
   const windowHi = limitSec * 0.95;
   const timeLimitRate = cell.aggregate.metrics['tug-outcome.isFirstTimeLimit']?.avg ?? 0;
@@ -530,57 +533,41 @@ function runMatchDurationBoundProbe(): DurationResult {
     windowLo,
     windowHi,
     timeLimitRate,
-    // Acceptance: zero in-match time-limit terminations (matches resolve
-    // by player-win or ai-win). p50 in [50%, 95%] of the limit ensures
-    // matches don't trivially resolve in the first few minutes.
     pass: timeLimitRate === 0 && p50Sec >= windowLo && p50Sec <= windowHi,
   };
 }
 
-// ─── Probe 6 — per-archetype dominance (MC Cartesian) ────────────────────
+// ─── Probe 6 — per-archetype dominance (framework-correctness gate) ──────
 
 const DOMINANCE_PERSONAS: PersonaKey[] = ['mass', 'greed', 'counter', 'tech'];
 const DOMINANCE_SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 /** Threshold for `max single-archetype share` across the persona meta.
- *  No corpus anchor exists for this number — Direct Strike's tier-list
- *  framing measures dominance via human curation (pick_freq × win_rate
- *  rankings), not algorithmic thresholds. The 0.40 derivation is from
- *  uniform expectation: with 6 unit archetypes, uniform = 1/6 ≈ 0.167;
- *  2.4× over-representation lands at ≈ 0.40 — the boundary where one
- *  archetype is meaningfully over-represented in winning compositions
- *  without being absolutely degenerate. The probe `pass` criterion is
- *  framework-correctness (Cartesian runs end-to-end, histogram populated)
- *  per OL-730 pattern; the threshold reading is informational. */
+ *  Direct Strike's tier-list framing measures dominance via human curation
+ *  (pick_freq × win_rate rankings). The 0.40 derivation is from uniform
+ *  expectation: with 6 unit archetypes, uniform = 1/6 ≈ 0.167; 2.4× over-
+ *  representation lands at ≈ 0.40 — the boundary where one archetype is
+ *  meaningfully over-represented in winning compositions without being
+ *  absolutely degenerate. The probe `pass` criterion is framework-
+ *  correctness (Cartesian runs end-to-end, histogram populated); the
+ *  threshold reading is informational. */
 const MAX_ARCHETYPE_SHARE_TARGET = 0.4;
 
 interface DominanceCellRow {
   playerPersona: PersonaKey;
   aiPersona: PersonaKey;
   winRate: number;
-  /** Per-archetype share within the winning matches of this cell. Empty
-   *  when win-rate is 0 (no winning matches → no composition signal). */
   spawnShareInWin: Record<string, number>;
-  /** Total player spawns across winning matches in this cell (= avg ×
-   *  seeds). Used as the cell's weight in cross-cell aggregation. */
   totalSpawnsInWin: number;
-  /** Most-spawned archetype in winning matches; null when the cell has
-   *  no wins. */
   topArchetype: string | null;
   topShare: number;
 }
 
 interface DominanceResult {
   cells: DominanceCellRow[];
-  /** Aggregate share across the persona meta. share[X] = total spawns
-   *  of X in winning matches across all cells, divided by total player
-   *  spawns in winning matches across all cells. Direct Strike tier-
-   *  list shape (pick_freq × win_rate) translated to sim. */
   aggregateShare: Record<string, number>;
-  /** Headline scalar: highest share across all archetypes. */
   maxShare: number;
   maxShareArchetype: string | null;
-  /** Per-cell win-rate matrix (4×4) for the persona-pair readout. */
   winRateMatrix: Record<PersonaKey, Record<PersonaKey, number>>;
   pass: boolean;
 }
@@ -592,7 +579,8 @@ function runArchetypeDominanceProbe(): DominanceResult {
     for (const aiPersona of DOMINANCE_PERSONAS) {
       cells.push(
         buildCell(`p=${playerPersona}/ai=${aiPersona}`, {
-          balance: { opponentPersona: { player: playerPersona, ai: aiPersona } },
+          player: playerPersona,
+          ai: aiPersona,
         }),
       );
     }
@@ -611,8 +599,6 @@ function runArchetypeDominanceProbe(): DominanceResult {
     counter: {} as Record<PersonaKey, number>,
     tech: {} as Record<PersonaKey, number>,
   };
-  // Aggregate-share accumulators. Sum the per-cell `avg(spawnsInWin)`
-  // across cells; the seed-count cancels out in the share ratio.
   const totalByArchetype: Record<string, number> = Object.fromEntries(
     archetypeIds.map((id) => [id, 0]),
   );
@@ -625,8 +611,6 @@ function runArchetypeDominanceProbe(): DominanceResult {
       const winRate = cell.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0;
       winRateMatrix[playerPersona][aiPersona] = winRate;
 
-      // Per-archetype avg-spawns-in-win, summed to a cell total then
-      // turned into a normalized share (within winning matches only).
       const spawnsInWinByArchetype: Record<string, number> = {};
       let cellTotalInWin = 0;
       for (const id of archetypeIds) {
@@ -676,11 +660,6 @@ function runArchetypeDominanceProbe(): DominanceResult {
     }
   }
 
-  // Pass criterion is framework-correctness: every cell ran to completion,
-  // and at least one cell has wins (signal floor — if zero cells have any
-  // player-wins, the aggregate share is undefined and the data is so
-  // imbalanced that the dominance question isn't answerable). The
-  // threshold reading is informational; flag it in the reporter.
   const allCellsCompleted = result.cells.every((c) => c.runs.length === DOMINANCE_SEEDS.length);
   const someCellHasWins = grandTotal > 0;
   const pass = allCellsCompleted && someCellHasWins;
@@ -718,7 +697,7 @@ function renderTable(header: string[], rows: string[][]): string {
 
 function main(): void {
   const t0 = Date.now();
-  console.log('# Tug Tier-C balance probes\n');
+  console.log('# Tug balance probes\n');
   console.log(`Run at ${new Date().toISOString()}\n`);
   console.log(
     `PRIMARY_SEEDS = ${PRIMARY_SEEDS} (CI half-width ≈ ${(0.98 / Math.sqrt(PRIMARY_SEEDS)).toFixed(2)} at p=0.5)`,
@@ -726,12 +705,12 @@ function main(): void {
   console.log(`DURATION_PROBE_SEEDS = ${DURATION_PROBE_SEEDS}`);
   console.log(`TICK_DELTA_SEC = ${TICK_DELTA_SEC}\n`);
   console.log(
-    'Math-only probes (1, 2) override believability to 0/0 (deterministic); MC probes (3, 5) use sim-default 0.05/0.15 from buildTugSimEngine.\n',
+    'Math-only probes (1, 2) override believability to 0/0 (deterministic); MC probes (3, 5) use sim-default 0.20/0.25 from buildTugSimEngine.\n',
   );
 
   const summary: ProbeRow[] = [];
 
-  console.log('## Probe 1 — income-rate-baseline (math-only ±20%)\n');
+  console.log('## Probe 1 — income-rate-baseline (methodology #1 math-only ±25%)\n');
   const p1 = runIncomeRateBaselineProbe();
   console.log(
     renderTable(
@@ -753,7 +732,7 @@ function main(): void {
     pass: p1.pass,
   });
 
-  console.log('## Probe 2 — unit-cost-scaling (math-only ±25%)\n');
+  console.log('## Probe 2 — unit-cost-scaling (methodology #1 math-only ±15%)\n');
   const p2 = runUnitCostScalingProbe();
   console.log(
     renderTable(
@@ -775,7 +754,7 @@ function main(): void {
     pass: p2.pass,
   });
 
-  console.log('## Probe 3 — counter-strong-sensitivity (MC, N=20) [SIGNATURE]\n');
+  console.log('## Probe 3 — counter-strong-sensitivity (methodology #3, N=20) [SIGNATURE]\n');
   const p3 = runCounterStrongSensitivityProbe();
   console.log(
     renderTable(
@@ -807,7 +786,7 @@ function main(): void {
     pass: p3.pass,
   });
 
-  console.log('## Probe 4 — income-upgrade-roi (math-only)\n');
+  console.log('## Probe 4 — income-upgrade-roi (methodology #5)\n');
   const p4 = runIncomeUpgradeRoiProbe();
   const roiHeader = ['variant', 'tier', 'payback', 'crossover', 'in match?'];
   const roiRows: string[][] = [];
@@ -820,7 +799,7 @@ function main(): void {
   console.log(renderTable(roiHeader, roiRows));
   console.log();
   console.log(
-    `match-duration gate = ${fmtSec(MATCH_DURATION_P50_SEC)} (50% of ${DEFAULT_TUG_DATA.balance.matchTimeLimitMinutes}m limit)`,
+    `match-duration gate = ${fmtSec(MATCH_DURATION_P50_SEC)} (50% of ${fmtSec(MATCH_TIME_LIMIT_SEC)} limit)`,
   );
   console.log(
     `proposed max refinery-1 cost ≈ ${p4.proposedMaxCost != null ? p4.proposedMaxCost.toFixed(0) : 'unbounded in sweep range'}`,
@@ -834,7 +813,7 @@ function main(): void {
     pass: p4.pass,
   });
 
-  console.log('## Probe 5 — match-duration-bound (MC, N=30)\n');
+  console.log('## Probe 5 — match-duration-bound (methodology #1 distribution lock, N=30)\n');
   const p5 = runMatchDurationBoundProbe();
   console.log(
     `p50 = ${fmtSec(p5.p50Sec)} of ${fmtSec(p5.limitSec)} limit (target ∈ [${fmtSec(p5.windowLo)}, ${fmtSec(p5.windowHi)}])`,
@@ -851,7 +830,7 @@ function main(): void {
   });
 
   console.log(
-    `## Probe 6 — per-archetype dominance (MC Cartesian, ${DOMINANCE_PERSONAS.length}×${DOMINANCE_PERSONAS.length} personas, N=${DOMINANCE_SEEDS.length})\n`,
+    `## Probe 6 — per-archetype dominance (framework-correctness, ${DOMINANCE_PERSONAS.length}×${DOMINANCE_PERSONAS.length} personas, N=${DOMINANCE_SEEDS.length})\n`,
   );
   const p6 = runArchetypeDominanceProbe();
   console.log('### Win-rate matrix (player rows × ai cols)\n');

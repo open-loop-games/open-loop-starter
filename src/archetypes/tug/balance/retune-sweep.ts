@@ -1,13 +1,14 @@
 /**
- * OL-731 step-1 retune sweep — multi-axis Cartesian over the 4×4 persona
- * matrix to find a data slice where mass / counter / tech personas have
- * viable strategies, not just greed.
+ * Multi-axis retune sweep — Cartesian over the 4×4 persona matrix to find
+ * a data slice where mass / counter / tech personas have viable
+ * strategies, not just greed.
  *
- * Axes include refinery-1 cost / multiplier and baseIncomeRate — these are
- * the levers the dominance mechanism (greed's economic compound via
- * refinery-1) is gated on. Per BALANCING.md § Retune vs reshape: before
- * reshape, perturb the constants the existing harness already exposes,
- * including the ones the dominance mechanism is gated on.
+ * Axes include refinery-1 cost / multiplier, baseIncomeRate, top-tier
+ * unit cost, and counter-matrix sharpness — these are the levers the
+ * dominance mechanism (greed's economic compound via refinery-1) is
+ * gated on. Per BALANCING.md § Retune vs reshape: before reshape,
+ * perturb the constants the existing harness already exposes, including
+ * the ones the dominance mechanism is gated on.
  *
  * Acceptance bar: for some slice, mass-row-max > 0.3 OR counter-row-max
  * > 0.3 — i.e. mass or counter has a viable matchup against at least one
@@ -15,17 +16,22 @@
  * row (a persona has no viable opponent), not just a uniform-zero column
  * (a persona is universally dominant).
  *
- * If found → small data PR retunes refinery economics; OL-731 closes
- * or rescopes. If not → reshape territory (cardinality, predicate, or
- * persona-knob), and OL-731's procedural-persona agent path indicated
- * with the structural-decisions list.
+ * If found → small data PR retunes refinery economics. If not → reshape
+ * territory (cardinality, predicate, or persona-knob), and the procedural-
+ * persona agent path indicated with the structural-decisions list.
  *
  * Run: `pnpm balance:sweep:tug-retune`. ~17k runs at 12 seeds × 16
  * personas × 108 slices; tractable in one session at ~30 min wall.
+ *
+ * **Perturbation path.** Every slice perturbation routes through
+ * `pushScope` on the tuning registry (engine-canonical). The
+ * `topTierCost` axis multiplies per-unit `cost` keys for units at or
+ * above `TOP_TIER_COST_FLOOR`; per-unit costs are uniformly tunable in
+ * `modules/units.ts`.
  */
 
 import { runMatrixUntil, type Engine, type UntilCell } from '@open-loop/engine';
-import { TugTuningRegistryKey } from '../modules';
+import { TugTuningRegistryKey, type TugTunables } from '../modules';
 import {
   buildTugSimEngine,
   createOutcomeAnalyzer,
@@ -33,7 +39,6 @@ import {
   type OutcomeCapture,
 } from './bot';
 import { DEFAULT_TUG_DATA } from '../data';
-import type { TugOverrides } from '../data/overrides';
 import type { PersonaKey } from '../data/personality';
 
 // ─── Sweep parameters ────────────────────────────────────────────────────
@@ -45,19 +50,18 @@ const MAX_SIM_TIME_SEC = 35 * 60;
 const TICK_DELTA_SEC = 1.0;
 
 /** Refinery-1 multiplier — the actual lever for greed's economic edge.
- *  Default 1.5; 1.0 disables the eco strategy entirely. */
+ *  Default 1.25; 1.0 disables the eco strategy entirely. */
 const REFINERY_MULT_AXIS = [1.0, 1.25, 1.5];
 
 /** Refinery-1 cost — gates *when* greed gets the income compound. Default
- *  100; 400 = ~80s save (a third of a typical match); 1600 = ~5min save
- *  (greed effectively never gets it). */
+ *  400; 1600 = ~5min save (greed effectively never gets it). */
 const REFINERY_COST_AXIS = [100, 400, 1600];
 
-/** Global base income rate. Interacts with refinery payback. Default 5/s. */
+/** Global base income rate. Interacts with refinery payback. Default 8/s. */
 const BASE_INCOME_AXIS = [3, 5, 8];
 
-/** `cost` mult applied to units with base cost ≥ 150 (siege-tank,
- *  battlecruiser, ghost). */
+/** Cost mult applied to units with base cost ≥ TOP_TIER_COST_FLOOR
+ *  (siege-tank, battlecruiser, ghost). */
 const TOP_TIER_COST_AXIS = [1.0, 2.0];
 
 /** `counter-matrix/strongCounter` tunable scope. */
@@ -65,16 +69,16 @@ const STRONG_AXIS = [1.0, 2.0];
 
 const TOP_TIER_COST_FLOOR = 150;
 
-const DEFAULT_REFINERY_MULT = 1.5;
-const DEFAULT_REFINERY_COST = 100;
-const DEFAULT_BASE_INCOME = 5;
+const DEFAULT_REFINERY_MULT = 1.25;
+const DEFAULT_REFINERY_COST = 400;
+const DEFAULT_BASE_INCOME = 8;
 const DEFAULT_TOP_TIER_COST = 1.0;
 const DEFAULT_STRONG = 1.0;
 
 /** Acceptance: at least one persona row has a max win-rate above this. */
 const VIABILITY_THRESHOLD = 0.3;
 
-// ─── Slice → overrides ───────────────────────────────────────────────────
+// ─── Slice → scope perturbations ─────────────────────────────────────────
 
 interface Slice {
   refineryMult: number;
@@ -94,46 +98,42 @@ function isDefaultSlice(s: Slice): boolean {
   );
 }
 
-function buildOverrides(slice: Slice, player: PersonaKey, ai: PersonaKey): TugOverrides {
-  const unitPatches = DEFAULT_TUG_DATA.units
-    .filter((u) => Number(u.cost) >= TOP_TIER_COST_FLOOR)
-    .map((u) => ({ id: u.id, cost: Number(u.cost) * slice.topTierCost }));
-
-  const incomeUpgradePatches: Array<{ id: string; cost?: number; multiplier?: number }> = [];
-  if (slice.refineryCost !== DEFAULT_REFINERY_COST) {
-    incomeUpgradePatches.push({ id: 'refinery-1', cost: slice.refineryCost });
-  }
-  if (slice.refineryMult !== DEFAULT_REFINERY_MULT) {
-    const existing = incomeUpgradePatches.find((p) => p.id === 'refinery-1');
-    if (existing) existing.multiplier = slice.refineryMult;
-    else incomeUpgradePatches.push({ id: 'refinery-1', multiplier: slice.refineryMult });
-  }
-
-  return {
-    units: slice.topTierCost !== DEFAULT_TOP_TIER_COST ? unitPatches : undefined,
-    incomeUpgrades: incomeUpgradePatches.length > 0 ? incomeUpgradePatches : undefined,
-    balance: {
-      baseIncomeRate: slice.baseIncome,
-      opponentPersona: { player, ai },
-    },
+function buildScope(slice: Slice): Partial<TugTunables> {
+  const scope: Partial<TugTunables> = {
+    'balance/baseIncomeRate': () => slice.baseIncome,
+    'income-upgrades/refinery-1/cost': () => slice.refineryCost,
+    'income-upgrades/refinery-1/multiplier': () => slice.refineryMult,
+    'counter-matrix/strongCounter': () => slice.strong,
   };
+  if (slice.topTierCost !== DEFAULT_TOP_TIER_COST) {
+    for (const u of DEFAULT_TUG_DATA.units) {
+      if (Number(u.cost) >= TOP_TIER_COST_FLOOR) {
+        const baseCost = Number(u.cost);
+        scope[`units/${u.id}/cost`] = () => baseCost * slice.topTierCost;
+      }
+    }
+  }
+  return scope;
 }
 
 // ─── Cell builder ────────────────────────────────────────────────────────
 
 let activeCapture: OutcomeCapture | null = null;
 
-function buildCell(name: string, overrides: TugOverrides, strong: number): UntilCell {
+function buildCell(
+  name: string,
+  scope: Partial<TugTunables>,
+  player: PersonaKey,
+  ai: PersonaKey,
+): UntilCell {
   return {
     name,
-    buildEngine: () => buildTugSimEngine(overrides),
+    buildEngine: () => buildTugSimEngine({ player, ai }),
     analyzers: (engine: Engine) => {
       const capture = createOutcomeCapture(engine);
       activeCapture = capture;
       const reg = engine.tryInject(TugTuningRegistryKey)!;
-      const cleanup = reg.pushScope(`sweep:${name}`, {
-        'counter-matrix/strongCounter': () => strong,
-      });
+      const cleanup = reg.pushScope(`sweep:${name}`, scope);
       return [
         createOutcomeAnalyzer(capture),
         {
@@ -162,20 +162,18 @@ function emptyMatrix(): WinMatrix {
 
 interface SliceResult {
   matrix: WinMatrix;
-  /** Aggregate share across the 16-cell persona meta — fraction of player
-   *  spawns in winning matches, by archetype. Computed the same way as
-   *  probe 6's `aggregateShare`. */
   aggregateShare: Record<string, number>;
   topArchetype: string | null;
   topShare: number;
 }
 
 function runSlice(slice: Slice): SliceResult {
+  const scope = buildScope(slice);
   const cells: UntilCell[] = [];
   for (const player of PERSONAS) {
     for (const ai of PERSONAS) {
       const name = `mult=${slice.refineryMult}/cost=${slice.refineryCost}/base=${slice.baseIncome}/top=${slice.topTierCost}/strong=${slice.strong}/p=${player}/ai=${ai}`;
-      cells.push(buildCell(name, buildOverrides(slice, player, ai), slice.strong));
+      cells.push(buildCell(name, scope, player, ai));
     }
   }
   const result = runMatrixUntil({
@@ -293,7 +291,7 @@ function main(): void {
     STRONG_AXIS.length;
   const totalRuns = totalSlices * 16 * SEEDS.length;
 
-  console.log('# OL-731 step 1 — multi-axis retune sweep\n');
+  console.log('# Tug multi-axis retune sweep\n');
   console.log(`Run at ${new Date().toISOString()}`);
   console.log(`Axes:`);
   console.log(`  refinery-1 multiplier ∈ {${REFINERY_MULT_AXIS.join(', ')}}`);
@@ -364,11 +362,6 @@ function main(): void {
     console.log('\nWARNING: no default slice in axis grid — cannot compute diffAggregates.');
   }
 
-  // ─── Non-degeneracy summary ─────────────────────────────────────────────
-  // mass-max=1 etc. is too coarse: it only requires winning one cell out of
-  // 16, and beating-tech almost always trivially passes. The real question
-  // is whether any slice has no uniform row or column — every persona AND
-  // every opponent both wins and loses at least once.
   console.log('\n## Non-degeneracy summary\n');
   const nondegen = rows.filter((r) => !r.degeneracy.degenerate);
   console.log(`non-degenerate matrices: ${nondegen.length}/${rows.length}`);
@@ -381,7 +374,6 @@ function main(): void {
     }
   }
 
-  // ─── Viability summary (kept as secondary signal) ───────────────────────
   console.log('\n## Persona-row-max viability (coarse — beating tech counts)\n');
   console.log(`Threshold: persona-row-max ≥ ${VIABILITY_THRESHOLD}.`);
   const massViable = rows.filter((r) => r.massMax >= VIABILITY_THRESHOLD);
@@ -393,7 +385,6 @@ function main(): void {
   console.log(`counter viable in ${counterViable.length}/${rows.length} slices`);
   console.log(`both viable in ${bothViable.length}/${rows.length} slices\n`);
 
-  // ─── Top slices ranked by mass-max + counter-max ────────────────────────
   console.log('## Top slices by (mass-max + counter-max) — best mass/counter unlock\n');
   const ranked = [...rows].sort((a, b) => b.massMax + b.counterMax - (a.massMax + a.counterMax));
   console.log('| slice | spread | mass-max | counter-max | greed-max | tech-max | top archetype |');
@@ -405,7 +396,6 @@ function main(): void {
     );
   }
 
-  // ─── Default slice + matrix ─────────────────────────────────────────────
   if (defaultRow) {
     console.log('\n## Default slice — current data\n');
     console.log(`spread=${defaultRow.spread.toFixed(3)}`);
@@ -422,7 +412,6 @@ function main(): void {
     }
   }
 
-  // ─── Top unlock slices: matrix + aggregate share ────────────────────────
   if (ranked.length > 0) {
     console.log('\n## Top-5 unlock slices — matrix + aggregate share\n');
     const topUnlock = ranked.filter((r) => !r.isDefault).slice(0, 5);
@@ -439,7 +428,6 @@ function main(): void {
     }
   }
 
-  // ─── All matrices + aggregate shares ────────────────────────────────────
   console.log('\n## Full per-slice scalars\n');
   console.log('| slice | degen | spread | m | g | c | t | top |');
   console.log('|---|---|---|---|---|---|---|---|');
@@ -451,7 +439,6 @@ function main(): void {
     );
   }
 
-  // ─── All matrices ───────────────────────────────────────────────────────
   console.log('\n## All per-slice win-rate matrices\n');
   for (const r of rows) {
     const tag = r.isDefault ? ' [DEFAULT]' : '';

@@ -2,11 +2,11 @@ import { describe, it } from 'vitest';
 
 /**
  * Tug beat-map placeholder suite — one `it.todo` per beat. Engine-driven
- * beat verification rides the Tier-C balance lane
- * (`balance/probes.ts`, `balance/tune.ts`); sim drivers stay out of this
- * vitest suite. These todos exist so any future shape-change to a beat
- * surfaces here as a missing-test signal rather than vanishing silently
- * when the balance lane isn't running.
+ * beat verification rides the methodology-#3 sensitivity sweep in
+ * `balance/probes.ts`; sim drivers stay out of this vitest suite. These
+ * todos exist so any future shape-change to a beat surfaces here as a
+ * missing-test signal rather than vanishing silently when the balance
+ * lane isn't running.
  */
 
 describe('tug beats — structural placeholders (no runHeadless)', () => {
@@ -21,8 +21,4 @@ describe('tug beats — structural placeholders (no runHeadless)', () => {
   it.todo('beat 5 — second-match composition pivot (different opener archetype, 30:00–50:00)');
 
   it.todo('beat 6 — counter-type mastery demonstrated (≥2 pivots in a winning match, 45:00–75:00)');
-
-  it.todo(
-    'beat 7 — first meta-progression milestone OR counter-mastery invariant (arc closure, 60:00–120:00)',
-  );
 });

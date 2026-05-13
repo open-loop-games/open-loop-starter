@@ -7,7 +7,7 @@ import { createIncomeUpgradesSideModule } from './income-upgrades';
 import { createLaneModule } from './lane';
 import { createUnitsSideModule } from './units';
 import { createMatchModule } from './match';
-import { createOpponentBotModule } from './opponent-bot';
+import { createOpponentBotModule, type OpponentBotOptions } from './opponent-bot';
 import { createMetaModule } from './meta';
 import { createPrestigeModule } from './prestige';
 
@@ -35,22 +35,29 @@ export {
 } from './match';
 export { MetaKey, type MetaApi } from './meta';
 export { PrestigeKey } from './prestige';
+export type { OpponentBotOptions } from './opponent-bot';
+
+export interface TugModulesOptions {
+  /** AI-side opponent-bot install. Defaults to `{ persona: 'counter' }` with
+   *  production-zero believability — the human player drives the player
+   *  side. */
+  ai?: OpponentBotOptions;
+  /** Player-side opponent-bot install. Production omits; sim engines pass
+   *  to drive unattended bilateral runs. */
+  player?: OpponentBotOptions;
+  /** Cross-match meta-progression layer. Production skeleton: false. */
+  metaProgressionEnabled?: boolean;
+}
 
 /**
  * Compose the Tug modules in dependency order. Modules close over `data` at
- * construction; overrides applied upstream in a future `boot.ts` flow
- * through unchanged.
- *
- * No runtime `withPersistentContext` wrapper around this list — the engine
- * wraps each module's install in `withPersistentContext(mod.id, ...)` at
- * `engine.start()` time, and the composer's array-creation closure runs
- * before any engine state exists. Match-scope reset semantics are encoded
- * via the explicit module-id list in `match.ts::TUG_MATCH_SCOPE_MODULES`.
+ * construction; the engine wraps each install in
+ * `withPersistentContext(mod.id, ...)` at `engine.start()` time.
  *
  * Module ordering reflects the dependency graph (the engine topo-sorts on
  * `dependencies`, but listing in order keeps the source readable):
  *
- *  1. `tug/tuning` — registry + data publish; OUTSIDE match-scope so leaf-6
+ *  1. `tug/tuning` — registry + data publish; OUTSIDE match-scope so
  *     pushed scopes survive match resets.
  *  2. `tug/match/<side>/income` — per-side mineral resources.
  *  3. `tug/match/fortress` — per-side fortress HP resources + fortress
@@ -63,19 +70,20 @@ export { PrestigeKey } from './prestige';
  *     upgrade category factories at construction time; no aggregator.
  *  6. `tug/match` — match orchestrator; injects fortress + lane +
  *     sequencers.
- *  7. `tug/match/ai/opponent-bot` — AI policy. Strict-after-units ordering
- *     so `getUnits('ai')` returns a populated handle before the AI reads it.
- *     Side-parameterized so sim engines can install a second instance for
- *     `'player'` (unattended balance harnesses); production installs only
- *     the `'ai'` instance and leaves player input to the UI.
+ *  7. `tug/match/<side>/opponent-bot` — AI policy. Strict-after-units
+ *     ordering so `getUnits(side)` returns a populated handle before the
+ *     bot reads it. Side-parameterized so sim engines can install a second
+ *     instance for `'player'` (unattended balance harnesses); production
+ *     installs only the `'ai'` instance and leaves player input to the UI.
  *  8. `tug/meta` — cross-match state container.
  *  9. `tug/meta/prestige` — conditional; only when meta-progression is on.
  */
-export function createTugModules(data: TugData): EngineModule[] {
+export function createTugModules(data: TugData, options?: TugModulesOptions): EngineModule[] {
+  const aiOptions: OpponentBotOptions = options?.ai ?? { persona: 'counter' };
   const modules: EngineModule[] = [
     createTuningModule(data),
-    createIncomeSideModule(data, 'player'),
-    createIncomeSideModule(data, 'ai'),
+    createIncomeSideModule('player'),
+    createIncomeSideModule('ai'),
     createIncomeUpgradesSideModule(data, 'player'),
     createIncomeUpgradesSideModule(data, 'ai'),
     createFortressModule(data),
@@ -83,10 +91,13 @@ export function createTugModules(data: TugData): EngineModule[] {
     createUnitsSideModule(data, 'player'),
     createUnitsSideModule(data, 'ai'),
     createMatchModule(data),
-    createOpponentBotModule(data, 'ai'),
+    createOpponentBotModule(data, 'ai', aiOptions),
     createMetaModule(data),
   ];
-  if (data.balance.metaProgressionEnabled) {
+  if (options?.player) {
+    modules.push(createOpponentBotModule(data, 'player', options.player));
+  }
+  if (options?.metaProgressionEnabled) {
     modules.push(createPrestigeModule(data));
   }
   return modules;

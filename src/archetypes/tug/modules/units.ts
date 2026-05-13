@@ -43,11 +43,6 @@ export const UnitsCooldownKey: Record<Side, InjectionKey<Record<string, Persiste
   ai: Symbol('tug/match/ai/units-cooldown') as InjectionKey<Record<string, Persistent<number>>>,
 };
 
-// Unit ids whose `cost` is registered with the tuning registry. Other units
-// pass `def.cost` through unchanged. Mirrors Ambient's `TUNABLE_BASE_COST_IDS`
-// pattern — opt-in keeps the leaf-6 bisection surface narrow and greppable.
-const TUNABLE_COST_IDS = new Set<string>(['marine', 'siege-tank']);
-
 // TODO(expansion): mirrored-instance — `createUnitsSideModule(data, side)`
 // hand-rolls a per-side install pair. Engine candidate
 // `createSymmetricModuleSet` (open-loop-engine `candidate-primitives.md`)
@@ -77,6 +72,9 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       // sequencer (one enqueue per level bought, so a buy-N covers N sends).
       // The sequencer's `canRun` then paces dispatch against per-archetype
       // cooldowns; the `'start'` handler spawns into the lane.
+      //
+      // Every unit's `cost` registers as `tunable()` against the registry so
+      // balance probes can perturb per-unit costs via `pushScope`.
       let sequencerRef: Sequencer<UnitSendMeta> | null = null;
 
       const shop = createPurchasableCategory<UnitDef>({
@@ -85,9 +83,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
           display: { title: def.name, description: def.role },
           requirements: createCostRequirement({
             resource: income,
-            cost: TUNABLE_COST_IDS.has(def.id)
-              ? tunable(registry, `units/${def.id}/cost`, () => def.cost)
-              : def.cost,
+            cost: tunable(registry, `units/${def.id}/cost`, () => def.cost),
           }),
           limit: Infinity,
           onPurchase: (amount) => {

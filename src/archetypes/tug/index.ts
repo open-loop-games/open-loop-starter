@@ -1,27 +1,17 @@
 export { createApp, createTugEngine, type TugBootResult, type TugEngineOptions } from './boot';
 export { manifest } from './manifest';
-export {
-  DEFAULT_TUG_DATA,
-  ABILITIES,
-  TUG_BALANCE,
-  TUG_THEME,
-  COUNTER_MATRIX,
-  INCOME_UPGRADES,
-  UNITS,
-} from './data';
+export { DEFAULT_TUG_DATA, ABILITIES, COUNTER_MATRIX, INCOME_UPGRADES, UNITS } from './data';
 export type {
   AbilityDef,
   AbilityEffect,
   CounterMatrix,
   IncomeUpgradeDef,
-  TugBalance,
+  TugBelievability,
   TugData,
   TugGameState,
-  TugTheme,
   UnitArchetypeTag,
   UnitDef,
 } from './data/types';
-export { applyTugOverrides, type TugOverrides } from './data/overrides';
 export {
   SIDES,
   TugDataKey,
@@ -41,6 +31,8 @@ export {
   type Side,
   type TugTunableKey,
   type TugTunables,
+  type TugModulesOptions,
+  type OpponentBotOptions,
   type LaneApi,
   type LaneEvents,
   type UnitInstance,

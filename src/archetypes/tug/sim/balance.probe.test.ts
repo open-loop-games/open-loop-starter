@@ -7,7 +7,7 @@ import {
   createOutcomeCapture,
   type OutcomeCapture,
 } from '../balance/bot';
-import { ARC_BEATS } from '../balance/beats';
+import { ARC_BEATS } from '../balance/balance';
 import {
   getIncome,
   getIncomeUpgrades,
@@ -16,32 +16,26 @@ import {
 } from '../modules';
 
 /**
- * Tier-C balance regression locks for Tug — static data invariants
- * (roster shape, counter-matrix shape, default opponent persona,
- * believability bundle present) and framework-correctness locks for
- * the sensitivity sweep harness.
+ * Balance regression locks for Tug — static data invariants (counter-
+ * matrix shape, roster cardinality) and framework-correctness locks for
+ * the methodology-#3 sensitivity sweep harness.
  *
- * **Framework-correctness, not balance-numbers.** Per the OL-730
- * rescope, the SIGNATURE strongCounter sweep currently surfaces
- * "underlying data balance dominates matrix sensitivity" at default
- * data — a forward-looking finding for the procedural-persona tester-
- * seat follow-up. These locks pin the framework primitives
- * (TugBelievability bundle wired through merge, sensitivity sweep
- * runs to completion across the full strongCounter range, monotonicity
- * preserved) so the next session can balance the data and re-tune
- * locks against numerical bands then.
+ * **Framework-correctness, not balance-numbers.** The signature
+ * strongCounter sweep currently surfaces "underlying data balance
+ * dominates matrix sensitivity" at default data — a forward-looking
+ * finding for the procedural-persona tester-seat follow-up. These locks
+ * pin the framework primitives (sensitivity sweep runs to completion
+ * across the full strongCounter range, monotonicity preserved) so the
+ * next session can balance the data and re-tune locks against numerical
+ * bands then.
  */
 
 const TUG_LOCK_SEEDS = [1, 2, 3, 4, 5];
 const MAX_SIM = 35 * 60;
 
-const { balance, units, counterMatrix } = DEFAULT_TUG_DATA;
+const { units, counterMatrix } = DEFAULT_TUG_DATA;
 
-describe('tug Tier-C balance locks — static data invariants', () => {
-  it('roster has unitArchetypeCount entries', () => {
-    expect(units.length).toBe(balance.unitArchetypeCount);
-  });
-
+describe('tug balance locks — static data invariants', () => {
   it('counter-matrix is square and matches roster size', () => {
     expect(counterMatrix.length).toBe(units.length);
     for (const row of counterMatrix) expect(row.length).toBe(units.length);
@@ -52,30 +46,12 @@ describe('tug Tier-C balance locks — static data invariants', () => {
       expect(counterMatrix[i][i]).toBe(1.0);
     }
   });
-
-  it('matchTimeLimitMinutes provides the duration-probe ceiling', () => {
-    expect(balance.matchTimeLimitMinutes).toBeGreaterThan(0);
-  });
-
-  it('default opponent persona is counter on both slots', () => {
-    expect(balance.opponentPersona.player).toBe('counter');
-    expect(balance.opponentPersona.ai).toBe('counter');
-  });
-
-  it('production believability is zero on both knobs (deterministic AI)', () => {
-    expect(balance.believability.suboptimalityRate).toBe(0);
-    expect(balance.believability.cadenceJitterScale).toBe(0);
-  });
-
-  it('aiIncomeMultiplier defaults to side-symmetric 1.0 (not a balance lever)', () => {
-    expect(balance.aiIncomeMultiplier).toBe(1.0);
-  });
 });
 
-describe('tug Tier-C balance locks — math-only fire-time', () => {
+describe('tug balance locks — math-only fire-time', () => {
   it('beat-1 (first unit purchased) fires within first cadence window', () => {
     const engine = buildTugSimEngine({
-      balance: { believability: { suboptimalityRate: 0, cadenceJitterScale: 0 } },
+      believability: { suboptimalityRate: 0, cadenceJitterScale: 0 },
     });
     const beat = ARC_BEATS.find((b) => b.id === 'beat-1')!;
     const result = runUntil({
@@ -85,26 +61,13 @@ describe('tug Tier-C balance locks — math-only fire-time', () => {
       tickDelta: 1.0,
     });
     expect(result.terminated).toBe('predicate');
-    // Counter persona's first marine purchase fires by ~5s (income 5/sec
+    // Counter persona's first marine purchase fires by ~5s (income 8/sec
     // affords 25-cost marine at first cadence trigger).
     expect(result.elapsedSimulated).toBeLessThanOrEqual(30);
   }, 30_000);
 });
 
-describe('tug Tier-C balance locks — believability bundle is wired', () => {
-  it('TugBelievability sub-merges through applyTugOverrides', () => {
-    const engine = buildTugSimEngine({
-      balance: { believability: { suboptimalityRate: 0.1 } },
-    });
-    // Read the merged data via a public surface — the engine's match
-    // module isn't exposing data directly, so verify by behavior: a
-    // run with believability override doesn't throw, and engine starts
-    // cleanly. (TypeScript types guarantee the field shape.)
-    expect(engine).toBeDefined();
-  });
-});
-
-describe('tug Tier-C balance locks — counter-strong sensitivity framework', () => {
+describe('tug balance locks — counter-strong sensitivity framework', () => {
   let activeCapture: OutcomeCapture | null = null;
 
   function runCellAtStrong(strong: number) {
@@ -150,7 +113,7 @@ describe('tug Tier-C balance locks — counter-strong sensitivity framework', ()
     expect(lo.cells[0]!.runs.length).toBe(TUG_LOCK_SEEDS.length);
     expect(hi.cells[0]!.runs.length).toBe(TUG_LOCK_SEEDS.length);
     // Win-rate metric is exposed by the analyzer (read pattern used by
-    // probe 3 and tune.ts).
+    // probe 3).
     expect(lo.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']).toBeDefined();
     expect(hi.cells[0]!.aggregate.metrics['tug-outcome.isFirstPlayerWin']).toBeDefined();
   }, 60_000);
@@ -169,7 +132,7 @@ describe('tug Tier-C balance locks — counter-strong sensitivity framework', ()
   }, 60_000);
 });
 
-describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
+describe('tug balance locks — income-upgrade ROI (math-only)', () => {
   // Default-state values: no tiers bought, so `currentRate = baseRate
   // = 8/s` for every tier. The post-buy values are exercised in the
   // buy-chain test below — they're the realistic strategic numbers but
@@ -201,19 +164,6 @@ describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
         1,
       );
     }
-  });
-
-  it('AI-side payback scales inversely with aiIncomeMultiplier perturbation', () => {
-    // At aiIncomeMultiplier=0.7, AI's chain-applied baseRate is 8*0.7
-    // = 5.6/s, so refinery-1 payback becomes 400/(5.6*0.25) ≈ 285.71s
-    // (vs 200s at the symmetric default). Player-side is unchanged.
-    const engine = buildTugSimEngine({ balance: { aiIncomeMultiplier: 0.7 } });
-    const roiAi = engine.tryInject(IncomeUpgradeRoiKey.ai)!;
-    const roiPlayer = engine.tryInject(IncomeUpgradeRoiKey.player)!;
-    const aiPayback = roiAi.get('refinery-1')!.paybackSeconds.value;
-    const playerPayback = roiPlayer.get('refinery-1')!.paybackSeconds.value;
-    expect(aiPayback).toBeCloseTo(400 / (8 * 0.7 * 0.25), 1);
-    expect(playerPayback).toBeCloseTo(200, 1);
   });
 
   it('refinery-2 payback drops when refinery-1 is bought (chain reactivity)', () => {
@@ -256,14 +206,14 @@ describe('tug Tier-C balance locks — income-upgrade ROI (math-only)', () => {
   });
 });
 
-describe('tug Tier-C balance locks — per-archetype dominance framework', () => {
-  // OL-732 framework-correctness locks. Verifies the per-archetype kill +
+describe('tug balance locks — per-archetype dominance framework', () => {
+  // Framework-correctness locks. Verifies the per-archetype kill +
   // spawn instrumentation wires through `OutcomeCapture` → analyzer
   // metrics → cell aggregate. Numerical thresholds (e.g. max-share ≤ 0.4)
   // are NOT locked — at current data balance, the SIGNATURE matchup
-  // imbalance dominates the dominance signal too (same constraint OL-731
-  // exists to address). Locks guard the framework against silent
-  // regression while balance discovery proceeds in parallel.
+  // imbalance dominates the dominance signal too. Locks guard the
+  // framework against silent regression while balance discovery proceeds
+  // in parallel.
 
   let activeCapture: OutcomeCapture | null = null;
 
@@ -302,10 +252,7 @@ describe('tug Tier-C balance locks — per-archetype dominance framework', () =>
     const cells = personas.flatMap((player) =>
       personas.map((ai) => ({
         name: `p=${player}/ai=${ai}`,
-        buildEngine: () =>
-          buildTugSimEngine({
-            balance: { opponentPersona: { player, ai } },
-          }),
+        buildEngine: () => buildTugSimEngine({ player, ai }),
         analyzers: (engine: ReturnType<typeof buildTugSimEngine>) => {
           const cap = createOutcomeCapture(engine);
           activeCapture = cap;
@@ -326,8 +273,8 @@ describe('tug Tier-C balance locks — per-archetype dominance framework', () =>
       expect(cell.runs.length).toBe(2);
     }
     // At least one cell must have player wins so the spawnsInWin
-    // aggregator has signal. Greed-vs-counter at default data should
-    // hit this trivially per OL-732 probe runs.
+    // aggregator has signal. Greed-vs-counter at default data hits
+    // this trivially per probe runs.
     const someCellHasWins = result.cells.some(
       (cell) => (cell.aggregate.metrics['tug-outcome.isFirstPlayerWin']?.avg ?? 0) > 0,
     );

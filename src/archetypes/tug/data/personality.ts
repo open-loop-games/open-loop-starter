@@ -15,11 +15,12 @@
  * tech) cover the corpus's named cluster — see the sketch §1.4 dimension
  * catalog and §3.2 Tug guidance.
  *
- * **Why this set breaks parity stalemate** (OL-711 session-2 finding):
- * `counter` vs `greed` produces a smooth `aiIncomeMultiplier` response
- * surface (greed scales late, counter is steady) for `bisectTuner`, AND
- * greed's `top-tier` picker concentrates composition so `pickCounterAware`
- * fires non-zero counter-pivots (unblocks the `meanCp = 0` diagnostic).
+ * **Why this set breaks parity stalemate.** `counter` vs `greed`
+ * produces a smooth response surface (greed scales late, counter is
+ * steady) for the methodology-#3 sensitivity sweep, AND greed's
+ * `top-tier` picker concentrates composition so the counter persona's
+ * matrix-aware picker fires non-zero counter-pivots (unblocks the
+ * `meanCp = 0` diagnostic).
  *
  * Future auto-rotation across matches lands as `createSequencer` +
  * `createRoundRobinStrategy` per sketch §3.2; the match-driver seam in
@@ -47,8 +48,9 @@ export interface Persona {
    *  opportunistic path" — combined with `saveForUpgradeTiers === 0` this
    *  disables the upgrade branch entirely. */
   upgradeSurplusFactor: number;
-  /** Scales `data.balance.aiSendCadenceSec` for this persona's spend
-   *  rhythm. <1 = faster spends (mass spam); >1 = slower. */
+  /** Scales the baseline send-cadence (4s, inlined in
+   *  `modules/opponent-bot.ts`) for this persona's spend rhythm.
+   *  <1 = faster spends (mass spam); >1 = slower. */
   cadenceMultiplier: number;
 }
 
@@ -63,10 +65,11 @@ export interface Persona {
  *
  * `counter` and `mass` are tempo-first; they don't sacrifice early units
  * for economy. With `saveForUpgradeTiers: 0` and `upgradeSurplusFactor:
- * Infinity`, neither persona ever buys an upgrade — they live on
- * `baseIncomeRate` for the whole match. This gives `greed` an asymmetric
- * late-game advantage (the post-refinery-1 income gap) which is what
- * `bisectTuner` rides for the smooth `aiIncomeMultiplier` response surface.
+ * Infinity`, neither persona ever buys an upgrade — they live on the
+ * base income rate for the whole match. This gives `greed` an asymmetric
+ * late-game advantage (the post-refinery-1 income gap) which the
+ * methodology-#3 signature probe rides for the counter-strong response
+ * surface.
  */
 export const PERSONAS: Record<PersonaKey, Persona> = {
   // Spam tier-1, no eco, fast cadence. Floods the lane with cheap units.

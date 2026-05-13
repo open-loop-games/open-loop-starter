@@ -7,7 +7,7 @@ function mustInject<T>(engine: Engine, key: InjectionKey<T>): T {
   if (v === undefined) throw new Error(`mustInject: key not provided (${String(key)})`);
   return v;
 }
-import { DEFAULT_TUG_DATA, applyTugOverrides, type TugOverrides } from '../data';
+import { DEFAULT_TUG_DATA } from '../data';
 import {
   createTugModules,
   getIncome,
@@ -21,13 +21,12 @@ import {
 const GAME_ID = 'tug-test';
 const MOD_ID = 'tug';
 
-function bootTug(overrides?: TugOverrides, namespace?: string): Engine {
-  const data = applyTugOverrides(DEFAULT_TUG_DATA, overrides);
+function bootTug(namespace?: string): Engine {
   const engine = bootEngine({
     gameId: GAME_ID,
     persistenceNamespace: namespace,
     autoSaveInterval: 0,
-    mods: [{ id: MOD_ID, name: 'Tug Test', modules: createTugModules(data) }],
+    mods: [{ id: MOD_ID, name: 'Tug Test', modules: createTugModules(DEFAULT_TUG_DATA) }],
   });
   engine.selectMod(MOD_ID);
   engine.start();
@@ -36,7 +35,7 @@ function bootTug(overrides?: TugOverrides, namespace?: string): Engine {
 
 describe('tug match-scope reset (structural invariant)', () => {
   it('end() resets tug/match-scoped refs and preserves tug/meta-scoped refs', () => {
-    const engine = bootTug(undefined, 'reset-invariant');
+    const engine = bootTug('reset-invariant');
     const match = mustInject(engine, MatchKey);
     const meta = mustInject(engine, MetaKey);
     const lane = mustInject(engine, LaneKey);
@@ -93,7 +92,7 @@ describe('tug match-scope reset (structural invariant)', () => {
   });
 
   it('matchEnded payload reaches meta before reset clears counter', () => {
-    const engine = bootTug(undefined, 'meta-payload');
+    const engine = bootTug('meta-payload');
     const match = mustInject(engine, MatchKey);
     const meta = mustInject(engine, MetaKey);
 
@@ -109,7 +108,7 @@ describe('tug match-scope reset (structural invariant)', () => {
 
 describe('tug AI opponent (default counter persona)', () => {
   it('produces sends with default persona at default cadence under 60s', () => {
-    const engine = bootTug(undefined, 'ai-mirror');
+    const engine = bootTug('ai-mirror');
     const match = mustInject(engine, MatchKey);
     const playerSequencer = mustInject(engine, SequencerKey.player);
     const aiSequencer = mustInject(engine, SequencerKey.ai);

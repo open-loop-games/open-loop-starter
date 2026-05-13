@@ -5,8 +5,8 @@ export const PrestigeKey: InjectionKey<Reset> = Symbol('tug/meta/prestige') as I
 
 /**
  * Meta-progression reset. Conditionally installed by the composer when
- * `data.balance.metaProgressionEnabled === true`. Resets the `tug/meta`
- * context back to defaults — clears `factionsUnlocked`,
+ * `TugModulesOptions.metaProgressionEnabled === true`. Resets the
+ * `tug/meta` context back to defaults — clears `factionsUnlocked`,
  * `maxCounterPivotsAnyMatch`, and `matchesPlayed`.
  *
  * Mirrors Ambient's `prestige.ts` shape: thin `createReset` provider; any

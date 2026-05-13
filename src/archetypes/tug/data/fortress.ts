@@ -10,15 +10,15 @@ import type { FortressDef } from './types';
 // damage-sponge: no return fire, no resistance.
 
 // ─── Costume ───
-// Theme C SciFi Armada. The fortress is the
-// `Nexus` (per `TUG_THEME.fortressName`) — labels live in the theme,
-// numbers live here.
+// Theme C SciFi Armada. The fortress is the `Nexus` — labels live inline
+// at the reader sites in `modules/fortress.ts`, numbers live here.
 
 // ─── Balance ───
 // `hp: 5_000` is the skeleton-default fortress cap. `damagePerHit: 0` and
-// empty resistance keep the skeleton in pure damage-sponge mode. Leaf 6's
-// tuner perturbs `'fortress/hp'` against match-duration probes; resistance
-// entries become tuner axes only when variants ship a non-empty default.
+// empty resistance keep the skeleton in pure damage-sponge mode. The
+// `'fortress/hp'` tunable in `modules/fortress.ts` is the perturbation
+// surface for match-duration probes; resistance entries become tuner axes
+// only when variants ship a non-empty default.
 
 export const TUG_FORTRESS: FortressDef = {
   hp: 5_000,

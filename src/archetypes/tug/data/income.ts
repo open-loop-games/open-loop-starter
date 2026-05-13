@@ -12,8 +12,10 @@ import type { IncomeUpgradeDef } from './types';
 // tier upgrades, idiomatic to the StarCraft / Direct Strike economy.
 
 // ─── Balance ───
-// First-cut placeholders chosen for ratio shape; retunes against the
-// Tier-C tuner's beat-2/3/5 fire-time bands.
+// First-cut placeholders chosen for ratio shape; retune against beat-2/3/5
+// fire-time bands. Per-tier `cost` and `multiplier` are tunable surfaces in
+// `modules/income-upgrades.ts` — perturb via `pushScope` on
+// `income-upgrades/<id>/{cost,multiplier}`.
 
 export const INCOME_UPGRADES: IncomeUpgradeDef[] = [
   {

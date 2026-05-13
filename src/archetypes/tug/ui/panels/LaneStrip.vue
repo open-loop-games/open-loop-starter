@@ -17,8 +17,8 @@ const lane = useLane();
 const data = useModule(TugDataKey);
 const match = useMatch();
 
-const playerLabel = computed(() => data.theme.factionNames[0]);
-const aiLabel = computed(() => data.theme.factionNames[1]);
+const playerLabel = 'Terran';
+const aiLabel = 'Protoss';
 
 interface DotView {
   id: string;

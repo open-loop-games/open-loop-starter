@@ -1,37 +1,31 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useIncomeUpgrades } from '../../composables';
-import { useModule } from '@/composables/useModule';
 import { useFormatting } from '@/composables/useFormatting';
-import { getIncome, TugDataKey } from '../../modules';
+import { getIncome } from '../../modules';
 import Button from '@/ui/components/Button.vue';
 import type { IncomeUpgradeRow } from '../../composables/useIncomeUpgrades';
 
 /**
  * Income display + player income-upgrade shop.
  *
- * Top row: per-side accrual rates and current balances. AI rate shown is
- * the displayed multiplier × baseRate; the runtime rate flows through
- * `incomeRateChain` and includes any AI upgrade multipliers it has bought,
- * but rendering the chain'd rate per side requires injecting the chain
- * here. Keeping the displayed rate as the static-config preview avoids the
- * cross-Vue-brand chain unwrap; live balances reflect actual accrual.
+ * Top row: per-side accrual rates and current balances. Displayed rate is
+ * the static baseline preview (8/s, symmetric); the runtime rate flows
+ * through `incomeRateChain` and includes any upgrade multipliers each side
+ * has bought, but rendering the chain'd rate per side requires injecting
+ * the chain here. Live balances reflect actual accrual.
  *
  * Tile row: player income-upgrade tiers — sequential, tier N requires
  * tier N-1 bought. Disabled state covers both unaffordable AND
  * sequentially-gated cases; engine's `canPurchase` is the unified flag.
  */
-const data = useModule(TugDataKey);
 const player = getIncome('player');
 const ai = getIncome('ai');
 const playerUpgrades = useIncomeUpgrades('player');
 const { format, formatTime } = useFormatting();
 
-const baseRate = computed(() => Number(data.balance.baseIncomeRate));
-const aiMult = computed(() => data.balance.aiIncomeMultiplier);
-const aiRate = computed(() => baseRate.value * aiMult.value);
+const baseRate = 8;
 
-const resourceLabel = computed(() => data.theme.resourceName.plural);
+const resourceLabel = 'minerals';
 
 function fmtSec(s: number): string {
   if (!Number.isFinite(s)) return '∞';
@@ -56,15 +50,15 @@ function rowTooltip(row: IncomeUpgradeRow): string {
   <div class="income-bar">
     <div class="income-bar__rows">
       <div class="income-bar__row income-bar__row--player">
-        <span class="income-bar__label">{{ data.theme.factionNames[0] }}</span>
+        <span class="income-bar__label">Terran</span>
         <span class="income-bar__rate">+{{ format(baseRate, 1) }} {{ resourceLabel }}/s</span>
         <span class="income-bar__balance">
           {{ format(player, 0) }}
         </span>
       </div>
       <div class="income-bar__row income-bar__row--ai">
-        <span class="income-bar__label">{{ data.theme.factionNames[1] }}</span>
-        <span class="income-bar__rate">+{{ format(aiRate, 1) }} {{ resourceLabel }}/s</span>
+        <span class="income-bar__label">Protoss</span>
+        <span class="income-bar__rate">+{{ format(baseRate, 1) }} {{ resourceLabel }}/s</span>
         <span class="income-bar__balance">
           {{ format(ai, 0) }}
         </span>
@@ -86,12 +80,21 @@ function rowTooltip(row: IncomeUpgradeRow): string {
         <div class="upgrade-tile__title">
           {{ row.def.name }}
         </div>
-        <div class="upgrade-tile__effect">×{{ row.def.multiplier }}</div>
-        <div class="upgrade-tile__cost">
-          <template v-if="row.bought.value"> bought </template>
-          <template v-else> {{ format(row.cost.value, 0) }} {{ resourceLabel }} </template>
+        <div class="upgrade-tile__effect">
+          ×{{ row.def.multiplier }}
         </div>
-        <div v-if="!row.bought.value" class="upgrade-tile__roi">
+        <div class="upgrade-tile__cost">
+          <template v-if="row.bought.value">
+            bought
+          </template>
+          <template v-else>
+            {{ format(row.cost.value, 0) }} {{ resourceLabel }}
+          </template>
+        </div>
+        <div
+          v-if="!row.bought.value"
+          class="upgrade-tile__roi"
+        >
           pays {{ fmtSec(row.paybackSeconds.value) }} · catches
           {{ fmtSec(row.crossoverSeconds.value) }}
         </div>

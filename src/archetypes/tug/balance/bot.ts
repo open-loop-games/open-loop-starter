@@ -1,15 +1,14 @@
 import { type Analyzer, type Engine } from '@open-loop/engine';
 import { LaneKey, MatchKey } from '../modules';
-import { createOpponentBotModule } from '../modules/opponent-bot';
 import { createTugEngine } from '../boot';
-import { DEFAULT_TUG_DATA } from '../data';
-import { applyTugOverrides, type TugOverrides } from '../data/overrides';
+import type { TugBelievability } from '../data/types';
+import type { PersonaKey } from '../data/personality';
 import { createMatchDriverModule } from './match-driver';
 
 /**
- * Sim-engine harness for Tier-C balance probes + tuner. Owns:
+ * Sim-engine harness for balance probes + sweeps. Owns:
  *
- * 1. `buildTugSimEngine(overrides?)` — builds a started, bot-driven engine
+ * 1. `buildTugSimEngine(options?)` — builds a started, bot-driven engine
  *    instance with bilateral opponent bots + multi-match orchestration.
  * 2. `OutcomeCapture` + `createOutcomeAnalyzer` — per-run match-outcome
  *    capture, used by `runMatrixUntil`'s analyzer hook.
@@ -17,14 +16,14 @@ import { createMatchDriverModule } from './match-driver';
  * **Bilateral-symmetric bot pattern.** The production AI policy
  * (`createOpponentBotModule`, side-parameterized) is installed on BOTH
  * sides for sim. This collapses player-vs-bot policy asymmetry into
- * "production AI plays itself," so the only structural asymmetry knobs
- * left are the side-keyed bound modifiers (`aiIncomeMultiplier` etc.).
+ * "production AI plays itself," so the only structural asymmetry knob
+ * left is the per-side persona choice.
  *
  * **Sim matchup is chosen to exercise the design property, not to mirror
  * production.** Production runs human-vs-counter (no sim equivalent —
  * the sim has no human), so any "mirror production" framing for the sim
  * default is a category error. The signature probe
- * (`counter-strong-sensitivity`) measures matrix decisiveness, which
+ * (counter-strong-sensitivity) measures matrix decisiveness, which
  * requires a *concentrating* opponent for the counter persona to detect
  * dominance and fire counters. `counter`-vs-`greed` is the calibrated
  * pair: greed's `top-tier` picker concentrates composition on the
@@ -36,15 +35,36 @@ import { createMatchDriverModule } from './match-driver';
  * **Believability calibration applies independently** of matchup choice,
  * per `composition-cookbook/parameterized-personality.md` §
  * Believability-calibration discipline. It's a sim-discipline knob that
- * adds decision noise to the deterministic policy. Production data has
+ * adds decision noise to the deterministic policy. Production has
  * `believability: 0/0` (deterministic AI, predictable for the human
- * player); sim default is `0.05/0.15`.
+ * player); sim default is `0.20/0.25`.
  *
- * See `open-loop-engine/docs/candidate-primitives.md` § "Tier-C bilateral-
- * symmetric sim-bot pattern" for the candidate graduation entry.
+ * See `open-loop-engine/docs/candidate-primitives.md` § bilateral-
+ * symmetric sim-bot pattern for the candidate graduation entry.
  */
 
 let engineCounter = 0;
+
+const DEFAULT_SIM_BELIEVABILITY: TugBelievability = {
+  suboptimalityRate: 0.2,
+  cadenceJitterScale: 0.25,
+};
+
+export interface TugSimOptions {
+  /** Player-side persona. Default `'counter'`. */
+  player?: PersonaKey;
+  /** AI-side persona. Default `'greed'`. The counter-vs-greed pairing
+   *  exercises the matrix sharpness signature: greed concentrates
+   *  composition; counter fires against it. */
+  ai?: PersonaKey;
+  /** Believability calibration applied to BOTH sides. Default is the
+   *  sim-cookbook bundle (suboptimality 0.20, cadence jitter 0.25);
+   *  math-only probes pass `{ suboptimalityRate: 0, cadenceJitterScale: 0 }`
+   *  for determinism. Partial overrides fill from the default. */
+  believability?: Partial<TugBelievability>;
+  /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context. */
+  maxDeltaTime?: number;
+}
 
 /**
  * Build a started, sim-bot-driven engine for the Tug archetype.
@@ -57,66 +77,43 @@ let engineCounter = 0;
  * from `runUntil` / `runMatrixUntil`), and finally `match.start()` to
  * kick off match 1.
  *
- * **Sim default: `opponentPersona = { player: 'counter', ai: 'greed' }`.**
- * Counter-vs-greed: greed's `top-tier` picker concentrates composition
- * on the highest-cost affordable archetype; counter's matrix-aware
- * picker fires against it. Caller overrides win: pass
- * `{ balance: { opponentPersona: { player: 'mass', ai: 'greed' } } }`
- * to sweep alternate matchups.
- *
- * **Sim default: `believability = { suboptimalityRate: 0.20,
- * cadenceJitterScale: 0.25 }`.** Mid-cookbook range (suboptimality 0–40%,
- * cadence jitter implicit). High enough to produce dynamic match
- * outcomes that respond to design-parameter perturbations; low enough
- * to keep persona identity recognizable.
+ * **Sim default: `{ player: 'counter', ai: 'greed' }`.** Counter-vs-greed:
+ * greed's `top-tier` picker concentrates composition on the highest-cost
+ * affordable archetype; counter's matrix-aware picker fires against it.
  *
  * **Known limitation — SIGNATURE matchup needs balance work.** At the
- * current data balance, counter-vs-greed at default
- * `aiIncomeMultiplier = 1.0` is heavily AI-favored; at OL-711's
- * calibrated `0.711` it stalemates. There's no balanced range where
- * `strongCounter` sweep produces a smooth win-rate response. The
- * underlying data balance is filed as a follow-up — the procedural-
- * persona tester-seat agent (cookbook `procedural-personas.md`) is the
- * canonical balance-discovery agent shape. This leaf lands the
- * framework correctly; the SIGNATURE probe will report a flat curve
- * + null proposed value at current data, which IS the actionable
- * signal: "data balance dominates strongCounter sensitivity."
+ * current data balance, counter-vs-greed is heavily AI-favored; there's
+ * no balanced range where `strongCounter` sweep produces a smooth win-
+ * rate response. The underlying data balance is filed as a follow-up
+ * — the procedural-persona tester-seat agent (cookbook
+ * `procedural-personas.md`) is the canonical balance-discovery agent
+ * shape. This harness lands the framework correctly; the signature
+ * probe reports a flat curve + null proposed value at current data,
+ * which IS the actionable signal: "data balance dominates strongCounter
+ * sensitivity."
  *
  * The `createMatchDriverModule` handles match-2+ restarts; cumulative-arc
- * probes (beats 5, 7) work transparently inside a single `runMatrixUntil`
+ * probes (beats 5, 6) work transparently inside a single `runMatrixUntil`
  * cell.
  */
-export function buildTugSimEngine(
-  overrides?: TugOverrides,
-  options?: { maxDeltaTime?: number },
-): Engine {
+export function buildTugSimEngine(options?: TugSimOptions): Engine {
   const namespace = `tug-balance-${++engineCounter}`;
-  const mergedOverrides: TugOverrides = {
-    ...overrides,
-    balance: {
-      ...overrides?.balance,
-      opponentPersona: {
-        player: 'counter',
-        ai: 'greed',
-        ...overrides?.balance?.opponentPersona,
-      },
-      believability: {
-        suboptimalityRate: 0.2,
-        cadenceJitterScale: 0.25,
-        ...overrides?.balance?.believability,
-      },
-    },
+  const believability: TugBelievability = {
+    suboptimalityRate:
+      options?.believability?.suboptimalityRate ?? DEFAULT_SIM_BELIEVABILITY.suboptimalityRate,
+    cadenceJitterScale:
+      options?.believability?.cadenceJitterScale ?? DEFAULT_SIM_BELIEVABILITY.cadenceJitterScale,
   };
-  // Compute data once locally so the `'player'` opponent-bot module factory
-  // can close over it. `createTugEngine` re-applies the same overrides
-  // internally to build its own data instance — `applyTugOverrides` is a
-  // deep merge and idempotent under repeat application, so this is safe and
-  // negligibly more expensive than threading data through the boot factory.
-  const data = applyTugOverrides(DEFAULT_TUG_DATA, mergedOverrides);
-  const { engine } = createTugEngine(mergedOverrides, {
+  const playerPersona: PersonaKey = options?.player ?? 'counter';
+  const aiPersona: PersonaKey = options?.ai ?? 'greed';
+  const { engine } = createTugEngine({
     persistenceNamespace: namespace,
-    extraModules: [createOpponentBotModule(data, 'player'), createMatchDriverModule()],
+    extraModules: [createMatchDriverModule()],
     maxDeltaTime: options?.maxDeltaTime,
+    modules: {
+      player: { persona: playerPersona, believability },
+      ai: { persona: aiPersona, believability },
+    },
   });
   engine.selectMod('sci-fi-armada');
   engine.start();
@@ -142,10 +139,10 @@ export function buildTugSimEngine(
  * pre-reset outcome.
  *
  * `firstMatch*` fields snapshot the first match only — used by the
- * `ai-difficulty-symmetry` and `match-duration-bound` probes, which
- * terminate after match 1. `matchesPlayed` / `matchesWon` /
- * `totalCounterPivots` accumulate across all matches in the run — used
- * by counter-mastery / cross-match probes.
+ * match-duration probe, which terminates after match 1.
+ * `matchesPlayed` / `matchesWon` / `totalCounterPivots` accumulate
+ * across all matches in the run — used by counter-mastery / cross-match
+ * probes.
  */
 export interface OutcomeCapture {
   firstMatchEnded: boolean;
@@ -156,7 +153,7 @@ export interface OutcomeCapture {
   /** Per-side, per-archetype spawn counts during match 1. `archetypeId →
    *  count`. Side keys both populated; absent archetype ids read as 0
    *  via `?? 0` at consumer sites. Used by the per-archetype dominance
-   *  probe (OL-732) to compute composition share in winning matches. */
+   *  probe to compute composition share in winning matches. */
   firstMatchSpawnsByArchetype: Record<'player' | 'ai', Record<string, number>>;
   /** Per-side, per-archetype death counts during match 1. Mirror of spawns;
    *  death counts the side of the killed unit (i.e. `deaths.player.marine`
@@ -258,8 +255,8 @@ export function createOutcomeAnalyzer(capture: OutcomeCapture): Analyzer {
       // Per-archetype spawn / death counts. Flat metric keys
       // `tug-outcome.spawns.<side>.<archetypeId>` and `.deaths.<side>.<id>`
       // so `runMatrixUntil`'s aggregator averages them across seeds. The
-      // per-archetype-dominance probe (OL-732) reads these directly to
-      // compute the composition-share histogram per Cartesian cell.
+      // per-archetype-dominance probe reads these directly to compute the
+      // composition-share histogram per Cartesian cell.
       // Conditional emit: a winning-match gets a separate `.spawnsInWin`
       // bucket so the dominance aggregator can weight by win-only shares
       // (Direct Strike tier-list framing — pick_freq × win_rate). Losing

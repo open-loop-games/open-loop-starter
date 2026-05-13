@@ -10,7 +10,7 @@ import {
 } from 'reka-ui';
 import { useMatch } from '../../composables';
 import { useModule } from '@/composables/useModule';
-import { MetaKey, TugDataKey } from '../../modules';
+import { MetaKey } from '../../modules';
 
 /**
  * Match-end overlay. Sources its display state from `useMatch().lastMatchEnd`
@@ -23,15 +23,14 @@ import { MetaKey, TugDataKey } from '../../modules';
  */
 const match = useMatch();
 const meta = useModule(MetaKey);
-const data = useModule(TugDataKey);
 
 const payload = computed(() => match.lastMatchEnd.value);
 const visible = computed(() => payload.value !== null);
 
 const outcomeLabel = computed(() => {
   const o = payload.value?.outcome;
-  if (o === 'player-win') return `${data.theme.factionNames[0]} victory`;
-  if (o === 'ai-win') return `${data.theme.factionNames[1]} victory`;
+  if (o === 'player-win') return 'Terran victory';
+  if (o === 'ai-win') return 'Protoss victory';
   if (o === 'time-limit') return 'Time limit — match draw';
   return '';
 });
@@ -78,10 +77,7 @@ function restart(): void {
             <dd>{{ meta.maxCounterPivotsAnyMatch.value }}</dd>
           </div>
         </dl>
-        <AlertDialogAction
-          class="match-end__restart"
-          @click="restart"
-        >
+        <AlertDialogAction class="match-end__restart" @click="restart">
           Start next match
         </AlertDialogAction>
       </AlertDialogContent>

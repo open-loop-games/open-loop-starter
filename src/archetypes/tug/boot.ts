@@ -2,9 +2,8 @@ import { type App } from 'vue';
 import { type Engine, type EngineModule } from '@open-loop/engine';
 import { bootApp, bootEngine } from '@/boot';
 import TugAppRoot from './ui/TugAppRoot.vue';
-import { createTugModules } from './modules';
+import { createTugModules, type TugModulesOptions } from './modules';
 import { DEFAULT_TUG_DATA } from './data';
-import { applyTugOverrides, type TugOverrides } from './data/overrides';
 import type { TugData } from './data/types';
 
 const GAME_ID = 'tug-pilot';
@@ -26,6 +25,9 @@ export interface TugEngineOptions {
   extraModules?: EngineModule[];
   /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context. */
   maxDeltaTime?: number;
+  /** Per-side opponent-bot install options + meta-progression toggle. Sim
+   *  engines override; production uses defaults. */
+  modules?: TugModulesOptions;
 }
 
 /**
@@ -34,15 +36,12 @@ export interface TugEngineOptions {
  * AppRoot owns the resume sequence (mirrors Ambient's pattern: engine.start
  * → engine.load → match.start when no in-progress match is loaded).
  */
-export function createTugEngine(
-  overrides?: TugOverrides,
-  options?: TugEngineOptions,
-): {
+export function createTugEngine(options?: TugEngineOptions): {
   engine: Engine;
   data: TugData;
 } {
-  const data = applyTugOverrides(DEFAULT_TUG_DATA, overrides);
-  const modules = [...createTugModules(data), ...(options?.extraModules ?? [])];
+  const data = DEFAULT_TUG_DATA;
+  const modules = [...createTugModules(data, options?.modules), ...(options?.extraModules ?? [])];
   const engine = bootEngine({
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
@@ -67,8 +66,8 @@ export function createTugEngine(
  * mount('#app');
  * ```
  */
-export function createApp(overrides?: TugOverrides): TugBootResult {
-  const { engine, data } = createTugEngine(overrides);
+export function createApp(): TugBootResult {
+  const { engine, data } = createTugEngine();
   const { app, mount } = bootApp({
     root: TugAppRoot,
     engine,

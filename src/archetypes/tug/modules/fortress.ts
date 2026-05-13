@@ -65,11 +65,11 @@ export function createFortressModule(data: TugData): EngineModule {
       const hp: Record<Side, Resource<DecimalSource>> = {
         player: createResource<DecimalSource>(0, {
           id: 'fortress-hp-player',
-          displayName: `${data.theme.fortressName} (${data.theme.factionNames[0]})`,
+          displayName: 'Nexus (Terran)',
         }),
         ai: createResource<DecimalSource>(0, {
           id: 'fortress-hp-ai',
-          displayName: `${data.theme.fortressName} (${data.theme.factionNames[1]})`,
+          displayName: 'Nexus (Protoss)',
         }),
       };
 

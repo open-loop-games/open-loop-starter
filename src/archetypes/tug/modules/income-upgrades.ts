@@ -27,8 +27,7 @@ export function getIncomeUpgrades(side: Side): PurchasableCategory<IncomeUpgrade
  * Per-tier engine-side ROI metrics. Reactive against live cost (post-
  * tunable), live multiplier (post-tunable), and the side's
  * `incomeRateChain.apply(baseRate)` (which reflects already-bought prior
- * tiers via the chain's grant binds, plus AI-side scalars like
- * `aiIncomeMultiplier`).
+ * tiers via the chain's grant binds).
  *
  * Lives at module scope rather than on a composable because the per-def
  * tunable multiplier and the `baseRate` tunable are install-private —
@@ -47,7 +46,7 @@ export interface RoiMetrics {
   /** Eco-vs-rush crossover: total elapsed time (including save-up)
    *  until the eco-then-rush strategy reaches the same cumulative
    *  spendable as pure-rush. Equals `paybackSeconds × multiplier`.
-   *  The strategically meaningful break-even — answers OL-733's
+   *  The strategically meaningful break-even — answers the
    *  "macro vs rush" framing. `Infinity` in the same edge cases. */
   crossoverSeconds: ComputedRef<number>;
 }
@@ -56,13 +55,6 @@ export const IncomeUpgradeRoiKey: Record<Side, InjectionKey<Map<string, RoiMetri
   player: Symbol('tug/match/player/income-upgrade-roi') as InjectionKey<Map<string, RoiMetrics>>,
   ai: Symbol('tug/match/ai/income-upgrade-roi') as InjectionKey<Map<string, RoiMetrics>>,
 };
-
-// Income-upgrade ids whose `cost` / `multiplier` are registered with the
-// tuning registry. Mirrors `units.ts::TUNABLE_COST_IDS` — opt-in keeps the
-// leaf-6 bisection surface narrow and greppable. Add tier ids here AND
-// extend `TugTunableKey` in tuning.ts when graduating new bisection axes.
-const TUNABLE_COST_IDS = new Set<string>(['refinery-1']);
-const TUNABLE_MULTIPLIER_IDS = new Set<string>(['refinery-1']);
 
 /**
  * Per-side income-upgrade shop. Each tier binds a multiplicative modifier
@@ -76,6 +68,9 @@ const TUNABLE_MULTIPLIER_IDS = new Set<string>(['refinery-1']);
  * requirement-eval time, all tiers have registered. No `shopRef`
  * gymnastics needed; the closure captures the `incomeUpgrades` binding,
  * which is set by the time the closure runs.
+ *
+ * Per-tier `cost` and `multiplier` register as `tunable()` against the
+ * registry so balance probes can perturb them via `pushScope`.
  */
 export function createIncomeUpgradesSideModule(data: TugData, side: Side): EngineModule {
   return {
@@ -85,15 +80,11 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
       const registry = ctx.inject(TugTuningRegistryKey);
       const income = getIncome(side);
       const incomeRateChain = getIncomeRateChain(side);
-      // Same key as `income.ts:62` — `tunable()` uses `setDefault`, so this
-      // second call returns whatever the income module already registered
-      // rather than overwriting it. We need it here to compute live ROI
-      // metrics without re-plumbing module privates.
-      const baseRate = tunable<DecimalSource>(
-        registry,
-        'balance/baseIncomeRate',
-        () => data.balance.baseIncomeRate,
-      );
+      // Re-register the income module's baseRate tunable here so the ROI
+      // computed-refs can read it without re-plumbing income module privates.
+      // `tunable()` uses `setDefault`, so this returns the value the income
+      // module already registered rather than overwriting it.
+      const baseRate = tunable<DecimalSource>(registry, 'balance/baseIncomeRate', () => 8);
 
       const roiMap = new Map<string, RoiMetrics>();
 
@@ -104,18 +95,18 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
           const priorId = idx > 0 ? data.incomeUpgrades[idx - 1].id : null;
           const priorName = idx > 0 ? data.incomeUpgrades[idx - 1].name : null;
 
-          const cost = TUNABLE_COST_IDS.has(def.id)
-            ? tunable(registry, `income-upgrades/${def.id}/cost`, () => def.cost)
-            : def.cost;
-          const multiplier = TUNABLE_MULTIPLIER_IDS.has(def.id)
-            ? tunable(registry, `income-upgrades/${def.id}/multiplier`, () => def.multiplier)
-            : def.multiplier;
+          const cost = tunable(registry, `income-upgrades/${def.id}/cost`, () => def.cost);
+          const multiplier = tunable(
+            registry,
+            `income-upgrades/${def.id}/multiplier`,
+            () => def.multiplier,
+          );
 
           // Extra income per second the upgrade would add at current rate:
           // `currentRate × (multiplier − 1)`. `currentRate` evaluates the
-          // chain *now*, so already-bought prior tiers (and AI scalars) are
-          // already folded in. Returns 0 in degenerate cases so payback
-          // surfaces as Infinity below.
+          // chain *now*, so already-bought prior tiers are folded in.
+          // Returns 0 in degenerate cases so payback surfaces as Infinity
+          // below.
           const extraRatePerSec = computed<Decimal>(() => {
             const base = Decimal.fromValue(resolveComputable(baseRate));
             const currentRate = Decimal.fromValue(incomeRateChain.apply(base));

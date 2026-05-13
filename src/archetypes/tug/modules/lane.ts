@@ -15,8 +15,8 @@ import { LANE_LENGTH, SIDES, type Side, TugTuningRegistryKey } from './tuning';
 
 /** Engagement radius — opposing units within this distance acquire each
  *  other as engagement targets and trade combat damage each tick.
- *  Structural; if combat dynamics need retuning, that becomes a
- *  `data/balance.ts` field, not a hidden constant. */
+ *  Structural; if combat dynamics need retuning, this graduates to a
+ *  tunable surface in the registry. */
 const ENGAGE_RADIUS = 2;
 
 /** archetypeId sentinel for fortress UnitInstances. The fortress unit's

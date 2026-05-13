@@ -20,24 +20,25 @@ import { MatchKey } from '../modules';
  * the match-end summary modal. Only `buildTugSimEngine` adds this module.
  *
  * **Candidate primitive.** This pattern (sim-bot match driver) recurs in
- * any Tier-C archetype with multi-match cumulative-arc beats. See
- * `open-loop-engine/docs/candidate-primitives.md` § "Tier-C bilateral-
- * symmetric sim-bot pattern". TODO(expansion): graduate
+ * any adversarial-state archetype with multi-match cumulative-arc beats.
+ * See `open-loop-engine/docs/candidate-primitives.md` § bilateral-
+ * symmetric sim-bot pattern. TODO(expansion): graduate
  * `createMatchDriverModule({ matchKey })` once a second match-shaped
- * Tier-C archetype lands and the match-key shape converges.
+ * adversarial-state archetype lands and the match-key shape converges.
  *
  * **Persona-switch seam.** The between-match window inside the deferred-
  * tick block is the natural insertion point for opponent-persona rotation
- * across matches. Production holds a fixed AI persona for the session;
- * sim sets a per-engine pair via `buildTugSimEngine` overrides. When
- * auto-rotation lands (player-facing "rotate opponents per match" toggle,
- * or tuner sweeping persona pairs Cartesian within one engine), the
- * canonical composition per `parameterized-personality-extraction-sketch.md`
- * §3.2 is `createSequencer` with
- * `canRun: () => matchEnded.value ? 'now' : 'notNow'` plus
- * `createRoundRobinStrategy` as the `FillStrategy`. Selection-policy writes
- * a queued `PersonaKey` to that sequencer; the apply step mutates
- * `data.balance.opponentPersona[side]` here, before `match.start()`.
+ * across matches. Today persona is bound at module install
+ * (`createOpponentBotModule(data, side, { persona })`) — static for the
+ * engine's lifetime; sim engines vary by constructing a fresh engine per
+ * persona pair. When auto-rotation lands (player-facing "rotate opponents
+ * per match" toggle, or tuner sweeping persona pairs Cartesian within one
+ * engine), the canonical composition per
+ * `parameterized-personality-extraction-sketch.md` §3.2 is
+ * `createSequencer` with `canRun: () => matchEnded.value ? 'now' : 'notNow'`
+ * plus `createRoundRobinStrategy` as the `FillStrategy`. That lands as a
+ * follow-up; the opponent-bot module would expose a runtime persona setter
+ * for the apply step to mutate before `match.start()`.
  */
 export function createMatchDriverModule(): EngineModule {
   return {

@@ -15,8 +15,8 @@ const fortressMax = computed(() => Number(data.fortress.hp));
 const playerHp = computed(() => Number(match.fortressHp.player.value));
 const aiHp = computed(() => Number(match.fortressHp.ai.value));
 
-const playerLabel = computed(() => `${data.theme.factionNames[0]} ${data.theme.fortressName}`);
-const aiLabel = computed(() => `${data.theme.factionNames[1]} ${data.theme.fortressName}`);
+const playerLabel = 'Terran Nexus';
+const aiLabel = 'Protoss Nexus';
 </script>
 
 <template>

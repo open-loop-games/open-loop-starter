@@ -20,18 +20,26 @@ export const SIDES: readonly Side[] = ['player', 'ai'];
 export const LANE_LENGTH = 100;
 
 /**
- * The keys leaf 6's Tier-C tuner perturbs via `pushScope`. Add new keys here
- * AND register them at the consumer site via `tunable(registry, key, ...)`.
+ * Keys registered against the tug tuning registry. Solvers and balance
+ * probes perturb these via `pushScope`; the engine pattern lives at
+ * `open-loop-engine/src/core/override-registry.ts` and surfaces through
+ * the picker (`open-loop-engine/docs/api/harness.md` § Picker).
+ *
+ * Namespaces:
+ *   - `balance/*`            — global balance scalars (income rate)
+ *   - `fortress/*`           — fortress hp
+ *   - `units/<id>/cost`      — per-unit purchase cost
+ *   - `income-upgrades/<id>/*` — per-tier cost + multiplier
+ *   - `counter-matrix/*`     — matrix sharpness scalars
+ *
  * Grep for `tunable(` to audit the surface.
  */
 export type TugTunableKey =
   | 'balance/baseIncomeRate'
-  | 'balance/aiIncomeMultiplier'
   | 'fortress/hp'
-  | 'units/marine/cost'
-  | 'units/siege-tank/cost'
-  | 'income-upgrades/refinery-1/cost'
-  | 'income-upgrades/refinery-1/multiplier'
+  | `units/${string}/cost`
+  | `income-upgrades/${string}/cost`
+  | `income-upgrades/${string}/multiplier`
   | 'counter-matrix/strongCounter'
   | 'counter-matrix/weakCounter';
 

@@ -174,9 +174,9 @@ export function createMatchModule(data: TugData): EngineModule {
       // Counter-pivot inference. Detection is intentionally placeholder —
       // simple "buy strong-counters AI's current dominant archetype"
       // instantaneous check, no time window. Window + dominance threshold
-      // are leaf-6 tunables; revisit when the Tier-C bisect surfaces a real
-      // shape. unitsSentByPlayer also accumulates here so the meta-off arc
-      // predicate has a consistent counter source.
+      // are tunable surfaces; revisit when the methodology #3 sweep
+      // surfaces a real shape. unitsSentByPlayer also accumulates here so
+      // the meta-off arc predicate has a consistent counter source.
       const idxOf = new Map<string, number>();
       for (let i = 0; i < data.units.length; i++) idxOf.set(data.units[i].id, i);
 
@@ -232,8 +232,9 @@ export function createMatchModule(data: TugData): EngineModule {
           return;
         }
         matchTimeElapsed.value += dt;
-        const limitMin = data.balance.matchTimeLimitMinutes;
-        if (limitMin > 0 && matchTimeElapsed.value >= limitMin * 60) {
+        // 30-min match limit. Direct-Strike-typical; structural skeleton
+        // baseline, not a balance lever.
+        if (matchTimeElapsed.value >= 30 * 60) {
           end('time-limit');
         }
       });

@@ -2,7 +2,6 @@ import {
   Decimal,
   addResource,
   createModifierChain,
-  createMultiplicativeModifier,
   createResource,
   tunable,
   type DecimalSource,
@@ -10,8 +9,13 @@ import {
   type ModifierChain,
   type Resource,
 } from '@open-loop/engine';
-import type { TugData } from '../data/types';
 import { type Side, TugTuningRegistryKey } from './tuning';
+
+/** Per-side per-second mineral accrual at default income tier. Bound to the
+ *  `balance/baseIncomeRate` tunable key so balance probes can perturb it
+ *  via `pushScope`. Both sides bind the same key (symmetric income), and
+ *  `tunable()` is built on `setDefault` so the second registration no-ops. */
+const BASE_INCOME_RATE: DecimalSource = 8;
 
 // Module-scope per-side handles set during install. Sibling modules +
 // composables + UI import the typed accessors below; engine self-publishes
@@ -28,7 +32,7 @@ export function getIncomeRateChain(side: Side): ModifierChain {
   return incomeRateChainBySide[side];
 }
 
-export function createIncomeSideModule(data: TugData, side: Side): EngineModule {
+export function createIncomeSideModule(side: Side): EngineModule {
   return {
     id: `tug/match/${side}/income`,
     dependencies: ['tug/tuning'],
@@ -37,38 +41,23 @@ export function createIncomeSideModule(data: TugData, side: Side): EngineModule 
 
       const income = createResource<DecimalSource>(0, {
         id: `tug/match/${side}/income`,
-        displayName: data.theme.resourceName.plural,
+        displayName: 'minerals',
         precision: 0,
       });
 
       // Both sides register `balance/baseIncomeRate` against the shared
       // registry — `tunable()` is built on `setDefault`, which no-ops on the
       // second call, so the first install wins and both sides read the same
-      // (scope-perturbable) value. The chain composes the rest: AI side
-      // binds `aiIncomeMultiplier` as a multiplicative modifier; income-
+      // (scope-perturbable) value. The chain composes the rest: income-
       // upgrades binds per-tier multipliers per-side. Tick reads
       // `chain.apply(baseRate.value) * dt` for the per-tick accrual.
       const baseRate = tunable<DecimalSource>(
         registry,
         'balance/baseIncomeRate',
-        () => data.balance.baseIncomeRate,
+        () => BASE_INCOME_RATE,
       );
 
       const incomeRateChain = createModifierChain(`tug/match/${side}/income-rate`);
-
-      if (side === 'ai') {
-        const aiMult = tunable<DecimalSource>(
-          registry,
-          'balance/aiIncomeMultiplier',
-          () => data.balance.aiIncomeMultiplier,
-        );
-        incomeRateChain.bind({
-          modifier: createMultiplicativeModifier({
-            multiplier: aiMult,
-            description: 'AI income multiplier',
-          }),
-        });
-      }
 
       ctx.onTick((dt) => {
         const rate = incomeRateChain.apply(baseRate.value);

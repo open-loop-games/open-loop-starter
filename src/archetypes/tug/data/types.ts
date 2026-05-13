@@ -1,15 +1,13 @@
 import type { DecimalSource } from '@open-loop/engine';
-import type { PersonaKey } from './personality';
 
-// ─── Skeleton ───
 // 6 unit archetypes; 6×6 counter matrix; 3 income upgrade tiers; 2 spendable
 // abilities (artillery + reinforcement); per-side fortress HP; 30 min match
 // time limit. These counts are the skeleton baseline; editing any of them
 // forks the skeleton, not tunes it.
 //
 // `archetypeTag` on UnitDef is the engineering tag used to construct the
-// counter matrix's rock-paper-scissors+2-axis structure (see § 8). Runtime
-// matrix lookup is index-keyed: leaf 3 builds a `Map<id, idx>` from the
+// counter matrix's rock-paper-scissors+2-axis structure. Runtime matrix
+// lookup is index-keyed: `lane.ts` builds a `Map<id, idx>` from the
 // `units: UnitDef[]` order at module construction; the order in `units.ts`
 // is therefore load-bearing and must match `counterMatrix` row/column order.
 
@@ -91,8 +89,6 @@ export interface AbilityDef {
 /** `counterMatrix[attackerIdx][defenderIdx]` = damage multiplier (data-table lookup, not chain). */
 export type CounterMatrix = number[][];
 
-// ─── Balance ───
-
 /**
  * Believability calibration bundle. Per `composition-cookbook/
  * parameterized-personality.md` § Believability-calibration discipline:
@@ -104,58 +100,11 @@ export type CounterMatrix = number[][];
  */
 export interface TugBelievability {
   /** Probability per decision of picking second-best instead of optimal.
-   *  Cookbook range 0–40%; sim default 0.05. */
+   *  Cookbook range 0–40%; sim default 0.20. */
   suboptimalityRate: number;
   /** ±fraction of multiplicative noise on the cadence threshold. 0 = no
-   *  jitter; sim default 0.15 (±15% of the persona-scaled cadence). */
+   *  jitter; sim default 0.25 (±25% of the persona-scaled cadence). */
   cadenceJitterScale: number;
-}
-
-export interface TugBalance {
-  /** Per-side per-second mineral accrual at default income tier. */
-  baseIncomeRate: DecimalSource;
-  /** 0 = no time limit (Direct Strike); >0 = score resolution at limit. */
-  matchTimeLimitMinutes: number;
-  /** 1.0 = symmetric. AI-quirk knob (one-side throughput tax), not a
-   *  balance lever; reserved for difficulty-dial work that requires
-   *  playtest data. */
-  aiIncomeMultiplier: number;
-  /** Baseline seconds between bot spend attempts; per-persona
-   *  `cadenceMultiplier` scales this at decision time. */
-  aiSendCadenceSec: number;
-  /** Cross-match meta-progression layer (faction unlocks, ladder). */
-  metaProgressionEnabled: boolean;
-  /** Off-map spendable abilities (artillery, reinforcement). */
-  spendableAbilitiesEnabled: boolean;
-  /** 'pure-routing' (default) = Direct Strike; 'with-placement-grid' = Legion TD 2 hybrid. */
-  spatialMode: 'pure-routing' | 'with-placement-grid';
-  /** 1 = corpus-typical Direct Strike shape; 2–3 = Warfare 1944 flanks. */
-  laneCount: number;
-  /** Active opponent-bot persona per side. Production reads only `ai`;
-   *  the `player` slot exists for sim/balance bilateral runs. PvP mode is
-   *  expressed by not installing the bot module, not by a sentinel value. */
-  opponentPersona: { player: PersonaKey; ai: PersonaKey };
-  /** Calibration constraint on bot decision execution; see
-   *  {@link TugBelievability}. Distinct from `opponentPersona` because the
-   *  tuning timelines differ (player perception research vs. balance
-   *  metrics). */
-  believability: TugBelievability;
-  matchMode: 'pvp' | 'pve' | 'campaign';
-  /** Length of the unit roster; matrix is `unitArchetypeCount × unitArchetypeCount`. */
-  unitArchetypeCount: number;
-  /** Length of `incomeUpgrades`. */
-  incomeUpgradeTiers: number;
-}
-
-// ─── Costume ───
-// Theme C SciFi Armada bake; see units.ts and counter-matrix.ts for the
-// per-entry costume strings. Faction labels live as a top-level field for
-// UI consumers; modules read them off `TugData.theme`.
-
-export interface TugTheme {
-  resourceName: { singular: string; plural: string };
-  factionNames: [string, string];
-  fortressName: string;
 }
 
 /**
@@ -183,6 +132,4 @@ export interface TugData {
   abilities: AbilityDef[];
   counterMatrix: CounterMatrix;
   fortress: FortressDef;
-  balance: TugBalance;
-  theme: TugTheme;
 }
