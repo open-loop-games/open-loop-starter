@@ -18,7 +18,7 @@
  *   pnpm exec vite-node src/archetypes/producer/balance/verify.ts
  */
 
-import { Decimal, runUntil, type Engine } from 'open-loop-engine';
+import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { createProducerEngine, getBuildings, getPrimaryResource, getUpgrades } from '..';
 import { PRODUCER_BALANCE } from '..';
 import { arcWaypoints, strictTierOrderSchedule, type ArcWaypoint, type ScheduleStep } from './spec';

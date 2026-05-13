@@ -5,7 +5,7 @@
   pending purchase. Bakery-themed parchment surface.
 -->
 <script setup lang="ts">
-import { type DecimalSource } from 'open-loop-engine';
+import { type DecimalSource } from '@open-loop/engine';
 import RichTooltip from '@/ui/components/RichTooltip.vue';
 import ChainBreakdown from '@/ui/components/ChainBreakdown.vue';
 import { useFormatting } from '@/composables/useFormatting';

@@ -37,7 +37,7 @@ import {
   type GameStateAccessor,
   type GameStateMutator,
   type GateRuntime,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import {
   CONTINUOUS_PRODUCER_IDS,
   createProducerEngine,

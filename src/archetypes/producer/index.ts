@@ -26,10 +26,13 @@ export { applyProducerOverrides, type ProducerOverrides } from './data/overrides
 export {
   ProducerTuningRegistryKey,
   createProducerModules,
-  getAchievements,
   getBuildings,
   getClickCount,
   getPrimaryResource,
   getUpgrades,
+  getAchievements,
+  AutobuyerMasterToggleKey,
+  AutobuyerRegistryKey,
+  type AutobuyerSpec,
   type ProducerInstanceState,
 } from './modules';

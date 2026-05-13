@@ -15,7 +15,7 @@
  * gate.
  */
 
-import { runUntil } from 'open-loop-engine';
+import { runUntil } from '@open-loop/engine';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { buildProducerSimEngine } from './bot';
 import { arcWaypointsBotPolicy } from './predict-bot-policy';

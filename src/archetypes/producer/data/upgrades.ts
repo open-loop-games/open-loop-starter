@@ -1,135 +1,205 @@
+// ─── Upgrades ────────────────────────────────────────────────────────────────
+// Spec:   archetypes/producer.md § 5 — Upgrades / Purchasables
+// Sources:
+//   - `Game.MakeTiered` / `Game.TieredUpgrade` helpers: `main.js:10145–10155`.
+//     Non-cursor tier-N cost = building.basePrice × `Game.Tiers[tier].price`;
+//     ×2 multiplier wired into building rate function on purchase.
+//   - Cursor tier block: `main.js:10236–10238` (Reinforced index finger,
+//     Carpal tunnel prevention cream, Ambidextrous) — costs hand-set in
+//     canonical (100 / 500 / 10000), not derived from basePrice formula.
+//   - Thousand fingers cross-building series: `main.js:10239–10243`
+//     (Thousand / Million / Billion / Trillion / Quadrillion fingers).
+//     Per-tier cost hand-set; `getStrThousandFingersGain(mult)` describes
+//     the per-non-cursor-building flat bonus.
+//   - Per-building tier upgrade names: `main.js:10246–10914` (Grandma
+//     tier 1-3 at :10248-10250, Farm at :10252-10254, etc.).
+//
+// First-arc upgrade scope landed here:
+//   - 3 cursor tier upgrades (binding to ['click', 'cursor'])
+//   - 9 non-cursor buildings × 3 tiers = 27 tiered ×2 upgrades
+//     (Grandma → Alchemy lab; later-building tiers + tier-4+ defer to a
+//     later integration leaf when their owned-count unlock gates land)
+//   - 1 Thousand fingers cross-building bonus entry (enough for demo
+//     arc beat 5 "First global bonus upgrade fires"; Million through
+//     Septillion fingers gated by cursor-count thresholds — extends with
+//     the achievement-unlock pass at leaf 4)
+//
+// Canonical tier-cost ratios (from `Game.Tiers[tier].price`):
+//   tier 1 ×10, tier 2 ×100, tier 3 ×500.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import type { UpgradeDef } from './types';
-import {
-  PRODUCERS,
-  PRODUCER_BALANCE,
-  CONTINUOUS_PRODUCER_IDS,
-  CLICK_PRODUCER_ID,
-} from './producers';
 
-// ─── Balance ───────────────────────────────────────────────────────────────
-// Per-producer upgrade costs scale with the producer's baseCost × cost-multiplier.
-// baseCost is derived from PRODUCERS (single source of truth) so workbench
-// perturbations of producer cost flow through to upgrade cost automatically.
-// Each tier has its own rate multiplier — tier-ii is ×3 (the "big upgrade"
-// rung), the others ×2.
-//
-// Tier-i's multiplier lives in PRODUCER_BALANCE.tier1UpgradeMultiplier — it's
-// the balance-solver's knob for beat-4. Runtime scope-push retunes it via
-// `tunable('balance/tier1UpgradeMultiplier', ...)` inside
-// `modules/upgrades.ts`; the static cost here is the default / data-file view.
-//
-// Tiers in-arc: i, ii, iia. Tier-iii is post-arc.
+const TIER_COST_RATIOS: Record<number, number> = {
+  1: 10,
+  2: 100,
+  3: 500,
+};
 
-const PER_PRODUCER_TIERS = [
-  { suffix: 'i', costMul: Number(PRODUCER_BALANCE.tier1UpgradeMultiplier), rateMul: 2 },
-  { suffix: 'ii', costMul: 2000, rateMul: 3 },
-  { suffix: 'iia', costMul: 20_000, rateMul: 2 },
-  { suffix: 'iii', costMul: 200_000, rateMul: 2 },
-];
-
-// ─── Costume + Skeleton ────────────────────────────────────────────────────
-// 28 per-producer upgrades (4 tiers × 7 producers) + 8 global upgrades.
-// Top-producer rateChain ceiling with full in-arc set:
-//   per-producer (i+ii+iia) = 2 × 3 × 2 = 12×
-//   globals on production   = 2 × 3 × 4 × 4 × 5 = 480×
-//   milestones (bonus 5, 3 tiers fired at count 25) = 5³ = 125×
-//   achievements            ≈ 1.5× (partial set in-arc)
-//   total ≈ 1.08M× — matches beat-7's 1e6× signature.
-
-function buildPerProducerUpgrades(): UpgradeDef[] {
-  const upgrades: UpgradeDef[] = [];
-  for (const p of PRODUCERS) {
-    if (p.trigger !== 'continuous' || !p.purchase) continue;
-    const baseCost = Number(p.purchase.baseCost);
-    for (const { suffix, costMul, rateMul } of PER_PRODUCER_TIERS) {
-      upgrades.push({
-        id: `${p.id}-boost-${suffix}`,
-        name: `${p.name} Boost ${suffix.toUpperCase()}`,
-        description: `${p.name} production ×${rateMul}`,
-        cost: baseCost * costMul,
-        targetProducerId: p.id,
-        multiplier: rateMul,
-      });
-    }
-  }
-  return upgrades;
+interface TierUpgradeRow {
+  buildingId: string;
+  buildingBasePrice: number;
+  tiers: { tier: 1 | 2 | 3; name: string }[];
 }
 
-const PER_PRODUCER_UPGRADES: UpgradeDef[] = buildPerProducerUpgrades();
-
-const GLOBAL_UPGRADES: UpgradeDef[] = [
-  // Click ladder — each rung ×2 click yield. Not on production chain.
+const TIER_UPGRADES: TierUpgradeRow[] = [
   {
-    id: 'click-x2',
-    name: 'Golden Whisk',
-    description: 'Click yield ×2',
-    cost: 100,
-    targetProducerId: CLICK_PRODUCER_ID,
-    multiplier: 2,
+    buildingId: 'grandma',
+    buildingBasePrice: 100,
+    tiers: [
+      { tier: 1, name: 'Forwards from grandma' },
+      { tier: 2, name: 'Steel-plated rolling pins' },
+      { tier: 3, name: 'Lubricated dentures' },
+    ],
   },
   {
-    id: 'click-x4',
-    name: 'Silver Tray',
-    description: 'Click yield ×2',
-    cost: 10_000,
-    targetProducerId: CLICK_PRODUCER_ID,
-    multiplier: 2,
+    buildingId: 'farm',
+    buildingBasePrice: 1_100,
+    tiers: [
+      { tier: 1, name: 'Cheap hoes' },
+      { tier: 2, name: 'Fertilizer' },
+      { tier: 3, name: 'Cookie trees' },
+    ],
   },
   {
-    id: 'click-x8',
-    name: 'Obsidian Rolling Pin',
-    description: 'Click yield ×2',
-    cost: 1_000_000,
-    targetProducerId: CLICK_PRODUCER_ID,
-    multiplier: 2,
-  },
-  // Global-production ladder. Rate multiplier grows with cost — late rungs
-  // are the archetype-signature big compounding moments. Cumulative factor
-  // on top producer: 2 × 3 × 4 × 4 × 5 = 480×. Suffix on id is cumulative.
-  {
-    id: 'global-x2',
-    name: 'Family Recipe',
-    description: 'All production ×2',
-    cost: 100_000,
-    targetProducerId: null,
-    multiplier: 2,
+    buildingId: 'mine',
+    buildingBasePrice: 12_000,
+    tiers: [
+      { tier: 1, name: 'Sugar gas' },
+      { tier: 2, name: 'Megadrill' },
+      { tier: 3, name: 'Ultradrill' },
+    ],
   },
   {
-    id: 'global-x6',
-    name: 'Heirloom Oven',
-    description: 'All production ×3',
-    cost: 10_000_000,
-    targetProducerId: null,
-    multiplier: 3,
+    buildingId: 'factory',
+    buildingBasePrice: 130_000,
+    tiers: [
+      { tier: 1, name: 'Sturdier conveyor belts' },
+      { tier: 2, name: 'Child labor' },
+      { tier: 3, name: 'Sweatshop' },
+    ],
   },
   {
-    id: 'global-x24',
-    name: 'Eternal Hearth',
-    description: 'All production ×4',
-    cost: 1_000_000_000,
-    targetProducerId: null,
-    multiplier: 4,
+    buildingId: 'bank',
+    buildingBasePrice: 1_400_000,
+    tiers: [
+      { tier: 1, name: 'Taller tellers' },
+      { tier: 2, name: 'Scissor-resistant credit cards' },
+      { tier: 3, name: 'Acid-proof vaults' },
+    ],
   },
   {
-    id: 'global-x96',
-    name: 'Celestial Dough',
-    description: 'All production ×4',
-    cost: 100_000_000_000,
-    targetProducerId: null,
-    multiplier: 4,
+    buildingId: 'temple',
+    buildingBasePrice: 20_000_000,
+    tiers: [
+      { tier: 1, name: 'Golden idols' },
+      { tier: 2, name: 'Sacrifices' },
+      { tier: 3, name: 'Delicious blessing' },
+    ],
   },
   {
-    id: 'global-x480',
-    name: 'Cosmic Yeast',
-    description: 'All production ×5',
-    cost: 100_000_000_000_000,
-    targetProducerId: null,
-    multiplier: 5,
+    buildingId: 'wizard-tower',
+    buildingBasePrice: 330_000_000,
+    tiers: [
+      { tier: 1, name: 'Pointier hats' },
+      { tier: 2, name: 'Beardlier beards' },
+      { tier: 3, name: 'Ancient grimoires' },
+    ],
+  },
+  {
+    buildingId: 'shipment',
+    buildingBasePrice: 5_100_000_000,
+    tiers: [
+      { tier: 1, name: 'Vanilla nebulae' },
+      { tier: 2, name: 'Wormholes' },
+      { tier: 3, name: 'Frequent flyer' },
+    ],
+  },
+  {
+    buildingId: 'alchemy-lab',
+    buildingBasePrice: 75_000_000_000,
+    tiers: [
+      { tier: 1, name: 'Antimony' },
+      { tier: 2, name: 'Essence of dough' },
+      { tier: 3, name: 'True chocolate' },
+    ],
   },
 ];
 
-export const UPGRADES: UpgradeDef[] = [...PER_PRODUCER_UPGRADES, ...GLOBAL_UPGRADES];
+function tieredUpgrade(
+  buildingId: string,
+  buildingBasePrice: number,
+  tier: 1 | 2 | 3,
+  name: string,
+): UpgradeDef {
+  return {
+    id: `${buildingId}-tier-${tier}`,
+    name,
+    description: `${capitalize(buildingId)}s are twice as efficient.`,
+    cost: buildingBasePrice * TIER_COST_RATIOS[tier],
+    kind: 'multiplier',
+    targetProducerId: buildingId,
+    multiplier: 2,
+  };
+}
 
-/** T1 per-producer upgrades (first rung per producer) — used by the
- *  "all tier-1 upgrades bought" hidden achievement. */
-export const TIER1_UPGRADE_IDS: string[] = CONTINUOUS_PRODUCER_IDS.map((id) => `${id}-boost-i`);
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ');
+}
+
+const CURSOR_TIER_UPGRADES: UpgradeDef[] = [
+  {
+    id: 'cursor-tier-1',
+    name: 'Reinforced index finger',
+    description: 'The mouse and cursors are twice as efficient.',
+    cost: 100,
+    kind: 'multiplier',
+    targetProducerId: ['click', 'cursor'],
+    multiplier: 2,
+  },
+  {
+    id: 'cursor-tier-2',
+    name: 'Carpal tunnel prevention cream',
+    description: 'The mouse and cursors are twice as efficient.',
+    cost: 500,
+    kind: 'multiplier',
+    targetProducerId: ['click', 'cursor'],
+    multiplier: 2,
+  },
+  {
+    id: 'cursor-tier-3',
+    name: 'Ambidextrous',
+    description: 'The mouse and cursors are twice as efficient.',
+    cost: 10_000,
+    kind: 'multiplier',
+    targetProducerId: ['click', 'cursor'],
+    multiplier: 2,
+  },
+];
+
+const THOUSAND_FINGERS: UpgradeDef = {
+  id: 'thousand-fingers',
+  name: 'Thousand fingers',
+  description: 'The mouse and cursors gain +0.1 cookies for each non-cursor building owned.',
+  cost: 100_000,
+  kind: 'cross-building-click-bonus',
+  perNonCursorBuilding: 0.1,
+};
+
+export const UPGRADES: UpgradeDef[] = [
+  ...CURSOR_TIER_UPGRADES,
+  ...TIER_UPGRADES.flatMap((row) =>
+    row.tiers.map(({ tier, name }) =>
+      tieredUpgrade(row.buildingId, row.buildingBasePrice, tier, name),
+    ),
+  ),
+  THOUSAND_FINGERS,
+];
+
+/** Tier-1 upgrade ids (fork-API surface for "cheapest path through the
+ *  upgrade ladder"). Includes the cursor's tier-1 and every non-cursor
+ *  building's tier-1. */
+export const TIER1_UPGRADE_IDS: string[] = [
+  'cursor-tier-1',
+  ...TIER_UPGRADES.map((row) => `${row.buildingId}-tier-1`),
+];

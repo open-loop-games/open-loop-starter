@@ -1,27 +1,31 @@
 import { computed } from 'vue';
-import type { ComputedRef } from 'vue';
 import {
   Decimal,
   createPurchasableCategory,
   createCostRequirement,
   tunable,
-  type Computable,
-  type DecimalSource,
   type EngineModule,
   type Grant,
   type ModifierChain,
-  type OverrideRegistry,
   type ProducerCategory,
   type PurchasableCategory,
-} from 'open-loop-engine';
-import type { ProducerData, ProducerDef, UpgradeDef } from '../data/types';
+} from '@open-loop/engine';
+import type {
+  CrossBuildingClickBonusUpgradeDef,
+  MultiplierUpgradeDef,
+  ProducerData,
+  ProducerDef,
+  UpgradeDef,
+} from '../data/types';
+import { CLICK_PRODUCER_ID } from '../data/producers';
 import {
   ProducerTuningRegistryKey,
   getBuildings,
   getPrimaryResource,
   type ProducerInstanceState,
-  type ProducerTunables,
 } from './producers';
+
+type Buildings = ProducerCategory<ProducerDef, ProducerInstanceState>;
 
 let upgrades: PurchasableCategory<UpgradeDef>;
 
@@ -38,68 +42,91 @@ export function createUpgradesModule(data: ProducerData): EngineModule {
       const primary = getPrimaryResource();
       const tuningRegistry = ctx.inject(ProducerTuningRegistryKey);
 
-      const tier1Multiplier = tunable(
+      // Wired through tunable() so balance scripts can retune the ×2
+      // tiered-multiplier headline without rewriting every upgrade row.
+      tunable(
         tuningRegistry,
-        'balance/tier1UpgradeMultiplier',
-        () => data.balance.tier1UpgradeMultiplier,
+        'balance/tieredUpgradeMultiplier',
+        () => data.balance.tieredUpgradeMultiplier,
       );
 
       upgrades = createPurchasableCategory<UpgradeDef>({
         id: 'producer/upgrades',
-        mapPurchasable: (def) => {
-          const chain = resolveUpgradeTarget(def, buildings);
-          const grants: Grant[] = [{ chain, mult: def.multiplier, description: def.name }];
-          return {
-            display: { title: def.name, description: def.description },
-            requirements: createCostRequirement({
-              resource: primary,
-              cost: resolveUpgradeCost(def, data, tuningRegistry, tier1Multiplier),
-            }),
-            limit: 1,
-            grants,
-          };
-        },
+        mapPurchasable: (def) => ({
+          display: { title: def.name, description: def.description },
+          requirements: createCostRequirement({
+            resource: primary,
+            cost: def.cost,
+          }),
+          limit: 1,
+          grants: resolveGrants(def, buildings),
+        }),
       });
       upgrades.register(data.upgrades);
     },
   };
 }
 
-// Tier-i upgrade cost is `producer.baseCost × balance.tier1UpgradeMultiplier`.
-// Routing through a computed against the tunables lets the balance solver
-// retune either axis via `pushScope` without mutating data or re-baking
-// upgrade rows.
-function resolveUpgradeCost(
-  def: UpgradeDef,
-  data: ProducerData,
-  registry: OverrideRegistry<ProducerTunables>,
-  tier1Multiplier: ComputedRef<DecimalSource>,
-): Computable<DecimalSource> {
-  if (!def.id.endsWith('-boost-i')) return def.cost;
-  const producerId = def.id.slice(0, -'-boost-i'.length);
-  const producer = data.producers.find((p) => p.id === producerId);
-  if (!producer?.purchase) return def.cost;
-  const baseCostKey = `producers/${producerId}/purchase/baseCost` as keyof ProducerTunables;
-  return computed(() => {
-    const baseCost = registry.has(baseCostKey)
-      ? registry.get(baseCostKey)()
-      : producer.purchase!.baseCost;
-    return Decimal.mul(baseCost, tier1Multiplier.value);
-  });
+function resolveGrants(def: UpgradeDef, buildings: Buildings): Grant[] {
+  switch (def.kind) {
+    case 'multiplier':
+      return resolveMultiplierGrants(def, buildings);
+    case 'cross-building-click-bonus':
+      return resolveCrossBuildingClickBonusGrants(def, buildings);
+  }
 }
 
-// `null` → all rate chains (headline). Any other id (including the click
-// producer) routes to that producer's rate chain.
-function resolveUpgradeTarget(
-  def: UpgradeDef,
-  buildings: ProducerCategory<ProducerDef, ProducerInstanceState>,
+function resolveMultiplierGrants(def: MultiplierUpgradeDef, buildings: Buildings): Grant[] {
+  const chains = resolveChains(def.targetProducerId, buildings);
+  return [{ chain: chains, mult: def.multiplier, description: def.name }];
+}
+
+// `null` → headline (every producer's rate chain). `string` → that
+// producer's chain. `string[]` → chains for each id; canonical case is
+// cursor tier upgrades binding to both 'click' and 'cursor'.
+function resolveChains(
+  target: MultiplierUpgradeDef['targetProducerId'],
+  buildings: Buildings,
 ): ModifierChain | ModifierChain[] {
-  if (def.targetProducerId === null) {
+  if (target === null) {
     return buildings.getAll().map((entry) => entry.producer.rateChain);
   }
-  const producer = buildings.getProducer(def.targetProducerId);
-  if (!producer) {
-    throw new Error(`Upgrade "${def.id}" targets unknown producer "${def.targetProducerId}"`);
+  const ids = Array.isArray(target) ? target : [target];
+  const chains = ids.map((id) => {
+    const producer = buildings.getProducer(id);
+    if (!producer) {
+      throw new Error(`Upgrade targets unknown producer "${id}"`);
+    }
+    return producer.rateChain;
+  });
+  return chains.length === 1 ? chains[0] : chains;
+}
+
+// Thousand fingers series: additive bind on the click producer's rate
+// chain, contributing `perNonCursorBuilding × non-cursor-count`. The
+// non-cursor count excludes both the manual click producer and the
+// cursor building (canonical "non-cursor buildings" reading).
+function resolveCrossBuildingClickBonusGrants(
+  def: CrossBuildingClickBonusUpgradeDef,
+  buildings: Buildings,
+): Grant[] {
+  const clickProducer = buildings.getProducer(CLICK_PRODUCER_ID);
+  if (!clickProducer) {
+    throw new Error(`Upgrade "${def.id}" requires the click producer to exist`);
   }
-  return producer.rateChain;
+  const nonCursorCount = computed(() => {
+    let count: Decimal = Decimal.dZero;
+    for (const entry of buildings.getAll()) {
+      if (entry.def.id === CLICK_PRODUCER_ID || entry.def.id === 'cursor') continue;
+      count = count.add(entry.producer.count.value);
+    }
+    return count;
+  });
+  return [
+    {
+      chain: clickProducer.rateChain,
+      add: computed(() => Decimal.mul(def.perNonCursorBuilding, nonCursorCount.value)),
+      description: def.name,
+    },
+  ];
 }

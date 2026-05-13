@@ -1,187 +1,153 @@
-import type { Gate } from 'open-loop-engine';
+// ─── Achievements ────────────────────────────────────────────────────────────
+// Spec:   archetypes/producer.md § 5 — Achievements
+// Sources:
+//   - Production-total milestones → `BankAchievement` helper + calls,
+//     `main.js:12994–13037`. Triggered by cumulative cookies earned.
+//   - CPS-rate milestones → `CpsAchievement` helper + calls,
+//     `main.js:13005–13048`. Triggered by current cookies-per-second.
+//   - Click-count milestones → `Game.Win` calls in the click handler,
+//     `main.js:13058–13065`. Triggered by cumulative big-cookie clicks.
+//   - Per-building owned-count tiers (`Game.Win` calls inside building
+//     callbacks at `main.js:9019+`) land via `modules/milestones.ts`
+//     against `producer.count` and the balance.milestoneThresholds set;
+//     they don't appear in this file.
+//
+// First-arc declared invention (spec § 5):
+//   - Per-achievement direct multiplier (×1.02 default via
+//     `balance.achievementRewardMultiplier`) replaces canonical Cookie
+//     Clicker's milk/kitten chain (`main.js:5240`, `:5256–5271`). Each
+//     entry omits `rewardMultiplier` so the balance default carries.
+//
+// Threshold ramp: representative subset reaching demo-arc-relevant
+// scale (~1e12 cookies). Forks extend by appending higher tiers; the
+// data layer is the editing surface.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import type { AchievementDef } from './types';
-import { CONTINUOUS_PRODUCER_IDS } from './producers';
-import { TIER1_UPGRADE_IDS, UPGRADES } from './upgrades';
 
-// ─── Skeleton + Costume ────────────────────────────────────────────────────
-// 11 production milestones + 12 building-count milestones + 9 hidden + arc-close = 33.
-// Each grants the default multiplicative headline reward unless `reward` is set.
-
-// In-arc upgrades are everything except the post-arc tier-iii rung, mirroring
-// the producer/{boost-iii} naming convention.
-const ARC_UPGRADE_IDS = UPGRADES.map((u) => u.id).filter((id) => !id.endsWith('-boost-iii'));
-
-// ─── Production milestones ────────────────────────────────────────────────
-
-const PRODUCTION_THRESHOLDS: { id: string; name: string; total: number | string }[] = [
-  { id: 'prod-1', name: 'First Crumb', total: 1 },
-  { id: 'prod-100', name: 'Warming Up', total: 100 },
-  { id: 'prod-10k', name: 'Humble Bakery', total: 10_000 },
-  { id: 'prod-1m', name: 'Small Empire', total: 1_000_000 },
-  { id: 'prod-100m', name: 'Regional Power', total: 100_000_000 },
-  { id: 'prod-1b', name: 'Continental Chain', total: 1_000_000_000 },
-  { id: 'prod-1t', name: 'Cookie Barons', total: '1e12' },
-  { id: 'prod-1q', name: 'Quadrillion Club', total: '1e15' },
-  { id: 'prod-1qi', name: 'Quintillion Tier', total: '1e18' },
-  { id: 'prod-1sx', name: 'Sextillion Saints', total: '1e21' },
-  { id: 'prod-1sp', name: 'Septillion Sovereigns', total: '1e24' },
+// === Production-total milestones (BankAchievement series) ===
+// Predicate reads cumulative `cookiesEarned`; canonical fires off the
+// `Game.cookiesEarned` field.
+const BANK_TIERS: { id: string; name: string; threshold: number | string; flavour: string }[] = [
+  { id: 'bank-1', name: 'Wake and bake', threshold: 1, flavour: 'Bake 1 cookie.' },
+  { id: 'bank-2', name: 'Making some dough', threshold: 1_000, flavour: 'Bake 1,000 cookies.' },
+  {
+    id: 'bank-3',
+    name: 'So baked right now',
+    threshold: 100_000,
+    flavour: 'Bake 100,000 cookies.',
+  },
+  {
+    id: 'bank-4',
+    name: 'Fledgling bakery',
+    threshold: 1_000_000,
+    flavour: 'Bake 1 million cookies.',
+  },
+  {
+    id: 'bank-5',
+    name: 'Affluent bakery',
+    threshold: 100_000_000,
+    flavour: 'Bake 100 million cookies.',
+  },
+  {
+    id: 'bank-6',
+    name: 'World-famous bakery',
+    threshold: 10_000_000_000,
+    flavour: 'Bake 10 billion cookies.',
+  },
+  {
+    id: 'bank-7',
+    name: 'Cosmic bakery',
+    threshold: 1_000_000_000_000,
+    flavour: 'Bake 1 trillion cookies.',
+  },
 ];
 
-const productionMilestones: AchievementDef[] = PRODUCTION_THRESHOLDS.map((t) => ({
-  id: t.id,
-  name: t.name,
-  description: `Bake ${typeof t.total === 'number' ? t.total.toLocaleString() : t.total} cookies in total`,
-  requirement: { kind: 'cumulative-gte', resource: 'cookies', value: t.total },
+const BANK_ACHIEVEMENTS: AchievementDef[] = BANK_TIERS.map((tier) => ({
+  id: tier.id,
+  name: tier.name,
+  description: tier.flavour,
+  requirement: (state) => state.cookiesEarned.gte(tier.threshold),
 }));
 
-// ─── Building-count milestones ────────────────────────────────────────────
-
-const BUILDING_MILESTONES: { id: string; producer: string; count: number; name: string }[] = [
-  { id: 'own-1-cursor', producer: 'cursor', count: 1, name: 'Finger Licking Good' },
-  { id: 'own-10-cursor', producer: 'cursor', count: 10, name: 'Ten Digits' },
-  { id: 'own-50-cursor', producer: 'cursor', count: 50, name: 'Assembly of Hands' },
-  { id: 'own-1-grandma', producer: 'grandma', count: 1, name: 'Grandma Approves' },
-  { id: 'own-10-grandma', producer: 'grandma', count: 10, name: 'Grandma Quorum' },
-  { id: 'own-25-grandma', producer: 'grandma', count: 25, name: 'Grandma Guild' },
-  { id: 'own-1-farm', producer: 'farm', count: 1, name: 'Wheat Harvest' },
-  { id: 'own-10-farm', producer: 'farm', count: 10, name: 'Breadbasket' },
-  { id: 'own-1-mine', producer: 'mine', count: 1, name: 'Deep Shaft' },
-  { id: 'own-1-factory', producer: 'factory', count: 1, name: 'Industrial Revolution' },
-  { id: 'own-1-bank', producer: 'bank', count: 1, name: 'Interest Compounds' },
-  { id: 'own-1-temple', producer: 'temple', count: 1, name: 'Sacred Dough' },
+// === CPS-rate milestones (CpsAchievement series) ===
+// Predicate reads the headline rate; canonical fires off `Game.cookiesPs`.
+const CPS_TIERS: { id: string; name: string; threshold: number | string; flavour: string }[] = [
+  { id: 'cps-1', name: 'Casual baking', threshold: 1, flavour: '1 cookie per second.' },
+  { id: 'cps-2', name: 'Hardcore baking', threshold: 10, flavour: '10 cookies per second.' },
+  {
+    id: 'cps-3',
+    name: 'Steady tasty stream',
+    threshold: 1_000,
+    flavour: '1,000 cookies per second.',
+  },
+  {
+    id: 'cps-4',
+    name: 'Cookie monster',
+    threshold: 1_000_000,
+    flavour: '1 million cookies per second.',
+  },
+  {
+    id: 'cps-5',
+    name: 'Mass producer',
+    threshold: 100_000_000,
+    flavour: '100 million cookies per second.',
+  },
+  {
+    id: 'cps-6',
+    name: 'Cookie vortex',
+    threshold: 10_000_000_000,
+    flavour: '10 billion cookies per second.',
+  },
 ];
 
-const buildingMilestones: AchievementDef[] = BUILDING_MILESTONES.map((m) => ({
-  id: m.id,
-  name: m.name,
-  description: `Own ${m.count} ${m.producer}${m.count === 1 ? '' : 's'}`,
-  requirement: {
-    kind: 'count-gte',
-    category: 'producer/buildings',
-    entity: m.producer,
-    value: m.count,
-  },
+const CPS_ACHIEVEMENTS: AchievementDef[] = CPS_TIERS.map((tier) => ({
+  id: tier.id,
+  name: tier.name,
+  description: tier.flavour,
+  requirement: (state) => state.cps.gte(tier.threshold),
 }));
 
-// ─── Hidden achievements ──────────────────────────────────────────────────
-
-const ownAllProducers: Gate = {
-  kind: 'all',
-  of: CONTINUOUS_PRODUCER_IDS.map((id) => ({
-    kind: 'count-gte' as const,
-    category: 'producer/buildings',
-    entity: id,
-    value: 1,
-  })),
-};
-
-const allTier1UpgradesBought: Gate = {
-  kind: 'all',
-  of: TIER1_UPGRADE_IDS.map((id) => ({
-    kind: 'unlock' as const,
-    category: 'producer/upgrades',
-    entity: id,
-  })),
-};
-
-const arcClose: Gate = {
-  kind: 'all',
-  of: [
-    ...CONTINUOUS_PRODUCER_IDS.map((id) => ({
-      kind: 'count-gte' as const,
-      category: 'producer/buildings',
-      entity: id,
-      value: 1,
-    })),
-    ...ARC_UPGRADE_IDS.map((id) => ({
-      kind: 'unlock' as const,
-      category: 'producer/upgrades',
-      entity: id,
-    })),
-  ],
-};
-
-const hidden: AchievementDef[] = [
+// === Click-count milestones ===
+// Predicate reads cumulative clicks; canonical fires off the
+// `Game.handmadeCookies` counter on the click handler.
+const CLICK_TIERS: { id: string; name: string; threshold: number; flavour: string }[] = [
   {
-    id: 'hidden-first-click',
-    name: 'And so it begins',
-    description: 'Click the dough for the first time',
-    hidden: true,
-    requirement: { kind: 'cumulative-gte', resource: 'click-count', value: 1 },
+    id: 'click-1',
+    name: 'Clicktastic',
+    threshold: 1_000,
+    flavour: 'Make 1,000 cookies from clicking.',
   },
   {
-    id: 'hidden-100-clicks',
-    name: 'Repetitive Strain',
-    description: 'Click 100 times',
-    hidden: true,
-    requirement: { kind: 'cumulative-gte', resource: 'click-count', value: 100 },
+    id: 'click-2',
+    name: 'Clickathlon',
+    threshold: 100_000,
+    flavour: 'Make 100,000 cookies from clicking.',
   },
   {
-    id: 'hidden-1000-clicks',
-    name: 'Carpal Champion',
-    description: 'Click 1000 times',
-    hidden: true,
-    requirement: { kind: 'cumulative-gte', resource: 'click-count', value: 1000 },
-  },
-  {
-    id: 'hidden-first-upgrade',
-    name: 'Upgrade Habit',
-    description: 'Buy your first cursor upgrade',
-    hidden: true,
-    requirement: { kind: 'unlock', category: 'producer/upgrades', entity: 'cursor-boost-i' },
-  },
-  {
-    id: 'hidden-first-global',
-    name: 'Big Picture',
-    description: 'Buy your first global upgrade',
-    hidden: true,
-    requirement: {
-      kind: 'any',
-      of: [
-        { kind: 'unlock', category: 'producer/upgrades', entity: 'click-x2' },
-        { kind: 'unlock', category: 'producer/upgrades', entity: 'global-x2' },
-      ],
-    },
-  },
-  {
-    id: 'hidden-owns-everything',
-    name: 'Full Stack',
-    description: 'Own at least one of every producer tier',
-    hidden: true,
-    requirement: ownAllProducers,
-  },
-  {
-    id: 'hidden-all-tier1',
-    name: 'Tier One Tourist',
-    description: 'Buy every tier-1 boost upgrade',
-    hidden: true,
-    requirement: allTier1UpgradesBought,
-  },
-  {
-    id: 'hidden-1e10-lifetime',
-    name: 'Billionaire Baker',
-    description: 'Reach 10 billion total cookies',
-    hidden: true,
-    requirement: { kind: 'cumulative-gte', resource: 'cookies', value: '1e10' },
-  },
-  {
-    id: 'hidden-1e30-lifetime',
-    name: 'Cosmic Confection',
-    description: 'Reach 1e30 total cookies',
-    hidden: true,
-    requirement: { kind: 'cumulative-gte', resource: 'cookies', value: '1e30' },
-  },
-  {
-    id: 'hidden-arc-close',
-    name: 'The Bakery Hums',
-    description: 'Own every producer tier and buy every in-arc upgrade',
-    hidden: true,
-    requirement: arcClose,
+    id: 'click-3',
+    name: 'Clickolympics',
+    threshold: 10_000_000,
+    flavour: 'Make 10 million cookies from clicking.',
   },
 ];
+
+const CLICK_ACHIEVEMENTS: AchievementDef[] = CLICK_TIERS.map((tier) => ({
+  id: tier.id,
+  name: tier.name,
+  description: tier.flavour,
+  // `clicks` is the cumulative big-cookie click count, but the canonical
+  // achievement fires off cookies-from-clicking. With the click-producer's
+  // baseRate of 1, click-count == cookies-from-clicking at the base; tier
+  // upgrades extend per-click value upward, at which point the canonical
+  // and ported predicates diverge. Declared invention: use raw click count
+  // — the per-click upgrade chain still contributes through the bank-total
+  // series, so the headline pacing is preserved.
+  requirement: (state) => state.clicks.gte(tier.threshold),
+}));
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  ...productionMilestones,
-  ...buildingMilestones,
-  ...hidden,
+  ...BANK_ACHIEVEMENTS,
+  ...CPS_ACHIEVEMENTS,
+  ...CLICK_ACHIEVEMENTS,
 ];

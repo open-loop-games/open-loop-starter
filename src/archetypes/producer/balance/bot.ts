@@ -9,7 +9,7 @@ import {
   type Producer,
   type ProducerCategory,
   type SelectionPolicy,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import {
   createProducerEngine,
   getBuildings,

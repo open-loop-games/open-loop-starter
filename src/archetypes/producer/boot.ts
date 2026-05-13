@@ -5,7 +5,7 @@ import {
   type EngineModule,
   type GameStateAccessor,
   type GameStateMutator,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { bootApp, bootEngine } from '@/boot';
 import ProducerAppRoot from './ui/ProducerAppRoot.vue';
 import { createProducerModules } from './modules';

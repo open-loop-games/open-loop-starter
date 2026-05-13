@@ -6,7 +6,7 @@ import {
   getEarnedCount,
   tunable,
   type EngineModule,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { ProducerData } from '../data/types';
 import { ProducerTuningRegistryKey, getBuildings } from './producers';
 

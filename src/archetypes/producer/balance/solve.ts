@@ -32,7 +32,7 @@ import {
   type Engine,
   type OverrideRegistry,
   type TunerResult,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { ProducerTuningRegistryKey, type ProducerTunables } from '../modules/producers';
 import { DEFAULT_PRODUCER_DATA } from '../data';
 import { PRODUCERS } from '../data/producers';
@@ -143,7 +143,7 @@ function solveBeat3(ctx: SamplerContext, targetSec: number): TunerResult {
 /**
  * Beat-4 fires on `cursor-boost-i` purchased. The tier-1 upgrade multiplier
  * drives all `*-boost-i` costs together via
- * `balance/tier1UpgradeMultiplier` — one tunable key, module-side cost
+ * `balance/tieredUpgradeMultiplier` — one tunable key, module-side cost
  * derivation does the fan-out (`modules/upgrades.ts resolveUpgradeCost`).
  */
 function solveBeat4(ctx: SamplerContext, targetSec: number): TunerResult {
@@ -151,7 +151,7 @@ function solveBeat4(ctx: SamplerContext, targetSec: number): TunerResult {
     lo: 1,
     hi: 500,
     targetSec,
-    sampler: (v) => sampleBeat(ctx, 'beat-4', 'balance/tier1UpgradeMultiplier', v),
+    sampler: (v) => sampleBeat(ctx, 'beat-4', 'balance/tieredUpgradeMultiplier', v),
   });
 }
 
@@ -300,19 +300,19 @@ function solvePass(proposed: Proposed): {
     const currentFire = sampleBeat(
       ctx,
       'beat-4',
-      'balance/tier1UpgradeMultiplier',
+      'balance/tieredUpgradeMultiplier',
       Number(
-        proposed['balance/tier1UpgradeMultiplier'] ??
-          DEFAULT_PRODUCER_DATA.balance.tier1UpgradeMultiplier,
+        proposed['balance/tieredUpgradeMultiplier'] ??
+          DEFAULT_PRODUCER_DATA.balance.tieredUpgradeMultiplier,
       ),
     );
     const sol = solveBeat4(ctx, target);
     const value = Math.round(sol.value);
-    ctx.proposed['balance/tier1UpgradeMultiplier'] = value;
+    ctx.proposed['balance/tieredUpgradeMultiplier'] = value;
     solves.push({
       beatId: 'beat-4',
       field: 'tier-i multiplier',
-      current: Number(DEFAULT_PRODUCER_DATA.balance.tier1UpgradeMultiplier),
+      current: Number(DEFAULT_PRODUCER_DATA.balance.tieredUpgradeMultiplier),
       currentFireTime: currentFire,
       proposed: value,
       proposedFireTime: sol.time,

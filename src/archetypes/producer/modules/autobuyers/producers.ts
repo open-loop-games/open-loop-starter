@@ -1,4 +1,4 @@
-import { persistent, type EngineContext, type EngineModule } from 'open-loop-engine';
+import { persistent, type EngineContext, type EngineModule } from '@open-loop/engine';
 import {
   setupPolicyAutoPurchase,
   setupSweepAutoPurchase,
@@ -6,7 +6,7 @@ import {
   type Producer,
   type ProducerCategory,
   type SelectionPolicy,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { getBuildings, type ProducerInstanceState } from '../producers';
 import { getUpgrades } from '../upgrades';
 import type { ProducerDef } from '../../data/types';

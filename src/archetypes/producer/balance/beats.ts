@@ -1,4 +1,4 @@
-import { Decimal, bn } from 'open-loop-engine';
+import { Decimal, bn } from '@open-loop/engine';
 import { getAchievements, getBuildings, getPrimaryResource, getUpgrades } from '../modules';
 import type { BeatProbe, Waypoint } from '@/balance';
 

@@ -1,6 +1,6 @@
 import { computed, unref } from 'vue';
 import type { ComputedRef } from 'vue';
-import type { ModifierChain } from 'open-loop-engine';
+import type { ModifierChain } from '@open-loop/engine';
 import { getBuildings } from '../modules';
 
 export interface ChainFactor {

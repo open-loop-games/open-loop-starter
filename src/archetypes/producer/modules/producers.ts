@@ -10,7 +10,7 @@ import {
   type ProducerCategory,
   type Resource,
   type TuningRegistry,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { ProducerData, ProducerDef } from '../data/types';
 
 /**
@@ -34,8 +34,8 @@ export type ProducerTunableKey =
   | 'producers/cursor/purchase/baseCost'
   | 'producers/grandma/purchase/baseCost'
   | 'balance/milestoneBonusPerTier'
-  | 'balance/tier1UpgradeMultiplier'
-  | 'balance/achievementMultiplier';
+  | 'balance/tieredUpgradeMultiplier'
+  | 'balance/achievementRewardMultiplier';
 // `balance/producerCostGrowth` is intentionally absent: the engine's
 // ProducerMapping.purchase.costScaling is static `DecimalSource`, not
 // Computable — the value is read once at producer registration and can't

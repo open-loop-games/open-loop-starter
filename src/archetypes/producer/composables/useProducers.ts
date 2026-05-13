@@ -5,7 +5,7 @@ import {
   type DecimalSource,
   type ModifierChain,
   type Purchasable,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import type { ProducerDef } from '../data/types';
 import { getBuildings } from '../modules';
 

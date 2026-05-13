@@ -53,7 +53,7 @@ import {
   type GameStateMutator,
   type GateRuntime,
   type Producer,
-} from 'open-loop-engine';
+} from '@open-loop/engine';
 import { getBuildings, getClickCount, getPrimaryResource, getUpgrades } from '..';
 import { buildBotPolicy } from './bot';
 import { accumulateUntilPay, nextAchievementFireDistance, resetWalkerWorld } from './spec';
