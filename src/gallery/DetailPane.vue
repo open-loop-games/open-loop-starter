@@ -6,74 +6,29 @@
   contract, so inline code is honest and forward-compatible.
 -->
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { ArchetypeManifest } from '@/types';
+import MarkdownDoc from './MarkdownDoc.vue';
+import { loadArchetypeOverview } from './useArchetypeOverviews';
 
-defineProps<{
+const props = defineProps<{
   manifest: ArchetypeManifest;
 }>();
+
+const overview = computed(() => loadArchetypeOverview(props.manifest.id));
 </script>
 
 <template>
   <div class="detail">
     <header class="detail__header">
       <h2>{{ manifest.name }}</h2>
-      <span
-        class="detail__status"
-        :data-status="manifest.status"
-      >{{ manifest.status }}</span>
     </header>
-    <p class="detail__pitch">
-      {{ manifest.pitch }}
-    </p>
-
-    <section class="detail__section">
-      <h3>Required patterns</h3>
-      <ul class="reflist">
-        <li
-          v-for="p in manifest.patterns.required"
-          :key="p.label"
-        >
-          <span
-            class="chip"
-            :data-tier="p.tier"
-          >{{ p.tier.replace(/^tier-/, 't') }}</span>
-          <strong>{{ p.label }}</strong>
-          <code class="path">{{ p.path }}</code>
-        </li>
-      </ul>
-    </section>
-
-    <section class="detail__section">
-      <h3>Cross-pattern properties</h3>
-      <ul class="reflist">
-        <li
-          v-for="p in manifest.patterns.crossProperties"
-          :key="p.label"
-        >
-          <strong>{{ p.label }}</strong>
-          <code class="path">{{ p.path }}</code>
-        </li>
-      </ul>
-    </section>
 
     <section
-      v-if="manifest.patterns.optional && manifest.patterns.optional.length"
+      v-if="overview"
       class="detail__section"
     >
-      <h3>Optional patterns</h3>
-      <ul class="reflist">
-        <li
-          v-for="p in manifest.patterns.optional"
-          :key="p.label"
-        >
-          <span
-            class="chip"
-            :data-tier="p.tier"
-          >{{ p.tier.replace(/^tier-/, 't') }}</span>
-          <strong>{{ p.label }}</strong>
-          <code class="path">{{ p.path }}</code>
-        </li>
-      </ul>
+      <MarkdownDoc :source="overview" />
     </section>
 
     <section class="detail__section">
@@ -135,10 +90,6 @@ defineProps<{
             v-if="t.isDefault"
             class="badge badge-primary"
           >default</span>
-          <span
-            class="chip"
-            :data-status="t.status"
-          >{{ t.status }}</span>
         </li>
       </ul>
     </section>

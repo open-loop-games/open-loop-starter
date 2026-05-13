@@ -1,13 +1,14 @@
 <!--
-  Gallery card — pitch + pattern chips + primitive count + shell label.
-  No live thumbnails (per OL-478 protocol point #2: live mounts would
-  multiply tickers and create persistence collisions per card).
+  Gallery card — first prose paragraph + primitive count + shell label.
+  No live thumbnails: live mounts would multiply tickers and create
+  persistence collisions per card.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ArchetypeManifest } from '@/types';
 import Button from '@/ui/components/Button.vue';
 import { resolveShellComponent } from './useArchetypes';
+import { loadArchetypeOverview } from './useArchetypeOverviews';
 
 const props = defineProps<{
   manifest: ArchetypeManifest;
@@ -17,27 +18,29 @@ defineEmits<{
   enter: [];
 }>();
 
-const requiredChips = computed(() => props.manifest.patterns.required);
 const primitiveCount = computed(() => props.manifest.primitives.length);
 const shellResolved = computed(() => resolveShellComponent(props.manifest.shell) !== undefined);
+const previewLine = computed(() => {
+  const md = loadArchetypeOverview(props.manifest.id);
+  if (!md) return '';
+  return md.split(/\n\s*\n/, 1)[0].trim();
+});
 </script>
 
 <template>
-  <Button class="card" type="button" @click="$emit('enter')">
+  <Button
+    class="card"
+    type="button"
+    @click="$emit('enter')"
+  >
     <header class="card__header">
       <h3 class="card__title">
         {{ manifest.name }}
       </h3>
-      <span class="card__status" :data-status="manifest.status">{{ manifest.status }}</span>
     </header>
     <p class="card__pitch">
-      {{ manifest.pitch }}
+      {{ previewLine }}
     </p>
-    <ul class="card__chips">
-      <li v-for="p in requiredChips" :key="p.label" class="chip" :data-tier="p.tier">
-        {{ p.label }}
-      </li>
-    </ul>
     <footer class="card__meta">
       <span>{{ primitiveCount }} engine primitives</span>
       <span class="card__shell">

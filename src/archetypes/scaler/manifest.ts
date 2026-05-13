@@ -3,60 +3,7 @@ import type { ArchetypeManifest } from '@/types';
 export const manifest: ArchetypeManifest = {
   id: 'scaler',
   name: 'Antimatter Physics',
-  status: 'candidate',
-  pitch:
-    'Scaler is the archetype where the game you played an hour ago becomes a footnote. Buy producers, watch costs scale, hit a prestige threshold, ascend — every tier compresses the one below it until what took an hour takes seconds. The pull is watching the headline multiplier scroll past 1e12×, then 1e120×, knowing every digit came from a deliberate composition of layers, challenges, and upgrades you designed.',
-  patterns: {
-    required: [
-      {
-        label: 'Prestige Systems',
-        path: 'open-loop-research/patterns/tier-1-foundation/prestige-systems.md',
-        tier: 'tier-1-foundation',
-      },
-      {
-        label: 'Challenge Systems',
-        path: 'open-loop-research/patterns/tier-3-moderate/challenge-systems.md',
-        tier: 'tier-3-moderate',
-      },
-      {
-        label: 'Activity Systems (A+C hybrid)',
-        path: 'open-loop-research/patterns/tier-0-universal/activity-systems/',
-        tier: 'tier-0-universal',
-      },
-      {
-        label: 'Progression Systems',
-        path: 'open-loop-research/patterns/tier-0-universal/progression-systems.md',
-        tier: 'tier-0-universal',
-      },
-    ],
-    crossProperties: [
-      {
-        label: 'Modifier Chains',
-        path: 'open-loop-research/patterns/cross-pattern-properties/modifier-chains.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Cost Scaling',
-        path: 'open-loop-research/patterns/cross-pattern-properties/cost-scaling.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Scaling Formulas',
-        path: 'open-loop-research/patterns/cross-pattern-properties/scaling-formulas.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Softcapping',
-        path: 'open-loop-research/patterns/cross-pattern-properties/softcapping.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Purchase Mechanics',
-        path: 'open-loop-research/patterns/cross-pattern-properties/purchase-mechanics.md',
-        tier: 'cross-pattern-property',
-      },
-    ],
-  },
+  status: 'canonical',
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
@@ -107,12 +54,7 @@ export const manifest: ArchetypeManifest = {
     },
     { n: 8, label: 'Arc closure: every challenge maxed', targetSimRange: [14400, 21600] },
   ],
-  themes: [
-    { name: 'Antimatter Physics', isDefault: true, status: 'baked' },
-    { name: 'Dreaming Lucidity', isDefault: false, status: 'spec-only' },
-    { name: 'Civilisation Cycle', isDefault: false, status: 'spec-only' },
-    { name: 'Signal Depth', isDefault: false, status: 'spec-only' },
-  ],
+  themes: [{ name: 'Antimatter Physics', isDefault: true }],
   shell: 'TabsBarShell',
   formFactor: 'desktop',
   exemplars: [

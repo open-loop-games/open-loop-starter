@@ -4,54 +4,6 @@ export const manifest: ArchetypeManifest = {
   id: 'looper',
   name: 'Classic Adventuring',
   status: 'canonical',
-  pitch:
-    "Looper is the archetype where a run feels like a rehearsal. You queue up a sequence of actions inside a strictly limited time budget, watch the budget drain, and when it's gone the run ends — most of what you built resets, and a thin layer of permanent mastery carries to the next run. The compulsion loop is *next run I'll do it faster and further*, and over six or eight runs you start doing things you couldn't even reach on run one. The game is the diff between those runs.",
-  patterns: {
-    required: [
-      {
-        label: 'Loop/Cycle Systems',
-        path: 'open-loop-research/patterns/tier-4-specialized/loop-mechanics/',
-        tier: 'tier-4-specialized',
-      },
-      {
-        label: 'Mastery Systems',
-        path: 'open-loop-research/patterns/tier-3-moderate/mastery-systems.md',
-        tier: 'tier-3-moderate',
-      },
-      {
-        label: 'Activity Systems (duration-based variation)',
-        path: 'open-loop-research/patterns/tier-0-universal/activity-systems/variations/',
-        tier: 'tier-0-universal',
-      },
-      {
-        label: 'Progression Systems',
-        path: 'open-loop-research/patterns/tier-0-universal/progression-systems.md',
-        tier: 'tier-0-universal',
-      },
-    ],
-    crossProperties: [
-      {
-        label: 'Automation',
-        path: 'open-loop-research/patterns/cross-pattern-properties/automation.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Modifier Chains',
-        path: 'open-loop-research/patterns/cross-pattern-properties/modifier-chains.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Quantity Tracking',
-        path: 'open-loop-research/patterns/cross-pattern-properties/quantity-tracking.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Unlock Requirements',
-        path: 'open-loop-research/patterns/cross-pattern-properties/unlock-requirements.md',
-        tier: 'cross-pattern-property',
-      },
-    ],
-  },
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createSequencer', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
@@ -79,12 +31,7 @@ export const manifest: ArchetypeManifest = {
       targetSimRange: [5100, 7200],
     },
   ],
-  themes: [
-    { name: 'Classic Adventuring', isDefault: true, status: 'baked' },
-    { name: 'Dreaming Lucidity', isDefault: false, status: 'spec-only' },
-    { name: 'Reincarnation', isDefault: false, status: 'spec-only' },
-    { name: 'Groundhog Detective', isDefault: false, status: 'spec-only' },
-  ],
+  themes: [{ name: 'Classic Adventuring', isDefault: true }],
   shell: 'ThreePanelShell',
   formFactor: 'desktop',
   exemplars: [

@@ -4,66 +4,6 @@ export const manifest: ArchetypeManifest = {
   id: 'producer',
   name: 'Bakery',
   status: 'canonical',
-  pitch:
-    "Producer is the archetype every incremental player already understands within thirty seconds. You click a thing. A number goes up. You spend the number on something that increases the number by itself. Before long you stop clicking and watch the number grow, checking in to buy the next producer tier and the next multiplier upgrade. The texture of play is pacing against a curve: costs rise faster than production, so each tier feels unreachable until it isn't, and then it's trivial and you're already saving for the next one.",
-  patterns: {
-    required: [
-      {
-        label: 'Activity Systems (A+C hybrid)',
-        path: 'open-loop-research/patterns/tier-0-universal/activity-systems/',
-        tier: 'tier-0-universal',
-      },
-      {
-        label: 'Progression Systems',
-        path: 'open-loop-research/patterns/tier-0-universal/progression-systems.md',
-        tier: 'tier-0-universal',
-      },
-      {
-        label: 'Achievement Systems',
-        path: 'open-loop-research/patterns/tier-1-foundation/achievement-systems.md',
-        tier: 'tier-1-foundation',
-      },
-    ],
-    crossProperties: [
-      {
-        label: 'Purchase Mechanics',
-        path: 'open-loop-research/patterns/cross-pattern-properties/purchase-mechanics.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Cost Scaling',
-        path: 'open-loop-research/patterns/cross-pattern-properties/cost-scaling.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Modifier Chains',
-        path: 'open-loop-research/patterns/cross-pattern-properties/modifier-chains.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Quantity Tracking',
-        path: 'open-loop-research/patterns/cross-pattern-properties/quantity-tracking.md',
-        tier: 'cross-pattern-property',
-      },
-      {
-        label: 'Scaling Formulas',
-        path: 'open-loop-research/patterns/cross-pattern-properties/scaling-formulas.md',
-        tier: 'cross-pattern-property',
-      },
-    ],
-    optional: [
-      {
-        label: 'Single-tier Prestige',
-        path: 'open-loop-research/LIBRARY.md',
-        tier: 'tier-1-foundation',
-      },
-      {
-        label: 'Softcapping',
-        path: 'open-loop-research/patterns/cross-pattern-properties/softcapping.md',
-        tier: 'cross-pattern-property',
-      },
-    ],
-  },
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createModifierChain', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
@@ -105,12 +45,7 @@ export const manifest: ArchetypeManifest = {
     { n: 6, label: 'Bulk-buy becomes meaningful', targetSimRange: [2400, 3900] },
     { n: 7, label: 'Deep modifier chain visible', targetSimRange: [3900, 5700] },
   ],
-  themes: [
-    { name: 'Bakery', isDefault: true, status: 'baked' },
-    { name: 'Reef Reclamation', isDefault: false, status: 'spec-only' },
-    { name: 'Signal Farm', isDefault: false, status: 'spec-only' },
-    { name: 'Paper Mill', isDefault: false, status: 'spec-only' },
-  ],
+  themes: [{ name: 'Bakery', isDefault: true }],
   shell: 'ThreePanelShell',
   formFactor: 'desktop',
   exemplars: [
