@@ -8,19 +8,20 @@
  * looper's existing `restartActionQueue` (in `loop.ts`'s `onRestart`)
  * promotes the new queue into active.
  *
+ * Build-once, swap-per-iteration. The bot module installs once and
+ * publishes a {@link BalanceBotControlKey} setter. Solvers call
+ * `engine.saveManager.importSave(initialBlob)` to reset game state, then
+ * `control.setSchedule(next)` to load the candidate trajectory, then
+ * `runUntil` to drive the engine to the goal predicate or budget cap.
+ * Mirrors the producer/ambient one-engine + importSave-per-iteration
+ * canonical pattern. Rebuilding the engine per iteration is the wrong
+ * shape — module install runs once; closure-local bot state would leak
+ * across iterations.
+ *
  * Engine-as-oracle: the bot does not reimplement queue dispatch — it
  * only schedules which queue runs next. Action execution, mana drain,
  * XP accrual, completion-effects, and progress-var level-ups all flow
- * through the looper's existing modules. Mirrors the producer/ambient
- * `bot.ts` shape — install one module that owns bot-local state in
- * persistent refs, build the engine with that module appended via
- * `extraModules`.
- *
- * Once the algorithm-choice prototype settles (A* + beam side-by-side
- * on `forest ≥ 1`), the solver feeds its chosen trajectory in as a
- * `LoopSchedule`; `runUntil` drives engine ticks until the goal predicate
- * fires or the budget caps. Perturbation sweeps re-build a fresh engine
- * per cell via the same `buildLooperSimEngine` entrypoint.
+ * through the looper's existing modules.
  */
 
 import {
@@ -29,6 +30,7 @@ import {
   type Engine,
   type EngineModule,
   type GameStateAccessor,
+  type InjectionKey,
 } from '@open-loop/engine';
 import { createLooperEngine } from '..';
 import { addAction, clearActions, getLoop, getLoopCount, getMana, startLoop } from '../modules';
@@ -48,14 +50,33 @@ export type LoopQueue = ReadonlyArray<ScheduleItem>;
 /** A solver-chosen trajectory: a sequence of per-loop queues. */
 export type LoopSchedule = ReadonlyArray<LoopQueue>;
 
+// ─── Bot control surface ──────────────────────────────────────────────────
+
+/**
+ * Solver-facing control over the bot's active schedule. Published by the
+ * bot module's `install()` and consumed by solver iterations after
+ * `saveManager.importSave(initialBlob)` resets game state.
+ *
+ * `setSchedule` is the only public mutation. It clears the edit queue,
+ * loads `schedule[0]` into edit, and arms the `beforeRestart` subscriber
+ * so subsequent loops swap to `schedule[loopCount]` automatically. When
+ * `loopCount` exceeds the schedule length the bot leaves the queue
+ * untouched and the last queue replays — solvers needing a definite end
+ * append a sentinel empty queue.
+ */
+export interface BalanceBotControl {
+  setSchedule(schedule: LoopSchedule): void;
+}
+
+export const BalanceBotControlKey: InjectionKey<BalanceBotControl> = Symbol(
+  'looper/balance/bot-control',
+) as InjectionKey<BalanceBotControl>;
+
 // ─── Bot module ───────────────────────────────────────────────────────────
 
 let engineCounter = 0;
 
-/**
- * Populate the edit queue with one loop's items. Cleared first so each
- * call replaces the queue wholesale rather than appending.
- */
+/** Populate the edit queue with one loop's items. */
 function loadEditQueue(queue: LoopQueue): void {
   clearActions();
   for (const item of queue) {
@@ -64,49 +85,44 @@ function loadEditQueue(queue: LoopQueue): void {
 }
 
 /**
- * Bot module wiring. Loads `schedule[0]` into the edit queue at install,
- * starts the loop, and subscribes to `loop.on('beforeRestart')` so each
- * end-of-loop transition swaps in the next entry's queue (loop's own
- * `onRestart` then promotes edit→active via `restartActionQueue`).
+ * Bot module wiring. Subscribes to `loop.on('beforeRestart')` once; the
+ * active schedule is mutable state owned by the module closure and swapped
+ * by `setSchedule` between solver iterations.
  *
- * When the schedule exhausts, the bot leaves the active queue as-is —
- * the looper's queue dispatcher will replay the last queue until
- * `runUntil` terminates on the goal predicate or hits the budget cap.
- * Solvers that want hard termination at schedule-end should append a
- * terminal sentinel queue (e.g. an empty queue) that exhausts immediately.
+ * `beforeRestart` fires after the loop's reset sequence has incremented
+ * `loopCount`, so the value read inside the handler is the index of the
+ * loop about to start. Edit→active promotion happens in the loop module's
+ * own `onRestart` (which runs after this `beforeRestart`).
  */
-function createBalanceBotModule(schedule: LoopSchedule): EngineModule {
+function createBalanceBotModule(): EngineModule {
   return {
     id: 'balance-bot',
     dependencies: ['loop', 'action-runner'],
-    install() {
-      if (schedule.length === 0) {
-        throw new Error('looper/balance/bot: schedule must contain at least one loop queue');
-      }
+    install(ctx) {
+      let activeSchedule: LoopSchedule | null = null;
 
-      // Loop 0 — populate edit queue, then start the loop. `startLoop`
-      // calls `bootstrapActiveFromSave` which promotes edit→active when
-      // active is empty.
-      loadEditQueue(schedule[0]!);
-      startLoop();
+      const control: BalanceBotControl = {
+        setSchedule(schedule: LoopSchedule) {
+          if (schedule.length === 0) {
+            throw new Error('looper/balance/bot: schedule must contain at least one loop queue');
+          }
+          activeSchedule = schedule;
+          loadEditQueue(schedule[0]!);
+          startLoop();
+        },
+      };
 
-      // Subsequent loops — swap the edit queue before the loop module's
-      // own `onRestart` fires (which copies edit→active). `getLoopCount`
-      // increments inside the Loop primitive's reset sequence between
-      // `beforeRestart` and `onRestart`, so the loop counter at this
-      // event-firing time is the just-finished loop's index (0-indexed
-      // count means schedule index for the *next* loop is the current
-      // count).
       const loop = getLoop();
       loop.on('beforeRestart', () => {
+        if (activeSchedule === null) return;
         const nextIndex = getLoopCount().value;
-        if (nextIndex < schedule.length) {
-          loadEditQueue(schedule[nextIndex]!);
+        if (nextIndex < activeSchedule.length) {
+          loadEditQueue(activeSchedule[nextIndex]!);
         }
-        // Past the schedule: leave the edit queue as-is so the last
-        // queue replays. Solvers that need a definite end append a
-        // sentinel queue.
+        // Past schedule end: leave edit queue as-is (last queue replays).
       });
+
+      ctx.provide(BalanceBotControlKey, control);
     },
   };
 }
@@ -114,34 +130,30 @@ function createBalanceBotModule(schedule: LoopSchedule): EngineModule {
 // ─── Build + accessor ─────────────────────────────────────────────────────
 
 /**
- * Build a started, sim-bot-driven engine for the Looper archetype.
- *
- * Wires:
- *   - The bot module appended via `extraModules`, which owns the queue-
- *     scheduling lifecycle.
- *   - Per-instance `persistenceNamespace` so parallel solver iterations
- *     don't collide in storage (matches producer/ambient/tug shape).
- *
- * Caller drives the engine via `runUntil` / `runMatrixUntil`. The engine
- * has been `start()`ed and immediately `stop()`ped so the real-time
+ * Build a started, sim-bot-driven engine for the Looper archetype. The
+ * engine has been `start()`ed and immediately `stop()`ped so the real-time
  * interval doesn't fire; solver iterations advance via
  * `engine.loop.stepOnce()` from `runUntil`.
  *
- * Solver flow:
- *   1. Construct a candidate `LoopSchedule`.
- *   2. `engine = buildLooperSimEngine(schedule, tunables)`.
- *   3. `runUntil(engine, { until: () => evaluateGoal(goal.predicate, engine), maxSimTime: goal.budgetSec })`.
- *   4. Check `terminated` — `'predicate'` is reachable; `'maxSimTime'` is
- *      not (or not within budget).
+ * Solver flow (one engine, many iterations):
+ *
+ *   1. `const engine = buildLooperSimEngine();`
+ *   2. `const initialBlob = engine.saveManager!.exportSave();`
+ *   3. `const control = engine.inject(BalanceBotControlKey);`
+ *   4. Per iteration:
+ *        `engine.saveManager!.importSave(initialBlob);`
+ *        `control.setSchedule(candidate);`
+ *        `runUntil({ engine, until: () => evaluateGoal(...), maxSimTime: goal.budgetSec });`
+ *
+ * Perturbation sweeps wrap each iteration in `tuningRegistry.pushScope`;
+ * caller asserts `scopeDepth === 0` between iterations per BALANCING.md
+ * § Load-bearing ceremony.
  */
-export function buildLooperSimEngine(
-  schedule: LoopSchedule,
-  options?: { maxDeltaTime?: number },
-): Engine {
+export function buildLooperSimEngine(options?: { maxDeltaTime?: number }): Engine {
   const namespace = `looper-balance-${++engineCounter}`;
   const { engine } = createLooperEngine({
     persistenceNamespace: namespace,
-    extraModules: [createBalanceBotModule(schedule)],
+    extraModules: [createBalanceBotModule()],
     maxDeltaTime: options?.maxDeltaTime,
   });
   engine.selectMod('classic-adventuring');
