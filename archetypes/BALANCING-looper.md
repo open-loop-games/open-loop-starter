@@ -137,25 +137,49 @@ For REACH_FOREST_1, a candidate scoring function:
 The closed-form lower bound is the algorithm's heuristic — same machinery
 as A*'s h(n). Tightness vs computational cost is open; settle by prototype.
 
-## Algorithm choice
+## Algorithm choice — verdict (REACH_FOREST_1 prototype)
 
-Open per `BALANCING.md § Theme 3 #7`. Resolve in-leaf by running two
-algorithms side-by-side on REACH_FOREST_1 at canonical settings.
+Both **A\* with `h = 0` (uniform-cost / Dijkstra)** and **beam(W=8)** find
+the goal at canonical settings on the same trajectory:
 
-- **A\* over mutation-applied states.** Admissible heuristic = closed-form
-  remaining-sim-time estimate. Pruning power depends on heuristic
-  tightness; loose heuristics over the unlock-cliff structure may
-  not prune enough to beat beam.
-- **Beam search at width W.** Bounded-width best-first heuristic. Doesn't
-  guarantee optimal; for "find a viable trajectory" rather than "find the
-  optimal trajectory," beam is often the right cost/quality tradeoff.
-- **MCTS-style best-of-N rollouts** (fallback). Transitions are
-  deterministic, so UCT degenerates to best-of-N rollouts. Lift this if
-  A\*'s heuristic is too loose AND beam's W blows up.
+```
+algo       found  simTime  expanded  generated  wallTime  termination
+A* (h=0)   yes    7m23s    5         13         ~800ms    goal
+Beam(W=8)  yes    7m23s    13        15         ~1000ms   goal
+```
 
-The prototype's output: a comparison table (nodes-expanded /
-nodes-generated / wall-time / solution-trajectory) plus a written verdict
-on which algorithm fronts the harness and on which goal-shape.
+Same 5-step mutation timeline:
+
+```
+step 0: [wander × 1]                       (bootstrap; wander 0 → 3)
+step 1: [wander × 1]                       (stay; wander 3 → 5)
+step 2: [smash-pots × 50]                  (switch-to-pure-smash; bank first good)
+step 3: [smash-pots × 3, wander × 1]       (smash-first hybrid; build wander + bank more good)
+step 4: [smash-pots × 3, explore-forest × 1]  (goal action; explore-forest completes mid-loop)
+```
+
+The verdict is "A\* with `h = 0` fronts the harness; beam is the
+fallback when state-bracket coarsening doesn't collapse enough." Reasons:
+
+- A\* with closed-set bracket-dedup expands fewer nodes (5 vs 13) because
+  beam expands every frontier node per generation while A\* pops
+  cheapest-g first and dedups by state hash. For trees of dozens of
+  nodes (REACH_FOREST_1's actual scale), the difference is small; for
+  deeper goals (STAT_TIER_COMPOUND, where talent compounding generates
+  many near-identical states), dedup matters more.
+- A useful admissible heuristic is hard to write tightly under talent
+  compounding's positive feedback. The prototype uses `h = 0` —
+  optimality guarantee is preserved, pruning power is purely from the
+  closed set. Future-you can add a tightening heuristic once the
+  bracket-state shape stabilizes across goals.
+- The verdict is weak from a single goal — STAT_TIER_COMPOUND and
+  WANDER_TIME_BOUND are explicitly out of prototype scope per
+  description; the algorithm-choice comparison will get more weight when
+  those goals get their own decision-point + operator menus.
+
+Beam doesn't promote to primary because its top-W-by-score pruning isn't
+load-bearing for this search-tree size. MCTS-fallback per the prior
+framing isn't justified; both algorithms terminate in under 1s.
 
 ## Backtracking — open
 
@@ -168,31 +192,117 @@ paths), backtracking — keeping a frontier of recent commits and re-trying
 alternatives when forward progress stalls — may earn its weight. Open
 until measured.
 
-## Open verdicts (resolve in-leaf; record outcomes here as learnings land)
+## Verdicts settled by the REACH_FOREST_1 prototype
 
-- **Engine-surface verdict.** Default posture: ad-hoc composition of
-  `runUntil` + `BalanceBotControlKey` + `OverrideRegistry.pushScope` +
-  custom search code. Drop a `Planner<S, A, G>` candidate entry in
-  `open-loop-engine/docs/candidate-primitives.md` to seed N=1; wait for
-  N=2 from cycler / explorer / scripter before promoting to a research
-  ticket. Open: confirm the ad-hoc posture by writing the search code
-  and seeing what the abstraction would have bought.
-- **Lock semantics.** Probable: trajectory waypoints + feasibility
-  frontier. Waypoints capture canonical-state checkpoints at chosen
-  sim-time intervals (matches producer/ambient verify shape); feasibility
-  frontier captures, per goal × tunable-perturbation, whether the solver
-  found a reachable trajectory within budget (boolean grid). Open:
-  confirm during `verify.ts` and `solve.ts` implementation.
-- **Decision-point detector composition.** Heuristic-trigger set vs
-  fixed-cadence K-loop fallback. Open: settle by prototype which triggers
-  fire often enough to obviate the fallback.
-- **State-hash discretization granularity.** Coarse enough that
-  "roughly the same place" trajectories converge; fine enough that
-  genuinely distinct states stay distinct. Open: settle by prototype.
-- **Rollout horizon H per goal.** Open per goal; REACH_FOREST_1 likely H
-  ≥ 3, the other two longer.
-- **Backtracking vs linear-commit.** Open per goal; REACH_FOREST_1
-  likely linear-commit is fine.
+- **Engine-surface verdict.** Ad-hoc composition of `runUntil` +
+  `BalanceBotControlKey` + `OverrideRegistry.pushScope` + custom search
+  code works end-to-end on REACH_FOREST_1. Reading the search code, the
+  only piece that "wants" engine support is the bracket-trigger
+  detection inside `runUntil`'s `until` predicate — and that wires
+  through cleanly without a primitive. The `Planner<S, A, G>` candidate-
+  primitives.md drop is still right to make as an N=1 seed for the
+  cycler/explorer/scripter family; abstraction promotion waits for N=2.
+- **Decision-point detector composition.** Bracket-transition triggers
+  (state-space crossed a coarse-bucket boundary) work better than
+  one-shot heuristic crosses (e.g., `wander-crosses-5`). One-shot
+  triggers can't re-fire once their threshold is crossed; bracket
+  transitions naturally re-fire on the next bucket boundary. The
+  prototype's brackets — wander {0-2, 3-4, 5+}, potsGood {0, 1-2, 3-4,
+  5+}, forest {0, ≥1} — produce a 6-level tree with branching factor 2-3.
+- **State-hash discretization granularity.** The same brackets used for
+  triggering double as the closed-set hash key. Coarse enough that
+  parallel trajectories converging on roughly the same regime get
+  deduplicated; fine enough that pre-bootstrap (wander 0-2) and
+  smash-economy-active (potsGood ≥ 1) states stay distinct. Single-axis
+  bucket counts: wander 3, potsGood 4, forest 2 → 24 possible hashes.
+- **Rollout horizon H per goal.** N/A under bracket-transition
+  termination: each rollout runs until ANY bracket crosses (or goal
+  fires, or budget exhausts). Effective H varies — bootstrap rollout is
+  ~3 loops, mid-arc rollouts are ~6-10 loops, goal rollout is 1 loop.
+  Fixed-cadence K-loop fallback isn't needed because every realistic
+  trajectory crosses a bracket eventually.
+- **Backtracking vs linear-commit.** REACH_FOREST_1 doesn't exercise
+  backtracking — A\* with closed-set dedup converges on the optimal
+  trajectory without needing to re-try committed mutations. Open for
+  STAT_TIER_COMPOUND, where multi-axis talent compounding may create
+  trajectories that look promising mid-rollout but stall.
+
+## Open (carry into the next leaf or perturbation sweep)
+
+- **Lock semantics.** Probable shape unchanged: trajectory waypoints
+  (canonical-state checkpoints at chosen sim-time intervals; matches
+  producer/ambient verify shape) plus a feasibility frontier (boolean
+  grid over goal × tunable-perturbation). Implementation lands with
+  `verify.ts` and `solve.ts` once the perturbation sweep follow-up
+  starts; the algorithm-choice verdict above doesn't constrain it.
+- **Algorithm generalization.** The verdict above is from one goal. The
+  next leaf (perturbation sweep + STAT_TIER_COMPOUND / WANDER_TIME_BOUND
+  decision-point work) re-tests the A\*-primary call on those goal
+  shapes, especially STAT_TIER_COMPOUND's hundreds-of-loops Per talent
+  grind where the closed-set may dedup most of the tree away.
+
+## Findings landed during the prototype (engine-side gotchas)
+
+These are properties of the looper port + engine substrate the prototype
+surfaced. Documented here so future-you doesn't re-discover them.
+
+- **`tickDelta` must divide every action's `manaCost` evenly.** Per-tick
+  mana drain at default engine settings = `tickRate × tickDelta`. With
+  `tickRate=20`, `tickDelta=1` (the sibling-solver canonical value)
+  gives 20-mana ticks. Smash Pots's 50-mana cost overshoots to a
+  60-effective-cost (3 ticks of 20-drain instead of the 50-mana
+  intended). This breaks the goodTemp banking math by exactly the
+  amount needed to fit Explore Forest in a single loop. The prototype
+  uses `tickDelta=0.5` (10-mana ticks: smash exactly 50, Explore Forest
+  exactly 400). Other action cost grids in the first arc (Wander 250,
+  Wild Mana 150, Pick Locks 400, Buy Mana 100, Gather Herbs 200, Old
+  Shortcut 1200, Meet People 800) all divide by 10, so 0.5 works
+  uniformly. Future expansion of the action grid should pick a
+  `tickDelta` matching the GCD of all manaCosts.
+- **Bot `setSchedule` must force edit→active promotion.** The looper's
+  `activeLoopQueue` and `editLoopQueue` Sequencer state is NOT inside
+  `withPersistentContext` — its `items` array is a Vue ref, not a
+  Persistent ref, so `saveManager.importSave(blob)` doesn't restore it.
+  Without explicit handling, queue state leaks from prior rollouts (the
+  candidate queue only takes effect after one residual loop completes).
+  `setSchedule` calls `restartActionQueue` after `loadEditQueue` so the
+  candidate runs on the loop that's starting, not the one after.
+- **Bot `setSchedule` indexes off by one** (parked as known issue).
+  `bot.ts:beforeRestart` reads `getLoopCount().value` and uses it
+  directly as the schedule index — but the engine emits `beforeRestart`
+  *before* `count.value++` (see `open-loop-engine/src/systems/loop.ts:213-218`
+  and `tests/systems/loop-log.test.ts:155-166`). The handler should
+  index `loopCount + 1` for "the loop about to start." The bug doesn't
+  bite the decision-point branching solver shape because every rollout
+  calls `setSchedule([singleQueue])` — schedule.length=1 keeps the bot
+  in past-end "leave edit alone" mode for any loopCount ≥ 1, and the
+  single queue replays correctly via `restartActionQueue`'s edit→active
+  copy. The bug WOULD bite a multi-queue `setSchedule([Q0, Q1, ...])`
+  call — verify pass-shapes that re-run a full LoopSchedule end-to-end
+  should be implemented as iterated single-queue `setSchedule` calls,
+  same as the solver itself.
+- **Action-runner's `canRun` zone-gate skips wrong-zone items.** Each
+  loop reset selects `beginnersville` (`modules/zones.ts:261`); the
+  per-tick dispatcher's `canRun` (`modules/action-runner.ts:420`)
+  returns `'never'` for any item whose `def.zoneId !== getCurrentZone()`.
+  UI players resolve this by clicking the zone selector mid-loop; the
+  bot has no UI. The Sequencer's `'start'` event doesn't fire on a
+  `'never'` gate (it emits `'skip'` instead), so a post-hoc handler
+  can't react in time. The bot wraps `canRun` at install time so wrong-
+  zone items auto-`unlockZone(def.zoneId, true)` before the original
+  gate's zone check runs. Player-facing engine instances don't install
+  the bot module — the UI zone-selection contract is preserved for
+  production play.
+- **Module-singleton collision blocks two-engine setup.** Building two
+  `buildLooperSimEngine()` instances back-to-back trips a `Duplicate
+  entry id: "wander"` error from `action-runner/progress` content
+  registry. `progressCategory` (and the sibling regular/basic
+  categories) are module-level state inside `action-types/*.ts`;
+  re-installing the module re-registers the action defs into the same
+  singleton. The prototype works around this by sharing one engine
+  across A\* and beam (importSave-per-search reset). Multi-engine
+  scenarios (e.g., parallel batch sims) need the action-type categories
+  reworked to be per-engine or a separate ticket.
 
 ## Findings to graduate at close (cross-archetype)
 

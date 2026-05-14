@@ -12,8 +12,21 @@ export { tuningModule, LooperTuningRegistryKey, type LooperTunableKey } from './
 export { manaModule, getMana } from './mana';
 export { resourcesModule } from './resources';
 export { statsModule, getStatLevel, getTalentLevel } from './stats';
-export { zonesModule, getProgressLevel } from './zones';
-export { actionQueueModule, addAction, clearActions } from './action-queue';
+export {
+  zonesModule,
+  getProgressLevel,
+  getRegularGood,
+  getRegularVar,
+  unlockZone,
+  getCurrentZone,
+} from './zones';
+export {
+  actionQueueModule,
+  addAction,
+  clearActions,
+  getActiveLoopQueue,
+  restartActionQueue,
+} from './action-queue';
 export {
   actionRunnerModule,
   isActionVisible,

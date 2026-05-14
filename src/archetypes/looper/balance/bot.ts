@@ -18,6 +18,15 @@
  * shape — module install runs once; closure-local bot state would leak
  * across iterations.
  *
+ * Critical detail: the looper's `activeLoopQueue` / `editLoopQueue`
+ * Sequencer state is NOT inside `withPersistentContext` — its items array
+ * is a Vue ref, not a Persistent ref, and `importSave` doesn't restore
+ * it. Without explicit handling, queue state from the prior rollout leaks
+ * into the next one (the candidate queue only takes effect after one
+ * residual loop completes). `setSchedule` therefore promotes edit → active
+ * immediately via `restartActionQueue` so the candidate queue runs on the
+ * loop that's about to start, not the one after.
+ *
  * Engine-as-oracle: the bot does not reimplement queue dispatch — it
  * only schedules which queue runs next. Action execution, mana drain,
  * XP accrual, completion-effects, and progress-var level-ups all flow
@@ -33,7 +42,18 @@ import {
   type InjectionKey,
 } from '@open-loop/engine';
 import { createLooperEngine } from '..';
-import { addAction, clearActions, getLoop, getLoopCount, getMana, startLoop } from '../modules';
+import {
+  addAction,
+  clearActions,
+  getActionDef,
+  getActiveLoopQueue,
+  getLoop,
+  getLoopCount,
+  getMana,
+  restartActionQueue,
+  startLoop,
+  unlockZone,
+} from '../modules';
 
 // ─── Schedule shape ───────────────────────────────────────────────────────
 
@@ -85,6 +105,32 @@ function loadEditQueue(queue: LoopQueue): void {
 }
 
 /**
+ * Wrap action-runner's `canRun` gate so that wrong-zone items auto-switch
+ * zones instead of being skipped. The default gate at
+ * `modules/action-runner.ts:420` returns `'never'` when `def.zoneId !==
+ * getCurrentZone()`; UI players resolve this by clicking a zone selector
+ * mid-loop. The bot has no UI, and Sequencer emits `'skip'` (not `'start'`)
+ * on a `'never'` gate, so a post-hoc `'start'` event handler can't catch
+ * the wrong-zone case in time. Wrapping `canRun` at install time lets the
+ * bot unlock + select the action's zone before the gate's zone check, so
+ * mixed-zone queues like `[smash-pots, explore-forest]` run end-to-end.
+ *
+ * Player-facing engine instances don't install this module, so the UI
+ * zone-selection contract is preserved for production play.
+ */
+function installZoneAutoSelectGate(): void {
+  const queue = getActiveLoopQueue();
+  const original = queue.canRun;
+  queue.canRun = (item) => {
+    const def = getActionDef(item.id);
+    if (def && def.zoneId === 'forest-path') {
+      unlockZone('forest-path', true);
+    }
+    return original ? original(item) : 'now';
+  };
+}
+
+/**
  * Bot module wiring. Subscribes to `loop.on('beforeRestart')` once; the
  * active schedule is mutable state owned by the module closure and swapped
  * by `setSchedule` between solver iterations.
@@ -99,6 +145,8 @@ function createBalanceBotModule(): EngineModule {
     id: 'balance-bot',
     dependencies: ['loop', 'action-runner'],
     install(ctx) {
+      installZoneAutoSelectGate();
+
       let activeSchedule: LoopSchedule | null = null;
 
       const control: BalanceBotControl = {
@@ -108,6 +156,11 @@ function createBalanceBotModule(): EngineModule {
           }
           activeSchedule = schedule;
           loadEditQueue(schedule[0]!);
+          // Force the candidate queue to take effect on the *current* loop.
+          // Without this, the active queue inherits whatever the engine
+          // instance last ran (a prior rollout's queue) because Sequencer
+          // state isn't part of the save envelope. See file header.
+          restartActionQueue();
           startLoop();
         },
       };
