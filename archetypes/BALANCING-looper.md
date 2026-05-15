@@ -227,14 +227,147 @@ until measured.
   STAT_TIER_COMPOUND, where multi-axis talent compounding may create
   trajectories that look promising mid-rollout but stall.
 
+## Lock semantics — trajectory waypoints + feasibility frontier
+
+Two locked artifacts: the canonical trajectory's per-step state
+checkpoints (regression-catches engine-side primitive drift), and the
+perturbation sweep's reachability grid (regression-catches tunable shift
+in the solver's reachable space).
+
+### Trajectory waypoints
+
+One waypoint per decision-point step in REACH_FOREST_1's A\* trajectory
+at canonical settings (initialMana=250, costDivisor=100,
+talentAccrualRatio=0.01). The canonical trajectory has 5 steps (per
+§ Algorithm choice's verdict table); each step's waypoint captures:
+
+- **`stepIndex: number`** — 0..N-1, matches trajectory ordering.
+- **`queue: LoopQueue`** — `(actionId, repeats)[]` that ran during this
+  step's rollout. Shape regression: a change that reorders or resizes
+  the chosen queue surfaces here.
+- **`cumulativeSimSec: number`** — sim-time at end of this step's
+  rollout (= `SearchNode.g`).
+- **`state: LooperState`** — bracket-state snapshot from `solver.ts`
+  plus the supplementary fields that don't drive search but matter for
+  drift detection:
+  - `wander, forest, met, shortcut` — progress-var levels (integers).
+  - `loopCount` — persistent loop counter.
+  - `potsGood, locksGood` — regular-var banked goods (integers).
+  - `talentLevels: Record<StatId, number>` — 9 talent integer levels.
+- **`rolloutTermination: 'bracket' | 'goal' | 'budget'`** — what closed
+  this step's rollout. Same field on `SearchNode`.
+
+Tolerance shape per field:
+
+- `cumulativeSimSec` — **±5% relative**, matches producer/verify.ts.
+  Loosens at the terminal step where rollout-jitter compounds.
+- `state` integer fields (progress-var levels, loop count, regular-var
+  goods, talent levels) — **exact match**. These are integer thresholds
+  the search keys off; drift means a different operator menu would have
+  fired.
+- `queue` — **exact match** on (actionId, repeats) per slot. A
+  regression changing action set or repeat counts is load-bearing.
+- `rolloutTermination` — **exact match**. A step that previously closed
+  on `'bracket'` and now closes on `'goal'` reshapes the whole
+  trajectory; not a soft drift.
+
+Authority chain: `verify.ts` runs the canonical solver, captures the
+trajectory, diffs against a checked-in golden waypoint array, exits
+nonzero on tolerance breach. Goldens live alongside the script
+(`GOLDEN_WAYPOINTS` inline or sibling file), regenerated explicitly via
+a `--bless` flag when intentional drift lands. Same exit-code + golden
+shape as producer/verify.ts.
+
+### Feasibility frontier
+
+One cell per (goal × tunable-perturbation) pair. The harness defines the
+*shape* of a cell + the diff tolerance for drift detection; the
+*populated grid* belongs to whoever has a real perturbation in mind. The
+canonical first-arc port has none — vanilla numbers are canonical per
+PROGRESSION.md § What the looper port is, and arbitrary multipliers
+around canonical (e.g. "0.5× to 2.0× costDivisor") would lock a baseline
+with no design basis.
+
+Per-cell record:
+
+```
+{ reachable: boolean,
+  simTimeAtGoal: number | null,
+  trajectoryLength: number | null,
+  terminationReason: string,
+  nodesExpanded: number }
+```
+
+Lock granularity (when a fork populates the grid):
+
+- **`reachable` per cell — exact match.** A flip from reachable to
+  unreachable (or back) signals a real perturbation-surface shift; the
+  fork investigates whether their change broke the canonical trajectory.
+- **`simTimeAtGoal` per reachable cell — ±10% relative.** Wider than
+  the trajectory-waypoint tolerance because the solver's mutation
+  choices can flip between equal-cost trajectories at perturbed
+  settings.
+- **`trajectoryLength` per reachable cell — exact match.**
+- **`terminationReason` per cell — exact match.**
+
+Available perturbation axes (`LooperTunableKey`):
+
+- `balance/costDivisor` — live closure at `action-runner.ts:486`,
+  mid-run `pushScope` propagates. Effect on REACH_FOREST_1 is bounded;
+  per PROGRESSION.md § Adjusted-ticks, within-loop XP compression is
+  small at zero starting stats and the goal lands at ~24 loops.
+- `balance/talentAccrualRatio` — live closure at `stats.ts:165`. Doesn't
+  bite the first-arc trajectory; PROGRESSION.md § XP accrual: canonical
+  0.01 ratio keeps talent levels at zero for the ~24 loops of
+  REACH_FOREST_1. Talent becomes load-bearing at hundreds-to-thousands
+  of loops, so the meaningful sweep against this axis pairs with a
+  longer-horizon goal (STAT_TIER_COMPOUND when it lands).
+- `balance/initialMana` — reader is captured at module install
+  (`mana.ts:122`); mid-run `pushScope` doesn't affect it, and the
+  module-singleton finding blocks rebuilding the engine per cell.
+  Resolves when action-types module-singleton state moves into
+  per-engine context.
+
+Forks that perturb per-action numbers (manaCost grids, weights,
+rewardRatios, regular-var pool sizing) are reshaping the canonical
+pots→smash→else mana ramp itself — that's content reshape, not the
+tunable-axis surface. Reshape-the-loop forks re-bless the verify
+waypoints under their new numbers.
+
+Per cell:
+
+```
+{ reachable: boolean,
+  simTimeAtGoal: number | null,
+  trajectoryLength: number | null,
+  terminationReason: string,
+  nodesExpanded: number }
+```
+
+The first two fields are load-bearing — boolean reachability frontier
++ sim-time isocline. The rest are diagnostic.
+
+Lock granularity:
+
+- **`reachable` per cell — exact match.** A flip from reachable to
+  unreachable (or back) signals either a real perturbation-surface
+  shift or an engine drift; both want investigation.
+- **`simTimeAtGoal` per reachable cell — ±10% relative.** Wider than
+  the trajectory tolerance because the solver's mutation choices can
+  flip between equal-cost trajectories at perturbed settings,
+  producing legitimately different but still-good sim-times.
+- **`trajectoryLength` per reachable cell — exact match.** Same
+  shape-regression argument as `queue` above.
+- **`terminationReason` per cell — exact match.**
+
+Authority chain: `solve.ts` produces the frontier table; goldens live
+alongside (sibling file or inline `GOLDEN_FRONTIER`), diffed with the
+same `--bless`-to-regenerate pattern. Both regression catches run as
+`pnpm balance:looper:verify` / `pnpm balance:looper:solve` from CI,
+exit-code discipline same as producer/verify.ts.
+
 ## Open (carry into the next leaf or perturbation sweep)
 
-- **Lock semantics.** Probable shape unchanged: trajectory waypoints
-  (canonical-state checkpoints at chosen sim-time intervals; matches
-  producer/ambient verify shape) plus a feasibility frontier (boolean
-  grid over goal × tunable-perturbation). Implementation lands with
-  `verify.ts` and `solve.ts` once the perturbation sweep follow-up
-  starts; the algorithm-choice verdict above doesn't constrain it.
 - **Algorithm generalization.** The verdict above is from one goal. The
   next leaf (perturbation sweep + STAT_TIER_COMPOUND / WANDER_TIME_BOUND
   decision-point work) re-tests the A\*-primary call on those goal

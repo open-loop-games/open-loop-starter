@@ -77,7 +77,7 @@ export interface LooperState {
   loopCount: number;
 }
 
-function snapshotState(): LooperState {
+export function snapshotState(): LooperState {
   const pots = getRegularVar('pots');
   return {
     wander: getProgressLevel('wander'),
@@ -133,7 +133,7 @@ function hashState(s: LooperState): string {
  * Trigger naming reflects the bracket that changed; `expand()` uses the
  * trigger id + current state to choose the candidate menu.
  */
-function detectBracketTrigger(prev: LooperState): string | null {
+export function detectBracketTrigger(prev: LooperState): string | null {
   const cur = snapshotState();
   const wB = wanderBracket(cur.wander);
   const fB = forestBracket(cur.forest);
@@ -490,6 +490,14 @@ export interface SearchResult {
  * Heuristic is `h = 0` — true admissible bounds under talent compounding
  * are hard to write tightly; the prototype runs Dijkstra and lets beam
  * answer "is heuristic pruning worth the complexity?"
+ *
+ * TODO(expansion): `Planner<S, A, G>` candidate — shared
+ * `{problem, expand(node), goalReached(state), hashState(state)}` contract
+ * for state-space search across consumers (cycler / explorer / scripter
+ * balance leaves are the N=2+ family). N=1 seed; deliberate pause point per
+ * `BALANCING-looper.md § Engine-surface verdict`. See
+ * `open-loop-engine/docs/candidate-primitives.md` §
+ * `Planner<S, A, G>` — constructive state-space search.
  */
 export function astar(problem: SearchProblem): SearchResult {
   const t0 = Date.now();
