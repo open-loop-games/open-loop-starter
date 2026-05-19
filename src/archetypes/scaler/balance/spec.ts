@@ -13,12 +13,21 @@
  * Sections per subsystem:
  *   - Runes — Pure log-curve via canonical `computeEXPToLevel` inversion.
  *   - ECC — Piecewise regime walker over the transcend-tier softcap splice.
+ *   - Prestige — Optimal-stopping frozen-state predictions at the canonical
+ *     threshold (`coinsThisPrestige=1e16` ⇒ `prestigePointGain=100`).
  */
 
 import { Decimal, type Engine } from '@open-loop/engine';
 import type { RuneId } from '../data';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
-import { computeEXPToLevel, getRuneDefs, getRuneEffects } from '../modules';
+import {
+  computeEXPToLevel,
+  getCoinsThisPrestige,
+  getPrestigeConversion,
+  getPrestigePointGain,
+  getRuneDefs,
+  getRuneEffects,
+} from '../modules';
 
 let counter = 0;
 let cachedEngine: Engine | undefined;
@@ -195,4 +204,100 @@ export interface EccSamplePoint {
  */
 export function buildEccSpec(sampleCompletions: readonly number[]): EccSamplePoint[] {
   return sampleCompletions.map((c) => ({ completions: c, predicted: specEccTranscend(c) }));
+}
+
+// ─── Prestige — Optimal-stopping frozen-state predictions ────────────────────
+
+/**
+ * Canonical prestige threshold (`Synergism.ts:3620`):
+ *
+ *   coinsThisPrestige >= 1e16  OR  prestigePointGain >= 100
+ *
+ * With canonical `prestigePointGain = floor((coinsThisPrestige / 1e12)^0.5)`,
+ * the two conditions are mathematically equivalent under canonical params:
+ * at `c = 1e16`, `gain = floor((1e16/1e12)^0.5) = floor(100) = 100`. The
+ * `anyOf` disjunction is structurally a single threshold under canonical
+ * numbers — both branches fire at the same engine tick.
+ *
+ * The frozen-state predictor mutates `coinsThisPrestige` to the canonical
+ * threshold (1e16) and reads back the engine's `prestigePointGain` +
+ * `prestigeConversion.canConvert`. Both reads are pure engine computeds —
+ * predictor never reimplements the canonical formula on its own side.
+ *
+ * Bellman-style optimal-stopping context:
+ *
+ *   Under canonical-port discipline (`BALANCING.md § Canonical numbers
+ *   are not tunable`), the threshold θ = 1e16 is fixed. Bellman value
+ *   iteration would compute θ* under a free-policy regime — informative
+ *   as a design analysis but NOT a regression catch. The direct-bisect
+ *   path below (frozen-state queries against canonical θ) is what the
+ *   regression locks depend on; the optimal-θ analysis is fork-extension
+ *   territory.
+ *
+ * TODO(expansion): graduate the prestige optimal-stopping framing to a
+ * `createOptimalStoppingSolver({ state, action, reward, transition,
+ * discount })` engine helper once a second consumer derives the same
+ * shape (Transcend Bellman is the in-leaf N=2 candidate, layered one
+ * level up). See `open-loop-engine/docs/candidate-primitives.md`.
+ */
+
+export interface PrestigeThresholdPrediction {
+  /** Canonical coin threshold: 1e16. */
+  canonicalCoinThreshold: number;
+  /** Canonical PP-gain threshold: 100. */
+  canonicalGainThreshold: number;
+  /** `prestigePointGain` engine query at `coinsThisPrestige = 1e16` —
+   *  predicted exactly 100 by canonical formula construction. */
+  gainAtCoinThreshold: number;
+  /** `prestigeConversion.canConvert` engine query at the canonical
+   *  threshold — predicted `true`. */
+  canConvertAtCoinThreshold: boolean;
+  /** Long-run-average PP rate under canonical policy, computed as
+   *  `gainAtFire / observedCycleSec`. Populated by `verify.ts` with
+   *  observed cycle time; analytical reference for the optimal-θ gap. */
+  longRunAvgRateHint: { gainPerSec: number; cycleSec: number } | null;
+}
+
+/**
+ * Frozen-state predictor: mutate `coinsThisPrestige` to the canonical
+ * threshold, query the engine's `prestigePointGain` + `canConvert`
+ * computeds, restore state. The engine answers — predictor doesn't
+ * recompute the canonical formula on its own side.
+ *
+ * Reads from whichever scaler engine the caller has installed — the
+ * module-level singletons (`getCoinsThisPrestige`, etc.) bind to the
+ * last-built engine, so callers must ensure their target engine is
+ * built and active before calling this predictor. If no engine is yet
+ * built, this builds a spec engine on demand.
+ */
+export function predictPrestigeAtCanonicalThreshold(): PrestigeThresholdPrediction {
+  let coinsThisPrestige;
+  try {
+    coinsThisPrestige = getCoinsThisPrestige();
+  } catch {
+    // No engine installed — build a dedicated spec engine for this call.
+    getSpecEngine();
+    coinsThisPrestige = getCoinsThisPrestige();
+  }
+  const prestigeConversion = getPrestigeConversion();
+  const prestigePointGain = getPrestigePointGain();
+
+  const canonicalCoinThreshold = 1e16;
+  const canonicalGainThreshold = 100;
+
+  const saved = coinsThisPrestige.value;
+  try {
+    coinsThisPrestige.value = canonicalCoinThreshold;
+    const gain = Decimal.fromValue(prestigePointGain.value).toNumber();
+    const canConvert = prestigeConversion.canConvert.value;
+    return {
+      canonicalCoinThreshold,
+      canonicalGainThreshold,
+      gainAtCoinThreshold: gain,
+      canConvertAtCoinThreshold: canConvert,
+      longRunAvgRateHint: null,
+    };
+  } finally {
+    coinsThisPrestige.value = saved;
+  }
 }

@@ -19,13 +19,17 @@ import {
   eccTranscend,
   getCoinResource,
   getCoinProducers,
+  getCoinsThisPrestige,
+  getDiamondProducers,
   getOfferings,
+  getPrestigeCount,
   getPrestigePoints,
+  getPrestigePointGain,
   getRuneEffects,
   getRuneLevel,
 } from '../modules';
 import { ECC_SAMPLE_COMPLETIONS } from './balance';
-import { specEccTranscend } from './spec';
+import { predictPrestigeAtCanonicalThreshold, specEccTranscend } from './spec';
 
 const TICK_DELTA = 1; // 1s — minute-scale events.
 const MAX_SIM_SECONDS = 24 * 60 * 60;
@@ -125,9 +129,128 @@ function runEccDiscovery(): void {
   }
 }
 
+// ─── Prestige ────────────────────────────────────────────────────────────────
+
+function runPrestigeDiscovery(): void {
+  console.log('\n=== Scaler prestige-beat discovery ===');
+  console.log(`tickDelta=${TICK_DELTA}s   maxSimTime=${MAX_SIM_SECONDS}s\n`);
+
+  // Frozen-state predictions — engine-as-oracle at the canonical threshold.
+  const prediction = predictPrestigeAtCanonicalThreshold();
+  console.log(`  Canonical threshold predictions (engine queries at coinsThisPrestige=1e16):`);
+  console.log(`    prestigePointGain         = ${prediction.gainAtCoinThreshold}`);
+  console.log(`    prestigeConversion.canConvert = ${prediction.canConvertAtCoinThreshold}`);
+  console.log(
+    `    gain-threshold equivalence  = ` +
+      `${prediction.gainAtCoinThreshold === prediction.canonicalGainThreshold ? 'yes (anyOf is structurally a single threshold)' : 'NO'}\n`,
+  );
+
+  const { engine } = createScalerEngine({
+    persistenceNamespace: `solve-prestige-${Date.now()}`,
+  });
+  engine.selectMod(SCALER_MOD_ID);
+  engine.start();
+
+  const pp = getPrestigePoints();
+  const cthis = getCoinsThisPrestige();
+  const gain = getPrestigePointGain();
+  const prestigeCount = getPrestigeCount();
+  const diamond1 = getDiamondProducers().getProducer('diamond-1');
+
+  // Phase 1 — observe first prestige. Trip on coin-threshold cross to
+  // capture pre-reset state; the actual conversion fires on a separate
+  // onTick callback within the same tick.
+  let firstPrestigeAt = -1;
+  let firstCoinsAtFire = '0';
+  let firstGainAtFire = 0;
+  const phase1 = runUntil({
+    engine,
+    tickDelta: TICK_DELTA,
+    maxSimTime: MAX_SIM_SECONDS,
+    until: ({ simTime }) => {
+      if (firstPrestigeAt < 0 && Decimal.gte(cthis.value, 1e16)) {
+        firstPrestigeAt = simTime;
+        firstCoinsAtFire = Decimal.fromValue(cthis.value).toExponential(3);
+        firstGainAtFire = Decimal.fromValue(gain.value).toNumber();
+      }
+      return prestigeCount.value >= 1;
+    },
+  });
+  if (phase1.terminated !== 'predicate') {
+    console.log(`!! first prestige did not fire within budget`);
+    engine.dispose();
+    return;
+  }
+  console.log(
+    `>> first prestige fired at simTime = ${firstPrestigeAt}s ` +
+      `(${(firstPrestigeAt / 60).toFixed(1)}min)`,
+  );
+  console.log(`>> coinsThisPrestige at fire = ${firstCoinsAtFire}`);
+  console.log(`>> prestigePointGain at fire = ${firstGainAtFire}`);
+  console.log(
+    `>> long-run-avg PP rate (cycle 1) = ${(firstGainAtFire / firstPrestigeAt).toFixed(4)} PP/s`,
+  );
+
+  // Phase 2 — diamond-1 autobuy.
+  let diamond1At = -1;
+  const phase2 = runUntil({
+    engine,
+    tickDelta: TICK_DELTA,
+    maxSimTime: 60,
+    until: ({ simTime }) => {
+      if (diamond1 && Decimal.gte(diamond1.count.value, 1)) {
+        diamond1At = firstPrestigeAt + simTime;
+        return true;
+      }
+      return false;
+    },
+  });
+  if (phase2.terminated === 'predicate') {
+    console.log(
+      `>> diamond-1 auto-bought at simTime = ${diamond1At}s ` +
+        `(${phase2.elapsedSimulated}s after first prestige)`,
+    );
+  } else {
+    console.log(`!! diamond-1 not auto-bought within 60s of first prestige`);
+  }
+
+  // Phase 3 — observe per-cycle compounding for cycles 2..5 (informs transcend
+  // sub-pass and the optimal-stopping long-run-average reference).
+  console.log(`\n  Per-cycle PP gain (cycles 2..5):`);
+  const cycleTimes: number[] = [firstPrestigeAt];
+  for (let cycle = 2; cycle <= 5; cycle++) {
+    let cycleStartSec = -1;
+    const phase = runUntil({
+      engine,
+      tickDelta: TICK_DELTA,
+      maxSimTime: MAX_SIM_SECONDS,
+      until: ({ simTime }) => {
+        if (prestigeCount.value >= cycle) {
+          cycleStartSec = simTime;
+          return true;
+        }
+        return false;
+      },
+    });
+    if (phase.terminated !== 'predicate' || cycleStartSec < 0) {
+      console.log(`    cycle ${cycle}: did not fire within budget`);
+      break;
+    }
+    cycleTimes.push(cycleTimes[cycleTimes.length - 1] + cycleStartSec);
+    const dur = cycleStartSec;
+    console.log(
+      `    cycle ${cycle}: Δt = ${dur}s (${(dur / 60).toFixed(1)}min), ` +
+        `cumulative PP = ${Decimal.fromValue(pp.value).toString()}`,
+    );
+  }
+
+  engine.dispose();
+}
+
 function main(): void {
   runRunesDiscovery();
   runEccDiscovery();
+  runPrestigeDiscovery();
 }
 
 main();

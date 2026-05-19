@@ -284,11 +284,12 @@ export const SCALER_MEASUREMENT_ANCHORS: readonly BeatProbe[] = [
   },
   {
     id: 'first-prestige',
-    // Canonical first-prestige fires ~58min under autobuyer; expected window
-    // is the existing discovery-script ceiling (90min) with a floor at
-    // the math's earliest-possible (~30min). Sharpened by prestige spec.ts
-    // Bellman convergence in the prestige sub-pass.
-    targetWindow: [30 * 60, 90 * 60],
+    // Canonical first-prestige fires ~57min under autobuyer at canonical
+    // 1e16 threshold; predictor (`balance/spec.ts predictPrestigeAtCanonical
+    // Threshold`) confirms `prestigePointGain = 100` at threshold exactly,
+    // making the `anyOf` disjunction structurally a single condition.
+    // Window: ±5min around observed 3405s closure.
+    targetWindow: [54 * 60, 62 * 60],
     predicate: () => getPrestigeCount().value >= 1,
   },
   {

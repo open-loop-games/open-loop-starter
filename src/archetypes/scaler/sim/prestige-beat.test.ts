@@ -2,17 +2,23 @@
  * Regression locks for the Scaler beat-2 fire-time and post-beat state.
  *
  * Per `archetypes/BALANCING.md` § Theme 5: tests lock chosen numbers with
- * `toBeBetween` bounds; discovery happens elsewhere (`balance/prestige-beat.ts`,
- * run via `pnpm exec vite-node`). The bounds below come from a converged
- * discovery run against the default `SCALER_BALANCE` constants — they trip
- * if a seemingly-unrelated change shifts beat-2 by more than a few minutes
- * either direction.
+ * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve.ts`,
+ * run via `pnpm exec vite-node`).
  *
- * Discovery snapshot (2026-05-07, autobuyer leaf 3 land):
- *   first prestige fires at simTime ≈ 3499s (58.3 min)
- *   prestigePoints.cumulative = 100 immediately after first prestige
- *   diamond-1 auto-bought 0s after first prestige (same tick)
- *   prestige upgrades remain at 0 purchased (cheapest costs 1e5 PP, gain is 100)
+ * Predictor (`balance/spec.ts predictPrestigeAtCanonicalThreshold`) computes
+ * frozen-state engine queries at the canonical threshold (1e16):
+ *   - `prestigePointGain` at threshold = 100 exactly (canonical formula
+ *     `floor((c/1e12)^0.5)` constructed for this equivalence).
+ *   - `prestigeConversion.canConvert` = true at threshold.
+ *
+ * Verify-driver (`balance/verify.ts`) sims to first prestige and diffs.
+ * The threshold equivalence pins the `anyOf` disjunction's structural
+ * collapse — the coin-threshold and gain-threshold branches fire at the
+ * same engine tick under canonical params.
+ *
+ * Fire-time window tightened from a converged discovery run (3499s ≈ 58.3
+ * min closure) to predictor-aware bounds. Drift outside the band signals
+ * a shift in coin-tier compounding or an autobuyer scheduling change.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -60,12 +66,12 @@ describe('scaler prestige-beat lock — beat-2 (first prestige + first diamond)'
     expect(result.terminated).toBe('predicate');
 
     // ─── Beat-2 fire-time band ────────────────────────────────────────
-    // Closure value: 3499s. Bounds: [50, 75] minutes — wide enough to
-    // tolerate per-tick drift from extraCount cascade evaluation order
-    // (still wired off pending the cascade-upgrade leaf), tight enough
-    // to catch any 2× shift in coin-tier compounding.
-    expect(result.elapsedSimulated).toBeGreaterThan(50 * 60);
-    expect(result.elapsedSimulated).toBeLessThan(75 * 60);
+    // Converged discovery: 3405s (56.8 min) under canonical autobuyer +
+    // canonical 1e16 threshold. Bounds: ±5min around the closure — tight
+    // enough to catch a 10% shift in coin-tier compounding, loose enough
+    // to tolerate per-tick scheduling jitter from autobuyer sweep order.
+    expect(result.elapsedSimulated).toBeGreaterThan(54 * 60);
+    expect(result.elapsedSimulated).toBeLessThan(62 * 60);
 
     // ─── Beat-2 state invariants ──────────────────────────────────────
     // prestigePoints.cumulative tracks first-cycle gain. Closure value:

@@ -17,7 +17,12 @@ import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
 import { eccTranscend, getPrestigePoints, getRuneLevel } from '../modules';
 import { ECC_SAMPLE_COMPLETIONS } from './balance';
-import { buildEccSpec, buildRunesSpec, predictFirstSpeedLevel1Sec } from './spec';
+import {
+  buildEccSpec,
+  buildRunesSpec,
+  predictFirstSpeedLevel1Sec,
+  predictPrestigeAtCanonicalThreshold,
+} from './spec';
 
 const TICK_DELTA = 1; // 1s — minute-scale events; matches sim/runes-beat.test.ts.
 const MAX_SIM_SECONDS = 24 * 60 * 60; // 24h cap.
@@ -114,6 +119,92 @@ function verifyEcc(): EccDiffRow[] {
     const delta = engine - predicted;
     return { completions, predicted, engine, delta, exact: delta === 0 };
   });
+}
+
+// ─── Prestige — frozen-state predictor vs sim observation ───────────────────
+
+interface PrestigeDiffRow {
+  metric: string;
+  predicted: string;
+  observed: string;
+  pass: boolean;
+}
+
+interface PrestigeObservation {
+  firstPrestigeAtSec: number;
+  /** Cumulative PP after first prestige — this is the canonical post-fire
+   *  signal. The autobuyer fires the prestige conversion in the same tick
+   *  the threshold crosses, so pre-fire `coinsThisPrestige` is not
+   *  observable via post-tick polling (the reset has already wiped it to
+   *  100 by the time `runUntil`'s predicate runs at tick end). */
+  cumulativePPAtFire: Decimal;
+}
+
+function observeFirstPrestige(): {
+  observation: PrestigeObservation;
+  prediction: ReturnType<typeof predictPrestigeAtCanonicalThreshold>;
+} {
+  // Build the sim engine first so the module-level accessors bind to it,
+  // then run the frozen-state predictor against the SAME engine. Sequencing
+  // matters: scaler's module-level singletons re-bind on every
+  // `createScalerEngine` call, so the predictor's query would land on a
+  // disposed engine if it ran before this build.
+  const engine = buildVerifyEngine();
+  const prestigePoints = getPrestigePoints();
+
+  const prediction = predictPrestigeAtCanonicalThreshold();
+
+  const result = runUntil({
+    engine,
+    tickDelta: TICK_DELTA,
+    maxSimTime: MAX_SIM_SECONDS,
+    until: () => Decimal.gt(prestigePoints.cumulative?.value ?? 0, 0),
+  });
+
+  if (result.terminated !== 'predicate') {
+    engine.dispose();
+    throw new Error(`verify(prestige): first prestige did not fire within ${MAX_SIM_SECONDS}s`);
+  }
+
+  const cumulativePPAtFire = Decimal.fromValue(prestigePoints.cumulative?.value ?? 0);
+  engine.dispose();
+
+  return {
+    prediction,
+    observation: {
+      firstPrestigeAtSec: result.elapsedSimulated,
+      cumulativePPAtFire,
+    },
+  };
+}
+
+function verifyPrestige(): { rows: PrestigeDiffRow[]; observation: PrestigeObservation } {
+  const { prediction, observation: obs } = observeFirstPrestige();
+
+  const rows: PrestigeDiffRow[] = [
+    {
+      metric: 'frozen-state: gain at coinsThisPrestige=1e16 (predicted == 100 exact)',
+      predicted: String(prediction.gainAtCoinThreshold),
+      observed: `cumulative PP at first prestige = ${obs.cumulativePPAtFire.toString()}`,
+      pass:
+        prediction.gainAtCoinThreshold === prediction.canonicalGainThreshold &&
+        Decimal.eq(obs.cumulativePPAtFire, prediction.canonicalGainThreshold),
+    },
+    {
+      metric: 'frozen-state: canConvert at canonical threshold (predicted == true)',
+      predicted: String(prediction.canConvertAtCoinThreshold),
+      observed: 'sim observed prestige fire (cumulative > 0)',
+      pass: prediction.canConvertAtCoinThreshold,
+    },
+    {
+      metric: 'threshold-equivalence: anyOf branches fire same tick (1e16 ⇔ 100PP)',
+      predicted: `gainAt(1e16) == ${prediction.canonicalGainThreshold} ⇒ disjunction collapses`,
+      observed: `cumulative PP at fire == ${obs.cumulativePPAtFire.toString()}`,
+      pass: Decimal.eq(obs.cumulativePPAtFire, prediction.canonicalGainThreshold),
+    },
+  ];
+
+  return { rows, observation: obs };
 }
 
 // ─── Output ──────────────────────────────────────────────────────────────────
@@ -216,6 +307,34 @@ function main(): void {
     process.exitCode = 1;
   } else {
     console.log(`All ${eccRows.length} ECC sample points match exactly.`);
+  }
+
+  // ─── Prestige ─────────────────────────────────────────────────────────────
+  console.log('\n## Prestige sub-pass — frozen-state predictor vs sim\n');
+  const { rows: prestigeRows, observation } = verifyPrestige();
+  console.log(`  first prestige observed at simTime = ${fmt(observation.firstPrestigeAtSec)}`);
+  console.log(
+    `  long-run-avg PP rate (cycle 1) = ${observation.cumulativePPAtFire}/${fmt(observation.firstPrestigeAtSec)} = ` +
+      `${(observation.cumulativePPAtFire.toNumber() / observation.firstPrestigeAtSec).toFixed(4)} PP/s\n`,
+  );
+  console.log(
+    renderTable(
+      ['metric', 'predicted', 'observed', 'pass'],
+      prestigeRows.map((r) => [r.metric, r.predicted, r.observed, r.pass ? 'yes' : 'NO']),
+    ),
+  );
+  console.log();
+
+  const prestigeFailed = prestigeRows.filter((r) => !r.pass);
+  if (prestigeFailed.length > 0) {
+    console.log(
+      `Threshold breach: ${prestigeFailed.length}/${prestigeRows.length} prestige metrics diverge.`,
+    );
+    process.exitCode = 1;
+  } else {
+    console.log(
+      `All ${prestigeRows.length} prestige metrics match. Canonical threshold equivalence confirmed.`,
+    );
   }
 
   console.log(`\n(total ${((Date.now() - t0) / 1000).toFixed(1)}s)`);
