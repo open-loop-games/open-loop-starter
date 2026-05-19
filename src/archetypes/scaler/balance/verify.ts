@@ -15,8 +15,9 @@
 
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
-import { getPrestigePoints, getRuneLevel } from '../modules';
-import { buildRunesSpec, predictFirstSpeedLevel1Sec } from './spec';
+import { eccTranscend, getPrestigePoints, getRuneLevel } from '../modules';
+import { ECC_SAMPLE_COMPLETIONS } from './balance';
+import { buildEccSpec, buildRunesSpec, predictFirstSpeedLevel1Sec } from './spec';
 
 const TICK_DELTA = 1; // 1s — minute-scale events; matches sim/runes-beat.test.ts.
 const MAX_SIM_SECONDS = 24 * 60 * 60; // 24h cap.
@@ -90,6 +91,31 @@ function verifyRunes(): RunesDiffRow[] {
   ];
 }
 
+// ─── ECC — Piecewise spec-vs-engine ──────────────────────────────────────────
+
+interface EccDiffRow {
+  completions: number;
+  predicted: number;
+  engine: number;
+  delta: number;
+  exact: boolean;
+}
+
+/**
+ * Diff the spec walker's piecewise output against the engine's
+ * `eccTranscend()` at every sample point. Both sides are closed-form
+ * IEEE 754; equality is exact (zero tolerance) — drift means the spec
+ * walker's regime expression or the engine's `eccTranscend` shifted.
+ */
+function verifyEcc(): EccDiffRow[] {
+  const spec = buildEccSpec(ECC_SAMPLE_COMPLETIONS);
+  return spec.map(({ completions, predicted }) => {
+    const engine = eccTranscend(completions);
+    const delta = engine - predicted;
+    return { completions, predicted, engine, delta, exact: delta === 0 };
+  });
+}
+
 // ─── Output ──────────────────────────────────────────────────────────────────
 
 function fmt(sec: number): string {
@@ -144,10 +170,10 @@ function main(): void {
   );
   console.log();
 
-  const failed = runesRows.filter((r) => !r.withinTolerance);
-  if (failed.length > 0) {
+  const runesFailed = runesRows.filter((r) => !r.withinTolerance);
+  if (runesFailed.length > 0) {
     console.log(
-      `Tolerance breach: ${failed.length}/${runesRows.length} metrics exceed ${TOLERANCE_SEC}s.`,
+      `Tolerance breach: ${runesFailed.length}/${runesRows.length} metrics exceed ${TOLERANCE_SEC}s.`,
     );
     console.log(
       'Predictor and sim disagree. Algebra is unchanged; an engine-side ' +
@@ -159,6 +185,37 @@ function main(): void {
     console.log(
       `All ${runesRows.length} runes metrics within tolerance. Predictor agrees with sim.`,
     );
+  }
+
+  // ─── ECC ──────────────────────────────────────────────────────────────────
+  console.log('\n## ECC piecewise sub-pass — spec walker vs engine\n');
+  const eccRows = verifyEcc();
+  console.log(
+    renderTable(
+      ['completions', 'predicted', 'engine', 'Δ', 'exact'],
+      eccRows.map((r) => [
+        String(r.completions),
+        r.predicted.toString(),
+        r.engine.toString(),
+        r.delta.toString(),
+        r.exact ? 'yes' : 'NO',
+      ]),
+    ),
+  );
+  console.log();
+
+  const eccDrifted = eccRows.filter((r) => !r.exact);
+  if (eccDrifted.length > 0) {
+    console.log(`Exactness breach: ${eccDrifted.length}/${eccRows.length} sample points diverge.`);
+    console.log(
+      'Spec walker and engine disagree. Both compute the same canonical ' +
+        'piecewise in IEEE 754 — drift means one regime expression mutated. ' +
+        'Compare spec.ts `specEccTranscend` against `modules/challenges.ts` ' +
+        '`eccTranscend`.',
+    );
+    process.exitCode = 1;
+  } else {
+    console.log(`All ${eccRows.length} ECC sample points match exactly.`);
   }
 
   console.log(`\n(total ${((Date.now() - t0) / 1000).toFixed(1)}s)`);

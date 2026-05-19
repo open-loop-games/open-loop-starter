@@ -16,6 +16,7 @@
 import { Decimal, runUntil } from '@open-loop/engine';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
 import {
+  eccTranscend,
   getCoinResource,
   getCoinProducers,
   getOfferings,
@@ -23,6 +24,8 @@ import {
   getRuneEffects,
   getRuneLevel,
 } from '../modules';
+import { ECC_SAMPLE_COMPLETIONS } from './balance';
+import { specEccTranscend } from './spec';
 
 const TICK_DELTA = 1; // 1s — minute-scale events.
 const MAX_SIM_SECONDS = 24 * 60 * 60;
@@ -106,8 +109,25 @@ function runRunesDiscovery(): void {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
+// ─── ECC ─────────────────────────────────────────────────────────────────────
+
+function runEccDiscovery(): void {
+  console.log('\n=== Scaler ECC piecewise discovery ===');
+  console.log('Regimes: linear ≤100, +1/20 in (100, 1000], +1/100 above 1000.\n');
+  console.log('  completions      engine eccTranscend      spec walker');
+  for (const c of ECC_SAMPLE_COMPLETIONS) {
+    const eng = eccTranscend(c);
+    const spec = specEccTranscend(c);
+    console.log(
+      `  ${String(c).padStart(8)}        ${String(eng).padStart(16)}    ${String(spec).padStart(14)}` +
+        (eng !== spec ? '   <- DIVERGES' : ''),
+    );
+  }
+}
+
 function main(): void {
   runRunesDiscovery();
+  runEccDiscovery();
 }
 
 main();

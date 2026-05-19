@@ -12,6 +12,7 @@
  *
  * Sections per subsystem:
  *   - Runes — Pure log-curve via canonical `computeEXPToLevel` inversion.
+ *   - ECC — Piecewise regime walker over the transcend-tier softcap splice.
  */
 
 import { Decimal, type Engine } from '@open-loop/engine';
@@ -135,4 +136,63 @@ export function predictFirstSpeedLevel1Sec(firstPrestigeAtSec: number): number {
     );
   }
   return firstPrestigeAtSec;
+}
+
+// ─── ECC — Piecewise transcend-tier softcap regime walker ────────────────────
+
+/**
+ * Canonical ECC softcap (`Challenges.ts:599-617` `case 'transcend'`):
+ *
+ *   eccTranscend(n) = min(100, n)
+ *                   + (1/20)  × (min(1000, max(100, n))  − 100)
+ *                   + (1/100) × (max(1000, n)            − 1000)
+ *
+ * Three regimes spliced at breakpoints 100 and 1000. The walker below
+ * computes the same piecewise expression independently of the engine's
+ * `eccTranscend()` — both sides are closed-form, both compute in IEEE 754,
+ * verify diffs exact equality at every sample point.
+ *
+ * Sample completion counts: `ECC_SAMPLE_COMPLETIONS` in `balance.ts`
+ * spans the regime breakpoints (100, 1000) ± 1 plus interior points to
+ * exercise both splice junctions and within-regime interpolation.
+ */
+
+/**
+ * Per-regime breakpoints. Independent of `modules/challenges.ts`'s
+ * `CANONICAL_*` consts — the spec walker is the second source of truth
+ * that the verify diff compares against.
+ */
+const ECC_LINEAR_CAP = 100;
+const ECC_SOFT_BREAKPOINT = 1000;
+const ECC_SOFT_DIVISOR = 20;
+const ECC_HARD_DIVISOR = 100;
+
+/**
+ * Spec-walker piecewise expression. Re-derives the canonical regime
+ * splice independently — verify diffs against `eccTranscend()`.
+ */
+export function specEccTranscend(completions: number): number {
+  const linearCap = ECC_LINEAR_CAP;
+  const softBreakpoint = ECC_SOFT_BREAKPOINT;
+  const softDivisor = ECC_SOFT_DIVISOR;
+  const hardDivisor = ECC_HARD_DIVISOR;
+
+  const linearPart = Math.min(linearCap, completions);
+  const softPart =
+    (1 / softDivisor) * (Math.min(softBreakpoint, Math.max(linearCap, completions)) - linearCap);
+  const hardPart = (1 / hardDivisor) * (Math.max(softBreakpoint, completions) - softBreakpoint);
+  return linearPart + softPart + hardPart;
+}
+
+export interface EccSamplePoint {
+  completions: number;
+  predicted: number;
+}
+
+/**
+ * Sample the spec walker across the regime-spanning completion counts.
+ * Output pairs with the verify driver's engine read at each point.
+ */
+export function buildEccSpec(sampleCompletions: readonly number[]): EccSamplePoint[] {
+  return sampleCompletions.map((c) => ({ completions: c, predicted: specEccTranscend(c) }));
 }
