@@ -311,17 +311,18 @@ export const SCALER_MEASUREMENT_ANCHORS: readonly BeatProbe[] = [
   },
   {
     id: 'first-transcend',
-    // Canonical first-transcend fires ~290min under first-arc 5e16 thresholds
-    // (canonical 1e100 unreachable pre-cube/hepteract). Expected window
-    // is the existing discovery-script ceiling (6h) with a floor matching
-    // the prestige-cycle compounding floor. Sharpened by transcend spec.ts.
-    targetWindow: [3 * 60 * 60, 6 * 60 * 60],
+    // First transcend fires ~285min under first-arc 5e16 tunables (canonical
+    // 1e100 unreachable pre-cube/hepteract). Predictor (`balance/spec.ts
+    // predictTranscendAtCanonicalThreshold`) confirms `transcendPointGain = 1`
+    // at threshold exactly — the layered anyOf disjunction collapses under
+    // canonical-port discipline. Window ±25min around observed closure.
+    targetWindow: [260 * 60, 310 * 60],
     predicate: () => getTranscendCount().value >= 1,
   },
   {
     id: 'first-mythos-owned',
     // Mythos-1 auto-purchases inside seconds of first-transcend firing.
-    targetWindow: [3 * 60 * 60, 6 * 60 * 60 + 5 * 60],
+    targetWindow: [260 * 60, 310 * 60 + 5 * 60],
     predicate: () => mythosProducerCountAtLeast('mythos-1', 1),
   },
 ];

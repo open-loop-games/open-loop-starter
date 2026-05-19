@@ -15,13 +15,14 @@
 
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
-import { eccTranscend, getPrestigePoints, getRuneLevel } from '../modules';
+import { eccTranscend, getPrestigePoints, getRuneLevel, getTranscendPoints } from '../modules';
 import { ECC_SAMPLE_COMPLETIONS } from './balance';
 import {
   buildEccSpec,
   buildRunesSpec,
   predictFirstSpeedLevel1Sec,
   predictPrestigeAtCanonicalThreshold,
+  predictTranscendAtCanonicalThreshold,
 } from './spec';
 
 const TICK_DELTA = 1; // 1s — minute-scale events; matches sim/runes-beat.test.ts.
@@ -207,6 +208,84 @@ function verifyPrestige(): { rows: PrestigeDiffRow[]; observation: PrestigeObser
   return { rows, observation: obs };
 }
 
+// ─── Transcend — frozen-state predictor vs sim observation ──────────────────
+
+interface TranscendObservation {
+  firstTranscendAtSec: number;
+  /** Cumulative TP after first transcend — canonical-port should be 1 at
+   *  the 5e16 first-arc threshold (gain = floor(1^0.03) = 1). */
+  cumulativeTPAtFire: Decimal;
+}
+
+const TRANSCEND_MAX_SIM_SECONDS = 8 * 60 * 60; // 8h cap — observed ~290min closure.
+
+function observeFirstTranscend(): {
+  observation: TranscendObservation;
+  prediction: ReturnType<typeof predictTranscendAtCanonicalThreshold>;
+} {
+  const engine = buildVerifyEngine();
+  const transcendPoints = getTranscendPoints();
+
+  const prediction = predictTranscendAtCanonicalThreshold();
+
+  const result = runUntil({
+    engine,
+    tickDelta: TICK_DELTA,
+    maxSimTime: TRANSCEND_MAX_SIM_SECONDS,
+    until: () => Decimal.gt(transcendPoints.cumulative?.value ?? 0, 0),
+  });
+
+  if (result.terminated !== 'predicate') {
+    engine.dispose();
+    throw new Error(
+      `verify(transcend): first transcend did not fire within ${TRANSCEND_MAX_SIM_SECONDS}s`,
+    );
+  }
+
+  const cumulativeTPAtFire = Decimal.fromValue(transcendPoints.cumulative?.value ?? 0);
+  engine.dispose();
+
+  return {
+    prediction,
+    observation: {
+      firstTranscendAtSec: result.elapsedSimulated,
+      cumulativeTPAtFire,
+    },
+  };
+}
+
+function verifyTranscend(): {
+  rows: PrestigeDiffRow[];
+  observation: TranscendObservation;
+} {
+  const { prediction, observation: obs } = observeFirstTranscend();
+
+  const rows: PrestigeDiffRow[] = [
+    {
+      metric: `frozen-state: gain at c=${prediction.transcendDivisorObserved} (predicted == 1 exact)`,
+      predicted: String(prediction.gainAtCoinThreshold),
+      observed: `cumulative TP at first transcend = ${obs.cumulativeTPAtFire.toString()}`,
+      pass:
+        prediction.gainAtCoinThreshold === 1 &&
+        Decimal.eq(obs.cumulativeTPAtFire, prediction.gainAtCoinThreshold),
+    },
+    {
+      metric: 'frozen-state: canConvert at canonical threshold (predicted == true)',
+      predicted: String(prediction.canConvertAtCoinThreshold),
+      observed: 'sim observed transcend fire (cumulative > 0)',
+      pass: prediction.canConvertAtCoinThreshold,
+    },
+    {
+      metric: 'threshold-equivalence: anyOf branches fire same tick (5e16 ⇔ 1TP)',
+      predicted: `gainAt(5e16) == 1 ⇒ gain >= 0.5 floor satisfied`,
+      observed: `cumulative TP at fire == ${obs.cumulativeTPAtFire.toString()}`,
+      pass: Decimal.eq(obs.cumulativeTPAtFire, 1),
+    },
+  ];
+
+  return { rows, observation: obs };
+}
+
 // ─── Output ──────────────────────────────────────────────────────────────────
 
 function fmt(sec: number): string {
@@ -334,6 +413,31 @@ function main(): void {
   } else {
     console.log(
       `All ${prestigeRows.length} prestige metrics match. Canonical threshold equivalence confirmed.`,
+    );
+  }
+
+  // ─── Transcend ────────────────────────────────────────────────────────────
+  console.log('\n## Transcend sub-pass — frozen-state predictor vs sim\n');
+  const { rows: transcendRows, observation: transcendObs } = verifyTranscend();
+  console.log(`  first transcend observed at simTime = ${fmt(transcendObs.firstTranscendAtSec)}`);
+  console.log(`  cumulative TP at fire = ${transcendObs.cumulativeTPAtFire.toString()}\n`);
+  console.log(
+    renderTable(
+      ['metric', 'predicted', 'observed', 'pass'],
+      transcendRows.map((r) => [r.metric, r.predicted, r.observed, r.pass ? 'yes' : 'NO']),
+    ),
+  );
+  console.log();
+
+  const transcendFailed = transcendRows.filter((r) => !r.pass);
+  if (transcendFailed.length > 0) {
+    console.log(
+      `Threshold breach: ${transcendFailed.length}/${transcendRows.length} transcend metrics diverge.`,
+    );
+    process.exitCode = 1;
+  } else {
+    console.log(
+      `All ${transcendRows.length} transcend metrics match. Layered threshold equivalence confirmed.`,
     );
   }
 

@@ -4,28 +4,25 @@
  * transcend-tab substrate is observable.
  *
  * Per `archetypes/BALANCING.md` § Theme 5: tests lock chosen numbers with
- * `toBeBetween` bounds; discovery happens elsewhere (`balance/transcend-beat.ts`,
- * run via `pnpm exec vite-node`). The bounds below come from a converged
- * discovery run against the default `SCALER_BALANCE` constants with the
- * port-deviated `transcendThreshold = 5e16` / `transcendDivisor = 5e16` (see
- * `data/balance.ts` for the deviation rationale — first-arc balance can't
- * reach the canonical 1e100 without later-arc compounding).
+ * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve.ts`,
+ * run via `pnpm exec vite-node`).
  *
- * Discovery snapshot (2026-05-07, transcend leaf 5 land):
- *   first prestige fires at simTime ≈ 3499s (58.3 min) — unchanged from leaves 2-4
- *   first transcend fires at simTime ≈ 17419s (290.3 min total; 232 min after first
- *     prestige) — first-arc port balance reaches the deviated threshold via
- *     ratcheted prestige/rune compounding
- *   mythos-1 auto-bought same tick (cost 1 transcendPoint, gain = 1 per
- *     transcend cycle, so each cycle ratchets one mythos-1 buy then resets)
- *   prestigePoints.value = 0 post-transcend (canonical inversion: transcend
- *     reset's `keep:` excludes prestigePoints, contrast with prestige reset's
- *     `keep: [prestigePoints]`)
+ * Predictor (`balance/spec.ts predictTranscendAtCanonicalThreshold`) computes
+ * frozen-state engine queries at the declared-invention tunable threshold
+ * (`transcendDivisor = transcendThreshold = 5e16`):
+ *   - `transcendPointGain` at threshold = 1 exactly (`floor(1^0.03) = 1`).
+ *   - `transcendConversion.canConvert` = true at threshold.
+ *   - The anyOf disjunction (`c >= 5e16 OR gain >= 0.5`) structurally
+ *     collapses: gain steps 0 → 1 at exactly c = 5e16.
  *
- * Invariants pinned: transcend-arc beat fires within bounded window, mythos-1
- * substrate produces transcend shards, prestigePoints zero on transcend
- * reset, transcend upgrade 41 binds into coin rateChain (live whether bought
- * or not, contributing identity-1 when inactive).
+ * Verify-driver (`balance/verify.ts`) sims to first transcend and diffs.
+ * The threshold equivalence pins the layered (transcend-on-prestige)
+ * cycle's convergence under canonical-port discipline.
+ *
+ * Fire-time window tightened around the observed ~290min closure under
+ * first-arc balance (ratcheted prestige/rune compounding to the deviated
+ * 5e16 threshold). Drift outside the band signals a shift in cross-tier
+ * compounding or the tunable surface.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -72,11 +69,13 @@ describe('scaler transcend-beat lock — beat-5 (first transcend fires)', () => 
     expect(result.terminated).toBe('predicate');
 
     // ─── Beat-5 fire-time band ────────────────────────────────────────
-    // Closure: 17419s (290 min). Bounds tolerate balance drift in the
-    // ratcheted-prestige path: first-prestige at 3499s + ~232 min of
-    // post-prestige coin compounding to reach the 5e16 deviated threshold.
-    expect(result.elapsedSimulated).toBeGreaterThan(200 * 60);
-    expect(result.elapsedSimulated).toBeLessThan(360 * 60);
+    // Converged closure: ~285min total under canonical autobuyer +
+    // first-arc tunable threshold (5e16). Bounds tightened ±25min around
+    // the closure — tight enough to catch a 10% shift in cross-tier
+    // compounding, loose enough to absorb ratcheted-prestige scheduling
+    // variance from autobuyer sweep order.
+    expect(result.elapsedSimulated).toBeGreaterThan(260 * 60);
+    expect(result.elapsedSimulated).toBeLessThan(310 * 60);
 
     // ─── First-prestige regression ────────────────────────────────────
     // Confirms leaf-2 prestige beat still fires en-route to first transcend.

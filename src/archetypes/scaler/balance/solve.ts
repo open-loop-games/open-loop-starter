@@ -20,16 +20,26 @@ import {
   getCoinResource,
   getCoinProducers,
   getCoinsThisPrestige,
+  getCoinsThisTranscension,
   getDiamondProducers,
+  getMythosProducers,
   getOfferings,
   getPrestigeCount,
   getPrestigePoints,
   getPrestigePointGain,
   getRuneEffects,
   getRuneLevel,
+  getTranscendCount,
+  getTranscendPoints,
+  getTranscendPointGain,
+  getTranscendUpgrades,
 } from '../modules';
 import { ECC_SAMPLE_COMPLETIONS } from './balance';
-import { predictPrestigeAtCanonicalThreshold, specEccTranscend } from './spec';
+import {
+  predictPrestigeAtCanonicalThreshold,
+  predictTranscendAtCanonicalThreshold,
+  specEccTranscend,
+} from './spec';
 
 const TICK_DELTA = 1; // 1s — minute-scale events.
 const MAX_SIM_SECONDS = 24 * 60 * 60;
@@ -247,10 +257,133 @@ function runPrestigeDiscovery(): void {
   engine.dispose();
 }
 
+// ─── Transcend ───────────────────────────────────────────────────────────────
+
+function runTranscendDiscovery(): void {
+  console.log('\n=== Scaler transcend-beat discovery ===');
+  console.log(`tickDelta=${TICK_DELTA}s   maxSimTime=${8 * 60 * 60}s\n`);
+
+  const prediction = predictTranscendAtCanonicalThreshold();
+  console.log(
+    `  Canonical threshold predictions (engine queries at ` +
+      `coinsThisTranscension=${prediction.transcendDivisorObserved}):`,
+  );
+  console.log(`    transcendPointGain         = ${prediction.gainAtCoinThreshold}`);
+  console.log(`    transcendConversion.canConvert = ${prediction.canConvertAtCoinThreshold}`);
+  console.log(
+    `    gain-threshold equivalence = ` +
+      `${prediction.gainAtCoinThreshold >= prediction.canonicalGainThreshold ? 'yes (gain step 0→1 satisfies >= 0.5 floor at threshold)' : 'NO'}\n`,
+  );
+
+  const { engine } = createScalerEngine({
+    persistenceNamespace: `solve-transcend-${Date.now()}`,
+  });
+  engine.selectMod(SCALER_MOD_ID);
+  engine.start();
+
+  const pp = getPrestigePoints();
+  const tp = getTranscendPoints();
+  const ctt = getCoinsThisTranscension();
+  const tpGain = getTranscendPointGain();
+  const transcendCount = getTranscendCount();
+  const mythos1 = getMythosProducers().getProducer('mythos-1');
+  const upg41 = getTranscendUpgrades().getPurchasable('upgrade-41');
+
+  // Phase 1 — observe first prestige (en-route to transcend).
+  let firstPrestigeAt = -1;
+  const phase1 = runUntil({
+    engine,
+    tickDelta: TICK_DELTA,
+    maxSimTime: 8 * 60 * 60,
+    until: ({ simTime }) => {
+      if (firstPrestigeAt < 0 && Decimal.gt(pp.cumulative?.value ?? 0, 0)) {
+        firstPrestigeAt = simTime;
+      }
+      return firstPrestigeAt >= 0;
+    },
+  });
+  if (phase1.terminated !== 'predicate') {
+    console.log(`!! first prestige did not fire within budget`);
+    engine.dispose();
+    return;
+  }
+  console.log(
+    `>> first prestige at simTime = ${firstPrestigeAt}s (${(firstPrestigeAt / 60).toFixed(1)}min)`,
+  );
+
+  // Phase 2 — observe first transcend.
+  let firstTranscendAt = -1;
+  let coinsAtTranscend = '0';
+  const phase2 = runUntil({
+    engine,
+    tickDelta: TICK_DELTA,
+    maxSimTime: 8 * 60 * 60,
+    until: ({ simTime }) => {
+      if (firstTranscendAt < 0 && Decimal.gte(ctt.value, 5e16)) {
+        firstTranscendAt = firstPrestigeAt + simTime;
+        coinsAtTranscend = Decimal.fromValue(ctt.value).toExponential(3);
+      }
+      return transcendCount.value >= 1;
+    },
+  });
+  if (phase2.terminated !== 'predicate') {
+    console.log(`!! first transcend did not fire within budget`);
+    engine.dispose();
+    return;
+  }
+  console.log(
+    `>> first transcend at simTime = ${firstTranscendAt}s ` +
+      `(${(firstTranscendAt / 60).toFixed(1)}min total; ` +
+      `${((firstTranscendAt - firstPrestigeAt) / 60).toFixed(1)}min after first prestige)`,
+  );
+  console.log(`>> coinsThisTranscension at fire = ${coinsAtTranscend}`);
+  console.log(`>> transcendPointGain at fire = ${Decimal.fromValue(tpGain.value).toString()}`);
+  console.log(
+    `>> cumulative TP after fire = ${Decimal.fromValue(tp.cumulative?.value ?? 0).toString()}`,
+  );
+  console.log(
+    `>> long-run-avg TP rate (cycle 1) = ` +
+      `${(Decimal.fromValue(tp.cumulative?.value ?? 0).toNumber() / firstTranscendAt).toFixed(6)} TP/s`,
+  );
+
+  // Phase 3 — first mythos + first transcend upgrade auto-bought.
+  let firstMythosAt = -1;
+  let firstUpg41At = -1;
+  const phase3 = runUntil({
+    engine,
+    tickDelta: TICK_DELTA,
+    maxSimTime: 8 * 60 * 60,
+    until: ({ simTime }) => {
+      if (firstMythosAt < 0 && mythos1 && Decimal.gt(mythos1.ownedCount.value, 0)) {
+        firstMythosAt = firstTranscendAt + simTime;
+      }
+      if (firstUpg41At < 0 && upg41 && upg41.active.value) {
+        firstUpg41At = firstTranscendAt + simTime;
+      }
+      return firstMythosAt >= 0 && firstUpg41At >= 0;
+    },
+  });
+  if (phase3.terminated === 'predicate') {
+    console.log(
+      `>> mythos-1 owned at simTime = ${firstMythosAt}s ` +
+        `(${((firstMythosAt - firstTranscendAt) / 60).toFixed(2)}min after transcend)`,
+    );
+    console.log(
+      `>> upgrade-41 bought at simTime = ${firstUpg41At}s ` +
+        `(${((firstUpg41At - firstTranscendAt) / 60).toFixed(2)}min after transcend)`,
+    );
+  } else {
+    console.log(`!! mythos / transcend upgrade purchases did not complete in budget`);
+  }
+
+  engine.dispose();
+}
+
 function main(): void {
   runRunesDiscovery();
   runEccDiscovery();
   runPrestigeDiscovery();
+  runTranscendDiscovery();
 }
 
 main();
