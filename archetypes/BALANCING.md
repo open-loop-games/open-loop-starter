@@ -109,13 +109,13 @@ The buckets cross-reference to the methodologies in theme 3. Each row identifies
 | Bucket                      | Primary methodology                          | Algebra / bifurcation              | In-tree exemplar                                  |
 | --------------------------- | -------------------------------------------- | ---------------------------------- | ------------------------------------------------- |
 | Pure closed-form            | #1 spec/calibrate/lock or #2 math-first      | `rate-function-algebra.md § 2`     | producer (#1 + #2 triangular), ambient (#1)       |
-| Piecewise closed-form       | #2 (piecewise variant)                       | `algebra § 2.9 + § 3.4`            | scaler ECC (target post-OL-841)                   |
+| Piecewise closed-form       | #2 (piecewise variant)                       | `algebra § 2.9 + § 3.4`            | scaler ECC                                        |
 | Coupled-state deterministic | #1 multi-knob (linear) or numerical          | `bifurcations.md § 1`              | tug lane dynamics                                 |
 | Strategy-space integration  | #5 best-response / fixed-strategy ROI        | `bifurcations.md § 2`              | tug matchup matrix                                |
 | Stochastic load-bearing     | #4 distribution sampling                     | `bifurcations.md § 3`              | (no in-tree yet)                                  |
 | Discrete-event coupled      | #6 pure sim discovery                        | `bifurcations.md § 4`              | (no in-tree; rare)                                |
 | Network-topological         | structural (LP, min-cut)                     | `bifurcations.md § 5`              | (no in-tree yet)                                  |
-| Optimal stopping            | #5 + Bellman / threshold policy              | `bifurcations.md § 6`              | scaler prestige (target post-OL-841)              |
+| Optimal stopping            | #5 + Bellman / threshold policy              | `bifurcations.md § 6`              | scaler prestige + transcend (frozen-state threshold-equivalence; full Bellman fork-extension) |
 | Combinatorial selection     | #5 + bounds                                  | `bifurcations.md § 4.4` sibling    | scaler Time Studies (target post-OL-841)          |
 | Discrete planning / scheduling | #7 solver-driven balance                  | TBD (OL-960 research)              | looper queue formation (target OL-959)            |
 
@@ -286,6 +286,15 @@ Don't bypass. Downstream solvers carry the scope discipline as load-bearing; the
 
 Balance is measured in minutes. A 2-hour arc at engine-default `tickDelta: 0.05s` runs 144,000 ticks per probe. At `tickDelta: 1s` it runs 7,200 ticks — one-to-two orders of magnitude faster, and minute-scale beat timing is unchanged. Default to `1s` for arc probes during discovery; drop to lower deltas only when sub-second timing is part of the spec (e.g., explicit click cadence, real-time combat resolution).
 
+### `stasis-aware-tick` adoption — zero out-of-band channel rule
+
+`runUntil({mode: 'stasis-aware-tick'})` short-circuits ticks when the accessor's `getRate` reads zero for the target resource. The adoption condition: **the accessor faithfully captures the engine's income channels iff there is no out-of-band rate channel** the accessor can't see.
+
+- Producer's click-taper bot adds a discrete click channel that `getTotalRate` doesn't surface; stasis-aware-tick was reverted there because the accessor would prematurely declare stasis during the click-driven bootstrap regime.
+- Ambient (zero-click, single-resource) and scaler (zero-click, multi-tier autobuyer-driven) adopt cleanly — every income channel surfaces through `Producer.getTotalRate` or fires as a discrete event the predicate observes directly.
+
+The rule is structural, not heuristic: if your archetype has a click affordance, a tick-jitter spawn channel, or any out-of-band rate the accessor doesn't read, stasis-aware-tick will misfire. If all continuous income flows through producer categories, it adopts cleanly. Decision point lives in the bot.ts accessor — `getRate(resource)` either captures all channels for that resource or it doesn't.
+
 ## Theme 5 — How do I know it's working?
 
 Two distinct surfaces, not interchangeable.
@@ -348,6 +357,8 @@ The chosen number lives in the default closure. The `TuningRegistry` exposes the
 `data/balance.ts` as a per-archetype constants file retires. The deep-partial override path stays only for non-tunable consumer surfaces — theme tokens, content cardinality, IDs.
 
 **`shape.ts` is an optional artifact**, not a required identity-declaration file. When the archetype is predictor-seed-shaped (producer-style — a closed-form spec drives a predictor that walks the arc), `shape.ts` is where the identity layer lands as data the predictor and solver both consume. Otherwise, the identity content lives as comments adjacent to the solver/predict code or doesn't need its own file at all. File count tracks algorithmic surfaces, not framing artifacts.
+
+**Predictor-seed colocation pattern** — `balance/balance.ts` collects the identity layer (phases, beats, signature metric, measurement anchors, sample inputs for spec walkers) alongside the predicate helpers, and `balance/spec.ts` adds per-subsystem closed-form predictors that read off this seed. Producer (Pure single-subsystem) and scaler (multi-subsystem with mixed Pure / piecewise / optimal-stopping rows) both adopt this shape: identity and predictor inputs co-locate; spec walkers read off them; verify diffs spec output against engine reads or sim observations. Forks copying a predictor-seed-shaped archetype get the closure between identity and the predictor's spec inputs for free.
 
 ## Graduating findings — per-archetype logs to this doc
 

@@ -82,3 +82,95 @@ Two findings are pre-emptively flagged as candidates that may or may not graduat
 
 - **Predictor-seed N=2 confirmation candidate.** If scaler's `balance.ts` + per-sub-pass `spec.ts` colocate identity-with-windows in the same way producer's does (the producer log's pending promotion threshold), this is the second predictor-seed-shaped archetype. Promotes to `BALANCING.md § Where balance constants live` per producer's log. Pending verification once `spec.ts` lands per sub-pass.
 - **`createSoftcappedAccumulator` engine candidate at N=1.** ECC's piecewise softcap is the first in-tree consumer of the shape. Marker migrated to the new home at `modules/challenges.ts` (during the canonical-port fold) but the candidate stays N=1 until a second consumer derives the same shape. No graduation under this leaf.
+
+## End-of-pass findings (sub-passes 1–4 closed)
+
+The four sub-passes shipped per the foundation comment's sequence — runes, ECC piecewise, prestige, transcend. Two of them resolved as planned, two converged differently and warranted re-scoping; the deferred Bellman decision settled in favor of direct-bisect for canonical-port archetypes.
+
+### Runes sub-pass — scaffolding validated; predictor-sim co-tick prediction
+
+The runes spec walker uses canonical `computeEXPToLevel` inversion to predict `first-Speed-level-1` time. Under canonical autobuyer policy:
+
+- First sacrifice fires `ctx.onTick` inside the same engine tick the prestige reset's `afterReset` event accrues 2 offerings.
+- Speed level-1 threshold (`~0.77` EXP at canonical `costCoefficient=50`, `levelsPerOOM=150`) clears in one sacrifice — 2 offerings ⇒ Speed jumps from level 0 to level 2.
+- Predictor returns `firstPrestigeAtSec` exactly; verify diffs sim with ±1 tick tolerance. Observed: predictor=3405s, sim=3405s, Δ=0.
+
+The cascade math the spec walker computes — `prestigeFiringsToLevel1` per rune (Speed: 1, Dup: 194, Prism: 6479, Thrift: 489029, SI: 4e10) — informs future fork work but is fork-extension territory under this leaf (only Speed level-1 is the measurement anchor).
+
+- **Receipt:** `balance/spec.ts` `predictFirstSpeedLevel1Sec` + `buildRunesSpec`.
+- **Cross-archetype reference:** runes is a Pure-subsystem-inside-multi-subsystem demonstration — the smallest math validates the `spec.ts`/`solve.ts`/`verify.ts` scaffolding before harder sub-passes (ECC, prestige, transcend) land. Producer was Pure-single-subsystem; ambient was Pure-single-subsystem with zero-click; scaler is Pure-as-one-of-many. Future multi-subsystem archetypes can copy this sub-pass's shape directly.
+
+### ECC piecewise sub-pass — in-tree exemplar for `BALANCING.md § Theme 3 #2`
+
+`specEccTranscend` re-derives the canonical regime splice (linear ≤100, +1/20 in (100, 1000], +1/100 above 1000) as a second source of truth. `verify.ts` diffs spec walker output against engine `eccTranscend()` at the regime-spanning sample set; both sides compute in IEEE 754 over `number`, so equality is exact (zero tolerance).
+
+- All 12 sample points match exactly (breakpoints 100 + 1000 ± 1, interior 50/500/999/1500/2000).
+- `sim/ecc-beat.test.ts` adds 13 vitest locks: 12 spec-vs-engine equality checks + 7 canonical-value pins at every regime breakpoint.
+- **Receipt:** `balance/spec.ts § specEccTranscend` + `sim/ecc-beat.test.ts`.
+
+ECC is the canonical Piecewise closed-form exemplar — two independent expressions of the same canonical math, exact equality at sample points, drift catches expression mutation immediately without sim runs. This is the cleanest sub-pass shape in scaler's set.
+
+- **Generalization (ride-along to `BALANCING.md`):** ECC piecewise lands as the in-tree exemplar in `BALANCING.md § Bucket → methodology lookup` row "Piecewise closed-form → scaler ECC."
+
+### Prestige sub-pass — deferred-Bellman decision converged to direct-bisect
+
+The plan flagged Bellman value iteration as a structural decision deferred to per-sub-pass execution. After scoping the work, Bellman value iteration on the full state space (`coinsThisPrestige` + multi-resource purchase counts + multiplier-stack) required either:
+1. Replicating the autobuyer's cheapest-affordable decision logic in the predictor (violating "the engine is the math"), or
+2. Discretizing to a 1D state lattice (`pgGain`) with an empirical Δ-per-step from sampled sim (legitimate but informative-only under canonical-port discipline).
+
+The fallback per the deferred plan — direct-bisect with frozen-state threshold-equivalence predictions — provides the actual regression catch under canonical-port posture:
+
+- `predictPrestigeAtCanonicalThreshold` mutates `coinsThisPrestige` to 1e16, reads back `prestigePointGain = 100` exactly (canonical formula construction) + `prestigeConversion.canConvert = true`.
+- The `anyOf` disjunction (`coinsThisPrestige >= 1e16 OR PPGain >= 100`) collapses structurally — both branches fire at the same engine tick. The threshold-equivalence is the regression invariant.
+- Verify observes post-fire signal (`prestigePoints.cumulative`), diffs against prediction. Observed: cumulative PP at fire = 100 exactly, threshold equivalence confirmed.
+
+**Why Bellman wasn't load-bearing here.** Canonical-port discipline (`BALANCING.md § Canonical numbers are not tunable`) fixes θ=1e16. Bellman value iteration would compute θ* under a free-policy regime — informative as a design analysis but NOT a regression catch. The optimal-stopping math has a place when:
+1. The threshold is a tunable design surface (not canonical-port), or
+2. A consumer (fork) wants to evaluate canonical-θ vs optimal-θ as a balance-pass output, not a lock.
+
+Neither case applies to scaler under this leaf. The `TODO(expansion)` at the predictor site documents the framing for later consumers — and the transcend sub-pass below provides the N=2 in-leaf instance of the same direct-bisect shape, strengthening the candidate-primitives convergence case (see `Bellman framing as fork-extension` below).
+
+- **Receipt:** `balance/spec.ts § predictPrestigeAtCanonicalThreshold` + `balance/verify.ts § verifyPrestige`.
+
+### Transcend sub-pass — N=2 layered threshold equivalence
+
+Same shape as prestige, one layer up, parameterized on the declared-invention tunable surface (`balance/transcendDivisor` + `balance/transcendThreshold`, both default 5e16). The canonical formula `floor((c/transcendDivisor)^0.03)` produces a step function 0 → 1 at exactly c = transcendDivisor: at the threshold, gain=1 satisfies the gain-floor branch (`gain >= 0.5`) and the coin-threshold branch (`c >= transcendThreshold`) simultaneously.
+
+- Predictor returns `gainAtCoinThreshold = 1` exactly; verify observes cumulative TP=1 at first transcend.
+- All 3 frozen-state predictions match; layered threshold equivalence confirmed.
+- Observed first-transcend: 279m49s, within the tightened [260, 310] min window.
+
+**N=2 in-tree instance of the frozen-state threshold-equivalence shape.** Prestige + transcend share the canonical-port disjunction-collapse pattern. If a third archetype (looper / a future fork) hand-rolls the same `predictXxxAtCanonicalThreshold` shape, that's the trigger to graduate `createOptimalStoppingSolver` / `frozenStateThresholdEquivalence` as an engine helper. Under this leaf, the candidate stays in `spec.ts` with `TODO(expansion)` co-locating at the prestige + transcend predictor sites.
+
+- **Receipt:** `balance/spec.ts § predictTranscendAtCanonicalThreshold` + `balance/verify.ts § verifyTranscend`.
+
+### Predictor-seed N=2 colocation — confirmed; promotion candidate ready
+
+Scaler's `balance/balance.ts` co-locates `SCALER_IDENTITY`, `SCALER_PHASES`, `SCALER_MEASUREMENT_ANCHORS`, `SCALER_SUBSYSTEMS`, `ECC_SAMPLE_COMPLETIONS` in one file alongside the predicate helpers — same predictor-seed shape producer pioneered (identity + windows + spec inputs co-located). `balance/spec.ts` adds the per-sub-pass closed-form predictors that read off this seed.
+
+- **Convergence count:** N=2 (producer + scaler). Producer's log flagged this as pending-confirmation against a second predictor-seed-shaped archetype; scaler is the confirmation.
+- **PR-amendment candidate confirmed:** `BALANCING.md § Where balance constants live` adds a note on the predictor-seed colocation pattern, citing both producer and scaler as references. Ambient + tug remain direct-bisect-shaped (per their logs); the predictor-seed shape applies where the spec walker has a meaningful closed-form output to drive verify against.
+
+### Stasis-aware-tick N=2 — confirmed end-of-pass
+
+Foundation seeded the N=2 confirmation candidate for stasis-aware-tick adoption rule: "an accessor faithfully captures the engine's income channels iff there is no out-of-band rate channel." Scaler's `buildScalerAccessor` (in `balance/bot.ts`) adopted cleanly per the foundation note. The sub-pass verifies the rule still holds across all 4 measurement points (runes, ECC, prestige, transcend) — every sim run used `runUntil`'s default `'tick'` mode against the autobuyer-driven scaler engine, and predictions matched observations exactly.
+
+- **PR-amendment candidate confirmed:** `BALANCING.md § Theme 4` engine-surface table gets a note on stasis-aware-tick adoption (zero-out-of-band-channel rule). Lands per ambient log's pending promotion threshold.
+
+### Bellman framing as fork-extension
+
+The plan called for Bellman value iteration as the first in-tree consumer of optimal-stopping math, with a `bellman-value-iteration` entry in `candidate-primitives.md`. The sub-pass converged differently:
+
+- Direct-bisect frozen-state threshold-equivalence is the right shape for canonical-port archetypes. The candidate-primitives entry would be premature — there's no in-tree Bellman consumer to receipt against.
+- The optimal-stopping framing remains valid for forks that perturb thresholds outside canonical-port discipline (e.g., a fork raising transcend thresholds as cube/hepteract systems port in, evaluating canonical vs optimal as a design output). The `TODO(expansion)` markers at the predictor sites document the framing for those future consumers.
+- The candidate-primitives entry shifts from `bellman-value-iteration` to `frozenStateThresholdEquivalence`-style — name TBD when the second consumer (looper, a future archetype, or a fork) hand-rolls the same direct-bisect pattern. Current N=2 in-tree (prestige + transcend) is intra-archetype; engine-side graduation needs cross-archetype convergence.
+
+### Methodology-rekey final pass
+
+Per OL-955 / OL-956 / OL-957 / scaler's foundation seed: the Tier-A/B/C taxonomy excision lands as observation across all five archetypes (producer, ambient, tug, scaler, looper). Scaler confirms N=3+ (foundation already documented this); transcend sub-pass's code carries no Tier-* labels. The umbrella's "applied during" item closes as "was already the case." No `BALANCING.md` amendment from this finding.
+
+### What this leaf did NOT learn
+
+- **Full Bellman value iteration in-tree.** Deferred per the structural decision; remains fork-extension territory.
+- **Multi-prestige-cycle compounding predictor.** Sub-pass scope tightened to first-prestige + first-transcend predictions. Per-cycle T_N for cycles 2..N is sampled by `solve.ts` (cycles 2..5 prestige) for future reference but not modeled.
+- **`createOptimalStoppingSolver` engine candidate at N=1.** No in-tree Bellman consumer — see fork-extension framing above.
