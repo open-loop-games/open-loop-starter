@@ -46,17 +46,9 @@
  * 1 at first arc — the canonical reduce composes only later-arc multipliers
  * (corruption / talisman / blessing). Ports as a static `1` constant.
  *
- * Sacrifice loop is bespoke per spec § 7 — `createSacrificeProgression` is a
- * predicted engine gap awaiting a 2nd consumer (Skill / Stat / Cultivation
- * archetypes) before graduation. See
- * `open-loop-engine/docs/candidate-primitives.md` for the duplicate-means-
- * ticket entry.
+ * Sacrifice loop is bespoke per spec § 7 — composes onto `createSkill` plus a
+ * consumer-side input-currency drain in the action body.
  */
-
-// TODO(expansion): graduate the offerings → per-rune EXP → integer level →
-// multiplicative grant loop to a `createSacrificeProgression` engine helper
-// once a 2nd consumer derives the same shape. See
-// `open-loop-engine/docs/candidate-primitives.md`.
 
 import { computed, type ComputedRef } from 'vue';
 import {

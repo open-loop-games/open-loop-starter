@@ -293,9 +293,12 @@ export const SCALER_MEASUREMENT_ANCHORS: readonly BeatProbe[] = [
   },
   {
     id: 'first-rune-speed-level-1',
-    // First Speed level-1 fires in the same prestige cycle the offerings
-    // accrue from. Sharpened by runes spec.ts closed-form walker.
-    targetWindow: [0, 90 * 60],
+    // Fires same engine tick as first prestige: the autobuyer's onTick
+    // sacrifice consumes the 2 offerings accrued by the prestige reset's
+    // afterReset, and Speed's level-1 threshold (≈0.77 EXP) clears in one
+    // pass. Window mirrors first-prestige; `balance/spec.ts`
+    // `predictFirstSpeedLevel1Sec` returns `firstPrestigeAt` exactly.
+    targetWindow: [30 * 60, 90 * 60],
     predicate: () => getRuneLevel('speed').value >= 1,
   },
   {

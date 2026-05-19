@@ -3,22 +3,20 @@
  * Speed rune visibly into the coin rateChain.
  *
  * Per `archetypes/BALANCING.md` § Theme 5: tests lock chosen numbers with
- * `toBeBetween` bounds; discovery happens elsewhere (`balance/runes-beat.ts`,
- * run via `pnpm exec vite-node`). The bounds below come from a converged
- * discovery run against the default `SCALER_BALANCE` constants.
+ * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve.ts`,
+ * run via `pnpm exec vite-node`).
  *
- * Discovery snapshot (2026-05-07, runes leaf 4 land):
- *   first prestige fires at simTime ≈ 3499s (58.3 min) — unchanged from leaf 3
- *   on first prestige's afterReset: offerings += offeringBaseGain × SI.mult
- *     (= 2 × 1 = 2 at first prestige, since SI level is 0)
- *   auto-sacrifice consumes offerings same tick → Speed reaches level 2
- *     (2 EXP at costCoefficient 50 / levelsPerOOM 150 → floor(150 × log10(1.04)) = 2)
- *   Speed.multiplicativeAccelerators at level 2 ≈ 1.005 (1 + 2/400) — the
- *     "Rune: Speed (mAcc)" entry on the coin rateChain is now > 1
+ * Predictor (`balance/spec.ts predictFirstSpeedLevel1Sec`) returns the
+ * first-prestige time exactly — the autobuyer's onTick sacrifice fires the
+ * same engine tick the prestige reset's afterReset accrues offerings, and
+ * 2 offerings clear Speed's level-1 threshold (≈0.77 EXP) in one pass.
  *
- * Invariants pinned: rune-arc beat fires within the prestige-beat window,
- * Speed leaves level 0, Speed mAcc multiplier surfaces in coin chain, all
- * three first-arc-active rune bindings register against coin-1's rateChain.
+ * Verify-driver (`balance/verify.ts`) tracks both first-prestige and
+ * first-Speed-level-1 times and diffs with one-tick tolerance.
+ *
+ * State invariants pinned: Speed leaves level 0, Speed mAcc multiplier
+ * surfaces in coin chain, all three first-arc-active rune bindings
+ * register against coin-1's rateChain.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -48,24 +46,27 @@ describe('scaler runes-beat lock — beat-3 (first sacrifice raises Speed)', () 
     const speedLv = getRuneLevel('speed');
     const speedFx = getRuneEffects('speed');
 
+    let firstPrestigeAt = -1;
     const result = runUntil({
       engine,
       tickDelta: TICK_DELTA,
       maxSimTime: FIRE_TIME_CEILING,
-      until: () => {
-        const prestiged = Decimal.gt(pp.cumulative?.value ?? 0, 0);
-        const speedRose = speedLv.value >= 1;
-        return prestiged && speedRose;
+      until: ({ simTime }) => {
+        if (firstPrestigeAt < 0 && Decimal.gt(pp.cumulative?.value ?? 0, 0)) {
+          firstPrestigeAt = simTime;
+        }
+        return firstPrestigeAt >= 0 && speedLv.value >= 1;
       },
     });
 
     expect(result.terminated).toBe('predicate');
 
-    // ─── Beat-3 fire-time band ────────────────────────────────────────
-    // Closure: 3499s (auto-sacrifice fires the same tick as first prestige's
-    // afterReset). Bounds match the prestige-beat window since the rune-arc
-    // beat is co-located with first prestige under the default constants —
-    // shifts only if first prestige itself shifts.
+    // ─── Predictor lock: Speed level-1 fires on the first-prestige tick ──
+    // `balance/spec.ts predictFirstSpeedLevel1Sec` returns firstPrestigeAt
+    // exactly. The deterministic tick co-location is what the regression
+    // catches — drift means an engine-side primitive (autobuyer ordering,
+    // afterReset hook, computeEXPToLevel) has shifted.
+    expect(result.elapsedSimulated - firstPrestigeAt).toBeLessThanOrEqual(TICK_DELTA);
     expect(result.elapsedSimulated).toBeGreaterThan(50 * 60);
     expect(result.elapsedSimulated).toBeLessThan(75 * 60);
 
