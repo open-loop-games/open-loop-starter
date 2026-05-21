@@ -4,7 +4,6 @@ import {
   type DecimalSource,
   type Modifier,
   type ModifierDescription,
-  type WithRequired,
 } from '@open-loop/engine';
 
 /** Options for {@link createModifierSection} */
@@ -13,8 +12,8 @@ export interface ModifierSectionOptions {
   title: string;
   /** Optional subtitle shown after the title */
   subtitle?: string;
-  /** The modifier (or sequential modifier) to break down. Must have descriptions. */
-  modifier: WithRequired<Modifier, 'description'>;
+  /** The modifier (or sequential modifier) to break down. Rows are emitted from `description`; modifiers without one contribute to the total but produce no breakdown line. */
+  modifier: Modifier;
   /** Starting value before any modifiers are applied. Default: `1` */
   base?: DecimalSource;
   /** Unit suffix for formatted values (e.g., `"/s"`, `"%"`) */

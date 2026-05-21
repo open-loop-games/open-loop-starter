@@ -24,13 +24,10 @@ const props = withDefaults(
   { base: 1, baseText: 'Base', smallerIsBetter: false },
 );
 
-// createModifierSection types `modifier` as `WithRequired<Modifier, 'description'>`,
-// but its runtime implementation no-ops the modifier-row list when description
-// is missing, which is the right fallback for the "chain isn't wired yet" case.
 const section = computed(() =>
   createModifierSection({
     title: props.title,
-    modifier: props.modifier as Parameters<typeof createModifierSection>[0]['modifier'],
+    modifier: props.modifier,
     base: props.base,
     baseText: props.baseText,
     unit: props.unit,
