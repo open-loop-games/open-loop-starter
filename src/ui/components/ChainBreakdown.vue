@@ -9,7 +9,8 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { createModifierSection, type DecimalSource, type Modifier } from '@open-loop/engine';
+import type { DecimalSource, Modifier } from '@open-loop/engine';
+import { createModifierSection } from '../../lib/ui/modifier-section';
 
 const props = withDefaults(
   defineProps<{
