@@ -1,10 +1,11 @@
 import { unref } from 'vue';
 import {
   Decimal,
+  createAchievementCategory,
   createMultiplicativeModifier,
-  createTieredAchievement,
   getEarnedCount,
   tunable,
+  type BaseTieredAchievementDef,
   type DecimalSource,
   type EngineModule,
 } from '@open-loop/engine';
@@ -36,12 +37,24 @@ export function createMilestonesModule(data: ProducerData): EngineModule {
       // per-producer scope (spec § 5).
       const bonusPerTier = tunable(tuningRegistry, 'balance/milestoneBonusPerTier', () => 1.1);
 
+      // One shared category for all per-producer milestone tiers. Each
+      // producer's milestones register through `registerTiered`, so the
+      // resulting achievements show up in `EngineCategories`, reset
+      // traversal, and devtools introspection alongside everything else.
+      const milestonesCategory = createAchievementCategory<BaseTieredAchievementDef>({
+        id: 'producer/milestones',
+        mapAchievement: (def) => ({
+          display: { title: def.title, description: def.description },
+          requirement: def.requirement,
+        }),
+      });
+
       for (const def of data.producers) {
         if (def.trigger !== 'continuous') continue;
         const producer = buildings.getProducer(def.id);
         if (!producer) continue;
 
-        const tiers = createTieredAchievement<number>({
+        const tiers = milestonesCategory.registerTiered<number>({
           baseId: `milestone/${def.id}`,
           baseName: `${def.name} milestone`,
           getValue: () => producer.count.value,
