@@ -1,4 +1,5 @@
 import {
+  Decimal,
   createBooleanRequirement,
   createPurchasableCategory,
   persistent,
@@ -9,15 +10,10 @@ import {
   type Persistent,
   type PurchasableCategory,
 } from '@open-loop/engine';
-import type {
-  BloonInstance,
-  DefenderData,
-  TowerDef,
-  TowerId,
-  TowerInstance,
-} from '../data/types';
+import type { BloonInstance, DefenderData, TowerDef, TowerId, TowerInstance } from '../data/types';
 import { getBloons } from './bloons';
 import { MapKey } from './map';
+import { getRound } from './round';
 import { DefenderTuningRegistryKey } from './tuning';
 
 export interface TowersApi {
@@ -104,6 +100,12 @@ export function createTowersModule(data: DefenderData): EngineModule {
         stats.set(def.id, buildStatRefs(registry, def));
       }
 
+      // Sell-rate reader. The round module registers the default in its own
+      // `tunable()` site (`economy/*` is round's namespace); we register here
+      // too so towers can read it without injecting round. `setDefault` is
+      // idempotent — the duplicate registration is a no-op.
+      const sellRate = tunable<number>(registry, 'economy/sellRate', () => data.economy.sellRate);
+
       // ─── Persistent state ──────────────────────────────────────────────
       const placedTowers = persistent<TowerInstance[]>([], { name: 'placed-towers' });
       const nextInstanceId = persistent<number>(0, { name: 'next-tower-instance-id' });
@@ -139,9 +141,12 @@ export function createTowersModule(data: DefenderData): EngineModule {
         if (target.type !== 'buildable') return false;
         if (target.towerInstanceId != null) return false;
 
-        // TODO(phase-3): subtract def.baseCost from money via the round
-        // module's resource. Phase 2 lands the placement mechanism alone;
-        // Phase 3 wires the money flow when the round module's body lands.
+        // Money debit. Reads the tunable's current value through the round
+        // module so harness perturbations on `towers/<id>/baseCost` flow
+        // through. Round refuses if insufficient cash; we propagate the
+        // false back to the UI without committing any state.
+        const cost = stats.get(defId)!.baseCost.value;
+        if (!getRound().spendMoney(cost)) return false;
 
         const instanceId = `tower-${nextInstanceId.value++}`;
         target.type = 'blocked';
@@ -174,12 +179,14 @@ export function createTowersModule(data: DefenderData): EngineModule {
         cell.type = 'buildable';
         cell.towerInstanceId = undefined;
 
-        // TODO(phase-3): refund def.baseCost × economy.sellRate to money.
-        // Round module lands the money resource in Phase 3.
+        // Refund `baseCost × sellRate` to money. Citation: BloonsTD.as:826
+        // SELL_RATE = 0.8. Reads through the tunable so a Phase-5 perturbation
+        // of sellRate (rare but in-scope for the balance pass) is honored.
+        const baseCost = stats.get(instance.defId)!.baseCost.value;
+        const refund = Decimal.mul(baseCost, sellRate.value);
+        getRound().refundMoney(refund);
 
-        placedTowers.value = placedTowers.value.filter(
-          (t) => t.instanceId !== instanceId,
-        );
+        placedTowers.value = placedTowers.value.filter((t) => t.instanceId !== instanceId);
       }
 
       // ─── Per-tick: cooldown + targeting + fire ─────────────────────────
@@ -187,16 +194,7 @@ export function createTowersModule(data: DefenderData): EngineModule {
         const arr = placedTowers.value;
         if (arr.length === 0) return;
 
-        // Resolve in-flight bloons. The bloons module's body lands in
-        // worktree C; if it's still a stub in this branch, accessing
-        // `inFlight.value` throws — guard so towers tick cleanly until C
-        // merges in.
-        let bloons: BloonInstance[] | null;
-        try {
-          bloons = getBloons().inFlight.value;
-        } catch {
-          bloons = null;
-        }
+        const bloons = getBloons().inFlight.value;
 
         for (const t of arr) {
           t.cooldownRemaining -= dt;
@@ -215,7 +213,7 @@ export function createTowersModule(data: DefenderData): EngineModule {
           if (def.id === 'tack') {
             // Radial volley — no target needed. `volleyCount` projectiles
             // fan out from the tower position; bloons within range pop.
-            fireTack(tx, ty, refs, bloons);
+            fireTack(t.instanceId, tx, ty, refs, bloons);
           } else if (def.id === 'ice') {
             // Instant AoE freeze — all freezable bloons within range get
             // `freezeDurationSec` added to their `frozenRemainingSec`.
@@ -225,12 +223,12 @@ export function createTowersModule(data: DefenderData): EngineModule {
             // frozen — bombs ignore the freeze-skip rule per
             // Tower.as:276-281). Splash AoE on impact.
             const target = pickFurthestInRange(tx, ty, refs, bloons, /*allowFrozen*/ true);
-            if (target) fireBomb(target, refs, bloons);
+            if (target) fireBomb(t.instanceId, target, refs, bloons);
           } else {
             // Dart: single furthest-along-path bloon in range; skip frozen
             // (matches BTD1 Tower.as:276-281 — only bombs hit frozen).
             const target = pickFurthestInRange(tx, ty, refs, bloons, /*allowFrozen*/ false);
-            if (target) fireDart(target, refs);
+            if (target) fireDart(t.instanceId, target);
           }
 
           t.cooldownRemaining = refs.attackCooldownSec.value;
@@ -243,8 +241,7 @@ export function createTowersModule(data: DefenderData): EngineModule {
         placeTower,
         sellTower,
         placedCount: () => placedTowers.value.length,
-        placedCountOf: (defId) =>
-          placedTowers.value.filter((t) => t.defId === defId).length,
+        placedCountOf: (defId) => placedTowers.value.filter((t) => t.defId === defId).length,
       };
 
       towers = api;
@@ -273,19 +270,12 @@ interface TowerStatRefs {
   volleyCount: { value: number };
 }
 
-function buildStatRefs(
-  registry: Parameters<typeof tunable>[0],
-  def: TowerDef,
-): TowerStatRefs {
+function buildStatRefs(registry: Parameters<typeof tunable>[0], def: TowerDef): TowerStatRefs {
   // Cite Tower.as line ranges by tower for the reader. Per-constant citations
   // already live next to each value in data/towers.ts.
   return {
     // Tower base purchase cost. Citation: BloonsTD.as:802-806 COST_* per id.
-    baseCost: tunable<DecimalSource>(
-      registry,
-      `towers/${def.id}/baseCost`,
-      () => def.baseCost,
-    ),
+    baseCost: tunable<DecimalSource>(registry, `towers/${def.id}/baseCost`, () => def.baseCost),
     // Targeting radius (lane units). Citation: BloonsTD.as:817-821 RANGE_*.
     rangeLaneUnits: tunable<number>(
       registry,
@@ -307,11 +297,7 @@ function buildStatRefs(
       () => def.projectileSpeedLaneUnitsPerSec,
     ),
     // Max bloons a single fire pops. Citation: Tower.as:158/207/216 pierceMax.
-    pierceMax: tunable<number>(
-      registry,
-      `towers/${def.id}/pierceMax`,
-      () => def.pierceMax,
-    ),
+    pierceMax: tunable<number>(registry, `towers/${def.id}/pierceMax`, () => def.pierceMax),
     // Bomb splash radius. Citation: Phase-1 stand-in (SWF resource); only
     // 'bomb' reads this. Phase-5 balance pass re-derives. Tunable key
     // `towers/bomb/splashRadiusLaneUnits` registers under the bomb-only id.
@@ -337,11 +323,7 @@ function buildStatRefs(
     // Only 'tack' reads this.
     volleyCount:
       def.id === 'tack'
-        ? tunable<number>(
-            registry,
-            'towers/tack/volleyCount',
-            () => def.volleyCount ?? 0,
-          )
+        ? tunable<number>(registry, 'towers/tack/volleyCount', () => def.volleyCount ?? 0)
         : { value: 0 },
   };
 }
@@ -396,27 +378,29 @@ let mapRef: import('./map').MapApi | null = null;
 
 // ─── Fire policies ────────────────────────────────────────────────────────
 
-function fireDart(target: BloonInstance, _refs: TowerStatRefs): void {
-  // Hitscan single-target pop. TODO(phase-3): once worktree C exposes a
-  // `popBloon(instanceId, byTowerInstanceId)` method on BloonsApi, route the
-  // pop through it so `onBloonPopped` fires and the round module's money +
-  // shedding handler runs. For Phase 2 the fire mechanism exists but the
-  // pop-routing is deferred; the bloon stays on the field until C's body
-  // lands and provides a real pop entry point.
-  void target;
+function fireDart(towerInstanceId: string, target: BloonInstance): void {
+  // Hitscan single-target pop. Routes through `BloonsApi.popBloon` so
+  // `onBloonPopped` fires (round module grants moneyPerPop) and shedding
+  // runs (popping blue spawns red at the same path position).
+  getBloons().popBloon(target.instanceId, towerInstanceId);
 }
 
 function fireBomb(
+  towerInstanceId: string,
   impact: BloonInstance,
   refs: TowerStatRefs,
-  bloons: BloonInstance[] | null,
+  bloons: BloonInstance[],
 ): void {
   // AoE splash centered on the impact bloon. Pops up to `pierceMax`
-  // (Tower.as:207 = 20) bloons within `splashRadiusLaneUnits`.
-  if (!bloons || bloons.length === 0) return;
+  // (Tower.as:207 = 20) bloons within `splashRadiusLaneUnits`. Iterates
+  // over a snapshot of the in-flight list captured this tick; popBloon is
+  // idempotent (silent no-op when the instance is gone) so the shed child
+  // of an early pop won't get caught by a later splash hit on the same id.
+  if (bloons.length === 0) return;
   const radius = refs.splashRadiusLaneUnits.value;
   const radiusSq = radius * radius;
   const pierceLimit = refs.pierceMax.value;
+  const api = getBloons();
 
   const { x: ix, y: iy } = positionOf(impact);
   let popped = 0;
@@ -426,16 +410,17 @@ function fireBomb(
     const dx = bx - ix;
     const dy = by - iy;
     if (dx * dx + dy * dy > radiusSq) continue;
+    api.popBloon(b.instanceId, towerInstanceId);
     popped++;
-    // TODO(phase-3): route through BloonsApi.popBloon — see fireDart note.
   }
 }
 
 function fireTack(
+  towerInstanceId: string,
   tx: number,
   ty: number,
   refs: TowerStatRefs,
-  bloons: BloonInstance[] | null,
+  bloons: BloonInstance[],
 ): void {
   // Radial volley — `volleyCount` projectiles in a circle. Modeled as
   // hitscan: any bloon within range gets popped, up to `pierceMax × volleyCount`
@@ -443,10 +428,11 @@ function fireTack(
   // gameplay this rarely matters in arc-1 since pierceMax=1 and only the
   // closest bloon per projectile angle would normally pop; modeling as
   // "all bloons in range up to volleyCount" captures the practical effect.
-  if (!bloons || bloons.length === 0) return;
+  if (bloons.length === 0) return;
   const range = refs.rangeLaneUnits.value;
   const rangeSq = range * range;
   const cap = refs.volleyCount.value * refs.pierceMax.value;
+  const api = getBloons();
 
   let popped = 0;
   for (const b of bloons) {
@@ -456,22 +442,17 @@ function fireTack(
     const dx = bx - tx;
     const dy = by - ty;
     if (dx * dx + dy * dy > rangeSq) continue;
+    api.popBloon(b.instanceId, towerInstanceId);
     popped++;
-    // TODO(phase-3): route through BloonsApi.popBloon — see fireDart note.
   }
 }
 
-function fireIce(
-  tx: number,
-  ty: number,
-  refs: TowerStatRefs,
-  bloons: BloonInstance[] | null,
-): void {
+function fireIce(tx: number, ty: number, refs: TowerStatRefs, bloons: BloonInstance[]): void {
   // Instant-AoE freeze — every freezable bloon within range gets frozen
   // for `freezeDurationSec` seconds. Direct mutation of `frozenRemainingSec`
   // is the freeze application; the bloons module's per-tick walk handler
   // reads the field and gates movement on it.
-  if (!bloons || bloons.length === 0) return;
+  if (bloons.length === 0) return;
   const range = refs.rangeLaneUnits.value;
   const rangeSq = range * range;
   const duration = refs.freezeDurationSec.value;
@@ -484,12 +465,10 @@ function fireIce(
     const dx = bx - tx;
     const dy = by - ty;
     if (dx * dx + dy * dy > rangeSq) continue;
-    // Phase-2 freeze: write directly to the bloon's frozen countdown. The
-    // freezable check (data.bloons[*].freezable) is not enforced here —
-    // arc-1 bloons are all freezable per BloonsTD.as:rank-1-to-5; later
-    // arcs that introduce non-freezable bloons (rank 6+) would extend the
-    // bloons module to expose a freezable lookup or to gate this write
-    // internally.
+    // Freezable check (data.bloons[*].freezable) is not enforced here —
+    // arc-1 bloons are all freezable per BloonsTD.as:rank-1-to-5. Later
+    // arcs that introduce non-freezable bloons (rank 6+) extend the bloons
+    // module with a freezable lookup or gate this write internally.
     b.frozenRemainingSec = Math.max(b.frozenRemainingSec, duration);
     frozen++;
   }
@@ -516,4 +495,3 @@ function describeTower(def: TowerDef): string {
 // helpers can resolve bloon world positions without re-injecting per call.
 // HMR re-installs overwrite it cleanly; single-engine-per-process means no
 // cross-instance leakage in arc-1.
-
