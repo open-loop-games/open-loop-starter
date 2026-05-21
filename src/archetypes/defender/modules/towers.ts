@@ -190,6 +190,7 @@ export function createTowersModule(data: DefenderData): EngineModule {
       }
 
       // ─── Per-tick: cooldown + targeting + fire ─────────────────────────
+      const cellSizePixels = data.path.cellSizePixels;
       ctx.onTick((dt) => {
         const arr = placedTowers.value;
         if (arr.length === 0) return;
@@ -203,9 +204,13 @@ export function createTowersModule(data: DefenderData): EngineModule {
           const refs = stats.get(t.defId)!;
           const def = data.towers.find((d) => d.id === t.defId)!;
 
-          // Tower world position — cell center on the lane-unit grid.
-          const tx = t.cell.x + 0.5;
-          const ty = t.cell.y + 0.5;
+          // Tower world position in BTD1 pixels — placement-cell center
+          // scaled by `cellSizePixels`. Range / splash checks compare to
+          // bloon positions returned by `map.positionAtDistance`, which is
+          // also in pixels, so the verbatim BTD1 range numbers (60–120 px)
+          // carry the source's balance.
+          const tx = (t.cell.x + 0.5) * cellSizePixels;
+          const ty = (t.cell.y + 0.5) * cellSizePixels;
 
           // Fire policy branches by tower type. Each policy resets the
           // cooldown to the tunable's current value — perturbations take

@@ -5,28 +5,25 @@ import type { BloonDef } from './types';
 // Lives-on-leak equals rank (`BloonsTD.as:1151`); money per pop is a flat 1
 // (`BloonsTD.as:1142`).
 //
-// ─── Lane-unit calibration (Phase 5a, OL-1029) ─────────────────────────────
-// BTD1 ranges and pixel-space distances live in a ~580×400 px playfield
-// (Flash MovieClip authoring). Our path is hand-authored on a 20×15 lane-
-// unit grid (`data/path.ts`), total length 75 lane-units. The two
-// coordinate systems aren't compatible — using BTD1's raw pixel-per-sec
-// speeds on our 75-unit path would have red bloons crossing the map in
-// well under a second.
+// Walk speeds derived from each bloon's `plainN` MovieClip frame count
+// (SWF Symbol N.xml `DOMFrame duration`). Bloon speed is implicit: each
+// plainN sprite walks the same 2137 px path in a different number of
+// frames at 40 fps, so px/s = pathPx × 40 / (1 + duration). Values:
 //
-// Walk speeds are calibrated to make red bloon traversal ~30 sec at
-// `speedLaneUnitsPerSec = 2.5` (75 units / 2.5 u/s = 30s). Higher ranks
-// preserve BTD1's speed ratio 1 : 1.5 : 2 : 3 (rank-1 : rank-4) per the
-// `getSpeed()` switch at `Bloon.as` rank dispatch. The ratio is verbatim
-// BTD1; the scalar is recalibrated for the 20×15 grid.
+//   plain1 (red,    Symbol 10, dur=914 → 915 frames) → 2137 × 40 / 915 ≈ 93.4 px/s
+//   plain2 (blue,   Symbol 35, dur=766 → 767 frames) → 2137 × 40 / 767 ≈ 111.4 px/s
+//   plain3 (green,  Symbol 30, dur=531 → 532 frames) → 2137 × 40 / 532 ≈ 160.7 px/s
+//   plain4 (yellow, Symbol 25, dur=293 → 294 frames) → 2137 × 40 / 294 ≈ 290.8 px/s
 //
-// Tunable per bloon: `bloons/${id}/speedLaneUnitsPerSec`. Phase 5b's sim
-// probes perturb this against round-clear time to land the elbow.
+// The actual ratio (1 : 1.19 : 1.72 : 3.11) differs from the wiki-folkloric
+// 1 : 1.5 : 2 : 3 we'd been using — the SWF is authoritative. Tunable per
+// bloon: `bloons/${id}/speedLaneUnitsPerSec`.
 
 export const BLOONS: BloonDef[] = [
   {
     id: 'red',
     rank: 1,
-    speedLaneUnitsPerSec: 2.5, // Phase 5a calibration; ratio 1.0 vs BTD1's red baseline
+    speedLaneUnitsPerSec: 93.4, // plain1 Symbol 10 (dur=914, 915 frames @ 40fps)
     hp: 1,
     freezable: true,
     moneyOnPop: 1,
@@ -35,7 +32,7 @@ export const BLOONS: BloonDef[] = [
   {
     id: 'blue',
     rank: 2,
-    speedLaneUnitsPerSec: 3.75, // Ratio 1.5 — `Bloon.as` rank-2 dispatch
+    speedLaneUnitsPerSec: 111.4, // plain2 Symbol 35 (dur=766, 767 frames @ 40fps)
     hp: 1,
     freezable: true,
     moneyOnPop: 1,
@@ -45,7 +42,7 @@ export const BLOONS: BloonDef[] = [
   {
     id: 'green',
     rank: 3,
-    speedLaneUnitsPerSec: 5.0, // Ratio 2.0
+    speedLaneUnitsPerSec: 160.7, // plain3 Symbol 30 (dur=531, 532 frames @ 40fps)
     hp: 1,
     freezable: true,
     moneyOnPop: 1,
@@ -55,7 +52,7 @@ export const BLOONS: BloonDef[] = [
   {
     id: 'yellow',
     rank: 4,
-    speedLaneUnitsPerSec: 7.5, // Ratio 3.0
+    speedLaneUnitsPerSec: 290.8, // plain4 Symbol 25 (dur=293, 294 frames @ 40fps)
     hp: 1,
     freezable: true,
     moneyOnPop: 1,

@@ -19,16 +19,17 @@ const selectedTowerInstance = ref<string | null>(null);
 
 const W = data.path.gridWidth;
 const H = data.path.gridHeight;
-// SVG view-box is the lane-unit grid; CSS lays out the surrounding box and
-// preserveAspectRatio keeps the grid undistorted at any container size.
-const viewBox = `0 0 ${W} ${H}`;
+const CELL = data.path.cellSizePixels;
+// SVG view-box is BTD1 pixel-space (placement grid × cellSizePixels). The
+// engine's range / position math is also in pixels, so towers/bloons placed
+// at pixel coords render at their natural sim positions. preserveAspectRatio
+// keeps the grid undistorted at any container size.
+const viewBox = `0 0 ${W * CELL} ${H * CELL}`;
 
-// Path polyline as "x0,y0 x1,y1 …" — cell centers, no path-cell rasterization
-// here since the engine grid carries that. Visual width handles the on-screen
-// thickness; the engine's hit logic uses point-on-line distance, not stroke
-// thickness, so this is purely cosmetic.
+// Path polyline as "x0,y0 x1,y1 …" — cell centers in pixel coords. The
+// engine grid carries the buildable/path rasterization; this is cosmetic.
 const pathPoints = computed(() =>
-  data.path.waypoints.map(([x, y]) => `${x + 0.5},${y + 0.5}`).join(' '),
+  data.path.waypoints.map(([x, y]) => `${(x + 0.5) * CELL},${(y + 0.5) * CELL}`).join(' '),
 );
 
 // Buildable-cell overlay — every cell whose type is 'buildable' renders as a
@@ -69,8 +70,8 @@ const placedView = computed<PlacedView[]>(() =>
     return {
       instanceId: t.instanceId,
       defId: t.defId,
-      cx: t.cell.x + 0.5,
-      cy: t.cell.y + 0.5,
+      cx: (t.cell.x + 0.5) * CELL,
+      cy: (t.cell.y + 0.5) * CELL,
       range: def.rangeLaneUnits,
       showRange: selectedTowerInstance.value === t.instanceId,
     };
@@ -113,8 +114,8 @@ const preview = computed(() => {
   const buildable = target.type === 'buildable' && target.towerInstanceId == null;
   const affordable = Number(round.money.value) >= Number(def.baseCost);
   return {
-    cx: cell.x + 0.5,
-    cy: cell.y + 0.5,
+    cx: (cell.x + 0.5) * CELL,
+    cy: (cell.y + 0.5) * CELL,
     range: def.rangeLaneUnits,
     valid: buildable && affordable,
   };
@@ -193,9 +194,10 @@ const selectedTowerInfo = computed(() => {
 });
 
 // Bloon visual size — tiered by rank so larger ladder members look bigger.
+// Pixel radii: rank 1 → ~6.6 px, rank 4 → ~10.2 px on the BTD1-pixel viewBox.
 function bloonRadius(id: BloonId): number {
   const def = bloonDefById.get(id);
-  return def ? 0.18 + def.rank * 0.04 : 0.2;
+  return (def ? 0.18 + def.rank * 0.04 : 0.2) * CELL;
 }
 </script>
 
@@ -215,10 +217,10 @@ function bloonRadius(id: BloonId): number {
         <rect
           v-for="c in cells"
           :key="`${c.x},${c.y}`"
-          :x="c.x"
-          :y="c.y"
-          width="1"
-          height="1"
+          :x="c.x * CELL"
+          :y="c.y * CELL"
+          :width="CELL"
+          :height="CELL"
           class="cell"
           :class="{
             'cell--buildable': c.type === 'buildable',
@@ -261,7 +263,7 @@ function bloonRadius(id: BloonId): number {
         <circle
           :cx="preview.cx"
           :cy="preview.cy"
-          :r="0.35"
+          :r="0.35 * CELL"
           class="preview-marker"
           :class="{ 'preview-marker--invalid': !preview.valid }"
         />
@@ -283,7 +285,7 @@ function bloonRadius(id: BloonId): number {
           <circle
             :cx="t.cx"
             :cy="t.cy"
-            :r="0.42"
+            :r="0.42 * CELL"
             class="tower"
             :class="{ 'tower--selected': t.showRange }"
             :fill="towerColor(t.defId)"
@@ -341,14 +343,15 @@ function bloonRadius(id: BloonId): number {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  /* Stroke widths are in lane-units (the viewBox unit). Use a small absolute
-     vector-effect so towers/bloons keep crisp 1px outlines at any zoom. */
+  /* Stroke widths are in BTD1 pixels (the viewBox unit, set by
+     gridWidth × cellSizePixels). Sized to read at the natural ~600×450
+     viewBox; CSS layout + preserveAspectRatio handles container scaling. */
 }
 
 .cell {
   fill: transparent;
   stroke: rgba(255, 255, 255, 0.04);
-  stroke-width: 0.02;
+  stroke-width: 0.6;
   cursor: default;
   transition: fill 0.1s ease;
 }
@@ -373,13 +376,13 @@ function bloonRadius(id: BloonId): number {
 
 .map-canvas__path {
   stroke: color-mix(in srgb, var(--color-fg, #fff) 15%, var(--color-bg));
-  stroke-width: 0.8;
+  stroke-width: 24;
 }
 
 .preview-range {
   fill: color-mix(in srgb, var(--color-primary, #4a9eff) 8%, transparent);
   stroke: color-mix(in srgb, var(--color-primary, #4a9eff) 60%, transparent);
-  stroke-width: 0.08;
+  stroke-width: 2.4;
   pointer-events: none;
 }
 
@@ -400,25 +403,25 @@ function bloonRadius(id: BloonId): number {
 
 .tower {
   stroke: rgba(0, 0, 0, 0.4);
-  stroke-width: 0.06;
+  stroke-width: 1.8;
   cursor: pointer;
 }
 
 .tower--selected {
   stroke: var(--color-primary, #4a9eff);
-  stroke-width: 0.12;
+  stroke-width: 3.6;
 }
 
 .tower-range {
   fill: color-mix(in srgb, var(--color-primary, #4a9eff) 6%, transparent);
   stroke: color-mix(in srgb, var(--color-primary, #4a9eff) 50%, transparent);
-  stroke-width: 0.08;
+  stroke-width: 2.4;
   pointer-events: none;
 }
 
 .bloon {
   stroke: rgba(0, 0, 0, 0.55);
-  stroke-width: 0.04;
+  stroke-width: 1.2;
   /* Smooth interpolation between ticks so bloons read as moving rather than
      teleporting. Vue re-renders re-pin the cx/cy attrs; the CSS transition
      animates the change. 0.1s matches the ~20Hz default tick rate. */
@@ -429,7 +432,7 @@ function bloonRadius(id: BloonId): number {
 
 .bloon--frozen {
   stroke: #fff;
-  stroke-width: 0.1;
+  stroke-width: 3;
 }
 
 .map-canvas__info {

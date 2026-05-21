@@ -4,17 +4,34 @@ Per-archetype balance log per `BALANCING.md § Graduating findings`. Records wha
 
 When an entry generalizes across archetypes, file a PR moving the abstracted rule into `BALANCING.md` and leave the worked example here.
 
-## Numerical surprise — BTD1 pixel-space scalars don't transfer to a chosen lane-unit grid
+## Methodology — AS scripts aren't the whole source; decompile the SWF
 
-Defender ports BTD1 verbatim per the umbrella contract: tower ranges (60–120), bloon speeds (30–90 pixel-per-sec), splash radii. BTD1's playfield is ~580×400 px (Flash MovieClip authoring); our path lives on a hand-authored 20×15 lane-unit grid (`data/path.ts`), 75 units total length, diagonal ~25.
+Phase 5a opened on the assumption that `open-loop-research/reference-code/bloons-td-1/scripts/` (the AS extraction under `__Packages/`) was the canonical source. It isn't — it's *one* extraction. The SWF carries additional authoritative data in non-script tags (stage header, MovieClip per-frame `Matrix tx/ty`, shape primitives) that the AS extract doesn't surface. Treating the AS as the whole source meant authoring stand-ins for anything not literally in `BloonsTD.as` / `Tower.as` / `Bloon.as` — and several of those stand-ins were wrong in ways that warped balance.
 
-Phase 4 UI revealed the mismatch in the most visible way possible: every tower covered the entire map. A dart at range 100 placed anywhere on a 20×15 grid hits every bloon in flight. Placement strategy collapsed to "drop it anywhere."
+What the AS-only assumption missed, and what the SWF decompile (`ffdec` at `/usr/bin/ffdec`, output at `/tmp/btd1-xfl/`) actually provides:
 
-Resolution (Phase 5a): rescale ranges + bloon speeds by ~25× (the map-diagonal ratio), preserving BTD1's *ratios* but recalibrating the absolute scalars for our grid. Dart 100 → 4.0; tack 70 → 2.8; bomb 120 → 4.8; ice 60 → 2.4. Red bloon 30 → 2.5; ratio 1.0 : 1.5 : 2.0 : 3.0 preserved. The BTD1 origins stay in `data/towers.ts` + `data/bloons.ts` comments; the rescale rationale is co-located.
+| Datum | AS-only stand-in | SWF actual | Source |
+| --- | --- | --- | --- |
+| Frame rate | 30 fps (folkloric) | **40 fps** | `DOMDocument.xml frameRate="40"` |
+| Stage dimensions | guessed ~580×400 px | **640×480 px** | `DOMDocument.xml width/height` |
+| `spawnIntervalSec` | hardcoded 0.5 everywhere | per-round `(16 − round) / 40` | formula already in `BloonsTD.as:1002`; we'd just hardcoded a derivative |
+| Bloon speeds | 30 / 45 / 60 / 90 px/s (wiki ratio 1 : 1.5 : 2 : 3) | **93.4 / 111.4 / 160.7 / 290.8 px/s** (ratio 1 : 1.19 : 1.72 : 3.11) | per-plain MovieClip `DOMFrame duration`: 914/766/531/293 frames @ 40 fps over 2137 px path |
+| Path waypoints | hand-authored 14 integer-cell points (a guess at "monkey lane shape") | **19 waypoints** decimated via Douglas-Peucker (eps=10px) from 915 per-frame `Matrix tx/ty` entries | `LIBRARY/Symbol 10.xml` (plain1) Layer 2 timeline |
+| Bomb splash radius | 30 px stand-in | **~40 px** (rectangular hitbox, modeled as circle of radius = half-major-dimension) | `Symbol 129` hitbit = `Symbol 43` (138×192 twips = 6.9×9.6 px) scaled `a=11.578, d=8.319` at explosion frame |
 
-- **Receipt:** `src/archetypes/defender/data/{towers.ts, bloons.ts}` rescale block at the citation comments.
-- **Cross-link:** `src/archetypes/defender/data/types.ts` describes the lane-unit system at the type definition; this finding adds the calibration rationale.
-- **Promotion candidate for BALANCING.md:** "A canonical-fidelity port inherits the source's coordinate system. When the consumer's coordinate system is different (hand-authored grid vs source's pixel-space, lane-units vs frame-space), the calibration step is the per-archetype balance pass's first move — *before* methodology selection. Preserve the source's *ratios*, recalibrate the absolute scalars, document the conversion at the citation site." This generalizes any archetype porting verbatim from a different coordinate system (e.g., spell-compiler porting from Mages of Mystralia).
+The methodological rule: when the upstream source is a binary asset with multiple extraction surfaces, **enumerate the surfaces before treating any one of them as canonical**. A `scripts/` directory pulled out by a script-only decompiler covers maybe 60% of what's load-bearing for balance; the rest lives in shape data, sprite timelines, sound buckets, and the file header. Pull all of it before declaring "verbatim from the source."
+
+Two-scale coordinate system stays as the structural answer: placement grid coarse (20×15 cells) for game-feel; distance / range / speed in BTD1 pixels via `PathDef.cellSizePixels`. With the SWF-exact `cellSizePixels = 32`, the placement grid lands at 640×480 px — matches BTD1 stage *exactly* (vs. the 600×450 / cellSizePixels=30 first attempt against a guessed 580×400 stage).
+
+- **Receipts:**
+  - `decompile/README.md` has the WC3 tooling, but `ffdec` is system-installed at `/usr/bin/ffdec` (JPEXS Free Flash Decompiler v24.1.0); `ffdec -export xfl <out> <swf>` produces the full XFL tree.
+  - `src/archetypes/defender/data/path.ts` — 19 plain1-extracted waypoints, header documents the extraction.
+  - `src/archetypes/defender/data/bloons.ts` — speeds per `plainN` frame-count table in the header.
+  - `src/archetypes/defender/data/towers.ts` — all `/30` → `/40` time conversions; bomb splash 40px.
+  - `src/archetypes/defender/data/waves.ts` — per-round `spawnIntervalSecForRound(r) = (16 - r) / 40` helper.
+  - `src/archetypes/defender/data/path.ts` `cellSizePixels: 32`; `src/archetypes/defender/data/types.ts` `PathDef.cellSizePixels` doc; `src/archetypes/defender/modules/map.ts` `pathTotalLength` + `positionAtDistance` scale by cellSizePixels + Bresenham rounds float waypoints; `src/archetypes/defender/modules/towers.ts` per-tick `tx/ty = (cell + 0.5) * cellSizePixels`; `src/archetypes/defender/ui/panels/MapCanvas.vue` viewBox + sizes in pixels.
+
+- **Promotion candidate for BALANCING.md:** "When the upstream source is a compiled binary (SWF, .pak, .pck, packed bundles), enumerate the extraction surfaces — script source is rarely sufficient. Header / shape / sprite / sound / timing data carry load-bearing balance numbers that the script extraction doesn't surface. Before declaring 'verbatim from the source,' confirm every constant you've authored has a citation that resolves all the way back to the binary, not to a downstream wiki estimate or a Phase-N stand-in." Generalizes beyond Flash to any consumer porting from a packed binary asset (Godot .pck, WC3 .w3x, RPG Maker .json bundles, Unity scenes — see `decompile/README.md` for the related WC3 tooling).
 
 ## Cross-archetype convergence — override-path-vs-tunable rule
 

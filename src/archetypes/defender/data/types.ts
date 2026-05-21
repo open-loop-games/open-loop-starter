@@ -96,13 +96,24 @@ export interface EconomyConfig {
 }
 
 export interface PathDef {
-  /** Ordered [x, y] waypoints on a `gridWidth × gridHeight` lane-unit grid.
-   *  Hand-authored approximation of BTD1 Monkey Lane — the actual BTD1 path
-   *  lives in SWF MovieClip animation, not AS source. Bloon position
-   *  interpolates linearly between waypoints. */
+  /** Ordered [x, y] waypoints in **cell** coordinates on a
+   *  `gridWidth × gridHeight` placement grid. Hand-authored approximation
+   *  of BTD1 Monkey Lane — the actual BTD1 path lives in SWF MovieClip
+   *  animation, not AS source. Integer cell coords feed the Bresenham
+   *  path raster; bloon world position interpolates linearly between
+   *  waypoints (in pixels — see `cellSizePixels`). */
   waypoints: ReadonlyArray<readonly [number, number]>;
+  /** Placement grid width in cells. Tower placement is one-tower-per-cell. */
   gridWidth: number;
+  /** Placement grid height in cells. */
   gridHeight: number;
+  /** Cell size in BTD1 pixels. The placement grid is a coarse game-feel
+   *  abstraction; range / speed / distance arithmetic happens in BTD1
+   *  pixel-space so the verbatim source numbers (`towers/<id>/rangeLaneUnits`
+   *  = 60–120 px, `bloons/<id>/speedLaneUnitsPerSec`) carry the source's
+   *  balance. `gridWidth × cellSizePixels` matches BTD1 stage width
+   *  (640 px from SWF DOMDocument.xml); same for height (480 px). */
+  cellSizePixels: number;
 }
 
 export interface DefenderData {

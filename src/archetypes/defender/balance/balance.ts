@@ -62,8 +62,9 @@ export const DEFENDER_IDENTITY = {
   archetypeId: 'defender' as const,
   /** ~40 min cumulative arc — 10 rounds × ~30-90s per round + tower-buying
    *  gaps. Phase 5b sim discovery will tighten this once the balance pass
-   *  measures actual round durations across the rescaled lane-unit system.
-   *  Initial estimate; not the methodology-target binding number. */
+   *  measures actual round durations under the verbatim BTD1 numbers +
+   *  pixel-space playfield. Initial estimate; not the methodology-target
+   *  binding number. */
   arcBudgetSec: 40 * 60,
   /** Min content cardinality the targeting pattern depends on. 4 towers
    *  (dart / tack / bomb / ice) is the minimum that supports the
@@ -73,11 +74,12 @@ export const DEFENDER_IDENTITY = {
   /** Bloon shedding ladder depth. 4 ranks (red / blue / green / yellow)
    *  in arc 1; ranks 5+ (pink / black / etc.) deferred to expansion. */
   minBloonRanks: 4,
-  /** Path length in lane-units. Computed from waypoints in `data/path.ts`
-   *  (13 integer waypoints on a 20×15 grid); cached here for sim probes
-   *  needing the constant without injecting the map module. Phase 4 UI
-   *  measurement confirmed 75 units total. */
-  pathTotalLaneUnits: 75,
+  /** Path length in BTD1 pixels. Computed from the plain1-extracted
+   *  waypoints in `data/path.ts` (19 waypoints decimated from 915 frames
+   *  via Douglas-Peucker at eps=10px). Total 2137 px ≈ 23.2s red-bloon
+   *  transit at the verbatim BTD1 red speed of ~93 px/s. Cached here for
+   *  sim probes needing the constant without injecting the map module. */
+  pathTotalLaneUnits: 2137,
   /** Signature climax metric. Numeric magnitudes are mutable; the metric
    *  *shape* — `survivalRate(round N | placement strategy)` distribution
    *  across N seeds, plus per-round mean leak count — is the archetype
@@ -176,9 +178,11 @@ const min = (m: number) => m * 60;
  * windows when Phase 5b lands those probes.
  *
  * Windows are an estimate informed by Phase 4 manual playthrough + the
- * rescaled lane-unit system (red bloon traverses 75-unit path at 2.5
- * units/sec → 30s; rounds 1–2 short, rounds 6–10 longer with tower
- * cooldowns finishing waves). Expect 5–20% shifts during 5b reconciliation.
+ * pixel-space coordinate system (red bloon at 30 px/s on a 2250-px path →
+ * ~75s traversal; rounds 1–2 short, rounds 6–10 longer with tower
+ * cooldowns finishing waves). Expect 5–20% shifts during 5b reconciliation
+ * — and possibly a path-length or `cellSizePixels` re-author once the sim
+ * measures actual round durations against BTD1's known ~25–30s red transit.
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), sec(30)],

@@ -15,18 +15,21 @@ export interface MapCell {
  * dependent API calls.
  */
 export interface MapApi {
-  /** Bounded 2D grid sized `data.path.gridWidth × data.path.gridHeight`.
-   *  Path cells (rasterized from the polyline) carry `type: 'path'`;
-   *  remaining cells default to `'buildable'`. */
+  /** Bounded 2D grid sized `data.path.gridWidth × data.path.gridHeight`
+   *  (placement grid; cell coords are integers in [0, gridWidth) × [0,
+   *  gridHeight)). Path cells (rasterized from the polyline in cell
+   *  space) carry `type: 'path'`; remaining cells default to `'buildable'`. */
   grid: SpatialGrid<MapCell>;
-  /** Total path length in lane units; sum of segment lengths between
-   *  consecutive waypoints. Bloons walk `distanceAlongPath` from 0 to here. */
+  /** Total path length in BTD1 pixels; sum of segment Euclidean lengths
+   *  between consecutive waypoints, scaled by `data.path.cellSizePixels`.
+   *  Bloons walk `distanceAlongPath` from 0 to here at `speedLaneUnitsPerSec`
+   *  px/s (verbatim BTD1). */
   pathTotalLength: number;
-  /** Interpolate world position along the path at the given distance.
-   *  Returns the [x, y] in grid-unit coordinates plus the segment index
-   *  bloon is currently traversing. */
+  /** Interpolate world position along the path at the given pixel
+   *  distance. Returns the [x, y] in BTD1 pixel coordinates plus the
+   *  segment index the bloon is currently traversing. */
   positionAtDistance(distance: number): { x: number; y: number; segmentIndex: number };
-  /** Read the cell at integer grid coordinates. */
+  /** Read the cell at integer placement-grid coordinates. */
   cellAt(x: number, y: number): MapCell;
   /** Passability predicate suitable for `SpatialGrid.bfs` queries — returns
    *  true iff `cell.type === 'path'`. Bloon movement consumes this. */
@@ -62,7 +65,7 @@ export function createMapModule(data: DefenderData): EngineModule {
     id: 'defender/map',
     dependencies: ['defender/tuning'],
     install(ctx) {
-      const { gridWidth, gridHeight, waypoints } = data.path;
+      const { gridWidth, gridHeight, cellSizePixels, waypoints } = data.path;
 
       const grid = createSpatialGrid<MapCell>({
         width: gridWidth,
@@ -70,19 +73,22 @@ export function createMapModule(data: DefenderData): EngineModule {
         initializer: () => ({ type: 'buildable' }),
       });
 
-      // Rasterize the path polyline onto the grid. Each consecutive waypoint
-      // pair contributes a Bresenham line; cells touched flip to `'path'`.
-      // Out-of-bounds steps are silently skipped (defensive — data/path.ts
-      // keeps all 13 waypoints in-bounds at authoring time).
+      // Rasterize the path polyline onto the placement grid. Each consecutive
+      // waypoint pair contributes a Bresenham line in cell space; cells
+      // touched flip to `'path'`. Waypoints may be floats (the BTD1-extracted
+      // path uses sub-cell precision); round at the raster call site since
+      // Bresenham needs integer endpoints. Out-of-bounds steps are silently
+      // skipped — BTD1's path enters/exits off-stage by design.
       for (let i = 0; i < waypoints.length - 1; i++) {
         const [x0, y0] = waypoints[i];
         const [x1, y1] = waypoints[i + 1];
-        rasterizeLine(grid, x0, y0, x1, y1);
+        rasterizeLine(grid, Math.round(x0), Math.round(y0), Math.round(x1), Math.round(y1));
       }
 
-      // Cumulative Euclidean length prefix sum. `cumulative[i]` is the
-      // distance from waypoint 0 to waypoint i (cumulative[0] === 0). The
-      // total path length is the final entry.
+      // Cumulative Euclidean length prefix sum, in BTD1 pixels.
+      // `cumulative[i]` is the pixel distance from waypoint 0 to waypoint i
+      // (cumulative[0] === 0). The total path length is the final entry.
+      // Waypoints are cell coords; multiply each segment by cellSizePixels.
       const cumulative = new Float64Array(waypoints.length);
       cumulative[0] = 0;
       for (let i = 1; i < waypoints.length; i++) {
@@ -90,7 +96,7 @@ export function createMapModule(data: DefenderData): EngineModule {
         const [qx, qy] = waypoints[i];
         const dx = qx - px;
         const dy = qy - py;
-        cumulative[i] = cumulative[i - 1] + Math.hypot(dx, dy);
+        cumulative[i] = cumulative[i - 1] + Math.hypot(dx, dy) * cellSizePixels;
       }
       const pathTotalLength = cumulative[cumulative.length - 1];
 
@@ -104,14 +110,18 @@ export function createMapModule(data: DefenderData): EngineModule {
         // wave/bloon module owns the despawn/leak decision when a bloon's
         // distanceAlongPath exceeds pathTotalLength — this function stays
         // total so callers can probe positions either side of the bounds
-        // without throwing.
+        // without throwing. Returned coords are in BTD1 pixels.
         if (distance <= 0) {
-          const [x, y] = waypoints[0];
-          return { x, y, segmentIndex: 0 };
+          const [cx, cy] = waypoints[0];
+          return { x: cx * cellSizePixels, y: cy * cellSizePixels, segmentIndex: 0 };
         }
         if (distance >= pathTotalLength) {
-          const [x, y] = waypoints[waypoints.length - 1];
-          return { x, y, segmentIndex: waypoints.length - 2 };
+          const [cx, cy] = waypoints[waypoints.length - 1];
+          return {
+            x: cx * cellSizePixels,
+            y: cy * cellSizePixels,
+            segmentIndex: waypoints.length - 2,
+          };
         }
 
         // Binary search the cumulative array for the segment index `i`
@@ -137,8 +147,8 @@ export function createMapModule(data: DefenderData): EngineModule {
         const [ax, ay] = waypoints[lo];
         const [bx, by] = waypoints[lo + 1];
         return {
-          x: ax + (bx - ax) * t,
-          y: ay + (by - ay) * t,
+          x: (ax + (bx - ax) * t) * cellSizePixels,
+          y: (ay + (by - ay) * t) * cellSizePixels,
           segmentIndex: lo,
         };
       }
