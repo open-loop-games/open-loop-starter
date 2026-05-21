@@ -22,6 +22,7 @@
 import { createApp as createVueApp, type App, type Component } from 'vue';
 import { createEngine, type Engine, type EngineConfig, type ModDef } from '@open-loop/engine';
 import { sharedBase } from '@/modules';
+import { useSaveEvents } from '@/composables/useSaveEvents';
 
 const DEFAULT_TICK_RATE = 20;
 const DEFAULT_AUTOSAVE_MS = 0;
@@ -70,6 +71,14 @@ export function bootApp(options: BootAppOptions): BootAppResult {
   app.provide('engine', options.engine);
   for (const [key, value] of options.provides ?? []) {
     app.provide(key, value);
+  }
+
+  // Canonical save-event subscription — toast aggregation for self-healed
+  // fields, load failures, future-version refusals, migration logging.
+  // Engines created without persistence (sim/test) have no saveManager;
+  // skip silently.
+  if (options.engine.saveManager) {
+    useSaveEvents(options.engine.saveManager);
   }
 
   return {
