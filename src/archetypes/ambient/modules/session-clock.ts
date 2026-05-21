@@ -54,7 +54,7 @@ export const SessionClockKey: InjectionKey<SessionClock> = Symbol(
  *   2. AppRoot reads `engine.load().timestamp`, computes
  *      `gap = (Date.now() - timestamp) / 1000`, writes
  *      `sessionClock.lastResumeGapSec.value = gap`.
- *   3. AppRoot calls `processOfflineTime(engine.loop, gap, ...)`, which
+ *   3. AppRoot calls `processOfflineTime(engine.tickDriver, gap, ...)`, which
  *      advances `time.elapsed` (and `time.totalPlayTime`) by the gap.
  *   4. AppRoot calls `sessionClock.refreshElapsedAtResume()` so
  *      `secondsSinceLastResume` resumes measuring live-session time.

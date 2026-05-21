@@ -20,7 +20,7 @@ let engineCounter = 0;
  * Caller drives the engine via `runUntil` from the engine harness. The
  * engine is `start()`ed and immediately `stop()`ped so the real-time
  * interval doesn't fire — solver iterations advance via
- * `engine.loop.simulateTick(tickDelta)` from `runUntil`.
+ * `engine.tickDriver.simulateTick(tickDelta)` from `runUntil`.
  *
  * Each build gets a unique `persistenceNamespace` so parallel instances
  * (matrix-probe seeds, sweeps) don't collide in storage.

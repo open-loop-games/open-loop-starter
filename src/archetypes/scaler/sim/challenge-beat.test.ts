@@ -121,7 +121,7 @@ describe('scaler challenges-beat lock', () => {
     expect(ch1.active.value).toBe(true);
 
     // Engine tick scans canComplete → calls complete(false), which exits.
-    engine.loop.simulateTick(1);
+    engine.tickDriver.simulateTick(1);
 
     // (3) Completion increments
     expect(ch1.completions.value).toBe(1);
@@ -150,7 +150,7 @@ describe('scaler challenges-beat lock', () => {
     coins.value = Decimal.mul(challengeRequirement(2, 0), 2);
     const ch2 = cat.getChallenge('challenge-2')!;
     ch2.enter();
-    engine.loop.simulateTick(1);
+    engine.tickDriver.simulateTick(1);
     expect(ch2.completions.value).toBe(1);
 
     const postBindingIds = coin1.rateChain.bindings().map((b) => b.id);
@@ -170,7 +170,7 @@ describe('scaler challenges-beat lock', () => {
     coins.value = Decimal.mul(challengeRequirement(1, 0), 2);
     const ch1 = cat.getChallenge('challenge-1')!;
     ch1.enter();
-    engine.loop.simulateTick(1);
+    engine.tickDriver.simulateTick(1);
     expect(ch1.completions.value).toBe(1);
     expect(ch1.active.value).toBe(false);
 
@@ -224,7 +224,7 @@ describe('scaler challenges-beat lock', () => {
 
     // One tick: sweep observes active=null, finds the first unmaxed
     // challenge (challenge-1 in registration order), enters it.
-    engine.loop.simulateTick(1);
+    engine.tickDriver.simulateTick(1);
 
     const active = cat.active.value;
     expect(active).not.toBeNull();

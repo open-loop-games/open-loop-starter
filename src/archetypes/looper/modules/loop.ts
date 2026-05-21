@@ -18,14 +18,14 @@ import {
   type EngineModule,
   type EngineContext,
   type Loop,
-  type GameLoop,
+  type TickDriver,
   createLoop,
   createRetentionPolicy,
   type RetentionPolicy,
   persistent,
   type Persistent,
   withPersistentContext,
-  GameLoopKey,
+  TickDriverKey,
 } from '@open-loop/engine';
 import { getMana, drainMana, resetMana } from './mana';
 import { getStatLevelSkills } from './stats';
@@ -52,7 +52,7 @@ import {
 
 let loop: Loop;
 let retention: RetentionPolicy;
-let gameLoop: GameLoop;
+let gameLoop: TickDriver;
 let pauseBeforeRestart: Persistent<boolean>;
 let pauseOnFailedLoop: Persistent<boolean>;
 
@@ -196,7 +196,7 @@ export const loopModule: EngineModule = {
   id: 'loop',
   dependencies: ['stats', 'mana', 'resources', 'zones', 'action-queue'],
   install(ctx: EngineContext) {
-    gameLoop = ctx.inject(GameLoopKey);
+    gameLoop = ctx.inject(TickDriverKey);
 
     ({ pauseBeforeRestart, pauseOnFailedLoop } = withPersistentContext('loop', () => ({
       pauseBeforeRestart: persistent(false, { name: 'pauseBeforeRestart' }),

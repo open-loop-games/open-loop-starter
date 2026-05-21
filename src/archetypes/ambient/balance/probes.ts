@@ -54,7 +54,7 @@ function runContinuousFor(engine: Engine, gapSec: number): number {
 }
 
 function runOfflineFor(engine: Engine, gapSec: number): number {
-  processOfflineTime(engine.loop, gapSec, { chunkSize: 1 });
+  processOfflineTime(engine.tickDriver, gapSec, { chunkSize: 1 });
   return snapshotLifetime(engine);
 }
 

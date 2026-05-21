@@ -141,7 +141,7 @@ export function buildProducerAccessor(_engine: Engine): GameStateAccessor {
  *   any gating those autobuyers carry.
  *
  * Caller drives the engine via `runUntil` / `runMatrixUntil` (which call
- * `engine.loop.stepOnce()` internally). The engine has been `start()`ed
+ * `engine.tickDriver.stepOnce()` internally). The engine has been `start()`ed
  * and immediately `stop()`ped so the real-time interval doesn't fire.
  *
  * `maxDeltaTime` override is for `runProbe({mode: 'event'})` benches —

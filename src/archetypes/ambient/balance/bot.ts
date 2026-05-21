@@ -74,7 +74,7 @@ function createBalanceBotModule(): EngineModule {
  * Caller drives the engine via `runUntil` from the engine harness. The
  * engine is `start()`ed and immediately `stop()`ped so the real-time
  * interval doesn't fire — solver iterations advance via
- * `engine.loop.simulateTick(tickDelta)` from `runUntil`.
+ * `engine.tickDriver.simulateTick(tickDelta)` from `runUntil`.
  *
  * Each build gets a unique `persistenceNamespace` so parallel instances
  * (e.g. matrix-probe seeds, future runMatrix-driven sweeps) don't collide

@@ -50,7 +50,7 @@ export interface BalanceWorkbenchOptions {
    */
   modules: () => EngineModule[];
   /**
-   * Per-run tick driver. Defaults to `engine.loop.stepOnce()`. Override for
+   * Per-run tick driver. Defaults to `engine.tickDriver.stepOnce()`. Override for
    * games with custom harness step semantics.
    */
   tick?: (engine: Engine, dt: number) => void;
@@ -122,7 +122,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
   const {
     engine,
     modules,
-    tick = (e: Engine) => e.loop.stepOnce(),
+    tick = (e: Engine) => e.tickDriver.stepOnce(),
     analyzerPack = (e: Engine) => defaultAnalyzerPack(e),
     prepare,
   } = options;

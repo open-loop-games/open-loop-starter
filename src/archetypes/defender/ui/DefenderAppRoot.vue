@@ -43,7 +43,7 @@ function startGame(slotId: number, modId?: string): void {
   // save time keep walking through the gap rather than freezing in place.
   if (result.success && result.timestamp != null) {
     const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
-    if (gap > 0) processOfflineTime(engine.loop, gap);
+    if (gap > 0) processOfflineTime(engine.tickDriver, gap);
   }
 
   currentScreen.value = Screen.Game;

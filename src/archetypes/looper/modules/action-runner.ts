@@ -26,7 +26,7 @@ import {
   type Loop,
   bn,
   createContentRegistry,
-  GameLoopKey,
+  TickDriverKey,
   tunable,
 } from '@open-loop/engine';
 import { LooperTuningRegistryKey } from './tuning';
@@ -475,7 +475,7 @@ export const actionRunnerModule: EngineModule = {
   id: 'action-runner',
   dependencies: ['tuning', 'stats', 'mana', 'resources', 'zones', 'action-queue', 'loop'],
   install(ctx: EngineContext) {
-    const gameLoop = ctx.inject(GameLoopKey);
+    const gameLoop = ctx.inject(TickDriverKey);
     _dispatcherTickRate = gameLoop.tickRate;
     loop = getLoop();
 

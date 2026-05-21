@@ -38,7 +38,7 @@ function startGame(slotId: number, modId?: string): void {
   // on the match-end overlay).
   if (result.success && result.timestamp != null) {
     const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
-    if (gap > 0) processOfflineTime(engine.loop, gap);
+    if (gap > 0) processOfflineTime(engine.tickDriver, gap);
   }
   const match = engine.tryInject(MatchKey);
   if (match && !match.inMatch.value) match.start();
@@ -66,11 +66,20 @@ function getActiveModules(): EngineModule[] {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame v-else :stack="stack" :tooltip-delay="400">
+  <AppFrame
+    v-else
+    :stack="stack"
+    :tooltip-delay="400"
+  >
     <template #header>
-      <SystemHeader app-name="Tug — SciFi Armada" @return-to-slots="returnToSlots">
+      <SystemHeader
+        app-name="Tug — SciFi Armada"
+        @return-to-slots="returnToSlots"
+      >
         <template #about>
-          <h4 style="margin-bottom: 6px">Tug — SciFi Armada</h4>
+          <h4 style="margin-bottom: 6px">
+            Tug — SciFi Armada
+          </h4>
           <p>
             Spend minerals to send units down the lane. Counter the AI's composition by picking
             archetypes that beat its dominant unit. Reduce the enemy fortress to zero before yours
@@ -98,13 +107,19 @@ function getActiveModules(): EngineModule[] {
     </TugFrameLayout>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
+  <DevDiagnostics
+    v-if="isDev"
+    v-model:workbench-open="showDevPanel"
+  />
   <MatchEndSummary v-if="currentScreen === Screen.Game" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+    <BalanceWorkbench
+      :engine="engine"
+      :modules="getActiveModules"
+    />
   </DevPanelOverlay>
 </template>

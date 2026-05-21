@@ -135,7 +135,7 @@ describe('tug AI opponent (default counter persona)', () => {
     // Tick at ~20Hz for 60 sim seconds. simulateTick processes one logical
     // tick at the loop's stepSize (1/20 = 50ms in default config).
     const totalSteps = 60 * 20;
-    for (let i = 0; i < totalSteps; i++) engine.loop.simulateTick(1 / 20);
+    for (let i = 0; i < totalSteps; i++) engine.tickDriver.simulateTick(1 / 20);
 
     expect(playerStarts).toBeGreaterThan(0);
     expect(aiStarts).toBeGreaterThan(0);

@@ -73,7 +73,7 @@ export interface TugSimOptions {
  * `persistenceNamespace` per call (essential for `runMatrixUntil`
  * parallelism — collisions are sneaky), `selectMod('sci-fi-armada')`,
  * `engine.start()` then `engine.stop()` so the live `tickRate` doesn't
- * fire (solver iterations advance via `engine.loop.simulateTick(tickDelta)`
+ * fire (solver iterations advance via `engine.tickDriver.simulateTick(tickDelta)`
  * from `runUntil` / `runMatrixUntil`), and finally `match.start()` to
  * kick off match 1.
  *

@@ -186,7 +186,7 @@ function createBalanceBotModule(): EngineModule {
  * Build a started, sim-bot-driven engine for the Looper archetype. The
  * engine has been `start()`ed and immediately `stop()`ped so the real-time
  * interval doesn't fire; solver iterations advance via
- * `engine.loop.stepOnce()` from `runUntil`.
+ * `engine.tickDriver.stepOnce()` from `runUntil`.
  *
  * Solver flow (one engine, many iterations):
  *

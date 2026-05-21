@@ -98,7 +98,7 @@ function startGame(slotId: number, modId?: string): void {
     if (sessionClock) sessionClock.lastResumeGapSec.value = gap;
     if (gap > 0) {
       const before = Decimal.fromValue(primary.value);
-      processOfflineTime(engine.loop, gap, {
+      processOfflineTime(engine.tickDriver, gap, {
         maxOfflineSeconds: sessionClock?.offlineCapSeconds,
       });
       resumeDelta = Decimal.sub(primary.value, before);

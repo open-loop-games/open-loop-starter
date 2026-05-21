@@ -6,11 +6,11 @@
  * the state-dump panel stripped; starter forks can re-add that locally
  * when they need it.
  *
- * FPS is rAF-derived frame count. TPS reads `engine.loop.deltaMean` once
+ * FPS is rAF-derived frame count. TPS reads `engine.tickDriver.deltaMean` once
  * per 1s sample tick — sufficient for spot-checking repaint budget on
  * engine-driven views like `DomGrid.vue` at 60×60.
  *
- * Speed buttons set `engine.loop.speedMultiplier` directly. Reset to 1x
+ * Speed buttons set `engine.tickDriver.speedMultiplier` directly. Reset to 1x
  * on unmount so a fork doesn't ship a cranked-up demo if the dev panel
  * gets unmounted with speed left high.
  */
@@ -37,18 +37,18 @@ function measure() {
     fps.value = frameCount;
     frameCount = 0;
     lastSampleTime = now;
-    const dm = engine?.loop.deltaMean ?? 0;
+    const dm = engine?.tickDriver.deltaMean ?? 0;
     tps.value = dm > 0 ? Math.round(1 / dm) : 0;
   }
   rafId = requestAnimationFrame(measure);
 }
 
 const SPEEDS = [1, 5, 10, 20] as const;
-const speed = ref(engine?.loop.speedMultiplier ?? 1);
+const speed = ref(engine?.tickDriver.speedMultiplier ?? 1);
 
 function setSpeed(mult: number): void {
   if (!engine) return;
-  engine.loop.speedMultiplier = mult;
+  engine.tickDriver.speedMultiplier = mult;
   speed.value = mult;
 }
 
@@ -62,7 +62,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   cancelAnimationFrame(rafId);
-  if (engine) engine.loop.speedMultiplier = 1;
+  if (engine) engine.tickDriver.speedMultiplier = 1;
 });
 </script>
 

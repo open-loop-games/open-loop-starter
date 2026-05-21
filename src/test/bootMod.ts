@@ -75,7 +75,7 @@ export function bootMod(options: BootModOptions): BootHandle {
 
   const tick = async (n = 1): Promise<void> => {
     for (let i = 0; i < n; i++) {
-      engine.loop.stepOnce();
+      engine.tickDriver.stepOnce();
       await Promise.resolve();
     }
   };
@@ -83,7 +83,7 @@ export function bootMod(options: BootModOptions): BootHandle {
   const tickUntil = async (condition: () => boolean, maxTicks = 50_000): Promise<number> => {
     for (let i = 0; i < maxTicks; i++) {
       if (condition()) return i;
-      engine.loop.stepOnce();
+      engine.tickDriver.stepOnce();
       await Promise.resolve();
     }
     throw new Error(`tickUntil timed out after ${maxTicks} ticks`);
