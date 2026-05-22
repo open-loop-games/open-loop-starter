@@ -10,6 +10,7 @@ function readout(
   opts: Partial<{
     value: DecimalSource;
     rate: DecimalSource;
+    cap: DecimalSource;
     hidden: boolean;
     highlight: ResourceHighlight;
   }> = {},
@@ -19,6 +20,7 @@ function readout(
     label: id.toUpperCase(),
     value: ref<DecimalSource>(opts.value ?? 100),
     rate: opts.rate !== undefined ? ref<DecimalSource>(opts.rate) : undefined,
+    cap: opts.cap !== undefined ? ref<DecimalSource>(opts.cap) : undefined,
     hidden: opts.hidden !== undefined ? ref(opts.hidden) : undefined,
     highlight: opts.highlight !== undefined ? ref(opts.highlight) : undefined,
   };
@@ -58,6 +60,31 @@ describe('ResourceHeaderStrip', () => {
       props: { readouts: [readout('coins', { highlight: 'deficit' })] },
     });
     expect(wrapper.find('[data-readout-id="coins"]').attributes('data-highlight')).toBe('deficit');
+  });
+
+  it('cap renders as `value / cap` when present', () => {
+    const wrapper = mount(ResourceHeaderStrip, {
+      props: { readouts: [readout('catnip', { value: 73, cap: 200 })] },
+    });
+    const text = wrapper.find('[data-readout-id="catnip"] .resource-header-strip__value').text();
+    expect(text.replace(/\s+/g, ' ')).toBe('73 / 200');
+  });
+
+  it('cap absent → no `/` in the value cell', () => {
+    const wrapper = mount(ResourceHeaderStrip, {
+      props: { readouts: [readout('science', { value: 412 })] },
+    });
+    const text = wrapper.find('[data-readout-id="science"] .resource-header-strip__value').text();
+    expect(text).not.toContain('/');
+  });
+
+  it('negative rate keeps its leading minus (no double sign)', () => {
+    const wrapper = mount(ResourceHeaderStrip, {
+      props: { readouts: [readout('catnip', { rate: -4.25 })] },
+    });
+    const rate = wrapper.find('.resource-header-strip__rate').text();
+    expect(rate.startsWith('-')).toBe(true);
+    expect(rate.startsWith('+-')).toBe(false);
   });
 
   it('orientation stamps the wrapper', () => {

@@ -8,6 +8,8 @@ export interface ResourceReadout {
   label: string;
   value: Ref<DecimalSource>;
   rate?: Ref<DecimalSource>;
+  /** Storage cap. When present the readout renders as `value / cap`. */
+  cap?: Ref<DecimalSource>;
   hidden?: Ref<boolean>;
   highlight?: Ref<ResourceHighlight>;
 }

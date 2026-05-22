@@ -7,7 +7,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format } from '@open-loop/engine';
+import { Decimal, format, type DecimalSource } from '@open-loop/engine';
 import HudBar from '@/ui/components/HudBar.vue';
 import HudChip from '@/ui/components/HudChip.vue';
 import type { ResourceReadout, ResourceHighlight } from './ResourceHeaderStrip';
@@ -39,6 +39,10 @@ function chipVariant(
   if (highlight === 'surplus') return 'big';
   return 'default';
 }
+
+function rateSign(value: DecimalSource): string {
+  return Decimal.lt(value, 0) ? '' : '+';
+}
 </script>
 
 <template>
@@ -56,12 +60,13 @@ function chipVariant(
         :data-readout-id="r.id"
         :data-highlight="r.highlight?.value ?? 'normal'"
       >
-        <span class="resource-header-strip__value">{{ format(r.value.value, 0) }}</span>
+        <span class="resource-header-strip__value">{{ format(r.value.value, 0)
+        }}<template v-if="r.cap"> / {{ format(r.cap.value, 0) }}</template></span>
         <span class="resource-header-strip__label">{{ r.label }}</span>
         <span
           v-if="r.rate"
           class="resource-header-strip__rate"
-        >+{{ format(r.rate.value, 2) }}/s</span>
+        >{{ rateSign(r.rate.value) }}{{ format(r.rate.value, 2) }}/s</span>
       </HudChip>
       <slot name="trailing" />
     </HudBar>
