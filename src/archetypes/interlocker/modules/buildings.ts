@@ -25,6 +25,8 @@ import type {
 import { InterlockerTuningRegistryKey } from './tuning';
 import { ResourcesKey, type ResourcesApi } from './resources';
 import { SciencesKey } from './sciences';
+import { VillageKey, type VillageApi } from './village';
+import { WorkshopKey, type WorkshopApi } from './workshop';
 
 /**
  * Buildings module's public API. Phase 2 worktree B fills the body — Phase 1
@@ -65,24 +67,45 @@ export function getBuildings(): BuildingsApi {
 }
 
 /**
- * Resolve a grant's `chainId` to a chain on `ResourcesApi`. The frozen
- * contract maps `<resource>-max` → `maxChains[resource]` and
- * `<resource>-rate` → `rateChains[resource]`. ChainIds outside those two
- * shapes (e.g., the workshop-owned `craft-output` chain or the village-owned
- * `catnip-consumption-rate` chain) are not exposed through `ResourcesApi` and
- * resolve to `undefined`; the grant binds nothing in that case — sibling
- * modules own those chains and will wire them in their own Phase.
+ * Resolve a grant's `chainId` to a chain on one of the sibling module APIs.
+ *
+ * Three patterns map cleanly:
+ *   - `<resource>-max`   → `resourcesApi.maxChains[resource]`
+ *   - `<resource>-rate`  → `resourcesApi.rateChains[resource]`
+ *   - `catnip-consumption-rate` → `villageApi.consumptionRateChain`
+ *   - `craft-output`     → `workshopApi.craftOutputChain`
+ *
+ * The non-`<resource>-*` chains live on the modules that own the mechanic
+ * they modify — village owns kitten catnip drain, workshop owns craft output
+ * magnitude. Phase 3 wires both up through this resolver so building grants
+ * with those chainIds (pasture, workshop) bind correctly.
+ *
+ * `villageApi` + `workshopApi` are passed as nullable so the resolver works
+ * during install (when sibling modules may not have produced their API yet —
+ * topo-sort guarantees they install before us per the dep declaration, but
+ * defensively skipping unresolved chains keeps the binding loop tolerant).
  */
-function resolveChain(chainId: string, api: ResourcesApi): ModifierChain | undefined {
+function resolveChain(
+  chainId: string,
+  resourcesApi: ResourcesApi,
+  villageApi: VillageApi | null,
+  workshopApi: WorkshopApi | null,
+): ModifierChain | undefined {
+  if (chainId === 'catnip-consumption-rate') {
+    return villageApi?.consumptionRateChain;
+  }
+  if (chainId === 'craft-output') {
+    return workshopApi?.craftOutputChain;
+  }
   const maxMatch = /^(.+)-max$/.exec(chainId);
   if (maxMatch) {
     const id = maxMatch[1] as ResourceId;
-    return api.maxChains[id];
+    return resourcesApi.maxChains[id];
   }
   const rateMatch = /^(.+)-rate$/.exec(chainId);
   if (rateMatch) {
     const id = rateMatch[1] as ResourceId;
-    return api.rateChains[id];
+    return resourcesApi.rateChains[id];
   }
   return undefined;
 }
@@ -112,11 +135,23 @@ function describeBuilding(def: BuildingSpec): string {
 export function createBuildingsModule(data: InterlockerData): EngineModule {
   return {
     id: 'interlocker/buildings',
-    dependencies: ['interlocker/tuning', 'interlocker/resources', 'interlocker/sciences'],
+    // village + workshop install before buildings so the resolver can eagerly
+    // pick up their `consumptionRateChain` / `craftOutputChain` for pasture
+    // and workshop-building grants. Workshop's reverse-dep on buildings
+    // (buildingCount in isVisible) is lazy — see workshop.ts.
+    dependencies: [
+      'interlocker/tuning',
+      'interlocker/resources',
+      'interlocker/sciences',
+      'interlocker/village',
+      'interlocker/workshop',
+    ],
     install(ctx) {
       const registry = ctx.inject(InterlockerTuningRegistryKey);
       const resourcesApi = ctx.inject(ResourcesKey);
       const sciencesApi = ctx.inject(SciencesKey);
+      const villageApi = ctx.inject(VillageKey);
+      const workshopApi = ctx.inject(WorkshopKey);
 
       // ─── Tunable readers ───────────────────────────────────────────────
       // Per-building per-resource baseCost + priceRatio + per-grant magnitudes.
@@ -171,11 +206,7 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
         'smelter/mineralConsumptionRate',
         () => 0.25,
       );
-      const ironProductionRate = tunable<number>(
-        registry,
-        'smelter/ironProductionRate',
-        () => 0.1,
-      );
+      const ironProductionRate = tunable<number>(registry, 'smelter/ironProductionRate', () => 0.1);
 
       // ─── Purchasable category ──────────────────────────────────────────
       // Explicit annotation here breaks a TS circular-inference loop — the
@@ -214,7 +245,7 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
           // drop their grant — those sibling modules wire their own chains.
           const grants: Grant[] = [];
           for (const grant of def.grants) {
-            const chain = resolveChain(grant.chainId, resourcesApi);
+            const chain = resolveChain(grant.chainId, resourcesApi, villageApi, workshopApi);
             if (!chain) continue;
             grants.push(buildGrant(grant, chain, r.grants.get(grant.chainId)!));
           }

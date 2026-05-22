@@ -27,31 +27,27 @@ export { SciencesKey, getSciences, type SciencesApi } from './sciences';
  *     (deps: tuning).
  *  3. `interlocker/sciences` — limit:1 purchasable + completion-flipped
  *     visibility cascade (deps: tuning, resources).
- *  4. `interlocker/buildings` — purchasable category + smelter onTick
- *     (deps: tuning, resources, sciences).
- *  5. `interlocker/village` — kittens + jobs + catnip consumption + starvation
- *     (deps: tuning, resources, sciences).
- *  6. `interlocker/workshop` — crafts via createCategoryBase + createConversion
- *     (deps: tuning, resources, buildings, sciences).
+ *  4. `interlocker/village` — kittens + jobs + catnip consumption + starvation
+ *     + consumptionRateChain owner (deps: tuning, resources, sciences).
+ *  5. `interlocker/workshop` — crafts via createCategoryBase + createConversion
+ *     + craftOutputChain owner (deps: tuning, resources, sciences;
+ *     buildingCount via lazy `() => ctx.inject(BuildingsKey)`).
+ *  6. `interlocker/buildings` — purchasable category + smelter onTick + grant
+ *     resolver consuming village.consumptionRateChain + workshop.craftOutputChain
+ *     (deps: tuning, resources, sciences, village, workshop).
  *
  * Phase 1 ships all six as STUBs publishing only the injection keys and API
- * contracts. `tuning` is the only fully-implemented module — its body
- * (registry creation + data publish) is the foundation Phase 2 fan-out
- * branches consume.
- *
- * Phase 2 fan-out fills modules 2 (resources), 4 (buildings), and 5 (village)
- * in three parallel worktree-isolated branches. Phase 3 then fills 3
- * (sciences) and 6 (workshop) on main; module 6 is the final wiring step
- * because crafts consume bag + max-chains (resources) AND require the
- * workshop building to be owned (buildings).
+ * contracts. Phase 2 fan-out fills resources, buildings, village. Phase 3
+ * (this commit) fills sciences and workshop, extends village with the
+ * consumption chain, and adds the resolver wiring to buildings.
  */
 export function createInterlockerModules(data: InterlockerData): EngineModule[] {
   return [
     createTuningModule(data),
     createResourcesModule(data),
     createSciencesModule(data),
-    createBuildingsModule(data),
     createVillageModule(data),
     createWorkshopModule(data),
+    createBuildingsModule(data),
   ];
 }

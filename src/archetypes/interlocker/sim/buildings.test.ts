@@ -28,9 +28,13 @@ import {
   InterlockerTuningRegistryKey,
   ResourcesKey,
   SciencesKey,
+  VillageKey,
+  WorkshopKey,
   type BuildingsApi,
   type ResourcesApi,
   type SciencesApi,
+  type VillageApi,
+  type WorkshopApi,
 } from '../modules';
 import { createBuildingsModule } from '../modules/buildings';
 import { DEFAULT_INTERLOCKER_DATA } from '../data';
@@ -85,7 +89,11 @@ function createTestResourcesModule(handle: { value: TestResourcesHandle | null }
       const api: ResourcesApi = {
         bag: new Proxy(
           {},
-          { get: () => { throw new Error('test bag not implemented'); } },
+          {
+            get: () => {
+              throw new Error('test bag not implemented');
+            },
+          },
         ) as never,
         resources,
         maxChains,
@@ -125,6 +133,53 @@ function createTestSciencesModule(
   };
 }
 
+/** Minimal village stand-in for the Phase 3 chain-resolver dep. Exposes the
+ *  `consumptionRateChain` that pasture grants bind onto; everything else
+ *  throws to surface unintended cross-module reads. */
+function createTestVillageModule(consumptionRateChain: ModifierChain): EngineModule {
+  const api: VillageApi = {
+    get jobCounts(): never {
+      throw new Error('test village jobCounts not implemented');
+    },
+    consumptionRateChain,
+    isJobVisible: () => false,
+    setJobCount: () => {
+      throw new Error('test village setJobCount not implemented');
+    },
+    onKittenDied: () => () => {},
+    onJobCountChanged: () => () => {},
+  };
+  return {
+    id: 'interlocker/village',
+    dependencies: ['interlocker/tuning', 'interlocker/resources', 'interlocker/sciences'],
+    install(ctx) {
+      ctx.provide(VillageKey, api);
+    },
+  };
+}
+
+/** Minimal workshop stand-in for the Phase 3 chain-resolver dep. Exposes the
+ *  `craftOutputChain` workshop building grants bind onto; everything else
+ *  throws to surface unintended cross-module reads. */
+function createTestWorkshopModule(craftOutputChain: ModifierChain): EngineModule {
+  const api: WorkshopApi = {
+    get category(): never {
+      throw new Error('test workshop category not implemented');
+    },
+    craftOutputChain,
+    triggerCraft: () => ({}),
+    isVisible: () => false,
+    onCrafted: () => () => {},
+  };
+  return {
+    id: 'interlocker/workshop',
+    dependencies: ['interlocker/tuning', 'interlocker/resources', 'interlocker/sciences'],
+    install(ctx) {
+      ctx.provide(WorkshopKey, api);
+    },
+  };
+}
+
 function createTestTuningModule(): EngineModule {
   return {
     id: 'interlocker/tuning',
@@ -144,6 +199,8 @@ interface Bench {
   resources: Record<ResourceId, Resource<Decimal>>;
   maxChains: Record<ResourceId, ModifierChain>;
   completedSciences: { value: Set<ScienceId> };
+  consumptionRateChain: ModifierChain;
+  craftOutputChain: ModifierChain;
 }
 
 interface BootOptions {
@@ -154,6 +211,8 @@ interface BootOptions {
 function bootBench(opts: BootOptions = {}): Bench {
   const handle: { value: TestResourcesHandle | null } = { value: null };
   const completedSciences = { value: new Set<ScienceId>(opts.completedSciences ?? []) };
+  const consumptionRateChain = createModifierChain('catnip-consumption-rate');
+  const craftOutputChain = createModifierChain('craft-output');
   const namespace = `interlocker-buildings-test-${Math.random().toString(36).slice(2)}`;
   const engine = createEngine({
     gameId: namespace,
@@ -167,6 +226,8 @@ function bootBench(opts: BootOptions = {}): Bench {
           createTestTuningModule(),
           createTestResourcesModule(handle),
           createTestSciencesModule(completedSciences),
+          createTestVillageModule(consumptionRateChain),
+          createTestWorkshopModule(craftOutputChain),
           createBuildingsModule(DEFAULT_INTERLOCKER_DATA),
         ],
       },
@@ -183,6 +244,8 @@ function bootBench(opts: BootOptions = {}): Bench {
     resources: handle.value.resources,
     maxChains: handle.value.maxChains,
     completedSciences,
+    consumptionRateChain,
+    craftOutputChain,
   };
 }
 

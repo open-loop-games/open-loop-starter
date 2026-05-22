@@ -2,12 +2,14 @@ import {
   addResource,
   createAdditiveModifier,
   createEmitHandle,
+  createModifierChain,
   persistent,
   subtractResource,
   tunable,
   withPersistentContext,
   type EngineModule,
   type InjectionKey,
+  type ModifierChain,
   type Persistent,
 } from '@open-loop/engine';
 import type {
@@ -47,6 +49,10 @@ import { SciencesKey } from './sciences';
 export interface VillageApi {
   /** Per-job count refs, keyed by job id. */
   jobCounts: Record<JobId, Persistent<number>>;
+  /** Effective catnip-consumption-rate chain. Pasture's `mul -0.005` grant
+   *  binds here via the buildings module's resolver extension (Phase 3
+   *  wiring); the per-tick catnip drain reads `chain.apply(baseRate)`. */
+  consumptionRateChain: ModifierChain;
   /** Whether the job is currently visible to the player. Driven by
    *  `JobSpec.unlockedByScience` predicate against `sciences.scienceCompleted`. */
   isJobVisible(id: JobId): boolean;
@@ -188,6 +194,14 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
 
       const handle = createEmitHandle<VillageEvents>();
 
+      // Effective catnip-consumption-rate chain. Pasture's `mul -0.005` grant
+      // binds here (Phase 3 resolver extension in buildings.ts). The catnip
+      // drain onTick + the starvation predicate both route the base
+      // `perKittenPerSecond` magnitude through `consumptionRateChain.apply(...)`
+      // so pasture compounds across multiple pastures via the chain's standard
+      // multiplicative semantics.
+      const consumptionRateChain = createModifierChain('catnip-consumption-rate');
+
       // Per-job rate-chain unbind handles. Stable ids (`village/jobs/<id>`)
       // make the rebind sequence (unbind-then-bind) idempotent across save/load.
       const jobUnbind = new Map<JobId, () => void>();
@@ -285,22 +299,27 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         // 2) Catnip consumption. `perKittenPerSecond` is negative (-4.25/sec);
         //    take absolute value for the subtract magnitude. `allowNegative`
         //    lets the bag go negative so the starvation predicate can fire.
+        //    The per-kitten magnitude routes through `consumptionRateChain`
+        //    so pasture's `mul -0.005` reduces effective drain (canonical
+        //    Kittens `catnipDemandRatio`); empty chain is the identity.
         // TODO(expansion): continuous-rate consumption — shared N=1 receipt
         // with smelter for `createContinuousConversion`. See
         // `open-loop-engine/docs/candidate-primitives.md`.
-        const consumeMagnitude =
-          Math.abs(Number(perKittenCatnipPerSec.value)) * kittensTotal * dt;
+        const baseDrainPerKitten = Math.abs(Number(perKittenCatnipPerSec.value));
+        const effectivePerKittenDrain = Number(consumptionRateChain.apply(baseDrainPerKitten));
+        const consumeMagnitude = effectivePerKittenDrain * kittensTotal * dt;
         if (consumeMagnitude > 0) {
           subtractResource(catnip, consumeMagnitude, { allowNegative: true });
         }
 
         // 3) Starvation predicate. Effective net catnip rate = sum of all
         //    positive rate-chain contributions (farmer + buildings) minus the
-        //    consumption magnitude. Death fires only when BOTH the rate is at
-        //    or below the threshold AND the bag has drained to ≤ 0 — a short
-        //    grace window during which the player can react.
+        //    consumption magnitude (already pasture-adjusted). Death fires only
+        //    when BOTH the rate is at or below the threshold AND the bag has
+        //    drained to ≤ 0 — a short grace window during which the player
+        //    can react.
         const positiveRate = Number(resources.rateChains.catnip.apply(0));
-        const consumptionRate = Math.abs(Number(perKittenCatnipPerSec.value)) * kittensTotal;
+        const consumptionRate = effectivePerKittenDrain * kittensTotal;
         const effectiveCatnipRate = positiveRate - consumptionRate;
         if (
           kittensTotal > 0 &&
@@ -321,6 +340,7 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
 
       village = {
         jobCounts,
+        consumptionRateChain,
         isJobVisible(id: JobId): boolean {
           const def = jobById.get(id);
           if (!def) return false;
