@@ -276,10 +276,36 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         }
       }
 
+      // Resources that receive per-tick production from their rate chain.
+      // Catnip is excluded — the rate chain is read in step 3 for the
+      // starvation predicate, but per-tick add happens here too (positive
+      // contributors only; consumption is its own step 2 below). Iron is
+      // excluded because the smelter `onTick` in buildings.ts pushes iron
+      // directly; double-counting would multiply smelter output. Kittens
+      // is excluded — population grows through `kittenGrowthRate` in step 1.
+      const productionResourceIds = ['catnip', 'wood', 'minerals', 'science'] as const;
+
       ctx.onTick((dt) => {
         const kittens = resources.resources.kittens;
         const catnip = resources.resources.catnip;
         const kittensTotal = Number(kittens.value);
+
+        // 0) Per-resource production. For each resource fed by jobs or
+        //    additive building grants (catnip from fields/farmers, wood from
+        //    woodcutters with lumberMill mul, minerals from miners with mine/
+        //    quarry mul, science from scholars with library mul), read the
+        //    composed rate from the rate chain (`apply(0)` returns the
+        //    chain's net effect on a zero base — additive + multiplicative
+        //    composition per the engine's chain semantics) and add the
+        //    integrated amount to the bag. Iron is produced by the smelter
+        //    `onTick` in buildings.ts; catnip consumption + starvation run
+        //    in steps 2 + 3 below.
+        for (const id of productionResourceIds) {
+          const rate = Number(resources.rateChains[id].apply(0));
+          if (rate > 0) {
+            addResource(resources.resources[id], rate * dt);
+          }
+        }
 
         // 1) Population growth. Happiness arc-1 stand-in is 1.0 always
         //    (Kittens canon happiness depends on the culture chain, out of

@@ -295,6 +295,8 @@ Balance is measured in minutes. A 2-hour arc at engine-default `tickDelta: 0.05s
 
 The rule is structural, not heuristic: if your archetype has a click affordance, a tick-jitter spawn channel, or any out-of-band rate the accessor doesn't read, stasis-aware-tick will misfire. If all continuous income flows through producer categories, it adopts cleanly. Decision point lives in the bot.ts accessor — `getRate(resource)` either captures all channels for that resource or it doesn't.
 
+**Cap-reach sub-axis (N=1, interlocker).** The zero-out-of-band rule is necessary but not sufficient. A cap-bounded resource whose value clamps to a finite ceiling introduces a second wedge: the rate is real but the integrand is bounded. Stasis-aware-tick inspects content-walker transitions (purchasable distances, conversion readiness) via `isStasis`, not the accessor's `getRate`. A purchasable visible-but-uncapped is reported as a finite transition even when its consumed resource is wedged at a zero cap, so `isStasis` returns false and the run terminates as `maxSimTime` rather than `unreachable`. Consumers needing to detect cap-reach termination must layer a budget-bounded reachability check on top — exactly the `InfeasibilityOracle` shape `open-loop-engine/docs/candidate-primitives.md` tracks. See `BALANCING-interlocker.md § stasis-aware-tick verdict + new sub-axis` for the reproduction.
+
 ## Theme 5 — How do I know it's working?
 
 Two distinct surfaces, not interchangeable.
@@ -355,6 +357,8 @@ const effect = tunable(tuningRegistry, 'upgrades/double-gold/effect', () => base
 The chosen number lives in the default closure. The `TuningRegistry` exposes the value to the picker (so solvers and the Balance Workbench can enumerate and perturb it) and to scope-push overrides (so a sim takeover can swap the value transiently and restore on cleanup). Citations co-locate at the `tunable()` site — the file-header citation pattern for vanilla-port values applies inline next to the closure that produces them.
 
 `data/balance.ts` as a per-archetype constants file retires. The deep-partial override path stays only for non-tunable consumer surfaces — theme tokens, content cardinality, IDs.
+
+**Greenfield archetypes route balance constants through `tunable()` from Phase 1 onward — no parallel `data/balance.ts`.** Tug + Defender + Interlocker all confirm this independently (N=3 across consumer surfaces). The `data/` directory carries content shape and citation-anchored constants; perturbable values declare at their reader sites with `tunable(registry, 'namespace/key', () => default)` closures. The N=3 confirmation also lifts the dead-fields rule: every field in `data/{...}.ts` should have a module-side reader. Phase 1 of any greenfield port authors "only what consumers read"; data-shape-up-front without reader coverage drifts dead.
 
 **`shape.ts` is an optional artifact**, not a required identity-declaration file. When the archetype is predictor-seed-shaped (producer-style — a closed-form spec drives a predictor that walks the arc), `shape.ts` is where the identity layer lands as data the predictor and solver both consume. Otherwise, the identity content lives as comments adjacent to the solver/predict code or doesn't need its own file at all. File count tracks algorithmic surfaces, not framing artifacts.
 
