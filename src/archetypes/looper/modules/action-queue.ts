@@ -50,7 +50,6 @@ import {
  * - `timeSpent`: real seconds elapsed on this item (speed-adjusted), reset per loop
  * - `goldRemaining`: gold on hand snapshotted at the last completion of this item
  * - `statExp`: actual XP accumulated per stat on this item this loop
- * - `collapsed`: UI state for travel rows
  *
  * Reference: idleLoops/actions.js lines 163-167, 23, 85, 263
  */
@@ -66,7 +65,6 @@ export interface ActionMeta {
   timeSpent: number;
   goldRemaining: number;
   statExp: Record<string, number>;
-  collapsed: boolean;
 }
 
 /**
@@ -126,7 +124,6 @@ function buildMeta(loops: number): ActionMeta {
     timeSpent: 0,
     goldRemaining: 0,
     statExp: {},
-    collapsed: false,
   };
 }
 
@@ -312,17 +309,6 @@ export function toggleActionDisabled(index: number): void {
   items[index] = {
     ...items[index],
     metadata: { ...items[index].metadata, disabled: !items[index].metadata.disabled },
-  };
-  editLoopQueue.items.value = items;
-}
-
-/** Toggle an edit action's UI-collapsed flag (travel rows only, visually). */
-export function toggleActionCollapsed(index: number): void {
-  const items = [...editLoopQueue.items.value];
-  if (index < 0 || index >= items.length) return;
-  items[index] = {
-    ...items[index],
-    metadata: { ...items[index].metadata, collapsed: !items[index].metadata.collapsed },
   };
   editLoopQueue.items.value = items;
 }
