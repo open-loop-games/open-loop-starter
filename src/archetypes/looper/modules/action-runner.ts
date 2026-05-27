@@ -385,6 +385,7 @@ function dispatchTick(dt: number): void {
   if (wasLastLoop) {
     if (shouldRepeatLast(def, queue)) {
       patchCursorMeta((m) => ({ ...m, loops: m.loops + 1, loopsLeft: m.loopsLeft + 1 }));
+      queue.repeat();
     } else {
       queue.complete();
     }
