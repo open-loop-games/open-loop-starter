@@ -29,8 +29,6 @@ export {
   actionQueueModule,
   actionRunnerModule,
   loopModule,
-  registerActions,
-  initRunner,
   isActionVisible,
   getActionDef,
   getLoop,
@@ -45,6 +43,6 @@ export {
   SPEED_OPTIONS,
   type ProgressVarState,
   type RegularVarState,
-  type ActionMeta,
+  type EditPayload,
   type LoadoutEntry,
 } from './modules';

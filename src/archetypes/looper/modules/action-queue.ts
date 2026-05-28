@@ -1,24 +1,15 @@
 /**
- * Action queue module — player's ordered action lists with loadouts.
+ * Action queue module — player's planning buffer (edit queue) and loadout system.
  *
- * Two parallel queues matching reference OMSI's `actions.current[]` / `actions.next[]`
- * data shape via the engine's multi-queue primitive:
+ * The edit queue is a `Sequencer<EditPayload>` in planning mode
+ * (`startOnEnqueue: false`). It never dispatches; player edits (add, remove,
+ * reorder, adjust loops, toggle disabled, clear, loadout load) target it
+ * exclusively. The active (executing) queue lives in `action-runner.ts` as
+ * the internal sequencer of `activeLoopCategory`; copy-into-active on loop
+ * boundaries is the consumer-side bridge.
  *
- * - **`activeLoopQueue`** — the list currently executing. Bound to the action
- *   runner. The UI shows live progress from this queue. Player edits never
- *   target it directly; contents are (re)populated by `startActiveLoop()` from the
- *   edit queue at loop boundaries.
- *
- * - **`editLoopQueue`** — the planning buffer. All player edits (add, remove,
- *   reorder, adjust loops, toggle disabled, clear, loadout load) target this
- *   queue. Never executes directly (`startOnEnqueue: false`). Stays freely
- *   editable during active execution without disturbing the running loop.
- *
- * At loop restart, `startActiveLoop(preserveActive)` either copies edit→active (default)
- * or leaves active alone (when "Keep current list active" is on). Loadouts
- * save/load against the edit queue exclusively.
- *
- * Reference: idleLoops/actions.js (Actions constructor, actions.current / actions.next)
+ * Reference: idleLoops/actions.js (Actions constructor, actions.next as the
+ * editable plan; actions.current as the executing list).
  */
 
 import {
@@ -37,39 +28,25 @@ import {
 // ============================================================================
 
 /**
- * Per-item execution metadata.
+ * Edit-queue payload. The plan carries player-set loop count and a disabled
+ * toggle. Runtime state (loopsLeft, ticks, manaUsed, statExp, etc.) lives on
+ * the active queue's `ActionItemMetadata<ActionPayload>` shape and only
+ * materializes when `startActiveLoop()` copies the plan into the active
+ * category.
  *
- * - `loops`: player-set repeat count (how many times to run this action)
- * - `loopsLeft`: remaining repetitions this loop execution
- * - `ticks`: ticks spent on current iteration
- * - `adjustedTicks`: computed cost after stat reduction (set by action runner)
- * - `manaUsed`: total mana spent on this action this loop
- * - `disabled`: toggle for skipping the action
- * - `failedCount`: failed attempts this loop (surfaced in the UI)
- * - `errorMessage`: last failure reason, cleared on successful completion
- * - `timeSpent`: real seconds elapsed on this item (speed-adjusted), reset per loop
- * - `goldRemaining`: gold on hand snapshotted at the last completion of this item
- * - `statExp`: actual XP accumulated per stat on this item this loop
- *
- * Reference: idleLoops/actions.js lines 163-167, 23, 85, 263
+ * Reference: idleLoops/actions.js lines 163-167 (planning-shape fields only).
  */
-export interface ActionMeta {
+export interface EditPayload {
   loops: number;
-  loopsLeft: number;
-  ticks: number;
-  adjustedTicks: number;
-  manaUsed: number;
   disabled: boolean;
-  failedCount: number;
-  errorMessage?: string;
-  timeSpent: number;
-  goldRemaining: number;
-  statExp: Record<string, number>;
 }
 
 /**
  * Loadout slot entry: a single queued action in a saved loadout.
  * `disabled` round-trips the edit-list disabled flag so load restores it.
+ *
+ * Index signature is load-bearing: retention's `Persistent<State>` constraint
+ * requires recursively-serializable state, which the index satisfies.
  */
 export interface LoadoutEntry {
   [key: string]: string | number | boolean | undefined;
@@ -88,8 +65,7 @@ const MAX_LOADOUT_SLOTS = 5;
 // Module State (populated in install)
 // ============================================================================
 
-let activeLoopQueue: Sequencer<ActionMeta>;
-let editLoopQueue: Sequencer<ActionMeta>;
+let editLoopQueue: Sequencer<EditPayload>;
 let loadouts: Persistent<LoadoutEntry[][]>;
 let loadoutNames: Persistent<string[]>;
 let currentLoadout: Persistent<number>;
@@ -98,147 +74,41 @@ let addToTop: Persistent<boolean>;
 let keepActiveLoopActive: Persistent<boolean>;
 let queueAddAmount: Persistent<number>;
 
-/** Completed ticks this loop (for progress display) */
-let completedTicks = 0;
-
 /**
  * Optional item decorator — called when edit-queue items are created.
  * Opt-in extension point; null by default.
  */
-let itemDecorator: ((item: SequencerItem<ActionMeta>) => void) | null = null;
+let itemDecorator: ((item: SequencerItem<EditPayload>) => void) | null = null;
 
 // ============================================================================
 // Factories
 // ============================================================================
 
-/** Build a fresh metadata block for a queued action. */
-function buildMeta(loops: number): ActionMeta {
-  return {
-    loops,
-    loopsLeft: loops,
-    ticks: 0,
-    adjustedTicks: 0,
-    manaUsed: 0,
-    disabled: false,
-    failedCount: 0,
-    timeSpent: 0,
-    goldRemaining: 0,
-    statExp: {},
-  };
-}
-
-/** Reset execution metadata on an item (for loop restart). */
-function resetMeta(meta: ActionMeta): ActionMeta {
-  return {
-    ...meta,
-    loopsLeft: meta.loops,
-    ticks: 0,
-    adjustedTicks: 0,
-    manaUsed: 0,
-    failedCount: 0,
-    errorMessage: undefined,
-    timeSpent: 0,
-    goldRemaining: 0,
-    statExp: {},
-  };
+function buildEditPayload(loops: number): EditPayload {
+  return { loops, disabled: false };
 }
 
 // ============================================================================
 // Public API — queue access
 // ============================================================================
 
-/** Get the active (currently-executing) queue. Bound to the action runner. */
-export function getActiveLoopQueue(): Sequencer<ActionMeta> {
-  return activeLoopQueue;
-}
-
 /** Get the edit (planning) queue. All player edits target this. */
-export function getEditLoopQueue(): Sequencer<ActionMeta> {
+export function getEditLoopQueue(): Sequencer<EditPayload> {
   return editLoopQueue;
 }
 
-/** Items in the active queue (what's running this loop). */
-export function getActiveList(): SequencerItem<ActionMeta>[] {
-  return activeLoopQueue.items.value;
-}
-
 /** Items in the edit queue (what the player is planning). */
-export function getEditList(): SequencerItem<ActionMeta>[] {
+export function getEditList(): SequencerItem<EditPayload>[] {
   return editLoopQueue.items.value;
 }
 
-/** Cursor position in the active queue. */
-export function getActiveCursor(): number {
-  return activeLoopQueue.cursor;
-}
-
-/**
- * Vanilla parity for `getNextValidAction() == null`: the active queue has
- * items but the cursor has walked past the end (last item completed, or all
- * remaining items got skipped by canRun).
- *
- * Reference: idleLoops/actions.js Actions.tick — `shouldRestart = true` when
- * `getNextValidAction()` returns null.
- */
-export function isActiveQueueExhausted(): boolean {
-  const items = activeLoopQueue.items.value;
-  if (items.length === 0) return false;
-  return activeLoopQueue.cursor >= items.length;
-}
-
-/** Get completed ticks this loop */
-export function getCompletedTicks(): number {
-  return completedTicks;
-}
-
-/** Add to completed ticks (called by action runner on action completion) */
-export function addCompletedTicks(ticks: number): void {
-  completedTicks += ticks;
-}
-
-// ============================================================================
-// Cursor-item live-update helpers
-// ============================================================================
-
-/**
- * Immutably patch the metadata of the active-queue item at the cursor.
- * Used for live-ticking fields (timeSpent, statExp) where per-tick updates
- * must remain reactive for the detail-pane UI.
- */
-export function patchCursorMeta(patch: (meta: ActionMeta) => ActionMeta): void {
-  const items = activeLoopQueue.items.value;
-  const idx = activeLoopQueue.cursor;
-  if (idx < 0 || idx >= items.length) return;
-  const updated = [...items];
-  updated[idx] = { ...updated[idx], metadata: patch(updated[idx].metadata) };
-  activeLoopQueue.items.value = updated;
-}
-
-/** Accumulate per-stat XP gains onto the current cursor item's statExp map. */
-export function accumulateCurrentItemStatExp(gains: Record<string, number>): void {
-  patchCursorMeta((meta) => {
-    const next = { ...meta.statExp };
-    for (const [stat, amt] of Object.entries(gains)) {
-      if (!amt) continue;
-      next[stat] = (next[stat] ?? 0) + amt;
-    }
-    return { ...meta, statExp: next };
-  });
-}
-
-/** Add real seconds to the current cursor item's timeSpent. */
-export function accumulateCurrentItemTime(dt: number): void {
-  if (dt <= 0) return;
-  patchCursorMeta((meta) => ({ ...meta, timeSpent: meta.timeSpent + dt }));
-}
-
 /** Set a decorator called on every edit-queue item at add time */
-export function setItemDecorator(fn: (item: SequencerItem<ActionMeta>) => void): void {
+export function setItemDecorator(fn: (item: SequencerItem<EditPayload>) => void): void {
   itemDecorator = fn;
 }
 
 /** Get the current item decorator (if any) */
-export function getItemDecorator(): ((item: SequencerItem<ActionMeta>) => void) | null {
+export function getItemDecorator(): ((item: SequencerItem<EditPayload>) => void) | null {
   return itemDecorator;
 }
 
@@ -249,11 +119,10 @@ export function getItemDecorator(): ((item: SequencerItem<ActionMeta>) => void) 
 /**
  * Add an action to the edit queue with a given loop count.
  *
- * Respects the addToTop toggle. Initializes execution metadata.
- * Reference: idleLoops/actions.js addAction
+ * Respects the addToTop toggle. Reference: idleLoops/actions.js addAction
  */
 export function addAction(actionId: string, loops: number): void {
-  const item: SequencerItem<ActionMeta> = { id: actionId, metadata: buildMeta(loops) };
+  const item: SequencerItem<EditPayload> = { id: actionId, metadata: buildEditPayload(loops) };
   if (itemDecorator) itemDecorator(item);
 
   if (addToTop.value) {
@@ -270,7 +139,7 @@ export function addAction(actionId: string, loops: number): void {
  * Clamps to [0, items.length]. Ignores `addToTop` — explicit index always wins.
  */
 export function insertActionAt(index: number, actionId: string, loops: number): void {
-  const item: SequencerItem<ActionMeta> = { id: actionId, metadata: buildMeta(loops) };
+  const item: SequencerItem<EditPayload> = { id: actionId, metadata: buildEditPayload(loops) };
   if (itemDecorator) itemDecorator(item);
 
   const clamped = Math.max(0, Math.min(index, editLoopQueue.items.value.length));
@@ -293,11 +162,7 @@ export function adjustLoops(index: number, newLoops: number): void {
   if (index < 0 || index >= items.length) return;
   items[index] = {
     ...items[index],
-    metadata: {
-      ...items[index].metadata,
-      loops: Math.max(0, newLoops),
-      loopsLeft: Math.max(0, newLoops),
-    },
+    metadata: { ...items[index].metadata, loops: Math.max(0, newLoops) },
   };
   editLoopQueue.items.value = items;
 }
@@ -328,15 +193,14 @@ export function splitAction(index: number): void {
   const twinLoops = Math.ceil(orig.metadata.loops / 2);
   const origLoops = Math.floor(orig.metadata.loops / 2);
 
-  const twinMeta = buildMeta(twinLoops);
-  twinMeta.disabled = orig.metadata.disabled;
-  const twin: SequencerItem<ActionMeta> = { id: orig.id, metadata: twinMeta };
+  const twinMeta: EditPayload = { loops: twinLoops, disabled: orig.metadata.disabled };
+  const twin: SequencerItem<EditPayload> = { id: orig.id, metadata: twinMeta };
   if (itemDecorator) itemDecorator(twin);
 
   const updated = [...items];
   updated[index] = {
     ...orig,
-    metadata: { ...orig.metadata, loops: origLoops, loopsLeft: origLoops },
+    metadata: { ...orig.metadata, loops: origLoops },
   };
   updated.splice(index + 1, 0, twin);
   editLoopQueue.items.value = updated;
@@ -378,7 +242,7 @@ export function capActionAdditive(index: number, target: number): void {
   const updated = [...items];
   updated[index] = {
     ...self,
-    metadata: { ...self.metadata, loops: nextLoops, loopsLeft: nextLoops },
+    metadata: { ...self.metadata, loops: nextLoops },
   };
   editLoopQueue.items.value = updated;
 }
@@ -386,64 +250,6 @@ export function capActionAdditive(index: number, target: number): void {
 /** Clear all actions from the edit queue */
 export function clearActions(): void {
   editLoopQueue.clear();
-}
-
-// ============================================================================
-// Public API — loop lifecycle
-// ============================================================================
-
-/**
- * Copy the edit queue into the active queue and reset the cursor.
- *
- * Called on initial play / manual restart / loop-end unless `preserveActive`
- * is set. With `preserveActive`, leaves active contents untouched and only
- * resets its cursor (replay the same list from the top).
- */
-export function startActiveLoop(preserveActive = false): void {
-  completedTicks = 0;
-
-  if (!preserveActive) {
-    const fresh: SequencerItem<ActionMeta>[] = editLoopQueue.items.value.map((item) => ({
-      id: item.id,
-      metadata: resetMeta(item.metadata),
-    }));
-    activeLoopQueue.items.value = fresh;
-  } else {
-    const refreshed = activeLoopQueue.items.value.map((item) => ({
-      ...item,
-      metadata: resetMeta(item.metadata),
-    }));
-    activeLoopQueue.items.value = refreshed;
-  }
-
-  activeLoopQueue.resetCursor();
-}
-
-/**
- * Reset the action queues for a new loop.
- *
- * Reference: idleLoops/actions.js restart()
- */
-export function restartActionQueue(preserveActive = false): void {
-  startActiveLoop(preserveActive);
-}
-
-/**
- * If active has items from a prior save but the runner hasn't started,
- * kick it off. Called on game load bootstrap.
- */
-export function bootstrapActiveFromSave(): void {
-  const active = activeLoopQueue.items.value;
-  const edit = editLoopQueue.items.value;
-
-  if (active.length === 0 && edit.length > 0) {
-    startActiveLoop(false);
-    return;
-  }
-
-  if (active.length > 0) {
-    // Resume path: the dispatcher reads queue.currentItem each tick, cursor is consistent.
-  }
 }
 
 // ============================================================================
@@ -530,10 +336,9 @@ export function loadLoadout(slot: number): void {
     return;
   }
 
-  const items: SequencerItem<ActionMeta>[] = entries.map((entry) => {
-    const meta = buildMeta(entry.loops);
-    if (entry.disabled) meta.disabled = true;
-    const item: SequencerItem<ActionMeta> = { id: entry.name, metadata: meta };
+  const items: SequencerItem<EditPayload>[] = entries.map((entry) => {
+    const meta: EditPayload = { loops: entry.loops, disabled: !!entry.disabled };
+    const item: SequencerItem<EditPayload> = { id: entry.name, metadata: meta };
     if (itemDecorator) itemDecorator(item);
     return item;
   });
@@ -567,12 +372,7 @@ export function renameLoadout(slot: number, name: string): void {
 export const actionQueueModule: EngineModule = {
   id: 'action-queue',
   install(_ctx: EngineContext) {
-    activeLoopQueue = createSequencer<ActionMeta>({
-      id: 'active-loop',
-      mode: 'list',
-    });
-
-    editLoopQueue = createSequencer<ActionMeta>({
+    editLoopQueue = createSequencer<EditPayload>({
       id: 'edit-loop',
       mode: 'list',
       startOnEnqueue: false,

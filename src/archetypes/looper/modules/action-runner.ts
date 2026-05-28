@@ -1,9 +1,20 @@
 /**
- * Action runner module — per-tick execution engine for Idle Loops actions.
+ * Action runner module — active execution queue on top of `createActionCategory`.
  *
- * Owns a bare ContentRegistry<ActionDef> and a single onTick dispatcher that
- * drives all three looper action types (basic/progress/regular). Per-def tick
- * state lives in action-types/*; this module is the routing + completion layer.
+ * Owns `activeLoopCategory` (an `ActionCategory<ActionDef, void, ActionPayload>`)
+ * and a single dispatcher tick closure that switches on `def.type` to drive
+ * the three looper action types (basic/progress/regular). Per-def tick state
+ * lives in `action-types/*` sibling categories; this module is the routing,
+ * accumulator, and completion layer.
+ *
+ * State split:
+ * - Per-def persistent state (`progress`, `timesCompleted`, optional
+ *   `gainChain`) — in sibling per-def categories under `action-types/`.
+ *   ActionCategory's `State = void`.
+ * - Per-enqueue consumer payload (`loops`, `loopsLeft`, `disabled`, `statExp`)
+ *   — typed `Payload` on item metadata.
+ * - Per-execution engine slots (`lifecycle`, `progress` multi-bar, `attempt`,
+ *   `error`, `timing`) — managed by ActionCategory.
  *
  * Bespoke looper additions vs. idle-loops-ng:
  * - Weight-based multi-stat XP (def.weights replaces def.stats)
@@ -22,10 +33,13 @@ import {
   Decimal,
   type EngineModule,
   type EngineContext,
-  type ContentRegistry,
   type Loop,
+  type SequencerItem,
+  type ActionCategory,
+  type ActionItemMetadata,
   bn,
-  createContentRegistry,
+  computed,
+  createActionCategory,
   TickDriverKey,
   tunable,
 } from '@open-loop/engine';
@@ -40,14 +54,7 @@ import type {
   LooperGameState,
 } from '../data/types';
 import { PROGRESS_VARS } from '../data/progress-vars';
-import {
-  getActiveLoopQueue,
-  addCompletedTicks,
-  patchCursorMeta,
-  accumulateCurrentItemTime,
-  isActiveQueueExhausted,
-  getRepeatLastAction,
-} from './action-queue';
+import { getEditLoopQueue, getRepeatLastAction } from './action-queue';
 import { getCurrentZone, addProgressXP, finishRegular, getProgressLevel } from './zones';
 import { computeAdjustedTicks, addExpFromAction, setCostDivisorReader } from './action-formulas';
 import { installBasicOne, dispatchBasic, basicCategory } from './action-types/basic';
@@ -66,13 +73,48 @@ import {
 export { basicCategory, progressCategory, regularCategory };
 
 // ============================================================================
-// Action Registry
+// Types
 // ============================================================================
 
-/** Bare content registry — per-type state and dispatch live in action-types/. */
-let actions: ContentRegistry<ActionDef>;
+/**
+ * Per-execution payload — what the consumer types into ActionCategory's
+ * `Payload` generic. Plain JSON-serializable; Decimal-scale state stays in
+ * sibling per-def categories.
+ */
+export interface ActionPayload {
+  loops: number;
+  loopsLeft: number;
+  disabled: boolean;
+  /**
+   * Per-stat XP accumulated this execution. Boosted figure (after talentMult)
+   * — see `addExpFromAction` in action-formulas.ts.
+   */
+  statExp: Record<string, number>;
+}
 
+/**
+ * Multi-bar engine progress slot keys. Used through `tickItemProgress` /
+ * `setItemProgress`. Bars are plain numbers; large Decimal quantities stay
+ * in sibling category state.
+ */
+const PROGRESS_KEYS = ['ticks', 'timeSpent', 'manaUsed', 'goldRemaining'] as const;
+type ProgressKey = (typeof PROGRESS_KEYS)[number];
+type ActionProgress = Record<ProgressKey, number>;
+
+function zeroProgress(): ActionProgress {
+  return { ticks: 0, timeSpent: 0, manaUsed: 0, goldRemaining: 0 };
+}
+
+// ============================================================================
+// Module State
+// ============================================================================
+
+let activeLoopCategory: ActionCategory<ActionDef, void, ActionPayload>;
 let loop: Loop;
+let _dispatcherTickRate = 20;
+
+/** Completed ticks this loop (for progress display) */
+let completedTicks = 0;
 
 /**
  * Restart flag — set when the dispatcher observes an exhausted active queue.
@@ -90,44 +132,57 @@ export function consumeRestartFlag(): void {
   _restartFlag.value = false;
 }
 
-/** Get the action definition registry */
-export function getActionRegistry(): ContentRegistry<ActionDef> {
-  return actions;
+// ============================================================================
+// Public API — active-queue access
+// ============================================================================
+
+/** Get the active action category (executing queue + per-execution state machine). */
+export function getActiveLoopCategory(): ActionCategory<ActionDef, void, ActionPayload> {
+  return activeLoopCategory;
+}
+
+/** Items in the active queue (what's running this loop). */
+export function getActiveList(): SequencerItem<ActionItemMetadata<ActionPayload>>[] {
+  return activeLoopCategory.sequencer.items.value;
+}
+
+/** Cursor position in the active queue. */
+export function getActiveCursor(): number {
+  return activeLoopCategory.sequencer.cursor;
+}
+
+/**
+ * Vanilla parity for `getNextValidAction() == null`: the active queue has
+ * items but the cursor has walked past the end (last item completed, or all
+ * remaining items got skipped by canRun).
+ *
+ * Reference: idleLoops/actions.js Actions.tick — `shouldRestart = true` when
+ * `getNextValidAction()` returns null.
+ */
+export function isActiveQueueExhausted(): boolean {
+  const items = activeLoopCategory.sequencer.items.value;
+  if (items.length === 0) return false;
+  return activeLoopCategory.sequencer.cursor >= items.length;
+}
+
+/** Get completed ticks this loop */
+export function getCompletedTicks(): number {
+  return completedTicks;
+}
+
+/** Add to completed ticks (called by action runner on action completion) */
+export function addCompletedTicks(ticks: number): void {
+  completedTicks += ticks;
 }
 
 /** Get an action definition by ID */
 export function getActionDef(id: string): ActionDef | undefined {
-  return actions.get(id);
+  return activeLoopCategory.getDef(id);
 }
 
-/**
- * Register an action definition and eagerly build its per-type state.
- */
-export function registerAction(def: ActionDef): void {
-  actions.register(def);
-  installBasicOne(def);
-  installProgressOne(def);
-  installRegularOne(def);
-}
-
-/** Register multiple action definitions at once. */
-export function registerActions(defs: ActionDef[]): void {
-  for (const def of defs) registerAction(def);
-}
-
-// ============================================================================
-// Completion hooks
-// ============================================================================
-
-type CompletionHook = (def: ActionDef, proceedNative: () => void) => void;
-const _completionHooks: CompletionHook[] = [];
-
-/**
- * Register a completion hook. The hook fires on every action completion and
- * must explicitly call `proceedNative()` to allow the normal completion path.
- */
-export function addCompletionHook(hook: CompletionHook): void {
-  _completionHooks.push(hook);
+/** The action def registry (live `ContentRegistry<ActionDef>`). */
+export function getActionRegistry() {
+  return activeLoopCategory.registry;
 }
 
 // ============================================================================
@@ -268,40 +323,6 @@ function applyRewardEffects(effects: readonly RewardEffect[]): void {
   }
 }
 
-// ============================================================================
-// Dispatcher
-// ============================================================================
-
-let _dispatcherTickRate = 20;
-
-/**
- * Metadata patch on dispatched-type completion.
- */
-function onDispatchedComplete(adjusted: number): void {
-  const queue = getActiveLoopQueue();
-  addCompletedTicks(adjusted);
-
-  const cursorIdx = queue.cursor;
-  const items = queue.items.value;
-  if (cursorIdx < 0 || cursorIdx >= items.length) return;
-  const meta = items[cursorIdx].metadata;
-  const goldSnapshot = getResourceValue('gold').toNumber();
-  const updated = [...items];
-  updated[cursorIdx] = {
-    ...updated[cursorIdx],
-    metadata: {
-      ...meta,
-      loopsLeft: Math.max(0, meta.loopsLeft - 1),
-      adjustedTicks: adjusted,
-      manaUsed: meta.manaUsed + adjusted,
-      ticks: 0,
-      goldRemaining: goldSnapshot,
-      errorMessage: undefined,
-    },
-  };
-  queue.items.value = updated;
-}
-
 /**
  * Grant progress-var XP for a completed progress-type action.
  * Applies the ProgressState's gainChain and the pvDef.expMult.
@@ -327,25 +348,115 @@ function finishRegularCompletion(def: ActionDef): void {
   });
 }
 
-function dispatchTick(dt: number): void {
-  if (!loop.running.value) return;
-  const queue = getActiveLoopQueue();
-  const item = queue.currentItem;
-  if (!item) {
-    if (isActiveQueueExhausted()) _restartFlag.value = true;
-    return;
+// ============================================================================
+// Active queue lifecycle (copy edit → active, reset per loop)
+// ============================================================================
+
+/**
+ * Copy the edit queue into the active category and reset the cursor.
+ *
+ * Called on initial play / manual restart / loop-end unless `preserveActive`
+ * is set. With `preserveActive`, leaves active contents untouched and only
+ * resets the per-execution metadata + cursor (replay the same list).
+ */
+export function startActiveLoop(preserveActive = false): void {
+  completedTicks = 0;
+
+  if (!preserveActive) {
+    activeLoopCategory.sequencer.clear();
+    for (const item of getEditLoopQueue().items.value) {
+      activeLoopCategory.enqueue(item.id, {
+        payload: {
+          loops: item.metadata.loops,
+          loopsLeft: item.metadata.loops,
+          disabled: item.metadata.disabled,
+          statExp: {},
+        },
+      });
+    }
+  } else {
+    for (const item of activeLoopCategory.sequencer.items.value) {
+      const defId = item.metadata.defId;
+      activeLoopCategory.patchItemPayload(defId, (p) => ({
+        ...p,
+        loopsLeft: p.loops,
+        statExp: {},
+      }));
+      activeLoopCategory.setItemProgress(defId, zeroProgress());
+      activeLoopCategory.setItemError(defId, null);
+    }
   }
 
-  const def = actions.get(item.id);
-  if (!def) return;
+  activeLoopCategory.sequencer.resetCursor();
+}
+
+/**
+ * Reset the action queues for a new loop.
+ *
+ * Reference: idleLoops/actions.js restart()
+ */
+export function restartActionQueue(preserveActive = false): void {
+  startActiveLoop(preserveActive);
+}
+
+/**
+ * If active has items from a prior save but the runner hasn't started,
+ * kick it off. Called on game load bootstrap.
+ */
+export function bootstrapActiveFromSave(): void {
+  const active = activeLoopCategory.sequencer.items.value;
+  const edit = getEditLoopQueue().items.value;
+
+  if (active.length === 0 && edit.length > 0) {
+    startActiveLoop(false);
+    return;
+  }
+  // active.length > 0: dispatcher reads sequencer.currentItem each tick; cursor consistent.
+}
+
+// ============================================================================
+// Per-item progress helpers (multi-bar engine slot accessors)
+// ============================================================================
+
+function progressOf(meta: ActionItemMetadata<ActionPayload>): ActionProgress {
+  const raw = meta.progress;
+  if (typeof raw === 'number') return zeroProgress();
+  return {
+    ticks: raw.ticks ?? 0,
+    timeSpent: raw.timeSpent ?? 0,
+    manaUsed: raw.manaUsed ?? 0,
+    goldRemaining: raw.goldRemaining ?? 0,
+  };
+}
+
+// ============================================================================
+// Dispatcher (per-def tick closure inside mapAction)
+// ============================================================================
+
+/**
+ * Per-def tick — fires when this def is the current active item. Switches
+ * on `def.type` to call the matching sibling dispatch function.
+ *
+ * On 'completed':
+ * - Apply per-type effects (completionEffects / progress XP / regular pool).
+ * - Decrement loopsLeft on the payload.
+ * - Snapshot gold remaining; accumulate mana used; reset ticks.
+ * - On last loop: either `sequencer.repeat()` (with payload bump) or
+ *   `sequencer.complete()`.
+ */
+function runDispatch(def: ActionDef, dt: number): void {
+  if (!loop.running.value) return;
   if (def.type !== 'basic' && def.type !== 'progress' && def.type !== 'regular') return;
-  if (item.metadata.loopsLeft <= 0) return;
+
+  const current = activeLoopCategory.currentItem;
+  if (!current || current.defId !== def.id) return;
+  if (current.payload.loopsLeft <= 0) return;
 
   const adjusted = computeAdjustedTicks(def);
 
   // Shared tick instrumentation — XP grant per tick, wall time
   addExpFromAction(def, adjusted);
-  accumulateCurrentItemTime(dt);
+  activeLoopCategory.tickItemProgress(def.id, { timeSpent: dt });
 
   // gainPerTick: at dt ≈ 1/tickRate, speedMult=1, ticksAmt=1 → 1 unit/frame
   const gainPerTick = _dispatcherTickRate * dt; // speedMult=1, ticksAmt=1 (declared invention)
@@ -360,87 +471,56 @@ function dispatchTick(dt: number): void {
   if (status !== 'completed') return;
 
   // Native completion path — type-specific effects.
-  // Wrapped in a closure so completion hooks can call it or gate it.
-  const proceedNative = () => {
-    if (def.type === 'progress') {
-      grantProgressXP(def);
-    } else if (def.type === 'regular') {
-      finishRegularCompletion(def);
-    } else if (def.type === 'basic') {
-      applyCompletionEffects(def);
-    }
-  };
-
-  if (_completionHooks.length === 0) {
-    proceedNative();
-  } else {
-    _completionHooks[0](def, proceedNative);
+  if (def.type === 'progress') {
+    grantProgressXP(def);
+  } else if (def.type === 'regular') {
+    finishRegularCompletion(def);
+  } else if (def.type === 'basic') {
+    applyCompletionEffects(def);
   }
 
-  const liveLoopsLeft =
-    queue.items.value[queue.cursor]?.metadata.loopsLeft ?? item.metadata.loopsLeft;
-  const wasLastLoop = Math.max(0, liveLoopsLeft - 1) <= 0;
-  onDispatchedComplete(adjusted.toNumber());
+  // Refresh the current payload after side-effects (loopsLeft snapshot for
+  // the wasLastLoop decision).
+  const after = activeLoopCategory.currentItem;
+  if (!after || after.defId !== def.id) return;
+  const wasLastLoop = Math.max(0, after.payload.loopsLeft - 1) <= 0;
+
+  activeLoopCategory.patchItemPayload(def.id, (p) => ({
+    ...p,
+    loopsLeft: Math.max(0, p.loopsLeft - 1),
+  }));
+  const goldSnapshot = getResourceValue('gold').toNumber();
+  activeLoopCategory.setItemProgress(def.id, {
+    ticks: 0,
+    timeSpent: progressOf(after).timeSpent,
+    manaUsed: progressOf(after).manaUsed + adjusted.toNumber(),
+    goldRemaining: goldSnapshot,
+  });
+  activeLoopCategory.setItemError(def.id, null);
+  addCompletedTicks(adjusted.toNumber());
 
   if (wasLastLoop) {
-    if (shouldRepeatLast(def, queue)) {
-      patchCursorMeta((m) => ({ ...m, loops: m.loops + 1, loopsLeft: m.loopsLeft + 1 }));
-      queue.repeat();
+    if (shouldRepeatLast(def)) {
+      activeLoopCategory.patchItemPayload(def.id, (p) => ({
+        ...p,
+        loops: p.loops + 1,
+        loopsLeft: p.loopsLeft + 1,
+      }));
+      activeLoopCategory.sequencer.repeat();
     } else {
-      queue.complete();
+      activeLoopCategory.sequencer.complete();
     }
   }
 }
 
-/**
- * Vanilla repeat-last gate.
- */
-function shouldRepeatLast(def: ActionDef, queue: ReturnType<typeof getActiveLoopQueue>): boolean {
+/** Vanilla repeat-last gate. */
+function shouldRepeatLast(def: ActionDef): boolean {
+  const seq = activeLoopCategory.sequencer;
   if (!getRepeatLastAction().value) return false;
-  if (queue.cursor !== queue.items.value.length - 1) return false;
+  if (seq.cursor !== seq.items.value.length - 1) return false;
   if (def.zoneId !== getCurrentZone()) return false;
   if (def.canStart && !def.canStart(buildLooperGameState())) return false;
   return true;
-}
-
-// ============================================================================
-// Queue wiring (canRun gate + skip handler)
-// ============================================================================
-
-/**
- * Wire queue-level gates onto the active sequencer. Called from boot.ts
- * after all actions are registered.
- */
-export function initRunner(): void {
-  const queue = getActiveLoopQueue();
-
-  queue.canRun = (item) => {
-    const def = actions.get(item.id);
-    if (!def) return 'never';
-    if (item.metadata.disabled) return 'never';
-    if (def.zoneId !== getCurrentZone()) return 'never';
-    if (def.canStart && !def.canStart(buildLooperGameState())) return 'never';
-    return 'now';
-  };
-
-  queue.on('skip', () => {
-    const priorIdx = queue.cursor - 1;
-    if (priorIdx < 0) return;
-    const items = queue.items.value;
-    if (priorIdx >= items.length) return;
-    const meta = items[priorIdx].metadata;
-    if (meta.errorMessage) return;
-    const updated = [...items];
-    updated[priorIdx] = {
-      ...updated[priorIdx],
-      metadata: {
-        ...meta,
-        failedCount: meta.failedCount + 1,
-        errorMessage: 'Cannot run here',
-      },
-    };
-    queue.items.value = updated;
-  });
 }
 
 // ============================================================================
@@ -452,17 +532,16 @@ export function initRunner(): void {
  * Reference: idleLoops/actions.js adjustTicksNeeded
  */
 export function calcTotalTicksNeeded(): Decimal {
-  const queue = getActiveLoopQueue();
-  const items = queue.items.value;
-  const cursor = queue.cursor;
+  const items = activeLoopCategory.sequencer.items.value;
+  const cursor = activeLoopCategory.sequencer.cursor;
   let total = Decimal.dZero;
 
   for (let i = cursor; i < items.length; i++) {
     const item = items[i];
-    const def = actions.get(item.id);
+    const def = activeLoopCategory.getDef(item.id);
     if (!def) continue;
     const adjusted = computeAdjustedTicks(def);
-    total = Decimal.add(total, Decimal.mul(item.metadata.loopsLeft, adjusted));
+    total = Decimal.add(total, Decimal.mul(item.metadata.payload.loopsLeft, adjusted));
   }
 
   return total;
@@ -486,10 +565,56 @@ export const actionRunnerModule: EngineModule = {
     const costDivisorRef = tunable(tuningRegistry, 'balance/costDivisor', () => 100);
     setCostDivisorReader(() => costDivisorRef.value);
 
-    actions = createContentRegistry<ActionDef>('actions');
-    registerActions(ACTIONS);
-    initRunner();
+    activeLoopCategory = createActionCategory<ActionDef, void, ActionPayload>({
+      id: 'actions/active',
+      mode: 'list',
+      registerTick: ctx.onTick,
+      mapAction: (def) => ({
+        signals: {
+          unlock: computed(() => isActionVisible(def)),
+          count: computed(() => bn(getTimesCompleted(def.id))),
+        },
+        canRun: (entry) => {
+          if (entry.current?.payload.disabled) return 'never';
+          if (def.zoneId !== getCurrentZone()) return 'never';
+          if (def.canStart && !def.canStart(buildLooperGameState())) return 'never';
+          return 'now';
+        },
+        tick: ({ dt }) => runDispatch(def, dt),
+      }),
+    });
 
-    ctx.onTick((dt: number) => dispatchTick(dt));
+    // Sibling per-def state must exist before any prereq evaluator or signals
+    // computation reads `getTimesCompleted` (it walks all three sibling
+    // categories' `getEntry(def.id)?.state`). Install siblings first, then
+    // register into activeLoopCategory.
+    for (const def of ACTIONS) {
+      installBasicOne(def);
+      installProgressOne(def);
+      installRegularOne(def);
+    }
+    activeLoopCategory.register(ACTIONS);
+
+    // Skip handler: when canRun returns 'never', the sequencer skips the item
+    // and advances the cursor. Tag the prior (skipped) item with an error so
+    // the UI surfaces "Cannot run here".
+    activeLoopCategory.sequencer.on('skip', () => {
+      const seq = activeLoopCategory.sequencer;
+      const items = seq.items.value;
+      const priorIdx = seq.cursor - 1;
+      if (priorIdx < 0 || priorIdx >= items.length) return;
+      const meta = items[priorIdx].metadata;
+      if (meta.error) return;
+      activeLoopCategory.setItemError(meta.defId, { message: 'Cannot run here' });
+    });
+
+    // Restart-flag detection — separate tick from the ActionCategory dispatcher,
+    // which only fires when there's a current item. Exhaustion is "items exist
+    // but cursor walked past the end."
+    ctx.onTick(() => {
+      if (!loop.running.value) return;
+      if (activeLoopCategory.currentItem) return;
+      if (isActiveQueueExhausted()) _restartFlag.value = true;
+    });
   },
 };

@@ -13,8 +13,7 @@
 
 import { computed } from 'vue';
 import { Decimal, formatWhole, formatTime, toNumber } from '@open-loop/engine';
-import { getActiveList } from '../../modules/action-queue';
-import { getActionDef } from '../../modules/action-runner';
+import { getActionDef, getActiveList } from '../../modules/action-runner';
 import { computeAdjustedTicks } from '../../modules/action-formulas';
 
 const props = defineProps<{ index: number | null }>();
@@ -31,26 +30,40 @@ const def = computed(() => {
 
 const name = computed(() => def.value?.name ?? item.value?.id ?? '—');
 
+// Engine `progress` slot is `number | Record<string, number>`; the active
+// dispatcher writes named bars (`ticks`/`timeSpent`/`manaUsed`/`goldRemaining`).
+// Pre-first-tick the slot is the initial `0` number — read defensively.
+function progressBar(it: typeof item.value, key: string): number {
+  if (!it) return 0;
+  const p = it.metadata.progress;
+  if (typeof p === 'number') return 0;
+  return p[key] ?? 0;
+}
+
 const manaOrig = computed(() => {
   if (!def.value || !item.value) return '—';
   const adjusted = computeAdjustedTicks(def.value);
-  return formatWhole(Decimal.mul(adjusted, item.value.metadata.loops));
+  return formatWhole(Decimal.mul(adjusted, item.value.metadata.payload.loops));
 });
 
-const manaUsed = computed(() => (item.value ? formatWhole(item.value.metadata.manaUsed) : '—'));
+const manaUsed = computed(() =>
+  item.value ? formatWhole(progressBar(item.value, 'manaUsed')) : '—',
+);
 
 const manaRemaining = computed(() => {
   if (!def.value || !item.value) return '—';
   const adjusted = computeAdjustedTicks(def.value);
-  const total = Decimal.mul(adjusted, item.value.metadata.loops);
-  return formatWhole(Decimal.max(0, Decimal.sub(total, item.value.metadata.manaUsed)));
+  const total = Decimal.mul(adjusted, item.value.metadata.payload.loops);
+  return formatWhole(Decimal.max(0, Decimal.sub(total, progressBar(item.value, 'manaUsed'))));
 });
 
 const goldRemaining = computed(() =>
-  item.value ? formatWhole(item.value.metadata.goldRemaining) : '—',
+  item.value ? formatWhole(progressBar(item.value, 'goldRemaining')) : '—',
 );
 
-const timeSpent = computed(() => (item.value ? formatTime(item.value.metadata.timeSpent) : '—'));
+const timeSpent = computed(() =>
+  item.value ? formatTime(progressBar(item.value, 'timeSpent')) : '—',
+);
 
 /**
  * Per-stat XP actually accumulated on this item this loop (reference:
@@ -59,7 +72,7 @@ const timeSpent = computed(() => (item.value ? formatTime(item.value.metadata.ti
  */
 const statExpRows = computed<Array<{ name: string; value: string }>>(() => {
   if (!def.value || !item.value) return [];
-  const statExp = item.value.metadata.statExp as Record<string, number | undefined>;
+  const statExp = item.value.metadata.payload.statExp as Record<string, number | undefined>;
   return Object.entries(def.value.weights)
     .filter(([, w]) => w && toNumber(w) > 0)
     .map(([s]) => ({
@@ -68,13 +81,16 @@ const statExpRows = computed<Array<{ name: string; value: string }>>(() => {
     }));
 });
 
-const hasError = computed(() => Boolean(item.value?.metadata.errorMessage));
-const errorMessage = computed(() => item.value?.metadata.errorMessage ?? '');
-const failedCount = computed(() => item.value?.metadata.failedCount ?? 0);
+const hasError = computed(() => Boolean(item.value?.metadata.error));
+const errorMessage = computed(() => item.value?.metadata.error?.message ?? '');
+const failedCount = computed(() => item.value?.metadata.attempt ?? 0);
 </script>
 
 <template>
-  <div v-if="item" class="cad">
+  <div
+    v-if="item"
+    class="cad"
+  >
     <div class="cad-name">
       {{ name }}
     </div>
@@ -95,13 +111,23 @@ const failedCount = computed(() => item.value?.metadata.failedCount ?? 0);
       <span>Time spent</span><b>{{ timeSpent }}</b>
     </div>
 
-    <div v-if="statExpRows.length" class="cad-stats">
-      <span v-for="sx in statExpRows" :key="sx.name" class="cad-stat">
+    <div
+      v-if="statExpRows.length"
+      class="cad-stats"
+    >
+      <span
+        v-for="sx in statExpRows"
+        :key="sx.name"
+        class="cad-stat"
+      >
         <b>{{ sx.name }}</b> {{ sx.value }}
       </span>
     </div>
 
-    <div v-if="hasError" class="cad-error">
+    <div
+      v-if="hasError"
+      class="cad-error"
+    >
       <div class="cad-row">
         <span>Failed attempts</span><b>{{ failedCount }}</b>
       </div>

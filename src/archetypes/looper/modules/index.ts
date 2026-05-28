@@ -20,20 +20,15 @@ export {
   unlockZone,
   getCurrentZone,
 } from './zones';
-export {
-  actionQueueModule,
-  addAction,
-  clearActions,
-  getActiveLoopQueue,
-  restartActionQueue,
-} from './action-queue';
+export { actionQueueModule, addAction, clearActions } from './action-queue';
 export {
   actionRunnerModule,
   isActionVisible,
   getActionDef,
+  getActiveLoopCategory,
   getTimesCompleted,
-  initRunner,
-  registerActions,
+  restartActionQueue,
+  type ActionPayload,
 } from './action-runner';
 export {
   loopModule,
@@ -49,7 +44,7 @@ export {
   SPEED_OPTIONS,
 } from './loop';
 export type { ProgressVarState, RegularVarState } from './zones';
-export type { ActionMeta, LoadoutEntry } from './action-queue';
+export type { EditPayload, LoadoutEntry } from './action-queue';
 
 /**
  * Compose the looper modules in dependency order:

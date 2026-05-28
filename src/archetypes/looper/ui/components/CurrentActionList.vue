@@ -17,10 +17,15 @@
 import { computed } from 'vue';
 import { Icon } from '@iconify/vue';
 import { formatWhole } from '@open-loop/engine';
-import { getActiveList, getActiveCursor, type ActionMeta } from '../../modules/action-queue';
-import { getActionDef, getActionProgress } from '../../modules/action-runner';
+import {
+  getActionDef,
+  getActionProgress,
+  getActiveCursor,
+  getActiveList,
+  type ActionPayload,
+} from '../../modules/action-runner';
 import { getActionIcon } from '../../data/action-icons';
-import type { SequencerItem } from '@open-loop/engine';
+import type { ActionItemMetadata, SequencerItem } from '@open-loop/engine';
 
 const props = defineProps<{ hoveredIndex: number | null }>();
 const emit = defineEmits<{ (e: 'hover', index: number | null): void }>();
@@ -28,12 +33,12 @@ const emit = defineEmits<{ (e: 'hover', index: number | null): void }>();
 const items = computed(() => getActiveList());
 const cursor = computed(() => getActiveCursor());
 
-type Item = SequencerItem<ActionMeta>;
+type Item = SequencerItem<ActionItemMetadata<ActionPayload>>;
 
 function itemState(item: Item, index: number): 'done' | 'active' | 'pending' | 'error' {
-  if (item.metadata.errorMessage) return 'error';
+  if (item.metadata.error) return 'error';
   if (index < cursor.value) return 'done';
-  if (index === cursor.value) return item.metadata.loopsLeft > 0 ? 'active' : 'done';
+  if (index === cursor.value) return item.metadata.payload.loopsLeft > 0 ? 'active' : 'done';
   return 'pending';
 }
 
@@ -45,7 +50,7 @@ function barWidthPercent(item: Item, index: number): number {
 }
 
 function loopCounter(item: Item): string {
-  const { loops, loopsLeft } = item.metadata;
+  const { loops, loopsLeft } = item.metadata.payload;
   const done = Math.max(0, loops - loopsLeft);
   return `${formatWhole(done)}/${formatWhole(loops)}`;
 }
@@ -61,7 +66,12 @@ function nameFor(item: Item): string {
 </script>
 
 <template>
-  <div v-if="items.length === 0" class="cal-empty">No active actions.</div>
+  <div
+    v-if="items.length === 0"
+    class="cal-empty"
+  >
+    No active actions.
+  </div>
   <div
     v-for="(item, index) in items"
     :key="`${item.id}-${index}`"
@@ -84,7 +94,10 @@ function nameFor(item: Item): string {
       }"
       :style="{ width: barWidthPercent(item, index) + '%' }"
     />
-    <Icon class="cal-icon" :icon="iconFor(item)" />
+    <Icon
+      class="cal-icon"
+      :icon="iconFor(item)"
+    />
     <span class="cal-name">{{ nameFor(item) }}</span>
     <span class="cal-loops">{{ loopCounter(item) }}</span>
   </div>

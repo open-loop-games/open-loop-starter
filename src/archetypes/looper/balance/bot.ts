@@ -46,7 +46,7 @@ import {
   addAction,
   clearActions,
   getActionDef,
-  getActiveLoopQueue,
+  getActiveLoopCategory,
   getLoop,
   getLoopCount,
   getMana,
@@ -106,22 +106,28 @@ function loadEditQueue(queue: LoopQueue): void {
 
 /**
  * Wrap action-runner's `canRun` gate so that wrong-zone items auto-switch
- * zones instead of being skipped. The default gate at
- * `modules/action-runner.ts:420` returns `'never'` when `def.zoneId !==
- * getCurrentZone()`; UI players resolve this by clicking a zone selector
- * mid-loop. The bot has no UI, and Sequencer emits `'skip'` (not `'start'`)
- * on a `'never'` gate, so a post-hoc `'start'` event handler can't catch
- * the wrong-zone case in time. Wrapping `canRun` at install time lets the
- * bot unlock + select the action's zone before the gate's zone check, so
- * mixed-zone queues like `[smash-pots, explore-forest]` run end-to-end.
+ * zones instead of being skipped. The default gate (built from per-mapping
+ * canRun composition inside `createActionCategory`) returns `'never'` when
+ * `def.zoneId !== getCurrentZone()`; UI players resolve this by clicking a
+ * zone selector mid-loop. The bot has no UI, and Sequencer emits `'skip'`
+ * (not `'start'`) on a `'never'` gate, so a post-hoc `'start'` event handler
+ * can't catch the wrong-zone case in time. Replacing the underlying
+ * sequencer's composed `canRun` lets the bot unlock + select the action's
+ * zone before the gate's zone check, so mixed-zone queues like
+ * `[smash-pots, explore-forest]` run end-to-end.
  *
- * Player-facing engine instances don't install this module, so the UI
- * zone-selection contract is preserved for production play.
+ * NOTE: this assignment bypasses ActionCategory's per-def `canRun`
+ * composition (the engine wires it inside `createActionCategory` and stores
+ * the composed fn on `sequencer.canRun`). We re-wrap that composed fn here,
+ * so per-def `canRun` still fires through `original(item)` — intentional for
+ * balance-mode determinism. Player-facing engine instances don't install
+ * this module, so the UI zone-selection contract is preserved for production
+ * play.
  */
 function installZoneAutoSelectGate(): void {
-  const queue = getActiveLoopQueue();
-  const original = queue.canRun;
-  queue.canRun = (item) => {
+  const sequencer = getActiveLoopCategory().sequencer;
+  const original = sequencer.canRun;
+  sequencer.canRun = (item) => {
     const def = getActionDef(item.id);
     if (def && def.zoneId === 'forest-path') {
       unlockZone('forest-path', true);

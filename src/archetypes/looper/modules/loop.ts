@@ -31,16 +31,13 @@ import { getMana, drainMana, resetMana } from './mana';
 import { getStatLevelSkills } from './stats';
 import { resetAllResources } from './resources';
 import { restartZones, getProgressVarsForZone } from './zones';
+import { getLoadouts, getLoadoutNames } from './action-queue';
 import {
-  restartActionQueue,
   bootstrapActiveFromSave,
-  getLoadouts,
-  getLoadoutNames,
-  getActiveList,
-} from './action-queue';
-import {
   consumeRestartFlag,
+  getActiveList,
   isRestartFlagged,
+  restartActionQueue,
   basicCategory,
   progressCategory,
   regularCategory,
@@ -235,7 +232,7 @@ export const loopModule: EngineModule = {
           (pauseBeforeRestart.value ||
             (pauseOnFailedLoop.value &&
               getActiveList().some(
-                (item) => !!item.metadata.errorMessage || item.metadata.failedCount > 0,
+                (item) => !!item.metadata.error || item.metadata.attempt > 0,
               ))) &&
           loop.running.value;
 

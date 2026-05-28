@@ -11,7 +11,7 @@
 import { Decimal, type DecimalSource } from '@open-loop/engine';
 import type { ActionDef } from '../data/types';
 import { getStatLevel, getTalentMult, addStatXP } from './stats';
-import { getActiveLoopQueue, accumulateCurrentItemStatExp } from './action-queue';
+import { getActiveLoopCategory } from './action-runner';
 
 /** Evaluate a manaCost field (static number or Decimal-compatible source) */
 function evalManaCost(def: ActionDef): DecimalSource {
@@ -76,7 +76,16 @@ export function addExpFromAction(def: ActionDef, adjustedTicks: DecimalSource): 
     addStatXP(stat, raw);
     statExpGains[stat] = boosted.toNumber();
   }
-  accumulateCurrentItemStatExp(statExpGains);
+
+  const category = getActiveLoopCategory();
+  category.patchItemPayload(def.id, (p) => {
+    const next = { ...p.statExp };
+    for (const [stat, amt] of Object.entries(statExpGains)) {
+      if (!amt) continue;
+      next[stat] = (next[stat] ?? 0) + amt;
+    }
+    return { ...p, statExp: next };
+  });
 }
 
 /**
@@ -85,11 +94,11 @@ export function addExpFromAction(def: ActionDef, adjustedTicks: DecimalSource): 
  * Reference: idleLoops/actions.js getNumOnCurList
  */
 export function getNumOnList(actionName: string): number {
-  const items = getActiveLoopQueue().items.value;
+  const items = getActiveLoopCategory().sequencer.items.value;
   let count = 0;
   for (const item of items) {
     if (item.id === actionName) {
-      count += item.metadata.loops;
+      count += item.metadata.payload.loops;
     }
   }
   return count;
