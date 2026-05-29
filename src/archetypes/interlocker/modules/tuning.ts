@@ -26,11 +26,13 @@ import type {
  *   - `buildings/<id>/grants/<chainId>` — per-grant magnitudes
  *   - `village/jobs/<id>/baseRate`      — per-job production rate (units/sec)
  *   - `village/catnip/perKittenPerSecond`     — kitten catnip consumption
- *   - `village/catnip/starvationThreshold`    — death predicate threshold
  *   - `village/kittenGrowthRatePerSec`        — base population growth rate
  *   - `smelter/woodConsumptionRate`     — wood consumed per smelter per sec
  *   - `smelter/mineralConsumptionRate`  — minerals consumed per smelter per sec
  *   - `smelter/ironProductionRate`      — iron produced per smelter per sec
+ *   - `actions/gatherCatnipAmount`      — catnip per manual gather click
+ *   - `actions/refineCatnipCost`        — catnip spent per manual refine
+ *   - `actions/refineCatnipWoodOutput`  — wood produced per manual refine
  *   - `crafts/<id>/inputs.<res>`        — multi-input recipe magnitudes
  *   - `crafts/<id>/outputAmount`        — base output per craft fire
  *   - `sciences/<id>/baseCost`          — science research cost
@@ -57,13 +59,16 @@ export type InterlockerTunableKey =
   // Per-job production rate (units/sec). Source values are per-tick × 5.
   | `village/jobs/${JobId}/baseRate`
   | 'village/catnip/perKittenPerSecond'
-  | 'village/catnip/starvationThreshold'
   | 'village/kittenGrowthRatePerSec'
   // Smelter continuous-consumption tunables. First N=1 receipt for
   // `createContinuousConversion` (open-loop-engine/docs/candidate-primitives.md).
   | 'smelter/woodConsumptionRate'
   | 'smelter/mineralConsumptionRate'
   | 'smelter/ironProductionRate'
+  // Manual opener actions (canon gather/refine, buildings.js:2747-2754).
+  | 'actions/gatherCatnipAmount'
+  | 'actions/refineCatnipCost'
+  | 'actions/refineCatnipWoodOutput'
   // Per-craft, per-input recipe magnitudes + output amount.
   | `crafts/${CraftId}/inputs.${ResourceId}`
   | `crafts/${CraftId}/outputAmount`

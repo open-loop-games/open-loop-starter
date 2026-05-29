@@ -238,17 +238,23 @@ describe('interlocker/village — catnip consumption', () => {
     expect(Number(H.catnip.value)).toBeCloseTo(100 - 4.25, 5);
   });
 
-  it('lets catnip go negative under sustained consumption', () => {
+  it('floors catnip at zero and starves a kitten when consumption outruns supply', () => {
+    // Canon (village.js:343-367): consumption transiently drives the balance
+    // negative, the starvation step kills a kitten and floors catnip back to
+    // zero — the deficit is paid by the lost kitten, not carried as negative.
     H.reset(2, 100);
     H.catnip.value = 1 as never;
-    H.tick(1); // 2 × 4.25 = 8.5/sec consumption, 1 - 8.5 = -7.5
-    expect(Number(H.catnip.value)).toBeLessThan(0);
+    H.tick(1); // 2 × 4.25 = 8.5/sec drains past zero
+    expect(Number(H.catnip.value)).toBe(0);
+    expect(Number(H.kittens.value)).toBe(1);
   });
 });
 
 describe('interlocker/village — starvation', () => {
   it('emits KittenDiedEvent and decrements kittens when catnip drains', () => {
     H.reset(1, 100);
+    H.catnip.value = 1000 as never;
+    H.tick(0.001); // fed baseline clears the starvation cooldown (kills at 0)
     let deathEvent: KittenDiedEvent | null = null;
     const off = H.village.onKittenDied((e) => {
       deathEvent = e;
@@ -262,6 +268,8 @@ describe('interlocker/village — starvation', () => {
 
   it('demotes a job-assigned kitten in priority order (scholar first)', () => {
     H.reset(1, 100);
+    H.catnip.value = 1000 as never;
+    H.tick(0.001); // fed baseline clears the starvation cooldown (kills at 0)
     H.village.setJobCount('scholar', 1);
     let demotedJob: JobId | null = null;
     const off = H.village.onKittenDied((e) => {

@@ -109,9 +109,10 @@ export function createResourcesModule(data: InterlockerData): EngineModule {
 
         // Tunable reader for base capacity. Capped resources expose the
         // `resources/<id>/baseCapacity` key (default closure reads
-        // `spec.baseCapacity`); science + kittens are uncapped (baseCapacity
-        // === null) and never register a tunable — their bag entries omit
-        // capacityPerType and the bag returns Infinity room.
+        // `spec.baseCapacity`); science is uncapped (baseCapacity === null) and
+        // never registers a tunable — its bag entry omits capacityPerType and
+        // the bag returns Infinity room. Kittens is capped at base 0 with hut
+        // grants supplying the housing room (canon `maxKittens`).
         if (spec.baseCapacity !== null) {
           baseCaps.set(
             spec.id,
@@ -133,8 +134,17 @@ export function createResourcesModule(data: InterlockerData): EngineModule {
         if (spec.baseCapacity === null) continue;
         const base = baseCaps.get(spec.id)!;
         const chain = maxChains[spec.id];
-        // Polled per-read by the bag — chain.push() shows up next call.
-        capacityPerType[spec.id] = () => chain.apply(base.value) as DecimalSource;
+        // Polled per-read by the bag — chain.push() shows up next call. Stockpiles
+        // follow canon `addRes` (`maxValue || MAX_VALUE`): a zero/empty max means
+        // uncapped until a storage building grants a finite cap — so refined goods
+        // (base 0) are unbounded until a warehouse. `hardCap` resources (kittens
+        // population) keep the literal value: zero housing means zero room.
+        capacityPerType[spec.id] = spec.hardCap
+          ? () => chain.apply(base.value) as DecimalSource
+          : () => {
+              const cap = chain.apply(base.value);
+              return (Decimal.lte(cap, 0) ? Decimal.dInf : cap) as DecimalSource;
+            };
       }
 
       const bag = createResourceBag({
@@ -178,4 +188,3 @@ export function createResourcesModule(data: InterlockerData): EngineModule {
     },
   };
 }
-

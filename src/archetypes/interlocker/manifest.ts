@@ -21,9 +21,14 @@ export const manifest: ArchetypeManifest = {
     { name: 'runHeadless', layer: 'harness', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'runMatrixUntil', layer: 'harness', path: 'open-loop-engine/docs/api/INDEX.md' },
   ],
+  // Target ranges are calibration-pending (OL-1079 step 3): the canonical early
+  // arc is bootstrapped by manual gather/refine, so beat timings emerge from a
+  // reference bot policy, not a closed form. Probe-4 under a crude greedy bot
+  // currently lands beat-1 ≈1s, beat-2 ≈408s (first kitten is housing-gated:
+  // gather → refine catnip→wood → hut → 0.05/sec growth, NOT flat-from-t0).
   beats: [
     { n: 1, label: 'First catnip field built', targetSimRange: [0, 60] },
-    { n: 2, label: 'First kitten arrives (catnip 5000)', targetSimRange: [60, 300] },
+    { n: 2, label: 'First kitten arrives', targetSimRange: [60, 600] },
     { n: 3, label: 'First science: calendar', targetSimRange: [300, 600] },
     {
       n: 4,

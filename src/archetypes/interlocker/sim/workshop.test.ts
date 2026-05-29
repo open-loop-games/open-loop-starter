@@ -128,6 +128,8 @@ function createTestBuildingsModule(workshopCount: { value: number }): EngineModu
     },
     buildingCount: (id) => (id === 'workshop' ? workshopCount.value : 0),
     isVisible: () => false,
+    gatherCatnip: () => {},
+    refineCatnip: () => false,
   };
   return {
     id: 'interlocker/buildings',

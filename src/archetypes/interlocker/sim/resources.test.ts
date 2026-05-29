@@ -76,10 +76,10 @@ describe('interlocker/resources — reactive capacity via maxChains', () => {
     const engine = startInterlocker('cap-reactive');
     const api = mustInject(engine, ResourcesKey);
 
-    // Baseline: baseCapacity for wood is 0 (data/resources.ts:18). With no
-    // grants pushed onto max-chain, remaining capacity is 0. Decimal sub
-    // can yield -0 — compare via Decimal.eq instead of strict toNumber.
-    expect(api.bag.remainingCapacityForType('wood').eq(0)).toBe(true);
+    // Baseline: wood carries a 200 bootstrap base cap (data/resources.ts) so
+    // woodcutter output accumulates before the barn grant. With no grants on
+    // the max-chain, remaining capacity equals that base.
+    expect(api.bag.remainingCapacityForType('wood').toNumber()).toBe(200);
 
     // Push a +100 additive grant — simulates a single barn (real building
     // grants land in Phase 2B; this test isolates the capacity-source
@@ -89,22 +89,27 @@ describe('interlocker/resources — reactive capacity via maxChains', () => {
     // resource-bag.ts:43-46 — CapacitySource is polled per-read, so the
     // remaining-capacity computation picks up the new chain output without
     // any explicit invalidate step.
-    expect(api.bag.remainingCapacityForType('wood').toNumber()).toBe(100);
+    expect(api.bag.remainingCapacityForType('wood').toNumber()).toBe(300);
 
     // Adding another +50 grant stacks additively under the chain's composed
     // sequential apply.
     api.maxChains.wood.add(createAdditiveModifier({ addend: 50, description: 'test-warehouse' }));
-    expect(api.bag.remainingCapacityForType('wood').toNumber()).toBe(150);
+    expect(api.bag.remainingCapacityForType('wood').toNumber()).toBe(350);
   });
 
-  it('uncapped resources (science, kittens) report Infinity room', () => {
+  it('science is uncapped (Infinity room); kittens is housing-capped at base 0', () => {
     const engine = startInterlocker('uncapped');
     const api = mustInject(engine, ResourcesKey);
 
-    // baseCapacity: null → omitted from capacityPerType → bag returns
+    // science baseCapacity: null → omitted from capacityPerType → bag returns
     // dInf for remainingCapacityForType (resource-bag.ts:217-218).
     expect(api.bag.remainingCapacityForType('science').eq(Decimal.dInf)).toBe(true);
-    expect(api.bag.remainingCapacityForType('kittens').eq(Decimal.dInf)).toBe(true);
+
+    // kittens baseCapacity: 0 → bag-capped; with no hut grants the room is 0.
+    // A +2 hut grant on the kittens-max chain opens room for two kittens.
+    expect(api.bag.remainingCapacityForType('kittens').eq(0)).toBe(true);
+    api.maxChains.kittens.add(createAdditiveModifier({ addend: 2, description: 'test-hut' }));
+    expect(api.bag.remainingCapacityForType('kittens').toNumber()).toBe(2);
   });
 });
 

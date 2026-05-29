@@ -6,9 +6,10 @@
 //   - woodcutter: defaultUnlocked true (visible from start)
 //   - farmer: agriculture unlocks (science.js:34)
 //   - miner: implied via mine building unlock; arc-1 keys on mining science
-//   - scholar: implied via library building unlock; arc-1 keys on agriculture
-//     (canon's "library job unlock" pattern threads via the building, but
-//     arc-1's predicate-gating prefers a uniform science-keyed cascade).
+//   - scholar: unlocked via the library building (canon), so it is reachable
+//     before any science exists — science requires scholars, so a science gate
+//     here would deadlock the bootstrap (scholar→agriculture→calendar→science→
+//     scholar). Library is start-visible, restoring canon's "library job unlock".
 
 import type { JobSpec } from './types';
 
@@ -35,7 +36,8 @@ export const JOBS: JobSpec[] = [
     name: 'Scholar',
     resource: 'science',
     baseRatePerSecond: 0.175,
-    unlockedByScience: 'agriculture',
+    unlockedByScience: null,
+    unlockedByBuilding: 'library',
   },
   // village.js:67-76 — miner. modifiers.minerals = 0.05/tick → 0.25/sec.
   {

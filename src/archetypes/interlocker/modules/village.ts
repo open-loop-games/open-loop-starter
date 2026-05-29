@@ -22,6 +22,7 @@ import type {
 import { InterlockerTuningRegistryKey } from './tuning';
 import { ResourcesKey } from './resources';
 import { SciencesKey } from './sciences';
+import { BuildingsKey } from './buildings';
 
 /**
  * Village module's public API. Phase 2 worktree C fills the body — Phase 1
@@ -42,9 +43,11 @@ import { SciencesKey } from './sciences';
  *   - Catnip consumption `onTick`: `subtractResource(catnip, perKitten × kittens.value × dt,
  *     { allowNegative: true })`. First N=1 receipt for
  *     `createContinuousConversion` shared with smelter.
- *   - Starvation loop: every tick, if effectiveCatnipRate ≤ starvationThreshold,
- *     emit `KittenDiedEvent` and decrement kittens by 1 (demoting a kitten
- *     from a job in priority order: scholar > miner > woodcutter > farmer).
+ *   - Canon population dynamics (village.js:332-373): while the catnip balance
+ *     is negative the colony starves — growth is suspended and at most one
+ *     kitten dies per `DEATH_COOLDOWN_SEC`, emitting `KittenDiedEvent` and
+ *     demoting a job-assigned kitten (scholar > miner > woodcutter > farmer);
+ *     otherwise population grows at the flat per-tick rate.
  */
 export interface VillageApi {
   /** Per-job count refs, keyed by job id. */
@@ -53,8 +56,10 @@ export interface VillageApi {
    *  binds here via the buildings module's resolver extension (Phase 3
    *  wiring); the per-tick catnip drain reads `chain.apply(baseRate)`. */
   consumptionRateChain: ModifierChain;
-  /** Whether the job is currently visible to the player. Driven by
-   *  `JobSpec.unlockedByScience` predicate against `sciences.scienceCompleted`. */
+  /** Whether the job is currently visible to the player. A job unlocks when its
+   *  `unlockedByScience` gate (if any) is researched AND its `unlockedByBuilding`
+   *  gate (if any) is built — scholar threads through the library, breaking the
+   *  science↔scholar bootstrap cycle. */
   isJobVisible(id: JobId): boolean;
   /** Assign `newCount` kittens to job `id`. Throws if `sum(allCounts) > kittens`. */
   setJobCount(id: JobId, newCount: number): void;
@@ -108,6 +113,10 @@ interface VillageEvents {
  *  (science) doesn't gate immediate survival. */
 const DEMOTION_ORDER: JobId[] = ['scholar', 'miner', 'woodcutter', 'farmer'];
 
+/** Seconds between starvation deaths — canon `deathTimeout = ticksPerSecond × 5`
+ *  (village.js:362). At most one kitten starves per this window. */
+const DEATH_COOLDOWN_SEC = 5;
+
 /**
  * Village module — kittens, jobs, catnip consumption, starvation.
  *
@@ -116,16 +125,17 @@ const DEMOTION_ORDER: JobId[] = ['scholar', 'miner', 'woodcutter', 'farmer'];
  * modifiers are bound by stable id (`village/jobs/<id>`) and rebound on every
  * `setJobCount` call so the chain reflects the new magnitude immediately.
  *
- * The tick handler runs three independent sub-steps in fixed order:
- *   1. Population growth — accumulate `kittenGrowthRatePerSec × dt` into a
- *      sub-kitten progress counter; cross the integer threshold to add one
- *      kitten, gated by the bag's per-type capacity (hut soft-cap).
- *   2. Catnip consumption — continuous `subtractResource(catnip, ...)` per
- *      `perKittenPerSecond × kittens × dt`. `allowNegative: true` so the
- *      starvation predicate can fire on a negative bag.
- *   3. Starvation predicate — when effective net catnip rate is at or below
- *      `starvationThreshold` AND the catnip bag has dropped to zero or below,
- *      kill one kitten + demote one job-assigned kitten per `DEMOTION_ORDER`.
+ * The tick handler runs sub-steps in fixed order:
+ *   0. Production — integrate each rate chain (`catnip/wood/minerals/science`)
+ *      into its resource. Iron is smelter-owned (buildings.ts onTick).
+ *   1. Catnip consumption — continuous `subtractResource(catnip, ...)` per
+ *      `perKittenPerSecond × kittens × dt`. `allowNegative: true` so the catnip
+ *      balance can dip negative for the canon starvation check.
+ *   2. Canon population dynamics (village.js:332-373) — if the catnip balance
+ *      is negative, suspend growth and kill ≤1 kitten per `DEATH_COOLDOWN_SEC`
+ *      (demoting per `DEMOTION_ORDER`), then floor catnip to zero; otherwise
+ *      accumulate flat growth into the sub-kitten progress counter, gated by
+ *      the bag's per-type capacity (hut soft-cap).
  */
 export function createVillageModule(_data: InterlockerData): EngineModule {
   return {
@@ -138,6 +148,10 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
       // Resolved lazily — sciences module's stub throws on access in Phase 1.
       // `isJobVisible` only resolves when called from UI, well after Phase 1.
       const sciences = () => ctx.inject(SciencesKey);
+      // Buildings installs after village (it depends on village), so the
+      // building gate resolves lazily too — only read at `isJobVisible` call
+      // time, well after every module is installed.
+      const buildings = () => ctx.inject(BuildingsKey);
 
       const jobs = _data.jobs;
       const jobById = new Map<JobId, JobSpec>(jobs.map((j) => [j.id, j]));
@@ -160,11 +174,6 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         'village/catnip/perKittenPerSecond',
         () => _data.catnipPerKittenPerSec,
       );
-      const starvationThreshold = tunable<number>(
-        registry,
-        'village/catnip/starvationThreshold',
-        () => _data.starvationCatnipRateThreshold,
-      );
       const kittenGrowthRate = tunable<number>(
         registry,
         'village/kittenGrowthRatePerSec',
@@ -183,6 +192,10 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         // Sub-kitten progress counter. Accumulates fractional growth; integer
         // threshold crosses spawn a kitten via `addResource(kittens, 1)`.
         kittenProgress: persistent<number>(0, { name: 'kitten-progress' }),
+        // Seconds remaining on the canon death cooldown (village.js:362 —
+        // `deathTimeout = ticksPerSecond × 5`). Starvation kills at most one
+        // kitten per `DEATH_COOLDOWN_SEC`; counts down while starving.
+        deathTimeout: persistent<number>(0, { name: 'death-timeout' }),
       }));
 
       const jobCounts: Record<JobId, Persistent<number>> = {
@@ -307,27 +320,14 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
           }
         }
 
-        // 1) Population growth. Happiness arc-1 stand-in is 1.0 always
-        //    (Kittens canon happiness depends on the culture chain, out of
-        //    scope for arc-1). Hut soft-cap rides the bag's per-type capacity
-        //    — when the bag is full for `kittens`, growth pauses but progress
-        //    accumulation continues so a hut purchase mid-tick unlocks the
-        //    queued kitten on the next pass.
-        const happinessFactor = 1.0;
-        state.kittenProgress.value += kittenGrowthRate.value * happinessFactor * dt;
-        while (state.kittenProgress.value >= 1.0) {
-          const remainingCapacity = Number(resources.bag.remainingCapacityForType('kittens'));
-          if (remainingCapacity <= 0) break;
-          addResource(kittens, 1);
-          state.kittenProgress.value -= 1.0;
-        }
-
-        // 2) Catnip consumption. `perKittenPerSecond` is negative (-4.25/sec);
-        //    take absolute value for the subtract magnitude. `allowNegative`
-        //    lets the bag go negative so the starvation predicate can fire.
-        //    The per-kitten magnitude routes through `consumptionRateChain`
-        //    so pasture's `mul -0.005` reduces effective drain (canonical
-        //    Kittens `catnipDemandRatio`); empty chain is the identity.
+        // 1) Catnip consumption (drain). `perKittenPerSecond` is negative
+        //    (-4.25/sec); take the magnitude. The per-kitten drain routes
+        //    through `consumptionRateChain` so pasture's `mul -0.005` reduces
+        //    it (canonical `catnipDemandRatio`); empty chain is the identity.
+        //    `allowNegative` lets the bag dip below zero so the canon
+        //    starvation projection (village.js:343 `resDiff < 0`) can see the
+        //    deficit; step 2 floors catnip back to zero, matching canon's
+        //    non-negative resPool.
         // TODO(expansion): continuous-rate consumption — shared N=1 receipt
         // with smelter for `createContinuousConversion`. See
         // `open-loop-engine/docs/candidate-primitives.md`.
@@ -338,29 +338,50 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
           subtractResource(catnip, consumeMagnitude, { allowNegative: true });
         }
 
-        // 3) Starvation predicate. Effective net catnip rate = sum of all
-        //    positive rate-chain contributions (farmer + buildings) minus the
-        //    consumption magnitude (already pasture-adjusted). Death fires only
-        //    when BOTH the rate is at or below the threshold AND the bag has
-        //    drained to ≤ 0 — a short grace window during which the player
-        //    can react.
-        const positiveRate = Number(resources.rateChains.catnip.apply(0));
-        const consumptionRate = effectivePerKittenDrain * kittensTotal;
-        const effectiveCatnipRate = positiveRate - consumptionRate;
-        if (
-          kittensTotal > 0 &&
-          effectiveCatnipRate <= Number(starvationThreshold.value) &&
-          Number(catnip.value) <= 0
-        ) {
-          const demotedFromJob = demoteOneKitten();
-          subtractResource(kittens, 1, { allowNegative: false });
-          handle.emit('kitten-died', {
-            // simTime is engine-side; consumers can read engine.elapsedSimTime
-            // for the precise wall-clock of the event. 0 keeps the contract
-            // honest until a Phase 3 wiring threads the engine's time accessor.
-            simTime: 0,
-            demotedFromJob,
-          });
+        // 2) Canon population dynamics (village.js:332-373). After this tick's
+        //    net catnip flow, `resDiff` is the catnip balance. When it is
+        //    negative the colony is starving: canon kills at most one kitten
+        //    per `DEATH_COOLDOWN_SEC` and SUSPENDS growth (`sim.update(0)`).
+        //    Otherwise it grows at the flat per-tick rate. Growth is never
+        //    gated by a fixed catnip threshold — only by the sign of the
+        //    balance, which is what couples population to the catnip economy.
+        const resDiff = Number(catnip.value);
+        if (kittensTotal > 0 && resDiff < 0) {
+          state.deathTimeout.value -= dt;
+          if (state.deathTimeout.value <= 0) {
+            const demotedFromJob = demoteOneKitten();
+            subtractResource(kittens, 1, { allowNegative: false });
+            handle.emit('kitten-died', {
+              // simTime threads through a Phase 3 engine-time accessor; 0 keeps
+              // the contract honest until then. Consumers read
+              // engine.elapsedSimTime for the precise wall-clock.
+              simTime: 0,
+              demotedFromJob,
+            });
+            state.deathTimeout.value = DEATH_COOLDOWN_SEC;
+          }
+          // Canon floors catnip at zero — the deficit is paid by the starved
+          // kitten, not carried forward as negative catnip.
+          addResource(catnip, -resDiff);
+        } else {
+          // Fed. Canon freezes the death cooldown here (village.js only
+          // decrements it inside the starvation branch); arc-1 clears it so a
+          // recovered colony gets the full grace window on its next crisis
+          // rather than a stale partial countdown. Macro pacing is unchanged —
+          // sustained starvation still kills one kitten per DEATH_COOLDOWN_SEC.
+          state.deathTimeout.value = 0;
+          // Flat per-tick growth (happiness is the 1.0 arc-1 stand-in; culture
+          // chain is out of scope). Hut soft-cap rides the bag's per-type
+          // capacity — when full, growth pauses but progress still accumulates
+          // so a mid-tick hut purchase releases the queued kitten next pass.
+          const happinessFactor = 1.0;
+          state.kittenProgress.value += kittenGrowthRate.value * happinessFactor * dt;
+          while (state.kittenProgress.value >= 1.0) {
+            const remainingCapacity = Number(resources.bag.remainingCapacityForType('kittens'));
+            if (remainingCapacity <= 0) break;
+            addResource(kittens, 1);
+            state.kittenProgress.value -= 1.0;
+          }
         }
       });
 
@@ -370,8 +391,19 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         isJobVisible(id: JobId): boolean {
           const def = jobById.get(id);
           if (!def) return false;
-          if (def.unlockedByScience == null) return true;
-          return sciences().scienceCompleted(def.unlockedByScience);
+          if (
+            def.unlockedByScience != null &&
+            !sciences().scienceCompleted(def.unlockedByScience)
+          ) {
+            return false;
+          }
+          if (
+            def.unlockedByBuilding != null &&
+            buildings().buildingCount(def.unlockedByBuilding) < 1
+          ) {
+            return false;
+          }
+          return true;
         },
         setJobCount,
         onKittenDied: (h) => handle.on('kitten-died', h),

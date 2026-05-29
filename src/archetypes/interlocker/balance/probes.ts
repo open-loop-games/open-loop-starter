@@ -36,8 +36,8 @@
 
 import { Decimal, addResource, createAdditiveModifier, runUntil } from '@open-loop/engine';
 import { createInterlockerEngine } from '..';
-import { BuildingsKey, ResourcesKey, SciencesKey, VillageKey } from '../modules';
-import type { BuildingId, ResourceId, ScienceId } from '../data/types';
+import { BuildingsKey, ResourcesKey, SciencesKey, VillageKey, WorkshopKey } from '../modules';
+import type { BuildingId, CraftId, JobId, ResourceId, ScienceId } from '../data/types';
 
 const HEAD = (s: string) => `\n## ${s}\n`;
 
@@ -340,7 +340,8 @@ function probeArcSmoke(maxSimSec: number): {
   const buildings = engine.tryInject(BuildingsKey);
   const village = engine.tryInject(VillageKey);
   const sciences = engine.tryInject(SciencesKey);
-  if (!resources || !buildings || !village || !sciences) {
+  const workshop = engine.tryInject(WorkshopKey);
+  if (!resources || !buildings || !village || !sciences || !workshop) {
     throw new Error('module missing');
   }
 
@@ -354,25 +355,20 @@ function probeArcSmoke(maxSimSec: number): {
     6: null,
   };
 
-  // Greedy bot policy fired per tick. Order matters:
-  //   1. Try to buy the cheapest visible/affordable building (catnip field first,
-  //      then hut, then library, then whatever's visible).
-  //   2. Hire kittens — priority: farmer first to keep alive, then woodcutter,
-  //      then scholar.
-  //   3. Research sciences in cascade order whenever affordable.
-  const buildingPriority: BuildingId[] = [
-    'field',
-    'hut',
-    'library',
-    'barn',
-    'mine',
-    'workshop',
-    'smelter',
-    'pasture',
-    'lumberMill',
-    'warehouse',
-    'quarry',
-  ];
+  // ─── Reference bot policy ─────────────────────────────────────────────
+  // The binding constraint is catnip: EVERY kitten drains 4.25/sec regardless
+  // of job (canon catnipPerKitten), so population must never outrun catnip
+  // production. The lever is housing — grow huts only when fields + farmers can
+  // feed the +2 kittens a hut admits. Pre-agriculture, fields are the sole
+  // catnip source (~6.8 fields/kitten); post-agriculture a farmer is net-
+  // positive catnip (+5/sec produced vs −4.25/sec drained), so the economy
+  // opens once agriculture lands. Steady catnip surplus keeps scholars from
+  // being demoted by starvation, so the science cascade actually completes.
+  const CATNIP_PER_KITTEN = 4.25;
+  const FIELD_CATNIP = 0.625;
+  const FARMER_CATNIP = 5;
+  const SURPLUS = 3; // catnip/sec headroom held before growing housing
+
   const sciencePriority: ScienceId[] = [
     'calendar',
     'agriculture',
@@ -381,59 +377,175 @@ function probeArcSmoke(maxSimSec: number): {
     'construction',
     'architecture',
   ];
+  // Built greedily once their science unlocks them, after the hand-managed
+  // field/hut/library core. Order = rough dependency/value sequence.
+  const tierBuildings: BuildingId[] = [
+    'mine',
+    'lumberMill',
+    'quarry',
+    'smelter',
+    'workshop',
+    'pasture',
+    'barn',
+    'warehouse',
+  ];
+
+  const CLICKS_PER_TICK = 5;
+  // Wood is the scarce structural resource (huts scale ×2.5, workshop needs 100);
+  // catnip is abundant (farmers + fields cap it out). Refine converts the
+  // otherwise-wasted catnip surplus into wood, holding a deep reserve so huts +
+  // workshop are affordable without waiting on the trickle of woodcutters.
+  const WOOD_RESERVE = 300;
+  const REFINE_CATNIP_FLOOR = 200; // keep this much catnip; refine only above it
+  const HUT_NET = 2 * CATNIP_PER_KITTEN + SURPLUS; // surplus needed to grow housing
+  function gatherClicks(): void {
+    for (let i = 0; i < CLICKS_PER_TICK; i++) buildings!.gatherCatnip();
+  }
+  function refineSurplus(): void {
+    // Runs AFTER building so fields/farmers get first call on catnip. Drains the
+    // surplus above the floor into wood (multiple refines/tick when flush), up to
+    // the reserve — turning capped, otherwise-wasted catnip into structural wood.
+    let wood = Number(resources!.resources.wood.value);
+    for (let i = 0; i < 10 && wood < WOOD_RESERVE; i++) {
+      if (Number(resources!.resources.catnip.value) <= REFINE_CATNIP_FLOOR) break;
+      if (!buildings!.refineCatnip()) break;
+      wood = Number(resources!.resources.wood.value);
+    }
+  }
+
+  function canBuy(id: BuildingId): boolean {
+    if (!buildings!.isVisible(id)) return false;
+    const entry = buildings!.category.getEntry(id);
+    return !!entry && entry.purchasable.canPurchase.value;
+  }
+  function buy(id: BuildingId): void {
+    buildings!.category.getEntry(id)?.purchasable.purchase();
+  }
 
   function tryBuyBuilding(): void {
-    for (const id of buildingPriority) {
-      if (!buildings!.isVisible(id)) continue;
-      const entry = buildings!.category.getEntry(id);
-      if (!entry) continue;
-      if (entry.purchasable.canPurchase.value) {
-        entry.purchasable.purchase();
-        return; // one purchase per tick
-      }
+    const k = Number(resources!.resources.kittens.value);
+    const net = Number(resources!.rateChains.catnip.apply(0)) - CATNIP_PER_KITTEN * k;
+    const catnipVal = Number(resources!.resources.catnip.value);
+
+    // 1. Hut — sustainability gate: only admit +2 kittens if the current
+    //    surplus can feed them with margin. THE lever that keeps catnip solvent
+    //    and the gate to all population, so it precedes wood-competing builds.
+    if (net >= 2 * CATNIP_PER_KITTEN + SURPLUS && canBuy('hut')) return void buy('hut');
+    // 2. Library — +10% science rate per library; only worth wood once there's
+    //    a kitten to scholar. Capped so it doesn't starve huts of wood.
+    if (
+      buildings!.buildingCount('hut') >= 1 &&
+      buildings!.buildingCount('library') < 3 &&
+      canBuy('library')
+    ) {
+      return void buy('library');
     }
+    // 3. Field — the PRE-agriculture catnip engine. Build while we still need
+    //    surplus for the next hut. Once agriculture unlocks farmers, stop:
+    //    farmers (one kitten, net +0.75/sec) are far cheaper catnip than fields,
+    //    whose geometric cost otherwise soaks up every catnip and starves refine.
+    if (
+      !village!.isJobVisible('farmer') &&
+      net < HUT_NET + SURPLUS &&
+      catnipVal > 12 &&
+      canBuy('field')
+    ) {
+      return void buy('field');
+    }
+    // 4. Tier buildings once unlocked.
+    for (const id of tierBuildings) if (canBuy(id)) return void buy(id);
   }
 
   function tryResearch(): void {
     for (const id of sciencePriority) {
       if (sciences!.scienceCompleted(id)) continue;
       const entry = sciences!.category.getEntry(id);
-      if (!entry) continue;
-      if (entry.purchasable.canPurchase.value) {
+      if (entry?.purchasable.canPurchase.value) {
         entry.purchasable.purchase();
         return;
       }
     }
   }
 
-  function tryAssignKittens(): void {
-    const kittens = Number(resources!.resources.kittens.value);
-    const counts = village!.jobCounts;
-    const assigned =
-      counts.woodcutter.value + counts.farmer.value + counts.scholar.value + counts.miner.value;
-    const unassigned = kittens - assigned;
-    if (unassigned <= 0) return;
-    // Farmer priority: aim for catnip rate net-positive.
-    const catnipRate = Number(resources!.rateChains.catnip.apply(0)) + counts.farmer.value * 5; // farmers add 5/sec each via job binding
-    const drainPerSec =
-      Math.abs(Number(resources!.rateChains.catnip.apply(0))) === 0
-        ? 4.25 * kittens
-        : 4.25 * kittens;
-    // Hire farmer if catnip net would be ≤ 0.
-    if (catnipRate < drainPerSec + 1) {
-      try {
-        village!.setJobCount('farmer', counts.farmer.value + 1);
-      } catch {
-        // setJobCount throws when sum overflows kittens — bot just skips.
-      }
-      return;
-    }
-    // Else hire woodcutter (wood drives everything).
+  function hire(jobId: JobId, target: number): boolean {
     try {
-      village!.setJobCount('woodcutter', counts.woodcutter.value + 1);
+      village!.setJobCount(jobId, target);
+      return true;
     } catch {
-      // see above
+      // setJobCount throws when the sum overflows kittens — bot just skips.
+      return false;
     }
+  }
+
+  // Target-based allocation, recomputed each tick so the split adapts as the
+  // population grows. Catnip solvency comes first (enough farmers to hold the
+  // surplus), then scholars drive the science cascade, then miners feed the
+  // smelter → crafts, then woodcutters mop up.
+  function allocateJobs(): void {
+    const k = Number(resources!.resources.kittens.value);
+    if (k <= 0) return;
+    const counts = village!.jobCounts;
+    const fieldsProd = buildings!.buildingCount('field') * FIELD_CATNIP;
+
+    // Farmers cover catnip to the hut margin (net ≥ HUT_NET) — a healthy buffer
+    // that both prevents starvation as population grows AND leaves surplus for
+    // refine to convert into wood. Under-provisioning here death-spirals the
+    // colony; the abundant catnip a full farmer corps produces is what feeds
+    // both the population and the wood refinery.
+    let farmers = 0;
+    if (village!.isJobVisible('farmer')) {
+      const need = (HUT_NET + CATNIP_PER_KITTEN * k - fieldsProd) / FARMER_CATNIP;
+      farmers = Math.max(0, Math.min(k, Math.ceil(need)));
+    }
+    let rem = k - farmers;
+    // Reserve a baseline woodcutter + miner for infrastructure, then pour the
+    // rest into scholars to rush the tech tree (mining → construction →
+    // lumberMill, which is what finally scales wood). Tech-first beats balance
+    // because the upstream sciences unlock every downstream resource multiplier.
+    let woodcutters = rem > 0 ? 1 : 0;
+    rem -= woodcutters;
+    const miners = village!.isJobVisible('miner') && rem > 0 ? 1 : 0;
+    rem -= miners;
+    const scienceLeft = !sciences!.scienceCompleted('architecture');
+    const scholars = village!.isJobVisible('scholar') && scienceLeft ? rem : 0;
+    rem -= scholars;
+    woodcutters += rem; // any remainder to wood
+
+    const targets: Record<JobId, number> = {
+      farmer: farmers,
+      scholar: scholars,
+      miner: miners,
+      woodcutter: woodcutters,
+    };
+    const order: JobId[] = ['woodcutter', 'farmer', 'scholar', 'miner'];
+    // Reduce first (frees headroom), then increase — sum stays ≤ kittens.
+    for (const job of order) if (targets[job] < counts[job].value) hire(job, targets[job]);
+    for (const job of order) if (targets[job] > counts[job].value) hire(job, targets[job]);
+  }
+
+  // Craft toward the megalith once architecture unlocks it. Fire the megalith
+  // when its inputs are ready; otherwise stockpile the intermediate whose
+  // stock is lowest relative to the megalith recipe (25 beam / 50 slab / 5
+  // plate). triggerCraft is atomic — a no-op when inputs are short.
+  const craftIntermediates: CraftId[] = ['beam', 'slab', 'plate'];
+  function tryCraft(): void {
+    if (!workshop!.isVisible('megalith')) return;
+    const got = workshop!.triggerCraft('megalith');
+    if (Object.keys(got).length > 0) return; // megalith fired
+    // Build the intermediate furthest from its megalith requirement.
+    const need: Record<string, number> = { beam: 25, slab: 50, plate: 5 };
+    let lowest: CraftId | null = null;
+    let lowestRatio = Infinity;
+    for (const id of craftIntermediates) {
+      if (!workshop!.isVisible(id)) continue;
+      const have = Number(resources!.resources[id as ResourceId].value);
+      const ratio = have / need[id]!;
+      if (ratio < lowestRatio) {
+        lowestRatio = ratio;
+        lowest = id;
+      }
+    }
+    if (lowest) workshop!.triggerCraft(lowest);
   }
 
   function checkBeats(simTime: number): void {
@@ -453,26 +565,29 @@ function probeArcSmoke(maxSimSec: number): {
     ) {
       beatFireTimes[4] = simTime;
     }
-    // beat-5 + beat-6 need crafts policy; not bot-driven in this probe.
+    const megaliths = Number(resources!.resources.megalith.value);
+    if (beatFireTimes[5] === null && megaliths >= 1) {
+      beatFireTimes[5] = simTime;
+    }
+    if (beatFireTimes[6] === null && sciences!.scienceCompleted('architecture') && megaliths >= 1) {
+      beatFireTimes[6] = simTime;
+    }
   }
 
-  // Free starter resources to bootstrap (Kittens canon gives the player ~5
-  // catnip on start, but `baseCapacity: 0` means we'd lose it). Lift the
-  // catnip cap by a synthetic +100 push so the first field is affordable.
-  resources.maxChains.catnip.bind({
-    id: 'probe/bootstrap-catnip-cap',
-    modifier: createAdditiveModifier({ addend: () => 100, description: 'probe bootstrap' }),
-  });
-  addResource(resources.resources.catnip, 10);
-
+  // Canonical opening loop: the bot works gather/refine like the Bonfire
+  // buttons, then builds + researches + allocates + crafts. No seeds, no
+  // synthetic caps — the arc bootstraps exactly as a player would.
   runUntil({
     engine,
     until: ({ simTime }) => {
+      gatherClicks();
       tryBuyBuilding();
       tryResearch();
-      tryAssignKittens();
+      allocateJobs();
+      refineSurplus();
+      tryCraft();
       checkBeats(simTime);
-      return beatFireTimes[4] !== null && beatFireTimes[1] !== null;
+      return beatFireTimes[6] !== null; // run to arc closure or the sim budget
     },
     maxSimTime: maxSimSec,
     tickDelta: 1,
@@ -480,7 +595,7 @@ function probeArcSmoke(maxSimSec: number): {
 
   const beats: BeatRow[] = [
     { id: 1, label: 'First catnip field built', targetWindowSec: [0, 60] },
-    { id: 2, label: 'First kitten arrives (catnip 5000)', targetWindowSec: [60, 300] },
+    { id: 2, label: 'First kitten arrives', targetWindowSec: [60, 600] },
     { id: 3, label: 'First science: calendar', targetWindowSec: [300, 600] },
     {
       id: 4,

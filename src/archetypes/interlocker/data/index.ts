@@ -26,10 +26,6 @@ export const DEFAULT_INTERLOCKER_DATA: InterlockerData = {
   catnipPerKittenPerSec: -4.25,
   // village.js:7 kittensPerTickBase: 0.01/tick × 5 = 0.05/sec.
   kittenGrowthRatePerSec: 0.05,
-  // Phase-1 stand-in. Phase 5 balance tunes. -0.1/sec is "rate is meaningfully
-  // negative" — chosen to give the player a brief grace period before the
-  // starvation death loop fires.
-  starvationCatnipRateThreshold: -0.1,
 };
 
 // Re-export smelter rates as constants for the tuning module's default closures.

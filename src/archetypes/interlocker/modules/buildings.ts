@@ -1,5 +1,6 @@
 import type { ComputedRef } from 'vue';
 import {
+  addResource,
   createAdditiveModifier,
   createCostRequirement,
   createMultiplicativeModifier,
@@ -10,18 +11,11 @@ import {
   tunable,
   type DecimalSource,
   type EngineModule,
-  type Grant,
   type InjectionKey,
   type ModifierChain,
   type PurchasableCategory,
 } from '@open-loop/engine';
-import type {
-  BuildingGrant,
-  BuildingId,
-  BuildingSpec,
-  InterlockerData,
-  ResourceId,
-} from '../data/types';
+import type { BuildingId, BuildingSpec, InterlockerData, ResourceId } from '../data/types';
 import { InterlockerTuningRegistryKey } from './tuning';
 import { ResourcesKey, type ResourcesApi } from './resources';
 import { SciencesKey } from './sciences';
@@ -53,6 +47,13 @@ export interface BuildingsApi {
   /** Whether the building is currently visible to the player. Driven by
    *  `BuildingSpec.unlockedByScience` predicate against `sciences.scienceCompleted`. */
   isVisible(id: BuildingId): boolean;
+  /** Canon manual opener (buildings.js:2747 `gatherCatnip`): add the base
+   *  per-click catnip. The bootstrap channel before any catnip field exists. */
+  gatherCatnip(): void;
+  /** Canon manual refine (buildings.js:2751 `refineCatnip`): spend the catnip
+   *  cost to produce wood. Returns false (no-op) when catnip is short. The
+   *  bootstrap channel for the first wood before any woodcutter exists. */
+  refineCatnip(): boolean;
 }
 
 export const BuildingsKey: InjectionKey<BuildingsApi> = Symbol(
@@ -208,6 +209,17 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
       );
       const ironProductionRate = tunable<number>(registry, 'smelter/ironProductionRate', () => 0.1);
 
+      // Manual opener actions (canon buildings.js:2747-2754). Gather adds one
+      // catnip per click; refine spends catnip to produce wood (1 + craftRatio;
+      // arc-1 has no craftRatio sources yet, so base 1 wood per 100 catnip).
+      const gatherCatnipAmount = tunable<number>(registry, 'actions/gatherCatnipAmount', () => 1);
+      const refineCatnipCost = tunable<number>(registry, 'actions/refineCatnipCost', () => 100);
+      const refineCatnipWoodOutput = tunable<number>(
+        registry,
+        'actions/refineCatnipWoodOutput',
+        () => 1,
+      );
+
       // ─── Purchasable category ──────────────────────────────────────────
       // Explicit annotation here breaks a TS circular-inference loop — the
       // `cost` getter inside `mapPurchasable` reaches back into `category` to
@@ -238,23 +250,14 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
             });
           });
 
-          // Lower each BuildingGrant → engine Grant via the modifier escape
-          // hatch (explicit `createAdditiveModifier`/`createMultiplicativeModifier`
-          // per the OL-1058 contract). Unresolved chainIds (chains owned by
-          // sibling modules, e.g. `craft-output` / `catnip-consumption-rate`)
-          // drop their grant — those sibling modules wire their own chains.
-          const grants: Grant[] = [];
-          for (const grant of def.grants) {
-            const chain = resolveChain(grant.chainId, resourcesApi, villageApi, workshopApi);
-            if (!chain) continue;
-            grants.push(buildGrant(grant, chain, r.grants.get(grant.chainId)!));
-          }
-
+          // Grants are NOT lowered here. They scale with owned count, which
+          // needs the entry's live `signals.count` — but the entry/purchasable
+          // doesn't exist yet inside mapPurchasable. They're bound in a
+          // post-register pass below, against each registered entry's count.
           return {
             display: { title: def.name, description: describeBuilding(def) },
             requirements,
             limit: Infinity,
-            grants,
             visibility: () =>
               def.unlockedByScience == null || sciencesApi.scienceCompleted(def.unlockedByScience),
           };
@@ -262,10 +265,42 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
       });
       category.register(data.buildings);
 
+      // ─── Count-scaled grant bindings (post-register) ───────────────────
+      // Each building grant scales with its owned count (canon: effect × count
+      // — catnipPerTickBase × fieldCount, scienceRatio × libraryCount, catnipMax
+      // × barnCount). Bound here, after register, so the closure captures the
+      // entry's real `signals.count` (`computed(() => amount.value)`) and the
+      // purchasable's `active` ref directly — no reliance on a `category` const
+      // or module-level state that the mapPurchasable-time closure can't reach
+      // reliably. The grant activates with the purchasable and reads count live.
+      for (const def of data.buildings) {
+        const entry = category.getEntry(def.id);
+        if (!entry) continue;
+        const r = refs.get(def.id)!;
+        const count = () => Number(entry.signals.count.value);
+        for (const grant of def.grants) {
+          const chain = resolveChain(grant.chainId, resourcesApi, villageApi, workshopApi);
+          if (!chain) continue;
+          const magnitude = r.grants.get(grant.chainId)!;
+          const modifier =
+            grant.kind === 'add'
+              ? createAdditiveModifier({
+                  addend: () => magnitude.value * count(),
+                  description: grant.description,
+                })
+              : createMultiplicativeModifier({
+                  multiplier: () => 1 + magnitude.value * count(),
+                  description: grant.description,
+                });
+          chain.bind({ active: entry.purchasable.active, modifier });
+        }
+      }
+
       // ─── Smelter onTick: raw Level-3 hand-roll ────────────────────────
       // TODO(expansion): wood + minerals → iron is a continuous-conversion
       // shape (see open-loop-engine/docs/candidate-primitives.md). First N=1
       // receipt; second consumer is village.ts's catnip drain.
+      const catnip = resourcesApi.resources.catnip;
       const wood = resourcesApi.resources.wood;
       const minerals = resourcesApi.resources.minerals;
       const iron = resourcesApi.resources.iron;
@@ -303,38 +338,20 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
             def.unlockedByScience == null || sciencesApi.scienceCompleted(def.unlockedByScience)
           );
         },
+        gatherCatnip() {
+          addResource(catnip, gatherCatnipAmount.value);
+        },
+        refineCatnip() {
+          const cost = refineCatnipCost.value;
+          if (!hasResource(catnip, cost)) return false;
+          subtractResource(catnip, cost);
+          addResource(wood, refineCatnipWoodOutput.value);
+          return true;
+        },
       };
 
       buildings = api;
       ctx.provide(BuildingsKey, api);
     },
-  };
-}
-
-/** Build an engine `Grant` for a single `BuildingGrant`. Reads the per-grant
- *  magnitude through the tunable ref so picker perturbations carry through. */
-function buildGrant(
-  grant: BuildingGrant,
-  chain: ModifierChain,
-  magnitude: ComputedRef<number>,
-): Grant {
-  if (grant.kind === 'add') {
-    return {
-      chain,
-      description: grant.description,
-      modifier: createAdditiveModifier({
-        addend: () => magnitude.value,
-        description: grant.description,
-      }),
-    };
-  }
-  // `kind: 'mul'` → multiplicative grant of `(1 + value)` per chain stack.
-  return {
-    chain,
-    description: grant.description,
-    modifier: createMultiplicativeModifier({
-      multiplier: () => 1 + magnitude.value,
-      description: grant.description,
-    }),
   };
 }

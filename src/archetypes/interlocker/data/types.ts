@@ -64,6 +64,13 @@ export interface ResourceSpec {
   baseCapacity: DecimalSource | null;
   /** Whether the resource appears in the crafts panel as a craftable. */
   craftable: boolean;
+  /** Cap semantics when the max-chain is empty (no storage building yet).
+   *  `false`/absent → canon stockpile (`resources.js` `addRes`: `maxValue ||
+   *  MAX_VALUE`, so a zero max is UNCAPPED until a barn/warehouse grants a
+   *  finite cap). `true` → hard cap, a zero max means zero room — used for
+   *  population (kittens), whose only housing is hut grants (canon `maxKittens`,
+   *  base 0). */
+  hardCap?: boolean;
 }
 
 export interface BuildingPrice {
@@ -109,9 +116,13 @@ export interface JobSpec {
   /** Per-kitten-assigned production rate, in units/sec. Source values are
    *  per-tick (Kittens 5 ticks/sec); convert at the reader site by × 5. */
   baseRatePerSecond: number;
-  /** Science id required to unlock job visibility. `null` = visible from start
-   *  (canonical Kittens default). */
+  /** Science id required to unlock job visibility. `null` = not science-gated. */
   unlockedByScience: ScienceId | null;
+  /** Building whose presence (count ≥ 1) unlocks job visibility, matching
+   *  canon's "job threads through a building" pattern (scholar ← library).
+   *  `undefined` = not building-gated. A job is visible when its science gate
+   *  (if any) AND its building gate (if any) are both satisfied. */
+  unlockedByBuilding?: BuildingId;
 }
 
 export interface ScienceSpec {
@@ -156,15 +167,13 @@ export interface InterlockerData {
   /** Per-kitten catnip consumption per second. Source: `village.js:9`
    *  `catnipPerKitten: -0.85 per tick` × 5 ticks/sec = -4.25/sec. */
   catnipPerKittenPerSec: number;
-  /** Base kitten growth rate per second when catnip rate positive. Source:
+  /** Base kitten growth rate per second while the colony is fed. Source:
    *  `village.js:7` `kittensPerTickBase: 0.01 per tick` × 5 = 0.05/sec. The
-   *  village module accumulates this into a sub-kitten progress counter. */
+   *  village module accumulates this into a sub-kitten progress counter, and
+   *  suspends it while the catnip balance is negative (canon `sim.update(0)`,
+   *  village.js:367) — so growth is gated by the sign of the catnip balance,
+   *  not by a fixed threshold. */
   kittenGrowthRatePerSec: number;
-  /** Catnip-rate threshold below which kittens begin to die. Source:
-   *  inferred from `village.js:650+` starvation gate — death triggers when
-   *  resPool.catnip is depleted AND catnipRate ≤ 0. Phase 1 surfaces this as
-   *  a configurable threshold; Phase 5 balance tunes. */
-  starvationCatnipRateThreshold: number;
 }
 
 // ─── Typed read view (data-side predicates avoid engine runtime imports) ──
