@@ -211,3 +211,6 @@ const showDevPanel = ref(false);
 
 - `/work/studio/open-loop-research/practical/ui-ux/layout-spray-2026-04.md` — 42-game spray that validated the 5-shell set and killed the 2×2 idea. Primary reference for shell design.
 - `/work/studio/open-loop-research/practical/ui-ux/game-layout-patterns.md` — deep dives on Cookie Clicker, Progress Knight, Kittens Game.
+
+<!-- Private, gitignored per-repo notes (replaces auto-memory). Resolves to .claude/CLAUDE.local.md. -->
+@CLAUDE.local.md

@@ -3,7 +3,10 @@ dist
 *.local
 .vite
 .mcp.json
-.claude/
+.claude/*
+!.claude/CLAUDE.md
+!.claude/rules/
+.claude/CLAUDE.local.md
 src/components.d.ts
 .codex
 profiles/
