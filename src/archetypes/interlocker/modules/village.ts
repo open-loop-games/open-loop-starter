@@ -23,6 +23,7 @@ import { InterlockerTuningRegistryKey } from './tuning';
 import { ResourcesKey } from './resources';
 import { SciencesKey } from './sciences';
 import { BuildingsKey } from './buildings';
+import { CalendarKey } from './calendar';
 
 /**
  * Village module's public API. Phase 2 worktree C fills the body — Phase 1
@@ -140,10 +141,16 @@ const DEATH_COOLDOWN_SEC = 5;
 export function createVillageModule(_data: InterlockerData): EngineModule {
   return {
     id: 'interlocker/village',
-    dependencies: ['interlocker/tuning', 'interlocker/resources', 'interlocker/sciences'],
+    dependencies: [
+      'interlocker/tuning',
+      'interlocker/resources',
+      'interlocker/sciences',
+      'interlocker/calendar',
+    ],
     install(ctx) {
       const registry = ctx.inject(InterlockerTuningRegistryKey);
       const resources = ctx.inject(ResourcesKey);
+      const calendar = ctx.inject(CalendarKey);
 
       // Resolved lazily — sciences module's stub throws on access in Phase 1.
       // `isJobVisible` only resolves when called from UI, well after Phase 1.
@@ -314,7 +321,15 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         //    `onTick` in buildings.ts; catnip consumption + starvation run
         //    in steps 2 + 3 below.
         for (const id of productionResourceIds) {
-          const rate = Number(resources.rateChains[id].apply(0));
+          // Additive job/building rates scaled by the building multipliers
+          // (lumberMill/mine/quarry/library) via the resources module's
+          // order-independent compose.
+          let rate = resources.productionRate(id);
+          // Canon scales catnip production by the active season (getWeatherMod,
+          // calendar.js:1095): spring ×1.5 … winter ×0.25. Applied here at the
+          // read site (a runtime multiplier on the seasonal economy), not on a
+          // rate chain.
+          if (id === 'catnip') rate *= calendar.catnipMultiplier.value;
           if (rate > 0) {
             addResource(resources.resources[id], rate * dt);
           }

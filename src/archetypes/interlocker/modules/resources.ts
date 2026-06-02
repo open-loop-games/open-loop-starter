@@ -44,8 +44,21 @@ export interface ResourcesApi {
   resources: Record<ResourceId, Resource<Decimal>>;
   /** Per-resource max-cap chain. Building grants push `add`/`mul` modifiers. */
   maxChains: Record<ResourceId, ModifierChain>;
-  /** Per-resource production-rate chain. Job modifiers + building multipliers. */
+  /** Per-resource ADDITIVE production-rate chain. Job rates + additive building
+   *  grants (catnip field) push here. */
   rateChains: Record<ResourceId, ModifierChain>;
+  /** Per-resource MULTIPLICATIVE production-rate chain. Building production
+   *  multipliers (lumberMill wood, mine/quarry minerals, library science) push
+   *  here. Kept separate from `rateChains` because `ModifierChain` composes in
+   *  insertion order over a zero base: a multiplier mixed into the additive
+   *  chain applies to 0 (no-op). `productionRate()` composes them correctly —
+   *  multipliers scale the additive sum. */
+  rateMulChains: Record<ResourceId, ModifierChain>;
+  /** Effective production rate/sec for a resource: the additive sum scaled by
+   *  the multiplicative chain (`rateMul.apply(rate.apply(0))`). Order-independent
+   *  — the canonical "sum the addends, then apply the multipliers" semantics.
+   *  Excludes consumption and seasonal swing (those are caller concerns). */
+  productionRate(id: ResourceId): number;
   /** AND-check across a multi-resource requirement set. Delegates to
    *  `bag.hasAll()` (engine-native). Used by craft inputs + building costs. */
   hasAll(requirements: Partial<Record<ResourceId, number>>): boolean;
@@ -101,11 +114,13 @@ export function createResourcesModule(data: InterlockerData): EngineModule {
       // keeping it typed-uniform avoids special-cases at every reader site).
       const maxChains = {} as Record<ResourceId, ModifierChain>;
       const rateChains = {} as Record<ResourceId, ModifierChain>;
+      const rateMulChains = {} as Record<ResourceId, ModifierChain>;
       const baseCaps = new Map<ResourceId, ReturnType<typeof tunable<DecimalSource>>>();
 
       for (const spec of data.resources) {
         maxChains[spec.id] = createModifierChain(`max-${spec.id}`);
         rateChains[spec.id] = createModifierChain(`rate-${spec.id}`);
+        rateMulChains[spec.id] = createModifierChain(`rate-mul-${spec.id}`);
 
         // Tunable reader for base capacity. Capped resources expose the
         // `resources/<id>/baseCapacity` key (default closure reads
@@ -174,6 +189,10 @@ export function createResourcesModule(data: InterlockerData): EngineModule {
         resources: resourceMap,
         maxChains,
         rateChains,
+        rateMulChains,
+        productionRate(id: ResourceId): number {
+          return Number(rateMulChains[id].apply(rateChains[id].apply(0)));
+        },
         hasAll(requirements: Partial<Record<ResourceId, number>>): boolean {
           // Bag's hasAll signature is Record<string, DecimalSource>; the
           // ResourceId-typed Partial is structurally compatible (string keys,

@@ -52,6 +52,8 @@ export type ScienceId =
 
 export type CraftId = 'wood' | 'beam' | 'slab' | 'plate' | 'scaffold' | 'megalith';
 
+export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter';
+
 // ─── Data shapes ──────────────────────────────────────────────────────────
 
 export interface ResourceSpec {
@@ -158,12 +160,27 @@ export interface CraftSpec {
   unlockedByScience: ScienceId | null;
 }
 
+export interface SeasonSpec {
+  id: SeasonId;
+  name: string;
+  /** Multiplier applied to catnip production while this season is active.
+   *  Source: `calendar.js` season `modifiers.catnip` (spring 1.5, summer 1.0,
+   *  autumn 1.0, winter 0.25). */
+  catnipMultiplier: number;
+}
+
 export interface InterlockerData {
   resources: ResourceSpec[];
   buildings: BuildingSpec[];
   jobs: JobSpec[];
   sciences: ScienceSpec[];
   crafts: CraftSpec[];
+  /** Season cycle in calendar order (spring → winter). */
+  seasons: SeasonSpec[];
+  /** Days per season (canon `calendar.js:218 daysPerSeason: 100`). */
+  daysPerSeason: number;
+  /** Real seconds per in-game day (canon 10 ticks/day ÷ 5 ticks/sec = 2). */
+  secondsPerDay: number;
   /** Per-kitten catnip consumption per second. Source: `village.js:9`
    *  `catnipPerKitten: -0.85 per tick` × 5 ticks/sec = -4.25/sec. */
   catnipPerKittenPerSec: number;

@@ -6,6 +6,7 @@ import { createBuildingsModule } from './buildings';
 import { createVillageModule } from './village';
 import { createWorkshopModule } from './workshop';
 import { createSciencesModule } from './sciences';
+import { createCalendarModule } from './calendar';
 
 export {
   InterlockerDataKey,
@@ -17,6 +18,7 @@ export { BuildingsKey, getBuildings, type BuildingsApi } from './buildings';
 export { VillageKey, getVillage, type VillageApi } from './village';
 export { WorkshopKey, getWorkshop, type WorkshopApi } from './workshop';
 export { SciencesKey, getSciences, type SciencesApi } from './sciences';
+export { CalendarKey, getCalendar, type CalendarApi, type SeasonChangedEvent } from './calendar';
 
 /**
  * Compose the Interlocker modules in dependency order. The engine topo-sorts
@@ -45,6 +47,7 @@ export function createInterlockerModules(data: InterlockerData): EngineModule[] 
   return [
     createTuningModule(data),
     createResourcesModule(data),
+    createCalendarModule(data),
     createSciencesModule(data),
     createVillageModule(data),
     createWorkshopModule(data),

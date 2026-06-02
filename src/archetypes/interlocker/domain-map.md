@@ -16,10 +16,11 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 - **JobId** _(string-literal union)_ — `woodcutter` · `farmer` · `scholar` · `miner`
 - **ScienceId** _(string-literal union)_ — `calendar` · `agriculture` · `mining` · `metal` · `construction` · `architecture`
 - **CraftId** _(string-literal union)_ — `wood` · `beam` · `slab` · `plate` · `scaffold` · `megalith`
+- **SeasonId** _(string-literal union)_ — `spring` · `summer` · `autumn` · `winter`
 
 ## Definitions
 
-`BuildingSpec`, `CraftSpec`, `JobSpec`, `ResourceSpec`, `ScienceSpec`
+`BuildingSpec`, `CraftSpec`, `JobSpec`, `ResourceSpec`, `ScienceSpec`, `SeasonSpec`
 
 ## Relationships
 
@@ -32,7 +33,7 @@ type-graph tools like dependency-cruiser/findReferences miss them.)
 - **JobSpec** → `resource`, `science`, `building`
 - **CraftInput** → `resource`
 - **CraftSpec** → `resource`, `science`
-- **InterlockerData** → `resource`, `building`, `job`, `science`, `craft`
+- **InterlockerData** → `resource`, `building`, `job`, `science`, `craft`, `season`
 - **KittenDiedEvent** → `job`
 - **BuildingPurchasedEvent** → `building`
 - **JobCountChangedEvent** → `job`

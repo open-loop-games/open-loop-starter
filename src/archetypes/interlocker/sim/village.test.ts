@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import {
   createModifierChain,
   createResource,
@@ -38,6 +38,7 @@ import { createTuningModule } from '../modules/tuning';
 import { ResourcesKey, type ResourcesApi } from '../modules/resources';
 import { SciencesKey, type SciencesApi } from '../modules/sciences';
 import { JobAssignmentError, VillageKey, type VillageApi } from '../modules/village';
+import { CalendarKey, type CalendarApi } from '../modules/calendar';
 
 const RESOURCE_IDS: ResourceId[] = [
   'catnip',
@@ -110,10 +111,14 @@ function buildHarness(): Harness {
   >;
   const maxChains: Record<ResourceId, ModifierChain> = {} as Record<ResourceId, ModifierChain>;
   const rateChains: Record<ResourceId, ModifierChain> = {} as Record<ResourceId, ModifierChain>;
+  const rateMulChains: Record<ResourceId, ModifierChain> = {} as Record<ResourceId, ModifierChain>;
   for (const id of RESOURCE_IDS) {
     resources[id] = createResource(ref(0) as never, { displayName: id, id }) as Resource<Decimal>;
     maxChains[id] = createModifierChain(`stub-max-${id}-${Math.random().toString(36).slice(2)}`);
     rateChains[id] = createModifierChain(`stub-rate-${id}-${Math.random().toString(36).slice(2)}`);
+    rateMulChains[id] = createModifierChain(
+      `stub-rate-mul-${id}-${Math.random().toString(36).slice(2)}`,
+    );
   }
   bag.link('kittens', resources.kittens);
   const resourcesApi: ResourcesApi = {
@@ -121,6 +126,8 @@ function buildHarness(): Harness {
     resources,
     maxChains,
     rateChains,
+    rateMulChains,
+    productionRate: (id) => Number(rateMulChains[id].apply(rateChains[id].apply(0))),
     hasAll: () => true,
   };
   ctx.provide(ResourcesKey, resourcesApi);
@@ -132,6 +139,17 @@ function buildHarness(): Harness {
     onScienceCompleted: () => () => {},
   };
   ctx.provide(SciencesKey, sciencesStub);
+
+  // Calendar stand-in — catnipMultiplier 1 keeps these production/starvation
+  // tests season-neutral (the real seasonal swing is exercised in calendar.test).
+  const calendarStub: CalendarApi = {
+    year: computed(() => 0),
+    dayOfSeason: computed(() => 0),
+    season: computed(() => data.seasons[0]),
+    catnipMultiplier: computed(() => 1),
+    onSeasonChanged: () => () => {},
+  };
+  ctx.provide(CalendarKey, calendarStub);
 
   createVillageModule(data).install(ctx);
   const village = ctx.inject(VillageKey);

@@ -12,6 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
+  createAdditiveModifier,
   createEngine,
   createModifierChain,
   createResource,
@@ -65,6 +66,7 @@ interface TestResourcesHandle {
   resources: Record<ResourceId, Resource<Decimal>>;
   maxChains: Record<ResourceId, ModifierChain>;
   rateChains: Record<ResourceId, ModifierChain>;
+  rateMulChains: Record<ResourceId, ModifierChain>;
 }
 
 function createTestResourcesModule(handle: { value: TestResourcesHandle | null }): EngineModule {
@@ -78,6 +80,7 @@ function createTestResourcesModule(handle: { value: TestResourcesHandle | null }
       const resources = {} as Record<ResourceId, Resource<Decimal>>;
       const maxChains = {} as Record<ResourceId, ModifierChain>;
       const rateChains = {} as Record<ResourceId, ModifierChain>;
+      const rateMulChains = {} as Record<ResourceId, ModifierChain>;
       for (const id of RESOURCE_IDS) {
         resources[id] = createResource<Decimal>(new Decimal(0), {
           displayName: id,
@@ -85,6 +88,7 @@ function createTestResourcesModule(handle: { value: TestResourcesHandle | null }
         }) as Resource<Decimal>;
         maxChains[id] = createModifierChain(`${id}-max`);
         rateChains[id] = createModifierChain(`${id}-rate`);
+        rateMulChains[id] = createModifierChain(`${id}-rate-mul`);
       }
       const api: ResourcesApi = {
         bag: new Proxy(
@@ -98,6 +102,8 @@ function createTestResourcesModule(handle: { value: TestResourcesHandle | null }
         resources,
         maxChains,
         rateChains,
+        rateMulChains,
+        productionRate: (id) => Number(rateMulChains[id].apply(rateChains[id].apply(0))),
         hasAll(reqs) {
           for (const [id, amt] of Object.entries(reqs)) {
             if (amt == null) continue;
@@ -106,7 +112,7 @@ function createTestResourcesModule(handle: { value: TestResourcesHandle | null }
           return true;
         },
       };
-      handle.value = { api, resources, maxChains, rateChains };
+      handle.value = { api, resources, maxChains, rateChains, rateMulChains };
       ctx.provide(ResourcesKey, api);
     },
   };
@@ -196,8 +202,11 @@ function createTestTuningModule(): EngineModule {
 interface Bench {
   engine: Engine;
   buildings: BuildingsApi;
+  resourcesApi: ResourcesApi;
   resources: Record<ResourceId, Resource<Decimal>>;
   maxChains: Record<ResourceId, ModifierChain>;
+  rateChains: Record<ResourceId, ModifierChain>;
+  rateMulChains: Record<ResourceId, ModifierChain>;
   completedSciences: { value: Set<ScienceId> };
   consumptionRateChain: ModifierChain;
   craftOutputChain: ModifierChain;
@@ -241,8 +250,11 @@ function bootBench(opts: BootOptions = {}): Bench {
   return {
     engine,
     buildings,
+    resourcesApi: handle.value.api,
     resources: handle.value.resources,
     maxChains: handle.value.maxChains,
+    rateChains: handle.value.rateChains,
+    rateMulChains: handle.value.rateMulChains,
     completedSciences,
     consumptionRateChain,
     craftOutputChain,
@@ -413,5 +425,28 @@ describe('interlocker/buildings — purchasable category + smelter onTick', () =
     // Once `agriculture` flips, pasture becomes visible.
     bench.completedSciences.value.add('agriculture');
     expect(bench.buildings.isVisible('pasture')).toBe(true);
+  });
+
+  it('production multiplier scales the additive rate: lumberMill → +10% wood', () => {
+    // Simulate a woodcutter's additive wood rate (the village binds these onto
+    // rateChains at assignment; here we push it directly).
+    bench.rateChains.wood.add(
+      createAdditiveModifier({ addend: 10, description: 'test-woodcutter' }),
+    );
+    expect(bench.resourcesApi.productionRate('wood')).toBe(10);
+
+    // Build one lumberMill (its `mul` grant routes to the rate-MUL chain).
+    bench.resources.wood.value = new Decimal(1000);
+    bench.resources.minerals.value = new Decimal(1000);
+    bench.resources.iron.value = new Decimal(1000);
+    getPurchasable(bench.buildings, 'lumberMill').purchase(1);
+    expect(bench.buildings.buildingCount('lumberMill')).toBe(1);
+
+    // Multiplier scales the additive sum (10 × 1.1 = 11) — the bug this guards
+    // against left the additive chain unmultiplied (a `mul` over a zero base is
+    // a no-op). The additive chain itself stays clean; the mul lives separately.
+    expect(bench.resourcesApi.productionRate('wood')).toBeCloseTo(11);
+    expect(Number(bench.rateChains.wood.apply(0))).toBe(10);
+    expect(Number(bench.rateMulChains.wood.apply(1))).toBeCloseTo(1.1);
   });
 });

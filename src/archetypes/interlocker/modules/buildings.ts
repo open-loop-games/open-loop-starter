@@ -54,6 +54,12 @@ export interface BuildingsApi {
    *  cost to produce wood. Returns false (no-op) when catnip is short. The
    *  bootstrap channel for the first wood before any woodcutter exists. */
   refineCatnip(): boolean;
+  /** Live catnip-per-gather, catnip-cost-per-refine, and wood-per-refine — the
+   *  tunable opener amounts, surfaced so the action bar can label and gate the
+   *  buttons without duplicating the constants. */
+  readonly gatherCatnipAmount: number;
+  readonly refineCatnipCost: number;
+  readonly refineCatnipWoodOutput: number;
 }
 
 export const BuildingsKey: InjectionKey<BuildingsApi> = Symbol(
@@ -279,7 +285,16 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
         const r = refs.get(def.id)!;
         const count = () => Number(entry.signals.count.value);
         for (const grant of def.grants) {
-          const chain = resolveChain(grant.chainId, resourcesApi, villageApi, workshopApi);
+          // Production multipliers (`<resource>-rate` + kind `mul`: lumberMill,
+          // mine, quarry, library) bind onto the resource's SEPARATE
+          // multiplicative rate chain, not the additive one — a `mul` mixed into
+          // the additive chain applies to a zero base and is silently a no-op.
+          // `productionRate()` composes the two. Consumption/craft-output muls
+          // apply to a non-zero base and stay on their own chains via resolveChain.
+          const rateMulMatch = grant.kind === 'mul' ? /^(.+)-rate$/.exec(grant.chainId) : null;
+          const chain = rateMulMatch
+            ? resourcesApi.rateMulChains[rateMulMatch[1] as keyof typeof resourcesApi.rateMulChains]
+            : resolveChain(grant.chainId, resourcesApi, villageApi, workshopApi);
           if (!chain) continue;
           const magnitude = r.grants.get(grant.chainId)!;
           const modifier =
@@ -347,6 +362,15 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
           subtractResource(catnip, cost);
           addResource(wood, refineCatnipWoodOutput.value);
           return true;
+        },
+        get gatherCatnipAmount() {
+          return gatherCatnipAmount.value;
+        },
+        get refineCatnipCost() {
+          return refineCatnipCost.value;
+        },
+        get refineCatnipWoodOutput() {
+          return refineCatnipWoodOutput.value;
         },
       };
 

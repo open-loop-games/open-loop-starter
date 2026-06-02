@@ -64,6 +64,7 @@ function createTestResourcesModule(handle: { value: TestResourcesHandle | null }
       const resources = {} as Record<ResourceId, Resource<Decimal>>;
       const maxChains = {} as Record<ResourceId, ModifierChain>;
       const rateChains = {} as Record<ResourceId, ModifierChain>;
+      const rateMulChains = {} as Record<ResourceId, ModifierChain>;
       for (const id of RESOURCE_IDS) {
         resources[id] = createResource<Decimal>(new Decimal(0), {
           displayName: id,
@@ -71,6 +72,7 @@ function createTestResourcesModule(handle: { value: TestResourcesHandle | null }
         }) as Resource<Decimal>;
         maxChains[id] = createModifierChain(`${id}-max`);
         rateChains[id] = createModifierChain(`${id}-rate`);
+        rateMulChains[id] = createModifierChain(`${id}-rate-mul`);
       }
       const api: ResourcesApi = {
         bag: new Proxy(
@@ -84,6 +86,8 @@ function createTestResourcesModule(handle: { value: TestResourcesHandle | null }
         resources,
         maxChains,
         rateChains,
+        rateMulChains,
+        productionRate: (id) => Number(rateMulChains[id].apply(rateChains[id].apply(0))),
         hasAll(reqs) {
           for (const [id, amt] of Object.entries(reqs)) {
             if (amt == null) continue;
@@ -130,6 +134,9 @@ function createTestBuildingsModule(workshopCount: { value: number }): EngineModu
     isVisible: () => false,
     gatherCatnip: () => {},
     refineCatnip: () => false,
+    gatherCatnipAmount: 1,
+    refineCatnipCost: 100,
+    refineCatnipWoodOutput: 1,
   };
   return {
     id: 'interlocker/buildings',
