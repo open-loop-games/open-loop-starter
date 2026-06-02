@@ -29,14 +29,17 @@ export interface PrimitiveRef {
 }
 
 export interface BeatRef {
-  /** 1-indexed beat number, matching doc § 4. */
+  /** 1-indexed beat number. */
   n: number;
   label: string;
   /**
-   * Sim-time window (min, max) in seconds within which the beat lands at
-   * default balance. Mirrors the doc's "0:00–0:30" / "1:00–3:00" cells.
+   * Sim-time window (min, max) in seconds where this beat was OBSERVED to land,
+   * measured from a harness run and recorded here — never authored as a target
+   * to tune the source numbers toward (see ARCHETYPES.md § Dev-loop:
+   * measure-and-record). Omit until measured; a beat with no recorded window is
+   * honest, not incomplete.
    */
-  targetSimRange: [number, number];
+  recordedSimRange?: [number, number];
 }
 
 export interface ExemplarRef {

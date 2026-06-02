@@ -24,10 +24,7 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
       <h2>{{ manifest.name }}</h2>
     </header>
 
-    <section
-      v-if="overview"
-      class="detail__section"
-    >
+    <section v-if="overview" class="detail__section">
       <MarkdownDoc :source="overview" />
     </section>
 
@@ -42,18 +39,12 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="prim in manifest.primitives"
-            :key="prim.name"
-          >
+          <tr v-for="prim in manifest.primitives" :key="prim.name">
             <td>
               <code>{{ prim.name }}</code>
             </td>
             <td>
-              <span
-                class="chip"
-                :data-layer="prim.layer"
-              >{{ prim.layer }}</span>
+              <span class="chip" :data-layer="prim.layer">{{ prim.layer }}</span>
             </td>
             <td>
               <code class="path">{{ prim.path }}</code>
@@ -66,37 +57,25 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
     <section class="detail__section">
       <h3>Beats</h3>
       <ol class="beats">
-        <li
-          v-for="beat in manifest.beats"
-          :key="beat.n"
-        >
+        <li v-for="beat in manifest.beats" :key="beat.n">
           <strong>{{ beat.n }}.</strong> {{ beat.label }}
-          <span class="beat-window">
-            ({{ beat.targetSimRange[0] }}–{{ beat.targetSimRange[1] }}s)
+          <span v-if="beat.recordedSimRange" class="beat-window">
+            (observed {{ beat.recordedSimRange[0] }}–{{ beat.recordedSimRange[1] }}s)
           </span>
         </li>
       </ol>
     </section>
 
-    <section
-      v-if="manifest.exemplars && manifest.exemplars.length"
-      class="detail__section"
-    >
+    <section v-if="manifest.exemplars && manifest.exemplars.length" class="detail__section">
       <h3>Exemplars</h3>
       <ul class="reflist">
-        <li
-          v-for="ex in manifest.exemplars"
-          :key="ex.title"
-        >
+        <li v-for="ex in manifest.exemplars" :key="ex.title">
           <strong>{{ ex.title }}</strong>
           <code class="path">{{ ex.analysisPath }}</code>
         </li>
       </ul>
     </section>
-    <section
-      v-else
-      class="detail__section detail__section--note"
-    >
+    <section v-else class="detail__section detail__section--note">
       <em>Declared invention — no listed exemplars.</em>
     </section>
   </div>

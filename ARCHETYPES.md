@@ -48,37 +48,48 @@ inheriting a composition they proved viable.
 
 ---
 
-## The 1–2 hour first-completion arc
+## The first-completion arc
 
-Every archetype is scoped to a **1–2 hour first-completion arc**: the time for
-a new player to experience one full traversal of the skeleton (first producer
-→ first upgrade → first prestige, or the archetype's equivalent). This is the
-design constraint that forces minimum-viable pattern density. You cannot
-cargo-cult a 100-hour reference game at 1/100 scale; you have to pick which
-pattern beats actually land in 90 minutes and build only those.
+Every archetype proves one **first-completion arc**: a single full traversal of
+the skeleton (first producer → first upgrade → first prestige, or the
+archetype's equivalent), ported faithfully from one canonical exemplar. The arc
+is defined by *content* — the slice of the canonical game it reproduces — not by
+a target clock. How long that traversal takes is **measured from the built
+system, never prescribed**: you port the canon math faithfully, then observe how
+the arc paces. Inventing a duration target and bending the source numbers to hit
+it distorts the very math the port exists to preserve (see § Dev-loop
+integration — measure-and-record).
 
-This is the *showcase* arc. A fork that wants 100 hours of content extends
-after the skeleton lands. The 1–2h arc is what the shared archetype proves; the
-long tail is what the fork proves.
+This is the *showcase* arc. A fork that wants a longer game extends after the
+skeleton lands. The first arc is what the shared archetype proves; the long tail
+is what the fork proves.
 
 ---
 
 ## Dev-loop integration
 
 Each archetype spec is a **harness-testable game shape**, not just a content
-sketch. Three tools wire in directly:
+sketch. The harness is the agent's feedback loop — how it confirms its own work
+runs — so it stays. What's retired is the inverted authoring it used to imply.
 
-- **Beat map** — 5–8 ordered beats across the arc, each with a target sim-time
-  window (e.g. *first prestige: 20–30 min of sim time*).
+- **Beat map** — 5–8 ordered milestones across the arc (first producer, first
+  prestige, …). Beats are *labels* for where the arc turns; their **sim-time
+  windows are measured from a harness run and recorded, never authored as
+  targets**. A beat with no recorded window yet is honest — it just hasn't been
+  measured.
 - **Balance probes** — Workbench perturbations (cost scaling ±20%, tick rate
-  ±10%, …) with tolerance assertions per beat.
-- **Sim assertions** — headless `runHeadless` / `runMatrix` tests, checked in
-  as part of the archetype, that fail if beats land outside tolerance.
+  ±10%, …) that observe how each beat moves under stress.
+- **Sim assertions** — headless `runHeadless` / `runMatrix` tests, checked in,
+  that lock the *measured* beat windows (with tolerance) as regression guards.
 
-The intended dev workflow inverts the usual: write the sim test first, then
-tune costs/rates in `balance.ts` until it passes. Content modules become
-hypotheses the harness falsifies. Forks inherit the beat map and probes when
-they theme a skeleton, and only swap the costume.
+**Measure-and-record, never set-as-target.** Port the canon math faithfully
+first; then run the harness to see where the beats land and record those
+windows. The sim test guards the observed behavior from regressing — it is not a
+target you tune the source numbers toward. Bending costs/rates to hit an
+invented window distorts the canonical math the port exists to preserve (the
+mistake the old "write the sim test first, tune until it passes" loop baked in).
+Forks inherit the beat labels and probes when they theme a skeleton, and
+re-measure after they retune.
 
 Wires through `src/ui/panels/BalanceWorkbench.vue` and
 `open-loop-engine/harness`.
