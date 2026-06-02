@@ -6,7 +6,8 @@ import type { BuildingRow } from '../composables';
 
 defineProps<{
   row: BuildingRow;
-  bulkLabel: string;
+  /** Resolved bulk count (×1/×10/×100) the click should purchase. */
+  bulk: number;
 }>();
 </script>
 
@@ -16,25 +17,15 @@ defineProps<{
     class="building-row"
     :data-testid="`building-${row.id}`"
   >
-    <div class="building-row__head">
-      <strong class="building-row__name">{{ row.name }}</strong>
-      <span class="building-row__count">{{ row.count.value }}</span>
-    </div>
     <RichTooltip side="right">
       <Button
         :disabled="!row.canBuy.value"
         :data-testid="`buy-${row.id}`"
-        class="building-row__buy"
-        @click="row.buy(1)"
+        class="building-row__btn"
+        @click="row.buy(bulk)"
       >
-        <span>Buy {{ bulkLabel }}</span>
-        <span class="building-row__cost-summary">
-          <span
-            v-for="line in row.costs.value"
-            :key="line.resource"
-            :data-satisfied="line.satisfied.value"
-          >{{ format(line.amount.value, 0) }} {{ line.resourceName }}</span>
-        </span>
+        <span class="building-row__name">{{ row.name }}</span>
+        <span class="building-row__count">{{ row.count.value }}</span>
       </Button>
       <template #content>
         <div class="building-row__tooltip">
@@ -71,20 +62,19 @@ defineProps<{
 
 <style scoped>
 .building-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-xs);
-  padding: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   list-style: none;
 }
-.building-row__head {
+/* Canon's building is a single full-width button: name on the left, owned
+   count on the right; cost lives in the tooltip, affordability in the
+   disabled state. */
+.building-row__btn {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
+  justify-content: space-between;
   gap: var(--gap-sm);
+  width: 100%;
+  padding: var(--gap-xs) var(--gap-sm);
+  text-align: left;
 }
 .building-row__name {
   font-weight: 600;
@@ -92,27 +82,6 @@ defineProps<{
 .building-row__count {
   font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
-}
-.building-row__buy {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-  width: 100%;
-  text-align: left;
-}
-.building-row__cost-summary {
-  display: flex;
-  gap: var(--gap-xs);
-  flex-wrap: wrap;
-  font-size: 0.78em;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-muted);
-}
-.building-row__cost-summary > span[data-satisfied='false'] {
-  color: var(--color-text);
-  opacity: 0.55;
-  text-decoration: line-through;
 }
 .building-row__tooltip {
   display: flex;

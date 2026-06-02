@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, ref } from 'vue';
 import { type Engine, type EngineModule } from '@open-loop/engine';
-import { AppFrame, DevPanelOverlay, SidebarMainShell, useModalStack } from '@/lib';
+import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
@@ -9,11 +9,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
-import ResourceSidebar from './panels/ResourceSidebar.vue';
-import BuildingsPanel from './panels/BuildingsPanel.vue';
-import JobAssignmentPanel from './panels/JobAssignmentPanel.vue';
-import CraftsPanel from './panels/CraftsPanel.vue';
-import SciencePanel from './panels/SciencePanel.vue';
+import InterlockerGameView from './InterlockerGameView.vue';
 
 const engine = inject<Engine>('engine')!;
 const currentScreen = ref<Screen>(Screen.Slots);
@@ -74,17 +70,7 @@ function getActiveModules(): EngineModule[] {
         </template>
       </SystemHeader>
     </template>
-    <SidebarMainShell sidebar-width="220px">
-      <template #sidebarResources>
-        <ResourceSidebar />
-      </template>
-      <template #sidebar>
-        <JobAssignmentPanel />
-        <SciencePanel />
-      </template>
-      <BuildingsPanel />
-      <CraftsPanel />
-    </SidebarMainShell>
+    <InterlockerGameView />
   </AppFrame>
   <ToastContainer />
   <DevDiagnostics

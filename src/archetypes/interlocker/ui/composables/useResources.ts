@@ -1,7 +1,7 @@
 import { computed, type ComputedRef, type Ref } from 'vue';
 import { Decimal, type DecimalSource } from '@open-loop/engine';
 import type { ResourceReadout, ResourceHighlight } from '@/ui/compositions';
-import { getResources } from '../../modules';
+import { getCalendar, getResources } from '../../modules';
 import { DEFAULT_INTERLOCKER_DATA } from '../../data';
 import type { InterlockerData, ResourceSpec } from '../../data/types';
 
@@ -17,18 +17,19 @@ import type { InterlockerData, ResourceSpec } from '../../data/types';
  */
 export function useResources(): ResourceReadout[] {
   const resources = getResources();
+  const calendar = getCalendar();
   const data = DEFAULT_INTERLOCKER_DATA;
-  return data.resources.map((spec) => buildReadout(spec, resources, data));
+  return data.resources.map((spec) => buildReadout(spec, resources, calendar, data));
 }
 
 function buildReadout(
   spec: ResourceSpec,
   resources: ReturnType<typeof getResources>,
+  calendar: ReturnType<typeof getCalendar>,
   data: InterlockerData,
 ): ResourceReadout {
   const resourceRef = resources.resources[spec.id];
   const maxChain = resources.maxChains[spec.id];
-  const rateChain = resources.rateChains[spec.id];
 
   // `Resource<Decimal>` exposes `.value` as a writable getter/setter backed by
   // its internal persistent ref; treat it as a Ref for the readout contract.
@@ -42,15 +43,18 @@ function buildReadout(
       : undefined;
 
   // Rate = chain.apply(0) sums all positive/negative contributions onto the
-  // zero base. Catnip is special: village's onTick consumes outside the chain
-  // (via subtractResource), so the displayed rate subtracts the live
-  // consumption magnitude. Other resources read the rate chain directly.
+  // zero base. Catnip is special: its production is scaled by the active
+  // season (mirrors village onTick's read-site multiply), and consumption
+  // happens outside the chain (village subtractResource), so the displayed
+  // rate is seasoned-production minus the live consumption magnitude. Other
+  // resources read the rate chain directly.
   const rate = computed<DecimalSource>(() => {
-    const baseRate = Number(rateChain.apply(0));
+    const baseRate = resources.productionRate(spec.id);
     if (spec.id === 'catnip') {
+      const production = baseRate * calendar.catnipMultiplier.value;
       const kittens = Number(resources.resources.kittens.value);
       const perKitten = Math.abs(data.catnipPerKittenPerSec);
-      return baseRate - perKitten * kittens;
+      return production - perKitten * kittens;
     }
     return baseRate;
   });

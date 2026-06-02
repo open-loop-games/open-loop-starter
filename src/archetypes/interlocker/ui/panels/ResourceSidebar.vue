@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import { ResourceHeaderStrip } from '@/ui/compositions';
 import { useResources } from '../composables';
+import ResourceList from '../components/ResourceList.vue';
 
 const readouts = useResources();
 </script>
 
 <template>
-  <ResourceHeaderStrip
-    :readouts="readouts"
-    orientation="vertical-sidebar"
-  />
+  <ResourceList :readouts="readouts" />
 </template>
