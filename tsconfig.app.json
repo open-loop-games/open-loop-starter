@@ -15,14 +15,14 @@
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
   "exclude": [
-    "src/archetypes/_template",
-    "src/archetypes/scaler/achievements.ts",
-    "src/archetypes/scaler/buy.ts",
-    "src/archetypes/scaler/challenges.ts",
-    "src/archetypes/scaler/reset.ts",
-    "src/archetypes/scaler/runes.ts",
-    "src/archetypes/scaler/synergism.ts",
-    "src/archetypes/scaler/upgrades.ts",
-    "src/archetypes/scaler/variables.ts"
+    "src/showcase/archetypes/_template",
+    "src/showcase/archetypes/scaler/achievements.ts",
+    "src/showcase/archetypes/scaler/buy.ts",
+    "src/showcase/archetypes/scaler/challenges.ts",
+    "src/showcase/archetypes/scaler/reset.ts",
+    "src/showcase/archetypes/scaler/runes.ts",
+    "src/showcase/archetypes/scaler/synergism.ts",
+    "src/showcase/archetypes/scaler/upgrades.ts",
+    "src/showcase/archetypes/scaler/variables.ts"
   ]
 }

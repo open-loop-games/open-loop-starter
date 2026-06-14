@@ -14,7 +14,7 @@ Layout shells, AppFrame, modal stack, default CSS tokens, reset, and the bridge 
 
 Maintenance discipline: stability. Forks copy this and don't want it shifting under them. The bar for new scaffold code is "would every new game want this on day one?"
 
-### Archetype demos (`src/archetypes/<name>/`)
+### Archetype demos (`src/showcase/archetypes/<name>/`)
 
 Forkable best-practice implementations of validated archetypes, ported as the first arc of canonical games with file-header citations. Each archetype is self-bootable with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts` — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton.
 
@@ -22,7 +22,9 @@ This half is a research-output surface that happens to live inside starter. Main
 
 ### Fork workflow
 
-Clone the repo, pick one archetype, delete the others + `src/gallery/` (when it lands), keep your one archetype as the whole app.
+`pnpm eject <archetype> [--name <game>]` turns the starter into a single-game fork in one step: hoists your archetype to `src/game/`, rewrites `main.ts` to a single-archetype boot, repoints/prunes config, and deletes the entire demo/research surface (`src/showcase/` + the repo-root demo docs). It's **dry-run by default** — it prints the plan and touches nothing; pass `--execute` to perform it. Implementation in `scripts/eject.mjs`, locked by `src/test/eject.test.ts`.
+
+The demo surface lives behind one strip boundary — everything under `src/showcase/` (archetypes, gallery, about, sandbox). The scaffold (`src/lib`, `src/ui`, `src/composables`, `src/modules`, `src/balance`, `src/styles`) never imports across that boundary; an eslint rule enforces the one-way cut so the ejected game can't break.
 
 ## Commands
 
@@ -41,14 +43,17 @@ pnpm format           # prettier --write
 
 ```
 src/
-├── main.ts              # Mounts the active archetype via its createApp() factory
-├── App.vue              # Transitional shell; replaced by archetype-owned root on fork
-├── types.ts             # Shared starter types
-├── archetypes/          # Self-bootable archetype demos (see § Archetype convention)
-│   ├── producer/
-│   ├── looper/
-│   ├── scaler/
-│   └── …                # one directory per canonical + candidate archetype
+├── main.ts              # Gallery boot; `pnpm eject` rewrites it to a single createApp().mount()
+├── types.ts             # Shared starter types (ArchetypeManifest — gallery contract)
+├── showcase/            # ← STRIP BOUNDARY. `pnpm eject` deletes this whole tree.
+│   ├── archetypes/      # Self-bootable archetype demos (see § Archetype convention)
+│   │   ├── producer/
+│   │   ├── looper/
+│   │   ├── scaler/
+│   │   └── …            # one directory per canonical + candidate archetype
+│   ├── gallery/         # Landing surface — enumerates archetypes via import.meta.glob
+│   ├── about/           # About panel content
+│   └── sandbox/         # SandboxWrapper — mounts/unmounts a demo for the gallery
 ├── lib/                 # Scaffold layout/theme layer
 │   ├── shells/          # 5 layout shells validated by the 42-game spray
 │   ├── frame/           # AppFrame: header + shell + modal stack + toasts + theme
@@ -71,15 +76,15 @@ src/
     ├── screens/         # Cross-archetype screens (SlotScreen, GameScreen)
     ├── panels/          # Cross-archetype panels (BalanceWorkbench)
     └── components/      # Shared primitives (Tooltip, ProgressBar, BaseModal, Tabs, …)
-                         # Archetype-specific SFCs live under src/archetypes/<name>/ui/
+                         # Archetype-specific SFCs live under src/showcase/archetypes/<name>/ui/
 ```
 
 ### Archetype convention
 
-Each archetype under `src/archetypes/<name>/` is self-bootable and follows the same colocated shape (matches `/work/studio/incloneution`):
+Each archetype under `src/showcase/archetypes/<name>/` is self-bootable and follows the same colocated shape (matches `/work/studio/incloneution`):
 
 ```
-src/archetypes/<name>/
+src/showcase/archetypes/<name>/
 ├── data/            # Pure config. Typed defs + balance constants. Skeleton + balance
 │                    # lens lives here as comment sections, not separate files.
 ├── modules/         # Engine modules; factory-constructed, closing over data.
@@ -91,9 +96,9 @@ src/archetypes/<name>/
 
 **Dependency direction (strict):** `data → modules → ui`, with composables between modules and ui when they earn the layer (see § Layering). Data never imports from modules; composables and components never contain game logic.
 
-**Port methodology lives next to the code** at `src/archetypes/README.md` (mirrored at `archetypes/README.md`) — phases, byte-landing discipline, walkthrough gate, lens conventions. Reference reading, not auto-loaded; consult before starting a port.
+**Port methodology lives next to the code** at `src/showcase/archetypes/README.md` (mirrored at `archetypes/README.md`) — phases, byte-landing discipline, walkthrough gate, lens conventions. Reference reading, not auto-loaded; consult before starting a port.
 
-**Fork workflow:** clone the repo, pick one archetype, delete the others + `src/gallery/` (when it lands), keep your one archetype as the whole app.
+**Fork workflow:** `pnpm eject <archetype>` (see § Fork workflow above) — hoists one archetype to `src/game/` and deletes the rest of `src/showcase/`.
 
 ### Layering
 
@@ -182,7 +187,7 @@ const showDevPanel = ref(false);
 - Archetype `data/` is pure config — typed defs and balance constants only; modules read data at construction via factory closure.
 - Archetype data lives inline in `data/*.ts` with the skeleton + balance lens as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`) — no parallel `vars/` layer, no codegen round-trips.
 - Each archetype carries a `domain-map.config.mjs` + generated `domain-map.md` — a per-game map of its own domain language (vocabulary + is-a + reference graph) sourced from the `data/` types by the engine's `ol-domain-map` tool. Regenerate all seven with `pnpm domain-map`. This is a read-only research surface (like `overview.md`): generated FROM the types, never feeding back IN — so it's drift-proof, not a codegen round-trip. Edit the config (suffixes, nouns, curated disambiguators), never the `.md`. Each committed map doubles as a forkable best-practice example.
-- Game-specific content lives under `src/archetypes/<name>/`; cross-archetype `src/modules/` and `src/ui/` stay archetype-agnostic.
+- Game-specific content lives under `src/showcase/archetypes/<name>/`; cross-archetype `src/modules/` and `src/ui/` stay archetype-agnostic.
 - Layering inside each archetype runs `data → modules → composables → ui`.
 - Layout uses `src/lib/` shells and AppFrame; `src/lib/` is presentational, with engine bridging in `src/ui/`.
 - Theme by setting CSS variables (no Tailwind, no shadcn-vue).

@@ -13,14 +13,14 @@ export default [
       'tools/eslint-rules/**',
       // Canonical Synergism snapshot files — kept verbatim as port reference;
       // not on the build path. tsconfig.app.json excludes the same set.
-      'src/archetypes/scaler/achievements.ts',
-      'src/archetypes/scaler/buy.ts',
-      'src/archetypes/scaler/challenges.ts',
-      'src/archetypes/scaler/reset.ts',
-      'src/archetypes/scaler/runes.ts',
-      'src/archetypes/scaler/synergism.ts',
-      'src/archetypes/scaler/upgrades.ts',
-      'src/archetypes/scaler/variables.ts',
+      'src/showcase/archetypes/scaler/achievements.ts',
+      'src/showcase/archetypes/scaler/buy.ts',
+      'src/showcase/archetypes/scaler/challenges.ts',
+      'src/showcase/archetypes/scaler/reset.ts',
+      'src/showcase/archetypes/scaler/runes.ts',
+      'src/showcase/archetypes/scaler/synergism.ts',
+      'src/showcase/archetypes/scaler/upgrades.ts',
+      'src/showcase/archetypes/scaler/variables.ts',
     ],
   },
   js.configs.recommended,
@@ -53,7 +53,7 @@ export default [
   // service can't resolve those files; keep them on the basic-lint pass only.
   {
     files: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.vue'],
-    ignores: ['src/archetypes/_template/**'],
+    ignores: ['src/showcase/archetypes/_template/**'],
     languageOptions: {
       parserOptions: {
         parser: tseslint.parser,
@@ -67,6 +67,36 @@ export default [
     },
     rules: {
       'open-loop/no-decimal-relational-operator': 'error',
+    },
+  },
+  // Layering: the scaffold never imports the demo/showcase surface. The cut is
+  // one-way — `pnpm eject` deletes `src/showcase/`, so any scaffold-side import
+  // reaching into it would break the ejected game. Shared code belongs in the
+  // scaffold (src/ui, src/composables, …), not behind the strip boundary.
+  // main.ts (the entry, rewritten on eject) and tests are intentionally exempt.
+  {
+    files: [
+      'src/lib/**/*.{ts,vue}',
+      'src/ui/**/*.{ts,vue}',
+      'src/composables/**/*.{ts,vue}',
+      'src/modules/**/*.{ts,vue}',
+      'src/balance/**/*.{ts,vue}',
+      'src/boot.ts',
+      'src/types.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/showcase', '@/showcase/*', '@/showcase/**'],
+              message:
+                'Scaffold must not import the showcase (demo) surface — it is deleted on `pnpm eject`. Put shared code in the scaffold (src/ui, src/composables, …) instead.',
+            },
+          ],
+        },
+      ],
     },
   },
 ];

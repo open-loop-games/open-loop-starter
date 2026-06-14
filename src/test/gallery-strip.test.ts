@@ -7,9 +7,9 @@
  *   <delete the other archetype directories>
  *
  * If anything under `src/gallery/**` or `src/about/**` hard-imports a
- * specific archetype (e.g. `from '@/archetypes/producer'`), that strip
+ * specific archetype (e.g. `from '@/showcase/archetypes/producer'`), that strip
  * cascades into broken imports. Only `import.meta.glob(...)` over the
- * `@/archetypes/*\/index.ts` wildcard is allowed — the eager glob
+ * `@/showcase/archetypes/*\/index.ts` wildcard is allowed — the eager glob
  * vanishes with the gallery, so its bundle effect goes away too.
  *
  * The check is a textual scan over file sources loaded via Vite's
@@ -18,13 +18,13 @@
  */
 import { describe, it, expect } from 'vitest';
 
-const gallerySources = import.meta.glob('../gallery/**/*.{ts,vue}', {
+const gallerySources = import.meta.glob('../showcase/gallery/**/*.{ts,vue}', {
   query: '?raw',
   import: 'default',
   eager: true,
 }) as Record<string, string>;
 
-const aboutSources = import.meta.glob('../about/**/*.{ts,vue}', {
+const aboutSources = import.meta.glob('../showcase/about/**/*.{ts,vue}', {
   query: '?raw',
   import: 'default',
   eager: true,
@@ -85,13 +85,13 @@ function findHardImports(source: string, file: string): Hit[] {
   const cleaned = stripComments(source);
   const cleanedLines = cleaned.split('\n');
   const originalLines = source.split('\n');
-  // `from '@/archetypes/<name>...'` (static) — `<name>` may not begin
+  // `from '@/showcase/archetypes/<name>...'` (static) — `<name>` may not begin
   // with `*`, which is the only allowed glob-pattern reference.
-  const STATIC_IMPORT = /from\s+['"]@\/archetypes\/(?!\*)/;
-  // `import('@/archetypes/<name>')` (dynamic) — also disallowed: nothing
+  const STATIC_IMPORT = /from\s+['"]@\/showcase\/archetypes\/(?!\*)/;
+  // `import('@/showcase/archetypes/<name>')` (dynamic) — also disallowed: nothing
   // in the gallery should be calling a specific archetype, even lazily.
-  // Allowed: `import.meta.glob('@/archetypes/*\/...')`.
-  const DYNAMIC_IMPORT = /\bimport\s*\(\s*['"]@\/archetypes\/(?!\*)/;
+  // Allowed: `import.meta.glob('@/showcase/archetypes/*\/...')`.
+  const DYNAMIC_IMPORT = /\bimport\s*\(\s*['"]@\/showcase\/archetypes\/(?!\*)/;
   for (let i = 0; i < cleanedLines.length; i++) {
     const line = cleanedLines[i];
     if (STATIC_IMPORT.test(line) || DYNAMIC_IMPORT.test(line)) {
@@ -102,7 +102,7 @@ function findHardImports(source: string, file: string): Hit[] {
 }
 
 describe('gallery strip-cleanliness', () => {
-  it('nothing under src/gallery/** hard-imports @/archetypes/<name>', () => {
+  it('nothing under src/gallery/** hard-imports @/showcase/archetypes/<name>', () => {
     const files = Object.entries(gallerySources);
     expect(files.length).toBeGreaterThan(0);
     const hits: Hit[] = [];
@@ -119,7 +119,7 @@ describe('gallery strip-cleanliness', () => {
     ).toEqual([]);
   });
 
-  it('nothing under src/about/** hard-imports @/archetypes/<name>', () => {
+  it('nothing under src/about/** hard-imports @/showcase/archetypes/<name>', () => {
     // about/ may legitimately be md-only (no .ts/.vue files). That's fine —
     // there's nothing to scan, and nothing to break.
     const hits: Hit[] = [];

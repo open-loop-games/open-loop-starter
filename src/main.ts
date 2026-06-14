@@ -1,6 +1,6 @@
 /**
  * Gallery is the landing surface. The gallery enumerates archetypes via
- * `import.meta.glob('@/archetypes/*\/index.ts')` and mounts each demo
+ * `import.meta.glob('@/showcase/archetypes/*\/index.ts')` and mounts each demo
  * through `src/ui/sandbox/SandboxWrapper.vue`.
  *
  * Forks delete `src/gallery/` and `src/about/`, then revert this file to
@@ -9,7 +9,7 @@
  *
  * ```ts
  * import { effectScope } from 'vue';
- * import { createApp } from '@/archetypes/producer';
+ * import { createApp } from '@/showcase/archetypes/producer';
  * import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
  * import { useNotation } from '@/composables/useNotation';
  * import '@/lib/styles/reset.css';
@@ -22,7 +22,7 @@
  * ```
  */
 import { createApp, effectScope } from 'vue';
-import { GalleryApp } from '@/gallery';
+import { GalleryApp } from '@/showcase/gallery';
 import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
 import { useNotation } from '@/composables/useNotation';
 import '@/lib/styles/reset.css';
