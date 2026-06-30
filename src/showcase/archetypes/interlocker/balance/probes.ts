@@ -27,15 +27,19 @@
  *    (smelter count × 0.1 iron/sec). Confirms the hand-roll matches the
  *    candidate `createContinuousConversion`'s expected per-tick semantics.
  *
- * 4. **End-to-end arc smoke.** Build an engine, install a minimal greedy
- *    bot (buy cheapest visible building, hire farmer first, research in
- *    cascade order), run to manifest's 2h budget, record beat-1..beat-3
- *    fire-times (beats 4–6 are out of reach without crafts policy; out of
- *    scope for this pass).
+ * 4. **End-to-end arc smoke.** Build an engine, install a reference bot
+ *    (gather/refine + building/research/job/craft policy informed by Kitten
+ *    Scientists' `VillageManager`/`WorkshopManager` — see in-line citations),
+ *    run within a sim-time budget, and record when each beat fires. Beats are
+ *    timeline points that show how the arc's progression flows, not budgets
+ *    to tune toward — there is no pass/fail verdict here by design (see
+ *    `ARCHETYPES.md` § Dev-loop integration and `studio/open-loop-engine#2`
+ *    for the harness-level follow-up this probe works around).
  */
 
 import { Decimal, addResource, createAdditiveModifier, runUntil } from '@open-loop/engine';
 import { createInterlockerEngine } from '..';
+import { DAYS_PER_SEASON, SEASONS, SECONDS_PER_DAY } from '../data/calendar';
 import { BuildingsKey, ResourcesKey, SciencesKey, VillageKey, WorkshopKey } from '../modules';
 import type { BuildingId, CraftId, JobId, ResourceId, ScienceId } from '../data/types';
 
@@ -317,12 +321,19 @@ function probeSmelter(durationSec: number, smelterCount: number): SmelterRow {
 
 // ─── Probe 4 — end-to-end arc smoke ───────────────────────────────────────
 
+// Beats are timeline points that show how the arc's progression flows, not
+// budgets to tune toward (ARCHETYPES.md § Dev-loop integration —
+// measure-and-record). This row reports only what was observed; there is no
+// pass/fail verdict to compute, by design — see `studio/open-loop-engine#2`
+// for the harness-level follow-up (`runProbe`'s `targetWindow`/`inWindow`
+// shape still invites exactly this anti-pattern, which is why these fields
+// existed here in the first place — they previously carried the *same*
+// `targetSimRange` numbers `manifest.ts` explicitly disowns as
+// calibration-pending and discredited).
 interface BeatRow {
   id: number;
   label: string;
-  targetWindowSec: [number, number];
   fireTimeSec: number | null;
-  inWindow: boolean | null;
 }
 
 function probeArcSmoke(maxSimSec: number): {
@@ -392,22 +403,43 @@ function probeArcSmoke(maxSimSec: number): {
 
   const CLICKS_PER_TICK = 5;
   // Wood is the scarce structural resource (huts scale ×2.5, workshop needs 100);
-  // catnip is abundant (farmers + fields cap it out). Refine converts the
-  // otherwise-wasted catnip surplus into wood, holding a deep reserve so huts +
-  // workshop are affordable without waiting on the trickle of woodcutters.
+  // catnip is abundant in-season. Refine converts spendable catnip surplus
+  // into wood, but must never raid the colony's winter cushion.
   const WOOD_RESERVE = 300;
-  const REFINE_CATNIP_FLOOR = 200; // keep this much catnip; refine only above it
   const HUT_NET = 2 * CATNIP_PER_KITTEN + SURPLUS; // surplus needed to grow housing
+
+  // Winter reserve — modeled on Kitten Scientists' `WorkshopManager
+  // .getValueAvailable`/`getPotentialCatnip(worstWeather: true)`: always
+  // project production at the *worst* season's multiplier (never the
+  // current one) and, if that projected rate is a net deficit, hold back
+  // enough catnip to survive the deficit for a full season before letting
+  // any consumer (there: crafting; here: refine) touch it. A flat numeric
+  // floor (the previous `REFINE_CATNIP_FLOOR = 200`) doesn't scale with
+  // population or production and can starve the colony come winter, or
+  // conversely lock away catnip the colony doesn't actually need protected.
+  const WINTER_CATNIP_MULTIPLIER = Math.min(...SEASONS.map((s) => s.catnipMultiplier));
+  const WINTER_DURATION_SEC = DAYS_PER_SEASON * SECONDS_PER_DAY;
+  function winterCatnipReserve(): number {
+    const k = Number(resources!.resources.kittens.value);
+    const fieldsProd = buildings!.buildingCount('field') * FIELD_CATNIP;
+    const farmersProd = Number(village!.jobCounts.farmer.value) * FARMER_CATNIP;
+    const worstCaseProduction = (fieldsProd + farmersProd) * WINTER_CATNIP_MULTIPLIER;
+    const worstCaseDeficit = Math.max(0, CATNIP_PER_KITTEN * k - worstCaseProduction);
+    return worstCaseDeficit * WINTER_DURATION_SEC;
+  }
+
   function gatherClicks(): void {
     for (let i = 0; i < CLICKS_PER_TICK; i++) buildings!.gatherCatnip();
   }
   function refineSurplus(): void {
-    // Runs AFTER building so fields/farmers get first call on catnip. Drains the
-    // surplus above the floor into wood (multiple refines/tick when flush), up to
-    // the reserve — turning capped, otherwise-wasted catnip into structural wood.
+    // Runs AFTER building so fields/farmers get first call on catnip. Drains
+    // the surplus above the winter reserve into wood (multiple refines/tick
+    // when flush), up to the wood reserve — turning catnip the colony
+    // wouldn't need even at worst-case winter production into structural wood.
+    const reserve = winterCatnipReserve();
     let wood = Number(resources!.resources.wood.value);
     for (let i = 0; i < 10 && wood < WOOD_RESERVE; i++) {
-      if (Number(resources!.resources.catnip.value) <= REFINE_CATNIP_FLOOR) break;
+      if (Number(resources!.resources.catnip.value) <= reserve) break;
       if (!buildings!.refineCatnip()) break;
       wood = Number(resources!.resources.wood.value);
     }
@@ -477,46 +509,59 @@ function probeArcSmoke(maxSimSec: number): {
     }
   }
 
-  // Target-based allocation, recomputed each tick so the split adapts as the
-  // population grows. Catnip solvency comes first (enough farmers to hold the
-  // surplus), then scholars drive the science cascade, then miners feed the
-  // smelter → crafts, then woodcutters mop up.
-  function allocateJobs(): void {
+  // Target-based allocation, recomputed fully each tick — matching the
+  // canon UI, where every job count is a freely adjustable slider, not a
+  // one-way "kitten picks a career at birth" assignment. Catnip solvency
+  // comes first (enough farmers to hold current consumption); the remainder
+  // splits evenly across the other eligible jobs (Kitten Scientists'
+  // `VillageManager.autoDistributeKittens` policy: assign free kittens to
+  // whichever unlocked job currently has the fewest, rather than a single
+  // priority job absorbing the rest). The even split uses a tick-rotating
+  // remainder so ties don't always resolve to the same array slot — plain
+  // least-count-first re-derived from zero every tick deterministically
+  // starves whichever job sorts last (scholar), because the comparison loop
+  // always prefers an earlier-indexed job on a tie.
+  //
+  // The original "dump every remaining kitten into scholar until architecture
+  // is researched" policy (modulo a fixed 1-woodcutter/1-miner reserve)
+  // starves wood/mineral/iron production for the entire early-to-mid game —
+  // those resources never scale with population, so the smelter→workshop
+  // crafting chain the megalith needs never accumulates a stockpile.
+  function allocateJobs(simTime: number): void {
     const k = Number(resources!.resources.kittens.value);
     if (k <= 0) return;
-    const counts = village!.jobCounts;
     const fieldsProd = buildings!.buildingCount('field') * FIELD_CATNIP;
 
-    // Farmers cover catnip to the hut margin (net ≥ HUT_NET) — a healthy buffer
-    // that both prevents starvation as population grows AND leaves surplus for
-    // refine to convert into wood. Under-provisioning here death-spirals the
-    // colony; the abundant catnip a full farmer corps produces is what feeds
-    // both the population and the wood refinery.
+    // Farmers cover *current* consumption plus a modest buffer — not the next
+    // hut's worth of population. Reserving enough farmers to clear the
+    // hut-growth threshold (HUT_NET) even after hut growth stalls (wood- or
+    // cost-gated) permanently parks most of the population in farming and
+    // leaves nothing for science/mining/crafting. Hut growth is paced
+    // separately by the `canBuy('hut')` net-surplus gate below; farmers here
+    // only need to keep the colony fed.
     let farmers = 0;
     if (village!.isJobVisible('farmer')) {
-      const need = (HUT_NET + CATNIP_PER_KITTEN * k - fieldsProd) / FARMER_CATNIP;
+      const need = (SURPLUS + CATNIP_PER_KITTEN * k - fieldsProd) / FARMER_CATNIP;
       farmers = Math.max(0, Math.min(k, Math.ceil(need)));
     }
-    let rem = k - farmers;
-    // Reserve a baseline woodcutter + miner for infrastructure, then pour the
-    // rest into scholars to rush the tech tree (mining → construction →
-    // lumberMill, which is what finally scales wood). Tech-first beats balance
-    // because the upstream sciences unlock every downstream resource multiplier.
-    let woodcutters = rem > 0 ? 1 : 0;
-    rem -= woodcutters;
-    const miners = village!.isJobVisible('miner') && rem > 0 ? 1 : 0;
-    rem -= miners;
-    const scienceLeft = !sciences!.scienceCompleted('architecture');
-    const scholars = village!.isJobVisible('scholar') && scienceLeft ? rem : 0;
-    rem -= scholars;
-    woodcutters += rem; // any remainder to wood
+    const rem = k - farmers;
 
-    const targets: Record<JobId, number> = {
-      farmer: farmers,
-      scholar: scholars,
-      miner: miners,
-      woodcutter: woodcutters,
-    };
+    const scienceLeft = !sciences!.scienceCompleted('architecture');
+    const eligible: JobId[] = ['woodcutter'];
+    if (village!.isJobVisible('miner')) eligible.push('miner');
+    if (village!.isJobVisible('scholar') && scienceLeft) eligible.push('scholar');
+
+    const n = eligible.length;
+    const base = Math.floor(rem / n);
+    const remainder = rem % n;
+    const offset = Math.floor(simTime) % n;
+    const targets: Record<JobId, number> = { farmer: farmers, woodcutter: 0, miner: 0, scholar: 0 };
+    eligible.forEach((job, idx) => {
+      const getsRemainder = (idx - offset + n) % n < remainder;
+      targets[job] = base + (getsRemainder ? 1 : 0);
+    });
+
+    const counts = village!.jobCounts;
     const order: JobId[] = ['woodcutter', 'farmer', 'scholar', 'miner'];
     // Reduce first (frees headroom), then increase — sum stays ≤ kittens.
     for (const job of order) if (targets[job] < counts[job].value) hire(job, targets[job]);
@@ -583,7 +628,7 @@ function probeArcSmoke(maxSimSec: number): {
       gatherClicks();
       tryBuyBuilding();
       tryResearch();
-      allocateJobs();
+      allocateJobs(simTime);
       refineSurplus();
       tryCraft();
       checkBeats(simTime);
@@ -594,24 +639,16 @@ function probeArcSmoke(maxSimSec: number): {
   });
 
   const beats: BeatRow[] = [
-    { id: 1, label: 'First catnip field built', targetWindowSec: [0, 60] },
-    { id: 2, label: 'First kitten arrives', targetWindowSec: [60, 600] },
-    { id: 3, label: 'First science: calendar', targetWindowSec: [300, 600] },
-    {
-      id: 4,
-      label: 'Workshop unlocked (mining + workshop built)',
-      targetWindowSec: [600, 1500],
-    },
-    { id: 5, label: 'First megalith crafted', targetWindowSec: [3000, 5400] },
-    { id: 6, label: 'Arc closure — architecture + megalith owned', targetWindowSec: [3000, 7200] },
-  ].map((b) => {
-    const fire = beatFireTimes[b.id as keyof typeof beatFireTimes];
-    return {
-      ...b,
-      fireTimeSec: fire,
-      inWindow: fire === null ? null : fire >= b.targetWindowSec[0] && fire <= b.targetWindowSec[1],
-    } as BeatRow;
-  });
+    { id: 1, label: 'First catnip field built' },
+    { id: 2, label: 'First kitten arrives' },
+    { id: 3, label: 'First science: calendar' },
+    { id: 4, label: 'Workshop unlocked (mining + workshop built)' },
+    { id: 5, label: 'First megalith crafted' },
+    { id: 6, label: 'Arc closure — architecture + megalith owned' },
+  ].map((b) => ({
+    ...b,
+    fireTimeSec: beatFireTimes[b.id as keyof typeof beatFireTimes],
+  }));
 
   const finalState = {
     catnip: Number(resources.resources.catnip.value),
@@ -702,17 +739,18 @@ function main(): void {
     ),
   );
 
-  console.log(HEAD('Probe 4 — end-to-end arc smoke (greedy bot, beats 1–4)'));
-  const arc = probeArcSmoke(2 * 3600); // 2h sim
+  const ARC_SMOKE_BUDGET_SEC = 2 * 3600; // sim-time cutoff, not a beat target
+  console.log(HEAD('Probe 4 — end-to-end arc smoke (greedy bot)'));
+  const arc = probeArcSmoke(ARC_SMOKE_BUDGET_SEC);
   console.log(
     renderTable(
-      ['beat', 'label', 'target window', 'fired @', 'in window?'],
+      ['beat', 'label', 'fired @'],
       arc.beats.map((b) => [
         String(b.id),
         b.label,
-        `[${b.targetWindowSec[0]}, ${b.targetWindowSec[1]}]`,
-        b.fireTimeSec === null ? '—' : fmtNum(b.fireTimeSec),
-        b.inWindow === null ? '—' : b.inWindow ? 'yes' : 'NO',
+        b.fireTimeSec === null
+          ? `not reached (${ARC_SMOKE_BUDGET_SEC}s budget)`
+          : fmtNum(b.fireTimeSec),
       ]),
     ),
   );

@@ -1,26 +1,22 @@
 /**
- * UI smoke + beats-1–3 wiring (OL-1060 Phase 4).
+ * UI composables — found-regression locks.
  *
- * Boots the full interlocker engine through `bootEngine` (matching the
- * AppRoot's lifecycle) and exercises the composable surface that the panels
- * consume. This is the regression-proof equivalent of the ticket's manual
- * "first field → first kitten → first calendar science" play-through —
- * confirms the composables synthesize the right state and the
- * BuildingsApi / VillageApi / SciencesApi cross-module visibility cascade
- * remains intact through the UI layer.
+ * Per `archetypes/BALANCING.md` § Theme 5: tests lock observable behavior;
+ * discovery is elsewhere. This is the `tug/sim` "structural invariant"
+ * exception, not a balance-number lock and not a general unit-test suite —
+ * the case below documents a bug that actually shipped (a UI composable
+ * silently bypassing a module's modifier chain) and was found. New cases
+ * land here only when they pin a found regression.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { provide, getCurrentInstance, defineComponent, type App } from 'vue';
-import { Decimal, createAdditiveModifier } from '@open-loop/engine';
+import { createAdditiveModifier } from '@open-loop/engine';
 import { createApp as createVueApp, h } from 'vue';
 import { createInterlockerEngine } from '../boot';
-import { getResources, getBuildings, getSciences } from '../modules';
+import { getResources, getSciences } from '../modules';
 import { useResources } from '../ui/composables/useResources';
 import { useBuildings } from '../ui/composables/useBuildings';
-import { useJobs } from '../ui/composables/useJobs';
-import { useSciences } from '../ui/composables/useSciences';
-import { useCrafts } from '../ui/composables/useCrafts';
 
 interface Harness {
   engine: ReturnType<typeof createInterlockerEngine>['engine'];
@@ -81,7 +77,7 @@ function seedCaps(): void {
   }
 }
 
-describe('interlocker UI composables — beats 1–3 wiring', () => {
+describe('interlocker UI composables — found-regression locks', () => {
   let h: Harness;
   beforeEach(() => {
     h = bootInsideApp();
@@ -90,158 +86,35 @@ describe('interlocker UI composables — beats 1–3 wiring', () => {
     h.unmount();
   });
 
-  it('useResources surfaces all 11 resource readouts; capped resources carry cap; uncapped do not', () => {
-    const readouts = useResources();
-    expect(readouts.map((r) => r.id)).toEqual([
-      'catnip',
-      'wood',
-      'minerals',
-      'iron',
-      'science',
-      'kittens',
-      'beam',
-      'slab',
-      'plate',
-      'scaffold',
-      'megalith',
-    ]);
-    const science = readouts.find((r) => r.id === 'science')!;
-    expect(science.cap).toBeUndefined();
-    const catnip = readouts.find((r) => r.id === 'catnip')!;
-    expect(catnip.cap).toBeDefined();
-  });
-
-  it('beat 1 — first catnip field: buildings.canBuy flips after seeding catnip; buy() purchases', () => {
+  it('buying a pasture moves the displayed catnip net rate (consumption discount), not just the simulated total', () => {
+    // Regression: useResources() used to re-derive the per-kitten catnip
+    // drain from the raw `catnipPerKittenPerSec` data constant, bypassing
+    // `village.consumptionRateChain` entirely — so the readout never moved
+    // when pasture (or any future consumption-discount building) was bought,
+    // even though the underlying simulation was already correct.
     seedCaps();
     const resources = getResources();
-    resources.bag.add('catnip', 10);
-
-    const rows = useBuildings(() => 1);
-    const field = rows.find((r) => r.id === 'field')!;
-    expect(field.visible.value).toBe(true);
-    expect(field.canBuy.value).toBe(true);
-    expect(field.count.value).toBe(0);
-
-    field.buy(1);
-    expect(field.count.value).toBe(1);
-
-    // Field's grant pushed onto catnip-rate; rate chain now positive.
-    const rate = Number(resources.rateChains.catnip.apply(0));
-    expect(rate).toBeGreaterThan(0);
-  });
-
-  it('beat 2 — first kitten: hut purchase grants +2 to kittens cap; village tick crosses growth threshold', () => {
-    seedCaps();
-    const resources = getResources();
-    const buildings = getBuildings();
-    // Hut requires 5 wood.
-    resources.bag.add('wood', 5);
-    const rows = useBuildings(() => 1);
-    const hut = rows.find((r) => r.id === 'hut')!;
-    expect(hut.canBuy.value).toBe(true);
-    hut.buy(1);
-    expect(hut.count.value).toBe(1);
-
-    // After hut, kittens cap > 0 — bag has room for population growth.
-    const remaining = resources.bag.remainingCapacityForType('kittens');
-    expect(Decimal.gt(remaining, 0)).toBe(true);
-
-    // Drive village growth: with a positive growth rate (0.05/sec), after 60
-    // sim-seconds we expect at least 1 kitten. simulateTick(1) at the default
-    // 20Hz step accumulates internally; the call advances real sim time by 1s.
-    for (let i = 0; i < 60; i++) {
-      h.engine.tickDriver.simulateTick(1);
-    }
-    const kittens = Number(resources.resources.kittens.value);
-    expect(kittens).toBeGreaterThanOrEqual(1);
-
-    // Only woodcutter is visible at this point (others are science-gated).
-    // Unassigned == kittens (none allocated yet).
-    const { rows: jobs, village: villageRO } = useJobs();
-    expect(jobs.find((j) => j.id === 'woodcutter')!.visible.value).toBe(true);
-    expect(jobs.find((j) => j.id === 'farmer')!.visible.value).toBe(false);
-    expect(villageRO.unassigned.value).toBe(kittens);
-    void buildings;
-  });
-
-  it('beat 3 — first calendar science: research flips scienceCompleted + cascades visibility', () => {
-    seedCaps();
-    const resources = getResources();
-    resources.bag.add('science', 30);
-
-    const sciences = useSciences();
-    const calendar = sciences.find((s) => s.id === 'calendar')!;
-    expect(calendar.researched.value).toBe(false);
-    expect(calendar.canResearch.value).toBe(true);
-    calendar.research();
-    expect(calendar.researched.value).toBe(true);
-
-    // Cascade: agriculture is now prereq-met (visible) but not researched.
-    const ag = sciences.find((s) => s.id === 'agriculture')!;
-    expect(ag.prereqMet.value).toBe(true);
-    expect(ag.researched.value).toBe(false);
-
-    // mining is two prereqs away (needs agriculture); still locked.
-    const mining = sciences.find((s) => s.id === 'mining')!;
-    expect(mining.prereqMet.value).toBe(false);
-  });
-
-  it('beat 4 setup — mining + workshop unlock surfaces craft visibility', () => {
-    seedCaps();
-    const resources = getResources();
-    // Research calendar → agriculture → mining. Costs 30 + 100 + 500.
-    resources.bag.add('science', 30 + 100 + 500);
     const sciences = getSciences();
+
+    resources.bag.add('kittens', 5);
+    resources.bag.add('science', 30 + 100);
     sciences.category.getEntry('calendar')!.purchasable.purchase(1);
     sciences.category.getEntry('agriculture')!.purchasable.purchase(1);
-    sciences.category.getEntry('mining')!.purchasable.purchase(1);
 
-    // Workshop visible (gated on mining); seed cost, buy.
-    resources.bag.add('wood', 100);
-    resources.bag.add('minerals', 400);
+    resources.bag.add('catnip', 1000);
+    resources.bag.add('wood', 1000);
+
+    const rateBefore = Number(useResources().find((r) => r.id === 'catnip')!.rate!.value);
+
     const buildingRows = useBuildings(() => 1);
-    const workshop = buildingRows.find((r) => r.id === 'workshop')!;
-    expect(workshop.visible.value).toBe(true);
-    expect(workshop.canBuy.value).toBe(true);
-    workshop.buy(1);
-    expect(workshop.count.value).toBe(1);
+    const pasture = buildingRows.find((r) => r.id === 'pasture')!;
+    expect(pasture.visible.value).toBe(true);
+    pasture.buy(1);
+    expect(pasture.count.value).toBe(1);
 
-    // Wood/beam/slab/plate are mining-gated and also require workshop ≥ 1,
-    // both now true → visible. Scaffold and megalith remain locked behind
-    // construction / architecture.
-    const crafts = useCrafts();
-    const wood = crafts.find((c) => c.id === 'wood')!;
-    const scaffold = crafts.find((c) => c.id === 'scaffold')!;
-    expect(wood.visible.value).toBe(true);
-    expect(scaffold.visible.value).toBe(false);
-
-    // Research construction so scaffold unlocks. Costs 900 (metal) + 1300.
-    resources.bag.add('science', 900 + 1300);
-    sciences.category.getEntry('metal')!.purchasable.purchase(1);
-    sciences.category.getEntry('construction')!.purchasable.purchase(1);
-    expect(scaffold.visible.value).toBe(true);
-  });
-
-  it('useJobs +/- clamps client-side: cannot increment past unassigned, cannot decrement below 0', () => {
-    seedCaps();
-    const resources = getResources();
-    resources.bag.add('kittens', 1);
-
-    const { rows } = useJobs();
-    const farmer = rows.find((j) => j.id === 'farmer')!;
-    expect(farmer.canIncrement.value).toBe(true);
-    expect(farmer.canDecrement.value).toBe(false);
-    farmer.increment();
-    expect(farmer.count.value).toBe(1);
-    expect(farmer.canIncrement.value).toBe(false);
-
-    // Increment when full is a no-op (does not throw).
-    farmer.increment();
-    expect(farmer.count.value).toBe(1);
-
-    farmer.decrement();
-    expect(farmer.count.value).toBe(0);
-    farmer.decrement();
-    expect(farmer.count.value).toBe(0);
+    const rateAfter = Number(useResources().find((r) => r.id === 'catnip')!.rate!.value);
+    // 5 kittens × 4.25/sec × 0.5% pasture discount = 0.10625 catnip/sec less
+    // drain — the net rate should rise by exactly that, not stay flat.
+    expect(rateAfter - rateBefore).toBeCloseTo(0.10625, 6);
   });
 });

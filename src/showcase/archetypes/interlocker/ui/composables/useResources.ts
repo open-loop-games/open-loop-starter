@@ -1,9 +1,9 @@
 import { computed, type ComputedRef, type Ref } from 'vue';
 import { Decimal, type DecimalSource } from '@open-loop/engine';
 import type { ResourceReadout, ResourceHighlight } from '@/ui/compositions';
-import { getCalendar, getResources } from '../../modules';
+import { getCalendar, getResources, getVillage } from '../../modules';
 import { DEFAULT_INTERLOCKER_DATA } from '../../data';
-import type { InterlockerData, ResourceSpec } from '../../data/types';
+import type { ResourceSpec } from '../../data/types';
 
 /**
  * Synthesize the Interlocker wallet into `ResourceReadout[]` for the
@@ -18,15 +18,16 @@ import type { InterlockerData, ResourceSpec } from '../../data/types';
 export function useResources(): ResourceReadout[] {
   const resources = getResources();
   const calendar = getCalendar();
+  const village = getVillage();
   const data = DEFAULT_INTERLOCKER_DATA;
-  return data.resources.map((spec) => buildReadout(spec, resources, calendar, data));
+  return data.resources.map((spec) => buildReadout(spec, resources, calendar, village));
 }
 
 function buildReadout(
   spec: ResourceSpec,
   resources: ReturnType<typeof getResources>,
   calendar: ReturnType<typeof getCalendar>,
-  data: InterlockerData,
+  village: ReturnType<typeof getVillage>,
 ): ResourceReadout {
   const resourceRef = resources.resources[spec.id];
   const maxChain = resources.maxChains[spec.id];
@@ -46,15 +47,16 @@ function buildReadout(
   // zero base. Catnip is special: its production is scaled by the active
   // season (mirrors village onTick's read-site multiply), and consumption
   // happens outside the chain (village subtractResource), so the displayed
-  // rate is seasoned-production minus the live consumption magnitude. Other
+  // rate is seasoned-production minus `village.catnipConsumptionRate` — the
+  // same chain-aware total village's onTick consumption step burns. Reading
+  // that single getter (rather than re-deriving the per-kitten/chain math
+  // here) keeps the consumption calc owned by the module that runs it; other
   // resources read the rate chain directly.
   const rate = computed<DecimalSource>(() => {
     const baseRate = resources.productionRate(spec.id);
     if (spec.id === 'catnip') {
       const production = baseRate * calendar.catnipMultiplier.value;
-      const kittens = Number(resources.resources.kittens.value);
-      const perKitten = Math.abs(data.catnipPerKittenPerSec);
-      return production - perKitten * kittens;
+      return production - village.catnipConsumptionRate.value;
     }
     return baseRate;
   });

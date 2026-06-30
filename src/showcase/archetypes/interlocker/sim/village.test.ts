@@ -1,13 +1,12 @@
 /**
- * Village module unit tests — kittens + jobs + catnip consumption + starvation.
+ * Village module — found-regression locks.
  *
- * The Phase 1 stubs for `ResourcesKey` (sibling OL-1057) and `SciencesKey`
- * (Phase 3) throw on access, so we cannot drive these tests through the
- * full `createInterlockerEngine` path. Instead we hand-roll a minimal
- * `ResourcesApi` stand-in and install the village module against a mock
- * `EngineContext`. After OL-1057 lands and the rebase merges it, an
- * integration test can ride the real engine; this suite stays as the
- * write-site contract lock for the four behaviors the leaf owns.
+ * Per `archetypes/BALANCING.md` § Theme 5: tests lock observable behavior;
+ * discovery is elsewhere. This is the `tug/sim` "structural invariant"
+ * exception, not a balance-number lock and not a general unit-test suite —
+ * the case below documents a bug that actually shipped (production silently
+ * not resuming after `engine.load()`) and was found. New cases land here
+ * only when they pin a found regression.
  *
  * Persistent context collision note: the engine's `persistent()` registers
  * refs into a process-global context keyed by id. Re-installing the village
@@ -32,12 +31,12 @@ import {
 } from '@open-loop/engine';
 
 import { DEFAULT_INTERLOCKER_DATA } from '../data';
-import type { JobId, KittenDiedEvent, ResourceId } from '../data/types';
+import type { ResourceId } from '../data/types';
 import { createVillageModule } from '../modules/village';
 import { createTuningModule } from '../modules/tuning';
 import { ResourcesKey, type ResourcesApi } from '../modules/resources';
 import { SciencesKey, type SciencesApi } from '../modules/sciences';
-import { JobAssignmentError, VillageKey, type VillageApi } from '../modules/village';
+import { VillageKey, type VillageApi } from '../modules/village';
 import { CalendarKey, type CalendarApi } from '../modules/calendar';
 
 const RESOURCE_IDS: ResourceId[] = [
@@ -57,28 +56,26 @@ const RESOURCE_IDS: ResourceId[] = [
 interface Harness {
   village: VillageApi;
   resources: ResourcesApi;
-  kittens: Resource<Decimal>;
-  catnip: Resource<Decimal>;
-  setKittenCapacity: (n: number) => void;
-  tick: (dt: number) => void;
   /** Resets the per-test mutable state: kittens, catnip, job counts, sub-kitten
    *  progress, and rate-chain bindings. */
   reset: (initialKittens: number, kittenCapacity: number) => void;
+  /** Fires every `ctx.onLoad` callback registered during install — simulates
+   *  the save manager's `engine.load()` mutating persisted refs directly
+   *  (bypassing `setJobCount`), without re-installing the module. */
+  triggerLoad: () => void;
 }
 
 function buildHarness(): Harness {
   const provided = new Map<symbol, unknown>();
-  const tickHandlers: Array<(dt: number) => void> = [];
+  const loadHandlers: Array<(data: unknown) => void> = [];
   const ctx: EngineContext = {
-    onTick(cb) {
-      tickHandlers.push(cb);
-      return () => {
-        const idx = tickHandlers.indexOf(cb);
-        if (idx >= 0) tickHandlers.splice(idx, 1);
-      };
+    onTick() {
+      return () => {};
     },
     onSave: () => {},
-    onLoad: () => {},
+    onLoad: (cb) => {
+      loadHandlers.push(cb);
+    },
     onReset: () => {},
     on: () => () => {},
     emit: () => {},
@@ -172,13 +169,10 @@ function buildHarness(): Harness {
   return {
     village,
     resources: resourcesApi,
-    kittens: resources.kittens,
-    catnip: resources.catnip,
-    setKittenCapacity: (n) => (kittenCap.value = n),
-    tick: (dt: number) => {
-      for (const h of tickHandlers) h(dt);
-    },
     reset,
+    triggerLoad: () => {
+      for (const h of loadHandlers) h(undefined);
+    },
   };
 }
 
@@ -187,129 +181,21 @@ beforeAll(() => {
   H = buildHarness();
 });
 
-describe('interlocker/village — setJobCount validation', () => {
-  beforeEach(() => H.reset(2, 100));
-
-  it('throws JobAssignmentError when sum(allCounts) exceeds kittens.value', () => {
-    H.village.setJobCount('woodcutter', 2);
-    expect(() => H.village.setJobCount('farmer', 1)).toThrowError(JobAssignmentError);
-  });
-
-  it('allows assignment up to kittens.value', () => {
-    H.reset(3, 100);
-    H.village.setJobCount('woodcutter', 2);
-    H.village.setJobCount('farmer', 1);
-    expect(H.village.jobCounts.woodcutter.value).toBe(2);
-    expect(H.village.jobCounts.farmer.value).toBe(1);
-  });
-});
-
-describe('interlocker/village — job-modifier rebind', () => {
+describe('interlocker/village — found-regression locks', () => {
   beforeEach(() => H.reset(5, 100));
 
-  it('binds an additive modifier on the resource rate chain reflecting count × baseRate', () => {
-    H.village.setJobCount('woodcutter', 2);
-    // woodcutter base rate = 0.09/sec; 2 kittens = 0.18/sec contribution.
-    const woodRate = Number(H.resources.rateChains.wood.apply(0));
-    expect(woodRate).toBeCloseTo(0.18, 6);
-  });
+  it('rebinds job rate modifiers on engine.load() — production resumes without a manual toggle', () => {
+    // Simulate the save manager's load path: it writes the persisted job-count
+    // ref directly (`deserializePersistents`), bypassing `setJobCount` and
+    // therefore `bindJobModifier`. Before the load handler runs, the rate
+    // chain still reflects whatever was bound at install (nothing, here).
+    H.village.jobCounts.woodcutter.value = 2;
+    expect(Number(H.resources.rateChains.wood.apply(0))).toBe(0);
 
-  it('rebinds cleanly on increase (replaces, does not duplicate)', () => {
-    H.village.setJobCount('woodcutter', 1);
-    H.village.setJobCount('woodcutter', 3);
-    const woodRate = Number(H.resources.rateChains.wood.apply(0));
-    // 3 × 0.09 = 0.27. Would be 0.36 (= 0.09 + 0.27) if the rebind double-stacked.
-    expect(woodRate).toBeCloseTo(0.27, 6);
-  });
+    H.triggerLoad();
 
-  it('unbinds on setJobCount(0)', () => {
-    H.village.setJobCount('woodcutter', 2);
-    H.village.setJobCount('woodcutter', 0);
-    const woodRate = Number(H.resources.rateChains.wood.apply(0));
-    expect(woodRate).toBe(0);
-  });
-});
-
-describe('interlocker/village — population growth', () => {
-  it('does not spawn kittens when the bag is at capacity (no huts)', () => {
-    H.reset(0, 0);
-    for (let i = 0; i < 100; i++) H.tick(1);
-    expect(Number(H.kittens.value)).toBe(0);
-  });
-
-  it('spawns kittens when capacity is available', () => {
-    H.reset(0, 10);
-    // Seed catnip large enough that the starvation predicate never fires on
-    // the (still zero-kitten) bag. Once kittens > 0 the consumption starts;
-    // we tick only enough to cross one growth threshold (~20s @ 0.05/sec).
-    H.catnip.value = 1000 as never;
-    for (let i = 0; i < 25; i++) H.tick(1);
-    expect(Number(H.kittens.value)).toBeGreaterThanOrEqual(1);
-  });
-});
-
-describe('interlocker/village — catnip consumption', () => {
-  it('subtracts ~4.25 catnip/sec per kitten', () => {
-    H.reset(1, 100);
-    H.catnip.value = 100 as never;
-    H.tick(1);
-    expect(Number(H.catnip.value)).toBeCloseTo(100 - 4.25, 5);
-  });
-
-  it('floors catnip at zero and starves a kitten when consumption outruns supply', () => {
-    // Canon (village.js:343-367): consumption transiently drives the balance
-    // negative, the starvation step kills a kitten and floors catnip back to
-    // zero — the deficit is paid by the lost kitten, not carried as negative.
-    H.reset(2, 100);
-    H.catnip.value = 1 as never;
-    H.tick(1); // 2 × 4.25 = 8.5/sec drains past zero
-    expect(Number(H.catnip.value)).toBe(0);
-    expect(Number(H.kittens.value)).toBe(1);
-  });
-});
-
-describe('interlocker/village — starvation', () => {
-  it('emits KittenDiedEvent and decrements kittens when catnip drains', () => {
-    H.reset(1, 100);
-    H.catnip.value = 1000 as never;
-    H.tick(0.001); // fed baseline clears the starvation cooldown (kills at 0)
-    let deathEvent: KittenDiedEvent | null = null;
-    const off = H.village.onKittenDied((e) => {
-      deathEvent = e;
-    });
-    H.catnip.value = 0 as never;
-    H.tick(1);
-    off();
-    expect(deathEvent).not.toBeNull();
-    expect(Number(H.kittens.value)).toBe(0);
-  });
-
-  it('demotes a job-assigned kitten in priority order (scholar first)', () => {
-    H.reset(1, 100);
-    H.catnip.value = 1000 as never;
-    H.tick(0.001); // fed baseline clears the starvation cooldown (kills at 0)
-    H.village.setJobCount('scholar', 1);
-    let demotedJob: JobId | null = null;
-    const off = H.village.onKittenDied((e) => {
-      demotedJob = e.demotedFromJob;
-    });
-    H.catnip.value = 0 as never;
-    H.tick(1);
-    off();
-    expect(demotedJob).toBe('scholar');
-    expect(H.village.jobCounts.scholar.value).toBe(0);
-  });
-
-  it('does NOT fire starvation when catnip is positive', () => {
-    H.reset(1, 100);
-    let deathFired = false;
-    const off = H.village.onKittenDied(() => {
-      deathFired = true;
-    });
-    H.catnip.value = 10 as never;
-    H.tick(0.1);
-    off();
-    expect(deathFired).toBe(false);
-    expect(Number(H.kittens.value)).toBe(1);
+    // woodcutter base rate = 0.09/sec; 2 kittens = 0.18/sec — bound without
+    // ever calling setJobCount.
+    expect(Number(H.resources.rateChains.wood.apply(0))).toBeCloseTo(0.18, 6);
   });
 });

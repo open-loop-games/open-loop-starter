@@ -1,3 +1,4 @@
+import { computed, type ComputedRef } from 'vue';
 import {
   addResource,
   createAdditiveModifier,
@@ -57,6 +58,14 @@ export interface VillageApi {
    *  binds here via the buildings module's resolver extension (Phase 3
    *  wiring); the per-tick catnip drain reads `chain.apply(baseRate)`. */
   consumptionRateChain: ModifierChain;
+  /** Total effective catnip drain (positive magnitude, catnip/sec) across all
+   *  kittens — `consumptionRateChain.apply(baseDrainPerKitten) × kittensTotal`,
+   *  the same calc the onTick consumption step runs. The single source of
+   *  truth for "how much catnip is the village burning right now," so UI
+   *  reads it instead of re-deriving the chain-aware drain from the raw
+   *  per-kitten constant (which would silently drop building discounts like
+   *  pasture). */
+  catnipConsumptionRate: ComputedRef<number>;
   /** Whether the job is currently visible to the player. A job unlocks when its
    *  `unlockedByScience` gate (if any) is researched AND its `unlockedByBuilding`
    *  gate (if any) is built — scholar threads through the library, breaking the
@@ -222,6 +231,17 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
       // multiplicative semantics.
       const consumptionRateChain = createModifierChain('catnip-consumption-rate');
 
+      // Single source of truth for "how much catnip is the village burning
+      // right now" — onTick's consumption step and the UI's net-rate readout
+      // both read this instead of separately re-deriving the chain-aware
+      // drain from `perKittenCatnipPerSec`.
+      const catnipConsumptionRate: ComputedRef<number> = computed(() => {
+        const kittensTotal = Number(resources.resources.kittens.value);
+        const baseDrainPerKitten = Math.abs(Number(perKittenCatnipPerSec.value));
+        const effectivePerKittenDrain = Number(consumptionRateChain.apply(baseDrainPerKitten));
+        return effectivePerKittenDrain * kittensTotal;
+      });
+
       // Per-job rate-chain unbind handles. Stable ids (`village/jobs/<id>`)
       // make the rebind sequence (unbind-then-bind) idempotent across save/load.
       const jobUnbind = new Map<JobId, () => void>();
@@ -287,14 +307,29 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         return null;
       }
 
-      // Engine modules whose install wraps in a persistent context — we
-      // re-bind the empty jobs on install so the rate chains reflect the
-      // persisted counts after a save/load. No-op for fresh saves (all zeros).
-      for (const def of jobs) {
-        if (jobCounts[def.id].value > 0) {
-          bindJobModifier(def.id, jobCounts[def.id].value);
+      // Rebind every job's rate modifier from the current `jobCounts` values.
+      // Needed both right after install (job refs already reflect persisted
+      // state on HMR re-install) and after `engine.load()` — persisted refs
+      // are created with their default (0) at install time and only mutated
+      // in place by the save manager once `engine.load()` runs afterward
+      // (see AppRoot's `engine.start(); engine.load();` resume sequence).
+      // `setJobCount` is the only other call site for `bindJobModifier`, and
+      // it never fires during load (load writes refs directly, bypassing the
+      // setter), so without this the rate chain stays bound to whatever was
+      // true at install — typically all-zero — until the player manually
+      // toggles a job, which is the "production doesn't resume" symptom this
+      // closes.
+      function rebindAllJobs(): void {
+        for (const def of jobs) {
+          if (jobCounts[def.id].value > 0) {
+            bindJobModifier(def.id, jobCounts[def.id].value);
+          }
         }
       }
+      rebindAllJobs();
+      ctx.onLoad(() => {
+        rebindAllJobs();
+      });
 
       // Resources that receive per-tick production from their rate chain.
       // Catnip is excluded — the rate chain is read in step 3 for the
@@ -335,20 +370,18 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
           }
         }
 
-        // 1) Catnip consumption (drain). `perKittenPerSecond` is negative
-        //    (-4.25/sec); take the magnitude. The per-kitten drain routes
-        //    through `consumptionRateChain` so pasture's `mul -0.005` reduces
-        //    it (canonical `catnipDemandRatio`); empty chain is the identity.
-        //    `allowNegative` lets the bag dip below zero so the canon
-        //    starvation projection (village.js:343 `resDiff < 0`) can see the
-        //    deficit; step 2 floors catnip back to zero, matching canon's
-        //    non-negative resPool.
+        // 1) Catnip consumption (drain). Reads `catnipConsumptionRate` — the
+        //    same chain-aware total the UI's net-rate readout reads — so the
+        //    `mul -0.005` pasture grant (canonical `catnipDemandRatio`)
+        //    reduces it everywhere it's read. `allowNegative` lets the bag
+        //    dip below zero so the canon starvation projection
+        //    (village.js:343 `resDiff < 0`) can see the deficit; step 2
+        //    floors catnip back to zero, matching canon's non-negative
+        //    resPool.
         // TODO(expansion): continuous-rate consumption — shared N=1 receipt
         // with smelter for `createContinuousConversion`. See
         // `open-loop-engine/docs/candidate-primitives.md`.
-        const baseDrainPerKitten = Math.abs(Number(perKittenCatnipPerSec.value));
-        const effectivePerKittenDrain = Number(consumptionRateChain.apply(baseDrainPerKitten));
-        const consumeMagnitude = effectivePerKittenDrain * kittensTotal * dt;
+        const consumeMagnitude = catnipConsumptionRate.value * dt;
         if (consumeMagnitude > 0) {
           subtractResource(catnip, consumeMagnitude, { allowNegative: true });
         }
@@ -403,6 +436,7 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
       village = {
         jobCounts,
         consumptionRateChain,
+        catnipConsumptionRate,
         isJobVisible(id: JobId): boolean {
           const def = jobById.get(id);
           if (!def) return false;

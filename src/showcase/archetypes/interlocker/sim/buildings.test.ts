@@ -1,16 +1,18 @@
 /**
- * Buildings module sim suite (OL-1058).
+ * Buildings module — found-regression locks.
  *
- * Phase 2B lands the buildings module against the FROZEN Phase 1 contracts.
- * The sibling resources (OL-1057) and sciences (Phase 3) modules are still
- * stubs at the time of writing; rather than waiting for OL-1057, this suite
- * hand-rolls a minimal `ResourcesApi` / `SciencesApi` stand-in inside an
- * engine boot — the contract is what's frozen, so a tests-only impl is a
- * valid stand-in for unit-level coverage. The integration sweep rides on
- * the launching session's post-merge rebase + verify pass.
+ * Per `archetypes/BALANCING.md` § Theme 5: tests lock observable behavior;
+ * discovery is elsewhere. This isn't balance-number locking (no
+ * beat-fire-time / flow-band / signature-metric surface here) — it's the
+ * `tug/sim` "structural invariant" exception: each case below documents a
+ * bug that actually shipped and was found, exercised via direct API calls
+ * against a hand-rolled stand-in engine rather than a full sim run. Not a
+ * general unit-test suite — new cases land here only when they pin a found
+ * regression, not to cover a code path during initial implementation.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { computed } from 'vue';
 import {
   createAdditiveModifier,
   createEngine,
@@ -148,6 +150,10 @@ function createTestVillageModule(consumptionRateChain: ModifierChain): EngineMod
       throw new Error('test village jobCounts not implemented');
     },
     consumptionRateChain,
+    // Buildings tests assert against `consumptionRateChain` directly (the
+    // chain pasture binds onto); this composable-facing getter isn't
+    // exercised here, so a stub computed satisfies the interface.
+    catnipConsumptionRate: computed(() => 0),
     isJobVisible: () => false,
     setJobCount: () => {
       throw new Error('test village setJobCount not implemented');
@@ -278,7 +284,7 @@ function getPurchasable(buildings: BuildingsApi, id: string) {
 
 // ─── Suite ────────────────────────────────────────────────────────────────
 
-describe('interlocker/buildings — purchasable category + smelter onTick', () => {
+describe('interlocker/buildings — found-regression locks', () => {
   let bench: Bench;
   beforeEach(() => {
     bench = bootBench({ completedSciences: ALL_SCIENCES });
@@ -287,144 +293,24 @@ describe('interlocker/buildings — purchasable category + smelter onTick', () =
     bench.engine.dispose();
   });
 
-  it('registers all 11 building defs', () => {
-    expect(bench.buildings.category.size).toBe(11);
-  });
+  it('pasture binds its mul grant onto consumptionRateChain, not a phantom rate-mul chain', () => {
+    // Regression: the `mul` + `-rate$`-suffix fast path in buildings.ts was
+    // intercepting `catnip-consumption-rate` (matching the same regex as
+    // `wood-rate`/`minerals-rate`/`science-rate`) and looking it up under
+    // `rateMulChains['catnip-consumption']`, which doesn't exist — the grant
+    // silently failed to bind and pasture had zero effect.
+    expect(Decimal.eq(bench.consumptionRateChain.apply(1), 1)).toBe(true);
 
-  it('multi-resource purchase deducts atomically (warehouse: 1.5 beam + 2 slab)', () => {
-    // Warehouse base cost: 1.5 beam + 2 slab. Seed both above cost.
-    bench.resources.beam.value = new Decimal(10);
-    bench.resources.slab.value = new Decimal(10);
-
-    const warehouse = getPurchasable(bench.buildings, 'warehouse');
-    expect(warehouse.canPurchase.value).toBe(true);
-
-    const bought = warehouse.purchase(1);
-    expect(Decimal.eq(bought, 1)).toBe(true);
-    expect(bench.buildings.buildingCount('warehouse')).toBe(1);
-
-    // Both inputs consumed.
-    expect(Decimal.eq(bench.resources.beam.value, 8.5)).toBe(true);
-    expect(Decimal.eq(bench.resources.slab.value, 8)).toBe(true);
-  });
-
-  it('grants push to correct chains with correct activation (barn → wood-max=200; sell → 0)', () => {
-    // Wood-max base 0 — barn adds 200 on activation.
-    expect(Decimal.eq(bench.maxChains.wood.apply(0), 0)).toBe(true);
-
+    bench.resources.catnip.value = new Decimal(1000);
     bench.resources.wood.value = new Decimal(1000);
-    const barn = getPurchasable(bench.buildings, 'barn');
-    const bought = barn.purchase(1);
-    expect(Decimal.eq(bought, 1)).toBe(true);
+    const pasture = getPurchasable(bench.buildings, 'pasture');
+    pasture.purchase(1);
 
-    expect(Decimal.eq(bench.maxChains.wood.apply(0), 200)).toBe(true);
-    // Barn also pushes catnip / minerals / iron caps simultaneously.
-    expect(Decimal.eq(bench.maxChains.catnip.apply(0), 5000)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.minerals.apply(0), 250)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.iron.apply(0), 50)).toBe(true);
+    // -0.5% catnip demand per pasture: apply(1) → 1 × (1 - 0.005) = 0.995.
+    expect(Decimal.eq(bench.consumptionRateChain.apply(1), 0.995)).toBe(true);
 
-    // "Sell" — the Purchasable doesn't expose a sell action in the engine API;
-    // simulate sell by zeroing the amount. The Grant binding's `active`
-    // predicate (purchasable.active) flips false at amount<1, deactivating
-    // every grant binding.
-    barn.amount.value = new Decimal(0);
-    expect(Decimal.eq(bench.maxChains.wood.apply(0), 0)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.catnip.apply(0), 0)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.minerals.apply(0), 0)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.iron.apply(0), 0)).toBe(true);
-  });
-
-  it('warehouse multi-chain pattern: 1 warehouse pushes onto all 7 max-chains simultaneously', () => {
-    bench.resources.beam.value = new Decimal(10);
-    bench.resources.slab.value = new Decimal(10);
-
-    const warehouse = getPurchasable(bench.buildings, 'warehouse');
-    warehouse.purchase(1);
-
-    // 3 raw-resource caps + 5 refined-good caps. Magnitudes lifted from data.
-    expect(Decimal.eq(bench.maxChains.wood.apply(0), 150)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.minerals.apply(0), 200)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.iron.apply(0), 25)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.beam.apply(0), 50)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.slab.apply(0), 50)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.plate.apply(0), 50)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.scaffold.apply(0), 25)).toBe(true);
-    expect(Decimal.eq(bench.maxChains.megalith.apply(0), 10)).toBe(true);
-  });
-
-  it('cost-scaling: barn cost grows by priceRatio per owned (50 → 87.5)', () => {
-    bench.resources.wood.value = new Decimal(1000);
-    const barn = getPurchasable(bench.buildings, 'barn');
-
-    // Barn base 50 wood. First purchase deducts 50.
-    barn.purchase(1);
-    expect(Decimal.eq(bench.resources.wood.value, 950)).toBe(true);
-    expect(Decimal.eq(barn.getCost(1), 87.5)).toBe(true);
-
-    // Second purchase deducts 50 × 1.75 = 87.5. 950 - 87.5 = 862.5.
-    barn.purchase(1);
-    expect(Decimal.eq(bench.resources.wood.value, 862.5)).toBe(true);
-  });
-
-  it('smelter onTick: at full stock, consumes wood + minerals and produces iron at per-second rates', () => {
-    // Need to buy the smelter first. Smelter base cost: 200 minerals.
-    // Bypass the visibility predicate by patching the purchasable directly —
-    // the test sciences module reports `scienceCompleted: false`, so smelter
-    // isn't visible. Visibility doesn't gate `purchase()`; only the
-    // requirements + limit gate it. Seed minerals above 200.
-    bench.resources.minerals.value = new Decimal(1000);
-    const smelter = getPurchasable(bench.buildings, 'smelter');
-    smelter.purchase(1);
-    expect(bench.buildings.buildingCount('smelter')).toBe(1);
-
-    // Seed inputs above per-second budget so a 1-second tick can consume them
-    // (the smelter purchase already spent some minerals — top up afresh).
-    bench.resources.wood.value = new Decimal(10);
-    bench.resources.minerals.value = new Decimal(10);
-    const ironBefore = new Decimal(bench.resources.iron.value);
-
-    // Drive one 1-second tick directly via the engine's TickDriver.
-    bench.engine.tickDriver.simulateTick(1);
-
-    // 1 smelter × 1s × 0.25 = 0.25 wood + 0.25 minerals consumed,
-    // 0.1 iron produced.
-    expect(Decimal.eq(bench.resources.wood.value, 9.75)).toBe(true);
-    expect(Decimal.eq(bench.resources.minerals.value, 9.75)).toBe(true);
-    expect(Decimal.eq(bench.resources.iron.value, Decimal.add(ironBefore, 0.1))).toBe(true);
-  });
-
-  it('smelter onTick: with wood depleted, the tick is skipped (no minerals consumed, no iron produced)', () => {
-    bench.resources.minerals.value = new Decimal(1000);
-    const smelter = getPurchasable(bench.buildings, 'smelter');
-    smelter.purchase(1);
-
-    // Wood empty; minerals + iron snapshot for comparison.
-    bench.resources.wood.value = new Decimal(0);
-    bench.resources.minerals.value = new Decimal(10);
-    bench.resources.iron.value = new Decimal(0);
-
-    bench.engine.tickDriver.simulateTick(1);
-
-    // Wood was insufficient → fail-soft skip.
-    expect(Decimal.eq(bench.resources.wood.value, 0)).toBe(true);
-    expect(Decimal.eq(bench.resources.minerals.value, 10)).toBe(true);
-    expect(Decimal.eq(bench.resources.iron.value, 0)).toBe(true);
-  });
-
-  it('visibility: building with unlockedByScience is hidden until that science completes', () => {
-    // Dispose the all-sciences bench from beforeEach and rebuild with no
-    // sciences completed so the hidden-gate path exercises.
-    bench.engine.dispose();
-    bench = bootBench({ completedSciences: [] });
-
-    // Catnip field has no science gate — visible.
-    expect(bench.buildings.isVisible('field')).toBe(true);
-    // Pasture is gated on `agriculture` — not completed → hidden.
-    expect(bench.buildings.isVisible('pasture')).toBe(false);
-
-    // Once `agriculture` flips, pasture becomes visible.
-    bench.completedSciences.value.add('agriculture');
-    expect(bench.buildings.isVisible('pasture')).toBe(true);
+    pasture.purchase(1);
+    expect(Decimal.eq(bench.consumptionRateChain.apply(1), 0.99)).toBe(true);
   });
 
   it('production multiplier scales the additive rate: lumberMill → +10% wood', () => {

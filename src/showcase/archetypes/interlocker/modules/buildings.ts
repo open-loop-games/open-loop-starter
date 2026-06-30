@@ -292,9 +292,11 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
           // `productionRate()` composes the two. Consumption/craft-output muls
           // apply to a non-zero base and stay on their own chains via resolveChain.
           const rateMulMatch = grant.kind === 'mul' ? /^(.+)-rate$/.exec(grant.chainId) : null;
-          const chain = rateMulMatch
-            ? resourcesApi.rateMulChains[rateMulMatch[1] as keyof typeof resourcesApi.rateMulChains]
-            : resolveChain(grant.chainId, resourcesApi, villageApi, workshopApi);
+          const rateMulResourceId = rateMulMatch?.[1] as ResourceId | undefined;
+          const chain =
+            rateMulResourceId && rateMulResourceId in resourcesApi.rateMulChains
+              ? resourcesApi.rateMulChains[rateMulResourceId]
+              : resolveChain(grant.chainId, resourcesApi, villageApi, workshopApi);
           if (!chain) continue;
           const magnitude = r.grants.get(grant.chainId)!;
           const modifier =
