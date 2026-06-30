@@ -10,8 +10,8 @@
  *
  * `runWaypointProbe` checks per-producer payback texture at scheduled
  * waypoints (own-income beat time, classified into Csikszentmihalyi flow
- * channels). `runProbe` with `BeatProbe.targetWindow` checks
- * beat-completion-time distributions across a seed sweep, with `inWindow`
+ * channels). `runProbe` with `BeatProbe.tuningWindow` checks
+ * beat-completion-time distributions across a seed sweep, with `inTuningWindow`
  * classification. `runSensitivity` (with `until`/`axes` for predicate-
  * bounded sweeps) confirms ±%-perturbation robustness once a balance is
  * chosen.

@@ -273,13 +273,13 @@ export const SCALER_MEASUREMENT_ANCHORS: readonly BeatProbe[] = [
   {
     id: 'coin-1-owned',
     // Within the first minute under canonical autobuyer + starter coins.
-    targetWindow: [0, 60],
+    tuningWindow: [0, 60],
     predicate: () => coinProducerCountAtLeast('coin-1', 1),
   },
   {
     id: 'accelerator-1-bought',
     // Accelerator-1 fires inside the first 5 minutes per canonical price.
-    targetWindow: [0, 5 * 60],
+    tuningWindow: [0, 5 * 60],
     predicate: () => acceleratorBoughtAtLeast(1),
   },
   {
@@ -289,7 +289,7 @@ export const SCALER_MEASUREMENT_ANCHORS: readonly BeatProbe[] = [
     // Threshold`) confirms `prestigePointGain = 100` at threshold exactly,
     // making the `anyOf` disjunction structurally a single condition.
     // Window: ±5min around observed 3405s closure.
-    targetWindow: [54 * 60, 62 * 60],
+    tuningWindow: [54 * 60, 62 * 60],
     predicate: () => getPrestigeCount().value >= 1,
   },
   {
@@ -299,14 +299,14 @@ export const SCALER_MEASUREMENT_ANCHORS: readonly BeatProbe[] = [
     // afterReset, and Speed's level-1 threshold (≈0.77 EXP) clears in one
     // pass. Window mirrors first-prestige; `balance/spec.ts`
     // `predictFirstSpeedLevel1Sec` returns `firstPrestigeAt` exactly.
-    targetWindow: [30 * 60, 90 * 60],
+    tuningWindow: [30 * 60, 90 * 60],
     predicate: () => getRuneLevel('speed').value >= 1,
   },
   {
     id: 'first-diamond-owned',
     // Diamond-1 auto-purchases inside seconds of first-prestige firing —
     // tier-presence gate opens, autobuyer sweeps cheap producer.
-    targetWindow: [30 * 60, 95 * 60],
+    tuningWindow: [30 * 60, 95 * 60],
     predicate: () => diamondProducerCountAtLeast('diamond-1', 1),
   },
   {
@@ -316,13 +316,13 @@ export const SCALER_MEASUREMENT_ANCHORS: readonly BeatProbe[] = [
     // predictTranscendAtCanonicalThreshold`) confirms `transcendPointGain = 1`
     // at threshold exactly — the layered anyOf disjunction collapses under
     // canonical-port discipline. Window ±25min around observed closure.
-    targetWindow: [260 * 60, 310 * 60],
+    tuningWindow: [260 * 60, 310 * 60],
     predicate: () => getTranscendCount().value >= 1,
   },
   {
     id: 'first-mythos-owned',
     // Mythos-1 auto-purchases inside seconds of first-transcend firing.
-    targetWindow: [260 * 60, 310 * 60 + 5 * 60],
+    tuningWindow: [260 * 60, 310 * 60 + 5 * 60],
     predicate: () => mythosProducerCountAtLeast('mythos-1', 1),
   },
 ];

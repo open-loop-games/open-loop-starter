@@ -202,32 +202,32 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
 export const ARC_BEATS: BeatProbe[] = [
   {
     id: 'beat-1',
-    targetWindow: BEAT_WINDOWS['beat-1']!,
+    tuningWindow: BEAT_WINDOWS['beat-1']!,
     predicate: (engine) => unitsSentAtLeast(engine, 1),
   },
   {
     id: 'beat-2',
-    targetWindow: BEAT_WINDOWS['beat-2']!,
+    tuningWindow: BEAT_WINDOWS['beat-2']!,
     predicate: (engine) => firstCombatEngaged(engine),
   },
   {
     id: 'beat-3',
-    targetWindow: BEAT_WINDOWS['beat-3']!,
+    tuningWindow: BEAT_WINDOWS['beat-3']!,
     predicate: (engine) => counterPivotsAtLeast(engine, 1),
   },
   {
     id: 'beat-4',
-    targetWindow: BEAT_WINDOWS['beat-4']!,
+    tuningWindow: BEAT_WINDOWS['beat-4']!,
     predicate: (engine) => matchEnded(engine),
   },
   {
     id: 'beat-5',
-    targetWindow: BEAT_WINDOWS['beat-5']!,
+    tuningWindow: BEAT_WINDOWS['beat-5']!,
     predicate: (engine) => secondMatchPivotMade(engine),
   },
   {
     id: 'beat-6',
-    targetWindow: BEAT_WINDOWS['beat-6']!,
+    tuningWindow: BEAT_WINDOWS['beat-6']!,
     predicate: (engine) => counterPivotsAtLeast(engine, 2),
   },
 ];

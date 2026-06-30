@@ -8,7 +8,7 @@
  *   3. read the punch list — find the red rows
  *   4. tweak again
  *
- * Drives `buildProducerSimEngine()` via `runProbe` (targetWindow-classified
+ * Drives `buildProducerSimEngine()` via `runProbe` (tuningWindow-classified
  * arc beats) and `runWaypointProbe` (snapshot-at-time per-producer pacing)
  * at `tickDelta: 1s`. Methodology is documented in `archetypes/BALANCING.md`.
  */
@@ -86,14 +86,14 @@ function main(): void {
   console.log();
 
   console.log('## Punch list\n');
-  const simFailed = arcResults.filter((r) => !r.inWindow);
+  const simFailed = arcResults.filter((r) => !r.inTuningWindow);
   if (simFailed.length === 0) {
     console.log('All arc beats land inside their spec windows.');
   } else {
     for (const r of simFailed) {
       const p50 = r.terminationTime?.p50;
-      // Every ARC_BEAT carries targetWindow, so it round-trips on the result.
-      const [lo, hi] = r.targetWindow!;
+      // Every ARC_BEAT carries tuningWindow, so it round-trips on the result.
+      const [lo, hi] = r.tuningWindow!;
       let diag: string;
       if (p50 == null || r.counts.predicate === 0) {
         diag = `never fired across ${r.counts.maxSimTime} seeds`;

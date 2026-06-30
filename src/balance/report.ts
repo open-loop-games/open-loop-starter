@@ -45,12 +45,12 @@ export function renderArcTable(results: BeatResult[]): string {
     const t = r.terminationTime;
     return [
       r.beatId,
-      r.targetWindow ? formatWindow(r.targetWindow) : '—',
+      r.tuningWindow ? formatWindow(r.tuningWindow) : '—',
       t ? formatDuration(t.p5) : '—',
       t ? formatDuration(t.p50) : '—',
       t ? formatDuration(t.p95) : '—',
       `${r.counts.predicate} / ${r.counts.predicate + r.counts.maxSimTime}`,
-      r.inWindow ? 'YES' : 'NO',
+      r.inTuningWindow ? 'YES' : 'NO',
     ];
   });
   return renderMarkdownTable(header, rows);

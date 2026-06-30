@@ -219,22 +219,22 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
 export const ARC_BEATS: BeatProbe[] = [
   {
     id: 'beat-1',
-    targetWindow: BEAT_WINDOWS['beat-1']!,
+    tuningWindow: BEAT_WINDOWS['beat-1']!,
     predicate: (engine) => towersPlacedAtLeast(engine, 1),
   },
   {
     id: 'beat-2',
-    targetWindow: BEAT_WINDOWS['beat-2']!,
+    tuningWindow: BEAT_WINDOWS['beat-2']!,
     predicate: (engine) => roundAtLeast(engine, 2),
   },
   {
     id: 'beat-3',
-    targetWindow: BEAT_WINDOWS['beat-3']!,
+    tuningWindow: BEAT_WINDOWS['beat-3']!,
     predicate: (engine) => nonDartTowerBought(engine),
   },
   {
     id: 'beat-4',
-    targetWindow: BEAT_WINDOWS['beat-4']!,
+    tuningWindow: BEAT_WINDOWS['beat-4']!,
     // Phase 5a placeholder. Phase 5b wires a bot-side shed-event counter
     // via `bloons.onBloonPopped(({ defId }) => ...)`; this predicate then
     // reads that counter through an injection key the bot module provides.
@@ -242,12 +242,12 @@ export const ARC_BEATS: BeatProbe[] = [
   },
   {
     id: 'beat-5',
-    targetWindow: BEAT_WINDOWS['beat-5']!,
+    tuningWindow: BEAT_WINDOWS['beat-5']!,
     predicate: (engine) => roundAtLeast(engine, 7),
   },
   {
     id: 'beat-6',
-    targetWindow: BEAT_WINDOWS['beat-6']!,
+    tuningWindow: BEAT_WINDOWS['beat-6']!,
     predicate: (engine) => arcClosed(engine),
   },
 ];

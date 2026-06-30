@@ -203,27 +203,27 @@ export const FLOW_BEATS: Waypoint[] = Object.keys(BEAT_WINDOWS).map((id) => ({
 export const ARC_BEATS: BeatProbe[] = [
   {
     id: 'beat-1',
-    targetWindow: BEAT_WINDOWS['beat-1']!,
+    tuningWindow: BEAT_WINDOWS['beat-1']!,
     predicate: () => Decimal.gte(getPrimaryResource().value, 1),
   },
   {
     id: 'beat-2',
-    targetWindow: BEAT_WINDOWS['beat-2']!,
+    tuningWindow: BEAT_WINDOWS['beat-2']!,
     predicate: () => producerCountAtLeast('planter', 2),
   },
   {
     id: 'beat-3',
-    targetWindow: BEAT_WINDOWS['beat-3']!,
+    tuningWindow: BEAT_WINDOWS['beat-3']!,
     predicate: () => unlockBought('coop-built'),
   },
   {
     id: 'beat-5',
-    targetWindow: BEAT_WINDOWS['beat-5']!,
+    tuningWindow: BEAT_WINDOWS['beat-5']!,
     predicate: () => producerCountAtLeast('pond', 1) && unlockBought('spring-arrives'),
   },
   {
     id: 'beat-6',
-    targetWindow: BEAT_WINDOWS['beat-6']!,
+    tuningWindow: BEAT_WINDOWS['beat-6']!,
     predicate: () => achievementsEarnedAtLeast(8),
   },
 ];
