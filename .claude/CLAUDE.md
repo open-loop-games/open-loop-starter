@@ -22,9 +22,15 @@ This half is a research-output surface that happens to live inside starter. Main
 
 ### Fork workflow
 
-`pnpm eject <archetype> [--name <game>]` turns the starter into a single-game fork in one step: hoists your archetype to `src/game/`, rewrites `main.ts` to a single-archetype boot, repoints/prunes config, and deletes the entire demo/research surface (`src/showcase/` + the repo-root demo docs). It's **dry-run by default** — it prints the plan and touches nothing; pass `--execute` to perform it. Implementation in `scripts/eject.mjs`, locked by `src/test/eject.test.ts`.
+`pnpm eject <archetype> [--name <game>]` turns the starter into a single-game fork in one step: hoists your archetype to `src/game/`, rewrites `main.ts` to a single-archetype boot, repoints/prunes config, slims `types.ts`/`manifest.ts` to game identity, stubs the README, and deletes the entire demo/research surface (`src/showcase/` + the repo-root demo docs) **and eject's own machinery** (`scripts/eject.mjs`, `src/test/eject.test.ts`, the `eject` script, the `@/showcase` eslint guard). The fork starts clean, green, and correctly-named. It's **dry-run by default** — it prints the plan and touches nothing; pass `--execute` to perform it. Implementation in `scripts/eject.mjs`, locked by `src/test/eject.test.ts`.
 
-The demo surface lives behind one strip boundary — everything under `src/showcase/` (archetypes, gallery, about, sandbox). The scaffold (`src/lib`, `src/ui`, `src/composables`, `src/modules`, `src/balance`, `src/styles`) never imports across that boundary; an eslint rule enforces the one-way cut so the ejected game can't break.
+Two modes: `pnpm eject <archetype>` builds on a validated archetype (its `Producer*`/`Looper*` identifiers stay — honestly naming the pattern you chose); `pnpm eject --clean` hoists the neutral `_blank` skeleton (generic `Game*` symbols) for a novel composition with no fitting archetype — the honest blank base, so there's no archetype content to gut. `--name` controls display casing (`--name "Cookie Tycoon"` → `Cookie Tycoon`); the package name + `GAME_ID` are slugified.
+
+Because the eject test is deleted with the machinery, there is no self-checking green-after-eject invariant — the fork must run `pnpm install && pnpm typecheck && pnpm test && pnpm lint` itself (eject prints this).
+
+**Manual post-fork steps eject leaves to judgment:** rewrite `.claude/CLAUDE.md` from the starter's dual-character framing to your game (eject leaves it verbatim — a `--name` stub would lose too much); regenerate `src/game/overview.md` + `domain-map.md` (`pnpm domain-map`) once you've reshaped `src/game/data`. (`.claude/CLAUDE.local.md` is gitignored and doesn't travel; the fork inherits the studio-root `gitea-tasks` MCP config once its own `.mcp.json` is removed, which eject does.)
+
+The demo surface lives behind one strip boundary — everything under `src/showcase/` (archetypes, gallery, about, sandbox). The scaffold (`src/lib`, `src/ui`, `src/composables`, `src/modules`, `src/balance`, `src/styles`) never imports across that boundary; an eslint rule enforces the one-way cut so the ejected game can't break. The `_blank` skeleton lives under the boundary too — an underscore-prefixed authoring surface the gallery and the archetype list both filter out.
 
 ## Commands
 

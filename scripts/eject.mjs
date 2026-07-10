@@ -28,14 +28,23 @@ const SHOWCASE = 'src/showcase';
 const ARCHETYPES = `${SHOWCASE}/archetypes`;
 const GAME_DIR = 'src/game';
 
-// Repo-root + in-src surfaces that exist only to support the demo gallery.
+// Repo-root + in-src surfaces that exist only to support the demo gallery,
+// plus eject's own machinery (which is meaningless in a single-game fork) and
+// starter-identity files a fork must not inherit.
 const DEMO_DELETES = [
   SHOWCASE,
   'src/test/gallery-strip.test.ts',
+  'src/test/eject.test.ts',
+  'scripts/eject.mjs',
   'docs',
   'archetypes',
   'profiles',
   'ARCHETYPES.md',
+  'TODO.md',
+  // Stale under the /work/studio workspace — the root lockfile is authoritative.
+  'pnpm-lock.yaml',
+  // Starter's task-backend config; a fork inherits the studio-root gitea config.
+  '.mcp.json',
 ];
 
 const MAIN_TS = `import { effectScope } from 'vue';
@@ -58,6 +67,60 @@ const { mount } = createApp();
 mount('#app');
 `;
 
+// Slim replacement for src/types.ts — keeps the app-wide Screen enum, drops the
+// gallery-surface manifest contract (ArchetypeManifest + PrimitiveRef/BeatRef/
+// ExemplarRef/FormFactor) that only the deleted gallery consumed.
+const TYPES_TS = `export enum Screen {
+  Slots = 'slots',
+  Game = 'game',
+}
+
+/** Game identity manifest. Forwarded as \`appName\` to SlotScreen and used as
+ *  the engine save-namespace. */
+export interface GameManifest {
+  id: string;
+  name: string;
+}
+`;
+
+/** Identity-only manifest for the hoisted src/game — the gallery arrays
+ *  (primitives/beats/exemplars/shell) are dropped on eject. */
+function gameManifest(id, name) {
+  const esc = (s) => s.replace(/'/g, "\\'");
+  return `import type { GameManifest } from '@/types';
+
+export const manifest: GameManifest = { id: '${esc(id)}', name: '${esc(name)}' };
+`;
+}
+
+/** Minimal README stub replacing starter's dual-character docs. */
+function readmeMd(name) {
+  return `# ${name}
+
+A game built on [open-loop-engine](../open-loop-engine), forked from open-loop-starter.
+
+## Setup
+
+\`\`\`bash
+pnpm install   # engine is a link: dep to the sibling directory
+pnpm dev
+\`\`\`
+
+## Commands
+
+\`\`\`bash
+pnpm dev        # Vite dev server
+pnpm build      # vue-tsc -b && vite build
+pnpm typecheck  # vue-tsc -b
+pnpm test       # Vitest run
+pnpm lint       # eslint src/
+pnpm domain-map # regenerate src/game/domain-map.md from data types
+\`\`\`
+
+Regenerate \`src/game/overview.md\` + \`domain-map.md\` after editing \`src/game/data\`.
+`;
+}
+
 function slug(s) {
   return s
     .toLowerCase()
@@ -66,15 +129,33 @@ function slug(s) {
 }
 
 function parseArgs(argv) {
-  const out = { archetype: undefined, name: undefined, execute: false, root: process.cwd() };
+  const out = { archetype: undefined, name: undefined, execute: false, clean: false, root: process.cwd() };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--execute') out.execute = true;
+    else if (a === '--clean') out.clean = true;
     else if (a === '--name') out.name = argv[++i];
     else if (a === '--root') out.root = resolve(argv[++i]);
     else if (!a.startsWith('--') && !out.archetype) out.archetype = a;
   }
   return out;
+}
+
+// `--clean` ejects the neutral `_blank` skeleton — the honest base for a novel
+// composition with no fitting archetype (no archetype content to strip by hand).
+const CLEAN_ARCHETYPE = '_blank';
+
+/** Read the top-level `id`/`name` string literals from an archetype's manifest,
+ *  falling back to the directory name if the manifest can't be parsed. */
+function readManifestIdentity(root, archetype) {
+  const p = join(root, ARCHETYPES, archetype, 'manifest.ts');
+  if (existsSync(p)) {
+    const src = readFileSync(p, 'utf8');
+    const id = src.match(/\bid:\s*'([^']*)'/)?.[1];
+    const name = src.match(/\bname:\s*'([^']*)'/)?.[1];
+    if (id && name) return { id, name };
+  }
+  return { id: archetype, name: archetype };
 }
 
 /** Compute the eject plan without touching disk. Pure given the root tree. */
@@ -87,8 +168,12 @@ function planEject(root, archetype, name) {
     throw new Error(`Unknown archetype "${archetype}". Available: ${have.join(', ') || '(none)'}`);
   }
   const gameId = name ? slug(name) : undefined;
+  // Post-eject the game keeps only identity: --name wins, else the source
+  // manifest's own id/name, else the directory name.
+  const manifest = name ? { id: slug(name), name } : readManifestIdentity(root, archetype);
   return {
     archetype,
+    manifest,
     move: { from: `${ARCHETYPES}/${archetype}`, to: GAME_DIR },
     rewriteMain: 'src/main.ts',
     // Repoint config references for the kept archetype, then prune any that
@@ -132,17 +217,38 @@ function applyPlan(root, plan) {
         .join(plan.repoint.to)
         .split(plan.domainMap.from)
         .join(plan.domainMap.to);
+      // eslint.config.js carries demo-only rule blocks (the showcase-boundary
+      // guard, the Synergism-snapshot ignores) that are brace-balanced JS a
+      // line-filter can't safely remove. They're wrapped in `eject:strip-start`
+      // /`eject:strip-end` sentinels in source; strip each region wholesale.
+      if (rel === 'eslint.config.js') {
+        out = out.replace(/[ \t]*\/\* eject:strip-start[\s\S]*?eject:strip-end \*\/\n?/g, '');
+      }
       // Drop any config line that still points into the showcase (other
       // archetypes / _template excludes that no longer exist post-eject).
       out = out
         .split('\n')
         .filter((line) => !line.includes(plan.pruneConfigLines))
         .join('\n');
+      // The `eject` script references machinery deleted by this run.
+      if (rel === 'package.json') {
+        out = out
+          .split('\n')
+          .filter((line) => !/^\s*"eject":/.test(line))
+          .join('\n');
+      }
       return out;
     });
   }
 
-  // 4. Apply the game name to package.json + the hoisted boot's GAME_ID.
+  // 4. Slim starter-wide surfaces to the single game: drop the gallery manifest
+  // contract from types.ts, reduce the hoisted manifest to identity, and stub
+  // the README. Wholesale writes (same pattern as main.ts) — never munging.
+  writeFileSync(join(root, 'src/types.ts'), TYPES_TS);
+  writeFileSync(join(root, GAME_DIR, 'manifest.ts'), gameManifest(plan.manifest.id, plan.manifest.name));
+  writeFileSync(join(root, 'README.md'), readmeMd(plan.manifest.name));
+
+  // 5. Apply the game name to package.json + the hoisted boot's GAME_ID.
   if (plan.packageName) {
     editFile(join(root, 'package.json'), (src) =>
       src.replace(/("name":\s*")[^"]*(")/, `$1${plan.packageName}$2`),
@@ -152,16 +258,20 @@ function applyPlan(root, plan) {
     );
   }
 
-  // 5. Delete the demo/research surface.
+  // 6. Delete the demo/research surface + eject's own machinery. Runs last so
+  // every read/write above completes first; self-deleting eject.mjs mid-run is
+  // safe (the module is already loaded into memory).
   for (const rel of plan.deletes) {
     rmSync(join(root, rel), { recursive: true, force: true });
   }
 }
 
 function main() {
-  const { archetype, name, execute, root } = parseArgs(process.argv.slice(2));
+  const { archetype: named, name, execute, clean, root } = parseArgs(process.argv.slice(2));
+  const archetype = clean ? CLEAN_ARCHETYPE : named;
   if (!archetype) {
     console.error('usage: pnpm eject <archetype> [--name <game-name>] [--execute]');
+    console.error('       pnpm eject --clean [--name <game-name>] [--execute]');
     const dir = join(root, ARCHETYPES);
     if (existsSync(dir)) {
       const have = readdirSync(dir).filter((d) => !d.startsWith('_'));
@@ -182,10 +292,16 @@ function main() {
     return;
   }
   applyPlan(root, plan);
-  console.log(`✓ ejected "${archetype}" → ${GAME_DIR}`);
-  console.log(`  main.ts now boots the single archetype; showcase + demo docs removed.`);
-  if (plan.gameId) console.log(`  named "${plan.gameId}" (package.json + GAME_ID).`);
-  console.log(`  next: pnpm install && pnpm typecheck && pnpm dev`);
+  const label = clean ? 'clean scaffold' : `"${archetype}"`;
+  console.log(`✓ ejected ${label} → ${GAME_DIR}`);
+  console.log(`  main.ts now boots the single game; showcase, demo docs, and eject machinery removed.`);
+  if (plan.gameId) console.log(`  named "${plan.gameId}" (package.json + GAME_ID + manifest).`);
+  // The eject lock test is deleted with the rest of the machinery, so there is
+  // no longer a self-checking green-after-eject invariant — the fork must run
+  // the full gate itself before trusting the result.
+  console.log('\n  next — REQUIRED to confirm a clean fork (there is no eject test left to enforce it):');
+  console.log('    pnpm install && pnpm typecheck && pnpm test && pnpm lint');
+  console.log('    pnpm dev');
 }
 
 // Exported for the dry-run lock test; runs as a CLI otherwise.

@@ -24,14 +24,35 @@ describe('eject plan', () => {
     expect(plan.gameId).toBe('cookie-tycoon');
     expect(plan.deletes).toContain('src/showcase');
     expect(plan.deletes).toContain('src/test/gallery-strip.test.ts');
+    // Eject strips its own machinery so the fork starts clean + green.
+    expect(plan.deletes).toContain('scripts/eject.mjs');
+    expect(plan.deletes).toContain('src/test/eject.test.ts');
     // Nothing in the plan deletes anything under what becomes the game.
     for (const d of plan.deletes) expect(d.startsWith('src/game')).toBe(false);
+  });
+
+  it('slims the manifest to identity — --name wins', () => {
+    const plan = planEject(ROOT, 'producer', 'Cookie Tycoon');
+    expect(plan.manifest).toEqual({ id: 'cookie-tycoon', name: 'Cookie Tycoon' });
+  });
+
+  it('slims the manifest to identity — falls back to the source manifest', () => {
+    const plan = planEject(ROOT, 'producer');
+    expect(plan.manifest).toEqual({ id: 'producer', name: 'Bakery' });
   });
 
   it('omits the game name when none is given', () => {
     const plan = planEject(ROOT, 'looper');
     expect(plan.gameId).toBeUndefined();
     expect(plan.packageName).toBeUndefined();
+  });
+
+  it('ejects the neutral _blank skeleton for a clean fork', () => {
+    // `--clean` resolves to the `_blank` archetype in main(); the planner sees
+    // the resolved name. This also transitively locks that _blank exists.
+    const plan = planEject(ROOT, '_blank');
+    expect(plan.move).toEqual({ from: 'src/showcase/archetypes/_blank', to: 'src/game' });
+    expect(plan.manifest).toEqual({ id: 'game', name: 'Game' });
   });
 
   it('rejects an unknown archetype', () => {
