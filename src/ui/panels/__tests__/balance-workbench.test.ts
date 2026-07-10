@@ -104,6 +104,57 @@ describe('useBalanceWorkbench composable', () => {
     live.stop();
   });
 
+  it('captures per-resource trajectories and keeps series keys out of the delta table', () => {
+    const displayName = 'bw-traj-gold';
+    const modFactory = (): EngineModule => makeProducerModule(displayName);
+    const live = buildLiveEngine('bw-traj', modFactory());
+
+    const wb = useBalanceWorkbench({ engine: live, modules: () => [modFactory()] });
+    const cursorEntry = wb.snapshot.value.all.find((e) => e.label.includes('cursor'))!;
+    wb.selectEntry(cursorEntry);
+    wb.form.kind = 'scalar-multiply';
+    wb.form.factor = 3;
+    wb.form.seedCount = 2;
+    wb.form.ticks = 5;
+    wb.form.captureSeries = true;
+
+    wb.run();
+
+    // Trajectories reconstructed, one band per tick, defaulting the selection.
+    expect(wb.seriesNames.value).toContain(displayName);
+    const traj = wb.selectedTrajectory.value;
+    expect(traj).not.toBeNull();
+    expect(traj!.baseline).toHaveLength(5);
+    expect(traj!.variant).toHaveLength(5);
+    // A 3× rate multiplier lifts the variant's final gold above baseline.
+    expect(traj!.variant[4]!.mean).toBeGreaterThan(traj!.baseline[4]!.mean);
+
+    // Per-tick series metrics never leak into the scalar delta table.
+    expect(wb.rows.value.every((r) => !r.metric.startsWith('series:'))).toBe(true);
+
+    live.stop();
+  });
+
+  it('skips trajectory capture when captureSeries is off', () => {
+    const displayName = 'bw-noseries-gold';
+    const modFactory = (): EngineModule => makeProducerModule(displayName);
+    const live = buildLiveEngine('bw-noseries', modFactory());
+
+    const wb = useBalanceWorkbench({ engine: live, modules: () => [modFactory()] });
+    wb.selectEntry(wb.snapshot.value.all.find((e) => e.label.includes('cursor'))!);
+    wb.form.seedCount = 2;
+    wb.form.ticks = 5;
+    wb.form.captureSeries = false;
+
+    wb.run();
+
+    expect(wb.trajectories.value).toHaveLength(0);
+    expect(wb.selectedTrajectory.value).toBeNull();
+    expect(wb.rows.value.length).toBeGreaterThan(0);
+
+    live.stop();
+  });
+
   it('blocks running when no entry is selected and surfaces an error', () => {
     const live = buildLiveEngine('bw-comp-empty', makeProducerModule('bw-empty'));
     const wb = useBalanceWorkbench({
@@ -201,6 +252,8 @@ describe('BalanceWorkbench.vue', () => {
 
     expect(wrapper.find('.delta-table').exists()).toBe(true);
     expect(wrapper.find('.delta-headline-value').text()).toMatch(/%/);
+    // Trajectory chart renders (captureSeries defaults on).
+    expect(wrapper.find('.delta-trajectory svg.traj__svg').exists()).toBe(true);
 
     wrapper.unmount();
     live.stop();

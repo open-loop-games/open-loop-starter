@@ -16,6 +16,7 @@ import {
 import type { Analyzer, Engine, EngineModule, RunContext } from '@open-loop/engine';
 import type { PickerEntry } from '@open-loop/engine/harness';
 import Button from '@/ui/components/Button.vue';
+import TrajectoryChart from '@/ui/components/TrajectoryChart.vue';
 import { useBalanceWorkbench } from '@/composables/useBalanceWorkbench';
 
 const props = defineProps<{
@@ -95,6 +96,13 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
   get: () => wb.form.kind,
   set: (next) => {
     if (next) wb.form.kind = next;
+  },
+});
+
+const seriesModel = computed<string | null>({
+  get: () => wb.selectedTrajectory.value?.name ?? null,
+  set: (next) => {
+    if (next) wb.selectedSeriesName.value = next;
   },
 });
 </script>
@@ -284,6 +292,20 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
               </NumberFieldIncrement>
             </NumberFieldRoot>
           </div>
+
+          <div class="form-row form-row--inline">
+            <label
+              class="bw-check"
+              for="bw-capture-series"
+            >
+              <input
+                id="bw-capture-series"
+                v-model="wb.form.captureSeries"
+                type="checkbox"
+              >
+              Capture trajectories
+            </label>
+          </div>
         </div>
 
         <div class="form-actions">
@@ -355,6 +377,30 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
           class="delta-empty"
         >
           No run yet.
+        </div>
+
+        <div
+          v-if="wb.selectedTrajectory.value"
+          class="delta-trajectory"
+        >
+          <ToggleGroupRoot
+            v-if="wb.seriesNames.value.length > 1"
+            v-model="seriesModel"
+            type="single"
+            :roving-focus="true"
+            class="series-toggle"
+            aria-label="Charted resource"
+          >
+            <ToggleGroupItem
+              v-for="name in wb.seriesNames.value"
+              :key="name"
+              :value="name"
+              class="bw-btn series-toggle__item"
+            >
+              {{ name }}
+            </ToggleGroupItem>
+          </ToggleGroupRoot>
+          <TrajectoryChart :trajectory="wb.selectedTrajectory.value" />
         </div>
 
         <table
@@ -609,6 +655,26 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
   flex-wrap: wrap;
 }
 
+.form-row--inline {
+  flex-direction: row;
+  align-items: center;
+}
+
+.bw-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.bw-check input {
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
 .form-status {
   margin-top: var(--gap-sm);
 }
@@ -651,6 +717,29 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
 .delta-headline-value {
   font-size: 18px;
   font-weight: 600;
+}
+
+.delta-trajectory {
+  margin-bottom: var(--gap);
+}
+
+.series-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: var(--gap-sm);
+}
+
+.series-toggle__item {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.series-toggle__item[data-state='on'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-bg);
 }
 
 .delta-table {

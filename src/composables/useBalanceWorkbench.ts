@@ -25,7 +25,9 @@ import {
   createSensitivityCell,
   defaultAnalyzerPack,
   runSensitivity,
+  seriesAnalyzerPack,
   type Analyzer,
+  type CellAggregate,
   type CellResult,
   type Engine,
   type EngineModule,
@@ -81,6 +83,12 @@ export interface PerturbationForm {
   delta: number;
   seedCount: number;
   ticks: number;
+  /**
+   * Capture per-tick resource trajectories (baseline vs variant) for charting.
+   * Fans each tracked resource out to `ticks` metric keys per run, so it's
+   * opt-in — off by default keeps a plain sensitivity run scalar-cheap.
+   */
+  captureSeries: boolean;
 }
 
 export interface DeltaRow {
@@ -88,6 +96,22 @@ export interface DeltaRow {
   baselineAvg: number;
   variantAvg: number;
   delta: MetricDelta;
+}
+
+/** One tick's baseline/variant band, aggregated across the seed sweep. */
+export interface TrajectoryBand {
+  tick: number;
+  mean: number;
+  min: number;
+  max: number;
+}
+
+/** Per-resource baseline-vs-variant trajectory reconstructed from series metrics. */
+export interface Trajectory {
+  /** Resource display name (the `series:{name}` suffix). */
+  name: string;
+  baseline: TrajectoryBand[];
+  variant: TrajectoryBand[];
 }
 
 export interface RunProgress {
@@ -107,6 +131,14 @@ export interface UseBalanceWorkbenchReturn {
   progress: Ref<RunProgress>;
   rows: Ref<DeltaRow[]>;
   headline: Ref<DeltaRow | null>;
+  /** All captured resource trajectories from the last run (empty if series capture was off). */
+  trajectories: Ref<Trajectory[]>;
+  /** Resource names available to chart, in aggregate order. */
+  seriesNames: Ref<string[]>;
+  /** Which trajectory the chart shows; defaults to the first captured resource. */
+  selectedSeriesName: Ref<string | null>;
+  /** The trajectory matching `selectedSeriesName`, or null. */
+  selectedTrajectory: Ref<Trajectory | null>;
   error: Ref<string | null>;
   committed: Ref<boolean>;
   canPerturb: Ref<boolean>;
@@ -116,6 +148,29 @@ export interface UseBalanceWorkbenchReturn {
   run: () => void;
   commit: () => void;
   discard: () => void;
+}
+
+const SERIES_KEY = /^series:(.*)\.t(\d+)$/;
+
+/**
+ * Reconstruct per-resource `{tick, mean, min, max}` bands from a cell's
+ * aggregated `series:{name}.t{i}` metrics. Each per-tick metric already
+ * carries the across-seed distribution (the aggregator's job), so the band
+ * is a direct read of `avg`/`min`/`max` — no re-aggregation here.
+ */
+function reconstructBands(aggregate: CellAggregate): Record<string, TrajectoryBand[]> {
+  const byName: Record<string, TrajectoryBand[]> = {};
+  for (const [key, stats] of Object.entries(aggregate.metrics)) {
+    const match = SERIES_KEY.exec(key);
+    if (!match) continue;
+    const name = match[1]!;
+    const tick = Number(match[2]);
+    (byName[name] ??= []).push({ tick, mean: stats.avg, min: stats.min, max: stats.max });
+  }
+  for (const bands of Object.values(byName)) {
+    bands.sort((a, b) => a.tick - b.tick);
+  }
+  return byName;
 }
 
 export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanceWorkbenchReturn {
@@ -136,6 +191,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     delta: 1,
     seedCount: 20,
     ticks: 200,
+    captureSeries: true,
   });
 
   const running = ref(false);
@@ -155,17 +211,47 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     if (!r) return [];
     const variant = r.variants[0];
     if (!variant) return [];
-    return Object.entries(variant.deltas)
-      .map(([metric, delta]) => ({
-        metric,
-        baselineAvg: r.baseline.aggregate.metrics[metric]?.avg ?? 0,
-        variantAvg: variant.cell.aggregate.metrics[metric]?.avg ?? 0,
-        delta,
-      }))
-      .sort((a, b) => Math.abs(b.delta.relative) - Math.abs(a.delta.relative));
+    return (
+      Object.entries(variant.deltas)
+        // Per-tick series metrics are charted separately — keep them out of the
+        // scalar delta table so it isn't flooded with `series:*.t*` rows.
+        .filter(([metric]) => !metric.startsWith('series:'))
+        .map(([metric, delta]) => ({
+          metric,
+          baselineAvg: r.baseline.aggregate.metrics[metric]?.avg ?? 0,
+          variantAvg: variant.cell.aggregate.metrics[metric]?.avg ?? 0,
+          delta,
+        }))
+        .sort((a, b) => Math.abs(b.delta.relative) - Math.abs(a.delta.relative))
+    );
   });
 
   const headline = computed<DeltaRow | null>(() => rows.value[0] ?? null);
+
+  const trajectories = computed<Trajectory[]>(() => {
+    const r = result.value;
+    const variant = r?.variants[0];
+    if (!r || !variant) return [];
+    const baseBands = reconstructBands(r.baseline.aggregate);
+    const variantBands = reconstructBands(variant.cell.aggregate);
+    const names = Object.keys(baseBands);
+    return names.map((name) => ({
+      name,
+      baseline: baseBands[name] ?? [],
+      variant: variantBands[name] ?? [],
+    }));
+  });
+
+  const seriesNames = computed<string[]>(() => trajectories.value.map((t) => t.name));
+
+  const selectedSeriesName = ref<string | null>(null);
+
+  const selectedTrajectory = computed<Trajectory | null>(() => {
+    const list = trajectories.value;
+    if (list.length === 0) return null;
+    const want = selectedSeriesName.value;
+    return list.find((t) => t.name === want) ?? list[0] ?? null;
+  });
 
   function refreshPicker(): void {
     snapshot.value = createPickerSnapshot(engine);
@@ -206,12 +292,19 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       const blob = engine.saveManager.exportSave();
       const perturbation = buildPerturbation();
 
+      // Both cells must share one analyzer set so their metric keys align for
+      // the baseline-vs-variant diff. Series capture appends per-resource
+      // trackers on top of the scalar pack.
+      const captureSeries = form.captureSeries;
+      const buildAnalyzers = (e: Engine): Analyzer[] =>
+        captureSeries ? [...analyzerPack(e), ...seriesAnalyzerPack(e)] : analyzerPack(e);
+
       const baseline = createSensitivityCell({
         name: 'baseline',
         saveBlob: blob,
         modules,
         ...(prepare && { perturb: (e, ctx) => prepare(e, ctx) }),
-        buildAnalyzers: analyzerPack,
+        buildAnalyzers,
         tick,
         ticks: form.ticks,
       });
@@ -223,7 +316,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
           prepare?.(e, ctx);
           applyPerturbation(e, entry, perturbation);
         },
-        buildAnalyzers: analyzerPack,
+        buildAnalyzers,
         tick,
         ticks: form.ticks,
       });
@@ -290,6 +383,10 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     progress,
     rows,
     headline,
+    trajectories,
+    seriesNames,
+    selectedSeriesName,
+    selectedTrajectory,
     error,
     committed,
     canPerturb,
