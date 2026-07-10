@@ -8,7 +8,7 @@ export interface ScienceRow {
   id: ScienceId;
   name: string;
   def: ScienceSpec;
-  cost: DecimalSource;
+  cost: ComputedRef<DecimalSource>;
   prerequisiteName: string | null;
   researched: ComputedRef<boolean>;
   visible: ComputedRef<boolean>;
@@ -35,12 +35,13 @@ export function useSciences(): ScienceRow[] {
     const visible = computed(() => prereqMet.value);
     const canResearch = computed(() => entry.value?.purchasable.canPurchase.value ?? false);
     const prerequisiteName = def.prerequisite ? (nameById.get(def.prerequisite) ?? null) : null;
+    const cost = computed<DecimalSource>(() => sciences.scienceCost(def.id));
 
     return {
       id: def.id,
       name: def.name,
       def,
-      cost: def.baseCost,
+      cost,
       prerequisiteName,
       researched,
       visible,

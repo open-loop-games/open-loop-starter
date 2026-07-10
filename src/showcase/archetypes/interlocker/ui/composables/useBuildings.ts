@@ -1,5 +1,5 @@
 import { computed, type ComputedRef } from 'vue';
-import { Decimal, type DecimalSource } from '@open-loop/engine';
+import { Decimal, isCostRequirement, type DecimalSource } from '@open-loop/engine';
 import { getBuildings, getResources } from '../../modules';
 import { DEFAULT_INTERLOCKER_DATA } from '../../data';
 import type { BuildingPrice, BuildingSpec } from '../../data/types';
@@ -32,14 +32,12 @@ export interface BuildingRow {
 /**
  * Row data for the buildings panel.
  *
- * `Purchasable.getCost(amount)` collapses multi-resource costs to a single
- * `DecimalSource`, so the panel computes per-resource costs directly from the
- * spec (`baseCost × priceRatio^count`). The engine's own `canPurchase`
- * predicate still drives the buy gate — it evaluates every CostRequirement.
- *
- * TODO(expansion): multi-resource cost preview. First consumer of this shape
- * in the corpus. Future Factorio-likes / Mindustry-likes / Director archetype
- * would converge — promote into @/ui/compositions/ when N=2 lands.
+ * Per-resource bulk cost reads each price line's own `CostRequirement.getCost`
+ * off the live purchasable — `buildings.ts` builds those requirements as
+ * `Formula.exponential`, so `getCost(amount)` is the engine's closed-form
+ * compounding geometric sum, not a hand-rolled re-derivation. The engine's own
+ * `canPurchase` predicate drives the buy gate — it evaluates every
+ * CostRequirement.
  */
 export function useBuildings(bulkAmount: () => DecimalSource): BuildingRow[] {
   const buildings = getBuildings();
@@ -53,18 +51,11 @@ export function useBuildings(bulkAmount: () => DecimalSource): BuildingRow[] {
 
     const entry = computed(() => buildings.category.getEntry(def.id));
 
-    const costs = computed<BuildingCostLine[]>(() => {
-      const amount = bulkAmount();
-      // Bulk pricing: sum the next N geometric terms.
-      // cost_total(amount) = baseCost × ratio^count × (ratio^amount - 1) / (ratio - 1)
-      //                     for ratio != 1; baseCost × amount when ratio == 1.
-      const n = Decimal.fromValue(amount);
-      const exp = def.priceRatio;
-      const c = count.value;
-      return def.prices.map((price) =>
-        buildCostLine(price, exp, c, n, resources, resourceNameById),
-      );
-    });
+    const costs = computed<BuildingCostLine[]>(() =>
+      def.prices.map((price) =>
+        buildCostLine(price, entry, bulkAmount, resources, resourceNameById),
+      ),
+    );
 
     const canBuy = computed(() => entry.value?.purchasable.canPurchase.value ?? false);
 
@@ -90,21 +81,19 @@ export function useBuildings(bulkAmount: () => DecimalSource): BuildingRow[] {
 
 function buildCostLine(
   price: BuildingPrice,
-  ratio: number,
-  count: number,
-  bulk: Decimal,
+  entry: ComputedRef<ReturnType<ReturnType<typeof getBuildings>['category']['getEntry']>>,
+  bulkAmount: () => DecimalSource,
   resources: ReturnType<typeof getResources>,
   nameById: Map<string, string>,
 ): BuildingCostLine {
+  const resource = resources.resources[price.resource];
   const amount = computed<DecimalSource>(() => {
-    const single = Decimal.mul(price.baseCost, Decimal.pow(ratio, count));
-    if (ratio === 1) return Decimal.mul(single, bulk);
-    // Sum of next-N geometric terms starting at exponent `count`.
-    const num = Decimal.sub(Decimal.pow(ratio, bulk), 1);
-    const den = ratio - 1;
-    return Decimal.mul(single, Decimal.div(num, den));
+    const reqs = entry.value?.purchasable.requirements;
+    const list = reqs == null ? [] : Array.isArray(reqs) ? reqs : [reqs];
+    const req = list.find((r) => isCostRequirement(r) && r.resource === resource);
+    return req && isCostRequirement(req) ? req.getCost(bulkAmount()) : Decimal.dZero;
   });
-  const have = computed<DecimalSource>(() => resources.resources[price.resource].value);
+  const have = computed<DecimalSource>(() => resource.value);
   const satisfied = computed(() => Decimal.gte(have.value, amount.value));
   return {
     resource: price.resource,

@@ -1,7 +1,7 @@
 import { computed, type ComputedRef, type Ref } from 'vue';
 import { Decimal, type DecimalSource } from '@open-loop/engine';
 import type { ResourceReadout, ResourceHighlight } from '@/ui/compositions';
-import { getCalendar, getResources, getVillage } from '../../modules';
+import { getBuildings, getResources, getVillage } from '../../modules';
 import { DEFAULT_INTERLOCKER_DATA } from '../../data';
 import type { ResourceSpec } from '../../data/types';
 
@@ -9,7 +9,7 @@ import type { ResourceSpec } from '../../data/types';
  * Synthesize the Interlocker wallet into `ResourceReadout[]` for the
  * vertical-sidebar variant of `ResourceHeaderStrip`. Each readout carries the
  * live amount, the chained cap (when the resource has a base cap), and the
- * net rate (positive contributions minus consumption for catnip).
+ * net rate (positive contributions minus consumption).
  *
  * The `highlight` axis maps to the strip's chip variant:
  *   - 'surplus' when the resource is at or above its cap.
@@ -17,17 +17,17 @@ import type { ResourceSpec } from '../../data/types';
  */
 export function useResources(): ResourceReadout[] {
   const resources = getResources();
-  const calendar = getCalendar();
   const village = getVillage();
+  const buildings = getBuildings();
   const data = DEFAULT_INTERLOCKER_DATA;
-  return data.resources.map((spec) => buildReadout(spec, resources, calendar, village));
+  return data.resources.map((spec) => buildReadout(spec, resources, village, buildings));
 }
 
 function buildReadout(
   spec: ResourceSpec,
   resources: ReturnType<typeof getResources>,
-  calendar: ReturnType<typeof getCalendar>,
   village: ReturnType<typeof getVillage>,
+  buildings: ReturnType<typeof getBuildings>,
 ): ResourceReadout {
   const resourceRef = resources.resources[spec.id];
   const maxChain = resources.maxChains[spec.id];
@@ -44,20 +44,17 @@ function buildReadout(
       : undefined;
 
   // Rate = chain.apply(0) sums all positive/negative contributions onto the
-  // zero base. Catnip is special: its production is scaled by the active
-  // season (mirrors village onTick's read-site multiply), and consumption
-  // happens outside the chain (village subtractResource), so the displayed
-  // rate is seasoned-production minus `village.catnipConsumptionRate` — the
-  // same chain-aware total village's onTick consumption step burns. Reading
-  // that single getter (rather than re-deriving the per-kitten/chain math
-  // here) keeps the consumption calc owned by the module that runs it; other
-  // resources read the rate chain directly.
+  // zero base, minus whatever consumption happens outside the chain (smelter
+  // draws wood + minerals, village draws catnip) via `subtractResource`
+  // directly. Each module that runs a drain owns its own net-rate/
+  // consumption-rate computed; the UI reads those single getters rather than
+  // re-deriving the per-tick math, so the readout can't drift out of sync
+  // with what onTick actually does.
   const rate = computed<DecimalSource>(() => {
+    if (spec.id === 'catnip') return village.catnipNetRate.value;
     const baseRate = resources.productionRate(spec.id);
-    if (spec.id === 'catnip') {
-      const production = baseRate * calendar.catnipMultiplier.value;
-      return production - village.catnipConsumptionRate.value;
-    }
+    if (spec.id === 'wood') return baseRate - buildings.smelterConsumptionRate.wood.value;
+    if (spec.id === 'minerals') return baseRate - buildings.smelterConsumptionRate.minerals.value;
     return baseRate;
   });
 

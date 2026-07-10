@@ -130,6 +130,9 @@ function createTestSciencesModule(
     },
     scienceCompleted: (id: ScienceId) => completed.value.has(id),
     isVisible: () => false,
+    scienceCost: () => {
+      throw new Error('test sciences scienceCost not implemented');
+    },
     onScienceCompleted: () => () => {},
   };
   return {
@@ -154,7 +157,11 @@ function createTestVillageModule(consumptionRateChain: ModifierChain): EngineMod
     // chain pasture binds onto); this composable-facing getter isn't
     // exercised here, so a stub computed satisfies the interface.
     catnipConsumptionRate: computed(() => 0),
+    catnipNetRate: computed(() => 0),
     isJobVisible: () => false,
+    jobRatePerSecond: () => {
+      throw new Error('test village jobRatePerSecond not implemented');
+    },
     setJobCount: () => {
       throw new Error('test village setJobCount not implemented');
     },

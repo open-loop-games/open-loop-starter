@@ -1,4 +1,4 @@
-import type { ComputedRef } from 'vue';
+import { computed, type ComputedRef } from 'vue';
 import {
   addResource,
   createAdditiveModifier,
@@ -6,6 +6,7 @@ import {
   createMultiplicativeModifier,
   createPurchasableCategory,
   Decimal,
+  Formula,
   hasResource,
   subtractResource,
   tunable,
@@ -60,6 +61,13 @@ export interface BuildingsApi {
   readonly gatherCatnipAmount: number;
   readonly refineCatnipCost: number;
   readonly refineCatnipWoodOutput: number;
+  /** Effective smelter drain (resource/sec) across all owned smelters, for wood
+   *  and minerals. Zero when no smelter is owned OR the smelter is currently
+   *  stalled (mirrors the onTick fail-soft: both reagents must be available
+   *  before either drains). Single source of truth for "how much wood/minerals
+   *  are being burned right now" — the UI's net-rate readout reads this instead
+   *  of re-deriving `rate × count` and silently dropping the stall case. */
+  smelterConsumptionRate: { wood: ComputedRef<number>; minerals: ComputedRef<number> };
 }
 
 export const BuildingsKey: InjectionKey<BuildingsApi> = Symbol(
@@ -237,22 +245,28 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
           const r = refs.get(def.id)!;
 
           // Composite cost: one CostRequirement per price-list entry. Each
-          // entry's cost reads `baseCost × priceRatio^count` — the count
-          // reference resolves at requirement-evaluation time so subsequent
-          // purchases re-read the up-to-date amount.
+          // entry's cost is `baseCost × priceRatio^count`, built as a
+          // `Formula.exponential` (not a plain getter) so the engine's own
+          // `getCost(amount)`/`requirementMet` compute the correct compounding
+          // geometric sum for bulk purchases via closed-form integration
+          // (`calculateCost`/`calculateMaxAffordable`) instead of falling back
+          // to a naive `singleCost × amount` — see
+          // `open-loop-engine/src/systems/purchasable.ts` `buildScalingCostRequirement`'s
+          // geometric path for the same pattern. `priceRatio` is captured once
+          // at construction (matching that engine convention — only `base`
+          // stays reactive through tunable perturbation); `count` resolves
+          // lazily via `category.getEntry` since the entry doesn't exist yet
+          // inside `mapPurchasable`.
+          const countRef = computed<DecimalSource>(
+            () => category.getEntry(def.id)?.signals.count.value ?? 0,
+          );
           const requirements = def.prices.map((price) => {
             const resource = resourcesApi.resources[price.resource];
             const baseCostRef = r.baseCost.get(price.resource)!;
             return createCostRequirement({
               resource,
-              cost: () => {
-                // Pull the live count via the per-def signals exposed by the
-                // category. The category builds entries during `register()`,
-                // so we look up lazily inside the getter.
-                const entry = category.getEntry(def.id);
-                const count = entry ? Number(entry.signals.count.value) : 0;
-                return Decimal.mul(baseCostRef.value, Decimal.pow(r.priceRatio.value, count));
-              },
+              cost: Formula.exponential(countRef, baseCostRef, r.priceRatio.value),
+              maxBulkAmount: Decimal.dInf,
             });
           });
 
@@ -341,6 +355,30 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
         iron.value = Decimal.add(iron.value, ironGain);
       });
 
+      // Display-rate predicate for the smelter's drain. Approximates the
+      // onTick fail-soft stall (both reagents must be available before either
+      // drains) without needing a `dt`: once a reagent balance hits zero the
+      // smelter stops drawing it, so "currently active" reduces to "both
+      // balances are still positive." Good enough for a per-second readout —
+      // exact dt-aligned stall timing isn't a display concern.
+      const smelterActive = computed<boolean>(() => {
+        const smelter = category.getEntry('smelter');
+        const count = smelter ? Number(smelter.signals.count.value) : 0;
+        return count > 0 && Decimal.gt(wood.value, 0) && Decimal.gt(minerals.value, 0);
+      });
+      const smelterCount = computed<number>(() => {
+        const smelter = category.getEntry('smelter');
+        return smelter ? Number(smelter.signals.count.value) : 0;
+      });
+      const smelterConsumptionRate = {
+        wood: computed<number>(() =>
+          smelterActive.value ? woodConsumptionRate.value * smelterCount.value : 0,
+        ),
+        minerals: computed<number>(() =>
+          smelterActive.value ? mineralConsumptionRate.value * smelterCount.value : 0,
+        ),
+      };
+
       // ─── API ───────────────────────────────────────────────────────────
       const api: BuildingsApi = {
         category,
@@ -374,6 +412,7 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
         get refineCatnipWoodOutput() {
           return refineCatnipWoodOutput.value;
         },
+        smelterConsumptionRate,
       };
 
       buildings = api;

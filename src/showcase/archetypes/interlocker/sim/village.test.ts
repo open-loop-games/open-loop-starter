@@ -133,6 +133,9 @@ function buildHarness(): Harness {
     category: undefined as never,
     scienceCompleted: () => true,
     isVisible: () => true,
+    scienceCost: () => {
+      throw new Error('test sciences scienceCost not implemented');
+    },
     onScienceCompleted: () => () => {},
   };
   ctx.provide(SciencesKey, sciencesStub);

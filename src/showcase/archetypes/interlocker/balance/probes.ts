@@ -254,7 +254,7 @@ function probeSmelter(durationSec: number, smelterCount: number): SmelterRow {
     for (const id of ['calendar', 'agriculture', 'mining', 'metal'] as ScienceId[]) {
       const entry = sciencesApi.category.getEntry(id);
       if (entry) {
-        const purchased = entry.purchasable.purchase();
+        const purchased = entry.purchasable.purchase(1);
         if (!purchased) {
           throw new Error(`science ${id} purchase failed`);
         }
@@ -271,7 +271,7 @@ function probeSmelter(durationSec: number, smelterCount: number): SmelterRow {
     addResource(minerals, cost + 10);
     const entry = buildingsApi.category.getEntry('smelter');
     if (!entry) throw new Error('no smelter');
-    const ok = entry.purchasable.purchase();
+    const ok = entry.purchasable.purchase(1);
     if (!ok) {
       throw new Error(`smelter purchase ${i} failed`);
     }
@@ -451,7 +451,10 @@ function probeArcSmoke(maxSimSec: number): {
     return !!entry && entry.purchasable.canPurchase.value;
   }
   function buy(id: BuildingId): void {
-    buildings!.category.getEntry(id)?.purchasable.purchase();
+    // Explicit amount: buildings are leveled (non-one-shot) purchasables with
+    // bulk-purchase enabled by default, so a bare `purchase()` buys as many as
+    // affordable, not one — same trap as the smelter-setup loop above.
+    buildings!.category.getEntry(id)?.purchasable.purchase(1);
   }
 
   function tryBuyBuilding(): void {
@@ -493,7 +496,7 @@ function probeArcSmoke(maxSimSec: number): {
       if (sciences!.scienceCompleted(id)) continue;
       const entry = sciences!.category.getEntry(id);
       if (entry?.purchasable.canPurchase.value) {
-        entry.purchasable.purchase();
+        entry.purchasable.purchase(1);
         return;
       }
     }

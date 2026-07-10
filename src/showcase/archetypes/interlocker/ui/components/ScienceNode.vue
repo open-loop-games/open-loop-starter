@@ -15,11 +15,17 @@ defineProps<{ row: ScienceRow }>();
   >
     <div class="science-node__info">
       <strong class="science-node__name">{{ row.name }}</strong>
-      <span v-if="row.prerequisiteName && !row.researched.value" class="science-node__prereq">
+      <span
+        v-if="row.prerequisiteName && !row.researched.value"
+        class="science-node__prereq"
+      >
         after {{ row.prerequisiteName }}
       </span>
     </div>
-    <span v-if="row.researched.value" class="science-node__badge"> ✓ researched </span>
+    <span
+      v-if="row.researched.value"
+      class="science-node__badge"
+    > ✓ researched </span>
     <Button
       v-else
       :disabled="!row.canResearch.value"
@@ -27,7 +33,7 @@ defineProps<{ row: ScienceRow }>();
       class="science-node__btn"
       @click="row.research()"
     >
-      {{ format(row.cost, 0) }} science
+      {{ format(row.cost.value, 0) }} science
     </Button>
   </li>
 </template>

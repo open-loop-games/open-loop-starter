@@ -37,6 +37,12 @@ export interface SciencesApi {
   /** Whether a science is currently visible to the player (prerequisite met,
    *  not yet researched). */
   isVisible(id: ScienceId): boolean;
+  /** Live science-point cost to research `id` — the tunable-resolved value the
+   *  purchasable's `CostRequirement` actually reads, not the static
+   *  `ScienceSpec.baseCost`. UI reads this for the displayed cost so it
+   *  doesn't drift from a balance-probe perturbation of
+   *  `sciences/<id>/baseCost`. */
+  scienceCost(id: ScienceId): DecimalSource;
   /** Subscribe to per-science completion events. UI uses for unlock-cascade
    *  toast aggregation. */
   onScienceCompleted(handler: (event: ScienceCompletedEvent) => void): () => void;
@@ -147,6 +153,11 @@ export function createSciencesModule(data: InterlockerData): EngineModule {
           const prereqOk = def.prerequisite == null || scienceCompleted(def.prerequisite);
           const notYet = !scienceCompleted(id);
           return prereqOk && notYet;
+        },
+        scienceCost(id: ScienceId): DecimalSource {
+          const ref = baseCostById.get(id);
+          if (!ref) throw new Error(`interlocker/sciences: unknown science "${id}"`);
+          return ref.value;
         },
         onScienceCompleted: (h) => handle.on('science-completed', h),
       };

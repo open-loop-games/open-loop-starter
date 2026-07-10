@@ -66,11 +66,23 @@ export interface VillageApi {
    *  per-kitten constant (which would silently drop building discounts like
    *  pasture). */
   catnipConsumptionRate: ComputedRef<number>;
+  /** Net catnip rate/sec — seasoned production minus `catnipConsumptionRate`,
+   *  the same two quantities village's onTick step 0/1 combine. Single source
+   *  of truth for "is the colony's catnip balance currently rising or
+   *  falling" so the UI reads one number instead of re-deriving the seasonal
+   *  multiply + consumption subtract itself. */
+  catnipNetRate: ComputedRef<number>;
   /** Whether the job is currently visible to the player. A job unlocks when its
    *  `unlockedByScience` gate (if any) is researched AND its `unlockedByBuilding`
    *  gate (if any) is built — scholar threads through the library, breaking the
    *  science↔scholar bootstrap cycle. */
   isJobVisible(id: JobId): boolean;
+  /** Live per-kitten rate for job `id` — the tunable-resolved value
+   *  `bindJobModifier` actually multiplies into the rate chain, not the
+   *  static `JobSpec.baseRatePerSecond`. UI reads this (× count) for the
+   *  displayed per-job rate so it doesn't drift from a balance-probe
+   *  perturbation of `village/jobs/<id>/baseRate`. */
+  jobRatePerSecond(id: JobId): number;
   /** Assign `newCount` kittens to job `id`. Throws if `sum(allCounts) > kittens`. */
   setJobCount(id: JobId, newCount: number): void;
   /** Subscribe to kitten-death events. Round-equivalent module (Phase 3+) can
@@ -240,6 +252,15 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         const baseDrainPerKitten = Math.abs(Number(perKittenCatnipPerSec.value));
         const effectivePerKittenDrain = Number(consumptionRateChain.apply(baseDrainPerKitten));
         return effectivePerKittenDrain * kittensTotal;
+      });
+
+      // Canon scales catnip production by the active season (getWeatherMod,
+      // calendar.js:1095): spring ×1.5 … winter ×0.25 — the same read-site
+      // multiply step 0 of onTick applies before integrating. Net rate is
+      // this seasoned production minus `catnipConsumptionRate`.
+      const catnipNetRate: ComputedRef<number> = computed(() => {
+        const production = resources.productionRate('catnip') * calendar.catnipMultiplier.value;
+        return production - catnipConsumptionRate.value;
       });
 
       // Per-job rate-chain unbind handles. Stable ids (`village/jobs/<id>`)
@@ -437,6 +458,7 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         jobCounts,
         consumptionRateChain,
         catnipConsumptionRate,
+        catnipNetRate,
         isJobVisible(id: JobId): boolean {
           const def = jobById.get(id);
           if (!def) return false;
@@ -453,6 +475,11 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
             return false;
           }
           return true;
+        },
+        jobRatePerSecond(id: JobId): number {
+          const ref = baseRateById[id];
+          if (!ref) throw new Error(`interlocker/village: unknown job "${id}"`);
+          return Number(ref.value);
         },
         setJobCount,
         onKittenDied: (h) => handle.on('kitten-died', h),

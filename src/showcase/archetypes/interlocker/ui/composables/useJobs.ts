@@ -45,7 +45,7 @@ export function useJobs(): { rows: JobRow[]; village: VillageReadout } {
 
   const rows = data.jobs.map<JobRow>((def) => {
     const count = computed(() => village.jobCounts[def.id].value);
-    const ratePerSecond = computed(() => count.value * def.baseRatePerSecond);
+    const ratePerSecond = computed(() => count.value * village.jobRatePerSecond(def.id));
     const visible = computed(() => village.isJobVisible(def.id));
     const canIncrement = computed(() => unassigned.value > 0);
     const canDecrement = computed(() => count.value > 0);
