@@ -1,20 +1,24 @@
 /**
  * Boot a fresh engine with a given module list under an isolated persistence
- * namespace. Returns a handle with step/flush/dispose helpers.
+ * namespace, on memory storage, and hand back a handle that steps it. The
+ * primitive under every behavioral test: game code asserts observable behavior
+ * by driving the real assembled engine tick-by-tick, rather than mocking it.
  *
- * Consumers:
- * - vitest tests, wrapped by per-archetype accessor packs (see
- *   `src/test/cookie-factory/accessors.ts`).
- * - The benchmark mod's runtime, which calls `bootMod` inside a `runMatrix`
- *   cell setup to spin up CF-booted engines per seed.
+ * Named for what it does — boots an *engine* from a module list — not "mod":
+ * "mod" is the engine's own selectable-game concept (`ModDef` / `selectMod`),
+ * which this has nothing to do with.
+ *
+ * Consumers wrap this per game in a bare `boot()`/`tick()` harness (see the
+ * `sim/harness.ts` an eject leaves in `src/game/sim/`), which hardcodes the
+ * game's module list so tests read `boot(); forkSpread(); await tick(10)`.
  *
  * Each call allocates a unique persistence namespace, so multiple handles
- * coexist in one process without aliasing persistent-ref contexts or
- * storage keys. The engine exposes no per-namespace ref cleanup, so the
- * `persistentRefs` map grows by one context-set per `bootMod()` call for
- * the lifetime of the process. Acceptable in tests (per-file workers exit)
- * and for occasional benchmark runs; a long-running browser session that
- * kicks the benchmark repeatedly will accumulate refs until reload.
+ * coexist in one process without aliasing persistent-ref contexts or storage
+ * keys — that isolation is what makes fresh-boot-per-test (`beforeEach(boot)`)
+ * safe: a re-install would otherwise collide on process-global persistent ids.
+ * The engine exposes no per-namespace ref cleanup, so the `persistentRefs` map
+ * grows by one context-set per call for the process lifetime. Acceptable in
+ * tests (per-file workers exit); mind it in any long-running repeated-boot loop.
  */
 import {
   createEngine,
@@ -23,7 +27,7 @@ import {
   type EngineModule,
 } from '@open-loop/engine';
 
-export interface BootHandle {
+export interface TestEngineHandle {
   engine: Engine;
   /** Advance the engine by `n` real ticks. Async to flush queued microtasks. */
   tick(n?: number): Promise<void>;
@@ -38,7 +42,7 @@ export interface BootHandle {
 
 let bootCounter = 0;
 
-export interface BootModOptions {
+export interface BootTestEngineOptions {
   modules: EngineModule[];
   /** Optional prefix for the generated namespace. Useful in debug output. */
   namespacePrefix?: string;
@@ -47,11 +51,12 @@ export interface BootModOptions {
 }
 
 /**
- * Build a fresh engine, install the given modules, start the loop, and
- * return a handle that drives it. The engine is namespaced so repeated
- * calls in one process don't collide on persistent-ref contexts.
+ * Build a fresh engine, install the given modules, run its install/onStart
+ * wiring, and return a handle that drives it deterministically. The engine is
+ * namespaced so repeated calls in one process don't collide on persistent-ref
+ * contexts.
  */
-export function bootMod(options: BootModOptions): BootHandle {
+export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle {
   const { modules, namespacePrefix = 'boot', tickRate = 20 } = options;
   const namespace = `${namespacePrefix}-${bootCounter++}`;
 
@@ -64,9 +69,14 @@ export function bootMod(options: BootModOptions): BootHandle {
     tickRate,
   });
   for (const mod of modules) engine.use(mod);
+  // start() runs install/onStart wiring; stop() immediately hands the clock to
+  // stepOnce() so the real-time loop can't advance time between assertions —
+  // tests own the tick. stepOnce() is manual and works whether or not the loop
+  // is running.
   engine.start();
+  engine.stop();
 
-  let stopped = false;
+  let stopped = true;
   const dispose = (): void => {
     if (stopped) return;
     stopped = true;

@@ -135,6 +135,15 @@ Three rules for per-archetype balance work under `sim/` and `balance/`:
 - **Scripts discover, Vitest locks.** Balance discovery (solver iteration, projector runs, perturbation sweeps) belongs in vite-node scripts (`pnpm balance:*`). Vitest is for regression locks: chosen invariants pinned with tolerance bounds *after* discovery converges. Don't route discovery through Vitest — its semantics fight the workflow.
 - **Step solvers incrementally.** For multi-beat solvers, run beat N alone at `PASSES = 1`, then `PASSES = 3`, then add the next beat. Each rung should flush a log in under two minutes. The full run is the last step, not the first.
 
+## Behavioral testing
+
+Balance probes lock *how much* (magnitudes, with tolerance); behavioral suites spec *what a mechanic does* (counts, monotonic growth, slots freeing) by driving the real assembled engine tick-by-tick. Keep them separate — behavioral assertions stay true across retunes, so magnitude numbers don't belong in them.
+
+- **Primitive:** `src/test/bootTestEngine.ts` — boots a fresh engine (shared base + given modules) on memory storage under a unique namespace, returning `{ engine, tick, tickUntil, dispose }`. Scaffold-level and game-agnostic; survives eject.
+- **Per-game harness:** `sim/harness.ts` wraps the primitive into bare `boot()`/`tick()`/`tickUntil()` free functions that hardcode the game's module list, so tests read `boot(); doThing(); await tick(10)`. Set its `TICK_RATE` to match your economy's time unit. `_blank` ships this plus a living `sim/example.test.ts`; eject leaves both in `src/game/sim/`, so a fork is born with the pattern green.
+- **Reset by fresh boot.** `beforeEach(() => boot())` — modules rebind their state on `install` and the unique namespace isolates persistent-ref contexts, so a fresh engine per test *is* the reset. No per-module reset surface to maintain.
+- **Where suites live:** per-module behavioral specs beside the module (`src/game/modules/<name>.test.ts`), importing the `sim/` harness; balance probes stay under `sim/`+`balance/`.
+
 ## `src/lib/` scope
 
 `src/lib/` is the scaffold's layout and theme layer: layout shells, AppFrame, modal stack, token defaults, reset. It is a real layer inside starter — presentational-only, no engine imports — but it is **not** an importable cross-package library. Games consume starter by forking; there is no `open-loop-starter` package dependency and no cross-game semver contract. Forks are free to rename, restructure, or delete any of this.
