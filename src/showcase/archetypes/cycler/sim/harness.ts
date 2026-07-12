@@ -27,9 +27,11 @@ import {
   createCyclerModules,
   CycleKey,
   BuildKey,
+  BurnTierKey,
   PrestigeKey,
   type CycleApi,
   type BuildApi,
+  type BurnTierApi,
   type PrestigeApi,
   type CyclerModulesOptions,
 } from '../modules';
@@ -63,6 +65,13 @@ export function cycle(): CycleApi {
 export function build(): BuildApi {
   const api = handle.engine.tryInject(BuildKey);
   if (!api) throw new Error('cycler/sim/harness: build module not installed');
+  return api;
+}
+
+/** The installed burn-tier API for the current engine. */
+export function burnTier(): BurnTierApi {
+  const api = handle.engine.tryInject(BurnTierKey);
+  if (!api) throw new Error('cycler/sim/harness: burn-tier module not installed');
   return api;
 }
 

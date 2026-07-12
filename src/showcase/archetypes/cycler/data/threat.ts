@@ -51,3 +51,64 @@ export const THREAT_BALANCE: ThreatBalance = {
 //   Illustrative H=4, g=2, T_g=6, τ_setup=4 → N* = 4 + 6·log₂4 = 16 min. Grounding
 //   reference (WIP, un-calibrated, multiverse-hr drain-projection.ts): H=8, g=2,
 //   T_g=15, τ_setup=10. Absolute calibration is a Lane-2 probe (multiverse-hr #17).
+
+// ─── Skeleton (burn tiers) ───
+// The escalation-content ladder (`addBurnTier`, IDENTITY § Growth ports): a
+// reach-gated sequence of pressure presets, each authoring its own (g, T_g) — the
+// PACE surface. THREAT_BALANCE above is the base burn; a tier overrides only g and
+// T_g (H and τ_setup stay shared, so the peg is one knob across the whole ladder).
+// Deeper tiers raise g — a steeper escalation, a shorter/sharper run (Increlution
+// Part 3: attacking the escalation base is the high-leverage lever). Advancing is a
+// deliberate, reach-gated step; it is what the later `addUpgrade` g-bender pushes
+// back on. The burn schedule freezes into a run at its start (like the W₀ peg), so
+// a tier switch applies to the NEXT run, never mid-run — the crossing stays closed-
+// form. Reach gate = permanent power level L (the prestige currency's sink), so the
+// pace surface can't outrun the board-fill/power that has to clear it.
+
+export interface BurnTier {
+  /** Player-facing tier name (costume). */
+  label: string;
+  /** Burn escalation base g for this tier — steeper ⇒ shorter, sharper run. */
+  escalationBase: number;
+  /** Escalation timescale T_g (minutes) for this tier. */
+  escalationTimescale: number;
+  /** Reach gate: the tier unlocks once permanent power level L ≥ this. Tier 0 = 0. */
+  unlockPowerLevel: number;
+}
+
+// Tier 0 mirrors THREAT_BALANCE (the base burn) so the shipped default run is
+// unchanged; deeper tiers step g up under a widening reach gate.
+export const BURN_TIERS: readonly BurnTier[] = [
+  {
+    label: 'Standard',
+    escalationBase: THREAT_BALANCE.escalationBase, // g = 2
+    escalationTimescale: THREAT_BALANCE.escalationTimescale, // T_g = 6
+    unlockPowerLevel: 0,
+  },
+  { label: 'Accelerated', escalationBase: 3, escalationTimescale: 6, unlockPowerLevel: 2 },
+  { label: 'Cascade', escalationBase: 4, escalationTimescale: 6, unlockPowerLevel: 4 },
+  { label: 'Collapse', escalationBase: 6, escalationTimescale: 6, unlockPowerLevel: 6 },
+];
+
+// ─── Balance (burn tiers) ───
+// The pace surface, closed-form (rate-function pass, 2026-07). Each tier's authored
+// run length under the SHARED peg (H = headroom, τ_setup = setupGrace):
+//     N*(tier) = τ_setup + T_g · log_g(H)          (the base formula, per-tier g/T_g)
+// At the illustrative H=4, τ_setup=4, T_g=6:
+//     Standard    g=2 → 4 + 6·log₂4 = 16.00 min   (gate L≥0)
+//     Accelerated g=3 → 4 + 6·log₃4 = 11.57 min   (gate L≥2)
+//     Cascade     g=4 → 4 + 6·log₄4 = 10.00 min   (gate L≥4)
+//     Collapse    g=6 → 4 + 6·log₆4 =  8.64 min   (gate L≥6)
+// Two invariants this ladder must preserve (locked in `sim/burn-tier.test.ts`):
+//   • WITHIN a tier the peg still holds run length flat across all reach growth
+//     (raising power re-pegs to +0 — the decoupling, `data/upgrades.ts`); only
+//     CROSSING a tier moves run length, and only under the reach gate.
+//   • The step is discrete and one-way-gated: `advanceTier` is a no-op until reach
+//     unlocks the next rung.
+// SCOPE: this port models the pace surface ONLY (g, T_g). A harder tier is shorter
+// and sharper AND — since production ∫cap dt shrinks with N* — mints LESS sublinear
+// currency per run, so on its own it is a pure difficulty step. The INCENTIVE to
+// opt in (a per-tier yield multiplier, a content/upgrade gate behind the tier) is a
+// fork's to add, or the `addUpgrade` currency layer's — deliberately out of scope
+// here. What this port guarantees is the mechanic: a reach-gated, peg-preserving
+// step in the pace surface.

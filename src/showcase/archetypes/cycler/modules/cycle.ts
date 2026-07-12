@@ -81,6 +81,15 @@ export interface CycleModuleOptions {
    * real build capacity trajectory here.
    */
   capacity?: () => Decimal;
+  /**
+   * Injected burn schedule (g, T_g) — the pace surface. Defaults to the base
+   * `threat` constants so the kernel is self-bootable before a burn-tier module
+   * exists; a fork wires the live active-tier schedule here (see
+   * `modules/burn-tier.ts`). Read ONLY at `startRun` and frozen for the run (like
+   * the W₀ peg), so a tier switch applies to the next run and the crossing stays
+   * closed-form.
+   */
+  schedule?: () => { escalationBase: number; escalationTimescale: number };
 }
 
 /**
@@ -95,17 +104,24 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
   );
   const capacityOf = options.capacity ?? (() => defaultCapacity);
 
-  const { headroom: H, escalationBase: g, escalationTimescale: Tg, setupGrace: setup } = threat;
+  const { headroom: H, escalationBase: g0, escalationTimescale: Tg0, setupGrace: setup } = threat;
+  // The pace surface (g, T_g). Default freezes the base `threat` schedule; a
+  // burn-tier module wires the live active-tier schedule. Only read at startRun.
+  const scheduleOf = options.schedule ?? (() => ({ escalationBase: g0, escalationTimescale: Tg0 }));
 
   return {
     id: 'cycler/cycle',
     install(ctx) {
       // Persistent run state. `elapsedSeconds` is the raw clock the loop
       // advances; minutes derive from it (the spine's time unit). `w0Raw` is the
-      // pegged burn baseline, frozen for the run and re-set only at run start.
+      // pegged burn baseline and `gRaw`/`tgRaw` are the active pace surface — all
+      // three are frozen for the run and re-read only at run start, so a re-peg or
+      // a burn-tier switch never reshapes a run already in flight.
       const state = withPersistentContext('cycler/cycle', () => ({
         elapsedSeconds: persistent<number>(0, { name: 'elapsed-seconds' }),
         w0Raw: persistent<string>(capacityOf().div(H).toString(), { name: 'w0' }),
+        gRaw: persistent<number>(g0, { name: 'g' }),
+        tgRaw: persistent<number>(Tg0, { name: 'tg' }),
         runState: persistent<RunState>('running', { name: 'run-state' }),
         endedAtRaw: persistent<number | null>(null, { name: 'ended-at-minutes' }),
       }));
@@ -121,7 +137,7 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
        */
       const burnAt = (tMinutes: number): Decimal => {
         const past = Math.max(0, tMinutes - setup);
-        return w0.value.mul(Decimal.pow(g, past / Tg));
+        return w0.value.mul(Decimal.pow(state.gRaw.value, past / state.tgRaw.value));
       };
 
       const burn = computed(() => burnAt(elapsedMinutes.value));
@@ -140,10 +156,16 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
       const runState = computed(() => state.runState.value);
       const endedAtMinutes = computed(() => state.endedAtRaw.value);
 
-      const predictedRunLength = (): number => setup + Tg * (Math.log(H) / Math.log(g));
+      const predictedRunLength = (): number =>
+        setup + state.tgRaw.value * (Math.log(H) / Math.log(state.gRaw.value));
 
       const startRun = (): void => {
         state.elapsedSeconds.value = 0;
+        // Freeze the active pace surface for this run (like the W₀ peg): a
+        // burn-tier switch between runs lands here, never mid-run.
+        const s = scheduleOf();
+        state.gRaw.value = s.escalationBase;
+        state.tgRaw.value = s.escalationTimescale;
         state.w0Raw.value = capacityOf().div(H).toString();
         state.runState.value = 'running';
         state.endedAtRaw.value = null;

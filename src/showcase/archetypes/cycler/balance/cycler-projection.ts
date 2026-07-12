@@ -23,7 +23,7 @@
  */
 
 import { BUILD_BALANCE } from '../data/build';
-import { THREAT_BALANCE } from '../data/threat';
+import { THREAT_BALANCE, BURN_TIERS } from '../data/threat';
 import { CADENCE_BALANCE } from '../data/cadence';
 import { PRESTIGE_BALANCE } from '../data/prestige';
 import { UPGRADE_BALANCE } from '../data/upgrades';
@@ -265,12 +265,61 @@ function printPrestigeArc(): void {
   );
 }
 
+/**
+ * The burn-tier ladder (addBurnTier): the pace surface steps run length under a
+ * reach gate. Within a tier the peg holds flat; crossing a tier is the gated step.
+ */
+function printBurnTiers(): void {
+  console.log(
+    `\n═══ The burn-tier ladder — the pace surface (g, T_g) steps under a reach gate ═══`,
+  );
+  console.log(`  Shared peg: H = ${H}, τ_setup = ${fmt(setup)} (one knob across the ladder).`);
+  console.log(
+    col('  tier', 14) +
+      col('g', 5) +
+      col('T_g', 7) +
+      col('gate L≥', 9) +
+      col('N* = τ_setup + T_g·log_g(H)', 30) +
+      'per-run production ∫cap dt',
+  );
+  const tierRunLength = (t: (typeof BURN_TIERS)[number]) =>
+    setup + t.escalationTimescale * (Math.log(H) / Math.log(t.escalationBase));
+  for (const t of BURN_TIERS) {
+    const n = tierRunLength(t);
+    // Production is ∫₀^N* D_max dt = D_max·N* at a fixed L; the tier only moves N*,
+    // so a shorter (harder) tier mints strictly LESS per-run production/currency.
+    const prodAtL0 = dMax(0) * n;
+    console.log(
+      col(`  ${t.label}`, 14) +
+        col(t.escalationBase, 5) +
+        col(fmt(t.escalationTimescale), 7) +
+        col(t.unlockPowerLevel, 9) +
+        col(fmt(n), 30) +
+        `${Math.round(prodAtL0).toLocaleString()} (×D_max/D_max(0))`,
+    );
+  }
+  console.log(
+    `  Deeper tiers raise g ⇒ shorter, sharper runs (harder). Note production FALLS with N*:`,
+  );
+  console.log(
+    `  the pace step is a pure difficulty move here — a fork pairs it with a per-tier yield`,
+  );
+  console.log(
+    `  multiplier / content gate for the incentive (out of scope; see data/threat.ts § Balance).`,
+  );
+  console.log(
+    `  WITHIN a tier the peg still holds run length flat as D_max climbs (the decoupling above);`,
+  );
+  console.log(`  only CROSSING a tier — under the reach gate — moves it.`);
+}
+
 function main(): void {
   console.log('Cycler — closed-form balance projection (pegged-saturation spine)');
   printPegged();
   printWithinRun();
   printArc();
   printDecoupling();
+  printBurnTiers();
   printCurrency();
   printPrestigeArc();
   console.log(`\n═══ Headroom sweep — pick H for a target run length ═══`);
