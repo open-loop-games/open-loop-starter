@@ -22,3 +22,11 @@ export const SEASONS: SeasonSpec[] = [
 
 export const DAYS_PER_SEASON = 100;
 export const SECONDS_PER_DAY = 2;
+
+// ─── Balance ─────────────────────────────────────────────────────────────────
+// Winter (×0.25 for DAYS_PER_SEASON·SECONDS_PER_DAY = 200s/yr) is a *banking*
+// constraint, not a rate one: an all-farmer colony's winter output 0.25·5·P =
+// 1.25·P/s can't meet the 4.25·P/s kitten drain at any allocation, so the colony
+// must hold ≈ (4.25·P − 0.25·(fieldCatnip + farmers·5))·200 catnip banked before
+// winter — the demand that drives barn (catnip cap) and pasture (−demand) buying.
+// See data/index.ts § Balance point 3 for the full solvency spine.

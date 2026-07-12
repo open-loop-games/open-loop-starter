@@ -36,3 +36,14 @@ export const SCIENCES: ScienceSpec[] = [
   // (compedium requirement dropped — see top-of-file note).
   { id: 'architecture', name: 'Architecture', baseCost: 42000, prerequisite: 'construction' },
 ];
+
+// ─── Balance ─────────────────────────────────────────────────────────────────
+// The cascade is cheap (calendar 30 → agriculture 100 → mining 500 → metal 900 /
+// construction 1300) and clears in the first ~hour of sim; then architecture's
+// 42000 is a cliff — ~30× the entire rest combined. Science rate = scholars ·
+// 0.175 · (1 + 0.1·libraries); with only libraries as multipliers (academy /
+// observatory out of arc-1 scope) and population wood-capped at ~8 kittens, that
+// cliff is the arc's dominant cost: architecture completes ≈ 81577s of sim
+// (measured, `sim/interlocker.probe.test.ts`). This single constant is why the
+// arc is a multi-hour progression and why any fixed short "completion budget" was
+// fiction. See data/index.ts § Balance point 4.

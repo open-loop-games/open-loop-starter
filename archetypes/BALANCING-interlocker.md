@@ -107,7 +107,38 @@ Phase 5a observed enough to validate methodology bucket-walk on cost-scaling and
 - **Population-allocator strategy bucket.** The task pre-staged "#6 or #7" as a candidate methodology for the population-allocator subsystem if discrete cliff effects appear in beat-5/6. Pre-stage discarded — interlocker's job-rate model is *continuous additive* through the rate chain (woodcutter count adds 0.09/sec/count linearly), and per-fixed-strategy ROI closes per `BALANCING.md § Bucket → methodology lookup` Coupled-state deterministic row (primary methodology #1 multi-knob, sibling #5 if re-allocation is a dynamic choice). Methodology #6 (pure sim discovery) and #7 (planning/scheduling) do not fit; the population-allocator is coupled-state-deterministic per fixed strategy. Confirmed at design-layer; arc-play confirmation deferred.
 - **Methodology #6 stress for emergent strategy.** Not reached; no observed cliff effects to characterize.
 
+## The three-lane lens + arc closure (frontier alignment)
+
+> **Bootstrap resolved.** The gather/refine openers and non-zero default caps landed; the arc plays end-to-end by hand. The "unwinnable headless" / "wedges before beat 3" entries below are dated records of the pre-fix state — left intact per the don't-fix-dated-records ethos.
+
+This pass brought Interlocker onto the three-lane discipline that `BALANCING.md § Theme 5` names and `/work/studio/frontier/docs/balance-process.md` instantiates: a closed-form **lens** in `data/*.ts` `─── Balance ───` sections → a shared discovery **core** (`balance/arc-bot.ts`) driving the real engine → measured-window **locks** (`sim/interlocker.probe.test.ts`). Because Interlocker is a subtractive canon port (numbers immutable), the lens is *descriptive* — it predicts pacing and names where the arc wedges — never *prescriptive*. Measure-and-record throughout; no canon number moved.
+
+The lens's spine is the **shifting binding constraint** — each arc phase is gated by a different scarce resource, and naming them IS the balance model (see `data/index.ts § Balance`):
+
+1. **Bootstrap ordering.** kitten cap 0 → needs a hut → needs wood → pre-population wood only from manual refine (100 catnip → 1). Forced opening: gather → refine → hut → first kitten.
+2. **Catnip solvency gates population.** 4.25/s drain/kitten; fields (0.625/s, geometric) pre-agriculture, farmers (net +0.75/s) after.
+3. **Winter is a banking problem, not a rate problem — the load-bearing finding.** At ×0.25 for 200s/yr, an *all-farmer* colony makes only `0.25·5·P = 1.25·P/s` against a `4.25·P/s` drain — a structural deficit no allocation closes. Survival is banking (barns) + demand-shaving (pastures), not production. This is the interlocking pressure the archetype is named for.
+4. **The architecture wall.** 42000 science with only libraries (+10%/each) as multipliers dominates the arc; measured completion ≈ **81577s** of sim at the wood-capped ~8-kitten population.
+5. **The megalith tail is wood-gated.** 25 beam (4375 wood) + 50 slab (12500 min) + 5 plate (625 iron), with a storage wrinkle: plate costs 125 iron but base iron cap is 100, so a warehouse (+25 iron) — itself priced in beam+slab — must bootstrap the storage that unblocks the chain.
+
+Measured beat windows (single canonical run, no RNG): b1=2s, b2=64s, b3=257s, b4=425s, b5=2861s, architecture=81577s. Locked in `sim/interlocker.probe.test.ts` with tolerance bands; the fast beats tight, the architecture wall wide.
+
+## Methodology stress — the interlocking tail resists greedy play (a probe that found something)
+
+The arc bot went through the classic wedge sequence — each fix surfaced the next constraint, exactly the diagnostic value frontier's "a probe that fails found something" predicts:
+- greedy field-hoarder → dies at 4 kittens (never escapes pre-agriculture);
+- phased model → reaches workshop + architecture, but plateaus at 8 kittens (huts wood-capped) and cannot close the megalith tail.
+
+**The tail is not closable by a simple phased bot in a practical horizon — a MEASURED finding, not a bot defect.** Wood is a closed interlocking loop: wood gates huts gate woodcutters gate wood, with no arc-1 escape valve (canon's log house is out of scope), and refine is a 100:1 catnip→wood trade too weak to break it. Closing beats 6–7 needs the non-myopic play the archetype is built to reward — which a human supplies (hand-verified completable) but the greedy/phased bot does not.
+
+Per measure-and-record, beats 6–7 are `describe.skip`-with-a-pointer in the lock, **not** forced green by tuning the bot toward the beat — that inversion is the set-as-target anti-pattern retired in `studio/open-loop-starter#2`. This is the honest state: the archetype proves the *shape* (interlocking loops that punish myopia); balance is what a fork tunes.
+
+- **Receipts:** `balance/arc-bot.ts` (shared faithful-player core + phase notes), `sim/interlocker.probe.test.ts` (locks + the skipped-with-pointer beats 6–7 block), `data/*.ts § Balance` (the descriptive lens).
+- **Promotion candidate for `BALANCING.md`:** "For a subtractive canon-port archetype whose economy is an interlocking loop, a greedy/phased bot's *inability* to close the arc is a measure-and-record finding about the design's identity, not a bar to a green lock. Lock what the bot reliably reaches; skip-with-a-pointer what demands non-myopic play; never tune the bot toward the beat." Generalizes the frontier "a failed probe found something" rule to the canon-port case.
+
 ## Carry-forward to 5b — arc-bootstrap fix
+
+> **Resolved** (see § The three-lane lens above). Recommended path (2)+(3) — non-zero default caps + gather/refine openers — landed; the arc plays. Section kept as a dated record.
 
 Phase 5b's first work item is **not the harness** but **un-wedging the bootstrap**. Options surfaced in this pass:
 

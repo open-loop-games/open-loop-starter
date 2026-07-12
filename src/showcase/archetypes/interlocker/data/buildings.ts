@@ -270,3 +270,19 @@ export const SMELTER_RATES = {
   /** Minerals consumed per smelter per second. */
   mineralsConsumptionPerSec: 0.25,
 } as const;
+
+// ─── Balance ─────────────────────────────────────────────────────────────────
+// Two buildings carry the arc's load-bearing geometry:
+//   - HUT (5 wood, ratio 2.5). The population lever AND the population ceiling.
+//     Grants +2 kitten cap; base cap is 0, so hut #0 is the gate to the very
+//     first kitten (bootstrap: gather → refine catnip→wood → hut → kitten). But
+//     wood cost 5·2.5^n explodes — hut #6 already wants 488 wood, outgrowing wood
+//     storage — so population is hut-WOOD-capped at ~8–10 in arc-1 (canon's log
+//     house, which breaks this, is out of scope). This cap sets the science rate,
+//     hence the architecture-wall horizon.
+//   - FIELD (10 catnip, ratio 1.12). The pre-agriculture catnip engine at
+//     +0.625/s; gentle ratio so early fields are cheap, but geometric cost still
+//     makes farmers (post-agriculture) the better catnip lever once available.
+// Barn/warehouse are the storage answer to the winter catnip bank and the refined-
+// good caps (warehouse's +25 iron is what unblocks plate). See data/index.ts
+// § Balance for how these compose into the arc's shifting binding constraints.

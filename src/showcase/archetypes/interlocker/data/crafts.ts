@@ -88,3 +88,16 @@ export const CRAFTS: CraftSpec[] = [
     unlockedByScience: 'architecture',
   },
 ];
+
+// ─── Balance ─────────────────────────────────────────────────────────────────
+// Megalith raw cost, expanded through the chain: 25 beam = 25·175 = 4375 wood;
+// 50 slab = 50·250 = 12500 minerals; 5 plate = 5·125 = 625 iron. Two structural
+// wrinkles the arc bot has to navigate:
+//   - PLATE IS STORAGE-GATED. plate costs 125 iron but base iron cap is 100
+//     (resources.ts: 50 + barn 50). Plate is uncraftable until a warehouse
+//     (+25 iron) lifts the cap to 125 — and a warehouse is priced in beam + slab,
+//     so the intermediates must bootstrap the storage that unblocks the chain.
+//   - WOOD DOMINATES THE TAIL. The 4375 wood in beams, plus the wood the smelters
+//     burn producing plate's iron, must come from woodcutters (0.09/s each); at
+//     the wood-capped population this is the arc's slowest lane. See data/index.ts
+//     § Balance point 5 — the megalith tail is the archetype's interlocking wall.
