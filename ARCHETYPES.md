@@ -33,9 +33,9 @@ content. The skeleton plus the engine does the rest.
 ## Skeleton + Theme
 
 An **archetype** is a skeleton: a named pattern composition (e.g.
-*Multi-layer Prestige + Challenge + Deep Modifier Chains*) with a canonical
-engine-surface usage, a canonical beat map, and a canonical set of balance
-knobs.
+*Multi-layer Prestige + Challenge + Deep Modifier Chains*) with a defining
+engine-surface usage, a beat map, and a rate-function balance spine that
+generates its knobs.
 
 A **theme** is a costume over the skeleton: resource names, art, flavour copy,
 narrative framing. "Antimatter physics," "dream lucidity," "empire collapse"
@@ -48,21 +48,22 @@ inheriting a composition they proved viable.
 
 ---
 
-## The first-completion arc
+## The first traversal
 
-Every archetype proves one **first-completion arc**: a single full traversal of
-the skeleton (first producer → first upgrade → first prestige, or the
-archetype's equivalent), ported faithfully from one canonical exemplar. The arc
-is defined by *content* — the slice of the canonical game it reproduces — not by
-a target clock. How long that traversal takes is **measured from the built
-system, never prescribed**: you port the canon math faithfully, then observe how
-the arc paces. Inventing a duration target and bending the source numbers to hit
-it distorts the very math the port exists to preserve (see § Dev-loop
-integration — measure-and-record).
+Every archetype proves one **first traversal**: a single full pass through the
+skeleton (first producer → first upgrade → first prestige, or the archetype's
+equivalent). The traversal is defined by *content* — the smallest slice that
+unmistakably *is* the pattern — not by a target clock. Its balance comes from the
+archetype's **rate-function spine**: the spine generates the numbers, and how
+long the traversal paces is **measured from the built system, never prescribed**
+(see § Dev-loop integration — measure-and-record). Inventing a duration target
+and bending the spine's parameters to hit it inverts the authoring — the spine is
+the balance, the measurement is the observation.
 
-This is the *showcase* arc. A fork that wants a longer game extends after the
-skeleton lands. The first arc is what the shared archetype proves; the long tail
-is what the fork proves.
+This is the *showcase* traversal — the minimal proven core the shared archetype
+ships. A fork grows the archetype up through its named growth ports; the first
+traversal is what the shared archetype proves, and the long tail is what the fork
+proves.
 
 ---
 
@@ -82,13 +83,13 @@ runs — so it stays. What's retired is the inverted authoring it used to imply.
 - **Sim assertions** — headless `runHeadless` / `runMatrix` tests, checked in,
   that lock the *measured* beat windows (with tolerance) as regression guards.
 
-**Measure-and-record, never set-as-target.** Port the canon math faithfully
-first; then run the harness to see where the beats land and record those
-windows. The sim test guards the observed behavior from regressing — it is not a
-target you tune the source numbers toward. Bending costs/rates to hit an
-invented window distorts the canonical math the port exists to preserve (the
-mistake the old "write the sim test first, tune until it passes" loop baked in).
-Forks inherit the beat labels and probes when they theme a skeleton, and
+**Measure-and-record, never set-as-target.** Parameterize the spine first; then
+run the harness to see where the beats land and record those windows. The sim
+test guards the observed behavior from regressing — it is not a target you tune
+the spine parameters toward. Bending costs/rates to hit an invented window
+inverts the authoring (the mistake the old "write the sim test first, tune until
+it passes" loop baked in) — the spine generates the numbers, the harness observes
+them. Forks inherit the beat labels and probes when they theme a skeleton, and
 re-measure after they retune.
 
 Wires through `src/ui/panels/BalanceWorkbench.vue` and

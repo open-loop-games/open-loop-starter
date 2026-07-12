@@ -46,7 +46,7 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 
 ## Archetype demos
 
-`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a first-arc port of a validated archetype against one canonical exemplar, showing a distinct slice of engine systems and a distinct layout shell. Pick the one closest to your game and `eject` it (above).
+`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a validated archetype — a pattern-language composition carried by a rate-function balance spine — showing a distinct slice of engine systems and a distinct layout shell. The exemplar named per demo validates that the composition ships in the wild; it is not a clone target. Pick the one closest to your game and `eject` it (above).
 
 | Archetype | Demo (exemplar) | Shell | Engine systems | What it shows |
 |---|---|---|---|---|

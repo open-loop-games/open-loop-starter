@@ -16,9 +16,11 @@ Maintenance discipline: stability. Forks copy this and don't want it shifting un
 
 ### Archetype demos (`src/showcase/archetypes/<name>/`)
 
-Forkable best-practice implementations of validated archetypes, ported as the first arc of canonical games with file-header citations. Each archetype is self-bootable with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts` — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton.
+Forkable best-practice implementations of validated archetypes. Each archetype is a composition in research's pattern language (its identity line) carried by a rate-function balance spine, and is self-bootable with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts` — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton.
 
-This half is a research-output surface that happens to live inside starter. Maintenance discipline: canonical-fidelity + research-grounding. First-arc ports lift ids, names, and numbers verbatim from one canonical exemplar — exemplars live under `open-loop-research/reference-code/<name>/`; studio paths per `/work/studio/CLAUDE.md`. The bar for new archetype content is "would a new game forking this archetype want this on day one, traceable to a canonical exemplar?"
+This half is a research-output surface that happens to live inside starter. Maintenance discipline: research-grounding. An archetype is grounded in two things — the **pattern language** (the validated patterns its identity line composes, per `open-loop-research/LIBRARY.md` and `archetypes/_identity.md`) and a **rate-function balance spine** (the closed-form or named-adjacent-math bucket its economy lives in, per `incremental-math/…/rate-functions/`) that *generates* its balance rather than lifting numbers from a game. Exemplar games validate that the composition ships in the wild — cited as a set, crosses and all — never lifted verbatim. The bar for new archetype content is "would a new game forking this archetype want this on day one, and does its balance fall out of the declared spine?"
+
+(The built archetypes — looper, defender, scaler, interlocker — predate this: they are subtractive ports that lifted ids/names/numbers 1:1 from one canonical exemplar. Their own `overview.md` / `PROGRESSION.md` / `BALANCING-<name>.md` record that, honestly, as dated fact. They are not the forward model, and forward archetypes are not built that way.)
 
 ### Fork workflow
 

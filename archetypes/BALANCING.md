@@ -335,9 +335,11 @@ Per archetype, the locks pin:
 
 Tighter bounds catch more drift but pop on irrelevant noise. Looser bounds tolerate noise but miss real drift. Find the band that catches what matters and don't tighten "for good measure."
 
-### Canonical numbers are not tunable
+### The spine is the perturbation surface
 
-Cited-from-vanilla numbers — values carried 1:1 from a reference exemplar with file-header citations — are not solver perturbation surface. Solvers operate on the *declared-invention* surface where the first-arc port diverges from canonical. Perturbing canonical values is fudging, not balancing — the first-arc port's job is to faithfully reproduce the exemplar's economy, and balance passes work *around* that economy, not against it.
+A spine-grounded archetype has no frozen "cited-from-vanilla" numbers — its balance is *generated* by the rate-function spine (the closed-form or named-adjacent-math bucket its economy lives in), and the spine's parameters *are* the perturbation surface. Solvers and probes operate on those parameters; the spine keeps the composition coherent as content grows against it.
+
+(The built subtractive-port archetypes — looper, defender, scaler, interlocker — predate this and carry values lifted 1:1 from a reference exemplar; for those, the lifted numbers are not perturbation surface and balance passes work *around* that economy. Their per-archetype `BALANCING-<name>.md` records this as dated fact. Forward archetypes are spine-grounded and are not built that way.)
 
 ### AI knobs are not balance levers
 
