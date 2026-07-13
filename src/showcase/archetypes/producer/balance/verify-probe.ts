@@ -15,7 +15,7 @@
  * difference. This file is methodology #2's missing verify half: the
  * regression catch the umbrella's spec-vs-truth chain depends on.
  *
- *   pnpm exec vite-node src/archetypes/producer/balance/verify.ts
+ *   pnpm exec vite-node src/showcase/archetypes/producer/balance/verify-probe.ts
  */
 
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';

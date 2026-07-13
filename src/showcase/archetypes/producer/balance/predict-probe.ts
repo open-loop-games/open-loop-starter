@@ -5,7 +5,7 @@
  * against `runUntil(engine, predicate)` on a freshly-built sim engine. Both
  * read default data; no overrides pushed.
  *
- *   pnpm exec vite-node src/archetypes/producer/balance/predict.smoke.ts
+ *   pnpm exec vite-node src/showcase/archetypes/producer/balance/predict-probe.ts
  *
  * Predictor and sim are decoupled peers, both reading the engine's math
  * primitives at different layers (closed-form vs ticked). Drift between them
@@ -16,7 +16,7 @@
  */
 
 import { runUntil } from '@open-loop/engine';
-import { ARC_BEATS, BEAT_WINDOWS } from './balance';
+import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { buildProducerSimEngine } from './bot';
 import { arcWaypointsBotPolicy } from './predict';
 

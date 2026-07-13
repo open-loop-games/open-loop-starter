@@ -4,7 +4,7 @@
  * Iteration loop:
  *   1. tweak `data/{producers,upgrades,achievements}.ts` or a `tunable()`
  *      default at its reader site under `modules/`
- *   2. `pnpm exec vite-node src/archetypes/producer/balance/run.ts`
+ *   2. `pnpm exec vite-node src/showcase/archetypes/producer/balance/arc-probe.ts`
  *   3. read the punch list — find the red rows
  *   4. tweak again
  *
@@ -22,7 +22,7 @@ import {
   type ProducerInspector,
 } from '@/balance';
 import { getBuildings } from '../modules';
-import { ARC_BEATS, BEAT_WINDOWS, FLOW_BEATS } from './balance';
+import { ARC_BEATS, BEAT_WINDOWS, FLOW_BEATS } from './beats';
 import { buildProducerSimEngine } from './bot';
 
 const inspectorPolicy: ProducerInspector = {

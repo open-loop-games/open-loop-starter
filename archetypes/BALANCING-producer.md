@@ -1,6 +1,6 @@
 # Balancing — Producer
 
-Per-archetype balance log per `BALANCING.md § Graduating findings`. Records what was *learned* across producer's balance passes — instrument-earning moments, methodology stresses, engine-surface gaps, drift signals, numerical surprises. Not chosen values (those live at `tunable()` sites), not beat windows (`balance/balance.ts`), not per-pass status or ticket IDs.
+Per-archetype balance log per `BALANCING.md § Graduating findings`. Records what was *learned* across producer's balance passes — instrument-earning moments, methodology stresses, engine-surface gaps, drift signals, numerical surprises. Not chosen values (those live at `tunable()` sites), not beat windows (`balance/beats.ts`), not per-pass status or ticket IDs.
 
 When an entry generalizes across archetypes, file a PR moving the abstracted rule into `BALANCING.md` and leave the worked example here.
 
@@ -10,13 +10,13 @@ The geometric per-unit cost growth (Cookie Clicker `1.15`) couldn't fold into a 
 
 Resolution today: inlined `1.15` in `data/producers.ts` with the canonical `priceFunc` citation. Tuning the cost growth requires an engine change: `Computable<DecimalSource>` adoption on `ProducerMapping.purchase.costScaling` with `unref` at the registration read site.
 
-- **Receipt:** in-code comment block at `src/archetypes/producer/modules/producers.ts:39-43` documents the negative criterion.
+- **Receipt:** in-code comment block at `src/showcase/archetypes/producer/modules/producers.ts:39-43` documents the negative criterion.
 - **Cross-link:** when filed, the candidate primitive should land in `open-loop-engine/docs/candidate-primitives.md`. Adjacent entries on `Purchasable` / `Producer` cost-side `Computable` adoption exist but don't subsume this row.
 - **Affected consumers:** any archetype that bisects against per-tier cost growth as a methodology-#1 knob. None today — but the bisection is the natural diagnostic for a "tier cadence feels wrong" reshape call.
 
 ## Engine-surface gap — narrow `runUntil({mode: 'stasis-aware-tick'})` inadequate for click-driven income channels
 
-Stasis-aware-tick mode checks `createTransitionSnapshot` + `isStasis` per tick. The accessor passed by the consumer drives the snapshot's view of resource rates. Producer's `buildProducerAccessor` (`src/archetypes/producer/balance/bot.ts:121`) reports `getRate('cookies') = buildings.getTotalRate(cookies)` — passive production only. At `tick=0` with no producers owned, that returns zero. The check declares stasis immediately and the runner terminates with `terminated: 'unreachable'` *before* the first click-taper-driven income lands.
+Stasis-aware-tick mode checks `createTransitionSnapshot` + `isStasis` per tick. The accessor passed by the consumer drives the snapshot's view of resource rates. Producer's `buildProducerAccessor` (`src/showcase/archetypes/producer/balance/bot.ts:121`) reports `getRate('cookies') = buildings.getTotalRate(cookies)` — passive production only. At `tick=0` with no producers owned, that returns zero. The check declares stasis immediately and the runner terminates with `terminated: 'unreachable'` *before* the first click-taper-driven income lands.
 
 Adoption attempt (OL-955 Phase 3a, 2026-05-13): added `mode: 'stasis-aware-tick'` + `accessor: buildProducerAccessor(engine)` to five `runUntil` sites across `solve.ts` / `verify.ts` / `predict.smoke.ts`. Beat-2 (cursor purchase, default-content fires at 15s) and beat-3 (grandma purchase, fires at 12m08s) both collapsed to `Infinity` in the smoke run. The mode is not safe to drop in.
 
@@ -41,6 +41,8 @@ Producer is the wedge case. Until one of those lands, producer's `runUntil` stay
 The cut OL-955 Phase 2 settled on: merge identity (`PRODUCER_IDENTITY`, `PRODUCER_PHASES`, `PRODUCER_SUBSYSTEMS`, `FLOW_BAND_SCORE`) with windows (`BEAT_WINDOWS`, `ARC_BEATS`, `FLOW_BEATS`) in a single declarative `balance.ts`. The two halves cross-reference (phase `currentBeatId` points at window ids; `FLOW_BAND_SCORE` weights consume the `FLOW_BEATS` series), and keeping them in one file makes the cross-reference local.
 
 Promote to `BALANCING.md` if a second predictor-seed archetype (looper, scaler post-OL-841 ECC?) reaches the same conclusion.
+
+**Reversed by the canonical-consistency sweep (studio/open-loop-starter#9, #14).** The colocation above was retired: the *identity* half (`PRODUCER_IDENTITY`, `PRODUCER_PHASES`, `PRODUCER_SUBSYSTEMS`, `FLOW_BAND_SCORE`) dissolved into prose in `IDENTITY.md`, and the *windows* half (`BEAT_WINDOWS`, `ARC_BEATS`, `FLOW_BEATS` + predicates) moved to `balance/beats.ts`. The cross-references the merge protected were unconsumed doc-as-code (nothing imported the identity exports), so the split cost nothing and made the identity a single-source doc per the README's `IDENTITY.md` requirement. The predictor-seed observation still stands — it just no longer argues for one *file*.
 
 ## Drift signal — `cursor-boost-i` predicate/data mismatch
 

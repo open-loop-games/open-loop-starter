@@ -202,3 +202,18 @@ export const TIER1_UPGRADE_IDS: string[] = [
   'cursor-tier-1',
   ...TIER_UPGRADES.map((row) => `${row.buildingId}-tier-1`),
 ];
+
+// ─── Balance ────────────────────────────────────────────────────────────────
+// The multiplier half of Producer's spine (see `../IDENTITY.md` § Rate-function
+// spine; the geometric cost ladder lives in `producers.ts` § Balance). Upgrades
+// are the modifier PRODUCT — each `kind: 'multiplier'` row folds a ×2 into its
+// building's rate chain on purchase:
+//
+//   headlineMult = Π_bought upgrade.multiplier × achievementMult × milestoneMult
+//
+// Compounding is multiplicative, so the headline grows geometrically in the
+// number of stacked multipliers even while any single producer's count grows
+// only logarithmically in cookies (the cost ladder). That gap — log climb,
+// geometric reward — is the "watch the multiplier scroll" payoff the
+// signature-compound beat locks. The ×2 per tier is the invention knob a fork
+// retunes (perturbation surface, not a lifted constant).

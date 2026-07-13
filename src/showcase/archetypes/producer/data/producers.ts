@@ -223,3 +223,24 @@ export const PRODUCERS: ProducerDef[] = [CLICK_PRODUCER, ...BUILDINGS];
  *  tier). Excludes the click producer — milestones / cost-curve modules
  *  iterate this list to skip the manual-trigger entry. */
 export const CONTINUOUS_PRODUCER_IDS: string[] = BUILDINGS.map((b) => b.id);
+
+// ─── Balance ────────────────────────────────────────────────────────────────
+// Rate-function bucket: geometric cost-scaling (the Cost-Scaling family; see
+// `../IDENTITY.md` § Rate-function spine). Each building is a geometric price
+// ladder, so its count is logarithmic in accumulated cookies:
+//
+//   cost(n)  = baseCost · COST_SCALING^n            (COST_SCALING = 1.15)
+//   n_afford ≈ log_1.15( 1 + cookies·(1.15−1)/baseCost )   [geometric-series inverse]
+//
+// The per-building payback ratio is roughly constant across the ladder — each
+// tier's (baseCost / baseRate) climbs ~geometrically in lock-step with the tier
+// above it (15/0.1, 100/1, 1100/8, 12000/47, …), which is what makes every tier
+// "feel unreachable until it isn't, then trivial." That constant-ish payback is
+// the pacing invariant a fork retunes; the 1.15 growth is the CC-canonical
+// steepness (inlined, not `tunable()` — see `../../archetypes/BALANCING-producer.md`
+// § Engine-surface gap: `costScaling` is static).
+//
+// Headline output = Σ_tiers (count · baseRate) × the modifier product from
+// `upgrades.ts` § Balance (× achievements × milestones). The modifier product is
+// what the signature-compound beat watches scroll; the geometric cost ladder is
+// what paces the climb toward it.

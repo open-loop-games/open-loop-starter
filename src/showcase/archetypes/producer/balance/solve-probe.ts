@@ -9,7 +9,7 @@
  * instead of rebuilding. The engine plays the game; the solver tunes a
  * parameter until the beat's fire time lands on target.
  *
- * Run: `pnpm exec vite-node src/archetypes/producer/balance/solve.ts`.
+ * Run: `pnpm exec vite-node src/showcase/archetypes/producer/balance/solve-probe.ts`.
  * Prints a proposed-patch report. Does NOT mutate data files.
  *
  * Scope: beats 2, 3, 4, 7. Proposals chain forward — each beat solves against
@@ -35,7 +35,7 @@ import {
 } from '@open-loop/engine';
 import { ProducerTuningRegistryKey, type ProducerTunables } from '../modules/producers';
 import { PRODUCERS } from '../data/producers';
-import { ARC_BEATS, BEAT_WINDOWS } from './balance';
+import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { buildProducerSimEngine } from './bot';
 
 const BUDGET_SEC = BEAT_WINDOWS['beat-7']![1] * 2.5;
