@@ -7,7 +7,7 @@
  * per solve-pass — bisection iterations reset state via
  * `saveManager.importSave(initialBlob)` instead of rebuilding.
  *
- * Run: `pnpm exec vite-node src/archetypes/ambient/balance/solve.ts`.
+ * Run: `pnpm exec vite-node src/showcase/archetypes/ambient/balance/solve-probe.ts`.
  * Prints a proposed-patch report. Does NOT mutate data files — the human
  * picks and edits scaffolding based on the output, per
  * `archetypes/BALANCING.md`.
@@ -26,7 +26,7 @@
  *
  * Proposals chain forward — each beat solves against the prior beats'
  * proposed values via a single scope-push per sample. Mirrors
- * producer/balance/solve.ts shape.
+ * producer/balance/solve-probe.ts shape.
  */
 
 import {
@@ -41,7 +41,7 @@ import {
 import { AmbientTuningRegistryKey, type AmbientTunables } from '../modules';
 import { AUTO_PRODUCERS } from '../data/producers';
 import { UNLOCKS } from '../data/unlocks';
-import { ARC_BEATS, BEAT_WINDOWS } from './balance';
+import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { buildAmbientAccessor, buildAmbientSimEngine } from './bot';
 
 const BUDGET_SEC = BEAT_WINDOWS['beat-6']![1] * 2.5;

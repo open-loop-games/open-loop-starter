@@ -4,7 +4,7 @@
  * `archetypes/BALANCING.md` § Theme 5 ("Scripts discover, tests lock"); the
  * vitest suite never drives sim runs.
  *
- * Run: `pnpm exec vite-node src/archetypes/ambient/balance/probes.ts`.
+ * Run: `pnpm exec vite-node src/showcase/archetypes/ambient/balance/invariant-probe.ts`.
  * Prints two report sections.
  *
  * Probe 3 — offline-round-trip correctness. The Ambient contract requires
