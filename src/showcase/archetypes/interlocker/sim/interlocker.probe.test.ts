@@ -3,7 +3,7 @@
  *
  * Per `archetypes/BALANCING.md` § Theme 5 and
  * `/work/studio/frontier/docs/balance-process.md`: discovery lives in
- * `balance/arc-run.ts` + `balance/probes.ts` (scripts discover); this file pins
+ * `balance/arc-run.ts` + `balance/arc-probe.ts` (scripts discover); this file pins
  * the windows that discovery converged on (tests lock). Every bound here is a
  * MEASURED observation of the SHIPPING automation (`modules/automation.ts` under
  * the canonical `DEFAULT_AUTOMATION_PROFILE`, all tiers force-unlocked) driving

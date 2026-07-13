@@ -1,14 +1,15 @@
 <!--
-  Gallery card — first prose paragraph + primitive count + shell label.
-  No live thumbnails: live mounts would multiply tickers and create
-  persistence collisions per card.
+  Gallery card — archetype pitch line (identity-line blockquote or first prose
+  paragraph, per archetypePitch) + primitive count + shell label. No live
+  thumbnails: live mounts would multiply tickers and create persistence
+  collisions per card.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ArchetypeManifest } from '@/types';
 import Button from '@/ui/components/Button.vue';
 import { resolveShellComponent } from './useArchetypes';
-import { loadArchetypeOverview } from './useArchetypeOverviews';
+import { archetypePitch } from './useArchetypeOverviews';
 
 const props = defineProps<{
   manifest: ArchetypeManifest;
@@ -20,11 +21,7 @@ defineEmits<{
 
 const primitiveCount = computed(() => props.manifest.primitives.length);
 const shellResolved = computed(() => resolveShellComponent(props.manifest.shell) !== undefined);
-const previewLine = computed(() => {
-  const md = loadArchetypeOverview(props.manifest.id);
-  if (!md) return '';
-  return md.split(/\n\s*\n/, 1)[0].trim();
-});
+const previewLine = computed(() => archetypePitch(props.manifest.id));
 </script>
 
 <template>

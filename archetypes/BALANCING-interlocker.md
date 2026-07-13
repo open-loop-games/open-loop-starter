@@ -6,7 +6,7 @@ When an entry generalizes across archetypes, file a PR moving the abstracted rul
 
 ## Methodology — sim-driven gap discovery on a freshly-landed archetype
 
-The interlocker port (OL-1056 Phases 1–4) landed scaffold + locked contracts + module bodies + UI across four commits, with 70 vitest tests passing — but no headless sim run had been attempted before this pass. Discovery probes (`src/archetypes/interlocker/balance/probes.ts`) immediately surfaced two structural gaps the unit-test surface missed:
+The interlocker port (OL-1056 Phases 1–4) landed scaffold + locked contracts + module bodies + UI across four commits, with 70 vitest tests passing — but no headless sim run had been attempted before this pass. Discovery probes (`src/showcase/archetypes/interlocker/balance/arc-probe.ts`) immediately surfaced two structural gaps the unit-test surface missed:
 
 1. **Production loop unwired.** Rate chains (`rateChains[id]`) collected modifiers from jobs (woodcutter +0.09/sec wood, farmer +5/sec catnip, scholar +0.175/sec science, miner +0.25/sec minerals) and from building muls (lumberMill +10% wood, library +10% science, mine +20% / quarry +35% minerals). The chains were *read* by the starvation predicate (`village.ts:321`) and by the UI rate display, but nothing consumed them to actually `addResource` per tick. Only the smelter (`buildings.ts:273`) and population growth (`village.ts:291`) had real per-tick handlers. The arc didn't play because four of five rate-bearing resources never accumulated.
 
@@ -15,8 +15,8 @@ The interlocker port (OL-1056 Phases 1–4) landed scaffold + locked contracts +
 The methodological rule: **the unit-test surface validates module API contracts but does not validate that the archetype plays.** A port lands type-clean, test-clean, manifest-complete — and still has an unwired production loop and an unwinnable bootstrap because the test design checks module-local invariants rather than arc behavior. Phase 5 balance probes are the first integration surface that asks "does this game produce a beat sequence under any policy?" — and that's where these gaps showed up.
 
 - **Receipts:**
-  - `src/archetypes/interlocker/modules/village.ts:280-296` — production sub-step added at the top of the village `onTick`. Walks `productionResourceIds = ['catnip', 'wood', 'minerals', 'science']`, reads `chain.apply(0)` for each, calls `addResource(resource, rate × dt)` when positive. Iron excluded because the smelter `onTick` in `buildings.ts:273` writes iron directly. Catnip is included on the production side; the consumption side stays at step 2 (drain from kittens).
-  - `src/archetypes/interlocker/balance/probes.ts` — four probes documented inline. Discovery artifact; not promoted to a vitest lock until the bootstrap gap is fixed and the arc plays end-to-end.
+  - `src/showcase/archetypes/interlocker/modules/village.ts:280-296` — production sub-step added at the top of the village `onTick`. Walks `productionResourceIds = ['catnip', 'wood', 'minerals', 'science']`, reads `chain.apply(0)` for each, calls `addResource(resource, rate × dt)` when positive. Iron excluded because the smelter `onTick` in `buildings.ts:273` writes iron directly. Catnip is included on the production side; the consumption side stays at step 2 (drain from kittens).
+  - `src/showcase/archetypes/interlocker/balance/arc-probe.ts` — four probes documented inline. Discovery artifact; not promoted to a vitest lock until the bootstrap gap is fixed and the arc plays end-to-end.
 
 - **Promotion candidate for BALANCING.md:** "Module-API tests are insufficient to prove an archetype plays. The first balance pass on a greenfield archetype is the first integration surface that walks the rate-chain → resource → predicate → beat path under a deterministic bot. Schedule a smoke probe (one bot, one arc-length `runUntil`, beat fire-time table) as a Phase 4 / Phase 5a precondition — before any methodology bucket-walk, confirm the game *plays*." Generalizes to any archetype port using composed modifier chains where a per-tick consumer is the architectural cut between "rate is reported" and "rate is integrated."
 
@@ -26,7 +26,7 @@ First archetype consumer of `createResourceBag`. The wallet is a single bag with
 
 Validated by the probe runner (probes 1+3+4 install fresh engines via `createInterlockerEngine` and read through `resourcesApi.bag.remainingCapacityForType` + `resourcesApi.resources[id].value` without per-call double-bookkeeping). Capacity-chain reactivity works as designed: `chain.bind` then `chain.apply(0)` reflects the new modifier on the next read.
 
-- **Receipt:** `src/archetypes/interlocker/modules/resources.ts:128` — `TODO(expansion)` co-located with the bag construction.
+- **Receipt:** `src/showcase/archetypes/interlocker/modules/resources.ts:128` — `TODO(expansion)` co-located with the bag construction.
 - **Convergence count:** N=1 (interlocker is the sole archetype consumer of `createResourceBag` in starter). Producer / ambient / scaler use single-headline-resource modules; defender uses individual `Resource` handles directly without a bag.
 - **Graduation trigger:** second wide-graph archetype adopts the same bag + per-type-reactive-cap-chain shape. Candidate archetypes: Explorer (loadout-style), Director (multi-resource match economy), future Factorio-like / Mindustry-like archetypes. Engine-side graduation likely a sugar over current `createResourceBag` rather than a new primitive — the current shape works, the convergence question is whether the bag→chain-getter wiring earns a helper.
 
@@ -41,8 +41,8 @@ First archetype consumer of continuous per-tick multi-input/output conversion, h
 The shape is `createConversion` (atomic player-fired) integrated by an `onTick(dt)` driver — the canonical "continuous multi-input/output" composition the engine doesn't have a single primitive for yet. Defender's wave economy was event-driven (popped + cleared); interlocker is the first per-tick continuous consumer in the corpus.
 
 - **Receipts:**
-  - `src/archetypes/interlocker/modules/buildings.ts:266` — smelter `TODO(expansion)`.
-  - `src/archetypes/interlocker/modules/village.ts:305` — catnip drain `TODO(expansion)`.
+  - `src/showcase/archetypes/interlocker/modules/buildings.ts:266` — smelter `TODO(expansion)`.
+  - `src/showcase/archetypes/interlocker/modules/village.ts:305` — catnip drain `TODO(expansion)`.
 - **Convergence count:** N=1 archetype, two sites — both within the same Interlocker substrate. Engine-side graduation waits for a second archetype to hand-roll the same shape (Factorio-like, Mindustry-like, automation-heavy future archetypes).
 - **Graduation trigger:** second archetype adopts the same per-tick `(inputs[], outputs[], rate)` shape. At graduation, decide: does `createConversion` grow a `tickDriver` option (`createConversion({ inputs, outputs, perTickRate: …})`) that internalizes the `onTick` driver, or is `createContinuousConversion` a separate primitive that composes a Conversion with a rate driver? The two-site replication inside Interlocker is evidence the shape generalizes but doesn't itself satisfy the N=2-corpus rule.
 
@@ -56,7 +56,7 @@ The shape is `createConversion` (atomic player-fired) integrated by an `onTick(d
 
 The novel termination class: **a resource whose rate is positive but whose bag cap is zero is functionally wedged, but the standard transition-snapshot stasis check cannot see this through purchasable-distance inspection alone.** The `getRate` accessor isn't consulted by `isStasis`; the walker's purchasable transitions are.
 
-- **Receipt:** `src/archetypes/interlocker/balance/probes.ts § Probe 2` — wedge reproduction in 60 lines. Termination column reads 'maxSimTime' with rate=5.0/sec and catnip stuck at 0.
+- **Receipt:** `src/showcase/archetypes/interlocker/balance/arc-probe.ts § Probe 2` — wedge reproduction in 60 lines. Termination column reads 'maxSimTime' with rate=5.0/sec and catnip stuck at 0.
 - **Cross-link:** `BALANCING-defender.md § stasis-aware-tick verdict`, `open-loop-engine/docs/candidate-primitives.md § InfeasibilityOracle`.
 - **Promotion to `BALANCING.md`:** Phase 5c PR-amends `BALANCING.md § stasis-aware-tick adoption — zero out-of-band channel rule` to extend the rule with the cap-reached sub-axis: *the rule "accessor faithfully captures income channels iff there is no out-of-band rate channel" is necessary but not sufficient. A cap-bounded resource whose value clamps to a finite ceiling (or zero) introduces a second wedge: the rate is real but the integrand is bounded. Stasis-aware-tick via transition-snapshot inspection does not see cap-reach termination. Consumers needing to detect cap-reach must layer a budget-bounded reachability check on top — exactly the `InfeasibilityOracle` shape the candidate-primitives entry tracks.*
 
@@ -66,7 +66,7 @@ The novel termination class: **a resource whose rate is positive but whose bag c
 
 Interlocker confirms N=3: greenfield from Phase 1 onward, no `data/balance.ts` parallel was ever authored. Every perturbable value is a `tunable()` reader site keyed under `resources/`, `buildings/`, `village/`, `crafts/`, `smelter/`, `sciences/` (see `modules/tuning.ts` `InterlockerTunableKey`). Balance probes perturb exclusively through `pushScope` on `InterlockerTuningRegistryKey`.
 
-- **Receipt:** `src/archetypes/interlocker/data/` directory shape — no `balance.ts` or `overrides.ts` alongside `buildings.ts` / `crafts.ts` / `jobs.ts` / `resources.ts` / `sciences.ts` / `types.ts`.
+- **Receipt:** `src/showcase/archetypes/interlocker/data/` directory shape — no `balance.ts` or `overrides.ts` alongside `buildings.ts` / `crafts.ts` / `jobs.ts` / `resources.ts` / `sciences.ts` / `types.ts`.
 - **Cross-link:** `BALANCING-tug.md § Architectural finding — deep-partial override redundant with tunable()`, `BALANCING-defender.md § override-path-vs-tunable`.
 - **Promotion to `BALANCING.md`:** Ready as N=3. Phase 5c PR-amends `BALANCING.md § Where balance constants live` to lift the lesson from log-local to a cross-archetype rule: *`data/balance.ts` retires; greenfield archetypes route balance constants through `tunable()` + `TuningRegistry` from Phase 1 onward.*
 
@@ -76,7 +76,7 @@ Interlocker confirms N=3: greenfield from Phase 1 onward, no `data/balance.ts` p
 
 Interlocker confirms N=3: every field in `data/{resources, buildings, jobs, sciences, crafts}.ts` has a module-side reader. Phase 1 explicitly authored "only what consumers read" per the umbrella's convergence-question staging. Phase 5a grep audit confirms zero dead fields.
 
-- **Receipt:** grep audit across `src/archetypes/interlocker/data/` → all fields appear in at least one module reader site (`modules/resources.ts`, `modules/buildings.ts`, `modules/village.ts`, `modules/workshop.ts`, `modules/sciences.ts`).
+- **Receipt:** grep audit across `src/showcase/archetypes/interlocker/data/` → all fields appear in at least one module reader site (`modules/resources.ts`, `modules/buildings.ts`, `modules/village.ts`, `modules/workshop.ts`, `modules/sciences.ts`).
 - **Cross-link:** `BALANCING-tug.md § Over-authoring finding`, `BALANCING-defender.md § data-shape-up-front`.
 - **Promotion to `BALANCING.md`:** Ready as N=3.
 
@@ -86,7 +86,7 @@ Producer, ambient, defender each confirmed methodology-number framing (#1–#7) 
 
 Interlocker confirms N=4: zero Tier-A/B/C references in identifiers, comments, or test descriptions across the archetype. Authored against #1–#7 from Phase 1 onward.
 
-- **Receipt:** grep audit across `src/archetypes/interlocker/` → no Tier-A/B/C residue.
+- **Receipt:** grep audit across `src/showcase/archetypes/interlocker/` → no Tier-A/B/C residue.
 - **Cross-link:** `BALANCING-defender.md § methodology-number rekey`.
 - **Promotion to `BALANCING.md`:** Ready as N=4. Phase 5c rewrites `BALANCING.md § Theme 3` preamble to drop the methodology-rekey caveat as historical and confirm "all current archetypes author against #1–#7 from the start."
 

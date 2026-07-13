@@ -1,9 +1,10 @@
 /**
- * Interlocker sim-driven balance probes. Discovery lane per `BALANCING.md`
- * § Theme 5 ("Scripts discover, tests lock"). Findings feed
- * `archetypes/BALANCING-interlocker.md` and the candidate-primitives drop.
+ * Interlocker sim-driven balance probes — Lane 2 (see `../../README.md`
+ * § Balance). Discovery lane per `BALANCING.md` § Theme 5 ("Scripts discover,
+ * tests lock"). Findings feed `archetypes/BALANCING-interlocker.md` and the
+ * candidate-primitives drop.
  *
- * Run: `pnpm exec vite-node src/archetypes/interlocker/balance/probes.ts`.
+ * Run: `pnpm exec vite-node src/showcase/archetypes/interlocker/balance/arc-probe.ts`.
  *
  * Probes:
  *

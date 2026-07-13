@@ -134,7 +134,7 @@ export interface ScienceSpec {
   /** Display label. */
   name: string;
   /** Science cost (only requirement in canonical Kittens for arc-1 sciences;
-   *  architecture's `compedium` requirement is dropped — see overview.md). */
+   *  architecture's `compedium` requirement is dropped — see IDENTITY.md). */
   baseCost: DecimalSource;
   /** Prerequisite science id, or `null` for the first-tier (calendar). */
   prerequisite: ScienceId | null;

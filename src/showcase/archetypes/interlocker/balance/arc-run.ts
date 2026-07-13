@@ -273,7 +273,7 @@ function finalize(rec: ArcRecorder, mods: ArcModules, finalSimTime: number): Arc
  *  sim-time budget — whichever is first — recording beat fire-times. `sampleEvery`
  *  (seconds) enables trajectory capture; `stopWhen` lets a lock halt at its
  *  checkpoint (e.g. architecture completion) instead of burning the whole budget.
- *  Synchronous — used by `balance/probes.ts` scripts and the fast beat locks. */
+ *  Synchronous — used by `balance/arc-probe.ts` scripts and the fast beat locks. */
 export function runArc(opts: ArcRunOptions = { maxSimTime: 60000 }): ArcResult {
   const { mods, engine } = buildArcEngine();
   const rec = newRecorder();
