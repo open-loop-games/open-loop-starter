@@ -8,8 +8,10 @@ import {
   Decimal,
   Formula,
   hasResource,
+  persistent,
   subtractResource,
   tunable,
+  withPersistentContext,
   type DecimalSource,
   type EngineModule,
   type InjectionKey,
@@ -45,6 +47,17 @@ export interface BuildingsApi {
   /** Per-building owned count. Reads through the category's per-def instance
    *  state. */
   buildingCount(id: BuildingId): number;
+  /** Active ("on") count for a building — canon's per-building on/off throttle
+   *  (buildings.js `on`). `= max(0, count − disabled)`. Continuous consumers
+   *  (the smelter) run only their active count, so a player (or the automation)
+   *  can pause a drain without selling. Non-continuous buildings ignore it. */
+  activeCount(id: BuildingId): number;
+  /** Set how many of `id` are active (on). Clamped to `[0, count]`; stored as a
+   *  disabled-count so newly-built copies come online automatically (canon). */
+  setActiveCount(id: BuildingId, n: number): void;
+  /** Per-unit continuous smelter drain (resource/sec for ONE active smelter),
+   *  for throttle math (e.g. matching active smelters to wood income). */
+  readonly smelterUnitDrain: { wood: number; minerals: number };
   /** Whether the building is currently visible to the player. Driven by
    *  `BuildingSpec.unlockedByScience` predicate against `sciences.scienceCompleted`. */
   isVisible(id: BuildingId): boolean;
@@ -223,6 +236,21 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
       );
       const ironProductionRate = tunable<number>(registry, 'smelter/ironProductionRate', () => 0.1);
 
+      // ─── Active-count throttle (canon `on`) ─────────────────────────────
+      // Per-building disabled count: `active = max(0, count − disabled)`. Stored
+      // as disabled (not on) so newly-built copies come online automatically,
+      // matching canon. Only continuous consumers (smelter) read it in onTick;
+      // the field is general so the UI can expose it uniformly.
+      const state = withPersistentContext('interlocker/buildings', () => ({
+        disabled: persistent<Partial<Record<BuildingId, number>>>({}, { name: 'disabled' }),
+      }));
+      const buildingCountOf = (id: BuildingId): number => {
+        const entry = category.getEntry(id);
+        return entry ? Number(entry.signals.count.value) : 0;
+      };
+      const activeCountOf = (id: BuildingId): number =>
+        Math.max(0, buildingCountOf(id) - (state.disabled.value[id] ?? 0));
+
       // Manual opener actions (canon buildings.js:2747-2754). Gather adds one
       // catnip per click; refine spends catnip to produce wood (1 + craftRatio;
       // arc-1 has no craftRatio sources yet, so base 1 wood per 100 catnip).
@@ -337,8 +365,9 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
       const iron = resourcesApi.resources.iron;
 
       ctx.onTick((dt) => {
-        const smelter = category.getEntry('smelter');
-        const count = smelter ? Number(smelter.signals.count.value) : 0;
+        // Only ACTIVE smelters consume/produce — canon's `on` throttle lets a
+        // player (or the automation) pause the wood drain without selling.
+        const count = activeCountOf('smelter');
         if (count <= 0) return;
 
         const woodNeed = woodConsumptionRate.value * count * dt;
@@ -362,14 +391,10 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
       // balances are still positive." Good enough for a per-second readout —
       // exact dt-aligned stall timing isn't a display concern.
       const smelterActive = computed<boolean>(() => {
-        const smelter = category.getEntry('smelter');
-        const count = smelter ? Number(smelter.signals.count.value) : 0;
+        const count = activeCountOf('smelter');
         return count > 0 && Decimal.gt(wood.value, 0) && Decimal.gt(minerals.value, 0);
       });
-      const smelterCount = computed<number>(() => {
-        const smelter = category.getEntry('smelter');
-        return smelter ? Number(smelter.signals.count.value) : 0;
-      });
+      const smelterCount = computed<number>(() => activeCountOf('smelter'));
       const smelterConsumptionRate = {
         wood: computed<number>(() =>
           smelterActive.value ? woodConsumptionRate.value * smelterCount.value : 0,
@@ -385,6 +410,15 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
         buildingCount(id) {
           const entry = category.getEntry(id);
           return entry ? Number(entry.signals.count.value) : 0;
+        },
+        activeCount: activeCountOf,
+        setActiveCount(id, n) {
+          const count = buildingCountOf(id);
+          const on = Math.max(0, Math.min(count, Math.floor(n)));
+          state.disabled.value = { ...state.disabled.value, [id]: count - on };
+        },
+        get smelterUnitDrain() {
+          return { wood: woodConsumptionRate.value, minerals: mineralConsumptionRate.value };
         },
         isVisible(id) {
           const def = data.buildings.find((b) => b.id === id);

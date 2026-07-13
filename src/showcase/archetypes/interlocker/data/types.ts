@@ -1,4 +1,5 @@
 import type { DecimalSource } from '@open-loop/engine';
+import type { AutomationProfile } from './automation';
 
 // 10 resources, 10 buildings, 4 jobs, 6 sciences, 6 crafts. Arc-1 scope is
 // Kittens Game pre-paragon, through `architecture` science + first megalith.
@@ -31,6 +32,7 @@ export type BuildingId =
   | 'field'
   | 'pasture'
   | 'hut'
+  | 'logHouse'
   | 'library'
   | 'mine'
   | 'quarry'
@@ -191,6 +193,9 @@ export interface InterlockerData {
    *  village.js:367) — so growth is gated by the sign of the catnip balance,
    *  not by a fixed threshold. */
   kittenGrowthRatePerSec: number;
+  /** Default automation profile (the `{enabled,max,trigger}` config the
+   *  automation module seeds from, and the balance harness's sweep axis). */
+  automationProfile: AutomationProfile;
 }
 
 // ─── Typed read view (data-side predicates avoid engine runtime imports) ──

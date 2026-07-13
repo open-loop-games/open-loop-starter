@@ -12,7 +12,7 @@ Kittens Game first arc: a wide multi-resource graph with multi-input conversion 
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
 - **ResourceId** _(string-literal union)_ — `catnip` · `wood` · `minerals` · `iron` · `science` · `kittens` · `beam` · `slab` · `plate` · `scaffold` · `megalith`
-- **BuildingId** _(string-literal union)_ — `field` · `pasture` · `hut` · `library` · `mine` · `quarry` · `smelter` · `workshop` · `barn` · `warehouse` · `lumberMill`
+- **BuildingId** _(string-literal union)_ — `field` · `pasture` · `hut` · `logHouse` · `library` · `mine` · `quarry` · `smelter` · `workshop` · `barn` · `warehouse` · `lumberMill`
 - **JobId** _(string-literal union)_ — `woodcutter` · `farmer` · `scholar` · `miner`
 - **ScienceId** _(string-literal union)_ — `calendar` · `agriculture` · `mining` · `metal` · `construction` · `architecture`
 - **CraftId** _(string-literal union)_ — `wood` · `beam` · `slab` · `plate` · `scaffold` · `megalith`
@@ -28,6 +28,7 @@ Field-name reference edges — untyped IDs in named fields that point at
 another domain noun. (These are name-encoded, not type-encoded, so
 type-graph tools like dependency-cruiser/findReferences miss them.)
 
+- **AutomationProfile** → `building`, `job`, `science`, `craft`
 - **BuildingPrice** → `resource`
 - **BuildingSpec** → `science`
 - **JobSpec** → `resource`, `science`, `building`

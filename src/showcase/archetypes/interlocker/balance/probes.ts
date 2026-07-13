@@ -28,7 +28,7 @@
  *    candidate `createContinuousConversion`'s expected per-tick semantics.
  *
  * 4. **End-to-end arc smoke.** Drive the shared faithful-player model in
- *    `balance/arc-bot.ts` over the real assembled engine within a sim-time
+ *    `balance/arc-run.ts` over the real assembled engine within a sim-time
  *    budget and record when each beat fires. Beats are timeline anchors that
  *    show how the arc progresses, not budgets to tune toward — there is no
  *    pass/fail verdict here by design (measure-and-record; `archetypes/BALANCING.md`
@@ -39,7 +39,7 @@ import { Decimal, addResource, createAdditiveModifier, runUntil } from '@open-lo
 import { createInterlockerEngine } from '..';
 import { BuildingsKey, ResourcesKey, SciencesKey } from '../modules';
 import type { BuildingId, ResourceId, ScienceId } from '../data/types';
-import { ARC_BEATS, runArc } from './arc-bot';
+import { ARC_BEATS, runArc } from './arc-run';
 
 const HEAD = (s: string) => `\n## ${s}\n`;
 
@@ -317,19 +317,19 @@ function probeSmelter(durationSec: number, smelterCount: number): SmelterRow {
   };
 }
 
-// ─── Probe 4 — end-to-end arc smoke (shared arc-bot core) ────────────
+// ─── Probe 4 — end-to-end arc smoke (shipping automation) ────────────
 
-// Drives the shared `balance/arc-bot.ts` faithful-player model over the real
-// assembled engine and records when each beat first fires. Beats are timeline
-// anchors, NOT budgets to tune toward (measure-and-record; `archetypes/BALANCING.md`
-// § Theme 5). There is no pass/fail verdict here by design — the report states
-// only what was observed. The invariant windows this discovery converged on are
-// locked in `sim/interlocker.probe.test.ts`.
+// Drives the SHIPPING automation (`modules/automation.ts` under the canonical
+// `DEFAULT_AUTOMATION_PROFILE`, all tiers force-unlocked) via `balance/arc-run.ts`
+// over the real assembled engine and records when each beat first fires. Beats
+// are timeline anchors, NOT budgets to tune toward (measure-and-record;
+// `archetypes/BALANCING.md` § Theme 5). There is no pass/fail verdict here by
+// design — the report states only what was observed. The invariant windows this
+// discovery converged on are locked in `sim/interlocker.probe.test.ts`.
 //
 // Determinism note: arc-1 has no RNG, so this is a single canonical trajectory —
-// no seed sweep (the old greedy bot lived inline here and could not even reach the
-// mid-arc beats; the shared core reaches workshop + architecture reliably, and the
-// megalith tail is a measured wood-gated wall, not a bot bug — see arc-bot.ts).
+// no seed sweep. The KS-patterned automation + log house closes the full arc
+// (megalith), which the retired bespoke bot never reached.
 function probeArcSmoke(maxSimSec: number): {
   beats: { id: number; label: string; fireTimeSec: number | null }[];
   finalState: Record<string, number>;
@@ -422,7 +422,7 @@ function main(): void {
   // arc's true length, not a flattering short window. A sim-time cutoff, never a
   // beat target.
   const ARC_SMOKE_BUDGET_SEC = 90000;
-  console.log(HEAD('Probe 4 — end-to-end arc smoke (arc-bot core)'));
+  console.log(HEAD('Probe 4 — end-to-end arc smoke (shipping automation)'));
   const arc = probeArcSmoke(ARC_SMOKE_BUDGET_SEC);
   console.log(
     renderTable(

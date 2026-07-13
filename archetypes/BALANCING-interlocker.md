@@ -125,6 +125,8 @@ Measured beat windows (single canonical run, no RNG): b1=2s, b2=64s, b3=257s, b4
 
 ## Methodology stress — the interlocking tail resists greedy play (a probe that found something)
 
+> **Superseded (studio/open-loop-starter#8) — see § Arc closure via shipping automation below.** The conclusion here ("no automation closes the tail; it needs a human") was an artifact of the *bespoke phase-bot's construction*, not the archetype's identity: the bot drained inputs to zero because it lacked a storage-buffer, so every fix just moved the wedge. A properly-buffered KS-pattern automation (`{enabled,max,trigger}`) — plus canon's log house, which was out of arc-1 scope when this was written — closes the full arc. Kept intact as a dated record of the pre-fix state and a genuine "a probe that failed found something" episode.
+
 The arc bot went through the classic wedge sequence — each fix surfaced the next constraint, exactly the diagnostic value frontier's "a probe that fails found something" predicts:
 - greedy field-hoarder → dies at 4 kittens (never escapes pre-agriculture);
 - phased model → reaches workshop + architecture, but plateaus at 8 kittens (huts wood-capped) and cannot close the megalith tail.
@@ -135,6 +137,19 @@ Per measure-and-record, beats 6–7 are `describe.skip`-with-a-pointer in the lo
 
 - **Receipts:** `balance/arc-bot.ts` (shared faithful-player core + phase notes), `sim/interlocker.probe.test.ts` (locks + the skipped-with-pointer beats 6–7 block), `data/*.ts § Balance` (the descriptive lens).
 - **Promotion candidate for `BALANCING.md`:** "For a subtractive canon-port archetype whose economy is an interlocking loop, a greedy/phased bot's *inability* to close the arc is a measure-and-record finding about the design's identity, not a bar to a green lock. Lock what the bot reliably reaches; skip-with-a-pointer what demands non-myopic play; never tune the bot toward the beat." Generalizes the frontier "a failed probe found something" rule to the canon-port case.
+
+## Arc closure via shipping automation (studio/open-loop-starter#8)
+
+The bespoke harness bot was retired and replaced with **tier-gated player-facing automation** (`modules/automation.ts`) ported from Kitten Scientists: every automatable item carries `{enabled, max, trigger}`, `trigger` a storage-buffer fraction — spend only when every capacity-bearing input sits at ≥ trigger·cap. That buffer is exactly what the phase-bot lacked. Two additions the retired framing did not have:
+
+- **The log house** (canon `buildings.js:476`, previously out-of-scope): 200 wood + 250 minerals, ratio 1.15, +1 maxKittens, gated on `construction`. The genuine escape valve for the wood-gated pop ceiling — it prices housing partly in minerals, so population growth routes through the mining lane instead of strangling on wood alone.
+- **Active-count throttle** (canon `on`): continuous consumers (the smelter) run only their active count; the automation matches active smelters to sustainable wood income above a buffer. The retired bot's over-early smelters (wood drain > production) were the pop-8 ceiling's proximate cause — a bot artifact, not a game limit.
+
+The lens (§ The three-lane lens) still holds descriptively — the shifting binding constraints are unchanged canon. What changed is that the automation now *navigates* them: the catnip-solvency farmer controller (the one deliberate non-KS deviation) + the housing solvency gate keep the colony fed as it grows, and the trigger buffers stop cheap sinks from starving expensive priorities.
+
+**Measured arc under the canonical `DEFAULT_AUTOMATION_PROFILE`** (single canonical run, no RNG, tickDelta 1s, 2026-07-12): b1=1s, b2=142s, b3=345s, b4=579s, b5=5266s, architecture=101045s, **b6 (first megalith)=121945s, b7 (arc closure)=121945s**, final population 29 (7 huts + 15 log houses). The full arc CLOSES — beats 6–7 are now live locks in `sim/interlocker.probe.test.ts`, not skipped. The harness (`balance/arc-run.ts`) drives the shipping automation with the canonical profile, so the measured beats are exactly what a player running that profile sees (the profile is both the sweep axis and the player's tuning surface — they can't drift).
+
+The § "promotion candidate for BALANCING.md" above is withdrawn: a greedy/phased bot's inability to close an interlocking arc is a finding about *that bot's* myopia (drains to zero), not the archetype's identity — a buffered automation closes it. The durable rule is narrower and lives in the automation-as-game-code convention: model automation as tier-gated game code over a `{enabled,max,trigger}` profile, not as a bespoke phase machine.
 
 ## Carry-forward to 5b — arc-bootstrap fix
 

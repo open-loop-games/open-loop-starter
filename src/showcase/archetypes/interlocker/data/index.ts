@@ -5,6 +5,7 @@ import { JOBS } from './jobs';
 import { SCIENCES } from './sciences';
 import { CRAFTS } from './crafts';
 import { SEASONS, DAYS_PER_SEASON, SECONDS_PER_DAY } from './calendar';
+import { DEFAULT_AUTOMATION_PROFILE } from './automation';
 
 export * from './types';
 export { RESOURCES } from './resources';
@@ -13,6 +14,15 @@ export { JOBS } from './jobs';
 export { SCIENCES } from './sciences';
 export { CRAFTS } from './crafts';
 export { SEASONS, DAYS_PER_SEASON, SECONDS_PER_DAY } from './calendar';
+export {
+  DEFAULT_AUTOMATION_PROFILE,
+  AUTOMATION_NO_MAX,
+  type AutomationProfile,
+  type BuildEntry,
+  type CraftEntry,
+  type JobEntry,
+  type ScienceEntry,
+} from './automation';
 
 /** Immutable default Interlocker data — verbatim Kittens constants with
  *  arc-1 substitutions documented inline in each data file. Modules close
@@ -31,6 +41,7 @@ export const DEFAULT_INTERLOCKER_DATA: InterlockerData = {
   catnipPerKittenPerSec: -4.25,
   // village.js:7 kittensPerTickBase: 0.01/tick × 5 = 0.05/sec.
   kittenGrowthRatePerSec: 0.05,
+  automationProfile: DEFAULT_AUTOMATION_PROFILE,
 };
 
 // Re-export smelter rates as constants for the tuning module's default closures.
@@ -89,13 +100,16 @@ export { SMELTER_RATES as _SMELTER_RATES };
 //    hard bottleneck: it comes almost entirely from woodcutters (0.09/s each;
 //    refine is a 100:1 catnip→wood trade, negligible), and woodcutter headcount is
 //    capped by population, which is hut-WOOD-capped (huts scale 5·2.5^n in wood,
-//    outgrowing wood storage by ~hut #6). So wood gates huts gate woodcutters gate
-//    wood — a closed interlocking loop with no arc-1 escape valve (canon's log
-//    house is out of scope). A greedy/phased bot reliably reaches beat 5 (workshop)
-//    and architecture but cannot close the megalith tail in a practical horizon —
-//    a MEASURED finding, not a bot bug: the tail demands the non-myopic play the
-//    archetype is built to reward. See the bot's phase notes and the lock's
-//    skipped beats 6–7.
+//    outgrowing wood storage by ~hut #6). The LOG HOUSE (construction-gated, 200
+//    wood + 250 minerals at ratio 1.15) is canon's escape valve for this closed
+//    loop: it lifts population past the hut-wood plateau and prices the lift partly
+//    in minerals, so the interlock becomes wood AND minerals feeding population
+//    rather than wood alone strangling it. The bespoke phased bot (retired,
+//    studio/open-loop-starter#8) reached beat 5 + architecture but never closed
+//    the megalith tail; the shipping tier-gated automation drives past the old
+//    pop-8 ceiling (which was a bot artifact — see that ticket). Whether the tail
+//    now closes under the canonical automation profile is MEASURED, not assumed —
+//    see the re-pointed lock in `sim/interlocker.probe.test.ts`.
 //
 // Re-tune targets: none — the numbers are canon and immutable. What a FORK tunes
 // is this whole surface (that is the point of the archetype). The lens is the map

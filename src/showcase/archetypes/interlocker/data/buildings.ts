@@ -70,6 +70,26 @@ export const BUILDINGS: BuildingSpec[] = [
     ],
     unlockedByScience: null,
   },
+  // buildings.js:475-522 — "logHouse". Canon: maxKittens +1, priced in wood +
+  // minerals with the gentle 1.15 ratio (vs the hut's explosive 2.5). This is
+  // canon's escape valve for the hut-wood wall: it lifts the population ceiling
+  // and shares the pop cost onto MINERALS (miner output), so growth past the
+  // wood-capped hut plateau routes through the mining lane — interlocking wood
+  // and minerals rather than pinning population on wood alone. Gated on
+  // `construction` (the science that also unlocks warehouse/lumberMill).
+  {
+    id: 'logHouse',
+    name: 'Log House',
+    prices: [
+      { resource: 'wood', baseCost: 200 },
+      { resource: 'minerals', baseCost: 250 },
+    ],
+    priceRatio: 1.15,
+    grants: [
+      { chainId: 'kittens-max', kind: 'add', value: 1, description: 'Log House: +1 max kitten' },
+    ],
+    unlockedByScience: 'construction',
+  },
   // buildings.js:523-613 — "library" stage 0. Default unlockable. Effects:
   // scienceRatio 0.1 (cap bonus), scienceMax 250 (uncapped resource gets no
   // bag cap; arc-1 surfaces this as a wood-cap side-effect citation only —
@@ -277,9 +297,14 @@ export const SMELTER_RATES = {
 //     Grants +2 kitten cap; base cap is 0, so hut #0 is the gate to the very
 //     first kitten (bootstrap: gather → refine catnip→wood → hut → kitten). But
 //     wood cost 5·2.5^n explodes — hut #6 already wants 488 wood, outgrowing wood
-//     storage — so population is hut-WOOD-capped at ~8–10 in arc-1 (canon's log
-//     house, which breaks this, is out of scope). This cap sets the science rate,
-//     hence the architecture-wall horizon.
+//     storage — so the hut lane alone would cap population at ~8–10 in arc-1. The
+//     LOG HOUSE (below) is canon's escape valve: +1 kitten at a gentle 1.15 ratio
+//     priced in wood+minerals, so growth past the hut-wood plateau routes through
+//     the mining lane. Population still sets the science rate, hence the
+//     architecture-wall horizon.
+//   - LOG HOUSE (200 wood + 250 minerals, ratio 1.15). The pop-ceiling lift that
+//     breaks the closed wood loop — shares housing cost onto minerals so miners,
+//     not just woodcutters, feed population growth. Gated on `construction`.
 //   - FIELD (10 catnip, ratio 1.12). The pre-agriculture catnip engine at
 //     +0.625/s; gentle ratio so early fields are cheap, but geometric cost still
 //     makes farmers (post-agriculture) the better catnip lever once available.

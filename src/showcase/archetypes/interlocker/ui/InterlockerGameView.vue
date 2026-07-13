@@ -8,17 +8,19 @@
 import { computed, ref } from 'vue';
 import { ThreePanelShell } from '@/lib';
 import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
-import { getBuildings } from '../modules';
+import { getBuildings, getAutomation } from '../modules';
 import { useLogFeed } from './composables';
 import ResourceSidebar from './panels/ResourceSidebar.vue';
 import BuildingsPanel from './panels/BuildingsPanel.vue';
 import JobAssignmentPanel from './panels/JobAssignmentPanel.vue';
 import CraftsPanel from './panels/CraftsPanel.vue';
 import SciencePanel from './panels/SciencePanel.vue';
+import AutomationPanel from './panels/AutomationPanel.vue';
 import LogPanel from './panels/LogPanel.vue';
 import CalendarHeader from './components/CalendarHeader.vue';
 
 const buildings = getBuildings();
+const automation = getAutomation();
 
 // Stream colony events into the right-rail log for this session.
 useLogFeed();
@@ -33,17 +35,25 @@ const tabs = computed<TabItem[]>(() => {
   ];
   if (buildings.buildingCount('library') > 0) items.push({ value: 'science', label: 'Science' });
   if (buildings.buildingCount('workshop') > 0) items.push({ value: 'workshop', label: 'Workshop' });
+  // Automation reveals once its first tier unlocks (the first hut → Auto-Build).
+  if (automation.isAutomated.value) items.push({ value: 'automation', label: 'Automation' });
   return items;
 });
 const activeTab = ref('bonfire');
 </script>
 
 <template>
-  <ThreePanelShell left-width="220px" right-width="260px">
+  <ThreePanelShell
+    left-width="220px"
+    right-width="260px"
+  >
     <template #left>
       <ResourceSidebar />
     </template>
-    <Tabs v-model="activeTab" :items="tabs">
+    <Tabs
+      v-model="activeTab"
+      :items="tabs"
+    >
       <template #panel-bonfire>
         <BuildingsPanel />
       </template>
@@ -55,6 +65,9 @@ const activeTab = ref('bonfire');
       </template>
       <template #panel-workshop>
         <CraftsPanel />
+      </template>
+      <template #panel-automation>
+        <AutomationPanel />
       </template>
     </Tabs>
     <template #right>

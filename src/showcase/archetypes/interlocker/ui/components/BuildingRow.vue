@@ -12,7 +12,11 @@ defineProps<{
 </script>
 
 <template>
-  <li v-if="row.visible.value" class="building-row" :data-testid="`building-${row.id}`">
+  <li
+    v-if="row.visible.value"
+    class="building-row"
+    :data-testid="`building-${row.id}`"
+  >
     <RichTooltip side="right">
       <Button
         :disabled="!row.canBuy.value"
@@ -26,6 +30,12 @@ defineProps<{
       <template #content>
         <div class="building-row__tooltip">
           <h4>{{ row.name }}</h4>
+          <p
+            v-if="row.continuous"
+            class="building-row__note"
+          >
+            Continuous consumer — set how many run below.
+          </p>
           <ul class="building-row__cost-list">
             <li
               v-for="line in row.costs.value"
@@ -39,14 +49,51 @@ defineProps<{
               </span>
             </li>
           </ul>
-          <ul v-if="row.grants.length" class="building-row__grant-list">
-            <li v-for="(grant, i) in row.grants" :key="i">
+          <ul
+            v-if="row.grants.length"
+            class="building-row__grant-list"
+          >
+            <li
+              v-for="(grant, i) in row.grants"
+              :key="i"
+            >
               {{ grant.description }}
             </li>
           </ul>
         </div>
       </template>
     </RichTooltip>
+    <!-- Canon active-count throttle for continuous consumers (smelter): pause
+         some of the running copies to cap the wood/mineral drain by hand. -->
+    <div
+      v-if="row.continuous && row.count.value > 0"
+      class="building-row__active"
+      :data-testid="`active-${row.id}`"
+    >
+      <span class="building-row__active-label">running</span>
+      <Button
+        :disabled="row.activeCount.value <= 0"
+        class="building-row__active-step"
+        :data-testid="`active-${row.id}-dec`"
+        @click="row.setActive(row.activeCount.value - 1)"
+      >
+        −
+      </Button>
+      <span
+        class="building-row__active-count"
+        :data-testid="`active-${row.id}-count`"
+      >
+        {{ row.activeCount.value }} / {{ row.count.value }}
+      </span>
+      <Button
+        :disabled="row.activeCount.value >= row.count.value"
+        class="building-row__active-step"
+        :data-testid="`active-${row.id}-inc`"
+        @click="row.setActive(row.activeCount.value + 1)"
+      >
+        +
+      </Button>
+    </div>
   </li>
 </template>
 
@@ -81,6 +128,34 @@ defineProps<{
 }
 .building-row__tooltip h4 {
   margin: 0;
+}
+.building-row__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+.building-row__active {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  padding: 2px var(--gap-sm) var(--gap-xs);
+}
+.building-row__active-label {
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-right: auto;
+}
+.building-row__active-step {
+  padding: 0 8px;
+  line-height: 1.5;
+}
+.building-row__active-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+  min-width: 3.2em;
+  text-align: center;
 }
 .building-row__cost-list,
 .building-row__grant-list {

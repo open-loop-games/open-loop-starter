@@ -7,6 +7,7 @@ import { createVillageModule } from './village';
 import { createWorkshopModule } from './workshop';
 import { createSciencesModule } from './sciences';
 import { createCalendarModule } from './calendar';
+import { createAutomationModule } from './automation';
 
 export {
   InterlockerDataKey,
@@ -19,6 +20,13 @@ export { VillageKey, getVillage, type VillageApi } from './village';
 export { WorkshopKey, getWorkshop, type WorkshopApi } from './workshop';
 export { SciencesKey, getSciences, type SciencesApi } from './sciences';
 export { CalendarKey, getCalendar, type CalendarApi, type SeasonChangedEvent } from './calendar';
+export {
+  AutomationKey,
+  getAutomation,
+  createAutomationModule,
+  AUTOMATION_TIERS,
+  type AutomationApi,
+} from './automation';
 
 /**
  * Compose the Interlocker modules in dependency order. The engine topo-sorts
@@ -52,5 +60,7 @@ export function createInterlockerModules(data: InterlockerData): EngineModule[] 
     createVillageModule(data),
     createWorkshopModule(data),
     createBuildingsModule(data),
+    // Automation installs last — it reads every sibling API and drives them.
+    createAutomationModule(data),
   ];
 }

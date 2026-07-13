@@ -27,6 +27,15 @@ export interface BuildingRow {
   costs: ComputedRef<BuildingCostLine[]>;
   grants: BuildingSpec['grants'];
   buy(amount: DecimalSource): void;
+  /** Whether this building is a continuous consumer (drains inputs every tick).
+   *  Such buildings expose the canon active-count throttle. Arc-1's only one is
+   *  the smelter. */
+  continuous: boolean;
+  /** Active ("on") count — how many of `count` are currently running. */
+  activeCount: ComputedRef<number>;
+  /** Set the active count (canon pause/throttle). Overridden by the automation
+   *  when the building's automation is enabled. */
+  setActive(n: number): void;
 }
 
 /**
@@ -65,6 +74,14 @@ export function useBuildings(bulkAmount: () => DecimalSource): BuildingRow[] {
       p.purchase(amount);
     }
 
+    // Arc-1's only continuous consumer is the smelter (drains wood + minerals
+    // per tick). Generalize this flag when a second continuous building lands.
+    const continuous = def.id === 'smelter';
+    const activeCount = computed(() => buildings.activeCount(def.id));
+    function setActive(n: number): void {
+      buildings.setActiveCount(def.id, n);
+    }
+
     return {
       id: def.id,
       name: def.name,
@@ -75,6 +92,9 @@ export function useBuildings(bulkAmount: () => DecimalSource): BuildingRow[] {
       costs,
       grants: def.grants,
       buy,
+      continuous,
+      activeCount,
+      setActive,
     };
   });
 }
