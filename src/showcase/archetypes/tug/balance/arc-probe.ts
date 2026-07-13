@@ -10,7 +10,8 @@
  * knob; the methodology kit doesn't currently name this shape — see
  * `archetypes/BALANCING-tug.md`).
  *
- * Run: `pnpm balance:probes:tug`. Prints per-probe pass/fail report;
+ * Run: `pnpm exec vite-node src/showcase/archetypes/tug/balance/arc-probe.ts`.
+ * Prints per-probe pass/fail report;
  * surfaces drift for human inspection rather than blocking on it.
  *
  * **Math-only vs MC split:**
@@ -53,7 +54,7 @@ import {
   type OutcomeCapture,
   type TugSimOptions,
 } from './bot';
-import { ARC_BEATS, BEAT_WINDOWS } from './balance';
+import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { DEFAULT_TUG_DATA } from '../data';
 import type { PersonaKey } from '../data/personality';
 

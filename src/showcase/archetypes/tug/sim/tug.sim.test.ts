@@ -3,7 +3,7 @@ import { describe, it } from 'vitest';
 /**
  * Tug beat-map placeholder suite — one `it.todo` per beat. Engine-driven
  * beat verification rides the methodology-#3 sensitivity sweep in
- * `balance/probes.ts`; sim drivers stay out of this vitest suite. These
+ * `balance/arc-probe.ts`; sim drivers stay out of this vitest suite. These
  * todos exist so any future shape-change to a beat surfaces here as a
  * missing-test signal rather than vanishing silently when the balance
  * lane isn't running.

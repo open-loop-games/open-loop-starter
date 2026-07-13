@@ -20,7 +20,8 @@
  * territory (cardinality, predicate, or persona-knob), and the procedural-
  * persona agent path indicated with the structural-decisions list.
  *
- * Run: `pnpm balance:sweep:tug-retune`. ~17k runs at 12 seeds × 16
+ * Run: `pnpm exec vite-node src/showcase/archetypes/tug/balance/retune-probe.ts`.
+ * ~17k runs at 12 seeds × 16
  * personas × 108 slices; tractable in one session at ~30 min wall.
  *
  * **Perturbation path.** Every slice perturbation routes through

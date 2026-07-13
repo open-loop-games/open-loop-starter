@@ -1,6 +1,6 @@
 # Balancing — Tug
 
-Per-archetype balance log per `BALANCING.md § Graduating findings`. Records what was *learned* across Tug's balance passes — instrument-earning moments, methodology stresses, engine-surface gaps, drift signals, numerical surprises. Not chosen values (those live at `tunable()` sites), not beat windows (`balance/balance.ts`), not per-pass status or ticket IDs.
+Per-archetype balance log per `BALANCING.md § Graduating findings`. Records what was *learned* across Tug's balance passes — instrument-earning moments, methodology stresses, engine-surface gaps, drift signals, numerical surprises. Not chosen values (those live at `tunable()` sites), not beat windows (`balance/beats.ts`), not per-pass status or ticket IDs.
 
 When an entry generalizes across archetypes, file a PR moving the abstracted rule into `BALANCING.md` and leave the worked example here.
 
@@ -12,7 +12,7 @@ Tug already had a `TuningRegistry` + `tunable()` reader sites at units, income-u
 
 Resolution: delete `data/balance.ts` and `data/overrides.ts` entirely. Inline active fields at their reader sites; extend the `tunable()` surface so every cost/multiplier/rate the probes perturb is a registry key. Drop dead fields. The balance scripts route through `pushScope` on `TugTuningRegistryKey` instead of `applyTugOverrides`, matching Producer's post-redo path.
 
-- **Receipt:** the redo itself; before/after diff at `src/archetypes/tug/data/` and `src/archetypes/tug/balance/`.
+- **Receipt:** the redo itself; before/after diff at `src/showcase/archetypes/tug/data/` and `src/showcase/archetypes/tug/balance/`.
 - **Cross-link:** Producer's `BALANCING-producer.md` records the same end state via the locked rule "Where balance constants live" — `tunable()` + `TuningRegistry` is canonical.
 - **Promotion candidate for BALANCING.md:** "If an archetype carries both a deep-partial override path AND a `tunable()` surface, the override path is redundant. The locked deep-partial path lives only for genuinely non-tunable consumer surfaces (content cardinality, IDs) — and even those usually have less weight than the author thinks (see next finding)."
 

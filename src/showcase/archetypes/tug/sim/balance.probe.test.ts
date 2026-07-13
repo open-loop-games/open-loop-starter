@@ -7,7 +7,7 @@ import {
   createOutcomeCapture,
   type OutcomeCapture,
 } from '../balance/bot';
-import { ARC_BEATS } from '../balance/balance';
+import { ARC_BEATS } from '../balance/beats';
 import {
   getIncome,
   getIncomeUpgrades,
