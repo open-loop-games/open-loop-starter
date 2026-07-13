@@ -4,10 +4,9 @@
 > the game's actual evolution rules — what the engine simulates, what state
 > persists vs resets, what the player's queue actually controls.
 >
-> Cite this document; don't re-derive from code each session. Companion to
-> `overview.md` (archetype concept) and `balance/balance.ts` (identity layer);
-> sibling to `archetypes/BALANCING-looper.md` (search-strategy notes, lands
-> separately).
+> Cite this document; don't re-derive from code each session. Appendix to
+> `IDENTITY.md` (archetype concept + identity layer); sibling to
+> `archetypes/BALANCING-looper.md` (search-strategy notes, lands separately).
 
 ## What the looper port is
 
@@ -537,19 +536,19 @@ progress bars, the wider Idle Loops content) is out of scope.
   LOC — existence proof for headless simulation, not a search loop):
   `open-loop-research/reference-code/idle-loops-dmchurch/predictor.js`.
 - **Looper port code:**
-  - `src/archetypes/looper/data/actions.ts` — action defs, vanilla
+  - `src/showcase/archetypes/looper/data/actions.ts` — action defs, vanilla
     citations per row.
-  - `src/archetypes/looper/data/progress-vars.ts` — progress-var defs +
+  - `src/showcase/archetypes/looper/data/progress-vars.ts` — progress-var defs +
     `scales` table.
-  - `src/archetypes/looper/modules/loop.ts` — retention policy, mana
+  - `src/showcase/archetypes/looper/modules/loop.ts` — retention policy, mana
     drain, restart sequence.
-  - `src/archetypes/looper/modules/mana.ts` — mana resource +
+  - `src/showcase/archetypes/looper/modules/mana.ts` — mana resource +
     `initialMana` tunable.
-  - `src/archetypes/looper/modules/action-runner.ts` — per-tick
+  - `src/showcase/archetypes/looper/modules/action-runner.ts` — per-tick
     dispatcher, completion effects.
-  - `src/archetypes/looper/modules/action-formulas.ts` — adjusted-ticks +
+  - `src/showcase/archetypes/looper/modules/action-formulas.ts` — adjusted-ticks +
     XP formulas.
-  - `src/archetypes/looper/modules/stats.ts` — stat / talent
+  - `src/showcase/archetypes/looper/modules/stats.ts` — stat / talent
     SkillCategory wiring + curves.
-  - `src/archetypes/looper/modules/zones.ts` — progress-var XP grant,
+  - `src/showcase/archetypes/looper/modules/zones.ts` — progress-var XP grant,
     regular-var `finishRegular`, level-up reactions.

@@ -12,14 +12,14 @@
  * reward-effect handlers; bot or solver changes that perturb the chosen
  * queue or the per-step state arrival.
  *
- * Distinct from producer's `verify.ts` (which diffs a closed-form predictor
- * against the sim) because looper has no closed-form predictor — the
- * solver's chosen trajectory IS the canonical reference. What's regression-
- * caught here is the consistency of "same canonical settings → same
- * trajectory → same per-step state arrival."
+ * Distinct from producer's `verify-probe.ts` (which diffs a closed-form
+ * predictor against the sim) because looper has no closed-form predictor —
+ * the solver's chosen trajectory IS the canonical reference. What's
+ * regression-caught here is the consistency of "same canonical settings →
+ * same trajectory → same per-step state arrival."
  *
- *   pnpm exec vite-node src/archetypes/looper/balance/verify.ts
- *   pnpm exec vite-node src/archetypes/looper/balance/verify.ts --bless
+ *   pnpm exec vite-node src/showcase/archetypes/looper/balance/verify-probe.ts
+ *   pnpm exec vite-node src/showcase/archetypes/looper/balance/verify-probe.ts --bless
  *
  * `--bless` mode prints the captured waypoints as the new golden array
  * (paste into this file's `GOLDEN_WAYPOINTS` block). Use when intentional

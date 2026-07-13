@@ -5,8 +5,8 @@
  * tunable surface around canonical settings and reports per-cell
  * reachability + sim-time-at-goal for REACH_FOREST_1.
  *
- *   pnpm exec vite-node src/archetypes/looper/balance/solve.ts
- *   pnpm exec vite-node src/archetypes/looper/balance/solve.ts --bless
+ *   pnpm exec vite-node src/showcase/archetypes/looper/balance/solve-probe.ts
+ *   pnpm exec vite-node src/showcase/archetypes/looper/balance/solve-probe.ts --bless
  *
  * `--bless` mode prints the captured frontier table as the new golden.
  *

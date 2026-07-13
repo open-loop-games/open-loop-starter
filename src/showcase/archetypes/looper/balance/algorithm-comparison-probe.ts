@@ -1,7 +1,7 @@
 /**
  * Looper balance — algorithm comparison (archived discovery artifact).
  *
- * Run: `pnpm exec vite-node src/archetypes/looper/balance/algorithm-comparison.ts`.
+ * Run: `pnpm exec vite-node src/showcase/archetypes/looper/balance/algorithm-comparison-probe.ts`.
  *
  * Verdict landed in `archetypes/BALANCING-looper.md § Algorithm choice` —
  * A\*(h=0) primary, beam(W=8) fallback at REACH_FOREST_1's scale. This
@@ -12,7 +12,7 @@
  *
  * Scope is REACH_FOREST_1 only at canonical settings (initialMana=250,
  * costDivisor=100, talentAccrualRatio=0.01). The perturbation sweep
- * lives in `solve.ts`.
+ * lives in `solve-probe.ts`.
  */
 
 import type { Engine } from '@open-loop/engine';

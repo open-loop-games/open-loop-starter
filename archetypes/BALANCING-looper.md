@@ -3,7 +3,7 @@
 Per-archetype balance log per `BALANCING.md § Graduating findings`. Looper's
 balance pass hasn't run yet — this doc starts as a pre-pass *search-strategy
 spec* and grows learnings as the harness work proceeds. Game-mechanics
-foundation lives at `src/archetypes/looper/PROGRESSION.md`; cite that doc,
+foundation lives at `src/showcase/archetypes/looper/PROGRESSION.md`; cite that doc,
 don't restate it here.
 
 ## Methodology — why this archetype needs #7
@@ -69,7 +69,7 @@ The base operation:
    - `importSave(checkpoint)` restores engine to the decision-point state.
    - Apply the mutation to the current queue.
    - `setSchedule(new queue)` via `BalanceBotControlKey` (see
-     `src/archetypes/looper/balance/bot.ts`).
+     `src/showcase/archetypes/looper/balance/bot.ts`).
    - `runUntil(H loops OR goal predicate fires OR budget exceeded)`.
    - Capture post-rollout state + new save blob.
 3. Score each rollout against goal-distance.
@@ -259,7 +259,7 @@ talentAccrualRatio=0.01). The canonical trajectory has 5 steps (per
 
 Tolerance shape per field:
 
-- `cumulativeSimSec` — **±5% relative**, matches producer/verify.ts.
+- `cumulativeSimSec` — **±5% relative**, matches producer/verify-probe.ts.
   Loosens at the terminal step where rollout-jitter compounds.
 - `state` integer fields (progress-var levels, loop count, regular-var
   goods, talent levels) — **exact match**. These are integer thresholds
@@ -271,12 +271,12 @@ Tolerance shape per field:
   on `'bracket'` and now closes on `'goal'` reshapes the whole
   trajectory; not a soft drift.
 
-Authority chain: `verify.ts` runs the canonical solver, captures the
+Authority chain: `verify-probe.ts` runs the canonical solver, captures the
 trajectory, diffs against a checked-in golden waypoint array, exits
 nonzero on tolerance breach. Goldens live alongside the script
 (`GOLDEN_WAYPOINTS` inline or sibling file), regenerated explicitly via
 a `--bless` flag when intentional drift lands. Same exit-code + golden
-shape as producer/verify.ts.
+shape as producer/verify-probe.ts.
 
 ### Feasibility frontier
 
@@ -360,11 +360,11 @@ Lock granularity:
   shape-regression argument as `queue` above.
 - **`terminationReason` per cell — exact match.**
 
-Authority chain: `solve.ts` produces the frontier table; goldens live
+Authority chain: `solve-probe.ts` produces the frontier table; goldens live
 alongside (sibling file or inline `GOLDEN_FRONTIER`), diffed with the
 same `--bless`-to-regenerate pattern. Both regression catches run as
 `pnpm balance:looper:verify` / `pnpm balance:looper:solve` from CI,
-exit-code discipline same as producer/verify.ts.
+exit-code discipline same as producer/verify-probe.ts.
 
 ## Open (carry into the next leaf or perturbation sweep)
 
