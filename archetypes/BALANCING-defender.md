@@ -25,11 +25,11 @@ Two-scale coordinate system stays as the structural answer: placement grid coars
 
 - **Receipts:**
   - `decompile/README.md` has the WC3 tooling, but `ffdec` is system-installed at `/usr/bin/ffdec` (JPEXS Free Flash Decompiler v24.1.0); `ffdec -export xfl <out> <swf>` produces the full XFL tree.
-  - `src/archetypes/defender/data/path.ts` — 19 plain1-extracted waypoints, header documents the extraction.
-  - `src/archetypes/defender/data/bloons.ts` — speeds per `plainN` frame-count table in the header.
-  - `src/archetypes/defender/data/towers.ts` — all `/30` → `/40` time conversions; bomb splash 40px.
-  - `src/archetypes/defender/data/waves.ts` — per-round `spawnIntervalSecForRound(r) = (16 - r) / 40` helper.
-  - `src/archetypes/defender/data/path.ts` `cellSizePixels: 32`; `src/archetypes/defender/data/types.ts` `PathDef.cellSizePixels` doc; `src/archetypes/defender/modules/map.ts` `pathTotalLength` + `positionAtDistance` scale by cellSizePixels + Bresenham rounds float waypoints; `src/archetypes/defender/modules/towers.ts` per-tick `tx/ty = (cell + 0.5) * cellSizePixels`; `src/archetypes/defender/ui/panels/MapCanvas.vue` viewBox + sizes in pixels.
+  - `src/showcase/archetypes/defender/data/path.ts` — 19 plain1-extracted waypoints, header documents the extraction.
+  - `src/showcase/archetypes/defender/data/bloons.ts` — speeds per `plainN` frame-count table in the header.
+  - `src/showcase/archetypes/defender/data/towers.ts` — all `/30` → `/40` time conversions; bomb splash 40px.
+  - `src/showcase/archetypes/defender/data/waves.ts` — per-round `spawnIntervalSecForRound(r) = (16 - r) / 40` helper.
+  - `src/showcase/archetypes/defender/data/path.ts` `cellSizePixels: 32`; `src/showcase/archetypes/defender/data/types.ts` `PathDef.cellSizePixels` doc; `src/showcase/archetypes/defender/modules/map.ts` `pathTotalLength` + `positionAtDistance` scale by cellSizePixels + Bresenham rounds float waypoints; `src/showcase/archetypes/defender/modules/towers.ts` per-tick `tx/ty = (cell + 0.5) * cellSizePixels`; `src/showcase/archetypes/defender/ui/panels/MapCanvas.vue` viewBox + sizes in pixels.
 
 - **Promotion candidate for BALANCING.md:** "When the upstream source is a compiled binary (SWF, .pak, .pck, packed bundles), enumerate the extraction surfaces — script source is rarely sufficient. Header / shape / sprite / sound / timing data carry load-bearing balance numbers that the script extraction doesn't surface. Before declaring 'verbatim from the source,' confirm every constant you've authored has a citation that resolves all the way back to the binary, not to a downstream wiki estimate or a Phase-N stand-in." Generalizes beyond Flash to any consumer porting from a packed binary asset (Godot .pck, WC3 .w3x, RPG Maker .json bundles, Unity scenes — see `decompile/README.md` for the related WC3 tooling).
 
@@ -39,7 +39,7 @@ Two-scale coordinate system stays as the structural answer: placement grid coars
 
 Defender confirms N=2: greenfield from Phase 1 onward, no `data/balance.ts` parallel was ever authored. Every perturbable value is a `tunable()` reader site keyed under `towers/`, `bloons/`, or `economy/` (see `modules/tuning.ts` `DefenderTunableKey`). No deep-partial override mechanism; balance harness perturbations flow exclusively through `pushScope` on `DefenderTuningRegistryKey`.
 
-- **Receipt:** `src/archetypes/defender/data/` directory shape — no `balance.ts` or `overrides.ts` alongside `bloons.ts` / `towers.ts` / `economy.ts` / `waves.ts` / `path.ts`.
+- **Receipt:** `src/showcase/archetypes/defender/data/` directory shape — no `balance.ts` or `overrides.ts` alongside `bloons.ts` / `towers.ts` / `economy.ts` / `waves.ts` / `path.ts`.
 - **Cross-link:** `BALANCING-tug.md § Architectural finding — deep-partial override redundant with tunable()`.
 - **Promotion to `BALANCING.md`:** Ready as N=2. Phase 5c PR-amends `BALANCING.md § Where balance constants live` to lift the lesson from log-local to a cross-archetype rule. Wait for 5c so the audit + close-out lands as one PR rather than two.
 
@@ -59,7 +59,7 @@ Defender confirms N=2: every field in `data/{bloons.ts, towers.ts, economy.ts, w
 
 Defender confirms N=3: Phase 1 onward authored against #1–#7 directly (umbrella description's bucket-walk references methodology numbers; `balance/balance.ts` identity layer comments cite `BALANCING.md § Bucket → methodology lookup` by methodology number). Zero Tier-A/B/C residue in any file across the archetype.
 
-- **Receipt:** grep audit across `src/archetypes/defender/` → no Tier-A/B/C references in identifiers, comments, or test descriptions.
+- **Receipt:** grep audit across `src/showcase/archetypes/defender/` → no Tier-A/B/C references in identifiers, comments, or test descriptions.
 - **Cross-link:** `BALANCING-ambient.md` methodology-rekey note + producer's pre-OL-954 framing.
 - **Promotion to `BALANCING.md`:** Ready as N=3. Phase 5c rewrites the BALANCING.md § Theme 3 preamble to drop the methodology-rekey caveat as historical and confirm "all current archetypes author against #1–#7 from the start."
 
@@ -76,7 +76,7 @@ Stasis-aware-tick over a defender sim would see `getRate('money') = 0` at every 
 
 Defender's sim probes in Phase 5b will run `runUntil` in default `'tick'` mode and accept the budget-bounded termination flag the consumer wedge already absorbs.
 
-- **Receipt:** `src/archetypes/defender/modules/round.ts:121-144` — event subscriber bodies. Verifiable by grep: zero `getRate` reader sites across defender modules.
+- **Receipt:** `src/showcase/archetypes/defender/modules/round.ts:121-144` — event subscriber bodies. Verifiable by grep: zero `getRate` reader sites across defender modules.
 - **Cross-link:** `BALANCING-producer.md § narrow runUntil stasis-aware-tick inadequate`, `BALANCING-ambient.md` ambient-side confirmation, `open-loop-engine/docs/candidate-primitives.md § runUntil stasis-aware-tick`.
 - **Promotion to `BALANCING.md`:** Bifurcation graduates. Phase 5c PR-amends `BALANCING.md § stasis-aware-tick adoption — zero out-of-band channel rule` to record the bifurcation explicitly: *event-driven income channels (defender, producer click-taper) bifurcate against continuous-rate channels (ambient, tug). The narrow-form stasis check is safe only for the latter; event-driven income consumers stay in default `'tick'` mode until a broader-form primitive lands.*
 
