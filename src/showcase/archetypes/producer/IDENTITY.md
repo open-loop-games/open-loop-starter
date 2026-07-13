@@ -38,7 +38,11 @@ oracle — frozen-state `getCost(1)` / `getTotalRate` queries (methodology #2) p
 bot-driven `runUntil` bisection per beat (methodology #1). The single modeled
 subsystem is `continuous-producers` (Pure bucket, triangular multi-resource
 composition row); the one optimal-stopping row (prestige timing) is out of first-arc
-scope.
+scope. The automation reads the spine rather than optimizing it: producer's two
+levers (buy a producer, sweep the upgrades) don't warrant an optimal-play scorer,
+so the policy is the legible "most cost-effective, cheapest cold-start" pairing
+gated by a "% spend" reserve — the single-currency analog of the clone archetypes'
+trigger buffers.
 
 ## The loop — beat map
 
@@ -67,8 +71,8 @@ has forked into a sibling archetype, not retuned. The arc budget is ~90 min
 | Cost Scaling | `Producer.getCost(n)` geometric price ladder | `cost = baseCost · priceRatio^count` |
 | Modifier Chains | `rateChain` (upgrade × achievement × milestone products) | the compounding headline multiplier |
 | Achievement multipliers | `AchievementCategory.registerTiered` | earned achievements feed the rate chain |
-| Automation | shipping autobuyers (`modules/autobuyers/`) | the arc probe drives these; `bot.ts`'s purchase policy is shared with them |
-| Perturbation | module `TuningRegistry` (`tunable()`) + `data/overrides.ts` | constants via tuning; data-shape via overrides |
+| Automation | shipping autobuyers (`modules/autobuyers/`) | one `buildProducerPolicy` (payback-period + cheapest cold-start) drives the autobuyer *and* the walker; a `reserveFraction` "% spend" knob holds back part of the bank |
+| Perturbation | module `TuningRegistry` (`tunable()`) + `data/overrides.ts` | constants (incl. `balance/producerReserveFraction`) via tuning; data-shape via overrides |
 
 ## Balance model — three lanes
 

@@ -22,8 +22,9 @@
  * against.
  *
  * What's modeled:
- *   - Producer policy (`selectionHybridPayback` via `buildBotPolicy`) against
- *     the currently-affordable filter.
+ *   - Producer policy (`buildProducerPolicy` — payback-period with cheapest
+ *     cold-start) against the currently-affordable filter. This is the SAME
+ *     shipping policy the autobuyer runs; the walker doesn't carry its own copy.
  *   - Click-taper rate channel (`bot.ts:expectedClicksAt` regimes 1/s for
  *     [0,30), 0.2/s for [30,120), 0/s after).
  *   - Achievement Gate flips and click-regime boundaries during cookie save-up,
@@ -38,9 +39,9 @@
  *     The resulting timing offset is sub-interval — small relative to beat
  *     windows — and is exactly the kind of decoupled-peer drift the smoke
  *     driver visualizes.
- *   - The headline-rate cache in `auto-purchase.ts:249` is per-drain; the
- *     predictor builds a fresh map per pick. Negligible at producer's
- *     intended balance.
+ *   - The reserve knob (`reserveFraction · bank`) is inert at the default
+ *     fraction 0, so the walker's affordable filter matches the driver's. A
+ *     fork that raises the fraction must mirror it in the candidate filter here.
  */
 
 import {
@@ -55,7 +56,7 @@ import {
   type Producer,
 } from '@open-loop/engine';
 import { getBuildings, getClickCount, getPrimaryResource, getUpgrades } from '..';
-import { buildBotPolicy } from './bot';
+import { buildProducerPolicy } from '../modules';
 import { accumulateUntilPay, nextAchievementFireDistance, resetWalkerWorld } from './spec';
 
 // ─── Click taper ─────────────────────────────────────────────────────────
@@ -167,7 +168,7 @@ export function arcWaypointsBotPolicy(
 
   resetWalkerWorld(initial);
 
-  const policy = buildBotPolicy(buildings);
+  const policy = buildProducerPolicy();
   let simTime = 0;
   const runtime = buildGateRuntime(engine, () => simTime);
   const accessor = runtime.accessor;
@@ -261,15 +262,6 @@ export function arcWaypointsBotPolicy(
       },
     });
 
-  const headlineCache = new Map<unknown, Decimal>();
-  const getHeadlineRate = (p: Producer): Decimal => {
-    const cached = headlineCache.get(p.resource);
-    if (cached) return cached;
-    const total = Decimal.fromValue(buildings.getTotalRate(p.resource));
-    headlineCache.set(p.resource, total);
-    return total;
-  };
-
   // Iter cap is a safety against runaway loops. Healthy trajectory: iter ≈
   // purchases + save-ups, both bounded polynomially in the arc budget.
   let iterCount = 0;
@@ -297,7 +289,6 @@ export function arcWaypointsBotPolicy(
     // only differs for the contrived case where producer + upgrade are both
     // newly affordable on the same save-up — bot would buy producer first,
     // walker buys upgrade first. Sub-tick noise.
-    headlineCache.clear();
     const candidates: Producer[] = [];
     for (const entry of buildings.getAll()) {
       const p = entry.producer;
@@ -306,7 +297,7 @@ export function arcWaypointsBotPolicy(
       candidates.push(p);
     }
     if (candidates.length > 0) {
-      const pick = policy.pick(candidates, { getHeadlineRate });
+      const pick = policy.pick(candidates);
       if (pick) {
         buyProducer(pick);
         continue;

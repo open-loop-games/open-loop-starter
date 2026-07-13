@@ -1,23 +1,12 @@
 import {
   bn,
   persistent,
-  selectionHybridPayback,
   type DecimalSource,
   type Engine,
   type EngineModule,
   type GameStateAccessor,
-  type Producer,
-  type ProducerCategory,
-  type SelectionPolicy,
 } from '@open-loop/engine';
-import {
-  createProducerEngine,
-  getBuildings,
-  getPrimaryResource,
-  type ProducerDef,
-  type ProducerInstanceState,
-  type ProducerOverrides,
-} from '..';
+import { createProducerEngine, getBuildings, getPrimaryResource, type ProducerOverrides } from '..';
 import { AutobuyerMasterToggleKey, AutobuyerRegistryKey } from '../modules';
 
 /**
@@ -43,28 +32,10 @@ function expectedClicksAt(simTimeSec: number): number {
   return 48;
 }
 
-/**
- * Hybrid-payback selection policy for the producer balance bot — single source
- * of truth shared by the producer auto-buy autobuyer (installed in
- * `modules/autobuyers/producers.ts` via `setupPolicyAutoPurchase`) and the
- * closed-form bot-policy walker (`predict.ts`'s `arcWaypointsBotPolicy`
- * queries it against frozen-state engine readouts).
- *
- * Reserve floor is fixed at zero — the producer balance bot doesn't bank.
- * Forks that introduce a reserve must extend this signature; the predictor
- * will then need to mirror the reserve in its candidate filter.
- */
-export function buildBotPolicy(
-  buildings: ProducerCategory<ProducerDef, ProducerInstanceState>,
-): SelectionPolicy<Producer> {
-  return selectionHybridPayback({
-    getCost: (p) => p.repeatable!.getCost(1),
-    getRate: (p) => p.computedRate.value,
-    getResource: (p) => p.resource.value,
-    getReserve: () => 0,
-    getHeadlineRate: (p) => buildings.getTotalRate(p.resource),
-  });
-}
+// The producer selection policy is shipping code — it lives in
+// `modules/autobuyers/producers.ts` as `buildProducerPolicy` and drives both the
+// autobuyer and the closed-form walker (`predict.ts`). The balance bot no longer
+// carries its own copy; there is one policy, and the harness drives it.
 
 let engineCounter = 0;
 

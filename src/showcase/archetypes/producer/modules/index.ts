@@ -7,6 +7,8 @@ import { createAchievementsModule } from './achievements';
 import { createAutobuyerRegistryModule } from './autobuyers';
 import { createProducerAutobuyersModule } from './autobuyers/producers';
 
+export { buildProducerPolicy } from './autobuyers/producers';
+
 export {
   ProducerTuningRegistryKey,
   getBuildings,

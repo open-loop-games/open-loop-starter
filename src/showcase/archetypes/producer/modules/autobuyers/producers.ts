@@ -1,15 +1,17 @@
 import { persistent, type EngineContext, type EngineModule } from '@open-loop/engine';
 import {
+  Decimal,
   setupPolicyAutoPurchase,
   setupSweepAutoPurchase,
-  selectionHybridPayback,
+  selectionComposite,
+  selectionPaybackPeriod,
+  selectionCheapest,
+  tunable,
   type Producer,
-  type ProducerCategory,
   type SelectionPolicy,
 } from '@open-loop/engine';
-import { getBuildings, type ProducerInstanceState } from '../producers';
+import { getBuildings, getPrimaryResource, ProducerTuningRegistryKey } from '../producers';
 import { getUpgrades } from '../upgrades';
-import type { ProducerDef } from '../../data/types';
 import {
   AutobuyerMasterToggleKey,
   AutobuyerRegistryKey,
@@ -34,16 +36,34 @@ import {
 // gating (e.g. milestone-locked upgrade panels) can carry it through the
 // `isUnlocked` slot without restructuring the spec.
 
-export function buildProducerPolicy(
-  buildings: ProducerCategory<ProducerDef, ProducerInstanceState>,
-): SelectionPolicy<Producer> {
-  return selectionHybridPayback({
-    getCost: (p) => p.repeatable!.getCost(1),
-    getRate: (p) => p.computedRate.value,
-    getResource: (p) => p.resource.value,
-    getReserve: () => 0,
-    getHeadlineRate: (p) => buildings.getTotalRate(p.resource),
-  });
+// ─── Balance ────────────────────────────────────────────────────────────────
+// Producer's spine is thin: two levers (buy a producer, sweep the upgrades) over
+// one currency. The automation reads as "buy the most cost-effective producer;
+// cold-start to cheapest when nothing produces yet" — the documented
+// selectionComposite pairing, not an optimal-play scorer. Shortest-payback picks
+// by the engine's canonical `purchaseBeatSeconds` (cost / total-rate), which
+// self-advances tiers once they're affordable; the cheapest fallback covers the
+// cold-start moment where no owned producer has a finite payback.
+//
+// Spend discipline is the single-currency analog of interlocker's per-input
+// trigger buffer: hold back a fraction of the bank rather than spending to zero.
+// `reserve = PRODUCER_RESERVE_FRACTION · cookies` folds into the driver's reserve
+// knob; the default 0 spends freely, and the fraction is a `tunable()` so the
+// harness sweeps it and a fork later exposes it as the player "% spend" slider.
+const PRODUCER_RESERVE_FRACTION = 0;
+
+/**
+ * Shared producer selection policy — the single source of truth driving both the
+ * shipping autobuyer (below) and the closed-form bot-policy walker
+ * (`balance/predict.ts`). Since candidates are pre-filtered to affordable, the
+ * old hybrid-payback wait-term was always zero here; payback-period is the
+ * behavior-faithful, legible replacement.
+ */
+export function buildProducerPolicy(): SelectionPolicy<Producer> {
+  return selectionComposite(
+    selectionPaybackPeriod<Producer>((p) => p.purchaseBeatSeconds.value),
+    selectionCheapest<Producer>((p) => p.repeatable!.getCost(1)),
+  );
 }
 
 export function createProducerAutobuyersModule(): EngineModule {
@@ -57,10 +77,19 @@ export function createProducerAutobuyersModule(): EngineModule {
     connect(ctx: EngineContext): void {
       const buildings = getBuildings();
       const upgrades = getUpgrades();
+      const primary = getPrimaryResource();
       const master = ctx.inject(AutobuyerMasterToggleKey);
       const registry = ctx.inject(AutobuyerRegistryKey);
 
       const isUnlocked = () => true;
+
+      // "% spend" reserve: keep `reserveFraction · bank` unspent. Tunable so the
+      // harness sweeps it and a fork surfaces it as the player slider.
+      const reserveFraction = tunable(
+        ctx.inject(ProducerTuningRegistryKey),
+        'balance/producerReserveFraction',
+        () => PRODUCER_RESERVE_FRACTION,
+      );
 
       // === producer auto-buy ===
       const producerAutoBuy: AutobuyerSpec = {
@@ -76,7 +105,8 @@ export function createProducerAutobuyersModule(): EngineModule {
         {
           enabled: autobuyerGate(master, producerAutoBuy),
           interval: 1,
-          policy: buildProducerPolicy(buildings),
+          policy: buildProducerPolicy(),
+          reserve: () => Decimal.mul(reserveFraction.value, primary.value),
         },
         ctx.onTick,
       );

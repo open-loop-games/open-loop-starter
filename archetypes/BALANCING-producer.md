@@ -44,6 +44,60 @@ Promote to `BALANCING.md` if a second predictor-seed archetype (looper, scaler p
 
 **Reversed by the canonical-consistency sweep (studio/open-loop-starter#9, #14).** The colocation above was retired: the *identity* half (`PRODUCER_IDENTITY`, `PRODUCER_PHASES`, `PRODUCER_SUBSYSTEMS`, `FLOW_BAND_SCORE`) dissolved into prose in `IDENTITY.md`, and the *windows* half (`BEAT_WINDOWS`, `ARC_BEATS`, `FLOW_BEATS` + predicates) moved to `balance/beats.ts`. The cross-references the merge protected were unconsumed doc-as-code (nothing imported the identity exports), so the split cost nothing and made the identity a single-source doc per the README's `IDENTITY.md` requirement. The predictor-seed observation still stands — it just no longer argues for one *file*.
 
+## Methodology — hybrid-payback collapses to payback-period under an affordable-only filter
+
+Producer shipped `selectionHybridPayback` (Cookie Monster `pp` / Frozen Cookies
+`purchaseEfficiency`) as both the autobuyer policy and the walker policy. The
+canonical-consistency sweep (studio/open-loop-starter#9) replaced it with
+`selectionComposite(selectionPaybackPeriod, selectionCheapest)` — and the arc
+timings did not move (walker: beat-2 15s, beat-3 ~12.6min, beat-4 ∞, all
+unchanged).
+
+Why they're equivalent here: hybrid payback's score is `waitTerm + paybackTerm`,
+where `waitTerm = max(cost − (bank − reserve), 0) / headlineRate`. Both the driver
+(`setupPolicyAutoPurchase`) and the walker pre-filter candidates to *affordable*
+before calling `pick`, so `cost ≤ bank` and (at reserve 0) `waitTerm = 0` for
+every candidate. The score degenerates to `cost / Δrate` — the payback term
+alone. The wait-term only changes the answer when the policy must choose to *save
+toward* an unaffordable item, which neither consumer ever asks it to do (they pick
+among affordable, else save toward the cheapest gap). So the optimal-play scorer
+bought nothing over the legible one, at the cost of a headline-rate aggregation
+per candidate per pick.
+
+Generalizes: any single-currency archetype whose auto-buy pre-filters to
+affordable candidates gets nothing from a hybrid wait-term. Reach for
+`selectionPaybackPeriod` (+ `selectionCheapest` cold-start) first; escalate to
+`selectionHybridPayback` only when the policy itself owns the save-toward decision
+(multi-currency, or a driver that hands the policy unaffordable candidates).
+Promote to `BALANCING.md § Selection policies` if a second archetype confirms.
+
+- **Receipt:** the shared policy + `buildProducerPolicy` live at
+  `modules/autobuyers/producers.ts`; the balance bot no longer carries a copy
+  (`balance/bot.ts`).
+
+## Convention — one policy, shared by autobuyer + walker (not a bot copy)
+
+The pre-sweep producer carried the selection policy *twice*: `balance/bot.ts::buildBotPolicy`
+(walker) and `modules/autobuyers/producers.ts::buildProducerPolicy` (autobuyer),
+byte-identical `selectionHybridPayback` definitions that could drift silently. The
+sweep collapsed them to one `buildProducerPolicy` in the shipping module, imported
+by the walker — the automation-as-game-code discipline (`/work/studio/CLAUDE.md`)
+applied to the *policy*, not just the manager: there is one policy, and the harness
+drives it. The interlocker rewrite reached the same shape from the manager side
+(one profile drives player + harness); producer reaches it from the policy side.
+
+## Automation — "% spend" reserve is the single-currency trigger buffer
+
+Interlocker's automation gates spending on a per-input trigger buffer (spend only
+when every input is banked ≥ `trigger·capacity`). Producer is single-currency
+(cost-resource = produce-resource = cookies), so that buffer collapses to one
+knob: `reserve = reserveFraction · bank`, folded into `setupPolicyAutoPurchase`'s
+`reserve` slot as a `tunable('balance/producerReserveFraction')`. Default 0 spends
+freely (preserving the pre-sweep behavior); the fraction is the harness sweep axis
+and the eventual player "% spend" slider. The walker's affordable filter matches
+the driver only while the fraction is 0 — a fork raising it must mirror the reserve
+in `predict.ts`'s candidate filter (noted in that file's header).
+
 ## Drift signal — `cursor-boost-i` predicate/data mismatch
 
 Beat-4's predicate (`balance/balance.ts:282`, formerly `beats.ts`) references upgrade id `cursor-boost-i` via `upgradeBought('cursor-boost-i')`. The default Bakery `data/upgrades.ts` does not register that id. Reproduces on `main` pre-OL-955 (verified by `git stash` smoke during Phase 1). Effect: beat-4 + beat-7 report `Infinity` fire times in `predict.smoke.ts`.
