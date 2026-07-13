@@ -1,13 +1,11 @@
 /**
- * Eager `?raw` loaders for each archetype's identity doc. Vite resolves the
- * globs at build time, so the index is synchronous.
+ * Eager `?raw` loader for each archetype's identity doc. Vite resolves the
+ * glob at build time, so the index is synchronous.
  *
- * The canonical doc is `IDENTITY.md` (see
- * `src/showcase/archetypes/README.md` § IDENTITY.md). `overview.md` is the
- * legacy filename still used by un-migrated archetypes; both globs run and
- * `IDENTITY.md` wins when an archetype carries both, so the doc-rename sweep
- * (studio/open-loop-starter#9) can migrate one archetype at a time without
- * dropping any from the gallery.
+ * The canonical (and now only) doc is `IDENTITY.md` (see
+ * `src/showcase/archetypes/README.md` § IDENTITY.md). The doc-rename sweep
+ * (studio/open-loop-starter#9) migrated every archetype off the legacy
+ * `overview.md` filename; the fallback glob it needed is gone with it.
  */
 const identityByPath = import.meta.glob('@/showcase/archetypes/*/IDENTITY.md', {
   query: '?raw',
@@ -15,19 +13,8 @@ const identityByPath = import.meta.glob('@/showcase/archetypes/*/IDENTITY.md', {
   eager: true,
 }) as Record<string, string>;
 
-const overviewByPath = import.meta.glob('@/showcase/archetypes/*/overview.md', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>;
-
 const docsById: Record<string, string> = (() => {
   const out: Record<string, string> = {};
-  // Legacy first, then IDENTITY.md overwrites — the canonical doc wins.
-  for (const [path, body] of Object.entries(overviewByPath)) {
-    const id = path.match(/archetypes\/([^/]+)\/overview\.md$/)?.[1];
-    if (id) out[id] = body;
-  }
   for (const [path, body] of Object.entries(identityByPath)) {
     const id = path.match(/archetypes\/([^/]+)\/IDENTITY\.md$/)?.[1];
     if (id) out[id] = body;
@@ -40,10 +27,9 @@ export function loadArchetypeOverview(id: string): string | null {
 }
 
 /**
- * The one-line pitch for a gallery card. Robust to both doc shapes: skips a
- * leading `# heading`, then returns the first paragraph with any leading `>`
- * blockquote markers stripped — so a prose-first `overview.md` yields its pitch
- * paragraph and an `IDENTITY.md` yields its identity-line blockquote.
+ * The one-line pitch for a gallery card: skips a leading `# heading`, then
+ * returns the first paragraph with any leading `>` blockquote markers stripped
+ * — so an `IDENTITY.md` yields its identity-line blockquote.
  */
 export function archetypePitch(id: string): string {
   const md = docsById[id];
