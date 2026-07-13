@@ -10,10 +10,11 @@
  * reset surface to keep in sync. Cheap; revisit only if boot cost ever bites.
  *
  * This is the behavioral counterpart to the balance layer: `balance/`+`sim/`
- * probes drive the engine coarsely to *lock economy magnitudes*; this drives it
- * tick-by-tick to *spec what the mechanics do* — counts, monotonic growth,
- * things freeing up. Keep absolute-number locks in the balance probes; keep
- * observable behavior here. See `example.test.ts` for the shape to copy.
+ * probes drive the engine coarsely to *lock economy magnitudes* (see
+ * `game.probe.test.ts` for the Lane-3 lock shape); this drives it tick-by-tick
+ * to *spec what the mechanics do* — counts, monotonic growth, things freeing up.
+ * Keep absolute-number locks in the balance probes; keep observable behavior
+ * here. See `example.test.ts` for the behavioral shape to copy.
  */
 
 import { type Engine } from '@open-loop/engine';
@@ -26,7 +27,7 @@ import { createGameModules } from '../modules';
  * time. Set to 1 if your economy is second-valued and you want `tick(n)` to
  * mean n seconds; keep at 20 (the engine default) for fine-grained cadence.
  */
-const TICK_RATE = 20;
+export const TICK_RATE = 20;
 
 let handle: TestEngineHandle;
 
