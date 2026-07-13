@@ -21,7 +21,7 @@ import {
  *
  * Namespace: `balance/<knob>`.
  *
- * Grep `tunable(` under `src/archetypes/scaler/` for the auditable surface.
+ * Grep `tunable(` under `src/showcase/archetypes/scaler/` for the auditable surface.
  */
 export type ScalerTunableKey =
   | 'balance/transcendDivisor'

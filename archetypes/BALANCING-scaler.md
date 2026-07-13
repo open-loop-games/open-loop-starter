@@ -1,6 +1,6 @@
 # Balancing — Scaler
 
-Per-archetype balance log per `BALANCING.md § Graduating findings`. Records what was *learned* across scaler's balance passes — instrument-earning moments, methodology stresses, engine-surface gaps, drift signals, numerical surprises. Not chosen values (those live at `tunable()` sites or as canonical-port consts at module reader sites), not measurement-anchor windows (`balance/balance.ts`), not per-pass status or ticket IDs.
+Per-archetype balance log per `BALANCING.md § Graduating findings`. Records what was *learned* across scaler's balance passes — instrument-earning moments, methodology stresses, engine-surface gaps, drift signals, numerical surprises. Not chosen values (those live at `tunable()` sites or as canonical-port consts at module reader sites), not measurement-anchor windows (`balance/beats.ts`), not per-pass status or ticket IDs.
 
 When an entry generalizes across archetypes, file a PR moving the abstracted rule into `BALANCING.md` and leave the worked example here.
 
@@ -14,7 +14,7 @@ Scaler's autobuyer-driven contract is the structural condition that lets stasis-
 
 `buildScalerAccessor(engine)` returns `getRate('coins') = getCoinProducers().getTotalRate(coins)`. This is the same shape ambient's `buildAmbientAccessor` adopted cleanly (`BALANCING-ambient.md § stasis-aware-tick`).
 
-- **Receipt:** `src/archetypes/scaler/balance/bot.ts` `buildScalerAccessor`. Adoption call sites land per-sub-pass as `solve.ts` / `verify.ts` grow under each leaf.
+- **Receipt:** `src/showcase/archetypes/scaler/balance/bot.ts` `buildScalerAccessor`. Adoption call sites land per-sub-pass as `solve-probe.ts` / `verify-probe.ts` grow under each leaf.
 - **Convergence count:** N=2 (ambient + scaler) for the rule "an accessor faithfully captures the engine's income channels iff there is no out-of-band rate channel." Ambient was zero-click + single-resource; scaler is zero-click + multi-tier (coins → prestigePoints → transcendPoints via discrete conversions). The rule survives the cardinality jump — multi-tier doesn't add an out-of-band channel because the inter-tier transitions are event-driven, not rate-driven.
 - **Generalization candidate (promotes to `BALANCING.md`):** at N=2, the ambient log's pending promotion candidate is reached. PR-amend `BALANCING.md § Theme 4` engine-surface table with: "stasis-aware-tick adopts iff the accessor's `getRate` captures all continuous income channels. Producer was the wedge (click taper); ambient + scaler are the clean cases (zero-click + autobuyer-driven respectively)." Lands as a `BALANCING.md` PR amendment during end-of-pass close.
 
@@ -24,7 +24,7 @@ Producer's `tunable()` adoption was small (~5 sites in a single-subsystem Pure a
 
 ### The three declared-invention `tunable()` sites
 
-- `balance/transcendDivisor` — `() => 5e16` at `modules/transcend.ts:290`. Canonical 1e100 (`Synergism.ts:3583-3585`). 84-OOM lowering is structural: canonical 1e100 requires compounding sources (cube upgrades, hepteract effects, shop upgrades) not yet ported. Forks porting those systems raise this here, not in `data/balance.ts`.
+- `balance/transcendDivisor` — `() => 5e16` at `modules/transcend.ts:290`. Canonical 1e100 (`Synergism.ts:3583-3585`). 84-OOM lowering is structural: canonical 1e100 requires compounding sources (cube upgrades, hepteract effects, shop upgrades) not yet ported. Forks porting those systems raise this here, not as an inline `data/` const.
 - `balance/transcendThreshold` — same lowering rationale, parallel site at `modules/transcend.ts:295`.
 - `balance/offeringBaseGain` — `() => 2` at `modules/runes.ts:224`. Canonical `Calculate.ts:114-142` sums a base + later-arc multipliers (challenge tiers, achievement rewards, shop upgrades, ascension counter). First-arc port lifts a constant trickle that the SI rune scales. Forks add canonical compounding here.
 
@@ -49,28 +49,30 @@ When the next canonical-port archetype lands (likely a fork of incloneution or p
 1. Canonical-cited values fold to inline `const` at the owning module's reader site with citation co-located. Cross-module-shared values export from a `modules/canonical.ts` to avoid duplicating citations.
 2. The declared-invention surface (first-arc deviations from canonical) earns `tunable()` reader sites against the archetype's dedicated `TuningRegistry` (`createTuningRegistry('<archetype>-tuning')` in `modules/tuning.ts`, mirroring tug's pattern).
 3. The `TuningRegistry` instantiation lives in a dedicated tuning module with no dependencies, runs first in the archetype's module list. Sibling modules declare `dependencies: ['<archetype>/tuning']` and `ctx.inject(<Archetype>TuningRegistryKey)` to bind their `tunable()` reads.
-4. Grep `tunable(` under `src/archetypes/<archetype>/` audits the perturbation surface. The rule is `tunable` adoption is opt-in — canonical-port values are NOT solver perturbation surface.
+4. Grep `tunable(` under `src/showcase/archetypes/<archetype>/` audits the perturbation surface. The rule is `tunable` adoption is opt-in — canonical-port values are NOT solver perturbation surface.
 
 This pattern is the **canonical-port reference implementation** template. The methodology pass instruments the math; the small declared-invention surface is where forks adjust as additional canonical systems port in.
 
-- **Receipt:** files modified during the fold are listed above. The pattern generalizes to any canonical-port archetype with a citation-heavy `data/balance.ts`.
+- **Receipt:** files modified during the fold are listed above. The pattern generalizes to any canonical-port archetype with a citation-heavy `data/` layer.
 - **Generalization candidate:** ride along to `BALANCING.md § Where balance constants live` as an addendum on canonical-port archetypes specifically. Producer's fold was small enough that the "values declare at reader sites" rule was the dominant pattern; scaler clarifies that for canonical-heavy archetypes, *most* values land as plain consts and `tunable()` is the smaller opt-in surface. Lands as a `BALANCING.md` PR amendment during end-of-pass close.
 
 ## Methodology-number rekey — N=3 no-op confirmation
 
 OL-955 + OL-956 close-out comments predicted the methodology-rekey rule (Tier-A/B/C taxonomy excision) would land as observation rather than work across all archetypes. Scaler is the third archetype to confirm: the codebase carries no `Tier-A` / `Tier-B` / `Tier-C` labels in scaler code, comments, or test scaffolding — the framing was always against canonical Synergism rather than the prescriptive taxonomy.
 
-- **Receipt:** `grep -rn "Tier-[ABC]\|tier-[abc]" src/archetypes/scaler/` returns zero hits.
+- **Receipt:** `grep -rn "Tier-[ABC]\|tier-[abc]" src/showcase/archetypes/scaler/` returns zero hits.
 - **Convergence count:** N=3 (producer + ambient + scaler). All three archetypes converge on "rekey was already the case."
 - **Generalization candidate:** the umbrella OL-953 description's rekey item is documented as observation across the full set. The cross-cutting rule collapses from "applied during" to "was already the case." End-of-pass note in the umbrella thread, not a `BALANCING.md` amendment.
 
 ## Subsystem bucket-walk — multi-subsystem archetype as compositional reference
 
-Scaler is the first multi-subsystem archetype in the balance-pass umbrella to do the Theme 2 nine-bucket walk explicitly. `balance/balance.ts` § `SCALER_SUBSYSTEMS` classifies all nine subsystems (coin / accelerator / multiplier / upgrades / runes / challenges / prestige / transcend / achievements) against the bucket vocabulary with per-subsystem methodology call and sub-pass attribution.
+Scaler is the first multi-subsystem archetype in the balance-pass umbrella to do the Theme 2 nine-bucket walk explicitly. The classification (originally `SCALER_SUBSYSTEMS` in `balance/balance.ts`) buckets all nine subsystems (coin / accelerator / multiplier / upgrades / runes / challenges / prestige / transcend / achievements) with per-subsystem methodology call and sub-pass attribution.
 
-The classification surface lives next to the identity declaration so future fork engineers reading `balance/balance.ts` see the methodology call alongside the architectural one. Compare producer + ambient: both classified single subsystems as Pure inline in their identity comments. Scaler's compositional shape demands explicit per-subsystem rows.
+The classification surface lives next to the identity declaration so future fork engineers see the methodology call alongside the architectural one. Compare producer + ambient: both classified single subsystems as Pure inline in their identity comments. Scaler's compositional shape demands explicit per-subsystem rows.
 
-- **Receipt:** `src/archetypes/scaler/balance/balance.ts § SCALER_SUBSYSTEMS`.
+**Re-homed by the canonical-consistency sweep (studio/open-loop-starter#9, #15).** `SCALER_SUBSYSTEMS` was runtime-dead (a comment-and-type surface, consumed nowhere); the sweep dissolved `balance/balance.ts` and moved this bucket-walk into `../IDENTITY.md` § Rate-function spine as a prose table, which now owns it. The finding stands — the nine-bucket walk is still the compositional reference; only its home moved from a data file into the identity doc.
+
+- **Receipt:** `src/showcase/archetypes/scaler/IDENTITY.md § Rate-function spine`.
 - **Affected sub-passes:** 4 of 9 subsystems ship solvers under this leaf (runes Pure walker, ECC piecewise walker, prestige Bellman, transcend Bellman). The other 5 are canonical-port read-off only — locked via existing `sim/<beat>.test.ts` mechanical state-transition checks.
 - **Generalization candidate (forward):** if a second multi-subsystem canonical-port archetype lands, promote `SCALER_SUBSYSTEMS`'s shape into `BALANCING.md` as a template for the per-subsystem classification. Single-archetype findings stay log-local until N=2.
 
@@ -98,11 +100,11 @@ The runes spec walker uses canonical `computeEXPToLevel` inversion to predict `f
 The cascade math the spec walker computes — `prestigeFiringsToLevel1` per rune (Speed: 1, Dup: 194, Prism: 6479, Thrift: 489029, SI: 4e10) — informs future fork work but is fork-extension territory under this leaf (only Speed level-1 is the measurement anchor).
 
 - **Receipt:** `balance/spec.ts` `predictFirstSpeedLevel1Sec` + `buildRunesSpec`.
-- **Cross-archetype reference:** runes is a Pure-subsystem-inside-multi-subsystem demonstration — the smallest math validates the `spec.ts`/`solve.ts`/`verify.ts` scaffolding before harder sub-passes (ECC, prestige, transcend) land. Producer was Pure-single-subsystem; ambient was Pure-single-subsystem with zero-click; scaler is Pure-as-one-of-many. Future multi-subsystem archetypes can copy this sub-pass's shape directly.
+- **Cross-archetype reference:** runes is a Pure-subsystem-inside-multi-subsystem demonstration — the smallest math validates the `spec.ts`/`solve-probe.ts`/`verify-probe.ts` scaffolding before harder sub-passes (ECC, prestige, transcend) land. Producer was Pure-single-subsystem; ambient was Pure-single-subsystem with zero-click; scaler is Pure-as-one-of-many. Future multi-subsystem archetypes can copy this sub-pass's shape directly.
 
 ### ECC piecewise sub-pass — in-tree exemplar for `BALANCING.md § Theme 3 #2`
 
-`specEccTranscend` re-derives the canonical regime splice (linear ≤100, +1/20 in (100, 1000], +1/100 above 1000) as a second source of truth. `verify.ts` diffs spec walker output against engine `eccTranscend()` at the regime-spanning sample set; both sides compute in IEEE 754 over `number`, so equality is exact (zero tolerance).
+`specEccTranscend` re-derives the canonical regime splice (linear ≤100, +1/20 in (100, 1000], +1/100 above 1000) as a second source of truth. `verify-probe.ts` diffs spec walker output against engine `eccTranscend()` at the regime-spanning sample set; both sides compute in IEEE 754 over `number`, so equality is exact (zero tolerance).
 
 - All 12 sample points match exactly (breakpoints 100 + 1000 ± 1, interior 50/500/999/1500/2000).
 - `sim/ecc-beat.test.ts` adds 13 vitest locks: 12 spec-vs-engine equality checks + 7 canonical-value pins at every regime breakpoint.
@@ -130,7 +132,7 @@ The fallback per the deferred plan — direct-bisect with frozen-state threshold
 
 Neither case applies to scaler under this leaf. The `TODO(expansion)` at the predictor site documents the framing for later consumers — and the transcend sub-pass below provides the N=2 in-leaf instance of the same direct-bisect shape, strengthening the candidate-primitives convergence case (see `Bellman framing as fork-extension` below).
 
-- **Receipt:** `balance/spec.ts § predictPrestigeAtCanonicalThreshold` + `balance/verify.ts § verifyPrestige`.
+- **Receipt:** `balance/spec.ts § predictPrestigeAtCanonicalThreshold` + `balance/verify-probe.ts § verifyPrestige`.
 
 ### Transcend sub-pass — N=2 layered threshold equivalence
 
@@ -142,14 +144,16 @@ Same shape as prestige, one layer up, parameterized on the declared-invention tu
 
 **N=2 in-tree instance of the frozen-state threshold-equivalence shape.** Prestige + transcend share the canonical-port disjunction-collapse pattern. If a third archetype (looper / a future fork) hand-rolls the same `predictXxxAtCanonicalThreshold` shape, that's the trigger to graduate `createOptimalStoppingSolver` / `frozenStateThresholdEquivalence` as an engine helper. Under this leaf, the candidate stays in `spec.ts` with `TODO(expansion)` co-locating at the prestige + transcend predictor sites.
 
-- **Receipt:** `balance/spec.ts § predictTranscendAtCanonicalThreshold` + `balance/verify.ts § verifyTranscend`.
+- **Receipt:** `balance/spec.ts § predictTranscendAtCanonicalThreshold` + `balance/verify-probe.ts § verifyTranscend`.
 
 ### Predictor-seed N=2 colocation — confirmed; promotion candidate ready
 
-Scaler's `balance/balance.ts` co-locates `SCALER_IDENTITY`, `SCALER_PHASES`, `SCALER_MEASUREMENT_ANCHORS`, `SCALER_SUBSYSTEMS`, `ECC_SAMPLE_COMPLETIONS` in one file alongside the predicate helpers — same predictor-seed shape producer pioneered (identity + windows + spec inputs co-located). `balance/spec.ts` adds the per-sub-pass closed-form predictors that read off this seed.
+Scaler's `balance/balance.ts` co-located `SCALER_IDENTITY`, `SCALER_PHASES`, `SCALER_MEASUREMENT_ANCHORS`, `SCALER_SUBSYSTEMS`, `ECC_SAMPLE_COMPLETIONS` in one file alongside the predicate helpers — same predictor-seed shape producer pioneered (identity + windows + spec inputs co-located). `balance/spec.ts` adds the per-sub-pass closed-form predictors that read off this seed.
 
-- **Convergence count:** N=2 (producer + scaler). Producer's log flagged this as pending-confirmation against a second predictor-seed-shaped archetype; scaler is the confirmation.
-- **PR-amendment candidate confirmed:** `BALANCING.md § Where balance constants live` adds a note on the predictor-seed colocation pattern, citing both producer and scaler as references. Ambient + tug remain direct-bisect-shaped (per their logs); the predictor-seed shape applies where the spec walker has a meaningful closed-form output to drive verify against.
+**Superseded by the canonical-consistency sweep (studio/open-loop-starter#9, #15) — as it was for producer (#14).** Both archetypes' single-file colocation was dissolved to match the canonical surface: identity → `../IDENTITY.md` prose, windows → `balance/beats.ts`, predictors stay in `balance/spec.ts`. The *substance* survives — a predictor-seed archetype is one whose `spec.ts` has a meaningful closed-form output to drive `verify-probe.ts` against, and that is still what distinguishes producer + scaler from the direct-bisect archetypes (ambient + tug). Only the "one file" packaging is gone; the seed's three parts now live in their canonical homes. The N=2 finding's promotion target shifts accordingly: `BALANCING.md § Where balance constants live` should describe the predictor-seed as a *spec-walker-earns-its-layer* distinction, not a single-file colocation.
+
+- **Convergence count:** N=2 (producer + scaler), both now on the canonical split surface.
+- **PR-amendment candidate confirmed:** `BALANCING.md § Where balance constants live` adds a note on the predictor-seed distinction (spec walker with closed-form output), citing both producer and scaler. Ambient + tug remain direct-bisect-shaped (per their logs).
 
 ### Stasis-aware-tick N=2 — confirmed end-of-pass
 
@@ -172,5 +176,5 @@ Per OL-955 / OL-956 / OL-957 / scaler's foundation seed: the Tier-A/B/C taxonomy
 ### What this leaf did NOT learn
 
 - **Full Bellman value iteration in-tree.** Deferred per the structural decision; remains fork-extension territory.
-- **Multi-prestige-cycle compounding predictor.** Sub-pass scope tightened to first-prestige + first-transcend predictions. Per-cycle T_N for cycles 2..N is sampled by `solve.ts` (cycles 2..5 prestige) for future reference but not modeled.
+- **Multi-prestige-cycle compounding predictor.** Sub-pass scope tightened to first-prestige + first-transcend predictions. Per-cycle T_N for cycles 2..N is sampled by `solve-probe.ts` (cycles 2..5 prestige) for future reference but not modeled.
 - **`createOptimalStoppingSolver` engine candidate at N=1.** No in-tree Bellman consumer — see fork-extension framing above.

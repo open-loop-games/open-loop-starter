@@ -167,7 +167,7 @@ export function predictFirstSpeedLevel1Sec(firstPrestigeAtSec: number): number {
  * `eccTranscend()` — both sides are closed-form, both compute in IEEE 754,
  * verify diffs exact equality at every sample point.
  *
- * Sample completion counts: `ECC_SAMPLE_COMPLETIONS` in `balance.ts`
+ * Sample completion counts: `ECC_SAMPLE_COMPLETIONS` in `beats.ts`
  * spans the regime breakpoints (100, 1000) ± 1 plus interior points to
  * exercise both splice junctions and within-regime interpolation.
  */
@@ -259,7 +259,7 @@ export interface PrestigeThresholdPrediction {
    *  threshold — predicted `true`. */
   canConvertAtCoinThreshold: boolean;
   /** Long-run-average PP rate under canonical policy, computed as
-   *  `gainAtFire / observedCycleSec`. Populated by `verify.ts` with
+   *  `gainAtFire / observedCycleSec`. Populated by `verify-probe.ts` with
    *  observed cycle time; analytical reference for the optimal-θ gap. */
   longRunAvgRateHint: { gainPerSec: number; cycleSec: number } | null;
 }

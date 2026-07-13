@@ -21,7 +21,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { eccTranscend } from '../modules';
-import { ECC_SAMPLE_COMPLETIONS } from '../balance/balance';
+import { ECC_SAMPLE_COMPLETIONS } from '../balance/beats';
 import { specEccTranscend } from '../balance/spec';
 
 describe('scaler ECC piecewise lock — spec walker matches engine exactly', () => {

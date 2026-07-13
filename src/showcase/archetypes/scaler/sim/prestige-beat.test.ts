@@ -2,7 +2,7 @@
  * Regression locks for the Scaler beat-2 fire-time and post-beat state.
  *
  * Per `archetypes/BALANCING.md` § Theme 5: tests lock chosen numbers with
- * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve.ts`,
+ * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve-probe.ts`,
  * run via `pnpm exec vite-node`).
  *
  * Predictor (`balance/spec.ts predictPrestigeAtCanonicalThreshold`) computes
@@ -11,7 +11,7 @@
  *     `floor((c/1e12)^0.5)` constructed for this equivalence).
  *   - `prestigeConversion.canConvert` = true at threshold.
  *
- * Verify-driver (`balance/verify.ts`) sims to first prestige and diffs.
+ * Verify-driver (`balance/verify-probe.ts`) sims to first prestige and diffs.
  * The threshold equivalence pins the `anyOf` disjunction's structural
  * collapse — the coin-threshold and gain-threshold branches fire at the
  * same engine tick under canonical params.

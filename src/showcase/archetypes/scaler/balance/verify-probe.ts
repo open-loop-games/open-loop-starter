@@ -10,13 +10,13 @@
  * and the simulated trajectory. ECC sub-pass diffs spec-vs-spec (both closed-
  * form, no sim run); runes/prestige/transcend diff spec-vs-sim per event.
  *
- *   pnpm exec vite-node src/archetypes/scaler/balance/verify.ts
+ *   pnpm exec vite-node src/showcase/archetypes/scaler/balance/verify-probe.ts
  */
 
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { createScalerEngine, SCALER_MOD_ID } from '../boot';
 import { eccTranscend, getPrestigePoints, getRuneLevel, getTranscendPoints } from '../modules';
-import { ECC_SAMPLE_COMPLETIONS } from './balance';
+import { ECC_SAMPLE_COMPLETIONS } from './beats';
 import {
   buildEccSpec,
   buildRunesSpec,

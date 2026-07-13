@@ -3,7 +3,7 @@
  * Speed rune visibly into the coin rateChain.
  *
  * Per `archetypes/BALANCING.md` § Theme 5: tests lock chosen numbers with
- * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve.ts`,
+ * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve-probe.ts`,
  * run via `pnpm exec vite-node`).
  *
  * Predictor (`balance/spec.ts predictFirstSpeedLevel1Sec`) returns the
@@ -11,7 +11,7 @@
  * same engine tick the prestige reset's afterReset accrues offerings, and
  * 2 offerings clear Speed's level-1 threshold (≈0.77 EXP) in one pass.
  *
- * Verify-driver (`balance/verify.ts`) tracks both first-prestige and
+ * Verify-driver (`balance/verify-probe.ts`) tracks both first-prestige and
  * first-Speed-level-1 times and diffs with one-tick tolerance.
  *
  * State invariants pinned: Speed leaves level 0, Speed mAcc multiplier

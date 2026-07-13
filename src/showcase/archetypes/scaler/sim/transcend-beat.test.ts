@@ -4,7 +4,7 @@
  * transcend-tab substrate is observable.
  *
  * Per `archetypes/BALANCING.md` § Theme 5: tests lock chosen numbers with
- * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve.ts`,
+ * `toBeBetween` bounds; discovery happens elsewhere (`balance/solve-probe.ts`,
  * run via `pnpm exec vite-node`).
  *
  * Predictor (`balance/spec.ts predictTranscendAtCanonicalThreshold`) computes
@@ -15,7 +15,7 @@
  *   - The anyOf disjunction (`c >= 5e16 OR gain >= 0.5`) structurally
  *     collapses: gain steps 0 → 1 at exactly c = 5e16.
  *
- * Verify-driver (`balance/verify.ts`) sims to first transcend and diffs.
+ * Verify-driver (`balance/verify-probe.ts`) sims to first transcend and diffs.
  * The threshold equivalence pins the layered (transcend-on-prestige)
  * cycle's convergence under canonical-port discipline.
  *

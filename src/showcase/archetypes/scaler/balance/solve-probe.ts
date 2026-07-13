@@ -10,7 +10,7 @@
  * human picks. Locks come after discovery converges. Output here is read
  * once when re-pinning a lock window, not on every run.
  *
- *   pnpm exec vite-node src/archetypes/scaler/balance/solve.ts
+ *   pnpm exec vite-node src/showcase/archetypes/scaler/balance/solve-probe.ts
  */
 
 import { Decimal, runUntil } from '@open-loop/engine';
@@ -34,7 +34,7 @@ import {
   getTranscendPointGain,
   getTranscendUpgrades,
 } from '../modules';
-import { ECC_SAMPLE_COMPLETIONS } from './balance';
+import { ECC_SAMPLE_COMPLETIONS } from './beats';
 import {
   predictPrestigeAtCanonicalThreshold,
   predictTranscendAtCanonicalThreshold,
