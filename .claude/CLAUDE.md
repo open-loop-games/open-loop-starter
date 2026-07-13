@@ -104,7 +104,7 @@ src/showcase/archetypes/<name>/
 
 **Dependency direction (strict):** `data → modules → ui`, with composables between modules and ui when they earn the layer (see § Layering). Data never imports from modules; composables and components never contain game logic.
 
-**Port methodology lives next to the code** at `src/showcase/archetypes/README.md` (mirrored at `archetypes/README.md`) — phases, byte-landing discipline, walkthrough gate, lens conventions. Reference reading, not auto-loaded; consult before starting a port.
+**Port methodology lives next to the code** at `src/showcase/archetypes/README.md` — canonical template: directory shape, the two number-sourcing methods (forward spine / subtractive clone), `IDENTITY.md` requirements, the three-lane balance pipeline + canonical `balance/` filenames, and landing discipline (walkthrough gate, phased landing). `archetypes/README.md` is the balance-kit index that routes to it. Reference reading, not auto-loaded; consult before starting a port.
 
 **Fork workflow:** `pnpm eject <archetype>` (see § Fork workflow above) — hoists one archetype to `src/game/` and deletes the rest of `src/showcase/`.
 
