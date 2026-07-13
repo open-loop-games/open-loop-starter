@@ -1,5 +1,6 @@
 import {
   Decimal,
+  integerRoot,
   persistent,
   withPersistentContext,
   type EngineModule,
@@ -91,20 +92,10 @@ export interface PrestigeModuleOptions {
   upgrade?: UpgradeBalance;
 }
 
-/**
- * `Decimal.root(x, 3)` computes pow(x, 1/3), so exact cubes land a hair under
- * their true value (∛8 ≈ 1.9999…); nudge before flooring. Same fix as
- * multiverse-hr's `sublinearFragments`.
- *
- * TODO(expansion): the sublinear-per-source prestige payout (this `⌊∛(total/scale)⌋`
- * with the +1e-9 root nudge) is a candidate engine primitive at N=2 (mv-hr
- * `merge.ts` + this). See `candidate-primitives.md` § "Sublinear-per-source
- * prestige payout" — the nudge wants a primitives-layer `Decimal.rootExact`, the
- * floor-sum a `createPrestigeCurrency` facade.
- */
+/** The cbrt-per-source transform: ⌊∛(total/scale)⌋, floored via the engine's
+ *  scale-robust integer root (see consumer-guide § Sublinear per-source payouts). */
 function sublinear(total: Decimal, scale: number): Decimal {
-  if (total.lte(0)) return new Decimal(0);
-  return Decimal.floor(Decimal.root(total.div(scale), 3).add(1e-9));
+  return integerRoot(total.div(scale), 3);
 }
 
 export function createPrestigeModule(options: PrestigeModuleOptions = {}): EngineModule {
