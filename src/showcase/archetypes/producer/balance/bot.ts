@@ -10,26 +10,32 @@ import { createProducerEngine, getBuildings, getPrimaryResource, type ProducerOv
 import { AutobuyerMasterToggleKey, AutobuyerRegistryKey } from '../modules';
 
 /**
- * Click activity model. The previous bot did 20 clicks/s for 5s flat then
- * stopped — a delta function that warped beat 2 (cursor cost 15 was payable
- * after second 1, blowing the 60–180s window). Real players taper: a brief
- * burst while learning the click affordance, then occasional clicks while
- * skimming producer rows, then fully passive.
+ * Click activity model — a human active-clicking phase followed by a sustained
+ * autoclicker.
  *
- * Cumulative click count over time is the integral of these rates:
- * - `[0, 30s)` at 1/s → 30 clicks
- * - `[30s, 120s)` at 0.2/s → 18 clicks
- * - `[120s, ∞)` → 0
+ * For the opening `HUMAN_CLICK_WINDOW` the player clicks the big cookie by hand
+ * at a realistic human cadence (`HUMAN_CLICK_RATE`, ~10–12/s sustained during
+ * active play). Past that the player sets up an autoclicker (holds the mouse or
+ * runs a clicker mod) at the faster `AUTOCLICK_RATE`.
  *
- * Total ≈ 48 clicks. With clickBaseValue=1, click contributes ~48 cookies
- * by the 2 minute mark — enough to seed the cursor but small relative to
- * even tier-1 production within the first 5 minutes.
+ * Sustained clicking keeps the click producer economically live across the
+ * whole arc — its per-click value climbs with the cursor tier upgrades (each
+ * ×2, targeting `['click','cursor']`) and thousand-fingers, so the click stream
+ * is a real secondary income lane, not dead weight after the opening.
+ *
+ * Cumulative click count is the integral of these rates:
+ * - `[0, HUMAN_CLICK_WINDOW)` at HUMAN_CLICK_RATE/s
+ * - `[HUMAN_CLICK_WINDOW, ∞)` at AUTOCLICK_RATE/s
  */
+const HUMAN_CLICK_RATE = 11;
+const HUMAN_CLICK_WINDOW = 180;
+const AUTOCLICK_RATE = 30;
+
 function expectedClicksAt(simTimeSec: number): number {
   if (simTimeSec <= 0) return 0;
-  if (simTimeSec <= 30) return Math.floor(simTimeSec);
-  if (simTimeSec <= 120) return 30 + Math.floor((simTimeSec - 30) * 0.2);
-  return 48;
+  if (simTimeSec <= HUMAN_CLICK_WINDOW) return Math.floor(simTimeSec * HUMAN_CLICK_RATE);
+  const humanClicks = HUMAN_CLICK_WINDOW * HUMAN_CLICK_RATE;
+  return humanClicks + Math.floor((simTimeSec - HUMAN_CLICK_WINDOW) * AUTOCLICK_RATE);
 }
 
 // The producer selection policy is shipping code — it lives in

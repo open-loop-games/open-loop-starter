@@ -47,8 +47,10 @@ trigger buffers.
 ## The loop — beat map
 
 Seven ordered player-experience phases; the **measured** windows + predicates live in
-`balance/beats.ts` (awaiting the deferred Lane-3 lock — see § Balance model), never
-authored:
+`balance/beats.ts` and are locked by `sim/producer.probe.test.ts`, never authored.
+Beats 4–7 measure each phase through a total-CpS threshold (the arc is a
+cookies-per-second power-of-ten ladder) — the qualitative moments below are what
+those thresholds mark, not separate predicates:
 
 1. **first-click** — onboarding, the core feedback loop confirmed (click → number up).
 2. **first-producer** — clicking becomes idling; auto-production begins.
@@ -56,8 +58,12 @@ authored:
 4. **first-upgrade** — the modifier chain introduced; the long-term pull revealed.
 5. **achievement-moment** — achievements felt as a mechanical multiplier, not decoration.
 6. **bulk-buy-moment** — UX shift to "buy 10 / buy max" as the dominant action.
-7. **signature-compound** — the stacked rate-chain visible: the compounded multiplier
-   scrolling past ~1e6× is the archetype centerpiece.
+7. **signature-compound** — the stacked rate-chain made visible in the headline:
+   cookies-per-second scrolling past ~1e6 is the archetype centerpiece. (The per-unit
+   rate chain compounds — tiers × achievements × milestone × the global-multiplier
+   chain — but the headline that scrolls is total CpS, base × count folded through
+   that chain across every producer, which is what actually reaches the millions
+   inside the arc.)
 
 The phase order and each phase's intent are **fixed identity** — a fork changing them
 has forked into a sibling archetype, not retuned. The arc budget is ~90 min

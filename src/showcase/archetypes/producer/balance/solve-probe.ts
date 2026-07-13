@@ -147,10 +147,10 @@ function solveBeat3(ctx: SamplerContext, targetSec: number): TunerResult {
 }
 
 /**
- * Beat-4 fires on `cursor-boost-i` purchased. The tier-1 upgrade multiplier
- * drives all `*-boost-i` costs together via
- * `balance/tieredUpgradeMultiplier` — one tunable key, module-side cost
- * derivation does the fan-out (`modules/upgrades.ts resolveUpgradeCost`).
+ * Beat-4 fires when total CpS ≥ 1e3. The tiered ×2 upgrade multiplier is the
+ * strongest lever on early per-producer rate, so a higher value ramps CpS
+ * faster and pulls the beat earlier. One tunable key (`tieredUpgradeMultiplier`)
+ * drives every tier upgrade's bind.
  */
 function solveBeat4(ctx: SamplerContext, targetSec: number): TunerResult {
   return bisectTuner({
@@ -162,9 +162,11 @@ function solveBeat4(ctx: SamplerContext, targetSec: number): TunerResult {
 }
 
 /**
- * Beat-7 fires when top-owned producer's rateChain compounds to ≥1e6× base.
- * `milestoneBonusPerTier` is inverted — higher bonus → faster rate ramp →
- * earlier fire. Auto-direction detection in `bisectTuner` handles this.
+ * Beat-7 fires when total CpS ≥ 1e6 (the compound climax). `milestoneBonusPerTier`
+ * is inverted — a higher per-tier bonus → faster rate ramp → earlier fire.
+ * Auto-direction detection in `bisectTuner` handles this. (The dominant lever on
+ * the late arc is the global-multiplier chain in `data/upgrades.ts`; this solver
+ * treats milestone bonus as the continuous knob for landing the beat's window.)
  */
 function solveBeat7(ctx: SamplerContext, targetSec: number): TunerResult {
   return bisectTuner({

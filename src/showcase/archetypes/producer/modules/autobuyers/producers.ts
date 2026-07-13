@@ -2,7 +2,6 @@ import { persistent, type EngineContext, type EngineModule } from '@open-loop/en
 import {
   Decimal,
   setupPolicyAutoPurchase,
-  setupSweepAutoPurchase,
   selectionComposite,
   selectionPaybackPeriod,
   selectionCheapest,
@@ -47,10 +46,19 @@ import {
 //
 // Spend discipline is the single-currency analog of interlocker's per-input
 // trigger buffer: hold back a fraction of the bank rather than spending to zero.
-// `reserve = PRODUCER_RESERVE_FRACTION · cookies` folds into the driver's reserve
-// knob; the default 0 spends freely, and the fraction is a `tunable()` so the
-// harness sweeps it and a fork later exposes it as the player "% spend" slider.
-const PRODUCER_RESERVE_FRACTION = 0;
+// `reserve = fraction · cookies` folds into each auto-buyer's reserve knob; the
+// fraction is a `tunable()` so the harness sweeps it and a fork later exposes it
+// as the player "% spend" slider.
+//
+// Producers and upgrades carry SEPARATE fractions because they pull opposite
+// ways on one bank: the producer reserve pools cookies toward the next tier and
+// the expensive per-building ×2 upgrades (which cost ~10× a building and only
+// clear once the bank has grown), while the upgrade sweep wants to grab those
+// ×2s the instant they're affordable — a doubling for the price of a handful of
+// buildings is always worth taking. So producers default to a pooling reserve
+// and upgrades default to greedy (0).
+const PRODUCER_RESERVE_FRACTION = 0.9;
+const UPGRADE_RESERVE_FRACTION = 0;
 
 /**
  * Shared producer selection policy — the single source of truth driving both the
@@ -83,12 +91,19 @@ export function createProducerAutobuyersModule(): EngineModule {
 
       const isUnlocked = () => true;
 
-      // "% spend" reserve: keep `reserveFraction · bank` unspent. Tunable so the
-      // harness sweeps it and a fork surfaces it as the player slider.
+      // "% spend" reserves: keep `fraction · bank` unspent. Tunable so the
+      // harness sweeps them and a fork surfaces them as player sliders. Producers
+      // pool; upgrades grab greedily (see § Balance above).
+      const tuning = ctx.inject(ProducerTuningRegistryKey);
       const reserveFraction = tunable(
-        ctx.inject(ProducerTuningRegistryKey),
+        tuning,
         'balance/producerReserveFraction',
         () => PRODUCER_RESERVE_FRACTION,
+      );
+      const upgradeReserveFraction = tunable(
+        tuning,
+        'balance/upgradeReserveFraction',
+        () => UPGRADE_RESERVE_FRACTION,
       );
 
       // === producer auto-buy ===
@@ -112,22 +127,37 @@ export function createProducerAutobuyersModule(): EngineModule {
       );
 
       // === upgrade auto-buy ===
-      // Adopts setupSweepAutoPurchase. Replaces the hand-rolled
-      // `while (upgradeAccum >= upgradeInterval) sweep…` loop the
-      // pre-OL-855 producer balance bot carried at bot.ts:117-132.
+      // Reserve-aware sweep: buy each affordable upgrade, but hold the bank
+      // above the same `reserveFraction · bank` floor the producer auto-buy
+      // honors, so a burst of upgrade unlocks can't drain the pool the producer
+      // autobuyer is accumulating toward its next tier. With the default
+      // fraction 0 this reduces to the plain "buy everything affordable" sweep.
+      //
+      // Runs through the spec's own `tick` (driven by the registry loop) rather
+      // than `setupSweepAutoPurchase`, because that helper has no reserve knob:
+      // a Purchasable doesn't expose its cost resource, so a general reserve
+      // floor needs a resource handle the sweep can't reach. Producer is
+      // single-currency — every upgrade costs the primary resource — so the
+      // reserve check reads `primary.value` directly here.
+      const sweepList = upgrades.getAll().map((entry) => entry.purchasable);
       const upgradeAutoBuy: AutobuyerSpec = {
         id: 'autobuyer/producer/upgrades',
         groupId: 'upgrades',
         displayName: 'Upgrade auto-buy',
         isUnlocked,
         isActive: persistent<boolean>(false, { name: 'producer-upgrades-active' }),
+        tick: () => {
+          for (const p of sweepList) {
+            if (!p.canPurchase.value) continue;
+            // Recompute the floor against the live bank each iteration so the
+            // reserve holds cumulatively as earlier upgrades in the sweep spend.
+            const reserve = Decimal.mul(upgradeReserveFraction.value, primary.value);
+            const cost = Decimal.fromValue(p.getCost(p.amountToPurchase.value));
+            if (Decimal.sub(primary.value, reserve).gte(cost)) p.purchaseMax();
+          }
+        },
       };
       registry.push(upgradeAutoBuy);
-      setupSweepAutoPurchase(
-        upgrades.getAll().map((entry) => entry.purchasable),
-        autobuyerGate(master, upgradeAutoBuy),
-        ctx.onTick,
-      );
     },
   };
 }

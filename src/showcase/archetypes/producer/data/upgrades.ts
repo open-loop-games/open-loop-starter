@@ -29,16 +29,25 @@
 
 import type { UpgradeDef } from './types';
 
-const TIER_COST_RATIOS: Record<number, number> = {
+// Canonical `Game.Tiers[n].price` ladder (main.js:10111–10120): the per-tier
+// cost is `building.basePrice × ratio`. The first-arc port stopped at tier 3;
+// tiers 4–6 extend the ×2 ladder with the real ratios so a mature building's
+// headline can climb past ×8. (CC's tier 2 is ×50, not the port's original
+// ×100 — realigned here now that the ladder ports authentically.)
+type Tier = 1 | 2 | 3 | 4 | 5 | 6;
+const TIER_COST_RATIOS: Record<Tier, number> = {
   1: 10,
-  2: 100,
+  2: 50,
   3: 500,
+  4: 50_000,
+  5: 5_000_000,
+  6: 500_000_000,
 };
 
 interface TierUpgradeRow {
   buildingId: string;
   buildingBasePrice: number;
-  tiers: { tier: 1 | 2 | 3; name: string }[];
+  tiers: { tier: Tier; name: string }[];
 }
 
 const TIER_UPGRADES: TierUpgradeRow[] = [
@@ -128,7 +137,7 @@ const TIER_UPGRADES: TierUpgradeRow[] = [
 function tieredUpgrade(
   buildingId: string,
   buildingBasePrice: number,
-  tier: 1 | 2 | 3,
+  tier: Tier,
   name: string,
 ): UpgradeDef {
   return {
@@ -140,6 +149,29 @@ function tieredUpgrade(
     targetProducerId: buildingId,
     multiplier: 2,
   };
+}
+
+// Tiers 4–6 extend every building's ×2 ladder without hand-authoring 27 more
+// canonical flavor names (CC's are building-specific; ours are cosmetic
+// placeholders — the mechanic, not the label, is what ports). The cost ratios
+// climb steeply (×50k / ×5M / ×500M of basePrice) so these only bind on the
+// cheaper buildings a mature arc can actually afford to deepen.
+const EXTENDED_TIERS: Tier[] = [4, 5, 6];
+const EXTENDED_TIER_PREFIX: Record<number, string> = {
+  4: 'Reinforced',
+  5: 'Industrial',
+  6: 'Quantum',
+};
+
+function extendedTierUpgrades(row: TierUpgradeRow): UpgradeDef[] {
+  return EXTENDED_TIERS.map((tier) =>
+    tieredUpgrade(
+      row.buildingId,
+      row.buildingBasePrice,
+      tier,
+      `${EXTENDED_TIER_PREFIX[tier]} ${row.buildingId.replace(/-/g, ' ')}s`,
+    ),
+  );
 }
 
 function capitalize(s: string): string {
@@ -185,14 +217,56 @@ const THOUSAND_FINGERS: UpgradeDef = {
   perNonCursorBuilding: 0.1,
 };
 
+// ─── Global production multipliers (flat research chain) ─────────────────────
+// The port's headline-wide multiplier lane, and the dominant lever on the late
+// arc. Canonical CC reaches its high-CpS "watch it scroll" state through GLOBAL
+// multipliers stacked on top of the per-building tier ladder. This chain ports
+// the flat "cookie production multiplier" research upgrades (`main.js:5177–5218`,
+// each folding a fixed factor into the one `Game.cookiesPs *= mult` term) — the
+// count-scaled milk/kitten chain (`main.js:5240`, `:5256–5271`) is a SEPARATE
+// global, already stood in for by the per-achievement ×1.02 in
+// `modules/achievements.ts`.
+//
+// Bound headline-wide (`targetProducerId: null` → every producer's rate chain),
+// one-shot, and bounded by chain length, so it's stable — the effect can't run
+// away, only the cost-gated purchase timing paces it. Costs climb ×8 per rung
+// from 5e5 so the chain ramps across the mid-to-late arc (first rung affordable
+// ~25min) without touching the opening beats. Rung count + base cost + scaling
+// are the primary knobs for landing beat-7 (total CpS ≥ 1e6) in its window.
+const GLOBAL_MULT_BASE_COST = 500_000;
+const GLOBAL_MULT_COST_SCALING = 8;
+const GLOBAL_MULT_COUNT = 4;
+const GLOBAL_MULT_NAMES = [
+  'Specialized chocolate chips',
+  'Designer cocoa beans',
+  'Ritual rolling pins',
+  'Underworld ovens',
+  'One mind',
+  'Exotic nuts',
+  'Communal brainsweep',
+  'Arcane sugar',
+];
+
+const GLOBAL_MULT_UPGRADES: UpgradeDef[] = Array.from({ length: GLOBAL_MULT_COUNT }, (_, i) => ({
+  id: `global-mult-${i + 1}`,
+  name: GLOBAL_MULT_NAMES[i] ?? `Global production ${i + 1}`,
+  description: 'Cookie production is twice as efficient across the board.',
+  cost: Math.round(GLOBAL_MULT_BASE_COST * GLOBAL_MULT_COST_SCALING ** i),
+  kind: 'multiplier',
+  targetProducerId: null,
+  multiplier: 2,
+}));
+
 export const UPGRADES: UpgradeDef[] = [
   ...CURSOR_TIER_UPGRADES,
-  ...TIER_UPGRADES.flatMap((row) =>
-    row.tiers.map(({ tier, name }) =>
+  ...TIER_UPGRADES.flatMap((row) => [
+    ...row.tiers.map(({ tier, name }) =>
       tieredUpgrade(row.buildingId, row.buildingBasePrice, tier, name),
     ),
-  ),
+    ...extendedTierUpgrades(row),
+  ]),
   THOUSAND_FINGERS,
+  ...GLOBAL_MULT_UPGRADES,
 ];
 
 /** Tier-1 upgrade ids (fork-API surface for "cheapest path through the
