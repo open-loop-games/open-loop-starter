@@ -237,7 +237,7 @@ them is the recipe.
 - **Dive gate:** a THIRD *independent* autobuyer registry (not a backport of these
   two) is the real N=3. Parked as recipe until then, not promoted.
 
-### Run-phase controller — N=1 (cycler), named-anticipated N=2 (multiverse-hr)
+### Run-phase controller — N=2 (cycler, multiverse-hr)
 
 A run clock (`persistent` elapsed) + a `running`/`ended` lifecycle + a derived
 beat label read off a tension ratio + a crossing detector in `ctx.onTick` that
@@ -247,15 +247,24 @@ ceiling; the beat label (`setup`/`comfortable`/`first-bite`/`under-review`/`merg
 is *measured* off the ratio, never authored; the pace surface is frozen at
 `startRun` so the crossing stays closed-form.
 
-- **The split.** The exogenous scheduled-burn half (`(simTime) => value`,
-  frozen-at-run-start) is a **primitive** candidate — engine
-  `candidate-primitives.md` § TimedInput / § "Exogenous time-scheduled burn + run
-  phase controller". The phase-controller half (clock + lifecycle + derived-label
-  + crossing detector) is this recipe.
-- **Instances:** cycler `modules/cycle.ts` (N=1). **Named-anticipated N=2:**
-  multiverse-hr #17 — a WIP Cycler with a continuous escalating drain-to-death,
-  named in the engine candidate as the back-flow target. Admitted at N=1 under the
-  named-anticipated rule as the breadcrumb for that port.
+- **The split.** The exogenous scheduled-burn half (`(simTime) => value`) is a
+  **primitive** candidate — engine `candidate-primitives.md` § "Exogenous
+  time-scheduled burn". The phase-controller half (clock + lifecycle +
+  derived-label + crossing detector) is this recipe.
+- **Instances (N=2):** cycler `modules/cycle.ts`; multiverse-hr
+  `src/modules/drain.ts` (Operating Burn — a deliberate port of the same kernel;
+  the module header cites the shared `N* ≈ prime + Tg·log_g(H)` crossing, τ_setup
+  priming, and the `{H,g,Tg}`-authored-run-length decoupling). The named-anticipated
+  #17 breadcrumb is now a real second instance.
+- **Divergences to keep visible (for the N=3 dive):** (1) *crossing* — cycler is
+  a hard closed-form `ratio→1`; multiverse-hr is a soft *rate* crossing
+  (`burnRate > productionRate`) with a `graceSeconds` window and a solvent-recovery
+  reset, so run-end is a soft-bind, not a deterministic time. (2) *baseline peg* —
+  cycler freezes the pace surface at `startRun`; multiverse-hr pegs B₀ to a
+  continuous cross-run EMA of production rate (`pegEma`, drain-independent), so its
+  schedule is not run-frozen. (3) *beat label* — cycler derives the full 5-beat
+  ladder; multiverse-hr surfaces `primed` + `isUnderReview` booleans + a merge-bell
+  event rather than one derived enum.
 
 ### Two-sided match lifecycle
 
