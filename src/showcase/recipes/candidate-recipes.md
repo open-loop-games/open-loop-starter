@@ -37,8 +37,10 @@ code composition that realizes it. The stack: **pattern → recipe → primitive
 
 ## How this surface works
 
-- **Drop at N=2.** The second time a shape is hand-rolled across starter
-  archetypes, index it here — don't wait, and don't route it to the engine.
+- **Drop at N=2.** The second time a shape is *independently* hand-rolled —
+  anywhere in the studio — index it here; don't wait, and don't route it to the
+  engine. The count is over independent instances, not repos: a starter archetype
+  and a consumer game each count once (see § Sourcing scope below).
 - **N=1 only when named.** A single instance is admitted only with a *specific*
   anticipated second consumer named (like the engine candidate file's pre-designed
   shapes) — never a speculative "some future archetype". The named N=1 entry is a
@@ -63,13 +65,20 @@ code composition that realizes it. The stack: **pattern → recipe → primitive
   (b) a shared starter standard module (`src/modules/`, not in `sharedBase` —
   menu-style like the shells), or (c) it stays glue and never generalizes.
 
-**Scope, and the expansion path.** Starter archetypes only, for now — prove the
-surface on a controlled input set. Once the concept holds, it expands into a
-studio-level project: picking through the composition/recipe-half entries already
-misfiled in engine `candidate-primitives.md` (e.g. `createSymmetricModuleSet`,
-the bilateral-sim-bot recipe half), a root `/work/studio/CLAUDE.md` back-flow
-entry, then widening to consumer-game receipts. Not active yet — noted so the
-surface is built with it in mind.
+**Sourcing scope — a maturity marker, not a counting rule.** The cadence above
+counts independent instances *studio-wide* and never depended on which repo a copy
+lives in. What is still widening is *where* instances get sourced from: starter
+archetypes were the initial controlled input set — the only surface stable enough
+to mine while this incubator was itself being proven — so most current entries are
+starter-sourced. **Phase 3** opens sourcing to consumer games (multiverse-hr,
+maldacena, frontier, borglike, …); that advances the marker without changing the
+count. The bridge is already in place — the named-anticipated N=1 entries
+(§ Run-phase controller cites multiverse-hr #17) reach across the starter boundary
+today, exactly as the cadence allows. Upstream reconciliation has landed too: root
+`/work/studio/CLAUDE.md` § Back-flows names this the third drop-spot, and the
+recipe-half entries once misfiled in engine `candidate-primitives.md`
+(`createSymmetricModuleSet`'s policy sibling, the bilateral-sim-bot runner,
+autobuyer registry, run-phase controller) now point here as their recipe home.
 
 ## Current recipes
 
