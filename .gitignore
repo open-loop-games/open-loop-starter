@@ -10,3 +10,6 @@ dist
 src/components.d.ts
 .codex
 profiles/
+# Skirmish reference seeds — local working scratch (verbatim tug/defender copies
+# staged for hacking as bones land); never shipped in the archetype exemplar.
+src/showcase/archetypes/skirmish/_seeds/

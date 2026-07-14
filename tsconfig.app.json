@@ -23,6 +23,7 @@
     "src/showcase/archetypes/scaler/runes.ts",
     "src/showcase/archetypes/scaler/synergism.ts",
     "src/showcase/archetypes/scaler/upgrades.ts",
-    "src/showcase/archetypes/scaler/variables.ts"
+    "src/showcase/archetypes/scaler/variables.ts",
+    "src/showcase/archetypes/skirmish/_seeds"
   ]
 }
