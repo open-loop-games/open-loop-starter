@@ -327,7 +327,7 @@ a `match.inMatch` guard.
   callback extraction is a graduation outcome, not the staging shape — copies
   stay inline here.
 
-### Shared pure decision/step function across live tick and harness — N=3
+### Shared pure decision/step function across live tick and harness — GRADUATED (N=3 dive)
 
 One pure function over game state — a *decision* (`(state, params) => choice`) or an
 *integration step* (`(state, dt) => state'`) — is exported once and invoked *identically*
@@ -348,13 +348,17 @@ consumer games / direct consumers, not starter archetypes.
   `worstEligibleSeat` / `freshestBenchedReplacement` — a *selection* policy; header:
   "shared by the HR module's on-grid automation (`hr.ts`) and the balance bot's manual
   rotation (`balance/bot.ts`) … the bot rotating *is* the HR mechanic run").
-- **N=3 → deliberate dive.** Load-bearing divergence: frontier & multiverse-hr share a
-  discrete *decision/selection* policy; fork shares a continuous *integration step*. The
-  dive question is whether the recipe is "shared pure decision policy" or the broader
-  "shared pure state-transition (decision ∪ step)". Resolve-by-flavor: scaffolding/harness
-  glue (the shared-fn-across-live-and-sim wiring) → likely a shared starter standard, not
-  engine API. Composes only a plain exported fn + `engine.onTick` (live caller) + the
-  harness caller.
+- **Dive resolved → graduated** (engine `consumer-guide-recipes.md` § "Shared pure
+  state-function across live tick and harness"). The decision-vs-step divergence resolves
+  *into* the recipe, not against it: deleting the discipline reinvents the same one gap
+  ("keep sim and live from diverging") the same way in all three, so it's one recipe with a
+  domain flavor, not two competing shapes. Argument purity is not the invariant (fork is
+  pure-of-args; frontier reads an accessor object `exp`; multiverse-hr reads sibling modules)
+  — the live-vs-harness *symmetry* is. Graduated as a documented *discipline*, not a helper:
+  each policy is domain-specific, so there is no code to extract; the shared part is a
+  one-liner. It *generalizes* studio CLAUDE.md § "Automation is game code" beyond
+  AutomationTiers-gated policies to any shared pure state-function — fork's non-automation
+  `advanceCenter` step is the evidence the shape is broader than automation.
 
 ### Player throttle dial over AutomationTiers (clamp-below-ceiling) — N=2
 
