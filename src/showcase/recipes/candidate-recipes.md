@@ -147,6 +147,21 @@ proposals forward.
   (looper substitutes `astar` for its discrete-schedule domain); `GameStateAccessor`
   is tick-mode-conditional (producer's probe passes none). Domain coupling = the
   beat/key list + the accessor's resource-id switch only.
+- **Consumer widening (phase 3).** frontier `src/game/balance/expedition-sim.ts:64` and
+  fork `src/game/balance/session-sim.ts:113` carry the *engine-assembly kernel* of this
+  harness — `createEngine` + `createMemoryStorage` + `engine.start()/stop()` (kill the
+  real-time interval) + force-unlock automation tiers past their requirement gate +
+  optional `TuningRegistry.pushScope` overrides + `runUntil`-driven advance — as the
+  first *consumer-game* receipts (the N=3 instances above are all starter archetypes).
+  They diverge on the solver *superstructure*: both build a **fresh** engine per call
+  rather than the `exportSave` baseline / `importSave`-per-candidate reset + Gauss-Seidel
+  outer pass, so they're kernel-level, not full-solver, instances. This crosses the
+  sourcing maturity marker (starter → consumer) without changing the full-solver count;
+  the assembly kernel is the graduation-ready core (→ engine `consumer-guide-recipes.md`),
+  the reset/solver loop is the starter-side superstructure. Cousin (same kernel, different
+  purpose): idle-loops-ng `src/modules/mods/dmchurch-predictor-worker.ts:138` boots the
+  same headless engine from a save blob for an *in-game* snapshot-diff predictor, not
+  balance discovery.
 
 ## Gameplay & harness glue
 
@@ -311,3 +326,52 @@ a `match.inMatch` guard.
   what (if anything) is real engine API vs. copyable glue. The `decide`-as-
   callback extraction is a graduation outcome, not the staging shape — copies
   stay inline here.
+
+### Shared pure decision/step function across live tick and harness — N=3
+
+One pure function over game state — a *decision* (`(state, params) => choice`) or an
+*integration step* (`(state, dt) => state'`) — is exported once and invoked *identically*
+by the live `engine.onTick` path and by the balance harness / offline sim, so shipping
+pacing and the harness's model of it cannot diverge. This is the composition form of
+studio CLAUDE.md § "Automation is game code, not a harness bot": the mechanic and the
+bot are the *same code*, and the policy params double as the sweep axis and the
+player-facing tuning surface. First cross-consumer N=3 on this surface — all three are
+consumer games / direct consumers, not starter archetypes.
+
+- **Instances (N=3):** frontier `src/game/modules/auto-target.ts:71`
+  (`pickNextTarget(exp, params)` — a cheapest-first *decision*, called by the on-tick
+  automation ticker and by balance-sim probes; four such policy fns in-file);
+  fork `src/game/economy/drift.ts:59` (`advanceCenter(s, dt, lo, hi)` — a pure
+  *integration step*; header: "Shared by `buildCenterPath` (1 s sim steps) and the live
+  drift module (variable-dt ticks) so the harness and shipping code integrate
+  identically"); multiverse-hr `src/modules/rotation.ts:26` (`isRotationEligible` /
+  `worstEligibleSeat` / `freshestBenchedReplacement` — a *selection* policy; header:
+  "shared by the HR module's on-grid automation (`hr.ts`) and the balance bot's manual
+  rotation (`balance/bot.ts`) … the bot rotating *is* the HR mechanic run").
+- **N=3 → deliberate dive.** Load-bearing divergence: frontier & multiverse-hr share a
+  discrete *decision/selection* policy; fork shares a continuous *integration step*. The
+  dive question is whether the recipe is "shared pure decision policy" or the broader
+  "shared pure state-transition (decision ∪ step)". Resolve-by-flavor: scaffolding/harness
+  glue (the shared-fn-across-live-and-sim wiring) → likely a shared starter standard, not
+  engine API. Composes only a plain exported fn + `engine.onTick` (live caller) + the
+  harness caller.
+
+### Player throttle dial over AutomationTiers (clamp-below-ceiling) — N=2
+
+A player-facing dial that clamps the *effective* acting automation tier at or below
+whatever's unlocked: `createAutomationTiers({ tiers: [manual, …requirement-gated] })` +
+`activeOrder = persistent<number>(-1)` (−1 = follow the unlocked ceiling) +
+`effectiveOrder = computed(() => activeOrder < 0 ? tiers.currentTierOrder : Math.min(
+activeOrder, tiers.currentTierOrder))`, and the tick loop reads `effectiveOrder.value`
+*fresh each pulse* — no watcher, because a stale watcher never drains under a headless
+driver that never runs Vue's scheduler.
+
+- **Instances (N=2):** frontier `src/game/modules/auto-target.ts:196`; fork
+  `src/game/modules/automation.ts:150` — near-verbatim, down to the `-1` sentinel, the
+  `Math.min` clamp, and the identical "read the computed fresh each tick, no stale
+  watcher under a headless driver" rationale.
+- **Divergence to keep visible:** frontier carries an extra `authorizedBoundary`
+  persistent alongside `activeOrder` (a second clamp axis); fork has only the one dial.
+- **N=3 watch:** a third consumer with an AutomationTiers + player-throttle dial. Composes
+  only existing engine API (`createAutomationTiers`, `persistent`, `computed`) → recipe,
+  not a primitive gap.
