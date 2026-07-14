@@ -1,10 +1,11 @@
 # Candidate Recipes
 
 Starter-hosted staging surface for **recipes** — reusable compositions of engine
-primitives, stripped of archetype coupling — pending deliberate evaluation. The
-slow, judgment-paced cousin of engine `candidate-primitives.md`: where that file
-mechanically graduates *primitives* on an N=2 trigger, this one collects
-*compositions* and works them through as a batch before anything moves.
+primitives, stripped of archetype coupling — pending deliberate evaluation. Sibling to
+engine `candidate-primitives.md` and research `candidate-patterns.md` on the
+shared back-flow cadence (`/work/studio/CLAUDE.md` § Back-flows): N=1-named-only,
+N=2 drop, N=3 deliberate dive. This is the recipe lane — compositions that only
+re-wire existing primitives — worked through as a batch before anything moves.
 
 Dropping here is explicitly a decision **not** to file an engine candidate yet.
 
@@ -38,6 +39,11 @@ code composition that realizes it. The stack: **pattern → recipe → primitive
 
 - **Drop at N=2.** The second time a shape is hand-rolled across starter
   archetypes, index it here — don't wait, and don't route it to the engine.
+- **N=1 only when named.** A single instance is admitted only with a *specific*
+  anticipated second consumer named (like the engine candidate file's pre-designed
+  shapes) — never a speculative "some future archetype". The named N=1 entry is a
+  discoverability breadcrumb for whoever builds that second instance; a
+  speculative one stays a `TODO(expansion)` marker + engine candidate until real.
 - **Deeper dive at N=3.** A third instance triggers a deliberate cohort review:
   evaluate the copies *together*, keep their divergence visible, and decide the
   shape. Judgment, not a mechanical promote.
@@ -194,6 +200,53 @@ closure-over-forward-declared-binding read is the named convention.
   third — verify rejected it (no Purchasable/Requirement/Grant; gates on a
   sibling's external reach signal, not a predecessor node). Fresh N=2 → find a
   genuine third before the dive.
+
+### Autobuyer-as-content registry — N=2 (ambient, producer), mirror-caveat
+
+A registry module provides a persistent master toggle + `AutobuyerSpec[]` under
+injection keys and runs the interval/tick loop; per-category modules push a spec
+(each with its own persistent `isActive`) in `connect()` and delegate the buy
+decision to `setupPolicyAutoPurchase` under a selection policy (composite
+payback+cheapest cold-start), gated by `autobuyerGate(master && isActive &&
+unlocked)` with a `tunable` reserve floor. `setupPolicyAutoPurchase` /
+`setupSweepAutoPurchase` are the primitive core; the spec/registry/gate around
+them is the recipe.
+
+- **Instances (N=2, NOT independent):** ambient `modules/autobuyers/index.ts`,
+  producer `modules/autobuyers/producers.ts` — verbatim OL-855 backport mirrors
+  (ambient header: "Mirror of `…producer…`"), i.e. one deliberate copy. Scaler
+  was the claimed third but its copy was deleted in `9df7f9c` and rebuilt on a
+  direct-toggle design (zero registry refs). The shape recurs, but the divergence
+  signal is absent — the weakest kind of N=2 (a copy, not independent arrival).
+- **Engine-side reframe (2b).** Engine `candidate-primitives.md` § "AutobuyerSpec
+  registry" frames this as a *primitive* awaiting graduation, trigger "FIRED" on
+  the now-false N=3. Reconciliation verdict: the registry is a **recipe**
+  (composition over the existing auto-purchase primitives); only the bespoke-tick
+  `createThresholdAutobuyer({ mode })` half is a genuine primitive candidate. Any
+  graduation ticket filed on the FIRED trigger was premature — see the discrepancy
+  flag on that entry.
+- **Dive gate:** a THIRD *independent* autobuyer registry (not a backport of these
+  two) is the real N=3. Parked as recipe until then, not promoted.
+
+### Run-phase controller — N=1 (cycler), named-anticipated N=2 (multiverse-hr)
+
+A run clock (`persistent` elapsed) + a `running`/`ended` lifecycle + a derived
+beat label read off a tension ratio + a crossing detector in `ctx.onTick` that
+ends the run when the ratio reaches 1. In cycler the ratio is `burn / D_max`: an
+exogenous scheduled burn `W(t) = W₀·g^((t−setup)/T_g)` races a saturated capacity
+ceiling; the beat label (`setup`/`comfortable`/`first-bite`/`under-review`/`merge-bell`)
+is *measured* off the ratio, never authored; the pace surface is frozen at
+`startRun` so the crossing stays closed-form.
+
+- **The split.** The exogenous scheduled-burn half (`(simTime) => value`,
+  frozen-at-run-start) is a **primitive** candidate — engine
+  `candidate-primitives.md` § TimedInput / § "Exogenous time-scheduled burn + run
+  phase controller". The phase-controller half (clock + lifecycle + derived-label
+  + crossing detector) is this recipe.
+- **Instances:** cycler `modules/cycle.ts` (N=1). **Named-anticipated N=2:**
+  multiverse-hr #17 — a WIP Cycler with a continuous escalating drain-to-death,
+  named in the engine candidate as the back-flow target. Admitted at N=1 under the
+  named-anticipated rule as the breadcrumb for that port.
 
 ### Two-sided match lifecycle
 
