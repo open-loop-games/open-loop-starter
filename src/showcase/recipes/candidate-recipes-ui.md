@@ -140,7 +140,7 @@ this file and the commit are the memory.
 
 | Slice | Roles | Files | ~Lines | Status |
 |---|---|---|---|---|
-| A | root + frame | 12 | 1.8k | not started |
+| A | root + frame | 12 | 1.8k | **done** — 4 entries, 1 subsumed, 3 housekeeping |
 | B | composable + helper | 30 | 2.1k | not started |
 | C | component | 26 | 3.9k | not started |
 | D | panel | 34 | 7.0k | not started — oversized, split at read-time |
@@ -169,17 +169,14 @@ freezing it now would freeze the wrong shape.
 - The frame tier exists in 3 archetypes under 2 names (`*FrameLayout` in
   defender/tug, `InterlockerGameView`).
 - `_blank` ships a root only, so it models none of the above for a fork.
-
-## Housekeeping found in passing
-
-Not sweep output; noted so it isn't lost.
-
-- `scaler/variables.ts` is vendored Synergism source (imports `./Calculate`,
-  `./Tabs`, `./types/Synergism` — none present), is imported by nothing, and is
-  absent from the `tsconfig.app.json` exclude list that covers its seven vendored
-  siblings.
-- `tsconfig.app.json` excludes `src/showcase/archetypes/_template`; the directory
-  no longer exists.
+- Theme scoping (slice A): 3 of 9 roots import a `*-theme.css` (ambient, looper,
+  producer); 6 set `document.body.dataset.archetype`, but only those 3 have CSS
+  reading `body[data-archetype=…]`. The other 3 set it for nobody.
+- The frame tier is two different jobs under one role: defender/tug's
+  `*FrameLayout` are raw slot grids, while interlocker's `GameView` uses
+  `ThreePanelShell` and owns tab logic + a mount gate. Same tier, unshared shape.
+- interlocker alone omits `provide('currentScreen', …)` — and is right to (see
+  § Housekeeping).
 
 ## Unverified leads
 
@@ -189,7 +186,11 @@ Scratch. Grep-level or read-in-passing signal, not site-read. A lead is not an N
   and `scaler/composables/use-producer-row.ts` both adapt archetype state into
   `ProducerList`'s `ProducerRowData`. Independently written, same job, different
   names. Grep says interlocker's `useResources` / `useJobs` and its
-  `BuildingsPanel` also touch the contract — unread, so not counted. Slice B.
+  `BuildingsPanel` also touch the contract — unread, so not counted. Slice A adds
+  a third *form*: `ScalerAppRoot.vue:74-116` builds a `ResourceReadout[]` for
+  `ResourceHeaderStrip` inline in the root, with no adapter layer at all. So the
+  adapter is sometimes a composable and sometimes inline — bears on #20's third
+  uncertainty. Slice B.
 - **Autobuyer UI trio.** ambient/producer each carry `AutobuyerToggles` (75/75),
   `AutobuyerMasterButton` (29/28), `AchievementGridDialog` (239/268). The
   *wiring* is already indexed in the parent as "Autobuyer-as-content registry —
@@ -202,4 +203,154 @@ Scratch. Grep-level or read-in-passing signal, not site-read. A lead is not an N
 
 ## Entries
 
-None landed yet.
+### Archetype app-root spine — N=9 (canonical)
+
+Every archetype root is the same assembly with an archetype-shaped hole in the
+middle. `SlotScreen` on `Screen.Slots` → `AppFrame` (`:stack`,
+`:tooltip-delay="400"`) with a `SystemHeader` in `#header` → a shell → a sibling
+`ToastContainer` → the dev dock. Around it: `inject<Engine>('engine')!`, a
+`currentScreen` ref, `useModalStack()`, and three session functions.
+
+**Status — established, not candidate.** Present in all 9 roots including
+`_blank`; it *is* the archetype app convention, past the await-N=3 stage. Like
+the parent's tuning-registry seam, the live question is graduation, not whether
+it converged. Its sub-shapes carry their own N and their own divergence:
+
+| Sub-shape | N | Divergence |
+|---|---|---|
+| `getActiveModules()` | 9 | **none — byte-identical.** Exists only to feed `BalanceWorkbench`'s `:modules`. |
+| `returnToSlots()` | 9 | **none — byte-identical.** |
+| dev-dock block (`isDev` + `showDevPanel` + `DevDiagnostics` + `DevPanelOverlay` + `BalanceWorkbench`) | 9 | **none — verbatim.** |
+| `:tooltip-delay="400"` | 9 | none — the same magic number, 9 times. |
+| `startGame()` | 9 | **spine identical, tail diverges.** Bare (`_blank`, interlocker, looper, producer, scaler); + offline catch-up (defender); + catch-up + match auto-start (tug); + match auto-start only (skirmish); + `SessionClock` resume with a pre/post primary-resource bracket for the welcome-back overlay (ambient). |
+
+The `startGame` tail is the only sub-shape where the divergence is load-bearing —
+each tail is a real archetype need. Everything above it is copy.
+
+**The dev-dock sub-shape has a tell worth keeping.** `.claude/CLAUDE.md` § Dev
+overlay documents this block as "typical fork wiring", framing the dev panel as
+opt-in that forks mount themselves. All 9 opt-ins are byte-identical — the
+boilerplate got *documented* rather than removed, and the opt-in framing is
+buying nothing. A graduation here retires a doc section too.
+
+**Shape a dive would weigh** (not a decision): a slot-based root component in
+`src/ui/` plus a `useGameSession()` composable, leaving archetypes the residue
+that actually differs — shell choice, panel set, theme import, `startGame` tail,
+extra provides. Survives eject, so a fork keeps it.
+
+- **Sites:** `_blank/ui/GameAppRoot.vue:13-47`, `ambient/ui/AmbientAppRoot.vue:23-132`,
+  `defender/ui/DefenderAppRoot.vue:19-62`, `interlocker/ui/InterlockerAppRoot.vue:14-40`,
+  `looper/ui/LooperAppRoot.vue:18-52`, `producer/ui/ProducerAppRoot.vue:21-82`,
+  `scaler/ui/ScalerAppRoot.vue:32-140`, `skirmish/ui/SkirmishAppRoot.vue:15-52`,
+  `tug/ui/TugAppRoot.vue:21-59`.
+
+### Web-font injection from the archetype root — N=2 (ambient, producer)
+
+A `FONTS_HREF` const plus an `ensure<Theme>Fonts()` that early-returns on an
+element-id guard, builds two `<link rel=preconnect>` and one `<link
+rel=stylesheet>`, and `document.head.append`s all three — called from
+`onMounted`. Byte-identical modulo the href and the element id.
+
+Both live and independently maintained; counts per the parent's rule. Home if it
+graduates: `src/lib/` — presentational, no engine, a `useWebFont(id, href)`.
+
+Rider: both fetch Google Fonts from the network at runtime, injected by an
+archetype root. Worth a decision on its own merits before this gets blessed into
+a shared helper that makes it easier to do nine more times.
+
+- **Sites:** `ambient/ui/AmbientAppRoot.vue:30-50`, `producer/ui/ProducerAppRoot.vue:28-48`.
+
+### Archetype-local slot grid — N=2 (defender, tug) — a practice, not a component
+
+Raw CSS grid with `grid-template-areas`, named slots, a `@media (max-width:900px)`
+single-column collapse as a "don't crash on a narrow window" floor, and a header
+comment carrying an ASCII region diagram plus the graduation trigger.
+
+The **components do not converge** — 3 regions vs 5, no shared markup — and they
+shouldn't. What converges is the *practice*. Both files independently reason
+their way to the same place, in nearly the same words: inline under the archetype
+rather than `src/lib/shells/` because it's N=1, graduate at a second consumer of
+that shape. Each is correct about itself; neither is evidence for the other's
+shell.
+
+This is the § UI discriminator's last bucket working exactly as intended — it
+stays copied. Indexed so the third instance doesn't mistake the pattern for a
+missing shell.
+
+- **Sites:** `defender/ui/DefenderFrameLayout.vue:1-16`, `tug/ui/TugFrameLayout.vue:1-19`.
+
+### Post-start module access gate — N=3, divergent solutions — ROUTING QUESTION
+
+One engine fact — module getters and `inject` are only valid after
+`engine.start()` — worked around three different ways, each with a comment
+explaining the same constraint to the next reader:
+
+- **interlocker** extracts a whole component (`InterlockerGameView.vue`) whose
+  stated reason for existing is mount timing: "Lives in its own component so it
+  mounts only after a game starts, when the engine modules (getBuildings etc.)
+  are installed."
+- **ambient** guards inline in a computed: `almanacUnlocked` returns early unless
+  `currentScreen === Screen.Game`, because "the unlocks category is only
+  populated after engine.start(), and Screen.Game is the gate that guarantees
+  that's run."
+- **skirmish / tug** reach for `engine.tryInject(MatchKey)` *after* `start()`,
+  commented "Match module is only injectable post-start".
+
+**This may not be a recipe.** Three independent workarounds to one ergonomic gap
+is the shape of a *primitive* gap: the clean fix wants engine API (a post-start
+injection guarantee, or a lazy accessor that resolves on first read), which by
+the parent's delete-test routes to `open-loop-engine/docs/candidate-primitives.md`,
+not here. Left indexed here with the receipts; the dive routes it.
+
+**Lumping risk, stated on purpose:** these are three *manifestations*, not three
+copies — a component extraction, a computed guard, and a post-start inject. They
+are one entry only because they share a root cause. If the dive finds the root
+cause isn't shared, split them rather than forcing the label.
+
+- **Sites:** `interlocker/ui/InterlockerGameView.vue:1-6`,
+  `ambient/ui/AmbientAppRoot.vue:119-126`, `skirmish/ui/SkirmishAppRoot.vue:36-38`,
+  `tug/ui/TugAppRoot.vue:43-44`.
+
+### Subsumed, not indexed
+
+- **Match auto-start after load** — `const match = engine.tryInject(MatchKey); if
+  (match && !match.inMatch.value) match.start();` is byte-identical in
+  `skirmish/ui/SkirmishAppRoot.vue:37-38` and `tug/ui/TugAppRoot.vue:43-44`.
+  The parent already indexes *Two-sided match lifecycle* (N=2, same two sites);
+  this is that entry's two-line boot residue, not a shape of its own.
+  **First data on #20's double-indexing uncertainty: the wiring entry subsumes
+  the presentational residue.** One data point, not a rule yet — but the residue
+  was too small to carry an entry, which suggests the test is size and
+  independence, not principle.
+
+## Housekeeping found in passing
+
+Not sweep output; noted so it isn't lost.
+
+- **`provide('currentScreen', …)` is vestigial in 8 of 9 roots.**
+  `src/composables/useGame.ts:7` injects it behind a `!` non-null assertion and
+  returns it — and no caller reads it: its only consumers, `useModule.ts:9` and
+  `useSave.ts:5`, destructure `{ engine }` alone. Roots use their local
+  `currentScreen` ref for their own `v-if`, which is real; the *provide* feeds
+  nothing. interlocker is the single root that omits it and is correct by
+  accident — the only one that noticed. The `!` is the landmine: a fork calling
+  `useGame()` under a root that doesn't provide gets `undefined` with TS
+  silenced. Fix is to drop `currentScreen` from `useGame`'s inject + return and
+  delete 8 provides.
+- **`document.body.dataset.archetype` is dead in 3 of 6 setters.** Only
+  ambient/looper/producer ship a `*-theme.css` reading `body[data-archetype=…]`.
+  `_blank` (sets `'game'`), scaler, and skirmish set it for no reader.
+  `_blank` matters most: it's the fork template, so every clean fork is born with
+  inert `onMounted`/`onUnmounted` wiring it has to reverse-engineer to delete.
+  (`SandboxWrapper.vue:52` is a separate, legitimate consumer of the same
+  attribute.)
+- **skirmish has no offline catch-up; tug has one.** Both are match archetypes
+  and both auto-start a match after load, but only tug advances the tick driver
+  over the gap (`tug/ui/TugAppRoot.vue:39-42` vs `skirmish/ui/SkirmishAppRoot.vue:35-39`).
+  Possibly deliberate — skirmish's match is bot-vs-bot and may not want a
+  fast-forward — but nothing says so.
+- `scaler/variables.ts` is vendored Synergism (imports `./Calculate`, `./Tabs`,
+  `./types/Synergism` — none present), is imported by nothing, and is absent from
+  the `tsconfig.app.json` exclude list that covers its seven vendored siblings.
+- `tsconfig.app.json` excludes `src/showcase/archetypes/_template`; the directory
+  no longer exists.
