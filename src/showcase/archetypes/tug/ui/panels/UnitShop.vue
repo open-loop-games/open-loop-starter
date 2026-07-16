@@ -29,7 +29,7 @@ function counterHints(archetypeId: string): string {
 </script>
 
 <template>
-  <div class="unit-shop">
+  <div class="olui-surface unit-shop">
     <div class="unit-shop__header">
       <h3>Send units</h3>
       <span class="unit-shop__balance"> {{ balance }} {{ resourceLabel }} </span>
@@ -38,7 +38,7 @@ function counterHints(archetypeId: string): string {
       <Button
         v-for="row in units.rows.value"
         :key="row.def.id"
-        class="unit-card"
+        class="olui-buy-card unit-card"
         :class="{
           'unit-card--ready': row.ready.value,
           'unit-card--cooldown': row.cooldownRemaining.value > 0,
@@ -79,9 +79,6 @@ function counterHints(archetypeId: string): string {
   display: flex;
   flex-direction: column;
   gap: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   padding: var(--gap);
   height: 100%;
 }
@@ -109,30 +106,9 @@ function counterHints(archetypeId: string): string {
   gap: var(--gap-sm);
 }
 
-.unit-card {
-  text-align: left;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius) * 0.75);
-  padding: var(--gap-sm);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
-}
-
 .unit-card:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.unit-card:not(:disabled):hover {
-  border-color: var(--color-primary, #4a9eff);
 }
 
 .unit-card--ready {

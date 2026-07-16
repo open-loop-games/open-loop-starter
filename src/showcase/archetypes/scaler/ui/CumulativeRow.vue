@@ -21,7 +21,7 @@ function buy(): void {
 </script>
 
 <template>
-  <div class="cumulative-row">
+  <div class="olui-surface cumulative-row">
     <div class="cumulative-row__head">
       <strong class="cumulative-row__name">{{ name }}</strong>
       <span class="cumulative-row__owned">×{{ owned }}</span>
@@ -44,9 +44,6 @@ function buy(): void {
   flex-direction: column;
   gap: var(--gap-xs);
   padding: var(--gap-sm) var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 .cumulative-row__head {
   display: flex;

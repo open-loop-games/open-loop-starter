@@ -20,7 +20,7 @@ const aiLabel = 'Protoss Nexus';
 </script>
 
 <template>
-  <div class="fortress-bars">
+  <div class="olui-surface fortress-bars">
     <h3 class="fortress-bars__title">
       Fortresses
     </h3>
@@ -52,9 +52,6 @@ const aiLabel = 'Protoss Nexus';
   display: flex;
   flex-direction: column;
   gap: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   padding: var(--gap);
 }
 

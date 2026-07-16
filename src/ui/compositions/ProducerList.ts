@@ -1,7 +1,7 @@
 import type { Ref } from 'vue';
 import type { DecimalSource } from '@open-loop/engine';
 
-export interface ProducerRowData {
+export interface ProducerRowData<T = never> {
   id: string;
   name: string;
   count: Ref<DecimalSource>;
@@ -15,9 +15,13 @@ export interface ProducerRowData {
   buy: (amount: DecimalSource) => void;
   unlocked?: Ref<boolean>;
   /**
-   * Opaque per-row data forwarded to the `#row` slot. Lets archetypes attach
-   * rich state (engine refs, def, breakdown chains) without a side-channel
-   * map lookup. Default template ignores it.
+   * Typed per-row payload forwarded to the `#row` slot. Together with the slot,
+   * this is the composition's extension seam: a story that needs richer state
+   * (engine refs, def, breakdown chains) or a shape the flat contract can't
+   * hold — e.g. multi-resource costs — passes it here and reads it back typed
+   * in the slot, instead of the core contract growing every consumer's needs.
+   * Parameterize the component (`ProducerList<MyRow>`) to type it end-to-end;
+   * the default template ignores it, so `T` defaults to `never`.
    */
-  extra?: unknown;
+  extra?: T;
 }

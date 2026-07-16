@@ -3,8 +3,18 @@
   (buildings, dimensions, businesses). Engine-bridged: adapts to any module
   exposing the ProducerRowData shape. Slots for content shape, props for
   behavior. Sourced from OL-919 vocabulary work.
+
+  Costume hooks (stable API). A story reskins this from outside via
+  `:deep(.producer-list__…)` without forking it (see producer's ProducerPanel).
+  These class names are part of the contract — treat renames as breaking:
+    .producer-list          root section (+ [data-density])
+    .producer-list__header  header slot region
+    .producer-list__rows    the <ul>
+    .producer-list__row     one <li>
+  (Convention: panel-level compositions expose bare BEM hooks; widget-level
+  components under src/ui/components expose `olui-` hooks. Both are stable.)
 -->
-<script setup lang="ts">
+<script setup lang="ts" generic="T = never">
 import { computed } from 'vue';
 import { format, formatWhole, type DecimalSource } from '@open-loop/engine';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
@@ -19,7 +29,7 @@ type Reveal = 'inline' | 'tooltip';
 
 const props = withDefaults(
   defineProps<{
-    rows: ProducerRowData[];
+    rows: ProducerRowData<T>[];
     costLabel: string;
     bulkModeSource?: BulkModeSource;
     density?: Density;
@@ -37,7 +47,7 @@ const props = withDefaults(
 defineSlots<{
   header?: () => unknown;
   row?: (props: {
-    row: ProducerRowData;
+    row: ProducerRowData<T>;
     pendingAmount: DecimalSource;
     pendingCost: DecimalSource;
     buyLabel: string;
@@ -54,7 +64,7 @@ function resolveAmount(maxAffordable: DecimalSource): DecimalSource {
 
 const visibleRows = computed(() => props.rows.filter((r) => r.unlocked?.value ?? true));
 
-function rowState(row: ProducerRowData) {
+function rowState(row: ProducerRowData<T>) {
   const pendingAmount = resolveAmount(row.maxAffordable.value);
   const pendingCost = row.cost(pendingAmount);
   const buyLabel = `Buy ${formatWhole(pendingAmount)} — ${format(pendingCost, 0)} ${props.costLabel}`;

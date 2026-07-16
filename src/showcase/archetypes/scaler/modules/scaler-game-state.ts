@@ -27,7 +27,7 @@ import {
   getCoinFreeAcceleratorChain,
   getCoinFreeMultiplierChain,
   getCoinAcceleratorPowerBonusChain,
-} from '../modules/coin';
+} from './coin';
 import {
   getDiamondProducers,
   getCrystalUpgrades,
@@ -37,7 +37,7 @@ import {
   getCoinsThisPrestige,
   getPrestigeCount,
   getPrestigePointGain,
-} from '../modules/prestige';
+} from './prestige';
 import {
   getMythosProducers,
   getTranscendUpgrades,
@@ -48,10 +48,10 @@ import {
   getTranscendPointGain,
   getAcceleratorBoostBought,
   getTranscendFreeAccelBoostChain,
-} from '../modules/transcend';
-import { getOfferings, getRuneLevel } from '../modules/runes';
-import { getChallengesCategory } from '../modules/challenges';
-import { getAchievementPoints } from '../modules/achievements';
+} from './transcend';
+import { getOfferings, getRuneLevel } from './runes';
+import { getChallengesCategory } from './challenges';
+import { getAchievementPoints } from './achievements';
 
 const ZERO: DecimalSource = 0;
 

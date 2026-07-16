@@ -21,7 +21,7 @@ function buy(): void {
 </script>
 
 <template>
-  <div class="crystal-row">
+  <div class="olui-surface crystal-row">
     <div class="crystal-row__head">
       <span class="crystal-row__pos">#{{ position }}</span>
       <strong class="crystal-row__name">{{ name }}</strong>
@@ -45,9 +45,6 @@ function buy(): void {
   flex-direction: column;
   gap: var(--gap-xs);
   padding: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 .crystal-row__head {
   display: flex;

@@ -7,9 +7,8 @@ export interface MatchView extends MatchApi {
    * Latched payload of the most recent `'matchEnded'` event. UI source of
    * truth for the match-end overlay — `outcome` flips back to null when
    * `match.end()` runs the reset, so reading the live ref post-event would
-   * miss the summary state. The payload is captured BEFORE the reset (per
-   * leaf-4 contract) and stays here until `clearLastMatchEnd()` is called
-   * from the restart handler.
+   * miss the summary state. The payload is captured BEFORE the reset and
+   * stays here until `clearLastMatchEnd()` is called from the restart handler.
    */
   lastMatchEnd: Ref<MatchEndedPayload | null>;
   clearLastMatchEnd(): void;

@@ -33,7 +33,7 @@ function fmtSec(s: number): string {
 }
 
 // Two-line ROI tooltip: "Pays off in X" mirrors producer vocabulary;
-// "Catches rush at Y" answers OL-733's macro-vs-rush framing directly.
+// "Catches rush at Y" answers the macro-vs-rush question directly.
 // Native `:title` attribute renders `\n` as a line break — cheapest
 // landing without pulling in a tooltip component.
 function rowTooltip(row: IncomeUpgradeRow): string {
@@ -47,7 +47,7 @@ function rowTooltip(row: IncomeUpgradeRow): string {
 </script>
 
 <template>
-  <div class="income-bar">
+  <div class="olui-surface income-bar">
     <div class="income-bar__rows">
       <div class="income-bar__row income-bar__row--player">
         <span class="income-bar__label">Terran</span>
@@ -68,7 +68,7 @@ function rowTooltip(row: IncomeUpgradeRow): string {
       <Button
         v-for="row in playerUpgrades.rows.value"
         :key="row.def.id"
-        class="upgrade-tile"
+        class="olui-buy-card upgrade-tile"
         :class="{
           'upgrade-tile--bought': row.bought.value,
           'upgrade-tile--ready': row.canPurchase.value && !row.bought.value,
@@ -108,9 +108,6 @@ function rowTooltip(row: IncomeUpgradeRow): string {
   display: flex;
   flex-direction: column;
   gap: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   padding: var(--gap-sm) var(--gap);
 }
 
@@ -156,29 +153,12 @@ function rowTooltip(row: IncomeUpgradeRow): string {
 
 .upgrade-tile {
   flex: 1 1 0;
-  text-align: left;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius) * 0.75);
-  padding: var(--gap-sm);
-  display: flex;
-  flex-direction: column;
   gap: 2px;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
 }
 
 .upgrade-tile:disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-.upgrade-tile:not(:disabled):hover {
-  border-color: var(--color-primary, #4a9eff);
 }
 
 .upgrade-tile--ready {

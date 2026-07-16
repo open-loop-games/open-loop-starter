@@ -30,7 +30,7 @@ export interface VillageReadout {
  * TODO(expansion): finite-pool allocator row pattern (count + or - against a
  * shared pool). N=1 in the corpus today (Interlocker only); promote into
  * @/ui/compositions/ when Director/Survivor/Packer archetype lands and reuses
- * the shape. See OL-1056 umbrella's "population-as-allocator pressure" note.
+ * the shape.
  */
 export function useJobs(): { rows: JobRow[]; village: VillageReadout } {
   const village = getVillage();

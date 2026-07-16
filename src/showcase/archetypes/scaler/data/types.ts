@@ -246,7 +246,7 @@ export interface RuneDef<K extends RuneId = RuneId> {
 /**
  * Typed read view of module state, exposed to predicate / multiplier closures
  * inside `data/upgrades.ts` (and `data/prestige.ts` for Crystal effects).
- * The shared accessor at `composables/scaler-game-state.ts` fills the methods
+ * The shared accessor at `modules/scaler-game-state.ts` fills the methods
  * over live engine refs so data files stay engine-runtime-free.
  *
  * Each method named here resolves to a single-arg accessor over the relevant

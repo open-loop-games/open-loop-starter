@@ -20,8 +20,10 @@ const { format, formatWhole } = useFormatting();
 
 const LADDER: BulkMode[] = [1, 10, 100, 'max'];
 
-function richRow(row: ProducerRowData): ProducerRow {
-  return row.extra as ProducerRow;
+// `extra` is the typed slot payload (ProducerList<ProducerRow>); the adapter
+// always populates it, so this narrows the optional, not an unknown.
+function richRow(row: ProducerRowData<ProducerRow>): ProducerRow {
+  return row.extra!;
 }
 
 function buyLabel(pendingAmount: number | string | Decimal): string {

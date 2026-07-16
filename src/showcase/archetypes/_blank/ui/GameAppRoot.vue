@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { type Engine, type EngineModule } from '@open-loop/engine';
+import { ref } from 'vue';
 import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -10,41 +10,14 @@ import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 
-const engine = inject<Engine>('engine')!;
-const currentScreen = ref<Screen>(Screen.Slots);
-provide('currentScreen', currentScreen);
-
-const isDev = import.meta.env.DEV;
-const showDevPanel = ref(false);
-
-onMounted(() => {
-  document.body.dataset.archetype = 'game';
-});
-onUnmounted(() => {
-  delete document.body.dataset.archetype;
-});
+// Slot-pick → start → load → play → save → back. `useGameSession` owns it;
+// pass `onLoaded` when your game needs to do something with the offline gap.
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession();
 
 const stack = useModalStack();
 
-function startGame(slotId: number, modId?: string): void {
-  engine.saveManager!.selectSlot(slotId);
-  if (modId) engine.selectMod(modId);
-  engine.start();
-  engine.load();
-  currentScreen.value = Screen.Game;
-}
-
-function returnToSlots(): void {
-  engine.saveManager?.save();
-  engine.stop();
-  currentScreen.value = Screen.Slots;
-}
-
-function getActiveModules(): EngineModule[] {
-  const activeId = engine.activeModId;
-  if (!activeId) return [];
-  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
-}
+const isDev = import.meta.env.DEV;
+const showDevPanel = ref(false);
 </script>
 
 <template>

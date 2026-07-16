@@ -64,6 +64,16 @@ code composition that realizes it. The stack: **pattern → recipe → primitive
   `useIncomeUpgrades` says it "mirrors `useUnits` shape" — deliberate, same
   author, same fork, N=1. ambient's autobuyer surface silently drifted off
   producer's — N=2, and the drift is the proof.
+- **N is a demand signal, never proof of generality.** Sources are semi-isolated
+  trees authored in parallel that can read each other, so repetition mixes
+  convergence, literal copying, and copying in feel — indistinguishable after the
+  fact. So N answers "should this be one copy?" and never "is this a
+  well-generalized piece?". Only the destination's own bar answers the second
+  (for starter: `.claude/CLAUDE.md` § Purpose). Graduating something because N
+  sources share it, rather than because a consumer would want it, is how a shared
+  piece ships one author's incidental assumption — `ProducerRowData`'s
+  single-resource cost, extracted from a producer/scaler overlap and rejected by
+  the first archetype with multi-resource costs, is the worked example.
 - **N=1 only when named.** A single instance is admitted only with a *specific*
   anticipated second consumer named (like the engine candidate file's pre-designed
   shapes) — never a speculative "some future archetype". The named N=1 entry is a

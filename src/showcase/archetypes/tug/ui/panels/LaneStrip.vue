@@ -58,7 +58,7 @@ const matchTimeLabel = computed(() => {
 </script>
 
 <template>
-  <div class="lane-strip">
+  <div class="olui-surface lane-strip">
     <div class="lane-strip__chrome">
       <span class="lane-strip__label lane-strip__label--player">
         {{ playerLabel }}
@@ -117,9 +117,6 @@ const matchTimeLabel = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   padding: var(--gap-sm) var(--gap);
 }
 

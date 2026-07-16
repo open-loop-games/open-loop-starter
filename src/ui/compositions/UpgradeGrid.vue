@@ -5,8 +5,16 @@
   OL-919 vocabulary; the reveal wrapper sits above the cell so `#cell`
   overrides still receive tooltip/popover wrapping. Use `#reveal-content`
   to customise the tooltip/popover body.
+
+  Costume hooks (stable API) — reskin via `:deep(.upgrade-grid__…)` (see
+  producer's UpgradeTray, scaler's UpgradesPanel). Renames are breaking:
+    .upgrade-grid            root grid (+ inline grid-template-columns)
+    .upgrade-grid__cell-wrap the reveal wrapper around each cell
+    .upgrade-grid__cell      one cell
+  (Panel compositions expose bare BEM hooks; widgets under src/ui/components
+  expose `olui-` hooks. Both stable.)
 -->
-<script setup lang="ts">
+<script setup lang="ts" generic="T = never">
 import { computed } from 'vue';
 import { format } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
@@ -19,7 +27,7 @@ type PurchasedState = 'greyed' | 'removed' | 'checkmark';
 
 const props = withDefaults(
   defineProps<{
-    cells: UpgradeCellData[];
+    cells: UpgradeCellData<T>[];
     columns?: number;
     reveal?: Reveal;
     purchasedState?: PurchasedState;
@@ -34,8 +42,8 @@ const props = withDefaults(
 );
 
 defineSlots<{
-  cell?: (props: { cell: UpgradeCellData; idx: number }) => unknown;
-  'reveal-content'?: (props: { cell: UpgradeCellData }) => unknown;
+  cell?: (props: { cell: UpgradeCellData<T>; idx: number }) => unknown;
+  'reveal-content'?: (props: { cell: UpgradeCellData<T> }) => unknown;
 }>();
 
 const gridStyle = computed(() => ({
@@ -46,7 +54,7 @@ const visibleCells = computed(() =>
   props.cells.filter((c) => !(c.owned.value && props.purchasedState === 'removed')),
 );
 
-function describe(cell: UpgradeCellData): string {
+function describe(cell: UpgradeCellData<T>): string {
   return typeof cell.description === 'function' ? cell.description() : cell.description;
 }
 </script>

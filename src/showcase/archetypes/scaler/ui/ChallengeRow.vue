@@ -39,7 +39,7 @@ function doToggle(): void {
 
 <template>
   <div
-    class="challenge-row"
+    class="olui-surface challenge-row"
     :data-active="isActive"
   >
     <div class="challenge-row__head">
@@ -83,9 +83,6 @@ function doToggle(): void {
   flex-direction: column;
   gap: var(--gap-xs);
   padding: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 .challenge-row[data-active='true'] {
   border-color: var(--color-accent, var(--color-text));

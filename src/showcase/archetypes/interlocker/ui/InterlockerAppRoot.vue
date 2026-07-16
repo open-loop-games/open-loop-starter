@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue';
-import { type Engine, type EngineModule } from '@open-loop/engine';
+import { ref } from 'vue';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -11,33 +11,12 @@ import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 import InterlockerGameView from './InterlockerGameView.vue';
 
-const engine = inject<Engine>('engine')!;
-const currentScreen = ref<Screen>(Screen.Slots);
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession();
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
 
 const stack = useModalStack();
-
-function startGame(slotId: number, modId?: string): void {
-  engine.saveManager!.selectSlot(slotId);
-  if (modId) engine.selectMod(modId);
-  engine.start();
-  engine.load();
-  currentScreen.value = Screen.Game;
-}
-
-function returnToSlots(): void {
-  engine.saveManager?.save();
-  engine.stop();
-  currentScreen.value = Screen.Slots;
-}
-
-function getActiveModules(): EngineModule[] {
-  const activeId = engine.activeModId;
-  if (!activeId) return [];
-  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
-}
 </script>
 
 <template>
@@ -47,11 +26,20 @@ function getActiveModules(): EngineModule[] {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame v-else :stack="stack" :tooltip-delay="400">
+  <AppFrame
+    v-else
+    :stack="stack"
+    :tooltip-delay="400"
+  >
     <template #header>
-      <SystemHeader :app-name="manifest.name" @return-to-slots="returnToSlots">
+      <SystemHeader
+        :app-name="manifest.name"
+        @return-to-slots="returnToSlots"
+      >
         <template #about>
-          <h4 style="margin-bottom: 6px">Interlocker — Kittens</h4>
+          <h4 style="margin-bottom: 6px">
+            Interlocker — Kittens
+          </h4>
           <p>
             Build catnip fields to feed your kittens, assign them to jobs to harvest wood, minerals,
             and science, then research up to architecture and craft your first megalith. The graph
@@ -64,12 +52,18 @@ function getActiveModules(): EngineModule[] {
     <InterlockerGameView />
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
+  <DevDiagnostics
+    v-if="isDev"
+    v-model:workbench-open="showDevPanel"
+  />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+    <BalanceWorkbench
+      :engine="engine"
+      :modules="getActiveModules"
+    />
   </DevPanelOverlay>
 </template>

@@ -17,7 +17,7 @@ const bulkAmount = computed(() => (mode.value === 'max' ? 1 : mode.value));
 // single-resource (`cost(amount): DecimalSource`, `costLabel: string`), so the
 // panel renders a bespoke <ul> of BuildingRow instead of slotting into
 // ProducerList. The slot-override gymnastics to satisfy ProducerRowData would
-// cost more than the wrapper saves. See OL-1060 triage discussion.
+// cost more than the wrapper saves.
 const rows = useBuildings(() => bulkAmount.value);
 </script>
 

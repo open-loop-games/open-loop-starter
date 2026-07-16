@@ -27,7 +27,7 @@ function startRound(): void {
 </script>
 
 <template>
-  <div class="round-status">
+  <div class="olui-surface round-status">
     <dl class="round-status__stats">
       <div>
         <dt>Cash</dt>
@@ -42,7 +42,11 @@ function startRound(): void {
         <dd>{{ roundLabel }}</dd>
       </div>
     </dl>
-    <Button class="round-status__start" :disabled="!canStartRound" @click="startRound">
+    <Button
+      class="round-status__start"
+      :disabled="!canStartRound"
+      @click="startRound"
+    >
       {{ startLabel }}
     </Button>
   </div>
@@ -54,9 +58,6 @@ function startRound(): void {
   align-items: center;
   justify-content: space-between;
   gap: var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   padding: var(--gap-sm) var(--gap);
 }
 

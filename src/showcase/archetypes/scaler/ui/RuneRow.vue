@@ -59,7 +59,7 @@ const effectSummary = computed((): string => {
 </script>
 
 <template>
-  <div class="rune-row">
+  <div class="olui-surface rune-row">
     <div class="rune-row__head">
       <strong class="rune-row__name">{{ displayName }}</strong>
       <span class="rune-row__level">Lv {{ level }}</span>
@@ -86,9 +86,6 @@ const effectSummary = computed((): string => {
   flex-direction: column;
   gap: var(--gap-xs);
   padding: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 .rune-row__head {
   display: flex;

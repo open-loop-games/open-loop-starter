@@ -1,4 +1,5 @@
-import { computed, type ComputedRef, type Ref } from 'vue';
+import { computed, unref, type ComputedRef, type Ref } from 'vue';
+import { processGetter } from '@open-loop/engine';
 import { useModule } from '@/composables/useModule';
 import { AutobuyerMasterToggleKey, AutobuyerRegistryKey, type AutobuyerSpec } from '../modules';
 
@@ -26,14 +27,8 @@ export function useAutobuyers(): AutobuyerSurface {
   const registry = useModule(AutobuyerRegistryKey);
 
   function rowFor(spec: AutobuyerSpec): AutobuyerRow {
-    const unlocked = spec.isUnlocked;
-    const isUnlocked = computed(() => {
-      if (typeof unlocked === 'function') return Boolean(unlocked());
-      if (unlocked && typeof unlocked === 'object' && 'value' in unlocked) {
-        return Boolean((unlocked as { value: unknown }).value);
-      }
-      return Boolean(unlocked);
-    });
+    const processed = processGetter(spec.isUnlocked);
+    const isUnlocked = computed(() => Boolean(unref(processed)));
     return {
       id: spec.id,
       groupId: spec.groupId,

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { type Engine, type EngineModule } from '@open-loop/engine';
+import { ref } from 'vue';
 import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -12,44 +12,18 @@ import { manifest } from '../manifest';
 import { MatchKey } from '../modules';
 import BattlefieldScreen from './BattlefieldScreen.vue';
 
-const engine = inject<Engine>('engine')!;
-const currentScreen = ref<Screen>(Screen.Slots);
-provide('currentScreen', currentScreen);
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
+  onLoaded: () => {
+    // Match module is only injectable post-start; kick off the first match.
+    const match = engine.tryInject(MatchKey);
+    if (match && !match.inMatch.value) match.start();
+  },
+});
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
 
-onMounted(() => {
-  document.body.dataset.archetype = 'skirmish';
-});
-onUnmounted(() => {
-  delete document.body.dataset.archetype;
-});
-
 const stack = useModalStack();
-
-function startGame(slotId: number, modId?: string): void {
-  engine.saveManager!.selectSlot(slotId);
-  if (modId) engine.selectMod(modId);
-  engine.start();
-  engine.load();
-  // Match module is only injectable post-start; kick off the first match.
-  const match = engine.tryInject(MatchKey);
-  if (match && !match.inMatch.value) match.start();
-  currentScreen.value = Screen.Game;
-}
-
-function returnToSlots(): void {
-  engine.saveManager?.save();
-  engine.stop();
-  currentScreen.value = Screen.Slots;
-}
-
-function getActiveModules(): EngineModule[] {
-  const activeId = engine.activeModId;
-  if (!activeId) return [];
-  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
-}
 </script>
 
 <template>

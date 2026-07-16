@@ -11,18 +11,6 @@ export default [
       'node_modules',
       'coverage',
       'tools/eslint-rules/**',
-      /* eject:strip-start — Synergism scaler-snapshot ignores; demo-only, removed by `pnpm eject` */
-      // Canonical Synergism snapshot files — kept verbatim as port reference;
-      // not on the build path. tsconfig.app.json excludes the same set.
-      'src/showcase/archetypes/scaler/achievements.ts',
-      'src/showcase/archetypes/scaler/buy.ts',
-      'src/showcase/archetypes/scaler/challenges.ts',
-      'src/showcase/archetypes/scaler/reset.ts',
-      'src/showcase/archetypes/scaler/runes.ts',
-      'src/showcase/archetypes/scaler/synergism.ts',
-      'src/showcase/archetypes/scaler/upgrades.ts',
-      'src/showcase/archetypes/scaler/variables.ts',
-      /* eject:strip-end */
     ],
   },
   js.configs.recommended,

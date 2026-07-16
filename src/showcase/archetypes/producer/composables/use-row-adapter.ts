@@ -11,7 +11,7 @@ import type { ProducerRowData, UpgradeCellData } from '@/ui/compositions';
  * is attached as `extra` so the `#row` slot can reach it without a side
  * lookup.
  */
-export function toProducerRowData(row: ProducerRow): ProducerRowData {
+export function toProducerRowData(row: ProducerRow): ProducerRowData<ProducerRow> {
   return {
     id: row.def.id,
     name: row.def.name,
@@ -27,7 +27,7 @@ export function toProducerRowData(row: ProducerRow): ProducerRowData {
   };
 }
 
-export function toUpgradeCellData(row: UpgradeRow): UpgradeCellData {
+export function toUpgradeCellData(row: UpgradeRow): UpgradeCellData<UpgradeRow> {
   return {
     id: row.def.id,
     name: row.def.name,

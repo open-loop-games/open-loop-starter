@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { inject, provide, ref } from 'vue';
-import { processOfflineTime, type Engine, type EngineModule } from '@open-loop/engine';
+import { provide, ref } from 'vue';
+import { processOfflineTime } from '@open-loop/engine';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -16,9 +17,17 @@ import TowerShop from './panels/TowerShop.vue';
 import MapCanvas from './panels/MapCanvas.vue';
 import EndGameOverlay from './panels/EndGameOverlay.vue';
 
-const engine = inject<Engine>('engine')!;
-const currentScreen = ref<Screen>(Screen.Slots);
-provide('currentScreen', currentScreen);
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
+  onLoaded: (result) => {
+    // Defender's economy is event-driven, but the loop still advances bloon
+    // walk + cooldowns over the offline gap — bloons in-flight at save time
+    // keep walking through the gap rather than freezing in place.
+    if (result.success && result.timestamp != null) {
+      const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
+      if (gap > 0) processOfflineTime(engine.tickDriver, gap);
+    }
+  },
+});
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
@@ -31,35 +40,6 @@ const selectedTowerType = ref<TowerId | null>(null);
 provide('defender:selectedTowerType', selectedTowerType);
 
 const stack = useModalStack();
-
-function startGame(slotId: number, modId?: string): void {
-  engine.saveManager!.selectSlot(slotId);
-  if (modId) engine.selectMod(modId);
-  engine.start();
-  const result = engine.load();
-
-  // Offline catch-up tick. Defender's economy is event-driven, but the loop
-  // still advances bloon walk + cooldowns over the gap — bloons in-flight at
-  // save time keep walking through the gap rather than freezing in place.
-  if (result.success && result.timestamp != null) {
-    const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
-    if (gap > 0) processOfflineTime(engine.tickDriver, gap);
-  }
-
-  currentScreen.value = Screen.Game;
-}
-
-function returnToSlots(): void {
-  engine.saveManager?.save();
-  engine.stop();
-  currentScreen.value = Screen.Slots;
-}
-
-function getActiveModules(): EngineModule[] {
-  const activeId = engine.activeModId;
-  if (!activeId) return [];
-  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
-}
 </script>
 
 <template>
@@ -69,11 +49,20 @@ function getActiveModules(): EngineModule[] {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame v-else :stack="stack" :tooltip-delay="400">
+  <AppFrame
+    v-else
+    :stack="stack"
+    :tooltip-delay="400"
+  >
     <template #header>
-      <SystemHeader app-name="Defender — Bloons" @return-to-slots="returnToSlots">
+      <SystemHeader
+        app-name="Defender — Bloons"
+        @return-to-slots="returnToSlots"
+      >
         <template #about>
-          <h4 style="margin-bottom: 6px">Defender — Bloons</h4>
+          <h4 style="margin-bottom: 6px">
+            Defender — Bloons
+          </h4>
           <p>
             Place towers on buildable cells to pop bloons as they walk the path. Survive 10 rounds
             without losing all 40 lives. Stronger bloons (blue / green / yellow) shed into weaker
@@ -96,13 +85,19 @@ function getActiveModules(): EngineModule[] {
     </DefenderFrameLayout>
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
+  <DevDiagnostics
+    v-if="isDev"
+    v-model:workbench-open="showDevPanel"
+  />
   <EndGameOverlay v-if="currentScreen === Screen.Game" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+    <BalanceWorkbench
+      :engine="engine"
+      :modules="getActiveModules"
+    />
   </DevPanelOverlay>
 </template>

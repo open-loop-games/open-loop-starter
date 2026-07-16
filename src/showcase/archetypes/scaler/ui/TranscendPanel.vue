@@ -55,7 +55,7 @@ function doBoost(): void {
 
 <template>
   <div class="transcend-panel">
-    <section class="transcend-panel__action">
+    <section class="olui-surface transcend-panel__action">
       <header class="transcend-panel__head">
         <h3>Transcend</h3>
         <p>
@@ -92,7 +92,7 @@ function doBoost(): void {
       </p>
     </section>
 
-    <section class="transcend-panel__action">
+    <section class="olui-surface transcend-panel__action">
       <header class="transcend-panel__head">
         <h3>Accelerator Boost</h3>
         <p>
@@ -154,9 +154,6 @@ function doBoost(): void {
   flex-direction: column;
   gap: var(--gap);
   padding: var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 .transcend-panel__stats {
   display: grid;

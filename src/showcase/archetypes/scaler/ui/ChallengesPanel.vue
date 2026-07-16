@@ -39,7 +39,7 @@ const activeName = computed(() => {
       </p>
     </header>
 
-    <section class="challenges-panel__autobuyer">
+    <section class="olui-surface challenges-panel__autobuyer">
       <label class="challenges-panel__toggle">
         <input
           v-model="toggles.challengeSweep.value"
@@ -86,9 +86,6 @@ const activeName = computed(() => {
 }
 .challenges-panel__autobuyer {
   padding: var(--gap-sm) var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 .challenges-panel__toggle {
   display: flex;

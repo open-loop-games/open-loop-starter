@@ -57,7 +57,7 @@ import {
   type ProducerDef,
   type UpgradeDef,
 } from '../data';
-import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
+import { buildScalerGameState, expandUpgradeGrant } from './scaler-game-state';
 import { getChallengesCategory } from './challenges';
 import { CANONICAL_ACCELERATOR_POWER, CANONICAL_MULTIPLIER_POWER } from './canonical';
 

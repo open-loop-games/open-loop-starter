@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { type Engine, type EngineModule } from '@open-loop/engine';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { AppFrame, DevPanelOverlay, ThreePanelShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -18,9 +18,7 @@ import AutobuyerToggles from './components/AutobuyerToggles.vue';
 import AutobuyerMasterButton from './components/AutobuyerMasterButton.vue';
 import './producer-theme.css';
 
-const engine = inject<Engine>('engine')!;
-const currentScreen = ref<Screen>(Screen.Slots);
-provide('currentScreen', currentScreen);
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession();
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
@@ -59,26 +57,6 @@ onUnmounted(() => {
 const stack = useModalStack();
 function openAchievements(): void {
   const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
-}
-
-function startGame(slotId: number, modId?: string): void {
-  engine.saveManager!.selectSlot(slotId);
-  if (modId) engine.selectMod(modId);
-  engine.start();
-  engine.load();
-  currentScreen.value = Screen.Game;
-}
-
-function returnToSlots(): void {
-  engine.saveManager?.save();
-  engine.stop();
-  currentScreen.value = Screen.Slots;
-}
-
-function getActiveModules(): EngineModule[] {
-  const activeId = engine.activeModId;
-  if (!activeId) return [];
-  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
 }
 </script>
 

@@ -28,7 +28,7 @@
  *   `Synergism.ts:3620` enabled by the OL-893 combinators.
  *
  * Cross-tier modifier bindings (Crystal upgrades into coin / diamond
- * rateChains) flow through `composables/scaler-game-state.ts`'s
+ * rateChains) flow through `modules/scaler-game-state.ts`'s
  * `expandUpgradeGrant` — the prestige module imports `getCoinProducers`
  * indirectly through the shared accessor, keeping module-level imports
  * one-way.
@@ -80,7 +80,7 @@ const CANONICAL_PRESTIGE_DIVISOR = 1e12;
 const CANONICAL_PRESTIGE_POW = 0.5;
 const CANONICAL_PRESTIGE_THRESHOLD = 1e16;
 const CANONICAL_PRESTIGE_GAIN_FLOOR = 100;
-import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
+import { buildScalerGameState, expandUpgradeGrant } from './scaler-game-state';
 import { getCoinResource, getCoinProducers } from './coin';
 import { getChallengesCategory } from './challenges';
 

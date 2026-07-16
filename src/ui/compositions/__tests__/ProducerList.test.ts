@@ -98,4 +98,21 @@ describe('ProducerList', () => {
     expect(wrapper.find('.custom-row').text()).toBe('CUSTOM-a');
     expect(wrapper.find('.producer-list__row-body').exists()).toBe(false);
   });
+
+  it('forwards a typed extra payload to the #row slot (the extension seam)', () => {
+    // The contract-first seam: a story parameterizes the component with its own
+    // payload type and reads it back in the slot — no cast, no side lookup. This
+    // is what replaces growing the core contract for every consumer's shape.
+    interface RichRow {
+      def: { flavor: string };
+    }
+    const row: ProducerRowData<RichRow> = { ...makeRow('a'), extra: { def: { flavor: 'spicy' } } };
+    const wrapper = mount(ProducerList<RichRow>, {
+      props: { rows: [row], costLabel: 'c', bulkModeSource: 'none' },
+      slots: {
+        row: `<template #row="{ row }"><span class="flavor">{{ row.extra.def.flavor }}</span></template>`,
+      },
+    });
+    expect(wrapper.find('.flavor').text()).toBe('spicy');
+  });
 });

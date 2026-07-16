@@ -41,7 +41,7 @@ const totalCrystalLevels = computed(() =>
 
 <template>
   <div class="prestige-panel">
-    <section class="prestige-panel__action">
+    <section class="olui-surface prestige-panel__action">
       <header class="prestige-panel__head">
         <h3>Prestige</h3>
         <p>
@@ -127,9 +127,6 @@ const totalCrystalLevels = computed(() =>
   flex-direction: column;
   gap: var(--gap);
   padding: var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 .prestige-panel__stats {
   display: grid;

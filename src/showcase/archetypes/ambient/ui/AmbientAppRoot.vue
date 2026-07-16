@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { Decimal, processOfflineTime, type Engine, type EngineModule } from '@open-loop/engine';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { Decimal, processOfflineTime } from '@open-loop/engine';
 import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -20,9 +21,35 @@ import AutobuyerToggles from './components/AutobuyerToggles.vue';
 import AutobuyerMasterButton from './components/AutobuyerMasterButton.vue';
 import './ambient-theme.css';
 
-const engine = inject<Engine>('engine')!;
-const currentScreen = ref<Screen>(Screen.Slots);
-provide('currentScreen', currentScreen);
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
+  onLoaded: (result) => {
+    // Resume sequence (session-clock.ts inline doc): write the wall-clock
+    // catch-up gap before processOfflineTime so SessionClock observers see
+    // the correct gap during the catch-up advance, then refresh
+    // elapsedAtResume so secondsSinceLastResume measures live-session time
+    // only (excluding the catch-up). The pre/post primary snapshot brackets
+    // processOfflineTime so the welcome-back overlay can quote the delta
+    // grown while away.
+    let resumeGapSec = 0;
+    let resumeDelta = new Decimal(0);
+    if (result.success && result.timestamp != null) {
+      const sessionClock = engine.tryInject(SessionClockKey);
+      const primary = getPrimaryResource();
+      const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
+      resumeGapSec = gap;
+      if (sessionClock) sessionClock.lastResumeGapSec.value = gap;
+      if (gap > 0) {
+        const before = Decimal.fromValue(primary.value);
+        processOfflineTime(engine.tickDriver, gap, {
+          maxOfflineSeconds: sessionClock?.offlineCapSeconds,
+        });
+        resumeDelta = Decimal.sub(primary.value, before);
+      }
+      sessionClock?.refreshElapsedAtResume();
+    }
+    maybeShowWelcomeBack(resumeGapSec, resumeDelta);
+  },
+});
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
@@ -75,47 +102,6 @@ function maybeShowWelcomeBack(gapSec: number, sproutDelta: Decimal): void {
   });
 }
 
-function startGame(slotId: number, modId?: string): void {
-  engine.saveManager!.selectSlot(slotId);
-  if (modId) engine.selectMod(modId);
-  engine.start();
-  const result = engine.load();
-
-  // Resume sequence (session-clock.ts inline doc): write the wall-clock
-  // catch-up gap before processOfflineTime so SessionClock observers see
-  // the correct gap during the catch-up advance, then refresh
-  // elapsedAtResume so secondsSinceLastResume measures live-session time
-  // only (excluding the catch-up). The pre/post primary snapshot brackets
-  // processOfflineTime so the welcome-back overlay can quote the delta
-  // grown while away.
-  let resumeGapSec = 0;
-  let resumeDelta = new Decimal(0);
-  if (result.success && result.timestamp != null) {
-    const sessionClock = engine.tryInject(SessionClockKey);
-    const primary = getPrimaryResource();
-    const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
-    resumeGapSec = gap;
-    if (sessionClock) sessionClock.lastResumeGapSec.value = gap;
-    if (gap > 0) {
-      const before = Decimal.fromValue(primary.value);
-      processOfflineTime(engine.tickDriver, gap, {
-        maxOfflineSeconds: sessionClock?.offlineCapSeconds,
-      });
-      resumeDelta = Decimal.sub(primary.value, before);
-    }
-    sessionClock?.refreshElapsedAtResume();
-  }
-
-  currentScreen.value = Screen.Game;
-  maybeShowWelcomeBack(resumeGapSec, resumeDelta);
-}
-
-function returnToSlots(): void {
-  engine.saveManager?.save();
-  engine.stop();
-  currentScreen.value = Screen.Slots;
-}
-
 // Almanac (achievement-grid) is gated by the `garden-almanac` UI-affordance
 // unlock. Reads through the module-scope getter — the unlocks category is
 // only populated after engine.start(), and Screen.Game is the gate that
@@ -124,12 +110,6 @@ const almanacUnlocked = computed(() => {
   if (currentScreen.value !== Screen.Game) return false;
   return getUnlocks().getPurchasable('garden-almanac')?.active.value === true;
 });
-
-function getActiveModules(): EngineModule[] {
-  const activeId = engine.activeModId;
-  if (!activeId) return [];
-  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
-}
 </script>
 
 <template>

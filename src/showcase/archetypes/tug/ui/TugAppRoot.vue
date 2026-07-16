@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { inject, provide, ref } from 'vue';
-import { processOfflineTime, type Engine, type EngineModule } from '@open-loop/engine';
+import { ref } from 'vue';
+import { processOfflineTime } from '@open-loop/engine';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -18,45 +19,24 @@ import IncomeBar from './panels/IncomeBar.vue';
 import CounterMatrixPanel from './panels/CounterMatrixPanel.vue';
 import MatchEndSummary from './panels/MatchEndSummary.vue';
 
-const engine = inject<Engine>('engine')!;
-const currentScreen = ref<Screen>(Screen.Slots);
-provide('currentScreen', currentScreen);
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
+  onLoaded: (result) => {
+    // Catch-up advance for offline gap, then auto-start a match if none in
+    // progress (skeleton plays-by-default; explicit "Start Match" lives only
+    // on the match-end overlay).
+    if (result.success && result.timestamp != null) {
+      const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
+      if (gap > 0) processOfflineTime(engine.tickDriver, gap);
+    }
+    const match = engine.tryInject(MatchKey);
+    if (match && !match.inMatch.value) match.start();
+  },
+});
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
 
 const stack = useModalStack();
-
-function startGame(slotId: number, modId?: string): void {
-  engine.saveManager!.selectSlot(slotId);
-  if (modId) engine.selectMod(modId);
-  engine.start();
-  const result = engine.load();
-
-  // Catch-up advance for offline gap, then auto-start a match if none in
-  // progress (skeleton plays-by-default; explicit "Start Match" lives only
-  // on the match-end overlay).
-  if (result.success && result.timestamp != null) {
-    const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
-    if (gap > 0) processOfflineTime(engine.tickDriver, gap);
-  }
-  const match = engine.tryInject(MatchKey);
-  if (match && !match.inMatch.value) match.start();
-
-  currentScreen.value = Screen.Game;
-}
-
-function returnToSlots(): void {
-  engine.saveManager?.save();
-  engine.stop();
-  currentScreen.value = Screen.Slots;
-}
-
-function getActiveModules(): EngineModule[] {
-  const activeId = engine.activeModId;
-  if (!activeId) return [];
-  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
-}
 </script>
 
 <template>

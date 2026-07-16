@@ -39,7 +39,7 @@ function selectCell(attacker: UnitDef, defender: UnitDef): void {
 </script>
 
 <template>
-  <div class="counter-matrix">
+  <div class="olui-surface counter-matrix">
     <h3 class="counter-matrix__title">
       Counter matrix
       <span class="counter-matrix__hint">attacker → defender damage multiplier</span>
@@ -96,9 +96,6 @@ function selectCell(attacker: UnitDef, defender: UnitDef): void {
   display: flex;
   flex-direction: column;
   gap: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   padding: var(--gap);
   height: 100%;
 }

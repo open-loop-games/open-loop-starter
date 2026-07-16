@@ -47,8 +47,10 @@ function describeTower(def: TowerDef): string {
 </script>
 
 <template>
-  <div class="tower-shop">
-    <h3 class="tower-shop__title">Towers</h3>
+  <div class="olui-surface tower-shop">
+    <h3 class="tower-shop__title">
+      Towers
+    </h3>
     <p class="tower-shop__hint">
       {{
         selectedTowerType
@@ -60,7 +62,7 @@ function describeTower(def: TowerDef): string {
       <Button
         v-for="row in rows"
         :key="row.def.id"
-        class="tower-card"
+        class="olui-buy-card tower-card"
         :class="{
           'tower-card--selected': row.selected,
           'tower-card--unaffordable': !row.affordable,
@@ -75,7 +77,9 @@ function describeTower(def: TowerDef): string {
         <div class="tower-card__desc">
           {{ describeTower(row.def) }}
         </div>
-        <div class="tower-card__cost">¢ {{ row.def.baseCost }}</div>
+        <div class="tower-card__cost">
+          ¢ {{ row.def.baseCost }}
+        </div>
       </Button>
     </div>
   </div>
@@ -86,9 +90,6 @@ function describeTower(def: TowerDef): string {
   display: flex;
   flex-direction: column;
   gap: var(--gap-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   padding: var(--gap);
   height: 100%;
 }
@@ -109,27 +110,6 @@ function describeTower(def: TowerDef): string {
   display: flex;
   flex-direction: column;
   gap: var(--gap-sm);
-}
-
-.tower-card {
-  text-align: left;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius) * 0.75);
-  padding: var(--gap-sm);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.tower-card:hover:not(:disabled) {
-  border-color: var(--color-primary, #4a9eff);
 }
 
 .tower-card--selected {

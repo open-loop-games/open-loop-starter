@@ -1,34 +1,22 @@
 # CLAUDE.md
 
-open-loop-starter — quick-copy scaffold for prototyping games on `open-loop-engine`. Games fork from here.
+open-loop-starter — the engine's batteries-included clone target, and the storybook for those batteries. Games clone and eject from here.
 
 **Stack:** Vue 3 + TypeScript + Vite + reka-ui + `@open-loop/engine` + break_eternity.js
 
 ## Purpose
 
-The engine's **batteries-included clone target**, and the **storybook** for those batteries (see `/work/studio/CLAUDE.md` § Studio components). Engine and starter are the two surfaces; the engine directs here to start a game. Not a library — clone it and eject. There is no shared-library surface and no semver contract: the batteries reach you by being copied.
+Two halves split at `src/showcase/` (see `/work/studio/CLAUDE.md` § Studio components): the **base** — the batteries, § Scaffold — and the **stories** — the archetypes, § Archetype demos. Not a library; clone and eject.
 
-Two halves, and they are **not** independent:
+**The stories demonstrate the base.** The strip boundary is a one-way *import* cut, not a separation of concerns. A story that hand-rolls what a battery provides is a **story** defect — it teaches the next fork to hand-roll. A story that must fight a battery to say what it means is a **battery** defect: the stories are the generality test, and a documented bypass at the call site is that test reporting a failure.
 
-- **The base — the batteries.** `src/lib/`, `src/ui/`, `src/composables/`, `src/modules/`, `src/styles/`. Well-generalized pieces for building a game on the engine. A fork keeps these.
-- **The stories — the archetypes.** `src/showcase/archetypes/<name>/`. Worked examples composing the batteries into game shapes. A fork sheds all but one.
-
-**The stories demonstrate the base.** That's the relationship the strip boundary hides: it's a one-way *import* cut, not a separation of concerns. A story that hand-rolls what a battery provides is a story defect — it teaches the next fork to hand-roll. A story that must fight a battery to say what it means is a *battery* defect, and the story is where you find out: it's the generality test, and a documented bypass at the call site is that test reporting a failure. Read both halves as instruction.
-
-**The bars:**
-
-- **A battery:** would a game built on the engine want this on day one, and is it general enough that a story doesn't have to fight it?
-- **A story:** does it compose the batteries (rather than route around them), and does its balance fall out of its declared spine?
-
-**Reading replication between stories.** The archetypes are semi-isolated trees authored in parallel that can read each other, so repetition mixes convergence, literal copying, and copying in feel — indistinguishable after the fact. Duplication is a **demand signal, not proof of generality**: it answers "should this be one copy?", never "is this well-generalized?". Only the bars above answer the second.
-
-### Scaffold (`src/lib/`, `src/styles/`, AppFrame, composables)
+### Scaffold — the base (`src/lib/`, `src/ui/`, `src/styles/`, composables)
 
 Layout shells, AppFrame, modal stack, default CSS tokens, reset, and the bridge composables that connect engine state to UI. `src/lib/` is presentational-only — no engine imports — and is **not** an importable cross-package library. `src/styles/` provides opinionated CSS-variable values and widget-level selectors layered over the token defaults; forks override per-variable or swap wholesale.
 
-Maintenance discipline: stability. Forks copy this and don't want it shifting under them. The bar for new scaffold code is "would every new game want this on day one?"
+Maintenance discipline: stability **and generality**. Forks copy this and don't want it shifting under them; they also shouldn't have to fight it. The bar for new scaffold code is "would every new game want this on day one, and is it general enough that a story doesn't route around it?"
 
-### Archetype demos (`src/showcase/archetypes/<name>/`)
+### Archetype demos — the stories (`src/showcase/archetypes/<name>/`)
 
 Forkable best-practice implementations of validated archetypes. Each archetype is a composition in research's pattern language (its identity line) carried by a rate-function balance spine, and is self-bootable with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts` — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton.
 
@@ -113,7 +101,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 - **`src/lib/`** — scaffold layout/theme layer. No engine imports. Consumed by `src/ui/` via `@/lib`.
 - **`src/modules/`** own engine state via `persistent()` refs; no UI imports.
 - **`src/composables/`** — UI consumes module public API, never internals. Composables earn their layer with `computed` / `watch` / lifecycle, per-component state, or cross-module synthesis. Pure re-export composables are wallpaper — UI imports from `modules/` directly.
-- **`src/ui/compositions/`** — the shared home for engine-state→widget wiring that recurs across archetypes. Each composition is a `.ts` **contract** (the row/item shape an archetype must supply), a `.vue` **renderer** over it, and a test. Archetypes adapt their own state to the contract and keep their vocabulary; the composition owns the rendering and interaction. It survives eject, so a fork keeps what it adopted. The bar is the same as any scaffold code — "would a new game want this on day one?" — and the route in is the recipe surface's presentation flavor (`src/showcase/recipes/candidate-recipes-ui.md`), not a hoist-on-noticing.
+- **`src/ui/compositions/`** — engine-state→widget wiring that recurs across archetypes. Each composition is a `.ts` **contract** (the row/item shape a game supplies) plus a `.vue` **default renderer** and a test. **The contract is the battery; the renderer is one default.** A game can adopt the contract and render it however it likes — interlocker takes `ResourceReadout` and renders it with its own `ResourceList.vue`. "Want the shape, not the markup" is a first-class path, not a fallback. Two extension seams, in order of reach: (1) the typed `extra?: T` payload + the `#row`/`#cell` slot — parameterize the component (`ProducerList<MyRow>`) and read your own state back typed in the slot; this is how a game holds a shape the flat contract can't (e.g. multi-resource costs) **without the core contract growing every consumer's needs**; (2) reskin from outside via the composition's costume hooks (`:deep(.producer-list__…)`), which are documented **stable API** in each composition header — renames are breaking. Survives eject. Bar: "would a new game want this on day one, and is it general enough that a story doesn't fight it?" Route in is the recipe surface's presentation flavor (`src/showcase/recipes/candidate-recipes-ui.md`), not hoist-on-noticing.
 - **`src/styles/`** sets token defaults and widget-level selectors consumed by `src/lib/` and `src/ui/components/`.
 
 ### Key Patterns

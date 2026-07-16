@@ -19,7 +19,7 @@ const continuousProducers = buildings
 interface Section {
   key: string;
   title: string;
-  cells: UpgradeCellData[];
+  cells: UpgradeCellData<UpgradeRow>[];
   rows: UpgradeRow[];
 }
 

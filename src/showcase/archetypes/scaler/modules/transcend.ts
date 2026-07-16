@@ -48,7 +48,7 @@
  *   exposes (`open-loop-engine/src/systems/conversion.ts:256-263`).
  *
  * Cross-tier modifier bindings (transcend upgrades into coin / mythos
- * rateChains) flow through `composables/scaler-game-state.ts`'s
+ * rateChains) flow through `modules/scaler-game-state.ts`'s
  * `expandUpgradeGrant` — the transcend module imports `getCoinProducers`
  * indirectly through the shared accessor, keeping module-level imports
  * one-way.
@@ -88,7 +88,7 @@ import {
   type UpgradeDef,
   type ScalerGameState,
 } from '../data';
-import { buildScalerGameState, expandUpgradeGrant } from '../composables/scaler-game-state';
+import { buildScalerGameState, expandUpgradeGrant } from './scaler-game-state';
 import { getCoinResource, getCoinProducers } from './coin';
 import { getPrestigePoints, getPrestigeReset } from './prestige';
 import { getChallengesCategory } from './challenges';

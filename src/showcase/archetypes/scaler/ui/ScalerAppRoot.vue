@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
-import { Decimal, type Engine, type EngineModule } from '@open-loop/engine';
+import { computed, ref } from 'vue';
+import { Decimal } from '@open-loop/engine';
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
 import { AppFrame, DevPanelOverlay, TabsBarShell, useModalStack } from '@/lib';
 import { Screen } from '@/types';
+import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -29,19 +30,10 @@ import {
   getTranscendShards,
 } from '../modules';
 
-const engine = inject<Engine>('engine')!;
-const currentScreen = ref<Screen>(Screen.Slots);
-provide('currentScreen', currentScreen);
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession();
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-
-onMounted(() => {
-  document.body.dataset.archetype = 'scaler';
-});
-onUnmounted(() => {
-  delete document.body.dataset.archetype;
-});
 
 const stack = useModalStack();
 
@@ -117,26 +109,6 @@ const readouts = computed<ResourceReadout[]>(() => [
 
 function openAchievements(): void {
   const id = stack.push(AchievementsModal, { onClose: () => stack.remove(id) }, 'lg');
-}
-
-function startGame(slotId: number, modId?: string): void {
-  engine.saveManager!.selectSlot(slotId);
-  if (modId) engine.selectMod(modId);
-  engine.start();
-  engine.load();
-  currentScreen.value = Screen.Game;
-}
-
-function returnToSlots(): void {
-  engine.saveManager?.save();
-  engine.stop();
-  currentScreen.value = Screen.Slots;
-}
-
-function getActiveModules(): EngineModule[] {
-  const activeId = engine.activeModId;
-  if (!activeId) return [];
-  return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
 }
 </script>
 

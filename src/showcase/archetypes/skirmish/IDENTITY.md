@@ -82,12 +82,18 @@ probes driving the shipping bilateral AI headless; Lane 3 locks pinning measured
 windows. Driver is shipping automation (`modules/automation.ts`), not a bespoke
 bot.
 
-## Seeds
+## Hack-from references
 
-Reference modules staged under `_seeds/` (tug spine + defender movement/render)
-are **local working scratch — gitignored, not shipped**: verbatim sibling-archetype
-copies for hacking as bones land, not part of the forkable exemplar. Excluded from
-typecheck; see `_seeds/README.md` for the seed→target→hack map. A bone consumes a
-seed by *porting* it (adapting to skirmish), and the port is what's committed — never
-the raw copy. `antigravity-creep-pvp` contributed one idea (influence-field logistics
-with supply-cutoff decay), not code.
+Growth ports read the sibling archetypes **in place**: tug for the adversarial
+spine (`modules/match.ts`, `data/units.ts`, `data/counter-matrix.ts`,
+`data/personality.ts`, `balance/bot.ts`) and defender for movement + the render
+seam (`modules/map.ts`, `ui/panels/MapCanvas.vue`). A bone consumes a reference by
+*porting* it — adapting to skirmish — and the port is what's committed, never the
+raw copy.
+
+There is no staged copy of them here. A `_seeds/` tree used to hold verbatim
+duplicates for hacking; it was dropped because every file in it was byte-identical
+to the live sibling it came from, so it preserved nothing and cost a tsconfig
+exclude, an eslint blind spot, and a second place for the same code to rot. Read
+the siblings. `antigravity-creep-pvp` contributed one idea (influence-field
+logistics with supply-cutoff decay), not code.

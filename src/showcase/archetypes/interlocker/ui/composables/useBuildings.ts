@@ -74,8 +74,9 @@ export function useBuildings(bulkAmount: () => DecimalSource): BuildingRow[] {
       p.purchase(amount);
     }
 
-    // Arc-1's only continuous consumer is the smelter (drains wood + minerals
-    // per tick). Generalize this flag when a second continuous building lands.
+    // TODO(expansion): Arc-1's only continuous consumer is the smelter (drains
+    // wood + minerals per tick), so the flag is hardcoded. Generalize when a
+    // second continuous building lands.
     const continuous = def.id === 'smelter';
     const activeCount = computed(() => buildings.activeCount(def.id));
     function setActive(n: number): void {

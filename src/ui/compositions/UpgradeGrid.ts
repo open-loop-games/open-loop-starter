@@ -1,7 +1,7 @@
 import type { Ref } from 'vue';
 import type { DecimalSource } from '@open-loop/engine';
 
-export interface UpgradeCellData {
+export interface UpgradeCellData<T = never> {
   id: string;
   name: string;
   description: string | (() => string);
@@ -15,8 +15,9 @@ export interface UpgradeCellData {
   buy: () => void;
   position?: number;
   /**
-   * Opaque per-cell data forwarded to `#cell` / `#reveal-content` slots.
-   * Lets archetypes attach rich state without a side-channel lookup.
+   * Typed per-cell payload forwarded to the `#cell` / `#reveal-content` slots —
+   * the extension seam (see `ProducerRowData.extra`). Parameterize the
+   * component (`UpgradeGrid<MyCell>`) to type it; defaults to `never`.
    */
-  extra?: unknown;
+  extra?: T;
 }

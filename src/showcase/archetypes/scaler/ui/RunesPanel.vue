@@ -25,7 +25,7 @@ const offeringsLabel = computed(() => format(offerings.value, 0));
       </p>
     </header>
 
-    <section class="runes-panel__autobuyer">
+    <section class="olui-surface runes-panel__autobuyer">
       <label class="runes-panel__toggle">
         <input
           v-model="toggles.autoSacrifice.value"
@@ -70,9 +70,6 @@ const offeringsLabel = computed(() => format(offerings.value, 0));
 }
 .runes-panel__autobuyer {
   padding: var(--gap-sm) var(--gap);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 .runes-panel__toggle {
   display: flex;

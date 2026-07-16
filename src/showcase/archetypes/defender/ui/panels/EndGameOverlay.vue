@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-  AlertDialogRoot,
-  AlertDialogPortal,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogTitle,
-  AlertDialogAction,
-} from 'reka-ui';
+import { AlertDialogAction } from 'reka-ui';
+import { BlockingDialog } from '@/lib';
 import { useModule } from '@/composables/useModule';
 import { RoundKey } from '../../modules';
 
@@ -17,8 +11,8 @@ import { RoundKey } from '../../modules';
  * `round.resetGame()`, which clears persistent state to fresh defaults
  * (money = startingMoney, lives = maxLives, round = 1, outcome = in-progress).
  *
- * AlertDialog (not Dialog): end-game is a blocking decision surface — no ESC,
- * no overlay-click dismiss. Player must click "New game" to reset.
+ * BlockingDialog (not useModalStack): end-game is a blocking decision surface —
+ * no ESC, no overlay-click dismiss. Player must click "New game" to reset.
  */
 const round = useModule(RoundKey);
 
@@ -40,63 +34,28 @@ function restart(): void {
 </script>
 
 <template>
-  <AlertDialogRoot :open="visible">
-    <AlertDialogPortal>
-      <AlertDialogOverlay class="end-game__overlay" />
-      <AlertDialogContent
-        class="end-game__panel"
-        :class="{ 'end-game__panel--victory': isVictory }"
-      >
-        <AlertDialogTitle class="end-game__title">
-          {{ title }}
-        </AlertDialogTitle>
-        <p class="end-game__summary">
-          {{ summary }}
-        </p>
-        <AlertDialogAction class="end-game__restart" @click="restart"> New game </AlertDialogAction>
-      </AlertDialogContent>
-    </AlertDialogPortal>
-  </AlertDialogRoot>
+  <BlockingDialog
+    :open="visible"
+    :title="title"
+    max-width="420px"
+    :panel-class="isVictory ? 'end-game--victory' : undefined"
+  >
+    <p class="end-game__summary">
+      {{ summary }}
+    </p>
+    <AlertDialogAction
+      class="end-game__restart"
+      @click="restart"
+    >
+      New game
+    </AlertDialogAction>
+  </BlockingDialog>
 </template>
 
 <style scoped>
-.end-game__overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--modal-backdrop);
-  z-index: var(--modal-z-base);
-}
-
-.end-game__panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  min-width: 320px;
-  max-width: 420px;
-  background: var(--modal-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--modal-radius);
-  padding: var(--modal-padding);
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  z-index: calc(var(--modal-z-base) + 1);
-  text-align: center;
-}
-
-.end-game__panel--victory {
-  border-color: var(--color-primary, #4a9eff);
-}
-
-.end-game__title {
-  margin: 0;
-  font-size: 1.5em;
-}
-
 .end-game__summary {
   margin: 0;
+  text-align: center;
   color: var(--color-text-muted, var(--color-text));
 }
 
@@ -114,5 +73,14 @@ function restart(): void {
 
 .end-game__restart:hover {
   filter: brightness(1.1);
+}
+</style>
+
+<!-- The panel is portaled to <body>, so the victory accent on BlockingDialog's
+     own panel element can't be reached by scoped :deep — it rides `panel-class`
+     and this unscoped rule. -->
+<style>
+.end-game--victory {
+  border-color: var(--color-primary, #4a9eff);
 }
 </style>
