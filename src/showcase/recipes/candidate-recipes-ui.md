@@ -49,6 +49,42 @@ Ambient's `AutobuyerToggles` says "Tending" where producer's says "Automation".
 That is archetype voice, not drift — a diff sees convergence, a reader sees two
 archetypes correctly speaking their own language. When in doubt, it stays copied.
 
+## `_blank` is not just another instance
+
+`_blank` is the fork template — `pnpm eject --clean` hoists it to `src/game/` for
+a novel composition with no fitting archetype. That gives it a different weight
+from its eight siblings in three ways, and they apply to every slice.
+
+**It counts, but the argument it supports is a different one.** `_blank` is live,
+shipped, typechecked and independently maintained, so the parent's counting rule
+admits it. But it is the *intended copy source*: when a shape sits in `_blank` and
+eight archetypes carry it identically, that is not eight independent
+convergences — it's the template doing its job. The N is real; the reasoning
+changes. For an ordinary shape, N=k means *k authors hit the same problem*, which
+is evidence a shared thing is wanted. For a `_blank`-resident shape, N=k means
+*the template mandates it* — which is evidence it should be code the template
+**uses**, not code the template **contains**.
+
+**Its cost is amplified and permanent.** Duplication in `_blank` isn't nine copies
+today; it's every clean fork, forever, by design. And a fork is the reader least
+equipped to spot it: the boilerplate arrives as *its own code* in `src/game/`,
+indistinguishable from what it wrote, so it can't tell inherited scaffold from
+its own decisions, and gets no upgrades to it.
+
+**It is the de facto spec of the spine.** `_blank`'s root is the spine with
+nothing in the hole. Whatever appears in `_blank` *and* identically elsewhere is
+definitionally boilerplate — `_blank` has no game to justify it. That makes it the
+best reading direction for the rest of the sweep: diff an archetype against
+`_blank` and what's left is the archetype.
+
+**Provenance (verified).** `_blank` postdates the archetypes it resembles: seven
+roots exist as of `2397b48`; `_blank` lands 2026-07-10 in `e5acd56` ("add _blank
+skeleton for archetype-free forks"); skirmish follows 2026-07-13 in `ec747a8` —
+carrying the spine as a fresh copy. So the spine was already recognized as
+canonical enough to enshrine in a template, and the template enshrined it as
+*copy*; the next archetype built duplicated it anyway rather than importing it.
+`_blank` did not create the duplication — it promoted it from accident to policy.
+
 ## Scope
 
 **In:** the 9 archetypes with a UI, at the roles mapped below.
@@ -233,10 +269,30 @@ opt-in that forks mount themselves. All 9 opt-ins are byte-identical — the
 boilerplate got *documented* rather than removed, and the opt-in framing is
 buying nothing. A graduation here retires a doc section too.
 
+**`_blank` changes what this N means** (see § `_blank` is not just another
+instance). This isn't nine authors converging — `_blank` is the template, so the
+spine is *mandated*, and every clean fork gets it as its own code in `src/game/`
+forever. The provenance sharpens it: `_blank` was distilled from the archetypes
+in `e5acd56`, and skirmish was built three days later with the spine copied
+again rather than imported. The shape was recognized as canonical enough to
+enshrine in a template; it just got enshrined as copy.
+
+**The honest counter-argument.** Starter is "not a library — a template", and
+forks are explicitly free to rename, restructure, or delete. A root a fork *owns*
+is arguably correct, and a shared root trades that away. This entry does not
+settle that — but the divergence data bears on it, and points one way: ownership
+only pays where it's exercised. `startGame`'s tails diverged four ways because
+each archetype genuinely needed something different — that's ownership earning
+itself, and it should stay owned. `getActiveModules` did not diverge once in nine
+tries. Nine chances to differ, taken zero times, is not ownership; it's copying.
+The split runs through the middle of the spine, not around it.
+
 **Shape a dive would weigh** (not a decision): a slot-based root component in
 `src/ui/` plus a `useGameSession()` composable, leaving archetypes the residue
 that actually differs — shell choice, panel set, theme import, `startGame` tail,
-extra provides. Survives eject, so a fork keeps it.
+extra provides. Survives eject, so a fork keeps it, and `_blank`'s root becomes a
+thin slot-filling shell instead of a hundred lines a fork inherits and can't
+upgrade.
 
 - **Sites:** `_blank/ui/GameAppRoot.vue:13-47`, `ambient/ui/AmbientAppRoot.vue:23-132`,
   `defender/ui/DefenderAppRoot.vue:19-62`, `interlocker/ui/InterlockerAppRoot.vue:14-40`,
