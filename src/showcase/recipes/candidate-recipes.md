@@ -9,6 +9,13 @@ re-wire existing primitives — worked through as a batch before anything moves.
 
 Dropping here is explicitly a decision **not** to file an engine candidate yet.
 
+**Companion — `candidate-recipes-ui.md`** holds the *presentation & bridge*
+flavor: shapes whose repetition is purely in the UI layer (app assembly,
+composables, panels, widgets). Same surface, same cadence, same counting rule —
+split by flavor so each file stays readable in one pass. This file indexes
+recipes by their *wiring*; a shape indexed here doesn't get a second entry there
+just because its UI copies rode along.
+
 ## Primitive vs recipe
 
 - **Primitive** — an atomic engine capability: one unit of API that other code
@@ -41,6 +48,14 @@ code composition that realizes it. The stack: **pattern → recipe → primitive
   anywhere in the studio — index it here; don't wait, and don't route it to the
   engine. The count is over independent instances, not repos: a starter archetype
   and a consumer game each count once (see § Sourcing scope below).
+- **What counts as an instance: live and independently maintained code** — a copy
+  someone would have to fix *twice*. This, not copy-vs-original, is the line. A
+  fork-copy counts once it ships and is maintained on its own; divergence between
+  two copies is itself the evidence that it is. What doesn't count: unwired
+  staging copies, vendored upstream source, anything excluded from typecheck or
+  awaiting deletion — nobody maintains it, so it can't diverge, so it was never a
+  second instance. The rule is one line because the alternative is a growing list
+  of special cases for trees that are all not-maintained for the same reason.
 - **N=1 only when named.** A single instance is admitted only with a *specific*
   anticipated second consumer named (like the engine candidate file's pre-designed
   shapes) — never a speculative "some future archetype". The named N=1 entry is a
@@ -60,10 +75,13 @@ code composition that realizes it. The stack: **pattern → recipe → primitive
   down to 7 and fabricated two line-citations). Never index an entry on a claimed
   count — verify each site by reading it, the same reading the divergence signal
   already demands.
-- **Graduation is optional and three-way.** A converged recipe may become (a) an
-  engine consumer-guide recipe (prose + primitive list, citing the starter home),
-  (b) a shared starter standard module (`src/modules/`, not in `sharedBase` —
-  menu-style like the shells), or (c) it stays glue and never generalizes.
+- **Graduation is optional, and resolves by flavor.** A converged recipe may
+  become (a) an *engine-composition* recipe → engine `consumer-guide-recipes.md`
+  (prose + primitive list, citing the starter home), (b) a *scaffolding* recipe →
+  a shared starter standard module (`src/modules/`, not in `sharedBase` —
+  menu-style like the shells), (c) a *presentation & bridge* recipe → `src/lib/`,
+  `src/ui/components/`, or `src/ui/compositions/` per that flavor's own
+  discriminator, or (d) it stays glue and never generalizes.
 
 **Sourcing scope — a maturity marker, not a counting rule.** The cadence above
 counts independent instances *studio-wide* and never depended on which repo a copy
