@@ -8,7 +8,7 @@
  *
  * FPS is rAF-derived frame count. TPS reads `engine.tickDriver.deltaMean` once
  * per 1s sample tick — sufficient for spot-checking repaint budget on
- * engine-driven views like `DomGrid.vue` at 60×60.
+ * large engine-driven views.
  *
  * Speed buttons set `engine.tickDriver.speedMultiplier` directly. Reset to 1x
  * on unmount so a fork doesn't ship a cranked-up demo if the dev panel

@@ -76,12 +76,12 @@ src/
 ├── composables/         # Starter-level Vue composables — bridge shared-base refs to UI
 │                          useGame, useSave, useSettings, useTheme, useToasts,
 │                          useSlots, useNotation, useFormatting, useAutomation,
-│                          useSaveEvents, useUI
+│                          useSaveEvents
 ├── styles/
 │   ├── base.css             # Consumer theme — fills in --color-*, --gap-*, etc.
 │   └── theme-widgets.css    # Widget-specific theme (progress, tooltip, popover, panel)
 └── ui/
-    ├── screens/         # Cross-archetype screens (SlotScreen, GameScreen)
+    ├── screens/         # Cross-archetype screens (SlotScreen)
     ├── panels/          # Cross-archetype panels (BalanceWorkbench)
     └── components/      # Shared primitives (Tooltip, ProgressBar, BaseModal, Tabs, …)
                          # Archetype-specific SFCs live under src/showcase/archetypes/<name>/ui/

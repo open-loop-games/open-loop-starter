@@ -1,8 +1,8 @@
 /**
  * UI Slot Registry — lets EngineModules contribute Vue components for
- * well-known layout slots. GameScreen.vue reads from the registry with
- * sensible fallbacks, so mods can swap the whole layout or individual panels
- * without the app shell knowing about them.
+ * well-known layout slots, so mods can swap the whole layout or individual
+ * panels without the app shell knowing about them. A shell reads a slot via
+ * `getSlot` and falls back to its own default when nothing is registered.
  */
 import { shallowReactive, markRaw, type Component } from 'vue';
 import type { EngineModule } from '@open-loop/engine';
