@@ -99,6 +99,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 - **`src/lib/`** — scaffold layout/theme layer. No engine imports. Consumed by `src/ui/` via `@/lib`.
 - **`src/modules/`** own engine state via `persistent()` refs; no UI imports.
 - **`src/composables/`** — UI consumes module public API, never internals. Composables earn their layer with `computed` / `watch` / lifecycle, per-component state, or cross-module synthesis. Pure re-export composables are wallpaper — UI imports from `modules/` directly.
+- **`src/ui/compositions/`** — the shared home for engine-state→widget wiring that recurs across archetypes. Each composition is a `.ts` **contract** (the row/item shape an archetype must supply), a `.vue` **renderer** over it, and a test. Archetypes adapt their own state to the contract and keep their vocabulary; the composition owns the rendering and interaction. It survives eject, so a fork keeps what it adopted. The bar is the same as any scaffold code — "would a new game want this on day one?" — and the route in is the recipe surface's presentation flavor (`src/showcase/recipes/candidate-recipes-ui.md`), not a hoist-on-noticing.
 - **`src/styles/`** sets token defaults and widget-level selectors consumed by `src/lib/` and `src/ui/components/`.
 
 ### Key Patterns
