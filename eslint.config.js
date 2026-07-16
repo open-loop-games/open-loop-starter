@@ -75,6 +75,38 @@ export default [
       'open-loop/no-decimal-relational-operator': 'error',
     },
   },
+  // Layering: `src/lib/` is the presentational layout/theme layer and never
+  // imports the engine — `src/ui/` owns engine bridging. Keeps the scaffold's
+  // shells/frame/modal reusable by a fork that swaps or drops the engine.
+  //
+  // `src/lib/` owns both of its import bans here rather than sharing the
+  // showcase-boundary block below: flat config REPLACES `no-restricted-imports`
+  // on the last matching block, so splitting them across two blocks silently
+  // disables whichever loses.
+  {
+    files: ['src/lib/**/*.{ts,vue}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@open-loop/engine', '@open-loop/engine/*'],
+              message:
+                'src/lib/ is presentational — no engine imports. Engine-aware code belongs in src/ui/.',
+            },
+            /* eject:strip-start */
+            {
+              group: ['@/showcase', '@/showcase/*', '@/showcase/**'],
+              message:
+                'Scaffold must not import the showcase (demo) surface — it is deleted on `pnpm eject`.',
+            },
+            /* eject:strip-end */
+          ],
+        },
+      ],
+    },
+  },
   /* eject:strip-start — showcase-boundary guard; the boundary is gone post-eject, removed by `pnpm eject` */
   // Layering: the scaffold never imports the demo/showcase surface. The cut is
   // one-way — `pnpm eject` deletes `src/showcase/`, so any scaffold-side import
@@ -83,7 +115,8 @@ export default [
   // main.ts (the entry, rewritten on eject) and tests are intentionally exempt.
   {
     files: [
-      'src/lib/**/*.{ts,vue}',
+      // src/lib/** is covered by its own block above (which carries this same
+      // showcase ban alongside its engine ban).
       'src/ui/**/*.{ts,vue}',
       'src/composables/**/*.{ts,vue}',
       'src/modules/**/*.{ts,vue}',

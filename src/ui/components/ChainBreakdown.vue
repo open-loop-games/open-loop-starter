@@ -1,16 +1,27 @@
 <!--
   ChainBreakdown — Paradox-style modifier breakdown table. Feeds off any
   `Modifier` with a description (including `ModifierChain`) plus a base
-  value, and renders the per-modifier contribution list the engine's
-  `createModifierSection` already computes for us.
+  value, and renders the per-modifier contribution list.
+
+  Rows come from the engine's `description`, which already filters out
+  modifiers whose `enabled` is false — and `ModifierChain.bind()` folds a
+  binding's `active` predicate into that same `enabled`, so inactive
+  bindings are excluded too. To show inactive factors (greyed out rather
+  than absent), walk `chain.bindings()` instead; `description` cannot
+  express them.
 
   Designed to drop inside a `RichTooltip`'s #content slot. Stays
   presentational: no engine writes, no refs beyond the computed breakdown.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { DecimalSource, Modifier } from '@open-loop/engine';
-import { createModifierSection } from '../../lib/ui/modifier-section';
+import {
+  Decimal,
+  formatSmall,
+  type DecimalSource,
+  type Modifier,
+  type ModifierDescription,
+} from '@open-loop/engine';
 
 const props = withDefaults(
   defineProps<{
@@ -24,31 +35,37 @@ const props = withDefaults(
   { base: 1, baseText: 'Base', smallerIsBetter: false },
 );
 
-const section = computed(() =>
-  createModifierSection({
-    title: props.title,
-    modifier: props.modifier,
-    base: props.base,
-    baseText: props.baseText,
-    unit: props.unit,
-    smallerIsBetter: props.smallerIsBetter,
-  })(),
+// A sequential modifier's `description` getter flat-maps to an array, while a
+// lone modifier resolves to a single row; normalise both to a list.
+const rows = computed<ModifierDescription[]>(() => {
+  const desc = props.modifier.description;
+  if (!desc) return [];
+  const resolved = typeof desc === 'function' ? desc() : desc;
+  return Array.isArray(resolved) ? resolved : [resolved];
+});
+
+const total = computed<DecimalSource>(() => props.modifier.apply(props.base));
+
+const baseValue = computed(() => formatSmall(props.base) + (props.unit ?? ''));
+const totalValue = computed(() => formatSmall(total.value) + (props.unit ?? ''));
+const totalIsBad = computed(() =>
+  props.smallerIsBetter ? Decimal.gt(total.value, props.base) : Decimal.lt(total.value, props.base),
 );
 </script>
 
 <template>
   <div class="olui-chain-breakdown">
     <div class="olui-chain-breakdown__title">
-      {{ section.title }}
+      {{ title }}
     </div>
 
     <div class="olui-chain-breakdown__row olui-chain-breakdown__row--base">
-      <span class="olui-chain-breakdown__label">{{ section.base.text }}</span>
-      <span class="olui-chain-breakdown__value">{{ section.base.value }}</span>
+      <span class="olui-chain-breakdown__label">{{ baseText }}</span>
+      <span class="olui-chain-breakdown__value">{{ baseValue }}</span>
     </div>
 
     <div
-      v-for="(mod, idx) in section.modifiers"
+      v-for="(mod, idx) in rows"
       :key="idx"
       class="olui-chain-breakdown__row"
       :class="{ 'olui-chain-breakdown__row--bad': mod.isBad }"
@@ -58,7 +75,7 @@ const section = computed(() =>
     </div>
 
     <div
-      v-if="section.modifiers.length === 0"
+      v-if="rows.length === 0"
       class="olui-chain-breakdown__row olui-chain-breakdown__row--muted"
     >
       <span class="olui-chain-breakdown__label">No active modifiers</span>
@@ -66,10 +83,10 @@ const section = computed(() =>
 
     <div
       class="olui-chain-breakdown__row olui-chain-breakdown__row--total"
-      :class="{ 'olui-chain-breakdown__row--bad': section.total.isBad }"
+      :class="{ 'olui-chain-breakdown__row--bad': totalIsBad }"
     >
       <span class="olui-chain-breakdown__label">Total</span>
-      <span class="olui-chain-breakdown__value">{{ section.total.value }}</span>
+      <span class="olui-chain-breakdown__value">{{ totalValue }}</span>
     </div>
   </div>
 </template>
