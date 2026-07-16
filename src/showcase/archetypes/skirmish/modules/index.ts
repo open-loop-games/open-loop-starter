@@ -35,7 +35,7 @@ const MATCH_SCOPE_MODULES: readonly string[] = [
 
 /**
  * The skirmish module list. `bootEngine` installs the shared base (settings,
- * ui-prefs, ui-registry) alongside these.
+ * ui-prefs) alongside these.
  *
  * Bot-vs-bot: the SAME automation factory installs on both sides. Side `a` is
  * the all-in tempo player (short cadence, spawn all affordable); side `b`

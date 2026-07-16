@@ -70,9 +70,9 @@ src/
 │   ├── styles/          # tokens.css (default CSS custom properties) + reset.css
 │   └── index.ts         # Barrel — import via '@/lib'
 ├── modules/             # Shared-base modules used by every archetype
-│   ├── index.ts         # sharedBase = [settingsModule, uiRegistryModule]
+│   ├── index.ts         # sharedBase = [settingsModule, uiPrefsModule]
 │   ├── settings.ts      # Settings module (theme, notation, autosave)
-│   └── ui-registry.ts   # UI slot registry (panel/screen registration)
+│   └── ui-prefs.ts      # Player-pref refs (theme, notation, autosave cadence)
 ├── composables/         # Starter-level Vue composables — bridge shared-base refs to UI
 │                          useGame, useSave, useSettings, useTheme, useToasts,
 │                          useSlots, useNotation, useFormatting, useAutomation,
@@ -124,7 +124,6 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 ### Key Patterns
 
 - **Engine singleton** — created once in `main.ts`, HMR-invalidated, shared via `provide('engine')`
-- **UI slot registry** — panels and screens register themselves; composable mods can add/remove without touching the shell
 - **Mod extension point** — `src/modules/mods/` mirrors the idle-loops-ng pattern for vanilla-plus-mods games
 - **Slot-based shells** — `src/lib/shells/*` never prescribe content; games fill slots
 - **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the default token values (palette, spacing, radius, shell/modal/widget knobs); `src/styles/` provides the scaffold theme and widget-level selectors on top

@@ -4,7 +4,7 @@ import { createCoreModule } from './core';
 
 /**
  * The blank game's module list. `bootEngine` installs the shared base
- * (settings, ui-prefs, ui-registry) alongside these, so the engine boots with
+ * (settings, ui-prefs) alongside these, so the engine boots with
  * working saves and settings.
  *
  * These two are the DELETE-OR-RESHAPE example economy (see `./core.ts`): the
