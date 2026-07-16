@@ -22,10 +22,18 @@ the parent inside doc-size discipline as this lane grows.
 The parent file indexes recipes by their *wiring*; a shape already indexed there
 does not get a second entry here just because its UI copies rode along.
 
-**Status: sweep in progress.** § Unverified leads is scratch — leads are drained
-into entries as slices verify them, and the section is deleted when the sweep
-closes. Nothing in it has been site-read. Entries below § Entries are site-read
-per the parent file's landing rule.
+**Status: slices A–D read; sweep ready for its dive.** § Unverified leads is
+scratch — leads drain into entries as slices verify them, and the section goes
+when the sweep closes. Nothing in it has been site-read.
+
+**Coverage, stated plainly.** Every site an entry cites for a *judgment* was read
+in full — slices A (12/12), B (30/30) and C (26/26) completely, and 18 of slice
+D's 34 panels. The 16 unread panels are archetype-specific screens that no entry
+turns on; where slice D's § Surface chrome cites files beyond those 18, it cites
+them as an **exact-string census**, not as judgment, and says so in the entry. The
+read-every-site rule exists because judgment over-lumps — a `grep` for three
+literal CSS declarations doesn't. Any future entry resting on those 16 must read
+them first.
 
 ## The UI discriminator
 
@@ -361,6 +369,28 @@ and declined the renderer. That's evidence the `.ts` contract is the valuable
 half of a composition, and that a fork wanting the shape but not the markup is a
 supported case nobody wrote down.
 
+**Slice D: the contract has a stated limitation, documented at a bypass.**
+`interlocker/ui/panels/BuildingsPanel.vue:16-20` declines `ProducerList`
+outright, with a reason:
+
+> "Buildings have multi-resource costs; ProducerList's `ProducerRowData` shape is
+> single-resource (`cost(amount): DecimalSource`, `costLabel: string`), so the
+> panel renders a bespoke `<ul>` of BuildingRow instead of slotting into
+> ProducerList. The slot-override gymnastics to satisfy ProducerRowData would
+> cost more than the wrapper saves."
+
+That's the studio's "document the bypass where it lives" discipline applied to a
+composition, and it names a real design bound: **`ProducerRowData` assumes one
+cost resource.** Either the contract grows multi-resource costs, or it is
+economy-archetype-only by construction and should say so.
+
+**And the narrowing is nominal.** `producer/ui/panels/ProducerPanel.vue:23-25`
+defines `richRow(row) = row.extra as ProducerRow` and routes *every* row read
+through it — an unchecked cast from `extra?: unknown` straight back to the rich
+row the adapter just discarded. The thin contract is a formality when the
+consumer needs anything real; `extra` is the hole it escapes through, and it is
+type-unsafe by design.
+
 ### Producer-row surface — N=2 (producer, ambient), fork-copy
 
 `useProducers()` and `useAutoProducers()` are the same ~60-line file: the same
@@ -441,56 +471,133 @@ override on the shared cell chrome"*.
 the *word* was available; what converged is the practice, not the coinage. Weaker
 than the `toProducerRowData` convergence, which had no such prior.
 
-**Bounded deliberately at N=2.** interlocker's single `:deep(.olui-panel__body)`
-in `AutomationPanel.vue` is a one-off spacing tweak, not costuming — counting it
-would inflate the entry with a different act.
+**Bounded deliberately at N=2 archetypes** — but slice D found it's producer's
+*standard* way of consuming anything shared, not a one-off. Slice C's census
+grepped `:deep(.olui-` and so missed every composition, because **compositions
+don't use the `olui-` prefix**. Full picture:
 
-This generalizes past achievements (any composition, any archetype voice), so it
-earns an entry rather than subsuming. What a dive would weigh: this practice only
-works because `AchievementGrid` exposes stable `olui-` class hooks and `data-*`
-state — an undocumented contract that a composition author can break without
-noticing. If costuming is the supported adoption path, those hooks are API.
+| Site | Costumes | Hook prefix |
+|---|---|---|
+| `ambient/AchievementGridDialog` | `AchievementGrid` (×8 selectors) | `olui-achievement-grid__*` |
+| `producer/AchievementGridDialog` | `AchievementGrid` (×8) | `olui-achievement-grid__*` |
+| `producer/ProducerPanel` | `ProducerList` (×3) | `producer-list__*` — **bare** |
+| `producer/UpgradeTray` | `UpgradeGrid` (×2, incl. `__cell-wrap`) | `upgrade-grid__*` — **bare** |
+| `scaler/UpgradesPanel` | `UpgradeGrid` (×1, in `@media`) | `upgrade-grid` — **bare** |
+
+**The costume hooks are inconsistently namespaced across the two graduation
+destinations** — `src/ui/components/` emit `olui-achievement-grid__cell`, while
+`src/ui/compositions/` emit bare `producer-list`, `upgrade-grid`,
+`resource-header-strip`. If costuming is the supported adoption path then these
+hooks are API, and it's API with two conventions and no documentation. A
+composition author renaming an internal class breaks a fork silently. That's the
+sharpest thing this entry has to say, and it only surfaced because the first
+census used the wrong prefix.
+
+Excluded as different acts: interlocker's `:deep(.olui-panel__body)` (a spacing
+tweak), ambient's and producer's `:deep(.is-active)` (reaching into `Button`'s
+state class — costuming a *component's state*, less contractual still), looper's
+`:deep(svg)` and skirmish's `:deep(canvas)` (library internals, not chrome).
 
 - **Sites:** `ambient/ui/components/AchievementGridDialog.vue:137-238`,
-  `producer/ui/components/AchievementGridDialog.vue:144-267`.
+  `producer/ui/components/AchievementGridDialog.vue:144-267`,
+  `producer/ui/panels/ProducerPanel.vue:128-136`,
+  `producer/ui/panels/UpgradeTray.vue`, `scaler/ui/UpgradesPanel.vue:191-195`.
 
-### Row/card chrome — the hole in the widget layer — N=2 (interlocker, scaler)
+### Surface chrome — the hole in the widget layer — N=4 (defender, looper, scaler, tug)
 
-`src/styles/theme-widgets.css` is the scaffold's widget-selector layer, and it
-covers `.olui-panel`, `.olui-tooltip__content`, `.olui-popover__content`,
-`.olui-select__trigger`, `.olui-progress-bar`; `src/styles/base.css` adds
-`.btn-*` and `.badge*`. There is **no row and no card** — and row/card chrome is
-the single most-repeated CSS in the archetype layer.
+*Slice C opened this as N=2 on a vague "row/card" practice with a stated
+over-lumping worry. Slice D resolved the worry the other way: the shape is
+narrower and the count is bigger than recorded.*
 
-Each archetype re-derives its own and then repeats it internally, byte-identical:
+`src/styles/theme-widgets.css` is the scaffold's widget-selector layer —
+`.olui-tooltip__content`, `.olui-popover__content`, `.olui-select__trigger`,
+`.olui-progress-bar`, plus `.btn-*`/`.badge*` in `base.css`. `.olui-panel` exists
+but is modal *sizing* (`min-width:360px; max-width:560px; --panel-padding`), not
+surface. **There is no card/surface class** — and it's the most-repeated CSS in
+the archetype layer.
 
-- **interlocker — list-row chrome** (`display:flex; align-items:…; gap:var(--gap-sm);
-  padding:var(--gap-xs) 2px; border-bottom:1px solid var(--color-border);
-  list-style:none`) across `JobAllocationRow`, `ScienceNode`, `AutomationRow`.
-  Plus `BuildingRow` and `CraftCard` — near the same component with different
-  data — repeat `__btn`, `__tooltip`, and the whole `__cost-list` block verbatim.
-- **scaler — card chrome** (`display:flex; flex-direction:column; gap:var(--gap-xs);
-  padding:var(--gap-sm); background:var(--color-surface); border:1px solid
-  var(--color-border); border-radius:var(--radius)`) across `CrystalRow`,
-  `CumulativeRow`, `RuneRow`, `ChallengeRow`. `CrystalRow` and `CumulativeRow`
-  go further — identical `<script setup>` bar one computed's name.
+Two distinct blocks, each repeated verbatim rather than approximately:
 
-Both repetitions are **intra-archetype, so N=1 each by the consumer-boundary
-rule**. The entry is N=2 on the *practice*: two archetypes independently hit the
-same hole and patched it the same way. The shapes differ (list-row vs card), so
-what graduates is two selectors, not one.
+**1. Panel surface** — the same three declarations, 17 files, 4 archetypes:
 
-**Over-lumping risk, stated.** "Everyone writes row CSS" is exactly the shape of
-the def-driven-row-builder near-miss below, and this entry could be that mistake.
-The counter is specific and checkable: `theme-widgets.css` already covers seven
-widgets, so this isn't a law of nature — it's a coverage gap, and it happens to
-sit precisely where the repetition is. If the dive disagrees, the near-miss
-section is where this belongs.
+```css
+background: var(--color-surface);
+border: 1px solid var(--color-border);
+border-radius: var(--radius);
+```
 
-Rider for the dive: scaler both adapts to `UpgradeCellData` *and* hand-rolls
-`CrystalRow`/`CumulativeRow` taking a raw `Purchasable` — the same archetype using
-the contract and bypassing it. Evidence the contract needs a documented
-convention more than it needs more surface.
+defender (`TowerShop`, `RoundStatusHeader`, `MapCanvas`), tug (`UnitShop`,
+`FortressBars`, `IncomeBar`, `LaneStrip`, `CounterMatrixPanel`), scaler
+(`ChallengeRow`, `CrystalRow`, `CumulativeRow`, `RuneRow`, `ChallengesPanel`,
+`PrestigePanel`, `RunesPanel`, `TranscendPanel`), looper (`HeaderBand`,
+`StatsPanel`, `AppTooltip`). It also appears in three `src/showcase/gallery/`
+files — outside the role map, but more evidence it's universal.
+
+**2. Buy-card** — twelve declarations, byte-identical, across two archetypes:
+
+```css
+text-align: left; background: var(--color-bg);
+border: 1px solid var(--color-border); border-radius: calc(var(--radius) * 0.75);
+padding: var(--gap-sm); display: flex; flex-direction: column; gap: 4px;
+cursor: pointer; font: inherit; color: inherit;
+transition: border-color 0.15s ease, background-color 0.15s ease;
+```
+
+`defender/TowerShop.vue:114` (`.tower-card`), `tug/UnitShop.vue:112`
+(`.unit-card`), `tug/IncomeBar.vue:157` (`.upgrade-tile`) — differing only in
+`gap` (4px/2px) and one `flex: 1 1 0`. Three sites, two archetypes, twelve
+declarations neither author varied.
+
+**Why the over-lumping worry is now retired.** Slice C's version was "everyone
+writes row CSS", which is a label, not a shape. This is a *specific string*, and
+the count came from an exact-match census rather than a judgment about
+similarity. N=4 is by consumer boundary and each of the four archetypes had at
+least two sites read; the 17-site list is grep-derived supporting detail, and
+five of those files (`MapCanvas`, `StatsPanel`, `ChallengesPanel`,
+`TranscendPanel`, `LaneStrip`) were not read in full — cited as census, not as
+judgment.
+
+Graduates as two selectors (a surface and a buy-card), not one.
+
+Rider for the dive, unchanged from slice C: scaler both adapts to
+`UpgradeCellData` *and* hand-rolls `CrystalRow`/`CumulativeRow` taking a raw
+`Purchasable` — the same archetype using the contract and bypassing it.
+
+### Blocking end-state overlay — N=2 (defender, tug)
+
+Both match archetypes reach **past `useModalStack`** to hand-roll a fixed-position
+overlay from reka-ui's `AlertDialog` primitives — the same six imports
+(`AlertDialogRoot/Portal/Overlay/Content/Title/Action`), the same structure, and
+CSS that is byte-identical for `__overlay` and `__restart` and differs in
+`__panel` only by `max-width` (420 vs 480) and one `text-align`.
+
+**They independently reasoned to the same rationale, and both wrote it down:**
+
+> *defender:* "AlertDialog (not Dialog): end-game is a blocking decision surface —
+> no ESC, no overlay-click dismiss. Player must click 'New game' to reset."
+>
+> *tug:* "AlertDialog (not Dialog): match-end is a blocking action — no ESC, no
+> overlay-click dismiss. Player must click 'Start next match' to proceed."
+
+**This is a modal-stack gap, not a preference.** `useModalStack` wraps reka's
+`Dialog`, which is dismissible by construction; neither author could express
+"blocking, no-dismiss" through it, so both bypassed it — while still consuming the
+modal *tokens* (`--modal-backdrop`, `--modal-surface`, `--modal-radius`,
+`--modal-padding`, `--modal-z-base`). They took the theme and rebuilt the
+behaviour, which is the exact inverse of § Costume over shared chrome.
+
+**The control case confirms it.** ambient's `WelcomeBackOverlay` *is* dismissible
+("click to dismiss") and goes through `useModalStack` happily. So the split isn't
+archetype taste — it's whether the surface must block. Two of two archetypes that
+needed blocking bypassed the stack; the one that didn't, didn't.
+
+Resolution the dive should weigh: an alert/blocking variant on `useModalStack`, or
+an `AlertDialog` sibling in `src/lib/` — the chrome is presentational and belongs
+there, with each archetype keeping its content.
+
+- **Sites:** `defender/ui/panels/EndGameOverlay.vue:1-60`,
+  `tug/ui/panels/MatchEndSummary.vue:1-89`; control:
+  `ambient/ui/panels/WelcomeBackOverlay.vue`.
 
 ### Read, not indexed
 
@@ -536,6 +643,33 @@ Recorded so the next reader doesn't re-propose them.
 The inverse of a recipe, so not indexed as one: nothing needs building, something
 needs adopting. Recorded because the sweep keeps surfacing them and they'd
 otherwise read as convergence.
+
+**The compositions are adopted by 2 of 9 archetypes** (slice D census). Renderer
+uptake: `ProducerList` → producer, scaler. `UpgradeGrid` → producer, scaler.
+`ResourceHeaderStrip` → scaler alone. `AchievementGrid` → ambient, producer. So
+`src/ui/compositions/` is, in practice, producer-and-scaler infrastructure that
+the other seven archetypes route around. That reframes the sweep's premise: the
+loop wasn't just unclosed, it was closed around two consumers.
+
+The declines split into two kinds, and only one is a problem:
+
+- **Reasoned declines** — the renderer genuinely doesn't fit, and the author said
+  so at the bypass. interlocker's `ResourceList` ("the strip's pill-chip model
+  doesn't fit a vertical sidebar — a tight table does") and its `BuildingsPanel`
+  ("`ProducerRowData` is single-resource"). These aren't adoption failures;
+  they're the composition's limits, correctly documented. ambient's
+  `AutoProducerList` is the same act *undocumented* — it hand-rolls the whole list
+  because the almanac costume (dotted leader lines, oldstyle numerals,
+  per-producer verbs, glyphs) won't fit `ProducerList`'s markup, but nothing says
+  so.
+- **Unaware declines** — the shared thing would have fit and wasn't reached for.
+  Below.
+
+**scaler hand-rolls reka tabs three times.** `ScalerAppRoot`, `BuildingsPanel`,
+and `UpgradesPanel` each wire raw `TabsRoot`/`TabsList`/`TabsTrigger`/`TabsContent`
+and repeat a byte-identical `__tab-trigger` CSS block — while
+`src/ui/components/Tabs.vue` exists and interlocker's `GameView` uses it. Three
+sites, one archetype, one import missed.
 
 **looper never adopted the scaffold — four gaps, one cause.**
 
@@ -630,11 +764,15 @@ Not sweep output; noted so it isn't lost.
   isn't a composable: no `use*` export, no Vue reactivity beyond reading refs.
   It's a module-layer accessor misfiled under `composables/`, and moving it (to
   `modules/` or `data/`) fixes the direction without touching behavior.
-- **Task IDs in comments, against comment hygiene.**
-  `interlocker/ui/composables/useJobs.ts:33` cites "OL-1056 umbrella" — a stale
-  ref from a different tracker than the org's Gitea `repo#N`; `tug/composables/useMatch.ts:11`
-  cites "leaf-4 contract". `/work/studio/CLAUDE.md` § Comment hygiene: no phase
-  names or task IDs in comments.
+- **Task IDs in comments, against comment hygiene** — four now, three of them
+  stale refs from a different tracker than the org's Gitea `repo#N`:
+  `interlocker/ui/composables/useJobs.ts:33` ("OL-1056 umbrella"),
+  `interlocker/ui/panels/BuildingsPanel.vue:20` ("OL-1060 triage discussion"),
+  `tug/ui/panels/IncomeBar.vue:36` ("OL-733's macro-vs-rush framing"), and
+  `tug/composables/useMatch.ts:11` ("leaf-4 contract").
+  `/work/studio/CLAUDE.md` § Comment hygiene: no phase names or task IDs in
+  comments. Worth fixing as a class — each one is a dangling pointer for the next
+  reader, since OL-* isn't resolvable from this org at all.
 - `interlocker/ui/composables/useBuildings.ts:79` hardcodes
   `const continuous = def.id === 'smelter'` with a "Generalize this flag when a
   second continuous building lands" comment — a graduation trigger with no
