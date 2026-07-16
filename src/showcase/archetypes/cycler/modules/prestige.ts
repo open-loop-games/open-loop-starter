@@ -3,41 +3,44 @@ import {
   integerRoot,
   persistent,
   withPersistentContext,
+  createResource,
+  addResource,
+  type DecimalSource,
+  type Resource,
   type EngineModule,
   type InjectionKey,
   type ComputedRef,
 } from '@open-loop/engine';
 import { computed } from 'vue';
 import { PRESTIGE_BALANCE, type PrestigeBalance } from '../data/prestige';
-import { UPGRADE_BALANCE, type UpgradeBalance } from '../data/upgrades';
 import { getCycle } from './cycle';
 import { getBuild } from './build';
 
 /**
  * Prestige (Merge) layer — the boundary that CLOSES the Cycler loop (see
- * `../IDENTITY.md` § Growth ports, `addPrestigeLayer`). The kernel already ends a
- * run at the burn crossing; this layer turns that ending into progress:
+ * `../IDENTITY.md` § Growth ports, `addPrestigeLayer`). The kernel ends a run at
+ * the burn crossing; this layer turns that ending into progress:
  *
- *   run-end (crossing) → PAYOUT (auto-bank sublinear currency) → buy REACH
- *   (raise permanent power, D_max ×ratio) → RE-PEG (W₀ = D_max/H, restart clock).
- *
- * It ORCHESTRATES existing wiring, it does not rebuild it: `build.raisePower()`
- * raises the permanent level L and `cycle.startRun()` re-pegs W₀ from the current
- * D_max. The +0-run-length-after-re-peg invariant is the kernel's (locked in
- * `sim/build.test.ts`); prestige is the sequence around it.
+ *   run-end (crossing) → PAYOUT (auto-bank sublinear currency) → the player buys
+ *   REACH from the upgrade catalog between runs → merge() RE-PEGS (W₀ = D_max/H,
+ *   restart the clock) for the next run.
  *
  * The Merge bell is a payout, NOT a fail state (Industry-Idle, not Thronefall):
  * the run ALWAYS pays out on the crossing, which is what lets the exogenous burn
  * guarantee termination without punishing the player.
  *
- * Two design decisions this layer commits (studio/open-loop-starter#7):
+ * Two design decisions this layer commits (studio/open-loop-starter#6, #7):
  *   1. Payout auto-banks on the `runState==='ended'` crossing; the player spends
  *      the banked currency between runs. (IDENTITY: run-end always pays out.)
- *   2. The BASE power purchase lives here — the minimal spend that closes the loop
- *      and lets reach climb (without it the prestige probe can't show D_max rising
- *      while run length stays flat). The later `addUpgrade` port generalizes to a
- *      CATALOG of permanents on this same wallet (adding the gated g-bender — the
- *      sole pacing lever); it does not re-own this base reach purchase.
+ *   2. Spending is OWNED BY THE UPGRADE CATALOG. `merge()` is re-peg-only — reach
+ *      is a freely-sold catalog permanent (`modules/upgrades.ts`), not a buy folded
+ *      into the Merge. (This supersedes the earlier "the base power buy lives in the
+ *      prestige layer" split, now that the wallet is an engine Resource the catalog
+ *      spends via `createCostRequirement`; see `data/prestige.ts` § Balance.)
+ *
+ * The wallet is an engine `Resource` — auto-persisted, registered for
+ * balance-workbench discovery, with a built-in `cumulative` tracker that IS
+ * `lifetimeFragments` (it accrues on payout and is untouched by spends).
  *
  * Currency shape (grounded in multiverse-hr `merge.ts`, studio/multiverse-hr#17):
  * a sublinear cube-root of run output, summed PER SOURCE (not pooled before the
@@ -50,9 +53,11 @@ import { getBuild } from './build';
  * sublinearly across merges as D_max climbs.
  */
 export interface PrestigeApi {
-  /** Spendable banked currency (Fragments). Rises on payout, falls on power buys. */
+  /** Spendable banked currency (Fragments), as a Decimal view. */
   fragments: ComputedRef<Decimal>;
-  /** Lifetime Fragments ever banked (never spent down) — the reach-climb signal. */
+  /** The Fragments engine Resource — the wallet the upgrade catalog spends. */
+  fragmentsResource: Resource<DecimalSource>;
+  /** Lifetime Fragments ever banked (the resource's `cumulative` tracker) — the reach-climb signal. */
   lifetimeFragments: ComputedRef<Decimal>;
   /** Run-long production accumulator ∫ capacity dt (primary source), reset per run. */
   runOutput: ComputedRef<Decimal>;
@@ -62,16 +67,13 @@ export interface PrestigeApi {
   pendingFragments: ComputedRef<Decimal>;
   /** Merges performed (prestige count). */
   mergeCount: ComputedRef<number>;
-  /** Cost of the next power level: mergeQuorum · powerUpgradeCostRatio^L. */
-  nextPowerCost: ComputedRef<Decimal>;
-  /** Whether the wallet can afford the next power level right now. */
-  canRaisePower: ComputedRef<boolean>;
   /** The sublinear payout for a given run output — the cbrt-per-source transform. */
   fragmentsFor(production: Decimal, endurance: Decimal): Decimal;
   /**
-   * The Merge: buy one power level if affordable (reach, not pacing), then re-peg
-   * (restart the run at the possibly-raised D_max). Returns whether power rose.
-   * A no-op that returns false unless the run has ended (the bell must ring first).
+   * The Merge bell → next run: re-peg (restart the run at the current D_max).
+   * Reach is bought separately from the upgrade catalog between runs; this only
+   * re-pegs. Returns whether it re-pegged (false unless the run has ended — the
+   * bell must ring first).
    */
   merge(): boolean;
 }
@@ -89,7 +91,6 @@ export function getPrestige(): PrestigeApi {
 
 export interface PrestigeModuleOptions {
   prestige?: PrestigeBalance;
-  upgrade?: UpgradeBalance;
 }
 
 /** The cbrt-per-source transform: ⌊∛(total/scale)⌋, floored via the engine's
@@ -100,9 +101,7 @@ function sublinear(total: Decimal, scale: number): Decimal {
 
 export function createPrestigeModule(options: PrestigeModuleOptions = {}): EngineModule {
   const data = options.prestige ?? PRESTIGE_BALANCE;
-  const upgrade = options.upgrade ?? UPGRADE_BALANCE;
-  const { fragmentScalePrimary, fragmentScaleSecondary, mergeQuorum } = data;
-  const { powerUpgradeCostRatio } = upgrade;
+  const { fragmentScalePrimary, fragmentScaleSecondary } = data;
 
   const fragmentsFor = (production: Decimal, endurance: Decimal): Decimal =>
     sublinear(production, fragmentScalePrimary).add(sublinear(endurance, fragmentScaleSecondary));
@@ -114,32 +113,23 @@ export function createPrestigeModule(options: PrestigeModuleOptions = {}): Engin
       // ended run (and, flipped, signals a fresh run needs its accumulators
       // zeroed) — so a save/reload mid-`ended` never re-banks. Accumulators are
       // run-scoped strings (the local Decimal-as-string pattern, cf. cycle.ts).
+      // `wallet` is the graduated Fragments Resource; its `cumulative` tracker is
+      // lifetimeFragments.
       const state = withPersistentContext('cycler/prestige', () => ({
-        fragmentsRaw: persistent<string>('0', { name: 'fragments' }),
-        lifetimeRaw: persistent<string>('0', { name: 'lifetime-fragments' }),
+        wallet: createResource<DecimalSource>(0, { displayName: 'fragments', precision: 0 }),
         outputRaw: persistent<string>('0', { name: 'run-output' }),
         enduranceRaw: persistent<string>('0', { name: 'run-endurance' }),
         banked: persistent<boolean>(false, { name: 'banked' }),
         mergeCountRaw: persistent<number>(0, { name: 'merge-count' }),
       }));
 
-      const fragments = computed(() => new Decimal(state.fragmentsRaw.value));
-      const lifetimeFragments = computed(() => new Decimal(state.lifetimeRaw.value));
+      const wallet = state.wallet;
+      const fragments = computed(() => new Decimal(wallet.value));
+      const lifetimeFragments = computed(() => new Decimal(wallet.cumulative?.value ?? 0));
       const runOutput = computed(() => new Decimal(state.outputRaw.value));
       const runEndurance = computed(() => new Decimal(state.enduranceRaw.value));
       const pendingFragments = computed(() => fragmentsFor(runOutput.value, runEndurance.value));
       const mergeCount = computed(() => state.mergeCountRaw.value);
-
-      // Next power level costs mergeQuorum · ratio^L — the quorum is the L=0 price
-      // (first competent run banks it, cf. multiverse-hr's first-merge anchor);
-      // the geometric ratio makes later levels save-across-runs. Power is REACH:
-      // under the peg raising D_max re-baselines W₀, so it buys zero run length.
-      const nextPowerCost = computed(() =>
-        new Decimal(mergeQuorum).mul(
-          Decimal.pow(powerUpgradeCostRatio, getBuild().powerLevel.value),
-        ),
-      );
-      const canRaisePower = computed(() => fragments.value.gte(nextPowerCost.value));
 
       // The run accumulators + auto-bank, driven by the live kernel. While a run
       // is live, integrate throughput (capacity) and pressure weathered (burn) in
@@ -166,9 +156,10 @@ export function createPrestigeModule(options: PrestigeModuleOptions = {}): Engin
             .add(cycle.burn.value.mul(dtMinutes))
             .toString();
         } else if (!state.banked.value) {
-          const payout = pendingFragments.value;
-          state.fragmentsRaw.value = fragments.value.add(payout).toString();
-          state.lifetimeRaw.value = lifetimeFragments.value.add(payout).toString();
+          // Auto-bank the payout. addResource grows the wallet (and, via its sync
+          // watch, the cumulative tracker == lifetimeFragments); spends never
+          // touch cumulative, so it stays exactly lifetime-banked.
+          addResource(wallet, pendingFragments.value);
           state.banked.value = true;
         }
       });
@@ -177,27 +168,20 @@ export function createPrestigeModule(options: PrestigeModuleOptions = {}): Engin
         const cycle = getCycle();
         const build = getBuild();
         if (cycle.runState.value !== 'ended') return false; // the bell must ring first
-        let raised = false;
-        if (fragments.value.gte(nextPowerCost.value)) {
-          state.fragmentsRaw.value = fragments.value.sub(nextPowerCost.value).toString();
-          build.raisePower(); // D_max ×ratio — reach, re-pegged below to +0 run length
-          raised = true;
-        }
         build.resetRun(); // clear placements; permanent level L survives
         cycle.startRun(); // re-peg W₀ = D_max/H, zero the clock (accumulators reset next tick)
         state.mergeCountRaw.value += 1;
-        return raised;
+        return true;
       };
 
       const api: PrestigeApi = {
         fragments,
+        fragmentsResource: wallet,
         lifetimeFragments,
         runOutput,
         runEndurance,
         pendingFragments,
         mergeCount,
-        nextPowerCost,
-        canRaisePower,
         fragmentsFor,
         merge,
       };

@@ -56,8 +56,11 @@ export const PRESTIGE_BALANCE: PrestigeBalance = {
 //   • The next power level costs mergeQuorum · powerUpgradeCostRatio^L
 //     (`data/upgrades.ts`): the quorum is the L=0 price (paid by the first run),
 //     the geometric ratio makes later levels save-across-runs (decelerating
-//     prestige). Power permanents buy REACH here, never run length — under the peg
+//     prestige). Power permanents buy REACH, never run length — under the peg
 //     raising D_max re-baselines W₀ (see `data/upgrades.ts`); only H and g
-//     (threat.ts) move pacing. The BASE power buy lives in the prestige layer (the
-//     minimal spend that closes the loop); the later `addUpgrade` port adds a
-//     CATALOG on this wallet, including the gated g-bender — the sole pace lever.
+//     (threat.ts) move pacing. SPENDING IS OWNED BY THE UPGRADE CATALOG
+//     (`modules/upgrades.ts`): the reach permanent is a freely-sold `Fragments`
+//     purchasable, and `merge()` is re-peg-only. (This supersedes the earlier
+//     "the base power buy lives in the prestige layer" split — folded into the
+//     catalog once the wallet graduated to an engine Resource, studio/open-loop-starter#6.)
+//     The `addUpgrade` port adds the gated g-bender to the same catalog — the sole pace lever.

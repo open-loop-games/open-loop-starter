@@ -29,10 +29,12 @@ import {
   BuildKey,
   BurnTierKey,
   PrestigeKey,
+  UpgradesKey,
   type CycleApi,
   type BuildApi,
   type BurnTierApi,
   type PrestigeApi,
+  type UpgradesApi,
   type CyclerModulesOptions,
 } from '../modules';
 
@@ -79,6 +81,13 @@ export function burnTier(): BurnTierApi {
 export function prestige(): PrestigeApi {
   const api = handle.engine.tryInject(PrestigeKey);
   if (!api) throw new Error('cycler/sim/harness: prestige module not installed');
+  return api;
+}
+
+/** The installed upgrades API (the permanent catalog) for the current engine. */
+export function upgrades(): UpgradesApi {
+  const api = handle.engine.tryInject(UpgradesKey);
+  if (!api) throw new Error('cycler/sim/harness: upgrades module not installed');
   return api;
 }
 

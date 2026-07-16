@@ -288,6 +288,31 @@ them is the recipe.
 - **Dive gate:** a THIRD *independent* autobuyer registry (not a backport of these
   two) is the real N=3. Parked as recipe until then, not promoted.
 
+### Prestige currency as Resource + purchasable catalog of permanents — N=2 (scaler, cycler)
+
+A prestige/meta currency modelled as an engine `createResource` (not a hand-rolled
+`persistent<string>`), spent by a `createPurchasableCategory` of permanents that
+carry across the prestige boundary. The convention: the currency's built-in
+`cumulative` tracker doubles as the lifetime-banked stat (adds on payout, untouched
+by spends), and the catalog's `createCostRequirement` auto-deducts, so no consumer
+hand-rolls affordability or the wallet. Close to engine-as-intended — indexed
+because two archetypes independently arrived at it *and diverge on the mechanics*,
+which is what the N=3 dive would reconcile.
+
+- **Instances (N=2):** scaler `modules/prestige.ts` (prestigePoints/prestigeShards
+  Resources; `createPurchasableCategory` of prestige-band upgrades; reset via
+  engine `createReset({ keep: [prestigePoints] })`), cycler `modules/upgrades.ts`
+  (Fragments Resource; catalog of reach + g-bender; **hand-rolled** reset via
+  `resetRun`/`startRun`, no engine `createReset`).
+- **Divergences to keep visible (for the N=3 dive):** (1) *cost source* — scaler's
+  leveled costs use `createScalingPurchasable` (own-amount geometric); cycler's
+  category entries read cost off *live external state* (reach: build power level;
+  g-bender: its own amount via a late-bound holder). (2) *reset* — scaler uses the
+  engine reset + `keep`; cycler hand-rolls the boundary, so "permanents survive"
+  isn't a `keep:[]` decision there. (3) *effect wiring* — scaler binds declarative
+  `grants` to rate chains; cycler's reach delegates to another module's imperative
+  action (`raisePower`) and the g-bender feeds the kernel's frozen schedule getter.
+
 ### Run-phase controller — N=2 (cycler, multiverse-hr)
 
 A run clock (`persistent` elapsed) + a `running`/`ended` lifecycle + a derived

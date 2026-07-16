@@ -17,7 +17,7 @@
 
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
-import { createCyclerModules, CycleKey, BuildKey, PrestigeKey } from '../modules';
+import { createCyclerModules, CycleKey, BuildKey, PrestigeKey, UpgradesKey } from '../modules';
 import { BUILD_BALANCE } from '../data/build';
 import { THREAT_BALANCE } from '../data/threat';
 import { PRESTIGE_BALANCE } from '../data/prestige';
@@ -64,9 +64,10 @@ function bootStack() {
   const cycle = handle.engine.tryInject(CycleKey);
   const build = handle.engine.tryInject(BuildKey);
   const prestige = handle.engine.tryInject(PrestigeKey);
-  if (!cycle || !build || !prestige)
+  const upgrades = handle.engine.tryInject(UpgradesKey);
+  if (!cycle || !build || !prestige || !upgrades)
     throw new Error('prestige-probe: cycler stack did not install');
-  return { handle, cycle, build, prestige };
+  return { handle, cycle, build, prestige, upgrades };
 }
 
 // ─── Probe 1 — the payout realizes the closed-form sublinear currency ──────────
@@ -106,7 +107,7 @@ async function probePayout(): Promise<void> {
 
 async function probeArc(): Promise<void> {
   HEAD('Probe 2 — reach climbs & currency banks while run length holds at N*');
-  const { handle, cycle, build, prestige } = bootStack();
+  const { handle, cycle, build, prestige, upgrades } = bootStack();
   const target = N();
   console.log(`  authored N* = ${fmt(target)} (must hold every run — the peg)`);
   console.log(
@@ -130,8 +131,12 @@ async function probeArc(): Promise<void> {
     const len = cycle.endedAtMinutes.value ?? Number.NaN;
     const drift = ((len - target) / target) * 100;
     maxDrift = Math.max(maxDrift, Math.abs(drift));
+    // Reach is a catalog buy now: buy the reach permanent when affordable, then
+    // merge() re-pegs for the next run. Power still climbs — through the catalog.
     const before = build.powerLevel.value;
-    const raised = prestige.merge();
+    if (upgrades.reach.canPurchase.value) upgrades.reach.purchase();
+    prestige.merge();
+    const raised = build.powerLevel.value > before;
     const event = raised
       ? `⇒ Merge: L ${before}→${build.powerLevel.value}, D_max→${Math.round(dMax(build.powerLevel.value)).toLocaleString()}`
       : '';

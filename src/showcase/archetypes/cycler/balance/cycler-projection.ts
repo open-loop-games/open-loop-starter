@@ -45,6 +45,10 @@ const Sp = PRESTIGE_BALANCE.fragmentScalePrimary;
 const Ss = PRESTIGE_BALANCE.fragmentScaleSecondary;
 const quorum = PRESTIGE_BALANCE.mergeQuorum;
 const costRatio = UPGRADE_BALANCE.powerUpgradeCostRatio;
+const gBendRatio = UPGRADE_BALANCE.gBendRatio;
+const gBendBaseCost = UPGRADE_BALANCE.gBendBaseCost;
+const gBendCostRatio = UPGRADE_BALANCE.gBendCostRatio;
+const gBendGateStep = UPGRADE_BALANCE.gBendGateStep;
 
 // ─── The spine, closed-form ───
 
@@ -170,9 +174,10 @@ function printDecoupling(): void {
       col(`+${fmt(dbl - base)}`, 8) +
       'reach / currency, NOT time',
   );
-  const gBend = setup + Tg * 1.15 * (Math.log(H) / Math.log(g)); // slower escalation (T_g ×1.15)
+  const gEff1 = 1 + (g - 1) * gBendRatio; // g-bender level 1 (§ printGBender)
+  const gBend = setup + Tg * (Math.log(H) / Math.log(gEff1));
   console.log(
-    col(`  slower escalation (g pace lever)`, 34) +
+    col(`  g-bender L=1 (g ${g}→${gEff1.toFixed(2)})`, 34) +
       col(fmt(gBend), 8) +
       col(`+${fmt(gBend - base)}`, 8) +
       'run length — the pace lever',
@@ -313,6 +318,49 @@ function printBurnTiers(): void {
   console.log(`  only CROSSING a tier — under the reach gate — moves it.`);
 }
 
+/**
+ * The g-bender (addUpgrade): the sole pace lever. Lowers the operative g toward
+ * the g=1 asymptote (g_eff = 1 + (g−1)·r_bend^L_bend), lengthening every run —
+ * the mirror of the burn-tier ladder. Reach-gated so pace can't run from power.
+ */
+function printGBender(): void {
+  console.log(`\n═══ The g-bender — the sole pace lever (lowers g toward the g=1 asymptote) ═══`);
+  console.log(
+    `  Shared peg: H=${H}, τ_setup=${fmt(setup)}, base g=${g}, T_g=${fmt(Tg)}; r_bend=${gBendRatio}`,
+  );
+  console.log(
+    col('  L_bend', 9) +
+      col('g_eff', 8) +
+      col('N* = τ+T_g·log_{g_eff}(H)', 28) +
+      col('ΔN* vs base', 13) +
+      col('cost (frag)', 13) +
+      'reach gate L≥',
+  );
+  const baseN = setup + Tg * (Math.log(H) / Math.log(g));
+  for (let Lb = 0; Lb <= 4; Lb++) {
+    const gEff = 1 + (g - 1) * Math.pow(gBendRatio, Lb);
+    const n = setup + Tg * (Math.log(H) / Math.log(gEff));
+    // Cost to REACH level Lb (buy the Lb-th level, from Lb-1): base·ratio^(Lb-1).
+    const cost = Lb === 0 ? null : gBendBaseCost * Math.pow(gBendCostRatio, Lb - 1);
+    const gate = Lb * gBendGateStep;
+    console.log(
+      col(`  ${Lb}`, 9) +
+        col(gEff.toFixed(2), 8) +
+        col(fmt(n), 28) +
+        col(Lb === 0 ? '—' : `+${fmt(n - baseN)}`, 13) +
+        col(cost === null ? '—' : `${cost}`, 13) +
+        (Lb === 0 ? '—' : `${gate}`),
+    );
+  }
+  console.log(
+    `  Each level moves g_eff a fixed fraction (r_bend=${gBendRatio}) of the remaining distance to 1 —`,
+  );
+  console.log(`  diminishing (half-life-like), never crossing g=1 (termination stays guaranteed).`);
+  console.log(
+    `  It LENGTHENS the run (unlike reach, which re-pegs to +0); gated on reach so pace tracks power.`,
+  );
+}
+
 function main(): void {
   console.log('Cycler — closed-form balance projection (pegged-saturation spine)');
   printPegged();
@@ -320,6 +368,7 @@ function main(): void {
   printArc();
   printDecoupling();
   printBurnTiers();
+  printGBender();
   printCurrency();
   printPrestigeArc();
   console.log(`\n═══ Headroom sweep — pick H for a target run length ═══`);
