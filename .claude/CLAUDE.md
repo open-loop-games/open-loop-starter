@@ -2,7 +2,7 @@
 
 open-loop-starter — quick-copy scaffold for prototyping games on `open-loop-engine`. Games fork from here.
 
-**Stack:** Vue 3 + TypeScript + Vite + reka-ui + open-loop-engine + break_eternity.js
+**Stack:** Vue 3 + TypeScript + Vite + reka-ui + `@open-loop/engine` + break_eternity.js
 
 ## Purpose
 
@@ -32,7 +32,7 @@ Because the eject test is deleted with the machinery, there is no self-checking 
 
 **Manual post-fork steps eject leaves to judgment:** rewrite `.claude/CLAUDE.md` from the starter's dual-character framing to your game (eject leaves it verbatim — a `--name` stub would lose too much); regenerate `src/game/overview.md` + `domain-map.md` (`pnpm domain-map`) once you've reshaped `src/game/data`. (`.claude/CLAUDE.local.md` is gitignored and doesn't travel; the fork inherits the studio-root `gitea-tasks` MCP config once its own `.mcp.json` is removed, which eject does.)
 
-The demo surface lives behind one strip boundary — everything under `src/showcase/` (archetypes, gallery, about, sandbox). The scaffold (`src/lib`, `src/ui`, `src/composables`, `src/modules`, `src/balance`, `src/styles`) never imports across that boundary; an eslint rule enforces the one-way cut so the ejected game can't break. The `_blank` skeleton lives under the boundary too — an underscore-prefixed authoring surface the gallery and the archetype list both filter out.
+The demo surface lives behind one strip boundary — everything under `src/showcase/` (archetypes, gallery, about, sandbox). The scaffold never imports across that boundary; an eslint rule enforces the one-way cut so the ejected game can't break (`eslint.config.js` holds the covered paths). The `_blank` skeleton lives under the boundary too — an underscore-prefixed authoring surface the gallery and the archetype list both filter out.
 
 ## Commands
 
@@ -41,7 +41,7 @@ pnpm dev              # Vite dev server
 pnpm build            # vue-tsc -b && vite build
 pnpm typecheck        # vue-tsc -b
 pnpm preview          # Preview production build
-pnpm test             # Vitest run (covers src/lib/ primitives)
+pnpm test             # Vitest run
 pnpm test:watch       # Vitest watch mode
 pnpm lint             # eslint src/
 pnpm format           # prettier --write
@@ -51,41 +51,21 @@ pnpm format           # prettier --write
 
 ```
 src/
-├── main.ts              # Gallery boot; `pnpm eject` rewrites it to a single createApp().mount()
-├── types.ts             # Shared starter types (ArchetypeManifest — gallery contract)
-├── showcase/            # ← STRIP BOUNDARY. `pnpm eject` deletes this whole tree.
-│   ├── archetypes/      # Self-bootable archetype demos (see § Archetype convention)
-│   │   ├── producer/
-│   │   ├── looper/
-│   │   ├── scaler/
-│   │   └── …            # one directory per canonical + candidate archetype
-│   ├── gallery/         # Landing surface — enumerates archetypes via import.meta.glob
-│   ├── about/           # About panel content
-│   └── sandbox/         # SandboxWrapper — mounts/unmounts a demo for the gallery
-├── lib/                 # Scaffold layout/theme layer
-│   ├── shells/          # 5 layout shells validated by the 42-game spray
-│   ├── frame/           # AppFrame: header + shell + modal stack + toasts + theme
-│   ├── modal/           # useModalStack composable + ModalStack mount (reka-ui Dialog)
-│   ├── dev/             # DevPanelOverlay — presentational fullscreen dev surface
-│   ├── styles/          # tokens.css (default CSS custom properties) + reset.css
-│   └── index.ts         # Barrel — import via '@/lib'
-├── modules/             # Shared-base modules used by every archetype
-│   ├── index.ts         # sharedBase = [settingsModule, uiPrefsModule]
-│   ├── settings.ts      # Settings module (theme, notation, autosave)
-│   └── ui-prefs.ts      # Player-pref refs (theme, notation, autosave cadence)
-├── composables/         # Starter-level Vue composables — bridge shared-base refs to UI
-│                          useGame, useSave, useSettings, useTheme, useToasts,
-│                          useSlots, useNotation, useFormatting, useAutomation,
-│                          useSaveEvents
-├── styles/
-│   ├── base.css             # Consumer theme — fills in --color-*, --gap-*, etc.
-│   └── theme-widgets.css    # Widget-specific theme (progress, tooltip, popover, panel)
-└── ui/
-    ├── screens/         # Cross-archetype screens (SlotScreen)
-    ├── panels/          # Cross-archetype panels (BalanceWorkbench)
-    └── components/      # Shared primitives (Tooltip, ProgressBar, BaseModal, Tabs, …)
-                         # Archetype-specific SFCs live under src/showcase/archetypes/<name>/ui/
+├── main.ts        # Gallery boot. `pnpm eject` rewrites it to a single-game mount.
+├── boot.ts        # bootEngine / bootApp — the supported way to wire an engine + app. Archetype boot.ts files flow through these.
+├── types.ts       # Shared starter types (the gallery contract).
+├── showcase/      # ← STRIP BOUNDARY. `pnpm eject` deletes this whole tree. Archetype demos, gallery, about, sandbox.
+├── lib/           # Scaffold layout/theme layer. Presentational — no engine imports (eslint-enforced). Import via '@/lib'.
+├── ui/            # Engine-bridged UI — screens, panels, components, compositions. Archetype-specific SFCs live with their archetype, not here.
+├── composables/   # Starter-level composables — bridge shared-base state to UI.
+├── modules/       # The shared-base engine modules every archetype boots.
+├── directives/    # Shared Vue directives.
+├── balance/       # Cross-archetype balance toolkit over the engine harness. Per-archetype balance/ lives with the archetype.
+├── styles/        # Scaffold theme layered over lib's token defaults.
+└── test/          # Scaffold-level test primitives. Game-agnostic; survives eject.
 ```
+
+Directory roles, not inventories — the directory is the list. `src/ui/components/**` is auto-registered globally (`unplugin-vue-components`), so components resolve in templates without an import.
 
 ### Archetype convention
 
@@ -123,8 +103,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 
 ### Key Patterns
 
-- **Engine singleton** — created once in `main.ts`, HMR-invalidated, shared via `provide('engine')`
-- **Mod extension point** — `src/modules/mods/` mirrors the idle-loops-ng pattern for vanilla-plus-mods games
+- **Engine singleton** — created once via `bootEngine` (`src/boot.ts`), HMR-invalidated, shared via `provide('engine')`. `bootEngine` prepends `sharedBase` to every mod, so archetypes never assemble the base themselves.
 - **Slot-based shells** — `src/lib/shells/*` never prescribe content; games fill slots
 - **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the default token values (palette, spacing, radius, shell/modal/widget knobs); `src/styles/` provides the scaffold theme and widget-level selectors on top
 
@@ -153,8 +132,8 @@ Rules that apply inside `src/lib/`, and that forks should carry forward by defau
 
 1. **Styling: CSS custom properties only.** No Tailwind, no shadcn-vue. Theme by variable override.
 2. **Behavioral primitives via reka-ui.** a11y, focus trap, portal, positioning come from reka-ui. `src/lib/` layers classes and custom-property defaults on top; it never reimplements the behavior.
-3. **Presentational only.** No engine imports. `src/ui/` owns engine bridging.
-4. **What lives here.** Shells (5 validated layout patterns), AppFrame (header + shell + modal + theme glue), `useModalStack` + `ModalStack`, `DevPanelOverlay` (fullscreen dev surface), `styles/tokens.css`, `styles/reset.css`. Widget components — PanelLayout, Tooltip, Popover, ProgressBar, and future additions — live in `src/ui/components/` alongside game components, not here. The cut line: `src/lib/` owns layout and cross-cutting surfaces (modals, theme root); concrete widgets are scaffold components forks adapt in place.
+3. **Presentational only.** No engine imports — enforced in `eslint.config.js`, not by convention. `src/ui/` owns engine bridging.
+4. **What lives here.** The cut line: `src/lib/` owns layout and cross-cutting surfaces (shells, frame, modals, theme root); concrete widgets are scaffold components that live in `src/ui/components/` alongside game components, for forks to adapt in place. Decide membership by the cut line — what happens to sit here today is an outcome, not the rule.
 
 Extraction to a real shared library is deferred until multiple independent game UI passes converge on the same shape. Don't pre-extract against a single consumer.
 
@@ -162,7 +141,7 @@ Extraction to a real shared library is deferred until multiple independent game 
 
 `src/lib/dev/DevPanelOverlay.vue` is a presentational fullscreen overlay (toolbar + content slot, ESC to close). It ships unmounted — base starter does not wire a dev panel into `App.vue`. Forks opt in by mounting it themselves, gated by their own dev flag.
 
-`src/ui/panels/BalanceWorkbench.vue` is the canonical content screen: a picker + perturbation form + delta table wired through `useBalanceWorkbench` onto `open-loop-engine/harness`. It's engine-aware and lives in the engine-bridged `src/ui/` layer.
+`src/ui/panels/BalanceWorkbench.vue` is the canonical content screen: a picker + perturbation form + delta table wired through `useBalanceWorkbench` onto `@open-loop/engine/harness`. It's engine-aware and lives in the engine-bridged `src/ui/` layer.
 
 Typical fork wiring in `App.vue`:
 
@@ -198,11 +177,11 @@ const showDevPanel = ref(false);
 - CSS variables: one flat namespace. Palette (`--color-*`, `--gap-*`, `--radius-*`, `--font-*`) and scaffold knobs (`--shell-*`, `--modal-*`, `--panel-*`, `--tooltip-*`, `--popover-*`, `--progress-bar-*`) all live in `src/lib/styles/tokens.css`.
 
 **Rules:**
-- All game quantities use `Decimal` from `open-loop-engine` (engine re-exports `break_eternity`; consumers reach for the engine import, not the upstream package).
+- All game quantities use `Decimal` from `@open-loop/engine` (engine re-exports `break_eternity`; consumers reach for the engine import, not the upstream package).
 - Declare engine state inside `withPersistentContext(id, () => ({ ... }))` in `install(ctx)` — or use bare `persistent()` calls when the module context is already active (the engine wraps `install()` in its own `withPersistentContext`).
 - Archetype `data/` is pure config — typed defs and balance constants only; modules read data at construction via factory closure.
 - Archetype data lives inline in `data/*.ts` with the skeleton + balance lens as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`) — no parallel `vars/` layer, no codegen round-trips.
-- Each archetype carries a `domain-map.config.mjs` + generated `domain-map.md` — a per-game map of its own domain language (vocabulary + is-a + reference graph) sourced from the `data/` types by the engine's `ol-domain-map` tool. Regenerate all seven with `pnpm domain-map`. This is a read-only research surface (like `overview.md`): generated FROM the types, never feeding back IN — so it's drift-proof, not a codegen round-trip. Edit the config (suffixes, nouns, curated disambiguators), never the `.md`. Each committed map doubles as a forkable best-practice example.
+- Each archetype carries a `domain-map.config.mjs` + generated `domain-map.md` — a per-game map of its own domain language (vocabulary + is-a + reference graph) sourced from the `data/` types by the engine's `ol-domain-map` tool. Regenerate with `pnpm domain-map`. This is a read-only research surface (like `overview.md`): generated FROM the types, never feeding back IN — so it's drift-proof, not a codegen round-trip. Edit the config (suffixes, nouns, curated disambiguators), never the `.md`. Each committed map doubles as a forkable best-practice example.
 - Game-specific content lives under `src/showcase/archetypes/<name>/`; cross-archetype `src/modules/` and `src/ui/` stay archetype-agnostic.
 - Layering inside each archetype runs `data → modules → composables → ui`.
 - Layout uses `src/lib/` shells and AppFrame; `src/lib/` is presentational, with engine bridging in `src/ui/`.
@@ -210,10 +189,10 @@ const showDevPanel = ref(false);
 - Public component props and composable APIs are typed explicitly.
 - Shells are slot-based — content fills slots, the shell doesn't prescribe.
 - Every clickable element imports `Button` from `@/ui/components/Button.vue` — the shared component wraps reka-ui Primitive with `v-hold-repeat` and centralizes disabled-suppression.
-- `src/lib/` test surface uses Vitest + @vue/test-utils + jsdom.
+- Component and composable tests use Vitest + @vue/test-utils + jsdom.
 - Visual behavior runs in CSS first; JS is for state and interaction only.
 - Focus, portal, and a11y come from reka-ui primitives.
-- Shell additions to `src/lib/` cite the layout-spray research; the 42-game spray established the 5-shell set, and 2×2 quadrant shells have zero prior art.
+- Shell additions to `src/lib/` cite the layout-spray research (§ Research Inputs) — the shell set is a research finding, not a preference.
 
 ## Path Aliases
 
@@ -224,13 +203,11 @@ const showDevPanel = ref(false);
 
 ## Peer Setup
 
-`open-loop-engine` is consumed as a `link:` dep pointing at the sibling directory. Changes propagate immediately via HMR.
-
-- `open-loop-engine` at `/work/studio/open-loop-engine`
+`@open-loop/engine` is a workspace dep resolved to the sibling checkout at `/work/studio/open-loop-engine` — the version range in `package.json` is superseded by the `workspace:*` override in the studio-root `pnpm-workspace.yaml`, so don't read it as a published-version pin. Changes propagate immediately via HMR.
 
 ## Research Inputs
 
-- `/work/studio/open-loop-research/practical/ui-ux/layout-spray-2026-04.md` — 42-game spray that validated the 5-shell set and killed the 2×2 idea. Primary reference for shell design.
+- `/work/studio/open-loop-research/practical/ui-ux/layout-spray-2026-04.md` — the layout spray that validated the shell set and killed the 2×2 quadrant idea. Primary reference for shell design; read it before adding or reshaping a shell.
 - `/work/studio/open-loop-research/practical/ui-ux/game-layout-patterns.md` — deep dives on Cookie Clicker, Progress Knight, Kittens Game.
 
 <!-- Private, gitignored per-repo notes (replaces auto-memory). Resolves to .claude/CLAUDE.local.md. -->
