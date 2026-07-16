@@ -1,13 +1,17 @@
+<!--
+  InterlockerAppRoot — routing + app chrome only (runs pre-`engine.start()`), so
+  it reads no engine module state. The colony lives in `<InterlockerGameView>`,
+  mounted under the post-start frame. See `.claude/rules/app-root-discipline.md`.
+-->
 <script setup lang="ts">
 import { ref } from 'vue';
-import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
+import { DevPanelOverlay } from '@/lib';
 import { Screen } from '@/types';
 import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 import InterlockerGameView from './InterlockerGameView.vue';
 
@@ -15,8 +19,6 @@ const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = us
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-
-const stack = useModalStack();
 </script>
 
 <template>
@@ -26,31 +28,10 @@ const stack = useModalStack();
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
+  <InterlockerGameView
     v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
-    <template #header>
-      <SystemHeader
-        :app-name="manifest.name"
-        @return-to-slots="returnToSlots"
-      >
-        <template #about>
-          <h4 style="margin-bottom: 6px">
-            Interlocker — Kittens
-          </h4>
-          <p>
-            Build catnip fields to feed your kittens, assign them to jobs to harvest wood, minerals,
-            and science, then research up to architecture and craft your first megalith. The graph
-            is wide and the pressure is the same Kittens players know — every kitten assigned away
-            from farming trades against the catnip rate that keeps the colony alive.
-          </p>
-        </template>
-      </SystemHeader>
-    </template>
-    <InterlockerGameView />
-  </AppFrame>
+    @return="returnToSlots"
+  />
   <ToastContainer />
   <DevDiagnostics
     v-if="isDev"

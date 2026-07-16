@@ -1,23 +1,23 @@
+<!--
+  TugAppRoot — routing + app chrome only (runs pre-`engine.start()`, on the slot
+  screen), so it reads no engine module state. The match lives in
+  `<TugGameView>`, mounted under the post-start frame. The `onLoaded` seam below
+  is the one legitimate root-side post-start hook (offline catch-up +
+  auto-starting a match); see `.claude/rules/app-root-discipline.md`.
+-->
 <script setup lang="ts">
 import { ref } from 'vue';
 import { processOfflineTime } from '@open-loop/engine';
-import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
+import { DevPanelOverlay } from '@/lib';
 import { Screen } from '@/types';
 import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 import { MatchKey } from '../modules';
-import TugFrameLayout from './TugFrameLayout.vue';
-import LaneStrip from './panels/LaneStrip.vue';
-import UnitShop from './panels/UnitShop.vue';
-import FortressBars from './panels/FortressBars.vue';
-import IncomeBar from './panels/IncomeBar.vue';
-import CounterMatrixPanel from './panels/CounterMatrixPanel.vue';
-import MatchEndSummary from './panels/MatchEndSummary.vue';
+import TugGameView from './TugGameView.vue';
 
 const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
   onLoaded: (result) => {
@@ -35,8 +35,6 @@ const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = us
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-
-const stack = useModalStack();
 </script>
 
 <template>
@@ -46,52 +44,15 @@ const stack = useModalStack();
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
+  <TugGameView
     v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
-    <template #header>
-      <SystemHeader
-        app-name="Tug — SciFi Armada"
-        @return-to-slots="returnToSlots"
-      >
-        <template #about>
-          <h4 style="margin-bottom: 6px">
-            Tug — SciFi Armada
-          </h4>
-          <p>
-            Spend minerals to send units down the lane. Counter the AI's composition by picking
-            archetypes that beat its dominant unit. Reduce the enemy fortress to zero before yours
-            falls — or before the timer runs out.
-          </p>
-        </template>
-      </SystemHeader>
-    </template>
-    <TugFrameLayout>
-      <template #lane>
-        <LaneStrip />
-      </template>
-      <template #shop>
-        <UnitShop side="player" />
-      </template>
-      <template #matrix>
-        <CounterMatrixPanel />
-      </template>
-      <template #income>
-        <IncomeBar />
-      </template>
-      <template #stats>
-        <FortressBars />
-      </template>
-    </TugFrameLayout>
-  </AppFrame>
+    @return="returnToSlots"
+  />
   <ToastContainer />
   <DevDiagnostics
     v-if="isDev"
     v-model:workbench-open="showDevPanel"
   />
-  <MatchEndSummary v-if="currentScreen === Screen.Game" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"

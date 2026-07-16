@@ -1,10 +1,8 @@
 <!--
-  Master autobuyer kill-switch button (ambient: "Tending"). Standalone
-  component so the useAutobuyers() inject runs inside a child of the
-  v-else AppFrame — i.e., after engine.start() has installed the
-  autobuyer registry module. Mounting it under AmbientAppRoot's
-  <script setup> would fire the inject before slot-pick runs
-  engine.start().
+  Master autobuyer kill-switch button (ambient: "Tending"). A header action that
+  reads module state (`useAutobuyers`), so it's its own component under the game
+  view — every module read lives below the post-start frame.
+  See `.claude/rules/app-root-discipline.md`.
 -->
 <script setup lang="ts">
 import Button from '@/ui/components/Button.vue';

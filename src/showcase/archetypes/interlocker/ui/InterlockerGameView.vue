@@ -1,13 +1,16 @@
 <!--
-  InterlockerGameView — the in-game shell: persistent resource column, the canon
-  tab bar (Bonfire / Small Town / Science / Workshop), and the right-rail event
-  log. Lives in its own component so it mounts only after a game starts, when
-  the engine modules (getBuildings etc.) are installed.
+  InterlockerGameView — the in-game view: the app frame + header, a persistent
+  resource column, the canon tab bar (Bonfire / Small Town / Science / Workshop),
+  and the right-rail event log. Interlocker's game-view boundary — it mounts
+  under the root's post-start `v-else`, so the module getters (getBuildings etc.)
+  resolve here. See `.claude/rules/app-root-discipline.md`.
 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { ThreePanelShell } from '@/lib';
+import { AppFrame, ThreePanelShell, useModalStack } from '@/lib';
+import SystemHeader from '@/ui/components/SystemHeader.vue';
 import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
+import { manifest } from '../manifest';
 import { getBuildings, getAutomation } from '../modules';
 import { useLogFeed } from './composables';
 import ResourceSidebar from './panels/ResourceSidebar.vue';
@@ -18,6 +21,10 @@ import SciencePanel from './panels/SciencePanel.vue';
 import AutomationPanel from './panels/AutomationPanel.vue';
 import LogPanel from './panels/LogPanel.vue';
 import CalendarHeader from './components/CalendarHeader.vue';
+
+const emit = defineEmits<{ return: [] }>();
+
+const stack = useModalStack();
 
 const buildings = getBuildings();
 const automation = getAutomation();
@@ -43,36 +50,59 @@ const activeTab = ref('bonfire');
 </script>
 
 <template>
-  <ThreePanelShell
-    left-width="220px"
-    right-width="260px"
+  <AppFrame
+    :stack="stack"
+    :tooltip-delay="400"
   >
-    <template #left>
-      <ResourceSidebar />
+    <template #header>
+      <SystemHeader
+        :app-name="manifest.name"
+        @return-to-slots="emit('return')"
+      >
+        <template #about>
+          <h4 style="margin-bottom: 6px">
+            Interlocker — Kittens
+          </h4>
+          <p>
+            Build catnip fields to feed your kittens, assign them to jobs to harvest wood, minerals,
+            and science, then research up to architecture and craft your first megalith. The graph
+            is wide and the pressure is the same Kittens players know — every kitten assigned away
+            from farming trades against the catnip rate that keeps the colony alive.
+          </p>
+        </template>
+      </SystemHeader>
     </template>
-    <Tabs
-      v-model="activeTab"
-      :items="tabs"
+    <ThreePanelShell
+      left-width="220px"
+      right-width="260px"
     >
-      <template #panel-bonfire>
-        <BuildingsPanel />
+      <template #left>
+        <ResourceSidebar />
       </template>
-      <template #panel-town>
-        <JobAssignmentPanel />
+      <Tabs
+        v-model="activeTab"
+        :items="tabs"
+      >
+        <template #panel-bonfire>
+          <BuildingsPanel />
+        </template>
+        <template #panel-town>
+          <JobAssignmentPanel />
+        </template>
+        <template #panel-science>
+          <SciencePanel />
+        </template>
+        <template #panel-workshop>
+          <CraftsPanel />
+        </template>
+        <template #panel-automation>
+          <AutomationPanel />
+        </template>
+      </Tabs>
+      <template #right>
+        <CalendarHeader />
+        <LogPanel />
       </template>
-      <template #panel-science>
-        <SciencePanel />
-      </template>
-      <template #panel-workshop>
-        <CraftsPanel />
-      </template>
-      <template #panel-automation>
-        <AutomationPanel />
-      </template>
-    </Tabs>
-    <template #right>
-      <CalendarHeader />
-      <LogPanel />
-    </template>
-  </ThreePanelShell>
+    </ThreePanelShell>
+  </AppFrame>
 </template>

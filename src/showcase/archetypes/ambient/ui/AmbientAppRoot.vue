@@ -1,24 +1,25 @@
+<!--
+  AmbientAppRoot — routing + app chrome only (runs pre-`engine.start()`), so it
+  reads no engine module state in setup. The almanac lives in
+  `<AmbientGameView>`, mounted under the post-start frame. The one post-start
+  read here is `useGameSession`'s `onLoaded` resume seam (offline catch-up +
+  welcome-back), which runs after `start()`. See
+  `.claude/rules/app-root-discipline.md`.
+-->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, provide, ref } from 'vue';
 import { Decimal, processOfflineTime } from '@open-loop/engine';
-import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
+import { DevPanelOverlay, modalStackKey, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import SystemHeader from '@/ui/components/SystemHeader.vue';
-import Button from '@/ui/components/Button.vue';
 import { manifest } from '../manifest';
 import { SessionClockKey, getPrimaryResource, getUnlocks } from '../modules';
-import IdleScenePanel from './panels/IdleScenePanel.vue';
-import AutoProducerList from './panels/AutoProducerList.vue';
-import UnlockTray from './panels/UnlockTray.vue';
 import WelcomeBackOverlay from './panels/WelcomeBackOverlay.vue';
-import AchievementGridDialog from './components/AchievementGridDialog.vue';
-import AutobuyerToggles from './components/AutobuyerToggles.vue';
-import AutobuyerMasterButton from './components/AutobuyerMasterButton.vue';
+import AmbientGameView from './AmbientGameView.vue';
 import './ambient-theme.css';
 
 const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
@@ -85,10 +86,10 @@ onUnmounted(() => {
   delete document.body.dataset.archetype;
 });
 
+// Owned here (the resume/welcome-back seam below pushes into it) and shared
+// with AmbientGameView's AppFrame + almanac action via provide/inject.
 const stack = useModalStack();
-function openAchievements(): void {
-  const id = stack.push(AchievementGridDialog, { onClose: () => stack.remove(id) });
-}
+provide(modalStackKey, stack);
 
 const WELCOME_BACK_MIN_GAP_SEC = 60;
 const WELCOME_BACK_UNLOCK_ID = 'returns-welcomed';
@@ -101,15 +102,6 @@ function maybeShowWelcomeBack(gapSec: number, sproutDelta: Decimal): void {
     onClose: () => stack.remove(id),
   });
 }
-
-// Almanac (achievement-grid) is gated by the `garden-almanac` UI-affordance
-// unlock. Reads through the module-scope getter — the unlocks category is
-// only populated after engine.start(), and Screen.Game is the gate that
-// guarantees that's run.
-const almanacUnlocked = computed(() => {
-  if (currentScreen.value !== Screen.Game) return false;
-  return getUnlocks().getPurchasable('garden-almanac')?.active.value === true;
-});
 </script>
 
 <template>
@@ -119,57 +111,10 @@ const almanacUnlocked = computed(() => {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
+  <AmbientGameView
     v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
-    <template #header>
-      <SystemHeader @return-to-slots="returnToSlots">
-        <template #title>
-          <Button
-            class="almanac-title"
-            data-testid="return-to-slots"
-            title="Save and return to save picker"
-            @click="returnToSlots"
-          >
-            <span class="almanac-title__eyebrow">An Almanac of</span>
-            <span class="almanac-title__name">Cozy Farm</span>
-            <span class="almanac-title__sub">vol. i &middot; printed at home, kept by the sill</span>
-          </Button>
-        </template>
-        <template #about>
-          <div class="almanac-info">
-            <h4 class="almanac-info__title">
-              A Quiet Garden
-            </h4>
-            <p>
-              The garden grows on its own. Open it once in the morning, glance at it while a pot
-              boils. Nothing expires. Nothing is about to be overrun. Sprouts pile up whether you
-              are watching or not.
-            </p>
-          </div>
-        </template>
-        <template #extra-actions>
-          <AutobuyerMasterButton />
-          <Button
-            v-if="almanacUnlocked"
-            class="btn-sm"
-            data-testid="open-achievements"
-            @click="openAchievements"
-          >
-            Almanac
-          </Button>
-        </template>
-      </SystemHeader>
-    </template>
-    <SingleColumnShell max-width="720px">
-      <IdleScenePanel />
-      <AutoProducerList />
-      <AutobuyerToggles />
-      <UnlockTray />
-    </SingleColumnShell>
-  </AppFrame>
+    @return="returnToSlots"
+  />
   <ToastContainer />
   <DevDiagnostics
     v-if="isDev"
@@ -186,83 +131,3 @@ const almanacUnlocked = computed(() => {
     />
   </DevPanelOverlay>
 </template>
-
-<style scoped>
-/*
- * Almanac title — passed via SystemHeader's #title slot. Outer header
- * skin lives in ambient-theme.css, since .olui-system-header is rendered
- * by SystemHeader and not reachable from this component's scoped CSS.
- */
-.almanac-title {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font-family: var(--font-display, Georgia, serif);
-  color: var(--almanac-evergreen, #1f3322);
-  text-align: left;
-  position: relative;
-  transition: color 140ms ease-out;
-}
-
-.almanac-title:hover {
-  color: var(--almanac-evergreen-soft, #2d4a32);
-  background: none;
-}
-
-.almanac-title__eyebrow {
-  font-family: var(--font-body, Georgia, serif);
-  font-style: italic;
-  font-size: 0.76em;
-  letter-spacing: 0.12em;
-  color: var(--almanac-moss, #4f6049);
-  margin-bottom: 2px;
-}
-
-.almanac-title__name {
-  font-family: var(--font-display, Georgia, serif);
-  font-weight: 500;
-  font-style: italic;
-  font-size: 2em;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  color: var(--almanac-evergreen, #1f3322);
-}
-
-.almanac-title__sub {
-  font-family: var(--font-body, Georgia, serif);
-  font-style: italic;
-  font-size: 0.74em;
-  letter-spacing: 0.04em;
-  margin-top: 6px;
-  color: var(--almanac-pencil, #6b6553);
-}
-
-/* ─── About popover content ──────────────────────────────────────────── */
-.almanac-info {
-  font-family: var(--font-body, Georgia, serif);
-  max-width: 280px;
-  color: var(--almanac-evergreen, #1f3322);
-  line-height: 1.55;
-  font-size: 0.92em;
-}
-
-.almanac-info__title {
-  font-family: var(--font-display, Georgia, serif);
-  font-weight: 500;
-  font-style: italic;
-  font-size: 1.3em;
-  letter-spacing: 0.02em;
-  color: var(--almanac-evergreen, #1f3322);
-  margin: 0 0 8px;
-  border-bottom: 1px solid var(--almanac-rule-soft, rgba(168, 158, 139, 0.32));
-  padding-bottom: 6px;
-}
-
-.almanac-info p {
-  margin: 0;
-}
-</style>

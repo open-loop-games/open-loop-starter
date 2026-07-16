@@ -1,21 +1,21 @@
+<!--
+  DefenderAppRoot — routing + app chrome only (runs pre-`engine.start()`, on the
+  slot screen), so it reads no engine module state. The board lives in
+  `<DefenderGameView>`, mounted under the post-start frame. See
+  `.claude/rules/app-root-discipline.md`.
+-->
 <script setup lang="ts">
-import { provide, ref } from 'vue';
+import { ref } from 'vue';
 import { processOfflineTime } from '@open-loop/engine';
-import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
+import { DevPanelOverlay } from '@/lib';
 import { Screen } from '@/types';
 import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
-import type { TowerId } from '../data/types';
-import DefenderFrameLayout from './DefenderFrameLayout.vue';
-import RoundStatusHeader from './panels/RoundStatusHeader.vue';
-import TowerShop from './panels/TowerShop.vue';
-import MapCanvas from './panels/MapCanvas.vue';
-import EndGameOverlay from './panels/EndGameOverlay.vue';
+import DefenderGameView from './DefenderGameView.vue';
 
 const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
   onLoaded: (result) => {
@@ -31,15 +31,6 @@ const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = us
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-
-// Placement state shared across TowerShop (selector) and MapCanvas (target).
-// `null` = no tower selected; clicking a tower button sets it, clicking the
-// map clears after a successful placement or on right-click. Provided here so
-// shop + canvas can stay independent panels.
-const selectedTowerType = ref<TowerId | null>(null);
-provide('defender:selectedTowerType', selectedTowerType);
-
-const stack = useModalStack();
 </script>
 
 <template>
@@ -49,47 +40,15 @@ const stack = useModalStack();
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
+  <DefenderGameView
     v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
-    <template #header>
-      <SystemHeader
-        app-name="Defender — Bloons"
-        @return-to-slots="returnToSlots"
-      >
-        <template #about>
-          <h4 style="margin-bottom: 6px">
-            Defender — Bloons
-          </h4>
-          <p>
-            Place towers on buildable cells to pop bloons as they walk the path. Survive 10 rounds
-            without losing all 40 lives. Stronger bloons (blue / green / yellow) shed into weaker
-            children when popped — only red is the floor. Ice freezes; bombs splash and ignore the
-            freeze; tack volleys cover short range; darts hit furthest-along-path.
-          </p>
-        </template>
-      </SystemHeader>
-    </template>
-    <DefenderFrameLayout>
-      <template #status>
-        <RoundStatusHeader />
-      </template>
-      <template #map>
-        <MapCanvas />
-      </template>
-      <template #shop>
-        <TowerShop />
-      </template>
-    </DefenderFrameLayout>
-  </AppFrame>
+    @return="returnToSlots"
+  />
   <ToastContainer />
   <DevDiagnostics
     v-if="isDev"
     v-model:workbench-open="showDevPanel"
   />
-  <EndGameOverlay v-if="currentScreen === Screen.Game" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"

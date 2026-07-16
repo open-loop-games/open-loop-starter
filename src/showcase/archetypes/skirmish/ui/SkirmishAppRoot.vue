@@ -1,16 +1,22 @@
+<!--
+  SkirmishAppRoot — routing + app chrome only (runs pre-`engine.start()`), so it
+  reads no engine module state in setup. The battlefield lives in
+  `<SkirmishGameView>`, mounted under the post-start frame. The `onLoaded` seam
+  auto-starts the first match — a legitimate post-start hook. See
+  `.claude/rules/app-root-discipline.md`.
+-->
 <script setup lang="ts">
 import { ref } from 'vue';
-import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
+import { DevPanelOverlay } from '@/lib';
 import { Screen } from '@/types';
 import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
-import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 import { MatchKey } from '../modules';
-import BattlefieldScreen from './BattlefieldScreen.vue';
+import SkirmishGameView from './SkirmishGameView.vue';
 
 const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
   onLoaded: () => {
@@ -22,8 +28,6 @@ const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = us
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
-
-const stack = useModalStack();
 </script>
 
 <template>
@@ -33,31 +37,10 @@ const stack = useModalStack();
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
+  <SkirmishGameView
     v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
-    <template #header>
-      <SystemHeader
-        :app-name="manifest.name"
-        @return-to-slots="returnToSlots"
-      >
-        <template #about>
-          <h4 style="margin-bottom: 6px">
-            {{ manifest.name }}
-          </h4>
-          <p>
-            Continuous tactical RTS — bot vs bot of built-in AI on a pixi/webgl field. Both sides
-            are played by the shipping AI; player control is a stretch goal.
-          </p>
-        </template>
-      </SystemHeader>
-    </template>
-    <SingleColumnShell>
-      <BattlefieldScreen />
-    </SingleColumnShell>
-  </AppFrame>
+    @return="returnToSlots"
+  />
   <ToastContainer />
   <DevDiagnostics
     v-if="isDev"

@@ -7,10 +7,9 @@ import { BASE_HP } from '../data/tactical';
 import PlayField from './PlayField.vue';
 
 /**
- * The game-screen battlefield: the pixi field plus its HUD. Injection lives
- * here (not in AppRoot) so it resolves only once the engine has started and
- * the modules are installed — this component mounts inside the Game screen,
- * mirroring defender's MapCanvas panel.
+ * The battlefield panel: the pixi field plus its HUD. Rendered inside
+ * SkirmishGameView (below the post-start frame), so the match/tactical
+ * injection here resolves with the modules installed.
  */
 
 const match = useMatch();
