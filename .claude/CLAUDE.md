@@ -6,7 +6,21 @@ open-loop-starter — quick-copy scaffold for prototyping games on `open-loop-en
 
 ## Purpose
 
-Dual character in one repo (see `/work/studio/CLAUDE.md` § Studio components). Forks consume both halves by forking the repo and deleting what they don't need. Not a library — a template.
+The engine's **batteries-included clone target**, and the **storybook** for those batteries (see `/work/studio/CLAUDE.md` § Studio components). Engine and starter are the two surfaces; the engine directs here to start a game. Not a library — clone it and eject. There is no shared-library surface and no semver contract: the batteries reach you by being copied.
+
+Two halves, and they are **not** independent:
+
+- **The base — the batteries.** `src/lib/`, `src/ui/`, `src/composables/`, `src/modules/`, `src/styles/`. Well-generalized pieces for building a game on the engine. A fork keeps these.
+- **The stories — the archetypes.** `src/showcase/archetypes/<name>/`. Worked examples composing the batteries into game shapes. A fork sheds all but one.
+
+**The stories demonstrate the base.** That's the relationship the strip boundary hides: it's a one-way *import* cut, not a separation of concerns. A story that hand-rolls what a battery provides is a story defect — it teaches the next fork to hand-roll. A story that must fight a battery to say what it means is a *battery* defect, and the story is where you find out: it's the generality test, and a documented bypass at the call site is that test reporting a failure. Read both halves as instruction.
+
+**The bars:**
+
+- **A battery:** would a game built on the engine want this on day one, and is it general enough that a story doesn't have to fight it?
+- **A story:** does it compose the batteries (rather than route around them), and does its balance fall out of its declared spine?
+
+**Reading replication between stories.** The archetypes are semi-isolated trees authored in parallel that can read each other, so repetition mixes convergence, literal copying, and copying in feel — indistinguishable after the fact. Duplication is a **demand signal, not proof of generality**: it answers "should this be one copy?", never "is this well-generalized?". Only the bars above answer the second.
 
 ### Scaffold (`src/lib/`, `src/styles/`, AppFrame, composables)
 

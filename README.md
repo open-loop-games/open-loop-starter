@@ -1,8 +1,15 @@
 # open-loop-starter
 
-Quick-copy scaffold for prototyping games on [open-loop-engine](../open-loop-engine). Fork this repo, `eject` down to one archetype, start building.
+Batteries-included clone target for building games on [open-loop-engine](../open-loop-engine), and the storybook for those batteries. Clone this repo, `eject` down to one archetype, start building.
 
-The repo has two halves: the **scaffold** (`src/lib`, `src/ui`, `src/composables`, `src/modules`, `src/styles` — layout shells, AppFrame, bridge composables) that every game keeps, and the **showcase** (`src/showcase/` — archetype demos + browsable gallery) that a fork sheds. The cut is one-way: the scaffold never imports the showcase (an eslint rule enforces it), so shedding the showcase can't break your game.
+Engine and starter are the two surfaces — there's no library to depend on and no version to pin. The batteries reach you by being copied, so once you clone, they're yours: rename them, restructure them, delete them.
+
+The repo has two halves:
+
+- **The base — the batteries** (`src/lib`, `src/ui`, `src/composables`, `src/modules`, `src/styles`): layout shells, AppFrame, modal stack, widgets, compositions, bridge composables, token defaults. Every game keeps these.
+- **The stories — the archetypes** (`src/showcase/`): worked examples composing the batteries into game shapes, plus a browsable gallery. A fork sheds all but one.
+
+**The stories exist to demonstrate the base.** Read an archetype to learn how the pieces go together, not just to see a finished game. The cut between the halves is one-way — the base never imports the showcase (an eslint rule enforces it) — so shedding it can't break your game.
 
 ## Quick start
 
