@@ -177,7 +177,7 @@ this file and the commit are the memory.
 | Slice | Roles | Files | ~Lines | Status |
 |---|---|---|---|---|
 | A | root + frame | 12 | 1.8k | **done** — 4 entries, 1 subsumed, 3 housekeeping |
-| B | composable + helper | 30 | 2.1k | not started |
+| B | composable + helper | 30 | 2.1k | **done** — 3 entries, 1 subsumed, A's gate → N=4 |
 | C | component | 26 | 3.9k | not started |
 | D | panel | 34 | 7.0k | not started — oversized, split at read-time |
 
@@ -213,29 +213,42 @@ freezing it now would freeze the wrong shape.
   `ThreePanelShell` and owns tab logic + a mount gate. Same tier, unshared shape.
 - interlocker alone omits `provide('currentScreen', …)` — and is right to (see
   § Housekeeping).
+- `_blank` has **no `composables/` directory at all** (slice B), so the template
+  models nothing for this layer either — consistent with it shipping a root only.
+- Composable file naming (slice B): the majority is camelCase (`useAutobuyers.ts`),
+  but both composition adapters are kebab (`use-row-adapter.ts`,
+  `use-producer-row.ts`) and scaler is kebab throughout
+  (`scaler-game-state.ts`). `/work/studio/CLAUDE.md` says "Files: kebab-case.ts
+  for TS" — so the camelCase majority drifts from the documented convention,
+  including the scaffold's own `src/composables/useGame.ts`. Whichever way the
+  standardization pass goes, it's the doc or ~25 files, not both.
+- Every archetype with composables ships a pure re-export `index.ts` barrel (5 of
+  5). Uniform and unremarkable; noted only so its absence somewhere reads as
+  deliberate.
 
 ## Unverified leads
 
 Scratch. Grep-level or read-in-passing signal, not site-read. A lead is not an N.
 
-- **Adapter to a composition contract.** `producer/composables/use-row-adapter.ts`
-  and `scaler/composables/use-producer-row.ts` both adapt archetype state into
-  `ProducerList`'s `ProducerRowData`. Independently written, same job, different
-  names. Grep says interlocker's `useResources` / `useJobs` and its
-  `BuildingsPanel` also touch the contract — unread, so not counted. Slice A adds
-  a third *form*: `ScalerAppRoot.vue:74-116` builds a `ResourceReadout[]` for
-  `ResourceHeaderStrip` inline in the root, with no adapter layer at all. So the
-  adapter is sometimes a composable and sometimes inline — bears on #20's third
-  uncertainty. Slice B.
 - **Autobuyer UI trio.** ambient/producer each carry `AutobuyerToggles` (75/75),
   `AutobuyerMasterButton` (29/28), `AchievementGridDialog` (239/268). The
   *wiring* is already indexed in the parent as "Autobuyer-as-content registry —
-  N=2"; only a purely-presentational residue would belong here. Watch for
-  double-indexing. Slices C.
-- **Engine-API drift in a fork-copy.** ambient's `useAutobuyers` hand-rolls the
-  ref/function/value unwrap that producer's does via the engine's
-  `processGetter`. Not a recipe — a copy that drifted off engine API. Expect a
-  class of these; file separately rather than fixing inline. Slice B.
+  N=2". Slice B settled the test — generalization, not size — and subsumed the
+  `useAutobuyers` composable under it. These three are the harder case: large,
+  and a fork could plausibly want the toggle panel without ambient's registry.
+  Apply the same test. Slice C.
+- **Resource-strip adoption gap.** looper hand-rolls its own tracked-resource
+  strip (`composables/useTrackedResources.ts` + `ui/components/HeaderBand.vue`)
+  with the same hidden-until-nonzero idea as `ResourceReadout.hidden`, adopting
+  neither the contract nor the renderer — while scaler and interlocker both
+  adopt the contract. Not a recipe (the shared thing exists); an adoption gap.
+  Confirm against `HeaderBand.vue` in slice D.
+- **Cross-repo N=2, phase-3 sourcing.** `looper/ui/next-action-drag.ts:5` cites
+  `idle-loops-ng/src/ui/components/next-action-drag.ts` as "same pattern" — an
+  `InjectionKey` + drag-type-tag module so a row and a tile can share drag state
+  without importing each other. The cited file exists (verified). Different
+  repos = different consumer boundaries, so it would count N=2 — but reading it
+  is phase-3 sourcing scope, and an unread site is not an N. Left as a lead.
 
 ## Entries
 
@@ -335,7 +348,7 @@ missing shell.
 
 - **Sites:** `defender/ui/DefenderFrameLayout.vue:1-16`, `tug/ui/TugFrameLayout.vue:1-19`.
 
-### Post-start module access gate — N=3, divergent solutions — ROUTING QUESTION
+### Post-start module access gate — N=4, divergent solutions — ROUTING QUESTION
 
 One engine fact — module getters and `inject` are only valid after
 `engine.start()` — worked around three different ways, each with a comment
@@ -351,6 +364,18 @@ explaining the same constraint to the next reader:
   that's run."
 - **skirmish / tug** reach for `engine.tryInject(MatchKey)` *after* `start()`,
   commented "Match module is only injectable post-start".
+- **scaler** (slice B) wraps **20 `try`/`catch` blocks** with `?? ZERO` fallbacks
+  around every cross-tier module getter in `composables/scaler-game-state.ts`,
+  documented as tolerating "module not yet installed". By far the most severe
+  manifestation — the workaround is most of the file's control flow.
+
+**scaler's is adjacent, not identical, and that distinction may split the entry.**
+The other three are *start*-order ("before `engine.start()`"). scaler's is
+*install*-order between sibling modules: coin's upgrade grants evaluate eagerly
+during `category.register` (the engine resolves modifier descriptions via
+`chain.bind`), so cross-tier reads of prestige state run before prestige
+installs. Same family — "the module isn't there yet" — different trigger. Left in
+one entry with the difference stated rather than silently lumped.
 
 **This may not be a recipe.** Three independent workarounds to one ergonomic gap
 is the shape of a *primitive* gap: the clean fix wants engine API (a post-start
@@ -367,8 +392,127 @@ cause isn't shared, split them rather than forcing the label.
   `ambient/ui/AmbientAppRoot.vue:119-126`, `skirmish/ui/SkirmishAppRoot.vue:36-38`,
   `tug/ui/TugAppRoot.vue:43-44`.
 
+### Composition-contract adapter — N=4 across two contracts
+
+The `.ts` contract half of a composition needs archetype state mapped onto it.
+Four independent instances across two contracts:
+
+| Contract | Site | Form |
+|---|---|---|
+| `ProducerRowData` + `UpgradeCellData` | `producer/composables/use-row-adapter.ts` | pure `to*` fns over producer's own rich `ProducerRow` |
+| `ProducerRowData` + `UpgradeCellData` | `scaler/composables/use-producer-row.ts` | pure `to*` fns over an engine `Producer` / `Purchasable` |
+| `ResourceReadout` | `interlocker/ui/composables/useResources.ts` | a `use*` composable returning the array |
+| `ResourceReadout` | `scaler/ui/ScalerAppRoot.vue:74-116` | **inline in the root — no adapter layer** |
+
+**The naming convergence is the strong signal.** producer and scaler
+independently named their exports `toProducerRowData` and `toUpgradeCellData` —
+the same two names, in files named differently (`use-row-adapter` vs
+`use-producer-row`), over different input types and signatures. The contract's
+name drove the adapter's name in both heads. A convention is trying to exist and
+has nowhere to live.
+
+**Resolves #20's third uncertainty: the adapter layer is not implied.** Three of
+four use a dedicated module; scaler's root inlines it. Nothing forces the layer,
+and nothing documents that it's a choice.
+
+**Bigger finding — the contract and the renderer graduate independently.**
+interlocker adapts to `ResourceReadout` and then renders it with *its own*
+`ui/components/ResourceList.vue`, whose header says it "Consumes the same
+ResourceReadout[] the shared ResourceHeaderStrip uses". So it took the contract
+and declined the renderer. That's evidence the `.ts` contract is the valuable
+half of a composition, and that a fork wanting the shape but not the markup is a
+supported case nobody wrote down.
+
+### Producer-row surface — N=2 (producer, ambient), fork-copy
+
+`useProducers()` and `useAutoProducers()` are the same ~60-line file: the same
+11-field row interface (`def`, `rate`, `rateChain`, `count`, `beatSeconds`,
+`maxAffordable`, `getCost`, `canAfford`, `purchase`, `purchaseMax`,
+`purchasable`), the same `computed(() => { for (entry of getAll()) rows.push({…}) })`
+body, the same `?? Decimal.dZero` / `?? Decimal.dInf` fallbacks.
+
+Divergence is three renames and one line: producer filters
+`if (entry.def.trigger !== 'continuous') continue;`, ambient doesn't — and
+ambient's doc explains the absence ("Ambient is zero-click, so every registered
+producer is `trigger: 'continuous'` and there is no manual entry to filter out"),
+which is an author telling you they adapted producer's copy.
+
+Note the ceremony this sits in: the rich row is built here, then
+`toProducerRowData` narrows it to the thin contract — and re-attaches the whole
+rich row as `extra` so the `#row` slot can reach it. The narrowing is nominal;
+every consumer gets the source object back anyway. Worth weighing at the dive
+before the contract is treated as load-bearing.
+
+- **Sites:** `producer/composables/useProducers.ts:12-65`,
+  `ambient/composables/useAutoProducers.ts:12-62`.
+
+### Event-payload latch — N=2 (skirmish, tug), byte-identical
+
+`useMatch()` is **identical code** in both — same `MatchView extends MatchApi`
+interface, same body, same `onScopeDispose(() => unsubscribe())`. Only the prose
+comments differ.
+
+```ts
+const lastMatchEnd = ref<MatchEndedPayload | null>(null);
+const unsubscribe = match.on('matchEnded', (payload) => { lastMatchEnd.value = payload; });
+onScopeDispose(() => unsubscribe());
+return { ...match, lastMatchEnd, clearLastMatchEnd: () => { lastMatchEnd.value = null; } };
+```
+
+The shape is **latch an event payload the emitter destroys**: `end()` runs the
+reset, so `outcome` is null by the time UI reads it — the payload only exists in
+flight. That generalizes to any event-with-reset-on-emit, well past match, and
+`src/composables/useLatchOnce.ts` already occupies the adjacent slot
+(latch-once-truthy), so the family has a home and a naming precedent.
+
+**Resolves #20's double-indexing uncertainty — the test is generalization, not
+size.** All three data points now agree, and size was only ever a proxy:
+
+| Shape | Size | Generalizes past its wiring? | Verdict |
+|---|---|---|---|
+| Match auto-start (slice A) | 2 lines | no | subsumed |
+| `useAutobuyers` (below) | 46 lines | no | subsumed |
+| Event-payload latch | 40 lines | **yes** — any event, any reset | **own entry** |
+
+- **Sites:** `skirmish/composables/useMatch.ts:16-32`, `tug/composables/useMatch.ts:23-39`.
+
+### Read, not indexed
+
+Recorded so the next reader doesn't re-propose them.
+
+- **Def-driven row builder — a near-miss, deliberately not an entry.** Every
+  archetype maps `data.defs` onto reactive rows with `visible` / `can*` computeds
+  and an action closure: producer (`useProducers`, `useUpgrades`), ambient
+  (`useAutoProducers`), interlocker (`useBuildings`, `useCrafts`, `useSciences`,
+  `useJobs`), tug (`useUnits`, `useIncomeUpgrades`). N=4 across fork boundaries —
+  but the field sets diverge completely (`BuildingRow` carries multi-resource
+  `costs[]` + an active-count throttle; `UnitRow` carries `cooldownRemaining`;
+  `ScienceRow` carries `prereqMet`). What's shared is "code that lists things",
+  which is too generic to graduate — and the concrete subset that *was* specific
+  enough already graduated, as `ProducerRowData`. Indexing this would be the
+  over-lumping trap wearing a label.
+- **A grep-level over-lump this sweep caught by reading.** `useRateBreakdown`
+  (scaffold) and `useChainBreakdown` (producer) look like the same composable
+  from a filename and both take a `ModifierChain` — they are different jobs. The
+  first computes contribution / beat / marginal math for a tooltip; the second
+  walks a chain's *bindings* into renderable factors. Nothing to merge. This is
+  the parent file's "automated scans over-lump" warning reproducing exactly, and
+  the reason the read-every-site rule is not negotiable.
+- **A graduation that worked, for contrast.** `src/composables/useRateBreakdown.ts`
+  is consumed by producer's bakery-themed tooltip *and* the scaffold's default
+  `RateBreakdownTooltip.vue`, and its docstring says why: "keeps contribution /
+  beat / marginal math in one spot so a fix in one place lands everywhere." The
+  route from archetype hand-roll to shared scaffold composable is already proven —
+  it just has no cadence feeding it, which is this whole sweep's premise.
+
 ### Subsumed, not indexed
 
+- **`useAutobuyers`** — N=2 (ambient, producer), near-verbatim: identical
+  `AutobuyerRow` / `AutobuyerSurface` interfaces, identical body and return.
+  Subsumed by the parent's *Autobuyer-as-content registry* (N=2, same two sites):
+  it is, by its own docstring, "UI surface for the autobuyer registry" and means
+  nothing without it. Large but doesn't generalize — the second row of the table
+  above. (Its one real divergence is a defect, not a shape: see § Housekeeping.)
 - **Match auto-start after load** — `const match = engine.tryInject(MatchKey); if
   (match && !match.inMatch.value) match.start();` is byte-identical in
   `skirmish/ui/SkirmishAppRoot.vue:37-38` and `tug/ui/TugAppRoot.vue:43-44`.
@@ -405,6 +549,29 @@ Not sweep output; noted so it isn't lost.
   over the gap (`tug/ui/TugAppRoot.vue:39-42` vs `skirmish/ui/SkirmishAppRoot.vue:35-39`).
   Possibly deliberate — skirmish's match is bot-vs-bot and may not want a
   fast-forward — but nothing says so.
+- **ambient's `useAutobuyers` reimplements engine API.** `rowFor` hand-rolls a
+  six-line `typeof` / `'value' in` unwrap of `spec.isUnlocked`
+  (`ambient/composables/useAutobuyers.ts:29-36`) where producer's copy calls the
+  engine's `processGetter` + `unref` in two
+  (`producer/composables/useAutobuyers.ts:31-32`). The fork-copy drifted off
+  engine API. Confirms the predicted class; expect more in slices C–D.
+- **scaler inverts the archetype layering.** Four modules — `coin.ts:60`,
+  `transcend.ts:91`, `prestige.ts:83`, `achievements.ts:45` — import
+  `buildScalerGameState` / `expandUpgradeGrant` from
+  `../composables/scaler-game-state`, so `modules` depends on `composables`,
+  against the strict `data → modules → composables → ui` direction. The file also
+  isn't a composable: no `use*` export, no Vue reactivity beyond reading refs.
+  It's a module-layer accessor misfiled under `composables/`, and moving it (to
+  `modules/` or `data/`) fixes the direction without touching behavior.
+- **Task IDs in comments, against comment hygiene.**
+  `interlocker/ui/composables/useJobs.ts:33` cites "OL-1056 umbrella" — a stale
+  ref from a different tracker than the org's Gitea `repo#N`; `tug/composables/useMatch.ts:11`
+  cites "leaf-4 contract". `/work/studio/CLAUDE.md` § Comment hygiene: no phase
+  names or task IDs in comments.
+- `interlocker/ui/composables/useBuildings.ts:79` hardcodes
+  `const continuous = def.id === 'smelter'` with a "Generalize this flag when a
+  second continuous building lands" comment — a graduation trigger with no
+  `TODO(expansion)` marker to find it by.
 - `scaler/variables.ts` is vendored Synergism (imports `./Calculate`, `./Tabs`,
   `./types/Synergism` — none present), is imported by nothing, and is absent from
   the `tsconfig.app.json` exclude list that covers its seven vendored siblings.

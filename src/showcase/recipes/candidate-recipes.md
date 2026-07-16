@@ -56,6 +56,14 @@ code composition that realizes it. The stack: **pattern → recipe → primitive
   awaiting deletion — nobody maintains it, so it can't diverge, so it was never a
   second instance. The rule is one line because the alternative is a growing list
   of special cases for trees that are all not-maintained for the same reason.
+- **The unit of independence is the consumer boundary, not the file.** Two copies
+  inside one archetype (or one game) travel together, under one owner, fixed in
+  one sitting — that's ordinary internal repetition, and it counts once. Two
+  copies in different archetypes travel to *different* forks and get fixed by
+  different people, or don't. Same word, different weight: tug's
+  `useIncomeUpgrades` says it "mirrors `useUnits` shape" — deliberate, same
+  author, same fork, N=1. ambient's autobuyer surface silently drifted off
+  producer's — N=2, and the drift is the proof.
 - **N=1 only when named.** A single instance is admitted only with a *specific*
   anticipated second consumer named (like the engine candidate file's pre-designed
   shapes) — never a speculative "some future archetype". The named N=1 entry is a
