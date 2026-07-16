@@ -1,6 +1,12 @@
+<!--
+  GameAppRoot — routing + app chrome only. Runs before `engine.start()` (on the
+  slot screen), so it reads NO engine module state. The game lives in
+  `<GameView>`, mounted under the post-start `v-else` frame where module reads
+  are safe. See `.claude/rules/app-root-discipline.md`.
+-->
 <script setup lang="ts">
 import { ref } from 'vue';
-import { AppFrame, DevPanelOverlay, SingleColumnShell, useModalStack } from '@/lib';
+import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import { useGameSession } from '@/composables/useGameSession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
@@ -9,6 +15,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
+import GameView from './GameView.vue';
 
 // Slot-pick → start → load → play → save → back. `useGameSession` owns it;
 // pass `onLoaded` when your game needs to do something with the offline gap.
@@ -43,21 +50,12 @@ const showDevPanel = ref(false);
           </h4>
           <p>
             A blank game on the scaffold. Add modules under
-            <code>src/game/modules/</code> and render them here.
+            <code>src/game/modules/</code> and render them in <code>GameView.vue</code>.
           </p>
         </template>
       </SystemHeader>
     </template>
-    <SingleColumnShell>
-      <section class="game-placeholder">
-        <h2>Hello from your new game.</h2>
-        <p>
-          The scaffold is wired: engine, save slots, settings, theme, and the dev workbench all
-          work. Start building by adding an engine module in
-          <code>src/game/modules/</code> and a component to render its state.
-        </p>
-      </section>
-    </SingleColumnShell>
+    <GameView />
   </AppFrame>
   <ToastContainer />
   <DevDiagnostics
@@ -75,13 +73,3 @@ const showDevPanel = ref(false);
     />
   </DevPanelOverlay>
 </template>
-
-<style scoped>
-.game-placeholder {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  padding: var(--gap-lg);
-  text-align: center;
-}
-</style>

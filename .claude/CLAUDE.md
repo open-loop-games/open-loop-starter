@@ -79,7 +79,9 @@ src/showcase/archetypes/<name>/
 │                    # lens lives here as comment sections, not separate files.
 ├── modules/         # Engine modules; factory-constructed, closing over data.
 ├── composables/     # Vue composables when there's scoped Vue work or cross-module synthesis. Optional layer.
-├── ui/              # Archetype-colocated screens + panels + components.
+├── ui/              # Archetype-colocated screens + panels + components. Root
+│                    # `*AppRoot.vue` is routing+chrome only; a `<XGameView>`
+│                    # subtree owns all module reads (see § Key Patterns).
 ├── sim/             # Beat + probe vitest suite per archetype doc § 7.
 └── boot.ts          # createApp(overrides?) → { app, engine, mount }.
 ```
@@ -107,6 +109,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 ### Key Patterns
 
 - **Engine singleton** — created once via `bootEngine` (`src/boot.ts`), HMR-invalidated, shared via `provide('engine')`. `bootEngine` prepends `sharedBase` to every mod, so archetypes never assemble the base themselves.
+- **Routing shell vs game view** — an archetype root (`*AppRoot.vue`) is routing + app chrome only and reads **no** engine module state (its setup runs pre-`start()`, on the slot screen). All module reads live in a `<XGameView>` subtree rendered under the post-start `v-else` frame. Full discipline + corollaries in `.claude/rules/app-root-discipline.md`; `_blank/ui/GameView.vue` is the reference forks copy.
 - **Slot-based shells** — `src/lib/shells/*` never prescribe content; games fill slots
 - **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the default token values (palette, spacing, radius, shell/modal/widget knobs); `src/styles/` provides the scaffold theme and widget-level selectors on top
 
