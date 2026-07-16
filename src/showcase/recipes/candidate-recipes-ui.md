@@ -178,7 +178,7 @@ this file and the commit are the memory.
 |---|---|---|---|---|
 | A | root + frame | 12 | 1.8k | **done** — 4 entries, 1 subsumed, 3 housekeeping |
 | B | composable + helper | 30 | 2.1k | **done** — 3 entries, 1 subsumed, A's gate → N=4 |
-| C | component | 26 | 3.9k | not started |
+| C | component | 26 | 3.9k | **done** — 2 entries, 2 subsumed, A's gate → N=6 |
 | D | panel | 34 | 7.0k | not started — oversized, split at read-time |
 
 A first: smallest, highest convergence density, and it names the vocabulary the
@@ -230,19 +230,6 @@ freezing it now would freeze the wrong shape.
 
 Scratch. Grep-level or read-in-passing signal, not site-read. A lead is not an N.
 
-- **Autobuyer UI trio.** ambient/producer each carry `AutobuyerToggles` (75/75),
-  `AutobuyerMasterButton` (29/28), `AchievementGridDialog` (239/268). The
-  *wiring* is already indexed in the parent as "Autobuyer-as-content registry —
-  N=2". Slice B settled the test — generalization, not size — and subsumed the
-  `useAutobuyers` composable under it. These three are the harder case: large,
-  and a fork could plausibly want the toggle panel without ambient's registry.
-  Apply the same test. Slice C.
-- **Resource-strip adoption gap.** looper hand-rolls its own tracked-resource
-  strip (`composables/useTrackedResources.ts` + `ui/components/HeaderBand.vue`)
-  with the same hidden-until-nonzero idea as `ResourceReadout.hidden`, adopting
-  neither the contract nor the renderer — while scaler and interlocker both
-  adopt the contract. Not a recipe (the shared thing exists); an adoption gap.
-  Confirm against `HeaderBand.vue` in slice D.
 - **Cross-repo N=2, phase-3 sourcing.** `looper/ui/next-action-drag.ts:5` cites
   `idle-loops-ng/src/ui/components/next-action-drag.ts` as "same pattern" — an
   `InjectionKey` + drag-type-tag module so a row and a tile can share drag state
@@ -348,7 +335,7 @@ missing shell.
 
 - **Sites:** `defender/ui/DefenderFrameLayout.vue:1-16`, `tug/ui/TugFrameLayout.vue:1-19`.
 
-### Post-start module access gate — N=4, divergent solutions — ROUTING QUESTION
+### Post-start module access gate — N=6, divergent solutions — ROUTING QUESTION
 
 One engine fact — module getters and `inject` are only valid after
 `engine.start()` — worked around three different ways, each with a comment
@@ -368,6 +355,20 @@ explaining the same constraint to the next reader:
   around every cross-tier module getter in `composables/scaler-game-state.ts`,
   documented as tolerating "module not yet installed". By far the most severe
   manifestation — the workaround is most of the file's control flow.
+
+- **ambient + producer** (slice C) each ship `AutobuyerMasterButton.vue` as a
+  standalone 28-line component *whose only stated reason to be a separate file is
+  mount timing* — both comments, in near-identical words: "Standalone component
+  so the `useAutobuyers()` inject runs inside a child of the `v-else` AppFrame —
+  i.e. after `engine.start()` has installed the autobuyer registry module.
+  Mounting it under [X]AppRoot's `<script setup>` would fire the inject before
+  slot-pick runs `engine.start()`."
+
+**The component-extraction workaround is itself N=3** (interlocker's `GameView`,
+ambient's and producer's `AutobuyerMasterButton`) — three components that exist
+for no design reason, only to move an `inject` later in the mount order. A
+component with no reason to be a component is a pure tax, and this is the
+sub-shape a dive should weigh first.
 
 **scaler's is adjacent, not identical, and that distinction may split the entry.**
 The other three are *start*-order ("before `engine.start()`"). scaler's is
@@ -392,10 +393,10 @@ cause isn't shared, split them rather than forcing the label.
   `ambient/ui/AmbientAppRoot.vue:119-126`, `skirmish/ui/SkirmishAppRoot.vue:36-38`,
   `tug/ui/TugAppRoot.vue:43-44`.
 
-### Composition-contract adapter — N=4 across two contracts
+### Composition-contract adapter — N=6 across three contracts
 
 The `.ts` contract half of a composition needs archetype state mapped onto it.
-Four independent instances across two contracts:
+Six independent instances across three contracts:
 
 | Contract | Site | Form |
 |---|---|---|
@@ -403,6 +404,15 @@ Four independent instances across two contracts:
 | `ProducerRowData` + `UpgradeCellData` | `scaler/composables/use-producer-row.ts` | pure `to*` fns over an engine `Producer` / `Purchasable` |
 | `ResourceReadout` | `interlocker/ui/composables/useResources.ts` | a `use*` composable returning the array |
 | `ResourceReadout` | `scaler/ui/ScalerAppRoot.vue:74-116` | **inline in the root — no adapter layer** |
+| `AchievementGridCell` | `ambient/ui/components/AchievementGridDialog.vue:9-20` | inline `computed` in the consuming component |
+| `AchievementGridCell` | `producer/ui/components/AchievementGridDialog.vue:9-20` | inline `computed` in the consuming component |
+
+**The `AchievementGridCell` pair is byte-identical** — twelve lines that differ by
+one word inside one string (`'Hidden — earn to reveal'` vs `'Hidden — bake to
+reveal'`). Not the same idea expressed twice; the same code. It's also carrying
+duplicated *game logic*: the hidden-achievement mask (`visible ? def.name : '???'`)
+is a rule about how achievements reveal, living in two adapters instead of in the
+composition with the reveal verb as a prop.
 
 **The naming convergence is the strong signal.** producer and scaler
 independently named their exports `toProducerRowData` and `toUpgradeCellData` —
@@ -476,6 +486,84 @@ size.** All three data points now agree, and size was only ever a proxy:
 
 - **Sites:** `skirmish/composables/useMatch.ts:16-32`, `tug/composables/useMatch.ts:23-39`.
 
+### Costume over shared chrome — N=2 (ambient, producer)
+
+How a fork adopts a composition *without* forking it. Both
+`AchievementGridDialog.vue` files consume the shared
+`@/ui/components/AchievementGrid.vue` and reskin it entirely from outside:
+`:deep(.olui-achievement-grid__cell[data-earned='true'])` and friends, scoped
+under a costume class (`.almanac-entries` / `.bakery-awards`), driving off the
+shared component's `data-*` state attributes rather than its internals.
+
+The split inside each file is the whole point, and it's clean:
+
+| Layer | ambient vs producer |
+|---|---|
+| `<script setup>` | **byte-identical** (one word in one string) |
+| `<template>` | **structurally identical** — same slots, same `#summary`/`#cell` shape |
+| `<style scoped>` | **~180 lines, genuinely different** — pressed-flower almanac (dashed rules, oldstyle numerals, rotated mark) vs wax-seal bakery (radial gradients, brass, inset shadows) |
+
+That is exactly the divide the § UI discriminator predicts: logic and structure
+converge and should be shared; the costume is the archetype's voice and must not
+be. Both files even head that CSS block with the same section comment — *"Costume
+override on the shared cell chrome"*.
+
+**Honest caveat on the naming evidence:** "Costume" is already house vocabulary —
+`// ─── Costume ───` is a section marker in ambient's and tug's `data/` files. So
+the *word* was available; what converged is the practice, not the coinage. Weaker
+than the `toProducerRowData` convergence, which had no such prior.
+
+**Bounded deliberately at N=2.** interlocker's single `:deep(.olui-panel__body)`
+in `AutomationPanel.vue` is a one-off spacing tweak, not costuming — counting it
+would inflate the entry with a different act.
+
+This generalizes past achievements (any composition, any archetype voice), so it
+earns an entry rather than subsuming. What a dive would weigh: this practice only
+works because `AchievementGrid` exposes stable `olui-` class hooks and `data-*`
+state — an undocumented contract that a composition author can break without
+noticing. If costuming is the supported adoption path, those hooks are API.
+
+- **Sites:** `ambient/ui/components/AchievementGridDialog.vue:137-238`,
+  `producer/ui/components/AchievementGridDialog.vue:144-267`.
+
+### Row/card chrome — the hole in the widget layer — N=2 (interlocker, scaler)
+
+`src/styles/theme-widgets.css` is the scaffold's widget-selector layer, and it
+covers `.olui-panel`, `.olui-tooltip__content`, `.olui-popover__content`,
+`.olui-select__trigger`, `.olui-progress-bar`; `src/styles/base.css` adds
+`.btn-*` and `.badge*`. There is **no row and no card** — and row/card chrome is
+the single most-repeated CSS in the archetype layer.
+
+Each archetype re-derives its own and then repeats it internally, byte-identical:
+
+- **interlocker — list-row chrome** (`display:flex; align-items:…; gap:var(--gap-sm);
+  padding:var(--gap-xs) 2px; border-bottom:1px solid var(--color-border);
+  list-style:none`) across `JobAllocationRow`, `ScienceNode`, `AutomationRow`.
+  Plus `BuildingRow` and `CraftCard` — near the same component with different
+  data — repeat `__btn`, `__tooltip`, and the whole `__cost-list` block verbatim.
+- **scaler — card chrome** (`display:flex; flex-direction:column; gap:var(--gap-xs);
+  padding:var(--gap-sm); background:var(--color-surface); border:1px solid
+  var(--color-border); border-radius:var(--radius)`) across `CrystalRow`,
+  `CumulativeRow`, `RuneRow`, `ChallengeRow`. `CrystalRow` and `CumulativeRow`
+  go further — identical `<script setup>` bar one computed's name.
+
+Both repetitions are **intra-archetype, so N=1 each by the consumer-boundary
+rule**. The entry is N=2 on the *practice*: two archetypes independently hit the
+same hole and patched it the same way. The shapes differ (list-row vs card), so
+what graduates is two selectors, not one.
+
+**Over-lumping risk, stated.** "Everyone writes row CSS" is exactly the shape of
+the def-driven-row-builder near-miss below, and this entry could be that mistake.
+The counter is specific and checkable: `theme-widgets.css` already covers seven
+widgets, so this isn't a law of nature — it's a coverage gap, and it happens to
+sit precisely where the repetition is. If the dive disagrees, the near-miss
+section is where this belongs.
+
+Rider for the dive: scaler both adapts to `UpgradeCellData` *and* hand-rolls
+`CrystalRow`/`CumulativeRow` taking a raw `Purchasable` — the same archetype using
+the contract and bypassing it. Evidence the contract needs a documented
+convention more than it needs more surface.
+
 ### Read, not indexed
 
 Recorded so the next reader doesn't re-propose them.
@@ -491,13 +579,23 @@ Recorded so the next reader doesn't re-propose them.
   which is too generic to graduate — and the concrete subset that *was* specific
   enough already graduated, as `ProducerRowData`. Indexing this would be the
   over-lumping trap wearing a label.
-- **A grep-level over-lump this sweep caught by reading.** `useRateBreakdown`
-  (scaffold) and `useChainBreakdown` (producer) look like the same composable
-  from a filename and both take a `ModifierChain` — they are different jobs. The
-  first computes contribution / beat / marginal math for a tooltip; the second
-  walks a chain's *bindings* into renderable factors. Nothing to merge. This is
-  the parent file's "automated scans over-lump" warning reproducing exactly, and
-  the reason the read-every-site rule is not negotiable.
+- **Three filename-driven false leads this sweep caught by reading.** Every one
+  looked like convergence from a name and died on contact:
+  1. `useRateBreakdown` (scaffold) vs `useChainBreakdown` (producer) — same
+     filename shape, both take a `ModifierChain`, different jobs entirely
+     (contribution/beat/marginal math vs walking bindings into factors).
+  2. `PlantingGlyph.vue` (ambient) vs `CookieGlyph.vue` (producer) — same
+     `*Glyph.vue` suffix, unrelated components: one is an icon-set dispatcher
+     switching on `producerId`, the other a single hero illustration with
+     turbulence filters and a `size` prop.
+  3. The "autobuyer trio" this sweep itself named in slice A — grouped by
+     *duplicate filename across ambient/producer*, not by shape.
+     `AchievementGridDialog` has nothing to do with autobuyers; it belongs to the
+     adapter entry. The label was wrong from the moment it was coined.
+  The parent file's "automated scans over-lump" warning, reproducing three times
+  inside the sweep that cites it — twice on hypotheses this sweep authored. The
+  read-every-site rule is not negotiable, and **filename similarity is the single
+  worst signal on this surface**: it has been wrong every time it fired.
 - **A graduation that worked, for contrast.** `src/composables/useRateBreakdown.ts`
   is consumed by producer's bakery-themed tooltip *and* the scaffold's default
   `RateBreakdownTooltip.vue`, and its docstring says why: "keeps contribution /
@@ -505,8 +603,49 @@ Recorded so the next reader doesn't re-propose them.
   route from archetype hand-roll to shared scaffold composable is already proven —
   it just has no cadence feeding it, which is this whole sweep's premise.
 
+### Adoption gaps — the shared thing exists and isn't used
+
+The inverse of a recipe, so not indexed as one: nothing needs building, something
+needs adopting. Recorded because the sweep keeps surfacing them and they'd
+otherwise read as convergence.
+
+**looper never adopted the scaffold — four gaps, one cause.**
+
+| looper hand-rolls | Scaffold already ships |
+|---|---|
+| `ui/components/AppTooltip.vue` (59 lines over reka-ui) | `src/ui/components/Tooltip.vue` + `RichTooltip.vue` |
+| `composables/useTrackedResources.ts` + `HeaderBand`'s resource strip | `ResourceHeaderStrip` + the `ResourceReadout` contract |
+| `HeaderBand`'s `.time-bar-container` / `.time-bar-fill` | `ProgressBar.vue` + `.olui-progress-bar` |
+| `HeaderBand`'s raw `DialogRoot`/`Portal`/`Overlay`/`Content` confirm | `useModalStack` |
+
+`AppTooltip` is the clearest: same reka-ui wiring as the scaffold's `Tooltip.vue`,
+but without the `TooltipProvider`, without the `--tooltip-*` custom-property
+theming, hardcoding its surface instead — a strictly worse copy of a component
+one import away.
+
+**The cause is provenance, not drift.** looper is the subtractive port from
+`idle-loops-ng` (`/work/studio/CLAUDE.md` § Studio components), and it carried its
+source's UI wholesale: `CurrentActionList`, `CurrentActionDetail`, `NextActionList`,
+`NextActionRow`, and `next-action-drag.ts` each cite
+`idle-loops-ng/src/ui/components/<same name>.vue` by path in their header. It was
+ported *beside* the scaffold rather than *onto* it. So these four aren't four
+decisions to re-invent — they're one decision never revisited, which makes them a
+single re-basing task rather than four cleanups.
+
+This also retires slice B's resource-strip lead: same cause, no separate finding.
+
 ### Subsumed, not indexed
 
+- **`AutobuyerToggles` (75/75) and `AutobuyerMasterButton` (29/28)** — N=2 each
+  (ambient, producer), code-identical with only vocabulary differing ("Tending"
+  vs "Automation", `almanac-` vs `bakery-`). Both subsumed by the parent's
+  *Autobuyer-as-content registry*: they render `autobuyers.master` /
+  `autobuyers.rows` and mean nothing without that registry. **The generalization
+  test doing real work at its hardest case** — these are large and were the
+  declared test — and it splits them cleanly: their *autobuyer* content subsumes,
+  while the *mount-timing* reason `AutobuyerMasterButton` exists at all does
+  generalize, and so joins § Post-start module access gate instead. Two shapes in
+  one 28-line file, routed to two different places.
 - **`useAutobuyers`** — N=2 (ambient, producer), near-verbatim: identical
   `AutobuyerRow` / `AutobuyerSurface` interfaces, identical body and return.
   Subsumed by the parent's *Autobuyer-as-content registry* (N=2, same two sites):
