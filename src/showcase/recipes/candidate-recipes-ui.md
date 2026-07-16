@@ -87,7 +87,7 @@ canonical enough to enshrine in a template, and the template enshrined it as
 
 ## Scope
 
-**In:** the 9 archetypes with a UI, at the roles mapped below.
+**In:** the 9 archetypes with a UI, at the roles mapped on studio/open-loop-starter#20.
 
 **Out, and why** — each of these would inflate every N it touched:
 
@@ -104,91 +104,19 @@ Both exclusions follow from the parent's counting rule rather than being special
 cases: an instance counts when it is **live and independently maintained** — code
 someone would have to fix twice. Unwired and vendored trees are neither.
 
-## Role map
+## Role map & slice plan
 
-Roles cut across paths, because the path conventions have diverged (see § Path
-divergence). Membership is by role; the directory a file sits in decides nothing.
+Sweep scaffolding — working state, not surface output — lives on the umbrella
+(studio/open-loop-starter#20), which is the flow-state home per PROCESS.md
+§ Iterative umbrella tickets. It held the slice list already; the role map joined
+it rather than being duplicated here. Both die with the sweep; the entries below
+outlive it.
 
-**root** — archetype app assembly: boot, shell selection, provide/inject, modal
-and toast wiring.
-
-- `_blank/ui/GameAppRoot.vue`, `ambient/ui/AmbientAppRoot.vue`,
-  `defender/ui/DefenderAppRoot.vue`, `interlocker/ui/InterlockerAppRoot.vue`,
-  `looper/ui/LooperAppRoot.vue`, `producer/ui/ProducerAppRoot.vue`,
-  `scaler/ui/ScalerAppRoot.vue`, `skirmish/ui/SkirmishAppRoot.vue`,
-  `tug/ui/TugAppRoot.vue`
-
-**frame** — a layout tier between root and panels. Only 3 archetypes have one.
-
-- `defender/ui/DefenderFrameLayout.vue`, `tug/ui/TugFrameLayout.vue`,
-  `interlocker/ui/InterlockerGameView.vue`
-
-**composable** — reactive bridge from module state to UI.
-
-- ambient: `useAutobuyers`, `useAutoProducers`
-- interlocker: `useActions`, `useAutomationPanel`, `useBuildings`, `useCrafts`,
-  `useGameLog`, `useJobs`, `useLogFeed`, `useResources`, `useSciences`
-- looper: `useTrackedResources`
-- producer: `useAutobuyers`, `useChainBreakdown`, `useProducers`,
-  `use-row-adapter`, `useUpgrades`
-- scaler: `scaler-game-state`, `use-producer-row`
-- skirmish: `useMatch`
-- tug: `useCounterMatrix`, `useIncomeUpgrades`, `useLane`, `useMatch`, `useUnits`
-
-**helper** — non-composable UI-side TS.
-
-- `looper/composables/tooltips/actionTooltips.ts`, `looper/ui/next-action-drag.ts`
-
-**panel** — a screen region owning one concern. Role, not path: looper's
-`StatsPanel` / `TownColumn` / `ActionColumn` live in `ui/components/` and are
-panels; scaler's live flat in `ui/`.
-
-- ambient: `AutoProducerList`, `IdleScenePanel`, `UnlockTray`, `WelcomeBackOverlay`
-- defender: `EndGameOverlay`, `MapCanvas`, `RoundStatusHeader`, `TowerShop`
-- interlocker: `AutomationPanel`, `BuildingsPanel`, `CraftsPanel`,
-  `JobAssignmentPanel`, `LogPanel`, `ResourceSidebar`, `SciencePanel`
-- looper: `ActionColumn`, `StatsPanel`, `TownColumn`
-- producer: `HeadlinePanel`, `ProducerPanel`, `UpgradeTray`
-- scaler: `AchievementsModal`, `BuildingsPanel`, `ChallengesPanel`,
-  `PrestigePanel`, `RunesPanel`, `TranscendPanel`, `UpgradesPanel`
-- skirmish: `BattlefieldScreen`, `PlayField`
-- tug: `CounterMatrixPanel`, `FortressBars`, `IncomeBar`, `LaneStrip`,
-  `MatchEndSummary`, `UnitShop`
-
-**component** — a widget or row rendered inside a panel.
-
-- ambient: `AchievementGridDialog`, `AutobuyerMasterButton`, `AutobuyerToggles`,
-  `PlantingGlyph`
-- interlocker: `ActionBar`, `AutomationRow`, `BuildingRow`, `CalendarHeader`,
-  `CraftCard`, `JobAllocationRow`, `ResourceList`, `ScienceNode`
-- looper: `AppTooltip`, `CurrentActionDetail`, `CurrentActionList`, `HeaderBand`,
-  `NextActionList`, `NextActionRow`
-- producer: `AchievementGridDialog`, `AutobuyerMasterButton`, `AutobuyerToggles`,
-  `ClickCookieButton`, `CookieGlyph`, `ProducerTooltip`
-- scaler: `ChallengeRow`, `CrystalRow`, `CumulativeRow`, `RuneRow`
-
-## Slice plan
-
-Slices cut by role across archetypes, never per-archetype: convergence is
-cross-archetype by definition, so an archetype-shaped slice cannot see a repeat.
-Each slice ends by writing entries + leads here, committing, then compacting —
-this file and the commit are the memory.
-
-| Slice | Roles | Files | ~Lines | Status |
-|---|---|---|---|---|
-| A | root + frame | 12 | 1.8k | **done** — 4 entries, 1 subsumed, 3 housekeeping |
-| B | composable + helper | 30 | 2.1k | **done** — 3 entries, 1 subsumed, A's gate → N=4 |
-| C | component | 26 | 3.9k | **done** — 2 entries, 2 subsumed, A's gate → N=6 |
-| D | panel | 34 | 7.0k | not started — oversized, split at read-time |
-
-A first: smallest, highest convergence density, and it names the vocabulary the
-later slices reference.
-
-D is oversized and will need splitting. The split must be a **size
-accommodation, not a taxonomy** — cutting it by a guessed family (economy vs
-contest, list vs overlay) decides convergence before reading, which is the
-over-lumping trap the parent file records. Whatever the cut, entries from both
-halves get cross-checked before the sweep closes.
+Two rules from it that the entries lean on, so they stay: **roles cut across
+paths** (the directory a file sits in decides nothing — looper's 550-line
+`StatsPanel` lives in `ui/components/`), and **slices cut by role across
+archetypes, never per-archetype** (convergence is cross-archetype by definition,
+so an archetype-shaped slice cannot see a repeat).
 
 ## Path divergence
 
