@@ -67,14 +67,24 @@ Precedent, not live work. Each landed as noted; the durable lesson is what's kep
   (panel-compositions bare BEM, widgets `olui-`). `ResourceHeaderStrip` is the
   reference case: interlocker adopts the *shape* and renders its own markup.
 
-- **Post-start module gate → engine (`studio/open-loop-engine#10`).** N=6
-  workarounds to one fact — module getters / `inject` are only valid after
-  `engine.start()` — routed out as a primitive gap (wants a post-start injection
-  guarantee / lazy accessor / `connect()`-phase resolution). The component-extraction
-  workaround was itself N=3 (interlocker `GameView`, ambient + producer
-  `AutobuyerMasterButton`) — components that exist only to move an `inject` later in
-  mount order. scaler's variant is *install*-order, not *start*-order; carried into
-  the ticket's uncertainties.
+- **Post-start module gate → resolved starter-side, no engine change
+  (`studio/open-loop-engine#10`).** N=6 workarounds to one fact — module getters /
+  `inject` are only valid after `engine.start()`. The engine triage found the fix
+  is *not* a primitive: real consumers already dodge the gap by construction
+  (start-at-boot: incloneution, multiverse-hr) or clean screen-routing (idle-loops-ng,
+  maldacena, frontier confine all module reads to a post-start game screen), and no
+  consumer invented a `started`/`whenStarted` signal — the signal's natural owner is
+  whoever calls `start()`, always consumer-side. Resolution is the **app-root routing
+  discipline** (`.claude/rules/app-root-discipline.md`): roots are routing+chrome only,
+  a `<XGameView>` subtree under the post-start `v-else` owns every module read. The
+  five start-order workarounds collapse (the three mount-timing components become plain
+  game-view boundaries; ambient's `Screen.Game` gate drops). scaler's variant is
+  *install*-order, not start-order — benign localized try/catch in the accessor's
+  eager-register closures (grants resolve backward in dependency order, so no chain
+  read actually fails); left as-is deliberately, since honest `| undefined` getters
+  would spread `?.` across ~28 correct post-start callers to remove defense from one
+  file. Landed: engine#10 needs no change; starter discipline + per-archetype
+  game-view extraction across all nine roots.
 
 - **Surface chrome → `.olui-surface` + `.olui-buy-card` (`aa11d20`).** Two widget
   classes: the surface/border/radius trio and the 12-declaration buy tile. Adopted
