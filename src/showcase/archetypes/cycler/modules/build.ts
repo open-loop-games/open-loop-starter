@@ -41,8 +41,10 @@ export interface BuildApi {
   powerLevel: ComputedRef<number>;
   /** Pieces placed on the board this run (0..boardCells). */
   placed: ComputedRef<number>;
-  /** Realized within-run output of the live board (evaluator over occupancy). */
+  /** Realized within-run producer output MW of the live board (evaluator over occupancy). */
   capacity: ComputedRef<Decimal>;
+  /** Realized clear-rate C — aggregate Lance interception, boosted, scaled by power. */
+  clearRate: ComputedRef<Decimal>;
   /** Saturated closed-form ceiling at the current L. The peg's D_max (unchanged). */
   dMax: ComputedRef<Decimal>;
   /** Total placement cells (width·height) — the finite-board saturation source. */
@@ -138,6 +140,7 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
       const powerMult = computed(() => Decimal.pow(producerUpgradeRatio, state.powerLevel.value));
       const evaluation = computed<BoardEvaluation>(() => evaluateBoard(liveView));
       const capacity = computed(() => powerMult.value.mul(evaluation.value.total));
+      const clearRate = computed(() => powerMult.value.mul(evaluation.value.clearRate));
       // The authored ceiling — unchanged closed form (the peg + currency read this).
       const dMax = computed(() =>
         powerMult.value.mul(boardCells).mul(baseOutputCeiling).mul(adjacencyBoost),
@@ -179,6 +182,7 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
         powerLevel: computed(() => state.powerLevel.value),
         placed,
         capacity,
+        clearRate,
         dMax,
         boardCells: cellCount,
         width,

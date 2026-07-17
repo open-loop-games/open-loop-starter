@@ -27,7 +27,7 @@ export {
   coveredCells,
   type OccupancyView,
   type BoardEvaluation,
-  type ProducerCell,
+  type ReceiverCell,
 } from './adjacency';
 export {
   BurnTierKey,

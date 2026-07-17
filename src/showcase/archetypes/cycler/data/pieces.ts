@@ -1,31 +1,44 @@
 // ─── Skeleton ───
-// The build-phase pieces on the shared placement grid (IDENTITY § One shared
-// surface; studio/open-loop-starter#21 leaf 2). Two kinds occupy the same board:
-//   • Reactor (producer) — yields output; the economy's source.
-//   • Relay   (booster)  — yields nothing itself; boosts adjacent producers
-//                          (and, from leaf 3, adjacent Lances — the bridge that
-//                          makes economy and defense one system).
+// The pieces on the one shared placement grid (IDENTITY § One shared surface;
+// studio/open-loop-starter#21 leaves 2–3). Three kinds occupy the same board:
+//   • Reactor (producer) — yields MW output; the economy's source.
+//   • Lance   (tower)    — yields clear-rate C (Lance interception); draws MW to
+//                          fire (a within-run sink). Shares cells with Reactors —
+//                          every cell a Lance takes is a cell not producing (the
+//                          spatial C-vs-output tradeoff, Stage 2).
+//   • Relay   (booster)  — yields nothing itself; boosts adjacent Reactors AND
+//                          Lances — the bridge that makes economy and defense one
+//                          system (Relays raise both output and C).
 // Pure config: typed defs + the reference full-board layout the closed-form
 // ceiling calibrates against. The board module reads these at construction.
 
 /** Connection shape a booster reaches — the cells it covers. Cycler uses `cross`. */
 export type ConnectionShape = 'cross' | 'diagonal' | 'ring';
 
-export type PieceKind = 'reactor' | 'relay';
+export type PieceKind = 'reactor' | 'lance' | 'relay';
+
+/**
+ * A piece's role in the adjacency evaluation. `producer` and `tower` are both
+ * *boostable* receivers (Relays lift both); `booster` emits the boost.
+ */
+export type PieceRole = 'producer' | 'tower' | 'booster';
 
 export interface PieceDef {
   kind: PieceKind;
-  /** Role in the adjacency evaluation: producers receive boosts, boosters emit them. */
-  role: 'producer' | 'booster';
+  role: PieceRole;
   /** Player-facing name (costume). */
   title: string;
   /** Player-facing description. */
   description: string;
-  /** Producer base output (MW) before adjacency and permanent power. Boosters: undefined. */
+  /** Producer base output (MW) before adjacency and permanent power. Non-producers: undefined. */
   output?: number;
-  /** Booster additive boost fraction per covered producer (1 = +100%). Producers: undefined. */
+  /** Tower base clear-rate C (interception) before adjacency and power. Non-towers: undefined. */
+  intercept?: number;
+  /** Tower MW drawn per INBOUND to fire — the within-run economic sink. Non-towers: undefined. */
+  draw?: number;
+  /** Booster additive boost fraction per covered receiver (1 = +100%). Non-boosters: undefined. */
   boost?: number;
-  /** Booster coverage shape. Producers: undefined. */
+  /** Booster coverage shape. Non-boosters: undefined. */
   shape?: ConnectionShape;
 }
 
@@ -40,11 +53,19 @@ export const PIECES: Record<PieceKind, PieceDef> = {
     description: 'Yields MW. The economy that funds Lances and repair.',
     output: 95,
   },
+  lance: {
+    kind: 'lance',
+    role: 'tower',
+    title: 'Lance',
+    description: 'Directed-energy tower — raises clear-rate C, draws MW to fire.',
+    intercept: 40,
+    draw: 30,
+  },
   relay: {
     kind: 'relay',
     role: 'booster',
     title: 'Relay',
-    description: 'Boosts cross-adjacent Reactors (and, later, Lances) — the shared-state bridge.',
+    description: 'Boosts cross-adjacent Reactors and Lances — the shared-state bridge.',
     boost: 0.75,
     shape: 'cross',
   },

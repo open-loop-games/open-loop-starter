@@ -12,7 +12,8 @@ Phase-alternation over shared state: a saturating capacity ceiling D_max races a
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
 - **ConnectionShape** _(string-literal union)_ — `cross` · `diagonal` · `ring`
-- **PieceKind** _(string-literal union)_ — `reactor` · `relay`
+- **PieceKind** _(string-literal union)_ — `reactor` · `lance` · `relay`
+- **PieceRole** _(string-literal union)_ — `producer` · `tower` · `booster`
 - **UpgradeKind** _(string-literal union)_ — `reach` · `g-bender`
 
 ## Definitions

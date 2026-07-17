@@ -60,6 +60,31 @@ describe('evaluateBoard — booster-centric additive synergy', () => {
     const ev = evaluateBoard(viewOf(REFERENCE_LAYOUT));
     expect(ev.producers.size).toBe(12);
     expect(ev.total).toBe(1995); // 95 · Σmult(21); ≈ closed-form D_max 2000
+    expect(ev.clearRate).toBe(0); // no Lances on the economy reference board
+  });
+});
+
+describe('evaluateBoard — Lances yield clear-rate C; Relays boost both receivers', () => {
+  it('a lone Lance yields its base intercept as C, no output', () => {
+    const ev = evaluateBoard(viewOf(['lance', null, null, null], 2, 2));
+    expect(ev.clearRate).toBe(PIECES.lance.intercept);
+    expect(ev.total).toBe(0);
+    expect(ev.towers.get('0,0')!.multiplier).toBe(1);
+  });
+
+  it('a Relay lifts a cross-adjacent Lance AND a cross-adjacent Reactor (the bridge)', () => {
+    // Reactor at (0,0), Lance at (1,1), Relay at (1,0) cross-covers both.
+    const ev = evaluateBoard(viewOf(['reactor', 'relay', null, 'lance'], 2, 2));
+    const boosted = 1 + PIECES.relay.boost!;
+    expect(ev.total).toBeCloseTo(PIECES.reactor.output! * boosted, 6);
+    expect(ev.clearRate).toBeCloseTo(PIECES.lance.intercept! * boosted, 6);
+  });
+
+  it('C-vs-output is spatial: a Lance cell is a cell not producing', () => {
+    const allReactors = evaluateBoard(viewOf(['reactor', 'reactor', 'reactor', 'reactor'], 2, 2));
+    const oneLance = evaluateBoard(viewOf(['lance', 'reactor', 'reactor', 'reactor'], 2, 2));
+    expect(oneLance.clearRate).toBe(PIECES.lance.intercept); // gained C
+    expect(oneLance.total).toBeLessThan(allReactors.total); // lost that cell's output
   });
 });
 

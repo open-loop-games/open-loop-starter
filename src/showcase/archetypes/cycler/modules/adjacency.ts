@@ -27,45 +27,55 @@ export interface OccupancyView {
   pieceAt(x: number, y: number): PieceKind | null;
 }
 
-/** One producer's realized state after adjacency: its multiplier and output. */
-export interface ProducerCell {
+/** One boostable cell's realized state after adjacency: its multiplier and value. */
+export interface ReceiverCell {
   readonly x: number;
   readonly y: number;
-  /** Output multiplier from covering boosters: 1 + Σ boost (single additive group). */
+  /** Multiplier from covering boosters: 1 + Σ boost (single additive group). */
   readonly multiplier: number;
-  /** Realized output = base output · multiplier (before permanent-power scaling). */
-  readonly output: number;
+  /** Realized value = base (output for producers, intercept for towers) · multiplier. */
+  readonly value: number;
 }
 
 export interface BoardEvaluation {
-  /** Aggregate realized producer output (before permanent-power scaling). */
+  /** Aggregate realized producer output MW (before permanent-power scaling). */
   readonly total: number;
-  /** Per-producer breakdown, keyed by `"x,y"` — the UI's per-cell readout. */
-  readonly producers: ReadonlyMap<string, ProducerCell>;
+  /** Aggregate realized tower clear-rate C (before permanent-power scaling). */
+  readonly clearRate: number;
+  /** Per-producer breakdown, keyed by `"x,y"`. */
+  readonly producers: ReadonlyMap<string, ReceiverCell>;
+  /** Per-tower breakdown, keyed by `"x,y"`. */
+  readonly towers: ReadonlyMap<string, ReceiverCell>;
 }
 
 /**
- * Evaluate the board's realized output. Booster-centric: each booster pushes an
- * additive boost onto every producer it covers; a producer's multiplier is
- * `1 + Σ boost` (one booster type ⇒ one additive group — the degenerate case of
- * mv-hr's hybrid stacking). Boosters produce nothing directly.
+ * Evaluate the board's realized output MW and clear-rate C. Booster-centric: each
+ * booster pushes an additive boost onto every *receiver* it covers — producers
+ * (Reactors) AND towers (Lances), the bridge that makes one system. A receiver's
+ * multiplier is `1 + Σ boost` (one booster type ⇒ one additive group — the
+ * degenerate case of mv-hr's hybrid stacking). Boosters emit nothing themselves.
  */
 export function evaluateBoard(view: OccupancyView): BoardEvaluation {
-  const boostAcc = new Map<string, number>(); // "x,y" of a producer → Σ boost fraction
-  const producerCoords: Array<{ x: number; y: number }> = [];
+  const boostAcc = new Map<string, number>(); // "x,y" of a receiver → Σ boost fraction
+  const receivers: Array<{ x: number; y: number; role: 'producer' | 'tower' }> = [];
+
+  const isReceiver = (x: number, y: number): boolean => {
+    const kind = view.pieceAt(x, y);
+    return kind !== null && PIECES[kind].role !== 'booster';
+  };
 
   for (let y = 0; y < view.height; y++) {
     for (let x = 0; x < view.width; x++) {
       const kind = view.pieceAt(x, y);
       if (kind === null) continue;
       const def = PIECES[kind];
-      if (def.role === 'producer') {
-        producerCoords.push({ x, y });
+      if (def.role === 'producer' || def.role === 'tower') {
+        receivers.push({ x, y, role: def.role });
         const key = `${x},${y}`;
         if (!boostAcc.has(key)) boostAcc.set(key, 0);
       } else if (def.role === 'booster' && def.boost !== undefined && def.shape) {
         for (const c of coveredCells(def.shape, x, y, view.width, view.height)) {
-          if (PIECES[view.pieceAt(c.x, c.y) ?? 'relay']?.role !== 'producer') continue;
+          if (!isReceiver(c.x, c.y)) continue;
           const key = `${c.x},${c.y}`;
           boostAcc.set(key, (boostAcc.get(key) ?? 0) + def.boost);
         }
@@ -73,18 +83,25 @@ export function evaluateBoard(view: OccupancyView): BoardEvaluation {
     }
   }
 
-  const producers = new Map<string, ProducerCell>();
+  const producers = new Map<string, ReceiverCell>();
+  const towers = new Map<string, ReceiverCell>();
   let total = 0;
-  for (const { x, y } of producerCoords) {
+  let clearRate = 0;
+  for (const { x, y, role } of receivers) {
     const key = `${x},${y}`;
-    const kind = view.pieceAt(x, y)!;
-    const base = PIECES[kind].output ?? 0;
+    const def = PIECES[view.pieceAt(x, y)!];
+    const base = role === 'producer' ? (def.output ?? 0) : (def.intercept ?? 0);
     const multiplier = 1 + (boostAcc.get(key) ?? 0);
-    const output = base * multiplier;
-    producers.set(key, { x, y, multiplier, output });
-    total += output;
+    const value = base * multiplier;
+    if (role === 'producer') {
+      producers.set(key, { x, y, multiplier, value });
+      total += value;
+    } else {
+      towers.set(key, { x, y, multiplier, value });
+      clearRate += value;
+    }
   }
-  return { total, producers };
+  return { total, clearRate, producers, towers };
 }
 
 /**
