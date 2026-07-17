@@ -27,11 +27,13 @@ import {
   createCyclerModules,
   CycleKey,
   BuildKey,
+  WallKey,
   BurnTierKey,
   PrestigeKey,
   UpgradesKey,
   type CycleApi,
   type BuildApi,
+  type WallApi,
   type BurnTierApi,
   type PrestigeApi,
   type UpgradesApi,
@@ -67,6 +69,13 @@ export function cycle(): CycleApi {
 export function build(): BuildApi {
   const api = handle.engine.tryInject(BuildKey);
   if (!api) throw new Error('cycler/sim/harness: build module not installed');
+  return api;
+}
+
+/** The installed wall (defended line) API for the current engine. */
+export function wall(): WallApi {
+  const api = handle.engine.tryInject(WallKey);
+  if (!api) throw new Error('cycler/sim/harness: wall module not installed');
   return api;
 }
 

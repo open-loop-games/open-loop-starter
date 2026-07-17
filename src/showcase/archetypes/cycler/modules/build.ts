@@ -10,7 +10,7 @@ import {
 } from '@open-loop/engine';
 import { computed } from 'vue';
 import { BUILD_BALANCE, type BuildBalance } from '../data/build';
-import { BOARD, REFERENCE_LAYOUT, type PieceKind } from '../data/pieces';
+import { BOARD, PIECES, REFERENCE_LAYOUT, type PieceKind } from '../data/pieces';
 import { evaluateBoard, previewAt, type BoardEvaluation, type OccupancyView } from './adjacency';
 
 /**
@@ -45,6 +45,10 @@ export interface BuildApi {
   capacity: ComputedRef<Decimal>;
   /** Realized clear-rate C — aggregate Lance interception, boosted, scaled by power. */
   clearRate: ComputedRef<Decimal>;
+  /** MW the placed Lances draw to fire during INBOUND — the within-run economic sink. */
+  fireDraw: ComputedRef<Decimal>;
+  /** MW surplus = producer output − Lance fire-draw (≥0); the repair budget. */
+  mwSurplus: ComputedRef<Decimal>;
   /** Saturated closed-form ceiling at the current L. The peg's D_max (unchanged). */
   dMax: ComputedRef<Decimal>;
   /** Total placement cells (width·height) — the finite-board saturation source. */
@@ -141,6 +145,11 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
       const evaluation = computed<BoardEvaluation>(() => evaluateBoard(liveView));
       const capacity = computed(() => powerMult.value.mul(evaluation.value.total));
       const clearRate = computed(() => powerMult.value.mul(evaluation.value.clearRate));
+      // Each Lance draws `PIECES.lance.draw` MW to fire; power scales it like output.
+      const fireDraw = computed(() =>
+        powerMult.value.mul(evaluation.value.towers.size).mul(PIECES.lance.draw ?? 0),
+      );
+      const mwSurplus = computed(() => Decimal.max(0, capacity.value.sub(fireDraw.value)));
       // The authored ceiling — unchanged closed form (the peg + currency read this).
       const dMax = computed(() =>
         powerMult.value.mul(boardCells).mul(baseOutputCeiling).mul(adjacencyBoost),
@@ -183,6 +192,8 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
         placed,
         capacity,
         clearRate,
+        fireDraw,
+        mwSurplus,
         dMax,
         boardCells: cellCount,
         width,

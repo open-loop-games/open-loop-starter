@@ -1,6 +1,7 @@
 import type { EngineModule } from '@open-loop/engine';
 import { createCycleModule, type CycleModuleOptions } from './cycle';
 import { createBuildModule, getBuild, type BuildModuleOptions } from './build';
+import { createWallModule, type WallModuleOptions } from './wall';
 import { createBurnTierModule, getBurnTier, type BurnTierModuleOptions } from './burn-tier';
 import { createPrestigeModule, type PrestigeModuleOptions } from './prestige';
 import { createUpgradesModule, getUpgrades, type UpgradesModuleOptions } from './upgrades';
@@ -29,6 +30,7 @@ export {
   type BoardEvaluation,
   type ReceiverCell,
 } from './adjacency';
+export { WallKey, getWall, createWallModule, type WallApi, type WallModuleOptions } from './wall';
 export {
   BurnTierKey,
   getBurnTier,
@@ -55,6 +57,7 @@ export interface CyclerModulesOptions
   extends
     CycleModuleOptions,
     BuildModuleOptions,
+    WallModuleOptions,
     BurnTierModuleOptions,
     PrestigeModuleOptions,
     UpgradesModuleOptions {}
@@ -89,7 +92,8 @@ export function createCyclerModules(options: CyclerModulesOptions = {}): EngineM
         };
       }),
   });
+  const wall = createWallModule(options);
   const prestige = createPrestigeModule(options);
   const upgrades = createUpgradesModule(options);
-  return [build, burnTier, cycle, prestige, upgrades];
+  return [build, burnTier, cycle, wall, prestige, upgrades];
 }
