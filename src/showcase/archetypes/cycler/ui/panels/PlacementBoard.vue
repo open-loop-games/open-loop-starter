@@ -20,6 +20,7 @@ const GLYPH: Record<PieceKind, { ic: string; code: string; tone: string }> = {
   reactor: { ic: '◆', code: 'rctr', tone: 'prod' },
   lance: { ic: '▲', code: 'lnc', tone: 'tow' },
   relay: { ic: '+', code: 'rly', tone: 'boost' },
+  pylon: { ic: 'Ψ', code: 'pyln', tone: 'boost' },
   bulwark: { ic: '▚', code: 'blwk', tone: 'rpr' },
 };
 </script>

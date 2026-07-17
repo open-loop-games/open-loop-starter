@@ -1,13 +1,16 @@
 <!--
   DefenseField — the combat volume: the sky (radar), the defended line, the board.
-  The sky is a STATIC CSS radar backdrop here; the descending-warhead / Lance-beam
-  pixi layer is a deferred follow-up leaf (studio/open-loop-starter#21 5c) that mounts
-  over this box. Warheads are cosmetic over the rate model, so the field is fully
-  playable without them. The `data-tone` recolour comes from the `.cyc-world` ancestor.
+  The sky is a CSS radar backdrop with the pixi descending-warhead / Lance-beam
+  CombatLayer mounted over it (studio/open-loop-starter#22 leaf 1). Warheads are
+  cosmetic over the rate model — the field is fully playable without them, and the
+  pixi canvas is pointer-transparent so the board below stays clickable. HUD/line/
+  board are DOM siblings, never pixi children. The `data-tone` recolour comes from
+  the `.cyc-world` ancestor.
 -->
 <script setup lang="ts">
 import LineBar from './LineBar.vue';
 import PlacementBoard from './PlacementBoard.vue';
+import CombatLayer from './CombatLayer.vue';
 
 const ADDR = ['0x00', '0x20', '0x40', '0x60'];
 </script>
@@ -25,7 +28,7 @@ const ADDR = ['0x00', '0x20', '0x40', '0x60'];
         class="cyc-sky__addr"
         :style="{ left: 6 + i * 25 + '%' }"
       >{{ addr }}</span>
-      <span class="cyc-sky__standby">— radar scope · combat layer pending —</span>
+      <CombatLayer />
     </div>
     <LineBar />
     <PlacementBoard />
@@ -64,15 +67,5 @@ const ADDR = ['0x00', '0x20', '0x40', '0x60'];
   top: 3px;
   font-size: 8px;
   color: var(--cyc-grn2);
-}
-.cyc-sky__standby {
-  position: absolute;
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 9px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--cyc-grndim);
 }
 </style>

@@ -108,6 +108,7 @@ export function useBoardControl(): BoardControl {
       reactor: cell.kind === 'reactor',
       lance: cell.kind === 'lance',
       relay: cell.kind === 'relay',
+      pylon: cell.kind === 'pylon',
       bulwark: cell.kind === 'bulwark',
       aura: evalBoosted,
       firing: firing.value && cell.kind === 'lance' && cell.forward,

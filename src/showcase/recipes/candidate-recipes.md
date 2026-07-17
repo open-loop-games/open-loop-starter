@@ -371,8 +371,11 @@ fn mirroring SpatialGrid neighbour semantics.
   thresholds, realms, scars, adjacency burnout. (2) *reactive wiring* — cycler
   computes off the persistent `placements` array directly; mv-hr wraps the evaluator
   in a `shallowRef` recomputed on `onGridChanged` + rule-scope watches. (3)
-  *`coveredCells` shapes* — cycler `cross`/`diagonal`/`ring`; mv-hr adds
-  `row`/`column`/`knight`. (4) *positional receiver gating* — cycler adds a
+  *`coveredCells` shapes* — cycler `cross`/`diagonal`/`ring` plus `reach` (a range-2
+  cardinal cross — the Pylon piece, studio/open-loop-starter#22; the first range-2
+  shape on either side); mv-hr adds `row`/`column`/`knight` (all range-1). Keep the
+  range dimension visible for the dive: the convergent core is range-1, and a
+  graduated primitive would need a `range` parameter, not a fixed shape enum. (4) *positional receiver gating* — cycler adds a
   `forwardRows` param so a `tower` receiver counts only in a forward cell (a Lance
   behind the line is inert), a spatial front/rear split threaded through the same pure
   fn (studio/open-loop-starter#21 leaf 5); mv-hr has no positional gate. The

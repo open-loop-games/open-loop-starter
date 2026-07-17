@@ -1,26 +1,40 @@
 // ─── Skeleton ───
 // The pieces on the one shared placement grid (IDENTITY § One shared surface;
-// studio/open-loop-starter#21 leaves 2–3). Four kinds occupy the same board:
+// studio/open-loop-starter#21 leaves 2–3, #22 roster additions). Five kinds occupy
+// the same board:
 //   • Reactor (producer) — yields MW output; the economy's source.
 //   • Lance   (tower)    — yields clear-rate C (Lance interception); draws MW to
 //                          fire (a within-run sink). Shares cells with Reactors —
 //                          every cell a Lance takes is a cell not producing (the
 //                          spatial C-vs-output tradeoff, Stage 2).
-//   • Relay   (booster)  — yields nothing itself; boosts adjacent Reactors AND
+//   • Relay   (booster)  — yields nothing itself; boosts cross-adjacent Reactors AND
 //                          Lances — the bridge that makes economy and defense one
-//                          system (Relays raise both output and C).
+//                          system (Relays raise both output and C). Concentrated,
+//                          short (range-1) reach.
+//   • Pylon   (booster)  — a range-2 booster (studio/open-loop-starter#22): the same
+//                          Reactor-AND-Lance bridge as Relay, but reaching two cells
+//                          out along each axis (`reach` shape) at a lower per-cell
+//                          boost. Diffuse long reach vs Relay's concentrated boost —
+//                          it spans the forward/back split (a row-1 Pylon lifts a
+//                          front-row Lance AND a back-row Reactor), a distinct tool,
+//                          not a strict upgrade.
 //   • Bulwark (repair)   — the third strategic leg made spatial (leaf 3): converts
 //                          MW surplus into line-repair THROUGHPUT (Δ_wall tail). A
 //                          Bulwark cell is a cell not producing or clearing, so
 //                          "buy tail" competes for the board like C and output.
-//                          Not a boost receiver (Relays don't lift it).
+//                          Not a boost receiver (boosters don't lift it).
 // Pure config: typed defs + the reference full-board layout the closed-form
 // ceiling calibrates against. The board module reads these at construction.
 
-/** Connection shape a booster reaches — the cells it covers. Cycler uses `cross`. */
-export type ConnectionShape = 'cross' | 'diagonal' | 'ring';
+/**
+ * Connection shape a booster reaches — the cells it covers. `cross` = 4-connected
+ * (range-1 cardinal, Relay), `diagonal` = the 4 range-1 corners, `ring` = the 8
+ * range-1 Moore cells, `reach` = the range-2 cardinal cross (distance 1 AND 2 along
+ * each axis, up to 8 cells — Pylon's wider footprint).
+ */
+export type ConnectionShape = 'cross' | 'diagonal' | 'ring' | 'reach';
 
-export type PieceKind = 'reactor' | 'lance' | 'relay' | 'bulwark';
+export type PieceKind = 'reactor' | 'lance' | 'relay' | 'pylon' | 'bulwark';
 
 /**
  * A piece's role in the adjacency evaluation. `producer` and `tower` are both
@@ -76,6 +90,14 @@ export const PIECES: Record<PieceKind, PieceDef> = {
     description: 'Boosts cross-adjacent Reactors and Lances — the shared-state bridge.',
     boost: 0.75,
     shape: 'cross',
+  },
+  pylon: {
+    kind: 'pylon',
+    role: 'booster',
+    title: 'Pylon',
+    description: 'Range-2 booster — a lower, longer-reach lift spanning the forward/back split.',
+    boost: 0.35,
+    shape: 'reach',
   },
   bulwark: {
     kind: 'bulwark',
@@ -145,8 +167,12 @@ export const REFERENCE_DEFENSE: readonly (PieceKind | null)[] = [
 // `data/build.ts`): the finite board caps capacity, which is what makes the burn
 // crossing logarithmic. Leaf 2 replaces the SCALAR ceiling with a REAL evaluation
 // over placed pieces, calibrated so the reference full board reproduces it:
-//   • Reactor output 95 MW; Relay +0.75 per cross-covered Reactor (additive, one
-//     booster type ⇒ a single additive group, per the lifted mv-hr evaluator).
+//   • Reactor output 95 MW; Relay +0.75 per cross-covered receiver; Pylon +0.35 per
+//     range-2-covered receiver. Both boosters sum into ONE additive group (multiplier
+//     = 1 + Σ all boosts), the degenerate case of mv-hr's hybrid stacking — cycler has
+//     no cross-type product. Pylon's magnitude is illustrative (a fork re-grounds it),
+//     traded lower for its wider `reach` footprint; like every booster it lifts realized
+//     C/output toward the reference, never the closed-form cMax/dMax peg.
 //   • REFERENCE_LAYOUT: 12 Reactors, Σ adjacency-multiplier = 12·(1) + 0.75·(Σ
 //     cross-coverage = 12) = 21. Realized output = 95 · 21 = 1995 ≈ the abstract
 //     D_max = boardCells·baseOutputCeiling·adjacencyBoost = 16·50·2.5 = 2000 (99.7%).

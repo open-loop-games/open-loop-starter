@@ -137,8 +137,11 @@ export function previewAt(
 
 /**
  * Cells a booster at (x, y) reaches with the given connection shape, clipped to a
- * width×height board. `cross` = 4-connected, `diagonal` = the 4 corners, `ring` =
- * the 8-connected Moore neighbourhood. Mirrors the mv-hr evaluator's semantics.
+ * width×height board. `cross` = 4-connected (range-1 cardinal), `diagonal` = the 4
+ * range-1 corners, `ring` = the 8-connected range-1 Moore neighbourhood, `reach` =
+ * the range-2 cardinal cross (cells at distance 1 AND 2 along each axis — Pylon's
+ * wider footprint, studio/open-loop-starter#22). `cross`/`diagonal`/`ring` mirror the
+ * mv-hr evaluator's semantics; `reach` is cycler-local (mv-hr has no range-2 shape).
  */
 export function coveredCells(
   shape: ConnectionShape,
@@ -167,6 +170,14 @@ export function coveredCells(
     [x - 1, y + 1],
     [x + 1, y + 1],
   ];
+  // `reach`: the cardinal cross extended to range 2 — distance 1 and 2 along each axis.
+  const reach: ReadonlyArray<readonly [number, number]> = [
+    ...cross,
+    [x - 2, y],
+    [x + 2, y],
+    [x, y - 2],
+    [x, y + 2],
+  ];
   switch (shape) {
     case 'cross':
       return push([], cross);
@@ -174,5 +185,7 @@ export function coveredCells(
       return push([], diagonal);
     case 'ring':
       return push(push([], cross), diagonal);
+    case 'reach':
+      return push([], reach);
   }
 }

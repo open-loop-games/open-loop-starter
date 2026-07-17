@@ -36,6 +36,12 @@ const PALETTE: PaletteEntry[] = [
     tone: 'boost',
     effect: `+${Math.round((PIECES.relay.boost ?? 0) * 100)}% cross-adjacent`,
   },
+  {
+    kind: 'pylon',
+    ic: 'Ψ',
+    tone: 'boost',
+    effect: `+${Math.round((PIECES.pylon.boost ?? 0) * 100)}% range-2`,
+  },
   { kind: 'bulwark', ic: '▚', tone: 'rpr', effect: `+${PIECES.bulwark.throughput} line repair` },
 ];
 
