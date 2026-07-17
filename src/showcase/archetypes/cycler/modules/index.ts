@@ -22,6 +22,14 @@ export {
   type BuildModuleOptions,
 } from './build';
 export {
+  evaluateBoard,
+  previewAt,
+  coveredCells,
+  type OccupancyView,
+  type BoardEvaluation,
+  type ProducerCell,
+} from './adjacency';
+export {
   BurnTierKey,
   getBurnTier,
   createBurnTierModule,

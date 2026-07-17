@@ -342,6 +342,36 @@ is *measured* off the ratio, never authored; the pace surface is frozen at
   ladder; multiverse-hr surfaces `primed` + `isUnderReview` booleans + a merge-bell
   event rather than one derived enum.
 
+### Placement-adjacency evaluator over an OccupancyView — N=2 (cycler, multiverse-hr)
+
+A pure, booster-centric synergy function evaluated over an `OccupancyView`
+read-abstraction (`width`/`height`/`pieceAt`) rather than a live `SpatialGrid`, so
+the **same function** drives the live board and the hover preview (run against an
+overlay), and stays engine-harness-testable with no module state. Boosters iterate
+and push additive contributions onto the in-profile producers they cover;
+same-type contributions sum (one additive group), cross-type multiply (hybrid
+stacking). The live board is a `createSpatialGrid` index rebuilt from a persisted
+occupancy array; `coveredCells(shape, x, y, w, h)` is a pure connection-shape→cells
+fn mirroring SpatialGrid neighbour semantics.
+
+- **The split.** `createSpatialGrid` + `Decimal` are engine **primitives**; the
+  `OccupancyView` + evaluator + preview-as-overlay wiring is this **recipe** — it
+  re-wires existing primitives, inventing no engine API.
+- **Instances (N=2):** cycler `modules/adjacency.ts` (Reactor/Relay, the bare
+  additive core — subtractively lifted from mv-hr, studio/open-loop-starter#21 leaf
+  2); multiverse-hr `src/modules/adjacency.ts` (the full evaluator — manager
+  amplification, party rules, realms, burnout quirks — over the same `OccupancyView`
+  + `coveredCells` core).
+- **Divergences to keep visible (for the N=3 dive):** (1) *quirk surface* — cycler
+  is the bare `1 + Σboost` group; mv-hr layers transitive-reach management, party
+  thresholds, realms, scars, adjacency burnout. (2) *reactive wiring* — cycler
+  computes off the persistent `placements` array directly; mv-hr wraps the evaluator
+  in a `shallowRef` recomputed on `onGridChanged` + rule-scope watches. (3)
+  *`coveredCells` shapes* — cycler `cross`/`diagonal`/`ring`; mv-hr adds
+  `row`/`column`/`knight`. The convergent core to graduate is `OccupancyView` +
+  `coveredCells` + booster-additive stacking + preview-overlay; the quirk layers
+  stay game-side.
+
 ### Two-sided match lifecycle
 
 Domain-free two-sided match spine: `start()` opens, `end(outcome)` closes

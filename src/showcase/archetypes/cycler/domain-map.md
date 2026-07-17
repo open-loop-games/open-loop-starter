@@ -11,11 +11,13 @@ Phase-alternation over shared state: a saturating capacity ceiling D_max races a
 
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
+- **ConnectionShape** _(string-literal union)_ — `cross` · `diagonal` · `ring`
+- **PieceKind** _(string-literal union)_ — `reactor` · `relay`
 - **UpgradeKind** _(string-literal union)_ — `reach` · `g-bender`
 
 ## Definitions
 
-`BuildBalance`, `BurnTier`, `CadenceBalance`, `PrestigeBalance`, `ThreatBalance`, `UpgradeBalance`, `UpgradeDef`
+`BuildBalance`, `BurnTier`, `CadenceBalance`, `DefenseBalance`, `PieceDef`, `PrestigeBalance`, `ThreatBalance`, `UpgradeBalance`, `UpgradeDef`
 
 ## Relationships
 
@@ -30,7 +32,7 @@ type-graph tools like dependency-cruiser/findReferences miss them.)
 Definitions with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`CadenceBalance`, `PrestigeBalance`, `ThreatBalance`, `BurnTier`
+`CadenceBalance`, `DefenseBalance`, `PieceDef`, `PrestigeBalance`, `ThreatBalance`, `BurnTier`
 
 ## Disambiguators (curated)
 
