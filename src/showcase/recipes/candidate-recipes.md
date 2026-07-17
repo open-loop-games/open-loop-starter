@@ -372,8 +372,12 @@ fn mirroring SpatialGrid neighbour semantics.
   computes off the persistent `placements` array directly; mv-hr wraps the evaluator
   in a `shallowRef` recomputed on `onGridChanged` + rule-scope watches. (3)
   *`coveredCells` shapes* — cycler `cross`/`diagonal`/`ring`; mv-hr adds
-  `row`/`column`/`knight`. The convergent core to graduate is `OccupancyView` +
-  `coveredCells` + booster-additive stacking + preview-overlay; the quirk layers
+  `row`/`column`/`knight`. (4) *positional receiver gating* — cycler adds a
+  `forwardRows` param so a `tower` receiver counts only in a forward cell (a Lance
+  behind the line is inert), a spatial front/rear split threaded through the same pure
+  fn (studio/open-loop-starter#21 leaf 5); mv-hr has no positional gate. The
+  convergent core to graduate is `OccupancyView` + `coveredCells` + booster-additive
+  stacking + preview-overlay; the quirk layers (and any positional receiver gating)
   stay game-side.
 
 ### Two-sided match lifecycle

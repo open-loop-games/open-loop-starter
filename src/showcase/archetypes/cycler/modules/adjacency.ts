@@ -54,16 +54,25 @@ export interface BoardEvaluation {
  * (Reactors) AND towers (Lances), the bridge that makes one system. A receiver's
  * multiplier is `1 + Σ boost` (one booster type ⇒ one additive group — the
  * degenerate case of mv-hr's hybrid stacking). Boosters emit nothing themselves.
+ *
+ * `forwardRows` sets the salvo-ranged front: a tower (Lance) is a receiver only in a
+ * forward cell (`y < forwardRows`); a Lance behind the line is INERT — no clear-rate,
+ * not a boost receiver, and (via `towers.size`) draws no MW. This is the spatial
+ * C-vs-output tradeoff (IDENTITY § One shared surface). Producers/boosters/repair are
+ * position-independent. Defaults to the whole board being forward, so the pure
+ * evaluator stays position-agnostic unless a caller supplies the split.
  */
-export function evaluateBoard(view: OccupancyView): BoardEvaluation {
+export function evaluateBoard(view: OccupancyView, forwardRows = view.height): BoardEvaluation {
   const boostAcc = new Map<string, number>(); // "x,y" of a receiver → Σ boost fraction
   const receivers: Array<{ x: number; y: number; role: 'producer' | 'tower' }> = [];
 
+  // A tower only counts on the forward line; producers are position-independent.
   const isReceiver = (x: number, y: number): boolean => {
     const kind = view.pieceAt(x, y);
     if (kind === null) return false;
     const role = PIECES[kind].role;
-    return role === 'producer' || role === 'tower';
+    if (role === 'tower') return y < forwardRows;
+    return role === 'producer';
   };
 
   for (let y = 0; y < view.height; y++) {
@@ -71,8 +80,8 @@ export function evaluateBoard(view: OccupancyView): BoardEvaluation {
       const kind = view.pieceAt(x, y);
       if (kind === null) continue;
       const def = PIECES[kind];
-      if (def.role === 'producer' || def.role === 'tower') {
-        receivers.push({ x, y, role: def.role });
+      if (isReceiver(x, y)) {
+        receivers.push({ x, y, role: def.role as 'producer' | 'tower' });
         const key = `${x},${y}`;
         if (!boostAcc.has(key)) boostAcc.set(key, 0);
       } else if (def.role === 'booster' && def.boost !== undefined && def.shape) {
@@ -115,11 +124,15 @@ export function previewAt(
   kind: PieceKind | null,
   x: number,
   y: number,
+  forwardRows = view.height,
 ): BoardEvaluation {
-  return evaluateBoard({
-    ...view,
-    pieceAt: (cx, cy) => (cx === x && cy === y ? kind : view.pieceAt(cx, cy)),
-  });
+  return evaluateBoard(
+    {
+      ...view,
+      pieceAt: (cx, cy) => (cx === x && cy === y ? kind : view.pieceAt(cx, cy)),
+    },
+    forwardRows,
+  );
 }
 
 /**

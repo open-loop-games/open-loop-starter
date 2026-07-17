@@ -56,6 +56,17 @@ const WEAK: ReadonlyArray<readonly [number, number, PieceKind]> = [
   [2, 2, 'reactor'],
   [3, 2, 'reactor'],
 ];
+// Lances placed BEHIND the line (rows 2-3, back cells) — inert, so no clear-rate.
+const BACK_LANCES: ReadonlyArray<readonly [number, number, PieceKind]> = [
+  [0, 2, 'lance'],
+  [1, 2, 'lance'],
+  [2, 2, 'lance'],
+  [3, 2, 'lance'],
+  [0, 3, 'lance'],
+  [1, 3, 'lance'],
+  [2, 3, 'lance'],
+  [3, 3, 'lance'],
+];
 
 /**
  * Walk the exogenous salvo schedule over the shipping wall module. Each wave:
@@ -132,6 +143,23 @@ describe('defense resolution — the wall gives a bounded Δ_wall tail', () => {
     const repaired = walkToBreach(wall(), C, w0, surplus, lineHP);
     const unrepaired = walkToBreach(wall(), C, w0, 0, lineHP);
     expect(repaired).toBeGreaterThanOrEqual(unrepaired);
+  });
+
+  it('Lances behind the line are inert — a back-only board clears nothing (the front is spatial)', () => {
+    const b = build();
+    place(b, BACK_LANCES); // eight Lances, all behind the line
+    const cBack = b.clearRate.value.toNumber();
+    expect(cBack).toBe(0); // zero realized C — the front line is where Lances count
+
+    boot();
+    const b2 = build();
+    place(b2, STRONG); // the same salvo, but Lances on the forward line
+    const cFwd = b2.clearRate.value.toNumber();
+    const w0 = cFwd / H; // peg to the forward board's reach
+
+    const backBreach = walkToBreach(wall(), cBack, w0, 0, lineHP);
+    const fwdBreach = walkToBreach(wall(), cFwd, w0, b2.mwSurplus.value.toNumber(), lineHP);
+    expect(backBreach).toBeLessThan(fwdBreach); // back-placed Lances buy nothing — the line falls sooner
   });
 
   it('under-building C relative to the pegged reach breaches early (the tradeoff)', () => {

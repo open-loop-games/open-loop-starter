@@ -21,9 +21,17 @@
 // realization for the full derivation.
 
 export interface DefenseBalance {
-  /** Forward cells B_f — the finite, salvo-ranged real estate Lances must occupy. Finite → C saturates (forward-cell fill). */
+  /**
+   * Forward rows — the top `forwardRows` board rows are salvo-ranged (contested). A
+   * Lance clears C only from a forward cell; a Lance behind the line is inert (no C,
+   * draws no MW). The spatial front/rear split that makes the C-vs-output tradeoff a
+   * placement decision (IDENTITY § One shared surface). `forwardCells = forwardRows ·
+   * BOARD.width`.
+   */
+  forwardRows: number;
+  /** Forward cells B_f = forwardRows·BOARD.width — the finite, salvo-ranged real estate Lances must occupy. Finite → C saturates (forward-cell fill). */
   forwardCells: number;
-  /** Back cells B_b — safe reactor-only cells. forwardCells + backCells = build.boardCells (the one shared grid). */
+  /** Back cells B_b — safe cells behind the line (Reactors/Relays/Bulwarks). forwardCells + backCells = build.boardCells (the one shared grid). */
   backCells: number;
   /** ι — warhead-units a single Lance clears per salvo, before adjacency (Relays) and permanent power (·producerUpgradeRatio^L). */
   lanceIntercept: number;
@@ -48,8 +56,9 @@ export interface DefenseBalance {
 }
 
 export const DEFENSE_BALANCE: DefenseBalance = {
-  forwardCells: 6,
-  backCells: 10,
+  forwardRows: 2,
+  forwardCells: 8, // forwardRows(2) · BOARD.width(4) — the top two rows are the line
+  backCells: 8,
   lanceIntercept: 40,
   reactorOutput: 20,
   lanceDraw: 30,

@@ -17,8 +17,8 @@ export interface PrestigeBalance {
 }
 
 export const PRESTIGE_BALANCE: PrestigeBalance = {
-  fragmentScalePrimary: 1800,
-  fragmentScaleSecondary: 2600,
+  fragmentScalePrimary: 1000,
+  fragmentScaleSecondary: 1200,
   mergeQuorum: 3,
 };
 
@@ -38,10 +38,11 @@ export const PRESTIGE_BALANCE: PrestigeBalance = {
 //     Both climb with reach (∝ C ∝ power), so currency climbs ∝ ∛C across merges —
 //     sublinear in the reach it buys.
 //   • Scale VALUES are cycler-calibrated, not lifted: the reference board's
-//     accumulators run ~15.2k (∫capacity dt) / ~2.6k (Σ W_n) at L=0, so Sp=1800 /
-//     Ss=2600 reproduce a 2+1 first-merge split (⌊∛(15184/1800)⌋=2,
-//     ⌊∛(2622/2600)⌋=1) == quorum-3 affordability. Absolute magnitudes are a Lane-3
-//     discovery (multiverse-hr#17); a fork re-sizes both to its own economy.
+//     accumulators run ~13.3k (∫capacity dt) / ~2.15k (Σ W_n) at L=0 (measured on the
+//     forward-line spatial split, forwardRows=2), so Sp=1000 / Ss=1200 reproduce a 2+1
+//     first-merge split (⌊∛(13284/1000)⌋=2, ⌊∛(2154/1200)⌋=1) == quorum-3
+//     affordability. Absolute magnitudes are a Lane-3 discovery (multiverse-hr#17); a
+//     fork re-sizes both to its own economy.
 //   • THE RE-PEG is the whole point. Prestige carries permanent power (raises
 //     D_max), and the burn re-baselines W₀ = D_max/H at the Merge boundary. So
 //     D_max climbs run-over-run but N* = τ_setup + T_g·log_g(H) stays constant —

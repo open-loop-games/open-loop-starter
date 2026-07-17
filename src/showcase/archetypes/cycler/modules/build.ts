@@ -68,6 +68,8 @@ export interface BuildApi {
   width: number;
   /** Board height in cells. */
   height: number;
+  /** The salvo-ranged forward rows (`y < forwardRows`) — where Lances clear C. The UI shades this zone. */
+  forwardRows: number;
   /** The piece kind at (x, y), or null. */
   pieceAt(x: number, y: number): PieceKind | null;
   /** Realized per-cell breakdown of the live board (multiplier + output per producer). */
@@ -110,7 +112,7 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
   const data = options.build ?? BUILD_BALANCE;
   const defense = options.defense ?? DEFENSE_BALANCE;
   const { boardCells, baseOutputCeiling, adjacencyBoost, producerUpgradeRatio } = data;
-  const { forwardCells, lanceIntercept, baseRepair } = defense;
+  const { forwardCells, forwardRows, lanceIntercept, baseRepair } = defense;
   const bulwarkThroughput = PIECES.bulwark.throughput ?? 0;
   const { width, height } = BOARD;
   const cellCount = width * height;
@@ -157,7 +159,7 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
       };
 
       const powerMult = computed(() => Decimal.pow(producerUpgradeRatio, state.powerLevel.value));
-      const evaluation = computed<BoardEvaluation>(() => evaluateBoard(liveView));
+      const evaluation = computed<BoardEvaluation>(() => evaluateBoard(liveView, forwardRows));
       const capacity = computed(() => powerMult.value.mul(evaluation.value.total));
       const clearRate = computed(() => powerMult.value.mul(evaluation.value.clearRate));
       // Each Lance draws `PIECES.lance.draw` MW to fire; power scales it like output.
@@ -230,11 +232,12 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
         boardCells: cellCount,
         width,
         height,
+        forwardRows,
         pieceAt: (x, y) => liveView.pieceAt(x, y),
         evaluation,
         placeAt,
         removeAt,
-        preview: (kind, x, y) => previewAt(liveView, kind, x, y),
+        preview: (kind, x, y) => previewAt(liveView, kind, x, y, forwardRows),
         placeProducer,
         fillBoard,
         raisePower,

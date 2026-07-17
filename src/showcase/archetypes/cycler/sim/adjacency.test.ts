@@ -88,6 +88,33 @@ describe('evaluateBoard — Lances yield clear-rate C; Relays boost both receive
   });
 });
 
+describe('evaluateBoard — the forward line: a Lance clears C only from a forward cell', () => {
+  // A 4-tall column: forwardRows=2 marks y∈{0,1} as the salvo-ranged line.
+  const column = (...cells: (PieceKind | null)[]) => viewOf(cells, 1, 4);
+
+  it('a forward Lance (y < forwardRows) clears C; a Lance behind the line is inert', () => {
+    const fwd = evaluateBoard(column('lance', null, null, null), 2); // Lance at y=0
+    expect(fwd.clearRate).toBe(PIECES.lance.intercept);
+    expect(fwd.towers.size).toBe(1);
+
+    const back = evaluateBoard(column(null, null, 'lance', null), 2); // Lance at y=2
+    expect(back.clearRate).toBe(0); // no C from behind the line
+    expect(back.towers.size).toBe(0); // inert — not even a firing tower (draws no MW)
+  });
+
+  it('a Relay behind the line does not lift an inert back Lance', () => {
+    // Lance at y=2, Relay cross-adjacent at y=1 — but the back Lance is not a receiver.
+    const ev = evaluateBoard(column(null, 'relay', 'lance', null), 2);
+    expect(ev.clearRate).toBe(0);
+  });
+
+  it('the default forwardRows is the whole board (position-agnostic pure evaluator)', () => {
+    // No forwardRows arg → every row is forward, so a y=2 Lance still clears.
+    const ev = evaluateBoard(column(null, null, 'lance', null));
+    expect(ev.clearRate).toBe(PIECES.lance.intercept);
+  });
+});
+
 describe('previewAt — the same evaluator over an overlay', () => {
   it('previewing a placement equals evaluating the board with the piece placed', () => {
     const base = ['reactor', null, null, null] as (PieceKind | null)[];
