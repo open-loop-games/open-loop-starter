@@ -7,14 +7,16 @@ import type { ArchetypeManifest } from '@/types';
  * `IDENTITY.md` for the identity line and the load-bearing spine, and the
  * `studio/open-loop-starter#6` umbrella for the growth-port history.
  *
- * `beats` record the intra-run phase windows measured from the tier-0 probe (the
- * authored N* ≈ 16 min at H=4, g=2, T_g=6, τ_setup=4). The cross-run Reach arc
- * carries no single-run window — it is a per-merge cadence, not a clock range —
- * so it is listed without `recordedSimRange` (honest, not incomplete).
+ * `beats` record the intra-run phase windows of the wave-indexed spine (Defense
+ * Command): STANDBY↔INBOUND cycling to an OVERRUN breach, authored N*_waves =
+ * log_g(H) + Δ_wall ≈ 7 waves at H=16, g=1.6/wave, 2 min/wave (~14 min, measured on
+ * the reference forward-line board). The cross-run Reach arc carries no single-run
+ * window — it is a per-Redeploy cadence, not a clock range — so it is listed without
+ * `recordedSimRange` (honest, not incomplete).
  */
 export const manifest: ArchetypeManifest = {
   id: 'cycler',
-  name: 'Cycler — Containment',
+  name: 'Cycler — Defense Command',
   primitives: [
     { name: 'persistent', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
@@ -30,30 +32,34 @@ export const manifest: ArchetypeManifest = {
   beats: [
     {
       n: 1,
-      label: 'Setup — rebuild in the grace window; the burn has not bitten',
-      recordedSimRange: [0, 240],
+      label: 'Standby — rebuild the grid in the grace window; the salvo has not bitten',
+      recordedSimRange: [0, 120],
     },
     {
       n: 2,
-      label: 'Comfortable — capacity clears the burn with margin',
-      recordedSimRange: [240, 600],
+      label: 'Comfortable — early salvos clear with margin; the Lances outpace the wave',
+      recordedSimRange: [120, 480],
     },
     {
       n: 3,
-      label: 'First bite — burn crosses ~half the ceiling; rearrangement matters',
-      recordedSimRange: [600, 876],
+      label: 'First bite — the salvo nears the clear-rate C; rearrangement starts to matter',
+      recordedSimRange: [480, 720],
     },
     {
       n: 4,
-      label: 'Under review — burn approaches the ceiling; the tension peak',
-      recordedSimRange: [876, 960],
+      label:
+        'Under review — leak-through drains the line buffer (the Δ_wall tail); the tension peak',
+      recordedSimRange: [720, 840],
     },
     {
       n: 5,
-      label: 'Merge bell — burn overtakes D_max; the run ends and pays out',
-      recordedSimRange: [960, 960],
+      label: 'Overrun — the salvo breaches the line; the run ends and pays out (Redeploy)',
+      recordedSimRange: [840, 840],
     },
-    { n: 6, label: 'Reach — prestige re-pegs at higher D_max; deeper content, same run length' },
+    {
+      n: 6,
+      label: 'Reach — Redeploy re-pegs W₀=C/H at higher reach; deeper content, same run length',
+    },
   ],
   shell: 'SidebarMainShell',
   formFactor: 'responsive',
