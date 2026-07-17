@@ -4,17 +4,19 @@
 > shared state.** Build during the calm, survive the pressure, repeat with
 > escalating stakes.
 
-One screen: what the archetype *is*, the closed-form spine that balances it, and
-the ports a fork grows it through. The spine is the load-bearing part — read that
-section slowly; the rest hangs off it.
+One screen: what the archetype *is*, the closed-form spine that balances it,
+cycler's committed realization, and the ports a fork grows it through. The spine is
+the load-bearing part — read that section slowly; the rest hangs off it.
 
 Identity line source: `archetypes/_identity.md` (Cycler row). This is a
 pattern-language composition, not a port of any one game. Thronefall (Cycler ×
 Defender), Kingdom Two Crowns (Cycler × side-scroll Explorer), They Are Billions
 (Cycler × RTS) validate the composition as a *set, with their crosses showing* —
-none is a clone target. The spine below is grounded in the **multiverse-hr** Cycler
-pivot (`/work/studio/multiverse-hr` #17), a real WIP game whose data sweep
-corrected the naive version of this archetype (see § The rate-function spine).
+none is a clone target. The King is Watching (2025) is the closest single exemplar
+of the build↔raid shape; its gaze mechanic is deliberately **not** adopted (§ What
+is committed / not committed). The spine is grounded in the **multiverse-hr** Cycler
+pivot (`/work/studio/multiverse-hr` #17), a real WIP game whose data sweep corrected
+the naive version of this archetype (see § The rate-function spine).
 
 ## What this archetype is
 
@@ -27,7 +29,8 @@ to stay ahead** — and when it can't, the run ends and pays out. The player is
 architect during the calm and auditor under pressure; the pull is the compounding
 payoff of shared-state investment. The phase boundary can be **hard** (discrete
 day/night — Thronefall) or **soft** (a continuous, escalating drain with a grace
-period — multiverse-hr / Increlution); same spine either way.
+period — Increlution); same spine either way. **Cycler commits to hard phases**
+(§ Cycler's realization).
 
 ## The rate-function spine
 
@@ -71,24 +74,90 @@ Three consequences, all better than a hand-matched difficulty:
    curve (Increlution Part 3), far stronger than boosting power. Gate a g-bender
    permanent; sell power permanents freely.
 
-> **Capture test.** If a fork can't write *its* `D_max`, its burn schedule, and its
-> `N* = τ_setup + T_g·log_g(H)` on paper, the mechanic is mis-specified, not just
-> untuned. The spine is where you find that out — before any engine wiring.
+> **Capture test.** If a fork can't write *its* `D_max` (or clear-rate `C`), its
+> burn schedule, and its `N* = τ_setup + T_g·log_g(H)` on paper, the mechanic is
+> mis-specified, not just untuned. The spine is where you find that out — before
+> any engine wiring.
 
-## The loop — build → pressure → payout (beat map)
+## Cycler's realization — Defense Command
 
-Beats are *labels* for where the run turns; their windows are **measured and
-recorded, never authored** (§ Balance model).
+Cycler ships this composition as a **Cold-War missile-defense command** (SAGE/NORAD
+radar) fought with **directed-energy weapons** — the SDI "Star Wars" dream. Warhead
+salvos descend on a defended **line**; behind it you build an energy grid;
+**Lances** (directed-energy towers) burn warheads from the sky; leak-through bleeds
+the line; a breach ends the cycle. The design language is a phosphor command
+terminal — see `design/defense-command-mock.html`, a static four-phase-state layout
+study (the warhead/lance combat is the pixi/SVG layer the mock stubs).
 
-1. **Setup** — rebuild the board in the grace window `τ_setup`; the burn hasn't bitten.
-2. **Comfortable** — capacity clears the burn with margin; the placement puzzle is pure optimization.
-3. **First bite** — the burn crosses ~half the ceiling; rearrangement starts to matter.
-4. **Under review** — burn approaches the ceiling; a soft degraded state, the tension peak.
-5. **Merge bell** — the burn overtakes `D_max`; the run ends **and pays out** (banks currency).
-6. **Reach** — prestige re-pegs at higher `D_max`; deeper content, same authored run length.
+**The spine, concretized.** The abstract ceiling `D_max` is realized as **defense
+clear-rate `C`** — aggregate Lance interception, saturating on the same three
+forces (finite forward cells, convergent upgrade ladders, Placement-Adjacency
+board-fill). The exogenous burn is the **salvo schedule**: wave `N` arrives at
+strength `W_N = W₀·g^N`. A **line-HP buffer** absorbs the leak-through, adding a
+bounded tail:
 
-Identity guard (multiverse-hr): the burn must **drive** rearrangement, not compress
-it out — the late run stays a placement puzzle, not a survival reflex.
+```
+clear-rate  → saturates to  C          (Lances: forward-cell fill + convergent ladders + adjacency)
+salvo N     → W_N = W₀ · g^N           (exogenous schedule — guarantees termination)
+line HP     → buffers max(0, W_N − C) per wave; auto-repairs from MW surplus in the calm
+run length:  N*_waves = log_g( C / W₀ ) + Δ_wall
+peg W₀ = C/H ⇒ N*_waves = log_g( H ) + Δ_wall     ← H sets the run, Δ_wall the tail
+```
+
+Same log law, wave-indexed, plus a bounded `Δ_wall` tail the player controls by
+repairing. **The terminating pressure stays exogenous** — the salvo schedule, never
+a state-derived cost. The Lance operating-draw (energy weapons cost MW to fire) and
+repair are *within-run economic sinks*, not the run-end condition; they shape how
+fast `C` and `Δ_wall` grow, not when the run ends. (Coupling the *terminating* burn
+to within-run state — threat ∝ your own build — falls to optimal-stopping; the line
+crossing must stay driven by the exogenous salvo.)
+
+**The strategic triangle.** One materiel pool — **MW** — funds three competing
+sinks, shared-state discipline made concrete:
+
+- **Reactors + Relays** raise output (MW/sec).
+- **Lances** raise clear-rate `C` (buy run length) but **draw MW to fire** (cut the economy).
+- **Repair** extends `Δ_wall` (buy run length) but competes with Lances for the same MW.
+
+The bridge that makes this one system, not two bolted together: **Relays (boosters)
+amplify adjacent Lances *and* Reactors** — one placement decision drives both
+economy and defense.
+
+**One shared surface.** Lances and Reactors occupy the *same* placement grid:
+forward cells range the incoming salvos (contested defensive real estate), back
+cells sit safe, and every cell spent on a Lance is a cell not producing — the
+`C`-vs-output tradeoff is spatial. Warheads damage the **line only**, never the
+board, so the board stays a placement puzzle under fire (identity guard). Single
+materiel (MW) for the first cut; multi-resource production chains are deferred
+costume. (Spatial rollout is staged — a fixed-slot line first, shared cells as the
+target — tracked in the rework ticket, not here.)
+
+**Player-facing vocabulary** (internal spine term → fiction): `D_max`/`C` →
+clear-rate of the Lance grid · burn `W_N` → warhead salvo · `g` → salvo posture,
+drafted via **Prophecy** · prestige re-peg `W₀ = C/H` → **Redeploy** · the line's
+integrity → the defended line · boss escalation step → a **Saturation** salvo. Keep
+the algebra (`W₀ = C/H`, `log_g(H)`) in this doc and the balance lanes, never in the
+HUD.
+
+## The loop — phase states
+
+Hard phases cycle STANDBY ↔ INBOUND, punctuated by SATURATION bosses, ending in
+OVERRUN. Windows are **measured and recorded, never authored** (§ Balance model).
+
+1. **STANDBY** (build / calm) — the `τ_setup` grace between salvos: rebuild, place,
+   spend; the line auto-repairs from MW surplus; draft the next salvo's `g` (Prophecy).
+2. **INBOUND** (defend) — a salvo `W_N`; Lances clear at `C`, leak-through
+   `max(0, W_N − C)` bleeds the line; **build locks** — you live with what you placed.
+3. **SATURATION** (boss) — a milestone salvo; surviving it steps production and
+   threat together (the re-peg cadence).
+4. **OVERRUN → REDEPLOY** (breach) — the line exhausts; the run ends **and pays
+   out** (banks sublinear currency), then re-pegs `W₀ = C/H` for a deeper cycle.
+
+Arc across a run: early salvos clear with margin (Comfortable) → mid salvos bite as
+`W_N` nears `C`, rearrangement starts to matter (First bite) → the line buffer
+drains over the last waves, the tension peak (Under review) → breach. Identity guard
+(multiverse-hr): escalation must **drive** rearrangement, not compress it into a
+survival reflex — the late run stays a placement puzzle.
 
 ## Growth ports
 
@@ -96,31 +165,45 @@ A fork grows the archetype *up* through these. Each feeds a named part of the sp
 
 | Port | Adds | Spine term it feeds |
 |---|---|---|
-| `addProducer` / `addBooster` | a build-phase placement + its adjacency synergy | raises `D_max` (reach) — **not** run length under the peg |
-| `addBurnTier` | an escalation-content step | `g`, `T_g` — the pace surface |
-| `addUpgrade` | a permanent (carried across prestige) | power → reach; **only a g/H upgrade moves pacing, and gets gated** |
-| `addPrestigeLayer` | a Merge / re-peg boundary | re-baselines `W₀ = D_max/H`; banks sublinear currency |
+| `addProducer` (Reactor) / `addBooster` (Relay) | a placement + its adjacency synergy (Relay boosts Lances *and* Reactors) | raises output / `C` (reach) — **not** run length under the peg |
+| `addTower` (Lance) | a forward interceptor with an MW operating-draw | raises `C`; the draw is a within-run economic sink, not run-end coupling |
+| `addWall` / repair | the line's HP buffer + surplus-fed auto-repair | `Δ_wall` — the bounded run-length tail the player controls |
+| `addBurnTier` (salvo posture) | an escalation-content step / Prophecy draft option | `g`, `T_g` — the pace surface |
+| `addUpgrade` | a permanent (carried across Redeploy) | power → reach; **only a g/H upgrade moves pacing, and gets gated** |
+| `addPrestigeLayer` (Redeploy) | the breach / re-peg boundary | re-baselines `W₀ = C/H`; banks sublinear currency |
 
 ## Engine fit (pattern → primitive)
 
 | Pattern | Engine primitive | Note |
 |---|---|---|
-| Phase-Alternation + Time Systems | phase/state controller + an exogenous time-scheduled burn | **candidate primitive** — the burn is an *authored schedule*, never a state-derived cost; if the engine has no scheduled-drain primitive, hand-roll with a `TODO(expansion)` + `candidate-primitives.md` entry. |
-| Placement-Adjacency | building-to-building synergy over a finite grid | builds `D_max`; board-fill **saturation** is what makes the crossing log |
-| Wave Escalation | geometric time schedule `W₀·g^(t/T_g)` in `data/` | exogenous; guarantees termination |
-| Shared state | `persistent()` refs across phases | reset only at prestige, never at the phase boundary |
+| Phase-Alternation + Time Systems | phase/state controller + an exogenous wave sequencer | **candidate primitive** — hard build↔defend; `createSequencer` drives the salvo schedule as an *authored schedule*, never a state-derived cost (`TODO(expansion)` + `candidate-primitives.md` if no scheduled-drain primitive exists) |
+| Placement-Adjacency | building-to-building synergy over a finite grid (Lances + Reactors share cells; Relay boosts both) | builds `C`; board-fill **saturation** is what makes the crossing log |
+| Wave Escalation | geometric salvo schedule `W₀·g^N` in `data/` | exogenous; guarantees termination |
+| Wall + repair | an HP resource + surplus-fed drip | `Δ_wall`; damaged by leak-through only, never the board |
+| Lance operating-draw | per-tick `subtractResource` while firing | economic sink; keep it off the run-end condition |
+| Shared state | `persistent()` refs across phases | reset only at Redeploy, never at the phase boundary |
 | Prestige / re-peg | reset + sublinear (cbrt) currency award | re-baselines `W₀`; run-end pays out (Industry-Idle, not Thronefall) |
 
 ## What is committed / not committed
 
-**Committed:** saturating capacity vs exogenous escalating burn; `N* = τ_setup +
-T_g·log_g(H)`; the peg `W₀ = D_max/H`; `(H, g)` as the difficulty surface; power
-decoupled from run length; run-end pays out.
+**Committed (spine):** saturating capacity/clear-rate vs exogenous escalating burn;
+`N*_waves = log_g(H) + Δ_wall`; the peg `W₀ = C/H`; `(H, g)` as the difficulty
+surface; power decoupled from run length; run-end pays out; the terminating pressure
+stays exogenous.
 
-**Not committed (fork's call):** hard vs soft phase boundary; grid vs graph
-placement; real-time vs discrete pressure; whether the burn intensity is a
-player-facing preset (cautious/standard/aggressive/off — `off` reverts to a
-near-Ambient free-form shape). These are costume and scope; none moves the spine.
+**Committed (cycler's realization):** hard phases; one shared placement grid (Lances
++ Reactors compete for cells); Relays boost both; single materiel (MW); the line
+damaged by leak-through only; continuous surplus-fed auto-repair; Prophecy as the
+player-facing `g` draft; boss-milestone escalation; Defense-Command fiction +
+phosphor-terminal design language; Redeploy as the re-peg. No gaze.
+
+**Not committed (a different fork's call):** the fiction/costume (Defense Command is
+cycler's; a fork reskins freely); soft vs hard boundary; grid vs graph placement;
+multi-resource chains; whether the salvo posture exposes an `off` preset (reverts to
+a near-Ambient free-form shape). The King is Watching's **gaze** (only watched
+buildings work) is a deliberate omission — it replaces hard phases with continuous
+attention allocation and is single-source in research; cycler stays Thronefall-clean.
+These are costume and scope; none moves the spine.
 
 ## Balance model — three lanes (mirrors `frontier/docs/balance-process.md`)
 
@@ -133,17 +216,19 @@ closed-form lens                discovery / verification       measured window l
 ```
 
 1. **Lens (`data/*.ts`).** Constants with co-located `// ─── Balance ───` sections
-   carrying the pegged-saturation closed form, each naming its coupling and the
-   multiverse-hr grounding.
+   carrying the pegged-saturation closed form — clear-rate `C`, the salvo schedule,
+   and the `Δ_wall` line buffer — each naming its coupling and the multiverse-hr
+   grounding.
 2. **Projection (`balance/cycler-projection.ts`).** Pure math, **no engine** —
-   predicts `N*`, sizes `H` to a target run length, and shows the peg holding run
-   length flat across the arc while `fixed`/`none` policies drift. Predicts; does
-   not discover.
+   predicts `N*_waves`, sizes `H` to a target run length, sizes `Δ_wall` to the
+   intended tail, and shows the peg holding run length flat across the arc while
+   `fixed`/`none` policies drift. Predicts; does not discover.
 3. **Probe (`balance/*-probe.ts`).** Drives the **real engine + shipping
-   automation** (build/rearrange/merge policy functions, harness only force-unlocks
-   the tier) so sim and game can't drift. Verifies the projection; measures the
-   realized `D_max` trajectory and the calibration of `H, g, T_g, τ_setup` (open in
-   multiverse-hr #17).
+   automation** (build/rearrange/repair/redeploy policy functions; the harness only
+   force-unlocks the tier) so sim and game can't drift. Verifies the projection;
+   measures the realized `C` trajectory, the MW economy under Lance draw, and the
+   calibration of `H, g, T_g, τ_setup, Δ_wall` (open in multiverse-hr #17).
 4. **Lock (`sim/*.probe.test.ts`).** Pins the *measured* run-length band and shape
-   invariants (run ends at the burn crossing; power re-pegs to +0 run length) with
-   tolerance and provenance. Measure-and-record, never set-as-target.
+   invariants (run ends at the line breach; power re-pegs to +0 base run length;
+   repair extends only the `Δ_wall` tail) with tolerance and provenance.
+   Measure-and-record, never set-as-target.

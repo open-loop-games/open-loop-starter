@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cycler · defense command — phase states</title>
+    <style>
+      /* ============ terminal + missile-command design system ============ */
+      :root {
+        --bg: #04070a;
+        --bg2: #071016;
+        --panel: #0a141a;
+        --grn: #38ffab;
+        --grn2: #0f6b48;
+        --grndim: #1c3630;
+        --amb: #ffb000;
+        --blu: #54a9ff;
+        --red: #ff4d5e;
+        --reddim: #5c1620;
+        --ink: #bfe9d8;
+        --mono: 'DejaVu Sans Mono', 'JetBrains Mono', ui-monospace, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        background: var(--bg);
+        color: var(--grn);
+        font-family: var(--mono);
+        font-size: 14px;
+      }
+      .app {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 18px 20px 46px;
+      }
+      .masthead {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+      }
+      .masthead h1 {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--grn);
+      }
+      .masthead .sub {
+        color: var(--grn2);
+        font-size: 11.5px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      /* phase tabs */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin: 16px 0 16px;
+        flex-wrap: wrap;
+      }
+      .tab {
+        appearance: none;
+        border: 1px solid var(--grn2);
+        background: var(--bg2);
+        color: var(--grn2);
+        font: 700 12px/1.1 var(--mono);
+        letter-spacing: 0.6px;
+        padding: 9px 13px;
+        cursor: pointer;
+        text-align: left;
+        text-transform: uppercase;
+      }
+      .tab small {
+        display: block;
+        font-weight: 400;
+        font-size: 10px;
+        margin-top: 3px;
+        letter-spacing: 0.2px;
+        opacity: 0.8;
+      }
+      .tab:hover {
+        color: var(--grn);
+      }
+      .tab[aria-selected='true'] {
+        color: var(--bg);
+        background: var(--grn);
+        border-color: var(--grn);
+      }
+      .tab.warn[aria-selected='true'] {
+        background: var(--amb);
+        border-color: var(--amb);
+      }
+      .tab.crit[aria-selected='true'] {
+        background: var(--red);
+        border-color: var(--red);
+        color: #fff;
+      }
+      .tab.breach[aria-selected='true'] {
+        background: #7a2530;
+        border-color: var(--red);
+        color: #fff;
+      }
+      .tab .n::before {
+        content: '[';
+      }
+      .tab .n::after {
+        content: ']';
+      }
+      .screen {
+        display: none;
+      }
+      .screen.active {
+        display: block;
+        animation: fade 0.2s ease;
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .foot {
+        margin-top: 20px;
+        color: var(--grndim);
+        font-size: 10.5px;
+        letter-spacing: 0.4px;
+        text-align: center;
+      }
+      .foot b {
+        color: var(--grn2);
+      }
+
+      /* world + tone */
+      .world {
+        position: relative;
+        border: 1px solid var(--grn2);
+        padding: 16px;
+        overflow: hidden;
+        background: radial-gradient(120% 90% at 50% 0%, var(--bg2), var(--bg));
+      }
+      .world::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 6;
+        background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.3) 0 1px, transparent 1px 3px);
+        opacity: 0.5;
+      }
+      .world::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset 0 0 140px 24px rgba(0, 0, 0, 0.65);
+      }
+      .world[data-tone='warn'] {
+        border-color: #6b4a0f;
+      }
+      .world[data-tone='crit'] {
+        border-color: #6b1620;
+      }
+      .world[data-tone='breach'] {
+        border-color: #6b1620;
+      }
+
+      .vhint {
+        font-size: 11.5px;
+        letter-spacing: 0.3px;
+        margin: 0 0 14px;
+        padding-left: 10px;
+        border-left: 2px solid var(--grn2);
+        opacity: 0.8;
+      }
+      .vhint b {
+        color: var(--grn);
+      }
+
+      .vC {
+        display: grid;
+        grid-template-columns: 212px 1fr 250px;
+        gap: 14px;
+        align-items: start;
+        position: relative;
+        z-index: 1;
+      }
+      .rail {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .panel {
+        padding: 12px;
+        background: rgba(7, 16, 22, 0.7);
+        border: 1px solid var(--grn2);
+      }
+      .slab {
+        font-size: 10.5px;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin: 0 0 9px;
+        color: var(--grn);
+        display: flex;
+        gap: 7px;
+        align-items: center;
+      }
+      .slab::before {
+        content: '>';
+      }
+      .slab::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--grn2);
+        opacity: 0.6;
+      }
+
+      /* command bar (phase + DEFCON + alert) */
+      .cmdbar {
+        border: 1px solid var(--grn2);
+        background: rgba(7, 16, 22, 0.8);
+        margin-bottom: 10px;
+      }
+      .cmdrow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+      }
+      .defcon {
+        border: 1px solid var(--grn);
+        padding: 3px 8px;
+        font-size: 12px;
+        letter-spacing: 1px;
+        white-space: nowrap;
+      }
+      .defcon b {
+        color: var(--grn);
+      }
+      .phase {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .phase .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--grn);
+        box-shadow: 0 0 6px var(--grn);
+      }
+      .phase .name {
+        font-size: 14px;
+        letter-spacing: 1.6px;
+        text-transform: uppercase;
+        color: var(--grn);
+      }
+      .phase .name::before {
+        content: '[';
+      }
+      .phase .name::after {
+        content: ']';
+      }
+      .phase .sub {
+        font-size: 11px;
+        color: var(--grn2);
+        letter-spacing: 0.4px;
+      }
+      .timeline {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 100px;
+      }
+      .timeline .seg {
+        flex: 1;
+        height: 2px;
+        background: var(--grndim);
+      }
+      .timeline .seg.done {
+        background: var(--grn2);
+      }
+      .timeline .seg.now {
+        background: var(--amb);
+      }
+      .timeline .pip {
+        width: 7px;
+        height: 7px;
+        flex: 0 0 auto;
+        background: var(--bg);
+        border: 1px solid var(--grn2);
+      }
+      .timeline .pip.done {
+        background: var(--grn2);
+      }
+      .timeline .pip.now {
+        background: var(--amb);
+        border-color: var(--amb);
+        box-shadow: 0 0 6px var(--amb);
+      }
+      .timeline .pip.boss {
+        width: 10px;
+        height: 10px;
+        background: var(--red);
+        border-color: var(--red);
+      }
+      .alert {
+        padding: 5px 12px;
+        font-size: 11.5px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        border-top: 1px solid var(--grn2);
+        color: var(--grn2);
+      }
+      /* tone shifts */
+      [data-tone='warn'] .phase .dot,
+      [data-tone='warn'] .defcon {
+        box-shadow: 0 0 6px var(--amb);
+        border-color: var(--amb);
+      }
+      [data-tone='warn'] .phase .dot {
+        background: var(--amb);
+        animation: blink 1s step-end infinite;
+      }
+      [data-tone='warn'] .phase .name,
+      [data-tone='warn'] .defcon b {
+        color: var(--amb);
+      }
+      [data-tone='warn'] .alert {
+        color: var(--amb);
+        border-color: #6b4a0f;
+      }
+      [data-tone='crit'] .phase .dot {
+        background: var(--red);
+        box-shadow: 0 0 8px var(--red);
+        animation: blink 0.5s step-end infinite;
+      }
+      [data-tone='crit'] .phase .name,
+      [data-tone='crit'] .defcon b {
+        color: var(--red);
+      }
+      [data-tone='crit'] .defcon {
+        border-color: var(--red);
+      }
+      [data-tone='crit'] .alert {
+        color: var(--red);
+        border-color: #6b1620;
+      }
+      [data-tone='breach'] .phase .name {
+        color: var(--red);
+      }
+      [data-tone='breach'] .alert {
+        color: var(--red);
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0.25;
+        }
+      }
+
+      /* field: sky radar volume → line → board */
+      .field {
+        position: relative;
+        border: 1px solid var(--grn2);
+        overflow: hidden;
+      }
+      .sky {
+        position: relative;
+        height: 150px;
+        overflow: hidden;
+        background:
+          linear-gradient(180deg, rgba(255, 176, 0, 0.03), transparent 60%),
+          repeating-linear-gradient(
+            90deg,
+            transparent 0 var(--lanew, 12.5%),
+            rgba(56, 255, 171, 0.05) var(--lanew, 12.5%) calc(var(--lanew, 12.5%) + 1px)
+          );
+      }
+      .sky .grid {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent 0 24px,
+          rgba(56, 255, 171, 0.05) 24px 25px
+        );
+      }
+      .sky .addr {
+        position: absolute;
+        top: 3px;
+        font-size: 8px;
+        color: var(--grn2);
+        letter-spacing: 0;
+      }
+      /* incoming warhead track */
+      .track {
+        position: absolute;
+        top: 0;
+        width: 2px;
+        transform: translateX(-50%);
+        background: linear-gradient(180deg, transparent, var(--amb));
+        height: var(--prog, 50%);
+      }
+      .track .head {
+        position: absolute;
+        left: 50%;
+        bottom: -6px;
+        transform: translateX(-50%);
+        color: var(--amb);
+        font-size: 12px;
+        text-shadow: 0 0 8px var(--amb);
+        line-height: 1;
+      }
+      .track.crit {
+        background: linear-gradient(180deg, transparent, var(--red));
+      }
+      .track.crit .head {
+        color: var(--red);
+        text-shadow: 0 0 8px var(--red);
+      }
+      .track .impact {
+        position: absolute;
+        left: 50%;
+        bottom: -999px;
+      }
+      .track.mirv .head::after {
+        content: '';
+        position: absolute;
+        left: -10px;
+        top: 8px;
+        width: 22px;
+        height: 12px;
+        border-bottom: 1px solid var(--red);
+        border-left: 1px solid var(--red);
+        border-right: 1px solid var(--red);
+      }
+      /* lance beam (interceptor) */
+      .shot {
+        position: absolute;
+        bottom: 0;
+        width: 2px;
+        transform: translateX(-50%);
+        background: linear-gradient(0deg, transparent, var(--blu));
+        height: var(--h, 55%);
+      }
+      .shot .burst {
+        position: absolute;
+        left: 50%;
+        top: -6px;
+        transform: translateX(-50%);
+        color: var(--blu);
+        font-size: 12px;
+        text-shadow: 0 0 8px var(--blu);
+      }
+      /* the defended line */
+      .line {
+        position: relative;
+        height: 16px;
+        background: var(--bg2);
+        border-top: 1px solid var(--grn);
+        border-bottom: 1px solid var(--grn2);
+        --pct: 63%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+      }
+      .line .fill {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, var(--grn2) 0 var(--pct), var(--reddim) var(--pct));
+        opacity: 0.6;
+      }
+      .line .ticks {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        width: 100%;
+        justify-content: space-around;
+        font-size: 9px;
+        color: var(--grn);
+        letter-spacing: -1px;
+      }
+      .line[data-state='warn'] .fill {
+        background: linear-gradient(90deg, var(--amb) 0 var(--pct), var(--reddim) var(--pct));
+      }
+      .line[data-state='crit'] .fill {
+        background: linear-gradient(90deg, var(--red) 0 var(--pct), #2a0a10 var(--pct));
+      }
+      .line[data-state='breach'] .fill {
+        background: var(--reddim);
+        animation: flat 1s step-end infinite;
+      }
+      @keyframes flat {
+        50% {
+          opacity: 0.25;
+        }
+      }
+      .line .label {
+        position: absolute;
+        right: 6px;
+        top: -18px;
+        font-size: 10px;
+        color: var(--grn);
+        z-index: 2;
+      }
+      .line .label b {
+        color: var(--grn);
+      }
+      .line[data-state='warn'] .label b {
+        color: var(--amb);
+      }
+      .line[data-state='crit'] .label b,
+      .line[data-state='breach'] .label b {
+        color: var(--red);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 56px));
+        gap: 5px;
+        justify-content: center;
+        padding: 11px;
+        position: relative;
+      }
+      .cell {
+        aspect-ratio: 1/1;
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(7, 16, 22, 0.5);
+        border: 1px solid var(--grn2);
+        position: relative;
+      }
+      .cell.empty {
+        border-color: var(--grndim);
+      }
+      .cell.empty::after {
+        content: '·';
+        color: var(--grndim);
+      }
+      .cell.aura {
+        box-shadow:
+          inset 0 0 0 1px var(--amb),
+          0 0 8px -2px var(--amb);
+      }
+      .cell .pc {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+      }
+      .cell .pc .ic {
+        font-size: 15px;
+        line-height: 1;
+      }
+      .cell .pc .code {
+        font-size: 8px;
+        letter-spacing: 0.3px;
+      }
+      .cell .pc .code::before {
+        content: '[';
+      }
+      .cell .pc .code::after {
+        content: ']';
+      }
+      .cell .pc .lv {
+        position: absolute;
+        top: 1px;
+        right: 3px;
+        font-size: 8px;
+        opacity: 0.6;
+      }
+      .pc.prod {
+        color: var(--grn);
+      }
+      .pc.boost {
+        color: var(--amb);
+      }
+      .pc.tow {
+        color: var(--blu);
+      }
+      /* battery firing state */
+      .cell.firing {
+        box-shadow:
+          0 0 10px -2px var(--blu),
+          inset 0 0 0 1px var(--blu);
+      }
+      .cell.firing::before {
+        content: '';
+        position: absolute;
+        top: -3px;
+        left: 50%;
+        width: 2px;
+        height: 6px;
+        transform: translateX(-50%);
+        background: var(--blu);
+        box-shadow: 0 0 6px var(--blu);
+      }
+      [data-locked='1'] .board {
+        opacity: 0.85;
+      }
+
+      /* build tray + lock overlay */
+      .palette {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
+      }
+      .pcard {
+        padding: 8px 10px;
+        background: rgba(7, 16, 22, 0.6);
+        border: 1px solid var(--grn2);
+        position: relative;
+      }
+      .pcard .t {
+        font-size: 12px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        color: var(--grn);
+      }
+      .pcard .d {
+        font-size: 10px;
+        opacity: 0.65;
+        margin: 3px 0 6px;
+        line-height: 1.3;
+      }
+      .pcard .cost {
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .pcard.afford {
+        border-color: var(--grn);
+      }
+      .pcard.afford .cost {
+        color: var(--grn);
+      }
+      .pcard.broke {
+        opacity: 0.6;
+      }
+      .pcard.broke .cost {
+        color: var(--amb);
+      }
+      .pcard.locked {
+        opacity: 0.4;
+      }
+      .pcard.locked .t::before {
+        content: '# ';
+      }
+      .tray-lock {
+        margin-top: 8px;
+        border: 1px dashed var(--amb);
+        color: var(--amb);
+        font-size: 10px;
+        letter-spacing: 1px;
+        text-align: center;
+        padding: 6px;
+        text-transform: uppercase;
+      }
+
+      .reserve .amt {
+        font-size: 24px;
+        line-height: 1;
+        color: var(--grn);
+        text-shadow: 0 0 8px rgba(56, 255, 171, 0.35);
+        font-variant-numeric: tabular-nums;
+      }
+      .reserve .amt .u {
+        font-size: 11px;
+        color: var(--grn2);
+        margin-left: 5px;
+        letter-spacing: 1px;
+      }
+      .reserve .rate {
+        font-size: 12px;
+        margin-top: 5px;
+        font-variant-numeric: tabular-nums;
+      }
+      .reserve .rate.pos {
+        color: var(--grn);
+      }
+      .reserve .rate.neg {
+        color: var(--amb);
+      }
+      .reserve .rate.crit {
+        color: var(--red);
+      }
+
+      .lever {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 9px;
+        background: rgba(7, 16, 22, 0.6);
+        border: 1px solid var(--grn2);
+      }
+      .lever .meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .lever .meta .t {
+        font-size: 11.5px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--grn);
+      }
+      .lever .meta .d {
+        font-size: 9.5px;
+        opacity: 0.6;
+      }
+      .lever .lv {
+        font-size: 10.5px;
+        opacity: 0.7;
+      }
+      .btn {
+        background: transparent;
+        border: 1px solid var(--grn);
+        color: var(--grn);
+        font: 700 10.5px/1 var(--mono);
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        padding: 6px 9px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .btn.broke {
+        border-color: var(--grndim);
+        color: var(--grn2);
+      }
+      .btn.big {
+        width: 100%;
+        padding: 11px;
+        font-size: 13px;
+        letter-spacing: 2px;
+        border-color: var(--grn);
+        color: var(--grn);
+        box-shadow: 0 0 16px -4px var(--grn);
+        animation: beacon 1.6s ease-in-out infinite;
+      }
+      @keyframes beacon {
+        50% {
+          box-shadow: 0 0 22px 0 var(--grn);
+        }
+      }
+
+      /* prophecy / posture */
+      .prophecy {
+        padding: 11px;
+        background: rgba(7, 16, 22, 0.7);
+        border: 1px solid var(--grn2);
+      }
+      .prophecy.locked {
+        opacity: 0.6;
+      }
+      .prophecy .ph {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .prophecy .ph .t {
+        font-size: 11px;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: var(--amb);
+      }
+      .prophecy .ph .s {
+        font-size: 9.5px;
+        opacity: 0.6;
+      }
+      .pcards {
+        display: flex;
+        gap: 6px;
+      }
+      .oracle {
+        flex: 1;
+        padding: 8px 3px;
+        text-align: center;
+        background: rgba(4, 7, 10, 0.6);
+        border: 1px solid var(--grn2);
+        position: relative;
+      }
+      .oracle .g {
+        font-size: 9px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        opacity: 0.75;
+      }
+      .oracle .mult {
+        font-size: 16px;
+        margin: 3px 0 1px;
+        color: var(--grn);
+        font-variant-numeric: tabular-nums;
+      }
+      .oracle .rw {
+        font-size: 9px;
+        opacity: 0.6;
+      }
+      .oracle.surge {
+        border-color: var(--red);
+      }
+      .oracle.surge .mult {
+        color: var(--red);
+      }
+      .oracle.sel {
+        border-color: var(--amb);
+      }
+      .oracle.sel::after {
+        content: '◄';
+        position: absolute;
+        top: 3px;
+        right: 4px;
+        color: var(--amb);
+        font-size: 8px;
+      }
+      .oracle.sel .mult {
+        color: var(--amb);
+      }
+
+      /* regroup overlay (breach → merge re-peg) */
+      .regroup {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(
+          circle at 50% 45%,
+          rgba(122, 37, 48, 0.28),
+          rgba(4, 7, 10, 0.9) 70%
+        );
+      }
+      .regroup .box {
+        border: 1px solid var(--red);
+        background: rgba(7, 16, 22, 0.94);
+        padding: 22px 26px;
+        max-width: 440px;
+        text-align: center;
+        box-shadow: 0 0 40px -8px var(--red);
+      }
+      .regroup .hd {
+        font-size: 15px;
+        letter-spacing: 3px;
+        color: var(--red);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .regroup .sub {
+        font-size: 11px;
+        color: var(--grn2);
+        letter-spacing: 0.5px;
+        margin-bottom: 14px;
+      }
+      .regroup .stat {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        font-size: 12px;
+        padding: 5px 0;
+        border-bottom: 1px solid var(--grndim);
+      }
+      .regroup .stat span:first-child {
+        color: var(--grn2);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .regroup .stat b {
+        color: var(--grn);
+        font-variant-numeric: tabular-nums;
+      }
+      .regroup .stat b.gain {
+        color: var(--amb);
+      }
+      .regroup .note {
+        font-size: 10px;
+        color: var(--grn2);
+        margin: 12px 0 14px;
+        line-height: 1.5;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="masthead">
+        <h1>Cycler · Defense Command</h1>
+        <span class="sub">phase-alternation loop — 4 states · terminal × missile-command</span>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-v="standby" aria-selected="true">
+          <span class="n">1</span> STANDBY<small>build · calm · re-arm</small>
+        </button>
+        <button class="tab warn" role="tab" data-v="inbound" aria-selected="false">
+          <span class="n">2</span> INBOUND<small>defend · engage</small>
+        </button>
+        <button class="tab crit" role="tab" data-v="saturation" aria-selected="false">
+          <span class="n">3</span> SATURATION<small>boss · MIRV salvo</small>
+        </button>
+        <button class="tab breach" role="tab" data-v="regroup" aria-selected="false">
+          <span class="n">4</span> OVERRUN<small>breach · redeploy</small>
+        </button>
+      </div>
+      <section class="screen active" data-screen="standby"></section>
+      <section class="screen" data-screen="inbound"></section>
+      <section class="screen" data-screen="saturation"></section>
+      <section class="screen" data-screen="regroup"></section>
+      <p class="foot">
+        Static layout mock · C shell · warhead tracks + lance beams are
+        <b>placeholders for the pixi/SVG combat layer</b> · not wired to logic
+      </p>
+    </div>
+
+    <script>
+      const PIECES = {
+        prod: { ic: '◆', code: 'rctr' },
+        boost: { ic: '+', code: 'relay' },
+        tow: { ic: '▲', code: 'lnc' },
+      };
+      /* board: energy lances forward (rows 0-1), relay booster mid w/ aura, reactors back */
+      function boardModel() {
+        const rows = 5,
+          cols = 8,
+          cells = [];
+        for (let r = 0; r < rows; r++)
+          for (let c = 0; c < cols; c++) cells.push({ r, c, pc: null, aura: false });
+        const at = (r, c) => cells.find((x) => x.r === r && x.c === c);
+        const put = (r, c, t, lv) => {
+          const cell = at(r, c);
+          if (cell) cell.pc = { t, lv };
+        };
+        put(0, 1, 'tow', 2);
+        put(0, 3, 'tow', 1);
+        put(0, 5, 'tow', 2);
+        put(1, 2, 'tow', 1);
+        put(0, 6, 'tow', 1);
+        const mr = 2,
+          mc = 3;
+        put(mr, mc, 'boost', 2);
+        [
+          [mr - 1, mc],
+          [mr + 1, mc],
+          [mr, mc - 1],
+          [mr, mc + 1],
+        ].forEach(([r, c]) => {
+          const cell = at(r, c);
+          if (cell) cell.aura = true;
+        });
+        put(3, 1, 'prod', 3);
+        put(3, 2, 'prod', 2);
+        put(4, 1, 'prod', 2);
+        put(4, 2, 'prod', 3);
+        put(4, 3, 'prod', 1);
+        put(2, 1, 'prod', 2);
+        put(3, 6, 'prod', 2);
+        put(4, 6, 'prod', 2);
+        put(4, 7, 'prod', 1);
+        put(3, 7, 'prod', 3);
+        return cells;
+      }
+      const PAL = [
+        { t: 'prod', n: 'Reactor', d: 'generates MW while idle', cost: '120', st: 'afford' },
+        { t: 'boost', n: 'Relay', d: 'amps adjacent lances + reactors', cost: '340', st: 'afford' },
+        {
+          t: 'tow',
+          n: 'Lance',
+          d: 'burns warheads from the sky · draws MW',
+          cost: '1,500',
+          st: 'broke',
+        },
+        { t: 'prod', n: 'C&C node', d: 'command uplink', cost: '—', st: 'locked' },
+      ];
+      const LEV = [
+        { t: 'Harden', d: 'raise line ceiling · reach', lv: '3', cost: '240', st: 'afford' },
+        { t: 'Decoy', d: 'slow escalation (g)', lv: '1', cost: '6', st: 'broke' },
+      ];
+      /* per-phase state deltas */
+      const PH = {
+        standby: {
+          tone: 'ok',
+          defcon: '5',
+          name: 'Standby',
+          sub: '· re-arming the line',
+          hint: '<b>1 — STANDBY (build / calm).</b> No inbound. Place reactors/relays/lances, spend, the line auto-re-arms from MW surplus. Draft the next salvo (posture) before it launches.',
+          alert: 'ALL QUIET · sector clear · line re-arming',
+          line: 63,
+          lineState: 'ok',
+          rate: { cls: 'pos', txt: '+ 18 MW/s · surplus → re-arm' },
+          sky: [],
+          shots: [],
+          firing: false,
+          locked: false,
+          prophecy: 'draft',
+          tl: { now: 6, label: '' },
+          overlay: null,
+        },
+        inbound: {
+          tone: 'warn',
+          defcon: '3',
+          name: 'Inbound',
+          sub: '· wave 07/12 · 0:22',
+          hint: '<b>2 — INBOUND (defend / engage).</b> Warhead tracks descend; lances auto-burn them while the line bleeds the leak-through. Build is locked — you live with what you placed.',
+          alert: '⚠ TRACKS INBOUND · lances firing · hold the line',
+          line: 54,
+          lineState: 'warn',
+          rate: { cls: 'neg', txt: '− 6 MW/s · beam draw' },
+          sky: [
+            { x: 16, p: 42 },
+            { x: 31, p: 64 },
+            { x: 50, p: 28 },
+            { x: 69, p: 72 },
+            { x: 84, p: 50 },
+          ],
+          shots: [
+            { x: 20, h: 60 },
+            { x: 52, h: 74 },
+          ],
+          firing: true,
+          locked: true,
+          prophecy: 'locked',
+          tl: { now: 6, label: '' },
+          overlay: null,
+        },
+        saturation: {
+          tone: 'crit',
+          defcon: '1',
+          name: 'Saturation',
+          sub: '· BOSS · MIRV salvo',
+          hint: '<b>3 — SATURATION (boss).</b> A MIRV boss salvo — DEFCON 1. Threat spikes on the g-curve; the line is critical. Survive it and the boss-kill steps up both your production and the threat.',
+          alert: '‼ MIRV SATURATION · DEFCON 1 · line critical',
+          line: 22,
+          lineState: 'crit',
+          rate: { cls: 'crit', txt: '− 41 MW/s · saturation draw' },
+          sky: [
+            { x: 12, p: 60 },
+            { x: 26, p: 78 },
+            { x: 40, p: 44 },
+            { x: 50, p: 30, mirv: 1 },
+            { x: 62, p: 70 },
+            { x: 74, p: 84 },
+            { x: 88, p: 58 },
+          ],
+          shots: [
+            { x: 18, h: 70 },
+            { x: 44, h: 78 },
+            { x: 70, h: 66 },
+          ],
+          firing: true,
+          locked: true,
+          prophecy: 'locked',
+          tl: { now: 9, label: '', boss: true },
+          overlay: null,
+        },
+        regroup: {
+          tone: 'breach',
+          defcon: '—',
+          name: 'Overrun',
+          sub: '· cycle 3',
+          hint: '<b>4 — OVERRUN → REDEPLOY (breach).</b> The line fell — the cycle ends. The run banks its Fragments; you redeploy a fresh line that holds as long as ever but reaches further, and the next cycle begins harder.',
+          alert: '— LINE OVERRUN · cycle ended —',
+          line: 0,
+          lineState: 'breach',
+          rate: { cls: 'crit', txt: '— offline —' },
+          sky: [],
+          shots: [],
+          firing: false,
+          locked: true,
+          prophecy: 'locked',
+          tl: { now: 11, label: '' },
+          overlay: 'regroup',
+        },
+      };
+      const PROPH = {
+        t: 'Threat forecast',
+        s: '— set posture for the next salvo',
+        cards: [
+          { g: 'Probe', m: 'g 1.6', rw: '×1' },
+          { g: 'Strike', m: 'g 2.0', rw: '×1.5', sel: 1 },
+          { g: 'Saturation', m: 'g 3.0', rw: '×2.6', surge: 1 },
+        ],
+      };
+
+      function skyHTML(ph) {
+        let h = '<div class="grid"></div>';
+        ['0x00', '0x20', '0x40', '0x60'].forEach(
+          (a, i) => (h += `<span class="addr" style="left:${6 + i * 25}%">${a}</span>`),
+        );
+        ph.sky.forEach((t) => {
+          h += `<div class="track ${ph.tone === 'crit' ? 'crit' : ''} ${t.mirv ? 'mirv' : ''}" style="left:${t.x}%;--prog:${t.p}%"><span class="head">▼</span></div>`;
+        });
+        ph.shots.forEach((s) => {
+          h += `<div class="shot" style="left:${s.x}%;--h:${s.h}%"><span class="burst">✳</span></div>`;
+        });
+        return h;
+      }
+      function boardHTML(ph) {
+        return boardModel()
+          .map((cell) => {
+            const fire = ph.firing && cell.pc && cell.pc.t === 'tow';
+            const cls =
+              'cell' +
+              (cell.aura ? ' aura' : '') +
+              (cell.pc ? '' : ' empty') +
+              (fire ? ' firing' : '');
+            if (!cell.pc) return `<div class="${cls}"></div>`;
+            const p = PIECES[cell.pc.t];
+            return `<div class="${cls}"><div class="pc ${cell.pc.t}"><span class="lv">${cell.pc.lv}</span><span class="ic">${p.ic}</span><span class="code">${p.code}</span></div></div>`;
+          })
+          .join('');
+      }
+      function timelineHTML(ph) {
+        const seq = [
+          'done',
+          'done',
+          'done',
+          'done',
+          'done',
+          'done',
+          'w',
+          'w',
+          'w',
+          'boss',
+          'w',
+          'w',
+        ];
+        let h = '';
+        seq.forEach((s, i) => {
+          const st =
+            i < ph.tl.now
+              ? 'done'
+              : i === ph.tl.now
+                ? s === 'boss'
+                  ? 'boss now'
+                  : 'now'
+                : s === 'boss'
+                  ? 'boss'
+                  : '';
+          h += `<span class="pip ${st}"></span>`;
+          if (i < seq.length - 1)
+            h += `<span class="seg ${i < ph.tl.now ? 'done' : i === ph.tl.now ? 'now' : ''}"></span>`;
+        });
+        return h;
+      }
+      function prophecyHTML(state) {
+        return `<div class="prophecy ${state === 'locked' ? 'locked' : ''}">
+    <div class="ph"><span class="t">${PROPH.t}</span><span class="s">${state === 'locked' ? '— locked for this wave' : PROPH.s}</span></div>
+    <div class="pcards">${PROPH.cards.map((c) => `<div class="oracle ${c.surge ? 'surge' : ''} ${c.sel ? 'sel' : ''}"><div class="g">${c.g}</div><div class="mult">${c.m}</div><div class="rw">${c.rw}</div></div>`).join('')}</div></div>`;
+      }
+      function screenHTML(ph) {
+        const overlay =
+          ph.overlay === 'regroup'
+            ? `
+   <div class="regroup"><div class="box">
+     <div class="hd">Line Overrun</div>
+     <div class="sub">cycle 3 · survived to wave 12 · DEFCON 1 breach</div>
+     <div class="stat"><span>reach attained</span><b>C-line L3 · 2.4M</b></div>
+     <div class="stat"><span>∫ output banked</span><b>—</b></div>
+     <div class="stat"><span>fragments minted</span><b class="gain">◈◈◈ + 3</b></div>
+     <div class="note">Fragments salvaged from the wreck. Spend them on Harden / Decoy, then stand the line back up — it holds as long as ever, but reaches further into the dark.</div>
+     <button class="btn big">◈ Redeploy the line →</button>
+   </div></div>`
+            : '';
+        return `<p class="vhint">${ph.hint}</p>
+  <div class="world" data-tone="${ph.tone}" data-locked="${ph.locked ? 1 : 0}">
+   ${overlay}
+   <div class="vC">
+    <div class="rail">
+      <div class="panel"><div class="slab">Muster</div>
+        <div class="palette">${PAL.map((p) => {
+          const P = PIECES[p.t];
+          return `<div class="pcard ${p.st}"><div class="t"><span class="ic ${p.t}">${P.ic}</span>${p.n}</div><div class="d">${p.d}</div><div class="cost">${p.cost === '—' ? '—' : '◈ ' + p.cost}</div></div>`;
+        }).join('')}
+        ${ph.locked ? '<div class="tray-lock">▚ build locked · engagement</div>' : ''}</div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="cmdbar">
+        <div class="cmdrow">
+          <span class="defcon">DEFCON <b>${ph.defcon}</b></span>
+          <div class="phase"><span class="dot"></span><span class="name">${ph.name}</span><span class="sub">${ph.sub}</span></div>
+          <div class="timeline">${timelineHTML(ph)}</div>
+        </div>
+        <div class="alert">${ph.alert}</div>
+      </div>
+      <div class="field">
+        <div class="sky">${skyHTML(ph)}</div>
+        <div class="line" data-state="${ph.lineState}" style="--pct:${ph.line}%"><div class="fill"></div>
+          <div class="ticks"><span>▔</span><span>▔</span><span>▔</span><span>▔</span><span>▔</span><span>▔</span></div>
+          <span class="label">LINE <b>${ph.line}%</b></span></div>
+        <div class="board">${boardHTML(ph)}</div>
+      </div>
+    </div>
+    <div class="rail">
+      <div class="panel reserve"><div class="slab">Reserve</div>
+        <div class="amt">1,240<span class="u">MW</span></div>
+        <div class="rate ${ph.rate.cls}">${ph.rate.txt}</div></div>
+      <div class="panel"><div class="slab">Levers</div><div style="display:flex;flex-direction:column;gap:8px">
+        ${LEV.map((v) => `<div class="lever"><div class="meta"><div class="t">${v.t}</div><div class="d">${v.d}</div></div><span class="lv">L${v.lv}</span><button class="btn ${v.st === 'afford' ? '' : 'broke'}">◈ ${v.cost}</button></div>`).join('')}
+      </div></div>
+      ${prophecyHTML(ph.prophecy)}
+    </div>
+   </div>
+  </div>`;
+      }
+      document.querySelectorAll('.screen').forEach((s) => {
+        s.innerHTML = screenHTML(PH[s.dataset.screen]);
+      });
+      const tabs = [...document.querySelectorAll('.tab')];
+      tabs.forEach((t) =>
+        t.addEventListener('click', () => {
+          tabs.forEach((x) => x.setAttribute('aria-selected', x === t));
+          document
+            .querySelectorAll('.screen')
+            .forEach((s) => s.classList.toggle('active', s.dataset.screen === t.dataset.v));
+        }),
+      );
+    </script>
+  </body>
+</html>
