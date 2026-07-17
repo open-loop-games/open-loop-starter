@@ -17,8 +17,8 @@ export interface PrestigeBalance {
 }
 
 export const PRESTIGE_BALANCE: PrestigeBalance = {
-  fragmentScalePrimary: 2500,
-  fragmentScaleSecondary: 5000,
+  fragmentScalePrimary: 1800,
+  fragmentScaleSecondary: 2600,
   mergeQuorum: 3,
 };
 
@@ -32,16 +32,16 @@ export const PRESTIGE_BALANCE: PrestigeBalance = {
 //     fragments = ⌊∛(production/Sp)⌋ + ⌊∛(endurance/Ss)⌋, summed PER SOURCE, not
 //     pooled — the cube root is the diminishing-returns transform (power-law.mdx)
 //     that keeps late runs' huge output from minting proportionally huge currency.
-//     The two run outputs are RUN-LONG ACCUMULATORS (not board snapshots — the
-//     mv-hr identity guard): production = ∫ capacity dt (throughput), endurance =
-//     ∫ burn dt (pressure weathered). Both ∝ D_max, so currency climbs ∝ ∛D_max
-//     across merges — sublinear in the reach it buys.
-//   • Scale VALUES are cycler-calibrated, not lifted: mv-hr's S_C=280 / S_I=350
-//     were sized to ITS Council-Value / Influence accumulators (~2268 / ~365 at
-//     the first merge). Cycler's ∫capacity dt / ∫burn dt accumulators run ~32k /
-//     ~15k at L=0, so Sp=2500 / Ss=5000 reproduce the same 2+1 first-merge split
-//     (⌊∛(32000/2500)⌋=2, ⌊∛(14984/5000)⌋=1) and quorum-3 affordability. A fork
-//     re-sizes both to its own economy's magnitudes (`balance/cycler-projection.ts`).
+//     Mixed sourcing, each honest to its quantity (studio/open-loop-starter#21 leaf 3):
+//     production = ∫ build.capacity dt (realized MW throughput — a genuine rate) and
+//     endurance = Σ W_n (the wave-native salvo tonnage weathered, owned by the kernel).
+//     Both climb with reach (∝ C ∝ power), so currency climbs ∝ ∛C across merges —
+//     sublinear in the reach it buys.
+//   • Scale VALUES are cycler-calibrated, not lifted: the reference board's
+//     accumulators run ~15.2k (∫capacity dt) / ~2.6k (Σ W_n) at L=0, so Sp=1800 /
+//     Ss=2600 reproduce a 2+1 first-merge split (⌊∛(15184/1800)⌋=2,
+//     ⌊∛(2622/2600)⌋=1) == quorum-3 affordability. Absolute magnitudes are a Lane-3
+//     discovery (multiverse-hr#17); a fork re-sizes both to its own economy.
 //   • THE RE-PEG is the whole point. Prestige carries permanent power (raises
 //     D_max), and the burn re-baselines W₀ = D_max/H at the Merge boundary. So
 //     D_max climbs run-over-run but N* = τ_setup + T_g·log_g(H) stays constant —

@@ -1,15 +1,15 @@
 <!--
-  BurnTierPanel — the reach-gated pace ladder (`addBurnTier`). Each tier authors
-  its own (g, T_g); deeper tiers raise g for a steeper, shorter, sharper run.
-  Advancing is a deliberate, one-way, reach-gated step (it's what the Dampen
-  lever pushes back on). A switch lands on the NEXT run — the schedule freezes at
-  run start — so this is a between-runs decision.
+  BurnTierPanel — the reach-gated salvo-posture ladder (`addBurnTier`). Each posture
+  authors its own per-wave salvo base g; deeper postures raise g for a steeper,
+  shorter, sharper run. Advancing is a deliberate, one-way, reach-gated step (it's
+  what the Dampen lever pushes back on). A switch lands on the NEXT run — the schedule
+  freezes at run start — so this is a between-runs decision.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import Button from '@/ui/components/Button.vue';
 import { getBurnTier } from '../../modules';
-import { BURN_TIERS } from '../../data/threat';
+import { SALVO_POSTURES } from '../../data/defense';
 
 const burnTier = getBurnTier();
 
@@ -28,17 +28,17 @@ function stateOf(index: number): 'active' | 'unlocked' | 'locked' {
 <template>
   <section class="tiers">
     <h3 class="tiers__title">
-      Burn tier
+      Salvo posture
     </h3>
     <ol class="tiers__list">
       <li
-        v-for="(tier, i) in BURN_TIERS"
+        v-for="(tier, i) in SALVO_POSTURES"
         :key="tier.label"
         class="tier"
         :data-state="stateOf(i)"
       >
         <span class="tier__label">{{ tier.label }}</span>
-        <span class="tier__g">g&nbsp;{{ tier.escalationBase }}</span>
+        <span class="tier__g">g&nbsp;{{ tier.salvoBase }}</span>
         <span class="tier__gate">
           <template v-if="stateOf(i) === 'locked'">L&nbsp;≥&nbsp;{{ tier.unlockPowerLevel }}</template>
           <template v-else-if="stateOf(i) === 'active'">active</template>

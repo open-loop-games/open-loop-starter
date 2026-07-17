@@ -21,15 +21,15 @@ export interface CyclerRunView {
   elapsedSeconds: ComputedRef<number>;
   /** Closed-form authored run length N* (minutes). */
   predictedMinutes: ComputedRef<number>;
-  /** burn / D_max, clamped to [0, 1] — the vessel fill. */
+  /** salvo / cMax, clamped to [0, 1] — the vessel fill. */
   fill: ComputedRef<number>;
-  /** Raw pressure burn / D_max (may exceed 1 at the crossing). */
+  /** Raw pressure salvo / cMax (may exceed 1 at the crossing). */
   pressure: ComputedRef<number>;
-  /** Current exogenous burn W(t) — the debit the ceiling must outpace. */
-  burn: ComputedRef<Decimal>;
-  /** Saturated capacity ceiling D_max the burn is racing. */
+  /** Current exogenous salvo W_N — the pressure the clear-rate must outpace. */
+  salvo: ComputedRef<Decimal>;
+  /** Saturated clear-rate ceiling cMax the salvo is racing. */
   capacity: ComputedRef<Decimal>;
-  /** True once the burn has overtaken D_max — the merge bell. */
+  /** True once the line has breached — the Redeploy bell. */
   ended: ComputedRef<boolean>;
   /** Fragments the current run has accrued (banked automatically at the bell). */
   pendingFragments: ComputedRef<Decimal>;
@@ -40,11 +40,10 @@ export interface CyclerRunView {
 }
 
 const PHASE_LABELS: Record<CyclePhase, string> = {
-  setup: 'Setup',
-  comfortable: 'Comfortable',
-  'first-bite': 'First bite',
-  'under-review': 'Under review',
-  'merge-bell': 'Merge bell',
+  standby: 'Standby',
+  inbound: 'Inbound',
+  saturation: 'Saturation',
+  overrun: 'Overrun',
 };
 
 export function useCyclerRun(): CyclerRunView {
@@ -67,7 +66,7 @@ export function useCyclerRun(): CyclerRunView {
     predictedMinutes,
     fill,
     pressure,
-    burn: cycle.burn,
+    salvo: cycle.salvo,
     capacity: cycle.capacity,
     ended,
     pendingFragments: prestige.pendingFragments,

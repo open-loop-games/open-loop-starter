@@ -48,9 +48,11 @@ import { getBuild } from './build';
  *
  *   fragments = ⌊∛(production / S_p)⌋ + ⌊∛(endurance / S_s)⌋
  *
- * with production = ∫ capacity dt (throughput) and endurance = ∫ burn dt (pressure
- * weathered) — two run-long accumulators, both ∝ D_max, so banked currency climbs
- * sublinearly across merges as D_max climbs.
+ * Mixed sourcing, each honest to its quantity (studio/open-loop-starter#21 leaf 3):
+ * production = ∫ build.capacity dt (realized MW throughput — a genuine rate, integrated
+ * over real run-time) and endurance = Σ W_n (the wave-native salvo tonnage weathered,
+ * owned by the kernel). Both climb with reach (∝ C ∝ power), so banked currency climbs
+ * sublinearly across Redeploys as reach climbs.
  */
 export interface PrestigeApi {
   /** Spendable banked currency (Fragments), as a Decimal view. */
@@ -59,9 +61,9 @@ export interface PrestigeApi {
   fragmentsResource: Resource<DecimalSource>;
   /** Lifetime Fragments ever banked (the resource's `cumulative` tracker) — the reach-climb signal. */
   lifetimeFragments: ComputedRef<Decimal>;
-  /** Run-long production accumulator ∫ capacity dt (primary source), reset per run. */
+  /** Run-long production accumulator ∫ build.capacity dt (primary source), reset per run. */
   runOutput: ComputedRef<Decimal>;
-  /** Run-long endurance accumulator ∫ burn dt (secondary source), reset per run. */
+  /** Run-long endurance Σ W_n (secondary source) — the kernel-owned salvo tonnage weathered. */
   runEndurance: ComputedRef<Decimal>;
   /** Fragments the current run has accrued so far — monotone over a run. */
   pendingFragments: ComputedRef<Decimal>;
@@ -110,15 +112,14 @@ export function createPrestigeModule(options: PrestigeModuleOptions = {}): Engin
     id: 'cycler/prestige',
     install(ctx) {
       // Persistent meta + run state. `banked` guards against double-paying one
-      // ended run (and, flipped, signals a fresh run needs its accumulators
-      // zeroed) — so a save/reload mid-`ended` never re-banks. Accumulators are
-      // run-scoped strings (the local Decimal-as-string pattern, cf. cycle.ts).
-      // `wallet` is the graduated Fragments Resource; its `cumulative` tracker is
-      // lifetimeFragments.
+      // ended run (and, flipped, signals a fresh run needs its accumulator zeroed)
+      // — so a save/reload mid-`ended` never re-banks. `outputRaw` is the run-scoped
+      // production accumulator (Decimal-as-string). Endurance is the kernel's Σ W_n
+      // (read, not accumulated here). `wallet` is the graduated Fragments Resource;
+      // its `cumulative` tracker is lifetimeFragments.
       const state = withPersistentContext('cycler/prestige', () => ({
         wallet: createResource<DecimalSource>(0, { displayName: 'fragments', precision: 0 }),
         outputRaw: persistent<string>('0', { name: 'run-output' }),
-        enduranceRaw: persistent<string>('0', { name: 'run-endurance' }),
         banked: persistent<boolean>(false, { name: 'banked' }),
         mergeCountRaw: persistent<number>(0, { name: 'merge-count' }),
       }));
@@ -127,33 +128,26 @@ export function createPrestigeModule(options: PrestigeModuleOptions = {}): Engin
       const fragments = computed(() => new Decimal(wallet.value));
       const lifetimeFragments = computed(() => new Decimal(wallet.cumulative?.value ?? 0));
       const runOutput = computed(() => new Decimal(state.outputRaw.value));
-      const runEndurance = computed(() => new Decimal(state.enduranceRaw.value));
+      // Endurance is the kernel-owned wave-native Σ W_n, reset by cycle.startRun.
+      const runEndurance = computed(() => getCycle().runEndurance.value);
       const pendingFragments = computed(() => fragmentsFor(runOutput.value, runEndurance.value));
       const mergeCount = computed(() => state.mergeCountRaw.value);
 
-      // The run accumulators + auto-bank, driven by the live kernel. While a run
-      // is live, integrate throughput (capacity) and pressure weathered (burn) in
-      // minutes — the spine's time unit, matching `cycle.burnAt`. On the ended
-      // crossing, auto-bank the payout once (the Merge bell). On the ended→running
-      // transition (a Merge, or a direct startRun) reset the run accumulators, so
-      // this stays correct regardless of who restarts the clock.
+      // The production accumulator + auto-bank, driven by the live kernel. While a
+      // run is live, integrate realized MW throughput (build.capacity) in minutes.
+      // On the ended crossing (the line breach), auto-bank the payout once (the
+      // Merge bell). On the ended→running transition (a Merge, or a direct startRun)
+      // reset the production accumulator; endurance resets kernel-side in startRun.
       ctx.onTick((dt) => {
         const cycle = getCycle();
         if (cycle.runState.value === 'running') {
           if (state.banked.value) {
             state.outputRaw.value = '0';
-            state.enduranceRaw.value = '0';
             state.banked.value = false;
           }
           const dtMinutes = dt / 60;
-          // Throughput = the capacity the kernel actually races the burn against
-          // (cycle.capacity = the operative D_max, whatever wires into it), NOT
-          // build.capacity (live placement, 0 until a fork adds a placement loop).
           state.outputRaw.value = runOutput.value
-            .add(cycle.capacity.value.mul(dtMinutes))
-            .toString();
-          state.enduranceRaw.value = runEndurance.value
-            .add(cycle.burn.value.mul(dtMinutes))
+            .add(getBuild().capacity.value.mul(dtMinutes))
             .toString();
         } else if (!state.banked.value) {
           // Auto-bank the payout. addResource grows the wallet (and, via its sync

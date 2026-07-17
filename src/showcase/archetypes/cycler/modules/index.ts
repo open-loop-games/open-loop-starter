@@ -1,6 +1,6 @@
 import type { EngineModule } from '@open-loop/engine';
 import { createCycleModule, type CycleModuleOptions } from './cycle';
-import { createBuildModule, getBuild, type BuildModuleOptions } from './build';
+import { createBuildModule, type BuildModuleOptions } from './build';
 import { createWallModule, type WallModuleOptions } from './wall';
 import { createBurnTierModule, getBurnTier, type BurnTierModuleOptions } from './burn-tier';
 import { createPrestigeModule, type PrestigeModuleOptions } from './prestige';
@@ -63,33 +63,29 @@ export interface CyclerModulesOptions
     UpgradesModuleOptions {}
 
 /**
- * Compose the Cycler modules. Build installs first and owns the saturated
- * capacity ceiling D_max; the cycle kernel's peg reads it (`getBuild().dMax`)
- * unless an explicit `capacity` override is passed (kernel-only boots, forced
- * prestige-tier stand-ins). Burn-tier installs next and owns the pace surface —
- * the kernel reads its active schedule (`getBurnTier().schedule()`) unless an
- * explicit `schedule` override is passed. Prestige closes the loop — it reads the
- * live kernel (run-end) and build (resetRun) via their getters. Upgrades is the
- * permanent catalog on the prestige wallet — it reads the Fragments Resource
- * (prestige) and the power level (build), so it installs LAST.
+ * Compose the Cycler modules. Build installs first and owns the closed-form ceilings
+ * (`dMax` output / `cMax` clear-rate); the cycle kernel reads `getBuild().cMax` for the
+ * salvo peg and realized `clearRate` for leak resolution. Burn-tier installs next and
+ * owns the per-wave pace surface — the kernel reads its active schedule
+ * (`getBurnTier().schedule()`) unless an explicit `schedule` override is passed. Wall
+ * holds the defended line the kernel drives. Prestige closes the loop — it reads the
+ * live kernel (run-end, endurance) and build (production, resetRun). Upgrades is the
+ * permanent catalog on the prestige wallet — it reads the Fragments Resource (prestige)
+ * and the power level (build), so it installs LAST.
  */
 export function createCyclerModules(options: CyclerModulesOptions = {}): EngineModule[] {
   const build = createBuildModule(options);
   const burnTier = createBurnTierModule(options);
   const cycle = createCycleModule({
     ...options,
-    capacity: options.capacity ?? (() => getBuild().dMax.value),
-    // The active pace surface: the burn-tier schedule with the g-bender applied to
-    // its escalation base (the sole pace lever bends g toward 1). Lazy — read only
-    // at startRun, so it's frozen for the run and the crossing stays closed-form.
+    // The active pace surface: the active posture's salvoBase with the g-bender
+    // applied (the sole pace lever bends g toward 1). Lazy — read only at startRun,
+    // so it's frozen for the run and the crossing stays closed-form.
     schedule:
       options.schedule ??
       (() => {
         const s = getBurnTier().schedule();
-        return {
-          escalationBase: getUpgrades().bendBase(s.escalationBase),
-          escalationTimescale: s.escalationTimescale,
-        };
+        return { salvoBase: getUpgrades().bendBase(s.salvoBase) };
       }),
   });
   const wall = createWallModule(options);

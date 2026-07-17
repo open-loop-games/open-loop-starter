@@ -61,7 +61,9 @@ export function evaluateBoard(view: OccupancyView): BoardEvaluation {
 
   const isReceiver = (x: number, y: number): boolean => {
     const kind = view.pieceAt(x, y);
-    return kind !== null && PIECES[kind].role !== 'booster';
+    if (kind === null) return false;
+    const role = PIECES[kind].role;
+    return role === 'producer' || role === 'tower';
   };
 
   for (let y = 0; y < view.height; y++) {

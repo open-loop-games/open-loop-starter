@@ -1,25 +1,29 @@
 /**
  * Cycler build module — shape-invariant spec (IDENTITY § Balance model; the leaf-2
- * board concretization, studio/open-loop-starter#21).
+ * board concretization + leaf-3 clear-rate/repair ceilings, studio/open-loop-starter#21).
  *
  * Behavioral, not magnitude. Pins WHAT the shared placement grid does:
- *   • the board is REAL now — Reactors produce, Relays boost cross-adjacent
- *     Reactors, and the realized output flows from a live evaluator over occupancy;
- *   • the LEAF-2 LOCK — the reference full board's realized output ≈ the closed-form
- *     ceiling D_max (the two models agree at the reference point);
- *   • D_max stays the authored closed form (finite board ⇒ log crossing) and is
+ *   • the board is REAL — Reactors produce, Relays boost cross-adjacent receivers,
+ *     realized output/clear-rate flow from a live evaluator over occupancy;
+ *   • the LEAF-2 LOCK — the reference full board's realized output ≈ D_max;
+ *   • dMax / cMax are the authored closed forms (finite board ⇒ log crossing),
  *     geometric in the permanent level L (reach, not pacing);
- *   • the kernel still pegs against D_max and crosses at N* on live capacity.
+ *   • Bulwarks are repair-only — they contribute nothing to output/clear-rate but
+ *     add repair throughput;
+ *   • the kernel pegs the salvo against cMax and the run ends at the line breach.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, cycle, getEngine, tickUntil } from './harness';
+import { boot, cycle, wall, getEngine, placeDefense, tickUntil } from './harness';
 import { BuildKey, getBuild } from '../modules';
 import { BUILD_BALANCE } from '../data/build';
+import { DEFENSE_BALANCE } from '../data/defense';
 import { PIECES } from '../data/pieces';
 
 const closedFormDMax =
   BUILD_BALANCE.boardCells * BUILD_BALANCE.baseOutputCeiling * BUILD_BALANCE.adjacencyBoost;
+const closedFormCMax =
+  DEFENSE_BALANCE.forwardCells * DEFENSE_BALANCE.lanceIntercept * BUILD_BALANCE.adjacencyBoost;
 
 describe('build — the shared placement grid is real', () => {
   beforeEach(() => boot());
@@ -85,32 +89,72 @@ describe('build — the reference board reconciles with the closed-form ceiling'
   });
 });
 
-describe('build ↔ kernel integration — the crossing holds on the ceiling', () => {
+describe('build — the clear-rate + repair ceilings (leaf 3)', () => {
   beforeEach(() => boot());
 
-  it('the kernel pegs against the live build D_max and crosses at N*', async () => {
-    expect(cycle().capacity.value.eq(getBuild().dMax.value)).toBe(true);
+  it('cMax is the authored clear-rate closed form and geometric in the permanent level L', () => {
+    const b = getBuild();
+    expect(b.cMax.value.toNumber()).toBeCloseTo(closedFormCMax, 6);
+    const c0 = b.cMax.value;
+    b.raisePower();
+    expect(b.cMax.value.div(c0).toNumber()).toBeCloseTo(BUILD_BALANCE.producerUpgradeRatio, 6);
+  });
+
+  it('a Bulwark contributes nothing to output or clear-rate — repair only', () => {
+    const b = getBuild();
+    b.placeAt(1, 1, 'reactor');
+    const outWithReactor = b.capacity.value.toNumber();
+    // Add a Bulwark: output and clear-rate are unchanged; it is not a boost receiver.
+    b.placeAt(2, 2, 'bulwark');
+    expect(b.capacity.value.toNumber()).toBeCloseTo(outWithReactor, 6);
+    expect(b.clearRate.value.toNumber()).toBe(0);
+    expect(b.bulwarkCount.value).toBe(1);
+  });
+
+  it('repairCapacity = (baseRepair + n·throughput)·power', () => {
+    const b = getBuild();
+    const beta = PIECES.bulwark.throughput!;
+    expect(b.repairCapacity.value.toNumber()).toBeCloseTo(DEFENSE_BALANCE.baseRepair, 6); // empty: baseline trickle
+    b.placeAt(0, 0, 'bulwark');
+    b.placeAt(1, 0, 'bulwark');
+    expect(b.repairCapacity.value.toNumber()).toBeCloseTo(DEFENSE_BALANCE.baseRepair + 2 * beta, 6);
+    b.raisePower();
+    expect(b.repairCapacity.value.toNumber()).toBeCloseTo(
+      (DEFENSE_BALANCE.baseRepair + 2 * beta) * BUILD_BALANCE.producerUpgradeRatio,
+      6,
+    );
+  });
+});
+
+describe('build ↔ kernel integration — the salvo pegs against cMax, breach ends the run', () => {
+  beforeEach(() => boot());
+
+  it('the kernel HUD ceiling is build cMax; a placed board runs to the line breach', async () => {
+    expect(cycle().capacity.value.eq(getBuild().cMax.value)).toBe(true);
 
     const c = cycle();
-    await tickUntil(() => c.runState.value === 'ended');
-    expect(c.endedAtMinutes.value!).toBeCloseTo(c.predictedRunLength(), 1);
+    placeDefense();
+    await tickUntil(() => c.runState.value === 'ended', 20_000);
+    expect(wall().breached.value).toBe(true); // the line breach IS the run-end
+    expect(c.endedAtMinutes.value!).toBeGreaterThan(0);
   });
 
   it('raising build power re-pegs to +0 run length (reach, not pacing)', async () => {
+    placeDefense();
+    const baseC = getBuild().cMax.value;
     const base = (await runToEnd()).endedAtMinutes.value!;
 
-    boot();
     getBuild().raisePower();
-    cycle().startRun();
+    cycle().startRun(); // re-peg; board persists (startRun doesn't clear it)
     const powered = (await runToEnd()).endedAtMinutes.value!;
 
-    expect(getBuild().dMax.value.toNumber()).toBeGreaterThan(closedFormDMax);
-    expect(Math.abs(powered - base)).toBeLessThan(0.05);
+    expect(getBuild().cMax.value.gt(baseC)).toBe(true); // reach genuinely climbed
+    expect(Math.abs(powered - base)).toBeLessThan(0.1);
   });
 });
 
 async function runToEnd() {
   const c = cycle();
-  await tickUntil(() => c.runState.value === 'ended');
+  await tickUntil(() => c.runState.value === 'ended', 20_000);
   return c;
 }

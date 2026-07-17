@@ -1,6 +1,6 @@
 // ─── Skeleton ───
 // The pieces on the one shared placement grid (IDENTITY § One shared surface;
-// studio/open-loop-starter#21 leaves 2–3). Three kinds occupy the same board:
+// studio/open-loop-starter#21 leaves 2–3). Four kinds occupy the same board:
 //   • Reactor (producer) — yields MW output; the economy's source.
 //   • Lance   (tower)    — yields clear-rate C (Lance interception); draws MW to
 //                          fire (a within-run sink). Shares cells with Reactors —
@@ -9,19 +9,25 @@
 //   • Relay   (booster)  — yields nothing itself; boosts adjacent Reactors AND
 //                          Lances — the bridge that makes economy and defense one
 //                          system (Relays raise both output and C).
+//   • Bulwark (repair)   — the third strategic leg made spatial (leaf 3): converts
+//                          MW surplus into line-repair THROUGHPUT (Δ_wall tail). A
+//                          Bulwark cell is a cell not producing or clearing, so
+//                          "buy tail" competes for the board like C and output.
+//                          Not a boost receiver (Relays don't lift it).
 // Pure config: typed defs + the reference full-board layout the closed-form
 // ceiling calibrates against. The board module reads these at construction.
 
 /** Connection shape a booster reaches — the cells it covers. Cycler uses `cross`. */
 export type ConnectionShape = 'cross' | 'diagonal' | 'ring';
 
-export type PieceKind = 'reactor' | 'lance' | 'relay';
+export type PieceKind = 'reactor' | 'lance' | 'relay' | 'bulwark';
 
 /**
  * A piece's role in the adjacency evaluation. `producer` and `tower` are both
- * *boostable* receivers (Relays lift both); `booster` emits the boost.
+ * *boostable* receivers (Relays lift both); `booster` emits the boost; `repair`
+ * is neither (it feeds the wall's Δ_wall tail, not the board evaluation).
  */
-export type PieceRole = 'producer' | 'tower' | 'booster';
+export type PieceRole = 'producer' | 'tower' | 'booster' | 'repair';
 
 export interface PieceDef {
   kind: PieceKind;
@@ -40,6 +46,8 @@ export interface PieceDef {
   boost?: number;
   /** Booster coverage shape. Non-boosters: undefined. */
   shape?: ConnectionShape;
+  /** Repair throughput β (MW-surplus → line HP a Bulwark can route per STANDBY, before power). Non-repair: undefined. */
+  throughput?: number;
 }
 
 /** The one shared board — 4×4 = 16 cells (the abstract `build.boardCells`). */
@@ -69,6 +77,13 @@ export const PIECES: Record<PieceKind, PieceDef> = {
     boost: 0.75,
     shape: 'cross',
   },
+  bulwark: {
+    kind: 'bulwark',
+    role: 'repair',
+    title: 'Bulwark',
+    description: 'Routes MW surplus into line repair — extends the Δ_wall tail. Costs a cell.',
+    throughput: 200,
+  },
 };
 
 /**
@@ -95,6 +110,34 @@ export const REFERENCE_LAYOUT: readonly (PieceKind | null)[] = [
   'relay',
   'reactor',
   'relay',
+];
+
+/**
+ * A competent reference DEFENSE board: a forward Lance line (relay-boosted),
+ * Reactors behind, and one Bulwark. Its realized clear-rate is a fixed fraction of
+ * the aspirational `cMax`, so a run reaches a consistent, power-invariant crossing +
+ * Δ_wall tail. Row-major, length BOARD.width·BOARD.height. Used by the wave-model sim
+ * harness (`sim/harness.ts` placeDefense) and the balance probes — one source of the
+ * reference so they can't drift. (Distinct from REFERENCE_LAYOUT, the all-producer
+ * board the OUTPUT ceiling D_max calibrates against.)
+ */
+export const REFERENCE_DEFENSE: readonly (PieceKind | null)[] = [
+  'lance',
+  'lance',
+  'lance',
+  'lance',
+  'relay',
+  'relay',
+  'relay',
+  'relay',
+  'reactor',
+  'reactor',
+  'reactor',
+  'reactor',
+  'reactor',
+  'reactor',
+  'reactor',
+  'bulwark',
 ];
 
 // ─── Balance ───

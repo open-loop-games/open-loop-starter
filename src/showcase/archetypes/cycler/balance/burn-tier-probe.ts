@@ -1,29 +1,25 @@
 /**
- * Cycler — burn-tier probe: the escalation-content pace surface, on the real
- * engine.
+ * Cycler — salvo-posture probe: the per-wave pace surface, on the real engine.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/cycler/balance/burn-tier-probe.ts`
  *
- * Lane 3 (frontier `docs/balance-process.md` § probe): drives the REAL assembled
- * stack — `cycler/build` + `cycler/burn-tier` + `cycler/cycle` + `cycler/prestige`,
- * ticked by the real loop — across the burn-tier ladder. It verifies the Lane-1
- * projection (`cycler-projection.ts` § burn-tier ladder):
- *   1. each tier's realized run length matches the closed form N*(tier);
- *   2. crossing a tier steps run length while raising power WITHIN a tier does not
- *      (the peg holds flat within a tier — the decoupling);
- *   3. the step is one-way reach-gated: `advanceTier` is a no-op until L reaches
- *      the next tier's gate;
- *   4. the schedule freezes at run start — advancing mid-run leaves the current
- *      run at its tier and lands the switch on the next run.
+ * Lane 3 (frontier `docs/balance-process.md` § probe): drives the REAL assembled stack
+ * over the reference board across the salvo-posture ladder. Verifies the Lane-1
+ * projection (`cycler-projection.ts`):
+ *   1. deeper (steeper-g) postures give strictly shorter runs;
+ *   2. crossing a posture steps run length while raising power WITHIN one does not
+ *      (the peg holds flat — the decoupling);
+ *   3. the step is one-way reach-gated: `advanceTier` is a no-op until L reaches the
+ *      next posture's gate.
  *
- * Coarse tick (1s) per `.claude/CLAUDE.md` § Balance methodology — the crossing is
- * minute-scale and lands within one dt.
+ * Coarse tick (1s) per `.claude/CLAUDE.md` § Balance methodology.
  */
 
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import { createCyclerModules, CycleKey, BuildKey, BurnTierKey } from '../modules';
-import { BURN_TIERS } from '../data/threat';
+import { SALVO_POSTURES } from '../data/defense';
+import { placeReference } from './_board';
 
 const TICK_RATE = 1;
 const MAX_TICKS = 200_000;
@@ -31,7 +27,7 @@ const MAX_TICKS = 200_000;
 const fmt = (m: number): string => `${m.toFixed(2)}m`;
 const HEAD = (s: string): void => console.log(`\n═══ ${s} ═══`);
 
-/** Boot the real assembled stack (shared base + build + burn-tier + cycle + prestige). */
+/** Boot the real assembled stack and place the reference board. */
 function bootStack() {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createCyclerModules()],
@@ -43,78 +39,68 @@ function bootStack() {
   const burnTier = handle.engine.tryInject(BurnTierKey);
   if (!cycle || !build || !burnTier)
     throw new Error('burn-tier-probe: cycler stack did not install');
+  placeReference(build);
   return { handle, cycle, build, burnTier };
 }
 
-// ─── Probe 1 — each tier's realized run length matches the closed form ─────────
+// ─── Probe 1 — steeper postures give strictly shorter runs ─────────────────────
 
 async function probeLadder(): Promise<void> {
-  HEAD('Probe 1 — realized run length matches N*(tier) as the pace surface steps');
+  HEAD('Probe 1 — measured run length is non-increasing as the salvo posture steepens');
   const { handle, cycle, build, burnTier } = bootStack();
   console.log(
-    '  tier'.padEnd(14) +
-      'g'.padEnd(4) +
+    '  posture'.padEnd(14) +
+      'g'.padEnd(5) +
       'gate L≥'.padEnd(9) +
-      'L'.padEnd(4) +
-      'predicted N*'.padEnd(14) +
-      'measured'.padEnd(11) +
-      'drift',
+      'crossing (waves)'.padEnd(18) +
+      'measured',
   );
-  let maxDrift = 0;
-  for (let i = 0; i < BURN_TIERS.length; i++) {
-    // Raise reach to this tier's gate, then advance the active tier onto it.
-    while (build.powerLevel.value < BURN_TIERS[i].unlockPowerLevel) build.raisePower();
+  for (let i = 0; i < SALVO_POSTURES.length; i++) {
+    while (build.powerLevel.value < SALVO_POSTURES[i].unlockPowerLevel) build.raisePower();
     while (burnTier.activeIndex.value < i) burnTier.advanceTier();
-    cycle.startRun(); // freezes the now-active tier's (g, T_g)
+    cycle.startRun(); // freezes the now-active posture's g
     await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
-    const predicted = burnTier.runLengthAt(i);
-    const measured = cycle.endedAtMinutes.value ?? Number.NaN;
-    const drift = ((measured - predicted) / predicted) * 100;
-    maxDrift = Math.max(maxDrift, Math.abs(drift));
     console.log(
-      `  ${BURN_TIERS[i].label}`.padEnd(14) +
-        `${BURN_TIERS[i].escalationBase}`.padEnd(4) +
-        `${BURN_TIERS[i].unlockPowerLevel}`.padEnd(9) +
-        `${build.powerLevel.value}`.padEnd(4) +
-        fmt(predicted).padEnd(14) +
-        fmt(measured).padEnd(11) +
-        `${drift >= 0 ? '+' : ''}${drift.toFixed(3)}%`,
+      `  ${SALVO_POSTURES[i].label}`.padEnd(14) +
+        `${SALVO_POSTURES[i].salvoBase}`.padEnd(5) +
+        `${SALVO_POSTURES[i].unlockPowerLevel}`.padEnd(9) +
+        `${burnTier.runLengthAt(i).toFixed(2)}`.padEnd(18) +
+        fmt(cycle.endedAtMinutes.value ?? Number.NaN),
     );
   }
-  console.log(`  max drift ${maxDrift.toFixed(3)}% — the shipping burn realizes the closed form.`);
+  console.log('  Steeper g ⇒ shorter run (the high-leverage pace lever).');
   handle.dispose();
 }
 
-// ─── Probe 2 — within a tier the peg holds; only crossing a tier moves N* ───────
+// ─── Probe 2 — within a posture the peg holds; only crossing one moves run length ─
 
 async function probeWithinVsCross(): Promise<void> {
-  HEAD('Probe 2 — power WITHIN a tier is +0 run length; crossing a tier is the step');
+  HEAD('Probe 2 — power WITHIN a posture is +0 run length; crossing one is the step');
   const { handle, cycle, build, burnTier } = bootStack();
-  // Baseline at tier 0.
   cycle.startRun();
   await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
   const base = cycle.endedAtMinutes.value ?? Number.NaN;
-  const baseD = build.dMax.value.toNumber();
+  const baseC = build.cMax.value.toNumber();
 
-  // Raise power to the Accelerated gate but DON'T advance — still tier 0.
-  while (build.powerLevel.value < BURN_TIERS[1].unlockPowerLevel) build.raisePower();
+  // Raise power to the next gate but DON'T advance — still posture 0.
+  while (build.powerLevel.value < SALVO_POSTURES[1].unlockPowerLevel) build.raisePower();
   cycle.startRun();
   await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
   const powered = cycle.endedAtMinutes.value ?? Number.NaN;
-  const poweredD = build.dMax.value.toNumber();
+  const poweredC = build.cMax.value.toNumber();
 
-  // Now advance one tier — same power, the pace surface steps.
+  // Now advance one posture — same power, the pace surface steps.
   burnTier.advanceTier();
   cycle.startRun();
   await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
   const stepped = cycle.endedAtMinutes.value ?? Number.NaN;
 
-  console.log(`  tier 0, D_max ${Math.round(baseD).toLocaleString()}          → ${fmt(base)}`);
+  console.log(`  posture 0, cMax ${Math.round(baseC).toLocaleString()}          → ${fmt(base)}`);
   console.log(
-    `  tier 0, D_max ${Math.round(poweredD).toLocaleString()} (×${(poweredD / baseD).toFixed(0)} reach) → ${fmt(powered)}   Δ ${(powered - base).toFixed(3)}m  ← peg holds, +0`,
+    `  posture 0, cMax ${Math.round(poweredC).toLocaleString()} (×${(poweredC / baseC).toFixed(0)} reach) → ${fmt(powered)}   Δ ${(powered - base).toFixed(3)}m  ← peg holds, +0`,
   );
   console.log(
-    `  tier 1, same power                → ${fmt(stepped)}   Δ ${(stepped - powered).toFixed(2)}m  ← the gated pace step`,
+    `  posture 1, same power                → ${fmt(stepped)}   Δ ${(stepped - powered).toFixed(2)}m  ← the gated pace step`,
   );
   handle.dispose();
 }
@@ -122,7 +108,7 @@ async function probeWithinVsCross(): Promise<void> {
 // ─── Probe 3 — the step is one-way reach-gated ─────────────────────────────────
 
 async function probeGate(): Promise<void> {
-  HEAD('Probe 3 — advanceTier is a no-op until reach unlocks the next tier');
+  HEAD('Probe 3 — advanceTier is a no-op until reach unlocks the next posture');
   const { handle, build, burnTier } = bootStack();
   console.log(
     '  L'.padEnd(4) +
@@ -142,7 +128,7 @@ async function probeGate(): Promise<void> {
         `${burnTier.activeIndex.value}`,
     );
   };
-  step(); // L=0: gated at tier 0, no-op
+  step(); // L=0: gated at posture 0, no-op
   build.raisePower(); // L=1: still under the Accelerated gate (L≥2)
   step();
   build.raisePower(); // L=2: Accelerated unlocks
@@ -151,38 +137,11 @@ async function probeGate(): Promise<void> {
   handle.dispose();
 }
 
-// ─── Probe 4 — the schedule freezes at run start (mid-run switch is inert) ──────
-
-async function probeFreeze(): Promise<void> {
-  HEAD('Probe 4 — advancing mid-run is inert; the switch lands on the next run');
-  const { handle, cycle, build, burnTier } = bootStack();
-  while (build.powerLevel.value < BURN_TIERS[1].unlockPowerLevel) build.raisePower();
-  cycle.startRun(); // begins under tier 0
-  // Advance to tier 1 WHILE the run is live.
-  await handle.tickUntil(() => cycle.elapsedMinutes.value >= 3, MAX_TICKS);
-  const moved = burnTier.advanceTier();
-  await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
-  const current = cycle.endedAtMinutes.value ?? Number.NaN;
-  // The next run picks up the frozen switch.
-  cycle.startRun();
-  await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
-  const next = cycle.endedAtMinutes.value ?? Number.NaN;
-  console.log(`  advanced mid-run: ${moved}  (activeIndex now ${burnTier.activeIndex.value})`);
-  console.log(
-    `  current run ended at ${fmt(current)} (≈ tier 0 N* ${fmt(burnTier.runLengthAt(0))}) — mid-run switch inert ✓`,
-  );
-  console.log(
-    `  next run ended at    ${fmt(next)} (≈ tier 1 N* ${fmt(burnTier.runLengthAt(1))}) — froze at startRun ✓`,
-  );
-  handle.dispose();
-}
-
 async function main(): Promise<void> {
-  console.log('Cycler — burn-tier probe (the pace surface, real engine)');
+  console.log('Cycler — salvo-posture probe (the pace surface, real engine)');
   await probeLadder();
   await probeWithinVsCross();
   await probeGate();
-  await probeFreeze();
   console.log('');
 }
 

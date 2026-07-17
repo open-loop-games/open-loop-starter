@@ -315,13 +315,16 @@ which is what the N=3 dive would reconcile.
 
 ### Run-phase controller — N=2 (cycler, multiverse-hr)
 
-A run clock (`persistent` elapsed) + a `running`/`ended` lifecycle + a derived
-beat label read off a tension ratio + a crossing detector in `ctx.onTick` that
-ends the run when the ratio reaches 1. In cycler the ratio is `burn / D_max`: an
-exogenous scheduled burn `W(t) = W₀·g^((t−setup)/T_g)` races a saturated capacity
-ceiling; the beat label (`setup`/`comfortable`/`first-bite`/`under-review`/`merge-bell`)
-is *measured* off the ratio, never authored; the pace surface is frozen at
-`startRun` so the crossing stays closed-form.
+A run clock + a `running`/`ended` lifecycle + a derived phase label + a crossing
+detector in `ctx.onTick` that ends the run. In cycler (post-#21, Defense Command) the
+controller is a **hard two-phase alternation**: STANDBY (build/repair) ↔ INBOUND (a
+wave-indexed salvo `W_N = W₀·g^N` resolves at its close), and the run ends when the
+salvo breaches a line-HP buffer — `overrun`, not an arithmetic `ratio→1`. The phase
+label (`standby`/`inbound`/`saturation`/`overrun`) is measured off the wave/phase
+state; the pace surface (salvo `g`) is frozen at `startRun` so the crossing stays
+closed-form. (Pre-#21 cycler was a *soft* single-phase controller racing a
+time-indexed `burn / D_max` ratio — the wave reindex + two-phase alternation is a
+divergence to keep visible for the N=3 dive.)
 
 - **The split.** The exogenous scheduled-burn half (`(simTime) => value`) is a
   **primitive** candidate — engine `candidate-primitives.md` § "Exogenous
@@ -332,10 +335,11 @@ is *measured* off the ratio, never authored; the pace surface is frozen at
   the module header cites the shared `N* ≈ prime + Tg·log_g(H)` crossing, τ_setup
   priming, and the `{H,g,Tg}`-authored-run-length decoupling). The named-anticipated
   #17 breadcrumb is now a real second instance.
-- **Divergences to keep visible (for the N=3 dive):** (1) *crossing* — cycler is
-  a hard closed-form `ratio→1`; multiverse-hr is a soft *rate* crossing
-  (`burnRate > productionRate`) with a `graceSeconds` window and a solvent-recovery
-  reset, so run-end is a soft-bind, not a deterministic time. (2) *baseline peg* —
+- **Divergences to keep visible (for the N=3 dive → studio/open-loop-engine#11):**
+  (1) *crossing* — cycler (post-#21) is a hard **wave-indexed line breach**
+  (salvo `W_N` vs realized clear-rate bleeds a bounded HP buffer); multiverse-hr is a
+  soft *rate* crossing (`burnRate > productionRate`) with a `graceSeconds` window and a
+  solvent-recovery reset, so run-end is a soft-bind, not a deterministic time. (2) *baseline peg* —
   cycler freezes the pace surface at `startRun`; multiverse-hr pegs B₀ to a
   continuous cross-run EMA of production rate (`pegEma`, drain-independent), so its
   schedule is not run-frozen. (3) *beat label* — cycler derives the full 5-beat

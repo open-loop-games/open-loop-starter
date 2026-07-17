@@ -23,6 +23,7 @@
 import { type Engine } from '@open-loop/engine';
 import { bootTestEngine, type TestEngineHandle } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
+import { BOARD, REFERENCE_DEFENSE } from '../data/pieces';
 import {
   createCyclerModules,
   CycleKey,
@@ -98,6 +99,24 @@ export function upgrades(): UpgradesApi {
   const api = handle.engine.tryInject(UpgradesKey);
   if (!api) throw new Error('cycler/sim/harness: upgrades module not installed');
   return api;
+}
+
+/**
+ * Place the shared `REFERENCE_DEFENSE` board (`data/pieces.ts`) — a forward Lance
+ * line, Reactors behind, one Bulwark. Its realized `clearRate` is a fixed fraction k
+ * of the aspirational `cMax`, so a run reaches a CONSISTENT, power-invariant crossing
+ * (both realized C and cMax scale ·producerUpgradeRatio^L, so k holds across power).
+ * Wave-model tests place this so the run reaches the pegged crossing + Δ_wall tail
+ * rather than breaching at wave 0 with an empty board.
+ */
+export function placeDefense(): void {
+  const b = build();
+  for (let y = 0; y < BOARD.height; y++) {
+    for (let x = 0; x < BOARD.width; x++) {
+      const kind = REFERENCE_DEFENSE[y * BOARD.width + x];
+      if (kind) b.placeAt(x, y, kind);
+    }
+  }
 }
 
 /** Advance n ticks (n game-seconds at TICK_RATE=1), flushing reactive effects. */

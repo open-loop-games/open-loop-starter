@@ -17,7 +17,7 @@ import { useCyclerRun } from '../../composables/useCyclerRun';
 const run = useCyclerRun();
 
 const pressureLabel = computed(() => formatPercent(run.pressure.value, 0));
-const burnLabel = computed(() => format(run.burn.value, 2));
+const salvoLabel = computed(() => format(run.salvo.value, 2));
 const capacityLabel = computed(() => format(run.capacity.value, 2));
 const elapsedLabel = computed(() => formatTime(run.elapsedSeconds.value));
 const predictedLabel = computed(() => formatTime(Math.round(run.predictedMinutes.value * 60)));
@@ -44,7 +44,7 @@ const predictedLabel = computed(() => formatTime(Math.round(run.predictedMinutes
         aria-label="Containment pressure"
       >
         <div class="gauge__ceiling">
-          <span class="gauge__ceiling-label">D_max</span>
+          <span class="gauge__ceiling-label">cMax</span>
         </div>
         <div
           class="gauge__fill"
@@ -60,13 +60,13 @@ const predictedLabel = computed(() => formatTime(Math.round(run.predictedMinutes
         </div>
         <dl class="gauge__stats">
           <div class="gauge__stat">
-            <dt>Burn W(t)</dt>
+            <dt>Salvo W_N</dt>
             <dd class="gauge__num gauge__num--burn">
-              {{ burnLabel }}
+              {{ salvoLabel }}
             </dd>
           </div>
           <div class="gauge__stat">
-            <dt>Ceiling D_max</dt>
+            <dt>Clear-rate C</dt>
             <dd class="gauge__num gauge__num--cap">
               {{ capacityLabel }}
             </dd>
@@ -85,16 +85,16 @@ const predictedLabel = computed(() => formatTime(Math.round(run.predictedMinutes
   /* Phase-driven fill color: the vessel reads its temperature from the beat. */
   --gauge-fill: var(--cyc-calm);
 }
-.gauge[data-phase='comfortable'] {
+.gauge[data-phase='standby'] {
   --gauge-fill: var(--cyc-hold);
 }
-.gauge[data-phase='first-bite'] {
+.gauge[data-phase='inbound'] {
   --gauge-fill: var(--cyc-warm);
 }
-.gauge[data-phase='under-review'] {
+.gauge[data-phase='saturation'] {
   --gauge-fill: var(--cyc-hot);
 }
-.gauge[data-phase='merge-bell'] {
+.gauge[data-phase='overrun'] {
   --gauge-fill: var(--cyc-breach);
 }
 

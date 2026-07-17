@@ -1,110 +1,120 @@
 /**
- * Cycler cycle kernel — Lane-4 lock (IDENTITY § Balance model, lane 4).
+ * Cycler cycle kernel — wave-model lock (IDENTITY § Balance model; studio/open-loop-starter#21
+ * leaf 3). The kernel is now a wave-indexed STANDBY↔INBOUND phase controller: the
+ * exogenous salvo `W_N = W₀·g^N` bleeds the defended line through the realized
+ * clear-rate C, and the run ends when the line BREACHES (OVERRUN), not when an
+ * arithmetic ceiling is crossed.
  *
- * Pins what `balance/cycle-probe.ts` MEASURED against the real engine: the
- * pegged run-length band and the two shape invariants (the run ends at the burn
- * crossing; power re-pegs to +0 run length). Measure-and-record, never
- * set-as-target — if H/g/T_g/τ_setup are retuned, re-run the probe and update the
- * provenance below.
+ * Pins the shape invariants that survive retunes:
+ *   • the run opens in STANDBY at authored pressure 1/H (salvo/cMax);
+ *   • the salvo escalates monotonically and the run ends at the wall breach;
+ *   • power re-pegs to +0 run length (realized C and cMax both scale with power, so
+ *     the crossing holds); H authors run length.
+ * Magnitude (the [12,20]m band) is a measured record — re-run and update on a retune.
  *
- * Provenance (2026-07, cycle-probe.ts at shipped constants
- * H=4, g=2, T_g=6, τ_setup=4): N* = τ_setup + T_g·log_g(H) = 16.00m, <0.1% drift
- * vs the closed form (the ≤1 dt overshoot at 1s tick). Authored target band
- * [12,20]m (CADENCE_BALANCE).
+ * The tests place a competent reference board (`placeDefense`) so the run reaches the
+ * pegged crossing + Δ_wall tail; an empty board breaches at wave 0 by design (no C).
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Decimal } from '@open-loop/engine';
-import { boot, cycle, tickUntil } from './harness';
-import { BUILD_BALANCE } from '../data/build';
-import { THREAT_BALANCE } from '../data/threat';
+import { boot, cycle, build, wall, placeDefense, tickUntil } from './harness';
+import { DEFENSE_BALANCE } from '../data/defense';
 
+const { headroom: H, salvoBase: g } = DEFENSE_BALANCE;
 const CADENCE_BAND: [number, number] = [12, 20];
-const baseCapacity =
-  BUILD_BALANCE.boardCells * BUILD_BALANCE.baseOutputCeiling * BUILD_BALANCE.adjacencyBoost;
+const waveCycleMinutes = (DEFENSE_BALANCE.standbySeconds + DEFENSE_BALANCE.inboundSeconds) / 60;
 
-/** Drive a booted engine to the Merge bell and hand back the measured run. */
-async function runToEnd() {
+/** Drive a booted, board-placed engine to the line breach and hand back the run. */
+async function runToBreach() {
   const c = cycle();
-  await tickUntil(() => c.runState.value === 'ended');
+  await tickUntil(() => c.runState.value === 'ended', 20_000);
   return c;
 }
 
 describe('cycle kernel — pegged run-length band', () => {
   beforeEach(() => boot());
 
-  it('realizes the closed-form N* = τ_setup + T_g·log_g(H) at the shipped constants', async () => {
-    const c = await runToEnd();
-    const measured = c.endedAtMinutes.value!;
-    // Shipping burn == the projection's closed form (retune-robust: predicted
-    // recomputes from the same constants). `toBeCloseTo(_, 1)` ⇒ within 0.05m.
-    expect(measured).toBeCloseTo(c.predictedRunLength(), 1);
-  });
-
-  it('lands inside the authored target band [12,20]m (design intent)', async () => {
-    const c = await runToEnd();
+  it('a competent board lands the run inside the authored band [12,20]m', async () => {
+    placeDefense();
+    const c = await runToBreach();
     const measured = c.endedAtMinutes.value!;
     expect(measured).toBeGreaterThanOrEqual(CADENCE_BAND[0]);
     expect(measured).toBeLessThanOrEqual(CADENCE_BAND[1]);
   });
 });
 
-describe('cycle kernel — shape invariant: the run ends at the burn crossing', () => {
+describe('cycle kernel — shape invariant: opens in STANDBY at authored pressure 1/H', () => {
   beforeEach(() => boot());
 
-  it('opens in the setup grace at pressure 1/H, well under the ceiling', () => {
+  it('starts in STANDBY, wave 0, pressure exactly 1/H (salvo/cMax, placement-independent)', () => {
     const c = cycle();
-    expect(c.phase.value).toBe('setup');
-    // W₀ = D_max/H ⇒ opening pressure is exactly 1/H.
-    expect(c.pressure.value).toBeCloseTo(1 / THREAT_BALANCE.headroom, 5);
+    placeDefense();
+    expect(c.phase.value).toBe('standby');
+    expect(c.waveIndex.value).toBe(0);
+    // W₀ = cMax/H ⇒ opening pressure salvo/cMax is exactly 1/H, independent of the board.
+    expect(c.pressure.value).toBeCloseTo(1 / H, 5);
   });
+});
 
-  it('escalates monotonically and terminates when burn overtakes D_max', async () => {
+describe('cycle kernel — shape invariant: the run ends at the line breach', () => {
+  beforeEach(() => boot());
+
+  it('escalates monotonically and terminates when the salvo breaches the line', async () => {
     const c = cycle();
-    // Sample pressure at the end of the setup grace, then partway up the ramp.
-    await tickUntil(() => c.elapsedMinutes.value >= THREAT_BALANCE.setupGrace + 2);
+    placeDefense();
+    // Sample pressure a few waves in, then near the end — the salvo strictly climbs.
+    await tickUntil(() => c.waveIndex.value >= 2, 20_000);
     const early = c.pressure.value;
-    await tickUntil(() => c.elapsedMinutes.value >= c.predictedRunLength() - 2);
+    await tickUntil(() => c.waveIndex.value >= 4 || c.runState.value === 'ended', 20_000);
     const late = c.pressure.value;
-    expect(late).toBeGreaterThan(early); // exogenous burn strictly climbs
+    expect(late).toBeGreaterThan(early);
 
-    await runToEnd();
+    await runToBreach();
     expect(c.runState.value).toBe('ended');
-    expect(c.phase.value).toBe('merge-bell');
-    expect(c.pressure.value).toBeGreaterThanOrEqual(1); // ended AT the crossing
-    expect(c.endedAtMinutes.value).not.toBeNull();
+    expect(c.phase.value).toBe('overrun');
+    expect(wall().breached.value).toBe(true); // the line breach IS the run-end
+    expect(c.endedAtWave.value).not.toBeNull();
+    // The breaching salvo overtook the realized clear-rate.
+    expect(c.salvoAt(c.endedAtWave.value!).toNumber()).toBeGreaterThan(
+      build().clearRate.value.toNumber(),
+    );
   });
 });
 
 describe('cycle kernel — shape invariant: power re-pegs to +0 run length', () => {
-  it('a raised capacity (prestige-tier stand-in) leaves run length unchanged', async () => {
-    // Baseline run at the shipped capacity.
+  it('a raised power level (prestige-tier stand-in) leaves run length unchanged', async () => {
     boot();
-    const base = (await runToEnd()).endedAtMinutes.value!;
-
-    // Force a raised D_max — the harness analog of unlocking a prestige tier.
-    // Under the peg, W₀ re-baselines to D_max/H, so N* must not move.
-    const raised = new Decimal(baseCapacity).mul(
-      Decimal.pow(BUILD_BALANCE.producerUpgradeRatio, 4),
-    );
-    boot({ capacity: () => raised });
+    placeDefense();
     const c = cycle();
-    expect(c.capacity.value.gt(baseCapacity)).toBe(true); // capacity really rose
-    const powered = (await runToEnd()).endedAtMinutes.value!;
+    const baseCMax = c.capacity.value;
+    const base = (await runToBreach()).endedAtMinutes.value!;
 
-    expect(Math.abs(powered - base)).toBeLessThan(0.05); // +0 run length
+    // Raise permanent power — realized C AND cMax both scale ·producerUpgradeRatio^L,
+    // so the peg re-baselines W₀ = cMax/H and the crossing (log_g of their ratio) holds.
+    const b = build();
+    for (let i = 0; i < 4; i++) b.raisePower();
+    c.startRun(); // re-peg + rescale the line; placements survive
+    expect(c.capacity.value.gt(baseCMax)).toBe(true); // cMax genuinely rose with power
+    const powered = (await runToBreach()).endedAtMinutes.value!;
+
+    expect(Math.abs(powered - base)).toBeLessThan(waveCycleMinutes); // +0 (sub-one-wave)
   });
 });
 
 describe('cycle kernel — run length is authored by H', () => {
-  it('a looser headroom lengthens the run to the closed form for that H', async () => {
-    boot({ threat: { ...THREAT_BALANCE, headroom: THREAT_BALANCE.headroom * 2 } });
-    const c = await runToEnd();
-    const measured = c.endedAtMinutes.value!;
-    expect(measured).toBeCloseTo(c.predictedRunLength(), 1);
-    // Doubling H adds exactly T_g·log_g(2) = one escalation timescale.
-    expect(measured).toBeGreaterThan(
-      THREAT_BALANCE.setupGrace + THREAT_BALANCE.escalationTimescale,
-    );
+  it('a looser headroom lengthens the run', async () => {
+    boot();
+    placeDefense();
+    const tight = (await runToBreach()).endedAtMinutes.value!;
+
+    boot({ defense: { ...DEFENSE_BALANCE, headroom: H * 2 } });
+    placeDefense();
+    const loose = (await runToBreach()).endedAtMinutes.value!;
+
+    expect(loose).toBeGreaterThan(tight);
+    // Doubling H shifts the crossing by ~log_g(2) waves (quantized to integer waves).
+    const deltaWaves = (loose - tight) / waveCycleMinutes;
+    expect(deltaWaves).toBeGreaterThan(0.5);
+    expect(deltaWaves).toBeLessThan(Math.log(2) / Math.log(g) + 2);
   });
 });

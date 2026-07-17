@@ -10,6 +10,7 @@ import {
 } from '@open-loop/engine';
 import { computed } from 'vue';
 import { BUILD_BALANCE, type BuildBalance } from '../data/build';
+import { DEFENSE_BALANCE, type DefenseBalance } from '../data/defense';
 import { BOARD, PIECES, REFERENCE_LAYOUT, type PieceKind } from '../data/pieces';
 import { evaluateBoard, previewAt, type BoardEvaluation, type OccupancyView } from './adjacency';
 
@@ -21,15 +22,19 @@ import { evaluateBoard, previewAt, type BoardEvaluation, type OccupancyView } fr
  * into realized output. This replaces the old scalar `placed` count — the board is
  * now live, and preview is the same evaluator over an overlay.
  *
- * Two capacity reads, deliberately distinct:
- *   • `capacity` — the REALIZED output of the current board (evaluator over live
- *     occupancy, scaled by permanent power). The live/UI value; leaf 3 (Lances)
- *     reads C off this substrate.
- *   • `dMax` — the closed-form saturated ceiling `boardCells · baseOutputCeiling ·
+ * Capacity reads, deliberately distinct:
+ *   • `capacity` / `clearRate` — the REALIZED output / clear-rate C of the current
+ *     board (evaluator over live occupancy, scaled by permanent power). The live/UI
+ *     values; leak resolves against realized `clearRate`.
+ *   • `dMax` — the closed-form saturated OUTPUT ceiling `boardCells · baseOutputCeiling ·
  *     adjacencyBoost · producerUpgradeRatio^L` (the multiverse-hr #17 correction:
- *     finite board ⇒ log crossing). UNCHANGED — the kernel peg and prestige currency
- *     read this, so the realized board becoming live disturbs neither. The reference
- *     full board reconciles the two: realized ≈ D_max (locked in `sim/build.test.ts`).
+ *     finite board ⇒ log crossing). UNCHANGED — prestige currency reads this. The
+ *     reference full board reconciles it: realized ≈ D_max (locked in `sim/build.test.ts`).
+ *   • `cMax` — the closed-form saturated CLEAR-RATE ceiling `forwardCells ·
+ *     lanceIntercept · adjacencyBoost · producerUpgradeRatio^L` (mirror of dMax). The
+ *     kernel freezes the salvo peg `W₀ = cMax/H` against it; because leak resolves
+ *     against realized `clearRate`, under-fielding Lances (clearRate < cMax) breaches
+ *     the line early — the committed C-vs-output tension, live.
  *
  * The grid is a rebuildable index over the persisted `placements` array (mirrors the
  * mv-hr grid module): occupancy is the save format, the SpatialGrid is the live index
@@ -51,6 +56,12 @@ export interface BuildApi {
   mwSurplus: ComputedRef<Decimal>;
   /** Saturated closed-form ceiling at the current L. The peg's D_max (unchanged). */
   dMax: ComputedRef<Decimal>;
+  /** Saturated closed-form CLEAR-RATE ceiling — the C peg the kernel reads (forwardCells all Lanced + adjacency). Mirror of dMax. */
+  cMax: ComputedRef<Decimal>;
+  /** Bulwarks placed this run — the repair-throughput count. */
+  bulwarkCount: ComputedRef<number>;
+  /** Line-HP repair the board can route per STANDBY = (baseRepair + n·throughput)·power. Caps the surplus→line drip. */
+  repairCapacity: ComputedRef<Decimal>;
   /** Total placement cells (width·height) — the finite-board saturation source. */
   boardCells: number;
   /** Board width in cells. */
@@ -88,6 +99,7 @@ export function getBuild(): BuildApi {
 
 export interface BuildModuleOptions {
   build?: BuildBalance;
+  defense?: DefenseBalance;
 }
 
 interface BoardCell {
@@ -96,7 +108,10 @@ interface BoardCell {
 
 export function createBuildModule(options: BuildModuleOptions = {}): EngineModule {
   const data = options.build ?? BUILD_BALANCE;
+  const defense = options.defense ?? DEFENSE_BALANCE;
   const { boardCells, baseOutputCeiling, adjacencyBoost, producerUpgradeRatio } = data;
+  const { forwardCells, lanceIntercept, baseRepair } = defense;
+  const bulwarkThroughput = PIECES.bulwark.throughput ?? 0;
   const { width, height } = BOARD;
   const cellCount = width * height;
 
@@ -150,9 +165,23 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
         powerMult.value.mul(evaluation.value.towers.size).mul(PIECES.lance.draw ?? 0),
       );
       const mwSurplus = computed(() => Decimal.max(0, capacity.value.sub(fireDraw.value)));
-      // The authored ceiling — unchanged closed form (the peg + currency read this).
+      // The authored OUTPUT ceiling — unchanged closed form (prestige currency reads this).
       const dMax = computed(() =>
         powerMult.value.mul(boardCells).mul(baseOutputCeiling).mul(adjacencyBoost),
+      );
+      // The authored CLEAR-RATE ceiling — the C peg the kernel freezes W₀ against
+      // (all forward cells Lanced + full adjacency). Mirror of dMax; leak resolves
+      // against realized `clearRate`, so under-fielding Lances breaches early.
+      const cMax = computed(() =>
+        powerMult.value.mul(forwardCells).mul(lanceIntercept).mul(adjacencyBoost),
+      );
+      const bulwarkCount = computed(() =>
+        state.placements.value.reduce((n, p) => (p === 'bulwark' ? n + 1 : n), 0),
+      );
+      // Line-HP the board can route into the wall per STANDBY: a baseline trickle
+      // plus each Bulwark's throughput, scaled by power (so Δ_wall stays power-invariant).
+      const repairCapacity = computed(() =>
+        powerMult.value.mul(baseRepair + bulwarkCount.value * bulwarkThroughput),
       );
       const placed = computed(() => state.placements.value.reduce((n, p) => (p ? n + 1 : n), 0));
 
@@ -195,6 +224,9 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
         fireDraw,
         mwSurplus,
         dMax,
+        cMax,
+        bulwarkCount,
+        repairCapacity,
         boardCells: cellCount,
         width,
         height,

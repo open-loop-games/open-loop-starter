@@ -37,10 +37,14 @@ export interface DefenseBalance {
   headroom: number;
   /** L_HP — the defended line's HP buffer. Absorbs leak-through; its ratio to C sizes the Δ_wall tail (bounded, log in L_HP/C). */
   lineHP: number;
+  /** Baseline repair throughput (line HP per STANDBY the line self-heals with NO Bulwark). A trickle — Bulwarks are the real lever. */
+  baseRepair: number;
   /** STANDBY (build/calm) seconds per wave — the τ_setup grace where the board rebuilds and the line repairs. */
   standbySeconds: number;
   /** INBOUND (defend) seconds per wave — the salvo window where build locks and Lances fire. */
   inboundSeconds: number;
+  /** Boss cadence: every Nth wave is a SATURATION salvo (a milestone; boss escalation content is leaf 4). */
+  bossMilestone: number;
 }
 
 export const DEFENSE_BALANCE: DefenseBalance = {
@@ -52,9 +56,39 @@ export const DEFENSE_BALANCE: DefenseBalance = {
   salvoBase: 1.6,
   headroom: 16,
   lineHP: 500,
+  baseRepair: 30,
   standbySeconds: 90,
   inboundSeconds: 30,
+  bossMilestone: 3,
 };
+
+// ─── Skeleton (salvo postures) ───
+// The per-WAVE pace surface (the reshaped `addBurnTier` ladder — `data/threat.ts`'s
+// per-TIME `BURN_TIERS` reindexed to `salvoBase` per wave; studio/open-loop-starter#21
+// leaf 3 contract flip). A reach-gated sequence of salvo postures, each authoring its
+// own `salvoBase` g. The active posture's `g` feeds the cycle kernel, which FREEZES it
+// at run start (like the W₀ peg), so a switch applies to the next run and the crossing
+// stays closed-form. Deeper postures raise g — a steeper salvo, a shorter/sharper run
+// (Increlution Part 3: attacking the escalation base is the high-leverage lever). The
+// reach gate is permanent power level L. Posture 0's g mirrors DEFENSE_BALANCE.salvoBase
+// so the shipped run is unchanged. Absolute per-posture g and the Prophecy-draft /
+// yield-incentive layer are leaf-4 balance work; this leaf ships the mechanic.
+
+export interface SalvoPosture {
+  /** Player-facing posture name (costume — the Prophecy draft option). */
+  label: string;
+  /** Salvo escalation base g per wave for this posture — steeper ⇒ shorter, sharper run. */
+  salvoBase: number;
+  /** Reach gate: unlocks once permanent power level L ≥ this. Posture 0 = 0. */
+  unlockPowerLevel: number;
+}
+
+export const SALVO_POSTURES: readonly SalvoPosture[] = [
+  { label: 'Standard', salvoBase: DEFENSE_BALANCE.salvoBase, unlockPowerLevel: 0 },
+  { label: 'Accelerated', salvoBase: 1.9, unlockPowerLevel: 2 },
+  { label: 'Cascade', salvoBase: 2.2, unlockPowerLevel: 4 },
+  { label: 'Collapse', salvoBase: 2.6, unlockPowerLevel: 6 },
+];
 
 // ─── Balance ───
 // The concrete-spine closed form (rate-function pass, 2026-07; IDENTITY § Cycler's
@@ -67,7 +101,8 @@ export const DEFENSE_BALANCE: DefenseBalance = {
 //   salvo N     W_N   = W₀ · salvoBase^N                       (exogenous per-wave schedule)
 //   the peg     W₀    = C / H                                  (tracks the saturated ceiling)
 //   crossing          W_N = C  ⇒  N = log_g(H)                 (DECOUPLED: allocation-/power-invariant)
-//   line buffer       per wave absorbs max(0, W_N − C); repaired from MW surplus in STANDBY
+//   line buffer       per wave absorbs max(0, W_N − C); repaired in STANDBY at
+//                       R = min(mwSurplus, baseRepair + n_Bulwark·throughput)·power
 //   run length  N*_waves = log_g(H) + Δ_wall                   (waves; ×(standby+inbound) → minutes)
 //
 //   • THE PEG, unchanged. W₀ tracks the permanent saturated C, frozen at Redeploy
@@ -82,13 +117,17 @@ export const DEFENSE_BALANCE: DefenseBalance = {
 //     constants) the player nudges by routing MW surplus to repair. It CANNOT be
 //     pumped to survive forever; this is what keeps the terminating pressure
 //     exogenous (the salvo), not a repair race.
-//   • THE STRATEGIC TRIANGLE on one MW pool. Each forward cell is a Lance (raises C;
-//     draws lanceDraw MW to fire; produces nothing) or a Reactor (raises MW output).
-//     Back cells are Reactors. Relays (adjacency) boost BOTH — the bridge. The
-//     allocation optimum is interior: enough Lances for a high C ceiling (reach),
-//     enough Reactors to fund firing + repair (Δ_wall). `cycler-projection.ts`
-//     § allocation sweeps forwardCells to show it. Grounded in multiverse-hr #17's
-//     one-pool discipline; absolute calibration (ι, ρ, δ, L_HP) is a Lane-3 probe.
+//   • THE STRATEGIC TRIANGLE on one MW pool, all three legs SPATIAL. Each forward
+//     cell is a Lance (raises C; draws lanceDraw MW to fire; produces nothing) or a
+//     Reactor (raises MW output). Back cells are Reactors, Relays, or Bulwarks. Relays
+//     (adjacency) boost Reactors AND Lances — the bridge. Bulwarks convert surplus into
+//     repair THROUGHPUT — the third leg made a placement decision: extending Δ_wall now
+//     needs BOTH surplus (Reactors) AND throughput (Bulwarks), and every Bulwark cell is
+//     a cell not producing/clearing. The allocation optimum is interior: enough Lances
+//     for a high C ceiling (reach), enough Reactors to fund firing, enough Bulwarks to
+//     route the surplus into the line (Δ_wall). `cycler-projection.ts` § allocation
+//     sweeps it. Grounded in multiverse-hr #17's one-pool discipline; absolute
+//     calibration (ι, ρ, δ, L_HP, baseRepair, throughput) is a Lane-3 probe.
 //   • RUN LENGTH IN MINUTES. N*_waves waves × (standbySeconds + inboundSeconds).
 //     At H=16, g=1.6, Δ_wall≈2 → ~8 waves × 2 min = ~16 min, inside CADENCE's
 //     [12,20] band. Move run length by H (waves-to-crossing) or the salvo posture g

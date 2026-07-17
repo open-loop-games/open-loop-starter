@@ -117,11 +117,14 @@ sinks, shared-state discipline made concrete:
 
 - **Reactors + Relays** raise output (MW/sec).
 - **Lances** raise clear-rate `C` (buy run length) but **draw MW to fire** (cut the economy).
-- **Repair** extends `Δ_wall` (buy run length) but competes with Lances for the same MW.
+- **Bulwarks** route MW surplus into line repair — extend `Δ_wall` (buy run length),
+  competing for cells *and* for the same MW. Repair is auto (STANDBY drip) but its rate
+  is throughput-gated by placed Bulwarks, so the third leg is a spatial decision too, not
+  a free background heal.
 
 The bridge that makes this one system, not two bolted together: **Relays (boosters)
 amplify adjacent Lances *and* Reactors** — one placement decision drives both
-economy and defense.
+economy and defense. All three legs (C · output · repair) compete for the one board.
 
 **One shared surface.** Lances and Reactors occupy the *same* placement grid:
 forward cells range the incoming salvos (contested defensive real estate), back
