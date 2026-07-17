@@ -39,8 +39,13 @@ export interface CommandState {
   alert: ComputedRef<string>;
   /** Whether build is locked (INBOUND / SATURATION — you live with what you placed). */
   buildLocked: ComputedRef<boolean>;
-  /** The wave timeline: fixed slot count, current position, boss marks. */
-  timeline: ComputedRef<{ total: number; current: number; slots: TimelineSlot[] }>;
+  /** The wave timeline: fixed slot count, current position, live crawl within the current wave, boss marks. */
+  timeline: ComputedRef<{
+    total: number;
+    current: number;
+    progress: number;
+    slots: TimelineSlot[];
+  }>;
   /** Defended-line integrity [0,1]. */
   lineIntegrity: ComputedRef<number>;
   /** Defended-line condition (colour ramp). */
@@ -121,7 +126,7 @@ export function useCommandState(): CommandState {
         boss: isBoss(n),
       });
     }
-    return { total, current, slots };
+    return { total, current, progress: cycle.waveProgress.value, slots };
   });
 
   const lineIntegrity = computed(() => wall.integrity.value);

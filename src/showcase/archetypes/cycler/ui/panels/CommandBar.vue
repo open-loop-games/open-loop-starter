@@ -39,8 +39,13 @@ const predicted = computed(() => formatTime(Math.round(run.predictedMinutes.valu
             class="cyc-cmd__seg"
             :class="{
               done: slot.n <= cmd.timeline.value.current,
-              now: slot.n === cmd.timeline.value.current,
+              now: slot.n === cmd.timeline.value.current + 1,
             }"
+            :style="
+              slot.n === cmd.timeline.value.current + 1
+                ? { '--fill': Math.round(cmd.timeline.value.progress * 100) + '%' }
+                : undefined
+            "
           />
           <span
             class="cyc-cmd__pip"
@@ -122,8 +127,14 @@ const predicted = computed(() => formatTime(Math.round(run.predictedMinutes.valu
 .cyc-cmd__seg.done {
   background: var(--cyc-grn2);
 }
+/* The segment past the current pip crawls: amber fills to --fill as the wave
+   progresses through its STANDBY→INBOUND cycle, the rest sits unlit. */
 .cyc-cmd__seg.now {
-  background: var(--cyc-amb);
+  background: linear-gradient(
+    90deg,
+    var(--cyc-amb) 0 var(--fill, 0%),
+    var(--cyc-grndim) var(--fill, 0%)
+  );
 }
 .cyc-cmd__pip {
   width: 7px;
@@ -165,41 +176,44 @@ const predicted = computed(() => formatTime(Math.round(run.predictedMinutes.valu
   color: var(--cyc-grn2);
 }
 
-/* Tone shifts, driven by the .cyc-world[data-tone] ancestor. */
-:global(.cyc-world[data-tone='warn']) .cyc-cmd__dot {
+/* Tone shifts, driven by the .cyc-world[data-tone] ancestor. The whole selector
+   (ancestor AND descendant) must sit inside one :global() — the compiler drops the
+   descendant of a `:global(ancestor) .child` scoped rule, collapsing it to a bare
+   `.cyc-world[data-tone]` that washes the entire world in the tone colour. */
+:global(.cyc-world[data-tone='warn'] .cyc-cmd__dot) {
   background: var(--cyc-amb);
   box-shadow: 0 0 6px var(--cyc-amb);
   animation: cyc-blink 1s step-end infinite;
 }
-:global(.cyc-world[data-tone='warn']) .cyc-cmd__name,
-:global(.cyc-world[data-tone='warn']) .cyc-cmd__defcon b {
+:global(.cyc-world[data-tone='warn'] .cyc-cmd__name),
+:global(.cyc-world[data-tone='warn'] .cyc-cmd__defcon b) {
   color: var(--cyc-amb);
 }
-:global(.cyc-world[data-tone='warn']) .cyc-cmd__defcon {
+:global(.cyc-world[data-tone='warn'] .cyc-cmd__defcon) {
   border-color: var(--cyc-amb);
 }
-:global(.cyc-world[data-tone='warn']) .cyc-cmd__alert {
+:global(.cyc-world[data-tone='warn'] .cyc-cmd__alert) {
   color: var(--cyc-amb);
   border-color: var(--cyc-warn-edge);
 }
-:global(.cyc-world[data-tone='crit']) .cyc-cmd__dot {
+:global(.cyc-world[data-tone='crit'] .cyc-cmd__dot) {
   background: var(--cyc-red);
   box-shadow: 0 0 8px var(--cyc-red);
   animation: cyc-blink 0.5s step-end infinite;
 }
-:global(.cyc-world[data-tone='crit']) .cyc-cmd__name,
-:global(.cyc-world[data-tone='crit']) .cyc-cmd__defcon b {
+:global(.cyc-world[data-tone='crit'] .cyc-cmd__name),
+:global(.cyc-world[data-tone='crit'] .cyc-cmd__defcon b) {
   color: var(--cyc-red);
 }
-:global(.cyc-world[data-tone='crit']) .cyc-cmd__defcon {
+:global(.cyc-world[data-tone='crit'] .cyc-cmd__defcon) {
   border-color: var(--cyc-red);
 }
-:global(.cyc-world[data-tone='crit']) .cyc-cmd__alert {
+:global(.cyc-world[data-tone='crit'] .cyc-cmd__alert) {
   color: var(--cyc-red);
   border-color: var(--cyc-crit-edge);
 }
-:global(.cyc-world[data-tone='breach']) .cyc-cmd__name,
-:global(.cyc-world[data-tone='breach']) .cyc-cmd__alert {
+:global(.cyc-world[data-tone='breach'] .cyc-cmd__name),
+:global(.cyc-world[data-tone='breach'] .cyc-cmd__alert) {
   color: var(--cyc-red);
 }
 @keyframes cyc-blink {

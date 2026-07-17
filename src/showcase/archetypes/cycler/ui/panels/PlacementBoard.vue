@@ -67,7 +67,7 @@ const GLYPH: Record<PieceKind, { ic: string; code: string; tone: string }> = {
   padding: 11px;
   position: relative;
 }
-:global(.cyc-world[data-locked='1']) .cyc-board {
+:global(.cyc-world[data-locked='1'] .cyc-board) {
   opacity: 0.85;
 }
 .cyc-cell {

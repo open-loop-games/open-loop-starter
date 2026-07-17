@@ -51,6 +51,8 @@ export interface CycleApi {
   waveIndex: ComputedRef<number>;
   /** The active hard phase. */
   phase: ComputedRef<CyclePhase>;
+  /** Fraction [0,1] through the current wave's full STANDBY+INBOUND cycle — the live crawl the timeline fills. */
+  waveProgress: ComputedRef<number>;
   /** Current salvo W_N = W₀·g^N — the exogenous pressure the clear-rate must outpace. */
   salvo: ComputedRef<Decimal>;
   /** Saturated clear-rate ceiling cMax the salvo is racing (HUD ceiling + peg base). Injected off build. */
@@ -157,6 +159,18 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
           : 'inbound';
       });
 
+      // Live progress through the current wave's STANDBY→INBOUND cycle, so the
+      // timeline segment crawls each tick instead of flipping on transition. 0 once
+      // the run has ended (the timeline reads breach, not progress, then).
+      const waveProgress = computed(() => {
+        if (state.runState.value !== 'running') return 0;
+        const done =
+          state.phaseState.value === 'standby'
+            ? state.phaseElapsed.value
+            : standbySeconds + state.phaseElapsed.value;
+        return Math.max(0, Math.min(1, done / (standbySeconds + inboundSeconds)));
+      });
+
       const runState = computed(() => state.runState.value);
       const endedAtWave = computed(() => state.endedAtWaveRaw.value);
       const endedAtMinutes = computed(() =>
@@ -205,26 +219,33 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
           return;
         }
 
-        // INBOUND — build locks (enforcement is UI/automation's). Resolve at close.
+        // INBOUND — build locks (enforcement is UI/automation's). Leak-through
+        // `max(0, W_N − realized C)` bleeds the line CONTINUOUSLY across the window
+        // (mirroring the STANDBY repair drip above), so the life bar drains live during
+        // combat rather than stepping on transition; dripped over the whole window the
+        // total still integrates to the closed-form per-wave leak, so the breach wave —
+        // and the pegged run length — is unchanged. A mid-window exhaustion breaches
+        // immediately; an intact line RESOLVES the wave (banks endurance, advances) at
+        // the window's close.
+        const wave = salvo.value; // this wave's W_N (fixed while the phase holds)
+        const leak = Decimal.max(0, wave.sub(getBuild().clearRate.value));
+        if (getWall().applyLeak((leak.toNumber() / inboundSeconds) * dt)) {
+          state.runState.value = 'ended';
+          state.endedAtWaveRaw.value = state.waveIndex.value;
+          return;
+        }
         if (state.phaseElapsed.value >= inboundSeconds) {
-          const wave = salvo.value; // this wave's W_N
           state.enduranceRaw.value = runEndurance.value.add(wave).toString();
-          const leak = Decimal.max(0, wave.sub(getBuild().clearRate.value));
-          const breached = getWall().applyLeak(leak.toNumber());
-          if (breached) {
-            state.runState.value = 'ended';
-            state.endedAtWaveRaw.value = state.waveIndex.value;
-          } else {
-            state.waveIndex.value += 1;
-            state.phaseState.value = 'standby';
-            state.phaseElapsed.value = 0;
-          }
+          state.waveIndex.value += 1;
+          state.phaseState.value = 'standby';
+          state.phaseElapsed.value = 0;
         }
       });
 
       const api: CycleApi = {
         waveIndex,
         phase,
+        waveProgress,
         salvo,
         capacity,
         pressure,
