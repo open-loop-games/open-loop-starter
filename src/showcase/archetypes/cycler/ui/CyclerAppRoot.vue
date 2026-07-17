@@ -47,12 +47,14 @@ const showDevPanel = ref(false);
             {{ manifest.name }}
           </h4>
           <p>
-            A containment vessel holds against a rising thermal load. Capacity saturates to a
-            ceiling <strong>D_max</strong>; an exogenous, escalating <strong>burn</strong> overtakes
-            it — and when it does, the run ends and pays out. Spend
+            A Cold-War missile-defense command. Warhead salvos descend on a defended
+            <strong>line</strong>; behind it you build an energy grid whose
+            <strong>Lances</strong> burn them from the sky. Clear-rate <strong>C</strong> saturates
+            on the finite forward cells; the exogenous <strong>salvo</strong> escalates each wave
+            and, when it overtakes the line, the run ends and pays out. Spend
             <strong>Fragments</strong> between runs: <em>Reinforce</em> raises the ceiling (reach,
-            not run length under the peg), <em>Dampen</em> bends the escalation back. Advance a
-            <em>burn tier</em> to raise the stakes.
+            not run length under the peg), <em>Dampen</em> bends the escalation back. Draft a
+            steeper <em>salvo posture</em> to raise the stakes; <em>Redeploy</em> to re-peg.
           </p>
         </template>
       </SystemHeader>

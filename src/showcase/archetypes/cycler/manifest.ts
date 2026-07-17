@@ -61,7 +61,12 @@ export const manifest: ArchetypeManifest = {
       label: 'Reach — Redeploy re-pegs W₀=C/H at higher reach; deeper content, same run length',
     },
   ],
-  shell: 'SidebarMainShell',
+  // Bespoke command-terminal console (not a src/lib/ shell). The build-defend-cycler
+  // sub-genre's weak majority is single-column (subgenre-shell-mapping-2026.md, N=3);
+  // this deviates to a spatial-dashboard console because the core loop is spatial (a
+  // placement grid + a defended line under a descending salvo) — the doc's free-form
+  // rationale for spatial-primary hybrids. Gallery marks it a declared invention.
+  shell: 'DefenseCommandConsole',
   formFactor: 'responsive',
   exemplars: [
     {

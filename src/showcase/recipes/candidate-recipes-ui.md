@@ -152,6 +152,19 @@ dive can find the hand-rolls.
   `idle-loops-ng/src/ui/components/next-action-drag.ts` as the same `InjectionKey`
   drag-tag pattern — N=2 across repos, but the sibling is unread, so a lead, not an N.
 
+- **Placement-board render — N=1 (cycler), cross-repo cousin (multiverse-hr).** A
+  spatial grid rendered as a composable (`useBoardControl`: occupancy → `rows`, a
+  centralized `cellClasses` state grammar, shared selection) + a dumb cell renderer,
+  with the parent owning selection/hover and running the lifted adjacency evaluator as
+  the hover-preview overlay (`{covered, boosted}`). Subtractively adopted from
+  multiverse-hr's `useSeatingGrid` + `SeatingChart`/`SeatingWindow` — but that's a
+  consumer game, not a starter archetype, so within starter this is **N=1**: a lead,
+  not a recipe. Built cycler-local per the discriminator (single starter consumer);
+  index kept so a second archetype fielding a placement grid trips the N=2 dive rather
+  than re-hand-rolling. The evaluator *logic* is already tracked in `candidate-recipes.md`
+  § placement-adjacency (N=2, cycler + mv-hr); this is the *render* half. Sites:
+  `cycler/composables/useBoardControl.ts`, `cycler/ui/panels/PlacementBoard.vue`.
+
 ## Gated on a visual pass
 
 Two adoption gaps that are visible *restyles*, not pixel-identical lifts — held for
