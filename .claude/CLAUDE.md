@@ -6,7 +6,7 @@ open-loop-starter — the engine's batteries-included clone target, and the stor
 
 ## Purpose
 
-Two halves split at `src/showcase/` (see `/work/studio/CLAUDE.md` § Studio components): the **base** — the batteries, § Scaffold — and the **stories** — the archetypes, § Archetype demos. Not a library; clone and eject.
+Two halves split at `src/showcase/`: the **base** — the batteries, § Scaffold — and the **stories** — the archetypes, § Archetype demos. Not a library; clone and eject.
 
 **The stories demonstrate the base.** The strip boundary is a one-way *import* cut, not a separation of concerns. A story that hand-rolls what a battery provides is a **story** defect — it teaches the next fork to hand-roll. A story that must fight a battery to say what it means is a **battery** defect: the stories are the generality test, and a documented bypass at the call site is that test reporting a failure.
 
@@ -20,7 +20,7 @@ Maintenance discipline: stability **and generality**. Forks copy this and don't 
 
 Forkable best-practice implementations of validated archetypes. Each archetype is a composition in research's pattern language (its identity line) carried by a rate-function balance spine, and is self-bootable with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, and `boot.ts` — pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme, and a working game skeleton.
 
-This half is a research-output surface that happens to live inside starter. Maintenance discipline: research-grounding. An archetype is grounded in two things — the **pattern language** (the validated patterns its identity line composes, per `open-loop-research/LIBRARY.md` and `archetypes/_identity.md`) and a **rate-function balance spine** (the closed-form or named-adjacent-math bucket its economy lives in, per `incremental-math/…/rate-functions/`) that *generates* its balance rather than lifting numbers from a game. Exemplar games validate that the composition ships in the wild — cited as a set, crosses and all — never lifted verbatim. The bar for new archetype content is "would a new game forking this archetype want this on day one, and does its balance fall out of the declared spine?"
+This half is a research-output surface that happens to live inside starter. Maintenance discipline: research-grounding. An archetype is grounded in two things — the **pattern language** (the validated patterns its identity line composes; `archetypes/_identity.md` carries each line and cites its sources) and a **rate-function balance spine** (the closed-form or named-adjacent-math bucket its economy lives in, declared per archetype) that *generates* its balance rather than lifting numbers from a game. Exemplar games validate that the composition ships in the wild — cited as a set, crosses and all — never lifted verbatim. The bar for new archetype content is "would a new game forking this archetype want this on day one, and does its balance fall out of the declared spine?"
 
 (The built archetypes — looper, defender, scaler, interlocker — predate this: they are subtractive ports that lifted ids/names/numbers 1:1 from one canonical exemplar. Their own `overview.md` / `PROGRESSION.md` / `BALANCING-<name>.md` record that, honestly, as dated fact. They are not the forward model, and forward archetypes are not built that way.)
 
@@ -32,7 +32,7 @@ Two modes: `pnpm eject <archetype>` builds on a validated archetype (its `Produc
 
 Because the eject test is deleted with the machinery, there is no self-checking green-after-eject invariant — the fork must run `pnpm install && pnpm typecheck && pnpm test && pnpm lint` itself (eject prints this).
 
-**Manual post-fork steps eject leaves to judgment:** rewrite `.claude/CLAUDE.md` from the starter's dual-character framing to your game (eject leaves it verbatim — a `--name` stub would lose too much); regenerate `src/game/overview.md` + `domain-map.md` (`pnpm domain-map`) once you've reshaped `src/game/data`. (`.claude/CLAUDE.local.md` is gitignored and doesn't travel; the fork inherits the studio-root `gitea-tasks` MCP config once its own `.mcp.json` is removed, which eject does.)
+**Manual post-fork steps eject leaves to judgment:** rewrite `.claude/CLAUDE.md` from the starter's dual-character framing to your game (eject leaves it verbatim — a `--name` stub would lose too much); regenerate `src/game/overview.md` + `domain-map.md` (`pnpm domain-map`) once you've reshaped `src/game/data`. (`.claude/CLAUDE.local.md` is gitignored and doesn't travel, so anything the starter kept there is yours to re-establish; eject removes the repo's own `.mcp.json`, so re-add whatever MCP servers your fork needs.)
 
 The demo surface lives behind one strip boundary — everything under `src/showcase/` (archetypes, gallery, about, sandbox). The scaffold never imports across that boundary; an eslint rule enforces the one-way cut so the ejected game can't break (`eslint.config.js` holds the covered paths). The `_blank` skeleton lives under the boundary too — an underscore-prefixed authoring surface the gallery and the archetype list both filter out.
 
@@ -71,7 +71,7 @@ Directory roles, not inventories — the directory is the list. `src/ui/componen
 
 ### Archetype convention
 
-Each archetype under `src/showcase/archetypes/<name>/` is self-bootable and follows the same colocated shape (matches `/work/studio/incloneution`):
+Each archetype under `src/showcase/archetypes/<name>/` is self-bootable and follows the same colocated shape:
 
 ```
 src/showcase/archetypes/<name>/
@@ -103,7 +103,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 - **`src/lib/`** — scaffold layout/theme layer. No engine imports. Consumed by `src/ui/` via `@/lib`.
 - **`src/modules/`** own engine state via `persistent()` refs; no UI imports.
 - **`src/composables/`** — UI consumes module public API, never internals. Composables earn their layer with `computed` / `watch` / lifecycle, per-component state, or cross-module synthesis. Pure re-export composables are wallpaper — UI imports from `modules/` directly.
-- **`src/ui/compositions/`** — engine-state→widget wiring that recurs across archetypes. Each composition is a `.ts` **contract** (the row/item shape a game supplies) plus a `.vue` **default renderer** and a test. **The contract is the battery; the renderer is one default.** A game can adopt the contract and render it however it likes — interlocker takes `ResourceReadout` and renders it with its own `ResourceList.vue`. "Want the shape, not the markup" is a first-class path, not a fallback. Two extension seams, in order of reach: (1) the typed `extra?: T` payload + the `#row`/`#cell` slot — parameterize the component (`ProducerList<MyRow>`) and read your own state back typed in the slot; this is how a game holds a shape the flat contract can't (e.g. multi-resource costs) **without the core contract growing every consumer's needs**; (2) reskin from outside via the composition's costume hooks (`:deep(.producer-list__…)`), which are documented **stable API** in each composition header — renames are breaking. Survives eject. Bar: "would a new game want this on day one, and is it general enough that a story doesn't fight it?" Route in is the recipe surface's presentation flavor (`src/showcase/recipes/candidate-recipes-ui.md`), not hoist-on-noticing.
+- **`src/ui/compositions/`** — engine-state→widget wiring that recurs across archetypes. Each composition is a `.ts` **contract** (the row/item shape a game supplies) plus a `.vue` **default renderer** and a test. **The contract is the battery; the renderer is one default.** A game can adopt the contract and render it however it likes — interlocker takes `ResourceReadout` and renders it with its own `ResourceList.vue`. "Want the shape, not the markup" is a first-class path, not a fallback. Two extension seams, in order of reach: (1) the typed `extra?: T` payload + the `#row`/`#cell` slot — parameterize the component (`ProducerList<MyRow>`) and read your own state back typed in the slot; this is how a game holds a shape the flat contract can't (e.g. multi-resource costs) **without the core contract growing every consumer's needs**; (2) reskin from outside via the composition's costume hooks (`:deep(.producer-list__…)`), which are documented **stable API** in each composition header — renames are breaking. Survives eject. Bar: "would a new game want this on day one, and is it general enough that a story doesn't fight it?" Promotion is a deliberate pass over accumulated evidence, never hoist-on-noticing.
 - **`src/styles/`** sets token defaults and widget-level selectors consumed by `src/lib/` and `src/ui/components/`.
 
 ### Key Patterns
@@ -198,7 +198,7 @@ const showDevPanel = ref(false);
 - Component and composable tests use Vitest + @vue/test-utils + jsdom.
 - Visual behavior runs in CSS first; JS is for state and interaction only.
 - Focus, portal, and a11y come from reka-ui primitives.
-- Shell additions to `src/lib/` cite the layout-spray research (§ Research Inputs) — the shell set is a research finding, not a preference.
+- Shell additions to `src/lib/` cite the layout research they come from — the shell set is a research finding, not a preference.
 
 ## Path Aliases
 
@@ -209,12 +209,7 @@ const showDevPanel = ref(false);
 
 ## Peer Setup
 
-`@open-loop/engine` is a workspace dep resolved to the sibling checkout at `/work/studio/open-loop-engine` — the version range in `package.json` is superseded by the `workspace:*` override in the studio-root `pnpm-workspace.yaml`, so don't read it as a published-version pin. Changes propagate immediately via HMR.
-
-## Research Inputs
-
-- `/work/studio/open-loop-research/practical/ui-ux/layout-spray-2026-04.md` — the layout spray that validated the shell set and killed the 2×2 quadrant idea. Primary reference for shell design; read it before adding or reshaping a shell.
-- `/work/studio/open-loop-research/practical/ui-ux/game-layout-patterns.md` — deep dives on Cookie Clicker, Progress Knight, Kittens Game.
+`@open-loop/engine` is an ordinary dependency — the version range in `package.json` is the pin, and engine updates arrive through your package manager like any other. A checkout that resolves it to a local sibling instead is doing so by workspace override, which supersedes that range; check for one before reading the range as authoritative.
 
 <!-- Private, gitignored per-repo notes (replaces auto-memory). Resolves to .claude/CLAUDE.local.md. -->
 @CLAUDE.local.md
