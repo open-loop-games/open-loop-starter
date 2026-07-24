@@ -124,7 +124,7 @@ const CANONICAL_CHALLENGE_BASE_REQUIREMENTS = [10, 20, 60, 100, 200];
 // TODO(expansion): graduate to `createSoftcappedAccumulator({ linearCap,
 // softDivisor, softBreakpoint, hardDivisor })` engine helper after a second
 // consumer derives the same shape (Looper-with-challenge-mods, Producer-with-
-// challenge-layer). See `open-loop-engine/docs/candidate-primitives.md`.
+// challenge-layer). See `candidate-primitives.md`.
 
 /**
  * Effective Challenge Completions for the transcend tier.
@@ -308,7 +308,7 @@ export const challengesModule: EngineModule = {
           // multiplier with no runtime-predicate hook — landing this requires
           // an engine surface change (`createProducerCategory` accepting a
           // `costMultiplier?: () => DecimalSource`) beyond first-arc-port
-          // scope. File against `open-loop-engine/docs/candidate-primitives.md`
+          // scope. File against `candidate-primitives.md`
           // when a second consumer derives the same need.
           restricts = [];
           break;

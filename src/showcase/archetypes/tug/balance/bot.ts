@@ -39,7 +39,7 @@ import { createMatchDriverModule } from './match-driver';
  * `believability: 0/0` (deterministic AI, predictable for the human
  * player); sim default is `0.20/0.25`.
  *
- * See `open-loop-engine/docs/candidate-primitives.md` § bilateral-
+ * See `candidate-primitives.md` § bilateral-
  * symmetric sim-bot pattern for the candidate graduation entry.
  */
 

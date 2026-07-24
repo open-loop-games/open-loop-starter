@@ -36,7 +36,7 @@ import { getWall } from './wall';
  *
  * TODO(expansion): the wave-indexed exogenous schedule + the STANDBY↔INBOUND phase
  * controller are a candidate engine primitive — the `TimedInput` candidate
- * (`open-loop-engine/docs/candidate-primitives.md`) re-indexed time→wave, plus a
+ * (`candidate-primitives.md`) re-indexed time→wave, plus a
  * two-phase alternation the single running/ended lifecycle doesn't cover. Graduation
  * dive filed as studio/open-loop-engine#11.
  */

@@ -57,7 +57,7 @@ The shape is `createConversion` (atomic player-fired) integrated by an `onTick(d
 The novel termination class: **a resource whose rate is positive but whose bag cap is zero is functionally wedged, but the standard transition-snapshot stasis check cannot see this through purchasable-distance inspection alone.** The `getRate` accessor isn't consulted by `isStasis`; the walker's purchasable transitions are.
 
 - **Receipt:** `src/showcase/archetypes/interlocker/balance/arc-probe.ts § Probe 2` — wedge reproduction in 60 lines. Termination column reads 'maxSimTime' with rate=5.0/sec and catnip stuck at 0.
-- **Cross-link:** `BALANCING-defender.md § stasis-aware-tick verdict`, `open-loop-engine/docs/candidate-primitives.md § InfeasibilityOracle`.
+- **Cross-link:** `BALANCING-defender.md § stasis-aware-tick verdict`, `candidate-primitives.md § InfeasibilityOracle`.
 - **Promotion to `BALANCING.md`:** Phase 5c PR-amends `BALANCING.md § stasis-aware-tick adoption — zero out-of-band channel rule` to extend the rule with the cap-reached sub-axis: *the rule "accessor faithfully captures income channels iff there is no out-of-band rate channel" is necessary but not sufficient. A cap-bounded resource whose value clamps to a finite ceiling (or zero) introduces a second wedge: the rate is real but the integrand is bounded. Stasis-aware-tick via transition-snapshot inspection does not see cap-reach termination. Consumers needing to detect cap-reach must layer a budget-bounded reachability check on top — exactly the `InfeasibilityOracle` shape the candidate-primitives entry tracks.*
 
 ## Cross-archetype convergence — override-path-vs-tunable rule (N=3)
@@ -174,4 +174,4 @@ Phase 5c lifts the four cross-archetype convergences from log-local to ecosystem
 - **`BALANCING.md § Where balance constants live`**: lift override-path-vs-tunable rule + dead-fields rule from log-local (Tug+Defender) to ecosystem (N=3 confirmation).
 - **`BALANCING.md § Theme 3 preamble`**: rewrite methodology-rekey caveat as "was always the case across the corpus" (N=4 confirmation).
 - **`BALANCING.md § stasis-aware-tick rule`**: extend with cap-reached sub-axis (verified in probe 2).
-- **`open-loop-engine/docs/candidate-primitives.md`**: append `createResourceBag` adoption-pattern entry + `createContinuousConversion` two-site entry. Both N=1; engine-side graduation waits for second archetype consumer.
+- **`candidate-primitives.md`**: append `createResourceBag` adoption-pattern entry + `createContinuousConversion` two-site entry. Both N=1; engine-side graduation waits for second archetype consumer.

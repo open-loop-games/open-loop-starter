@@ -119,5 +119,5 @@ lifted-number lens              Lane-2 discovery (shipping automation)    Lane-3
 - Methodology + balance kit: `../README.md`, `archetypes/BALANCING.md`,
   `archetypes/BALANCING-interlocker.md`
 - Engine API: `open-loop-engine/docs/api/INDEX.md`, `consumer-guide.md`
-- Candidate primitives: `open-loop-engine/docs/candidate-primitives.md`
+- Candidate primitives: `candidate-primitives.md`
 - Layout shell: `src/lib/shells/ThreePanelShell.vue` (resources · tabbed content · calendar + log)

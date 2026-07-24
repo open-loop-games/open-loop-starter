@@ -141,6 +141,6 @@ Cost-Scaling + matrix lens   arc + sensitivity + retune probes           measure
   family
 - Methodology + balance kit: `../README.md`, `archetypes/BALANCING.md`,
   `archetypes/BALANCING-tug.md`
-- Candidate primitive: `open-loop-engine/docs/candidate-primitives.md`
+- Candidate primitive: `candidate-primitives.md`
   § bilateral-symmetric sim-bot pattern (parked at N=1)
 - Engine API: `open-loop-engine/docs/api/INDEX.md`, `consumer-guide.md`

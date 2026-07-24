@@ -77,7 +77,7 @@ Stasis-aware-tick over a defender sim would see `getRate('money') = 0` at every 
 Defender's sim probes in Phase 5b will run `runUntil` in default `'tick'` mode and accept the budget-bounded termination flag the consumer wedge already absorbs.
 
 - **Receipt:** `src/showcase/archetypes/defender/modules/round.ts:121-144` — event subscriber bodies. Verifiable by grep: zero `getRate` reader sites across defender modules.
-- **Cross-link:** `BALANCING-producer.md § narrow runUntil stasis-aware-tick inadequate`, `BALANCING-ambient.md` ambient-side confirmation, `open-loop-engine/docs/candidate-primitives.md § runUntil stasis-aware-tick`.
+- **Cross-link:** `BALANCING-producer.md § narrow runUntil stasis-aware-tick inadequate`, `BALANCING-ambient.md` ambient-side confirmation, `candidate-primitives.md § runUntil stasis-aware-tick`.
 - **Promotion to `BALANCING.md`:** Bifurcation graduates. Phase 5c PR-amends `BALANCING.md § stasis-aware-tick adoption — zero out-of-band channel rule` to record the bifurcation explicitly: *event-driven income channels (defender, producer click-taper) bifurcate against continuous-rate channels (ambient, tug). The narrow-form stasis check is safe only for the latter; event-driven income consumers stay in default `'tick'` mode until a broader-form primitive lands.*
 
 ## What this pass did NOT learn (yet)
@@ -99,5 +99,5 @@ Known pre-staged unknowns Phase 5b will resolve:
 ## Carry-forward to Phase 5c
 
 - PR-amend `BALANCING.md`: lift override-path rule, dead-fields rule, methodology-rekey caveat removal, stasis-bifurcation finding. All four hit ready-to-promote status in this pass.
-- Audit `open-loop-engine/docs/candidate-primitives.md`: defender's static-path-list (`data/path.ts`) is the locked Phase 1 decision against `createFlowField`. The N=2 trigger (a second consumer needing dynamic re-pathing under tower placement) is still unmet. Drop a comment on the `createFlowField` entry noting defender's N=2 *candidate* status (path is static; the trigger is dynamic re-pathing, not just spatial-pathfinding-as-a-mechanic).
+- Audit `candidate-primitives.md`: defender's static-path-list (`data/path.ts`) is the locked Phase 1 decision against `createFlowField`. The N=2 trigger (a second consumer needing dynamic re-pathing under tower placement) is still unmet. Drop a comment on the `createFlowField` entry noting defender's N=2 *candidate* status (path is static; the trigger is dynamic re-pathing, not just spatial-pathfinding-as-a-mechanic).
 - Close umbrella OL-1021 with the full commit graph + cross-archetype convergence-status table.

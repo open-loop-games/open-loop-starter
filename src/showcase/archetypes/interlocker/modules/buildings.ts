@@ -38,7 +38,7 @@ import { WorkshopKey, type WorkshopApi } from './workshop';
  * Smelter is special-cased: it grants nothing but consumes wood + minerals and
  * produces iron per tick via a raw Level-3 `onTick` hand-roll. First N=1
  * receipt for `createContinuousConversion`
- * (`open-loop-engine/docs/candidate-primitives.md`).
+ * (`candidate-primitives.md`).
  */
 export interface BuildingsApi {
   /** The purchasable category covering all buildings — registry-walkable for
@@ -357,7 +357,7 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
 
       // ─── Smelter onTick: raw Level-3 hand-roll ────────────────────────
       // TODO(expansion): wood + minerals → iron is a continuous-conversion
-      // shape (see open-loop-engine/docs/candidate-primitives.md). First N=1
+      // shape (see candidate-primitives.md). First N=1
       // receipt; second consumer is village.ts's catnip drain.
       const catnip = resourcesApi.resources.catnip;
       const wood = resourcesApi.resources.wood;

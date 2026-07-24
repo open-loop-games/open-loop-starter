@@ -72,7 +72,7 @@ Match/reset/economy/harness = direct engine primitives (`createReset`,
 `tunable`). Tactical spatial layer = **consumer-side, no engine primitive**
 (deliberate — spatial-rendering-boundary-spec keeps continuous coords in the
 render/consumer layer). Candidate-primitive receipts land in
-`open-loop-engine/docs/candidate-primitives.md` only if a second spatial
+`candidate-primitives.md` only if a second spatial
 consumer converges — not from this archetype alone.
 
 ## Balance model — three lanes

@@ -496,7 +496,7 @@ export interface SearchResult {
  * for state-space search across consumers (cycler / explorer / scripter
  * balance leaves are the N=2+ family). N=1 seed; deliberate pause point per
  * `BALANCING-looper.md § Engine-surface verdict`. See
- * `open-loop-engine/docs/candidate-primitives.md` §
+ * `candidate-primitives.md` §
  * `Planner<S, A, G>` — constructive state-space search.
  */
 export function astar(problem: SearchProblem): SearchResult {

@@ -11,13 +11,13 @@ This doc owns starter-side composition prescription.
 - **Audit discipline** (negative: rule + anti-pattern + grep + threshold) — lives in [`../archetypes/AUDITING.md`](../archetypes/AUDITING.md). When this doc names an engine path, AUDITING covers what wrong-shape adoption to flag at review.
 - **Engine surface authority** — [`open-loop-engine/docs/api/INDEX.md`](../../open-loop-engine/docs/api/INDEX.md). Every recipe in this doc cites a symbol from there.
 - **Per-chunk source extracts** — [`engine-starter-cookbook/extracts/`](engine-starter-cookbook/extracts/). The 212 individual subsystem rows behind this doc's goal patterns live there.
-- **Candidate-primitive filing target** — [`open-loop-engine/docs/candidate-primitives.md`](../../open-loop-engine/docs/candidate-primitives.md). Partial-verdict recipes cite an entry here.
+- **Candidate-primitive filing target** — [`candidate-primitives.md`](../../candidate-primitives.md). Partial-verdict recipes cite an entry here.
 
 What's left for this doc: cross-chunk goal patterns + min wiring + verdict per goal.
 
 ## 1. Headline
 
-Across **212 subsystem rows** drawn from 15 archetypes (the same corpus the [closed-form-progression subsystem inventory](../../open-loop-research/methodology/techniques/closed-form-progression/subsystem-inventory.md) runs against), **156 rows (73.6%) adopt an existing engine surface cleanly**, **15 rows (7.1%) adopt with a known awkwardness already filed in [`open-loop-engine/docs/candidate-primitives.md`](../../open-loop-engine/docs/candidate-primitives.md)**, and **41 rows (19.3%) are genuinely substrate-only** — bifurcation territory where the engine intentionally provides composition substrate (harness, sim runtime, spatial primitives) rather than a single primitive.
+Across **212 subsystem rows** drawn from 15 archetypes (the same corpus the [closed-form-progression subsystem inventory](../../open-loop-research/methodology/techniques/closed-form-progression/subsystem-inventory.md) runs against), **156 rows (73.6%) adopt an existing engine surface cleanly**, **15 rows (7.1%) adopt with a known awkwardness already filed in [`candidate-primitives.md`](../../candidate-primitives.md)**, and **41 rows (19.3%) are genuinely substrate-only** — bifurcation territory where the engine intentionally provides composition substrate (harness, sim runtime, spatial primitives) rather than a single primitive.
 
 **Net-new gaps surfaced by this pass: 0.** Every "gap" candidate that survived the falsification protocol matches an entry already in `candidate-primitives.md`. The engine's API surface is genuinely complete against the archetype design corpus — what's left to ship is graduation work on filed candidates, not new candidate discovery.
 
@@ -342,5 +342,5 @@ Live questions from the engine-first walk. The first five are coverage notes for
 - [`open-loop-engine/docs/api/INDEX.md`](../../open-loop-engine/docs/api/INDEX.md) — per-symbol engine surface authority. Every recipe in this doc cites a symbol from here.
 - [`open-loop-engine/docs/consumer-guide.md`](../../open-loop-engine/docs/consumer-guide.md) — narrative companion; the abstraction-spectrum framing (Levels 1–4) underlies G-S3 / G-S4 / G-S5.
 - [`incremental-math/src/pages/modern/big-numbers.mdx`](../../incremental-math/src/pages/modern/big-numbers.mdx) — research synthesis on `break_infinity.js` / `break_eternity.js` adoption, the AD log-space exemplar, comparison-operator hazards, and presentation/notation as a downstream design surface. Cited from G-S15 (Pattern L escalation reference).
-- [`open-loop-engine/docs/candidate-primitives.md`](../../open-loop-engine/docs/candidate-primitives.md) — filing target for engine gaps. Every `partial` verdict in § 7 of this doc cites an entry here.
+- [`candidate-primitives.md`](../../candidate-primitives.md) — filing target for engine gaps. Every `partial` verdict in § 7 of this doc cites an entry here.
 - [`extracts/`](engine-starter-cookbook/extracts/) — per-chunk source extracts (chunk-1-economy-spine.md, chunk-2-loop-driven.md, chunk-3-sim-adversarial.md). The 212 individual rows live there.

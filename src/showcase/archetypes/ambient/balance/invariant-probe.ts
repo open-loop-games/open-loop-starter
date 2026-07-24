@@ -124,7 +124,7 @@ function runNoPressureAudit(): { ticksRun: number; findings: PressureFinding[] }
       // TODO(expansion): graduate to a dedicated analyzer in
       // `open-loop-engine/src/harness/analyzers/no-pressure.ts` once a
       // second consumer (Looper balance leaf) wants the same shape — see
-      // `open-loop-engine/docs/candidate-primitives.md`.
+      // `candidate-primitives.md`.
       if (!purchasedThisTick && cur.lt(lastPrimary)) {
         const dropFrac = lastPrimary.sub(cur).div(lastPrimary.eq(0) ? 1 : lastPrimary);
         if (dropFrac.gt(0.01)) {

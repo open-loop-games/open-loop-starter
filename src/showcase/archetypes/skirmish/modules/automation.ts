@@ -38,7 +38,7 @@ export interface AutomationOptions {
  * eventually fires `match.end` by defeat when an army breaks through).
  *
  * RECIPE INSTANCE — bilateral sim-bot (see
- * `src/showcase/recipes/candidate-recipes.md`). The runner skeleton is
+ * `candidate-recipes.md`). The runner skeleton is
  * invariant: in-match guard → cadence accumulator (+ seeded believability
  * jitter) → decide → act. Only `decide` (here: spawn while affordable, up to a
  * cap) is domain. tug's `opponent-bot.ts` is the coupled source instance; this

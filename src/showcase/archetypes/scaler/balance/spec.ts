@@ -244,7 +244,7 @@ export function buildEccSpec(sampleCompletions: readonly number[]): EccSamplePoi
  * `createOptimalStoppingSolver({ state, action, reward, transition,
  * discount })` engine helper once a second consumer derives the same
  * shape (Transcend Bellman is the in-leaf N=2 candidate, layered one
- * level up). See `open-loop-engine/docs/candidate-primitives.md`.
+ * level up). See `candidate-primitives.md`.
  */
 
 export interface PrestigeThresholdPrediction {
@@ -349,7 +349,7 @@ export function predictPrestigeAtCanonicalThreshold(): PrestigeThresholdPredicti
  * transcend predictor is the N=2 in-leaf instance of the frozen-state
  * threshold-equivalence shape; consumer-side hand-rolls of the same shape
  * trigger the `createOptimalStoppingSolver` graduation discussion. See
- * `open-loop-engine/docs/candidate-primitives.md`.
+ * `candidate-primitives.md`.
  */
 
 export interface TranscendThresholdPrediction {

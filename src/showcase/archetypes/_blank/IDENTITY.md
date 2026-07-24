@@ -43,7 +43,7 @@ substitutions it made, honestly, as a port ledger.
 The blank base uses only the substrate: a `persistent()` number, a per-tick accrual,
 and the `tunable()` perturbation path. A real archetype maps each pattern in its
 identity line to an engine primitive here, with candidate-primitive receipts where it
-hand-rolls a gap (`open-loop-engine/docs/candidate-primitives.md`).
+hand-rolls a gap (`candidate-primitives.md`).
 
 ## Balance model — three lanes
 

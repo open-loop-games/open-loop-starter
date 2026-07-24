@@ -77,7 +77,7 @@ export interface OpponentBotOptions {
  *
  * **Candidate primitive.** This module + its sim-bot counterpart form a
  * bilateral-symmetric sim-bot pattern that's a candidate for engine
- * graduation. See `open-loop-engine/docs/candidate-primitives.md` §
+ * graduation. See `candidate-primitives.md` §
  * bilateral-symmetric sim-bot pattern; graduation trigger is a second
  * adversarial-state consumer landing.
  */

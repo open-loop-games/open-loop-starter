@@ -61,7 +61,7 @@ export type InterlockerTunableKey =
   | 'village/catnip/perKittenPerSecond'
   | 'village/kittenGrowthRatePerSec'
   // Smelter continuous-consumption tunables. First N=1 receipt for
-  // `createContinuousConversion` (open-loop-engine/docs/candidate-primitives.md).
+  // `createContinuousConversion` (candidate-primitives.md).
   | 'smelter/woodConsumptionRate'
   | 'smelter/mineralConsumptionRate'
   | 'smelter/ironProductionRate'

@@ -253,7 +253,7 @@ Full surface at `open-loop-engine/docs/api/INDEX.md` (system-layer entries — n
 
 ### Portability and the candidate-primitives loop
 
-Engine-as-oracle posture makes balance work portable across engine refactors. The math is the spec; the engine is the truth; the solver glues them. When a primitive is missing — when consumers hand-roll a query the engine should own — file it as a candidate in `open-loop-engine/docs/candidate-primitives.md`. Co-locate a `TODO(expansion)` marker at the hand-roll site as the in-code receipt. The candidate file is the convergence channel; duplicate consumers (N=2) graduate the candidate to a research ticket.
+Engine-as-oracle posture makes balance work portable across engine refactors. The math is the spec; the engine is the truth; the solver glues them. When a primitive is missing — when consumers hand-roll a query the engine should own — file it as a candidate in `candidate-primitives.md`. Co-locate a `TODO(expansion)` marker at the hand-roll site as the in-code receipt. The candidate file is the convergence channel; duplicate consumers (N=2) graduate the candidate to a research ticket.
 
 ## Theme 4 — What engine surfaces help?
 
@@ -295,7 +295,7 @@ Balance is measured in minutes. A 2-hour arc at engine-default `tickDelta: 0.05s
 
 The rule is structural, not heuristic: if your archetype has a click affordance, a tick-jitter spawn channel, or any out-of-band rate the accessor doesn't read, stasis-aware-tick will misfire. If all continuous income flows through producer categories, it adopts cleanly. Decision point lives in the bot.ts accessor — `getRate(resource)` either captures all channels for that resource or it doesn't.
 
-**Cap-reach sub-axis (N=1, interlocker).** The zero-out-of-band rule is necessary but not sufficient. A cap-bounded resource whose value clamps to a finite ceiling introduces a second wedge: the rate is real but the integrand is bounded. Stasis-aware-tick inspects content-walker transitions (purchasable distances, conversion readiness) via `isStasis`, not the accessor's `getRate`. A purchasable visible-but-uncapped is reported as a finite transition even when its consumed resource is wedged at a zero cap, so `isStasis` returns false and the run terminates as `maxSimTime` rather than `unreachable`. Consumers needing to detect cap-reach termination must layer a budget-bounded reachability check on top — exactly the `InfeasibilityOracle` shape `open-loop-engine/docs/candidate-primitives.md` tracks. See `BALANCING-interlocker.md § stasis-aware-tick verdict + new sub-axis` for the reproduction.
+**Cap-reach sub-axis (N=1, interlocker).** The zero-out-of-band rule is necessary but not sufficient. A cap-bounded resource whose value clamps to a finite ceiling introduces a second wedge: the rate is real but the integrand is bounded. Stasis-aware-tick inspects content-walker transitions (purchasable distances, conversion readiness) via `isStasis`, not the accessor's `getRate`. A purchasable visible-but-uncapped is reported as a finite transition even when its consumed resource is wedged at a zero cap, so `isStasis` returns false and the run terminates as `maxSimTime` rather than `unreachable`. Consumers needing to detect cap-reach termination must layer a budget-bounded reachability check on top — exactly the `InfeasibilityOracle` shape `candidate-primitives.md` tracks. See `BALANCING-interlocker.md § stasis-aware-tick verdict + new sub-axis` for the reproduction.
 
 ## Theme 5 — How do I know it's working?
 
@@ -417,6 +417,6 @@ PR welcome. The cost of an outdated balance doc is tuning calls that read off st
 - `incremental-math/src/pages/design-playbook/` — prescriptive design surfaces (pacing, composition, bending, modifier-chains, prestige, multi-resource).
 - `open-loop-engine/docs/api/harness.md` — full engine balance toolkit.
 - `open-loop-engine/docs/api/INDEX.md` — engine API per-symbol directory; system-layer engine-as-oracle primitives live here.
-- `open-loop-engine/docs/candidate-primitives.md` — observed-but-not-yet-graduated primitives raised by consumers.
+- `candidate-primitives.md` — observed-but-not-yet-graduated primitives raised by consumers.
 - `open-loop-research/LIBRARY.md` — pattern catalog, cross-pattern properties, prevalence.
 - `open-loop-research/practical/composition-cookbook/` — believability-calibration discipline, parameterized-personality recipes, procedural-personas tester-seat agent.

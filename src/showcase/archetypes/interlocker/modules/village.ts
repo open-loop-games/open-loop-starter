@@ -401,7 +401,7 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         //    resPool.
         // TODO(expansion): continuous-rate consumption — shared N=1 receipt
         // with smelter for `createContinuousConversion`. See
-        // `open-loop-engine/docs/candidate-primitives.md`.
+        // `candidate-primitives.md`.
         const consumeMagnitude = catnipConsumptionRate.value * dt;
         if (consumeMagnitude > 0) {
           subtractResource(catnip, consumeMagnitude, { allowNegative: true });

@@ -12,7 +12,7 @@ Resolution today: inlined `1.08` in `data/producers.ts` with the negative-criter
 
 - **Receipt:** in-code comment block at `src/showcase/archetypes/ambient/data/producers.ts:13-21` documents the negative criterion and cross-references `BALANCING-producer.md`.
 - **Convergence count:** N=2 (producer + ambient). Both archetypes hit the gap from the inverse direction — producer per-tier (`1.15`, Cookie Clicker citation), ambient unified (`1.08`, gentler cozy curve). Same engine surface, same blocker.
-- **Cross-link:** `open-loop-engine/docs/candidate-primitives.md` — when the `Computable<DecimalSource>` adoption candidate gets filed for `ProducerMapping.purchase.costScaling`, both archetypes graduate together. File as `scope:engine` research ticket per umbrella decomposition rule.
+- **Cross-link:** `candidate-primitives.md` — when the `Computable<DecimalSource>` adoption candidate gets filed for `ProducerMapping.purchase.costScaling`, both archetypes graduate together. File as `scope:engine` research ticket per umbrella decomposition rule.
 
 ## Engine-surface adoption (clean) — `runUntil({mode: 'stasis-aware-tick'})` works for zero-click archetypes
 
@@ -34,7 +34,7 @@ Adoption committed: `mode: 'stasis-aware-tick'` + `accessor: buildAmbientAccesso
 This validates the structural read recorded at `candidate-primitives.md:81` (OL-628 close-out, 2026-04-23): "the question that matters is 'predicate cannot fire *within budget*,' not 'predicate cannot fire ever.'" For zero-click archetypes whose accessor faithfully captures all income channels, the narrower stasis-aware form *is* the right shape. Producer's wedge (click-taper income invisible to `getRate`) is the structural exception, not the rule.
 
 - **Receipt:** `src/showcase/archetypes/ambient/balance/bot.ts` `buildAmbientAccessor` + `src/showcase/archetypes/ambient/balance/solve-probe.ts` `sampleBeat` / `verifyAll` mode-wired call sites.
-- **Cross-link:** `BALANCING-producer.md § stasis-aware-tick` for the contrast; `open-loop-engine/docs/candidate-primitives.md` § `runUntil({mode: 'stasis-aware-tick'})` for the upstream entry.
+- **Cross-link:** `BALANCING-producer.md § stasis-aware-tick` for the contrast; `candidate-primitives.md` § `runUntil({mode: 'stasis-aware-tick'})` for the upstream entry.
 - **Generalization candidate (single-archetype findings stay log-local for now):** "An accessor faithfully captures the engine's income channels iff there is no out-of-band rate channel (click taper, externally driven event, etc.)." Zero-click is the cleanest case. Promote to `BALANCING.md` when a second zero-rate-channel archetype (looper greenfield?) reaches the same conclusion — currently N=1.
 
 ## Methodology-fit — identity collapses without a predictor

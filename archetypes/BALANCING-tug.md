@@ -72,6 +72,6 @@ The probe-6 shape is **not currently named in BALANCING.md's methodology kit.** 
 
 No new diagnostic vocabulary; no methodology stress; no engine-surface gap. The locked methodology vocabulary (#1–#7) covers Tug's surfaces cleanly modulo the framework-correctness gap above. The `tunable()` adoption pattern extended uniformly to all unit costs and all refinery tiers without engine changes — the engine already supports the cardinality.
 
-The bilateral-symmetric sim-bot match-driver candidate (`open-loop-engine/docs/candidate-primitives.md` § bilateral-symmetric sim-bot pattern) stays parked at N=1. Graduation trigger is unmet — no second adversarial-state consumer has landed.
+The bilateral-symmetric sim-bot match-driver candidate (`candidate-primitives.md` § bilateral-symmetric sim-bot pattern) stays parked at N=1. Graduation trigger is unmet — no second adversarial-state consumer has landed.
 
 The data balance itself remains the known limitation flagged at `balance/bot.ts § Known limitation`: counter-vs-greed at default data produces a flat win-rate curve across the strongCounter sweep, which is the actionable signal that the underlying economy + roster + matrix balance needs procedural-persona tester-seat work. That's a separate balance-discovery surface filed as a follow-up; the methodology framework lands correctly.

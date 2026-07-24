@@ -76,7 +76,7 @@ export function getTowers(): TowersApi {
  * are slow enough that the difference is cosmetic; a later refinement can add
  * visible-projectile fidelity by spawning persistent projectile entities and
  * ticking their travel + AABB collision. Drop-spot:
- * `open-loop-engine/docs/candidate-primitives.md` if a second consumer needs
+ * `candidate-primitives.md` if a second consumer needs
  * lobbed projectile semantics.
  */
 export function createTowersModule(data: DefenderData): EngineModule {

@@ -11,7 +11,7 @@ The geometric per-unit cost growth (Cookie Clicker `1.15`) couldn't fold into a 
 Resolution today: inlined `1.15` in `data/producers.ts` with the canonical `priceFunc` citation. Tuning the cost growth requires an engine change: `Computable<DecimalSource>` adoption on `ProducerMapping.purchase.costScaling` with `unref` at the registration read site.
 
 - **Receipt:** in-code comment block at `src/showcase/archetypes/producer/modules/producers.ts:39-43` documents the negative criterion.
-- **Cross-link:** when filed, the candidate primitive should land in `open-loop-engine/docs/candidate-primitives.md`. Adjacent entries on `Purchasable` / `Producer` cost-side `Computable` adoption exist but don't subsume this row.
+- **Cross-link:** when filed, the candidate primitive should land in `candidate-primitives.md`. Adjacent entries on `Purchasable` / `Producer` cost-side `Computable` adoption exist but don't subsume this row.
 - **Affected consumers:** any archetype that bisects against per-tier cost growth as a methodology-#1 knob. None today — but the bisection is the natural diagnostic for a "tier cadence feels wrong" reshape call.
 
 ## Engine-surface gap — narrow `runUntil({mode: 'stasis-aware-tick'})` inadequate for click-driven income channels
@@ -20,7 +20,7 @@ Stasis-aware-tick mode checks `createTransitionSnapshot` + `isStasis` per tick. 
 
 Adoption attempt (OL-955 Phase 3a, 2026-05-13): added `mode: 'stasis-aware-tick'` + `accessor: buildProducerAccessor(engine)` to five `runUntil` sites across `solve.ts` / `verify.ts` / `predict.smoke.ts`. Beat-2 (cursor purchase, default-content fires at 15s) and beat-3 (grandma purchase, fires at 12m08s) both collapsed to `Infinity` in the smoke run. The mode is not safe to drop in.
 
-This validates the prediction recorded at `open-loop-engine/docs/candidate-primitives.md:81` (OL-628 close-out, 2026-04-23): "narrow form was inadequate for non-decaying-rate archetypes (Producer): the question that matters is 'predicate cannot fire *within budget*,' not 'predicate cannot fire ever.' That broader form needs event-driven reasoning."
+This validates the prediction recorded at `candidate-primitives.md:81` (OL-628 close-out, 2026-04-23): "narrow form was inadequate for non-decaying-rate archetypes (Producer): the question that matters is 'predicate cannot fire *within budget*,' not 'predicate cannot fire ever.' That broader form needs event-driven reasoning."
 
 The right shape is one of:
 
@@ -31,7 +31,7 @@ The right shape is one of:
 Producer is the wedge case. Until one of those lands, producer's `runUntil` stays in default `'tick'` mode and the `cursor-boost-i` drift signal below absorbs the cost of the wedge.
 
 - **Receipt:** empirical adoption + revert recorded in this leaf; no in-code marker (the revert restores no-change state).
-- **Cross-link:** `open-loop-engine/docs/candidate-primitives.md` § `runUntil({mode: 'stasis-aware-tick'})` and § `TimedInput` and the budget-bounded reachability oracle.
+- **Cross-link:** `candidate-primitives.md` § `runUntil({mode: 'stasis-aware-tick'})` and § `TimedInput` and the budget-bounded reachability oracle.
 - **Affected consumers:** any archetype with bot-driven income channels not surfaced through `getRate`. Looper's queue-driven progression may be the next archetype to hit this — different mechanism, same wedge.
 
 ## Identity-file judgment call — predictor-seed shape earns identity + windows colocation

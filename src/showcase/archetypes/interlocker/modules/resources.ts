@@ -143,7 +143,7 @@ export function createResourcesModule(data: InterlockerData): EngineModule {
       // ─── Bag ──────────────────────────────────────────────────────────
       // TODO(expansion): First archetype consumer of `createResourceBag` with
       // per-type reactive caps via ModifierChain getters. N=1 receipt entry:
-      // open-loop-engine/docs/candidate-primitives.md (bag-adoption pattern).
+      // candidate-primitives.md (bag-adoption pattern).
       const capacityPerType: Record<string, () => DecimalSource> = {};
       for (const spec of data.resources) {
         if (spec.baseCapacity === null) continue;

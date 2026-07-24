@@ -29,7 +29,7 @@ import { SkirmishTuningRegistryKey, type Side } from './tuning';
  *
  * RECIPE CANDIDATE (starter recipe surface — NOT the engine track): this is a
  * composition of engine primitives (a two-sided match lifecycle), not a
- * primitive gap, so it is indexed in `src/showcase/recipes/candidate-recipes.md`
+ * primitive gap, so it is indexed in `candidate-recipes.md`
  * for deliberate cross-archetype evaluation — deliberately not dropped in engine
  * `candidate-primitives.md`. tug carries a coupled copy; skirmish is the first
  * stripped, parameterized instance (N=2). A converged shape may later graduate
