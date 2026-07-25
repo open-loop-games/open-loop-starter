@@ -358,8 +358,8 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
 
       // ─── Smelter onTick: raw Level-3 hand-roll ────────────────────────
       // TODO(expansion): wood + minerals → iron is a continuous-conversion
-      // shape. N=3 dive filed — see `createContinuousConversion` in the studio
-      // candidate-primitives drop-spot.
+      // shape. Shape settled, graduation pending a second shipping-game
+      // receipt — studio/open-loop-engine#12; entry is in the drop-spot archive.
       const catnip = resourcesApi.resources.catnip;
       const wood = resourcesApi.resources.wood;
       const minerals = resourcesApi.resources.minerals;

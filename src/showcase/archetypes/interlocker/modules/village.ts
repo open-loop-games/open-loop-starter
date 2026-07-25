@@ -399,9 +399,10 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         //    (village.js:343 `resDiff < 0`) can see the deficit; step 2
         //    floors catnip back to zero, matching canon's non-negative
         //    resPool.
-        // TODO(expansion): signed-net-rate drain, NOT the smelter's converter
-        // shape — the deficit must stay observable for starvation below. N=3
-        // dive filed; see `createContinuousConversion` § Family B in the drop-spot.
+        // TODO(ergonomics): the engine grew signed-rate integration for exactly
+        // this shape — a Producer with a net-negative rate chain and
+        // `allowNegative: true`. Adopt when this module next moves; the drain
+        // predates it.
         const consumeMagnitude = catnipConsumptionRate.value * dt;
         if (consumeMagnitude > 0) {
           subtractResource(catnip, consumeMagnitude, { allowNegative: true });
