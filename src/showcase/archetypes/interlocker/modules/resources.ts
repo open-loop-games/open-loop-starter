@@ -20,11 +20,11 @@ import { InterlockerTuningRegistryKey } from './tuning';
  *
  * The wallet is one `createResourceBag`. Per-type capacities for the 9 capped
  * resources are sourced via getters `() => maxChains[id].apply(<baseCapacity>)`;
- * the bag polls per-read (`src/core/resource-bag.ts:43-46`) so chain.push()
+ * the bag polls per-read (`resource-bag.ts` `resolveCapacity`) so chain.push()
  * updates are immediately visible. `science` and `kittens` are uncapped — they
  * omit `capacityPerType` entries and the bag treats them as Infinity (per
- * resource-bag.ts:217-218: when both per-type and total caps are null, the
- * remaining-capacity computation returns dInf).
+ * `resource-bag.ts` `computeRemainingForType`: when both per-type and total
+ * caps are null, the remaining-capacity computation returns dInf).
  *
  * Per-resource handles:
  *   - `resources[id]: Resource<DecimalSource>` — bag-linked Resource; consumed
@@ -84,16 +84,16 @@ export function getResources(): ResourcesApi {
  * passed through the chain's composed `apply`). Buildings push additive +
  * multiplicative grants onto these chains in their own install — the bag sees
  * the new effective cap on the next read because `CapacitySource` polls
- * per-call (`open-loop-engine/src/core/resource-bag.ts:43-46`).
+ * per-call (engine `core/resource-bag.ts` `resolveCapacity`).
  *
  * Persistence: `createResource(...)` inside `install()` participates in the
  * `interlocker/resources` persistent context that the engine wraps install in
- * (`open-loop-engine/src/index.ts:588` `withPersistentContext(mod.id, ...)`).
- * `bag.link(id, resource)` establishes two-way sync between the bag slot and
- * the persistent Resource ref, so on save→load the Resource hydrates first and
- * the bag re-syncs via its watcher — no explicit `bag.serialize` /
- * `bag.deserialize` calls needed. This is the same pattern `createInventory`
- * uses in `open-loop-engine/src/systems/inventory.ts:138-151`.
+ * (engine `engine.ts` — the `withPersistentContext(mod.id, ...)` call around
+ * `mod.install`). `bag.link(id, resource)` establishes two-way sync between the
+ * bag slot and the persistent Resource ref, so on save→load the Resource
+ * hydrates first and the bag re-syncs via its watcher — no explicit
+ * `bag.serialize` / `bag.deserialize` calls needed. This is the same pattern
+ * `createInventory` uses (engine `systems/inventory.ts`).
  *
  * Reads `InterlockerTuningRegistryKey` for the `resources/<id>/baseCapacity`
  * tunables — base caps are zero per Kittens canon, but the tunable surface
