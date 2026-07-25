@@ -342,4 +342,55 @@ describe('interlocker/buildings — found-regression locks', () => {
     expect(Number(bench.rateChains.wood.apply(0))).toBe(10);
     expect(Number(bench.rateMulChains.wood.apply(1))).toBeCloseTo(1.1);
   });
+
+  it('smelter runs partial on the scarcest reagent instead of stalling', () => {
+    // Regression: the onTick bailed outright unless BOTH reagents covered the
+    // full request, commented as mirroring canon. Canon does the opposite —
+    // `resPool.getAmtDependsOnStock` scales the active count down to what stock
+    // supports and returns "the percentage to decrease the productivity", so a
+    // short reagent throttles the run rather than stopping it. The stall meant
+    // a colony one splinter short of the wood bill smelted nothing at all.
+    bench.resources.wood.value = new Decimal(1000);
+    bench.resources.minerals.value = new Decimal(1000);
+    bench.resources.iron.value = new Decimal(1000);
+    getPurchasable(bench.buildings, 'smelter').purchase(1);
+    expect(bench.buildings.activeCount('smelter')).toBe(1);
+
+    const { wood: woodPerSec, minerals: mineralsPerSec } = bench.buildings.smelterUnitDrain;
+
+    // Leave minerals covering only a quarter of one second's draw; wood is
+    // plentiful, so minerals is the limiter and the whole run scales to 0.25.
+    bench.resources.minerals.value = new Decimal(mineralsPerSec * 0.25);
+    bench.resources.wood.value = new Decimal(1000);
+    const ironBefore = Number(bench.resources.iron.value);
+    const woodBefore = Number(bench.resources.wood.value);
+
+    bench.engine.tickDriver.simulateTick(1);
+
+    // Minerals fully drained, wood drawn at the throttled rate, iron produced
+    // at the same fraction — not zero, which is what the stall gave.
+    expect(Number(bench.resources.minerals.value)).toBeCloseTo(0, 6);
+    expect(woodBefore - Number(bench.resources.wood.value)).toBeCloseTo(woodPerSec * 0.25, 6);
+    expect(Number(bench.resources.iron.value)).toBeGreaterThan(ironBefore);
+
+    // The rate readout reports the throttled draw, not the requested one.
+    expect(bench.buildings.smelterConsumptionRate.wood.value).toBeCloseTo(woodPerSec * 0.25, 6);
+  });
+
+  it('smelter stops only when a reagent is actually empty', () => {
+    bench.resources.wood.value = new Decimal(1000);
+    bench.resources.minerals.value = new Decimal(1000);
+    bench.resources.iron.value = new Decimal(1000);
+    getPurchasable(bench.buildings, 'smelter').purchase(1);
+
+    bench.resources.minerals.value = new Decimal(0);
+    const woodBefore = Number(bench.resources.wood.value);
+    const ironBefore = Number(bench.resources.iron.value);
+
+    bench.engine.tickDriver.simulateTick(1);
+
+    expect(Number(bench.resources.wood.value)).toBe(woodBefore);
+    expect(Number(bench.resources.iron.value)).toBe(ironBefore);
+    expect(bench.buildings.smelterConsumptionRate.wood.value).toBe(0);
+  });
 });

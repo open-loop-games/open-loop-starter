@@ -1,4 +1,4 @@
-import { computed, type ComputedRef } from 'vue';
+import { computed, ref, type ComputedRef } from 'vue';
 import {
   addResource,
   createAdditiveModifier,
@@ -74,12 +74,13 @@ export interface BuildingsApi {
   readonly gatherCatnipAmount: number;
   readonly refineCatnipCost: number;
   readonly refineCatnipWoodOutput: number;
-  /** Effective smelter drain (resource/sec) across all owned smelters, for wood
-   *  and minerals. Zero when no smelter is owned OR the smelter is currently
-   *  stalled (mirrors the onTick fail-soft: both reagents must be available
-   *  before either drains). Single source of truth for "how much wood/minerals
-   *  are being burned right now" — the UI's net-rate readout reads this instead
-   *  of re-deriving `rate × count` and silently dropping the stall case. */
+  /** Effective smelter drain (resource/sec) across all active smelters, for wood
+   *  and minerals. Scaled by the supply fraction the last tick actually ran, so
+   *  a shortage shows the throttled draw rather than the requested one; zero
+   *  when no smelter is active or a reagent is empty. Single source of truth for
+   *  "how much wood/minerals are being burned right now" — the UI's net-rate
+   *  readout reads this instead of re-deriving `rate × count` and silently
+   *  ignoring the throttle. */
   smelterConsumptionRate: { wood: ComputedRef<number>; minerals: ComputedRef<number> };
 }
 
@@ -357,50 +358,64 @@ export function createBuildingsModule(data: InterlockerData): EngineModule {
 
       // ─── Smelter onTick: raw Level-3 hand-roll ────────────────────────
       // TODO(expansion): wood + minerals → iron is a continuous-conversion
-      // shape (see candidate-primitives.md). First N=1
-      // receipt; second consumer is village.ts's catnip drain.
+      // shape. N=3 dive filed — see `createContinuousConversion` in the studio
+      // candidate-primitives drop-spot.
       const catnip = resourcesApi.resources.catnip;
       const wood = resourcesApi.resources.wood;
       const minerals = resourcesApi.resources.minerals;
       const iron = resourcesApi.resources.iron;
 
+      /**
+       * Fraction of the requested smelter throughput the last tick could
+       * actually run, 0–1. Canon computes the same value inside
+       * `resPool.getAmtDependsOnStock` and scales the building's effects by it;
+       * mirroring that here keeps the rate readout honest under a shortage
+       * instead of re-deriving an approximation without a `dt`.
+       */
+      const smelterSupply = ref(1);
+
       ctx.onTick((dt) => {
         // Only ACTIVE smelters consume/produce — canon's `on` throttle lets a
         // player (or the automation) pause the wood drain without selling.
         const count = activeCountOf('smelter');
-        if (count <= 0) return;
+        if (count <= 0) {
+          smelterSupply.value = 0;
+          return;
+        }
 
         const woodNeed = woodConsumptionRate.value * count * dt;
         const mineralsNeed = mineralConsumptionRate.value * count * dt;
-        const ironGain = ironProductionRate.value * count * dt;
 
-        // Fail-soft: both inputs must be available before either is consumed.
-        // Mirrors the canonical Kittens behaviour where the smelter stalls if
-        // either reagent is exhausted.
-        if (!hasResource(wood, woodNeed) || !hasResource(minerals, mineralsNeed)) return;
+        // Fail-soft: run partial on the scarcest reagent rather than stalling.
+        // Canon scales the *active building count* down to what stock supports
+        // (`amt = min(amt, resAvailable / perBuildingRate)` in
+        // `getAmtDependsOnStock`) and returns the resulting fraction as "the
+        // percentage to decrease the productivity". Because every term is
+        // linear in count, scaling the whole run by that fraction is
+        // equivalent. A full stall only happens when a reagent is truly empty.
+        let supply = 1;
+        for (const [need, have] of [
+          [woodNeed, Number(wood.value)],
+          [mineralsNeed, Number(minerals.value)],
+        ]) {
+          if (need <= 0) continue;
+          if (have < need) supply = Math.min(supply, Math.max(0, have / need));
+        }
+        smelterSupply.value = supply;
+        if (supply <= 0) return;
 
-        subtractResource(wood, woodNeed);
-        subtractResource(minerals, mineralsNeed);
-        iron.value = Decimal.add(iron.value, ironGain);
+        subtractResource(wood, woodNeed * supply);
+        subtractResource(minerals, mineralsNeed * supply);
+        iron.value = Decimal.add(iron.value, ironProductionRate.value * count * dt * supply);
       });
 
-      // Display-rate predicate for the smelter's drain. Approximates the
-      // onTick fail-soft stall (both reagents must be available before either
-      // drains) without needing a `dt`: once a reagent balance hits zero the
-      // smelter stops drawing it, so "currently active" reduces to "both
-      // balances are still positive." Good enough for a per-second readout —
-      // exact dt-aligned stall timing isn't a display concern.
-      const smelterActive = computed<boolean>(() => {
-        const count = activeCountOf('smelter');
-        return count > 0 && Decimal.gt(wood.value, 0) && Decimal.gt(minerals.value, 0);
-      });
       const smelterCount = computed<number>(() => activeCountOf('smelter'));
       const smelterConsumptionRate = {
-        wood: computed<number>(() =>
-          smelterActive.value ? woodConsumptionRate.value * smelterCount.value : 0,
+        wood: computed<number>(
+          () => woodConsumptionRate.value * smelterCount.value * smelterSupply.value,
         ),
-        minerals: computed<number>(() =>
-          smelterActive.value ? mineralConsumptionRate.value * smelterCount.value : 0,
+        minerals: computed<number>(
+          () => mineralConsumptionRate.value * smelterCount.value * smelterSupply.value,
         ),
       };
 

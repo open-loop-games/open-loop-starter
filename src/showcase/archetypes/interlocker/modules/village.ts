@@ -399,9 +399,9 @@ export function createVillageModule(_data: InterlockerData): EngineModule {
         //    (village.js:343 `resDiff < 0`) can see the deficit; step 2
         //    floors catnip back to zero, matching canon's non-negative
         //    resPool.
-        // TODO(expansion): continuous-rate consumption — shared N=1 receipt
-        // with smelter for `createContinuousConversion`. See
-        // `candidate-primitives.md`.
+        // TODO(expansion): signed-net-rate drain, NOT the smelter's converter
+        // shape — the deficit must stay observable for starvation below. N=3
+        // dive filed; see `createContinuousConversion` § Family B in the drop-spot.
         const consumeMagnitude = catnipConsumptionRate.value * dt;
         if (consumeMagnitude > 0) {
           subtractResource(catnip, consumeMagnitude, { allowNegative: true });
