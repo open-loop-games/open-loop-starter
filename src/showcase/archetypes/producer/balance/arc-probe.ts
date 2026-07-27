@@ -13,12 +13,11 @@
  * at `tickDelta: 1s`. Methodology is documented in `archetypes/BALANCING.md`.
  */
 
+import { runProbe, runWaypointProbe } from '@open-loop/engine';
 import {
   producerPacingInspector,
   renderArcTable,
   renderFlowTable,
-  runProbe,
-  runWaypointProbe,
   type ProducerInspector,
 } from '@/balance';
 import { getBuildings } from '../modules';

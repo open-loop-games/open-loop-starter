@@ -1,23 +1,24 @@
 /**
- * Cross-archetype balance toolkit. Wraps engine pacing primitives + the
- * `runMatrixUntil` harness into shapes a per-archetype `balance/` folder
- * can plug into.
+ * Cross-archetype balance toolkit — the pieces the per-archetype `balance/`
+ * folders share, over an engine harness they import directly.
  *
- * Discovery shape: scripts call `runWaypointProbe` + `runProbe`, render
- * with `report.ts`, iterate balance constants until tables are green.
- * Regression shape: a thin sim test pins the chosen `terminationTime`
- * distribution per beat.
+ * Runners and their types (`runProbe`, `runWaypointProbe`, `runUntil`,
+ * `runMatrixUntil`, `runSensitivity`, `BeatProbe`, `Waypoint`) come from
+ * `@open-loop/engine`. This kit deliberately does not re-export them: it
+ * owns the *balance* vocabulary, not the harness, and a partial re-export
+ * only made one subsystem arrive from two paths.
  *
- * `costCurve` builds the cost side as an engine `Formula` in level, which
- * the beat-time quotient and any inversion/integration downstream share.
+ * What lives here:
  *
- * `runWaypointProbe` checks per-producer payback texture at scheduled
- * waypoints (own-income beat time, classified into Csikszentmihalyi flow
- * channels). `runProbe` with `BeatProbe.tuningWindow` checks
- * beat-completion-time distributions across a seed sweep, with `inTuningWindow`
- * classification. `runSensitivity` (with `until`/`axes` for predicate-
- * bounded sweeps) confirms ±%-perturbation robustness once a balance is
- * chosen.
+ * - `costCurve` — the cost side as an engine `Formula` in level, shared by
+ *   the beat-time quotient and any inversion/integration downstream.
+ * - `producerPacingInspector` — the `inspect` callback `runWaypointProbe`
+ *   takes, producing the `ProducerPacing` rows `renderFlowTable` renders.
+ * - `report.ts` — the markdown renderers a discovery script prints.
+ *
+ * Discovery shape: scripts drive the engine runners, render with `report.ts`,
+ * iterate balance constants until tables are green. Regression shape: a thin
+ * sim test pins the chosen `terminationTime` distribution per beat.
  */
 
 import {
@@ -28,15 +29,6 @@ import {
   type FlowChannel,
 } from '@open-loop/engine';
 import { costCurve } from './cost-curve';
-
-export {
-  runProbe,
-  runWaypointProbe,
-  type BeatProbe,
-  type BeatResult,
-  type Waypoint,
-  type WaypointSnapshot,
-} from '@open-loop/engine';
 
 export { costCurve, type CostCurveParams, type CostScalingFamily } from './cost-curve';
 

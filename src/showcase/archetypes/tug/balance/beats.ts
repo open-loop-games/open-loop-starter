@@ -14,9 +14,8 @@
  * multi-match driver in `match-driver.ts::createMatchDriverModule`.
  */
 
-import { type Engine } from '@open-loop/engine';
+import { type BeatProbe, type Engine } from '@open-loop/engine';
 import { LaneKey, MatchKey, MetaKey } from '../modules';
-import type { BeatProbe } from '@/balance';
 
 // ─── Windows + beat predicates ───────────────────────────────────────────
 

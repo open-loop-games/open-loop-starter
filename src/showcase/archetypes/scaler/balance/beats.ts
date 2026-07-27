@@ -19,8 +19,7 @@
  *   verify-probe.ts — spec-vs-sim diff per sub-pass
  */
 
-import { Decimal } from '@open-loop/engine';
-import type { BeatProbe } from '@/balance';
+import { Decimal, type BeatProbe } from '@open-loop/engine';
 import {
   eccTranscend,
   getCoinsThisPrestige,

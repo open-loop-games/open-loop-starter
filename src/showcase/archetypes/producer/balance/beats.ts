@@ -16,9 +16,8 @@
  * until the math closes.
  */
 
-import { Decimal, type DecimalSource } from '@open-loop/engine';
+import { Decimal, type BeatProbe, type DecimalSource, type Waypoint } from '@open-loop/engine';
 import { getAchievements, getBuildings, getPrimaryResource, getUpgrades } from '../modules';
-import type { BeatProbe, Waypoint } from '@/balance';
 
 // ─── Windows ──────────────────────────────────────────────────────────────
 

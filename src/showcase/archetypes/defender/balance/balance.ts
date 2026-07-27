@@ -36,9 +36,8 @@
  * Identity + windows fit in this single file.
  */
 
-import { type Engine } from '@open-loop/engine';
+import { type BeatProbe, type Engine } from '@open-loop/engine';
 import { BloonsKey, RoundKey, TowersKey } from '../modules';
-import type { BeatProbe } from '@/balance';
 
 // ─── Identity ────────────────────────────────────────────────────────────
 

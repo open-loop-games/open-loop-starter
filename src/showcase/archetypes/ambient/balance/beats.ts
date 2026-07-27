@@ -17,9 +17,8 @@
  * Worked example for cross-reference: `../../producer/balance/beats.ts`.
  */
 
-import { Decimal } from '@open-loop/engine';
+import { Decimal, type BeatProbe, type Waypoint } from '@open-loop/engine';
 import { getAchievements, getAutoProducers, getPrimaryResource, getUnlocks } from '../modules';
-import type { BeatProbe, Waypoint } from '@/balance';
 
 // ─── Windows ────────────────────────────────────────────────────────────────
 
