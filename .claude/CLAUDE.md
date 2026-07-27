@@ -117,7 +117,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 
 Three rules for per-archetype balance work under `sim/` and `balance/`:
 
-- **Math first, sim to verify.** Use closed-form expressions (`calculateBeatTiming`, geometric series, piecewise integrals) to predict balance targets. Sim-verify at a coarse `tickDelta` (1s–5s) — not the default 0.05s, which wastes cycles on sub-second fidelity for minute-scale events.
+- **Math first, sim to verify.** Use closed-form expressions (`costCurve` and the engine's `Formula` algebra, geometric series, piecewise integrals) to predict balance targets. Sim-verify at a coarse `tickDelta` (1s–5s) — not the default 0.05s, which wastes cycles on sub-second fidelity for minute-scale events.
 - **Scripts discover, Vitest locks.** Balance discovery (solver iteration, projector runs, perturbation sweeps) belongs in vite-node scripts (`pnpm balance:*`). Vitest is for regression locks: chosen invariants pinned with tolerance bounds *after* discovery converges. Don't route discovery through Vitest — its semantics fight the workflow.
 - **Step solvers incrementally.** For multi-beat solvers, run beat N alone at `PASSES = 1`, then `PASSES = 3`, then add the next beat. Each rung should flush a log in under two minutes. The full run is the last step, not the first.
 

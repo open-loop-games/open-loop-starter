@@ -8,6 +8,9 @@
  * Regression shape: a thin sim test pins the chosen `terminationTime`
  * distribution per beat.
  *
+ * `costCurve` builds the cost side as an engine `Formula` in level, which
+ * the beat-time quotient and any inversion/integration downstream share.
+ *
  * `runWaypointProbe` checks per-producer payback texture at scheduled
  * waypoints (own-income beat time, classified into Csikszentmihalyi flow
  * channels). `runProbe` with `BeatProbe.tuningWindow` checks
@@ -18,11 +21,13 @@
  */
 
 import {
+  Decimal,
   type Engine,
-  calculateBeatTiming,
   classifyFlowChannel,
+  toNumber,
   type FlowChannel,
 } from '@open-loop/engine';
+import { costCurve } from './cost-curve';
 
 export {
   runProbe,
@@ -32,6 +37,8 @@ export {
   type Waypoint,
   type WaypointSnapshot,
 } from '@open-loop/engine';
+
+export { costCurve, type CostCurveParams, type CostScalingFamily } from './cost-curve';
 
 export {
   formatChannel,
@@ -86,20 +93,22 @@ export function producerPacingInspector(
   return (engine) => {
     const out: ProducerPacing[] = [];
     for (const p of inspector.ownedProducers(engine)) {
-      const beatTime = calculateBeatTiming({
+      const nextCost = costCurve(p.level, {
         baseCost: p.baseCost,
         costMultiplier: p.costScaling,
-        baseProduction: p.perUnitRate,
-        quantity: p.quantity,
-        level: p.level,
-      });
-      const sec = Number(beatTime);
+      }).evaluate();
+      const production = Decimal.mul(p.perUnitRate, p.quantity);
+      // Nothing is ever afforded at zero production. `classifyFlowChannel`
+      // reads Infinity as 'breakdown' and the report renders it as '∞'.
+      const sec = Decimal.lte(production, 0)
+        ? Infinity
+        : toNumber(Decimal.div(nextCost, production));
       out.push({
         producerId: p.id,
         level: p.level,
         quantity: p.quantity,
         perUnitRate: p.perUnitRate,
-        nextCost: Number(p.baseCost) * Math.pow(Number(p.costScaling), p.level),
+        nextCost: toNumber(nextCost),
         beatTimeSeconds: sec,
         channel: classifyFlowChannel(sec),
       });
