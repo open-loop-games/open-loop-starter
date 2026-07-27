@@ -42,10 +42,9 @@
  * - Transcend conversion gated via `anyOf(coinsThresholdRequirement,
  *   createBooleanRequirement({ requirement: gainGteFloor }))` — canonical disjunction lift from
  *   `Synergism.ts:3631-3633` mirroring leaf 2's prestige conversion shape.
- *   Gain formula uses `createPolynomialFormula(transcendPow, transcendDivisor)`
- *   from the engine — `Synergism.ts:3583-3585` is `floor((c/1e100)^0.03)`,
- *   exactly the polynomial-with-sub-1-exponent shape `createPolynomialFormula`
- *   exposes (`open-loop-engine/src/systems/conversion.ts:256-263`).
+ *   Gain formula is an inline computed — `Synergism.ts:3583-3585` is
+ *   `floor((c/1e100)^0.03)`, with the exponent read at evaluation time rather
+ *   than captured, because Ch5 crushes `transcendPow` while active.
  *
  * Cross-tier modifier bindings (transcend upgrades into coin / mythos
  * rateChains) flow through `modules/scaler-game-state.ts`'s
@@ -482,10 +481,10 @@ export const transcendModule: EngineModule = {
     // ─── transcendPointGain formula ────────────────────────────────────────
     // Canonical (`Synergism.ts:3583-3585`):
     //   transcendPointGain = floor((coinsThisTranscension / 1e100) ^ transcendPow)
-    // Earlier leaves used `createPolynomialFormula(exponent, scale)` which
-    // captures the exponent at construction. Ch5 crushes `transcendPow` to
-    // 0.001 while active, so the formula goes inline as a hand-rolled computed
-    // mirroring the prestige shape (`prestige.ts § prestigePointGain formula`).
+    // The exponent is read inside the computed rather than captured at
+    // construction: Ch5 crushes `transcendPow` to 0.001 while active, so
+    // anything binding it once is wrong for the duration of the challenge.
+    // Mirrors the prestige shape (`prestige.ts § prestigePointGain formula`).
     // First-arc port still omits the upgrade-44 / corruption / deflation
     // modifiers that compound on top in canonical (upgrade 44 deferred — see
     // `data/upgrades.ts § Skeleton`).
