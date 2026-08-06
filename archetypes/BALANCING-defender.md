@@ -99,5 +99,5 @@ Known pre-staged unknowns Phase 5b will resolve:
 ## Carry-forward to Phase 5c
 
 - PR-amend `BALANCING.md`: lift override-path rule, dead-fields rule, methodology-rekey caveat removal, stasis-bifurcation finding. All four hit ready-to-promote status in this pass.
-- Audit `candidate-primitives.md`: defender's static-path-list (`data/path.ts`) is the locked Phase 1 decision against `createFlowField`. The N=2 trigger (a second consumer needing dynamic re-pathing under tower placement) is still unmet. Drop a comment on the `createFlowField` entry noting defender's N=2 *candidate* status (path is static; the trigger is dynamic re-pathing, not just spatial-pathfinding-as-a-mechanic).
+- Audit `candidate-primitives.md`: defender's static-path-list (`data/path.ts`) is the locked Phase 1 decision against a weighted grid distance field (now shipped as `SpatialGrid.distanceField`). The trigger — a consumer needing dynamic re-pathing under tower placement — is still unmet, so defender is a *candidate* receipt only: the qualifier is dynamic re-pathing, not spatial-pathfinding-as-a-mechanic.
 - Close umbrella OL-1021 with the full commit graph + cross-archetype convergence-status table.

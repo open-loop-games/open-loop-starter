@@ -53,12 +53,11 @@ export function getMap(): MapApi {
  * lengths in lane units, and serves `positionAtDistance` via binary search
  * over the prefix-sum array.
  *
- * TODO(expansion): if a second consumer needs dynamic re-pathing under
- * tower placement, graduate `createFlowField` (open-loop-engine
- * candidate-primitives.md § createFlowField — N=1 at Borglike today). Defender
- * arc 1's path is static so the hand-roll stays local. The static prefix-sum
- * approach below becomes the N=2 graduation trigger the moment re-pathing
- * lands.
+ * TODO(expansion): if a second consumer needs dynamic re-pathing under tower
+ * placement, this wants `SpatialGrid.distanceField` — the weighted grid
+ * distance field, shipped 2026-08-05. Defender arc 1's path is static so the
+ * hand-roll stays local: a prefix-sum over a fixed polyline answers
+ * "where am I at distance d", which a distance field does not.
  */
 export function createMapModule(data: DefenderData): EngineModule {
   return {
