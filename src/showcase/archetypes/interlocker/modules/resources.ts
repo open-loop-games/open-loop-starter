@@ -141,9 +141,9 @@ export function createResourcesModule(data: InterlockerData): EngineModule {
       }
 
       // ─── Bag ──────────────────────────────────────────────────────────
-      // TODO(expansion): First archetype consumer of `createResourceBag` with
-      // per-type reactive caps via ModifierChain getters. N=1 receipt entry:
-      // candidate-primitives.md (bag-adoption pattern).
+      // Wide-graph wallet: one bag, per-type caps as chain getters, slots linked
+      // to persistent Resources. Composition over `capacityPerType`, not an engine
+      // gap — indexed as a recipe (candidate-recipes.md § Wide-graph wallet).
       const capacityPerType: Record<string, () => DecimalSource> = {};
       for (const spec of data.resources) {
         if (spec.baseCapacity === null) continue;

@@ -2,6 +2,7 @@ import { persistent, type EngineContext, type EngineModule } from '@open-loop/en
 import {
   Decimal,
   setupPolicyAutoPurchase,
+  setupSweepAutoPurchase,
   selectionComposite,
   selectionPaybackPeriod,
   selectionCheapest,
@@ -132,32 +133,22 @@ export function createProducerAutobuyersModule(): EngineModule {
       // honors, so a burst of upgrade unlocks can't drain the pool the producer
       // autobuyer is accumulating toward its next tier. With the default
       // fraction 0 this reduces to the plain "buy everything affordable" sweep.
-      //
-      // Runs through the spec's own `tick` (driven by the registry loop) rather
-      // than `setupSweepAutoPurchase`, because that helper has no reserve knob:
-      // a Purchasable doesn't expose its cost resource, so a general reserve
-      // floor needs a resource handle the sweep can't reach. Producer is
-      // single-currency — every upgrade costs the primary resource — so the
-      // reserve check reads `primary.value` directly here.
-      const sweepList = upgrades.getAll().map((entry) => entry.purchasable);
       const upgradeAutoBuy: AutobuyerSpec = {
         id: 'autobuyer/producer/upgrades',
         groupId: 'upgrades',
         displayName: 'Upgrade auto-buy',
         isUnlocked,
         isActive: persistent<boolean>(false, { name: 'producer-upgrades-active' }),
-        tick: () => {
-          for (const p of sweepList) {
-            if (!p.canPurchase.value) continue;
-            // Recompute the floor against the live bank each iteration so the
-            // reserve holds cumulatively as earlier upgrades in the sweep spend.
-            const reserve = Decimal.mul(upgradeReserveFraction.value, primary.value);
-            const cost = Decimal.fromValue(p.getCost(p.amountToPurchase.value));
-            if (Decimal.sub(primary.value, reserve).gte(cost)) p.purchaseMax();
-          }
-        },
       };
       registry.push(upgradeAutoBuy);
+      setupSweepAutoPurchase(
+        upgrades.getAll().map((entry) => entry.purchasable),
+        {
+          enabled: autobuyerGate(master, upgradeAutoBuy),
+          reserve: () => Decimal.mul(upgradeReserveFraction.value, primary.value),
+        },
+        ctx.onTick,
+      );
     },
   };
 }

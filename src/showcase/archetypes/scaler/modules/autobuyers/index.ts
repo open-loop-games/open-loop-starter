@@ -173,7 +173,7 @@ export const autobuyersModule: EngineModule = {
 
     setupSweepAutoPurchase(
       [getAccelerator(), getMultiplier()],
-      () => autoEnabled.value && toggleAcceleratorMultiplier.value,
+      { enabled: () => autoEnabled.value && toggleAcceleratorMultiplier.value },
       ctx.onTick,
     );
 
@@ -181,7 +181,7 @@ export const autobuyersModule: EngineModule = {
       getCoinUpgrades()
         .getAll()
         .map((e) => e.purchasable),
-      () => autoEnabled.value && toggleCoinUpgrades.value,
+      { enabled: () => autoEnabled.value && toggleCoinUpgrades.value },
       ctx.onTick,
     );
 
@@ -273,13 +273,17 @@ export const autobuyersModule: EngineModule = {
       getPrestigeUpgrades()
         .getAll()
         .map((e) => e.purchasable),
-      () => autoEnabled.value && togglePrestigeUpgrades.value && prestigeUnlocked.value,
+      {
+        enabled: () => autoEnabled.value && togglePrestigeUpgrades.value && prestigeUnlocked.value,
+      },
       ctx.onTick,
     );
 
     setupSweepAutoPurchase(
       getCrystalUpgrades(),
-      () => autoEnabled.value && toggleCrystalUpgrades.value && prestigeUnlocked.value,
+      {
+        enabled: () => autoEnabled.value && toggleCrystalUpgrades.value && prestigeUnlocked.value,
+      },
       ctx.onTick,
     );
 
@@ -297,7 +301,10 @@ export const autobuyersModule: EngineModule = {
       getTranscendUpgrades()
         .getAll()
         .map((e) => e.purchasable),
-      () => autoEnabled.value && toggleTranscendUpgrades.value && transcendUnlocked.value,
+      {
+        enabled: () =>
+          autoEnabled.value && toggleTranscendUpgrades.value && transcendUnlocked.value,
+      },
       ctx.onTick,
     );
 

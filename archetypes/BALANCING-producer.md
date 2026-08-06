@@ -94,7 +94,10 @@ when every input is banked ≥ `trigger·capacity`). Producer is single-currency
 knob: `reserve = reserveFraction · bank`, folded into `setupPolicyAutoPurchase`'s
 `reserve` slot as a `tunable('balance/producerReserveFraction')`. Default 0 spends
 freely (preserving the pre-sweep behavior); the fraction is the harness sweep axis
-and the eventual player "% spend" slider. The walker's affordable filter matches
+and the eventual player "% spend" slider. The upgrade autobuyer carries the same
+knob as `balance/upgradeReserveFraction` through `setupSweepAutoPurchase`'s
+`reserve` slot — two independent axes, both engine-side, so neither manager
+re-implements the floor. The walker's affordable filter matches
 the driver only while the fraction is 0 — a fork raising it must mirror the reserve
 in `predict.ts`'s candidate filter (noted in that file's header).
 

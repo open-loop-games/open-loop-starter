@@ -63,12 +63,12 @@ export function createUnlocksModule(data: AmbientData): EngineModule {
       unlocks.register(data.unlocks);
 
       // Auto-purchase on every tick when affordable (i.e. requirement met).
-      // `enabled: () => true` because unlocks have no opt-out — they reveal
+      // `enabled: true` because unlocks have no opt-out — they reveal
       // unconditionally on threshold cross. Boolean requirements set
       // `requiresPay: false`, so no resource is consumed.
       setupSweepAutoPurchase(
         unlocks.getAll().map((entry) => entry.purchasable),
-        () => true,
+        { enabled: true },
         ctx.onTick,
       );
     },

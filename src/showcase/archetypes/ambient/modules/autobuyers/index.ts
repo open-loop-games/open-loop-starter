@@ -15,14 +15,24 @@ import {
 //   AntimatterDimensionsSourceCode/src/core/autobuyers/autobuyers.js:122-137 —
 //     master tick loop.
 //
-// Mirror of `src/archetypes/scaler/modules/autobuyers/index.ts` and
-// `src/archetypes/producer/modules/autobuyers/index.ts` — the cross-archetype
-// autobuyer-as-content shape. Visibility unlocks (`modules/unlocks.ts`)
-// remain non-registered: their `setupSweepAutoPurchase` install fires
-// unconditionally on threshold cross, since the Ambient contract forbids
-// player-pausable content reveals.
+// AD's hierarchy carries the buy loop because AD has no auto-purchase
+// primitive. Here the engine owns that half — `setupSweepAutoPurchase` /
+// `setupPolicyAutoPurchase` throttle, scan, and buy — so the registry declares
+// content and gates it, and installs no tick handler of its own. See the
+// producer mirror for the full rationale.
+//
+// Mirror of `src/showcase/archetypes/producer/modules/autobuyers/index.ts` —
+// the cross-archetype autobuyer-as-content shape. Visibility unlocks
+// (`modules/unlocks.ts`) remain non-registered: their `setupSweepAutoPurchase`
+// install fires unconditionally on threshold cross, since the Ambient contract
+// forbids player-pausable content reveals.
 
-export interface AutobuyerSpec<Config = unknown> {
+/**
+ * One player-facing autobuyer: its identity, its unlock, and its toggle.
+ * Behavior lives in the engine helper the spec's module installs, gated by
+ * {@link autobuyerGate}.
+ */
+export interface AutobuyerSpec {
   /** Stable identifier; persistent state lives under this name. */
   id: string;
   /** Group affordance for UI accessors. Free-form. */
@@ -33,12 +43,6 @@ export interface AutobuyerSpec<Config = unknown> {
   isUnlocked: Computable<boolean>;
   /** Player toggle. */
   isActive: Persistent<boolean>;
-  /** Throttle interval in seconds; 0 fires every tick. */
-  interval?: Computable<number>;
-  /** Bespoke per-autobuyer config. */
-  config?: Config;
-  /** Action body. Specs delegating to engine helpers leave this empty. */
-  tick?: (dt: number, ctx: EngineContext) => void;
 }
 
 export const AutobuyerMasterToggleKey: InjectionKey<Persistent<boolean>> = Symbol(
@@ -57,6 +61,9 @@ export function autobuyerGate(master: Persistent<boolean>, ab: AutobuyerSpec): (
 /**
  * Master autobuyer registry module. Per-category autobuyer modules push
  * their specs in connect().
+ *
+ * Registers no tick handler — the master toggle reaches each buy loop through
+ * {@link autobuyerGate}, not through a loop here.
  */
 export function createAutobuyerRegistryModule(): EngineModule {
   return {
@@ -67,34 +74,6 @@ export function createAutobuyerRegistryModule(): EngineModule {
 
       ctx.provide(AutobuyerMasterToggleKey, master);
       ctx.provide(AutobuyerRegistryKey, registry);
-
-      const accum = new WeakMap<AutobuyerSpec, number>();
-
-      ctx.onTick((dt: number) => {
-        if (!master.value) return;
-        for (const spec of registry) {
-          if (!spec.tick) continue;
-          if (!spec.isActive.value) continue;
-          if (!unref(processGetter(spec.isUnlocked))) continue;
-
-          const interval = Number(unref(processGetter(spec.interval ?? 0)));
-          if (interval <= 0) {
-            spec.tick(dt, ctx);
-            continue;
-          }
-          const carried = (accum.get(spec) ?? 0) + dt;
-          if (carried < interval) {
-            accum.set(spec, carried);
-            continue;
-          }
-          let remaining = carried;
-          while (remaining >= interval) {
-            spec.tick(dt, ctx);
-            remaining -= interval;
-          }
-          accum.set(spec, remaining);
-        }
-      });
     },
   };
 }

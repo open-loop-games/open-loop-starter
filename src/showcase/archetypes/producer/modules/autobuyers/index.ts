@@ -16,11 +16,26 @@ import {
 //   AntimatterDimensionsSourceCode/src/core/autobuyers/autobuyers.js:122-137 —
 //     master tick loop (single sequential canTick → tick).
 //
-// Mirror of `src/archetypes/scaler/modules/autobuyers/index.ts` — the scaler
-// archetype established this shape under OL-854; OL-855 backports it across
-// archetypes so the autobuyer-as-content pattern is the in-tree default.
+// AD's hierarchy carries the buy loop because AD has no auto-purchase
+// primitive — interval accumulation, the affordability scan, and the purchase
+// all live on the autobuyer object. Here the engine owns that half:
+// `setupSweepAutoPurchase` / `setupPolicyAutoPurchase` throttle, scan, and buy.
+// So the registry keeps only what the engine can't know — which autobuyers
+// exist, what to call them, when they unlock, and whether the player switched
+// them on — and installs no tick handler of its own. A spec that looks like it
+// needs a bespoke tick is describing a helper option that doesn't exist yet;
+// grow the helper rather than running a second loop beside it.
+//
+// Mirror of `src/showcase/archetypes/ambient/modules/autobuyers/index.ts`.
 
-export interface AutobuyerSpec<Config = unknown> {
+/**
+ * One player-facing autobuyer: its identity, its unlock, and its toggle.
+ *
+ * Behavior is deliberately absent. A spec's own module pushes it here for UI
+ * surfacing, then hands {@link autobuyerGate} to an engine auto-purchase
+ * helper — the helper is where throttling and the buy decision live.
+ */
+export interface AutobuyerSpec {
   /** Stable identifier; persistent state lives under this name. */
   id: string;
   /** Group affordance for UI accessors. Free-form. */
@@ -31,22 +46,6 @@ export interface AutobuyerSpec<Config = unknown> {
   isUnlocked: Computable<boolean>;
   /** Player toggle. Mirrors AD's per-instance `isActive`. */
   isActive: Persistent<boolean>;
-  /**
-   * Throttle interval in seconds. `0` (default) fires every tick; engine-level
-   * helpers like {@link setupPolicyAutoPurchase} carry their own interval, so
-   * autobuyers wrapping those helpers leave this at 0 and let the helper
-   * throttle.
-   */
-  interval?: Computable<number>;
-  /** Bespoke per-autobuyer config. */
-  config?: Config;
-  /**
-   * Action body. Autobuyers that delegate to `setupPolicyAutoPurchase` /
-   * `setupSweepAutoPurchase` pass an empty `tick` and rely on the engine
-   * helper's own ctx.onTick — they only need the registry for unlock
-   * surfacing + UI toggle bridging.
-   */
-  tick?: (dt: number, ctx: EngineContext) => void;
 }
 
 export const AutobuyerMasterToggleKey: InjectionKey<Persistent<boolean>> = Symbol(
@@ -68,6 +67,12 @@ export function autobuyerGate(master: Persistent<boolean>, ab: AutobuyerSpec): (
 /**
  * Master autobuyer registry module. Installs the `autobuyersOn` toggle and an
  * empty registry; per-category autobuyer modules push their specs in connect().
+ *
+ * Registers no tick handler. Every autobuyer's behavior sits in the engine
+ * helper its own module installed, so the master toggle reaches the buy loop
+ * through {@link autobuyerGate} rather than through a loop here — one owner
+ * per behavior, and the throttle state lands in the engine's persistent
+ * accumulator instead of a registry-side map the save never sees.
  */
 export function createAutobuyerRegistryModule(): EngineModule {
   return {
@@ -78,34 +83,6 @@ export function createAutobuyerRegistryModule(): EngineModule {
 
       ctx.provide(AutobuyerMasterToggleKey, master);
       ctx.provide(AutobuyerRegistryKey, registry);
-
-      const accum = new WeakMap<AutobuyerSpec, number>();
-
-      ctx.onTick((dt: number) => {
-        if (!master.value) return;
-        for (const spec of registry) {
-          if (!spec.tick) continue;
-          if (!spec.isActive.value) continue;
-          if (!unref(processGetter(spec.isUnlocked))) continue;
-
-          const interval = Number(unref(processGetter(spec.interval ?? 0)));
-          if (interval <= 0) {
-            spec.tick(dt, ctx);
-            continue;
-          }
-          const carried = (accum.get(spec) ?? 0) + dt;
-          if (carried < interval) {
-            accum.set(spec, carried);
-            continue;
-          }
-          let remaining = carried;
-          while (remaining >= interval) {
-            spec.tick(dt, ctx);
-            remaining -= interval;
-          }
-          accum.set(spec, remaining);
-        }
-      });
     },
   };
 }
