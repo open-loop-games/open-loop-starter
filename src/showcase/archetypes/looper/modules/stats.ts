@@ -47,7 +47,7 @@ import { LooperTuningRegistryKey } from './tuning';
  * Reference: idleLoops/stats.js getLevelFromExp / getLevelFromTalent
  */
 function statXpToLevel(xp: MaybeRef<DecimalSource>) {
-  return Formula.variable(xp).div(100).times(8).add(1).sqrt().sub(1).div(2).floor();
+  return Formula.variable(xp).div(100).mul(8).add(1).sqrt().sub(1).div(2).floor();
 }
 
 /**
