@@ -41,7 +41,7 @@ so its pacing is not a fire-time curve but a *trajectory* the solver constructs
 under a parameter setting. The lifted numbers still fall into named shapes —
 level-XP curve, adjusted-ticks (`ceil(manaCost × costMult)`), talent multiplier,
 regular-var pool sizing, gold↔mana exchange — with closed-form receipts for each
-subsystem at `open-loop-research/inbox/closed-form-progression/looper.md` (18
+subsystem at `open-loop-research/methodology/techniques/closed-form-progression/per-archetype/looper.md` (18
 rows, source-line cited across the vanilla / dmchurch / omsi / lloyd / squirrel
 variants). But the economy *as a whole* has no projectable closed form, which is
 why balance here is **solver-driven** (methodology #7, engine-as-oracle) rather
@@ -163,7 +163,7 @@ idle-loops-ng lens          A*/beam search + sim substrate + sweeps            t
   per-tick mechanics, state partition, queue-mutation taxonomy, XP accrual.
 - Exemplar (shape validation, not a lift target): idle-loops vanilla via
   `idle-loops-ng`; closed-form receipts at
-  `open-loop-research/inbox/closed-form-progression/looper.md`.
+  `open-loop-research/methodology/techniques/closed-form-progression/per-archetype/looper.md`.
 - Umbrella: `studio/open-loop-starter#9` (canonical-surface sweep); `#13` (this leaf).
 - Sibling clones: `src/showcase/archetypes/scaler/`, `.../interlocker/`, `.../defender/`.
 - Methodology + balance kit: `../README.md`, `archetypes/BALANCING.md`,

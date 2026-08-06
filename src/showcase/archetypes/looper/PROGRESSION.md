@@ -22,7 +22,7 @@ re-balance.
 
 Closed-form receipts for every subsystem (level XP curve, adjusted-ticks,
 talent multiplier, regular-var pool sizing, gold↔mana exchange) live at
-`open-loop-research/inbox/closed-form-progression/looper.md` — 18 rows with
+`open-loop-research/methodology/techniques/closed-form-progression/per-archetype/looper.md` — 18 rows with
 source-line citations across the vanilla / dmchurch / omsi / lloyd /
 squirrel variants. This document inlines operationally load-bearing
 formulas; for the algebra classifications and the cross-variant comparison
@@ -526,7 +526,7 @@ progress bars, the wider Idle Loops content) is out of scope.
 
 - **Closed-form receipts** (level XP curve, adjusted-ticks, talent
   multiplier, regular-var pool sizing, gold-mana exchange, cross-variant
-  comparison): `open-loop-research/inbox/closed-form-progression/looper.md`.
+  comparison): `open-loop-research/methodology/techniques/closed-form-progression/per-archetype/looper.md`.
 - **Community gameplay analysis** (game overview, action-queue mechanics,
   mana-as-time discussion, soulstone prestige): `open-loop-research/analyses/complete/idle-loops-analysis.md`.
 - **Reference implementation** (vanilla idle-loops source, multi-variant

@@ -9,7 +9,7 @@ don't restate it here.
 ## Methodology — why this archetype needs #7
 
 Looper is single-subsystem **Discrete planning / scheduling** per the
-research subsystem inventory (`open-loop-research/inbox/closed-form-progression/looper.md`
+research subsystem inventory (`open-loop-research/methodology/techniques/closed-form-progression/per-archetype/looper.md`
 row 15). Methodology #7 (solver-driven balance) per `BALANCING.md
 § Theme 3 #7` lands here.
 
