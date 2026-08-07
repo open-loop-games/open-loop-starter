@@ -3,6 +3,9 @@ import {
   createCostRequirement,
   createBooleanRequirement,
   createPurchasableCategory,
+  tunable,
+  unref,
+  type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type Purchasable,
@@ -10,13 +13,9 @@ import {
   type ComputedRef,
 } from '@open-loop/engine';
 import { computed } from 'vue';
-import { PRESTIGE_BALANCE, type PrestigeBalance } from '../data/prestige';
-import {
-  UPGRADE_BALANCE,
-  CYCLER_UPGRADES,
-  type UpgradeBalance,
-  type UpgradeDef,
-} from '../data/upgrades';
+import { PRESTIGE_BALANCE } from '../data/prestige';
+import { CyclerTuningRegistryKey, type CyclerTunableKey } from './tuning';
+import { UPGRADE_BALANCE, CYCLER_UPGRADES, type UpgradeDef } from '../data/upgrades';
 import { getBuild } from './build';
 import { getPrestige } from './prestige';
 
@@ -62,26 +61,31 @@ export function getUpgrades(): UpgradesApi {
   return upgrades;
 }
 
-export interface UpgradesModuleOptions {
-  prestige?: PrestigeBalance;
-  upgrade?: UpgradeBalance;
-}
-
-export function createUpgradesModule(options: UpgradesModuleOptions = {}): EngineModule {
-  const prestigeData = options.prestige ?? PRESTIGE_BALANCE;
-  const upgradeData = options.upgrade ?? UPGRADE_BALANCE;
-  const quorum = prestigeData.mergeQuorum;
-  const {
-    powerUpgradeCostRatio: ratio,
-    gBendRatio,
-    gBendBaseCost,
-    gBendCostRatio,
-    gBendGateStep,
-  } = upgradeData;
+export function createUpgradesModule(): EngineModule {
+  // The reach gate's step is structural — it indexes the power ladder rather
+  // than pricing anything, so it stays plain.
+  const { gBendGateStep } = UPGRADE_BALANCE;
 
   return {
     id: 'cycler/upgrades',
+    dependencies: ['cycler/tuning'],
     install(ctx) {
+      const registry = ctx.inject(CyclerTuningRegistryKey);
+      const t = (key: CyclerTunableKey, fallback: number) =>
+        tunable<DecimalSource>(registry, key, () => fallback);
+
+      // Costs and the bend are read at purchase / run-start, so a pushed scope
+      // reaches them without a rebuild.
+      const quorumT = t('prestige/mergeQuorum', PRESTIGE_BALANCE.mergeQuorum);
+      const ratioT = t('upgrades/powerUpgradeCostRatio', UPGRADE_BALANCE.powerUpgradeCostRatio);
+      const gBendRatioT = t('upgrades/gBendRatio', UPGRADE_BALANCE.gBendRatio);
+      const gBendBaseCostT = t('upgrades/gBendBaseCost', UPGRADE_BALANCE.gBendBaseCost);
+      const gBendCostRatioT = t('upgrades/gBendCostRatio', UPGRADE_BALANCE.gBendCostRatio);
+      const quorum = () => Number(unref(quorumT));
+      const ratio = () => Number(unref(ratioT));
+      const gBendRatio = () => Number(unref(gBendRatioT));
+      const gBendBaseCost = () => Number(unref(gBendBaseCostT));
+      const gBendCostRatio = () => Number(unref(gBendCostRatioT));
       // Late-bound holder for the g-bender purchasable — its `amount` is the bend
       // level L_bend, the single source of truth read by the cost, the reach gate,
       // and `bendBase`. Populated after `register`; every getter that reads it is
@@ -103,7 +107,7 @@ export function createUpgradesModule(options: UpgradesModuleOptions = {}): Engin
               requirements: createCostRequirement({
                 resource: getPrestige().fragmentsResource,
                 cost: () =>
-                  new Decimal(quorum).mul(Decimal.pow(ratio, getBuild().powerLevel.value)),
+                  new Decimal(quorum()).mul(Decimal.pow(ratio(), getBuild().powerLevel.value)),
               }),
               limit: Infinity,
               bulkPurchase: false,
@@ -125,7 +129,7 @@ export function createUpgradesModule(options: UpgradesModuleOptions = {}): Engin
                 createCostRequirement({
                   resource: getPrestige().fragmentsResource,
                   cost: () =>
-                    new Decimal(gBendBaseCost).mul(Decimal.pow(gBendCostRatio, gBendLevelOf())),
+                    new Decimal(gBendBaseCost()).mul(Decimal.pow(gBendCostRatio(), gBendLevelOf())),
                 }),
                 createBooleanRequirement({
                   requirement: () =>
@@ -150,7 +154,7 @@ export function createUpgradesModule(options: UpgradesModuleOptions = {}): Engin
       const gBendLevel = computed(() => gBendLevelOf());
       // g_eff = 1 + (g − 1)·r_bend^L_bend — the multiplicative approach to the g=1
       // asymptote (data/upgrades.ts § Balance (g-bender)). L_bend 0 ⇒ g unchanged.
-      const bendBase = (g: number): number => 1 + (g - 1) * Math.pow(gBendRatio, gBendLevelOf());
+      const bendBase = (g: number): number => 1 + (g - 1) * Math.pow(gBendRatio(), gBendLevelOf());
 
       const api: UpgradesApi = { category, reach, gBender, gBendLevel, bendBase };
       upgrades = api;

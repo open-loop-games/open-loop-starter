@@ -2,16 +2,20 @@ import {
   Decimal,
   createSpatialGrid,
   persistent,
+  tunable,
+  unref,
   withPersistentContext,
+  type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type ComputedRef,
   type SpatialGrid,
 } from '@open-loop/engine';
 import { computed } from 'vue';
-import { BUILD_BALANCE, type BuildBalance } from '../data/build';
-import { DEFENSE_BALANCE, type DefenseBalance } from '../data/defense';
+import { BUILD_BALANCE } from '../data/build';
+import { DEFENSE_BALANCE } from '../data/defense';
 import { BOARD, PIECES, REFERENCE_LAYOUT, type PieceKind } from '../data/pieces';
+import { CyclerTuningRegistryKey, type CyclerTunableKey } from './tuning';
 import { evaluateBoard, previewAt, type BoardEvaluation, type OccupancyView } from './adjacency';
 
 /**
@@ -99,27 +103,38 @@ export function getBuild(): BuildApi {
   return build;
 }
 
-export interface BuildModuleOptions {
-  build?: BuildBalance;
-  defense?: DefenseBalance;
-}
-
 interface BoardCell {
   piece: PieceKind | null;
 }
 
-export function createBuildModule(options: BuildModuleOptions = {}): EngineModule {
-  const data = options.build ?? BUILD_BALANCE;
-  const defense = options.defense ?? DEFENSE_BALANCE;
-  const { boardCells, baseOutputCeiling, adjacencyBoost, producerUpgradeRatio } = data;
-  const { forwardCells, forwardRows, lanceIntercept, baseRepair } = defense;
+export function createBuildModule(): EngineModule {
+  // Structural cardinality — board and zone shape, not balance. Stays in the
+  // data layer per the engine guide § Where balance constants live.
+  const { boardCells } = BUILD_BALANCE;
+  const { forwardCells, forwardRows } = DEFENSE_BALANCE;
   const bulwarkThroughput = PIECES.bulwark.throughput ?? 0;
   const { width, height } = BOARD;
   const cellCount = width * height;
 
   return {
     id: 'cycler/build',
+    dependencies: ['cycler/tuning'],
     install(ctx) {
+      // The ceiling terms bind through the tuning registry. Each is read inside
+      // a `computed`, so a pushed scope re-derives dMax / cMax / repair on the
+      // next read rather than needing a rebuild.
+      const registry = ctx.inject(CyclerTuningRegistryKey);
+      const t = (key: CyclerTunableKey, fallback: number) =>
+        tunable<DecimalSource>(registry, key, () => fallback);
+
+      const baseOutputCeiling = t('capacity/baseOutputCeiling', BUILD_BALANCE.baseOutputCeiling);
+      const adjacencyBoost = t('capacity/adjacencyBoost', BUILD_BALANCE.adjacencyBoost);
+      const producerUpgradeRatio = t(
+        'capacity/producerUpgradeRatio',
+        BUILD_BALANCE.producerUpgradeRatio,
+      );
+      const lanceIntercept = t('capacity/lanceIntercept', DEFENSE_BALANCE.lanceIntercept);
+      const baseRepair = t('line/baseRepair', DEFENSE_BALANCE.baseRepair);
       const state = withPersistentContext('cycler/build', () => ({
         // Row-major occupancy — the save format; the grid is rebuilt from it.
         placements: persistent<(PieceKind | null)[]>(Array(cellCount).fill(null), {
@@ -158,7 +173,9 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
         grid.set(x, y, { piece: kind });
       };
 
-      const powerMult = computed(() => Decimal.pow(producerUpgradeRatio, state.powerLevel.value));
+      const powerMult = computed(() =>
+        Decimal.pow(unref(producerUpgradeRatio), state.powerLevel.value),
+      );
       const evaluation = computed<BoardEvaluation>(() => evaluateBoard(liveView, forwardRows));
       const capacity = computed(() => powerMult.value.mul(evaluation.value.total));
       const clearRate = computed(() => powerMult.value.mul(evaluation.value.clearRate));
@@ -169,13 +186,13 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
       const mwSurplus = computed(() => Decimal.max(0, capacity.value.sub(fireDraw.value)));
       // The authored OUTPUT ceiling — unchanged closed form (prestige currency reads this).
       const dMax = computed(() =>
-        powerMult.value.mul(boardCells).mul(baseOutputCeiling).mul(adjacencyBoost),
+        powerMult.value.mul(boardCells).mul(unref(baseOutputCeiling)).mul(unref(adjacencyBoost)),
       );
       // The authored CLEAR-RATE ceiling — the C peg the kernel freezes W₀ against
       // (all forward cells Lanced + full adjacency). Mirror of dMax; leak resolves
       // against realized `clearRate`, so under-fielding Lances breaches early.
       const cMax = computed(() =>
-        powerMult.value.mul(forwardCells).mul(lanceIntercept).mul(adjacencyBoost),
+        powerMult.value.mul(forwardCells).mul(unref(lanceIntercept)).mul(unref(adjacencyBoost)),
       );
       const bulwarkCount = computed(() =>
         state.placements.value.reduce((n, p) => (p === 'bulwark' ? n + 1 : n), 0),
@@ -183,7 +200,7 @@ export function createBuildModule(options: BuildModuleOptions = {}): EngineModul
       // Line-HP the board can route into the wall per STANDBY: a baseline trickle
       // plus each Bulwark's throughput, scaled by power (so Δ_wall stays power-invariant).
       const repairCapacity = computed(() =>
-        powerMult.value.mul(baseRepair + bulwarkCount.value * bulwarkThroughput),
+        powerMult.value.mul(Number(unref(baseRepair)) + bulwarkCount.value * bulwarkThroughput),
       );
       const placed = computed(() => state.placements.value.reduce((n, p) => (p ? n + 1 : n), 0));
 

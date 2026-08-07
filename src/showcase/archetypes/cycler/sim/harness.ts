@@ -20,11 +20,12 @@
  * § Balance methodology); the crossing lands within one dt.
  */
 
-import { type Engine } from '@open-loop/engine';
+import { type Engine, type TuningRegistry } from '@open-loop/engine';
 import { bootTestEngine, type TestEngineHandle } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import { BOARD, REFERENCE_DEFENSE } from '../data/pieces';
 import {
+  CyclerTuningRegistryKey,
   createCyclerModules,
   CycleKey,
   BuildKey,
@@ -53,6 +54,20 @@ export function boot(options: CyclerModulesOptions = {}): Engine {
     tickRate: TICK_RATE,
   });
   return handle.engine;
+}
+
+/**
+ * The archetype's tuning registry — the one perturbation path. A suite that
+ * needs a different balance value pushes a scope rather than re-booting with
+ * overridden data:
+ *
+ *   const restore = tuning().pushScope('test:H', { 'peg/headroom': () => 32 });
+ *   try { ... } finally { restore(); }
+ */
+export function tuning(): TuningRegistry {
+  const registry = getEngine().tryInject(CyclerTuningRegistryKey);
+  if (!registry) throw new Error('cycler/harness: tuning registry not provided');
+  return registry;
 }
 
 export function getEngine(): Engine {

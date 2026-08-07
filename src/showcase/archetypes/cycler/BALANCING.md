@@ -15,26 +15,32 @@ derivation; this file is how you work on it.
 
 ## The knobs
 
-Cycler has **no `tunable()` registry** — see Known thin, because three data files
-say otherwise. Perturbation goes through the boot factory instead:
-`createCyclerEngine({ modules: { … } })` rebuilds the engine with overridden
-data, which is what every probe does.
+Perturbation is `tunable()` against the registry in `modules/tuning.ts`. A probe
+or a suite sweeps a value with `pushScope`, never by rebuilding the engine with
+overridden data. Keys are namespaced by the spine term they sit in rather than by
+the file they came from, because that is how the economy decomposes:
 
-The constants that move the spine, by the term they sit in:
+| Key | Default | What it moves |
+|---|---|---|
+| `peg/headroom` (H) | `16` | **Authors run length.** `W₀ = cMax/H`, so the crossing is `log_g(H)` waves. |
+| `peg/salvoBase` (g) | `1.6` | Escalation per wave. The high-leverage lever — steeper g means a shorter, sharper run. |
+| `wave/standbySeconds` / `wave/inboundSeconds` | `90` / `30` | The 2-minute wave cycle. The only thing converting waves into minutes. |
+| `line/hp` / `line/baseRepair` | `500` / `30` | The `Δ_wall` tail — how long the line bleeds after the salvo passes it. |
+| `capacity/baseOutputCeiling` | `50` | The hard cap that makes capacity concave rather than unbounded. |
+| `capacity/adjacencyBoost` | `2.5` | Placement payoff — how much the board rewards arrangement over count. |
+| `capacity/lanceIntercept` | `40` | Per-Lance clear-rate; sets `cMax` with the forward-cell count. |
+| `capacity/producerUpgradeRatio` | `2` | `cMax` per permanent power layer. Rides the peg, so it buys reach, not run length. |
+| `upgrades/reinvestCostRatio` / `reinvestOutputExponent` | `3` / `0.369` | The within-run ladder. Cost ratio above output exponent is what forces convergence. |
+| `upgrades/gBendRatio` | `0.7` | Bends g toward the `g = 1` asymptote — the one permanent that *does* lengthen runs. |
+| `upgrades/gBendBaseCost` / `gBendCostRatio` | `6` / `2` | What the g-bender costs, and how fast that climbs. |
+| `upgrades/powerUpgradeCostRatio` | `2` | Reach price growth per power layer. |
+| `prestige/mergeQuorum` | `3` | Fragments per reach purchase; sets how many runs a prestige step costs. |
+| `prestige/fragmentScalePrimary` / `Secondary` | `1000` / `1200` | Currency minted per run. Sublinear in reach — see Couplings. |
 
-| Constant | Where | Default | What it moves |
-|---|---|---|---|
-| `headroom` (H) | `data/defense.ts` | `16` | **Authors run length.** `W₀ = cMax/H`, so the crossing is `log_g(H)` waves. |
-| `salvoBase` (g) | `data/defense.ts` | `1.6` | Escalation per wave. The high-leverage lever — steeper g means a shorter, sharper run. |
-| `lineHP` / `baseRepair` | `data/defense.ts` | `500` / `30` | The `Δ_wall` tail — how long the line bleeds after the salvo passes it. |
-| `standbySeconds` / `inboundSeconds` | `data/defense.ts` | `90` / `30` | The 2-minute wave cycle. The only thing converting waves into minutes. |
-| `baseOutputCeiling` | `data/build.ts` | `50` | The hard cap that makes capacity concave rather than unbounded. |
-| `adjacencyBoost` | `data/build.ts` | `2.5` | Placement payoff — how much the board rewards arrangement over count. |
-| `producerUpgradeRatio` | `data/build.ts` | `2` | `cMax` per permanent power layer. Rides the peg, so it buys reach, not run length. |
-| `reinvestCostRatio` / `reinvestOutputExponent` | `data/upgrades.ts` | `3` / `0.369` | The within-run ladder. Cost ratio above output exponent is what forces convergence. |
-| `gBendRatio` | `data/upgrades.ts` | `0.7` | Bends g toward the `g = 1` asymptote — the one permanent that *does* lengthen runs. |
-| `mergeQuorum` | `data/prestige.ts` | `3` | Fragments per reach purchase; sets how many runs a prestige step costs. |
-| `fragmentScalePrimary` / `Secondary` | `data/prestige.ts` | `1000` / `1200` | Currency minted per run. Sublinear in reach — see Couplings. |
+**Structural, deliberately not tunable:** board and zone cardinality
+(`boardCells`, `forwardCells`, `forwardRows`, `backCells`), `bossMilestone`, and
+`gBendGateStep`. Those are content shape and ladder indices, not balance — the
+engine guide § Where balance constants live keeps them in the data layer.
 
 ## Couplings
 
@@ -70,6 +76,12 @@ not drift. Read a *change* in the gap as a signal; the gap itself is expected.
 prestige — that is what makes the prestige ladder decelerate, and it is the
 log-frontier reading of the arc. Making currency linear would collapse the
 deceleration.
+
+**A pushed scope needs a run boundary.** `peg/headroom` and `peg/salvoBase` are
+read at `startRun` and then frozen for the run — that freeze is what keeps the
+crossing closed-form. So a scope pushed mid-run does nothing until the next run
+starts; probes and suites that sweep them call `startRun()` after the push. The
+capacity and cost knobs have no such rule, being read inside `computed` bodies.
 
 **One reference board, two consumers.** `balance/_board.ts` `placeReference` and
 `sim/harness.ts` `placeDefense` are the same placement, so probes and behavioral
@@ -111,17 +123,12 @@ mechanics do*, carrying no magnitudes, which is why they survive a retune.
 
 ## Known thin
 
-- **Three data files claim a `tunable()` surface that does not exist.**
-  `data/build.ts`, `data/threat.ts` and `data/upgrades.ts` each open by saying
-  the module wraps their perturbable values in `tunable()`. No module does —
-  there is no `createTuningRegistry` call anywhere in the archetype. The real
-  perturbation path is rebuilding the engine through
-  `createCyclerEngine({ modules })`, which works for probes but means the knobs
-  are not enumerable by the picker and the balance workbench cannot drive them.
-  Every other surviving archetype uses `tunable()`, and the engine guide
-  § Where balance constants live calls it the canonical answer. Either adopt it
-  or correct three file headers — but not neither, because a reader currently
-  goes looking for a surface that isn't there.
+- **`data/threat.ts` is superseded and unwired.** No module imports it: its
+  per-time burn was reindexed to the per-wave salvo in `data/defense.ts`, which
+  is what the kernel reads. The file is kept for the spine derivation it
+  documents, and its header now says so — but the values in it are inert, and
+  the right long-term answer is probably to move that prose somewhere a reader
+  will not mistake for live config.
 - **Absolute calibration is open in `data/threat.ts`.** Its own comment marks the
   reference numbers un-calibrated and defers absolute calibration to a probe
   measurement. The *shape* results in this file are solid — the peg, the

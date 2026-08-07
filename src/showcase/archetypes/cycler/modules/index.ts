@@ -1,10 +1,11 @@
 import type { EngineModule } from '@open-loop/engine';
 import { createCycleModule, type CycleModuleOptions } from './cycle';
-import { createBuildModule, type BuildModuleOptions } from './build';
-import { createWallModule, type WallModuleOptions } from './wall';
+import { createBuildModule } from './build';
+import { createWallModule } from './wall';
 import { createBurnTierModule, getBurnTier, type BurnTierModuleOptions } from './burn-tier';
-import { createPrestigeModule, type PrestigeModuleOptions } from './prestige';
-import { createUpgradesModule, getUpgrades, type UpgradesModuleOptions } from './upgrades';
+import { createPrestigeModule } from './prestige';
+import { createUpgradesModule, getUpgrades } from './upgrades';
+import { createTuningModule } from './tuning';
 
 export {
   CycleKey,
@@ -15,13 +16,7 @@ export {
   type RunState,
   type CycleModuleOptions,
 } from './cycle';
-export {
-  BuildKey,
-  getBuild,
-  createBuildModule,
-  type BuildApi,
-  type BuildModuleOptions,
-} from './build';
+export { BuildKey, getBuild, createBuildModule, type BuildApi } from './build';
 export {
   evaluateBoard,
   previewAt,
@@ -30,7 +25,13 @@ export {
   type BoardEvaluation,
   type ReceiverCell,
 } from './adjacency';
-export { WallKey, getWall, createWallModule, type WallApi, type WallModuleOptions } from './wall';
+export { WallKey, getWall, createWallModule, type WallApi } from './wall';
+export {
+  CyclerTuningRegistryKey,
+  createTuningModule,
+  type CyclerTunableKey,
+  type CyclerTunables,
+} from './tuning';
 export {
   BurnTierKey,
   getBurnTier,
@@ -38,29 +39,16 @@ export {
   type BurnTierApi,
   type BurnTierModuleOptions,
 } from './burn-tier';
-export {
-  PrestigeKey,
-  getPrestige,
-  createPrestigeModule,
-  type PrestigeApi,
-  type PrestigeModuleOptions,
-} from './prestige';
-export {
-  UpgradesKey,
-  getUpgrades,
-  createUpgradesModule,
-  type UpgradesApi,
-  type UpgradesModuleOptions,
-} from './upgrades';
+export { PrestigeKey, getPrestige, createPrestigeModule, type PrestigeApi } from './prestige';
+export { UpgradesKey, getUpgrades, createUpgradesModule, type UpgradesApi } from './upgrades';
 
-export interface CyclerModulesOptions
-  extends
-    CycleModuleOptions,
-    BuildModuleOptions,
-    WallModuleOptions,
-    BurnTierModuleOptions,
-    PrestigeModuleOptions,
-    UpgradesModuleOptions {}
+/**
+ * Construction-time options — **content and wiring only**. Balance values are
+ * not here: they bind through `tunable()` against the registry in `tuning.ts`,
+ * which is the archetype's one perturbation path. A probe sweeps a number with
+ * `pushScope`, never by rebuilding the engine with a different blob.
+ */
+export interface CyclerModulesOptions extends CycleModuleOptions, BurnTierModuleOptions {}
 
 /**
  * Compose the Cycler modules. Build installs first and owns the closed-form ceilings
@@ -74,7 +62,10 @@ export interface CyclerModulesOptions
  * and the power level (build), so it installs LAST.
  */
 export function createCyclerModules(options: CyclerModulesOptions = {}): EngineModule[] {
-  const build = createBuildModule(options);
+  // Installs first and depends on nothing — every balance constant in the
+  // archetype binds through the registry it provides.
+  const tuning = createTuningModule();
+  const build = createBuildModule();
   const burnTier = createBurnTierModule(options);
   const cycle = createCycleModule({
     ...options,
@@ -88,8 +79,8 @@ export function createCyclerModules(options: CyclerModulesOptions = {}): EngineM
         return { salvoBase: getUpgrades().bendBase(s.salvoBase) };
       }),
   });
-  const wall = createWallModule(options);
-  const prestige = createPrestigeModule(options);
-  const upgrades = createUpgradesModule(options);
-  return [build, burnTier, cycle, wall, prestige, upgrades];
+  const wall = createWallModule();
+  const prestige = createPrestigeModule();
+  const upgrades = createUpgradesModule();
+  return [tuning, build, burnTier, cycle, wall, prestige, upgrades];
 }

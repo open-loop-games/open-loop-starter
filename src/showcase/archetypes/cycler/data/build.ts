@@ -1,7 +1,8 @@
 // ─── Skeleton ───
 // Phase-A (build) constants for Cycler — the saturating production/defense
-// capacity. Plain values; the build module wraps the perturbable ones in
-// `tunable()`. The load-bearing correction (from the multiverse-hr Cycler pivot,
+// capacity. Plain values; `modules/build.ts`
+// binds the perturbable ones through `tunable()` against the registry in
+// `modules/tuning.ts`; `boardCells` stays plain, being board cardinality. The load-bearing correction (from the multiverse-hr Cycler pivot,
 // `/work/studio/multiverse-hr` #17): within-run capacity does NOT grow
 // geometrically without bound — every reinvestment ladder is convergent (pull
 // cost ratio > log output, income ∝ C^p with p<1, base output hard-capped, and

@@ -5,6 +5,8 @@ import {
   withPersistentContext,
   createResource,
   addResource,
+  tunable,
+  unref,
   type DecimalSource,
   type Resource,
   type EngineModule,
@@ -12,7 +14,8 @@ import {
   type ComputedRef,
 } from '@open-loop/engine';
 import { computed } from 'vue';
-import { PRESTIGE_BALANCE, type PrestigeBalance } from '../data/prestige';
+import { PRESTIGE_BALANCE } from '../data/prestige';
+import { CyclerTuningRegistryKey } from './tuning';
 import { getCycle } from './cycle';
 import { getBuild } from './build';
 
@@ -91,26 +94,35 @@ export function getPrestige(): PrestigeApi {
   return prestige;
 }
 
-export interface PrestigeModuleOptions {
-  prestige?: PrestigeBalance;
-}
-
 /** The cbrt-per-source transform: ⌊∛(total/scale)⌋, floored via the engine's
  *  scale-robust integer root (see consumer-guide § Sublinear per-source payouts). */
 function sublinear(total: Decimal, scale: number): Decimal {
   return integerRoot(total.div(scale), 3);
 }
 
-export function createPrestigeModule(options: PrestigeModuleOptions = {}): EngineModule {
-  const data = options.prestige ?? PRESTIGE_BALANCE;
-  const { fragmentScalePrimary, fragmentScaleSecondary } = data;
-
-  const fragmentsFor = (production: Decimal, endurance: Decimal): Decimal =>
-    sublinear(production, fragmentScalePrimary).add(sublinear(endurance, fragmentScaleSecondary));
-
+export function createPrestigeModule(): EngineModule {
   return {
     id: 'cycler/prestige',
+    dependencies: ['cycler/tuning'],
     install(ctx) {
+      const registry = ctx.inject(CyclerTuningRegistryKey);
+      const primary = tunable<DecimalSource>(
+        registry,
+        'prestige/fragmentScalePrimary',
+        () => PRESTIGE_BALANCE.fragmentScalePrimary,
+      );
+      const secondary = tunable<DecimalSource>(
+        registry,
+        'prestige/fragmentScaleSecondary',
+        () => PRESTIGE_BALANCE.fragmentScaleSecondary,
+      );
+
+      // Minting is read at run-end, so the scope in effect when the run banks
+      // is the one that applies.
+      const fragmentsFor = (production: Decimal, endurance: Decimal): Decimal =>
+        sublinear(production, Number(unref(primary))).add(
+          sublinear(endurance, Number(unref(secondary))),
+        );
       // Persistent meta + run state. `banked` guards against double-paying one
       // ended run (and, flipped, signals a fresh run needs its accumulator zeroed)
       // — so a save/reload mid-`ended` never re-banks. `outputRaw` is the run-scoped

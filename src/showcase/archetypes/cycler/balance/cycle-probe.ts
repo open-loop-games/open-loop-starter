@@ -18,7 +18,7 @@
 import { type Decimal } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
-import { createCyclerModules, CycleKey, BuildKey } from '../modules';
+import { createCyclerModules, CycleKey, BuildKey, CyclerTuningRegistryKey } from '../modules';
 import { BUILD_BALANCE } from '../data/build';
 import { DEFENSE_BALANCE } from '../data/defense';
 import { placeReference } from './_board';
@@ -47,21 +47,28 @@ async function measureRun(opts: { headroom?: number; powerLevel?: number }): Pro
   w0: Decimal;
   clearRate: Decimal;
 }> {
-  const defense = { ...DEFENSE_BALANCE, headroom: opts.headroom ?? H0 };
   const handle = bootTestEngine({
-    modules: [...sharedBase, ...createCyclerModules({ defense })],
+    modules: [...sharedBase, ...createCyclerModules()],
     tickRate: TICK_RATE,
     namespacePrefix: 'cycle-probe',
   });
   const cycle = handle.engine.tryInject(CycleKey);
   const build = handle.engine.tryInject(BuildKey);
-  if (!cycle || !build) throw new Error('cycle-probe: cycler modules did not install');
+  const registry = handle.engine.tryInject(CyclerTuningRegistryKey);
+  if (!cycle || !build || !registry) throw new Error('cycle-probe: cycler modules did not install');
+  // Sweep H through the tuning registry — the one perturbation path. The
+  // kernel re-reads it at run start, so the scope has to outlive the run.
+  const restore = registry.pushScope('probe:headroom', {
+    'peg/headroom': () => opts.headroom ?? H0,
+  });
   placeReference(build);
   const L = opts.powerLevel ?? 0;
-  if (L > 0) {
-    for (let i = 0; i < L; i++) build.raisePower();
-    cycle.startRun(); // re-peg cMax/H at the raised level; board persists
-  }
+  for (let i = 0; i < L; i++) build.raisePower();
+  // Re-peg under the pushed scope. H and g are read ONLY at run start and then
+  // frozen for the run — that is what keeps the crossing closed-form — so a
+  // scope pushed after install needs a run boundary to take effect. The board
+  // persists across it.
+  cycle.startRun();
   await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
   const out = {
     endedAt: cycle.endedAtMinutes.value ?? Number.NaN,
@@ -70,6 +77,7 @@ async function measureRun(opts: { headroom?: number; powerLevel?: number }): Pro
     w0: cycle.w0.value,
     clearRate: build.clearRate.value,
   };
+  restore();
   handle.dispose();
   return out;
 }

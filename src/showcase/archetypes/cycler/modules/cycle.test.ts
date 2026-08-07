@@ -19,7 +19,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, cycle, build, wall, placeDefense, tickUntil } from '../sim/harness';
+import { boot, cycle, build, wall, placeDefense, tickUntil, tuning } from '../sim/harness';
 import { DEFENSE_BALANCE } from '../data/defense';
 
 const { headroom: H, salvoBase: g } = DEFENSE_BALANCE;
@@ -96,9 +96,21 @@ describe('cycle kernel — run length is authored by H', () => {
     placeDefense();
     const tight = (await runToBreach()).endedAtMinutes.value!;
 
-    boot({ defense: { ...DEFENSE_BALANCE, headroom: H * 2 } });
-    placeDefense();
-    const loose = (await runToBreach()).endedAtMinutes.value!;
+    // Perturbation is a tuning scope, not a re-boot with overridden data —
+    // `pushScope` is the archetype's one path and the kernel re-reads H at
+    // run start, so the looser peg applies to the run started below.
+    boot();
+    const restore = tuning().pushScope('test:looser-headroom', {
+      'peg/headroom': () => H * 2,
+    });
+    let loose: number;
+    try {
+      placeDefense();
+      cycle().startRun();
+      loose = (await runToBreach()).endedAtMinutes.value!;
+    } finally {
+      restore();
+    }
 
     expect(loose).toBeGreaterThan(tight);
     // Doubling H shifts the crossing by ~log_g(2) waves (quantized to integer waves).

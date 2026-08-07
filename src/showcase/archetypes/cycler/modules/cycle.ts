@@ -1,14 +1,18 @@
 import {
   Decimal,
   persistent,
+  tunable,
+  unref,
   withPersistentContext,
+  type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type ComputedRef,
 } from '@open-loop/engine';
 import { computed } from 'vue';
-import { BUILD_BALANCE, type BuildBalance } from '../data/build';
-import { DEFENSE_BALANCE, type DefenseBalance } from '../data/defense';
+import { BUILD_BALANCE } from '../data/build';
+import { DEFENSE_BALANCE } from '../data/defense';
+import { CyclerTuningRegistryKey, type CyclerTunableKey } from './tuning';
 import { getBuild } from './build';
 import { getWall } from './wall';
 
@@ -91,10 +95,6 @@ export function getCycle(): CycleApi {
 }
 
 export interface CycleModuleOptions {
-  /** Difficulty + wave-cycle surface (H, salvoBase, standby/inbound seconds, bossMilestone, lineHP). */
-  defense?: DefenseBalance;
-  /** Permanent-power surface (producerUpgradeRatio) — scales the line buffer at run start. */
-  build?: BuildBalance;
   /**
    * Injected salvo schedule (the active posture's g). Defaults to the base
    * `DEFENSE_BALANCE.salvoBase` so the kernel is self-bootable before a posture
@@ -111,18 +111,35 @@ export interface CycleModuleOptions {
  * getters (both install before `onTick`/`startRun` fire), so no module-order change.
  */
 export function createCycleModule(options: CycleModuleOptions = {}): EngineModule {
-  const defense = options.defense ?? DEFENSE_BALANCE;
-  const build = options.build ?? BUILD_BALANCE;
-  const { headroom: H, standbySeconds, inboundSeconds, bossMilestone, lineHP, salvoBase } = defense;
-  const { producerUpgradeRatio } = build;
-  const waveCycleMinutes = (standbySeconds + inboundSeconds) / 60;
-  // The pace surface (g). Default freezes the base salvoBase; a posture module wires
-  // the live active-posture schedule. Only read at startRun.
-  const scheduleOf = options.schedule ?? (() => ({ salvoBase }));
+  const { bossMilestone } = DEFENSE_BALANCE;
 
   return {
     id: 'cycler/cycle',
+    dependencies: ['cycler/tuning'],
     install(ctx) {
+      // Balance constants bind through the tuning registry, so a probe can
+      // `pushScope` them and the next run re-reads. Every one of these is read
+      // at run start or per tick — never captured into a const here — which is
+      // what makes the scope push actually take effect.
+      const registry = ctx.inject(CyclerTuningRegistryKey);
+      const t = (key: CyclerTunableKey, fallback: number) =>
+        tunable<DecimalSource>(registry, key, () => fallback);
+
+      const H = t('peg/headroom', DEFENSE_BALANCE.headroom);
+      const standby = t('wave/standbySeconds', DEFENSE_BALANCE.standbySeconds);
+      const inbound = t('wave/inboundSeconds', DEFENSE_BALANCE.inboundSeconds);
+      const lineHP = t('line/hp', DEFENSE_BALANCE.lineHP);
+      const powerRatio = t('capacity/producerUpgradeRatio', BUILD_BALANCE.producerUpgradeRatio);
+      const baseSalvo = t('peg/salvoBase', DEFENSE_BALANCE.salvoBase);
+
+      const standbySeconds = () => Number(unref(standby));
+      const inboundSeconds = () => Number(unref(inbound));
+      const waveCycleMinutes = () => (standbySeconds() + inboundSeconds()) / 60;
+      const headroom = () => Number(unref(H));
+
+      // The pace surface (g). Default reads the tunable base; a posture module
+      // wires the live active-posture schedule. Only read at startRun.
+      const scheduleOf = options.schedule ?? (() => ({ salvoBase: Number(unref(baseSalvo)) }));
       // Persistent run state. `waveIndex`/`phaseState`/`phaseElapsed` drive the hard
       // cycle; `elapsedSeconds` is a real clock (for readouts, no longer the crossing
       // driver); `w0Raw`/`gRaw` are the pegged salvo baseline + active pace, both
@@ -133,8 +150,8 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
         phaseState: persistent<'standby' | 'inbound'>('standby', { name: 'phase-state' }),
         phaseElapsed: persistent<number>(0, { name: 'phase-elapsed' }),
         elapsedSeconds: persistent<number>(0, { name: 'elapsed-seconds' }),
-        w0Raw: persistent<string>(getBuild().cMax.value.div(H).toString(), { name: 'w0' }),
-        gRaw: persistent<number>(salvoBase, { name: 'g' }),
+        w0Raw: persistent<string>(getBuild().cMax.value.div(headroom()).toString(), { name: 'w0' }),
+        gRaw: persistent<number>(Number(unref(baseSalvo)), { name: 'g' }),
         enduranceRaw: persistent<string>('0', { name: 'run-endurance' }),
         runState: persistent<RunState>('running', { name: 'run-state' }),
         endedAtWaveRaw: persistent<number | null>(null, { name: 'ended-at-wave' }),
@@ -167,8 +184,8 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
         const done =
           state.phaseState.value === 'standby'
             ? state.phaseElapsed.value
-            : standbySeconds + state.phaseElapsed.value;
-        return Math.max(0, Math.min(1, done / (standbySeconds + inboundSeconds)));
+            : standbySeconds() + state.phaseElapsed.value;
+        return Math.max(0, Math.min(1, done / (standbySeconds() + inboundSeconds())));
       });
 
       const runState = computed(() => state.runState.value);
@@ -177,15 +194,16 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
         state.runState.value === 'ended' ? state.elapsedSeconds.value / 60 : null,
       );
 
-      const predictedRunLengthWaves = (): number => Math.log(H) / Math.log(state.gRaw.value);
-      const predictedRunLength = (): number => predictedRunLengthWaves() * waveCycleMinutes;
+      const predictedRunLengthWaves = (): number =>
+        Math.log(headroom()) / Math.log(state.gRaw.value);
+      const predictedRunLength = (): number => predictedRunLengthWaves() * waveCycleMinutes();
 
       const startRun = (): void => {
         // Freeze the active pace surface for this run (like the W₀ peg): a posture
         // switch between runs lands here, never mid-run.
         const s = scheduleOf();
         state.gRaw.value = s.salvoBase;
-        state.w0Raw.value = getBuild().cMax.value.div(H).toString();
+        state.w0Raw.value = getBuild().cMax.value.div(headroom()).toString();
         state.waveIndex.value = 0;
         state.phaseState.value = 'standby';
         state.phaseElapsed.value = 0;
@@ -196,7 +214,7 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
         // Rescale the line buffer with permanent power so the Δ_wall tail stays
         // power-invariant (leak ∝ C ∝ power; the buffer scales with it).
         const L = getBuild().powerLevel.value;
-        getWall().resetRun(lineHP * Math.pow(producerUpgradeRatio, L));
+        getWall().resetRun(Number(unref(lineHP)) * Math.pow(Number(unref(powerRatio)), L));
       };
 
       // The hard-phase controller. STANDBY drips surplus into the line (throughput-
@@ -211,8 +229,8 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
           // Continuous surplus-fed auto-repair: the per-STANDBY total is
           // min(mwSurplus, repairCapacity), dripped across the window.
           const budget = Decimal.min(getBuild().mwSurplus.value, getBuild().repairCapacity.value);
-          getWall().repair((budget.toNumber() / standbySeconds) * dt);
-          if (state.phaseElapsed.value >= standbySeconds) {
+          getWall().repair((budget.toNumber() / standbySeconds()) * dt);
+          if (state.phaseElapsed.value >= standbySeconds()) {
             state.phaseState.value = 'inbound';
             state.phaseElapsed.value = 0;
           }
@@ -229,12 +247,12 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
         // the window's close.
         const wave = salvo.value; // this wave's W_N (fixed while the phase holds)
         const leak = Decimal.max(0, wave.sub(getBuild().clearRate.value));
-        if (getWall().applyLeak((leak.toNumber() / inboundSeconds) * dt)) {
+        if (getWall().applyLeak((leak.toNumber() / inboundSeconds()) * dt)) {
           state.runState.value = 'ended';
           state.endedAtWaveRaw.value = state.waveIndex.value;
           return;
         }
-        if (state.phaseElapsed.value >= inboundSeconds) {
+        if (state.phaseElapsed.value >= inboundSeconds()) {
           state.enduranceRaw.value = runEndurance.value.add(wave).toString();
           state.waveIndex.value += 1;
           state.phaseState.value = 'standby';

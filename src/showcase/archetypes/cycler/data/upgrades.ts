@@ -1,7 +1,9 @@
 // ─── Skeleton ───
 // Upgrade constants for Cycler — the within-run reinvestment that builds toward
 // the capacity ceiling, and the permanent power that carries across prestige.
-// Plain values; the upgrade module wraps them in `tunable()`. The corrected model
+// Plain values; `modules/upgrades.ts` binds the perturbable ones through
+// `tunable()` against the registry in `modules/tuning.ts`. `gBendGateStep` stays
+// plain — it indexes the power ladder rather than pricing anything. The corrected model
 // (multiverse-hr #17): within-run reinvestment ladders are deliberately
 // CONVERGENT (this is what makes capacity saturate to D_max), and permanent power
 // upgrades re-peg the burn — so they buy REACH, not run length.

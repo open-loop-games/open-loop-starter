@@ -1,7 +1,15 @@
 // ─── Skeleton ───
 // Phase-B (pressure) constants for Cycler — the exogenous operating burn and the
-// difficulty surface it defines. Plain values; the burn module wraps them in
-// `tunable()`. The corrected spine (multiverse-hr #17, Increlution drain-to-death
+// difficulty surface it defines.
+//
+// SUPERSEDED AND UNWIRED. No module imports this file. The per-TIME burn below
+// was reindexed to a per-WAVE salvo in `data/defense.ts` (`SALVO_POSTURES`,
+// `salvoBase`), which is what the kernel actually reads; `balance/cycler-
+// projection.ts` says the same. What survives here is the derivation of the
+// corrected spine, kept because the reasoning is load-bearing and documented
+// nowhere else — not because anything runs on it. Do not tune these values
+// expecting an effect, and do not add a `tunable()` binding: a knob nothing
+// reads is worse than a plain constant, because it looks live. The corrected spine (multiverse-hr #17, Increlution drain-to-death
 // shape): the pressure is an escalating burn that debits the wallet on a
 // time/cycle schedule and must be outpaced by the saturated capacity D_max
 // (`data/build.ts`). It is EXOGENOUS and time-driven — never derived from

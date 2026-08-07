@@ -1,18 +1,17 @@
 import {
   persistent,
+  tunable,
+  unref,
   withPersistentContext,
+  type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type ComputedRef,
 } from '@open-loop/engine';
 import { computed } from 'vue';
-import {
-  DEFENSE_BALANCE,
-  SALVO_POSTURES,
-  type DefenseBalance,
-  type SalvoPosture,
-} from '../data/defense';
+import { DEFENSE_BALANCE, SALVO_POSTURES, type SalvoPosture } from '../data/defense';
 import { getBuild } from './build';
+import { CyclerTuningRegistryKey } from './tuning';
 
 /**
  * Salvo-posture module — the pace surface (see `../IDENTITY.md` § Growth ports,
@@ -78,26 +77,28 @@ export function getBurnTier(): BurnTierApi {
 export interface BurnTierModuleOptions {
   /** The salvo-posture ladder (pace surface). Defaults to `SALVO_POSTURES`. */
   posture?: readonly SalvoPosture[];
-  /** Shared peg constants (H) the per-posture crossing is authored against. */
-  defense?: DefenseBalance;
 }
 
 export function createBurnTierModule(options: BurnTierModuleOptions = {}): EngineModule {
   const postures = options.posture ?? SALVO_POSTURES;
-  const defense = options.defense ?? DEFENSE_BALANCE;
-  const { headroom: H } = defense;
-
-  // Per-posture pegged crossing in waves: N_c(posture) = log_g(H). H is shared across
-  // the ladder (the peg is one knob); only g varies per posture. The Δ_wall tail is
-  // measured (kernel `predictedRunLengthWaves`), not authored per posture.
-  const runLengthAt = (index: number): number => {
-    const posture = postures[index];
-    return Math.log(H) / Math.log(posture.salvoBase);
-  };
 
   return {
     id: 'cycler/burn-tier',
+    dependencies: ['cycler/tuning'],
     install(ctx) {
+      const H = tunable<DecimalSource>(
+        ctx.inject(CyclerTuningRegistryKey),
+        'peg/headroom',
+        () => DEFENSE_BALANCE.headroom,
+      );
+
+      // Per-posture pegged crossing in waves: N_c(posture) = log_g(H). H is shared
+      // across the ladder (the peg is one knob); only g varies per posture. The
+      // Δ_wall tail is measured (kernel `predictedRunLengthWaves`), not authored.
+      const runLengthAt = (index: number): number => {
+        const posture = postures[index];
+        return Math.log(Number(unref(H))) / Math.log(posture.salvoBase);
+      };
       const state = withPersistentContext('cycler/burn-tier', () => ({
         activeIndexRaw: persistent<number>(0, { name: 'active-index' }),
       }));

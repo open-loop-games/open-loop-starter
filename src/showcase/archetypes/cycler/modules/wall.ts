@@ -6,7 +6,7 @@ import {
   type ComputedRef,
 } from '@open-loop/engine';
 import { computed } from 'vue';
-import { DEFENSE_BALANCE, type DefenseBalance } from '../data/defense';
+import { DEFENSE_BALANCE } from '../data/defense';
 
 /**
  * Wall module — the defended line's HP buffer (IDENTITY § Cycler's realization;
@@ -53,19 +53,19 @@ export function getWall(): WallApi {
   return wall;
 }
 
-export interface WallModuleOptions {
-  defense?: DefenseBalance;
-}
-
-export function createWallModule(options: WallModuleOptions = {}): EngineModule {
-  const data = options.defense ?? DEFENSE_BALANCE;
+export function createWallModule(): EngineModule {
+  // `lineHP` is read here only to seed the persistent refs on a cold boot. The
+  // live value arrives per run through `resetRun(hp)`, which the kernel calls
+  // with the tunable `line/hp` scaled by power — so this is not a second home
+  // for the number, it is the value before the first run exists.
+  const seedHp = DEFENSE_BALANCE.lineHP;
 
   return {
     id: 'cycler/wall',
     install(ctx) {
       const state = withPersistentContext('cycler/wall', () => ({
-        hp: persistent<number>(data.lineHP, { name: 'hp' }),
-        maxHp: persistent<number>(data.lineHP, { name: 'max-hp' }),
+        hp: persistent<number>(seedHp, { name: 'hp' }),
+        maxHp: persistent<number>(seedHp, { name: 'max-hp' }),
       }));
 
       const hp = computed(() => state.hp.value);
