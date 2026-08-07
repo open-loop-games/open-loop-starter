@@ -43,6 +43,7 @@ perf budget:
 | Economy + match + events + harness | fixed-step ~10–20Hz | engine + tug seeds | ✅ match spine (`match.ts`) |
 | **Tactical sim** — 2D entities, brute-force targeting, unit-vs-unit combat, per-side spawn | fixed-step, deterministic | new | ✅ `tactical-sim.ts` (continuous 2D units, one type; broad-phase is the scale seam) |
 | Bot policy — per-side, cadenced, in-match-guarded, bilateral | sub-Hz decision cadence | tug automation pattern | ✅ `automation.ts` (`decide` = spawn while affordable) |
+| Automation progression — the player seat's unlock gate | per-seat, reactive | `AutomationTiers` | ✅ `automation-tiers.ts` (`manual → assisted`; opponent seats pass no tier and are gated by install-presence) |
 | Render — pixi/webgl, own RAF + interpolation, read-only | 60fps | pixi (defender is SVG; this is heavier) | ✅ `PlayField.vue` (pixi field, Kenney sprites, per-unit position easing) |
 
 Continuous positions live **here at the consumer layer**, never in the engine —

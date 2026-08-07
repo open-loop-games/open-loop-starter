@@ -1,6 +1,7 @@
 import { createSeededRNG, getSeed, persistent, type EngineModule } from '@open-loop/engine';
 import { MatchKey } from './match';
 import { TacticalKey } from './tactical-sim';
+import { AutomationTiersKey, type SkirmishAutomationTier } from './automation-tiers';
 import { type Side } from './tuning';
 
 /** Baseline seconds between spawn decisions, before per-persona scaling. */
@@ -23,11 +24,12 @@ export interface AutomationOptions {
    */
   cadenceJitter?: number;
   /**
-   * AutomationTiers gate — PLAYER-seat only, unused for bot-vs-bot. When a
-   * player seat lands, its side's automation gates behind an unlock ladder;
-   * the opponent seat (this) is gated by install-presence, not a tier.
+   * `AutomationTiers` gate — the player seat's progression lock. A seat given
+   * a tier acts only once that tier is reached; a seat given none is gated by
+   * install-presence instead, which is what the two opponent seats use. Omit
+   * for bot-vs-bot.
    */
-  tier?: string;
+  tier?: SkirmishAutomationTier;
 }
 
 /**
@@ -46,21 +48,24 @@ export interface AutomationOptions {
  * recipe surface keeps copies in place so their divergence is the evaluation
  * signal; a callback-based runner is a graduation outcome, not the staging shape.
  *
- * Bot-vs-bot installs both sides. A future player seat swaps its side's policy
- * for input; `tier` gates player-facing automation there, unused here.
+ * Bot-vs-bot installs both sides, neither carrying a tier. A player seat swaps
+ * its side's policy for input and passes `tier`, which holds the policy behind
+ * the ladder in `automation-tiers.ts`.
  */
 export function createAutomationModule(side: Side, options: AutomationOptions): EngineModule {
   const cadenceSec = options.cadenceSec ?? BASE_CADENCE_SEC;
   const maxSpawnPerBurst = options.maxSpawnPerBurst ?? Infinity;
   const jitterScale = options.cadenceJitter ?? 0;
   const sideOffset = side === 'a' ? 1 : 2;
+  const tier = options.tier;
 
   return {
     id: `skirmish/match/${side}/automation`,
-    dependencies: ['skirmish/match', 'skirmish/match/tactical'],
+    dependencies: ['skirmish/automation-tiers', 'skirmish/match', 'skirmish/match/tactical'],
     install(ctx) {
       const match = ctx.inject(MatchKey);
       const tactical = ctx.inject(TacticalKey);
+      const tiers = ctx.inject(AutomationTiersKey);
 
       // Cadence accumulator — persistent so save/load mid-match resumes pacing
       // without dumping a burst on the first post-load tick.
@@ -79,6 +84,10 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
 
       ctx.onTick((dt) => {
         if (!match.inMatch.value) return;
+        // Tiered seats stay inert until the ladder reaches them; the cadence
+        // accumulator does not advance either, so unlocking mid-match starts a
+        // fresh interval rather than dumping a banked burst.
+        if (tier !== undefined && !tiers.hasReached(tier)) return;
         sinceActSec.value += dt;
         if (sinceActSec.value < cadenceSec * (1 + jitter())) return;
         sinceActSec.value = 0;

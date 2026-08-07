@@ -1,10 +1,16 @@
 import type { EngineModule } from '@open-loop/engine';
 import { createTuningModule } from './tuning';
+import { createAutomationTiersModule } from './automation-tiers';
 import { createMatchModule } from './match';
 import { createTacticalSimModule } from './tactical-sim';
 import { createAutomationModule } from './automation';
 
 export { createTuningModule, SkirmishTuningRegistryKey, SIDES, opponentOf } from './tuning';
+export {
+  createAutomationTiersModule,
+  AutomationTiersKey,
+  type SkirmishAutomationTier,
+} from './automation-tiers';
 export type { Side, SkirmishTunableKey } from './tuning';
 export { createMatchModule, MatchKey, SKIRMISH_MATCH_SCOPE_MODULES } from './match';
 export type {
@@ -46,6 +52,7 @@ const MATCH_SCOPE_MODULES: readonly string[] = [
 export function createSkirmishModules(): EngineModule[] {
   return [
     createTuningModule(),
+    createAutomationTiersModule(),
     createMatchModule({ resetModules: MATCH_SCOPE_MODULES }),
     createTacticalSimModule(),
     createAutomationModule('a', { cadenceSec: 2, maxSpawnPerBurst: Infinity }),

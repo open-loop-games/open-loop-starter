@@ -1,6 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { boot, getEngine, tick, tickUntil, TICK_RATE } from '../sim/harness';
-import { MatchKey, TacticalKey, type MatchApi, type TacticalApi } from '.';
+import { boot, bootModules, getEngine, tick, tickUntil, TICK_RATE } from '../sim/harness';
+import {
+  AutomationTiersKey,
+  MatchKey,
+  TacticalKey,
+  createAutomationModule,
+  createAutomationTiersModule,
+  createMatchModule,
+  createTacticalSimModule,
+  createTuningModule,
+  type MatchApi,
+  type TacticalApi,
+} from '.';
 import { BASE_HP } from '../data/tactical';
 
 /**
@@ -60,5 +71,64 @@ describe('skirmish bot-vs-bot', () => {
     expect(t.units.a.value).toHaveLength(0);
     expect(t.units.b.value).toHaveLength(0);
     expect(match().inMatch.value).toBe(true);
+  });
+});
+
+/**
+ * The player seat's progression gate. Bot-vs-bot passes no tier, so without
+ * this suite the `tier` path would ship unexercised — the shape a player seat
+ * lands on, asserted before there is a seat to land it.
+ */
+describe('skirmish tiered automation seat', () => {
+  function bootTiered() {
+    return bootModules([
+      createTuningModule(),
+      createAutomationTiersModule(),
+      createMatchModule({
+        resetModules: ['skirmish/match/tactical', 'skirmish/match/a/automation'],
+      }),
+      createTacticalSimModule(),
+      // Side `a` is the tiered seat; `b` is absent so nothing else spawns.
+      createAutomationModule('a', { cadenceSec: 2, maxSpawnPerBurst: Infinity, tier: 'assisted' }),
+    ]);
+  }
+
+  beforeEach(() => bootTiered());
+
+  function tiers() {
+    return getEngine().tryInject(AutomationTiersKey)!;
+  }
+
+  it('starts on the manual tier with the seat locked', () => {
+    expect(tiers().currentTierId.value).toBe('manual');
+    expect(tiers().hasReached('assisted')).toBe(false);
+  });
+
+  it('spawns nothing while its tier is locked, however long the match runs', async () => {
+    match().start();
+    await tick(20 * TICK_RATE); // ten cadence intervals
+
+    expect(tactical().units.a.value).toHaveLength(0);
+    expect(Number(tactical().supply.a.value)).toBeGreaterThan(0); // income still flows
+  });
+
+  it('spawns once the tier unlocks mid-match', async () => {
+    match().start();
+    await tick(20 * TICK_RATE);
+    expect(tactical().units.a.value).toHaveLength(0);
+
+    tiers().unlock('assisted');
+    await tick(4 * TICK_RATE); // two cadence intervals past the unlock
+
+    expect(tactical().units.a.value.length).toBeGreaterThan(0);
+  });
+
+  it('does not bank cadence while locked — the first burst waits a full interval', async () => {
+    match().start();
+    await tick(20 * TICK_RATE);
+
+    tiers().unlock('assisted');
+    await tick(TICK_RATE); // one second, short of the 2s cadence
+    expect(tactical().units.a.value).toHaveLength(0);
   });
 });
