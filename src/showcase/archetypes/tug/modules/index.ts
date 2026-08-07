@@ -21,7 +21,7 @@ export {
   type TugTunables,
 } from './tuning';
 export { getFortress, type FortressApi } from './fortress';
-export { getIncome, getIncomeRateChain } from './income';
+export { getIncome, getIncomeRateChain, BASE_INCOME_RATE } from './income';
 export { getIncomeUpgrades, IncomeUpgradeRoiKey, type RoiMetrics } from './income-upgrades';
 export { LaneKey, type LaneApi, type LaneEvents, type UnitInstance } from './lane';
 export { getUnits, SequencerKey, UnitsCooldownKey, type UnitSendMeta } from './units';

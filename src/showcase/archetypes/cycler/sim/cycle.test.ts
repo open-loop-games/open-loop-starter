@@ -10,7 +10,9 @@
  *   • the salvo escalates monotonically and the run ends at the wall breach;
  *   • power re-pegs to +0 run length (realized C and cMax both scale with power, so
  *     the crossing holds); H authors run length.
- * Magnitude (the [12,20]m band) is a measured record — re-run and update on a retune.
+ * No magnitudes: the realized run length is a measured value, so it prints from
+ * `balance/cycle-probe.ts` rather than asserting here
+ * (`open-loop-engine/docs/consumer-guide-balance.md` § Why this isn't a test suite).
  *
  * The tests place a competent reference board (`placeDefense`) so the run reaches the
  * pegged crossing + Δ_wall tail; an empty board breaches at wave 0 by design (no C).
@@ -21,7 +23,6 @@ import { boot, cycle, build, wall, placeDefense, tickUntil } from './harness';
 import { DEFENSE_BALANCE } from '../data/defense';
 
 const { headroom: H, salvoBase: g } = DEFENSE_BALANCE;
-const CADENCE_BAND: [number, number] = [12, 20];
 const waveCycleMinutes = (DEFENSE_BALANCE.standbySeconds + DEFENSE_BALANCE.inboundSeconds) / 60;
 
 /** Drive a booted, board-placed engine to the line breach and hand back the run. */
@@ -30,18 +31,6 @@ async function runToBreach() {
   await tickUntil(() => c.runState.value === 'ended', 20_000);
   return c;
 }
-
-describe('cycle kernel — pegged run-length band', () => {
-  beforeEach(() => boot());
-
-  it('a competent board lands the run inside the authored band [12,20]m', async () => {
-    placeDefense();
-    const c = await runToBreach();
-    const measured = c.endedAtMinutes.value!;
-    expect(measured).toBeGreaterThanOrEqual(CADENCE_BAND[0]);
-    expect(measured).toBeLessThanOrEqual(CADENCE_BAND[1]);
-  });
-});
 
 describe('cycle kernel — shape invariant: opens in STANDBY at authored pressure 1/H', () => {
   beforeEach(() => boot());

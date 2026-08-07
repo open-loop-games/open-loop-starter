@@ -26,7 +26,7 @@ export const CADENCE_BALANCE: CadenceBalance = {
 
 // ─── Balance ───
 // Tuned by `balance/cycler-projection.ts` (§ pegged run length) and
-// `sim/cycle.probe.test.ts` (measured lock) toward: a run inside the target band at
+// `balance/cycle-probe.ts` (measured, printed) toward: a run inside the target band at
 // the shipped headroom.
 // Closed-form skeleton (rate-function pass, 2026-07): session length IS the run
 // length under the peg, N*_waves = log_g(H) + Δ_wall waves, ×(standbySeconds +

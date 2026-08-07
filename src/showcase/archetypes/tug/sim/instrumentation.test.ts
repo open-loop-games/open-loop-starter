@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { addResource, Decimal, runMatrixUntil, runUntil } from '@open-loop/engine';
 import { DEFAULT_TUG_DATA } from '../data';
+import type { IncomeUpgradeDef } from '../data/types';
 import {
   buildTugSimEngine,
   createOutcomeAnalyzer,
   createOutcomeCapture,
   type OutcomeCapture,
 } from '../balance/bot';
-import { ARC_BEATS } from '../balance/beats';
 import {
+  BASE_INCOME_RATE,
   getIncome,
   getIncomeUpgrades,
   IncomeUpgradeRoiKey,
@@ -16,58 +17,24 @@ import {
 } from '../modules';
 
 /**
- * Balance regression locks for Tug — static data invariants (counter-
- * matrix shape, roster cardinality) and framework-correctness locks for
- * the methodology-#3 sensitivity sweep harness.
+ * Framework-correctness for Tug — the measurement path, not the numbers.
  *
- * **Framework-correctness, not balance-numbers.** The signature
- * strongCounter sweep currently surfaces "underlying data balance
- * dominates matrix sensitivity" at default data — a forward-looking
- * finding for the procedural-persona tester-seat follow-up. These locks
- * pin the framework primitives (sensitivity sweep runs to completion
- * across the full strongCounter range, monotonicity preserved) so the
- * next session can balance the data and re-tune locks against numerical
- * bands then.
+ * These verify that the instrumentation reports what it claims: the sweep runs
+ * to completion across the strongCounter range, the ROI metrics agree with the
+ * closed form recomputed from the data, and per-archetype spawn/death events
+ * reach the aggregate. A red here means broken pipes, not bad balance — check
+ * it first when a probe starts reporting nonsense.
+ *
+ * Every expectation derives from `DEFAULT_TUG_DATA`, never from a literal, so
+ * a legitimate retune moves both sides together. Measured windows print from
+ * `balance/arc-probe.ts` instead (`open-loop-engine/docs/consumer-guide-balance.md`
+ * § Why this isn't a test suite).
  */
 
 const TUG_LOCK_SEEDS = [1, 2, 3, 4, 5];
 const MAX_SIM = 35 * 60;
 
-const { units, counterMatrix } = DEFAULT_TUG_DATA;
-
-describe('tug balance locks — static data invariants', () => {
-  it('counter-matrix is square and matches roster size', () => {
-    expect(counterMatrix.length).toBe(units.length);
-    for (const row of counterMatrix) expect(row.length).toBe(units.length);
-  });
-
-  it('counter-matrix diagonal is identity (1.0 vs self)', () => {
-    for (let i = 0; i < counterMatrix.length; i++) {
-      expect(counterMatrix[i][i]).toBe(1.0);
-    }
-  });
-});
-
-describe('tug balance locks — math-only fire-time', () => {
-  it('beat-1 (first unit purchased) fires within first cadence window', () => {
-    const engine = buildTugSimEngine({
-      believability: { suboptimalityRate: 0, cadenceJitterScale: 0 },
-    });
-    const beat = ARC_BEATS.find((b) => b.id === 'beat-1')!;
-    const result = runUntil({
-      engine,
-      until: () => beat.predicate(engine),
-      maxSimTime: MAX_SIM,
-      tickDelta: 1.0,
-    });
-    expect(result.terminated).toBe('predicate');
-    // Counter persona's first marine purchase fires by ~5s (income 8/sec
-    // affords 25-cost marine at first cadence trigger).
-    expect(result.elapsedSimulated).toBeLessThanOrEqual(30);
-  }, 30_000);
-});
-
-describe('tug balance locks — counter-strong sensitivity framework', () => {
+describe('framework — counter-strong sensitivity framework', () => {
   let activeCapture: OutcomeCapture | null = null;
 
   function runCellAtStrong(strong: number) {
@@ -132,21 +99,15 @@ describe('tug balance locks — counter-strong sensitivity framework', () => {
   }, 60_000);
 });
 
-describe('tug balance locks — income-upgrade ROI (math-only)', () => {
-  // Default-state values: no tiers bought, so `currentRate = baseRate
-  // = 8/s` for every tier. The post-buy values are exercised in the
-  // buy-chain test below — they're the realistic strategic numbers but
-  // only appear once the chain has the prior tier's grant active.
-  const EXPECTED_PAYBACK_DEFAULT = {
-    'refinery-1': 400 / (8 * 0.25), // 200
-    'refinery-2': 350 / (8 * 0.4), // 109.375
-    'refinery-3': 1200 / (8 * 0.3), // 500
-  };
-  const EXPECTED_CROSSOVER_DEFAULT = {
-    'refinery-1': (400 / (8 * 0.25)) * 1.25, // 250
-    'refinery-2': (350 / (8 * 0.4)) * 1.4, // 153.125
-    'refinery-3': (1200 / (8 * 0.3)) * 1.3, // 650
-  };
+describe('framework — income-upgrade ROI (math-only)', () => {
+  // Default state: no tiers bought, so `currentRate` is the base rate for
+  // every tier. Expectations recompute the canonical closed form from the
+  // shipping data — `paybackSeconds = cost / (rate × (multiplier − 1))` — so
+  // this asserts the instrumentation agrees with the arithmetic, not that any
+  // particular number was chosen. Retuning `data/income.ts` moves both sides.
+  const BASE = Number(BASE_INCOME_RATE);
+  const payback = (def: IncomeUpgradeDef, rate: number) =>
+    Number(def.cost) / (rate * (Number(def.multiplier) - 1));
 
   it('player-side ROI metrics match analytical at default state (no tiers bought)', () => {
     const engine = buildTugSimEngine();
@@ -155,58 +116,57 @@ describe('tug balance locks — income-upgrade ROI (math-only)', () => {
     for (const def of DEFAULT_TUG_DATA.incomeUpgrades) {
       const m = roi!.get(def.id);
       expect(m, `metrics for ${def.id}`).toBeDefined();
-      expect(m!.paybackSeconds.value).toBeCloseTo(
-        EXPECTED_PAYBACK_DEFAULT[def.id as keyof typeof EXPECTED_PAYBACK_DEFAULT],
-        1,
-      );
-      expect(m!.crossoverSeconds.value).toBeCloseTo(
-        EXPECTED_CROSSOVER_DEFAULT[def.id as keyof typeof EXPECTED_CROSSOVER_DEFAULT],
-        1,
-      );
+      expect(m!.paybackSeconds.value).toBeCloseTo(payback(def, BASE), 1);
+      expect(m!.crossoverSeconds.value).toBeCloseTo(payback(def, BASE) * Number(def.multiplier), 1);
     }
   });
 
   it('refinery-2 payback drops when refinery-1 is bought (chain reactivity)', () => {
-    // Pre-buy: refinery-2 sees baseRate (8/s), payback = 350/(8*0.4) ≈ 109.4s.
-    // Post-buy: refinery-1's grant binds onto incomeRateChain, currentRate
-    // becomes 10/s, payback drops to 350/(10*0.4) = 87.5s. This is the
-    // realistic strategic number a player sees in the IncomeBar tooltip
-    // once refinery-2 unlocks.
+    // Pre-buy, refinery-2 sees the base rate. Post-buy, refinery-1's grant
+    // binds onto incomeRateChain, so the rate it sees is `BASE × r1.multiplier`
+    // and its payback drops proportionally. That drop is the reactivity being
+    // asserted; the magnitudes on either side come from the data.
     const engine = buildTugSimEngine();
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player)!;
     const shop = getIncomeUpgrades('player');
     const income = getIncome('player');
+    const [r1def, r2def] = DEFAULT_TUG_DATA.incomeUpgrades;
     const r2 = roi.get('refinery-2')!;
-    expect(r2.paybackSeconds.value).toBeCloseTo(350 / (8 * 0.4), 1);
+    expect(r2.paybackSeconds.value).toBeCloseTo(payback(r2def!, BASE), 1);
     // Inject enough minerals to satisfy refinery-1's cost requirement,
     // then purchase. Bypasses normal accrual — no need to tick the loop.
     addResource(income, Decimal.fromValue(500));
     const r1 = shop.getPurchasable('refinery-1')!;
     r1.purchase(1);
     expect(r1.active.value).toBe(true);
-    expect(r2.paybackSeconds.value).toBeCloseTo(350 / (10 * 0.4), 1);
+    expect(r2.paybackSeconds.value).toBeCloseTo(
+      payback(r2def!, BASE * Number(r1def!.multiplier)),
+      1,
+    );
   });
 
   it('payback recomputes when baseRate tunable is perturbed at runtime', () => {
     const engine = buildTugSimEngine();
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player)!;
     const reg = engine.tryInject(TugTuningRegistryKey)!;
+    const r1def = DEFAULT_TUG_DATA.incomeUpgrades[0]!;
     const r1 = roi.get('refinery-1')!;
-    expect(r1.paybackSeconds.value).toBeCloseTo(200, 1);
-    const cleanup = reg.pushScope('lock:baseRate=16', {
-      'balance/baseIncomeRate': () => 16,
+    expect(r1.paybackSeconds.value).toBeCloseTo(payback(r1def, BASE), 1);
+    const cleanup = reg.pushScope('framework:baseRate-doubled', {
+      'balance/baseIncomeRate': () => BASE * 2,
     });
     try {
-      // baseRate doubles → payback halves: 400/(16*0.25) = 100s.
-      expect(r1.paybackSeconds.value).toBeCloseTo(100, 1);
+      // Doubling the rate halves the payback — the metric is reactive to the
+      // tunable, which is the property under test.
+      expect(r1.paybackSeconds.value).toBeCloseTo(payback(r1def, BASE * 2), 1);
     } finally {
       cleanup();
     }
-    expect(r1.paybackSeconds.value).toBeCloseTo(200, 1);
+    expect(r1.paybackSeconds.value).toBeCloseTo(payback(r1def, BASE), 1);
   });
 });
 
-describe('tug balance locks — per-archetype dominance framework', () => {
+describe('framework — per-archetype dominance framework', () => {
   // Framework-correctness locks. Verifies the per-archetype kill +
   // spawn instrumentation wires through `OutcomeCapture` → analyzer
   // metrics → cell aggregate. Numerical thresholds (e.g. max-share ≤ 0.4)

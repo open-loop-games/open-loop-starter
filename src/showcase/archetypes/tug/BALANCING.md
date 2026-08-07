@@ -115,8 +115,8 @@ pnpm exec vite-node src/showcase/archetypes/tug/balance/retune-probe.ts
   many words — "first-cut placeholders chosen for ratio shape; retune against
   beat-2/3/5 fire-time bands." That retune has not happened, which is the root the
   first two entries both grow from.
-- **The regression locks are on their way out.** `sim/balance.probe.test.ts`
-  currently pins magnitudes as assertions. Magnitudes belong in a probe report you
-  read, not in a test that goes red on a legitimate retune — so don't add new
-  ones there. The static shape checks (matrix square against roster, identity
-  diagonal) are the part that stays.
+- **The suites assert instrumentation, not numbers.**
+  `sim/instrumentation.test.ts` derives every expectation from
+  `DEFAULT_TUG_DATA`, so retuning `data/income.ts` moves both sides together and
+  nothing reds spuriously. `sim/data-invariants.test.ts` holds shape only. If you
+  want a magnitude recorded, print it from `balance/arc-probe.ts`.

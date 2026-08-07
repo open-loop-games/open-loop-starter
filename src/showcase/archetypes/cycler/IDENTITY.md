@@ -230,6 +230,6 @@ is `.claude/rules/archetype-authoring.md` § Balance — where each surface land
   economy under Lance draw, and the calibration of `H, g, T_g, τ_setup, Δ_wall`.
 - **The behavioral suites (`sim/*.test.ts`).** Shape invariants that survive
   retuning: the run ends at the line breach, power re-pegs to +0 base run length,
-  repair extends only the `Δ_wall` tail. `sim/cycle.probe.test.ts` still pins a
-  measured band as an assertion; that is moving to a printing probe, per the
-  engine guide § Why this isn't a test suite.
+  repair extends only the `Δ_wall` tail. No magnitudes — the realized run length
+  prints from `balance/cycle-probe.ts`, per the engine guide § Why this isn't a
+  test suite.

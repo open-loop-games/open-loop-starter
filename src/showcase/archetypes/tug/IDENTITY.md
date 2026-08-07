@@ -124,10 +124,11 @@ couples to what, and how to read each probe. In brief:
   `balance/retune-probe.ts` sweeps the persona matrix for a viable-strategy data
   slice. Both lean on `match-driver.ts` for cumulative multi-match beats.
 - **The behavioral suites** — `sim/match-scope.test.ts` covers match-scope reset
-  and `sim/tug.sim.test.ts` the behavioral shape. `sim/balance.probe.test.ts`
-  still pins measured windows as assertions; those are moving to a printing
-  probe, per `open-loop-engine/docs/consumer-guide-balance.md` § Why this isn't a
-  test suite.
+  and `sim/tug.sim.test.ts` the behavioral shape. `sim/data-invariants.test.ts`
+  holds counter-matrix shape, and `sim/instrumentation.test.ts` verifies the
+  measurement path with every expectation derived from the data — no magnitudes,
+  per `open-loop-engine/docs/consumer-guide-balance.md` § Why this isn't a test
+  suite.
 
 ## Cross-references
 

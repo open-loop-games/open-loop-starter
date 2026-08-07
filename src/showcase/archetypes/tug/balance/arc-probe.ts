@@ -46,7 +46,12 @@ import {
   type Engine,
   type UntilCell,
 } from '@open-loop/engine';
-import { IncomeUpgradeRoiKey, TugTuningRegistryKey, type TugTunables } from '../modules';
+import {
+  BASE_INCOME_RATE,
+  IncomeUpgradeRoiKey,
+  TugTuningRegistryKey,
+  type TugTunables,
+} from '../modules';
 import {
   buildTugSimEngine,
   createOutcomeAnalyzer,
@@ -69,7 +74,6 @@ const MATCH_TIME_LIMIT_SEC = 30 * 60;
 
 /** Default base income rate (inlined in `modules/income.ts`). Probe 1's
  *  multiplier sweep computes target perturbed values from this baseline. */
-const BASE_INCOME_RATE = 8;
 
 /** Deterministic-bot bundle for math-only probes — zero believability. */
 const DETERMINISTIC: Partial<import('../data/types').TugBelievability> = {
@@ -78,7 +82,7 @@ const DETERMINISTIC: Partial<import('../data/types').TugBelievability> = {
 };
 
 /** Fixed seed list — locked here so the regression-lock layer in
- *  `sim/balance.probe.test.ts` can `runMatrixUntil({ seeds: TUG_SEEDS, ... })`
+ *  `sim/instrumentation.test.ts` can `runMatrixUntil({ seeds: TUG_SEEDS, ... })`
  *  with reproducible outcomes. */
 export const TUG_SEEDS = Array.from({ length: PRIMARY_SEEDS }, (_, i) => i + 1);
 export const TUG_DURATION_SEEDS = Array.from({ length: DURATION_PROBE_SEEDS }, (_, i) => i + 1);
@@ -183,7 +187,7 @@ function runIncomeRateBaselineProbe(): { rows: BeatFireRow[]; pass: boolean } {
   const rows: BeatFireRow[] = [];
   for (const m of multipliers) {
     const scope: Partial<TugTunables> = {
-      'balance/baseIncomeRate': () => BASE_INCOME_RATE * m,
+      'balance/baseIncomeRate': () => Number(BASE_INCOME_RATE) * m,
     };
     for (const beatId of beats) {
       const [windowLo, windowHi] = BEAT_WINDOWS[beatId]!;

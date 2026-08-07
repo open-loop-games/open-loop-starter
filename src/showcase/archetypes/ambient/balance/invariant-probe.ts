@@ -24,7 +24,14 @@
 
 import { computed } from 'vue';
 import { Decimal, bn, processOfflineTime, runUntil, type Engine } from '@open-loop/engine';
-import { PrimaryLifetimeKey, getAutoProducers, getPrimaryResource, getUnlocks } from '../modules';
+import {
+  DEFAULT_ACHIEVEMENT_MULTIPLIER,
+  PrimaryLifetimeKey,
+  getAutoProducers,
+  getPrimaryResource,
+  getUnlocks,
+} from '../modules';
+import { DEFAULT_AMBIENT_DATA } from '../data';
 import { buildAmbientSimEngine } from './bot';
 
 // ─── Probe 3 — offline round-trip ────────────────────────────────────────
@@ -179,6 +186,27 @@ function renderTable(header: string[], rows: string[][]): string {
   return [row(header), sep, ...rows.map(row)].join('\n');
 }
 
+/**
+ * Data readings — no sim, derived straight from the default content. These
+ * used to be assertions in `sim/`; they are magnitudes, so they print. Read
+ * them against the intent in `../BALANCING.md` rather than a tolerance band.
+ */
+function reportDataReadings(): void {
+  const { achievements, producers } = DEFAULT_AMBIENT_DATA;
+  const headline = Math.pow(DEFAULT_ACHIEVEMENT_MULTIPLIER, achievements.length);
+  const orchard = producers.find((p) => p.id === 'orchard')!;
+
+  console.log('## Data readings — headline multiplier + idle ceiling\n');
+  console.log(
+    `Achievement headline: ${DEFAULT_ACHIEVEMENT_MULTIPLIER}^${achievements.length} = ${headline.toFixed(3)}×`,
+  );
+  console.log('  Intent: a pacing marker, not a growth lever — a small product is correct.');
+  console.log(
+    `Orchard at 50 owned: ${Number(orchard.baseRate)} × 50 = ${(Number(orchard.baseRate) * 50).toLocaleString()}/s`,
+  );
+  console.log('  Intent: the top tier still climbs late in a multi-hour arc.\n');
+}
+
 function main(): void {
   const t0 = Date.now();
 
@@ -231,6 +259,8 @@ function main(): void {
     }
     console.log();
   }
+
+  reportDataReadings();
 
   console.log(`(total ${((Date.now() - t0) / 1000).toFixed(1)}s)`);
 }

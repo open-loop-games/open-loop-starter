@@ -15,7 +15,9 @@ import { type Side, TugTuningRegistryKey } from './tuning';
  *  `balance/baseIncomeRate` tunable key so balance probes can perturb it
  *  via `pushScope`. Both sides bind the same key (symmetric income), and
  *  `tunable()` is built on `setDefault` so the second registration no-ops. */
-const BASE_INCOME_RATE: DecimalSource = 8;
+/** Per-second mineral accrual before any upgrade multiplier. The one home
+ *  for this number — `balance/baseIncomeRate` perturbs it, nothing re-declares it. */
+export const BASE_INCOME_RATE: DecimalSource = 8;
 
 // Module-scope per-side handles set during install. Sibling modules +
 // composables + UI import the typed accessors below; engine self-publishes

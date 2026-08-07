@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { boot, getEngine, tick, TICK_RATE } from './harness';
-import { MatchKey, type MatchApi, type MatchEndedPayload } from '../modules';
+import { boot, getEngine, tick, TICK_RATE } from '../sim/harness';
+import { MatchKey, type MatchApi, type MatchEndedPayload } from '.';
 
 /**
  * Behavioral spec for the match spine (bone #1). Drives the real engine

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { bootModules, getEngine, tick, tickUntil, TICK_RATE } from './harness';
+import { bootModules, getEngine, tick, tickUntil, TICK_RATE } from '../sim/harness';
 import {
   createTuningModule,
   createMatchModule,
@@ -8,14 +8,14 @@ import {
   TacticalKey,
   type MatchApi,
   type TacticalApi,
-} from '../modules';
+} from '.';
 import { BASE_HP } from '../data/tactical';
 
 /**
  * Tactical-sim mechanics (bone #3), isolated from the AI policies — the module
  * stack here has no automation, so `spawn` is driven by hand and the field
  * only holds what the test puts there. Specs movement / targeting / combat /
- * death; the bot-vs-bot loop is `automation.probe.test.ts`.
+ * death; the bot-vs-bot loop is `automation.test.ts`.
  */
 
 function boot() {

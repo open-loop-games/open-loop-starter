@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { boot, getEngine, tick, tickUntil, TICK_RATE } from './harness';
-import { MatchKey, TacticalKey, type MatchApi, type TacticalApi } from '../modules';
+import { boot, getEngine, tick, tickUntil, TICK_RATE } from '../sim/harness';
+import { MatchKey, TacticalKey, type MatchApi, type TacticalApi } from '.';
 import { BASE_HP } from '../data/tactical';
 
 /**

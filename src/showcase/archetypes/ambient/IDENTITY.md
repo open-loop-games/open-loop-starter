@@ -99,9 +99,9 @@ guide — the knobs, what couples to what, and how to run a pass. In brief:
   engine driven by the **shipping autobuyers**, under `stasis-aware-tick`;
   `balance/invariant-probe.ts` reports the offline round-trip (≤0.5%) and the
   no-pressure invariant. Both print; neither asserts.
-- **The behavioral suite** — `sim/balance.probe.test.ts` holds the structural
-  relationships that survive retuning: threshold parity, monotonic ordering,
-  multiplier sanity. Magnitudes do not belong there, per
+- **The behavioral suite** — `sim/data-invariants.test.ts` holds the structural
+  relationships that survive retuning: threshold parity and monotonic ordering.
+  Magnitudes do not belong there, per
   `open-loop-engine/docs/consumer-guide-balance.md` § Why this isn't a test suite.
 
 ## Cross-references

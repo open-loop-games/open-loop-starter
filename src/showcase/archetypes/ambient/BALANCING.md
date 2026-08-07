@@ -54,7 +54,7 @@ push, and the no-pressure contract is the archetype. If you want compounding
 growth, it belongs in the producer ladder where the player can see it.
 
 **Scene variants mirror unlock thresholds.** Five pairs, locked in
-`sim/balance.probe.test.ts`. The four mid-arc transitions are geometric
+`sim/data-invariants.test.ts`. The four mid-arc transitions are geometric
 interpolation between spring (`1.05e9`) and year-cycles (`4.28e9`). Move an
 unlock threshold and its scene variant moves with it or the lock goes red.
 
@@ -85,11 +85,12 @@ pnpm exec vite-node src/showcase/archetypes/ambient/balance/invariant-probe.ts
   *measured*, not authored — when a beat will not fire inside its window, the
   response is to move the window or reshape content, not to contort a single
   constant into place.
-- **`sim/balance.probe.test.ts`** asserts structural relationships on the default
-  data: threshold parity, monotonic ordering, multiplier sanity. No sim, runs in
+- **`sim/data-invariants.test.ts`** asserts structural relationships on the
+  default data: threshold parity and monotonic ordering. No sim, runs in
   milliseconds. Magnitudes do not belong here — they belong in a probe report you
   read, not in a test that goes red on a legitimate retune — so don't add new
-  ones. The shape checks are the part that stays.
+  ones. The headline-multiplier and idle-ceiling readings that used to sit here
+  now print from `invariant-probe.ts`.
 
 Beats 1, 4 and 6 are verify-only by design. Beat 1 fires in seconds off the
 planter's seeded `initialAmount: 1` under any content, so there is nothing to
@@ -110,7 +111,7 @@ thresholds — not a new knob.
   design. It is also the one reveal on the perturbation surface, which is the
   likely cause: a bisection wrote a value there and nothing compared it to the
   other four. Nothing catches it — the monotonic-order lock in
-  `sim/balance.probe.test.ts` covers the five scene variants only, not the
+  `sim/data-invariants.test.ts` covers the five scene variants only, not the
   producer reveals. Fix the threshold, then close the coverage hole — as a probe
   that reports reveal order against tier order, not as another assertion.
 - **The windows are a first guess.** They were authored ahead of the content that

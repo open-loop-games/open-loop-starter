@@ -14,7 +14,7 @@ import {
   type Requirement,
 } from '@open-loop/engine';
 import type { IncomeUpgradeDef, TugData } from '../data/types';
-import { getIncome, getIncomeRateChain } from './income';
+import { getIncome, getIncomeRateChain, BASE_INCOME_RATE } from './income';
 import { type Side, TugTuningRegistryKey } from './tuning';
 
 const incomeUpgradesBySide = {} as Record<Side, PurchasableCategory<IncomeUpgradeDef>>;
@@ -84,7 +84,11 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
       // computed-refs can read it without re-plumbing income module privates.
       // `tunable()` uses `setDefault`, so this returns the value the income
       // module already registered rather than overwriting it.
-      const baseRate = tunable<DecimalSource>(registry, 'balance/baseIncomeRate', () => 8);
+      const baseRate = tunable<DecimalSource>(
+        registry,
+        'balance/baseIncomeRate',
+        () => BASE_INCOME_RATE,
+      );
 
       const roiMap = new Map<string, RoiMetrics>();
 

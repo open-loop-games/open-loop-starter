@@ -32,7 +32,7 @@ export function getAchievements(): AchievementCategory<AchievementDef, unknown> 
  * Default per-achievement headline contribution. Used as the fallback for
  * `AchievementDef.rewardMultiplier` and as the default closure for the
  * `balance/achievementMultiplier` tunable. The structural-invariant probe
- * in `sim/balance.probe.test.ts` imports this directly.
+ * in `sim/data-invariants.test.ts` imports this directly.
  */
 export const DEFAULT_ACHIEVEMENT_MULTIPLIER = 1.02;
 
