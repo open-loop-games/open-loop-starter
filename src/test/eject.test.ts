@@ -18,8 +18,8 @@ const ROOT = process.cwd();
 
 describe('eject plan', () => {
   it('hoists the chosen archetype and deletes the demo surface', () => {
-    const plan = planEject(ROOT, 'producer', 'Cookie Tycoon');
-    expect(plan.move).toEqual({ from: 'src/showcase/archetypes/producer', to: 'src/game' });
+    const plan = planEject(ROOT, 'cycler', 'Cookie Tycoon');
+    expect(plan.move).toEqual({ from: 'src/showcase/archetypes/cycler', to: 'src/game' });
     expect(plan.rewriteMain).toBe('src/main.ts');
     expect(plan.gameId).toBe('cookie-tycoon');
     expect(plan.deletes).toContain('src/showcase');
@@ -32,17 +32,17 @@ describe('eject plan', () => {
   });
 
   it('slims the manifest to identity — --name wins', () => {
-    const plan = planEject(ROOT, 'producer', 'Cookie Tycoon');
+    const plan = planEject(ROOT, 'cycler', 'Cookie Tycoon');
     expect(plan.manifest).toEqual({ id: 'cookie-tycoon', name: 'Cookie Tycoon' });
   });
 
   it('slims the manifest to identity — falls back to the source manifest', () => {
-    const plan = planEject(ROOT, 'producer');
-    expect(plan.manifest).toEqual({ id: 'producer', name: 'Bakery' });
+    const plan = planEject(ROOT, 'cycler');
+    expect(plan.manifest).toEqual({ id: 'cycler', name: 'Cycler — Defense Command' });
   });
 
   it('omits the game name when none is given', () => {
-    const plan = planEject(ROOT, 'looper');
+    const plan = planEject(ROOT, 'ambient');
     expect(plan.gameId).toBeUndefined();
     expect(plan.packageName).toBeUndefined();
   });

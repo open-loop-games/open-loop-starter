@@ -6,9 +6,8 @@
   slots for archetype-specific contextual content.
 
   Reference case for the contract/renderer split: the battery is the
-  `ResourceReadout` shape, and this renderer is one default. interlocker
-  adopts the shape and renders it with its OWN component
-  (interlocker/ui/components/ResourceList.vue) — "want the shape, not the
+  `ResourceReadout` shape, and this renderer is one default. A game may adopt
+  the shape and render it with its OWN component — "want the shape, not the
   markup" is a first-class path, not a fallback. Costume hooks
   (`:deep(.resource-header-strip__…)`) are stable API for stories that keep
   this renderer; `.resource-header-strip` root, `__value` / `__rate` / `__label`.

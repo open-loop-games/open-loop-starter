@@ -7,7 +7,7 @@
  *   <delete the other archetype directories>
  *
  * If anything under `src/gallery/**` or `src/about/**` hard-imports a
- * specific archetype (e.g. `from '@/showcase/archetypes/producer'`), that strip
+ * specific archetype (e.g. `from '@/showcase/archetypes/cycler'`), that strip
  * cascades into broken imports. Only `import.meta.glob(...)` over the
  * `@/showcase/archetypes/*\/index.ts` wildcard is allowed — the eager glob
  * vanishes with the gallery, so its bundle effect goes away too.

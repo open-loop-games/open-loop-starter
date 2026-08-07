@@ -6,8 +6,8 @@
   overrides still receive tooltip/popover wrapping. Use `#reveal-content`
   to customise the tooltip/popover body.
 
-  Costume hooks (stable API) — reskin via `:deep(.upgrade-grid__…)` (see
-  producer's UpgradeTray, scaler's UpgradesPanel). Renames are breaking:
+  Costume hooks (stable API) — reskin via `:deep(.upgrade-grid__…)`.
+  Renames are breaking:
     .upgrade-grid            root grid (+ inline grid-template-columns)
     .upgrade-grid__cell-wrap the reveal wrapper around each cell
     .upgrade-grid__cell      one cell

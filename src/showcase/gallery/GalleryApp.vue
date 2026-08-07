@@ -249,7 +249,7 @@ function flipTab(): void {
    hamburger toggle can drive collapse without lib/ changes.
 
    Direct-child combinators are load-bearing: an archetype that itself uses
-   SidebarMainShell (e.g. scaler) would otherwise inherit `display: none`
+   SidebarMainShell would otherwise inherit `display: none`
    on its inner __sidebar via descendant match, and the surviving __main
    would auto-place into the 260px first track. */
 .gallery-shell > .gallery-shell__shell[data-collapsed='true'] {

@@ -4,7 +4,7 @@
   Owns the single-tenant invariants for the gallery:
 
   - `body[data-archetype]` is set to the archetype id before mount and
-    cleared after unmount. Defensive: producer's AppRoot also writes/clears
+    cleared after unmount. Defensive: an archetype's AppRoot may also write/clear
     this attribute (its CSS theme scopes from it). Both writes are
     idempotent on the same value, and the wrapper's clear runs after the
     AppRoot's `onUnmounted` so a missed teardown is still cleaned up.
@@ -16,7 +16,7 @@
     in-page; without it the second mount throws on persistent-name
     collisions (engine assumes single-instance-per-lifetime otherwise).
 
-  Save isolation rides on each archetype's unique `gameId` (producer-pilot,
+  Save isolation rides on each archetype's unique `gameId` (cycler-pilot,
   ambient-pilot, tug-pilot); save-manager prefixes storage keys with it, so
   no `manifest.id`-as-namespace push/pop is needed. Saves persist across
   remounts because dispose only touches the in-memory ref registry.

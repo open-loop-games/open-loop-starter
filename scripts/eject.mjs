@@ -39,7 +39,6 @@ const DEMO_DELETES = [
   'docs',
   'archetypes',
   'profiles',
-  'ARCHETYPES.md',
   'TODO.md',
   // Stale under the /work/studio workspace — the root lockfile is authoritative.
   'pnpm-lock.yaml',

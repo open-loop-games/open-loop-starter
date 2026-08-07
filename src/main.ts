@@ -9,7 +9,7 @@
  *
  * ```ts
  * import { effectScope } from 'vue';
- * import { createApp } from '@/showcase/archetypes/producer';
+ * import { createApp } from '@/showcase/archetypes/cycler';
  * import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
  * import { useNotation } from '@/composables/useNotation';
  * import '@/lib/styles/reset.css';

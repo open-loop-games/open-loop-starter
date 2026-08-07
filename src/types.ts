@@ -35,9 +35,8 @@ export interface BeatRef {
   /**
    * Sim-time window (min, max) in seconds where this beat was OBSERVED to land,
    * measured from a harness run and recorded here — never authored as a target
-   * to tune the source numbers toward (see ARCHETYPES.md § Dev-loop:
-   * measure-and-record). Omit until measured; a beat with no recorded window is
-   * honest, not incomplete.
+   * to tune the source numbers toward. Omit until measured; a beat with no
+   * recorded window is honest, not incomplete.
    */
   recordedSimRange?: [number, number];
 }

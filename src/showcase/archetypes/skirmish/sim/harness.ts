@@ -9,12 +9,11 @@
  * their state on `install`, so a fresh boot IS a clean reset, no per-module
  * reset surface to keep in sync. Cheap; revisit only if boot cost ever bites.
  *
- * This is the behavioral counterpart to the balance layer: `balance/`+`sim/`
- * probes drive the engine coarsely to *lock economy magnitudes* (see
- * `game.probe.test.ts` for the Lane-3 lock shape); this drives it tick-by-tick
- * to *spec what the mechanics do* — counts, monotonic growth, things freeing up.
- * Keep absolute-number locks in the balance probes; keep observable behavior
- * here. See `example.test.ts` for the behavioral shape to copy.
+ * This is the behavioral counterpart to the balance layer: `balance/` probes
+ * drive the engine coarsely and print economy magnitudes; this drives it
+ * tick-by-tick to *spec what the mechanics do* — counts, monotonic growth,
+ * things freeing up. Magnitudes stay in the balance probes; observable behavior
+ * lives here, which is why these suites survive a retune.
  */
 
 import { type Engine, type EngineModule } from '@open-loop/engine';

@@ -28,13 +28,13 @@ the repo and stripping it down:
 gh repo create my-game --template open-loop/starter --private --clone
 cd my-game
 
-# 2. Pick one archetype (here: producer) — delete the rest + the gallery
-rm -rf src/archetypes/{ambient,tug,looper}
+# 2. Pick one archetype (here: cycler) — delete the rest + the gallery
+rm -rf src/showcase/archetypes/{ambient,tug,skirmish}
 rm -rf src/gallery src/about
 
 # 3. Wire main.ts to your one archetype
 cat > src/main.ts <<'EOF'
-import { createApp } from '@/showcase/archetypes/producer';
+import { createApp } from '@/showcase/archetypes/cycler';
 import '@/lib/styles/reset.css';
 import '@/lib/styles/tokens.css';
 import './styles/base.css';

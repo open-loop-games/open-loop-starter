@@ -30,10 +30,10 @@ Pick the archetype closest to your game and eject everything else:
 
 ```bash
 # Dry-run by default — prints the plan, touches nothing
-pnpm eject producer --name "My Game"
+pnpm eject cycler --name "My Game"
 
 # Perform it
-pnpm eject producer --name "My Game" --execute
+pnpm eject cycler --name "My Game" --execute
 ```
 
 This hoists your archetype to `src/game/`, rewrites `main.ts` to boot it directly, prunes config, and deletes the whole `src/showcase/` demo surface. What's left is the scaffold + your one archetype. Run `pnpm eject` with no archetype to list the available ones.
@@ -53,17 +53,15 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 
 ## Archetype demos
 
-`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a validated archetype — a pattern-language composition carried by a rate-function balance spine — showing a distinct slice of engine systems and a distinct layout shell. The exemplar named per demo validates that the composition ships in the wild; it is not a clone target. Pick the one closest to your game and `eject` it (above).
+`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a validated archetype — a pattern-language composition carried by a rate-function balance spine — showing a distinct slice of engine systems and a distinct layout shell. Exemplar games validate that each composition ships in the wild; they are cited as a set and are not clone targets. Pick the one closest to your game and `eject` it (above).
 
-| Archetype | Demo (exemplar) | Shell | Engine systems | What it shows |
+| Archetype | Demo | Shell | Engine systems | What it shows |
 |---|---|---|---|---|
-| `producer` | Bakery | ThreePanelShell | ProducerCategory, PurchasableCategory, ModifierChain, AchievementCategory (tiered) | Classic big-number incremental: cost-scaled auto-production, stacked multipliers, achievement bonuses |
-| `looper` | Classic Adventuring | ThreePanelShell | Sequencer, SkillCategory, ZoneSystem, Loop, RetentionPolicy, TimeSystem | Repetition-with-retention: a resource-gated run, skill mastery carried across resets, zone-gated action queue |
-| `scaler` | Antimatter Physics | TabsBarShell | ProducerCategory, MultiplicativeModifier, CostRequirement, Reset | Layered prestige at extreme scale: nested reset layers and deep modifier chains |
-| `interlocker` | Kittens | ThreePanelShell | Conversion, ModifierChain, PurchasableCategory, CategoryBase | Wide-not-deep resource management: a multi-resource graph of interlocking conversions and building synergies |
-| `defender` | Bloons | SidebarMainShell | Sequencer, SpatialGrid, PurchasableCategory, Reset | Placement + wave pacing: commit static defenders on a grid before the wave resolves |
-| `tug` | SciFi Armada | TugFrameLayout | Sequencer, Loop, PurchasableCategory, ChallengeCategory, Reset | Adversarial lane push: auto-send economy versus a live zero-sum opponent |
+| `cycler` | Defense Command | DefenseCommandConsole | PurchasableCategory, CostRequirement, BooleanRequirement, integerRoot | Phase alternation: build during the calm, survive the salvo, redeploy at higher reach |
 | `ambient` | Cozy Farm | SingleColumnShell | ProducerCategory, Loop, PurchasableCategory, AchievementCategory, Reset | Companion-software idle: an auto-production spine tuned for low-pressure ambient progression |
+| `tug` | SciFi Armada | TugFrameLayout | Sequencer, Loop, PurchasableCategory, ChallengeCategory, Reset | Adversarial lane push: auto-send economy versus a live zero-sum opponent |
+| `skirmish` | Skirmish | SingleColumnShell | Sequencer, Loop, AutomationTiers | Adversarial real-time match with automation on both sides |
+| `_blank` | — | SingleColumnShell | — | Neutral skeleton for a novel composition (`pnpm eject --clean`) |
 
 ## Commands
 
