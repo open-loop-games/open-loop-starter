@@ -13,9 +13,9 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, build, wall } from './harness';
+import { boot, build, wall } from '../sim/harness';
 import { DEFENSE_BALANCE } from '../data/defense';
-import type { BuildApi, WallApi } from '../modules';
+import type { BuildApi, WallApi } from '.';
 import type { PieceKind } from '../data/pieces';
 
 const { headroom: H, salvoBase: g, lineHP } = DEFENSE_BALANCE;

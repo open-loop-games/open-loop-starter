@@ -16,7 +16,7 @@
  *     expect(getOutput().gt(0)).toBe(true);   // behavior, not a magic number
  *   });
  *
- * Absolute economy magnitudes belong in the balance probes (`balance/`+`sim/`),
+ * Absolute economy magnitudes belong in the balance probes under `balance/`,
  * not here — this layer specs *what the mechanic does*, which stays true across
  * retunes; magnitudes print from `balance/`, never asserted here.
  */

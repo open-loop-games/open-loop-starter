@@ -29,7 +29,7 @@ import { evaluateBoard, previewAt, type BoardEvaluation, type OccupancyView } fr
  *   • `dMax` — the closed-form saturated OUTPUT ceiling `boardCells · baseOutputCeiling ·
  *     adjacencyBoost · producerUpgradeRatio^L` (the multiverse-hr #17 correction:
  *     finite board ⇒ log crossing). UNCHANGED — prestige currency reads this. The
- *     reference full board reconciles it: realized ≈ D_max (locked in `sim/build.test.ts`).
+ *     reference full board reconciles it: realized ≈ D_max (see `build.test.ts`).
  *   • `cMax` — the closed-form saturated CLEAR-RATE ceiling `forwardCells ·
  *     lanceIntercept · adjacencyBoost · producerUpgradeRatio^L` (mirror of dMax). The
  *     kernel freezes the salvo peg `W₀ = cMax/H` against it; because leak resolves

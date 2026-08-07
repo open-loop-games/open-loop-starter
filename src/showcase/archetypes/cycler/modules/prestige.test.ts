@@ -5,7 +5,7 @@
  * retunes:
  *   • the run auto-pays-out on the line breach (Redeploy bell, not a fail state);
  *   • merge() re-pegs to the next run WITHOUT buying power (reach is a catalog buy
- *     now — see `sim/upgrades.test.ts` for the reach-climb arc);
+ *     now — see `upgrades.test.ts` for the reach-climb arc);
  *   • currency is sublinear in run output (∛-per-source), mixed sourcing
  *     (production = ∫build.capacity dt, endurance = Σ W_n).
  *
@@ -16,7 +16,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, cycle, build, prestige, placeDefense, tickUntil } from './harness';
+import { boot, cycle, build, prestige, placeDefense, tickUntil } from '../sim/harness';
 import { BUILD_BALANCE } from '../data/build';
 import { PRESTIGE_BALANCE } from '../data/prestige';
 
@@ -50,7 +50,7 @@ describe('prestige — the run auto-pays-out on the breach (Redeploy bell, not a
     placeDefense();
     await runToEnd();
     // Calibrated 2+1 split == quorum, so the first reach buy (cost == quorum at L=0)
-    // is affordable. The reach cost + affordability is locked in sim/upgrades.test.ts.
+    // is affordable. The reach cost + affordability is covered in upgrades.test.ts.
     expect(p.fragments.value.toNumber()).toBe(PRESTIGE_BALANCE.mergeQuorum);
   });
 });

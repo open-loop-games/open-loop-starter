@@ -17,7 +17,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, cycle, build, burnTier, placeDefense, tickUntil } from './harness';
+import { boot, cycle, build, burnTier, placeDefense, tickUntil } from '../sim/harness';
 import { SALVO_POSTURES } from '../data/defense';
 
 /** Drive a booted, board-placed engine to the line breach and return the run length (minutes). */

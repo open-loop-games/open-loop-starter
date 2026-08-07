@@ -104,10 +104,10 @@ pnpm exec vite-node src/showcase/archetypes/cycler/balance/prestige-probe.ts
 - **`prestige-probe.ts`** closes the loop through real Redeploys — sublinear
   banking, reach as a catalog buy, run length flat across the boundary.
 
-All five print; none asserts. The behavioral suites under `sim/` are the
-separate surface — adjacency, build, burn-tier, cycle, prestige, upgrades and
-wall spec *what the mechanics do*, carrying no magnitudes, which is why they
-survive a retune.
+All five print; none asserts. The behavioral suites are the separate surface and
+sit beside the modules they spec — `modules/{adjacency,build,burn-tier,cycle,
+prestige,upgrades,wall}.test.ts`, each over `sim/harness.ts`. They say *what the
+mechanics do*, carrying no magnitudes, which is why they survive a retune.
 
 ## Known thin
 

@@ -14,7 +14,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal } from '@open-loop/engine';
-import { boot, cycle, build, prestige, upgrades, placeDefense, tickUntil } from './harness';
+import { boot, cycle, build, prestige, upgrades, placeDefense, tickUntil } from '../sim/harness';
 import { PRESTIGE_BALANCE } from '../data/prestige';
 import { UPGRADE_BALANCE } from '../data/upgrades';
 

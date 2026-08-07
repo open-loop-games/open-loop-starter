@@ -19,7 +19,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, cycle, build, wall, placeDefense, tickUntil } from './harness';
+import { boot, cycle, build, wall, placeDefense, tickUntil } from '../sim/harness';
 import { DEFENSE_BALANCE } from '../data/defense';
 
 const { headroom: H, salvoBase: g } = DEFENSE_BALANCE;

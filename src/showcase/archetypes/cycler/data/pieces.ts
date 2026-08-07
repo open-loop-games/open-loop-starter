@@ -176,7 +176,7 @@ export const REFERENCE_DEFENSE: readonly (PieceKind | null)[] = [
 //   • REFERENCE_LAYOUT: 12 Reactors, Σ adjacency-multiplier = 12·(1) + 0.75·(Σ
 //     cross-coverage = 12) = 21. Realized output = 95 · 21 = 1995 ≈ the abstract
 //     D_max = boardCells·baseOutputCeiling·adjacencyBoost = 16·50·2.5 = 2000 (99.7%).
-//     `sim/build.test.ts` locks realized ≈ D_max (tolerance) — the leaf-2 lock.
+//     `modules/build.test.ts` covers realized ≈ D_max (tolerance).
 //   • The peg still reads the closed-form `D_max` (unchanged formula; `data/build.ts`),
 //     so the kernel crossing and prestige currency are undisturbed — the realized
 //     board is the live/UI value and the substrate leaf 3 (Lances) reads C off.

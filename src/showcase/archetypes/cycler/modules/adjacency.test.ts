@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { coveredCells, evaluateBoard, previewAt, type OccupancyView } from '../modules';
+import { coveredCells, evaluateBoard, previewAt, type OccupancyView } from '.';
 import { BOARD, PIECES, REFERENCE_LAYOUT, type PieceKind } from '../data/pieces';
 
 /** An OccupancyView backed by a row-major layout array. */

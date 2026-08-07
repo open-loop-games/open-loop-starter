@@ -99,7 +99,7 @@ export const BURN_TIERS: readonly BurnTier[] = [
 //     Accelerated g=3 → 4 + 6·log₃4 = 11.57 min   (gate L≥2)
 //     Cascade     g=4 → 4 + 6·log₄4 = 10.00 min   (gate L≥4)
 //     Collapse    g=6 → 4 + 6·log₆4 =  8.64 min   (gate L≥6)
-// Two invariants this ladder must preserve (locked in `sim/burn-tier.test.ts`):
+// Two invariants this ladder must preserve (spec'd in `modules/burn-tier.test.ts`):
 //   • WITHIN a tier the peg still holds run length flat across all reach growth
 //     (raising power re-pegs to +0 — the decoupling, `data/upgrades.ts`); only
 //     CROSSING a tier moves run length, and only under the reach gate.

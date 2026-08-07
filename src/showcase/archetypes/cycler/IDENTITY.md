@@ -230,7 +230,7 @@ the disk layout it maps onto is `.claude/rules/archetype-authoring.md`
   only force-unlocks the tier) so sim and game cannot drift. They contradict the
   projection where it is wrong — measuring the realized `C` trajectory, the MW
   economy under Lance draw, and the calibration of `H, g, T_g, τ_setup, Δ_wall`.
-- **The behavioral suites (`sim/*.test.ts`).** Shape invariants that survive
+- **The behavioral suites (`modules/<name>.test.ts`).** Shape invariants that survive
   retuning: the run ends at the line breach, power re-pegs to +0 base run length,
   repair extends only the `Δ_wall` tail. No magnitudes — the realized run length
   prints from `balance/cycle-probe.ts`, per the engine guide § Why this isn't a

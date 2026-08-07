@@ -14,8 +14,8 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, cycle, wall, getEngine, placeDefense, tickUntil } from './harness';
-import { BuildKey, getBuild } from '../modules';
+import { boot, cycle, wall, getEngine, placeDefense, tickUntil } from '../sim/harness';
+import { BuildKey, getBuild } from '.';
 import { BUILD_BALANCE } from '../data/build';
 import { DEFENSE_BALANCE } from '../data/defense';
 import { PIECES } from '../data/pieces';
