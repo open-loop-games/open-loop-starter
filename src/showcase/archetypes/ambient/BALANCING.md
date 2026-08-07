@@ -15,11 +15,11 @@ what each one actually moves:
 
 | Key | Default | What it moves |
 |---|---|---|
-| `balance/tier1BaseRate` | `1.0` | Planter's rate at its chain bind site. The whole early arc rides this — beats 2 and 3 are mostly a function of it. |
+| `balance/tier1BaseRate` | `1.0` | Planter's rate at its chain bind site. The whole early arc rides this — beat 2 is mostly a function of it. |
 | `balance/achievementMultiplier` | `1.02` | Per-achievement multiplier folded into the rate chain. Pacing marker, not a growth lever — see Couplings. |
 | `producers/planter/purchase/baseCost` | `55` | Where the first purchase lands. Bisected by the solver for beat 2. |
-| `producers/coop/purchase/baseCost` | `75` | The early payback dip. Bisected for beat 3. |
-| `unlocks/coop-built/threshold` | `30_810_558` | When the coop becomes visible. Currently wrong — see Known thin. |
+| `producers/coop/purchase/baseCost` | `75` | The early payback dip that carries the "first purchase feels good" beat. |
+| `unlocks/coop-built/threshold` | `45` | When the coop becomes visible. Not solver-driven — see Known thin. |
 | `unlocks/spring-arrives/threshold` | `1.05e9` | First mid-arc reveal. Paired with a scene variant — see Couplings. |
 | `unlocks/year-cycles/threshold` | `4.28e9` | Arc-closing reveal. Paired likewise. |
 
@@ -73,7 +73,7 @@ pnpm exec vite-node src/showcase/archetypes/ambient/balance/solve-probe.ts
 pnpm exec vite-node src/showcase/archetypes/ambient/balance/invariant-probe.ts
 ```
 
-- **`solve-probe.ts`** bisects beats 2, 3 and 5 against the real engine driven by
+- **`solve-probe.ts`** bisects beats 2 and 5 against the real engine driven by
   the shipping autobuyers, chaining each beat's proposal forward into the next.
   Output is a proposed-patch report; it never edits `data/`.
 - **`invariant-probe.ts`** runs the two contract checks: offline round-trip
@@ -81,6 +81,10 @@ pnpm exec vite-node src/showcase/archetypes/ambient/balance/invariant-probe.ts
   the no-pressure invariant (24h sim, reporting any tick where the visible
   resource shrinks, the headline rate unexpectedly hits zero, or a fail-state
   flag appears).
+- **`reveal-probe.ts`** reports the unfold: each producer's reveal threshold and
+  measured fire time, whether reveal order matches tier order, and the gap
+  between consecutive reveals. The ordering half is a verdict — there is no band
+  to widen — and the cadence half is a reading.
 - **`beats.ts`** holds the windows and predicates both probes import. Windows are
   *measured*, not authored — when a beat will not fire inside its window, the
   response is to move the window or reshape content, not to contort a single
@@ -92,28 +96,36 @@ pnpm exec vite-node src/showcase/archetypes/ambient/balance/invariant-probe.ts
   ones. The headline-multiplier and idle-ceiling readings that used to sit here
   now print from `invariant-probe.ts`.
 
-Beats 1, 4 and 6 are verify-only by design. Beat 1 fires in seconds off the
-planter's seeded `initialAmount: 1` under any content, so there is nothing to
-bisect. Beat 4 is resume-driven and cannot be observed in a continuous headless
+Beats 1, 3, 4 and 6 are verify-only. Beat 1 fires in seconds off the planter's
+seeded `initialAmount: 1` under any content, so there is nothing to bisect.
+Beat 3 has no knob that can carry it without breaking the reveal ladder — see
+Known thin. Beat 4 is resume-driven and cannot be observed in a continuous headless
 run — it is verified at runtime through `sessionClock.lastResumeGapSec`, and
-deliberately has no predicate. Beat 6 rides whatever curve beats 2/3/5 settle on;
+deliberately has no predicate. Beat 6 rides whatever curve beats 2 and 5 settle on;
 if it lands outside its window the fix is content — more achievements, or shifted
 thresholds — not a new knob.
 
 ## Known thin
 
-- **The coop reveals last, and it is meant to reveal second.** The five producer
-  reveals in `data/unlocks.ts` all threshold on lifetime primary, and they read
-  0 / 600 / 12k / 200k for planter, pond, pasture and orchard — with `coop-built`
-  at `30_810_558`, roughly 150× past the orchard. Coop is tier 2 and
-  `data/producers.ts` § Balance calls it the deliberate early payback dip that
-  carries the "first purchase feels good" beat, so the data contradicts the
-  design. It is also the one reveal on the perturbation surface, which is the
-  likely cause: a bisection wrote a value there and nothing compared it to the
-  other four. Nothing catches it — the monotonic-order lock in
-  `sim/data-invariants.test.ts` covers the five scene variants only, not the
-  producer reveals. Fix the threshold, then close the coverage hole — as a probe
-  that reports reveal order against tier order, not as another assertion.
+- **The whole reveal ladder unfolds in under fifteen minutes.** `reveal-probe.ts`
+  measures all five producers visible by ~13m of a 12h arc — planter at 1s, then
+  coop, pond, pasture, orchard at 1.4m / 4.9m / 7.5m / 13.3m. The identity claims
+  "a slowly unfolding unlock tree"; this is a quarter-hour of unfolding followed
+  by eleven hours of nothing new. The thresholds are each sized at ~0.6× their
+  producer's `baseCost`, which makes them coherent *with each other* and unrelated
+  to the arc they are supposed to pace.
+
+  This is the root of the coop-reveal defect that has now been fixed
+  (`coop-built` was at `30_810_558`, revealing tier 2 last, ~150× past the
+  orchard). It was not a stray edit: beat-3's window is [30m, 90m], no producer
+  reveal can reach it, and the solver had exactly one knob — so it pushed that
+  knob two orders past its neighbours. `solveBeat3` is disabled for the same
+  reason, and running it again would reproduce the defect.
+
+  **Open decision.** Either the ladder should span the arc rather than its first
+  quarter-hour, or beat-3 should be carried by a later reveal. Both are calls
+  about what the unfold cadence *is*, not bisections. Until one is made, beat-3
+  fires around 1.4m against a 30–90m window and the probes will say so.
 - **The windows are a first guess.** They were authored ahead of the content that
   now has to hit them and have not been re-measured since it settled. Treat a
   window miss as a question about the window before treating it as a tuning bug.

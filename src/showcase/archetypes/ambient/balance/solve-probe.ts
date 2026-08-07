@@ -12,10 +12,12 @@
  * picks and edits scaffolding based on the output, per
  * `../BALANCING.md`.
  *
- * Scope: beats 2, 3, 5. Beats 1, 4, 6 are verify-only:
+ * Scope: beats 2 and 5. Beats 1, 3, 4 and 6 are verify-only:
  *   - Beat 1 ("first passive production") fires on planter's seeded
  *     `initialAmount: 1` producing primary ≥ 1 in seconds. No knob to bisect
  *     against under default content.
+ *   - Beat 3 ("first visibility unlock") has no single knob that can carry it
+ *     without breaking the reveal ladder — see `solveBeat3`.
  *   - Beat 4 ("glance-check value proposition") is resume-driven and not
  *     testable in continuous headless sim. Runtime verification only.
  *   - Beat 6 ("first low-urgency achievement multiplier") rides the
@@ -131,18 +133,28 @@ function solveBeat2(ctx: SamplerContext, targetSec: number): TunerResult {
 }
 
 /**
- * coop-built unlock threshold controls beat-3. Default 30 → lifetime crosses
- * fast (t≈60s under default planter rate). Need threshold ~hundreds-to-low-
- * thousands so fire lands in 30–90min window. Bracket wide: [30, 5e7] —
- * accumulation-rate growth with coop ownership makes the curve nonlinear.
+ * DISABLED — this solve is what produced the reveal-order defect, and running
+ * it again reproduces it.
+ *
+ * Beat-3 ("first visibility unlock") is carried by `coop-built`, which is the
+ * tier-2 producer's reveal. Bisecting it against beat-3's 30–90min window
+ * moves one rung of a five-rung ladder in isolation, and the window is not
+ * reachable by any producer reveal: `reveal-probe.ts` measures the whole
+ * ladder unfolding inside ~14min of a 12h arc. The solver did the only thing
+ * it could and pushed `coop-built` to ~3e7, revealing tier 2 last — roughly
+ * 150× past the orchard.
+ *
+ * The knob was never the problem. Either the reveal ladder should span the arc
+ * rather than its first quarter-hour, or beat-3 should be carried by a later
+ * reveal. Both are design calls about the unfold cadence, not bisections, and
+ * `../BALANCING.md` § Known thin carries the open question.
  */
 function solveBeat3(ctx: SamplerContext, targetSec: number): TunerResult {
-  return bisectTuner({
-    lo: 30,
-    hi: 5e7,
-    targetSec,
-    sampler: (v) => sampleBeat(ctx, 'beat-3', 'unlocks/coop-built/threshold', v),
-  });
+  void ctx;
+  void targetSec;
+  throw new Error(
+    'ambient/solve-probe: beat-3 is not solvable by bisecting a single reveal — see the comment above solveBeat3.',
+  );
 }
 
 /**
@@ -224,7 +236,10 @@ function currentUnlockThreshold(id: string): number {
 // Solver ramp-up gate. Step up one beat at a time — never run the full
 // multi-beat × multi-pass sweep on the first try. Toggle this and PASSES
 // below as the ramp progresses.
-const ENABLED_BEATS = new Set<string>(['beat-2', 'beat-3', 'beat-5']);
+//
+// beat-3 is deliberately absent: bisecting its carrier reveal against its
+// window is what produced the reveal-order defect. See `solveBeat3`.
+const ENABLED_BEATS = new Set<string>(['beat-2', 'beat-5']);
 
 function solvePass(proposed: Proposed): {
   proposed: Proposed;

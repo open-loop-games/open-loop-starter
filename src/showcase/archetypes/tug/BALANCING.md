@@ -15,8 +15,8 @@ this file is how you work inside it.
 | `balance/baseIncomeRate` | `8` | Income accrual for **both** sides. Symmetric by rule — see Couplings. |
 | `fortress/hp` | `5_000` | How long a match can run before a base falls. The match-length ceiling. |
 | `units/<id>/cost` | per unit | Composition economics. The retune sweep multiplies costs at or above its top-tier floor as one axis. |
-| `income-upgrades/<id>/cost` | `400` / `350` / `1_200` | Buy-now-vs-bank tension. Refinery I's cost is the lever the greed persona's economic compound is gated on. |
-| `income-upgrades/<id>/multiplier` | `1.25` / `1.4` / `1.3` | Sequential compounding, ≈`×2.28` with all three bought. |
+| `income-upgrades/<id>/cost` | `400` / `1_200` / `3_600` | Buy-now-vs-bank tension — ×3 per rung. Refinery I's cost is the lever the greed persona's economic compound is gated on. |
+| `income-upgrades/<id>/multiplier` | `1.5` / `1.4` / `1.3` | Tapering compounding down the path, `×2.73` with all three bought. |
 | `counter-matrix/strongCounter` | `1.75` | **The signature knob.** How decisively a good counter-pick pays. |
 | `counter-matrix/weakCounter` | `0.6` | The other half of the asymmetry — how badly a bad pick punishes. |
 
@@ -93,6 +93,11 @@ pnpm exec vite-node src/showcase/archetypes/tug/balance/retune-probe.ts
   something to reach for casually. It is hunting for a data slice where mass or
   counter has a viable matchup against *someone* — the failure it catches is a
   persona with no viable opponent at all.
+- **`roi-probe.ts`** is a fast no-sim read of the income ladder: cost, multiplier,
+  the rate each rung is bought from, payback, and cumulative multiplier — plus a
+  verdict on each claim `data/income.ts` § Balance makes about the ladder's shape.
+  Run it after touching refinery numbers; it takes no time and catches the class
+  of drift where the prose and the constants stop agreeing.
 - **`beats.ts`** holds the windows and predicates both drivers import.
 
 ## Known thin
@@ -104,17 +109,13 @@ pnpm exec vite-node src/showcase/archetypes/tug/balance/retune-probe.ts
   important fact about tug's balance today — until the economy underneath is
   retuned, the sensitivity sweep is reporting on something other than the matrix.
   `retune-probe.ts` exists to find the slice where it stops being flat.
-- **The refinery ladder dips where the design says it climbs.** Costs run
-  `400 / 350 / 1_200` — Refinery II is *cheaper* than Refinery I, while
-  `data/income.ts` § Skeleton says costs "scale much faster than the cumulative
-  payoff so the buy-now-vs-bank-for-units tension stays sharp." Sequential gating
-  means this is not a dominance bug, but the tension slackens exactly where the
-  design wants it to tighten. That same comment describes a tier-1 multiplier of
-  `×1.5` stacking to `≈×2.73`; the shipping data is `×1.25` stacking to `≈×2.28`.
-- **The numbers are still first-cut.** `data/income.ts` § Balance says so in as
-  many words — "first-cut placeholders chosen for ratio shape; retune against
-  beat-2/3/5 fire-time bands." That retune has not happened, which is the root the
-  first two entries both grow from.
+- **The refinery ladder is retuned but unvalidated in play.** It now matches its
+  stated design — costs `400 / 1_200 / 3_600` climbing ×3 against multipliers
+  tapering `1.5 / 1.4 / 1.3`, cumulative `×2.73`, with Refinery III's payback at
+  40% of the match limit so committing to it is a real bet. `roi-probe.ts` checks
+  those claims. What is *not* established is that the ladder plays well against
+  the unit economy: the numbers are internally coherent and have never been
+  measured against win-rate. Run `retune-probe.ts` before trusting them.
 - **The suites assert instrumentation, not numbers.**
   `sim/instrumentation.test.ts` derives every expectation from
   `DEFAULT_TUG_DATA`, so retuning `data/income.ts` moves both sides together and

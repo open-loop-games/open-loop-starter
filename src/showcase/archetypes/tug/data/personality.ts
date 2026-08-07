@@ -56,12 +56,13 @@ export interface Persona {
 
 /**
  * Calibration note. The Direct-Strike-shape baseline (5 mineral/sec base
- * income; refinery-1 cost 100 = 20s save) makes save-first for the first
- * tier acceptable: ~20s of silence is bearable. Saving for refinery-2
- * (350 cost, ~47s post-tier-1) compounds the silence into a full minute,
- * which the opponent's flood will exploit. So `greed` saves only for tier
- * 1 and accepts opportunistic-or-never for tier 2/3 — the +50% income
- * from refinery-1 alone is the persona's economic identity.
+ * income; a first-tier refinery costing ~20s of saving) makes save-first for
+ * the first tier acceptable: ~20s of silence is bearable. Saving for the
+ * second tier compounds that silence past a minute, which the opponent's
+ * flood will exploit — the ladder climbs ×3 per rung while the payoff tapers,
+ * so each further rung is a longer bank for less. So `greed` saves only for
+ * tier 1 and accepts opportunistic-or-never for tiers 2/3; the tier-1 income
+ * multiplier alone is the persona's economic identity.
  *
  * `counter` and `mass` are tempo-first; they don't sacrifice early units
  * for economy. With `saveForUpgradeTiers: 0` and `upgradeSurplusFactor:

@@ -33,7 +33,7 @@
  */
 
 import { runMatrixUntil, type Engine, type UntilCell } from '@open-loop/engine';
-import { TugTuningRegistryKey, type TugTunables } from '../modules';
+import { BASE_INCOME_RATE, TugTuningRegistryKey, type TugTunables } from '../modules';
 import {
   buildTugSimEngine,
   createOutcomeAnalyzer,
@@ -52,7 +52,8 @@ const MAX_SIM_TIME_SEC = 35 * 60;
 const TICK_DELTA_SEC = 1.0;
 
 /** Refinery-1 multiplier — the actual lever for greed's economic edge.
- *  Default 1.25; 1.0 disables the eco strategy entirely. */
+ *  1.0 disables the eco strategy entirely; the shipping default sits at the
+ *  top of this axis. */
 const REFINERY_MULT_AXIS = [1.0, 1.25, 1.5];
 
 /** Refinery-1 cost — gates *when* greed gets the income compound. Default
@@ -71,9 +72,10 @@ const STRONG_AXIS = [1.0, 2.0];
 
 const TOP_TIER_COST_FLOOR = 150;
 
-const DEFAULT_REFINERY_MULT = 1.25;
-const DEFAULT_REFINERY_COST = 400;
-const DEFAULT_BASE_INCOME = 8;
+const REFINERY_1 = DEFAULT_TUG_DATA.incomeUpgrades.find((u) => u.id === 'refinery-1')!;
+const DEFAULT_REFINERY_MULT = Number(REFINERY_1.multiplier);
+const DEFAULT_REFINERY_COST = Number(REFINERY_1.cost);
+const DEFAULT_BASE_INCOME = Number(BASE_INCOME_RATE);
 const DEFAULT_TOP_TIER_COST = 1.0;
 const DEFAULT_STRONG = 1.0;
 

@@ -25,7 +25,10 @@ export const UNLOCKS: UnlockDef[] = [
   {
     id: 'coop-built',
     label: 'Henhouse Plans',
-    threshold: 30_810_558,
+    // ~0.6 × the coop's baseCost of 75, matching the ratio the other three
+    // producer reveals hold (pond 600/1100, pasture 12k/18k, orchard 200k/320k):
+    // the tier becomes visible a little before it becomes affordable.
+    threshold: 45,
     reveals: { kind: 'producer', producerId: 'coop' },
   },
   {

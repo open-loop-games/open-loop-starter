@@ -366,19 +366,23 @@ const REFINERY_1_COST_SWEEP = [200, 400, 800, 1600, 3200];
  *  typical match. */
 const MATCH_DURATION_P50_SEC = MATCH_TIME_LIMIT_SEC * 0.5;
 
-/** Analytical defaults at engine-build state (no tiers bought, so
- *  `currentRate = baseRate = 8/s` for every tier). These are what the
- *  ROI ComputedRefs return at `buildTugSimEngine()`. */
-const ANALYTICAL_DEFAULT_PAYBACK: Record<string, number> = {
-  'refinery-1': 400 / (8 * 0.25), // 200s
-  'refinery-2': 350 / (8 * 0.4), // 109.375s
-  'refinery-3': 1200 / (8 * 0.3), // 500s
-};
-const ANALYTICAL_DEFAULT_CROSSOVER: Record<string, number> = {
-  'refinery-1': (400 / (8 * 0.25)) * 1.25, // 250s
-  'refinery-2': (350 / (8 * 0.4)) * 1.4, // 153.125s
-  'refinery-3': (1200 / (8 * 0.3)) * 1.3, // 650s
-};
+/** Analytical defaults at engine-build state — no tiers bought, so every tier
+ *  sees `currentRate = baseRate`. These are what the ROI ComputedRefs return
+ *  at `buildTugSimEngine()`. Derived from the shipping data rather than
+ *  restated, so a retune moves the expectation with the value; the ladder's
+ *  own shape claims are checked by `roi-probe.ts`. */
+const ANALYTICAL_DEFAULT_PAYBACK: Record<string, number> = Object.fromEntries(
+  DEFAULT_TUG_DATA.incomeUpgrades.map((d) => [
+    d.id,
+    Number(d.cost) / (Number(BASE_INCOME_RATE) * (Number(d.multiplier) - 1)),
+  ]),
+);
+const ANALYTICAL_DEFAULT_CROSSOVER: Record<string, number> = Object.fromEntries(
+  DEFAULT_TUG_DATA.incomeUpgrades.map((d) => [
+    d.id,
+    ANALYTICAL_DEFAULT_PAYBACK[d.id]! * Number(d.multiplier),
+  ]),
+);
 const ROI_TOLERANCE = 0.05;
 
 const REFINERY_1_DEFAULT_COST = Number(
