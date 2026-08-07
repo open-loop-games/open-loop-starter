@@ -20,9 +20,10 @@ import {
 //   Ambient corpus — Cookie Clicker, Realm Grinder, Trimps, Rusty's
 //     Retirement, Chillquarium — none ship a player-toggleable producer
 //     auto-buy in the archetype's first arc. The first-arc port treats the
-//     pre-OL-855 bot-side `setupPolicyAutoPurchase` install
-//     (`balance/bot.ts:58`) as the canonical reference: bot behavior the
-//     player should be able to opt into, not a fork-extension layer.
+//     probe-side `setupPolicyAutoPurchase` install that preceded this module
+//     (`balance/_engine.ts`, `buildAmbientSimEngine`) as the canonical
+//     reference: bot behavior the player should be able to opt into, not a
+//     fork-extension layer.
 //
 // Visibility unlocks (`modules/unlocks.ts`) deliberately stay out of this
 // registry. Their `setupSweepAutoPurchase` install runs with `() => true`

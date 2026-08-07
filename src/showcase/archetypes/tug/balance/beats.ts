@@ -11,7 +11,7 @@
  * Cumulative-across-matches arc — beats 1–4 land within match 1; beats 5–6 span
  * 2–4 matches. The headless sim does not auto-restart matches between
  * `match.end()` and the next `match.start()`, so beats 5–6 require the
- * multi-match driver in `match-driver.ts::createMatchDriverModule`.
+ * multi-match driver in `_match-driver.ts` `createMatchDriverModule`.
  */
 
 import { type BeatProbe, type Engine } from '@open-loop/engine';

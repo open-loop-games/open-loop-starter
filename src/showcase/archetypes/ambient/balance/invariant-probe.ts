@@ -32,7 +32,7 @@ import {
   getUnlocks,
 } from '../modules';
 import { DEFAULT_AMBIENT_DATA } from '../data';
-import { buildAmbientSimEngine } from './bot';
+import { buildAmbientSimEngine } from './_engine';
 
 // ─── Probe 3 — offline round-trip ────────────────────────────────────────
 

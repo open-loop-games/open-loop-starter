@@ -24,7 +24,7 @@
 import { runUntil } from '@open-loop/engine';
 import { DEFAULT_AMBIENT_DATA } from '../data';
 import { getUnlocks } from '../modules';
-import { buildAmbientSimEngine } from './bot';
+import { buildAmbientSimEngine } from './_engine';
 
 const HORIZON_SEC = 12 * 3600;
 

@@ -18,7 +18,7 @@
  * rising. Magnitudes stay in the probes, which is why these suites survive a
  * retune.
  *
- * `balance/bot.ts`'s `buildAmbientSimEngine` is a different thing and not a
+ * `balance/_engine.ts`'s `buildAmbientSimEngine` is a different thing and not a
  * duplicate of this: it builds the probe-side engine plus the zero-click
  * activity model the solver measures against.
  */

@@ -43,7 +43,7 @@ import { AmbientTuningRegistryKey, type AmbientTunables } from '../modules';
 import { AUTO_PRODUCERS } from '../data/producers';
 import { UNLOCKS } from '../data/unlocks';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
-import { buildAmbientAccessor, buildAmbientSimEngine } from './bot';
+import { buildAmbientAccessor, buildAmbientSimEngine } from './_engine';
 
 const BUDGET_SEC = BEAT_WINDOWS['beat-6']![1] * 2.5;
 

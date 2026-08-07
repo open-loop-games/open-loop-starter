@@ -39,7 +39,7 @@ import {
   createOutcomeAnalyzer,
   createOutcomeCapture,
   type OutcomeCapture,
-} from './bot';
+} from './_engine';
 import { DEFAULT_TUG_DATA } from '../data';
 import type { PersonaKey } from '../data/personality';
 

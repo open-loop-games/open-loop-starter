@@ -36,25 +36,25 @@ and drops splash before your tanks arrive.
 
 **Bucket: adversarial zero-sum lane over a Cost-Scaling economy — no single
 closed form.** Each side's economy is a familiar spine (geometric income-upgrade
-ladders feeding Auto-Production units), but it runs *inside a match against a
-live opposing economy*, so the archetype's pacing is not a fire-time curve — it
+ladders feeding Auto-Production units), but it runs _inside a match against a
+live opposing economy_, so the archetype's pacing is not a fire-time curve — it
 is a **distribution** over stochastic match outcomes. That is the honest
 consequence of being adversarial: as with any wide interacting graph, the whole
 has no projectable closed form, which is why balance here is **measure-and-record
 via distribution statistics** (§ Balance model), not projected from a spine.
 
-Two structural properties make it *this* archetype rather than a solo producer:
+Two structural properties make it _this_ archetype rather than a solo producer:
 
 - **The opponent economy is a live pressure source that ships as game code.**
   The AI (`modules/opponent-bot.ts`, side-parameterized) is a real module, not a
-  harness fixture — its auto-send *is* the adversarial mechanic the player reads
+  harness fixture — its auto-send _is_ the adversarial mechanic the player reads
   and counters. The player, by contrast, is a **human** (manual send, low APM by
   design); there is no player auto-send policy to ship. In headless sim the
-  shipping AI plays *both* sides (bilateral-symmetric) precisely because there is
+  shipping AI plays _both_ sides (bilateral-symmetric) precisely because there is
   no human — a deliberate sim fiction, harness-side by the automation-as-game-code
   convention's carve-out.
 - **The counter matrix is data, not a chain** — an N×N damage-type multiplier
-  table the per-tick combat resolver reads as a 2D lookup. Its *sharpness*
+  table the per-tick combat resolver reads as a 2D lookup. Its _sharpness_
   (`strongCounter`) is the signature balance knob, and the archetype's centerpiece
   metric is the sensitivity of counter-pivots-per-match to it (methodology #3).
 
@@ -86,7 +86,7 @@ match limit.
   `metaProgressionEnabled` gate ship dormant (production skeleton: off). The
   between-match window is where a persistent power/roster layer grows in.
 - **Opponent-persona rotation** — persona is bound at module install today; the
-  `match-driver.ts` between-match seam is the documented insertion point for a
+  `balance/_match-driver.ts` between-match seam is the documented insertion point for a
   player-facing "rotate opponents per match" toggle or a tuner sweeping persona
   pairs (`TODO(expansion)` there).
 - **Spendable abilities** — `data/abilities.ts` sketches an active-ability layer
@@ -101,16 +101,16 @@ match limit.
 
 ## Engine fit (pattern → primitive)
 
-| Pattern | Engine primitive | Note |
-|---|---|---|
-| Resource Accumulation | per-side income `Resource` + rate chain | both sides accrue symmetrically at `baseIncomeRate` |
-| Cost-Scaling income upgrades | geometric refinery ladders (`tunable()` costs) | the fixed-strategy ROI surface (methodology #5) |
-| Auto-Production | per-side unit shop + sequencer + cooldowns | send dispatches a unit into the shared lane |
-| Routing-Traversal lane | single shared `lane` module, all-pairs combat | fortress treated as just-another opposing unit |
-| Counter matrix | N×N data table read by the combat resolver | `strongCounter` sharpness = signature knob |
-| Adversarial pressure | `modules/opponent-bot.ts` (side-parameterized AI) | ships as game code; auto-send IS the mechanic |
-| Match orchestration | `modules/match.ts` (start/end/reset, events) | `matchEnded` fires pre-reset — capture then |
-| Perturbation | module `TuningRegistry` (`tunable()`) | unit costs, refinery, fortress HP, matrix sharpness |
+| Pattern                      | Engine primitive                                  | Note                                                |
+| ---------------------------- | ------------------------------------------------- | --------------------------------------------------- |
+| Resource Accumulation        | per-side income `Resource` + rate chain           | both sides accrue symmetrically at `baseIncomeRate` |
+| Cost-Scaling income upgrades | geometric refinery ladders (`tunable()` costs)    | the fixed-strategy ROI surface (methodology #5)     |
+| Auto-Production              | per-side unit shop + sequencer + cooldowns        | send dispatches a unit into the shared lane         |
+| Routing-Traversal lane       | single shared `lane` module, all-pairs combat     | fortress treated as just-another opposing unit      |
+| Counter matrix               | N×N data table read by the combat resolver        | `strongCounter` sharpness = signature knob          |
+| Adversarial pressure         | `modules/opponent-bot.ts` (side-parameterized AI) | ships as game code; auto-send IS the mechanic       |
+| Match orchestration          | `modules/match.ts` (start/end/reset, events)      | `matchEnded` fires pre-reset — capture then         |
+| Perturbation                 | module `TuningRegistry` (`tunable()`)             | unit costs, refinery, fortress HP, matrix sharpness |
 
 ## Balance model
 
@@ -122,12 +122,12 @@ couples to what, and how to read each probe. In brief:
   `data/*.ts` name each unit cost, matrix cell and refinery value with its
   coupling.
 - **The probes** — `balance/arc-probe.ts` drives the real engine and the
-  **shipping AI** through `bot.ts`'s bilateral sim-engine builder: fire-time
+  **shipping AI** through `balance/_engine.ts`'s bilateral sim-engine builder: fire-time
   checks, the counter-strong sensitivity signature, an income-upgrade ROI
   snapshot, match-duration statistics, and a framework-correctness dominance
   gate that verifies instrumentation rather than tuning anything.
   `balance/retune-probe.ts` sweeps the persona matrix for a viable-strategy data
-  slice. Both lean on `match-driver.ts` for cumulative multi-match beats.
+  slice. Both lean on `balance/_match-driver.ts` for cumulative multi-match beats.
 - **The behavioral suites** — `sim/match-scope.test.ts` covers match-scope reset
   and `sim/tug.sim.test.ts` the behavioral shape. `sim/data-invariants.test.ts`
   holds counter-matrix shape, and `sim/instrumentation.test.ts` verifies the

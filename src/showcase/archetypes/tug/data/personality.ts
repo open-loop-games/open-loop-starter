@@ -24,7 +24,7 @@
  *
  * Future auto-rotation across matches lands as `createSequencer` +
  * `createRoundRobinStrategy` per sketch §3.2; the match-driver seam in
- * `balance/match-driver.ts` is shaped to accept that drop-in.
+ * `balance/_match-driver.ts` is shaped to accept that drop-in.
  */
 export type PersonaKey = 'mass' | 'greed' | 'counter' | 'tech';
 

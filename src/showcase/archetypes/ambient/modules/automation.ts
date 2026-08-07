@@ -28,7 +28,7 @@ export type AmbientAutomationTier = 'manual' | 'basic';
  * structural one: the selection policy is a no-op while `planter` is the only
  * producer, so the natural rung is the second producer reveal (`coop-built`,
  * ~1.4m per `balance/reveal-probe.ts`). Setting it there moves the arc,
- * because `balance/bot.ts` enables every autobuyer spec at t=0 — which makes
+ * because `balance/_engine.ts` enables every autobuyer spec at t=0 — which makes
  * it part of the open unfold-cadence decision rather than a free change.
  *
  * A fork wanting the gate replaces the `unlock` call below with

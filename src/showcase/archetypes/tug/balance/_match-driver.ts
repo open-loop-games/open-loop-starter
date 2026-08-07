@@ -10,14 +10,14 @@ import { MatchKey } from '../modules';
  * never fire.
  *
  * **Why deferred-by-one-tick:** `match.end()` runs `emit('matchEnded')`
- * BEFORE its synchronous `reset.reset()` (see `match.ts` lines 153–158).
+ * BEFORE its synchronous `reset.reset()` (see `modules/match.ts`, `end`).
  * A synchronous `match.start()` inside the listener would be wiped by the
  * immediately-following reset. Deferring to the next tick lets the reset
  * settle before re-init.
  *
  * **Production never installs this module.** Production game lives inside
  * a single match per UI session; the player drives match transitions via
- * the match-end summary modal. Only `buildTugSimEngine` adds this module.
+ * the match-end summary modal. Only `_engine.ts`'s `buildTugSimEngine` adds this module.
  *
  * **Candidate primitive.** This pattern (sim-bot match driver) recurs in
  * any adversarial-state archetype with multi-match cumulative-arc beats.

@@ -3,7 +3,7 @@ import { LaneKey, MatchKey } from '../modules';
 import { createTugEngine } from '../boot';
 import type { TugBelievability } from '../data/types';
 import type { PersonaKey } from '../data/personality';
-import { createMatchDriverModule } from './match-driver';
+import { createMatchDriverModule } from './_match-driver';
 
 /**
  * Sim-engine harness for balance probes + sweeps. Owns:

@@ -7,7 +7,7 @@ import {
   createOutcomeAnalyzer,
   createOutcomeCapture,
   type OutcomeCapture,
-} from '../balance/bot';
+} from '../balance/_engine';
 import {
   BASE_INCOME_RATE,
   getIncome,

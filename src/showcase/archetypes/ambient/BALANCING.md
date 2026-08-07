@@ -43,7 +43,7 @@ which is a decision about what game this is, not a tuning pass.
 **Zero-click is structural.** There is no manual trigger, so all income flows
 through `getTotalRate`, and that is precisely what lets the solver read the arc
 under `stasis-aware-tick` and terminate early when a candidate value makes a
-predicate unreachable. Add a click channel and the accessor in `balance/bot.ts`
+predicate unreachable. Add a click channel and the accessor in `balance/_engine.ts`
 stops capturing all income — the solver then reports *wrong* fire times rather
 than failing, which is the worst way for a balance tool to break. Grow the
 accessor first, or accept that you have left the archetype.
@@ -133,7 +133,7 @@ thresholds — not a new knob.
   anything. The honest rung is the second producer reveal: `selectionHybridPayback`
   has one candidate while `planter` stands alone, so the policy is a no-op until
   `coop-built` (~1.4m). Setting the requirement there is a one-line change and a
-  re-solve, *not* a free one — `balance/bot.ts` enables every autobuyer spec at
+  re-solve, *not* a free one — `balance/_engine.ts` enables every autobuyer spec at
   t=0, so the gate would move the arc. It belongs with the unfold-cadence decision
   above rather than ahead of it.
 - **The windows are a first guess.** They were authored ahead of the content that

@@ -17,7 +17,7 @@
  * — reset scope, event ordering, both sides firing. Magnitudes stay in the
  * probes, which is why these suites survive a retune.
  *
- * `balance/bot.ts`'s `buildTugSimEngine` is a different thing and not a
+ * `balance/_engine.ts`'s `buildTugSimEngine` is a different thing and not a
  * duplicate of this: it builds the bilateral bot-driven engine the probes
  * measure, and `instrumentation.test.ts` imports it deliberately because that
  * measurement path is what the suite specs.

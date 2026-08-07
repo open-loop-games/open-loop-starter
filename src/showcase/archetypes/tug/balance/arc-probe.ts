@@ -58,7 +58,7 @@ import {
   createOutcomeCapture,
   type OutcomeCapture,
   type TugSimOptions,
-} from './bot';
+} from './_engine';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { DEFAULT_TUG_DATA } from '../data';
 import type { PersonaKey } from '../data/personality';
