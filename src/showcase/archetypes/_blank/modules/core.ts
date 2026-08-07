@@ -10,6 +10,7 @@ import {
 import { computed } from 'vue';
 import { GAME_BALANCE, type GameBalance } from '../data/game';
 import { GameTuningRegistryKey } from './tuning';
+import { AutomationKey } from './automation';
 
 /**
  * Core module — the blank base's single example mechanic: one tracked number
@@ -25,7 +26,10 @@ import { GameTuningRegistryKey } from './tuning';
 export interface CoreApi {
   /** The accumulated headline number. */
   count: ComputedRef<Decimal>;
-  /** Live accrual rate (units/game-second), after any tuning override. */
+  /**
+   * Live accrual rate (units/game-second), after any tuning override and any
+   * automation boost currently unlocked.
+   */
   ratePerSecond: ComputedRef<number>;
 }
 
@@ -40,9 +44,10 @@ export function createCoreModule(options: CoreModuleOptions = {}): EngineModule 
 
   return {
     id: 'game/core',
-    dependencies: ['game/tuning'],
+    dependencies: ['game/tuning', 'game/automation'],
     install(ctx) {
       const registry = ctx.inject(GameTuningRegistryKey);
+      const automation = ctx.inject(AutomationKey);
 
       const state = withPersistentContext('game/core', () => ({
         count: persistent<Decimal>(new Decimal(0), { name: 'count' }),
@@ -52,13 +57,20 @@ export function createCoreModule(options: CoreModuleOptions = {}): EngineModule 
       // probes can override it via pushScope. Default closure reads `data/`.
       const ratePerSecond = tunable(registry, 'core/ratePerSecond', () => data.ratePerSecond);
 
+      // Effective rate = the tuned base times whatever automation is
+      // contributing. `boostMultiplier` is 1 while the ladder is locked, so a
+      // clean fork accrues exactly the linear spine.
+      const effectiveRate = computed(
+        () => Number(ratePerSecond.value) * automation.boostMultiplier.value,
+      );
+
       ctx.onTick((dt) => {
-        state.count.value = state.count.value.add(Decimal.mul(ratePerSecond.value, dt));
+        state.count.value = state.count.value.add(Decimal.mul(effectiveRate.value, dt));
       });
 
       ctx.provide(CoreKey, {
         count: computed(() => state.count.value),
-        ratePerSecond,
+        ratePerSecond: effectiveRate,
       });
     },
   };

@@ -166,6 +166,19 @@ working only the manual openers a player works. Deliberately unrealistic drivers
 full-auto session runners, optimal-play enumeration — stay probe-side; they are tooling,
 not mechanics.
 
+**The gate is for player-facing automation only.** An AI *opponent* is not automation
+the player unlocks, so it is gated by install-presence rather than a tier — skirmish's
+opponent seats pass no tier, and its `AutomationOptions.tier` is what a player seat
+would pass. Tier ids are a typed union per archetype (`SkirmishAutomationTier`,
+`AmbientAutomationTier`), so a policy naming a tier that does not exist fails at the
+call site instead of silently never running.
+
+**A ladder that is declared but never withholds anything is a divergence**, not an
+adoption — say so at the call site and in `BALANCING.md` § Known thin, with what the
+honest rung would cost. Opening a gate changes the arc, so it is a spine decision:
+grow the projection's second branch in the same pass, or the probe reports real drift
+with nothing to explain it.
+
 ## Conformance
 
 The archetypes are the storybook for the engine's batteries, so they are read as
@@ -179,6 +192,7 @@ Each axis has one canonical answer and one archetype to copy it from:
 |---|---|---|
 | Perturbation path | `tunable()` at reader sites; registry created in `modules/tuning.ts` | `tug` |
 | Automation driver | `modules/automation.ts` gated by `AutomationTiers`; a thin runner works only the manual openers | `skirmish` |
+| Automation ladder | player-facing automation runs behind an `AutomationTiers` gate, tier ids a typed union, policies inert until the tier is reached | `_blank` |
 | Behavioral suites | `modules/<name>.test.ts`, beside the module, importing `sim/harness.ts` | `skirmish` |
 | Test harness | `sim/harness.ts` → bare `boot()` / `tick()` / `tickUntil()` over this archetype's modules | `_blank` |
 | Runnable projection | `<name>-projection.ts` where the closed form is worth executing | `cycler` |

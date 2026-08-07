@@ -27,6 +27,12 @@ deliberately *not* perturbable too, and why, so nobody re-litigates it.
 |---|---|---|
 | `game/ratePerSecond` | `1` | How fast the tracked number climbs. The whole economy, for now. |
 
+`autoBoostMultiplier` (`2`, in `data/game.ts`) is deliberately **not** on the
+perturbation surface. It is a content decision about what unlocking automation
+is worth, and the ladder ships locked, so it moves nothing until a fork opens
+it. Wrap it in `tunable()` at its reader site the moment you have a probe that
+wants to sweep it.
+
 ## Couplings
 
 What is *not* independent, and what breaks **silently** when changed. This is the
@@ -34,7 +40,15 @@ highest-value section in a real archetype: it is where a structural assumption
 the code never states gets written down, and it is what saves the next person a
 day.
 
-Nothing yet — one knob cannot couple to anything. In a real economy this is where
+**Unlocking the automation ladder makes the spine piecewise.** `data/game.ts`
+§ Balance carries the linear closed form *and* the branch that opens when the
+`assisted` tier unlocks. `balance/game-projection.ts` only implements the linear
+one, because the ladder ships locked — the probe reads 0.00% drift for exactly
+that reason. Open the gate without growing the projection and the probe starts
+reporting drift that is real but unexplained, which is the worst way to discover
+you changed the economy.
+
+In a real economy this is where
 you record things like "these two ladders share a growth constant, so retune the
 ratios rather than the shared term", or "the harness can only read the arc
 because there is no click channel; add one and the solver reports wrong answers

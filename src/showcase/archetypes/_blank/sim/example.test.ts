@@ -4,8 +4,8 @@
  * freshly-ejected repo starts green, and it guards the scaffold's core promise:
  * persistence survives a round-trip.
  *
- * The blank game has no modules of its own yet, so this targets the shared base
- * (settings). As you add game modules, write one suite per module beside it —
+ * This targets the shared base (settings) plus the example economy's automation
+ * gate. As you add game modules, write one suite per module beside it —
  * `src/game/modules/<name>.test.ts` — that boots the harness and asserts the
  * mechanic's *observable behavior* through its public API:
  *

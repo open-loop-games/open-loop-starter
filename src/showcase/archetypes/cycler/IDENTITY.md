@@ -174,6 +174,7 @@ A fork grows the archetype *up* through these. Each feeds a named part of the sp
 | `addBurnTier` (salvo posture) | an escalation-content step / Prophecy draft option | `g`, `T_g` — the pace surface |
 | `addUpgrade` | a permanent (carried across Redeploy) | power → reach; **only a g/H upgrade moves pacing, and gets gated** |
 | `addPrestigeLayer` (Redeploy) | the breach / re-peg boundary | re-baselines `W₀ = C/H`; banks sublinear currency |
+| automation ladder | auto-placement / auto-muster behind an `AutomationTiers` gate | none yet — cycler ships no player automation, so the gate has nothing to withhold. Adding one means declaring which spine term it moves first (see `.claude/rules/archetype-authoring.md` § Conformance) |
 
 ## Engine fit (pattern → primitive)
 

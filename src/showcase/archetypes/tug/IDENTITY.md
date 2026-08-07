@@ -91,6 +91,11 @@ match limit.
   pairs (`TODO(expansion)` there).
 - **Spendable abilities** — `data/abilities.ts` sketches an active-ability layer
   over the passive send loop.
+- **Player-side automation** — tug has no player-facing automation today;
+  `modules/opponent-bot.ts` is an AI opponent, which is gated by install-presence
+  rather than a tier. An auto-sender or auto-upgrade layer is the shape that would
+  earn an `AutomationTiers` ladder, per `.claude/rules/archetype-authoring.md`
+  § Conformance.
 - **Live PvP** — the overview's endgame: against a second human the counter
   space becomes combinatorial. The shipping AI is the single-player stand-in.
 
