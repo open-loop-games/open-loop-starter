@@ -111,9 +111,10 @@ export { expectedInputAt };
  * resource's current value + cumulative auto-producer rate keyed by
  * resource id `'sprouts'`. Ambient has no click channel — all income flows
  * through `ProducerCategory.getTotalRate`, so `getRate` faithfully captures
- * what the engine simulates each tick. This is the structural difference
- * from Producer (where `getRate` misses click-taper income, forcing the
- * 'tick' mode default — see `BALANCING-producer.md` § stasis-aware-tick).
+ * what the engine simulates each tick. An economy with an out-of-band rate
+ * channel — click taper, externally driven event — cannot use this mode: its
+ * accessor under-reports income and the run terminates on a false stasis. See
+ * `../BALANCING.md` § Couplings.
  */
 export function buildAmbientAccessor(_engine: Engine): GameStateAccessor {
   const sprouts = getPrimaryResource();

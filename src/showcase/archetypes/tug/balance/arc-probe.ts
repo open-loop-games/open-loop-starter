@@ -8,7 +8,7 @@
  * Probe 5 is a methodology-#1 distribution lock on match-duration p50;
  * probe 6 is a framework-correctness archetype-dominance gate (no design
  * knob; the methodology kit doesn't currently name this shape — see
- * `archetypes/BALANCING-tug.md`).
+ * `../BALANCING.md`).
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/tug/balance/arc-probe.ts`.
  * Prints per-probe pass/fail report;

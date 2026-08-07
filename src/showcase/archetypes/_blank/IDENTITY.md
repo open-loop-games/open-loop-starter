@@ -9,8 +9,9 @@ section `.claude/rules/archetype-authoring.md` § IDENTITY.md — required secti
 requires, filled in for
 the neutral base. When you build on `pnpm eject --clean`, rewrite each section for
 your game; when you author a *new* archetype in the gallery, replace the placeholder
-content with the real composition. Keep it a single screen — push worked balance
-detail into `archetypes/BALANCING-<name>.md`.
+content with the real composition. Keep it a single screen — worked balance
+detail belongs in `BALANCING.md` beside this file, per
+`.claude/rules/archetype-authoring.md` § BALANCING.md — required sections.
 
 ## What this archetype is
 

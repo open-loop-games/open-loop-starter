@@ -23,9 +23,9 @@ import type { AmbientData, AutoProducerDef } from '../data/types';
  * so typos surface at the call site.
  *
  * `balance/producerCostGrowth` is intentionally absent: `ProducerMapping.
- * purchase.costScaling` is static `DecimalSource` (not Computable), read
- * once at producer registration. See `data/producers.ts` `COST_SCALING`
- * inline comment + `BALANCING-producer.md` § first engine-surface gap.
+ * purchase.costScaling` is read once at producer registration, so a key here
+ * would never be re-read. See `data/producers.ts` `COST_SCALING` for the
+ * inline rationale and what to compose instead.
  */
 export type AmbientTunableKey =
   | 'balance/tier1BaseRate'

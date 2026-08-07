@@ -10,7 +10,7 @@
  * Run: `pnpm exec vite-node src/showcase/archetypes/ambient/balance/solve-probe.ts`.
  * Prints a proposed-patch report. Does NOT mutate data files — the human
  * picks and edits scaffolding based on the output, per
- * `archetypes/BALANCING.md`.
+ * `../BALANCING.md`.
  *
  * Scope: beats 2, 3, 5. Beats 1, 4, 6 are verify-only:
  *   - Beat 1 ("first passive production") fires on planter's seeded

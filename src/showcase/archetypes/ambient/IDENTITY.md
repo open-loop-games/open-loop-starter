@@ -43,8 +43,8 @@ cumulative rather than a steep session sprint. The headline rate is
 `Σ_tiers (count · baseRate) × achievement-modifier product`. The one structural
 departure from Producer is the **zero-click contract**: there is no manual trigger,
 so all income flows through `getTotalRate` — which lets the harness read the arc
-through `stasis-aware-tick` (Producer's click-taper channel can't; see
-`BALANCING-ambient.md` § stasis-aware-tick). The single modeled subsystem is
+through `stasis-aware-tick` (an economy with an out-of-band rate channel can't;
+see `BALANCING.md` § Couplings). The single modeled subsystem is
 `continuous-auto-producers` (Pure bucket, 7/7 rows Pure — the cleanest Pure
 decomposition in the set); balance is invented against the spine and settled by
 per-beat `runUntil` bisection (methodology #1), no predictor walker.
@@ -105,12 +105,13 @@ gentle Cost-Scaling lens              solver bisection + invariants       struct
    regardless of solver-output rounding: scene-variant ↔ unlock threshold parity,
    monotonic threshold order, headline-multiplier sanity ranges. Runs in
    milliseconds, no sim (beat-fire-time locks belong on `runMatrixUntil`, per
-   `BALANCING.md § Theme 5`).
+   `open-loop-engine/docs/consumer-guide-balance.md` § Why this isn't a test suite).
 
 ## Cross-references
 
 - Genre exemplars (shape validation, not lift targets): Anti-Idle, Rusty's
   Retirement, Chillquarium, Tiny Pasture
-- Methodology + balance kit: `../README.md`, `archetypes/BALANCING.md`,
-  `archetypes/BALANCING-ambient.md`
+- Working on the numbers: `BALANCING.md` (beside this file)
+- Balance methodology: `open-loop-engine/docs/consumer-guide-balance.md`;
+  archetype-specific authoring in `.claude/rules/archetype-authoring.md`
 - Engine API: `open-loop-engine/docs/api/INDEX.md`, `consumer-guide.md`

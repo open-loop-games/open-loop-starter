@@ -11,12 +11,12 @@ import type { AutoProducerDef } from './types';
 // Cozy Farm theme: planter / coop / pond / pasture / orchard.
 
 // Multiplicative per-purchase cost growth. Inlined rather than wrapped in
-// `tunable()` because `ProducerMapping.purchase.costScaling` is static
-// `DecimalSource` (not Computable) — read once at producer registration,
-// not re-read on retune. Bisecting this knob requires an engine change
-// (Computable adoption on `costScaling` with `unref` at the read site).
-// Same negative criterion as producer's `defaultCostScaling = 1.15`; see
-// `BALANCING-producer.md` § first engine-surface gap.
+// `tunable()`: `ProducerMapping.purchase.costScaling` is read once at producer
+// registration, so a registered knob here would never be re-read. Sweeping it
+// means editing this constant and re-running the solver. A cost curve that
+// needs to be perturbable — or invertible, for bulk-purchase math — is composed
+// as a `Formula` at the wiring layer instead of through this shorthand field;
+// see `costCurve` in `src/balance/cost-curve.ts`.
 const COST_SCALING = 1.08;
 
 export const AUTO_PRODUCERS: AutoProducerDef[] = [
@@ -68,11 +68,10 @@ export const AUTO_PRODUCERS: AutoProducerDef[] = [
 // achievement folds `DEFAULT_ACHIEVEMENT_MULTIPLIER` into the chain, per
 // `../modules/achievements.ts`). Unlike Producer there is NO click channel — all
 // income flows through `getTotalRate`, which is what lets the harness read the
-// arc through `stasis-aware-tick` (see `BALANCING-ambient.md` § stasis-aware-tick).
+// arc through `stasis-aware-tick` (see `../BALANCING.md` § Couplings).
 //
 // The per-tier (baseCost / baseRate) ratios climb 110 / 19 / 34 / 82 / 213: coop
 // is a deliberate early payback dip (the "first purchased producer feels good"
 // beat), then the ladder resumes its gentle climb. That shape is the pacing
-// invariant a fork retunes; the 1.08 steepness is inlined, not `tunable()` — the
-// engine's `costScaling` is static (see `BALANCING-producer.md` § costScaling gap,
-// N=2 with ambient).
+// invariant a fork retunes; the 1.08 steepness stays fixed for the reason given
+// at `COST_SCALING` above.

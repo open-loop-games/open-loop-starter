@@ -6,7 +6,8 @@
  * Axes include refinery-1 cost / multiplier, baseIncomeRate, top-tier
  * unit cost, and counter-matrix sharpness — these are the levers the
  * dominance mechanism (greed's economic compound via refinery-1) is
- * gated on. Per BALANCING.md § Retune vs reshape: before reshape,
+ * gated on. Per `open-loop-engine/docs/consumer-guide-balance.md`
+ * § When prediction and truth disagree: before reshape,
  * perturb the constants the existing harness already exposes, including
  * the ones the dominance mechanism is gated on.
  *

@@ -37,7 +37,6 @@ const DEMO_DELETES = [
   'src/test/eject.test.ts',
   'scripts/eject.mjs',
   'docs',
-  'archetypes',
   'profiles',
   'TODO.md',
   // Stale under the /work/studio workspace — the root lockfile is authoritative.

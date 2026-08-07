@@ -7,7 +7,7 @@
  * FIXED about Ambient — the companion-software contract, phases, signature
  * beat) dissolved into `../IDENTITY.md`; the closed-form cost/rate lens lives
  * in the `// ─── Balance ───` section of `../data/producers.ts`. See
- * `../../README.md` § Balance — three lanes.
+ * `.claude/rules/archetype-authoring.md` § Balance — where each surface lands.
  *
  * The Lane-2 probes (`solve-probe.ts` bisection, `invariant-probe.ts`
  * offline-round-trip + no-pressure) import these. When a phase is unreachable,
@@ -40,7 +40,8 @@ const hr = (h: number) => h * 60 * 60;
  * the same reason.
  *
  * Windows are an LLM guess on first pass — fully expect to shift them
- * during balance reconciliation (BALANCING.md § "Retune vs reshape" →
+ * during balance reconciliation (open-loop-engine/docs/consumer-guide-balance.md
+ * § When prediction and truth disagree →
  * "move the phase"). Producer's B5/B6/B7 shifted 15–25 minutes during
  * prior tuning; record the same kind of shifts here in commit notes if
  * they happen.

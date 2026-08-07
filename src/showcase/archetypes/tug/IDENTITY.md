@@ -139,8 +139,10 @@ Cost-Scaling + matrix lens   arc + sensitivity + retune probes           measure
 - Genre exemplars (shape validation, not lift targets): the lane-push /
   tug-of-war lineage — Age of War and the Warcraft III tug-of-war custom-map
   family
-- Methodology + balance kit: `../README.md`, `archetypes/BALANCING.md`,
-  `archetypes/BALANCING-tug.md`
-- Candidate primitive: `candidate-primitives.md`
-  § bilateral-symmetric sim-bot pattern (parked at N=1)
+- Working on the numbers: `BALANCING.md` (beside this file)
+- Balance methodology: `open-loop-engine/docs/consumer-guide-balance.md`;
+  archetype-specific authoring in `.claude/rules/archetype-authoring.md`
+- Back-flow entries this archetype is a receipt for:
+  `candidate-primitives.md` § `createMatchDriverModule({ matchKey })` and
+  `candidate-recipes.md` § Bilateral sim-bot
 - Engine API: `open-loop-engine/docs/api/INDEX.md`, `consumer-guide.md`

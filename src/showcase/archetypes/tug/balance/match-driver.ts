@@ -21,8 +21,9 @@ import { MatchKey } from '../modules';
  *
  * **Candidate primitive.** This pattern (sim-bot match driver) recurs in
  * any adversarial-state archetype with multi-match cumulative-arc beats.
- * See `candidate-primitives.md` § bilateral-
- * symmetric sim-bot pattern. TODO(expansion): graduate
+ * See `candidate-primitives.md` § `createMatchDriverModule({ matchKey })`;
+ * the policy installed atop it is the recipe half, `candidate-recipes.md`
+ * § Bilateral sim-bot. TODO(expansion): graduate
  * `createMatchDriverModule({ matchKey })` once a second match-shaped
  * adversarial-state archetype lands and the match-key shape converges.
  *

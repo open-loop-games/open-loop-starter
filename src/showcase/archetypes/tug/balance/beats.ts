@@ -28,7 +28,8 @@ const min = (m: number) => m * 60;
  * aggregate p50 windows.
  *
  * Windows are a first-pass guess — expect to shift them during balance
- * reconciliation (BALANCING.md § Retune vs reshape → "move the phase").
+ * reconciliation (open-loop-engine/docs/consumer-guide-balance.md
+ * § When prediction and truth disagree).
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), min(1)],

@@ -49,6 +49,7 @@ strict, one-way: `data → modules → composables → ui`.
 ```
 <name>/
 ├── IDENTITY.md          # single-screen identity: pattern-language line + spine + growth ports
+├── BALANCING.md         # the balance orientation a fork inherits — see below
 ├── data/                # pure config — typed defs + balance constants, with co-located
 │                        #   `// ─── Skeleton ───` / `// ─── Balance ───` comment sections
 ├── modules/             # engine modules, factory-constructed over data (incl. tuning.ts, automation.ts)
@@ -76,6 +77,33 @@ Filename is `IDENTITY.md` for every archetype. Single screen. Required:
 5. **Growth ports** — the validated-but-deferred directions the archetype grows through.
 6. **Engine fit** — pattern → engine primitive, with candidate-primitive receipts.
 7. **Balance model** — the spine and what checks it, pointing at this archetype's `balance/`.
+
+## BALANCING.md — required sections
+
+`IDENTITY.md` says what the archetype *is*. `BALANCING.md` is how you **work on
+its numbers** — written for whoever inherits this game after eject, when the
+showcase is gone and this doc is all that stands between the spine declaration
+and a wall of constants. Present tense, no pass history. Required:
+
+1. **Opening** — two or three sentences on what kind of economy this is. Points at
+   `IDENTITY.md` § Rate-function spine for the bucket; never restates it.
+2. **The knobs** — every `tunable()` key, its default, and *what it moves*. The
+   effect, not the declaration — that is what a reader cannot get from `data/`.
+   Name what is deliberately **not** perturbable, and why.
+3. **Couplings** — what is not independent, and what breaks *silently* if changed.
+   The highest-value section: it is where a structural assumption the code never
+   states gets written down.
+4. **Running a pass** — which probe answers which question, what it prints, how to
+   read it. Point at probe headers rather than restating them.
+5. **Known thin** — where the balance is unsatisfying and what the probes already
+   say about it. Honest limits, not apologies.
+
+It is not a pass ledger. Records of what a session learned, convergence counts,
+and promotion tracking do not belong — a finding that proves general leaves for
+the project's balance-methodology record (per the engine guide § When a balance
+pass finds an engine gap, which states the same rule for engine gaps: record the
+receipt by path and symbol, and let a later pass read it). Findings ripen in
+§ Couplings and § Known thin until they are general enough to leave.
 
 ## Balance — where each surface lands
 

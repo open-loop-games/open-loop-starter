@@ -1,7 +1,8 @@
 /**
  * Ambient sim-driven balance probes — offline-round-trip + no-pressure
  * invariant. Sits in the vite-node discovery lane per
- * `archetypes/BALANCING.md` § Theme 5 ("Scripts discover, tests lock"); the
+ * `open-loop-engine/docs/consumer-guide-balance.md`
+ * § Why this isn't a test suite; the
  * vitest suite never drives sim runs.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/ambient/balance/invariant-probe.ts`.

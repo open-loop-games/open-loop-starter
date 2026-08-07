@@ -9,7 +9,8 @@ import { DEFAULT_ACHIEVEMENT_MULTIPLIER } from '../modules';
  * solver-output rounding: scene-variant ↔ unlock threshold parity, monotonic
  * threshold order, and headline-multiplier sanity ranges. Beat-fire-time
  * locks belong on `runMatrixUntil` with `toBeBetween` bounds, not here —
- * see `archetypes/BALANCING.md` § Theme 5.
+ * see `open-loop-engine/docs/consumer-guide-balance.md`
+ * § Why this isn't a test suite.
  */
 
 const { achievements, producers, unlocks, sceneVariants } = DEFAULT_AMBIENT_DATA;
