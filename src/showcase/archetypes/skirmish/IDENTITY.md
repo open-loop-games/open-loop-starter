@@ -1,56 +1,153 @@
 # Skirmish — Identity
 
-> **Status: all four architecture layers walk.** Match spine, continuous
-> tactical sim, bilateral AI, and the pixi render field are live end-to-end —
-> bot vs bot renders on screen. What remains is depth (economy spine, unit
-> roster + counters, personas, balance lanes), not the skeleton. Sections
-> marked _(TBD)_ get filled as those bones land.
-
 ## Identity line
 
-Continuous tactical RTS — a **two-sided real-time combat archetype**: symmetric
-factions, per-unit HP and target acquisition on a continuous 2D field, driven
-first by **built-in AI on both sides** (bot vs bot), with player control as a
-stretch. _(Formal pattern-language line pending — register in `_identity.md`.)_
+> **Real-time strategy** — Resource Accumulation + Auto-Production funding **N
+> factions** that contest one continuous field in real time; build order,
+> composition and engagement are the decision surface, and **AI Rosters** drive
+> the seats.
+
+Registered in `../_identity.md` (Skirmish row). Patterns: Activity Systems
+(tier 0, continuous production) and the Automation CPP (100%) carry the economy;
+**AI Rosters** (adjacent — parameterized-personality sub-shape) carries the
+opponents, which is load-bearing rather than decorative here.
+
+**N factions, not a duel** — this is the line against Tug, whose identity is
+bilateral zero-sum over one shared lane _by construction_. Three armies can meet;
+two can be left to bleed each other while a third expands; threat is directional
+and unevenly distributed, so _who to fight_ sits alongside how much to build.
+Free-for-all is the base case, teams a friend/foe relation over the same
+substrate. The current cut seats two (`Side = 'a' | 'b'`) — that is a first
+implementation, not the archetype, and § Growth ports carries the widening.
+
+**No spatial pattern is in this line, deliberately.** Placement-Adjacency wants
+neighbour semantics and Routing-Traversal wants path-as-commitment; skirmish has
+neither. Units acquire and close. The field is where attrition _resolves_ rather
+than a surface anyone authors — it is load-bearing in the spine (it sets how many
+units are in contact at once) without being a pattern the player composes.
+Claiming either sibling here would be the easy mis-file.
 
 ## What this archetype is
 
-Two economies fund two armies that contest one field. Units are free-moving
-agents (continuous `(x,y)`), not lane-rail followers. The first-class player is
-a *policy*: the shipping AI plays both sides, so the archetype is fully
-exercisable — and balanceable — headless before a human ever touches it. The
-pixi/webgl field renders the sim as a pure read-only projection.
+Each faction funds an army that contests one shared field. Income splits between
+compounding the economy and building units; units are free-moving agents
+(continuous `(x,y)`), not lane-rail followers, and they acquire and engage on
+their own once committed. A faction loses when its base breaks.
 
-## Rate-function spine / bucket _(TBD)_
+The first-class player is a _policy_: the shipping AI drives every seat, so the
+archetype is fully exercisable — and balanceable — headless before a human ever
+touches it. A player seat is that policy swapped for input. The pixi/webgl field
+renders the sim as a pure read-only projection.
 
-Economy spine unresolved. Open fork: a **two-tier** model — a coarse economic
-spine for balance sweeps (tug-style, cheap at sub-second ticks) vs. the fine
-tactical sim for play. Decide early; it determines whether the bot reads the
-same state in both.
+## Rate-function spine / bucket
 
-## The loop / beat map _(TBD)_
+**Bucket: the exponential family — guns-versus-butter allocation.** The RTS
+economic decision is a split, not a curve. A faction reinvests a fraction `φ` of
+income into the economy, which compounds, and spends `1 − φ` on army, which is
+consumed. For a _fixed_ `φ` the whole trajectory closes
+(`incremental-math/…/rate-functions/exponential`):
 
-Match-scoped: fund → build → engage → attrition → base fall. Beats measured off
-the bot-vs-bot harness once the tactical sim walks, never authored.
+    E(t) = E₀ · e^(φ · r · t)                        economy, compounding
+    A(t) = ((1 − φ)/φ) · E₀ · (e^(φ · r · t) − 1)    army mass committed by t
+
+Two consequences the archetype is built on. Army mass is _proportional to the
+economy's own growth_, so a higher `φ` buys strictly more army later at the cost
+of everything earlier — the tradeoff is a timing curve, not a magnitude. And
+because the exponent carries `φ`, two factions separated by a small split
+difference diverge exponentially: an early advantage compounds unless it is
+spent. That is the RTS opening in closed form, and it is what the beat map is
+measured against.
+
+**Where the closed form stops — three named places, in order of how much they
+cost:**
+
+1. **The optimum for `φ` is a best-response fixed point, not an expression.**
+   The right split depends on rivals' splits, so this is _strategy-space
+   integration_ (`…/rate-functions/bifurcations#strategy-space-integration`):
+   per-fixed-strategy ROI closes per the algebra, `σ* = BR(σ*)` does not.
+   Skirmish inherits the bucket's own caveat — the closed-orbit results it
+   illustrates are zero-sum ones, and at N ≥ 3 factions even that shelter is
+   gone.
+2. **The attrition exchange is coupled-state deterministic**
+   (`…/bifurcations#coupled-state-deterministic`, which names multi-faction
+   warfare outright). Armies mutually consume each other; a conserved quantity
+   exists — Lanchester's square law in the fully-engaged limit, since targeting
+   is aimed (`modules/tactical-sim.ts`, `nearestEnemy`) — but the
+   time-parametrization does not. Worse, units arrive as a _stream_ rather than
+   a mass, so the engaged fraction is itself dynamic and the square law is a
+   bound rather than the model.
+3. **Cadence jitter is stochastic load-bearing** where it is switched on
+   (`AutomationOptions.cadenceJitter`). The distribution over seeds carries the
+   design intent — a persona matchup that wins 60% is a different design object
+   from one that wins 100% — so the mean is not the answer.
+
+**What measures the remainder:** distribution statistics over seeded bilateral
+runs, in the shape tug already proves out — a win-rate surface over the split
+axis, and a match-duration distribution rather than a match-duration number.
+Partial coverage: the opening projects, the war is measured.
+
+**What the spine says is missing.** `φ` does not exist in the shipping data —
+`SUPPLY_RATE` is a flat constant (`data/tactical.ts`) with no reinvestment
+channel, so the archetype's central decision is currently unrepresentable and
+every faction is pinned at `φ = 0`. The economy bone is exactly the work of
+building that channel. This is the spine doing its job before the data does:
+declared first, so the contract phase is measured against it rather than
+back-fitted to whatever gets built.
+
+## The loop — beat map
+
+Match-scoped: **fund → build → commit → engage → break**. Six ordered
+player-experience phases; the **measured** windows and predicates belong in
+`balance/beats.ts`, never authored — that file is owed with the economy bone.
+
+1. **first-income-decision** — the split becomes real: income can go to economy
+   or to army and cannot go to both.
+2. **first-army-committed** — the opening ends; units leave the base with the
+   economy at whatever `φ` bought.
+3. **first-contact** — armies meet. The first read on whether the split was
+   right, and the archetype's defining moment.
+4. **first-engagement-decided** — one army breaks. Attrition asymmetry becomes
+   legible as a _consequence of the opening_ rather than as noise.
+5. **recovery-or-collapse** — the losing faction either rebuilds off a compounded
+   economy or cannot. This is where `φ` pays or doesn't, and it is the beat the
+   spine most directly predicts.
+6. **base-broken** — the match resolves.
+
+The phase order is **fixed identity**: an economy phase that does not precede
+commitment, or a commitment with no recovery window behind it, has forked into a
+sibling. Beats 3–5 are the ones that only exist because rivals are live; a
+single-seat game reaches beat 2 and stops.
 
 ## Layered architecture (the load-bearing design)
 
 Spring-shaped separation — sim resolves, render draws, AI decides; each its own
 perf budget:
 
-| Layer | Budget | Source | Status |
-|---|---|---|---|
-| Economy + match + events + harness | fixed-step ~10–20Hz | engine + tug seeds | ✅ match spine (`match.ts`) |
-| **Tactical sim** — 2D entities, brute-force targeting, unit-vs-unit combat, per-side spawn | fixed-step, deterministic | new | ✅ `tactical-sim.ts` (continuous 2D units, one type; broad-phase is the scale seam) |
-| Bot policy — per-side, cadenced, in-match-guarded, bilateral | sub-Hz decision cadence | tug automation pattern | ✅ `automation.ts` (`decide` = spawn while affordable) |
-| Automation progression — the player seat's unlock gate | per-seat, reactive | `AutomationTiers` | ✅ `automation-tiers.ts` (`manual → assisted`; opponent seats pass no tier and are gated by install-presence) |
-| Render — pixi/webgl, own RAF + interpolation, read-only | 60fps | pixi (defender is SVG; this is heavier) | ✅ `PlayField.vue` (pixi field, Kenney sprites, per-unit position easing) |
+| Layer                                                                                      | Budget                    | Source                                                        | Status                                                                                                        |
+| ------------------------------------------------------------------------------------------ | ------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Economy + match + events + harness                                                         | fixed-step ~10–20Hz       | engine + tug seeds                                            | ✅ match spine (`match.ts`)                                                                                   |
+| **Tactical sim** — 2D entities, brute-force targeting, unit-vs-unit combat, per-side spawn | fixed-step, deterministic | new                                                           | ✅ `tactical-sim.ts` (continuous 2D units, one type; broad-phase is the scale seam)                           |
+| Bot policy — per-side, cadenced, in-match-guarded, bilateral                               | sub-Hz decision cadence   | tug automation pattern                                        | ✅ `automation.ts` (`decide` = spawn while affordable)                                                        |
+| Automation progression — the player seat's unlock gate                                     | per-seat, reactive        | `AutomationTiers`                                             | ✅ `automation-tiers.ts` (`manual → assisted`; opponent seats pass no tier and are gated by install-presence) |
+| Render — pixi/webgl, own RAF + interpolation, read-only                                    | 60fps                     | pixi (heavier than SVG-on-reactivity; chosen for unit counts) | ✅ `PlayField.vue` (pixi field, Kenney sprites, per-unit position easing)                                     |
 
 Continuous positions live **here at the consumer layer**, never in the engine —
 engine core stays a plain-data headless economic substrate.
 
 ## Growth ports
 
+A fork grows the archetype _up_ through these. The first two are the identity
+line's own unbuilt half, and they feed named spine terms.
+
+- **The split channel** — a reinvestment sink so `φ` exists: income can buy
+  economy instead of army. Feeds `E(t)` / `A(t)` directly; without it the
+  economy is flat and every faction is pinned at `φ = 0`.
+- **N factions** — `Side = 'a' | 'b'` widens to a faction set with a friend/foe
+  relation, making free-for-all the base case and teams a relation over it.
+  Feeds the coupled-state term: at N ≥ 3 the exchange loses even the zero-sum
+  shelter, which is where the archetype's balance question gets its teeth.
+- Unit roster + counters — one type today; a roster turns composition into a
+  real axis alongside the split (tug's `data/counter-matrix.ts` is the shape).
 - Scale: brute-force targeting at tens of units → uniform-grid / spatial-hash
   broad-phase when counts demand it (and only then a candidate-primitive, if a
   second consumer converges).
@@ -59,12 +156,12 @@ engine core stays a plain-data headless economic substrate.
   smoothing, lag-on-stop). True fixed-timestep snapshot interpolation (prev +
   curr per sim tick, render at alpha) is the upgrade if motion needs to be
   frame-exact; the ease is smooth enough at 20Hz for now.
-- Render is a **pixi** field, where defender's is SVG-on-reactivity — a second
+- Render is a **pixi** field rather than SVG-on-reactivity — a second
   render tech in the scaffold, not a shared one. "Render = read-only projection
   of sim state" is the shared discipline (the Spring-shaped cut), not the tech;
   a pixi-field-with-interpolation recipe is N=1, so unregistered.
-- Player-playable stretch: the player side swaps its AI policy for input;
-  bilateral `AutomationTiers` gating already supports "policy on both sides."
+- Player-playable stretch: a seat swaps its AI policy for input; the per-seat
+  `AutomationTiers` gate already supports "policy on every seat."
 
 ## Engine fit (pattern → primitive)
 
@@ -78,12 +175,28 @@ consumer converges — not from this archetype alone.
 
 ## Balance model
 
-Not yet built — skirmish has no `balance/` directory, which is the concrete form
-of the `_(TBD)_` spine above. What it owes, once the economy is declared: the
-closed form as prose beside the constants in `data/*.ts` § Balance and again as a
-runnable projection; probes driving the shipping bilateral AI headless and
-printing what they measure. The driver is already the right shape — shipping
-automation (`modules/automation.ts`, tier-gated), never a bespoke bot.
+**Declared, not yet built.** The spine above is the declaration; skirmish still
+has no `balance/` directory, and that gap is now specific rather than open-ended.
+What it owes, in order:
+
+- **The split channel first.** `φ` has no representation in `data/tactical.ts`,
+  so there is nothing to balance yet — an economy that cannot be reinvested in
+  admits exactly one strategy. Build the channel, then the constants.
+- **The closed form as prose** beside those constants in `data/*.ts` § Balance —
+  `E(t)` and `A(t)` above, each naming its coupling and re-tune target.
+- **`skirmish-projection.ts`**, written _with_ the data rather than after it. The
+  fixed-`φ` trajectory is closed, so it is worth executing — and a coverage claim
+  is only as good as the expression that tests it. Write the projection while the
+  declaration is still cheap to change.
+- **Probes** driving the shipping AI headless and printing: a win-rate surface
+  over the split axis (the strategy-space term), a match-duration distribution
+  over seeds (the stochastic term), and an engaged-fraction reading (the
+  coupled-state term — how far the square-law bound sits from the streamed
+  reality).
+
+The driver is already the right shape — shipping automation
+(`modules/automation.ts`, tier-gated), never a bespoke bot — so the probes have
+something real to drive the moment the economy lands.
 
 Its behavioral suites already sit where the canon puts them —
 `modules/{automation,match,tactical-sim}.test.ts`, beside the modules they spec,
@@ -95,14 +208,10 @@ over `sim/harness.ts`. Skirmish is the reference for that axis and for the
 
 Growth ports read the sibling archetypes **in place**: tug for the adversarial
 spine (`modules/match.ts`, `data/units.ts`, `data/counter-matrix.ts`,
-`data/personality.ts`, `balance/bot.ts`) and defender for movement + the render
-seam (`modules/map.ts`, `ui/panels/MapCanvas.vue`). A bone consumes a reference by
-*porting* it — adapting to skirmish — and the port is what's committed, never the
-raw copy.
+`data/personality.ts`, `balance/_engine.ts`). Movement and the render seam are
+skirmish's own — `modules/tactical-sim.ts` and `ui/PlayField.vue`.
 
-There is no staged copy of them here. A `_seeds/` tree used to hold verbatim
-duplicates for hacking; it was dropped because every file in it was byte-identical
-to the live sibling it came from, so it preserved nothing and cost a tsconfig
-exclude, an eslint blind spot, and a second place for the same code to rot. Read
-the siblings. `antigravity-creep-pvp` contributed one idea (influence-field
-logistics with supply-cutoff decay), not code.
+A bone consumes a reference by _porting_ it — adapting to skirmish — and the port
+is what's committed, never the raw copy. Read the siblings where they live; no
+staged copy belongs here, since a duplicate preserves nothing and gives the same
+code a second place to rot.
