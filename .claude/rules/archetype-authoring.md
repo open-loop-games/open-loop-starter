@@ -142,6 +142,14 @@ alongside the constants           and the probes that contradict it
   modules can live here under its own name; a suite that specs one module belongs
   beside it. Probes never live here — they are vite-node scripts under `balance/`.
 
+  **`sim/harness.ts` and a `balance/` engine builder are not duplicates.** The
+  harness boots the module list on memory storage for tick-by-tick behavioral
+  specs; a probe builder assembles whatever the probe measures — bot-driven,
+  bilateral, instrumented with analyzers. Ambient and tug carry both, and each
+  one's header says what the other is for. A suite may import a probe builder
+  when that measurement path is the thing under test — tug's
+  `instrumentation.test.ts` does, deliberately, and says so.
+
 ### Canonical `balance/` filenames
 
 | Role | Canonical name |
