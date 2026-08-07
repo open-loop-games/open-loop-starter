@@ -24,9 +24,9 @@ export const GAME_BALANCE: GameBalance = {
 
 // ─── Balance ───
 // Rate-function bucket: LINEAR ACCUMULATION — the trivial base case. Every
-// forward archetype replaces this with its own spine (geometric cost-scaling,
+// archetype replaces this with its own spine (geometric cost-scaling,
 // saturating capacity, log-frontier, phase-alternation, …); the blank base
-// carries the simplest one so the lens → projection → probe → lock pipeline is
+// carries the simplest one so the spine → projection → probe pipeline is
 // demonstrated end-to-end without committing the fork to any archetype shape.
 //
 // Closed form (the whole spine — see `balance/game-projection.ts`):

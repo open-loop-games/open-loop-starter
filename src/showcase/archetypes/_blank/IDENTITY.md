@@ -22,12 +22,26 @@ to demonstrate the canonical wiring; the game's real identity is the fork's to w
 
 ## Rate-function spine / bucket
 
-**Bucket: linear accumulation** — `count(t) = ratePerSecond · t`. The trivial base
-case, and the load-bearing section of any real `IDENTITY.md`: a forward archetype
-writes its closed-form spine here (a geometric crossing, a saturating ceiling, a
-log-frontier), grounded in a named `incremental-math/…/rate-functions/` bucket; a
-subtractive clone names the bucket its lifted numbers fall into, retro-fit. If a fork
-can't write its spine on paper, the mechanic is mis-specified, not just untuned.
+**Bucket: linear accumulation** — `count(t) = ratePerSecond · t`.
+
+This is the load-bearing section of any real `IDENTITY.md`, and it declares a
+**coverage boundary** — three things:
+
+1. **The bucket** the closed core lives in, named from
+   `incremental-math/…/rate-functions/` (a geometric crossing, a saturating
+   ceiling, a log-frontier).
+2. **Where the closed form stops** — the part of the economy the bucket does not
+   project.
+3. **What measures the remainder** — the probe methodology that settles what
+   projection leaves open.
+
+For the blank base: linear accumulation projects the whole economy, so nothing
+is left over and the probe simply confirms it. That is full coverage, the simple
+case. Partial coverage is ordinary, not a failure — an adversarial economy or a
+stochastic layer bounds where projection ends and measurement begins, and
+declaring that boundary *is* the spine. "No bucket" is not an available answer:
+if a fork can't write its spine on paper, the mechanic is mis-specified, not
+just untuned.
 
 ## The loop — beat map
 
@@ -36,9 +50,10 @@ payout), with windows **measured and recorded** by the balance probes, never aut
 
 ## Growth ports
 
-None committed — a fork defines how the archetype grows *up* (which `add*` ports feed
-which spine term). A clone instead records its canonical exemplar, arc scope, and the
-substitutions it made, honestly, as a port ledger.
+None committed — a fork defines how the archetype grows *up*: which validated-but-
+deferred directions it would grow through, and which spine term each one feeds.
+Exemplar games belong here too, cited as a set that validates the shape ships in
+the wild — never as lift targets.
 
 ## Engine fit (pattern → primitive)
 
@@ -57,16 +72,20 @@ data/game.ts ─── Balance ───  →  balance/game-projection.ts  →  
 spine, as prose + math           runnable projection             probe (real engine)
 ```
 
-1. **Spine** — `data/game.ts` `// ─── Balance ───`: the closed form that justifies
-   `ratePerSecond`.
-2. **Projection** — `balance/game-projection.ts`: pure math, no engine; predicts
-   `count(t)`.
-3. **Probe** — `balance/game-probe.ts`: drives the shipping `game/core` module on the
-   real engine and prints the drift against the projection. It reports; it does not
-   assert.
+- **Spine** — `data/game.ts` `// ─── Balance ───`: the closed form that justifies
+  `ratePerSecond`.
+- **Projection** — `balance/game-projection.ts`: pure math, no engine; predicts
+  `count(t)`.
+- **Probe** — `balance/game-probe.ts`: drives the shipping `game/core` module on
+  the real engine and prints the drift against the projection. It reports; it
+  does not assert.
+- **Behavioral suite** — `sim/example.test.ts` specs *what the mechanic does*
+  (the count rises), carrying no magnitudes, which is why it survives a retune.
 
-`sim/` is the separate behavioral surface — `sim/example.test.ts` specs *what the
-mechanic does* (count rises), with no magnitudes, which is why it survives a retune.
+Magnitudes never become assertions. A measured value with a tolerance band
+around it reds on every legitimate retune, the band gets widened to restore
+green, and it then asserts nothing while still looking like a passing test. Put
+it in a probe report a human reads instead.
 
-The behavioral counterpart (`sim/example.test.ts`) specs *what the mechanic does*; the
-lock pins *how much*. Keep them separate.
+`BALANCING.md` beside this file is the working guide — the knobs, their
+couplings, and how to run a pass.

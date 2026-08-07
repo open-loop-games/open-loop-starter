@@ -105,6 +105,12 @@ pass finds an engine gap, which states the same rule for engine gaps: record the
 receipt by path and symbol, and let a later pass read it). Findings ripen in
 § Couplings and § Known thin until they are general enough to leave.
 
+`_blank/BALANCING.md` is the template, filled in for the neutral base and
+annotated with what each section is for; `ambient` and `tug` are worked examples
+on real economies. **§ Couplings carries the most weight** — it is where a
+structural assumption the code never states gets written down, and it is the
+section a fork will thank you for.
+
 ## Balance — where each surface lands
 
 The process is the engine guide's; this is the disk layout it maps onto.

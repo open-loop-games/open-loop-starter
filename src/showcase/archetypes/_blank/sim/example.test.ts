@@ -18,7 +18,7 @@
  *
  * Absolute economy magnitudes belong in the balance probes (`balance/`+`sim/`),
  * not here — this layer specs *what the mechanic does*, which stays true across
- * retunes; the balance layer locks *how much*, with tolerance.
+ * retunes; magnitudes print from `balance/`, never asserted here.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';

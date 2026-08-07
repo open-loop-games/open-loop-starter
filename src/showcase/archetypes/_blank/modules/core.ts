@@ -49,7 +49,7 @@ export function createCoreModule(options: CoreModuleOptions = {}): EngineModule 
       }));
 
       // The one perturbable balance value, read through the tuning registry so
-      // probes can override it via pushScope. Default closure reads the lens.
+      // probes can override it via pushScope. Default closure reads `data/`.
       const ratePerSecond = tunable(registry, 'core/ratePerSecond', () => data.ratePerSecond);
 
       ctx.onTick((dt) => {
