@@ -14,12 +14,12 @@ import { GameTuningRegistryKey } from './tuning';
 /**
  * Core module — the blank base's single example mechanic: one tracked number
  * (`count`) rising at a tunable rate (see `../data/game.ts` § Balance). It is
- * the shipping-code half of the three-lane balance demo — the probe
- * (`../balance/game-probe.ts`) drives THIS module on the real engine to verify
- * the projection, and the lock (`../sim/game.probe.test.ts`) pins its rate.
+ * the shipping-code half of the balance demo — the probe
+ * (`../balance/game-probe.ts`) drives THIS module on the real engine to check it
+ * against the projection.
  *
  * DELETE-OR-RESHAPE: replace this with your game's real modules. It is here so a
- * clean fork boots with a working economy and a green three-lane scaffold, not
+ * clean fork boots with a working economy and a green balance scaffold, not
  * with empty stubs.
  */
 export interface CoreApi {

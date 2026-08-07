@@ -5,7 +5,8 @@
 > full canonical shape so a novel composition starts green and consistent.
 
 This file is the template for a real archetype's `IDENTITY.md`. It carries every
-section `src/showcase/archetypes/README.md` § IDENTITY.md requires, filled in for
+section `.claude/rules/archetype-authoring.md` § IDENTITY.md — required sections
+requires, filled in for
 the neutral base. When you build on `pnpm eject --clean`, rewrite each section for
 your game; when you author a *new* archetype in the gallery, replace the placeholder
 content with the real composition. Keep it a single screen — push worked balance
@@ -45,22 +46,26 @@ and the `tunable()` perturbation path. A real archetype maps each pattern in its
 identity line to an engine primitive here, with candidate-primitive receipts where it
 hand-rolls a gap (`candidate-primitives.md`).
 
-## Balance model — three lanes
+## Balance model
 
-Math first, one-way flow, one home per number (see `../README.md` § Balance):
+Math first, one-way flow, one home per number (see
+`.claude/rules/archetype-authoring.md` § Balance — where each surface lands):
 
 ```
-data/game.ts ─── Balance ───  →  balance/game-projection.ts  →  balance/game-probe.ts  →  sim/game.probe.test.ts
-closed-form lens                 Lane-1 runnable projection      Lane-2 probe (real engine)  Lane-3 measured lock
+data/game.ts ─── Balance ───  →  balance/game-projection.ts  →  balance/game-probe.ts
+spine, as prose + math           runnable projection             probe (real engine)
 ```
 
-1. **Lens** — `data/game.ts` `// ─── Balance ───`: the closed form that justifies
+1. **Spine** — `data/game.ts` `// ─── Balance ───`: the closed form that justifies
    `ratePerSecond`.
 2. **Projection** — `balance/game-projection.ts`: pure math, no engine; predicts
    `count(t)`.
 3. **Probe** — `balance/game-probe.ts`: drives the shipping `game/core` module on the
-   real engine; verifies the projection.
-4. **Lock** — `sim/game.probe.test.ts`: pins the *measured* accrual with tolerance.
+   real engine and prints the drift against the projection. It reports; it does not
+   assert.
+
+`sim/` is the separate behavioral surface — `sim/example.test.ts` specs *what the
+mechanic does* (count rises), with no magnitudes, which is why it survives a retune.
 
 The behavioral counterpart (`sim/example.test.ts`) specs *what the mechanic does*; the
 lock pins *how much*. Keep them separate.

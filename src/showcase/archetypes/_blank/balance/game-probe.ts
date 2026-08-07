@@ -1,14 +1,15 @@
 /**
- * Blank game — sim probe: shipping module vs the closed-form projection. Lane 2.
+ * Blank game — sim probe: shipping module vs the closed-form projection.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/_blank/balance/game-probe.ts`
  *
- * Lane 2 (see `../../README.md` § Balance — three lanes): drives the REAL
- * assembled engine — the shipping `game/core` module ticked by the real loop —
- * and measures the realized accrual rate, verifying it matches the Lane-1
- * projection (`game-projection.ts`: count(t) = ratePerSecond · t). A probe is
- * discovery, not a test — a probe that disagrees found something. The invariant
- * it settles on gets pinned in the Lane-3 lock (`../sim/game.probe.test.ts`).
+ * See `.claude/rules/archetype-authoring.md` § Balance — where each surface
+ * lands: drives the REAL assembled engine — the shipping `game/core` module
+ * ticked by the real loop — and measures the realized accrual rate, verifying it
+ * matches the projection (`game-projection.ts`: count(t) = ratePerSecond · t). A
+ * probe is discovery, not a test — it prints, it does not assert, and a probe
+ * that disagrees found something. Magnitudes stay here; `../sim/` specs
+ * behavior, which is why those suites survive a retune.
  *
  * Coarse tick (1s) per `.claude/CLAUDE.md` § Balance methodology — no sub-second
  * fidelity needed for a linear rate.
@@ -43,7 +44,7 @@ async function main(): Promise<void> {
   console.log(
     `\n═══ Realized accrual over ${seconds}s (ratePerSecond = ${GAME_BALANCE.ratePerSecond}) ═══`,
   );
-  console.log(`  projection (Lane 1)     = ${predicted.toLocaleString()}`);
+  console.log(`  projection             = ${predicted.toLocaleString()}`);
   console.log(`  measured (real engine)  = ${measured.toLocaleString()}`);
   console.log(
     `  drift ${driftPct >= 0 ? '+' : ''}${driftPct.toFixed(2)}%   → ${

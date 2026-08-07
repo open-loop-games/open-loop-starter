@@ -1,13 +1,12 @@
 /**
- * Blank game — closed-form balance projection (no engine). Lane 1.
+ * Blank game — closed-form balance projection (no engine).
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/_blank/balance/game-projection.ts`
  *
- * Lane 1, pure math, NO engine (see `../../README.md` § Balance — three lanes).
- * The projection is the lens in runnable form: it predicts the mechanic's
- * trajectory on paper. The probe (`game-probe.ts`) then verifies the shipping
- * module realizes it; the lock (`../sim/game.probe.test.ts`) pins the measured
- * window. Predicts; does not discover.
+ * Pure math, NO engine (see `.claude/rules/archetype-authoring.md` § Balance —
+ * where each surface lands). The spine in runnable form: it predicts the mechanic's
+ * trajectory on paper. The probe (`game-probe.ts`) then drives the shipping
+ * module and prints where reality lands against it. Predicts; does not discover.
  *
  * Bucket: linear accumulation — count(t) = ratePerSecond · t. A forward
  * archetype replaces this with its spine's closed form (the crossing, the

@@ -1,11 +1,12 @@
 // ─── Skeleton ───
-// Blank-game balance data — the pure-config Lane-1 lens (see
-// `../../README.md` § Balance — three lanes, and `../IDENTITY.md`).
+// Blank-game balance data — the pure-config form of the spine (see
+// `.claude/rules/archetype-authoring.md` § Balance — where each surface lands,
+// and `../IDENTITY.md`).
 //
 // This is a DELETE-OR-RESHAPE example, the config counterpart to
 // `sim/example.test.ts`: the single most neutral mechanic an incremental can
 // have — one tracked number rising at a fixed rate. It exists so a clean fork
-// inherits the full three-lane balance scaffold already wired and green; swap
+// inherits the balance scaffold already wired and green; swap
 // `ratePerSecond` (and this whole file) for your own economy's constants.
 //
 // Perturbable values are wrapped in `tunable()` at their module reader sites
@@ -32,8 +33,7 @@ export const GAME_BALANCE: GameBalance = {
 //     count(t) = ratePerSecond · t
 //
 // One design number to author: `ratePerSecond`. The projection predicts
-// `count(t)` on paper; the probe (`balance/game-probe.ts`) verifies the shipping
-// module realizes it on the real engine; the lock (`sim/game.probe.test.ts`)
-// pins the measured rate with tolerance. When you give the game a real economy,
+// `count(t)` on paper; the probe (`balance/game-probe.ts`) drives the shipping
+// module on the real engine and prints the drift against it. When you give the game a real economy,
 // this section carries the closed-form expressions that justify each constant
 // before it is measured, each naming its coupling and its re-tune target.

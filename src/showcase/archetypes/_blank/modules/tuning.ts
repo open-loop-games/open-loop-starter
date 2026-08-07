@@ -7,7 +7,8 @@ import {
 
 /**
  * The `tunable()` key registry — the one perturbation path (no parallel
- * `data/balance.ts`; see `../../README.md` § Balance). Balance probes and
+ * `data/balance.ts`; see `.claude/rules/archetype-authoring.md` § Directory
+ * shape). Balance probes and
  * solvers perturb these keys via `registry.pushScope`; the engine pattern lives
  * at `open-loop-engine/src/core/override-registry.ts`.
  *
