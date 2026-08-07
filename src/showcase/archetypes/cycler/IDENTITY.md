@@ -210,9 +210,11 @@ These are costume and scope; none moves the spine.
 
 ## Balance model
 
-Math first, one-way flow, one home per number. Methodology lives at
-`open-loop-engine/docs/consumer-guide-balance.md`; the disk layout it maps onto
-is `.claude/rules/archetype-authoring.md` § Balance — where each surface lands.
+Math first, one-way flow, one home per number. `BALANCING.md` beside this file
+is the working guide — the knobs, what couples to what, and how to read each
+probe. Methodology lives at `open-loop-engine/docs/consumer-guide-balance.md`;
+the disk layout it maps onto is `.claude/rules/archetype-authoring.md`
+§ Balance — where each surface lands. In brief:
 
 - **The spine, as prose + math (`data/*.ts`).** Constants with co-located
   `// ─── Balance ───` sections carrying the pegged-saturation closed form —
