@@ -126,6 +126,16 @@ thresholds — not a new knob.
   quarter-hour, or beat-3 should be carried by a later reveal. Both are calls
   about what the unfold cadence *is*, not bisections. Until one is made, beat-3
   fires around 1.4m against a 30–90m window and the probes will say so.
+- **The automation ladder is open.** `modules/automation.ts` declares the
+  `manual → basic` ladder the conformance canon asks for, but `basic` carries no
+  requirement — it is unlocked imperatively at install, so producer auto-buy is
+  available from the first tick and the tier gate never actually withholds
+  anything. The honest rung is the second producer reveal: `selectionHybridPayback`
+  has one candidate while `planter` stands alone, so the policy is a no-op until
+  `coop-built` (~1.4m). Setting the requirement there is a one-line change and a
+  re-solve, *not* a free one — `balance/bot.ts` enables every autobuyer spec at
+  t=0, so the gate would move the arc. It belongs with the unfold-cadence decision
+  above rather than ahead of it.
 - **The windows are a first guess.** They were authored ahead of the content that
   now has to hit them and have not been re-measured since it settled. Treat a
   window miss as a question about the window before treating it as a tuning bug.

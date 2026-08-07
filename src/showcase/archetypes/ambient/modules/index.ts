@@ -1,6 +1,7 @@
 import type { EngineModule } from '@open-loop/engine';
 import type { AmbientData } from '../data/types';
 import { createTuningModule } from './tuning';
+import { createAutomationModule } from './automation';
 import { createAutoProducersModule } from './auto-producers';
 import { createUnlocksModule } from './unlocks';
 import { createSceneModule } from './scene';
@@ -11,6 +12,7 @@ import { createAutobuyerRegistryModule } from './autobuyers';
 import { createAutoProducerAutobuyersModule } from './autobuyers/auto-producers';
 
 export { AmbientTuningRegistryKey, type AmbientTunableKey, type AmbientTunables } from './tuning';
+export { AutomationTiersKey, type AmbientAutomationTier } from './automation';
 export {
   PrimaryLifetimeKey,
   getAutoProducers,
@@ -40,6 +42,7 @@ const PRESTIGE_ENABLED = false;
 export function createAmbientModules(data: AmbientData): EngineModule[] {
   const modules: EngineModule[] = [
     createTuningModule(),
+    createAutomationModule(),
     createAutoProducersModule(data),
     createUnlocksModule(data),
     createSceneModule(data),

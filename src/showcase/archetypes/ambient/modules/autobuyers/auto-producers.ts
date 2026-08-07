@@ -7,6 +7,7 @@ import {
   type SelectionPolicy,
 } from '@open-loop/engine';
 import { getAutoProducers } from '../auto-producers';
+import { AutomationTiersKey } from '../automation';
 import type { AutoProducerDef } from '../../data/types';
 import {
   AutobuyerMasterToggleKey,
@@ -46,30 +47,32 @@ export function buildAutoProducerPolicy(
 export function createAutoProducerAutobuyersModule(): EngineModule {
   return {
     id: 'ambient/autobuyers/auto-producers',
-    dependencies: ['ambient/auto-producers', 'ambient/autobuyers'],
+    dependencies: ['ambient/automation', 'ambient/auto-producers', 'ambient/autobuyers'],
     install(): void {
       // Wiring lives in connect() — autobuyers read category shape from
       // sibling modules' getters, populated only after every install() runs.
     },
     connect(ctx: EngineContext): void {
       const buildings = getAutoProducers();
+      const tiers = ctx.inject(AutomationTiersKey);
       const master = ctx.inject(AutobuyerMasterToggleKey);
       const registry = ctx.inject(AutobuyerRegistryKey);
-
-      const isUnlocked = () => true;
 
       const producerAutoBuy: AutobuyerSpec = {
         id: 'autobuyer/ambient/producers',
         groupId: 'producers',
         displayName: 'Producer auto-buy',
-        isUnlocked,
+        // The `basic` tier is the whole gate here — there is no content
+        // condition on top of it.
+        tier: 'basic',
+        isUnlocked: () => true,
         isActive: persistent<boolean>(false, { name: 'ambient-producers-active' }),
       };
       registry.push(producerAutoBuy);
       setupPolicyAutoPurchase(
         buildings,
         {
-          enabled: autobuyerGate(master, producerAutoBuy),
+          enabled: autobuyerGate(tiers, master, producerAutoBuy),
           interval: 1,
           policy: buildAutoProducerPolicy(buildings),
         },

@@ -82,6 +82,7 @@ the archetype.
 | Idle Production | continuous `Producer` (zero manual trigger) | no click affordance — deliberate absence |
 | Cost Scaling (gentle) | `Producer.getCost(n)` geometric ladder | `cost = baseCost · 1.08^count` |
 | Auto-Production | shipping autobuyers (`modules/autobuyers/`) | auto-buy IS the mechanic; the arc probe drives these |
+| Automation progression | `AutomationTiers` (`modules/automation.ts`) | `manual → basic`; ladder currently open — see `BALANCING.md` § Known thin |
 | Ambient-Progression | `Unlock` sweep + scene-variant watch bridge | soft-reveals unconditional (no-pressure contract) |
 | Achievement multipliers | `AchievementCategory.registerTiered` | low-urgency pacing markers feed the rate chain |
 | Offline/resume | `processOfflineTime` + `sessionClock` | glance-check payoff; round-trips within 0.5% |
