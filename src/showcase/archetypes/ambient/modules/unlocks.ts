@@ -9,7 +9,8 @@ import {
   type PurchasableCategory,
 } from '@open-loop/engine';
 import type { AmbientData, UnlockDef } from '../data/types';
-import { AmbientTuningRegistryKey, PrimaryLifetimeKey } from './auto-producers';
+import { PrimaryLifetimeKey } from './auto-producers';
+import { AmbientTuningRegistryKey } from './tuning';
 
 let unlocks: PurchasableCategory<UnlockDef>;
 
@@ -39,7 +40,7 @@ const TUNABLE_THRESHOLD_IDS = new Set<string>(['coop-built', 'spring-arrives', '
 export function createUnlocksModule(data: AmbientData): EngineModule {
   return {
     id: 'ambient/unlocks',
-    dependencies: ['ambient/auto-producers'],
+    dependencies: ['ambient/tuning', 'ambient/auto-producers'],
     install(ctx) {
       const lifetime = ctx.inject(PrimaryLifetimeKey);
       const tuningRegistry = ctx.inject(AmbientTuningRegistryKey);

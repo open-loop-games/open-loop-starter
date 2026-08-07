@@ -12,12 +12,8 @@ import {
   type EngineModule,
 } from '@open-loop/engine';
 import type { AchievementDef, AmbientData, AmbientGameState } from '../data/types';
-import {
-  AmbientTuningRegistryKey,
-  PrimaryLifetimeKey,
-  getAutoProducers,
-  getPrimaryResource,
-} from './auto-producers';
+import { PrimaryLifetimeKey, getAutoProducers, getPrimaryResource } from './auto-producers';
+import { AmbientTuningRegistryKey } from './tuning';
 import { getUnlocks } from './unlocks';
 import { SceneKey } from './scene';
 import { SessionClockKey } from './session-clock';
@@ -56,6 +52,7 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
   return {
     id: 'ambient/achievements',
     dependencies: [
+      'ambient/tuning',
       'ambient/auto-producers',
       'ambient/unlocks',
       'ambient/scene',
