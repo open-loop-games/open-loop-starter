@@ -3,6 +3,7 @@ import { bootModules, getEngine, tick, tickUntil, TICK_RATE } from '../sim/harne
 import {
   createTuningModule,
   createMatchModule,
+  createEconomyModule,
   createTacticalSimModule,
   MatchKey,
   TacticalKey,
@@ -19,7 +20,12 @@ import { BASE_HP } from '../data/tactical';
  */
 
 function boot() {
-  bootModules([createTuningModule(), createMatchModule(), createTacticalSimModule()]);
+  bootModules([
+    createTuningModule(),
+    createMatchModule(),
+    createEconomyModule(),
+    createTacticalSimModule(),
+  ]);
 }
 function match(): MatchApi {
   return getEngine().tryInject(MatchKey)!;

@@ -1,5 +1,6 @@
 import { createSeededRNG, getSeed, persistent, type EngineModule } from '@open-loop/engine';
 import { MatchKey } from './match';
+import { EconomyKey } from './economy';
 import { TacticalKey } from './tactical-sim';
 import { AutomationTiersKey, type SkirmishAutomationTier } from './automation-tiers';
 import { type Side } from './tuning';
@@ -8,6 +9,18 @@ import { type Side } from './tuning';
 const BASE_CADENCE_SEC = 3;
 
 export interface AutomationOptions {
+  /**
+   * `φ` — the guns-versus-butter split, in [0, 1): the share of income this
+   * seat directs into workers rather than army. **The archetype's primary
+   * strategy axis** (`../IDENTITY.md` § Rate-function spine); a persona is
+   * mostly this number.
+   *
+   * Steered against realized spend rather than applied per-purchase, so it is a
+   * share of income over the match and not a coin flip per decision. `φ = 0` is
+   * all-army — the degenerate case, and what every seat did before an economy
+   * existed. `φ → 1` never commits and loses to anything that does.
+   */
+  economyShare?: number;
   /** Seconds between spawn decisions (before jitter). Tempo dial. */
   cadenceSec?: number;
   /**
@@ -56,15 +69,22 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
   const cadenceSec = options.cadenceSec ?? BASE_CADENCE_SEC;
   const maxSpawnPerBurst = options.maxSpawnPerBurst ?? Infinity;
   const jitterScale = options.cadenceJitter ?? 0;
+  const economyShare = options.economyShare ?? 0;
   const sideOffset = side === 'a' ? 1 : 2;
   const tier = options.tier;
 
   return {
     id: `skirmish/match/${side}/automation`,
-    dependencies: ['skirmish/automation-tiers', 'skirmish/match', 'skirmish/match/tactical'],
+    dependencies: [
+      'skirmish/automation-tiers',
+      'skirmish/match',
+      'skirmish/match/economy',
+      'skirmish/match/tactical',
+    ],
     install(ctx) {
       const match = ctx.inject(MatchKey);
       const tactical = ctx.inject(TacticalKey);
+      const economy = ctx.inject(EconomyKey);
       const tiers = ctx.inject(AutomationTiersKey);
 
       // Cadence accumulator — persistent so save/load mid-match resumes pacing
@@ -92,9 +112,30 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
         if (sinceActSec.value < cadenceSec * (1 + jitter())) return;
         sinceActSec.value = 0;
 
-        // DECIDE (domain): spawn up to `maxSpawnPerBurst` units while affordable.
+        // DECIDE (domain), in two steps.
+        //
+        // 1. Allocation. Buy workers while this seat is under its target share
+        //    of income. Steering on realized spend is self-correcting: a slot
+        //    that could not afford a worker leaves the seat under target, so the
+        //    next one retries rather than silently dropping the investment.
+        while (economy.realizedShare(side) < economyShare && economy.buyWorker(side)) {
+          /* keep investing until the split is satisfied or supply runs out */
+        }
+
+        // 2. Commitment. Whatever is left goes to army, up to the burst cap —
+        //    but hold back the price of the next worker while still under
+        //    target. Without that reserve a seat spends its remainder on units
+        //    every slot and can never bank a lump-sum investment: income loses
+        //    the race to its own spending, and φ silently reads as 0 no matter
+        //    what the persona asked for.
+        const reserve = economy.realizedShare(side) < economyShare ? economy.workerCost() : 0;
+        const unitCost = tactical.unitCost();
         let spawned = 0;
-        while (spawned < maxSpawnPerBurst && tactical.spawn(side)) {
+        while (
+          spawned < maxSpawnPerBurst &&
+          economy.available(side) >= unitCost + reserve &&
+          tactical.spawn(side)
+        ) {
           spawned += 1;
         }
       });

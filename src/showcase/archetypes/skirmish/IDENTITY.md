@@ -86,13 +86,21 @@ runs, in the shape tug already proves out — a win-rate surface over the split
 axis, and a match-duration distribution rather than a match-duration number.
 Partial coverage: the opening projects, the war is measured.
 
-**What the spine says is missing.** `φ` does not exist in the shipping data —
-`SUPPLY_RATE` is a flat constant (`data/tactical.ts`) with no reinvestment
-channel, so the archetype's central decision is currently unrepresentable and
-every faction is pinned at `φ = 0`. The economy bone is exactly the work of
-building that channel. This is the spine doing its job before the data does:
-declared first, so the contract phase is measured against it rather than
-back-fitted to whatever gets built.
+**Where `φ` lives.** `data/economy.ts` carries `ρ`, `c` and `E₀` with the closed
+form as prose; `modules/economy.ts` owns the mechanism (workers, income,
+reinvestment) and `modules/automation.ts` owns the policy, because the split is a
+_seat's strategy_ rather than a global constant — two seats hold different values
+at once, which is why `economyShare` sits on `AutomationOptions` and not in the
+tuning registry. The shipping matchup is rush (`φ = 0`) against greedy
+(`φ = 0.5`).
+
+**One discrete artifact the closed form cannot see.** A worker costs more than a
+unit, so investment is a _lump_ against a continuous income stream: a policy that
+commits its remainder to army every decision slot never banks the worker price,
+and `φ` silently realizes as 0 regardless of what a persona asked for. The
+policy therefore reserves the worker price while under target. The continuous
+model has no term for this — it is why the projection this spine owes is a bound
+rather than a prediction, and it is recorded at `data/economy.ts` § Coupling.
 
 ## The loop — beat map
 

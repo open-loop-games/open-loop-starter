@@ -1,7 +1,4 @@
 import {
-  Decimal,
-  addResource,
-  createResource,
   tunable,
   type DecimalSource,
   type EngineModule,
@@ -12,7 +9,8 @@ import {
 import { persistent } from '@open-loop/engine';
 import { SkirmishTuningRegistryKey, SIDES, opponentOf, type Side } from './tuning';
 import { MatchKey } from './match';
-import { BASE_HP, FIELD, SUPPLY_RATE, TROOPER } from '../data/tactical';
+import { EconomyKey } from './economy';
+import { BASE_HP, FIELD, TROOPER } from '../data/tactical';
 
 /**
  * Tactical sim — the continuous-tactical core (bone #3). Free-moving 2D unit
@@ -47,8 +45,14 @@ export interface Unit {
 export interface TacticalApi {
   units: Record<Side, Persistent<Unit[]>>;
   baseHp: Record<Side, Persistent<number>>;
+  /**
+   * Spendable supply — owned by `modules/economy.ts` and surfaced here because
+   * spawning is what spends it. Read it from either; there is one resource.
+   */
   supply: Record<Side, Resource<DecimalSource>>;
   basePos: Record<Side, { x: number; y: number }>;
+  /** Live unit price, after any tuning override. */
+  unitCost(): number;
   /** Spawn one unit for `side` if it can afford the cost. Returns whether it did. */
   spawn(side: Side): boolean;
 }
@@ -82,26 +86,21 @@ function nearestEnemy(u: Unit, enemies: Unit[], range: number): Unit | null {
 export function createTacticalSimModule(): EngineModule {
   return {
     id: 'skirmish/match/tactical',
-    dependencies: ['skirmish/tuning', 'skirmish/match'],
+    dependencies: ['skirmish/tuning', 'skirmish/match', 'skirmish/match/economy'],
     install(ctx) {
       const registry = ctx.inject(SkirmishTuningRegistryKey);
       const match = ctx.inject(MatchKey);
+      const economy = ctx.inject(EconomyKey);
 
       const units = {} as Record<Side, Persistent<Unit[]>>;
       const baseHp = {} as Record<Side, Persistent<number>>;
-      const supply = {} as Record<Side, Resource<DecimalSource>>;
       for (const side of SIDES) {
         units[side] = persistent<Unit[]>([], { name: `units-${side}` });
         baseHp[side] = persistent<number>(BASE_HP, { name: `baseHp-${side}` });
-        supply[side] = createResource<DecimalSource>(0, {
-          id: `skirmish/match/tactical/${side}/supply`,
-          displayName: 'supply',
-          precision: 0,
-        });
       }
       const nextId = persistent<number>(0, { name: 'nextId' });
 
-      const supplyRate = tunable<DecimalSource>(registry, 'tactical/supplyRate', () => SUPPLY_RATE);
+      const unitCost = tunable<DecimalSource>(registry, 'tactical/unitCost', () => TROOPER.cost);
 
       // Re-init on match open — `createReset` restores `persistent()` refs but
       // NOT `createResource`, and we want a single authoritative reset path, so
@@ -110,15 +109,13 @@ export function createTacticalSimModule(): EngineModule {
         for (const side of SIDES) {
           units[side].value = [];
           baseHp[side].value = BASE_HP;
-          addResource(supply[side], Decimal.mul(supply[side].value, -1));
         }
         nextId.value = 0;
       });
 
       function spawn(side: Side): boolean {
         if (!match.inMatch.value) return false;
-        if (Decimal.lt(supply[side].value, TROOPER.cost)) return false;
-        addResource(supply[side], -TROOPER.cost);
+        if (!economy.spendOnArmy(side, Number(unitCost.value))) return false;
         const bp = BASE_POS[side];
         // Deterministic y-spread so a burst doesn't stack on one point.
         const jitter = ((nextId.value % 5) - 2) * 3;
@@ -136,10 +133,6 @@ export function createTacticalSimModule(): EngineModule {
 
       ctx.onTick((dt) => {
         if (!match.inMatch.value) return;
-
-        for (const side of SIDES) {
-          addResource(supply[side], Decimal.mul(supplyRate.value, dt));
-        }
 
         // Move + attack. Sides processed in order; `a` resolves its attacks
         // before `b` this tick — a fixed, deterministic bias, negligible.
@@ -185,7 +178,14 @@ export function createTacticalSimModule(): EngineModule {
         }
       });
 
-      ctx.provide(TacticalKey, { units, baseHp, supply, basePos: BASE_POS, spawn });
+      ctx.provide(TacticalKey, {
+        units,
+        baseHp,
+        supply: economy.supply,
+        basePos: BASE_POS,
+        unitCost: () => Number(unitCost.value),
+        spawn,
+      });
     },
   };
 }

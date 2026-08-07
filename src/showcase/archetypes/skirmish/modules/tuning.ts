@@ -14,10 +14,22 @@ import {
  * module's construction site with `tunable(registry, key, defaultFn)`. Grep for
  * `tunable(` to audit the live surface.
  *
- * Namespaces (foundation — one key so far):
+ * Namespaces:
  *   - `match/timeLimitSec` — wall-clock cap before a match ends `time-limit`
+ *   - `economy/incomePerWorker`, `economy/workerCost` — the guns-versus-butter
+ *     curve. `r = incomePerWorker / workerCost` is the growth constant `φ`
+ *     multiplies in the spine's closed form, so these two move it together.
+ *   - `tactical/unitCost` — army price; the other side of the same split.
+ *
+ * `economyShare` (`φ` itself) is deliberately NOT here. It is a per-seat policy
+ * parameter on `AutomationOptions`, not a global constant — two seats hold
+ * different values at once, which a registry key cannot express.
  */
-export type SkirmishTunableKey = 'match/timeLimitSec';
+export type SkirmishTunableKey =
+  | 'match/timeLimitSec'
+  | 'economy/incomePerWorker'
+  | 'economy/workerCost'
+  | 'tactical/unitCost';
 
 /**
  * The two factions. Kept deliberately neutral (`a`/`b`, not player/ai) — the

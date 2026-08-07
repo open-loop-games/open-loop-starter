@@ -6,6 +6,7 @@ import {
   TacticalKey,
   createAutomationModule,
   createAutomationTiersModule,
+  createEconomyModule,
   createMatchModule,
   createTacticalSimModule,
   createTuningModule,
@@ -51,12 +52,18 @@ describe('skirmish bot-vs-bot', () => {
     expect(tactical().baseHp[loser].value).toBeLessThanOrEqual(0);
   });
 
-  it('is deterministic — the higher-throughput side (a) wins', async () => {
-    // a: all-in, 2s cadence. b: drip-feed, one unit per 6s. a fields the
-    // larger army and takes b's base.
+  it('is deterministic — the same matchup resolves the same way twice', async () => {
+    // The shipping matchup is rush (φ=0) against greedy (φ=0.5). WHICH seat
+    // wins is a balance question the probes answer, and it moves whenever the
+    // economy retunes — so this specs determinism, not the winner.
     match().start();
     await tickUntil(() => match().outcome.value !== null, MAX_TICKS);
-    expect(match().outcome.value!.winner).toBe('a');
+    const first = match().outcome.value!.winner;
+
+    boot();
+    match().start();
+    await tickUntil(() => match().outcome.value !== null, MAX_TICKS);
+    expect(match().outcome.value!.winner).toBe(first);
   });
 
   it('restores the field for a fresh match on the next start()', async () => {
@@ -85,8 +92,13 @@ describe('skirmish tiered automation seat', () => {
       createTuningModule(),
       createAutomationTiersModule(),
       createMatchModule({
-        resetModules: ['skirmish/match/tactical', 'skirmish/match/a/automation'],
+        resetModules: [
+          'skirmish/match/economy',
+          'skirmish/match/tactical',
+          'skirmish/match/a/automation',
+        ],
       }),
+      createEconomyModule(),
       createTacticalSimModule(),
       // Side `a` is the tiered seat; `b` is absent so nothing else spawns.
       createAutomationModule('a', { cadenceSec: 2, maxSpawnPerBurst: Infinity, tier: 'assisted' }),

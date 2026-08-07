@@ -28,16 +28,21 @@ export const FIELD = { width: 100, height: 40 } as const;
 /** Base health; a side loses when its base reaches 0. */
 export const BASE_HP = 100;
 
-/** Supply accrued per side per game-second — the spawn economy (placeholder;
- *  the economy bone formalizes this). */
-export const SUPPLY_RATE = 10;
-
 // ─── Balance ───
 // One unit type for the first cut — enough to exercise move / target / attack /
 // die. Multiple types + a counter-matrix are a later bone (tug seed carries the
-// shape). Numbers are crude-but-decisive placeholders so bot-vs-bot converges to
-// a base kill inside the time limit; the real spine arrives with the economy /
-// counter bones. Kept here so the lens → probe → lock pipeline has a home.
+// shape).
+//
+// `cost` is the army half of the guns-versus-butter split — see `./economy.ts`
+// § Balance, which owns the closed form and the `c > unitCost` coupling. This
+// number and `workerCost` move together: their ratio is how many troopers a
+// worker is worth, and it is the price of every investment decision in the game.
+//
+// The combat constants are crude-but-decisive placeholders chosen so bot-vs-bot
+// converges to a base kill inside the time limit. They are what the attrition
+// half of the spine measures rather than projects — `hp/damage/attackCooldownSec`
+// set the Lanchester exchange rate, and `speed/aggroRange` set how much of an
+// army is in contact at once, which is the term the closed form cannot carry.
 export const TROOPER: UnitTypeDef = {
   hp: 10,
   damage: 3,
