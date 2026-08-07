@@ -4,8 +4,9 @@
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/cycler/balance/prestige-probe.ts`
  *
- * Lane 3 (frontier `docs/balance-process.md` § probe): drives the REAL assembled stack
- * over the reference board through actual Redeploys. Verifies the Lane-1 projection
+ * Probe (`open-loop-engine/docs/consumer-guide-balance.md`
+ * § The probe — real engine, real policies): drives the REAL assembled stack
+ * over the reference board through actual Redeploys. Verifies the projection
  * (`cycler-projection.ts` § currency, § arc): the run auto-banks a sublinear currency
  * on the line breach, reach is a catalog buy, and the re-peg holds run length flat
  * while cMax and banked currency climb. Mixed sourcing: production = ∫build.capacity dt,

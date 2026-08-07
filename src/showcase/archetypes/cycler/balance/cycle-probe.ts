@@ -3,10 +3,11 @@
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/cycler/balance/cycle-probe.ts`
  *
- * Lane 3 (frontier `docs/balance-process.md` § probe): drives the REAL assembled
+ * Probe (`open-loop-engine/docs/consumer-guide-balance.md`
+ * § The probe — real engine, real policies): drives the REAL assembled
  * stack — the shipping `cycler/*` modules over a competent reference board — and
  * measures where the exogenous salvo `W_N = W₀·g^N` breaches the defended line. Its
- * job is to verify shipping code realizes the Lane-1 projection (`cycler-projection.ts`):
+ * job is to verify shipping code realizes the projection (`cycler-projection.ts`):
  * the authored crossing `log_g(H)` waves + a bounded Δ_wall tail, the peg holding run
  * length across the H surface, and power decoupling from pacing (+0 on reach).
  *

@@ -9,7 +9,7 @@
  *
  * Runs place the reference board (`placeDefense`); merge() clears the board, so
  * sequences that re-peg rebuild it. Reach L=0 price == quorum (a competent first run
- * banks it). Absolute run-length magnitudes are a Lane-3 discovery (multiverse-hr#17).
+ * banks it). Absolute run-length magnitudes are measured, never authored (multiverse-hr#17).
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';

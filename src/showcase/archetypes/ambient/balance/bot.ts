@@ -17,8 +17,7 @@ import {
 /**
  * Zero-click activity model. Ambient's identity is "auto-production runs
  * without input." The bot fires zero clicks at all sim-times; this function
- * is here for symmetry with Producer's `expectedClicksAt` and to make the
- * contract explicit.
+ * exists to make that contract explicit rather than implicit in its absence.
  *
  * If a fork later adds a click affordance, this becomes the Ambient-side
  * taper. Until then, returning 0 documents the deliberate absence.

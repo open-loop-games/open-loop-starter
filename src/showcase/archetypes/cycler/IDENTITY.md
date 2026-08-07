@@ -208,30 +208,28 @@ buildings work) is a deliberate omission — it replaces hard phases with contin
 attention allocation and is single-source in research; cycler stays Thronefall-clean.
 These are costume and scope; none moves the spine.
 
-## Balance model — three lanes (mirrors `frontier/docs/balance-process.md`)
+## Balance model
 
-Math first, one-way flow, one home per number:
+Math first, one-way flow, one home per number. Methodology lives at
+`open-loop-engine/docs/consumer-guide-balance.md`; the disk layout it maps onto
+is `.claude/rules/archetype-authoring.md` § Balance — where each surface lands.
 
-```
-data/*.ts ─── Balance ───   →   balance/*.ts (vite-node)   →   sim/*.probe.test.ts
-closed-form lens                discovery / verification       measured window lock
-"what the spine predicts"       "what shipping code does"      "what must stay true"
-```
-
-1. **Lens (`data/*.ts`).** Constants with co-located `// ─── Balance ───` sections
-   carrying the pegged-saturation closed form — clear-rate `C`, the salvo schedule,
-   and the `Δ_wall` line buffer — each naming its coupling and the multiverse-hr
-   grounding.
-2. **Projection (`balance/cycler-projection.ts`).** Pure math, **no engine** —
-   predicts `N*_waves`, sizes `H` to a target run length, sizes `Δ_wall` to the
-   intended tail, and shows the peg holding run length flat across the arc while
-   `fixed`/`none` policies drift. Predicts; does not discover.
-3. **Probe (`balance/*-probe.ts`).** Drives the **real engine + shipping
-   automation** (build/rearrange/repair/redeploy policy functions; the harness only
-   force-unlocks the tier) so sim and game can't drift. Verifies the projection;
-   measures the realized `C` trajectory, the MW economy under Lance draw, and the
-   calibration of `H, g, T_g, τ_setup, Δ_wall` (open in multiverse-hr #17).
-4. **Lock (`sim/*.probe.test.ts`).** Pins the *measured* run-length band and shape
-   invariants (run ends at the line breach; power re-pegs to +0 base run length;
-   repair extends only the `Δ_wall` tail) with tolerance and provenance.
-   Measure-and-record, never set-as-target.
+- **The spine, as prose + math (`data/*.ts`).** Constants with co-located
+  `// ─── Balance ───` sections carrying the pegged-saturation closed form —
+  clear-rate `C`, the salvo schedule, the `Δ_wall` line buffer — each naming its
+  coupling and its grounding.
+- **The projection (`balance/cycler-projection.ts`).** The same closed form in
+  runnable shape, pure math with **no engine** — predicts `N*_waves`, sizes `H`
+  to a target run length, sizes `Δ_wall` to the intended tail, and shows the peg
+  holding run length flat across the arc while `fixed`/`none` policies drift. It
+  predicts; it does not discover.
+- **The probes (`balance/*-probe.ts`).** Drive the **real engine and shipping
+  automation** (build/rearrange/repair/redeploy policy functions; the harness
+  only force-unlocks the tier) so sim and game cannot drift. They contradict the
+  projection where it is wrong — measuring the realized `C` trajectory, the MW
+  economy under Lance draw, and the calibration of `H, g, T_g, τ_setup, Δ_wall`.
+- **The behavioral suites (`sim/*.test.ts`).** Shape invariants that survive
+  retuning: the run ends at the line breach, power re-pegs to +0 base run length,
+  repair extends only the `Δ_wall` tail. `sim/cycle.probe.test.ts` still pins a
+  measured band as an assertion; that is moving to a printing probe, per the
+  engine guide § Why this isn't a test suite.

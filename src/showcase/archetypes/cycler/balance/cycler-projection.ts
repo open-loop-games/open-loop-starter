@@ -4,8 +4,8 @@
  *
  * Run: pnpm exec vite-node src/showcase/archetypes/cycler/balance/cycler-projection.ts
  *
- * Lane 1, pure math, NO engine (frontier `docs/balance-process.md` § closed-form
- * lens). Predicts; the sim probe verifies later. This is the CAPTURE TEST: if the
+ * Projection — pure math, NO engine (`open-loop-engine/docs/consumer-guide-balance.md`
+ * § The spine — a falsifiable prediction). Predicts; the sim probe verifies later. This is the CAPTURE TEST: if the
  * concrete realization can't write its clear-rate C, its salvo schedule, and its
  * N*_waves on paper, the mechanic is mis-specified, not just untuned.
  *

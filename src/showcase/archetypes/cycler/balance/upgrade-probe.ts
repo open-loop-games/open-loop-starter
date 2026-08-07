@@ -4,14 +4,15 @@
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/cycler/balance/upgrade-probe.ts`
  *
- * Lane 3 (frontier `docs/balance-process.md` § probe): drives the REAL assembled stack
- * over the reference board through actual catalog buys. Verifies the Lane-1 projection:
+ * Probe (`open-loop-engine/docs/consumer-guide-balance.md`
+ * § The probe — real engine, real policies): drives the REAL assembled stack
+ * over the reference board through actual catalog buys. Verifies the projection:
  *   1. the reach permanent re-pegs to +0 run length (reach, not pacing);
  *   2. each g-bender level lengthens the run (bends salvo g toward the g=1 asymptote);
  *   3. the g-bender is reach-gated (locked until permanent power reaches the gate).
  *
  * Coarse tick (1s) per `.claude/CLAUDE.md` § Balance methodology. Absolute run-length
- * magnitudes are a Lane-3 discovery; this probe reports measured trends.
+ * magnitudes are measured, never authored; this probe reports measured trends.
  */
 
 import { Decimal } from '@open-loop/engine';

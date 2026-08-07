@@ -62,7 +62,7 @@ export interface TugSimOptions {
    *  math-only probes pass `{ suboptimalityRate: 0, cadenceJitterScale: 0 }`
    *  for determinism. Partial overrides fill from the default. */
   believability?: Partial<TugBelievability>;
-  /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context. */
+  /** Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse steps that the default cap would clamp. */
   maxDeltaTime?: number;
 }
 

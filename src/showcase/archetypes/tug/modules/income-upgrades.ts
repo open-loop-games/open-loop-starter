@@ -33,9 +33,9 @@ export function getIncomeUpgrades(side: Side): PurchasableCategory<IncomeUpgrade
  * tunable multiplier and the `baseRate` tunable are install-private —
  * pulling them into a Vue layer would re-plumb privates. Mirrors the
  * shape of producer's `purchaseBeatSeconds`
- * (`open-loop-engine/src/systems/producer-category.ts:347`); the
+ * (`open-loop-engine/src/systems/producer-category.ts` `purchaseBeatSeconds`); the
  * cost / Δrate payback term is also exposed engine-side via
- * `selectionHybridPayback` (`open-loop-engine/src/core/policy.ts:193`)
+ * `selectionHybridPayback` (`open-loop-engine/src/core/policy.ts` `selectionHybridPayback`)
  * for autobuyer-policy consumers.
  */
 export interface RoiMetrics {

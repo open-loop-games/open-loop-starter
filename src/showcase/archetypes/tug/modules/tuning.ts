@@ -60,10 +60,9 @@ export const TugTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
  * modules carry `dependencies: ['tug/tuning']` and inject the registry.
  *
  * A dedicated module — rather than folding the registry into the first
- * per-side factory — keeps creation symmetric: Producer/Ambient host the
- * registry inside their distinguished resource-defining module
- * (`producer/producers`, `ambient/auto-producers`); Tug has no symmetric
- * counterpart, so any per-side choice would be asymmetric. categories.ts
+ * per-side factory — keeps creation symmetric. A single-sided archetype can
+ * host the registry inside its distinguished resource-defining module; Tug
+ * has no such counterpart, so any per-side choice would be asymmetric. categories.ts
  * cannot host it either — it depends on per-side category keys, and per-side
  * modules need the registry first.
  */

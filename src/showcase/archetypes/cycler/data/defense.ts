@@ -1,7 +1,7 @@
 // ─── Skeleton ───
 // Defense-Command concrete lens for Cycler — the realization the abstract spine
 // (build.ts D_max / threat.ts per-time burn) concretizes INTO (IDENTITY § Cycler's
-// realization). This file is the Lane-1 home for the concrete-spine numbers: the
+// realization). This file is the home for the concrete-spine numbers: the
 // shared placement grid split into forward/back cells, the Lance clear-rate C that
 // saturates on forward-cell fill, the MW economy that funds firing + repair, the
 // exogenous salvo schedule, and the line-HP buffer that adds the Δ_wall tail.
@@ -102,7 +102,7 @@ export const SALVO_POSTURES: readonly SalvoPosture[] = [
 // ─── Balance ───
 // The concrete-spine closed form (rate-function pass, 2026-07; IDENTITY § Cycler's
 // realization). Predicted by `balance/cycler-projection.ts`, verified later by a
-// Lane-3 probe (studio/open-loop-starter#21 leaf 3). SAME log law as the abstract
+// probe measurement. SAME log law as the abstract
 // spine, re-indexed by wave, plus a bounded tail:
 //
 //   clear-rate  C     = forwardCells · lanceIntercept · adjacency · producerUpgradeRatio^L
@@ -136,7 +136,7 @@ export const SALVO_POSTURES: readonly SalvoPosture[] = [
 //     for a high C ceiling (reach), enough Reactors to fund firing, enough Bulwarks to
 //     route the surplus into the line (Δ_wall). `cycler-projection.ts` § allocation
 //     sweeps it. Grounded in multiverse-hr #17's one-pool discipline; absolute
-//     calibration (ι, ρ, δ, L_HP, baseRepair, throughput) is a Lane-3 probe.
+//     calibration (ι, ρ, δ, L_HP, baseRepair, throughput) is a probe measurement.
 //   • RUN LENGTH IN MINUTES. N*_waves waves × (standbySeconds + inboundSeconds).
 //     At H=16, g=1.6, Δ_wall≈2 → ~8 waves × 2 min = ~16 min, inside CADENCE's
 //     [12,20] band. Move run length by H (waves-to-crossing) or the salvo posture g

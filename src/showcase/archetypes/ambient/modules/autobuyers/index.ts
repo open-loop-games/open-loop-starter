@@ -18,11 +18,9 @@ import {
 // AD's hierarchy carries the buy loop because AD has no auto-purchase
 // primitive. Here the engine owns that half — `setupSweepAutoPurchase` /
 // `setupPolicyAutoPurchase` throttle, scan, and buy — so the registry declares
-// content and gates it, and installs no tick handler of its own. See the
-// producer mirror for the full rationale.
+// content and gates it, and installs no tick handler of its own.
 //
-// Mirror of `src/showcase/archetypes/producer/modules/autobuyers/index.ts` —
-// the cross-archetype autobuyer-as-content shape. Visibility unlocks
+// This is the cross-archetype autobuyer-as-content shape. Visibility unlocks
 // (`modules/unlocks.ts`) remain non-registered: their `setupSweepAutoPurchase`
 // install fires unconditionally on threshold cross, since the Ambient contract
 // forbids player-pausable content reveals.

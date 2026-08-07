@@ -22,11 +22,10 @@
  *     production curve set by B2/B3/B5 + content cardinality. Verified
  *     after combined overrides; if it falls outside its window, decision is
  *     content-reshape (add achievements or shift their thresholds), not a
- *     dedicated knob — same precedent as Producer's B5 treatment.
+ *     dedicated knob.
  *
  * Proposals chain forward — each beat solves against the prior beats'
- * proposed values via a single scope-push per sample. Mirrors
- * producer/balance/solve-probe.ts shape.
+ * proposed values via a single scope-push per sample.
  */
 
 import {

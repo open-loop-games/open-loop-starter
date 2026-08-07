@@ -204,8 +204,7 @@ body[data-archetype='ambient'] .olui-single-column {
 }
 
 /* The shell itself is the spine of the spread; the section panels carry
-   their own paper. Producer's three-panel column-paper skin doesn't
-   translate — leave gap + padding only. */
+   their own paper — leave gap + padding only. */
 body[data-archetype='ambient'] .olui-single-column__inner {
   gap: var(--gap-lg);
 }

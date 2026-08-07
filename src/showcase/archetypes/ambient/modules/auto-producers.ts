@@ -71,8 +71,7 @@ export function getTimeSystem(): TimeSystem {
 
 // Producers whose baseCost is registered with the tuning registry. Other
 // producers pass their baseCost through unchanged — opt-in keeps the
-// solver's bisection surface narrow. Mirrors producer's pattern (cursor +
-// grandma); ambient bisects against planter + coop minimum.
+// solver's bisection surface narrow: ambient bisects against planter + coop.
 const TUNABLE_BASE_COST_IDS = new Set<string>(['planter', 'coop']);
 
 export function createAutoProducersModule(data: AmbientData): EngineModule {

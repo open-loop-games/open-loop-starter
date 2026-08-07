@@ -23,7 +23,7 @@ export interface AmbientEngineOptions {
   persistenceNamespace?: string;
   /** Extra modules registered into the Cozy Farm mod alongside the default ambient modules. */
   extraModules?: EngineModule[];
-  /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context. */
+  /** Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse steps that the default cap would clamp. */
   maxDeltaTime?: number;
 }
 

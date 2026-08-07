@@ -50,7 +50,7 @@ export const DEFAULT_ACHIEVEMENT_MULTIPLIER = 1.02;
  * Rate-bonus shape is G-M10: each achievement's `effect` returns its per-
  * achievement multiplier (`def.rewardMultiplier ?? DEFAULT_ACHIEVEMENT_MULTIPLIER`),
  * and a single multiplicative modifier per producer rateChain folds the active
- * set via `getCombinedAchievementEffect`. Mirrors `producer/achievements.ts`.
+ * set via `getCombinedAchievementEffect`.
  */
 export function createAchievementsModule(data: AmbientData): EngineModule {
   return {

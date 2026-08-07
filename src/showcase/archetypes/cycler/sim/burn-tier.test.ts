@@ -12,7 +12,7 @@
  *     its posture and lands the switch on the next run.
  *
  * Runs place a competent reference board (`placeDefense`) so they reach the pegged
- * crossing + Δ_wall tail; absolute run-length magnitudes are a Lane-3 discovery
+ * crossing + Δ_wall tail; absolute run-length magnitudes are measured, never authored
  * (multiverse-hr#17). `runLengthAt` is the closed-form crossing in WAVES (tail-exclusive).
  */
 

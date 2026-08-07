@@ -75,12 +75,18 @@ render/consumer layer). Candidate-primitive receipts land in
 `candidate-primitives.md` only if a second spatial
 consumer converges — not from this archetype alone.
 
-## Balance model — three lanes
+## Balance model
 
-Once the sim walks: Lane 1 lens in `data/*.ts` § Balance + a projection; Lane 2
-probes driving the shipping bilateral AI headless; Lane 3 locks pinning measured
-windows. Driver is shipping automation (`modules/automation.ts`), not a bespoke
-bot.
+Not yet built — skirmish has no `balance/` directory, which is the concrete form
+of the `_(TBD)_` spine above. What it owes, once the economy is declared: the
+closed form as prose beside the constants in `data/*.ts` § Balance and again as a
+runnable projection; probes driving the shipping bilateral AI headless and
+printing what they measure. The driver is already the right shape — shipping
+automation (`modules/automation.ts`, tier-gated), never a bespoke bot.
+
+The three `sim/*.probe.test.ts` suites are behavioral despite the name — they
+assert supply is positive, an outcome resolves, unit arrays clear on reset. They
+belong beside their modules, not under `sim/`.
 
 ## Hack-from references
 

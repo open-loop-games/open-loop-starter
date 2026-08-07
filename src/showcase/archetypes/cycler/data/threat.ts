@@ -50,7 +50,7 @@ export const THREAT_BALANCE: ThreatBalance = {
 //     never a power one.
 //   Illustrative H=4, g=2, T_g=6, τ_setup=4 → N* = 4 + 6·log₂4 = 16 min. Grounding
 //   reference (WIP, un-calibrated, multiverse-hr drain-projection.ts): H=8, g=2,
-//   T_g=15, τ_setup=10. Absolute calibration is a Lane-2 probe (multiverse-hr #17).
+//   T_g=15, τ_setup=10. Absolute calibration is a probe measurement (multiverse-hr #17).
 
 // ─── Skeleton (burn tiers) ───
 // The escalation-content ladder (`addBurnTier`, IDENTITY § Growth ports): a

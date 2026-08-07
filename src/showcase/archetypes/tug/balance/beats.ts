@@ -1,5 +1,5 @@
 /**
- * Tug beat spec — the Lane-3 lock's measured windows + predicates.
+ * Tug beat spec — the measured windows + predicates.
  *
  * Adversarial, distribution-statistic archetype: the *signature* is the
  * counter-matrix sharpness response curve (measured by `arc-probe.ts`), not a

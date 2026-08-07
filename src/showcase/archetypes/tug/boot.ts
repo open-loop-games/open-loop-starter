@@ -23,7 +23,7 @@ export interface TugEngineOptions {
   persistenceNamespace?: string;
   /** Extra modules registered into the SciFi Armada mod alongside the default tug modules. */
   extraModules?: EngineModule[];
-  /** Raise the loop's `maxDeltaTime` cap. See producer/boot.ts for context. */
+  /** Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse steps that the default cap would clamp. */
   maxDeltaTime?: number;
   /** Per-side opponent-bot install options + meta-progression toggle. Sim
    *  engines override; production uses defaults. */

@@ -3,9 +3,9 @@
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/cycler/balance/burn-tier-probe.ts`
  *
- * Lane 3 (frontier `docs/balance-process.md` § probe): drives the REAL assembled stack
- * over the reference board across the salvo-posture ladder. Verifies the Lane-1
- * projection (`cycler-projection.ts`):
+ * Probe (`open-loop-engine/docs/consumer-guide-balance.md`
+ * § The probe — real engine, real policies): drives the REAL assembled stack
+ * over the reference board across the salvo-posture ladder. Verifies the projection (`cycler-projection.ts`):
  *   1. deeper (steeper-g) postures give strictly shorter runs;
  *   2. crossing a posture steps run length while raising power WITHIN one does not
  *      (the peg holds flat — the decoupling);

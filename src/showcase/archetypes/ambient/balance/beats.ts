@@ -1,5 +1,5 @@
 /**
- * Ambient beat spec — the Lane-3 lock's measured windows + predicates.
+ * Ambient beat spec — the measured windows + predicates.
  *
  * The mutable half of the old `balance.ts`: per-beat cumulative-sim-second
  * windows (`BEAT_WINDOWS`), the arc-probe predicates (`ARC_BEATS`), and the
@@ -9,12 +9,11 @@
  * in the `// ─── Balance ───` section of `../data/producers.ts`. See
  * `.claude/rules/archetype-authoring.md` § Balance — where each surface lands.
  *
- * The Lane-2 probes (`solve-probe.ts` bisection, `invariant-probe.ts`
+ * The probes (`solve-probe.ts` bisection, `invariant-probe.ts`
  * offline-round-trip + no-pressure) import these. When a phase is unreachable,
  * the response is to propose coherent shifts across scaffolding — move the
  * beat, reshape content, relax the target — not to contort one constant.
  *
- * Worked example for cross-reference: `../../producer/balance/beats.ts`.
  */
 
 import { Decimal, type BeatProbe, type Waypoint } from '@open-loop/engine';
@@ -41,10 +40,8 @@ const hr = (h: number) => h * 60 * 60;
  *
  * Windows are an LLM guess on first pass — fully expect to shift them
  * during balance reconciliation (open-loop-engine/docs/consumer-guide-balance.md
- * § When prediction and truth disagree →
- * "move the phase"). Producer's B5/B6/B7 shifted 15–25 minutes during
- * prior tuning; record the same kind of shifts here in commit notes if
- * they happen.
+ * § When prediction and truth disagree, "move the phase").
+ * Record shifts in commit notes when they happen.
  */
 export const BEAT_WINDOWS: Record<string, [number, number]> = {
   'beat-1': [sec(0), sec(30)],
@@ -87,7 +84,7 @@ export const FLOW_BEATS: Waypoint[] = Object.keys(BEAT_WINDOWS).map((id) => ({
  *   unlock by threshold. Conjunction expresses "mid-arc scene
  *   diversification" — visual depth without engagement demand.
  * - 6: ≥ 8 achievements earned — 1.02⁸ ≈ 1.17× is the "first felt
- *   multiplier" threshold (Producer's beat-5 used a similar count threshold).
+ *   multiplier" threshold.
  *   Headless bot can fire 12 of 20 achievements (10 milestone
  *   + 2 tick-time); 8 sits comfortably in the reachable middle.
  *

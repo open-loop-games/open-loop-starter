@@ -5,11 +5,9 @@
 > live zero-sum pressure source. You author pressure against another agent
 > authoring pressure in the same shared space.
 
-**Forward-ish composition** (see `../README.md` § Two honest ways to source
-numbers): the SciFi Armada content (units, personas, counter-matrix) is
-**declared invention** — numbers are perturbation surface balanced against the
-spine by engine-as-oracle sensitivity sweeps (methodology #3), not lifted from a
-single exemplar. The lane-push / tug-of-war genre validates the shape ships in
+**Spine-formed.** The SciFi Armada content (units, personas, counter-matrix) is
+declared invention — numbers are perturbation surface settled against the spine
+by engine-as-oracle sensitivity sweeps, never lifted from a single exemplar. The lane-push / tug-of-war genre validates the shape ships in
 the wild — cited as a set, never lifted. Identity line source:
 `../_identity.md` (Tug row).
 
@@ -41,7 +39,7 @@ closed form.** Each side's economy is a familiar spine (geometric income-upgrade
 ladders feeding Auto-Production units), but it runs *inside a match against a
 live opposing economy*, so the archetype's pacing is not a fire-time curve — it
 is a **distribution** over stochastic match outcomes. That is the honest
-consequence of being adversarial: like a wide-graph clone, the system as a whole
+consequence of being adversarial: as with any wide interacting graph, the whole
 has no projectable closed form, which is why balance here is **measure-and-record
 via distribution statistics** (§ Balance model), not projected from a spine.
 
@@ -109,30 +107,27 @@ match limit.
 | Match orchestration | `modules/match.ts` (start/end/reset, events) | `matchEnded` fires pre-reset — capture then |
 | Perturbation | module `TuningRegistry` (`tunable()`) | unit costs, refinery, fortress HP, matrix sharpness |
 
-## Balance model — three lanes
+## Balance model
 
-Measure-and-record (adversarial; the signature is a distribution response curve,
-not a fire-time). See `../README.md` § Balance:
+Measure-and-record — the signature is a distribution response curve, not a
+fire-time. `BALANCING.md` beside this file is the working guide: the knobs, what
+couples to what, and how to read each probe. In brief:
 
-```
-data/*.ts ─ Balance ─   →   balance/*.ts (vite-node)                →   sim/*.test.ts
-Cost-Scaling + matrix lens   arc + sensitivity + retune probes           measured-window + framework lock
-"what the economy says"      "what shipping code + AI does"              "what must stay true"
-```
-
-1. **Lens** — the `// ─── Balance ───` sections in `data/*.ts` name each unit
-   cost / matrix cell / refinery value and its coupling.
-2. **Probe** — `balance/arc-probe.ts` runs the six probes (beat locks,
-   the methodology-#3 counter-strong sensitivity signature, income-upgrade ROI,
-   match-duration p50, and a framework-correctness archetype-dominance gate)
-   against the real engine + **shipping AI** via `bot.ts`'s bilateral sim-engine
-   builder + `tug-outcome` analyzer; `balance/retune-probe.ts` sweeps the 4×4
-   persona matrix for a viable-strategy data slice. Both lean on
-   `match-driver.ts` (sim-only multi-match orchestration) for cumulative beats.
-3. **Lock** — `sim/balance.probe.test.ts` pins the measured beat windows;
-   `sim/match-scope.test.ts` locks match-scope reset behavior; `sim/tug.sim.test.ts`
-   holds the behavioral shape. Framework-correctness (instrumentation intact)
-   rides probe 6, not a magnitude lock.
+- **The spine, as prose + math** — the `// ─── Balance ───` sections in
+  `data/*.ts` name each unit cost, matrix cell and refinery value with its
+  coupling.
+- **The probes** — `balance/arc-probe.ts` drives the real engine and the
+  **shipping AI** through `bot.ts`'s bilateral sim-engine builder: fire-time
+  checks, the counter-strong sensitivity signature, an income-upgrade ROI
+  snapshot, match-duration statistics, and a framework-correctness dominance
+  gate that verifies instrumentation rather than tuning anything.
+  `balance/retune-probe.ts` sweeps the persona matrix for a viable-strategy data
+  slice. Both lean on `match-driver.ts` for cumulative multi-match beats.
+- **The behavioral suites** — `sim/match-scope.test.ts` covers match-scope reset
+  and `sim/tug.sim.test.ts` the behavioral shape. `sim/balance.probe.test.ts`
+  still pins measured windows as assertions; those are moving to a printing
+  probe, per `open-loop-engine/docs/consumer-guide-balance.md` § Why this isn't a
+  test suite.
 
 ## Cross-references
 

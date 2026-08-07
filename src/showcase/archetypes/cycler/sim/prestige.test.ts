@@ -12,7 +12,7 @@
  * Runs place the reference board (`placeDefense`); merge() clears the board (a fresh
  * Redeploy rebuilds), so the arc re-places each cycle. Absolute payout magnitudes are
  * calibrated so a competent first run banks the quorum (data/prestige.ts); the exact
- * scale values are a Lane-3 discovery (multiverse-hr#17).
+ * scale values are measured, never authored (multiverse-hr#17).
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';

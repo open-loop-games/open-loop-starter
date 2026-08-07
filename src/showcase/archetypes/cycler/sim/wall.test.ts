@@ -9,7 +9,7 @@
  *     wall gives a bounded Δ_wall tail past the salvo crossing, repair extends it,
  *     and under-building C relative to the pegged reach breaches early (the
  *     C-vs-output tradeoff biting). Absolute (ι, ρ, δ, L_HP) calibration stays a
- *     Lane-3 discovery (multiverse-hr#17); the shapes locked here survive retunes.
+ *     measured, never authored (multiverse-hr#17); the shapes locked here survive retunes.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';

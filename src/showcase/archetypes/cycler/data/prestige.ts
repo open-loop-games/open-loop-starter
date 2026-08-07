@@ -41,7 +41,7 @@ export const PRESTIGE_BALANCE: PrestigeBalance = {
 //     accumulators run ~13.3k (∫capacity dt) / ~2.15k (Σ W_n) at L=0 (measured on the
 //     forward-line spatial split, forwardRows=2), so Sp=1000 / Ss=1200 reproduce a 2+1
 //     first-merge split (⌊∛(13284/1000)⌋=2, ⌊∛(2154/1200)⌋=1) == quorum-3
-//     affordability. Absolute magnitudes are a Lane-3 discovery (multiverse-hr#17); a
+//     affordability. Absolute magnitudes are measured, never authored (multiverse-hr#17); a
 //     fork re-sizes both to its own economy.
 //   • THE RE-PEG is the whole point. Prestige carries permanent power (raises
 //     D_max), and the burn re-baselines W₀ = D_max/H at the Merge boundary. So

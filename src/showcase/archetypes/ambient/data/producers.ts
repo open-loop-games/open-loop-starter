@@ -54,19 +54,19 @@ export const AUTO_PRODUCERS: AutoProducerDef[] = [
 
 // ─── Balance ────────────────────────────────────────────────────────────────
 // Rate-function bucket: geometric cost-scaling (the Cost-Scaling family; see
-// `../IDENTITY.md` § Rate-function spine), the same family as Producer but tuned
+// `../IDENTITY.md` § Rate-function spine), the same family tuned
 // *gentle* for the no-pressure contract. Each tier is a geometric price ladder,
 // so its count is logarithmic in accumulated primary:
 //
 //   cost(n)  = baseCost · COST_SCALING^n            (COST_SCALING = 1.08)
 //   n_afford ≈ log_1.08( 1 + sprouts·(1.08−1)/baseCost )   [geometric-series inverse]
 //
-// The 1.08 growth (vs Producer's 1.15) is the load-bearing cozy knob: a shallower
+// The 1.08 growth (vs the genre-default 1.15) is the load-bearing cozy knob: a shallower
 // ladder means owned-count keeps climbing for hours without a wall, so the arc is
 // multi-hour cumulative rather than a steep session sprint. Headline output =
 // Σ_tiers (count · baseRate) × the achievement modifier product (each earned
 // achievement folds `DEFAULT_ACHIEVEMENT_MULTIPLIER` into the chain, per
-// `../modules/achievements.ts`). Unlike Producer there is NO click channel — all
+// `../modules/achievements.ts`). There is NO click channel at all — all
 // income flows through `getTotalRate`, which is what lets the harness read the
 // arc through `stasis-aware-tick` (see `../BALANCING.md` § Couplings).
 //
