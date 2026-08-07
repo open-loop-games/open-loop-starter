@@ -84,9 +84,11 @@ runnable projection; probes driving the shipping bilateral AI headless and
 printing what they measure. The driver is already the right shape — shipping
 automation (`modules/automation.ts`, tier-gated), never a bespoke bot.
 
-The three `sim/*.probe.test.ts` suites are behavioral despite the name — they
-assert supply is positive, an outcome resolves, unit arrays clear on reset. They
-belong beside their modules, not under `sim/`.
+Its behavioral suites already sit where the canon puts them —
+`modules/{automation,match,tactical-sim}.test.ts`, beside the modules they spec,
+over `sim/harness.ts`. Skirmish is the reference for that axis and for the
+`AutomationTiers`-gated driver; see `.claude/rules/archetype-authoring.md`
+§ Conformance.
 
 ## Hack-from references
 

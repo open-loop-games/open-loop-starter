@@ -126,7 +126,7 @@ Balance probes lock *how much* (magnitudes, with tolerance); behavioral suites s
 - **Primitive:** `src/test/bootTestEngine.ts` — boots a fresh engine (shared base + given modules) on memory storage under a unique namespace, returning `{ engine, tick, tickUntil, dispose }`. Scaffold-level and game-agnostic; survives eject.
 - **Per-game harness:** `sim/harness.ts` wraps the primitive into bare `boot()`/`tick()`/`tickUntil()` free functions that hardcode the game's module list, so tests read `boot(); doThing(); await tick(10)`. Set its `TICK_RATE` to match your economy's time unit. `_blank` ships this plus a living `sim/example.test.ts`; eject leaves both in `src/game/sim/`, so a fork is born with the pattern green.
 - **Reset by fresh boot.** `beforeEach(() => boot())` — modules rebind their state on `install` and the unique namespace isolates persistent-ref contexts, so a fresh engine per test *is* the reset. No per-module reset surface to maintain.
-- **Where suites live:** per-module behavioral specs beside the module (`src/game/modules/<name>.test.ts`), importing the `sim/` harness; balance probes stay under `sim/`+`balance/`.
+- **Where suites live:** per-module behavioral specs beside the module (`src/game/modules/<name>.test.ts`), importing the `sim/` harness. `sim/` holds `harness.ts` and any suite that genuinely spans modules. Balance probes are vite-node scripts under `balance/` and never live in either — they print rather than assert, so a test runner has nothing to do with them.
 
 ## `src/lib/` scope
 

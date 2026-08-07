@@ -131,9 +131,16 @@ alongside the constants           and the probes that contradict it
   re-implementation. They print; they do not assert. A probe that surfaces something
   unexpected has done its job.
 
-- **`sim/` is for behavioral suites** — what a mechanic *does*, driven tick by tick:
-  counts, monotonic growth, a slot freeing, a wave completing. No magnitudes, which is why
-  they survive retunes. Balance magnitudes do not belong here.
+- **Behavioral suites sit beside the module they spec** — `modules/<name>.test.ts`,
+  importing `sim/harness.ts`. What a mechanic *does*, driven tick by tick: counts,
+  monotonic growth, a slot freeing, a wave completing. No magnitudes, which is why they
+  survive retunes.
+
+- **`sim/` holds the harness and nothing else by default** — `harness.ts` wrapping
+  `src/test/bootTestEngine.ts` into bare `boot()` / `tick()` / `tickUntil()` free
+  functions over this archetype's module list. A suite genuinely spanning several
+  modules can live here under its own name; a suite that specs one module belongs
+  beside it. Probes never live here — they are vite-node scripts under `balance/`.
 
 ### Canonical `balance/` filenames
 
@@ -142,6 +149,12 @@ alongside the constants           and the probes that contradict it
 | Runnable closed-form projection (no engine) | `<name>-projection.ts` |
 | Probe driving shipping code | `<concern>-probe.ts` |
 | Shipping-automation arc runner | `<name>-run.ts` |
+| Beat windows + predicates the probes import | `beats.ts` |
+| Shared fixture the probes and suites both build on | `_<noun>.ts` |
+
+An underscore prefix marks a file that is *not* runnable on its own — a fixture the
+runnable ones import, like cycler's `_board.ts`. Everything else in `balance/` should be
+executable with `vite-node` and print something.
 
 `_blank` and cycler are what to copy from.
 
@@ -152,6 +165,34 @@ the game's own `modules/automation.ts` (gated by `AutomationTiers`), with a thin
 working only the manual openers a player works. Deliberately unrealistic drivers —
 full-auto session runners, optimal-play enumeration — stay probe-side; they are tooling,
 not mechanics.
+
+## Conformance
+
+The archetypes are the storybook for the engine's batteries, so they are read as
+best practice whether or not they were written that way. Where two of them solve the
+same problem differently, at least one is teaching a fork the wrong thing — and the
+reader has no way to tell which. Uniformity here is the product, not tidiness.
+
+Each axis has one canonical answer and one archetype to copy it from:
+
+| Axis | Canon | Copy from |
+|---|---|---|
+| Perturbation path | `tunable()` at reader sites; registry created in `modules/tuning.ts` | `tug` |
+| Automation driver | `modules/automation.ts` gated by `AutomationTiers`; a thin runner works only the manual openers | `skirmish` |
+| Behavioral suites | `modules/<name>.test.ts`, beside the module, importing `sim/harness.ts` | `skirmish` |
+| Test harness | `sim/harness.ts` → bare `boot()` / `tick()` / `tickUntil()` over this archetype's modules | `_blank` |
+| Runnable projection | `<name>-projection.ts` where the closed form is worth executing | `cycler` |
+| Probes | `<concern>-probe.ts` under `balance/`; print, never assert | `cycler` |
+| Balance orientation | `BALANCING.md` beside `IDENTITY.md`, four required sections | `ambient` |
+| Boot | `createApp(overrides?) → { app, engine, mount }` | any — all five agree |
+
+A deliberate divergence is allowed and is worth writing down: say so at the call site
+and in that archetype's `BALANCING.md` § Known thin, with what the canon costs here.
+Silent divergence is the failure — it reads identically to a house style a fork should
+adopt.
+
+**A new axis appears whenever a second archetype solves a solved problem differently.**
+Add the row and pick the reference before the third one invents a third answer.
 
 ## Landing discipline
 
