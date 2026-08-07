@@ -19,8 +19,8 @@ export interface EconomyBalance {
 export const ECONOMY_BALANCE: EconomyBalance = {
   startingWorkers: 4,
   incomePerWorker: 2.5,
-  workerCost: 40,
-  maxWorkers: 40,
+  workerCost: 100,
+  maxWorkers: 120,
 };
 
 /** `r = ρ/c` — the economy's growth constant, per game-second. Derived, never
@@ -48,22 +48,26 @@ export const GROWTH_CONSTANT = ECONOMY_BALANCE.incomePerWorker / ECONOMY_BALANCE
 //
 // ─── Why these four numbers ───
 //
-// `r = ρ/c = 0.0625/s` is the load-bearing one: it sets how fast an investment
+// `r = ρ/c = 0.025/s` is the load-bearing one: it sets how fast an investment
 // decision pays back, and everything else is scale. At φ = 1 the economy
-// doubles every ln2/r ≈ 11s; at φ = 0.5 every ~22s. Those are deliberately
-// fast against a match that runs minutes — an RTS opening has to resolve its
-// split inside the first engagement or the decision is not a decision, it is a
-// preamble. Re-tune `r` to move the whole game's tempo; re-tune `E₀` to move
-// only the opening.
+// doubles every ln2/r ≈ 28s; at φ = 0.5 every ~55s. Sized against the match,
+// which resolves in minutes: a few doublings over a match means the split is a
+// live decision, while a doubling every ten seconds means the economy runs away
+// before an army can punish it. Re-tune `r` to move the whole game's tempo;
+// re-tune `E₀` to move only the opening.
 //
-// `c / (ρ · unitCost)`: a worker costs 4 troopers and repays its own cost in
-// c/ρ = 16s. A faction that buys one worker instead of four troopers is down
-// four troopers for sixteen seconds and ahead forever after — that is the
-// tension the archetype is made of, and it is why `c` is FLAT rather than
-// cost-scaling. Cost scaling would make the split self-limiting, and the point
-// is that over-investment must be punished by the *opponent*, not by an
-// arithmetic wall. Coupling: raising `c` without raising `ρ` lengthens payback
-// and pushes every persona toward army.
+// Measured receipt: `balance/skirmish-projection.ts` was what caught the first
+// pass at `c = 40` (r = 0.0625) — `maxWorkers` bound at ~74s, well inside a
+// match, which made the cap the balance rather than the guard it is meant to be.
+//
+// `c / (ρ · unitCost)`: a worker costs 10 troopers and repays its own cost in
+// c/ρ = 40s. A faction that buys one worker instead of ten troopers is down ten
+// troopers for forty seconds and ahead forever after — that is the tension the
+// archetype is made of, and it is why `c` is FLAT rather than cost-scaling.
+// Cost scaling would make the split self-limiting, and the point is that
+// over-investment must be punished by the *opponent*, not by an arithmetic
+// wall. Coupling: raising `c` without raising `ρ` lengthens payback AND slows
+// `r`, so it pushes every persona toward army twice over.
 //
 // `maxWorkers` is a sim guard, not pacing — unbounded exponential growth in a
 // match with no clock would run the field out of memory before the base fell.

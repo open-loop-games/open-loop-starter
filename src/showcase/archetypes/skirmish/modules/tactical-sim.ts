@@ -66,14 +66,24 @@ const BASE_POS: Record<Side, { x: number; y: number }> = {
   b: { x: FIELD.width - 6, y: FIELD.height / 2 },
 };
 
+/**
+ * A unit's position as it stood at the start of the tick, paired with the live
+ * unit so damage still lands on the real thing.
+ */
+interface Frozen {
+  unit: Unit;
+  x: number;
+  y: number;
+}
+
 /** Nearest living enemy within `range`, else null. Brute force — the scale seam. */
-function nearestEnemy(u: Unit, enemies: Unit[], range: number): Unit | null {
-  let best: Unit | null = null;
+function nearestEnemy(self: Frozen, enemies: Frozen[], range: number): Frozen | null {
+  let best: Frozen | null = null;
   let bestD2 = range * range;
   for (const e of enemies) {
-    if (e.hp <= 0) continue;
-    const dx = e.x - u.x;
-    const dy = e.y - u.y;
+    if (e.unit.hp <= 0) continue;
+    const dx = e.x - self.x;
+    const dy = e.y - self.y;
     const d2 = dx * dx + dy * dy;
     if (d2 <= bestD2) {
       bestD2 = d2;
@@ -99,6 +109,15 @@ export function createTacticalSimModule(): EngineModule {
         baseHp[side] = persistent<number>(BASE_HP, { name: `baseHp-${side}` });
       }
       const nextId = persistent<number>(0, { name: 'nextId' });
+      // Per-side spawn index, used ONLY for the formation offset. It cannot be
+      // `nextId`: that counter is shared, so interleaved spawns hand each side a
+      // different slice of the offset cycle and two seats running identical
+      // policies field differently-shaped armies. That asymmetry decides mirror
+      // matches, which makes it a balance result that is really a bug.
+      const spawnIndex = {} as Record<Side, Persistent<number>>;
+      for (const side of SIDES) {
+        spawnIndex[side] = persistent<number>(0, { name: `spawnIndex-${side}` });
+      }
 
       const unitCost = tunable<DecimalSource>(registry, 'tactical/unitCost', () => TROOPER.cost);
 
@@ -111,6 +130,7 @@ export function createTacticalSimModule(): EngineModule {
           baseHp[side].value = BASE_HP;
         }
         nextId.value = 0;
+        for (const side of SIDES) spawnIndex[side].value = 0;
       });
 
       function spawn(side: Side): boolean {
@@ -118,7 +138,7 @@ export function createTacticalSimModule(): EngineModule {
         if (!economy.spendOnArmy(side, Number(unitCost.value))) return false;
         const bp = BASE_POS[side];
         // Deterministic y-spread so a burst doesn't stack on one point.
-        const jitter = ((nextId.value % 5) - 2) * 3;
+        const jitter = ((spawnIndex[side].value % 5) - 2) * 3;
         units[side].value.push({
           id: nextId.value,
           x: bp.x,
@@ -128,30 +148,46 @@ export function createTacticalSimModule(): EngineModule {
         });
         units[side].value = [...units[side].value]; // reassign → reactivity
         nextId.value += 1;
+        spawnIndex[side].value += 1;
         return true;
       }
 
       ctx.onTick((dt) => {
         if (!match.inMatch.value) return;
 
-        // Move + attack. Sides processed in order; `a` resolves its attacks
-        // before `b` this tick — a fixed, deterministic bias, negligible.
+        // Simultaneous resolution. Every unit reads the world as it stood at the
+        // START of this tick, so both sides act on the same information.
+        //
+        // Resolving sides in sequence against live positions is not a small
+        // bias: the side processed second targets and range-checks against the
+        // first side's ALREADY-MOVED positions, so it closes more accurately and
+        // enters attack range sooner. It decides mirror matches on its own,
+        // which reads as a balance result while actually being an update-order
+        // artifact. Damage still applies to the live units — only the geometry
+        // is snapshotted.
+        const frozen = {} as Record<Side, Frozen[]>;
+        for (const side of SIDES) {
+          frozen[side] = units[side].value.map((u) => ({ unit: u, x: u.x, y: u.y }));
+        }
+
         for (const side of SIDES) {
           const foe = opponentOf(side);
-          const enemies = units[foe].value;
+          const enemies = frozen[foe];
           const foeBase = BASE_POS[foe];
-          for (const u of units[side].value) {
-            const target = nearestEnemy(u, enemies, TROOPER.aggroRange);
+          for (const self of frozen[side]) {
+            const u = self.unit;
+            const target = nearestEnemy(self, enemies, TROOPER.aggroRange);
             const tx = target ? target.x : foeBase.x;
             const ty = target ? target.y : foeBase.y;
-            const dx = tx - u.x;
-            const dy = ty - u.y;
+            // Distances read from the snapshot on both ends.
+            const dx = tx - self.x;
+            const dy = ty - self.y;
             const dist = Math.hypot(dx, dy);
 
             u.cooldown = Math.max(0, u.cooldown - dt);
             if (dist <= TROOPER.attackRange) {
               if (u.cooldown <= 0) {
-                if (target) target.hp -= TROOPER.damage;
+                if (target) target.unit.hp -= TROOPER.damage;
                 else baseHp[foe].value -= TROOPER.damage;
                 u.cooldown = TROOPER.attackCooldownSec;
               }

@@ -183,28 +183,27 @@ consumer converges — not from this archetype alone.
 
 ## Balance model
 
-**Declared, not yet built.** The spine above is the declaration; skirmish still
-has no `balance/` directory, and that gap is now specific rather than open-ended.
-What it owes, in order:
+Measure-and-record over an intransitive payoff matrix — there is no correct `φ`,
+only a best response. `BALANCING.md` beside this file is the working guide: the
+knobs, what couples to what, how to read each probe. In brief:
 
-- **The split channel first.** `φ` has no representation in `data/tactical.ts`,
-  so there is nothing to balance yet — an economy that cannot be reinvested in
-  admits exactly one strategy. Build the channel, then the constants.
-- **The closed form as prose** beside those constants in `data/*.ts` § Balance —
-  `E(t)` and `A(t)` above, each naming its coupling and re-tune target.
-- **`skirmish-projection.ts`**, written _with_ the data rather than after it. The
-  fixed-`φ` trajectory is closed, so it is worth executing — and a coverage claim
-  is only as good as the expression that tests it. Write the projection while the
-  declaration is still cheap to change.
-- **Probes** driving the shipping AI headless and printing: a win-rate surface
-  over the split axis (the strategy-space term), a match-duration distribution
-  over seeds (the stochastic term), and an engaged-fraction reading (the
-  coupled-state term — how far the square-law bound sits from the streamed
-  reality).
+- **The spine, as prose + math** — `data/economy.ts` § Balance carries `E(t)`,
+  `Aˢ(t)` and the `c > unitCost` coupling; `data/tactical.ts` § Balance carries
+  the attrition constants the closed form does not reach.
+- **`balance/skirmish-projection.ts`** runs the closed form with no engine and
+  reports army as an **upper bound** rather than a prediction — the reserve and
+  the purchase cadence both make the real army smaller. It also prints the
+  economic crossover against pure rush, which is what says whether the economy
+  can matter inside a match at all.
+- **`balance/split-probe.ts`** is the signature probe: the payoff matrix over
+  `φ` on both seats. It checks its own diagonal for mirror symmetry first,
+  because an asymmetric sim produces balance findings that are really bugs.
+- **`balance/arc-probe.ts`** drives the shipping automation through the default
+  matchup and reports each beat against its measured window.
 
-The driver is already the right shape — shipping automation
-(`modules/automation.ts`, tier-gated), never a bespoke bot — so the probes have
-something real to drive the moment the economy lands.
+The driver was already the right shape — shipping automation
+(`modules/automation.ts`, tier-gated), never a bespoke bot — so the probes drive
+real game code rather than a re-implementation of it.
 
 Its behavioral suites already sit where the canon puts them —
 `modules/{automation,match,tactical-sim}.test.ts`, beside the modules they spec,

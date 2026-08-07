@@ -2,7 +2,7 @@ import { type App } from 'vue';
 import { type Engine, type EngineModule } from '@open-loop/engine';
 import { bootApp, bootEngine } from '@/boot';
 import SkirmishAppRoot from './ui/SkirmishAppRoot.vue';
-import { createSkirmishModules } from './modules';
+import { createSkirmishModules, type SkirmishModulesOptions } from './modules';
 
 const GAME_ID = 'skirmish';
 const MOD_ID = 'skirmish';
@@ -22,6 +22,11 @@ export interface GameEngineOptions {
   extraModules?: EngineModule[];
   /** Raise the loop's `maxDeltaTime` cap. */
   maxDeltaTime?: number;
+  /**
+   * Per-seat policy overrides. The balance layer varies `economyShare` across
+   * seats to sweep the split axis; production takes the defaults.
+   */
+  seats?: SkirmishModulesOptions['seats'];
 }
 
 /**
@@ -30,7 +35,10 @@ export interface GameEngineOptions {
  * resume sequence.
  */
 export function createGameEngine(options?: GameEngineOptions): { engine: Engine } {
-  const modules = [...createSkirmishModules(), ...(options?.extraModules ?? [])];
+  const modules = [
+    ...createSkirmishModules({ seats: options?.seats }),
+    ...(options?.extraModules ?? []),
+  ];
   const engine = bootEngine({
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { addResource } from '@open-loop/engine';
 import { bootModules, getEngine, tick, tickUntil, TICK_RATE } from '../sim/harness';
 import {
   createTuningModule,
@@ -27,6 +28,52 @@ function boot() {
     createTacticalSimModule(),
   ]);
 }
+
+/**
+ * Mirror symmetry — two seats given identical treatment must reach identical
+ * state. The archetype is bilateral by construction, so any asymmetry the sim
+ * introduces on its own shows up later as a *balance* finding that is really a
+ * bug: two probes' worth of split-sweep were read against a sim that quietly
+ * favoured one seat. Two separate causes were found this way (a shared spawn
+ * counter that gave each side a different formation offset, and sequential
+ * per-side resolution that let the second side act on the first's post-move
+ * positions), which is why this is specced rather than assumed.
+ */
+describe('skirmish tactical sim — mirror symmetry', () => {
+  beforeEach(() => boot());
+
+  it('holds both bases even after identical armies fight to exhaustion', async () => {
+    match().start();
+    const t = tactical();
+    addResource(t.supply.a, 500);
+    addResource(t.supply.b, 500);
+    for (let i = 0; i < 10; i++) {
+      t.spawn('a');
+      t.spawn('b');
+    }
+
+    await tick(60 * TICK_RATE);
+
+    expect(t.units.a.value.length).toBe(t.units.b.value.length);
+    expect(t.baseHp.a.value).toBe(t.baseHp.b.value);
+  });
+
+  it('spreads each side across the same formation offsets', () => {
+    match().start();
+    const t = tactical();
+    addResource(t.supply.a, 500);
+    addResource(t.supply.b, 500);
+    for (let i = 0; i < 5; i++) {
+      t.spawn('a');
+      t.spawn('b');
+    }
+
+    // Offsets are relative to each base, so compare the shape, not the absolute y.
+    const offsets = (side: 'a' | 'b') =>
+      t.units[side].value.map((u) => u.y - t.basePos[side].y).sort((p, q) => p - q);
+    expect(offsets('a')).toEqual(offsets('b'));
+  });
+});
 function match(): MatchApi {
   return getEngine().tryInject(MatchKey)!;
 }
