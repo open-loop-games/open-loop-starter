@@ -70,6 +70,17 @@ pnpm exec vite-node src/showcase/archetypes/tug/balance/arc-probe.ts
 pnpm exec vite-node src/showcase/archetypes/tug/balance/retune-probe.ts
 ```
 
+**Tug ships no `tug-projection.ts`, deliberately.** The canon wants a runnable
+closed-form projection wherever one is worth executing, and ambient and cycler
+both carry one. Tug's spine declares no single closed form (`IDENTITY.md`
+§ Rate-function spine): the arc is a distribution over adversarial match
+outcomes, so there is no expression to run and contradict. The one genuinely
+closed-form piece — the income-upgrade ROI, `paybackSeconds = cost / (rate ×
+(multiplier − 1))` — is already executed where it is used, inside the ROI
+snapshot, recomputed from the data constants each run. Lifting it into a
+projection file would buy a filename and lose the co-location. Don't add one
+without a second closed form to put beside it.
+
 - **`arc-probe.ts`** is the battery. Deterministic single-pass fire-time checks
   ride one `runUntil` each; the sensitivity sweep and the ROI snapshot ride
   multi-seed matrix runs and read distribution statistics off the aggregate. It

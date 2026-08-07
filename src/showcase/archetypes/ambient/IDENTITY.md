@@ -45,11 +45,20 @@ so all income flows through `getTotalRate` — which lets the harness read the a
 through `stasis-aware-tick` (an economy with an out-of-band rate channel can't;
 see `BALANCING.md` § Couplings).
 
-**Where the closed form stops:** nowhere structural — one modeled subsystem
-(continuous auto-producers), fully projectable. **What measures the remainder:**
-per-beat `runUntil` bisection settles the constants the closed form leaves free,
-and the offline round-trip is measured rather than derived. Full coverage, the
-simple case.
+**Where the closed form stops: the achievement product.** The producer ladder is
+fully projectable — `balance/ambient-projection.ts` writes the inversion, the buy
+order and the whole reveal arc on paper. The multiplier `A` is not: each
+achievement folds its factor in when an arbitrary predicate over game state fires
+(`data/achievements.ts` — resume gaps, owned-counts, elapsed time), which is a
+discrete-event layer rather than a rate function. The projection holds `A = 1`
+and reports the arc as a **strict upper bound** instead of estimating it.
+
+**What measures the remainder:** `reveal-probe.ts` measures the crossings the
+bound brackets — the observed gap is the achievement product, and it is ~10–15%
+at the producer reveals. Per-beat `runUntil` bisection settles the constants the
+closed form leaves free, and the offline round-trip is measured rather than
+derived. Partial coverage, honestly — the ladder projects, the pacing layer is
+measured.
 
 ## The loop — beat map
 

@@ -53,6 +53,14 @@ until the product is a real multiplier converts achievements into a reason to
 push, and the no-pressure contract is the archetype. If you want compounding
 growth, it belongs in the producer ladder where the player can see it.
 
+**A producer cannot be bought before its reveal fires.** The autobuyer scores
+only affordable, already-revealed candidates, so an unlock threshold is a
+*pacing* control on the whole ladder and not just on visibility: raising
+`pond-dug` withholds pond's rate as well as its tile. Two versions of
+`ambient-projection.ts` got this wrong before it was caught — a model that buys
+the best tier globally races ahead of the engine while reading as obviously
+correct.
+
 **Scene variants mirror unlock thresholds.** Five pairs, locked in
 `sim/data-invariants.test.ts`. The four mid-arc transitions are geometric
 interpolation between spring (`1.05e9`) and year-cycles (`4.28e9`). Move an
@@ -85,6 +93,11 @@ pnpm exec vite-node src/showcase/archetypes/ambient/balance/invariant-probe.ts
   measured fire time, whether reveal order matches tier order, and the gap
   between consecutive reveals. The ordering half is a verdict — there is no band
   to widen — and the cadence half is a reading.
+- **`ambient-projection.ts`** is the spine's runnable form, and runs first — no
+  engine, pure arithmetic. It prints the ladder inversion, the buy order the
+  shipping policy should take, and a strict upper bound on every producer-reveal
+  time. Read it before a probe: if the bound and the probe disagree in the wrong
+  direction, the economy moved, and no amount of bisection will tell you that.
 - **`beats.ts`** holds the windows and predicates both probes import. Windows are
   *measured*, not authored — when a beat will not fire inside its window, the
   response is to move the window or reshape content, not to contort a single
