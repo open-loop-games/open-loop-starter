@@ -8,7 +8,7 @@ One screen: what the archetype *is*, the closed-form spine that balances it,
 cycler's committed realization, and the ports a fork grows it through. The spine is
 the load-bearing part — read that section slowly; the rest hangs off it.
 
-Identity line source: `archetypes/_identity.md` (Cycler row). This is a
+Identity line source: `../_identity.md` (Cycler row). This is a
 pattern-language composition, not a port of any one game. Thronefall (Cycler ×
 Defender), Kingdom Two Crowns (Cycler × side-scroll Explorer), They Are Billions
 (Cycler × RTS) validate the composition as a *set, with their crosses showing* —

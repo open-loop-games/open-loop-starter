@@ -11,7 +11,7 @@ numbers): the SciFi Armada content (units, personas, counter-matrix) is
 spine by engine-as-oracle sensitivity sweeps (methodology #3), not lifted from a
 single exemplar. The lane-push / tug-of-war genre validates the shape ships in
 the wild — cited as a set, never lifted. Identity line source:
-`archetypes/_identity.md` (Tug row).
+`../_identity.md` (Tug row).
 
 ## What this archetype is
 

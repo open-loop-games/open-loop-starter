@@ -10,7 +10,7 @@ numbers): not a 1:1 clone — the Cozy Farm content is **declared invention**
 engine-as-oracle bisection, methodology #1), not lifted from a single exemplar.
 Anti-Idle (2009), Rusty's Retirement (2024), Chillquarium and Tiny Pasture are the
 genre exemplars that validate the shape ships in the wild — cited as a set, never
-lifted. Identity line source: `archetypes/_identity.md` (Ambient row).
+lifted. Identity line source: `../_identity.md` (Ambient row).
 
 ## What this archetype is
 
