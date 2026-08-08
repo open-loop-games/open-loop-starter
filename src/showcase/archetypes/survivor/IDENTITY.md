@@ -45,7 +45,7 @@ the character-select screen.
 **Bucket: geometric discrete on minute marks, over a modifier-product chain.**
 Both sides of the run compound — device DPS through the draft, specimen HP and
 annulus density through the escalation schedule — so the closed core is a
-crossing between two geometric curves, and the XP ladder is *derived* from the
+crossing between two geometric curves, and the XP ladder is _derived_ from the
 income model so beats land on the authored schedule rather than being authored
 beside it. Per-subsystem buckets and their receipts are inventoried at
 `open-loop-research/methodology/techniques/closed-form-progression/per-archetype/survivor.md`.
@@ -69,12 +69,12 @@ wrong.
 personality: median survival, `η` reported separately for continuous pickup and
 collector bursts, and the distribution of **binding cause** at run end —
 
-| Cause | What bound |
-|---|---|
-| HP floor | contact accumulated; defence-bound |
-| Traversal collapse | annulus density beat available DPS; no gap to move through |
+| Cause                 | What bound                                                   |
+| --------------------- | ------------------------------------------------------------ |
+| HP floor              | contact accumulated; defence-bound                           |
+| Traversal collapse    | annulus density beat available DPS; no gap to move through   |
 | Collection starvation | killed enough, banked too little; low `η` against the ladder |
-| Timer | survived the arc |
+| Timer                 | survived the arc                                             |
 
 A personality bound by one cause across every seed is a wall in costume. Three
 specialists each bound by a different cause, with the baseline mostly reaching
@@ -91,13 +91,13 @@ draft beats over ~30 minutes, first interval 30s growing geometrically to 90s
 
 - **The automation ladder.** The human seat has landed (`data/seats.ts`
   `PLAYER_SEAT`, `driver: 'player'`) and it cost an addition rather than a
-  rewrite: input replaces the policy's *output* at two seams the modules already
+  rewrite: input replaces the policy's _output_ at two seams the modules already
   named, and every mechanic downstream is untouched. What it unblocks is the
   ladder. There is still deliberately **no `AutomationTiers` gate**: an AI seat
   is an alternative character, not something the player earns, so it stays gated
   by install-presence exactly as skirmish gates its opponent seats. The honest
-  rung is now buildable and is a different thing — *autopilot on the seat you are
-  sitting in*, unlocked mid-run or across runs, with the existing movement policy
+  rung is now buildable and is a different thing — _autopilot on the seat you are
+  sitting in_, unlocked mid-run or across runs, with the existing movement policy
   as its body. That is a spine decision when it comes: opening the gate changes
   the arc, so the projection grows its second branch in the same pass.
 - **Second meta-currency.** Halls of Torment's hero-specific shards alongside
@@ -112,18 +112,19 @@ lift targets: Vampire Survivors, Brotato, Halls of Torment.
 
 ## Engine fit (pattern → primitive)
 
-| Pattern | Engine surface |
-|---|---|
-| Movement / avoidance | `SpatialGrid.distanceField` over threat sources, ascended rather than descended; walls as cost |
-| Trap check + loss detection | `SpatialGrid.bfs` — reachability answers "is there a gap" |
-| Collector routing | second `distanceField`, multi-source over uncollected motes |
-| Draft offers | seeded `rng` weighted pick |
-| Device / reagent modifiers | `createModifierChain` + multiplicative modifiers |
-| Level cadence | `createSkill` with an invertible `Formula` ladder |
-| Run boundary | `createReset` with `keep` for the meta split |
-| Meta shop | `createPurchasableCategory` + `createCostRequirement` |
-| Player-facing automation | `AutomationTiers`, typed tier union |
-| Engagement banding | harness `classifyFlowChannel` |
+| Pattern                     | Engine surface                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Movement / avoidance        | `SpatialGrid.distanceField` over threat sources, ascended rather than descended; walls as cost                                                              |
+| Trap check + loss detection | `SpatialGrid.bfs` — reachability answers "is there a gap"                                                                                                   |
+| Mote routing                | second `distanceField`, multi-source over uncollected motes                                                                                                 |
+| Collector routing           | exact euclidean term in `chooseHeading` — a drop lands inside `r_kill` and a 100-unit nav cell cannot resolve an approach ending inside a ~70-unit aperture |
+| Draft offers                | seeded `rng` weighted pick                                                                                                                                  |
+| Device / reagent modifiers  | `createModifierChain` + multiplicative modifiers                                                                                                            |
+| Level cadence               | `createSkill` with an invertible `Formula` ladder                                                                                                           |
+| Run boundary                | `createReset` with `keep` for the meta split                                                                                                                |
+| Meta shop                   | `createPurchasableCategory` + `createCostRequirement`                                                                                                       |
+| Player-facing automation    | `AutomationTiers`, typed tier union                                                                                                                         |
+| Engagement banding          | harness `classifyFlowChannel`                                                                                                                               |
 
 **Deliberately consumer-side:** the real-time arena — positioning, collision,
 frame-level resolution — is named absent from the engine by design
@@ -143,9 +144,9 @@ probes, per the graduated shared-pure-state-function discipline.
   velocity at frame rate with the sim sample correcting error only. That kills the
   recipe's cadence-versus-smoothing question as posed — survivor steps at the same
   20 Hz as skirmish and still needed it — and replaces it with a sharper one: what
-  the smoothed value *drives*. An eased camera under a player's hand ripples the
+  the smoothed value _drives_. An eased camera under a player's hand ripples the
   whole floor at 15.3% CV against 2.5% reckoned. It also added two divergences the
-  dive has to cover: a *moving camera* where the prior receipts carry a static fit,
+  dive has to cover: a _moving camera_ where the prior receipts carry a static fit,
   and a viewport-culled sprite pool for motes, whose population is unbounded
   because the sim never despawns them. Recorded in `candidate-recipes-ui.md`.
 

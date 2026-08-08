@@ -101,13 +101,21 @@ describe('survivor/arena — player-driven movement', () => {
 
   it('ignores posted control on a policy seat', async () => {
     run().startRun('generalist');
-    arena().setControl({ x: 1, y: 0 });
+    const start = { ...arena().state.value.operator };
+    // `null` is the one input whose effect is unambiguous: it means STAND STILL,
+    // and the spec above asserts a player seat obeys it. A policy seat must move
+    // anyway, because nothing reads the posted value at all.
+    //
+    // Asserted this way round deliberately. The earlier form posted (1, 0) and
+    // required the heading to differ from it three seconds later, which is not
+    // the invariant — the policy is free to CHOOSE (1, 0) when a specimen lies
+    // that way, so the test was really asserting a property of the seeded spawn
+    // stream and it failed the first time an unrelated change shifted that
+    // stream. A behavioural spec must not depend on where the dice landed.
+    arena().setControl(null);
     await tick(60);
-    // The policy steers; a stale key must not be able to hijack it. Heading
-    // equality is the assertion — a policy that happened to agree for one step
-    // would not still agree three seconds later.
-    const heading = arena().state.value.operator.heading;
-    expect(heading.x === 1 && heading.y === 0).toBe(false);
+    const now = arena().state.value.operator;
+    expect(Math.hypot(now.x - start.x, now.y - start.y)).toBeGreaterThan(0);
   });
 });
 

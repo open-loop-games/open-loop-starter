@@ -10,6 +10,9 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ArenaKey } from './arena';
+import { ARENA_BALANCE, COLLECTOR_BALANCE, collectRadiusFor } from '../data/arena';
+import { REAGENTS } from '../data/devices';
+import { META_UPGRADES } from '../data/meta';
 import { boot, getEngine, tick } from '../sim/harness';
 
 function arena() {
@@ -103,5 +106,94 @@ describe('survivor/arena', () => {
     arena().startRun('generalist');
     await tick(300);
     expect(arena().state.value.stats.kills).toBe(first);
+  });
+});
+
+describe('survivor/arena — the aperture bound', () => {
+  /**
+   * `r_collect / r_kill` is this archetype's top coupling and two runtime
+   * sources multiply it, so the property under test is that no combination of
+   * them can reach the cap — not that today's combination happens to.
+   */
+  it('holds the collect radius below the kill radius however it is stacked', () => {
+    const { killRadius, collectRadius, apertureCapRatio } = ARENA_BALANCE;
+    const ceiling = killRadius * apertureCapRatio;
+
+    expect(collectRadiusFor(1)).toBeCloseTo(collectRadius, 6);
+
+    // Read off the defs rather than restated, so a retune of either source moves
+    // this with it instead of pinning yesterday's numbers.
+    const reclaimant = REAGENTS.find((r) => r.id === 'reclaimant')!;
+    const aperture = META_UPGRADES.find((u) => u.id === 'wider-aperture')!;
+    const stacked =
+      Math.pow(reclaimant.perStack, reclaimant.maxStacks) *
+      Math.pow(aperture.perLevel, aperture.maxLevel);
+
+    // The regression this bound exists for: on a raw product the two shipping
+    // sources put the aperture OUTSIDE the radius that feeds it.
+    expect(collectRadius * stacked).toBeGreaterThan(killRadius);
+    expect(collectRadiusFor(stacked)).toBeLessThan(ceiling);
+    // The ceiling is an asymptote, so an unbounded multiplier approaches it and
+    // never passes it — at which point the headroom term underflows the double
+    // and the two are equal. "Never exceeds" is the property; "always strictly
+    // below" would be asserting that floats have infinite precision.
+    expect(collectRadiusFor(Number.MAX_SAFE_INTEGER)).toBeLessThanOrEqual(ceiling);
+  });
+
+  it('still pays every stack, so no pick is wasted', () => {
+    // The reason this is a headroom curve rather than a clamp: a clamp makes the
+    // last stacks inert, which is a dial that stops reaching the player.
+    expect(collectRadiusFor(2)).toBeGreaterThan(collectRadiusFor(1));
+    expect(collectRadiusFor(4)).toBeGreaterThan(collectRadiusFor(2));
+    expect(collectRadiusFor(8)).toBeGreaterThan(collectRadiusFor(4));
+  });
+});
+
+describe('survivor/arena — the collector', () => {
+  beforeEach(() => boot());
+
+  it('rolls its drop times inside the run when a run starts', () => {
+    arena().startRun('generalist');
+    const s = arena().state.value;
+    expect(s.collectorTimes).toHaveLength(COLLECTOR_BALANCE.perRun);
+    expect(s.collectorsDropped).toBe(0);
+    expect([...s.collectorTimes]).toEqual([...s.collectorTimes].sort((a, b) => a - b));
+    for (const t of s.collectorTimes) expect(t).toBeGreaterThan(0);
+  });
+
+  it('banks the surrounding field when one is taken, not just what is underfoot', async () => {
+    arena().startRun('generalist');
+    await tick(400);
+    const s = arena().state.value;
+    const { x, y } = s.operator;
+
+    // Motes placed beyond the ordinary aperture but inside the pull — the whole
+    // point of a collector is that it reaches what walking over it would not.
+    const far = COLLECTOR_BALANCE.pullRadius * 0.5;
+    expect(far).toBeGreaterThan(collectRadiusFor(1));
+    const before = s.stats.motesBanked;
+    for (let i = 0; i < 5; i++) {
+      s.motes.push({ id: 900000 + i, x: x + far, y, value: 1, droppedAt: s.time });
+    }
+    s.collectors.push({ id: 999999, x, y, droppedAt: s.time });
+
+    await tick(2);
+
+    const after = arena().state.value.stats;
+    expect(after.collectorsTaken).toBe(1);
+    expect(after.motesCollectedByCollector).toBeGreaterThan(0);
+    expect(after.motesBanked).toBeGreaterThan(before);
+    expect(arena().state.value.collectors).toHaveLength(0);
+  });
+
+  it('counts collector motes inside the banked total rather than beside it', async () => {
+    arena().startRun('generalist');
+    await tick(400);
+    const s = arena().state.value;
+    s.collectors.push({ id: 999998, x: s.operator.x, y: s.operator.y, droppedAt: s.time });
+    await tick(2);
+    const stats = arena().state.value.stats;
+    expect(stats.motesCollectedByCollector).toBeLessThanOrEqual(stats.motesBanked);
+    expect(stats.motesBanked).toBeLessThanOrEqual(stats.motesDropped);
   });
 });

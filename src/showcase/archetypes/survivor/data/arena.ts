@@ -13,8 +13,14 @@
 export interface ArenaBalance {
   /** `r_kill` — device reach. Specimens inside this are being killed. */
   killRadius: number;
-  /** `r_collect` — mote pickup reach. Smaller than `r_kill`; see § Balance. */
+  /** `r_collect` — mote pickup reach at zero aperture. Smaller than `r_kill`. */
   collectRadius: number;
+  /**
+   * Ceiling on `r_collect / r_kill` that the aperture chain APPROACHES and never
+   * reaches. The ratio is this archetype's top coupling, so it is a structural
+   * bound rather than a clamp bolted on afterwards; see § Balance.
+   */
+  apertureCapRatio: number;
   /** `r_contact` — where a specimen damages the operator. */
   contactRadius: number;
   /**
@@ -33,6 +39,7 @@ export interface ArenaBalance {
 export const ARENA_BALANCE: ArenaBalance = {
   killRadius: 180,
   collectRadius: 70,
+  apertureCapRatio: 0.65,
   contactRadius: 22,
   spawnInnerRadius: 560,
   spawnOuterRadius: 760,
@@ -73,17 +80,77 @@ export const THREAT_BALANCE: ThreatBalance = {
 export interface CollectorBalance {
   /** Collector drops expected per run. */
   perRun: number;
-  /** Share of motes banked since the last collector that one pull actually takes. */
+  /**
+   * Share of motes banked since the last collector that one pull actually takes.
+   * The projection's ASSUMPTION, not the sim's rule — the sim pulls everything
+   * inside `pullRadius` and the probe measures what share that came to.
+   */
   onscreenShare: number;
   /** Nominal drop times, used by the projection where the game rolls them. */
   nominalTimes: number[];
+  /**
+   * How far one pull reaches — "every mote on screen at once"
+   * (`../IDENTITY.md`). Sized just inside `spawnInnerRadius` so a pull takes the
+   * field the operator has been working and not the un-spawned floor beyond it.
+   */
+  pullRadius: number;
+  /**
+   * Fractional jitter around each nominal time. The drop is a ROLL; the
+   * projection's fixed times are the expected-value idealisation of this, which
+   * is the one place the two are allowed to differ by construction.
+   */
+  timeJitter: number;
 }
 
 export const COLLECTOR_BALANCE: CollectorBalance = {
   perRun: 2,
   onscreenShare: 0.35,
   nominalTimes: [600, 1500],
+  pullRadius: 520,
+  timeJitter: 0.35,
 };
+
+/**
+ * Roll the drop times for one run's collectors — the nominal schedule, jittered.
+ *
+ * Sorted and clamped inside the run, because a collector that rolls past the
+ * purge is one the run never sees and the income model already counted.
+ */
+export function rollCollectorTimes(random: () => number, runSeconds: number): number[] {
+  const { nominalTimes, perRun, timeJitter } = COLLECTOR_BALANCE;
+  return nominalTimes
+    .slice(0, perRun)
+    .map((t) => {
+      const jittered = t * (1 + (random() * 2 - 1) * timeJitter);
+      return Math.min(runSeconds * 0.97, Math.max(0, jittered));
+    })
+    .sort((a, b) => a - b);
+}
+
+/**
+ * `r_collect` for a total aperture multiplier — the reagent chain (`reclaimant`)
+ * times the cross-run upgrade (`wider-aperture`).
+ *
+ * The multiplier is applied to the HEADROOM between the base ratio and
+ * `apertureCapRatio`, not to the radius, so the aperture approaches the cap
+ * hyperbolically and never crosses it. That shape is chosen over a clamp for a
+ * reason worth keeping: a clamp makes the last picks of a fully-stacked reagent
+ * do nothing, which is the same defect as a dial that never reaches the policy —
+ * the player invests and the game does not answer. Here every stack still moves
+ * the radius, by less.
+ *
+ * Why it needs bounding at all: `reclaimant` compounds to 1.18⁴ = 1.94 and
+ * `wider-aperture` to 1.1⁴ = 1.46, so the two together were 2.84× on a raw
+ * product — `r_collect` 199 against a `r_kill` of 180, an aperture wider than the
+ * radius that feeds it. § Balance below is explicit that the ratio approaching 1
+ * turns this archetype into a DPS check; unbounded, it went past 1.
+ */
+export function collectRadiusFor(apertureMul: number): number {
+  const { killRadius, collectRadius, apertureCapRatio } = ARENA_BALANCE;
+  const baseRatio = collectRadius / killRadius;
+  const mul = Math.max(1, apertureMul);
+  return killRadius * (apertureCapRatio - (apertureCapRatio - baseRatio) / mul);
+}
 
 /** Specimens spawned per game-second at `t`. */
 export function spawnRate(t: number): number {
@@ -123,6 +190,26 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 // is paid for with a dive. Nothing else changes the character of the game as
 // much with one number, which is why it is the first entry in
 // `../BALANCING.md` § Couplings.
+//
+// ─── Which is why the ratio is bounded by construction, not by care ───
+//
+// The base ratio is authored, but two multipliers move it at RUNTIME: the
+// `reclaimant` reagent (1.18⁴ = 1.94 fully stacked) and the `wider-aperture`
+// meta tile (1.1⁴ = 1.46). On a raw product those reach 2.84×, i.e. `r_collect`
+// 199 against `r_kill` 180 — the degenerate case above, arrived at by ordinary
+// play rather than by a retune, and reachable in one reagent line on its own.
+//
+// A coupling this load-bearing cannot be protected by remembering to check it
+// whenever a new aperture source is added. `collectRadiusFor` applies any
+// aperture multiplier to the HEADROOM below `apertureCapRatio`, so every present
+// and future source composes into a ratio that rises toward 0.65 and stops.
+// Fully stacked reagent plus fully bought tile now lands at 0.56 — a real reward
+// for four picks and a purchase, and still a floor where a mote dropped at the
+// kill edge has to be walked back to.
+//
+// The general form: when one ratio decides a genre, bound it where it is
+// COMPUTED, not where each contributor is authored. Contributors get added by
+// people who have not read this comment.
 //
 // ─── Why the annulus ───
 //

@@ -155,6 +155,7 @@ let world: Container | null = null;
 let moteLayer: Container | null = null;
 let specimenLayer: Container | null = null;
 let flashGfx: Graphics | null = null;
+let collectorGfx: Graphics | null = null;
 let operatorGfx: Graphics | null = null;
 let fxGfx: Graphics | null = null;
 let moteTex: Texture | null = null;
@@ -513,6 +514,74 @@ function drawPuffs(dtSec: number): void {
   });
 }
 
+/** Pulse phase for the collector glyph, in seconds. Wraps; nothing reads it raw. */
+let collectorPhase = 0;
+
+/**
+ * The collector pickup, and the edge arrow for one that is off screen.
+ *
+ * Both halves are required rather than decorative. `../IDENTITY.md` says routing
+ * to a collector THROUGH your own uncollected field is a decision, and a
+ * decision needs to be visible before it can be made: a drop the player cannot
+ * see is a drop the player cannot route to. The movement policy reads the
+ * collector's exact position out of state, so without this the AI seats were
+ * playing a mechanic the human seat could not.
+ *
+ * Drawn in world space including the arrow, whose position is simply clamped to
+ * the visible rectangle — the same thing as a screen-space overlay, without a
+ * second coordinate system to keep in sync.
+ */
+function drawCollectors(
+  state: ArenaState,
+  dtSec: number,
+  viewHalfW: number,
+  viewHalfH: number,
+): void {
+  const g = collectorGfx;
+  if (!g) return;
+  g.clear();
+  collectorPhase = (collectorPhase + dtSec) % 1;
+  if (state.collectors.length === 0) return;
+
+  const swell = 0.5 + 0.5 * Math.sin(collectorPhase * Math.PI * 2);
+
+  for (const c of state.collectors) {
+    const dx = c.x - camX;
+    const dy = c.y - camY;
+    const offscreen = Math.abs(dx) > viewHalfW - 24 || Math.abs(dy) > viewHalfH - 24;
+
+    if (!offscreen) {
+      // A ring that breathes outward, so it reads as reaching for the field
+      // rather than sitting in it — which is what it does when taken.
+      g.circle(c.x, c.y, 11 + swell * 5).stroke({
+        color: 0xf2d675,
+        width: 2.5,
+        alpha: 0.85,
+      });
+      g.circle(c.x, c.y, 20 + swell * 12).stroke({
+        color: 0xf2d675,
+        width: 1.5,
+        alpha: 0.28 * (1 - swell),
+      });
+      g.circle(c.x, c.y, 5).fill({ color: 0xfff3c4, alpha: 0.95 });
+      continue;
+    }
+
+    // Edge arrow: clamped to the viewport rectangle, pointing along the bearing.
+    const ax = camX + Math.max(-viewHalfW + 26, Math.min(viewHalfW - 26, dx));
+    const ay = camY + Math.max(-viewHalfH + 26, Math.min(viewHalfH - 26, dy));
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const size = 9 + swell * 2;
+    // Explicit `moveTo` and a closed triangle — see § the pixi path trap below.
+    g.moveTo(ax + ux * size, ay + uy * size)
+      .lineTo(ax - uy * size * 0.7 - ux * size * 0.4, ay + ux * size * 0.7 - uy * size * 0.4)
+      .lineTo(ax + uy * size * 0.7 - ux * size * 0.4, ay - ux * size * 0.7 - uy * size * 0.4)
+      .fill({ color: 0xf2d675, alpha: 0.6 + 0.3 * swell });
+  }
+}
+
 /**
  * The operator glyph — now the only persistent apparatus on screen.
  *
@@ -717,6 +786,10 @@ function frame(dtSec: number): void {
   collectFlashes(state);
   drawFlashes(operator.rx, operator.ry, dtSec);
   drawPuffs(dtSec);
+  // The TRUE visible half-extent, not `halfW`/`halfH` — those carry a +40 cull
+  // pad, and an arrow clamped against a padded extent is pinned just outside the
+  // viewport, which is exactly nowhere.
+  drawCollectors(state, dtSec, cw / scale / 2, ch / scale / 2);
   drawOperator(state, operator.rx, operator.ry);
 }
 
@@ -756,6 +829,10 @@ onMounted(async () => {
   world.addChild(flashGfx);
   fxGfx = new Graphics();
   world.addChild(fxGfx);
+  // Above the field and below the operator: a collector must not be lost under a
+  // dense mote drift, and must not cover the glyph the player is steering.
+  collectorGfx = new Graphics();
+  world.addChild(collectorGfx);
   operatorGfx = new Graphics();
   world.addChild(operatorGfx);
 
@@ -790,6 +867,7 @@ onBeforeUnmount(() => {
   specimenLayer = null;
   flashGfx = null;
   fxGfx = null;
+  collectorGfx = null;
   operatorGfx = null;
   moteTex = null;
   shapeTex.clear();

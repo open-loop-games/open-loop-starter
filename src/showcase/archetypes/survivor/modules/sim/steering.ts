@@ -152,6 +152,24 @@ export const ENGAGE_WEIGHT = 9;
 export const ENGAGE_SATURATION = 8;
 
 /**
+ * Score per sim unit of distance closed on a collector pickup.
+ *
+ * A collector is worth a detour a single mote is not: one pull banks the whole
+ * worked field (`./step.ts` § collector pickup), so routing to it THROUGH the
+ * uncollected field is the decision `../../IDENTITY.md` says it exists to
+ * create — and a decision needs a term, or it is not one.
+ *
+ * Sized against the terms it competes with rather than picked. The mote field is
+ * scored in nav CELLS at 2.5 per cell, so a cell of mote distance buys 2.5; at
+ * 0.125 per unit a collector buys 12.5 over the same 100 units, five mote-cells.
+ * Across the 100-unit lookahead that is a spread of up to ~25 between opposed
+ * headings — enough to outvote the turn cost (18) and a mild mote pull, and
+ * nowhere near the contact cliff (−400). The operator detours for it; it does
+ * not walk into the mass for it.
+ */
+export const COLLECTOR_WEIGHT = 0.125;
+
+/**
  * Rotate `current` toward `desired` by at most the step's turn budget.
  *
  * Separating the DECISION (a global arg-max over all sixteen headings) from its
@@ -179,12 +197,14 @@ export function slewHeading(current: Vec2, desired: Vec2, dt: number): Vec2 {
  * Choose a heading by weighted utility over the composed fields — the kernel the
  * parked primitive describes, with a continuous candidate set.
  *
- * Three terms, and the first is why this is not simply "flee":
+ * The first term is why this is not simply "flee":
  *
  *  - **threat**, peaked at `orbitRadius` rather than monotone. Running away is as
  *    wrong as standing still, because distance is zero damage and zero income.
  *  - **motes**, pulling toward uncollected income. The dive back through cleared
  *    space is this term winning over the threat term.
+ *  - **collector**, a much steeper pull toward the rare pickup. See
+ *    `COLLECTOR_WEIGHT`.
  *  - **walls**, a hard penalty. Corners are where a monotone flee-policy kills
  *    itself, which is why the threat term is peaked and the wall term is separate.
  *  - **turn cost**, the memory an arg-max otherwise has none of. See `TURN_COST`.
@@ -258,6 +278,20 @@ export function chooseHeading(
 
     const moteTerm = Number.isFinite(moteDist) ? -moteDist : -nav.cols;
 
+    // Collectors are scored in exact sim units rather than off the nav grid: one
+    // drops inside `r_kill` and a 100-unit cell cannot resolve an approach that
+    // has to end inside a ~70-unit aperture. Same division of labour as the near
+    // field above.
+    let collectorTerm = 0;
+    if (state.collectors.length > 0) {
+      let nearestCollector = Number.POSITIVE_INFINITY;
+      for (const c of state.collectors) {
+        const d2 = (c.x - px) * (c.x - px) + (c.y - py) * (c.y - py);
+        if (d2 < nearestCollector) nearestCollector = d2;
+      }
+      collectorTerm = -Math.sqrt(nearestCollector) * COLLECTOR_WEIGHT;
+    }
+
     // Turning is not free. `dot` with the current heading is 1 straight ahead and
     // −1 behind, so this is a linear ramp from nothing to a full `TURN_COST`.
     const turnCost = TURN_COST * 0.5 * (1 - (h.x * current.x + h.y * current.y));
@@ -265,9 +299,14 @@ export function chooseHeading(
     // The seat's appetite for the fight — see `ENGAGE_WEIGHT`.
     const engageTerm = params.engage * ENGAGE_WEIGHT * Math.min(inKill, ENGAGE_SATURATION);
 
-    // η is the seat's appetite for the dive; it is exactly the weight on income.
+    // η is the seat's appetite for the dive; it is exactly the weight on income,
+    // and a collector is income — so it rides the same dial rather than a new one.
     const score =
-      threatTerm + engageTerm + params.eta * 2.5 * moteTerm - wallPenalty * 8 - turnCost;
+      threatTerm +
+      engageTerm +
+      params.eta * (2.5 * moteTerm + collectorTerm) -
+      wallPenalty * 8 -
+      turnCost;
 
     if (score > bestScore) {
       bestScore = score;

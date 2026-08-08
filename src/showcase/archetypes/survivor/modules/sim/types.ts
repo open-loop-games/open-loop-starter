@@ -36,6 +36,20 @@ export interface Mote extends Vec2 {
   droppedAt: number;
 }
 
+/**
+ * A collector pickup — the rare drop that banks the whole field at once.
+ *
+ * A separate entity rather than an instant effect because routing to it THROUGH
+ * your own uncollected field is the decision it exists to create
+ * (`../../IDENTITY.md`): it sits where the specimen died, and the walk to it is
+ * paid for in contact.
+ */
+export interface Collector extends Vec2 {
+  id: number;
+  /** Sim-time it dropped, for the renderer's edge arrow and fade-in. */
+  droppedAt: number;
+}
+
 /** One installed device's live rotation state. */
 export interface DeviceRuntime {
   /** `DeviceDef.id` from `../../data/devices`. */
@@ -59,7 +73,10 @@ export interface ArenaStats {
   kills: number;
   motesDropped: number;
   motesBanked: number;
+  /** Motes banked BY a collector pull. A subset of `motesBanked`, not a peer. */
   motesCollectedByCollector: number;
+  /** Collector pickups actually taken this run. */
+  collectorsTaken: number;
   /** Seconds spent inside contact range. The damage-taken integral's driver. */
   contactSeconds: number;
   damageTaken: number;
@@ -71,6 +88,16 @@ export interface ArenaState {
   operator: OperatorState;
   specimens: Specimen[];
   motes: Mote[];
+  /** Collector pickups currently on the floor. Rarely more than one. */
+  collectors: Collector[];
+  /**
+   * Rolled drop times for this run's collectors, ascending, consumed in order.
+   * Rolled once at run start so the schedule is fixed by the seed rather than
+   * re-rolled per kill — a hazard that re-rolls has no expected count.
+   */
+  collectorTimes: number[];
+  /** How many of `collectorTimes` have already dropped. */
+  collectorsDropped: number;
   devices: DeviceRuntime[];
   /** Reagent id → stacks. The draft writes it; the modifier chains read it. */
   reagentStacks: Map<string, number>;

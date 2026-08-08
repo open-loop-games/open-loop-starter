@@ -1,6 +1,12 @@
-import { ARENA_BALANCE, THREAT_BALANCE } from '../../data/arena';
+import {
+  ARENA_BALANCE,
+  COLLECTOR_BALANCE,
+  THREAT_BALANCE,
+  collectRadiusFor,
+  rollCollectorTimes,
+} from '../../data/arena';
 import { startingDevice } from '../../data/devices';
-import { contactDamageMul, hpMul } from '../../data/schedule';
+import { SCHEDULE_BALANCE, contactDamageMul, hpMul } from '../../data/schedule';
 import {
   BASE_SPECIMEN_HP,
   SPECIMENS,
@@ -41,6 +47,9 @@ export function createArenaState(params: ArenaParams): ArenaState {
     },
     specimens: [],
     motes: [],
+    collectors: [],
+    collectorTimes: rollCollectorTimes(params.random, SCHEDULE_BALANCE.runSeconds),
+    collectorsDropped: 0,
     devices: [{ defId: opener.id, level: 1, timer: 0 }],
     reagentStacks: new Map(),
     stats: {
@@ -48,6 +57,7 @@ export function createArenaState(params: ArenaParams): ArenaState {
       motesDropped: 0,
       motesBanked: 0,
       motesCollectedByCollector: 0,
+      collectorsTaken: 0,
       contactSeconds: 0,
       damageTaken: 0,
     },
@@ -56,11 +66,17 @@ export function createArenaState(params: ArenaParams): ArenaState {
   };
 }
 
-/** Live collect radius, after reagents and the cross-run aperture upgrade. */
+/**
+ * Live collect radius, after reagents and the cross-run aperture upgrade.
+ *
+ * The two multipliers compose into ONE aperture figure handed to
+ * `collectRadiusFor`, which bounds `r_collect / r_kill` structurally
+ * (`../../data/arena.ts` § Which is why the ratio is bounded). Multiplying the
+ * radius here directly is what let a fully-stacked reagent plus a bought tile
+ * put the aperture outside the kill radius.
+ */
 export function collectRadius(state: ArenaState, params: ArenaParams): number {
-  return (
-    ARENA_BALANCE.collectRadius * chainMul('collect', state.reagentStacks) * params.metaCollect
-  );
+  return collectRadiusFor(chainMul('collect', state.reagentStacks) * params.metaCollect);
 }
 
 function spawnOne(state: ArenaState, params: ArenaParams): void {
@@ -106,6 +122,22 @@ function dropMotes(state: ArenaState, s: Specimen, params: ArenaParams): void {
       });
     }
   }
+}
+
+/**
+ * Drop a collector on this kill if the run has reached its next rolled time.
+ *
+ * The hazard is on the CLOCK and the body is only where it lands. Rolling per
+ * kill instead would make collector income scale with kill rate, quietly paying
+ * the seats that engage most a second time through a channel the income model
+ * (`../../data/income.ts`) has no term for — and it would make the expected
+ * count per run depend on how well the run was going.
+ */
+function maybeDropCollector(state: ArenaState, at: Vec2): void {
+  const next = state.collectorTimes[state.collectorsDropped];
+  if (next === undefined || state.time < next) return;
+  state.collectorsDropped++;
+  state.collectors.push({ id: state.nextId++, x: at.x, y: at.y, droppedAt: state.time });
 }
 
 export interface StepResult {
@@ -208,6 +240,7 @@ export function stepArena(
     if (s.hp <= 0) {
       state.stats.kills++;
       if (s.moteYield > 0) dropMotes(state, s, params);
+      maybeDropCollector(state, s);
     } else {
       survivors.push(s);
     }
@@ -226,6 +259,35 @@ export function stepArena(
     }
     return true;
   });
+
+  // ─── collector pickup ───
+  // Taken at the same aperture as a mote — it is a thing on the floor you walk
+  // over, not a thing that reaches for you. The PULL then runs at `pullRadius`,
+  // which is the whole point of it.
+  if (state.collectors.length > 0) {
+    const kept: typeof state.collectors = [];
+    for (const c of state.collectors) {
+      const dx = c.x - state.operator.x;
+      const dy = c.y - state.operator.y;
+      if (dx * dx + dy * dy > cr2) {
+        kept.push(c);
+        continue;
+      }
+      state.stats.collectorsTaken++;
+      const pull2 = COLLECTOR_BALANCE.pullRadius * COLLECTOR_BALANCE.pullRadius;
+      state.motes = state.motes.filter((m) => {
+        const mx = m.x - state.operator.x;
+        const my = m.y - state.operator.y;
+        if (mx * mx + my * my <= pull2) {
+          state.stats.motesBanked += m.value;
+          state.stats.motesCollectedByCollector += m.value;
+          return false;
+        }
+        return true;
+      });
+    }
+    state.collectors = kept;
+  }
 
   // ─── contact ───
   // Contact SATURATES rather than summing. Only so many bodies can reach you at
