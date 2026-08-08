@@ -158,6 +158,18 @@ carry no numbers.
   a full arc while one reaches the horn. Causes differing across seats is the
   target distribution rather than a defect, but the balance of it is unexamined
   and `BLOCKING_CROWD` / `ESCAPE_FLOOR` have never been swept.
+- **`entityBudget` becomes the binding density term past mid-run.** Live census
+  readouts sit pinned at exactly 400 — `THREAT_BALANCE.entityBudget` — from around
+  13:00 onward, because the spawn loop is `while (carry >= 1 && specimens.length <
+  entityBudget)`. Past that point spawn rate stops moving density at all: the floor
+  is clamped by a **performance budget**, while `localDensity` in `data/arena.ts`
+  goes on compounding geometrically, so every downstream term the projection reads
+  off density — contact chance, traversal collapse, residency — is quoting a curve
+  the sim stopped following. This is not the entity cap doing its job; a cap that
+  binds is a silently substituted model. Either the escalation curve should flatten
+  into the cap by construction, or the projection needs the same clamp so the two
+  agree on what happens after it bites. Surfaced by the HUD census rather than a
+  probe, which is the cheapest place it could have shown up.
 - **Contact damage is per-specimen in the sim and aggregate in the projection.**
   `contactDps` is applied to every specimen inside `r_contact` by
   `modules/sim/step.ts`, while `balance/survivor-projection.ts` multiplies it by a

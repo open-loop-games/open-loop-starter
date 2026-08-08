@@ -41,7 +41,12 @@ export const manifest: ArchetypeManifest = {
   // beats short of the authored schedule, so recording windows now would pin a
   // calibration that is still moving. They land when the spread settles.
   beats: [],
-  shell: 'SingleColumnShell',
+  // Declared invention, like tug's `TugFrameLayout` — a fullscreen floor with
+  // the readouts pinned over it, and the between-runs record sheet as a
+  // full-screen overlay. `subgenre-shell-mapping-2026.md` puts survivor-like at
+  // `free-form` (2/2 classifiable; formally insufficient-corpus at that N, and
+  // the third exemplar is consistent), so no `src/lib/shells/` entry fits.
+  shell: 'ContainmentFloor',
   formFactor: 'desktop',
   exemplars: [
     {

@@ -1,0 +1,124 @@
+/*
+ * Survivor archetype — the "Containment" costume.
+ *
+ * Topic is Mad Science × Action (`../IDENTITY.md`): a breach you cannot leave.
+ * The palette is sourced from what is physically in the fiction rather than
+ * applied to it — sodium emergency wash over a dark lab hall, specimen
+ * bioluminescence, the cold blue-white of apparatus discharge, and reagent
+ * motes as the one warm thing on the floor that is yours.
+ *
+ * The arc of the whole archetype is dark glass versus paper: everything inside
+ * a run is lit glass and grime, and the meta layer — the notes that survive
+ * when you do not — is a typewritten notebook page. That contrast is the
+ * costume's one structural idea, so `--note-*` deliberately does not harmonise
+ * with the rest of the palette.
+ *
+ * Scoped under `body[data-archetype='survivor']`, mounted/unmounted by
+ * `SurvivorAppRoot.vue`, so the gallery's other archetypes are untouched.
+ *
+ * Fonts are declared as stacks of locally-available faces rather than fetched
+ * at runtime. `/work/studio/candidate-recipes-ui.md` § Web-font injection holds
+ * the open question (fetch vs bundle); every cold run so far declares a local
+ * stack, so this takes that answer instead of adding a second receipt for the
+ * runtime-fetch path.
+ */
+
+body[data-archetype='survivor'] {
+  /* ─── The hall ───────────────────────────────────────────────────── */
+  --hall: #0a0d0c;
+  --slab: #141b18;
+  --slab-edge: #202b26;
+  --bulkhead: #05070620;
+  --grime: rgba(120, 150, 138, 0.06);
+
+  /* ─── What is alive on the floor ─────────────────────────────────── */
+  --vat: #5bc46f; /* specimen bioluminescence */
+  --vat-deep: #2f7a41;
+  --vat-dim: rgba(91, 196, 111, 0.22);
+
+  /* ─── The apparatus ──────────────────────────────────────────────── */
+  --arc: #7fd6ff; /* discharge blue-white */
+  --arc-hot: #dff4ff;
+  --arc-dim: rgba(127, 214, 255, 0.18);
+
+  /* ─── Income, and the emergency ──────────────────────────────────── */
+  --mote: #f2d675; /* reagent gold — the only warm thing that's yours */
+  --mote-deep: #b3963a;
+  --sodium: #ff8a2b; /* emergency wash — warnings, the horn */
+  --sodium-deep: #c25a00;
+  --breach: #ff4d4d;
+
+  /* ─── The notebook — paper against all that glass ────────────────── */
+  --note-paper: #e8e2d0;
+  --note-paper-shade: #d8d1bb;
+  --note-ink: #23201a;
+  --note-ink-soft: #5c564a;
+  --note-stamp: #a33b2c;
+
+  /* ─── Engine token overrides ─────────────────────────────────────── */
+  --color-bg: var(--hall);
+  --color-surface: #131a17;
+  --color-surface-hover: #1a2420;
+  --color-border: #26332d;
+  --color-text: #cfe0d8;
+  --color-text-muted: #7b968b;
+  --color-primary: var(--arc);
+  --color-primary-hover: var(--arc-hot);
+  --color-danger: var(--breach);
+  --color-danger-hover: #ff6b6b;
+  --color-success: var(--vat);
+  --color-badge: rgba(127, 214, 255, 0.12);
+
+  --modal-backdrop: rgba(4, 7, 6, 0.72);
+  --modal-surface: #131a17;
+
+  /* ─── Typography ─────────────────────────────────────────────────── */
+  /* Condensed technical chrome, monospace numerals, typewriter for the
+     notebook. All local stacks — nothing is fetched. */
+  --font-display:
+    'Roboto Condensed', 'Liberation Sans Narrow', 'DejaVu Sans Condensed', 'Arial Narrow',
+    ui-sans-serif, sans-serif;
+  --font-mono:
+    'JetBrains Mono', 'DejaVu Sans Mono', 'Liberation Mono', ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-note: 'Courier Prime', 'Nimbus Mono PS', 'Courier New', Courier, monospace;
+  --font-sans: var(--font-body);
+
+  /* ─── Grain, as a data-uri so nothing is fetched ─────────────────── */
+  --hall-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42  0 0 0 0 0.58  0 0 0 0 0.50  0 0 0 0.09 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
+  --note-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.20  0 0 0 0 0.17  0 0 0 0 0.12  0 0 0 0.10 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
+
+  background: var(--hall);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+/* Every live counter is tabular so a tick never shifts what sits beside it.
+   Applied at the costume root rather than per-widget: in this archetype the
+   numbers ARE the readout, and a jittering one is the failure mode. */
+body[data-archetype='survivor'] .num,
+body[data-archetype='survivor'] [data-num] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  /* Right-aligned inline-block so a site can reserve digit columns with `ch`.
+     Tabular figures make one `ch` exactly one digit, so a counter gaining a
+     digit grows into reserved space instead of shoving the words after it.
+     Corner blocks do not need this — nothing sits beside them — but every
+     counter with trailing text in the same line does. */
+  display: inline-block;
+  text-align: right;
+}
+
+/* Chrome headings take the condensed face with the stencil-ish tracking a
+   facility sign has. */
+body[data-archetype='survivor'] h1,
+body[data-archetype='survivor'] h2,
+body[data-archetype='survivor'] h3,
+body[data-archetype='survivor'] h4 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+}

@@ -5,7 +5,7 @@
   are safe. See `.claude/rules/app-root-discipline.md`.
 -->
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import { useGameSession } from '@/composables/useGameSession';
@@ -16,6 +16,7 @@ import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 import SurvivorGameView from './SurvivorGameView.vue';
+import './survivor-theme.css';
 
 // Slot-pick → start → load → play → save → back. `useGameSession` owns it;
 // pass `onLoaded` when your game needs to do something with the offline gap.
@@ -25,6 +26,15 @@ const stack = useModalStack();
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
+
+// Scopes the Containment costume to this archetype so the gallery's others are
+// untouched. Fonts are local stacks declared in the theme — nothing is fetched.
+onMounted(() => {
+  document.body.dataset.archetype = 'survivor';
+});
+onUnmounted(() => {
+  delete document.body.dataset.archetype;
+});
 </script>
 
 <template>
@@ -49,8 +59,14 @@ const showDevPanel = ref(false);
             {{ manifest.name }}
           </h4>
           <p>
-            A blank game on the scaffold. Add modules under
-            <code>src/game/modules/</code> and render them in <code>SurvivorGameView.vue</code>.
+            Wave Escalation + Cooldown-Rotation + Run-Scoped Upgrade Tree + Cross-Run Meta. One
+            operator on a scrolling floor, apparatus firing on its own cadences. You never aim — you
+            only decide where to stand, and the collect radius is smaller than the kill radius, so
+            banking income means diving back through what you just cleared.
+          </p>
+          <p>
+            Every seat is an AI policy, so the arc plays and balances before a human seat exists.
+            See <code>IDENTITY.md</code> for the spine.
           </p>
         </template>
       </SystemHeader>

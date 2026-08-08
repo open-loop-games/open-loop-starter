@@ -1,39 +1,45 @@
 <!--
-  SurvivorGameView — the in-game subtree. Mounts under the root's post-start `v-else`
-  frame, so engine module getters / composables / injects are all safe to read
-  here (the module graph is installed by the time this component sets up).
+  SurvivorGameView — the in-game subtree. Mounts under the root's post-start
+  `v-else` frame, so every module read below here is structurally post-start
+  (`.claude/rules/app-root-discipline.md`).
 
-  This is where your game lives: pull module state in `<script setup>`, render it
-  in the template. Keep the root (`SurvivorAppRoot.vue`) routing-only — never read a
-  module there. See `.claude/rules/app-root-discipline.md`.
+  Shell is `free-form`, declared-invention rather than a `src/lib/shells/` pick:
+  a fullscreen floor with the readouts pinned over it. That is the survivor-like
+  majority in `open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`
+  (fullscreen arena canvas + peripheral overlay HUD + a full-screen overlay for
+  the between-runs surface), formally insufficient-corpus at N_classifiable=2 but
+  consistent across all three exemplars. `manifest.shell` names it
+  `ContainmentFloor`, the same declared-invention path tug takes.
 -->
 <script setup lang="ts">
-import { SingleColumnShell } from '@/lib';
+import { computed } from 'vue';
+import { useModule } from '@/composables/useModule';
+import { ArenaKey } from '../modules/arena';
+import ArenaField from './ArenaField.vue';
+import RunHud from './RunHud.vue';
+import DebriefOverlay from './DebriefOverlay.vue';
 
-// Read your modules here, e.g.:
-//   import { getMyThing } from '../modules';
-//   const thing = getMyThing();
+const arena = useModule(ArenaKey);
+
+/** The floor keeps rendering under the debrief — the run you just lost stays on
+ *  screen behind the record sheet, which is where the notes came from. */
+const running = computed(() => arena.outcome.value === 'running');
 </script>
 
 <template>
-  <SingleColumnShell>
-    <section class="game-placeholder">
-      <h2>Hello from your new game.</h2>
-      <p>
-        The scaffold is wired: engine, save slots, settings, theme, and the dev workbench all work.
-        Start building by adding an engine module in
-        <code>src/showcase/archetypes/survivor/modules/</code> and rendering its state here.
-      </p>
-    </section>
-  </SingleColumnShell>
+  <div class="floor">
+    <ArenaField />
+    <RunHud v-if="running" />
+    <DebriefOverlay v-else />
+  </div>
 </template>
 
 <style scoped>
-.game-placeholder {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  padding: var(--gap-lg);
-  text-align: center;
+.floor {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 </style>
