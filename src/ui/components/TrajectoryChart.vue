@@ -80,16 +80,8 @@ function formatMax(n: number): string {
       role="img"
       :aria-label="`Trajectory for ${trajectory.name}`"
     >
-      <path
-        v-if="baselineBand"
-        :d="baselineBand"
-        class="traj__band traj__band--baseline"
-      />
-      <path
-        v-if="variantBand"
-        :d="variantBand"
-        class="traj__band traj__band--variant"
-      />
+      <path v-if="baselineBand" :d="baselineBand" class="traj__band traj__band--baseline" />
+      <path v-if="variantBand" :d="variantBand" class="traj__band traj__band--variant" />
       <path
         v-if="baselineMean"
         :d="baselineMean"

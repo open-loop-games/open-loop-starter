@@ -192,12 +192,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    ref="host"
-    class="play-field"
-    aria-label="Skirmish battlefield"
-    role="img"
-  />
+  <div ref="host" class="play-field" aria-label="Skirmish battlefield" role="img" />
 </template>
 
 <style scoped>

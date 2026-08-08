@@ -35,12 +35,7 @@ function handle(): void {
 </script>
 
 <template>
-  <Primitive
-    v-hold-repeat="handle"
-    :as="as"
-    :as-child="asChild"
-    :disabled="disabled"
-  >
+  <Primitive v-hold-repeat="handle" :as="as" :as-child="asChild" :disabled="disabled">
     <slot />
   </Primitive>
 </template>

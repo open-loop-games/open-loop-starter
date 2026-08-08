@@ -16,15 +16,9 @@ const stack = useModalStack();
 </script>
 
 <template>
-  <AppFrame
-    :stack="stack"
-    :tooltip-delay="400"
-  >
+  <AppFrame :stack="stack" :tooltip-delay="400">
     <template #header>
-      <SystemHeader
-        :app-name="manifest.name"
-        @return-to-slots="emit('return')"
-      >
+      <SystemHeader :app-name="manifest.name" @return-to-slots="emit('return')">
         <template #about>
           <h4 style="margin-bottom: 6px">
             {{ manifest.name }}

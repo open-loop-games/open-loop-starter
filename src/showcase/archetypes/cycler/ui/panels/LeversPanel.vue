@@ -29,18 +29,12 @@ const bendGated = computed(() => build.powerLevel.value < bendGateReq.value);
 
 <template>
   <div class="cyc-panel">
-    <h3 class="cyc-slab">
-      Levers
-    </h3>
+    <h3 class="cyc-slab">Levers</h3>
 
     <div class="cyc-lever">
       <div class="cyc-lever__meta">
-        <div class="cyc-lever__t">
-          Reinforce
-        </div>
-        <div class="cyc-lever__d">
-          Raise the clear-rate ceiling. Pure reach — +0 run length.
-        </div>
+        <div class="cyc-lever__t">Reinforce</div>
+        <div class="cyc-lever__d">Raise the clear-rate ceiling. Pure reach — +0 run length.</div>
       </div>
       <span class="cyc-lever__lv">L{{ reachLevel }}</span>
       <Button
@@ -55,16 +49,10 @@ const bendGated = computed(() => build.powerLevel.value < bendGateReq.value);
 
     <div class="cyc-lever">
       <div class="cyc-lever__meta">
-        <div class="cyc-lever__t">
-          Dampen
-        </div>
+        <div class="cyc-lever__t">Dampen</div>
         <div class="cyc-lever__d">
-          <template v-if="bendGated">
-            Reach-gated — needs Power L ≥ {{ bendGateReq }}.
-          </template>
-          <template v-else>
-            Bend g toward 1 — the sole pace lever. Lengthens every run.
-          </template>
+          <template v-if="bendGated"> Reach-gated — needs Power L ≥ {{ bendGateReq }}. </template>
+          <template v-else> Bend g toward 1 — the sole pace lever. Lengthens every run. </template>
         </div>
       </div>
       <span class="cyc-lever__lv">L{{ bendLevel }}</span>
@@ -74,12 +62,8 @@ const bendGated = computed(() => build.powerLevel.value < bendGateReq.value);
         :disabled="!bendCanBuy"
         @click="upgrades.gBender.purchase(1)"
       >
-        <template v-if="bendGated">
-          locked
-        </template>
-        <template v-else>
-          ◈ {{ format(bendCost, 0) }}
-        </template>
+        <template v-if="bendGated"> locked </template>
+        <template v-else> ◈ {{ format(bendCost, 0) }} </template>
       </Button>
     </div>
   </div>

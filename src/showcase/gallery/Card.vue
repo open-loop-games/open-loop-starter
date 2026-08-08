@@ -25,11 +25,7 @@ const previewLine = computed(() => archetypePitch(props.manifest.id));
 </script>
 
 <template>
-  <Button
-    class="card"
-    type="button"
-    @click="$emit('enter')"
-  >
+  <Button class="card" type="button" @click="$emit('enter')">
     <header class="card__header">
       <h3 class="card__title">
         {{ manifest.name }}

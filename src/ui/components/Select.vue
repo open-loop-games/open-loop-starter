@@ -45,26 +45,13 @@ function onUpdate(next: string) {
 </script>
 
 <template>
-  <SelectRoot
-    :model-value="modelValue"
-    :disabled="disabled"
-    @update:model-value="onUpdate"
-  >
-    <SelectTrigger
-      class="olui-select__trigger"
-      :aria-label="ariaLabel"
-    >
+  <SelectRoot :model-value="modelValue" :disabled="disabled" @update:model-value="onUpdate">
+    <SelectTrigger class="olui-select__trigger" :aria-label="ariaLabel">
       <SelectValue :placeholder="placeholder ?? 'Select…'" />
-      <SelectIcon class="olui-select__icon">
-        ▾
-      </SelectIcon>
+      <SelectIcon class="olui-select__icon"> ▾ </SelectIcon>
     </SelectTrigger>
     <SelectPortal>
-      <SelectContent
-        class="olui-select__content"
-        :side-offset="4"
-        position="popper"
-      >
+      <SelectContent class="olui-select__content" :side-offset="4" position="popper">
         <SelectViewport class="olui-select__viewport">
           <SelectItem
             v-for="opt in options"
@@ -74,9 +61,7 @@ function onUpdate(next: string) {
             :disabled="opt.disabled"
           >
             <SelectItemText>{{ opt.label }}</SelectItemText>
-            <SelectItemIndicator class="olui-select__indicator">
-              ✓
-            </SelectItemIndicator>
+            <SelectItemIndicator class="olui-select__indicator"> ✓ </SelectItemIndicator>
           </SelectItem>
         </SelectViewport>
       </SelectContent>

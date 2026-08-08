@@ -22,43 +22,21 @@ const playtime = computed(() => metadata.value?.playtime as number | undefined);
 </script>
 
 <template>
-  <div
-    class="slot-card"
-    :class="{ active }"
-  >
+  <div class="slot-card" :class="{ active }">
     <div class="slot-info">
       <div class="slot-header">
         <span class="slot-name">{{ info.name }}</span>
-        <span
-          v-if="modName"
-          class="badge"
-        >{{ modName }}</span>
-        <span
-          v-if="timeAgo"
-          class="slot-time"
-        >{{ timeAgo }}</span>
+        <span v-if="modName" class="badge">{{ modName }}</span>
+        <span v-if="timeAgo" class="slot-time">{{ timeAgo }}</span>
       </div>
-      <div
-        v-if="metadata"
-        class="slot-meta"
-      >
+      <div v-if="metadata" class="slot-meta">
         <span v-if="loopCount != null">Loops: {{ loopCount }}</span>
         <span v-if="playtime != null">Playtime: {{ formatTime(playtime) }}</span>
       </div>
     </div>
     <div class="slot-actions">
-      <Button
-        class="btn-primary btn-sm"
-        @click="$emit('load')"
-      >
-        Load
-      </Button>
-      <Button
-        class="btn-danger btn-sm"
-        @click="$emit('delete')"
-      >
-        Delete
-      </Button>
+      <Button class="btn-primary btn-sm" @click="$emit('load')"> Load </Button>
+      <Button class="btn-danger btn-sm" @click="$emit('delete')"> Delete </Button>
     </div>
   </div>
 </template>

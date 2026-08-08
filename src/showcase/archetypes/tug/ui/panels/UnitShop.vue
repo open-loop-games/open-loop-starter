@@ -56,13 +56,8 @@ function counterHints(archetypeId: string): string {
         <div class="unit-card__counter">
           {{ counterHints(row.def.id) }}
         </div>
-        <div class="unit-card__cost">
-          {{ format(row.def.cost, 0) }} {{ resourceLabel }}
-        </div>
-        <div
-          v-if="row.cooldownRemaining.value > 0"
-          class="unit-card__cooldown"
-        >
+        <div class="unit-card__cost">{{ format(row.def.cost, 0) }} {{ resourceLabel }}</div>
+        <div v-if="row.cooldownRemaining.value > 0" class="unit-card__cooldown">
           <ProgressBar
             :value="row.def.sendCooldownSec - row.cooldownRemaining.value"
             :max="row.def.sendCooldownSec"

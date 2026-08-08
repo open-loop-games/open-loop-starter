@@ -60,10 +60,7 @@ function describe(cell: UpgradeCellData<T>): string {
 </script>
 
 <template>
-  <div
-    class="upgrade-grid"
-    :style="gridStyle"
-  >
+  <div class="upgrade-grid" :style="gridStyle">
     <div
       v-for="(cell, idx) in visibleCells"
       :key="cell.id"
@@ -71,17 +68,8 @@ function describe(cell: UpgradeCellData<T>): string {
       :style="cell.position !== undefined ? { order: cell.position } : undefined"
     >
       <Tooltip v-if="reveal === 'tooltip'">
-        <slot
-          v-if="$slots.cell"
-          name="cell"
-          :cell="cell"
-          :idx="idx"
-        />
-        <div
-          v-else
-          class="upgrade-grid__cell"
-          :data-bought="cell.owned.value"
-        >
+        <slot v-if="$slots.cell" name="cell" :cell="cell" :idx="idx" />
+        <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
           <div class="upgrade-grid__cell-head">
             <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
             <strong>{{ cell.name }}</strong>
@@ -90,11 +78,9 @@ function describe(cell: UpgradeCellData<T>): string {
             <span
               v-if="cell.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-            >✓ Bought</span>
-            <span
-              v-else-if="cell.owned.value"
-              class="upgrade-grid__bought"
-            >Bought</span>
+              >✓ Bought</span
+            >
+            <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
               :disabled="!cell.canBuy.value"
@@ -106,19 +92,12 @@ function describe(cell: UpgradeCellData<T>): string {
           </div>
         </div>
         <template #content>
-          <slot
-            v-if="$slots['reveal-content']"
-            name="reveal-content"
-            :cell="cell"
-          />
+          <slot v-if="$slots['reveal-content']" name="reveal-content" :cell="cell" />
           <template v-else>
             <p class="upgrade-grid__cell-desc">
               {{ describe(cell) }}
             </p>
-            <p
-              v-if="showFormula && cell.formula"
-              class="upgrade-grid__cell-formula"
-            >
+            <p v-if="showFormula && cell.formula" class="upgrade-grid__cell-formula">
               {{ cell.formula() }}
             </p>
           </template>
@@ -126,47 +105,29 @@ function describe(cell: UpgradeCellData<T>): string {
       </Tooltip>
       <Popover v-else-if="reveal === 'popover'">
         <template #trigger>
-          <slot
-            v-if="$slots.cell"
-            name="cell"
-            :cell="cell"
-            :idx="idx"
-          />
-          <div
-            v-else
-            class="upgrade-grid__cell"
-            :data-bought="cell.owned.value"
-          >
+          <slot v-if="$slots.cell" name="cell" :cell="cell" :idx="idx" />
+          <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
             <div class="upgrade-grid__cell-head">
               <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
               <strong>{{ cell.name }}</strong>
             </div>
           </div>
         </template>
-        <slot
-          v-if="$slots['reveal-content']"
-          name="reveal-content"
-          :cell="cell"
-        />
+        <slot v-if="$slots['reveal-content']" name="reveal-content" :cell="cell" />
         <template v-else>
           <p class="upgrade-grid__cell-desc">
             {{ describe(cell) }}
           </p>
-          <p
-            v-if="showFormula && cell.formula"
-            class="upgrade-grid__cell-formula"
-          >
+          <p v-if="showFormula && cell.formula" class="upgrade-grid__cell-formula">
             {{ cell.formula() }}
           </p>
           <div class="upgrade-grid__cell-action">
             <span
               v-if="cell.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-            >✓ Bought</span>
-            <span
-              v-else-if="cell.owned.value"
-              class="upgrade-grid__bought"
-            >Bought</span>
+              >✓ Bought</span
+            >
+            <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
               :disabled="!cell.canBuy.value"
@@ -179,17 +140,8 @@ function describe(cell: UpgradeCellData<T>): string {
         </template>
       </Popover>
       <template v-else>
-        <slot
-          v-if="$slots.cell"
-          name="cell"
-          :cell="cell"
-          :idx="idx"
-        />
-        <div
-          v-else
-          class="upgrade-grid__cell"
-          :data-bought="cell.owned.value"
-        >
+        <slot v-if="$slots.cell" name="cell" :cell="cell" :idx="idx" />
+        <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
           <div class="upgrade-grid__cell-head">
             <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
             <strong>{{ cell.name }}</strong>
@@ -197,21 +149,16 @@ function describe(cell: UpgradeCellData<T>): string {
           <p class="upgrade-grid__cell-desc">
             {{ describe(cell) }}
           </p>
-          <p
-            v-if="showFormula && cell.formula"
-            class="upgrade-grid__cell-formula"
-          >
+          <p v-if="showFormula && cell.formula" class="upgrade-grid__cell-formula">
             {{ cell.formula() }}
           </p>
           <div class="upgrade-grid__cell-action">
             <span
               v-if="cell.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-            >✓ Bought</span>
-            <span
-              v-else-if="cell.owned.value"
-              class="upgrade-grid__bought"
-            >Bought</span>
+              >✓ Bought</span
+            >
+            <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
               :disabled="!cell.canBuy.value"

@@ -42,10 +42,7 @@ function restart(): void {
 </script>
 
 <template>
-  <BlockingDialog
-    :open="visible"
-    :title="outcomeLabel"
-  >
+  <BlockingDialog :open="visible" :title="outcomeLabel">
     <dl class="match-end__stats">
       <div>
         <dt>Match length</dt>
@@ -68,10 +65,7 @@ function restart(): void {
         <dd>{{ meta.maxCounterPivotsAnyMatch.value }}</dd>
       </div>
     </dl>
-    <AlertDialogAction
-      class="match-end__restart"
-      @click="restart"
-    >
+    <AlertDialogAction class="match-end__restart" @click="restart">
       Start next match
     </AlertDialogAction>
   </BlockingDialog>

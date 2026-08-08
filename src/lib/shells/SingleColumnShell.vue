@@ -18,10 +18,7 @@ withDefaults(
 </script>
 
 <template>
-  <div
-    class="olui-single-column"
-    :style="{ '--single-column-max-width': maxWidth }"
-  >
+  <div class="olui-single-column" :style="{ '--single-column-max-width': maxWidth }">
     <div class="olui-single-column__inner">
       <slot />
     </div>

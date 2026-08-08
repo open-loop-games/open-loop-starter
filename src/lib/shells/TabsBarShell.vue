@@ -18,21 +18,12 @@ withDefaults(
 </script>
 
 <template>
-  <div
-    class="olui-tabs-bar"
-    :data-nav-position="navPosition"
-  >
+  <div class="olui-tabs-bar" :data-nav-position="navPosition">
     <nav class="olui-tabs-bar__nav">
-      <div
-        v-if="$slots.resources"
-        class="olui-tabs-bar__resources"
-      >
+      <div v-if="$slots.resources" class="olui-tabs-bar__resources">
         <slot name="resources" />
       </div>
-      <div
-        v-if="$slots.tabs"
-        class="olui-tabs-bar__tabs"
-      >
+      <div v-if="$slots.tabs" class="olui-tabs-bar__tabs">
         <slot name="tabs" />
       </div>
     </nav>

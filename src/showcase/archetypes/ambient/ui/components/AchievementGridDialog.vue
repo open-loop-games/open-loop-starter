@@ -41,19 +41,13 @@ const cells = computed<AchievementGridCell[]>(() =>
           :aria-valuenow="earnedCount"
           :aria-valuemax="total"
         >
-          <div
-            class="entries-summary__rule-fill"
-            :style="{ width: `${fillPct}%` }"
-          />
+          <div class="entries-summary__rule-fill" :style="{ width: `${fillPct}%` }" />
         </div>
       </div>
     </template>
 
     <template #cell="{ cell }">
-      <div
-        class="entry-card__seal"
-        aria-hidden="true"
-      >
+      <div class="entry-card__seal" aria-hidden="true">
         <span class="entry-card__seal-mark">&#10038;</span>
       </div>
       <div class="entry-card__body">

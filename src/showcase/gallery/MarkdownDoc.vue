@@ -26,10 +26,7 @@ const html = computed(() => {
 </script>
 
 <template>
-  <article
-    class="md-doc"
-    v-html="html"
-  />
+  <article class="md-doc" v-html="html" />
 </template>
 
 <style>

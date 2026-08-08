@@ -52,13 +52,8 @@ function verbFor(id: string): string {
 
 <template>
   <section class="plantings">
-    <h3 class="plantings__title">
-      Plantings
-    </h3>
-    <ul
-      v-if="visibleRows.length"
-      class="plantings__rows"
-    >
+    <h3 class="plantings__title">Plantings</h3>
+    <ul v-if="visibleRows.length" class="plantings__rows">
       <RateBreakdownTooltip
         v-for="row in visibleRows"
         :key="row.def.id"
@@ -66,19 +61,13 @@ function verbFor(id: string): string {
         :total-rate="totalRate"
         breakdown-title="Rate each"
       >
-        <li
-          class="planting"
-          :data-testid="`producer-${row.def.id}`"
-        >
+        <li class="planting" :data-testid="`producer-${row.def.id}`">
           <span class="planting__glyph">
             <PlantingGlyph :producer-id="row.def.id" />
           </span>
           <div class="planting__head">
             <span class="planting__name">{{ row.def.name }}</span>
-            <span
-              class="planting__leader"
-              aria-hidden="true"
-            />
+            <span class="planting__leader" aria-hidden="true" />
             <span class="planting__count">{{ format(row.count.value, 0) }}</span>
           </div>
           <div class="planting__meta">
@@ -97,12 +86,7 @@ function verbFor(id: string): string {
         </li>
       </RateBreakdownTooltip>
     </ul>
-    <p
-      v-else
-      class="plantings__empty"
-    >
-      Tilling the earth&hellip;
-    </p>
+    <p v-else class="plantings__empty">Tilling the earth&hellip;</p>
   </section>
 </template>
 

@@ -21,9 +21,7 @@ const aiLabel = 'Protoss Nexus';
 
 <template>
   <div class="olui-surface fortress-bars">
-    <h3 class="fortress-bars__title">
-      Fortresses
-    </h3>
+    <h3 class="fortress-bars__title">Fortresses</h3>
     <div class="fortress-bars__row">
       <div class="fortress-bars__label">
         {{ playerLabel }}

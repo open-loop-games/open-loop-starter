@@ -96,44 +96,21 @@ function flipTab(): void {
       >
         ☰
       </Button>
-      <Button
-        class="gallery-header__title"
-        type="button"
-        @click="showHome"
-      >
+      <Button class="gallery-header__title" type="button" @click="showHome">
         <strong>Open Loop Starter</strong>
         <span class="gallery-header__sub">Archetype gallery</span>
       </Button>
 
-      <div
-        v-if="entered"
-        class="gallery-header__entered"
-      >
-        <Button
-          class="btn-sm"
-          type="button"
-          @click="exitArchetype"
-        >
-          ← Back
-        </Button>
+      <div v-if="entered" class="gallery-header__entered">
+        <Button class="btn-sm" type="button" @click="exitArchetype"> ← Back </Button>
         <span class="gallery-header__entered-name">{{ entered.manifest.name }}</span>
-        <Button
-          class="btn-sm"
-          type="button"
-          @click="flipTab"
-        >
+        <Button class="btn-sm" type="button" @click="flipTab">
           {{ enteredTab === 'details' ? 'Live demo →' : '← Details' }}
         </Button>
       </div>
 
       <nav class="gallery-header__nav">
-        <Button
-          class="btn-sm"
-          type="button"
-          @click="showAbout"
-        >
-          About
-        </Button>
+        <Button class="btn-sm" type="button" @click="showAbout"> About </Button>
       </nav>
     </header>
 
@@ -144,22 +121,10 @@ function flipTab(): void {
       :data-collapsed="!sidebarOpen ? 'true' : null"
     >
       <template #sidebar>
-        <div
-          v-if="sidebarOpen"
-          class="gallery-sidebar"
-        >
-          <Button
-            class="gallery-sidebar__home"
-            type="button"
-            @click="showHome"
-          >
-            Home
-          </Button>
+        <div v-if="sidebarOpen" class="gallery-sidebar">
+          <Button class="gallery-sidebar__home" type="button" @click="showHome"> Home </Button>
 
-          <ListboxRoot
-            :model-value="enteredId"
-            @update:model-value="onSidebarPick"
-          >
+          <ListboxRoot :model-value="enteredId" @update:model-value="onSidebarPick">
             <ListboxContent class="gallery-sidebar__list">
               <ListboxItem
                 v-for="a in archetypes"
@@ -174,26 +139,14 @@ function flipTab(): void {
         </div>
       </template>
 
-      <div
-        v-if="entered"
-        class="gallery-entered"
-      >
+      <div v-if="entered" class="gallery-entered">
         <!-- Demo + details are mutually exclusive in the main column so each
              gets the full available width. The sandbox stays mounted across
              toggles via v-show so engine state survives. -->
-        <div
-          v-show="enteredTab === 'demo'"
-          class="gallery-entered__demo"
-        >
-          <SandboxWrapper
-            :archetype="entered.manifest"
-            :boot="entered.boot"
-          />
+        <div v-show="enteredTab === 'demo'" class="gallery-entered__demo">
+          <SandboxWrapper :archetype="entered.manifest" :boot="entered.boot" />
         </div>
-        <div
-          v-show="enteredTab === 'details'"
-          class="gallery-entered__detail"
-        >
+        <div v-show="enteredTab === 'details'" class="gallery-entered__detail">
           <section class="gallery-entered__cta">
             <Button
               class="btn-primary gallery-entered__cta-btn"
@@ -210,10 +163,7 @@ function flipTab(): void {
         </div>
       </div>
       <AboutPanel v-else-if="view === 'about'" />
-      <div
-        v-else
-        class="gallery-home"
-      >
+      <div v-else class="gallery-home">
         <header class="gallery-home__header">
           <h2>Archetype gallery</h2>
           <p>

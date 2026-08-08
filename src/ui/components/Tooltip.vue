@@ -40,19 +40,12 @@ const isOpen = ref(false);
 
 <template>
   <TooltipProvider :delay-duration="delay">
-    <TooltipRoot
-      v-model:open="isOpen"
-      :disabled="disabled"
-    >
+    <TooltipRoot v-model:open="isOpen" :disabled="disabled">
       <TooltipTrigger as-child>
         <slot />
       </TooltipTrigger>
       <TooltipPortal v-if="isOpen">
-        <TooltipContent
-          class="olui-tooltip__content"
-          :side="side"
-          :side-offset="sideOffset"
-        >
+        <TooltipContent class="olui-tooltip__content" :side="side" :side-offset="sideOffset">
           <slot name="content" />
         </TooltipContent>
       </TooltipPortal>

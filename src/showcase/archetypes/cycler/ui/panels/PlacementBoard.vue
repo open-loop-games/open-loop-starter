@@ -26,14 +26,8 @@ const GLYPH: Record<PieceKind, { ic: string; code: string; tone: string }> = {
 </script>
 
 <template>
-  <div
-    class="cyc-board"
-    :style="{ '--cyc-cols': cols }"
-  >
-    <template
-      v-for="row in board.rows.value"
-      :key="row[0].y"
-    >
+  <div class="cyc-board" :style="{ '--cyc-cols': cols }">
+    <template v-for="row in board.rows.value" :key="row[0].y">
       <Button
         v-for="cell in row"
         :key="cell.x + ',' + cell.y"
@@ -45,11 +39,7 @@ const GLYPH: Record<PieceKind, { ic: string; code: string; tone: string }> = {
         @mouseenter="board.onCellHover(cell)"
         @mouseleave="board.onCellLeave()"
       >
-        <span
-          v-if="cell.kind"
-          class="cyc-pc"
-          :class="GLYPH[cell.kind].tone"
-        >
+        <span v-if="cell.kind" class="cyc-pc" :class="GLYPH[cell.kind].tone">
           <span class="cyc-pc__ic">{{ GLYPH[cell.kind].ic }}</span>
           <span class="cyc-pc__code">{{ GLYPH[cell.kind].code }}</span>
         </span>

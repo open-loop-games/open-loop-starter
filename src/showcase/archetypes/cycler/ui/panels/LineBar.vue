@@ -25,13 +25,12 @@ const pct = computed(() => Math.round(cmd.lineIntegrity.value * 100));
     aria-label="Defended line integrity"
   >
     <div class="cyc-line__fill" />
-    <div
-      class="cyc-line__ticks"
-      aria-hidden="true"
-    >
+    <div class="cyc-line__ticks" aria-hidden="true">
       <span>▔</span><span>▔</span><span>▔</span><span>▔</span><span>▔</span><span>▔</span>
     </div>
-    <span class="cyc-line__label">LINE <b>{{ pct }}%</b></span>
+    <span class="cyc-line__label"
+      >LINE <b>{{ pct }}%</b></span
+    >
   </div>
 </template>
 

@@ -37,10 +37,7 @@ const handleUpdateOpen = (id: string, open: boolean) => {
         :class="['olui-modal-content', `olui-modal-content--${entry.size ?? 'md'}`]"
         :aria-describedby="undefined"
       >
-        <component
-          :is="entry.component"
-          v-bind="entry.props ?? {}"
-        />
+        <component :is="entry.component" v-bind="entry.props ?? {}" />
       </DialogContent>
     </DialogPortal>
   </DialogRoot>

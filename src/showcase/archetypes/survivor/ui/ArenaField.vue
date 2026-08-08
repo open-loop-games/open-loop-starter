@@ -510,10 +510,7 @@ onBeforeUnmount(() => {
   <!-- Emergency wash + vignette. CSS rather than a pixi layer: it never changes,
        so it has no business being redrawn 60 times a second, and keeping it out
        of the world container means it does not scroll with the floor. -->
-  <div
-    class="arena-field__wash"
-    aria-hidden="true"
-  />
+  <div class="arena-field__wash" aria-hidden="true" />
 </template>
 
 <style scoped>

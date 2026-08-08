@@ -51,17 +51,10 @@ withDefaults(
         :align="align"
       >
         <slot />
-        <PopoverClose
-          v-if="showClose"
-          class="olui-popover__close"
-          aria-label="Close"
-        >
+        <PopoverClose v-if="showClose" class="olui-popover__close" aria-label="Close">
           ×
         </PopoverClose>
-        <PopoverArrow
-          v-if="showArrow"
-          class="olui-popover__arrow"
-        />
+        <PopoverArrow v-if="showArrow" class="olui-popover__arrow" />
       </PopoverContent>
     </PopoverPortal>
   </PopoverRoot>

@@ -70,15 +70,9 @@ function pick(i: number): void {
       :disabled="!canAdvance"
       @click="burnTier.advanceTier()"
     >
-      <template v-if="canAdvance">
-        Advance posture →
-      </template>
-      <template v-else-if="nextUnlockL !== null">
-        Next unlocks at L {{ nextUnlockL }}
-      </template>
-      <template v-else>
-        Max posture
-      </template>
+      <template v-if="canAdvance"> Advance posture → </template>
+      <template v-else-if="nextUnlockL !== null"> Next unlocks at L {{ nextUnlockL }} </template>
+      <template v-else> Max posture </template>
     </Button>
   </div>
 </template>

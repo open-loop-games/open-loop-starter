@@ -34,10 +34,7 @@ const model = defineModel<string>({ required: true });
 </script>
 
 <template>
-  <TabsRoot
-    v-model="model"
-    class="olui-tabs"
-  >
+  <TabsRoot v-model="model" class="olui-tabs">
     <TabsList class="olui-tabs__list">
       <TabsTrigger
         v-for="item in items"

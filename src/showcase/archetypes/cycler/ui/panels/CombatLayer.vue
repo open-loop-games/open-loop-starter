@@ -209,11 +209,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    ref="host"
-    class="cyc-combat"
-    aria-hidden="true"
-  />
+  <div ref="host" class="cyc-combat" aria-hidden="true" />
 </template>
 
 <style scoped>

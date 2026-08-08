@@ -40,10 +40,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
 </script>
 
 <template>
-  <PanelLayout
-    class="olui-achievement-grid"
-    @close="$emit('close')"
-  >
+  <PanelLayout class="olui-achievement-grid" @close="$emit('close')">
     <template #header>
       <DialogTitle as-child>
         <h3 class="olui-panel__title">
@@ -52,15 +49,8 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
       </DialogTitle>
     </template>
 
-    <slot
-      name="summary"
-      :earned-count="earnedCount"
-      :total="total"
-      :fill-pct="fillPct"
-    >
-      <div class="olui-achievement-grid__summary">
-        {{ earnedCount }} / {{ total }} earned
-      </div>
+    <slot name="summary" :earned-count="earnedCount" :total="total" :fill-pct="fillPct">
+      <div class="olui-achievement-grid__summary">{{ earnedCount }} / {{ total }} earned</div>
     </slot>
 
     <ul class="olui-achievement-grid__cells">
@@ -72,10 +62,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
         :data-hidden-cell="cell.hidden ? 'true' : 'false'"
         :data-testid="`achievement-${cell.id}`"
       >
-        <slot
-          name="cell"
-          :cell="cell"
-        >
+        <slot name="cell" :cell="cell">
           <div class="olui-achievement-grid__cell-name">
             {{ cell.name }}
           </div>

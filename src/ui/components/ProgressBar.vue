@@ -54,10 +54,7 @@ const pct = (v: number) => Math.max(0, Math.min(1, v)) * 100 + '%';
 </script>
 
 <template>
-  <div
-    class="olui-progress-bar"
-    :data-state="state"
-  >
+  <div class="olui-progress-bar" :data-state="state">
     <div class="olui-progress-bar__track">
       <template v-if="isSegmented">
         <div
@@ -68,16 +65,9 @@ const pct = (v: number) => Math.max(0, Math.min(1, v)) * 100 + '%';
           :style="{ width: pct(seg.value) }"
         />
       </template>
-      <div
-        v-else
-        class="olui-progress-bar__fill"
-        :style="{ width: pct(ratio) }"
-      />
+      <div v-else class="olui-progress-bar__fill" :style="{ width: pct(ratio) }" />
     </div>
-    <span
-      v-if="label"
-      class="olui-progress-bar__label"
-    >{{ label }}</span>
+    <span v-if="label" class="olui-progress-bar__label">{{ label }}</span>
   </div>
 </template>
 

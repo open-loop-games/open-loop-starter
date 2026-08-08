@@ -46,15 +46,9 @@ const condition = computed(() => {
   <div class="hud">
     <div class="hud__row hud__row--top">
       <div class="clock">
-        <span
-          class="clock__now num"
-          data-num
-        >{{ ladder.clock.value }}</span>
+        <span class="clock__now num" data-num>{{ ladder.clock.value }}</span>
         <span class="clock__meta">
-          <span
-            class="num"
-            data-num
-          >{{ remaining }}</span> to the horn
+          <span class="num" data-num>{{ remaining }}</span> to the horn
         </span>
       </div>
 
@@ -62,38 +56,27 @@ const condition = computed(() => {
 
       <div class="operator">
         <span class="operator__seat">{{ arena.seat.value.name }}</span>
-        <span
-          class="operator__cond"
-          :data-low="condition.frac <= 0.35"
-        >
-          <span
-            class="num"
-            data-num
-          >{{ condition.pct }}</span>% condition
+        <span class="operator__cond" :data-low="condition.frac <= 0.35">
+          <span class="num" data-num>{{ condition.pct }}</span
+          >% condition
         </span>
         <span class="operator__notes">
-          <span
-            class="num"
-            data-num
-          >{{ Math.floor(Number(meta.notes.value)) }}</span> notes banked
+          <span class="num" data-num>{{ Math.floor(Number(meta.notes.value)) }}</span> notes banked
         </span>
 
         <!-- Census rides the operator column rather than the opposite corner:
              the dev dock owns bottom-right in this repo, and a readout a fork
              has to un-overlap is a readout in the wrong place. -->
         <div class="census">
-          <span><span
-            class="num"
-            data-num
-          >{{ census.specimens }}</span> on the floor</span>
-          <span><span
-            class="num"
-            data-num
-          >{{ census.motes }}</span> uncollected</span>
-          <span><span
-            class="num"
-            data-num
-          >{{ census.kills }}</span> contained</span>
+          <span
+            ><span class="num" data-num>{{ census.specimens }}</span> on the floor</span
+          >
+          <span
+            ><span class="num" data-num>{{ census.motes }}</span> uncollected</span
+          >
+          <span
+            ><span class="num" data-num>{{ census.kills }}</span> contained</span
+          >
         </div>
       </div>
     </div>

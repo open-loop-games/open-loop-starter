@@ -38,10 +38,7 @@ function rematch(): void {
       <div class="hud__side hud__side--a">
         <span class="hud__name">Crimson</span>
         <div class="hud__track">
-          <div
-            class="hud__fill hud__fill--a"
-            :style="{ width: `${baseFracA * 100}%` }"
-          />
+          <div class="hud__fill hud__fill--a" :style="{ width: `${baseFracA * 100}%` }" />
         </div>
         <span class="hud__hp">{{ baseA }}</span>
       </div>
@@ -52,10 +49,7 @@ function rematch(): void {
       <div class="hud__side hud__side--b">
         <span class="hud__hp">{{ baseB }}</span>
         <div class="hud__track">
-          <div
-            class="hud__fill hud__fill--b"
-            :style="{ width: `${baseFracB * 100}%` }"
-          />
+          <div class="hud__fill hud__fill--b" :style="{ width: `${baseFracB * 100}%` }" />
         </div>
         <span class="hud__name">Azure</span>
       </div>
@@ -64,10 +58,7 @@ function rematch(): void {
     <div class="battlefield__field">
       <PlayField />
       <!-- Outcome curtain — only when the match has ended. -->
-      <div
-        v-if="!matchLive && matchOutcome"
-        class="outcome"
-      >
+      <div v-if="!matchLive && matchOutcome" class="outcome">
         <p class="outcome__line">
           <template v-if="matchOutcome.winner">
             <strong :class="`outcome__winner--${matchOutcome.winner}`">
@@ -75,16 +66,9 @@ function rematch(): void {
             </strong>
             takes the field
           </template>
-          <template v-else>
-            Stalemate — time called
-          </template>
+          <template v-else> Stalemate — time called </template>
         </p>
-        <button
-          class="outcome__rematch"
-          @click="rematch"
-        >
-          Rematch
-        </button>
+        <button class="outcome__rematch" @click="rematch">Rematch</button>
       </div>
     </div>
   </section>

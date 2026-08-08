@@ -20,20 +20,16 @@ const predicted = computed(() => formatTime(Math.round(run.predictedMinutes.valu
 <template>
   <div class="cyc-cmd">
     <div class="cyc-cmd__row">
-      <span class="cyc-cmd__defcon">DEFCON <b>{{ cmd.defcon.value }}</b></span>
+      <span class="cyc-cmd__defcon"
+        >DEFCON <b>{{ cmd.defcon.value }}</b></span
+      >
       <div class="cyc-cmd__phase">
         <span class="cyc-cmd__dot" />
         <span class="cyc-cmd__name">{{ run.phaseLabel.value }}</span>
         <span class="cyc-cmd__sub">{{ cmd.phaseSub.value }}</span>
       </div>
-      <div
-        class="cyc-cmd__timeline"
-        aria-hidden="true"
-      >
-        <template
-          v-for="slot in cmd.timeline.value.slots"
-          :key="slot.n"
-        >
+      <div class="cyc-cmd__timeline" aria-hidden="true">
+        <template v-for="slot in cmd.timeline.value.slots" :key="slot.n">
           <span
             v-if="slot.n > 0"
             class="cyc-cmd__seg"
@@ -53,7 +49,9 @@ const predicted = computed(() => formatTime(Math.round(run.predictedMinutes.valu
           />
         </template>
       </div>
-      <span class="cyc-cmd__clock">{{ elapsed }} <span class="cyc-cmd__clock-of">/ {{ predicted }}</span></span>
+      <span class="cyc-cmd__clock"
+        >{{ elapsed }} <span class="cyc-cmd__clock-of">/ {{ predicted }}</span></span
+      >
     </div>
     <div class="cyc-cmd__alert">
       {{ cmd.alert.value }}

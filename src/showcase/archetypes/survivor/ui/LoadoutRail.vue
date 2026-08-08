@@ -63,11 +63,7 @@ const stacks = computed(() => {
           'plate--evolved': m.evolved,
         }"
       >
-        <span
-          class="plate__shape"
-          :data-shape="m.shape"
-          aria-hidden="true"
-        />
+        <span class="plate__shape" :data-shape="m.shape" aria-hidden="true" />
         <span class="plate__name">{{ m.name }}</span>
         <span
           v-if="m.installed"
@@ -81,17 +77,11 @@ const stacks = computed(() => {
             :class="{ 'pip--lit': p <= m.level }"
           />
         </span>
-        <span
-          v-else
-          class="plate__mount"
-        >unmounted</span>
+        <span v-else class="plate__mount">unmounted</span>
       </div>
     </div>
 
-    <div
-      v-if="stacks.length"
-      class="rack__reagents"
-    >
+    <div v-if="stacks.length" class="rack__reagents">
       <span
         v-for="r in stacks"
         :key="r.id"
@@ -99,10 +89,7 @@ const stacks = computed(() => {
         :class="{ 'reagent--def': r.defensive }"
       >
         {{ r.name }}
-        <span
-          class="reagent__n num"
-          data-num
-        >×{{ r.stacks }}</span>
+        <span class="reagent__n num" data-num>×{{ r.stacks }}</span>
       </span>
     </div>
   </div>

@@ -111,23 +111,14 @@ function maybeShowWelcomeBack(gapSec: number, sproutDelta: Decimal): void {
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AmbientGameView
-    v-else
-    @return="returnToSlots"
-  />
+  <AmbientGameView v-else @return="returnToSlots" />
   <ToastContainer />
-  <DevDiagnostics
-    v-if="isDev"
-    v-model:workbench-open="showDevPanel"
-  />
+  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench
-      :engine="engine"
-      :modules="getActiveModules"
-    />
+    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
   </DevPanelOverlay>
 </template>

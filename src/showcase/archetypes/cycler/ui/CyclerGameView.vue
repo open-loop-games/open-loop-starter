@@ -55,11 +55,7 @@ const tone = computed<'' | 'warn' | 'crit' | 'breach'>(() => {
 
 <template>
   <div class="cycler">
-    <div
-      class="cyc-tabs"
-      role="tablist"
-      aria-label="Cycle phase"
-    >
+    <div class="cyc-tabs" role="tablist" aria-label="Cycle phase">
       <div
         v-for="tab in PHASE_TABS"
         :key="tab.key"
@@ -73,11 +69,7 @@ const tone = computed<'' | 'warn' | 'crit' | 'breach'>(() => {
       </div>
     </div>
 
-    <div
-      class="cyc-world"
-      :data-tone="tone"
-      :data-locked="cmd.buildLocked.value ? '1' : '0'"
-    >
+    <div class="cyc-world" :data-tone="tone" :data-locked="cmd.buildLocked.value ? '1' : '0'">
       <div class="cyc-grid">
         <div class="cyc-rail">
           <MusterPalette />

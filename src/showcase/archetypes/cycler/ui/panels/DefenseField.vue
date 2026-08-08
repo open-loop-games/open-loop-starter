@@ -17,17 +17,15 @@ const ADDR = ['0x00', '0x20', '0x40', '0x60'];
 
 <template>
   <div class="cyc-field">
-    <div
-      class="cyc-sky"
-      aria-hidden="true"
-    >
+    <div class="cyc-sky" aria-hidden="true">
       <div class="cyc-sky__grid" />
       <span
         v-for="(addr, i) in ADDR"
         :key="addr"
         class="cyc-sky__addr"
         :style="{ left: 6 + i * 25 + '%' }"
-      >{{ addr }}</span>
+        >{{ addr }}</span
+      >
       <CombatLayer />
     </div>
     <LineBar />

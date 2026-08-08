@@ -110,27 +110,16 @@ function descend(): void {
     <div class="sheet">
       <header class="sheet__head">
         <div>
-          <p class="sheet__kicker">
-            Containment record
-          </p>
-          <h2
-            class="sheet__cause"
-            :data-tone="cause.tone"
-          >
+          <p class="sheet__kicker">Containment record</p>
+          <h2 class="sheet__cause" :data-tone="cause.tone">
             {{ cause.title }}
           </h2>
           <p class="sheet__note">
             {{ cause.note }}
           </p>
         </div>
-        <div
-          class="stamp"
-          :data-tone="cause.tone"
-        >
-          <span
-            class="stamp__time num"
-            data-num
-          >{{ summary.elapsed }}</span>
+        <div class="stamp" :data-tone="cause.tone">
+          <span class="stamp__time num" data-num>{{ summary.elapsed }}</span>
           <span class="stamp__label">held</span>
         </div>
       </header>
@@ -138,28 +127,19 @@ function descend(): void {
       <dl class="figures">
         <div>
           <dt>Beats</dt>
-          <dd
-            class="num"
-            data-num
-          >
+          <dd class="num" data-num>
             {{ summary.beats }}
           </dd>
         </div>
         <div>
           <dt>Contained</dt>
-          <dd
-            class="num"
-            data-num
-          >
+          <dd class="num" data-num>
             {{ summary.kills }}
           </dd>
         </div>
         <div>
           <dt>Banked</dt>
-          <dd
-            class="num"
-            data-num
-          >
+          <dd class="num" data-num>
             {{ summary.banked }}<span class="figures__of">/{{ summary.dropped }}</span>
           </dd>
         </div>
@@ -168,28 +148,19 @@ function descend(): void {
                capital Eta, which renders identically to a Latin H and turned
                this label into "H COLLECTION". -->
           <dt>Collection <span class="glyph">η</span></dt>
-          <dd
-            class="num"
-            data-num
-          >
+          <dd class="num" data-num>
             {{ summary.eta.toFixed(2) }}
           </dd>
         </div>
         <div>
           <dt>Damage</dt>
-          <dd
-            class="num"
-            data-num
-          >
+          <dd class="num" data-num>
             {{ summary.damage }}
           </dd>
         </div>
         <div>
           <dt>In contact</dt>
-          <dd
-            class="num"
-            data-num
-          >
+          <dd class="num" data-num>
             {{ summary.contact }}
           </dd>
         </div>
@@ -199,10 +170,7 @@ function descend(): void {
         <h3 class="section__title">
           Standing orders
           <span class="section__notes">
-            <span
-              class="num"
-              data-num
-            >{{ notes }}</span> notes
+            <span class="num" data-num>{{ notes }}</span> notes
           </span>
         </h3>
         <div class="shop">
@@ -215,27 +183,15 @@ function descend(): void {
           >
             <div class="tile__top">
               <span class="tile__name">{{ u.name }}</span>
-              <span
-                class="tile__level num"
-                data-num
-              >{{ u.level }}/{{ u.maxLevel }}</span>
+              <span class="tile__level num" data-num>{{ u.level }}/{{ u.maxLevel }}</span>
             </div>
             <p class="tile__blurb">
               {{ u.blurb }}
             </p>
-            <Button
-              class="tile__buy"
-              :disabled="!u.canBuy || u.maxed"
-              @click="u.buy()"
-            >
-              <template v-if="u.maxed">
-                Complete
-              </template>
+            <Button class="tile__buy" :disabled="!u.canBuy || u.maxed" @click="u.buy()">
+              <template v-if="u.maxed"> Complete </template>
               <template v-else>
-                <span
-                  class="num"
-                  data-num
-                >{{ u.cost }}</span> notes
+                <span class="num" data-num>{{ u.cost }}</span> notes
               </template>
             </Button>
           </div>
@@ -243,9 +199,7 @@ function descend(): void {
       </section>
 
       <section class="section">
-        <h3 class="section__title">
-          Assign the floor
-        </h3>
+        <h3 class="section__title">Assign the floor</h3>
         <div class="seats">
           <button
             v-for="s in SEATS"
@@ -262,12 +216,7 @@ function descend(): void {
         </div>
       </section>
 
-      <Button
-        class="descend"
-        @click="descend"
-      >
-        Descend again
-      </Button>
+      <Button class="descend" @click="descend"> Descend again </Button>
     </div>
   </div>
 </template>

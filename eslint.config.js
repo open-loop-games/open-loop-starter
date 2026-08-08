@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import pluginVue from 'eslint-plugin-vue';
+import configPrettier from 'eslint-config-prettier';
 import globals from 'globals';
 import openLoopRules from './tools/eslint-rules/index.js';
 
@@ -128,4 +129,13 @@ export default [
     },
   },
   /* eject:strip-end */
+  // Formatting belongs to prettier, and to prettier only. `eslint-plugin-vue`'s
+  // recommended set brings its own layout rules (attribute-per-line, content
+  // newlines, …) which disagree with prettier's output — so `pnpm format` would
+  // leave the tree in a shape `pnpm lint` warns about, and the pre-commit hook
+  // would silently arbitrate by running eslint --fix second. Turning the
+  // conflicting rules off makes the two agree by construction.
+  //
+  // Must stay LAST: this works by disabling rules that earlier blocks enable.
+  configPrettier,
 ];

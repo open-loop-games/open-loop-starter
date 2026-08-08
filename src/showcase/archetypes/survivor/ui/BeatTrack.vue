@@ -60,20 +60,13 @@ const deltaState = computed(() => {
 </script>
 
 <template>
-  <div
-    class="beat-track"
-    :class="{ 'beat-track--flash': flashing }"
-  >
+  <div class="beat-track" :class="{ 'beat-track--flash': flashing }">
     <div class="beat-track__head">
       <span class="beat-track__label"><span>Draft beats</span></span>
-      <span
-        class="beat-track__count num"
-        data-num
-      >{{ ladder.level.value }}<span class="beat-track__of">/{{ ladder.total }}</span></span>
-      <span
-        class="beat-track__delta"
-        :data-state="deltaState"
-      >{{ deltaLabel }}</span>
+      <span class="beat-track__count num" data-num
+        >{{ ladder.level.value }}<span class="beat-track__of">/{{ ladder.total }}</span></span
+      >
+      <span class="beat-track__delta" :data-state="deltaState">{{ deltaLabel }}</span>
     </div>
 
     <div
@@ -100,16 +93,10 @@ const deltaState = computed(() => {
     </div>
 
     <div class="beat-track__foot">
-      <span
-        class="num"
-        data-num
-      >{{ Math.floor(ladder.banked.value) }}</span>
+      <span class="num" data-num>{{ Math.floor(ladder.banked.value) }}</span>
       <span class="beat-track__unit">reagent banked</span>
       <span class="beat-track__sep">·</span>
-      <span
-        class="num"
-        data-num
-      >{{
+      <span class="num" data-num>{{
         Number.isFinite(ladder.nextThreshold.value) ? Math.ceil(ladder.nextThreshold.value) : '—'
       }}</span>
       <span class="beat-track__unit">next beat</span>

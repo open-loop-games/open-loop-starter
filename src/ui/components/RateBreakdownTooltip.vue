@@ -58,19 +58,11 @@ const rowRef = toRef(props, 'row');
 </script>
 
 <template>
-  <RichTooltip
-    :open-delay="250"
-    :close-delay="100"
-    :side="side"
-  >
+  <RichTooltip :open-delay="250" :close-delay="100" :side="side">
     <slot />
     <template #content>
       <div class="olui-rate-breakdown">
-        <slot
-          name="head"
-          :row="rowRef"
-          :view="view"
-        >
+        <slot name="head" :row="rowRef" :view="view">
           <div class="olui-rate-breakdown__head">
             <span class="olui-rate-breakdown__name">{{ row.def.name }}</span>
             <span class="olui-rate-breakdown__count"> {{ format(row.count.value, 0) }} owned </span>
@@ -94,10 +86,7 @@ const rowRef = toRef(props, 'row');
               </span>
             </dd>
           </div>
-          <div
-            v-if="view.beatFinite.value"
-            class="olui-rate-breakdown__stat"
-          >
+          <div v-if="view.beatFinite.value" class="olui-rate-breakdown__stat">
             <dt>Pays off in</dt>
             <dd>{{ formatPurchaseBeat(row.beatSeconds.value) }}</dd>
           </div>
@@ -113,11 +102,7 @@ const rowRef = toRef(props, 'row');
               </span>
             </dd>
           </div>
-          <slot
-            name="extra"
-            :row="rowRef"
-            :view="view"
-          />
+          <slot name="extra" :row="rowRef" :view="view" />
         </dl>
       </div>
     </template>

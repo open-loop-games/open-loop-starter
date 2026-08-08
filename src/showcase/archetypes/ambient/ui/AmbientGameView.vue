@@ -35,10 +35,7 @@ const almanacUnlocked = computed(
 </script>
 
 <template>
-  <AppFrame
-    :stack="stack"
-    :tooltip-delay="400"
-  >
+  <AppFrame :stack="stack" :tooltip-delay="400">
     <template #header>
       <SystemHeader @return-to-slots="emit('return')">
         <template #title>
@@ -50,14 +47,14 @@ const almanacUnlocked = computed(
           >
             <span class="almanac-title__eyebrow">An Almanac of</span>
             <span class="almanac-title__name">Cozy Farm</span>
-            <span class="almanac-title__sub">vol. i &middot; printed at home, kept by the sill</span>
+            <span class="almanac-title__sub"
+              >vol. i &middot; printed at home, kept by the sill</span
+            >
           </Button>
         </template>
         <template #about>
           <div class="almanac-info">
-            <h4 class="almanac-info__title">
-              A Quiet Garden
-            </h4>
+            <h4 class="almanac-info__title">A Quiet Garden</h4>
             <p>
               The garden grows on its own. Open it once in the morning, glance at it while a pot
               boils. Nothing expires. Nothing is about to be overrun. Sprouts pile up whether you

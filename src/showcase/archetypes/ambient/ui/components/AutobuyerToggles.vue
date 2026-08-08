@@ -22,13 +22,8 @@ function toggle(id: string): void {
 </script>
 
 <template>
-  <div
-    v-if="rows.length"
-    class="ambient-autobuyer-toggles"
-  >
-    <h4 class="ambient-autobuyer-toggles__title">
-      Tending
-    </h4>
+  <div v-if="rows.length" class="ambient-autobuyer-toggles">
+    <h4 class="ambient-autobuyer-toggles__title">Tending</h4>
     <div class="ambient-autobuyer-toggles__list">
       <Button
         v-for="row in rows"

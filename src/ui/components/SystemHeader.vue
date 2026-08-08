@@ -63,10 +63,7 @@ function openSettings(): void {
 
 <template>
   <header class="olui-system-header">
-    <slot
-      name="title"
-      :return-to-slots="() => emit('returnToSlots')"
-    >
+    <slot name="title" :return-to-slots="() => emit('returnToSlots')">
       <Button
         class="olui-system-header__title-btn"
         data-testid="return-to-slots"
@@ -77,18 +74,9 @@ function openSettings(): void {
       </Button>
     </slot>
     <div class="olui-system-header__actions">
-      <Popover
-        align="end"
-        :side-offset="8"
-      >
+      <Popover align="end" :side-offset="8">
         <template #trigger>
-          <Button
-            class="btn-sm"
-            data-testid="open-info"
-            aria-label="About"
-          >
-            ?
-          </Button>
+          <Button class="btn-sm" data-testid="open-info" aria-label="About"> ? </Button>
         </template>
         <slot name="about">
           <h4 style="margin-bottom: 6px">
@@ -97,20 +85,8 @@ function openSettings(): void {
         </slot>
       </Popover>
       <slot name="extra-actions" />
-      <Button
-        class="btn-sm"
-        data-testid="open-save"
-        @click="openSave"
-      >
-        Save
-      </Button>
-      <Button
-        class="btn-sm"
-        data-testid="open-settings"
-        @click="openSettings"
-      >
-        Settings
-      </Button>
+      <Button class="btn-sm" data-testid="open-save" @click="openSave"> Save </Button>
+      <Button class="btn-sm" data-testid="open-settings" @click="openSettings"> Settings </Button>
     </div>
   </header>
 </template>

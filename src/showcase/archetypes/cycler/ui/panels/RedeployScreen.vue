@@ -30,9 +30,7 @@ const cycleNo = computed(() => prestige.mergeCount.value + 1);
 <template>
   <div class="cyc-regroup">
     <div class="cyc-regroup__box">
-      <div class="cyc-regroup__hd">
-        Line Overrun
-      </div>
+      <div class="cyc-regroup__hd">Line Overrun</div>
       <div class="cyc-regroup__sub">
         cycle {{ cycleNo }} · survived to wave {{ wave }} · {{ runLen }} · DEFCON 1 breach
       </div>
@@ -49,12 +47,7 @@ const cycleNo = computed(() => prestige.mergeCount.value + 1);
         Fragments salvaged from the wreck. Spend them on Reinforce / Dampen, then stand the line
         back up — it holds as long as ever, but reaches further into the dark.
       </p>
-      <Button
-        class="cyc-btn cyc-regroup__cta"
-        @click="run.merge()"
-      >
-        ◈ Redeploy the line →
-      </Button>
+      <Button class="cyc-btn cyc-regroup__cta" @click="run.merge()"> ◈ Redeploy the line → </Button>
     </div>
   </div>
 </template>

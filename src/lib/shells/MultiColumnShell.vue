@@ -34,16 +34,8 @@ const gridTemplate = computed(() => {
 </script>
 
 <template>
-  <div
-    class="olui-multi-column"
-    :style="{ '--multi-column-template': gridTemplate }"
-  >
-    <section
-      v-for="i in columnKeys"
-      :key="i"
-      class="olui-multi-column__col"
-      :data-column-index="i"
-    >
+  <div class="olui-multi-column" :style="{ '--multi-column-template': gridTemplate }">
+    <section v-for="i in columnKeys" :key="i" class="olui-multi-column__col" :data-column-index="i">
       <slot :name="`column-${i}`" />
     </section>
   </div>

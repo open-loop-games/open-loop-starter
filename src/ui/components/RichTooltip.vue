@@ -37,10 +37,7 @@ withDefaults(
 </script>
 
 <template>
-  <HoverCardRoot
-    :open-delay="openDelay"
-    :close-delay="closeDelay"
-  >
+  <HoverCardRoot :open-delay="openDelay" :close-delay="closeDelay">
     <HoverCardTrigger as-child>
       <slot />
     </HoverCardTrigger>

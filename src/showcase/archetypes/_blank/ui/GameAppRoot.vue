@@ -34,16 +34,9 @@ const showDevPanel = ref(false);
     :app-name="manifest.name"
     @start="startGame"
   />
-  <AppFrame
-    v-else
-    :stack="stack"
-    :tooltip-delay="400"
-  >
+  <AppFrame v-else :stack="stack" :tooltip-delay="400">
     <template #header>
-      <SystemHeader
-        :app-name="manifest.name"
-        @return-to-slots="returnToSlots"
-      >
+      <SystemHeader :app-name="manifest.name" @return-to-slots="returnToSlots">
         <template #about>
           <h4 style="margin-bottom: 6px">
             {{ manifest.name }}
@@ -58,18 +51,12 @@ const showDevPanel = ref(false);
     <GameView />
   </AppFrame>
   <ToastContainer />
-  <DevDiagnostics
-    v-if="isDev"
-    v-model:workbench-open="showDevPanel"
-  />
+  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
   <DevPanelOverlay
     v-if="isDev && showDevPanel"
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench
-      :engine="engine"
-      :modules="getActiveModules"
-    />
+    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
   </DevPanelOverlay>
 </template>

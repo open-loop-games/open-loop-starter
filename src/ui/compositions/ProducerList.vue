@@ -77,24 +77,14 @@ function rowState(row: ProducerRowData<T>) {
 </script>
 
 <template>
-  <section
-    class="producer-list"
-    :data-density="density"
-  >
+  <section class="producer-list" :data-density="density">
     <header class="producer-list__header">
       <slot name="header">
-        <BulkModeSelector
-          v-if="bulkModeSource === 'global'"
-          :ladder="bulkLadder"
-        />
+        <BulkModeSelector v-if="bulkModeSource === 'global'" :ladder="bulkLadder" />
       </slot>
     </header>
     <ul class="producer-list__rows">
-      <li
-        v-for="row in visibleRows"
-        :key="row.id"
-        class="producer-list__row"
-      >
+      <li v-for="row in visibleRows" :key="row.id" class="producer-list__row">
         <template v-if="$slots.row">
           <slot
             name="row"

@@ -48,24 +48,14 @@ function selectCell(attacker: UnitDef, defender: UnitDef): void {
       <thead>
         <tr>
           <th />
-          <th
-            v-for="defender in units"
-            :key="`d-${defender.id}`"
-            :title="defender.role"
-          >
+          <th v-for="defender in units" :key="`d-${defender.id}`" :title="defender.role">
             {{ defender.name.slice(0, 4) }}
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr
-          v-for="attacker in units"
-          :key="`r-${attacker.id}`"
-        >
-          <th
-            scope="row"
-            :title="attacker.role"
-          >
+        <tr v-for="attacker in units" :key="`r-${attacker.id}`">
+          <th scope="row" :title="attacker.role">
             {{ attacker.name.slice(0, 4) }}
           </th>
           <td
@@ -81,10 +71,7 @@ function selectCell(attacker: UnitDef, defender: UnitDef): void {
         </tr>
       </tbody>
     </table>
-    <div
-      v-if="selected"
-      class="counter-matrix__detail"
-    >
+    <div v-if="selected" class="counter-matrix__detail">
       <strong>{{ selected.attacker.name }}</strong>
       → {{ selected.defender.name }}: ×{{ selected.value.toFixed(2) }} ({{ selected.relation }})
     </div>

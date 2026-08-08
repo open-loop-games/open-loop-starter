@@ -50,9 +50,7 @@ const locked = computed(() => cmd.buildLocked.value);
 
 <template>
   <div class="cyc-panel cyc-muster">
-    <h3 class="cyc-slab">
-      Muster
-    </h3>
+    <h3 class="cyc-slab">Muster</h3>
     <div class="cyc-palette">
       <Button
         v-for="p in PALETTE"
@@ -65,26 +63,15 @@ const locked = computed(() => cmd.buildLocked.value);
         @click="board.select(p.kind)"
       >
         <span class="cyc-pcard__t">
-          <span
-            class="cyc-pcard__ic"
-            :class="p.tone"
-          >{{ p.ic }}</span>
+          <span class="cyc-pcard__ic" :class="p.tone">{{ p.ic }}</span>
           {{ PIECES[p.kind].title }}
         </span>
         <span class="cyc-pcard__d">{{ PIECES[p.kind].description }}</span>
         <span class="cyc-pcard__eff">{{ p.effect }}</span>
       </Button>
     </div>
-    <div
-      v-if="locked"
-      class="cyc-tray-lock"
-    >
-      ▚ build locked · engagement
-    </div>
-    <p
-      v-else
-      class="cyc-muster__hint"
-    >
+    <div v-if="locked" class="cyc-tray-lock">▚ build locked · engagement</div>
+    <p v-else class="cyc-muster__hint">
       Forward rows range the salvos — Lances clear there. Reactors, Relays &amp; Bulwarks sit
       behind.
     </p>

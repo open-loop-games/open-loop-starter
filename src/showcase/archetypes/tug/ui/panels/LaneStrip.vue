@@ -90,10 +90,7 @@ const matchTimeLabel = computed(() => {
         :style="{ left: dot.leftPct + '%' }"
         :title="dot.archetypeId"
       >
-        <div
-          class="lane-strip__dot-hp"
-          :style="{ width: dot.hpPct + '%' }"
-        />
+        <div class="lane-strip__dot-hp" :style="{ width: dot.hpPct + '%' }" />
       </div>
       <div
         v-for="dot in aiDots"
@@ -102,10 +99,7 @@ const matchTimeLabel = computed(() => {
         :style="{ left: dot.leftPct + '%' }"
         :title="dot.archetypeId"
       >
-        <div
-          class="lane-strip__dot-hp"
-          :style="{ width: dot.hpPct + '%' }"
-        />
+        <div class="lane-strip__dot-hp" :style="{ width: dot.hpPct + '%' }" />
       </div>
     </div>
   </div>

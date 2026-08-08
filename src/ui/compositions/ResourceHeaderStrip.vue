@@ -53,11 +53,7 @@ function rateSign(value: DecimalSource): string {
 </script>
 
 <template>
-  <div
-    class="resource-header-strip"
-    :data-orientation="orientation"
-    :data-position="position"
-  >
+  <div class="resource-header-strip" :data-orientation="orientation" :data-position="position">
     <HudBar>
       <slot name="leading" />
       <HudChip
@@ -67,13 +63,14 @@ function rateSign(value: DecimalSource): string {
         :data-readout-id="r.id"
         :data-highlight="r.highlight?.value ?? 'normal'"
       >
-        <span class="resource-header-strip__value">{{ format(r.value.value, 0)
-        }}<template v-if="r.cap"> / {{ format(r.cap.value, 0) }}</template></span>
+        <span class="resource-header-strip__value"
+          >{{ format(r.value.value, 0)
+          }}<template v-if="r.cap"> / {{ format(r.cap.value, 0) }}</template></span
+        >
         <span class="resource-header-strip__label">{{ r.label }}</span>
-        <span
-          v-if="r.rate"
-          class="resource-header-strip__rate"
-        >{{ rateSign(r.rate.value) }}{{ format(r.rate.value, 2) }}/s</span>
+        <span v-if="r.rate" class="resource-header-strip__rate"
+          >{{ rateSign(r.rate.value) }}{{ format(r.rate.value, 2) }}/s</span
+        >
       </HudChip>
       <slot name="trailing" />
     </HudBar>

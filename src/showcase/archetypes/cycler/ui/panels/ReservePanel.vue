@@ -26,16 +26,9 @@ const netLabel = computed(() =>
 
 <template>
   <div class="cyc-panel cyc-reserve">
-    <h3 class="cyc-slab">
-      Reserve
-    </h3>
-    <div class="cyc-reserve__amt">
-      {{ output }}<span class="cyc-reserve__u">MW/s</span>
-    </div>
-    <div
-      class="cyc-reserve__rate"
-      :class="netClass"
-    >
+    <h3 class="cyc-slab">Reserve</h3>
+    <div class="cyc-reserve__amt">{{ output }}<span class="cyc-reserve__u">MW/s</span></div>
+    <div class="cyc-reserve__rate" :class="netClass">
       {{ net >= 0 ? '+' : '' }}{{ format(cmd.mwNet.value, 0) }} MW/s · {{ netLabel }}
     </div>
     <dl class="cyc-reserve__stats">
