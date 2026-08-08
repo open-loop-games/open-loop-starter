@@ -124,7 +124,7 @@ export function deriveXpLadder(cumulativeIncomeAt: (t: number) => number): numbe
 // Only `beatFirstSeconds` and `runSeconds` are authored here. The identity line
 // puts a draft every 30–90s, so fixing the band and the run length determines the
 // rest: `beatRatio` is SOLVED so that beat `beatCount` lands at or just inside
-// the horn, and `beatCount` is then the largest count whose final interval still
+// the purge, and `beatCount` is then the largest count whose final interval still
 // sits inside the band. At 33 beats that gives ρ_b = 1.03465, a final interval of
 // 89.2s, and a span of 1798.6s.
 //
@@ -134,7 +134,7 @@ export function deriveXpLadder(cumulativeIncomeAt: (t: number) => number): numbe
 // a non-finite drift on the last beat. A schedule whose last beat falls outside
 // the run is not a rounding issue; it is a beat that does not exist. Re-solving
 // to 1.0347 still overshot by 0.3s, which is the same bug wearing a smaller
-// number — the horn is a hard edge, so the solve has to land under it.
+// number — the purge is a hard edge, so the solve has to land under it.
 //
 // The count is robust to the cadence, which is why it is worth trusting: a much
 // more aggressive schedule (10s first interval, ratio 1.10) also lands at 31.

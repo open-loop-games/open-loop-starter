@@ -128,7 +128,7 @@ export function createRunModule(): EngineModule {
 
         if (elapsed >= SCHEDULE_BALANCE.runSeconds) {
           // Survived the arc. Whether that reads as a win or as a grind is the
-          // schedule question: a run that reached the horn several beats short
+          // schedule question: a run that reached the purge several beats short
           // was starved of income, not of time.
           const behind = scheduledBeatsBy(elapsed) - level.value;
           finish('survived', behind > 3 ? 'collection-starvation' : 'timer');

@@ -29,26 +29,36 @@ const arena = useModule(ArenaKey);
 const meta = useModule(MetaKey);
 const run = useModule(RunKey);
 
+/**
+ * What ended the run, written for whoever reads the sheet rather than for
+ * whoever tunes the game.
+ *
+ * `BindingCause` is the spine's own name for each of these and the probes report
+ * the distribution over them (`../IDENTITY.md` § What measures the remainder) —
+ * so the ids stay, and only the copy is translated. A record sheet is allowed to
+ * be technical; it is not allowed to be technical in the *balance document's*
+ * vocabulary, which is what "annulus density beat available DPS" was.
+ */
 const CAUSE_COPY: Record<BindingCause, { title: string; note: string; tone: string }> = {
   running: { title: 'In progress', note: '', tone: 'neutral' },
   'hp-floor': {
-    title: 'HP floor',
-    note: 'Contact accumulated faster than it could be avoided. Defence-bound.',
+    title: 'Condition zero',
+    note: 'Contact came in faster than it could be shed. The hall kept the operator.',
     tone: 'bad',
   },
   'traversal-collapse': {
-    title: 'Traversal collapse',
-    note: 'Annulus density beat available DPS — no gap left to move through.',
+    title: 'Boxed in',
+    note: 'The floor closed faster than the apparatus could open it. No gap left to move through.',
     tone: 'bad',
   },
   'collection-starvation': {
-    title: 'Collection starvation',
-    note: 'Killed enough, banked too little. η ran under what the ladder was derived against.',
+    title: 'Ran dry',
+    note: 'Plenty contained, little banked. The dive back through the ash never paid for itself.',
     tone: 'warn',
   },
   timer: {
-    title: 'Reached the horn',
-    note: 'Survived the arc.',
+    title: 'Held to purge',
+    note: 'The hall vented with the operator still standing.',
     tone: 'good',
   },
 };
@@ -59,14 +69,16 @@ const summary = computed(() => {
   const s = arena.state.value.stats;
   return {
     elapsed: formatClock(arena.elapsed.value),
-    beats: run.level.value,
+    refits: run.level.value,
     kills: s.kills,
     banked: Math.floor(s.motesBanked),
     dropped: Math.floor(s.motesDropped),
     // η — the collection efficiency the closed form ASSUMES and cannot predict
     // (`../IDENTITY.md` § Where the closed form stops). Reporting it here is the
-    // cheapest read on the term that sets the price of all income.
-    eta: s.motesDropped > 0 ? s.motesBanked / s.motesDropped : 0,
+    // cheapest read on the term that sets the price of all income. Shown as a
+    // recovery percentage: the same quantity, in the only units a player has for
+    // it — how much of what fell you actually picked up.
+    recovered: s.motesDropped > 0 ? Math.round((s.motesBanked / s.motesDropped) * 100) : 0,
     damage: Math.round(s.damageTaken),
     contact: Math.round(s.contactSeconds),
   };
@@ -142,9 +154,9 @@ function descend(): void {
 
       <dl v-if="!briefing" class="figures">
         <div>
-          <dt>Beats</dt>
+          <dt>Refits</dt>
           <dd class="num" data-num>
-            {{ summary.beats }}
+            {{ summary.refits }}
           </dd>
         </div>
         <div>
@@ -160,13 +172,8 @@ function descend(): void {
           </dd>
         </div>
         <div>
-          <!-- η must not be uppercased: `text-transform: uppercase` folds it to
-               capital Eta, which renders identically to a Latin H and turned
-               this label into "H COLLECTION". -->
-          <dt>Collection <span class="glyph">η</span></dt>
-          <dd class="num" data-num>
-            {{ summary.eta.toFixed(2) }}
-          </dd>
+          <dt>Recovered</dt>
+          <dd class="num" data-num>{{ summary.recovered }}<span class="figures__of">%</span></dd>
         </div>
         <div>
           <dt>Damage</dt>
@@ -345,10 +352,6 @@ function descend(): void {
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--note-ink-soft);
-}
-/* Greek stays cased — see the η note in the template. */
-.figures dt .glyph {
-  text-transform: none;
 }
 .figures dd {
   margin: 2px 0 0;

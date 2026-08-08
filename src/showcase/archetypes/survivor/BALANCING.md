@@ -110,7 +110,7 @@ so owning it makes beats land earlier than the schedule says.
 
 That front-loading is intended and bounded by `maxLevel`, unlike the collector
 case — but it is large: at full investment income roughly doubles and a run
-finishes its draft about six minutes before the horn. Two consequences a fork
+finishes its draft about six minutes before the purge. Two consequences a fork
 should not lose: the ladder is derived for a **zero-meta** run (deriving against
 mid-progression would make run 1 unplayable), and adding an income-side tile
 re-paces the whole meta arc rather than just its own line. Prefer a survival-side

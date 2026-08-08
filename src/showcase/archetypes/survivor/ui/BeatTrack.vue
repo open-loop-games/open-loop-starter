@@ -3,10 +3,10 @@ import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useBeatLadder } from '../composables/useBeatLadder';
 
 /**
- * The beat track — this archetype's central readout.
+ * The refit track — this archetype's central readout.
  *
  * A segmented notch per authored beat rather than a percentage bar, because the
- * question the run is asking is positional: *which* beat, out of the 33 the
+ * question the run is asking is positional: *which* refit, out of the 33 the
  * schedule holds. A generic progress bar answers "how full", which is not a
  * question anyone has about this economy.
  *
@@ -14,6 +14,18 @@ import { useBeatLadder } from '../composables/useBeatLadder';
  * beats land on the authored schedule (`../IDENTITY.md` § Rate-function spine),
  * so the distance between the filled edge and the ghost IS the
  * collection-starvation binding cause forming — visible live, without a probe.
+ *
+ * ─── One thing, two vocabularies, deliberately ───
+ * The spine calls this a **beat**: `data/schedule.ts` authors beats, the ladder
+ * is derived against them, the probes report a schedule delta in them, and
+ * `manifest.beats` is the starter-wide contract. The player is never told any of
+ * that — on screen it is a **refit**, the moment the floor holds and the
+ * apparatus changes. Code keeps the spine's word so a balance pass and its
+ * receipts stay greppable; copy keeps the fiction's. Where they meet — here —
+ * the split is named rather than resolved, because collapsing it either way
+ * loses something real: renaming the data would sever the probes from their own
+ * vocabulary, and shipping "draft beat" to a player is a balance document
+ * leaking onto the HUD.
  */
 
 const ladder = useBeatLadder();
@@ -48,7 +60,7 @@ const notches = computed(() => {
 
 const deltaLabel = computed(() => {
   const d = ladder.delta.value;
-  if (d === 0) return 'on schedule';
+  if (d === 0) return 'on pace';
   return d > 0 ? `${d} ahead` : `${Math.abs(d)} behind`;
 });
 
@@ -62,7 +74,7 @@ const deltaState = computed(() => {
 <template>
   <div class="beat-track" :class="{ 'beat-track--flash': flashing }">
     <div class="beat-track__head">
-      <span class="beat-track__label"><span>Draft beats</span></span>
+      <span class="beat-track__label"><span>Refits</span></span>
       <span class="beat-track__count num" data-num
         >{{ ladder.level.value }}<span class="beat-track__of">/{{ ladder.total }}</span></span
       >
@@ -72,7 +84,7 @@ const deltaState = computed(() => {
     <div
       class="beat-track__notches"
       role="img"
-      :aria-label="`Beat ${ladder.level.value} of ${ladder.total}, ${deltaLabel}`"
+      :aria-label="`Refit ${ladder.level.value} of ${ladder.total}, ${deltaLabel}`"
     >
       <span
         v-for="n in notches"
@@ -99,7 +111,7 @@ const deltaState = computed(() => {
       <span class="num" data-num>{{
         Number.isFinite(ladder.nextThreshold.value) ? Math.ceil(ladder.nextThreshold.value) : '—'
       }}</span>
-      <span class="beat-track__unit">next beat</span>
+      <span class="beat-track__unit">next refit</span>
     </div>
   </div>
 </template>
@@ -244,13 +256,13 @@ const deltaState = computed(() => {
 .beat-track--flash .beat-track__label {
   color: var(--mote);
 }
-/* Swaps in for "Draft beats" while the flash is up, so the reveal says what it
-   is rather than only drawing attention to itself. */
+/* Swaps in for "Refits" while the flash is up, so the reveal says what it is
+   rather than only drawing attention to itself. */
 .beat-track--flash .beat-track__label span {
   display: none;
 }
 .beat-track--flash .beat-track__label::after {
-  content: 'Beat fired';
+  content: 'Bench open';
 }
 
 .beat-track__foot {

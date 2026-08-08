@@ -3,10 +3,8 @@ import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue';
 import { Application, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { useModule } from '@/composables/useModule';
 import { ArenaKey } from '../modules/arena';
-import { MetaKey } from '../modules/meta';
 import { ARENA_BALANCE } from '../data/arena';
 import { DEVICES } from '../data/devices';
-import { collectRadius } from '../modules/sim/step';
 import type { ArenaState } from '../modules/sim/types';
 
 /**
@@ -25,8 +23,9 @@ import type { ArenaState } from '../modules/sim/types';
  * primordial) with cadence-versus-smoothing as its open question: skirmish eases
  * exponentially toward truth and is fine at 20 Hz; primordial snapshots
  * prev+curr per step and tweens at the intra-step blend factor because at 4 Hz
- * easing reads as lag. This arena steps at 20 Hz, so it takes the easing branch
- * and confirms it — see § Smoothing below.
+ * easing reads as lag. This arena steps at 20 Hz too and it takes NEITHER branch
+ * — see § Smoothing, which is where the recipe's open question gets its real
+ * discriminator.
  *
  * Two divergences from the prior two receipts, both structural rather than
  * stylistic, and both worth carrying into the dive:
@@ -48,7 +47,6 @@ import type { ArenaState } from '../modules/sim/types';
  */
 
 const arena = useModule(ArenaKey);
-const meta = useModule(MetaKey);
 const host = useTemplateRef<HTMLDivElement>('host');
 const wash = useTemplateRef<HTMLDivElement>('wash');
 
@@ -57,7 +55,7 @@ const wash = useTemplateRef<HTMLDivElement>('wash');
  * its AREA rather than either axis, so the amount of floor on screen (and with it
  * the apparent size of a body) is the same on a square host and a 3:1 one.
  *
- * Sized against what the sim actually simulates rather than against the rings.
+ * Sized against what the sim actually simulates rather than against the operator.
  * Specimens live out to 1.4 × the spawn annulus — 1064 units — and are culled
  * beyond it, so a view of 1000 × 560 showed a quarter of the live population at
  * best: the HUD read "399 on the floor" over a field with a dozen dots on it, and
@@ -75,17 +73,53 @@ const VIEW_HEIGHT = 900;
 const SPAWN_FADE_SECONDS = 0.5;
 
 /**
- * ─── Smoothing ───
- * Render position eases toward sim truth at this rate (1/s), framerate-independent
- * via `1 - e^(-k·dt)`. At the 20 Hz sim step a 50 ms staleness worst case is
- * below the ~100 ms where easing starts reading as input lag, so easing is the
- * right branch here and no prev/curr snapshot pair is needed. That is this
- * build's answer to the recipe's open question, and it agrees with skirmish.
+ * ─── Smoothing: dead reckoning, not easing ───
+ *
+ * Every rendered body carries a velocity measured off the last two sim samples
+ * and INTEGRATES it at frame rate; the sim sample is used to correct the
+ * accumulated error, not to supply the motion. So the render position is
+ * `∫v dt` with a decaying error term rather than a chase toward a value that
+ * only moves 20 times a second.
+ *
+ * Easing was the wrong branch here, and the reason is not the cadence. An
+ * exponential chase has a time constant (`1/k`); when that is anywhere near the
+ * step interval, the render velocity ripples WITHIN each step — fast just after
+ * a sample lands, slow just before the next — and 20 samples a second means 20
+ * of those ripples a second. Skirmish gets away with it because nothing it eases
+ * is load-bearing for motion perception: a static fit, no camera, no hand on the
+ * keys. Here the eased value drove the CAMERA, so the ripple was applied to the
+ * whole floor at once, and a player pressing D felt the world breathe rather
+ * than scroll.
+ *
+ * The discriminator the recipe's open question actually wants is therefore not
+ * "how fast does the sim step" but **what does the smoothed value drive** — a
+ * decoration, or the camera and the body the player is steering. Dead reckoning
+ * costs one extra vector per entity and is correct at any cadence.
+ *
+ * Measured on one WASD walk, both filters replayed over the same sim trace, as
+ * frame-to-frame camera speed against a 120 u/s walk: the old chase ran a 15.3%
+ * coefficient of variation (sd 17.9, p05–p95 98–138 u/s), dead reckoning runs
+ * 2.5% (sd 3.0, p05–p95 115–127). Six times less ripple, and the residual is
+ * frame-pacing rather than the filter.
  */
-const SMOOTH = 18;
-/** The camera lags the operator slightly more than entities lag their truth, so
- *  the floor slides rather than snapping when the steering policy reverses. */
-const CAMERA_SMOOTH = 9;
+/** Rate (1/s) at which accumulated prediction error is pulled out. It corrects
+ *  error only — motion comes from the integrated velocity — so there is no
+ *  steady-state lag to trade against, unlike an easing constant. */
+const CORRECTION = 12;
+/**
+ * Cap on how far ahead of the last sim sample a body may be predicted, in real
+ * seconds. The floor genuinely stops — a pending draft holds it (`../modules/run.ts`),
+ * and a background tab throttles the tick — and unbounded prediction would walk
+ * four hundred bodies off the map while nothing was simulating.
+ */
+const MAX_LEAD = 0.12;
+/**
+ * Sample-to-sample distance above which a body is treated as having been placed
+ * rather than having moved: a fresh run recentres the operator, and a splitter's
+ * fragments appear beside a corpse. Deriving a velocity from those puts a body
+ * on a trajectory it was never on.
+ */
+const TELEPORT = 400;
 
 /** How long a device-discharge flash stays on screen, in seconds. */
 const FLASH_SECONDS = 0.18;
@@ -120,23 +154,70 @@ let ro: ResizeObserver | null = null;
 let world: Container | null = null;
 let moteLayer: Container | null = null;
 let specimenLayer: Container | null = null;
-let ringGfx: Graphics | null = null;
 let flashGfx: Graphics | null = null;
 let operatorGfx: Graphics | null = null;
 let fxGfx: Graphics | null = null;
 let moteTex: Texture | null = null;
 const shapeTex = new Map<SpecimenShape, Texture>();
 
-/** Eased camera centre, in sim units. */
+/** Camera centre, in sim units. Pinned to the operator's RENDERED position — see
+ *  `frame` — so the operator holds still and the floor is what moves. */
 let camX = ARENA_BALANCE.mapWidth / 2;
 let camY = ARENA_BALANCE.mapHeight / 2;
 let scale = 1;
-/** Wall-clock seconds since mount; drives the ring sweep and the notch drift. */
-let phase = 0;
 
-/** Specimen sprites keyed by the sim's entity id, with their eased position and
- *  their remaining fade-in. */
-const specimenSprites = new Map<number, { sprite: Sprite; rx: number; ry: number; fade: number }>();
+/**
+ * A dead-reckoned body: the last sim sample (`s*`), the velocity measured off
+ * the previous one (`v*`), and the integrated render position (`r*`).
+ */
+interface Reckoned {
+  sx: number;
+  sy: number;
+  vx: number;
+  vy: number;
+  rx: number;
+  ry: number;
+}
+
+/** Real seconds since the last observed sim sample. REAL, not sim: the dev speed
+ *  buttons scale sim time and the render clock has to stay on the wall. */
+let sinceStep = 0;
+
+/** Take a new sim sample into a reckoned body, deriving its velocity. */
+function sample(body: Reckoned, x: number, y: number, gap: number): void {
+  const dx = x - body.sx;
+  const dy = y - body.sy;
+  if (dx * dx + dy * dy > TELEPORT * TELEPORT) {
+    body.vx = 0;
+    body.vy = 0;
+    body.rx = x;
+    body.ry = y;
+  } else {
+    body.vx = dx / gap;
+    body.vy = dy / gap;
+  }
+  body.sx = x;
+  body.sy = y;
+}
+
+/** Integrate one frame of motion and bleed off the prediction error. */
+function reckon(body: Reckoned, dtSec: number, correction: number): void {
+  body.rx += body.vx * dtSec;
+  body.ry += body.vy * dtSec;
+  body.rx += (body.sx + body.vx * sinceStep - body.rx) * correction;
+  body.ry += (body.sy + body.vy * sinceStep - body.ry) * correction;
+}
+
+function reckonedAt(x: number, y: number): Reckoned {
+  return { sx: x, sy: y, vx: 0, vy: 0, rx: x, ry: y };
+}
+
+/** The operator, dead-reckoned. The camera rides this, not the sim sample. */
+let operator: Reckoned = reckonedAt(ARENA_BALANCE.mapWidth / 2, ARENA_BALANCE.mapHeight / 2);
+
+/** Specimen sprites keyed by the sim's entity id, with their reckoned position
+ *  and their remaining fade-in. */
+const specimenSprites = new Map<number, { sprite: Sprite; body: Reckoned; fade: number }>();
 /** Mote sprites are POOLED, not keyed: the population is unbounded and mostly
  *  offscreen, so each frame assigns visible motes to pool slots. */
 const motePool: Sprite[] = [];
@@ -159,7 +240,7 @@ function resize(): void {
   // `cover` crops the short axis, which is what buried the horde off-screen in a
   // wide host, and `contain` on that same host zooms out until bodies are dust to
   // satisfy a height nobody asked for. Equal-area keeps the apparent size of a
-  // specimen — and the share of the screen the kill ring occupies — constant, and
+  // specimen — and the share of the floor a kill radius spans — constant, and
   // lets a wide window simply see wider. There is no letterbox to guard against:
   // the floor is 8000 × 5200 and every direction has more of it.
   scale = Math.sqrt((cw * ch) / (VIEW_WIDTH * VIEW_HEIGHT));
@@ -261,143 +342,6 @@ function buildFloor(): Container {
 }
 
 /**
- * The two-ring operator glyph — the archetype's signature element.
- *
- * `r_collect` against `r_kill` is the top coupling in this game
- * (`data/arena.ts` § Balance): kills land at the outer edge, motes land where
- * the specimen died, and the collect ring is smaller, so banking income means
- * looping back through the space just cleared. Drawing both rings with the gap
- * between them shaded makes that transaction the most legible thing on screen
- * rather than an invariant buried in a constants file.
- */
-/** Radians per second the kill-ring sweep rotates. Slow on purpose: it says the
- *  apparatus is live, it is not asking for attention every second for ten hours. */
-const SWEEP_RATE = 0.5;
-
-function drawRings(state: ArenaState, phase: number, collectPulse: number): void {
-  const g = ringGfx;
-  if (!g) return;
-  const { x, y } = state.operator;
-  const kill = ARENA_BALANCE.killRadius;
-  const collect = liveCollectRadius(state);
-  g.clear();
-
-  // ─── the ash annulus, drawn as a place ───
-  // The band between "killed here" and "banked here" IS the top coupling of this
-  // economy (`../data/arena.ts` § Balance). Two outlines left it as the emptiness
-  // between them; radial spokes make it a floor you can see you have to re-cross.
-  // Hung from the kill boundary inward rather than grown from the aperture
-  // outward: twenty-four lines converging on the small circle read as a
-  // starburst centred on the operator, which is a second focal point three
-  // centimetres from the first one.
-  const SPOKES = 24;
-  const spokeStart = collect + (kill - collect) * 0.55;
-  for (let i = 0; i < SPOKES; i++) {
-    const a = (i / SPOKES) * Math.PI * 2 + phase * 0.08;
-    g.moveTo(x + Math.cos(a) * spokeStart, y + Math.sin(a) * spokeStart).lineTo(
-      x + Math.cos(a) * kill,
-      y + Math.sin(a) * kill,
-    );
-  }
-  g.stroke({ color: 0x7fd6ff, width: 0.8, alpha: 0.06 });
-
-  // ─── kill ring: an instrument boundary, not a circle ───
-  // Dashed rather than solid because it is a THRESHOLD reading, and because a
-  // continuous 360-unit outline at 36% of view width is the heaviest object on
-  // the screen no matter how faint the line is. Broken into 48 marks it reads as
-  // a graduation and stops competing with the bodies crossing it.
-  const MARKS = 48;
-  const span = ((Math.PI * 2) / MARKS) * 0.52;
-  for (let i = 0; i < MARKS; i++) {
-    const a = (i / MARKS) * Math.PI * 2;
-    g.moveTo(x + Math.cos(a) * kill, y + Math.sin(a) * kill).arc(x, y, kill, a, a + span);
-  }
-  g.stroke({ color: 0x7fd6ff, width: 1.3, alpha: 0.3 });
-
-  // Cardinal ticks — the graduation's decade marks, so the ring has an
-  // orientation and the heading pip has something to be read against.
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2;
-    g.moveTo(x + Math.cos(a) * (kill - 9), y + Math.sin(a) * (kill - 9)).lineTo(
-      x + Math.cos(a) * (kill + 9),
-      y + Math.sin(a) * (kill + 9),
-    );
-  }
-  g.stroke({ color: 0x7fd6ff, width: 1.6, alpha: 0.4 });
-
-  // The live sweep. One bright arc travelling the boundary, with two dimmer
-  // segments trailing it — the whole animation budget of this screen, spent on
-  // the one element that has to say "energised" for ten hours without blinking.
-  const head = phase * SWEEP_RATE;
-  for (let i = 0; i < 3; i++) {
-    const from = head - i * 0.42 - 0.4;
-    g.moveTo(x + Math.cos(from) * kill, y + Math.sin(from) * kill).arc(
-      x,
-      y,
-      kill,
-      from,
-      from + 0.4,
-    );
-    g.stroke({ color: 0xdff4ff, width: 2, alpha: 0.34 - i * 0.11 });
-  }
-
-  // ─── collect ring: the intake aperture ───
-  // Weighted the opposite way to the kill ring: this one is a PLACE, so it keeps
-  // its fill and its crisp warm edge. It also answers — the ring thickens and
-  // brightens for a moment each time it banks, which is the only feedback in the
-  // game that income happened, and it lands where the eye already is.
-  // A BAND inside the edge, not a filled disc. Reagents stack the aperture wide
-  // — Reclaimant caps at ×1.94 — and a flat fill over that area is a mustard
-  // blob covering half the floor, which inverts the hierarchy the two rings are
-  // for. An inward-fading rim says "aperture" at every radius it can reach.
-  g.circle(x, y, collect)
-    .fill({ color: 0xf2d675, alpha: 0.05 + collectPulse * 0.06 })
-    .circle(x, y, Math.max(0, collect - 16))
-    .cut();
-  g.circle(x, y, collect).stroke({
-    color: 0xf2d675,
-    width: 1.6 + collectPulse * 2.2,
-    alpha: 0.62 + collectPulse * 0.38,
-  });
-
-  // Intake notches, counter-rotating against the sweep. Machinery, and a second
-  // read on the aperture's size as reagents widen it mid-run.
-  const NOTCHES = 8;
-  for (let i = 0; i < NOTCHES; i++) {
-    const a = (i / NOTCHES) * Math.PI * 2 - phase * 0.3;
-    g.moveTo(x + Math.cos(a) * collect, y + Math.sin(a) * collect).lineTo(
-      x + Math.cos(a) * (collect - 8),
-      y + Math.sin(a) * (collect - 8),
-    );
-  }
-  g.stroke({ color: 0xf2d675, width: 2, alpha: 0.45 + collectPulse * 0.4 });
-}
-
-/**
- * Reach the sim's own collect-radius rule rather than restating it, so the ring
- * cannot drift from what actually banks a mote.
- *
- * `collectRadius` reads exactly two things off its params object — the reagent
- * chain (which lives on `state`) and `metaCollect` — so the rest is filler. The
- * meta multiplier is fixed for the duration of a run (the shop is between-runs
- * only), which is why reading it live here matches what the run opened with.
- */
-const RING_PARAM_FILLER = {
-  engage: 0,
-  eta: 0,
-  speedMul: 1,
-  dpsMul: 1,
-  toughnessMul: 1,
-  metaSurvival: 1,
-  metaYield: 1,
-  random: () => 0,
-} as const;
-
-function liveCollectRadius(state: ArenaState): number {
-  return collectRadius(state, { ...RING_PARAM_FILLER, metaCollect: meta.collectMul.value });
-}
-
-/**
  * Discharge flashes. The sim discards its activations, so the renderer detects a
  * fire by watching each device's cooldown timer re-arm (it counts down, then
  * jumps up). That keeps this a projection — no target selection is re-run here.
@@ -444,11 +388,12 @@ function nearestSpecimen(state: ArenaState, reach: number): { x: number; y: numb
   return best;
 }
 
-function drawFlashes(state: ArenaState, dtSec: number): void {
+/** Anchored to the operator's RENDERED position, not its sim sample — a discharge
+ *  that came out of a point 6 units from the muzzle reads as a rendering fault. */
+function drawFlashes(x: number, y: number, dtSec: number): void {
   const g = flashGfx;
   if (!g) return;
   g.clear();
-  const { x, y } = state.operator;
 
   flashes = flashes.filter((f) => {
     f.age += dtSec;
@@ -542,7 +487,7 @@ let puffs: Puff[] = [];
 const MAX_PUFFS = 48;
 const PUFF_SECONDS = 0.3;
 
-/** Decays to 0; drives the collect ring's answer to income. */
+/** Decays to 0; drives the operator glyph's intake pulse on banked income. */
 let collectPulse = 0;
 /** Decays to 0; drives the operator flash and the CSS hurt wash. */
 let hurtPulse = 0;
@@ -568,54 +513,118 @@ function drawPuffs(dtSec: number): void {
   });
 }
 
-function drawOperator(state: ArenaState): void {
-  if (!operatorGfx) return;
-  const { x, y, hp, maxHp } = state.operator;
-  const frac = maxHp > 0 ? Math.max(0, hp / maxHp) : 0;
+/**
+ * The operator glyph — now the only persistent apparatus on screen.
+ *
+ * The two range rings this used to sit inside are gone. `r_kill` and `r_collect`
+ * are still the top coupling of the economy (`../data/arena.ts` § Balance), but
+ * they are *stated* by what happens at them — bodies coming apart at one radius,
+ * motes vanishing at the other — and a pair of standing circles said the same
+ * thing continuously, at the size of a third of the screen, for ten hours. What
+ * the rings were carrying that events do not is income feedback; that moved onto
+ * this glyph as the intake pulse below.
+ *
+ * ─── The pixi path trap, because it bit this exact function ───
+ * `GraphicsContext.stroke()` does not begin a new path: it clears the active one
+ * and re-seeds it with a `moveTo` to the LAST POINT of what it just stroked
+ * (`GraphicsContext._initNextPathLocation`). So `.lineTo(…).stroke(…).arc(…)`
+ * draws a connecting chord from the end of the line to the start of the arc,
+ * silently, in the arc's colour — which is what put a green hook across the
+ * operator's hull. Every stroked element below therefore starts from either a
+ * closed primitive (`circle`) or an explicit `moveTo`.
+ */
+function drawOperator(state: ArenaState, x: number, y: number): void {
+  const g = operatorGfx;
+  if (!g) return;
+  const { hp, maxHp } = state.operator;
+  const frac = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
   const heading = state.operator.heading;
   const angle = Math.atan2(heading.y, heading.x);
   const hurt = hurtPulse;
 
-  operatorGfx
-    .clear()
-    .circle(x, y, 13)
-    .fill({ color: 0x0a0d0c })
-    .circle(x, y, 13)
-    .stroke({ color: hurt > 0 ? 0xff4d4d : 0xdff4ff, width: 2.5 + hurt * 2 })
-    // Heading pip — which way the cone and the next dive point. It sweeps rather
-    // than teleports now (`../modules/sim/steering.ts` § MAX_TURN_RATE), so it is
-    // a tell about where the operator is committing rather than a strobe.
-    .moveTo(x + Math.cos(angle) * 9, y + Math.sin(angle) * 9)
-    .lineTo(x + Math.cos(angle) * 22, y + Math.sin(angle) * 22)
-    .stroke({ color: 0xdff4ff, width: 2.5 })
-    // Condition ring: drains and reddens rather than sitting as a bar, so the
-    // one thing that ends the run is read where the eye already is.
-    .arc(x, y, 19, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac)
-    .stroke({ color: frac > 0.35 ? 0x5bc46f : 0xff4d4d, width: 3, alpha: 0.9 });
+  g.clear();
+
+  // Hull.
+  g.circle(x, y, 13).fill({ color: 0x0a0d0c });
+  g.circle(x, y, 13).stroke({ color: hurt > 0 ? 0xff4d4d : 0xdff4ff, width: 2.5 + hurt * 2 });
+
+  // Condition ring: drains and reddens rather than sitting as a bar, so the one
+  // thing that ends the run is read where the eye already is. A full ring is
+  // drawn as a `circle`, not an arc of exactly 2π — a start angle equal to its
+  // end angle is the degenerate case, and which way it resolves is not ours.
+  const tone = frac > 0.35 ? 0x5bc46f : 0xff4d4d;
+  if (frac >= 0.999) {
+    g.circle(x, y, 19).stroke({ color: tone, width: 3, alpha: 0.9 });
+  } else if (frac > 0) {
+    const from = -Math.PI / 2;
+    g.moveTo(x + Math.cos(from) * 19, y + Math.sin(from) * 19)
+      .arc(x, y, 19, from, from + Math.PI * 2 * frac)
+      .stroke({ color: tone, width: 3, alpha: 0.9 });
+  }
+
+  // Heading pip — which way the cone and the next dive point. It sweeps rather
+  // than teleports (`../modules/sim/steering.ts` § MAX_TURN_RATE), so it is a
+  // tell about where the operator is committing rather than a strobe.
+  //
+  // Hung OUTSIDE the condition ring and drawn last. Inside, it spanned 9→22
+  // against a ring occupying 17.5–20.5, so 1.5 units of it were visible and the
+  // glyph had no facing at all — which mattered less while two range circles
+  // were on screen giving the apparatus a presence, and matters a great deal now
+  // that this is the whole of it.
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  g.moveTo(x + cos * 21, y + sin * 21)
+    .lineTo(x + cos * 30, y + sin * 30)
+    .stroke({ color: 0xdff4ff, width: 3 });
+  // A tip, so the facing survives the squint at the size this glyph actually is.
+  g.moveTo(x + cos * 36, y + sin * 36)
+    .lineTo(x + cos * 28 - sin * 5, y + sin * 28 + cos * 5)
+    .lineTo(x + cos * 28 + sin * 5, y + sin * 28 - cos * 5)
+    .fill({ color: 0xdff4ff, alpha: 0.85 });
+
+  // Intake pulse — the one thing the collect ring was carrying that the floor
+  // does not already say. It fires on banked income and expands out through
+  // roughly where the aperture is, so the radius is still shown, just only at
+  // the moment it did something.
+  if (collectPulse > 0) {
+    g.circle(x, y, 18 + (1 - collectPulse) * 30).stroke({
+      color: 0xf2d675,
+      width: 1 + collectPulse * 2.5,
+      alpha: 0.7 * collectPulse,
+    });
+  }
 
   if (hurt > 0) {
-    operatorGfx
-      .circle(x, y, 24 + (1 - hurt) * 12)
-      .stroke({ color: 0xff4d4d, width: 2.5, alpha: 0.55 * hurt });
+    g.circle(x, y, 24 + (1 - hurt) * 12).stroke({
+      color: 0xff4d4d,
+      width: 2.5,
+      alpha: 0.55 * hurt,
+    });
   }
 }
 
 function frame(dtSec: number): void {
   if (!world || !moteLayer || !specimenLayer || !moteTex || !app) return;
   const state = arena.state.value;
-  const k = 1 - Math.exp(-SMOOTH * dtSec);
-  const ck = 1 - Math.exp(-CAMERA_SMOOTH * dtSec);
-  phase += dtSec;
+  const correction = 1 - Math.exp(-CORRECTION * dtSec);
 
-  // ─── sim-step diff: income banked, damage taken ───
+  // ─── sim-step diff: new sample, income banked, damage taken ───
   const stepped = state.time !== lastSimTime;
+  // How much real time the sample that just landed covers. Clamped low against a
+  // frame that happens to sit on top of a tick, and it is what makes every
+  // velocity below a per-REAL-second quantity — so the dev speed buttons scale
+  // the motion instead of desynchronising the prediction from it.
+  const gap = Math.max(sinceStep + dtSec, 1 / 240);
+  sinceStep = stepped ? 0 : Math.min(sinceStep + dtSec, MAX_LEAD);
   if (stepped) {
     lastSimTime = state.time;
+    sample(operator, state.operator.x, state.operator.y, gap);
     if (state.stats.motesBanked > lastBanked) collectPulse = 1;
     lastBanked = state.stats.motesBanked;
     if (state.operator.hp < lastHp - 1e-9) hurtPulse = 1;
     lastHp = state.operator.hp;
   }
+  reckon(operator, dtSec, correction);
   // Framerate-independent decay, same form as the position easing.
   collectPulse *= Math.exp(-6 * dtSec);
   hurtPulse *= Math.exp(-4.5 * dtSec);
@@ -624,8 +633,12 @@ function frame(dtSec: number): void {
   if (wash.value) wash.value.style.setProperty('--hurt', hurtPulse.toFixed(3));
 
   // ─── camera ───
-  camX += (state.operator.x - camX) * ck;
-  camY += (state.operator.y - camY) * ck;
+  // Pinned to the operator's reckoned position rather than chasing it. A second
+  // smoothing stage on top of a body that is already smooth adds nothing but its
+  // own lag, and pinning is what makes the operator the still point: everything
+  // the eye tracks during a dive is the floor sliding past a fixed glyph.
+  camX = operator.rx;
+  camY = operator.ry;
   const { width: cw, height: ch } = app.screen;
   world.x = cw / 2 - camX * scale;
   world.y = ch / 2 - camY * scale;
@@ -657,7 +670,7 @@ function frame(dtSec: number): void {
   }
   for (let i = used; i < motePool.length; i++) motePool[i].visible = false;
 
-  // ─── specimens, keyed by id and eased toward truth ───
+  // ─── specimens, keyed by id and dead-reckoned ───
   const seen = new Set<number>();
   for (const s of state.specimens) {
     seen.add(s.id);
@@ -671,13 +684,14 @@ function frame(dtSec: number): void {
       sprite.height = style.radius * 2;
       sprite.alpha = 0;
       specimenLayer.addChild(sprite);
-      rec = { sprite, rx: s.x, ry: s.y, fade: 0 }; // new arrivals snap to spawn
+      rec = { sprite, body: reckonedAt(s.x, s.y), fade: 0 }; // arrivals snap to spawn
       specimenSprites.set(s.id, rec);
+    } else if (stepped) {
+      sample(rec.body, s.x, s.y, gap);
     }
-    rec.rx += (s.x - rec.rx) * k;
-    rec.ry += (s.y - rec.ry) * k;
-    rec.sprite.x = rec.rx;
-    rec.sprite.y = rec.ry;
+    reckon(rec.body, dtSec, correction);
+    rec.sprite.x = rec.body.rx;
+    rec.sprite.y = rec.body.ry;
     if (rec.fade < 1) {
       rec.fade = Math.min(1, rec.fade + dtSec / SPAWN_FADE_SECONDS);
       rec.sprite.alpha = rec.fade;
@@ -691,20 +705,19 @@ function frame(dtSec: number): void {
   const puffRange2 = Math.pow(ARENA_BALANCE.killRadius * 1.3, 2);
   for (const [id, rec] of specimenSprites) {
     if (seen.has(id)) continue;
-    const dx = rec.rx - state.operator.x;
-    const dy = rec.ry - state.operator.y;
+    const dx = rec.body.rx - state.operator.x;
+    const dy = rec.body.ry - state.operator.y;
     if (dx * dx + dy * dy <= puffRange2 && puffs.length < MAX_PUFFS) {
-      puffs.push({ x: rec.rx, y: rec.ry, age: 0 });
+      puffs.push({ x: rec.body.rx, y: rec.body.ry, age: 0 });
     }
     rec.sprite.destroy();
     specimenSprites.delete(id);
   }
 
   collectFlashes(state);
-  drawRings(state, phase, collectPulse);
-  drawFlashes(state, dtSec);
+  drawFlashes(operator.rx, operator.ry, dtSec);
   drawPuffs(dtSec);
-  drawOperator(state);
+  drawOperator(state, operator.rx, operator.ry);
 }
 
 onMounted(async () => {
@@ -737,8 +750,6 @@ onMounted(async () => {
 
   moteLayer = new Container();
   world.addChild(moteLayer);
-  ringGfx = new Graphics();
-  world.addChild(ringGfx);
   specimenLayer = new Container();
   world.addChild(specimenLayer);
   flashGfx = new Graphics();
@@ -749,6 +760,8 @@ onMounted(async () => {
   world.addChild(operatorGfx);
 
   const start = arena.state.value.operator;
+  operator = reckonedAt(start.x, start.y);
+  sinceStep = 0;
   camX = start.x;
   camY = start.y;
   lastHp = start.hp;
@@ -775,7 +788,6 @@ onBeforeUnmount(() => {
   world = null;
   moteLayer = null;
   specimenLayer = null;
-  ringGfx = null;
   flashGfx = null;
   fxGfx = null;
   operatorGfx = null;

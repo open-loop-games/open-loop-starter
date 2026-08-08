@@ -6,7 +6,9 @@ import { RunKey } from '../modules/run';
 import { DEVICES, EVOLUTIONS, REAGENTS } from '../data/devices';
 
 /**
- * The draft, for a player seat — the beat where the floor stops and you choose.
+ * The draft, for a player seat — the refit where the floor stops and you choose.
+ * (Spine calls it a beat; the player is told "refit". `./BeatTrack.vue` § One
+ * thing, two vocabularies has why.)
  *
  * Rendered only while a pick is owed, which is exactly the window `run.ts` holds
  * the arena still for. The AI seats never reach here: their policy resolves the
@@ -59,10 +61,10 @@ function shapeOf(offer: DraftOffer): string | undefined {
 </script>
 
 <template>
-  <div v-if="open" class="draft" role="dialog" aria-label="Draft beat — choose one">
+  <div v-if="open" class="draft" role="dialog" aria-label="Refit — choose one">
     <div class="draft__panel">
       <p class="draft__title">
-        Beat <span class="num" data-num>{{ run.level.value }}</span> — requisition
+        Refit <span class="num" data-num>{{ run.level.value }}</span> — requisition
       </p>
       <div class="draft__offers">
         <button

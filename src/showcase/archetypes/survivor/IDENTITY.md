@@ -138,13 +138,16 @@ probes, per the graduated shared-pure-state-function discipline.
   mark the site.
 - `Spatial utility steering` — N=1 (primordial); its convergence signal names a
   bot layer, which the movement policy is.
-- Pixi field projection — **landed, N=3** (`ui/ArenaField.vue`). It took the
-  easing branch at 20 Hz without needing primordial's prev/curr snapshot pair, so
-  the recipe's cadence-versus-smoothing question resolves as a cadence threshold
-  rather than a preference. It also added two divergences the dive has to cover: a
-  *moving camera* where the prior receipts carry a static fit, and a
-  viewport-culled sprite pool for motes, whose population is unbounded because the
-  sim never despawns them. Recorded in `candidate-recipes-ui.md`.
+- Pixi field projection — **landed, N=3** (`ui/ArenaField.vue`). It runs neither
+  prior receipt's smoothing: per-entity dead reckoning, integrating a measured
+  velocity at frame rate with the sim sample correcting error only. That kills the
+  recipe's cadence-versus-smoothing question as posed — survivor steps at the same
+  20 Hz as skirmish and still needed it — and replaces it with a sharper one: what
+  the smoothed value *drives*. An eased camera under a player's hand ripples the
+  whole floor at 15.3% CV against 2.5% reckoned. It also added two divergences the
+  dive has to cover: a *moving camera* where the prior receipts carry a static fit,
+  and a viewport-culled sprite pool for motes, whose population is unbounded
+  because the sim never despawns them. Recorded in `candidate-recipes-ui.md`.
 
 ## Balance model
 

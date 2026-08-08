@@ -58,7 +58,7 @@ const condition = computed(() => {
       <div class="clock">
         <span class="clock__now num" data-num>{{ ladder.clock.value }}</span>
         <span class="clock__meta">
-          <span class="num" data-num>{{ remaining }}</span> to the horn
+          <span class="num" data-num>{{ remaining }}</span> until purge
         </span>
       </div>
 
