@@ -97,22 +97,11 @@ onBeforeUnmount(unmountArchetype);
 
 <template>
   <div class="sandbox">
-    <div
-      v-if="status === 'loading'"
-      class="sandbox__overlay"
-    >
-      Loading {{ archetype.id }}…
-    </div>
-    <div
-      v-else-if="status === 'error'"
-      class="sandbox__overlay sandbox__overlay--error"
-    >
+    <div v-if="status === 'loading'" class="sandbox__overlay">Loading {{ archetype.id }}…</div>
+    <div v-else-if="status === 'error'" class="sandbox__overlay sandbox__overlay--error">
       Failed to mount {{ archetype.id }}: {{ errorMessage }}
     </div>
-    <div
-      ref="host"
-      class="sandbox__host"
-    />
+    <div ref="host" class="sandbox__host" />
   </div>
 </template>
 
@@ -130,6 +119,12 @@ onBeforeUnmount(unmountArchetype);
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* The gallery mounts a whole archetype app inside its own chrome, so the
+     embedded app root must not claim a viewport of its own — this flex chain
+     already gives it a definite height. Without this the page overflows by the
+     height of the gallery bar above it, for every archetype, on both the slot
+     screen and the running game. */
+  --app-root-min-height: 0;
 }
 
 .sandbox__overlay {

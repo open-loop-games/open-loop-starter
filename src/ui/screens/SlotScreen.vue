@@ -64,26 +64,12 @@ function handleDeleteSlot(slotId: number) {
       {{ props.appName }}
     </h1>
 
-    <div
-      v-if="showModPicker"
-      class="picker-container"
-    >
-      <ModPicker
-        :mods="engine.mods"
-        @select="(modId) => startNewGame(modId)"
-      />
-      <Button
-        class="btn-sm"
-        @click="showModPicker = false"
-      >
-        Back
-      </Button>
+    <div v-if="showModPicker" class="picker-container">
+      <ModPicker :mods="engine.mods" @select="(modId) => startNewGame(modId)" />
+      <Button class="btn-sm" @click="showModPicker = false"> Back </Button>
     </div>
 
-    <div
-      v-else
-      class="slots-container"
-    >
+    <div v-else class="slots-container">
       <div class="slot-list">
         <SlotCard
           v-for="s in savedSlots"
@@ -98,12 +84,7 @@ function handleDeleteSlot(slotId: number) {
       </div>
 
       <div class="slot-actions">
-        <Button
-          class="btn-primary"
-          @click="handleNewGame"
-        >
-          New Game
-        </Button>
+        <Button class="btn-primary" @click="handleNewGame"> New Game </Button>
       </div>
     </div>
   </div>
@@ -115,7 +96,10 @@ function handleDeleteSlot(slotId: number) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  /* The other root surface an archetype app can show. Same claim as AppFrame,
+     same override when a host embeds it — see `--app-root-min-height`. */
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   padding: var(--gap-lg);
   gap: var(--gap-lg);
 }

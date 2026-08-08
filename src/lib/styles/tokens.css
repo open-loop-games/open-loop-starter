@@ -36,6 +36,13 @@
 
   --shell-sidebar-width: 250px;
   --shell-max-width: 1400px;
+  /* How tall an archetype app's root surface insists on being — AppFrame and
+     SlotScreen are the two mutually-exclusive ones, and both claim it. `100vh`
+     is right when the app IS the page, which is the ejected-fork case. A host
+     that embeds the app inside other chrome sets this to `0` and lets its own
+     flex chain size it — otherwise the app claims a full viewport it does not
+     have and the page overflows by exactly the height of the chrome above it. */
+  --app-root-min-height: 100vh;
   --modal-backdrop: rgba(0, 0, 0, 0.55);
   --modal-surface: var(--color-surface);
   --modal-radius: var(--radius);

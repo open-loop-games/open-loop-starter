@@ -20,23 +20,14 @@ provide(modalStackKey, props.stack ?? useModalStack());
 
 <template>
   <TooltipProvider :delay-duration="tooltipDelay">
-    <div
-      class="olui-app-frame"
-      :data-theme="theme"
-    >
-      <header
-        v-if="$slots.header"
-        class="olui-app-frame__header"
-      >
+    <div class="olui-app-frame" :data-theme="theme">
+      <header v-if="$slots.header" class="olui-app-frame__header">
         <slot name="header" />
       </header>
       <main class="olui-app-frame__main">
         <slot />
       </main>
-      <div
-        v-if="$slots.toasts"
-        class="olui-app-frame__toasts"
-      >
+      <div v-if="$slots.toasts" class="olui-app-frame__toasts">
         <slot name="toasts" />
       </div>
       <ModalStack />
@@ -48,7 +39,11 @@ provide(modalStackKey, props.stack ?? useModalStack());
 .olui-app-frame {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  /* Fills a flex-column parent when the frame is embedded in other chrome;
+     inert at the page root, where body is `display: block` and the min-height
+     below does the sizing instead. */
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   background: var(--color-bg);
   color: var(--color-text);
 }
