@@ -40,6 +40,16 @@ export function useSaveEvents(mgr: SaveManager): () => void {
     }),
 
     mgr.on('save:load-failed', (err) => {
+      // An empty slot is the first thing every new player and every fresh fork
+      // hits, and it is not a failure — toasting it as an undismissable error
+      // put "Save load failed" on the screen behind the opening moment of the
+      // game. Still logged, because a slot that is unexpectedly empty is worth
+      // finding in the console.
+      if (err.reason === 'not-found') {
+        console.info('[save] no save in slot — starting fresh');
+        pendingHealed = 0;
+        return;
+      }
       addToast('Save load failed', describeFailure(err.reason), false);
       console.error('[save] load failed:', err.reason, err.detail);
       pendingHealed = 0;
