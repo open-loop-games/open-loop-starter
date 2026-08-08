@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useModule } from '@/composables/useModule';
 import { ArenaKey } from '../modules/arena';
 import { DEVICES, EVOLUTIONS, REAGENTS } from '../data/devices';
+import { deviceCooldown } from '../modules/sim/dispatch';
 
 /**
  * The instrument rack — the Run-Scoped Upgrade Tree, as it stands right now.
@@ -21,10 +22,16 @@ const arena = useModule(ArenaKey);
 const EVO_BY_ID = new Map(EVOLUTIONS.map((e) => [e.id, e]));
 
 const mounts = computed(() => {
+  const stacks = arena.state.value.reagentStacks;
   const held = new Map(arena.state.value.devices.map((d) => [d.defId, d]));
   return DEVICES.map((def) => {
     const rt = held.get(def.id);
     const evo = rt?.evolutionId ? EVO_BY_ID.get(rt.evolutionId) : undefined;
+    // Charge, not remaining: the plate fills toward its next discharge. This is
+    // the only place the archetype's Cooldown-Rotation is legible — four devices
+    // on deliberately distinct cadences (`../data/devices.ts`), and until the
+    // plates answered, the rotation happened entirely off-screen.
+    const cooldown = rt ? deviceCooldown(rt, stacks) : 0;
     return {
       id: def.id,
       name: evo?.name ?? def.name,
@@ -34,6 +41,10 @@ const mounts = computed(() => {
       installed: rt !== undefined,
       evolved: evo !== undefined,
       maxed: rt !== undefined && rt.level >= def.maxLevel,
+      charge:
+        rt && cooldown > 0 && Number.isFinite(cooldown)
+          ? Math.min(1, Math.max(0, 1 - rt.timer / cooldown))
+          : 0,
     };
   });
 });
@@ -78,6 +89,12 @@ const stacks = computed(() => {
           />
         </span>
         <span v-else class="plate__mount">unmounted</span>
+        <span
+          v-if="m.installed"
+          class="plate__charge"
+          :style="{ '--charge': m.charge }"
+          aria-hidden="true"
+        />
       </div>
     </div>
 
@@ -110,6 +127,8 @@ const stacks = computed(() => {
 }
 
 .plate {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -194,6 +213,28 @@ const stacks = computed(() => {
   color: var(--color-text-muted);
   font-size: 0.66rem;
   letter-spacing: 0.05em;
+}
+
+/* Charge, on the plate's own bottom edge. `scaleX` on a fixed-width bar rather
+   than an animated `width`, so twenty updates a second across four plates never
+   touch layout — the same rule the counters follow. */
+.plate__charge {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  transform: scaleX(var(--charge, 0));
+  transform-origin: left center;
+  background: var(--arc);
+  opacity: 0.55;
+}
+.plate--maxed .plate__charge {
+  background: var(--mote);
+}
+.plate--evolved .plate__charge {
+  background: var(--sodium);
+  opacity: 0.75;
 }
 
 .rack__reagents {

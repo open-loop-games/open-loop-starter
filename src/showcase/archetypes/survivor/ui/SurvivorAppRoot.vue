@@ -58,8 +58,9 @@ onUnmounted(() => {
             banking income means diving back through what you just cleared.
           </p>
           <p>
-            Every seat is an AI policy, so the arc plays and balances before a human seat exists.
-            See <code>IDENTITY.md</code> for the spine.
+            Assign the floor to yourself and drive with WASD, or hand it to one of four AI policies
+            and watch its theory of survival play out — same mechanics either way, which is what
+            lets the arc be balanced headless. See <code>IDENTITY.md</code> for the spine.
           </p>
         </template>
       </SystemHeader>

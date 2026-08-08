@@ -277,8 +277,10 @@ export function createDraftModule(options: { seed?: number } = {}): EngineModule
         }
 
         // The AI seat answers immediately. A human seat simply does not, and the
-        // run module holds the floor until `choose` is called.
+        // run module holds the floor until `ui/DraftOverlay.vue` calls `choose`.
         const seat = arena.seat.value;
+        if (seat.driver === 'player') return;
+
         let bestIdx = 0;
         let bestScore = -Infinity;
         offers.value.forEach((offer, i) => {

@@ -15,6 +15,7 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 - **ReagentEffect** _(string-literal union)_ — `cooldown` · `damage` · `reach` · `toughness` · `collect` · `moveSpeed`
 - **MetaSide** _(string-literal union)_ — `survival` · `income`
 - **MetaEffect** _(string-literal union)_ — `damage` · `toughness` · `moveSpeed` · `collectRadius` · `moteYield` · `revive`
+- **SeatDriver** _(string-literal union)_ — `policy` · `player`
 
 ## Definitions
 

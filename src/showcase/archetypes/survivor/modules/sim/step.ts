@@ -8,8 +8,15 @@ import {
   activeSpecimens,
 } from '../../data/specimens';
 import { chainMul, tickRotation } from './dispatch';
-import { chooseHeading, computeFields, hasEscape, type Fields, type NavGrid } from './steering';
-import type { ArenaParams, ArenaState, Specimen } from './types';
+import {
+  chooseHeading,
+  computeFields,
+  hasEscape,
+  slewHeading,
+  type Fields,
+  type NavGrid,
+} from './steering';
+import type { ArenaParams, ArenaState, Specimen, Vec2 } from './types';
 
 /** How often the steering fields are rebuilt, in sim seconds. */
 export const FIELD_REFRESH_SECONDS = 0.25;
@@ -138,9 +145,37 @@ export function stepArena(
   }
 
   // ─── operator movement ───
-  const heading = chooseHeading(state, nav, fields, params);
+  // One mechanic, two drivers. A player-seat's input replaces the policy's
+  // OUTPUT, not its machinery: everything downstream — device aiming off the
+  // heading, contact, collection — reads the same fields either way.
+  let heading: Vec2;
+  let moving = true;
+  if (params.control) {
+    const input = params.control();
+    if (input) {
+      // Direct control is direct: no slew. The turn-rate limit exists so an
+      // arg-max cannot flail (`./steering.ts` § MAX_TURN_RATE); a hand on the
+      // keys is not flailing, and rate-limiting it would just read as lag.
+      const len = Math.hypot(input.x, input.y) || 1;
+      heading = { x: input.x / len, y: input.y / len };
+    } else {
+      // Nothing held. Hold the heading so the cone keeps pointing where the
+      // player last aimed, but stop moving — coasting would make "let go" a
+      // move rather than the absence of one.
+      heading = state.operator.heading;
+      moving = false;
+    }
+  } else {
+    // Decide freely, execute at a bounded turn rate. The operator has mass; a
+    // policy that can pivot instantly reads as a glitch even when it is choosing
+    // correctly (`./steering.ts` § MAX_TURN_RATE).
+    const desired = chooseHeading(state, nav, fields, params);
+    heading = slewHeading(state.operator.heading, desired, dt);
+  }
   state.operator.heading = heading;
-  const speed = BASE_MOVE_SPEED * params.speedMul * chainMul('moveSpeed', state.reagentStacks);
+  const speed = moving
+    ? BASE_MOVE_SPEED * params.speedMul * chainMul('moveSpeed', state.reagentStacks)
+    : 0;
   state.operator.x = Math.min(mapWidth, Math.max(0, state.operator.x + heading.x * speed * dt));
   state.operator.y = Math.min(mapHeight, Math.max(0, state.operator.y + heading.y * speed * dt));
 

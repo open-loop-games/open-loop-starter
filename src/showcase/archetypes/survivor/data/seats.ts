@@ -1,19 +1,28 @@
 // ─── Skeleton ───
 // The seats — simultaneously the character-select roster, the AI policy bundles
 // that drive them, and the balance sweep axis (`../IDENTITY.md` § What this
-// archetype is). Survivor ships every seat driven by shipping automation, so the
-// archetype is fully playable and balanceable before a human seat exists; a
-// player seat is a policy swapped for input.
+// archetype is). Every seat here is driven by shipping automation, which is what
+// makes the arc balanceable headless; `PLAYER_SEAT` below is the same seat with
+// the policy swapped for input, and it changes no mechanic on the way.
 //
 // A seat is a POLICY BUNDLE, not a stat block. `engage`/`eta` bias the movement
 // policy, `defenseShare` biases the draft policy, and the multipliers seed the
 // rest. Pure config; `../modules/automation.ts` reads it at construction.
+
+/**
+ * Who answers for this seat. `policy` runs the shipping movement and draft
+ * policies off the dials below; `player` swaps both for input and leaves the
+ * dials inert — the two are the same seam the arena and the draft already
+ * document, named once so the modules can branch on it instead of on an id.
+ */
+export type SeatDriver = 'policy' | 'player';
 
 export interface SeatDef {
   id: string;
   name: string;
   /** One line of character-select copy — the seat's theory of survival. */
   blurb: string;
+  driver: SeatDriver;
   /** Share of spawned specimens brought inside `r_kill`. Movement policy. */
   engage: number;
   /** `η` — share of dropped motes banked without a collector. Movement policy. */
@@ -39,6 +48,7 @@ export const SEATS: SeatDef[] = [
     id: 'generalist',
     name: 'The Generalist',
     blurb: 'No theory. Reads the floor and takes what it offers.',
+    driver: 'policy',
     engage: 0.55,
     eta: 0.65,
     speed: 1.0,
@@ -50,6 +60,7 @@ export const SEATS: SeatDef[] = [
     id: 'kinetic',
     name: 'The Kineticist',
     blurb: 'Never be where it is. Wide orbits, late sweeps, nothing touches you.',
+    driver: 'policy',
     engage: 0.4,
     eta: 0.78,
     speed: 1.35,
@@ -61,6 +72,7 @@ export const SEATS: SeatDef[] = [
     id: 'reactive',
     name: 'The Reactionist',
     blurb: 'Nothing that is dead can hurt you. Thin the floor, dive the ash.',
+    driver: 'policy',
     engage: 0.72,
     eta: 0.6,
     speed: 0.95,
@@ -72,6 +84,7 @@ export const SEATS: SeatDef[] = [
     id: 'shielded',
     name: 'The Shielded',
     blurb: 'Let it hit you. Walk through the mass and take the motes anyway.',
+    driver: 'policy',
     engage: 0.62,
     eta: 0.68,
     speed: 0.85,
@@ -81,12 +94,40 @@ export const SEATS: SeatDef[] = [
   },
 ];
 
+/**
+ * The player seat. Deliberately NOT a member of `SEATS`, which is the balance
+ * sweep axis: a seat with no policy behind it has no arc to measure, and a probe
+ * that included it would report a stationary operator as a balance reading.
+ *
+ * Its dials are all 1.0 and its policy dials are inert. That is the honest
+ * statement of what it is — the baseline body with the policy removed — and it
+ * keeps the roster's rule intact, that a seat earns its place by being good at
+ * something the income product does not express. This one is good at whatever
+ * you are.
+ */
+export const PLAYER_SEAT: SeatDef = {
+  id: 'manual',
+  name: 'Yourself',
+  blurb: 'No policy. WASD or the arrows, and you answer the draft.',
+  driver: 'player',
+  engage: 0.55,
+  eta: 0.65,
+  speed: 1.0,
+  dps: 1.0,
+  toughness: 1.0,
+  defenseShare: 0.35,
+};
+
+/** Everything assignable to the floor. `SEATS` is the measurable roster; this is
+ *  the pickable one, and only the UI and `seatById` want it. */
+export const ALL_SEATS: readonly SeatDef[] = [PLAYER_SEAT, ...SEATS];
+
 /** The seat the ladder is derived against. */
 export const BASELINE_SEAT: SeatDef = SEATS[0];
 
 /** Look a seat up by id. Throws rather than returning undefined — ids are data. */
 export function seatById(id: string): SeatDef {
-  const seat = SEATS.find((s) => s.id === id);
+  const seat = ALL_SEATS.find((s) => s.id === id);
   if (!seat) throw new Error(`survivor/seats: no seat with id "${id}"`);
   return seat;
 }

@@ -17,7 +17,7 @@ import { SurvivorTuningRegistryKey } from './tuning';
 import { MetaKey } from './meta';
 import { createArenaState, refreshFields, stepArena, type StepResult } from './sim/step';
 import { NAV_CELL, type Fields, type NavGrid } from './sim/steering';
-import type { ArenaParams, ArenaState } from './sim/types';
+import type { ArenaParams, ArenaState, Vec2 } from './sim/types';
 
 /**
  * Arena module — owns the real-time floor and drives it from the engine tick.
@@ -33,7 +33,16 @@ import type { ArenaParams, ArenaState } from './sim/types';
  * cost for no benefit, since the UI only ever reads a rendered projection of it.
  */
 
-export type RunOutcome = 'running' | 'died' | 'trapped' | 'survived';
+/**
+ * `briefing` is the state a fresh engine opens in — the floor exists and is
+ * rendered, but nothing steps until a seat has been assigned.
+ *
+ * It is here because seat choice has to happen BEFORE the first run once a
+ * player seat exists, and the debrief was the only place offering it. Everything
+ * downstream already branched on `!== 'running'`, so the between-runs surface
+ * covers the before-the-first-run case for free.
+ */
+export type RunOutcome = 'briefing' | 'running' | 'died' | 'trapped' | 'survived';
 
 export interface ArenaApi {
   /** The live floor. Bumped on each step so renderers can watch one ref. */
@@ -45,6 +54,14 @@ export interface ArenaApi {
   banked: ComputedRef<number>;
   /** The seat driving this run. The draft policy reads its dials. */
   seat: ComputedRef<SeatDef>;
+  /**
+   * Post the desired unit heading for a player-driven seat; `null` for nothing
+   * held. Written by `composables/usePlayerControl.ts` whenever the key set
+   * changes, NOT per frame — the sim samples it at its own 20 Hz.
+   *
+   * A no-op for policy seats, so the caller never has to ask which it is.
+   */
+  setControl: (heading: { x: number; y: number } | null) => void;
   /** Begin a run on the given seat. Resets the floor. */
   startRun: (seatId?: string) => void;
   /** Stop stepping without clearing state, so the outcome stays readable. */
@@ -114,7 +131,12 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
       // so every consumer would read the first value forever while the real
       // outcome moved on. Silent, and it deadlocks the run: the lifecycle keeps
       // ticking a floor that has already stopped advancing.
-      const outcome = ref<RunOutcome>('running');
+      const outcome = ref<RunOutcome>('briefing');
+
+      // Plain `let`, deliberately: the pure step reads this every tick through a
+      // closure and nothing renders off it, so a ref would buy reactivity nobody
+      // subscribes to and pay for it on the hot path.
+      let control: Vec2 | null = null;
 
       const state = shallowRef<ArenaState>(createArenaState(params));
       // Touch the tunables so a scope push is observed at read time rather than
@@ -129,12 +151,20 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
         persistentState.runsStarted.value += 1;
         // Meta multipliers are read at run START, not at install: a run opens
         // with whatever the shop has bought by then, and stays fixed for its arc.
-        params = buildParams(chosen, {
-          ...options,
-          metaSurvival: options.metaSurvival ?? meta.survivalMul.value,
-          metaCollect: options.metaCollect ?? meta.collectMul.value,
-          metaYield: options.metaYield ?? meta.yieldMul.value,
-        });
+        control = null;
+        params = buildParams(
+          chosen,
+          {
+            ...options,
+            metaSurvival: options.metaSurvival ?? meta.survivalMul.value,
+            metaCollect: options.metaCollect ?? meta.collectMul.value,
+            metaYield: options.metaYield ?? meta.yieldMul.value,
+          },
+          // The reader is installed only for a player seat. Its ABSENCE is what
+          // selects the movement policy in `stepArena`, so a policy seat cannot
+          // accidentally be steered by a stale key that is still held.
+          chosen.driver === 'player' ? () => control : undefined,
+        );
         state.value = createArenaState(params);
         fields = undefined;
         outcome.value = 'running';
@@ -166,6 +196,9 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
         elapsed: computed(() => state.value.time),
         banked: computed(() => state.value.stats.motesBanked),
         seat: computed(() => seatById(persistentState.seatId.value)),
+        setControl: (heading) => {
+          control = heading;
+        },
         startRun,
         endRun,
         advance,
@@ -174,7 +207,11 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
   };
 }
 
-function buildParams(seat: SeatDef, options: ArenaModuleOptions): ArenaParams {
+function buildParams(
+  seat: SeatDef,
+  options: ArenaModuleOptions,
+  control?: () => Vec2 | null,
+): ArenaParams {
   return {
     engage: seat.engage,
     eta: seat.eta,
@@ -185,5 +222,6 @@ function buildParams(seat: SeatDef, options: ArenaModuleOptions): ArenaParams {
     metaCollect: options.metaCollect ?? 1,
     metaYield: options.metaYield ?? 1,
     random: createSeededRNG(options.seed ?? getSeed()),
+    control,
   };
 }

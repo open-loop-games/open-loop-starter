@@ -57,6 +57,14 @@ means the operator chooses how much threat to meet, so the movement policy
 decides income. The closed form cannot predict `η`; it assumes one. Any change to
 the movement policy is a balance change even when no constant moved.
 
+The corollary bit once and is worth stating outright: **a seat dial that does not
+appear in the score does not reach the policy.** `engage` biased only the orbit
+DISTANCE for most of this archetype's life, and that worked solely because the
+undamped arg-max thrashed the operator through the mass a few times a second. The
+moment the steering was smoothed, kill rate halved — the dial had been riding on
+a rendering-visible defect. `ENGAGE_WEIGHT` in `modules/sim/steering.ts` is the
+real channel. Check a dial's term exists before reading a probe that quotes it.
+
 **Killing thins the field.** Engaged specimens leave by dying, unengaged by
 scrolling away, so `engage` and `dps` both feed local density and therefore
 contact. This is why the damage seat's advantage is structural rather than
@@ -128,25 +136,24 @@ carry no numbers.
 
 ## Known thin
 
-- **η measures ~1.0 against an assumed 0.65–0.78.** The instrument worked on its
-  first run: `balance/arena-probe.ts` reports the operator banking essentially
-  every mote it drops, so `r_collect` is charging no risk premium at all and the
-  archetype's signature transaction — kill at the edge, dive to collect — is not
-  happening. Either the collect radius is too large against the kill radius, or
-  the movement policy sweeps its own kill field by accident. It is a **policy or
-  geometry** finding, not an economy one, which is exactly the distinction the
-  measured-vs-assumed split exists to make. Do not retune income against it.
-- **Runs finish 5–19 beats short of the authored schedule.** The calibration has
-  swung both ways — the seats over-engaged before the steering gained a near-field
-  term and under-engage now — and the remaining gap is engagement, not the ladder.
-  The contact cliff in `chooseHeading` is strong and wants sweeping against
-  `engage`. Do not re-derive the ladder against either reading: the ladder is the
-  target, and income is what gets corrected toward it.
-- **Evolutions are reachable but rare** — one across four full arcs. Two fixes
-  landed (the policy weights depth by proximity to `maxLevel`; the draw weights a
-  device by how deep it already is) and the remaining shortfall follows from runs
-  ending short of 33 picks rather than from the roster. It resolves with the
-  schedule gap above rather than separately.
+- **η measures ~1.0 against an assumed 0.65–0.78, and the geometry says why.**
+  `balance/arena-probe.ts` reports the operator banking essentially every mote it
+  drops, so `r_collect` charges no risk premium and the archetype's signature
+  transaction — kill at the edge, dive to collect — is not happening. The
+  measured-vs-assumed split narrowed this to geometry rather than policy: a
+  fully-stacked **Reclaimant** is ×1.18⁴ ≈ ×1.94, which moves `r_collect/r_kill`
+  from its designed 0.39 to **0.75**, and the meta shop's Wider Aperture stacks on
+  top of that. § Couplings says a ratio approaching 1 turns this archetype into a
+  DPS check; one reagent line reaches three quarters of the way there on its own,
+  and it is drawn on screen — the aperture visibly swallows the ash annulus by
+  mid-run. Either `perStack` comes down, or the chain caps against `r_kill`. Do
+  not retune income against the η reading; fix the ratio and re-read it.
+- **Evolutions are reachable but rare** — one per seat per arc, against a pool
+  sized for two or three. Two fixes landed (the policy weights depth by proximity
+  to `maxLevel`; the draw weights a device by how deep it already is); the
+  remainder is suspected to be the DRAW, not the policy — a device needs eight
+  levels and an offer shows three of ~10 candidates, so the deepest device is
+  often not on the table.
 - **Shop costs are anchored to a payout the sim does not deliver.** The
   projection sizes `baseCost` against ~627 notes for a baseline run; a real run
   banks ~242. So "one run buys the first tile" is closer to one and a quarter, and
@@ -154,10 +161,13 @@ carry no numbers.
   root as the schedule gap — the closed form assumes seats engage what their dial
   says and they currently do not — so fix engagement first and re-read the anchor
   rather than repricing the shop against a number that is going to move.
-- **Traversal collapse is the common ending.** Three of four seats end there over
-  a full arc while one reaches the horn. Causes differing across seats is the
-  target distribution rather than a defect, but the balance of it is unexamined
-  and `BLOCKING_CROWD` / `ESCAPE_FLOOR` have never been swept.
+- **Traversal collapse has stopped happening at all.** It was three endings in
+  four before the movement policy gained a turn cost and a slew limit; a piloted
+  operator no longer walks itself into a closed pocket, and every arc now ends on
+  the HP floor or on collection starvation. That is one loss condition quietly
+  retired, and `BLOCKING_CROWD` / `ESCAPE_FLOOR` have still never been swept — so
+  it is unknown whether the detector is now correctly silent or simply
+  unreachable.
 - **`entityBudget` becomes the binding density term past mid-run.** Live census
   readouts sit pinned at exactly 400 — `THREAT_BALANCE.entityBudget` — from around
   13:00 onward, because the spawn loop is `while (carry >= 1 && specimens.length <

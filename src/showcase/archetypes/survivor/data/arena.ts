@@ -6,7 +6,9 @@
 // than a survival tactic. Pure config; `../modules/` read it at construction and
 // `../balance/survivor-projection.ts` projects from it.
 //
-// Sim units throughout. The view is roughly 1000 × 560 of them.
+// Sim units throughout. The renderer shows a screenful of them sized by area
+// (`../ui/ArenaField.vue` § VIEW_WIDTH), wide enough to hold the live population
+// rather than just the rings.
 
 export interface ArenaBalance {
   /** `r_kill` — device reach. Specimens inside this are being killed. */
@@ -15,7 +17,11 @@ export interface ArenaBalance {
   collectRadius: number;
   /** `r_contact` — where a specimen damages the operator. */
   contactRadius: number;
-  /** Inner edge of the spawn annulus — just outside the view. */
+  /**
+   * Inner edge of the spawn annulus. Bounds live density by annulus area rather
+   * than letting it accumulate; the renderer fades new bodies in rather than
+   * relying on this sitting outside the view, which it no longer does.
+   */
   spawnInnerRadius: number;
   /** Outer edge of the spawn annulus. */
   spawnOuterRadius: number;

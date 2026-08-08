@@ -102,4 +102,15 @@ export interface ArenaParams {
   metaYield: number;
   /** Seeded, injected — never `Math.random`, so a run is reproducible. */
   random: () => number;
+  /**
+   * Direct control, for a player-driven seat. Returns the desired unit heading,
+   * or `null` for "nothing held" — which means STAND STILL, not coast.
+   *
+   * Present only for `driver: 'player'` seats; when it is absent the movement
+   * policy runs, and that absence is the whole branch. Reading input through a
+   * function rather than a field keeps `stepArena` pure over `(state, params)`:
+   * the sim never learns what a keyboard is, exactly as it never learns what a
+   * draft is.
+   */
+  control?: () => Vec2 | null;
 }

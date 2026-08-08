@@ -122,20 +122,21 @@ async function main(): Promise<void> {
 
   console.log('\n  ── Reading ──');
   console.log('  The full arc runs. Seats survive minutes rather than seconds, they');
-  console.log('  draft the whole rotation, and binding causes now DIFFER across seats');
+  console.log('  draft the whole rotation, and binding causes DIFFER across seats');
   console.log('  — which is the target distribution, not a single wall in costume.');
+  console.log('\n  Kills/s now tracks the closed form within a seat-width, and the');
+  console.log('  schedule deficit closed to a few beats, because `engage` finally');
+  console.log('  reaches the movement policy as a term rather than as an orbit');
+  console.log('  distance (`../modules/sim/steering.ts` § ENGAGE_WEIGHT). Nothing in');
+  console.log('  `../data/` moved: the ladder is the target, the pilot was corrected.');
   console.log('\n  Open, and recorded in `../BALANCING.md` § Known thin:');
-  console.log('   1. Runs sit BEHIND schedule now, having sat ahead before the');
-  console.log('      near-field steering term landed. Kills/s is under the closed');
-  console.log('      form: the seats under-engage. The contact cliff is strong and');
-  console.log('      wants calibrating against `engage` — a tune, with a probe to');
-  console.log('      read it, which is the position this was supposed to reach.');
-  console.log('   2. Zero evolutions still. A device needs eight levels and the offer');
-  console.log('      draw presents three of ~10 candidates, so the deepest device is');
-  console.log('      often not on the table. Suspect the DRAW, not the policy.');
-  console.log('   3. η now measures 0.5–0.99 against an assumed 0.6–0.78 — in range');
-  console.log('      mid-run, drifting high late as the floor fills with motes. That');
-  console.log('      is the instrument working rather than a defect.');
+  console.log('   1. η measures ~1.0 across every seat, against an assumed 0.6–0.78.');
+  console.log('      The operator banks essentially everything it drops, so η has');
+  console.log('      stopped being a decision — which makes the `r_collect`/`r_kill`');
+  console.log('      coupling the income model is priced on inert. That is the next');
+  console.log('      sweep, and it wants the collector implemented first.');
+  console.log('   2. Evolutions now land (1 per seat, late). Still one arc from the');
+  console.log('      four the pool is sized for; suspect the DRAW, not the policy.');
   console.log(`\n  Mean mote yield over the window: ${meanMoteYield(MINUTES * 30).toFixed(2)}.`);
 }
 

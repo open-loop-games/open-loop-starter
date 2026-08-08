@@ -18,9 +18,19 @@ import LoadoutRail from './LoadoutRail.vue';
  * under the cursor, and between runs the debrief takes the whole screen.
  */
 
+const props = defineProps<{
+  /** True when a player seat holds the floor. Swaps the seat label for the one
+   *  thing a player needs told once, and never again after. */
+  driving: boolean;
+}>();
+
 const arena = useModule(ArenaKey);
 const meta = useModule(MetaKey);
 const ladder = useBeatLadder();
+
+/** The control hint retires itself: it is the opening seconds of a run, and a
+ *  permanent "WASD" label is chrome that earns nothing for the next ten hours. */
+const showHint = computed(() => props.driving && ladder.elapsed.value < 12);
 
 const remaining = computed(() => formatClock(ladder.runSeconds - ladder.elapsed.value));
 
@@ -55,10 +65,16 @@ const condition = computed(() => {
       <BeatTrack />
 
       <div class="operator">
-        <span class="operator__seat">{{ arena.seat.value.name }}</span>
+        <span class="operator__seat" :data-you="driving">{{ arena.seat.value.name }}</span>
         <span class="operator__cond" :data-low="condition.frac <= 0.35">
           <span class="num" data-num>{{ condition.pct }}</span
           >% condition
+        </span>
+        <!-- The one thing that ends the run, as a length rather than a number.
+             A percentage tells you where you are; the bar tells you how fast you
+             are getting there, which is the read that matters mid-dive. -->
+        <span class="cond-bar" :data-low="condition.frac <= 0.35" aria-hidden="true">
+          <span class="cond-bar__fill" :style="{ '--frac': condition.frac }" />
         </span>
         <span class="operator__notes">
           <span class="num" data-num>{{ Math.floor(Number(meta.notes.value)) }}</span> notes banked
@@ -81,8 +97,19 @@ const condition = computed(() => {
       </div>
     </div>
 
+    <!-- The hint stacks ABOVE the rail rather than opposite it: bottom-right is
+         the dev dock's corner in this repo, and a readout a fork has to
+         un-overlap is a readout in the wrong place. -->
     <div class="hud__row hud__row--bottom">
-      <LoadoutRail />
+      <div class="rack-column">
+        <Transition name="hint">
+          <p v-if="showHint" class="hint">
+            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the arrows. The apparatus fires
+            itself — you only choose where to stand.
+          </p>
+        </Transition>
+        <LoadoutRail />
+      </div>
     </div>
   </div>
 </template>
@@ -143,6 +170,10 @@ const condition = computed(() => {
   font-size: 0.82rem;
   color: var(--arc-hot);
 }
+.operator__seat[data-you='true'] {
+  color: var(--mote);
+}
+
 .operator__cond .num {
   min-width: 3ch;
 }
@@ -153,6 +184,25 @@ const condition = computed(() => {
 .operator__cond[data-low='true'] {
   color: var(--breach);
 }
+.cond-bar {
+  display: block;
+  width: 116px;
+  height: 4px;
+  margin: 3px 0 5px;
+  background: rgba(207, 224, 216, 0.2);
+}
+.cond-bar__fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform: scaleX(var(--frac, 1));
+  transform-origin: right center;
+  background: var(--vat);
+}
+.cond-bar[data-low='true'] .cond-bar__fill {
+  background: var(--breach);
+}
+
 .operator__notes {
   font-size: 0.7rem;
   color: var(--color-text-muted);
@@ -178,5 +228,40 @@ const condition = computed(() => {
 .census .num {
   min-width: 4ch;
   color: var(--color-text);
+}
+
+/* ─── control hint ──────────────────────────────────────────────────── */
+.rack-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.hint {
+  max-width: 46ch;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  text-shadow: 0 0 12px rgba(10, 13, 12, 0.95);
+}
+.hint kbd {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-right: 2px;
+  padding: 1px 3px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  text-align: center;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: rgba(19, 26, 23, 0.85);
+}
+/* Opacity only — the rail beside it must not reflow when this leaves. */
+.hint-leave-active {
+  transition: opacity 600ms ease;
+}
+.hint-leave-to {
+  opacity: 0;
 }
 </style>

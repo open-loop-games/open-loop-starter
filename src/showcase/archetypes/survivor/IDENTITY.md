@@ -89,13 +89,17 @@ draft beats over ~30 minutes, first interval 30s growing geometrically to 90s
 
 ## Growth ports
 
-- **Human seat, and the automation ladder with it.** Swap the movement policy for
-  input; the archetype is built so this is an addition, not a rewrite. There is
-  deliberately **no `AutomationTiers` ladder yet**: the seat policy is the game's
-  only driver, so it is gated by install-presence rather than a tier, exactly as
-  skirmish gates its opponent seats. A ladder that withholds nothing is a
-  divergence rather than an adoption, so the honest rung arrives with the player
-  seat that makes automation something to unlock.
+- **The automation ladder.** The human seat has landed (`data/seats.ts`
+  `PLAYER_SEAT`, `driver: 'player'`) and it cost an addition rather than a
+  rewrite: input replaces the policy's *output* at two seams the modules already
+  named, and every mechanic downstream is untouched. What it unblocks is the
+  ladder. There is still deliberately **no `AutomationTiers` gate**: an AI seat
+  is an alternative character, not something the player earns, so it stays gated
+  by install-presence exactly as skirmish gates its opponent seats. The honest
+  rung is now buildable and is a different thing — *autopilot on the seat you are
+  sitting in*, unlocked mid-run or across runs, with the existing movement policy
+  as its body. That is a spine decision when it comes: opening the gate changes
+  the arc, so the projection grows its second branch in the same pass.
 - **Second meta-currency.** Halls of Torment's hero-specific shards alongside
   universal gold; a second cross-run chain over the same accrual.
 - **Wave-shop fork.** Brotato replaces the level-up draft with a between-wave

@@ -5,7 +5,7 @@ import Button from '@/ui/components/Button.vue';
 import { ArenaKey } from '../modules/arena';
 import { MetaKey } from '../modules/meta';
 import { RunKey, type BindingCause } from '../modules/run';
-import { SEATS } from '../data/seats';
+import { ALL_SEATS } from '../data/seats';
 import { upgradeCost } from '../data/meta';
 import { formatClock } from '../composables/useBeatLadder';
 
@@ -98,6 +98,14 @@ const shop = computed(() =>
   }),
 );
 
+/**
+ * Before the first run this same sheet is the BRIEFING — no record to report,
+ * only a floor to assign. It is the same surface because it is the same
+ * decision, and because a second screen that offered the same four buttons would
+ * be a second screen to keep in step.
+ */
+const briefing = computed(() => arena.outcome.value === 'briefing');
+
 const chosenSeat = ref(arena.seat.value.id);
 
 function descend(): void {
@@ -109,7 +117,15 @@ function descend(): void {
   <div class="debrief">
     <div class="sheet">
       <header class="sheet__head">
-        <div>
+        <div v-if="briefing">
+          <p class="sheet__kicker">Containment order</p>
+          <h2 class="sheet__cause" data-tone="neutral">The floor is open</h2>
+          <p class="sheet__note">
+            Assign it below. Take it yourself, or hand it to a policy and watch what its theory of
+            survival is worth.
+          </p>
+        </div>
+        <div v-else>
           <p class="sheet__kicker">Containment record</p>
           <h2 class="sheet__cause" :data-tone="cause.tone">
             {{ cause.title }}
@@ -118,13 +134,13 @@ function descend(): void {
             {{ cause.note }}
           </p>
         </div>
-        <div class="stamp" :data-tone="cause.tone">
+        <div v-if="!briefing" class="stamp" :data-tone="cause.tone">
           <span class="stamp__time num" data-num>{{ summary.elapsed }}</span>
           <span class="stamp__label">held</span>
         </div>
       </header>
 
-      <dl class="figures">
+      <dl v-if="!briefing" class="figures">
         <div>
           <dt>Beats</dt>
           <dd class="num" data-num>
@@ -166,7 +182,10 @@ function descend(): void {
         </div>
       </dl>
 
-      <section class="section">
+      <!-- The very first briefing has nothing to sell and no notes to sell it
+           for, and leaving it up pushes the only decision on the sheet below the
+           fold. Every later visit shows it. -->
+      <section v-if="!briefing || notes > 0" class="section">
         <h3 class="section__title">
           Standing orders
           <span class="section__notes">
@@ -202,11 +221,11 @@ function descend(): void {
         <h3 class="section__title">Assign the floor</h3>
         <div class="seats">
           <button
-            v-for="s in SEATS"
+            v-for="s in ALL_SEATS"
             :key="s.id"
             type="button"
             class="seat"
-            :class="{ 'seat--on': chosenSeat === s.id }"
+            :class="{ 'seat--on': chosenSeat === s.id, 'seat--you': s.driver === 'player' }"
             :aria-pressed="chosenSeat === s.id"
             @click="chosenSeat = s.id"
           >
@@ -216,7 +235,9 @@ function descend(): void {
         </div>
       </section>
 
-      <Button class="descend" @click="descend"> Descend again </Button>
+      <Button class="descend" @click="descend">
+        {{ briefing ? 'Descend' : 'Descend again' }}
+      </Button>
     </div>
   </div>
 </template>
@@ -462,6 +483,17 @@ function descend(): void {
 }
 .seat--on .seat__blurb {
   color: rgba(232, 226, 208, 0.75);
+}
+/* The player seat is a different KIND of entry, not a fifth policy — the stamp
+   colour marks it as the hand-written line on an otherwise typed form. */
+.seat--you {
+  border-left: 3px solid var(--note-stamp);
+}
+.seat--you .seat__name {
+  color: var(--note-stamp);
+}
+.seat--you.seat--on .seat__name {
+  color: var(--note-paper);
 }
 
 .descend {
