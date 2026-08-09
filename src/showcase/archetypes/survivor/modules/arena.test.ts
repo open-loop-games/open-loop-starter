@@ -10,7 +10,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ArenaKey } from './arena';
-import { ARENA_BALANCE, COLLECTOR_BALANCE, collectRadiusFor } from '../data/arena';
+import { ARENA_BALANCE, COLLECTOR_BALANCE, THREAT_BALANCE, collectRadiusFor } from '../data/arena';
 import { REAGENTS } from '../data/devices';
 import { META_UPGRADES } from '../data/meta';
 import { boot, getEngine, tick } from '../sim/harness';
@@ -215,5 +215,44 @@ describe('survivor/arena — per-device accounting', () => {
       expect(d.firesConnected).toBeLessThanOrEqual(d.fires);
       expect(d.hits).toBeLessThanOrEqual(d.reachable);
     }
+  });
+});
+
+describe('survivor/arena — the entity budget is a ceiling, not a queue', () => {
+  beforeEach(() => boot());
+
+  it('drops spawns that meet a full floor instead of banking them', async () => {
+    arena().startRun('generalist');
+    await tick(200);
+    const s = arena().state.value;
+
+    // Fill the floor to the ceiling rather than ticking twenty minutes to reach
+    // it. The regression: `spawnCarry` gated its own draining on the budget, so
+    // a pinned floor accumulated an unbounded backlog — measured in the
+    // thousands against a 400 ceiling — and every kill was refilled from it
+    // within the same tick, so killing could not thin the field at all.
+    const seed = s.specimens[0];
+    while (s.specimens.length < THREAT_BALANCE.entityBudget) {
+      s.specimens.push({ ...seed, id: s.nextId++ });
+    }
+
+    await tick(100);
+    const after = arena().state.value;
+    expect(after.stats.spawnsDropped).toBeGreaterThan(0);
+    expect(after.spawnCarry).toBeLessThan(2);
+  });
+
+  it('lets a cleared floor stay cleared for longer than a tick', async () => {
+    arena().startRun('generalist');
+    await tick(1800);
+    const s = arena().state.value;
+    expect(s.specimens.length).toBeGreaterThan(50);
+
+    // Clear the floor by hand and step once. With a backlog this refilled to the
+    // cap immediately; without one, room persists until the rate refills it.
+    const before = s.specimens.length;
+    s.specimens.length = 0;
+    await tick(1);
+    expect(arena().state.value.specimens.length).toBeLessThan(before);
   });
 });

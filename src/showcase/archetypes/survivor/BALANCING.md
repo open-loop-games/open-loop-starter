@@ -268,37 +268,51 @@ carry no numbers.
   distinct causes rather than two. `BLOCKING_CROWD` / `ESCAPE_FLOOR` have still
   never been swept, and now that the detector fires again the sweep is worth
   something.
-- **`entityBudget` is the binding density term for most of the back half of a
-  run, measured rather than suspected.** `balance/arena-probe.ts` samples the
-  live census every minute: seats sit pinned at exactly 400 —
-  `THREAT_BALANCE.entityBudget` — for **7 to 19 of 30 minutes**, first binding as
-  early as 12:00, because the spawn loop is `while (carry >= 1 &&
-specimens.length < entityBudget)`.
+- **`entityBudget` discards 40–70% of the run's authored escalation, and the
+  DPS solve is calibrated against the part that never arrives.** Measured
+  directly: the probe counts spawns the curve called for against spawns the floor
+  had room for, and the dropped share runs **40% / 59% / 69% / 70%** across the
+  roster. Escalation past roughly the midpoint is authored, solved against, and
+  then inert — `offensivePickGain` includes the spawn-growth term `m_d`, so the
+  draft is sized to beat a density the game stops delivering.
 
-  The census also shows the loop that makes it worse: the **lowest-DPS seat caps
-  earliest and stays capped longest** (`kinetic`, first at 12:00, 19 minutes
-  there, at 1.49 kills/s). Slow kills fill the floor and a full floor is then
-  clamped flat, so this is not only a modelling question — it is a difficulty
-  _inversion_, handing a density ceiling to the seat least able to clear one.
+  Raising the ceiling is **not** an available answer, and that is measured rather
+  than assumed: at a 3× budget two of four seats still pin, at 1200. The
+  population is not bounded by anything except the cap, because spawn rate
+  reaches ~12/s by the end of the arc against a kill rate of 1.5–3/s. Raising it
+  moves the wall and costs frame time.
 
-  **The modelling half is fixed:** `localDensity` (`data/arena.ts`) now clamps
-  to `entityBudget`, since the sim's own near-operator population is the same
-  quantity the formula estimates by residency — past the cap they are one
-  quantity by construction, not two models agreeing by luck. Contact chance,
-  traversal-collapse classification and bind-cause reporting all read the
-  clamped value now, so the projection stops quoting a curve the sim abandoned.
-  This was a fix to the model's honesty, not to the game — `entityBudget` is
-  still a performance ceiling (400 at 20 Hz), not a designed number, and the
-  inversion above is unchanged: a real fact about the shipping game, still open.
+  A related divergence is the likeliest root and is not yet resolved. `localDensity`
+  models population as `rate · residency` with `residency` built from
+  `dwellSeconds` = 12, which predicts on the order of twenty live specimens where
+  the sim holds four hundred. The sim has no dwell: `modules/sim/step.ts`
+  § despawn culls on DISTANCE, at `spawnOuterRadius · 1.4`, and an operator that
+  orbits rather than fleeing in a straight line never outruns much. So the
+  declared "unengaged specimens leave by scrolling away" is not what the floor
+  does, and the clamp that reconciled `localDensity` to `entityBudget` was
+  papering over an order-of-magnitude modelling error rather than a rounding one.
 
-  Two directions remain, now cleanly separated from the modelling gap: raise or
-  reshape `entityBudget` itself (a performance question first), or design the
-  escalation curve to saturate toward the cap smoothly instead of hitting a
-  wall, which would soften the inversion by slowing growth for every seat as it
-  nears the ceiling rather than only for whichever seat fills the floor first.
-  Also still the most promising route to a real `η`: the late-run abandonment
-  that would push collection below 1 is exactly the pressure a hard cap removes,
-  and a smoother saturation curve is more likely to produce it than a wall is.
+  Three directions, and they are not equivalent. Implement dwell so the floor
+  behaves as the spine says and density tracks the spawn curve again; or flatten
+  `spawnGrowthPerMinute` so the curve lands near the budget at the end of the arc
+  instead of ten times past it, re-deriving the pick gain with it; or leave both
+  and accept that the back half of the arc escalates only through HP. The first
+  is the one that makes the other findings here fall out, and it is a mechanic
+  change rather than a tune.
+
+- **A full floor drops spawns; it used to bank them.** `spawnCarry` exists to
+  carry the fractional remainder of `rate · dt` between ticks, and the budget
+  check was inside the loop that drained it — so a pinned floor accumulated an
+  unbounded queue, measured at **1734–5889 pending bodies against a 400 ceiling**.
+  The floor was then not at the cap but welded to it: every kill was refilled
+  within the same tick, and killing could not thin the field by one body for the
+  back half of a run.
+
+  Worth keeping because of what it disguised itself as. This read as a
+  `maxTargets` problem — the mass-clear shape looked cap-bound exactly when the
+  mass existed — and no value of `maxTargets` would have helped, because the
+  floor refilled faster than any device could empty it. **Before widening a
+  device against a wall of enemies, check that killing them removes them.**
 
 - **The cone is a human-play device, and the draft now says so.** `selectTargets`
   (`modules/sim/dispatch.ts`) filters the `cone` shape to a ~120° wedge about

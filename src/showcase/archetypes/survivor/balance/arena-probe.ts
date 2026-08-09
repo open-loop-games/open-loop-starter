@@ -58,10 +58,12 @@ async function runSeat(seatId: string, seed: number) {
   let peakSpecimens = 0;
   let minutesAtCap = 0;
   let firstCapAt: number | null = null;
+  let peakCarry = 0;
   for (let m = 0; m < MINUTES; m++) {
     await handle.tick(60 * TICK_RATE);
     const live = arena.state.value;
     peakSpecimens = Math.max(peakSpecimens, live.specimens.length);
+    peakCarry = Math.max(peakCarry, live.spawnCarry);
     if (live.specimens.length >= THREAT_BALANCE.entityBudget) {
       minutesAtCap++;
       if (firstCapAt === null) firstCapAt = live.time;
@@ -101,7 +103,10 @@ async function runSeat(seatId: string, seed: number) {
     burstShare,
     collectorsTaken: stats.collectorsTaken,
     collectorsDropped: s.collectorsDropped,
+    spawned: stats.spawned,
+    spawnsDropped: stats.spawnsDropped,
     peakSpecimens,
+    peakCarry,
     minutesAtCap,
     firstCapAt,
     liveSpecimens: s.specimens.length,
@@ -173,7 +178,9 @@ async function main(): Promise<void> {
       col('peak', 8) +
       col('first at cap', 15) +
       col('min at cap', 13) +
-      'motes left',
+      col('motes left', 13) +
+      col('spawned', 10) +
+      'escalation dropped',
   );
   for (const r of results) {
     console.log(
@@ -181,7 +188,9 @@ async function main(): Promise<void> {
         col(r.peakSpecimens, 8) +
         col(r.firstCapAt === null ? '—' : clock(r.firstCapAt), 15) +
         col(r.minutesAtCap, 13) +
-        r.liveMotes,
+        col(r.liveMotes, 13) +
+        col(r.spawned, 10) +
+        `${r.spawnsDropped} (${((r.spawnsDropped / Math.max(1, r.spawned + r.spawnsDropped)) * 100).toFixed(0)}%)`,
     );
   }
 

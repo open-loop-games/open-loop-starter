@@ -65,6 +65,8 @@ export function createArenaState(params: ArenaParams): ArenaState {
       contactSeconds: 0,
       damageTaken: 0,
       devices: {},
+      spawned: 0,
+      spawnsDropped: 0,
     },
     nextId: 1,
     spawnCarry: 0,
@@ -176,9 +178,24 @@ export function stepArena(
   const rate =
     THREAT_BALANCE.spawnRate0 * Math.pow(THREAT_BALANCE.spawnGrowthPerMinute, state.time / 60);
   state.spawnCarry += rate * dt;
-  while (state.spawnCarry >= 1 && state.specimens.length < THREAT_BALANCE.entityBudget) {
+  while (state.spawnCarry >= 1) {
     state.spawnCarry -= 1;
-    if (live.length > 0) spawnOne(state, params);
+    // A spawn that meets a full floor is DROPPED, not deferred. `spawnCarry`
+    // exists to carry the fractional remainder of `rate · dt` between ticks; when
+    // the budget also gated draining it, it silently became an unbounded queue —
+    // measured at 1734–5889 pending bodies against a 400 ceiling. The floor was
+    // then not "at the cap" but welded to it, because every kill was refilled
+    // from the backlog within the same tick. Killing could not thin the field by
+    // one body for the back half of a run, which made the mass-clear shapes look
+    // like a `maxTargets` problem when nothing at any cap would have helped.
+    if (state.specimens.length >= THREAT_BALANCE.entityBudget) {
+      state.stats.spawnsDropped++;
+      continue;
+    }
+    if (live.length > 0) {
+      spawnOne(state, params);
+      state.stats.spawned++;
+    }
   }
 
   // ─── operator movement ───
