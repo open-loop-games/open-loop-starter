@@ -194,8 +194,35 @@ export function slewHeading(current: Vec2, desired: Vec2, dt: number): Vec2 {
 }
 
 /**
- * Choose a heading by weighted utility over the composed fields — the kernel the
- * parked primitive describes, with a continuous candidate set.
+ * One candidate heading's score, broken into the terms that produced it.
+ *
+ * The breakdown is not decoration: an arg-max is decided by the SPREAD of a term
+ * across candidates, never by its level. A term that reads the same on all
+ * sixteen headings — a contact cliff that fires everywhere, an engage term
+ * saturated everywhere — subtracts a constant and drops out of the decision
+ * entirely, however large it is. `../../balance/steering-probe.ts` reads these
+ * spreads, which is the only way to see a term stop steering.
+ */
+export interface HeadingScore {
+  heading: Vec2;
+  /** Peaked orbit term, cliff included. */
+  threat: number;
+  /** Whether the contact cliff fired on this candidate. */
+  cliff: boolean;
+  engage: number;
+  /** Unweighted; `total` applies `eta`. */
+  mote: number;
+  /** Unweighted; `total` applies `eta`. */
+  collector: number;
+  wall: number;
+  turn: number;
+  total: number;
+}
+
+/**
+ * Score every in-bounds candidate heading by weighted utility over the composed
+ * fields — the kernel the parked primitive describes, with a continuous
+ * candidate set.
  *
  * The first term is why this is not simply "flee":
  *
@@ -209,20 +236,21 @@ export function slewHeading(current: Vec2, desired: Vec2, dt: number): Vec2 {
  *    itself, which is why the threat term is peaked and the wall term is separate.
  *  - **turn cost**, the memory an arg-max otherwise has none of. See `TURN_COST`.
  *
- * The heading this returns is what the operator WANTS; `slewHeading` decides how
- * much of it the step can deliver.
+ * Candidates that leave the map are omitted rather than scored, so the returned
+ * set is what the arg-max actually chose between.
  */
-export function chooseHeading(
+export function scoreHeadings(
   state: ArenaState,
   nav: NavGrid,
   fields: Fields,
   params: ArenaParams,
-): Vec2 {
+): HeadingScore[] {
   const lookahead = NAV_CELL;
   const { mapWidth, mapHeight, killRadius } = ARENA_BALANCE;
   const killRadius2 = killRadius * killRadius;
   const orbit = orbitRadius(params);
   const current = state.operator.heading;
+  const scored: HeadingScore[] = [];
 
   // Only specimens this far out can change the near-field term: past it every
   // candidate reads the same saturated `offset > 1`, which is the branch a floor
@@ -236,9 +264,6 @@ export function chooseHeading(
     const dy = s.y - state.operator.y;
     if (dx * dx + dy * dy <= reach2) relevant.push(s);
   }
-
-  let best = current;
-  let bestScore = -Infinity;
 
   for (const h of HEADINGS) {
     const px = state.operator.x + h.x * lookahead;
@@ -274,7 +299,8 @@ export function chooseHeading(
 
     // Contact is a cliff, not a slope. Below the contact radius nothing else in
     // the score should be able to outvote getting out.
-    if (nearest < ARENA_BALANCE.contactRadius * 2.5) threatTerm -= 400;
+    const cliff = nearest < ARENA_BALANCE.contactRadius * 2.5;
+    if (cliff) threatTerm -= 400;
 
     const moteTerm = Number.isFinite(moteDist) ? -moteDist : -nav.cols;
 
@@ -308,9 +334,37 @@ export function chooseHeading(
       wallPenalty * 8 -
       turnCost;
 
-    if (score > bestScore) {
-      bestScore = score;
-      best = h;
+    scored.push({
+      heading: h,
+      threat: threatTerm,
+      cliff,
+      engage: engageTerm,
+      mote: moteTerm,
+      collector: collectorTerm,
+      wall: -wallPenalty * 8,
+      turn: -turnCost,
+      total: score,
+    });
+  }
+  return scored;
+}
+
+/**
+ * The arg-max over `scoreHeadings`. The heading this returns is what the operator
+ * WANTS; `slewHeading` decides how much of it the step can deliver.
+ */
+export function chooseHeading(
+  state: ArenaState,
+  nav: NavGrid,
+  fields: Fields,
+  params: ArenaParams,
+): Vec2 {
+  let best = state.operator.heading;
+  let bestScore = -Infinity;
+  for (const s of scoreHeadings(state, nav, fields, params)) {
+    if (s.total > bestScore) {
+      bestScore = s.total;
+      best = s.heading;
     }
   }
   return best;

@@ -27,17 +27,37 @@
  *    burning the same distance.
  *  - **speed** — mean sim units/s actually covered, against the nominal move
  *    speed. The gap is the cost of the jitter: distance walked that goes nowhere.
+ *
+ * It then prints the **term-spread table**, which answers a different question:
+ * not how the operator moved, but what was still steering it. An arg-max is
+ * decided by the SPREAD of a term across the candidate set, never by its level —
+ * a term reading the same on all sixteen headings subtracts a constant and drops
+ * out of the decision however large it is. A policy can therefore lose a term
+ * with every constant still in place and every comment about it still true, and
+ * nothing downstream says so.
+ *
+ * Spreads are binned by live specimen count because the landscape is a function
+ * of density: what steers on an open floor and what steers against a capped one
+ * are different questions, and only the second describes the back half of a run.
  */
 
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { ArenaKey, RunKey, createSurvivorModules } from '../modules';
+import { buildNav, buildParams } from '../modules/arena';
 import { SEATS } from '../data/seats';
-import { BASE_MOVE_SPEED } from '../modules/sim/step';
+import { BASE_MOVE_SPEED, refreshFields } from '../modules/sim/step';
+import { scoreHeadings, type Fields } from '../modules/sim/steering';
 
 /** 20 Hz — the live tick rate. Movement quality is a per-step property, so this
  *  probe cannot run at the coarse rate the economy probes use. */
 const TICK_RATE = 20;
-const MINUTES = 6;
+/**
+ * A full arc, not a sample of the opening. `entityBudget` first binds around
+ * 12:00 (`./arena-probe.ts` § census) and the term-spread table's whole question
+ * is what the scoring landscape looks like AT the cap — a six-minute run answers
+ * it for a floor the run never reaches.
+ */
+const MINUTES = 30;
 /** Straightness is measured over windows this long, in sim seconds. */
 const WINDOW_SECONDS = 5;
 
@@ -50,7 +70,39 @@ interface Reading {
   straightness: number;
   speed: number;
   samples: number;
+  bins: SpreadBin[];
 }
+
+/**
+ * Term spreads accumulated over the decisions taken at one density band.
+ *
+ * Spread, not level: `max − min` across the candidate set is exactly how much a
+ * term can move the arg-max, and a term whose spread is zero is not steering
+ * regardless of how big it is.
+ */
+interface SpreadBin {
+  label: string;
+  min: number;
+  max: number;
+  decisions: number;
+  threat: number;
+  engage: number;
+  mote: number;
+  turn: number;
+  /** Decisions where the contact cliff fired on SOME candidates but not all. */
+  cliffSplit: number;
+  /** Decisions where it fired on every candidate — a constant, so it cancels. */
+  cliffAll: number;
+}
+
+const BANDS: { label: string; min: number; max: number }[] = [
+  { label: '< 100', min: 0, max: 99 },
+  { label: '100–249', min: 100, max: 249 },
+  { label: '250–399', min: 250, max: 399 },
+  { label: 'at cap', min: 400, max: Infinity },
+];
+
+const spread = (xs: number[]): number => Math.max(...xs) - Math.min(...xs);
 
 async function runSeat(seatId: string, seed: number): Promise<Reading> {
   const handle = bootTestEngine({
@@ -77,11 +129,54 @@ async function runSeat(seatId: string, seed: number): Promise<Reading> {
   let windowElapsed = 0;
   const straightness: number[] = [];
 
+  // The scoring context the module runs on, rebuilt from its own exported
+  // factories so this reads the shipping policy rather than a copy of it.
+  const nav = buildNav();
+  const params = buildParams(
+    SEATS.find((s) => s.id === seatId)!,
+    {},
+    // A probed seat is never hand-driven: `control` returning null would mean
+    // "standing still" rather than "no input", which is a different policy.
+    undefined,
+  );
+  let probeFields: Fields | undefined;
+  const bins: SpreadBin[] = BANDS.map((b) => ({
+    ...b,
+    decisions: 0,
+    threat: 0,
+    engage: 0,
+    mote: 0,
+    turn: 0,
+    cliffSplit: 0,
+    cliffAll: 0,
+  }));
+
   const totalTicks = MINUTES * 60 * TICK_RATE;
   const dt = 1 / TICK_RATE;
   for (let i = 0; i < totalTicks; i++) {
     await handle.tick(1);
     if (arena.outcome.value !== 'running') break;
+
+    // Sampled rather than every tick: the scoring landscape moves on the field
+    // refresh cadence, not the step, so 1 Hz costs little and misses nothing.
+    if (i % TICK_RATE === 0) {
+      const live = arena.state.value;
+      probeFields = refreshFields(live, nav, probeFields);
+      const scores = scoreHeadings(live, nav, probeFields, params);
+      const bin = bins.find(
+        (b) => live.specimens.length >= b.min && live.specimens.length <= b.max,
+      );
+      if (bin && scores.length > 1) {
+        bin.decisions++;
+        bin.threat += spread(scores.map((s) => s.threat));
+        bin.engage += spread(scores.map((s) => s.engage));
+        bin.mote += spread(scores.map((s) => params.eta * 2.5 * s.mote));
+        bin.turn += spread(scores.map((s) => s.turn));
+        const cliffs = scores.filter((s) => s.cliff).length;
+        if (cliffs === scores.length) bin.cliffAll++;
+        else if (cliffs > 0) bin.cliffSplit++;
+      }
+    }
 
     const op = arena.state.value.operator;
     const dot = Math.max(
@@ -121,6 +216,7 @@ async function runSeat(seatId: string, seed: number): Promise<Reading> {
       : 0,
     speed: pathLength / Math.max(1e-6, seconds),
     samples,
+    bins,
   };
 }
 
@@ -137,8 +233,10 @@ async function main(): Promise<void> {
       'nominal',
   );
 
+  const readings: Reading[] = [];
   for (const seat of SEATS) {
     const r = await runSeat(seat.id, 12345);
+    readings.push(r);
     const nominal = BASE_MOVE_SPEED * seat.speed;
     console.log(
       col(`  ${r.seatId}`, 13) +
@@ -148,6 +246,35 @@ async function main(): Promise<void> {
         col(r.speed.toFixed(0), 10) +
         nominal.toFixed(0),
     );
+  }
+
+  console.log('\n  ── Term spread across the candidate set, by live density ──');
+  console.log('  Mean max−min per decision. A term at ~0 has stopped steering.');
+  console.log(
+    col('  seat', 13) +
+      col('density', 11) +
+      col('n', 7) +
+      col('threat', 10) +
+      col('engage', 10) +
+      col('mote', 10) +
+      col('turn', 10) +
+      'cliff split / all',
+  );
+  for (const r of readings) {
+    for (const b of r.bins) {
+      if (b.decisions === 0) continue;
+      const mean = (x: number): string => (x / b.decisions).toFixed(1);
+      console.log(
+        col(`  ${r.seatId}`, 13) +
+          col(b.label, 11) +
+          col(b.decisions, 7) +
+          col(mean(b.threat), 10) +
+          col(mean(b.engage), 10) +
+          col(mean(b.mote), 10) +
+          col(mean(b.turn), 10) +
+          `${((b.cliffSplit / b.decisions) * 100).toFixed(0)}% / ${((b.cliffAll / b.decisions) * 100).toFixed(0)}%`,
+      );
+    }
   }
 
   console.log('\n  ── Reading ──');
@@ -164,6 +291,32 @@ async function main(): Promise<void> {
   console.log('  units/s against nominal is the cost of the jitter in the currency');
   console.log('  the economy cares about: distance walked that went nowhere is');
   console.log('  motes not collected, which lands straight on η.');
+  console.log('');
+  console.log('  The term-spread table says what is actually deciding, and the answer');
+  console.log('  is one term at every density:');
+  console.log('');
+  console.log('   - threat spreads ~390–435 against engage ~17–31, mote ~3–5 and turn');
+  console.log('     18. That is the contact cliff, and it outweighs everything else by');
+  console.log('     roughly 20x. It also SPLITS the candidate set on 89–100% of');
+  console.log('     decisions and covers all sixteen on 0–1%, so it is never a constant');
+  console.log('     that cancels — it decides, and the rest break its ties.');
+  console.log('');
+  console.log('   - engage does NOT saturate away at the cap; its spread rises there');
+  console.log('     (24, 21, 31, 29) rather than collapsing. It is not being silenced');
+  console.log('     by density, it is simply an order of magnitude too small to reach');
+  console.log('     past the cliff. `ENGAGE_WEIGHT` moves the schedule because it picks');
+  console.log('     among candidates the cliff already rated equal, which is a real but');
+  console.log('     narrow channel.');
+  console.log('');
+  console.log('   - turn cost (18) is ~4x the whole mote pull (~4), so the operator');
+  console.log('     cannot afford to turn for income. The dive is not outvoted, it is');
+  console.log('     unaffordable — and `../IDENTITY.md` builds the archetype on it.');
+  console.log('');
+  console.log('   - the mote term is bounded by geometry, not weight: `lookahead` is');
+  console.log('     exactly `NAV_CELL`, so all sixteen candidates land within about one');
+  console.log('     cell of each other on a cell-quantised distance field. It cannot');
+  console.log('     produce a spread much above a couple of cells no matter what it is');
+  console.log('     scaled by, which is why raising the weight alone will not buy a dive.');
 }
 
 main();

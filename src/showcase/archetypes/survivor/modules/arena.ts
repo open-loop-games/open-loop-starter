@@ -88,7 +88,12 @@ export interface ArenaModuleOptions {
   metaYield?: number;
 }
 
-function buildNav(): NavGrid {
+/**
+ * Exported so a probe can assemble the same scoring context the module runs on
+ * (`../balance/steering-probe.ts` § term spread) rather than rebuilding a grid
+ * beside it and drifting. Pure over `ARENA_BALANCE`.
+ */
+export function buildNav(): NavGrid {
   const cols = Math.ceil(ARENA_BALANCE.mapWidth / NAV_CELL);
   const rows = Math.ceil(ARENA_BALANCE.mapHeight / NAV_CELL);
   return {
@@ -207,7 +212,8 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
   };
 }
 
-function buildParams(
+/** Exported for the same reason as `buildNav`. */
+export function buildParams(
   seat: SeatDef,
   options: ArenaModuleOptions,
   control?: () => Vec2 | null,
