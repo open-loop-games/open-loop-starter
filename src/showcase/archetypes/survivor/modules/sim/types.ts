@@ -27,6 +27,8 @@ export interface Specimen extends Vec2 {
   /** Cached from the def × the run curves, so the step loop does no lookups. */
   contactDamage: number;
   moteYield: number;
+  /** Sim-time this body arrived. Drives dwell — see `./step.ts` § despawn. */
+  spawnedAt: number;
 }
 
 export interface Mote extends Vec2 {

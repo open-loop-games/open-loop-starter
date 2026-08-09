@@ -52,7 +52,14 @@ export interface ThreatBalance {
   spawnRate0: number;
   /** `m_d` — spawn-rate growth per minute mark. */
   spawnGrowthPerMinute: number;
-  /** Mean seconds an UNENGAGED specimen lingers before the view leaves it. */
+  /**
+   * Seconds an UNENGAGED specimen lingers before the floor lets it go.
+   *
+   * Load-bearing twice over: it is the residency term `localDensity` is built
+   * on, and — since `../modules/sim/step.ts` § despawn implements it — it is now
+   * also what actually bounds the live population. Raise it and density rises
+   * everywhere, contact chance with it.
+   */
   dwellSeconds: number;
   /** Time-to-kill at baseline DPS. Flat across the run by construction. */
   timeToKillSeconds: number;
@@ -76,7 +83,7 @@ export interface ThreatBalance {
 export const THREAT_BALANCE: ThreatBalance = {
   spawnRate0: 1.2,
   spawnGrowthPerMinute: 1.08,
-  dwellSeconds: 12,
+  dwellSeconds: 30,
   timeToKillSeconds: 2.4,
   densityCap: 190,
   contactDps: 9,

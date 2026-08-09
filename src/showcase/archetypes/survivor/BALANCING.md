@@ -5,7 +5,7 @@ How to work on this archetype's numbers. What it _is_ lives in `IDENTITY.md`
 
 A run is a race between two compounding curves. Device DPS compounds through the
 draft; specimen HP and annulus density compound on minute marks. Everything else
-— the XP ladder, the entity budget, the per-pick gain — is _derived_ from those
+— the XP ladder, the live population, the per-pick gain — is _derived_ from those
 two plus the authored draft schedule, so almost nothing here is a free number.
 The ones that are free are below.
 
@@ -22,7 +22,8 @@ draft pool), `meta.ts` (the cross-run shop). `modules/tuning.ts` declares the
 | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `beatFirstSeconds`, `beatRatio`                                       | the draft schedule. The beat _count_ is a consequence, not a knob — hold the 30–90s band and ~33 beats falls out                                          |
 | `hpGrowthPerMinute`                                                   | how hard escalation bites. Also re-solves the per-pick DPS gain, since that is pinned to flat time-to-kill                                                |
-| `spawnRate0`, `spawnGrowthPerMinute`                                  | density, and with it the entity budget and the whole traversal term                                                                                       |
+| `spawnRate0`, `spawnGrowthPerMinute`                                  | density, and with it the whole traversal term. Nothing caps the floor, so this reaches it undiluted                                                       |
+| `dwellSeconds`                                                        | how long an unengaged body lingers — the residency term in `localDensity` AND what bounds live population. Moves density everywhere                       |
 | `contactDamageGrowthPerMinute`                                        | per-hit escalation. Deliberately far slower than HP growth                                                                                                |
 | `densityCap`, `BLOCKING_CROWD`, `ESCAPE_FLOOR`                        | where gaps close. Contact is the _squared_ approach to it, so this is quiet until it is sudden                                                            |
 | `hpPickGain`                                                          | what a defensive pick buys                                                                                                                                |
@@ -279,14 +280,33 @@ carry no numbers.
   spawn-growth term included. The draft was sized to beat a density the game had
   stopped delivering.
 
-  Removing it is bounded in practice rather than in principle: peak population
-  lands at **763–1465** against the old 400, because the annulus, kills and the
-  distance cull do bound it. That is roughly 3.7× the entity load at 20 Hz, which
-  is the cost, and it is why `modules/sim/step.ts` § spawn says what the bound is
-  now made of.
-
   Raising the ceiling instead was tried and rejected on measurement: at 3× two of
-  four seats still pinned, at 1200.
+  four seats still pinned, at 1200. Removed outright, peak population went to
+  763–1465 — bounded, but only by the annulus and the distance cull. What bounds
+  it properly is dwell, below; with that landed the peak sits at 122–297.
+
+- **The sim implements dwell now, and `dwellSeconds` is measured rather than
+  assumed.** `localDensity` is Little's law over a residency built from this
+  term, and for most of this archetype's life the sim did not implement it at
+  all: `modules/sim/step.ts` § despawn culled on DISTANCE, at
+  `spawnOuterRadius · 1.4`, and an operator that orbits rather than fleeing in a
+  straight line almost never outruns anything. Bodies lived ~130s against a
+  modelled 12 and the floor held hundreds against a modelled twenty — and that
+  gap is the reason a hard entity ceiling ever looked necessary. A body is now
+  exempt while inside `killRadius`, which is what engaged means and those leave by
+  dying; outside it the clock runs, with distance kept as the backstop.
+
+  **The value moved 12 → 30, and the receipt matters more than the number.**
+  Twelve is what the geometry says: at 38–70 units/s across a 560–760 annulus,
+  twelve seconds is about how long crossing the gap takes. But that assumes an
+  operator holding ground, and this one retreats — at 12 the seats could not reach
+  what spawned before it expired, realized engagement fell to 0.05–0.70 against
+  dials of 0.40–0.72, and the arc collapsed, `kinetic` finishing at level 5 and
+  thirty beats behind. Thirty is what the policy can actually meet.
+
+  Model against sim now reads **59/49, 29/25, 60/34** live-at-10:00 against
+  modelled, where it read 26–235 against 12–21. Within about 1.5×, from an order
+  of magnitude — so `localDensity` can be read as a prediction again.
 
 - **A full floor drops spawns; it used to bank them.** `spawnCarry` exists to
   carry the fractional remainder of `rate · dt` between ticks, and the budget
@@ -342,6 +362,24 @@ carry no numbers.
   that a player aims it better is reasoning, not a reading, and the human seat
   exists — so it is checkable, and it is the one part of this entry with no
   receipt behind it.
+
+- **No seat reaches the timer, and that is the open end of this work.**
+  `IDENTITY.md` targets "three specialists each bound by a different cause, with
+  the baseline mostly reaching the timer". Measured, the roster ends at
+  23:05 / 17:10 / 19:11 / 28:07 on two traversal collapses and two HP floors — the
+  cause distribution is right and the survival is not. Escalation now runs
+  undiluted for the whole arc where a ceiling used to discard 40–70% of it, so the
+  arc is genuinely harder than any tuning has been done against.
+
+  The specific gap is engagement, and it is structural rather than a constant.
+  `engage` is DEFINED as the share of spawns brought inside `r_kill`, which
+  requires the operator to go and get them; the movement policy only ever reacts
+  to what is already near, holding an orbit relative to the NEAREST specimen. So
+  realized engagement runs 0.24–1.12 against dials of 0.40–0.72, and the two seats
+  that miss are the ones that hang back. `balance/arena-probe.ts` prints the pair
+  as `engage`. Closing it means a term for approaching unengaged bodies — a
+  seeking policy rather than a reactive one — and that moves every number on this
+  page, so it wants doing before the economy is retuned.
 
 - **Guns-versus-butter is unsettled, and the reading that used to sit here was
   stale.** The structural asymmetry is real: DPS reaches survival only through

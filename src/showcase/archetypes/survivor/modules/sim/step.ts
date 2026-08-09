@@ -106,6 +106,7 @@ function spawnOne(state: ArenaState, params: ArenaParams): void {
     speed: def.speed,
     contactDamage: THREAT_BALANCE.contactDps * def.damageFactor * contactDamageMul(state.time),
     moteYield: def.moteYield,
+    spawnedAt: state.time,
   });
 }
 
@@ -360,12 +361,32 @@ export function stepArena(
     state.stats.contactSeconds += dt;
   }
 
-  // ─── despawn what the view left behind ───
+  // ─── despawn: dwell, with distance as the backstop ───
+  //
+  // `dwellSeconds` is the spine's own term — "unengaged specimens leave by
+  // scrolling away" (`../../IDENTITY.md`), and `localDensity` is Little's law
+  // over it. For most of this archetype's life the sim did not implement it: it
+  // culled on DISTANCE alone, at `spawnOuterRadius · 1.4`, and an operator that
+  // orbits rather than fleeing in a straight line almost never outruns anything.
+  // So bodies lived ~130s against a modelled 12 and the floor held hundreds
+  // against a modelled twenty — an order of magnitude, and the reason a hard
+  // entity ceiling looked necessary.
+  //
+  // A body is exempt while it is inside `killRadius`, because that is what
+  // "engaged" means here and those leave by dying. Outside it, the clock is the
+  // geometry restated: at 38–70 units/s from a 560–760 annulus, twelve seconds is
+  // as long as it takes to cross the gap, so dwelling out IS "you had your chance
+  // to reach me". Distance stays as a backstop for anything the operator outruns
+  // outright.
   const despawn2 = Math.pow(ARENA_BALANCE.spawnOuterRadius * 1.4, 2);
+  const kill2 = ARENA_BALANCE.killRadius * ARENA_BALANCE.killRadius;
   state.specimens = state.specimens.filter((s) => {
     const dx = s.x - state.operator.x;
     const dy = s.y - state.operator.y;
-    return dx * dx + dy * dy <= despawn2;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > despawn2) return false;
+    if (d2 <= kill2) return true;
+    return state.time - s.spawnedAt < THREAT_BALANCE.dwellSeconds;
   });
 
   return {

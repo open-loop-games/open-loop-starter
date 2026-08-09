@@ -39,6 +39,7 @@ function ahead(count: number): Specimen[] {
     speed: 0,
     contactDamage: 0,
     moteYield: 0,
+    spawnedAt: 0,
     x: 20 + i * 4,
     y: 0,
   }));

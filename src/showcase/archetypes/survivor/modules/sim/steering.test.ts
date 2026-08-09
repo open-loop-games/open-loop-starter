@@ -43,7 +43,7 @@ const params: ArenaParams = {
 };
 
 function specimen(id: number, x: number, y: number): Specimen {
-  return { id, tierId: 'x', hp: 100, speed: 0, contactDamage: 1, moteYield: 1, x, y };
+  return { id, tierId: 'x', hp: 100, speed: 0, contactDamage: 1, moteYield: 1, spawnedAt: 0, x, y };
 }
 
 /** A floor with a mass off to +x and a scatter of motes off to −y. */

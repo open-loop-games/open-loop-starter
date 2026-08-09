@@ -143,12 +143,17 @@ async function main(): Promise<void> {
       col('evo', 6) +
       col('kills/s', 10) +
       col('pred', 8) +
+      col('engage', 10) +
       col('η cont', 9) +
       col('η all', 8) +
       col('coll', 7) +
       'burst',
   );
 
+  // Realized engagement against the dial. `engage` is DEFINED as the share of
+  // spawns brought inside `r_kill` (`../data/arena.ts` § Density), so kills over
+  // spawns measures it directly — and the whole income model is built on the
+  // declared figure.
   const seatOf = (id: string) => SEATS.find((x) => x.id === id)!;
   const results: Awaited<ReturnType<typeof runSeat>>[] = [];
   for (const seat of SEATS) {
@@ -165,6 +170,10 @@ async function main(): Promise<void> {
         col(r.evolved.toString(), 6) +
         col((r.kills / Math.max(1, r.elapsed)).toFixed(2), 10) +
         col((predicted / Math.max(1, r.elapsed)).toFixed(2), 8) +
+        col(
+          `${(r.kills / Math.max(1, r.spawned)).toFixed(2)}/${seatOf(r.seatId).engage.toFixed(2)}`,
+          10,
+        ) +
         col(r.etaContinuous.toFixed(3), 9) +
         col(r.etaMeasured.toFixed(3), 8) +
         col(`${r.collectorsTaken}/${r.collectorsDropped}`, 7) +

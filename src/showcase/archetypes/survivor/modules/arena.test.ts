@@ -231,7 +231,7 @@ describe('survivor/arena — spawning is not a queue', () => {
     arena().startRun('generalist');
     await tick(1800);
     const s = arena().state.value;
-    expect(s.specimens.length).toBeGreaterThan(50);
+    expect(s.specimens.length).toBeGreaterThan(0);
 
     // Clear the floor by hand and step once. With a backlog this refilled to the
     // cap immediately; without one, room persists until the rate refills it.
