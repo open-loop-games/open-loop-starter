@@ -107,14 +107,8 @@ export interface ArenaStats {
   damageTaken: number;
   /** Per-device dispatch accounting, lazily keyed by `DeviceDef.id`. */
   devices: Record<string, DeviceStat>;
-  /** Bodies actually put on the floor. */
+  /** Bodies put on the floor. Nothing gates this — see `./step.ts` § spawn. */
   spawned: number;
-  /**
-   * Spawns the escalation curve called for and the floor had no room for.
-   * The share of these is how much of the run's escalation `entityBudget`
-   * discards — escalation that is authored, solved against, and then inert.
-   */
-  spawnsDropped: number;
 }
 
 export interface ArenaState {

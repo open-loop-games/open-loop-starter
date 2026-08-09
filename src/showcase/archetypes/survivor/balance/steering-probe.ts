@@ -37,7 +37,7 @@
  * nothing downstream says so.
  *
  * Spreads are binned by live specimen count because the landscape is a function
- * of density: what steers on an open floor and what steers against a capped one
+ * of density: what steers on an open floor and what steers against a crowded one
  * are different questions, and only the second describes the back half of a run.
  */
 
@@ -52,10 +52,10 @@ import { scoreHeadings, type Fields } from '../modules/sim/steering';
  *  probe cannot run at the coarse rate the economy probes use. */
 const TICK_RATE = 20;
 /**
- * A full arc, not a sample of the opening. `entityBudget` first binds around
- * 12:00 (`./arena-probe.ts` § census) and the term-spread table's whole question
- * is what the scoring landscape looks like AT the cap — a six-minute run answers
- * it for a floor the run never reaches.
+ * A full arc, not a sample of the opening. Density climbs for the whole run and
+ * peaks past 20:00 (`./arena-probe.ts` § census), and the term-spread table's
+ * whole question is what the scoring landscape looks like on a crowded floor — a
+ * six-minute run answers it for a floor the run never reaches.
  */
 const MINUTES = 30;
 /** Straightness is measured over windows this long, in sim seconds. */
@@ -98,8 +98,8 @@ interface SpreadBin {
 const BANDS: { label: string; min: number; max: number }[] = [
   { label: '< 100', min: 0, max: 99 },
   { label: '100–249', min: 100, max: 249 },
-  { label: '250–399', min: 250, max: 399 },
-  { label: 'at cap', min: 400, max: Infinity },
+  { label: '250–599', min: 250, max: 599 },
+  { label: '600+', min: 600, max: Infinity },
 ];
 
 const spread = (xs: number[]): number => Math.max(...xs) - Math.min(...xs);

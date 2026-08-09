@@ -168,9 +168,10 @@ function reportArena(): void {
     );
   }
   console.log(
-    `\n  Live is bounded by the annulus early, then by the ${THREAT_BALANCE.entityBudget}-entity ` +
-      `budget once spawn rate outruns it (measured ~12:00+, see arena-probe.ts census). ` +
-      `\`localDensity\` clamps to the same ceiling so this table agrees with the sim past that point.`,
+    '\n  Live population is bounded by the annulus, by kills and by the distance cull —' +
+      '\n  there is no entity ceiling, so `localDensity` above is the only bound there is.' +
+      '\n  That makes its `dwellSeconds` term load-bearing, and the arena probe prints a' +
+      '\n  measured census beside this column for exactly that reason.',
   );
 }
 

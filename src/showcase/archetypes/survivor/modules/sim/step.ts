@@ -66,7 +66,6 @@ export function createArenaState(params: ArenaParams): ArenaState {
       damageTaken: 0,
       devices: {},
       spawned: 0,
-      spawnsDropped: 0,
     },
     nextId: 1,
     spawnCarry: 0,
@@ -178,20 +177,13 @@ export function stepArena(
   const rate =
     THREAT_BALANCE.spawnRate0 * Math.pow(THREAT_BALANCE.spawnGrowthPerMinute, state.time / 60);
   state.spawnCarry += rate * dt;
+  // No ceiling: what the escalation curve calls for is what the floor gets. The
+  // `entityBudget` that used to gate this looked like a performance bound and
+  // acted as a design one, discarding 40–70% of the run's authored spawns
+  // (`../../BALANCING.md` § Known thin). Density is bounded by the annulus, by
+  // kills, and by the distance cull — by the game, rather than by a constant.
   while (state.spawnCarry >= 1) {
     state.spawnCarry -= 1;
-    // A spawn that meets a full floor is DROPPED, not deferred. `spawnCarry`
-    // exists to carry the fractional remainder of `rate · dt` between ticks; when
-    // the budget also gated draining it, it silently became an unbounded queue —
-    // measured at 1734–5889 pending bodies against a 400 ceiling. The floor was
-    // then not "at the cap" but welded to it, because every kill was refilled
-    // from the backlog within the same tick. Killing could not thin the field by
-    // one body for the back half of a run, which made the mass-clear shapes look
-    // like a `maxTargets` problem when nothing at any cap would have helped.
-    if (state.specimens.length >= THREAT_BALANCE.entityBudget) {
-      state.stats.spawnsDropped++;
-      continue;
-    }
     if (live.length > 0) {
       spawnOne(state, params);
       state.stats.spawned++;

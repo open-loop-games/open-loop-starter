@@ -78,7 +78,6 @@ function state(): ArenaState {
       damageTaken: 0,
       devices: {},
       spawned: 0,
-      spawnsDropped: 0,
     },
     nextId: 1000,
     spawnCarry: 0,

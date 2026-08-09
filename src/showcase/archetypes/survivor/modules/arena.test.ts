@@ -10,7 +10,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ArenaKey } from './arena';
-import { ARENA_BALANCE, COLLECTOR_BALANCE, THREAT_BALANCE, collectRadiusFor } from '../data/arena';
+import { ARENA_BALANCE, COLLECTOR_BALANCE, collectRadiusFor } from '../data/arena';
 import { REAGENTS } from '../data/devices';
 import { META_UPGRADES } from '../data/meta';
 import { boot, getEngine, tick } from '../sim/harness';
@@ -74,12 +74,15 @@ describe('survivor/arena', () => {
     expect(y).toBeGreaterThanOrEqual(0);
   });
 
-  it('holds live specimens under the declared entity budget', async () => {
+  it('grows the floor without a ceiling, and still bounds it', async () => {
     arena().startRun('generalist');
     await tick(1200);
-    // The annulus bounds density; a breach here means spawning stopped being
-    // bounded, which is a structural failure rather than a hard difficulty.
-    expect(arena().state.value.specimens.length).toBeLessThanOrEqual(400);
+    const s = arena().state.value;
+    // No entity budget any more: the bound is the annulus, kills and the
+    // distance cull. What must stay true is that those three DO bound it —
+    // an unbounded floor is a structural failure, not a hard difficulty.
+    expect(s.specimens.length).toBeGreaterThan(0);
+    expect(s.specimens.length).toBeLessThan(s.stats.spawned);
   });
 
   it('stops stepping once a run has ended', async () => {
@@ -221,29 +224,8 @@ describe('survivor/arena — per-device accounting', () => {
   });
 });
 
-describe('survivor/arena — the entity budget is a ceiling, not a queue', () => {
+describe('survivor/arena — spawning is not a queue', () => {
   beforeEach(() => boot());
-
-  it('drops spawns that meet a full floor instead of banking them', async () => {
-    arena().startRun('generalist');
-    await tick(200);
-    const s = arena().state.value;
-
-    // Fill the floor to the ceiling rather than ticking twenty minutes to reach
-    // it. The regression: `spawnCarry` gated its own draining on the budget, so
-    // a pinned floor accumulated an unbounded backlog — measured in the
-    // thousands against a 400 ceiling — and every kill was refilled from it
-    // within the same tick, so killing could not thin the field at all.
-    const seed = s.specimens[0];
-    while (s.specimens.length < THREAT_BALANCE.entityBudget) {
-      s.specimens.push({ ...seed, id: s.nextId++ });
-    }
-
-    await tick(100);
-    const after = arena().state.value;
-    expect(after.stats.spawnsDropped).toBeGreaterThan(0);
-    expect(after.spawnCarry).toBeLessThan(2);
-  });
 
   it('lets a cleared floor stay cleared for longer than a tick', async () => {
     arena().startRun('generalist');

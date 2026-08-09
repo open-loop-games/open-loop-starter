@@ -71,12 +71,6 @@ export interface ThreatBalance {
   contactSaturation: number;
   /** Operator effective-HP pool before seat toughness and defensive picks. */
   baseHp: number;
-  /**
-   * Hard ceiling on live entities — the arena sim's budget at 20 Hz. Also the
-   * ceiling `localDensity` clamps to, since past this point the sim's own
-   * population stops tracking the uncapped formula; see that function.
-   */
-  entityBudget: number;
 }
 
 export const THREAT_BALANCE: ThreatBalance = {
@@ -88,7 +82,6 @@ export const THREAT_BALANCE: ThreatBalance = {
   contactDps: 9,
   contactSaturation: 3,
   baseHp: 260,
-  entityBudget: 400,
 };
 
 export interface CollectorBalance {
@@ -176,17 +169,19 @@ export function spawnRate(t: number): number {
  * shortened by the seat's DPS), unengaged ones by scrolling away (dwell) — so
  * killing genuinely thins the field. Derived, never authored.
  *
- * Clamped at `entityBudget`: the sim's spawn loop
- * (`../modules/sim/step.ts` § spawn) stops adding bodies once
- * `specimens.length` reaches it, and despawn only removes specimens the
- * operator has outrun — the same near-operator population this formula
- * estimates by Little's-law residency. Past the clamp the two are the same
- * quantity by construction, not two models agreeing by luck.
+ * Unclamped. There was a ceiling here, mirroring a hard `entityBudget` in the
+ * sim's spawn loop, and it was removed because it did design work while looking
+ * like a performance bound: measured, it discarded 40–70% of the run's authored
+ * escalation, and the draft is solved against the spawn-growth term it discarded.
+ *
+ * This formula is the one that must now be right, because nothing downstream
+ * bounds it. It is Little's law over `residency`, and `dwellSeconds` is the term
+ * to distrust — see `../BALANCING.md` § Known thin.
  */
 export function localDensity(t: number, engage: number, dps: number): number {
-  const { timeToKillSeconds, dwellSeconds, entityBudget } = THREAT_BALANCE;
+  const { timeToKillSeconds, dwellSeconds } = THREAT_BALANCE;
   const residency = engage * (timeToKillSeconds / dps) + (1 - engage) * dwellSeconds;
-  return Math.min(spawnRate(t) * residency, entityBudget);
+  return spawnRate(t) * residency;
 }
 
 /**
@@ -245,7 +240,7 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 //
 // ─── Density, contact, and why killing is defensive ───
 //
-//   density(t) = min(d₀ · m_d^(t/60) · [engage · TTK/dps + (1−engage) · dwell], entityBudget)
+//   density(t) = d₀ · m_d^(t/60) · [engage · TTK/dps + (1−engage) · dwell]
 //   contact(t) = min(1, (density / (cap · speed))²)
 //   taken(t)   = contact(t) · contactDps · m_dmg^(t/60) / toughness
 //
@@ -255,16 +250,21 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 // That is what makes the damage seat's advantage structural rather than
 // cosmetic, and it is the only channel by which DPS converts into survival.
 //
-// The `entityBudget` clamp keeps this the honest formula once the sim's own
-// population stops climbing — measured at seats pinned at exactly 400 for
-// 7–19 of a run's 30 minutes (`../BALANCING.md` § Known thin). Before the
-// clamp, contact chance, traversal-collapse classification and bind-cause
-// reporting were all reading a curve the live sim had stopped following past
-// that point — a cap that binds in the sim but not in its model is a silently
-// substituted model. The clamp fixes the MODEL's honesty; it does not touch
-// the sim, and it does not remove the difficulty inversion where the
-// lowest-DPS seat fills the floor earliest and stays capped longest — that is
-// a real fact about the game, not a modelling error, and stays open.
+// This formula used to be clamped to an `entityBudget`, mirroring a hard
+// ceiling in the sim's spawn loop. Both are gone. The ceiling read as a
+// performance bound and behaved as a design one: it discarded 40–70% of the
+// run's authored spawns, so the escalation curve — which `offensivePickGain`
+// is solved against, spawn-growth term included — stopped reaching the floor
+// around the midpoint, and the draft was sized to beat a density the game had
+// quietly stopped delivering. Removing it costs a measured 763–1465 peak
+// population against the old 400, and buys density that escalates for the
+// whole arc.
+//
+// The consequence for this function is that nothing downstream bounds it any
+// more, so its own honesty is now load-bearing. `dwellSeconds` is the term to
+// distrust: the sim has no dwell at all, it culls on distance
+// (`../modules/sim/step.ts` § despawn), and the two disagree by an order of
+// magnitude. Recorded in `../BALANCING.md` § Known thin, not tuned away.
 //
 // Known thin, recorded rather than tuned away: that channel is currently too
 // weak. `toughness` and defensive picks divide damage directly while DPS reaches

@@ -18,25 +18,25 @@ time axis), `arena.ts` (geometry and threat), `income.ts` (motes to levels),
 draft pool), `meta.ts` (the cross-run shop). `modules/tuning.ts` declares the
 `tunable()` key union; not every constant below is wired to one yet.
 
-| Knob                                                                  | What it moves                                                                                                                                                |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `beatFirstSeconds`, `beatRatio`                                       | the draft schedule. The beat _count_ is a consequence, not a knob — hold the 30–90s band and ~33 beats falls out                                             |
-| `hpGrowthPerMinute`                                                   | how hard escalation bites. Also re-solves the per-pick DPS gain, since that is pinned to flat time-to-kill                                                   |
-| `spawnRate0`, `spawnGrowthPerMinute`                                  | density, and with it the entity budget and the whole traversal term                                                                                          |
-| `contactDamageGrowthPerMinute`                                        | per-hit escalation. Deliberately far slower than HP growth                                                                                                   |
-| `densityCap`, `BLOCKING_CROWD`, `ESCAPE_FLOOR`                        | where gaps close. Contact is the _squared_ approach to it, so this is quiet until it is sudden                                                               |
-| `hpPickGain`                                                          | what a defensive pick buys                                                                                                                                   |
-| `apertureCapRatio`                                                    | the ceiling `r_collect/r_kill` approaches as aperture sources stack. Bounds the top coupling structurally — see § Couplings                                  |
-| `COLLECTOR_BALANCE.onscreenShare`                                     | the projection's assumed burst size. The sim pulls everything inside `pullRadius` instead, so this is a prediction the probe measures against, not a rule    |
-| `COLLECTOR_BALANCE.pullRadius`, `timeJitter`                          | how much floor one pull banks, and how far a drop roams from its nominal time                                                                                |
-| per-seat `engage`, `eta`, `speed`, `dps`, `toughness`, `defenseShare` | the personality bundle; also the sweep axis                                                                                                                  |
-| device `baseDamage` / `cooldownSec`                                   | one device's cadence and weight. The opening device's pair is _solved_ against flat TTK at t=0, not chosen                                                   |
-| device `shape`                                                        | whether coverage is given or earned. A heading-bound shape is worth less to a policy than to a hand, and `modules/draft.ts` discounts it accordingly         |
-| device `maxTargets`                                                   | how many of the specimens in reach an area shape takes. Binds hardest at `entityBudget`, which is where the mass-clear shapes matter most — see § Known thin |
-| specimen `hpFactor` / `damageFactor` / `weight`                       | the mix, and through it the required-DPS curve and the pressure curve                                                                                        |
-| specimen `moteYield`                                                  | income. Coupled to the ladder — raise it and re-derive                                                                                                       |
-| `NOTES_PER_KILL`, `META_COST_RATIO`, per-upgrade `baseCost`           | the runs-to-buy ladder. Read the projection's meta table, not these numbers                                                                                  |
-| meta upgrade `side`                                                   | whether a tile is ladder-safe. Not annotation — see § Couplings                                                                                              |
+| Knob                                                                  | What it moves                                                                                                                                             |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beatFirstSeconds`, `beatRatio`                                       | the draft schedule. The beat _count_ is a consequence, not a knob — hold the 30–90s band and ~33 beats falls out                                          |
+| `hpGrowthPerMinute`                                                   | how hard escalation bites. Also re-solves the per-pick DPS gain, since that is pinned to flat time-to-kill                                                |
+| `spawnRate0`, `spawnGrowthPerMinute`                                  | density, and with it the entity budget and the whole traversal term                                                                                       |
+| `contactDamageGrowthPerMinute`                                        | per-hit escalation. Deliberately far slower than HP growth                                                                                                |
+| `densityCap`, `BLOCKING_CROWD`, `ESCAPE_FLOOR`                        | where gaps close. Contact is the _squared_ approach to it, so this is quiet until it is sudden                                                            |
+| `hpPickGain`                                                          | what a defensive pick buys                                                                                                                                |
+| `apertureCapRatio`                                                    | the ceiling `r_collect/r_kill` approaches as aperture sources stack. Bounds the top coupling structurally — see § Couplings                               |
+| `COLLECTOR_BALANCE.onscreenShare`                                     | the projection's assumed burst size. The sim pulls everything inside `pullRadius` instead, so this is a prediction the probe measures against, not a rule |
+| `COLLECTOR_BALANCE.pullRadius`, `timeJitter`                          | how much floor one pull banks, and how far a drop roams from its nominal time                                                                             |
+| per-seat `engage`, `eta`, `speed`, `dps`, `toughness`, `defenseShare` | the personality bundle; also the sweep axis                                                                                                               |
+| device `baseDamage` / `cooldownSec`                                   | one device's cadence and weight. The opening device's pair is _solved_ against flat TTK at t=0, not chosen                                                |
+| device `shape`                                                        | whether coverage is given or earned. A heading-bound shape is worth less to a policy than to a hand, and `modules/draft.ts` discounts it accordingly      |
+| device `maxTargets`                                                   | how many of the specimens in reach an area shape takes. On `bolt`/`lance` it is definitional; on the area shapes it is the real lever — see § Known thin  |
+| specimen `hpFactor` / `damageFactor` / `weight`                       | the mix, and through it the required-DPS curve and the pressure curve                                                                                     |
+| specimen `moteYield`                                                  | income. Coupled to the ladder — raise it and re-derive                                                                                                    |
+| `NOTES_PER_KILL`, `META_COST_RATIO`, per-upgrade `baseCost`           | the runs-to-buy ladder. Read the projection's meta table, not these numbers                                                                               |
+| meta upgrade `side`                                                   | whether a tile is ladder-safe. Not annotation — see § Couplings                                                                                           |
 
 **Deliberately not perturbable:** the per-pick DPS gain, the beat ratio, and the
 XP ladder. All three are _solved_ — the gain from flat time-to-kill, the ratio so
@@ -180,7 +180,7 @@ effect when the design is indifferent — it costs the schedule nothing.
   cap. `lvl` beside them is what says whether a shortfall is the device or the
   draft that fed it.
 
-  It also prints a **live census against `entityBudget`**, sampled each minute:
+  It also prints a **live census against the model**, sampled each minute:
   peak population, when the cap first bound, and how many minutes were spent
   pinned there. That table exists because end-of-run totals cannot distinguish a
   floor clamped for half the arc from one that never filled — see § Known thin.
@@ -248,9 +248,12 @@ carry no numbers.
   rotations, from the same draft policy.
 
   Still open, and the reason `maxTargets` is no longer described as the arc knob:
-  `pulse` capture runs 22–33% on seats sitting at `entityBudget` against **54% on
-  the seat that reaches it latest**. The one mass-clear device is cap-bound
-  precisely when there is a mass to clear.
+  `pulse` capture rises and falls with how crowded the floor gets, and
+  `maxTargets` is the lever — but only on the AREA shapes. Measured with every
+  cap removed at once, `bolt` becomes the dominant shape at 48–69% of kills,
+  because an uncapped single-target shape is just a pulse with a 0.55s cooldown.
+  On `bolt` and `lance` the cap is what the shape IS; on `pulse` and `cone` it is
+  a number. Uncapping `pulse` alone leaves the roster intact.
 
 - **Shop costs are anchored to a payout the sim does not deliver.** The
   projection sizes `baseCost` against ~627 notes for a baseline run; a real run
@@ -268,37 +271,22 @@ carry no numbers.
   distinct causes rather than two. `BLOCKING_CROWD` / `ESCAPE_FLOOR` have still
   never been swept, and now that the detector fires again the sweep is worth
   something.
-- **`entityBudget` discards 40–70% of the run's authored escalation, and the
-  DPS solve is calibrated against the part that never arrives.** Measured
-  directly: the probe counts spawns the curve called for against spawns the floor
-  had room for, and the dropped share runs **40% / 59% / 69% / 70%** across the
-  roster. Escalation past roughly the midpoint is authored, solved against, and
-  then inert — `offensivePickGain` includes the spawn-growth term `m_d`, so the
-  draft is sized to beat a density the game stops delivering.
+- **There is no entity ceiling any more, and `localDensity` is now the only
+  thing bounding the floor.** `entityBudget` was documented as the sim's budget
+  at 20 Hz and behaved as a design constant: measured, it discarded **40–70% of
+  the run's authored spawns**, so escalation past roughly the midpoint never
+  reached the floor — while `offensivePickGain` is solved against that curve,
+  spawn-growth term included. The draft was sized to beat a density the game had
+  stopped delivering.
 
-  Raising the ceiling is **not** an available answer, and that is measured rather
-  than assumed: at a 3× budget two of four seats still pin, at 1200. The
-  population is not bounded by anything except the cap, because spawn rate
-  reaches ~12/s by the end of the arc against a kill rate of 1.5–3/s. Raising it
-  moves the wall and costs frame time.
+  Removing it is bounded in practice rather than in principle: peak population
+  lands at **763–1465** against the old 400, because the annulus, kills and the
+  distance cull do bound it. That is roughly 3.7× the entity load at 20 Hz, which
+  is the cost, and it is why `modules/sim/step.ts` § spawn says what the bound is
+  now made of.
 
-  A related divergence is the likeliest root and is not yet resolved. `localDensity`
-  models population as `rate · residency` with `residency` built from
-  `dwellSeconds` = 12, which predicts on the order of twenty live specimens where
-  the sim holds four hundred. The sim has no dwell: `modules/sim/step.ts`
-  § despawn culls on DISTANCE, at `spawnOuterRadius · 1.4`, and an operator that
-  orbits rather than fleeing in a straight line never outruns much. So the
-  declared "unengaged specimens leave by scrolling away" is not what the floor
-  does, and the clamp that reconciled `localDensity` to `entityBudget` was
-  papering over an order-of-magnitude modelling error rather than a rounding one.
-
-  Three directions, and they are not equivalent. Implement dwell so the floor
-  behaves as the spine says and density tracks the spawn curve again; or flatten
-  `spawnGrowthPerMinute` so the curve lands near the budget at the end of the arc
-  instead of ten times past it, re-deriving the pick gain with it; or leave both
-  and accept that the back half of the arc escalates only through HP. The first
-  is the one that makes the other findings here fall out, and it is a mechanic
-  change rather than a tune.
+  Raising the ceiling instead was tried and rejected on measurement: at 3× two of
+  four seats still pinned, at 1200.
 
 - **A full floor drops spawns; it used to bank them.** `spawnCarry` exists to
   carry the fractional remainder of `rate · dt` between ticks, and the budget
@@ -308,11 +296,12 @@ carry no numbers.
   within the same tick, and killing could not thin the field by one body for the
   back half of a run.
 
-  Worth keeping because of what it disguised itself as. This read as a
-  `maxTargets` problem — the mass-clear shape looked cap-bound exactly when the
-  mass existed — and no value of `maxTargets` would have helped, because the
-  floor refilled faster than any device could empty it. **Before widening a
-  device against a wall of enemies, check that killing them removes them.**
+  Worth keeping although the ceiling it depended on is gone, because of what it
+  disguised itself as. This read as a `maxTargets` problem — the mass-clear shape
+  looked cap-bound exactly when the mass existed — and no value of `maxTargets`
+  would have helped, because the floor refilled faster than any device could
+  empty it. **Before widening a device against a wall of enemies, check that
+  killing them removes them.**
 
 - **The cone is a human-play device, and the draft now says so.** `selectTargets`
   (`modules/sim/dispatch.ts`) filters the `cone` shape to a ~120° wedge about

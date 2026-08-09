@@ -9,7 +9,7 @@ A containment breach on a scrolling floor. Two geometric curves race: device DPS
 
 ## Vocabulary
 
-Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
+Enum / union membership is an is-a relation — each arm _is a_ kind of its owner.
 
 - **DeviceShape** _(string-literal union)_ — `bolt` · `pulse` · `cone` · `lance`
 - **ReagentEffect** _(string-literal union)_ — `cooldown` · `damage` · `reach` · `toughness` · `collect` · `moveSpeed`

@@ -22,7 +22,7 @@ import { bootTestEngine } from '@/test/bootTestEngine';
 import { ArenaKey, DraftKey, RunKey, createSurvivorModules } from '../modules';
 import { SEATS } from '../data/seats';
 import { meanMoteYield } from '../data/specimens';
-import { THREAT_BALANCE, spawnRate } from '../data/arena';
+import { localDensity, spawnRate } from '../data/arena';
 import { DEVICES } from '../data/devices';
 
 /** 5 ticks per sim-second — coarse enough to be quick, fine enough to steer. */
@@ -49,25 +49,25 @@ async function runSeat(seatId: string, seed: number) {
   run.startRun(seatId);
 
   // Ticked a minute at a time rather than in one call so the live census can be
-  // SAMPLED. `entityBudget` is a measured binding density term past mid-run
-  // (`../BALANCING.md` § Known thin), and from end-of-run totals a floor pinned
-  // at the cap for half the arc is indistinguishable from one that never reached
-  // it — the spawn loop simply stops. `localDensity` (`../data/arena.ts`) now
-  // clamps to the same ceiling, so this census is what verifies the projection
-  // agrees with the sim rather than quoting a curve it abandoned.
+  // SAMPLED. Nothing bounds population now that `entityBudget` is gone, so what
+  // this samples is the shape of the curve rather than how long it sat against a
+  // ceiling: the peak, and where it got there. `localDensity` (`../data/arena.ts`)
+  // is the model it has to be read against, and that model is unclamped too — so
+  // a divergence here is a real disagreement rather than a clamp doing the
+  // agreeing. Its `dwellSeconds` term is the one to distrust.
   let peakSpecimens = 0;
-  let minutesAtCap = 0;
-  let firstCapAt: number | null = null;
+  let peakAt = 0;
+  let liveAt10 = 0;
   let peakCarry = 0;
   for (let m = 0; m < MINUTES; m++) {
     await handle.tick(60 * TICK_RATE);
     const live = arena.state.value;
-    peakSpecimens = Math.max(peakSpecimens, live.specimens.length);
-    peakCarry = Math.max(peakCarry, live.spawnCarry);
-    if (live.specimens.length >= THREAT_BALANCE.entityBudget) {
-      minutesAtCap++;
-      if (firstCapAt === null) firstCapAt = live.time;
+    if (live.specimens.length > peakSpecimens) {
+      peakSpecimens = live.specimens.length;
+      peakAt = live.time;
     }
+    if (m === 9) liveAt10 = live.specimens.length;
+    peakCarry = Math.max(peakCarry, live.spawnCarry);
     if (arena.outcome.value !== 'running') break;
   }
 
@@ -104,11 +104,10 @@ async function runSeat(seatId: string, seed: number) {
     collectorsTaken: stats.collectorsTaken,
     collectorsDropped: s.collectorsDropped,
     spawned: stats.spawned,
-    spawnsDropped: stats.spawnsDropped,
     peakSpecimens,
+    peakAt,
+    liveAt10,
     peakCarry,
-    minutesAtCap,
-    firstCapAt,
     liveSpecimens: s.specimens.length,
     liveMotes: s.motes.length,
     contactSeconds: stats.contactSeconds,
@@ -150,6 +149,7 @@ async function main(): Promise<void> {
       'burst',
   );
 
+  const seatOf = (id: string) => SEATS.find((x) => x.id === id)!;
   const results: Awaited<ReturnType<typeof runSeat>>[] = [];
   for (const seat of SEATS) {
     const r = await runSeat(seat.id, 12345);
@@ -172,25 +172,25 @@ async function main(): Promise<void> {
     );
   }
 
-  console.log(`\n  ── Live census against the ${THREAT_BALANCE.entityBudget}-entity budget ──`);
+  console.log('\n  ── Live census, unbounded ──');
   console.log(
     col('  seat', 13) +
       col('peak', 8) +
-      col('first at cap', 15) +
-      col('min at cap', 13) +
+      col('peak at', 10) +
+      col('at 10:00', 11) +
+      col('modelled', 11) +
       col('motes left', 13) +
-      col('spawned', 10) +
-      'escalation dropped',
+      'spawned',
   );
   for (const r of results) {
     console.log(
       col(`  ${r.seatId}`, 13) +
         col(r.peakSpecimens, 8) +
-        col(r.firstCapAt === null ? '—' : clock(r.firstCapAt), 15) +
-        col(r.minutesAtCap, 13) +
+        col(clock(r.peakAt), 10) +
+        col(r.liveAt10, 11) +
+        col(localDensity(600, seatOf(r.seatId).engage, seatOf(r.seatId).dps).toFixed(0), 11) +
         col(r.liveMotes, 13) +
-        col(r.spawned, 10) +
-        `${r.spawnsDropped} (${((r.spawnsDropped / Math.max(1, r.spawned + r.spawnsDropped)) * 100).toFixed(0)}%)`,
+        r.spawned,
     );
   }
 
