@@ -40,6 +40,10 @@ export interface ArcSample {
   deviceLevels: number;
   /** Cumulative picks flagged defensive — the `defenseShare` dial, realized. */
   defensivePicks: number;
+  /** Effective damage that bought a kill this minute. */
+  damageConverted: number;
+  /** Effective damage spent on bodies that left the floor alive this minute. */
+  damageWasted: number;
 }
 
 /** 5 ticks per sim-second — coarse enough to be quick, fine enough to steer. */
@@ -79,7 +83,7 @@ export async function runArc(seatId: string, seed: number) {
   // fell behind — and those are different repairs, so the arc has to be sampled
   // rather than summed. See `./lethality-probe.ts`.
   const series: ArcSample[] = [];
-  let prev = { kills: 0, reached: 0, spawned: 0 };
+  let prev = { kills: 0, reached: 0, spawned: 0, damageConverted: 0, damageWasted: 0 };
   for (let m = 0; m < MINUTES; m++) {
     await handle.tick(60 * TICK_RATE);
     const live = arena.state.value;
@@ -99,8 +103,16 @@ export async function runArc(seatId: string, seed: number) {
       spawned: st.spawned - prev.spawned,
       deviceLevels: live.devices.reduce((n, d) => n + d.level, 0),
       defensivePicks: draft.takenDefensive.value,
+      damageConverted: st.damageConverted - prev.damageConverted,
+      damageWasted: st.damageWasted - prev.damageWasted,
     });
-    prev = { kills: st.kills, reached: st.reached, spawned: st.spawned };
+    prev = {
+      kills: st.kills,
+      reached: st.reached,
+      spawned: st.spawned,
+      damageConverted: st.damageConverted,
+      damageWasted: st.damageWasted,
+    };
     if (arena.outcome.value !== 'running') break;
   }
 
@@ -147,6 +159,15 @@ export async function runArc(seatId: string, seed: number) {
     liveSpecimens: s.specimens.length,
     liveMotes: s.motes.length,
     contactSeconds: stats.contactSeconds,
+    damageConverted: stats.damageConverted,
+    damageWasted: stats.damageWasted,
+    bodiesWasted: stats.bodiesWasted,
+    /**
+     * Damage sitting in bodies still standing when the run ended. Not folded
+     * into `damageWasted` — those bodies never finished, so calling their
+     * damage wasted would charge the run for a verdict it never reached.
+     */
+    standingDamage: s.specimens.reduce((n, sp) => n + Math.max(0, sp.spawnHp - sp.hp), 0),
     hpLeft: Math.max(0, s.operator.hp),
     hpMax: s.operator.maxHp,
     deviceStats: stats.devices,

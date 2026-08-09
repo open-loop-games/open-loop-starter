@@ -225,11 +225,90 @@ async function main(): Promise<void> {
     });
     const present = perSeat.filter((v): v is number => v !== null);
     if (present.length === 0) continue;
-    const ratio = Math.max(...present) / Math.max(1e-9, Math.min(...present));
+    // A ratio against a seat that killed essentially nothing is not a spread,
+    // it is a division artifact — 0.38 over 0.00 printed as 382407407.4x here
+    // and read as a number. Past the floor the honest statement is that one seat
+    // has stopped killing.
+    const lo = Math.min(...present);
+    const spread =
+      present.length < 2
+        ? '—'
+        : lo < 0.01
+          ? 'floored'
+          : `${(Math.max(...present) / lo).toFixed(1)}x`;
     console.log(
       col(bin.label, 10) +
         perSeat.map((v) => col(v === null ? '—' : v.toFixed(2), 13)).join('') +
-        (present.length > 1 ? `${ratio.toFixed(1)}x` : '—'),
+        spread,
+    );
+  }
+
+  // ── Where the damage GOES ──
+  //
+  // `kills / reached` says how many bodies died; it cannot say whether the ones
+  // that lived were untouched or nearly dead. Those are different failures with
+  // different repairs — a seat that never engages wants movement, a seat that
+  // wounds the whole floor and finishes none of it wants its damage to STICK.
+  //
+  // `waste` is damage spent on bodies that walked away, over all damage that
+  // resolved. Both `speed` and crowding predict it rises: a fast operator's
+  // in-reach set churns before anything finishes, and `maxTargets` spreads each
+  // activation over more bodies as the floor fills. If it is flat, the two
+  // findings are unrelated and exit 3 buys nothing.
+  console.log('\n  ── Where the damage went (waste = spent on bodies that left alive) ──');
+  console.log(
+    col('  seat', 13) +
+      col('speed', 8) +
+      col('waste', 9) +
+      col('lethal', 9) +
+      'bodies left wounded',
+  );
+  for (const seat of SEATS) {
+    const runs = bySeat.get(seat.id)!;
+    let converted = 0;
+    let wasted = 0;
+    let bodies = 0;
+    let kills = 0;
+    let reached = 0;
+    for (const r of runs) {
+      converted += r.damageConverted;
+      wasted += r.damageWasted;
+      bodies += r.bodiesWasted;
+      kills += r.kills;
+      reached += r.reached;
+    }
+    const total = converted + wasted;
+    console.log(
+      col(`  ${seat.id}`, 13) +
+        col(seat.speed.toFixed(2), 8) +
+        col(total > 0 ? `${((wasted / total) * 100).toFixed(1)}%` : '—', 9) +
+        col(reached > 0 ? (kills / reached).toFixed(2) : '—', 9) +
+        (bodies / runs.length).toFixed(0),
+    );
+  }
+
+  console.log('\n  ── Waste by LIVE POPULATION (does crowding spread the damage?) ──');
+  console.log(col('  band', 10) + SEATS.map((s) => col(s.id, 13)).join('') + 'spread');
+  for (const bin of POP_BINS) {
+    const perSeat = SEATS.map((seat) => {
+      let converted = 0;
+      let wasted = 0;
+      for (const r of bySeat.get(seat.id)!) {
+        for (const s of r.series) {
+          if (s.liveSpecimens < bin.min || s.liveSpecimens > bin.max) continue;
+          converted += s.damageConverted;
+          wasted += s.damageWasted;
+        }
+      }
+      const total = converted + wasted;
+      return total > 0 ? wasted / total : null;
+    });
+    const present = perSeat.filter((v): v is number => v !== null);
+    if (present.length === 0) continue;
+    console.log(
+      col(bin.label, 10) +
+        perSeat.map((v) => col(v === null ? '—' : `${(v * 100).toFixed(1)}%`, 13)).join('') +
+        `${(Math.max(...present) - Math.min(...present)).toFixed(2)} abs`,
     );
   }
 

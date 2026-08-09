@@ -67,6 +67,9 @@ export function createArenaState(params: ArenaParams): ArenaState {
       devices: {},
       spawned: 0,
       reached: 0,
+      damageConverted: 0,
+      damageWasted: 0,
+      bodiesWasted: 0,
     },
     nextId: 1,
     spawnCarry: 0,
@@ -98,12 +101,14 @@ function spawnOne(state: ArenaState, params: ArenaParams): void {
   const x = Math.min(mapWidth, Math.max(0, state.operator.x + Math.cos(angle) * radius));
   const y = Math.min(mapHeight, Math.max(0, state.operator.y + Math.sin(angle) * radius));
 
+  const hp = BASE_SPECIMEN_HP * def.hpFactor * hpMul(state.time);
   state.specimens.push({
     id: state.nextId++,
     tierId: def.id,
     x,
     y,
-    hp: BASE_SPECIMEN_HP * def.hpFactor * hpMul(state.time),
+    hp,
+    spawnHp: hp,
     speed: def.speed,
     contactDamage: THREAT_BALANCE.contactDps * def.damageFactor * contactDamageMul(state.time),
     moteYield: def.moteYield,
@@ -125,9 +130,24 @@ function dropMotes(state: ArenaState, s: Specimen, params: ArenaParams): void {
         id: state.nextId++,
         x: s.x + Math.cos(a) * 30,
         y: s.y + Math.sin(a) * 30,
-        hp: s.hp * 0.4,
+        // Off the parent's ARRIVAL hp, not its current hp — `dropMotes` runs
+        // from the death sweep, where `s.hp` is at or below zero. Taken from
+        // `s.hp` a fragment was born dead: it was pushed onto `specimens` mid
+        // sweep, met the same `hp <= 0` test on the iterator's next step, and
+        // was booked as a kill without ever having existed. The tier's whole
+        // job is the density spike (`../../data/specimens.ts` § Each tier moves
+        // a different term) and it never once put a body on the floor.
+        hp: s.spawnHp * 0.4,
+        spawnHp: s.spawnHp * 0.4,
+        // Its own clock. Inherited through the spread, a fragment arrived
+        // already carrying its parent's dwell age and could expire on birth.
+        spawnedAt: state.time,
         tierId: 'splitter-fragment',
-        moteYield: 0,
+        // The income model already charges for these: `meanMoteYield` adds
+        // `SPLITTER_FRAGMENTS` on top of the splitter's own yield, so a
+        // fragment dropping nothing is the sim under-delivering against the
+        // curve the ladder was derived from.
+        moteYield: 1,
         // Born in range, by construction: a fragment appears on its parent's
         // corpse, and the parent died somewhere a device could reach. Stated
         // rather than inherited from the spread above, because it is what keeps
@@ -306,6 +326,7 @@ export function stepArena(
   for (const s of state.specimens) {
     if (s.hp <= 0) {
       state.stats.kills++;
+      state.stats.damageConverted += s.spawnHp;
       if (s.moteYield > 0) dropMotes(state, s, params);
       maybeDropCollector(state, s);
     } else {
@@ -408,9 +429,17 @@ export function stepArena(
     const dx = s.x - state.operator.x;
     const dy = s.y - state.operator.y;
     const d2 = dx * dx + dy * dy;
-    if (d2 > despawn2) return false;
-    if (d2 <= kill2) return true;
-    return state.time - s.spawnedAt < THREAT_BALANCE.dwellSeconds;
+    const leaves =
+      d2 > despawn2 || (d2 > kill2 && state.time - s.spawnedAt >= THREAT_BALANCE.dwellSeconds);
+    if (!leaves) return true;
+    // Damage already spent on a body that walks away bought nothing. Booked
+    // here rather than at the device, because whether a hit was worth anything
+    // is only knowable once the body's fate is — see `ArenaStats.damageWasted`.
+    if (s.hp < s.spawnHp) {
+      state.stats.damageWasted += s.spawnHp - s.hp;
+      state.stats.bodiesWasted++;
+    }
+    return false;
   });
 
   return {

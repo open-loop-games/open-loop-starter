@@ -36,6 +36,7 @@ function ahead(count: number): Specimen[] {
     id: i,
     tierId: 'x',
     hp: 1e9,
+    spawnHp: 1e9,
     speed: 0,
     contactDamage: 0,
     moteYield: 0,

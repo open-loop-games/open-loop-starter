@@ -60,24 +60,56 @@ spawns brought inside `r_kill`. Measured, that share splits, and the probes prin
 both halves: `reach` (bodies ever inside `r_kill`, over spawns — the movement
 half) and `lethal` (kills over bodies reached — the DPS half).
 
-Over eight seeds, `reach` runs **0.67 / 0.57 / 0.80 / 0.80** against dials of
-0.55 / 0.40 / 0.72 / 0.62 — _above_ the dial on every seat — while `lethal` runs
-**0.54 / 0.11 / 1.03 / 0.58**. Reach varies 1.4× across the roster and lethality
-9.4×, so essentially all of the spread lives in the half `engage` does not name.
+Over eight seeds, `reach` runs **0.74 / 0.63 / 0.73 / 0.76** against dials of
+0.55 / 0.40 / 0.72 / 0.62 — _above_ the dial on every seat, though `reactive`
+only marginally — while `lethal` runs **0.50 / 0.11 / 0.93 / 0.44**. Reach varies
+1.2× across the roster and lethality 8.5×, so essentially all of the spread lives
+in the half `engage` does not name.
 A seat whose engagement is short is almost never failing to meet the floor; it is
 failing to kill what it met. Two consequences: **retuning `engage` moves the
 model and barely moves the game**, and `lethal` above 1 is not a bug — splitter
 fragments count in `kills` but deliberately in neither `spawned` nor `reached`
 (`modules/sim/step.ts` `SPLITTER_FRAGMENTS`), so `lethal` is a rate, not a fraction.
 
-**`speed` is a lethality dial, and it is the largest one on the roster.** This is
-the same defect one axis over, and it is why `kinetic` — authored at `dps` 0.9,
-the same as `shielded` — reaches median level 10 against 22. A body only dies if
-it stays in range long enough to be killed, so lethality is bought in
-time-in-range; the operator moves at 120 · `speed` against specimens at 38–70, so
-a fast seat sweeps away from each body it meets. Nothing in the closed form
-contains this: `speed` enters as movement, and `localDensity` takes `dps` as an
-independent parameter.
+**Lethality is one quantity — the share of damage that finishes a body — and
+`speed`, `dps` and crowding all spend it.** A body dies only if it stays in range
+long enough to absorb its own HP, so damage landing on a body that then leaves
+bought nothing. That is booked directly rather than inferred:
+`ArenaStats.damageConverted` against `damageWasted` (`modules/sim/types.ts`),
+split at the moment the despawn filter drops a body.
+
+| seat         | `speed` | `dps` | waste | `lethal` |
+| ------------ | ------- | ----- | ----- | -------- |
+| `reactive`   | 0.95    | 1.35  | 14.6% | 0.98     |
+| `generalist` | 1.00    | 1.00  | 39.7% | 0.50     |
+| `shielded`   | 0.85    | 0.90  | 41.3% | 0.43     |
+| `kinetic`    | 1.35    | 0.90  | 73.3% | 0.13     |
+
+(`lethal` here is pooled across the batch, so it sits a point or two off the
+per-seat medians above; both come from the same runs.)
+
+Waste orders the roster where neither dial does alone: **`shielded` is the
+slowest seat on the floor and still wastes more than `generalist`**, because it
+is also 0.9 `dps`. The two multiply into one term — damage delivered per body
+per visit — and nothing in the closed form contains it, because `speed` enters
+as movement while `localDensity` takes `dps` as an independent parameter.
+
+Crowding spends the same term, and harder:
+
+| live bodies | `generalist` | `kinetic` | `reactive` | `shielded` |
+| ----------- | ------------ | --------- | ---------- | ---------- |
+| < 50        | 5.2%         | 23.2%     | 0.6%       | 5.0%       |
+| 50–99       | 16.3%        | 59.3%     | 4.0%       | 18.6%      |
+| 100–199     | 47.7%        | 90.7%     | 18.9%      | 46.8%      |
+| 200+        | 82.1%        | 100.0%    | 44.0%      | 69.5%      |
+
+Monotone for every seat, because `maxTargets` spreads each activation over more
+bodies as the floor fills and each body absorbs less before it leaves. At 200+
+`kinetic` converts none of its damage at all. **The seat problem and the density
+problem are one failure at two scales**, which is why neither can be repaired
+alone: a fix that concentrates damage — making it stick to a body across visits,
+or finish one before spreading to the next — moves both columns, and a `speed`
+retune moves one row.
 
 Measured by sweeping `kinetic`'s `speed` alone, reading lethality **at a given
 run level** so the ladder is controlled for:
@@ -230,11 +262,18 @@ carry no numbers.
 - **No seat reaches the timer, and the cause distribution is not right either.**
   `IDENTITY.md` targets "three specialists each bound by a different cause, with
   the baseline mostly reaching the timer". Over eight seeds per seat: **zero runs
-  of thirty-two end on the timer**, the roster carries **two** distinct modal
-  causes rather than three, `collection-starvation` appears once in the batch,
-  and modal shares run 50 / 75 / 63 / 88%. Escalation also runs undiluted for the
-  whole arc where a ceiling used to discard 40–70% of it, so the arc is harder
-  than any tuning has been done against.
+  of thirty-two end on the cause `timer`**, the roster carries **two** distinct
+  modal causes rather than three (`hp-floor`, `traversal-collapse`), and modal
+  shares run 50 / 50 / 63 / 88%. Escalation also runs undiluted for the whole arc
+  where a ceiling used to discard 40–70% of it, so the arc is harder than any
+  tuning has been done against.
+
+  Read the cause, not the clock: **two of the thirty-two do survive all thirty
+  minutes** and are booked `collection-starvation`, because `modules/run.ts`
+  splits a completed arc on whether it finished more than three beats behind
+  schedule. "Nothing reaches the timer" and "nothing survives" are different
+  claims with different repairs — the survivors are an income problem, the other
+  thirty are a lethality one.
 
   The distribution was once recorded here as the half that _was_ right, off a
   single seed on which the four seats happened to split. **On one run, a roster
@@ -247,17 +286,23 @@ carry no numbers.
   causes fell 2 → 2 → 1 → 1. `reach` is above the declared dial on every seat
   (§ Couplings), so there was nothing to seek. Reverted.
 
-  What is short is lethality, and § Couplings now names the cause: `speed`.
+  What is short is lethality, and § Couplings measures where it goes: **damage
+  spent on bodies that leave alive** — 39.7 / 73.3 / 14.6 / 41.3% of all damage
+  that resolves, rising to 82 / 100 / 44 / 70% once the floor passes 200 bodies.
   Three candidate explanations were tested and two died — it is not the draft
   (every seat converts run level into the same offensive mass, and realized
   defensive share tracks each `defenseShare` dial), and it is not a feedback loop
-  through level (three of four seats lie on one lethality-by-level curve). **The
-  repair is a design call, not a tune**, because `speed` 1.35 is what the
-  Kineticist IS — "never be where it is" is the seat. Three exits, none costed
-  yet: drop the dial and lose the personality; compensate it with `dps` and
-  accept that two dials now move together; or make lethality less
-  speed-sensitive mechanically, which is the only one that leaves the roster's
-  design space intact.
+  through level (three of four seats lie on one lethality-by-level curve).
+
+  **The repair is a design call, not a tune**, because `speed` 1.35 is what the
+  Kineticist IS — "never be where it is" is the seat. Three exits: drop the dial
+  and lose the personality; compensate it with `dps` and accept that two dials
+  now move together; or make damage concentrate rather than spread — stick to a
+  body across visits, or finish one before moving to the next. **The waste split
+  costs them.** The first two move one seat and leave the 82–100% waste every
+  seat pays in a crowd exactly where it is; only the third addresses the column
+  that is failing for the whole roster, and it is also the one that leaves the
+  roster's design space intact.
 
 - **`kinetic` is much worse than its single-seed reading, and the seed the arena
   probe runs is its best one.** (Cause settled — § Couplings, `speed`.) Batch medians against that seed: level 10 vs 16,

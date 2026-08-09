@@ -27,6 +27,13 @@ export interface Specimen extends Vec2 {
   /** Cached from the def × the run curves, so the step loop does no lookups. */
   contactDamage: number;
   moteYield: number;
+  /**
+   * HP this body arrived with. Retained so damage already spent on it can be
+   * told apart from damage that bought a kill — a body that leaves the floor
+   * wounded took `spawnHp - hp` of effective damage that converted to nothing.
+   * See `ArenaStats.damageWasted`.
+   */
+  spawnHp: number;
   /** Sim-time this body arrived. Drives dwell — see `./step.ts` § despawn. */
   spawnedAt: number;
   /**
@@ -127,6 +134,28 @@ export interface ArenaStats {
    * `reached / spawned` is the movement half; `kills / reached` is the other.
    */
   reached: number;
+  /**
+   * Effective damage that bought a kill — summed `spawnHp` over dead bodies.
+   *
+   * Paired with `damageWasted` below, this splits delivered damage by what it
+   * PURCHASED rather than by which device delivered it. `DeviceStat.damage`
+   * cannot answer that: it is already overkill-clamped, so it counts damage that
+   * landed, and damage landing on a body that then walks away looks identical to
+   * damage landing on one that dies.
+   */
+  damageConverted: number;
+  /**
+   * Effective damage spent on bodies that left the floor alive — summed
+   * `spawnHp - hp` over everything the despawn filter drops wounded.
+   *
+   * The quantity `kills / reached` hides: a seat can bring bodies into range,
+   * hurt all of them, and kill none, and every counter except this one reads
+   * that as engagement. Bodies still standing at run end are NOT counted here —
+   * they have not finished, and a probe reads them off the live array.
+   */
+  damageWasted: number;
+  /** Wounded bodies that left the floor alive. The `damageWasted` denominator. */
+  bodiesWasted: number;
 }
 
 export interface ArenaState {
