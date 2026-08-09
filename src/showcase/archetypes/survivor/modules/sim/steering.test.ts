@@ -105,7 +105,11 @@ describe('survivor/steering — score and choice are one policy', () => {
       // `mote` and `collector` are reported unweighted so a reader can see the
       // raw field; `eta` is the seat's weight on income and belongs to the sum.
       const recomposed =
-        c.threat + c.engage + params.eta * (2.5 * c.mote + c.collector) + c.wall + c.turn;
+        c.threat +
+        c.engage +
+        params.eta * (2.5 * c.mote + c.moteNear + c.collector) +
+        c.wall +
+        c.turn;
       expect(recomposed).toBeCloseTo(c.total, 9);
     }
   });

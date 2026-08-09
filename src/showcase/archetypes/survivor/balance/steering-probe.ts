@@ -170,7 +170,7 @@ async function runSeat(seatId: string, seed: number): Promise<Reading> {
         bin.decisions++;
         bin.threat += spread(scores.map((s) => s.threat));
         bin.engage += spread(scores.map((s) => s.engage));
-        bin.mote += spread(scores.map((s) => params.eta * 2.5 * s.mote));
+        bin.mote += spread(scores.map((s) => params.eta * (2.5 * s.mote + s.moteNear)));
         bin.turn += spread(scores.map((s) => s.turn));
         const cliffs = scores.filter((s) => s.cliff).length;
         if (cliffs === scores.length) bin.cliffAll++;

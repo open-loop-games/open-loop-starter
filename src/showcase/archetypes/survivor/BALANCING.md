@@ -80,6 +80,30 @@ moment the steering was smoothed, kill rate halved — the dial had been riding 
 a rendering-visible defect. `ENGAGE_WEIGHT` in `modules/sim/steering.ts` is the
 real channel. Check a dial's term exists before reading a probe that quotes it.
 
+**And existing is not enough — an arg-max acts on a term's SPREAD across the
+candidate set, never its level.** A term reading the same on every candidate
+subtracts a constant and drops out of the decision at any magnitude. This has now
+bitten in both directions, which is why it is a coupling and not a note:
+
+- The old contact cliff was a flat −400 below `contactRadius · 2.5`, and its
+  spread measured ~390–435 against `engage` 17–31, mote 3–5, turn 18 — at _every_
+  density band. Nothing could reach past it, so the whole policy was "avoid
+  contact, then break ties", and because a 55-unit margin is unbuyable on a floor
+  with a body every ~30 units, the back half of a run had no candidate pointing
+  at the fight. **A density-blind safety margin and "flee" are the same
+  instruction once density arrives.**
+- Replacing it with a priced term did nothing at first, for the mirror-image
+  reason. The price fired only inside `contactRadius`, so it was identically zero
+  across the 22–180 unit band where decisions are actually made — `CONTACT_WEIGHT`
+  swept 900 → 3500 with byte-identical probe output. A price that only speaks once
+  you are being hit is not a price; it needs `CONTACT_HORIZON` to become a
+  function of the approach.
+
+The reading rule that falls out: **before tuning a weight, confirm it moves the
+outcome at all.** `balance/steering-probe.ts` prints per-term spread by density
+band for exactly this, and two of this archetype's steering constants have now
+been found inert by it.
+
 **Killing thins the field.** Engaged specimens leave by dying, unengaged by
 scrolling away, so `engage` and `dps` both feed local density and therefore
 contact. This is why the damage seat's advantage is structural rather than
@@ -170,40 +194,37 @@ carry no numbers.
 
 ## Known thin
 
-- **η is ~0.91–0.99 against an assumed 0.65–0.78, and the residual is not
-  geometry.** The geometry half is fixed: the aperture chain now approaches
-  `apertureCapRatio` asymptotically instead of multiplying the radius, so the two
-  shipping sources fully stacked land at `r_collect/r_kill` = 0.56 rather than the
-  1.10 a raw product reached. That moved measured η from ~1.00 to ~0.92–0.99 —
-  real, and not enough.
+- **η is now IN its designed band, and it came from the movement policy rather
+  than from the economy.** Measured 0.45–0.81 continuous against an assumed
+  0.65–0.78, where it read 0.91–0.99 before the contact term was priced. The
+  earlier entry here treated the residual as a design question about mote
+  persistence and costed three exits; that framing was wrong, and the receipt is
+  that none of them were taken and η moved anyway. An operator circling a capped
+  mass retraces its own floor and sweeps everything for free, so η ≈ 1 was a
+  symptom of the kite, not an independent property of persistent motes. Motes
+  left on the floor at run end went from 24–247 to 280–650.
 
-  What is left is **structural, and it is a design question rather than a tuning
-  one**. Motes never expire and the movement policy routes toward them, so η is
-  not a steady-state efficiency at all — it is "did the operator ever walk over
-  this mote" across a 30-minute run, and that tends to 1 unless something forces
-  abandonment. The designed 0.65–0.78 asserts that a fifth to a third of all
-  motes are never picked up; nothing in the sim can produce that outcome. Three
-  ways out, none of them free:
-  - **Motes decay.** Makes η an efficiency again and gives the collector its
-    modelled yield back — but `IDENTITY.md` builds the collector _gamble_ on
-    persistence ("deferring collection to bank a larger burst"), so this trades
-    one designed mechanic for another.
-  - **Density forces abandonment.** The intended pressure, and see the
-    `entityBudget` entry below for why it currently never arrives.
-  - **Accept η ≈ 0.95 and re-derive.** Cheapest, and it costs the archetype its
-    signature transaction: at that η the dive is not a decision, and the identity
-    line's "kill at the edge, dive to collect" stops describing the game.
+  What remains open is the price paid for it: kill rate fell (generalist 2.51 →
+  1.73 kills/s) and the schedule deficit widened (−3/−7/+3/−6 → −8/−19/+2/−9),
+  because engaging is only survivable if engaging clears the floor, and § Known
+  thin's roster-arc entry says it does not. **The movement and roster findings are
+  one problem seen twice**, and income should not be retuned until the roster is
+  settled.
 
-  Until one is chosen, do not retune income against the η reading.
+  The aperture bound remains load-bearing underneath all of this: the chain
+  approaches `apertureCapRatio` asymptotically instead of multiplying the radius,
+  so the two shipping sources fully stacked land at `r_collect/r_kill` = 0.56
+  rather than the 1.10 a raw product reached. That was worth ~0.05 of η on its
+  own; the policy was worth the rest.
 
-- **The collector is implemented, is always picked up, and is worth ~1% of
-  income against a modelled 11%.** Every drop was taken in every probed seat, so
-  the mechanic and the routing term work. The shortfall is entirely downstream of
-  the η entry above: a pull banks a share of the _uncollected_ pool, and at
-  η ≈ 0.95 that pool is nearly empty. `COLLECTOR_BALANCE.onscreenShare` is the
-  projection's assumption; the probe now measures the burst share against it, and
-  the two will not agree until η does. Fixing the collector is not the lever —
-  it is already correct.
+- **The collector now banks 2.6–6.1% of income against a modelled 11%, up from
+  0.2–1.1%.** It was never broken — every drop is taken in every probed seat and
+  the routing term works. Its yield is a share of the _uncollected_ pool, so it
+  was starved by η ≈ 0.95 and recovered on its own when the movement policy
+  started leaving motes behind. `COLLECTOR_BALANCE.onscreenShare` is still the
+  projection's assumption and the two still do not agree, but the gap is now a
+  factor of two rather than a factor of ten, and it should be re-read after the
+  roster work rather than repriced now.
 - **Evolutions are reachable but rare** — one per seat per arc, against a pool
   sized for two or three. Two fixes landed (the policy weights depth by proximity
   to `maxLevel`; the draw weights a device by how deep it already is); the
@@ -240,13 +261,15 @@ carry no numbers.
   root as the schedule gap — the closed form assumes seats engage what their dial
   says and they currently do not — so fix engagement first and re-read the anchor
   rather than repricing the shop against a number that is going to move.
-- **Traversal collapse has stopped happening at all.** It was three endings in
-  four before the movement policy gained a turn cost and a slew limit; a piloted
-  operator no longer walks itself into a closed pocket, and every arc now ends on
-  the HP floor or on collection starvation. That is one loss condition quietly
-  retired, and `BLOCKING_CROWD` / `ESCAPE_FLOOR` have still never been swept — so
-  it is unknown whether the detector is now correctly silent or simply
-  unreachable.
+- **Traversal collapse is back, and it was the flee-bot that had retired it.**
+  For as long as the contact cliff dominated the score, the operator held a
+  55-unit margin from everything and could not be enclosed — the loss condition
+  was unreachable by construction, not correctly silent. With contact priced it
+  returns as a real ending (`reactive` at 15:18). That restores the third of the
+  four binding causes `IDENTITY.md` declares, so the roster now ends on three
+  distinct causes rather than two. `BLOCKING_CROWD` / `ESCAPE_FLOOR` have still
+  never been swept, and now that the detector fires again the sweep is worth
+  something.
 - **`entityBudget` is the binding density term for most of the back half of a
   run, measured rather than suspected.** `balance/arena-probe.ts` samples the
   live census every minute: seats sit pinned at exactly 400 —

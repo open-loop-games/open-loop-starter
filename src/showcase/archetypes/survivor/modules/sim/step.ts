@@ -30,8 +30,12 @@ export const FIELD_REFRESH_SECONDS = 0.25;
 /** Operator movement speed in sim units per second, before seat and meta. */
 export const BASE_MOVE_SPEED = 120;
 
-/** Touching bodies at which contact damage reaches the full aggregate rate. */
-export const CONTACT_SATURATION = 3;
+/**
+ * Touching bodies at which contact damage reaches the full aggregate rate.
+ * Declared in `../../data/arena.ts` because the movement policy prices contact
+ * with this same curve; re-exported here so the § contact loop below reads local.
+ */
+export const CONTACT_SATURATION = THREAT_BALANCE.contactSaturation;
 
 /** A fresh run's arena, before the first tick. */
 export function createArenaState(params: ArenaParams): ArenaState {

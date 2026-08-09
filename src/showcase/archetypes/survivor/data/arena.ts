@@ -60,6 +60,15 @@ export interface ThreatBalance {
   densityCap: number;
   /** Damage per second at full contact, before armour and escalation. */
   contactDps: number;
+  /**
+   * Touching bodies at which contact damage reaches the full aggregate rate.
+   *
+   * Lives here rather than beside the loop that applies it because the movement
+   * policy prices contact with the same formula it pays (`../modules/sim/steering.ts`
+   * § CONTACT_WEIGHT). A policy scoring a cost the sim does not charge is the
+   * two-models-disagreeing failure this archetype has already paid for twice.
+   */
+  contactSaturation: number;
   /** Operator effective-HP pool before seat toughness and defensive picks. */
   baseHp: number;
   /**
@@ -77,6 +86,7 @@ export const THREAT_BALANCE: ThreatBalance = {
   timeToKillSeconds: 2.4,
   densityCap: 190,
   contactDps: 9,
+  contactSaturation: 3,
   baseHp: 260,
   entityBudget: 400,
 };

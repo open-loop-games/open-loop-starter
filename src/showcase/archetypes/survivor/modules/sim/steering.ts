@@ -1,6 +1,6 @@
 import type { GridCoord, SpatialGrid } from '@open-loop/engine';
-import { ARENA_BALANCE } from '../../data/arena';
-import type { ArenaParams, ArenaState, Vec2 } from './types';
+import { ARENA_BALANCE, THREAT_BALANCE } from '../../data/arena';
+import type { ArenaParams, ArenaState, Specimen, Vec2 } from './types';
 
 // TODO(expansion): weighted utility over composed influence readers is a parked
 // engine primitive (`candidate-primitives.md` § Spatial utility steering, N=1
@@ -103,7 +103,7 @@ const HEADINGS: Vec2[] = Array.from({ length: 16 }, (_, i) => {
  * Sized against the score terms it competes with rather than picked: a
  * one-candidate turn (22.5°) costs 2.25, about what a single nav cell of mote
  * distance buys, so the policy still chases income; a reversal costs 18, which
- * only the contact cliff (-400) and a real threat gradient can pay.
+ * only a real threat gradient or a near-field income pull can pay.
  */
 export const TURN_COST = 18;
 
@@ -132,9 +132,9 @@ export const MAX_TURN_RATE = (420 * Math.PI) / 180;
  * clean path is a permanent escape. Measured: removing the jitter alone dropped
  * the baseline seat from 1.12 kills/s to 0.56 against a closed form asking 2.59.
  *
- * So this is the channel `engage` was always supposed to have, and the peaked
- * threat term is what keeps it from becoming "stand in the crowd": that term
- * still prices being too close, and the contact cliff still overrules everything.
+ * So this is the channel `engage` was always supposed to have, and what keeps it
+ * from becoming "stand in the crowd" is the priced contact term — see
+ * `CONTACT_WEIGHT`, which this now genuinely trades against rather than losing to.
  *
  * Swept at 4 / 6 / 9 against the arc probe. Schedule delta across the four seats
  * runs (−5, −16, +2, −8) at 4, (−5, −10, +1, −7) at 6, and (−2, −7, +2, −5) at 9,
@@ -150,6 +150,70 @@ export const ENGAGE_WEIGHT = 9;
  * past this the operator is buying contact risk without buying DPS.
  */
 export const ENGAGE_SATURATION = 8;
+
+/**
+ * The peaked threat term's two sides. Being further from the fight than the
+ * orbit is priced at `FAR_WEIGHT`; being nearer at `NEAR_WEIGHT`, which is
+ * deliberately much smaller because closeness is priced properly by
+ * `CONTACT_WEIGHT` in the currency it is paid in. They were one number, and that
+ * is what made the contact price inert — see the comment at the call site.
+ */
+export const FAR_WEIGHT = 40;
+export const NEAR_WEIGHT = 25;
+
+/**
+ * How far ahead the contact price looks, in sim seconds.
+ *
+ * Without a horizon the price is an indicator on `contactRadius` — 22 units —
+ * so every candidate outside it scores exactly zero. Measured: with an
+ * instantaneous price, `CONTACT_WEIGHT` was INERT across 900 → 3500, because the
+ * arg-max is decided in the 22–180 unit band where the term does not exist. A
+ * price that only speaks once you are already being hit is not a price.
+ *
+ * Specimens close at 38–70 units/s, so ~1.5s widens the term to ~130 units — the
+ * band the decision is actually made in — and makes it continuous in distance
+ * rather than a step. It is also what the quantity means: what standing here
+ * will cost, not whether something is touching at this instant.
+ */
+export const CONTACT_HORIZON = 1.5;
+
+/**
+ * Score per unit of "share of remaining HP per second" a candidate position
+ * would cost in contact damage.
+ *
+ * This replaced a flat −400 cliff below `contactRadius · 2.5`, and the swap is
+ * the difference between forbidding contact and pricing it. Measured, that cliff
+ * was the entire policy: its spread across the candidate set ran ~390–435
+ * against `engage` at 17–31, mote at 3–5 and turn at 18, at EVERY density band,
+ * and it split the candidate set on 89–100% of decisions. Nothing else could
+ * reach past it, so the operator was a flee-bot with preferences — and because
+ * the 55-unit margin it demanded is unaffordable on a floor with a body every
+ * ~30 units, the back half of a run had no candidate pointing at the fight.
+ * A density-blind safety margin and "flee" are the same instruction once density
+ * arrives.
+ *
+ * The cost is priced in the sim's own damage formula (`./step.ts` § contact:
+ * mean per-specimen damage, saturating at `contactSaturation` bodies, divided by
+ * toughness), then normalised by REMAINING hp. That normalisation is the whole
+ * design: the same crowd is a cheap trade at full health and a lethal one at a
+ * fifth of it, so caution emerges from the run's state instead of being a
+ * constant, and a seat's `toughness` finally reaches the movement policy — which
+ * is what makes guns-versus-butter a decision the policy actually takes.
+ *
+ * Swept at 900 / 2500 against the arc probe, with `CONTACT_HORIZON` in place —
+ * without it the sweep is meaningless, because the term is inert. At 900 three
+ * seats reach the full arc and η lands at 0.45–0.81; at 2500 the operator backs
+ * off enough to lose kill rate outright (kinetic 0.68 → 0.48 kills/s) and the
+ * schedule deficit widens to −21. 900 is the shallower side of that trade on
+ * purpose: this term competes with `engage` for the same decisions, so pushing it
+ * buys survival by not playing.
+ *
+ * The resulting landscape is the point of the whole exercise. Term spreads now
+ * read threat 34–133, engage 14–33, mote 12–15, turn 18 — one order of magnitude,
+ * where the cliff sat at 20x everything else. Threat still leads, because it is
+ * the risk term and should; it no longer decides alone.
+ */
+export const CONTACT_WEIGHT = 900;
 
 /**
  * Score per sim unit of distance closed on a collector pickup.
@@ -168,6 +232,31 @@ export const ENGAGE_SATURATION = 8;
  * not walk into the mass for it.
  */
 export const COLLECTOR_WEIGHT = 0.125;
+
+/**
+ * Score per sim unit of distance closed on the nearest mote, and the radius
+ * within which that exact term applies at all.
+ *
+ * The nav-grid mote field routes across the floor and is good at it; what it
+ * cannot do is decide a dive. `lookahead` is exactly `NAV_CELL`, so all sixteen
+ * candidates land within about one cell of each other on a cell-quantised
+ * field — measured spread 3–5, against a turn cost of 18. The dive was therefore
+ * not outvoted, it was UNAFFORDABLE, and no weight on the grid term fixes that
+ * because the ceiling is geometric rather than scalar.
+ *
+ * So this is the same division of labour the threat term already runs: the grid
+ * keeps routing and reachability, an exact near-field term resolves the approach.
+ * Scoped to a radius because it is a local decision — beyond it the grid field is
+ * both cheaper and better, and summing them everywhere would double-count the
+ * same pull.
+ *
+ * Sized so a dive is affordable without being compulsory: across two opposed
+ * candidates 200 units apart it spreads ~30 before `eta`, which clears the turn
+ * cost. It sits below `COLLECTOR_WEIGHT` on purpose — one pull banks the whole
+ * worked field, a single mote does not.
+ */
+export const MOTE_NEAR_WEIGHT = 0.15;
+export const MOTE_NEAR_RADIUS = NAV_CELL * 3;
 
 /**
  * Rotate `current` toward `desired` by at most the step's turn budget.
@@ -205,13 +294,15 @@ export function slewHeading(current: Vec2, desired: Vec2, dt: number): Vec2 {
  */
 export interface HeadingScore {
   heading: Vec2;
-  /** Peaked orbit term, cliff included. */
+  /** Peaked orbit term, priced contact included. */
   threat: number;
-  /** Whether the contact cliff fired on this candidate. */
+  /** Whether this candidate would be in contact at all — the priced branch. */
   cliff: boolean;
   engage: number;
-  /** Unweighted; `total` applies `eta`. */
+  /** Grid-routed mote pull. Unweighted; `total` applies `eta` and its 2.5. */
   mote: number;
+  /** Exact near-field mote pull. Unweighted; `total` applies `eta`. */
+  moteNear: number;
   /** Unweighted; `total` applies `eta`. */
   collector: number;
   wall: number;
@@ -250,13 +341,15 @@ export function scoreHeadings(
   const killRadius2 = killRadius * killRadius;
   const orbit = orbitRadius(params);
   const current = state.operator.heading;
+  const { contactRadius } = ARENA_BALANCE;
+  const moteNear2 = MOTE_NEAR_RADIUS * MOTE_NEAR_RADIUS;
   const scored: HeadingScore[] = [];
 
   // Only specimens this far out can change the near-field term: past it every
   // candidate reads the same saturated `offset > 1`, which is the branch a floor
   // with no specimens on it already takes. Filtering once is one pass over the
   // census instead of one per candidate heading.
-  const relevant: { x: number; y: number }[] = [];
+  const relevant: Specimen[] = [];
   const reach = lookahead + orbit * 3;
   const reach2 = reach * reach;
   for (const s of state.specimens) {
@@ -285,24 +378,66 @@ export function scoreHeadings(
     // reachability), which is the division of labour, not a workaround.
     let nearest = Number.POSITIVE_INFINITY;
     let inKill = 0;
+    // Expected contact over `CONTACT_HORIZON`, not contact at this instant.
+    // `share` is the fraction of the horizon a closing specimen would spend
+    // inside `contactRadius`: 1 if it is already touching, tapering to 0 at the
+    // distance it cannot cross in time. Summing the shares gives the expected
+    // touching COUNT, which is what the sim's saturation curve takes.
+    let expectedTouching = 0;
+    let damageSum = 0;
     for (const s of relevant) {
       const d2 = (s.x - px) * (s.x - px) + (s.y - py) * (s.y - py);
       if (d2 < nearest) nearest = d2;
       if (d2 <= killRadius2) inKill++;
+      const closeBand = s.speed * CONTACT_HORIZON;
+      if (d2 <= (contactRadius + closeBand) * (contactRadius + closeBand)) {
+        const share =
+          closeBand > 0
+            ? Math.min(1, Math.max(0, (contactRadius + closeBand - Math.sqrt(d2)) / closeBand))
+            : 1;
+        expectedTouching += share;
+        damageSum += s.contactDamage * share;
+      }
     }
     nearest = Math.sqrt(nearest);
 
-    // Peaked at the orbit: being far is penalised as much as being close, in sim
-    // units so the peak sits where the kill radius actually is.
+    // Peaked at the orbit, and ASYMMETRIC about it. The far side keeps the full
+    // weight — disengaging is the failure this term exists to price, and distance
+    // is zero damage and zero income. The near side is deliberately gentle,
+    // because the risk of being close is priced once, below, in the currency it
+    // is actually paid in. Charging it here as well made the cheap charge decide:
+    // the near side alone reached −40 against an `engage` spread that measures
+    // 17–31, so a candidate in contact lost before `CONTACT_WEIGHT` was read and
+    // the price was inert at any value.
     const offset = Number.isFinite(nearest) ? (nearest - orbit) / orbit : 1;
-    let threatTerm = -(offset * offset) * 40;
+    let threatTerm = -(offset * offset) * (offset > 0 ? FAR_WEIGHT : NEAR_WEIGHT);
 
-    // Contact is a cliff, not a slope. Below the contact radius nothing else in
-    // the score should be able to outvote getting out.
-    const cliff = nearest < ARENA_BALANCE.contactRadius * 2.5;
-    if (cliff) threatTerm -= 400;
+    // Contact is PRICED, not forbidden — see `CONTACT_WEIGHT`. This is the sim's
+    // own damage rate (`./step.ts` § contact) over remaining hp, so the policy
+    // scores exactly what it will be charged.
+    const cliff = expectedTouching > 0;
+    if (cliff) {
+      const hpPerSecond =
+        ((damageSum / expectedTouching) *
+          Math.min(1, expectedTouching / THREAT_BALANCE.contactSaturation)) /
+        (params.toughnessMul * params.metaSurvival);
+      threatTerm -= CONTACT_WEIGHT * (hpPerSecond / Math.max(1, state.operator.hp));
+    }
 
     const moteTerm = Number.isFinite(moteDist) ? -moteDist : -nav.cols;
+
+    // Exact near field for motes, for the reason the collector term is exact: a
+    // 100-unit cell cannot resolve an approach that has to end inside a ~70-unit
+    // aperture. Zero outside the radius, so it adds a decision rather than a bias.
+    let moteNearTerm = 0;
+    let nearestMote = Number.POSITIVE_INFINITY;
+    for (const m of state.motes) {
+      const d2 = (m.x - px) * (m.x - px) + (m.y - py) * (m.y - py);
+      if (d2 < nearestMote) nearestMote = d2;
+    }
+    if (nearestMote <= moteNear2) {
+      moteNearTerm = (Math.sqrt(nearestMote) - MOTE_NEAR_RADIUS) * MOTE_NEAR_WEIGHT;
+    }
 
     // Collectors are scored in exact sim units rather than off the nav grid: one
     // drops inside `r_kill` and a 100-unit cell cannot resolve an approach that
@@ -330,7 +465,7 @@ export function scoreHeadings(
     const score =
       threatTerm +
       engageTerm +
-      params.eta * (2.5 * moteTerm + collectorTerm) -
+      params.eta * (2.5 * moteTerm + moteNearTerm + collectorTerm) -
       wallPenalty * 8 -
       turnCost;
 
@@ -340,6 +475,7 @@ export function scoreHeadings(
       cliff,
       engage: engageTerm,
       mote: moteTerm,
+      moteNear: moteNearTerm,
       collector: collectorTerm,
       wall: -wallPenalty * 8,
       turn: -turnCost,
