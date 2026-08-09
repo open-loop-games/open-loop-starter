@@ -186,10 +186,21 @@ effect when the design is indifferent — it costs the schedule nothing.
   pinned there. That table exists because end-of-run totals cannot distinguish a
   floor clamped for half the arc from one that never filled — see § Known thin.
 
-- The measurement still owed is a **seeded multi-run spread**: the probe runs one
-  seed per seat, so every reading is a single sample of a stochastic system. Median
-  survival, `η` split into continuous pickup and collector bursts, and a
-  binding-cause distribution all need repeated runs before they mean anything.
+- `pnpm exec vite-node src/showcase/archetypes/survivor/balance/spread-probe.ts`
+  — the same arc across a seed batch (`SEEDS=16` to widen; default 8, about
+  seven minutes for the roster). This is the spine's declared measurement half:
+  median survival, `η` split, the economy as a range, and the **binding-cause
+  distribution**. Read it before believing any figure the arena probe prints.
+
+  The column that carries the design target is `modal` — the share of seeds a
+  seat ended on its single most common cause. A seat at 100% is a wall in
+  costume however well-tuned the constant behind it is, and `IDENTITY.md` asks
+  for three specialists on three different causes. Everything printed as
+  `median [min–max]` is the observed range, not a tail estimate: at batch sizes
+  an arc probe can afford, floor-index percentiles select the endpoints anyway.
+
+  **The two probes drive one fixture** (`balance/_arc.ts`), so a disagreement
+  between them is the seed and never the code.
 
 Magnitudes print, never assert. Behavioural suites sit beside their modules and
 carry no numbers.
@@ -243,10 +254,19 @@ carry no numbers.
   What made it read as "the roster is a skin" was a different fault: one of the
   four devices returned ~1% of kills whatever you did with it, so the choice was
   between three interchangeable options and a trap. With the cone entry below
-  resolved, seats now diverge on their own — `bolt` 8★ + `pulse` 4, `pulse` 8★ +
-  `lance` 5, `bolt` 8 + `pulse` 8★, `pulse` 6 + `lance` 4 across the roster,
-  with top-killer shares of 46 / 58 / 36 / 54%. Different seats, different
-  rotations, from the same draft policy.
+  resolved, one arc per seat showed four different rotations — `bolt` 8★ +
+  `pulse` 4, `pulse` 8★ + `lance` 5, `bolt` 8 + `pulse` 8★, `pulse` 6 + `lance`
+  4, at top-killer shares of 46 / 58 / 36 / 54%.
+
+  **Across eight seeds that divergence is much weaker than one run suggested.**
+  `arc-lance` is the modal top killer on _every_ seat, on 5 / 6 / 4 / 4 seeds of
+  eight, with `pressure-bell` and `sear-coil` taking the rest. So the seats do
+  vary — a seat's rotation is not fixed — but they vary around one shared
+  favourite rather than into four personalities, and the four-rotation reading
+  was one draw of a stochastic draft. What separates "different seats" from "one
+  draft with variance" is whether the modal pick differs BY seat, and today it
+  does not. Read `spread-probe.ts` § Draft variance, not the arena probe's `lvl`
+  column, before claiming the roster diverges.
 
   Still open, and the reason `maxTargets` is no longer described as the arc knob:
   `pulse` capture rises and falls with how crowded the floor gets, and
@@ -363,23 +383,40 @@ carry no numbers.
   exists — so it is checkable, and it is the one part of this entry with no
   receipt behind it.
 
-- **No seat reaches the timer, and that is the open end of this work.**
+- **No seat reaches the timer, and the cause distribution is not right either.**
   `IDENTITY.md` targets "three specialists each bound by a different cause, with
-  the baseline mostly reaching the timer". Measured, the roster ends at
-  23:05 / 17:10 / 19:11 / 28:07 on two traversal collapses and two HP floors — the
-  cause distribution is right and the survival is not. Escalation now runs
-  undiluted for the whole arc where a ceiling used to discard 40–70% of it, so the
-  arc is genuinely harder than any tuning has been done against.
+  the baseline mostly reaching the timer". Over eight seeds per seat: **zero runs
+  of thirty-two end on the timer**, the roster carries **two distinct modal
+  causes** rather than three, and `collection-starvation` appears once in the
+  whole batch. Modal shares run 50 / 75 / 63 / 88%.
+
+  The distribution used to be recorded here as the half that was right. That
+  came from a single seed on which the four seats happened to split, and it is
+  the clearest thing the seed batch has corrected so far: **on one run, a roster
+  and a coin land the same way.** Escalation also runs undiluted for the whole
+  arc where a ceiling used to discard 40–70% of it, so the arc is harder than
+  any tuning has been done against.
 
   The specific gap is engagement, and it is structural rather than a constant.
   `engage` is DEFINED as the share of spawns brought inside `r_kill`, which
   requires the operator to go and get them; the movement policy only ever reacts
-  to what is already near, holding an orbit relative to the NEAREST specimen. So
-  realized engagement runs 0.24–1.12 against dials of 0.40–0.72, and the two seats
-  that miss are the ones that hang back. `balance/arena-probe.ts` prints the pair
-  as `engage`. Closing it means a term for approaching unengaged bodies — a
-  seeking policy rather than a reactive one — and that moves every number on this
-  page, so it wants doing before the economy is retuned.
+  to what is already near, holding an orbit relative to the NEAREST specimen.
+  Realized against declared, medians over the batch: **0.36/0.55, 0.06/0.40,
+  0.83/0.72, 0.48/0.62** — the seats that miss are the ones that hang back, and
+  `kinetic` misses by nearly an order of magnitude with a median of 0.06 against
+  a per-seed range of 0.03–0.37. Closing it means a term for approaching
+  unengaged bodies — a seeking policy rather than a reactive one — and that
+  moves every number on this page, so it wants doing before the economy is
+  retuned.
+
+- **`kinetic` is much worse than its single-seed reading, and the seed that was
+  being read is its best one.** Batch medians against the seed the arena probe
+  runs: level 10 against 16, schedule −21 against −12, 0.26 kills/s against
+  0.72, realized `engage` 0.06 against 0.24. Every one of those single-seed
+  figures sits at or near the top of the batch's range. The orbit re-map
+  (`modules/sim/steering.ts` § orbitRadius) removed a defect that was real; what
+  it did not do is make the seat viable, and the point reading said otherwise.
+  Do not read a `kinetic` figure off one arc.
 
 - **Guns-versus-butter is unsettled, and the reading that used to sit here was
   stale.** The structural asymmetry is real: DPS reaches survival only through
