@@ -214,29 +214,36 @@ carry no numbers.
   it is unknown whether the detector is now correctly silent or simply
   unreachable.
 - **`entityBudget` is the binding density term for most of the back half of a
-  run, and it is now measured rather than suspected.** `balance/arena-probe.ts`
-  samples the live census every minute: seats sit pinned at exactly 400 —
+  run, measured rather than suspected.** `balance/arena-probe.ts` samples the
+  live census every minute: seats sit pinned at exactly 400 —
   `THREAT_BALANCE.entityBudget` — for **7 to 19 of 30 minutes**, first binding as
   early as 12:00, because the spawn loop is `while (carry >= 1 &&
-specimens.length < entityBudget)`. Past that point spawn rate stops moving
-  density at all: the floor is clamped by a **performance budget**, while
-  `localDensity` in `data/arena.ts` goes on compounding geometrically, so every
-  downstream term the projection reads off density — contact chance, traversal
-  collapse, residency — is quoting a curve the sim stopped following. A cap that
-  binds is a silently substituted model.
+specimens.length < entityBudget)`.
 
   The census also shows the loop that makes it worse: the **lowest-DPS seat caps
   earliest and stays capped longest** (`kinetic`, first at 12:00, 19 minutes
   there, at 1.49 kills/s). Slow kills fill the floor and a full floor is then
-  clamped flat, so the cap is not only a modelling divergence — it is a
-  difficulty _inversion_, handing a density ceiling to the seat least able to
-  clear one.
+  clamped flat, so this is not only a modelling question — it is a difficulty
+  _inversion_, handing a density ceiling to the seat least able to clear one.
 
-  Either the escalation curve flattens into the cap by construction, or the
-  projection takes the same clamp so the two agree on what happens after it
-  bites. This is also the most promising route to a real `η`: the late-run
-  abandonment that would push collection below 1 is exactly the pressure the cap
-  removes.
+  **The modelling half is fixed:** `localDensity` (`data/arena.ts`) now clamps
+  to `entityBudget`, since the sim's own near-operator population is the same
+  quantity the formula estimates by residency — past the cap they are one
+  quantity by construction, not two models agreeing by luck. Contact chance,
+  traversal-collapse classification and bind-cause reporting all read the
+  clamped value now, so the projection stops quoting a curve the sim abandoned.
+  This was a fix to the model's honesty, not to the game — `entityBudget` is
+  still a performance ceiling (400 at 20 Hz), not a designed number, and the
+  inversion above is unchanged: a real fact about the shipping game, still open.
+
+  Two directions remain, now cleanly separated from the modelling gap: raise or
+  reshape `entityBudget` itself (a performance question first), or design the
+  escalation curve to saturate toward the cap smoothly instead of hitting a
+  wall, which would soften the inversion by slowing growth for every seat as it
+  nears the ceiling rather than only for whichever seat fills the floor first.
+  Also still the most promising route to a real `η`: the late-run abandonment
+  that would push collection below 1 is exactly the pressure a hard cap removes,
+  and a smoother saturation curve is more likely to produce it than a wall is.
 
 - **The Culture Sprayer's cone fires along the movement heading, and nothing in
   the movement policy knows that.** `selectTargets` (`modules/sim/dispatch.ts`)

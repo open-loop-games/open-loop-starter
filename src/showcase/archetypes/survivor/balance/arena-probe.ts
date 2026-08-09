@@ -48,11 +48,12 @@ async function runSeat(seatId: string, seed: number) {
   run.startRun(seatId);
 
   // Ticked a minute at a time rather than in one call so the live census can be
-  // SAMPLED. `entityBudget` is a suspected binding density term past mid-run
+  // SAMPLED. `entityBudget` is a measured binding density term past mid-run
   // (`../BALANCING.md` § Known thin), and from end-of-run totals a floor pinned
   // at the cap for half the arc is indistinguishable from one that never reached
-  // it — the spawn loop simply stops, and every downstream term the projection
-  // reads off density goes on quoting a curve the sim abandoned.
+  // it — the spawn loop simply stops. `localDensity` (`../data/arena.ts`) now
+  // clamps to the same ceiling, so this census is what verifies the projection
+  // agrees with the sim rather than quoting a curve it abandoned.
   let peakSpecimens = 0;
   let minutesAtCap = 0;
   let firstCapAt: number | null = null;
@@ -203,11 +204,11 @@ async function main(): Promise<void> {
   console.log('      is wrong with the pull; it is downstream of finding 1.');
   console.log('   3. `entityBudget` binds, and it is not a corner case. The census above');
   console.log('      shows seats pinned at 400 for 7–19 of 30 minutes, earliest at 12:00.');
-  console.log('      Past that the spawn loop stops and density is set by a PERFORMANCE');
-  console.log('      budget while `localDensity` goes on compounding — so every term the');
-  console.log('      projection reads off density is quoting a curve the sim abandoned.');
-  console.log('      Lowest-DPS seat caps earliest and stays longest, which is the');
-  console.log('      feedback loop: slow kills fill the floor, a full floor is clamped.');
+  console.log('      `localDensity` now clamps to the same ceiling, so contact chance and');
+  console.log('      bind classification agree with the sim past that point — that was a');
+  console.log('      model-honesty fix, not a design one. The DIFFICULTY inversion it');
+  console.log('      exposed still stands: lowest-DPS seat caps earliest and stays longest,');
+  console.log('      because slow kills fill the floor and a full floor clamps flat.');
   console.log('   4. Evolutions land 1 per seat against a pool sized for 2–3');
   console.log('      (`../data/devices.ts` § Cardinality); suspect the DRAW, not the policy.');
   console.log(`\n  Mean mote yield over the window: ${meanMoteYield(MINUTES * 30).toFixed(2)}.`);

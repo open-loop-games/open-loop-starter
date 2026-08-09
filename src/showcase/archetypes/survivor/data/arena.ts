@@ -62,7 +62,11 @@ export interface ThreatBalance {
   contactDps: number;
   /** Operator effective-HP pool before seat toughness and defensive picks. */
   baseHp: number;
-  /** Hard ceiling on live entities — the arena sim's budget at 20 Hz. */
+  /**
+   * Hard ceiling on live entities — the arena sim's budget at 20 Hz. Also the
+   * ceiling `localDensity` clamps to, since past this point the sim's own
+   * population stops tracking the uncapped formula; see that function.
+   */
   entityBudget: number;
 }
 
@@ -161,11 +165,18 @@ export function spawnRate(t: number): number {
  * Live specimens near the operator. Engaged ones leave by DYING (time-to-kill,
  * shortened by the seat's DPS), unengaged ones by scrolling away (dwell) — so
  * killing genuinely thins the field. Derived, never authored.
+ *
+ * Clamped at `entityBudget`: the sim's spawn loop
+ * (`../modules/sim/step.ts` § spawn) stops adding bodies once
+ * `specimens.length` reaches it, and despawn only removes specimens the
+ * operator has outrun — the same near-operator population this formula
+ * estimates by Little's-law residency. Past the clamp the two are the same
+ * quantity by construction, not two models agreeing by luck.
  */
 export function localDensity(t: number, engage: number, dps: number): number {
-  const { timeToKillSeconds, dwellSeconds } = THREAT_BALANCE;
+  const { timeToKillSeconds, dwellSeconds, entityBudget } = THREAT_BALANCE;
   const residency = engage * (timeToKillSeconds / dps) + (1 - engage) * dwellSeconds;
-  return spawnRate(t) * residency;
+  return Math.min(spawnRate(t) * residency, entityBudget);
 }
 
 /**
@@ -224,7 +235,7 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 //
 // ─── Density, contact, and why killing is defensive ───
 //
-//   density(t) = d₀ · m_d^(t/60) · [engage · TTK/dps + (1−engage) · dwell]
+//   density(t) = min(d₀ · m_d^(t/60) · [engage · TTK/dps + (1−engage) · dwell], entityBudget)
 //   contact(t) = min(1, (density / (cap · speed))²)
 //   taken(t)   = contact(t) · contactDps · m_dmg^(t/60) / toughness
 //
@@ -233,6 +244,17 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 // unengaged ones at dwell (12s), a seat that engages more holds a THINNER field.
 // That is what makes the damage seat's advantage structural rather than
 // cosmetic, and it is the only channel by which DPS converts into survival.
+//
+// The `entityBudget` clamp keeps this the honest formula once the sim's own
+// population stops climbing — measured at seats pinned at exactly 400 for
+// 7–19 of a run's 30 minutes (`../BALANCING.md` § Known thin). Before the
+// clamp, contact chance, traversal-collapse classification and bind-cause
+// reporting were all reading a curve the live sim had stopped following past
+// that point — a cap that binds in the sim but not in its model is a silently
+// substituted model. The clamp fixes the MODEL's honesty; it does not touch
+// the sim, and it does not remove the difficulty inversion where the
+// lowest-DPS seat fills the floor earliest and stays capped longest — that is
+// a real fact about the game, not a modelling error, and stays open.
 //
 // Known thin, recorded rather than tuned away: that channel is currently too
 // weak. `toughness` and defensive picks divide damage directly while DPS reaches

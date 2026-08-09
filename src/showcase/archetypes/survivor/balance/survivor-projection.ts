@@ -168,8 +168,9 @@ function reportArena(): void {
     );
   }
   console.log(
-    `\n  Peak live is bounded by the annulus, not accumulated. Budget ` +
-      `${THREAT_BALANCE.entityBudget} at 20 Hz.`,
+    `\n  Live is bounded by the annulus early, then by the ${THREAT_BALANCE.entityBudget}-entity ` +
+      `budget once spawn rate outruns it (measured ~12:00+, see arena-probe.ts census). ` +
+      `\`localDensity\` clamps to the same ceiling so this table agrees with the sim past that point.`,
   );
 }
 
