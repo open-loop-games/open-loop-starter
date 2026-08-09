@@ -275,7 +275,11 @@ export function stepArena(
       // dropped this tick is at hp <= 0 before this subtraction.
       const before = target.hp;
       target.hp -= a.damage;
-      stat.damage += Math.min(before, a.damage);
+      // Clamped at zero, not just at the target's remaining hp: a target another
+      // device already dropped this tick has NEGATIVE hp, and crediting that as
+      // effective damage subtracts from the device's total. It reads as negative
+      // dps in the probe once several shapes cover the same body in one tick.
+      stat.damage += Math.max(0, Math.min(before, a.damage));
       if (before > 0 && target.hp <= 0) stat.kills++;
     }
   }

@@ -214,6 +214,9 @@ describe('survivor/arena — per-device accounting', () => {
     for (const d of entries) {
       expect(d.firesConnected).toBeLessThanOrEqual(d.fires);
       expect(d.hits).toBeLessThanOrEqual(d.reachable);
+      // Overkill onto a body another device dropped in the same tick is worth
+      // zero, never a debt — unclamped it reads as negative dps in the probe.
+      expect(d.damage).toBeGreaterThanOrEqual(0);
     }
   });
 });
