@@ -72,12 +72,26 @@ const at = (field: Float64Array, nav: NavGrid, c: GridCoord): number => field[c.
 
 /**
  * The orbit the seat wants to hold, in sim units: the distance from the nearest
- * specimen at which it is "dancing on the edge". A high-`engage` seat sits inside
- * the kill radius and eats more contact; a low-`engage` seat hovers outside it and
- * banks less. This single number is how a seat's movement policy differs.
+ * specimen at which it is "dancing on the edge". A high-`engage` seat holds a
+ * tight orbit and eats more contact; a low-`engage` seat hangs back and banks
+ * less. This single number is how a seat's movement policy differs.
+ *
+ * **Every orbit sits inside `killRadius`, and that is the point of the
+ * coefficients.** They used to run `1.35 − 0.75 · engage`, which crosses the kill
+ * radius at `engage` = 0.467 — so `kinetic`, at 0.40, wanted to hold station at
+ * 189 units against a reach of 180. It was steering to a distance at which its
+ * own devices could not fire, by construction, and it did it well: measured
+ * realized engagement of **0.01 against a declared dial of 0.40**, against
+ * `reactive` at 0.67 of 0.72. Chronically the worst seat in the roster, and this
+ * is why.
+ *
+ * A dial that hangs back is a real personality; a dial that hangs back out of
+ * range is a broken one. Re-mapped rather than clamped, because a clamp would
+ * make the whole low half of the dial inert — the same defect the aperture bound
+ * avoids in `../../data/arena.ts` § collectRadiusFor.
  */
 export function orbitRadius(params: ArenaParams): number {
-  return ARENA_BALANCE.killRadius * (1.35 - 0.75 * params.engage);
+  return ARENA_BALANCE.killRadius * (0.95 - 0.45 * params.engage);
 }
 
 /**
