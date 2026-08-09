@@ -35,7 +35,7 @@ draft pool), `meta.ts` (the cross-run shop). `modules/tuning.ts` declares the
 | `apertureCapRatio`                                                    | the ceiling `r_collect/r_kill` approaches as aperture sources stack. Bounds the top coupling structurally — see § Couplings                               |
 | `COLLECTOR_BALANCE.onscreenShare`                                     | the projection's assumed burst size. The sim pulls everything inside `pullRadius` instead, so this is a prediction the probe measures against, not a rule |
 | `COLLECTOR_BALANCE.pullRadius`, `timeJitter`                          | how much floor one pull banks, and how far a drop roams from its nominal time                                                                             |
-| per-seat `engage`, `eta`, `speed`, `dps`, `toughness`, `defenseShare` | the personality bundle; also the sweep axis. `engage` and `dps` are not independent — see § Couplings                                                     |
+| per-seat `engage`, `eta`, `speed`, `dps`, `toughness`, `defenseShare` | the personality bundle; also the sweep axis. Not orthogonal — `speed` and `engage` both move lethality, see § Couplings                                   |
 | device `baseDamage` / `cooldownSec`                                   | one device's cadence and weight. The opening device's pair is _solved_ against flat TTK at t=0, not chosen                                                |
 | device `shape`                                                        | whether coverage is given or earned. A heading-bound shape is worth less to a policy than to a hand, and `modules/draft.ts` discounts it accordingly      |
 | device `maxTargets`                                                   | how many of the specimens in reach an area shape takes. On `bolt`/`lance` it is definitional; on the area shapes it is the real lever — see § Known thin  |
@@ -70,13 +70,35 @@ model and barely moves the game**, and `lethal` above 1 is not a bug — splitte
 fragments count in `kills` but deliberately in neither `spawned` nor `reached`
 (`modules/sim/step.ts` `SPLITTER_FRAGMENTS`), so `lethal` is a rate, not a fraction.
 
-**The low-DPS seat's collapse compounds rather than sits.** `kinetic` and
-`shielded` are authored at the same `dps` 0.9 and reach median levels 10 and 22,
-because lethality feeds income, income feeds the ladder, the ladder feeds device
-level, and device level is DPS. Nothing in the closed form has this loop in it:
-`localDensity` takes `dps` as a parameter, not as a function of what the seat has
-banked. Read `level` beside `lethal` before concluding a seat is badly tuned —
-the constant may be fine and the feedback may be the whole story.
+**`speed` is a lethality dial, and it is the largest one on the roster.** This is
+the same defect one axis over, and it is why `kinetic` — authored at `dps` 0.9,
+the same as `shielded` — reaches median level 10 against 22. A body only dies if
+it stays in range long enough to be killed, so lethality is bought in
+time-in-range; the operator moves at 120 · `speed` against specimens at 38–70, so
+a fast seat sweeps away from each body it meets. Nothing in the closed form
+contains this: `speed` enters as movement, and `localDensity` takes `dps` as an
+independent parameter.
+
+Measured by sweeping `kinetic`'s `speed` alone, reading lethality **at a given
+run level** so the ladder is controlled for:
+
+| level band | 1.35 (shipped) | 1.0  | 0.85 | rest of roster |
+| ---------- | -------------- | ---- | ---- | -------------- |
+| 1–5        | 0.51           | 0.75 | 0.91 | 0.86–0.97      |
+| 6–10       | 0.11           | 0.71 | 0.91 | 0.99–1.04      |
+| 11–15      | 0.18           | 0.46 | 0.73 | 0.78–0.98      |
+
+Monotone, and at 0.85 the seat rejoins the roster curve. Final level goes 13 → 16
+→ 18. **One dial, no economy constant touched.** Which also settles what the
+compounding is: there IS a loop — lethality feeds income, income the ladder, the
+ladder device level, device level DPS — but it is driven by this constant rather
+than self-sustaining, because damping the constant alone moves the whole arc.
+
+The reason it stayed hidden is that three of the four seats agree. Lethality by
+level reads within 4% across `generalist` / `reactive` / `shielded` at band 6–10
+and 16.6× wide with `kinetic` in it: **a roster where most seats lie on one curve
+and one sits far below it is a seat constant, not a systemic one.** Read
+`balance/lethality-probe.ts` before treating any of this as an economy problem.
 
 **`r_collect` against `r_kill` is the top coupling and sets the price of all
 income.** Kills land at the outer edge; motes land where the specimen died; the
@@ -181,6 +203,11 @@ one answers which question, and in what order.
   prints.**
 - `balance/steering-probe.ts` — the path rather than the economy, plus the
   per-term spread table § Couplings sends you to.
+- `balance/lethality-probe.ts` — the arc SAMPLED rather than summed: lethality by
+  minute, by run level, by live population, and the loadout each seat held at a
+  given level. Reach for it when a seat is behind and you need to know whether it
+  started behind, fell behind, or drafted differently — an end-of-run total
+  cannot tell those apart, and they want different repairs.
 
 Three reading rules that are not in any header:
 
@@ -218,13 +245,22 @@ carry no numbers.
   steered (spread 22–48 open floor, 43–152 crowded) and bought nothing: swept
   0 / 2 / 5 / 9, `kinetic` moved 0.09 → 0.08 → 0.10 → 0.10 while distinct modal
   causes fell 2 → 2 → 1 → 1. `reach` is above the declared dial on every seat
-  (§ Couplings), so there was nothing to seek. Reverted. The open question is
-  whether a seat twelve draft beats behind is a constant to fix or a feedback
-  loop to damp — different repairs, and the economy should not be retuned before
-  it is settled.
+  (§ Couplings), so there was nothing to seek. Reverted.
+
+  What is short is lethality, and § Couplings now names the cause: `speed`.
+  Three candidate explanations were tested and two died — it is not the draft
+  (every seat converts run level into the same offensive mass, and realized
+  defensive share tracks each `defenseShare` dial), and it is not a feedback loop
+  through level (three of four seats lie on one lethality-by-level curve). **The
+  repair is a design call, not a tune**, because `speed` 1.35 is what the
+  Kineticist IS — "never be where it is" is the seat. Three exits, none costed
+  yet: drop the dial and lose the personality; compensate it with `dps` and
+  accept that two dials now move together; or make lethality less
+  speed-sensitive mechanically, which is the only one that leaves the roster's
+  design space intact.
 
 - **`kinetic` is much worse than its single-seed reading, and the seed the arena
-  probe runs is its best one.** Batch medians against that seed: level 10 vs 16,
+  probe runs is its best one.** (Cause settled — § Couplings, `speed`.) Batch medians against that seed: level 10 vs 16,
   schedule −21 vs −12, 0.26 kills/s vs 0.72, realized `engage` 0.06 vs 0.24 —
   every single-seed figure at or near the top of the range. The orbit re-map
   (`modules/sim/steering.ts` § orbitRadius) removed a real defect; it did not

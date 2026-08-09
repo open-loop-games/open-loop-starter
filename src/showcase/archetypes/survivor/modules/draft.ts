@@ -5,7 +5,7 @@ import {
   type EngineModule,
   type InjectionKey,
 } from '@open-loop/engine';
-import { computed, shallowRef, triggerRef, type ShallowRef } from 'vue';
+import { computed, ref, shallowRef, triggerRef, type ShallowRef } from 'vue';
 import { isHeadingBound } from './sim/dispatch';
 import { DEVICES, EVOLUTIONS, REAGENTS } from '../data/devices';
 import type { SeatDef } from '../data/seats';
@@ -49,6 +49,15 @@ export interface DraftApi {
   choose: (index: number) => void;
   /** Picks taken this run, by kind — a probe readout. */
   taken: ComputedRef<Record<OfferKind, number>>;
+  /**
+   * Picks taken this run that were flagged `defensive`, a probe readout.
+   *
+   * `taken` counts by OFFER KIND, and the defensive/offensive split cuts across
+   * it — a reagent can be either. Without this, a probe asking whether a seat's
+   * `defenseShare` is showing up in what it actually drafted has to infer the
+   * answer from `taken.reagent`, which is a different question.
+   */
+  takenDefensive: ComputedRef<number>;
 }
 
 export const DraftKey: InjectionKey<DraftApi> = Symbol('survivor/draft') as InjectionKey<DraftApi>;
@@ -247,7 +256,7 @@ export function createDraftModule(options: { seed?: number } = {}): EngineModule
         reagent: 0,
         evolution: 0,
       };
-      let takenDefensive = 0;
+      const takenDefensiveRef = ref(0);
       let takenTotal = 0;
 
       const apply = (offer: DraftOffer): void => {
@@ -273,7 +282,7 @@ export function createDraftModule(options: { seed?: number } = {}): EngineModule
         }
         taken[offer.kind] += 1;
         takenTotal += 1;
-        if (offer.defensive) takenDefensive += 1;
+        if (offer.defensive) takenDefensiveRef.value += 1;
         // Same mutate-in-place caveat as `arena.ts`: notify explicitly.
         triggerRef(arena.state);
       };
@@ -290,7 +299,7 @@ export function createDraftModule(options: { seed?: number } = {}): EngineModule
         // Reset the roster's bookkeeping when a fresh run begins.
         if (run.level.value === 0 && takenTotal > 0) {
           takenTotal = 0;
-          takenDefensive = 0;
+          takenDefensiveRef.value = 0;
           for (const k of Object.keys(taken) as OfferKind[]) taken[k] = 0;
           offers.value = [];
         }
@@ -316,7 +325,7 @@ export function createDraftModule(options: { seed?: number } = {}): EngineModule
           const score = scoreOffer(
             offer,
             seat,
-            takenDefensive,
+            takenDefensiveRef.value,
             takenTotal,
             arena.state.value.devices,
           );
@@ -333,6 +342,7 @@ export function createDraftModule(options: { seed?: number } = {}): EngineModule
         offerCount: OFFER_COUNT,
         choose,
         taken: computed(() => ({ ...taken })),
+        takenDefensive: computed(() => takenDefensiveRef.value),
       });
     },
   };

@@ -16,6 +16,32 @@
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { ArenaKey, DraftKey, RunKey, createSurvivorModules } from '../modules';
 
+/**
+ * One minute of an arc: the level reached by its end, and what happened during
+ * it. The counters are DELTAS over the minute, not cumulative totals — a ratio
+ * of cumulative counters is dominated by the early run and cannot show a trend.
+ */
+export interface ArcSample {
+  minute: number;
+  level: number;
+  liveSpecimens: number;
+  kills: number;
+  reached: number;
+  spawned: number;
+  /**
+   * Summed levels across every installed device — the loadout's offensive mass.
+   *
+   * Sampled beside `level` because the two answer different questions and only
+   * the pair separates them: run level is what the ladder GRANTED, this is what
+   * the draft policy BOUGHT with it. Two seats at the same run level holding
+   * different offensive mass is a selection difference; the same mass killing at
+   * different rates is not.
+   */
+  deviceLevels: number;
+  /** Cumulative picks flagged defensive — the `defenseShare` dial, realized. */
+  defensivePicks: number;
+}
+
 /** 5 ticks per sim-second — coarse enough to be quick, fine enough to steer. */
 export const TICK_RATE = 5;
 /** The authored arc. A seat that survives it ends on `timer`. */
@@ -48,6 +74,12 @@ export async function runArc(seatId: string, seed: number) {
   let peakAt = 0;
   let liveAt10 = 0;
   let peakCarry = 0;
+  // Per-minute samples of the cumulative counters, differenced by the caller.
+  // End-of-run totals cannot tell a seat that was always behind from one that
+  // fell behind — and those are different repairs, so the arc has to be sampled
+  // rather than summed. See `./lethality-probe.ts`.
+  const series: ArcSample[] = [];
+  let prev = { kills: 0, reached: 0, spawned: 0 };
   for (let m = 0; m < MINUTES; m++) {
     await handle.tick(60 * TICK_RATE);
     const live = arena.state.value;
@@ -57,6 +89,18 @@ export async function runArc(seatId: string, seed: number) {
     }
     if (m === 9) liveAt10 = live.specimens.length;
     peakCarry = Math.max(peakCarry, live.spawnCarry);
+    const st = live.stats;
+    series.push({
+      minute: m + 1,
+      level: run.level.value,
+      liveSpecimens: live.specimens.length,
+      kills: st.kills - prev.kills,
+      reached: st.reached - prev.reached,
+      spawned: st.spawned - prev.spawned,
+      deviceLevels: live.devices.reduce((n, d) => n + d.level, 0),
+      defensivePicks: draft.takenDefensive.value,
+    });
+    prev = { kills: st.kills, reached: st.reached, spawned: st.spawned };
     if (arena.outcome.value !== 'running') break;
   }
 
@@ -95,6 +139,7 @@ export async function runArc(seatId: string, seed: number) {
     collectorsDropped: s.collectorsDropped,
     spawned: stats.spawned,
     reached: stats.reached,
+    series,
     peakSpecimens,
     peakAt,
     liveAt10,
