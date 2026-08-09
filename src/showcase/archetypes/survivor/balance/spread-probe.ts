@@ -104,7 +104,9 @@ async function main(): Promise<void> {
       col('sched', 18) +
       col('kills/s', 18) +
       col('engage', 18) +
-      'dial',
+      col('dial', 7) +
+      col('reach', 18) +
+      'lethal',
   );
   for (const seat of SEATS) {
     const runs = bySeat.get(seat.id)!;
@@ -113,6 +115,8 @@ async function main(): Promise<void> {
       scheduleDelta: (r) => r.scheduleDelta,
       killRate: (r) => r.kills / Math.max(1, r.elapsed),
       engage: (r) => r.kills / Math.max(1, r.spawned),
+      reach: (r) => r.reached / Math.max(1, r.spawned),
+      lethal: (r) => r.kills / Math.max(1, r.reached),
     });
     console.log(
       col(`  ${seat.id}`, 13) +
@@ -120,7 +124,9 @@ async function main(): Promise<void> {
         col(formatSpread(s.scheduleDelta!, num(0)), 18) +
         col(formatSpread(s.killRate!, num(2)), 18) +
         col(formatSpread(s.engage!, num(2)), 18) +
-        seat.engage.toFixed(2),
+        col(seat.engage.toFixed(2), 7) +
+        col(formatSpread(s.reach!, num(2)), 18) +
+        formatSpread(s.lethal!, num(2)),
     );
   }
 

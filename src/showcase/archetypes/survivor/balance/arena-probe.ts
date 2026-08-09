@@ -59,6 +59,8 @@ async function main(): Promise<void> {
       col('kills/s', 10) +
       col('pred', 8) +
       col('engage', 10) +
+      col('reach', 8) +
+      col('lethal', 8) +
       col('η cont', 9) +
       col('η all', 8) +
       col('coll', 7) +
@@ -89,6 +91,8 @@ async function main(): Promise<void> {
           `${(r.kills / Math.max(1, r.spawned)).toFixed(2)}/${seatOf(r.seatId).engage.toFixed(2)}`,
           10,
         ) +
+        col((r.reached / Math.max(1, r.spawned)).toFixed(2), 8) +
+        col((r.kills / Math.max(1, r.reached)).toFixed(2), 8) +
         col(r.etaContinuous.toFixed(3), 9) +
         col(r.etaMeasured.toFixed(3), 8) +
         col(`${r.collectorsTaken}/${r.collectorsDropped}`, 7) +

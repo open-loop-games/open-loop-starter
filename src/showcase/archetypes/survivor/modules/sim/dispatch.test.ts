@@ -40,6 +40,7 @@ function ahead(count: number): Specimen[] {
     contactDamage: 0,
     moteYield: 0,
     spawnedAt: 0,
+    reached: false,
     x: 20 + i * 4,
     y: 0,
   }));

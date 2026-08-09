@@ -28,13 +28,20 @@ export function toCell(pos: Vec2, nav: NavGrid): GridCoord {
 }
 
 /**
- * Distance-from-threat and distance-to-motes fields, recomputed on a slow
- * cadence and reused between refreshes. Two `distanceField` calls, not one per
- * tick: at 20 Hz the field barely changes between steps, and the engine's own
- * docs warn the cost function must not re-enter `distanceField` on the same grid.
+ * Distance-to-motes field plus the crowding census, recomputed on a slow
+ * cadence and reused between refreshes. Not one `distanceField` call per tick:
+ * at 20 Hz the field barely changes between steps, and the engine's own docs
+ * warn the cost function must not re-enter `distanceField` on the same grid.
+ *
+ * There is deliberately no grid THREAT field. One was computed here for most of
+ * this archetype's life and never read: every term that reasons about specimens
+ * — the peaked orbit, the priced contact — needs exact positions, because a
+ * 100-unit cell cannot resolve a 22-unit contact radius or a 180-unit kill
+ * radius. It was a full BFS over the whole grid, every refresh, for nothing.
+ * The grid keeps the jobs it is good at: routing to motes, and reachability for
+ * the traversal detector.
  */
 export interface Fields {
-  threat: Float64Array;
   motes: Float64Array;
   /** Specimens per nav cell. Traversal is about crowding, not presence. */
   crowd: Uint16Array;
@@ -56,12 +63,13 @@ export const ESCAPE_FLOOR = 12;
 const UNIT_COST = () => 1;
 
 export function computeFields(state: ArenaState, nav: NavGrid, now: number): Fields {
-  const threatSources: GridCoord[] = state.specimens.map((s) => toCell(s, nav));
   const moteSources: GridCoord[] = state.motes.map((m) => toCell(m, nav));
   const crowd = new Uint16Array(nav.cols * nav.rows);
-  for (const c of threatSources) crowd[c.y * nav.cols + c.x] += 1;
+  for (const s of state.specimens) {
+    const c = toCell(s, nav);
+    crowd[c.y * nav.cols + c.x] += 1;
+  }
   return {
-    threat: nav.grid.distanceField(threatSources, UNIT_COST),
     motes: nav.grid.distanceField(moteSources, UNIT_COST),
     crowd,
     computedAt: now,
@@ -390,7 +398,7 @@ export function scoreHeadings(
   const moteNear2 = MOTE_NEAR_RADIUS * MOTE_NEAR_RADIUS;
   const scored: HeadingScore[] = [];
 
-  // Only specimens this far out can change the near-field term: past it every
+  // Only specimens this far out can change a near-field term: past it every
   // candidate reads the same saturated `offset > 1`, which is the branch a floor
   // with no specimens on it already takes. Filtering once is one pass over the
   // census instead of one per candidate heading.

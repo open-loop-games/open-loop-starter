@@ -94,6 +94,7 @@ export async function runArc(seatId: string, seed: number) {
     collectorsTaken: stats.collectorsTaken,
     collectorsDropped: s.collectorsDropped,
     spawned: stats.spawned,
+    reached: stats.reached,
     peakSpecimens,
     peakAt,
     liveAt10,

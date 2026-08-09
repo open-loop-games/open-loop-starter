@@ -48,6 +48,41 @@ looking like a ladder. Change the input and re-derive.
 
 ## Couplings
 
+**`engage` and `dps` are not independent seat axes — realized engagement is
+their product, and only one half is under the policy's control.** `engage` is
+authored per seat as a movement personality and enters the closed form
+(`data/arena.ts` § localDensity) as the share of spawns brought inside `r_kill`.
+Measured, that share splits in two, and the probes print both:
+
+- `reach` = bodies ever inside `r_kill`, over spawns. **The movement half.**
+- `lethal` = kills over bodies reached. **The DPS half.**
+
+Over eight seeds, `reach` runs **0.67 / 0.57 / 0.80 / 0.80** against dials of
+0.55 / 0.40 / 0.72 / 0.62 — _above_ the dial on every seat — while `lethal` runs
+**0.54 / 0.11 / 1.03 / 0.58**. So reach varies 1.4× across the roster and
+lethality varies 9.4×, and essentially all of the realized-engagement spread
+lives in the half `engage` does not name. A seat whose engagement is short is
+almost never failing to meet the floor; it is failing to kill what it met.
+
+Two consequences a fork should not have to rediscover. **Retuning `engage` moves
+the model and barely moves the game** — the dial's real reach is the orbit
+distance and the `ENGAGE_WEIGHT` term, both of which are already over-delivering.
+And **`lethal` above 1 is not a bug**: splitter fragments are counted in `kills`
+but deliberately in neither `spawned` nor `reached` (`modules/sim/step.ts`
+§ splitter), so a seat that clears splitters banks kills the denominator never
+saw. It is the same population on both sides of `reach`, which is what that
+figure needs; `lethal` is a rate, not a fraction.
+
+**The low-DPS seat's collapse compounds rather than sits.** `kinetic` and
+`shielded` are authored at the same `dps` 0.9, and their median levels are 10
+and 22 — because `lethal` feeds income, income feeds the ladder, the ladder feeds
+device level, and device level is DPS. A seat that starts slightly behind on
+killing ends the arc twelve draft beats behind on the thing that kills. Nothing
+in the closed form has this loop in it: `localDensity` takes `dps` as a
+parameter, not as a function of the income the seat has managed to bank. Read
+`level` beside `lethal` before concluding a seat is badly tuned — the constant
+may be fine and the feedback may be the whole story.
+
 **`r_collect` against `r_kill` is the top coupling and sets the price of all
 income.** Kills land at the outer edge; motes land where the specimen died; the
 collect radius is smaller, so banking means looping back through cleared space.
@@ -191,6 +226,11 @@ effect when the design is indifferent — it costs the schedule nothing.
   seven minutes for the roster). This is the spine's declared measurement half:
   median survival, `η` split, the economy as a range, and the **binding-cause
   distribution**. Read it before believing any figure the arena probe prints.
+
+  Both probes print `engage` as three numbers, not one: the realized figure
+  against the seat's dial, then `reach` and `lethal` beside it. Read the split
+  before reading the total — the two halves fail for unrelated reasons and § Couplings
+  is about what happens when they are conflated.
 
   The column that carries the design target is `modal` — the share of seeds a
   seat ended on its single most common cause. A seat at 100% is a wall in
@@ -397,17 +437,29 @@ carry no numbers.
   arc where a ceiling used to discard 40–70% of it, so the arc is harder than
   any tuning has been done against.
 
-  The specific gap is engagement, and it is structural rather than a constant.
-  `engage` is DEFINED as the share of spawns brought inside `r_kill`, which
-  requires the operator to go and get them; the movement policy only ever reacts
-  to what is already near, holding an orbit relative to the NEAREST specimen.
-  Realized against declared, medians over the batch: **0.36/0.55, 0.06/0.40,
-  0.83/0.72, 0.48/0.62** — the seats that miss are the ones that hang back, and
-  `kinetic` misses by nearly an order of magnitude with a median of 0.06 against
-  a per-seed range of 0.03–0.37. Closing it means a term for approaching
-  unengaged bodies — a seeking policy rather than a reactive one — and that
-  moves every number on this page, so it wants doing before the economy is
-  retuned.
+  **The gap is not seeking, and a seeking term was built and measured before
+  that was known.** The reading that motivated one was realized engagement
+  against declared — medians 0.36/0.55, 0.06/0.40, 0.83/0.72, 0.48/0.62 — read
+  as "the policy only reacts to what is already near, so it never goes and gets
+  the mass". Splitting that number says otherwise: `reach` is **above the
+  declared dial on every seat** (§ Couplings). The operator was already bringing
+  in more of the floor than its personality asked for.
+
+  The term itself is recorded here because building it is the only reason the
+  split exists. It scored bodies expected to ARRIVE inside `r_kill` over a 6s
+  horizon, weighted by imminence, and it steered — term spread 22–48 on an open
+  floor and 43–152 against a crowded one, comfortably in the band the other
+  terms occupy. Swept at 0 / 2 / 5 / 9 over five seeds, realized engagement moved
+  0.44 → 0.51 → 0.42 → 0.41 (generalist) and **0.09 → 0.08 → 0.10 → 0.10**
+  (`kinetic`, the seat it was built for), while distinct modal binding causes
+  across the roster fell 2 → 2 → 1 → 1. A term that steers hard, buys nothing,
+  and costs the cause distribution is not mis-weighted; it is answering a
+  question the game was not asking. Reverted.
+
+  **What is actually short is lethality**, and § Couplings has the numbers and
+  the compounding loop behind them. The economy still should not be retuned
+  first: the thing to settle is whether a seat twelve draft beats behind is a
+  constant to fix or a feedback loop to damp, and those want different repairs.
 
 - **`kinetic` is much worse than its single-seed reading, and the seed that was
   being read is its best one.** Batch medians against the seed the arena probe

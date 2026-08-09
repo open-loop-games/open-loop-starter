@@ -66,6 +66,7 @@ export function createArenaState(params: ArenaParams): ArenaState {
       damageTaken: 0,
       devices: {},
       spawned: 0,
+      reached: 0,
     },
     nextId: 1,
     spawnCarry: 0,
@@ -107,6 +108,7 @@ function spawnOne(state: ArenaState, params: ArenaParams): void {
     contactDamage: THREAT_BALANCE.contactDps * def.damageFactor * contactDamageMul(state.time),
     moteYield: def.moteYield,
     spawnedAt: state.time,
+    reached: false,
   });
 }
 
@@ -126,6 +128,14 @@ function dropMotes(state: ArenaState, s: Specimen, params: ArenaParams): void {
         hp: s.hp * 0.4,
         tierId: 'splitter-fragment',
         moteYield: 0,
+        // Born in range, by construction: a fragment appears on its parent's
+        // corpse, and the parent died somewhere a device could reach. Stated
+        // rather than inherited from the spread above, because it is what keeps
+        // `stats.reached` counting SPAWNS — a fragment is in neither `spawned`
+        // nor `reached`, so the ratio stays a ratio of the same population.
+        // (`stats.kills` does count them, which is why `kills / reached` can
+        // exceed 1 on a seat that clears splitters.)
+        reached: true,
       });
     }
   }
@@ -227,12 +237,26 @@ export function stepArena(
   state.operator.y = Math.min(mapHeight, Math.max(0, state.operator.y + heading.y * speed * dt));
 
   // ─── specimens close on the operator ───
+  //
+  // The reach flag is latched here rather than counted at death, because what it
+  // measures is whether the operator ever brought this body into range — an
+  // event that happens whether or not the body then dies. Counting at death
+  // would make it a second name for `kills`. See `ArenaStats.reached`.
+  const killRadius2 = ARENA_BALANCE.killRadius * ARENA_BALANCE.killRadius;
   for (const s of state.specimens) {
     const dx = state.operator.x - s.x;
     const dy = state.operator.y - s.y;
     const d = Math.hypot(dx, dy) || 1;
     s.x += (dx / d) * s.speed * dt;
     s.y += (dy / d) * s.speed * dt;
+    if (!s.reached) {
+      const ndx = state.operator.x - s.x;
+      const ndy = state.operator.y - s.y;
+      if (ndx * ndx + ndy * ndy <= killRadius2) {
+        s.reached = true;
+        state.stats.reached++;
+      }
+    }
   }
 
   // ─── devices fire ───

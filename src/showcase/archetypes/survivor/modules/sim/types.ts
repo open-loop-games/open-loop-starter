@@ -29,6 +29,11 @@ export interface Specimen extends Vec2 {
   moteYield: number;
   /** Sim-time this body arrived. Drives dwell — see `./step.ts` § despawn. */
   spawnedAt: number;
+  /**
+   * Whether this body has ever been inside `killRadius`. Splits realized
+   * engagement into its two halves — see `ArenaStats.reached`.
+   */
+  reached: boolean;
 }
 
 export interface Mote extends Vec2 {
@@ -111,6 +116,17 @@ export interface ArenaStats {
   devices: Record<string, DeviceStat>;
   /** Bodies put on the floor. Nothing gates this — see `./step.ts` § spawn. */
   spawned: number;
+  /**
+   * Bodies that were ever inside `killRadius`, counted once each.
+   *
+   * `engage` is DEFINED as the share of spawns brought inside `r_kill`
+   * (`../../data/arena.ts` § Density) and was measured as `kills / spawned`,
+   * which is that share ONLY IF everything brought in dies. Two different
+   * failures wear that one number: a seat that never brings bodies into range,
+   * and a seat that brings them in and cannot kill them before they dwell out.
+   * `reached / spawned` is the movement half; `kills / reached` is the other.
+   */
+  reached: number;
 }
 
 export interface ArenaState {

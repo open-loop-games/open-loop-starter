@@ -224,6 +224,41 @@ describe('survivor/arena — per-device accounting', () => {
   });
 });
 
+describe('survivor/arena — reach accounting', () => {
+  beforeEach(() => boot());
+
+  // `reached` splits realized engagement into the movement half and the killing
+  // half, and every conclusion drawn from that split rests on it counting a body
+  // once when it first comes inside `killRadius` — not once per tick it stays
+  // there, and not once per death, which would make it a second name for kills.
+  it('counts a body once, and only bodies that came into range', async () => {
+    arena().startRun('generalist');
+    await tick(900);
+    const s = arena().state.value;
+    const stats = s.stats;
+
+    expect(stats.reached).toBeGreaterThan(0);
+    // Once each: a per-tick tally would run away past the spawn count within
+    // seconds, since a body sits in range for many ticks before it dies.
+    expect(stats.reached).toBeLessThanOrEqual(stats.spawned);
+    // Every body still on the floor and flagged is accounted for in the total,
+    // and nothing flags a body that never arrived.
+    expect(s.specimens.filter((x) => x.reached).length).toBeLessThanOrEqual(stats.reached);
+  });
+
+  it('leaves bodies that have not arrived yet unflagged', async () => {
+    arena().startRun('shielded');
+    await tick(900);
+    const stats = arena().state.value.stats;
+
+    // Bodies spawn in an annulus well outside `killRadius` and take seconds to
+    // close, so at any instant some of what has spawned has not arrived. A flag
+    // set at spawn — or one that counted presence rather than arrival — would
+    // make these equal.
+    expect(stats.reached).toBeLessThan(stats.spawned);
+  });
+});
+
 describe('survivor/arena — spawning is not a queue', () => {
   beforeEach(() => boot());
 
