@@ -6,6 +6,7 @@ import {
   type InjectionKey,
 } from '@open-loop/engine';
 import { computed, shallowRef, triggerRef, type ShallowRef } from 'vue';
+import { isHeadingBound } from './sim/dispatch';
 import { DEVICES, EVOLUTIONS, REAGENTS } from '../data/devices';
 import type { SeatDef } from '../data/seats';
 import { ArenaKey } from './arena';
@@ -156,6 +157,14 @@ export function drawOffers(
  * which changes the DPS curve, which is why `offensivePickGain` is solved from it.
  */
 /**
+ * Score a policy-driven seat gives up for a heading-bound device. Sized to sit
+ * between "never take it" and "take it as readily as a radial shape": it cancels
+ * the acquire bonus rather than the whole offer, so the device still enters a
+ * rotation that has room for it and still deepens when the draw favours it.
+ */
+export const HEADING_BOUND_DISCOUNT = 7;
+
+/**
  * How much a device wants its next level: rises toward `maxLevel`, so the run
  * finishes what it starts instead of levelling everything to four.
  */
@@ -192,6 +201,26 @@ export function scoreOffer(
   // Depth on a device that is close to recombining — the last levels are worth
   // more than the first, because they are what buys the evolution.
   if (offer.kind === 'device-level') score += levelPressure(offer.id, devices);
+
+  // A heading-bound device is worth less to a policy than to a hand, and the
+  // draft is where that belongs. `cone` fires along the movement heading, so its
+  // value is the value of a manoeuvre — kite, swing the wedge onto the mass as
+  // the cooldown lands, fire, resume. `CONNECT_WEIGHT` in the steering policy
+  // buys the swing and it genuinely works (that seat's cone went 55.7% → 73.6%
+  // connect, 0.7% → 6.1% of kills at four levels), but a policy executing it
+  // still lands well under the omnidirectional shapes' 20–63%, because a wedge
+  // it has to earn is worth less than coverage it is simply given.
+  //
+  // So the discount is a discount and not a ban: the device is real, it is
+  // reachable, and a hand aims it far better than an arg-max with a turn cost
+  // ever will. Under a player seat this term is absent entirely and the offer
+  // scores on its merits — which is the honest statement that a roster can hold
+  // devices whose value depends on who is driving. Improve the manoeuvre and
+  // this should shrink; delete it before improving the manoeuvre and the seat
+  // goes back to sinking six levels into a device that returns 1%.
+  if (seat.driver !== 'player' && isHeadingBound(offer.id)) {
+    score -= HEADING_BOUND_DISCOUNT;
+  }
 
   // Collect reagents move η, which the closed form assumes rather than derives —
   // a seat that leans on income should take them when it is short of them.

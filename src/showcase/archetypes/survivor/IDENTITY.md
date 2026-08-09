@@ -40,6 +40,15 @@ bias both the movement policy and the draft policy, so each solves the collectio
 problem at a different price. They are simultaneously the balance sweep axis and
 the character-select screen.
 
+That seam has a consequence the roster is built on: **a device can be worth
+different amounts to a policy than to a hand.** The Culture Sprayer's wedge fires
+along the movement heading, so its value is the value of a manoeuvre — kite,
+swing the wedge onto the mass as the cooldown lands, fire, resume. The movement
+policy can execute that (`CONNECT_WEIGHT`) and measurably does, just worse than a
+player will, so the AI draft discounts it and a human seat does not. Directional
+weapons rewarding the driver is the genre's own texture, and here it is a
+measurement rather than a flavour claim.
+
 ## Rate-function spine
 
 **Bucket: geometric discrete on minute marks, over a modifier-product chain.**

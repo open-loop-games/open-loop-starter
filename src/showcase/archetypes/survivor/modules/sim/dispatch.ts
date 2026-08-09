@@ -61,6 +61,18 @@ export function deviceCooldown(
   return def.cooldownSec * (evolution?.cooldownMul ?? 1) * chainMul('cooldown', reagentStacks);
 }
 
+/**
+ * Whether a shape's coverage depends on which way the operator is facing.
+ *
+ * `lance` is directional but self-aiming — it pierces toward the nearest
+ * specimen, so it connects however the operator is travelling. Only `cone` reads
+ * the movement heading, which is why it is the only shape the steering policy
+ * has anything to decide about.
+ */
+export function isHeadingBound(defId: string): boolean {
+  return DEVICE_BY_ID.get(defId)?.shape === 'cone';
+}
+
 /** Live reach of a device, after reagents. */
 export function deviceReach(rt: DeviceRuntime, reagentStacks: ReadonlyMap<string, number>): number {
   const def = DEVICE_BY_ID.get(rt.defId);
@@ -111,7 +123,7 @@ export interface Activation {
  * Returns the in-reach count alongside the picks so the caller can account for
  * what the shape declined.
  */
-function selectTargets(
+export function selectTargets(
   rt: DeviceRuntime,
   origin: Vec2,
   heading: Vec2,

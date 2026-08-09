@@ -107,6 +107,7 @@ describe('survivor/steering — score and choice are one policy', () => {
       const recomposed =
         c.threat +
         c.engage +
+        c.connect +
         params.eta * (2.5 * c.mote + c.moteNear + c.collector) +
         c.wall +
         c.turn;

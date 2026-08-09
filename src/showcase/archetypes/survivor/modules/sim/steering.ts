@@ -1,5 +1,6 @@
 import type { GridCoord, SpatialGrid } from '@open-loop/engine';
 import { ARENA_BALANCE, THREAT_BALANCE } from '../../data/arena';
+import { deviceReach, isHeadingBound, selectTargets } from './dispatch';
 import type { ArenaParams, ArenaState, Specimen, Vec2 } from './types';
 
 // TODO(expansion): weighted utility over composed influence readers is a parked
@@ -178,6 +179,34 @@ export const NEAR_WEIGHT = 25;
 export const CONTACT_HORIZON = 1.5;
 
 /**
+ * Score per specimen a heading-bound device would land, and how far ahead of its
+ * activation the policy starts caring.
+ *
+ * `cone` fires along the movement heading (`./dispatch.ts` `isHeadingBound`) and
+ * nothing in this score knew that, which is the § Couplings corollary in its
+ * second costume: a thing that does not appear in the score does not reach the
+ * policy. Measured consequence — the Culture Sprayer connected on 27–56% of
+ * shots and returned **0.2–0.7% of kills on every seat**, while two seats spent
+ * six and seven draft levels on it. Not a weak device: a trap.
+ *
+ * The term is weighted by IMMINENCE rather than applied flat, and that is what
+ * makes the manoeuvre a manoeuvre. A device three seconds from firing is worth
+ * nothing to face; one about to fire is worth turning for. So the policy kites,
+ * swings to put the mass in the wedge as the cooldown comes up, fires, and the
+ * term collapses again — a cone dance that EMERGES from the score rather than a
+ * scripted state machine bolted beside it. That matters because the operator has
+ * no other memory: a scripted manoeuvre would have to be interrupted by the
+ * contact price and the wall term by hand, where a score term is simply outvoted.
+ *
+ * Counted in targets rather than damage on purpose. Device damage scales ~10x
+ * across a run and every other term here is flat, so pricing the connect in
+ * damage would make it swamp the score late for reasons that have nothing to do
+ * with whether the wedge points at anything.
+ */
+export const CONNECT_WEIGHT = 25;
+export const CONNECT_HORIZON = 1.2;
+
+/**
  * Score per unit of "share of remaining HP per second" a candidate position
  * would cost in contact damage.
  *
@@ -299,6 +328,8 @@ export interface HeadingScore {
   /** Whether this candidate would be in contact at all — the priced branch. */
   cliff: boolean;
   engage: number;
+  /** Expected targets a heading-bound device would land, times imminence. */
+  connect: number;
   /** Grid-routed mote pull. Unweighted; `total` applies `eta` and its 2.5. */
   mote: number;
   /** Exact near-field mote pull. Unweighted; `total` applies `eta`. */
@@ -453,6 +484,20 @@ export function scoreHeadings(
       collectorTerm = -Math.sqrt(nearestCollector) * COLLECTOR_WEIGHT;
     }
 
+    // What the heading-bound devices would actually hit if the operator faced
+    // this way, discounted by how soon they fire. Scored through the dispatcher's
+    // own `selectTargets` rather than a wedge test written beside it, so the
+    // policy cannot come to believe in coverage the sim does not grant.
+    let connectTerm = 0;
+    for (const rt of state.devices) {
+      if (!isHeadingBound(rt.defId)) continue;
+      const imminence = 1 - Math.min(1, Math.max(0, rt.timer) / CONNECT_HORIZON);
+      if (imminence <= 0) continue;
+      const reach = deviceReach(rt, state.reagentStacks);
+      const { targets } = selectTargets(rt, state.operator, h, reach, relevant);
+      connectTerm += CONNECT_WEIGHT * targets.length * imminence;
+    }
+
     // Turning is not free. `dot` with the current heading is 1 straight ahead and
     // −1 behind, so this is a linear ramp from nothing to a full `TURN_COST`.
     const turnCost = TURN_COST * 0.5 * (1 - (h.x * current.x + h.y * current.y));
@@ -465,6 +510,7 @@ export function scoreHeadings(
     const score =
       threatTerm +
       engageTerm +
+      connectTerm +
       params.eta * (2.5 * moteTerm + moteNearTerm + collectorTerm) -
       wallPenalty * 8 -
       turnCost;
@@ -474,6 +520,7 @@ export function scoreHeadings(
       threat: threatTerm,
       cliff,
       engage: engageTerm,
+      connect: connectTerm,
       mote: moteTerm,
       moteNear: moteNearTerm,
       collector: collectorTerm,

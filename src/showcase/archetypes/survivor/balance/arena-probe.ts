@@ -254,21 +254,23 @@ async function main(): Promise<void> {
   console.log('      because slow kills fill the floor and a full floor clamps flat.');
   console.log('   4. Evolutions land 1 per seat against a pool sized for 2–3');
   console.log('      (`../data/devices.ts` § Cardinality); suspect the DRAW, not the policy.');
-  console.log('   5. The cone is not a weapon. It connects on 27–56% of its shots and');
-  console.log('      returns 0.2–0.7% of kills on EVERY seat — and two seats sank 6 and 7');
-  console.log('      draft levels into it. Connect rate also tracks time-at-cap inversely');
-  console.log('      (kinetic 26.8% at 19 capped minutes, reactive 55.7% at none), which');
-  console.log('      is the kiting signature: the wedge follows travel, so a fleeing');
-  console.log('      operator sprays cleared floor.');
-  console.log('   6. Level dominates shape, so the roster has no arc. Every seat’s top');
-  console.log('      killer is whichever device reached 8 and evolved, single-target or');
-  console.log('      not: a maxed `bolt` takes 45–51% of kills against a maxed 24-target');
-  console.log('      `pulse` at 56–59%. Seven levels of LEVEL_GAIN is ~10.5x and the whole');
-  console.log('      shape spread is 2–4x, so `maxTargets` cannot decide the late roster');
-  console.log('      the way `../data/devices.ts` § Cardinality says it does. Note the');
-  console.log('      `pulse` capture column too: 21–26% on capped seats against 81% on the');
-  console.log('      seat that never caps — the mass-clear device is `maxTargets`-bound');
-  console.log('      exactly when the mass exists.');
+  console.log('   5. The cone is a HUMAN-PLAY device, by measurement rather than');
+  console.log('      by assertion. `CONNECT_WEIGHT` gives the movement policy a term for');
+  console.log('      what a heading-bound shape would land, weighted by imminence, and the');
+  console.log('      cone dance it buys is real — 55.7% -> 73.6% connect and 0.7% -> 6.1%');
+  console.log('      of kills at four levels. Still a bad pick against the omnidirectional');
+  console.log('      shapes, because a wedge the policy must EARN is worth less than');
+  console.log('      coverage it is given, so `modules/draft.ts` discounts it for policy');
+  console.log('      seats only. Expect level 1 or absent above; under a hand, no discount.');
+  console.log('   6. "Max one device" is correct play and is not the defect. Depth beats');
+  console.log('      breadth by construction (LEVEL_GAIN^7 ~10.5x against a 2-4x shape');
+  console.log('      spread), which is the genre behaving normally. What made the roster');
+  console.log('      read as a skin was one device returning ~1% whatever you did with it.');
+  console.log('      With that resolved the seats diverge on their own — check the lvl');
+  console.log('      column for four different rotations out of one draft policy.');
+  console.log('   7. `pulse` capture still runs low on seats pinned at the cap and high on');
+  console.log('      the seat that reaches it latest: the mass-clear device is bound by');
+  console.log('      `maxTargets` exactly when there is a mass to clear. Still open.');
   console.log(`\n  Mean mote yield over the window: ${meanMoteYield(MINUTES * 30).toFixed(2)}.`);
 }
 

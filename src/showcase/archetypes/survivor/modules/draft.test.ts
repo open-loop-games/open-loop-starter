@@ -9,11 +9,12 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createSeededRNG } from '@open-loop/engine';
-import { DraftKey, candidateOffers, drawOffers, scoreOffer } from './draft';
+import { DraftKey, candidateOffers, drawOffers, scoreOffer, type DraftOffer } from './draft';
 import { RunKey } from './run';
 import { createArenaState } from './sim/step';
 import type { ArenaParams, ArenaState } from './sim/types';
-import { BASELINE_SEAT } from '../data/seats';
+import { BASELINE_SEAT, PLAYER_SEAT } from '../data/seats';
+import { DEVICES } from '../data/devices';
 import { boot, getEngine, tick } from '../sim/harness';
 
 const params: ArenaParams = {
@@ -121,5 +122,35 @@ describe('survivor/draft — applied', () => {
     const total = Object.values(taken).reduce((a, b) => a + b, 0);
     expect(total).toBeGreaterThan(0);
     expect(run.pendingPicks.value).toBe(0);
+  });
+});
+
+describe('survivor/draft — who is driving changes what is worth drafting', () => {
+  const cone = DEVICES.find((d) => d.shape === 'cone')!;
+  const pulse = DEVICES.find((d) => d.shape === 'pulse')!;
+  const offer = (id: string): DraftOffer => ({
+    kind: 'device-acquire',
+    id,
+    label: id,
+    defensive: false,
+  });
+
+  it('discounts a heading-bound device for a policy seat but not a hand', () => {
+    // The manoeuvre that makes a `cone` pay is one an arg-max with a turn cost
+    // executes worse than a player does, so its value depends on the driver —
+    // and the draft is where that belongs.
+    const policyGap =
+      scoreOffer(offer(pulse.id), BASELINE_SEAT, 0, 0) -
+      scoreOffer(offer(cone.id), BASELINE_SEAT, 0, 0);
+    const playerGap =
+      scoreOffer(offer(pulse.id), PLAYER_SEAT, 0, 0) -
+      scoreOffer(offer(cone.id), PLAYER_SEAT, 0, 0);
+
+    expect(policyGap).toBeGreaterThan(0);
+    expect(playerGap).toBe(0);
+  });
+
+  it('discounts rather than forbids — the device stays reachable', () => {
+    expect(scoreOffer(offer(cone.id), BASELINE_SEAT, 0, 0)).toBeGreaterThan(0);
   });
 });
