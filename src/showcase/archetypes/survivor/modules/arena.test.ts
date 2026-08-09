@@ -197,3 +197,23 @@ describe('survivor/arena — the collector', () => {
     expect(stats.motesBanked).toBeLessThanOrEqual(stats.motesDropped);
   });
 });
+
+describe('survivor/arena — per-device accounting', () => {
+  beforeEach(() => boot());
+
+  it('attributes every kill to exactly one device', async () => {
+    arena().startRun('generalist');
+    await tick(600);
+    const stats = arena().state.value.stats;
+    const entries = Object.values(stats.devices);
+
+    expect(entries.length).toBeGreaterThan(0);
+    // Killing-blow credit, so the per-device shares the probe prints are a
+    // partition of the run's kills rather than an overlapping tally.
+    expect(entries.reduce((n, d) => n + d.kills, 0)).toBe(stats.kills);
+    for (const d of entries) {
+      expect(d.firesConnected).toBeLessThanOrEqual(d.fires);
+      expect(d.hits).toBeLessThanOrEqual(d.reachable);
+    }
+  });
+});

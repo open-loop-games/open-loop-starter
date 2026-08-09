@@ -23,6 +23,7 @@ import { ArenaKey, DraftKey, RunKey, createSurvivorModules } from '../modules';
 import { SEATS } from '../data/seats';
 import { meanMoteYield } from '../data/specimens';
 import { THREAT_BALANCE, spawnRate } from '../data/arena';
+import { DEVICES } from '../data/devices';
 
 /** 5 ticks per sim-second — coarse enough to be quick, fine enough to steer. */
 const TICK_RATE = 5;
@@ -108,6 +109,8 @@ async function runSeat(seatId: string, seed: number) {
     contactSeconds: stats.contactSeconds,
     hpLeft: Math.max(0, s.operator.hp),
     hpMax: s.operator.maxHp,
+    deviceStats: stats.devices,
+    installed: s.devices.map((d) => ({ defId: d.defId, level: d.level, evolved: !!d.evolutionId })),
   };
 }
 
@@ -182,6 +185,46 @@ async function main(): Promise<void> {
     );
   }
 
+  // ── Per-device dispatch ──
+  //
+  // Aggregate kills/s cannot say which device delivered them, and the shapes fail
+  // in different ways. `connect` is the share of shots that found any target at
+  // all; `capture` is hits over specimens IN REACH at fire time, so a directional
+  // shape's orientation loss and a radial shape's `maxTargets` cap read as
+  // different numbers instead of one blurred "it underperforms". `pulse` is the
+  // control: radial, so it can only ever lose to the cap.
+  console.log('\n  ── Per-device dispatch ──');
+  console.log(
+    col('  seat', 13) +
+      col('device', 18) +
+      col('shape', 8) +
+      col('lvl', 6) +
+      col('connect', 10) +
+      col('capture', 10) +
+      col('hits/fire', 11) +
+      col('kill share', 12) +
+      'dps',
+  );
+  const pct = (n: number, d: number): string => (d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '—');
+  for (const r of results) {
+    for (const inst of r.installed) {
+      const d = r.deviceStats[inst.defId];
+      const def = DEVICES.find((x) => x.id === inst.defId);
+      if (!d || !def) continue;
+      console.log(
+        col(`  ${r.seatId}`, 13) +
+          col(inst.defId, 18) +
+          col(def.shape, 8) +
+          col(`${inst.level}${inst.evolved ? '*' : ''}`, 6) +
+          col(pct(d.firesConnected, d.fires), 10) +
+          col(pct(d.hits, d.reachable), 10) +
+          col((d.hits / Math.max(1, d.firesConnected)).toFixed(1), 11) +
+          col(pct(d.kills, r.kills), 12) +
+          (d.damage / Math.max(1, r.elapsed)).toFixed(1),
+      );
+    }
+  }
+
   console.log('\n  ── Reading ──');
   console.log('  The full arc runs. Seats survive minutes rather than seconds, they');
   console.log('  draft the whole rotation, and binding causes DIFFER across seats');
@@ -211,6 +254,21 @@ async function main(): Promise<void> {
   console.log('      because slow kills fill the floor and a full floor clamps flat.');
   console.log('   4. Evolutions land 1 per seat against a pool sized for 2–3');
   console.log('      (`../data/devices.ts` § Cardinality); suspect the DRAW, not the policy.');
+  console.log('   5. The cone is not a weapon. It connects on 27–56% of its shots and');
+  console.log('      returns 0.2–0.7% of kills on EVERY seat — and two seats sank 6 and 7');
+  console.log('      draft levels into it. Connect rate also tracks time-at-cap inversely');
+  console.log('      (kinetic 26.8% at 19 capped minutes, reactive 55.7% at none), which');
+  console.log('      is the kiting signature: the wedge follows travel, so a fleeing');
+  console.log('      operator sprays cleared floor.');
+  console.log('   6. Level dominates shape, so the roster has no arc. Every seat’s top');
+  console.log('      killer is whichever device reached 8 and evolved, single-target or');
+  console.log('      not: a maxed `bolt` takes 45–51% of kills against a maxed 24-target');
+  console.log('      `pulse` at 56–59%. Seven levels of LEVEL_GAIN is ~10.5x and the whole');
+  console.log('      shape spread is 2–4x, so `maxTargets` cannot decide the late roster');
+  console.log('      the way `../data/devices.ts` § Cardinality says it does. Note the');
+  console.log('      `pulse` capture column too: 21–26% on capped seats against 81% on the');
+  console.log('      seat that never caps — the mass-clear device is `maxTargets`-bound');
+  console.log('      exactly when the mass exists.');
   console.log(`\n  Mean mote yield over the window: ${meanMoteYield(MINUTES * 30).toFixed(2)}.`);
 }
 

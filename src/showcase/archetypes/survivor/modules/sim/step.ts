@@ -60,6 +60,7 @@ export function createArenaState(params: ArenaParams): ArenaState {
       collectorsTaken: 0,
       contactSeconds: 0,
       damageTaken: 0,
+      devices: {},
     },
     nextId: 1,
     spawnCarry: 0,
@@ -231,7 +232,31 @@ export function stepArena(
     params,
   );
   for (const a of activations) {
-    for (const target of a.targets) target.hp -= a.damage;
+    const stat = (state.stats.devices[a.defId] ??= {
+      fires: 0,
+      firesConnected: 0,
+      reachable: 0,
+      hits: 0,
+      kills: 0,
+      damage: 0,
+    });
+    stat.fires += a.fires;
+    // `reachable` and `hits` are both per SELECTION, not per shot, so their ratio
+    // stays a capture rate; `fires` counts shots and is the connect denominator.
+    stat.reachable += a.reachable;
+    if (a.targets.length === 0) continue;
+    // Targets are selected once per tick, so every catch-up fire in this batch
+    // lands on the same selection — all of them connected or none did.
+    stat.firesConnected += a.fires;
+    stat.hits += a.targets.length;
+    for (const target of a.targets) {
+      // Credit the killing blow, and only once: a target another device already
+      // dropped this tick is at hp <= 0 before this subtraction.
+      const before = target.hp;
+      target.hp -= a.damage;
+      stat.damage += Math.min(before, a.damage);
+      if (before > 0 && target.hp <= 0) stat.kills++;
+    }
   }
 
   // ─── deaths, drops ───

@@ -18,24 +18,24 @@ time axis), `arena.ts` (geometry and threat), `income.ts` (motes to levels),
 draft pool), `meta.ts` (the cross-run shop). `modules/tuning.ts` declares the
 `tunable()` key union; not every constant below is wired to one yet.
 
-| Knob                                                                  | What it moves                                                                                                                                             |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `beatFirstSeconds`, `beatRatio`                                       | the draft schedule. The beat _count_ is a consequence, not a knob — hold the 30–90s band and ~33 beats falls out                                          |
-| `hpGrowthPerMinute`                                                   | how hard escalation bites. Also re-solves the per-pick DPS gain, since that is pinned to flat time-to-kill                                                |
-| `spawnRate0`, `spawnGrowthPerMinute`                                  | density, and with it the entity budget and the whole traversal term                                                                                       |
-| `contactDamageGrowthPerMinute`                                        | per-hit escalation. Deliberately far slower than HP growth                                                                                                |
-| `densityCap`, `BLOCKING_CROWD`, `ESCAPE_FLOOR`                        | where gaps close. Contact is the _squared_ approach to it, so this is quiet until it is sudden                                                            |
-| `hpPickGain`                                                          | what a defensive pick buys                                                                                                                                |
-| `apertureCapRatio`                                                    | the ceiling `r_collect/r_kill` approaches as aperture sources stack. Bounds the top coupling structurally — see § Couplings                               |
-| `COLLECTOR_BALANCE.onscreenShare`                                     | the projection's assumed burst size. The sim pulls everything inside `pullRadius` instead, so this is a prediction the probe measures against, not a rule |
-| `COLLECTOR_BALANCE.pullRadius`, `timeJitter`                          | how much floor one pull banks, and how far a drop roams from its nominal time                                                                             |
-| per-seat `engage`, `eta`, `speed`, `dps`, `toughness`, `defenseShare` | the personality bundle; also the sweep axis                                                                                                               |
-| device `baseDamage` / `cooldownSec`                                   | one device's cadence and weight. The opening device's pair is _solved_ against flat TTK at t=0, not chosen                                                |
-| device `maxTargets`                                                   | how far the area shapes overtake the single-target ones late. The knob that decides whether the roster has an arc                                         |
-| specimen `hpFactor` / `damageFactor` / `weight`                       | the mix, and through it the required-DPS curve and the pressure curve                                                                                     |
-| specimen `moteYield`                                                  | income. Coupled to the ladder — raise it and re-derive                                                                                                    |
-| `NOTES_PER_KILL`, `META_COST_RATIO`, per-upgrade `baseCost`           | the runs-to-buy ladder. Read the projection's meta table, not these numbers                                                                               |
-| meta upgrade `side`                                                   | whether a tile is ladder-safe. Not annotation — see § Couplings                                                                                           |
+| Knob                                                                  | What it moves                                                                                                                                               |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beatFirstSeconds`, `beatRatio`                                       | the draft schedule. The beat _count_ is a consequence, not a knob — hold the 30–90s band and ~33 beats falls out                                            |
+| `hpGrowthPerMinute`                                                   | how hard escalation bites. Also re-solves the per-pick DPS gain, since that is pinned to flat time-to-kill                                                  |
+| `spawnRate0`, `spawnGrowthPerMinute`                                  | density, and with it the entity budget and the whole traversal term                                                                                         |
+| `contactDamageGrowthPerMinute`                                        | per-hit escalation. Deliberately far slower than HP growth                                                                                                  |
+| `densityCap`, `BLOCKING_CROWD`, `ESCAPE_FLOOR`                        | where gaps close. Contact is the _squared_ approach to it, so this is quiet until it is sudden                                                              |
+| `hpPickGain`                                                          | what a defensive pick buys                                                                                                                                  |
+| `apertureCapRatio`                                                    | the ceiling `r_collect/r_kill` approaches as aperture sources stack. Bounds the top coupling structurally — see § Couplings                                 |
+| `COLLECTOR_BALANCE.onscreenShare`                                     | the projection's assumed burst size. The sim pulls everything inside `pullRadius` instead, so this is a prediction the probe measures against, not a rule   |
+| `COLLECTOR_BALANCE.pullRadius`, `timeJitter`                          | how much floor one pull banks, and how far a drop roams from its nominal time                                                                               |
+| per-seat `engage`, `eta`, `speed`, `dps`, `toughness`, `defenseShare` | the personality bundle; also the sweep axis                                                                                                                 |
+| device `baseDamage` / `cooldownSec`                                   | one device's cadence and weight. The opening device's pair is _solved_ against flat TTK at t=0, not chosen                                                  |
+| device `maxTargets`                                                   | how many of the specimens in reach an area shape takes. Intended as the knob deciding whether the roster has an arc; measured, it is not — see § Known thin |
+| specimen `hpFactor` / `damageFactor` / `weight`                       | the mix, and through it the required-DPS curve and the pressure curve                                                                                       |
+| specimen `moteYield`                                                  | income. Coupled to the ladder — raise it and re-derive                                                                                                      |
+| `NOTES_PER_KILL`, `META_COST_RATIO`, per-upgrade `baseCost`           | the runs-to-buy ladder. Read the projection's meta table, not these numbers                                                                                 |
+| meta upgrade `side`                                                   | whether a tile is ladder-safe. Not annotation — see § Couplings                                                                                             |
 
 **Deliberately not perturbable:** the per-pick DPS gain, the beat ratio, and the
 XP ladder. All three are _solved_ — the gain from flat time-to-kill, the ratio so
@@ -144,6 +144,17 @@ effect when the design is indifferent — it costs the schedule nothing.
   pickup — the policy's doing) and `η all`, with the collector's `burst` share
   beside them, because a single figure conflates a good pilot with a lucky drop.
 
+  It also prints a **per-device dispatch table**. Aggregate kills cannot say
+  which device delivered them, and the shapes fail in different ways, so the
+  table separates the two failures: `connect` is the share of shots that found
+  any target at all, and `capture` is hits over specimens _in reach at fire
+  time_, before the shape filter and before `maxTargets`. A directional shape
+  losing targets to the heading it is not facing and a radial one losing them to
+  its cap are then different numbers rather than one blurred "it
+  underperforms" — `pulse` is the control, since it can only ever lose to the
+  cap. `lvl` beside them is what says whether a shortfall is the device or the
+  draft that fed it.
+
   It also prints a **live census against `entityBudget`**, sampled each minute:
   peak population, when the cap first bound, and how many minutes were spent
   pinned there. That table exists because end-of-run totals cannot distinguish a
@@ -199,6 +210,29 @@ carry no numbers.
   remainder is suspected to be the DRAW, not the policy — a device needs eight
   levels and an offer shows three of ~10 candidates, so the deepest device is
   often not on the table.
+- **Level dominates shape, so the device roster has no arc.** `data/devices.ts`
+  § Cardinality intends `maxTargets` to decide the late roster: the capped shapes
+  stop scaling, the area shapes do not, and the draft's character changes as
+  density climbs. The dispatch table says otherwise. Every seat's top killer is
+  simply whichever device reached level 8 and evolved, irrespective of shape — a
+  maxed single-target `bolt` takes 45–51% of kills where a maxed 24-target
+  `pulse` takes 56–59%. Those are the same number for design purposes.
+
+  The arithmetic is not close. Seven levels of `LEVEL_GAIN` (`modules/sim/dispatch.ts`,
+  solved from `offensivePickGain`) is ~10.5×, while the whole spread across the
+  four shapes is 2–4×. A geometric level curve derived to hold time-to-kill flat
+  against escalation will always swamp a linear target count, so "max one device"
+  is the correct play in every seat and the roster is a skin. This is a real
+  tension in the spine rather than a loose constant: the level gain is _solved_
+  and § The knobs forbids overriding it directly, so an arc has to come from
+  somewhere the solve does not reach — shape-dependent scaling, per-device gain
+  curves, or a cap on how deep one device can go.
+
+  A second reading in the same table sharpens it: `pulse` capture runs 21–26% on
+  the seats that sit at `entityBudget` against **81% on the seat that never
+  caps**. The one mass-clear device is `maxTargets`-bound precisely when there is
+  a mass to clear, which is the shape of the kite-blob complaint from the seat.
+
 - **Shop costs are anchored to a payout the sim does not deliver.** The
   projection sizes `baseCost` against ~627 notes for a baseline run; a real run
   banks ~242. So "one run buys the first tile" is closer to one and a quarter, and
@@ -259,10 +293,20 @@ specimens.length < entityBudget)`.
   This is the § Couplings corollary again, in a second costume: a thing that does
   not appear in the score does not reach the policy. `engage` was the first. The
   fix is a design choice rather than a tuning one — give `chooseHeading` a term
-  for connecting the equipped directional shapes, or decouple facing from
-  travel — and either changes DPS, so it wants measuring after the income work
-  rather than during it. Reported from play, not from a probe; the probe cannot
-  see it because it reads kills, and the other three devices cover the shortfall.
+  for connecting the equipped directional shapes, or decouple facing from travel.
+
+  **Measured, and worse than "a device that mostly fires at nothing": it is not a
+  weapon at all.** The per-device dispatch table reads 27–56% connect and
+  **0.2–0.7% of kills on every seat in the roster**, and two seats spent six and
+  seven draft levels on it to get that. So it is not only a dead device, it is a
+  live _trap_ — the draft policy keeps buying it, and those picks are gone.
+
+  The table also ties it to the kite directly: connect rate runs inversely to
+  time spent at `entityBudget` (`kinetic` 26.8% across 19 capped minutes,
+  `reactive` 55.7% across none). The wedge follows travel, so the more the floor
+  forces flight the more of it sprays cleared space — which is why this cannot be
+  read as a device problem alone, and why the movement work and this fix are one
+  question rather than two.
 
 - **Guns-versus-butter is unsettled, and the reading that used to sit here was
   stale.** The structural asymmetry is real: DPS reaches survival only through

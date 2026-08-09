@@ -68,6 +68,31 @@ export interface OperatorState extends Vec2 {
   heading: Vec2;
 }
 
+/**
+ * Per-device dispatch accounting, keyed by `DeviceDef.id`.
+ *
+ * Aggregate kills cannot say whether a device is pulling its weight, and the
+ * shapes fail in different ways: a `cone` loses targets it could reach to the
+ * heading it is not facing, while a `pulse` only ever loses them to `maxTargets`.
+ * `reachable` versus `hits` separates those two — it is the count of specimens
+ * inside reach at fire time, BEFORE the shape filter and the cap, so the ratio is
+ * the shape's capture rate rather than a damage number wearing one.
+ */
+export interface DeviceStat {
+  /** Activations, counting each catch-up fire within one tick. */
+  fires: number;
+  /** Fires whose shape filter left at least one target. `fires - this` whiffed. */
+  firesConnected: number;
+  /** Specimens inside reach at fire time, summed — the denominator for capture. */
+  reachable: number;
+  /** Specimens actually affected, summed — after shape filter and `maxTargets`. */
+  hits: number;
+  /** Killing blows credited to this device. */
+  kills: number;
+  /** Effective damage, overkill clamped to the target's remaining hp. */
+  damage: number;
+}
+
 /** Counters the probes read. Cheap to maintain, and the only run readout. */
 export interface ArenaStats {
   kills: number;
@@ -80,6 +105,8 @@ export interface ArenaStats {
   /** Seconds spent inside contact range. The damage-taken integral's driver. */
   contactSeconds: number;
   damageTaken: number;
+  /** Per-device dispatch accounting, lazily keyed by `DeviceDef.id`. */
+  devices: Record<string, DeviceStat>;
 }
 
 export interface ArenaState {

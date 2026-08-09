@@ -83,11 +83,23 @@ export function chainMul(effect: string, reagentStacks: ReadonlyMap<string, numb
   return product;
 }
 
-/** A device activation: which specimens it hit, and for how much each. */
+/**
+ * A device activation: which specimens it hit, and for how much each.
+ *
+ * Emitted even when `targets` is empty, because a whiff is the reading — a
+ * directional shape firing at floor it is not facing is invisible in kill counts
+ * and shows up only as a device that quietly under-delivers. `reachable` is the
+ * in-reach census before the shape filter, so `hits/reachable` separates a shape
+ * that could not see its targets from one that was capped by `maxTargets`.
+ */
 export interface Activation {
   defId: string;
   targets: Specimen[];
   damage: number;
+  /** Catch-up fires folded into this activation. `damage` is already scaled. */
+  fires: number;
+  /** Specimens inside reach at fire time, before shape filter and cap. */
+  reachable: number;
 }
 
 /**
@@ -95,6 +107,9 @@ export interface Activation {
  * specimens inside reach they take, which is the whole reason the roster
  * re-ranks itself as density climbs: the capped shapes stop scaling and the area
  * shapes do not.
+ *
+ * Returns the in-reach count alongside the picks so the caller can account for
+ * what the shape declined.
  */
 function selectTargets(
   rt: DeviceRuntime,
@@ -102,9 +117,9 @@ function selectTargets(
   heading: Vec2,
   reach: number,
   specimens: Specimen[],
-): Specimen[] {
+): { targets: Specimen[]; reachable: number } {
   const def = DEVICE_BY_ID.get(rt.defId);
-  if (!def) return [];
+  if (!def) return { targets: [], reachable: 0 };
   const inReach: { s: Specimen; d2: number }[] = [];
   const reach2 = reach * reach;
   for (const s of specimens) {
@@ -113,12 +128,13 @@ function selectTargets(
     const d2 = dx * dx + dy * dy;
     if (d2 <= reach2) inReach.push({ s, d2 });
   }
-  if (inReach.length === 0) return [];
+  const reachable = inReach.length;
+  if (reachable === 0) return { targets: [], reachable };
 
   switch (def.shape) {
     case 'pulse':
       // Radial: everything in reach, capped.
-      return inReach.slice(0, def.maxTargets).map((e) => e.s);
+      return { targets: inReach.slice(0, def.maxTargets).map((e) => e.s), reachable };
     case 'cone': {
       // Forward wedge along the operator's heading.
       const hl = Math.hypot(heading.x, heading.y) || 1;
@@ -129,7 +145,7 @@ function selectTargets(
         const dot = ((e.s.x - origin.x) / dl) * hx + ((e.s.y - origin.y) / dl) * hy;
         return dot >= 0.5; // ~120° wedge
       });
-      return picked.slice(0, def.maxTargets).map((e) => e.s);
+      return { targets: picked.slice(0, def.maxTargets).map((e) => e.s), reachable };
     }
     case 'lance': {
       // Pierces a line toward the nearest specimen.
@@ -143,12 +159,12 @@ function selectTargets(
         const dot = ((e.s.x - origin.x) / dl) * lx + ((e.s.y - origin.y) / dl) * ly;
         return dot >= 0.92; // tight line
       });
-      return picked.slice(0, def.maxTargets).map((e) => e.s);
+      return { targets: picked.slice(0, def.maxTargets).map((e) => e.s), reachable };
     }
     case 'bolt':
     default: {
       inReach.sort((a, b) => a.d2 - b.d2);
-      return inReach.slice(0, def.maxTargets).map((e) => e.s);
+      return { targets: inReach.slice(0, def.maxTargets).map((e) => e.s), reachable };
     }
   }
 }
@@ -184,12 +200,13 @@ export function tickRotation(
     }
     if (fires === 0) continue;
     const reach = deviceReach(rt, reagentStacks);
-    const targets = selectTargets(rt, origin, heading, reach, specimens);
-    if (targets.length === 0) continue;
+    const { targets, reachable } = selectTargets(rt, origin, heading, reach, specimens);
     activations.push({
       defId: rt.defId,
       targets,
       damage: deviceDamage(rt, reagentStacks, params) * fires,
+      fires,
+      reachable,
     });
   }
   return activations;
