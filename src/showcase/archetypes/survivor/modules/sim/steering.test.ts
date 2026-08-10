@@ -94,6 +94,7 @@ function state(): ArenaState {
       damageConverted: 0,
       damageWasted: 0,
       bodiesWasted: 0,
+      damageOverkill: 0,
     },
     nextId: 1000,
     spawnCarry: 0,

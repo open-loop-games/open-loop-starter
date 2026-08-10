@@ -70,6 +70,7 @@ export function createArenaState(params: ArenaParams): ArenaState {
       damageConverted: 0,
       damageWasted: 0,
       bodiesWasted: 0,
+      damageOverkill: 0,
     },
     nextId: 1,
     spawnCarry: 0,
@@ -312,6 +313,7 @@ export function stepArena(
       // dropped this tick is at hp <= 0 before this subtraction.
       const before = target.hp;
       target.hp -= a.damage;
+      state.stats.damageOverkill += a.damage - Math.max(0, Math.min(before, a.damage));
       // Clamped at zero, not just at the target's remaining hp: a target another
       // device already dropped this tick has NEGATIVE hp, and crediting that as
       // effective damage subtracts from the device's total. It reads as negative

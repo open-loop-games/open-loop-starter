@@ -260,6 +260,7 @@ async function main(): Promise<void> {
     col('  seat', 13) +
       col('speed', 8) +
       col('waste', 9) +
+      col('overkill', 10) +
       col('lethal', 9) +
       'bodies left wounded',
   );
@@ -267,21 +268,27 @@ async function main(): Promise<void> {
     const runs = bySeat.get(seat.id)!;
     let converted = 0;
     let wasted = 0;
+    let overkill = 0;
     let bodies = 0;
     let kills = 0;
     let reached = 0;
     for (const r of runs) {
       converted += r.damageConverted;
       wasted += r.damageWasted;
+      overkill += r.damageOverkill;
       bodies += r.bodiesWasted;
       kills += r.kills;
       reached += r.reached;
     }
     const total = converted + wasted;
+    // Overkill is quoted against the same denominator as waste so the two read
+    // as competing destinations for one budget: targeting the closest to dying
+    // trades one for the other, and only the pair says whether that was a win.
     console.log(
       col(`  ${seat.id}`, 13) +
         col(seat.speed.toFixed(2), 8) +
         col(total > 0 ? `${((wasted / total) * 100).toFixed(1)}%` : '—', 9) +
+        col(total > 0 ? `${((overkill / total) * 100).toFixed(1)}%` : '—', 10) +
         col(reached > 0 ? (kills / reached).toFixed(2) : '—', 9) +
         (bodies / runs.length).toFixed(0),
     );

@@ -156,6 +156,15 @@ export interface ArenaStats {
   damageWasted: number;
   /** Wounded bodies that left the floor alive. The `damageWasted` denominator. */
   bodiesWasted: number;
+  /**
+   * Damage dealt past a target's remaining HP — the other way output fails to
+   * become kills, and the one any change to target selection trades against
+   * `damageWasted`. Tracked separately because it is invisible in the
+   * converted/wasted split: both count effective damage only, so a shape
+   * emptying activations into nearly-dead bodies reads as perfectly efficient
+   * there. See `../../BALANCING.md` § Couplings for the measured exchange rate.
+   */
+  damageOverkill: number;
 }
 
 export interface ArenaState {

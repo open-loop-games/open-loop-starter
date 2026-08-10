@@ -106,10 +106,38 @@ Crowding spends the same term, and harder:
 Monotone for every seat, because `maxTargets` spreads each activation over more
 bodies as the floor fills and each body absorbs less before it leaves. At 200+
 `kinetic` converts none of its damage at all. **The seat problem and the density
-problem are one failure at two scales**, which is why neither can be repaired
-alone: a fix that concentrates damage — making it stick to a body across visits,
-or finish one before spreading to the next — moves both columns, and a `speed`
-retune moves one row.
+problem are one failure at two scales** — but see the next entry before treating
+waste as the thing to repair.
+
+**Waste is a symptom, and the obvious repair is measured and worse. Target
+selection is an INCOME decision, not a lethality one.** A body's mote drops
+where it dies, and `r_collect` is smaller than `r_kill`, so _which_ body a shape
+picks decides where the floor's income lands. Picking by health scatters kills
+across the whole kill disc; picking the nearest drops them at the operator's
+feet.
+
+Both concentration rules were built and swept against `arc-lance`'s shipped
+nearest-first. Closest-to-dying alone cut waste 39.7 → 21.6% (`generalist`) and
+paid **58–77% overkill**. A two-tier rule — heaviest body the activation can
+kill, else closest to dying — fixed the overkill and still lost:
+
+|                | shipped                       | two-tier                      |
+| -------------- | ----------------------------- | ----------------------------- |
+| final level    | 22 / 10 / 26 / 22             | 18 / 9 / 25 / 15              |
+| `η` continuous | 0.773 / 0.548 / 0.717 / 0.805 | 0.533 / 0.412 / 0.641 / 0.449 |
+| motes left     | 376 / 166 / 795 / 285         | 701 / 250 / 1021 / 597        |
+
+**`η` fell on every seat and the roster finished lower.** Waste bought back less
+than the income it cost, and the exchange rate is set by the aperture ratio
+rather than by anything tunable in the roster.
+
+The general form, and the reason this is here rather than in a commit body:
+**every mechanism that reduces waste kills bodies further from the operator, and
+this economy charges for distance.** That closes lingering damage too, without
+building it — a burn finishes a body after it has left, which is the furthest
+point available. Reduce waste by making bodies die _during the visit_ (the seat
+dials, § the entry above) or by moving the aperture; not by choosing better
+targets.
 
 Measured by sweeping `kinetic`'s `speed` alone, reading lethality **at a given
 run level** so the ladder is controlled for:
@@ -279,30 +307,25 @@ carry no numbers.
   single seed on which the four seats happened to split. **On one run, a roster
   and a coin land the same way.**
 
-  **What is short is lethality, not seeking.** A seeking term was built for this
-  entry — arrivals inside `r_kill` over a 6s horizon, imminence-weighted — and it
-  steered (spread 22–48 open floor, 43–152 crowded) and bought nothing: swept
-  0 / 2 / 5 / 9, `kinetic` moved 0.09 → 0.08 → 0.10 → 0.10 while distinct modal
-  causes fell 2 → 2 → 1 → 1. `reach` is above the declared dial on every seat
-  (§ Couplings), so there was nothing to seek. Reverted.
-
-  What is short is lethality, and § Couplings measures where it goes: **damage
-  spent on bodies that leave alive** — 39.7 / 73.3 / 14.6 / 41.3% of all damage
-  that resolves, rising to 82 / 100 / 44 / 70% once the floor passes 200 bodies.
-  Three candidate explanations were tested and two died — it is not the draft
-  (every seat converts run level into the same offensive mass, and realized
-  defensive share tracks each `defenseShare` dial), and it is not a feedback loop
-  through level (three of four seats lie on one lethality-by-level curve).
+  **What is short is lethality, not seeking, and not the draft.** Two repairs
+  were built against this entry and both reverted on measurement: a seeking term
+  (imminence-weighted arrivals inside `r_kill`) steered and bought nothing,
+  because `reach` already runs above the declared dial on every seat; and
+  concentrating target selection cost more `η` than the waste it recovered.
+  Selection and the loop are both ruled out — every seat converts run level into
+  the same offensive mass, and three of four lie on one lethality-by-level
+  curve. § Couplings holds both receipts and the waste split they turn on.
 
   **The repair is a design call, not a tune**, because `speed` 1.35 is what the
-  Kineticist IS — "never be where it is" is the seat. Three exits: drop the dial
-  and lose the personality; compensate it with `dps` and accept that two dials
-  now move together; or make damage concentrate rather than spread — stick to a
-  body across visits, or finish one before moving to the next. **The waste split
-  costs them.** The first two move one seat and leave the 82–100% waste every
-  seat pays in a crowd exactly where it is; only the third addresses the column
-  that is failing for the whole roster, and it is also the one that leaves the
-  roster's design space intact.
+  Kineticist IS — "never be where it is" is the seat. Three exits were costed
+  and the cheapest-looking one is now closed: making damage concentrate rather
+  than spread was built, swept and reverted, because target selection is an
+  income decision and every concentration rule loses more `η` than it wins back
+  (§ Couplings). What remains is the two that move the dials — drop `speed` and
+  lose the personality, or compensate it with `dps` and accept that two dials
+  now move together — plus one the original list did not contain: **move the
+  aperture**, since `r_collect / r_kill` is what prices the whole trade and is
+  the only term outside the roster that touches it.
 
 - **`kinetic` is much worse than its single-seed reading, and the seed the arena
   probe runs is its best one.** (Cause settled — § Couplings, `speed`.) Batch medians against that seed: level 10 vs 16,

@@ -162,6 +162,7 @@ export async function runArc(seatId: string, seed: number) {
     damageConverted: stats.damageConverted,
     damageWasted: stats.damageWasted,
     bodiesWasted: stats.bodiesWasted,
+    damageOverkill: stats.damageOverkill,
     /**
      * Damage sitting in bodies still standing when the run ended. Not folded
      * into `damageWasted` — those bodies never finished, so calling their
