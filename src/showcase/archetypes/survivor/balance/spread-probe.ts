@@ -107,7 +107,9 @@ async function main(): Promise<void> {
       col('engage', 18) +
       col('dial', 7) +
       col('reach', 18) +
-      'lethal',
+      col('lethal', 18) +
+      col('income', 18) +
+      'modelled',
   );
   for (const seat of SEATS) {
     const runs = bySeat.get(seat.id)!;
@@ -118,6 +120,16 @@ async function main(): Promise<void> {
       engage: (r) => r.kills / Math.max(1, r.spawned),
       reach: (r) => r.reached / Math.max(1, r.spawned),
       lethal: (r) => r.kills / Math.max(1, r.reached),
+      // The compound the income model actually rides — kills per spawn times the
+      // share of their drops banked. `../data/income.ts` builds it from the two
+      // DIALS (`seat.engage * seat.eta`), and both dials diverge from what the
+      // policy achieves, in OPPOSITE directions. Only their product reaches
+      // income, so it is the product that has to be checked; reading either half
+      // alone reports a divergence the other half has already paid for.
+      //
+      // Per run, never a product of medians — the median of a product is not the
+      // product of the medians, and these two are correlated within a run.
+      income: (r) => (r.kills / Math.max(1, r.spawned)) * r.etaContinuous,
     });
     console.log(
       col(`  ${seat.id}`, 13) +
@@ -127,7 +139,14 @@ async function main(): Promise<void> {
         col(formatSpread(s.engage!, num(2)), 18) +
         col(seat.engage.toFixed(2), 7) +
         col(formatSpread(s.reach!, num(2)), 18) +
-        formatSpread(s.lethal!, num(2)),
+        col(formatSpread(s.lethal!, num(2)), 18) +
+        col(formatSpread(s.income!, num(3)), 18) +
+        // What `../data/income.ts` actually projects from — the seat's MEASURED
+        // pair, not its dials. These two columns are a fixed point: `measured`
+        // derives the ladder, the ladder changes the run, and the run moves
+        // `measured`. Re-copy and re-run until the pair stops moving; the gap
+        // between them is the iteration's residual, not a balance defect.
+        (seat.measured.killsPerSpawn * seat.measured.eta).toFixed(3),
     );
   }
 

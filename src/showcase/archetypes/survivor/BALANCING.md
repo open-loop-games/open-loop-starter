@@ -23,26 +23,27 @@ time axis), `arena.ts` (geometry and threat), `income.ts` (motes to levels),
 draft pool), `meta.ts` (the cross-run shop). `modules/tuning.ts` declares the
 `tunable()` key union; not every constant below is wired to one yet.
 
-| Knob                                                                  | What it moves                                                                                                                                             |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `beatFirstSeconds`, `beatRatio`                                       | the draft schedule. The beat _count_ is a consequence, not a knob — hold the 30–90s band and ~33 beats falls out                                          |
-| `hpGrowthPerMinute`                                                   | how hard escalation bites. Also re-solves the per-pick DPS gain, since that is pinned to flat time-to-kill                                                |
-| `spawnRate0`, `spawnGrowthPerMinute`                                  | density, and with it the whole traversal term. Nothing caps the floor, so this reaches it undiluted                                                       |
-| `dwellSeconds`                                                        | how long an unengaged body lingers — the residency term in `localDensity` AND what bounds live population. Moves density everywhere                       |
-| `contactDamageGrowthPerMinute`                                        | per-hit escalation. Deliberately far slower than HP growth                                                                                                |
-| `densityCap`, `BLOCKING_CROWD`, `ESCAPE_FLOOR`                        | where gaps close. Contact is the _squared_ approach to it, so this is quiet until it is sudden                                                            |
-| `hpPickGain`                                                          | what a defensive pick buys                                                                                                                                |
-| `apertureCapRatio`                                                    | the ceiling `r_collect/r_kill` approaches as aperture sources stack. Bounds the top coupling structurally — see § Couplings                               |
-| `COLLECTOR_BALANCE.onscreenShare`                                     | the projection's assumed burst size. The sim pulls everything inside `pullRadius` instead, so this is a prediction the probe measures against, not a rule |
-| `COLLECTOR_BALANCE.pullRadius`, `timeJitter`                          | how much floor one pull banks, and how far a drop roams from its nominal time                                                                             |
-| per-seat `engage`, `eta`, `speed`, `dps`, `toughness`, `defenseShare` | the personality bundle; also the sweep axis. Not orthogonal — `speed` and `engage` both move lethality, see § Couplings                                   |
-| device `baseDamage` / `cooldownSec`                                   | one device's cadence and weight. The opening device's pair is _solved_ against flat TTK at t=0, not chosen                                                |
-| device `shape`                                                        | whether coverage is given or earned. A heading-bound shape is worth less to a policy than to a hand, and `modules/draft.ts` discounts it accordingly      |
-| device `maxTargets`                                                   | how many of the specimens in reach an area shape takes. On `bolt`/`lance` it is definitional; on the area shapes it is the real lever — see § Known thin  |
-| specimen `hpFactor` / `damageFactor` / `weight`                       | the mix, and through it the required-DPS curve and the pressure curve                                                                                     |
-| specimen `moteYield`                                                  | income. Coupled to the ladder — raise it and re-derive                                                                                                    |
-| `NOTES_PER_KILL`, `META_COST_RATIO`, per-upgrade `baseCost`           | the runs-to-buy ladder. Read the projection's meta table, not these numbers                                                                               |
-| meta upgrade `side`                                                   | whether a tile is ladder-safe. Not annotation — see § Couplings                                                                                           |
+| Knob                                                                  | What it moves                                                                                                                                                                         |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beatFirstSeconds`, `beatRatio`                                       | the draft schedule. The beat _count_ is a consequence, not a knob — hold the 30–90s band and ~33 beats falls out                                                                      |
+| `hpGrowthPerMinute`                                                   | how hard escalation bites. Also re-solves the per-pick DPS gain, since that is pinned to flat time-to-kill                                                                            |
+| `spawnRate0`, `spawnGrowthPerMinute`                                  | density, and with it the whole traversal term. Nothing caps the floor, so this reaches it undiluted                                                                                   |
+| `dwellSeconds`                                                        | how long an unengaged body lingers — the residency term in `localDensity` AND what bounds live population. Moves density everywhere                                                   |
+| `contactDamageGrowthPerMinute`                                        | per-hit escalation. Deliberately far slower than HP growth                                                                                                                            |
+| `densityCap`, `BLOCKING_CROWD`, `ESCAPE_FLOOR`                        | where gaps close. Contact is the _squared_ approach to it, so this is quiet until it is sudden                                                                                        |
+| `hpPickGain`                                                          | what a defensive pick buys                                                                                                                                                            |
+| `apertureCapRatio`                                                    | the ceiling `r_collect/r_kill` approaches as aperture sources stack. Bounds the top coupling structurally — see § Couplings                                                           |
+| `COLLECTOR_BALANCE.onscreenShare`                                     | the projection's assumed burst size. The sim pulls everything inside `pullRadius` instead, so this is a prediction the probe measures against, not a rule                             |
+| `COLLECTOR_BALANCE.pullRadius`, `timeJitter`                          | how much floor one pull banks, and how far a drop roams from its nominal time                                                                                                         |
+| per-seat `engage`, `eta`, `speed`, `dps`, `toughness`, `defenseShare` | the personality bundle; also the sweep axis. Not orthogonal — `speed` and `engage` both move lethality, see § Couplings                                                               |
+| per-seat `measured`                                                   | nothing, and that is the point — it is the OUTCOME the income model projects from, not an input to the game. Re-measure it after any change that moves the policy; never hand-tune it |
+| device `baseDamage` / `cooldownSec`                                   | one device's cadence and weight. The opening device's pair is _solved_ against flat TTK at t=0, not chosen                                                                            |
+| device `shape`                                                        | whether coverage is given or earned. A heading-bound shape is worth less to a policy than to a hand, and `modules/draft.ts` discounts it accordingly                                  |
+| device `maxTargets`                                                   | how many of the specimens in reach an area shape takes. On `bolt`/`lance` it is definitional; on the area shapes it is the real lever — see § Known thin                              |
+| specimen `hpFactor` / `damageFactor` / `weight`                       | the mix, and through it the required-DPS curve and the pressure curve                                                                                                                 |
+| specimen `moteYield`                                                  | income. Coupled to the ladder — raise it and re-derive                                                                                                                                |
+| `NOTES_PER_KILL`, `META_COST_RATIO`, per-upgrade `baseCost`           | the runs-to-buy ladder. Read the projection's meta table, not these numbers                                                                                                           |
+| meta upgrade `side`                                                   | whether a tile is ladder-safe. Not annotation — see § Couplings                                                                                                                       |
 
 **Deliberately not perturbable:** the per-pick DPS gain, the beat ratio, and the
 XP ladder. All three are _solved_ — the gain from flat time-to-kill, the ratio so
@@ -53,22 +54,22 @@ looking like a ladder. Change the input and re-derive.
 
 ## Couplings
 
-**`engage` and `dps` are not independent seat axes — realized engagement is
-their product, and only one half is under the policy's control.** `engage` is
-authored as a movement personality and enters the closed form as the share of
-spawns brought inside `r_kill`. Measured, that share splits, and the probes print
-both halves: `reach` (bodies ever inside `r_kill`, over spawns — the movement
-half) and `lethal` (kills over bodies reached — the DPS half).
+**A seat dial is a preference; what the policy achieves is a different number,
+and the model must never read one for the other.** `engage` asks for a share of
+spawns brought inside `r_kill`; measured, that splits into `reach` (bodies ever
+in range, over spawns — the movement half) and `lethal` (kills over reached — the
+DPS half), and only their product drops motes. Over sixteen seeds `reach` runs
+**0.69 / 0.64 / 0.80 / 0.75** against dials of 0.55 / 0.40 / 0.72 / 0.62 while
+`lethal` runs **0.53 / 0.48 / 0.97 / 0.66**. A seat whose engagement is short is
+almost never failing to meet the floor; it is failing to kill what it met, so
+**retuning `engage` moves the model and barely moves the game**. (`lethal` above
+1 is not a bug — splitter fragments count in `kills` but deliberately in neither
+`spawned` nor `reached`, `modules/sim/step.ts` `SPLITTER_FRAGMENTS`.)
 
-Over eight seeds, `reach` runs **0.67 / 0.65 / 0.78 / 0.76** against dials of
-0.55 / 0.40 / 0.72 / 0.62 — _above_ the dial on every seat — while `lethal` runs
-**0.49 / 0.47 / 1.01 / 0.51**. A seat whose engagement is short is almost never
-failing to meet the floor; it is failing to kill what it met, so **retuning
-`engage` moves the model and barely moves the game**. Both halves now sit inside
-~1.2× across the roster bar `reactive`, which is the seat authored at 1.35 `dps`
-and should lead. Also: `lethal` above 1 is not a bug — splitter
-fragments count in `kills` but deliberately in neither `spawned` nor `reached`
-(`modules/sim/step.ts` `SPLITTER_FRAGMENTS`), so `lethal` is a rate, not a fraction.
+This is why `data/seats.ts` carries `measured` beside the dials and why
+`data/income.ts` projects only from it. The two errors run in opposite directions
+and cancel on the baseline, so the compound looks healthy while the collector —
+priced as a cut of `1 − η` — silently inflates. See § Known thin, η.
 
 **Lethality is one quantity — the share of damage that finishes a body — and
 crowding is what spends it.** A body dies only if it stays in range long enough
@@ -298,28 +299,42 @@ carry no numbers.
   balance, and neither was. The arena probe's single seed sat at or near the top
   of the seat's range throughout.
 
-- **η is now ABOVE its designed band, and that is a live question rather than a
-  win.** 0.86–0.99 continuous against an assumed 0.65–0.78, with motes left on
-  the floor down to 22–456. It got there from two movement-policy corrections
-  (the near-field income sign, and costing the routing field by crowd), not from
-  the economy. The ladder was derived against the assumed band, so income now
-  runs ahead of what the beats were sized for — a good problem, and still a
-  divergence: either re-derive against the measured band or find the term that
-  should be pulling η back down.
+- **η runs 0.87–0.99, and that is the correct value rather than a divergence.**
+  Motes do not expire, so the wake is always sweepable and a pilot that routes at
+  all approaches full collection; the exemplar set ships the same persistence.
+  The old 0.65–0.78 "band" was a dial being read as a forecast. What is left on
+  the floor at the end (27–456 motes) is the whole shortfall.
 
-  It remains **assumed, never derived**: every income figure inherits that
-  assumption, and a low η and a bad economy look identical from outside. That is
-  why the probes report η split into continuous pickup and collector burst — the
-  split is what says which channel a shortfall is in.
+  **Read the compound, never η alone.** Income rides `killsPerSpawn × η`, and the
+  two halves diverge from their dials in OPPOSITE directions — the policy kills a
+  smaller share of spawns than asked and banks a larger share of drops than
+  asked. On the baseline those nearly cancel (0.354 measured against 0.358
+  dialled), which is exactly why reading either half by itself reports a
+  divergence the other half has already paid for. The probes print `income`
+  beside `modelled` for this reason. Measured: 0.354 / 0.288 / 0.642 / 0.513.
 
-- **The collector banks 2.6–6.1% of income against a modelled 11%.** Never
-  broken: every drop is taken in every probed seat and the routing term works.
-  Its yield is a share of the _uncollected_ pool, so it was starved at η ≈ 0.95
-  and recovered on its own when the policy started leaving motes behind.
-  `COLLECTOR_BALANCE.onscreenShare` and the sim still disagree, but by a factor
-  of two rather than ten. Re-read it after the lethality work rather than
-  repricing now. Its timing is also deterministic in the projection where it is a
-  drop in the game — magnitude modelled, variance not.
+  It remains **assumed, never derived** — but the assumption now lives in
+  `data/seats.ts` `measured`, with a probe receipt, instead of being borrowed
+  from a policy weight that happens to share its name. A seat authored from
+  scratch cannot be projected until it has been run once; that is the declared
+  price of a policy output, not a gap.
+
+- **The collector is a small pickup that the model used to think was a large
+  one, and that error reached the XP ladder.** Its yield is a cut of the
+  _uncollected_ pool, and with motes persistent and the sweep always available
+  that pool stays near empty — burst share measures 0–1% of income. The model
+  now agrees, at 0.6% in two bursts, because it projects from `measured.eta`
+  rather than the dial; at a dialled η of 0.65 it read the pool as 35% of drops
+  and priced the collector accordingly. Understating η therefore _inflated_ the
+  collector, and the ladder is derived from income including it — worst
+  derivation deviation was 44.6s and is now 3.3s.
+
+  Never broken, and not a candidate for repricing upward: every drop is taken in
+  every probed seat and the routing term works. A collector is _always good_ and
+  cheap to take, which is the genre-standard shape; it is simply not a harvest of
+  an abandoned field, because with a competent pilot there is no abandoned field.
+  Its timing is also deterministic in the projection where it is a roll in the
+  game — magnitude modelled, variance not.
 
 - **Evolutions are reachable but rare** — one per seat per arc against a pool
   sized for two or three. Two fixes landed (the policy weights depth by proximity

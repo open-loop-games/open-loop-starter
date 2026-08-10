@@ -346,7 +346,13 @@ function reportSeats(): void {
         : 'timer';
     console.log(
       col(`  ${seat.id}`, 13) +
-        col((seat.engage * seat.eta).toFixed(3), 9) +
+        // The compound the projection actually rides — measured, not dialled.
+        // Printing `engage × eta` here made the table look like a statement about
+        // the seats when it was a statement about their dials, and the two have
+        // not agreed since the pilot learned to route (`../data/seats.ts`
+        // § SeatOutcome). Comparable directly against `spread-probe.ts`'s
+        // `income` column, which measures the same product per run.
+        col((seat.measured.killsPerSpawn * seat.measured.eta).toFixed(3), 9) +
         col(seat.defenseShare.toFixed(2), 7) +
         col(clock(end), 8) +
         col(`${reached}/${BEAT_COUNT}`, 9) +

@@ -19,19 +19,32 @@ export const XP_PER_MOTE = 1;
 /** Integration step for the cumulative forms below, in game-seconds. */
 const DT = 0.5;
 
+// Every rate below projects from `seat.measured`, never from the seat's dials.
+// The dials are what the policy is asked to prefer; these are what it achieves,
+// and the gap between them is not a rounding error — see `./seats.ts`
+// § SeatOutcome for the 20% ladder error that reading dials here produced.
+
 /** Motes dropped per game-second at `t` — kills × mean yield over the live mix. */
 export function dropRate(t: number, seat: SeatDef): number {
-  return spawnRate(t) * seat.engage * meanMoteYield(t) * XP_PER_MOTE;
+  return spawnRate(t) * seat.measured.killsPerSpawn * meanMoteYield(t) * XP_PER_MOTE;
 }
 
 /** Motes banked per game-second at `t`, excluding collector bursts. */
 export function incomeRate(t: number, seat: SeatDef): number {
-  return dropRate(t, seat) * seat.eta;
+  return dropRate(t, seat) * seat.measured.eta;
 }
 
-/** Motes dropped but NOT banked — the pool a collector later pulls from. */
+/**
+ * Motes dropped but NOT banked — the pool a collector later pulls from.
+ *
+ * This is the term that punished reading the dial. It is a cut of `1 − η`, so
+ * understating `η` does not merely understate continuous income, it INFLATES the
+ * collector's modelled yield — an error in the opposite direction, on a quantity
+ * the ladder is derived from. At a dialled 0.65 the pool reads 35% of drops;
+ * measured it is nearer 3%.
+ */
 export function uncollectedRate(t: number, seat: SeatDef): number {
-  return dropRate(t, seat) * (1 - seat.eta);
+  return dropRate(t, seat) * (1 - seat.measured.eta);
 }
 
 /** Cumulative continuously-banked motes up to `t`. */

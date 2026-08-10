@@ -47,9 +47,17 @@ export interface SeatDef {
   /** One line of character-select copy — the seat's theory of survival. */
   blurb: string;
   driver: SeatDriver;
-  /** Share of spawned specimens brought inside `r_kill`. Movement policy. */
+  /**
+   * Share of spawned specimens brought inside `r_kill` — what the movement
+   * policy is asked to PREFER, not what it achieves. See `measured`.
+   */
   engage: number;
-  /** `η` — share of dropped motes banked without a collector. Movement policy. */
+  /**
+   * `η` — weight on income in the movement policy's score. A preference, not an
+   * outcome: it scales the mote and collector terms in
+   * `../modules/sim/steering.ts`, and what share actually gets banked is
+   * `measured.eta`.
+   */
   eta: number;
   /** Movement multiplier. Widens the effective density ceiling. */
   speed: number;
@@ -59,6 +67,74 @@ export interface SeatDef {
   toughness: number;
   /** `σ` — share of draft picks spent on survivability. Draft policy. */
   defenseShare: number;
+  /** What the policy achieves, measured. See {@link SeatOutcome}. */
+  measured: SeatOutcome;
+}
+
+/**
+ * What a seat's policy ACHIEVES, as against the dials above, which are what it
+ * is asked to prefer. These are the numbers the income model projects from.
+ *
+ * They are separate fields because they are separate quantities, and collapsing
+ * them cost this archetype a 20% error in the XP ladder. `income.ts` read
+ * `engage` and `eta` as if a preference were a prediction; measured, the two
+ * diverge in OPPOSITE directions — the policy kills a smaller share of spawns
+ * than its dial asks for and banks a larger share of the drops than its dial
+ * asks for. On the baseline seat those errors nearly cancel in continuous
+ * income, which is what hid the defect: what did not cancel is the collector,
+ * whose modelled yield is a cut of the uncollected pool and therefore INFLATES
+ * as `eta` is understated. The ladder is derived from income including that
+ * yield, so it came out ~20% steep and every seat landed 4–5 beats behind while
+ * banking almost everything it dropped.
+ *
+ * **These cannot be derived, and that is the declared shape of this spine**
+ * (`../IDENTITY.md` § Rate-function spine: "η is a policy output... the closed
+ * form takes an η; it cannot derive one"). The same is true of engagement —
+ * `../BALANCING.md` § Couplings has always said realized engagement is a product
+ * only half of which the policy controls. So a NEWLY AUTHORED SEAT CANNOT BE
+ * PROJECTED UNTIL IT HAS BEEN RUN: author the dials, run
+ * `../balance/spread-probe.ts`, and copy its `engage` and `η continuous` columns
+ * back here. That is the honest price of a policy output, not a workaround.
+ *
+ * Design targets keep taking the DIALS, deliberately. The projection's
+ * `requiredDps0` solves the opening device against `engage` because it is
+ * authoring a device to the engagement the seat is *meant* to hold; a prediction
+ * takes a measurement, a target takes an intent.
+ */
+export interface SeatOutcome {
+  /**
+   * Kills per spawn — `reach × lethal`, the two halves `../BALANCING.md`
+   * § Couplings splits. This is what drops motes, so it is what income rides.
+   *
+   * **The unstable half, and it does not have a fixed point.** These values
+   * derive the ladder, the ladder changes how long a run lasts, and how long a
+   * run lasts decides how much of it is spent in the late density band where
+   * kills-per-spawn collapses — so re-measuring after a re-derivation moves it
+   * again. Measured over three passes on identical seeds, `shielded` ran
+   * 0.52 / 0.43 / 0.51: real feedback with a gain near 1, not seed noise.
+   *
+   * So this is DAMPED rather than iterated to convergence — the value here is
+   * the mean across those passes. Chasing the last pass would be tracking a
+   * quantity that has no single correct value, because a run-average of
+   * something that varies across the density arc is a summary, not a constant.
+   * If this ever needs to be better, the repair is to make it a function of `t`
+   * rather than to iterate harder.
+   */
+  killsPerSpawn: number;
+  /**
+   * `η` realized — share of dropped motes banked without a collector.
+   *
+   * The stable half: 0.962–0.972, 0.979–0.983, 0.867–0.870, 0.988–0.989 across
+   * the same three passes. It barely moves because it is a property of the
+   * movement policy against motes that never expire, and the ladder does not
+   * reach it. Take the measurement directly; no damping needed.
+   */
+  eta: number;
+  /**
+   * The probe run these came from. A bare number here is unfalsifiable; the
+   * receipt is what lets the next reader tell a measurement from a guess.
+   */
+  receipt: string;
 }
 
 /**
@@ -79,6 +155,11 @@ export const SEATS: SeatDef[] = [
     dps: 1.0,
     toughness: 1.0,
     defenseShare: 0.35,
+    measured: {
+      killsPerSpawn: 0.39,
+      eta: 0.969,
+      receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
+    },
   },
   {
     id: 'kinetic',
@@ -91,6 +172,11 @@ export const SEATS: SeatDef[] = [
     dps: 0.9,
     toughness: 0.85,
     defenseShare: 0.28,
+    measured: {
+      killsPerSpawn: 0.31,
+      eta: 0.981,
+      receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
+    },
   },
   {
     id: 'reactive',
@@ -103,6 +189,11 @@ export const SEATS: SeatDef[] = [
     dps: 1.35,
     toughness: 0.85,
     defenseShare: 0.2,
+    measured: {
+      killsPerSpawn: 0.79,
+      eta: 0.869,
+      receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
+    },
   },
   {
     id: 'shielded',
@@ -115,6 +206,11 @@ export const SEATS: SeatDef[] = [
     dps: 0.9,
     toughness: 1.75,
     defenseShare: 0.5,
+    measured: {
+      killsPerSpawn: 0.49,
+      eta: 0.988,
+      receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
+    },
   },
 ];
 
@@ -140,6 +236,15 @@ export const PLAYER_SEAT: SeatDef = {
   dps: 1.0,
   toughness: 1.0,
   defenseShare: 0.35,
+
+  // A hand is not a policy; these are the baseline's, carried so the
+  // projection can run a player seat at all. Never measured — a probe cannot
+  // drive input.
+  measured: {
+    killsPerSpawn: 0.39,
+    eta: 0.969,
+    receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
+  },
 };
 
 /** Everything assignable to the floor. `SEATS` is the measurable roster; this is
