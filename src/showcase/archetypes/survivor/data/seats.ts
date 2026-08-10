@@ -156,8 +156,8 @@ export const SEATS: SeatDef[] = [
     toughness: 1.0,
     defenseShare: 0.35,
     measured: {
-      killsPerSpawn: 0.39,
-      eta: 0.969,
+      killsPerSpawn: 0.48,
+      eta: 0.992,
       receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
     },
   },
@@ -173,8 +173,8 @@ export const SEATS: SeatDef[] = [
     toughness: 0.85,
     defenseShare: 0.28,
     measured: {
-      killsPerSpawn: 0.31,
-      eta: 0.981,
+      killsPerSpawn: 0.33,
+      eta: 0.994,
       receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
     },
   },
@@ -190,8 +190,8 @@ export const SEATS: SeatDef[] = [
     toughness: 0.85,
     defenseShare: 0.2,
     measured: {
-      killsPerSpawn: 0.79,
-      eta: 0.869,
+      killsPerSpawn: 0.87,
+      eta: 0.89,
       receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
     },
   },
@@ -207,8 +207,8 @@ export const SEATS: SeatDef[] = [
     toughness: 1.75,
     defenseShare: 0.5,
     measured: {
-      killsPerSpawn: 0.49,
-      eta: 0.988,
+      killsPerSpawn: 0.51,
+      eta: 0.997,
       receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
     },
   },
@@ -241,8 +241,8 @@ export const PLAYER_SEAT: SeatDef = {
   // projection can run a player seat at all. Never measured — a probe cannot
   // drive input.
   measured: {
-    killsPerSpawn: 0.39,
-    eta: 0.969,
+    killsPerSpawn: 0.48,
+    eta: 0.992,
     receipt: '16 seeds x3 passes, `balance/spread-probe.ts`; killsPerSpawn is the 3-pass mean',
   },
 };

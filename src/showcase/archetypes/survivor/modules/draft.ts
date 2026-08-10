@@ -220,13 +220,15 @@ export function scoreOffer(
   // still lands well under the omnidirectional shapes' 20–63%, because a wedge
   // it has to earn is worth less than coverage it is simply given.
   //
-  // So the discount is a discount and not a ban: the device is real, it is
-  // reachable, and a hand aims it far better than an arg-max with a turn cost
-  // ever will. Under a player seat this term is absent entirely and the offer
-  // scores on its merits — which is the honest statement that a roster can hold
-  // devices whose value depends on who is driving. Improve the manoeuvre and
-  // this should shrink; delete it before improving the manoeuvre and the seat
-  // goes back to sinking six levels into a device that returns 1%.
+  // So the discount is a discount and not a ban, and the size of the gap it
+  // prices is MEASURED: the policy holds 29% of the achievable wedge, 32–45% at
+  // the instant it fires (`../balance/cone-probe.ts`, which is a ceiling and not
+  // a simulated player — it charges nothing for the positioning a real turn
+  // costs). Under a player seat the term is absent entirely and the offer scores
+  // on its merits, which is the honest statement that a roster can hold devices
+  // whose value depends on who is driving. Improve the manoeuvre and this should
+  // shrink; delete it without improving the manoeuvre and the seat goes back to
+  // sinking six levels into a device that returns 1%.
   if (seat.driver !== 'player' && isHeadingBound(offer.id)) {
     score -= HEADING_BOUND_DISCOUNT;
   }

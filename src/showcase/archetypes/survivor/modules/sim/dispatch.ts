@@ -19,12 +19,20 @@ import type { ArenaParams, DeviceRuntime, Specimen, Vec2 } from './types';
  * read as "too hard" instead of "the growth term is wrong".
  *
  * Deriving it here means a retune of the escalation curves moves this with them.
+ *
+ * Computed per call rather than once at module load, which is what makes the
+ * escalation curves SWEEPABLE: frozen at import, a probe that perturbs `m_hp` or
+ * `m_d` gets the harder floor without the DPS growth solved to match it, and
+ * measures a decoupled knob rather than a retune. The arithmetic is a handful of
+ * flops against a few activations per second — cheaper than the staleness.
  */
-const LEVEL_GAIN = offensivePickGain(
-  BASELINE_SEAT.defenseShare,
-  THREAT_BALANCE.spawnGrowthPerMinute,
-  meanHpFactor(SCHEDULE_BALANCE.runSeconds) / meanHpFactor(0),
-);
+function levelGain(): number {
+  return offensivePickGain(
+    BASELINE_SEAT.defenseShare,
+    THREAT_BALANCE.spawnGrowthPerMinute,
+    meanHpFactor(SCHEDULE_BALANCE.runSeconds) / meanHpFactor(0),
+  );
+}
 
 // TODO(expansion): per-item cooldown timers + fire dispatch is a parked engine
 // primitive (`candidate-primitives.md` § Cooldown-rotation dispatch over a def
@@ -46,7 +54,7 @@ export function deviceDamage(
   const evolution = rt.evolutionId ? EVOLUTION_BY_ID.get(rt.evolutionId) : undefined;
   // Geometric in level, at the solved gain — this is where the spine's
   // compounding actually lives.
-  const levelled = def.baseDamage * Math.pow(LEVEL_GAIN, rt.level - 1);
+  const levelled = def.baseDamage * Math.pow(levelGain(), rt.level - 1);
   return levelled * (evolution?.damageMul ?? 1) * chainMul('damage', reagentStacks) * params.dpsMul;
 }
 

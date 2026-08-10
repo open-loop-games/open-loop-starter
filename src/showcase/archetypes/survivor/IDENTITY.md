@@ -91,10 +91,29 @@ the timer, is the target distribution.
 
 ## The loop — beat map
 
-Not yet measured. The authored schedule the ladder is derived against is 33
-draft beats over ~30 minutes, first interval 30s growing geometrically to 90s
-(`balance/survivor-projection.ts`). Recorded windows land in `manifest.ts`
-`beats` once the probes run — measured from a run, never authored as a target.
+Six phase turns, **recorded** from 16 seeds × 4 seats and carried in
+`manifest.ts` (definitions in `balance/beats.ts`). They are deliberately not the
+draft beats: the ladder lands ~33 drafts over ~30 minutes
+(`balance/survivor-projection.ts`), and thirty-three indistinguishable pauses say
+nothing about where a run changes character.
+
+| Beat | Turn                | Observed    | Median |
+| ---- | ------------------- | ----------- | ------ |
+| 1    | Opening             | 0:00        | 0:00   |
+| 2    | First contact       | 0:13–0:49   | 0:22   |
+| 3    | The loadout commits | 2:00–6:00   | 3:00   |
+| 4    | Halfway down        | 4:54–26:46  | 13:50  |
+| 5    | The floor fills     | 13:00–26:00 | 24:00  |
+| 6    | The floor closes    | 19:05–30:00 | 30:00  |
+
+Two were authored in the wrong order and the recording corrected them, which is
+the argument for recording. **First contact lands before the loadout is a
+loadout** — the floor has a hand on you at ~0:22, well before ~3:00 — so this is
+not an archetype with a safe opening. And **attrition runs ahead of density**:
+the bar is half gone at 13:50, ten minutes before the floor crosses a hundred
+live bodies at 24:00. A run is worn down long before it is crowded, which is why
+softening the density curve buys survival without buying schedule
+(`BALANCING.md` § Known thin).
 
 ## Growth ports
 

@@ -572,11 +572,33 @@ export function scoreHeadings(
       if (d2 < nearest) nearest = d2;
       if (d2 <= killRadius2) inKill++;
       const closeBand = s.speed * CONTACT_HORIZON;
-      if (d2 <= (contactRadius + closeBand) * (contactRadius + closeBand)) {
+      const band = contactRadius + closeBand;
+      const band2 = band * band;
+
+      // What the path GRAZES, priced off the swept segment — but ONLY for bodies
+      // already outside the band. The exclusion is load-bearing, not a tidy-up:
+      // every candidate segment starts at the operator, so a body inside the band
+      // now is inside it for all sixteen, and pricing it here reads the same on
+      // every candidate and drops out of the arg-max however large it is
+      // (§ `HeadingScore`). Pricing the full segment made the price INERT and cost
+      // every seat ~9 minutes. Bodies inside the band stay the endpoint term's,
+      // which reads them where they will BE after the move. Receipts in
+      // `../../BALANCING.md` § Couplings.
+      const rx = s.x - state.operator.x;
+      const ry = s.y - state.operator.y;
+      const r2 = rx * rx + ry * ry;
+      let priced2 = d2;
+      if (r2 > band2) {
+        const t = Math.max(0, Math.min(lookahead, rx * h.x + ry * h.y));
+        const gx = rx - h.x * t;
+        const gy = ry - h.y * t;
+        const g2 = gx * gx + gy * gy;
+        if (g2 < priced2) priced2 = g2;
+      }
+
+      if (priced2 <= band2) {
         const share =
-          closeBand > 0
-            ? Math.min(1, Math.max(0, (contactRadius + closeBand - Math.sqrt(d2)) / closeBand))
-            : 1;
+          closeBand > 0 ? Math.min(1, Math.max(0, (band - Math.sqrt(priced2)) / closeBand)) : 1;
         expectedTouching += share;
         damageSum += s.contactDamage * share;
       }

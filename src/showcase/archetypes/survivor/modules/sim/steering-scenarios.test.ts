@@ -307,24 +307,17 @@ describe('pilot — routing around what is in the way', () => {
     expect(out.damageTaken).toBe(0);
   });
 
-  // KNOWN DEFECT, kept red. Measured: 0.6 damage threading a 120-unit lane
-  // against a 22-unit contact radius — the operator brushes a wall it had room
-  // to clear, because a candidate is scored at one point 100 units ahead and
-  // nothing prices what the path grazes on the way.
+  // Red for two passes; fixed by the graze exclusion in `./steering.ts`.
   //
-  // The obvious repair was built and REVERTED, and the reason bounds any second
-  // attempt. Pricing contact by distance to the swept SEGMENT rather than to the
-  // endpoint turns this case green — and across a real floor it made the contact
-  // branch fire on ALL sixteen candidates on 49–100% of decisions, against
-  // 12–45% before. A term that reads the same on every candidate subtracts a
-  // constant and drops out of an arg-max whatever its magnitude, so the price
-  // went inert, `engage` took over at 0.86 against a 0.55 dial, and every seat
-  // died on `hp-floor` at 12–14 minutes against 21–27. Widening a detector
-  // flattens the spread that makes it steer.
-  //
-  // So the constraint on a fix is not geometric: it must price what the path
-  // grazes WITHOUT raising the share of candidates the branch fires on.
-  it.fails('threads a gap instead of clipping the group beside it', () => {
+  // **This case cannot police that fix on its own, which is the thing to know
+  // before touching it.** It goes green under the correct version AND under the
+  // reverted one that priced the whole swept segment — the version that fired the
+  // contact branch on all sixteen candidates, took the price out of the arg-max,
+  // and cost every seat ~9 minutes of arc. Passing here says the operator threads
+  // the lane; it says nothing about whether the price still steers. That reading
+  // is `../../balance/steering-probe.ts`'s `cliff all` column, and a change to the
+  // contact price is not verified until both have been looked at.
+  it('threads a gap instead of clipping the group beside it', () => {
     // A 120-unit lane between two static walls, with the payoff on the far side.
     // Contact is 22 units, so the gap is wide — clipping it is a routing failure
     // rather than a tight-squeeze failure.

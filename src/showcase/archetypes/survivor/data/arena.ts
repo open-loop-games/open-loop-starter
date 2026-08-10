@@ -50,7 +50,28 @@ export const ARENA_BALANCE: ArenaBalance = {
 export interface ThreatBalance {
   /** `d₀` — specimens spawned per game-second at t = 0. */
   spawnRate0: number;
-  /** `m_d` — spawn-rate growth per minute mark. */
+  /**
+   * `m_d` — spawn-rate growth per minute mark.
+   *
+   * MEASURED, and it is the archetype's single binding curve. Swept against a
+   * pilot that collects (`../balance/escalation-probe.ts`, baseline seat, six
+   * seeds a point): 1.080 reaches the run timer on 0% of runs, 1.058 on 33%,
+   * 1.048 on 50%, 1.037 on 100% — monotone, and the schedule deficit tracks it
+   * (−4 → −1). Nothing else moves either: halving `m_dmg` does nothing, and
+   * softening `m_hp` moves them the WRONG way, because `m_hp` sits inside
+   * `../data/schedule.ts` `offensivePickGain` and a softer floor buys a slower
+   * DPS curve.
+   *
+   * 1.048 rather than 1.037 is a design choice, not the optimum of anything.
+   * 1.037 meets "mostly reaching the timer" outright and ends every run the same
+   * way, which `../IDENTITY.md` itself calls a wall in costume; 1.048 is the only
+   * swept point where the binding cause spreads across three outcomes. It grows
+   * spawns ~4x across a run against ~10x at 1.080 — a real cost to the density
+   * channel the archetype declares as its escalation, taken deliberately.
+   *
+   * Re-derive `../data/seats.ts` `measured` after moving this: it changes run
+   * length, which changes how much of a run sits in the late density band.
+   */
   spawnGrowthPerMinute: number;
   /**
    * Seconds an UNENGAGED specimen lingers before the floor lets it go.
@@ -59,6 +80,16 @@ export interface ThreatBalance {
    * on, and — since `../modules/sim/step.ts` § despawn implements it — it is now
    * also what actually bounds the live population. Raise it and density rises
    * everywhere, contact chance with it.
+   *
+   * MEASURED, and the receipt matters more than the value. Twelve is what the
+   * geometry says — at 38–70 units/s across a 560–760 annulus, that is about how
+   * long crossing the gap takes — but the geometry assumes an operator holding
+   * ground, and this one retreats. At 12 the arc collapsed: `kinetic` finished at
+   * level 5, thirty beats behind. Thirty is what the policy can actually meet,
+   * and at it `localDensity` reads as a prediction again — sim against model
+   * 40/28, 41/37, 21/19, 34/25 live at 10:00, against 26–235 against 12–21 before.
+   * Re-measure this whenever the movement policy changes what it does with
+   * distance; it is a property of the pilot, not of the floor.
    */
   dwellSeconds: number;
   /** Time-to-kill at baseline DPS. Flat across the run by construction. */
@@ -82,7 +113,7 @@ export interface ThreatBalance {
 
 export const THREAT_BALANCE: ThreatBalance = {
   spawnRate0: 1.2,
-  spawnGrowthPerMinute: 1.08,
+  spawnGrowthPerMinute: 1.048,
   dwellSeconds: 30,
   timeToKillSeconds: 2.4,
   densityCap: 190,
@@ -253,7 +284,7 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 //
 // The residency term is the load-bearing one and easy to get wrong by modelling
 // density as spawn rate alone. Because engaged specimens exit at TTK (2.4s) and
-// unengaged ones at dwell (12s), a seat that engages more holds a THINNER field.
+// unengaged ones at dwell (30s), a seat that engages more holds a THINNER field.
 // That is what makes the damage seat's advantage structural rather than
 // cosmetic, and it is the only channel by which DPS converts into survival.
 //
@@ -263,15 +294,17 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 // run's authored spawns, so the escalation curve — which `offensivePickGain`
 // is solved against, spawn-growth term included — stopped reaching the floor
 // around the midpoint, and the draft was sized to beat a density the game had
-// quietly stopped delivering. Removing it costs a measured 763–1465 peak
-// population against the old 400, and buys density that escalates for the
-// whole arc.
+// quietly stopped delivering. Removing it bought density that escalates for the
+// whole arc — at the time, a measured 763–1465 peak population against the old
+// 400. At the current `m_d` the peak is 100–138, so the ceiling would not bind
+// today; that is the escalation curve having been softened since, not the
+// argument weakening. Re-read the peak from `../balance/arena-probe.ts` before
+// reasoning about population, never from this comment.
 //
 // The consequence for this function is that nothing downstream bounds it any
-// more, so its own honesty is now load-bearing. `dwellSeconds` is the term to
-// distrust: the sim has no dwell at all, it culls on distance
-// (`../modules/sim/step.ts` § despawn), and the two disagree by an order of
-// magnitude. Recorded in `../BALANCING.md` § Known thin, not tuned away.
+// more, so its own honesty is now load-bearing. `dwellSeconds` is the term that
+// carries that weight, and it is measured against the pilot rather than derived
+// from the geometry — the receipt is at the field.
 //
 // Known thin, recorded rather than tuned away: that channel is currently too
 // weak. `toughness` and defensive picks divide damage directly while DPS reaches

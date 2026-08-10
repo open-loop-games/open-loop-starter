@@ -10,13 +10,14 @@ directions it grows through. Start there.
 
 ## The set
 
-| Archetype | Shape |
-|---|---|
-| `ambient` | Idle production with auto-producers and ambient progression |
-| `cycler` | Alternating build/defend phases on a hard-phase cycle |
-| `skirmish` | Adversarial real-time match with bilateral automation |
-| `tug` | Adversarial lane push with a shared contested lane |
-| `_blank` | Neutral skeleton — the starting point for a novel composition |
+| Archetype  | Shape                                                                |
+| ---------- | -------------------------------------------------------------------- |
+| `ambient`  | Idle production with auto-producers and ambient progression          |
+| `cycler`   | Alternating build/defend phases on a hard-phase cycle                |
+| `skirmish` | Adversarial real-time match with bilateral automation                |
+| `survivor` | Run-scoped real-time survival against continuously escalating threat |
+| `tug`      | Adversarial lane push with a shared contested lane                   |
+| `_blank`   | Neutral skeleton — the starting point for a novel composition        |
 
 `_identity.md` is the identity-line registry across the set. It carries more lines than
 there are directories here — an identity line is a composition the pattern language

@@ -14,6 +14,12 @@
  * the surface for "what happened in this run"; nothing on it is an estimate,
  * because one sample never is. Read this one before believing a figure there.
  *
+ * It is also where the **beat windows** come from. `./beats.ts` defines the six
+ * turns of an arc as extractors over a finished run; this probe reports the
+ * observed range of each across the batch and prints a paste-ready block for
+ * `../manifest.ts`. A window is RECORDED from runs, never authored as a target
+ * (`@/types` § BeatRef), and a one-seed window is not a window.
+ *
  * The target it checks is stated in the same section: *three specialists each
  * bound by a different cause, with the baseline mostly reaching the timer.* A
  * seat whose cause is the same on every seed is a wall in costume however
@@ -31,7 +37,9 @@ import {
   spreadOf,
 } from '@/balance';
 import { MINUTES, clock, col, runArc, type ArcResult } from './_arc';
+import { SURVIVOR_BEATS } from './beats';
 import { SEATS } from '../data/seats';
+import { notesForRun } from '../data/meta';
 import { HP_MILESTONES } from '../modules/sim/types';
 
 const SEED_COUNT = Number(process.env.SEEDS ?? 8);
@@ -109,7 +117,8 @@ async function main(): Promise<void> {
       col('reach', 18) +
       col('lethal', 18) +
       col('income', 18) +
-      'modelled',
+      col('modelled', 10) +
+      'notes',
   );
   for (const seat of SEATS) {
     const runs = bySeat.get(seat.id)!;
@@ -130,6 +139,11 @@ async function main(): Promise<void> {
       // Per run, never a product of medians — the median of a product is not the
       // product of the medians, and these two are correlated within a run.
       income: (r) => (r.kills / Math.max(1, r.spawned)) * r.etaContinuous,
+      // What the run banks toward the shop, which is the cross-run economy's
+      // only input and had nothing printing it. `notesForRun` takes kills times
+      // the run's MEAN yield, and dropped/kills is that mean exactly — measured
+      // over the tier mix the run actually met, rather than modelled at a `t`.
+      notes: (r) => notesForRun(r.kills, r.dropped / Math.max(1, r.kills)),
     });
     console.log(
       col(`  ${seat.id}`, 13) +
@@ -146,7 +160,8 @@ async function main(): Promise<void> {
         // derives the ladder, the ladder changes the run, and the run moves
         // `measured`. Re-copy and re-run until the pair stops moving; the gap
         // between them is the iteration's residual, not a balance defect.
-        (seat.measured.killsPerSpawn * seat.measured.eta).toFixed(3),
+        col((seat.measured.killsPerSpawn * seat.measured.eta).toFixed(3), 10) +
+        formatSpread(s.notes!, num(0)),
     );
   }
 
@@ -214,6 +229,41 @@ async function main(): Promise<void> {
         `${untouched}/${runs.length}`,
     );
   }
+
+  // ── Beat windows, which is what `../manifest.ts` carries ──
+  //
+  // Recorded from the batch, never authored as a target (`@/types` § BeatRef).
+  // The window is the full OBSERVED range across every seat and seed, which is
+  // what that field means — a percentile band would be a nicer number and a
+  // different claim. `lands` is the share of runs that reached the beat at all;
+  // a beat that lands on some runs and not others is a reading about the roster
+  // rather than a defective window.
+  const allRuns = SEATS.flatMap((seat) => bySeat.get(seat.id)!);
+  console.log('\n  ── Beat windows (observed across the whole batch) ──');
+  console.log(col('  beat', 7) + col('window', 18) + col('median', 10) + col('lands', 9) + 'label');
+  const recorded: string[] = [];
+  for (const beat of SURVIVOR_BEATS) {
+    const landed = allRuns.map(beat.at).filter((v): v is number => v !== null);
+    if (landed.length === 0) {
+      console.log(col(`  ${beat.n}`, 7) + col('never lands', 18) + col('—', 10) + col('0%', 9));
+      continue;
+    }
+    const s = spreadOf(landed, { at: (v) => v }).at!;
+    console.log(
+      col(`  ${beat.n}`, 7) +
+        col(`${clock(s.min)}–${clock(s.max)}`, 18) +
+        col(clock(s.median), 10) +
+        col(pct(landed.length / allRuns.length), 9) +
+        beat.label.split('—')[0]!.trim(),
+    );
+    // Paste-ready, because a window transcribed by hand is a window that drifts
+    // from the run it claims to come from.
+    recorded.push(
+      `    { n: ${beat.n}, label: '…', recordedSimRange: [${Math.round(s.min)}, ${Math.round(s.max)}] },`,
+    );
+  }
+  console.log('\n  For `../manifest.ts` (labels from `./beats.ts`):');
+  for (const line of recorded) console.log(line);
 
   // ── The draft, which is the spine's other stochastic leg ──
   //
