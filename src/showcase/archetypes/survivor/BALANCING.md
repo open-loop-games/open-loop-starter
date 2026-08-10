@@ -60,105 +60,80 @@ spawns brought inside `r_kill`. Measured, that share splits, and the probes prin
 both halves: `reach` (bodies ever inside `r_kill`, over spawns — the movement
 half) and `lethal` (kills over bodies reached — the DPS half).
 
-Over eight seeds, `reach` runs **0.74 / 0.63 / 0.73 / 0.76** against dials of
-0.55 / 0.40 / 0.72 / 0.62 — _above_ the dial on every seat, though `reactive`
-only marginally — while `lethal` runs **0.50 / 0.11 / 0.93 / 0.44**. Reach varies
-1.2× across the roster and lethality 8.5×, so essentially all of the spread lives
-in the half `engage` does not name.
-A seat whose engagement is short is almost never failing to meet the floor; it is
-failing to kill what it met. Two consequences: **retuning `engage` moves the
-model and barely moves the game**, and `lethal` above 1 is not a bug — splitter
+Over eight seeds, `reach` runs **0.67 / 0.65 / 0.78 / 0.76** against dials of
+0.55 / 0.40 / 0.72 / 0.62 — _above_ the dial on every seat — while `lethal` runs
+**0.49 / 0.47 / 1.01 / 0.51**. A seat whose engagement is short is almost never
+failing to meet the floor; it is failing to kill what it met, so **retuning
+`engage` moves the model and barely moves the game**. Both halves now sit inside
+~1.2× across the roster bar `reactive`, which is the seat authored at 1.35 `dps`
+and should lead. Also: `lethal` above 1 is not a bug — splitter
 fragments count in `kills` but deliberately in neither `spawned` nor `reached`
 (`modules/sim/step.ts` `SPLITTER_FRAGMENTS`), so `lethal` is a rate, not a fraction.
 
 **Lethality is one quantity — the share of damage that finishes a body — and
-`speed`, `dps` and crowding all spend it.** A body dies only if it stays in range
-long enough to absorb its own HP, so damage landing on a body that then leaves
-bought nothing. That is booked directly rather than inferred:
-`ArenaStats.damageConverted` against `damageWasted` (`modules/sim/types.ts`),
-split at the moment the despawn filter drops a body.
+crowding is what spends it.** A body dies only if it stays in range long enough
+to absorb its own HP, so damage landing on a body that then leaves bought
+nothing, and damage landing past a body's remaining HP bought nothing either.
+Both are booked directly rather than inferred: `ArenaStats.damageConverted`
+against `damageWasted` and `damageOverkill` (`modules/sim/types.ts`), split at
+the moment a body's fate is settled.
 
-| seat         | `speed` | `dps` | waste | `lethal` |
-| ------------ | ------- | ----- | ----- | -------- |
-| `reactive`   | 0.95    | 1.35  | 14.6% | 0.98     |
-| `generalist` | 1.00    | 1.00  | 39.7% | 0.50     |
-| `shielded`   | 0.85    | 0.90  | 41.3% | 0.43     |
-| `kinetic`    | 1.35    | 0.90  | 73.3% | 0.13     |
+| seat         | waste | overkill | `lethal` |
+| ------------ | ----- | -------- | -------- |
+| `reactive`   | 14.9% | 93.2%    | 1.03     |
+| `shielded`   | 37.7% | 61.9%    | 0.52     |
+| `generalist` | 39.5% | 73.4%    | 0.53     |
+| `kinetic`    | 43.9% | 68.7%    | 0.44     |
 
-(`lethal` here is pooled across the batch, so it sits a point or two off the
-per-seat medians above; both come from the same runs.)
+Both are quoted against the same denominator, because they are competing
+destinations for one budget and a change to target selection trades one for the
+other. **Overkill is the larger of the two on every seat and has never been
+tuned against** — a levelled device carries ~10× its opening damage into bodies
+sized by the escalation curve, and `maxTargets` decides how many of them absorb
+it.
 
-Waste orders the roster where neither dial does alone: **`shielded` is the
-slowest seat on the floor and still wastes more than `generalist`**, because it
-is also 0.9 `dps`. The two multiply into one term — damage delivered per body
-per visit — and nothing in the closed form contains it, because `speed` enters
-as movement while `localDensity` takes `dps` as an independent parameter.
-
-Crowding spends the same term, and harder:
+Crowding is where the roster separates, and it is the only place it does:
 
 | live bodies | `generalist` | `kinetic` | `reactive` | `shielded` |
 | ----------- | ------------ | --------- | ---------- | ---------- |
-| < 50        | 5.2%         | 23.2%     | 0.6%       | 5.0%       |
-| 50–99       | 16.3%        | 59.3%     | 4.0%       | 18.6%      |
-| 100–199     | 47.7%        | 90.7%     | 18.9%      | 46.8%      |
-| 200+        | 82.1%        | 100.0%    | 44.0%      | 69.5%      |
+| < 50        | 2.1%         | 4.4%      | 0.3%       | 1.2%       |
+| 50–99       | 13.1%        | 26.7%     | 3.3%       | 15.5%      |
+| 100–199     | 45.9%        | 54.8%     | 20.4%      | 43.8%      |
+| 200+        | 77.7%        | 90.4%     | 41.5%      | 62.8%      |
 
 Monotone for every seat, because `maxTargets` spreads each activation over more
-bodies as the floor fills and each body absorbs less before it leaves. At 200+
-`kinetic` converts none of its damage at all. **The seat problem and the density
-problem are one failure at two scales** — but see the next entry before treating
-waste as the thing to repair.
+bodies as the floor fills and each body absorbs less before it leaves.
 
-**Waste is a symptom, and the obvious repair is measured and worse. Target
-selection is an INCOME decision, not a lethality one.** A body's mote drops
-where it dies, and `r_collect` is smaller than `r_kill`, so _which_ body a shape
-picks decides where the floor's income lands. Picking by health scatters kills
-across the whole kill disc; picking the nearest drops them at the operator's
-feet.
+**Read that against lethality by run level, which is now flat.** Binned by the
+level a minute was played at, the four seats agree within 1.0–1.1× through band
+11–15 and separate only at 21–25 (4.2×) and 26+ (8.8×) — the bands a run reaches
+once the floor is crowded. A roster that lies on one curve until density arrives
+does not have a seat constant; it has a density term. Anything attributing the
+late spread to a seat dial has to explain the flat half first.
 
-Both concentration rules were built and swept against `arc-lance`'s shipped
-nearest-first. Closest-to-dying alone cut waste 39.7 → 21.6% (`generalist`) and
-paid **58–77% overkill**. A two-tier rule — heaviest body the activation can
-kill, else closest to dying — fixed the overkill and still lost:
+**A seat dial once carried the blame here and did not deserve it.** `speed` was
+measured as the largest lethality dial on the roster and costed as a design
+decision, on readings taken through a movement policy whose near-field income
+term was inverted (`modules/sim/steering.ts` `MOTE_NEAR_WEIGHT`). With the sign
+corrected `kinetic` moves from `lethal` 0.11 to 0.44–0.50 and the roster spread
+collapses from 8.5× to ~2×. The transferable half is not about `speed`: **a
+policy-driven agent is a measurement instrument, and every economy reading is
+taken through it** — see `modules/sim/steering-scenarios.test.ts` for the
+calibration that now guards it.
 
-|                | shipped                       | two-tier                      |
-| -------------- | ----------------------------- | ----------------------------- |
-| final level    | 22 / 10 / 26 / 22             | 18 / 9 / 25 / 15              |
-| `η` continuous | 0.773 / 0.548 / 0.717 / 0.805 | 0.533 / 0.412 / 0.641 / 0.449 |
-| motes left     | 376 / 166 / 795 / 285         | 701 / 250 / 1021 / 597        |
+**Target selection is an income decision, not only a lethality one.** A body's
+mote drops where it dies and `r_collect` is smaller than `r_kill`, so _which_
+body a shape picks decides where the floor's income lands: picking by health
+scatters kills across the whole kill disc, picking the nearest drops them at the
+operator's feet.
 
-**`η` fell on every seat and the roster finished lower.** Waste bought back less
-than the income it cost, and the exchange rate is set by the aperture ratio
-rather than by anything tunable in the roster.
-
-The general form, and the reason this is here rather than in a commit body:
-**every mechanism that reduces waste kills bodies further from the operator, and
-this economy charges for distance.** That closes lingering damage too, without
-building it — a burn finishes a body after it has left, which is the furthest
-point available. Reduce waste by making bodies die _during the visit_ (the seat
-dials, § the entry above) or by moving the aperture; not by choosing better
-targets.
-
-Measured by sweeping `kinetic`'s `speed` alone, reading lethality **at a given
-run level** so the ladder is controlled for:
-
-| level band | 1.35 (shipped) | 1.0  | 0.85 | rest of roster |
-| ---------- | -------------- | ---- | ---- | -------------- |
-| 1–5        | 0.51           | 0.75 | 0.91 | 0.86–0.97      |
-| 6–10       | 0.11           | 0.71 | 0.91 | 0.99–1.04      |
-| 11–15      | 0.18           | 0.46 | 0.73 | 0.78–0.98      |
-
-Monotone, and at 0.85 the seat rejoins the roster curve. Final level goes 13 → 16
-→ 18. **One dial, no economy constant touched.** Which also settles what the
-compounding is: there IS a loop — lethality feeds income, income the ladder, the
-ladder device level, device level DPS — but it is driven by this constant rather
-than self-sustaining, because damping the constant alone moves the whole arc.
-
-The reason it stayed hidden is that three of the four seats agree. Lethality by
-level reads within 4% across `generalist` / `reactive` / `shielded` at band 6–10
-and 16.6× wide with `kinetic` in it: **a roster where most seats lie on one curve
-and one sits far below it is a seat constant, not a systemic one.** Read
-`balance/lethality-probe.ts` before treating any of this as an economy problem.
+Two concentration rules were built against `arc-lance`'s shipped nearest-first —
+closest-to-dying, and a two-tier rule taking the heaviest body an activation can
+kill — and both lost, `η` falling on every seat. **That receipt predates the
+steering fix** and was taken on a pilot that could not collect, so the conclusion
+is not safe to lean on; the coupling it names is. Re-run both against the current
+pilot before treating concentration as closed, and note that the overkill column
+above is exactly what they were built to reclaim.
 
 **`r_collect` against `r_kill` is the top coupling and sets the price of all
 income.** Kills land at the outer edge; motes land where the specimen died; the
@@ -290,58 +265,47 @@ carry no numbers.
 - **No seat reaches the timer, and the cause distribution is not right either.**
   `IDENTITY.md` targets "three specialists each bound by a different cause, with
   the baseline mostly reaching the timer". Over eight seeds per seat: **zero runs
-  of thirty-two end on the cause `timer`**, the roster carries **two** distinct
-  modal causes rather than three (`hp-floor`, `traversal-collapse`), and modal
-  shares run 50 / 50 / 63 / 88%. Escalation also runs undiluted for the whole arc
-  where a ceiling used to discard 40–70% of it, so the arc is harder than any
+  of thirty-two end on the cause `timer`**, and the roster carries **two**
+  distinct modal causes rather than three (`hp-floor`, `traversal-collapse`) at
+  shares of 63 / 50 / 88 / 63%.
+
+  Read the cause, not the clock: runs that survive the full thirty minutes are
+  booked `collection-starvation` when they finish more than three beats behind
+  schedule (`modules/run.ts`), so "nothing reaches the timer" and "nothing
+  survives" are different claims with different repairs.
+
+  **This is now a difficulty question rather than an income one**, which it has
+  never been before. The roster lands 24–28 levels on a schedule of
+  −5 / −5 / +1 / −5 and `η` runs 0.86–0.99, so the economy is close to its
+  ladder and the arc still ends early. Escalation also runs undiluted where a
+  ceiling once discarded 40–70% of it, so the back half is harder than any
   tuning has been done against.
 
-  Read the cause, not the clock: **two of the thirty-two do survive all thirty
-  minutes** and are booked `collection-starvation`, because `modules/run.ts`
-  splits a completed arc on whether it finished more than three beats behind
-  schedule. "Nothing reaches the timer" and "nothing survives" are different
-  claims with different repairs — the survivors are an income problem, the other
-  thirty are a lethality one.
+  Two repairs were built against this entry and both reverted on measurement: a
+  seeking term steered and bought nothing, because `reach` already runs above
+  the declared dial on every seat; and concentrating target selection cost more
+  `η` than the waste it recovered — on a pilot since found to be broken, so that
+  second receipt wants re-running (§ Couplings). What has never been swept is
+  the escalation curve itself against a pilot that collects.
 
-  The distribution was once recorded here as the half that _was_ right, off a
-  single seed on which the four seats happened to split. **On one run, a roster
-  and a coin land the same way.**
+- **Do not read a `kinetic` figure off one arc, and do not read the roster off
+  one pass.** The seat spent most of this archetype's life as its clear outlier
+  and is now level with the others (`lethal` 0.47 against 0.49 / 1.01 / 0.51),
+  because two defects were found underneath the readings rather than in the
+  seat: an orbit radius outside its own weapon reach
+  (`modules/sim/steering.ts` `orbitRadius`) and an inverted income term in the
+  movement policy. Both presented as "this seat is weak", both were costed as
+  balance, and neither was. The arena probe's single seed sat at or near the top
+  of the seat's range throughout.
 
-  **What is short is lethality, not seeking, and not the draft.** Two repairs
-  were built against this entry and both reverted on measurement: a seeking term
-  (imminence-weighted arrivals inside `r_kill`) steered and bought nothing,
-  because `reach` already runs above the declared dial on every seat; and
-  concentrating target selection cost more `η` than the waste it recovered.
-  Selection and the loop are both ruled out — every seat converts run level into
-  the same offensive mass, and three of four lie on one lethality-by-level
-  curve. § Couplings holds both receipts and the waste split they turn on.
-
-  **The repair is a design call, not a tune**, because `speed` 1.35 is what the
-  Kineticist IS — "never be where it is" is the seat. Three exits were costed
-  and the cheapest-looking one is now closed: making damage concentrate rather
-  than spread was built, swept and reverted, because target selection is an
-  income decision and every concentration rule loses more `η` than it wins back
-  (§ Couplings). What remains is the two that move the dials — drop `speed` and
-  lose the personality, or compensate it with `dps` and accept that two dials
-  now move together — plus one the original list did not contain: **move the
-  aperture**, since `r_collect / r_kill` is what prices the whole trade and is
-  the only term outside the roster that touches it.
-
-- **`kinetic` is much worse than its single-seed reading, and the seed the arena
-  probe runs is its best one.** (Cause settled — § Couplings, `speed`.) Batch medians against that seed: level 10 vs 16,
-  schedule −21 vs −12, 0.26 kills/s vs 0.72, realized `engage` 0.06 vs 0.24 —
-  every single-seed figure at or near the top of the range. The orbit re-map
-  (`modules/sim/steering.ts` § orbitRadius) removed a real defect; it did not
-  make the seat viable, and the point reading said otherwise. Do not read a
-  `kinetic` figure off one arc.
-
-- **η is in its designed band and got there from the movement policy, not the
-  economy.** 0.61–0.83 continuous across the batch against an assumed 0.65–0.78,
-  from 0.91–0.99 before contact was priced; motes left on the floor went from
-  24–247 to 280–650. An operator circling a capped mass retraces its own floor
-  and sweeps everything for free, so η ≈ 1 was a symptom of the kite rather than
-  a property of persistent motes — an earlier entry here costed three exits for
-  it and none were taken.
+- **η is now ABOVE its designed band, and that is a live question rather than a
+  win.** 0.86–0.99 continuous against an assumed 0.65–0.78, with motes left on
+  the floor down to 22–456. It got there from two movement-policy corrections
+  (the near-field income sign, and costing the routing field by crowd), not from
+  the economy. The ladder was derived against the assumed band, so income now
+  runs ahead of what the beats were sized for — a good problem, and still a
+  divergence: either re-derive against the measured band or find the term that
+  should be pulling η back down.
 
   It remains **assumed, never derived**: every income figure inherits that
   assumption, and a low η and a bad economy look identical from outside. That is
