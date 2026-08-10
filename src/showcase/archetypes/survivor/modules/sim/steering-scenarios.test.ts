@@ -35,35 +35,43 @@ import { describe, expect, it } from 'vitest';
 import { buildNav } from '../arena';
 import { ARENA_BALANCE } from '../../data/arena';
 import { BASE_SPECIMEN_HP } from '../../data/specimens';
-import { BASELINE_SEAT } from '../../data/seats';
+import { BASELINE_SEAT, seatById, type SeatDef } from '../../data/seats';
 import { computeFields } from './steering';
 import { createArenaState, stepArena } from './step';
 import type { ArenaParams, ArenaState, Specimen } from './types';
 
 const { killRadius, contactRadius, mapWidth, mapHeight } = ARENA_BALANCE;
 
-const params: ArenaParams = {
-  engage: BASELINE_SEAT.engage,
-  eta: BASELINE_SEAT.eta,
-  speedMul: BASELINE_SEAT.speed,
-  dpsMul: BASELINE_SEAT.dps,
-  toughnessMul: BASELINE_SEAT.toughness,
+const paramsFor = (seat: SeatDef): ArenaParams => ({
+  engage: seat.engage,
+  eta: seat.eta,
+  speedMul: seat.speed,
+  dpsMul: seat.dps,
+  toughnessMul: seat.toughness,
   metaSurvival: 1,
   metaCollect: 1,
   metaYield: 1,
   random: () => 0.5,
-};
+});
 
 const nav = buildNav();
 const TICK = 0.05;
 
 interface Placed {
-  /** Bodies, positioned relative to the operator's start. */
-  bodies?: { dx: number; dy: number; hp?: number }[];
+  /**
+   * Bodies, positioned relative to the operator's start.
+   *
+   * `speed: 0` makes a body a static obstacle, which is how the routing cases
+   * isolate "can it path around this" from "can it out-run a pursuer" — two
+   * different questions that a mobile wall answers at once and neither cleanly.
+   */
+  bodies?: { dx: number; dy: number; hp?: number; speed?: number }[];
   /** Motes, positioned relative to the operator's start. */
   motes?: { dx: number; dy: number }[];
   /** Unit heading the operator starts on. Default is +x. */
   heading?: { x: number; y: number };
+  /** Seat whose dials drive the pilot. Defaults to the baseline. */
+  seat?: SeatDef;
 }
 
 interface Outcome {
@@ -72,6 +80,9 @@ interface Outcome {
   /** Displacement over the whole scenario. */
   moved: { dx: number; dy: number };
   banked: number;
+  kills: number;
+  /** Contact damage taken. Zero is the Kineticist's whole thesis. */
+  damageTaken: number;
   /** Closest any placed body ever got, by index into `bodies`. */
   closest: number[];
   /** Whether each placed body was inside `killRadius` at the final tick. */
@@ -86,6 +97,7 @@ interface Outcome {
  * measuring something it never meant to.
  */
 function scenario(placed: Placed, seconds: number): Outcome {
+  const params = paramsFor(placed.seat ?? BASELINE_SEAT);
   const state = createArenaState(params);
   state.operator.x = mapWidth / 2;
   state.operator.y = mapHeight / 2;
@@ -102,7 +114,7 @@ function scenario(placed: Placed, seconds: number): Outcome {
       y: start.y + b.dy,
       hp,
       spawnHp: hp,
-      speed: 44,
+      speed: b.speed ?? 44,
       contactDamage: 6,
       moteYield: 1,
       spawnedAt: 0,
@@ -141,6 +153,8 @@ function scenario(placed: Placed, seconds: number): Outcome {
     start,
     moved: { dx: state.operator.x - start.x, dy: state.operator.y - start.y },
     banked: state.stats.motesBanked,
+    kills: state.stats.kills,
+    damageTaken: state.stats.damageTaken,
     closest,
     inReachAtEnd: placedIds.map((id) => {
       const body = state.specimens.find((s) => s.id === id);
@@ -242,5 +256,92 @@ describe('pilot — the evasion leg of the triangle', () => {
     // failure this leg exists to catch.
     const starboardClosest = Math.min(...out.closest.slice(10));
     expect(starboardClosest).toBeGreaterThan(contactRadius * 2);
+  });
+});
+
+describe('pilot — routing around what is in the way', () => {
+  /**
+   * These use static bodies. A pursuing wall closes the gap it is being asked
+   * about, so a failure could always be blamed on the pursuit rather than on the
+   * routing, and the point here is the routing.
+   */
+  const WALL = { hp: 1e6, speed: 0 };
+
+  it('goes around a body sitting on its path rather than through it', () => {
+    // One obstacle dead ahead and open floor on both sides. Nothing here needs a
+    // plan — it needs the operator to notice that its current bearing ends in a
+    // body and that a few degrees either way does not.
+    const out = scenario({ bodies: [{ dx: 260, dy: 0, ...WALL }], heading: { x: 1, y: 0 } }, 5);
+
+    expect(out.damageTaken).toBe(0);
+  });
+
+  it('reaches a mote with an obstacle between it and the mote', () => {
+    // A reason to go that way, and something in the way of going. The two legs
+    // of the triangle in direct opposition, which is where "keeps going through
+    // when it could have gone around" actually shows up.
+    const out = scenario(
+      {
+        bodies: [{ dx: 170, dy: 0, ...WALL }],
+        motes: [{ dx: 340, dy: 0 }],
+        heading: { x: 1, y: 0 },
+      },
+      8,
+    );
+
+    expect(out.banked).toBeGreaterThan(0);
+    expect(out.damageTaken).toBe(0);
+  });
+
+  // KNOWN DEFECT, kept red. Measured: 0.6 damage taken threading a 120-unit
+  // lane against a 22-unit contact radius. Not a tight squeeze — the operator
+  // brushes a wall it had room to clear, which is the same single-lookahead-point
+  // blindness as `survivor-pilot-corridor`: the candidate 100 units ahead sits in
+  // clear floor, and nothing scores what the path grazes on the way.
+  it.fails('threads a gap instead of clipping the group beside it', () => {
+    // A 120-unit lane between two static walls, with the payoff on the far side.
+    // Contact is 22 units, so the gap is wide — clipping it is a routing failure
+    // rather than a tight-squeeze failure.
+    const upper = Array.from({ length: 6 }, (_, i) => ({ dx: 60 + i * 40, dy: 60, ...WALL }));
+    const lower = Array.from({ length: 6 }, (_, i) => ({ dx: 60 + i * 40, dy: -60, ...WALL }));
+
+    const out = scenario(
+      { bodies: [...upper, ...lower], motes: [{ dx: 380, dy: 0 }], heading: { x: 1, y: 0 } },
+      8,
+    );
+
+    expect(out.damageTaken).toBe(0);
+  });
+});
+
+describe('pilot — the Kineticist thesis', () => {
+  /**
+   * "Never be where it is." The seat's whole claim is that movement and
+   * positioning let it take no damage while still killing and still collecting,
+   * so the three have to be asserted together — each one alone is satisfiable by
+   * a policy that fails the seat. Standing off scores zero damage taken and zero
+   * of everything else; standing in the mass kills and collects and dies.
+   */
+  // KNOWN DEFECT, kept red, and the one that matters most: this is the seat's
+  // thesis failing on a floor built to be clearable. Measured: 3 bodies at 200–260
+  // units against a kill radius of 180 and an opener that drops each in two shots
+  // from range, two motes astern, and the operator still takes 0.71 damage. It
+  // kills and it collects; it does not do either without being touched.
+  it.fails('kills, collects and takes nothing, on a floor that allows all three', () => {
+    const bodies = [
+      { dx: 200, dy: 40 },
+      { dx: 230, dy: -60 },
+      { dx: 260, dy: 10 },
+    ];
+    const motes = [
+      { dx: -120, dy: 30 },
+      { dx: -170, dy: -20 },
+    ];
+
+    const out = scenario({ bodies, motes, seat: seatById('kinetic'), heading: { x: 1, y: 0 } }, 10);
+
+    expect(out.kills).toBeGreaterThan(0);
+    expect(out.banked).toBeGreaterThan(0);
+    expect(out.damageTaken).toBe(0);
   });
 });

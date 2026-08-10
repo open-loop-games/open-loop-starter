@@ -159,6 +159,8 @@ export async function runArc(seatId: string, seed: number) {
     liveSpecimens: s.specimens.length,
     liveMotes: s.motes.length,
     contactSeconds: stats.contactSeconds,
+    firstDamageAt: stats.firstDamageAt,
+    hpMilestoneAt: stats.hpMilestoneAt,
     damageConverted: stats.damageConverted,
     damageWasted: stats.damageWasted,
     bodiesWasted: stats.bodiesWasted,

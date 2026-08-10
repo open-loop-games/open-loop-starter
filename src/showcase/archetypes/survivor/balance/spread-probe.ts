@@ -32,6 +32,7 @@ import {
 } from '@/balance';
 import { MINUTES, clock, col, runArc, type ArcResult } from './_arc';
 import { SEATS } from '../data/seats';
+import { HP_MILESTONES } from '../modules/sim/types';
 
 const SEED_COUNT = Number(process.env.SEEDS ?? 8);
 const seeds = seedBatch(SEED_COUNT);
@@ -152,6 +153,46 @@ async function main(): Promise<void> {
           20,
         ) +
         formatSpread(s.liveMotes!, num(0)),
+    );
+  }
+
+  // ── Attrition, which is what a positioning seat is actually claiming ──
+  //
+  // When a run ENDED is one number arriving after every decision that produced
+  // it, and it cannot tell a seat that was grazed early and lasted from one that
+  // went untouched and was then caught. The Kineticist's thesis — "never be where
+  // it is" — is a claim about the TOP of the HP bar, so that is what this reads:
+  // time to the first touch, then to each milestone. `—` means never reached,
+  // which for `first hit` is the seat doing exactly what it says.
+  console.log('\n  ── Attrition (median sim-time to first hit, then to each HP mark) ──');
+  console.log(
+    col('  seat', 13) +
+      col('first hit', 12) +
+      HP_MILESTONES.map((m) => col(`${(m * 100).toFixed(0)}%`, 10)).join('') +
+      'untouched runs',
+  );
+  for (const seat of SEATS) {
+    const runs = bySeat.get(seat.id)!;
+    const median = (pick: (r: ArcResult) => number | null): string => {
+      const hit = runs.map(pick).filter((v): v is number => v !== null);
+      if (hit.length === 0) return '—';
+      const s = spreadOf(hit, { v: (x) => x });
+      return clock(s.v!.median);
+    };
+    const untouched = runs.filter((r) => r.firstDamageAt === null).length;
+    console.log(
+      col(`  ${seat.id}`, 13) +
+        col(
+          median((r) => r.firstDamageAt),
+          12,
+        ) +
+        HP_MILESTONES.map((_, i) =>
+          col(
+            median((r) => r.hpMilestoneAt[i]),
+            10,
+          ),
+        ).join('') +
+        `${untouched}/${runs.length}`,
     );
   }
 

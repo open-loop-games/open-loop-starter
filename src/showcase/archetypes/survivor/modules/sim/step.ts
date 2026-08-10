@@ -22,7 +22,13 @@ import {
   type Fields,
   type NavGrid,
 } from './steering';
-import type { ArenaParams, ArenaState, Specimen, Vec2 } from './types';
+import {
+  HP_MILESTONES,
+  type ArenaParams,
+  type ArenaState,
+  type Specimen,
+  type Vec2,
+} from './types';
 
 /** How often the steering fields are rebuilt, in sim seconds. */
 export const FIELD_REFRESH_SECONDS = 0.25;
@@ -71,6 +77,8 @@ export function createArenaState(params: ArenaParams): ArenaState {
       damageWasted: 0,
       bodiesWasted: 0,
       damageOverkill: 0,
+      firstDamageAt: null,
+      hpMilestoneAt: HP_MILESTONES.map(() => null),
     },
     nextId: 1,
     spawnCarry: 0,
@@ -406,6 +414,16 @@ export function stepArena(
     state.operator.hp -= taken;
     state.stats.damageTaken += taken;
     state.stats.contactSeconds += dt;
+    // The attrition timeline. Recorded here rather than sampled by a probe
+    // because "when was it first touched" is a tick-resolution question and the
+    // arc fixture steps a minute at a time.
+    if (state.stats.firstDamageAt === null) state.stats.firstDamageAt = state.time;
+    const frac = state.operator.hp / state.operator.maxHp;
+    for (let i = 0; i < HP_MILESTONES.length; i++) {
+      if (state.stats.hpMilestoneAt[i] === null && frac <= HP_MILESTONES[i]) {
+        state.stats.hpMilestoneAt[i] = state.time;
+      }
+    }
   }
 
   // ─── despawn: dwell, with distance as the backstop ───

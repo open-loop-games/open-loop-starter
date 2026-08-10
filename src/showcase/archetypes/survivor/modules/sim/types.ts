@@ -165,7 +165,37 @@ export interface ArenaStats {
    * there. See `../../BALANCING.md` § Couplings for the measured exchange rate.
    */
   damageOverkill: number;
+  /**
+   * Sim-time of the first contact damage, or `null` if the run was never
+   * touched.
+   *
+   * Survival is measured here by when the run ENDED, which is a single number
+   * arriving after every decision that produced it. A seat whose whole thesis is
+   * positioning — "never be where it is" — is not described by that: it can be
+   * grazed at 0:30 and still last to 25:00 on a deep HP pool, and it can go
+   * untouched for ten minutes and then be caught once. Those are different seats
+   * and the end time calls them the same.
+   */
+  firstDamageAt: number | null;
+  /**
+   * Sim-time the operator first fell below each of `HP_MILESTONES`, or `null`
+   * for milestones never reached. Parallel to that array by index.
+   *
+   * The attrition CURVE rather than its endpoint: how long the operator stayed
+   * untouched, then whole, then healthy. A seat that gives up its pool in one
+   * late collapse and one that bleeds from the opening reach the same floor.
+   */
+  hpMilestoneAt: (number | null)[];
 }
+
+/**
+ * Fractions of max HP the attrition timeline records crossings for.
+ *
+ * Front-loaded on purpose. The interesting part of a positioning seat's run is
+ * the top of the bar — being at 95% says the pilot is holding its distance,
+ * where everything below 50% is just the ending arriving.
+ */
+export const HP_MILESTONES = [0.95, 0.9, 0.75, 0.5] as const;
 
 export interface ArenaState {
   /** Run-elapsed sim seconds. */

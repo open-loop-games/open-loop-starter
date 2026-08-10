@@ -13,7 +13,7 @@ import { NAV_CELL, chooseHeading, computeFields, scoreHeadings } from './steerin
 import type { NavGrid } from './steering';
 import { ARENA_BALANCE } from '../../data/arena';
 import { BASELINE_SEAT } from '../../data/seats';
-import type { ArenaParams, ArenaState, Specimen } from './types';
+import { HP_MILESTONES, type ArenaParams, type ArenaState, type Specimen } from './types';
 
 function nav(): NavGrid {
   const cols = Math.ceil(ARENA_BALANCE.mapWidth / NAV_CELL);
@@ -95,6 +95,8 @@ function state(): ArenaState {
       damageWasted: 0,
       bodiesWasted: 0,
       damageOverkill: 0,
+      firstDamageAt: null,
+      hpMilestoneAt: HP_MILESTONES.map(() => null),
     },
     nextId: 1000,
     spawnCarry: 0,
