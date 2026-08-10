@@ -322,12 +322,10 @@ describe('pilot — the Kineticist thesis', () => {
    * a policy that fails the seat. Standing off scores zero damage taken and zero
    * of everything else; standing in the mass kills and collects and dies.
    */
-  // KNOWN DEFECT, kept red, and the one that matters most: this is the seat's
-  // thesis failing on a floor built to be clearable. Measured: 3 bodies at 200–260
-  // units against a kill radius of 180 and an opener that drops each in two shots
-  // from range, two motes astern, and the operator still takes 0.71 damage. It
-  // kills and it collects; it does not do either without being touched.
-  it.fails('kills, collects and takes nothing, on a floor that allows all three', () => {
+  // Was red at 0.71 damage taken and went green when the routing field started
+  // costing crowded cells (`./steering.ts` CROWD_TRAVEL_COST): the route to the
+  // motes astern now bends around the bodies instead of grazing one on the way.
+  it('kills, collects and takes nothing, on a floor that allows all three', () => {
     const bodies = [
       { dx: 200, dy: 40 },
       { dx: 230, dy: -60 },
@@ -341,6 +339,41 @@ describe('pilot — the Kineticist thesis', () => {
     const out = scenario({ bodies, motes, seat: seatById('kinetic'), heading: { x: 1, y: 0 } }, 10);
 
     expect(out.kills).toBeGreaterThan(0);
+    expect(out.banked).toBeGreaterThan(0);
+    expect(out.damageTaken).toBe(0);
+  });
+});
+
+describe('pilot — routing at grid scale', () => {
+  /**
+   * Beyond `MOTE_NEAR_RADIUS`, so the exact near-field term is silent and the
+   * nav-grid distance field is what decides. That is the scale the grid is for:
+   * a 100-unit cell cannot resolve a 22-unit contact, but it resolves "which way
+   * around a crowd" perfectly well.
+   */
+  // KNOWN DEFECT, kept red — and it is a DIFFERENT defect from the crowd-blind
+  // cost that this file's other routing cases had. Weighting the field did not
+  // move this one, because the field is never DESCENDED: `scoreArcs`' ancestor
+  // samples the field's value at candidates one `NAV_CELL` out, so every
+  // candidate lands within about a cell of every other and the routing term's
+  // spread measures 3–5 against terms an order of magnitude larger. The engine's
+  // own contract for `distanceField` is "agents move by descending it"
+  // (`open-loop-engine` spatial.md#grid); we read its value at one point instead.
+  // Banks nothing at all in 14 seconds — it orbits the wall rather than routing
+  // past it.
+  it.fails('routes around a crowd to reach a mote beyond it', () => {
+    const wall = Array.from({ length: 11 }, (_, i) => ({
+      dx: 250,
+      dy: -200 + i * 40,
+      hp: 1e6,
+      speed: 0,
+    }));
+
+    const out = scenario(
+      { bodies: wall, motes: [{ dx: 500, dy: 0 }], heading: { x: 1, y: 0 } },
+      14,
+    );
+
     expect(out.banked).toBeGreaterThan(0);
     expect(out.damageTaken).toBe(0);
   });

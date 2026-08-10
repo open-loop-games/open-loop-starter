@@ -60,7 +60,22 @@ export const BLOCKING_CROWD = 4;
 /** Reachable cells below which the operator genuinely has nowhere to go. */
 export const ESCAPE_FLOOR = 12;
 
-const UNIT_COST = () => 1;
+/**
+ * Extra cost, in cells, of entering a cell per body standing in it.
+ *
+ * The routing field used to be `() => 1`: every route to income cost the same
+ * whether it crossed open floor or the horde, while the crowd census that could
+ * have said otherwise was computed in this very function and read only by the
+ * traversal detector. `SpatialGrid.distanceField` takes a cost function
+ * precisely so it does not have to be hop-count — its own doc example is roads
+ * at 0.5 and walls at `Infinity`.
+ *
+ * At 1 per body a cell at `BLOCKING_CROWD` costs five, so a detour of up to four
+ * clear cells beats crossing it. Never `Infinity`: an unreachable mote turns the
+ * whole field to `Infinity` and the routing term goes constant, which is how a
+ * blocked route becomes no route at all.
+ */
+export const CROWD_TRAVEL_COST = 1;
 
 export function computeFields(state: ArenaState, nav: NavGrid, now: number): Fields {
   const moteSources: GridCoord[] = state.motes.map((m) => toCell(m, nav));
@@ -69,8 +84,16 @@ export function computeFields(state: ArenaState, nav: NavGrid, now: number): Fie
     const c = toCell(s, nav);
     crowd[c.y * nav.cols + c.x] += 1;
   }
+  // Capped at `BLOCKING_CROWD`, so a hundred bodies in one cell is not a
+  // hundred times worse than four. Past the point where a cell is impassable in
+  // practice the extra bodies say nothing new about the route, and uncapped they
+  // would inflate the field's magnitude — which the score reads directly — by
+  // whatever the late-run density happens to be.
+  const cost = (_cell: number, x: number, y: number): number =>
+    1 + Math.min(crowd[y * nav.cols + x], BLOCKING_CROWD) * CROWD_TRAVEL_COST;
+
   return {
-    motes: nav.grid.distanceField(moteSources, UNIT_COST),
+    motes: nav.grid.distanceField(moteSources, cost),
     crowd,
     computedAt: now,
   };
