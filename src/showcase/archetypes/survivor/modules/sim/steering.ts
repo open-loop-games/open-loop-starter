@@ -489,7 +489,14 @@ export function scoreHeadings(
       if (d2 < nearestMote) nearestMote = d2;
     }
     if (nearestMote <= moteNear2) {
-      moteNearTerm = (Math.sqrt(nearestMote) - MOTE_NEAR_RADIUS) * MOTE_NEAR_WEIGHT;
+      // Closer is BETTER, like the grid pull it refines and the collector term
+      // beside it. Written `(distance − radius) · weight` this was the same
+      // magnitude with the opposite sign: zero at the edge of the radius and
+      // −45 standing on the mote, so inside 300 units the operator was pushed
+      // OFF income, hardest exactly where the dive should finish. It outweighed
+      // the grid pull it sits on top of, so the near field won and the operator
+      // fled its own wake.
+      moteNearTerm = (MOTE_NEAR_RADIUS - Math.sqrt(nearestMote)) * MOTE_NEAR_WEIGHT;
     }
 
     // Collectors are scored in exact sim units rather than off the nav grid: one
