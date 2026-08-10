@@ -1,4 +1,4 @@
-import type { GridCoord, SpatialGrid } from '@open-loop/engine';
+import { ORTHOGONAL_DELTAS, type GridCoord, type SpatialGrid } from '@open-loop/engine';
 import { ARENA_BALANCE, THREAT_BALANCE } from '../../data/arena';
 import { deviceReach, isHeadingBound, selectTargets } from './dispatch';
 import type { ArenaParams, ArenaState, Specimen, Vec2 } from './types';
@@ -100,6 +100,66 @@ export function computeFields(state: ArenaState, nav: NavGrid, now: number): Fie
 }
 
 const at = (field: Float64Array, nav: NavGrid, c: GridCoord): number => field[c.y * nav.cols + c.x];
+
+/**
+ * Walk a distance field downhill from a cell, one neighbour at a time, and
+ * return the route.
+ *
+ * This is the half of `distanceField` that was missing. The engine's contract is
+ * "agents move by descending it", and it says why the descent is the consumer's
+ * to write: `bfs()` returns parent links and no distances, `distanceField()`
+ * returns distances and no parent links, and deriving the step direction here
+ * keeps routing and rendering from drifting on tie-breaks. So there is no
+ * primitive to adopt — this IS the adoption.
+ *
+ * Reading the field's VALUE at a candidate is not descending it. `lookahead` is
+ * one `NAV_CELL`, so all sixteen candidates sample inside a 3x3 cell
+ * neighbourhood of a cell-quantised field and the routing term's spread measured
+ * 3-5 against a turn cost of 18 — routing that cannot pay for a turn is not
+ * routing, and no weight fixes it because the ceiling is geometric. A route has
+ * no such ceiling: it says where to GO, and a candidate's distance to that point
+ * separates opposed headings by the full lookahead however near or far it is.
+ *
+ * Stops at a strict local minimum, so it cannot cycle; the step bound is a
+ * backstop, not the mechanism. An unreachable start (`Infinity`) has no route.
+ */
+export function descendRoute(
+  field: Float64Array,
+  nav: NavGrid,
+  from: GridCoord,
+  maxSteps: number,
+): GridCoord[] {
+  const route: GridCoord[] = [];
+  let here = from;
+  let value = at(field, nav, here);
+  if (!Number.isFinite(value)) return route;
+
+  for (let step = 0; step < maxSteps && value > 0; step++) {
+    let best: GridCoord | undefined;
+    let bestValue = value;
+    for (const d of ORTHOGONAL_DELTAS) {
+      const x = here.x + d.dx;
+      const y = here.y + d.dy;
+      if (x < 0 || y < 0 || x >= nav.cols || y >= nav.rows) continue;
+      const v = field[y * nav.cols + x];
+      if (v < bestValue) {
+        bestValue = v;
+        best = { x, y };
+      }
+    }
+    if (!best) break;
+    route.push(best);
+    here = best;
+    value = bestValue;
+  }
+  return route;
+}
+
+/** The centre of a nav cell, in sim units. */
+const cellCentre = (c: GridCoord): Vec2 => ({
+  x: (c.x + 0.5) * NAV_CELL,
+  y: (c.y + 0.5) * NAV_CELL,
+});
 
 /**
  * The orbit the seat wants to hold, in sim units: the distance from the nearest
@@ -311,18 +371,16 @@ export const COLLECTOR_WEIGHT = 0.125;
  * Score per sim unit of distance closed on the nearest mote, and the radius
  * within which that exact term applies at all.
  *
- * The nav-grid mote field routes across the floor and is good at it; what it
- * cannot do is decide a dive. `lookahead` is exactly `NAV_CELL`, so all sixteen
- * candidates land within about one cell of each other on a cell-quantised
- * field — measured spread 3–5, against a turn cost of 18. The dive was therefore
- * not outvoted, it was UNAFFORDABLE, and no weight on the grid term fixes that
- * because the ceiling is geometric rather than scalar.
+ * The same division of labour the threat term runs: the grid routes, an exact
+ * near-field term resolves the approach. A 100-unit cell cannot decide a dive
+ * that has to end inside a ~70-unit aperture.
  *
- * So this is the same division of labour the threat term already runs: the grid
- * keeps routing and reachability, an exact near-field term resolves the approach.
- * Scoped to a radius because it is a local decision — beyond it the grid field is
- * both cheaper and better, and summing them everywhere would double-count the
- * same pull.
+ * It is summed with the route term rather than switched between, because neither
+ * is the other's refinement. The route is a crowd-aware BEARING — it knows which
+ * side of a body to pass and is deliberately blunt about the last few units. This
+ * one is exact, continuous and entirely crowd-blind. Scoped to a radius because
+ * it is a local decision: past it an exact straight-line pull toward a mote
+ * across the floor would just be the route with worse information.
  *
  * Sized so a dive is affordable without being compulsory: across two opposed
  * candidates 200 units apart it spreads ~30 before `eta`, which clears the turn
@@ -331,6 +389,40 @@ export const COLLECTOR_WEIGHT = 0.125;
  */
 export const MOTE_NEAR_WEIGHT = 0.15;
 export const MOTE_NEAR_RADIUS = NAV_CELL * 3;
+
+/**
+ * Score per sim unit of distance closed on the routing waypoint — the bearing
+ * out of the near field and toward income. See `descendRoute`.
+ *
+ * Scored in sim units against a WAYPOINT rather than in cells against a sampled
+ * field value, so the spread across opposed candidates is the full lookahead
+ * (~200 units) instead of the 3-5 a cell-quantised field can express. At 0.15
+ * that is ~30 before `eta`, which clears the turn cost.
+ *
+ * At parity with `MOTE_NEAR_WEIGHT` because the two are summed, not switched
+ * between, and neither is the other's refinement. This one is a BEARING and
+ * knows about crowds — the route it reads bends around bodies, because the field
+ * it descends is costed by them. The near term is an exact straight-line
+ * approach that resolves the ~70-unit aperture and is entirely crowd-blind.
+ * Silencing this one inside `MOTE_NEAR_RADIUS` to avoid double-counting was
+ * tried and reverted: it leaves the last three cells of every dive — the ones
+ * with bodies in them — steered by the term that cannot see bodies, and the
+ * Kineticist stops being able to collect untouched.
+ */
+export const MOTE_ROUTE_WEIGHT = 0.15;
+
+/**
+ * How many cells along the descended route the waypoint is taken.
+ *
+ * Not a lever length: a candidate's distance to any fixed point spreads by about
+ * twice the lookahead however far away that point is, so this does not size the
+ * term. It sizes the SMOOTHING. The nav grid is 4-connected, so a route to
+ * anything off-axis is an orthogonal staircase, and a waypoint one step out
+ * inherits the staircase's zigzag as a heading. Three steps average it back into
+ * the bearing the route is actually making. Clamped to the route's end, so a
+ * mote one cell away is aimed at directly rather than overshot.
+ */
+export const ROUTE_WAYPOINT_CELLS = 3;
 
 /**
  * Rotate `current` toward `desired` by at most the step's turn budget.
@@ -375,7 +467,10 @@ export interface HeadingScore {
   engage: number;
   /** Expected targets a heading-bound device would land, times imminence. */
   connect: number;
-  /** Grid-routed mote pull. Unweighted; `total` applies `eta` and its 2.5. */
+  /**
+   * Distance closed on the routing waypoint, in sim units. Unweighted; `total`
+   * applies `eta` and `MOTE_ROUTE_WEIGHT`.
+   */
   mote: number;
   /** Exact near-field mote pull. Unweighted; `total` applies `eta`. */
   moteNear: number;
@@ -434,6 +529,20 @@ export function scoreHeadings(
     if (dx * dx + dy * dy <= reach2) relevant.push(s);
   }
 
+  // The routing waypoint: descend the mote field from the operator's own cell and
+  // take a point a few steps along. Computed once per call, not per candidate —
+  // it is a property of where the operator IS, not of which way it is looking.
+  let waypoint: Vec2 | undefined;
+  if (state.motes.length > 0) {
+    const route = descendRoute(
+      fields.motes,
+      nav,
+      toCell(state.operator, nav),
+      ROUTE_WAYPOINT_CELLS,
+    );
+    if (route.length > 0) waypoint = cellCentre(route[route.length - 1]);
+  }
+
   for (const h of HEADINGS) {
     const px = state.operator.x + h.x * lookahead;
     const py = state.operator.y + h.y * lookahead;
@@ -442,9 +551,6 @@ export function scoreHeadings(
     const margin = Math.min(px, py, mapWidth - px, mapHeight - py);
     if (margin < 0) continue;
     const wallPenalty = margin < NAV_CELL * 2 ? (NAV_CELL * 2 - margin) / NAV_CELL : 0;
-
-    const cell = toCell({ x: px, y: py }, nav);
-    const moteDist = at(fields.motes, nav, cell);
 
     // NEAR field, exact and continuous. The nav grid is 100 units to a cell and
     // contact happens at 22, so a grid-sampled threat distance cannot see the
@@ -500,7 +606,10 @@ export function scoreHeadings(
       threatTerm -= CONTACT_WEIGHT * (hpPerSecond / Math.max(1, state.operator.hp));
     }
 
-    const moteTerm = Number.isFinite(moteDist) ? -moteDist : -nav.cols;
+    // Distance closed on the waypoint the descent chose — a bearing, not a
+    // sampled field value. Zero when there is no route past the near field, so
+    // it adds a decision rather than a constant.
+    const moteTerm = waypoint ? -Math.hypot(px - waypoint.x, py - waypoint.y) : 0;
 
     // Exact near field for motes, for the reason the collector term is exact: a
     // 100-unit cell cannot resolve an approach that has to end inside a ~70-unit
@@ -563,7 +672,7 @@ export function scoreHeadings(
       threatTerm +
       engageTerm +
       connectTerm +
-      params.eta * (2.5 * moteTerm + moteNearTerm + collectorTerm) -
+      params.eta * (MOTE_ROUTE_WEIGHT * moteTerm + moteNearTerm + collectorTerm) -
       wallPenalty * 8 -
       turnCost;
 

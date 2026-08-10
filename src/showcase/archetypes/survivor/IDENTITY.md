@@ -123,9 +123,9 @@ lift targets: Vampire Survivors, Brotato, Halls of Torment.
 
 | Pattern                     | Engine surface                                                                                                                                              |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Movement / avoidance        | `SpatialGrid.distanceField` over threat sources, ascended rather than descended; walls as cost                                                              |
+| Movement / avoidance        | no grid field — exact euclidean over specimen positions, since a 100-unit cell cannot resolve a 22-unit contact radius; priced along the swept segment      |
 | Trap check + loss detection | `SpatialGrid.bfs` — reachability answers "is there a gap"                                                                                                   |
-| Mote routing                | second `distanceField`, multi-source over uncollected motes                                                                                                 |
+| Mote routing                | `distanceField`, multi-source over uncollected motes, crowd-costed and **descended** — the step direction is derived consumer-side, as the engine specifies |
 | Collector routing           | exact euclidean term in `chooseHeading` — a drop lands inside `r_kill` and a 100-unit nav cell cannot resolve an approach ending inside a ~70-unit aperture |
 | Draft offers                | seeded `rng` weighted pick                                                                                                                                  |
 | Device / reagent modifiers  | `createModifierChain` + multiplicative modifiers                                                                                                            |

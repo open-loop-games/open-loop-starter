@@ -173,6 +173,17 @@ describe('pilot — the income leg of the triangle', () => {
     expect(out.banked).toBeGreaterThan(0);
   });
 
+  it('turns back for a mote beyond the near field, where only the grid can see it', () => {
+    // The same decision as the case above, moved outside `MOTE_NEAR_RADIUS` so
+    // the exact near-field term is silent and the nav grid is the only thing
+    // that can answer. Clear floor, nothing to fear, one thing to bank — if the
+    // grid term cannot pay the turn cost to reverse onto it, the operator has no
+    // routing at all beyond three cells and every mote past that is invisible.
+    const out = scenario({ motes: [{ dx: -500, dy: 0 }], heading: { x: 1, y: 0 } }, 8);
+
+    expect(out.banked).toBeGreaterThan(0);
+  });
+
   it('takes the wake of three over a single mote the other way', () => {
     // The manoeuvre the archetype is built on: kills happen at the edge, motes
     // lie where they died, so the return through your own wake is where income
@@ -233,16 +244,19 @@ describe('pilot — the evasion leg of the triangle', () => {
     heading: { x: 0, y: 1 },
   });
 
-  // KNOWN DEFECT, kept red on purpose. Measured: over four seconds the operator
-  // covers 86 units along the axis the far group sits on and 27 across the open
-  // lane — it flees onto the bearing of the crowd it cannot see.
+  // KNOWN DEFECT, kept red — but the assertion no longer measures the defect it
+  // was filed for, and that is the thing to fix first. It was filed because the
+  // operator fled +x onto the far group's bearing, 86 units along the blocked
+  // axis against 27 across the open one. Traced now: net −94 in x and −22 in y,
+  // AWAY from the far group, which never comes near — the sibling case below
+  // asserts exactly that and passes.
   //
-  // Structural rather than a weight. The policy scores each candidate at ONE
-  // point 100 units ahead, so a heading is judged by where it lands and never by
-  // what lies along it; at that range the far group is not yet near anything and
-  // the bearing reads clear. No weight fixes a term that is not being asked the
-  // question. `it.fails` rather than a skip so this flips the suite red the
-  // moment it starts passing, and nobody has to remember to come back.
+  // What it does instead is orbit the port mass, on `engage` at 39.6 against a
+  // threat spread of ~14. That may well be right play, and this assertion cannot
+  // say: net displacement over four seconds is an arbitrary direction for a
+  // policy that is circling, so it fails a good orbit and a bad flee alike.
+  // Needs an assertion about the lane rather than about the net vector before it
+  // can be believed either way.
   it.fails('takes the open lane rather than fleeing into bodies it cannot see past', () => {
     const out = scenario(pressed(), 4);
 
@@ -293,11 +307,23 @@ describe('pilot — routing around what is in the way', () => {
     expect(out.damageTaken).toBe(0);
   });
 
-  // KNOWN DEFECT, kept red. Measured: 0.6 damage taken threading a 120-unit
-  // lane against a 22-unit contact radius. Not a tight squeeze — the operator
-  // brushes a wall it had room to clear, which is the same single-lookahead-point
-  // blindness as `survivor-pilot-corridor`: the candidate 100 units ahead sits in
-  // clear floor, and nothing scores what the path grazes on the way.
+  // KNOWN DEFECT, kept red. Measured: 0.6 damage threading a 120-unit lane
+  // against a 22-unit contact radius — the operator brushes a wall it had room
+  // to clear, because a candidate is scored at one point 100 units ahead and
+  // nothing prices what the path grazes on the way.
+  //
+  // The obvious repair was built and REVERTED, and the reason bounds any second
+  // attempt. Pricing contact by distance to the swept SEGMENT rather than to the
+  // endpoint turns this case green — and across a real floor it made the contact
+  // branch fire on ALL sixteen candidates on 49–100% of decisions, against
+  // 12–45% before. A term that reads the same on every candidate subtracts a
+  // constant and drops out of an arg-max whatever its magnitude, so the price
+  // went inert, `engage` took over at 0.86 against a 0.55 dial, and every seat
+  // died on `hp-floor` at 12–14 minutes against 21–27. Widening a detector
+  // flattens the spread that makes it steer.
+  //
+  // So the constraint on a fix is not geometric: it must price what the path
+  // grazes WITHOUT raising the share of candidates the branch fires on.
   it.fails('threads a gap instead of clipping the group beside it', () => {
     // A 120-unit lane between two static walls, with the payoff on the far side.
     // Contact is 22 units, so the gap is wide — clipping it is a routing failure
@@ -351,16 +377,22 @@ describe('pilot — routing at grid scale', () => {
    * a 100-unit cell cannot resolve a 22-unit contact, but it resolves "which way
    * around a crowd" perfectly well.
    */
-  // KNOWN DEFECT, kept red — and it is a DIFFERENT defect from the crowd-blind
-  // cost that this file's other routing cases had. Weighting the field did not
-  // move this one, because the field is never DESCENDED: `scoreArcs`' ancestor
-  // samples the field's value at candidates one `NAV_CELL` out, so every
-  // candidate lands within about a cell of every other and the routing term's
-  // spread measures 3–5 against terms an order of magnitude larger. The engine's
-  // own contract for `distanceField` is "agents move by descending it"
-  // (`open-loop-engine` spatial.md#grid); we read its value at one point instead.
-  // Banks nothing at all in 14 seconds — it orbits the wall rather than routing
-  // past it.
+  // KNOWN DEFECT, kept red — but no longer for the reason it was filed under,
+  // and the routing half of it now works. Since the field is descended rather
+  // than sampled (`./steering.ts` `descendRoute`) the operator computes a route
+  // and follows it across the wall; traced, it reaches within ~110 units of the
+  // mote and then stops. Two things hold it there, neither of them the route:
+  //
+  //  - The wall is `hp: 1e6`, so nothing in it ever dies and `engage` stays at
+  //    saturation forever. Measured at the stall, the candidate aimed at the mote
+  //    is behind on `engage` by 29.7 while the income terms FAVOUR it by 17.6 —
+  //    the operator is holding station on a mass it cannot clear. That is correct
+  //    play against a killable floor and pathological against an immortal one, so
+  //    the case as written cannot separate routing from disengagement.
+  //  - Bodies sit 40 units apart against a 22-unit contact radius, so the widest
+  //    clearance through the wall is 20 and `damageTaken === 0` demands a full
+  //    detour around it. Crossing it grazes, which is the swept-path blindness
+  //    the other two red cases isolate more cleanly.
   it.fails('routes around a crowd to reach a mote beyond it', () => {
     const wall = Array.from({ length: 11 }, (_, i) => ({
       dx: 250,

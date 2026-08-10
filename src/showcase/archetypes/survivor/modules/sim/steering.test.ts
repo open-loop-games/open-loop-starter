@@ -9,7 +9,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { createSpatialGrid, ORTHOGONAL_DELTAS } from '@open-loop/engine';
-import { NAV_CELL, chooseHeading, computeFields, scoreHeadings } from './steering';
+import {
+  MOTE_ROUTE_WEIGHT,
+  NAV_CELL,
+  chooseHeading,
+  computeFields,
+  descendRoute,
+  scoreHeadings,
+  toCell,
+} from './steering';
 import type { NavGrid } from './steering';
 import { ARENA_BALANCE } from '../../data/arena';
 import { BASELINE_SEAT } from '../../data/seats';
@@ -103,6 +111,55 @@ function state(): ArenaState {
   };
 }
 
+describe('survivor/steering — the routing field is descended, not sampled', () => {
+  /**
+   * Two routes of equal length to the same mote, one of them through a crowd.
+   * The grid's neighbour order puts +x first, so an unweighted descent takes the
+   * crowded cell on a tie — which makes "goes the other way" a statement about
+   * the cost function reaching the route, and not about tie-break luck.
+   */
+  function twoWays() {
+    const n = nav();
+    const s = state();
+    s.operator.x = 4050;
+    s.operator.y = 2650;
+    s.specimens = [];
+    // Four bodies in the cell directly +x of the operator, which is what
+    // `BLOCKING_CROWD` calls impassable in practice.
+    for (let i = 0; i < 4; i++) s.specimens.push(specimen(i, 4150, 2650));
+    // Two cells over and two down: reachable by an equal number of steps whether
+    // the descent turns before the crowd or after it.
+    s.motes = [{ id: 1, x: 4250, y: 2850, value: 1, droppedAt: 0 }];
+    return { n, s };
+  }
+
+  it('routes around a crowded cell when a clear route is no longer', () => {
+    const { n, s } = twoWays();
+    const route = descendRoute(computeFields(s, n, 0).motes, n, toCell(s.operator, n), 40);
+
+    expect(route[0]).not.toEqual({ x: 41, y: 26 });
+  });
+
+  it('descends all the way to the mote it routed to', () => {
+    const { n, s } = twoWays();
+    const route = descendRoute(computeFields(s, n, 0).motes, n, toCell(s.operator, n), 40);
+
+    // A route that stops short is a local minimum in the field, which is the one
+    // way a descent can quietly return a bearing to nowhere.
+    expect(route[route.length - 1]).toEqual(toCell(s.motes[0], n));
+  });
+
+  it('has no route to descend when there is nowhere to go', () => {
+    const { n, s } = twoWays();
+    s.motes = [];
+    const route = descendRoute(computeFields(s, n, 0).motes, n, toCell(s.operator, n), 40);
+
+    // Every cell is `Infinity` with no sources. The term must go silent rather
+    // than resolve to a direction, or the operator chases an artefact.
+    expect(route).toEqual([]);
+  });
+});
+
 describe('survivor/steering — score and choice are one policy', () => {
   it('picks exactly the candidate the breakdown scores highest', () => {
     const s = state();
@@ -128,7 +185,7 @@ describe('survivor/steering — score and choice are one policy', () => {
         c.threat +
         c.engage +
         c.connect +
-        params.eta * (2.5 * c.mote + c.moteNear + c.collector) +
+        params.eta * (MOTE_ROUTE_WEIGHT * c.mote + c.moteNear + c.collector) +
         c.wall +
         c.turn;
       expect(recomposed).toBeCloseTo(c.total, 9);
