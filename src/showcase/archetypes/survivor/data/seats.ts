@@ -7,13 +7,37 @@
 //
 // A seat is a POLICY BUNDLE, not a stat block. `engage`/`eta` bias the movement
 // policy, `defenseShare` biases the draft policy, and the multipliers seed the
-// rest. Pure config; `../modules/automation.ts` reads it at construction.
+// rest. Pure config, read at construction by `../modules/arena.ts` (movement)
+// and `../modules/draft.ts` (offers) — the two modules that own the policies
+// these dials bias.
 
 /**
  * Who answers for this seat. `policy` runs the shipping movement and draft
  * policies off the dials below; `player` swaps both for input and leaves the
  * dials inert — the two are the same seam the arena and the draft already
  * document, named once so the modules can branch on it instead of on an id.
+ *
+ * **Deliberate divergence from the conformance canon**, which asks for a
+ * `modules/automation.ts` gated by `AutomationTiers` with tier ids as a typed
+ * union (`.claude/rules/archetype-authoring.md` § Conformance). This archetype
+ * has no player-facing automation to gate. A run is played rather than
+ * automated, and the only thing a player accrues between runs is a purchase, not
+ * a policy — so a declared ladder would withhold nothing, which the same rules
+ * name as a divergence in its own right rather than an adoption.
+ *
+ * What this is instead is the case those rules already carve out: a policy that
+ * answers for a seat is an AI driver, not automation the player unlocks, so it
+ * is gated by INSTALL PRESENCE rather than by a tier — the analogue of
+ * skirmish's opponent seats. The gate is literal: `../modules/arena.ts` installs
+ * a control reader only when `driver === 'player'`, and the reader's absence is
+ * what selects the movement policy in `../modules/sim/step.ts`. A policy seat
+ * cannot be steered by a stale key, because there is no key to hold.
+ *
+ * The convention this DOES meet is the load-bearing half — "automation is game
+ * code, not a harness bot". Every probe under `../balance/` drives these same
+ * policies through the real assembled module, so the sim exercises shipping code
+ * and the two cannot drift. `../modules/seat-driver.test.ts` is the spec that
+ * pins it: same mechanics either way, only the answerer changes.
  */
 export type SeatDriver = 'policy' | 'player';
 

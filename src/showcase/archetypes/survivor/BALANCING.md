@@ -360,6 +360,22 @@ carry no numbers.
   player aims it better is reasoning, not a reading — and the human seat ships,
   so it is checkable. The one claim in this file with no receipt behind it.
 
+- **There is no `AutomationTiers` ladder here, and that is a decision rather than
+  an omission.** The conformance canon asks every archetype for a
+  `modules/automation.ts` behind a tier gate. Survivor has no player-facing
+  automation to gate: a run is played, and what accrues between runs is a
+  purchase rather than a policy — so a ladder would withhold nothing, which the
+  same rules call a divergence in its own right. What the seats carry instead is
+  an AI DRIVER, gated by install presence the way an opponent is. Full argument
+  and the gate itself at `data/seats.ts` § `SeatDriver`.
+
+  What that costs a fork: if you add automation a player unlocks — auto-draft, an
+  auto-collector, a between-run optimiser — it does **not** belong on this seam.
+  `SeatDriver` answers "who plays this run"; a tier answers "what has the player
+  earned the right to stop doing". Widening the driver union to carry an unlock is
+  the tempting wrong move, because from the call site both read as "something else
+  decides now".
+
 - **Traversal collapse is a real ending again**, and it was the flee-bot that had
   retired it: while the contact cliff dominated, the operator held a 55-unit
   margin from everything and could not be enclosed, so the loss condition was
