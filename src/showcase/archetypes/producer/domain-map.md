@@ -12,6 +12,7 @@ The classic big-number incremental: a geometric cost ladder under a multiplicati
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
 - **ProbeClassId** _(string-literal union)_ — `seed` · `drone` · `foundry` · `hauler` · `ring` · `lathe` · `swarm` · `shell`
+- **ProbeScale** _(string-literal union)_ — `dust` · `asteroid` · `moon` · `planet` · `star`
 - **RefinementScope.kind** _(discriminated-union arm)_ — `class` · `global` · `click`
 
 ## Definitions

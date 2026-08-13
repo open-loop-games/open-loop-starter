@@ -99,6 +99,20 @@ describe('ProducerList', () => {
     expect(wrapper.find('.producer-list__row-body').exists()).toBe(false);
   });
 
+  it('quotes the price of one when nothing is affordable, and stays disabled', () => {
+    // Regression: `maxAffordable` is 0 while the player saves up, and quoting
+    // `cost(0)` rendered the price as 0 — the row hid what it cost exactly when
+    // that was the only thing the player wanted to know.
+    const row: ProducerRowData = { ...makeRow('a', { canBuy: false }), maxAffordable: ref(0) };
+    const wrapper = mount(ProducerList, {
+      props: { rows: [row], costLabel: 'coins', bulkModeSource: 'none' },
+    });
+    const button = wrapper.find('[data-testid="buy-a"]');
+    expect(button.text()).toContain('10 coins');
+    expect(button.text()).not.toContain('Buy 0');
+    expect(button.attributes('disabled')).toBeDefined();
+  });
+
   it('forwards a typed extra payload to the #row slot (the extension seam)', () => {
     // The contract-first seam: a story parameterizes the component with its own
     // payload type and reads it back in the slot — no cast, no side lookup. This

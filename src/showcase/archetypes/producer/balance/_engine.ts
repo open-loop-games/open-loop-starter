@@ -45,6 +45,15 @@ export interface ArcOptions {
   launchesPerSecond?: number;
   /** Unique namespace so concurrent runs cannot share persistent context. */
   namespace?: string;
+  /**
+   * Sample the arc on a fixed cadence. The beat map answers "when did X first
+   * happen"; this answers "what was the arc doing between the beats", which is
+   * the only way to read channel occupancy rather than a run average.
+   * Sampling is read-only — a sampler that purchased would be a second driver.
+   */
+  onSample?: (reading: ArcReading) => void;
+  /** Sample cadence in sim-seconds. Ignored without `onSample`. */
+  sampleEverySeconds?: number;
 }
 
 export interface ArcResult {
@@ -133,6 +142,9 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     const reading = read(t, tier);
     for (const beat of BEATS) {
       if (!beatAt.has(beat.n) && beat.reached(reading)) beatAt.set(beat.n, t);
+    }
+    if (options.onSample && t % (options.sampleEverySeconds ?? 60) === 0) {
+      options.onSample(reading);
     }
   }
 

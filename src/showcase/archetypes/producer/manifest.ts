@@ -54,7 +54,7 @@ export const manifest: ArchetypeManifest = {
     { n: 6, label: 'Managed dispatch', recordedSimRange: [5179, 5241] },
     { n: 7, label: 'The frontier — top class deployed', recordedSimRange: [13194, 13354] },
   ],
-  shell: 'SidebarMainShell',
+  shell: 'ThreePanelShell',
   formFactor: 'responsive',
   exemplars: [
     {

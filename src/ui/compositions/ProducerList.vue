@@ -16,7 +16,7 @@
 -->
 <script setup lang="ts" generic="T = never">
 import { computed } from 'vue';
-import { format, formatWhole, type DecimalSource } from '@open-loop/engine';
+import { Decimal, format, formatWhole, type DecimalSource } from '@open-loop/engine';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
 import Button from '@/ui/components/Button.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
@@ -65,7 +65,12 @@ function resolveAmount(maxAffordable: DecimalSource): DecimalSource {
 const visibleRows = computed(() => props.rows.filter((r) => r.unlocked?.value ?? true));
 
 function rowState(row: ProducerRowData<T>) {
-  const pendingAmount = resolveAmount(row.maxAffordable.value);
+  // Floor at 1. `maxAffordable` is 0 when the player cannot afford a single
+  // unit, and quoting `cost(0)` renders the price as 0 — the row would hide
+  // what it costs exactly when the player is saving up for it. One is also the
+  // amount a click would buy if it could, so `canBuy`/`buy` stay honest: both
+  // are asked about the amount actually shown.
+  const pendingAmount = Decimal.max(1, resolveAmount(row.maxAffordable.value));
   const pendingCost = row.cost(pendingAmount);
   const buyLabel = `Buy ${formatWhole(pendingAmount)} — ${format(pendingCost, 0)} ${props.costLabel}`;
   const canBuy = row.canBuy(pendingAmount);

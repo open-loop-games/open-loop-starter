@@ -200,20 +200,20 @@ export function createSwarmModule(data: ProducerData): EngineModule {
         });
         producer.rateChain.bind({
           id: `tuning/classRateScale/${def.id}`,
-          modifier: createMultiplicativeModifier({
-            multiplier: classRateScale,
-            description: 'Class rate scale',
-          }),
+          // No `description` — deliberately. A modifier without one is omitted
+          // from `chain.description`, and therefore from every breakdown the UI
+          // renders. This is a perturbation knob, not a game concept: the
+          // player-facing chain is refinements × revisions × generation, and a
+          // "Class rate scale ×1.00" row would put a balance instrument in it.
+          modifier: createMultiplicativeModifier({ multiplier: classRateScale }),
         });
       }
 
       const clickYieldScale = tunable<DecimalSource>(registry, 'balance/clickYieldScale', () => 1);
       launcher.rateChain.bind({
         id: 'tuning/clickYieldScale',
-        modifier: createMultiplicativeModifier({
-          multiplier: clickYieldScale,
-          description: 'Launch yield scale',
-        }),
+        // Undescribed for the same reason as `classRateScale` above.
+        modifier: createMultiplicativeModifier({ multiplier: clickYieldScale }),
       });
 
       ctx.provide(MassLifetimeKey, mass.cumulative!);

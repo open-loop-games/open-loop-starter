@@ -23,8 +23,18 @@ export type ProbeClassId =
   | 'swarm'
   | 'shell';
 
+/**
+ * Magnitude band a class works at. Costume, but load-bearing costume: the
+ * ladder is a *scale* ladder, and the UI reads this to name what the frontier
+ * has reached. Several classes share a band — the bands are coarser than the
+ * ladder on purpose.
+ */
+export type ProbeScale = 'dust' | 'asteroid' | 'moon' | 'planet' | 'star';
+
 export interface ProbeClassDef {
   id: ProbeClassId;
+  /** Magnitude band (costume). */
+  scale: ProbeScale;
   /** Display name (costume). */
   name: string;
   /** Flavour line (costume). */

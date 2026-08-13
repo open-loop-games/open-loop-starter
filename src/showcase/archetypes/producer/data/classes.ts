@@ -1,4 +1,4 @@
-import type { ProbeClassDef, ProbeClassId } from './types';
+import type { ProbeClassDef, ProbeClassId, ProbeScale } from './types';
 import { classBaseCost, classBaseRate } from './curve';
 
 // ─── Skeleton ───
@@ -16,6 +16,7 @@ import { classBaseCost, classBaseRate } from './curve';
 
 interface ProbeClassCostume {
   id: ProbeClassId;
+  scale: ProbeScale;
   name: string;
   description: string;
   revealAtFleetSize?: number;
@@ -24,47 +25,55 @@ interface ProbeClassCostume {
 const COSTUME: ProbeClassCostume[] = [
   {
     id: 'seed',
+    scale: 'dust',
     name: 'Seed',
     description: 'One probe, hand-launched, chewing interplanetary dust.',
   },
   {
     id: 'drone',
+    scale: 'dust',
     name: 'Drone',
     description: 'A working replicator. It builds copies without being asked.',
     revealAtFleetSize: 5,
   },
   {
     id: 'foundry',
+    scale: 'asteroid',
     name: 'Foundry',
     description: 'An asteroid hollowed into a smelter.',
     revealAtFleetSize: 15,
   },
   {
     id: 'hauler',
+    scale: 'asteroid',
     name: 'Hauler',
     description: 'Moves belt mass to where the foundries are.',
     revealAtFleetSize: 30,
   },
   {
     id: 'ring',
+    scale: 'moon',
     name: 'Ring',
     description: 'A moon disassembled into an orbital band.',
     revealAtFleetSize: 50,
   },
   {
     id: 'lathe',
+    scale: 'planet',
     name: 'Lathe',
     description: 'Takes a planet apart from the crust inward.',
     revealAtFleetSize: 75,
   },
   {
     id: 'swarm',
+    scale: 'star',
     name: 'Swarm',
     description: 'Collectors thick enough to dim the star they orbit.',
     revealAtFleetSize: 105,
   },
   {
     id: 'shell',
+    scale: 'star',
     name: 'Shell',
     description: 'The star is enclosed. Nothing it emits leaves unused.',
     revealAtFleetSize: 140,
