@@ -14,6 +14,7 @@ directions it grows through. Start there.
 | ---------- | -------------------------------------------------------------------- |
 | `ambient`  | Idle production with auto-producers and ambient progression          |
 | `cycler`   | Alternating build/defend phases on a hard-phase cycle                |
+| `producer` | Geometric cost ladder under a compounding modifier stack             |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
 | `survivor` | Run-scoped real-time survival against continuously escalating threat |
 | `tug`      | Adversarial lane push with a shared contested lane                   |
