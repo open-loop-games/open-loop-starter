@@ -11,7 +11,7 @@ export const manifest: ArchetypeManifest = {
       layer: 'systems',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
-    { name: 'createLoop', layer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'createCycle', layer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
       name: 'createPurchasableCategory',
       layer: 'systems',
