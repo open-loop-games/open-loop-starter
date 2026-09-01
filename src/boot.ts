@@ -17,6 +17,11 @@
  * Autosave: engine-side autosave is off by default (interval 0). The
  * starter drives autosave from the player-pref refs via SystemHeader's
  * runtime, so the cadence is user-configurable at runtime.
+ *
+ * Error surfacing: `bootApp` installs an `app.config.errorHandler`. Without
+ * one, Vue degrades a throw inside a lifecycle hook or event handler to a
+ * `[Vue warn]` with the cause swallowed — which is how engine wiring mistakes
+ * reach a developer as "the app didn't render" and nothing else.
  */
 
 import { createApp as createVueApp, type App, type Component } from 'vue';
@@ -67,6 +72,15 @@ export interface BootAppResult {
 
 export function bootApp(options: BootAppOptions): BootAppResult {
   const app = createVueApp(options.root);
+
+  // Vue routes lifecycle-hook and event-handler throws here; with no handler
+  // installed it logs a warn and drops the cause, so an engine throw during
+  // mount is invisible. Log it whole, then rethrow in dev to surface it in the
+  // overlay — production keeps rendering the rest of the tree.
+  app.config.errorHandler = (err, _instance, info) => {
+    console.error(`[boot] unhandled error during ${info}:`, err);
+    if (import.meta.env.DEV) throw err;
+  };
 
   app.provide('engine', options.engine);
   for (const [key, value] of options.provides ?? []) {
