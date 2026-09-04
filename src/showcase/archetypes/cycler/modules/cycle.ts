@@ -38,11 +38,11 @@ import { getWall } from './wall';
  * so under-fielding Lances breaches the line early. The line breach, not a
  * ceiling-crossing arithmetic, is the live run-end.
  *
- * TODO(expansion): the wave-indexed exogenous schedule + the STANDBY↔INBOUND phase
- * controller are a candidate engine primitive — the `TimedInput` candidate
- * (`candidate-primitives.md`) re-indexed time→wave, plus a
- * two-phase alternation the single running/ended lifecycle doesn't cover. Graduation
- * dive filed as studio/open-loop-engine#11.
+ * Both halves stay here by decision, not omission — studio/open-loop-engine#11
+ * rejected the graduation. The schedule is expressible as `Formula.variable`
+ * (axis-agnostic, so wave-indexing is not a distinct shape); the alternation has
+ * one counted receipt, and a timed phase cadence has no items to dispatch, so it
+ * stays consumer-side per the engine INDEX § Reserved names entry on Sequencer.
  */
 
 /** Hard phase the run is in. STANDBY/INBOUND cycle; SATURATION marks a boss salvo; OVERRUN is the breach. */
