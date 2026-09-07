@@ -69,7 +69,9 @@ strict, one-way: `data → modules → composables → ui`.
 
 Filename is `IDENTITY.md` for every archetype. Single screen. Required:
 
-1. **Identity line** — the pattern-language composition, sourced from `_identity.md`.
+1. **Identity line** — the pattern-language composition, sourced from `_identity.md`,
+   with the grounding class that registry gives it — rows are cited by handle only
+   where a sourced exemplar carries them, and a design claim says it is one.
 2. **What this archetype is** — the player experience in prose.
 3. **Rate-function spine** — the bucket, where the closed form stops, and what measures the
    remainder. The load-bearing section.
