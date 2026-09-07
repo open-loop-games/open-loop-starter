@@ -12,7 +12,7 @@
  * sides compound — device DPS through the draft, specimen HP and annulus density
  * through the escalation schedule — so the closed core is a crossing between two
  * geometric curves. Per-subsystem buckets and receipts:
- * `open-loop-research/methodology/techniques/closed-form-progression/per-archetype/survivor.md`.
+ * `open-loop-research/reports/closed-form-subsystem-inventory/per-archetype/survivor.md`.
  *
  * Every constant lives in `../data/`; the derivations (`beatTime`,
  * `offensivePickGain`, `deriveXpLadder`, the income model) live there too, so the

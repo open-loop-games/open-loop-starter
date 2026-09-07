@@ -66,7 +66,7 @@ annulus density through the escalation schedule — so the closed core is a
 crossing between two geometric curves, and the XP ladder is _derived_ from the
 income model so beats land on the authored schedule rather than being authored
 beside it. Per-subsystem buckets and their receipts are inventoried at
-`open-loop-research/methodology/techniques/closed-form-progression/per-archetype/survivor.md`.
+`open-loop-research/reports/closed-form-subsystem-inventory/per-archetype/survivor.md`.
 
 The runtime is **sim-as-gameplay**: the spec closes, and the tick-by-tick arena
 integrates it. That is not a gap in coverage — it is the integration of a form
