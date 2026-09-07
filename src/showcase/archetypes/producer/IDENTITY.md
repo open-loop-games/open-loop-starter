@@ -1,19 +1,23 @@
 # Producer — archetype identity
 
-> **A+C Activity + Cost Scaling + Modifier Chains + Achievement multipliers** — the
-> classic big-number incremental. Click a thing, the number goes up, spend the number
-> on something that raises the number, and watch the multiplier compound.
+> **`manual-action` + `producer` + `escalating-price` + `multiplier-stack`**, with
+> `automation` taking the click over and `statistics` thresholds stepping the stack
+> — the automation ladder with its `prestige` declined. Click a thing, the number
+> goes up, spend the number on something that raises the number, and watch the
+> multiplier compound.
 
 One screen: what the archetype *is*, the closed-form spine that balances it, producer's
 committed realization, and the ports a fork grows it through. The spine is the
 load-bearing part — read that section slowly; the rest hangs off it.
 
-Identity line source: `../_identity.md` (Producer row). This is a pattern-language
-composition, not a port of any one game. Cookie Clicker (the ladder + achievement
-stack), Antimatter Dimensions (the engineered cost-scaling class with closed-form bulk
-buy), AdVenture Capitalist (the autobuyer arc) and Universal Paperclips (scale as the
-payoff) validate the composition as a *set, with their crosses showing* — none is a
-clone target. Paperclips' phase transitions are a deliberate omission (§ What is
+Identity line source: `../_identity.md` (Producer row). Grounding: **both** — the
+market names the region (Idler ∧ Incremental, an address shared with Scaler, which
+the composition rather than the market separates) and the sourced exemplars share the
+rows the line cites. This is a pattern-language composition, not a port of any one
+game. Cookie Clicker (the ladder + achievement stack), Antimatter Dimensions (the
+engineered cost-scaling class with closed-form bulk buy), AdVenture Capitalist (the
+autobuyer arc) and Universal Paperclips (scale as the payoff) validate the composition
+as a *set, with their crosses showing* — none is a clone target. Paperclips' phase transitions are a deliberate omission (§ What is
 committed / not committed).
 
 ## What this archetype is
@@ -33,7 +37,7 @@ of this; producer is what is left when all of them are removed, which is why it 
 shape most forks arrive wanting and the one the base's widget contracts were drawn
 against.
 
-**Not ambient.** Ambient shares the auto-production ladder and the achievement stack but
+**Not ambient.** Ambient shares the `producer` ladder and the stepped stack but
 commits *mechanically* to never punishing absence — it suppresses escalation and
 urgency by design. Producer keeps the escalation: a click that matters and then
 deliberately stops mattering, a cost curve that bites, and a cadence you feel. Same
@@ -148,7 +152,7 @@ The costume exists to make spine terms legible, not to decorate them:
 | headline currency | **mass** — matter converted |
 | producer tier | a probe class, each an order of scale up |
 | `m` (cost ratio) | **the frontier** — each launch reaches a further star, so cost grows geometrically in the radius already claimed |
-| manual click (A+C) | **hand-launch** — you seed probes personally until the swarm stops needing you |
+| manual click (`manual-action`) | **hand-launch** — you seed probes personally until the swarm stops needing you |
 | `Π μ` member: upgrades | **refinements** — per-class and global |
 | `Π μ` member: achievements | **revisions** — crossing a replication milestone pushes a firmware revision through the entire swarm |
 | autobuyer tiers | **dispatch authority** — allocation handed to the swarm in stages |
@@ -201,11 +205,11 @@ Each feeds a named part of the spine.
 
 | Pattern | Engine primitive | Note |
 |---|---|---|
-| A+C Activity | manual action feeding the same resource | the click's own chain is a `Π μ` member, so it is dominated by the ladder rather than switched off |
-| Cost Scaling | `createProducerCategory` (L2), over `createScalingPurchasable` | bulk buy via `CostRequirement` inversion — the surface `ProducerList`'s `maxAffordable` / `buy(amount)` contract was written against |
-| Modifier Chains | `createModifierChain`, `bind`, trace / `BindingRecord` | four named chains; attribution is what makes the stack legible in the HUD |
-| Achievement multipliers | `createAchievementCategory` / `createAchievement` | threshold-triggered, granting a global factor — the splice points |
-| Dispatch ladder | `AutomationTiers` | tier ids a typed union (`ProducerAutomationTier`); the ladder must actually withhold, per `.claude/rules/archetype-authoring.md` § Conformance |
+| `manual-action` | manual action feeding the same resource | the click's own chain is a `Π μ` member, so it is dominated by the ladder rather than switched off |
+| `producer` + `escalating-price` | `createProducerCategory` (L2), over `createScalingPurchasable` | bulk buy via `CostRequirement` inversion — the surface `ProducerList`'s `maxAffordable` / `buy(amount)` contract was written against |
+| `multiplier-stack` | `createModifierChain`, `bind`, trace / `BindingRecord` | four named chains; attribution is what makes the stack legible in the HUD |
+| `statistics` thresholds (revisions) | `createAchievementCategory` / `createAchievement` | threshold-triggered, granting a global factor — the splice points |
+| `automation` (dispatch ladder) | `AutomationTiers` | tier ids a typed union (`ProducerAutomationTier`); the ladder must actually withhold, per `.claude/rules/archetype-authoring.md` § Conformance |
 | Perturbation | `tunable()` at reader sites, registry in `modules/tuning.ts` | canon is `tug`; one path, no `data/balance.ts` |
 
 **This table is a prediction, and phase 2 falsifies it.** Producer's claim is that the
@@ -221,8 +225,8 @@ composition; revisions discrete and count-keyed; `m` derived from authored beat 
 with its flow channel declared; the payback-greedy allocation rule authored inside the
 projection; the rule's leverage measured, not assumed.
 
-**Committed (producer's realization):** one headline currency (multi-input/output
-conversion is Interlocker's line); eight tiers; exactly four modifier chains; a click
+**Committed (producer's realization):** one headline currency (`converter` chains are
+Interlocker's line); eight tiers; exactly four modifier chains; a click
 that matters early and is dominated around tier 3; the dispatcher as both the shipping
 autobuyer and the probe's driver; no adversary, no board, no run, no reset.
 

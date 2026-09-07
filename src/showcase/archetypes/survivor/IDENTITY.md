@@ -1,8 +1,17 @@
 # Survivor — archetype identity
 
-> **Wave Escalation + Cooldown-Rotation + Run-Scoped Upgrade Tree + Cross-Run Meta**
-> — stand inside a continuously escalating threat and respond in real time, run
-> after run. (Identity line: `../_identity.md`.)
+> **Automatic fire with positioning as the only input — a standing candidate, not
+> a row — inside continuously escalating opposition, a draft at every threshold,
+> and a run whose earnings bank across runs.** Stand inside the threat and respond
+> in real time, run after run. (Identity line: `../_identity.md`.)
+
+Grounding: **market, corpus pending.** The tag address (Action Roguelike ∧ Bullet
+Heaven) is the strongest in the set and the line cites no row: the corpus
+exemplars with sourced rosters are idle hybrids, and the survivors themselves —
+Vampire Survivors, Brotato, Halls of Torment — are unsourced. The core is the
+automatic-fire candidate in `open-loop-research/patterns/candidate-patterns.md`,
+which already holds Brotato and a refusal; the line rewrites from what the set
+shares once it is sourced, not from this build.
 
 **Topic: Mad Science × Action.** A containment breach you cannot leave. Your
 apparatus fires itself because that is what apparatus does; reagents recombine

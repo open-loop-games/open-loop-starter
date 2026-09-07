@@ -21,8 +21,10 @@ directions it grows through. Start there.
 | `_blank`   | Neutral skeleton — the starting point for a novel composition        |
 
 `_identity.md` is the identity-line registry across the set. It carries more lines than
-there are directories here — an identity line is a composition the pattern language
-validates, independent of whether an archetype has been built for it.
+there are directories here — a line is a region the studio wants a story for, held at
+its market address, its composition in the pattern language and its exemplar set, with
+a grounding class saying which of those research can currently back. A line exists
+independent of whether an archetype has been built for it.
 
 ## Where to look
 

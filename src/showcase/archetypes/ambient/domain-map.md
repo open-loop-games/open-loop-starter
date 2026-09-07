@@ -38,5 +38,5 @@ Hand-authored. The module-level concepts no single type owns — the
 relationships structure cannot derive. Kept small and co-located in the
 config so staleness stays visible against the generated surface above.
 
-- **no-anxiety contract** — Loop 9 (enemy scaling) and Loop 14 (cooldown urgency) are deliberately absent, not merely missing — nothing expires or punishes absence.
+- **no-anxiety contract** — Scaled opposition and cooldown urgency are deliberately refused, not merely missing — nothing expires or punishes absence.
 - **scene variant** — A revealed visual element (a building appears, an animal wanders in, a zone unlocks) — presentation, distinct from a mechanical unlock.

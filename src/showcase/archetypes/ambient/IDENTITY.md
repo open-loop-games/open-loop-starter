@@ -1,15 +1,21 @@
 # Ambient — archetype identity
 
-> **Idle Production + Auto-Production spine + Ambient-Progression engagement
-> commitment** — the companion-software incremental, defined as much by what's
-> *absent* as by what's present. The game you don't play so much as *keep*.
+> **`escalating-price` + `held-output` + `offline-progress` + `statistics`, with
+> `scaled-opposition` and every urgency refused** — the check-back game by
+> contrast, the `offline-progress` it refuses selected here. The
+> companion-software incremental, defined as much by what's *absent* as by what's
+> present. The game you don't play so much as *keep*.
 
 **Spine-formed.** The Cozy Farm content is declared invention — numbers are
 perturbation surface generated against the closed-form spine by engine-as-oracle
 bisection, never lifted from a single exemplar.
 Anti-Idle (2009), Rusty's Retirement (2024), Chillquarium and Tiny Pasture are the
 genre exemplars that validate the shape ships in the wild — cited as a set, never
-lifted. Identity line source: `../_identity.md` (Ambient row).
+lifted. Identity line source: `../_identity.md` (Ambient row). Grounding: **both**
+— the market names the region (Idler ∧ Desktop Companion) and the sourced
+exemplars share the rows the line cites. Two of those rows the realization
+declines: the exemplar set carries `manual-action`, and Cozy Farm's zero-click
+contract refuses it; it carries `random-draw`, and the reveals here are authored.
 
 ## What this archetype is
 
@@ -17,9 +23,10 @@ You open it once in the morning, glance at it while a pot boils, check it on the
 way back from a meeting, let it run at the edge of a monitor for an afternoon.
 Resources accumulate whether you are watching or not. Nothing expires, no wave is
 about to overrun you, no cooldown is about to waste. The game has committed
-*mechanically* to never punishing absence — enemy-scaling and cooldown-urgency are
-deliberately missing, not merely unbuilt. What remains is idle production,
-auto-production, a slowly unfolding unlock tree, and optional softened prestige.
+*mechanically* to never punishing absence — `scaled-opposition` and every cooldown
+urgency are deliberately refused, not merely unbuilt. What remains is production
+that runs on its own, `automation` buying the next thing, a slowly unfolding unlock
+tree, and optional softened `prestige`.
 The relationship is **companionship, not engagement**: the game lives on the
 desktop the way a plant lives on a desk.
 
@@ -32,8 +39,8 @@ is happy, it grew while I was away.*
 
 ## Rate-function spine / bucket
 
-**Bucket: geometric cost-scaling × achievement-modifier product, tuned gentle** —
-the canonical **Cost-Scaling** family, but with a shallow
+**Bucket: `escalating-price` ladder × `multiplier-stack`, tuned gentle** — the
+geometric-cost family, but with a shallow
 `costScaling = 1.08` (vs the genre-default 1.15). Each auto-producer is a geometric price
 ladder (`cost = baseCost · 1.08^count`), so its count grows ~logarithmically in
 accumulated primary; the shallow ladder is load-bearing — owned-count keeps
@@ -88,13 +95,13 @@ the archetype.
 
 | Pattern | Engine primitive | Note |
 |---|---|---|
-| Idle Production | continuous `Producer` (zero manual trigger) | no click affordance — deliberate absence |
-| Cost Scaling (gentle) | `Producer.getCost(n)` geometric ladder | `cost = baseCost · 1.08^count` |
-| Auto-Production | shipping autobuyers (`modules/autobuyers/`) | auto-buy IS the mechanic; the arc probe drives these |
-| Automation progression | `AutomationTiers` (`modules/automation.ts`) | `manual → basic`; ladder currently open — see `BALANCING.md` § Known thin |
-| Ambient-Progression | `Unlock` sweep + scene-variant watch bridge | soft-reveals unconditional (no-pressure contract) |
-| Achievement multipliers | `AchievementCategory.registerTiered` | low-urgency pacing markers feed the rate chain |
-| Offline/resume | `processOfflineTime` + `sessionClock` | glance-check payoff; round-trips within 0.5% |
+| `producer`, with `manual-action` refused | continuous `Producer` (zero manual trigger) | no click affordance — deliberate absence |
+| `escalating-price` (gentle) | `Producer.getCost(n)` geometric ladder | `cost = baseCost · 1.08^count` |
+| `automation` | shipping autobuyers (`modules/autobuyers/`) | auto-buy IS the mechanic; the arc probe drives these |
+| automation ladder gate | `AutomationTiers` (`modules/automation.ts`) | `manual → basic`; ladder currently open — see `BALANCING.md` § Known thin |
+| the soft reveal (no row) | `Unlock` sweep + scene-variant watch bridge | soft-reveals unconditional (no-pressure contract) |
+| `statistics` thresholds → `multiplier-stack` | `AchievementCategory.registerTiered` | low-urgency pacing markers feed the rate chain |
+| `offline-progress` | `processOfflineTime` + `sessionClock` | glance-check payoff; round-trips within 0.5% |
 | Perturbation | module `TuningRegistry` (`tunable()`) | constants via tuning (`AmbientTuningRegistryKey`) |
 
 ## Balance model

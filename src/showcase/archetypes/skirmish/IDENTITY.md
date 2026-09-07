@@ -2,15 +2,18 @@
 
 ## Identity line
 
-> **Real-time strategy** — Resource Accumulation + Auto-Production funding **N
-> factions** that contest one continuous field in real time; build order,
-> composition and engagement are the decision surface, and **AI Rosters** drive
-> the seats.
+> **Real-time strategy** — a design claim from the genre: **N factions**, each
+> funding an army from a compounding economy, contesting one continuous field in
+> real time; build order, composition and engagement are the decision surface
+> because rivals make theirs at the same time, and policies drive the seats.
 
-Registered in `../_identity.md` (Skirmish row). Patterns: Activity Systems
-(tier 0, continuous production) and the Automation CPP (100%) carry the economy;
-**AI Rosters** (adjacent — parameterized-personality sub-shape) carries the
-opponents, which is load-bearing rather than decorative here.
+Registered in `../_identity.md` (Skirmish row). Grounding: **neither** — the tag
+region is RTS by definition, the corpus holds no sourced exemplar for the shape,
+and no row is cited. The economy is the substrate every archetype shares (a stock,
+a rate, a spend); the opponents are what is load-bearing rather than decorative,
+and they come from the adjacent game-AI corpus
+(`open-loop-research/patterns/adjacent/ai-rosters.md` — a keyed collection of
+behavioural variants, drawn from at match creation).
 
 **N factions, not a duel** — this is the line against Tug, whose identity is
 bilateral zero-sum over one shared lane _by construction_. Three armies can meet;
@@ -20,9 +23,9 @@ Free-for-all is the base case, teams a friend/foe relation over the same
 substrate. The current cut seats two (`Side = 'a' | 'b'`) — that is a first
 implementation, not the archetype, and § Growth ports carries the widening.
 
-**No spatial pattern is in this line, deliberately.** Placement-Adjacency wants
-neighbour semantics and Routing-Traversal wants path-as-commitment; skirmish has
-neither. Units acquire and close. The field is where attrition _resolves_ rather
+**No spatial row is in this line, deliberately.** `positional-effect` wants
+outcomes that turn on arrangement and `player-siting` wants acquiring and siting
+as two decisions; skirmish has neither. Units acquire and close. The field is where attrition _resolves_ rather
 than a surface anyone authors — it is load-bearing in the spine (it sets how many
 units are in contact at once) without being a pattern the player composes.
 Claiming either sibling here would be the easy mis-file.

@@ -7,7 +7,7 @@ export default {
   curated: [
     {
       term: 'no-anxiety contract',
-      note: 'Loop 9 (enemy scaling) and Loop 14 (cooldown urgency) are deliberately absent, not merely missing — nothing expires or punishes absence.',
+      note: 'Scaled opposition and cooldown urgency are deliberately refused, not merely missing — nothing expires or punishes absence.',
     },
     {
       term: 'scene variant',

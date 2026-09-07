@@ -1,14 +1,19 @@
 # Cycler — archetype identity
 
-> **Phase-Alternation + Time Systems + Placement-Adjacency + Wave Escalation over
-> shared state.** Build during the calm, survive the pressure, repeat with
-> escalating stakes.
+> **Phase alternation — a calm phase and a pressure phase sharing one state —
+> which no live row names, over `wave` + `scheduled-event` + `run-setup` +
+> `held-output` + `positional-effect`.** Build during the calm, survive the
+> pressure, repeat with escalating stakes.
 
 One screen: what the archetype *is*, the closed-form spine that balances it,
 cycler's committed realization, and the ports a fork grows it through. The spine is
 the load-bearing part — read that section slowly; the rest hangs off it.
 
-Identity line source: `../_identity.md` (Cycler row). This is a
+Identity line source: `../_identity.md` (Cycler row). Grounding: **market,
+corpus pending** — the tag address (Tower Defense ∧ Base Building) holds the
+exemplar set cleanly, but only one exemplar (Dome Keeper) is sourced, so the rows
+above are the parts that one carries; the alternation that composes them has no
+row and becomes a candidate only once a refusal is read in source. This is a
 pattern-language composition, not a port of any one game. Thronefall (Cycler ×
 Defender), Kingdom Two Crowns (Cycler × side-scroll Explorer), They Are Billions
 (Cycler × RTS) validate the composition as a *set, with their crosses showing* —
@@ -39,7 +44,7 @@ with a **saturating** build curve against an **exogenous geometric** pressure
 curve. The load-bearing correction from multiverse-hr's data sweep: real within-run
 capacity does **not** compound geometrically — every reinvestment ladder is
 convergent (geometric cost over concave output, hard-capped base output, and
-Placement-Adjacency **board-fill saturating** on a finite grid). So capacity is
+`positional-effect` **board-fill saturating** on a finite grid). So capacity is
 concave and **saturates to a ceiling `D_max`**, and the run ends when a
 **time-driven burn** overtakes that ceiling:
 
@@ -91,7 +96,7 @@ study (the warhead/lance combat is the pixi/SVG layer the mock stubs).
 
 **The spine, concretized.** The abstract ceiling `D_max` is realized as **defense
 clear-rate `C`** — aggregate Lance interception, saturating on the same three
-forces (finite forward cells, convergent upgrade ladders, Placement-Adjacency
+forces (finite forward cells, convergent upgrade ladders, `positional-effect`
 board-fill). The exogenous burn is the **salvo schedule**: wave `N` arrives at
 strength `W_N = W₀·g^N`. A **line-HP buffer** absorbs the leak-through, adding a
 bounded tail:
@@ -180,13 +185,13 @@ A fork grows the archetype *up* through these. Each feeds a named part of the sp
 
 | Pattern | Engine primitive | Note |
 |---|---|---|
-| Phase-Alternation + Time Systems | phase/state controller + an exogenous wave sequencer | **candidate primitive** — hard build↔defend; `createSequencer` drives the salvo schedule as an *authored schedule*, never a state-derived cost (`TODO(expansion)` + `candidate-primitives.md` if no scheduled-drain primitive exists) |
-| Placement-Adjacency | building-to-building synergy over a finite grid (Lances + Reactors share cells; Relay boosts both) | builds `C`; board-fill **saturation** is what makes the crossing log |
-| Wave Escalation | geometric salvo schedule `W₀·g^N` in `data/` | exogenous; guarantees termination |
+| phase alternation (no row) + `scheduled-event` | phase/state controller + an exogenous wave sequencer | **candidate primitive** — hard build↔defend; `createSequencer` drives the salvo schedule as an *authored schedule*, never a state-derived cost (`TODO(expansion)` + `candidate-primitives.md` if no scheduled-drain primitive exists) |
+| `player-siting` + `positional-effect` | building-to-building synergy over a finite grid (Lances + Reactors share cells; Relay boosts both) | builds `C`; board-fill **saturation** is what makes the crossing log |
+| `wave` + `scaled-opposition` | geometric salvo schedule `W₀·g^N` in `data/` | exogenous; guarantees termination |
 | Wall + repair | an HP resource + surplus-fed drip | `Δ_wall`; damaged by leak-through only, never the board |
 | Lance operating-draw | per-tick `subtractResource` while firing | economic sink; keep it off the run-end condition |
 | Shared state | `persistent()` refs across phases | reset only at Redeploy, never at the phase boundary |
-| Prestige / re-peg | reset + sublinear (cbrt) currency award | re-baselines `W₀`; run-end pays out (Industry-Idle, not Thronefall) |
+| `prestige` + `meta-progression` (re-peg) | reset + sublinear (cbrt) currency award | re-baselines `W₀`; run-end pays out (Industry-Idle, not Thronefall) |
 
 ## What is committed / not committed
 

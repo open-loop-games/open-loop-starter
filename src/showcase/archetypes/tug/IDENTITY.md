@@ -1,15 +1,20 @@
 # Tug — archetype identity
 
-> **Adversarial Auto-Send Lane Push** — Resource Accumulation + Auto-Production
-> spine over a Routing-Traversal shared lane, with the opponent's economy as a
-> live zero-sum pressure source. You author pressure against another agent
-> authoring pressure in the same shared space.
+> **The shared lane — two economies feeding one contested path — which no row
+> names, over `scaled-opposition` + `positional-effect` + `loss-on-failure` +
+> `ending`**, with the opponent's economy as a live zero-sum pressure source. You
+> author pressure against another agent authoring pressure in the same shared
+> space.
 
 **Spine-formed.** The SciFi Armada content (units, personas, counter-matrix) is
 declared invention — numbers are perturbation surface settled against the spine
-by engine-as-oracle sensitivity sweeps, never lifted from a single exemplar. The lane-push / tug-of-war genre validates the shape ships in
-the wild — cited as a set, never lifted. Identity line source:
-`../_identity.md` (Tug row).
+by engine-as-oracle sensitivity sweeps, never lifted from a single exemplar. The
+lane-push / tug-of-war genre validates the shape ships in the wild — cited as a
+set, never lifted. Identity line source: `../_identity.md` (Tug row). Grounding:
+**market, corpus pending**, thin on both axes — the tag address (Auto Battler ∧
+(Tower Defense ∨ RTS)) is small, one exemplar (Warfare 1917) is sourced and the
+rows above are the ones it carries; the lane itself has no row and no refusal
+read yet.
 
 ## What this archetype is
 
@@ -34,9 +39,9 @@ and drops splash before your tanks arrive.
 
 ## Rate-function spine / bucket
 
-**Bucket: adversarial zero-sum lane over a Cost-Scaling economy — no single
-closed form.** Each side's economy is a familiar spine (geometric income-upgrade
-ladders feeding Auto-Production units), but it runs _inside a match against a
+**Bucket: adversarial zero-sum lane over an `escalating-price` economy — no
+single closed form.** Each side's economy is a familiar spine (geometric
+income-upgrade ladders feeding unit production), but it runs _inside a match against a
 live opposing economy_, so the archetype's pacing is not a fire-time curve — it
 is a **distribution** over stochastic match outcomes. That is the honest
 consequence of being adversarial: as with any wide interacting graph, the whole
@@ -103,11 +108,11 @@ match limit.
 
 | Pattern                      | Engine primitive                                  | Note                                                |
 | ---------------------------- | ------------------------------------------------- | --------------------------------------------------- |
-| Resource Accumulation        | per-side income `Resource` + rate chain           | both sides accrue symmetrically at `baseIncomeRate` |
-| Cost-Scaling income upgrades | geometric refinery ladders (`tunable()` costs)    | the fixed-strategy ROI surface (methodology #5)     |
-| Auto-Production              | per-side unit shop + sequencer + cooldowns        | send dispatches a unit into the shared lane         |
-| Routing-Traversal lane       | single shared `lane` module, all-pairs combat     | fortress treated as just-another opposing unit      |
-| Counter matrix               | N×N data table read by the combat resolver        | `strongCounter` sharpness = signature knob          |
+| income (substrate)           | per-side income `Resource` + rate chain           | both sides accrue symmetrically at `baseIncomeRate` |
+| `escalating-price` upgrades  | geometric refinery ladders (`tunable()` costs)    | the fixed-strategy ROI surface (methodology #5)     |
+| unit production + send       | per-side unit shop + sequencer + cooldowns        | send dispatches a unit into the shared lane         |
+| the shared lane (no row)     | single shared `lane` module, all-pairs combat     | fortress treated as just-another opposing unit      |
+| `type-effectiveness`         | N×N data table read by the combat resolver        | `strongCounter` sharpness = signature knob          |
 | Adversarial pressure         | `modules/opponent-bot.ts` (side-parameterized AI) | ships as game code; auto-send IS the mechanic       |
 | Match orchestration          | `modules/match.ts` (start/end/reset, events)      | `matchEnded` fires pre-reset — capture then         |
 | Perturbation                 | module `TuningRegistry` (`tunable()`)             | unit costs, refinery, fortress HP, matrix sharpness |
