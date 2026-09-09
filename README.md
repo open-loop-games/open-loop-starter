@@ -53,7 +53,7 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 
 ## Archetype demos
 
-`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a validated archetype — a pattern-language composition carried by a rate-function balance spine — showing a distinct slice of engine systems and a distinct layout shell. Exemplar games validate that each composition ships in the wild; they are cited as a set and are not clone targets. Pick the one closest to your game and `eject` it (above).
+`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a composition in research's pattern language — its identity line — carried by a rate-function balance spine, showing a distinct slice of engine systems and a distinct layout shell. How much of a shape research can ground varies by archetype and is stated per line as its grounding class in `src/showcase/archetypes/_identity.md`: some are corpus-grounded, others are starter design claims said as such. Exemplar games validate that a composition ships in the wild; they are cited as a set and are not clone targets. Pick the one closest to your game and `eject` it (above).
 
 | Archetype | Demo | Shell | Engine systems | What it shows |
 |---|---|---|---|---|

@@ -1,6 +1,6 @@
 # Archetypes
 
-Worked examples of validated game shapes, composed from the starter's batteries. Each one
+Worked examples of game shapes, composed from the starter's batteries. Each one
 is self-bootable, forkable with `pnpm eject <name>`, and is a composition in research's
 pattern language carried by a rate-function spine that generates its balance.
 

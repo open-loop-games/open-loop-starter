@@ -31,7 +31,7 @@ detail belongs in `BALANCING.md` beside this file, per
 ## What this archetype is
 
 Nothing yet, deliberately. `_blank` is hoisted by `pnpm eject --clean` for a novel
-composition that no validated archetype fits — the honest base, so there is no
+composition that no registered archetype fits — the honest base, so there is no
 archetype content to gut. It ships one example mechanic (a number that rises) purely
 to demonstrate the canonical wiring; the game's real identity is the fork's to write.
 

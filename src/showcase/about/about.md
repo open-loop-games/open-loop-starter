@@ -16,10 +16,11 @@ view over that catalogue.
 - **Engine** — `open-loop-engine` ships the runtime primitives those
   patterns compose from: resources, modifier chains, formulas, save/load,
   the game loop, harness systems for sim and balance work.
-- **Starter** — this repo. The pattern library made legible: each
-  archetype is a working demo of one validated game shape, with its
-  manifest naming the patterns it composes, the engine primitives it
-  uses, the beats it expects, and the exemplars it descends from.
+- **Starter** — this repo. The pattern language made legible: each
+  archetype is a working demo of one game shape, its identity line naming
+  the rows it composes and the grounding class research gives it, and its
+  manifest naming the engine primitives it uses, the beats it expects,
+  and the exemplars it descends from.
 
 ## How to fork
 
