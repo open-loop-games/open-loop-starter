@@ -7,9 +7,12 @@ view over that catalogue.
 
 ## The trilogy
 
-- **Research** — `open-loop-research` catalogues 78+ incremental games and
-  distils them into 12 behavioural patterns tiered 0–4 by validated
-  prevalence. Source of truth for "is this pattern real?".
+- **Research** — `open-loop-research` reads incremental games against their
+  source and distils them into a pattern vocabulary, every entry a decision a
+  designer makes: patterns (a mechanism you select), compositions (recurring
+  bundles of them) and substrate (machinery nobody selects). No tiers and no
+  prevalence gates — a row earns its place by being selectable, refusable and
+  irreducible. Source of truth for "is this pattern real?".
 - **Engine** — `open-loop-engine` ships the runtime primitives those
   patterns compose from: resources, modifier chains, formulas, save/load,
   the game loop, harness systems for sim and balance work.

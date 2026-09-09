@@ -1,8 +1,23 @@
 # _blank — archetype identity (template)
 
+## Identity line
+
 > **The honest blank base.** No archetype composition, no exemplar, no lifted
 > numbers — a single tracked number rising at a tunable rate, wired through the
 > full canonical shape so a novel composition starts green and consistent.
+
+**Grounding: unregistered.** `_blank` names no region research has a story for, so
+it holds none of the three addresses `../_identity.md` records and carries no
+grounding class. That is a different case from `neither`, which is a starter design
+claim about a real market region; a novel composition simply has no registry row
+until someone writes one.
+
+A real archetype replaces both lines. Source the identity line from `../_identity.md`
+and carry the grounding class that registry gives it — the class fixes what the line
+may cite: rows by handle only where a sourced exemplar carries them, a design claim
+said as one, and no rows at all in the `neither` class. Register the line there
+before writing it here; a line that exists only in this file is ungrounded by
+construction.
 
 This file is the template for a real archetype's `IDENTITY.md`. It carries every
 section `.claude/rules/archetype-authoring.md` § IDENTITY.md — required sections

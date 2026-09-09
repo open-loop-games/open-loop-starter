@@ -1,32 +1,53 @@
 ---
-title: Balance Guidance
-date: '2026-04-27'
+title: Balance guidance — starter index
+date: '2026-09-09'
 ---
 
-# Balance Guidance
+# Balance guidance
 
-Balance tooling and AI-opponent design guidance for Open Loop game consumers.
+Where balance methodology lives for a starter fork, and what the shipped archetypes
+already demonstrate. The methodology is the engine's; this file routes and indexes,
+and states no rule of its own.
 
----
+## Where the methodology lives
 
-## AI variety — persona rosters
+- `open-loop-engine/docs/consumer-guide-balance.md` — balancing an economy off a
+  declared spine, and why a probe reports rather than asserts.
+- `open-loop-engine/docs/consumer-guide-balance-agents.md` — balancing against AI
+  seats. Read § Personas are a coverage axis, not a tuning knob before adding a
+  persona to move a number.
+- `open-loop-engine/docs/consumer-guide-recipes.md` § Persona-roster composition —
+  the engine substrate for a roster: `SequencerItem` carrying persona identity and
+  its param bundle, and the sequencer selection strategies.
+- `.claude/rules/archetype-authoring.md` § Balance — where each surface lands — the
+  starter's own placement contract: spine in `data/`, then projection, probe, suite.
 
-Any archetype with an AI-controlled entity (opponent, content agent, automation bot) benefits from shipping a **roster of N differentiated agents** rather than a single fixed behavior. The pattern is called AI rosters in the research library and appears in 80% of games with AI-controlled entities.
+## AI variety — where the shape comes from
 
-Two composition-cookbook writeups cover the implementation recipes:
+An archetype with an AI-controlled seat can ship a roster of differentiated agents
+rather than one fixed behavior. The shape is described in
+`open-loop-research/patterns/adjacent/ai-rosters.md`.
 
-- **[Parameterized personality](../../open-loop-research/practical/composition-cookbook/parameterized-personality.md)** — the parent recipe. N hand-authored param bundles; one decision function reads the active bundle. Covers difficulty-tier discipline, mode-roster composition, exploitability-as-design, believability calibration, and four evidence-cluster variations (V1 needs/mood, V2 memory-stream, V3 skill-library, V4 social-state). Start here for opponent-seat and content-agent-seat AI variety.
+**Read its standing carefully.** It is an *adjacent* shape, not a library row — its
+evidence sits outside the incremental corpus, drawn from game-AI sources, and
+`open-loop-research/LIBRARY.md` holds that incremental games cannot test such shapes.
+Its coverage figure is stated over the game-ai-variety subcorpus it was read from and
+is calibration for that study, not a prevalence claim about incremental games. It is
+not a row an identity line may cite.
 
-- **[Procedural personas](../../open-loop-research/practical/composition-cookbook/procedural-personas.md)** — specialization for search-based agents. N objective functions instead of N param bundles; behavior emerges from the search process. Start here for tester-seat agents and exploiter-role opponent design.
+Implementation recipes sit in research's composition cookbook:
+`open-loop-research/practical/composition-cookbook/parameterized-personality.md` is
+the parent — N hand-authored param bundles read by one decision function — and
+`procedural-personas.md` beside it is the specialization for search-based agents.
 
-The engine-level worked example (with code) is in `open-loop-engine/docs/consumer-guide.md` § Persona-roster composition.
+## What the shipped archetypes demonstrate
 
----
-
-## Worked variety samples
-
-Archetype-specific implementations:
-
-- **Tug** — OL-726: parameterized-personality roster on `src/archetypes/tug/modules/opponent-bot.ts` (N≥3 distinct personas via `createRoundRobinStrategy` or `createConditionalStrategy`)
-- **Defender/TD/Maul** — OL-727: wave-spawner variety via wave templates × tier dimensions × spawn tempo × type/elemental rotation
-- **Solo-archetype bot** — OL-728: balance-bot variety demonstrating foundation works outside opponent seat (producer content-agent variation or idle-loop playtest-bot variation)
+- **Adversarial seats carry a persona roster.** `tug` holds parameter vectors over
+  one decision architecture (`src/showcase/archetypes/tug/data/personality.ts`,
+  `PersonaKey`), read by `modules/opponent-bot.ts`. `skirmish` scales its decision
+  cadence per persona (`modules/automation.ts`) and ships rush against greedy.
+- **Solo archetypes carry tier-gated player automation, not an opponent roster.**
+  `ambient` and `producer` each hold a `modules/automation.ts` behind
+  `AutomationTiers`. That is the automation-as-game-code convention, and it is what
+  the balance harness drives — a different object from an opponent seat, and not a
+  place a roster is owed.
