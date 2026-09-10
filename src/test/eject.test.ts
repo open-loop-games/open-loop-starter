@@ -24,6 +24,9 @@ describe('eject plan', () => {
     expect(plan.gameId).toBe('cookie-tycoon');
     expect(plan.deletes).toContain('src/showcase');
     expect(plan.deletes).toContain('src/test/gallery-strip.test.ts');
+    // The instruction surface strips too: every rule is paths-scoped to the
+    // showcase tree, so a fork would inherit globs that can never match.
+    expect(plan.deletes).toContain('.claude/rules');
     // Eject strips its own machinery so the fork starts clean + green.
     expect(plan.deletes).toContain('scripts/eject.mjs');
     expect(plan.deletes).toContain('src/test/eject.test.ts');

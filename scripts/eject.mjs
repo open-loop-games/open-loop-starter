@@ -33,6 +33,9 @@ const GAME_DIR = 'src/game';
 // starter-identity files a fork must not inherit.
 const DEMO_DELETES = [
   SHOWCASE,
+  // Every rule in here is paths-scoped to the showcase tree, so in a fork its
+  // globs can never match a file that exists. Claude-only either way.
+  '.claude/rules',
   'src/test/gallery-strip.test.ts',
   'src/test/eject.test.ts',
   'scripts/eject.mjs',
