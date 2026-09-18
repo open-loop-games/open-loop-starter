@@ -35,6 +35,18 @@ export interface UnitTypeDef {
 export type CounterMatrix = readonly (readonly number[])[];
 
 export type PersonaKey = 'rush' | 'investor' | 'skirmish' | 'boom' | 'combined';
+export interface TargetingWeights {
+  /** Weight on enemy army strength. Positive = target stronger military; negative = target weaker prey. Defaults to 1. */
+  armyWeight?: number;
+  /** Weight on enemy economic strength (workers). Higher = prioritize macro rivals. Defaults to 1. */
+  economyWeight?: number;
+  /** Distance decay exponent p >= 0. Higher = prefer geographically closer bases. Defaults to 1. */
+  distanceExponent?: number;
+  /** Stickiness multiplier applied to the currently targeted base [0..1]. Prevents target fluttering. Defaults to 0.2. */
+  focusWeight?: number;
+  /** Weight on base vulnerability (favoring damaged bases). Defaults to 0. */
+  weaknessWeight?: number;
+}
 
 export interface PersonaDef {
   /** Stable identifier used in options and presets. */
@@ -55,6 +67,8 @@ export interface PersonaDef {
   cadenceJitter?: number;
   /** Relative draft weights across unit types. */
   composition: Partial<Record<UnitTypeId, number>>;
+  /** Meso-AI targeting policy weights for multi-enemy target selection. */
+  targeting?: TargetingWeights;
 }
 
 export type FactionId = string;

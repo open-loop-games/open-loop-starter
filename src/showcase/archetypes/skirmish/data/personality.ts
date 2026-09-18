@@ -29,6 +29,13 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
     maxSpawnPerBurst: Infinity,
     cadenceJitter: 0.15,
     composition: { trooper: 1 },
+    targeting: {
+      armyWeight: -0.5,
+      economyWeight: 0.5,
+      distanceExponent: 2.0,
+      focusWeight: 0.3,
+      weaknessWeight: 1.5,
+    },
   },
   investor: {
     id: 'investor',
@@ -41,6 +48,13 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
     maxSpawnPerBurst: Infinity,
     cadenceJitter: 0.15,
     composition: { trooper: 1 },
+    targeting: {
+      armyWeight: 1.5,
+      economyWeight: 0.5,
+      distanceExponent: 1.0,
+      focusWeight: 0.2,
+      weaknessWeight: 0.5,
+    },
   },
   skirmish: {
     id: 'skirmish',
@@ -53,6 +67,13 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
     maxSpawnPerBurst: 3,
     cadenceJitter: 0.15,
     composition: { archer: 3, trooper: 1 },
+    targeting: {
+      armyWeight: 0.5,
+      economyWeight: 2.0,
+      distanceExponent: 0.8,
+      focusWeight: 0.2,
+      weaknessWeight: 0.5,
+    },
   },
   boom: {
     id: 'boom',
@@ -65,6 +86,13 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
     maxSpawnPerBurst: Infinity,
     cadenceJitter: 0.15,
     composition: { cavalry: 2, trooper: 1 },
+    targeting: {
+      armyWeight: 1.0,
+      economyWeight: 2.5,
+      distanceExponent: 0.5,
+      focusWeight: 0.25,
+      weaknessWeight: 0,
+    },
   },
   combined: {
     id: 'combined',
@@ -77,6 +105,13 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
     maxSpawnPerBurst: Infinity,
     cadenceJitter: 0.15,
     composition: { trooper: 2, archer: 1, cavalry: 1 },
+    targeting: {
+      armyWeight: 1.0,
+      economyWeight: 1.0,
+      distanceExponent: 1.0,
+      focusWeight: 0.2,
+      weaknessWeight: 0.5,
+    },
   },
 };
 

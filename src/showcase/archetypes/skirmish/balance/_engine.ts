@@ -13,8 +13,15 @@
 
 import { seedRNG, type Analyzer, type Engine } from '@open-loop/engine';
 import { createGameEngine } from '../boot';
-import { MatchKey, type AutomationOptions, type Side, PERSONAS, type PersonaKey } from '../modules';
-
+import {
+  MatchKey,
+  type AutomationOptions,
+  type FactionId,
+  PERSONAS,
+  type PersonaKey,
+  type FactionElimination,
+} from '../modules';
+import { DEFAULT_TRIAD_FACTIONS } from '../data/tactical';
 let engineCounter = 0;
 
 /**
@@ -27,10 +34,18 @@ export const RUSH: AutomationOptions = { ...PERSONAS.rush, cadenceJitter: 0 };
 export const INVESTOR: AutomationOptions = { ...PERSONAS.investor, cadenceJitter: 0 };
 
 export interface SkirmishSimOptions {
-  /** Seat `a` policy. Default: the rush persona. */
+  /** Participating factions roster. Defaults to ['a', 'b'] or derived from seats/personas. */
+  factions?: readonly FactionId[];
+  /** Per-seat policy options for arbitrary factions. */
+  seats?: Partial<Record<FactionId, AutomationOptions>>;
+  /** Per-seat named personas. */
+  personas?: Partial<Record<FactionId, PersonaKey>>;
+  /** Seat `a` policy (legacy 2-player convenience). */
   a?: AutomationOptions;
-  /** Seat `b` policy. Default: the investor persona. */
+  /** Seat `b` policy (legacy 2-player convenience). */
   b?: AutomationOptions;
+  /** Base placement radius. */
+  baseRadius?: number;
   /**
    * Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse
    * steps that the default cap would otherwise clamp, silently stretching
@@ -56,19 +71,56 @@ export function buildSkirmishSimEngine(options?: SkirmishSimOptions): Engine {
   if (options?.seed !== undefined) {
     seedRNG(options.seed);
   }
+  let factions = options?.factions;
+  const seats: Partial<Record<FactionId, AutomationOptions>> = { ...options?.seats };
+  if (options?.a && !seats.a) seats.a = options.a;
+  if (options?.b && !seats.b) seats.b = options.b;
+
+  if (!factions) {
+    if (options?.personas && Object.keys(options.personas).length > 0) {
+      factions = Object.keys(options.personas);
+    } else if (Object.keys(seats).length > 0) {
+      factions = Object.keys(seats);
+    } else {
+      factions = ['a', 'b'];
+    }
+  }
+
+  if (factions.length === 2 && factions[0] === 'a' && factions[1] === 'b') {
+    if (!seats.a) seats.a = RUSH;
+    if (!seats.b) seats.b = INVESTOR;
+  }
+
   const { engine } = createGameEngine({
     persistenceNamespace: `skirmish-balance-${++engineCounter}`,
     maxDeltaTime: options?.maxDeltaTime,
-    seats: {
-      a: options?.a ?? RUSH,
-      b: options?.b ?? INVESTOR,
-    },
+    factions,
+    seats,
+    personas: options?.personas,
+    baseRadius: options?.baseRadius,
   });
   engine.selectMod('skirmish');
   engine.start();
   engine.stop();
   engine.tryInject(MatchKey)!.start();
   return engine;
+}
+
+/** Build seat configuration for an N-faction persona matchup, optionally with jitter. */
+export function seatsForTriad(
+  personas: readonly [PersonaKey, PersonaKey, PersonaKey],
+  factions: readonly FactionId[] = DEFAULT_TRIAD_FACTIONS,
+  jitter?: number,
+): SkirmishSimOptions {
+  const seats: Record<FactionId, AutomationOptions> = {};
+  for (let i = 0; i < factions.length; i++) {
+    const f = factions[i];
+    const pKey = personas[i];
+    const opts = { ...PERSONAS[pKey] };
+    if (jitter !== undefined) opts.cadenceJitter = jitter;
+    seats[f] = opts;
+  }
+  return { factions, seats };
 }
 
 /** A seat pairing on the split axis, for the sweep probes. */
@@ -98,11 +150,13 @@ export function seatsForPersonas(
 
 export interface OutcomeCapture {
   /** Winner of the match, once decided. */
-  winner: Side | null;
-  /** Why it ended — `'defeat'` when a base fell, `'time-limit'` otherwise. */
+  winner: FactionId | null;
+  /** Why it ended — `'defeat'` / `'last-standing'` when a base fell, `'time-limit'` otherwise. */
   reason: string | null;
   /** Match clock at resolution, in game-seconds. */
   durationSec: number;
+  /** Elimination history in chronological order. */
+  eliminations: FactionElimination[];
 }
 
 /**
@@ -115,13 +169,19 @@ export interface OutcomeCapture {
  * rather than inspecting engine state at the end.
  */
 export function createOutcomeCapture(engine: Engine): OutcomeCapture {
-  const capture: OutcomeCapture = { winner: null, reason: null, durationSec: 0 };
+  const capture: OutcomeCapture = {
+    winner: null,
+    reason: null,
+    durationSec: 0,
+    eliminations: [],
+  };
   const match = engine.tryInject(MatchKey)!;
   match.on('matchEnded', (payload) => {
     if (capture.reason !== null) return; // first match only
     capture.winner = payload.outcome.winner;
     capture.reason = payload.outcome.reason;
     capture.durationSec = payload.elapsedSec;
+    capture.eliminations = payload.eliminations ?? [];
   });
   return capture;
 }

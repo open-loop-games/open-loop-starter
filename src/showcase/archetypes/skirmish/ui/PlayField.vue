@@ -2,8 +2,8 @@
 import { onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
 import { Application, Assets, Container, Graphics, Sprite, TilingSprite, Texture } from 'pixi.js';
 import { useModule } from '@/composables/useModule';
-import { TacticalKey, SIDES, type Side } from '../modules';
-import { FIELD, BASE_HP, type UnitTypeId } from '../data/tactical';
+import { TacticalKey, type FactionId } from '../modules';
+import { FIELD, BASE_HP, type UnitTypeId, getFactionDef } from '../data/tactical';
 import unitUrl from '../assets/unit-soldier.png';
 import keepUrl from '../assets/keep.png';
 import groundUrl from '../assets/ground-grass.png';
@@ -24,28 +24,12 @@ import groundUrl from '../assets/ground-grass.png';
 const tactical = useModule(TacticalKey);
 const host = useTemplateRef<HTMLDivElement>('host');
 
-// Heraldry — the faction read. Light-gray sprites (unit + keep) tint cleanly to
-// these; everything else on the field is earthen so the two hosts pop.
-const TINT: Record<Side, number> = { a: 0xd9524b, b: 0x4f86d6 };
 const TYPE_SCALE: Record<UnitTypeId, number> = {
   trooper: 1.0,
   archer: 0.88,
   cavalry: 1.25,
 };
 
-const TYPE_TINT: Record<Side, Record<UnitTypeId, number>> = {
-  a: {
-    trooper: 0xd9524b,
-    archer: 0xf27d74,
-    cavalry: 0x9e241e,
-  },
-  b: {
-    trooper: 0x4f86d6,
-    archer: 0x7da8ed,
-    cavalry: 0x275296,
-  },
-};
-// Display sizes in FIELD units (the world container carries field→pixel scale).
 const UNIT_SIZE = 4.6;
 const KEEP_SIZE = 13;
 const TEX_PX = 64; // source sprite edge
@@ -60,7 +44,7 @@ let unitTex: Texture;
  *  letterbox offset + uniform field→pixel scale so nothing else does math. */
 let world: Container | null = null;
 let unitLayer: Container | null = null;
-const keeps = {} as Record<Side, { sprite: Sprite; bar: Graphics }>;
+const keeps = {} as Record<FactionId, { sprite: Sprite; bar: Graphics }>;
 /** Rendered unit sprites keyed by the sim's globally-unique unit id, with the
  *  eased render position that lags the authoritative sim position. */
 const sprites = new Map<number, { sprite: Sprite; rx: number; ry: number }>();
@@ -81,35 +65,45 @@ function frame(dtSec: number): void {
   const k = 1 - Math.exp(-SMOOTH * dtSec);
 
   // Keeps: static position, health bar + fade track baseHp.
-  for (const side of SIDES) {
-    const frac = Math.max(0, tactical.baseHp[side].value / BASE_HP);
-    const keep = keeps[side];
-    keep.sprite.alpha = 0.55 + 0.45 * frac; // wounded keep dims
-    const bw = KEEP_SIZE;
-    const bx = keep.sprite.x - bw / 2;
-    const by = keep.sprite.y - KEEP_SIZE * 0.72;
-    keep.bar
-      .clear()
-      .rect(bx, by, bw, 1.4)
-      .fill({ color: 0x000000, alpha: 0.4 })
-      .rect(bx, by, bw * frac, 1.4)
-      .fill({ color: TINT[side], alpha: 0.95 });
+  for (const f of tactical.factions) {
+    const hp = tactical.baseHp[f]?.value ?? 0;
+    const frac = Math.max(0, hp / BASE_HP);
+    const keep = keeps[f];
+    if (keep) {
+      const fDef = getFactionDef(f);
+      keep.sprite.alpha = frac <= 0 ? 0.25 : 0.55 + 0.45 * frac;
+      const bw = KEEP_SIZE;
+      const bx = keep.sprite.x - bw / 2;
+      const by = keep.sprite.y - KEEP_SIZE * 0.72;
+      keep.bar.clear();
+      if (frac > 0) {
+        keep.bar
+          .rect(bx, by, bw, 1.4)
+          .fill({ color: 0x000000, alpha: 0.4 })
+          .rect(bx, by, bw * frac, 1.4)
+          .fill({ color: fDef.color, alpha: 0.95 });
+      }
+    }
   }
 
   // Units: reconcile sprite set against the live arrays, then ease toward truth.
   const seen = new Set<number>();
-  for (const side of SIDES) {
-    const facing = side === 'a' ? 1 : -1;
-    const s = (UNIT_SIZE / TEX_PX) * facing;
-    for (const u of tactical.units[side].value) {
+  for (const f of tactical.factions) {
+    const fDef = getFactionDef(f);
+    const units = tactical.units[f]?.value ?? [];
+    for (const u of units) {
       seen.add(u.id);
       let rec = sprites.get(u.id);
+      const typeScale = TYPE_SCALE[u.type] ?? 1.0;
+      const facing = u.facing ?? (tactical.basePos[f].x <= 50 ? 1 : -1);
       if (!rec) {
-        const typeScale = TYPE_SCALE[u.type] ?? 1.0;
         const sprite = new Sprite(unitTex);
         sprite.anchor.set(0.5, 0.5);
-        sprite.scale.set(s * typeScale, (UNIT_SIZE / TEX_PX) * typeScale);
-        sprite.tint = TYPE_TINT[side][u.type] ?? TINT[side];
+        sprite.scale.set(
+          (UNIT_SIZE / TEX_PX) * facing * typeScale,
+          (UNIT_SIZE / TEX_PX) * typeScale,
+        );
+        sprite.tint = fDef.typeTint?.[u.type] ?? fDef.tint;
         unitLayer.addChild(sprite);
         rec = { sprite, rx: u.x, ry: u.y }; // new units snap to spawn
         sprites.set(u.id, rec);
@@ -118,6 +112,7 @@ function frame(dtSec: number): void {
       rec.ry += (u.y - rec.ry) * k;
       rec.sprite.x = rec.rx;
       rec.sprite.y = rec.ry;
+      rec.sprite.scale.x = (UNIT_SIZE / TEX_PX) * facing * typeScale;
     }
   }
   for (const [id, rec] of sprites) {
@@ -174,18 +169,19 @@ onMounted(async () => {
       .stroke({ color: 0x000000, alpha: 0.35, width: 0.6 }),
   );
 
-  // Keeps — one per side at its base position, tinted, with a health bar above.
-  for (const side of SIDES) {
+  // Keeps — one per faction at its base position, tinted, with a health bar above.
+  for (const f of tactical.factions) {
+    const fDef = getFactionDef(f);
     const sprite = new Sprite(keepTexLoaded);
     sprite.anchor.set(0.5, 0.5);
     sprite.setSize(KEEP_SIZE, KEEP_SIZE);
-    sprite.tint = TINT[side];
-    sprite.x = tactical.basePos[side].x;
-    sprite.y = tactical.basePos[side].y;
+    sprite.tint = fDef.tint;
+    sprite.x = tactical.basePos[f].x;
+    sprite.y = tactical.basePos[f].y;
     world.addChild(sprite);
     const bar = new Graphics();
     world.addChild(bar);
-    keeps[side] = { sprite, bar };
+    keeps[f] = { sprite, bar };
   }
 
   unitLayer = new Container();

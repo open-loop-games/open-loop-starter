@@ -13,6 +13,7 @@ export type {
   PersonaDef,
   FactionId,
   FactionDef,
+  TargetingWeights,
 } from './types';
 export { CANONICAL_FACTIONS, DEFAULT_TRIAD_FACTIONS, getFactionDef } from './types';
 export { UNITS, UNIT_BY_ID, getUnitDef } from './units';

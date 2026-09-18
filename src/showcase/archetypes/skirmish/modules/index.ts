@@ -11,10 +11,11 @@ import {
   getPersonaDef,
   type PersonaKey,
   type PersonaDef,
+  type TargetingWeights,
 } from '../data/tactical';
 
 export { PERSONAS, PERSONA_KEYS, getPersonaDef };
-export type { PersonaKey, PersonaDef };
+export type { PersonaKey, PersonaDef, TargetingWeights };
 
 export {
   createTuningModule,
@@ -83,6 +84,9 @@ export const MATCH_SCOPE_MODULES: readonly string[] = [
 export const DEFAULT_SEATS: Record<Side, AutomationOptions> = {
   a: { ...PERSONAS.rush, cadenceJitter: 0 },
   b: { ...PERSONAS.investor, cadenceJitter: 0 },
+  crimson: { ...PERSONAS.rush, cadenceJitter: 0.15 },
+  azure: { ...PERSONAS.boom, cadenceJitter: 0.15 },
+  emerald: { ...PERSONAS.skirmish, cadenceJitter: 0.15 },
 };
 export interface SkirmishModulesOptions {
   /** Roster of participating factions. Defaults to SIDES (['a', 'b']) or derived from seats/personas. */

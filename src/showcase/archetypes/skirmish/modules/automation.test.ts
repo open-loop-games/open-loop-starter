@@ -15,6 +15,7 @@ import {
   PERSONAS,
   PERSONA_KEYS,
   createSkirmishModules,
+  getAutomationKey,
 } from '.';
 import { BASE_HP } from '../data/tactical';
 
@@ -203,5 +204,91 @@ describe('skirmish tiered automation seat', () => {
     tiers().unlock('assisted');
     await tick(TICK_RATE); // one second, short of the 2s cadence
     expect(tactical().units.a.value).toHaveLength(0);
+  });
+});
+
+describe('skirmish meso-AI strategic targeting', () => {
+  it('evaluates target scores and dynamically selects high-threat or vulnerable bases', async () => {
+    const factions = ['crimson', 'azure', 'emerald'] as const;
+    bootModules(
+      createSkirmishModules({
+        factions,
+        personas: {
+          crimson: 'rush', // prefers weak/damaged base, high distanceExponent
+          azure: 'skirmish', // prefers high economy
+          emerald: 'investor', // prefers high army threat
+        },
+      }),
+    );
+
+    match().start();
+    const t = tactical();
+    const autoCrimson = getEngine().tryInject(getAutomationKey('crimson'))!;
+    const autoAzure = getEngine().tryInject(getAutomationKey('azure'))!;
+    const autoEmerald = getEngine().tryInject(getAutomationKey('emerald'))!;
+
+    expect(autoCrimson.targeting.value.armyWeight).toBe(-0.5);
+    expect(autoAzure.targeting.value.economyWeight).toBe(2.0);
+    expect(autoEmerald.targeting.value.armyWeight).toBe(1.5);
+
+    // Initially, both opponents have full HP and zero units
+    const crimsonTargetInitial = autoCrimson.evaluateTarget();
+    expect(['azure', 'emerald']).toContain(crimsonTargetInitial);
+
+    // Damage Azure's base — Crimson (high weaknessWeight 1.5) should decisively target Azure
+    t.baseHp.azure.value = 50;
+    expect(autoCrimson.evaluateTarget()).toBe('azure');
+
+    // Give Emerald a massive army — Emerald now becomes the highest threat for Emerald-watching seats
+    t.units.emerald.value.push({
+      id: 999,
+      type: 'trooper',
+      x: 50,
+      y: 50,
+      hp: 100,
+      cooldown: 0,
+    });
+    expect(['crimson', 'emerald']).toContain(autoAzure.evaluateTarget());
+  });
+
+  it('automatically retargets when the currently targeted base is eliminated', async () => {
+    const factions = ['crimson', 'azure', 'emerald'] as const;
+    bootModules(
+      createSkirmishModules({
+        factions,
+        personas: {
+          crimson: 'rush',
+          azure: 'investor',
+          emerald: 'boom',
+        },
+      }),
+    );
+
+    match().start();
+    const t = tactical();
+    t.setTargetBase('crimson', 'azure');
+    expect(t.targetBase.crimson.value).toBe('azure');
+
+    // Eliminate Azure
+    match().eliminate('azure');
+    // Target should immediately update away from the eliminated faction to emerald
+    expect(t.targetBase.crimson.value).toBe('emerald');
+  });
+
+  it('updates targeting weights when setPersona is called', () => {
+    bootModules(
+      createSkirmishModules({
+        factions: ['crimson', 'azure'],
+        personas: { crimson: 'rush', azure: 'investor' },
+      }),
+    );
+    const autoCrimson = getEngine().tryInject(getAutomationKey('crimson'))!;
+    expect(autoCrimson.currentPersona.value).toBe('rush');
+    expect(autoCrimson.targeting.value.weaknessWeight).toBe(1.5);
+
+    autoCrimson.setPersona('boom');
+    expect(autoCrimson.currentPersona.value).toBe('boom');
+    expect(autoCrimson.targeting.value.economyWeight).toBe(2.5);
+    expect(autoCrimson.targeting.value.weaknessWeight).toBe(0);
   });
 });

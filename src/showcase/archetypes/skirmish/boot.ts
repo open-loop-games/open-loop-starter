@@ -3,7 +3,7 @@ import { type Engine, type EngineModule } from '@open-loop/engine';
 import { bootApp, bootEngine } from '@/boot';
 import SkirmishAppRoot from './ui/SkirmishAppRoot.vue';
 import { createSkirmishModules, type SkirmishModulesOptions } from './modules';
-
+import { DEFAULT_TRIAD_FACTIONS } from './data/tactical';
 const GAME_ID = 'skirmish';
 const MOD_ID = 'skirmish';
 const MOD_NAME = 'Skirmish';
@@ -41,9 +41,10 @@ export interface GameEngineOptions {
  * resume sequence.
  */
 export function createGameEngine(options?: GameEngineOptions): { engine: Engine } {
+  const factions = options?.factions ?? DEFAULT_TRIAD_FACTIONS;
   const modules = [
     ...createSkirmishModules({
-      factions: options?.factions,
+      factions,
       seats: options?.seats,
       personas: options?.personas,
       baseRadius: options?.baseRadius,
