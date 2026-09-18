@@ -66,9 +66,10 @@ diagonal, and says so loudly.
 economic crossovers sit around 1.5–2.1m (`skirmish-projection.ts` § 3). If
 matches resolve much faster than that, no investment can ever pay off and the
 split is decorative regardless of how well `r` is tuned. The first pass here
-resolved matches in 21s, which made every economic number irrelevant; that is a
-content coupling, not a tuning one.
-
+resolved matches in 21s, which made every economic number irrelevant; raising
+`BASE_HP` to 500 (50 trooper equivalents) pushes economic clashes (φ = 0.2 vs
+0.4) across the crossover to ~130s (2.17m), while the default rush-vs-investor
+match resolves around ~50s (49.5s in `arc-probe.ts`, 60s in `split-probe.ts`).
 ## Running a pass
 
 Run from the repo root (`src/game/…` after eject). Order matters — the
@@ -97,8 +98,7 @@ pnpm exec vite-node src/showcase/archetypes/skirmish/balance/split-probe.ts
   split undefeated — a dominant split means the axis is dead; (3) is there an
   intransitive cycle — that is the outcome worth having.
 - **`beats.ts`** holds the windows and predicates. Windows are **measured**, and
-  the current ones come from the default matchup resolving around 43s.
-
+  the current ones come from the default matchup resolving around ~50s.
 **On `never` readings.** The break and recovery beats are asymmetric by nature: a
 seat that wins cleanly never has its army broken, and a seat that collapses never
 recovers. Those `never`s describe the match correctly. A `never` on any other
@@ -112,15 +112,13 @@ beat, or on both seats at once, is the one worth chasing.
   off. The spine names stochastic load-bearing as one of three places the closed
   form stops, and that third leg is currently unexercised: turn jitter on and the
   single-match readings above become distributions that need different tooling.
-- **The economic crossover sits after the match ends.** The projection puts
-  crossover against pure rush at 1.5–2.1m; matches resolve around 43s. So the
-  compounding half of the spine is only _partially_ live — investment pays off
-  through the arrival timing of a slightly larger wave, not through the
-  exponential actually compounding. The split still decides matches (the payoff
-  matrix is intransitive), but it is doing so at the very bottom of the curve.
-  Raising base HP or lowering army throughput to bring matches nearer the
-  crossover is the obvious lever, and it is a **content** decision about how long
-  an RTS match should be, not a tuning one.
+- **The economic crossover and match resolution.** The projection puts
+  crossover against pure rush at 1.5–2.1m. With `BASE_HP = 500`, economic clashes
+  (φ = 0.2 vs 0.4) last 130s (~2.17m), crossing the threshold and demonstrating
+  the compounding half of the spine. However, aggressive rush matchups (φ = 0 vs 0.2)
+  resolve earlier around ~50s, because field combat is decided at the first
+  engagement (~26s) and the defeated base falls under siege. The split
+  decides matches cleanly with an intransitive cycle (0 → 0.4 → 0.2 → 0).
 - **`maxWorkers` has never been reached, and must not be.** It is a guard against
   unbounded growth in a match with no clock. A probe reporting a seat pinned at
   the cap is reporting that the cap became balance, which is a defect — the first

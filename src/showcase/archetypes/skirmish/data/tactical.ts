@@ -25,8 +25,10 @@ export interface UnitTypeDef {
 /** Continuous play-field extent (field units, not pixels — the renderer scales). */
 export const FIELD = { width: 100, height: 40 } as const;
 
-/** Base health; a side loses when its base reaches 0. */
-export const BASE_HP = 100;
+/** Base health; a side loses when its base reaches 0. Sized to 50 trooper HP
+ *  equivalents so a base requires sustained siege rather than melting on
+ *  contact; brings matches nearer the 1.5–2.1m crossover. */
+export const BASE_HP = 500;
 
 // ─── Balance ───
 // One unit type for the first cut — enough to exercise move / target / attack /
