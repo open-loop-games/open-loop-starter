@@ -160,6 +160,10 @@ line's own unbuilt half, and they feed named spine terms.
 - **Unit roster + counters** — 3-unit rock-paper-scissors roster (trooper,
   archer, cavalry) with counter matrix (tug's `data/counter-matrix.ts` pattern);
   verified in `balance/roster-probe.ts`.
+- **Bot personas + stochastic leg** — 5-persona roster (`rush`, `investor`,
+  `skirmish`, `boom`, `combined`) in `data/personality.ts` with tactical drafts and
+  calibrated `cadenceJitter` (0.15) exercising the spine's stochastic remainder
+  over seeded multi-run batches (`balance/persona-probe.ts` adopting `@/balance`).
 - Scale: brute-force targeting at tens of units → uniform-grid / spatial-hash
   broad-phase when counts demand it (and only then a candidate-primitive, if a
   second consumer converges).
@@ -204,6 +208,11 @@ knobs, what couples to what, how to read each probe. In brief:
   because an asymmetric sim produces balance findings that are really bugs.
 - **`balance/arc-probe.ts`** drives the shipping automation through the default
   matchup and reports each beat against its measured window.
+- **`balance/roster-probe.ts`** verifies the 3-unit counter matrix and mirror
+  stalemate across pure and mixed unit compositions.
+- **`balance/persona-probe.ts`** sweeps the 5-persona tournament matrix deterministically
+  (confirming mirror symmetry on the diagonal) and measures win-rate and duration
+  distributions across seeded batches with calibrated `cadenceJitter = 0.15`.
 
 The driver was already the right shape — shipping automation
 (`modules/automation.ts`, tier-gated), never a bespoke bot — so the probes drive

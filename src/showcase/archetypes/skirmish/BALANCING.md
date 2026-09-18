@@ -80,6 +80,7 @@ pnpm exec vite-node src/showcase/archetypes/skirmish/balance/skirmish-projection
 pnpm exec vite-node src/showcase/archetypes/skirmish/balance/arc-probe.ts
 pnpm exec vite-node src/showcase/archetypes/skirmish/balance/split-probe.ts
 pnpm exec vite-node src/showcase/archetypes/skirmish/balance/roster-probe.ts
+pnpm exec vite-node src/showcase/archetypes/skirmish/balance/persona-probe.ts
 ```
 
 - **`skirmish-projection.ts`** — no engine, pure arithmetic. Prints army and
@@ -101,6 +102,10 @@ pnpm exec vite-node src/showcase/archetypes/skirmish/balance/roster-probe.ts
 - **`roster-probe.ts`** — verifies the 3-unit counter matrix (trooper > cavalry >
   archer > trooper) across pure and mixed composition matchups. Diagonal must be
   all stalemate (mirror symmetry); off-diagonal cells verify the counter cycle.
+- **`persona-probe.ts`** — sweeps the 5-persona tournament matrix deterministically
+  (confirming mirror symmetry on the diagonal) and measures win distributions and
+  duration spreads across a 10-seed batch under calibrated `cadenceJitter = 0.15`
+  via `@/balance`.
 - **`beats.ts`** holds the windows and predicates. Windows are **measured**, and
   the current ones come from the default matchup resolving around ~50s.
 **On `never` readings.** The break and recovery beats are asymmetric by nature: a
@@ -110,12 +115,21 @@ beat, or on both seats at once, is the one worth chasing.
 
 ## Known thin
 
-- **The default matchup is one point, run once.** `arc-probe.ts` reads a single
-  deterministic match. There is no seeded distribution anywhere yet, because
-  nothing in the shipping personas is stochastic — `cadenceJitter` exists and is
-  off. The spine names stochastic load-bearing as one of three places the closed
-  form stops, and that third leg is currently unexercised: turn jitter on and the
-  single-match readings above become distributions that need different tooling.
+- **Stochastic leg and multi-run distributions.** The spine names stochastic
+  cadence jitter as one of three places where the closed form stops.
+  `persona-probe.ts` exercises this third leg across seeded batches via
+  `src/balance/spread.ts` (`seedBatch`, `spreadOf`, `categorySpreadOf`) with
+  calibrated `cadenceJitter = 0.15`. Close matchups resolve as distributions:
+  `rush vs investor` yields 9b : 1a (duration spread 67.8s [43.0–86.5s]), and
+  `combined vs rush` splits 6b : 4a (duration spread 42.3s [32.0–72.0s]),
+  confirming that borderline matchups turn on the stochastic cadence of
+  individual bursts rather than collapsing to deterministic parity.
+- **5-persona roster and counter dynamics.** `data/personality.ts` declares five
+  canonical RTS archetypes: `rush` (infantry swarm), `investor` (steady macro),
+  `skirmish` (archer screen & harass), `boom` (cavalry blitz & heavy macro), and
+  `combined` (triad roster). Verified in `persona-probe.ts`: `rush` punishes `boom`'s
+  slow compounding in 28s; `skirmish`'s archers counter `rush`'s troopers in 48s;
+  and `boom`'s cavalry counters `skirmish`'s archers in 54s.
 - **The economic crossover and match resolution.** The projection puts
   crossover against pure rush at 1.5–2.1m. With `BASE_HP = 500`, economic clashes
   (φ = 0.2 vs 0.4) last 130s (~2.17m), crossing the threshold and demonstrating

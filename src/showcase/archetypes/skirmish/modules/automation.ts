@@ -1,10 +1,17 @@
-import { createSeededRNG, getSeed, persistent, type EngineModule } from '@open-loop/engine';
+import {
+  createSeededRNG,
+  getSeed,
+  persistent,
+  type EngineModule,
+  type InjectionKey,
+  type Persistent,
+} from '@open-loop/engine';
 import { MatchKey } from './match';
 import { EconomyKey } from './economy';
 import { TacticalKey } from './tactical-sim';
 import { AutomationTiersKey, type SkirmishAutomationTier } from './automation-tiers';
 import { type Side } from './tuning';
-import { type UnitTypeId } from '../data/tactical';
+import { type UnitTypeId, PERSONAS, getPersonaDef, type PersonaKey } from '../data/tactical';
 
 /** Baseline seconds between spawn decisions, before per-persona scaling. */
 const BASE_CADENCE_SEC = 3;
@@ -52,6 +59,22 @@ export interface AutomationOptions {
   composition?: Partial<Record<UnitTypeId, number>>;
 }
 
+export interface AutomationApi {
+  side: Side;
+  currentPersona: Persistent<PersonaKey | 'custom'>;
+  economyShare: Persistent<number>;
+  cadenceSec: Persistent<number>;
+  maxSpawnPerBurst: Persistent<number>;
+  cadenceJitter: Persistent<number>;
+  composition: Persistent<Partial<Record<UnitTypeId, number>>>;
+  setPersona: (key: PersonaKey) => void;
+}
+
+export const AutomationKey: Record<Side, InjectionKey<AutomationApi>> = {
+  a: Symbol('skirmish/automation/a') as InjectionKey<AutomationApi>,
+  b: Symbol('skirmish/automation/b') as InjectionKey<AutomationApi>,
+};
+
 /**
  * Per-side AI policy — bone #2. "Production AI plays itself": the SAME factory
  * installs on both sides (bilateral), so the archetype is fully exercisable —
@@ -73,21 +96,28 @@ export interface AutomationOptions {
  * the ladder in `automation-tiers.ts`.
  */
 export function createAutomationModule(side: Side, options: AutomationOptions): EngineModule {
-  const cadenceSec = options.cadenceSec ?? BASE_CADENCE_SEC;
-  const maxSpawnPerBurst = options.maxSpawnPerBurst ?? Infinity;
-  const jitterScale = options.cadenceJitter ?? 0;
-  const economyShare = options.economyShare ?? 0;
+  const initialEconomyShare = options.economyShare ?? 0;
+  const initialCadenceSec = options.cadenceSec ?? BASE_CADENCE_SEC;
+  const initialBurst = options.maxSpawnPerBurst ?? Infinity;
+  const initialJitter = options.cadenceJitter ?? 0;
+  const initialComp = options.composition ?? { trooper: 1 };
   const sideOffset = side === 'a' ? 1 : 2;
   const tier = options.tier;
-  const rawComposition = options.composition ?? { trooper: 1 };
-  const draftSequence: UnitTypeId[] = [];
-  for (const [typeId, weight] of Object.entries(rawComposition)) {
-    const count = Math.max(0, Math.floor(weight ?? 0));
-    for (let i = 0; i < count; i++) {
-      draftSequence.push(typeId as UnitTypeId);
+
+  // Determine initial persona key if one matches exactly
+  let initialPersona: PersonaKey | 'custom' = 'custom';
+  for (const [key, def] of Object.entries(PERSONAS) as Array<
+    [PersonaKey, (typeof PERSONAS)[PersonaKey]]
+  >) {
+    if (
+      def.economyShare === initialEconomyShare &&
+      def.cadenceSec === initialCadenceSec &&
+      def.maxSpawnPerBurst === initialBurst
+    ) {
+      initialPersona = key;
+      break;
     }
   }
-  if (draftSequence.length === 0) draftSequence.push('trooper');
   return {
     id: `skirmish/match/${side}/automation`,
     dependencies: [
@@ -101,51 +131,91 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
       const tactical = ctx.inject(TacticalKey);
       const economy = ctx.inject(EconomyKey);
       const tiers = ctx.inject(AutomationTiersKey);
-
       // Cadence accumulator — persistent so save/load mid-match resumes pacing
       // without dumping a burst on the first post-load tick.
-      const sinceActSec = persistent<number>(0, { name: 'sinceActSec' });
-      const draftIndex = persistent<number>(0, { name: 'draftIndex' });
-      // Lazy per-side seeded RNG for believability jitter — lazy because sim
-      // runners seed AFTER install but before the tick loop; the side offset
-      // keeps the two sides' streams distinct. Untouched (no RNG draw) when
-      // jitter is off, so default play stays deterministic.
+      const sinceActSec = persistent<number>(0, { name: `sinceActSec-${side}` });
+      const draftIndex = persistent<number>(0, { name: `draftIndex-${side}` });
+
+      const currentPersona = persistent<PersonaKey | 'custom'>(initialPersona, {
+        name: `persona-${side}`,
+      });
+      const economyShare = persistent<number>(initialEconomyShare, {
+        name: `econShare-${side}`,
+      });
+      const cadenceSec = persistent<number>(initialCadenceSec, {
+        name: `cadence-${side}`,
+      });
+      const maxSpawnPerBurst = persistent<number>(initialBurst, {
+        name: `maxBurst-${side}`,
+      });
+      const jitterScale = persistent<number>(initialJitter, {
+        name: `jitter-${side}`,
+      });
+      const composition = persistent<Partial<Record<UnitTypeId, number>>>(initialComp, {
+        name: `composition-${side}`,
+      });
+
+      let draftSequence: UnitTypeId[] = [];
+      function rebuildDraftSequence() {
+        draftSequence = [];
+        for (const [typeId, weight] of Object.entries(composition.value)) {
+          const count = Math.max(0, Math.floor(weight ?? 0));
+          for (let i = 0; i < count; i++) {
+            draftSequence.push(typeId as UnitTypeId);
+          }
+        }
+        if (draftSequence.length === 0) draftSequence.push('trooper');
+      }
+      rebuildDraftSequence();
+
+      function setPersona(key: PersonaKey): void {
+        const def = getPersonaDef(key);
+        currentPersona.value = key;
+        economyShare.value = def.economyShare;
+        cadenceSec.value = def.cadenceSec;
+        maxSpawnPerBurst.value = def.maxSpawnPerBurst;
+        jitterScale.value = def.cadenceJitter ?? 0;
+        composition.value = { ...def.composition };
+        rebuildDraftSequence();
+      }
+
+      const api: AutomationApi = {
+        side,
+        currentPersona,
+        economyShare,
+        cadenceSec,
+        maxSpawnPerBurst,
+        cadenceJitter: jitterScale,
+        composition,
+        setPersona,
+      };
+      ctx.provide(AutomationKey[side], api);
+
+      // Lazy per-side seeded RNG for believability jitter
       let rng: (() => number) | null = null;
       function jitter(): number {
-        if (jitterScale <= 0) return 0;
+        if (jitterScale.value <= 0) return 0;
         if (!rng) rng = createSeededRNG(getSeed() + sideOffset);
-        return (rng() * 2 - 1) * jitterScale; // ±jitterScale
+        return (rng() * 2 - 1) * jitterScale.value; // ±jitterScale
       }
 
       ctx.onTick((dt) => {
         if (!match.inMatch.value) return;
-        // Tiered seats stay inert until the ladder reaches them; the cadence
-        // accumulator does not advance either, so unlocking mid-match starts a
-        // fresh interval rather than dumping a banked burst.
         if (tier !== undefined && !tiers.hasReached(tier)) return;
         sinceActSec.value += dt;
-        if (sinceActSec.value < cadenceSec * (1 + jitter())) return;
+        if (sinceActSec.value < cadenceSec.value * (1 + jitter())) return;
         sinceActSec.value = 0;
 
         // DECIDE (domain), in two steps.
-        //
-        // 1. Allocation. Buy workers while this seat is under its target share
-        //    of income. Steering on realized spend is self-correcting: a slot
-        //    that could not afford a worker leaves the seat under target, so the
-        //    next one retries rather than silently dropping the investment.
-        while (economy.realizedShare(side) < economyShare && economy.buyWorker(side)) {
-          /* keep investing until the split is satisfied or supply runs out */
+        // 1. Allocation
+        while (economy.realizedShare(side) < economyShare.value && economy.buyWorker(side)) {
+          /* keep investing */
         }
 
-        // 2. Commitment. Whatever is left goes to army, up to the burst cap —
-        //    but hold back the price of the next worker while still under
-        //    target. Without that reserve a seat spends its remainder on units
-        //    every slot and can never bank a lump-sum investment: income loses
-        //    the race to its own spending, and φ silently reads as 0 no matter
-        //    what the persona asked for.
-        const reserve = economy.realizedShare(side) < economyShare ? economy.workerCost() : 0;
+        // 2. Commitment
+        const reserve = economy.realizedShare(side) < economyShare.value ? economy.workerCost() : 0;
         let spawned = 0;
-        while (spawned < maxSpawnPerBurst) {
+        while (spawned < maxSpawnPerBurst.value) {
           const nextType = draftSequence[draftIndex.value % draftSequence.length];
           const unitCost = tactical.unitCost(nextType);
           if (economy.available(side) < unitCost + reserve) break;

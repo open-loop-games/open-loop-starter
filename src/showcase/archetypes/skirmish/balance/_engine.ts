@@ -11,9 +11,9 @@
  * storage for tick-by-tick behavioral specs.
  */
 
-import { type Analyzer, type Engine } from '@open-loop/engine';
+import { seedRNG, type Analyzer, type Engine } from '@open-loop/engine';
 import { createGameEngine } from '../boot';
-import { MatchKey, type AutomationOptions, type Side } from '../modules';
+import { MatchKey, type AutomationOptions, type Side, PERSONAS, type PersonaKey } from '../modules';
 
 let engineCounter = 0;
 
@@ -23,12 +23,8 @@ let engineCounter = 0;
  * rather than a separate configuration whose result cannot be located on it.
  * Tempo dials are a second axis and are held equal until one is swept.
  */
-export const RUSH: AutomationOptions = {
-  economyShare: 0,
-  cadenceSec: 2,
-  maxSpawnPerBurst: Infinity,
-};
-export const INVESTOR: AutomationOptions = { ...RUSH, economyShare: 0.2 };
+export const RUSH: AutomationOptions = { ...PERSONAS.rush, cadenceJitter: 0 };
+export const INVESTOR: AutomationOptions = { ...PERSONAS.investor, cadenceJitter: 0 };
 
 export interface SkirmishSimOptions {
   /** Seat `a` policy. Default: the rush persona. */
@@ -41,6 +37,8 @@ export interface SkirmishSimOptions {
    * every measured time.
    */
   maxDeltaTime?: number;
+  /** Initial RNG seed for believability jitter. */
+  seed?: number;
 }
 
 /**
@@ -55,6 +53,9 @@ export interface SkirmishSimOptions {
  * real-time loop must not also be firing.
  */
 export function buildSkirmishSimEngine(options?: SkirmishSimOptions): Engine {
+  if (options?.seed !== undefined) {
+    seedRNG(options.seed);
+  }
   const { engine } = createGameEngine({
     persistenceNamespace: `skirmish-balance-${++engineCounter}`,
     maxDeltaTime: options?.maxDeltaTime,
@@ -76,6 +77,21 @@ export function seatsAtShare(shareA: number, shareB: number): SkirmishSimOptions
     a: { ...RUSH, economyShare: shareA },
     b: { ...RUSH, economyShare: shareB },
   };
+}
+
+/** A seat pairing for named personas, optionally overriding cadence jitter. */
+export function seatsForPersonas(
+  personaA: PersonaKey,
+  personaB: PersonaKey,
+  jitter?: number,
+): SkirmishSimOptions {
+  const a = { ...PERSONAS[personaA] };
+  const b = { ...PERSONAS[personaB] };
+  if (jitter !== undefined) {
+    a.cadenceJitter = jitter;
+    b.cadenceJitter = jitter;
+  }
+  return { a, b };
 }
 
 // ─── Outcome capture ─────────────────────────────────────────────────────────

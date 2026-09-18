@@ -5,6 +5,16 @@ import { createMatchModule } from './match';
 import { createEconomyModule } from './economy';
 import { createTacticalSimModule } from './tactical-sim';
 import { createAutomationModule, type AutomationOptions } from './automation';
+import {
+  PERSONAS,
+  PERSONA_KEYS,
+  getPersonaDef,
+  type PersonaKey,
+  type PersonaDef,
+} from '../data/tactical';
+
+export { PERSONAS, PERSONA_KEYS, getPersonaDef };
+export type { PersonaKey, PersonaDef };
 
 export { createTuningModule, SkirmishTuningRegistryKey, SIDES, opponentOf } from './tuning';
 export {
@@ -25,8 +35,8 @@ export { createEconomyModule, EconomyKey } from './economy';
 export type { EconomyApi } from './economy';
 export { createTacticalSimModule, TacticalKey } from './tactical-sim';
 export type { TacticalApi, Unit } from './tactical-sim';
-export { createAutomationModule } from './automation';
-export type { AutomationOptions } from './automation';
+export { createAutomationModule, AutomationKey } from './automation';
+export type { AutomationOptions, AutomationApi } from './automation';
 
 /**
  * Tactical sim + both AI policies are match-scoped. Their `persistent()` state
@@ -62,20 +72,26 @@ const MATCH_SCOPE_MODULES: readonly string[] = [
  * correct.
  */
 export const DEFAULT_SEATS: Record<Side, AutomationOptions> = {
-  a: { economyShare: 0, cadenceSec: 2, maxSpawnPerBurst: Infinity },
-  b: { economyShare: 0.2, cadenceSec: 2, maxSpawnPerBurst: Infinity },
+  a: { ...PERSONAS.rush, cadenceJitter: 0 },
+  b: { ...PERSONAS.investor, cadenceJitter: 0 },
 };
 
 export interface SkirmishModulesOptions {
   /** Per-seat policy. Partial: an omitted seat keeps its default persona. */
   seats?: Partial<Record<Side, AutomationOptions>>;
+  /** Per-seat named persona preset. Takes precedence over `seats` if provided. */
+  personas?: Partial<Record<Side, PersonaKey>>;
 }
-
 export function createSkirmishModules(options?: SkirmishModulesOptions): EngineModule[] {
-  const seats = SIDES.map((side) => ({
-    side,
-    opts: options?.seats?.[side] ?? DEFAULT_SEATS[side],
-  }));
+  const seats = SIDES.map((side) => {
+    let opts: AutomationOptions;
+    if (options?.personas?.[side]) {
+      opts = PERSONAS[options.personas[side]!];
+    } else {
+      opts = options?.seats?.[side] ?? DEFAULT_SEATS[side];
+    }
+    return { side, opts };
+  });
   return [
     createTuningModule(),
     createAutomationTiersModule(),

@@ -2,8 +2,8 @@
 import { computed } from 'vue';
 import { useModule } from '@/composables/useModule';
 import { useMatch } from '../composables/useMatch';
-import { TacticalKey } from '../modules';
-import { BASE_HP } from '../data/tactical';
+import { TacticalKey, AutomationKey, type Side } from '../modules';
+import { BASE_HP, PERSONAS, PERSONA_KEYS, type PersonaKey } from '../data/tactical';
 import PlayField from './PlayField.vue';
 
 /**
@@ -18,6 +18,13 @@ const matchOutcome = computed(() => match.outcome.value);
 const matchElapsed = computed(() => match.matchTimeElapsed.value);
 
 const tactical = useModule(TacticalKey);
+const autoA = useModule(AutomationKey.a);
+const autoB = useModule(AutomationKey.b);
+
+function onSelectPersona(side: Side, key: PersonaKey): void {
+  if (side === 'a') autoA.setPersona(key);
+  else autoB.setPersona(key);
+}
 const armyA = computed(() => tactical.units.a.value.length);
 const armyB = computed(() => tactical.units.b.value.length);
 const baseA = computed(() => Math.max(0, Math.round(tactical.baseHp.a.value)));
@@ -50,7 +57,20 @@ function rematch(): void {
          the at-a-glance read — who's winning is the length of a bar. -->
     <header class="hud">
       <div class="hud__side hud__side--a">
-        <span class="hud__name">Crimson</span>
+        <div class="hud__identity">
+          <span class="hud__name">Crimson</span>
+          <select
+            class="hud__persona-select hud__persona-select--a"
+            :value="autoA.currentPersona.value"
+            title="Crimson AI Persona"
+            @change="onSelectPersona('a', ($event.target as HTMLSelectElement).value as PersonaKey)"
+          >
+            <option v-for="key in PERSONA_KEYS" :key="key" :value="key">
+              {{ PERSONAS[key].name }}
+            </option>
+            <option v-if="autoA.currentPersona.value === 'custom'" value="custom">Custom</option>
+          </select>
+        </div>
         <div class="hud__track">
           <div class="hud__fill hud__fill--a" :style="{ width: `${baseFracA * 100}%` }" />
         </div>
@@ -66,7 +86,20 @@ function rematch(): void {
         <div class="hud__track">
           <div class="hud__fill hud__fill--b" :style="{ width: `${baseFracB * 100}%` }" />
         </div>
-        <span class="hud__name">Azure</span>
+        <div class="hud__identity hud__identity--b">
+          <span class="hud__name">Azure</span>
+          <select
+            class="hud__persona-select hud__persona-select--b"
+            :value="autoB.currentPersona.value"
+            title="Azure AI Persona"
+            @change="onSelectPersona('b', ($event.target as HTMLSelectElement).value as PersonaKey)"
+          >
+            <option v-for="key in PERSONA_KEYS" :key="key" :value="key">
+              {{ PERSONAS[key].name }}
+            </option>
+            <option v-if="autoB.currentPersona.value === 'custom'" value="custom">Custom</option>
+          </select>
+        </div>
       </div>
     </header>
 
@@ -122,6 +155,30 @@ function rematch(): void {
 }
 .hud__side--b .hud__name {
   color: var(--azure);
+}
+.hud__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hud__identity--b {
+  align-items: flex-end;
+}
+.hud__persona-select {
+  font-size: 0.72rem;
+  padding: 1px 4px;
+  background: color-mix(in srgb, var(--color-fg, #fff) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-fg, #fff) 18%, transparent);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-fg, #fff);
+  cursor: pointer;
+  outline: none;
+}
+.hud__persona-select--a {
+  border-color: color-mix(in srgb, var(--crimson) 45%, transparent);
+}
+.hud__persona-select--b {
+  border-color: color-mix(in srgb, var(--azure) 45%, transparent);
 }
 .hud__track {
   flex: 1 1 auto;

@@ -12,6 +12,9 @@ import {
   createTuningModule,
   type MatchApi,
   type TacticalApi,
+  PERSONAS,
+  PERSONA_KEYS,
+  createSkirmishModules,
 } from '.';
 import { BASE_HP } from '../data/tactical';
 
@@ -104,6 +107,38 @@ describe('skirmish bot-vs-bot', () => {
     expect(types.length).toBeGreaterThanOrEqual(2);
     expect(types).toContain('trooper');
     expect(types).toContain('archer');
+  });
+
+  it('boots with named personas and applies persona configurations', async () => {
+    bootModules(
+      createSkirmishModules({
+        personas: { a: 'rush', b: 'skirmish' },
+      }),
+    );
+    match().start();
+    await tick(16 * TICK_RATE);
+    const unitsA = tactical().units.a.value;
+    const unitsB = tactical().units.b.value;
+    expect(unitsA.length).toBeGreaterThan(0);
+    expect(unitsB.length).toBeGreaterThan(0);
+    // Rush spawns pure troopers
+    expect(unitsA.every((u) => u.type === 'trooper')).toBe(true);
+    // Skirmish drafts archers
+    expect(unitsB.some((u) => u.type === 'archer')).toBe(true);
+  });
+
+  it('exposes the 5 canonical personas with valid economic and composition options', () => {
+    expect(PERSONA_KEYS).toEqual(['rush', 'investor', 'skirmish', 'boom', 'combined']);
+    for (const key of PERSONA_KEYS) {
+      const p = PERSONAS[key];
+      expect(p.id).toBe(key);
+      expect(p.economyShare).toBeGreaterThanOrEqual(0);
+      expect(p.economyShare).toBeLessThan(1);
+      expect(p.cadenceSec).toBeGreaterThan(0);
+      expect(p.maxSpawnPerBurst).toBeGreaterThan(0);
+      expect(Object.keys(p.composition).length).toBeGreaterThan(0);
+      expect(p.cadenceJitter).toBe(0.15);
+    }
   });
 });
 

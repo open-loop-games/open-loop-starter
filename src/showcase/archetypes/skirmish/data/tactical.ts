@@ -4,7 +4,14 @@
 // geometry so this layer stays free of module imports (data → modules is
 // one-way).
 
-export type { UnitTypeId, UnitArchetypeTag, UnitTypeDef, CounterMatrix } from './types';
+export type {
+  UnitTypeId,
+  UnitArchetypeTag,
+  UnitTypeDef,
+  CounterMatrix,
+  PersonaKey,
+  PersonaDef,
+} from './types';
 export { UNITS, UNIT_BY_ID, getUnitDef } from './units';
 export {
   COUNTER_MATRIX,
@@ -14,6 +21,7 @@ export {
   WEAK,
   NEUTRAL,
 } from './counter-matrix';
+export { PERSONAS, PERSONA_KEYS, getPersonaDef } from './personality';
 
 import { UNIT_BY_ID } from './units';
 import type { UnitTypeDef } from './types';
