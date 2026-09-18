@@ -56,3 +56,81 @@ export interface PersonaDef {
   /** Relative draft weights across unit types. */
   composition: Partial<Record<UnitTypeId, number>>;
 }
+
+export type FactionId = string;
+
+export interface FactionDef {
+  /** Stable identifier (e.g. 'crimson', 'azure', 'emerald', 'amber'). */
+  id: FactionId;
+  /** Display name. */
+  name: string;
+  /** Primary theme color (hex number, e.g. 0xd9524b). */
+  color: number;
+  /** Base sprite tint. */
+  tint: number;
+  /** Accent tints by unit type. */
+  typeTint?: Partial<Record<UnitTypeId, number>>;
+}
+
+export const CANONICAL_FACTIONS: Record<string, FactionDef> = {
+  crimson: {
+    id: 'crimson',
+    name: 'Crimson',
+    color: 0xd9524b,
+    tint: 0xd9524b,
+    typeTint: {
+      trooper: 0xd9524b,
+      archer: 0xf27d74,
+      cavalry: 0x9e241e,
+    },
+  },
+  azure: {
+    id: 'azure',
+    name: 'Azure',
+    color: 0x4f86d6,
+    tint: 0x4f86d6,
+    typeTint: {
+      trooper: 0x4f86d6,
+      archer: 0x7da8ed,
+      cavalry: 0x275296,
+    },
+  },
+  emerald: {
+    id: 'emerald',
+    name: 'Emerald',
+    color: 0x2ba84a,
+    tint: 0x2ba84a,
+    typeTint: {
+      trooper: 0x2ba84a,
+      archer: 0x5ad478,
+      cavalry: 0x1a7231,
+    },
+  },
+  amber: {
+    id: 'amber',
+    name: 'Amber',
+    color: 0xe59819,
+    tint: 0xe59819,
+    typeTint: {
+      trooper: 0xe59819,
+      archer: 0xf7be5c,
+      cavalry: 0xa86c07,
+    },
+  },
+};
+
+export const DEFAULT_TRIAD_FACTIONS: readonly FactionId[] = ['crimson', 'azure', 'emerald'];
+
+export function getFactionDef(id: FactionId): FactionDef {
+  if (CANONICAL_FACTIONS[id]) return CANONICAL_FACTIONS[id];
+  if (id === 'a') return CANONICAL_FACTIONS.crimson;
+  if (id === 'b') return CANONICAL_FACTIONS.azure;
+  if (id === 'c') return CANONICAL_FACTIONS.emerald;
+  if (id === 'd') return CANONICAL_FACTIONS.amber;
+  return {
+    id,
+    name: id.charAt(0).toUpperCase() + id.slice(1),
+    color: 0x888888,
+    tint: 0x888888,
+  };
+}

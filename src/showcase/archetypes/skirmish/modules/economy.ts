@@ -10,7 +10,7 @@ import {
   type Persistent,
   type Resource,
 } from '@open-loop/engine';
-import { SkirmishTuningRegistryKey, SIDES, type Side } from './tuning';
+import { SkirmishTuningRegistryKey, DEFAULT_FACTIONS, type FactionId, type Side } from './tuning';
 import { MatchKey } from './match';
 import { ECONOMY_BALANCE } from '../data/economy';
 
@@ -26,14 +26,15 @@ import { ECONOMY_BALANCE } from '../data/economy';
  */
 
 export interface EconomyApi {
+  factions: readonly FactionId[];
   /** Spendable supply. */
-  supply: Record<Side, Resource<DecimalSource>>;
+  supply: Record<FactionId, Resource<DecimalSource>>;
   /** `E` — owned workers. */
-  workers: Record<Side, Persistent<number>>;
+  workers: Record<FactionId, Persistent<number>>;
   /** Supply produced since match start. Denominator of the realized split. */
-  cumulativeIncome: Record<Side, Persistent<number>>;
+  cumulativeIncome: Record<FactionId, Persistent<number>>;
   /** Supply spent on workers since match start. Numerator of the realized split. */
-  economySpend: Record<Side, Persistent<number>>;
+  economySpend: Record<FactionId, Persistent<number>>;
   /**
    * Realized `φ` so far: `economySpend / cumulativeIncome`, and 0 before any
    * income. What a policy steers against — not a target, a measurement.
@@ -53,7 +54,13 @@ export const EconomyKey: InjectionKey<EconomyApi> = Symbol(
   'skirmish/economy',
 ) as InjectionKey<EconomyApi>;
 
-export function createEconomyModule(): EngineModule {
+export interface EconomyModuleOptions {
+  factions?: readonly FactionId[];
+}
+
+export function createEconomyModule(options: EconomyModuleOptions = {}): EngineModule {
+  const factions = options.factions ?? DEFAULT_FACTIONS;
+
   return {
     id: 'skirmish/match/economy',
     dependencies: ['skirmish/tuning', 'skirmish/match'],
@@ -61,12 +68,12 @@ export function createEconomyModule(): EngineModule {
       const registry = ctx.inject(SkirmishTuningRegistryKey);
       const match = ctx.inject(MatchKey);
 
-      const supply = {} as Record<Side, Resource<DecimalSource>>;
-      const workers = {} as Record<Side, Persistent<number>>;
-      const cumulativeIncome = {} as Record<Side, Persistent<number>>;
-      const economySpend = {} as Record<Side, Persistent<number>>;
+      const supply = {} as Record<FactionId, Resource<DecimalSource>>;
+      const workers = {} as Record<FactionId, Persistent<number>>;
+      const cumulativeIncome = {} as Record<FactionId, Persistent<number>>;
+      const economySpend = {} as Record<FactionId, Persistent<number>>;
 
-      for (const side of SIDES) {
+      for (const side of factions) {
         supply[side] = createResource<DecimalSource>(0, {
           id: `skirmish/match/economy/${side}/supply`,
           displayName: 'supply',
@@ -93,7 +100,7 @@ export function createEconomyModule(): EngineModule {
       // `createReset` restores `persistent()` refs but not `createResource`, so
       // the economy clears its own supply each match alongside the counters.
       match.on('matchStarted', () => {
-        for (const side of SIDES) {
+        for (const side of factions) {
           addResource(supply[side], Decimal.mul(supply[side].value, -1));
           workers[side].value = ECONOMY_BALANCE.startingWorkers;
           cumulativeIncome[side].value = 0;
@@ -126,7 +133,7 @@ export function createEconomyModule(): EngineModule {
 
       ctx.onTick((dt) => {
         if (!match.inMatch.value) return;
-        for (const side of SIDES) {
+        for (const side of factions) {
           // income = ρ · E. The compounding is here and nowhere else: buying a
           // worker raises this term, which is what makes φ an investment rather
           // than a preference.
@@ -137,6 +144,7 @@ export function createEconomyModule(): EngineModule {
       });
 
       ctx.provide(EconomyKey, {
+        factions,
         supply,
         workers,
         cumulativeIncome,

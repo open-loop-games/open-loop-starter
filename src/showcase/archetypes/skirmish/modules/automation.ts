@@ -10,7 +10,7 @@ import { MatchKey } from './match';
 import { EconomyKey } from './economy';
 import { TacticalKey } from './tactical-sim';
 import { AutomationTiersKey, type SkirmishAutomationTier } from './automation-tiers';
-import { type Side } from './tuning';
+import { type FactionId, type Side } from './tuning';
 import { type UnitTypeId, PERSONAS, getPersonaDef, type PersonaKey } from '../data/tactical';
 
 /** Baseline seconds between spawn decisions, before per-persona scaling. */
@@ -60,7 +60,9 @@ export interface AutomationOptions {
 }
 
 export interface AutomationApi {
+  /** Faction / side identifier. */
   side: Side;
+  faction: FactionId;
   currentPersona: Persistent<PersonaKey | 'custom'>;
   economyShare: Persistent<number>;
   cadenceSec: Persistent<number>;
@@ -70,10 +72,31 @@ export interface AutomationApi {
   setPersona: (key: PersonaKey) => void;
 }
 
-export const AutomationKey: Record<Side, InjectionKey<AutomationApi>> = {
-  a: Symbol('skirmish/automation/a') as InjectionKey<AutomationApi>,
-  b: Symbol('skirmish/automation/b') as InjectionKey<AutomationApi>,
-};
+const keyRegistry = new Map<string, InjectionKey<AutomationApi>>();
+
+/**
+ * Resolve or allocate a stable InjectionKey for a faction's automation API.
+ */
+export function getAutomationKey(faction: FactionId): InjectionKey<AutomationApi> {
+  let key = keyRegistry.get(faction);
+  if (!key) {
+    key = Symbol(`skirmish/automation/${faction}`) as InjectionKey<AutomationApi>;
+    keyRegistry.set(faction, key);
+  }
+  return key;
+}
+
+/**
+ * AutomationKey record supporting both bilateral ('a'/'b') and dynamic N-faction keys.
+ */
+export const AutomationKey: Record<string, InjectionKey<AutomationApi>> = new Proxy(
+  {} as Record<string, InjectionKey<AutomationApi>>,
+  {
+    get(_target, prop: string) {
+      return getAutomationKey(prop);
+    },
+  },
+);
 
 /**
  * Per-side AI policy — bone #2. "Production AI plays itself": the SAME factory
@@ -101,7 +124,9 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
   const initialBurst = options.maxSpawnPerBurst ?? Infinity;
   const initialJitter = options.cadenceJitter ?? 0;
   const initialComp = options.composition ?? { trooper: 1 };
-  const sideOffset = side === 'a' ? 1 : 2;
+  let hash = 0;
+  for (let i = 0; i < side.length; i++) hash = (hash * 31 + side.charCodeAt(i)) | 0;
+  const sideOffset = side === 'a' ? 1 : side === 'b' ? 2 : Math.abs(hash % 1000) + 3;
   const tier = options.tier;
 
   // Determine initial persona key if one matches exactly
@@ -181,6 +206,7 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
 
       const api: AutomationApi = {
         side,
+        faction: side,
         currentPersona,
         economyShare,
         cadenceSec,
@@ -189,7 +215,7 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
         composition,
         setPersona,
       };
-      ctx.provide(AutomationKey[side], api);
+      ctx.provide(getAutomationKey(side), api);
 
       // Lazy per-side seeded RNG for believability jitter
       let rng: (() => number) | null = null;

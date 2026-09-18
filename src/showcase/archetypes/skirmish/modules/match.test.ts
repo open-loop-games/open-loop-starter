@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { boot, getEngine, tick, TICK_RATE } from '../sim/harness';
-import { MatchKey, type MatchApi, type MatchEndedPayload } from '.';
-
+import { boot, bootModules, getEngine, tick, TICK_RATE } from '../sim/harness';
+import {
+  createTuningModule,
+  createMatchModule,
+  MatchKey,
+  type MatchApi,
+  type MatchEndedPayload,
+} from '.';
 /**
  * Behavioral spec for the match spine (bone #1). Drives the real engine
  * tick-by-tick — specs *what the lifecycle does*, not economy magnitudes.
@@ -74,5 +79,52 @@ describe('skirmish match spine', () => {
     expect(match().inMatch.value).toBe(true);
     expect(match().outcome.value).toBeNull();
     expect(match().matchTimeElapsed.value).toBe(0);
+  });
+
+  it('tracks active factions initialized on start', () => {
+    bootModules([
+      createTuningModule(),
+      createMatchModule({ factions: ['crimson', 'azure', 'emerald'] }),
+    ]);
+    match().start();
+    expect(match().activeFactions.value).toEqual(['crimson', 'azure', 'emerald']);
+    expect(match().eliminations.value).toEqual([]);
+  });
+
+  it('handles sequential elimination in 3-way match, resolving on last-standing', async () => {
+    bootModules([
+      createTuningModule(),
+      createMatchModule({ factions: ['crimson', 'azure', 'emerald'] }),
+    ]);
+    let eliminatedEvent: { faction: string; elapsedSec: number } | null = null;
+    let endedPayload: MatchEndedPayload | null = null;
+    match().on('factionEliminated', (p) => (eliminatedEvent = p));
+    match().on('matchEnded', (p) => (endedPayload = p));
+
+    match().start();
+    await tick(TICK_RATE);
+    match().eliminate('crimson');
+
+    expect(match().inMatch.value).toBe(true);
+    expect(match().activeFactions.value).toEqual(['azure', 'emerald']);
+    expect(match().eliminations.value).toHaveLength(1);
+    expect(match().eliminations.value[0].faction).toBe('crimson');
+    expect(match().eliminations.value[0].remainingFactions).toEqual(['azure', 'emerald']);
+    expect((eliminatedEvent as { faction: string; elapsedSec: number } | null)?.faction).toBe(
+      'crimson',
+    );
+
+    await tick(TICK_RATE);
+    match().eliminate('azure');
+
+    expect(match().inMatch.value).toBe(false);
+    expect(match().activeFactions.value).toEqual(['emerald']);
+    expect(match().outcome.value).toEqual({ winner: 'emerald', reason: 'last-standing' });
+    expect(match().eliminations.value).toHaveLength(2);
+    expect(match().eliminations.value[1].faction).toBe('azure');
+    expect(match().eliminations.value[1].remainingFactions).toEqual(['emerald']);
+    expect(endedPayload).not.toBeNull();
+    expect(endedPayload!.outcome).toEqual({ winner: 'emerald', reason: 'last-standing' });
+    expect(endedPayload!.eliminations).toHaveLength(2);
   });
 });

@@ -22,11 +22,17 @@ export interface GameEngineOptions {
   extraModules?: EngineModule[];
   /** Raise the loop's `maxDeltaTime` cap. */
   maxDeltaTime?: number;
+  /** Roster of participating factions. */
+  factions?: SkirmishModulesOptions['factions'];
   /**
    * Per-seat policy overrides. The balance layer varies `economyShare` across
    * seats to sweep the split axis; production takes the defaults.
    */
   seats?: SkirmishModulesOptions['seats'];
+  /** Per-seat named persona presets. */
+  personas?: SkirmishModulesOptions['personas'];
+  /** Base placement radius. */
+  baseRadius?: number;
 }
 
 /**
@@ -36,7 +42,12 @@ export interface GameEngineOptions {
  */
 export function createGameEngine(options?: GameEngineOptions): { engine: Engine } {
   const modules = [
-    ...createSkirmishModules({ seats: options?.seats }),
+    ...createSkirmishModules({
+      factions: options?.factions,
+      seats: options?.seats,
+      personas: options?.personas,
+      baseRadius: options?.baseRadius,
+    }),
     ...(options?.extraModules ?? []),
   ];
   const engine = bootEngine({

@@ -32,14 +32,44 @@ export type SkirmishTunableKey =
   | 'tactical/unitCost';
 
 /**
- * The two factions. Kept deliberately neutral (`a`/`b`, not player/ai) — the
- * archetype is bot-vs-bot first; a "player" side is just a seat whose policy is
- * swapped for input later. Modules parameterize over `Side` so both seats run
- * identical code.
+ * Faction identifiers. Widened from the bilateral duel (`'a' | 'b'`) to arbitrary
+ * N-faction free-for-all identifiers ($N \ge 3$).
+ *
+ * `Side` is retained as an alias for backward compatibility.
  */
-export type Side = 'a' | 'b';
-export const SIDES: readonly Side[] = ['a', 'b'];
-export function opponentOf(side: Side): Side {
+export type FactionId = string;
+export type Side = FactionId;
+
+export const DEFAULT_FACTIONS: readonly FactionId[] = ['a', 'b'];
+export const SIDES: readonly Side[] = DEFAULT_FACTIONS;
+
+/**
+ * Relational hostility check. In the base free-for-all case, any two distinct
+ * factions are hostile.
+ */
+export function isHostile(a: FactionId, b: FactionId): boolean {
+  return a !== b;
+}
+
+/**
+ * Returns all factions hostile to `faction` within the provided `roster`.
+ */
+export function opponentsOf(
+  faction: FactionId,
+  roster: readonly FactionId[] = DEFAULT_FACTIONS,
+): FactionId[] {
+  return roster.filter((f) => isHostile(faction, f));
+}
+
+/**
+ * Legacy binary opponent helper. In an N-faction match, returns the first
+ * hostile opponent, falling back to binary 'a' <-> 'b'.
+ */
+export function opponentOf(side: Side, roster?: readonly FactionId[]): Side {
+  if (roster && roster.length > 0) {
+    const opps = opponentsOf(side, roster);
+    if (opps.length > 0) return opps[0];
+  }
   return side === 'a' ? 'b' : 'a';
 }
 

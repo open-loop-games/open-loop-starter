@@ -11,8 +11,7 @@ import {
   type MatchApi,
   type TacticalApi,
 } from '.';
-import { BASE_HP, getCounterMultiplier } from '../data/tactical';
-
+import { BASE_HP, BASE_RADIUS, computeBasePositions, getCounterMultiplier } from '../data/tactical';
 /**
  * Tactical-sim mechanics (bone #3), isolated from the AI policies — the module
  * stack here has no automation, so `spawn` is driven by hand and the field
@@ -72,6 +71,87 @@ describe('skirmish tactical sim — mirror symmetry', () => {
     const offsets = (side: 'a' | 'b') =>
       t.units[side].value.map((u) => u.y - t.basePos[side].y).sort((p, q) => p - q);
     expect(offsets('a')).toEqual(offsets('b'));
+  });
+});
+
+describe('skirmish tactical sim — N-faction regular N-gon geometry and mirror symmetry', () => {
+  const TRIAD = ['crimson', 'azure', 'emerald'] as const;
+
+  function bootTriad() {
+    bootModules([
+      createTuningModule(),
+      createMatchModule({ factions: TRIAD }),
+      createEconomyModule({ factions: TRIAD }),
+      createTacticalSimModule({ factions: TRIAD }),
+    ]);
+  }
+
+  it('computes exact equilateral pairwise distances at N=3', () => {
+    const positions = computeBasePositions(TRIAD, BASE_RADIUS);
+    const p0 = positions.crimson;
+    const p1 = positions.azure;
+    const p2 = positions.emerald;
+
+    const d01 = Math.hypot(p0.x - p1.x, p0.y - p1.y);
+    const d12 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    const d20 = Math.hypot(p2.x - p0.x, p2.y - p0.y);
+
+    const expectedDistance = BASE_RADIUS * Math.sqrt(3);
+    expect(d01).toBeCloseTo(expectedDistance, 4);
+    expect(d12).toBeCloseTo(expectedDistance, 4);
+    expect(d20).toBeCloseTo(expectedDistance, 4);
+  });
+
+  it('orients velocity-vector facing direction based on movement vx', async () => {
+    boot();
+    match().start();
+    const t = tactical();
+    addResource(t.supply.a, 500);
+    t.spawn('a'); // spawns at x=12, marches right toward x=88
+    await tick(TICK_RATE);
+    expect(t.units.a.value[0].facing).toBe(1);
+
+    addResource(t.supply.b, 500);
+    t.spawn('b'); // spawns at x=88, marches left toward x=12
+    await tick(TICK_RATE);
+    expect(t.units.b.value[0].facing).toBe(-1);
+  });
+
+  it('disbands surviving units immediately on base defeat and concludes on last-standing', async () => {
+    bootTriad();
+    match().start();
+    const t = tactical();
+
+    // Give all three factions resources and spawn units
+    for (const f of TRIAD) {
+      addResource(t.supply[f], 500);
+      t.spawn(f);
+    }
+    expect(t.units.crimson.value).toHaveLength(1);
+    expect(t.units.azure.value).toHaveLength(1);
+    expect(t.units.emerald.value).toHaveLength(1);
+
+    // Crimson's base falls
+    t.baseHp.crimson.value = 0;
+    await tick(1); // sim onTick processes defeat
+
+    // Crimson units are immediately disbanded
+    expect(t.units.crimson.value).toHaveLength(0);
+    // Match remains live with remaining 2 factions
+    expect(match().inMatch.value).toBe(true);
+    expect(match().activeFactions.value).toEqual(['azure', 'emerald']);
+
+    // Azure's base falls
+    t.baseHp.azure.value = 0;
+    await tick(1);
+
+    // Azure units disbanded, match ends with Emerald as last standing
+    expect(t.units.azure.value).toHaveLength(0);
+    expect(match().inMatch.value).toBe(false);
+    expect(match().outcome.value).toEqual({
+      winner: 'emerald',
+      reason: 'last-standing',
+    });
   });
 });
 function match(): MatchApi {

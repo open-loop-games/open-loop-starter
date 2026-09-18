@@ -10,8 +10,7 @@ import {
   type Persistent,
   type Reset,
 } from '@open-loop/engine';
-import { SkirmishTuningRegistryKey, type Side } from './tuning';
-
+import { SkirmishTuningRegistryKey, DEFAULT_FACTIONS, type FactionId } from './tuning';
 /**
  * Match spine — bone #1, stripped from tug's `match.ts` to the reusable core.
  *
@@ -37,24 +36,31 @@ import { SkirmishTuningRegistryKey, type Side } from './tuning';
  * judgment on the recipe batch, not an N=2 trigger. See that index.
  */
 
+export interface FactionElimination {
+  faction: FactionId;
+  eliminatedAtSec: number;
+  remainingFactions: FactionId[];
+}
+
 export type MatchOutcome =
-  | { winner: Side; reason: 'defeat' }
-  | { winner: null; reason: 'time-limit' };
+  | { winner: FactionId; reason: 'last-standing' | 'defeat' }
+  | { winner: null; reason: 'time-limit' | 'draw' };
 
 export interface MatchEndedPayload {
   outcome: MatchOutcome;
   elapsedSec: number;
+  eliminations: FactionElimination[];
 }
 
 export interface MatchEvents {
   /**
    * Fires when a match opens (synchronously inside `start()`). Battlefield /
    * tactical-sim modules subscribe to (re)initialize their own state — the
-   * decoupled alternative to match reaching into them. Load-bearing because
-   * `createReset` restores `persistent()` refs but NOT `createResource`
-   * resources, so resource-holding modules must re-init themselves here.
+   * decoupled alternative to match reaching into them.
    */
   matchStarted: () => void;
+  /** Fires when a faction's base falls, removing it from active contention. */
+  factionEliminated: (payload: { faction: FactionId; elapsedSec: number }) => void;
   /** Fires once per completion, BEFORE the match-scope reset clears state. */
   matchEnded: (payload: MatchEndedPayload) => void;
 }
@@ -62,10 +68,16 @@ export interface MatchEvents {
 export interface MatchApi {
   outcome: Persistent<MatchOutcome | null>;
   matchTimeElapsed: Persistent<number>;
+  /** Factions currently still contending in the live match. */
+  activeFactions: Persistent<FactionId[]>;
+  /** Ordered history of faction eliminations. */
+  eliminations: Persistent<FactionElimination[]>;
   /** True while a match is live (started AND no outcome). UI / AI gate on this. */
   inMatch: ComputedRef<boolean>;
   /** Open a fresh match. */
   start(): void;
+  /** Eliminate a faction. If <= 1 faction remains, resolves the match. */
+  eliminate(faction: FactionId): void;
   /** Close the match. Idempotent. Emits `matchEnded` then runs the reset. */
   end(outcome: MatchOutcome): void;
   /** The match-scope reset, exposed for test/debug drive-through. */
@@ -100,11 +112,14 @@ export interface MatchModuleOptions {
   timeLimitSec?: number;
   /** Match-scope module ids to clear on boundary. Default: this module only. */
   resetModules?: readonly string[];
+  /** Faction roster contending in the match. Defaults to DEFAULT_FACTIONS. */
+  factions?: readonly FactionId[];
 }
 
 export function createMatchModule(options: MatchModuleOptions = {}): EngineModule {
   const resetModules = options.resetModules ?? SKIRMISH_MATCH_SCOPE_MODULES;
   const defaultTimeLimit = options.timeLimitSec ?? 30 * 60;
+  const configuredFactions = options.factions ?? DEFAULT_FACTIONS;
 
   return {
     id: 'skirmish/match',
@@ -117,6 +132,10 @@ export function createMatchModule(options: MatchModuleOptions = {}): EngineModul
       const started = persistent<boolean>(false, { name: 'started' });
       const outcome = persistent<MatchOutcome | null>(null, { name: 'outcome' });
       const matchTimeElapsed = persistent<number>(0, { name: 'matchTimeElapsed' });
+      const activeFactions = persistent<FactionId[]>([...configuredFactions], {
+        name: 'activeFactions',
+      });
+      const eliminations = persistent<FactionElimination[]>([], { name: 'eliminations' });
 
       const inMatch = computed(() => started.value && outcome.value === null);
 
@@ -131,6 +150,8 @@ export function createMatchModule(options: MatchModuleOptions = {}): EngineModul
         started.value = true;
         outcome.value = null;
         matchTimeElapsed.value = 0;
+        activeFactions.value = [...configuredFactions];
+        eliminations.value = [];
         // Announce the open so resource-holding modules re-init themselves.
         handle.emit('matchStarted');
       }
@@ -140,12 +161,40 @@ export function createMatchModule(options: MatchModuleOptions = {}): EngineModul
         outcome.value = o;
         // Emit BEFORE reset so subscribers read pre-reset battlefield state
         // (unit positions, kill tallies) that the reset is about to clear.
-        handle.emit('matchEnded', { outcome: o, elapsedSec: matchTimeElapsed.value });
+        handle.emit('matchEnded', {
+          outcome: o,
+          elapsedSec: matchTimeElapsed.value,
+          eliminations: [...eliminations.value],
+        });
         reset.reset();
       }
 
+      function eliminate(faction: FactionId): void {
+        if (!inMatch.value) return;
+        const idx = activeFactions.value.indexOf(faction);
+        if (idx === -1) return;
+        const remaining = activeFactions.value.filter((f) => f !== faction);
+        activeFactions.value = remaining;
+        const record: FactionElimination = {
+          faction,
+          eliminatedAtSec: matchTimeElapsed.value,
+          remainingFactions: [...remaining],
+        };
+        eliminations.value = [...eliminations.value, record];
+        handle.emit('factionEliminated', { faction, elapsedSec: matchTimeElapsed.value });
+
+        if (remaining.length === 1) {
+          end({
+            winner: remaining[0],
+            reason: configuredFactions.length === 2 ? 'defeat' : 'last-standing',
+          });
+        } else if (remaining.length === 0) {
+          end({ winner: null, reason: 'draw' });
+        }
+      }
+
       // Match clock + time-limit. Win-by-defeat is reported externally via
-      // end({ winner }); this module owns only the clock-driven ending.
+      // end({ winner }) or eliminate(faction); this module owns the clock-driven ending.
       ctx.onTick((dt) => {
         if (!inMatch.value) return;
         matchTimeElapsed.value += dt;
@@ -157,8 +206,11 @@ export function createMatchModule(options: MatchModuleOptions = {}): EngineModul
       ctx.provide(MatchKey, {
         outcome,
         matchTimeElapsed,
+        activeFactions,
+        eliminations,
         inMatch,
         start,
+        eliminate,
         end,
         reset,
         on: handle.on,

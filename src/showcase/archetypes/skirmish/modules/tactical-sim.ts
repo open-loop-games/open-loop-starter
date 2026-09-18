@@ -7,15 +7,22 @@ import {
   type Resource,
 } from '@open-loop/engine';
 import { persistent } from '@open-loop/engine';
-import { SkirmishTuningRegistryKey, SIDES, opponentOf, type Side } from './tuning';
+import {
+  SkirmishTuningRegistryKey,
+  DEFAULT_FACTIONS,
+  isHostile,
+  type FactionId,
+  type Side,
+} from './tuning';
 import { MatchKey } from './match';
 import { EconomyKey } from './economy';
 import {
   BASE_HP,
-  FIELD,
+  BASE_RADIUS,
   TROOPER,
   getUnitDef,
   getCounterMultiplier,
+  computeBasePositions,
   type UnitTypeId,
 } from '../data/tactical';
 
@@ -48,31 +55,40 @@ export interface Unit {
   hp: number;
   /** Seconds until the next attack is ready. */
   cooldown: number;
+  /** Horizontal facing direction: 1 for right, -1 for left. */
+  facing?: number;
 }
 
 export interface TacticalApi {
-  units: Record<Side, Persistent<Unit[]>>;
-  baseHp: Record<Side, Persistent<number>>;
+  factions: readonly FactionId[];
+  units: Record<FactionId, Persistent<Unit[]>>;
+  baseHp: Record<FactionId, Persistent<number>>;
   /**
    * Spendable supply — owned by `modules/economy.ts` and surfaced here because
    * spawning is what spends it. Read it from either; there is one resource.
    */
-  supply: Record<Side, Resource<DecimalSource>>;
-  basePos: Record<Side, { x: number; y: number }>;
+  supply: Record<FactionId, Resource<DecimalSource>>;
+  basePos: Record<FactionId, { x: number; y: number }>;
+  /** Faction-level march target base (Meso-AI hook). */
+  targetBase: Record<FactionId, Persistent<FactionId | null>>;
   /** Live unit price, after any tuning override. Defaults to 'trooper'. */
   unitCost(type?: UnitTypeId): number;
   /** Spawn one unit for `side` if it can afford the cost. Defaults to 'trooper'. */
   spawn(side: Side, type?: UnitTypeId): boolean;
+  /** Set designated enemy base to march toward. */
+  setTargetBase(faction: FactionId, target: FactionId | null): void;
 }
 
 export const TacticalKey: InjectionKey<TacticalApi> = Symbol(
   'skirmish/tactical',
 ) as InjectionKey<TacticalApi>;
 
-const BASE_POS: Record<Side, { x: number; y: number }> = {
-  a: { x: 6, y: FIELD.height / 2 },
-  b: { x: FIELD.width - 6, y: FIELD.height / 2 },
-};
+export interface TacticalSimModuleOptions {
+  /** Participating faction roster. Defaults to DEFAULT_FACTIONS. */
+  factions?: readonly FactionId[];
+  /** Radius of regular N-gon placement from center (50, 50). Defaults to BASE_RADIUS (38). */
+  baseRadius?: number;
+}
 
 /**
  * A unit's position as it stood at the start of the tick, paired with the live
@@ -82,6 +98,8 @@ interface Frozen {
   unit: Unit;
   x: number;
   y: number;
+  hp: number;
+  faction: FactionId;
 }
 
 /** Nearest living enemy within `range`, else null. Brute force — the scale seam. */
@@ -89,7 +107,7 @@ function nearestEnemy(self: Frozen, enemies: Frozen[], range: number): Frozen | 
   let best: Frozen | null = null;
   let bestD2 = range * range;
   for (const e of enemies) {
-    if (e.unit.hp <= 0) continue;
+    if (e.hp <= 0) continue;
     const dx = e.x - self.x;
     const dy = e.y - self.y;
     const d2 = dx * dx + dy * dy;
@@ -101,7 +119,15 @@ function nearestEnemy(self: Frozen, enemies: Frozen[], range: number): Frozen | 
   return best;
 }
 
-export function createTacticalSimModule(): EngineModule {
+export function createTacticalSimModule(options: TacticalSimModuleOptions = {}): EngineModule {
+  const factions = options.factions ?? DEFAULT_FACTIONS;
+  const baseRadius = options.baseRadius ?? BASE_RADIUS;
+  const baseGeometries = computeBasePositions(factions, baseRadius);
+  const basePos: Record<FactionId, { x: number; y: number }> = {};
+  for (const f of factions) {
+    basePos[f] = { x: baseGeometries[f].x, y: baseGeometries[f].y };
+  }
+
   return {
     id: 'skirmish/match/tactical',
     dependencies: ['skirmish/tuning', 'skirmish/match', 'skirmish/match/economy'],
@@ -110,22 +136,18 @@ export function createTacticalSimModule(): EngineModule {
       const match = ctx.inject(MatchKey);
       const economy = ctx.inject(EconomyKey);
 
-      const units = {} as Record<Side, Persistent<Unit[]>>;
-      const baseHp = {} as Record<Side, Persistent<number>>;
-      for (const side of SIDES) {
-        units[side] = persistent<Unit[]>([], { name: `units-${side}` });
-        baseHp[side] = persistent<number>(BASE_HP, { name: `baseHp-${side}` });
+      const units = {} as Record<FactionId, Persistent<Unit[]>>;
+      const baseHp = {} as Record<FactionId, Persistent<number>>;
+      const spawnIndex = {} as Record<FactionId, Persistent<number>>;
+      const targetBase = {} as Record<FactionId, Persistent<FactionId | null>>;
+
+      for (const f of factions) {
+        units[f] = persistent<Unit[]>([], { name: `units-${f}` });
+        baseHp[f] = persistent<number>(BASE_HP, { name: `baseHp-${f}` });
+        spawnIndex[f] = persistent<number>(0, { name: `spawnIndex-${f}` });
+        targetBase[f] = persistent<FactionId | null>(null, { name: `targetBase-${f}` });
       }
       const nextId = persistent<number>(0, { name: 'nextId' });
-      // Per-side spawn index, used ONLY for the formation offset. It cannot be
-      // `nextId`: that counter is shared, so interleaved spawns hand each side a
-      // different slice of the offset cycle and two seats running identical
-      // policies field differently-shaped armies. That asymmetry decides mirror
-      // matches, which makes it a balance result that is really a bug.
-      const spawnIndex = {} as Record<Side, Persistent<number>>;
-      for (const side of SIDES) {
-        spawnIndex[side] = persistent<number>(0, { name: `spawnIndex-${side}` });
-      }
 
       const unitCost = tunable<DecimalSource>(registry, 'tactical/unitCost', () => TROOPER.cost);
 
@@ -133,65 +155,119 @@ export function createTacticalSimModule(): EngineModule {
       // NOT `createResource`, and we want a single authoritative reset path, so
       // the sim clears its own field each match.
       match.on('matchStarted', () => {
-        for (const side of SIDES) {
-          units[side].value = [];
-          baseHp[side].value = BASE_HP;
+        for (const f of factions) {
+          units[f].value = [];
+          baseHp[f].value = BASE_HP;
+          spawnIndex[f].value = 0;
+          targetBase[f].value = null;
         }
         nextId.value = 0;
-        for (const side of SIDES) spawnIndex[side].value = 0;
       });
 
-      function spawn(side: Side, type: UnitTypeId = 'trooper'): boolean {
+      function spawn(faction: FactionId, type: UnitTypeId = 'trooper'): boolean {
         if (!match.inMatch.value) return false;
+        if (!match.activeFactions.value.includes(faction)) return false;
         const def = getUnitDef(type);
         const cost = type === 'trooper' ? Number(unitCost.value) : def.cost;
-        if (!economy.spendOnArmy(side, cost)) return false;
-        const bp = BASE_POS[side];
-        // Deterministic y-spread so a burst doesn't stack on one point.
-        const jitter = ((spawnIndex[side].value % 5) - 2) * 3;
-        units[side].value.push({
+        if (!economy.spendOnArmy(faction, cost)) return false;
+
+        const bg = baseGeometries[faction];
+        // Deterministic tangent spread so a burst doesn't stack on one point.
+        const offset = ((spawnIndex[faction].value % 5) - 2) * 3;
+        const spawnX = bg.x + offset * bg.tangentX;
+        const spawnY = bg.y + offset * bg.tangentY;
+
+        units[faction].value.push({
           id: nextId.value,
           type,
-          x: bp.x,
-          y: bp.y + jitter,
+          x: spawnX,
+          y: spawnY,
           hp: def.hp,
           cooldown: 0,
+          facing: bg.x <= 50 ? 1 : -1,
         });
-        units[side].value = [...units[side].value]; // reassign → reactivity
+        units[faction].value = [...units[faction].value]; // reassign -> reactivity
         nextId.value += 1;
-        spawnIndex[side].value += 1;
+        spawnIndex[faction].value += 1;
         return true;
+      }
+
+      function setTargetBase(faction: FactionId, target: FactionId | null): void {
+        if (targetBase[faction]) {
+          targetBase[faction].value = target;
+        }
       }
 
       ctx.onTick((dt) => {
         if (!match.inMatch.value) return;
+        const active = match.activeFactions.value;
 
-        // Simultaneous resolution. Every unit reads the world as it stood at the
-        // START of this tick, so both sides act on the same information.
-        //
-        // Resolving sides in sequence against live positions is not a small
-        // bias: the side processed second targets and range-checks against the
-        // first side's ALREADY-MOVED positions, so it closes more accurately and
-        // enters attack range sooner. It decides mirror matches on its own,
-        // which reads as a balance result while actually being an update-order
-        // artifact. Damage still applies to the live units — only the geometry
-        // is snapshotted.
-        const frozen = {} as Record<Side, Frozen[]>;
-        for (const side of SIDES) {
-          frozen[side] = units[side].value.map((u) => ({ unit: u, x: u.x, y: u.y }));
+        // Simultaneous resolution: snapshot all living units across active factions
+        const frozen = {} as Record<FactionId, Frozen[]>;
+        for (const f of factions) {
+          frozen[f] = units[f].value.map((u) => ({
+            unit: u,
+            x: u.x,
+            y: u.y,
+            hp: u.hp,
+            faction: f,
+          }));
         }
 
-        for (const side of SIDES) {
-          const foe = opponentOf(side);
-          const enemies = frozen[foe];
-          const foeBase = BASE_POS[foe];
-          for (const self of frozen[side]) {
+        for (const selfFaction of active) {
+          // Collect units from all hostile active factions using snapshot hp
+          const hostileEnemies: Frozen[] = [];
+          for (const otherFaction of active) {
+            if (isHostile(selfFaction, otherFaction)) {
+              for (const e of frozen[otherFaction]) {
+                if (e.hp > 0) hostileEnemies.push(e);
+              }
+            }
+          }
+
+          for (const self of frozen[selfFaction]) {
             const u = self.unit;
             const def = getUnitDef(u.type);
-            const target = nearestEnemy(self, enemies, def.aggroRange);
-            const tx = target ? target.x : foeBase.x;
-            const ty = target ? target.y : foeBase.y;
-            // Distances read from the snapshot on both ends.
+            const targetUnit = nearestEnemy(self, hostileEnemies, def.aggroRange);
+
+            let tx: number;
+            let ty: number;
+            let targetEnemyBaseFaction: FactionId | null = null;
+
+            if (targetUnit) {
+              tx = targetUnit.x;
+              ty = targetUnit.y;
+            } else {
+              // March toward hostile enemy base
+              const designated = targetBase[selfFaction]?.value;
+              if (designated && active.includes(designated) && isHostile(selfFaction, designated)) {
+                targetEnemyBaseFaction = designated;
+              } else {
+                // Nearest living hostile base
+                let bestBaseDist2 = Infinity;
+                let bestBaseFaction: FactionId | null = null;
+                for (const other of active) {
+                  if (isHostile(selfFaction, other)) {
+                    const bp = basePos[other];
+                    const d2 = (bp.x - self.x) ** 2 + (bp.y - self.y) ** 2;
+                    if (d2 < bestBaseDist2) {
+                      bestBaseDist2 = d2;
+                      bestBaseFaction = other;
+                    }
+                  }
+                }
+                targetEnemyBaseFaction = bestBaseFaction;
+              }
+
+              if (targetEnemyBaseFaction) {
+                tx = basePos[targetEnemyBaseFaction].x;
+                ty = basePos[targetEnemyBaseFaction].y;
+              } else {
+                tx = self.x;
+                ty = self.y;
+              }
+            }
+
             const dx = tx - self.x;
             const dy = ty - self.y;
             const dist = Math.hypot(dx, dy);
@@ -199,45 +275,53 @@ export function createTacticalSimModule(): EngineModule {
             u.cooldown = Math.max(0, u.cooldown - dt);
             if (dist <= def.attackRange) {
               if (u.cooldown <= 0) {
-                if (target) {
-                  const mult = getCounterMultiplier(u.type, target.unit.type);
-                  target.unit.hp -= def.damage * mult;
-                } else {
-                  baseHp[foe].value -= def.damage;
+                if (targetUnit) {
+                  const mult = getCounterMultiplier(u.type, targetUnit.unit.type);
+                  targetUnit.unit.hp -= def.damage * mult;
+                } else if (targetEnemyBaseFaction) {
+                  baseHp[targetEnemyBaseFaction].value -= def.damage;
                 }
                 u.cooldown = def.attackCooldownSec;
               }
             } else if (dist > 0) {
               const stepLen = Math.min(def.speed * dt, dist);
-              u.x += (dx / dist) * stepLen;
-              u.y += (dy / dist) * stepLen;
+              const vx = (dx / dist) * stepLen;
+              const vy = (dy / dist) * stepLen;
+              u.x += vx;
+              u.y += vy;
+              if (Math.abs(vx) > 0.001) {
+                u.facing = vx > 0 ? 1 : -1;
+              }
             }
           }
         }
 
-        // Remove the dead; reassign each tick so movement is reactive too.
-        for (const side of SIDES) {
-          units[side].value = units[side].value.filter((u) => u.hp > 0);
+        // Remove the dead
+        for (const f of factions) {
+          units[f].value = units[f].value.filter((u) => u.hp > 0);
         }
 
-        // Defeat: a fallen base loses. `a` checked first — simultaneous falls
-        // resolve deterministically; `end()` is idempotent.
-        for (const side of SIDES) {
-          if (baseHp[side].value <= 0) {
-            match.end({ winner: opponentOf(side), reason: 'defeat' });
-            return;
+        // Elimination lifecycle: a fallen base loses.
+        // Surviving units of an eliminated faction are immediately disbanded.
+        for (const f of active) {
+          if (baseHp[f].value <= 0) {
+            units[f].value = [];
+            match.eliminate(f);
           }
         }
       });
 
       ctx.provide(TacticalKey, {
+        factions,
         units,
         baseHp,
         supply: economy.supply,
-        basePos: BASE_POS,
+        basePos,
+        targetBase,
         unitCost: (type: UnitTypeId = 'trooper') =>
           type === 'trooper' ? Number(unitCost.value) : getUnitDef(type).cost,
         spawn,
+        setTargetBase,
       });
     },
   };

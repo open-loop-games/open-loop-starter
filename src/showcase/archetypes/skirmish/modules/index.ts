@@ -1,5 +1,5 @@
 import type { EngineModule } from '@open-loop/engine';
-import { createTuningModule, SIDES, type Side } from './tuning';
+import { createTuningModule, SIDES, type FactionId, type Side } from './tuning';
 import { createAutomationTiersModule } from './automation-tiers';
 import { createMatchModule } from './match';
 import { createEconomyModule } from './economy';
@@ -16,37 +16,46 @@ import {
 export { PERSONAS, PERSONA_KEYS, getPersonaDef };
 export type { PersonaKey, PersonaDef };
 
-export { createTuningModule, SkirmishTuningRegistryKey, SIDES, opponentOf } from './tuning';
+export {
+  createTuningModule,
+  SkirmishTuningRegistryKey,
+  DEFAULT_FACTIONS,
+  SIDES,
+  isHostile,
+  opponentsOf,
+  opponentOf,
+} from './tuning';
 export {
   createAutomationTiersModule,
   AutomationTiersKey,
   type SkirmishAutomationTier,
 } from './automation-tiers';
-export type { Side, SkirmishTunableKey } from './tuning';
+export type { FactionId, Side, SkirmishTunableKey } from './tuning';
 export { createMatchModule, MatchKey, SKIRMISH_MATCH_SCOPE_MODULES } from './match';
 export type {
   MatchApi,
   MatchEvents,
   MatchEndedPayload,
   MatchOutcome,
+  FactionElimination,
   MatchModuleOptions,
 } from './match';
 export { createEconomyModule, EconomyKey } from './economy';
 export type { EconomyApi } from './economy';
 export { createTacticalSimModule, TacticalKey } from './tactical-sim';
-export type { TacticalApi, Unit } from './tactical-sim';
-export { createAutomationModule, AutomationKey } from './automation';
+export type { TacticalApi, Unit, TacticalSimModuleOptions } from './tactical-sim';
+export { createAutomationModule, AutomationKey, getAutomationKey } from './automation';
 export type { AutomationOptions, AutomationApi } from './automation';
+export type { EconomyModuleOptions } from './economy';
 
 /**
- * Tactical sim + both AI policies are match-scoped. Their `persistent()` state
+ * Tactical sim + AI policies are match-scoped. Their `persistent()` state
  * (cadence accumulators, and the sim's unit arrays / base hp / nextId) clears
  * on the boundary; the sim additionally re-inits itself on `matchStarted`
  * because `createReset` doesn't restore `createResource` (supply). The match
- * module itself and tuning stay out (see `match.ts`). Only the module-list
- * assembler knows which modules are installed, so the list lives here.
+ * module itself and tuning stay out (see `match.ts`).
  */
-const MATCH_SCOPE_MODULES: readonly string[] = [
+export const MATCH_SCOPE_MODULES: readonly string[] = [
   'skirmish/match/economy',
   'skirmish/match/tactical',
   'skirmish/match/a/automation',
@@ -75,29 +84,53 @@ export const DEFAULT_SEATS: Record<Side, AutomationOptions> = {
   a: { ...PERSONAS.rush, cadenceJitter: 0 },
   b: { ...PERSONAS.investor, cadenceJitter: 0 },
 };
-
 export interface SkirmishModulesOptions {
+  /** Roster of participating factions. Defaults to SIDES (['a', 'b']) or derived from seats/personas. */
+  factions?: readonly FactionId[];
   /** Per-seat policy. Partial: an omitted seat keeps its default persona. */
-  seats?: Partial<Record<Side, AutomationOptions>>;
+  seats?: Partial<Record<FactionId, AutomationOptions>>;
   /** Per-seat named persona preset. Takes precedence over `seats` if provided. */
-  personas?: Partial<Record<Side, PersonaKey>>;
+  personas?: Partial<Record<FactionId, PersonaKey>>;
+  /** Base placement radius. Defaults to BASE_RADIUS (38). */
+  baseRadius?: number;
 }
+
 export function createSkirmishModules(options?: SkirmishModulesOptions): EngineModule[] {
-  const seats = SIDES.map((side) => {
+  const factions =
+    options?.factions ??
+    (options?.seats && Object.keys(options.seats).length > 0
+      ? Object.keys(options.seats)
+      : options?.personas && Object.keys(options.personas).length > 0
+        ? Object.keys(options.personas)
+        : SIDES);
+
+  const matchScopeModules = [
+    'skirmish/match/economy',
+    'skirmish/match/tactical',
+    ...factions.map((f) => `skirmish/match/${f}/automation`),
+  ];
+
+  const seats = factions.map((side, i) => {
     let opts: AutomationOptions;
     if (options?.personas?.[side]) {
       opts = PERSONAS[options.personas[side]!];
+    } else if (options?.seats?.[side]) {
+      opts = options.seats[side]!;
+    } else if (DEFAULT_SEATS[side]) {
+      opts = DEFAULT_SEATS[side];
     } else {
-      opts = options?.seats?.[side] ?? DEFAULT_SEATS[side];
+      const keys: PersonaKey[] = ['rush', 'investor', 'skirmish', 'boom', 'combined'];
+      opts = PERSONAS[keys[i % keys.length]];
     }
     return { side, opts };
   });
+
   return [
     createTuningModule(),
     createAutomationTiersModule(),
-    createMatchModule({ resetModules: MATCH_SCOPE_MODULES }),
-    createEconomyModule(),
-    createTacticalSimModule(),
+    createMatchModule({ factions, resetModules: matchScopeModules }),
+    createEconomyModule({ factions }),
+    createTacticalSimModule({ factions, baseRadius: options?.baseRadius }),
     ...seats.map(({ side, opts }) => createAutomationModule(side, opts)),
   ];
 }
