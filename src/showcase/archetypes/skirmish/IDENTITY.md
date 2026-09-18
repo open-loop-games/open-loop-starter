@@ -157,8 +157,9 @@ line's own unbuilt half, and they feed named spine terms.
   relation, making free-for-all the base case and teams a relation over it.
   Feeds the coupled-state term: at N ≥ 3 the exchange loses even the zero-sum
   shelter, which is where the archetype's balance question gets its teeth.
-- Unit roster + counters — one type today; a roster turns composition into a
-  real axis alongside the split (tug's `data/counter-matrix.ts` is the shape).
+- **Unit roster + counters** — 3-unit rock-paper-scissors roster (trooper,
+  archer, cavalry) with counter matrix (tug's `data/counter-matrix.ts` pattern);
+  verified in `balance/roster-probe.ts`.
 - Scale: brute-force targeting at tens of units → uniform-grid / spatial-hash
   broad-phase when counts demand it (and only then a candidate-primitive, if a
   second consumer converges).

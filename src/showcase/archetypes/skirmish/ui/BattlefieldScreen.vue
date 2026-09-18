@@ -25,6 +25,20 @@ const baseB = computed(() => Math.max(0, Math.round(tactical.baseHp.b.value)));
 const baseFracA = computed(() => Math.max(0, Math.min(1, tactical.baseHp.a.value / BASE_HP)));
 const baseFracB = computed(() => Math.max(0, Math.min(1, tactical.baseHp.b.value / BASE_HP)));
 
+function formatComposition(units: readonly { type: string }[]): string {
+  const counts: Record<string, number> = {};
+  for (const u of units) {
+    counts[u.type] = (counts[u.type] ?? 0) + 1;
+  }
+  const parts: string[] = [];
+  if (counts.trooper) parts.push(`${counts.trooper}T`);
+  if (counts.archer) parts.push(`${counts.archer}A`);
+  if (counts.cavalry) parts.push(`${counts.cavalry}C`);
+  return parts.join(' ');
+}
+
+const compA = computed(() => formatComposition(tactical.units.a.value));
+const compB = computed(() => formatComposition(tactical.units.b.value));
 function rematch(): void {
   match.start();
 }
@@ -45,6 +59,7 @@ function rematch(): void {
       <div class="hud__center">
         <span class="hud__clock">{{ matchElapsed.toFixed(1) }}s</span>
         <span class="hud__army">{{ armyA }} vs {{ armyB }}</span>
+        <span v-if="compA || compB" class="hud__comp">{{ compA || '—' }} · {{ compB || '—' }}</span>
       </div>
       <div class="hud__side hud__side--b">
         <span class="hud__hp">{{ baseB }}</span>
@@ -152,7 +167,12 @@ function rematch(): void {
   opacity: 0.6;
   font-variant-numeric: tabular-nums;
 }
-
+.hud__comp {
+  font-size: 0.65rem;
+  opacity: 0.45;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
 .battlefield__field {
   position: relative;
   width: 100%;

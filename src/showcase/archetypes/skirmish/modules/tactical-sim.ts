@@ -10,7 +10,14 @@ import { persistent } from '@open-loop/engine';
 import { SkirmishTuningRegistryKey, SIDES, opponentOf, type Side } from './tuning';
 import { MatchKey } from './match';
 import { EconomyKey } from './economy';
-import { BASE_HP, FIELD, TROOPER } from '../data/tactical';
+import {
+  BASE_HP,
+  FIELD,
+  TROOPER,
+  getUnitDef,
+  getCounterMultiplier,
+  type UnitTypeId,
+} from '../data/tactical';
 
 /**
  * Tactical sim — the continuous-tactical core (bone #3). Free-moving 2D unit
@@ -35,6 +42,7 @@ import { BASE_HP, FIELD, TROOPER } from '../data/tactical';
 
 export interface Unit {
   id: number;
+  type: UnitTypeId;
   x: number;
   y: number;
   hp: number;
@@ -51,10 +59,10 @@ export interface TacticalApi {
    */
   supply: Record<Side, Resource<DecimalSource>>;
   basePos: Record<Side, { x: number; y: number }>;
-  /** Live unit price, after any tuning override. */
-  unitCost(): number;
-  /** Spawn one unit for `side` if it can afford the cost. Returns whether it did. */
-  spawn(side: Side): boolean;
+  /** Live unit price, after any tuning override. Defaults to 'trooper'. */
+  unitCost(type?: UnitTypeId): number;
+  /** Spawn one unit for `side` if it can afford the cost. Defaults to 'trooper'. */
+  spawn(side: Side, type?: UnitTypeId): boolean;
 }
 
 export const TacticalKey: InjectionKey<TacticalApi> = Symbol(
@@ -133,17 +141,20 @@ export function createTacticalSimModule(): EngineModule {
         for (const side of SIDES) spawnIndex[side].value = 0;
       });
 
-      function spawn(side: Side): boolean {
+      function spawn(side: Side, type: UnitTypeId = 'trooper'): boolean {
         if (!match.inMatch.value) return false;
-        if (!economy.spendOnArmy(side, Number(unitCost.value))) return false;
+        const def = getUnitDef(type);
+        const cost = type === 'trooper' ? Number(unitCost.value) : def.cost;
+        if (!economy.spendOnArmy(side, cost)) return false;
         const bp = BASE_POS[side];
         // Deterministic y-spread so a burst doesn't stack on one point.
         const jitter = ((spawnIndex[side].value % 5) - 2) * 3;
         units[side].value.push({
           id: nextId.value,
+          type,
           x: bp.x,
           y: bp.y + jitter,
-          hp: TROOPER.hp,
+          hp: def.hp,
           cooldown: 0,
         });
         units[side].value = [...units[side].value]; // reassign → reactivity
@@ -176,7 +187,8 @@ export function createTacticalSimModule(): EngineModule {
           const foeBase = BASE_POS[foe];
           for (const self of frozen[side]) {
             const u = self.unit;
-            const target = nearestEnemy(self, enemies, TROOPER.aggroRange);
+            const def = getUnitDef(u.type);
+            const target = nearestEnemy(self, enemies, def.aggroRange);
             const tx = target ? target.x : foeBase.x;
             const ty = target ? target.y : foeBase.y;
             // Distances read from the snapshot on both ends.
@@ -185,14 +197,18 @@ export function createTacticalSimModule(): EngineModule {
             const dist = Math.hypot(dx, dy);
 
             u.cooldown = Math.max(0, u.cooldown - dt);
-            if (dist <= TROOPER.attackRange) {
+            if (dist <= def.attackRange) {
               if (u.cooldown <= 0) {
-                if (target) target.unit.hp -= TROOPER.damage;
-                else baseHp[foe].value -= TROOPER.damage;
-                u.cooldown = TROOPER.attackCooldownSec;
+                if (target) {
+                  const mult = getCounterMultiplier(u.type, target.unit.type);
+                  target.unit.hp -= def.damage * mult;
+                } else {
+                  baseHp[foe].value -= def.damage;
+                }
+                u.cooldown = def.attackCooldownSec;
               }
             } else if (dist > 0) {
-              const stepLen = Math.min(TROOPER.speed * dt, dist);
+              const stepLen = Math.min(def.speed * dt, dist);
               u.x += (dx / dist) * stepLen;
               u.y += (dy / dist) * stepLen;
             }
@@ -219,7 +235,8 @@ export function createTacticalSimModule(): EngineModule {
         baseHp,
         supply: economy.supply,
         basePos: BASE_POS,
-        unitCost: () => Number(unitCost.value),
+        unitCost: (type: UnitTypeId = 'trooper') =>
+          type === 'trooper' ? Number(unitCost.value) : getUnitDef(type).cost,
         spawn,
       });
     },

@@ -3,7 +3,7 @@ import { onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
 import { Application, Assets, Container, Graphics, Sprite, TilingSprite, Texture } from 'pixi.js';
 import { useModule } from '@/composables/useModule';
 import { TacticalKey, SIDES, type Side } from '../modules';
-import { FIELD, BASE_HP } from '../data/tactical';
+import { FIELD, BASE_HP, type UnitTypeId } from '../data/tactical';
 import unitUrl from '../assets/unit-soldier.png';
 import keepUrl from '../assets/keep.png';
 import groundUrl from '../assets/ground-grass.png';
@@ -27,7 +27,24 @@ const host = useTemplateRef<HTMLDivElement>('host');
 // Heraldry — the faction read. Light-gray sprites (unit + keep) tint cleanly to
 // these; everything else on the field is earthen so the two hosts pop.
 const TINT: Record<Side, number> = { a: 0xd9524b, b: 0x4f86d6 };
+const TYPE_SCALE: Record<UnitTypeId, number> = {
+  trooper: 1.0,
+  archer: 0.88,
+  cavalry: 1.25,
+};
 
+const TYPE_TINT: Record<Side, Record<UnitTypeId, number>> = {
+  a: {
+    trooper: 0xd9524b,
+    archer: 0xf27d74,
+    cavalry: 0x9e241e,
+  },
+  b: {
+    trooper: 0x4f86d6,
+    archer: 0x7da8ed,
+    cavalry: 0x275296,
+  },
+};
 // Display sizes in FIELD units (the world container carries field→pixel scale).
 const UNIT_SIZE = 4.6;
 const KEEP_SIZE = 13;
@@ -88,10 +105,11 @@ function frame(dtSec: number): void {
       seen.add(u.id);
       let rec = sprites.get(u.id);
       if (!rec) {
+        const typeScale = TYPE_SCALE[u.type] ?? 1.0;
         const sprite = new Sprite(unitTex);
         sprite.anchor.set(0.5, 0.5);
-        sprite.scale.set(s, UNIT_SIZE / TEX_PX);
-        sprite.tint = TINT[side];
+        sprite.scale.set(s * typeScale, (UNIT_SIZE / TEX_PX) * typeScale);
+        sprite.tint = TYPE_TINT[side][u.type] ?? TINT[side];
         unitLayer.addChild(sprite);
         rec = { sprite, rx: u.x, ry: u.y }; // new units snap to spawn
         sprites.set(u.id, rec);

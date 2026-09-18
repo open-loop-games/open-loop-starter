@@ -11,7 +11,7 @@ import {
   type MatchApi,
   type TacticalApi,
 } from '.';
-import { BASE_HP } from '../data/tactical';
+import { BASE_HP, getCounterMultiplier } from '../data/tactical';
 
 /**
  * Tactical-sim mechanics (bone #3), isolated from the AI policies — the module
@@ -126,5 +126,46 @@ describe('skirmish tactical sim', () => {
     // them: b is removed, a keeps survivors.
     expect(tactical().units.b.value).toHaveLength(0);
     expect(tactical().units.a.value.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('spawns different unit types with their defined attributes', async () => {
+    match().start();
+    await tick(TICK_RATE * 5); // accumulate supply for archer and cavalry
+    expect(tactical().spawn('a', 'archer')).toBe(true);
+    expect(tactical().spawn('a', 'cavalry')).toBe(true);
+    const units = tactical().units.a.value;
+    expect(units).toHaveLength(2);
+    expect(units[0].type).toBe('archer');
+    expect(units[0].hp).toBe(7);
+    expect(units[1].type).toBe('cavalry');
+    expect(units[1].hp).toBe(16);
+  });
+
+  it('applies counter matrix multipliers in combat (cavalry vs archer)', async () => {
+    match().start();
+    await tick(TICK_RATE * 5);
+    tactical().spawn('a', 'cavalry');
+    tactical().spawn('b', 'archer');
+    await tickUntil(() => tactical().units.b.value.length === 0, 30 * TICK_RATE);
+    expect(tactical().units.b.value).toHaveLength(0);
+    expect(tactical().units.a.value).toHaveLength(1);
+  });
+
+  it('verifies counter matrix reciprocity and diagonal identity', () => {
+    expect(getCounterMultiplier('trooper', 'trooper')).toBe(1.0);
+    expect(getCounterMultiplier('archer', 'archer')).toBe(1.0);
+    expect(getCounterMultiplier('cavalry', 'cavalry')).toBe(1.0);
+
+    // Infantry counters cavalry
+    expect(getCounterMultiplier('trooper', 'cavalry')).toBe(1.75);
+    expect(getCounterMultiplier('cavalry', 'trooper')).toBe(0.6);
+
+    // Cavalry counters ranged
+    expect(getCounterMultiplier('cavalry', 'archer')).toBe(1.75);
+    expect(getCounterMultiplier('archer', 'cavalry')).toBe(0.6);
+
+    // Ranged counters infantry
+    expect(getCounterMultiplier('archer', 'trooper')).toBe(1.75);
+    expect(getCounterMultiplier('trooper', 'archer')).toBe(0.6);
   });
 });

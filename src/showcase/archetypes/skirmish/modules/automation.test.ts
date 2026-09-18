@@ -79,6 +79,32 @@ describe('skirmish bot-vs-bot', () => {
     expect(t.units.b.value).toHaveLength(0);
     expect(match().inMatch.value).toBe(true);
   });
+
+  it('drafts unit types matching configured composition', async () => {
+    bootModules([
+      createTuningModule(),
+      createAutomationTiersModule(),
+      createMatchModule({
+        resetModules: [
+          'skirmish/match/economy',
+          'skirmish/match/tactical',
+          'skirmish/match/a/automation',
+        ],
+      }),
+      createEconomyModule(),
+      createTacticalSimModule(),
+      createAutomationModule('a', {
+        cadenceSec: 2,
+        composition: { trooper: 1, archer: 1 },
+      }),
+    ]);
+    match().start();
+    await tick(10 * TICK_RATE);
+    const types = tactical().units.a.value.map((u) => u.type);
+    expect(types.length).toBeGreaterThanOrEqual(2);
+    expect(types).toContain('trooper');
+    expect(types).toContain('archer');
+  });
 });
 
 /**

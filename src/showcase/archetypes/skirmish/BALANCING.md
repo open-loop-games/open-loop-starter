@@ -79,6 +79,7 @@ projection is cheap and rules out whole classes of problem before any sim runs:
 pnpm exec vite-node src/showcase/archetypes/skirmish/balance/skirmish-projection.ts
 pnpm exec vite-node src/showcase/archetypes/skirmish/balance/arc-probe.ts
 pnpm exec vite-node src/showcase/archetypes/skirmish/balance/split-probe.ts
+pnpm exec vite-node src/showcase/archetypes/skirmish/balance/roster-probe.ts
 ```
 
 - **`skirmish-projection.ts`** — no engine, pure arithmetic. Prints army and
@@ -97,6 +98,9 @@ pnpm exec vite-node src/showcase/archetypes/skirmish/balance/split-probe.ts
   not, stop, the sim is asymmetric and every other cell is unreliable; (2) is any
   split undefeated — a dominant split means the axis is dead; (3) is there an
   intransitive cycle — that is the outcome worth having.
+- **`roster-probe.ts`** — verifies the 3-unit counter matrix (trooper > cavalry >
+  archer > trooper) across pure and mixed composition matchups. Diagonal must be
+  all stalemate (mirror symmetry); off-diagonal cells verify the counter cycle.
 - **`beats.ts`** holds the windows and predicates. Windows are **measured**, and
   the current ones come from the default matchup resolving around ~50s.
 **On `never` readings.** The break and recovery beats are asymmetric by nature: a
@@ -123,10 +127,11 @@ beat, or on both seats at once, is the one worth chasing.
   unbounded growth in a match with no clock. A probe reporting a seat pinned at
   the cap is reporting that the cap became balance, which is a defect — the first
   data pass had exactly that problem at `c = 40`, where the cap bound at ~74s.
-- **One unit type, so composition is not a real axis.** The identity line claims
-  composition as part of the decision surface and the roster cannot express it
-  yet. Until a second unit type and a counter relation land, the split is doing
-  all the strategic work alone.
+- **3-unit roster and counter matrix.** The roster provides the classic
+  rock-paper-scissors triad: trooper (infantry) counters cavalry (1.75x),
+  cavalry counters archer (1.75x), and archer counters trooper (1.75x). Verified
+  in `roster-probe.ts` with mirror symmetry on the diagonal. Automation policies
+  draft compositions via `AutomationOptions.composition` (defaults to pure trooper).
 - **Two seats, where the identity claims N.** Free-for-all is the base case in
   the identity line; the implementation seats two. Everything here — the payoff
   matrix especially — is the degenerate bilateral case, and the coupled-state

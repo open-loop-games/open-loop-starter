@@ -4,6 +4,7 @@ import { EconomyKey } from './economy';
 import { TacticalKey } from './tactical-sim';
 import { AutomationTiersKey, type SkirmishAutomationTier } from './automation-tiers';
 import { type Side } from './tuning';
+import { type UnitTypeId } from '../data/tactical';
 
 /** Baseline seconds between spawn decisions, before per-persona scaling. */
 const BASE_CADENCE_SEC = 3;
@@ -43,6 +44,12 @@ export interface AutomationOptions {
    * for bot-vs-bot.
    */
   tier?: SkirmishAutomationTier;
+  /**
+   * Relative draft weights across unit types. Defaults to `{ trooper: 1 }`.
+   * Example: `{ trooper: 2, archer: 1, cavalry: 1 }` produces 50% troopers,
+   * 25% archers, and 25% cavalry in a deterministic round-robin burst.
+   */
+  composition?: Partial<Record<UnitTypeId, number>>;
 }
 
 /**
@@ -72,7 +79,15 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
   const economyShare = options.economyShare ?? 0;
   const sideOffset = side === 'a' ? 1 : 2;
   const tier = options.tier;
-
+  const rawComposition = options.composition ?? { trooper: 1 };
+  const draftSequence: UnitTypeId[] = [];
+  for (const [typeId, weight] of Object.entries(rawComposition)) {
+    const count = Math.max(0, Math.floor(weight ?? 0));
+    for (let i = 0; i < count; i++) {
+      draftSequence.push(typeId as UnitTypeId);
+    }
+  }
+  if (draftSequence.length === 0) draftSequence.push('trooper');
   return {
     id: `skirmish/match/${side}/automation`,
     dependencies: [
@@ -90,7 +105,7 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
       // Cadence accumulator — persistent so save/load mid-match resumes pacing
       // without dumping a burst on the first post-load tick.
       const sinceActSec = persistent<number>(0, { name: 'sinceActSec' });
-
+      const draftIndex = persistent<number>(0, { name: 'draftIndex' });
       // Lazy per-side seeded RNG for believability jitter — lazy because sim
       // runners seed AFTER install but before the tick loop; the side offset
       // keeps the two sides' streams distinct. Untouched (no RNG draw) when
@@ -129,14 +144,14 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
         //    the race to its own spending, and φ silently reads as 0 no matter
         //    what the persona asked for.
         const reserve = economy.realizedShare(side) < economyShare ? economy.workerCost() : 0;
-        const unitCost = tactical.unitCost();
         let spawned = 0;
-        while (
-          spawned < maxSpawnPerBurst &&
-          economy.available(side) >= unitCost + reserve &&
-          tactical.spawn(side)
-        ) {
+        while (spawned < maxSpawnPerBurst) {
+          const nextType = draftSequence[draftIndex.value % draftSequence.length];
+          const unitCost = tactical.unitCost(nextType);
+          if (economy.available(side) < unitCost + reserve) break;
+          if (!tactical.spawn(side, nextType)) break;
           spawned += 1;
+          draftIndex.value += 1;
         }
       });
     },
