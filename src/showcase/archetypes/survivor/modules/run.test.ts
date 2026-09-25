@@ -18,7 +18,9 @@ const run = () => {
 };
 const arena = () => getEngine().tryInject(ArenaKey)!;
 
-describe('survivor/run', () => {
+// Specs here drive the arena for up to 2000 ticks: ~4s alone, over vitest's
+// 5s default when the full suite runs in parallel.
+describe('survivor/run', { timeout: 20_000 }, () => {
   beforeEach(() => boot());
 
   it('derives a ladder with one rung per draft beat', () => {

@@ -110,7 +110,9 @@ describe('survivor/draft — policy', () => {
   });
 });
 
-describe('survivor/draft — applied', () => {
+// This spec drives the arena for 1400 ticks: ~3s alone, over vitest's
+// 5s default when the full suite runs in parallel.
+describe('survivor/draft — applied', { timeout: 20_000 }, () => {
   beforeEach(() => boot());
 
   it('resolves owed picks and grows the loadout', async () => {
