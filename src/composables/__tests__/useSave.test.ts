@@ -45,6 +45,8 @@ function withSave(engine: Engine): ReturnType<typeof useSave> {
   return api;
 }
 
+// The "Saved" announcement is the settings module's, keyed off `save:written`;
+// these drive it through `useSave`, the surface the save panel uses.
 describe('useSave', () => {
   beforeEach(() => {
     const { toasts } = useToasts();
@@ -58,6 +60,17 @@ describe('useSave', () => {
     const { toasts } = useToasts();
     expect(toasts.value.map((t) => t.title)).toEqual(['Saved']);
     expect(engine.tryInject(SettingsKey)!.lastSaveTimestamp.value).toBeGreaterThan(0);
+  });
+
+  it('announces a write made straight through the save manager, as autosave does', () => {
+    const engine = bootEngine();
+    engine.saveManager!.save();
+
+    const { toasts } = useToasts();
+    expect(toasts.value.map((t) => t.title)).toEqual(['Saved']);
+    expect(engine.tryInject(SettingsKey)!.lastSaveTimestamp.value).toBe(
+      engine.saveManager!.peek()!.timestamp,
+    );
   });
 
   it('announces nothing when a failed load has protected the slot', () => {

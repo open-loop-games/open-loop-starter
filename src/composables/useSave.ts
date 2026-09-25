@@ -1,4 +1,3 @@
-import { SettingsKey } from '@/modules/settings';
 import { useGame } from './useGame';
 import { useToasts } from './useToasts';
 
@@ -7,17 +6,10 @@ export function useSave() {
   const mgr = engine.saveManager!;
   const { addToast } = useToasts();
 
-  /**
-   * Write the active slot and announce it. The announcement lives here rather
-   * than in an `onSave` hook, because the engine runs those for exports too.
-   * A slot protected by a failed load writes nothing, so it announces nothing.
-   */
   function save() {
-    if (mgr.isSlotProtected(mgr.activeSlotId)) return;
     mgr.save();
-    const lastSaveTimestamp = engine.tryInject(SettingsKey)?.lastSaveTimestamp;
-    if (lastSaveTimestamp) lastSaveTimestamp.value = Date.now();
-    addToast('Saved', '', 1500);
+    // The settings module toasts "Saved" on the save manager's
+    // `save:written`, so a save here needs no toast of its own.
   }
 
   function exportSave(): string {

@@ -1,11 +1,13 @@
 import { ref, type Ref } from 'vue';
 import {
   persistent,
+  SaveManagerKey,
   type InjectionKey,
   type EngineModule,
   type EngineContext,
   type Persistent,
 } from '@open-loop/engine';
+import { useToasts } from '@/composables/useToasts';
 
 /**
  * Demo-level toggles that persist with the engine save (per-demo, per-slot).
@@ -18,7 +20,7 @@ export interface StockSettings {
 
 export interface SettingsState {
   settings: StockSettings;
-  /** When `useSave().save()` last wrote the active slot, in ms; 0 before the first. */
+  /** When a save last landed in storage, in ms; 0 before the first this session. */
   lastSaveTimestamp: Ref<number>;
 }
 
@@ -33,6 +35,15 @@ export const settingsModule: EngineModule = {
       offlineProgress: persistent(true, { name: 'offlineProgress' }),
     };
     const lastSaveTimestamp: Ref<number> = ref(0);
+
+    // `save:written` fires only once a save lands in storage — never for an
+    // export, and never for a slot a failed load protects. `ctx.onSave` runs
+    // before every serialization, exports included, so it can't carry this.
+    const { addToast } = useToasts();
+    ctx.tryInject(SaveManagerKey)?.on('save:written', ({ timestamp }) => {
+      lastSaveTimestamp.value = timestamp;
+      addToast('Saved', '', 1500);
+    });
 
     ctx.provide(SettingsKey, { settings, lastSaveTimestamp });
   },
