@@ -23,7 +23,7 @@ import {
   Decimal,
   Formula,
   type DecimalSource,
-  type InvertibleIntegralFormula,
+  type GenericFormula,
   type Ref,
 } from '@open-loop/engine';
 
@@ -61,7 +61,7 @@ export interface CostCurveParams {
 export function costCurve(
   level: DecimalSource | Ref<DecimalSource>,
   { baseCost, costMultiplier, family = 'exponential' }: CostCurveParams,
-): InvertibleIntegralFormula {
+): GenericFormula {
   switch (family) {
     case 'linear':
       // `base + coef·n` with `coef = baseCost·(multiplier − 1)` is the same
