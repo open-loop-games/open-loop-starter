@@ -71,7 +71,7 @@ pnpm build            # vue-tsc -b && vite build
 pnpm typecheck        # vue-tsc -b
 pnpm test             # Vitest run
 pnpm lint             # eslint src/
-pnpm format           # prettier --write
+pnpm format           # oxfmt src
 ```
 
 ## Architecture

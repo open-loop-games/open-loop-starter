@@ -30,7 +30,7 @@ pnpm preview          # Preview production build
 pnpm test             # Vitest run
 pnpm test:watch       # Vitest watch mode
 pnpm lint             # eslint src/
-pnpm format           # prettier --write
+pnpm format           # oxfmt src
 ```
 
 ## Architecture

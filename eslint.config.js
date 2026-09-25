@@ -129,12 +129,13 @@ export default [
     },
   },
   /* eject:strip-end */
-  // Formatting belongs to prettier, and to prettier only. `eslint-plugin-vue`'s
+  // Formatting belongs to oxfmt, and to oxfmt only. `eslint-plugin-vue`'s
   // recommended set brings its own layout rules (attribute-per-line, content
-  // newlines, …) which disagree with prettier's output — so `pnpm format` would
+  // newlines, …) which disagree with oxfmt's output — so `pnpm format` would
   // leave the tree in a shape `pnpm lint` warns about, and the pre-commit hook
   // would silently arbitrate by running eslint --fix second. Turning the
-  // conflicting rules off makes the two agree by construction.
+  // conflicting rules off makes the two agree by construction. The config is
+  // named for prettier but only switches rules off, so it serves any formatter.
   //
   // Must stay LAST: this works by disabling rules that earlier blocks enable.
   configPrettier,
