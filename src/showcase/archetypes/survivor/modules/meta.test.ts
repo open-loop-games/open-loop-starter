@@ -8,6 +8,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal } from '@open-loop/engine';
+import { META_COST_RATIO, META_UPGRADES } from '../data/meta';
 import { MetaKey } from './meta';
 import { RunKey } from './run';
 import { ArenaKey } from './arena';
@@ -67,6 +68,14 @@ describe('survivor/meta', () => {
     weave.purchasable.purchase();
     const afterSecond = notes();
     expect(first - afterFirst).toBeLessThan(afterFirst - afterSecond);
+  });
+
+  it('prices a multi-level buy rung by rung', () => {
+    const def = META_UPGRADES.find((u) => u.id === 'reinforced-weave')!;
+    const weave = meta().shop.getEntry('reinforced-weave')!;
+    expect(new Decimal(weave.purchasable.getCost(2)).toNumber()).toBeCloseTo(
+      def.baseCost * (1 + META_COST_RATIO),
+    );
   });
 
   it('raises the survival baseline when a survival tile is bought', () => {

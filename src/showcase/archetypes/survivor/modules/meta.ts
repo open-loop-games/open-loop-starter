@@ -1,5 +1,6 @@
 import {
   Decimal,
+  Formula,
   createCostRequirement,
   createPurchasableCategory,
   createResource,
@@ -58,33 +59,26 @@ export function createMetaModule(): EngineModule {
         precision: 0,
       });
 
-      // Reads the live owned amount. Safe to close over `shop` before it is
-      // initialised: `mapPurchasable` runs at `register()` and the cost closure
-      // is only ever CALLED later, by which point the binding is bound.
-      const ownedAmount = (id: string): Decimal =>
-        new Decimal(shop?.getEntry(id)?.purchasable.amount.value ?? 0);
-
       const shop = createPurchasableCategory<MetaUpgradeDef>({
         id: 'survivor/meta-shop',
         mapPurchasable: (def) => ({
           display: { title: def.name, description: def.blurb },
           limit: def.maxLevel,
-          // Geometric ladder read off the owned amount — the runs-to-buy shape
-          // (`../data/meta.ts` § Balance). `createCostRequirement` does the
-          // affordability check and the deduction, so nothing here hand-rolls a
-          // wallet.
-          requirements: createCostRequirement({
-            resource: notes,
-            // Cost is read off the owned amount, so the ladder is the geometric
-            // runs-to-buy shape rather than a flat price per tile.
-            cost: () =>
-              new Decimal(def.baseCost).mul(Decimal.pow(META_COST_RATIO, ownedAmount(def.id))),
-          }),
+          // Geometric ladder over the tile's own level — the runs-to-buy shape
+          // (`../data/meta.ts` § Balance). A Formula prices each rung of a
+          // multi-level buy, and `createCostRequirement` does the affordability
+          // check and the deduction, so nothing here hand-rolls a wallet.
+          requirements: (level) =>
+            createCostRequirement({
+              resource: notes,
+              cost: Formula.exponential(level, def.baseCost, META_COST_RATIO),
+            }),
         }),
       });
       shop.register(META_UPGRADES);
 
-      const levelOf = (id: string): number => ownedAmount(id).toNumber();
+      const levelOf = (id: string): number =>
+        new Decimal(shop.getEntry(id)?.purchasable.amount.value ?? 0).toNumber();
 
       const baseline = (side: MetaSide): number =>
         META_UPGRADES.filter((u) => u.side === side && u.effect !== 'revive').reduce(
