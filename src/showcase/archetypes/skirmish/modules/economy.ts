@@ -97,8 +97,9 @@ export function createEconomyModule(options: EconomyModuleOptions = {}): EngineM
         () => ECONOMY_BALANCE.workerCost,
       );
 
-      // `createReset` restores `persistent()` refs but not `createResource`, so
-      // the economy clears its own supply each match alongside the counters.
+      // The match-scope reset runs at `end()`, not `start()`, so a match opened
+      // over a live one would inherit its field — the economy clears its own
+      // supply and counters on every open.
       match.on('matchStarted', () => {
         for (const side of factions) {
           addResource(supply[side], Decimal.mul(supply[side].value, -1));

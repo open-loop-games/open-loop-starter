@@ -45,6 +45,11 @@ describe('skirmish bot-vs-bot', () => {
   });
 
   it('spawns armies and runs to a defeat outcome', async () => {
+    // `end()` resets the field right after `matchEnded`, so base hp is read there.
+    let baseHpAtEnd: Record<string, number> = {};
+    match().on('matchEnded', () => {
+      baseHpAtEnd = { a: tactical().baseHp.a.value, b: tactical().baseHp.b.value };
+    });
     match().start();
     await tickUntil(() => match().outcome.value !== null, MAX_TICKS);
 
@@ -53,7 +58,7 @@ describe('skirmish bot-vs-bot', () => {
     expect(outcome.winner).not.toBeNull();
     expect(match().matchTimeElapsed.value).toBeLessThan(30 * 60);
     const loser = outcome.winner === 'a' ? 'b' : 'a';
-    expect(tactical().baseHp[loser].value).toBeLessThanOrEqual(0);
+    expect(baseHpAtEnd[loser]).toBeLessThanOrEqual(0);
   });
 
   it('is deterministic — the same matchup resolves the same way twice', async () => {

@@ -52,9 +52,9 @@ export type { EconomyModuleOptions } from './economy';
 /**
  * Tactical sim + AI policies are match-scoped. Their `persistent()` state
  * (cadence accumulators, and the sim's unit arrays / base hp / nextId) clears
- * on the boundary; the sim additionally re-inits itself on `matchStarted`
- * because `createReset` doesn't restore `createResource` (supply). The match
- * module itself and tuning stay out (see `match.ts`).
+ * on the boundary; the sim and economy additionally re-init themselves on
+ * `matchStarted`, because the reset runs at `end()` and a match can open over a
+ * live one. The match module itself and tuning stay out (see `match.ts`).
  */
 export const MATCH_SCOPE_MODULES: readonly string[] = [
   'skirmish/match/economy',

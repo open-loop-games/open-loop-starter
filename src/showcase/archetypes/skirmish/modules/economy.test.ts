@@ -65,6 +65,22 @@ function tactical(): TacticalApi {
   return getEngine().tryInject(TacticalKey)!;
 }
 
+/**
+ * Play up to `seconds` of the live match, then `read` the field. The match can
+ * end by defeat first, and `end()` clears the field with the match-scope reset
+ * in that same tick — so a finished match is read at `matchEnded`, which fires
+ * before the reset.
+ */
+async function playFor<T>(seconds: number, read: () => T): Promise<T> {
+  let atEnd: { value: T } | undefined;
+  const off = match().on('matchEnded', () => {
+    atEnd = { value: read() };
+  });
+  for (let i = 0; i < seconds * TICK_RATE && match().inMatch.value; i++) await tick();
+  off();
+  return atEnd ? atEnd.value : read();
+}
+
 describe('skirmish economy — income and the reinvestment channel', () => {
   beforeEach(() => bootBare());
 
@@ -145,43 +161,51 @@ describe('skirmish economy — φ steers the split', () => {
   it('leaves the economy untouched at φ = 0 and grows it above 0', async () => {
     bootSplit(0, 0.5);
     match().start();
-    await tick(60 * TICK_RATE);
+    const workers = await playFor(60, () => ({
+      a: economy().workers.a.value,
+      b: economy().workers.b.value,
+    }));
 
-    expect(economy().workers.a.value).toBe(ECONOMY_BALANCE.startingWorkers);
-    expect(economy().workers.b.value).toBeGreaterThan(ECONOMY_BALANCE.startingWorkers);
+    expect(workers.a).toBe(ECONOMY_BALANCE.startingWorkers);
+    expect(workers.b).toBeGreaterThan(ECONOMY_BALANCE.startingWorkers);
   });
 
   it('fields army sooner at φ = 0 and out-earns it later at φ > 0', async () => {
     bootSplit(0, 0.5);
     match().start();
 
-    await tick(10 * TICK_RATE);
+    const units = await playFor(10, () => ({
+      a: tactical().units.a.value.length,
+      b: tactical().units.b.value.length,
+    }));
     // The rush is ahead on the field while the greedy seat is still investing.
-    expect(tactical().units.a.value.length).toBeGreaterThan(tactical().units.b.value.length);
+    expect(units.a).toBeGreaterThan(units.b);
 
-    await tick(120 * TICK_RATE);
     // …and behind on income once the investment has compounded. Both halves of
     // the tradeoff, in one match — this is the spine's claim in behavioral form.
-    const incomeA = ECONOMY_BALANCE.incomePerWorker * economy().workers.a.value;
-    const incomeB = ECONOMY_BALANCE.incomePerWorker * economy().workers.b.value;
-    expect(incomeB).toBeGreaterThan(incomeA);
+    const income = await playFor(120, () => ({
+      a: ECONOMY_BALANCE.incomePerWorker * economy().workers.a.value,
+      b: ECONOMY_BALANCE.incomePerWorker * economy().workers.b.value,
+    }));
+    expect(income.b).toBeGreaterThan(income.a);
   });
 
   it('tracks realized share toward the target, overshooting by at most one worker', async () => {
     bootSplit(0, 0.5);
     match().start();
-    await tick(120 * TICK_RATE);
+    const split = await playFor(120, () => ({
+      a: economy().realizedShare('a'),
+      b: economy().realizedShare('b'),
+      oneWorkerB: economy().workerCost() / economy().cumulativeIncome.b.value,
+    }));
 
-    expect(economy().realizedShare('a')).toBe(0);
-    expect(economy().realizedShare('b')).toBeGreaterThan(0.4);
+    expect(split.a).toBe(0);
+    expect(split.b).toBeGreaterThan(0.4);
 
     // Buy-while-under-target is bang-bang control against a continuous income
     // stream, so the realized share sits at or just above the target and the
     // overshoot is bounded by one indivisible worker. Asserting that bound
     // rather than a hand-picked ceiling keeps this true as the economy retunes.
-    const overshoot = economy().realizedShare('b') - 0.5;
-    expect(overshoot).toBeLessThanOrEqual(
-      economy().workerCost() / economy().cumulativeIncome.b.value,
-    );
+    expect(split.b - 0.5).toBeLessThanOrEqual(split.oneWorkerB);
   });
 });

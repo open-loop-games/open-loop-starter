@@ -93,7 +93,7 @@ export const MatchKey: InjectionKey<MatchApi> = Symbol('skirmish/match') as Inje
  * land. Enumerated explicitly: the engine wraps each install in
  * `withPersistentContext(mod.id)` with no outer parent, so id-prefix walking
  * does NOT pick up sibling modules — each id must be listed. Ids with no
- * installed module are harmless (`getModulePersistentRefs` returns empty).
+ * installed module reset nothing; the engine warns once, on the first reset.
  *
  * Deliberately NOT self-referential — `skirmish/match` is absent, and so is
  * `skirmish/tuning` (its override scopes must survive resets). Match

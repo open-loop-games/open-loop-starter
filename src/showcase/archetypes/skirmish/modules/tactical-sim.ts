@@ -151,9 +151,9 @@ export function createTacticalSimModule(options: TacticalSimModuleOptions = {}):
 
       const unitCost = tunable<DecimalSource>(registry, 'tactical/unitCost', () => TROOPER.cost);
 
-      // Re-init on match open — `createReset` restores `persistent()` refs but
-      // NOT `createResource`, and we want a single authoritative reset path, so
-      // the sim clears its own field each match.
+      // Re-init on match open — the match-scope reset runs at `end()`, not
+      // `start()`, so a match opened over a live one would inherit its field.
+      // The sim clears its own field on every open.
       match.on('matchStarted', () => {
         for (const f of factions) {
           units[f].value = [];
