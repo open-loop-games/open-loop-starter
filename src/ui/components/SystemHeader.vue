@@ -19,6 +19,7 @@ import Popover from '@/ui/components/Popover.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
+import { useSave } from '@/composables/useSave';
 import { useModalStack } from '@/lib';
 
 withDefaults(
@@ -33,6 +34,7 @@ const emit = defineEmits<{ returnToSlots: [] }>();
 const engine = inject<Engine>('engine')!;
 const stack = useModalStack();
 const prefs = usePlayerPrefs();
+const { save } = useSave();
 
 let autosaveTimer: number | null = null;
 function clearAutosaveTimer(): void {
@@ -45,9 +47,8 @@ watch(
   [prefs.autoSave, prefs.autoSaveIntervalMs],
   ([enabled, intervalMs]) => {
     clearAutosaveTimer();
-    const mgr = engine.saveManager;
-    if (!mgr || !enabled || intervalMs <= 0) return;
-    autosaveTimer = window.setInterval(() => mgr.save(), intervalMs);
+    if (!engine.saveManager || !enabled || intervalMs <= 0) return;
+    autosaveTimer = window.setInterval(save, intervalMs);
   },
   { immediate: true },
 );

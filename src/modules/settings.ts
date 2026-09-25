@@ -6,7 +6,6 @@ import {
   type EngineContext,
   type Persistent,
 } from '@open-loop/engine';
-import { useToasts } from '@/composables/useToasts';
 
 /**
  * Demo-level toggles that persist with the engine save (per-demo, per-slot).
@@ -19,6 +18,7 @@ export interface StockSettings {
 
 export interface SettingsState {
   settings: StockSettings;
+  /** When `useSave().save()` last wrote the active slot, in ms; 0 before the first. */
   lastSaveTimestamp: Ref<number>;
 }
 
@@ -33,12 +33,6 @@ export const settingsModule: EngineModule = {
       offlineProgress: persistent(true, { name: 'offlineProgress' }),
     };
     const lastSaveTimestamp: Ref<number> = ref(0);
-
-    const { addToast } = useToasts();
-    ctx.onSave(() => {
-      lastSaveTimestamp.value = Date.now();
-      addToast('Saved', '', 1500);
-    });
 
     ctx.provide(SettingsKey, { settings, lastSaveTimestamp });
   },
