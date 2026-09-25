@@ -16,7 +16,7 @@ import { LaneKey } from './lane';
 import { type Side, TugTuningRegistryKey } from './tuning';
 
 /** Sequencer metadata — single field carrying the unit's archetype id so
- *  `canRun` can route to the right cooldown bucket and `'start'` handlers
+ *  `canRun` can route to the right cooldown bucket and `'started'` handlers
  *  can spawn into the lane. */
 export interface UnitSendMeta {
   archetypeId: string;
@@ -60,7 +60,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
 
       // Per-archetype send cooldown. One persistent ref per archetype, named
       // `cooldown-<archetypeId>` so save keys stay stable + greppable. Reset
-      // to `def.sendCooldownSec` on each `'start'` event; ticked down to 0
+      // to `def.sendCooldownSec` on each `'started'` event; ticked down to 0
       // each frame; gates the sequencer via `canRun`.
       const cooldown: Record<string, Persistent<number>> = {};
       for (const def of data.units) {
@@ -71,7 +71,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       // through the cost requirement; `onPurchase` enqueues into the
       // sequencer (one enqueue per level bought, so a buy-N covers N sends).
       // The sequencer's `canRun` then paces dispatch against per-archetype
-      // cooldowns; the `'start'` handler spawns into the lane.
+      // cooldowns; the `'started'` handler spawns into the lane.
       //
       // Every unit's `cost` registers as `tunable()` against the registry so
       // balance probes can perturb per-unit costs via `pushScope`.
@@ -115,7 +115,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       // On dispatch: spawn the unit, reset its archetype cooldown, complete
       // the queue slot so the next item can dispatch (which may itself hold
       // on `'notNow'` and ride the retry tick until cooldown clears).
-      sequencer.on('start', (item) => {
+      sequencer.on('started', (item) => {
         const def = data.units.find((u) => u.id === item.metadata.archetypeId);
         if (!def) {
           sequencer.complete();

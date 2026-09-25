@@ -24,7 +24,7 @@ export function useSaveEvents(mgr: SaveManager): () => void {
   let failedLoad: { slotId: number; toastId: number } | null = null;
 
   const unsubs = [
-    mgr.on('save:validation-error', (issue) => {
+    mgr.on('save:validation-failed', (issue) => {
       if (issue.action === 'self-heal') pendingHealed++;
       console.warn(
         `[save] validation ${issue.action} at ${issue.path}: expected ${issue.expected}`,
@@ -69,7 +69,7 @@ export function useSaveEvents(mgr: SaveManager): () => void {
       console.warn(`[save] slot ${slotId} protected — saves skip it until the save is deleted`);
     }),
 
-    mgr.on('save:future-version', (err) => {
+    mgr.on('save:future-version-refused', (err) => {
       addToast(
         'Save from newer version',
         `This save was written by version ${err.saveVersion}; the current build only supports up to version ${err.currentVersion}. Refusing to load to avoid corruption.`,
@@ -78,7 +78,7 @@ export function useSaveEvents(mgr: SaveManager): () => void {
       console.error('[save] future-version refused:', err);
     }),
 
-    mgr.on('save:migration-step', (info) => {
+    mgr.on('save:migration-applied', (info) => {
       console.info(`[save] migrated v${info.from} → v${info.to}`);
     }),
   ];

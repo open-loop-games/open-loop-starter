@@ -8,7 +8,6 @@ import {
   tunable,
   type Achievement,
   type AchievementCategory,
-  type DecimalSource,
   type EngineModule,
 } from '@open-loop/engine';
 import type { AchievementDef, AmbientData, AmbientGameState } from '../data/types';
@@ -90,7 +89,7 @@ export function createAchievementsModule(data: AmbientData): EngineModule {
         offlineGapAtLeast: (seconds) => sessionClock.lastResumeGapSec.value >= seconds,
       };
 
-      const achievementMultiplier = tunable<DecimalSource>(
+      const achievementMultiplier = tunable(
         tuningRegistry,
         'balance/achievementMultiplier',
         () => DEFAULT_ACHIEVEMENT_MULTIPLIER,

@@ -170,11 +170,7 @@ export function createSwarmModule(data: ProducerData): EngineModule {
       // Breadth, not depth: (1 + step)^(distinct classes deployed). Discrete
       // in a count, so it splices rather than breaking the product rule —
       // same constraint the revisions chain is under.
-      const generationStep = tunable<DecimalSource>(
-        registry,
-        'balance/generationStep',
-        () => GENERATION_STEP,
-      );
+      const generationStep = tunable(registry, 'balance/generationStep', () => GENERATION_STEP);
       const deployedClasses = computed(
         () =>
           data.classes.filter((def) =>
@@ -186,7 +182,7 @@ export function createSwarmModule(data: ProducerData): EngineModule {
       );
 
       // ── The perturbation stand-in for a static `baseRate` ───────────────
-      const classRateScale = tunable<DecimalSource>(registry, 'balance/classRateScale', () => 1);
+      const classRateScale = tunable(registry, 'balance/classRateScale', () => 1);
 
       for (const def of data.classes) {
         const producer = classes.getProducer(def.id);
@@ -209,7 +205,7 @@ export function createSwarmModule(data: ProducerData): EngineModule {
         });
       }
 
-      const clickYieldScale = tunable<DecimalSource>(registry, 'balance/clickYieldScale', () => 1);
+      const clickYieldScale = tunable(registry, 'balance/clickYieldScale', () => 1);
       launcher.rateChain.bind({
         id: 'tuning/clickYieldScale',
         // Undescribed for the same reason as `classRateScale` above.

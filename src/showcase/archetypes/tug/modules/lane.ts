@@ -3,7 +3,6 @@ import {
   createEmitHandle,
   persistent,
   tunable,
-  type DecimalSource,
   type Emittable,
   type EngineModule,
   type InjectionKey,
@@ -73,7 +72,7 @@ export interface LaneApi {
    *  to 0..1. */
   laneLength: number;
   /** Spawn a unit. Player spawns at 0, AI at `laneLength`. Called by
-   *  `units.ts` on the sequencer's `'start'` event. */
+   *  `units.ts` on the sequencer's `'started'` event. */
   spawn(side: Side, archetypeId: string): void;
   /** Subscribe to lane events. Leaf-4 `match.ts` and `opponent-bot.ts` consume. */
   on: Emittable<LaneEvents>['on'];
@@ -105,12 +104,8 @@ export function createLaneModule(data: TugData): EngineModule {
       // Counter-matrix sharpness scalars. Default 1.0 is identity (no
       // perturbation). Leaf 6's tuner pushes scopes to compress/expand the
       // strong/weak gap against the counter-pivot success-rate beat target.
-      const strongCounter = tunable<DecimalSource>(
-        registry,
-        'counter-matrix/strongCounter',
-        () => 1,
-      );
-      const weakCounter = tunable<DecimalSource>(registry, 'counter-matrix/weakCounter', () => 1);
+      const strongCounter = tunable(registry, 'counter-matrix/strongCounter', () => 1);
+      const weakCounter = tunable(registry, 'counter-matrix/weakCounter', () => 1);
 
       // archetypeId → matrix-index. `data.units` order is load-bearing
       // (fixes counter-matrix row/column order; see data/units.ts comment).

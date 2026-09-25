@@ -149,7 +149,7 @@ export function createTacticalSimModule(options: TacticalSimModuleOptions = {}):
       }
       const nextId = persistent<number>(0, { name: 'nextId' });
 
-      const unitCost = tunable<DecimalSource>(registry, 'tactical/unitCost', () => TROOPER.cost);
+      const unitCost = tunable(registry, 'tactical/unitCost', () => TROOPER.cost);
 
       // Re-init on match open — the match-scope reset runs at `end()`, not
       // `start()`, so a match opened over a live one would inherit its field.

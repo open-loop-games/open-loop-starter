@@ -5,7 +5,6 @@ import {
   tunable,
   unref,
   withPersistentContext,
-  type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type ComputedRef,
@@ -124,8 +123,7 @@ export function createBuildModule(): EngineModule {
       // a `computed`, so a pushed scope re-derives dMax / cMax / repair on the
       // next read rather than needing a rebuild.
       const registry = ctx.inject(CyclerTuningRegistryKey);
-      const t = (key: CyclerTunableKey, fallback: number) =>
-        tunable<DecimalSource>(registry, key, () => fallback);
+      const t = (key: CyclerTunableKey, fallback: number) => tunable(registry, key, () => fallback);
 
       const baseOutputCeiling = t('capacity/baseOutputCeiling', BUILD_BALANCE.baseOutputCeiling);
       const adjacencyBoost = t('capacity/adjacencyBoost', BUILD_BALANCE.adjacencyBoost);

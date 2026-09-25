@@ -60,7 +60,7 @@ export function createFortressModule(data: TugData): EngineModule {
       // `data.fortress.hp`; leaf 6's tuner pushes scopes against
       // `'fortress/hp'` to bisect against match-duration probes. Single
       // tunable shared by both sides — fortresses are symmetric.
-      const max = tunable<DecimalSource>(registry, 'fortress/hp', () => data.fortress.hp);
+      const max = tunable(registry, 'fortress/hp', () => data.fortress.hp);
 
       const hp: Record<Side, Resource<DecimalSource>> = {
         player: createResource<DecimalSource>(0, {

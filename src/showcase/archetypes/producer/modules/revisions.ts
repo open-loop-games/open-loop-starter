@@ -7,7 +7,6 @@ import {
   tunable,
   type Achievement,
   type AchievementCategory,
-  type DecimalSource,
   type EngineModule,
 } from '@open-loop/engine';
 import type { ProducerData, RevisionDef } from '../data/types';
@@ -47,7 +46,7 @@ export function createRevisionsModule(data: ProducerData): EngineModule {
       const state = getProducerGameState();
       const registry = ctx.inject(ProducerTuningRegistryKey);
 
-      const defaultMultiplier = tunable<DecimalSource>(
+      const defaultMultiplier = tunable(
         registry,
         'balance/revisionMultiplier',
         () => DEFAULT_REVISION_MULTIPLIER,

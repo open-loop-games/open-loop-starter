@@ -97,17 +97,17 @@ describe('tug AI opponent (default counter persona)', () => {
 
     let playerStarts = 0;
     let aiStarts = 0;
-    playerSequencer.on('start', () => {
+    playerSequencer.on('started', () => {
       playerStarts++;
     });
-    aiSequencer.on('start', () => {
+    aiSequencer.on('started', () => {
       aiStarts++;
     });
 
     match().start();
 
     // Drop the player some minerals so they can buy at least once — without
-    // a player buy, there's no player sequencer 'start' event to observe,
+    // a player buy, there's no player sequencer 'started' event to observe,
     // and acceptance asks both sides to fire.
     addResource(playerIncome, 100);
     playerShop.getPurchasable('marine')?.purchase();

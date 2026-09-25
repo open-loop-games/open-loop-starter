@@ -5,7 +5,6 @@ import {
   createPurchasableCategory,
   tunable,
   unref,
-  type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type Purchasable,
@@ -71,8 +70,7 @@ export function createUpgradesModule(): EngineModule {
     dependencies: ['cycler/tuning'],
     install(ctx) {
       const registry = ctx.inject(CyclerTuningRegistryKey);
-      const t = (key: CyclerTunableKey, fallback: number) =>
-        tunable<DecimalSource>(registry, key, () => fallback);
+      const t = (key: CyclerTunableKey, fallback: number) => tunable(registry, key, () => fallback);
 
       // Costs and the bend are read at purchase / run-start, so a pushed scope
       // reaches them without a rebuild.

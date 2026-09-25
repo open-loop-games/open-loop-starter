@@ -32,7 +32,7 @@ describe('useSaveEvents', () => {
     refs.b.value = 2;
     mgr.save();
 
-    // Corrupt both leaves so two save:validation-error events fire per load.
+    // Corrupt both leaves so two save:validation-failed events fire per load.
     const raw = JSON.parse(storage.getItem('aggregation-test-slot-0')!);
     raw.data['ctx'].a = { not: 'a number' };
     raw.data['ctx'].b = { not: 'a number' };

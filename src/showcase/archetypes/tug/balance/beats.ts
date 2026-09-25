@@ -44,7 +44,7 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
  * Predicates for arc-probe + math-only beat-time bisection.
  *
  * - 1 (math-only): first unit purchased — `match.unitsSentByPlayer.value
- *   >= 1`. Counter incremented inside `playerSequencer.on('start', ...)`
+ *   >= 1`. Counter incremented inside `playerSequencer.on('started', ...)`
  *   in `match.ts`; fires the same tick the bot's first purchase
  *   dispatches into the lane.
  * - 2 (math-only): first auto-resolve combat — any unit on either side has

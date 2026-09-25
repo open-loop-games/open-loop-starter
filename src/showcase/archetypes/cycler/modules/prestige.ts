@@ -106,12 +106,12 @@ export function createPrestigeModule(): EngineModule {
     dependencies: ['cycler/tuning'],
     install(ctx) {
       const registry = ctx.inject(CyclerTuningRegistryKey);
-      const primary = tunable<DecimalSource>(
+      const primary = tunable(
         registry,
         'prestige/fragmentScalePrimary',
         () => PRESTIGE_BALANCE.fragmentScalePrimary,
       );
-      const secondary = tunable<DecimalSource>(
+      const secondary = tunable(
         registry,
         'prestige/fragmentScaleSecondary',
         () => PRESTIGE_BALANCE.fragmentScaleSecondary,

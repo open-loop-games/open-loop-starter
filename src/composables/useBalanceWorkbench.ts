@@ -24,6 +24,7 @@ import { computed, reactive, ref, shallowRef, type Ref } from 'vue';
 import {
   createSensitivityCell,
   defaultAnalyzerPack,
+  ResourceRegistryKey,
   runSensitivity,
   seriesAnalyzerPack,
   type Analyzer,
@@ -108,7 +109,7 @@ export interface TrajectoryBand {
 
 /** Per-resource baseline-vs-variant trajectory reconstructed from series metrics. */
 export interface Trajectory {
-  /** Resource display name (the `series:{name}` suffix). */
+  /** Resource display name, resolved from the `series:{id}` suffix through the resource registry. */
   name: string;
   baseline: TrajectoryBand[];
   variant: TrajectoryBand[];
@@ -154,23 +155,24 @@ const SERIES_KEY = /^series:(.*)\.t(\d+)$/;
 
 /**
  * Reconstruct per-resource `{tick, mean, min, max}` bands from a cell's
- * aggregated `series:{name}.t{i}` metrics. Each per-tick metric already
- * carries the across-seed distribution (the aggregator's job), so the band
- * is a direct read of `avg`/`min`/`max` — no re-aggregation here.
+ * aggregated `series:{id}.t{i}` metrics, keyed by resource id; callers
+ * resolve the display label. Each per-tick metric already carries the
+ * across-seed distribution (the aggregator's job), so the band is a direct
+ * read of `avg`/`min`/`max` — no re-aggregation here.
  */
 function reconstructBands(aggregate: CellAggregate): Record<string, TrajectoryBand[]> {
-  const byName: Record<string, TrajectoryBand[]> = {};
+  const byId: Record<string, TrajectoryBand[]> = {};
   for (const [key, stats] of Object.entries(aggregate.metrics)) {
     const match = SERIES_KEY.exec(key);
     if (!match) continue;
-    const name = match[1]!;
+    const id = match[1]!;
     const tick = Number(match[2]);
-    (byName[name] ??= []).push({ tick, mean: stats.avg, min: stats.min, max: stats.max });
+    (byId[id] ??= []).push({ tick, mean: stats.avg, min: stats.min, max: stats.max });
   }
-  for (const bands of Object.values(byName)) {
+  for (const bands of Object.values(byId)) {
     bands.sort((a, b) => a.tick - b.tick);
   }
-  return byName;
+  return byId;
 }
 
 export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanceWorkbenchReturn {
@@ -234,11 +236,12 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     if (!r || !variant) return [];
     const baseBands = reconstructBands(r.baseline.aggregate);
     const variantBands = reconstructBands(variant.cell.aggregate);
-    const names = Object.keys(baseBands);
-    return names.map((name) => ({
-      name,
-      baseline: baseBands[name] ?? [],
-      variant: variantBands[name] ?? [],
+    const resources = engine.tryInject(ResourceRegistryKey);
+    const ids = Object.keys(baseBands);
+    return ids.map((id) => ({
+      name: resources?.findById(id)?.displayName ?? id,
+      baseline: baseBands[id] ?? [],
+      variant: variantBands[id] ?? [],
     }));
   });
 

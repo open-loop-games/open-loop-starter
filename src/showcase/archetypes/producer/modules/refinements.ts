@@ -83,7 +83,7 @@ export function createRefinementsModule(data: ProducerData): EngineModule {
             // Owned-only, no partial reveal: a refinement the player cannot
             // yet unlock stays out of the grid entirely, so the grid reads as
             // "what can I buy" rather than as a catalogue of locked rows.
-            visibility: computed(() => def.requirement(gameState)),
+            visible: computed(() => def.requirement(gameState)),
             grants,
           };
         },

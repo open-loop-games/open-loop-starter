@@ -53,11 +53,7 @@ export function createIncomeSideModule(side: Side): EngineModule {
       // (scope-perturbable) value. The chain composes the rest: income-
       // upgrades binds per-tier multipliers per-side. Tick reads
       // `chain.apply(baseRate.value) * dt` for the per-tick accrual.
-      const baseRate = tunable<DecimalSource>(
-        registry,
-        'balance/baseIncomeRate',
-        () => BASE_INCOME_RATE,
-      );
+      const baseRate = tunable(registry, 'balance/baseIncomeRate', () => BASE_INCOME_RATE);
 
       const incomeRateChain = createModifierChain(`tug/match/${side}/income-rate`);
 

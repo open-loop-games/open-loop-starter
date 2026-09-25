@@ -4,7 +4,6 @@ import {
   tunable,
   unref,
   withPersistentContext,
-  type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type ComputedRef,
@@ -122,8 +121,7 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
       // at run start or per tick — never captured into a const here — which is
       // what makes the scope push actually take effect.
       const registry = ctx.inject(CyclerTuningRegistryKey);
-      const t = (key: CyclerTunableKey, fallback: number) =>
-        tunable<DecimalSource>(registry, key, () => fallback);
+      const t = (key: CyclerTunableKey, fallback: number) => tunable(registry, key, () => fallback);
 
       const H = t('peg/headroom', DEFENSE_BALANCE.headroom);
       const standby = t('wave/standbySeconds', DEFENSE_BALANCE.standbySeconds);

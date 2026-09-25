@@ -3,7 +3,6 @@ import {
   tunable,
   unref,
   withPersistentContext,
-  type DecimalSource,
   type EngineModule,
   type InjectionKey,
   type ComputedRef,
@@ -86,7 +85,7 @@ export function createBurnTierModule(options: BurnTierModuleOptions = {}): Engin
     id: 'cycler/burn-tier',
     dependencies: ['cycler/tuning'],
     install(ctx) {
-      const H = tunable<DecimalSource>(
+      const H = tunable(
         ctx.inject(CyclerTuningRegistryKey),
         'peg/headroom',
         () => DEFENSE_BALANCE.headroom,

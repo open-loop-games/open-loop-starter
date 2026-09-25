@@ -12,14 +12,12 @@ import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import {
   addResource,
-  CategoriesKey,
   createEngine,
   createMemoryStorage,
   createMultiplicativeModifier,
   createProducerCategory,
   createResource,
   type Engine,
-  type EngineCategories,
   type EngineModule,
 } from '@open-loop/engine';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
@@ -48,7 +46,6 @@ function makeProducerModule(displayName: string): EngineModule {
       producers.register([{ id: 'cursor', name: 'Cursor', baseRate: 1 }]);
       const cursor = producers.getProducer('cursor')!;
       cursor.rateChain.add(createMultiplicativeModifier({ multiplier: 2 }));
-      ctx.provide(CategoriesKey, { producers: [producers] } as EngineCategories);
       ctx.onTick(() => {
         addResource(gold, cursor.rateChain.apply(1));
       });

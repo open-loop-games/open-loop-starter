@@ -1,4 +1,4 @@
-import { computed, unref, type ComputedRef } from 'vue';
+import { computed, type ComputedRef } from 'vue';
 import type { UpgradeCellData } from '@/ui/compositions';
 import type { RefinementDef } from '../data/types';
 import { getRefinements } from '../modules';
@@ -37,9 +37,7 @@ export function useRefinementCells(): RefinementsView {
 
   const open = computed<RefinementCell[]>(() =>
     entries.value
-      // `visibility` is a MaybeRef — comparing the ref object against `false`
-      // is always true, which silently shows every locked refinement.
-      .filter((entry) => unref(entry.purchasable.visibility) && !entry.purchasable.active.value)
+      .filter((entry) => entry.purchasable.visible.value && !entry.purchasable.active.value)
       .map((entry) => ({
         id: entry.def.id,
         name: entry.def.name,

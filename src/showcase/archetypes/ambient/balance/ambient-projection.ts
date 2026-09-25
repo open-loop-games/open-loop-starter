@@ -147,15 +147,16 @@ interface Holding {
 
 /**
  * `selectionHybridPayback`'s score, in plain arithmetic:
- *   `max(cost − resource, 0)/headline + cost/rate`, degenerating to `cost`
- * when the headline rate is zero. Rate is the engine's `computedRate`, which is
+ *   `max(cost − resource, 0)/headline + cost/rate`. With no income, an
+ * unaffordable tier would wait forever and is skipped, while an affordable one
+ * ranks by `cost/rate` alone. Rate is the engine's `computedRate`, which is
  * the *per-unit* effective rate — so a tier at count 0 is still a candidate.
  */
 function score(h: Holding, sprouts: number, headline: number, achievements: number): number {
   const cost = costAt(h.tier, h.count);
   const rate = h.tier.baseRate * achievements;
   if (rate <= 0) return Infinity;
-  if (headline <= 0) return cost;
+  if (headline <= 0) return cost > sprouts ? Infinity : cost / rate;
   return Math.max(cost - sprouts, 0) / headline + cost / rate;
 }
 

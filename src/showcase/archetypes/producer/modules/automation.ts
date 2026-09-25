@@ -52,9 +52,11 @@ export interface DispatchApi {
  *
  * - `cheapest` — buy whatever is cheapest and affordable. The naive rule, and
  *   the one a player approximates before they think about it.
- * - `payback` — smallest `purchaseBeatSeconds`, the engine's single-unit
- *   payback metric. Ignores how long you would have to save, so it starves
- *   whenever the best-payback candidate is unaffordable.
+ * - `payback` — smallest `purchaseBeatSeconds`, the time a producer's whole
+ *   stack takes to earn its next unit's cost — a stack-amortized beat that
+ *   favours tall stacks, not the marginal payback of one more unit. Ignores
+ *   how long you would have to save, so it starves whenever the best-beat
+ *   candidate is unaffordable.
  * - `hybrid` — `max(cost − bank, 0) / headlineRate + cost / Δrate`. The wait
  *   term collapses to zero once a candidate is affordable, handing the
  *   decision back to pure payback. Sourced by the engine from Cookie

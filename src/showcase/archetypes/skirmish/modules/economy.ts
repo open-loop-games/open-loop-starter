@@ -86,16 +86,12 @@ export function createEconomyModule(options: EconomyModuleOptions = {}): EngineM
         economySpend[side] = persistent<number>(0, { name: `economySpend-${side}` });
       }
 
-      const incomePerWorker = tunable<DecimalSource>(
+      const incomePerWorker = tunable(
         registry,
         'economy/incomePerWorker',
         () => ECONOMY_BALANCE.incomePerWorker,
       );
-      const workerCost = tunable<DecimalSource>(
-        registry,
-        'economy/workerCost',
-        () => ECONOMY_BALANCE.workerCost,
-      );
+      const workerCost = tunable(registry, 'economy/workerCost', () => ECONOMY_BALANCE.workerCost);
 
       // The match-scope reset runs at `end()`, not `start()`, so a match opened
       // over a live one would inherit its field — the economy clears its own

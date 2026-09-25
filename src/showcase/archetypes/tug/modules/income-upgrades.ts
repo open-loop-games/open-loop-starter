@@ -6,7 +6,6 @@ import {
   Decimal,
   resolveComputable,
   tunable,
-  type DecimalSource,
   type EngineModule,
   type Grant,
   type InjectionKey,
@@ -84,11 +83,7 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
       // computed-refs can read it without re-plumbing income module privates.
       // `tunable()` uses `setDefault`, so this returns the value the income
       // module already registered rather than overwriting it.
-      const baseRate = tunable<DecimalSource>(
-        registry,
-        'balance/baseIncomeRate',
-        () => BASE_INCOME_RATE,
-      );
+      const baseRate = tunable(registry, 'balance/baseIncomeRate', () => BASE_INCOME_RATE);
 
       const roiMap = new Map<string, RoiMetrics>();
 

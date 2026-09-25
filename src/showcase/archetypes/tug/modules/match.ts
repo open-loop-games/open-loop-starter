@@ -90,7 +90,7 @@ export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
  * clock, units-sent counter, and the match-boundary `Reset`. Reads fortress
  * HP via `getFortress()` (3c topology — fortress module owns the resources)
  * and ends the match when either side's HP falls to 0. Subscribes to both
- * side sequencers' `'start'` events for cross-side counter-pivot inference +
+ * side sequencers' `'started'` events for cross-side counter-pivot inference +
  * the player units-sent counter.
  */
 export function createMatchModule(data: TugData): EngineModule {
@@ -197,7 +197,7 @@ export function createMatchModule(data: TugData): EngineModule {
         return bestCount >= 2 ? bestId : null;
       }
 
-      playerSequencer.on('start', (item) => {
+      playerSequencer.on('started', (item) => {
         if (outcome.value !== null) return;
         unitsSentByPlayer.value += 1;
         const dom = dominantArchetype('ai');
@@ -214,7 +214,7 @@ export function createMatchModule(data: TugData): EngineModule {
       // AI sequencer subscription is a placeholder hook — leaf 6's tuner may
       // want to detect AI-side counter-pivots for symmetric difficulty
       // measurement. No-op for now; subscribed so the wiring is in place.
-      aiSequencer.on('start', () => {});
+      aiSequencer.on('started', () => {});
 
       // Match-time clock + fortress-fall + time-limit watcher.
       ctx.onTick((dt) => {
