@@ -28,11 +28,7 @@ import { meanMoteYield } from '../data/specimens';
 
 /** Which term ended the run. The probe's headline reading. */
 export type BindingCause =
-  | 'running'
-  | 'hp-floor'
-  | 'traversal-collapse'
-  | 'collection-starvation'
-  | 'timer';
+  'running' | 'hp-floor' | 'traversal-collapse' | 'collection-starvation' | 'timer';
 
 export interface RunApi {
   outcome: ComputedRef<RunOutcome>;
