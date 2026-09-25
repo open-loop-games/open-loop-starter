@@ -73,6 +73,16 @@ describe('useSave', () => {
     );
   });
 
+  it('stops announcing once the engine is disposed', () => {
+    const engine = bootEngine();
+    const mgr = engine.saveManager!;
+    engine.dispose();
+    mgr.save();
+
+    const { toasts } = useToasts();
+    expect(toasts.value).toHaveLength(0);
+  });
+
   it('announces nothing when a failed load has protected the slot', () => {
     const engine = bootEngine();
     const mgr = engine.saveManager!;

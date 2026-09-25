@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
 import {
+  onScopeDispose,
   persistent,
   SaveManagerKey,
   type InjectionKey,
@@ -39,11 +40,18 @@ export const settingsModule: EngineModule = {
     // `save:written` fires only once a save lands in storage — never for an
     // export, and never for a slot a failed load protects. `ctx.onSave` runs
     // before every serialization, exports included, so it can't carry this.
+    // The save manager outlives `engine.dispose()`, so the listener goes with
+    // the module scope rather than with the manager.
     const { addToast } = useToasts();
-    ctx.tryInject(SaveManagerKey)?.on('save:written', ({ timestamp }) => {
-      lastSaveTimestamp.value = timestamp;
-      addToast('Saved', '', 1500);
-    });
+    const saves = ctx.tryInject(SaveManagerKey);
+    if (saves) {
+      onScopeDispose(
+        saves.on('save:written', ({ timestamp }) => {
+          lastSaveTimestamp.value = timestamp;
+          addToast('Saved', '', 1500);
+        }),
+      );
+    }
 
     ctx.provide(SettingsKey, { settings, lastSaveTimestamp });
   },
