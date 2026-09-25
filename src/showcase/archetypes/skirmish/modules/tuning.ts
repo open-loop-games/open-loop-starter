@@ -26,7 +26,10 @@ import {
  * different values at once, which a registry key cannot express.
  */
 export type SkirmishTunableKey =
-  'match/timeLimitSec' | 'economy/incomePerWorker' | 'economy/workerCost' | 'tactical/unitCost';
+  | 'match/timeLimitSec'
+  | 'economy/incomePerWorker'
+  | 'economy/workerCost'
+  | 'tactical/unitCost';
 
 /**
  * Faction identifiers. Widened from the bilateral duel (`'a' | 'b'`) to arbitrary

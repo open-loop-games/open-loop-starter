@@ -14,7 +14,14 @@ import type { DecimalSource } from '@open-loop/engine';
 
 /** The eight probe classes, in ladder order. Ids are the ladder's identity. */
 export type ProbeClassId =
-  'seed' | 'drone' | 'foundry' | 'hauler' | 'ring' | 'lathe' | 'swarm' | 'shell';
+  | 'seed'
+  | 'drone'
+  | 'foundry'
+  | 'hauler'
+  | 'ring'
+  | 'lathe'
+  | 'swarm'
+  | 'shell';
 
 /**
  * Magnitude band a class works at. Costume, but load-bearing costume: the
@@ -49,7 +56,9 @@ export interface ProbeClassDef {
 
 /** What a refinement multiplies. Scope decides which chain it joins. */
 export type RefinementScope =
-  { kind: 'class'; classId: ProbeClassId } | { kind: 'global' } | { kind: 'click' };
+  | { kind: 'class'; classId: ProbeClassId }
+  | { kind: 'global' }
+  | { kind: 'click' };
 
 export interface RefinementDef {
   id: string;

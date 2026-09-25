@@ -15,7 +15,12 @@
 export type MetaSide = 'survival' | 'income';
 
 export type MetaEffect =
-  'damage' | 'toughness' | 'moveSpeed' | 'collectRadius' | 'moteYield' | 'revive';
+  | 'damage'
+  | 'toughness'
+  | 'moveSpeed'
+  | 'collectRadius'
+  | 'moteYield'
+  | 'revive';
 
 export interface MetaUpgradeDef {
   id: string;
