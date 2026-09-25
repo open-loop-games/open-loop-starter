@@ -35,7 +35,7 @@ function makeProducerModule(displayName: string): EngineModule {
   return {
     id: 'toy-producer-bw',
     install(ctx) {
-      const gold = createResource(0, { displayName });
+      const gold = createResource(0, { id: displayName, displayName });
       const producers = createProducerCategory<ProducerDef>({
         id: 'producers',
         mapProducer: (def) => ({

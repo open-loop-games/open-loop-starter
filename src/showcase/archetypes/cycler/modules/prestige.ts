@@ -130,7 +130,11 @@ export function createPrestigeModule(): EngineModule {
       // (read, not accumulated here). `wallet` is the graduated Fragments Resource;
       // its `cumulative` tracker is lifetimeFragments.
       const state = withPersistentContext('cycler/prestige', () => ({
-        wallet: createResource<DecimalSource>(0, { displayName: 'fragments', precision: 0 }),
+        wallet: createResource<DecimalSource>(0, {
+          id: 'fragments',
+          displayName: 'fragments',
+          precision: 0,
+        }),
         outputRaw: persistent<string>('0', { name: 'run-output' }),
         banked: persistent<boolean>(false, { name: 'banked' }),
         mergeCountRaw: persistent<number>(0, { name: 'merge-count' }),

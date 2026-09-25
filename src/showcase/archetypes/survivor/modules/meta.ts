@@ -53,6 +53,7 @@ export function createMetaModule(): EngineModule {
     id: 'survivor/meta',
     install(ctx) {
       const notes = createResource<Decimal>(new Decimal(0), {
+        id: 'Notes',
         displayName: 'Notes',
         precision: 0,
       });
