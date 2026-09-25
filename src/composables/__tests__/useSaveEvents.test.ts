@@ -90,6 +90,24 @@ describe('useSaveEvents', () => {
     expect(toasts.value[0].content).toContain('malformed');
   });
 
+  it('says on the load-failed toast that the slot is kept from later saves', () => {
+    const storage = createMemoryStorage();
+    const mgr = createSaveManager({ gameId: 'protect-load', storageAdapter: storage });
+    storage.setItem('protect-load-slot-0', 'not-valid-json{{{');
+
+    useSaveEvents(mgr);
+    mgr.load();
+
+    // One toast for the one failure, carrying both what failed and what the
+    // save manager did about it.
+    const { toasts } = useToasts();
+    expect(mgr.isSlotProtected(0)).toBe(true);
+    expect(toasts.value).toHaveLength(1);
+    expect(toasts.value[0].title).toBe('Save load failed');
+    expect(toasts.value[0].content).toContain('malformed');
+    expect(toasts.value[0].content).toContain('paused');
+  });
+
   it('unsubscribe tears down all listeners', () => {
     const storage = createMemoryStorage();
     const mgr = createSaveManager({ gameId: 'unsub-test', storageAdapter: storage });

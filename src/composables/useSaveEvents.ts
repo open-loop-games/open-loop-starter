@@ -7,7 +7,8 @@ import { useToasts } from './useToasts';
  * Validation-error events are buffered per-load and surfaced as a single
  * aggregated toast on success (avoids one-toast-per-healed-field spam).
  * Load failures, future-version refusals, and migration steps surface with
- * human-readable reasons.
+ * human-readable reasons. A failed load that protects its slot says so on the
+ * same toast: saves to that slot stop until the player deletes the save.
  *
  * Wired automatically by `bootApp` so every starter-using demo + every fork
  * inherits the pattern. Returns an unsubscribe function that tears down all
@@ -15,9 +16,12 @@ import { useToasts } from './useToasts';
  * the engine), but the gallery sandbox could on unmount.
  */
 export function useSaveEvents(mgr: SaveManager): () => void {
-  const { addToast } = useToasts();
+  const { toasts, addToast } = useToasts();
 
   let pendingHealed = 0;
+  // The toast the last failed load raised. The save manager protects the slot
+  // right after reporting the failure, and that note joins this toast.
+  let failedLoad: { slotId: number; toastId: number } | null = null;
 
   const unsubs = [
     mgr.on('save:validation-error', (issue) => {
@@ -50,9 +54,19 @@ export function useSaveEvents(mgr: SaveManager): () => void {
         pendingHealed = 0;
         return;
       }
-      addToast('Save load failed', describeFailure(err.reason), false);
+      const toastId = addToast('Save load failed', describeFailure(err.reason), false);
+      failedLoad = { slotId: err.slotId, toastId };
       console.error('[save] load failed:', err.reason, err.detail);
       pendingHealed = 0;
+    }),
+
+    mgr.on('save:slot-protected', ({ slotId }) => {
+      const failure = failedLoad?.slotId === slotId ? failedLoad : null;
+      const toast = failure && toasts.value.find((t) => t.id === failure.toastId);
+      if (toast) toast.content += ` ${PROTECTED_NOTE}`;
+      else addToast('Saving paused', PROTECTED_NOTE, false);
+      failedLoad = null;
+      console.warn(`[save] slot ${slotId} protected — saves skip it until the save is deleted`);
     }),
 
     mgr.on('save:future-version', (err) => {
@@ -71,6 +85,9 @@ export function useSaveEvents(mgr: SaveManager): () => void {
 
   return () => unsubs.forEach((u) => u());
 }
+
+const PROTECTED_NOTE =
+  'Saving to this slot is paused so it keeps the save that failed. Delete the save to start the slot over.';
 
 function describeFailure(reason: string): string {
   switch (reason) {
