@@ -23,6 +23,7 @@
 import {
   createEngine,
   createMemoryStorage,
+  seedRNG,
   type Engine,
   type EngineModule,
 } from '@open-loop/engine';
@@ -48,6 +49,12 @@ export interface BootTestEngineOptions {
   namespacePrefix?: string;
   /** Loop tick rate in Hz. Defaults to 20. */
   tickRate?: number;
+  /**
+   * Seed for the engine's module-global RNG, applied before the modules
+   * install. Defaults to 0: the engine otherwise starts that stream from
+   * entropy, and a behavioral run would draw differently every time.
+   */
+  seed?: number;
 }
 
 /**
@@ -57,8 +64,9 @@ export interface BootTestEngineOptions {
  * contexts.
  */
 export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle {
-  const { modules, namespacePrefix = 'boot', tickRate = 20 } = options;
+  const { modules, namespacePrefix = 'boot', tickRate = 20, seed = 0 } = options;
   const namespace = `${namespacePrefix}-${bootCounter++}`;
+  seedRNG(seed);
 
   const engine = createEngine({
     gameId: namespace,
