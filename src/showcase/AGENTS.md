@@ -27,7 +27,7 @@ src/showcase/archetypes/<name>/
 ├── ui/              # Archetype-colocated screens + panels + components. Root
 │                    # `*AppRoot.vue` is routing+chrome only; a `<XGameView>`
 │                    # subtree owns all module reads (see root § Key Patterns).
-├── sim/             # Beat + probe vitest suite per archetype doc § 7.
+├── sim/             # harness.ts + any suite spanning modules; probes live in balance/.
 └── boot.ts          # createApp(overrides?) → { app, engine, mount }.
 ```
 
@@ -45,4 +45,4 @@ Two modes: `pnpm eject <archetype>` builds on a registered archetype (its archet
 
 Because the eject test is deleted with the machinery, there is no self-checking green-after-eject invariant — the fork must run `pnpm install && pnpm typecheck && pnpm test && pnpm lint` itself (eject prints this).
 
-**Manual post-fork steps eject leaves to judgment:** rewrite the root `AGENTS.md` from the starter's dual-character framing to your game (eject leaves it verbatim — a `--name` stub would lose too much); regenerate `src/game/overview.md` + `domain-map.md` (`pnpm domain-map`) once you've reshaped `src/game/data`. (`.claude/CLAUDE.local.md` is gitignored and doesn't travel, so anything the starter kept there is yours to re-establish; eject removes the repo's own `.mcp.json`, so re-add whatever MCP servers your fork needs.)
+**Manual post-fork steps eject leaves to judgment:** rewrite the root `AGENTS.md` from the starter's dual-character framing to your game (eject leaves it verbatim — a `--name` stub would lose too much); update `src/game/IDENTITY.md` and regenerate `domain-map.md` (`pnpm domain-map`) once you've reshaped `src/game/data`. (`.claude/CLAUDE.local.md` is gitignored and doesn't travel, so anything the starter kept there is yours to re-establish; eject removes the repo's own `.mcp.json`, so re-add whatever MCP servers your fork needs.)

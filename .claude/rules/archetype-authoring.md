@@ -208,7 +208,7 @@ Each axis has one canonical answer and one archetype to copy it from:
 | Runnable projection | `<name>-projection.ts` where the closed form is worth executing | `cycler` |
 | Probes | `<concern>-probe.ts` under `balance/`; print, never assert | `cycler` |
 | Balance orientation | `BALANCING.md` beside `IDENTITY.md`, four required sections | `ambient` |
-| Boot | `createApp(overrides?) → { app, engine, mount }` | any — all five agree |
+| Boot | `createApp(overrides?) → { app, engine, mount }` | any — all agree |
 
 A deliberate divergence is allowed and is worth writing down: say so at the call site
 and in that archetype's `BALANCING.md` § Known thin, with what the canon costs here.
