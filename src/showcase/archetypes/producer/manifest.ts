@@ -3,6 +3,9 @@ import type { ArchetypeManifest } from '@/types';
 /**
  * Beat windows are RECORDED from `balance/allocation-probe.ts` — the min/max
  * across its three allocation rules over an 8h run — never authored as targets.
+ * The probe's fourth run, `hybrid` barred from waiting, is excluded: it is the
+ * control that prices saving, not a rule any rung grants, so it would widen a
+ * window with a run the game can never produce.
  * They are listed here in the order the beats are numbered, which is NOT the
  * order they land: beat 4 arrives before beat 3, and beat 2 lands fifth.
  */
@@ -47,13 +50,13 @@ export const manifest: ArchetypeManifest = {
     {
       n: 2,
       label: 'Ladder passes the click ceiling',
-      recordedSimRange: [1664, 1723],
+      recordedSimRange: [957, 1723],
     },
     { n: 3, label: 'First refinement bought', recordedSimRange: [248, 248] },
     { n: 4, label: 'First revision earned', recordedSimRange: [121, 121] },
     { n: 5, label: 'Dispatch opens', recordedSimRange: [507, 507] },
-    { n: 6, label: 'Managed dispatch', recordedSimRange: [5179, 5241] },
-    { n: 7, label: 'The frontier — top class deployed', recordedSimRange: [13194, 13354] },
+    { n: 6, label: 'Managed dispatch', recordedSimRange: [4091, 5241] },
+    { n: 7, label: 'The frontier — top class deployed', recordedSimRange: [3703, 13354] },
   ],
   shell: 'ThreePanelShell',
   formFactor: 'responsive',

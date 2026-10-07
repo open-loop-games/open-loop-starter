@@ -59,7 +59,7 @@ export const GENERATION_STEP = 0.05;
  * Sized by how long the returning player waits, not by the arc — catch-up
  * blocks the load. See § Balance, the offline window.
  */
-export const OFFLINE_WINDOW_SECONDS = 8 * 3600; // replays in ~4.5 s at ~0.55 ms per second (balance/offline-probe.ts § 3)
+export const OFFLINE_WINDOW_SECONDS = 6 * 3600; // replays in ~4.4 s at ~0.20 ms per second (balance/offline-probe.ts § 3)
 
 // ─── Balance ────────────────────────────────────────────────────────────────
 // Rate-function bucket: EXPONENTIAL FAMILY under piecewise × modifier-product
@@ -105,18 +105,20 @@ export const OFFLINE_WINDOW_SECONDS = 8 * 3600; // replays in ~4.5 s at ~0.55 ms
 //
 // In a producer, income is not constant: the thing you buy raises the rate.
 // Realized beat is `a·m^n / (n · r · Π μ)`, and both the `n` and the modifier
-// product flatten it by orders of magnitude. Measured on the first arc
-// walkthrough, an 8h run ends holding 152 Seeds — where the isolated curve
-// would price beat 152 at ~2×10^10 s, the realized average is ~190 s. The
-// isolated reading is off by eight orders of magnitude as a predictor of felt
+// product flatten it by orders of magnitude. An 8h run under the shipping
+// ladder ends holding 76 Seeds — where the isolated curve would price beat 76
+// at ~4×10^5 s, the realized average is ~380 s (`balance/arc-probe.ts`). The
+// isolated reading is off by three orders of magnitude as a predictor of felt
 // cadence, and correctly sized `m` regardless.
 //
-// FALSIFIED by that same run: this file previously predicted that a class must
-// hand off before its ~27th unit or the player falls into Boredom. It does not.
-// Measured final depths under the shipping dispatcher run
-// 152/136/120/104/88/73/57/41 across the ladder — every class far past 27, none
-// of it Boredom, because income climbs with the purchases. The prediction was
-// the isolated curve mistaken for the realized one.
+// FALSIFIED: this file once predicted that a class must hand off before its
+// ~27th unit or the player falls into Boredom. Depth is not what decides it.
+// Income climbs with the purchases, so every class runs far past 27 under
+// every dispatcher measured — 152/136/120/104/88/73/57/41 when it bought only
+// what was affordable, 76/74/73/71/70/68/66/65 now that the managed rung saves.
+// The Boredom the saving run does show comes from the dispatcher holding cash,
+// not from depth (`../BALANCING.md` § Known thin). The prediction was the
+// isolated curve mistaken for the realized one.
 //
 // What remains true, and is the whole reason the boundary is drawn where it is:
 // realized depth falls out of the ALLOCATION RULE, the combinatorial-selection
@@ -129,16 +131,17 @@ export const OFFLINE_WINDOW_SECONDS = 8 * 3600; // replays in ~4.5 s at ~0.55 ms
 // a time-base map): catch-up replays the absence through the live loop, so the
 // arc in sim time is untouched. The window is therefore not a pacing number at
 // all. It is a WAIT BUDGET — catch-up runs before the game screen appears, at a
-// measured ~0.55 ms per replayed second, so the window prices the longest load
+// measured ~0.20 ms per replayed second, so the window prices the longest load
 // a returning player sits through:
 //
-//   window = wait budget / replay cost  =  ~4.5 s / ~0.55 ms  ≈  8 h
+//   window = wait budget / replay cost  =  ~4.5 s / ~0.20 ms  ≈  6 h
 //
-// Eight hours covers a night away. The engine's own default (three days) held
-// the load for ~40 s on the same probe. The replay cost is machine- and fleet-dependent;
-// `balance/offline-probe.ts` § 3 re-measures it, and the slow end of the line
-// (`../../_docs/producer.md`) is where a longer window — and a longer wait —
-// belongs, as a tuning choice rather than a default.
+// Six hours covers most of a night away. The engine's own default (three days)
+// would hold the load for ~50 s on the same probe. The replay cost depends on
+// the machine, the fleet and the dispatcher, which the replay runs — so
+// re-measure with `balance/offline-probe.ts` § 3 after any of them moves. The
+// slow end of the line (`../../_docs/producer.md`) is where a longer window —
+// and a longer wait — belongs, as a tuning choice rather than a default.
 //
 // ── Ladder structure ────────────────────────────────────────────────────────
 // Each class costs ×10 and produces ×8 of the one below, so cost-per-unit-rate

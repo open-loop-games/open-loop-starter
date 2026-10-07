@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Decimal, addResource } from '@open-loop/engine';
+import { Decimal, addResource, subtractResource } from '@open-loop/engine';
 import { boot, getEngine, tick } from '../sim/harness';
 import { getClasses, getMass } from './swarm';
 import { DispatchKey } from './automation';
@@ -60,5 +60,42 @@ describe('once a rung opens', () => {
     for (let i = 0; i < 25; i++) seed.purchase(1);
     await tick(1);
     expect(dispatch().tiers.hasReached('assisted')).toBe(true);
+  });
+});
+
+/** Own `n` Seeds for income, then empty the wallet so nothing is affordable. */
+function fundThenSpend(n: number): void {
+  addResource(getMass(), 1e12);
+  const seed = getClasses().getProducer('seed')!.repeatable!;
+  for (let i = 0; i < n; i++) seed.purchase(1);
+  subtractResource(getMass(), getMass().value);
+}
+
+describe('saving for a pick', () => {
+  it('the managed rung holds cash for what it cannot yet afford, and buys nothing meanwhile', async () => {
+    fundThenSpend(10);
+    dispatch().tiers.unlock('managed');
+    dispatch().isActive.value = true;
+    const before = fleetSize();
+    await tick(1);
+    expect(dispatch().savingFor.value).not.toBeNull();
+    expect(fleetSize()).toBe(before);
+  });
+
+  it('the assisted rung never holds', async () => {
+    fundThenSpend(10);
+    dispatch().tiers.unlock('assisted');
+    dispatch().isActive.value = true;
+    await tick(5);
+    expect(dispatch().savingFor.value).toBeNull();
+  });
+
+  it('reports no hold while the toggle is off', async () => {
+    fundThenSpend(10);
+    dispatch().tiers.unlock('managed');
+    dispatch().isActive.value = true;
+    await tick(1);
+    dispatch().isActive.value = false;
+    expect(dispatch().savingFor.value).toBeNull();
   });
 });

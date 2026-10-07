@@ -42,6 +42,8 @@ export interface ArcOptions {
   seconds: number;
   /** Pin the allocation rule for the whole run. Unset = the shipping ladder. */
   forcePolicy?: DispatchPolicyName;
+  /** Pin whether the dispatcher may wait for cost. Unset = the rule decides. */
+  forceWaitForCost?: boolean;
   /** Hand-launches per second while the player is still opening the game. */
   launchesPerSecond?: number;
   /** Unique namespace so concurrent runs cannot share persistent context. */
@@ -75,6 +77,15 @@ export interface ArcResult {
   tierAt: Map<string, number>;
   /** Hand-buys the player made before dispatch took over. */
   handBuys: number;
+  /** Sim-seconds the dispatcher spent holding cash for a pick (`savingFor` set). */
+  holdSeconds: number;
+  /**
+   * Refinements the player bought while the dispatcher was holding, and the
+   * mass they took out of its savings. The player and the dispatcher share one
+   * wallet, so saving brings refinements forward, and a gap measured against a
+   * run that never saves includes that.
+   */
+  refinementsWhileHolding: { count: number; mass: number };
   final: ArcReading;
   /** Final rate-chain product on the opening class, as a factor over its base. */
   openingClassStack: number;
@@ -105,14 +116,16 @@ function read(t: number, tier: string): ArcReading {
  * minute-to-hour scale and sub-second fidelity would only cost cycles.
  */
 export async function runArc(options: ArcOptions): Promise<ArcResult> {
-  const { seconds, forcePolicy, launchesPerSecond = 2 } = options;
+  const { seconds, forcePolicy, forceWaitForCost, launchesPerSecond = 2 } = options;
 
   const handle = bootTestEngine({
     modules: createProducerModules(DEFAULT_PRODUCER_DATA, {
-      automation: forcePolicy ? { forcePolicy } : {},
+      automation: { forcePolicy, forceWaitForCost },
     }),
     tickRate: 1,
-    namespacePrefix: options.namespace ?? `producer-arc-${forcePolicy ?? 'ladder'}`,
+    namespacePrefix:
+      options.namespace ??
+      `producer-arc-${forcePolicy ?? 'ladder'}${forceWaitForCost === undefined ? '' : `-wait-${forceWaitForCost}`}`,
   });
 
   const classes = getClasses();
@@ -128,6 +141,8 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
   const classAt = new Map<string, number>();
   const tierAt = new Map<string, number>();
   let handBuys = 0;
+  let holdSeconds = 0;
+  const refinementsWhileHolding = { count: 0, mass: 0 };
   const offline = handle.engine.tryInject(OfflineKey);
   const absences = new Map((options.absences ?? []).map((a) => [a.at, a.seconds]));
 
@@ -144,8 +159,15 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     if (!autoRunning) for (let i = 0; i < launchesPerSecond; i++) launch();
     await handle.tick(1);
     if (!autoRunning && buyCheapestAffordable()) handBuys++;
+    const holding = dispatch.savingFor.value !== null;
+    if (holding) holdSeconds++;
     for (const entry of getRefinements().getAll()) {
-      if (entry.purchasable.canPurchase.value) entry.purchasable.purchase(1);
+      if (!entry.purchasable.canPurchase.value) continue;
+      entry.purchasable.purchase(1);
+      if (holding) {
+        refinementsWhileHolding.count++;
+        refinementsWhileHolding.mass += num(entry.def.cost);
+      }
     }
 
     const tier = dispatch.tiers.currentTierId.value;
@@ -170,6 +192,8 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     classAt,
     tierAt,
     handBuys,
+    holdSeconds,
+    refinementsWhileHolding,
     finalCounts: classes.getAll().map((e) => ({
       id: e.def.id,
       name: e.def.name,

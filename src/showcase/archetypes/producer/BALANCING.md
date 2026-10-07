@@ -84,6 +84,13 @@ moves the whole arc. Opening a gate earlier is not a small retune — grow the
 projection's second branch in the same pass or the probe reports drift with
 nothing to explain it.
 
+**The dispatcher reaches the offline window.** Catch-up replays the dispatcher,
+so what it does each slot is part of the cost of replaying an absence — letting
+the managed rung save raised that cost measurably. The window is a load-wait
+budget divided by that cost (`data/curve.ts` § The offline window), so a change
+to the dispatcher is a change to the window: re-run `offline-probe.ts` § 3 and
+re-derive it.
+
 **The probe driver depends on the manual openers still existing.** `_engine.ts`
 works only hand-launches, hand-buys before dispatch opens, and refinement
 purchases — everything else is the shipping dispatcher. Remove the hand-launch
@@ -129,10 +136,12 @@ pnpm exec vite-node src/showcase/archetypes/producer/balance/offline-probe.ts
   version is that a window of W seconds cannot measure a beat longer than W, and
   the first cut of this probe reported "100% engaged" with frustration
   structurally unreachable.
-- **`allocation-probe.ts`** runs the same arc three times under `cheapest`,
-  `payback` and `hybrid` via `forcePolicy`, and reports the spread. Read the
-  spread, not the winner. Its closing section states what the sweep structurally
-  cannot exercise — see Known thin.
+- **`allocation-probe.ts`** runs the same arc four times: pinned to `cheapest`,
+  `payback` and `hybrid` via `forcePolicy`, and once more as `hybrid` barred from
+  waiting via `forceWaitForCost` — the control. Read the spread across the three
+  rules, not the winner, then the wait Δ between `hybrid` and the control. It
+  also counts the refinements the player bought out of the dispatcher's savings,
+  and prints the beat windows `manifest.ts` records.
 - **`offline-probe.ts`** checks the banked closed form against the replay (§ 1),
   runs the arc with an hour away before and after dispatch opens (§ 2), and times
   catch-up at the window (§ 3) — the measurement `OFFLINE_WINDOW_SECONDS` is
@@ -149,50 +158,60 @@ retunes — don't add numbers to them.
 
 ## Known thin
 
-- **The arc is fully engaged as an economy and mostly disengaged as an
-  experience, and this is the headline finding.** `pacing-probe.ts` measures
-  **100.0%** of the arc in the engaged bands on raw purchase cadence — arousal
-  33%, flow 60%, flow-upper 7%, longest single gap 2m25s across 771 purchases.
-  The same probe's § 4 measures the beats a player can actually *perceive*
-  — a class appearing, a revision firing, a refinement unlocking — and gets
-  **11.3% engaged**: 49 events in eight hours, 40.8% boredom, 29.3% frustration,
-  18.6% breakdown.
+- **Saving is the lever, and under the shipping ladder it compresses the arc.
+  This is the headline finding.** The managed rung's dispatcher may hold cash
+  for a pick it can't yet afford (`modules/automation.ts`, `waitForCost` on
+  `hybrid`), and from managed at 1h26m it holds far more than it buys. The
+  frontier lands at **1h49m** of an eight-hour arc, the final ladder is nearly
+  flat (76 Seeds down to 65 Shells), and `pacing-probe.ts` measures **46.4%** of
+  the arc engaged on raw purchase cadence — arousal 7.9%, flow 26.8%, flow-upper
+  11.7%, boredom 26.2%, frustration 27.4% — across 563 purchases, longest single
+  gap 29m32s. The rhythm is holds broken by bursts: a purchase a second through
+  the second hour-pair, then whole half hours spent saving.
 
-  The gap is the hand-off. Dispatch opens at 8m27s and **97% of all purchases
-  after it are the dispatcher's**, so past that point purchase cadence is the
-  economy's tempo and not anyone's attention. This is the engine guide's
-  "the metric is wrong" case: purchase interval is structurally unable to
-  express felt pacing for an archetype whose whole arc is about handing
-  allocation away, and no setting of any constant reaches it.
+  **Open decision, and it is a retune.** The arc was sized under a buyer that
+  could not save; `m`, the class steps and the rung thresholds all predate it.
+  Either they move until the saving dispatcher fills eight hours, or the
+  archetype owns a shorter arc and says so in `IDENTITY.md`. Both are spine
+  changes (§ Couplings).
+
+- **The arc is mostly disengaged as an experience.** `pacing-probe.ts` § 4
+  measures the beats a player can actually *perceive* — a class appearing, a
+  revision firing, a refinement unlocking — and gets **9.5% engaged**: 50 events
+  in eight hours, 30.0% boredom, 22.9% frustration, 37.6% breakdown. Dispatch
+  opens at 8m27s and **96% of all purchases after it are the dispatcher's**, so
+  past that point purchase cadence is the economy's tempo and not anyone's
+  attention. This is the engine guide's "the metric is wrong" case: purchase
+  interval cannot express felt pacing for an archetype whose whole arc is about
+  handing allocation away.
 
   **Open decision, and it is a content one.** Either the perceptible surface
   grows — more revisions, finer refinement steps, magnitude milestones on mass —
   or the archetype accepts that its late arc is watched rather than played and
-  says so in `IDENTITY.md`. Both are calls about what producer *is*. Until one is
-  made, § 4 will keep reporting 11.3% and it is not a bug.
+  says so in `IDENTITY.md`. Both are calls about what producer *is*.
 
-- **Content runs dry for the last 19% of the budgeted arc.** The final
-  refinement lands at 6h28m and the final revision at 6h30m of an eight-hour
-  arc; after that nothing new arrives and the run is pure deepening. One
-  refinement and one revision are never reached at all. That tail is exactly the
-  18.6% breakdown band in § 4 — the same fact measured twice.
+- **Content runs dry for the last 38% of the budgeted arc.** The final
+  refinement lands at 4h03m and the final revision at 5h00m; after that nothing
+  new arrives and the run is pure deepening. One revision is never reached. That
+  tail is the 37.6% breakdown band in § 4 — the same fact measured twice — and
+  the retune above is what closes it.
 
-- **The allocation rule the spine names as its open edge is nearly inert.**
-  `allocation-probe.ts` reports a **1.00×** spread in final rate and a worst-beat
-  spread of 1.04× across all three rules; the final ladder shapes differ by a
-  single unit of Lathe. The spine declares combinatorial selection as where the
-  closed form stops, and the measurement says that edge is worth almost nothing
-  *in this economy*. The honest reading is narrow: picking among **affordable**
-  candidates barely matters here.
+- **The allocation rule is load-bearing, and saving is nearly all of it.**
+  `allocation-probe.ts` pins the dispatcher to each rule for the whole arc.
+  Across `cheapest`, `payback` and `hybrid` the frontier moves **3.61×** and the
+  final rate 2.62×. The control — `hybrid` barred from waiting — matches
+  `cheapest` on every row, and `payback` sits within 1.04× of both, so picking
+  among *affordable* candidates barely matters here and the spread is the wait
+  term. Pinned for the whole arc, waiting `hybrid` holds cash for 7h42m of the
+  7h51m after dispatch opens.
 
-- **…and the instrument cannot test the interesting half.**
-  `setupPolicyAutoPurchase` filters candidates by `canPurchase` **before**
-  calling `policy.pick`, so every candidate a policy sees is already affordable
-  and `selectionHybridPayback`'s wait term `max(cost − (resource − reserve), 0)`
-  is structurally always zero — for any reserve, since the filter uses the same
-  comparison. Save-toward-something-better is therefore untested, and testing it
-  needs a driver that can decline to buy, which the engine's own auto-purchase
-  helper cannot express. This bounds every allocation conclusion above.
+- **The wait gap includes the refinements saving brings forward.** The player
+  and the dispatcher share one wallet. While the dispatcher holds, mass banks,
+  refinements come within reach sooner, and the player buys them out of its
+  savings — 18 of 24 refinements in the pinned `hybrid` run. Every run models the
+  same player, so the gap is still the rule's, but it is not only the
+  dispatcher's. A player who respected the hold, or one who bought nothing
+  during it, would each measure something else.
 
 - **`m` has no sweep.** It is the most load-bearing number in the archetype and
   the only one outside the perturbation surface, so exploring it costs a source

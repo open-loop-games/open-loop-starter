@@ -112,22 +112,21 @@ export const PROBE_CLASSES: ProbeClassDef[] = COSTUME.map((costume, index) => ({
 // the class below it at count zero. It prices past only once the class below
 // has climbed `m^n` far enough — n = ln(1.25)/ln(m) ≈ 1.6 units, in isolation.
 //
-// That number is deliberately NOT the realized handoff depth. What keeps a
-// class in service for tens of units is that the next one is unaffordable at
-// current income, so the greedy spends where it can rather than where it would
-// rather. Measured depths under the shipping dispatcher run
-// 152/136/120/104/88/73/57/41 (`balance/arc-probe.ts`, 8h) — a smooth
-// descending ladder, never authored.
+// That number is deliberately NOT the realized handoff depth, and what sets
+// the depth is whether the buyer may save. A buyer offered only what it can
+// afford keeps a class in service for tens of units, because the next one is
+// unaffordable at current income: it spends where it can rather than where it
+// would rather, and walks a steep descending ladder. A buyer that may hold
+// cash for the next class spends where it would rather, and the ladder comes
+// out nearly flat — 76/74/73/71/70/68/66/65 under the shipping ladder, whose
+// managed rung saves (`balance/arc-probe.ts`, 8h). Neither shape is authored.
 //
-// MEASURED, and it corrects what this note used to claim. Affordability versus
-// payback is the decision surface for the PLAYER, who can decline to buy and
-// save. It is not one for the dispatcher: `setupPolicyAutoPurchase` filters to
-// affordable candidates before the policy is consulted, so no shipping rule
-// ever weighs waiting. Swept across all three rules, the whole arc moves by
-// ≤1.04% (`balance/allocation-probe.ts` § What this sweep does NOT exercise).
-// The combinatorial-selection edge in `../IDENTITY.md` § Where the closed form
-// stops is real algebra and nearly inert in practice — which is a result, and
-// the reason the sweep exists rather than an assumption it confirmed.
+// MEASURED. Affordability versus payback is this archetype's decision surface,
+// and saving is nearly all of it: across the three rules the frontier moves
+// 3.61×, `hybrid` barred from waiting matches `cheapest` on every row, and the
+// whole spread is the wait term (`balance/allocation-probe.ts`). The
+// combinatorial-selection edge in `../IDENTITY.md` § Where the closed form
+// stops is load-bearing, and it is load-bearing through the decision to save.
 //
 // Re-tune targets: to lengthen the arc, raise CLASS_COST_STEP (steeper walls
 // between classes); to make later classes feel stronger, raise

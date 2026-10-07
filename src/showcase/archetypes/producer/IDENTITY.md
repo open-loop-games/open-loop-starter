@@ -157,10 +157,17 @@ measurement the spine is currently unable to predict:
 > effectively full; a large one means the rule is load-bearing and belongs in every
 > statement of the spine.
 
-That number also settles an open question upstream: `studio/open-loop-starter#25` c4920
-prices Producer in the **"Closes — no policy"** row, and this spine reads it as
-**"Authored policy"**. The sweep decides which classification was right, with a number
-rather than an argument.
+`balance/allocation-probe.ts` answers it: the rule is **load-bearing**, and nearly all
+of its weight is the decision to save. The probe sweeps buy-cheapest, payback-ordered
+greedy and the hybrid that may hold cash for a better pick, plus that hybrid barred from
+waiting as a control. Picking among affordable candidates moves the arc almost nothing —
+the control matches buy-cheapest on every row — while letting the rule save moves
+time-to-tier-8 several-fold. So the spine's buy-order condition is not a formality: a
+statement of producer's arc names whether its dispatcher saves.
+
+That settles an open question upstream: `studio/open-loop-starter#25` c4920 prices
+Producer in the **"Closes — no policy"** row, and this spine reads it as **"Authored
+policy"**. The sweep says "Authored policy" was right.
 
 ## Producer's realization — the probe swarm
 

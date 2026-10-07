@@ -24,7 +24,7 @@ Every lever is one the build already has:
 - **A flatter ladder.** Author the target beat closer to the opener and `m` falls with it (`../producer/data/curve.ts` § The one derived number). Spends come less often and each one matters less.
 - **Dispatch early, not withheld.** Open the first `AutomationTiers` rung near the start, so `automation` buys the next thing whether or not anyone is looking. The click stays available and stops being needed.
 - **Reveals paced by lifetime totals.** Gate refinements and class visibility on lifetime-mass thresholds, so the board grows over hours rather than minutes. These are discrete steps on a lifetime total, the shape the spine already requires of revisions.
-- **A longer offline window, paid for in load time.** The window is a wait budget (`../producer/data/curve.ts` § The offline window), so twelve hours costs about half again the eight-hour wait. Whether to replay at all while closed is the axis this set splits on.
+- **A longer offline window, paid for in load time.** The window is a wait budget (`../producer/data/curve.ts` § The offline window), so twelve hours costs about twice the six-hour wait. Whether to replay at all while closed is the axis this set splits on.
 
 The worked numbers for this profile are the former `ambient/` archetype at open-loop-starter `9f2c34cb40`: a twelve-hour arc, a reveal ladder on lifetime thresholds, and a window matched to that arc.
 

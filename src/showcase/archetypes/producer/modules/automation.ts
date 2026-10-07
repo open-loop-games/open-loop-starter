@@ -1,4 +1,4 @@
-import { computed } from 'vue';
+import { computed, shallowRef, type ComputedRef } from 'vue';
 import {
   createAutomationTiers,
   persistent,
@@ -43,6 +43,12 @@ export interface DispatchApi {
   tiers: AutomationTiers;
   /** Player toggle. Inert until `assisted` unlocks; that is the point. */
   isActive: Persistent<boolean>;
+  /**
+   * The class the dispatcher is holding cash for: its last pick, when that pick
+   * couldn't be paid. `null` while it can buy, and while it isn't running. Only
+   * `hybrid` ever holds — see `waitForCost` in `createAutomationModule`.
+   */
+  savingFor: ComputedRef<ProbeClassDef | null>;
 }
 
 /**
@@ -54,12 +60,14 @@ export interface DispatchApi {
  *   the one a player approximates before they think about it.
  * - `payback` — smallest `purchaseBeatSeconds`, the time a producer's whole
  *   stack takes to earn its next unit's cost — a stack-amortized beat that
- *   favours tall stacks, not the marginal payback of one more unit. Ignores
- *   how long you would have to save, so it starves whenever the best-beat
- *   candidate is unaffordable.
+ *   favours tall stacks, not the marginal payback of one more unit. It has no
+ *   term for how long a save would take, so it is only ever offered what is
+ *   affordable now.
  * - `hybrid` — `max(cost − bank, 0) / headlineRate + cost / Δrate`. The wait
- *   term collapses to zero once a candidate is affordable, handing the
- *   decision back to pure payback. Sourced by the engine from Cookie
+ *   term prices the save toward a candidate and collapses to zero once it is
+ *   affordable, handing the decision back to pure payback. It is the one rule
+ *   that runs with `waitForCost`, so it can hold cash for a better pick rather
+ *   than spend on whatever is affordable. Sourced by the engine from Cookie
  *   Monster's `pp` and Frozen Cookies' `purchaseEfficiency`.
  *
  * `hybrid` is the one the ladder's top rung grants, because affordability
@@ -78,8 +86,8 @@ export function buildDispatchPolicies(
       getCost: (p) => p.repeatable!.getCost(1),
       getRate: (p) => p.computedRate.value,
       getResource: (p) => p.resource.value,
-      // No spending floor. The hybrid rule's wait term already models saving
-      // toward an unaffordable candidate; a reserve on top would be a second,
+      // No spending floor. The wait term already models saving toward an
+      // unaffordable candidate; a reserve on top would be a second,
       // uncalibrated brake on the same behavior.
       getReserve: () => 0,
       getHeadlineRate: (p) => classes.getTotalRate(p.resource),
@@ -116,6 +124,14 @@ export interface AutomationModuleOptions {
    * Unset in every shipping path.
    */
   forcePolicy?: DispatchPolicyName;
+  /**
+   * Pin whether the dispatcher may wait for cost, overriding the rule-derived
+   * gate. The sweep's control: `hybrid` with this `false` is the same rule
+   * without the license to save, so the gap between the two runs is what
+   * saving is worth. A construction option for the same reason `forcePolicy`
+   * is. Unset in every shipping path.
+   */
+  forceWaitForCost?: boolean;
 }
 
 export function createAutomationModule(options: AutomationModuleOptions = {}): EngineModule {
@@ -146,34 +162,53 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
       });
 
       const isActive = persistent<boolean>(false, { name: 'dispatchActive' });
+      const enabled = computed(() => tiers.hasReached('assisted') && isActive.value);
       const policies = buildDispatchPolicies(classes);
+      // Two rungs ship: `assisted` grants `cheapest`, `managed` grants
+      // `hybrid`. `payback` is built but ungranted — it is the sweep's middle
+      // point, and whether it deserves a rung of its own is an open question
+      // `balance/allocation-probe.ts` answers rather than one this file should
+      // guess.
+      const rule = computed<DispatchPolicyName>(
+        () => options.forcePolicy ?? (tiers.hasReached('managed') ? 'hybrid' : 'cheapest'),
+      );
+
+      // Recorded when the pick is made: a payable pick is bought in the same
+      // slot, so only an unpayable one is a hold.
+      const held = shallowRef<Producer | null>(null);
+      const recordHold = (policy: SelectionPolicy<Producer>): SelectionPolicy<Producer> => ({
+        pick(candidates, ctx) {
+          const best = policy.pick(candidates, ctx);
+          held.value = best && !best.repeatable!.canPurchase.value ? best : null;
+          return best;
+        },
+      });
+      const savingFor = computed(() =>
+        enabled.value && held.value ? (classes.getDef(held.value.id) ?? null) : null,
+      );
 
       setupPolicyAutoPurchase(
         classes,
         {
-          enabled: computed(() => tiers.hasReached('assisted') && isActive.value),
+          enabled,
           // One attempt per second. Coarser than per-tick on purpose: the
           // player-facing fiction is a dispatcher working through a queue, and
           // a per-tick buyer makes the ladder invisible by clearing every
           // affordable purchase the instant it is affordable.
           interval: 1,
-          // Two rungs ship: `assisted` grants `cheapest`, `managed` grants
-          // `hybrid`. `payback` is built but ungranted — it is the sweep's
-          // middle point, and whether it deserves a rung of its own is an
-          // open question `balance/allocation-probe.ts` answers rather than
-          // one this file should guess.
-          policy: computed(() =>
-            options.forcePolicy
-              ? policies[options.forcePolicy]
-              : tiers.hasReached('managed')
-                ? policies.hybrid
-                : policies.cheapest,
-          ),
+          policy: computed(() => recordHold(policies[rule.value])),
+          // Waiting belongs to the rule, not the rung: only `hybrid` scores how
+          // long a save takes, so only it may hold cash for a pick it can't yet
+          // afford. In play that is the managed rung either way. Under
+          // `forcePolicy` a rung gate would switch waiting on mid-run for
+          // `payback` and `cheapest` too, and each sweep column would stop
+          // being one rule.
+          waitForCost: computed(() => options.forceWaitForCost ?? rule.value === 'hybrid'),
         },
         ctx.onTick,
       );
 
-      ctx.provide(DispatchKey, { tiers, isActive });
+      ctx.provide(DispatchKey, { tiers, isActive, savingFor });
     },
   };
 }
