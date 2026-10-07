@@ -11,14 +11,14 @@ view over that catalogue.
   source and distils them into a pattern vocabulary, every entry a decision a
   designer makes: patterns (a mechanism you select), compositions (recurring
   bundles of them) and substrate (machinery nobody selects). No tiers and no
-  prevalence gates — a row earns its place by being selectable, refusable and
-  irreducible. Source of truth for "is this pattern real?".
+  prevalence gates — a pattern earns its place by being Selectable, Declinable
+  and Irreducible. Source of truth for "is this pattern real?".
 - **Engine** — `open-loop-engine` ships the runtime primitives those
   patterns compose from: resources, modifier chains, formulas, save/load,
   the game loop, harness systems for sim and balance work.
 - **Starter** — this repo. The pattern language made legible: each
   archetype is a working demo of one game shape, its identity line naming
-  the rows it composes and the grounding class research gives it, and its
+  the research patterns it composes and the pattern-coverage grade they give it, and its
   manifest naming the engine primitives it uses, the beats it expects,
   and the exemplars it descends from.
 
