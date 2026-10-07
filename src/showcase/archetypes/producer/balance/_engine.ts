@@ -19,6 +19,7 @@ import { Decimal, addResource } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import {
   DispatchKey,
+  OfflineKey,
   createProducerModules,
   getClasses,
   getHeadlineRate,
@@ -54,6 +55,13 @@ export interface ArcOptions {
   onSample?: (reading: ArcReading) => void;
   /** Sample cadence in sim-seconds. Ignored without `onSample`. */
   sampleEverySeconds?: number;
+  /**
+   * Times the player is away. At `at` the driver stops working the manual
+   * openers and hands `seconds` to the shipping offline catch-up; the arc
+   * resumes at the return. A beat that lands while away records at the return,
+   * which is when the player sees it.
+   */
+  absences?: { at: number; seconds: number }[];
 }
 
 export interface ArcResult {
@@ -120,8 +128,16 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
   const classAt = new Map<string, number>();
   const tierAt = new Map<string, number>();
   let handBuys = 0;
+  const offline = handle.engine.tryInject(OfflineKey);
+  const absences = new Map((options.absences ?? []).map((a) => [a.at, a.seconds]));
 
   for (let t = 0; t <= seconds; t++) {
+    const away = absences.get(t);
+    if (away !== undefined) {
+      if (!offline) throw new Error('producer arc: offline module did not provide OfflineKey');
+      const now = Date.now();
+      t += offline.catchUp(handle.engine.tickDriver, now - away * 1000, now).caughtUpSeconds;
+    }
     const autoRunning = dispatch.tiers.hasReached('assisted');
 
     // ── manual openers, and only these ──

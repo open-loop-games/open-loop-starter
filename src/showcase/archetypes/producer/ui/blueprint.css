@@ -17,7 +17,10 @@
  * costume. Overriding `--color-*` alone would not produce a drawing.
  */
 
-.producer {
+/* `.producer-portal` carries the same sheet to surfaces the modal stack
+   portals out of the `.producer` scope; it is the one place they are named. */
+.producer,
+.producer-portal {
   /* ── the drawing's own tokens, named from the drafting room ───────────── */
   --paper: #0a1626;
   --paper-lit: #0c1a2c;
@@ -402,4 +405,142 @@
 }
 .producer .log__msg {
   font-style: italic;
+}
+
+/* ── return report: the absence as a dimension line ───────────────────────
+   Portaled by the modal stack, so it carries the sheet itself
+   (`.producer-portal`) and the stack's frame steps back. Solid is the span the
+   replay recorded; dashed redline is time past the window — the drafting
+   convention for proposed-but-not-built, doing the explaining. */
+.olui-modal-content:has(> .return-report) {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.return-report {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(rgba(127, 212, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 212, 255, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  border: 1px solid var(--cyan);
+  padding: 20px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.return-report__title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--graphite);
+}
+.return-report__lede {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+.return-report__span {
+  margin: 4px 0 0;
+}
+.return-report__line {
+  position: relative;
+  display: flex;
+  height: 9px;
+  /* Extension lines: the dimension's two ends, as a drawing marks them. */
+  border-left: 1px solid var(--ink-faint);
+  border-right: 1px solid var(--ink-faint);
+}
+.return-report__built,
+.return-report__unbuilt {
+  align-self: center;
+  height: 0;
+}
+.return-report__built {
+  flex: var(--recorded) 0 0;
+  border-top: 1px solid var(--cyan);
+  transform-origin: left center;
+  animation: return-report-draw 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.return-report__unbuilt {
+  flex: calc(1 - var(--recorded)) 0 0;
+  border-top: 1px dashed var(--redline);
+}
+.return-report__dims {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-family: var(--draft-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+.return-report__dim--built {
+  color: var(--cyan);
+}
+.return-report__dim--unbuilt {
+  color: var(--redline);
+  margin-left: auto;
+}
+.return-report__spec {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 18px;
+  margin: 0;
+}
+.return-report__spec dt {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  align-self: baseline;
+}
+.return-report__spec dd {
+  margin: 0;
+  text-align: right;
+  font-family: var(--draft-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.return-report__gain {
+  color: var(--cyan);
+}
+.return-report__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.return-report__resume {
+  align-self: flex-end;
+  font-family: var(--draft-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink-faint);
+  border-radius: 0;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.return-report__resume:hover,
+.return-report__resume:focus-visible {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(127, 212, 255, 0.06);
+}
+@keyframes return-report-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .return-report__built {
+    animation: none;
+  }
 }

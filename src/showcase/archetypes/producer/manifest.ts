@@ -33,6 +33,7 @@ export const manifest: ArchetypeManifest = {
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
     { name: 'createAutomationTiers', layer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'processOfflineTime', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
       name: 'setupPolicyAutoPurchase',
       layer: 'systems',

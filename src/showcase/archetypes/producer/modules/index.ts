@@ -5,6 +5,7 @@ import { createSwarmModule } from './swarm';
 import { createRefinementsModule } from './refinements';
 import { createRevisionsModule } from './revisions';
 import { createAutomationModule, type AutomationModuleOptions } from './automation';
+import { createOfflineModule } from './offline';
 
 export { ProducerTuningRegistryKey, type ProducerTunableKey } from './tuning';
 export {
@@ -27,6 +28,7 @@ export {
   type DispatchPolicyName,
   type ProducerAutomationTier,
 } from './automation';
+export { OfflineKey, type OfflineApi, type OfflineReturn } from './offline';
 
 /**
  * Compose the producer modules in dependency order. Modules close over `data`
@@ -35,7 +37,8 @@ export {
  *
  * The order is the chain order: swarm creates every rate chain, then
  * refinements, revisions and generation bind onto them. Automation comes last
- * because it needs the registered classes to build its policies.
+ * because it needs the registered classes to build its policies. Offline sits
+ * after everything it replays, so a catch-up runs the whole stack.
  */
 export function createProducerModules(
   data: ProducerData,
@@ -47,5 +50,6 @@ export function createProducerModules(
     createRefinementsModule(data),
     createRevisionsModule(data),
     createAutomationModule(options.automation),
+    createOfflineModule(),
   ];
 }

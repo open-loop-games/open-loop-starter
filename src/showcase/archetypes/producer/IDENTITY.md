@@ -36,11 +36,12 @@ of this; producer is what is left when all of them are removed, which is why it 
 shape most forks arrive wanting and the one the base's widget contracts were drawn
 against.
 
-**Not ambient.** Ambient shares the `producer` ladder and the stepped stack but
-commits *mechanically* to never punishing absence — it suppresses escalation and
-urgency by design. Producer keeps the escalation: a click that matters and then
-deliberately stops mattering, a cost curve that bites, and a cadence you feel. Same
-primitives, opposite commitment.
+**One line, two paces.** The line's slow end — the game kept rather than played
+(`../_docs/producer.md` § At the slow end of its pacing) — is this composition at
+different rate constants with every urgency declined, not a different composition.
+This build is the fast end: a click that matters and then deliberately stops
+mattering, a cost curve that bites, and a cadence you feel. A fork that wants the slow
+end retunes this one.
 
 ## The rate-function spine
 
@@ -120,6 +121,29 @@ match the exhaustive optimum — the trap being budget windows where a cheap
 prereq-blocked path catches the heuristic — so "the greedy is the rule" is a declaration
 the probe checks, not an assumption it inherits.
 
+### Offline is a time-base map
+
+An absence adds no spine term. Catch-up is **tick-sim** (`modules/offline.ts` over
+`processOfflineTime`): the time away is replayed through the live loop, so the arc
+measured in sim time is the arc, and an absence only moves wall-clock time onto sim
+time. Both regimes close:
+
+- **Dispatch locked** — nothing spends, so the replay banks `R · t` at the frozen rate,
+  piecewise at any revision that lands mid-absence. That is claim 2 again, with the
+  splice falling inside the absence.
+- **Dispatch open** — the shipping dispatcher runs over the replay exactly as it runs
+  live, so the allocation rule is applied by the same code at the same cadence.
+
+What the replay does not run is the player. Hand-launches, hand-buys and refinement
+purchases wait for the return, so an absence before dispatch opens delays everything
+the opening hand-buys feed, and one after it delays only what waits on a refinement.
+`balance/offline-probe.ts` measures both and checks the banked closed form against the
+replay.
+
+The window a return replays is not a pacing number. Catch-up blocks the load, so
+`OFFLINE_WINDOW_SECONDS` is sized as a wait budget — derived in `data/curve.ts`
+§ Balance — and time away past it is not replayed.
+
 ### What measures the remainder
 
 An arc probe driving the **shipping dispatcher** (`modules/automation.ts`, gated by
@@ -198,7 +222,6 @@ Each feeds a named part of the spine.
 | `addRevision` | a count-threshold milestone | a new **splice point**; must stay discrete (§ spine, claim 2) |
 | dispatch tier | a rung on the `AutomationTiers` ladder | none directly — it changes *who* applies the allocation rule, which is what the sweep measures |
 | `addPrestige` | a reset boundary with a retention policy | **declined here** — multi-layer prestige is Scaler's identity line. Named so a fork knows where it goes and that producer deliberately declined it |
-| offline catch-up | accrual across a session boundary | deferred — complicates the projection's time base for no demonstration value |
 
 ## Engine fit (pattern → primitive)
 
@@ -209,6 +232,7 @@ Each feeds a named part of the spine.
 | `multiplier-stack` | `createModifierChain`, `bind`, trace / `BindingRecord` | four named chains; attribution is what makes the stack legible in the HUD |
 | `statistics` thresholds (revisions) | `createAchievementCategory` / `createAchievement` | threshold-triggered, granting a global factor — the splice points |
 | `automation` (dispatch ladder) | `AutomationTiers` | tier ids a typed union (`ProducerAutomationTier`); the ladder must actually withhold, per `.claude/rules/archetype-authoring.md` § Conformance |
+| `offline-progress` | `processOfflineTime` (tick-sim), in `modules/offline.ts` | gated by the base's `settings.offlineProgress`; replays the dispatcher; clamped to `OFFLINE_WINDOW_SECONDS` |
 | Perturbation | `tunable()` at reader sites, registry in `modules/tuning.ts` | canon is `tug`; one path, no `data/balance.ts` |
 
 **This table is a prediction, and phase 2 falsifies it.** Producer's claim is that the
@@ -227,7 +251,9 @@ projection; the rule's leverage measured, not assumed.
 **Committed (producer's realization):** one headline currency (`converter` chains are
 Interlocker's line); eight tiers; exactly four modifier chains; a click
 that matters early and is dominated around tier 3; the dispatcher as both the shipping
-autobuyer and the probe's driver; no adversary, no board, no run, no reset.
+autobuyer and the probe's driver; offline catch-up by tick-sim replay over a window
+sized as a load-wait budget, reported on return as a dimension line; no adversary, no
+board, no run, no reset.
 
 **Not committed (a fork's call):** the fiction and the display name; tier count and the
 ladder's nouns; whether refinements are per-class, global, or both; the exact beat
@@ -259,11 +285,13 @@ lands. In brief:
   dispatcher** so sim and game cannot drift. `arc-probe.ts` prints realized time-to-tier
   against the projection and records the beat windows § The loop leaves blank;
   `allocation-probe.ts` runs the rule sweep that decides how much the policy term is
-  worth.
+  worth; `offline-probe.ts` checks the banked closed form against the replay, measures
+  what an absence does to the arc, and times the catch-up the window is derived from.
 - **The behavioral suites (`modules/<name>.test.ts`).** Shape invariants that survive
   retuning: cost rises monotonically with count, a revision fires exactly once at its
   threshold, bulk buy charges the same total as the units bought singly, a locked
-  dispatch tier buys nothing. No magnitudes — those print from the probes, per the
+  dispatch tier buys nothing, an absence banks while dispatch is locked and spends once
+  it opens. No magnitudes — those print from the probes, per the
   engine guide § Why this isn't a test suite.
 
 **Ordering, per `studio/open-loop-starter#25` c4920.** The instrument comes first. The

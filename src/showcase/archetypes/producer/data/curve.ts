@@ -54,6 +54,13 @@ export const CLICK_BASE_YIELD = 1;
 /** The `generation` chain: `(1 + step)^(distinct classes deployed)`. */
 export const GENERATION_STEP = 0.05;
 
+/**
+ * Longest absence a return replays, in seconds; time away past it is lost.
+ * Sized by how long the returning player waits, not by the arc — catch-up
+ * blocks the load. See § Balance, the offline window.
+ */
+export const OFFLINE_WINDOW_SECONDS = 8 * 3600; // replays in ~4.5 s at ~0.55 ms per second (balance/offline-probe.ts § 3)
+
 // ─── Balance ────────────────────────────────────────────────────────────────
 // Rate-function bucket: EXPONENTIAL FAMILY under piecewise × modifier-product
 // composition (`../IDENTITY.md` § Rate-function spine). This file is the
@@ -116,6 +123,22 @@ export const GENERATION_STEP = 0.05;
 // edge the spine declares (`../IDENTITY.md` § Where the closed form stops). It
 // is measured, never authored, and a fork that pins it as a constant has
 // mis-read the spine.
+//
+// ── The offline window ──────────────────────────────────────────────────────
+// An absence is a time-base map, not a rate term (`../IDENTITY.md` § Offline is
+// a time-base map): catch-up replays the absence through the live loop, so the
+// arc in sim time is untouched. The window is therefore not a pacing number at
+// all. It is a WAIT BUDGET — catch-up runs before the game screen appears, at a
+// measured ~0.55 ms per replayed second, so the window prices the longest load
+// a returning player sits through:
+//
+//   window = wait budget / replay cost  =  ~4.5 s / ~0.55 ms  ≈  8 h
+//
+// Eight hours covers a night away. The engine's own default (three days) held
+// the load for ~40 s on the same probe. The replay cost is machine- and fleet-dependent;
+// `balance/offline-probe.ts` § 3 re-measures it, and the slow end of the line
+// (`../../_docs/producer.md`) is where a longer window — and a longer wait —
+// belongs, as a tuning choice rather than a default.
 //
 // ── Ladder structure ────────────────────────────────────────────────────────
 // Each class costs ×10 and produces ×8 of the one below, so cost-per-unit-rate

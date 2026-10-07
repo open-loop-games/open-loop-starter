@@ -24,6 +24,11 @@ what each one actually moves:
 | `balance/generationStep` | `0.05` | The breadth chain's per-class step — `(1 + step)^(distinct classes)`. Rewards deploying wide rather than deep. |
 | `classes/<id>/baseCost` | `15 · 10^i` | A class's zeroth-unit cost, `a_i`. Eight keys, one per class. |
 
+`OFFLINE_WINDOW_SECONDS` (`data/curve.ts`) is a constant rather than a key:
+a `TuningRegistry` reader returns a `DecimalSource`, so it cannot express "no
+window", and nothing has needed to sweep it. It is sized as a load-wait budget,
+not a pacing target — re-measure with `offline-probe.ts` § 3 before moving it.
+
 **Two of the most interesting constants are deliberately not on this surface**,
 and the reason is the same for both: they reach the engine as static
 `DecimalSource` fields read once at registration, so a `tunable()` wrapper would
@@ -87,9 +92,15 @@ an eight-hour arc buys nothing. That is not hypothetical: it is what the first
 walkthrough did, and it read as a balance failure rather than as a driver with
 no opener.
 
+**An absence replays the game, not the player.** Catch-up runs every module, the
+dispatcher included, but none of the manual openers. Anything that waits on a
+hand-buy or a refinement waits for the return, so content that moves a beat from
+automation onto the player also makes that beat sensitive to absence.
+`offline-probe.ts` § 2 is where that shows.
+
 ## Running a pass
 
-All four print and none assert — they hand you a report and you decide. Run from
+The probes print and none assert — they hand you a report and you decide. Run from
 the repo root (`src/game/…` after eject):
 
 ```
@@ -97,6 +108,7 @@ pnpm exec vite-node src/showcase/archetypes/producer/balance/producer-projection
 pnpm exec vite-node src/showcase/archetypes/producer/balance/arc-probe.ts
 pnpm exec vite-node src/showcase/archetypes/producer/balance/pacing-probe.ts
 pnpm exec vite-node src/showcase/archetypes/producer/balance/allocation-probe.ts
+pnpm exec vite-node src/showcase/archetypes/producer/balance/offline-probe.ts
 ```
 
 - **`producer-projection.ts`** is the spine's runnable form and runs first — no
@@ -121,6 +133,10 @@ pnpm exec vite-node src/showcase/archetypes/producer/balance/allocation-probe.ts
   `payback` and `hybrid` via `forcePolicy`, and reports the spread. Read the
   spread, not the winner. Its closing section states what the sweep structurally
   cannot exercise — see Known thin.
+- **`offline-probe.ts`** checks the banked closed form against the replay (§ 1),
+  runs the arc with an hour away before and after dispatch opens (§ 2), and times
+  catch-up at the window (§ 3) — the measurement `OFFLINE_WINDOW_SECONDS` is
+  derived from.
 - **`beats.ts`** holds the windows and predicates the probes import. Windows are
   **recorded**, not authored; `manifest.ts` carries them as
   `recordedSimRange`, min/max across the three allocation rules. When a beat
