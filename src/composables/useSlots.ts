@@ -1,42 +1,38 @@
-import { ref, computed, type Ref } from 'vue';
+import { computed } from 'vue';
 import type { SaveManager, SaveSlot, SavePeek, ModDef } from '@open-loop/engine';
 
 export interface SlotInfo extends SaveSlot {
   peek: SavePeek | null;
 }
 
+/**
+ * Slot-screen view over a SaveManager. `slots` and `activeSlotId` are live
+ * engine reads; `peek` is read whenever the slot list changes, which covers
+ * every save the screen can see — it mounts only after the session has saved
+ * and stopped the engine.
+ */
 export function useSlots(saveManager: SaveManager, mods: readonly ModDef[]) {
-  // Reactive trigger for slot list updates
-  const revision = ref(0);
-
-  const slots = computed<SlotInfo[]>(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    revision.value; // track
-    return saveManager.slots.map((slot) => ({
+  const slots = computed<SlotInfo[]>(() =>
+    saveManager.slots.map((slot) => ({
       ...slot,
       peek: saveManager.peekSlot(slot.id),
-    }));
-  });
+    })),
+  );
 
   function createSlot(name?: string): number {
-    const id = saveManager.createSlot(name);
-    revision.value++;
-    return id;
+    return saveManager.createSlot(name);
   }
 
   function deleteSlot(slotId: number) {
     saveManager.deleteSlot(slotId);
-    revision.value++;
   }
 
   function renameSlot(slotId: number, name: string) {
     saveManager.renameSlot(slotId, name);
-    revision.value++;
   }
 
   function selectSlot(slotId: number) {
     saveManager.selectSlot(slotId);
-    revision.value++;
   }
 
   function getModName(modId?: string): string | undefined {
@@ -64,10 +60,6 @@ export function useSlots(saveManager: SaveManager, mods: readonly ModDef[]) {
     selectSlot,
     getModName,
     formatTimestamp,
-    activeSlotId: computed(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      revision.value;
-      return saveManager.activeSlotId;
-    }) as Ref<number>,
+    activeSlotId: computed(() => saveManager.activeSlotId),
   };
 }

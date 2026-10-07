@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * Fixed-position FPS/TPS readout for dev builds. Pure presentation plus a
- * single `requestAnimationFrame` loop — no reactivity on engine state, no
- * interaction. Ported from `incloneution/src/dev/DevDiagnostics.vue` with
+ * single `requestAnimationFrame` loop; the active speed button is the one
+ * reactive engine read. Ported from `incloneution/src/dev/DevDiagnostics.vue` with
  * the state-dump panel stripped; starter forks can re-add that locally
  * when they need it.
  *
@@ -44,12 +44,11 @@ function measure() {
 }
 
 const SPEEDS = [1, 5, 10, 20] as const;
-const speed = ref(engine?.tickDriver.speedMultiplier ?? 1);
+const speed = computed(() => engine?.tickDriver.speedMultiplier ?? 1);
 
 function setSpeed(mult: number): void {
   if (!engine) return;
   engine.tickDriver.speedMultiplier = mult;
-  speed.value = mult;
 }
 
 const speedClasses = computed(() => (s: number) => ({
