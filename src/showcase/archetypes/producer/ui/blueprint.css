@@ -399,6 +399,44 @@
 .producer .dispatch__locked {
   font-style: italic;
 }
+/* The hold, drawn as a dimension line to the target's price — the same
+   grammar as the return report: solid cyan is mass banked, dashed redline is
+   the span not yet built. Extension lines at both ends mark it as a measure. */
+.producer .dispatch__hold-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.producer .dispatch__hold-target {
+  color: var(--ink);
+}
+.producer .dispatch__dim {
+  border-left: 1px solid var(--ink-faint);
+  border-right: 1px solid var(--ink-faint);
+}
+.producer .dispatch__dim::before {
+  border-top: 1px dashed var(--redline);
+}
+.producer .dispatch__dim-banked {
+  border-top: 1px solid var(--cyan);
+  transition: transform 900ms linear;
+}
+.producer .dispatch__dims {
+  font-family: var(--draft-mono);
+  font-size: 10.5px;
+}
+.producer .dispatch__dim-share {
+  color: var(--cyan);
+}
+.producer .dispatch__dim-wait {
+  color: var(--redline);
+}
+@media (prefers-reduced-motion: reduce) {
+  .producer .dispatch__dim-banked {
+    transition: none;
+  }
+}
 
 .producer .log__at {
   font-family: var(--draft-mono);

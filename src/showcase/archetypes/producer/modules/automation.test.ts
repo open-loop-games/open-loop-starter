@@ -72,6 +72,13 @@ function fundThenSpend(n: number): void {
 }
 
 describe('saving for a pick', () => {
+  it('only the rule the managed rung grants may wait', () => {
+    dispatch().tiers.unlock('assisted');
+    expect(dispatch().waitsForCost.value).toBe(false);
+    dispatch().tiers.unlock('managed');
+    expect(dispatch().waitsForCost.value).toBe(true);
+  });
+
   it('the managed rung holds cash for what it cannot yet afford, and buys nothing meanwhile', async () => {
     fundThenSpend(10);
     dispatch().tiers.unlock('managed');

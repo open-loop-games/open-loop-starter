@@ -43,10 +43,14 @@ export interface DispatchApi {
   tiers: AutomationTiers;
   /** Player toggle. Inert until `assisted` unlocks; that is the point. */
   isActive: Persistent<boolean>;
+  /** The allocation rule the open rung grants — what the dispatcher runs when active. */
+  rule: ComputedRef<DispatchPolicyName>;
+  /** Whether the dispatcher may hold cash for a pick it can't yet afford. */
+  waitsForCost: ComputedRef<boolean>;
   /**
    * The class the dispatcher is holding cash for: its last pick, when that pick
    * couldn't be paid. `null` while it can buy, and while it isn't running. Only
-   * `hybrid` ever holds — see `waitForCost` in `createAutomationModule`.
+   * set while {@link waitsForCost} holds.
    */
   savingFor: ComputedRef<ProbeClassDef | null>;
 }
@@ -172,6 +176,13 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
       const rule = computed<DispatchPolicyName>(
         () => options.forcePolicy ?? (tiers.hasReached('managed') ? 'hybrid' : 'cheapest'),
       );
+      // Waiting belongs to the rule, not the rung: only `hybrid` scores how
+      // long a save takes, so only it may hold cash for a pick it can't yet
+      // afford. In play that is the managed rung either way. Under
+      // `forcePolicy` a rung gate would switch waiting on mid-run for
+      // `payback` and `cheapest` too, and each sweep column would stop
+      // being one rule.
+      const waitsForCost = computed(() => options.forceWaitForCost ?? rule.value === 'hybrid');
 
       // Recorded when the pick is made: a payable pick is bought in the same
       // slot, so only an unpayable one is a hold.
@@ -197,18 +208,12 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
           // affordable purchase the instant it is affordable.
           interval: 1,
           policy: computed(() => recordHold(policies[rule.value])),
-          // Waiting belongs to the rule, not the rung: only `hybrid` scores how
-          // long a save takes, so only it may hold cash for a pick it can't yet
-          // afford. In play that is the managed rung either way. Under
-          // `forcePolicy` a rung gate would switch waiting on mid-run for
-          // `payback` and `cheapest` too, and each sweep column would stop
-          // being one rule.
-          waitForCost: computed(() => options.forceWaitForCost ?? rule.value === 'hybrid'),
+          waitForCost: waitsForCost,
         },
         ctx.onTick,
       );
 
-      ctx.provide(DispatchKey, { tiers, isActive, savingFor });
+      ctx.provide(DispatchKey, { tiers, isActive, rule, waitsForCost, savingFor });
     },
   };
 }
