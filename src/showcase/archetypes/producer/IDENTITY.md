@@ -10,11 +10,10 @@ One screen: what the archetype *is*, the closed-form spine that balances it, pro
 committed realization, and the ports a fork grows it through. The spine is the
 load-bearing part — read that section slowly; the rest hangs off it.
 
-Identity line source: `../_identity.md` (Producer row). Grounding: **both** — the
-market names the region (Idler ∧ Incremental, an address shared with Scaler, which
-the composition rather than the market separates) and the sourced exemplars share the
-rows the line cites. This is a pattern-language composition, not a port of any one
-game. Cookie Clicker (the ladder + achievement stack), Antimatter Dimensions (the
+Identity line source: `../_identity.md` (Producer entry); the line's player experience
+and exemplar calls are `../_docs/producer.md`. **Core · covered** — every component is
+a research pattern with a sourced, in-called member. This is a pattern-language
+composition, not a port of any one game. Cookie Clicker (the ladder + achievement stack), Antimatter Dimensions (the
 engineered cost-scaling class with closed-form bulk buy), AdVenture Capitalist (the
 autobuyer arc) and Universal Paperclips (scale as the payoff) validate the composition
 as a *set, with their crosses showing* — none is a clone target. Paperclips' phase transitions are a deliberate omission (§ What is
@@ -198,7 +197,7 @@ Each feeds a named part of the spine.
 | `addRefinement` | an upgrade, per-class or global | a factor in `Π μ` — rescales `T(C)`, never reshapes it |
 | `addRevision` | a count-threshold milestone | a new **splice point**; must stay discrete (§ spine, claim 2) |
 | dispatch tier | a rung on the `AutomationTiers` ladder | none directly — it changes *who* applies the allocation rule, which is what the sweep measures |
-| `addPrestige` | a reset boundary with a retention policy | **refused here** — multi-layer prestige is Scaler's identity line. Named so a fork knows where it goes and that producer deliberately declined it |
+| `addPrestige` | a reset boundary with a retention policy | **declined here** — multi-layer prestige is Scaler's identity line. Named so a fork knows where it goes and that producer deliberately declined it |
 | offline catch-up | accrual across a session boundary | deferred — complicates the projection's time base for no demonstration value |
 
 ## Engine fit (pattern → primitive)

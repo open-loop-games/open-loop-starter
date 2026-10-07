@@ -1,19 +1,21 @@
 # Cycler — archetype identity
 
 > **Phase alternation — a calm phase and a pressure phase sharing one state —
-> which no live row names, over `wave` + `scheduled-event` + `run-setup` +
-> `held-output` + `positional-effect`.** Build during the calm, survive the
-> pressure, repeat with escalating stakes.
+> which no pattern names, over `wave` + `scheduled-event` + `run-setup` +
+> `held-output` + `positional-effect`, an `offered-draft` between waves, and
+> `meta-progression` keeping unlocks across runs.** Build during the calm, survive
+> the pressure, repeat with escalating stakes.
 
 One screen: what the archetype *is*, the closed-form spine that balances it,
 cycler's committed realization, and the ports a fork grows it through. The spine is
 the load-bearing part — read that section slowly; the rest hangs off it.
 
-Identity line source: `../_identity.md` (Cycler row). Grounding: **market,
-corpus pending** — the tag address (Tower Defense ∧ Base Building) holds the
-exemplar set cleanly, but only one exemplar (Dome Keeper) is sourced, so the rows
-above are the parts that one carries; the alternation that composes them has no
-row and becomes a candidate only once a refusal is read in source. This is a
+Identity line source: `../_identity.md` (Cycler entry); the line's player experience
+and exemplar calls are `../_docs/cycler.md`. **Core · open core** — one exemplar
+(Dome Keeper) is sourced, so the patterns above are the parts that one carries; the
+alternation that composes them has no pattern and becomes a candidate only once a
+decline is read in source. This build does not yet realize the `offered-draft` or
+the `meta-progression` the line names. This is a
 pattern-language composition, not a port of any one game. Thronefall (Cycler ×
 Defender), Kingdom Two Crowns (Cycler × side-scroll Explorer), They Are Billions
 (Cycler × RTS) validate the composition as a *set, with their crosses showing* —
@@ -185,7 +187,7 @@ A fork grows the archetype *up* through these. Each feeds a named part of the sp
 
 | Pattern | Engine primitive | Note |
 |---|---|---|
-| phase alternation (no row) + `scheduled-event` | phase/state controller + an exogenous wave sequencer | **candidate primitive** — hard build↔defend; `createSequencer` drives the salvo schedule as an *authored schedule*, never a state-derived cost (`TODO(expansion)` + `candidate-primitives.md` if no scheduled-drain primitive exists) |
+| phase alternation (no pattern) + `scheduled-event` | phase/state controller + an exogenous wave sequencer | **candidate primitive** — hard build↔defend; `createSequencer` drives the salvo schedule as an *authored schedule*, never a state-derived cost (`TODO(expansion)` + `candidate-primitives.md` if no scheduled-drain primitive exists) |
 | `player-siting` + `positional-effect` | building-to-building synergy over a finite grid (Lances + Reactors share cells; Relay boosts both) | builds `C`; board-fill **saturation** is what makes the crossing log |
 | `wave` + `scaled-opposition` | geometric salvo schedule `W₀·g^N` in `data/` | exogenous; guarantees termination |
 | Wall + repair | an HP resource + surplus-fed drip | `Δ_wall`; damaged by leak-through only, never the board |

@@ -1,20 +1,24 @@
 # Tug — archetype identity
 
-> **The shared lane — two economies feeding one contested path — which no row
+> **The shared lane — two economies feeding one contested path — which no pattern
 > names, over `scaled-opposition` + `positional-effect` + `loss-on-failure` +
-> `ending`**, with the opponent's economy as a live zero-sum pressure source. You
-> author pressure against another agent authoring pressure in the same shared
-> space.
+> `ending`, with `meta-progression` carrying a career across matches**, and the
+> opponent's economy as a live zero-sum pressure source. You author pressure
+> against another agent authoring pressure in the same shared space; what you earn
+> outlasts the match.
 
 **Spine-formed.** The SciFi Armada content (units, personas, counter-matrix) is
 declared invention — numbers are perturbation surface settled against the spine
 by engine-as-oracle sensitivity sweeps, never lifted from a single exemplar. The
 lane-push / tug-of-war genre validates the shape ships in the wild — cited as a
-set, never lifted. Identity line source: `../_identity.md` (Tug row). Grounding:
-**market, corpus pending**, thin on both axes — the tag address (Auto Battler ∧
-(Tower Defense ∨ RTS)) is small, one exemplar (Warfare 1917) is sourced and the
-rows above are the ones it carries; the lane itself has no row and no refusal
-read yet.
+set, never lifted. Identity line source: `../_identity.md` (Tug entry); the line's
+player experience, exemplar calls and lineage are `../_docs/tug.md`. **Core · open
+core** — one exemplar (Warfare 1917) is sourced and the patterns above are the ones
+it carries; the lane itself has no pattern and no decline read yet.
+
+**This build does not yet show what makes the line core.** The career across
+matches ships dormant (§ Growth ports), and without it the build is a one-lane
+Skirmish. Waking it is a spine amendment, not a toggle.
 
 ## What this archetype is
 
@@ -87,9 +91,10 @@ match limit.
 
 ## Growth ports (validated-but-deferred)
 
-- **Cross-match meta-progression + prestige** — `modules/prestige.ts` +
-  `metaProgressionEnabled` gate ship dormant (production skeleton: off). The
-  between-match window is where a persistent power/roster layer grows in.
+- **Cross-match meta-progression** — the line's defining layer, not an optional
+  direction: `modules/prestige.ts` + `metaProgressionEnabled` gate ship dormant
+  (production skeleton: off). The between-match window is where a persistent
+  power/roster layer grows in, and it lands with its spine term.
 - **Opponent-persona rotation** — persona is bound at module install today; the
   `balance/_match-driver.ts` between-match seam is the documented insertion point for a
   player-facing "rotate opponents per match" toggle or a tuner sweeping persona
@@ -111,7 +116,7 @@ match limit.
 | income (substrate)           | per-side income `Resource` + rate chain           | both sides accrue symmetrically at `baseIncomeRate` |
 | `escalating-price` upgrades  | geometric refinery ladders (`tunable()` costs)    | the fixed-strategy ROI surface (methodology #5)     |
 | unit production + send       | per-side unit shop + sequencer + cooldowns        | send dispatches a unit into the shared lane         |
-| the shared lane (no row)     | single shared `lane` module, all-pairs combat     | fortress treated as just-another opposing unit      |
+| the shared lane (no pattern) | single shared `lane` module, all-pairs combat     | fortress treated as just-another opposing unit      |
 | `type-effectiveness`         | N×N data table read by the combat resolver        | `strongCounter` sharpness = signature knob          |
 | Adversarial pressure         | `modules/opponent-bot.ts` (side-parameterized AI) | ships as game code; auto-send IS the mechanic       |
 | Match orchestration          | `modules/match.ts` (start/end/reset, events)      | `matchEnded` fires pre-reset — capture then         |
@@ -142,9 +147,7 @@ couples to what, and how to read each probe. In brief:
 
 ## Cross-references
 
-- Genre exemplars (shape validation, not lift targets): the lane-push /
-  tug-of-war lineage — Age of War and the Warcraft III tug-of-war custom-map
-  family
+- Exemplars and lineage (shape validation, not lift targets): `../_docs/tug.md`
 - Working on the numbers: `BALANCING.md` (beside this file)
 - Balance methodology: `open-loop-engine/docs/consumer-guide-balance.md`;
   archetype-specific authoring in `.claude/rules/archetype-authoring.md`
