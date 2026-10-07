@@ -14,7 +14,6 @@ directions it grows through. Start there.
 
 | Archetype  | Shape                                                                |
 | ---------- | -------------------------------------------------------------------- |
-| `ambient`  | Producer's composition at the slow end of its pacing                 |
 | `cycler`   | Alternating build/defend phases on a hard-phase cycle                |
 | `producer` | Geometric cost ladder under a compounding modifier stack             |
 | `skirmish` | Adversarial real-time match with bilateral automation                |

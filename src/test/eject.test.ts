@@ -45,7 +45,7 @@ describe('eject plan', () => {
   });
 
   it('omits the game name when none is given', () => {
-    const plan = planEject(ROOT, 'ambient');
+    const plan = planEject(ROOT, 'producer');
     expect(plan.gameId).toBeUndefined();
     expect(plan.packageName).toBeUndefined();
   });

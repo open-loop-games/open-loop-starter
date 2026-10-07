@@ -17,7 +17,7 @@
     collisions (engine assumes single-instance-per-lifetime otherwise).
 
   Save isolation rides on each archetype's unique `gameId` (cycler-pilot,
-  ambient-pilot, tug-pilot); save-manager prefixes storage keys with it, so
+  tug-pilot); save-manager prefixes storage keys with it, so
   no `manifest.id`-as-namespace push/pop is needed. Saves persist across
   remounts because dispose only touches the in-memory ref registry.
 -->

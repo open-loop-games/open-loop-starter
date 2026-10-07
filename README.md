@@ -58,7 +58,7 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 | Archetype | Demo | Shell | Engine systems | What it shows |
 |---|---|---|---|---|
 | `cycler` | Defense Command | DefenseCommandConsole | PurchasableCategory, CostRequirement, BooleanRequirement, integerRoot | Phase alternation: build during the calm, survive the salvo, redeploy at higher reach |
-| `ambient` | Cozy Farm | SingleColumnShell | ProducerCategory, Loop, PurchasableCategory, AchievementCategory, Reset | Companion-software idle: an auto-production spine tuned for low-pressure ambient progression |
+| `producer` | Probe Swarm | ThreePanelShell | ProducerCategory, AchievementCategory, AutomationTiers, processOfflineTime | The automation ladder: a geometric cost ladder under a compounding modifier stack, with offline catch-up and a return report |
 | `tug` | SciFi Armada | TugFrameLayout | Sequencer, Loop, PurchasableCategory, ChallengeCategory, Reset | Adversarial lane push: auto-send economy versus a live zero-sum opponent |
 | `skirmish` | Skirmish | SingleColumnShell | Sequencer, Loop, AutomationTiers | Adversarial real-time match with automation on both sides |
 | `_blank` | — | SingleColumnShell | — | Neutral skeleton for a novel composition (`pnpm eject --clean`) |

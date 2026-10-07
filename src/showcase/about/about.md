@@ -33,7 +33,7 @@ gh repo create my-game --template open-loop/starter --private --clone
 cd my-game
 
 # 2. Pick one archetype (here: cycler) — delete the rest + the gallery
-rm -rf src/showcase/archetypes/{ambient,tug,skirmish}
+rm -rf src/showcase/archetypes/{producer,skirmish,survivor,tug}
 rm -rf src/gallery src/about
 
 # 3. Wire main.ts to your one archetype

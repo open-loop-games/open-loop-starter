@@ -111,7 +111,7 @@ receipt by path and symbol, and let a later pass read it). Findings ripen in
 § Couplings and § Known thin until they are general enough to leave.
 
 `_blank/BALANCING.md` is the template, filled in for the neutral base and
-annotated with what each section is for; `ambient` and `tug` are worked examples
+annotated with what each section is for; `producer` and `tug` are worked examples
 on real economies. **§ Couplings carries the most weight** — it is where a
 structural assumption the code never states gets written down, and it is the
 section a fork will thank you for.
@@ -210,7 +210,7 @@ Each axis has one canonical answer and one archetype to copy it from:
 | Test harness | `sim/harness.ts` → bare `boot()` / `tick()` / `tickUntil()` over this archetype's modules | `_blank` |
 | Runnable projection | `<name>-projection.ts` where the closed form is worth executing | `cycler` |
 | Probes | `<concern>-probe.ts` under `balance/`; print, never assert | `cycler` |
-| Balance orientation | `BALANCING.md` beside `IDENTITY.md`, four required sections | `ambient` |
+| Balance orientation | `BALANCING.md` beside `IDENTITY.md`, four required sections | `producer` |
 | Boot | `createApp(overrides?) → { app, engine, mount }` | any — all agree |
 
 A deliberate divergence is allowed and is worth writing down: say so at the call site

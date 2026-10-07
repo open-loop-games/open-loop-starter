@@ -8,7 +8,7 @@
   is the only thing the spine asks the player to read here.
 
   A fork whose achievements have real per-entry content should reach for
-  `AchievementGrid` in a dialog instead — ambient does exactly that.
+  `AchievementGrid` in a dialog instead.
 -->
 <script setup lang="ts">
 defineProps<{

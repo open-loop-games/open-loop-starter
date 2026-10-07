@@ -22,8 +22,7 @@ import { ProducerTuningRegistryKey } from './tuning';
  *
  * One binding per class rather than one per revision per class: the fold is
  * what keeps the chain readable in a breakdown (19 revisions would otherwise
- * be 19 rows saying nothing individually), and it is the same shape ambient
- * settled on.
+ * be 19 rows saying nothing individually).
  *
  * The launcher chain is deliberately NOT bound here. A revision is a
  * swarm-wide firmware push and the player is not a probe — which is also what

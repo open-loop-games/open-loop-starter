@@ -47,7 +47,6 @@ the parent — N hand-authored param bundles read by one decision function — a
   `PersonaKey`), read by `modules/opponent-bot.ts`. `skirmish` scales its decision
   cadence per persona (`modules/automation.ts`) and ships rush against greedy.
 - **Solo archetypes carry tier-gated player automation, not an opponent roster.**
-  `ambient` and `producer` each hold a `modules/automation.ts` behind
-  `AutomationTiers`. That is the automation-as-game-code convention, and it is what
+  `producer` holds a `modules/automation.ts` behind `AutomationTiers`. That is the automation-as-game-code convention, and it is what
   the balance harness drives — a different object from an opponent seat, and not a
   place a roster is owed.

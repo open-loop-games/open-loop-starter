@@ -15,7 +15,18 @@ The same composition, paced for absence, is a game the player does not play so m
 
 A thirty-minute session is seven three-minute glances distributed across the day. Each glance yields accumulated output, one or two affordable purchases, and occasionally a new visual element revealed — a building appears, an animal wanders in, a zone quietly unlocks. The long-term pull is the pleasant, legible, ongoing state of the game: _my thing is running, it is happy, it grew while I was away._ Anti-Idle made that commitment in the web era and the desktop-companion cluster around Rusty's Retirement remade it; what changes between the two is the visual budget, not the engagement contract.
 
-Pacing is not a line boundary. A slow Producer differs from a fast one in its rate constants and in which urgencies it declines, not in its composition, so it is a configuration of this line. The built `../ambient/` archetype is that configuration.
+Pacing is not a line boundary. A slow Producer differs from a fast one in its rate constants and in which urgencies it declines, not in its composition, so it is a configuration of this line, reached by retuning `../producer/` rather than by building another archetype.
+
+### The slow-end profile
+
+Every lever is one the build already has:
+
+- **A flatter ladder.** Author the target beat closer to the opener and `m` falls with it (`../producer/data/curve.ts` § The one derived number). Spends come less often and each one matters less.
+- **Dispatch early, not withheld.** Open the first `AutomationTiers` rung near the start, so `automation` buys the next thing whether or not anyone is looking. The click stays available and stops being needed.
+- **Reveals paced by lifetime totals.** Gate refinements and class visibility on lifetime-mass thresholds, so the board grows over hours rather than minutes. These are discrete steps on a lifetime total, the shape the spine already requires of revisions.
+- **A longer offline window, paid for in load time.** The window is a wait budget (`../producer/data/curve.ts` § The offline window), so twelve hours costs about half again the eight-hour wait. Whether to replay at all while closed is the axis this set splits on.
+
+The worked numbers for this profile are the former `ambient/` archetype at open-loop-starter `9f2c34cb40`: a twelve-hour arc, a reveal ladder on lifetime thresholds, and a window matched to that arc.
 
 ## Exemplar calls
 

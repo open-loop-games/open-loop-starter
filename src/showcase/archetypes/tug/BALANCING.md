@@ -71,7 +71,7 @@ pnpm exec vite-node src/showcase/archetypes/tug/balance/retune-probe.ts
 ```
 
 **Tug ships no `tug-projection.ts`, deliberately.** The canon wants a runnable
-closed-form projection wherever one is worth executing, and ambient and cycler
+closed-form projection wherever one is worth executing, and producer and cycler
 both carry one. Tug's spine declares no single closed form (`IDENTITY.md`
 § Rate-function spine): the arc is a distribution over adversarial match
 outcomes, so there is no expression to run and contradict. The one genuinely

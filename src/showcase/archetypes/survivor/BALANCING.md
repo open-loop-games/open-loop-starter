@@ -481,7 +481,7 @@ carry no numbers.
   both read as "something else decides now".
 
   And `balance/beats.ts` holds beat **extractors over a finished arc** where
-  ambient, skirmish and tug hold engine `BeatProbe` tick predicates. Theirs are
+  skirmish and tug hold engine `BeatProbe` tick predicates. Theirs are
   single events a bisection can stop on; survivor's are phases of a stochastic
   arc whose windows only mean anything across a seed batch, and `balance/_arc.ts`
   already samples what they need. A predicate here would be a second run path
