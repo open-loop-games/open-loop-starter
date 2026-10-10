@@ -6,9 +6,9 @@
   shopfronts (Producer's bakery markup); leave default for the standard
   h2-in-a-button shape.
 
-  Also drives the engine's autosave loop from the player pref refs —
-  enabled flag and interval are user-configurable at runtime, the
-  engine-side autosave is off by default. Theme, ui-scale, and notation
+  Also drives the engine's autosave from the player pref refs, by writing
+  `engine.autoSaveInterval` (0 when the player turns autosave off) while
+  the header is mounted. Theme, ui-scale, and notation
   are bound at app boot in usePlayerPrefs (page-lifetime, demo-agnostic).
 -->
 <script setup lang="ts">
@@ -34,24 +34,16 @@ const engine = inject<Engine>('engine')!;
 const stack = useModalStack();
 const prefs = usePlayerPrefs();
 
-let autosaveTimer: number | null = null;
-function clearAutosaveTimer(): void {
-  if (autosaveTimer != null) {
-    window.clearInterval(autosaveTimer);
-    autosaveTimer = null;
-  }
-}
 watch(
   [prefs.autoSave, prefs.autoSaveIntervalMs],
   ([enabled, intervalMs]) => {
-    clearAutosaveTimer();
-    const mgr = engine.saveManager;
-    if (!mgr || !enabled || intervalMs <= 0) return;
-    autosaveTimer = window.setInterval(() => mgr.save(), intervalMs);
+    engine.autoSaveInterval = enabled ? Math.max(0, intervalMs) : 0;
   },
   { immediate: true },
 );
-onUnmounted(clearAutosaveTimer);
+onUnmounted(() => {
+  engine.autoSaveInterval = 0;
+});
 
 function openSave(): void {
   const id = stack.push(SavePanel, { onClose: () => stack.remove(id) });
