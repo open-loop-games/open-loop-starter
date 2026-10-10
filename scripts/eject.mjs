@@ -42,8 +42,6 @@ const DEMO_DELETES = [
   'docs',
   'profiles',
   'TODO.md',
-  // Stale under the /work/studio workspace — the root lockfile is authoritative.
-  'pnpm-lock.yaml',
   // Starter's task-backend config; a fork inherits the studio-root gitea config.
   '.mcp.json',
 ];
