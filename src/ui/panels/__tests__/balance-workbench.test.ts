@@ -59,6 +59,7 @@ function buildLiveEngine(tag: string, mod: EngineModule): Engine {
     persistenceNamespace: `${tag}-${Math.random().toString(36).slice(2)}`,
     storageAdapter: createMemoryStorage(),
     persistence: true,
+    autoSaveInterval: 0,
   });
   engine.use(mod);
   engine.start();

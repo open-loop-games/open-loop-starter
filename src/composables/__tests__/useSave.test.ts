@@ -17,6 +17,7 @@ function bootEngine(): Engine {
     gameId: namespace,
     persistence: true,
     persistenceNamespace: namespace,
+    autoSaveInterval: 0,
     storageAdapter: {
       getItem: (key) => storage.get(key) ?? null,
       setItem: (key, value) => void storage.set(key, value),

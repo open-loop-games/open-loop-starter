@@ -110,6 +110,7 @@ export function buildTugSimEngine(options?: TugSimOptions): Engine {
     persistenceNamespace: namespace,
     extraModules: [createMatchDriverModule()],
     maxDeltaTime: options?.maxDeltaTime,
+    autoSaveInterval: 0,
     modules: {
       player: { persona: playerPersona, believability },
       ai: { persona: aiPersona, believability },

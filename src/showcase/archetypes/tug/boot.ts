@@ -25,6 +25,8 @@ export interface TugEngineOptions {
   extraModules?: EngineModule[];
   /** Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse steps that the default cap would clamp. */
   maxDeltaTime?: number;
+  /** Autosave period in ms; sim engines pass 0 so they never write. */
+  autoSaveInterval?: number;
   /** Per-side opponent-bot install options + meta-progression toggle. Sim
    *  engines override; production uses defaults. */
   modules?: TugModulesOptions;
@@ -46,6 +48,7 @@ export function createTugEngine(options?: TugEngineOptions): {
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
     maxDeltaTime: options?.maxDeltaTime,
+    autoSaveInterval: options?.autoSaveInterval,
     mods: [
       {
         id: MOD_ID,

@@ -14,9 +14,10 @@
  * SaveManager keys storage by `gameId`, so collisions cross-contaminate
  * saves between sibling demos. Forks rename `gameId` when forking.
  *
- * Autosave: engine-side autosave is off by default (interval 0). The
- * starter drives autosave from the player-pref refs via SystemHeader's
- * runtime, so the cadence is user-configurable at runtime.
+ * Autosave: the engine's default applies (it writes only after a load). While
+ * SystemHeader is mounted it drives the interval from the player-pref refs, so
+ * the cadence is user-configurable at runtime. An engine that must never write
+ * (sim, balance, test) passes `autoSaveInterval: 0`.
  *
  * Error surfacing: `bootApp` installs an `app.config.errorHandler`. Without
  * one, Vue degrades a throw inside a lifecycle hook or event handler to a
@@ -30,7 +31,6 @@ import { sharedBase } from '@/modules';
 import { useSaveEvents } from '@/composables/useSaveEvents';
 
 const DEFAULT_TICK_RATE = 20;
-const DEFAULT_AUTOSAVE_MS = 0;
 const DEFAULT_MAX_SAVE_SLOTS = 30;
 
 export interface BootEngineOptions extends Omit<EngineConfig, 'mods'> {
@@ -40,7 +40,6 @@ export interface BootEngineOptions extends Omit<EngineConfig, 'mods'> {
 export function bootEngine(options: BootEngineOptions): Engine {
   const {
     tickRate = DEFAULT_TICK_RATE,
-    autoSaveInterval = DEFAULT_AUTOSAVE_MS,
     maxSaveSlots = DEFAULT_MAX_SAVE_SLOTS,
     mods,
     ...rest
@@ -49,7 +48,6 @@ export function bootEngine(options: BootEngineOptions): Engine {
   return createEngine({
     ...rest,
     tickRate,
-    autoSaveInterval,
     maxSaveSlots,
     mods: mods.map((mod) => ({
       ...mod,

@@ -22,6 +22,8 @@ export interface GameEngineOptions {
   extraModules?: EngineModule[];
   /** Raise the loop's `maxDeltaTime` cap. */
   maxDeltaTime?: number;
+  /** Autosave period in ms; sim engines pass 0 so they never write. */
+  autoSaveInterval?: number;
   /** Roster of participating factions. */
   factions?: SkirmishModulesOptions['factions'];
   /**
@@ -55,6 +57,7 @@ export function createGameEngine(options?: GameEngineOptions): { engine: Engine 
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
     maxDeltaTime: options?.maxDeltaTime,
+    autoSaveInterval: options?.autoSaveInterval,
     mods: [
       {
         id: MOD_ID,

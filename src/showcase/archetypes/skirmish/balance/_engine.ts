@@ -94,6 +94,7 @@ export function buildSkirmishSimEngine(options?: SkirmishSimOptions): Engine {
   const { engine } = createGameEngine({
     persistenceNamespace: `skirmish-balance-${++engineCounter}`,
     maxDeltaTime: options?.maxDeltaTime,
+    autoSaveInterval: 0,
     factions,
     seats,
     personas: options?.personas,
