@@ -4,7 +4,7 @@
  * A composition-agnostic wrapper over the engine's two generic automation
  * building blocks:
  * - {@link createAutomationTiers} — tracks which automation tiers are unlocked,
- *   auto-unlocking a tier when its `requirement` flips true (reactive, persisted).
+ *   auto-unlocking a tier when its `unlockWhen` flips true (reactive, persisted).
  * - {@link createThrottle} — rate-limits how often the automation runs.
  *
  * It exposes the tier system, a throttle gate, `hasReached`, and derived UI
@@ -15,9 +15,9 @@
  * const auto = useAutomation({
  *   id: 'my-game/automation',
  *   tiers: [
- *     { id: 'manual', name: 'Manual', order: 0 },
- *     { id: 'build',  name: 'Auto-Build',  order: 1, requirement: () => firstBuildingOwned.value },
- *     { id: 'assign', name: 'Auto-Assign', order: 2, requirement: () => someScienceDone.value },
+ *     { id: 'manual', displayName: 'Manual', order: 0 },
+ *     { id: 'build',  displayName: 'Auto-Build',  order: 1, unlockWhen: () => firstBuildingOwned.value },
+ *     { id: 'assign', displayName: 'Auto-Assign', order: 2, unlockWhen: () => someScienceDone.value },
  *   ],
  *   throttleInterval: 1,
  * });
