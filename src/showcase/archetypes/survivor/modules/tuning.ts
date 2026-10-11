@@ -8,7 +8,7 @@ import {
 /**
  * The `tunable()` key registry — the one perturbation path (no parallel
  * `data/balance.ts`; `.claude/rules/archetype-authoring.md` § Directory shape).
- * Probes and solvers perturb these keys via `registry.pushScope`.
+ * Probes and solvers perturb these keys via `registry.pushOverrides`.
  *
  * A key exists here only if perturbing it is MEANINGFUL. The solved quantities —
  * the beat ratio, the per-pick DPS gain, the XP ladder — are deliberately absent:

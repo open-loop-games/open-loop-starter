@@ -89,12 +89,12 @@ export function buildDispatchPolicies(
     hybrid: selectionHybridPayback<Producer>({
       getCost: (p) => p.repeatable!.getCost(1),
       getRate: (p) => p.computedRate.value,
-      getResource: (p) => p.resource.value,
+      getAmount: (p) => p.resource.value,
       // No spending floor. The wait term already models saving toward an
       // unaffordable candidate; a reserve on top would be a second,
       // uncalibrated brake on the same behavior.
       getReserve: () => 0,
-      getHeadlineRate: (p) => classes.getTotalRate(p.resource),
+      getTotalRate: (p) => classes.getTotalRate(p.resource),
     }),
   };
 }
@@ -149,23 +149,23 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
       const tiers = createAutomationTiers({
         id: 'producer-automation',
         tiers: [
-          { id: 'manual', name: 'Manual', order: 0 },
+          { id: 'manual', displayName: 'Manual', order: 0 },
           {
             id: 'assisted',
-            name: 'Assisted dispatch',
+            displayName: 'Assisted dispatch',
             order: 1,
-            requirement: computed(() => state.fleetSizeAtLeast(ASSISTED_AT_FLEET)),
+            unlockWhen: computed(() => state.fleetSizeAtLeast(ASSISTED_AT_FLEET)),
           },
           {
             id: 'managed',
-            name: 'Managed dispatch',
+            displayName: 'Managed dispatch',
             order: 2,
-            requirement: computed(() => state.fleetSizeAtLeast(MANAGED_AT_FLEET)),
+            unlockWhen: computed(() => state.fleetSizeAtLeast(MANAGED_AT_FLEET)),
           },
         ],
       });
 
-      const isActive = persistent<boolean>(false, { name: 'dispatchActive' });
+      const isActive = persistent<boolean>(false, { id: 'dispatchActive' });
       const enabled = computed(() => tiers.hasReached('assisted') && isActive.value);
       const policies = buildDispatchPolicies(classes);
       // Two rungs ship: `assisted` grants `cheapest`, `managed` grants

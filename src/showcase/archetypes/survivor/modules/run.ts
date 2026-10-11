@@ -75,8 +75,8 @@ export function createRunModule(): EngineModule {
       }, 0);
 
       const stats = withPersistentContext('survivor/run', () => ({
-        bestLevel: persistent<number>(0, { name: 'bestLevel' }),
-        runsFinished: persistent<number>(0, { name: 'runsFinished' }),
+        bestLevel: persistent<number>(0, { id: 'bestLevel' }),
+        runsFinished: persistent<number>(0, { id: 'runsFinished' }),
       }));
 
       const level = ref(0);

@@ -99,7 +99,7 @@ interface ProbeRow {
 
 let activeCapture: OutcomeCapture | null = null;
 
-/** Build an UntilCell perturbed via `pushScope` on the tuning registry.
+/** Build an UntilCell perturbed via `pushOverrides` on the tuning registry.
  *  Engine-canonical pattern — no separate override path. */
 function buildCell(
   name: string,
@@ -107,7 +107,7 @@ function buildCell(
   scopePerturbations?: Partial<TugTunables>,
 ): UntilCell {
   return {
-    name,
+    id: name,
     buildEngine: () => buildTugSimEngine(simOptions),
     analyzers: (engine: Engine) => {
       const capture = createOutcomeCapture(engine);
@@ -115,17 +115,17 @@ function buildCell(
       let cleanup: (() => void) | null = null;
       if (scopePerturbations) {
         const reg = engine.tryInject(TugTuningRegistryKey)!;
-        cleanup = reg.pushScope(`probe:${name}`, scopePerturbations);
+        cleanup = reg.pushOverrides(`probe:${name}`, scopePerturbations);
       }
       return [
         createOutcomeAnalyzer(capture),
         {
-          name: 'scope-cleanup',
+          id: 'scope-cleanup',
           onEnd: () => {
             cleanup?.();
             cleanup = null;
           },
-          summarize: () => ({ name: 'scope-cleanup', metrics: {}, issues: [] }),
+          summarize: () => ({ id: 'scope-cleanup', metrics: {}, issues: [] }),
         },
       ];
     },
@@ -156,7 +156,7 @@ function fireBeatUnderScope(beatId: string, scope: Partial<TugTunables>): number
   const beat = ARC_BEATS.find((b) => b.id === beatId);
   if (!beat) return Infinity;
   const reg = engine.tryInject(TugTuningRegistryKey)!;
-  const cleanup = reg.pushScope(`probe:beat-${beatId}`, scope);
+  const cleanup = reg.pushOverrides(`probe:beat-${beatId}`, scope);
   try {
     const result = runUntil({
       engine,
@@ -277,7 +277,7 @@ function runCounterStrongSensitivityProbe(): CounterStrongResult {
       'counter-matrix/strongCounter': () => 1.0,
     }),
     variants: offValues.map((s) => ({
-      name: `strong=${s.toFixed(2)}`,
+      id: `strong=${s.toFixed(2)}`,
       patch: () =>
         buildCell(`strong=${s.toFixed(2)}`, undefined, {
           'counter-matrix/strongCounter': () => s,
@@ -426,7 +426,7 @@ function readRoiSnapshot(
 ): { tierId: string; paybackSec: number; crossoverSec: number }[] {
   const engine = buildTugSimEngine();
   const reg = engine.tryInject(TugTuningRegistryKey)!;
-  const cleanup = scope ? reg.pushScope('probe:roi-snapshot', scope) : null;
+  const cleanup = scope ? reg.pushOverrides('probe:roi-snapshot', scope) : null;
   try {
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player);
     if (!roi) throw new Error('IncomeUpgradeRoiKey.player not provided by engine');

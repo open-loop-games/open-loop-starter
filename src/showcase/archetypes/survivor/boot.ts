@@ -38,7 +38,7 @@ export function createSurvivorEngine(options?: SurvivorEngineOptions): { engine:
     mods: [
       {
         id: MOD_ID,
-        name: MOD_NAME,
+        displayName: MOD_NAME,
         modules,
       },
     ],

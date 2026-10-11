@@ -69,7 +69,7 @@ export const IncomeUpgradeRoiKey: Record<Side, InjectionKey<Map<string, RoiMetri
  * which is set by the time the closure runs.
  *
  * Per-tier `cost` and `multiplier` register as `tunable()` against the
- * registry so balance probes can perturb them via `pushScope`.
+ * registry so balance probes can perturb them via `pushOverrides`.
  */
 export function createIncomeUpgradesSideModule(data: TugData, side: Side): EngineModule {
   return {
@@ -132,7 +132,7 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
           if (priorId != null) {
             requirements.push(
               createBooleanRequirement({
-                requirement: () => {
+                met: () => {
                   const prior = incomeUpgrades.getPurchasable(priorId);
                   return prior != null && prior.active.value;
                 },

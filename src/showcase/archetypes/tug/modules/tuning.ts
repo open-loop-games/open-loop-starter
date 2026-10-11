@@ -21,7 +21,7 @@ export const LANE_LENGTH = 100;
 
 /**
  * Keys registered against the tug tuning registry. Solvers and balance
- * probes perturb these via `pushScope`; the engine pattern lives at
+ * probes perturb these via `pushOverrides`; the engine pattern lives at
  * `open-loop-engine/src/core/override-registry.ts` and surfaces through
  * the picker (`open-loop-engine/docs/api/harness.md` § Picker).
  *

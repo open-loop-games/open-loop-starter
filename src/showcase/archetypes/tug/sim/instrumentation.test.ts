@@ -41,21 +41,21 @@ describe('framework — counter-strong sensitivity framework', () => {
     return runMatrixUntil({
       cells: [
         {
-          name: `strong=${strong}`,
+          id: `strong=${strong}`,
           buildEngine: () => buildTugSimEngine(),
           analyzers: (engine) => {
             const cap = createOutcomeCapture(engine);
             activeCapture = cap;
             const reg = engine.tryInject(TugTuningRegistryKey)!;
-            const cleanup = reg.pushScope(`lock:strong=${strong}`, {
+            const cleanup = reg.pushOverrides(`lock:strong=${strong}`, {
               'counter-matrix/strongCounter': () => strong,
             });
             return [
               createOutcomeAnalyzer(cap),
               {
-                name: 'scope-cleanup',
+                id: 'scope-cleanup',
                 onEnd: () => cleanup(),
-                summarize: () => ({ name: 'scope-cleanup', metrics: {}, issues: [] }),
+                summarize: () => ({ id: 'scope-cleanup', metrics: {}, issues: [] }),
               },
             ];
           },
@@ -152,7 +152,7 @@ describe('framework — income-upgrade ROI (math-only)', () => {
     const r1def = DEFAULT_TUG_DATA.incomeUpgrades[0]!;
     const r1 = roi.get('refinery-1')!;
     expect(r1.paybackSeconds.value).toBeCloseTo(payback(r1def, BASE), 1);
-    const cleanup = reg.pushScope('framework:baseRate-doubled', {
+    const cleanup = reg.pushOverrides('framework:baseRate-doubled', {
       'balance/baseIncomeRate': () => BASE * 2,
     });
     try {
@@ -211,7 +211,7 @@ describe('framework — per-archetype dominance framework', () => {
     const personas: Array<'greed' | 'counter'> = ['greed', 'counter'];
     const cells = personas.flatMap((player) =>
       personas.map((ai) => ({
-        name: `p=${player}/ai=${ai}`,
+        id: `p=${player}/ai=${ai}`,
         buildEngine: () => buildTugSimEngine({ player, ai }),
         analyzers: (engine: ReturnType<typeof buildTugSimEngine>) => {
           const cap = createOutcomeCapture(engine);

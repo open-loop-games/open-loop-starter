@@ -35,7 +35,7 @@ export function boot(): Engine {
   handle = bootTestEngine({
     modules: [...sharedBase, ...createProducerModules(DEFAULT_PRODUCER_DATA)],
     namespacePrefix: 'producer-test',
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
   });
   return handle.engine;
 }

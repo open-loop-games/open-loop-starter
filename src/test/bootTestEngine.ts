@@ -47,8 +47,8 @@ export interface BootTestEngineOptions {
   modules: EngineModule[];
   /** Optional prefix for the generated namespace. Useful in debug output. */
   namespacePrefix?: string;
-  /** Loop tick rate in Hz. Defaults to 20. */
-  tickRate?: number;
+  /** Intervals per second, the engine's `intervalRate`. Defaults to 20. */
+  intervalRate?: number;
   /**
    * Seed for the engine's module-global RNG, applied before the modules
    * install. Defaults to 0: the engine otherwise starts that stream from
@@ -64,7 +64,7 @@ export interface BootTestEngineOptions {
  * contexts.
  */
 export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle {
-  const { modules, namespacePrefix = 'boot', tickRate = 20, seed = 0 } = options;
+  const { modules, namespacePrefix = 'boot', intervalRate = 20, seed = 0 } = options;
   const namespace = `${namespacePrefix}-${bootCounter++}`;
   seedRNG(seed);
 
@@ -74,12 +74,12 @@ export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle
     persistenceNamespace: namespace,
     storageAdapter: createMemoryStorage(),
     autoSaveInterval: 0,
-    tickRate,
+    intervalRate,
   });
   for (const mod of modules) engine.use(mod);
   // start() runs install/onStart wiring; stop() immediately hands the clock to
-  // stepOnce() so the real-time loop can't advance time between assertions —
-  // tests own the tick. stepOnce() is manual and works whether or not the loop
+  // tickOnce() so the real-time loop can't advance time between assertions —
+  // tests own the tick. tickOnce() is manual and works whether or not the loop
   // is running.
   engine.start();
   engine.stop();
@@ -93,7 +93,7 @@ export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle
 
   const tick = async (n = 1): Promise<void> => {
     for (let i = 0; i < n; i++) {
-      engine.tickDriver.stepOnce();
+      engine.tickDriver.tickOnce();
       await Promise.resolve();
     }
   };
@@ -101,7 +101,7 @@ export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle
   const tickUntil = async (condition: () => boolean, maxTicks = 50_000): Promise<number> => {
     for (let i = 0; i < maxTicks; i++) {
       if (condition()) return i;
-      engine.tickDriver.stepOnce();
+      engine.tickDriver.tickOnce();
       await Promise.resolve();
     }
     throw new Error(`tickUntil timed out after ${maxTicks} ticks`);

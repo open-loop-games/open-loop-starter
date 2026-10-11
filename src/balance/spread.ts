@@ -14,7 +14,7 @@
  * adds is the categorical half, which the engine's `CellAggregate` documents
  * as deliberately absent ("string/boolean metric aggregation (mode,
  * distribution) is deferred until a consumer demands it") — and the shape it
- * aggregates, `AnalyzerResult.metrics`, carries strings that `aggregateCell`
+ * aggregates, `AnalyzerSummary.metrics`, carries strings that `aggregateCell`
  * then silently drops.
  *
  * TODO(expansion): categorical aggregation over a seed sweep is a parked

@@ -2,8 +2,8 @@
  * Cross-archetype balance toolkit — the pieces the per-archetype `balance/`
  * folders share, over an engine harness they import directly.
  *
- * Runners and their types (`runProbe`, `runWaypointProbe`, `runUntil`,
- * `runMatrixUntil`, `runSensitivity`, `BeatProbe`, `Waypoint`) come from
+ * Runners and their types (`runBeatProbe`, `runWaypointProbe`, `runUntil`,
+ * `runMatrixUntil`, `runSensitivity`, `Beat`, `Waypoint`) come from
  * `@open-loop/engine`. This kit deliberately does not re-export them: it
  * owns the *balance* vocabulary, not the harness, and a partial re-export
  * only made one subsystem arrive from two paths.

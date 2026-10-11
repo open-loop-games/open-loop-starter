@@ -37,11 +37,11 @@ export function createMetaModule(_data: TugData): EngineModule {
     install(ctx) {
       const match = ctx.inject(MatchKey);
 
-      const factionsUnlocked = persistent<number>(0, { name: 'factionsUnlocked' });
+      const factionsUnlocked = persistent<number>(0, { id: 'factionsUnlocked' });
       const maxCounterPivotsAnyMatch = persistent<number>(0, {
-        name: 'maxCounterPivotsAnyMatch',
+        id: 'maxCounterPivotsAnyMatch',
       });
-      const matchesPlayed = persistent<number>(0, { name: 'matchesPlayed' });
+      const matchesPlayed = persistent<number>(0, { id: 'matchesPlayed' });
 
       // Listen for match end. Match emits BEFORE its reset clears
       // counterPivotsThisMatch, so we read the pre-reset value off the

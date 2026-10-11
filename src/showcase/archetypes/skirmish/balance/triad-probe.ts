@@ -47,7 +47,7 @@ function runTriadMatch(
   const capture = createOutcomeCapture(engine);
   let t = 0;
   while (t < MAX_SEC && capture.reason === null) {
-    engine.tickDriver.simulateTick(STEP_SEC);
+    engine.tickDriver.advanceTime(STEP_SEC);
     t += STEP_SEC;
   }
   return {

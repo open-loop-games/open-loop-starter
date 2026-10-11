@@ -54,7 +54,7 @@ looking like a ladder. Change the input and re-derive.
 
 **And the escalation constants are not perturbable through the registry either,
 for the same reason one step removed.** `hpGrowthPerMinute` and
-`spawnGrowthPerMinute` are _inputs_ to that solve, so a `pushScope` override
+`spawnGrowthPerMinute` are _inputs_ to that solve, so a `pushOverrides` override
 moves the floor while the DPS growth solved to match it stays put — the run gets
 harder for a reason the design never chose, and every reading afterwards is about
 the decoupling. Sweep them by assigning the constants and letting the
@@ -481,7 +481,7 @@ carry no numbers.
   both read as "something else decides now".
 
   And `balance/beats.ts` holds beat **extractors over a finished arc** where
-  skirmish and tug hold engine `BeatProbe` tick predicates. Theirs are
+  skirmish and tug hold engine `Beat` tick predicates. Theirs are
   single events a bisection can stop on; survivor's are phases of a stochastic
   arc whose windows only mean anything across a seed batch, and `balance/_arc.ts`
   already samples what they need. A predicate here would be a second run path

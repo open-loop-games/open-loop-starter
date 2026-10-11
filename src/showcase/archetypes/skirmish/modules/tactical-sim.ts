@@ -142,12 +142,12 @@ export function createTacticalSimModule(options: TacticalSimModuleOptions = {}):
       const targetBase = {} as Record<FactionId, Persistent<FactionId | null>>;
 
       for (const f of factions) {
-        units[f] = persistent<Unit[]>([], { name: `units-${f}` });
-        baseHp[f] = persistent<number>(BASE_HP, { name: `baseHp-${f}` });
-        spawnIndex[f] = persistent<number>(0, { name: `spawnIndex-${f}` });
-        targetBase[f] = persistent<FactionId | null>(null, { name: `targetBase-${f}` });
+        units[f] = persistent<Unit[]>([], { id: `units-${f}` });
+        baseHp[f] = persistent<number>(BASE_HP, { id: `baseHp-${f}` });
+        spawnIndex[f] = persistent<number>(0, { id: `spawnIndex-${f}` });
+        targetBase[f] = persistent<FactionId | null>(null, { id: `targetBase-${f}` });
       }
-      const nextId = persistent<number>(0, { name: 'nextId' });
+      const nextId = persistent<number>(0, { id: 'nextId' });
 
       const unitCost = tunable(registry, 'tactical/unitCost', () => TROOPER.cost);
 

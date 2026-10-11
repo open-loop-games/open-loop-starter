@@ -128,7 +128,7 @@ describe('useBalanceWorkbench composable', () => {
     expect(traj!.variant[4]!.mean).toBeGreaterThan(traj!.baseline[4]!.mean);
 
     // Per-tick series metrics never leak into the scalar delta table.
-    expect(wb.rows.value.every((r) => !r.metric.startsWith('series:'))).toBe(true);
+    expect(wb.rows.value.every((r) => !r.metric.startsWith('time-series:'))).toBe(true);
 
     live.stop();
   });

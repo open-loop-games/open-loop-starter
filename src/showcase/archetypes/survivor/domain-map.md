@@ -17,30 +17,30 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 - **MetaEffect** _(string-literal union)_ — `damage` · `toughness` · `moveSpeed` · `collectRadius` · `moteYield` · `revive`
 - **SeatDriver** _(string-literal union)_ — `policy` · `player`
 
-## Definitions
+## Defs
 
 `ArenaBalance`, `CollectorBalance`, `DeviceDef`, `EvolutionDef`, `MetaUpgradeDef`, `ReagentDef`, `ScheduleBalance`, `SeatDef`, `SpecimenDef`, `ThreatBalance`
 
 ## Relationships
 
-Field-name reference edges — untyped IDs in named fields that point at
-another domain noun. (These are name-encoded, not type-encoded, so
-type-graph tools like dependency-cruiser/findReferences miss them.)
+Field-name reference edges: untyped ids in named fields that point at
+another domain noun. These are name-encoded, not type-encoded, so
+type-graph tools such as dependency-cruiser and findReferences miss them.
 
 - **EvolutionDef** → `device`, `reagent`
 
 ## Thin spots
 
-Definitions with no structural signal (no vocabulary, no incident edge).
+Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
 `ArenaBalance`, `ThreatBalance`, `CollectorBalance`, `MetaUpgradeDef`, `ScheduleBalance`, `SeatDef`, `SpecimenDef`
 
 ## Disambiguators (curated)
 
-Hand-authored. The module-level concepts no single type owns — the
-relationships structure cannot derive. Kept small and co-located in the
-config so staleness stays visible against the generated surface above.
+Hand-authored: the game-level concepts no single type owns, which
+structure cannot derive. Kept small and stored in the config, so
+staleness stays visible against the generated sections above.
 
 - **mote** — The XP a specimen drops where it dies. Motes PERSIST, so the floor behind the operator accumulates uncollected income and deferring collection is a coherent gamble paid for against the beat schedule.
 - **η** — Collection efficiency — motes banked over motes dropped. A POLICY output, never predicted by the closed form, which is why the probe reports measured against assumed: a run that misses its schedule is either badly balanced or badly piloted, and nothing else separates those.

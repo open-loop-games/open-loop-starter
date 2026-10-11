@@ -31,7 +31,7 @@ const HEAD = (s: string): void => console.log(`\n═══ ${s} ═══`);
 function bootStack() {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createCyclerModules()],
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
     namespacePrefix: 'burn-tier-probe',
   });
   const cycle = handle.engine.tryInject(CycleKey);

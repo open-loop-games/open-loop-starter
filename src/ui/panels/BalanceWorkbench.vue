@@ -44,7 +44,7 @@ interface Group {
 const groups = computed<Group[]>(() => {
   const snap = wb.snapshot.value;
   return [
-    { key: 'content', title: 'Content', entries: snap.content },
+    { key: 'effectSystem', title: 'Effect systems', entries: snap.effectSystem },
     { key: 'chains', title: 'Chains', entries: snap.chains },
     { key: 'tunables', title: 'Tunables', entries: snap.tunables },
   ];
@@ -59,7 +59,7 @@ const selectedKey = computed<string | null>(() => {
   if (!sel) return null;
   for (const group of groups.value) {
     for (const entry of group.entries) {
-      if (entry.label === sel.label && entry.address.source === sel.address.source) {
+      if (entry.label === sel.label && entry.address.walker === sel.address.walker) {
         return entryKey(group, entry);
       }
     }

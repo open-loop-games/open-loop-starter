@@ -16,7 +16,7 @@ import { LaneKey } from './lane';
 import { type Side, TugTuningRegistryKey } from './tuning';
 
 /** Sequencer metadata — single field carrying the unit's archetype id so
- *  `canRun` can route to the right cooldown bucket and `'started'` handlers
+ *  `canStart` can route to the right cooldown bucket and `'started'` handlers
  *  can spawn into the lane. */
 export interface UnitSendMeta {
   archetypeId: string;
@@ -34,7 +34,7 @@ export const SequencerKey: Record<Side, InjectionKey<Sequencer<UnitSendMeta>>> =
 };
 
 /** Per-archetype send cooldown timers, exposed so the UI's UnitShop can render
- *  cooldown progress reactively. The sequencer's `canRun` already gates dispatch
+ *  cooldown progress reactively. The sequencer's `canStart` already gates dispatch
  *  via these refs — exposure is consumer-side display only. */
 export const UnitsCooldownKey: Record<Side, InjectionKey<Record<string, Persistent<number>>>> = {
   player: Symbol('tug/match/player/units-cooldown') as InjectionKey<
@@ -61,20 +61,20 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       // Per-archetype send cooldown. One persistent ref per archetype, named
       // `cooldown-<archetypeId>` so save keys stay stable + greppable. Reset
       // to `def.sendCooldownSec` on each `'started'` event; ticked down to 0
-      // each frame; gates the sequencer via `canRun`.
+      // each frame; gates the sequencer via `canStart`.
       const cooldown: Record<string, Persistent<number>> = {};
       for (const def of data.units) {
-        cooldown[def.id] = persistent<number>(0, { name: `cooldown-${def.id}` });
+        cooldown[def.id] = persistent<number>(0, { id: `cooldown-${def.id}` });
       }
 
       // The shop's `Purchasable.purchase()` flow handles cost subtraction
       // through the cost requirement; `onPurchase` enqueues into the
       // sequencer (one enqueue per level bought, so a buy-N covers N sends).
-      // The sequencer's `canRun` then paces dispatch against per-archetype
+      // The sequencer's `canStart` then paces dispatch against per-archetype
       // cooldowns; the `'started'` handler spawns into the lane.
       //
       // Every unit's `cost` registers as `tunable()` against the registry so
-      // balance probes can perturb per-unit costs via `pushScope`.
+      // balance probes can perturb per-unit costs via `pushOverrides`.
       let sequencerRef: Sequencer<UnitSendMeta> | null = null;
 
       const shop = createPurchasableCategory<UnitDef>({
@@ -103,7 +103,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       const sequencer = createSequencer<UnitSendMeta>({
         id: `tug/match/${side}/sequencer`,
         mode: 'queue',
-        canRun: (item) => {
+        canStart: (item) => {
           const remaining = cooldown[item.metadata.archetypeId];
           if (!remaining) return 'never';
           return remaining.value <= 0 ? 'now' : 'notNow';
@@ -127,7 +127,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       });
 
       // Decrement cooldowns each tick. The sequencer's retry tick handles
-      // re-evaluation of `canRun` independently — we just keep the timers
+      // re-evaluation of `canStart` independently — we just keep the timers
       // moving. Floor at 0 so saved snapshots in the past still restart
       // cleanly without negative drift.
       ctx.onTick((dt) => {

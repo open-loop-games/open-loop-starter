@@ -8,7 +8,7 @@ import {
 
 /**
  * Keys registered against the cycler tuning registry — the one perturbation
- * path. Probes and the balance workbench sweep these via `pushScope`; the
+ * path. Probes and the balance workbench sweep these via `pushOverrides`; the
  * registry surfaces them to the picker so they can be enumerated rather than
  * known in advance.
  *

@@ -55,7 +55,7 @@ export function createRevisionsModule(data: ProducerData): EngineModule {
         id: 'producer/revisions',
         mapAchievement: (def) => ({
           display: { title: def.name, description: def.description },
-          requirement: computed(() => def.requirement(state)),
+          goal: computed(() => def.requirement(state)),
           effect: (): number => toNumber(def.multiplier ?? unref(defaultMultiplier)),
         }),
       });

@@ -46,7 +46,7 @@ export { UpgradesKey, getUpgrades, createUpgradesModule, type UpgradesApi } from
  * Construction-time options — **content and wiring only**. Balance values are
  * not here: they bind through `tunable()` against the registry in `tuning.ts`,
  * which is the archetype's one perturbation path. A probe sweeps a number with
- * `pushScope`, never by rebuilding the engine with a different blob.
+ * `pushOverrides`, never by rebuilding the engine with a different blob.
  */
 export interface CyclerModulesOptions extends CycleModuleOptions, BurnTierModuleOptions {}
 

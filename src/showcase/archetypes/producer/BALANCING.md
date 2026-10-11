@@ -34,7 +34,7 @@ and the reason is the same for both: they reach the engine as static
 `DecimalSource` fields read once at registration, so a `tunable()` wrapper would
 register a knob nothing re-reads — a silent no-op that reads as a working lever.
 
-- **`COST_RATIO` (`m` = 1.1548)** is `ProducerPurchaseConfig.costScaling`.
+- **`COST_RATIO` (`m` = 1.1548)** is `ProducerPurchaseOptions.costScaling`.
   Sweeping it means editing `data/curve.ts` and re-running, or composing the
   curve as a `Formula` at the wiring layer (`costCurve` in the shared balance
   toolkit, which is what `producer-projection.ts` already uses). Budget for a

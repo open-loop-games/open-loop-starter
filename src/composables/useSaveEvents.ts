@@ -72,7 +72,7 @@ export function useSaveEvents(mgr: SaveManager): () => void {
     mgr.on('save:future-version-refused', (err) => {
       addToast(
         'Save from newer version',
-        `This save was written by version ${err.saveVersion}; the current build only supports up to version ${err.currentVersion}. Refusing to load to avoid corruption.`,
+        `This save was written by version ${err.writtenVersion}; the current build only supports up to version ${err.supportedVersion}. Refusing to load to avoid corruption.`,
         false,
       );
       console.error('[save] future-version refused:', err);

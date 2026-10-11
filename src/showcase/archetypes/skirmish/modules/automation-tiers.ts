@@ -38,8 +38,8 @@ export function createAutomationTiersModule(): EngineModule {
         createAutomationTiers({
           id: 'skirmish-automation',
           tiers: [
-            { id: 'manual', name: 'Manual', order: 0 },
-            { id: 'assisted', name: 'Assisted spawning', order: 1 },
+            { id: 'manual', displayName: 'Manual', order: 0 },
+            { id: 'assisted', displayName: 'Assisted spawning', order: 1 },
           ],
         }),
       );

@@ -73,7 +73,7 @@ let nextSample = 0;
 let elapsed = 0;
 let resolvedAt: number | null = null;
 while (elapsed < MAX_SEC) {
-  engine.tickDriver.simulateTick(STEP_SEC);
+  engine.tickDriver.advanceTime(STEP_SEC);
   elapsed += STEP_SEC;
 
   observe(engine, trace);

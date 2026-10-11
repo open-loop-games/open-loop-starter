@@ -49,7 +49,7 @@ async function measureRun(opts: { headroom?: number; powerLevel?: number }): Pro
 }> {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createCyclerModules()],
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
     namespacePrefix: 'cycle-probe',
   });
   const cycle = handle.engine.tryInject(CycleKey);
@@ -58,7 +58,7 @@ async function measureRun(opts: { headroom?: number; powerLevel?: number }): Pro
   if (!cycle || !build || !registry) throw new Error('cycle-probe: cycler modules did not install');
   // Sweep H through the tuning registry — the one perturbation path. The
   // kernel re-reads it at run start, so the scope has to outlive the run.
-  const restore = registry.pushScope('probe:headroom', {
+  const restore = registry.pushOverrides('probe:headroom', {
     'peg/headroom': () => opts.headroom ?? H0,
   });
   placeReference(build);

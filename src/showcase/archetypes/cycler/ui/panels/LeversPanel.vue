@@ -16,7 +16,7 @@ import { UPGRADE_BALANCE } from '../../data/upgrades';
 const upgrades = getUpgrades();
 const build = getBuild();
 
-const reachLevel = computed(() => Number(upgrades.reach.amount.value));
+const reachLevel = computed(() => Number(upgrades.reach.count.value));
 const reachCost = computed(() => new Decimal(upgrades.reach.getCost(1)));
 const reachCanBuy = computed(() => upgrades.reach.canPurchase.value);
 

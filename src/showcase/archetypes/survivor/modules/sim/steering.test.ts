@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { createSpatialGrid, ORTHOGONAL_DELTAS } from '@open-loop/engine';
+import { createSpatialGrid, ORTHOGONAL_OFFSETS } from '@open-loop/engine';
 import {
   MOTE_ROUTE_WEIGHT,
   NAV_CELL,
@@ -33,7 +33,7 @@ function nav(): NavGrid {
       width: cols,
       height: rows,
       initializer: () => 0,
-      neighborhood: ORTHOGONAL_DELTAS,
+      neighborhood: ORTHOGONAL_OFFSETS,
     }),
   };
 }

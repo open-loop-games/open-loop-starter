@@ -26,20 +26,20 @@
  */
 
 import { createApp as createVueApp, type App, type Component } from 'vue';
-import { createEngine, type Engine, type EngineConfig, type ModDef } from '@open-loop/engine';
+import { createEngine, type Engine, type EngineOptions, type ModDef } from '@open-loop/engine';
 import { sharedBase } from '@/modules';
 import { useSaveEvents } from '@/composables/useSaveEvents';
 
 const DEFAULT_TICK_RATE = 20;
 const DEFAULT_MAX_SAVE_SLOTS = 30;
 
-export interface BootEngineOptions extends Omit<EngineConfig, 'mods'> {
+export interface BootEngineOptions extends Omit<EngineOptions, 'mods'> {
   mods: ModDef[];
 }
 
 export function bootEngine(options: BootEngineOptions): Engine {
   const {
-    tickRate = DEFAULT_TICK_RATE,
+    intervalRate = DEFAULT_TICK_RATE,
     maxSaveSlots = DEFAULT_MAX_SAVE_SLOTS,
     mods,
     ...rest
@@ -47,7 +47,7 @@ export function bootEngine(options: BootEngineOptions): Engine {
 
   return createEngine({
     ...rest,
-    tickRate,
+    intervalRate,
     maxSaveSlots,
     mods: mods.map((mod) => ({
       ...mod,

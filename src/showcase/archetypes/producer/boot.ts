@@ -39,7 +39,7 @@ export function createProducerEngine(options?: ProducerEngineOptions): { engine:
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
     maxDeltaTime: options?.maxDeltaTime,
-    mods: [{ id: MOD_ID, name: MOD_NAME, modules }],
+    mods: [{ id: MOD_ID, displayName: MOD_NAME, modules }],
   });
   return { engine };
 }

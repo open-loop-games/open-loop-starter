@@ -89,16 +89,16 @@ export function createUpgradesModule(): EngineModule {
       // and `bendBase`. Populated after `register`; every getter that reads it is
       // lazy (affordability checks / run-start), so it's always set by call time.
       const holder: { gBender?: Purchasable } = {};
-      const gBendLevelOf = (): number => Number(holder.gBender?.amount.value ?? 0);
+      const gBendLevelOf = (): number => Number(holder.gBender?.count.value ?? 0);
 
       const category = createPurchasableCategory<UpgradeDef>({
         id: 'cycler/upgrades',
         mapPurchasable: (def) => {
           if (def.kind === 'reach') {
             // Cost = mergeQuorum · ratio^L, keyed off the LIVE power level L (build
-            // owns it). `onPurchase` raises L; the purchasable's own `amount` tracks
+            // owns it). `onPurchase` raises L; the purchasable's own `count` tracks
             // the buy count (== L, since only this raises power now). Single-step
-            // (`bulkPurchase: false`) so the live-L cost is never mispriced by a
+            // (`purchaseMaxByDefault: false`) so the live-L cost is never mispriced by a
             // buy-max walk.
             return {
               display: { title: def.title, description: def.description },
@@ -108,7 +108,7 @@ export function createUpgradesModule(): EngineModule {
                   new Decimal(quorum()).mul(Decimal.pow(ratio(), getBuild().powerLevel.value)),
               }),
               limit: Infinity,
-              bulkPurchase: false,
+              purchaseMaxByDefault: false,
               onPurchase: () => {
                 getBuild().raisePower();
               },
@@ -116,7 +116,7 @@ export function createUpgradesModule(): EngineModule {
           }
           if (def.kind === 'g-bender') {
             // The sole pace lever. Two requirements (flat array — not allOf — so
-            // the cost stays bulk-aware; bulkPurchase is off anyway):
+            // the cost stays bulk-aware; purchaseMaxByDefault is off anyway):
             //   • cost — geometric in the bend level: base · ratio^L_bend.
             //   • reach gate — the NEXT level (L_bend+1) needs L ≥ (L_bend+1)·step.
             // The bend itself is applied through the frozen schedule getter
@@ -130,13 +130,12 @@ export function createUpgradesModule(): EngineModule {
                     new Decimal(gBendBaseCost()).mul(Decimal.pow(gBendCostRatio(), gBendLevelOf())),
                 }),
                 createBooleanRequirement({
-                  requirement: () =>
-                    getBuild().powerLevel.value >= (gBendLevelOf() + 1) * gBendGateStep,
+                  met: () => getBuild().powerLevel.value >= (gBendLevelOf() + 1) * gBendGateStep,
                   description: 'reach gate',
                 }),
               ],
               limit: Infinity,
-              bulkPurchase: false,
+              purchaseMaxByDefault: false,
             };
           }
           throw new Error(`cycler/upgrades: unhandled upgrade kind '${(def as UpgradeDef).kind}'`);

@@ -133,11 +133,11 @@ export function createPrestigeModule(): EngineModule {
         wallet: createResource<DecimalSource>(0, {
           id: 'fragments',
           displayName: 'fragments',
-          precision: 0,
+          decimals: 0,
         }),
-        outputRaw: persistent<string>('0', { name: 'run-output' }),
-        banked: persistent<boolean>(false, { name: 'banked' }),
-        mergeCountRaw: persistent<number>(0, { name: 'merge-count' }),
+        outputRaw: persistent<string>('0', { id: 'run-output' }),
+        banked: persistent<boolean>(false, { id: 'banked' }),
+        mergeCountRaw: persistent<number>(0, { id: 'merge-count' }),
       }));
 
       const wallet = state.wallet;

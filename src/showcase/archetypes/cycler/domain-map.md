@@ -16,30 +16,30 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 - **PieceRole** _(string-literal union)_ — `producer` · `tower` · `booster` · `repair`
 - **UpgradeKind** _(string-literal union)_ — `reach` · `g-bender`
 
-## Definitions
+## Defs
 
 `BuildBalance`, `BurnTier`, `CadenceBalance`, `DefenseBalance`, `PieceDef`, `PrestigeBalance`, `ThreatBalance`, `UpgradeBalance`, `UpgradeDef`
 
 ## Relationships
 
-Field-name reference edges — untyped IDs in named fields that point at
-another domain noun. (These are name-encoded, not type-encoded, so
-type-graph tools like dependency-cruiser/findReferences miss them.)
+Field-name reference edges: untyped ids in named fields that point at
+another domain noun. These are name-encoded, not type-encoded, so
+type-graph tools such as dependency-cruiser and findReferences miss them.
 
 - **BuildBalance** → `upgrade`
 
 ## Thin spots
 
-Definitions with no structural signal (no vocabulary, no incident edge).
+Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
 `CadenceBalance`, `DefenseBalance`, `PieceDef`, `PrestigeBalance`, `ThreatBalance`, `BurnTier`
 
 ## Disambiguators (curated)
 
-Hand-authored. The module-level concepts no single type owns — the
-relationships structure cannot derive. Kept small and co-located in the
-config so staleness stays visible against the generated surface above.
+Hand-authored: the game-level concepts no single type owns, which
+structure cannot derive. Kept small and stored in the config, so
+staleness stays visible against the generated sections above.
 
 - **burn** — The exogenous pressure W(t) = W₀·g^((t−τ_setup)/T_g) — a pure function of run-time, never derived from within-run state. Its crossing of D_max ends the run.
 - **the peg** — W₀ = D_max / H. Because D_max/W₀ = H always, run length N* = τ_setup + T_g·log_g(H) is directly authored; a power upgrade re-baselines W₀ and adds zero run length (reach, not pacing).

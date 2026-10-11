@@ -22,7 +22,7 @@ import { sharedBase } from '@/modules';
 import { createSkirmishModules } from '../modules';
 
 /**
- * Ticks per game-second. `stepOnce()` advances 1/TICK_RATE seconds of game
+ * Ticks per game-second. `tickOnce()` advances 1/TICK_RATE seconds of game
  * time. Set to 1 if your economy is second-valued and you want `tick(n)` to
  * mean n seconds; keep at 20 (the engine default) for fine-grained cadence.
  */
@@ -44,7 +44,7 @@ export function bootModules(modules: EngineModule[]): Engine {
   handle = bootTestEngine({
     modules: [...sharedBase, ...modules],
     namespacePrefix: 'skirmish-test',
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
   });
   return handle.engine;
 }

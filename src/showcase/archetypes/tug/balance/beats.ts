@@ -14,7 +14,7 @@
  * multi-match driver in `_match-driver.ts` `createMatchDriverModule`.
  */
 
-import { type BeatProbe, type Engine } from '@open-loop/engine';
+import { type Beat, type Engine } from '@open-loop/engine';
 import { LaneKey, MatchKey, MetaKey } from '../modules';
 
 // ─── Windows + beat predicates ───────────────────────────────────────────
@@ -72,11 +72,11 @@ export const BEAT_WINDOWS: Record<string, [number, number]> = {
  *   the post-reset capture problem.
  *
  * Fire-time predicates are evaluated once per tick before each
- * simulateTick (per `runUntil` semantics); MC predicates use
+ * advanceTime (per `runUntil` semantics); MC predicates use
  * `runMatrixUntil`'s shared `until` over `cell.aggregate.terminationTime`
  * + analyzer captures. See `arc-probe.ts` for the MC probe implementations.
  */
-export const ARC_BEATS: BeatProbe[] = [
+export const ARC_BEATS: Beat[] = [
   {
     id: 'beat-1',
     tuningWindow: BEAT_WINDOWS['beat-1']!,

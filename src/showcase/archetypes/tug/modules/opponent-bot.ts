@@ -118,7 +118,7 @@ export function createOpponentBotModule(
       // pacing without dumping a buy on the first post-load tick. Resets to
       // 0 on match-boundary reset (the match-scope reset enumerates this
       // module).
-      const lastSendSec = persistent<number>(0, { name: 'lastSendSec' });
+      const lastSendSec = persistent<number>(0, { id: 'lastSendSec' });
 
       // Lazy per-side seeded RNG for believability calibration. Lazy
       // because `runHeadless`/`runUntil` calls `seedRNG(config.seed)` after
@@ -293,7 +293,7 @@ export function createOpponentBotModule(
         if (!chosenId) return;
 
         // The shop's `onPurchase` enqueues the unit into SequencerKey[side];
-        // the sequencer's canRun + tick loop dispatches against
+        // the sequencer's canStart + tick loop dispatches against
         // per-archetype cooldowns. Opponent composition is read off
         // lane.units[opposite] above, not via getUnits(opposite) — live-on-
         // field counts reflect strategy better than cumulative buys.

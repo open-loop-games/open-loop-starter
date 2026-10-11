@@ -122,7 +122,7 @@ export function renderSensitivityTable(sweep: SensitivityResult, metricKey: stri
     const cellMetric =
       variant.cell.aggregate.metrics[metricKey]?.avg ?? variant.cell.aggregate.terminationTime?.avg;
     rows.push([
-      variant.name,
+      variant.id,
       cellMetric != null ? formatDuration(cellMetric) : '—',
       delta ? formatDuration(delta.absolute) : '—',
       delta ? `${(delta.relative * 100).toFixed(1)}%` : '—',

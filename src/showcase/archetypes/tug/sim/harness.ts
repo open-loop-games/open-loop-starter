@@ -43,7 +43,7 @@ export function boot(options?: TugModulesOptions): Engine {
   handle = bootTestEngine({
     modules: [...sharedBase, ...createTugModules(DEFAULT_TUG_DATA, options)],
     namespacePrefix: 'tug-test',
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
   });
   return handle.engine;
 }

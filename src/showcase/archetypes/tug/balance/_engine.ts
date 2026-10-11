@@ -72,8 +72,8 @@ export interface TugSimOptions {
  * Mirrors Ambient's `buildAmbientSimEngine` shape line-for-line: unique
  * `persistenceNamespace` per call (essential for `runMatrixUntil`
  * parallelism — collisions are sneaky), `selectMod('sci-fi-armada')`,
- * `engine.start()` then `engine.stop()` so the live `tickRate` doesn't
- * fire (solver iterations advance via `engine.tickDriver.simulateTick(tickDelta)`
+ * `engine.start()` then `engine.stop()` so the live `intervalRate` doesn't
+ * fire (solver iterations advance via `engine.tickDriver.advanceTime(tickDelta)`
  * from `runUntil` / `runMatrixUntil`), and finally `match.start()` to
  * kick off match 1.
  *
@@ -219,7 +219,7 @@ export function createOutcomeCapture(engine: Engine): OutcomeCapture {
  * by `runMatrixUntil`'s `aggregateUntilCell` into
  * `cell.aggregate.metrics['tug-outcome.<key>']`; the `firstMatchOutcome`
  * string is dropped during aggregation but preserved per-run via
- * `cell.runs[i].analyzerResults[0].metrics.firstMatchOutcome` (useful
+ * `cell.runs[i].analyzerSummaries[0].metrics.firstMatchOutcome` (useful
  * for per-cell breakdowns when the average isn't enough).
  *
  * **Win-rate read pattern:** `cell.aggregate.metrics['tug-outcome.isFirstPlayerWin'].avg`
@@ -232,7 +232,7 @@ export function createOutcomeCapture(engine: Engine): OutcomeCapture {
  */
 export function createOutcomeAnalyzer(capture: OutcomeCapture): Analyzer {
   return {
-    name: 'tug-outcome',
+    id: 'tug-outcome',
     summarize: () => {
       const isPlayerWin = capture.firstMatchOutcome === 'player-win' ? 1 : 0;
       const isAiWin = capture.firstMatchOutcome === 'ai-win' ? 1 : 0;
@@ -273,7 +273,7 @@ export function createOutcomeAnalyzer(capture: OutcomeCapture): Analyzer {
         }
       }
       return {
-        name: 'tug-outcome',
+        id: 'tug-outcome',
         metrics,
         issues: [],
       };

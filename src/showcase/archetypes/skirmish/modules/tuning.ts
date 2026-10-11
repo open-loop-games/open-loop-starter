@@ -8,7 +8,7 @@ import {
 /**
  * The `tunable()` key registry — the one perturbation path (no parallel
  * `data/balance.ts`; see `../../README.md` § Balance). Balance probes and
- * solvers perturb these keys via `registry.pushScope`.
+ * solvers perturb these keys via `registry.pushOverrides`.
  *
  * Add one union member per perturbable balance value; read it at the owning
  * module's construction site with `tunable(registry, key, defaultFn)`. Grep for

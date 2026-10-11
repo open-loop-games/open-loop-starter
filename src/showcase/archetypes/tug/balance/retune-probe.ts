@@ -26,7 +26,7 @@
  * personas × 108 slices; tractable in one session at ~30 min wall.
  *
  * **Perturbation path.** Every slice perturbation routes through
- * `pushScope` on the tuning registry (engine-canonical). The
+ * `pushOverrides` on the tuning registry (engine-canonical). The
  * `topTierCost` axis multiplies per-unit `cost` keys for units at or
  * above `TOP_TIER_COST_FLOOR`; per-unit costs are uniformly tunable in
  * `modules/units.ts`.
@@ -131,19 +131,19 @@ function buildCell(
   ai: PersonaKey,
 ): UntilCell {
   return {
-    name,
+    id: name,
     buildEngine: () => buildTugSimEngine({ player, ai }),
     analyzers: (engine: Engine) => {
       const capture = createOutcomeCapture(engine);
       activeCapture = capture;
       const reg = engine.tryInject(TugTuningRegistryKey)!;
-      const cleanup = reg.pushScope(`sweep:${name}`, scope);
+      const cleanup = reg.pushOverrides(`sweep:${name}`, scope);
       return [
         createOutcomeAnalyzer(capture),
         {
-          name: 'scope-cleanup',
+          id: 'scope-cleanup',
           onEnd: () => cleanup(),
-          summarize: () => ({ name: 'scope-cleanup', metrics: {}, issues: [] }),
+          summarize: () => ({ id: 'scope-cleanup', metrics: {}, issues: [] }),
         },
       ];
     },

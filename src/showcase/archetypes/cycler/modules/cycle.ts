@@ -117,7 +117,7 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
     dependencies: ['cycler/tuning'],
     install(ctx) {
       // Balance constants bind through the tuning registry, so a probe can
-      // `pushScope` them and the next run re-reads. Every one of these is read
+      // `pushOverrides` them and the next run re-reads. Every one of these is read
       // at run start or per tick — never captured into a const here — which is
       // what makes the scope push actually take effect.
       const registry = ctx.inject(CyclerTuningRegistryKey);
@@ -144,15 +144,15 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
       // frozen for the run (re-read only at run start). `enduranceRaw` is Σ of
       // resolved salvos this run (the wave-native endurance source).
       const state = withPersistentContext('cycler/cycle', () => ({
-        waveIndex: persistent<number>(0, { name: 'wave-index' }),
-        phaseState: persistent<'standby' | 'inbound'>('standby', { name: 'phase-state' }),
-        phaseElapsed: persistent<number>(0, { name: 'phase-elapsed' }),
-        elapsedSeconds: persistent<number>(0, { name: 'elapsed-seconds' }),
-        w0Raw: persistent<string>(getBuild().cMax.value.div(headroom()).toString(), { name: 'w0' }),
-        gRaw: persistent<number>(Number(unref(baseSalvo)), { name: 'g' }),
-        enduranceRaw: persistent<string>('0', { name: 'run-endurance' }),
-        runState: persistent<RunState>('running', { name: 'run-state' }),
-        endedAtWaveRaw: persistent<number | null>(null, { name: 'ended-at-wave' }),
+        waveIndex: persistent<number>(0, { id: 'wave-index' }),
+        phaseState: persistent<'standby' | 'inbound'>('standby', { id: 'phase-state' }),
+        phaseElapsed: persistent<number>(0, { id: 'phase-elapsed' }),
+        elapsedSeconds: persistent<number>(0, { id: 'elapsed-seconds' }),
+        w0Raw: persistent<string>(getBuild().cMax.value.div(headroom()).toString(), { id: 'w0' }),
+        gRaw: persistent<number>(Number(unref(baseSalvo)), { id: 'g' }),
+        enduranceRaw: persistent<string>('0', { id: 'run-endurance' }),
+        runState: persistent<RunState>('running', { id: 'run-state' }),
+        endedAtWaveRaw: persistent<number | null>(null, { id: 'ended-at-wave' }),
       }));
 
       const waveIndex = computed(() => state.waveIndex.value);

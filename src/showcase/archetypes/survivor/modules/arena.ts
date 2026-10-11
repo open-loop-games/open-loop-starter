@@ -1,5 +1,5 @@
 import {
-  ORTHOGONAL_DELTAS,
+  ORTHOGONAL_OFFSETS,
   createSeededRNG,
   createSpatialGrid,
   getSeed,
@@ -103,7 +103,7 @@ export function buildNav(): NavGrid {
       width: cols,
       height: rows,
       initializer: () => 0,
-      neighborhood: ORTHOGONAL_DELTAS,
+      neighborhood: ORTHOGONAL_OFFSETS,
     }),
   };
 }
@@ -118,14 +118,14 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
       const registry = ctx.inject(SurvivorTuningRegistryKey);
       const meta = ctx.inject(MetaKey);
 
-      // Perturbable inputs read through the registry so probes can pushScope
+      // Perturbable inputs read through the registry so probes can pushOverrides
       // them. The derived quantities are NOT here — see `./tuning.ts`.
       const baseHp = tunable(registry, 'arena/baseHp', () => THREAT_BALANCE.baseHp);
       const contactDps = tunable(registry, 'threat/contactDps', () => THREAT_BALANCE.contactDps);
 
       const persistentState = withPersistentContext('survivor/arena', () => ({
-        seatId: persistent<string>(seat.id, { name: 'seatId' }),
-        runsStarted: persistent<number>(0, { name: 'runsStarted' }),
+        seatId: persistent<string>(seat.id, { id: 'seatId' }),
+        runsStarted: persistent<number>(0, { id: 'runsStarted' }),
       }));
 
       const nav = buildNav();

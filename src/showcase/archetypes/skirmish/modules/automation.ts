@@ -175,29 +175,29 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
       const tiers = ctx.inject(AutomationTiersKey);
       // Cadence accumulator — persistent so save/load mid-match resumes pacing
       // without dumping a burst on the first post-load tick.
-      const sinceActSec = persistent<number>(0, { name: `sinceActSec-${side}` });
-      const draftIndex = persistent<number>(0, { name: `draftIndex-${side}` });
+      const sinceActSec = persistent<number>(0, { id: `sinceActSec-${side}` });
+      const draftIndex = persistent<number>(0, { id: `draftIndex-${side}` });
 
       const currentPersona = persistent<PersonaKey | 'custom'>(initialPersona, {
-        name: `persona-${side}`,
+        id: `persona-${side}`,
       });
       const economyShare = persistent<number>(initialEconomyShare, {
-        name: `econShare-${side}`,
+        id: `econShare-${side}`,
       });
       const cadenceSec = persistent<number>(initialCadenceSec, {
-        name: `cadence-${side}`,
+        id: `cadence-${side}`,
       });
       const maxSpawnPerBurst = persistent<number>(initialBurst, {
-        name: `maxBurst-${side}`,
+        id: `maxBurst-${side}`,
       });
       const jitterScale = persistent<number>(initialJitter, {
-        name: `jitter-${side}`,
+        id: `jitter-${side}`,
       });
       const composition = persistent<Partial<Record<UnitTypeId, number>>>(initialComp, {
-        name: `composition-${side}`,
+        id: `composition-${side}`,
       });
       const targeting = persistent<TargetingWeights>(initialTargeting, {
-        name: `targeting-${side}`,
+        id: `targeting-${side}`,
       });
       let draftSequence: UnitTypeId[] = [];
       function rebuildDraftSequence() {

@@ -20,7 +20,7 @@ export function createPrestigeModule(_data: TugData): EngineModule {
     dependencies: ['tug/meta'],
     install(ctx) {
       const reset = createReset({
-        resetModules: ['tug/meta'],
+        resetPersistentContexts: ['tug/meta'],
       });
       ctx.provide(PrestigeKey, reset);
     },

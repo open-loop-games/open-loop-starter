@@ -42,7 +42,7 @@ const pad = (s: string | number, w: number): string => String(s).padStart(w);
 function bootOne(namespace: string) {
   const handle = bootTestEngine({
     modules: createProducerModules(DEFAULT_PRODUCER_DATA),
-    tickRate: 1,
+    intervalRate: 1,
     namespacePrefix: namespace,
   });
   const offline = handle.engine.tryInject(OfflineKey);

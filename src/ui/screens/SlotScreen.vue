@@ -52,7 +52,7 @@ function handleNewGame() {
 
 function handleDeleteSlot(slotId: number) {
   if (slotId === activeSlotId.value) return;
-  if (confirm(`Delete "${mgr.slots.find((s) => s.id === slotId)?.name}"?`)) {
+  if (confirm(`Delete "${mgr.slots.find((s) => s.id === slotId)?.displayName}"?`)) {
     deleteSlot(slotId);
   }
 }

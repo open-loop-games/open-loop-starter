@@ -98,7 +98,7 @@ interface SeatReading {
 async function runSeat(seatId: string, seed: number, into: SeatReading): Promise<void> {
   const handle = bootTestEngine({
     modules: createSurvivorModules({ seed }),
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
     namespacePrefix: `survivor-cone-${seatId}-${seed}`,
   });
   const arena = handle.engine.tryInject(ArenaKey);

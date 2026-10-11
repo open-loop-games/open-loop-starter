@@ -58,12 +58,12 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
       const tiers = createAutomationTiers({
         id: 'game-automation',
         tiers: [
-          { id: 'manual', name: 'Manual', order: 0 },
-          { id: 'assisted', name: 'Assisted', order: 1 },
+          { id: 'manual', displayName: 'Manual', order: 0 },
+          { id: 'assisted', displayName: 'Assisted', order: 1 },
         ],
       });
 
-      const isActive = persistent<boolean>(false, { name: 'automationActive' });
+      const isActive = persistent<boolean>(false, { id: 'automationActive' });
 
       ctx.provide(AutomationKey, {
         tiers,

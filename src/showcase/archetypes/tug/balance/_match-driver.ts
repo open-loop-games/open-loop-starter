@@ -36,7 +36,7 @@ import { MatchKey } from '../modules';
  * per match" toggle, or tuner sweeping persona pairs Cartesian within one
  * engine), the canonical composition per
  * `parameterized-personality-extraction-sketch.md` §3.2 is
- * `createSequencer` with `canRun: () => matchEnded.value ? 'now' : 'notNow'`
+ * `createSequencer` with `canStart: () => matchEnded.value ? 'now' : 'notNow'`
  * plus `createRoundRobinStrategy` as the `FillStrategy`. That lands as a
  * follow-up; the opponent-bot module would expose a runtime persona setter
  * for the apply step to mutate before `match.start()`.
@@ -47,7 +47,7 @@ export function createMatchDriverModule(): EngineModule {
     dependencies: ['tug/match'],
     install(ctx) {
       const match = ctx.inject(MatchKey);
-      const pendingRestart = persistent<boolean>(false, { name: 'pending-restart' });
+      const pendingRestart = persistent<boolean>(false, { id: 'pending-restart' });
 
       match.on('matchEnded', () => {
         pendingRestart.value = true;

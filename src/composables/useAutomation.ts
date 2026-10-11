@@ -111,13 +111,13 @@ export function useAutomation(options: UseAutomationOptions): UseAutomationRetur
 
   const isAutomated = computed(() => tierSystem.currentTierOrder.value > lowestOrder);
   const currentTierName = computed(
-    () => sorted.find((t) => t.id === tierSystem.currentTierId.value)?.name ?? '',
+    () => sorted.find((t) => t.id === tierSystem.currentTierId.value)?.displayName ?? '',
   );
 
   return {
     tierSystem,
     throttle,
-    shouldRun: (dt: number) => throttle.gate(dt),
+    shouldRun: (dt: number) => throttle.ready(dt),
     hasReached: (tierId: string) => tierSystem.hasReached(tierId),
     isAutomated,
     currentTierId: tierSystem.currentTierId,

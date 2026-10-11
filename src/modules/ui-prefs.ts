@@ -16,7 +16,7 @@ export const UIPrefsKey: InjectionKey<UIPrefsState> = Symbol(
 export const uiPrefsModule: EngineModule = {
   id: 'ui-prefs',
   install(ctx) {
-    const bulkMode = persistent<string>('1', { name: 'bulkMode' });
+    const bulkMode = persistent<string>('1', { id: 'bulkMode' });
     ctx.provide(UIPrefsKey, { bulkMode });
   },
 };

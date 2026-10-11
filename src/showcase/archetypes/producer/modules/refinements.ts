@@ -75,7 +75,7 @@ export function createRefinementsModule(data: ProducerData): EngineModule {
             requirements: [
               createCostRequirement({ resource: mass, cost: def.cost, description: def.name }),
               createBooleanRequirement({
-                requirement: computed(() => def.requirement(gameState)),
+                met: computed(() => def.requirement(gameState)),
                 description: def.description,
               }),
             ],

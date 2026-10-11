@@ -97,10 +97,10 @@ describe('cycle kernel — run length is authored by H', () => {
     const tight = (await runToBreach()).endedAtMinutes.value!;
 
     // Perturbation is a tuning scope, not a re-boot with overridden data —
-    // `pushScope` is the archetype's one path and the kernel re-reads H at
+    // `pushOverrides` is the archetype's one path and the kernel re-reads H at
     // run start, so the looser peg applies to the run started below.
     boot();
-    const restore = tuning().pushScope('test:looser-headroom', {
+    const restore = tuning().pushOverrides('test:looser-headroom', {
       'peg/headroom': () => H * 2,
     });
     let loose: number;

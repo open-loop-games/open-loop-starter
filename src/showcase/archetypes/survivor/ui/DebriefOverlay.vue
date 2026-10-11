@@ -94,7 +94,7 @@ const notes = computed(() => Math.floor(Number(meta.notes.value)));
 
 const shop = computed(() =>
   meta.shop.getAll().map((entry) => {
-    const level = Number(entry.purchasable.amount.value);
+    const level = Number(entry.purchasable.count.value);
     return {
       id: entry.def.id,
       name: entry.def.name,

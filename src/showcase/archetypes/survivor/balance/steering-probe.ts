@@ -107,7 +107,7 @@ const spread = (xs: number[]): number => Math.max(...xs) - Math.min(...xs);
 async function runSeat(seatId: string, seed: number): Promise<Reading> {
   const handle = bootTestEngine({
     modules: createSurvivorModules({ seed }),
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
     namespacePrefix: `survivor-steer-${seatId}-${seed}`,
   });
   const arena = handle.engine.tryInject(ArenaKey);

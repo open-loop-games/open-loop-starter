@@ -129,18 +129,18 @@ export function createMatchModule(options: MatchModuleOptions = {}): EngineModul
 
       // Persistents are auto-scoped to this module id by the engine's install
       // wrapper, so the match-boundary reset clears exactly these.
-      const started = persistent<boolean>(false, { name: 'started' });
-      const outcome = persistent<MatchOutcome | null>(null, { name: 'outcome' });
-      const matchTimeElapsed = persistent<number>(0, { name: 'matchTimeElapsed' });
+      const started = persistent<boolean>(false, { id: 'started' });
+      const outcome = persistent<MatchOutcome | null>(null, { id: 'outcome' });
+      const matchTimeElapsed = persistent<number>(0, { id: 'matchTimeElapsed' });
       const activeFactions = persistent<FactionId[]>([...configuredFactions], {
-        name: 'activeFactions',
+        id: 'activeFactions',
       });
-      const eliminations = persistent<FactionElimination[]>([], { name: 'eliminations' });
+      const eliminations = persistent<FactionElimination[]>([], { id: 'eliminations' });
 
       const inMatch = computed(() => started.value && outcome.value === null);
 
       const handle = createEmitHandle<MatchEvents>();
-      const reset = createReset({ resetModules: [...resetModules] });
+      const reset = createReset({ resetPersistentContexts: [...resetModules] });
 
       const timeLimitSec = tunable(registry, 'match/timeLimitSec', () => defaultTimeLimit);
 

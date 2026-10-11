@@ -58,7 +58,7 @@ export const MatchKey: InjectionKey<MatchApi> = Symbol('tug/match') as Injection
 /**
  * Module ids whose persistent state is reset at match boundary. Engine wraps
  * each module's install in `withPersistentContext(mod.id, ...)` with NO outer
- * parent context, so `getModulePersistentRefs('tug/match')` does NOT walk
+ * parent context, so `getPersistentContextRefs('tug/match')` does NOT walk
  * sibling modules by id-prefix alone — `contextChildren['tug/match']` stays
  * empty. We enumerate each module id explicitly. Sub-contexts created INSIDE
  * each install (sequencer ids, per-def category contexts) DO get parent
@@ -79,7 +79,7 @@ export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
   'tug/match/ai/units',
   // Per-side opponent bot. Production installs only the `'ai'` instance;
   // `buildTugSimEngine` adds the `'player'` instance for unattended balance
-  // harnesses. Enumerating both is safe — `getModulePersistentRefs` returns
+  // harnesses. Enumerating both is safe — `getPersistentContextRefs` returns
   // empty for ids with no installed module.
   'tug/match/player/opponent-bot',
   'tug/match/ai/opponent-bot',
@@ -117,10 +117,10 @@ export function createMatchModule(data: TugData): EngineModule {
       // `fortress.start()`.
       const fortressHp = fortress.hp;
 
-      const outcome = persistent<MatchOutcome>(null, { name: 'outcome' });
-      const matchTimeElapsed = persistent<number>(0, { name: 'matchTimeElapsed' });
-      const counterPivotsThisMatch = persistent<number>(0, { name: 'counterPivotsThisMatch' });
-      const unitsSentByPlayer = persistent<number>(0, { name: 'unitsSentByPlayer' });
+      const outcome = persistent<MatchOutcome>(null, { id: 'outcome' });
+      const matchTimeElapsed = persistent<number>(0, { id: 'matchTimeElapsed' });
+      const counterPivotsThisMatch = persistent<number>(0, { id: 'counterPivotsThisMatch' });
+      const unitsSentByPlayer = persistent<number>(0, { id: 'unitsSentByPlayer' });
 
       const inMatch = computed(
         () =>
@@ -134,7 +134,7 @@ export function createMatchModule(data: TugData): EngineModule {
       // because the engine doesn't establish parent-child linkage between
       // sibling modules at install time — see TUG_MATCH_SCOPE_MODULES comment.
       const reset = createReset({
-        resetModules: [...TUG_MATCH_SCOPE_MODULES],
+        resetPersistentContexts: [...TUG_MATCH_SCOPE_MODULES],
       });
 
       function start(): void {

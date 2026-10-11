@@ -26,7 +26,7 @@ import {
   defaultAnalyzerPack,
   ResourceRegistryKey,
   runSensitivity,
-  seriesAnalyzerPack,
+  timeSeriesAnalyzerPack,
   type Analyzer,
   type CellAggregate,
   type CellResult,
@@ -53,7 +53,7 @@ export interface BalanceWorkbenchOptions {
    */
   modules: () => EngineModule[];
   /**
-   * Per-run tick driver. Defaults to `engine.tickDriver.stepOnce()`. Override for
+   * Per-run tick driver. Defaults to `engine.tickDriver.tickOnce()`. Override for
    * games with custom harness step semantics.
    */
   tick?: (engine: Engine, dt: number) => void;
@@ -109,7 +109,7 @@ export interface TrajectoryBand {
 
 /** Per-resource baseline-vs-variant trajectory reconstructed from series metrics. */
 export interface Trajectory {
-  /** Resource display name, resolved from the `series:{id}` suffix through the resource registry. */
+  /** Resource display name, resolved from the `time-series:{id}` suffix through the resource registry. */
   name: string;
   baseline: TrajectoryBand[];
   variant: TrajectoryBand[];
@@ -151,11 +151,11 @@ export interface UseBalanceWorkbenchReturn {
   discard: () => void;
 }
 
-const SERIES_KEY = /^series:(.*)\.t(\d+)$/;
+const SERIES_KEY = /^time-series:(.*)\.t(\d+)$/;
 
 /**
  * Reconstruct per-resource `{tick, mean, min, max}` bands from a cell's
- * aggregated `series:{id}.t{i}` metrics, keyed by resource id; callers
+ * aggregated `time-series:{id}.t{i}` metrics, keyed by resource id; callers
  * resolve the display label. Each per-tick metric already carries the
  * across-seed distribution (the aggregator's job), so the band is a direct
  * read of `avg`/`min`/`max` — no re-aggregation here.
@@ -179,7 +179,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
   const {
     engine,
     modules,
-    tick = (e: Engine) => e.tickDriver.stepOnce(),
+    tick = (e: Engine) => e.tickDriver.tickOnce(),
     analyzerPack = (e: Engine) => defaultAnalyzerPack(e),
     prepare,
   } = options;
@@ -216,8 +216,8 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     return (
       Object.entries(variant.deltas)
         // Per-tick series metrics are charted separately — keep them out of the
-        // scalar delta table so it isn't flooded with `series:*.t*` rows.
-        .filter(([metric]) => !metric.startsWith('series:'))
+        // scalar delta table so it isn't flooded with `time-series:*.t*` rows.
+        .filter(([metric]) => !metric.startsWith('time-series:'))
         .map(([metric, delta]) => ({
           metric,
           baselineAvg: r.baseline.aggregate.metrics[metric]?.avg ?? 0,
@@ -300,11 +300,11 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       // trackers on top of the scalar pack.
       const captureSeries = form.captureSeries;
       const buildAnalyzers = (e: Engine): Analyzer[] =>
-        captureSeries ? [...analyzerPack(e), ...seriesAnalyzerPack(e)] : analyzerPack(e);
+        captureSeries ? [...analyzerPack(e), ...timeSeriesAnalyzerPack(e)] : analyzerPack(e);
 
       const baseline = createSensitivityCell({
-        name: 'baseline',
-        saveBlob: blob,
+        id: 'baseline',
+        saveText: blob,
         modules,
         ...(prepare && { perturb: (e, ctx) => prepare(e, ctx) }),
         buildAnalyzers,
@@ -312,8 +312,8 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         ticks: form.ticks,
       });
       const variant = createSensitivityCell({
-        name: 'variant',
-        saveBlob: blob,
+        id: 'variant',
+        saveText: blob,
         modules,
         perturb: (e, ctx) => {
           prepare?.(e, ctx);
@@ -326,7 +326,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
 
       const sensitivity = runSensitivity({
         baseline,
-        variants: [{ name: 'variant', patch: () => variant }],
+        variants: [{ id: 'variant', patch: () => variant }],
         seeds,
         onRunComplete: () => {
           progress.value = {
@@ -335,10 +335,10 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
           };
         },
         onCellComplete: (cell) => {
-          partialCells.value = { ...partialCells.value, [cell.name]: cell };
+          partialCells.value = { ...partialCells.value, [cell.id]: cell };
           progress.value = {
             ...progress.value,
-            completedCells: [...progress.value.completedCells, cell.name],
+            completedCells: [...progress.value.completedCells, cell.id],
           };
         },
       });

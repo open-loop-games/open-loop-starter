@@ -118,8 +118,8 @@ export function createLaneModule(data: TugData): EngineModule {
       for (const u of data.units) tagOf.set(u.id, u.archetypeTag);
 
       const units: Record<Side, Persistent<UnitInstance[]>> = {
-        player: persistent<UnitInstance[]>([], { name: 'player-units' }),
-        ai: persistent<UnitInstance[]>([], { name: 'ai-units' }),
+        player: persistent<UnitInstance[]>([], { id: 'player-units' }),
+        ai: persistent<UnitInstance[]>([], { id: 'ai-units' }),
       };
 
       const frontline: Record<Side, ComputedRef<number>> = {
@@ -131,7 +131,7 @@ export function createLaneModule(data: TugData): EngineModule {
 
       // Monotonic counter for unit-instance ids. Persistent so save/load
       // never collides freshly-spawned units with re-hydrated ones.
-      const nextUnitId = persistent<number>(0, { name: 'next-unit-id' });
+      const nextUnitId = persistent<number>(0, { id: 'next-unit-id' });
 
       function spawn(side: Side, archetypeId: string): void {
         const def = data.units.find((u) => u.id === archetypeId);

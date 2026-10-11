@@ -13,9 +13,9 @@ and states no rule of its own.
 
 - `open-loop-engine/docs/consumer-guide-balance.md` — balancing an economy off a
   declared spine, and why a probe reports rather than asserts.
-- `open-loop-engine/docs/consumer-guide-balance-agents.md` — balancing against AI
-  seats. Read § Personas are a coverage axis, not a tuning knob before adding a
-  persona to move a number.
+- `open-loop-engine/docs/consumer-guide-balance-automated-player.md` — balancing
+  when an automated player plays the game. Read § Personas are a coverage axis,
+  not a parameter to tune before adding a persona to move a number.
 - `open-loop-engine/docs/consumer-guide-recipes.md` § Persona-roster composition —
   the engine substrate for a roster: `SequencerItem` carrying persona identity and
   its param bundle, and the sequencer selection strategies.

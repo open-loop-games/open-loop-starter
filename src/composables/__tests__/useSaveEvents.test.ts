@@ -25,8 +25,8 @@ describe('useSaveEvents', () => {
       compressSave: false,
     });
     const refs = withPersistentContext('ctx', () => ({
-      a: persistent(0, { name: 'a' }) as Persistent<number>,
-      b: persistent(0, { name: 'b' }) as Persistent<number>,
+      a: persistent(0, { id: 'a' }) as Persistent<number>,
+      b: persistent(0, { id: 'b' }) as Persistent<number>,
     }));
     refs.a.value = 1;
     refs.b.value = 2;
@@ -59,10 +59,7 @@ describe('useSaveEvents', () => {
       strictValidation: false,
       compressSave: false,
     });
-    const x = withPersistentContext(
-      'ctx2',
-      () => persistent(0, { name: 'x' }) as Persistent<number>,
-    );
+    const x = withPersistentContext('ctx2', () => persistent(0, { id: 'x' }) as Persistent<number>);
     x.value = 42;
     mgr.save();
 

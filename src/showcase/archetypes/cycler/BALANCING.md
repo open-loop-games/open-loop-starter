@@ -16,7 +16,7 @@ derivation; this file is how you work on it.
 ## The knobs
 
 Perturbation is `tunable()` against the registry in `modules/tuning.ts`. A probe
-or a suite sweeps a value with `pushScope`, never by rebuilding the engine with
+or a suite sweeps a value with `pushOverrides`, never by rebuilding the engine with
 overridden data. Keys are namespaced by the spine term they sit in rather than by
 the file they came from, because that is how the economy decomposes:
 

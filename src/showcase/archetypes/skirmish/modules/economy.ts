@@ -77,13 +77,13 @@ export function createEconomyModule(options: EconomyModuleOptions = {}): EngineM
         supply[side] = createResource<DecimalSource>(0, {
           id: `skirmish/match/economy/${side}/supply`,
           displayName: 'supply',
-          precision: 0,
+          decimals: 0,
         });
         workers[side] = persistent<number>(ECONOMY_BALANCE.startingWorkers, {
-          name: `workers-${side}`,
+          id: `workers-${side}`,
         });
-        cumulativeIncome[side] = persistent<number>(0, { name: `cumulativeIncome-${side}` });
-        economySpend[side] = persistent<number>(0, { name: `economySpend-${side}` });
+        cumulativeIncome[side] = persistent<number>(0, { id: `cumulativeIncome-${side}` });
+        economySpend[side] = persistent<number>(0, { id: `economySpend-${side}` });
       }
 
       const incomePerWorker = tunable(

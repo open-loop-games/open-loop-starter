@@ -64,7 +64,7 @@ export interface SkirmishSimOptions {
  * way that reads as a balance result rather than as a bug.
  *
  * `start()` then `stop()` hands the clock to the caller — probes advance via
- * `engine.tickDriver.simulateTick(dt)` through the harness runners, so the
+ * `engine.tickDriver.advanceTime(dt)` through the harness runners, so the
  * real-time loop must not also be firing.
  */
 export function buildSkirmishSimEngine(options?: SkirmishSimOptions): Engine {
@@ -190,9 +190,9 @@ export function createOutcomeCapture(engine: Engine): OutcomeCapture {
 /** Surface an {@link OutcomeCapture} as harness metrics for matrix runs. */
 export function createOutcomeAnalyzer(capture: OutcomeCapture): Analyzer {
   return {
-    name: 'skirmish-outcome',
+    id: 'skirmish-outcome',
     summarize: () => ({
-      name: 'skirmish-outcome',
+      id: 'skirmish-outcome',
       metrics: {
         aWon: capture.winner === 'a' ? 1 : 0,
         bWon: capture.winner === 'b' ? 1 : 0,

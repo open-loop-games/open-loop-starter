@@ -136,9 +136,9 @@ export function createBuildModule(): EngineModule {
       const state = withPersistentContext('cycler/build', () => ({
         // Row-major occupancy — the save format; the grid is rebuilt from it.
         placements: persistent<(PieceKind | null)[]>(Array(cellCount).fill(null), {
-          name: 'placements',
+          id: 'placements',
         }),
-        powerLevel: persistent<number>(0, { name: 'power-level' }),
+        powerLevel: persistent<number>(0, { id: 'power-level' }),
       }));
 
       // The SpatialGrid is a rebuildable index over the persisted `placements`

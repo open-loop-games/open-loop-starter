@@ -13,7 +13,7 @@ import { type Side, TugTuningRegistryKey } from './tuning';
 
 /** Per-side per-second mineral accrual at default income tier. Bound to the
  *  `balance/baseIncomeRate` tunable key so balance probes can perturb it
- *  via `pushScope`. Both sides bind the same key (symmetric income), and
+ *  via `pushOverrides`. Both sides bind the same key (symmetric income), and
  *  `tunable()` is built on `setDefault` so the second registration no-ops. */
 /** Per-second mineral accrual before any upgrade multiplier. The one home
  *  for this number — `balance/baseIncomeRate` perturbs it, nothing re-declares it. */
@@ -44,7 +44,7 @@ export function createIncomeSideModule(side: Side): EngineModule {
       const income = createResource<DecimalSource>(0, {
         id: `tug/match/${side}/income`,
         displayName: 'minerals',
-        precision: 0,
+        decimals: 0,
       });
 
       // Both sides register `balance/baseIncomeRate` against the shared

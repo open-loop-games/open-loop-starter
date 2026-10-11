@@ -41,7 +41,7 @@ export function createCyclerEngine(options?: CyclerEngineOptions): { engine: Eng
     mods: [
       {
         id: MOD_ID,
-        name: MOD_NAME,
+        displayName: MOD_NAME,
         modules,
       },
     ],

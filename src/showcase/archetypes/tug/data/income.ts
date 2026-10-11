@@ -27,7 +27,7 @@ import type { IncomeUpgradeDef } from './types';
 // marginal, so committing to it is a real bet rather than an automatic buy.
 // `balance/roi-probe.ts` prints these against the match duration; per-tier
 // `cost` and `multiplier` are tunable surfaces in `modules/income-upgrades.ts`,
-// perturbed via `pushScope` on `income-upgrades/<id>/{cost,multiplier}`.
+// perturbed via `pushOverrides` on `income-upgrades/<id>/{cost,multiplier}`.
 
 export const INCOME_UPGRADES: IncomeUpgradeDef[] = [
   {

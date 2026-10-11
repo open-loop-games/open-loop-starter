@@ -33,7 +33,7 @@ export const settingsModule: EngineModule = {
   id: 'settings',
   install(ctx: EngineContext) {
     const settings: StockSettings = {
-      offlineProgress: persistent(true, { name: 'offlineProgress' }),
+      offlineProgress: persistent(true, { id: 'offlineProgress' }),
     };
     const lastSaveTimestamp: Ref<number> = ref(0);
 

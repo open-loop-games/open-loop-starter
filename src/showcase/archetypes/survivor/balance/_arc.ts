@@ -64,7 +64,7 @@ export const MINUTES = 30;
 export async function runArc(seatId: string, seed: number) {
   const handle = bootTestEngine({
     modules: createSurvivorModules({ seed }),
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
     namespacePrefix: `survivor-arena-${seatId}-${seed}`,
   });
   const arena = handle.engine.tryInject(ArenaKey);

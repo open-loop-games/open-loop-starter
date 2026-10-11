@@ -56,7 +56,7 @@ export function createMetaModule(): EngineModule {
       const notes = createResource<Decimal>(new Decimal(0), {
         id: 'Notes',
         displayName: 'Notes',
-        precision: 0,
+        decimals: 0,
       });
 
       const shop = createPurchasableCategory<MetaUpgradeDef>({
@@ -78,7 +78,7 @@ export function createMetaModule(): EngineModule {
       shop.register(META_UPGRADES);
 
       const levelOf = (id: string): number =>
-        new Decimal(shop.getEntry(id)?.purchasable.amount.value ?? 0).toNumber();
+        new Decimal(shop.getEntry(id)?.purchasable.count.value ?? 0).toNumber();
 
       const baseline = (side: MetaSide): number =>
         META_UPGRADES.filter((u) => u.side === side && u.effect !== 'revive').reduce(

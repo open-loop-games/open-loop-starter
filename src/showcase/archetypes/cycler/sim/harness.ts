@@ -51,7 +51,7 @@ export function boot(options: CyclerModulesOptions = {}): Engine {
   handle = bootTestEngine({
     modules: [...sharedBase, ...createCyclerModules(options)],
     namespacePrefix: 'cycler-test',
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
   });
   return handle.engine;
 }
@@ -61,7 +61,7 @@ export function boot(options: CyclerModulesOptions = {}): Engine {
  * needs a different balance value pushes a scope rather than re-booting with
  * overridden data:
  *
- *   const restore = tuning().pushScope('test:H', { 'peg/headroom': () => 32 });
+ *   const restore = tuning().pushOverrides('test:H', { 'peg/headroom': () => 32 });
  *   try { ... } finally { restore(); }
  */
 export function tuning(): TuningRegistry {

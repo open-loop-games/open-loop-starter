@@ -37,7 +37,7 @@ export function useSlots(saveManager: SaveManager, mods: readonly ModDef[]) {
 
   function getModName(modId?: string): string | undefined {
     if (!modId) return undefined;
-    return mods.find((m) => m.id === modId)?.name;
+    return mods.find((m) => m.id === modId)?.displayName;
   }
 
   function formatTimestamp(ts?: number): string {

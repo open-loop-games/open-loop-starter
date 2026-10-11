@@ -1,4 +1,4 @@
-import { ORTHOGONAL_DELTAS, type GridCoord, type SpatialGrid } from '@open-loop/engine';
+import { ORTHOGONAL_OFFSETS, type GridCoord, type SpatialGrid } from '@open-loop/engine';
 import { ARENA_BALANCE, THREAT_BALANCE } from '../../data/arena';
 import { deviceReach, isHeadingBound, selectTargets } from './dispatch';
 import type { ArenaParams, ArenaState, Specimen, Vec2 } from './types';
@@ -137,7 +137,7 @@ export function descendRoute(
   for (let step = 0; step < maxSteps && value > 0; step++) {
     let best: GridCoord | undefined;
     let bestValue = value;
-    for (const d of ORTHOGONAL_DELTAS) {
+    for (const d of ORTHOGONAL_OFFSETS) {
       const x = here.x + d.dx;
       const y = here.y + d.dy;
       if (x < 0 || y < 0 || x >= nav.cols || y >= nav.rows) continue;

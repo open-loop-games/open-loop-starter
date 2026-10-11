@@ -99,7 +99,7 @@ export function createBurnTierModule(options: BurnTierModuleOptions = {}): Engin
         return Math.log(Number(unref(H))) / Math.log(posture.salvoBase);
       };
       const state = withPersistentContext('cycler/burn-tier', () => ({
-        activeIndexRaw: persistent<number>(0, { name: 'active-index' }),
+        activeIndexRaw: persistent<number>(0, { id: 'active-index' }),
       }));
 
       const activeIndex = computed(() => Math.min(state.activeIndexRaw.value, postures.length - 1));

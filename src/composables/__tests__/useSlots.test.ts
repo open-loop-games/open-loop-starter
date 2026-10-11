@@ -21,16 +21,16 @@ describe('useSlots', () => {
     const id = mgr.createSlot('Second run');
 
     expect(view.slots.value).toHaveLength(before + 1);
-    expect(view.slots.value.find((s) => s.id === id)?.name).toBe('Second run');
+    expect(view.slots.value.find((s) => s.id === id)?.displayName).toBe('Second run');
   });
 
   it('shows a rename, and drops a deleted slot', () => {
     const { mgr, view } = setup();
     const id = mgr.createSlot('Before');
-    expect(view.slots.value.find((s) => s.id === id)?.name).toBe('Before');
+    expect(view.slots.value.find((s) => s.id === id)?.displayName).toBe('Before');
 
     mgr.renameSlot(id, 'After');
-    expect(view.slots.value.find((s) => s.id === id)?.name).toBe('After');
+    expect(view.slots.value.find((s) => s.id === id)?.displayName).toBe('After');
 
     mgr.deleteSlot(id);
     expect(view.slots.value.some((s) => s.id === id)).toBe(false);

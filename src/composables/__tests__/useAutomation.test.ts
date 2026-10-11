@@ -12,8 +12,8 @@ describe('useAutomation', () => {
     const auto = useAutomation({
       id: freshId(),
       tiers: [
-        { id: 'manual', name: 'Manual', order: 0 },
-        { id: 'build', name: 'Auto-Build', order: 1 },
+        { id: 'manual', displayName: 'Manual', order: 0 },
+        { id: 'build', displayName: 'Auto-Build', order: 1 },
       ],
     });
     expect(auto.currentTierId.value).toBe('manual');
@@ -28,8 +28,8 @@ describe('useAutomation', () => {
     const auto = useAutomation({
       id: freshId(),
       tiers: [
-        { id: 'manual', name: 'Manual', order: 0 },
-        { id: 'build', name: 'Auto-Build', order: 1, requirement: () => gate.value },
+        { id: 'manual', displayName: 'Manual', order: 0 },
+        { id: 'build', displayName: 'Auto-Build', order: 1, unlockWhen: () => gate.value },
       ],
     });
     expect(auto.hasReached('build')).toBe(false);
@@ -45,7 +45,7 @@ describe('useAutomation', () => {
   it('shouldRun gates at most once per throttle interval', () => {
     const auto = useAutomation({
       id: freshId(),
-      tiers: [{ id: 'manual', name: 'Manual', order: 0 }],
+      tiers: [{ id: 'manual', displayName: 'Manual', order: 0 }],
       throttleInterval: 1,
     });
     // Accumulate below the interval → no fire.
@@ -60,7 +60,7 @@ describe('useAutomation', () => {
   it('shouldRun fires every tick when throttleInterval is 0 (default)', () => {
     const auto = useAutomation({
       id: freshId(),
-      tiers: [{ id: 'manual', name: 'Manual', order: 0 }],
+      tiers: [{ id: 'manual', displayName: 'Manual', order: 0 }],
     });
     expect(auto.shouldRun(0.05)).toBe(true);
     expect(auto.shouldRun(0.05)).toBe(true);

@@ -38,7 +38,7 @@ export function createGameEngine(options?: GameEngineOptions): { engine: Engine 
     mods: [
       {
         id: MOD_ID,
-        name: MOD_NAME,
+        displayName: MOD_NAME,
         modules,
       },
     ],

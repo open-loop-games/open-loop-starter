@@ -122,7 +122,7 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     modules: createProducerModules(DEFAULT_PRODUCER_DATA, {
       automation: { forcePolicy, forceWaitForCost },
     }),
-    tickRate: 1,
+    intervalRate: 1,
     namespacePrefix:
       options.namespace ??
       `producer-arc-${forcePolicy ?? 'ladder'}${forceWaitForCost === undefined ? '' : `-wait-${forceWaitForCost}`}`,

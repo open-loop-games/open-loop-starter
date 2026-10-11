@@ -64,8 +64,8 @@ export function createWallModule(): EngineModule {
     id: 'cycler/wall',
     install(ctx) {
       const state = withPersistentContext('cycler/wall', () => ({
-        hp: persistent<number>(seedHp, { name: 'hp' }),
-        maxHp: persistent<number>(seedHp, { name: 'max-hp' }),
+        hp: persistent<number>(seedHp, { id: 'hp' }),
+        maxHp: persistent<number>(seedHp, { id: 'max-hp' }),
       }));
 
       const hp = computed(() => state.hp.value);

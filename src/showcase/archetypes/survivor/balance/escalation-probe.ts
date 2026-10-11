@@ -22,7 +22,7 @@
  * `../modules/tuning.ts` declares `threat/*` and `schedule/*` keys, but the
  * escalation constants are inputs to a SOLVE: `../data/schedule.ts`
  * `offensivePickGain` derives the per-pick DPS growth that holds time-to-kill
- * flat, from `m_hp` and `m_d` together. Perturbing one through `pushScope` moves
+ * flat, from `m_hp` and `m_d` together. Perturbing one through `pushOverrides` moves
  * the floor without moving the growth solved to match it, which is the decoupled
  * knob `../modules/tuning.ts` says it excludes solved quantities to avoid — the
  * run would get harder for a reason the design never chose, and the reading would

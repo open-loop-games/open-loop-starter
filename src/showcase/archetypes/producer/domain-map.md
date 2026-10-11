@@ -15,30 +15,30 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 - **ProbeScale** _(string-literal union)_ — `dust` · `asteroid` · `moon` · `planet` · `star`
 - **RefinementScope.kind** _(discriminated-union arm)_ — `class` · `global` · `click`
 
-## Definitions
+## Defs
 
 `ProbeClassDef`, `RefinementDef`, `RevisionDef`
 
 ## Relationships
 
-Field-name reference edges — untyped IDs in named fields that point at
-another domain noun. (These are name-encoded, not type-encoded, so
-type-graph tools like dependency-cruiser/findReferences miss them.)
+Field-name reference edges: untyped ids in named fields that point at
+another domain noun. These are name-encoded, not type-encoded, so
+type-graph tools such as dependency-cruiser and findReferences miss them.
 
 - **ProducerData** → `refinement`, `revision`
 
 ## Thin spots
 
-Definitions with no structural signal (no vocabulary, no incident edge).
+Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
 `ProbeClassDef`
 
 ## Disambiguators (curated)
 
-Hand-authored. The module-level concepts no single type owns — the
-relationships structure cannot derive. Kept small and co-located in the
-config so staleness stays visible against the generated surface above.
+Hand-authored: the game-level concepts no single type owns, which
+structure cannot derive. Kept small and stored in the config, so
+staleness stays visible against the generated sections above.
 
 - **the frontier** — Why cost scales. Each launch reaches a further star, so the cost ladder is the expanding shell — the ratio is derived from the premise rather than imposed on it.
 - **revision** — A threshold-triggered global multiplier — a firmware push reaching the whole swarm at once. Must stay a DISCRETE step on a count: made continuous in production it takes the spine off the closed form, silently.

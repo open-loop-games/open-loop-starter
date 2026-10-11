@@ -27,7 +27,7 @@ async function main(): Promise<void> {
 
   const handle = bootTestEngine({
     modules: createGameModules(),
-    tickRate: TICK_RATE,
+    intervalRate: TICK_RATE,
     namespacePrefix: 'game-probe',
   });
   const core = handle.engine.tryInject(CoreKey);

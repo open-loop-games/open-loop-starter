@@ -47,12 +47,12 @@ export function useClassRows(): ClassLadderView {
       const producer = entry.producer;
       const repeatable = producer.repeatable!;
 
-      // `amountToPurchase` floors at 1 even when nothing is affordable, so the
+      // `countToPurchase` floors at 1 even when nothing is affordable, so the
       // zero case has to come from `canPurchase`. Reading the engine's own
       // bulk math rather than re-inverting the cost curve here is what keeps
       // `maxAffordable` honest when a tunable moves a base cost.
       const maxAffordable = computed<DecimalSource>(() =>
-        repeatable.canPurchase.value ? repeatable.amountToPurchase.value : 0,
+        repeatable.canPurchase.value ? repeatable.countToPurchase.value : 0,
       );
 
       return {

@@ -50,11 +50,11 @@ export function createCoreModule(options: CoreModuleOptions = {}): EngineModule 
       const automation = ctx.inject(AutomationKey);
 
       const state = withPersistentContext('game/core', () => ({
-        count: persistent<Decimal>(new Decimal(0), { name: 'count' }),
+        count: persistent<Decimal>(new Decimal(0), { id: 'count' }),
       }));
 
       // The one perturbable balance value, read through the tuning registry so
-      // probes can override it via pushScope. Default closure reads `data/`.
+      // probes can override it via pushOverrides. Default closure reads `data/`.
       const ratePerSecond = tunable(registry, 'core/ratePerSecond', () => data.ratePerSecond);
 
       // Effective rate = the tuned base times whatever automation is

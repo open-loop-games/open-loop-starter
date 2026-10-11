@@ -22,7 +22,7 @@ const selected = ref<string | null>(
         :class="{ selected: selected === mod.id }"
         @click="selected = mod.id"
       >
-        <span class="mod-name">{{ mod.name }}</span>
+        <span class="mod-name">{{ mod.displayName }}</span>
         <span v-if="mod.recommended" class="badge badge-primary">Recommended</span>
         <p v-if="mod.description" class="mod-desc">
           {{ mod.description }}

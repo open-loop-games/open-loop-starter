@@ -25,7 +25,7 @@ const playtime = computed(() => metadata.value?.playtime as number | undefined);
   <div class="slot-card" :class="{ active }">
     <div class="slot-info">
       <div class="slot-header">
-        <span class="slot-name">{{ info.name }}</span>
+        <span class="slot-name">{{ info.displayName }}</span>
         <span v-if="modName" class="badge">{{ modName }}</span>
         <span v-if="timeAgo" class="slot-time">{{ timeAgo }}</span>
       </div>

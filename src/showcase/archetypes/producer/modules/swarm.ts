@@ -114,11 +114,11 @@ export function createSwarmModule(data: ProducerData): EngineModule {
 
       mass = createResource<DecimalSource>(0, {
         displayName: 'Mass',
-        precision: 0,
+        decimals: 0,
         id: 'mass',
       });
 
-      launchCount = persistent<DecimalSource>(0, { name: 'launchCount' });
+      launchCount = persistent<DecimalSource>(0, { id: 'launchCount' });
 
       // ── The ladder ──────────────────────────────────────────────────────
       // `costScaling` takes the derived `m` straight from data. It is NOT
@@ -141,7 +141,7 @@ export function createSwarmModule(data: ProducerData): EngineModule {
               () => def.baseCost,
             ),
             costScaling: COST_RATIO,
-            bulkPurchase: true,
+            purchaseMaxByDefault: true,
           },
         }),
       });

@@ -52,7 +52,7 @@ export function createTugEngine(options?: TugEngineOptions): {
     mods: [
       {
         id: MOD_ID,
-        name: MOD_NAME,
+        displayName: MOD_NAME,
         modules,
       },
     ],
