@@ -7,7 +7,7 @@ import type { SlotInfo } from '@/composables/useSlots';
 const props = defineProps<{
   info: SlotInfo;
   active: boolean;
-  modName?: string;
+  modDisplayName?: string;
   timeAgo: string;
 }>();
 
@@ -17,8 +17,8 @@ defineEmits<{
 }>();
 
 const metadata = computed(() => props.info.peek?.metadata as Record<string, unknown> | undefined);
-const loopCount = computed(() => metadata.value?.loopCount as number | undefined);
-const playtime = computed(() => metadata.value?.playtime as number | undefined);
+const runCount = computed(() => metadata.value?.runCount as number | undefined);
+const playTime = computed(() => metadata.value?.playTime as number | undefined);
 </script>
 
 <template>
@@ -26,12 +26,12 @@ const playtime = computed(() => metadata.value?.playtime as number | undefined);
     <div class="slot-info">
       <div class="slot-header">
         <span class="slot-name">{{ info.displayName }}</span>
-        <span v-if="modName" class="badge">{{ modName }}</span>
+        <span v-if="modDisplayName" class="badge">{{ modDisplayName }}</span>
         <span v-if="timeAgo" class="slot-time">{{ timeAgo }}</span>
       </div>
       <div v-if="metadata" class="slot-meta">
-        <span v-if="loopCount != null">Loops: {{ loopCount }}</span>
-        <span v-if="playtime != null">Playtime: {{ formatTime(playtime) }}</span>
+        <span v-if="runCount != null">Runs: {{ runCount }}</span>
+        <span v-if="playTime != null">Play time: {{ formatTime(playTime) }}</span>
       </div>
     </div>
     <div class="slot-actions">

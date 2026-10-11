@@ -9,7 +9,7 @@
 import { ref } from 'vue';
 import { DevPanelOverlay } from '@/lib';
 import { Screen } from '@/types';
-import { useGameSession } from '@/composables/useGameSession';
+import { usePlaySession } from '@/composables/usePlaySession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -18,7 +18,7 @@ import { manifest } from '../manifest';
 import { MatchKey } from '../modules';
 import SkirmishGameView from './SkirmishGameView.vue';
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession({
   onLoaded: () => {
     // Match module is only injectable post-start; kick off the first match.
     const match = engine.tryInject(MatchKey);

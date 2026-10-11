@@ -19,23 +19,23 @@ export function useSlots(saveManager: SaveManager, mods: readonly ModDef[]) {
     })),
   );
 
-  function createSlot(name?: string): number {
-    return saveManager.createSlot(name);
+  function createSlot(displayName?: string): number {
+    return saveManager.createSlot(displayName);
   }
 
   function deleteSlot(slotId: number) {
     saveManager.deleteSlot(slotId);
   }
 
-  function renameSlot(slotId: number, name: string) {
-    saveManager.renameSlot(slotId, name);
+  function renameSlot(slotId: number, displayName: string) {
+    saveManager.renameSlot(slotId, displayName);
   }
 
   function selectSlot(slotId: number) {
     saveManager.selectSlot(slotId);
   }
 
-  function getModName(modId?: string): string | undefined {
+  function getModDisplayName(modId?: string): string | undefined {
     if (!modId) return undefined;
     return mods.find((m) => m.id === modId)?.displayName;
   }
@@ -58,7 +58,7 @@ export function useSlots(saveManager: SaveManager, mods: readonly ModDef[]) {
     deleteSlot,
     renameSlot,
     selectSlot,
-    getModName,
+    getModDisplayName,
     formatTimestamp,
     activeSlotId: computed(() => saveManager.activeSlotId),
   };

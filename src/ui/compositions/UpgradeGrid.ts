@@ -8,11 +8,11 @@ export interface UpgradeCellData<T = never> {
   cost: Ref<DecimalSource>;
   costLabel: string;
   /** One-shot — non-parametric. Producers use the row-shape's parametric form. */
-  canBuy: Ref<boolean>;
+  canPurchase: Ref<boolean>;
   owned: Ref<boolean>;
   count?: Ref<DecimalSource>;
   formula?: () => string;
-  buy: () => void;
+  purchase: () => void;
   position?: number;
   /**
    * Typed per-cell payload forwarded to the `#cell` / `#reveal-content` slots —

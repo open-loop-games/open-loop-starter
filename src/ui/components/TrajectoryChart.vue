@@ -67,7 +67,7 @@ function formatMax(n: number): string {
 <template>
   <figure class="traj">
     <figcaption class="traj__caption">
-      <span class="traj__name">{{ trajectory.name }}</span>
+      <span class="traj__name">{{ trajectory.displayName }}</span>
       <span class="traj__legend">
         <span class="traj__key traj__key--baseline">baseline</span>
         <span class="traj__key traj__key--variant">variant</span>
@@ -78,7 +78,7 @@ function formatMax(n: number): string {
       :viewBox="`0 0 ${W} ${H}`"
       preserveAspectRatio="none"
       role="img"
-      :aria-label="`Trajectory for ${trajectory.name}`"
+      :aria-label="`Trajectory for ${trajectory.displayName}`"
     >
       <path v-if="baselineBand" :d="baselineBand" class="traj__band traj__band--baseline" />
       <path v-if="variantBand" :d="variantBand" class="traj__band traj__band--variant" />

@@ -304,14 +304,14 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Surface + buy-card — the two token-composed panel looks             */
+/* Surface + purchase-card — the two token-composed panel looks             */
 /* ------------------------------------------------------------------ */
 
 /*
  * .olui-surface is the panel look every archetype was writing inline:
  * the surface/border/radius token trio, in one place. Add it to any
  * panel, row, or card container; keep your own padding/layout scoped.
- * .olui-buy-card is the clickable purchase tile — a <button> reset plus
+ * .olui-purchase-card is the clickable purchase tile — a <button> reset plus
  * the shared frame + hover accent. Own the modifiers (--selected, --ready,
  * --bought) and children (__title/__cost) in your scoped styles.
  * Both are stable API; treat renames as breaking.
@@ -322,7 +322,7 @@
   border-radius: var(--radius);
 }
 
-.olui-buy-card {
+.olui-purchase-card {
   text-align: left;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -339,6 +339,6 @@
     background-color 0.15s ease;
 }
 
-.olui-buy-card:not(:disabled):hover {
+.olui-purchase-card:not(:disabled):hover {
   border-color: var(--color-primary);
 }

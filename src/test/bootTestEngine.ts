@@ -45,8 +45,8 @@ let bootCounter = 0;
 
 export interface BootTestEngineOptions {
   modules: EngineModule[];
-  /** Optional prefix for the generated namespace. Useful in debug output. */
-  namespacePrefix?: string;
+  /** Prefix for the generated persistence namespace. Useful in debug output. */
+  persistenceNamespacePrefix?: string;
   /** Intervals per second, the engine's `intervalRate`. Defaults to 20. */
   intervalRate?: number;
   /**
@@ -59,19 +59,19 @@ export interface BootTestEngineOptions {
 
 /**
  * Build a fresh engine, install the given modules, run its install/onStart
- * wiring, and return a handle that drives it deterministically. The engine is
- * namespaced so repeated calls in one process don't collide on persistent-ref
- * contexts.
+ * wiring, and return a handle that drives it deterministically. Each engine
+ * gets its own persistence namespace, so repeated calls in one process don't
+ * collide on persistent contexts.
  */
 export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle {
-  const { modules, namespacePrefix = 'boot', intervalRate = 20, seed = 0 } = options;
-  const namespace = `${namespacePrefix}-${bootCounter++}`;
+  const { modules, persistenceNamespacePrefix = 'boot', intervalRate = 20, seed = 0 } = options;
+  const persistenceNamespace = `${persistenceNamespacePrefix}-${bootCounter++}`;
   seedRNG(seed);
 
   const engine = createEngine({
-    gameId: namespace,
+    gameId: persistenceNamespace,
     persistence: true,
-    persistenceNamespace: namespace,
+    persistenceNamespace,
     storageAdapter: createMemoryStorage(),
     autoSaveInterval: 0,
     intervalRate,

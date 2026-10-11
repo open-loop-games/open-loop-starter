@@ -21,7 +21,7 @@ import { createCyclerModules, CycleKey, BuildKey, BurnTierKey } from '../modules
 import { SALVO_POSTURES } from '../data/defense';
 import { placeReference } from './_board';
 
-const TICK_RATE = 1;
+const INTERVAL_RATE = 1;
 const MAX_TICKS = 200_000;
 
 const fmt = (m: number): string => `${m.toFixed(2)}m`;
@@ -31,8 +31,8 @@ const HEAD = (s: string): void => console.log(`\n═══ ${s} ═══`);
 function bootStack() {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createCyclerModules()],
-    intervalRate: TICK_RATE,
-    namespacePrefix: 'burn-tier-probe',
+    intervalRate: INTERVAL_RATE,
+    persistenceNamespacePrefix: 'burn-tier-probe',
   });
   const cycle = handle.engine.tryInject(CycleKey);
   const build = handle.engine.tryInject(BuildKey);

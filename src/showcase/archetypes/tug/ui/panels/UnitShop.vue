@@ -38,7 +38,7 @@ function counterHints(archetypeId: string): string {
       <Button
         v-for="row in units.rows.value"
         :key="row.def.id"
-        class="olui-buy-card unit-card"
+        class="olui-purchase-card unit-card"
         :class="{
           'unit-card--ready': row.ready.value,
           'unit-card--cooldown': row.cooldownRemaining.value > 0,

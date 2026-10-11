@@ -22,8 +22,8 @@ export type FormFactor = 'desktop' | 'mobile-first' | 'responsive';
 export interface PrimitiveRef {
   /** Symbol name as it resolves in `open-loop-engine/docs/api/INDEX.md`. */
   name: string;
-  /** Engine layer the primitive lives at. */
-  layer: 'primitives' | 'core' | 'systems' | 'harness';
+  /** The engine source layer the primitive is in. */
+  sourceLayer: 'primitives' | 'core' | 'systems' | 'harness';
   /** Dev-time placeholder path; see top-of-file note. */
   path: string;
 }

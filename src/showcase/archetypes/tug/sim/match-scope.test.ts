@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { addResource } from '@open-loop/engine';
-import { boot, getEngine, tick, TICK_RATE } from './harness';
+import { boot, getEngine, tick, INTERVAL_RATE } from './harness';
 import { getIncome, getUnits, LaneKey, MatchKey, MetaKey, SequencerKey } from '../modules';
 
 /**
@@ -112,7 +112,7 @@ describe('tug AI opponent (default counter persona)', () => {
     addResource(playerIncome, 100);
     playerShop.getPurchasable('marine')?.purchase();
 
-    await tick(60 * TICK_RATE); // 60 sim-seconds
+    await tick(60 * INTERVAL_RATE); // 60 sim-seconds
 
     expect(playerStarts).toBeGreaterThan(0);
     expect(aiStarts).toBeGreaterThan(0);

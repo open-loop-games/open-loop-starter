@@ -44,9 +44,9 @@ export function useRefinementCells(): RefinementsView {
         description: entry.def.description,
         cost: computed(() => entry.def.cost),
         costLabel: 'mass',
-        canBuy: entry.purchasable.canPurchase,
+        canPurchase: entry.purchasable.canPurchase,
         owned: entry.purchasable.active,
-        buy: () => {
+        purchase: () => {
           entry.purchasable.purchase(1);
         },
         extra: { def: entry.def },

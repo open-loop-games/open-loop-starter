@@ -15,7 +15,7 @@ and throws (or reads `undefined`).
 The fix is structural, not a signal or a guard. Split each archetype in two:
 
 - **Root `*AppRoot.vue` — routing + app chrome only.** Setup pulls
-  `useGameSession`, `useModalStack`, and dev refs — **nothing that reads module
+  `usePlaySession`, `useModalStack`, and dev refs — **nothing that reads module
   state.** Template routes `<SlotScreen v-if="currentScreen === Screen.Slots">`
   and, under `v-else`, the `AppFrame` + `SystemHeader` chrome wrapping a single
   `<XGameView>` in the default slot (plus `ToastContainer` / dev panels).
@@ -33,7 +33,7 @@ Corollaries:
   root setup. Never lift its read into a root-level `computed`.
 - An overlay gated on `currentScreen === Game` belongs *inside* the game view,
   where the gate is redundant and gets dropped.
-- `useGameSession`'s `onLoaded(result)` is the one legitimate root-side post-start
+- `usePlaySession`'s `onLoaded(result)` is the one legitimate root-side post-start
   seam — first-run wiring that needs a started engine (auto-starting a match,
   measuring the offline gap) goes there. That is not a module read in setup.
 - `useModule(key)` throwing on a missing provider is a correct fail-fast: under

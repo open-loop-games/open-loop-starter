@@ -12,26 +12,30 @@ export const manifest: ArchetypeManifest = {
   id: 'survivor',
   displayName: 'Survivor',
   primitives: [
-    { name: 'createSpatialGrid', layer: 'core', path: 'open-loop-engine/src/core/spatial/grid.ts' },
+    {
+      name: 'createSpatialGrid',
+      sourceLayer: 'core',
+      path: 'open-loop-engine/src/core/spatial/grid.ts',
+    },
     {
       name: 'createTuningRegistry',
-      layer: 'core',
+      sourceLayer: 'core',
       path: 'open-loop-engine/src/core/override-registry.ts',
     },
-    { name: 'createResource', layer: 'core', path: 'open-loop-engine/src/core/resource.ts' },
+    { name: 'createResource', sourceLayer: 'core', path: 'open-loop-engine/src/core/resource.ts' },
     {
       name: 'createCostRequirement',
-      layer: 'core',
+      sourceLayer: 'core',
       path: 'open-loop-engine/src/core/requirements.ts',
     },
     {
       name: 'createPurchasableCategory',
-      layer: 'systems',
+      sourceLayer: 'systems',
       path: 'open-loop-engine/src/systems/purchasable-category.ts',
     },
     {
       name: 'createSeededRNG',
-      layer: 'primitives',
+      sourceLayer: 'primitives',
       path: 'open-loop-engine/src/primitives/rng.ts',
     },
   ],

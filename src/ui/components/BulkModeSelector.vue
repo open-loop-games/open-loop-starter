@@ -1,5 +1,5 @@
 <!--
-  BulkModeSelector — segmented control over a purchase-amount ladder
+  BulkModeSelector — segmented control over a list of bulk modes
   ([1, 10, 100, 'max'] by default). Writes through `useBulkMode()` so the
   choice persists and every purchase panel in the app reads the same mode.
 
@@ -13,12 +13,12 @@ import { ToggleGroupRoot, ToggleGroupItem } from 'reka-ui';
 import { useBulkMode, type BulkMode } from '@/composables/useBulkMode';
 
 const props = defineProps<{
-  ladder: BulkMode[];
+  modes: BulkMode[];
 }>();
 
 const { mode, setMode } = useBulkMode();
 
-const serialized = computed(() => props.ladder.map(toKey));
+const serialized = computed(() => props.modes.map(toKey));
 
 const model = computed<string>({
   get: () => toKey(mode.value),
@@ -49,7 +49,7 @@ function labelFor(k: string): string {
     type="single"
     :roving-focus="true"
     class="olui-bulk-mode"
-    aria-label="Purchase amount"
+    aria-label="Bulk purchase count"
   >
     <ToggleGroupItem
       v-for="key in serialized"

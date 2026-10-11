@@ -83,9 +83,9 @@ function describe(cell: UpgradeCellData<T>): string {
             <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
-              :disabled="!cell.canBuy.value"
-              :data-testid="`buy-${cell.id}`"
-              @click="cell.buy()"
+              :disabled="!cell.canPurchase.value"
+              :data-testid="`purchase-${cell.id}`"
+              @click="cell.purchase()"
             >
               {{ format(cell.cost.value, 0) }} {{ cell.costLabel }}
             </Button>
@@ -130,9 +130,9 @@ function describe(cell: UpgradeCellData<T>): string {
             <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
-              :disabled="!cell.canBuy.value"
-              :data-testid="`buy-${cell.id}`"
-              @click="cell.buy()"
+              :disabled="!cell.canPurchase.value"
+              :data-testid="`purchase-${cell.id}`"
+              @click="cell.purchase()"
             >
               {{ format(cell.cost.value, 0) }} {{ cell.costLabel }}
             </Button>
@@ -161,9 +161,9 @@ function describe(cell: UpgradeCellData<T>): string {
             <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
-              :disabled="!cell.canBuy.value"
-              :data-testid="`buy-${cell.id}`"
-              @click="cell.buy()"
+              :disabled="!cell.canPurchase.value"
+              :data-testid="`purchase-${cell.id}`"
+              @click="cell.purchase()"
             >
               {{ format(cell.cost.value, 0) }} {{ cell.costLabel }}
             </Button>

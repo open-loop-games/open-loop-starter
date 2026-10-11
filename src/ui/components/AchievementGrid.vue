@@ -10,7 +10,7 @@
     - `cell({ cell })` — replace the per-cell visual. Producer overrides
       for the wax-seal card.
 
-  Default cell shape is `{ id, name, description, earned, hidden? }`;
+  Default cell shape is `{ id, displayName, description, earned, hidden? }`;
   data hooks (`data-earned`, `data-hidden-cell`) carry through so theme
   CSS can target without re-deriving.
 -->
@@ -21,7 +21,7 @@ import PanelLayout from './PanelLayout.vue';
 
 export interface AchievementGridCell {
   id: string;
-  name: string;
+  displayName: string;
   description: string;
   earned: boolean;
   hidden?: boolean;
@@ -64,7 +64,7 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
       >
         <slot name="cell" :cell="cell">
           <div class="olui-achievement-grid__cell-name">
-            {{ cell.name }}
+            {{ cell.displayName }}
           </div>
           <div class="olui-achievement-grid__cell-desc">
             {{ cell.description }}

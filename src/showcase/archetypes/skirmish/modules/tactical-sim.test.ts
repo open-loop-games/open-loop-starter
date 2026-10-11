@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { addResource } from '@open-loop/engine';
-import { bootModules, getEngine, tick, tickUntil, TICK_RATE } from '../sim/harness';
+import { bootModules, getEngine, tick, tickUntil, INTERVAL_RATE } from '../sim/harness';
 import {
   createTuningModule,
   createMatchModule,
@@ -51,7 +51,7 @@ describe('skirmish tactical sim — mirror symmetry', () => {
       t.spawn('b');
     }
 
-    await tick(60 * TICK_RATE);
+    await tick(60 * INTERVAL_RATE);
 
     expect(t.units.a.value.length).toBe(t.units.b.value.length);
     expect(t.baseHp.a.value).toBe(t.baseHp.b.value);
@@ -108,12 +108,12 @@ describe('skirmish tactical sim — N-faction regular N-gon geometry and mirror 
     const t = tactical();
     addResource(t.supply.a, 500);
     t.spawn('a'); // spawns at x=12, marches right toward x=88
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     expect(t.units.a.value[0].facing).toBe(1);
 
     addResource(t.supply.b, 500);
     t.spawn('b'); // spawns at x=88, marches left toward x=12
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     expect(t.units.b.value[0].facing).toBe(-1);
   });
 
@@ -171,7 +171,7 @@ describe('skirmish tactical sim', () => {
 
   it('spawns a unit at the base once affordable', async () => {
     match().start();
-    await tick(TICK_RATE); // 1s → supply reaches the unit cost
+    await tick(INTERVAL_RATE); // 1s → supply reaches the unit cost
     expect(tactical().spawn('a')).toBe(true);
     const t = tactical();
     expect(t.units.a.value).toHaveLength(1);
@@ -180,28 +180,28 @@ describe('skirmish tactical sim', () => {
 
   it('advances a unit toward the enemy base when unopposed', async () => {
     match().start();
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     tactical().spawn('a'); // side a base is on the left; enemy base on the right
     const x0 = tactical().units.a.value[0].x;
-    await tick(TICK_RATE); // 1s of movement
+    await tick(INTERVAL_RATE); // 1s of movement
     expect(tactical().units.a.value[0].x).toBeGreaterThan(x0);
   });
 
   it('damages the enemy base when a unit reaches it', async () => {
     match().start();
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     tactical().spawn('a');
-    await tickUntil(() => tactical().baseHp.b.value < BASE_HP, 40 * TICK_RATE);
+    await tickUntil(() => tactical().baseHp.b.value < BASE_HP, 40 * INTERVAL_RATE);
     expect(tactical().baseHp.b.value).toBeLessThan(BASE_HP);
   });
 
   it('resolves unit-vs-unit combat — the outnumbered side is removed', async () => {
     match().start();
-    await tick(TICK_RATE * 2); // supply enough for two a-units
+    await tick(INTERVAL_RATE * 2); // supply enough for two a-units
     tactical().spawn('a');
     tactical().spawn('a'); // 2 vs 1 for side a
     tactical().spawn('b');
-    await tickUntil(() => tactical().units.b.value.length === 0, 60 * TICK_RATE);
+    await tickUntil(() => tactical().units.b.value.length === 0, 60 * INTERVAL_RATE);
     // Focus-fire from two attackers kills b's unit before it kills either of
     // them: b is removed, a keeps survivors.
     expect(tactical().units.b.value).toHaveLength(0);
@@ -210,7 +210,7 @@ describe('skirmish tactical sim', () => {
 
   it('spawns different unit types with their defined attributes', async () => {
     match().start();
-    await tick(TICK_RATE * 5); // accumulate supply for archer and cavalry
+    await tick(INTERVAL_RATE * 5); // accumulate supply for archer and cavalry
     expect(tactical().spawn('a', 'archer')).toBe(true);
     expect(tactical().spawn('a', 'cavalry')).toBe(true);
     const units = tactical().units.a.value;
@@ -223,10 +223,10 @@ describe('skirmish tactical sim', () => {
 
   it('applies counter matrix multipliers in combat (cavalry vs archer)', async () => {
     match().start();
-    await tick(TICK_RATE * 5);
+    await tick(INTERVAL_RATE * 5);
     tactical().spawn('a', 'cavalry');
     tactical().spawn('b', 'archer');
-    await tickUntil(() => tactical().units.b.value.length === 0, 30 * TICK_RATE);
+    await tickUntil(() => tactical().units.b.value.length === 0, 30 * INTERVAL_RATE);
     expect(tactical().units.b.value).toHaveLength(0);
     expect(tactical().units.a.value).toHaveLength(1);
   });

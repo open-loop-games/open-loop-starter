@@ -2,7 +2,7 @@
   ProducerAppRoot — routing + app chrome only. Runs before `engine.start()` (on
   the slot screen), so it reads NO engine module state. The game lives in
   `<ProducerGameView>`, mounted under the post-start `v-else` frame where module
-  reads are safe. The one post-start read here is `useGameSession`'s `onLoaded`
+  reads are safe. The one post-start read here is `usePlaySession`'s `onLoaded`
   resume seam (offline catch-up + the return report), which runs after
   `start()`. See `.claude/rules/app-root-discipline.md`.
 -->
@@ -10,7 +10,7 @@
 import { ref } from 'vue';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
-import { useGameSession } from '@/composables/useGameSession';
+import { usePlaySession } from '@/composables/usePlaySession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -32,7 +32,7 @@ const stack = useModalStack();
 /** A shorter return is a reload, not an absence, and gets no report. */
 const REPORT_MIN_AWAY_SECONDS = 60;
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession({
   onLoaded: (result) => {
     const offline = engine.tryInject(OfflineKey);
     if (!offline || !result.success) return;

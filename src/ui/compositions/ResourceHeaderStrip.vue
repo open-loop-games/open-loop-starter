@@ -36,7 +36,7 @@ defineSlots<{
   trailing?: () => unknown;
 }>();
 
-const visible = computed(() => props.readouts.filter((r) => !(r.hidden?.value ?? false)));
+const visible = computed(() => props.readouts.filter((r) => r.visible?.value ?? true));
 
 function chipVariant(
   highlight: ResourceHighlight | undefined,
@@ -65,7 +65,7 @@ function rateSign(value: DecimalSource): string {
       >
         <span class="resource-header-strip__value"
           >{{ format(r.value.value, 0)
-          }}<template v-if="r.cap"> / {{ format(r.cap.value, 0) }}</template></span
+          }}<template v-if="r.capacity"> / {{ format(r.capacity.value, 0) }}</template></span
         >
         <span class="resource-header-strip__label">{{ r.label }}</span>
         <span v-if="r.rate" class="resource-header-strip__rate"

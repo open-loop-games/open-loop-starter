@@ -43,7 +43,7 @@ import { col } from './_arc';
 const SEED_COUNT = Number(process.env.SEEDS ?? 4);
 const MINUTES = Number(process.env.CONE_MINUTES ?? 12);
 /** 5 ticks/sim-second, matching `./_arc.ts`. */
-const TICK_RATE = 5;
+const INTERVAL_RATE = 5;
 const CONE_ID = 'culture-sprayer';
 /** Mid-run depth. Level moves reach and damage, never the wedge angle. */
 const CONE_LEVEL = 4;
@@ -98,8 +98,8 @@ interface SeatReading {
 async function runSeat(seatId: string, seed: number, into: SeatReading): Promise<void> {
   const handle = bootTestEngine({
     modules: createSurvivorModules({ seed }),
-    intervalRate: TICK_RATE,
-    namespacePrefix: `survivor-cone-${seatId}-${seed}`,
+    intervalRate: INTERVAL_RATE,
+    persistenceNamespacePrefix: `survivor-cone-${seatId}-${seed}`,
   });
   const arena = handle.engine.tryInject(ArenaKey);
   const run = handle.engine.tryInject(RunKey);
@@ -109,8 +109,8 @@ async function runSeat(seatId: string, seed: number, into: SeatReading): Promise
   const state = arena.state.value;
   state.devices.push({ defId: CONE_ID, level: CONE_LEVEL, timer: 0 });
 
-  const dt = 1 / TICK_RATE;
-  const ticks = MINUTES * 60 * TICK_RATE;
+  const dt = 1 / INTERVAL_RATE;
+  const ticks = MINUTES * 60 * INTERVAL_RATE;
   for (let t = 0; t < ticks; t++) {
     const live = arena.state.value;
     const cone = live.devices.find((d: DeviceRuntime) => d.defId === CONE_ID);

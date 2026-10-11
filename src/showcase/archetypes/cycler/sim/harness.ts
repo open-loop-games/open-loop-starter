@@ -14,7 +14,7 @@
  * threading options through is the natural shape. `boot()` with no args is the
  * shipped configuration.
  *
- * TICK_RATE is 1 — the Cycler economy is minute-scale, so 1 tick = 1 game-second
+ * INTERVAL_RATE is 1 — the Cycler economy is minute-scale, so 1 tick = 1 game-second
  * gives minute resolution via `tick(60)` and keeps a full run to ~1k ticks. This
  * matches the coarse tick the balance probe uses (`.claude/CLAUDE.md`
  * § Balance methodology); the crossing lands within one dt.
@@ -42,7 +42,7 @@ import {
   type CyclerModulesOptions,
 } from '../modules';
 
-const TICK_RATE = 1;
+const INTERVAL_RATE = 1;
 
 let handle: TestEngineHandle;
 
@@ -50,8 +50,8 @@ let handle: TestEngineHandle;
 export function boot(options: CyclerModulesOptions = {}): Engine {
   handle = bootTestEngine({
     modules: [...sharedBase, ...createCyclerModules(options)],
-    namespacePrefix: 'cycler-test',
-    intervalRate: TICK_RATE,
+    persistenceNamespacePrefix: 'cycler-test',
+    intervalRate: INTERVAL_RATE,
   });
   return handle.engine;
 }
@@ -134,7 +134,7 @@ export function placeDefense(): void {
   }
 }
 
-/** Advance n ticks (n game-seconds at TICK_RATE=1), flushing reactive effects. */
+/** Advance n ticks (n game-seconds at INTERVAL_RATE=1), flushing reactive effects. */
 export function tick(n = 1): Promise<void> {
   return handle.tick(n);
 }

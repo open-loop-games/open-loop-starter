@@ -21,18 +21,18 @@ import type { ProducerRowData } from '../ProducerList';
 
 function makeRow(
   id: string,
-  opts: Partial<{ unlocked: boolean; canBuy: boolean }> = {},
+  opts: Partial<{ unlocked: boolean; canPurchase: boolean }> = {},
 ): ProducerRowData {
-  const buy = vi.fn();
+  const purchase = vi.fn();
   return {
     id,
     displayName: `Row ${id}`,
     count: ref<DecimalSource>(7),
     displayRate: ref<DecimalSource>(1.5),
     cost: (count) => Decimal.mul(count, 10),
-    canBuy: () => opts.canBuy ?? true,
+    canPurchase: () => opts.canPurchase ?? true,
     maxAffordable: ref<DecimalSource>(3),
-    buy,
+    purchase,
     unlocked: opts.unlocked === undefined ? ref(true) : ref(opts.unlocked),
   };
 }
@@ -67,24 +67,24 @@ describe('ProducerList', () => {
     expect(withNone.find('.olui-bulk-mode').exists()).toBe(false);
   });
 
-  it('clicking the buy button calls row.buy with the resolved count', async () => {
+  it('clicking the purchase button calls row.purchase with the resolved count', async () => {
     const row = makeRow('a');
     const wrapper = mount(ProducerList, {
       props: { rows: [row], costLabel: 'c', bulkModeSource: 'none' },
     });
-    await wrapper.find('[data-testid="buy-a"]').trigger('pointerdown');
-    // bulkModeSource='none' resolves to 1; row.buy invoked with that count.
-    const buyMock = row.buy as ReturnType<typeof vi.fn>;
-    expect(buyMock).toHaveBeenCalledTimes(1);
-    expect(Decimal.eq(buyMock.mock.calls[0][0] as DecimalSource, 1)).toBe(true);
+    await wrapper.find('[data-testid="purchase-a"]').trigger('pointerdown');
+    // bulkModeSource='none' resolves to 1; row.purchase invoked with that count.
+    const purchaseMock = row.purchase as ReturnType<typeof vi.fn>;
+    expect(purchaseMock).toHaveBeenCalledTimes(1);
+    expect(Decimal.eq(purchaseMock.mock.calls[0][0] as DecimalSource, 1)).toBe(true);
   });
 
-  it('canBuy(count) gates the buy button disabled state', () => {
-    const row = makeRow('a', { canBuy: false });
+  it('canPurchase(count) blocks the purchase button while false', () => {
+    const row = makeRow('a', { canPurchase: false });
     const wrapper = mount(ProducerList, {
       props: { rows: [row], costLabel: 'c', bulkModeSource: 'none' },
     });
-    expect(wrapper.find('[data-testid="buy-a"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('[data-testid="purchase-a"]').attributes('disabled')).toBeDefined();
   });
 
   it('#row slot replaces the default row template', () => {
@@ -103,11 +103,11 @@ describe('ProducerList', () => {
     // Regression: `maxAffordable` is 0 while the player saves up, and quoting
     // `cost(0)` rendered the price as 0 — the row hid what it cost exactly when
     // that was the only thing the player wanted to know.
-    const row: ProducerRowData = { ...makeRow('a', { canBuy: false }), maxAffordable: ref(0) };
+    const row: ProducerRowData = { ...makeRow('a', { canPurchase: false }), maxAffordable: ref(0) };
     const wrapper = mount(ProducerList, {
       props: { rows: [row], costLabel: 'coins', bulkModeSource: 'none' },
     });
-    const button = wrapper.find('[data-testid="buy-a"]');
+    const button = wrapper.find('[data-testid="purchase-a"]');
     expect(button.text()).toContain('10 coins');
     expect(button.text()).not.toContain('Buy 0');
     expect(button.attributes('disabled')).toBeDefined();

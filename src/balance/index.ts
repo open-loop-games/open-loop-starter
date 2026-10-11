@@ -10,7 +10,7 @@
  *
  * What lives here:
  *
- * - `costCurve` — the cost side as an engine `Formula` in level, shared by
+ * - `costCurve` — the cost side as an engine `Formula` in purchase count, shared by
  *   the beat-time quotient and any inversion/integration downstream.
  * - `producerPacingInspector` — the `inspect` callback `runWaypointProbe`
  *   takes, producing the `ProducerPacing` rows `renderFlowTable` renders.
@@ -56,14 +56,14 @@ export {
 /**
  * One producer's per-purchase pacing texture at a single waypoint snapshot.
  *
- * `beatTimeSeconds` is `Cost(level) / (perUnitRate × quantity)` — the
- * producer's own-income payback for the next purchase. Independent of
- * other income sources.
+ * `beatTimeSeconds` is `Cost(purchaseCount) / (perUnitRate × effectiveCount)`:
+ * the beat time of the next purchase on the producer's own production rate,
+ * independent of every other producer.
  */
 export interface ProducerPacing {
   producerId: string;
-  level: number;
-  quantity: number;
+  purchaseCount: number;
+  effectiveCount: number;
   perUnitRate: number;
   nextCost: number;
   beatTimeSeconds: number;
@@ -78,8 +78,10 @@ export interface ProducerInspector {
    */
   ownedProducers: (engine: Engine) => Array<{
     id: string;
-    level: number;
-    quantity: number;
+    /** Prices the next purchase. */
+    purchaseCount: number;
+    /** Units producing: the purchase count plus any extra count. */
+    effectiveCount: number;
     perUnitRate: number;
     baseCost: number;
     costScaling: number;
@@ -97,11 +99,11 @@ export function producerPacingInspector(
   return (engine) => {
     const out: ProducerPacing[] = [];
     for (const p of inspector.ownedProducers(engine)) {
-      const nextCost = costCurve(p.level, {
+      const nextCost = costCurve(p.purchaseCount, {
         baseCost: p.baseCost,
-        costMultiplier: p.costScaling,
+        costScaling: p.costScaling,
       }).evaluate();
-      const production = Decimal.mul(p.perUnitRate, p.quantity);
+      const production = Decimal.mul(p.perUnitRate, p.effectiveCount);
       // Nothing is ever afforded at zero production. `classifyFlowChannel`
       // reads Infinity as 'breakdown' and the report renders it as '∞'.
       const sec = Decimal.lte(production, 0)
@@ -109,8 +111,8 @@ export function producerPacingInspector(
         : toNumber(Decimal.div(nextCost, production));
       out.push({
         producerId: p.id,
-        level: p.level,
-        quantity: p.quantity,
+        purchaseCount: p.purchaseCount,
+        effectiveCount: p.effectiveCount,
         perUnitRate: p.perUnitRate,
         nextCost: toNumber(nextCost),
         beatTimeSeconds: sec,

@@ -9,10 +9,10 @@ export interface ProducerRowData<T = never> {
   displayRate: Ref<DecimalSource>;
   /** Cost is parametric on count because producers are repeatable. */
   cost: (count: DecimalSource) => DecimalSource;
-  /** Parametric for the same reason; e.g. canBuy(10) vs canBuy(1). */
-  canBuy: (count: DecimalSource) => boolean;
+  /** Parametric for the same reason; e.g. canPurchase(10) vs canPurchase(1). */
+  canPurchase: (count: DecimalSource) => boolean;
   maxAffordable: Ref<DecimalSource>;
-  buy: (count: DecimalSource) => void;
+  purchase: (count: DecimalSource) => void;
   unlocked?: Ref<boolean>;
   /**
    * Typed per-row payload forwarded to the `#row` slot. Together with the slot,

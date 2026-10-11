@@ -30,7 +30,7 @@ export interface CyclerEngineOptions {
  * Create an engine instance pre-wired with the Cycler modules (build → burn-tier
  * → cycle → prestige → upgrades; the barrel owns the install order and the peg
  * wiring). Does NOT call `engine.load()` — `CyclerAppRoot.vue` owns the resume
- * sequence via `useGameSession`.
+ * sequence via `usePlaySession`.
  */
 export function createCyclerEngine(options?: CyclerEngineOptions): { engine: Engine } {
   const modules = [...createCyclerModules(options?.modules), ...(options?.extraModules ?? [])];

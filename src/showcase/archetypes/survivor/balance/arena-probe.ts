@@ -24,7 +24,7 @@
  * figure on this one.
  */
 
-import { MINUTES, TICK_RATE, clock, col, runArc, type ArcResult } from './_arc';
+import { MINUTES, INTERVAL_RATE, clock, col, runArc, type ArcResult } from './_arc';
 import { SEATS } from '../data/seats';
 import { meanMoteYield } from '../data/specimens';
 import { localDensity, spawnRate } from '../data/arena';
@@ -35,7 +35,7 @@ const SEED = 12345;
 
 async function main(): Promise<void> {
   console.log('Survivor — arena probe (shipping module, headless)');
-  console.log(`${MINUTES} sim-minutes per seat at ${TICK_RATE} Hz.\n`);
+  console.log(`${MINUTES} sim-minutes per seat at ${INTERVAL_RATE} Hz.\n`);
 
   /**
    * Kills the closed form expects over the window the run ACTUALLY lasted.

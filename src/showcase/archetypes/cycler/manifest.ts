@@ -18,16 +18,24 @@ export const manifest: ArchetypeManifest = {
   id: 'cycler',
   displayName: 'Cycler — Defense Command',
   primitives: [
-    { name: 'persistent', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
-    { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
-    { name: 'integerRoot', layer: 'primitives', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'persistent', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'createResource', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'integerRoot', sourceLayer: 'primitives', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
       name: 'createPurchasableCategory',
-      layer: 'systems',
+      sourceLayer: 'systems',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
-    { name: 'createCostRequirement', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
-    { name: 'createBooleanRequirement', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
+    {
+      name: 'createCostRequirement',
+      sourceLayer: 'core',
+      path: 'open-loop-engine/docs/api/INDEX.md',
+    },
+    {
+      name: 'createBooleanRequirement',
+      sourceLayer: 'core',
+      path: 'open-loop-engine/docs/api/INDEX.md',
+    },
   ],
   beats: [
     {

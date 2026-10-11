@@ -89,7 +89,7 @@ export interface PerturbationForm {
    * Fans each tracked resource out to `ticks` metric keys per run, so it's
    * opt-in — off by default keeps a plain sensitivity run scalar-cheap.
    */
-  captureSeries: boolean;
+  captureTimeSeries: boolean;
 }
 
 export interface DeltaRow {
@@ -109,8 +109,8 @@ export interface TrajectoryBand {
 
 /** Per-resource baseline-vs-variant trajectory reconstructed from series metrics. */
 export interface Trajectory {
-  /** Resource display name, resolved from the `time-series:{id}` suffix through the resource registry. */
-  name: string;
+  /** Resolved from the `time-series:{id}` suffix through the resource registry. */
+  displayName: string;
   baseline: TrajectoryBand[];
   variant: TrajectoryBand[];
 }
@@ -132,13 +132,13 @@ export interface UseBalanceWorkbenchReturn {
   progress: Ref<RunProgress>;
   rows: Ref<DeltaRow[]>;
   headline: Ref<DeltaRow | null>;
-  /** All captured resource trajectories from the last run (empty if series capture was off). */
+  /** All captured resource trajectories from the last run (empty if time-series capture was off). */
   trajectories: Ref<Trajectory[]>;
-  /** Resource names available to chart, in aggregate order. */
-  seriesNames: Ref<string[]>;
+  /** Resource display names available to chart, in aggregate order. */
+  trajectoryDisplayNames: Ref<string[]>;
   /** Which trajectory the chart shows; defaults to the first captured resource. */
-  selectedSeriesName: Ref<string | null>;
-  /** The trajectory matching `selectedSeriesName`, or null. */
+  selectedTrajectoryDisplayName: Ref<string | null>;
+  /** The trajectory matching `selectedTrajectoryDisplayName`, or null. */
   selectedTrajectory: Ref<Trajectory | null>;
   error: Ref<string | null>;
   committed: Ref<boolean>;
@@ -193,7 +193,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     delta: 1,
     seedCount: 20,
     ticks: 200,
-    captureSeries: true,
+    captureTimeSeries: true,
   });
 
   const running = ref(false);
@@ -239,21 +239,23 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     const resources = engine.tryInject(ResourceRegistryKey);
     const ids = Object.keys(baseBands);
     return ids.map((id) => ({
-      name: resources?.findById(id)?.displayName ?? id,
+      displayName: resources?.findById(id)?.displayName ?? id,
       baseline: baseBands[id] ?? [],
       variant: variantBands[id] ?? [],
     }));
   });
 
-  const seriesNames = computed<string[]>(() => trajectories.value.map((t) => t.name));
+  const trajectoryDisplayNames = computed<string[]>(() =>
+    trajectories.value.map((t) => t.displayName),
+  );
 
-  const selectedSeriesName = ref<string | null>(null);
+  const selectedTrajectoryDisplayName = ref<string | null>(null);
 
   const selectedTrajectory = computed<Trajectory | null>(() => {
     const list = trajectories.value;
     if (list.length === 0) return null;
-    const want = selectedSeriesName.value;
-    return list.find((t) => t.name === want) ?? list[0] ?? null;
+    const want = selectedTrajectoryDisplayName.value;
+    return list.find((t) => t.displayName === want) ?? list[0] ?? null;
   });
 
   function refreshPicker(): void {
@@ -298,9 +300,9 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       // Both cells must share one analyzer set so their metric keys align for
       // the baseline-vs-variant diff. Series capture appends per-resource
       // trackers on top of the scalar pack.
-      const captureSeries = form.captureSeries;
+      const captureTimeSeries = form.captureTimeSeries;
       const buildAnalyzers = (e: Engine): Analyzer[] =>
-        captureSeries ? [...analyzerPack(e), ...timeSeriesAnalyzerPack(e)] : analyzerPack(e);
+        captureTimeSeries ? [...analyzerPack(e), ...timeSeriesAnalyzerPack(e)] : analyzerPack(e);
 
       const baseline = createSensitivityCell({
         id: 'baseline',
@@ -387,8 +389,8 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     rows,
     headline,
     trajectories,
-    seriesNames,
-    selectedSeriesName,
+    trajectoryDisplayNames,
+    selectedTrajectoryDisplayName,
     selectedTrajectory,
     error,
     committed,

@@ -43,7 +43,7 @@ function bootOne(namespace: string) {
   const handle = bootTestEngine({
     modules: createProducerModules(DEFAULT_PRODUCER_DATA),
     intervalRate: 1,
-    namespacePrefix: namespace,
+    persistenceNamespacePrefix: namespace,
   });
   const offline = handle.engine.tryInject(OfflineKey);
   const dispatch = handle.engine.tryInject(DispatchKey);

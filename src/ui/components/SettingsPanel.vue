@@ -19,7 +19,7 @@ const themeOptions: ReadonlyArray<SelectOption> = [
 ];
 
 const notationOptions = computed<ReadonlyArray<SelectOption>>(() =>
-  NOTATION_OPTIONS.map((opt) => ({ value: opt.key, label: opt.label })),
+  NOTATION_OPTIONS.map((opt) => ({ value: opt.id, label: opt.label })),
 );
 
 const autoSaveSeconds = computed<number>({

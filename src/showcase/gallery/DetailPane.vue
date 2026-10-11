@@ -44,7 +44,7 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
               <code>{{ prim.name }}</code>
             </td>
             <td>
-              <span class="chip" :data-layer="prim.layer">{{ prim.layer }}</span>
+              <span class="chip" :data-source-layer="prim.sourceLayer">{{ prim.sourceLayer }}</span>
             </td>
             <td>
               <code class="path">{{ prim.path }}</code>
@@ -157,10 +157,10 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
   color: var(--color-text-muted);
   font-size: 0.85em;
 }
-.chip[data-layer='primitives'] {
+.chip[data-source-layer='primitives'] {
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-badge));
 }
-.chip[data-layer='harness'] {
+.chip[data-source-layer='harness'] {
   background: color-mix(in srgb, var(--color-danger) 12%, var(--color-badge));
 }
 </style>

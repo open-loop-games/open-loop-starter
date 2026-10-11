@@ -20,15 +20,15 @@ import { createGameModules } from '../modules';
 import { CoreKey } from '../modules/core';
 import { GAME_BALANCE } from '../data/game';
 
-const TICK_RATE = 1; // 1 tick = 1 sim-second — coarse, matches the linear rate
+const INTERVAL_RATE = 1; // 1 tick = 1 sim-second — coarse, matches the linear rate
 
 async function main(): Promise<void> {
   console.log('Blank game — core probe (shipping accrual vs closed-form projection)');
 
   const handle = bootTestEngine({
     modules: createGameModules(),
-    intervalRate: TICK_RATE,
-    namespacePrefix: 'game-probe',
+    intervalRate: INTERVAL_RATE,
+    persistenceNamespacePrefix: 'game-probe',
   });
   const core = handle.engine.tryInject(CoreKey);
   if (!core) throw new Error('game-probe: core module did not provide CoreKey');

@@ -114,12 +114,12 @@ describe('useBalanceWorkbench composable', () => {
     wb.form.factor = 3;
     wb.form.seedCount = 2;
     wb.form.ticks = 5;
-    wb.form.captureSeries = true;
+    wb.form.captureTimeSeries = true;
 
     wb.run();
 
     // Trajectories reconstructed, one band per tick, defaulting the selection.
-    expect(wb.seriesNames.value).toContain(displayName);
+    expect(wb.trajectoryDisplayNames.value).toContain(displayName);
     const traj = wb.selectedTrajectory.value;
     expect(traj).not.toBeNull();
     expect(traj!.baseline).toHaveLength(5);
@@ -133,7 +133,7 @@ describe('useBalanceWorkbench composable', () => {
     live.stop();
   });
 
-  it('skips trajectory capture when captureSeries is off', () => {
+  it('skips trajectory capture when captureTimeSeries is off', () => {
     const displayName = 'bw-noseries-gold';
     const modFactory = (): EngineModule => makeProducerModule(displayName);
     const live = buildLiveEngine('bw-noseries', modFactory());
@@ -142,7 +142,7 @@ describe('useBalanceWorkbench composable', () => {
     wb.selectEntry(wb.snapshot.value.all.find((e) => e.label.includes('cursor'))!);
     wb.form.seedCount = 2;
     wb.form.ticks = 5;
-    wb.form.captureSeries = false;
+    wb.form.captureTimeSeries = false;
 
     wb.run();
 
@@ -250,7 +250,7 @@ describe('BalanceWorkbench.vue', () => {
 
     expect(wrapper.find('.delta-table').exists()).toBe(true);
     expect(wrapper.find('.delta-headline-value').text()).toMatch(/%/);
-    // Trajectory chart renders (captureSeries defaults on).
+    // Trajectory chart renders (captureTimeSeries defaults on).
     expect(wrapper.find('.delta-trajectory svg.traj__svg').exists()).toBe(true);
 
     wrapper.unmount();

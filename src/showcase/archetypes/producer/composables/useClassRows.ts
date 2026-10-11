@@ -63,9 +63,10 @@ export function useClassRows(): ClassLadderView {
           Decimal.mul(producer.computedRate.value, producer.ownedCount.value),
         ),
         cost: (count) => repeatable.getCost(count),
-        canBuy: (count) => repeatable.canPurchase.value && Decimal.gte(maxAffordable.value, count),
+        canPurchase: (count) =>
+          repeatable.canPurchase.value && Decimal.gte(maxAffordable.value, count),
         maxAffordable,
-        buy: (count) => {
+        purchase: (count) => {
           repeatable.purchase(count);
         },
         // Reveal is one-way: a class stays listed once owned, even if the

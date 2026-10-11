@@ -8,7 +8,7 @@
 import { ref } from 'vue';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
-import { useGameSession } from '@/composables/useGameSession';
+import { usePlaySession } from '@/composables/usePlaySession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -17,9 +17,9 @@ import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 import GameView from './GameView.vue';
 
-// Slot-pick → start → load → play → save → back. `useGameSession` owns it;
+// Slot-pick → start → load → play → save → back. `usePlaySession` owns it;
 // pass `onLoaded` when your game needs to do something with the offline gap.
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession();
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
 
 const stack = useModalStack();
 

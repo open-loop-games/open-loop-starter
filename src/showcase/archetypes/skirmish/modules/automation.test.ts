@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { boot, bootModules, getEngine, tick, tickUntil, TICK_RATE } from '../sim/harness';
+import { boot, bootModules, getEngine, tick, tickUntil, INTERVAL_RATE } from '../sim/harness';
 import {
   AutomationTiersKey,
   MatchKey,
@@ -32,14 +32,14 @@ function tactical(): TacticalApi {
   return getEngine().tryInject(TacticalKey)!;
 }
 
-const MAX_TICKS = 30 * 60 * TICK_RATE; // one full time-limit window, as a cap
+const MAX_TICKS = 30 * 60 * INTERVAL_RATE; // one full time-limit window, as a cap
 
 describe('skirmish bot-vs-bot', () => {
   beforeEach(() => boot());
 
   it('accrues supply on both sides while live', async () => {
     match().start();
-    await tick(TICK_RATE); // before either side's first spawn cadence
+    await tick(INTERVAL_RATE); // before either side's first spawn cadence
     expect(Number(tactical().supply.a.value)).toBeGreaterThan(0);
     expect(Number(tactical().supply.b.value)).toBeGreaterThan(0);
   });
@@ -108,7 +108,7 @@ describe('skirmish bot-vs-bot', () => {
       }),
     ]);
     match().start();
-    await tick(10 * TICK_RATE);
+    await tick(10 * INTERVAL_RATE);
     const types = tactical().units.a.value.map((u) => u.type);
     expect(types.length).toBeGreaterThanOrEqual(2);
     expect(types).toContain('trooper');
@@ -122,7 +122,7 @@ describe('skirmish bot-vs-bot', () => {
       }),
     );
     match().start();
-    await tick(16 * TICK_RATE);
+    await tick(16 * INTERVAL_RATE);
     const unitsA = tactical().units.a.value;
     const unitsB = tactical().units.b.value;
     expect(unitsA.length).toBeGreaterThan(0);
@@ -185,7 +185,7 @@ describe('skirmish tiered automation seat', () => {
 
   it('spawns nothing while its tier is locked, however long the match runs', async () => {
     match().start();
-    await tick(20 * TICK_RATE); // ten cadence intervals
+    await tick(20 * INTERVAL_RATE); // ten cadence intervals
 
     expect(tactical().units.a.value).toHaveLength(0);
     expect(Number(tactical().supply.a.value)).toBeGreaterThan(0); // income still flows
@@ -193,21 +193,21 @@ describe('skirmish tiered automation seat', () => {
 
   it('spawns once the tier unlocks mid-match', async () => {
     match().start();
-    await tick(20 * TICK_RATE);
+    await tick(20 * INTERVAL_RATE);
     expect(tactical().units.a.value).toHaveLength(0);
 
     tiers().unlock('assisted');
-    await tick(4 * TICK_RATE); // two cadence intervals past the unlock
+    await tick(4 * INTERVAL_RATE); // two cadence intervals past the unlock
 
     expect(tactical().units.a.value.length).toBeGreaterThan(0);
   });
 
   it('does not bank cadence while locked — the first burst waits a full interval', async () => {
     match().start();
-    await tick(20 * TICK_RATE);
+    await tick(20 * INTERVAL_RATE);
 
     tiers().unlock('assisted');
-    await tick(TICK_RATE); // one second, short of the 2s cadence
+    await tick(INTERVAL_RATE); // one second, short of the 2s cadence
     expect(tactical().units.a.value).toHaveLength(0);
   });
 });

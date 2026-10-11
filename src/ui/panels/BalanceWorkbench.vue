@@ -100,9 +100,9 @@ const kindModel = computed<'scalar-multiply' | 'scalar-add'>({
 });
 
 const seriesModel = computed<string | null>({
-  get: () => wb.selectedTrajectory.value?.name ?? null,
+  get: () => wb.selectedTrajectory.value?.displayName ?? null,
   set: (next) => {
-    if (next) wb.selectedSeriesName.value = next;
+    if (next) wb.selectedTrajectoryDisplayName.value = next;
   },
 });
 </script>
@@ -201,7 +201,7 @@ const seriesModel = computed<string | null>({
 
           <div class="form-row form-row--inline">
             <label class="bw-check" for="bw-capture-series">
-              <input id="bw-capture-series" v-model="wb.form.captureSeries" type="checkbox" />
+              <input id="bw-capture-series" v-model="wb.form.captureTimeSeries" type="checkbox" />
               Capture trajectories
             </label>
           </div>
@@ -261,7 +261,7 @@ const seriesModel = computed<string | null>({
 
         <div v-if="wb.selectedTrajectory.value" class="delta-trajectory">
           <ToggleGroupRoot
-            v-if="wb.seriesNames.value.length > 1"
+            v-if="wb.trajectoryDisplayNames.value.length > 1"
             v-model="seriesModel"
             type="single"
             :roving-focus="true"
@@ -269,7 +269,7 @@ const seriesModel = computed<string | null>({
             aria-label="Charted resource"
           >
             <ToggleGroupItem
-              v-for="name in wb.seriesNames.value"
+              v-for="name in wb.trajectoryDisplayNames.value"
               :key="name"
               :value="name"
               class="bw-btn series-toggle__item"

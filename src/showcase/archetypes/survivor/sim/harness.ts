@@ -23,11 +23,12 @@ import { sharedBase } from '@/modules';
 import { createSurvivorModules } from '../modules';
 
 /**
- * Ticks per game-second. `tickOnce()` advances 1/TICK_RATE seconds of game
- * time. Set to 1 if your economy is second-valued and you want `tick(n)` to
- * mean n seconds; keep at 20 (the engine default) for fine-grained cadence.
+ * Intervals per game-second, passed as the engine's `intervalRate`.
+ * `tickOnce()` advances 1/INTERVAL_RATE seconds of game time. Set to 1 if your
+ * economy is second-valued and you want `tick(n)` to mean n seconds; keep at 20
+ * (the engine default) for fine-grained cadence.
  */
-export const TICK_RATE = 20;
+export const INTERVAL_RATE = 20;
 
 let handle: TestEngineHandle;
 
@@ -35,8 +36,8 @@ let handle: TestEngineHandle;
 export function boot(): Engine {
   handle = bootTestEngine({
     modules: [...sharedBase, ...createSurvivorModules()],
-    namespacePrefix: 'survivor-test',
-    intervalRate: TICK_RATE,
+    persistenceNamespacePrefix: 'survivor-test',
+    intervalRate: INTERVAL_RATE,
   });
   return handle.engine;
 }
@@ -45,7 +46,7 @@ export function getEngine(): Engine {
   return handle.engine;
 }
 
-/** Advance n ticks (n/TICK_RATE game-seconds), flushing reactive effects. */
+/** Advance n ticks (n/INTERVAL_RATE game-seconds), flushing reactive effects. */
 export function tick(n = 1): Promise<void> {
   return handle.tick(n);
 }

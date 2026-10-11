@@ -50,7 +50,7 @@ import { scoreHeadings, type Fields } from '../modules/sim/steering';
 
 /** 20 Hz — the live tick rate. Movement quality is a per-step property, so this
  *  probe cannot run at the coarse rate the economy probes use. */
-const TICK_RATE = 20;
+const INTERVAL_RATE = 20;
 /**
  * A full arc, not a sample of the opening. Density climbs for the whole run and
  * peaks past 20:00 (`./arena-probe.ts` § census), and the term-spread table's
@@ -107,8 +107,8 @@ const spread = (xs: number[]): number => Math.max(...xs) - Math.min(...xs);
 async function runSeat(seatId: string, seed: number): Promise<Reading> {
   const handle = bootTestEngine({
     modules: createSurvivorModules({ seed }),
-    intervalRate: TICK_RATE,
-    namespacePrefix: `survivor-steer-${seatId}-${seed}`,
+    intervalRate: INTERVAL_RATE,
+    persistenceNamespacePrefix: `survivor-steer-${seatId}-${seed}`,
   });
   const arena = handle.engine.tryInject(ArenaKey);
   const run = handle.engine.tryInject(RunKey);
@@ -151,15 +151,15 @@ async function runSeat(seatId: string, seed: number): Promise<Reading> {
     cliffAll: 0,
   }));
 
-  const totalTicks = MINUTES * 60 * TICK_RATE;
-  const dt = 1 / TICK_RATE;
+  const totalTicks = MINUTES * 60 * INTERVAL_RATE;
+  const dt = 1 / INTERVAL_RATE;
   for (let i = 0; i < totalTicks; i++) {
     await handle.tick(1);
     if (arena.outcome.value !== 'running') break;
 
     // Sampled rather than every tick: the scoring landscape moves on the field
     // refresh cadence, not the step, so 1 Hz costs little and misses nothing.
-    if (i % TICK_RATE === 0) {
+    if (i % INTERVAL_RATE === 0) {
       const live = arena.state.value;
       probeFields = refreshFields(live, nav, probeFields);
       const scores = scoreHeadings(live, nav, probeFields, params);
@@ -222,7 +222,7 @@ async function runSeat(seatId: string, seed: number): Promise<Reading> {
 
 async function main(): Promise<void> {
   console.log('Survivor — steering probe (shipping module, headless)');
-  console.log(`${MINUTES} sim-minutes per seat at ${TICK_RATE} Hz.\n`);
+  console.log(`${MINUTES} sim-minutes per seat at ${INTERVAL_RATE} Hz.\n`);
 
   console.log(
     col('  seat', 13) +

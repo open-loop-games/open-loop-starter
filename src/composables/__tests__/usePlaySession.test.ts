@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { defineComponent, h, provide } from 'vue';
 import { mount } from '@vue/test-utils';
 import { Screen } from '@/types';
-import { useGameSession, type GameSession } from '../useGameSession';
+import { usePlaySession, type PlaySession } from '../usePlaySession';
 
 /**
  * Records lifecycle calls in order so a test can assert `startGame` /
  * `returnToSlots` drive the engine through the documented sequence. Only the
- * surface `useGameSession` touches is implemented — the rest of the engine is
+ * surface `usePlaySession` touches is implemented — the rest of the engine is
  * tested in the engine package; this locks *this layer's* orchestration.
  */
 function recordingEngine(loadResult = { success: true, timestamp: 1000 }) {
@@ -38,11 +38,11 @@ function recordingEngine(loadResult = { success: true, timestamp: 1000 }) {
  */
 function withSession(
   engine: ReturnType<typeof recordingEngine>,
-  options?: Parameters<typeof useGameSession>[0],
-): GameSession {
-  let session!: GameSession;
+  options?: Parameters<typeof usePlaySession>[0],
+): PlaySession {
+  let session!: PlaySession;
   const Child = defineComponent(() => {
-    session = useGameSession(options);
+    session = usePlaySession(options);
     return () => h('div');
   });
   mount(
@@ -54,7 +54,7 @@ function withSession(
   return session;
 }
 
-describe('useGameSession', () => {
+describe('usePlaySession', () => {
   it('starts on the slot picker', () => {
     const session = withSession(recordingEngine());
     expect(session.currentScreen.value).toBe(Screen.Slots);

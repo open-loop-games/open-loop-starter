@@ -68,7 +68,7 @@ function rowTooltip(row: IncomeUpgradeRow): string {
       <Button
         v-for="row in playerUpgrades.rows.value"
         :key="row.def.id"
-        class="olui-buy-card upgrade-tile"
+        class="olui-purchase-card upgrade-tile"
         :class="{
           'upgrade-tile--bought': row.bought.value,
           'upgrade-tile--ready': row.canPurchase.value && !row.bought.value,

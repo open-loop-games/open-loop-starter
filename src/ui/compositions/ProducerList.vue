@@ -34,13 +34,13 @@ const props = withDefaults(
     bulkModeSource?: BulkModeSource;
     density?: Density;
     reveal?: Reveal;
-    bulkLadder?: BulkMode[];
+    bulkModes?: BulkMode[];
   }>(),
   {
     bulkModeSource: 'global',
     density: 'row',
     reveal: 'inline',
-    bulkLadder: () => [1, 10, 100, 'max'],
+    bulkModes: () => [1, 10, 100, 'max'],
   },
 );
 
@@ -50,8 +50,8 @@ defineSlots<{
     row: ProducerRowData<T>;
     pendingCount: DecimalSource;
     pendingCost: DecimalSource;
-    buyLabel: string;
-    buy: () => void;
+    purchaseLabel: string;
+    purchase: () => void;
   }) => unknown;
 }>();
 
@@ -68,16 +68,16 @@ function rowState(row: ProducerRowData<T>) {
   // Floor at 1. `maxAffordable` is 0 when the player cannot afford a single
   // unit, and quoting `cost(0)` renders the price as 0 — the row would hide
   // what it costs exactly when the player is saving up for it. One is also the
-  // count a click would buy if it could, so `canBuy`/`buy` stay honest: both
+  // count a click would purchase if it could, so `canPurchase`/`purchase` stay honest: both
   // are asked about the count actually shown.
   const pendingCount = Decimal.max(1, resolveCount(row.maxAffordable.value));
   const pendingCost = row.cost(pendingCount);
-  const buyLabel = `Buy ${formatWhole(pendingCount)} — ${format(pendingCost, 0)} ${props.costLabel}`;
-  const canBuy = row.canBuy(pendingCount);
-  const buy = () => {
-    if (canBuy) row.buy(pendingCount);
+  const purchaseLabel = `Buy ${formatWhole(pendingCount)} — ${format(pendingCost, 0)} ${props.costLabel}`;
+  const canPurchase = row.canPurchase(pendingCount);
+  const purchase = () => {
+    if (canPurchase) row.purchase(pendingCount);
   };
-  return { pendingCount, pendingCost, buyLabel, canBuy, buy };
+  return { pendingCount, pendingCost, purchaseLabel, canPurchase, purchase };
 }
 </script>
 
@@ -85,7 +85,7 @@ function rowState(row: ProducerRowData<T>) {
   <section class="producer-list" :data-density="density">
     <header class="producer-list__header">
       <slot name="header">
-        <BulkModeSelector v-if="bulkModeSource === 'global'" :ladder="bulkLadder" />
+        <BulkModeSelector v-if="bulkModeSource === 'global'" :modes="bulkModes" />
       </slot>
     </header>
     <ul class="producer-list__rows">
@@ -96,8 +96,8 @@ function rowState(row: ProducerRowData<T>) {
             :row="row"
             :pending-count="rowState(row).pendingCount"
             :pending-cost="rowState(row).pendingCost"
-            :buy-label="rowState(row).buyLabel"
-            :buy="rowState(row).buy"
+            :purchase-label="rowState(row).purchaseLabel"
+            :purchase="rowState(row).purchase"
           />
         </template>
         <template v-else>
@@ -109,11 +109,11 @@ function rowState(row: ProducerRowData<T>) {
             </div>
             <Tooltip v-if="reveal === 'tooltip'">
               <Button
-                :disabled="!rowState(row).canBuy"
-                :data-testid="`buy-${row.id}`"
-                @click="rowState(row).buy()"
+                :disabled="!rowState(row).canPurchase"
+                :data-testid="`purchase-${row.id}`"
+                @click="rowState(row).purchase()"
               >
-                {{ rowState(row).buyLabel }}
+                {{ rowState(row).purchaseLabel }}
               </Button>
               <template #content>
                 {{ row.displayName }} — {{ format(row.displayRate.value, 2) }}/s
@@ -121,11 +121,11 @@ function rowState(row: ProducerRowData<T>) {
             </Tooltip>
             <Button
               v-else
-              :disabled="!rowState(row).canBuy"
-              :data-testid="`buy-${row.id}`"
-              @click="rowState(row).buy()"
+              :disabled="!rowState(row).canPurchase"
+              :data-testid="`purchase-${row.id}`"
+              @click="rowState(row).purchase()"
             >
-              {{ rowState(row).buyLabel }}
+              {{ rowState(row).purchaseLabel }}
             </Button>
           </div>
         </template>

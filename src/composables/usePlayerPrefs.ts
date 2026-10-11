@@ -24,7 +24,7 @@ export interface PlayerPrefs {
   autoSaveIntervalMs: Ref<number>;
 }
 
-interface PlayerPrefsSnapshot {
+interface SerializedPlayerPrefs {
   theme: ThemePref;
   notation: string;
   uiScale: number;
@@ -32,7 +32,7 @@ interface PlayerPrefsSnapshot {
   autoSaveIntervalMs: number;
 }
 
-const DEFAULTS: PlayerPrefsSnapshot = {
+const DEFAULTS: SerializedPlayerPrefs = {
   theme: 'dark',
   notation: 'standard',
   uiScale: 1,
@@ -40,19 +40,19 @@ const DEFAULTS: PlayerPrefsSnapshot = {
   autoSaveIntervalMs: 60_000,
 };
 
-function loadSnapshot(): PlayerPrefsSnapshot {
+function loadSerialized(): SerializedPlayerPrefs {
   if (typeof localStorage === 'undefined') return { ...DEFAULTS };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULTS };
-    const parsed = JSON.parse(raw) as Partial<PlayerPrefsSnapshot>;
+    const parsed = JSON.parse(raw) as Partial<SerializedPlayerPrefs>;
     return { ...DEFAULTS, ...parsed };
   } catch {
     return { ...DEFAULTS };
   }
 }
 
-function persist(snap: PlayerPrefsSnapshot): void {
+function persist(snap: SerializedPlayerPrefs): void {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
@@ -81,7 +81,7 @@ function applyDomEffects(prefs: PlayerPrefs): void {
 export function usePlayerPrefs(): PlayerPrefs {
   if (instance) return instance;
 
-  const initial = loadSnapshot();
+  const initial = loadSerialized();
   const prefs: PlayerPrefs = {
     theme: ref(initial.theme),
     notation: ref(initial.notation),

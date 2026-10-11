@@ -12,7 +12,7 @@
     · a RichTooltip carrying `ChainBreakdown` — the four chains as a product,
       which IDENTITY names as the archetype's long-term pull. Hover the row,
       not the button, so the reading is available while deciding.
-  Everything behavioural — bulk resolution, cost, affordability, the buy call —
+  Everything behavioural — bulk resolution, cost, affordability, the purchase call —
   still comes from the composition. This is a costume + one added surface, not
   a fork of the widget.
 -->
@@ -54,9 +54,9 @@ const costLabel = computed(() => 'mass');
     bulk-mode-source="global"
     density="row"
   >
-    <template #row="{ row, pendingCount, pendingCost, buy }">
+    <template #row="{ row, pendingCount, pendingCost, purchase }">
       <RichTooltip side="right" :side-offset="10">
-        <div class="ladder__row" :data-afford="row.canBuy(pendingCount)">
+        <div class="ladder__row" :data-afford="row.canPurchase(pendingCount)">
           <span class="ladder__tier">{{ extraOf(row).tier }}</span>
           <span class="ladder__id">
             <span class="ladder__name">{{ row.displayName }}</span>
@@ -67,9 +67,9 @@ const costLabel = computed(() => 'mass');
             {{ Decimal.gt(row.count.value, 0) ? `+${format(row.displayRate.value, 2)}/s` : '—' }}
           </span>
           <Button
-            :disabled="!row.canBuy(pendingCount)"
-            :data-testid="`buy-${row.id}`"
-            @click="buy()"
+            :disabled="!row.canPurchase(pendingCount)"
+            :data-testid="`purchase-${row.id}`"
+            @click="purchase()"
           >
             {{ format(pendingCost, 0) }}
           </Button>

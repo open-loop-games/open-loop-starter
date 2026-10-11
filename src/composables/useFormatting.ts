@@ -37,7 +37,7 @@ export function formatPlus(value: DecimalSource, decimals = 2): string {
 }
 
 /** Rate with per-unit suffix: 5 → "+5/s". Default unit is "s". */
-export function formatGain(value: DecimalSource, unit = 's', decimals = 2): string {
+export function formatRate(value: DecimalSource, unit = 's', decimals = 2): string {
   return `${formatPlus(value, decimals)}/${unit}`;
 }
 
@@ -48,12 +48,12 @@ export function formatPow(exponent: DecimalSource, decimals = 2): string {
 }
 
 /**
- * Purchase-beat display with a 1/sec-threshold flip, mirroring the
+ * Formats a beat time, with a 1/sec-threshold flip, mirroring the
  * validated pattern from incloneution's tooltip helpers. Infinite or
- * NaN beats collapse to a shared "unaffordable" label — callers that
+ * NaN beat times collapse to a shared "unaffordable" label — callers that
  * care about the distinction should check the value themselves.
  */
-export function formatPurchaseBeat(seconds: number): string {
+export function formatBeatTime(seconds: number): string {
   if (!Number.isFinite(seconds)) return 'unaffordable';
   if (seconds <= 0) return 'instant';
   if (seconds < 1) {
@@ -78,8 +78,8 @@ export function useFormatting() {
     formatPercent,
     formatX,
     formatPlus,
-    formatGain,
+    formatRate,
     formatPow,
-    formatPurchaseBeat,
+    formatBeatTime,
   };
 }

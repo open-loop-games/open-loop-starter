@@ -3,7 +3,7 @@ import type { EngineModule, SaveLoadResult, Engine } from '@open-loop/engine';
 import { Screen } from '@/types';
 import { useGame } from './useGame';
 
-export interface GameSessionOptions {
+export interface PlaySessionOptions {
   /**
    * Runs after `engine.load()`, before the screen flips to `Game`.
    *
@@ -16,7 +16,7 @@ export interface GameSessionOptions {
   onLoaded?: (result: SaveLoadResult) => void;
 }
 
-export interface GameSession {
+export interface PlaySession {
   engine: Engine;
   /** Slot picker vs in-game. Games drive their own `v-if` off this. */
   currentScreen: Ref<Screen>;
@@ -27,11 +27,11 @@ export interface GameSession {
 }
 
 /**
- * The session lifecycle every game on the engine needs: pick a slot, start,
+ * The play-session lifecycle every game on the engine needs: pick a slot, start,
  * load, play, save and come back. Games supply what differs via `onLoaded`
  * and render whatever they like around `currentScreen`.
  */
-export function useGameSession(options: GameSessionOptions = {}): GameSession {
+export function usePlaySession(options: PlaySessionOptions = {}): PlaySession {
   const { engine } = useGame();
   const currentScreen = ref<Screen>(Screen.Slots);
 

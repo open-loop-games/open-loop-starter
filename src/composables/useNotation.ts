@@ -4,12 +4,12 @@ import { usePlayerPrefs } from './usePlayerPrefs';
 
 /** Curated notation options for the settings picker */
 export const NOTATION_OPTIONS = [
-  { key: 'standard', label: 'Standard (1 k, 1 M, 1 B)' },
-  { key: 'scientific', label: 'Scientific (1e3, 1e6)' },
-  { key: 'engineering', label: 'Engineering (1e3, 10e6)' },
-  { key: 'logarithm', label: 'Logarithm (e15)' },
-  { key: 'letters', label: 'Letters (1a, 1b)' },
-  { key: 'mixed-scientific', label: 'Mixed Scientific' },
+  { id: 'standard', label: 'Standard (1 k, 1 M, 1 B)' },
+  { id: 'scientific', label: 'Scientific (1e3, 1e6)' },
+  { id: 'engineering', label: 'Engineering (1e3, 10e6)' },
+  { id: 'logarithm', label: 'Logarithm (e15)' },
+  { id: 'letters', label: 'Letters (1a, 1b)' },
+  { id: 'mixed-scientific', label: 'Mixed Scientific' },
 ] as const;
 
 let presetsRegistered = false;

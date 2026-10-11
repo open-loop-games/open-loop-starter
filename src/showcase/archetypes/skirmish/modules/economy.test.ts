@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { addResource } from '@open-loop/engine';
-import { bootModules, getEngine, tick, TICK_RATE } from '../sim/harness';
+import { bootModules, getEngine, tick, INTERVAL_RATE } from '../sim/harness';
 import {
   createAutomationTiersModule,
   createAutomationModule,
@@ -76,7 +76,7 @@ async function playFor<T>(seconds: number, read: () => T): Promise<T> {
   const off = match().on('matchEnded', () => {
     atEnd = { value: read() };
   });
-  for (let i = 0; i < seconds * TICK_RATE && match().inMatch.value; i++) await tick();
+  for (let i = 0; i < seconds * INTERVAL_RATE && match().inMatch.value; i++) await tick();
   off();
   return atEnd ? atEnd.value : read();
 }
@@ -91,11 +91,11 @@ describe('skirmish economy — income and the reinvestment channel', () => {
   });
 
   it('accrues income only while a match is live', async () => {
-    await tick(5 * TICK_RATE);
+    await tick(5 * INTERVAL_RATE);
     expect(Number(economy().supply.a.value)).toBe(0);
 
     match().start();
-    await tick(5 * TICK_RATE);
+    await tick(5 * INTERVAL_RATE);
     expect(Number(economy().supply.a.value)).toBeGreaterThan(0);
   });
 
@@ -110,7 +110,7 @@ describe('skirmish economy — income and the reinvestment channel', () => {
 
   it('compounds — more workers means strictly more income per tick', async () => {
     match().start();
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     const baseline = Number(economy().supply.a.value);
 
     // Grant the worker rather than earning it, so the comparison isolates the
@@ -118,7 +118,7 @@ describe('skirmish economy — income and the reinvestment channel', () => {
     addResource(economy().supply.a, ECONOMY_BALANCE.workerCost);
     economy().buyWorker('a');
     const banked = Number(economy().supply.a.value);
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
 
     expect(Number(economy().supply.a.value) - banked).toBeGreaterThan(baseline);
   });
@@ -145,7 +145,7 @@ describe('skirmish economy — income and the reinvestment channel', () => {
 
   it('clears the economy on a fresh match', async () => {
     match().start();
-    await tick(10 * TICK_RATE);
+    await tick(10 * INTERVAL_RATE);
     addResource(economy().supply.a, ECONOMY_BALANCE.workerCost);
     economy().buyWorker('a');
 

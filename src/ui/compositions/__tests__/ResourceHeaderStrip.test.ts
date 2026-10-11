@@ -10,8 +10,8 @@ function readout(
   opts: Partial<{
     value: DecimalSource;
     rate: DecimalSource;
-    cap: DecimalSource;
-    hidden: boolean;
+    capacity: DecimalSource;
+    visible: boolean;
     highlight: ResourceHighlight;
   }> = {},
 ): ResourceReadout {
@@ -20,8 +20,8 @@ function readout(
     label: id.toUpperCase(),
     value: ref<DecimalSource>(opts.value ?? 100),
     rate: opts.rate !== undefined ? ref<DecimalSource>(opts.rate) : undefined,
-    cap: opts.cap !== undefined ? ref<DecimalSource>(opts.cap) : undefined,
-    hidden: opts.hidden !== undefined ? ref(opts.hidden) : undefined,
+    capacity: opts.capacity !== undefined ? ref<DecimalSource>(opts.capacity) : undefined,
+    visible: opts.visible !== undefined ? ref(opts.visible) : undefined,
     highlight: opts.highlight !== undefined ? ref(opts.highlight) : undefined,
   };
 }
@@ -34,9 +34,9 @@ describe('ResourceHeaderStrip', () => {
     expect(wrapper.findAll('[data-readout-id]')).toHaveLength(2);
   });
 
-  it('hidden readouts are filtered out (no placeholder)', () => {
+  it('a readout with visible false is left out (no placeholder)', () => {
     const wrapper = mount(ResourceHeaderStrip, {
-      props: { readouts: [readout('coins'), readout('prestige', { hidden: true })] },
+      props: { readouts: [readout('coins'), readout('prestige', { visible: false })] },
     });
     const ids = wrapper.findAll('[data-readout-id]').map((w) => w.attributes('data-readout-id'));
     expect(ids).toEqual(['coins']);
@@ -62,15 +62,15 @@ describe('ResourceHeaderStrip', () => {
     expect(wrapper.find('[data-readout-id="coins"]').attributes('data-highlight')).toBe('deficit');
   });
 
-  it('cap renders as `value / cap` when present', () => {
+  it('capacity shows as `value / capacity` when present', () => {
     const wrapper = mount(ResourceHeaderStrip, {
-      props: { readouts: [readout('catnip', { value: 73, cap: 200 })] },
+      props: { readouts: [readout('catnip', { value: 73, capacity: 200 })] },
     });
     const text = wrapper.find('[data-readout-id="catnip"] .resource-header-strip__value').text();
     expect(text.replace(/\s+/g, ' ')).toBe('73 / 200');
   });
 
-  it('cap absent → no `/` in the value cell', () => {
+  it('capacity absent → no `/` in the value cell', () => {
     const wrapper = mount(ResourceHeaderStrip, {
       props: { readouts: [readout('science', { value: 412 })] },
     });

@@ -30,7 +30,7 @@ import { createEngine, type Engine, type EngineOptions, type ModDef } from '@ope
 import { sharedBase } from '@/modules';
 import { useSaveEvents } from '@/composables/useSaveEvents';
 
-const DEFAULT_TICK_RATE = 20;
+const DEFAULT_INTERVAL_RATE = 20;
 const DEFAULT_MAX_SAVE_SLOTS = 30;
 
 export interface BootEngineOptions extends Omit<EngineOptions, 'mods'> {
@@ -39,7 +39,7 @@ export interface BootEngineOptions extends Omit<EngineOptions, 'mods'> {
 
 export function bootEngine(options: BootEngineOptions): Engine {
   const {
-    intervalRate = DEFAULT_TICK_RATE,
+    intervalRate = DEFAULT_INTERVAL_RATE,
     maxSaveSlots = DEFAULT_MAX_SAVE_SLOTS,
     mods,
     ...rest

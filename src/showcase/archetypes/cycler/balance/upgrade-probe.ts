@@ -23,7 +23,7 @@ import { DEFENSE_BALANCE } from '../data/defense';
 import { UPGRADE_BALANCE } from '../data/upgrades';
 import { placeReference } from './_board';
 
-const TICK_RATE = 1;
+const INTERVAL_RATE = 1;
 const MAX_TICKS = 400_000;
 
 const g = DEFENSE_BALANCE.salvoBase;
@@ -38,8 +38,8 @@ const HEAD = (s: string): void => console.log(`\n═══ ${s} ═══`);
 function bootStack() {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createCyclerModules()],
-    intervalRate: TICK_RATE,
-    namespacePrefix: 'upgrade-probe',
+    intervalRate: INTERVAL_RATE,
+    persistenceNamespacePrefix: 'upgrade-probe',
   });
   const cycle = handle.engine.tryInject(CycleKey);
   const build = handle.engine.tryInject(BuildKey);

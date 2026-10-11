@@ -47,7 +47,7 @@ export interface ArcSample {
 }
 
 /** 5 ticks per sim-second — coarse enough to be quick, fine enough to steer. */
-export const TICK_RATE = 5;
+export const INTERVAL_RATE = 5;
 /** The authored arc. A seat that survives it ends on `timer`. */
 export const MINUTES = 30;
 
@@ -64,8 +64,8 @@ export const MINUTES = 30;
 export async function runArc(seatId: string, seed: number) {
   const handle = bootTestEngine({
     modules: createSurvivorModules({ seed }),
-    intervalRate: TICK_RATE,
-    namespacePrefix: `survivor-arena-${seatId}-${seed}`,
+    intervalRate: INTERVAL_RATE,
+    persistenceNamespacePrefix: `survivor-arena-${seatId}-${seed}`,
   });
   const arena = handle.engine.tryInject(ArenaKey);
   const run = handle.engine.tryInject(RunKey);
@@ -85,7 +85,7 @@ export async function runArc(seatId: string, seed: number) {
   const series: ArcSample[] = [];
   let prev = { kills: 0, reached: 0, spawned: 0, damageConverted: 0, damageWasted: 0 };
   for (let m = 0; m < MINUTES; m++) {
-    await handle.tick(60 * TICK_RATE);
+    await handle.tick(60 * INTERVAL_RATE);
     const live = arena.state.value;
     if (live.specimens.length > peakSpecimens) {
       peakSpecimens = live.specimens.length;

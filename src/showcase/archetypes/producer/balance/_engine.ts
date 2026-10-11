@@ -123,7 +123,7 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
       automation: { forcePolicy, forceWaitForCost },
     }),
     intervalRate: 1,
-    namespacePrefix:
+    persistenceNamespacePrefix:
       options.namespace ??
       `producer-arc-${forcePolicy ?? 'ladder'}${forceWaitForCost === undefined ? '' : `-wait-${forceWaitForCost}`}`,
   });

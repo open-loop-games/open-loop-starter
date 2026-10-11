@@ -10,7 +10,7 @@ import { ref } from 'vue';
 import { processOfflineTime } from '@open-loop/engine';
 import { DevPanelOverlay } from '@/lib';
 import { Screen } from '@/types';
-import { useGameSession } from '@/composables/useGameSession';
+import { usePlaySession } from '@/composables/usePlaySession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -19,7 +19,7 @@ import { manifest } from '../manifest';
 import { MatchKey } from '../modules';
 import TugGameView from './TugGameView.vue';
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = useGameSession({
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession({
   onLoaded: (result) => {
     // Catch-up advance for offline gap, then auto-start a match if none in
     // progress (skeleton plays-by-default; explicit "Start Match" lives only

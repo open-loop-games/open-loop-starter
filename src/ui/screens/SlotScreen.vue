@@ -16,8 +16,15 @@ const emit = defineEmits<{
 }>();
 
 const mgr = props.engine.saveManager!;
-const { slots, createSlot, deleteSlot, selectSlot, getModName, formatTimestamp, activeSlotId } =
-  useSlots(mgr, props.engine.mods);
+const {
+  slots,
+  createSlot,
+  deleteSlot,
+  selectSlot,
+  getModDisplayName,
+  formatTimestamp,
+  activeSlotId,
+} = useSlots(mgr, props.engine.mods);
 
 const hasMods = props.engine.mods.length > 0;
 
@@ -76,7 +83,7 @@ function handleDeleteSlot(slotId: number) {
           :key="s.id"
           :info="s"
           :active="s.id === activeSlotId"
-          :mod-name="getModName(s.peek?.modId)"
+          :mod-display-name="getModDisplayName(s.peek?.modId)"
           :time-ago="formatTimestamp(s.peek?.timestamp)"
           @load="loadSlot(s.id)"
           @delete="handleDeleteSlot(s.id)"

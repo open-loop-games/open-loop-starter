@@ -22,11 +22,11 @@ import { createProducerModules } from '../modules';
 import { DEFAULT_PRODUCER_DATA } from '../data';
 
 /**
- * Ticks per game-second. `1` because producer's economy is second-valued and
- * its beats are minutes-to-hours — `tick(n)` means n seconds, and sub-second
- * fidelity would only cost cycles.
+ * Intervals per game-second, passed as the engine's `intervalRate`. `1` because
+ * producer's economy is second-valued and its beats are minutes-to-hours —
+ * `tick(n)` means n seconds, and sub-second fidelity would only cost cycles.
  */
-export const TICK_RATE = 1;
+export const INTERVAL_RATE = 1;
 
 let handle: TestEngineHandle;
 
@@ -34,8 +34,8 @@ let handle: TestEngineHandle;
 export function boot(): Engine {
   handle = bootTestEngine({
     modules: [...sharedBase, ...createProducerModules(DEFAULT_PRODUCER_DATA)],
-    namespacePrefix: 'producer-test',
-    intervalRate: TICK_RATE,
+    persistenceNamespacePrefix: 'producer-test',
+    intervalRate: INTERVAL_RATE,
   });
   return handle.engine;
 }
@@ -44,7 +44,7 @@ export function getEngine(): Engine {
   return handle.engine;
 }
 
-/** Advance n ticks (n game-seconds at TICK_RATE 1), flushing reactive effects. */
+/** Advance n ticks (n game-seconds at INTERVAL_RATE 1), flushing reactive effects. */
 export function tick(n = 1): Promise<void> {
   return handle.tick(n);
 }

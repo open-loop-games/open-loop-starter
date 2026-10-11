@@ -23,7 +23,7 @@ import { BUILD_BALANCE } from '../data/build';
 import { DEFENSE_BALANCE } from '../data/defense';
 import { placeReference } from './_board';
 
-const TICK_RATE = 1; // 1 tick = 1 sim-second — coarse, minute-scale wave cadence
+const INTERVAL_RATE = 1; // 1 tick = 1 sim-second — coarse, minute-scale wave cadence
 const MAX_TICKS = 200_000;
 
 const g = DEFENSE_BALANCE.salvoBase;
@@ -49,8 +49,8 @@ async function measureRun(opts: { headroom?: number; powerLevel?: number }): Pro
 }> {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createCyclerModules()],
-    intervalRate: TICK_RATE,
-    namespacePrefix: 'cycle-probe',
+    intervalRate: INTERVAL_RATE,
+    persistenceNamespacePrefix: 'cycle-probe',
   });
   const cycle = handle.engine.tryInject(CycleKey);
   const build = handle.engine.tryInject(BuildKey);

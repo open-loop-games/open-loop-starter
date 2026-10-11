@@ -3,17 +3,17 @@ import type { ComputedRef } from 'vue';
 import { Decimal, type DecimalSource, type ModifierChain } from '@open-loop/engine';
 
 export interface RateBreakdownRow {
-  def: { name: string; baseRate: DecimalSource };
+  def: { displayName: string; baseRate: DecimalSource };
   rate: ComputedRef<DecimalSource>;
   rateChain: ModifierChain;
   count: ComputedRef<DecimalSource>;
-  beatSeconds: ComputedRef<number>;
+  beatTime: ComputedRef<number>;
 }
 
 export interface RateBreakdownView {
   contribution: ComputedRef<Decimal>;
   contributionPct: ComputedRef<number>;
-  beatFinite: ComputedRef<boolean>;
+  beatTimeFinite: ComputedRef<boolean>;
   marginalDelta: ComputedRef<Decimal>;
   marginalPct: ComputedRef<number>;
   pendingPositive: ComputedRef<boolean>;
@@ -22,7 +22,7 @@ export interface RateBreakdownView {
 /**
  * Tooltip-side compute kit shared by every per-producer hover surface.
  * Producer's bakery-themed tooltip and the default RateBreakdownTooltip both
- * use this — keeps contribution / beat / marginal math in one spot so a fix
+ * use this — keeps contribution / beat time / marginal math in one spot so a fix
  * in one place lands everywhere.
  *
  * `pendingCount` defaults to 1 so the marginal projection is always
@@ -42,7 +42,7 @@ export function useRateBreakdown(
     return contribution.value.div(total).toNumber();
   });
 
-  const beatFinite = computed(() => Number.isFinite(row.beatSeconds.value));
+  const beatTimeFinite = computed(() => Number.isFinite(row.beatTime.value));
 
   const marginalDelta = computed(() => Decimal.mul(row.rate.value, pendingCount()));
 
@@ -54,5 +54,12 @@ export function useRateBreakdown(
 
   const pendingPositive = computed(() => Decimal.gt(pendingCount(), 0));
 
-  return { contribution, contributionPct, beatFinite, marginalDelta, marginalPct, pendingPositive };
+  return {
+    contribution,
+    contributionPct,
+    beatTimeFinite,
+    marginalDelta,
+    marginalPct,
+    pendingPositive,
+  };
 }

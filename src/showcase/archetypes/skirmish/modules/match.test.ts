@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { boot, bootModules, getEngine, tick, TICK_RATE } from '../sim/harness';
+import { boot, bootModules, getEngine, tick, INTERVAL_RATE } from '../sim/harness';
 import {
   createTuningModule,
   createMatchModule,
@@ -34,7 +34,7 @@ describe('skirmish match spine', () => {
 
   it('advances the match clock while live', async () => {
     match().start();
-    await tick(TICK_RATE); // one game-second
+    await tick(INTERVAL_RATE); // one game-second
     expect(match().matchTimeElapsed.value).toBeGreaterThan(0.9);
     expect(match().matchTimeElapsed.value).toBeLessThan(1.1);
   });
@@ -44,7 +44,7 @@ describe('skirmish match spine', () => {
     match().on('matchEnded', (p) => (captured = p));
 
     match().start();
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     const elapsedAtEnd = match().matchTimeElapsed.value;
     match().end({ winner: 'a', reason: 'defeat' });
 
@@ -58,7 +58,7 @@ describe('skirmish match spine', () => {
     expect(match().outcome.value).toEqual({ winner: 'a', reason: 'defeat' });
 
     // Clock does not advance once ended.
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     expect(match().matchTimeElapsed.value).toBeCloseTo(elapsedAtEnd, 5);
   });
 
@@ -102,7 +102,7 @@ describe('skirmish match spine', () => {
     match().on('matchEnded', (p) => (endedPayload = p));
 
     match().start();
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     match().eliminate('crimson');
 
     expect(match().inMatch.value).toBe(true);
@@ -114,7 +114,7 @@ describe('skirmish match spine', () => {
       'crimson',
     );
 
-    await tick(TICK_RATE);
+    await tick(INTERVAL_RATE);
     match().eliminate('azure');
 
     expect(match().inMatch.value).toBe(false);

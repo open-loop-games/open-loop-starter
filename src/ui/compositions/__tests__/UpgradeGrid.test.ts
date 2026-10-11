@@ -7,7 +7,7 @@ import type { UpgradeCellData } from '../UpgradeGrid';
 
 function makeCell(
   id: string,
-  opts: Partial<{ owned: boolean; canBuy: boolean; position: number }> = {},
+  opts: Partial<{ owned: boolean; canPurchase: boolean; position: number }> = {},
 ): UpgradeCellData {
   return {
     id,
@@ -15,9 +15,9 @@ function makeCell(
     description: `desc ${id}`,
     cost: ref<DecimalSource>(50),
     costLabel: 'coins',
-    canBuy: ref(opts.canBuy ?? true),
+    canPurchase: ref(opts.canPurchase ?? true),
     owned: ref(opts.owned ?? false),
-    buy: vi.fn(),
+    purchase: vi.fn(),
     position: opts.position,
     formula: () => `2 * ${id}`,
   };
@@ -64,19 +64,19 @@ describe('UpgradeGrid', () => {
     expect(wrapper.find('.olui-tooltip__content').exists()).toBe(false);
   });
 
-  it('canBuy gates the buy button disabled state; click invokes cell.buy', async () => {
-    const cell = makeCell('a', { canBuy: false });
+  it('canPurchase blocks the purchase button while false; click invokes cell.purchase', async () => {
+    const cell = makeCell('a', { canPurchase: false });
     const wrapper = mount(UpgradeGrid, {
       props: { cells: [cell], reveal: 'inline' },
     });
-    expect(wrapper.find('[data-testid="buy-a"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('[data-testid="purchase-a"]').attributes('disabled')).toBeDefined();
 
-    const cell2 = makeCell('b', { canBuy: true });
+    const cell2 = makeCell('b', { canPurchase: true });
     const wrapper2 = mount(UpgradeGrid, {
       props: { cells: [cell2], reveal: 'inline' },
     });
-    await wrapper2.find('[data-testid="buy-b"]').trigger('pointerdown');
-    expect(cell2.buy).toHaveBeenCalledTimes(1);
+    await wrapper2.find('[data-testid="purchase-b"]').trigger('pointerdown');
+    expect(cell2.purchase).toHaveBeenCalledTimes(1);
   });
 
   it('showFormula reveals cell.formula() output', () => {
