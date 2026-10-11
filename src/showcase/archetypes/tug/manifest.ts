@@ -2,7 +2,7 @@ import type { ArchetypeManifest } from '@/types';
 
 export const manifest: ArchetypeManifest = {
   id: 'tug',
-  name: 'Tug — SciFi Armada',
+  displayName: 'Tug — SciFi Armada',
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'chain.bind', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },

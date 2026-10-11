@@ -11,7 +11,7 @@ vi.mock('@/composables/useBulkMode', () => {
       setMode: (n: number | 'max') => {
         mode.value = n;
       },
-      resolveAmount: (max: DecimalSource) => max,
+      resolveCount: (max: DecimalSource) => max,
     }),
   };
 });
@@ -26,10 +26,10 @@ function makeRow(
   const buy = vi.fn();
   return {
     id,
-    name: `Row ${id}`,
+    displayName: `Row ${id}`,
     count: ref<DecimalSource>(7),
     displayRate: ref<DecimalSource>(1.5),
-    cost: (amount) => Decimal.mul(amount, 10),
+    cost: (count) => Decimal.mul(count, 10),
     canBuy: () => opts.canBuy ?? true,
     maxAffordable: ref<DecimalSource>(3),
     buy,
@@ -67,19 +67,19 @@ describe('ProducerList', () => {
     expect(withNone.find('.olui-bulk-mode').exists()).toBe(false);
   });
 
-  it('clicking the buy button calls row.buy with the resolved amount', async () => {
+  it('clicking the buy button calls row.buy with the resolved count', async () => {
     const row = makeRow('a');
     const wrapper = mount(ProducerList, {
       props: { rows: [row], costLabel: 'c', bulkModeSource: 'none' },
     });
     await wrapper.find('[data-testid="buy-a"]').trigger('pointerdown');
-    // bulkModeSource='none' resolves to 1; row.buy invoked with that amount.
+    // bulkModeSource='none' resolves to 1; row.buy invoked with that count.
     const buyMock = row.buy as ReturnType<typeof vi.fn>;
     expect(buyMock).toHaveBeenCalledTimes(1);
     expect(Decimal.eq(buyMock.mock.calls[0][0] as DecimalSource, 1)).toBe(true);
   });
 
-  it('canBuy(amount) gates the buy button disabled state', () => {
+  it('canBuy(count) gates the buy button disabled state', () => {
     const row = makeRow('a', { canBuy: false });
     const wrapper = mount(ProducerList, {
       props: { rows: [row], costLabel: 'c', bulkModeSource: 'none' },

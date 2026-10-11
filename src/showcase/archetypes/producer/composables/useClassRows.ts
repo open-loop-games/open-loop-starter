@@ -57,17 +57,16 @@ export function useClassRows(): ClassLadderView {
 
       return {
         id: entry.def.id,
-        name: entry.def.name,
+        displayName: entry.def.name,
         count: producer.ownedCount,
         displayRate: computed(() =>
           Decimal.mul(producer.computedRate.value, producer.ownedCount.value),
         ),
-        cost: (amount) => repeatable.getCost(amount),
-        canBuy: (amount) =>
-          repeatable.canPurchase.value && Decimal.gte(maxAffordable.value, amount),
+        cost: (count) => repeatable.getCost(count),
+        canBuy: (count) => repeatable.canPurchase.value && Decimal.gte(maxAffordable.value, count),
         maxAffordable,
-        buy: (amount) => {
-          repeatable.purchase(amount);
+        buy: (count) => {
+          repeatable.purchase(count);
         },
         // Reveal is one-way: a class stays listed once owned, even if the
         // fleet later dips below its threshold. Nothing removes probes today,

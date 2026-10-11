@@ -51,8 +51,8 @@ export interface ExemplarRef {
 export interface ArchetypeManifest {
   /** Stable id; matches the directory name and the engine save-namespace. */
   id: string;
-  /** Display name forwarded as `appName` to SlotScreen. Costume-level. */
-  name: string;
+  /** Forwarded as `appName` to SlotScreen. Costume-level. */
+  displayName: string;
   /** Engine primitives the archetype uses. */
   primitives: PrimitiveRef[];
   beats: BeatRef[];

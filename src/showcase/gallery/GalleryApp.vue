@@ -103,7 +103,7 @@ function flipTab(): void {
 
       <div v-if="entered" class="gallery-header__entered">
         <Button class="btn-sm" type="button" @click="exitArchetype"> ← Back </Button>
-        <span class="gallery-header__entered-name">{{ entered.manifest.name }}</span>
+        <span class="gallery-header__entered-name">{{ entered.manifest.displayName }}</span>
         <Button class="btn-sm" type="button" @click="flipTab">
           {{ enteredTab === 'details' ? 'Live demo →' : '← Details' }}
         </Button>
@@ -132,7 +132,7 @@ function flipTab(): void {
                 :value="a.manifest.id"
                 class="gallery-sidebar__item"
               >
-                {{ a.manifest.name }}
+                {{ a.manifest.displayName }}
               </ListboxItem>
             </ListboxContent>
           </ListboxRoot>
@@ -153,7 +153,7 @@ function flipTab(): void {
               type="button"
               @click="enteredTab = 'demo'"
             >
-              ▶ Try {{ entered.manifest.name }} live
+              ▶ Try {{ entered.manifest.displayName }} live
             </Button>
             <span class="gallery-entered__cta-hint">
               Mounts the {{ entered.manifest.id }} engine in an isolated sandbox.

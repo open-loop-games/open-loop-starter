@@ -8,7 +8,7 @@ import type { ArchetypeManifest } from '@/types';
  */
 export const manifest: ArchetypeManifest = {
   id: 'skirmish',
-  name: 'Skirmish',
+  displayName: 'Skirmish',
   primitives: [],
   beats: [],
   shell: 'SingleColumnShell',

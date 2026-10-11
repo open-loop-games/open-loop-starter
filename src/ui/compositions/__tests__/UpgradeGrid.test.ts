@@ -11,7 +11,7 @@ function makeCell(
 ): UpgradeCellData {
   return {
     id,
-    name: `Cell ${id}`,
+    displayName: `Cell ${id}`,
     description: `desc ${id}`,
     cost: ref<DecimalSource>(50),
     costLabel: 'coins',

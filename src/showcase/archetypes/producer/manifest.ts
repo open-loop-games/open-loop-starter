@@ -11,7 +11,7 @@ import type { ArchetypeManifest } from '@/types';
  */
 export const manifest: ArchetypeManifest = {
   id: 'producer',
-  name: 'Producer — Probe Swarm',
+  displayName: 'Producer — Probe Swarm',
   primitives: [
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {

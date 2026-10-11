@@ -48,7 +48,7 @@ defineSlots<{
   header?: () => unknown;
   row?: (props: {
     row: ProducerRowData<T>;
-    pendingAmount: DecimalSource;
+    pendingCount: DecimalSource;
     pendingCost: DecimalSource;
     buyLabel: string;
     buy: () => void;
@@ -57,9 +57,9 @@ defineSlots<{
 
 const globalBulk = useBulkMode();
 
-function resolveAmount(maxAffordable: DecimalSource): DecimalSource {
+function resolveCount(maxAffordable: DecimalSource): DecimalSource {
   if (props.bulkModeSource === 'none') return 1;
-  return globalBulk.resolveAmount(maxAffordable);
+  return globalBulk.resolveCount(maxAffordable);
 }
 
 const visibleRows = computed(() => props.rows.filter((r) => r.unlocked?.value ?? true));
@@ -68,16 +68,16 @@ function rowState(row: ProducerRowData<T>) {
   // Floor at 1. `maxAffordable` is 0 when the player cannot afford a single
   // unit, and quoting `cost(0)` renders the price as 0 — the row would hide
   // what it costs exactly when the player is saving up for it. One is also the
-  // amount a click would buy if it could, so `canBuy`/`buy` stay honest: both
-  // are asked about the amount actually shown.
-  const pendingAmount = Decimal.max(1, resolveAmount(row.maxAffordable.value));
-  const pendingCost = row.cost(pendingAmount);
-  const buyLabel = `Buy ${formatWhole(pendingAmount)} — ${format(pendingCost, 0)} ${props.costLabel}`;
-  const canBuy = row.canBuy(pendingAmount);
+  // count a click would buy if it could, so `canBuy`/`buy` stay honest: both
+  // are asked about the count actually shown.
+  const pendingCount = Decimal.max(1, resolveCount(row.maxAffordable.value));
+  const pendingCost = row.cost(pendingCount);
+  const buyLabel = `Buy ${formatWhole(pendingCount)} — ${format(pendingCost, 0)} ${props.costLabel}`;
+  const canBuy = row.canBuy(pendingCount);
   const buy = () => {
-    if (canBuy) row.buy(pendingAmount);
+    if (canBuy) row.buy(pendingCount);
   };
-  return { pendingAmount, pendingCost, buyLabel, canBuy, buy };
+  return { pendingCount, pendingCost, buyLabel, canBuy, buy };
 }
 </script>
 
@@ -94,7 +94,7 @@ function rowState(row: ProducerRowData<T>) {
           <slot
             name="row"
             :row="row"
-            :pending-amount="rowState(row).pendingAmount"
+            :pending-count="rowState(row).pendingCount"
             :pending-cost="rowState(row).pendingCost"
             :buy-label="rowState(row).buyLabel"
             :buy="rowState(row).buy"
@@ -103,7 +103,7 @@ function rowState(row: ProducerRowData<T>) {
         <template v-else>
           <div class="producer-list__row-body">
             <div class="producer-list__row-head">
-              <strong class="producer-list__row-name">{{ row.name }}</strong>
+              <strong class="producer-list__row-name">{{ row.displayName }}</strong>
               <span class="producer-list__row-owned">owned: {{ format(row.count.value, 0) }}</span>
               <span class="producer-list__row-rate">+{{ format(row.displayRate.value, 2) }}/s</span>
             </div>
@@ -116,7 +116,7 @@ function rowState(row: ProducerRowData<T>) {
                 {{ rowState(row).buyLabel }}
               </Button>
               <template #content>
-                {{ row.name }} — {{ format(row.displayRate.value, 2) }}/s
+                {{ row.displayName }} — {{ format(row.displayRate.value, 2) }}/s
               </template>
             </Tooltip>
             <Button

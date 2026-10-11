@@ -18,10 +18,10 @@ const stack = useModalStack();
 <template>
   <AppFrame :stack="stack" :tooltip-delay="400">
     <template #header>
-      <SystemHeader :app-name="manifest.name" @return-to-slots="emit('return')">
+      <SystemHeader :app-name="manifest.displayName" @return-to-slots="emit('return')">
         <template #about>
           <h4 style="margin-bottom: 6px">
-            {{ manifest.name }}
+            {{ manifest.displayName }}
           </h4>
           <p>
             Continuous tactical RTS — bot vs bot of built-in AI on a pixi/webgl field. Both sides

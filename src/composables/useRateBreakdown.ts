@@ -25,14 +25,14 @@ export interface RateBreakdownView {
  * use this — keeps contribution / beat / marginal math in one spot so a fix
  * in one place lands everywhere.
  *
- * `pendingAmount` defaults to 1 so the marginal projection is always
+ * `pendingCount` defaults to 1 so the marginal projection is always
  * meaningful for "next purchase"-style callers; pass a bulk-aware getter
  * (e.g. `() => row.maxAffordable.value`) when bulk-buy mode is active.
  */
 export function useRateBreakdown(
   row: RateBreakdownRow,
   totalRate: () => DecimalSource,
-  pendingAmount: () => DecimalSource = () => 1,
+  pendingCount: () => DecimalSource = () => 1,
 ): RateBreakdownView {
   const contribution = computed(() => Decimal.mul(row.rate.value, row.count.value));
 
@@ -44,7 +44,7 @@ export function useRateBreakdown(
 
   const beatFinite = computed(() => Number.isFinite(row.beatSeconds.value));
 
-  const marginalDelta = computed(() => Decimal.mul(row.rate.value, pendingAmount()));
+  const marginalDelta = computed(() => Decimal.mul(row.rate.value, pendingCount()));
 
   const marginalPct = computed(() => {
     const total = Decimal.fromValue(totalRate());
@@ -52,7 +52,7 @@ export function useRateBreakdown(
     return marginalDelta.value.div(total).toNumber();
   });
 
-  const pendingPositive = computed(() => Decimal.gt(pendingAmount(), 0));
+  const pendingPositive = computed(() => Decimal.gt(pendingCount(), 0));
 
   return { contribution, contributionPct, beatFinite, marginalDelta, marginalPct, pendingPositive };
 }

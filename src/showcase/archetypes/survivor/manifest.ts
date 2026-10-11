@@ -10,7 +10,7 @@ import type { ArchetypeManifest } from '@/types';
  */
 export const manifest: ArchetypeManifest = {
   id: 'survivor',
-  name: 'Survivor',
+  displayName: 'Survivor',
   primitives: [
     { name: 'createSpatialGrid', layer: 'core', path: 'open-loop-engine/src/core/spatial/grid.ts' },
     {

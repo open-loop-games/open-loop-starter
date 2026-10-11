@@ -34,7 +34,7 @@ const showDevPanel = ref(false);
   <SlotScreen
     v-if="currentScreen === Screen.Slots"
     :engine="engine"
-    :app-name="manifest.name"
+    :app-name="manifest.displayName"
     @start="startGame"
   />
   <SkirmishGameView v-else @return="returnToSlots" />

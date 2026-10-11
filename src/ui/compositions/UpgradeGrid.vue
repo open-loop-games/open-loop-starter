@@ -72,7 +72,7 @@ function describe(cell: UpgradeCellData<T>): string {
         <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
           <div class="upgrade-grid__cell-head">
             <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
-            <strong>{{ cell.name }}</strong>
+            <strong>{{ cell.displayName }}</strong>
           </div>
           <div class="upgrade-grid__cell-action">
             <span
@@ -109,7 +109,7 @@ function describe(cell: UpgradeCellData<T>): string {
           <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
             <div class="upgrade-grid__cell-head">
               <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
-              <strong>{{ cell.name }}</strong>
+              <strong>{{ cell.displayName }}</strong>
             </div>
           </div>
         </template>
@@ -144,7 +144,7 @@ function describe(cell: UpgradeCellData<T>): string {
         <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
           <div class="upgrade-grid__cell-head">
             <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
-            <strong>{{ cell.name }}</strong>
+            <strong>{{ cell.displayName }}</strong>
           </div>
           <p class="upgrade-grid__cell-desc">
             {{ describe(cell) }}

@@ -31,15 +31,15 @@ const showDevPanel = ref(false);
   <SlotScreen
     v-if="currentScreen === Screen.Slots"
     :engine="engine"
-    :app-name="manifest.name"
+    :app-name="manifest.displayName"
     @start="startGame"
   />
   <AppFrame v-else :stack="stack" :tooltip-delay="400">
     <template #header>
-      <SystemHeader :app-name="manifest.name" @return-to-slots="returnToSlots">
+      <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
         <template #about>
           <h4 style="margin-bottom: 6px">
-            {{ manifest.name }}
+            {{ manifest.displayName }}
           </h4>
           <p>
             A blank game on the scaffold. Add modules under

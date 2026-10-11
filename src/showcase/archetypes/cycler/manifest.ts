@@ -16,7 +16,7 @@ import type { ArchetypeManifest } from '@/types';
  */
 export const manifest: ArchetypeManifest = {
   id: 'cycler',
-  name: 'Cycler — Defense Command',
+  displayName: 'Cycler — Defense Command',
   primitives: [
     { name: 'persistent', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createResource', layer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },

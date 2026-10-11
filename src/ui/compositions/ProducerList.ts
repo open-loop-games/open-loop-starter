@@ -3,16 +3,16 @@ import type { DecimalSource } from '@open-loop/engine';
 
 export interface ProducerRowData<T = never> {
   id: string;
-  name: string;
+  displayName: string;
   count: Ref<DecimalSource>;
   /** What renders under "/s" on the row — typically total, not per-instance. */
   displayRate: Ref<DecimalSource>;
-  /** Cost is parametric on amount because producers are repeatable. */
-  cost: (amount: DecimalSource) => DecimalSource;
+  /** Cost is parametric on count because producers are repeatable. */
+  cost: (count: DecimalSource) => DecimalSource;
   /** Parametric for the same reason; e.g. canBuy(10) vs canBuy(1). */
-  canBuy: (amount: DecimalSource) => boolean;
+  canBuy: (count: DecimalSource) => boolean;
   maxAffordable: Ref<DecimalSource>;
-  buy: (amount: DecimalSource) => void;
+  buy: (count: DecimalSource) => void;
   unlocked?: Ref<boolean>;
   /**
    * Typed per-row payload forwarded to the `#row` slot. Together with the slot,

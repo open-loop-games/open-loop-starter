@@ -78,17 +78,17 @@ const TYPES_TS = `export enum Screen {
  *  the engine save-namespace. */
 export interface GameManifest {
   id: string;
-  name: string;
+  displayName: string;
 }
 `;
 
 /** Identity-only manifest for the hoisted src/game — the gallery arrays
  *  (primitives/beats/exemplars/shell) are dropped on eject. */
-function gameManifest(id, name) {
+function gameManifest(id, displayName) {
   const esc = (s) => s.replace(/'/g, "\\'");
   return `import type { GameManifest } from '@/types';
 
-export const manifest: GameManifest = { id: '${esc(id)}', name: '${esc(name)}' };
+export const manifest: GameManifest = { id: '${esc(id)}', displayName: '${esc(displayName)}' };
 `;
 }
 
@@ -144,17 +144,17 @@ function parseArgs(argv) {
 // composition with no fitting archetype (no archetype content to strip by hand).
 const CLEAN_ARCHETYPE = '_blank';
 
-/** Read the top-level `id`/`name` string literals from an archetype's manifest,
+/** Read the top-level `id`/`displayName` string literals from an archetype's manifest,
  *  falling back to the directory name if the manifest can't be parsed. */
 function readManifestIdentity(root, archetype) {
   const p = join(root, ARCHETYPES, archetype, 'manifest.ts');
   if (existsSync(p)) {
     const src = readFileSync(p, 'utf8');
     const id = src.match(/\bid:\s*'([^']*)'/)?.[1];
-    const name = src.match(/\bname:\s*'([^']*)'/)?.[1];
-    if (id && name) return { id, name };
+    const displayName = src.match(/\bdisplayName:\s*'([^']*)'/)?.[1];
+    if (id && displayName) return { id, displayName };
   }
-  return { id: archetype, name: archetype };
+  return { id: archetype, displayName: archetype };
 }
 
 /** Compute the eject plan without touching disk. Pure given the root tree. */
@@ -168,8 +168,8 @@ function planEject(root, archetype, name) {
   }
   const gameId = name ? slug(name) : undefined;
   // Post-eject the game keeps only identity: --name wins, else the source
-  // manifest's own id/name, else the directory name.
-  const manifest = name ? { id: slug(name), name } : readManifestIdentity(root, archetype);
+  // manifest's own id/displayName, else the directory name.
+  const manifest = name ? { id: slug(name), displayName: name } : readManifestIdentity(root, archetype);
   return {
     archetype,
     manifest,
@@ -244,8 +244,8 @@ function applyPlan(root, plan) {
   // contract from types.ts, reduce the hoisted manifest to identity, and stub
   // the README. Wholesale writes (same pattern as main.ts) — never munging.
   writeFileSync(join(root, 'src/types.ts'), TYPES_TS);
-  writeFileSync(join(root, GAME_DIR, 'manifest.ts'), gameManifest(plan.manifest.id, plan.manifest.name));
-  writeFileSync(join(root, 'README.md'), readmeMd(plan.manifest.name));
+  writeFileSync(join(root, GAME_DIR, 'manifest.ts'), gameManifest(plan.manifest.id, plan.manifest.displayName));
+  writeFileSync(join(root, 'README.md'), readmeMd(plan.manifest.displayName));
 
   // 5. Apply the game name to package.json + the hoisted boot's GAME_ID.
   if (plan.packageName) {

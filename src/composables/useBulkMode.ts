@@ -15,7 +15,7 @@ export interface BulkModeApi {
    * - numeric N → `min(N, affordable)` (AD-style "up to N" fallback, so
    *   the button stays live when the player can only afford part of the tier).
    */
-  resolveAmount: (maxAffordable: DecimalSource) => DecimalSource;
+  resolveCount: (maxAffordable: DecimalSource) => DecimalSource;
 }
 
 export function useBulkMode(): BulkModeApi {
@@ -33,7 +33,7 @@ export function useBulkMode(): BulkModeApi {
     setMode: (next) => {
       mode.value = next;
     },
-    resolveAmount: (maxAffordable) => {
+    resolveCount: (maxAffordable) => {
       const mx = Decimal.fromValue(maxAffordable);
       if (mode.value === 'max') return mx;
       return Decimal.gte(mx, mode.value) ? mode.value : mx;

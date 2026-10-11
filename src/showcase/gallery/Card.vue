@@ -28,7 +28,7 @@ const previewLine = computed(() => archetypePitch(props.manifest.id));
   <Button class="card" type="button" @click="$emit('enter')">
     <header class="card__header">
       <h3 class="card__title">
-        {{ manifest.name }}
+        {{ manifest.displayName }}
       </h3>
     </header>
     <p class="card__pitch">

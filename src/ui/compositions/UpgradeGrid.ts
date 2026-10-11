@@ -3,14 +3,14 @@ import type { DecimalSource } from '@open-loop/engine';
 
 export interface UpgradeCellData<T = never> {
   id: string;
-  name: string;
+  displayName: string;
   description: string | (() => string);
   cost: Ref<DecimalSource>;
   costLabel: string;
   /** One-shot — non-parametric. Producers use the row-shape's parametric form. */
   canBuy: Ref<boolean>;
   owned: Ref<boolean>;
-  level?: Ref<DecimalSource>;
+  count?: Ref<DecimalSource>;
   formula?: () => string;
   buy: () => void;
   position?: number;

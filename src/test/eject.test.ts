@@ -36,12 +36,12 @@ describe('eject plan', () => {
 
   it('slims the manifest to identity — --name wins', () => {
     const plan = planEject(ROOT, 'cycler', 'Cookie Tycoon');
-    expect(plan.manifest).toEqual({ id: 'cookie-tycoon', name: 'Cookie Tycoon' });
+    expect(plan.manifest).toEqual({ id: 'cookie-tycoon', displayName: 'Cookie Tycoon' });
   });
 
   it('slims the manifest to identity — falls back to the source manifest', () => {
     const plan = planEject(ROOT, 'cycler');
-    expect(plan.manifest).toEqual({ id: 'cycler', name: 'Cycler — Defense Command' });
+    expect(plan.manifest).toEqual({ id: 'cycler', displayName: 'Cycler — Defense Command' });
   });
 
   it('omits the game name when none is given', () => {
@@ -55,7 +55,7 @@ describe('eject plan', () => {
     // the resolved name. This also transitively locks that _blank exists.
     const plan = planEject(ROOT, '_blank');
     expect(plan.move).toEqual({ from: 'src/showcase/archetypes/_blank', to: 'src/game' });
-    expect(plan.manifest).toEqual({ id: 'game', name: 'Game' });
+    expect(plan.manifest).toEqual({ id: 'game', displayName: 'Game' });
   });
 
   it('rejects an unknown archetype', () => {

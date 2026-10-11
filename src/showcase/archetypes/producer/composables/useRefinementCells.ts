@@ -40,7 +40,7 @@ export function useRefinementCells(): RefinementsView {
       .filter((entry) => entry.purchasable.visible.value && !entry.purchasable.active.value)
       .map((entry) => ({
         id: entry.def.id,
-        name: entry.def.name,
+        displayName: entry.def.name,
         description: entry.def.description,
         cost: computed(() => entry.def.cost),
         costLabel: 'mass',

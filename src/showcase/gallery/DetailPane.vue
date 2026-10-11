@@ -21,7 +21,7 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
 <template>
   <div class="detail">
     <header class="detail__header">
-      <h2>{{ manifest.name }}</h2>
+      <h2>{{ manifest.displayName }}</h2>
     </header>
 
     <section v-if="overview" class="detail__section">

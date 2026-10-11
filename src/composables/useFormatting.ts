@@ -15,36 +15,36 @@ function isFinite(n: DecimalSource): boolean {
 }
 
 /** 0.05 → "5%". Pass `signed: true` for "+5%" / "-5%". */
-export function formatPercent(value: DecimalSource, precision = 1, signed = false): string {
+export function formatPercent(value: DecimalSource, decimals = 1, signed = false): string {
   if (!isFinite(value)) return INFINITY_LABEL;
   const pct = Decimal.times(value, 100);
-  const body = format(pct, precision);
+  const body = format(pct, decimals);
   if (signed && Decimal.gte(pct, 0)) return `+${body}%`;
   return `${body}%`;
 }
 
 /** 1.05 → "×1.05". Use for multiplicative modifiers. */
-export function formatX(value: DecimalSource, precision = 2): string {
+export function formatX(value: DecimalSource, decimals = 2): string {
   if (!isFinite(value)) return `×${INFINITY_LABEL}`;
-  return `×${format(value, precision)}`;
+  return `×${format(value, decimals)}`;
 }
 
 /** Signed absolute: 5 → "+5", -3 → "-3". Useful for deltas. */
-export function formatPlus(value: DecimalSource, precision = 2): string {
+export function formatPlus(value: DecimalSource, decimals = 2): string {
   if (!isFinite(value)) return Decimal.gte(value, 0) ? `+${INFINITY_LABEL}` : `-${INFINITY_LABEL}`;
-  const body = format(value, precision);
+  const body = format(value, decimals);
   return Decimal.gte(value, 0) ? `+${body}` : body;
 }
 
 /** Rate with per-unit suffix: 5 → "+5/s". Default unit is "s". */
-export function formatGain(value: DecimalSource, unit = 's', precision = 2): string {
-  return `${formatPlus(value, precision)}/${unit}`;
+export function formatGain(value: DecimalSource, unit = 's', decimals = 2): string {
+  return `${formatPlus(value, decimals)}/${unit}`;
 }
 
 /** Exponent notation: 2 → "^2". */
-export function formatPow(exponent: DecimalSource, precision = 2): string {
+export function formatPow(exponent: DecimalSource, decimals = 2): string {
   if (!isFinite(exponent)) return `^${INFINITY_LABEL}`;
-  return `^${format(exponent, precision)}`;
+  return `^${format(exponent, decimals)}`;
 }
 
 /**

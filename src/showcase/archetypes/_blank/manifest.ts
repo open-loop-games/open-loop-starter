@@ -8,7 +8,7 @@ import type { ArchetypeManifest } from '@/types';
  */
 export const manifest: ArchetypeManifest = {
   id: 'game',
-  name: 'Game',
+  displayName: 'Game',
   primitives: [],
   beats: [],
   shell: 'SingleColumnShell',

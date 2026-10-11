@@ -54,12 +54,12 @@ const costLabel = computed(() => 'mass');
     bulk-mode-source="global"
     density="row"
   >
-    <template #row="{ row, pendingAmount, pendingCost, buy }">
+    <template #row="{ row, pendingCount, pendingCost, buy }">
       <RichTooltip side="right" :side-offset="10">
-        <div class="ladder__row" :data-afford="row.canBuy(pendingAmount)">
+        <div class="ladder__row" :data-afford="row.canBuy(pendingCount)">
           <span class="ladder__tier">{{ extraOf(row).tier }}</span>
           <span class="ladder__id">
-            <span class="ladder__name">{{ row.name }}</span>
+            <span class="ladder__name">{{ row.displayName }}</span>
             <span class="ladder__desc">{{ extraOf(row).def.description }}</span>
           </span>
           <span class="ladder__owned">{{ formatWhole(row.count.value) }}</span>
@@ -67,7 +67,7 @@ const costLabel = computed(() => 'mass');
             {{ Decimal.gt(row.count.value, 0) ? `+${format(row.displayRate.value, 2)}/s` : '—' }}
           </span>
           <Button
-            :disabled="!row.canBuy(pendingAmount)"
+            :disabled="!row.canBuy(pendingCount)"
             :data-testid="`buy-${row.id}`"
             @click="buy()"
           >
@@ -77,7 +77,7 @@ const costLabel = computed(() => 'mass');
 
         <template #content>
           <ChainBreakdown
-            :title="`${row.name} — output per unit`"
+            :title="`${row.displayName} — output per unit`"
             :modifier="extraOf(row).producer.rateChain"
             :base="extraOf(row).def.baseRate"
             base-text="Base rate"

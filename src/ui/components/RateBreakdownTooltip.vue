@@ -24,8 +24,8 @@ const props = withDefaults(
     row: RateBreakdownRow;
     /** Total rate across the same resource — denominator for contribution %. */
     totalRate: DecimalSource;
-    /** Quantity the marginal projection should reflect. Default 1. */
-    pendingAmount?: DecimalSource;
+    /** Count the marginal projection should reflect. Default 1. */
+    pendingCount?: DecimalSource;
     /** Suffix appended to rate displays. Default `' /sec'`. */
     unit?: string;
     /** RichTooltip side preference. Default `'right'`. */
@@ -33,12 +33,12 @@ const props = withDefaults(
     /** Title for the chain-breakdown block. Default `'Rate each'`. */
     breakdownTitle?: string;
     /** Render the marginal "next purchase" row. Default `true` when
-     *  pendingAmount > 0. Pass `false` for displays that only show
+     *  pendingCount > 0. Pass `false` for displays that only show
      *  current-state contribution. */
     showMarginal?: boolean;
   }>(),
   {
-    pendingAmount: 1,
+    pendingCount: 1,
     unit: ' /sec',
     side: 'right',
     breakdownTitle: 'Rate each',
@@ -49,7 +49,7 @@ const props = withDefaults(
 const view = useRateBreakdown(
   props.row,
   () => props.totalRate,
-  () => props.pendingAmount,
+  () => props.pendingCount,
 );
 
 const { format, formatPercent, formatPurchaseBeat, formatPlus } = useFormatting();
