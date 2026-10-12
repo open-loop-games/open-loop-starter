@@ -6,7 +6,6 @@
  * Stubs out the archetype boots — the wrapper protocol is the unit under
  * test, not any real archetype.
  */
-/* eslint-disable vue/one-component-per-file -- fake archetype roots are test fixtures, not production components */
 import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { defineComponent, h, nextTick, ref } from 'vue';

@@ -9,7 +9,7 @@ This half is the demo and research surface: archetypes, gallery, about and sandb
 - A story that hand-rolls what a battery provides is a **story** defect, because it teaches the next fork to hand-roll.
 - A story that must work around a battery to say what it means is a **battery** defect. The stories are the generality test. A documented bypass at the call site is that test reporting a failure.
 
-The scaffold never imports across the boundary. An eslint rule enforces the one-way cut, so the ejected game cannot break; `eslint.config.js` lists the covered paths. The `_blank` skeleton is under the boundary too. It is an underscore-prefixed authoring surface, and the gallery and the archetype list both filter it out.
+The scaffold never imports across the boundary. An oxlint rule enforces the one-way cut, so the ejected game cannot break; `oxlint.config.ts` lists the covered paths. The `_blank` skeleton is under the boundary too. It is an underscore-prefixed authoring surface, and the gallery and the archetype list both filter it out.
 
 ## Archetype demos (`src/showcase/archetypes/<name>/`)
 
@@ -71,7 +71,7 @@ Each archetype's `ui/` follows the root-vs-game-view split in `.claude/rules/app
 - stubs the README;
 - deletes the entire demo and research surface: `src/showcase/` and the repo-root demo docs;
 - deletes the Claude-only `.claude/rules/`, whose paths only ever matched the showcase tree;
-- deletes **eject's own machinery**: `scripts/eject.mjs`, `src/test/eject.test.ts`, the `eject` script and the `@/showcase` eslint guard.
+- deletes **eject's own machinery**: `scripts/eject.mjs`, `src/test/eject.test.ts`, the `eject` script and the `@/showcase` oxlint guard.
 
 The fork starts clean, green and correctly named. Eject is **dry-run by default**: it prints the plan and touches nothing. Pass `--execute` to perform it. The implementation is `scripts/eject.mjs`, and `src/test/eject.test.ts` locks it.
 

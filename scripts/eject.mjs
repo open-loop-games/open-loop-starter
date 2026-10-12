@@ -112,7 +112,7 @@ pnpm dev        # Vite dev server
 pnpm build      # vue-tsc -b && vite build
 pnpm typecheck  # vue-tsc -b
 pnpm test       # Vitest run
-pnpm lint       # eslint src/
+pnpm lint       # oxlint src/
 pnpm domain-map # regenerate src/game/domain-map.md from data types
 \`\`\`
 
@@ -208,19 +208,19 @@ function applyPlan(root, plan) {
   // 2. Single-archetype main.ts.
   writeFileSync(join(root, plan.rewriteMain), MAIN_TS);
 
-  // 3. Repoint + prune config. eslint/tsconfig/package reference archetype paths.
-  for (const rel of ['eslint.config.js', 'tsconfig.app.json', 'package.json']) {
+  // 3. Repoint + prune config. oxlint/tsconfig/package reference archetype paths.
+  for (const rel of ['oxlint.config.ts', 'tsconfig.app.json', 'package.json']) {
     editFile(join(root, rel), (src) => {
       let out = src
         .split(plan.repoint.from)
         .join(plan.repoint.to)
         .split(plan.domainMap.from)
         .join(plan.domainMap.to);
-      // eslint.config.js carries demo-only rule blocks (the showcase-boundary
-      // guard, the Synergism-snapshot ignores) that are brace-balanced JS a
+      // oxlint.config.ts carries demo-only rule blocks (the showcase-boundary
+      // guard) that are brace-balanced JS a
       // line-filter can't safely remove. They're wrapped in `eject:strip-start`
       // /`eject:strip-end` sentinels in source; strip each region wholesale.
-      if (rel === 'eslint.config.js') {
+      if (rel === 'oxlint.config.ts') {
         out = out.replace(/[ \t]*\/\* eject:strip-start[\s\S]*?eject:strip-end \*\/\n?/g, '');
       }
       // Drop any config line that still points into the showcase (other

@@ -9,7 +9,7 @@ The repo has two halves:
 - **The base — the batteries** (`src/lib`, `src/ui`, `src/composables`, `src/modules`, `src/styles`): layout shells, AppFrame, modal stack, widgets, compositions, bridge composables, token defaults. Every game keeps these.
 - **The stories — the archetypes** (`src/showcase/`): worked examples composing the batteries into game shapes, plus a browsable gallery. A fork sheds all but one.
 
-**The stories exist to demonstrate the base.** Read an archetype to learn how the pieces go together, not just to see a finished game. The cut between the halves is one-way — the base never imports the showcase (an eslint rule enforces it) — so shedding it can't break your game.
+**The stories exist to demonstrate the base.** Read an archetype to learn how the pieces go together, not just to see a finished game. The cut between the halves is one-way — the base never imports the showcase (an oxlint rule enforces it) — so shedding it can't break your game.
 
 ## Quick start
 
@@ -70,7 +70,7 @@ pnpm dev              # Vite dev server
 pnpm build            # vue-tsc -b && vite build
 pnpm typecheck        # vue-tsc -b
 pnpm test             # Vitest run
-pnpm lint             # eslint src/
+pnpm lint             # oxlint src/
 pnpm format           # oxfmt src
 ```
 

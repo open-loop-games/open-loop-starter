@@ -49,7 +49,7 @@ pnpm typecheck        # vue-tsc -b
 pnpm preview          # Preview production build
 pnpm test             # Vitest run
 pnpm test:watch       # Vitest watch mode
-pnpm lint             # eslint src/
+pnpm lint             # oxlint src/
 pnpm format           # oxfmt src
 ```
 
@@ -61,7 +61,7 @@ src/
 ├── boot.ts        # bootEngine / bootApp — the supported way to wire an engine + app. Archetype boot.ts files flow through these.
 ├── types.ts       # Shared starter types (the gallery contract).
 ├── showcase/      # ← STRIP BOUNDARY. `pnpm eject` deletes this whole tree. Archetype demos, gallery, about, sandbox. Documented at src/showcase/AGENTS.md.
-├── lib/           # Scaffold layout/theme layer. Presentational — no engine imports (eslint-enforced). Import via '@/lib'.
+├── lib/           # Scaffold layout/theme layer. Presentational — no engine imports (oxlint-enforced). Import via '@/lib'.
 ├── ui/            # Engine-bridged UI — screens, panels, components, compositions. Archetype-specific SFCs are in their archetype, not here.
 ├── composables/   # Starter-level composables — bridge shared-base state to UI.
 ├── modules/       # The shared-base engine modules every archetype boots.
@@ -123,7 +123,7 @@ Rules that apply inside `src/lib/`, which a fork should keep by default:
 
 1. **Styling: CSS custom properties only.** No Tailwind, no shadcn-vue. Theme by overriding variables.
 2. **Behavior from reka-ui primitives.** a11y, focus trap, portal and positioning come from reka-ui. `src/lib/` adds classes and custom-property defaults on top; it never reimplements the behavior.
-3. **Presentational only.** No engine imports. `eslint.config.js` enforces this, not convention. `src/ui/` owns engine bridging.
+3. **Presentational only.** No engine imports. `oxlint.config.ts` enforces this, not convention. `src/ui/` owns engine bridging.
 4. **What belongs here.** The cut line: `src/lib/` owns layout and cross-cutting pieces (shells, frame, modals, theme root). Concrete widgets are scaffold components in `src/ui/components/`, beside game components, so a fork adapts them in place. Decide membership by the cut line. What happens to be here today is an outcome, not the rule.
 
 Extraction to a real shared library waits until several independent game UI passes converge on the same shape. Do not extract early against a single consumer.
