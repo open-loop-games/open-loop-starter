@@ -3,7 +3,7 @@
  * a data slice where mass / counter / tech personas have viable
  * policies, not just greed.
  *
- * Axes include refinery-1 cost / multiplier, baseIncomeRate, top-tier
+ * Axes include refinery-1 cost / multiplier, baseIncomeRate, highest-cost
  * unit cost, and counter-matrix sharpness — these are the balance constants
  * the dominance mechanism (greed's economic compound via refinery-1)
  * depends on. Per `open-loop-engine/docs/consumer-guide-balance.md`
@@ -28,8 +28,8 @@
  *
  * **Perturbation path.** Every slice perturbation routes through
  * `pushOverrides` on the tuning registry (engine-canonical). The
- * `topTierCost` axis multiplies per-unit `cost` keys for units at or
- * above `TOP_TIER_COST_FLOOR`; per-unit costs are uniformly tunable in
+ * `highestCost` axis multiplies per-unit `cost` keys for units at or
+ * above `HIGHEST_COST_FLOOR`; per-unit costs are uniformly tunable in
  * `modules/units.ts`.
  */
 
@@ -64,20 +64,20 @@ const REFINERY_COST_AXIS = [100, 400, 1600];
 /** Global base income rate. Interacts with refinery payback. Default 8/s. */
 const BASE_INCOME_AXIS = [3, 5, 8];
 
-/** Cost mult applied to units with base cost ≥ TOP_TIER_COST_FLOOR
+/** Cost mult applied to units with base cost ≥ HIGHEST_COST_FLOOR
  *  (siege-tank, battlecruiser, ghost). */
-const TOP_TIER_COST_AXIS = [1.0, 2.0];
+const HIGHEST_COST_AXIS = [1.0, 2.0];
 
 /** `counter-matrix/strongCounter` tunable scope. */
 const STRONG_AXIS = [1.0, 2.0];
 
-const TOP_TIER_COST_FLOOR = 150;
+const HIGHEST_COST_FLOOR = 150;
 
 const REFINERY_1 = DEFAULT_TUG_DATA.incomeUpgrades.find((u) => u.id === 'refinery-1')!;
 const DEFAULT_REFINERY_MULT = Number(REFINERY_1.multiplier);
 const DEFAULT_REFINERY_COST = Number(REFINERY_1.cost);
 const DEFAULT_BASE_INCOME = Number(BASE_INCOME_RATE);
-const DEFAULT_TOP_TIER_COST = 1.0;
+const DEFAULT_HIGHEST_COST = 1.0;
 const DEFAULT_STRONG = 1.0;
 
 /** Acceptance: at least one persona row has a max win-rate above this. */
@@ -89,7 +89,7 @@ interface Slice {
   refineryMult: number;
   refineryCost: number;
   baseIncome: number;
-  topTierCost: number;
+  highestCost: number;
   strong: number;
 }
 
@@ -98,7 +98,7 @@ function isDefaultSlice(s: Slice): boolean {
     s.refineryMult === DEFAULT_REFINERY_MULT &&
     s.refineryCost === DEFAULT_REFINERY_COST &&
     s.baseIncome === DEFAULT_BASE_INCOME &&
-    s.topTierCost === DEFAULT_TOP_TIER_COST &&
+    s.highestCost === DEFAULT_HIGHEST_COST &&
     s.strong === DEFAULT_STRONG
   );
 }
@@ -110,11 +110,11 @@ function buildScope(slice: Slice): Partial<TugTunables> {
     'income-upgrades/refinery-1/multiplier': () => slice.refineryMult,
     'counter-matrix/strongCounter': () => slice.strong,
   };
-  if (slice.topTierCost !== DEFAULT_TOP_TIER_COST) {
+  if (slice.highestCost !== DEFAULT_HIGHEST_COST) {
     for (const u of DEFAULT_TUG_DATA.units) {
-      if (Number(u.cost) >= TOP_TIER_COST_FLOOR) {
+      if (Number(u.cost) >= HIGHEST_COST_FLOOR) {
         const baseCost = Number(u.cost);
-        scope[`units/${u.id}/cost`] = () => baseCost * slice.topTierCost;
+        scope[`units/${u.id}/cost`] = () => baseCost * slice.highestCost;
       }
     }
   }
@@ -177,7 +177,7 @@ function runSlice(slice: Slice): SliceResult {
   const cells: UntilCell[] = [];
   for (const player of PERSONAS) {
     for (const ai of PERSONAS) {
-      const name = `mult=${slice.refineryMult}/cost=${slice.refineryCost}/base=${slice.baseIncome}/top=${slice.topTierCost}/strong=${slice.strong}/p=${player}/ai=${ai}`;
+      const name = `mult=${slice.refineryMult}/cost=${slice.refineryCost}/base=${slice.baseIncome}/top=${slice.highestCost}/strong=${slice.strong}/p=${player}/ai=${ai}`;
       cells.push(buildCell(name, scope, player, ai));
     }
   }
@@ -283,7 +283,7 @@ function renderMatrix(m: WinMatrix): string {
 }
 
 function sliceLabel(s: Slice): string {
-  return `mult=${s.refineryMult}/cost=${s.refineryCost}/base=${s.baseIncome}/top=${s.topTierCost}/strong=${s.strong}`;
+  return `mult=${s.refineryMult}/cost=${s.refineryCost}/base=${s.baseIncome}/top=${s.highestCost}/strong=${s.strong}`;
 }
 
 function main(): void {
@@ -292,7 +292,7 @@ function main(): void {
     REFINERY_MULT_AXIS.length *
     REFINERY_COST_AXIS.length *
     BASE_INCOME_AXIS.length *
-    TOP_TIER_COST_AXIS.length *
+    HIGHEST_COST_AXIS.length *
     STRONG_AXIS.length;
   const totalRuns = totalSlices * 16 * SEEDS.length;
 
@@ -302,7 +302,7 @@ function main(): void {
   console.log(`  refinery-1 multiplier ∈ {${REFINERY_MULT_AXIS.join(', ')}}`);
   console.log(`  refinery-1 cost ∈ {${REFINERY_COST_AXIS.join(', ')}}`);
   console.log(`  base income rate ∈ {${BASE_INCOME_AXIS.join(', ')}}`);
-  console.log(`  top-tier-cost ∈ {${TOP_TIER_COST_AXIS.join(', ')}}`);
+  console.log(`  highest-cost ∈ {${HIGHEST_COST_AXIS.join(', ')}}`);
   console.log(`  strongCounter ∈ {${STRONG_AXIS.join(', ')}}`);
   console.log(`Personas: ${PERSONAS.length}×${PERSONAS.length} = 16 cells per slice`);
   console.log(`Seeds: ${SEEDS.length} per cell`);
@@ -315,14 +315,14 @@ function main(): void {
   for (const refineryMult of REFINERY_MULT_AXIS) {
     for (const refineryCost of REFINERY_COST_AXIS) {
       for (const baseIncome of BASE_INCOME_AXIS) {
-        for (const topTierCost of TOP_TIER_COST_AXIS) {
+        for (const highestCost of HIGHEST_COST_AXIS) {
           for (const strong of STRONG_AXIS) {
             i++;
             const slice: Slice = {
               refineryMult,
               refineryCost,
               baseIncome,
-              topTierCost,
+              highestCost,
               strong,
             };
             const sliceT0 = Date.now();

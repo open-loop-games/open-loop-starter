@@ -14,7 +14,7 @@ this file is how you work inside it.
 |---|---|---|
 | `balance/baseIncomeRate` | `8` | Income accrual for **both** sides. Symmetric by rule — see Couplings. |
 | `fortress/hp` | `5_000` | How long a match can run before a base falls. The match-length limit. |
-| `units/<id>/cost` | per unit | Composition economics. The retune sweep multiplies costs at or above its top-tier floor as one axis. |
+| `units/<id>/cost` | per unit | Composition economics. The retune sweep multiplies costs at or above its highest-cost floor as one axis. |
 | `income-upgrades/<id>/cost` | `400` / `1_200` / `3_600` | Purchase-now-or-save tension — ×3 per rung. The greed persona's economic compound depends on Refinery I's cost. |
 | `income-upgrades/<id>/multiplier` | `1.5` / `1.4` / `1.3` | Tapering compounding down the path, `×2.73` with all three purchased. |
 | `counter-matrix/strongCounter` | `1.75` | **The signature tunable.** How decisively a good counter-pick pays. |
@@ -98,8 +98,8 @@ without a second closed form to put beside it.
     passes if every cell runs end-to-end and at least one has wins. Red there
     means the per-archetype spawn/death instrumentation broke, not that the
     balance is bad — check it first when a sweep starts reporting nonsense.
-- **`retune-probe.ts`** is the wide sweep: refinery economics, base income, top-
-  tier unit cost and matrix sharpness, Cartesian across the persona matrix. It is
+- **`retune-probe.ts`** is the wide sweep: refinery economics, base income, highest-
+  cost unit cost and matrix sharpness, Cartesian across the persona matrix. It is
   ~17k runs and around half an hour of wall-clock time, so it is a deliberate run, not
   something to reach for casually. It is hunting for a data slice where mass or
   counter has a viable matchup against *someone* — the failure it catches is a

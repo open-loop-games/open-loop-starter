@@ -26,7 +26,7 @@ import { createMatchDriverModule } from './_match-driver';
  * (counter-strong-sensitivity) measures matrix decisiveness, which
  * requires a *concentrating* opponent for the counter persona to detect
  * dominance and fire counters. `counter`-vs-`greed` is the calibrated
- * pair: greed's `top-tier` picker concentrates composition on the
+ * pair: greed's `highest-cost` picker concentrates composition on the
  * highest-cost archetype, exercising the matrix; greed's ~20s eco-save
  * phase plus higher believability noise (suboptimality + cadence
  * jitter) produces match-outcome variance that responds to
@@ -79,7 +79,7 @@ export interface TugScratchEngineOptions {
  * kick off match 1.
  *
  * **Headless default: `{ player: 'counter', ai: 'greed' }`.** Counter-vs-greed:
- * greed's `top-tier` picker concentrates composition on the highest-cost
+ * greed's `highest-cost` picker concentrates composition on the highest-cost
  * affordable archetype; counter's matrix-aware picker fires against it.
  *
  * **Known limitation — SIGNATURE matchup needs balance work.** At the

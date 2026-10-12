@@ -59,7 +59,7 @@ export interface OpponentBotOptions {
  * - upgrade greed (`inc >= upgradeSurplusFactor * cost`; `Infinity` skips)
  * - eligible-pool filtering (`minSpendCost`; abstain when nothing affordable
  *   meets the floor — saves funds for next cadence, the tech rush pattern)
- * - action selection (`unitPicker`: `cheapest` / `top-tier` / `counter`)
+ * - action selection (`unitPicker`: `cheapest` / `highest-cost` / `counter`)
  *
  * The canonical personas are in `data/personality.ts`.
  *
@@ -200,7 +200,7 @@ export function createOpponentBotModule(
             );
             return pickWithSuboptimality(ranked, subRate)?.id ?? null;
           }
-          case 'top-tier': {
+          case 'highest-cost': {
             const ranked = [...eligible].sort(
               (a, b) => (costOf.get(b.id) ?? -Infinity) - (costOf.get(a.id) ?? -Infinity),
             );
@@ -285,7 +285,7 @@ export function createOpponentBotModule(
         if (affordable.length === 0) return;
 
         const chosenId = pickByPersona(persona, affordable);
-        // Null = abstain (tech with no eligible top-tier affordable). Hold
+        // Null = abstain (tech with no eligible highest-cost unit affordable). Hold
         // the accumulator at the threshold so funds keep accumulating
         // toward the next cadence window — same as the empty-affordable
         // path above.

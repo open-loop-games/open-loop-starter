@@ -12,7 +12,7 @@ You and the opponent feed the same lane: units auto-walk, resolve combat on cont
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
 - **PersonaKey** _(string-literal union)_ — `mass` · `greed` · `counter` · `tech`
-- **UnitPicker** _(string-literal union)_ — `counter` · `cheapest` · `top-tier`
+- **UnitPicker** _(string-literal union)_ — `counter` · `cheapest` · `highest-cost`
 - **UnitArchetypeTag** _(string-literal union)_ — `light` · `fast` · `siege` · `air` · `capital` · `special`
 - **AbilityEffect.kind** _(discriminated-union arm)_ — `artillery` · `reinforcement`
 

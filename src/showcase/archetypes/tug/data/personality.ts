@@ -17,7 +17,7 @@
  * **Why this set breaks parity stalemate.** `counter` vs `greed`
  * produces a smooth response surface (greed scales late, counter is
  * steady) for the methodology-#3 sensitivity sweep, AND greed's
- * `top-tier` picker concentrates composition so the counter persona's
+ * `highest-cost` picker concentrates composition so the counter persona's
  * matrix-aware picker fires non-zero counter-pivots (unblocks the
  * `meanCp = 0` diagnostic).
  *
@@ -27,14 +27,14 @@
  */
 export type PersonaKey = 'mass' | 'greed' | 'counter' | 'tech';
 
-export type UnitPicker = 'cheapest' | 'top-tier' | 'counter';
+export type UnitPicker = 'cheapest' | 'highest-cost' | 'counter';
 
 export interface Persona {
   /** Action-selection algorithm over the (eligible) affordable pool. */
   unitPicker: UnitPicker;
   /** Abstain (save funds) if no affordable unit at this cost or above.
    *  Default 0 = no floor. `tech` uses this to skip cheap units and
-   *  save for capital-tier. */
+   *  save for a capital unit. */
   minSpendCost: number;
   /** First N upgrade tiers are purchased save-first: as soon as affordable
    *  (amount ≥ cost), AND the AI opponent abstains from unit purchases while
@@ -72,7 +72,7 @@ export interface Persona {
  * surface.
  */
 export const PERSONAS: Record<PersonaKey, Persona> = {
-  // Spam tier-1, no eco, fast cadence. Floods the lane with cheap units.
+  // Spam cost-rank-1 units, no eco, fast cadence. Floods the lane with cheap units.
   // Wins early; loses to greed once economy compounds. Concentrates
   // composition (cheapest is one archetype) so counter-aware opponents
   // fire counters reliably.
@@ -83,11 +83,11 @@ export const PERSONAS: Record<PersonaKey, Persona> = {
     upgradeSurplusFactor: Infinity,
     cadenceMultiplier: 0.5,
   },
-  // Eco-first: silent ~20s while saving for refinery-1, then top-tier
+  // Eco-first: silent ~20s while saving for refinery-1, then highest-cost
   // units on a +50% income engine. Vulnerable to early floods; dominant
   // late. The only persona that purchases upgrades.
   greed: {
-    unitPicker: 'top-tier',
+    unitPicker: 'highest-cost',
     minSpendCost: 0,
     saveForUpgradeTiers: 1,
     upgradeSurplusFactor: Infinity, // tiers 2/3 never purchased via opportunistic
@@ -104,12 +104,12 @@ export const PERSONAS: Record<PersonaKey, Persona> = {
     upgradeSurplusFactor: Infinity,
     cadenceMultiplier: 1.0,
   },
-  // Save funds, skip tier-1 and tier-2, commit on capital-tier (cost ≥ 200:
-  // ghost or battlecruiser). No upgrade investment — pure unit-tier rush.
+  // Save funds, skip cost ranks 1 and 2, commit on a capital unit (cost ≥ 200:
+  // ghost or battlecruiser). No upgrade investment — a pure highest-cost rush.
   // Long quiet phase; sudden commit when capital is affordable.
   // Vulnerable to early mass.
   tech: {
-    unitPicker: 'top-tier',
+    unitPicker: 'highest-cost',
     minSpendCost: 200,
     saveForUpgradeTiers: 0,
     upgradeSurplusFactor: Infinity,
