@@ -16,7 +16,7 @@ export function useSave() {
     return mgr.exportSave();
   }
 
-  function importSave(data: string): boolean {
+  function importSave(saveText: string): boolean {
     try {
       const backup = mgr.exportSave();
       if (backup) {
@@ -26,11 +26,11 @@ export function useSave() {
       // No existing save to back up — that's fine
     }
 
-    const result = mgr.importSave(data);
+    const result = mgr.importSave(saveText);
     if (result.success) {
       addToast('Imported', 'Previous save backed up', 2500);
     } else {
-      addToast('Import failed', 'Invalid save data', 4000);
+      addToast('Import failed', 'Invalid save text', 4000);
     }
     return result.success;
   }
@@ -41,8 +41,8 @@ export function useSave() {
   }
 
   function downloadSave() {
-    const data = mgr.exportSave();
-    const blob = new Blob([data], { type: 'application/json' });
+    const saveText = mgr.exportSave();
+    const blob = new Blob([saveText], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

@@ -99,7 +99,7 @@ A personality bound by one cause across every seed is a wall in costume. Three
 specialists each bound by a different cause, with the baseline mostly reaching
 the timer, is the target distribution.
 
-## The loop — beat map
+## The arc — beat map
 
 Six phase turns, **recorded** from 16 seeds × 4 seats and carried in
 `manifest.ts` (definitions in `balance/beats.ts`). They are deliberately not the

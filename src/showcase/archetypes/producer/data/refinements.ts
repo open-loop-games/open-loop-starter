@@ -147,7 +147,7 @@ export const REFINEMENTS: RefinementDef[] = [
 // ── Click ───────────────────────────────────────────────────────────────────
 // Four rungs, ×2 each → 16× on a base yield of 1. At an assumed ~2 launches/s
 // that tops out near 32 mass/s, which is overtaken by roughly five Foundries.
-// That is the intended shape and it is where `../IDENTITY.md` § The loop gets
+// That is the intended shape and it is where `../IDENTITY.md` § The arc gets
 // its beat 2: clicking is competitive through Drone, dies in early Foundry,
 // and is never worth returning to. The crossover is MEASURED by the arc probe,
 // not authored — if it lands outside class 3 these four multipliers are the

@@ -10,7 +10,7 @@
  *
  * The numeric half is the engine's — `computeMetricStats` is its descriptive
  * kernel, and reusing it is what keeps percentiles here on the same
- * floor-index convention as every other stats surface in the tree. What this
+ * floor-index convention as every other stats utility in the tree. What this
  * adds is the categorical half, which the engine's `CellAggregate` documents
  * as deliberately absent ("string/boolean metric aggregation (mode,
  * distribution) is deferred until a consumer demands it") — and the shape it
@@ -44,7 +44,7 @@ export function seedBatch(count: number, base = 12345): number[] {
 }
 
 /**
- * Descriptive stats per named metric over a batch of per-run readouts.
+ * Descriptive stats per named metric over a batch of per-run values.
  *
  * The metric map is `(run) => number` selectors rather than a metrics object
  * on the run, so a probe keeps its own rich domain-shaped result and names
@@ -72,7 +72,7 @@ export function spreadOf<T>(
  * How a categorical outcome landed across a seed batch.
  *
  * `modalShare` is the reading a spine target is usually written against: a
- * personality bound by one cause on every seed reads 1.0, which is a wall in
+ * persona bound by one cause on every seed reads 1.0, which is a wall in
  * costume however well-tuned the number underneath it is.
  */
 export interface CategorySpread {

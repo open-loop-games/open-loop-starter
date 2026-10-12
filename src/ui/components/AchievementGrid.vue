@@ -9,9 +9,9 @@
       "X / Y earned" header, e.g. with a progress bar.
     - `card({ card })` — replace the per-card visual.
 
-  Default card shape is `AchievementCard`; data hooks (`data-earned`,
-  `data-hidden-cell`) carry through so theme CSS can target without
-  re-deriving. Classes and data attributes say `cell` where the contract
+  Default card shape is `AchievementCard`. Its costume classes include the
+  data attributes `data-earned` and `data-hidden-cell`, so theme CSS can
+  target state without re-deriving it. They say `cell` where the contract
   says card; they are stable, so renames are breaking.
 -->
 <script setup lang="ts">

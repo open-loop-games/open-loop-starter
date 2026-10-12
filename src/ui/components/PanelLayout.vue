@@ -3,7 +3,7 @@
   body, optional footer. Purely structural; no overlay. Fits inside a
   modal or anywhere else a titled panel is wanted.
 
-  Class hooks: olui-panel, olui-panel__header, olui-panel__title,
+  Costume classes: olui-panel, olui-panel__header, olui-panel__title,
   olui-panel__close, olui-panel__body, olui-panel__footer.
   Custom props: --panel-gap, --panel-padding,
   --panel-header-border, --panel-max-height.

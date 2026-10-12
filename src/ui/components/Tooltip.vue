@@ -1,11 +1,11 @@
 <!--
   Tooltip — thin wrapper over reka-ui Tooltip primitives. reka-ui owns
   delay, portal, positioning, a11y, and dismiss. This wrapper adds the
-  class hook on the content element, custom-property defaults, and a
+  costume class on the content element, custom-property defaults, and a
   400ms default delay. Trigger is a slot with `as-child`, so the
   consumer's element becomes the trigger without a wrapping div.
 
-  Class hook: olui-tooltip__content (trigger has none — it's the
+  Costume class: olui-tooltip__content (trigger has none — it's the
   consumer's element). Reactive state comes from reka-ui's native
   data-state / data-side / data-align — don't duplicate those.
   Custom props: --tooltip-{bg,text,padding,radius,max-width}.

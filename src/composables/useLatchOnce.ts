@@ -3,7 +3,7 @@ import { Decimal, type DecimalSource } from '@open-loop/engine';
 
 /**
  * Latches `true` the first time `source` strictly exceeds `threshold` and
- * stays true thereafter. Canonicalises the one-way unlock-gate boilerplate
+ * stays true thereafter. Canonicalises the one-way unlock boilerplate
  * (`computed(() => Decimal.gt(monotone?.value ?? 0, 0))`) into an explicit
  * latch — handles non-monotone sources too, where a `computed` would flip
  * back to false after a spend.

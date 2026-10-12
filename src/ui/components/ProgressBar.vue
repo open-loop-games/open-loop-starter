@@ -1,7 +1,7 @@
 <!--
   ProgressBar — plain or segmented horizontal progress bar.
 
-  Class hooks: olui-progress-bar, olui-progress-bar__track,
+  Costume classes: olui-progress-bar, olui-progress-bar__track,
   olui-progress-bar__fill, olui-progress-bar__label (when `label` set).
   Root carries data-state="empty" | "partial" | "full".
   Custom props: --progress-bar-{fill,track,radius,transition}.

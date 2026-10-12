@@ -1,6 +1,6 @@
 <!--
   GameView — the in-game subtree. Mounts under the root's post-start `v-else`
-  frame, so engine module getters / composables / injects are all safe to read
+  frame, so module getters / composables / injects are all safe to read
   here (the module graph is installed by the time this component sets up).
 
   This is where your game lives: pull module state in `<script setup>`, render it
@@ -20,8 +20,8 @@ import { SingleColumnShell } from '@/lib';
     <section class="game-placeholder">
       <h2>Hello from your new game.</h2>
       <p>
-        The scaffold is wired: engine, save slots, settings, theme, and the dev workbench all work.
-        Start building by adding an engine module in
+        The scaffold is wired: engine, save slots, settings, theme, and the balance workbench all
+        work. Start building by adding a module in
         <code>src/game/modules/</code> and rendering its state here.
       </p>
     </section>

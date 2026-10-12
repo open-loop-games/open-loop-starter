@@ -1,12 +1,12 @@
 /**
- * Strip-cleanliness lint for `src/gallery/` and `src/about/`.
+ * Strip-cleanliness lint for `src/showcase/gallery/` and `src/showcase/about/`.
  *
  * Fork workflow:
- *   rm -rf src/gallery/ src/about/
+ *   rm -rf src/showcase/gallery/ src/showcase/about/
  *   <revert main.ts to a single archetype createApp().mount('#app')>
  *   <delete the other archetype directories>
  *
- * If anything under `src/gallery/**` or `src/about/**` hard-imports a
+ * If anything under `src/showcase/gallery/**` or `src/showcase/about/**` hard-imports a
  * specific archetype (e.g. `from '@/showcase/archetypes/cycler'`), that strip
  * cascades into broken imports. Only `import.meta.glob(...)` over the
  * `@/showcase/archetypes/*\/index.ts` wildcard is allowed — the eager glob
@@ -102,7 +102,7 @@ function findHardImports(source: string, file: string): Hit[] {
 }
 
 describe('gallery strip-cleanliness', () => {
-  it('nothing under src/gallery/** hard-imports @/showcase/archetypes/<name>', () => {
+  it('nothing under src/showcase/gallery/** hard-imports @/showcase/archetypes/<name>', () => {
     const files = Object.entries(gallerySources);
     expect(files.length).toBeGreaterThan(0);
     const hits: Hit[] = [];
@@ -119,7 +119,7 @@ describe('gallery strip-cleanliness', () => {
     ).toEqual([]);
   });
 
-  it('nothing under src/about/** hard-imports @/showcase/archetypes/<name>', () => {
+  it('nothing under src/showcase/about/** hard-imports @/showcase/archetypes/<name>', () => {
     // about/ may legitimately be md-only (no .ts/.vue files). That's fine —
     // there's nothing to scan, and nothing to break.
     const hits: Hit[] = [];

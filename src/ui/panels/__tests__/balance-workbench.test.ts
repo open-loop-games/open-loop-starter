@@ -67,7 +67,7 @@ function buildLiveEngine(tag: string, mod: EngineModule): Engine {
 }
 
 describe('useBalanceWorkbench composable', () => {
-  it('exposes a snapshot grouped by source and runs sensitivity end-to-end', () => {
+  it('exposes a snapshot grouped by source and runs a sweep end-to-end', () => {
     const displayName = 'bw-comp-gold';
     const modFactory = (): EngineModule => makeProducerModule(displayName);
     const live = buildLiveEngine('bw-comp', modFactory());
@@ -153,7 +153,7 @@ describe('useBalanceWorkbench composable', () => {
     live.stop();
   });
 
-  it('blocks running when no entry is selected and surfaces an error', () => {
+  it('blocks running when no entry is selected and reports an error', () => {
     const live = buildLiveEngine('bw-comp-empty', makeProducerModule('bw-empty'));
     const wb = useBalanceWorkbench({
       engine: live,

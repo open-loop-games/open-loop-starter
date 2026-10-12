@@ -48,9 +48,8 @@ export function formatPow(exponent: DecimalSource, decimals = 2): string {
 }
 
 /**
- * Formats a beat time, with a 1/sec-threshold flip, mirroring the
- * validated pattern from incloneution's tooltip helpers. Infinite or
- * NaN beat times collapse to a shared "unaffordable" label — callers that
+ * Formats a beat time, flipping to a per-second rate below one second.
+ * Infinite or NaN beat times collapse to a shared "unaffordable" label — callers that
  * care about the distinction should check the value themselves.
  */
 export function formatBeatTime(seconds: number): string {
@@ -64,7 +63,7 @@ export function formatBeatTime(seconds: number): string {
 }
 
 /**
- * Thin composable exposing engine formatters plus a handful of small helpers
+ * Thin composable exposing engine formatters plus a handful of small utilities
  * validated across incremental game reference codebases.
  */
 export function useFormatting() {

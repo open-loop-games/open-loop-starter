@@ -10,7 +10,7 @@ matrix, not a curve.** There is no correct `φ`, only a best response to what th
 opponent is doing. A pass that produces one dominant split has made the game
 worse even if every individual number looks reasonable.
 
-## The knobs
+## The tunables
 
 Perturbable surface — the `tunable()` keys a probe can push a scope onto:
 

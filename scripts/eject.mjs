@@ -75,7 +75,7 @@ const TYPES_TS = `export enum Screen {
 }
 
 /** Game identity manifest. Forwarded as \`appName\` to SlotScreen and used as
- *  the engine save-namespace. */
+ *  the engine's persistence namespace. */
 export interface GameManifest {
   id: string;
   displayName: string;

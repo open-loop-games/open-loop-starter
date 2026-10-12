@@ -1,5 +1,5 @@
 /**
- * Blank game — sim probe: shipping module vs the closed-form projection.
+ * Blank game — probe: shipping module vs the closed-form projection.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/_blank/balance/game-probe.ts`
  *
@@ -11,7 +11,7 @@
  * that disagrees found something. Magnitudes stay here; `../sim/` specs
  * behavior, which is why those suites survive a retune.
  *
- * Coarse tick (1s) per `.claude/CLAUDE.md` § Balance methodology — no sub-second
+ * Coarse tick (1s) per `AGENTS.md` § Balance methodology — no sub-second
  * fidelity needed for a linear rate.
  */
 

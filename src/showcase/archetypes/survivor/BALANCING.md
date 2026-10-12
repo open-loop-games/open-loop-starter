@@ -14,7 +14,7 @@ TSDoc, the entry states the claim and names the symbol rather than repeating it 
 the duplicate is what goes stale. Findings live here; derivations live at the
 value; how either was arrived at lives in the commit.
 
-## The knobs
+## The tunables
 
 Constants live in `data/`, split by subsystem so each carries its own
 `─── Balance ───` reasoning beside the numbers it justifies: `schedule.ts` (the
@@ -299,7 +299,7 @@ one answers which question, and in what order.
 - `balance/escalation-probe.ts` — retunes an escalation constant and re-runs every
   derivation below it, one row per point. The surface for "is this difficulty or
   income", and the only one that answers it, because the escalation constants
-  cannot be perturbed through the tuning registry (§ The knobs).
+  cannot be perturbed through the tuning registry (§ The tunables).
 - `balance/cone-probe.ts` — what the policy's wedge caught against what the best
   orientation would have. Narrow by design: it exists to keep
   `HEADING_BOUND_DISCOUNT` honest, and it is a ceiling rather than a player.

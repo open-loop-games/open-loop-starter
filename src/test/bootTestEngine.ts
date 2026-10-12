@@ -1,19 +1,19 @@
 /**
  * Boot a fresh engine with a given module list under an isolated persistence
- * namespace, on memory storage, and hand back a handle that steps it. The
- * primitive under every behavioral test: game code asserts observable behavior
+ * namespace, on memory storage, and hand back a handle that ticks it. The
+ * test utility under every behavioral test: game code asserts observable behavior
  * by driving the real assembled engine tick-by-tick, rather than mocking it.
  *
  * Named for what it does — boots an *engine* from a module list — not "mod":
  * "mod" is the engine's own selectable-game concept (`ModDef` / `selectMod`),
  * which this has nothing to do with.
  *
- * Consumers wrap this per game in a bare `boot()`/`tick()` harness (see the
- * `sim/harness.ts` an eject leaves in `src/game/sim/`), which hardcodes the
+ * Consumers wrap this per game in a bare `boot()`/`tick()` test harness (see
+ * the `sim/harness.ts` an eject leaves in `src/game/sim/`), which hardcodes the
  * game's module list so tests read `boot(); forkSpread(); await tick(10)`.
  *
  * Each call allocates a unique persistence namespace, so multiple handles
- * coexist in one process without aliasing persistent-ref contexts or storage
+ * coexist in one process without aliasing persistent contexts or storage
  * keys — that isolation is what makes fresh-boot-per-test (`beforeEach(boot)`)
  * safe: a re-install would otherwise collide on process-global persistent ids.
  * The engine exposes no per-namespace ref cleanup, so the `persistentRefs` map
@@ -33,7 +33,7 @@ export interface TestEngineHandle {
   /** Advance the engine by `n` real ticks. Async to flush queued microtasks. */
   tick(n?: number): Promise<void>;
   /**
-   * Step until `condition()` returns true or `maxTicks` is reached. Returns
+   * Tick until `condition()` returns true or `maxTicks` is reached. Returns
    * the number of ticks it took. Throws on timeout.
    */
   tickUntil(condition: () => boolean, maxTicks?: number): Promise<number>;

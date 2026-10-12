@@ -67,7 +67,7 @@ Two structural properties make it _this_ archetype rather than a solo producer:
   (`strongCounter`) is the signature balance knob, and the archetype's centerpiece
   metric is the sensitivity of counter-pivots-per-match to it (methodology #3).
 
-## The loop — beat map
+## The arc — beat map
 
 Six ordered player-experience phases across a ~75min cumulative arc (2–4
 matches at the 30-min limit); the **measured** windows + predicates live in

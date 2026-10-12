@@ -14,7 +14,7 @@ import {
  * the beat ratio, the per-pick DPS gain, the XP ladder — are deliberately absent:
  * each is derived from the others to satisfy a constraint, so overriding one
  * directly decouples it from what it was derived for while still looking like a
- * knob. Perturb the inputs and re-derive (`../BALANCING.md` § The knobs).
+ * knob. Perturb the inputs and re-derive (`../BALANCING.md` § The tunables).
  *
  * Namespaces:
  *   - `threat/*`   — escalation and density (`../data/arena.ts`)

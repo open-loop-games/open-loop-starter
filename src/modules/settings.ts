@@ -21,7 +21,7 @@ export interface StockSettings {
 
 export interface SettingsState {
   settings: StockSettings;
-  /** When a save last landed in storage, in ms; 0 before the first this session. */
+  /** When a save last reached storage, in ms; 0 before the first this play session. */
   lastSaveTimestamp: Ref<number>;
 }
 
@@ -40,8 +40,8 @@ export const settingsModule: EngineModule = {
     // `save:written` fires only once a save lands in storage — never for an
     // export, and never for a slot a failed load protects. `ctx.onSave` runs
     // before every serialization, exports included, so it can't carry this.
-    // The save manager outlives `engine.dispose()`, so the listener goes with
-    // the module scope rather than with the manager.
+    // The save manager outlives `engine.dispose()`, so the handler goes with
+    // the module's Vue effect scope rather than with the manager.
     const { addToast } = useToasts();
     const saves = ctx.tryInject(SaveManagerKey);
     if (saves) {

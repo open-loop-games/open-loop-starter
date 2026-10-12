@@ -47,7 +47,7 @@ function withSave(engine: Engine): ReturnType<typeof useSave> {
 }
 
 // The "Saved" announcement is the settings module's, keyed off `save:written`;
-// these drive it through `useSave`, the surface the save panel uses.
+// these drive it through `useSave`, the API the save panel uses.
 describe('useSave', () => {
   beforeEach(() => {
     const { toasts } = useToasts();

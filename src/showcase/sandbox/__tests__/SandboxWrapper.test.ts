@@ -119,7 +119,7 @@ describe('SandboxWrapper', () => {
     // Gallery remount path: enter archetype, exit (SandboxWrapper unmounts
     // entirely via v-if on `entered`), enter same archetype (a fresh
     // SandboxWrapper instance mounts). Without dispose, the second mount's
-    // engine.start() hits a persistent-name collision because the first
+    // engine.start() hits a persistent-context id collision because the first
     // engine's module ids still own the persistent contexts.
     const archetype: SandboxArchetype = { id: 'remountA' };
     const bootA = makeFakeBoot('remountA');
@@ -147,7 +147,7 @@ describe('SandboxWrapper', () => {
     expect(bootB.handles.disposed).toBe(true);
   });
 
-  it('surfaces boot errors via the error event without leaving residue', async () => {
+  it('reports boot errors via the error event without leaving residue', async () => {
     const archetype = ref<SandboxArchetype>({ id: 'broken' });
     const onError = vi.fn();
 

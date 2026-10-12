@@ -20,14 +20,14 @@ export interface RateBreakdownView {
 }
 
 /**
- * Tooltip-side compute kit shared by every per-producer hover surface.
- * Producer's bakery-themed tooltip and the default RateBreakdownTooltip both
- * use this — keeps productionRate / beat time / marginal math in one spot so a fix
- * in one place lands everywhere.
+ * Tooltip-side compute kit for any per-producer hover tooltip. The default
+ * RateBreakdownTooltip uses it, and a game's own tooltip can too — it keeps the
+ * production-rate / beat time / marginal math in one spot, so a fix in one
+ * place applies everywhere.
  *
  * `pendingCount` defaults to 1 so the marginal projection is always
  * meaningful for "next purchase"-style callers; pass a bulk-aware getter
- * (e.g. `() => row.maxAffordable.value`) when bulk-buy mode is active.
+ * (e.g. `() => row.maxAffordable.value`) when a bulk mode is active.
  */
 export function useRateBreakdown(
   row: RateBreakdownRow,

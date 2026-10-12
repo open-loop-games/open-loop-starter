@@ -58,7 +58,7 @@ declaring that boundary *is* the spine. "No bucket" is not an available answer:
 if a fork can't write its spine on paper, the mechanic is mis-specified, not
 just untuned.
 
-## The loop — beat map
+## The arc — beat map
 
 None. A real archetype lists where the run turns (setup → comfortable → pressure →
 payout), with windows **measured and recorded** by the balance probes, never authored.
@@ -74,8 +74,8 @@ the wild — never as lift targets.
 
 The blank base uses only the substrate: a `persistent()` number, a per-tick accrual,
 the `tunable()` perturbation path, and an `AutomationTiers` ladder
-(`modules/automation.ts`) holding one example policy behind a `manual → assisted`
-gate. The ladder ships locked, so it costs the default arc nothing; it is here so a
+(`modules/automation.ts`) holding one example policy that stays blocked until the
+`assisted` automation tier unlocks. The ladder ships locked, so it costs the default arc nothing; it is here so a
 fork inherits the canonical shape for player-facing automation rather than inventing
 one. A real archetype maps each pattern in its identity line to an engine primitive
 here, with candidate-primitive receipts where it hand-rolls a gap
@@ -106,5 +106,5 @@ around it reds on every legitimate retune, the band gets widened to restore
 green, and it then asserts nothing while still looking like a passing test. Put
 it in a probe report a human reads instead.
 
-`BALANCING.md` beside this file is the working guide — the knobs, their
+`BALANCING.md` beside this file is the working guide — the tunables, their
 couplings, and how to run a pass.

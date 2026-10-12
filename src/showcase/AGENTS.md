@@ -1,6 +1,6 @@
 # AGENTS.md — the stories
 
-Conventions for `src/showcase/`, harness-neutral — read this whether you are Claude Code, Codex, opencode or anything else. `CLAUDE.md` beside this file imports it rather than restating it, so this is the one home for the content; edit here.
+Conventions for `src/showcase/`, for every agent harness: Claude Code, Codex, opencode or any other. `CLAUDE.md` beside this file imports it rather than restating it, so this is the one home for the content; edit here.
 
 This half is the demo/research surface — archetypes, gallery, about, sandbox — and it lives *inside* the strip boundary. `pnpm eject` deletes the tree and takes this file with it, so a fork inherits the root `AGENTS.md` and none of what follows. That is the point: what a fork must not inherit is documented where the deletion already reaches, rather than in a list eject has to keep in sync.
 

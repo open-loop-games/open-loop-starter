@@ -1,20 +1,20 @@
 # Archetype identities
 
 The registry of identity lines across the set. A line is a game shape the studio
-wants a story for: a composition in research's pattern language (patterns by
+wants a story for: a research composition (research patterns by
 handle, from `open-loop-research/LIBRARY.md`), with the exemplar games that show
 the shape ships. A line exists whether or not an archetype has been built for it.
 
 Each line has a file at `_docs/<line>.md` holding its player experience, the call
 on every exemplar, and any merge, fold or lineage note. A built archetype's
-`IDENTITY.md` holds the realization — spine, loop, growth ports — and points at
+`IDENTITY.md` holds the realization — spine, arc, growth ports — and points at
 its line file.
 
 ## Tiers
 
 | Tier         | What it holds                                                                                                                                                                                                                                                   |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **core**     | Incremental expressions. "Incremental" stays undefined: the set shows compositions that fit the space rather than drawing its border. `meta-progression` is one way in among several, and a reset is not the defining trait.                                     |
+| **core**     | Incremental expressions. "Incremental" stays undefined: the set shows research compositions that fit the space rather than drawing its border. `meta-progression` is one way in among several, and a reset is not the defining trait.                                     |
 | **adjacent** | Non-incremental uses of the engine, as examples. A line earns this tier by a named engine surface the core lines do not exercise; it keeps the spine and cites research's adjacent collection (`open-loop-research/patterns/adjacent/`) where one applies. |
 
 Engine coverage alone never admits a line to core. A line whose exemplars split
@@ -23,16 +23,16 @@ across the tiers is re-cut — narrowed or moved — never held across both.
 ## The incremental call
 
 Made per exemplar and recorded in the line's file with the patterns behind it.
-It turns on whether progress persists:
+It turns on whether progress survives a reset:
 
-- a run-based game is in when something earned by play carries across runs —
+- a run-based game is in when something earned by play survives into the next run —
   `meta-progression` is the usual carrier;
-- a runless game is in on its own persistent growth — `offline-progress`,
+- a runless game is in on its own lasting growth — `offline-progress`,
   `escalating-price`, `softcap` and their kin;
-- a game whose runs or matches carry nothing earned by play is out — ranked
+- a game whose runs or matches keep nothing earned by play is out — ranked
   standing and cosmetics are not progress;
-- a game with a persisting mode and a mode that persists nothing is called on
-  the mode that persists.
+- a game with a mode where progress survives and a mode where nothing does is
+  called on the first.
 
 An out-called game may still be recorded on a line as **lineage**, with the
 patterns it carries, where its shape is representative. Lineage is never an
@@ -40,7 +40,7 @@ exemplar.
 
 ## Pattern-coverage grades
 
-How much of a line's composition research patterns cover — distinct from a spine's
+How much of a line's research composition the research patterns cover — distinct from a spine's
 coverage boundary, which is about closed forms. The grade fixes what
 the line may cite.
 
@@ -56,7 +56,7 @@ design knowledge and cited as part of the set; it carries no patterns. A compone
 the vocabulary cannot name is stated as having no pattern, the way LIBRARY
 § Compositions states its own. It becomes a candidate for
 `open-loop-research/patterns/candidate-patterns.md` only when a decline is read
-in source, never from this table. Exemplars validate that the composition ships in
+in source, never from this table. Exemplars validate that the research composition ships in
 the wild, crosses and all — never lift targets.
 
 A line carries no market address. Steam tags slice the space differently from

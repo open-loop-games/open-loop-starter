@@ -149,7 +149,7 @@ integrity → the defended line · boss escalation step → a **Saturation** sal
 the algebra (`W₀ = C/H`, `log_g(H)`) in this doc and the balance lanes, never in the
 HUD.
 
-## The loop — phase states
+## The arc — phase states
 
 Hard phases cycle STANDBY ↔ INBOUND, punctuated by SATURATION bosses, ending in
 OVERRUN. Windows are **measured and recorded, never authored** (§ Balance model).

@@ -70,7 +70,7 @@ describe('useSaveEvents', () => {
     expect(toasts.value).toHaveLength(0);
   });
 
-  it('surfaces load-failed with a human-readable reason', () => {
+  it('shows load-failed with a human-readable reason', () => {
     const storage = createMemoryStorage();
     const mgr = createSaveManager({
       gameId: 'fail-load',
@@ -105,7 +105,7 @@ describe('useSaveEvents', () => {
     expect(toasts.value[0].content).toContain('paused');
   });
 
-  it('unsubscribe tears down all listeners', () => {
+  it('unsubscribe removes every handler', () => {
     const storage = createMemoryStorage();
     const mgr = createSaveManager({ gameId: 'unsub-test', storageAdapter: storage });
     storage.setItem('unsub-test-slot-0', 'corrupt{{');

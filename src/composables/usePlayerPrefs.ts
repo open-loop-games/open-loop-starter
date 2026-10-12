@@ -1,10 +1,10 @@
 /**
  * Player-level preferences shared across all demos in the gallery.
  *
- * Persists to localStorage outside any engine's namespace, so flipping
- * the theme in one demo carries to every other demo in the gallery.
- * Engine-namespaced settings (see `useSettings` / `settingsModule`) are
- * for demo-mechanic toggles only.
+ * Stored in localStorage outside any engine's persistence namespace, so
+ * flipping the theme in one demo applies to every other demo in the gallery.
+ * Settings under an engine's persistence namespace (see `useSettings` /
+ * `settingsModule`) are for demo-mechanic toggles only.
  *
  * Singleton — refs are created on first import and reused. Writes are
  * mirrored to localStorage via `watch`.
@@ -57,7 +57,7 @@ function persist(snap: SerializedPlayerPrefs): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
   } catch {
-    // Quota exceeded or storage disabled — preferences won't persist this session.
+    // Quota exceeded or storage disabled — preferences last only this play session.
   }
 }
 

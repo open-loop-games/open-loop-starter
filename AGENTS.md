@@ -20,6 +20,21 @@ Layout shells, AppFrame, modal stack, default CSS tokens, reset, and the bridge 
 
 Maintenance discipline: stability **and generality**. Forks copy this and don't want it shifting under them; they also shouldn't have to fight it. The bar for new scaffold code is "would every new game want this on day one, and is it general enough that a story doesn't route around it?"
 
+## Terms
+
+Starter's text follows the engine's term list: `docs/terms.md` in the `@open-loop/engine` package. It governs prose, TSDoc, runtime messages, UI text and starter's own API names. Read a word's family there before you write it.
+
+Starter adds two terms:
+
+| term | meaning | not |
+|---|---|---|
+| **test harness** | an archetype's `sim/harness.ts`: bare `boot()`, `tick()` and `tickUntil()` over its module list, for behavioral suites | bare "harness" |
+| **costume classes** | the CSS classes and data attributes a fork overrides to reskin a component. Each composition header lists its own; they are stable API | costume hooks, class hooks, data hooks |
+
+Starter differs from the engine list in one rule. It always qualifies "harness": balance harness, test harness or agent harness. The engine's bare "harness" means the balance harness, but starter has a second one. Code spans such as `@open-loop/engine/harness` and `sim/harness.ts` are exempt.
+
+Where the list is silent, a word keeps its everyday sense. Examples are starter's layers (`modules`, `composables`, `ui`, `lib`) and Vue's "render".
+
 ## Commands
 
 ```bash

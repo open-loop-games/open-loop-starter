@@ -1,7 +1,7 @@
 <!--
   ChainBreakdown — Paradox-style modifier breakdown table. Feeds off any
   `Modifier` with a description (including `ModifierChain`) plus a base
-  value, and renders the per-modifier contribution list.
+  value, and renders one row per modifier.
 
   Rows come from the engine's `description`, which already filters out
   modifiers whose `enabled` is false — and `ModifierChain.bind()` folds a

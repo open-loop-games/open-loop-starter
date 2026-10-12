@@ -1,7 +1,7 @@
 <!--
   Gallery card — archetype pitch line (identity-line blockquote or first prose
   paragraph, per archetypePitch) + primitive count + shell label. No live
-  thumbnails: live mounts would multiply tickers and create persistence
+  thumbnails: live mounts would multiply tickers and create persistent-context
   collisions per card.
 -->
 <script setup lang="ts">

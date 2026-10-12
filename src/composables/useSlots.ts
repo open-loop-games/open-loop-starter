@@ -8,8 +8,8 @@ export interface SlotInfo extends SaveSlot {
 /**
  * Slot-screen view over a SaveManager. `slots` and `activeSlotId` are live
  * engine reads; `peek` is read whenever the slot list changes, which covers
- * every save the screen can see — it mounts only after the session has saved
- * and stopped the engine.
+ * every save the screen can see — it mounts only after the play session has
+ * saved and stopped the engine.
  */
 export function useSlots(saveManager: SaveManager, mods: readonly ModDef[]) {
   const slots = computed<SlotInfo[]>(() =>

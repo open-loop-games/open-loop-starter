@@ -1,5 +1,5 @@
 /**
- * Beat windows and predicates — the six phases in `../IDENTITY.md` § The loop,
+ * Beat windows and predicates — the six phases in `../IDENTITY.md` § The arc,
  * expressed as things a probe can watch on a live engine.
  *
  * Not runnable on its own; `arc-probe.ts` imports it. Windows are **measured,

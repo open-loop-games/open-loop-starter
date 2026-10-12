@@ -9,14 +9,14 @@ import {
  * The `tunable()` key registry — the one perturbation path (no parallel
  * `data/balance.ts`; see `.claude/rules/archetype-authoring.md` § Directory
  * shape). Balance probes and
- * solvers perturb these keys via `registry.pushOverrides`; the engine pattern lives
- * at `open-loop-engine/src/core/override-registry.ts`.
+ * solvers perturb these keys via `registry.pushOverrides`; the engine pattern is
+ * `src/core/override-registry.ts` in the `@open-loop/engine` package.
  *
  * A fork adds one union member per perturbable balance value and reads it at the
  * owning module's construction site with `tunable(registry, key, defaultFn)`.
  * Grep for `tunable(` to audit the live surface.
  *
- * Namespaces (blank base — one key, the example accumulator's rate):
+ * Key prefixes (blank base — one key, the example accumulator's rate):
  *   - `core/ratePerSecond` — units of `amount` accrued per game-second
  */
 export type GameTunableKey = 'core/ratePerSecond';

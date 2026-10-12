@@ -4,15 +4,15 @@ import { useToasts } from './useToasts';
 /**
  * Subscribe a SaveManager's lifecycle events to the toast system and console.
  *
- * Validation-error events are buffered per-load and surfaced as a single
+ * Validation-error events are buffered per-load and shown as a single
  * aggregated toast on success (avoids one-toast-per-healed-field spam).
- * Load failures, future-version refusals, and migration steps surface with
+ * Load failures, future-version refusals, and save migrations show with
  * human-readable reasons. A failed load that protects its slot says so on the
  * same toast: saves to that slot stop until the player deletes the save.
  *
  * Wired automatically by `bootApp` so every starter-using demo + every fork
- * inherits the pattern. Returns an unsubscribe function that tears down all
- * listeners; `bootApp` doesn't currently call it (listeners live as long as
+ * inherits the pattern. Returns an unsubscribe function that removes every
+ * handler; `bootApp` doesn't currently call it (the handlers last as long as
  * the engine), but the gallery sandbox could on unmount.
  */
 export function useSaveEvents(mgr: SaveManager): () => void {
@@ -71,15 +71,15 @@ export function useSaveEvents(mgr: SaveManager): () => void {
 
     mgr.on('save:future-version-refused', (err) => {
       addToast(
-        'Save from newer version',
-        `This save was written by version ${err.writtenVersion}; the current build only supports up to version ${err.supportedVersion}. Refusing to load to avoid corruption.`,
+        'Save from a newer build',
+        `This save has save version ${err.writtenVersion}; this build loads up to save version ${err.supportedVersion}. Refusing to load to avoid corruption.`,
         false,
       );
       console.error('[save] future-version refused:', err);
     }),
 
     mgr.on('save:migration-applied', (info) => {
-      console.info(`[save] migrated v${info.from} → v${info.to}`);
+      console.info(`[save] save migration: v${info.from} → v${info.to}`);
     }),
   ];
 
@@ -92,9 +92,9 @@ const PROTECTED_NOTE =
 function describeFailure(reason: string): string {
   switch (reason) {
     case 'validation':
-      return 'Strict validation found unrecoverable issues. Check console for field paths.';
+      return 'Strict validation found unrecoverable issues. Check console for save paths.';
     case 'parse-error':
-      return 'Save data is malformed or corrupted.';
+      return 'The save text is malformed or corrupted.';
     case 'wrong-game-id':
       return 'This save belongs to a different game.';
     case 'not-found':

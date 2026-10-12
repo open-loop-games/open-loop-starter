@@ -8,7 +8,7 @@ the *distribution* of match outcomes those two ladders produce when they collide
 solve-for-a-fire-time. `IDENTITY.md` § Rate-function spine states that boundary;
 this file is how you work inside it.
 
-## The knobs
+## The tunables
 
 | Key | Default | What it moves |
 |---|---|---|

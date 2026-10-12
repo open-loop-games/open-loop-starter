@@ -11,7 +11,7 @@ the bucket and where the closed form stops; the closed forms themselves sit in
 The one derived number is `COST_RATIO`. Everything else is either generated from
 it or is content.
 
-## The knobs
+## The tunables
 
 Perturbable surface — the `tunable()` keys a probe can push a scope onto, and
 what each one actually moves:
@@ -215,7 +215,7 @@ retunes — don't add numbers to them.
 
 - **`m` has no sweep.** It is the most load-bearing number in the archetype and
   the only one outside the perturbation surface, so exploring it costs a source
-  edit and a full arc re-run per sample. See The knobs.
+  edit and a full arc re-run per sample. See § The tunables.
 
 - **One arc, one seed, and that is defensible but worth knowing.** The
   dispatcher is deterministic and there is no stochastic layer, so extra seeds

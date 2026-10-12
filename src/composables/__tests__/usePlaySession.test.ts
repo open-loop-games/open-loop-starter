@@ -7,7 +7,7 @@ import { usePlaySession, type PlaySession } from '../usePlaySession';
 /**
  * Records lifecycle calls in order so a test can assert `startGame` /
  * `returnToSlots` drive the engine through the documented sequence. Only the
- * surface `usePlaySession` touches is implemented — the rest of the engine is
+ * engine API `usePlaySession` touches is implemented — the rest of the engine is
  * tested in the engine package; this locks *this layer's* orchestration.
  */
 function recordingEngine(loadResult = { success: true, timestamp: 1000 }) {
@@ -88,7 +88,7 @@ describe('usePlaySession', () => {
     expect(seen).toHaveLength(1);
     expect(seen[0].result).toEqual({ success: true, timestamp: 4242 });
     // The seam the archetype tails depend on: onLoaded runs while the screen is
-    // still Slots, so a game's catch-up/first-run work lands before Game shows.
+    // still Slots, so a game's catch-up/first-launch work finishes before Game shows.
     expect(seen[0].screen).toBe(Screen.Slots);
     expect(engine.calls).toEqual(['selectSlot:0', 'start', 'load']);
   });

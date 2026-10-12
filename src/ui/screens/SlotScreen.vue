@@ -29,7 +29,7 @@ const {
 const hasMods = props.engine.mods.length > 0;
 
 // Only show slots that have actual save data — the engine always creates a
-// default slot 0 "Autosave" as a placeholder, but we don't surface it until
+// default slot 0 "Autosave" as a placeholder, but we don't show it until
 // the user has actually saved there.
 const savedSlots = computed(() => slots.value.filter((s) => s.peek !== null));
 

@@ -13,7 +13,7 @@ capacity 256× still gets a run of the same length, and why permanent power read
 as *reach* rather than as pacing. `IDENTITY.md` § The rate-function spine has the
 derivation; this file is how you work on it.
 
-## The knobs
+## The tunables
 
 Perturbation is `tunable()` against the registry in `modules/tuning.ts`. A probe
 or a suite sweeps a value with `pushOverrides`, never by rebuilding the engine with

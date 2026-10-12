@@ -1,13 +1,13 @@
 # Archetypes
 
 Example games in the common subgenre expressions of incrementals. Each is a
-composition of research patterns, and together they show how the engine is used
-and what its surfaces do, while exercising the engine under real use. Each one is
+research composition, and together they show how the engine is used
+and what its API surfaces do, while exercising the engine under real use. Each one is
 self-bootable, forkable with `pnpm eject <name>`, built from the starter's
 batteries, and carried by a rate-function spine that generates its balance.
 
 Each archetype's `IDENTITY.md` is the single-screen answer to what it is: the
-pattern-language identity line, the spine its economy lives on, the loop, and the
+pattern-language identity line, the spine its economy lives on, the arc, and the
 directions it grows through. Start there.
 
 ## The set
@@ -15,15 +15,15 @@ directions it grows through. Start there.
 | Archetype  | Shape                                                                |
 | ---------- | -------------------------------------------------------------------- |
 | `cycler`   | Alternating build/defend phases on a hard-phase cycle                |
-| `producer` | Geometric cost ladder under a compounding modifier stack             |
+| `producer` | Geometric cost ladder under a compounding multiplier stack           |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
 | `survivor` | Run-scoped real-time survival against continuously escalating threat |
 | `tug`      | Adversarial lane push with a shared contested lane                   |
-| `_blank`   | Neutral skeleton — the starting point for a novel composition        |
+| `_blank`   | Neutral skeleton — the starting point for a novel research composition |
 
 `_identity.md` is the identity-line registry across the set. It carries more lines than
 there are directories here — a line is a game shape the studio wants a story for: a
-composition in research's pattern language with its exemplar set, a tier (core
+research composition with its exemplar set, a tier (core
 incremental expression, or adjacent engine example) and a pattern-coverage grade saying how much
 of it research patterns cover. A line exists independent of whether an archetype has
 been built for it. Each line's explanation — player experience, the call on every

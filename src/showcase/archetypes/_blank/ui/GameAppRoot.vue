@@ -1,6 +1,6 @@
 <!--
   GameAppRoot — routing + app chrome only. Runs before `engine.start()` (on the
-  slot screen), so it reads NO engine module state. The game lives in
+  slot screen), so it reads NO module state. The game lives in
   `<GameView>`, mounted under the post-start `v-else` frame where module reads
   are safe. See `.claude/rules/app-root-discipline.md`.
 -->

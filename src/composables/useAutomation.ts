@@ -1,15 +1,15 @@
 /**
- * useAutomation — generic recipe for tier-gated, throttled automation.
+ * useAutomation — generic recipe for throttled automation behind automation tiers.
  *
- * A composition-agnostic wrapper over the engine's two generic automation
+ * A game-agnostic wrapper over the engine's two generic automation
  * building blocks:
  * - {@link createAutomationTiers} — tracks which automation tiers are unlocked,
  *   auto-unlocking a tier when its `unlockWhen` flips true (reactive, persisted).
  * - {@link createThrottle} — rate-limits how often the automation runs.
  *
- * It exposes the tier system, a throttle gate, `hasReached`, and derived UI
+ * It exposes the automation tiers, a throttle, `hasReached`, and derived UI
  * state — and nothing about *what* each tier does. The consumer wires the
- * per-tier behaviour in its own tick body:
+ * per-tier behaviour in its own tick handler:
  *
  * ```ts
  * const auto = useAutomation({
@@ -35,8 +35,8 @@
  * assigns it to `queue.fillStrategy`. That wiring is game-specific, so it lives in
  * the consumer, not here.
  *
- * Callable from a Vue setup OR from an engine module's `install()` — the tier
- * system opens its own `withPersistentContext(id)`, so it persists correctly in
+ * Callable from a Vue setup OR from a module's `install()` — the automation
+ * tiers open their own `withPersistentContext(id)`, so they persist correctly in
  * either place.
  */
 
@@ -54,17 +54,17 @@ import {
 // ============================================================================
 
 export interface UseAutomationOptions {
-  /** Persistence context ID for the tier system. */
+  /** Persistent context id for the automation tiers. */
   id: string;
 
-  /** Tier definitions — see {@link AutomationTierDef}. Sorted internally by order. */
+  /** Automation tier defs — see {@link AutomationTierDef}. Sorted internally by order. */
   tiers: AutomationTierDef[];
 
-  /** Tier IDs that start unlocked. Defaults to the single lowest-order tier. */
+  /** Automation tier ids that start unlocked. Defaults to the single lowest-order tier. */
   initiallyUnlocked?: string[];
 
   /**
-   * Seconds between throttle-gate openings. `0` (default) fires every tick.
+   * Seconds between throttle openings. `0` (default) fires every tick.
    * Applies to {@link UseAutomationReturn.shouldRun}.
    */
   throttleInterval?: number;
@@ -74,25 +74,25 @@ export interface UseAutomationReturn {
   /** The engine's automation tiers — use for UI, event wiring, prestige resets. */
   automationTiers: AutomationTiers;
 
-  /** The throttle gate backing {@link shouldRun}. */
+  /** The throttle backing {@link shouldRun}. */
   throttle: Throttle;
 
   /**
-   * Throttle gate. Call in a tick callback; returns `true` at most once per
-   * `throttleInterval`. Per-tier gating is the consumer's job (via {@link hasReached}).
+   * Throttle check. Call in a tick handler; returns `true` at most once per
+   * `throttleInterval`. Per-tier checks are the consumer's job (via {@link hasReached}).
    */
   shouldRun(dt: number): boolean;
 
-  /** Whether automation has progressed to at least the given tier. */
+  /** Whether automation has progressed to at least the given automation tier. */
   hasReached(tierId: string): boolean;
 
-  /** Whether any tier past the lowest-order (manual) tier is unlocked. */
+  /** Whether any automation tier past the lowest-order (manual) one is unlocked. */
   isAutomated: ComputedRef<boolean>;
 
-  /** The highest unlocked tier's ID. */
+  /** The highest unlocked automation tier's id. */
   currentTierId: ComputedRef<string>;
 
-  /** Display name of the current tier. */
+  /** Display name of the current automation tier. */
   currentTierName: ComputedRef<string>;
 }
 

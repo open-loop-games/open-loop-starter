@@ -1,5 +1,5 @@
 <!--
-  SandboxWrapper — gallery's mount surface for an archetype's `createApp()`.
+  SandboxWrapper — gallery's mount point for an archetype's `createApp()`.
 
   Owns the single-tenant invariants for the gallery:
 
@@ -7,19 +7,19 @@
     cleared after unmount. Defensive: an archetype's AppRoot may also write/clear
     this attribute (its CSS theme scopes from it). Both writes are
     idempotent on the same value, and the wrapper's clear runs after the
-    AppRoot's `onUnmounted` so a missed teardown is still cleaned up.
+    AppRoot's `onUnmounted`, so an AppRoot that skips its own clear is still covered.
 
   - Vue app is fully unmounted between archetypes — `engine.dispose()`
-    stops the loop and releases the engine's persistent-context registry,
+    stops the game loop and deletes the engine's persistent contexts,
     then `app.unmount()` fires `onUnmounted` on the AppRoot. Dispose (not
     stop) is required because the gallery remounts the same archetype
-    in-page; without it the second mount throws on persistent-name
-    collisions (engine assumes single-instance-per-lifetime otherwise).
+    in-page; without it the second mount throws on persistent-context
+    id collisions (engine assumes single-instance-per-lifetime otherwise).
 
   Save isolation rides on each archetype's unique `gameId` (cycler-pilot,
   tug-pilot); save-manager prefixes storage keys with it, so
-  no `manifest.id`-as-namespace push/pop is needed. Saves persist across
-  remounts because dispose only touches the in-memory ref registry.
+  no `manifest.id`-as-persistence-namespace push/pop is needed. Saves persist across
+  remounts because dispose only touches the in-memory persistent-ref registry.
 -->
 <script setup lang="ts">
 import { onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } from 'vue';

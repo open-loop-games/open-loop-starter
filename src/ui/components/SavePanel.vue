@@ -110,7 +110,7 @@ function confirmDelete(): void {
           data-testid="open-delete"
           @click="showDeleteConfirm = true"
         >
-          Clear this slot
+          Delete this slot
         </Button>
       </div>
 
@@ -120,7 +120,7 @@ function confirmDelete(): void {
       </div>
 
       <div v-if="showImport" class="import-area">
-        <textarea v-model="importText" rows="4" placeholder="Paste save data here..." />
+        <textarea v-model="importText" rows="4" placeholder="Paste save text here..." />
         <Button class="btn-primary btn-sm" :disabled="!importText.trim()" @click="doImport">
           Import
         </Button>
@@ -132,12 +132,12 @@ function confirmDelete(): void {
         <DialogOverlay class="dialog-overlay" />
         <DialogContent class="dialog-content">
           <VisuallyHidden>
-            <DialogTitle>Clear this save slot</DialogTitle>
+            <DialogTitle>Delete this save slot</DialogTitle>
             <DialogDescription>Confirm destructive save deletion</DialogDescription>
           </VisuallyHidden>
-          <PanelLayout title="Clear this slot?" @close="showDeleteConfirm = false">
+          <PanelLayout title="Delete this slot?" @close="showDeleteConfirm = false">
             <div class="confirm-body">
-              <p>This wipes the active save slot. Other slots and other demos are untouched.</p>
+              <p>This deletes the active save slot. Other slots and other demos are untouched.</p>
               <div class="confirm-actions">
                 <Button class="btn-sm" @click="showDeleteConfirm = false"> Cancel </Button>
                 <Button
@@ -145,7 +145,7 @@ function confirmDelete(): void {
                   data-testid="confirm-delete"
                   @click="confirmDelete"
                 >
-                  Clear slot
+                  Delete slot
                 </Button>
               </div>
             </div>

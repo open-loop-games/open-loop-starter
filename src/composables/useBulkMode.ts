@@ -13,7 +13,7 @@ export interface BulkModeApi {
    * Resolve the actual purchase count given how many are affordable:
    * - `max` → the full affordable count.
    * - numeric N → `min(N, affordable)` (AD-style "up to N" fallback, so
-   *   the button stays live when the player can only afford part of the tier).
+   *   the button stays live when the player can only afford part of the bulk count).
    */
   resolveCount: (maxAffordable: DecimalSource) => DecimalSource;
 }

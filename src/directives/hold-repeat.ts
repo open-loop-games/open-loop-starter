@@ -1,11 +1,11 @@
 import type { Directive } from 'vue';
 
 /**
- * v-hold-repeat — clicker-game standard: press-and-hold fires the callback
+ * v-hold-repeat — clicker-game standard: press-and-hold fires the handler
  * once immediately, then repeats at a fixed interval after a short delay.
  * Keyboard activation (Enter/Space) fires once — OS keyrepeat handles holds.
  *
- * Bind the callback directly: `v-hold-repeat="() => doThing()"`. The directive
+ * Bind the handler directly: `v-hold-repeat="() => doThing()"`. The directive
  * handles pointer/keyboard lifecycle; don't pair with `@click`, which would
  * double-fire on pointer devices.
  */

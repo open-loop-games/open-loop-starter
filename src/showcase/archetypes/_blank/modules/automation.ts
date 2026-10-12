@@ -16,17 +16,17 @@ import { GAME_BALANCE, type GameBalance } from '../data/game';
  * See `.claude/rules/archetype-authoring.md` § Conformance.
  *
  * DELETE-OR-RESHAPE, like the rest of the blank economy. What a fork should
- * keep is the *shape*: a tier ladder, a policy gated on `hasReached`, and a
+ * keep is the *shape*: a tier ladder, a policy blocked on `hasReached`, and a
  * player toggle underneath it. What a fork replaces is what the policy does —
  * here, a flat multiplier on the core accrual.
  *
  * The ladder ships locked, so a clean fork's arc is exactly the linear spine in
  * `../data/game.ts` § Balance. Unlocking makes it piecewise, which is the
- * lesson worth inheriting: gated automation is a *balance* change, not just a
+ * lesson worth inheriting: automation behind a tier is a *balance* change, not just a
  * structural one, and the projection has to say so.
  */
 
-/** Tier ids in ladder order. Policies are typed against this union. */
+/** Automation tier ids in ladder order. Policies are typed against this union. */
 export type GameAutomationTier = 'manual' | 'assisted';
 
 export interface AutomationApi {

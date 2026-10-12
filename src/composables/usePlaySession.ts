@@ -10,7 +10,7 @@ export interface PlaySessionOptions {
    * This is the seam games actually differ on. The load result carries
    * `timestamp`, so a game can measure the offline gap and decide what that
    * means for it: advance the tick driver over it, bracket a resource across
-   * it, ignore it. First-run state that needs a started engine (auto-starting
+   * it, ignore it. First-launch state that needs a started engine (auto-starting
    * a match) goes here too.
    */
   onLoaded?: (result: SaveLoadResult) => void;

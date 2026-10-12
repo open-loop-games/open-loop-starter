@@ -202,7 +202,7 @@ planet, star).
 band splice) in this doc and the balance lanes, never in the HUD. The HUD shows mass, a
 ladder, and a breakdown.
 
-## The loop — beat map
+## The arc — beat map
 
 There is no cycle and no run; the arc runs once and does not close. Windows are
 **measured and recorded by the probes, never authored** (§ Balance model) — the names
@@ -290,7 +290,7 @@ lands. In brief:
   revision bands. It predicts; it does not discover.
 - **The probes (`balance/*-probe.ts`).** Drive the **real engine and the shipping
   dispatcher** so sim and game cannot drift. `arc-probe.ts` prints realized time-to-tier
-  against the projection and records the beat windows § The loop leaves blank;
+  against the projection and records the beat windows § The arc leaves blank;
   `allocation-probe.ts` runs the rule sweep that decides how much the policy term is
   worth; `offline-probe.ts` checks the banked closed form against the replay, measures
   what an absence does to the arc, and times the catch-up the window is derived from.

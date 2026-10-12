@@ -7,7 +7,7 @@ export enum Screen {
  * Shared starter types.
  *
  * `ArchetypeManifest` is the gallery-surface contract every archetype satisfies.
- * Each `src/archetypes/<name>/manifest.ts` exports a typed `ArchetypeManifest`
+ * Each `src/showcase/archetypes/<name>/manifest.ts` exports a typed `ArchetypeManifest`
  * value re-exported from the archetype's `index.ts`. The gallery enumerates
  * archetypes via `import.meta.glob` and reads these manifests; the manifest
  * is the source of truth for card/detail-pane presentation.
@@ -49,7 +49,7 @@ export interface ExemplarRef {
 }
 
 export interface ArchetypeManifest {
-  /** Stable id; matches the directory name and the engine save-namespace. */
+  /** Stable id; matches the directory name and the engine's persistence namespace. */
   id: string;
   /** Forwarded as `appName` to SlotScreen. Costume-level. */
   displayName: string;

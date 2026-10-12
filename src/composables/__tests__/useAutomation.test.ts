@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ref, nextTick } from 'vue';
 import { useAutomation } from '../useAutomation';
 
-// A fresh persistence context id per test keeps tier unlock-state isolated
+// A fresh persistent context id per test keeps tier unlock-state isolated
 // (createAutomationTiers persists `unlocked` under the given id).
 let seq = 0;
 const freshId = () => `test-automation-${seq++}`;
@@ -23,18 +23,18 @@ describe('useAutomation', () => {
     expect(auto.hasReached('build')).toBe(false);
   });
 
-  it('auto-unlocks a tier when its requirement flips true', async () => {
-    const gate = ref(false);
+  it('auto-unlocks a tier when its unlockWhen predicate flips true', async () => {
+    const unlocked = ref(false);
     const auto = useAutomation({
       id: freshId(),
       tiers: [
         { id: 'manual', displayName: 'Manual', order: 0 },
-        { id: 'build', displayName: 'Auto-Build', order: 1, unlockWhen: () => gate.value },
+        { id: 'build', displayName: 'Auto-Build', order: 1, unlockWhen: () => unlocked.value },
       ],
     });
     expect(auto.hasReached('build')).toBe(false);
 
-    gate.value = true;
+    unlocked.value = true;
     await nextTick();
 
     expect(auto.hasReached('build')).toBe(true);
@@ -42,7 +42,7 @@ describe('useAutomation', () => {
     expect(auto.currentTierName.value).toBe('Auto-Build');
   });
 
-  it('shouldRun gates at most once per throttle interval', () => {
+  it('shouldRun returns true at most once per throttle interval', () => {
     const auto = useAutomation({
       id: freshId(),
       tiers: [{ id: 'manual', displayName: 'Manual', order: 0 }],

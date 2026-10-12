@@ -1,6 +1,6 @@
 <!--
   HudBar — flex row container for headline gameplay chips (resource
-  totals, rate displays, auto-buy toggles, etc.). Pair with HudChip for
+  totals, rate displays, auto-purchase toggles, etc.). Pair with HudChip for
   standard chip styling; bespoke content (e.g. a chip with an inlaid
   progress bar) slots in directly.
 -->

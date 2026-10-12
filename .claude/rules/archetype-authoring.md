@@ -78,7 +78,7 @@ Filename is `IDENTITY.md` for every archetype. Single screen. Required:
    realizes it; the line's general prose lives in its `_docs/` file.
 3. **Rate-function spine** — the bucket, where the closed form stops, and what measures the
    remainder. The load-bearing section.
-4. **The loop / beat map** — where the run turns.
+4. **The arc / beat map** — where the run turns.
 5. **Growth ports** — the validated-but-deferred directions the archetype grows through.
 6. **Engine fit** — pattern → engine primitive, with candidate-primitive receipts.
 7. **Balance model** — the spine and what checks it, pointing at this archetype's `balance/`.
@@ -92,7 +92,7 @@ and a wall of constants. Present tense, no pass history. Required:
 
 1. **Opening** — two or three sentences on what kind of economy this is. Points at
    `IDENTITY.md` § Rate-function spine for the bucket; never restates it.
-2. **The knobs** — every `tunable()` key, its default, and *what it moves*. The
+2. **The tunables** — every `tunable()` key, its default, and *what it moves*. The
    effect, not the declaration — that is what a reader cannot get from `data/`.
    Name what is deliberately **not** perturbable, and why.
 3. **Couplings** — what is not independent, and what breaks *silently* if changed.
@@ -210,7 +210,7 @@ Each axis has one canonical answer and one archetype to copy it from:
 | Test harness | `sim/harness.ts` → bare `boot()` / `tick()` / `tickUntil()` over this archetype's modules | `_blank` |
 | Runnable projection | `<name>-projection.ts` where the closed form is worth executing | `cycler` |
 | Probes | `<concern>-probe.ts` under `balance/`; print, never assert | `cycler` |
-| Balance orientation | `BALANCING.md` beside `IDENTITY.md`, four required sections | `producer` |
+| Balance orientation | `BALANCING.md` beside `IDENTITY.md`, five required sections | `producer` |
 | Boot | `createApp(overrides?) → { app, engine, mount }` | any — all agree |
 
 A deliberate divergence is allowed and is worth writing down: say so at the call site

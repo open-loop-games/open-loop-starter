@@ -1,14 +1,14 @@
 /**
  * Starter boot factories — the canonical entry points for every archetype.
  *
- * `bootEngine` creates an engine with starter defaults (tick rate, autosave,
+ * `bootEngine` creates an engine with starter defaults (interval rate, autosave,
  * save-slot count) and auto-prepends `sharedBase` modules to every mod.
  *
  * `bootApp` creates a Vue app and provides the engine. Pass additional
  * provides for archetype-specific keys.
  *
  * Archetype `boot.ts` files flow through these — there is no other supported
- * way to wire an engine + app. Fork at your own peril.
+ * way to wire an engine + app. Bypass them at your own peril.
  *
  * Invariant: every demo's `gameId` must be unique within the gallery —
  * SaveManager keys storage by `gameId`, so collisions cross-contaminate
@@ -17,9 +17,9 @@
  * Autosave: the engine's default applies (it writes only after a load). While
  * SystemHeader is mounted it drives the interval from the player-pref refs, so
  * the cadence is user-configurable at runtime. An engine that must never write
- * (sim, balance, test) passes `autoSaveInterval: 0`.
+ * (a simulation, a balance probe, a test) passes `autoSaveInterval: 0`.
  *
- * Error surfacing: `bootApp` installs an `app.config.errorHandler`. Without
+ * Error reporting: `bootApp` installs an `app.config.errorHandler`. Without
  * one, Vue degrades a throw inside a lifecycle hook or event handler to a
  * `[Vue warn]` with the cause swallowed — which is how engine wiring mistakes
  * reach a developer as "the app didn't render" and nothing else.
@@ -73,7 +73,7 @@ export function bootApp(options: BootAppOptions): BootAppResult {
 
   // Vue routes lifecycle-hook and event-handler throws here; with no handler
   // installed it logs a warn and drops the cause, so an engine throw during
-  // mount is invisible. Log it whole, then rethrow in dev to surface it in the
+  // mount is invisible. Log it whole, then rethrow in dev to show it in the
   // overlay — production keeps rendering the rest of the tree.
   app.config.errorHandler = (err, _instance, info) => {
     console.error(`[boot] unhandled error during ${info}:`, err);
@@ -86,8 +86,8 @@ export function bootApp(options: BootAppOptions): BootAppResult {
   }
 
   // Canonical save-event subscription — toast aggregation for self-healed
-  // fields, load failures, future-version refusals, migration logging.
-  // Engines created without persistence (sim/test) have no saveManager;
+  // fields, load failures, future-version refusals, save-migration logging.
+  // Engines created without persistence (simulation, test) have no saveManager;
   // skip silently.
   if (options.engine.saveManager) {
     useSaveEvents(options.engine.saveManager);

@@ -41,18 +41,18 @@ describe('UpgradeGrid', () => {
     expect(wrapper.html()).not.toContain('Card b');
   });
 
-  it('purchasedState="checkmark" renders ✓ on owned cards; "greyed" renders "Bought"', () => {
+  it('purchasedState="checkmark" renders ✓ on owned cards; "greyed" renders "Purchased"', () => {
     const cards = [makeCard('a', { owned: true })];
 
     const check = mount(UpgradeGrid, {
       props: { cards, reveal: 'inline', purchasedState: 'checkmark' },
     });
-    expect(check.html()).toContain('✓ Bought');
+    expect(check.html()).toContain('✓ Purchased');
 
     const grey = mount(UpgradeGrid, {
       props: { cards, reveal: 'inline', purchasedState: 'greyed' },
     });
-    expect(grey.html()).toContain('Bought');
+    expect(grey.html()).toContain('Purchased');
     expect(grey.html()).not.toContain('✓');
   });
 

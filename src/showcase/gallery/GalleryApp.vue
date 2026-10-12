@@ -2,9 +2,9 @@
   GalleryApp — root component for the showcase. Sidebar lists archetypes;
   main is either the home card grid or an "entered" view for one archetype.
 
-  Layout primitives are the lib/ shells; gallery contributes only
-  composition. The hamburger drives the shell's existing `data-collapsed`
-  attribute hook (the shell publishes this hook for mobile responsive
+  Layout comes from the lib/ shells; gallery only composes them. The
+  hamburger drives the shell's `data-collapsed` attribute, one of its
+  costume classes (the shell publishes it for mobile responsive
   collapse; gallery-scoped CSS extends it to desktop without editing the
   shell — see "wrap it yourself" guidance in SidebarMainShell.vue).
 
@@ -193,8 +193,8 @@ function flipTab(): void {
   color: var(--color-text);
 }
 
-/* Activate SidebarMainShell's `data-collapsed='true'` hook on desktop too.
-   The shell publishes this attribute hook for its own responsive collapse
+/* Activate SidebarMainShell's `data-collapsed='true'` costume class on desktop too.
+   The shell publishes this attribute for its own responsive collapse
    below 720px; gallery-scoped CSS lifts it to all viewport widths so the
    hamburger toggle can drive collapse without lib/ changes.
 

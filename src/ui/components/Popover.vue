@@ -3,7 +3,7 @@
   Popover primitives; the non-modal sibling of Tooltip. Trigger is a
   slot with `as-child`.
 
-  Class hooks: olui-popover__content, olui-popover__arrow (when
+  Costume classes: olui-popover__content, olui-popover__arrow (when
   showArrow), olui-popover__close (when showClose). Reactive state
   comes from reka-ui (data-state / data-side / data-align).
   Custom props: --popover-{surface,border,shadow,padding,radius}.

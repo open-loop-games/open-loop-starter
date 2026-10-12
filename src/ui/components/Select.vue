@@ -2,7 +2,7 @@
   Select — thin reka-ui Select wrapper.
 
   Behavioral primitives (a11y, focus, portal, positioning) come from reka-ui.
-  This component supplies class hooks + default custom-property values so
+  This component supplies costume classes + default custom-property values so
   theme-widgets.css can style Select without touching scoped CSS.
 
   Emits `update:modelValue` so it works with `v-model` at the call site.

@@ -1,13 +1,13 @@
 /**
  * Example behavioral suite — the pattern every game test in this fork should
- * copy. It exercises the harness end-to-end (`boot` → `tick` → save/load) so a
+ * copy. It exercises the test harness end-to-end (`boot` → `tick` → save/load) so a
  * freshly-ejected repo starts green, and it guards the scaffold's core promise:
  * persistence survives a round-trip.
  *
  * This targets the shared base (settings) plus the example economy's automation
- * gate. As you add game modules, write one suite per module beside it —
- * `src/game/modules/<name>.test.ts` — that boots the harness and asserts the
- * mechanic's *observable behavior* through its public API:
+ * tier. As you add game modules, write one suite per module beside it —
+ * `src/game/modules/<name>.test.ts` — that boots the test harness and asserts
+ * the mechanic's *observable behavior* through its public API:
  *
  *   beforeEach(() => boot());
  *   it('a widget produces while it runs', async () => {
@@ -27,7 +27,7 @@ import { SettingsKey } from '@/modules/settings';
 
 beforeEach(() => boot());
 
-describe('harness smoke', () => {
+describe('test harness smoke', () => {
   it('boots with the shared base installed and ticks without error', async () => {
     const settings = getEngine().tryInject(SettingsKey);
     expect(settings).toBeDefined();

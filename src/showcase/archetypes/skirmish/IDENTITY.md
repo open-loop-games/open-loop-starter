@@ -107,7 +107,7 @@ policy therefore reserves the worker price while under target. The continuous
 model has no term for this — it is why the projection this spine owes is a bound
 rather than a prediction, and it is recorded at `data/economy.ts` § Coupling.
 
-## The loop — beat map
+## The arc — beat map
 
 Match-scoped: **fund → build → commit → engage → break**. Six ordered
 player-experience phases; the **measured** windows and predicates belong in

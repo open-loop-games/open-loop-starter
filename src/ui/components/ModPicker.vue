@@ -13,7 +13,7 @@ const selected = ref<string | null>(
 
 <template>
   <div class="mod-picker">
-    <h3>Select Game Variant</h3>
+    <h3>Select a Mod</h3>
     <div class="mod-list">
       <Button
         v-for="mod in mods"

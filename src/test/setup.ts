@@ -2,7 +2,7 @@
  * Vitest setup file — runs once per worker before any test file. Loaded
  * via `vitest.config.ts` (see `test.setupFiles`). Any test-framework
  * side effects belong here, not inside `bootTestEngine.ts`, since that
- * primitive may also be consumed by non-vitest runtime code (e.g. benchmark
+ * utility may also be consumed by non-vitest runtime code (e.g. benchmark
  * runners) that has no vitest globals.
  */
 import { vi } from 'vitest';

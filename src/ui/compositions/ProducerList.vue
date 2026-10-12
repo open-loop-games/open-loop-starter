@@ -2,17 +2,17 @@
   ProducerList — panel-level composition over a list of producer-shaped rows
   (buildings, dimensions, businesses). Engine-bridged: adapts to any module
   exposing the ProducerRowData shape. Slots for content shape, props for
-  behavior. Sourced from OL-919 vocabulary work.
+  behavior.
 
-  Costume hooks (stable API). A story reskins this from outside via
+  Costume classes (stable API). A story reskins this from outside via
   `:deep(.producer-list__…)` without forking it (see producer's ProducerPanel).
   These class names are part of the contract — treat renames as breaking:
     .producer-list          root section (+ [data-density])
     .producer-list__header  header slot region
     .producer-list__rows    the <ul>
     .producer-list__row     one <li>
-  (Convention: panel-level compositions expose bare BEM hooks; widget-level
-  components under src/ui/components expose `olui-` hooks. Both are stable.)
+  (Convention: panel-level compositions expose bare BEM classes; widget-level
+  components under src/ui/components expose `olui-` classes. Both are stable.)
 -->
 <script setup lang="ts" generic="T = never">
 import { computed } from 'vue';
@@ -66,13 +66,13 @@ const visibleRows = computed(() => props.rows.filter((r) => r.unlocked?.value ??
 
 function rowState(row: ProducerRowData<T>) {
   // Floor at 1. `maxAffordable` is 0 when the player cannot afford a single
-  // unit, and quoting `cost(0)` renders the price as 0 — the row would hide
+  // unit, and quoting `cost(0)` renders the cost as 0 — the row would hide
   // what it costs exactly when the player is saving up for it. One is also the
   // count a click would purchase if it could, so `canPurchase`/`purchase` stay honest: both
   // are asked about the count actually shown.
   const pendingCount = Decimal.max(1, resolveCount(row.maxAffordable.value));
   const pendingCost = row.cost(pendingCount);
-  const purchaseLabel = `Buy ${formatWhole(pendingCount)} — ${format(pendingCost, 0)} ${props.costLabel}`;
+  const purchaseLabel = `Purchase ${formatWhole(pendingCount)} — ${format(pendingCost, 0)} ${props.costLabel}`;
   const canPurchase = row.canPurchase(pendingCount);
   const purchase = () => {
     if (canPurchase) row.purchase(pendingCount);

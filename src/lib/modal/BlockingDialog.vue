@@ -8,16 +8,16 @@
   construction, so a blocking decision surface (end-of-run victory/defeat, a
   match summary) can't be expressed through the stack — games hand-rolled
   AlertDialog instead. This is that surface as a battery. The chrome (overlay,
-  centred panel, title) lives here; the body, any stat list, and the action
+  centred panel, title) is here; the body, any stat list, and the action
   button fill the default slot and stay the game's.
 
   Reskin: the panel is PORTALED to <body>, so a consumer's `<style scoped>`
-  :deep() does NOT reach these chrome hooks (unlike the inline compositions,
+  :deep() does NOT reach these chrome classes (unlike the inline compositions,
   which render in place). Pass `panel-class` and style it from an UNSCOPED rule,
   or set `max-width`. Slotted content keeps its own component scope and styles
   normally.
 
-  Costume hooks (stable API) — for unscoped/global rules only; renames break:
+  Costume classes (stable API) — for unscoped/global rules only; renames break:
     .olui-blocking-dialog__overlay
     .olui-blocking-dialog__panel   (+ your panel-class)
     .olui-blocking-dialog__title

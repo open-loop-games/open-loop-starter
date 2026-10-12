@@ -37,7 +37,7 @@ describe('ChainBreakdown', () => {
 
   // The engine's `description` getter filters `enabled === false`, and
   // `ModifierChain.bind()` folds a binding's `active` predicate into that same
-  // `enabled` — so a disabled or inactive modifier contributes neither a row
+  // `enabled` — so a disabled or inactive modifier adds neither a row
   // nor a factor to the total. Pinned because it is the whole reason this
   // component can stay a dumb pass-through over `description`.
   it('omits disabled modifiers from both the rows and the total', () => {
@@ -70,7 +70,7 @@ describe('ChainBreakdown', () => {
     expect(totalText(w)).toBe('2.00');
   });
 
-  it('shows a placeholder when nothing is contributing', () => {
+  it('shows a placeholder when no modifier applies', () => {
     const modifier = createSequentialModifier([]);
     const w = mount(ChainBreakdown, { props: { title: 'Rate', modifier, base: 1 } });
 

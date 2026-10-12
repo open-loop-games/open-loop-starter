@@ -8,7 +8,7 @@ asks for, filled in for the neutral base. Rewrite each one for your game.
 work on its numbers. Write it for whoever inherits the game after `pnpm eject` —
 at that point the showcase is gone and this doc is all that stands between the
 spine declaration and a wall of constants. Present tense, no pass history: it is
-an operating guide, not a ledger of what a session learned. A finding that proves
+an operating guide, not a ledger of what a balance pass learned. A finding that proves
 general enough to apply to *any* economy leaves for the project's
 balance-methodology record; findings ripen in § Couplings and § Known thin until
 then.
@@ -17,7 +17,7 @@ The blank economy is one number rising at a fixed rate, so every section below i
 close to empty. That is the point — the shape is here, and a real economy fills
 it in.
 
-## The knobs
+## The tunables
 
 Every `tunable()` key, its default, and **what it moves**. The effect, not the
 declaration — that is what a reader cannot get by opening `data/`. Name what is
@@ -25,7 +25,7 @@ deliberately *not* perturbable too, and why, so nobody re-litigates it.
 
 | Key | Default | What it moves |
 |---|---|---|
-| `game/ratePerSecond` | `1` | How fast the tracked number climbs. The whole economy, for now. |
+| `core/ratePerSecond` | `1` | How fast the tracked number climbs. The whole economy, for now. |
 
 `automationMultiplier` (`2`, in `data/game.ts`) is deliberately **not** on the
 perturbation surface. It is a content decision about what unlocking automation
@@ -44,13 +44,13 @@ day.
 § Balance carries the linear closed form *and* the branch that opens when the
 `assisted` tier unlocks. `balance/game-projection.ts` only implements the linear
 one, because the ladder ships locked — the probe reads 0.00% drift for exactly
-that reason. Open the gate without growing the projection and the probe starts
+that reason. Unlock the `assisted` tier without growing the projection and the probe starts
 reporting drift that is real but unexplained, which is the worst way to discover
 you changed the economy.
 
 In a real economy this is where
 you record things like "these two ladders share a growth constant, so retune the
-ratios rather than the shared term", or "the harness can only read the arc
+ratios rather than the shared term", or "the balance harness can only read the arc
 because there is no click channel; add one and the solver reports wrong answers
 rather than failing".
 
@@ -68,7 +68,7 @@ pnpm exec vite-node src/game/balance/game-probe.ts
   Predicts; it does not discover.
 - **`game-probe.ts`** — drives the shipping module on the real engine and prints
   the drift against the projection. It reports; it does not assert. A probe that
-  surfaces something unexpected has done its job.
+  finds something unexpected has done its job.
 - **`sim/example.test.ts`** — the behavioral suite: what the mechanic *does*,
   tick by tick, with no magnitudes. Add per-module specs beside their modules as
   the game grows.
@@ -77,7 +77,7 @@ pnpm exec vite-node src/game/balance/game-probe.ts
 do I change" but *which layer is wrong* — the implementation drifted, the
 constant needs a retune, the content needs reshaping, the predicate measures the
 wrong moment, or the spine's shape was the wrong family. The engine guide's
-§ When prediction and truth disagree walks the full list. The probe surfaces the
+§ When prediction and truth disagree walks the full list. The probe shows the
 choice; a human makes the call.
 
 ## Known thin

@@ -1,7 +1,7 @@
 # Open Loop Starter
 
-A quick-copy scaffold for prototyping incremental games on the
-[open-loop-engine](https://github.com/) runtime. The starter ships every
+A quick-copy scaffold for prototyping incremental games on
+[open-loop-engine](https://github.com/). The starter ships every
 canonical archetype as a self-bootable demo; this gallery is the showcase
 view over that catalogue.
 
@@ -13,9 +13,9 @@ view over that catalogue.
   bundles of them) and substrate (machinery nobody selects). No tiers and no
   prevalence gates — a pattern earns its place by being Selectable, Declinable
   and Irreducible. Source of truth for "is this pattern real?".
-- **Engine** — `open-loop-engine` ships the runtime primitives those
+- **Engine** — `open-loop-engine` ships the primitives those
   patterns compose from: resources, modifier chains, formulas, save/load,
-  the game loop, harness systems for sim and balance work.
+  the game loop, and the balance harness for simulation and balance work.
 - **Starter** — this repo. The pattern language made legible: each
   archetype is a working demo of one game shape, its identity line naming
   the research patterns it composes and the pattern-coverage grade they give it, and its
@@ -69,7 +69,7 @@ allowed. That keeps the strip step from cascading broken imports.
 
 Each archetype owns its own theme assets (fonts, body CSS scope), engine
 modules, and UI. The gallery wraps every demo in a sandbox that owns the
-`body[data-archetype]` lifecycle and tears down both engine and Vue app
+`body[data-archetype]` lifecycle and disposes both engine and Vue app
 between demos — but archetypes still scope their own theme via the
 attribute so they work standalone in a forked single-archetype build.
 

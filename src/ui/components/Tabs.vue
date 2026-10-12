@@ -9,7 +9,7 @@
   Trigger labels accept either plain strings (via `label`) or a custom
   `#tab-<value>` slot when the tab head needs an icon or badge.
 
-  Class hooks: olui-tabs, olui-tabs__list, olui-tabs__trigger,
+  Costume classes: olui-tabs, olui-tabs__list, olui-tabs__trigger,
   olui-tabs__trigger--active, olui-tabs__content. All colors, spacing,
   and borders come from CSS custom properties rooted on the olui-tabs
   class — forks override via `--tabs-*` tokens.
@@ -18,7 +18,7 @@
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
 
 export interface TabItem {
-  /** Unique key; used for the slot name (`#panel-<value>`) and DOM id. */
+  /** Unique id; used for the slot name (`#panel-<value>`) and DOM id. */
   value: string;
   /** Plain-text label shown on the tab head. Override with `#tab-<value>` slot. */
   label: string;

@@ -36,7 +36,7 @@ function buildEntries(): GalleryArchetype[] {
   const entries: GalleryArchetype[] = [];
   for (const [path, mod] of Object.entries(indexModules)) {
     // Skip underscore-prefixed dirs (e.g. `_blank`) — authoring skeletons the
-    // gallery must not surface, consistent with eject's archetype-list filter.
+    // gallery must not show, consistent with eject's archetype-list filter.
     if (/\/archetypes\/_/.test(path)) continue;
     if (!mod || typeof mod !== 'object') continue;
     const manifest = (mod as ArchetypeIndexModule).manifest;

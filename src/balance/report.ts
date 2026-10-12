@@ -40,7 +40,7 @@ export function formatWindow(window: [number, number]): string {
 
 /** Markdown table of arc-completion results. One row per beat. */
 export function renderArcTable(results: BeatResult[]): string {
-  const header = ['beat', 'spec window', 'p5', 'p50', 'p95', 'predicate / max', 'in window?'];
+  const header = ['beat', 'tuning window', 'p5', 'p50', 'p95', 'predicate / max', 'in window?'];
   const rows = results.map((r) => {
     const t = r.terminationTime;
     return [

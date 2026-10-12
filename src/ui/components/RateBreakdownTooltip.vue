@@ -8,7 +8,7 @@
   Slot scope is the same `useRateBreakdown` view, so callers can compose
   arbitrary head/extra rows without re-deriving productionRate/marginal math.
 
-  Class hooks: olui-rate-breakdown, olui-rate-breakdown__head, …__stats,
+  Costume classes: olui-rate-breakdown, olui-rate-breakdown__head, …__stats,
   …__stat, …__stat--marginal. Reactive state from reka-ui (RichTooltip).
 -->
 <script setup lang="ts">
@@ -78,7 +78,7 @@ const rowRef = toRef(props, 'row');
 
         <dl class="olui-rate-breakdown__stats">
           <div class="olui-rate-breakdown__stat">
-            <dt>Contributes</dt>
+            <dt>Share</dt>
             <dd>
               {{ format(view.productionRate.value, 2) }}{{ unit }}
               <span class="olui-rate-breakdown__muted">
@@ -87,7 +87,7 @@ const rowRef = toRef(props, 'row');
             </dd>
           </div>
           <div v-if="view.beatTimeFinite.value" class="olui-rate-breakdown__stat">
-            <dt>Pays off in</dt>
+            <dt>Beat time</dt>
             <dd>{{ formatBeatTime(row.beatTime.value) }}</dd>
           </div>
           <div

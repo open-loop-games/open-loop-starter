@@ -2,13 +2,13 @@
   ResourceHeaderStrip — top/bottom/sidebar strip of resource readouts.
   Built on HudBar + HudChip; takes a pure-data ResourceReadout[] so any
   archetype's currency module can adapt without per-currency component
-  duplication. Per OL-919: orientation+position as props, leading/trailing
-  slots for archetype-specific contextual content.
+  duplication. Orientation and position are props; leading/trailing slots
+  hold archetype-specific contextual content.
 
   Reference case for the contract/renderer split: the battery is the
   `ResourceReadout` shape, and this renderer is one default. A game may adopt
   the shape and render it with its OWN component — "want the shape, not the
-  markup" is a first-class path, not a fallback. Costume hooks
+  markup" is a first-class path, not a fallback. Costume classes
   (`:deep(.resource-header-strip__…)`) are stable API for stories that keep
   this renderer; `.resource-header-strip` root, `__value` / `__rate` / `__label`.
 -->

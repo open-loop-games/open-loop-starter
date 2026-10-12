@@ -1,11 +1,12 @@
 /**
  * Gallery is the landing surface. The gallery enumerates archetypes via
  * `import.meta.glob('@/showcase/archetypes/*\/index.ts')` and mounts each demo
- * through `src/ui/sandbox/SandboxWrapper.vue`.
+ * through `src/showcase/sandbox/SandboxWrapper.vue`.
  *
- * Forks delete `src/gallery/` and `src/about/`, then revert this file to
- * a single archetype boot — keep the player-pref runtime block so the
- * fork's settings (theme, notation, ui scale) apply at app boot:
+ * `pnpm eject` deletes `src/showcase/` and rewrites this file to a single
+ * archetype boot. A hand-written fork does the same. Keep the player-pref
+ * runtime block, so the fork's settings (theme, notation, ui scale) apply at
+ * app boot:
  *
  * ```ts
  * import { effectScope } from 'vue';

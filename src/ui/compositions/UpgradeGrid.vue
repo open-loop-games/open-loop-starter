@@ -6,13 +6,13 @@
   tooltip/popover wrapping. Use `#reveal-content` to customise the
   tooltip/popover body.
 
-  Costume hooks (stable API) — reskin via `:deep(.upgrade-grid__…)`.
+  Costume classes (stable API) — reskin via `:deep(.upgrade-grid__…)`.
   A class says `cell` where the contract says card. Renames are breaking:
     .upgrade-grid            root grid (+ inline grid-template-columns)
     .upgrade-grid__cell-wrap the reveal wrapper around each card
     .upgrade-grid__cell      one card
-  (Panel compositions expose bare BEM hooks; widgets under src/ui/components
-  expose `olui-` hooks. Both stable.)
+  (Panel compositions expose bare BEM classes; widgets under src/ui/components
+  expose `olui-` classes. Both stable.)
 -->
 <script setup lang="ts" generic="T = never">
 import { computed } from 'vue';
@@ -78,9 +78,9 @@ function describe(card: UpgradeCardData<T>): string {
             <span
               v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-              >✓ Bought</span
+              >✓ Purchased</span
             >
-            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Bought</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
             <Button
               v-else
               :disabled="!card.canPurchase.value"
@@ -125,9 +125,9 @@ function describe(card: UpgradeCardData<T>): string {
             <span
               v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-              >✓ Bought</span
+              >✓ Purchased</span
             >
-            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Bought</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
             <Button
               v-else
               :disabled="!card.canPurchase.value"
@@ -156,9 +156,9 @@ function describe(card: UpgradeCardData<T>): string {
             <span
               v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-              >✓ Bought</span
+              >✓ Purchased</span
             >
-            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Bought</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
             <Button
               v-else
               :disabled="!card.canPurchase.value"

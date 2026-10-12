@@ -1,7 +1,7 @@
 <!--
   SidebarMainShell — two-column layout with sidebar on the left and main
   content on the right. The `sidebarResources` slot exists because many
-  corpus games collapse the persistent resource readout into the sidebar
+  corpus games collapse the always-visible resource readout into the sidebar
   rather than a top bar (Kittens Game, Progress Knight, etc.) — not optional.
 
   Covers ~33% of the 42-game layout corpus; the most common shape.

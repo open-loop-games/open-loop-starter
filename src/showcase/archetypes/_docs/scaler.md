@@ -6,11 +6,11 @@ Core · covered. Identity line: the Scaler entry in `../_identity.md`. Not built
 
 Scaler is the archetype where _the game you played an hour ago becomes a footnote_. You buy producers, they produce, costs scale, a number climbs — familiar Producer shape. But then you hit a prestige threshold and ascend: everything you built resets, and in exchange you get a new currency, a new upgrade tree, and a multiplier that makes your next run minutes instead of hours. A few runs later there is a _second_ layer on top of the first, with its own currency and its own reset scope that wipes the first layer's upgrades too. Eventually a third. Each layer compresses the one below it until what took you an hour takes seconds.
 
-A thirty-minute session near the start is a prestige cycle: push the headline resource past a threshold, click the big button, watch the multipliers compound, out-perform your previous run within minutes. A thirty-minute session in the mid-game is a _challenge_ run — you voluntarily take on a nerf ("production halved for Dimension 8," "can't buy upgrades") inside the outer prestige loop, grinding it out for a permanent stacking bonus. The long-term pull is watching the headline multiplier readout scroll past `1e12×`, then `1e120×`, then into tetration, knowing every one of those digits came from a deliberate composition of layers, challenges, and upgrades you designed yourself.
+A thirty-minute play session near the start is a prestige cycle: push the headline resource past a threshold, click the big button, watch the multipliers compound, out-perform your previous run within minutes. A thirty-minute play session in the mid-game is spent inside a _challenge_ — you voluntarily take on a nerf ("production halved for Dimension 8," "can't buy upgrades") inside the outer prestige cycle, grinding it out for a permanent stacking bonus. The long-term pull is watching the headline multiplier readout scroll past `1e12×`, then `1e120×`, then into tetration, knowing every one of those digits came from a deliberate combination of layers, challenges, and upgrades you designed yourself.
 
 ## Exemplar calls
 
-| Game                  | Call | Progress persists through                          | Sourced |
+| Game                  | Call | How progress survives                              | Sourced |
 | --------------------- | ---- | -------------------------------------------------- | ------- |
 | Antimatter Dimensions | in   | `prestige` layers banking `meta-progression`       | yes     |
 | The Prestige Tree     | in   | `prestige` layers banking `meta-progression`       | yes     |

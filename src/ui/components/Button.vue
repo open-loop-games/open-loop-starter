@@ -5,7 +5,7 @@
  * `v-hold-repeat` for clicker-game press-and-hold semantics.
  *
  * Consumers use standard Vue idioms:
- *   <Button @click="doThing()" :disabled="!canDo">Buy</Button>
+ *   <Button @click="doThing()" :disabled="!canDo">Purchase</Button>
  *
  * Hold-repeat fires once on press, then at interval after a short delay.
  * `disabled` suppresses the emit in-component (the directive still runs,

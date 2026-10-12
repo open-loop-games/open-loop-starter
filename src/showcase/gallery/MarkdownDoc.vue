@@ -1,10 +1,10 @@
 <!--
   MarkdownDoc — renders a markdown source string into the gallery detail
-  pane. `marked` parses, `DOMPurify` sanitizes; we keep the surface boring
+  pane. `marked` parses, `DOMPurify` sanitizes; we keep it boring
   on purpose.
 
   No syntax highlighting (no archetype doc relies on fenced code blocks
-  today). Add `shiki` later if a doc surfaces one and the plain pre/code
+  today). Add `shiki` later if a doc contains one and the plain pre/code
   treatment isn't enough.
 
   `path` fields on manifests are dev-time monorepo-relative placeholders

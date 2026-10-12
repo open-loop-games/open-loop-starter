@@ -3,7 +3,7 @@
  * fork should copy: `modules/<name>.test.ts`, beside the module it specs,
  * booting `sim/harness.ts`.
  *
- * What it specs is the automation gate: a policy is inert until its tier
+ * What it specs is the automation tier: a policy is inert until its tier
  * unlocks, and live afterwards. Note there is not a single magnitude here — the
  * multiplier's *size* is a balance question that `balance/game-probe.ts`
  * prints, so these assertions survive any retune of `automationMultiplier`.
@@ -22,7 +22,7 @@ function core() {
   return getEngine().tryInject(CoreKey)!;
 }
 
-describe('automation tier gate', () => {
+describe('assisted automation tier', () => {
   it('starts locked on the manual tier', () => {
     expect(automation().tiers.currentTierId.value).toBe('manual');
     expect(automation().tiers.hasReached('assisted')).toBe(false);

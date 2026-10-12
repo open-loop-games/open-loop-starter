@@ -3,9 +3,9 @@
   ([1, 10, 100, 'max'] by default). Writes through `useBulkMode()` so the
   choice persists and every purchase panel in the app reads the same mode.
 
-  Lives next to the buy buttons, never in Settings — genre convention.
+  Sits next to the purchase buttons, never in Settings — genre convention.
   reka-ui's ToggleGroup owns roving-tabindex, aria, and keyboard nav; we
-  layer class hooks + a deselect guard (one item is always selected).
+  layer costume classes + a deselect guard (one item is always selected).
 -->
 <script setup lang="ts">
 import { computed } from 'vue';

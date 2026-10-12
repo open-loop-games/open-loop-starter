@@ -3,7 +3,7 @@
  *
  * The widget components themselves (src/ui/components/PanelLayout.vue,
  * Tooltip.vue, Popover.vue, ProgressBar.vue) ship zero visual opinions —
- * only class hooks and custom-property defaults. This file layers one
+ * only costume classes and custom-property defaults. This file layers one
  * reference styling pass on top. Forks trim or tweak to taste.
  *
  * Each widget block states size/layout overrides, per-state accents via

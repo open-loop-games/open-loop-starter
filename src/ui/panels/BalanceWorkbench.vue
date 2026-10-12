@@ -214,7 +214,7 @@ const seriesModel = computed<string | null>({
             :disabled="!wb.canPerturb.value || wb.running.value"
             @click="wb.run()"
           >
-            {{ wb.running.value ? 'Running…' : 'Run sensitivity' }}
+            {{ wb.running.value ? 'Running…' : 'Run sweep' }}
           </Button>
           <Button
             type="button"
@@ -257,7 +257,7 @@ const seriesModel = computed<string | null>({
         <div v-else-if="wb.running.value" class="delta-empty">
           Running… {{ wb.progress.value.completedRuns }} / {{ wb.progress.value.totalRuns }}
         </div>
-        <div v-else class="delta-empty">No run yet.</div>
+        <div v-else class="delta-empty">No sweep yet.</div>
 
         <div v-if="wb.selectedTrajectory.value" class="delta-trajectory">
           <ToggleGroupRoot

@@ -1,18 +1,18 @@
 /**
  * Cross-archetype balance toolkit — the pieces the per-archetype `balance/`
- * folders share, over an engine harness they import directly.
+ * folders share, over the engine's balance harness they import directly.
  *
  * Runners and their types (`runBeatProbe`, `runWaypointProbe`, `runUntil`,
  * `runMatrixUntil`, `runSensitivity`, `Beat`, `Waypoint`) come from
  * `@open-loop/engine`. This kit deliberately does not re-export them: it
- * owns the *balance* vocabulary, not the harness, and a partial re-export
+ * owns the *balance* vocabulary, not the balance harness's, and a partial re-export
  * only made one subsystem arrive from two paths.
  *
- * What lives here:
+ * What is here:
  *
  * - `costCurve` — the cost side as an engine `Formula` in purchase count, shared by
  *   the beat-time quotient and any inversion/integration downstream.
- * - `producerPacingInspector` — the `inspect` callback `runWaypointProbe`
+ * - `producerPacingInspector` — the `inspect` function `runWaypointProbe`
  *   takes, producing the `ProducerPacing` rows `renderFlowTable` renders.
  * - `report.ts` — the markdown renderers a discovery script prints.
  * - `spread.ts` — seeded multi-run statistics, for a spine whose closed form
@@ -21,7 +21,7 @@
  *
  * Discovery shape: scripts drive the engine runners, render with `report.ts`,
  * iterate balance constants until tables are green. Regression shape: a thin
- * sim test pins the chosen `terminationTime` distribution per beat.
+ * simulation test pins the chosen `terminationTime` distribution per beat.
  */
 
 import {
@@ -70,15 +70,15 @@ export interface ProducerPacing {
   flowChannel: FlowChannel;
 }
 
-/** Per-archetype hook: read state out of an engine into pacing inputs. */
+/** Per-archetype reader: read state out of an engine into pacing inputs. */
 export interface ProducerInspector {
   /**
-   * List the continuous producers the player has at least 1 of, in tier
+   * List the continuous producers the player has at least 1 of, in cascade-tier
    * order. Each entry feeds one row into the pacing snapshot.
    */
   ownedProducers: (engine: Engine) => Array<{
     id: string;
-    /** Prices the next purchase. */
+    /** Sets the next purchase's cost. */
     purchaseCount: number;
     /** Units producing: the purchase count plus any extra count. */
     effectiveCount: number;
@@ -89,8 +89,8 @@ export interface ProducerInspector {
 }
 
 /**
- * Helper consumed by archetype `balance/run.ts` scripts: closes over a
- * {@link ProducerInspector} and returns the `inspect` callback expected by
+ * Utility consumed by archetype `balance/run.ts` scripts: closes over a
+ * {@link ProducerInspector} and returns the `inspect` function expected by
  * {@link runWaypointProbe}.
  */
 export function producerPacingInspector(

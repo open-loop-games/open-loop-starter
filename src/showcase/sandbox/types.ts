@@ -3,11 +3,11 @@ import type { Engine } from '@open-loop/engine';
 
 /**
  * Shape every archetype's `createApp()` must return so the gallery sandbox
- * can mount it in isolation and tear it down cleanly.
+ * can mount it in isolation and dispose it cleanly.
  *
  * `engine` and `app` give the sandbox the two handles needed for a clean
- * exit: `engine.stop()` halts the game loop; `app.unmount()` runs the Vue
- * teardown chain (which fires onUnmounted in the archetype's AppRoot —
+ * exit: `engine.dispose()` stops the game loop; `app.unmount()` runs Vue's
+ * unmount chain (which fires onUnmounted in the archetype's AppRoot —
  * including any `body[data-archetype]` cleanup the archetype owns).
  *
  * Each archetype's `createApp(overrides?)` factory may return a wider

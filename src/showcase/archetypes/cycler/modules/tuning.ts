@@ -13,7 +13,7 @@ import {
  * known in advance.
  *
  * Namespaces follow the spine's terms rather than the files the constants sit
- * in, because that is how the economy decomposes (`../BALANCING.md` § The knobs):
+ * in, because that is how the economy decomposes (`../BALANCING.md` § The tunables):
  *
  *   - `peg/*`        — the two numbers that author pacing: headroom H, salvo base g
  *   - `wave/*`       — the STANDBY/INBOUND cycle that converts waves to minutes

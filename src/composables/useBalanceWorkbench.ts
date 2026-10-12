@@ -1,14 +1,14 @@
 /**
- * Reactive state machine for the balance workbench loop:
- * pick → fork → run sensitivity → render delta → commit/revert.
+ * Reactive state machine for the balance workbench's cycle:
+ * pick → build scratch engines → run a sweep → render delta → commit/revert.
  *
  * The composable owns nothing rendered — it exposes refs and actions that
  * the `BalanceWorkbench.vue` component binds to. Tests can drive it without
  * mounting Vue.
  *
- * Run model: each `run()` call exports the live engine's save blob, builds
+ * Run model: each `run()` call exports the live engine's save text, builds
  * a baseline cell + a single variant cell via `createSensitivityCell`, and
- * passes both to `runSensitivity`. The variant's `perturb` hook calls
+ * passes both to `runSensitivity`. The variant's `perturb` option callback calls
  * `applyPerturbation` against the *per-run* engine using the entry's
  * address — entries carry addresses, not refs, so this resolves correctly
  * against fresh engines.
@@ -16,7 +16,7 @@
  * Commit/revert model: `commit()` calls `applyPerturbation` directly on
  * the live engine and stores the cleanup. `revert()` runs the cleanup.
  * The live engine's saved state remains the unperturbed form — perturbations
- * are not persisted across reloads. (This is testing infrastructure, not a
+ * are ephemeral and do not survive a reload. (This is testing infrastructure, not a
  * save-mutating balance editor.)
  */
 
@@ -54,7 +54,7 @@ export interface BalanceWorkbenchOptions {
   modules: () => EngineModule[];
   /**
    * Per-run tick driver. Defaults to `engine.tickDriver.tickOnce()`. Override for
-   * games with custom harness step semantics.
+   * games with custom tick semantics in the balance harness.
    */
   tick?: (engine: Engine, dt: number) => void;
   /**
@@ -64,10 +64,10 @@ export interface BalanceWorkbenchOptions {
   analyzerPack?: (engine: Engine) => Analyzer[];
   /**
    * Runs on every per-run engine (baseline + variant), after engine build and
-   * before any perturbation or tick. Receives the harness `RunContext` so
-   * stochastic consumers can route `ctx.seed` into per-run RNG seeding or
-   * sim-reset hooks — the routing happens symmetrically across cells so
-   * baseline/variant deltas compare matched seeded trajectories, not
+   * before any perturbation or tick. Receives the balance harness's
+   * `RunContext`, so stochastic consumers can route `ctx.seed` into per-run RNG
+   * seeding or simulation-reset handlers. The routing is symmetric across cells,
+   * so baseline/variant deltas compare matched seeded trajectories, not
    * "variant got the seed, baseline didn't."
    *
    * Ordering: `prepare(engine, ctx)` → (variant only) `applyPerturbation(...)`
@@ -294,11 +294,11 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     progress.value = { completedCells: [], completedRuns: 0, totalRuns };
 
     try {
-      const blob = engine.saveManager.exportSave();
+      const saveText = engine.saveManager.exportSave();
       const perturbation = buildPerturbation();
 
       // Both cells must share one analyzer set so their metric keys align for
-      // the baseline-vs-variant diff. Series capture appends per-resource
+      // the baseline-vs-variant diff. Time-series capture appends per-resource
       // trackers on top of the scalar pack.
       const captureTimeSeries = form.captureTimeSeries;
       const buildAnalyzers = (e: Engine): Analyzer[] =>
@@ -306,7 +306,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
 
       const baseline = createSensitivityCell({
         id: 'baseline',
-        saveText: blob,
+        saveText,
         modules,
         ...(prepare && { perturb: (e, ctx) => prepare(e, ctx) }),
         buildAnalyzers,
@@ -315,7 +315,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       });
       const variant = createSensitivityCell({
         id: 'variant',
-        saveText: blob,
+        saveText,
         modules,
         perturb: (e, ctx) => {
           prepare?.(e, ctx);

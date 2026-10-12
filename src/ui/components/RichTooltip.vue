@@ -7,7 +7,7 @@
   Trigger is a slot with `as-child`, so the consumer's element becomes
   the trigger without a wrapping div.
 
-  Class hook: olui-rich-tooltip__content. Reactive state comes from
+  Costume class: olui-rich-tooltip__content. Reactive state comes from
   reka-ui's native data-state / data-side / data-align.
   Custom props: --rich-tooltip-{surface,border,shadow,padding,radius,max-width}.
 

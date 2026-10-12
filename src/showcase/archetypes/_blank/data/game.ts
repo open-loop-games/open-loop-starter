@@ -39,14 +39,14 @@ export const GAME_BALANCE: GameBalance = {
 // Closed form (the whole spine — see `balance/game-projection.ts`):
 //     amount(t) = ratePerSecond · t
 //
-// Gated automation makes that piecewise. With the `assisted` tier unlocked at
+// Automation behind a tier makes that piecewise. With the `assisted` tier unlocked at
 // time `tU` and the toggle on, accrual runs at `ratePerSecond ·
 // automationMultiplier` thereafter:
 //     amount(t) = ratePerSecond · (t + automationMultiplier · max(0, t − tU))
 // The blank base ships the ladder LOCKED, so `tU = ∞` and the linear form
 // above is the whole story until a fork unlocks it. That is the point of
-// carrying the example: a tier gate is a balance change, and the projection
-// has to grow the second branch when you open it.
+// carrying the example: unlocking an automation tier is a balance change, and
+// the projection has to grow the second branch when you unlock it.
 //
 // One design number to author: `ratePerSecond`. The projection predicts
 // `amount(t)` on paper; the probe (`balance/game-probe.ts`) drives the shipping

@@ -7,30 +7,30 @@ as `../producer/`.
 
 Producer is the archetype every incremental player already understands within thirty seconds. You click a thing. A number goes up. You spend the number on something that increases the number by itself. Before long you stop clicking and watch the number grow, checking in to buy the next producer tier and the next multiplier upgrade. The texture of play is _pacing against a curve_: costs rise faster than production, so each tier feels unreachable until it isn't, and then it's trivial and you're already saving for the next one.
 
-A thirty-minute session is a sequence of threshold moments — _"I can finally afford a farm"_, _"the cursor upgrade doubled my click value"_, _"the first achievement multiplier just kicked in"_. The long-term pull is modifier stacking: six hours in, a player watches their headline multiplier (base × upgrades × achievements × milestones × tier-bonuses) visibly compound into an unfathomable number, and that is the reward. There is no story; the curve is the content.
+A thirty-minute play session is a sequence of threshold moments — _"I can finally afford a farm"_, _"the cursor upgrade doubled my click value"_, _"the first achievement multiplier just kicked in"_. The long-term pull is modifier stacking: six hours in, a player watches their headline multiplier (base × upgrades × achievements × milestones × tier-bonuses) visibly compound into an unfathomable number, and that is the reward. There is no story; the curve is the content.
 
 ### At the slow end of its pacing
 
-The same composition, paced for absence, is a game the player does not play so much as _keep_. You open it once in the morning, glance at it while a pot boils, check it on the way back from a meeting, let it run at the edge of a monitor for an afternoon. Resources accumulate whether you are watching or not, and `held-output` banks them until you look. Nothing expires. No cooldown queue is about to waste. The game commits to never punishing a glance not taken — urgency is declined, not merely absent. Whether it also grows while closed splits the set: Chillquarium selects `offline-progress`, while Rusty's Retirement and Tiny Pasture decline it and grow only while they sit open on the desktop. What remains is production that runs on its own, `automation` buying the next thing, and a slowly unfolding unlock tree. The player's relationship to the game is _companionship_, not engagement: the game lives on the desktop the way a plant lives on a desk.
+The same research composition, paced for time away, is a game the player does not play so much as _keep_. You open it once in the morning, glance at it while a pot boils, check it on the way back from a meeting, let it run at the edge of a monitor for an afternoon. Resources accumulate whether you are watching or not, and `held-output` banks them until you look. Nothing expires. No cooldown queue is about to waste. The game commits to never punishing a glance not taken — urgency is declined, not merely absent. Whether it also grows while closed splits the set: Chillquarium selects `offline-progress`, while Rusty's Retirement and Tiny Pasture decline it and grow only while they sit open on the desktop. What remains is production that runs on its own, `automation` purchasing the next thing, and a slowly unfolding unlock tree. The player's relationship to the game is _companionship_, not engagement: the game lives on the desktop the way a plant lives on a desk.
 
-A thirty-minute session is seven three-minute glances distributed across the day. Each glance yields accumulated output, one or two affordable purchases, and occasionally a new visual element revealed — a building appears, an animal wanders in, a zone quietly unlocks. The long-term pull is the pleasant, legible, ongoing state of the game: _my thing is running, it is happy, it grew while I was away._ Anti-Idle made that commitment in the web era and the desktop-companion cluster around Rusty's Retirement remade it; what changes between the two is the visual budget, not the engagement contract.
+A thirty-minute play session is seven three-minute glances distributed across the day. Each glance yields accumulated output, one or two affordable purchases, and occasionally a new visual element revealed — a building appears, an animal wanders in, a zone quietly unlocks. The long-term pull is the pleasant, legible, ongoing state of the game: _my thing is running, it is happy, it grew while I was away._ Anti-Idle made that commitment in the web era and the desktop-companion cluster around Rusty's Retirement remade it; what changes between the two is the visual budget, not the engagement contract.
 
-Pacing is not a line boundary. A slow Producer differs from a fast one in its rate constants and in which urgencies it declines, not in its composition, so it is a configuration of this line, reached by retuning `../producer/` rather than by building another archetype.
+Pacing is not a line boundary. A slow Producer differs from a fast one in its rate constants and in which urgencies it declines, not in its research composition, so it is a configuration of this line, reached by retuning `../producer/` rather than by building another archetype.
 
 ### The slow-end profile
 
-Every lever is one the build already has:
+Each change below uses something the build already has:
 
 - **A flatter ladder.** Author the target beat closer to the opener and `m` falls with it (`../producer/data/curve.ts` § The one derived number). Spends come less often and each one matters less.
-- **Dispatch early, not withheld.** Open the first `AutomationTiers` rung near the start, so `automation` buys the next thing whether or not anyone is looking. The click stays available and stops being needed.
-- **Reveals paced by lifetime totals.** Gate refinements and class visibility on lifetime-mass thresholds, so the board grows over hours rather than minutes. These are discrete steps on a lifetime total, the shape the spine already requires of revisions.
+- **Automation early, not withheld.** Open the first automation tier near the start, so `automation` purchases the next thing whether or not anyone is looking. The click stays available and stops being needed.
+- **Reveals paced by lifetime totals.** Unlock refinements and class visibility on lifetime-mass thresholds, so the board grows over hours rather than minutes. These are discrete steps on a lifetime total, the shape the spine already requires of revisions.
 - **A longer offline window, paid for in load time.** The window is a wait budget (`../producer/data/curve.ts` § The offline window), so twelve hours costs about twice the six-hour wait. Whether to replay at all while closed is the axis this set splits on.
 
 The worked numbers for this profile are the former `ambient/` archetype at open-loop-starter `9f2c34cb40`: a twelve-hour arc, a reveal ladder on lifetime thresholds, and a window matched to that arc.
 
 ## Exemplar calls
 
-| Game                  | Call | Progress persists through                                                | Sourced |
+| Game                  | Call | How progress survives                                                    | Sourced |
 | --------------------- | ---- | ------------------------------------------------------------------------ | ------- |
 | Cookie Clicker        | in   | a runless save: `escalating-price` buildings, `statistics`-stepped stack | yes     |
 | Antimatter Dimensions | in   | a runless save under its reset layers                                    | yes     |
