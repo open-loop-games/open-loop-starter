@@ -1,0 +1,198 @@
+/*
+ * Looper — the Lights Out costume.
+ *
+ * The whole design language is here, scoped under `.looper`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in
+ * `src/lib/` or `src/ui/` is edited for it: every hook is a documented costume
+ * class on a shell (`.olui-three-panel__…`, `.olui-system-header`, `.olui-app-frame`)
+ * or a class this story's own components emit.
+ *
+ * Language: Blackwater Penitentiary at night. The affordance palette comes
+ * first: sodium = you can act or afford; faded ink = you can't yet; searchlight
+ * = newly found; guard lamp = automated or done; jumpsuit = danger, failure,
+ * slower than last night. A stencil face for the chrome, a case-file serif for
+ * everything read.
+ *
+ * Fonts: Kenney Future Narrow (CC0) and Noto Serif SemiCondensed (SIL OFL,
+ * `../assets/fonts/OFL.txt`).
+ */
+
+@font-face {
+  font-family: 'Blackwater Stencil';
+  src: url('../assets/fonts/kenney-future-narrow.ttf') format('truetype');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Case File';
+  src: url('../assets/fonts/noto-serif-semicondensed.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Case File';
+  src: url('../assets/fonts/noto-serif-semicondensed-semibold.ttf') format('truetype');
+  font-weight: 600;
+}
+
+.looper {
+  /* ── the building ── */
+  --lo-night: #0b1016;
+  --lo-concrete: #131a22;
+  --lo-concrete-raised: #19222c;
+  --lo-concrete-edge: #263241;
+  --lo-bars: #34414f;
+
+  /* ── light sources ── */
+  --lo-sodium: #eea53a;
+  --lo-sodium-dim: #8a6427;
+  --lo-sodium-glow: rgba(238, 165, 58, 0.14);
+  --lo-searchlight: #e6efea;
+  --lo-searchlight-sweep: rgba(230, 239, 234, 0.22);
+  --lo-guard-lamp: #82b48b;
+  --lo-guard-lamp-dim: rgba(130, 180, 139, 0.16);
+
+  /* ── paper and people ── */
+  --lo-chalk: #cfc7b6;
+  --lo-ink-faded: #788390;
+  --lo-jumpsuit: #e2672c;
+  --lo-jumpsuit-dim: rgba(226, 103, 44, 0.16);
+
+  /* skill tints, desaturated so four of them can sit together for hours */
+  --lo-brawn: #c98a5e;
+  --lo-stealth: #7f98b8;
+  --lo-finesse: #b7a86a;
+  --lo-guile: #a98bb0;
+
+  --lo-face-stencil: 'Blackwater Stencil', 'Case File', serif;
+  --lo-face-file: 'Case File', Georgia, serif;
+
+  --lo-gap: 14px;
+  --lo-radius: 3px;
+
+  /* Scaffold tokens the shared chrome reads, set here so the costume travels
+     with the story. */
+  --color-bg: var(--lo-night);
+  --color-surface: var(--lo-concrete);
+  --color-surface-hover: var(--lo-concrete-raised);
+  --color-border: var(--lo-concrete-edge);
+  --color-text: var(--lo-chalk);
+  --color-text-muted: var(--lo-ink-faded);
+  --color-primary: var(--lo-sodium);
+  --color-primary-hover: #f4b85b;
+  --color-danger: var(--lo-jumpsuit);
+  --color-success: var(--lo-guard-lamp);
+  --radius: var(--lo-radius);
+  --radius-sm: 2px;
+  --gap: var(--lo-gap);
+  --font-sans: var(--lo-face-file);
+
+  color: var(--lo-chalk);
+  font-family: var(--lo-face-file);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.looper button {
+  font: inherit;
+  color: inherit;
+}
+
+.looper .lo-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The one sodium lamp over the corridor, far off to the right. Painted on the
+   frame, which already claims the viewport height. */
+.looper .olui-app-frame,
+.looper .slot-screen {
+  background:
+    radial-gradient(ellipse 60% 40% at 78% -10%, var(--lo-sodium-glow), transparent 70%),
+    var(--lo-night);
+}
+
+.looper .olui-system-header {
+  border-bottom: 1px solid var(--lo-concrete-edge);
+  background: linear-gradient(var(--lo-concrete), rgba(19, 26, 34, 0.6));
+}
+
+/* Starter's header buttons (about, save, settings) in the stencil chrome, so
+   they read as fittings of the same building rather than the scaffold's. */
+.looper .olui-system-header__actions {
+  align-items: center;
+  gap: 16px;
+}
+.looper .olui-system-header__actions > button {
+  background: transparent;
+  border: 1px solid var(--lo-concrete-edge);
+  border-radius: 2px;
+  padding: 4px 10px;
+  min-height: 0;
+  font-family: var(--lo-face-stencil);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lo-ink-faded);
+  cursor: pointer;
+}
+.looper .olui-system-header__actions > button:hover {
+  color: var(--lo-sodium);
+  border-color: var(--lo-sodium-dim);
+}
+
+/* The shell's three columns are bare: each panel is its own concrete slab, and
+   the case-file column stacks four of them. */
+.looper .olui-three-panel__left,
+.looper .olui-three-panel__main,
+.looper .olui-three-panel__right {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-width: 0;
+}
+
+/* ── shared panel chrome: a slab of concrete with a stenciled label ── */
+.looper .lo-panel {
+  background: var(--lo-concrete);
+  border: 1px solid var(--lo-concrete-edge);
+  border-radius: var(--lo-radius);
+  padding: 12px 14px 14px;
+}
+.looper .lo-panel > h2 {
+  margin: 0 0 10px;
+  font-family: var(--lo-face-stencil);
+  font-weight: normal;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lo-ink-faded);
+}
+
+/* ── reveal grammar: a searchlight sweeps once across anything newly found ── */
+.looper .lo-reveal {
+  position: relative;
+  overflow: hidden;
+  animation: lo-fade-in 600ms ease-out both;
+}
+.looper .lo-reveal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    var(--lo-searchlight-sweep) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: lo-sweep 1400ms ease-out 200ms 1 both;
+  pointer-events: none;
+}
+@keyframes lo-sweep {
+  to {
+    transform: translateX(120%);
+  }
+}
+@keyframes lo-fade-in {
+  from {
+    opacity: 0;
+  }
+}

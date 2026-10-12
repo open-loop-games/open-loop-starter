@@ -15,6 +15,7 @@ directions it grows through. Start there.
 | Archetype  | Shape                                                                |
 | ---------- | -------------------------------------------------------------------- |
 | `cycler`   | Alternating build/defend phases on a hard-phase cycle                |
+| `looper`   | Authored plan run against a draining budget; mastery survives the reset |
 | `producer` | Geometric cost ladder under a compounding multiplier stack           |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
 | `survivor` | Run-scoped real-time survival against continuously escalating threat |

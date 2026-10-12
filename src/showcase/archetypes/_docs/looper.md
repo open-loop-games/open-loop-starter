@@ -1,6 +1,6 @@
 # Looper
 
-Core · open core. Identity line: the Looper entry in `../_identity.md`. Not built.
+Core · open core. Identity line: the Looper entry in `../_identity.md`. Built: `../looper/IDENTITY.md`.
 
 ## Player experience
 
