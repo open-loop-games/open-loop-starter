@@ -11,10 +11,10 @@
  *
  * This is the behavioral counterpart to the balance layer: `balance/` probes
  * drive the engine coarsely and print economy magnitudes (see
- * `../balance/game-probe.ts`); this drives it tick-by-tick to *spec what the
+ * `../balance/arc-probe.ts`); this drives it tick-by-tick to *spec what the
  * mechanics do* — counts, monotonic growth, things freeing up. Magnitudes stay
  * in the balance probes; observable behavior lives here, which is why these
- * suites survive a retune. See `example.test.ts` for the shape to copy.
+ * suites survive a retune. The suites beside the modules show the shape.
  */
 
 import { type Engine } from '@open-loop/engine';

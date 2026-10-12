@@ -42,10 +42,10 @@ Hand-authored: the game-level concepts no single type owns, which
 structure cannot derive. Kept small and stored in the config, so
 staleness stays visible against the generated sections above.
 
-- **night** — One run. It ends on empty Nerve, on the wall, or on turning in, and the night module resets. Nothing a night carries survives it except mastery, Intel and the ground discovered.
-- **Nerve** — The run budget: seconds of night left, drained by the night clock and refilled only by route content (coffee, the hamper). A refill is work spent to buy time, so it is counted inside a gate's fill.
+- **night** — One run. It ends on empty Nerve, on the freight, or on turning in, and the night module resets. Nothing a night carries survives it except mastery, Intel and the ground discovered.
+- **Nerve** — The run budget: seconds of night left, drained by the night clock and refilled only by route content: coffee and the hamper inside, the milk truck past the wall. A refill is work spent to buy time, so it is counted inside a gate's fill.
 - **plan** — The authored policy: an ordered list of actions with repeat counts, executed top to bottom. It is the only player decision during play; an action the night cannot do is skipped, not waited on.
 - **gate** — An action that opens a landmark. Its duration is derived from the predicted capacity of the night it is scheduled to fall on, never authored.
 - **talent** — A skill's in-night level, 1 + α·L. It resets with the night. Contrast mastery.
 - **mastery** — The share of a night's talent level a skill banks at the night's end: linear to a knee, square root past it. It multiplies talent, so every later night starts faster.
-- **splits** — Night-seconds to each landmark. After the first escape the night ends on the wall, so splits — not depth — are what improves.
+- **splits** — Night-seconds to each landmark. After the first escape the night ends on the freight, so splits — not depth — are what improves.

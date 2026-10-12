@@ -8,11 +8,11 @@ export default {
   curated: [
     {
       term: 'night',
-      note: 'One run. It ends on empty Nerve, on the wall, or on turning in, and the night module resets. Nothing a night carries survives it except mastery, Intel and the ground discovered.',
+      note: 'One run. It ends on empty Nerve, on the freight, or on turning in, and the night module resets. Nothing a night carries survives it except mastery, Intel and the ground discovered.',
     },
     {
       term: 'Nerve',
-      note: "The run budget: seconds of night left, drained by the night clock and refilled only by route content (coffee, the hamper). A refill is work spent to buy time, so it is counted inside a gate's fill.",
+      note: "The run budget: seconds of night left, drained by the night clock and refilled only by route content: coffee and the hamper inside, the milk truck past the wall. A refill is work spent to buy time, so it is counted inside a gate's fill.",
     },
     {
       term: 'plan',
@@ -32,7 +32,7 @@ export default {
     },
     {
       term: 'splits',
-      note: 'Night-seconds to each landmark. After the first escape the night ends on the wall, so splits — not depth — are what improves.',
+      note: 'Night-seconds to each landmark. After the first escape the night ends on the freight, so splits — not depth — are what improves.',
     },
   ],
 };
