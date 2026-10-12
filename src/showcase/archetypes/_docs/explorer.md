@@ -1,7 +1,7 @@
 # Explorer
 
-Core · open core. Identity line: the Explorer entry in `../_identity.md`. Not
-built.
+Core · open core. Identity line: the Explorer entry in `../_identity.md`. Built:
+`../explorer/IDENTITY.md`.
 
 ## Player experience
 

@@ -1,0 +1,313 @@
+/*
+ * Explorer — the Hartwold costume.
+ *
+ * The whole design language is here, scoped under `.explorer`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in
+ * `src/lib/` or `src/ui/` is edited for it: every hook is a documented costume
+ * class on a shell or a composition (`.olui-three-panel__…`,
+ * `.olui-system-header`, `.olui-progress-bar__…`, `.producer-list__…`,
+ * `.upgrade-grid__…`) or a class this story's own components emit.
+ *
+ * Language: a huntsman's lodge at the edge of a fogged forest, read by a tallow
+ * lamp. The affordance palette comes first: tallow = you can reach or afford;
+ * ash = you can't yet; ember = newly opened; rust = danger, or past the tether;
+ * moss = banked, done; frost = a find. A high-contrast display serif for the
+ * large chrome only (its hairlines break up under about 18px), a book serif for
+ * everything read, semibold for labels, italic for the hunter's notes.
+ *
+ * Fonts: Noto Serif Display and Noto Serif, Latin subsets (SIL OFL,
+ * `../assets/fonts/OFL.txt`).
+ */
+
+@font-face {
+  font-family: 'Lodge Display';
+  src: url('../assets/fonts/NotoSerifDisplay-SemiBold.woff') format('woff');
+  font-weight: 600;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Lodge Book';
+  src: url('../assets/fonts/NotoSerif-Regular.woff') format('woff');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Lodge Book';
+  src: url('../assets/fonts/NotoSerif-SemiBold.woff') format('woff');
+  font-weight: 600;
+}
+@font-face {
+  font-family: 'Lodge Book';
+  src: url('../assets/fonts/NotoSerif-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+}
+
+.explorer {
+  /* ── the ground at night ── */
+  --sp-night: #12110e;
+  --sp-peat: #1b1a15;
+  --sp-bark: #26241d;
+  --sp-bark-raised: #2f2c23;
+  --sp-bark-edge: #3a372c;
+
+  /* ── ink ── */
+  --sp-birch: #ddd5c4;
+  --sp-birch-dim: #a49c8b;
+  --sp-ash: #6c675b;
+
+  /* ── affordance ── */
+  --sp-tallow: #e2aa4c;
+  --sp-tallow-deep: #9c6f26;
+  --sp-tallow-glow: rgba(226, 170, 76, 0.12);
+  --sp-ember: #f0c878;
+  --sp-rust: #b0503a;
+  --sp-moss: #7f9a62;
+  --sp-frost: #9fb3c2;
+
+  /* ── terrain, desaturated so five bands sit together for hours ── */
+  --sp-ground-meadow: #3b4a2c;
+  --sp-ground-forest: #24382a;
+  --sp-ground-marsh: #2c3d3b;
+  --sp-ground-snow: #56606a;
+  --sp-ground-deepwood: #1d1a26;
+  --sp-ground-blocked: #0c0b09;
+  --sp-fog: #0f0e0b;
+
+  --sp-face-display: 'Lodge Display', 'Lodge Book', Georgia, serif;
+  --sp-face-book: 'Lodge Book', Georgia, serif;
+  --sp-tile: 27px;
+  --sp-radius: 2px;
+
+  /* Scaffold tokens the shared chrome reads, set here so the costume travels
+     with the story. */
+  --color-bg: var(--sp-night);
+  --color-surface: var(--sp-peat);
+  --color-surface-hover: var(--sp-bark-raised);
+  --color-border: var(--sp-bark-edge);
+  --color-text: var(--sp-birch);
+  --color-text-muted: var(--sp-birch-dim);
+  --color-primary: var(--sp-tallow);
+  --color-primary-hover: var(--sp-ember);
+  --color-danger: var(--sp-rust);
+  --color-success: var(--sp-moss);
+  --radius: var(--sp-radius);
+  --radius-sm: 2px;
+  --gap: 12px;
+  --font-sans: var(--sp-face-book);
+
+  color: var(--sp-birch);
+  font-family: var(--sp-face-book);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.explorer button {
+  font: inherit;
+  color: inherit;
+}
+
+.explorer .sp-num {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* The lodge lamp, low on the left where the lodge sits. Painted on the frame,
+   which already claims the viewport height. */
+.explorer .olui-app-frame,
+.explorer .slot-screen {
+  background:
+    radial-gradient(ellipse 50% 45% at 18% 105%, var(--sp-tallow-glow), transparent 70%),
+    var(--sp-night);
+}
+
+.explorer .olui-system-header {
+  border-bottom: 1px solid var(--sp-bark-edge);
+  background: linear-gradient(var(--sp-peat), rgba(18, 17, 14, 0.6));
+}
+.explorer .olui-system-header__actions {
+  align-items: center;
+  gap: 16px;
+}
+.explorer .olui-system-header__actions > button {
+  background: transparent;
+  border: 1px solid var(--sp-bark-edge);
+  border-radius: var(--sp-radius);
+  padding: 3px 10px;
+  min-height: 0;
+  font-family: var(--sp-face-book);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--sp-birch-dim);
+  cursor: pointer;
+}
+.explorer .olui-system-header__actions > button:hover {
+  color: var(--sp-tallow);
+  border-color: var(--sp-tallow-deep);
+}
+
+/* The shell's three columns are bare; each section draws its own ledger rule. */
+.explorer .olui-three-panel__left,
+.explorer .olui-three-panel__main,
+.explorer .olui-three-panel__right {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-width: 0;
+}
+
+/* ── shared section chrome: a ledger heading over a rule ── */
+.explorer .sp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.explorer .sp-section > h2 {
+  margin: 0 0 2px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--sp-bark-edge);
+  font-family: var(--sp-face-book);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sp-birch-dim);
+}
+
+/* ── meters: the scaffold progress bar in tallow on peat ── */
+.explorer .olui-progress-bar {
+  --progress-bar-track: var(--sp-peat);
+  --progress-bar-fill: var(--sp-tallow);
+  --progress-bar-radius: 0;
+  --progress-bar-transition: width 200ms linear;
+}
+.explorer .olui-progress-bar__track {
+  border: 1px solid var(--sp-bark-edge);
+}
+/* The scaffold theme paints a full bar as success. Here a full satchel is just
+   a full satchel; each meter says what full means in its own fill. */
+.explorer .olui-progress-bar[data-state='full'] .olui-progress-bar__fill {
+  background: var(--progress-bar-fill);
+}
+
+/* ── a purchase card: tallow edge when it can be afforded ── */
+.explorer .sp-buy {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'title chips' 'blurb blurb';
+  gap: 1px 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 9px 7px;
+  background: var(--sp-peat);
+  border: 1px solid var(--sp-bark-edge);
+  border-left: 3px solid var(--sp-bark-edge);
+  border-radius: var(--sp-radius);
+  cursor: not-allowed;
+  color: var(--sp-birch-dim);
+}
+.explorer .sp-buy.can {
+  cursor: pointer;
+  border-left-color: var(--sp-tallow);
+  color: var(--sp-birch);
+  background: var(--sp-bark);
+}
+.explorer .sp-buy.can:hover {
+  background: var(--sp-bark-raised);
+}
+.explorer .sp-buy.maxed {
+  opacity: 0.5;
+  border-left-color: var(--sp-moss);
+  cursor: default;
+}
+.explorer .sp-buy .title {
+  grid-area: title;
+  font-weight: 600;
+  font-size: 14px;
+}
+.explorer .sp-buy .lvl {
+  color: var(--sp-tallow);
+  font-size: 12px;
+  margin-left: 4px;
+}
+.explorer .sp-buy .blurb {
+  grid-area: blurb;
+  font-size: 12.5px;
+  color: var(--sp-ash);
+  font-style: italic;
+}
+.explorer .sp-buy.can .blurb {
+  color: var(--sp-birch-dim);
+}
+.explorer .sp-buy .chips {
+  grid-area: chips;
+  display: flex;
+  gap: 6px;
+  font-size: 12.5px;
+}
+.explorer .sp-buy .chip {
+  color: var(--sp-ash);
+}
+.explorer .sp-buy .chip.ok {
+  color: var(--sp-tallow);
+}
+
+/* ── a verb: what the huntsman can do where he stands ── */
+.explorer .sp-verb {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  font-weight: 600;
+  font-size: 14px;
+  background: var(--sp-bark);
+  border: 1px solid var(--sp-tallow-deep);
+  border-left: 3px solid var(--sp-tallow);
+  border-radius: var(--sp-radius);
+  cursor: pointer;
+}
+.explorer .sp-verb:hover:not(:disabled) {
+  background: var(--sp-bark-raised);
+}
+.explorer .sp-verb.danger {
+  border-color: #6b3428;
+  border-left-color: var(--sp-rust);
+}
+.explorer .sp-verb.quiet {
+  border-color: var(--sp-bark-edge);
+  border-left-color: var(--sp-birch-dim);
+  color: var(--sp-birch-dim);
+}
+.explorer .sp-verb:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.explorer .sp-hint {
+  font-size: 12.5px;
+  color: var(--sp-ash);
+  font-style: italic;
+}
+.explorer .sp-warn {
+  color: var(--sp-rust);
+  font-style: normal;
+}
+
+/* ── reveal grammar: new country and new gear come up out of the fog ── */
+.explorer .sp-reveal {
+  animation: sp-reveal-in 700ms ease-out both;
+}
+@keyframes sp-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* ── the epilogue, on the scaffold's modal stack ──
+   The stack portals to <body>, outside `.explorer`; the epilogue's own root
+   carries the class, and this rule dresses the box it is mounted in. */
+.olui-modal-content:has(.sp-epilogue) {
+  padding: 0;
+  background: #1b1a15;
+  border: 1px solid #3a372c;
+  border-top: 3px solid #e2aa4c;
+}

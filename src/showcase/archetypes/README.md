@@ -15,6 +15,7 @@ directions it grows through. Start there.
 | Archetype  | Shape                                                                |
 | ---------- | -------------------------------------------------------------------- |
 | `cycler`   | Alternating build/defend phases on a hard-phase cycle                |
+| `explorer` | A fogged map uncovered on carried supply; the pack banks only at home |
 | `looper`   | Authored plan run against a draining budget; mastery survives the reset |
 | `producer` | Geometric cost ladder under a compounding multiplier stack           |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
