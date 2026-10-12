@@ -13,6 +13,7 @@ import type { ProducerId } from '../data';
  *
  * Key prefixes:
  *   - `trip/*` — the reference trip's clock and jerky: seconds per step and per hunt, jerky per each
+ *   - `water/*` — water drunk per step and per hunt
  *   - `lodge/*` — the producers' rates and prices
  *   - `racks/*` — the smokehouse: throughput, wood burned and price
  *   - `hounds/*` — what each hound adds to the pack, prowess and the walk's jerky
@@ -24,6 +25,8 @@ export type ExplorerTunableKey =
   | 'trip/huntSeconds'
   | 'trip/supplyPerStep'
   | 'trip/supplyPerHunt'
+  | 'water/perStep'
+  | 'water/perHunt'
   | `lodge/${ProducerId}/rate`
   | `lodge/${ProducerId}/baseCost`
   | 'lodge/costRatio'

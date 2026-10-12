@@ -4,9 +4,11 @@
 // these values at their `tunable()` reader sites and never re-author them.
 //
 // The model is a reference trip: walk from the lodge to the middle of band k,
-// hunt `huntsPerTrip` times, walk home and bank the haul. Everything else is sized
-// against what that trip earns per second, so a band's prices are "how long you
-// dwell in the band before" rather than hand-picked numbers.
+// hunt `huntsPerTrip` times, walk home and bank the haul, refilling water on the
+// way. Everything else is sized against what that trip earns per second, so a
+// band's prices are "how long you dwell in the band before" rather than
+// hand-picked numbers. Each band's den trophy changes the trip from the band
+// after its den.
 
 export const ANCHORS = {
   /** Designed time from a cold start to the Pale Hart under the reference policy. */
@@ -31,17 +33,26 @@ export const ANCHORS = {
   supplyPerStep: 1,
   /** Jerky eaten per hunt. */
   supplyPerHunt: 1,
+  /** Water drunk per tile walked: more than jerky, so water binds the walk first. */
+  waterPerStep: 2,
+  /** Water drunk per hunt. */
+  waterPerHunt: 1,
+  /** Water the starting skin holds: eight steps, against the satchel's twelve. */
+  skinBase: 16,
+  /** Water each waterskin level adds: four more steps. */
+  skinStep: 8,
   /** Smoking stretches meat: jerky per meat. */
   jerkyPerMeat: 2,
   /** Lodge producer price ratio: about 6 cost doublings across about 30 purchases. */
   priceRatio: 1.15,
   /** Target gap between lodge purchases, inside the 30–120s flow band. */
   beatSeconds: 45,
-  /** How a band's hide budget splits between the four gear lines; sums to 1. */
-  gearShare: 0.35,
-  frameShare: 0.25,
-  bowShare: 0.25,
-  satchelShare: 0.15,
+  /** How a band's hide budget splits between the five gear lines; sums to 1. */
+  gearShare: 0.3,
+  frameShare: 0.22,
+  bowShare: 0.23,
+  satchelShare: 0.13,
+  skinShare: 0.12,
 } as const;
 
 // ─── Balance ────────────────────────────────────────────────────────────────
@@ -71,10 +82,54 @@ export const yieldAntler = (k: number): number => (k < 2 ? 0 : A.yieldGrowth ** 
 /** Dangerous quarry pays this much over the band's timid quarry, for the risk. */
 export const DANGER_PREMIUM = 1.6;
 
+// === TROPHIES ===
+// A den beast is beatable with the next band's bow, so the reference policy takes
+// band k's den as it enters band k+1, and the trophy counts from that band on.
+
+export type TrophyId = 'mattock' | 'coracle' | 'sledge';
+/** The band from which each trophy changes the reference trip. */
+export const TROPHY_FROM: Record<TrophyId, number> = { mattock: 2, coracle: 3, sledge: 4 };
+const holds = (t: TrophyId, k: number): boolean => k >= TROPHY_FROM[t];
+/** Steps the coracle saves each way across the Fen, cutting over the meres. */
+export const CORACLE_SAVE = 1;
+/** Steps from a band's waystone camp to its middle: the sledge's trip starts there. */
+export const CAMP_TO_MIDDLE = A.bandDepth / 2 + 1;
+
 // === THE REFERENCE TRIP ===
 
-/** Tiles walked out to band k's middle and home again. */
-export const tripSteps = (k: number): number => 2 * (A.bandDepth * k + A.bandDepth / 2);
+/** Tiles walked out to band k's middle and back to where the haul banks. */
+export const walkSteps = (k: number): number => {
+  if (holds('sledge', k)) return 2 * CAMP_TO_MIDDLE;
+  const lodge = 2 * (A.bandDepth * k + A.bandDepth / 2);
+  return holds('coracle', k) ? lodge - 2 * CORACLE_SAVE : lodge;
+};
+
+// === WATER ===
+// Water is free at springs, the river, the Fen's meres and the lodge well, but the
+// skin holds fewer steps than the satchel. A trip whose water need passes the
+// skin refills on the way, and each refill is a detour off the route.
+
+/** Water the waterskin holds at level L. */
+export const skinCapacity = (level: number): number => A.skinBase + level * A.skinStep;
+/** The skin level the reference policy carries into band k: bought from the band before. */
+export const skinLevelAt = (k: number): number => Math.min(k, 3);
+/** Water one trip into band k drinks. */
+export const waterNeed = (k: number): number =>
+  walkSteps(k) * A.waterPerStep + A.huntsPerTrip * A.waterPerHunt;
+/** Refills one trip into band k makes on the way. */
+export const refillsFor = (k: number): number =>
+  Math.max(0, Math.ceil(waterNeed(k) / skinCapacity(skinLevelAt(k))) - 1);
+/**
+ * Steps off the route to the nearest water, by band: the lodge well, the
+ * forest's springs and river, the Fen's meres, the Snowfield's frozen water, the
+ * dry Deepwood. With the mattock every camp is a well, and no band is far from one.
+ */
+export const REFILL_DETOUR = [0, 2, 1, 4, 6];
+export const refillDetour = (k: number): number =>
+  holds('mattock', k) ? Math.min(REFILL_DETOUR[k], 1) : REFILL_DETOUR[k];
+
+/** Tiles one trip into band k walks, its refill detours included. */
+export const tripSteps = (k: number): number => walkSteps(k) + refillsFor(k) * 2 * refillDetour(k);
 export const tripSeconds = (k: number): number =>
   tripSteps(k) * A.stepSeconds + A.huntsPerTrip * A.huntSeconds;
 /** Jerky one reference trip eats. */
@@ -127,7 +182,7 @@ export const bandSeconds = (k: number): number => (k === 0 ? MEADOW_SECONDS : DW
  * factors trade against each other, because the Fen's gear is priced from the
  * forest's budget, so the kept step is the one that lands the Hart.
  */
-export const FIELD_FACTOR = [1, 0.49, 0.7, 1.32, 1];
+export const FIELD_FACTOR = [1, 0.55, 0.82, 1.35, 0.7];
 /** Band k's stay in seconds of the reference trip's earning. */
 export const earningSeconds = (k: number): number => bandSeconds(k) * FIELD_FACTOR[k];
 export const bandStart = (k: number): number =>
@@ -239,6 +294,10 @@ export const bowPower = (level: number): number => 2 ** level;
 export const threat = (k: number): number => 2 ** k;
 /** The Pale Hart: half again a deepwood beast, so skill and hounds must close the gap. */
 export const HART_THREAT = threat(4) * 1.5;
+/** Band k's den beast: an even fight for the next band's bow. */
+export const denThreat = (k: number): number => threat(k + 1);
+/** A den beast pays this much over the band's dangerous quarry. */
+export const DEN_PREMIUM = 2;
 /** Chance a hunt against threat t succeeds at prowess p. */
 export const winChance = (prowess: number, t: number): number =>
   t <= 0 ? 1 : prowess / (prowess + t);
@@ -265,6 +324,8 @@ export const bowCost = (level: number): { hide: number; antler: number } => ({
 /** Satchel level L: the reach line, the alternative to camps. */
 export const satchelCost = (level: number): number =>
   round5(A.satchelShare * hideBudget(level - 1));
+/** Waterskin level L: the water line, the alternative to walking to a spring. */
+export const skinCost = (level: number): number => round5(A.skinShare * hideBudget(level - 1));
 
 // === LODGE PRICES ===
 
@@ -308,7 +369,7 @@ export interface BeatPrediction {
 
 /**
  * When the reference policy should finish the forest kit, first set foot in
- * each band past the forest, and take the Hart. `balance/arc-probe.ts` prints
+ * each band past the forest, take each den's trophy, and take the Hart. `balance/arc-probe.ts` prints
  * the measured diff.
  */
 export function predictBeats(): BeatPrediction[] {
@@ -322,6 +383,10 @@ export function predictBeats(): BeatPrediction[] {
   out.push({ label: 'camp 1', seconds: Math.round(MEADOW_SECONDS) });
   for (let k = 2; k < A.bands; k++)
     out.push({ label: `enter band ${k}`, seconds: Math.round(bandStart(k)) });
+  // Each den falls as the band after it opens, with that band's bow.
+  for (const [trophy, from] of Object.entries(TROPHY_FROM))
+    out.push({ label: `trophy ${trophy}`, seconds: Math.round(bandStart(from)) });
   out.push({ label: 'the Hart', seconds: A.arcSeconds });
+  out.sort((a, b) => a.seconds - b.seconds);
   return out;
 }

@@ -11,7 +11,8 @@
  * Language: a huntsman's lodge at the edge of a fogged forest, read by a tallow
  * lamp. The affordance palette comes first: tallow = you can reach or afford;
  * ash = you can't yet; ember = newly opened; rust = danger, or past the tether;
- * moss = banked, done; frost = a find. A high-contrast display serif for the
+ * moss = banked, done; frost = a find; water = what the skin holds and where it
+ * refills. Ink not yet dry — a sepia wash — is ground in this trip's notes. A high-contrast display serif for the
  * large chrome only (its hairlines break up under about 18px), a book serif for
  * everything read, semibold for labels, italic for the hunter's notes.
  *
@@ -63,6 +64,11 @@
   --sp-rust: #b0503a;
   --sp-moss: #7f9a62;
   --sp-frost: #9fb3c2;
+  /* ── water: the second thing he carries, and the map's waypoints ── */
+  --sp-water: #6fa3b8;
+  --sp-water-deep: #22394a;
+  --sp-water-tint: rgba(111, 163, 184, 0.4);
+  --sp-frost-tint: rgba(205, 220, 230, 0.22);
 
   /* ── terrain, desaturated so five bands sit together for hours ── */
   --sp-ground-meadow: #3b4a2c;

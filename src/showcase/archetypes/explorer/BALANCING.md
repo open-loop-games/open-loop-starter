@@ -1,13 +1,16 @@
 # Explorer — balancing
 
 A territory economy: the lodge earns while the huntsman is out, and the huntsman earns
-only what he carries home. Each band's quarry pays a constant multiple of the band
-before, and every price is sized from the budget a stay in the band before banks. The
+only what he carries home, on jerky the lodge smokes and water the map gives. Each
+band's quarry pays a constant multiple of the band before, every price is sized from
+the budget a stay in the band before banks, and each den's trophy changes the trips of
+the bands after it. The
 bucket and its closed form are in `IDENTITY.md` § Rate-function spine.
 
 The numbers come from the anchors at the top of `data/spine.ts`. To retune, change an
 anchor and let the derivations follow: gear prices, pack and satchel capacities, rack
-throughput, the opening's length and the Hart's trail are all derived from it.
+throughput, refill detours, the opening's length and the Hart's trail are all derived
+from it.
 
 ## The tunables
 
@@ -18,6 +21,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
 |---|---|---|
 | `trip/stepSeconds`, `trip/huntSeconds` | 0.5, 3 | The walk's and the hunt's clock. A slower step lengthens every trip, and deep bands most. |
 | `trip/supplyPerStep`, `trip/supplyPerHunt` | 1, 1 | Jerky per tile and per hunt. This sets the tether's radius for a given satchel. |
+| `water/perStep`, `water/perHunt` | 2, 1 | Water per tile and per hunt. At 2 a tile, water binds the walk before jerky does; lower it and the springs stop shaping paths. |
 | `lodge/<producer>/rate` | 0.2, 0.15 | Wood or meat per second per woodcutter or snare line. |
 | `lodge/<producer>/baseCost`, `lodge/costRatio` | from the spine, 1.15 | The producers' price ladder. |
 | `racks/jerkyRate` | 0.57 | Jerky per second per rack at full feed: the meadow's jerky demand. |
@@ -36,17 +40,31 @@ Every key is read at its reader site through `tunable()`; the registry is in
   `data/wold.ts` at construction.
 - The map is generated from `MAP_SEED`. A different seed is a different map, and every
   save made on the old one breaks.
+- The trophy schedule (`TROPHY_FROM`) and the water geography (`SPRINGS_PER_BAND`,
+  `REFILL_DETOUR`, the river, the frozen band) are spine inputs. Change them in `data/`
+  and re-solve the field factor.
 - `FIELD_FACTOR` is a measurement, not a knob. Perturbing it would price the game for a
   walk that does not happen; re-solve it instead (§ Running a pass).
 
 ## Couplings
 
-- **The tether is jerky, not distance.** Every term that changes jerky per tile —
-  `trip/supplyPerStep`, a hound — shrinks the reachable map for the same satchel. A hound
-  pays for itself in pack and prowess only if the walker still reaches the band.
-- **The pack banks only at the lodge.** A camp moves the restock point outward but not
-  the bank, so deep trips are bounded by the walk home, not by the satchel alone.
-  `loss-on-failure` depends on this: a camp that banked would remove it.
+- **The tether is jerky and water, not distance.** Every term that changes jerky or
+  water per tile — `trip/supplyPerStep`, `water/perStep`, a hound — shrinks the reachable
+  map for the same satchel and skin. A hound pays for itself in pack and prowess only if
+  the walker still reaches the band.
+- **Water binds first.** The starting skin holds 8 steps against the satchel's 12, and
+  each skin level adds 4 against the satchel's 8. So springs and the river shape the
+  routes, the frozen Snowfield and dry Deepwood bind hardest, and the waterskin line is
+  bought before the satchel.
+- **The pack banks only at the lodge until the sledge.** A camp moves the restock point
+  outward but not the bank, so deep trips are bounded by the walk home.
+  `loss-on-failure` depends on this, which is why a camp banks only once the White Bear
+  is taken, late. The notes bank at any camp: a fall costs charting as well as the haul.
+- **Trophies change the trips of the bands after their den.** The mattock caps every
+  refill detour; the coracle shortens trips across the Fen; the sledge starts and banks
+  Deepwood trips at the camp. The sledge more than doubles the Deepwood's hide rate,
+  and the Hart's trail is one reference stay of kills, so a player who skips the White
+  Bear stays in the Deepwood longer.
 - **Racks are throughput-bounded by both inputs.** A rack smokes the minimum its meat
   and its wood can feed. Raising `racks/jerkyRate` without wood to burn does nothing.
 - **Gear prices come from the band before.** Terrain gear for band k is a share of band
@@ -89,15 +107,15 @@ within 10% of their predictions, and the Fen within 25%.
 
 ## Known thin
 
-- **The Fen opens early.** Its entry falls at 563–578s against 682s. The forest outruns
-  its factor once the opening is paid for, and solving the forest's factor directly
-  overshoots the Fen (§ Couplings).
-- **The forest still waits on racks.** About 115s of its stay is the walker standing at
-  a restock point while the racks refill the satchel. The racks are not starved; there
-  are too few of them for the forest's walking, which runs past the reference trip.
+- **The opening runs long.** The first camp falls at 347–443s against 294s: the walker
+  reaches the waystone after the wood is ready. The Fen then opens 3–22% late.
+- **Dens fall off schedule.** The mattock comes 30% after the Fen opens, while the
+  coracle and the sledge come before their bands open: the walker owns the next bow
+  before it owns the next terrain gear. The spine counts each trophy from a band
+  boundary.
 - **The remainder is a measurement.** `FIELD_FACTOR` carries what the walk does not
   model: herds scattered in threes, early trips on entry gear, shallower quarry on the
-  way. The spine predicts the arc only for maps and walkers like the ones it was solved
-  on.
+  way, rack waits. The spine predicts the arc only for maps and walkers like the ones it
+  was solved on.
 - **One walker.** The probe's greedy walker is one policy. A player who camps earlier or
   over-builds racks runs a different arc, and nothing measures the spread.

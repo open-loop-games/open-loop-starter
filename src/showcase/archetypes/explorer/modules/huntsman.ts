@@ -34,10 +34,12 @@ import {
   LODGE,
   SKILL_STEP,
   SPECIES,
+  TROPHIES,
   WOOD_RATE,
   XP_SCALE,
   bowPower,
   campCost,
+  skinCapacity,
   huntXp,
   packCapacity,
   speciesById,
@@ -78,6 +80,8 @@ export interface HuntsmanApi {
   actionClock: TimedProgress;
   supply: Resource<DecimalSource>;
   supplyCap: ComputedRef<number>;
+  water: Resource<DecimalSource>;
+  waterCap: ComputedRef<number>;
   pack: ResourceBag;
   packItems: Record<PackItem, Resource<DecimalSource>>;
   packCap: ComputedRef<number>;
@@ -95,6 +99,8 @@ export interface HuntsmanApi {
   huntChance(s: SpeciesDef): number;
   /** jerky from the huntsman to every tile */
   hereField(): Float64Array;
+  /** water from the huntsman to every tile */
+  hereWaterField(): Float64Array;
   /** the walk to `target` over charted, walkable ground, or null when there is none */
   routeTo(target: GridCoord): GridCoord[] | null;
   walkTo(target: GridCoord): boolean;
@@ -113,6 +119,7 @@ export function getHuntsman(): HuntsmanApi {
 }
 
 const STARVED = 'Your jerky is gone. You drop on the trail, and porters find you.';
+const PARCHED = 'Your water is gone. You fall in the heat of the day, and porters find you.';
 
 export function createHuntsmanModule(): EngineModule {
   return {
@@ -187,7 +194,7 @@ export function createHuntsmanModule(): EngineModule {
             ),
         }),
       });
-      bestiary.register(SPECIES.filter((s) => s.id !== 'hart'));
+      bestiary.register(SPECIES.filter((s) => s.id !== 'hart' && !s.trophy));
 
       // === CARRYING ===
 
@@ -199,6 +206,12 @@ export function createHuntsmanModule(): EngineModule {
         displayName: 'Jerky carried',
       });
       const supplyCap = computed(() => supplyCapacity(lodge.gearLevel('satchel')));
+      const water = createResource<DecimalSource>(0, { id: 'water', displayName: 'Water carried' });
+      const waterCap = computed(() => skinCapacity(lodge.gearLevel('skin')));
+      const waterPerHunt = tunable(registry, 'water/perHunt', () => ANCHORS.waterPerHunt);
+      const refill = () => {
+        water.value = waterCap.value;
+      };
 
       const packChain = createModifierChain('pack');
       packChain.bind({
@@ -291,6 +304,7 @@ export function createHuntsmanModule(): EngineModule {
         pos.value = { x: next.x, y: next.y };
         path.value = rest;
         supply.value = Decimal.sub(supply.value, wold.stepCost.value).max(0);
+        water.value = Decimal.sub(water.value, wold.waterPerStep.value).max(0);
         arrive(next.x, next.y);
         if (path.value.length === 0 && action.value === 'walk') action.value = 'idle';
       }
@@ -301,18 +315,18 @@ export function createHuntsmanModule(): EngineModule {
         wold.reveal(x, y, wold.sight.value);
         // The band edge is jittered; a beat counts only on ground at the band's true depth.
         if (t.depth >= ANCHORS.bandDepth * t.band) beat(`enter band ${t.band}`);
-        if (t.feature === 'lodge') bank();
+        if (wold.isWaterSource(x, y)) refill();
         if (wold.isRestock(x, y)) {
-          restock();
+          atRestock();
           return;
         }
         if (t.feature === 'lookout' && !wold.looted.value.includes(i)) {
-          wold.looted.value = [...wold.looted.value, i];
+          wold.loot(i);
           wold.reveal(x, y, 4);
           say('From the lookout the country opens below you.', 'find');
         }
         if (t.feature === 'cache' && !wold.looted.value.includes(i)) {
-          wold.looted.value = [...wold.looted.value, i];
+          wold.loot(i);
           const k = t.band;
           const hide = Math.round(yieldHide(k) * 4);
           const antler = Math.round(yieldAntler(k) * 3);
@@ -325,7 +339,24 @@ export function createHuntsmanModule(): EngineModule {
             'find',
           );
         }
+        checkSupplies();
+      }
+
+      /** Out of jerky or water anywhere but a restock point: the trip ends. */
+      function checkSupplies(): void {
         if (Decimal.lte(supply.value, 0)) collapse(STARVED);
+        else if (Decimal.lte(water.value, 0) && !wold.isWaterSource(pos.value.x, pos.value.y))
+          collapse(PARCHED);
+      }
+
+      /**
+       * At the lodge or a camp: the satchel restocks and the notes bank. The pack
+       * banks at the lodge, and at a camp too once the sledge drags it home.
+       */
+      function atRestock(): void {
+        if (atLodge() || wold.hasTrophy('sledge')) bank();
+        restock();
+        wold.bankNotes();
       }
 
       function bank(): void {
@@ -360,9 +391,11 @@ export function createHuntsmanModule(): EngineModule {
         action.value = 'idle';
         actionClock.progress.value = 0;
         supply.value = 0;
+        wold.loseNotes();
         pos.value = { ...LODGE };
         wold.reveal(LODGE.x, LODGE.y, wold.sight.value);
         restock();
+        refill();
         say(`${text} The haul is lost.`, 'bad');
         beat('first loss');
       }
@@ -387,7 +420,9 @@ export function createHuntsmanModule(): EngineModule {
         const s = herdAt(pos.value.x, pos.value.y);
         if (!s) return false;
         if (Decimal.lt(supply.value, supplyPerHunt.value)) return false;
+        if (Decimal.lt(water.value, waterPerHunt.value)) return false;
         supply.value = Decimal.sub(supply.value, supplyPerHunt.value);
+        water.value = Decimal.sub(water.value, waterPerHunt.value);
         action.value = 'hunt';
         actionClock.progress.value = 0;
         return true;
@@ -403,7 +438,7 @@ export function createHuntsmanModule(): EngineModule {
             collapse(`The ${s.displayName.toLowerCase()} turns on you. You are carried home torn.`);
           } else {
             say(`The ${s.displayName.toLowerCase()} bolts.`);
-            if (Decimal.lte(supply.value, 0)) collapse(STARVED);
+            checkSupplies();
           }
           return;
         }
@@ -414,6 +449,15 @@ export function createHuntsmanModule(): EngineModule {
         if (s.id === 'hart') {
           finish();
           return;
+        }
+        if (s.trophy) {
+          const trophy = TROPHIES.find((tr) => tr.id === s.trophy)!;
+          wold.grantTrophy(trophy.id);
+          say(
+            `${s.displayName} is taken. Its trophy: ${trophy.displayName}. ${trophy.blurb}`,
+            'find',
+          );
+          beat(`trophy ${trophy.id}`);
         }
         const mult = toNumber(yieldChains.get(s.id)!.apply(1));
         const want: Record<PackItem, number> = {
@@ -439,7 +483,7 @@ export function createHuntsmanModule(): EngineModule {
           );
           beat('hart trail');
         }
-        if (Decimal.lte(supply.value, 0)) collapse(STARVED);
+        checkSupplies();
       }
 
       // === CAMPS ===
@@ -472,10 +516,9 @@ export function createHuntsmanModule(): EngineModule {
 
       ctx.onTick(() => {
         if (chronicle.won.value) return;
-        if (action.value === 'idle' && wold.isRestock(pos.value.x, pos.value.y)) {
-          if (atLodge()) bank();
-          restock();
-        }
+        if (action.value !== 'idle') return;
+        if (wold.isWaterSource(pos.value.x, pos.value.y)) refill();
+        if (wold.isRestock(pos.value.x, pos.value.y)) atRestock();
       });
 
       ctx.onLoad(() => {
@@ -484,6 +527,8 @@ export function createHuntsmanModule(): EngineModule {
       });
 
       wold.reveal(LODGE.x, LODGE.y, wold.sight.value);
+      wold.bankNotes();
+      refill();
       supply.value = Math.min(supplyCap.value, num(stores.jerky));
       stores.jerky.value = Decimal.sub(stores.jerky.value, supply.value);
 
@@ -494,6 +539,8 @@ export function createHuntsmanModule(): EngineModule {
         actionClock,
         supply,
         supplyCap,
+        water,
+        waterCap,
         pack,
         packItems,
         packCap,
@@ -508,6 +555,7 @@ export function createHuntsmanModule(): EngineModule {
         herdAt,
         huntChance,
         hereField: () => wold.fieldFrom(pos.value),
+        hereWaterField: () => wold.fieldFrom(pos.value, 'water'),
         routeTo,
         walkTo,
         hunt,

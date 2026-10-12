@@ -11,10 +11,12 @@ import {
   MAP_H,
   MAP_W,
   SPECIES,
+  SPRINGS_PER_BAND,
   terrainOfBand,
   type Feature,
   type SpeciesId,
   type Terrain,
+  type Water,
 } from '../data';
 
 export interface Tile {
@@ -25,6 +27,7 @@ export interface Tile {
   blocked: boolean;
   feature: Feature | null;
   herd: SpeciesId | null;
+  water: Water | null;
 }
 
 /** How deep a tile sits: rows above the lodge plus half the sideways offset. */
@@ -49,6 +52,7 @@ export function generateMap(seed: number): Tile[] {
         blocked: !nearLodge && rng() < 0.14,
         feature: null,
         herd: null,
+        water: null,
       });
     }
   }
@@ -67,6 +71,12 @@ export function generateMap(seed: number): Tile[] {
   placeOne(tiles, rng, 'lookout', (t, x) => t.band === 3 && t.depth >= 13 && x > 14);
   for (let i = 0; i < 6; i++) placeOne(tiles, rng, 'cache', (t) => t.depth >= 3 + i * 2);
   placeHerds(tiles, rng);
+  // Water and dens draw from their own streams, so the land, its features and its
+  // herds are the same wold with or without them.
+  const water = createSeededRNG(seed + 1);
+  placeRiver(tiles, water);
+  placeSprings(tiles, water);
+  placeDens(tiles, createSeededRNG(seed + 2));
   return tiles;
 }
 
@@ -136,9 +146,58 @@ function placeHerds(tiles: Tile[], rng: () => number): void {
   for (const i of candidates(tiles, (t) => t.depth >= 2)) {
     if (rng() >= 0.2) continue;
     const t = tiles[i];
-    const pool = SPECIES.filter((s) => s.band === t.band && s.id !== 'hart');
+    const pool = SPECIES.filter((s) => s.band === t.band && s.id !== 'hart' && !s.trophy);
     const wantDanger = t.band >= 1 && rng() < 0.3;
     const pick = pool.find((s) => s.dangerous === wantDanger) ?? pool[0];
     t.herd = pick.id;
+  }
+}
+
+/**
+ * One river down the west of the wold, from the Snowfield (frozen there) through
+ * the Fen and the forest to the meadow. River tiles are shallow: always walkable.
+ */
+function placeRiver(tiles: Tile[], rng: () => number): void {
+  let x = 4;
+  for (let y = 5; y <= LODGE.y - 1; y++) {
+    const t = tiles[tileIndex(x, y)];
+    t.blocked = false;
+    t.water = 'river';
+    const r = rng();
+    if (r < 0.25) x = Math.max(2, x - 1);
+    else if (r < 0.5) x = Math.min(7, x + 1);
+    // A sideways bend fills the corner too, so the river stays one connected line.
+    const bend = tiles[tileIndex(x, y)];
+    bend.blocked = false;
+    bend.water = 'river';
+  }
+}
+
+/** Springs per band, on open ground away from the river and every feature. */
+function placeSprings(tiles: Tile[], rng: () => number): void {
+  SPRINGS_PER_BAND.forEach((count, band) => {
+    for (let i = 0; i < count; i++) {
+      const pool = candidates(
+        tiles,
+        (t) => t.band === band && t.depth >= 2 && t.water == null && t.herd == null,
+      );
+      if (pool.length === 0) return;
+      tiles[pool[Math.floor(rng() * pool.length)]].water = 'spring';
+    }
+  });
+}
+
+/** One den in the deeper half of the forest, the Fen and the Snowfield. */
+function placeDens(tiles: Tile[], rng: () => number): void {
+  for (const s of SPECIES.filter((sp) => sp.trophy)) {
+    const deep = ANCHORS.bandDepth * s.band + ANCHORS.bandDepth / 2;
+    const pool = candidates(
+      tiles,
+      (t) => t.band === s.band && t.depth >= deep && t.water == null && t.herd == null,
+    );
+    if (pool.length === 0) continue;
+    const t = tiles[pool[Math.floor(rng() * pool.length)]];
+    t.feature = 'den';
+    t.herd = s.id;
   }
 }

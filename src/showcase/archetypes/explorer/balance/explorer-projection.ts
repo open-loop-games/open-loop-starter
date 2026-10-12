@@ -6,7 +6,9 @@
  * Run: `pnpm exec vite-node src/showcase/archetypes/explorer/balance/explorer-projection.ts`
  *
  * How to read it:
- * - § Bands: the reference trip into each band, what it earns per second with
+ * - § Trophies: the band from which each den's trophy changes the trip.
+ * - § Bands: the reference trip into each band — its walk, the water it drinks
+ *   against the skin, the refills and their detour — what it earns per second with
  *   the hit chance, Huntcraft and the bestiary folded in, the field factor that
  *   turns a stay into earning seconds, and the budget a stay banks.
  * - § Prices: each gear line's next level against the band budget it is bought
@@ -27,6 +29,7 @@ import {
   antlerRate,
   bandSeconds,
   bandStart,
+  TROPHY_FROM,
   campCost,
   earningSeconds,
   hideBudget,
@@ -38,7 +41,13 @@ import {
   packCapacity,
   predictBeats,
   racksFor,
+  refillDetour,
+  refillsFor,
   skillLevelAt,
+  skinCapacity,
+  skinLevelAt,
+  walkSteps,
+  waterNeed,
   supplyCapacity,
   tripSeconds,
   tripSteps,
@@ -58,6 +67,9 @@ console.log({
   hartTrailKills: HART_TRAIL_KILLS,
 });
 
+console.log('\n=== Trophies: the band each counts from ===');
+console.log(TROPHY_FROM);
+
 console.log('\n=== Bands: the reference trip and its budget ===');
 console.table(
   [0, 1, 2, 3, 4].map((k) => ({
@@ -66,6 +78,11 @@ console.table(
     stay: Math.round(bandSeconds(k)),
     field: FIELD_FACTOR[k],
     earning: Math.round(earningSeconds(k)),
+    walk: walkSteps(k),
+    water: waterNeed(k),
+    skin: skinCapacity(skinLevelAt(k)),
+    refills: refillsFor(k),
+    detour: refillDetour(k),
     tripSteps: tripSteps(k),
     tripSecs: tripSeconds(k),
     tripJerky: tripSupply(k),

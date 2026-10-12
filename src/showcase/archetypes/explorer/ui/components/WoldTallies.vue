@@ -19,7 +19,10 @@ const share = computed(() => Math.floor((100 * wold.chartedCount.value) / wold.t
   <dl class="sp-tallies">
     <div>
       <dt>Charted</dt>
-      <dd class="sp-num">{{ wold.chartedCount.value }}</dd>
+      <dd class="sp-num">
+        {{ wold.chartedCount.value
+        }}<span v-if="wold.notesCount.value" class="noted">+{{ wold.notesCount.value }}</span>
+      </dd>
     </div>
     <div>
       <dt>Of the wold</dt>
@@ -54,6 +57,11 @@ const share = computed(() => Math.floor((100 * wold.chartedCount.value) / wold.t
   font-size: 20px;
   color: var(--sp-birch);
   min-width: 3ch;
+}
+.sp-tallies .noted {
+  margin-left: 3px;
+  font-size: 13px;
+  color: var(--sp-tallow-deep);
 }
 .sp-tallies .dim dd {
   color: var(--sp-birch-dim);

@@ -10,13 +10,24 @@ import { getWold } from './wold';
 const num = (r: { value: unknown }) => toNumber(r.value as number);
 const NORTH = { x: LODGE.x, y: LODGE.y - 1 };
 
+/** Raise a camp on the first waystone and stand the huntsman on it. */
+function atCamp(): { x: number; y: number } {
+  const wold = getWold();
+  const i = wold.tiles.findIndex((t) => t.feature === 'waystone');
+  wold.raiseCamp(i);
+  const at = { x: i % MAP_W, y: Math.floor(i / MAP_W) };
+  getHuntsman().pos.value = at;
+  return at;
+}
+
 describe('the huntsman', () => {
   beforeEach(() => boot());
 
-  it('eats jerky for every tile walked and charts the ground around him', async () => {
+  it('eats jerky and drinks water for every tile walked, and notes the ground around him', async () => {
     const man = getHuntsman();
     const wold = getWold();
     const supply = num(man.supply);
+    const water = num(man.water);
     const charted = wold.chartedCount.value;
 
     expect(man.walkTo(NORTH)).toBe(true);
@@ -24,7 +35,39 @@ describe('the huntsman', () => {
 
     expect(man.pos.value).toEqual(NORTH);
     expect(num(man.supply)).toBe(supply - wold.stepCost.value);
-    expect(wold.chartedCount.value).toBeGreaterThan(charted);
+    expect(num(man.water)).toBe(water - wold.waterPerStep.value);
+    expect(wold.notesCount.value).toBeGreaterThan(0);
+    expect(wold.chartedCount.value).toBe(charted);
+  });
+
+  it('banks his notes into the chart on reaching the lodge, and refills at its well', async () => {
+    const man = getHuntsman();
+    const wold = getWold();
+    man.walkTo(NORTH);
+    await tickUntil(() => man.action.value === 'idle');
+    const noted = wold.notesCount.value;
+    const charted = wold.chartedCount.value;
+
+    man.walkTo(LODGE);
+    await tickUntil(() => man.action.value === 'idle');
+
+    expect(wold.notesCount.value).toBe(0);
+    expect(wold.chartedCount.value).toBe(charted + noted);
+    expect(num(man.water)).toBe(man.waterCap.value);
+  });
+
+  it('falls when his water runs out away from water', async () => {
+    const man = getHuntsman();
+    const chronicle = getChronicle();
+    man.walkTo(NORTH);
+    await tickUntil(() => man.action.value === 'idle');
+    man.water.value = getWold().waterPerStep.value;
+
+    man.walkTo({ x: NORTH.x, y: NORTH.y - 1 });
+    await tickUntil(() => man.action.value === 'idle');
+
+    expect(man.pos.value).toEqual(LODGE);
+    expect(chronicle.log.value[0].text).toMatch(/water is gone/);
   });
 
   it('banks the pack only on reaching the lodge', async () => {
@@ -59,23 +102,52 @@ describe('the huntsman', () => {
     expect(man.packLoad.value).toBe(0);
     expect(num(stores.hide)).toBe(0);
     expect(chronicle.log.value[0].tone).toBe('bad');
+    expect(getWold().notesCount.value).toBe(0);
   });
 
-  it('restocks jerky at a camp without banking the pack', async () => {
+  it('restocks jerky and banks his notes at a camp, but not the pack', async () => {
     const man = getHuntsman();
     const wold = getWold();
     const { stores } = getLodge();
-    const waystone = wold.tiles.findIndex((t) => t.feature === 'waystone');
-    wold.raiseCamp(waystone);
-    man.pos.value = { x: waystone % MAP_W, y: Math.floor(waystone / MAP_W) };
+    const waystone = atCamp();
+    wold.reveal(waystone.x, waystone.y, 1);
     man.supply.value = 0;
     man.pack.add('hide', 5);
 
     await tick(1);
 
     expect(num(man.supply)).toBeGreaterThan(0);
+    expect(wold.notesCount.value).toBe(0);
     expect(man.packLoad.value).toBe(5);
     expect(num(stores.hide)).toBe(0);
+  });
+
+  it('banks the pack at a camp once the sledge is his', async () => {
+    const man = getHuntsman();
+    const { stores } = getLodge();
+    getWold().grantTrophy('sledge');
+    atCamp();
+    man.pack.add('hide', 5);
+
+    await tick(1);
+
+    expect(man.packLoad.value).toBe(0);
+    expect(num(stores.hide)).toBe(5);
+  });
+
+  it('drinks at a camp only once the mattock has dug its well', async () => {
+    const man = getHuntsman();
+    const wold = getWold();
+    const camp = atCamp();
+    man.water.value = 0;
+    await tick(1);
+    expect(wold.isWaterSource(camp.x, camp.y)).toBe(false);
+    expect(num(man.water)).toBe(0);
+
+    wold.grantTrophy('mattock');
+    await tick(1);
+
+    expect(num(man.water)).toBe(man.waterCap.value);
   });
 
   it('finds the Hart only once the deepwood kills open its trail', () => {

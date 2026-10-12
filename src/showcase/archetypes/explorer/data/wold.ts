@@ -3,7 +3,17 @@
 // fixed geometry the seeded map is generated on. The generator itself is in
 // `modules/wold-map.ts`, because it draws from the engine's seeded RNG.
 
-import { DANGER_PREMIUM, HART_THREAT, threat, yieldAntler, yieldHide, yieldMeat } from './spine';
+import {
+  DANGER_PREMIUM,
+  DEN_PREMIUM,
+  HART_THREAT,
+  denThreat,
+  threat,
+  yieldAntler,
+  yieldHide,
+  yieldMeat,
+  type TrophyId,
+} from './spine';
 import type { GearId } from './gear';
 
 // === TERRAIN ===
@@ -42,6 +52,9 @@ export type SpeciesId =
   | 'bear'
   | 'stag'
   | 'aurochs'
+  | 'tusker'
+  | 'merewolf'
+  | 'whitebear'
   | 'hart';
 
 export interface SpeciesDef {
@@ -57,6 +70,8 @@ export interface SpeciesDef {
   /** Head a herd tile holds when full. */
   herdSize: number;
   glyph: string;
+  /** A den beast is one of a kind: it never regrows, and taking it pays its trophy. */
+  trophy?: TrophyId;
 }
 
 function timid(id: SpeciesId, displayName: string, band: number, glyph: string): SpeciesDef {
@@ -90,6 +105,28 @@ function dangerous(id: SpeciesId, displayName: string, band: number, glyph: stri
   };
 }
 
+function den(
+  id: SpeciesId,
+  displayName: string,
+  band: number,
+  glyph: string,
+  trophy: TrophyId,
+): SpeciesDef {
+  return {
+    id,
+    displayName,
+    band,
+    dangerous: true,
+    meat: yieldMeat(band) * DANGER_PREMIUM * DEN_PREMIUM,
+    hide: yieldHide(band) * DANGER_PREMIUM * DEN_PREMIUM,
+    antler: yieldAntler(band) * DANGER_PREMIUM * DEN_PREMIUM,
+    threat: denThreat(band),
+    herdSize: 1,
+    glyph,
+    trophy,
+  };
+}
+
 export const SPECIES: readonly SpeciesDef[] = [
   timid('hare', 'Hare', 0, 'h'),
   timid('roe', 'Roe deer', 1, 'r'),
@@ -100,6 +137,9 @@ export const SPECIES: readonly SpeciesDef[] = [
   dangerous('bear', 'Bear', 3, 'U'),
   timid('stag', 'Great stag', 4, 's'),
   dangerous('aurochs', 'Aurochs', 4, 'A'),
+  den('tusker', 'The Old Tusker', 1, 'T', 'mattock'),
+  den('merewolf', 'The Mere Wolf', 2, 'M', 'coracle'),
+  den('whitebear', 'The White Bear', 3, 'Ω', 'sledge'),
   {
     id: 'hart',
     displayName: 'The Pale Hart',
@@ -116,6 +156,37 @@ export const SPECIES: readonly SpeciesDef[] = [
 
 export const speciesById = new Map(SPECIES.map((s) => [s.id, s]));
 
+// === TROPHIES ===
+
+export interface TrophyDef {
+  id: TrophyId;
+  displayName: string;
+  /** what the trophy changes, in the player's words */
+  blurb: string;
+  den: SpeciesId;
+}
+
+export const TROPHIES: readonly TrophyDef[] = [
+  {
+    id: 'mattock',
+    displayName: 'Tusk mattock',
+    blurb: 'Every camp digs a well: camps refill water.',
+    den: 'tusker',
+  },
+  {
+    id: 'coracle',
+    displayName: 'Coracle',
+    blurb: 'The meres are open water: paddle across the Fen, and drink from it.',
+    den: 'merewolf',
+  },
+  {
+    id: 'sledge',
+    displayName: 'Bear-hide sledge',
+    blurb: 'Porters drag the pack home from any camp: camps bank the haul.',
+    den: 'whitebear',
+  },
+];
+
 // === GEOMETRY ===
 
 export const MAP_W = 23;
@@ -131,4 +202,16 @@ export interface Coord {
 export const LODGE: Coord = { x: 11, y: 17 };
 export const LAIR: Coord = { x: 11, y: 1 };
 
-export type Feature = 'lodge' | 'waystone' | 'lookout' | 'cache' | 'lair';
+export type Feature = 'lodge' | 'waystone' | 'lookout' | 'cache' | 'lair' | 'den';
+
+/** Water on a tile: a spring, or a stretch of the river. Frozen water refills nothing. */
+export type Water = 'spring' | 'river';
+
+/**
+ * Springs per band, placed by the generator: the meadow's beside the lodge well,
+ * the forest's beside the river, none in the Fen (its meres are its water), one
+ * frozen in the Snowfield, one in the dry Deepwood.
+ */
+export const SPRINGS_PER_BAND = [2, 3, 0, 1, 1];
+/** The band whose water is frozen: its springs and river refill nothing. */
+export const FROZEN_BAND = 3;

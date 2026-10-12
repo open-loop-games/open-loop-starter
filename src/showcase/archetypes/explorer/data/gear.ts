@@ -12,6 +12,7 @@ import {
   bowCost,
   frameCost,
   satchelCost,
+  skinCost,
   terrainGearCost,
 } from './spine';
 
@@ -20,7 +21,15 @@ export type Currency = 'meat' | 'hide' | 'antler' | 'wood' | 'jerky';
 
 // === GEAR ===
 
-export type GearId = 'waders' | 'snowshoes' | 'lantern' | 'bow' | 'frame' | 'satchel' | 'hounds';
+export type GearId =
+  | 'waders'
+  | 'snowshoes'
+  | 'lantern'
+  | 'bow'
+  | 'frame'
+  | 'satchel'
+  | 'skin'
+  | 'hounds';
 
 export interface GearDef {
   id: GearId;
@@ -55,6 +64,13 @@ export const GEAR: readonly GearDef[] = [
     blurb: 'Carry more jerky.',
     limit: 3,
     cost: (l) => ({ hide: satchelCost(l + 1) }),
+  },
+  {
+    id: 'skin',
+    displayName: 'Waterskin',
+    blurb: 'Carry more water between springs.',
+    limit: 3,
+    cost: (l) => ({ hide: skinCost(l + 1) }),
   },
   { id: 'waders', displayName: 'Waders', blurb: 'Walk the Fen.', limit: 1, cost: terrainGear(2) },
   {

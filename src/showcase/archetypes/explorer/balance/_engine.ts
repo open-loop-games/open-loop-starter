@@ -9,9 +9,12 @@
  * The walker stands in for the spine's reference player, so its rules are the
  * spine's assumptions:
  * - it buys racks to `racksFor(k)` first, and producers only from stores the
- *   next rack, the next camp and one satchel refill have not spoken for;
- * - it hunts the deepest band's timid quarry, and dangerous quarry only with a
- *   nearly empty pack, since a mauling loses it;
+ *   next rack, the next camp and one satchel refill have not spoken for — except
+ *   a snare line when the lodge is starving;
+ * - it hunts the deepest band's timid quarry, and dangerous quarry and dens only
+ *   with a nearly empty pack, since a mauling loses it;
+ * - it plans every walk on water as well as jerky, and heads for water when its
+ *   skin is half empty;
  * - on an empty larder it hunts what is in reach and charting waits.
  * `FIELD_FACTOR` is measured under these rules: change them and re-solve it.
  *
@@ -41,6 +44,7 @@ const GEAR_ORDER: GearId[] = [
   'lantern',
   'bow',
   'frame',
+  'skin',
   'satchel',
   'hounds',
 ];
@@ -122,9 +126,18 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
     const woodReserved =
       (racksShort ? toNumber(lodge.racks.getCost(1)) : 0) +
       (wold.camps.value.length < 4 ? man.campCost.value : 0);
+    // A starving lodge — no jerky out or in, no meat to smoke — buys a snare line
+    // with any wood it has: meat that walks in is the only way out.
+    const starving =
+      n(man.supply) + n(lodge.stores.jerky) + n(lodge.stores.meat) * ANCHORS.jerkyPerMeat <
+      2 * wold.stepCost.value;
     for (const p of lodge.producers.getAll()) {
       const r = p.producer.repeatable!;
       if (p.def.id === 'snare' && n(lodge.stores.meat) > 30) continue;
+      if (p.def.id === 'snare' && starving) {
+        lodge.buyProducer('snare');
+        continue;
+      }
       const reserved = p.def.payer === 'wood' ? woodReserved : meatReserved;
       const spare = n(lodge.stores[p.def.payer]) - reserved;
       if (spare > 2 * toNumber(r.getCost(1))) lodge.buyProducer(p.def.id);
@@ -157,10 +170,31 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
     return best;
   }
 
-  /** Head for the lodge when the walk fits the satchel, else the nearest camp to restock on the way. */
+  /** The nearest water source the walker's water reaches, or null. */
+  function nearestWater(hereW: Float64Array, srcW: Float64Array): GridCoord | null {
+    let best: GridCoord | null = null;
+    let d = n(man.water);
+    for (let j = 0; j < srcW.length; j++) {
+      if (srcW[j] !== 0 || !(hereW[j] <= d) || j === idx(man.pos.value)) continue;
+      d = hereW[j];
+      best = { x: j % MAP_W, y: Math.floor(j / MAP_W) };
+    }
+    return best;
+  }
+
+  /**
+   * Head home to bank: the lodge when the walk fits the satchel, else the nearest
+   * camp; with the sledge, the nearest camp banks too. Water first if the walk
+   * home would run the skin dry.
+   */
   function goHome(here: Float64Array): void {
     walkingToChart = false;
-    man.walkTo(here[idx(LODGE)] <= n(man.supply) ? LODGE : nearestRestock(here));
+    const hereW = man.hereWaterField();
+    let target =
+      here[idx(LODGE)] <= n(man.supply) && !wold.hasTrophy('sledge') ? LODGE : nearestRestock(here);
+    if (hereW[idx(target)] > n(man.water))
+      target = nearestWater(hereW, wold.waterField()) ?? target;
+    man.walkTo(target);
   }
 
   let walkingToChart = false;
@@ -173,11 +207,17 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
 
     const home = wold.homeField();
     const here = man.hereField();
+    const srcW = wold.waterField();
+    const hereW = man.hereWaterField();
     const supply = n(man.supply);
+    const water = n(man.water);
     const i = idx(man.pos.value);
     const packFull = man.packLoad.value >= man.packCap.value * 0.85;
+    const banksHere = at(LODGE) || (wold.hasTrophy('sledge') && wold.isCamp(i));
+    // Low water: the next water is the job.
+    const thirsty = water < 0.5 * man.waterCap.value;
 
-    if (packFull && !at(LODGE)) {
+    if (packFull && !banksHere) {
       goHome(here);
       return;
     }
@@ -190,7 +230,12 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
       smoking
     )
       return;
-    if (s && supply - ANCHORS.supplyPerHunt >= home[i] && okToHunt(s.id)) {
+    if (
+      s &&
+      supply - ANCHORS.supplyPerHunt >= home[i] &&
+      water - ANCHORS.waterPerHunt >= srcW[i] &&
+      okToHunt(s.id)
+    ) {
       man.hunt();
       return;
     }
@@ -208,17 +253,23 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
     for (let j = 0; j < wold.tiles.length; j++) {
       if (j === i || !Number.isFinite(here[j])) continue;
       if (here[j] + home[j] + ANCHORS.supplyPerHunt > supply) continue;
+      if (hereW[j] + srcW[j] + ANCHORS.waterPerHunt > water) continue;
       const t = wold.tiles[j];
       const x = j % MAP_W;
       const y = Math.floor(j / MAP_W);
       let score = -Infinity;
       const herd = man.herdAt(x, y);
-      if (herd && okToHunt(herd.id) && !packFull) {
+      if (thirsty && srcW[j] === 0) {
+        score = 4800 - hereW[j];
+      } else if (herd && okToHunt(herd.id) && !packFull) {
         // Quarry of the deepest band reached is the job; shallower quarry is filler.
+        // A den is worth a detour: its trophy changes the ground.
         score =
           herd.id === 'hart'
             ? 1e6
-            : (herd.band >= band || hungry ? 3000 : 0) + 10 * herd.meat - 4 * here[j];
+            : herd.trophy
+              ? 4200 - 4 * here[j]
+              : (herd.band >= band || hungry ? 3000 : 0) + 10 * herd.meat - 4 * here[j];
       } else if (t.feature === 'waystone' && !wold.isCamp(j) && wantCamp) {
         score = 5000 - here[j];
       } else if (t.feature === 'lookout' && !wold.looted.value.includes(j)) {
@@ -241,7 +292,7 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
       return;
     }
     // Nothing in reach: go back to the nearest restock and wait for jerky.
-    if (!wold.isRestock(man.pos.value.x, man.pos.value.y) || (man.packLoad.value > 0 && !at(LODGE)))
+    if (!wold.isRestock(man.pos.value.x, man.pos.value.y) || (man.packLoad.value > 0 && !banksHere))
       goHome(here);
   }
 
@@ -294,7 +345,9 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
 
   function snapshot(t: number): string {
     const s = lodge.stores;
-    const gear = (['waders', 'snowshoes', 'lantern', 'bow', 'frame', 'satchel', 'hounds'] as const)
+    const gear = (
+      ['waders', 'snowshoes', 'lantern', 'bow', 'frame', 'satchel', 'skin', 'hounds'] as const
+    )
       .map((id) => `${id[0]}${lodge.gearLevel(id)}`)
       .join('');
     return [

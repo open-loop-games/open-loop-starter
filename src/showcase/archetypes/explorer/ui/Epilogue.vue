@@ -19,6 +19,9 @@ const LABELS: [RegExp, string][] = [
   [/^enter band 4$/, 'Under the Deepwood'],
   [/^camp (\d)$/, 'Camp $1 raised'],
   [/^first loss$/, 'First haul lost'],
+  [/^trophy mattock$/, 'The Old Tusker taken'],
+  [/^trophy coracle$/, 'The Mere Wolf taken'],
+  [/^trophy sledge$/, 'The White Bear taken'],
   [/^the Hart$/, 'The Pale Hart'],
 ];
 

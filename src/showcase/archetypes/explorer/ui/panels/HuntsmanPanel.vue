@@ -8,7 +8,16 @@ import { computed } from 'vue';
 import { getSkillProgress, toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
-import { ANCHORS, BESTIARY_KILLS, LODGE, MAP_W, SPECIES, TERRAIN } from '../../data';
+import {
+  ANCHORS,
+  BESTIARY_KILLS,
+  LODGE,
+  MAP_W,
+  SPECIES,
+  TERRAIN,
+  TROPHIES,
+  speciesById,
+} from '../../data';
 import { getChronicle, getHuntsman, getLodge, getWold } from '../../modules';
 import { fmt } from '../format';
 
@@ -18,6 +27,15 @@ const lodge = getLodge();
 const chronicle = getChronicle();
 
 const supply = computed(() => toNumber(man.supply.value));
+const water = computed(() => toNumber(man.water.value));
+/** Water from where he stands to the nearest water. */
+const toWater = computed(() => {
+  void wold.mapVersion.value;
+  void wold.trophies.value.length;
+  const { x, y } = man.pos.value;
+  return wold.waterField()[y * MAP_W + x];
+});
+const waterMark = computed(() => Math.min(100, (100 * toWater.value) / man.waterCap.value));
 const homeCost = computed(() => {
   void wold.mapVersion.value;
   void wold.camps.value.length;
@@ -51,13 +69,23 @@ const doing = computed(() =>
       ? 'stalking…'
       : 'standing',
 );
-const canHunt = computed(() => !busy.value && supply.value >= ANCHORS.supplyPerHunt);
+const canHunt = computed(
+  () => !busy.value && supply.value >= ANCHORS.supplyPerHunt && water.value >= ANCHORS.waterPerHunt,
+);
 const canCamp = computed(
   () => !busy.value && toNumber(lodge.stores.wood.value) >= man.campCost.value,
 );
 
+const trophies = computed(() =>
+  TROPHIES.filter((t) => wold.zones.isUnlocked(TERRAIN[speciesById.get(t.den)!.band].id)).map(
+    (t) => ({ t, den: speciesById.get(t.den)!, held: wold.hasTrophy(t.id) }),
+  ),
+);
+
 const bestiary = computed(() =>
-  SPECIES.filter((s) => s.id !== 'hart' && wold.zones.isUnlocked(TERRAIN[s.band].id)).map((s) => ({
+  SPECIES.filter(
+    (s) => s.id !== 'hart' && !s.trophy && wold.zones.isUnlocked(TERRAIN[s.band].id),
+  ).map((s) => ({
     s,
     kills: man.kills.value[s.id] ?? 0,
     known: (man.kills.value[s.id] ?? 0) >= BESTIARY_KILLS,
@@ -89,6 +117,24 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
       </div>
       <div class="meter">
         <div class="label">
+          <span>Water carried</span>
+          <span class="sp-num">{{ Math.floor(water) }} / {{ man.waterCap.value }}</span>
+        </div>
+        <div class="bar">
+          <ProgressBar class="water" :value="water" :max="man.waterCap.value" />
+          <div class="mark" :style="{ left: `${waterMark}%` }" />
+        </div>
+        <div class="sp-hint sp-num" :class="{ 'sp-warn': toWater >= water - 2 && toWater > 0 }">
+          {{
+            toWater === 0
+              ? 'water here'
+              : `nearest water ${Number.isFinite(toWater) ? Math.round(toWater) : '—'}`
+          }}
+          · each tile {{ wold.waterPerStep.value }}
+        </div>
+      </div>
+      <div class="meter">
+        <div class="label">
           <span>Pack</span>
           <span class="sp-num">{{ fmt(man.packLoad.value) }} / {{ fmt(man.packCap.value) }}</span>
         </div>
@@ -113,6 +159,10 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
         <span
           >Sight <b>{{ wold.sight.value }}</b></span
         >
+      </div>
+      <div v-if="wold.notesCount.value > 0" class="notes sp-hint sp-num">
+        {{ wold.notesCount.value }} tiles in your notes — banked at the lodge or a camp, lost if you
+        fall
       </div>
     </section>
 
@@ -171,6 +221,18 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
       </Button>
     </section>
 
+    <section v-if="trophies.length" class="sp-section">
+      <h2>Trophies</h2>
+      <ul class="trophies">
+        <li v-for="r in trophies" :key="r.t.id" class="sp-reveal" :class="{ held: r.held }">
+          <span class="name">{{ r.held ? r.t.displayName : r.den.displayName }}</span>
+          <span class="sp-hint">{{
+            r.held ? r.t.blurb : 'Its den is somewhere in this country.'
+          }}</span>
+        </li>
+      </ul>
+    </section>
+
     <section v-if="bestiary.length" class="sp-section">
       <h2>Bestiary</h2>
       <ul class="beasts">
@@ -227,6 +289,9 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
 .meter .jerky {
   --progress-bar-fill: linear-gradient(90deg, var(--sp-tallow-deep), var(--sp-tallow));
 }
+.meter .water {
+  --progress-bar-fill: linear-gradient(90deg, var(--sp-water-deep), var(--sp-water));
+}
 .meter .pack {
   --progress-bar-fill: linear-gradient(90deg, #4f5f3a, var(--sp-moss));
 }
@@ -278,6 +343,29 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
   font-style: italic;
 }
 
+.notes {
+  color: var(--sp-tallow-deep);
+}
+.trophies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.trophies li {
+  display: flex;
+  flex-direction: column;
+  color: var(--sp-ash);
+}
+.trophies .name {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.trophies li.held .name {
+  color: var(--sp-tallow);
+}
 .beasts {
   list-style: none;
   margin: 0;

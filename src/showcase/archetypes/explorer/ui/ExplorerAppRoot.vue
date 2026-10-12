@@ -60,9 +60,10 @@ const showDevPanel = ref(false);
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
               You are the last huntsman of a lodge at the edge of a fogged forest. Walk the wold one
-              tile at a time on a satchel of jerky, hunt what you find, and carry the haul home: the
-              pack banks only at the lodge. Refit for deeper country until you can track the Pale
-              Hart to its lair. Nothing resets; the reward is territory.
+              tile at a time on jerky and water, hunt what you find, and carry it home: the pack
+              banks at the lodge, and what you chart banks at the lodge or a camp. Take the dens'
+              trophies, refit for deeper country, and track the Pale Hart to its lair. Nothing
+              resets; the reward is territory.
             </p>
           </template>
           <template #extra-actions>

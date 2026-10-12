@@ -9,7 +9,7 @@
 import { computed, ref } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { MAP_H, MAP_W, TERRAIN, speciesById } from '../../data';
+import { FROZEN_BAND, MAP_H, MAP_W, TERRAIN, speciesById } from '../../data';
 import { getHuntsman, getWold } from '../../modules';
 
 const wold = getWold();
@@ -23,6 +23,8 @@ const FEATURE_GLYPH: Record<string, string> = {
   cache: '✱',
   lair: '✦',
 };
+const SPRING = '●';
+const RIPPLE = '~';
 
 type Reach = 'tether' | 'beyond' | 'barred' | 'none';
 
@@ -41,17 +43,26 @@ const fields = computed(() => {
   void wold.mapVersion.value;
   void man.pos.value;
   void wold.camps.value.length;
+  void wold.trophies.value.length;
   void wold.stepCost.value;
-  return { here: man.hereField(), home: wold.homeField() };
+  return {
+    here: man.hereField(),
+    home: wold.homeField(),
+    hereW: man.hereWaterField(),
+    srcW: wold.waterField(),
+  };
 });
 
 const supply = computed(() => toNumber(man.supply.value));
+const water = computed(() => toNumber(man.water.value));
 
 const view = computed<TileView[]>(() => {
   void wold.mapVersion.value;
-  const { here, home } = fields.value;
+  const { here, home, hereW, srcW } = fields.value;
   const inTether = (i: number) =>
-    Number.isFinite(here[i]) && here[i] + home[i] <= supply.value + 1e-9;
+    Number.isFinite(here[i]) &&
+    here[i] + home[i] <= supply.value + 1e-9 &&
+    hereW[i] + srcW[i] <= water.value + 1e-9;
   const pos = man.pos.value;
   const out: TileView[] = [];
   for (let i = 0; i < wold.tiles.length; i++) {
@@ -65,9 +76,13 @@ const view = computed<TileView[]>(() => {
     let pips = 0;
     let title = 'Unknown country';
     if (explored) {
-      cls.push(t.blocked ? 'blocked' : t.terrain);
+      const blocked = wold.isBlocked(t);
+      cls.push(blocked ? 'blocked' : t.terrain);
+      if (t.blocked && !blocked) cls.push('mere');
+      if (!wold.isBanked(i)) cls.push('noted');
+      if (t.water) cls.push(`w-${t.water}`, ...(t.band === FROZEN_BAND ? ['frozen'] : []));
       let reach: Reach = 'none';
-      if (!t.blocked) {
+      if (!blocked) {
         if (!wold.hasGearFor(t)) reach = 'barred';
         else reach = inTether(i) ? 'tether' : 'beyond';
       }
@@ -86,13 +101,23 @@ const view = computed<TileView[]>(() => {
           const ni = ny * MAP_W + nx;
           const nt = wold.tiles[ni];
           const inside =
-            nt.blocked || wold.grid.explored[ni] === 0 || (wold.hasGearFor(nt) && inTether(ni));
+            wold.isBlocked(nt) ||
+            wold.grid.explored[ni] === 0 ||
+            (wold.hasGearFor(nt) && inTether(ni));
           if (!inside) cls.push(`edge-${side}`);
         }
       }
       const terrain = TERRAIN[t.band];
-      title = t.blocked ? terrain.obstacle : terrain.displayName;
-      if (t.feature) {
+      title = blocked ? terrain.obstacle : terrain.displayName;
+      if (t.blocked && !blocked) title = 'Open mere';
+      if (t.water) title += ` · ${t.band === FROZEN_BAND ? `frozen ${t.water}` : t.water}`;
+      if (t.feature === 'den' && t.herd) {
+        const s = speciesById.get(t.herd)!;
+        const taken = wold.stock.value[i] === 0;
+        glyph = s.glyph;
+        glyphCls = `f-den${taken ? ' spent' : ''}`;
+        title += ` · den of ${s.displayName}${taken ? ' (taken)' : ''}`;
+      } else if (t.feature) {
         glyph = FEATURE_GLYPH[t.feature];
         glyphCls = `f-${t.feature}`;
         if (t.feature === 'waystone' && wold.isCamp(i)) {
@@ -114,7 +139,12 @@ const view = computed<TileView[]>(() => {
         if (pips === 0) glyphCls += ' spent';
         title += ` · ${s.displayName} ×${pips}`;
       }
-      if (!t.blocked && !wold.hasGearFor(t)) title += ` · needs ${terrain.needs}`;
+      if (!glyph && t.water) {
+        glyph = t.water === 'spring' ? SPRING : RIPPLE;
+        glyphCls = `f-${t.water}${t.band === FROZEN_BAND ? ' frozen' : ''}`;
+      }
+      if (!blocked && !wold.hasGearFor(t)) title += ` · needs ${terrain.needs}`;
+      if (!wold.isBanked(i)) title += ' · in your notes';
     } else {
       cls.push('fog');
     }
@@ -128,12 +158,16 @@ const preview = computed(() => {
   const i = hovered.value;
   if (i == null) return null;
   const route = man.routeTo({ x: i % MAP_W, y: Math.floor(i / MAP_W) });
-  const { here, home } = fields.value;
+  const { here, home, hereW, srcW } = fields.value;
   return {
     cells: new Set((route ?? []).map((c) => c.y * MAP_W + c.x)),
     ok: route != null,
     out: here[i],
     back: home[i],
+    outW: hereW[i],
+    backW: srcW[i],
+    fits: here[i] + home[i] <= supply.value && hereW[i] + srcW[i] <= water.value,
+    dry: hereW[i] + srcW[i] > water.value,
     label: view.value[i].title,
   };
 });
@@ -168,17 +202,21 @@ function click(i: number): void {
     <div class="readout">
       <template v-if="preview && preview.ok">
         <span class="where">{{ preview.label }}</span>
-        <span class="sp-num"
-          >walk <b>{{ Math.round(preview.out * 10) / 10 }}</b></span
-        >
-        <span class="sp-num"
-          >home from there <b>{{ Math.round(preview.back * 10) / 10 }}</b></span
-        >
-        <span :class="preview.out + preview.back <= supply ? 'ok' : 'warn'">
+        <span class="sp-num">
+          jerky <b>{{ Math.round(preview.out * 10) / 10 }}</b> + home
+          <b>{{ Math.round(preview.back * 10) / 10 }}</b>
+        </span>
+        <span class="sp-num water">
+          water <b>{{ Math.round(preview.outW) }}</b> + to water
+          <b>{{ Math.round(preview.backW) }}</b>
+        </span>
+        <span :class="preview.fits ? 'ok' : 'warn'">
           {{
-            preview.out + preview.back <= supply
+            preview.fits
               ? 'within the tether'
-              : 'past the tether — you will not walk back'
+              : preview.dry
+                ? 'too dry — you will not reach water again'
+                : 'past the tether — you will not walk back'
           }}
         </span>
       </template>
@@ -188,8 +226,8 @@ function click(i: number): void {
       </template>
       <template v-else>
         <span class="dim">
-          The lit ground is what your jerky can reach and still bring you home. Click a tile to
-          walk.
+          The lit ground is what your jerky and water reach and still bring you home. Faded ink is
+          in your notes: it banks at the lodge or a camp. Click a tile to walk.
         </span>
       </template>
     </div>
@@ -281,6 +319,40 @@ function click(i: number): void {
 }
 .edge-r::after {
   border-right-width: 2px;
+}
+/* water: the river runs as a tint along its tiles; frozen water is pale and refills nothing */
+.w-river {
+  box-shadow: inset 0 0 0 30px var(--sp-water-tint);
+}
+.w-river.frozen,
+.w-spring.frozen {
+  box-shadow: inset 0 0 0 30px var(--sp-frost-tint);
+}
+.mere {
+  background: var(--sp-water-deep);
+}
+.glyph.f-spring {
+  color: var(--sp-water);
+  font-size: 11px;
+}
+.glyph.f-river {
+  color: var(--sp-water);
+  font-size: 18px;
+}
+.glyph.f-spring.frozen,
+.glyph.f-river.frozen {
+  color: var(--sp-frost);
+  opacity: 0.6;
+}
+.glyph.f-den {
+  color: var(--sp-rust);
+  outline: 1px solid var(--sp-rust);
+  outline-offset: 2px;
+  padding: 0 2px;
+}
+/* this trip's notes: ink not yet dry, banked at the lodge or a camp */
+.noted {
+  filter: sepia(0.55) saturate(0.7);
 }
 .route {
   outline: 1px solid var(--sp-ember);
@@ -375,5 +447,8 @@ function click(i: number): void {
 .dim {
   color: var(--sp-ash);
   font-style: italic;
+}
+.water b {
+  color: var(--sp-water);
 }
 </style>
