@@ -108,14 +108,17 @@ it in the present tense, with no pass history. Required sections:
    down here.
 4. **Running a pass** — which probe answers which question, what it prints, how to
    read it. Point at probe headers rather than restating them.
-5. **Known thin** — where the balance is unsatisfying, and what the probes already
-   say about it. Honest limits, not apologies.
+5. **Known thin** — where the balance is unsatisfying now, and what the probes measure
+   about it. Honest limits, not apologies. Delete a limit once a pass fixes it.
 
-It is not a pass ledger. These do not belong in it:
+It describes the game as it stands, never how it got there. These do not belong in it:
 
 - records of what an agent session learned;
+- shapes a pass tried and retired, and why;
 - convergence counts;
 - promotion tracking.
+
+History has two homes: the commit body, and the task thread the commit names.
 
 A finding that proves general goes to the project's balance-methodology record. The
 engine guide § When a balance pass finds an engine gap states the same rule for engine
@@ -123,7 +126,7 @@ gaps. Record the receipt by path and symbol, and let a later pass read it. Findi
 mature in § Couplings and § Known thin until they are general enough to move out.
 
 `_blank/BALANCING.md` is the template. It is filled in for the neutral base and
-annotated with what each section is for. `producer` and `tug` are worked examples on
+annotated with what each section is for. `looper` and `tug` are worked examples on
 real economies. **§ Couplings matters most.** A structural assumption the code never
 states is written down there, and a fork values that section most.
 
@@ -227,7 +230,7 @@ Each axis has one canonical answer and one archetype to copy it from:
 | Test harness | `sim/harness.ts` → bare `boot()` / `tick()` / `tickUntil()` over this archetype's modules | `_blank` |
 | Runnable projection | `<name>-projection.ts` where the closed form is worth executing | `cycler` |
 | Probes | `<concern>-probe.ts` under `balance/`; print, never assert | `cycler` |
-| Balance orientation | `BALANCING.md` beside `IDENTITY.md`, five required sections | `producer` |
+| Balance orientation | `BALANCING.md` beside `IDENTITY.md`, five required sections, final state only | `looper` |
 | Boot | `createApp(overrides?) → { app, engine, mount }` | any — all agree |
 
 A deliberate divergence is allowed, and is worth writing down. Say so at the call site
