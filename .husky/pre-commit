@@ -1,8 +1,8 @@
 pnpm exec lint-staged && pnpm run typecheck && pnpm domain-map && {
-  if ! git diff --quiet src/archetypes/*/domain-map.md; then
+  if ! git diff --quiet src/showcase/archetypes/*/domain-map.md; then
     echo ""
     echo "✗ Domain maps are stale. Stage them and re-commit:"
-    echo "    git add src/archetypes/*/domain-map.md && git commit --amend --no-edit"
+    echo "    git add src/showcase/archetypes/*/domain-map.md && git commit --amend --no-edit"
     echo ""
     exit 1
   fi
