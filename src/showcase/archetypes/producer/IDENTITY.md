@@ -22,7 +22,7 @@ committed / not committed).
 ## What this archetype is
 
 You spend a number on things that make the number bigger. Costs rise geometrically and
-output rises linearly in count, so every tier is unreachable until it suddenly isn't,
+output rises linearly in count, so every class is unreachable until it suddenly isn't,
 and then it's trivial and you are already saving for the next one. The texture of play
 is **pacing against a curve**: threshold moments, arriving on a cadence the designer
 picked. The long-term pull is **modifier stacking** — hours in, the headline multiplier
@@ -50,7 +50,7 @@ composed under two rules from `…/rate-functions/composition.mdx` — **piecewi
 across achievement thresholds, **modifier-product** within each band.
 
 ```
-cost of unit n of tier i     c_i(n) = a_i · m^n            geometric ladder
+cost of unit n of class i    c_i(n) = a_i · m^n            geometric ladder
 purchases affordable on C    N(C)   = log_m( C(m−1)/a + 1 ) − 1     ← elementary inverse
 rate                         R(t)   = Σ_i n_i(t) · r_i · Π_k μ_k
 first passage under a stack  T(C)   = T_base( C / Π_k μ_k )         ← modifier-product rule
@@ -97,7 +97,7 @@ is.
 
 ### Where the closed form stops
 
-**The allocation rule** — which tier absorbs the next unit of mass. This has a name:
+**The allocation rule** — which class absorbs the next unit of mass. This has a name:
 the **combinatorial-selection** bifurcation
 (`incremental-math/…/rate-functions/bifurcations.mdx` § Combinatorial selection), one of
 the eight buckets that page catalogues as places the algebra ends. Its statement is
@@ -148,12 +148,12 @@ The window a return replays is not a pacing number. Catch-up blocks the load, so
 
 An arc probe driving the **shipping dispatcher** (`modules/automation.ts`, behind
 `AutomationTiers`) — never a bespoke automated player, per `/work/studio/CLAUDE.md` § automation as
-game code. It prints realized time-to-tier against the projection, and it carries one
+game code. It prints realized time-to-class against the projection, and it carries one
 measurement the spine is currently unable to predict:
 
 > **How much does the allocation rule move the arc?** Sweep the rule — payback-ordered
 > greedy vs purchase-cheapest vs purchase-highest-affordable-class — and print the spread in
-> time-to-tier-8. A small spread means the policy term is nearly inert and coverage is
+> time-to-class-8. A small spread means the policy term is nearly inert and coverage is
 > effectively full; a large one means the rule is load-bearing and belongs in every
 > statement of the spine.
 
@@ -162,7 +162,7 @@ of its weight is the decision to save. The probe sweeps purchase-cheapest, payba
 greedy and the hybrid that may hold mass for a better pick, plus that hybrid barred from
 waiting as a control. Picking among affordable candidates moves the arc almost nothing —
 the control matches purchase-cheapest on every row — while letting the rule save moves
-time-to-tier-8 several-fold. So the spine's purchase-order condition is not a formality: a
+time-to-class-8 several-fold. So the spine's purchase-order condition is not a formality: a
 statement of producer's arc names whether its dispatcher saves.
 
 That settles an open question upstream: `studio/open-loop-starter#25` c4920 places
@@ -180,7 +180,7 @@ The costume exists to make spine terms legible, not to decorate them:
 | Spine term | Fiction |
 |---|---|
 | headline currency | **mass** — matter converted |
-| producer tier | a probe class, each an order of scale up |
+| producer class | a probe class, each an order of scale up |
 | `m` (cost ratio) | **the frontier** — each launch reaches a further star, so cost grows geometrically in the radius already claimed |
 | manual click (`manual-action`) | **hand-launch** — you seed probes personally until the swarm stops needing you |
 | `Π μ` member: upgrades | **refinements** — per-class and global |
@@ -193,7 +193,7 @@ leaves the ratio unexplained. And a revision is a swarm-wide firmware push, whic
 the multiplier is **global**: the usual least-motivated member of the identity line gets
 a reason to apply to everything at once.
 
-**Ladder** — eight tiers, each roughly ×10 cost and ×8 output, so later tiers are worse
+**Ladder** — eight classes, each roughly ×10 cost and ×8 output, so later classes are worse
 per unit cost and are reached through the stack rather than around it:
 `Seed → Drone → Foundry → Hauler → Ring → Lathe → Swarm → Shell` (dust, asteroid, moon,
 planet, star).
@@ -224,7 +224,7 @@ Each feeds a named part of the spine.
 
 | Port | Adds | Spine term it feeds |
 |---|---|---|
-| `addTier` | another probe class on the ladder | extends `Σ n_i r_i`; does **not** move `m` or the beat cadence |
+| `addClass` | another probe class on the ladder | extends `Σ n_i r_i`; does **not** move `m` or the beat cadence |
 | `addRefinement` | an upgrade, per-class or global | a factor in `Π μ` — rescales `T(C)`, never reshapes it |
 | `addRevision` | a count-threshold milestone | a new **splice point**; must stay discrete (§ spine, claim 2) |
 | dispatch tier | a rung on the `AutomationTiers` ladder | none directly — it changes *who* applies the allocation rule, which is what the sweep measures |
@@ -256,13 +256,13 @@ with its flow channel declared; the payback-greedy allocation rule authored insi
 projection; the rule's leverage measured, not assumed.
 
 **Committed (producer's realization):** one headline currency (`converter` chains are
-Interlocker's line); eight tiers; exactly four modifier chains; a click
-that matters early and is dominated around tier 3; the dispatcher as both the shipping
+Interlocker's line); eight classes; exactly four modifier chains; a click
+that matters early and is dominated around class 3; the dispatcher as both the shipping
 automation and the probe's driver; offline catch-up by simulated replay over a window
 sized as a load-wait budget, reported on return as a dimension line; no adversary, no
 board, no run, no reset.
 
-**Not committed (a fork's call):** the fiction and the display name; tier count and the
+**Not committed (a fork's call):** the fiction and the display name; class count and the
 ladder's nouns; whether refinements are per-class, global, or both; the exact beat
 targets and therefore `m`; whether the click chain gets its own late-game revival.
 
@@ -282,14 +282,14 @@ goes. In brief:
 
 - **The spine, as prose + math (`data/*.ts`).** Constants with co-located
   `// ─── Balance ───` sections: the authored beat targets and the `m` derived from
-  them, the per-tier `a_i` / `r_i`, the revision thresholds as splice points, each
+  them, the per-class `a_i` / `r_i`, the revision thresholds as splice points, each
   naming its coupling.
 - **The projection (`balance/producer-projection.ts`).** The same closed form, runnable,
   **no engine** — sizes `m` from the beat targets, prints which flow channel each purchase
   falls in, evaluates the payback-greedy rule to produce `n_i(t)`, and splices the
   revision bands. It predicts; it does not discover.
 - **The probes (`balance/*-probe.ts`).** Drive the **real engine and the shipping
-  dispatcher** so the simulation and the game cannot drift. `arc-probe.ts` prints realized time-to-tier
+  dispatcher** so the simulation and the game cannot drift. `arc-probe.ts` prints realized time-to-class
   against the projection and records the beat windows § The arc leaves blank;
   `allocation-probe.ts` runs the rule sweep that decides how much the policy term is
   worth; `offline-probe.ts` checks the accumulated closed form against the replay, measures
@@ -297,7 +297,7 @@ goes. In brief:
 - **The behavioral suites (`modules/<name>.test.ts`).** Shape invariants that survive
   retuning: cost rises monotonically with count, a revision fires exactly once at its
   threshold, a bulk purchase costs the same total as the units purchased singly, a
-  locked dispatch tier purchases nothing, offline time accumulates mass while dispatch
+  locked dispatch automation tier purchases nothing, offline time accumulates mass while dispatch
   is locked and spends it once dispatch opens. No magnitudes — those print from the probes, per the
   engine guide § Why this isn't a test suite.
 

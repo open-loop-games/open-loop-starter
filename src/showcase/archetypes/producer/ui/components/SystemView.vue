@@ -52,10 +52,10 @@ const arcDash = computed(() => {
  */
 const probes = computed(() => {
   const out: { x: number; y: number; r: number; key: string }[] = [];
-  const tiers = props.counts.length || 1;
+  const classCount = props.counts.length || 1;
   props.counts.forEach((count, i) => {
     if (count < 1) return;
-    const orbit = 14 + (i / Math.max(1, tiers - 1)) * (R - 16);
+    const orbit = 14 + (i / Math.max(1, classCount - 1)) * (R - 16);
     const dots = Math.min(9, Math.max(1, Math.round(Math.log2(count + 1))));
     for (let k = 0; k < dots; k++) {
       const theta = i * 1.9 + k * ((Math.PI * 2) / dots) + 0.4;

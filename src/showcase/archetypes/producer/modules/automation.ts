@@ -16,7 +16,7 @@ import {
 } from '@open-loop/engine';
 import type { ProbeClassDef } from '../data/types';
 import { getClasses } from './swarm';
-import { getProducerGameState } from './refinements';
+import { getProducerStateView } from './refinements';
 
 /**
  * Dispatch — the automation ladder and the allocation rule each rung unlocks.
@@ -144,7 +144,7 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
     dependencies: ['producer/swarm', 'producer/refinements'],
     install(ctx) {
       const classes = getClasses();
-      const state = getProducerGameState();
+      const state = getProducerStateView();
 
       const tiers = createAutomationTiers({
         id: 'producer-automation',

@@ -8,8 +8,8 @@ import {
   type ModifierChain,
   type PurchasableCategory,
 } from '@open-loop/engine';
-import type { ProducerData, ProducerGameState, RefinementDef } from '../data/types';
-import { buildProducerGameState, getClasses, getLauncher, getMass } from './swarm';
+import type { ProducerData, ProducerStateView, RefinementDef } from '../data/types';
+import { buildProducerStateView, getClasses, getLauncher, getMass } from './swarm';
 
 /**
  * Refinements — the purchased chain. One-shot purchasables whose `grants` bind a
@@ -23,7 +23,7 @@ import { buildProducerGameState, getClasses, getLauncher, getMass } from './swar
  */
 
 let refinements: PurchasableCategory<RefinementDef>;
-let gameState: ProducerGameState;
+let stateView: ProducerStateView;
 
 export function getRefinements(): PurchasableCategory<RefinementDef> {
   return refinements;
@@ -34,8 +34,8 @@ export function getRefinements(): PurchasableCategory<RefinementDef> {
  * module that needs it; revisions injects the same instance rather than
  * building a second one over the same state.
  */
-export function getProducerGameState(): ProducerGameState {
-  return gameState;
+export function getProducerStateView(): ProducerStateView {
+  return stateView;
 }
 
 export function createRefinementsModule(data: ProducerData): EngineModule {
@@ -45,7 +45,7 @@ export function createRefinementsModule(data: ProducerData): EngineModule {
     install() {
       const classes = getClasses();
       const mass = getMass();
-      gameState = buildProducerGameState(data);
+      stateView = buildProducerStateView(data);
 
       const classChain = (id: string): ModifierChain | undefined =>
         classes.getProducer(id)?.rateChain;
@@ -79,7 +79,7 @@ export function createRefinementsModule(data: ProducerData): EngineModule {
                 description: def.displayName,
               }),
               createBooleanRequirement({
-                met: computed(() => def.unlockWhen(gameState)),
+                met: computed(() => def.unlockWhen(stateView)),
                 description: def.description,
               }),
             ],
@@ -87,7 +87,7 @@ export function createRefinementsModule(data: ProducerData): EngineModule {
             // Owned-only, no partial reveal: a refinement the player cannot
             // yet unlock stays out of the grid entirely, so the grid reads as
             // "what can I purchase" rather than as a catalogue of locked rows.
-            visible: computed(() => def.unlockWhen(gameState)),
+            visible: computed(() => def.unlockWhen(stateView)),
             grants,
           };
         },

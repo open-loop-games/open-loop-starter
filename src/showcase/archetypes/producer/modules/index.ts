@@ -10,7 +10,7 @@ import { createOfflineModule } from './offline';
 export { ProducerTuningRegistryKey, type ProducerTunableKey } from './tuning';
 export {
   MassLifetimeKey,
-  buildProducerGameState,
+  buildProducerStateView,
   getClasses,
   getTotalRate,
   getLaunchCount,
@@ -18,7 +18,7 @@ export {
   getMass,
   launch,
 } from './swarm';
-export { getProducerGameState, getRefinements } from './refinements';
+export { getProducerStateView, getRefinements } from './refinements';
 export { getRevisions } from './revisions';
 export {
   DispatchKey,

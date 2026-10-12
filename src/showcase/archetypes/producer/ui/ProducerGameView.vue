@@ -10,7 +10,7 @@
 
   The canonical split is action / production / customization. Producer diverges
   on the left column: Cookie Clicker's clicker stays alive forever, while this
-  archetype commits to a click that is dominated by tier 3, so an action-only
+  archetype commits to a click that is dominated by class 3, so an action-only
   rail would go dead exactly when the play session gets long. The left column is
   instead a SYSTEM VIEW — plate, launch pad, dispatch ladder, and a log that
   accumulates. It fills as the click empties.

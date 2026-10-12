@@ -2,7 +2,7 @@
   LaunchPad — the A+C activity, and the one control designed to stop mattering.
 
   The share readout is not decoration. IDENTITY commits to a click that matters
-  early and is dominated around tier 3, so the UI has to *say* that rather than
+  early and is dominated around class 3, so the UI has to *say* that rather than
   leave the player wondering why the button stopped helping. Once the swarm
   outproduces a launch, the pad dims and names it.
 -->

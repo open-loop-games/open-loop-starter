@@ -68,7 +68,7 @@ deepening. Retune `CLASS_COST_STEP` / `CLASS_RATE_STEP` as a pair, never one.
 total, never on a function of current production. This is the constraint that
 keeps the whole composition closed: a threshold reading current rate would make
 the multiplier a function of the thing it multiplies, and the piecewise splice
-stops being a splice. `ProducerGameState` enforces it by construction — every
+stops being a splice. `ProducerStateView` enforces it by construction — every
 method is a count or a lifetime total — so the coupling is in the type, and the
 type is the only thing guarding it.
 

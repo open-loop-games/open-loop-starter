@@ -147,7 +147,7 @@ export const OFFLINE_WINDOW_SECONDS = 6 * 3600; // replays in ~4.4 s at ~0.20 ms
 // Each class costs ×10 and produces ×8 of the one below, so cost-per-unit-rate
 // decays by 10/8 = 1.25 per class; Shell's zeroth unit is 1.25^7 = 4.77× less
 // efficient than Seed's. That is the point and it matches the corpus (Cookie
-// Clicker's Factory is ~3.3× worse than its Cursor across five tiers): a later
+// Clicker's Factory is ~3.3× worse than its Cursor across five buildings): a later
 // class is never purchased because it is intrinsically better, but because the
 // class below has climbed its own geometric ladder past it. The whole
 // payback dynamic lives in that gap.

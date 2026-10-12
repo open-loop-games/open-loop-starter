@@ -71,7 +71,7 @@ export interface RefinementDef {
   /** Multiplicative factor contributed to its chain while owned. */
   multiplier: DecimalSource;
   /** Purchasable only once this predicate holds. It blocks both visibility and purchase. */
-  unlockWhen: (s: ProducerGameState) => boolean;
+  unlockWhen: (s: ProducerStateView) => boolean;
 }
 
 export interface RevisionDef {
@@ -90,7 +90,7 @@ export interface RevisionDef {
    * of current production. See `./revisions.ts` § Balance for why the spine
    * depends on it.
    */
-  goal: (s: ProducerGameState) => boolean;
+  goal: (s: ProducerStateView) => boolean;
 }
 
 /**
@@ -103,7 +103,7 @@ export interface RevisionDef {
  * revision whose multiplier tracks the rate it modifies, which is the one
  * composition the spine cannot absorb.
  */
-export interface ProducerGameState {
+export interface ProducerStateView {
   /** Units owned of one class. */
   classCountAtLeast(id: ProbeClassId, count: number): boolean;
   /** Units owned across every class. */

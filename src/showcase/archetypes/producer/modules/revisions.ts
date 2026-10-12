@@ -12,7 +12,7 @@ import {
 import type { ProducerData, RevisionDef } from '../data/types';
 import { DEFAULT_REVISION_MULTIPLIER } from '../data/revisions';
 import { getClasses } from './swarm';
-import { getProducerGameState } from './refinements';
+import { getProducerStateView } from './refinements';
 import { ProducerTuningRegistryKey } from './tuning';
 
 /**
@@ -42,7 +42,7 @@ export function createRevisionsModule(data: ProducerData): EngineModule {
     dependencies: ['producer/tuning', 'producer/swarm', 'producer/refinements'],
     install(ctx) {
       const classes = getClasses();
-      const state = getProducerGameState();
+      const state = getProducerStateView();
       const registry = ctx.inject(ProducerTuningRegistryKey);
 
       const defaultMultiplier = tunable(

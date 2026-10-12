@@ -13,7 +13,7 @@ import {
   type ProducerCategory,
   type Resource,
 } from '@open-loop/engine';
-import type { ProbeClassDef, ProbeClassId, ProducerData, ProducerGameState } from '../data/types';
+import type { ProbeClassDef, ProbeClassId, ProducerData, ProducerStateView } from '../data/types';
 import { CLICK_BASE_YIELD, COST_RATIO, GENERATION_STEP } from '../data/curve';
 import { ProducerTuningRegistryKey } from './tuning';
 
@@ -73,7 +73,7 @@ export function getTotalRate(): DecimalSource {
  * a lifetime total — see `../data/types.ts` for why that is a spine
  * constraint and not a convention.
  */
-export function buildProducerGameState(data: ProducerData): ProducerGameState {
+export function buildProducerStateView(data: ProducerData): ProducerStateView {
   const lifetime = mass.cumulative!;
 
   // Hoisted, not per-call: these back every revision and refinement predicate,
