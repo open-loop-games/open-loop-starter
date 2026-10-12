@@ -140,7 +140,7 @@ export function createSwarmModule(data: ProducerData): EngineModule {
               `classes/${def.id as ProbeClassId}/baseCost`,
               () => def.baseCost,
             ),
-            costScaling: COST_RATIO,
+            costRatio: COST_RATIO,
             purchaseMaxByDefault: true,
           },
         }),

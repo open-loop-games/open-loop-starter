@@ -142,7 +142,7 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
           }
 
           const grants: Grant[] = [
-            { chain: incomeRateChain, mult: multiplier, description: def.name },
+            { chain: incomeRateChain, multiplier: multiplier, description: def.name },
           ];
 
           return {

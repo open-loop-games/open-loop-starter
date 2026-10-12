@@ -311,7 +311,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         ...(prepare && { perturb: (e, ctx) => prepare(e, ctx) }),
         buildAnalyzers,
         tick,
-        ticks: form.ticks,
+        iterations: form.ticks,
       });
       const variant = createSensitivityCell({
         id: 'variant',
@@ -323,7 +323,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         },
         buildAnalyzers,
         tick,
-        ticks: form.ticks,
+        iterations: form.ticks,
       });
 
       const sensitivity = runSensitivity({

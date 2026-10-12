@@ -67,7 +67,7 @@ export function createRefinementsModule(data: ProducerData): EngineModule {
           const bound = chains.filter((c): c is ModifierChain => c !== undefined);
 
           const grants: Grant[] = bound.length
-            ? [{ chain: bound, mult: def.multiplier, description: def.name }]
+            ? [{ chain: bound, multiplier: def.multiplier, description: def.name }]
             : [];
 
           return {

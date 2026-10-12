@@ -18,6 +18,7 @@ import { computed } from 'vue';
 import {
   Decimal,
   formatSmall,
+  resolveComputable,
   type DecimalSource,
   type Modifier,
   type ModifierDescription,
@@ -40,7 +41,7 @@ const props = withDefaults(
 const rows = computed<ModifierDescription[]>(() => {
   const desc = props.modifier.description;
   if (!desc) return [];
-  const resolved = typeof desc === 'function' ? desc() : desc;
+  const resolved = resolveComputable(desc);
   return Array.isArray(resolved) ? resolved : [resolved];
 });
 
