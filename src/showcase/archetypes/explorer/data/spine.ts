@@ -94,19 +94,42 @@ export const racksFor = (k: number): number => Math.ceil(jerkyDemand(k) / RACK_J
  * output, leaving the other half for camps and racks.
  */
 export const WOOD_PER_JERKY = (0.5 * WOOD_RATE) / jerkyDemand(1);
+/** First extra rack: two beats of a single woodcutter, since a rack also burns wood. */
+export const RACK_BASE_COST = round5(2 * WOOD_RATE * A.beatSeconds);
+/** Racks are coarser purchases than producers: a rack is about half a band's jerky demand. */
+export const RACK_PRICE_RATIO = 1.6;
+/** The second rack: one is owned from the start, so it is priced one step up the ladder. */
+export const SECOND_RACK_COST = RACK_BASE_COST * RACK_PRICE_RATIO;
 
 // === PACING ===
 
 /** Camp j (0-based) on a waystone, priced in wood, doubling: three beats of one woodcutter. */
 export const campCost = (j: number): number => round5(WOOD_RATE * A.beatSeconds * 3 * 2 ** j);
+/** Wood per second one woodcutter leaves over while the racks smoke the meadow's jerky. */
+export const OPENING_WOOD_RATE = WOOD_RATE - WOOD_PER_JERKY * jerkyDemand(0);
 /**
- * The meadow is onboarding, not a full band: the forest opens as soon as the
- * first camp is affordable from the opening wood and one woodcutter.
+ * The meadow is onboarding, not a full band. A forest trip needs the forest
+ * kit — the first camp, and the second rack the forest's jerky demand calls
+ * for — so the forest's stay starts when the opening's wood has paid for it.
  */
-export const MEADOW_SECONDS = (campCost(0) - START_WOOD) / WOOD_RATE;
+export const MEADOW_SECONDS = (campCost(0) + SECOND_RACK_COST - START_WOOD) / OPENING_WOOD_RATE;
 /** Seconds the reference policy spends in each band past the meadow; the deepwood's is the Hart's trail. */
 export const DWELL_SECONDS = (A.arcSeconds - MEADOW_SECONDS) / (A.bands - 1);
 export const bandSeconds = (k: number): number => (k === 0 ? MEADOW_SECONDS : DWELL_SECONDS);
+
+/**
+ * How each band's stay earns against the reference trip. Below 1 is the walk
+ * the trip does not model: early trips on the gear the band was entered with,
+ * walking between scattered herds, shallower quarry on the way, waiting on the
+ * racks. Above 1 is hauls larger than the trip's four hunts. Measured, not
+ * projected: solved so each band's stay in `balance/arc-probe.ts` (mean over
+ * its default seeds) matches its scheduled stay. The forest's and the Fen's
+ * factors trade against each other, because the Fen's gear is priced from the
+ * forest's budget, so the kept step is the one that lands the Hart.
+ */
+export const FIELD_FACTOR = [1, 0.49, 0.7, 1.32, 1];
+/** Band k's stay in seconds of the reference trip's earning. */
+export const earningSeconds = (k: number): number => bandSeconds(k) * FIELD_FACTOR[k];
 export const bandStart = (k: number): number =>
   k === 0 ? 0 : MEADOW_SECONDS + (k - 1) * DWELL_SECONDS;
 
@@ -122,14 +145,52 @@ export const SKILL_STEP = 1.08;
 export const BESTIARY_KILLS = 10;
 export const BESTIARY_BONUS = 1.25;
 
-/** Kills the reference policy makes across band k's stay. */
-export const killsIn = (k: number): number => (A.huntsPerTrip * bandSeconds(k)) / tripSeconds(k);
-/** Huntcraft level at the middle of band k's stay. */
-export const skillLevelAt = (k: number): number => {
-  let xp = 0.5 * killsIn(k) * huntXp(k);
-  for (let j = 0; j < k; j++) xp += killsIn(j) * huntXp(j);
-  return Math.floor(Math.log2(xp / XP_SCALE + 1));
+/** Hunts the reference policy makes across band k's stay. */
+export const huntsIn = (k: number): number => (A.huntsPerTrip * earningSeconds(k)) / tripSeconds(k);
+/**
+ * Chance a hunt of a band's timid quarry succeeds at Huntcraft level L, with the
+ * bow matched to the band: prowess 2ᵏ·s against threat 2ᵏ/4, so s / (s + ¼).
+ */
+export const timidHitChance = (level: number): number => {
+  const s = SKILL_STEP ** level;
+  return s / (s + 0.25);
 };
+
+interface BandSkill {
+  /** Huntcraft level at the middle of the stay */
+  level: number;
+  /** chance a hunt kills, at that level */
+  hit: number;
+  kills: number;
+}
+
+const levelFor = (xp: number): number => Math.floor(Math.log2(xp / XP_SCALE + 1));
+
+/**
+ * Huntcraft across the arc, band by band. A kill trains the skill and the skill
+ * raises the hit chance, so each band's level is solved from the kills before it
+ * and half its own, with the hit chance read once at the level it enters with.
+ */
+const BAND_SKILL: readonly BandSkill[] = (() => {
+  const out: BandSkill[] = [];
+  let xpBefore = 0;
+  for (let k = 0; k < A.bands; k++) {
+    const entering = timidHitChance(levelFor(xpBefore));
+    const level = levelFor(xpBefore + 0.5 * huntsIn(k) * entering * huntXp(k));
+    const hit = timidHitChance(level);
+    const kills = huntsIn(k) * hit;
+    out.push({ level, hit, kills });
+    xpBefore += kills * huntXp(k);
+  }
+  return out;
+})();
+
+/** Kills the reference policy makes across band k's stay. */
+export const killsIn = (k: number): number => BAND_SKILL[k].kills;
+/** Huntcraft level at the middle of band k's stay. */
+export const skillLevelAt = (k: number): number => BAND_SKILL[k].level;
+/** Share of band k's hunts that kill, at the band's middle. */
+export const hitChance = (k: number): number => BAND_SKILL[k].hit;
 /**
  * Every multiplier on a carcass, inside the solve: Huntcraft at the band's
  * middle, and the bestiary bonus, which ten kills earn early in every band.
@@ -138,20 +199,23 @@ export const yieldMult = (k: number): number => SKILL_STEP ** skillLevelAt(k) * 
 
 // === BAND BUDGETS ===
 
+/** Kills in one reference trip into band k. */
+const tripKills = (k: number): number => A.huntsPerTrip * hitChance(k);
+
 /** Hides per second of expeditioning in band k. */
 export const hideRate = (k: number): number =>
-  (A.huntsPerTrip * yieldHide(k) * yieldMult(k)) / tripSeconds(k);
+  (tripKills(k) * yieldHide(k) * yieldMult(k)) / tripSeconds(k);
 /** Antler per second of expeditioning in band k. */
 export const antlerRate = (k: number): number =>
-  (A.huntsPerTrip * yieldAntler(k) * yieldMult(k)) / tripSeconds(k);
+  (tripKills(k) * yieldAntler(k) * yieldMult(k)) / tripSeconds(k);
 /** Meat per second after the trip's own jerky is smoked back out of it. */
 export const meatNetRate = (k: number): number =>
-  (A.huntsPerTrip * yieldMeat(k) * yieldMult(k) - tripSupply(k) / A.jerkyPerMeat) / tripSeconds(k);
+  (tripKills(k) * yieldMeat(k) * yieldMult(k) - tripSupply(k) / A.jerkyPerMeat) / tripSeconds(k);
 
 /** Hides banked over band k's stay. */
-export const hideBudget = (k: number): number => hideRate(k) * bandSeconds(k);
+export const hideBudget = (k: number): number => hideRate(k) * earningSeconds(k);
 /** Antler banked over band k's stay. */
-export const antlerBudget = (k: number): number => antlerRate(k) * bandSeconds(k);
+export const antlerBudget = (k: number): number => antlerRate(k) * earningSeconds(k);
 
 // === CARRYING ===
 
@@ -208,10 +272,6 @@ export const satchelCost = (level: number): number =>
 export const WOODCUTTER_BASE_COST = round5(meatNetRate(0) * A.beatSeconds);
 /** First snare: one beat of a single woodcutter's wood. */
 export const SNARE_BASE_COST = round5(WOOD_RATE * A.beatSeconds);
-/** First extra rack: two beats of a single woodcutter, since a rack also burns wood. */
-export const RACK_BASE_COST = round5(2 * WOOD_RATE * A.beatSeconds);
-/** Racks are coarser purchases than producers: a rack is about half a band's jerky demand. */
-export const RACK_PRICE_RATIO = 1.6;
 /** Hounds: priced in meat, tripling — few, deliberate purchases. */
 export const HOUND_BASE_COST = round5(meatNetRate(1) * A.beatSeconds * 2);
 export const HOUND_PRICE_RATIO = 3;
@@ -247,12 +307,20 @@ export interface BeatPrediction {
 }
 
 /**
- * When the reference policy should first set foot in each band, and reach the
- * Hart. `balance/arc-probe.ts` prints the measured diff.
+ * When the reference policy should finish the forest kit, first set foot in
+ * each band past the forest, and take the Hart. `balance/arc-probe.ts` prints
+ * the measured diff.
  */
 export function predictBeats(): BeatPrediction[] {
-  const out: BeatPrediction[] = [{ label: 'first lodge purchase', seconds: A.beatSeconds }];
-  for (let k = 1; k < A.bands; k++)
+  // The first purchase is the second rack, from the opening wood and one woodcutter.
+  const firstPurchase = (SECOND_RACK_COST - START_WOOD) / OPENING_WOOD_RATE;
+  const out: BeatPrediction[] = [
+    { label: 'first lodge purchase', seconds: Math.round(firstPurchase) },
+  ];
+  // The forest's edge is a few steps from the lodge, so setting foot in it marks
+  // nothing; its stay starts with the forest kit, which the first camp completes.
+  out.push({ label: 'camp 1', seconds: Math.round(MEADOW_SECONDS) });
+  for (let k = 2; k < A.bands; k++)
     out.push({ label: `enter band ${k}`, seconds: Math.round(bandStart(k)) });
   out.push({ label: 'the Hart', seconds: A.arcSeconds });
   return out;

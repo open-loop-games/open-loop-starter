@@ -7,7 +7,8 @@
  *
  * How to read it:
  * - § Bands: the reference trip into each band, what it earns per second with
- *   Huntcraft and the bestiary folded in, and the budget a stay banks.
+ *   the hit chance, Huntcraft and the bestiary folded in, the field factor that
+ *   turns a stay into earning seconds, and the budget a stay banks.
  * - § Prices: each gear line's next level against the band budget it is bought
  *   from. A price above its budget share would stall the walker in that band.
  * - § Beats: the predictions `balance/arc-probe.ts` measures against.
@@ -15,16 +16,21 @@
 
 import {
   ANCHORS,
+  DWELL_SECONDS,
+  FIELD_FACTOR,
   GEAR,
   HART_TRAIL_KILLS,
   MEADOW_SECONDS,
-  DWELL_SECONDS,
+  OPENING_WOOD_RATE,
+  SECOND_RACK_COST,
   antlerBudget,
   antlerRate,
   bandSeconds,
   bandStart,
   campCost,
+  earningSeconds,
   hideBudget,
+  hitChance,
   hideRate,
   jerkyDemand,
   killsIn,
@@ -45,6 +51,8 @@ const r2 = (x: number) => +x.toFixed(2);
 console.log('\n=== Anchors ===');
 console.log(ANCHORS);
 console.log({
+  openingWoodRate: r2(OPENING_WOOD_RATE),
+  secondRackCost: SECOND_RACK_COST,
   meadowSeconds: r2(MEADOW_SECONDS),
   dwellSeconds: r2(DWELL_SECONDS),
   hartTrailKills: HART_TRAIL_KILLS,
@@ -56,11 +64,14 @@ console.table(
     band: k,
     start: Math.round(bandStart(k)),
     stay: Math.round(bandSeconds(k)),
+    field: FIELD_FACTOR[k],
+    earning: Math.round(earningSeconds(k)),
     tripSteps: tripSteps(k),
     tripSecs: tripSeconds(k),
     tripJerky: tripSupply(k),
     'jerky/s': r2(jerkyDemand(k)),
     racks: racksFor(k),
+    hit: r2(hitChance(k)),
     kills: r2(killsIn(k)),
     huntcraft: skillLevelAt(k),
     yieldMult: r2(yieldMult(k)),

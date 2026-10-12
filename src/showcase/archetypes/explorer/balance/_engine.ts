@@ -6,6 +6,15 @@
  * when the pack fills. The walker is balance-harness tooling, not a mechanic.
  * Spoor ships no automation, and no player-facing tier would walk for you.
  *
+ * The walker stands in for the spine's reference player, so its rules are the
+ * spine's assumptions:
+ * - it buys racks to `racksFor(k)` first, and producers only from stores the
+ *   next rack, the next camp and one satchel refill have not spoken for;
+ * - it hunts the deepest band's timid quarry, and dangerous quarry only with a
+ *   nearly empty pack, since a mauling loses it;
+ * - on an empty larder it hunts what is in reach and charting waits.
+ * `FIELD_FACTOR` is measured under these rules: change them and re-solve it.
+ *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list
  * for tick-by-tick behavioral specs; this records an arc and prints magnitudes.
  */
@@ -39,11 +48,19 @@ const GEAR_ORDER: GearId[] = [
 /** Time by activity and hides banked while band `k` was the deepest entered. */
 export interface BandLedger {
   walk: number;
+  /** of `walk`, seconds walking toward a frontier tile to chart it */
+  chart: number;
   hunt: number;
   wait: number;
+  /** seconds of `wait` at a restock point whose store could not fill the satchel */
+  waitJerky: number;
+  /** of `waitJerky`, seconds the racks ran below capacity for want of meat or wood */
+  waitStarved: number;
   /** cumulative hides banked when the band was last the deepest */
   hides: number;
   kills: number;
+  /** kills of the band's own quarry; the rest are shallower */
+  killsDeep: number;
 }
 
 export interface ArcRecord {
@@ -97,23 +114,30 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
       lodge.buyGear(id);
     }
     // Racks to the spine's count for the deepest band reached, or whenever the store cannot refill the satchel.
-    if (
-      toNumber(lodge.racks.count.value) < racksFor(deepestBand()) ||
-      n(lodge.stores.jerky) < man.supplyCap.value
-    )
-      lodge.buyRack();
+    const racksShort = toNumber(lodge.racks.count.value) < racksFor(deepestBand());
+    if (racksShort || n(lodge.stores.jerky) < man.supplyCap.value) lodge.buyRack();
+    // Producers come out of wood the spine has not spoken for: the next rack it calls for, and the next camp.
+    // Meat the racks need to smoke one satchel refill stays in the store.
+    const meatReserved = man.supplyCap.value / ANCHORS.jerkyPerMeat;
+    const woodReserved =
+      (racksShort ? toNumber(lodge.racks.getCost(1)) : 0) +
+      (wold.camps.value.length < 4 ? man.campCost.value : 0);
     for (const p of lodge.producers.getAll()) {
       const r = p.producer.repeatable!;
       if (p.def.id === 'snare' && n(lodge.stores.meat) > 30) continue;
-      if (n(lodge.stores[p.def.payer]) > 2 * toNumber(r.getCost(1))) lodge.buyProducer(p.def.id);
+      const reserved = p.def.payer === 'wood' ? woodReserved : meatReserved;
+      const spare = n(lodge.stores[p.def.payer]) - reserved;
+      if (spare > 2 * toNumber(r.getCost(1))) lodge.buyProducer(p.def.id);
     }
   }
 
+  /** Dangerous quarry only when a mauling would cost little: the pack nearly empty. */
   function okToHunt(id: string): boolean {
     const s = speciesById.get(id as never)!;
     const p = man.huntChance(s);
     if (s.id === 'hart') return p >= 0.45;
-    return s.dangerous ? p >= 0.6 : p >= 0.3;
+    if (s.dangerous) return p >= 0.6 && man.packLoad.value < 0.25 * man.packCap.value;
+    return p >= 0.3;
   }
 
   function isFrontier(x: number, y: number): boolean {
@@ -135,8 +159,11 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
 
   /** Head for the lodge when the walk fits the satchel, else the nearest camp to restock on the way. */
   function goHome(here: Float64Array): void {
+    walkingToChart = false;
     man.walkTo(here[idx(LODGE)] <= n(man.supply) ? LODGE : nearestRestock(here));
   }
+
+  let walkingToChart = false;
 
   function policy(): void {
     if (chronicle.won.value) return;
@@ -171,8 +198,13 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
     // Score every charted tile the walker can reach and still walk home from.
     let best: GridCoord | null = null;
     let bestScore = -Infinity;
+    let bestIsFrontier = false;
     const wantCamp = wold.camps.value.length < 4 && n(lodge.stores.wood) >= man.campCost.value;
     const band = deepestBand();
+    // An empty larder: the store and the meat it could smoke cannot refill the satchel.
+    // Then any quarry in reach is the job, and charting waits.
+    const hungry =
+      n(lodge.stores.jerky) + n(lodge.stores.meat) * ANCHORS.jerkyPerMeat < man.supplyCap.value;
     for (let j = 0; j < wold.tiles.length; j++) {
       if (j === i || !Number.isFinite(here[j])) continue;
       if (here[j] + home[j] + ANCHORS.supplyPerHunt > supply) continue;
@@ -184,7 +216,9 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
       if (herd && okToHunt(herd.id) && !packFull) {
         // Quarry of the deepest band reached is the job; shallower quarry is filler.
         score =
-          herd.id === 'hart' ? 1e6 : (herd.band >= band ? 3000 : 0) + 10 * herd.meat - 4 * here[j];
+          herd.id === 'hart'
+            ? 1e6
+            : (herd.band >= band || hungry ? 3000 : 0) + 10 * herd.meat - 4 * here[j];
       } else if (t.feature === 'waystone' && !wold.isCamp(j) && wantCamp) {
         score = 5000 - here[j];
       } else if (t.feature === 'lookout' && !wold.looted.value.includes(j)) {
@@ -193,14 +227,16 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
         score = 3500 - here[j];
       } else if (isFrontier(x, y)) {
         // Charting deeper than any band entered beats hunting; charting behind you is filler.
-        score = (t.band >= band ? 3200 : 200) + 20 * t.depth - 3 * here[j];
+        score = (t.band >= band && !hungry ? 3200 : 200) + 20 * t.depth - 3 * here[j];
       }
       if (score > bestScore) {
         bestScore = score;
         best = { x, y };
+        bestIsFrontier = !herd && t.feature == null && isFrontier(x, y);
       }
     }
     if (best && bestScore > -Infinity) {
+      walkingToChart = bestIsFrontier;
       man.walkTo(best);
       return;
     }
@@ -212,19 +248,47 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
   // === ACCOUNTING ===
 
   const ledger: BandLedger[] = [];
-  let lastKills = 0;
-  const killTotal = () => Object.values(man.kills.value).reduce((a, b) => a + b, 0);
+  let lastKills: Record<string, number> = {};
   function account(): void {
     const band = deepestBand();
-    while (ledger.length <= band) ledger.push({ walk: 0, hunt: 0, wait: 0, hides: 0, kills: 0 });
+    while (ledger.length <= band)
+      ledger.push({
+        walk: 0,
+        chart: 0,
+        hunt: 0,
+        wait: 0,
+        waitJerky: 0,
+        waitStarved: 0,
+        hides: 0,
+        kills: 0,
+        killsDeep: 0,
+      });
     const L = ledger[band];
     const a = man.action.value;
-    if (a === 'walk') L.walk += DT;
-    else if (a === 'hunt') L.hunt += DT;
-    else L.wait += DT;
-    const total = killTotal();
-    L.kills += total - lastKills;
-    lastKills = total;
+    if (a === 'walk') {
+      L.walk += DT;
+      if (walkingToChart) L.chart += DT;
+    } else if (a === 'hunt') L.hunt += DT;
+    else {
+      L.wait += DT;
+      const room = man.supplyCap.value - n(man.supply);
+      if (
+        wold.isRestock(man.pos.value.x, man.pos.value.y) &&
+        room > 0.01 &&
+        n(lodge.stores.jerky) < room
+      ) {
+        L.waitJerky += DT;
+        const capacity = toNumber(lodge.racks.count.value) * lodge.rackJerkyRate.value;
+        if (lodge.smokeRate.value < 0.99 * capacity) L.waitStarved += DT;
+      }
+    }
+    for (const [id, k] of Object.entries(man.kills.value)) {
+      const d = k - (lastKills[id] ?? 0);
+      if (d <= 0) continue;
+      L.kills += d;
+      if (speciesById.get(id as never)!.band >= band) L.killsDeep += d;
+    }
+    lastKills = { ...man.kills.value };
     L.hides = toNumber(lodge.stores.hide.cumulative!.value);
   }
 

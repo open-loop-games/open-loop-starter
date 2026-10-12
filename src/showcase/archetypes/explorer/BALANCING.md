@@ -7,7 +7,7 @@ bucket and its closed form are in `IDENTITY.md` § Rate-function spine.
 
 The numbers come from the anchors at the top of `data/spine.ts`. To retune, change an
 anchor and let the derivations follow: gear prices, pack and satchel capacities, rack
-throughput and the Hart's trail are all derived from it.
+throughput, the opening's length and the Hart's trail are all derived from it.
 
 ## The tunables
 
@@ -27,7 +27,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
 | `herds/<band>/regrowSeconds` | one reference trip | Seconds a depleted herd takes to regrow one head. |
 | `hunt/skillStep` | 1.08 | Yield and prowess per Huntcraft level. |
 | `hunt/bestiaryBonus` | 1.25 | A species' yield once ten are taken. |
-| `hunt/hartTrailKills` | 58 | Deepwood kills before the Hart shows itself. |
+| `hunt/hartTrailKills` | 44 | Deepwood kills before the Hart shows itself. |
 
 **Not perturbable, on purpose:**
 - Gear prices and camp prices are band budgets, not knobs. A price set apart from the
@@ -36,6 +36,8 @@ Every key is read at its reader site through `tunable()`; the registry is in
   `data/wold.ts` at construction.
 - The map is generated from `MAP_SEED`. A different seed is a different map, and every
   save made on the old one breaks.
+- `FIELD_FACTOR` is a measurement, not a knob. Perturbing it would price the game for a
+  walk that does not happen; re-solve it instead (§ Running a pass).
 
 ## Couplings
 
@@ -53,6 +55,18 @@ Every key is read at its reader site through `tunable()`; the registry is in
 - **The bestiary and Huntcraft are inside the solve.** `yieldMult(k)` assumes ten kills
   of the band's species early in the stay. A band whose quarry is scarce misses the
   bonus, and its rate falls below the spine's twice over.
+- **The hit chance and Huntcraft feed each other.** A kill trains the skill and the skill
+  raises the hit chance, so `hunt/skillStep` moves every band's kills, yields and the
+  Hart's trail at once.
+- **The opening is paid in wood, net of smoking.** The meadow lasts until the first camp
+  and the second rack are affordable, and the racks burn wood while the meadow eats.
+  Raising `racks/woodPerJerky` lengthens the opening as well as the forest.
+- **`FIELD_FACTOR` is measured under the walker.** The walker in `balance/_engine.ts`
+  stands in for the reference player, and its rules are the spine's assumptions. Change
+  them, the map or any trip term, and the factors no longer describe the walk.
+- **The forest's and the Fen's factors trade.** The Fen's gear is priced from the
+  forest's budget. A higher forest factor makes the Fen's gear dearer, so a step that
+  fixes one band's stay moves the other's.
 
 ## Running a pass
 
@@ -60,22 +74,30 @@ Every key is read at its reader site through `tunable()`; the registry is in
   budgets, every gear price against the budget it is bought from, and the predicted
   beats.
 - `balance/arc-probe.ts [seeds] [maxSeconds]` plays the shipping game to the Hart once per
-  seed. Read § Beats against the prediction, then § Bands: the time split into walking,
-  hunting and waiting at a restock point, the kills, and the hide rate against the
-  spine. A long wait is a jerky shortage; a low rate at full hunting time is thin quarry.
+  seed. Read § Beats against the prediction, then § Bands: the time split into walking
+  (charting toward the frontier within it), hunting and waiting at a restock point, the
+  hit rate and kills, and the hide rate against the spine. A long wait is a jerky
+  shortage; a low rate at full hunting time is thin quarry.
+- `balance/field-probe.ts [seeds]` measures each band's stay against its schedule and
+  prints the next `FIELD_FACTOR` step. Re-solve after any change to the walker, the map
+  or a trip term. Keep the step that lands the Hart; a full step overshoots the forest
+  and the Fen (§ Couplings).
 
-A healthy pass: every seed takes the Hart with no stuck streak, and each band's hide
-rate is near `hideRate(k)`.
+A healthy pass, over the default seeds: every seed takes the Hart with no stuck streak;
+the Hart lands within 5% of `ANCHORS.arcSeconds`; the Snowfield and Deepwood entries land
+within 10% of their predictions, and the Fen within 25%.
 
 ## Known thin
 
-- **The arc runs about 47% long.** The Hart falls at 2637–2794s against 1800s. Almost
-  all of it is the forest: it banks hides at about half the spine's rate and lasts more
-  than twice its stay, because the walker waits at the lodge for jerky for 19% of it
-  and meadow hares dilute its kills. The Fen runs at 70%; the Snowfield and Deepwood at
-  76–106%.
-- **The spine has no kill-supply term.** It assumes quarry is waiting at every band's
-  middle. Herd density and regrowth set what the map can actually yield, and the probe
-  is the only measure of it.
+- **The Fen opens early.** Its entry falls at 563–578s against 682s. The forest outruns
+  its factor once the opening is paid for, and solving the forest's factor directly
+  overshoots the Fen (§ Couplings).
+- **The forest still waits on racks.** About 115s of its stay is the walker standing at
+  a restock point while the racks refill the satchel. The racks are not starved; there
+  are too few of them for the forest's walking, which runs past the reference trip.
+- **The remainder is a measurement.** `FIELD_FACTOR` carries what the walk does not
+  model: herds scattered in threes, early trips on entry gear, shallower quarry on the
+  way. The spine predicts the arc only for maps and walkers like the ones it was solved
+  on.
 - **One walker.** The probe's greedy walker is one policy. A player who camps earlier or
   over-builds racks runs a different arc, and nothing measures the spread.

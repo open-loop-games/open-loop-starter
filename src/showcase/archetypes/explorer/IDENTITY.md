@@ -57,34 +57,41 @@ middle of band k, hunt four times, walk home and bank.
 
 ```
 tripSeconds(k) = 2·(4k + 2)·stepSeconds + 4·huntSeconds        linear in k
-hideRate(k)    = 4 · yieldHide(k) · yieldMult(k) / tripSeconds(k)
-hideBudget(k)  = hideRate(k) · stay(k)
+hideRate(k)    = 4 · hit(k) · yieldHide(k) · yieldMult(k) / tripSeconds(k)
+hideBudget(k)  = hideRate(k) · stay(k) · field(k)
+hit(L)         = s / (s + ¼),  s = 1.08ᴸ                          bow matched to the band
 ```
 
 Across bands the spine composes under `…/rate-functions/composition.mdx`:
 - a **piecewise splice**, one constant-rate regime per band;
 - a **modifier product**, Huntcraft at the band's middle × the bestiary bonus.
 
-Every price derives from the band budget of the stay it is bought from. Terrain gear for
-band k costs a share of band k−1's hide budget, and so do the bow, frame and satchel
+Huntcraft and the hit chance feed each other, so the spine solves them band by band from
+the kills before. The meadow is the opening: it lasts until the forest kit — the first
+camp and the second rack — is paid for from the opening's wood, net of what smoking
+burns. Every price derives from the budget of the stay it is bought from. Terrain gear
+for band k costs a share of band k−1's hide budget, and so do the bow, frame and satchel
 levels. The pack fits one trip's haul, and racks smoke the band's jerky demand.
 
-**Where the closed form stops: the walk.** The reference trip assumes quarry is always
-waiting at the band's middle and jerky is always on the shelf. On the map, herds are
-scattered and deplete, the forest is diluted by meadow hares, and the walker waits at
-the lodge when the racks fall behind. `balance/arc-probe.ts` measures the remainder over
-seeds: the time split into walking, hunting and waiting per band, and each band's hide
-rate against `hideRate(k)`.
+**Where the closed form stops: the walk.** The reference trip assumes quarry waits at the
+band's middle and jerky is on the shelf. On the map, herds are scattered in threes, early
+trips run on the gear the band was entered with, shallower quarry lies on the way, and
+the walker waits on the racks. `FIELD_FACTOR` in `data/spine.ts` carries that remainder:
+the factor that turns a band's stay into seconds of reference-trip earning. It is
+measured, not projected: `balance/field-probe.ts` solves it over seeds against each
+band's scheduled stay, and `balance/arc-probe.ts` prints where each stay went — walking,
+charting, hunting and waiting.
 
 ## The arc
 
-| Beat | Recorded at |
-|---|---|
-| First lodge purchase | 25s |
-| Into the Fen | 976–1164s |
-| Onto the Snowfield | 1614–1846s |
-| Under the Deepwood | 2122–2266s |
-| The Pale Hart | 2637–2794s |
+| Beat | Predicted | Recorded |
+|---|---|---|
+| First lodge purchase | 125s | 110–116s |
+| The forest kit: first camp | 309s | 282–365s |
+| Into the Fen | 682s | 563–578s |
+| Onto the Snowfield | 1055s | 1030–1061s |
+| Under the Deepwood | 1427s | 1396–1428s |
+| The Pale Hart | 1800s | 1781–1842s |
 
 The ranges are the probe's default seeds; the map is fixed and the seed drives the hunt
 rolls. `manifest.ts` holds the recorded beats.
@@ -119,5 +126,6 @@ a continuous converter whose throughput is the minimum its inputs can feed.
 
 The spine is `data/spine.ts`, printed by `balance/explorer-projection.ts`.
 `balance/arc-probe.ts` plays the shipping game to the Hart under a greedy walker, one run
-per seed, with the walker in `balance/_engine.ts`. `BALANCING.md` covers the knobs and
+per seed, with the walker in `balance/_engine.ts`; `balance/field-probe.ts` re-solves the
+field factor. `BALANCING.md` covers the knobs and
 couplings.
