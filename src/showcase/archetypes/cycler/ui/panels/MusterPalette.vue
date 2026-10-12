@@ -2,7 +2,7 @@
   MusterPalette — the build tray. The four pieces of the shared grid; selecting one
   arms it for placement on the board. Placement is FREE (no per-piece cost) — the
   economy is the shared MW pool (Lances draw to fire) and the finite board, not a
-  price, so each card shows its role + effect, not a cost. Build locks during INBOUND
+  per-piece cost, so each card shows its role + effect instead. Build locks during INBOUND
   (you live with what you placed). Selection is shared with the board via
   `useBoardControl`.
 -->

@@ -64,10 +64,10 @@ async function measureRun(opts: { headroom?: number; powerLevel?: number }): Pro
   placeReference(build);
   const L = opts.powerLevel ?? 0;
   for (let i = 0; i < L; i++) build.raisePower();
-  // Re-peg under the pushed scope. H and g are read ONLY at run start and then
-  // frozen for the run — that is what keeps the crossing closed-form — so a
-  // scope pushed after install needs a run boundary to take effect. The board
-  // persists across it.
+  // Re-peg under the scoped override. H and g are read ONLY at run start and then
+  // frozen for the run — that is what keeps the crossing closed-form — so an
+  // override pushed after install needs a run boundary to take effect. The run
+  // boundary keeps the board.
   cycle.startRun();
   await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
   const out = {

@@ -10,7 +10,7 @@
  *
  * Pure over an {@link OccupancyView} rather than a live grid, so placement PREVIEW is
  * the same function run against an overlay (`previewAt`), and the evaluator stays
- * engine-harness testable with no module state. This is the "one pure fn drives live
+ * testable headless, with no module state. This is the "one pure fn drives live
  * board + hover preview" the rework calls for (studio/open-loop-starter#21 leaf 2).
  */
 

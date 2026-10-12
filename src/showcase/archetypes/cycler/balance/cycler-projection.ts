@@ -5,7 +5,7 @@
  * Run: pnpm exec vite-node src/showcase/archetypes/cycler/balance/cycler-projection.ts
  *
  * Projection — pure math, NO engine (`open-loop-engine/docs/consumer-guide-balance.md`
- * § The spine — a falsifiable prediction). Predicts; the sim probe verifies later. This is the CAPTURE TEST: if the
+ * § The spine — a falsifiable prediction). Predicts; the probes verify later. This is the CAPTURE TEST: if the
  * concrete realization can't write its clear-rate C, its salvo schedule, and its
  * N*_waves on paper, the mechanic is mis-specified, not just untuned.
  *
@@ -20,7 +20,7 @@
  *     line buffer: per wave absorbs max(0, W_N − C), repaired from MW surplus
  *     run length:  N*_waves = log_g(H) + Δ_wall              (×cycle → minutes)
  *
- * Same log law as studio/open-loop-starter#6, re-indexed by wave. Two new knobs the
+ * Same log law as studio/open-loop-starter#6, re-indexed by wave. Two new balance constants the
  * realization adds — Δ_wall (the line-buffer tail) and the forward/back cell split
  * that sets the C-vs-output allocation tradeoff — are sized here (leaf 1). The
  * terminating pressure stays EXOGENOUS (the salvo); the Lance MW-draw and repair are
@@ -32,19 +32,19 @@ import { DEFENSE_BALANCE } from '../data/defense';
 import { CADENCE_BALANCE } from '../data/cadence';
 import { UPGRADE_BALANCE } from '../data/upgrades';
 
-// ─── Projection knobs (the tuning surface) ───
+// ─── Projection constants (the tuning surface) ───
 const ARC_LAYERS = 12; // permanent-power layers to trace
 const H_SWEEP = [4, 8, 16, 32, 64]; // headroom values → waves-to-crossing
 const WALL_SWEEP = [250, 500, 1000, 2000]; // line-HP values → Δ_wall tail
 
 // Concrete-spine salvo postures (the per-wave `g` ladder — addBurnTier → Prophecy
 // draft, IDENTITY § Growth ports). Supersedes threat.ts BURN_TIERS' per-TIME g for
-// the wave-indexed spine; reach gates mirror that ladder. Reconciled in leaf 4.
+// the wave-indexed spine; reach thresholds mirror that ladder. Reconciled in leaf 4.
 const POSTURES = [
-  { label: 'Standard', g: DEFENSE_BALANCE.salvoBase, gate: 0 },
-  { label: 'Accelerated', g: 2.0, gate: 2 },
-  { label: 'Cascade', g: 2.6, gate: 4 },
-  { label: 'Collapse', g: 3.4, gate: 6 },
+  { label: 'Standard', g: DEFENSE_BALANCE.salvoBase, threshold: 0 },
+  { label: 'Accelerated', g: 2.0, threshold: 2 },
+  { label: 'Cascade', g: 2.6, threshold: 4 },
+  { label: 'Collapse', g: 3.4, threshold: 6 },
 ] as const;
 
 // Concrete-spine currency scales (illustrative — the abstract prestige.ts Sp/Ss are
@@ -69,7 +69,7 @@ const costRatio = UPGRADE_BALANCE.powerUpgradeCostRatio;
 const gBendRatio = UPGRADE_BALANCE.gBendRatio;
 const gBendBaseCost = UPGRADE_BALANCE.gBendBaseCost;
 const gBendCostRatio = UPGRADE_BALANCE.gBendCostRatio;
-const gBendGateStep = UPGRADE_BALANCE.gBendGateStep;
+const gBendThresholdStep = UPGRADE_BALANCE.gBendThresholdStep;
 
 // ─── The spine, closed-form ───
 
@@ -278,7 +278,7 @@ function printDecoupling(): void {
   console.log(
     `  baseline N*_waves = ${base.nWaves} (${fmtM(waveMin(base.nWaves))}) at L=3, C = ${base.C.toLocaleString()}`,
   );
-  console.log(col('  permanent', 30) + col('C', 12) + col('N*_waves', 11) + 'what it buys');
+  console.log(col('  permanent', 30) + col('C', 12) + col('N*_waves', 11) + 'what it adds');
   const up = refWalk(4); // ×power reach, re-pegged
   console.log(
     col(`  ×${power} power (L=3→4)`, 30) +
@@ -304,15 +304,15 @@ function printDecoupling(): void {
 
 /**
  * The salvo posture ladder (addBurnTier → Prophecy): the per-wave `g` steps run
- * length under a reach gate. Deeper posture ⇒ steeper salvo ⇒ fewer waves to cross.
+ * length under a reach threshold. Deeper posture ⇒ steeper salvo ⇒ fewer waves to cross.
  */
 function printPostures(): void {
-  console.log(`\n═══ The salvo-posture ladder — per-wave g under a reach gate (Prophecy) ═══`);
-  console.log(`  Shared peg: H = ${H}, line HP = ${L_HP} (one knob across the ladder).`);
+  console.log(`\n═══ The salvo-posture ladder — per-wave g under a reach threshold (Prophecy) ═══`);
+  console.log(`  Shared peg: H = ${H}, line HP = ${L_HP} (one constant across the ladder).`);
   console.log(
     col('  posture', 14) +
       col('g/wave', 8) +
-      col('gate L≥', 9) +
+      col('unlock L≥', 9) +
       col('crossing', 10) +
       col('N*_waves', 10) +
       'run',
@@ -322,21 +322,21 @@ function printPostures(): void {
     console.log(
       col(`  ${p.label}`, 14) +
         col(p.g.toString(), 8) +
-        col(p.gate.toString(), 9) +
+        col(p.threshold.toString(), 9) +
         col(crossing(p.g).toFixed(2), 10) +
         col(w.nWaves.toString(), 10) +
         fmtM(waveMin(w.nWaves)),
     );
   }
   console.log(
-    `  Steeper postures raise g ⇒ shorter, sharper runs (harder). Reach-gated so pace tracks power.`,
+    `  Steeper postures raise g ⇒ shorter, sharper runs (harder). Locked by reach, so pace tracks power.`,
   );
 }
 
 /**
  * The g-bender (addUpgrade): the sole pace lever. Lowers the operative g toward the
  * g=1 asymptote (g_eff = 1 + (g−1)·r_bend^L), lengthening every run — the mirror of
- * the posture ladder. Reach-gated so pace can't run from power.
+ * the posture ladder. Locked by reach, so pace can't run from power.
  */
 function printGBender(): void {
   console.log(`\n═══ The g-bender — the sole pace lever (lowers g toward g=1) ═══`);
@@ -347,7 +347,7 @@ function printGBender(): void {
       col('N*_waves', 11) +
       col('ΔN* vs base', 13) +
       col('cost (frag)', 13) +
-      'gate L≥',
+      'unlock L≥',
   );
   const base = refWalk();
   for (let Lb = 0; Lb <= 4; Lb++) {
@@ -360,13 +360,13 @@ function printGBender(): void {
         col(`${n.toFixed(1)} (${fmtM(waveMin(n))})`, 11) +
         col(Lb === 0 ? '—' : `+${(n - base.nWaves).toFixed(1)}`, 13) +
         col(cost === null ? '—' : `${cost}`, 13) +
-        (Lb === 0 ? '—' : `${Lb * gBendGateStep}`),
+        (Lb === 0 ? '—' : `${Lb * gBendThresholdStep}`),
     );
   }
   console.log(
     `  Each level moves g_eff a fixed fraction of the way to 1 (diminishing); never crosses g=1.`,
   );
-  console.log(`  It LENGTHENS the run (unlike reach, +0); gated on reach so pace tracks power.`);
+  console.log(`  It LENGTHENS the run (unlike reach, +0); locked by reach, so pace tracks power.`);
 }
 
 /** The Redeploy payout: sublinear currency from run output, summed per source. */

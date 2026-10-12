@@ -29,7 +29,7 @@ the naive version of this archetype (see § The rate-function spine).
 
 The game alternates a calm **build phase** — place infrastructure on a shared grid,
 convert income into capacity — and a **pressure phase** where an escalating threat
-tests what you built. The phases share everything: the same wallet, the same board,
+tests what you built. The phases share everything: the same currency, the same board,
 the same topology. Build sets the board; pressure reveals whether it holds. Each
 run raises the stakes, so **the build must outpace the escalation just long enough
 to stay ahead** — and when it can't, the run ends and pays out. The player is
@@ -71,15 +71,15 @@ N* = τ_setup + T_g · log_g( H )      ← constant across the arc, DIRECTLY AUT
 Three consequences, all better than a hand-matched difficulty:
 
 1. **Run length is one number you pick** — `H`. The peg re-baselines `W₀` only at
-   prestige (like a content-tier multiplier), so within a run the burn stays
+   prestige (like a content-rung multiplier), so within a run the burn stays
    exogenous and the algebra stays closed. (Couple the burn to *within-run* state —
    payroll ∝ live headcount — and it falls to optimal-stopping. Don't.)
 2. **Power decouples from pacing.** A capacity upgrade raises `D_max`, which
-   re-pegs `W₀` — so it adds **zero** run length. It buys *reach* (deeper content,
+   re-pegs `W₀` — so it adds **zero** run length. It adds *reach* (deeper content,
    more prestige currency) instead. The whole difficulty surface is **(H, g)**.
-3. **`g` is the high-leverage lever** — attacking the escalation base bends the
-   curve (Increlution Part 3), far stronger than boosting power. Gate a g-bender
-   permanent; sell power permanents freely.
+3. **`g` is the high-leverage constant** — attacking the escalation base bends the
+   curve (Increlution Part 3), far stronger than boosting power. Put a reach
+   threshold on a g-bender permanent; offer power permanents freely.
 
 > **Capture test.** If a fork can't write *its* `D_max` (or clear-rate `C`), its
 > burn schedule, and its `N* = τ_setup + T_g·log_g(H)` on paper, the mechanic is
@@ -123,10 +123,10 @@ crossing must stay driven by the exogenous salvo.)
 sinks, shared-state discipline made concrete:
 
 - **Reactors + Relays** raise output (MW/sec).
-- **Lances** raise clear-rate `C` (buy run length) but **draw MW to fire** (cut the economy).
-- **Bulwarks** route MW surplus into line repair — extend `Δ_wall` (buy run length),
+- **Lances** raise clear-rate `C` (add run length) but **draw MW to fire** (cut the economy).
+- **Bulwarks** route MW surplus into line repair — extend `Δ_wall` (add run length),
   competing for cells *and* for the same MW. Repair is auto (STANDBY drip) but its rate
-  is throughput-gated by placed Bulwarks, so the third leg is a spatial decision too, not
+  is throughput-limited by placed Bulwarks, so the third leg is a spatial decision too, not
   a free background heal.
 
 The bridge that makes this one system, not two bolted together: **Relays (boosters)
@@ -179,9 +179,9 @@ A fork grows the archetype *up* through these. Each feeds a named part of the sp
 | `addTower` (Lance) | a forward interceptor with an MW operating-draw | raises `C`; the draw is a within-run economic sink, not run-end coupling |
 | `addWall` / repair | the line's HP buffer + surplus-fed auto-repair | `Δ_wall` — the bounded run-length tail the player controls |
 | `addBurnTier` (salvo posture) | an escalation-content step / Prophecy draft option | `g`, `T_g` — the pace surface |
-| `addUpgrade` | a permanent (carried across Redeploy) | power → reach; **only a g/H upgrade moves pacing, and gets gated** |
+| `addUpgrade` | a permanent (survives Redeploy) | power → reach; **only a g/H upgrade moves pacing, and a reach threshold blocks it** |
 | `addPrestigeLayer` (Redeploy) | the breach / re-peg boundary | re-baselines `W₀ = C/H`; banks sublinear currency |
-| automation ladder | auto-placement / auto-muster behind an `AutomationTiers` gate | none yet — cycler ships no player automation, so the gate has nothing to withhold. Adding one means declaring which spine term it moves first (see `.claude/rules/archetype-authoring.md` § Conformance) |
+| automation ladder | auto-placement / auto-muster behind an automation tier (`AutomationTiers`) | none yet — cycler ships no player automation, so the automation tiers have nothing to withhold. Adding one means declaring which spine term it moves first (see `.claude/rules/archetype-authoring.md` § Conformance) |
 
 ## Engine fit (pattern → primitive)
 
@@ -219,7 +219,7 @@ These are costume and scope; none moves the spine.
 ## Balance model
 
 Math first, one-way flow, one home per number. `BALANCING.md` beside this file
-is the working guide — the knobs, what couples to what, and how to read each
+is the working guide — the tunables, what couples to what, and how to read each
 probe. Methodology lives at `open-loop-engine/docs/consumer-guide-balance.md`;
 the disk layout it maps onto is `.claude/rules/archetype-authoring.md`
 § Balance — where each surface goes. In brief:
@@ -234,8 +234,8 @@ the disk layout it maps onto is `.claude/rules/archetype-authoring.md`
   holding run length flat across the arc while `fixed`/`none` policies drift. It
   predicts; it does not discover.
 - **The probes (`balance/*-probe.ts`).** Drive the **real engine and shipping
-  automation** (build/rearrange/repair/redeploy policy functions; the harness
-  only force-unlocks the tier) so sim and game cannot drift. They contradict the
+  automation** (build/rearrange/repair/redeploy policy functions; the probe
+  only force-unlocks the automation tier) so simulation and game cannot drift. They contradict the
   projection where it is wrong — measuring the realized `C` trajectory, the MW
   economy under Lance draw, and the calibration of `H, g, T_g, τ_setup, Δ_wall`.
 - **The behavioral suites (`modules/<name>.test.ts`).** Shape invariants that survive

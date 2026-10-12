@@ -16,7 +16,7 @@ export interface CyclerBootResult {
 }
 
 export interface CyclerEngineOptions {
-  /** Persistence namespace override. Unique per-engine; used to isolate sim runs. */
+  /** Persistence namespace override. Unique per-engine; used to isolate headless runs. */
   persistenceNamespace?: string;
   /** Extra modules registered alongside the default cycler modules. */
   extraModules?: EngineModule[];

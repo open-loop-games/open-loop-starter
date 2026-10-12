@@ -5,7 +5,7 @@ import { DEFENSE_BALANCE } from '../data/defense';
 
 /**
  * Defense-Command HUD synthesis — the derived state the command bar, the defended
- * line, and the reserve readout need but no single module surfaces (studio/
+ * line, and the reserve readout need but no single module shows (studio/
  * open-loop-starter#21 leaf 5). Composes the wave kernel, the board economy, the
  * wall, and the pace surface into UI-shaped values: a derived DEFCON level, the
  * wave timeline (with boss marks), the signed MW net-rate, the line state, and the

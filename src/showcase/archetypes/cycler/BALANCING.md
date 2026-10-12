@@ -17,29 +17,29 @@ derivation; this file is how you work on it.
 
 Perturbation is `tunable()` against the registry in `modules/tuning.ts`. A probe
 or a suite sweeps a value with `pushOverrides`, never by rebuilding the engine with
-overridden data. Keys are namespaced by the spine term they sit in rather than by
-the file they came from, because that is how the economy decomposes:
+overridden data. A key's prefix is the spine term it is in, rather than
+the file it came from, because that is how the economy decomposes:
 
 | Key | Default | What it moves |
 |---|---|---|
 | `peg/headroom` (H) | `16` | **Authors run length.** `W₀ = cMax/H`, so the crossing is `log_g(H)` waves. |
-| `peg/salvoBase` (g) | `1.6` | Escalation per wave. The high-leverage lever — steeper g means a shorter, sharper run. |
+| `peg/salvoBase` (g) | `1.6` | Escalation per wave. The high-leverage constant — steeper g means a shorter, sharper run. |
 | `wave/standbySeconds` / `wave/inboundSeconds` | `90` / `30` | The 2-minute wave cycle. The only thing converting waves into minutes. |
 | `line/hp` / `line/baseRepair` | `500` / `30` | The `Δ_wall` tail — how long the line bleeds after the salvo passes it. |
 | `capacity/baseOutputCeiling` | `50` | The hard cap that makes capacity concave rather than unbounded. |
 | `capacity/adjacencyBoost` | `2.5` | Placement payoff — how much the board rewards arrangement over count. |
 | `capacity/lanceIntercept` | `40` | Per-Lance clear-rate; sets `cMax` with the forward-cell count. |
-| `capacity/producerUpgradeRatio` | `2` | `cMax` per permanent power layer. Rides the peg, so it buys reach, not run length. |
+| `capacity/producerUpgradeRatio` | `2` | `cMax` per permanent power layer. Rides the peg, so it adds reach, not run length. |
 | `upgrades/reinvestCostRatio` / `reinvestOutputExponent` | `3` / `0.369` | The within-run ladder. Cost ratio above output exponent is what forces convergence. |
 | `upgrades/gBendRatio` | `0.7` | Bends g toward the `g = 1` asymptote — the one permanent that *does* lengthen runs. |
 | `upgrades/gBendBaseCost` / `gBendCostRatio` | `6` / `2` | What the g-bender costs, and how fast that climbs. |
-| `upgrades/powerUpgradeCostRatio` | `2` | Reach price growth per power layer. |
+| `upgrades/powerUpgradeCostRatio` | `2` | Reach cost growth per power layer. |
 | `prestige/mergeQuorum` | `3` | Fragments per reach purchase; sets how many runs a prestige step costs. |
 | `prestige/fragmentScalePrimary` / `Secondary` | `1000` / `1200` | Currency minted per run. Sublinear in reach — see Couplings. |
 
 **Structural, deliberately not tunable:** board and zone cardinality
 (`boardCells`, `forwardCells`, `forwardRows`, `backCells`), `bossMilestone`, and
-`gBendGateStep`. Those are content shape and ladder indices, not balance — the
+`gBendThresholdStep`. Those are content shape and ladder indices, not balance — the
 engine guide § Where balance constants live keeps them in the data layer.
 
 ## Couplings
@@ -55,8 +55,8 @@ logarithm disappears, and you are playing a different archetype.
 That freeze is what keeps the crossing closed-form: a g that moved mid-run would
 make `W_N` path-dependent and there would be nothing to project against.
 
-**Run length is logarithmic in H, so H is a weak lever.** The measured sweep runs
-`H=4 → 7.97m` through `H=32 → 17.72m`: an 8× change in H buys roughly 2.2× the
+**Run length is logarithmic in H, so H is a weak constant.** The measured sweep runs
+`H=4 → 7.97m` through `H=32 → 17.72m`: an 8× change in H gives roughly 2.2× the
 run. If you want a large change in run length, move g. H is for fine-tuning the
 difficulty surface.
 
@@ -72,21 +72,21 @@ tail, so the measured figure sits consistently ~2m above the prediction
 not drift. Read a *change* in the gap as a signal; the gap itself is expected.
 
 **Currency is sublinear in reach.** Minting goes as the cube root, so `C` rising
-×2 per layer mints only ×∛2 ≈ 1.26. Huge late capacity does not buy proportional
+×2 per layer mints only ×∛2 ≈ 1.26. Huge late capacity does not give proportional
 prestige — that is what makes the prestige ladder decelerate, and it is the
 log-frontier reading of the arc. Making currency linear would collapse the
 deceleration.
 
-**A pushed scope needs a run boundary.** `peg/headroom` and `peg/salvoBase` are
+**A scoped override needs a run boundary.** `peg/headroom` and `peg/salvoBase` are
 read at `startRun` and then frozen for the run — that freeze is what keeps the
-crossing closed-form. So a scope pushed mid-run does nothing until the next run
+crossing closed-form. So an override pushed mid-run does nothing until the next run
 starts; probes and suites that sweep them call `startRun()` after the push. The
-capacity and cost knobs have no such rule, being read inside `computed` bodies.
+capacity and cost tunables have no such rule, being read inside `computed` bodies.
 
 **One reference board, two consumers.** `balance/_board.ts` `placeReference` and
-`sim/harness.ts` `placeDefense` are the same placement, so probes and behavioral
-suites cannot drift apart. An empty board breaches at wave 0 by design — there
-is no clear-rate — so anything driving a run has to place first.
+the test harness's `placeDefense` (`sim/harness.ts`) are the same placement, so
+probes and behavioral suites cannot drift apart. An empty board breaches at wave 0
+by design — there is no clear-rate — so anything driving a run has to place first.
 
 ## Running a pass
 
@@ -112,9 +112,9 @@ pnpm exec vite-node src/showcase/archetypes/cycler/balance/prestige-probe.ts
   strictly shorter runs, and raising power *within* a posture does not move run
   length.
 - **`upgrade-probe.ts`** drives the permanent catalog: reach re-pegs to +0, each
-  g-bender level lengthens the run, and the gate holds until power reaches it.
-- **`prestige-probe.ts`** closes the loop through real Redeploys — sublinear
-  banking, reach as a catalog buy, run length flat across the boundary.
+  g-bender level lengthens the run, and the reach threshold blocks it until power reaches it.
+- **`prestige-probe.ts`** closes the cycle through real Redeploys — sublinear
+  banking, reach as a catalog purchase, run length flat across the boundary.
 
 All five print; none asserts. The behavioral suites are the separate surface and
 sit beside the modules they spec — `modules/{adjacency,build,burn-tier,cycle,
@@ -128,7 +128,7 @@ mechanics do*, carrying no magnitudes, which is why they survive a retune.
   is what the kernel reads. The file is kept for the spine derivation it
   documents, and its header now says so — but the values in it are inert, and
   the right long-term answer is probably to move that prose somewhere a reader
-  will not mistake for live config.
+  will not mistake for live data.
 - **Absolute calibration is open in `data/threat.ts`.** Its own comment marks the
   reference numbers un-calibrated and defers absolute calibration to a probe
   measurement. The *shape* results in this file are solid — the peg, the

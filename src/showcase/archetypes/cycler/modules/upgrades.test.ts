@@ -1,14 +1,14 @@
 /**
  * Cycler upgrade catalog — wave-model lock (IDENTITY § Balance model; studio/
- * open-loop-starter#21 leaf 3). Pins the permanent catalog on the prestige wallet.
+ * open-loop-starter#21 leaf 3). Pins the permanent catalog on the prestige currency.
  * Behavioral + shape invariants:
- *   • the wallet is an engine Resource — reach buys auto-deduct Fragments;
+ *   • the Fragments amount is an engine Resource — reach purchases auto-deduct Fragments;
  *   • the reach permanent raises L and re-pegs to +0 run length (reach, not pacing);
- *   • the g-bender is reach-gated (locked until permanent power reaches the gate);
+ *   • the g-bender is reach-locked (locked until permanent power reaches the threshold);
  *   • a g-bender level LENGTHENS the run (the sole pace lever bends salvo g toward 1).
  *
  * Runs place the reference board (`placeDefense`); merge() clears the board, so
- * sequences that re-peg rebuild it. Reach L=0 price == quorum (a competent first run
+ * sequences that re-peg rebuild it. Reach L=0 cost == quorum (a competent first run
  * banks it). Absolute run-length magnitudes are measured, never authored (multiverse-hr#17).
  */
 
@@ -22,7 +22,7 @@ async function runOnce(): Promise<void> {
   await tickUntil(() => cycle().runState.value === 'ended', 20_000);
 }
 
-/** Bank at least `n` Fragments by running (and re-pegging + rebuilding) until the wallet clears it. */
+/** Bank at least `n` Fragments by running (and re-pegging + rebuilding) until the Fragments amount clears it. */
 async function bankUntil(n: number): Promise<void> {
   for (let i = 0; i < 60; i++) {
     if (prestige().fragments.value.toNumber() >= n) return;
@@ -30,22 +30,22 @@ async function bankUntil(n: number): Promise<void> {
     placeDefense(); // rebuild the board for the (re-pegged or initial) run
     await runOnce();
   }
-  throw new Error(`bankUntil(${n}): wallet never reached target`);
+  throw new Error(`bankUntil(${n}): Fragments never reached target`);
 }
 
-describe('upgrades — the reach permanent (freely sold; reach, not pacing)', () => {
+describe('upgrades — the reach permanent (freely offered; reach, not pacing)', () => {
   beforeEach(() => boot());
 
   it('costs quorum·ratio^L and is affordable after a competent first run', async () => {
     const u = upgrades();
     placeDefense();
     await runOnce();
-    // L=0 price == quorum (the first competent run banks exactly it).
+    // L=0 cost == quorum (the first competent run banks exactly it).
     expect(new Decimal(u.reach.getCost()).toNumber()).toBe(PRESTIGE_BALANCE.mergeQuorum);
     expect(u.reach.canPurchase.value).toBe(true);
   });
 
-  it('buying reach raises L, auto-deducts Fragments (the Resource), and re-pegs to +0 run length', async () => {
+  it('purchasing reach raises L, auto-deducts Fragments (the Resource), and re-pegs to +0 run length', async () => {
     const b = build();
     const u = upgrades();
     const c = cycle();
@@ -70,28 +70,28 @@ describe('upgrades — the reach permanent (freely sold; reach, not pacing)', ()
   });
 });
 
-describe('upgrades — the g-bender (the sole pace lever, reach-gated)', () => {
+describe('upgrades — the g-bender (the sole pace lever, reach-locked)', () => {
   beforeEach(() => boot());
 
-  it('is reach-gated: locked on power level, not on Fragments', async () => {
+  it('is reach-locked: locked on power level, not on Fragments', async () => {
     const u = upgrades();
     const b = build();
-    // Bank past the level-1 cost while power stays at 0 → the gate (L≥2) blocks it.
+    // Bank past the level-1 cost while power stays at 0 → the threshold (L≥2) blocks it.
     await bankUntil(UPGRADE_BALANCE.gBendBaseCost + 2);
     expect(b.powerLevel.value).toBe(0);
-    expect(u.gBender.canPurchase.value).toBe(false); // gated on reach, not affordability
+    expect(u.gBender.canPurchase.value).toBe(false); // blocked by reach, not affordability
 
     b.raisePower();
-    b.raisePower(); // L=2 clears the level-1 gate
+    b.raisePower(); // L=2 clears the level-1 threshold
     expect(u.gBender.canPurchase.value).toBe(true);
   });
 
-  it('a bought level lengthens the run (never touching reach)', async () => {
+  it('a purchased level lengthens the run (never touching reach)', async () => {
     const b = build();
     const u = upgrades();
     const c = cycle();
     b.raisePower();
-    b.raisePower(); // L=2, passes the level-1 gate; reach held fixed hereafter
+    b.raisePower(); // L=2, passes the level-1 threshold; reach held fixed hereafter
     await bankUntil(UPGRADE_BALANCE.gBendBaseCost);
 
     // Baseline run at bend level 0.
@@ -100,7 +100,7 @@ describe('upgrades — the g-bender (the sole pace lever, reach-gated)', () => {
     await runOnce();
     const base = c.endedAtMinutes.value!;
 
-    // Buy one bend level, re-peg, and the next run lengthens (shallower salvo g).
+    // Purchase one bend level, re-peg, and the next run lengthens (shallower salvo g).
     expect(u.gBender.canPurchase.value).toBe(true);
     u.gBender.purchase();
     expect(u.gBendLevel.value).toBe(1);

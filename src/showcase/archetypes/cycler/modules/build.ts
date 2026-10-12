@@ -45,7 +45,7 @@ import { evaluateBoard, previewAt, type BoardEvaluation, type OccupancyView } fr
  * grid without persisting per-cell.
  */
 export interface BuildApi {
-  /** Permanent power level L (prestige-carried). D_max ∝ producerUpgradeRatio^L. */
+  /** Permanent power level L (survives prestige). D_max ∝ producerUpgradeRatio^L. */
   powerLevel: ComputedRef<number>;
   /** Pieces placed on the board this run (0..boardCells). */
   placed: ComputedRef<number>;
@@ -120,7 +120,7 @@ export function createBuildModule(): EngineModule {
     dependencies: ['cycler/tuning'],
     install(ctx) {
       // The ceiling terms bind through the tuning registry. Each is read inside
-      // a `computed`, so a pushed scope re-derives dMax / cMax / repair on the
+      // a `computed`, so a scoped override re-derives dMax / cMax / repair on the
       // next read rather than needing a rebuild.
       const registry = ctx.inject(CyclerTuningRegistryKey);
       const t = (key: CyclerTunableKey, fallback: number) => tunable(registry, key, () => fallback);

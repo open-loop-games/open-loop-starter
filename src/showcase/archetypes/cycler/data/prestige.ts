@@ -3,7 +3,7 @@
 // and banks currency. Plain values; the prestige module reads them at its reader
 // sites. Corrected shape (multiverse-hr #17): prestige is where the peg
 // re-baselines. On run-end (the crossing / insolvency) the run PAYS OUT a
-// sublinear currency; cumulative currency buys permanents that raise capacity
+// sublinear currency; cumulative currency purchases permanents that raise capacity
 // D_max; and because the burn re-pegs to the new D_max/H at prestige, run length
 // stays authored while REACH climbs. Matched reach, realized as the peg.
 
@@ -12,7 +12,7 @@ export interface PrestigeBalance {
   fragmentScalePrimary: number;
   /** cbrt scale for the secondary source (∫ burn dt) — summed independently, not pooled before the cbrt. */
   fragmentScaleSecondary: number;
-  /** Merge quorum: the L=0 power price and the minimum bank to raise power (a competent first run pays it). */
+  /** Merge quorum: the L=0 power cost and the minimum bank to raise power (a competent first run pays it). */
   mergeQuorum: number;
 }
 
@@ -36,14 +36,14 @@ export const PRESTIGE_BALANCE: PrestigeBalance = {
 //     production = ∫ build.capacity dt (realized MW throughput — a genuine rate) and
 //     endurance = Σ W_n (the wave-native salvo tonnage weathered, owned by the kernel).
 //     Both climb with reach (∝ C ∝ power), so currency climbs ∝ ∛C across merges —
-//     sublinear in the reach it buys.
+//     sublinear in the reach it adds.
 //   • Scale VALUES are cycler-calibrated, not lifted: the reference board's
 //     accumulators run ~13.3k (∫capacity dt) / ~2.15k (Σ W_n) at L=0 (measured on the
 //     forward-line spatial split, forwardRows=2), so Sp=1000 / Ss=1200 reproduce a 2+1
 //     first-merge split (⌊∛(13284/1000)⌋=2, ⌊∛(2154/1200)⌋=1) == quorum-3
 //     affordability. Absolute magnitudes are measured, never authored (multiverse-hr#17); a
 //     fork re-sizes both to its own economy.
-//   • THE RE-PEG is the whole point. Prestige carries permanent power (raises
+//   • THE RE-PEG is the whole point. Permanent power survives prestige (it raises
 //     D_max), and the burn re-baselines W₀ = D_max/H at the Merge boundary. So
 //     D_max climbs run-over-run but N* = τ_setup + T_g·log_g(H) stays constant —
 //     the "matched reach" shape, now realized as the peg rather than a hand-tuned
@@ -55,13 +55,13 @@ export const PRESTIGE_BALANCE: PrestigeBalance = {
 //     and the ending is always progress. Payout AUTO-BANKS on the crossing; the
 //     player spends the banked currency between runs (studio/open-loop-starter#7).
 //   • The next power level costs mergeQuorum · powerUpgradeCostRatio^L
-//     (`data/upgrades.ts`): the quorum is the L=0 price (paid by the first run),
-//     the geometric ratio makes later levels save-across-runs (decelerating
-//     prestige). Power permanents buy REACH, never run length — under the peg
+//     (`data/upgrades.ts`): the quorum is the L=0 cost (paid by the first run),
+//     the geometric ratio makes later levels take saving over several runs (decelerating
+//     prestige). Power permanents add REACH, never run length — under the peg
 //     raising D_max re-baselines W₀ (see `data/upgrades.ts`); only H and g
 //     (threat.ts) move pacing. SPENDING IS OWNED BY THE UPGRADE CATALOG
-//     (`modules/upgrades.ts`): the reach permanent is a freely-sold `Fragments`
+//     (`modules/upgrades.ts`): the reach permanent is a freely offered `Fragments`
 //     purchasable, and `merge()` is re-peg-only. (This supersedes the earlier
-//     "the base power buy lives in the prestige layer" split — folded into the
-//     catalog once the wallet graduated to an engine Resource, studio/open-loop-starter#6.)
-//     The `addUpgrade` port adds the gated g-bender to the same catalog — the sole pace lever.
+//     "the base power purchase lives in the prestige layer" split — folded into the
+//     catalog once the Fragments amount graduated to an engine Resource, studio/open-loop-starter#6.)
+//     The `addUpgrade` port adds the reach-locked g-bender to the same catalog — the sole pace lever.

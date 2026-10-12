@@ -7,12 +7,12 @@ import { getBuild, getCycle } from '../../modules';
  * CombatLayer — the descending-warhead / Lance-beam cosmetic over the field's
  * radar sky (studio/open-loop-starter#22 leaf 1; the pixi layer `DefenseField.vue`
  * stubbed with "combat layer pending"). It is a pure read-only projection of the
- * rate model: the sim gives an AGGREGATE salvo `W_N` and realized clear-rate `C`
+ * rate model: the simulation gives an AGGREGATE salvo `W_N` and realized clear-rate `C`
  * per wave, never per-warhead events, so warheads carry NO tactical state. Spawn
  * cadence tracks `pressure`; each mark's fate (intercepted vs leak-through) is drawn
  * against the closed-form cleared fraction `min(1, C/W_N)` read each frame — the
  * same C-vs-W_N envelope the kernel resolves, sampled as discrete marks. It never
- * writes sim state (per #22's resolved combat-fidelity decision: literal-aggregate).
+ * writes simulation state (per #22's resolved combat-fidelity decision: literal-aggregate).
  *
  * Adopts `skirmish/ui/PlayField.vue`'s pattern: self-contained, no props, pull
  * module state each frame; pixi handles in module-scope `let`/`const` (never Vue

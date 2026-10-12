@@ -14,7 +14,7 @@
 export interface BuildBalance {
   /** Placement-grid cells. Finite → the primary saturation source (adjacency runs out of neighbours). */
   boardCells: number;
-  /** Hard cap on per-unit output at the top tier — the convergent ladders' ceiling. */
+  /** Hard cap on per-unit output at the top rung — the convergent ladders' ceiling. */
   baseOutputCeiling: number;
   /** Effective average adjacency synergy at board-fill. Saturates (stack-vs-spread; boosters run out of coverage). */
   adjacencyBoost: number;
@@ -47,4 +47,4 @@ export const BUILD_BALANCE: BuildBalance = {
 //     cap is why production is concave, which is why the crossing is log_g(D_max/W₀).
 //   • D_max is the "reach" axis. Under the peg (threat.ts) it does NOT set run
 //     length — permanent power re-pegs the burn (see `data/upgrades.ts`). Raising
-//     D_max buys deeper content and more prestige currency, not longer runs.
+//     D_max adds deeper content and more prestige currency, not longer runs.

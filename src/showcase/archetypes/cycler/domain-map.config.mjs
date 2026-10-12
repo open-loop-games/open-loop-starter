@@ -16,11 +16,11 @@ export default {
     },
     {
       term: 'headroom',
-      note: 'H = D_max / W₀ — the difficulty lever. Sets run length directly; the peg holds it constant as D_max climbs.',
+      note: 'H = D_max / W₀ — the difficulty constant. Sets run length directly; the peg holds it constant as D_max climbs.',
     },
     {
       term: 'burn tier',
-      note: 'A reach-gated pace preset overriding (g, T_g). Deeper tiers raise g — a steeper escalation, a shorter/sharper run. The g-bender upgrade is the mirror lever that bends g back toward 1.',
+      note: 'A reach-locked pace preset overriding (g, T_g). Deeper tiers raise g — a steeper escalation, a shorter/sharper run. The g-bender upgrade is the mirror lever that bends g back toward 1.',
     },
     {
       term: 'merge',

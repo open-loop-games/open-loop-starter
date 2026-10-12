@@ -145,7 +145,7 @@ describe('build ↔ kernel integration — the salvo pegs against cMax, breach e
     const base = (await runToEnd()).endedAtMinutes.value!;
 
     getBuild().raisePower();
-    cycle().startRun(); // re-peg; board persists (startRun doesn't clear it)
+    cycle().startRun(); // re-peg; the board stays (startRun doesn't clear it)
     const powered = (await runToEnd()).endedAtMinutes.value!;
 
     expect(getBuild().cMax.value.gt(baseC)).toBe(true); // reach genuinely climbed

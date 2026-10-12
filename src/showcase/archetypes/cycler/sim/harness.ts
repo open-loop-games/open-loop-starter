@@ -1,16 +1,16 @@
 /**
- * Cycler behavioral/lock harness — the game-facing wrapper over `bootTestEngine`.
+ * Cycler test harness — the game-facing wrapper over `bootTestEngine`.
  * Hardcodes the Cycler module stack so tests read as specs:
  *
  *   beforeEach(() => boot());
  *   it('…', async () => { await tickUntil(() => cycle().runState.value === 'ended'); … });
  *
  * Fresh engine per `boot()` (call it in `beforeEach`) — modules rebind state on
- * `install` and the namespace is unique per boot, so a fresh boot IS the reset.
+ * `install` and the persistence namespace is unique per boot, so a fresh boot IS the reset.
  *
- * Unlike the `_blank` no-arg harness, `boot()` takes `CycleModuleOptions`: the
+ * Unlike the `_blank` no-arg test harness, `boot()` takes `CycleModuleOptions`: the
  * Cycler's entire test surface is parameterized runs (force the difficulty
- * surface H/g, force a raised capacity to stand in for a prestige tier), so
+ * surface H/g, force a raised capacity to stand in for a prestige layer), so
  * threading options through is the natural shape. `boot()` with no args is the
  * shipped configuration.
  *
@@ -66,7 +66,7 @@ export function boot(options: CyclerModulesOptions = {}): Engine {
  */
 export function tuning(): TuningRegistry {
   const registry = getEngine().tryInject(CyclerTuningRegistryKey);
-  if (!registry) throw new Error('cycler/harness: tuning registry not provided');
+  if (!registry) throw new Error('cycler/sim/harness: tuning registry not provided');
   return registry;
 }
 

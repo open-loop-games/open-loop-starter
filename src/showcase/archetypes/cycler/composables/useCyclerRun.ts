@@ -33,7 +33,7 @@ export interface CyclerRunView {
   ended: ComputedRef<boolean>;
   /** Fragments the current run has accrued (banked automatically at the bell). */
   pendingFragments: ComputedRef<Decimal>;
-  /** Permanent power level L (reach), carried across merges. */
+  /** Permanent power level L (reach), survives merges. */
   powerLevel: ComputedRef<number>;
   /** Re-peg and start the next run. Returns false unless the bell has rung. */
   merge(): boolean;

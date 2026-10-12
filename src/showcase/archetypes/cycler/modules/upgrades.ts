@@ -19,17 +19,17 @@ import { getBuild } from './build';
 import { getPrestige } from './prestige';
 
 /**
- * Upgrades module — the permanent catalog on the prestige wallet (see
+ * Upgrades module — the permanent catalog on the prestige currency (see
  * `../IDENTITY.md` § Growth ports, `addUpgrade`). A `createPurchasableCategory`
  * of permanents that cost Fragments:
  *
- *   • reach — freely-sold permanent power (raises D_max). Under the peg this
- *     re-baselines W₀, so it buys REACH at +0 run length. Effect delegates to the
+ *   • reach — freely offered permanent power (raises D_max). Under the peg this
+ *     re-baselines W₀, so it adds REACH at +0 run length. Effect delegates to the
  *     build module (`raisePower`), which OWNS the power level L (build is
- *     self-bootable without this module); the catalog only drives + prices it.
- *   • g-bender — the sole PACE lever, reach-gated. Leveled: each level lowers the
+ *     self-bootable without this module); the catalog only drives it and sets its cost.
+ *   • g-bender — the sole PACE lever, reach-locked. Leveled: each level lowers the
  *     operative g toward the g=1 asymptote (`bendBase`), lengthening every run.
- *     Cost + gate + bend all read the purchasable's OWN `amount` (the bend level)
+ *     Cost + threshold + bend all read the purchasable's OWN `amount` (the bend level)
  *     via a late-bound ref, so there's a single source of truth and no dual-persist.
  *
  * Installs LAST: it reads the Fragments Resource from prestige and the power level
@@ -39,9 +39,9 @@ import { getPrestige } from './prestige';
 export interface UpgradesApi {
   /** The upgrade catalog. */
   category: PurchasableCategory<UpgradeDef>;
-  /** The freely-sold reach permanent (raises build power level L). */
+  /** The freely offered reach permanent (raises build power level L). */
   reach: Purchasable;
-  /** The reach-gated g-bender (the sole pace lever). */
+  /** The reach-locked g-bender (the sole pace lever). */
   gBender: Purchasable;
   /** Current g-bend level L_bend (the g-bender purchasable's amount). */
   gBendLevel: ComputedRef<number>;
@@ -61,9 +61,9 @@ export function getUpgrades(): UpgradesApi {
 }
 
 export function createUpgradesModule(): EngineModule {
-  // The reach gate's step is structural — it indexes the power ladder rather
-  // than pricing anything, so it stays plain.
-  const { gBendGateStep } = UPGRADE_BALANCE;
+  // The reach threshold's step is structural — it indexes the power ladder rather
+  // than setting a cost, so it stays plain.
+  const { gBendThresholdStep } = UPGRADE_BALANCE;
 
   return {
     id: 'cycler/upgrades',
@@ -72,7 +72,7 @@ export function createUpgradesModule(): EngineModule {
       const registry = ctx.inject(CyclerTuningRegistryKey);
       const t = (key: CyclerTunableKey, fallback: number) => tunable(registry, key, () => fallback);
 
-      // Costs and the bend are read at purchase / run-start, so a pushed scope
+      // Costs and the bend are read at purchase / run-start, so a scoped override
       // reaches them without a rebuild.
       const quorumT = t('prestige/mergeQuorum', PRESTIGE_BALANCE.mergeQuorum);
       const ratioT = t('upgrades/powerUpgradeCostRatio', UPGRADE_BALANCE.powerUpgradeCostRatio);
@@ -85,7 +85,7 @@ export function createUpgradesModule(): EngineModule {
       const gBendBaseCost = () => Number(unref(gBendBaseCostT));
       const gBendCostRatio = () => Number(unref(gBendCostRatioT));
       // Late-bound holder for the g-bender purchasable — its `amount` is the bend
-      // level L_bend, the single source of truth read by the cost, the reach gate,
+      // level L_bend, the single source of truth read by the cost, the reach threshold,
       // and `bendBase`. Populated after `register`; every getter that reads it is
       // lazy (affordability checks / run-start), so it's always set by call time.
       const holder: { gBender?: Purchasable } = {};
@@ -97,9 +97,9 @@ export function createUpgradesModule(): EngineModule {
           if (def.kind === 'reach') {
             // Cost = mergeQuorum · ratio^L, keyed off the LIVE power level L (build
             // owns it). `onPurchase` raises L; the purchasable's own `count` tracks
-            // the buy count (== L, since only this raises power now). Single-step
-            // (`purchaseMaxByDefault: false`) so the live-L cost is never mispriced by a
-            // buy-max walk.
+            // the purchase count (== L, since only this raises power now). Single-step
+            // (`purchaseMaxByDefault: false`) so the live-L cost is never computed wrong by a
+            // purchase-max walk.
             return {
               display: { title: def.title, description: def.description },
               requirements: createCostRequirement({
@@ -118,7 +118,7 @@ export function createUpgradesModule(): EngineModule {
             // The sole pace lever. Two requirements (flat array — not allOf — so
             // the cost stays bulk-aware; purchaseMaxByDefault is off anyway):
             //   • cost — geometric in the bend level: base · ratio^L_bend.
-            //   • reach gate — the NEXT level (L_bend+1) needs L ≥ (L_bend+1)·step.
+            //   • reach threshold — the NEXT level (L_bend+1) needs L ≥ (L_bend+1)·step.
             // The bend itself is applied through the frozen schedule getter
             // (`modules/index.ts` → `bendBase`), so it lands on the next run.
             return {
@@ -130,8 +130,9 @@ export function createUpgradesModule(): EngineModule {
                     new Decimal(gBendBaseCost()).mul(Decimal.pow(gBendCostRatio(), gBendLevelOf())),
                 }),
                 createBooleanRequirement({
-                  met: () => getBuild().powerLevel.value >= (gBendLevelOf() + 1) * gBendGateStep,
-                  description: 'reach gate',
+                  met: () =>
+                    getBuild().powerLevel.value >= (gBendLevelOf() + 1) * gBendThresholdStep,
+                  description: 'reach threshold',
                 }),
               ],
               limit: Infinity,

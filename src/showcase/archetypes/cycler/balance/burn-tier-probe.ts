@@ -9,8 +9,8 @@
  *   1. deeper (steeper-g) postures give strictly shorter runs;
  *   2. crossing a posture steps run length while raising power WITHIN one does not
  *      (the peg holds flat — the decoupling);
- *   3. the step is one-way reach-gated: `advanceTier` is a no-op until L reaches the
- *      next posture's gate.
+ *   3. the step is one-way reach-locked: `advanceTier` is a no-op until L reaches the
+ *      next posture's threshold.
  *
  * Coarse tick (1s) per `.claude/CLAUDE.md` § Balance methodology.
  */
@@ -51,7 +51,7 @@ async function probeLadder(): Promise<void> {
   console.log(
     '  posture'.padEnd(14) +
       'g'.padEnd(5) +
-      'gate L≥'.padEnd(9) +
+      'unlock L≥'.padEnd(9) +
       'crossing (waves)'.padEnd(18) +
       'measured',
   );
@@ -68,7 +68,7 @@ async function probeLadder(): Promise<void> {
         fmt(cycle.endedAtMinutes.value ?? Number.NaN),
     );
   }
-  console.log('  Steeper g ⇒ shorter run (the high-leverage pace lever).');
+  console.log('  Steeper g ⇒ shorter run (g has the highest leverage).');
   handle.dispose();
 }
 
@@ -82,7 +82,7 @@ async function probeWithinVsCross(): Promise<void> {
   const base = cycle.endedAtMinutes.value ?? Number.NaN;
   const baseC = build.cMax.value.toNumber();
 
-  // Raise power to the next gate but DON'T advance — still posture 0.
+  // Raise power to the next threshold but DON'T advance — still posture 0.
   while (build.powerLevel.value < SALVO_POSTURES[1].unlockPowerLevel) build.raisePower();
   cycle.startRun();
   await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
@@ -100,14 +100,14 @@ async function probeWithinVsCross(): Promise<void> {
     `  posture 0, cMax ${Math.round(poweredC).toLocaleString()} (×${(poweredC / baseC).toFixed(0)} reach) → ${fmt(powered)}   Δ ${(powered - base).toFixed(3)}m  ← peg holds, +0`,
   );
   console.log(
-    `  posture 1, same power                → ${fmt(stepped)}   Δ ${(stepped - powered).toFixed(2)}m  ← the gated pace step`,
+    `  posture 1, same power                → ${fmt(stepped)}   Δ ${(stepped - powered).toFixed(2)}m  ← the locked pace step`,
   );
   handle.dispose();
 }
 
-// ─── Probe 3 — the step is one-way reach-gated ─────────────────────────────────
+// ─── Probe 3 — the step is one-way reach-locked ─────────────────────────────────
 
-async function probeGate(): Promise<void> {
+async function probeThreshold(): Promise<void> {
   HEAD('Probe 3 — advanceTier is a no-op until reach unlocks the next posture');
   const { handle, build, burnTier } = bootStack();
   console.log(
@@ -128,12 +128,12 @@ async function probeGate(): Promise<void> {
         `${burnTier.activeIndex.value}`,
     );
   };
-  step(); // L=0: gated at posture 0, no-op
-  build.raisePower(); // L=1: still under the Accelerated gate (L≥2)
+  step(); // L=0: locked at posture 0, no-op
+  build.raisePower(); // L=1: still under the Accelerated threshold (L≥2)
   step();
   build.raisePower(); // L=2: Accelerated unlocks
   step();
-  step(); // Cascade still gated (L≥4)
+  step(); // Cascade still locked (L≥4)
   handle.dispose();
 }
 
@@ -141,7 +141,7 @@ async function main(): Promise<void> {
   console.log('Cycler — salvo-posture probe (the pace surface, real engine)');
   await probeLadder();
   await probeWithinVsCross();
-  await probeGate();
+  await probeThreshold();
   console.log('');
 }
 

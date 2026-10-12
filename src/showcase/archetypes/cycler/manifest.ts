@@ -10,7 +10,7 @@ import type { ArchetypeManifest } from '@/types';
  * `beats` record the intra-run phase windows of the wave-indexed spine (Defense
  * Command): STANDBY↔INBOUND cycling to an OVERRUN breach, authored N*_waves =
  * log_g(H) + Δ_wall ≈ 7 waves at H=16, g=1.6/wave, 2 min/wave (~14 min, measured on
- * the reference forward-line board). The cross-run Reach arc carries no single-run
+ * the reference forward-line board). The Reach arc across runs has no single-run
  * window — it is a per-Redeploy cadence, not a clock range — so it is listed without
  * `recordedFireTimeRange` (honest, not incomplete).
  */

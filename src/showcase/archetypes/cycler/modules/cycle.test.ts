@@ -71,7 +71,7 @@ describe('cycle kernel — shape invariant: the run ends at the line breach', ()
 });
 
 describe('cycle kernel — shape invariant: power re-pegs to +0 run length', () => {
-  it('a raised power level (prestige-tier stand-in) leaves run length unchanged', async () => {
+  it('a raised power level (prestige-layer stand-in) leaves run length unchanged', async () => {
     boot();
     placeDefense();
     const c = cycle();

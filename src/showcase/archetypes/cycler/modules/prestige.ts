@@ -24,7 +24,7 @@ import { getBuild } from './build';
  * `../IDENTITY.md` § Growth ports, `addPrestigeLayer`). The kernel ends a run at
  * the burn crossing; this layer turns that ending into progress:
  *
- *   run-end (crossing) → PAYOUT (auto-bank sublinear currency) → the player buys
+ *   run-end (crossing) → PAYOUT (auto-bank sublinear currency) → the player purchases
  *   REACH from the upgrade catalog between runs → merge() RE-PEGS (W₀ = D_max/H,
  *   restart the clock) for the next run.
  *
@@ -36,12 +36,12 @@ import { getBuild } from './build';
  *   1. Payout auto-banks on the `runState==='ended'` crossing; the player spends
  *      the banked currency between runs. (IDENTITY: run-end always pays out.)
  *   2. Spending is OWNED BY THE UPGRADE CATALOG. `merge()` is re-peg-only — reach
- *      is a freely-sold catalog permanent (`modules/upgrades.ts`), not a buy folded
- *      into the Merge. (This supersedes the earlier "the base power buy lives in the
- *      prestige layer" split, now that the wallet is an engine Resource the catalog
+ *      is a freely offered catalog permanent (`modules/upgrades.ts`), not a purchase folded
+ *      into the Merge. (This supersedes the earlier "the base power purchase lives in the
+ *      prestige layer" split, now that the Fragments amount is an engine Resource the catalog
  *      spends via `createCostRequirement`; see `data/prestige.ts` § Balance.)
  *
- * The wallet is an engine `Resource` — auto-persisted, registered for
+ * The Fragments currency is an engine `Resource` — auto-persisted, registered for
  * balance-workbench discovery, with a built-in `cumulative` tracker that IS
  * `lifetimeFragments` (it accrues on payout and is untouched by spends).
  *
@@ -60,7 +60,7 @@ import { getBuild } from './build';
 export interface PrestigeApi {
   /** Spendable banked currency (Fragments), as a Decimal view. */
   fragments: ComputedRef<Decimal>;
-  /** The Fragments engine Resource — the wallet the upgrade catalog spends. */
+  /** The Fragments engine Resource — the Fragments amount the upgrade catalog spends. */
   fragmentsResource: Resource<DecimalSource>;
   /** Lifetime Fragments ever banked (the resource's `cumulative` tracker) — the reach-climb signal. */
   lifetimeFragments: ComputedRef<Decimal>;
@@ -76,7 +76,7 @@ export interface PrestigeApi {
   fragmentsFor(production: Decimal, endurance: Decimal): Decimal;
   /**
    * The Merge bell → next run: re-peg (restart the run at the current D_max).
-   * Reach is bought separately from the upgrade catalog between runs; this only
+   * Reach is purchased separately from the upgrade catalog between runs; this only
    * re-pegs. Returns whether it re-pegged (false unless the run has ended — the
    * bell must ring first).
    */
@@ -127,10 +127,10 @@ export function createPrestigeModule(): EngineModule {
       // ended run (and, flipped, signals a fresh run needs its accumulator zeroed)
       // — so a save/reload mid-`ended` never re-banks. `outputRaw` is the run-scoped
       // production accumulator (Decimal-as-string). Endurance is the kernel's Σ W_n
-      // (read, not accumulated here). `wallet` is the graduated Fragments Resource;
+      // (read, not accumulated here). `fragmentsResource` is the Fragments Resource;
       // its `cumulative` tracker is lifetimeFragments.
       const state = withPersistentContext('cycler/prestige', () => ({
-        wallet: createResource<DecimalSource>(0, {
+        fragmentsResource: createResource<DecimalSource>(0, {
           id: 'fragments',
           displayName: 'fragments',
           decimals: 0,
@@ -140,9 +140,11 @@ export function createPrestigeModule(): EngineModule {
         mergeCountRaw: persistent<number>(0, { id: 'merge-count' }),
       }));
 
-      const wallet = state.wallet;
-      const fragments = computed(() => new Decimal(wallet.value));
-      const lifetimeFragments = computed(() => new Decimal(wallet.cumulative?.value ?? 0));
+      const fragmentsResource = state.fragmentsResource;
+      const fragments = computed(() => new Decimal(fragmentsResource.value));
+      const lifetimeFragments = computed(
+        () => new Decimal(fragmentsResource.cumulative?.value ?? 0),
+      );
       const runOutput = computed(() => new Decimal(state.outputRaw.value));
       // Endurance is the kernel-owned wave-native Σ W_n, reset by cycle.startRun.
       const runEndurance = computed(() => getCycle().runEndurance.value);
@@ -166,10 +168,10 @@ export function createPrestigeModule(): EngineModule {
             .add(getBuild().capacity.value.mul(dtMinutes))
             .toString();
         } else if (!state.banked.value) {
-          // Auto-bank the payout. addResource grows the wallet (and, via its sync
+          // Auto-bank the payout. addResource grows the Fragments amount (and, via its sync
           // watch, the cumulative tracker == lifetimeFragments); spends never
           // touch cumulative, so it stays exactly lifetime-banked.
-          addResource(wallet, pendingFragments.value);
+          addResource(fragmentsResource, pendingFragments.value);
           state.banked.value = true;
         }
       });
@@ -186,7 +188,7 @@ export function createPrestigeModule(): EngineModule {
 
       const api: PrestigeApi = {
         fragments,
-        fragmentsResource: wallet,
+        fragmentsResource,
         lifetimeFragments,
         runOutput,
         runEndurance,

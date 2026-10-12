@@ -1,7 +1,7 @@
 <!--
   ProphecyPanel — the salvo-posture ladder drawn as the Prophecy draft (studio/
   open-loop-starter#21 leaf 5: ladder-as-cards, UI only). The model is a one-way,
-  reach-gated ladder (Standard→Accelerated→Cascade→Collapse); each posture authors a
+  reach-locked ladder (Standard→Accelerated→Cascade→Collapse); each posture authors a
   steeper per-wave g for a sharper, shorter run. A switch lands on the NEXT run (the
   kernel freezes the schedule at run start), so this is a between-runs decision.
   Advancing steps one rung when reach unlocks it. Shows the effective (Dampen-bent) g.

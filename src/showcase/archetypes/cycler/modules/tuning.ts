@@ -9,10 +9,10 @@ import {
 /**
  * Keys registered against the cycler tuning registry — the one perturbation
  * path. Probes and the balance workbench sweep these via `pushOverrides`; the
- * registry surfaces them to the picker so they can be enumerated rather than
+ * registry presents them to the picker so they can be enumerated rather than
  * known in advance.
  *
- * Namespaces follow the spine's terms rather than the files the constants sit
+ * Key prefixes follow the spine's terms rather than the files the constants sit
  * in, because that is how the economy decomposes (`../BALANCING.md` § The tunables):
  *
  *   - `peg/*`        — the two numbers that author pacing: headroom H, salvo base g

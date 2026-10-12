@@ -1,9 +1,9 @@
 <!--
-  LeversPanel — the two permanent levers on the Fragments wallet (the `addUpgrade`
-  catalog), phosphor-styled. NOT the one-shot UpgradeGrid: these are leveled, gated
-  levers with a distinct pace/reach identity.
-    • Reinforce (reach) — freely sold; raises the ceiling, +0 run length under the peg.
-    • Dampen (g-bender) — the sole pace lever; reach-gated, bends g toward 1.
+  LeversPanel — the two permanent levers that spend Fragments (the `addUpgrade`
+  catalog), phosphor-styled. NOT the one-shot UpgradeGrid: these are leveled levers,
+  locked by reach, with a distinct pace/reach identity.
+    • Reinforce (reach) — freely offered; raises the ceiling, +0 run length under the peg.
+    • Dampen (g-bender) — the sole pace lever; locked by reach, bends g toward 1.
   Reads the purchasable primitives directly (cost / canPurchase / purchase).
 -->
 <script setup lang="ts">
@@ -18,13 +18,13 @@ const build = getBuild();
 
 const reachLevel = computed(() => Number(upgrades.reach.count.value));
 const reachCost = computed(() => new Decimal(upgrades.reach.getCost(1)));
-const reachCanBuy = computed(() => upgrades.reach.canPurchase.value);
+const reachCanPurchase = computed(() => upgrades.reach.canPurchase.value);
 
 const bendLevel = computed(() => upgrades.gBendLevel.value);
 const bendCost = computed(() => new Decimal(upgrades.gBender.getCost(1)));
-const bendCanBuy = computed(() => upgrades.gBender.canPurchase.value);
-const bendGateReq = computed(() => (bendLevel.value + 1) * UPGRADE_BALANCE.gBendGateStep);
-const bendGated = computed(() => build.powerLevel.value < bendGateReq.value);
+const bendCanPurchase = computed(() => upgrades.gBender.canPurchase.value);
+const bendThreshold = computed(() => (bendLevel.value + 1) * UPGRADE_BALANCE.gBendThresholdStep);
+const bendLocked = computed(() => build.powerLevel.value < bendThreshold.value);
 </script>
 
 <template>
@@ -39,8 +39,8 @@ const bendGated = computed(() => build.powerLevel.value < bendGateReq.value);
       <span class="cyc-lever__lv">L{{ reachLevel }}</span>
       <Button
         class="cyc-btn"
-        :class="{ broke: !reachCanBuy }"
-        :disabled="!reachCanBuy"
+        :class="{ broke: !reachCanPurchase }"
+        :disabled="!reachCanPurchase"
         @click="upgrades.reach.purchase(1)"
       >
         ◈ {{ format(reachCost, 0) }}
@@ -51,18 +51,18 @@ const bendGated = computed(() => build.powerLevel.value < bendGateReq.value);
       <div class="cyc-lever__meta">
         <div class="cyc-lever__t">Dampen</div>
         <div class="cyc-lever__d">
-          <template v-if="bendGated"> Reach-gated — needs Power L ≥ {{ bendGateReq }}. </template>
+          <template v-if="bendLocked"> Locked — needs Power L ≥ {{ bendThreshold }}. </template>
           <template v-else> Bend g toward 1 — the sole pace lever. Lengthens every run. </template>
         </div>
       </div>
       <span class="cyc-lever__lv">L{{ bendLevel }}</span>
       <Button
         class="cyc-btn"
-        :class="{ broke: !bendCanBuy }"
-        :disabled="!bendCanBuy"
+        :class="{ broke: !bendCanPurchase }"
+        :disabled="!bendCanPurchase"
         @click="upgrades.gBender.purchase(1)"
       >
-        <template v-if="bendGated"> locked </template>
+        <template v-if="bendLocked"> locked </template>
         <template v-else> ◈ {{ format(bendCost, 0) }} </template>
       </Button>
     </div>

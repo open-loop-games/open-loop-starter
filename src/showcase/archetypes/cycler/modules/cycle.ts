@@ -24,10 +24,10 @@ import { getWall } from './wall';
  * buffer can absorb (OVERRUN → Redeploy).
  *
  * The salvo is EXOGENOUS and WAVE-indexed: `W_N = W₀ · g^N`, a pure function of the
- * wave count, never derived from within-run wallet state — that is what guarantees
+ * wave count, never derived from within-run currency state — that is what guarantees
  * termination and keeps the crossing closed-form. Under the peg (`W₀ = cMax / H`)
  * the salvo crosses the ceiling at the AUTHORED wave `N_c = log_g(H)`, independent of
- * how large cMax has grown (power buys reach, only (H, g) move pacing). A bounded,
+ * how large cMax has grown (power adds reach, only (H, g) move pacing). A bounded,
  * player-controlled `Δ_wall` tail — the line-HP buffer, repaired from MW surplus in
  * STANDBY — extends the run a few waves past the crossing; `N*_waves = log_g(H) + Δ_wall`.
  *
@@ -216,7 +216,7 @@ export function createCycleModule(options: CycleModuleOptions = {}): EngineModul
       };
 
       // The hard-phase controller. STANDBY drips surplus into the line (throughput-
-      // gated by Bulwarks); INBOUND resolves one salvo at its close — leak-through
+      // limited by Bulwarks); INBOUND resolves one salvo at its close — leak-through
       // `max(0, W_N − realized C)` bleeds the line, and a breach ends the run.
       ctx.onTick((dt) => {
         if (state.runState.value !== 'running') return;

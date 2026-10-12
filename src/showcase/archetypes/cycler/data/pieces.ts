@@ -21,7 +21,7 @@
 //   • Bulwark (repair)   — the third strategic leg made spatial (leaf 3): converts
 //                          MW surplus into line-repair THROUGHPUT (Δ_wall tail). A
 //                          Bulwark cell is a cell not producing or clearing, so
-//                          "buy tail" competes for the board like C and output.
+//                          adding tail competes for the board like C and output.
 //                          Not a boost receiver (boosters don't lift it).
 // Pure config: typed defs + the reference full-board layout the closed-form
 // ceiling calibrates against. The board module reads these at construction.
@@ -138,7 +138,7 @@ export const REFERENCE_LAYOUT: readonly (PieceKind | null)[] = [
  * A competent reference DEFENSE board: a forward Lance line (relay-boosted),
  * Reactors behind, and one Bulwark. Its realized clear-rate is a fixed fraction of
  * the aspirational `cMax`, so a run reaches a consistent, power-invariant crossing +
- * Δ_wall tail. Row-major, length BOARD.width·BOARD.height. Used by the wave-model sim
+ * Δ_wall tail. Row-major, length BOARD.width·BOARD.height. Used by the test
  * harness (`sim/harness.ts` placeDefense) and the balance probes — one source of the
  * reference so they can't drift. (Distinct from REFERENCE_LAYOUT, the all-producer
  * board the OUTPUT ceiling D_max calibrates against.)

@@ -6,8 +6,8 @@
  *   • deeper (steeper-g) postures give strictly shorter runs (measured + closed-form);
  *   • WITHIN a posture the peg holds run length flat as reach climbs (+0 on
  *     raisePower); only CROSSING a posture moves it — the pace step;
- *   • the step is one-way reach-gated: advanceTier is a no-op until L reaches the next
- *     posture's unlock gate, and it never runs past the last posture;
+ *   • the step is one-way reach-locked: advanceTier is a no-op until L reaches the next
+ *     posture's unlock threshold, and it never runs past the last posture;
  *   • the schedule freezes at run start — advancing mid-run leaves the current run at
  *     its posture and lands the switch on the next run.
  *
@@ -80,7 +80,7 @@ describe('salvo posture — power WITHIN a posture is +0; crossing a posture is 
     const base = await runLength();
     const baseC = b.cMax.value.toNumber();
 
-    // Raise reach to the next gate but DON'T advance — still posture 0, peg holds.
+    // Raise reach to the next threshold but DON'T advance — still posture 0, peg holds.
     while (b.powerLevel.value < SALVO_POSTURES[1].unlockPowerLevel) b.raisePower();
     cycle().startRun();
     const powered = await runLength();
@@ -97,10 +97,10 @@ describe('salvo posture — power WITHIN a posture is +0; crossing a posture is 
   });
 });
 
-describe('salvo posture — the step is one-way reach-gated', () => {
+describe('salvo posture — the step is one-way reach-locked', () => {
   beforeEach(() => boot());
 
-  it('advanceTier is a no-op until L reaches the next posture gate', () => {
+  it('advanceTier is a no-op until L reaches the next posture threshold', () => {
     const bt = burnTier();
     const b = build();
 
@@ -110,18 +110,18 @@ describe('salvo posture — the step is one-way reach-gated', () => {
     expect(bt.activeIndex.value).toBe(0);
     expect(bt.nextUnlockPowerLevel.value).toBe(SALVO_POSTURES[1].unlockPowerLevel);
 
-    // One level shy of the gate — still refused.
+    // One level shy of the threshold — still refused.
     while (b.powerLevel.value < SALVO_POSTURES[1].unlockPowerLevel - 1) b.raisePower();
     expect(bt.canAdvance.value).toBe(false);
     expect(bt.advanceTier()).toBe(false);
 
-    // At the gate — it unlocks and advances exactly once.
+    // At the threshold — it unlocks and advances exactly once.
     b.raisePower();
     expect(bt.unlockedIndex.value).toBe(1);
     expect(bt.canAdvance.value).toBe(true);
     expect(bt.advanceTier()).toBe(true);
     expect(bt.activeIndex.value).toBe(1);
-    // Posture 2 is gated again — one rung per reach threshold.
+    // Posture 2 is locked again — one rung per reach threshold.
     expect(bt.canAdvance.value).toBe(false);
     expect(bt.advanceTier()).toBe(false);
   });
@@ -129,8 +129,8 @@ describe('salvo posture — the step is one-way reach-gated', () => {
   it('never advances past the last posture', () => {
     const bt = burnTier();
     const b = build();
-    const lastGate = SALVO_POSTURES[SALVO_POSTURES.length - 1].unlockPowerLevel;
-    for (let i = 0; i < lastGate + 2; i++) b.raisePower();
+    const lastThreshold = SALVO_POSTURES[SALVO_POSTURES.length - 1].unlockPowerLevel;
+    for (let i = 0; i < lastThreshold + 2; i++) b.raisePower();
     while (bt.advanceTier()) {
       /* climb to the top */
     }

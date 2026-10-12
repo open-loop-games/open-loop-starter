@@ -1,5 +1,5 @@
 /**
- * Cycler — prestige probe: the Redeploy boundary that closes the loop, on the real
+ * Cycler — prestige probe: the Redeploy boundary that closes the cycle, on the real
  * engine.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/cycler/balance/prestige-probe.ts`
@@ -8,7 +8,7 @@
  * § The probe — real engine, real policies): drives the REAL assembled stack
  * over the reference board through actual Redeploys. Verifies the projection
  * (`cycler-projection.ts` § currency, § arc): the run auto-banks a sublinear currency
- * on the line breach, reach is a catalog buy, and the re-peg holds run length flat
+ * on the line breach, reach is a catalog purchase, and the re-peg holds run length flat
  * while cMax and banked currency climb. Mixed sourcing: production = ∫build.capacity dt,
  * endurance = Σ W_n. Absolute payout magnitudes are calibrated (data/prestige.ts);
  * this probe reports the measured trends.
@@ -67,7 +67,7 @@ async function probePayout(): Promise<void> {
         Math.round(prestige.runEndurance.value.toNumber()).toLocaleString().padEnd(15) +
         `${prestige.pendingFragments.value.toNumber()}`,
     );
-    build.raisePower(); // one level per step (board persists across startRun)
+    build.raisePower(); // one level per step (startRun keeps the board)
     cycle.startRun();
   }
   handle.dispose();
@@ -142,7 +142,7 @@ async function probeSublinear(): Promise<void> {
     }
     prevOut = out;
     prevPay = pay;
-    build.raisePower(); // one level per step (board persists across startRun)
+    build.raisePower(); // one level per step (startRun keeps the board)
     cycle.startRun();
   }
   console.log(

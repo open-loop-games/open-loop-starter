@@ -5,7 +5,7 @@
  *   • the wall as a bounded HP buffer — damage clamps to breach, repair caps at max;
  *   • the DEFENSE RESOLUTION driven through the leaf-1 salvo schedule over the REAL
  *     board's clear-rate C and MW surplus (the shipping build + wall modules, driven
- *     by the harness — sim and game can't drift). Behavioral, not magnitude: the
+ *     by the test harness — test and game can't drift). Behavioral, not magnitude: the
  *     wall gives a bounded Δ_wall tail past the salvo crossing, repair extends it,
  *     and under-building C relative to the pegged reach breaches early (the
  *     C-vs-output tradeoff biting). Absolute (ι, ρ, δ, L_HP) calibration stays a
@@ -129,11 +129,11 @@ describe('defense resolution — the wall gives a bounded Δ_wall tail', () => {
     const noWall = walkToBreach(wall(), C, w0, surplus, 1); // no buffer
 
     expect(withWall).toBeGreaterThan(crossingWave); // survives the crossing (Δ_wall ≥ 1)
-    expect(withWall).toBeGreaterThan(noWall); // the wall is what buys the tail
+    expect(withWall).toBeGreaterThan(noWall); // the wall is what adds the tail
     expect(withWall - crossingWave).toBeLessThan(8); // bounded — leak is geometric
   });
 
-  it('repair extends the tail (surplus routed to the line buys waves)', () => {
+  it('repair extends the tail (surplus routed to the line adds waves)', () => {
     const b = build();
     place(b, STRONG);
     const C = b.clearRate.value.toNumber();
@@ -159,7 +159,7 @@ describe('defense resolution — the wall gives a bounded Δ_wall tail', () => {
 
     const backBreach = walkToBreach(wall(), cBack, w0, 0, lineHP);
     const fwdBreach = walkToBreach(wall(), cFwd, w0, b2.mwSurplus.value.toNumber(), lineHP);
-    expect(backBreach).toBeLessThan(fwdBreach); // back-placed Lances buy nothing — the line falls sooner
+    expect(backBreach).toBeLessThan(fwdBreach); // back-placed Lances add nothing — the line falls sooner
   });
 
   it('under-building C relative to the pegged reach breaches early (the tradeoff)', () => {

@@ -56,9 +56,9 @@ export interface CyclerModulesOptions extends CycleModuleOptions, BurnTierModule
  * salvo peg and realized `clearRate` for leak resolution. Burn-tier installs next and
  * owns the per-wave pace surface — the kernel reads its active schedule
  * (`getBurnTier().schedule()`) unless an explicit `schedule` override is passed. Wall
- * holds the defended line the kernel drives. Prestige closes the loop — it reads the
+ * holds the defended line the kernel drives. Prestige closes the cycle — it reads the
  * live kernel (run-end, endurance) and build (production, resetRun). Upgrades is the
- * permanent catalog on the prestige wallet — it reads the Fragments Resource (prestige)
+ * permanent catalog on the prestige currency — it reads the Fragments Resource (prestige)
  * and the power level (build), so it installs LAST.
  */
 export function createCyclerModules(options: CyclerModulesOptions = {}): EngineModule[] {

@@ -1,10 +1,10 @@
 /**
  * Cycler prestige layer — wave-model lock (IDENTITY § Balance model; studio/
- * open-loop-starter#21 leaf 3). Pins the Redeploy boundary that closes the loop.
+ * open-loop-starter#21 leaf 3). Pins the Redeploy boundary that closes the cycle.
  * Behavioral + shape invariants (not magnitude-as-target) — they stay true across
  * retunes:
  *   • the run auto-pays-out on the line breach (Redeploy bell, not a fail state);
- *   • merge() re-pegs to the next run WITHOUT buying power (reach is a catalog buy
+ *   • merge() re-pegs to the next run WITHOUT purchasing power (reach is a catalog purchase
  *     now — see `upgrades.test.ts` for the reach-climb arc);
  *   • currency is sublinear in run output (∛-per-source), mixed sourcing
  *     (production = ∫build.capacity dt, endurance = Σ W_n).
@@ -37,7 +37,7 @@ describe('prestige — the run auto-pays-out on the breach (Redeploy bell, not a
 
     await runToEnd();
 
-    // Auto-bank: the breach paid out. Wallet == what the run accrued.
+    // Auto-bank: the breach paid out. The Fragments amount == what the run accrued.
     const payout = p.pendingFragments.value;
     expect(payout.gt(0)).toBe(true);
     expect(p.fragments.value.eq(payout)).toBe(true);
@@ -45,17 +45,17 @@ describe('prestige — the run auto-pays-out on the breach (Redeploy bell, not a
     expect(p.mergeCount.value).toBe(0); // paid out WITHOUT a merge
   });
 
-  it('a competent first run banks exactly the quorum (the loop is affordable)', async () => {
+  it('a competent first run banks exactly the quorum (the cycle is affordable)', async () => {
     const p = prestige();
     placeDefense();
     await runToEnd();
-    // Calibrated 2+1 split == quorum, so the first reach buy (cost == quorum at L=0)
+    // Calibrated 2+1 split == quorum, so the first reach purchase (cost == quorum at L=0)
     // is affordable. The reach cost + affordability is covered in upgrades.test.ts.
     expect(p.fragments.value.toNumber()).toBe(PRESTIGE_BALANCE.mergeQuorum);
   });
 });
 
-describe('prestige — merge() re-pegs to the next run (reach is a separate catalog buy)', () => {
+describe('prestige — merge() re-pegs to the next run (reach is a separate catalog purchase)', () => {
   beforeEach(() => boot());
 
   it('is a no-op before the bell rings (the run must breach first)', () => {
@@ -74,7 +74,7 @@ describe('prestige — merge() re-pegs to the next run (reach is a separate cata
     const merged = p.merge();
 
     expect(merged).toBe(true);
-    expect(b.powerLevel.value).toBe(0); // merge no longer buys power — that's the catalog's job
+    expect(b.powerLevel.value).toBe(0); // merge no longer purchases power — that's the catalog's job
     expect(cycle().runState.value).toBe('running'); // re-pegged, clock restarted
     expect(p.mergeCount.value).toBe(1);
   });
@@ -96,7 +96,7 @@ describe('prestige — the arc: currency banks while run length holds flat', () 
       const lifetime = p.lifetimeFragments.value.toNumber();
       expect(lifetime).toBeGreaterThan(lastLifetime);
       lastLifetime = lifetime;
-      p.merge(); // re-peg for the next run (no reach buy — C holds, so does run length)
+      p.merge(); // re-peg for the next run (no reach purchase — C holds, so does run length)
     }
 
     // Run length is flat across the whole arc (the peg): all identical.
@@ -127,7 +127,7 @@ describe('prestige — currency is sublinear in run output (∛-per-source)', ()
       prevOut = out;
       prevPay = pay;
       b.raisePower(); // one level per step so capacity (and output) doubles
-      cycle().startRun(); // re-peg; board persists (startRun doesn't clear it)
+      cycle().startRun(); // re-peg; the board stays (startRun doesn't clear it)
     }
   });
 

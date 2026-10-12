@@ -1,15 +1,15 @@
 /**
- * Cycler — upgrade probe: the permanent catalog on the prestige wallet, on the real
+ * Cycler — upgrade probe: the permanent catalog on the prestige currency, on the real
  * engine.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/cycler/balance/upgrade-probe.ts`
  *
  * Probe (`open-loop-engine/docs/consumer-guide-balance.md`
  * § The probe — real engine, real policies): drives the REAL assembled stack
- * over the reference board through actual catalog buys. Verifies the projection:
+ * over the reference board through actual catalog purchases. Verifies the projection:
  *   1. the reach permanent re-pegs to +0 run length (reach, not pacing);
  *   2. each g-bender level lengthens the run (bends salvo g toward the g=1 asymptote);
- *   3. the g-bender is reach-gated (locked until permanent power reaches the gate).
+ *   3. the g-bender is reach-locked (locked until permanent power reaches the threshold).
  *
  * Coarse tick (1s) per `.claude/CLAUDE.md` § Balance methodology. Absolute run-length
  * magnitudes are measured, never authored; this probe reports measured trends.
@@ -27,10 +27,10 @@ const INTERVAL_RATE = 1;
 const MAX_TICKS = 400_000;
 
 const g = DEFENSE_BALANCE.salvoBase;
-const { gBendRatio, gBendBaseCost, gBendCostRatio, gBendGateStep } = UPGRADE_BALANCE;
+const { gBendRatio, gBendBaseCost, gBendCostRatio, gBendThresholdStep } = UPGRADE_BALANCE;
 
 const gEffAt = (Lb: number): number => 1 + (g - 1) * Math.pow(gBendRatio, Lb);
-const gBendCost = (Lb: number): number => gBendBaseCost * Math.pow(gBendCostRatio, Lb); // price L_bend→L_bend+1
+const gBendCost = (Lb: number): number => gBendBaseCost * Math.pow(gBendCostRatio, Lb); // cost L_bend→L_bend+1
 
 const fmt = (m: number): string => (m < 90 ? `${m.toFixed(2)}m` : `${(m / 60).toFixed(2)}h`);
 const HEAD = (s: string): void => console.log(`\n═══ ${s} ═══`);
@@ -54,7 +54,7 @@ function bootStack() {
 // ─── Probe 1 — the reach permanent re-pegs to +0 run length ────────────────────
 
 async function probeReach(): Promise<void> {
-  HEAD('Probe 1 — reach is +0 run length (buys cMax, the peg re-baselines W₀)');
+  HEAD('Probe 1 — reach is +0 run length (adds cMax, the peg re-baselines W₀)');
   const { handle, cycle, build, prestige, upgrades } = bootStack();
   console.log('  L'.padEnd(4) + 'cMax'.padEnd(10) + 'run len'.padEnd(10) + 'reach cost');
   const lengths: number[] = [];
@@ -86,9 +86,11 @@ async function probeGBender(): Promise<void> {
   HEAD('Probe 2 — the g-bender lengthens the run (bends salvo g → 1 asymptote)');
   const { handle, cycle, build, prestige, upgrades } = bootStack();
   const maxLevel = 4;
-  for (let i = 0; i < maxLevel * gBendGateStep; i++) build.raisePower(); // clear every bend gate
+  for (let i = 0; i < maxLevel * gBendThresholdStep; i++) build.raisePower(); // clear every bend threshold
   cycle.startRun();
-  console.log(`  forced reach L=${build.powerLevel.value} (clears all bend gates); base g=${g}`);
+  console.log(
+    `  forced reach L=${build.powerLevel.value} (clears all bend thresholds); base g=${g}`,
+  );
   console.log('  L_bend'.padEnd(9) + 'g_eff'.padEnd(8) + 'measured'.padEnd(12) + 'cost');
   let prev = -Infinity;
   for (let Lb = 0; Lb <= maxLevel; Lb++) {
@@ -117,14 +119,16 @@ async function probeGBender(): Promise<void> {
     );
     prev = measured;
   }
-  console.log('  Lower g_eff ⇒ shallower salvo ⇒ longer run — the sole pace lever, gated.');
+  console.log(
+    '  Lower g_eff ⇒ shallower salvo ⇒ longer run — the sole pace lever, locked by reach.',
+  );
   handle.dispose();
 }
 
-// ─── Probe 3 — the g-bender is reach-gated ─────────────────────────────────────
+// ─── Probe 3 — the g-bender is reach-locked ─────────────────────────────────────
 
-async function probeGate(): Promise<void> {
-  HEAD('Probe 3 — the g-bender is reach-gated (locked on power, not Fragments)');
+async function probeThreshold(): Promise<void> {
+  HEAD('Probe 3 — the g-bender is reach-locked (locked on power, not Fragments)');
   const { handle, cycle, build, prestige, upgrades } = bootStack();
   while (prestige.fragments.value.toNumber() < gBendCost(0) + 5) {
     if (cycle.runState.value === 'ended') {
@@ -133,13 +137,13 @@ async function probeGate(): Promise<void> {
     }
     await handle.tickUntil(() => cycle.runState.value === 'ended', MAX_TICKS);
   }
-  const gateFor1 = 1 * gBendGateStep;
+  const thresholdFor1 = 1 * gBendThresholdStep;
   console.log(
-    `  wallet ${prestige.fragments.value.toNumber()} ≥ cost ${gBendCost(0)}, but L=${build.powerLevel.value} < gate ${gateFor1}: canPurchase = ${upgrades.gBender.canPurchase.value}`,
+    `  fragments ${prestige.fragments.value.toNumber()} ≥ cost ${gBendCost(0)}, but L=${build.powerLevel.value} < threshold ${thresholdFor1}: canPurchase = ${upgrades.gBender.canPurchase.value}`,
   );
-  for (let i = 0; i < gateFor1; i++) build.raisePower();
+  for (let i = 0; i < thresholdFor1; i++) build.raisePower();
   console.log(
-    `  raise reach to L=${build.powerLevel.value} ≥ gate ${gateFor1}: canPurchase = ${upgrades.gBender.canPurchase.value}`,
+    `  raise reach to L=${build.powerLevel.value} ≥ threshold ${thresholdFor1}: canPurchase = ${upgrades.gBender.canPurchase.value}`,
   );
   handle.dispose();
 }
@@ -148,7 +152,7 @@ async function main(): Promise<void> {
   console.log('Cycler — upgrade probe (the permanent catalog, real engine)');
   await probeReach();
   await probeGBender();
-  await probeGate();
+  await probeThreshold();
   console.log('');
 }
 

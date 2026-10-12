@@ -74,12 +74,12 @@ export const DEFENSE_BALANCE: DefenseBalance = {
 // ─── Skeleton (salvo postures) ───
 // The per-WAVE pace surface (the reshaped `addBurnTier` ladder — `data/threat.ts`'s
 // per-TIME `BURN_TIERS` reindexed to `salvoBase` per wave; studio/open-loop-starter#21
-// leaf 3 contract flip). A reach-gated sequence of salvo postures, each authoring its
+// leaf 3 contract flip). A reach-locked sequence of salvo postures, each authoring its
 // own `salvoBase` g. The active posture's `g` feeds the cycle kernel, which FREEZES it
 // at run start (like the W₀ peg), so a switch applies to the next run and the crossing
 // stays closed-form. Deeper postures raise g — a steeper salvo, a shorter/sharper run
-// (Increlution Part 3: attacking the escalation base is the high-leverage lever). The
-// reach gate is permanent power level L. Posture 0's g mirrors DEFENSE_BALANCE.salvoBase
+// (Increlution Part 3: attacking the escalation base has the highest leverage). The
+// reach threshold is permanent power level L. Posture 0's g mirrors DEFENSE_BALANCE.salvoBase
 // so the shipped run is unchanged. Absolute per-posture g and the Prophecy-draft /
 // yield-incentive layer are leaf-4 balance work; this leaf ships the mechanic.
 
@@ -88,7 +88,7 @@ export interface SalvoPosture {
   label: string;
   /** Salvo escalation base g per wave for this posture — steeper ⇒ shorter, sharper run. */
   salvoBase: number;
-  /** Reach gate: unlocks once permanent power level L ≥ this. Posture 0 = 0. */
+  /** Reach threshold: unlocks once permanent power level L ≥ this. Posture 0 = 0. */
   unlockPowerLevel: number;
 }
 
@@ -117,7 +117,7 @@ export const SALVO_POSTURES: readonly SalvoPosture[] = [
 //   • THE PEG, unchanged. W₀ tracks the permanent saturated C, frozen at Redeploy
 //     (like the abstract W₀ = D_max/H). So the CROSSING is log_g(H) waves — a
 //     directly-authored number, invariant to how many Lances vs Reactors fill the
-//     forward cells and to permanent power. Power/allocation buy REACH (absolute C →
+//     forward cells and to permanent power. Power/allocation add REACH (absolute C →
 //     currency) and Δ_wall (via MW surplus → repair), never the base crossing. At
 //     H=16, g=1.6: log_1.6(16) = 5.9 → the salvo overtakes C on wave 6.
 //   • Δ_wall IS BOUNDED AND LOGARITHMIC. Past the crossing, leak = C·(g^j − 1) grows
@@ -142,4 +142,4 @@ export const SALVO_POSTURES: readonly SalvoPosture[] = [
 //     [12,20] band. Move run length by H (waves-to-crossing) or the salvo posture g
 //     (per-wave steepness), never by C — under the peg C is pure reach. Δ_wall (via
 //     L_HP / repair) sizes only the tail. The wave-cycle time converts the authored
-//     wave count into the felt session length; it is costume, re-measured per fork.
+//     wave count into the felt play-session length; it is costume, re-measured per fork.
