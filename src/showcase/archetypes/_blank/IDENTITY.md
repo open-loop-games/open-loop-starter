@@ -37,7 +37,7 @@ to demonstrate the canonical wiring; the game's real identity is the fork's to w
 
 ## Rate-function spine / bucket
 
-**Bucket: linear accumulation** — `count(t) = ratePerSecond · t`.
+**Bucket: linear accumulation** — `amount(t) = ratePerSecond · t`.
 
 This is the load-bearing section of any real `IDENTITY.md`, and it declares a
 **coverage boundary** — three things:
@@ -94,12 +94,12 @@ spine, as prose + math           runnable projection             probe (real eng
 - **Spine** — `data/game.ts` `// ─── Balance ───`: the closed form that justifies
   `ratePerSecond`.
 - **Projection** — `balance/game-projection.ts`: pure math, no engine; predicts
-  `count(t)`.
+  `amount(t)`.
 - **Probe** — `balance/game-probe.ts`: drives the shipping `game/core` module on
   the real engine and prints the drift against the projection. It reports; it
   does not assert.
 - **Behavioral suite** — `sim/example.test.ts` specs *what the mechanic does*
-  (the count rises), carrying no magnitudes, which is why it survives a retune.
+  (the amount rises), carrying no magnitudes, which is why it survives a retune.
 
 Magnitudes never become assertions. A measured value with a tolerance band
 around it reds on every legitimate retune, the band gets widened to restore

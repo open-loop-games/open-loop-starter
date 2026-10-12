@@ -228,9 +228,9 @@ const seriesModel = computed<string | null>({
             type="button"
             class="bw-btn bw-btn--ghost"
             :disabled="!wb.committed.value"
-            @click="wb.discard()"
+            @click="wb.revert()"
           >
-            Discard
+            Revert
           </Button>
         </div>
 

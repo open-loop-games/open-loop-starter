@@ -4,7 +4,7 @@
  * The mounting test exercises the integration shape inside Vue, asserting:
  *  - picker rows render grouped by source
  *  - run() populates progressive `progress` and final `rows`
- *  - commit() / discard() mutate the live engine and clean up
+ *  - commit() / revert() mutate the live engine and clean up
  */
 
 import { describe, it, expect } from 'vitest';
@@ -167,7 +167,7 @@ describe('useBalanceWorkbench composable', () => {
     live.stop();
   });
 
-  it('commit applies the perturbation to the live engine; discard reverts', () => {
+  it('commit applies the perturbation to the live engine; revert undoes it', () => {
     const displayName = 'bw-commit-gold';
     const modFactory = (): EngineModule => makeProducerModule(displayName);
     const live = buildLiveEngine('bw-commit', modFactory());
@@ -187,10 +187,10 @@ describe('useBalanceWorkbench composable', () => {
     const afterCommit = Number(chain.apply(1));
     expect(afterCommit).toBeGreaterThan(before);
 
-    wb.discard();
+    wb.revert();
     expect(wb.committed.value).toBe(false);
-    const afterDiscard = Number(chain.apply(1));
-    expect(afterDiscard).toBe(before);
+    const afterRevert = Number(chain.apply(1));
+    expect(afterRevert).toBe(before);
 
     live.stop();
   });

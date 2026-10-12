@@ -71,8 +71,8 @@ export interface UseAutomationOptions {
 }
 
 export interface UseAutomationReturn {
-  /** The automation tier system — use for UI, event wiring, prestige resets. */
-  tierSystem: AutomationTiers;
+  /** The engine's automation tiers — use for UI, event wiring, prestige resets. */
+  automationTiers: AutomationTiers;
 
   /** The throttle gate backing {@link shouldRun}. */
   throttle: Throttle;
@@ -103,24 +103,24 @@ export interface UseAutomationReturn {
 export function useAutomation(options: UseAutomationOptions): UseAutomationReturn {
   const { id, tiers, initiallyUnlocked, throttleInterval = 0 } = options;
 
-  const tierSystem = createAutomationTiers({ id, tiers, initiallyUnlocked });
+  const automationTiers = createAutomationTiers({ id, tiers, initiallyUnlocked });
   const throttle = createThrottle({ interval: throttleInterval });
 
-  const sorted = tierSystem.tiers;
+  const sorted = automationTiers.tiers;
   const lowestOrder = sorted[0]?.order ?? 0;
 
-  const isAutomated = computed(() => tierSystem.currentTierOrder.value > lowestOrder);
+  const isAutomated = computed(() => automationTiers.currentTierOrder.value > lowestOrder);
   const currentTierName = computed(
-    () => sorted.find((t) => t.id === tierSystem.currentTierId.value)?.displayName ?? '',
+    () => sorted.find((t) => t.id === automationTiers.currentTierId.value)?.displayName ?? '',
   );
 
   return {
-    tierSystem,
+    automationTiers,
     throttle,
     shouldRun: (dt: number) => throttle.ready(dt),
-    hasReached: (tierId: string) => tierSystem.hasReached(tierId),
+    hasReached: (tierId: string) => automationTiers.hasReached(tierId),
     isAutomated,
-    currentTierId: tierSystem.currentTierId,
+    currentTierId: automationTiers.currentTierId,
     currentTierName,
   };
 }

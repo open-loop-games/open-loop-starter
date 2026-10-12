@@ -6,7 +6,7 @@
   ProducerTooltip.vue) and use `useRateBreakdown` for shared compute.
 
   Slot scope is the same `useRateBreakdown` view, so callers can compose
-  arbitrary head/extra rows without re-deriving contribution/marginal math.
+  arbitrary head/extra rows without re-deriving productionRate/marginal math.
 
   Class hooks: olui-rate-breakdown, olui-rate-breakdown__head, …__stats,
   …__stat, …__stat--marginal. Reactive state from reka-ui (RichTooltip).
@@ -22,7 +22,7 @@ import { useRateBreakdown, type RateBreakdownRow } from '@/composables/useRateBr
 const props = withDefaults(
   defineProps<{
     row: RateBreakdownRow;
-    /** Total rate across the same resource — denominator for contribution %. */
+    /** Total rate across the same resource — denominator for productionRate %. */
     totalRate: DecimalSource;
     /** Count the marginal projection should reflect. Default 1. */
     pendingCount?: DecimalSource;
@@ -34,7 +34,7 @@ const props = withDefaults(
     breakdownTitle?: string;
     /** Render the marginal "next purchase" row. Default `true` when
      *  pendingCount > 0. Pass `false` for displays that only show
-     *  current-state contribution. */
+     *  current-state productionRate. */
     showMarginal?: boolean;
   }>(),
   {
@@ -80,9 +80,9 @@ const rowRef = toRef(props, 'row');
           <div class="olui-rate-breakdown__stat">
             <dt>Contributes</dt>
             <dd>
-              {{ format(view.contribution.value, 2) }}{{ unit }}
+              {{ format(view.productionRate.value, 2) }}{{ unit }}
               <span class="olui-rate-breakdown__muted">
-                ({{ formatPercent(view.contributionPct.value, 1) }})
+                ({{ formatPercent(view.productionShare.value, 1) }})
               </span>
             </dd>
           </div>

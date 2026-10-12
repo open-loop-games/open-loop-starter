@@ -1,5 +1,5 @@
 import { computed, type ComputedRef } from 'vue';
-import type { UpgradeCellData } from '@/ui/compositions';
+import type { UpgradeCardData } from '@/ui/compositions';
 import type { RefinementDef } from '../data/types';
 import { getRefinements } from '../modules';
 
@@ -20,7 +20,7 @@ export interface RefinementCellExtra {
   def: RefinementDef;
 }
 
-export type RefinementCell = UpgradeCellData<RefinementCellExtra>;
+export type RefinementCell = UpgradeCardData<RefinementCellExtra>;
 
 export interface RefinementsView {
   /** Unowned and visible — the cells that still ask a question. */

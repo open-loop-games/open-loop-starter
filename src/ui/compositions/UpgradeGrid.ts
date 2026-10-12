@@ -1,7 +1,7 @@
 import type { Ref } from 'vue';
 import type { DecimalSource } from '@open-loop/engine';
 
-export interface UpgradeCellData<T = never> {
+export interface UpgradeCardData<T = never> {
   id: string;
   displayName: string;
   description: string | (() => string);
@@ -15,9 +15,9 @@ export interface UpgradeCellData<T = never> {
   purchase: () => void;
   position?: number;
   /**
-   * Typed per-cell payload forwarded to the `#cell` / `#reveal-content` slots —
+   * Typed per-card payload forwarded to the `#card` / `#reveal-content` slots —
    * the extension seam (see `ProducerRowData.extra`). Parameterize the
-   * component (`UpgradeGrid<MyCell>`) to type it; defaults to `never`.
+   * component (`UpgradeGrid<MyCard>`) to type it; defaults to `never`.
    */
   extra?: T;
 }

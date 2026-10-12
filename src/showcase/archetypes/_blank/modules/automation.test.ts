@@ -5,8 +5,8 @@
  *
  * What it specs is the automation gate: a policy is inert until its tier
  * unlocks, and live afterwards. Note there is not a single magnitude here — the
- * boost's *size* is a balance question that `balance/game-probe.ts` prints, so
- * these assertions survive any retune of `autoBoostMultiplier`.
+ * multiplier's *size* is a balance question that `balance/game-probe.ts`
+ * prints, so these assertions survive any retune of `automationMultiplier`.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -32,7 +32,7 @@ describe('automation tier gate', () => {
     const base = core().ratePerSecond.value;
     automation().isActive.value = true;
 
-    expect(automation().boostMultiplier.value).toBe(1);
+    expect(automation().automationMultiplier.value).toBe(1);
     expect(core().ratePerSecond.value).toBe(base);
   });
 
@@ -45,17 +45,17 @@ describe('automation tier gate', () => {
     expect(core().ratePerSecond.value).toBeGreaterThan(base);
   });
 
-  it('accrues more in a boosted window than in an equal unboosted one', async () => {
+  it('accrues more in an automated window than in an equal manual one', async () => {
     const WINDOW = 20;
 
     await tick(WINDOW);
-    const unboostedGain = core().count.value;
+    const manualGain = core().amount.value;
 
     automation().tiers.unlock('assisted');
     automation().isActive.value = true;
     await tick(WINDOW);
-    const boostedGain = core().count.value.sub(unboostedGain);
+    const automatedGain = core().amount.value.sub(manualGain);
 
-    expect(boostedGain.gt(unboostedGain)).toBe(true);
+    expect(automatedGain.gt(manualGain)).toBe(true);
   });
 });

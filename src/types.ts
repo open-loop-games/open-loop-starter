@@ -33,12 +33,12 @@ export interface BeatRef {
   n: number;
   label: string;
   /**
-   * Sim-time window (min, max) in seconds where this beat was OBSERVED to land,
-   * measured from a harness run and recorded here — never authored as a target
-   * to tune the source numbers toward. Omit until measured; a beat with no
-   * recorded window is honest, not incomplete.
+   * Fire-time window (min, max) in sim-seconds where this beat was OBSERVED to
+   * fire, measured from headless runs and recorded here — never authored as a
+   * target to tune the source numbers toward. Omit until measured; a beat with
+   * no recorded window is honest, not incomplete.
    */
-  recordedSimRange?: [number, number];
+  recordedFireTimeRange?: [number, number];
 }
 
 export interface ExemplarRef {

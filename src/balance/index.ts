@@ -36,7 +36,7 @@ import { costCurve } from './cost-curve';
 export { costCurve, type CostCurveParams, type CostScalingFamily } from './cost-curve';
 
 export {
-  formatChannel,
+  formatFlowChannel,
   formatDuration,
   formatWindow,
   renderArcTable,
@@ -67,7 +67,7 @@ export interface ProducerPacing {
   perUnitRate: number;
   nextCost: number;
   beatTimeSeconds: number;
-  channel: FlowChannel;
+  flowChannel: FlowChannel;
 }
 
 /** Per-archetype hook: read state out of an engine into pacing inputs. */
@@ -116,7 +116,7 @@ export function producerPacingInspector(
         perUnitRate: p.perUnitRate,
         nextCost: toNumber(nextCost),
         beatTimeSeconds: sec,
-        channel: classifyFlowChannel(sec),
+        flowChannel: classifyFlowChannel(sec),
       });
     }
     return out;

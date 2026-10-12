@@ -3,15 +3,15 @@ import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
 import type { DecimalSource } from '@open-loop/engine';
 import UpgradeGrid from '../UpgradeGrid.vue';
-import type { UpgradeCellData } from '../UpgradeGrid';
+import type { UpgradeCardData } from '../UpgradeGrid';
 
-function makeCell(
+function makeCard(
   id: string,
   opts: Partial<{ owned: boolean; canPurchase: boolean; position: number }> = {},
-): UpgradeCellData {
+): UpgradeCardData {
   return {
     id,
-    displayName: `Cell ${id}`,
+    displayName: `Card ${id}`,
     description: `desc ${id}`,
     cost: ref<DecimalSource>(50),
     costLabel: 'coins',
@@ -26,31 +26,31 @@ function makeCell(
 describe('UpgradeGrid', () => {
   it('applies `columns` to the grid-template-columns style', () => {
     const wrapper = mount(UpgradeGrid, {
-      props: { cells: [makeCell('a')], columns: 3, reveal: 'inline' },
+      props: { cards: [makeCard('a')], columns: 3, reveal: 'inline' },
     });
     const grid = wrapper.find('.upgrade-grid').element as HTMLElement;
     expect(grid.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
   });
 
-  it('purchasedState="removed" filters out owned cells', () => {
-    const cells = [makeCell('a', { owned: false }), makeCell('b', { owned: true })];
+  it('purchasedState="removed" filters out owned cards', () => {
+    const cards = [makeCard('a', { owned: false }), makeCard('b', { owned: true })];
     const wrapper = mount(UpgradeGrid, {
-      props: { cells, reveal: 'inline', purchasedState: 'removed' },
+      props: { cards, reveal: 'inline', purchasedState: 'removed' },
     });
     expect(wrapper.findAll('.upgrade-grid__cell-wrap')).toHaveLength(1);
-    expect(wrapper.html()).not.toContain('Cell b');
+    expect(wrapper.html()).not.toContain('Card b');
   });
 
-  it('purchasedState="checkmark" renders ✓ on owned cells; "greyed" renders "Bought"', () => {
-    const cells = [makeCell('a', { owned: true })];
+  it('purchasedState="checkmark" renders ✓ on owned cards; "greyed" renders "Bought"', () => {
+    const cards = [makeCard('a', { owned: true })];
 
     const check = mount(UpgradeGrid, {
-      props: { cells, reveal: 'inline', purchasedState: 'checkmark' },
+      props: { cards, reveal: 'inline', purchasedState: 'checkmark' },
     });
     expect(check.html()).toContain('✓ Bought');
 
     const grey = mount(UpgradeGrid, {
-      props: { cells, reveal: 'inline', purchasedState: 'greyed' },
+      props: { cards, reveal: 'inline', purchasedState: 'greyed' },
     });
     expect(grey.html()).toContain('Bought');
     expect(grey.html()).not.toContain('✓');
@@ -58,55 +58,55 @@ describe('UpgradeGrid', () => {
 
   it('reveal="inline" renders the description inline (no Tooltip wrapper)', () => {
     const wrapper = mount(UpgradeGrid, {
-      props: { cells: [makeCell('a')], reveal: 'inline' },
+      props: { cards: [makeCard('a')], reveal: 'inline' },
     });
     expect(wrapper.find('.upgrade-grid__cell-desc').exists()).toBe(true);
     expect(wrapper.find('.olui-tooltip__content').exists()).toBe(false);
   });
 
-  it('canPurchase blocks the purchase button while false; click invokes cell.purchase', async () => {
-    const cell = makeCell('a', { canPurchase: false });
+  it('canPurchase blocks the purchase button while false; click invokes card.purchase', async () => {
+    const card = makeCard('a', { canPurchase: false });
     const wrapper = mount(UpgradeGrid, {
-      props: { cells: [cell], reveal: 'inline' },
+      props: { cards: [card], reveal: 'inline' },
     });
     expect(wrapper.find('[data-testid="purchase-a"]').attributes('disabled')).toBeDefined();
 
-    const cell2 = makeCell('b', { canPurchase: true });
+    const card2 = makeCard('b', { canPurchase: true });
     const wrapper2 = mount(UpgradeGrid, {
-      props: { cells: [cell2], reveal: 'inline' },
+      props: { cards: [card2], reveal: 'inline' },
     });
     await wrapper2.find('[data-testid="purchase-b"]').trigger('pointerdown');
-    expect(cell2.purchase).toHaveBeenCalledTimes(1);
+    expect(card2.purchase).toHaveBeenCalledTimes(1);
   });
 
-  it('showFormula reveals cell.formula() output', () => {
+  it('showFormula reveals card.formula() output', () => {
     const off = mount(UpgradeGrid, {
-      props: { cells: [makeCell('a')], reveal: 'inline', showFormula: false },
+      props: { cards: [makeCard('a')], reveal: 'inline', showFormula: false },
     });
     expect(off.html()).not.toContain('2 * a');
 
     const on = mount(UpgradeGrid, {
-      props: { cells: [makeCell('a')], reveal: 'inline', showFormula: true },
+      props: { cards: [makeCard('a')], reveal: 'inline', showFormula: true },
     });
     expect(on.html()).toContain('2 * a');
   });
 
-  it('cell.position drives CSS order on the wrapper', () => {
+  it('card.position drives CSS order on the wrapper', () => {
     const wrapper = mount(UpgradeGrid, {
-      props: { cells: [makeCell('a', { position: 5 })], reveal: 'inline' },
+      props: { cards: [makeCard('a', { position: 5 })], reveal: 'inline' },
     });
     const el = wrapper.find('.upgrade-grid__cell-wrap').element as HTMLElement;
     expect(el.style.order).toBe('5');
   });
 
-  it('#cell slot replaces the default cell template', () => {
+  it('#card slot replaces the default card template', () => {
     const wrapper = mount(UpgradeGrid, {
-      props: { cells: [makeCell('a')], reveal: 'inline' },
+      props: { cards: [makeCard('a')], reveal: 'inline' },
       slots: {
-        cell: `<template #cell="{ cell }"><div class="custom-cell">{{ cell.id }}</div></template>`,
+        card: `<template #card="{ card }"><div class="custom-card">{{ card.id }}</div></template>`,
       },
     });
-    expect(wrapper.find('.custom-cell').exists()).toBe(true);
+    expect(wrapper.find('.custom-card').exists()).toBe(true);
     expect(wrapper.find('.upgrade-grid__cell').exists()).toBe(false);
   });
 });

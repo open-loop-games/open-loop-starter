@@ -14,19 +14,19 @@
 // path. There is no parallel `data/balance.ts` override file.
 
 export interface GameBalance {
-  /** Units of `count` accrued per game-second. The one perturbable constant. */
+  /** Units of `amount` accrued per game-second. The one perturbable constant. */
   ratePerSecond: number;
   /**
    * Accrual multiplier while the `assisted` automation tier is unlocked AND the
    * player toggle is on. `1` everywhere else, so a locked ladder leaves the
    * linear spine exactly as written.
    */
-  autoBoostMultiplier: number;
+  automationMultiplier: number;
 }
 
 export const GAME_BALANCE: GameBalance = {
   ratePerSecond: 1,
-  autoBoostMultiplier: 2,
+  automationMultiplier: 2,
 };
 
 // ─── Balance ───
@@ -37,19 +37,19 @@ export const GAME_BALANCE: GameBalance = {
 // demonstrated end-to-end without committing the fork to any archetype shape.
 //
 // Closed form (the whole spine — see `balance/game-projection.ts`):
-//     count(t) = ratePerSecond · t
+//     amount(t) = ratePerSecond · t
 //
 // Gated automation makes that piecewise. With the `assisted` tier unlocked at
 // time `tU` and the toggle on, accrual runs at `ratePerSecond ·
-// autoBoostMultiplier` thereafter:
-//     count(t) = ratePerSecond · (t + autoBoostMultiplier · max(0, t − tU))
+// automationMultiplier` thereafter:
+//     amount(t) = ratePerSecond · (t + automationMultiplier · max(0, t − tU))
 // The blank base ships the ladder LOCKED, so `tU = ∞` and the linear form
 // above is the whole story until a fork unlocks it. That is the point of
 // carrying the example: a tier gate is a balance change, and the projection
 // has to grow the second branch when you open it.
 //
 // One design number to author: `ratePerSecond`. The projection predicts
-// `count(t)` on paper; the probe (`balance/game-probe.ts`) drives the shipping
+// `amount(t)` on paper; the probe (`balance/game-probe.ts`) drives the shipping
 // module on the real engine and prints the drift against it. When you give the game a real economy,
 // this section carries the closed-form expressions that justify each constant
 // before it is measured, each naming its coupling and its re-tune target.

@@ -6,7 +6,7 @@
  * See `.claude/rules/archetype-authoring.md` § Balance — where each surface
  * lands: drives the REAL assembled engine — the shipping `game/core` module
  * ticked by the real loop — and measures the realized accrual rate, verifying it
- * matches the projection (`game-projection.ts`: count(t) = ratePerSecond · t). A
+ * matches the projection (`game-projection.ts`: amount(t) = ratePerSecond · t). A
  * probe is discovery, not a test — it prints, it does not assert, and a probe
  * that disagrees found something. Magnitudes stay here; `../sim/` specs
  * behavior, which is why those suites survive a retune.
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   const seconds = 60;
   await handle.tick(seconds);
 
-  const measured = core.count.value.toNumber();
+  const measured = core.amount.value.toNumber();
   const predicted = GAME_BALANCE.ratePerSecond * seconds;
   const driftPct = ((measured - predicted) / predicted) * 100;
   handle.dispose();

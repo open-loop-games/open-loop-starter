@@ -1,25 +1,25 @@
 <!--
-  AchievementGrid — content-only grid of achievement-shaped cells. Push
+  AchievementGrid — content-only grid of achievement cards. Push
   this through `useModalStack` (see SavePanel / SettingsPanel for the
   pattern); ModalStack wraps it in reka-ui DialogRoot/Portal/Overlay/Content
   with focus trap, ESC, and a11y. Do NOT add own modal chrome.
 
   Slot scope:
     - `summary({ earnedCount, total, fillPct })` — replace the default
-      "X / Y earned" header. Producer overrides for a progress-bar look.
-    - `cell({ cell })` — replace the per-cell visual. Producer overrides
-      for the wax-seal card.
+      "X / Y earned" header, e.g. with a progress bar.
+    - `card({ card })` — replace the per-card visual.
 
-  Default cell shape is `{ id, displayName, description, earned, hidden? }`;
-  data hooks (`data-earned`, `data-hidden-cell`) carry through so theme
-  CSS can target without re-deriving.
+  Default card shape is `AchievementCard`; data hooks (`data-earned`,
+  `data-hidden-cell`) carry through so theme CSS can target without
+  re-deriving. Classes and data attributes say `cell` where the contract
+  says card; they are stable, so renames are breaking.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { DialogTitle } from 'reka-ui';
 import PanelLayout from './PanelLayout.vue';
 
-export interface AchievementGridCell {
+export interface AchievementCard {
   id: string;
   displayName: string;
   description: string;
@@ -29,13 +29,13 @@ export interface AchievementGridCell {
 
 const props = defineProps<{
   title: string;
-  cells: AchievementGridCell[];
+  cards: AchievementCard[];
 }>();
 
 defineEmits<{ close: [] }>();
 
-const earnedCount = computed(() => props.cells.filter((c) => c.earned).length);
-const total = computed(() => props.cells.length);
+const earnedCount = computed(() => props.cards.filter((c) => c.earned).length);
+const total = computed(() => props.cards.length);
 const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / total.value) * 100));
 </script>
 
@@ -55,19 +55,19 @@ const fillPct = computed(() => (total.value === 0 ? 0 : (earnedCount.value / tot
 
     <ul class="olui-achievement-grid__cells">
       <li
-        v-for="cell in cells"
-        :key="cell.id"
+        v-for="card in cards"
+        :key="card.id"
         class="olui-achievement-grid__cell"
-        :data-earned="cell.earned ? 'true' : 'false'"
-        :data-hidden-cell="cell.hidden ? 'true' : 'false'"
-        :data-testid="`achievement-${cell.id}`"
+        :data-earned="card.earned ? 'true' : 'false'"
+        :data-hidden-cell="card.hidden ? 'true' : 'false'"
+        :data-testid="`achievement-${card.id}`"
       >
-        <slot name="cell" :cell="cell">
+        <slot name="card" :card="card">
           <div class="olui-achievement-grid__cell-name">
-            {{ cell.displayName }}
+            {{ card.displayName }}
           </div>
           <div class="olui-achievement-grid__cell-desc">
-            {{ cell.description }}
+            {{ card.description }}
           </div>
         </slot>
       </li>

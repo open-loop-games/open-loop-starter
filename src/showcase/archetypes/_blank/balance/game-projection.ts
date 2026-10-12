@@ -8,7 +8,7 @@
  * trajectory on paper. The probe (`game-probe.ts`) then drives the shipping
  * module and prints where reality lands against it. Predicts; does not discover.
  *
- * Bucket: linear accumulation — count(t) = ratePerSecond · t. A forward
+ * Bucket: linear accumulation — amount(t) = ratePerSecond · t. A forward
  * archetype replaces this with its spine's closed form (the crossing, the
  * geometric series, the log-frontier) and sizes its authored numbers here.
  */
@@ -24,8 +24,8 @@ const col = (s: string | number, w: number): string => String(s).padEnd(w);
 
 function main(): void {
   console.log('Blank game — closed-form balance projection (linear accumulation)');
-  console.log(`\n═══ count(t) = ratePerSecond · t   (ratePerSecond = ${rate}) ═══`);
-  console.log(col('  t (s)', 10) + 'predicted count');
+  console.log(`\n═══ amount(t) = ratePerSecond · t   (ratePerSecond = ${rate}) ═══`);
+  console.log(col('  t (s)', 10) + 'predicted amount');
   for (const t of [0, 10, 30, 60, 300, 3600]) {
     console.log(col(`  ${t}`, 10) + countAt(t).toLocaleString());
   }

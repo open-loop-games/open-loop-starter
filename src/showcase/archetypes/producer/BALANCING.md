@@ -148,7 +148,7 @@ pnpm exec vite-node src/showcase/archetypes/producer/balance/offline-probe.ts
   derived from.
 - **`beats.ts`** holds the windows and predicates the probes import. Windows are
   **recorded**, not authored; `manifest.ts` carries them as
-  `recordedSimRange`, min/max across the three allocation rules. When a beat
+  `recordedFireTimeRange`, min/max across the three allocation rules. When a beat
   will not fire inside its window, the response is to move the window or reshape
   content, not to contort a constant into place.
 

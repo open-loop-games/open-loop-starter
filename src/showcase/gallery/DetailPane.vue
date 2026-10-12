@@ -59,8 +59,8 @@ const overview = computed(() => loadArchetypeOverview(props.manifest.id));
       <ol class="beats">
         <li v-for="beat in manifest.beats" :key="beat.n">
           <strong>{{ beat.n }}.</strong> {{ beat.label }}
-          <span v-if="beat.recordedSimRange" class="beat-window">
-            (observed {{ beat.recordedSimRange[0] }}–{{ beat.recordedSimRange[1] }}s)
+          <span v-if="beat.recordedFireTimeRange" class="beat-window">
+            (observed {{ beat.recordedFireTimeRange[0] }}–{{ beat.recordedFireTimeRange[1] }}s)
           </span>
         </li>
       </ol>

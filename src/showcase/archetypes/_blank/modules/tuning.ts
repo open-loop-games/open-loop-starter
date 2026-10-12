@@ -17,7 +17,7 @@ import {
  * Grep for `tunable(` to audit the live surface.
  *
  * Namespaces (blank base — one key, the example accumulator's rate):
- *   - `core/ratePerSecond` — units of `count` accrued per game-second
+ *   - `core/ratePerSecond` — units of `amount` accrued per game-second
  */
 export type GameTunableKey = 'core/ratePerSecond';
 

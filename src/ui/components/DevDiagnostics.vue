@@ -1,14 +1,13 @@
 <script setup lang="ts">
 /**
- * Fixed-position FPS/TPS readout for dev builds. Pure presentation plus a
- * single `requestAnimationFrame` loop; the active speed button is the one
- * reactive engine read. Ported from `incloneution/src/dev/DevDiagnostics.vue` with
- * the state-dump panel stripped; starter forks can re-add that locally
- * when they need it.
+ * Fixed-position FPS and interval-rate readout for dev builds. Pure
+ * presentation plus a single `requestAnimationFrame` loop; the active speed
+ * button is the one reactive engine read. It has no state-dump panel; a fork
+ * adds one locally when it needs one.
  *
- * FPS is rAF-derived frame count. TPS reads `engine.tickDriver.deltaMean` once
- * per 1s sample tick — sufficient for spot-checking repaint budget on
- * large engine-driven views.
+ * FPS is rAF-derived frame count. The interval rate is
+ * `1 / engine.tickDriver.deltaMean`, sampled once a second — sufficient for
+ * spot-checking repaint budget on large engine-driven views.
  *
  * Speed buttons set `engine.tickDriver.speedMultiplier` directly. Reset to 1x
  * on unmount so a fork doesn't ship a cranked-up demo if the dev panel
@@ -24,7 +23,7 @@ const engine = inject<Engine>('engine');
 const workbenchOpen = defineModel<boolean>('workbenchOpen', { default: false });
 
 const fps = ref(0);
-const tps = ref(0);
+const intervalRate = ref(0);
 
 let frameCount = 0;
 let lastSampleTime = performance.now();
@@ -38,7 +37,7 @@ function measure() {
     frameCount = 0;
     lastSampleTime = now;
     const dm = engine?.tickDriver.deltaMean ?? 0;
-    tps.value = dm > 0 ? Math.round(1 / dm) : 0;
+    intervalRate.value = dm > 0 ? Math.round(1 / dm) : 0;
   }
   rafId = requestAnimationFrame(measure);
 }
@@ -82,8 +81,8 @@ onUnmounted(() => {
       <span class="dev-diag-label">FPS</span>
       <span class="dev-diag-value">{{ fps }}</span>
       <span class="dev-diag-sep">|</span>
-      <span class="dev-diag-label">TPS</span>
-      <span class="dev-diag-value">{{ tps }}</span>
+      <span class="dev-diag-label">Interval/s</span>
+      <span class="dev-diag-value">{{ intervalRate }}</span>
     </div>
     <div class="dev-diag-row dev-diag-row--speed">
       <span class="dev-diag-label">Speed</span>

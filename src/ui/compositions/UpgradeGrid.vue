@@ -1,16 +1,16 @@
 <!--
-  UpgradeGrid — panel-level composition over a grid of one-time/tiered
-  upgrade cells (AD upgrades, Cookie tray, Synergism cubes). Engine-bridged
-  via UpgradeCellData. Reveal mode picks Tooltip / Popover / inline per the
-  OL-919 vocabulary; the reveal wrapper sits above the cell so `#cell`
-  overrides still receive tooltip/popover wrapping. Use `#reveal-content`
-  to customise the tooltip/popover body.
+  UpgradeGrid — panel-level composition over a grid of one-time upgrade
+  cards (AD upgrades, Cookie tray, Synergism cubes). Engine-bridged via
+  UpgradeCardData. Reveal mode picks Tooltip / Popover / inline; the reveal
+  wrapper sits above the card, so a `#card` override still gets the
+  tooltip/popover wrapping. Use `#reveal-content` to customise the
+  tooltip/popover body.
 
   Costume hooks (stable API) — reskin via `:deep(.upgrade-grid__…)`.
-  Renames are breaking:
+  A class says `cell` where the contract says card. Renames are breaking:
     .upgrade-grid            root grid (+ inline grid-template-columns)
-    .upgrade-grid__cell-wrap the reveal wrapper around each cell
-    .upgrade-grid__cell      one cell
+    .upgrade-grid__cell-wrap the reveal wrapper around each card
+    .upgrade-grid__cell      one card
   (Panel compositions expose bare BEM hooks; widgets under src/ui/components
   expose `olui-` hooks. Both stable.)
 -->
@@ -20,14 +20,14 @@ import { format } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
 import Popover from '@/ui/components/Popover.vue';
-import type { UpgradeCellData } from './UpgradeGrid';
+import type { UpgradeCardData } from './UpgradeGrid';
 
 type Reveal = 'inline' | 'tooltip' | 'popover';
 type PurchasedState = 'greyed' | 'removed' | 'checkmark';
 
 const props = withDefaults(
   defineProps<{
-    cells: UpgradeCellData<T>[];
+    cards: UpgradeCardData<T>[];
     columns?: number;
     reveal?: Reveal;
     purchasedState?: PurchasedState;
@@ -42,130 +42,130 @@ const props = withDefaults(
 );
 
 defineSlots<{
-  cell?: (props: { cell: UpgradeCellData<T>; idx: number }) => unknown;
-  'reveal-content'?: (props: { cell: UpgradeCellData<T> }) => unknown;
+  card?: (props: { card: UpgradeCardData<T>; idx: number }) => unknown;
+  'reveal-content'?: (props: { card: UpgradeCardData<T> }) => unknown;
 }>();
 
 const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${props.columns}, 1fr)`,
 }));
 
-const visibleCells = computed(() =>
-  props.cells.filter((c) => !(c.owned.value && props.purchasedState === 'removed')),
+const visibleCards = computed(() =>
+  props.cards.filter((c) => !(c.owned.value && props.purchasedState === 'removed')),
 );
 
-function describe(cell: UpgradeCellData<T>): string {
-  return typeof cell.description === 'function' ? cell.description() : cell.description;
+function describe(card: UpgradeCardData<T>): string {
+  return typeof card.description === 'function' ? card.description() : card.description;
 }
 </script>
 
 <template>
   <div class="upgrade-grid" :style="gridStyle">
     <div
-      v-for="(cell, idx) in visibleCells"
-      :key="cell.id"
+      v-for="(card, idx) in visibleCards"
+      :key="card.id"
       class="upgrade-grid__cell-wrap"
-      :style="cell.position !== undefined ? { order: cell.position } : undefined"
+      :style="card.position !== undefined ? { order: card.position } : undefined"
     >
       <Tooltip v-if="reveal === 'tooltip'">
-        <slot v-if="$slots.cell" name="cell" :cell="cell" :idx="idx" />
-        <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
+        <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
+        <div v-else class="upgrade-grid__cell" :data-bought="card.owned.value">
           <div class="upgrade-grid__cell-head">
-            <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
-            <strong>{{ cell.displayName }}</strong>
+            <span class="upgrade-grid__cell-pos">#{{ card.position ?? idx + 1 }}</span>
+            <strong>{{ card.displayName }}</strong>
           </div>
           <div class="upgrade-grid__cell-action">
             <span
-              v-if="cell.owned.value && purchasedState === 'checkmark'"
+              v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
               >✓ Bought</span
             >
-            <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
-              :disabled="!cell.canPurchase.value"
-              :data-testid="`purchase-${cell.id}`"
-              @click="cell.purchase()"
+              :disabled="!card.canPurchase.value"
+              :data-testid="`purchase-${card.id}`"
+              @click="card.purchase()"
             >
-              {{ format(cell.cost.value, 0) }} {{ cell.costLabel }}
+              {{ format(card.cost.value, 0) }} {{ card.costLabel }}
             </Button>
           </div>
         </div>
         <template #content>
-          <slot v-if="$slots['reveal-content']" name="reveal-content" :cell="cell" />
+          <slot v-if="$slots['reveal-content']" name="reveal-content" :card="card" />
           <template v-else>
             <p class="upgrade-grid__cell-desc">
-              {{ describe(cell) }}
+              {{ describe(card) }}
             </p>
-            <p v-if="showFormula && cell.formula" class="upgrade-grid__cell-formula">
-              {{ cell.formula() }}
+            <p v-if="showFormula && card.formula" class="upgrade-grid__cell-formula">
+              {{ card.formula() }}
             </p>
           </template>
         </template>
       </Tooltip>
       <Popover v-else-if="reveal === 'popover'">
         <template #trigger>
-          <slot v-if="$slots.cell" name="cell" :cell="cell" :idx="idx" />
-          <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
+          <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
+          <div v-else class="upgrade-grid__cell" :data-bought="card.owned.value">
             <div class="upgrade-grid__cell-head">
-              <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
-              <strong>{{ cell.displayName }}</strong>
+              <span class="upgrade-grid__cell-pos">#{{ card.position ?? idx + 1 }}</span>
+              <strong>{{ card.displayName }}</strong>
             </div>
           </div>
         </template>
-        <slot v-if="$slots['reveal-content']" name="reveal-content" :cell="cell" />
+        <slot v-if="$slots['reveal-content']" name="reveal-content" :card="card" />
         <template v-else>
           <p class="upgrade-grid__cell-desc">
-            {{ describe(cell) }}
+            {{ describe(card) }}
           </p>
-          <p v-if="showFormula && cell.formula" class="upgrade-grid__cell-formula">
-            {{ cell.formula() }}
+          <p v-if="showFormula && card.formula" class="upgrade-grid__cell-formula">
+            {{ card.formula() }}
           </p>
           <div class="upgrade-grid__cell-action">
             <span
-              v-if="cell.owned.value && purchasedState === 'checkmark'"
+              v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
               >✓ Bought</span
             >
-            <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
-              :disabled="!cell.canPurchase.value"
-              :data-testid="`purchase-${cell.id}`"
-              @click="cell.purchase()"
+              :disabled="!card.canPurchase.value"
+              :data-testid="`purchase-${card.id}`"
+              @click="card.purchase()"
             >
-              {{ format(cell.cost.value, 0) }} {{ cell.costLabel }}
+              {{ format(card.cost.value, 0) }} {{ card.costLabel }}
             </Button>
           </div>
         </template>
       </Popover>
       <template v-else>
-        <slot v-if="$slots.cell" name="cell" :cell="cell" :idx="idx" />
-        <div v-else class="upgrade-grid__cell" :data-bought="cell.owned.value">
+        <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
+        <div v-else class="upgrade-grid__cell" :data-bought="card.owned.value">
           <div class="upgrade-grid__cell-head">
-            <span class="upgrade-grid__cell-pos">#{{ cell.position ?? idx + 1 }}</span>
-            <strong>{{ cell.displayName }}</strong>
+            <span class="upgrade-grid__cell-pos">#{{ card.position ?? idx + 1 }}</span>
+            <strong>{{ card.displayName }}</strong>
           </div>
           <p class="upgrade-grid__cell-desc">
-            {{ describe(cell) }}
+            {{ describe(card) }}
           </p>
-          <p v-if="showFormula && cell.formula" class="upgrade-grid__cell-formula">
-            {{ cell.formula() }}
+          <p v-if="showFormula && card.formula" class="upgrade-grid__cell-formula">
+            {{ card.formula() }}
           </p>
           <div class="upgrade-grid__cell-action">
             <span
-              v-if="cell.owned.value && purchasedState === 'checkmark'"
+              v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
               >✓ Bought</span
             >
-            <span v-else-if="cell.owned.value" class="upgrade-grid__bought">Bought</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Bought</span>
             <Button
               v-else
-              :disabled="!cell.canPurchase.value"
-              :data-testid="`purchase-${cell.id}`"
-              @click="cell.purchase()"
+              :disabled="!card.canPurchase.value"
+              :data-testid="`purchase-${card.id}`"
+              @click="card.purchase()"
             >
-              {{ format(cell.cost.value, 0) }} {{ cell.costLabel }}
+              {{ format(card.cost.value, 0) }} {{ card.costLabel }}
             </Button>
           </div>
         </div>

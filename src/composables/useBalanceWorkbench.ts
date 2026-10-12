@@ -1,6 +1,6 @@
 /**
  * Reactive state machine for the balance workbench loop:
- * pick → fork → run sensitivity → render delta → commit/discard.
+ * pick → fork → run sensitivity → render delta → commit/revert.
  *
  * The composable owns nothing rendered — it exposes refs and actions that
  * the `BalanceWorkbench.vue` component binds to. Tests can drive it without
@@ -13,8 +13,8 @@
  * address — entries carry addresses, not refs, so this resolves correctly
  * against fresh engines.
  *
- * Commit/discard model: `commit()` calls `applyPerturbation` directly on
- * the live engine and stores the cleanup. `discard()` runs the cleanup.
+ * Commit/revert model: `commit()` calls `applyPerturbation` directly on
+ * the live engine and stores the cleanup. `revert()` runs the cleanup.
  * The live engine's saved state remains the unperturbed form — perturbations
  * are not persisted across reloads. (This is testing infrastructure, not a
  * save-mutating balance editor.)
@@ -148,7 +148,7 @@ export interface UseBalanceWorkbenchReturn {
   buildPerturbation: () => Perturbation;
   run: () => void;
   commit: () => void;
-  discard: () => void;
+  revert: () => void;
 }
 
 const SERIES_KEY = /^time-series:(.*)\.t(\d+)$/;
@@ -359,7 +359,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       error.value = 'No picker entry selected';
       return;
     }
-    discard();
+    revert();
     try {
       liveCleanup = applyPerturbation(engine, entry, buildPerturbation());
       committed.value = true;
@@ -371,7 +371,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     }
   }
 
-  function discard(): void {
+  function revert(): void {
     if (liveCleanup) {
       liveCleanup();
       liveCleanup = null;
@@ -400,6 +400,6 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     buildPerturbation,
     run,
     commit,
-    discard,
+    revert,
   };
 }

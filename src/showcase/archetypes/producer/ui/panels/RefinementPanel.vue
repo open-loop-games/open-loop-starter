@@ -38,7 +38,7 @@ const { open, installed, installedCount, total } = useRefinementCells();
     <UpgradeGrid
       v-if="open.length"
       class="refinements__grid"
-      :cells="open"
+      :cards="open"
       :columns="2"
       reveal="tooltip"
       purchased-state="removed"

@@ -12,7 +12,7 @@ import type { ArchetypeManifest } from '@/types';
  * log_g(H) + Δ_wall ≈ 7 waves at H=16, g=1.6/wave, 2 min/wave (~14 min, measured on
  * the reference forward-line board). The cross-run Reach arc carries no single-run
  * window — it is a per-Redeploy cadence, not a clock range — so it is listed without
- * `recordedSimRange` (honest, not incomplete).
+ * `recordedFireTimeRange` (honest, not incomplete).
  */
 export const manifest: ArchetypeManifest = {
   id: 'cycler',
@@ -41,28 +41,28 @@ export const manifest: ArchetypeManifest = {
     {
       n: 1,
       label: 'Standby — rebuild the grid in the grace window; the salvo has not bitten',
-      recordedSimRange: [0, 120],
+      recordedFireTimeRange: [0, 120],
     },
     {
       n: 2,
       label: 'Comfortable — early salvos clear with margin; the Lances outpace the wave',
-      recordedSimRange: [120, 480],
+      recordedFireTimeRange: [120, 480],
     },
     {
       n: 3,
       label: 'First bite — the salvo nears the clear-rate C; rearrangement starts to matter',
-      recordedSimRange: [480, 720],
+      recordedFireTimeRange: [480, 720],
     },
     {
       n: 4,
       label:
         'Under review — leak-through drains the line buffer (the Δ_wall tail); the tension peak',
-      recordedSimRange: [720, 840],
+      recordedFireTimeRange: [720, 840],
     },
     {
       n: 5,
       label: 'Overrun — the salvo breaches the line; the run ends and pays out (Redeploy)',
-      recordedSimRange: [840, 840],
+      recordedFireTimeRange: [840, 840],
     },
     {
       n: 6,

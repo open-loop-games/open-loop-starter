@@ -27,7 +27,7 @@ deliberately *not* perturbable too, and why, so nobody re-litigates it.
 |---|---|---|
 | `game/ratePerSecond` | `1` | How fast the tracked number climbs. The whole economy, for now. |
 
-`autoBoostMultiplier` (`2`, in `data/game.ts`) is deliberately **not** on the
+`automationMultiplier` (`2`, in `data/game.ts`) is deliberately **not** on the
 perturbation surface. It is a content decision about what unlocking automation
 is worth, and the ladder ships locked, so it moves nothing until a fork opens
 it. Wrap it in `tunable()` at its reader site the moment you have a probe that

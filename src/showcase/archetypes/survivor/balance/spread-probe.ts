@@ -259,7 +259,7 @@ async function main(): Promise<void> {
     // Paste-ready, because a window transcribed by hand is a window that drifts
     // from the run it claims to come from.
     recorded.push(
-      `    { n: ${beat.n}, label: '…', recordedSimRange: [${Math.round(s.min)}, ${Math.round(s.max)}] },`,
+      `    { n: ${beat.n}, label: '…', recordedFireTimeRange: [${Math.round(s.min)}, ${Math.round(s.max)}] },`,
     );
   }
   console.log('\n  For `../manifest.ts` (labels from `./beats.ts`):');

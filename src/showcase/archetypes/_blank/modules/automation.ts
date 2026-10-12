@@ -36,9 +36,9 @@ export interface AutomationApi {
   isActive: Persistent<boolean>;
   /**
    * Live accrual multiplier: `1` while locked or toggled off, the configured
-   * boost otherwise. `modules/core.ts` reads this into its tick.
+   * `automationMultiplier` otherwise. `modules/core.ts` reads this into its tick.
    */
-  boostMultiplier: ComputedRef<number>;
+  automationMultiplier: ComputedRef<number>;
 }
 
 export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
@@ -68,8 +68,8 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
       ctx.provide(AutomationKey, {
         tiers,
         isActive,
-        boostMultiplier: computed(() =>
-          tiers.hasReached('assisted') && isActive.value ? data.autoBoostMultiplier : 1,
+        automationMultiplier: computed(() =>
+          tiers.hasReached('assisted') && isActive.value ? data.automationMultiplier : 1,
         ),
       });
     },

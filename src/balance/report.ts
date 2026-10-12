@@ -13,9 +13,9 @@ export function formatDuration(sec: number): string {
 }
 
 /** Format a flow-channel name with a one-glance verdict glyph. */
-export function formatChannel(channel: string): string {
+export function formatFlowChannel(flowChannel: string): string {
   // Pocket = arousal, flow, flow-upper. Out-of-pocket = boredom and worse.
-  switch (channel) {
+  switch (flowChannel) {
     case 'arousal':
       return 'arousal';
     case 'flow':
@@ -29,7 +29,7 @@ export function formatChannel(channel: string): string {
     case 'breakdown':
       return '!!! breakdown';
     default:
-      return channel;
+      return flowChannel;
   }
 }
 
@@ -67,7 +67,7 @@ export function renderFlowTable(snapshots: WaypointSnapshot<ProducerPacing[]>[])
     'rate/u',
     'next cost',
     'beat T',
-    'channel',
+    'flow channel',
   ];
   const rows: string[][] = [];
   for (const snap of snapshots) {
@@ -96,7 +96,7 @@ export function renderFlowTable(snapshots: WaypointSnapshot<ProducerPacing[]>[])
         formatScientific(p.perUnitRate),
         formatScientific(p.nextCost),
         formatDuration(p.beatTimeSeconds),
-        formatChannel(p.channel),
+        formatFlowChannel(p.flowChannel),
       ]);
       first = false;
     }

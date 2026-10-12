@@ -3,7 +3,7 @@
  *
  * A beat is where the run turns. The windows in `../manifest.ts` are RECORDED
  * from probe runs, never authored as targets to tune toward
- * (`src/types.ts` § `BeatRef.recordedSimRange`), so this file owns only the
+ * (`src/types.ts` § `BeatRef.recordedFireTimeRange`), so this file owns only the
  * predicates: what it means for each beat to have landed. The probe owns when.
  */
 
