@@ -129,7 +129,7 @@ const summary = computed(() => night.lastNight.value);
       <template v-else-if="summary">
         Night {{ summary.night }}:
         <strong v-if="summary.escaped" class="lo-out"
-          >over the wall at {{ clock(summary.seconds) }}.</strong
+          >on the freight at {{ clock(summary.seconds) }}.</strong
         >
         <template v-else-if="summary.cause === 'turned-in'"
           >turned in at {{ clock(summary.seconds) }}.</template

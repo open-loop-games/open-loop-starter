@@ -1,12 +1,14 @@
 // ─── Skeleton ───
-// The ground a night covers: four zones, the actions in each, the items they
-// pass along, and the landmarks that end each stage. Durations come from
-// `./spine.ts`; a gate's duration is derived there, never authored here.
+// The ground a night covers: the prison's four zones and the two past the wall,
+// the actions in each, the items they pass along, and the landmarks that end
+// each stage. Durations come from `./spine.ts`; a gate's duration is derived
+// there, never authored here. The reference plan through all of it is
+// `REFERENCE_ROUTE` in `./spine.ts`.
 
 import { ACTION_SECONDS, GATE_SECONDS } from './spine';
 import type { SkillId } from './skills';
 
-export type ItemId = 'picks' | 'smokes' | 'keycard' | 'fence';
+export type ItemId = 'picks' | 'smokes' | 'keycard' | 'fence' | 'gate';
 
 export interface ZoneDef {
   id: string;
@@ -20,10 +22,9 @@ export const ZONES: ZoneDef[] = [
   { id: 'corridor', displayName: 'C-Block Corridor', order: 1 },
   { id: 'laundry', displayName: 'Laundry', order: 2 },
   { id: 'yard', displayName: 'The Yard', order: 3 },
+  { id: 'woods', displayName: 'Blackwater Woods', order: 4 },
+  { id: 'rail-yard', displayName: 'The Rail Yard', order: 5 },
 ];
-
-/** Depth 4 is not a zone you stand in — it is the far side of the wall. */
-export const ESCAPE_DEPTH = 4;
 
 export interface ActionDef {
   id: string;
@@ -42,8 +43,10 @@ export interface ActionDef {
   needs?: Partial<Record<ItemId, number>>;
   /** items gained on completion */
   gives?: Partial<Record<ItemId, number>>;
-  /** Nerve restored on completion */
-  nerve?: 'coffee' | 'hamper';
+  /** Nerve restored on completion; the ride's amount falls with the night clock */
+  nerve?: 'coffee' | 'hamper' | 'ride';
+  /** completion raises the kept patrol-knowledge level */
+  learnsPatrol?: true;
   /** landmark depth reached on completion */
   opens?: number;
   flavor: string;
@@ -97,6 +100,15 @@ export const ACTIONS: ActionDef[] = [
     flavor: 'Old Yale tumbler. Five pins.',
   },
   // C-Block Corridor
+  {
+    id: 'learn-patrol',
+    displayName: 'Watch the Patrol',
+    zone: 1,
+    baseSeconds: ACTION_SECONDS['learn-patrol'],
+    weights: { stealth: 0.7, guile: 0.3 },
+    learnsPatrol: true,
+    flavor: 'Count the paces. Note who yawns. Remember it.',
+  },
   {
     id: 'coffee',
     displayName: 'Swipe the Guard’s Coffee',
@@ -182,6 +194,51 @@ export const ACTIONS: ActionDef[] = [
     opens: 4,
     flavor: 'Between sweeps of the searchlight.',
   },
+  // Blackwater Woods
+  {
+    id: 'ride',
+    displayName: 'Catch the Milk Truck',
+    zone: 4,
+    baseSeconds: ACTION_SECONDS.ride,
+    weights: { guile: 0.6, stealth: 0.4 },
+    limit: 1,
+    consumes: { smokes: 1 },
+    nerve: 'ride',
+    flavor: 'A pack for the driver, and he never saw you. He leaves at half past two.',
+  },
+  {
+    id: 'cross-woods',
+    displayName: 'Cross the Woods',
+    zone: 4,
+    baseSeconds: GATE_SECONDS['cross-woods'],
+    weights: { brawn: 0.5, stealth: 0.5 },
+    limit: 1,
+    opens: 5,
+    flavor: 'Keep the river on your left and the dogs behind you.',
+  },
+  // The Rail Yard
+  {
+    id: 'padlock',
+    displayName: 'Pick the Yard Padlock',
+    zone: 5,
+    baseSeconds: ACTION_SECONDS.padlock,
+    weights: { finesse: 0.8, stealth: 0.2 },
+    limit: 1,
+    consumes: { picks: 1 },
+    gives: { gate: 1 },
+    flavor: 'The same wire, a heavier lock.',
+  },
+  {
+    id: 'board-freight',
+    displayName: 'Board the Freight',
+    zone: 5,
+    baseSeconds: GATE_SECONDS['board-freight'],
+    weights: { brawn: 0.6, finesse: 0.4 },
+    limit: 1,
+    needs: { gate: 1 },
+    opens: 6,
+    flavor: 'The 4:10 to anywhere. Run alongside, then jump.',
+  },
 ];
 
 export const ITEM_NAMES: Record<ItemId, string> = {
@@ -189,6 +246,7 @@ export const ITEM_NAMES: Record<ItemId, string> = {
   smokes: 'Smokes',
   keycard: 'Keycard',
   fence: 'Fence cut',
+  gate: 'Yard gate open',
 };
 
 /** Landmark names, by depth — the splits board reads these. */
@@ -197,6 +255,8 @@ export const LANDMARKS: Record<number, string> = {
   2: 'Into the laundry',
   3: 'Into the yard',
   4: 'Over the wall',
+  5: 'Into the rail yard',
+  6: 'On the freight',
 };
 
 /** The plan a first night starts with: make a pick, use it, train the rest of the night. */

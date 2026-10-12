@@ -21,17 +21,32 @@ export const MASTERY_AT_KNEE = 0.1;
 export const MASTERY_KNEE = LEVEL_FROM_ONE_NIGHT;
 
 /**
- * When each landmark should first fall, and what fraction of that night's
- * predicted work capacity the route up to it consumes. Depth 1 falls early on
- * night one (the tutorial beat); the rest land with a margin of training left
- * over. Depth 4 is the wall — the escape.
+ * When each landmark should first fall. `position` places the route through it
+ * between the predicted capacity of the night before (0) and of its own night
+ * (1), so it cannot fall a night early or late within that margin. Night one has
+ * no night before: depth 1 takes 0.4 of it, the tutorial beat. Depth 4 is the
+ * wall, the edge of the prison. Depth 6 is the freight train — the escape.
  */
 export const LANDMARK_SCHEDULE = [
-  { depth: 1, night: 1, fill: 0.4 },
-  { depth: 2, night: 3, fill: 0.8 },
-  { depth: 3, night: 5, fill: 0.8 },
-  { depth: 4, night: 8, fill: 0.85 },
+  { depth: 1, night: 1, position: 0.4 },
+  { depth: 2, night: 3, position: 0.5 },
+  { depth: 3, night: 5, position: 0.5 },
+  { depth: 4, night: 8, position: 0.5 },
+  { depth: 5, night: 13, position: 0.5 },
+  { depth: 6, night: 17, position: 0.5 },
 ] as const;
+
+/** The landmark that ends the night: on the freight. */
+export const ESCAPE_DEPTH = 6;
+
+/** The milk truck's best refill: a whole first night of Nerve, for a ride caught at lights-out. */
+export const RIDE_NERVE = NIGHT_SECONDS;
+/** Night-clock second the truck leaves the road. A ride is worth less the later it is caught. */
+export const RIDE_DEADLINE = 150;
+/** Share of Slip the Patrol's duration one kept level of patrol knowledge removes. */
+export const PATROL_STEP = 0.02;
+/** Levels of patrol knowledge that count: at the cap, the gate takes half its base. */
+export const PATROL_CAP = 25;
 
 /** Intel a landmark is worth the first night-take, and how much more each deeper one is. */
 export const INTEL_BASE = 2;
@@ -79,6 +94,20 @@ export const HAMPER_NERVE = NIGHT_SECONDS / 6;
 /** Steel Nerves raises the night by a quarter of its base per level. */
 export const NERVE_PER_LEVEL = NIGHT_SECONDS / 4;
 
+/**
+ * The milk truck's refill for a ride caught at night-clock second `t`:
+ * `RIDE_NERVE · max(0, 1 − t / RIDE_DEADLINE)`. It couples the zone past the wall
+ * to the prison splits: every second saved inside is Nerve gained outside.
+ */
+export function rideNerve(t: number): number {
+  return RIDE_NERVE * Math.max(0, 1 - t / RIDE_DEADLINE);
+}
+
+/** Slip the Patrol's duration as a share of its base, at a kept patrol-knowledge level. */
+export function patrolFactor(level: number): number {
+  return 1 - PATROL_STEP * Math.min(level, PATROL_CAP);
+}
+
 // ── Intel and the notes ─────────────────────────────────────────────────────
 
 /** Intel a landmark pays at the night's end (credited once per night reached). */
@@ -120,13 +149,139 @@ export function noteCost(id: NoteId, level: number): number {
   return p.base * p.ratio ** level;
 }
 
+// ── The route ───────────────────────────────────────────────────────────────
+
+/** Training rep durations and the non-gate route steps, in base-seconds. */
+export const ACTION_SECONDS = {
+  'push-ups': REP_SECONDS,
+  'shadow-walk': REP_SECONDS,
+  'bend-wire': REP_SECONDS * 1.5,
+  rehearse: REP_SECONDS,
+  'learn-patrol': REP_SECONDS * 2.5,
+  coffee: REP_SECONDS * 2,
+  smokes: REP_SECONDS * 2.5,
+  hamper: REP_SECONDS * 3,
+  bribe: REP_SECONDS * 4,
+  ride: REP_SECONDS * 2,
+  padlock: REP_SECONDS * 3,
+} as const;
+
+export type GateId =
+  | 'pick-cell'
+  | 'slip-patrol'
+  | 'badge-door'
+  | 'cut-fence'
+  | 'wall-climb'
+  | 'cross-woods'
+  | 'board-freight';
+
+/** What a reference plan is written from: the ground known and the patrol already learned. */
+export interface PlanContext {
+  /** deepest landmark reached before the night begins */
+  known: number;
+  /** kept patrol-knowledge level at the night's start */
+  patrolLevel: number;
+}
+
+export interface RouteStep {
+  id: keyof typeof ACTION_SECONDS | GateId;
+  /** zone the step happens in; it is on the plan once that zone is known */
+  zone: number;
+  times(k: PlanContext): number;
+  /** landmark depth the step reaches */
+  opens?: number;
+  refill?: 'coffee' | 'hamper' | 'ride';
+}
+
+/**
+ * The reference policy's route, in order. It makes only what the known ground
+ * spends: a second pick once the rail yard's padlock is known, a third pack of
+ * smokes once the truck is. It learns the patrol once a night until the cap.
+ */
+export const REFERENCE_ROUTE: RouteStep[] = [
+  { id: 'bend-wire', zone: 0, times: (k) => (k.known >= 5 ? 2 : 1) },
+  { id: 'pick-cell', zone: 0, times: () => 1, opens: 1 },
+  { id: 'learn-patrol', zone: 1, times: (k) => (k.patrolLevel < PATROL_CAP ? 1 : 0) },
+  { id: 'coffee', zone: 1, times: () => COFFEE_PER_NIGHT, refill: 'coffee' },
+  { id: 'smokes', zone: 1, times: (k) => (k.known >= 4 ? 3 : 2) },
+  { id: 'slip-patrol', zone: 1, times: () => 1, opens: 2 },
+  { id: 'hamper', zone: 2, times: () => 1, refill: 'hamper' },
+  { id: 'bribe', zone: 2, times: () => 1 },
+  { id: 'badge-door', zone: 2, times: () => 1, opens: 3 },
+  { id: 'cut-fence', zone: 3, times: () => 1 },
+  { id: 'wall-climb', zone: 3, times: () => 1, opens: 4 },
+  { id: 'ride', zone: 4, times: () => 1, refill: 'ride' },
+  { id: 'cross-woods', zone: 4, times: () => 1, opens: 5 },
+  { id: 'padlock', zone: 5, times: () => 1 },
+  { id: 'board-freight', zone: 5, times: () => 1, opens: 6 },
+];
+
+/** The reference plan's rows for a night: the known route, in order. */
+export function referencePlan(k: PlanContext): { id: string; times: number }[] {
+  return REFERENCE_ROUTE.filter((s) => s.zone <= k.known)
+    .map((s) => ({ id: s.id, times: s.times(k) }))
+    .filter((r) => r.times > 0);
+}
+
+interface PlannedStep {
+  id: string;
+  /** base-seconds of work, after the patrol discount */
+  work: number;
+  /** the discount applied: 1 for every step but Slip the Patrol */
+  factor: number;
+  opens?: number;
+  refill?: RouteStep['refill'];
+  learnsPatrol: boolean;
+}
+
+/**
+ * A night's route as work, one entry per execution. A gate with no derived
+ * duration yet counts as zero work. Learning the patrol before slipping it
+ * shortens the same night's slip.
+ */
+function planSteps(k: PlanContext, gates: Partial<Record<GateId, number>>): PlannedStep[] {
+  const out: PlannedStep[] = [];
+  let level = k.patrolLevel;
+  for (const s of REFERENCE_ROUTE) {
+    if (s.zone > k.known) continue;
+    for (let i = 0; i < s.times(k); i++) {
+      const factor = s.id === 'slip-patrol' ? patrolFactor(level) : 1;
+      const base =
+        s.id in ACTION_SECONDS
+          ? ACTION_SECONDS[s.id as keyof typeof ACTION_SECONDS]
+          : (gates[s.id as GateId] ?? 0);
+      out.push({
+        id: s.id,
+        work: base * factor,
+        factor,
+        opens: s.opens,
+        refill: s.refill,
+        learnsPatrol: s.id === 'learn-patrol',
+      });
+      if (s.id === 'learn-patrol') level++;
+    }
+  }
+  return out;
+}
+
+/** Base-seconds of the reference route through landmark `depth`, for a night planned from `k`. */
+export function routeWork(
+  k: PlanContext,
+  depth: number,
+  gates: Partial<Record<GateId, number>> = GATE_SECONDS,
+): number {
+  const steps = planSteps(k, gates);
+  const through = steps.findIndex((s) => s.opens === depth);
+  return steps.slice(0, through + 1).reduce((a, s) => a + s.work, 0);
+}
+
 // ── The arc ─────────────────────────────────────────────────────────────────
 
 export interface NightPrediction {
   night: number;
   /** deepest landmark the schedule says falls by this night */
   depth: number;
-  /** Nerve seconds available, base + Steel Nerves + refills on the route */
+  /** Nerve seconds the night had, the ride's refill included */
   budget: number;
   /** base-seconds of action progress the night delivers (its capacity) */
   work: number;
@@ -136,53 +291,78 @@ export interface NightPrediction {
   mastery: number;
   /** intel credited at the night's end */
   intel: number;
-  /** night-seconds to go over the wall, when the night's capacity covers the route */
-  escapeSeconds: number | null;
+  /** night-second each landmark fell, keyed by depth; empty while gates are unknown */
+  splits: Record<number, number>;
+  /** Nerve the milk truck added, 0 when it was not caught */
+  ride: number;
+  /** patrol-knowledge level after the night */
+  patrolLevel: number;
   nerveLevel: number;
   grapevineLevel: number;
 }
 
+export interface PredictOptions {
+  /** derived gate durations; a missing gate counts as zero work */
+  gates?: Partial<Record<GateId, number>>;
+  /** end a night on the freight, as the game does */
+  endAtEscape?: boolean;
+  dt?: number;
+}
+
 /**
- * Predict the first `nights` nights under a reference policy: every second is
- * spent working, work spreads evenly over the four skills, every refill on
- * ground known before the night began is taken, and the notes are bought
- * cheapest-first after each night. The arc probe plays the real game with the
- * same buying rule; the work spread is where the two are expected to disagree,
- * because the route leans on a few skills.
+ * Predict the first `nights` nights under the reference policy: the reference
+ * plan runs first, every second after it is training, work spreads evenly over
+ * the four skills, and the notes are bought cheapest-first after each night. The
+ * arc probe plays the real game with the same plan and buying rule; the work
+ * spread is where the two are expected to disagree, because the route leans on a
+ * few skills.
  *
- * Refills count only on ground known before the night begins: a night's plan is
- * written before that night reveals new ground, so its refills are not on it.
- *
- * With `escapeWork` (the route's total base-seconds), a night whose capacity
- * reaches it ends there, as the game ends a night on the wall. Past the first
- * escape the quantity to read is escape time, not work, which stays pinned at
- * the route's length.
+ * A night's plan is written from the ground known before it begins, so new ground
+ * a night reveals adds nothing to that night's plan.
  */
-export function predictNights(nights: number, escapeWork?: number, dt = 0.05): NightPrediction[] {
+export function predictNights(nights: number, opts: PredictOptions = {}): NightPrediction[] {
+  const { gates = {}, endAtEscape = false, dt = 0.05 } = opts;
   const out: NightPrediction[] = [];
   let mastery = 0;
   let intel = 0;
+  let patrolLevel = 0;
   const ids = Object.keys(NOTE_PRICES) as NoteId[];
   const owned = Object.fromEntries(ids.map((k) => [k, 0])) as Record<NoteId, number>;
   for (let night = 1; night <= nights; night++) {
     const depth = LANDMARK_SCHEDULE.filter((l) => l.night <= night).length;
     const known = LANDMARK_SCHEDULE.filter((l) => l.night < night).length;
-    const budget =
-      NIGHT_SECONDS +
-      NERVE_PER_LEVEL * owned['steel-nerves'] +
-      (known >= 1 ? COFFEE_NERVE * COFFEE_PER_NIGHT : 0) +
-      (known >= 2 ? HAMPER_NERVE : 0);
+    const steps = planSteps({ known, patrolLevel }, gates);
+    let budget = NIGHT_SECONDS + NERVE_PER_LEVEL * owned['steel-nerves'];
+    for (const s of steps) {
+      if (s.refill === 'coffee') budget += COFFEE_NERVE;
+      if (s.refill === 'hamper') budget += HAMPER_NERVE;
+    }
     const global = 1 + GRAPEVINE_PER_LEVEL * owned.grapevine;
     let work = 0;
-    let escapeSeconds: number | null = null;
+    let next = 0;
+    let stepEnd = steps[0]?.work ?? Infinity;
+    let ride = 0;
+    let learned = 0;
+    const splits: Record<number, number> = {};
     for (let t = 0; t < budget; t += dt) {
       const level = Math.sqrt(work / 4 / XP_PER_LEVEL_SQ);
       work += (1 + TALENT_PER_LEVEL * level) * (1 + mastery) * global * dt;
-      if (escapeWork !== undefined && work >= escapeWork) {
-        escapeSeconds = t + dt;
-        break;
+      let escaped = false;
+      while (next < steps.length && work >= stepEnd) {
+        const s = steps[next];
+        if (s.refill === 'ride') {
+          ride = rideNerve(t + dt);
+          budget += ride;
+        }
+        if (s.learnsPatrol) learned++;
+        if (s.opens !== undefined) splits[s.opens] = t + dt;
+        if (s.opens === ESCAPE_DEPTH && endAtEscape) escaped = true;
+        next++;
+        stepEnd += steps[next]?.work ?? Infinity;
       }
+      if (escaped) break;
     }
+    patrolLevel += learned;
     const endLevel = levelFromXp(work / 4);
     mastery += masteryRetention(endLevel);
     let take = 0;
@@ -203,7 +383,9 @@ export function predictNights(nights: number, escapeWork?: number, dt = 0.05): N
       endLevel,
       mastery,
       intel: take,
-      escapeSeconds,
+      splits,
+      ride,
+      patrolLevel,
       nerveLevel: owned['steel-nerves'],
       grapevineLevel: owned.grapevine,
     });
@@ -211,65 +393,65 @@ export function predictNights(nights: number, escapeWork?: number, dt = 0.05): N
   return out;
 }
 
-// ── Route durations ─────────────────────────────────────────────────────────
+// ── Gate durations ──────────────────────────────────────────────────────────
 
-/** Training rep durations and the non-gate route steps, in base-seconds. */
-export const ACTION_SECONDS = {
-  'push-ups': REP_SECONDS,
-  'shadow-walk': REP_SECONDS,
-  'bend-wire': REP_SECONDS * 1.5,
-  rehearse: REP_SECONDS,
-  coffee: REP_SECONDS * 2,
-  smokes: REP_SECONDS * 2.5,
-  hamper: REP_SECONDS * 3,
-  bribe: REP_SECONDS * 4,
-} as const;
-
-/** Mandatory non-gate work inside each stage (the steps the gate needs first). */
-const STAGE_PREREQS: Record<number, number> = {
-  1: ACTION_SECONDS['bend-wire'],
-  2: ACTION_SECONDS.smokes * 2,
-  3: ACTION_SECONDS.bribe,
-  4: 0,
+/** Gates that share one stage, and the share of the stage's work each takes. */
+const STAGE_GATES: Record<number, [GateId, number][]> = {
+  1: [['pick-cell', 1]],
+  2: [['slip-patrol', 1]],
+  3: [['badge-door', 1]],
+  4: [
+    ['cut-fence', 0.4],
+    ['wall-climb', 0.6],
+  ],
+  5: [['cross-woods', 1]],
+  6: [['board-freight', 1]],
 };
-/** Share of the final stage spent cutting the fence before the climb. */
-const FENCE_SHARE = 0.4;
-
-export type GateId = 'pick-cell' | 'slip-patrol' | 'badge-door' | 'cut-fence' | 'wall-climb';
 
 /**
- * Gate durations, sized so the cumulative route through landmark d consumes
- * `fill` of the predicted capacity of the night it is scheduled to fall on.
- * Refills on the route cost work too; they are counted inside the fill.
+ * Size the gates of landmark `d` so the route through it sits at its `position`
+ * between the predicted capacity of the night before and of its own night. The
+ * route's other steps, refills included, count against it; the patrol discount
+ * is divided out.
+ */
+function sizeStage(
+  d: number,
+  arc: NightPrediction[],
+  gates: Partial<Record<GateId, number>>,
+): void {
+  const l = LANDMARK_SCHEDULE.find((x) => x.depth === d)!;
+  const patrolLevel = l.night > 1 ? arc[l.night - 2].patrolLevel : 0;
+  const steps = planSteps({ known: d - 1, patrolLevel }, gates);
+  const through = steps.findIndex((s) => s.opens === d);
+  const others = steps.slice(0, through + 1).reduce((a, s) => a + s.work, 0);
+  const before = l.night > 1 ? arc[l.night - 2].work : 0;
+  const target = before + l.position * (arc[l.night - 1].work - before);
+  const remainder = target - others;
+  for (const [id, share] of STAGE_GATES[d]) {
+    const factor = steps.find((s) => s.id === id)?.factor ?? 1;
+    gates[id] = Math.round((remainder * share) / factor);
+  }
+}
+
+/**
+ * Derive every gate from the arc. The prison's gates come from nights before the
+ * wall, which no ride reaches. The zone past the wall depends on when the wall
+ * falls, so its gates come from a second prediction with the prison sized.
  */
 export function deriveGates(): Record<GateId, number> {
-  const arc = predictNights(Math.max(...LANDMARK_SCHEDULE.map((l) => l.night)));
-  const routeThrough = LANDMARK_SCHEDULE.map((l) => l.fill * arc[l.night - 1].work);
-  const stage = (d: number) =>
-    routeThrough[d - 1] - (d > 1 ? routeThrough[d - 2] : 0) - STAGE_PREREQS[d];
-  const final = stage(4);
-  return {
-    'pick-cell': Math.round(stage(1)),
-    'slip-patrol': Math.round(stage(2)),
-    'badge-door': Math.round(stage(3)),
-    'cut-fence': Math.round(final * FENCE_SHARE),
-    'wall-climb': Math.round(final * (1 - FENCE_SHARE)),
-  };
+  const gates: Partial<Record<GateId, number>> = {};
+  const wall = LANDMARK_SCHEDULE.find((l) => l.depth === 4)!.night;
+  const prison = predictNights(wall);
+  for (const d of [1, 2, 3, 4]) sizeStage(d, prison, gates);
+  const last = Math.max(...LANDMARK_SCHEDULE.map((l) => l.night));
+  const outside = predictNights(last, { gates });
+  for (const d of [5, 6]) sizeStage(d, outside, gates);
+  return gates as Record<GateId, number>;
 }
 
 export const GATE_SECONDS = deriveGates();
 
-/**
- * Base-seconds of the whole escape route: every gate, every step it needs, and
- * the refills the reference policy takes on the way (both coffees, the hamper).
- */
-export const ESCAPE_ROUTE_WORK =
-  Object.values(GATE_SECONDS).reduce((a, b) => a + b, 0) +
-  Object.values(STAGE_PREREQS).reduce((a, b) => a + b, 0) +
-  ACTION_SECONDS.coffee * COFFEE_PER_NIGHT +
-  ACTION_SECONDS.hamper;
-
-/** The arc with nights ending on the wall once they can reach it. */
+/** The arc as the game plays it: derived gates, nights ending on the freight. */
 export function predictArc(nights: number): NightPrediction[] {
-  return predictNights(nights, ESCAPE_ROUTE_WORK);
+  return predictNights(nights, { gates: GATE_SECONDS, endAtEscape: true });
 }

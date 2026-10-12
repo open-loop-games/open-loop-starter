@@ -2,7 +2,16 @@
 import Button from '@/ui/components/Button.vue';
 import { computed } from 'vue';
 import { getMeta, getNight } from '../../modules';
-import { ACTIONS, ZONES, ITEM_NAMES, type ActionDef, type ItemId } from '../../data';
+import {
+  ACTIONS,
+  ESCAPE_DEPTH,
+  ITEM_NAMES,
+  PATROL_CAP,
+  RIDE_DEADLINE,
+  ZONES,
+  type ActionDef,
+  type ItemId,
+} from '../../data';
 import { secs } from '../format';
 import { addToPlan } from '../../modules';
 import SkillPips from './SkillPips.vue';
@@ -38,10 +47,12 @@ function notes(a: ActionDef): string[] {
   const spends = itemsText(a.consumes, 'spends');
   const gives = itemsText(a.gives, 'gives');
   for (const n of [needs, spends, gives]) if (n) out.push(n);
-  if (a.nerve === 'coffee') out.push('+Nerve');
-  if (a.nerve === 'hamper') out.push('+Nerve');
+  if (a.nerve === 'coffee' || a.nerve === 'hamper') out.push('+Nerve');
+  if (a.nerve === 'ride') out.push(`+Nerve, less the later; none after ${secs(RIDE_DEADLINE)}`);
+  if (a.learnsPatrol)
+    out.push(`kept ${meta.patrolKnowledge.value}/${PATROL_CAP}: shortens Slip the Patrol`);
   if (a.opens !== undefined)
-    out.push(a.opens === 4 ? 'the way out' : `opens ${ZONES[a.opens].displayName}`);
+    out.push(a.opens === ESCAPE_DEPTH ? 'the way out' : `opens ${ZONES[a.opens].displayName}`);
   return out;
 }
 </script>

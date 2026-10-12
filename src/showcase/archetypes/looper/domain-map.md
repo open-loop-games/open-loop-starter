@@ -11,10 +11,10 @@ The loop game: the player writes a plan, a night executes it against a draining 
 
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
-- **ItemId** _(string-literal union)_ — `picks` · `smokes` · `keycard` · `fence`
+- **ItemId** _(string-literal union)_ — `picks` · `smokes` · `keycard` · `fence` · `gate`
 - **SkillId** _(string-literal union)_ — `brawn` · `stealth` · `finesse` · `guile`
 - **NoteId** _(string-literal union)_ — `steel-nerves` · `grapevine` · `routine` · `discipline` · `deja-vu`
-- **GateId** _(string-literal union)_ — `pick-cell` · `slip-patrol` · `badge-door` · `cut-fence` · `wall-climb`
+- **GateId** _(string-literal union)_ — `pick-cell` · `slip-patrol` · `badge-door` · `cut-fence` · `wall-climb` · `cross-woods` · `board-freight`
 
 ## Defs
 
@@ -27,6 +27,7 @@ another domain noun. These are name-encoded, not type-encoded, so
 type-graph tools such as dependency-cruiser and findReferences miss them.
 
 - **ActionDef** → `zone`
+- **RouteStep** → `zone`
 
 ## Thin spots
 

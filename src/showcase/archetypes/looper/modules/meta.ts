@@ -35,8 +35,8 @@ import { LooperTuningRegistryKey } from './tuning';
 
 /**
  * Meta module — what survives a night: Intel, the plan, the ground discovered,
- * the notes Intel buys, the global speed stack, the game-speed rung and the
- * splits record. The night module resets every night; this one never does.
+ * the notes Intel buys, the patrol learned, the global speed stack, the
+ * game-speed rung and the splits record. The night module resets every night; this one never does.
  */
 
 /** One line of the player's plan: an action and how many times to run it. */
@@ -61,6 +61,8 @@ export interface MetaApi {
   speedSteps: ComputedRef<number[]>;
   /** lowest night-seconds to reach each landmark, keyed by depth */
   bestSplits: Persistent<Record<string, number>>;
+  /** kept patrol-knowledge level: each one shortens Slip the Patrol on every later night */
+  patrolKnowledge: Persistent<number>;
   /** the last finished night's splits, the diff the night strip ghosts */
   lastSplits: Persistent<Record<string, number>>;
   escapes: Persistent<number>;
@@ -125,6 +127,7 @@ export function createMetaModule(): EngineModule {
       const bestSplits = persistent<Record<string, number>>({}, { id: 'bestSplits' });
       const lastSplits = persistent<Record<string, number>>({}, { id: 'lastSplits' });
       const escapes = persistent(0, { id: 'escapes' });
+      const patrolKnowledge = persistent(0, { id: 'patrolKnowledge' });
 
       const speedChain = createModifierChain('looper/speed');
       const grapevineStep = tunable(
@@ -191,6 +194,7 @@ export function createMetaModule(): EngineModule {
         bestSplits,
         lastSplits,
         escapes,
+        patrolKnowledge,
       };
       ctx.provide(MetaKey, api);
     },

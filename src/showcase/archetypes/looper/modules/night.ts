@@ -28,6 +28,10 @@ import {
 import {
   ACTIONS,
   COFFEE_NERVE,
+  PATROL_CAP,
+  PATROL_STEP,
+  RIDE_DEADLINE,
+  RIDE_NERVE,
   ESCAPE_DEPTH,
   HAMPER_NERVE,
   intelForDepth,
@@ -78,6 +82,8 @@ export interface NightSummary {
   /** mastery bonus gained this night, per skill */
   mastery: Record<string, number>;
   splits: Record<string, number>;
+  /** Nerve the milk truck added, 0 when it was not caught */
+  ride: number;
   /** how the night ended */
   cause: 'nerve' | 'escape' | 'turned-in';
 }
@@ -143,6 +149,7 @@ export function createNightModule(): EngineModule {
         smokes: createResource<DecimalSource>(0, { id: 'smokes', displayName: 'Smokes' }),
         keycard: createResource<DecimalSource>(0, { id: 'keycard', displayName: 'Keycard' }),
         fence: createResource<DecimalSource>(0, { id: 'fence', displayName: 'Fence cut' }),
+        gate: createResource<DecimalSource>(0, { id: 'gate', displayName: 'Yard gate open' }),
       };
       const nightActive = persistent(false, { id: 'nightActive' });
       const depth = persistent(0, { id: 'depth' });
@@ -151,6 +158,7 @@ export function createNightModule(): EngineModule {
       const nerveCap = persistent(NIGHT_SECONDS, { id: 'nerveCap' });
       const planStamp = persistent('', { id: 'planStamp' });
       const nightOver = persistent('', { id: 'nightOver' });
+      const rideGained = persistent(0, { id: 'rideGained' });
       const lastNight = ref<NightSummary | null>(null);
       const sinceNightEnded = ref(Infinity);
 
@@ -164,6 +172,13 @@ export function createNightModule(): EngineModule {
         coffee: tunable(registry, 'nerve/coffee', () => COFFEE_NERVE),
         hamper: tunable(registry, 'nerve/hamper', () => HAMPER_NERVE),
       };
+      // The milk truck pays less the later on the night clock it is caught.
+      const rideMax = tunable(registry, 'nerve/ride', () => RIDE_NERVE);
+      const rideDeadline = tunable(registry, 'nerve/rideDeadline', () => RIDE_DEADLINE);
+      const refillAmount = (kind: NonNullable<ActionDef['nerve']>): number =>
+        kind === 'ride'
+          ? rideMax.value * Math.max(0, 1 - cycle.elapsed.value / rideDeadline.value)
+          : refill[kind].value;
       const maxNerve = computed(
         () => nightSeconds.value + nervePerLevel.value * meta.owned('steel-nerves'),
       );
@@ -215,6 +230,13 @@ export function createNightModule(): EngineModule {
           tunable(registry, `actions/${a.id}/seconds`, () => a.baseSeconds),
         ]),
       );
+      // Kept patrol knowledge shortens Slip the Patrol on every night after it is learned.
+      const patrolStep = tunable(registry, 'patrol/step', () => PATROL_STEP);
+      const effectiveSeconds = (id: string): number =>
+        id === 'slip-patrol'
+          ? seconds[id].value *
+            Math.max(0, 1 - patrolStep.value * Math.min(meta.patrolKnowledge.value, PATROL_CAP))
+          : seconds[id].value;
 
       function holds(need: Partial<Record<ItemId, number>> | undefined): boolean {
         if (!need) return true;
@@ -225,6 +247,7 @@ export function createNightModule(): EngineModule {
       function runnable(def: ActionDef, state: ActionState): StartResult {
         if (def.zone > depth.value) return 'never';
         if (def.limit !== undefined && state.done.value >= def.limit) return 'never';
+        if (def.learnsPatrol && meta.patrolKnowledge.value >= PATROL_CAP) return 'never';
         if (!holds(def.needs) || !holds(def.consumes)) return 'never';
         return 'now';
       }
@@ -234,8 +257,11 @@ export function createNightModule(): EngineModule {
           items[item as ItemId].value = Decimal.sub(items[item as ItemId].value, n as number);
         for (const [item, n] of Object.entries(def.gives ?? {}))
           addResource(items[item as ItemId], n as number);
+        if (def.learnsPatrol) meta.patrolKnowledge.value++;
         if (def.nerve) {
-          addResource(nerve, refill[def.nerve].value);
+          const amount = refillAmount(def.nerve);
+          if (def.nerve === 'ride') rideGained.value = amount;
+          addResource(nerve, amount);
           nerveCap.value = Math.max(nerveCap.value, new Decimal(nerve.value).toNumber());
         }
         if (def.opens !== undefined && def.opens > depth.value) {
@@ -274,7 +300,7 @@ export function createNightModule(): EngineModule {
               talent.addXp(skill, step * (w as number));
               mastery.addXp(skill, step * (w as number));
             }
-            if ((category.currentItem!.progress as number) >= seconds[def.id].value) {
+            if ((category.currentItem!.progress as number) >= effectiveSeconds(def.id)) {
               finish(def, entry.state);
               category.sequencer.complete();
             }
@@ -357,6 +383,7 @@ export function createNightModule(): EngineModule {
               SKILLS.map((s) => [s.id, masteryNow(s.id) - masteryBefore[s.id]]),
             ),
             splits: { ...splits.value },
+            ride: rideGained.value,
             cause: pendingCause,
           } satisfies NightSummary);
         },
@@ -421,7 +448,7 @@ export function createNightModule(): EngineModule {
         mastery,
         skillSpeed: (id) => skillMult[id].value,
         actions,
-        actionSeconds: (id) => seconds[id].value,
+        actionSeconds: effectiveSeconds,
         actionSpeed: (id) => new Decimal(actions.getRateChain(id)!.apply(1)).toNumber(),
         cycle,
         log,

@@ -6,9 +6,12 @@
  *
  * How to read it:
  * - § Beats: when each zone, automation tier and purchase first fired.
- * - § Nights: measured work against `predictArc`. Before the first escape, `work Δ%`
- *   is the check. After it, a night ends on the wall, so read `secs` against
- *   `predEscape` instead; work then pins at the route's length.
+ * - § Nights: measured work against `predictArc`. Before the freight, `work Δ%` is
+ *   the check. After it a night ends on the freight and work pins at the route's
+ *   length, so read the splits instead.
+ * - § Splits: the night-second the wall, the rail yard and the freight fell,
+ *   measured and predicted, and the milk truck's refill. The ride couples the two
+ *   zones: a faster wall is a bigger ride.
  * - § Landmarks: the night each landmark first fell, against `LANDMARK_SCHEDULE`.
  */
 
@@ -16,7 +19,7 @@ import { LANDMARK_SCHEDULE, LANDMARKS, predictArc } from '../data';
 import { runArc } from './_engine';
 
 const argv = (globalThis as { process?: { argv: string[] } }).process?.argv ?? [];
-const NIGHTS = Number(argv[2] ?? 14);
+const NIGHTS = Number(argv[2] ?? 20);
 
 const t0 = performance.now();
 const arc = await runArc(NIGHTS);
@@ -38,9 +41,29 @@ console.table(
     predDepth: pred[i].depth,
     mastery: +mastery.toFixed(3),
     predMastery: +pred[i].mastery.toFixed(3),
-    predEscape: pred[i].escapeSeconds === null ? '-' : +pred[i].escapeSeconds!.toFixed(1),
     intel: s.intel,
   })),
+);
+
+const split = (v: number | undefined) => (v === undefined ? '-' : +v.toFixed(1));
+console.log('\n=== Splits past the prison: probe vs spine ===');
+console.table(
+  arc.nights
+    .filter(({ summary: s }) => s.depth >= 4)
+    .map(({ summary: s }) => {
+      const p = pred[s.night - 1];
+      return {
+        night: s.night,
+        wall: split(s.splits[4]),
+        predWall: split(p.splits[4]),
+        ride: +s.ride.toFixed(1),
+        predRide: +p.ride.toFixed(1),
+        railYard: split(s.splits[5]),
+        predRailYard: split(p.splits[5]),
+        freight: split(s.splits[6]),
+        predFreight: split(p.splits[6]),
+      };
+    }),
 );
 
 console.log('\n=== Landmarks: first night reached ===');

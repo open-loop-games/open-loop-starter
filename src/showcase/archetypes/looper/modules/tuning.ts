@@ -12,7 +12,8 @@ import type { NoteId } from '../data';
  * reads `../data/spine.ts`. `BALANCING.md` § The tunables says what each moves.
  *
  * Key prefixes:
- *   - `nerve/*` — the run budget: the base night and its refills
+ *   - `nerve/*` — the run budget: the base night, its refills and the ride
+ *   - `patrol/step` — Slip the Patrol's share removed per kept patrol level
  *   - `skills/*` — the talent and mastery curves of the parallel track
  *   - `actions/<id>/seconds` — an action's base duration
  *   - `notes/<id>/*` — a note's price, and Grapevine and Steel Nerves effects
@@ -21,6 +22,9 @@ export type LooperTunableKey =
   | 'nerve/base'
   | 'nerve/coffee'
   | 'nerve/hamper'
+  | 'nerve/ride'
+  | 'nerve/rideDeadline'
+  | 'patrol/step'
   | 'skills/xpPerLevelSq'
   | 'skills/talentPerLevel'
   | 'skills/masteryPerLevel'

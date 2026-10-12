@@ -14,7 +14,7 @@
 import { Decimal } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
-import { ACTIONS, NOTES, SKILLS, ZONES } from '../data';
+import { NOTES, SKILLS, ZONES, referencePlan } from '../data';
 import {
   createLooperModules,
   getAutomation,
@@ -29,27 +29,17 @@ export const num = (v: unknown): number => new Decimal(v as never).toNumber();
 /** Sim-seconds per tick: coarse enough for minute-scale nights, fine enough for 4s reps. */
 export const DT = 0.1;
 
-/** The route in order, the way a player writes it once the ground is known. */
-const ROUTE: PlanRow[] = [
-  { id: 'bend-wire', times: 1 },
-  { id: 'pick-cell', times: 1 },
-  { id: 'coffee', times: 2 },
-  { id: 'smokes', times: 2 },
-  { id: 'slip-patrol', times: 1 },
-  { id: 'hamper', times: 1 },
-  { id: 'bribe', times: 1 },
-  { id: 'badge-door', times: 1 },
-  { id: 'cut-fence', times: 1 },
-  { id: 'wall-climb', times: 1 },
-];
-
-/** The plan for ground known up to zone `known`: the route so far, then training to fill the night. */
-export function planFor(known: number): PlanRow[] {
-  const route = ROUTE.filter((r) => ACTIONS.find((a) => a.id === r.id)!.zone <= known);
-  const filler: PlanRow[] = [];
-  for (let i = 0; i < 12; i++)
-    for (const id of ['push-ups', 'shadow-walk', 'rehearse']) filler.push({ id, times: 1 });
-  return [...route, ...filler];
+/**
+ * The plan for the ground known up to zone `known`: the spine's reference plan,
+ * then training to fill the night.
+ */
+export function planFor(known: number, patrolLevel: number): PlanRow[] {
+  // Training long enough that no night's plan runs out before its Nerve does.
+  const filler: PlanRow[] = ['push-ups', 'shadow-walk', 'rehearse'].map((id) => ({
+    id,
+    times: 250,
+  }));
+  return [...referencePlan({ known, patrolLevel }), ...filler];
 }
 
 /** Buy notes cheapest-first until nothing is affordable; returns the ids bought. */
@@ -112,7 +102,7 @@ export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<
   let idle = 0;
   let stalled = false;
 
-  meta.plan.value = planFor(discovered());
+  meta.plan.value = planFor(discovered(), meta.patrolKnowledge.value);
   night.beginNight();
   beat('first night begins');
 
@@ -152,7 +142,7 @@ export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<
         SKILLS.reduce((a, k) => a + num(night.mastery.getSkill(k.id)!.lifetimeBonus!.value), 0) / 4;
       rows.push({ summary: s, mastery, bought });
       // The player rewrites the plan between nights; Routine, once owned, presses Begin.
-      meta.plan.value = planFor(discovered());
+      meta.plan.value = planFor(discovered(), meta.patrolKnowledge.value);
       if (!automation.hasReached('routine')) night.beginNight();
     }
     // Routine owns the restart once bought; a long gap between nights is a stuck phase.

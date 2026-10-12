@@ -15,18 +15,21 @@ Progress Knight 2 show the composition ships, as a set; none is a lift target.
 ## What this archetype is
 
 *Lights Out.* Inmate 4471 relives the same night. At lights-out you write a plan — bend
-a wire into a pick, pick the cell lock, swipe the guard's coffee, slip the patrol, bribe
-the trustee, badge into the yard, cut the fence, scale the wall — and the plan runs.
-Every second of the night costs **Nerve**. When it breaks, you wake at lights-out again.
-What carries over is **mastery**, the part of each skill's level the night taught it,
-and **Intel**, which buys longer nights, faster moves, a faster clock and two automation
-rungs.
+a wire into a pick, pick the cell lock, slip the patrol, bribe the trustee, badge into
+the yard, scale the wall, catch the milk truck, cross the woods, pick the rail-yard
+padlock, board the freight — and the plan runs. Every second of the night costs
+**Nerve**. When it breaks, you wake at lights-out again. What carries over is
+**mastery**, the part of each skill's level the night taught it; **Intel**, which buys
+longer nights, faster moves, a faster clock and two automation rungs; and what you
+learned of the **patrol**.
 
-The plan is the only decision. Between nights you read the skills, the splits and the
-log, and rewrite the plan for what night N+1 can reach that night N could not. The first
-escape is designed for night eight. After it, every night ends on the wall, and the game
-becomes the splits board: tonight's time to each landmark against last night's and your
-best.
+The plan is the only decision. The night has two zones. The prison is re-run every
+night: it is the toll on the way out, and the plan's job there is to get through it
+faster. Past the wall, the second zone spends what the first produced. The truck takes
+a pack of smokes and pays out Nerve, less the later you reach it. The rail-yard padlock
+takes a second pick. So the prison plan has to make more than the prison needs, and every
+second it saves inside is Nerve outside. The freight is the last landmark; after it,
+every night ends on the train, and the game is the splits board.
 
 ## The defining component
 
@@ -55,17 +58,27 @@ t(W)  = (2/b)·[ √W − (a/b)·ln(1 + (b/a)·√W) ]  a = M·g,  b = a·α / (
 The first passage `t(W)` closes in elementary form; its inverse, work by a given second,
 is the Lambert-W frontier (`…/log-frontier.mdx`). Across nights the spine composes under
 `…/composition.mdx`: mastery is a **piecewise splice** at the knee, and mastery ×
-Grapevine is a **modifier product** on the night's rate.
+Grapevine is a **modifier product** on the night's rate. Two terms couple the zones:
 
-**The spine generates the route.** `data/spine.ts` integrates the arc night by night
-under a reference policy, then sizes each gate so the route through landmark d fills a
-set share of the capacity of the night it is scheduled for. No gate duration is authored.
+```
+ride(t_wall)  = R · max(0, 1 − t_wall / T_truck)     budget past the wall falls with the wall's split
+slip(level)   = slip₀ · (1 − s · min(level, cap))    the prison toll falls with the patrol learned
+```
 
-**Where the closed form stops: the plan.** The reference policy spreads work evenly over
-four skills and takes every refill on known ground. A real plan leans on the route's
-skills and may skip moves, so the speed product drifts from the even split.
-`balance/arc-probe.ts` measures the shipping game against the prediction: work per night
-before the first escape, and escape time after it.
+The ride makes zone 2's budget a function of zone 1's first passage, so a prison gain
+pays twice. The patrol discount is a per-segment track beside mastery, as Idle Loops'
+Old Shortcut is.
+
+**The spine generates the route.** `data/spine.ts` predicts the arc night by night under
+a reference plan (`REFERENCE_ROUTE`), then sizes each gate so the route through landmark
+d sits at a set position between the predicted capacity of the night before and of its
+own night. No gate duration is authored. The prison is sized first; zone 2 depends on
+when the wall falls, so it is sized from a second prediction.
+
+**Where the closed form stops: the plan.** The reference plan spreads work evenly over
+four skills. A real plan leans on the route's skills, and past the wall the long gates
+lean on Brawn and Stealth. `balance/arc-probe.ts` measures the shipping game against
+the prediction: work per night, and the wall, ride, rail-yard and freight splits.
 
 ## The arc
 
@@ -73,21 +86,23 @@ before the first escape, and escape time after it.
 |---|---|---|
 | Out of the cell | 1 | 25s |
 | First note (Steel Nerves) | after 2 | 150s |
-| Into the laundry | 3 | 242s |
-| Into the yard; Routine takes the restart | 5 | 483s, 500s |
-| Over the wall; Discipline takes the turn-in | 8 | 920s |
+| Into the laundry | 3 | 244s |
+| Into the yard; Routine takes the restart | 5 | 485s, 500s |
+| Over the wall; Discipline takes the turn-in | 8 | 922s, 929s |
+| Into the rail yard | 13 | 1846s |
+| On the freight | 17 | 2772s |
 
-Nights run 60s at first and about 130–145s by the yard. After the first escape the
-night shortens: 136s on night 8, about 80s by night 14. `manifest.ts` holds the recorded
-beats.
+The wall falls at 138s on night 8 and under 50s by night 20, and the truck's refill
+grows from 7 to 40 Nerve as it does. `manifest.ts` holds the recorded beats.
 
 ## Growth ports
 
-- **A second route.** A different way over the wall that leans on other skills, so the
-  plan chooses a route as well as an order.
+- **A second route.** A different way to the freight that leans on other skills, so the
+  plan chooses a route as well as an order. The spine would then track each skill.
 - **Ground that mastery grows.** Refills and supplies whose per-night limits rise with a
   skill, so training changes what the night can carry.
-- **A layer above nights.** A second reset that compresses the night layer.
+- **A third zone.** The same coupling again: a budget past the freight priced by the
+  freight's split.
 
 ## Engine fit
 
@@ -107,6 +122,7 @@ and plan repeat counts.
 
 ## Balance model
 
-The spine is `data/spine.ts`, printed by `balance/looper-projection.ts`.
-`balance/arc-probe.ts` plays the shipping game for N nights, with the player's openers
-in `balance/_engine.ts`. `BALANCING.md` covers the knobs and couplings.
+The spine is `data/spine.ts`, printed by `balance/looper-projection.ts`, which also
+checks that every landmark lands on its night. `balance/arc-probe.ts` plays the shipping
+game for N nights, with the player's openers in `balance/_engine.ts`. `BALANCING.md`
+covers the knobs and couplings.

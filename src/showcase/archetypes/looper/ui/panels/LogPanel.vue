@@ -17,7 +17,7 @@ function kept(s: NightSummary): string {
   return `+${(total * 100).toFixed(1)}%`;
 }
 function ending(s: NightSummary): string {
-  if (s.escaped) return 'over the wall';
+  if (s.escaped) return 'on the freight';
   if (s.cause === 'turned-in') return 'turned in';
   return `caught in ${s.depth === 0 ? 'the cell' : ZONES[s.depth].displayName.replace(/^The /, 'the ')}`;
 }

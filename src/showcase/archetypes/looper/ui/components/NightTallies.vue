@@ -31,7 +31,7 @@ const chosen = computed(() => Math.min(meta.chosenSpeed.value, meta.speedSteps.v
         <dd class="lo-num lo-intel">{{ whole(intel) }}</dd>
       </div>
       <div v-if="meta.escapes.value > 0" class="lo-reveal">
-        <dt>Over the wall</dt>
+        <dt>On the freight</dt>
         <dd class="lo-num">{{ meta.escapes.value }}</dd>
       </div>
     </dl>
