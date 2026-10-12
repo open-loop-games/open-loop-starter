@@ -37,9 +37,8 @@ export const OPENING_CLASS_COST = 15;
 export const OPENING_CLASS_RATE = 0.1;
 
 /**
- * The ladder generators. `./classes.ts` writes its values out longhand so the
- * file reads as data; these are the contract those values must satisfy, and
- * what anything sizing against a class (refinement costs, projections) uses
+ * The ladder generators. `./classes.ts` maps them over its costume table, and
+ * anything sizing against a class (refinement costs, projections) uses them
  * rather than re-deriving the formula.
  */
 export const classBaseCost = (index: number): number =>

@@ -18,32 +18,24 @@ what each one actually moves:
 
 | Key | Default | What it moves |
 |---|---|---|
-| `balance/classRateScale` | `1` | ×N on every class's rate chain. The reactive stand-in for `baseRate`, which is static — see below. Moves the realized rate without touching the authored ladder. |
+| `balance/costRatio` | `1.1548` | `m`, the cost ratio every class shares. Steepens or flattens all eight cost ladders at once — the beat curve, the channel map and every handoff move with it. One key, not one per class; see § Couplings. |
 | `balance/clickYieldScale` | `1` | ×N on the hand-launch chain only. Nothing global binds here, so this moves the click-vs-ladder crossover and nothing else. |
 | `balance/revisionMultiplier` | `1.03` | The per-revision default reward. 19 revisions compound to ~1.75×; the whole revisions chain rides this. |
 | `balance/generationStep` | `0.05` | The breadth chain's per-class step — `(1 + step)^(distinct classes)`. Rewards deploying wide rather than deep. |
 | `classes/<id>/baseCost` | `15 · 10^i` | A class's zeroth-unit cost, `a_i`. Eight keys, one per class. |
+| `classes/<id>/baseRate` | `0.1 · 8^i` | A class's per-unit rate, `r_i`, before its chain. Eight keys, one per class. A uniform rate sweep pushes all eight. |
 
 `OFFLINE_WINDOW_SECONDS` (`data/curve.ts`) is a constant rather than a key:
 a `TuningRegistry` reader returns a `DecimalSource`, so it cannot express "no
 window", and nothing has needed to sweep it. It is sized as a load-wait budget,
 not a pacing target — re-measure with `offline-probe.ts` § 3 before moving it.
 
-**Two of the most interesting constants are deliberately not on this surface**,
-and the reason is the same for both: they reach the engine as static
-`DecimalSource` fields read once at registration, so a `tunable()` wrapper would
-register a tunable nothing re-reads — a silent no-op that looks like a working one.
+**The authored readouts divide by the authored rate.** The ladder tooltip's base
+rate, the game view's stack total and `_engine.ts`'s `openingClassStack` read
+`def.baseRate`, not the tuned one. Under a `baseRate` override the stack they
+report carries the override's factor.
 
-- **`COST_RATIO` (`m` = 1.1548)** is `ProducerPurchaseOptions.costRatio`.
-  Sweeping it means editing `data/curve.ts` and re-running, or composing the
-  curve as a `Formula` at the wiring layer (`costCurve` in the shared balance
-  toolkit, which is what `producer-projection.ts` already uses). Budget for a
-  source edit per sample before deciding to explore it.
-- **Class `baseRate`** is static on `ProducerMapping`. `balance/classRateScale`
-  is the stand-in — it perturbs realized output without pretending the authored
-  constant moved.
-
-The tuning-modifier chain entries have **no `description`**, which keeps them
+`balance/clickYieldScale`'s chain entry has **no `description`**, which keeps it
 out of `chain.description` and therefore out of every player-facing breakdown.
 A tunable that shows up in the UI as a game concept is a tunable that will get
 balanced against by mistake.
@@ -54,10 +46,13 @@ balanced against by mistake.
 out of `m = (T_n/T_1)^(1/(n−1))` with an 8s opener and a 60s beat at purchase 15.
 Changing the ratio without changing those two authored beat times leaves a
 constant whose derivation comment is now a lie, and the comment is the only
-thing that makes it checkable. Move the beat targets and re-derive, or accept
-that you are choosing a number by feel and say so at the value.
+thing that makes it checkable. Sweeping `balance/costRatio` is exploration: it
+says which `m` the arc wants. Committing one means moving the beat targets until
+they derive it, or accepting that you are choosing a number by feel and saying
+so at the value.
 
-**One steepness, eight classes.** Every class shares `m`. The ladder's character
+**One steepness, eight classes.** Every class shares `m`, which is why
+`balance/costRatio` is one key. The ladder's character
 lives in the per-class ratios instead — cost ×10 against rate ×8, so
 self-payback climbs ×1.25 per class and every class opener is *worse* per unit
 cost than the one below it. That gap is what makes the ladder a ladder rather
@@ -212,10 +207,6 @@ retunes — don't add numbers to them.
   same player, so the gap is still the rule's, but it is not only the
   dispatcher's. A player who respected the hold, or one who purchased nothing
   during it, would each measure something else.
-
-- **`m` has no sweep.** It is the most load-bearing number in the archetype and
-  the only one outside the perturbation surface, so exploring it costs a source
-  edit and a full arc re-run per sample. See § The tunables.
 
 - **One arc, one seed, and that is defensible but worth knowing.** The
   dispatcher is deterministic and there is no stochastic layer, so extra seeds

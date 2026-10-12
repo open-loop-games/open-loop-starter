@@ -121,16 +121,17 @@ export function createSwarmModule(data: ProducerData): EngineModule {
       launchCount = persistent<DecimalSource>(0, { id: 'launchCount' });
 
       // ── The ladder ──────────────────────────────────────────────────────
-      // `costRatio` takes the derived `m` straight from data. It is NOT
-      // routed through the tuning registry: the field is a static
-      // `DecimalSource` read once at registration, so a tunable here would be an
-      // unused key. Rationale and the alternative in `./tuning.ts`.
+      const costRatio = tunable(registry, 'balance/costRatio', () => COST_RATIO);
       classes = createProducerCategory<ProbeClassDef>({
         id: 'producer/classes',
         registerTick: ctx.onTick,
         mapProducer: (def) => ({
           resource: mass,
-          baseRate: def.baseRate,
+          baseRate: tunable(
+            registry,
+            `classes/${def.id as ProbeClassId}/baseRate`,
+            () => def.baseRate,
+          ),
           trigger: 'continuous',
           display: def.displayName,
           purchase: {
@@ -140,7 +141,7 @@ export function createSwarmModule(data: ProducerData): EngineModule {
               `classes/${def.id as ProbeClassId}/baseCost`,
               () => def.baseCost,
             ),
-            costRatio: COST_RATIO,
+            costRatio,
             purchaseMaxByDefault: true,
           },
         }),
@@ -181,9 +182,6 @@ export function createSwarmModule(data: ProducerData): EngineModule {
         Decimal.pow(Decimal.add(1, unref(generationStep)), deployedClasses.value),
       );
 
-      // ── The perturbation stand-in for a static `baseRate` ───────────────
-      const classRateScale = tunable(registry, 'balance/classRateScale', () => 1);
-
       for (const def of data.classes) {
         const producer = classes.getProducer(def.id);
         if (!producer) continue;
@@ -194,21 +192,16 @@ export function createSwarmModule(data: ProducerData): EngineModule {
             description: 'Generation',
           }),
         });
-        producer.rateChain.bind({
-          id: `tuning/classRateScale/${def.id}`,
-          // No `description` — deliberately. A modifier without one is omitted
-          // from `chain.description`, and therefore from every breakdown the UI
-          // renders. This is a perturbation tunable, not a game concept: the
-          // player-facing chain is refinements × revisions × generation, and a
-          // "Class rate scale ×1.00" row would put a balance tool in it.
-          modifier: createMultiplicativeModifier({ multiplier: classRateScale }),
-        });
       }
 
       const clickYieldScale = tunable(registry, 'balance/clickYieldScale', () => 1);
       launcher.rateChain.bind({
         id: 'tuning/clickYieldScale',
-        // Undescribed for the same reason as `classRateScale` above.
+        // No `description` — deliberately. A modifier without one is omitted
+        // from `chain.description`, and therefore from every breakdown the UI
+        // renders. This is a perturbation tunable, not a game concept, and a
+        // "Click yield scale ×1.00" row would put a balance tool in the click's
+        // breakdown.
         modifier: createMultiplicativeModifier({ multiplier: clickYieldScale }),
       });
 

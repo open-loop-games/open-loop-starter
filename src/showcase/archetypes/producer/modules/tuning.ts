@@ -16,34 +16,24 @@ import type { ProbeClassId } from '../data/types';
  * `pushOverrides`: it looks like a working tunable and perturbs nothing.
  * Grep for `tunable(` to audit.
  *
- * **What is deliberately NOT here, and why.** Two of the archetype's most
- * interesting constants cannot be perturbed through this path:
- *
- * - `COST_RATIO` (`m`) reaches the engine as `ProducerPurchaseOptions.
- *   costRatio`, typed `DecimalSource` rather than `Computable`, so it is
- *   read once at registration and a registered tunable would never be re-read.
- *   Sweeping `m` means editing `data/curve.ts` and re-running, or composing
- *   the curve as a `Formula` at the wiring layer — `costCurve` in
- *   `src/balance/cost-curve.ts` is the battery for that, and it is what
- *   `balance/producer-projection.ts` uses.
- * - Class `baseRate` is static on `ProducerMapping` for the same reason.
- *   `balance/classRateScale` below is the reactive stand-in: a multiplicative
- *   modifier on every class chain, which perturbs realized output without
- *   pretending the authored constant moved.
+ * `balance/costRatio` is one key, not one per class: the spine derives a
+ * single `m` and every class shares it (`../data/curve.ts` § Balance).
  *
  * Namespaces:
- *   - `balance/classRateScale`      — ×N on every probe class's rate chain
+ *   - `balance/costRatio`           — the shared cost ratio, `m`
  *   - `balance/clickYieldScale`     — ×N on the hand-launch chain
  *   - `balance/revisionMultiplier`  — the per-revision default reward
  *   - `balance/generationStep`      — the breadth chain's per-class step
  *   - `classes/<id>/baseCost`       — a class's zeroth-unit cost, `a_i`
+ *   - `classes/<id>/baseRate`       — a class's per-unit rate, `r_i`
  */
 export type ProducerTunableKey =
-  | 'balance/classRateScale'
+  | 'balance/costRatio'
   | 'balance/clickYieldScale'
   | 'balance/revisionMultiplier'
   | 'balance/generationStep'
-  | `classes/${ProbeClassId}/baseCost`;
+  | `classes/${ProbeClassId}/baseCost`
+  | `classes/${ProbeClassId}/baseRate`;
 
 export const ProducerTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
   'producer/tuning-registry',
