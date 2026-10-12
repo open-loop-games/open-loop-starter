@@ -20,9 +20,9 @@ import {
 
 /**
  * Meta module — the notes that survive a containment failure, and the shop they
- * buy (`../IDENTITY.md` § Cross-Run Meta).
+ * are spent in (`../IDENTITY.md` § Cross-Run Meta).
  *
- * A **continuous accumulator**, not a hard-reset prestige: notes carry through
+ * A **continuous accumulator**, not a hard-reset prestige: notes survive
  * every run end including death, which is what makes a failed run still progress
  * and is the property that separates this archetype from prestige-shaped ones.
  *
@@ -35,9 +35,9 @@ export interface MetaApi {
   /** Banked notes. A `Resource`, so its `cumulative` doubles as the lifetime stat. */
   notes: ReturnType<typeof createResource<Decimal>>;
   shop: PurchasableCategory<MetaUpgradeDef>;
-  /** Owned level of one upgrade. */
-  levelOf: (id: string) => number;
-  /** `∏ perLevel^level` over one side — the `runBaseline` term. */
+  /** Purchase count of one upgrade. */
+  countOf: (id: string) => number;
+  /** `∏ perPurchase^count` over one side — the `runBaseline` term. */
   baseline: (side: MetaSide) => number;
   /** Live survival / collect / yield multipliers a run opens with. */
   survivalMul: ComputedRef<number>;
@@ -62,47 +62,48 @@ export function createMetaModule(): EngineModule {
       const shop = createPurchasableCategory<MetaUpgradeDef>({
         id: 'survivor/meta-shop',
         mapPurchasable: (def) => ({
-          display: { title: def.name, description: def.blurb },
-          limit: def.maxLevel,
-          // Geometric ladder over the tile's own level — the runs-to-buy shape
-          // (`../data/meta.ts` § Balance). A Formula prices each rung of a
-          // multi-level buy, and `createCostRequirement` does the affordability
-          // check and the deduction, so nothing here hand-rolls a wallet.
-          requirements: (level) =>
+          display: { title: def.displayName, description: def.blurb },
+          limit: def.limit,
+          // Geometric ladder over the tile's own purchase count — the
+          // runs-to-purchase shape (`../data/meta.ts` § Balance). A Formula sets
+          // the cost of each purchase in a bulk purchase, and
+          // `createCostRequirement` does the affordability check and the
+          // deduction, so nothing here hand-rolls the amount check.
+          requirements: (count) =>
             createCostRequirement({
               resource: notes,
-              cost: Formula.exponential(level, def.baseCost, META_COST_RATIO),
+              cost: Formula.exponential(count, def.baseCost, META_COST_RATIO),
             }),
         }),
       });
       shop.register(META_UPGRADES);
 
-      const levelOf = (id: string): number =>
+      const countOf = (id: string): number =>
         new Decimal(shop.getEntry(id)?.purchasable.count.value ?? 0).toNumber();
 
       const baseline = (side: MetaSide): number =>
         META_UPGRADES.filter((u) => u.side === side && u.effect !== 'revive').reduce(
-          (product, u) => product * Math.pow(u.perLevel, levelOf(u.id)),
+          (product, u) => product * Math.pow(u.perPurchase, countOf(u.id)),
           1,
         );
 
       /** One effect's compounded multiplier — used where a side is too coarse. */
       const effectMul = (effect: MetaUpgradeDef['effect']): number => {
         const def = META_UPGRADES.find((u) => u.effect === effect);
-        return def ? Math.pow(def.perLevel, levelOf(def.id)) : 1;
+        return def ? Math.pow(def.perPurchase, countOf(def.id)) : 1;
       };
 
       ctx.provide(MetaKey, {
         notes,
         shop,
-        levelOf,
+        countOf,
         baseline,
         survivalMul: computed(() => baseline('survival')),
         collectMul: computed(() => effectMul('collectRadius')),
         yieldMul: computed(() => effectMul('moteYield')),
         award: (kills, meanYield) => {
           // Payout is the same expression the projection anchors shop costs to,
-          // so "one run buys the first tile" stays true rather than drifting.
+          // so "one run pays for the first tile" stays true rather than drifting.
           const earned = kills * meanYield * NOTES_PER_KILL;
           notes.value = new Decimal(notes.value).add(earned);
         },

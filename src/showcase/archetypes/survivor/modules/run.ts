@@ -7,7 +7,7 @@ import {
 } from '@open-loop/engine';
 import { computed, ref, type Ref } from 'vue';
 import { cumulativeIncomeAmortized } from '../data/income';
-import { SCHEDULE_BALANCE, beatTime, deriveXpLadder, scheduledBeatsBy } from '../data/schedule';
+import { SCHEDULE_BALANCE, fireTime, deriveXpLadder, scheduledBeatsBy } from '../data/schedule';
 import { BASELINE_SEAT } from '../data/seats';
 import { ArenaKey, type RunOutcome } from './arena';
 import { MetaKey } from './meta';
@@ -151,7 +151,7 @@ export function createRunModule(): EngineModule {
         },
       });
 
-      void beatTime;
+      void fireTime;
     },
   };
 }

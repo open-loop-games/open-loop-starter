@@ -70,7 +70,7 @@ interface Placed {
   motes?: { dx: number; dy: number }[];
   /** Unit heading the operator starts on. Default is +x. */
   heading?: { x: number; y: number };
-  /** Seat whose dials drive the pilot. Defaults to the baseline. */
+  /** Seat whose authored parameters drive the pilot. Defaults to the baseline. */
   seat?: SeatDef;
 }
 
@@ -311,12 +311,12 @@ describe('pilot — routing around what is in the way', () => {
   //
   // **This case cannot police that fix on its own, which is the thing to know
   // before touching it.** It goes green under the correct version AND under the
-  // reverted one that priced the whole swept segment — the version that fired the
-  // contact branch on all sixteen candidates, took the price out of the arg-max,
+  // reverted one that costed the whole swept segment — the version that fired the
+  // contact branch on all sixteen candidates, took the cost out of the arg-max,
   // and cost every seat ~9 minutes of arc. Passing here says the operator threads
-  // the lane; it says nothing about whether the price still steers. That reading
+  // the lane; it says nothing about whether the cost still steers. That reading
   // is `../../balance/steering-probe.ts`'s `cliff all` column, and a change to the
-  // contact price is not verified until both have been looked at.
+  // contact cost is not verified until both have been looked at.
   it('threads a gap instead of clipping the group beside it', () => {
     // A 120-unit lane between two static walls, with the payoff on the far side.
     // Contact is 22 units, so the gap is wide — clipping it is a routing failure

@@ -75,7 +75,7 @@ const summary = computed(() => {
     dropped: Math.floor(s.motesDropped),
     // η — the collection efficiency the closed form ASSUMES and cannot predict
     // (`../IDENTITY.md` § Where the closed form stops). Reporting it here is the
-    // cheapest read on the term that sets the price of all income. Shown as a
+    // cheapest read on the term that sets the cost of all income. Shown as a
     // recovery percentage: the same quantity, in the only units a player has for
     // it — how much of what fell you actually picked up.
     recovered: s.motesDropped > 0 ? Math.round((s.motesBanked / s.motesDropped) * 100) : 0,
@@ -94,18 +94,18 @@ const notes = computed(() => Math.floor(Number(meta.notes.value)));
 
 const shop = computed(() =>
   meta.shop.getAll().map((entry) => {
-    const level = Number(entry.purchasable.count.value);
+    const count = Number(entry.purchasable.count.value);
     return {
       id: entry.def.id,
-      name: entry.def.name,
+      displayName: entry.def.displayName,
       blurb: entry.def.blurb,
       side: entry.def.side,
-      level,
-      maxLevel: entry.def.maxLevel,
+      count,
+      limit: entry.def.limit,
       maxed: entry.purchasable.maxed.value,
-      canBuy: entry.purchasable.canPurchase.value,
-      cost: Math.ceil(upgradeCost(entry.def, level)),
-      buy: () => entry.purchasable.purchase(),
+      canPurchase: entry.purchasable.canPurchase.value,
+      cost: Math.ceil(upgradeCost(entry.def, count)),
+      purchase: () => entry.purchasable.purchase(),
     };
   }),
 );
@@ -204,17 +204,17 @@ function descend(): void {
             v-for="u in shop"
             :key="u.id"
             class="tile"
-            :class="{ 'tile--maxed': u.maxed, 'tile--afford': u.canBuy && !u.maxed }"
+            :class="{ 'tile--maxed': u.maxed, 'tile--afford': u.canPurchase && !u.maxed }"
             :data-side="u.side"
           >
             <div class="tile__top">
-              <span class="tile__name">{{ u.name }}</span>
-              <span class="tile__level num" data-num>{{ u.level }}/{{ u.maxLevel }}</span>
+              <span class="tile__name">{{ u.displayName }}</span>
+              <span class="tile__level num" data-num>{{ u.count }}/{{ u.limit }}</span>
             </div>
             <p class="tile__blurb">
               {{ u.blurb }}
             </p>
-            <Button class="tile__buy" :disabled="!u.canBuy || u.maxed" @click="u.buy()">
+            <Button class="tile__buy" :disabled="!u.canPurchase || u.maxed" @click="u.purchase()">
               <template v-if="u.maxed"> Complete </template>
               <template v-else>
                 <span class="num" data-num>{{ u.cost }}</span> notes
@@ -236,7 +236,7 @@ function descend(): void {
             :aria-pressed="chosenSeat === s.id"
             @click="chosenSeat = s.id"
           >
-            <span class="seat__name">{{ s.name }}</span>
+            <span class="seat__name">{{ s.displayName }}</span>
             <span class="seat__blurb">{{ s.blurb }}</span>
           </button>
         </div>
@@ -393,7 +393,7 @@ function descend(): void {
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.35);
   border: 1px solid rgba(35, 32, 26, 0.2);
-  /* Affordance before branding: the side a tile buys is a left rule, and
+  /* Affordance before branding: the side a tile improves is a left rule, and
      affordability is the border. Both read before the words do. */
   border-left: 3px solid rgba(35, 32, 26, 0.3);
   border-radius: 2px;

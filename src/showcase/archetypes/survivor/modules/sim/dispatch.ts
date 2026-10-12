@@ -23,7 +23,7 @@ import type { ArenaParams, DeviceRuntime, Specimen, Vec2 } from './types';
  * Computed per call rather than once at module load, which is what makes the
  * escalation curves SWEEPABLE: frozen at import, a probe that perturbs `m_hp` or
  * `m_d` gets the harder floor without the DPS growth solved to match it, and
- * measures a decoupled knob rather than a retune. The arithmetic is a handful of
+ * measures a decoupled tunable rather than a retune. The arithmetic is a handful of
  * flops against a few activations per second — cheaper than the staleness.
  */
 function levelGain(): number {

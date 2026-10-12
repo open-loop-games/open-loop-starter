@@ -29,7 +29,7 @@ export interface Specimen extends Vec2 {
   moteYield: number;
   /**
    * HP this body arrived with. Retained so damage already spent on it can be
-   * told apart from damage that bought a kill — a body that leaves the floor
+   * told apart from damage that produced a kill — a body that leaves the floor
    * wounded took `spawnHp - hp` of effective damage that converted to nothing.
    * See `ArenaStats.damageWasted`.
    */
@@ -46,7 +46,7 @@ export interface Specimen extends Vec2 {
 export interface Mote extends Vec2 {
   id: number;
   value: number;
-  /** Sim-time the mote was dropped. Motes persist; this is for readouts. */
+  /** Sim-time the mote was dropped. Motes stay on the floor; this is for readouts. */
   droppedAt: number;
 }
 
@@ -121,7 +121,7 @@ export interface ArenaStats {
   damageTaken: number;
   /** Per-device dispatch accounting, lazily keyed by `DeviceDef.id`. */
   devices: Record<string, DeviceStat>;
-  /** Bodies put on the floor. Nothing gates this — see `./step.ts` § spawn. */
+  /** Bodies put on the floor. Nothing blocks this — see `./step.ts` § spawn. */
   spawned: number;
   /**
    * Bodies that were ever inside `killRadius`, counted once each.
@@ -135,7 +135,7 @@ export interface ArenaStats {
    */
   reached: number;
   /**
-   * Effective damage that bought a kill — summed `spawnHp` over dead bodies.
+   * Effective damage that produced a kill — summed `spawnHp` over dead bodies.
    *
    * Paired with `damageWasted` below, this splits delivered damage by what it
    * PURCHASED rather than by which device delivered it. `DeviceStat.damage`
@@ -224,22 +224,22 @@ export interface ArenaState {
 }
 
 /**
- * Everything the step needs that is not state: the seat's policy dials, the
+ * Everything the step needs that is not state: the seat's authored policy parameters, the
  * derived multipliers a run has accumulated, and the injected RNG.
  *
  * Passed in rather than read from module scope so a probe can sweep it and the
  * live tick can hand over exactly what the player's run has earned.
  */
 export interface ArenaParams {
-  /** Seat dials — `SeatDef` fields the sim actually consumes. */
+  /** Seat authored parameters — `SeatDef` fields the sim actually consumes. */
   engage: number;
   eta: number;
   speedMul: number;
   dpsMul: number;
   toughnessMul: number;
-  /** Cross-run survival multiplier (`meta.ts` `maxRunBaseline('survival')`). */
+  /** Lifetime survival multiplier (`meta.ts` `maxRunBaseline('survival')`). */
   metaSurvival: number;
-  /** Cross-run income multiplier. Scales collect radius and mote value. */
+  /** Lifetime income multiplier. Scales collect radius and mote value. */
   metaCollect: number;
   metaYield: number;
   /** Seeded, injected — never `Math.random`, so a run is reproducible. */

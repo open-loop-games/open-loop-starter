@@ -19,10 +19,10 @@ export const XP_PER_MOTE = 1;
 /** Integration step for the cumulative forms below, in game-seconds. */
 const DT = 0.5;
 
-// Every rate below projects from `seat.measured`, never from the seat's dials.
-// The dials are what the policy is asked to prefer; these are what it achieves,
+// Every rate below projects from `seat.measured`, never from the seat's authored parameters.
+// The authored parameters are what the policy is asked to prefer; these are what it achieves,
 // and the gap between them is not a rounding error — see `./seats.ts`
-// § SeatOutcome for the 20% ladder error that reading dials here produced.
+// § SeatOutcome for the 20% ladder error that reading authored parameters here produced.
 
 /** Motes dropped per game-second at `t` — kills × mean yield over the live mix. */
 export function dropRate(t: number, seat: SeatDef): number {
@@ -37,10 +37,10 @@ export function incomeRate(t: number, seat: SeatDef): number {
 /**
  * Motes dropped but NOT banked — the pool a collector later pulls from.
  *
- * This is the term that punished reading the dial. It is a cut of `1 − η`, so
+ * This is the term that punished reading the authored parameter. It is a cut of `1 − η`, so
  * understating `η` does not merely understate continuous income, it INFLATES the
  * collector's modelled yield — an error in the opposite direction, on a quantity
- * the ladder is derived from. At a dialled 0.65 the pool reads 35% of drops;
+ * the ladder is derived from. At an authored 0.65 the pool reads 35% of drops;
  * measured it is nearer 3%.
  */
 export function uncollectedRate(t: number, seat: SeatDef): number {
@@ -113,7 +113,7 @@ export function cumulativeIncomeAmortized(t: number, seat: SeatDef, runSeconds: 
 // badly balanced or badly piloted, and those look identical from outside. The
 // probe therefore reports η measured against η assumed, and splits it into
 // continuous pickup and collector bursts — that split is what says which side
-// needs the work. Retuning an economy because the bot was bad is the standard way
+// needs the work. Retuning an economy because the automated player was bad is the standard way
 // this goes wrong, and it is invisible without the ratio.
 //
 // ─── Collectors are impulses and belong in the derivation ───
@@ -131,7 +131,7 @@ export function cumulativeIncomeAmortized(t: number, seat: SeatDef, runSeconds: 
 // drop is a roll. `cumulativeIncomeAmortized` is what the derivation takes.
 //
 // Second-order, and the reason collectors are worth their complexity: because
-// motes persist and the floor behind the operator is un-spawned, deferring
+// motes stay on the floor and the floor behind the operator is un-spawned, deferring
 // collection to bank a larger burst is a coherent gamble paid for against the
 // beat schedule. The edge arrow on an off-screen collector is what makes routing
 // through your own uncollected field a decision rather than a reflex.

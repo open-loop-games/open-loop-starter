@@ -7,7 +7,7 @@
  * `../IDENTITY.md` § Rate-function spine stops the closed form in two named
  * places — the draft is stochastic, and `η` is a policy output — and declares
  * what measures the rest: **seeded multi-run distribution statistics per
- * personality**, being median survival, `η` split into continuous pickup and
+ * persona**, being median survival, `η` split into continuous pickup and
  * collector burst, and the distribution of **binding cause** at run end.
  *
  * This is that instrument. `./arena-probe.ts` reads one seed in depth and is
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
   //
   // `engage` is DEFINED as the share of spawns brought inside `r_kill`
   // (`../data/arena.ts` § Density), so kills over spawns measures it directly
-  // against the seat's declared dial. Every income figure in the closed form
+  // against the seat's declared authored parameter. Every income figure in the closed form
   // rides that pair agreeing.
   console.log('\n  ── Economy across the batch ──');
   console.log(
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
       col('sched', 18) +
       col('kills/s', 18) +
       col('engage', 18) +
-      col('dial', 7) +
+      col('asked', 7) +
       col('reach', 18) +
       col('lethal', 18) +
       col('income', 18) +
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
       lethal: (r) => r.kills / Math.max(1, r.reached),
       // The compound the income model actually rides — kills per spawn times the
       // share of their drops banked. `../data/income.ts` builds it from the two
-      // DIALS (`seat.engage * seat.eta`), and both dials diverge from what the
+      // AUTHORED PARAMETERS (`seat.engage * seat.eta`), and both authored parameters diverge from what the
       // policy achieves, in OPPOSITE directions. Only their product reaches
       // income, so it is the product that has to be checked; reading either half
       // alone reports a divergence the other half has already paid for.
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
       // Per run, never a product of medians — the median of a product is not the
       // product of the medians, and these two are correlated within a run.
       income: (r) => (r.kills / Math.max(1, r.spawned)) * r.etaContinuous,
-      // What the run banks toward the shop, which is the cross-run economy's
+      // What the run banks toward the shop, which is the lifetime economy's
       // only input and had nothing printing it. `notesForRun` takes kills times
       // the run's MEAN yield, and dropped/kills is that mean exactly — measured
       // over the tier mix the run actually met, rather than modelled at a `t`.
@@ -156,7 +156,7 @@ async function main(): Promise<void> {
         col(formatSpread(s.lethal!, num(2)), 18) +
         col(formatSpread(s.income!, num(3)), 18) +
         // What `../data/income.ts` actually projects from — the seat's MEASURED
-        // pair, not its dials. These two columns are a fixed point: `measured`
+        // pair, not its authored parameters. These two columns are a fixed point: `measured`
         // derives the ladder, the ladder changes the run, and the run moves
         // `measured`. Re-copy and re-run until the pair stops moving; the gap
         // between them is the iteration's residual, not a balance defect.

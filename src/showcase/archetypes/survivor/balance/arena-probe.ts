@@ -67,7 +67,7 @@ async function main(): Promise<void> {
       'burst',
   );
 
-  // Realized engagement against the dial. `engage` is DEFINED as the share of
+  // Realized engagement against the authored parameter. `engage` is DEFINED as the share of
   // spawns brought inside `r_kill` (`../data/arena.ts` § Density), so kills over
   // spawns measures it directly — and the whole income model is built on the
   // declared figure.
@@ -163,7 +163,7 @@ async function main(): Promise<void> {
   }
 
   // A ledger of open findings used to be printed here. It went stale — three of
-  // its seven items described a ceiling that had been deleted and an η that had
+  // its seven items described a cap that had been deleted and an η that had
   // moved — because it was a second copy of `../BALANCING.md` § Known thin with
   // nothing keeping the two in step. The findings have one home; this prints
   // what THIS run measured and says how far a single seed can be trusted.

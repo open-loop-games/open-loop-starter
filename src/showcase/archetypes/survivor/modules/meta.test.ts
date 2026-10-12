@@ -1,5 +1,5 @@
 /**
- * Meta behavioural spec — the cross-run accumulator and the shop.
+ * Meta behavioural spec — the lifetime accumulator and the shop.
  *
  * The property that matters most here is that notes survive a FAILED run. That
  * is what makes this a continuous accumulator rather than a prestige loop, and
@@ -26,7 +26,7 @@ describe('survivor/meta', () => {
 
   it('opens with nothing banked and nothing owned', () => {
     expect(notes()).toBe(0);
-    expect(meta().levelOf('reinforced-weave')).toBe(0);
+    expect(meta().countOf('reinforced-weave')).toBe(0);
   });
 
   it('registers every upgrade in the shop', () => {
@@ -45,21 +45,21 @@ describe('survivor/meta', () => {
     expect(notes()).toBeGreaterThan(0);
   });
 
-  it('cannot buy what it cannot afford', () => {
+  it('cannot purchase what it cannot afford', () => {
     const weave = meta().shop.getEntry('reinforced-weave')!;
     expect(weave.purchasable.canPurchase.value).toBe(false);
   });
 
-  it('buys, deducts, and raises the owned level', () => {
+  it('purchases, deducts, and raises the purchase count', () => {
     meta().award(100000, 1);
     const before = notes();
     const weave = meta().shop.getEntry('reinforced-weave')!;
     weave.purchasable.purchase();
-    expect(meta().levelOf('reinforced-weave')).toBe(1);
+    expect(meta().countOf('reinforced-weave')).toBe(1);
     expect(notes()).toBeLessThan(before);
   });
 
-  it('charges more for each successive level', () => {
+  it('charges more for each successive purchase', () => {
     meta().award(100000, 1);
     const weave = meta().shop.getEntry('reinforced-weave')!;
     const first = notes();
@@ -70,7 +70,7 @@ describe('survivor/meta', () => {
     expect(first - afterFirst).toBeLessThan(afterFirst - afterSecond);
   });
 
-  it('prices a multi-level buy rung by rung', () => {
+  it('costs a bulk purchase one purchase at a time', () => {
     const def = META_UPGRADES.find((u) => u.id === 'reinforced-weave')!;
     const weave = meta().shop.getEntry('reinforced-weave')!;
     expect(new Decimal(weave.purchasable.getCost(2)).toNumber()).toBeCloseTo(
@@ -78,14 +78,14 @@ describe('survivor/meta', () => {
     );
   });
 
-  it('raises the survival baseline when a survival tile is bought', () => {
+  it('raises the survival baseline when a survival tile is purchased', () => {
     meta().award(100000, 1);
     expect(meta().survivalMul.value).toBe(1);
     meta().shop.getEntry('reinforced-weave')!.purchasable.purchase();
     expect(meta().survivalMul.value).toBeGreaterThan(1);
   });
 
-  it('leaves the survival baseline alone when an INCOME tile is bought', () => {
+  it('leaves the survival baseline alone when an INCOME tile is purchased', () => {
     // `side` is load-bearing, not annotation: survival tiles are ladder-safe and
     // income tiles are not, so they must not bleed into each other.
     meta().award(100000, 1);
@@ -94,11 +94,11 @@ describe('survivor/meta', () => {
     expect(meta().collectMul.value).toBeGreaterThan(1);
   });
 
-  it('respects each upgrade’s level cap', () => {
+  it('respects each upgrade’s limit', () => {
     meta().award(10_000_000, 1);
     const vial = meta().shop.getEntry('contingency-vial')!;
     vial.purchasable.purchase();
     vial.purchasable.purchase();
-    expect(meta().levelOf('contingency-vial')).toBe(1);
+    expect(meta().countOf('contingency-vial')).toBe(1);
   });
 });

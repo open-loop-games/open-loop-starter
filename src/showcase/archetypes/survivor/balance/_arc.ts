@@ -33,14 +33,14 @@ export interface ArcSample {
    *
    * Sampled beside `level` because the two answer different questions and only
    * the pair separates them: run level is what the ladder GRANTED, this is what
-   * the draft policy BOUGHT with it. Two seats at the same run level holding
+   * the draft policy PICKED with it. Two seats at the same run level holding
    * different offensive mass is a selection difference; the same mass killing at
    * different rates is not.
    */
   deviceLevels: number;
-  /** Cumulative picks flagged defensive — the `defenseShare` dial, realized. */
+  /** Cumulative picks flagged defensive — the `defenseShare` authored parameter, realized. */
   defensivePicks: number;
-  /** Effective damage that bought a kill this minute. */
+  /** Effective damage that produced a kill this minute. */
   damageConverted: number;
   /** Effective damage spent on bodies that left the floor alive this minute. */
   damageWasted: number;
@@ -57,7 +57,7 @@ export const MINUTES = 30;
  * Ticked a minute at a time rather than in one call so the live census can be
  * SAMPLED. Nothing bounds population — `entityBudget` is gone — so what the
  * census reads is the shape of the curve rather than how long it sat against a
- * ceiling. `localDensity` (`../data/arena.ts`) is the model it has to be read
+ * cap. `localDensity` (`../data/arena.ts`) is the model it has to be read
  * against, and that model is unclamped too, so a divergence is a real
  * disagreement rather than a clamp doing the agreeing.
  */

@@ -13,7 +13,7 @@ export type DeviceShape = 'bolt' | 'pulse' | 'cone' | 'lance';
 
 export interface DeviceDef {
   id: string;
-  name: string;
+  displayName: string;
   blurb: string;
   /** How it reaches: single target, radial pulse, forward cone, piercing line. */
   shape: DeviceShape;
@@ -41,7 +41,7 @@ export interface DeviceDef {
 export const DEVICES: DeviceDef[] = [
   {
     id: 'arc-lance',
-    name: 'Arc Lance',
+    displayName: 'Arc Lance',
     blurb: 'A tight discharge on a short cycle. Always working, never impressive.',
     shape: 'bolt',
     baseDamage: 6.2,
@@ -53,7 +53,7 @@ export const DEVICES: DeviceDef[] = [
   },
   {
     id: 'pressure-bell',
-    name: 'Pressure Bell',
+    displayName: 'Pressure Bell',
     blurb: 'Discharges outward on a slow swell. Rewards being surrounded.',
     shape: 'pulse',
     baseDamage: 9.5,
@@ -64,7 +64,7 @@ export const DEVICES: DeviceDef[] = [
   },
   {
     id: 'culture-sprayer',
-    name: 'Culture Sprayer',
+    displayName: 'Culture Sprayer',
     blurb: 'Throws a wedge of reagent along your heading. Kite into it.',
     shape: 'cone',
     baseDamage: 6.0,
@@ -75,7 +75,7 @@ export const DEVICES: DeviceDef[] = [
   },
   {
     id: 'sear-coil',
-    name: 'Sear Coil',
+    displayName: 'Sear Coil',
     blurb: 'Winds up, then opens a line through everything standing in it.',
     shape: 'lance',
     baseDamage: 26,
@@ -90,7 +90,7 @@ export type ReagentEffect = 'cooldown' | 'damage' | 'reach' | 'toughness' | 'col
 
 export interface ReagentDef {
   id: string;
-  name: string;
+  displayName: string;
   blurb: string;
   effect: ReagentEffect;
   /** Multiplier contributed per stack, folded into the modifier chain. */
@@ -112,7 +112,7 @@ export interface ReagentDef {
 export const REAGENTS: ReagentDef[] = [
   {
     id: 'catalyst',
-    name: 'Catalyst',
+    displayName: 'Catalyst',
     blurb: 'Everything cycles faster. Nothing hits harder.',
     effect: 'cooldown',
     perStack: 0.88,
@@ -121,7 +121,7 @@ export const REAGENTS: ReagentDef[] = [
   },
   {
     id: 'reactant-mass',
-    name: 'Reactant Mass',
+    displayName: 'Reactant Mass',
     blurb: 'More of it goes in. More of it comes out.',
     effect: 'damage',
     perStack: 1.22,
@@ -130,7 +130,7 @@ export const REAGENTS: ReagentDef[] = [
   },
   {
     id: 'field-lens',
-    name: 'Field Lens',
+    displayName: 'Field Lens',
     blurb: 'The apparatus reaches further than it should.',
     effect: 'reach',
     perStack: 1.15,
@@ -139,7 +139,7 @@ export const REAGENTS: ReagentDef[] = [
   },
   {
     id: 'ablative-plating',
-    name: 'Ablative Plating',
+    displayName: 'Ablative Plating',
     blurb: 'It still hurts. It hurts less.',
     effect: 'toughness',
     perStack: 1.2,
@@ -148,7 +148,7 @@ export const REAGENTS: ReagentDef[] = [
   },
   {
     id: 'kinetic-primer',
-    name: 'Kinetic Primer',
+    displayName: 'Kinetic Primer',
     blurb: 'Not being there is a defence.',
     effect: 'moveSpeed',
     perStack: 1.09,
@@ -157,7 +157,7 @@ export const REAGENTS: ReagentDef[] = [
   },
   {
     id: 'reclaimant',
-    name: 'Reclaimant',
+    displayName: 'Reclaimant',
     blurb: 'Motes come to you. A little. Reluctantly.',
     effect: 'collect',
     perStack: 1.18,
@@ -168,7 +168,7 @@ export const REAGENTS: ReagentDef[] = [
 
 export interface EvolutionDef {
   id: string;
-  name: string;
+  displayName: string;
   blurb: string;
   /** Device that must be at `maxLevel`. */
   deviceId: string;
@@ -188,7 +188,7 @@ export interface EvolutionDef {
 export const EVOLUTIONS: EvolutionDef[] = [
   {
     id: 'continuum-arc',
-    name: 'Continuum Arc',
+    displayName: 'Continuum Arc',
     blurb: 'The gap between discharges closes until there is not one.',
     deviceId: 'arc-lance',
     reagentId: 'catalyst',
@@ -197,7 +197,7 @@ export const EVOLUTIONS: EvolutionDef[] = [
   },
   {
     id: 'lattice-lance',
-    name: 'Lattice Lance',
+    displayName: 'Lattice Lance',
     blurb: 'One discharge, forked across the whole approach.',
     deviceId: 'arc-lance',
     reagentId: 'field-lens',
@@ -206,7 +206,7 @@ export const EVOLUTIONS: EvolutionDef[] = [
   },
   {
     id: 'detonation-bell',
-    name: 'Detonation Bell',
+    displayName: 'Detonation Bell',
     blurb: 'The swell stops being a warning.',
     deviceId: 'pressure-bell',
     reagentId: 'reactant-mass',
@@ -215,7 +215,7 @@ export const EVOLUTIONS: EvolutionDef[] = [
   },
   {
     id: 'harvest-bell',
-    name: 'Harvest Bell',
+    displayName: 'Harvest Bell',
     blurb: 'It rings, and the floor gives up its motes.',
     deviceId: 'pressure-bell',
     reagentId: 'reclaimant',
@@ -224,7 +224,7 @@ export const EVOLUTIONS: EvolutionDef[] = [
   },
   {
     id: 'bloom-vector',
-    name: 'Bloom Vector',
+    displayName: 'Bloom Vector',
     blurb: 'The wedge opens into a front you can walk behind.',
     deviceId: 'culture-sprayer',
     reagentId: 'field-lens',
@@ -233,7 +233,7 @@ export const EVOLUTIONS: EvolutionDef[] = [
   },
   {
     id: 'annihilation-coil',
-    name: 'Annihilation Coil',
+    displayName: 'Annihilation Coil',
     blurb: 'Whatever the line touches was already over.',
     deviceId: 'sear-coil',
     reagentId: 'reactant-mass',
@@ -278,7 +278,7 @@ export function draftPoolSize(): number {
 // It carries **deliberate headroom** — 6.2/0.55 = 11.3, about 1.4× the
 // requirement. Break-even is the wrong target here, and this was a measured
 // correction: an opener sized at exactly 8.0 put the run on a knife edge, because
-// the economy is a compounding loop where kills fund the levels that buy more
+// the economy is a compounding loop where kills fund the levels that give more
 // kills. Any inefficiency the closed form does not model — travel time, target
 // selection, a device firing at empty space — pushes the opening under water, and
 // under water the loop runs BACKWARDS: fewer kills, less income, fewer levels,
@@ -302,7 +302,7 @@ export function draftPoolSize(): number {
 //
 // Coupling worth naming: `maxTargets` on the area shapes is a soft cap on that
 // re-ranking. Raising it hands the late run to area devices outright; lowering it
-// flattens the rotation into single-target arithmetic. It is the knob that
+// flattens the rotation into single-target arithmetic. It is the tunable that
 // decides whether the roster has an arc.
 //
 // ─── Reagents carry the seat axis ───
@@ -311,8 +311,8 @@ export function draftPoolSize(): number {
 // expressible on a typical offer rather than being a preference the pool cannot
 // honour. `reclaimant` is the interesting one: it moves `collect`, which moves η,
 // which is the one term the closed form assumes rather than derives
-// (`./income.ts` § Balance). It is classed defensive because it buys income
-// without buying engagement — the seat that takes it is choosing not to fight for
+// (`./income.ts` § Balance). It is classed defensive because it gives income
+// without adding engagement — the seat that takes it is choosing not to fight for
 // its motes.
 //
 // `catalyst` at 0.88 per stack compounds to 0.60 at four stacks, a 1.66× rate

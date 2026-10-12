@@ -65,7 +65,7 @@ const condition = computed(() => {
       <BeatTrack />
 
       <div class="operator">
-        <span class="operator__seat" :data-you="driving">{{ arena.seat.value.name }}</span>
+        <span class="operator__seat" :data-you="driving">{{ arena.seat.value.displayName }}</span>
         <span class="operator__cond" :data-low="condition.frac <= 0.35">
           <span class="num" data-num>{{ condition.pct }}</span
           >% condition

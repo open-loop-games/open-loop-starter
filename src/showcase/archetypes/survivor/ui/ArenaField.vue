@@ -11,7 +11,7 @@ import type { ArenaState } from '../modules/sim/types';
  * The arena field — a read-only projection of the arena sim onto a pixi/webgl
  * surface. It OWNS its frame loop (pixi's ticker → RAF) and reads the sim's
  * `shallowRef` as a plain value each frame, so rendering runs decoupled from
- * both Vue's reactive re-render and the fixed-step engine tick. It never writes
+ * both Vue's reactive re-render and the fixed-dt engine tick. It never writes
  * sim state.
  *
  * Pixi objects live in plain `let`s, never Vue refs — a reactive proxy corrupts
@@ -22,8 +22,8 @@ import type { ArenaState } from '../modules/sim/types';
  * `/work/studio/candidate-recipes-ui.md` carries this shape at N=2 (skirmish,
  * primordial) with cadence-versus-smoothing as its open question: skirmish eases
  * exponentially toward truth and is fine at 20 Hz; primordial snapshots
- * prev+curr per step and tweens at the intra-step blend factor because at 4 Hz
- * easing reads as lag. This arena steps at 20 Hz too and it takes NEITHER branch
+ * prev+curr per tick and tweens at the intra-tick blend factor because at 4 Hz
+ * easing looks like lag. This arena ticks at 20 Hz too and it takes NEITHER branch
  * — see § Smoothing, which is where the recipe's open question gets its real
  * discriminator.
  *
@@ -39,7 +39,7 @@ import type { ArenaState } from '../modules/sim/types';
  *    rules: see `resize`.
  * 2. **Two entity populations with different lifetimes.** Specimens are capped
  *    (`entityBudget`) and keyed by id like skirmish's units. Motes are NOT
- *    despawned by the sim — only collected — so an unbanked mote persists for
+ *    despawned by the sim — only collected — so an unbanked mote stays for
  *    the whole run and the population grows unbounded across an 8000 × 5200
  *    floor. They render from a viewport-culled sprite pool rather than a
  *    per-entity sprite map, which is the part of this recipe the prior two
@@ -83,7 +83,7 @@ const SPAWN_FADE_SECONDS = 0.5;
  *
  * Easing was the wrong branch here, and the reason is not the cadence. An
  * exponential chase has a time constant (`1/k`); when that is anywhere near the
- * step interval, the render velocity ripples WITHIN each step — fast just after
+ * tick interval, the render velocity ripples WITHIN each tick — fast just after
  * a sample lands, slow just before the next — and 20 samples a second means 20
  * of those ripples a second. Skirmish gets away with it because nothing it eases
  * is load-bearing for motion perception: a static fit, no camera, no hand on the
@@ -92,7 +92,7 @@ const SPAWN_FADE_SECONDS = 0.5;
  * than scroll.
  *
  * The discriminator the recipe's open question actually wants is therefore not
- * "how fast does the sim step" but **what does the smoothed value drive** — a
+ * "how fast does the simulation tick" but **what does the smoothed value drive** — a
  * decoration, or the camera and the body the player is steering. Dead reckoning
  * costs one extra vector per entity and is correct at any cadence.
  *
@@ -348,7 +348,7 @@ function buildFloor(): Container {
  * jumps up). That keeps this a projection — no target selection is re-run here.
  *
  * What IS approximated is direction: `bolt` and `lance` aim at the nearest
- * specimen, resolved at frame time rather than at the sim step that fired, so a
+ * specimen, resolved at frame time rather than at the tick that fired, so a
  * flash can point a frame's worth of movement away from what the sim actually
  * hit. The flash says a device discharged in this shape, not who it killed.
  */
@@ -473,8 +473,8 @@ function drawFlashes(x: number, y: number, dtSec: number): void {
  * projection that never writes back, so the effects are DIFFED out of state,
  * exactly the way discharge flashes already are.
  *
- * The diff runs on sim steps only (20 Hz), not on frames (60 Hz), because
- * nothing it looks at changes between steps and a per-frame id sweep over four
+ * The diff runs on ticks only (20 Hz), not on frames (60 Hz), because
+ * nothing it looks at changes between ticks and a per-frame id sweep over four
  * hundred bodies is two thirds waste.
  */
 interface Puff {
@@ -583,7 +583,7 @@ function drawCollectors(
 }
 
 /**
- * The operator glyph — now the only persistent apparatus on screen.
+ * The operator glyph — now the only always-present apparatus on screen.
  *
  * The two range rings this used to sit inside are gone. `r_kill` and `r_collect`
  * are still the top coupling of the economy (`../data/arena.ts` § Balance), but
@@ -677,7 +677,7 @@ function frame(dtSec: number): void {
   const state = arena.state.value;
   const correction = 1 - Math.exp(-CORRECTION * dtSec);
 
-  // ─── sim-step diff: new sample, income banked, damage taken ───
+  // ─── per-tick diff: new sample, income banked, damage taken ───
   const stepped = state.time !== lastSimTime;
   // How much real time the sample that just landed covers. Clamped low against a
   // frame that happens to sit on top of a tick, and it is what makes every

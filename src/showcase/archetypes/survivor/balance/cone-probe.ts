@@ -196,7 +196,7 @@ async function main(): Promise<void> {
     );
   }
 
-  // ── What the discount is actually pricing ──
+  // ── What the discount is actually costing ──
   //
   // Stated rather than thresholded. `HEADING_BOUND_DISCOUNT` cancels the acquire
   // bonus, so the question it answers is "how much of this shape is unavailable

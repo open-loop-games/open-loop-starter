@@ -9,7 +9,7 @@
 
 export interface SpecimenDef {
   id: string;
-  name: string;
+  displayName: string;
   /** Game-seconds after which this tier starts appearing. */
   entersAt: number;
   /** Multiplier on the run-wide HP curve. Tier 1 is the unit. */
@@ -32,7 +32,7 @@ export interface SpecimenDef {
 export const SPECIMENS: SpecimenDef[] = [
   {
     id: 'mote-fly',
-    name: 'Mote-fly',
+    displayName: 'Mote-fly',
     entersAt: 0,
     hpFactor: 1,
     damageFactor: 1,
@@ -42,7 +42,7 @@ export const SPECIMENS: SpecimenDef[] = [
   },
   {
     id: 'crawler',
-    name: 'Vat Crawler',
+    displayName: 'Vat Crawler',
     entersAt: 240,
     hpFactor: 2.6,
     damageFactor: 1.3,
@@ -52,7 +52,7 @@ export const SPECIMENS: SpecimenDef[] = [
   },
   {
     id: 'splitter',
-    name: 'Splitter',
+    displayName: 'Splitter',
     entersAt: 600,
     hpFactor: 1.4,
     damageFactor: 0.9,
@@ -62,7 +62,7 @@ export const SPECIMENS: SpecimenDef[] = [
   },
   {
     id: 'warden',
-    name: 'Containment Warden',
+    displayName: 'Containment Warden',
     entersAt: 1080,
     hpFactor: 7.5,
     damageFactor: 2.1,

@@ -8,7 +8,7 @@ export default {
   curated: [
     {
       term: 'mote',
-      note: 'The XP a specimen drops where it dies. Motes PERSIST, so the floor behind the operator accumulates uncollected income and deferring collection is a coherent gamble paid for against the beat schedule.',
+      note: 'The XP a specimen drops where it dies. Motes STAY on the floor, so the floor behind the operator accumulates uncollected income and deferring collection is a coherent gamble paid for against the beat schedule.',
     },
     {
       term: 'η',
@@ -28,7 +28,7 @@ export default {
     },
     {
       term: 'seat',
-      note: 'A personality: simultaneously the character-select roster, the AI policy bundle driving the operator, and the balance sweep axis. Bundles a movement bias (engage, η) and a draft bias (defenseShare), never a stat block.',
+      note: 'A persona: simultaneously the character-select roster, the AI policy bundle driving the operator, and the balance sweep axis. Bundles a movement bias (engage, η) and a draft bias (defenseShare), never a stat block.',
     },
     {
       term: 'σ / defenseShare',
@@ -44,7 +44,7 @@ export default {
     },
     {
       term: 'notes',
-      note: 'The cross-run currency. A continuous accumulator — notes bank on EVERY run end including death, which is what makes a failed run progress rather than a wasted one.',
+      note: 'The lifetime currency. A continuous accumulator — notes bank on EVERY run end including death, which is what makes a failed run progress rather than a wasted one.',
     },
   ],
 };

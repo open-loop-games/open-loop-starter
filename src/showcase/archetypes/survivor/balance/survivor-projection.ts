@@ -14,7 +14,7 @@
  * geometric curves. Per-subsystem buckets and receipts:
  * `open-loop-research/reports/closed-form-subsystem-inventory/per-archetype/survivor.md`.
  *
- * Every constant lives in `../data/`; the derivations (`beatTime`,
+ * Every constant lives in `../data/`; the derivations (`fireTime`,
  * `offensivePickGain`, `deriveXpLadder`, the income model) live there too, so the
  * ladder this projects and the ladder the game runs are produced by the same
  * functions rather than by two agreeing implementations.
@@ -35,7 +35,7 @@ import {
 } from '../data/income';
 import {
   SCHEDULE_BALANCE,
-  beatTime,
+  fireTime,
   contactDamageMul,
   deriveXpLadder,
   hpMul,
@@ -124,7 +124,7 @@ function reportSchedule(): void {
   console.log('\n═══ Draft schedule — geometric intervals, 30s → 90s ═══');
   console.log(col('  beat', 8) + col('interval', 11) + col('t', 10) + col('HP ×', 9) + 'XP req');
   for (const n of [1, 5, 10, 15, 20, 25, 30, BEAT_COUNT]) {
-    const t = beatTime(n);
+    const t = fireTime(n);
     const interval =
       SCHEDULE_BALANCE.beatFirstSeconds * Math.pow(SCHEDULE_BALANCE.beatRatio, n - 1);
     console.log(
@@ -136,8 +136,8 @@ function reportSchedule(): void {
     );
   }
   console.log(
-    `\n  ${BEAT_COUNT} beats span ${fmt(beatTime(BEAT_COUNT))}s (target ${RUN_SECONDS}s).` +
-      `  Beat count is a consequence of the 30–90s band, not a knob.`,
+    `\n  ${BEAT_COUNT} beats span ${fmt(fireTime(BEAT_COUNT))}s (target ${RUN_SECONDS}s).` +
+      `  Beat count is a consequence of the 30–90s band, not a tunable.`,
   );
   console.log(
     `  Per-offensive-pick DPS gain for FLAT time-to-kill at baseline σ=` +
@@ -148,7 +148,7 @@ function reportSchedule(): void {
 
 function reportArena(): void {
   const { killRadius, collectRadius, mapWidth, mapHeight } = ARENA_BALANCE;
-  console.log('\n═══ Arena — the price of income, and the entity budget ═══');
+  console.log('\n═══ Arena — the cost of income, and the entity budget ═══');
   console.log(
     `  r_collect / r_kill = ${collectRadius}/${killRadius} = ` +
       `${(collectRadius / killRadius).toFixed(2)}  — the risk premium on every mote.`,
@@ -169,7 +169,7 @@ function reportArena(): void {
   }
   console.log(
     '\n  Live population is bounded by the annulus, by kills and by the distance cull —' +
-      '\n  there is no entity ceiling, so `localDensity` above is the only bound there is.' +
+      '\n  there is no entity cap, so `localDensity` above is the only bound there is.' +
       '\n  That makes its `dwellSeconds` term load-bearing, and the arena probe prints a' +
       '\n  measured census beside this column for exactly that reason.',
   );
@@ -192,7 +192,7 @@ function reportContent(): void {
   const got = nominalDps(opener);
   console.log(
     `\n  Opening DPS — flat-TTK wants ${requiredDps0.toFixed(2)}, ` +
-      `${opener.name} delivers ${got.toFixed(2)} ` +
+      `${opener.displayName} delivers ${got.toFixed(2)} ` +
       `(${(((got - requiredDps0) / requiredDps0) * 100).toFixed(1)}%).`,
   );
 
@@ -214,7 +214,7 @@ function reportContent(): void {
   );
   for (const d of DEVICES) {
     console.log(
-      col(`  ${d.name}`, 18) +
+      col(`  ${d.displayName}`, 18) +
         col(`${d.cooldownSec}s`, 8) +
         col(nominalDps(d).toFixed(2), 14) +
         (d.maxTargets > 1 ? `yes (≤${d.maxTargets})` : 'no'),
@@ -225,7 +225,7 @@ function reportContent(): void {
 }
 
 function reportMeta(): void {
-  console.log('\n═══ Cross-run meta — runs to buy, and the declared front-load ═══');
+  console.log('\n═══ Cross-run meta — runs to purchase, and the declared front-load ═══');
 
   // Kills a baseline run banks before it ends, at its own income.
   const landings = beatLandings(LADDER, BASELINE_SEAT, true);
@@ -239,14 +239,14 @@ function reportMeta(): void {
   );
 
   console.log(
-    '\n' + col('  upgrade', 22) + col('side', 11) + col('lv1', 8) + col('max', 8) + 'runs to max',
+    '\n' + col('  upgrade', 22) + col('side', 11) + col('first', 8) + col('max', 8) + 'runs to max',
   );
   for (const u of META_UPGRADES) {
     console.log(
-      col(`  ${u.name}`, 22) +
+      col(`  ${u.displayName}`, 22) +
         col(u.side, 11) +
         col(upgradeCost(u, 0).toString(), 8) +
-        col(`${u.maxLevel}`, 8) +
+        col(`${u.limit}`, 8) +
         (totalCost(u) / notes).toFixed(1),
     );
   }
@@ -272,10 +272,10 @@ function reportMeta(): void {
   const last = juicedLandings[BEAT_COUNT - 1];
   console.log(
     `  Fully-metaed income run reaches beat ${BEAT_COUNT} at ${clock(last)} vs ` +
-      `${clock(beatTime(BEAT_COUNT))} — ${fmt(beatTime(BEAT_COUNT) - last)}s earlier.`,
+      `${clock(fireTime(BEAT_COUNT))} — ${fmt(fireTime(BEAT_COUNT) - last)}s earlier.`,
   );
   console.log('  Bounded and intended: the ladder is derived for a ZERO-meta run, and');
-  console.log('  the arc is capped by maxLevel. Unlike the collector case, this front-');
+  console.log('  the arc is capped by each limit. Unlike the collector case, this front-');
   console.log('  loading is declared — but an added income-side tile moves this number.');
 }
 
@@ -288,12 +288,12 @@ function reportDerivationCheck(): void {
   console.log('\n' + col('  beat', 8) + col('scheduled', 12) + col('actual', 10) + 'drift');
   let worst = 0;
   for (let n = 1; n <= BEAT_COUNT; n++) {
-    const drift = landings[n - 1] - beatTime(n);
+    const drift = landings[n - 1] - fireTime(n);
     if (Math.abs(drift) > Math.abs(worst)) worst = drift;
     if ([10, 11, 20, 25, 30, BEAT_COUNT].includes(n)) {
       console.log(
         col(`  ${n}`, 8) +
-          col(clock(beatTime(n)), 12) +
+          col(clock(fireTime(n)), 12) +
           col(clock(landings[n - 1]), 10) +
           `${drift > 0 ? '+' : ''}${fmt(drift)}s`,
       );
@@ -309,14 +309,14 @@ function reportDerivationCheck(): void {
   const shipped = beatLandings(LADDER, BASELINE_SEAT, true);
   let worstShipped = 0;
   for (let n = 1; n <= BEAT_COUNT; n++) {
-    const drift = shipped[n - 1] - beatTime(n);
+    const drift = shipped[n - 1] - fireTime(n);
     if (Math.abs(drift) > Math.abs(worstShipped)) worstShipped = drift;
   }
   console.log(
     `  The shipping ladder (derived on AMORTIZED income): worst deviation ` +
       `${fmt(worstShipped)}s, and it oscillates rather than accumulating — a seat` +
       ` runs\n  slightly behind before the first collector and slightly ahead after` +
-      ` one. Bounded\n  jitter around the schedule is the honest price of impulsive` +
+      ` one. Bounded\n  jitter around the schedule is the honest cost of impulsive` +
       ` income; monotone\n  drift is a broken derivation.`,
   );
 }
@@ -346,9 +346,9 @@ function reportSeats(): void {
         : 'timer';
     console.log(
       col(`  ${seat.id}`, 13) +
-        // The compound the projection actually rides — measured, not dialled.
+        // The compound the projection actually rides — measured, not authored.
         // Printing `engage × eta` here made the table look like a statement about
-        // the seats when it was a statement about their dials, and the two have
+        // the seats when it was a statement about their authored parameters, and the two have
         // not agreed since the pilot learned to route (`../data/seats.ts`
         // § SeatOutcome). Comparable directly against `spread-probe.ts`'s
         // `income` column, which measures the same product per run.

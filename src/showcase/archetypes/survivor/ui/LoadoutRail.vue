@@ -34,7 +34,7 @@ const mounts = computed(() => {
     const cooldown = rt ? deviceCooldown(rt, stacks) : 0;
     return {
       id: def.id,
-      name: evo?.name ?? def.name,
+      displayName: evo?.displayName ?? def.displayName,
       shape: def.shape,
       level: rt?.level ?? 0,
       maxLevel: def.maxLevel,
@@ -53,7 +53,7 @@ const stacks = computed(() => {
   const live = arena.state.value.reagentStacks;
   return REAGENTS.map((r) => ({
     id: r.id,
-    name: r.name,
+    displayName: r.displayName,
     stacks: live.get(r.id) ?? 0,
     maxStacks: r.maxStacks,
     defensive: r.defensive,
@@ -75,7 +75,7 @@ const stacks = computed(() => {
         }"
       >
         <span class="plate__shape" :data-shape="m.shape" aria-hidden="true" />
-        <span class="plate__name">{{ m.name }}</span>
+        <span class="plate__name">{{ m.displayName }}</span>
         <span
           v-if="m.installed"
           class="plate__pips"
@@ -105,7 +105,7 @@ const stacks = computed(() => {
         class="reagent"
         :class="{ 'reagent--def': r.defensive }"
       >
-        {{ r.name }}
+        {{ r.displayName }}
         <span class="reagent__n num" data-num>×{{ r.stacks }}</span>
       </span>
     </div>

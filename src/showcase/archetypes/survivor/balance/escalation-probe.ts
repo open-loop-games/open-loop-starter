@@ -13,7 +13,7 @@
  *
  * The answer is `m_d`, the spawn-density growth per minute, and it is the only
  * curve here that moves the target at all. It also moves the SCHEDULE deficit,
- * which is what makes it the unifying term rather than one knob among several:
+ * which is what makes it the unifying term rather than one tunable among several:
  * density is what collapses kills-per-spawn late in a run (`../BALANCING.md`
  * § Known thin, the density reading), so the same curve that ends runs early is
  * the one starving their income.
@@ -24,7 +24,7 @@
  * `offensivePickGain` derives the per-pick DPS growth that holds time-to-kill
  * flat, from `m_hp` and `m_d` together. Perturbing one through `pushOverrides` moves
  * the floor without moving the growth solved to match it, which is the decoupled
- * knob `../modules/tuning.ts` says it excludes solved quantities to avoid — the
+ * tunable `../modules/tuning.ts` says it excludes solved quantities to avoid — the
  * run would get harder for a reason the design never chose, and the reading would
  * be about the decoupling. So this sweep assigns the authored constants and lets
  * every derivation downstream re-run: the pick gain (`../modules/sim/dispatch.ts`
@@ -90,11 +90,11 @@ const SHIPPED = {
  * 1.037 gives 0% / 33% / 50% / 100% on the timer, monotone, with the schedule
  * deficit tracking it. `m_hp` 1.150 → 1.104 → 1.058 gives 0% / 0% / 0% and moves
  * the modal cause the WRONG way (`hp-floor` → `traversal-collapse`), because
- * `m_hp` is inside the `offensivePickGain` solve — a softer floor buys a slower
+ * `m_hp` is inside the `offensivePickGain` solve — a softer floor gives a slower
  * DPS curve and the operator clears less. Halving `m_dmg` does nothing at all.
  *
  * Re-run this after anything that moves the pilot: the whole curve is read
- * through it, and a policy that collects differently re-prices every row.
+ * through it, and a policy that collects differently changes every row's cost.
  */
 const POINTS: Point[] = [
   { label: 'shipped 1.048' },

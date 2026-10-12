@@ -30,12 +30,12 @@ export function toCell(pos: Vec2, nav: NavGrid): GridCoord {
 /**
  * Distance-to-motes field plus the crowding census, recomputed on a slow
  * cadence and reused between refreshes. Not one `distanceField` call per tick:
- * at 20 Hz the field barely changes between steps, and the engine's own docs
+ * at 20 Hz the field barely changes between ticks, and the engine's own docs
  * warn the cost function must not re-enter `distanceField` on the same grid.
  *
  * There is deliberately no grid THREAT field. One was computed here for most of
  * this archetype's life and never read: every term that reasons about specimens
- * — the peaked orbit, the priced contact — needs exact positions, because a
+ * — the peaked orbit, the costed contact — needs exact positions, because a
  * 100-unit cell cannot resolve a 22-unit contact radius or a 180-unit kill
  * radius. It was a full BFS over the whole grid, every refresh, for nothing.
  * The grid keeps the jobs it is good at: routing to motes, and reachability for
@@ -172,13 +172,13 @@ const cellCentre = (c: GridCoord): Vec2 => ({
  * radius at `engage` = 0.467 — so `kinetic`, at 0.40, wanted to hold station at
  * 189 units against a reach of 180. It was steering to a distance at which its
  * own devices could not fire, by construction, and it did it well: measured
- * realized engagement of **0.01 against a declared dial of 0.40**, against
+ * realized engagement of **0.01 against a declared authored parameter of 0.40**, against
  * `reactive` at 0.67 of 0.72. Chronically the worst seat in the roster, and this
  * is why.
  *
- * A dial that hangs back is a real personality; a dial that hangs back out of
+ * An authored parameter that hangs back is a real persona; an authored parameter that hangs back out of
  * range is a broken one. Re-mapped rather than clamped, because a clamp would
- * make the whole low half of the dial inert — the same defect the aperture bound
+ * make the whole low half of the authored parameter inert — the same defect the aperture bound
  * avoids in `../../data/arena.ts` § collectRadiusFor.
  */
 export function orbitRadius(params: ArenaParams): number {
@@ -200,7 +200,7 @@ const HEADINGS: Vec2[] = Array.from({ length: 16 }, (_, i) => {
  * Score penalty for a full 180° reversal, ramping linearly with turn angle.
  *
  * An arg-max has no memory: two candidates whose scores cross swap the heading
- * every step for as long as the crossing lasts, at no cost, and the operator
+ * every tick for as long as the crossing lasts, at no cost, and the operator
  * vibrates in place instead of moving. Measured before this term existed
  * (`../../balance/steering-probe.ts`): 775°/s of mean turn and 4 reversals a
  * second on the baseline seat — more than two full rotations per second of
@@ -208,7 +208,7 @@ const HEADINGS: Vec2[] = Array.from({ length: 16 }, (_, i) => {
  *
  * Sized against the score terms it competes with rather than picked: a
  * one-candidate turn (22.5°) costs 2.25, about what a single nav cell of mote
- * distance buys, so the policy still chases income; a reversal costs 18, which
+ * distance gives, so the policy still chases income; a reversal costs 18, which
  * only a real threat gradient or a near-field income pull can pay.
  */
 export const TURN_COST = 18;
@@ -239,7 +239,7 @@ export const MAX_TURN_RATE = (420 * Math.PI) / 180;
  * the baseline seat from 1.12 kills/s to 0.56 against a closed form asking 2.59.
  *
  * So this is the channel `engage` was always supposed to have, and what keeps it
- * from becoming "stand in the crowd" is the priced contact term — see
+ * from becoming "stand in the crowd" is the costed contact term — see
  * `CONTACT_WEIGHT`, which this now genuinely trades against rather than losing to.
  *
  * Swept at 4 / 6 / 9 against the arc probe. Schedule delta across the four seats
@@ -253,28 +253,28 @@ export const ENGAGE_WEIGHT = 9;
 /**
  * Bodies inside `r_kill` past which more stop being worth anything. The widest
  * device takes 24 targets but the rest cap at 1–6 (`../../data/devices.ts`), so
- * past this the operator is buying contact risk without buying DPS.
+ * past this the operator is taking contact risk without gaining DPS.
  */
 export const ENGAGE_SATURATION = 8;
 
 /**
  * The peaked threat term's two sides. Being further from the fight than the
- * orbit is priced at `FAR_WEIGHT`; being nearer at `NEAR_WEIGHT`, which is
- * deliberately much smaller because closeness is priced properly by
+ * orbit is costed at `FAR_WEIGHT`; being nearer at `NEAR_WEIGHT`, which is
+ * deliberately much smaller because closeness is costed properly by
  * `CONTACT_WEIGHT` in the currency it is paid in. They were one number, and that
- * is what made the contact price inert — see the comment at the call site.
+ * is what made the contact cost inert — see the comment at the call site.
  */
 export const FAR_WEIGHT = 40;
 export const NEAR_WEIGHT = 25;
 
 /**
- * How far ahead the contact price looks, in sim seconds.
+ * How far ahead the contact cost looks, in sim seconds.
  *
- * Without a horizon the price is an indicator on `contactRadius` — 22 units —
+ * Without a horizon the cost is an indicator on `contactRadius` — 22 units —
  * so every candidate outside it scores exactly zero. Measured: with an
- * instantaneous price, `CONTACT_WEIGHT` was INERT across 900 → 3500, because the
+ * instantaneous cost, `CONTACT_WEIGHT` was INERT across 900 → 3500, because the
  * arg-max is decided in the 22–180 unit band where the term does not exist. A
- * price that only speaks once you are already being hit is not a price.
+ * cost that only speaks once you are already being hit is not a cost.
  *
  * Specimens close at 38–70 units/s, so ~1.5s widens the term to ~130 units — the
  * band the decision is actually made in — and makes it continuous in distance
@@ -301,10 +301,10 @@ export const CONTACT_HORIZON = 1.5;
  * term collapses again — a cone dance that EMERGES from the score rather than a
  * scripted state machine bolted beside it. That matters because the operator has
  * no other memory: a scripted manoeuvre would have to be interrupted by the
- * contact price and the wall term by hand, where a score term is simply outvoted.
+ * contact cost and the wall term by hand, where a score term is simply outvoted.
  *
  * Counted in targets rather than damage on purpose. Device damage scales ~10x
- * across a run and every other term here is flat, so pricing the connect in
+ * across a run and every other term here is flat, so costing the connect in
  * damage would make it swamp the score late for reasons that have nothing to do
  * with whether the wedge points at anything.
  */
@@ -316,17 +316,17 @@ export const CONNECT_HORIZON = 1.2;
  * would cost in contact damage.
  *
  * This replaced a flat −400 cliff below `contactRadius · 2.5`, and the swap is
- * the difference between forbidding contact and pricing it. Measured, that cliff
+ * the difference between forbidding contact and costing it. Measured, that cliff
  * was the entire policy: its spread across the candidate set ran ~390–435
  * against `engage` at 17–31, mote at 3–5 and turn at 18, at EVERY density band,
  * and it split the candidate set on 89–100% of decisions. Nothing else could
- * reach past it, so the operator was a flee-bot with preferences — and because
+ * reach past it, so the operator was a fleeing automated player with preferences — and because
  * the 55-unit margin it demanded is unaffordable on a floor with a body every
  * ~30 units, the back half of a run had no candidate pointing at the fight.
  * A density-blind safety margin and "flee" are the same instruction once density
  * arrives.
  *
- * The cost is priced in the sim's own damage formula (`./step.ts` § contact:
+ * The cost is computed in the sim's own damage formula (`./step.ts` § contact:
  * mean per-specimen damage, saturating at `contactSaturation` bodies, divided by
  * toughness), then normalised by REMAINING hp. That normalisation is the whole
  * design: the same crowd is a cheap trade at full health and a lethal one at a
@@ -340,7 +340,7 @@ export const CONNECT_HORIZON = 1.2;
  * off enough to lose kill rate outright (kinetic 0.68 → 0.48 kills/s) and the
  * schedule deficit widens to −21. 900 is the shallower side of that trade on
  * purpose: this term competes with `engage` for the same decisions, so pushing it
- * buys survival by not playing.
+ * gives survival by not playing.
  *
  * The resulting landscape is the point of the whole exercise. Term spreads now
  * read threat 34–133, engage 14–33, mote 12–15, turn 18 — one order of magnitude,
@@ -358,8 +358,8 @@ export const CONTACT_WEIGHT = 900;
  * create — and a decision needs a term, or it is not one.
  *
  * Sized against the terms it competes with rather than picked. The mote field is
- * scored in nav CELLS at 2.5 per cell, so a cell of mote distance buys 2.5; at
- * 0.125 per unit a collector buys 12.5 over the same 100 units, five mote-cells.
+ * scored in nav CELLS at 2.5 per cell, so a cell of mote distance gives 2.5; at
+ * 0.125 per unit a collector gives 12.5 over the same 100 units, five mote-cells.
  * Across the 100-unit lookahead that is a spread of up to ~25 between opposed
  * headings — enough to outvote the turn cost (18) and a mild mote pull, and
  * nowhere near the contact cliff (−400). The operator detours for it; it does
@@ -425,7 +425,7 @@ export const MOTE_ROUTE_WEIGHT = 0.15;
 export const ROUTE_WAYPOINT_CELLS = 3;
 
 /**
- * Rotate `current` toward `desired` by at most the step's turn budget.
+ * Rotate `current` toward `desired` by at most the tick's turn budget.
  *
  * Separating the DECISION (a global arg-max over all sixteen headings) from its
  * EXECUTION (a rate-limited swing) is what keeps the policy able to see the best
@@ -460,9 +460,9 @@ export function slewHeading(current: Vec2, desired: Vec2, dt: number): Vec2 {
  */
 export interface HeadingScore {
   heading: Vec2;
-  /** Peaked orbit term, priced contact included. */
+  /** Peaked orbit term, costed contact included. */
   threat: number;
-  /** Whether this candidate would be in contact at all — the priced branch. */
+  /** Whether this candidate would be in contact at all — the costed branch. */
   cliff: boolean;
   engage: number;
   /** Expected targets a heading-bound device would land, times imminence. */
@@ -575,12 +575,12 @@ export function scoreHeadings(
       const band = contactRadius + closeBand;
       const band2 = band * band;
 
-      // What the path GRAZES, priced off the swept segment — but ONLY for bodies
+      // What the path GRAZES, costed off the swept segment — but ONLY for bodies
       // already outside the band. The exclusion is load-bearing, not a tidy-up:
       // every candidate segment starts at the operator, so a body inside the band
-      // now is inside it for all sixteen, and pricing it here reads the same on
+      // now is inside it for all sixteen, and costing it here reads the same on
       // every candidate and drops out of the arg-max however large it is
-      // (§ `HeadingScore`). Pricing the full segment made the price INERT and cost
+      // (§ `HeadingScore`). Costing the full segment made the cost INERT and cost
       // every seat ~9 minutes. Bodies inside the band stay the endpoint term's,
       // which reads them where they will BE after the move. Receipts in
       // `../../BALANCING.md` § Couplings.
@@ -606,17 +606,17 @@ export function scoreHeadings(
     nearest = Math.sqrt(nearest);
 
     // Peaked at the orbit, and ASYMMETRIC about it. The far side keeps the full
-    // weight — disengaging is the failure this term exists to price, and distance
+    // weight — disengaging is the failure this term exists to cost, and distance
     // is zero damage and zero income. The near side is deliberately gentle,
-    // because the risk of being close is priced once, below, in the currency it
+    // because the risk of being close is costed once, below, in the currency it
     // is actually paid in. Charging it here as well made the cheap charge decide:
     // the near side alone reached −40 against an `engage` spread that measures
     // 17–31, so a candidate in contact lost before `CONTACT_WEIGHT` was read and
-    // the price was inert at any value.
+    // the cost was inert at any value.
     const offset = Number.isFinite(nearest) ? (nearest - orbit) / orbit : 1;
     let threatTerm = -(offset * offset) * (offset > 0 ? FAR_WEIGHT : NEAR_WEIGHT);
 
-    // Contact is PRICED, not forbidden — see `CONTACT_WEIGHT`. This is the sim's
+    // Contact is COSTED, not forbidden — see `CONTACT_WEIGHT`. This is the sim's
     // own damage rate (`./step.ts` § contact) over remaining hp, so the policy
     // scores exactly what it will be charged.
     const cliff = expectedTouching > 0;
@@ -689,7 +689,7 @@ export function scoreHeadings(
     const engageTerm = params.engage * ENGAGE_WEIGHT * Math.min(inKill, ENGAGE_SATURATION);
 
     // η is the seat's appetite for the dive; it is exactly the weight on income,
-    // and a collector is income — so it rides the same dial rather than a new one.
+    // and a collector is income — so it rides the same authored parameter rather than a new one.
     const score =
       threatTerm +
       engageTerm +
@@ -717,7 +717,7 @@ export function scoreHeadings(
 
 /**
  * The arg-max over `scoreHeadings`. The heading this returns is what the operator
- * WANTS; `slewHeading` decides how much of it the step can deliver.
+ * WANTS; `slewHeading` decides how much of it the tick can deliver.
  */
 export function chooseHeading(
   state: ArenaState,

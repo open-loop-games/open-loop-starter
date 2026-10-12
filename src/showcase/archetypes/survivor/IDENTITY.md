@@ -37,7 +37,7 @@ closes. Either way the notes bank, and the next descent starts further along.
 The floor **scrolls**: the map is larger than the view, walled, and specimens
 spawn only in an annulus around the operator. So threat is always local and
 always escapable — which means disengaging is possible and costs you everything,
-because distance is zero damage and zero income. Motes persist, and a rare
+because distance is zero damage and zero income. Motes stay on the floor, and a rare
 **collector** drop pulls every mote on screen at once; off-screen specials are
 signposted by edge arrows, which is what makes routing to one through your own
 uncollected field a real decision.
@@ -45,9 +45,9 @@ uncollected field a real decision.
 **Seats are policies.** Survivor ships with the operator driven by shipping
 automation and is fully playable and balanceable before a human seat exists; a
 player seat is a policy swapped for input (`modules/automation.ts`, and the same
-discipline skirmish uses). The three **personalities** — speed, damage, defence —
+discipline skirmish uses). The three **personas** — speed, damage, defence —
 bias both the movement policy and the draft policy, so each solves the collection
-problem at a different price. They are simultaneously the balance sweep axis and
+problem at a different cost. They are simultaneously the balance sweep axis and
 the character-select screen.
 
 That seam has a consequence the roster is built on: **a device can be worth
@@ -85,7 +85,7 @@ wrong.
    cannot predict one.
 
 **What measures the remainder** — seeded multi-run distribution statistics per
-personality: median survival, `η` reported separately for continuous pickup and
+persona: median survival, `η` reported separately for continuous pickup and
 collector bursts, and the distribution of **binding cause** at run end —
 
 | Cause                 | What bound                                                   |
@@ -95,7 +95,7 @@ collector bursts, and the distribution of **binding cause** at run end —
 | Collection starvation | killed enough, banked too little; low `η` against the ladder |
 | Timer                 | survived the arc                                             |
 
-A personality bound by one cause across every seed is a wall in costume. Three
+A persona bound by one cause across every seed is a wall in costume. Three
 specialists each bound by a different cause, with the baseline mostly reaching
 the timer, is the target distribution.
 
@@ -122,7 +122,7 @@ loadout** — the floor has a hand on you at ~0:22, well before ~3:00 — so thi
 not an archetype with a safe opening. And **attrition runs ahead of density**:
 the bar is half gone at 13:50, ten minutes before the floor crosses a hundred
 live bodies at 24:00. A run is worn down long before it is crowded, which is why
-softening the density curve buys survival without buying schedule
+softening the density curve gives survival without changing schedule
 (`BALANCING.md` § Known thin).
 
 ## Growth ports
@@ -131,15 +131,15 @@ softening the density curve buys survival without buying schedule
   `PLAYER_SEAT`, `driver: 'player'`) and it cost an addition rather than a
   rewrite: input replaces the policy's _output_ at two seams the modules already
   named, and every mechanic downstream is untouched. What it unblocks is the
-  ladder. There is still deliberately **no `AutomationTiers` gate**: an AI seat
-  is an alternative character, not something the player earns, so it stays gated
-  by install-presence exactly as skirmish gates its opponent seats. The honest
+  ladder. There is still deliberately **no `AutomationTiers` ladder**: an AI seat
+  is an alternative character, not something the player earns, so install
+  presence blocks it exactly as it blocks skirmish's opponent seats. The honest
   rung is now buildable and is a different thing — _autopilot on the seat you are
   sitting in_, unlocked mid-run or across runs, with the existing movement policy
-  as its body. That is a spine decision when it comes: opening the gate changes
+  as its body. That is a spine decision when it comes: unlocking that automation tier changes
   the arc, so the projection grows its second branch in the same pass.
 - **Second meta-currency.** Halls of Torment's hero-specific shards alongside
-  universal gold; a second cross-run chain over the same accrual.
+  universal gold; a second lifetime chain over the same accrual.
 - **Wave-shop fork.** Brotato replaces the level-up draft with a between-wave
   shop — same identity line, `shopMode` is the structural fork.
 - **Arcana-style run modifiers.** Per-run rule-change cards as a small slot set
@@ -152,7 +152,7 @@ lift targets: Vampire Survivors, Brotato, Halls of Torment.
 
 | Pattern                     | Engine surface                                                                                                                                              |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Movement / avoidance        | no grid field — exact euclidean over specimen positions, since a 100-unit cell cannot resolve a 22-unit contact radius; priced along the swept segment      |
+| Movement / avoidance        | no grid field — exact euclidean over specimen positions, since a 100-unit cell cannot resolve a 22-unit contact radius; costed along the swept segment      |
 | Trap check + loss detection | `SpatialGrid.bfs` — reachability answers "is there a gap"                                                                                                   |
 | Mote routing                | `distanceField`, multi-source over uncollected motes, crowd-costed and **descended** — the step direction is derived consumer-side, as the engine specifies |
 | Collector routing           | exact euclidean term in `chooseHeading` — a drop lands inside `r_kill` and a 100-unit nav cell cannot resolve an approach ending inside a ~70-unit aperture |
@@ -161,8 +161,8 @@ lift targets: Vampire Survivors, Brotato, Halls of Torment.
 | Level cadence               | `createSkill` with an invertible `Formula` ladder                                                                                                           |
 | Run boundary                | `createReset` with `keep` for the meta split                                                                                                                |
 | Meta shop                   | `createPurchasableCategory` + `createCostRequirement`                                                                                                       |
-| Player-facing automation    | `AutomationTiers`, typed tier union                                                                                                                         |
-| Engagement banding          | harness `classifyFlowChannel`                                                                                                                               |
+| Player-facing automation    | `AutomationTiers`, typed automation tier union                                                                                                              |
+| Engagement banding          | balance harness `classifyFlowChannel`                                                                                                                       |
 
 **Deliberately consumer-side:** the real-time arena — positioning, collision,
 frame-level resolution — is named absent from the engine by design
@@ -198,7 +198,7 @@ spine, as prose + math               runnable closed form               probes (
 The projection is written **before** `data/` and carries the authored design
 parameters itself, so the coverage boundary is falsified while that is still
 cheap. `data/` is derived from it, not the other way round. `BALANCING.md`
-beside this file is the working guide — the knobs, their couplings, and how to
+beside this file is the working guide — the tunables, their couplings, and how to
 run a pass; `r_collect` relative to `r_kill` is the top coupling, because it sets
 the risk premium on all income.
 

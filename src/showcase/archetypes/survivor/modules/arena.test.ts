@@ -74,7 +74,7 @@ describe('survivor/arena', () => {
     expect(y).toBeGreaterThanOrEqual(0);
   });
 
-  it('grows the floor without a ceiling, and still bounds it', async () => {
+  it('grows the floor without a cap, and still bounds it', async () => {
     arena().startRun('generalist');
     await tick(1200);
     const s = arena().state.value;
@@ -130,7 +130,7 @@ describe('survivor/arena — the aperture bound', () => {
     const aperture = META_UPGRADES.find((u) => u.id === 'wider-aperture')!;
     const stacked =
       Math.pow(reclaimant.perStack, reclaimant.maxStacks) *
-      Math.pow(aperture.perLevel, aperture.maxLevel);
+      Math.pow(aperture.perPurchase, aperture.limit);
 
     // The regression this bound exists for: on a raw product the two shipping
     // sources put the aperture OUTSIDE the radius that feeds it.
@@ -145,7 +145,7 @@ describe('survivor/arena — the aperture bound', () => {
 
   it('still pays every stack, so no pick is wasted', () => {
     // The reason this is a headroom curve rather than a clamp: a clamp makes the
-    // last stacks inert, which is a dial that stops reaching the player.
+    // last stacks inert, which is an authored parameter that stops reaching the player.
     expect(collectRadiusFor(2)).toBeGreaterThan(collectRadiusFor(1));
     expect(collectRadiusFor(4)).toBeGreaterThan(collectRadiusFor(2));
     expect(collectRadiusFor(8)).toBeGreaterThan(collectRadiusFor(4));
@@ -269,7 +269,7 @@ describe('survivor/arena — spawning is not a queue', () => {
     expect(s.specimens.length).toBeGreaterThan(0);
 
     // Clear the floor by hand and step once. With a backlog this refilled to the
-    // cap immediately; without one, room persists until the rate refills it.
+    // cap immediately; without one, room stays until the rate refills it.
     const before = s.specimens.length;
     s.specimens.length = 0;
     await tick(1);

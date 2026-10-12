@@ -79,18 +79,18 @@ export function candidateOffers(state: ArenaState): DraftOffer[] {
     if (!device || !def || device.evolutionId) continue;
     if (device.level < def.maxLevel) continue;
     if (!state.reagentStacks.has(evo.reagentId)) continue;
-    out.push({ kind: 'evolution', id: evo.id, label: evo.name, defensive: false });
+    out.push({ kind: 'evolution', id: evo.id, label: evo.displayName, defensive: false });
   }
 
   for (const def of DEVICES) {
     const held = owned.get(def.id);
     if (!held) {
-      out.push({ kind: 'device-acquire', id: def.id, label: def.name, defensive: false });
+      out.push({ kind: 'device-acquire', id: def.id, label: def.displayName, defensive: false });
     } else if (held.level < def.maxLevel && !held.evolutionId) {
       out.push({
         kind: 'device-level',
         id: def.id,
-        label: `${def.name} +1`,
+        label: `${def.displayName} +1`,
         defensive: false,
       });
     }
@@ -102,7 +102,7 @@ export function candidateOffers(state: ArenaState): DraftOffer[] {
     out.push({
       kind: 'reagent',
       id: reagent.id,
-      label: `${reagent.name} +1`,
+      label: `${reagent.displayName} +1`,
       defensive: reagent.defensive,
     });
   }
@@ -158,11 +158,11 @@ export function drawOffers(
 }
 
 /**
- * The seat's draft policy — the half of a personality that is not movement.
+ * The seat's draft policy — the half of a persona that is not movement.
  *
  * A seat spends `defenseShare` of its picks defensively, so the policy scores an
  * offer by how much taking it moves the run toward that ratio. This is what makes
- * `defenseShare` a real dial rather than a label: it changes what gets drafted,
+ * `defenseShare` a real authored parameter rather than a label: it changes what gets drafted,
  * which changes the DPS curve, which is why `offensivePickGain` is solved from it.
  */
 /**
@@ -208,20 +208,20 @@ export function scoreOffer(
   if (offer.kind === 'device-acquire') score += takenTotal < 6 ? 7 : 1;
 
   // Depth on a device that is close to recombining — the last levels are worth
-  // more than the first, because they are what buys the evolution.
+  // more than the first, because they are what gives the evolution.
   if (offer.kind === 'device-level') score += levelPressure(offer.id, devices);
 
   // A heading-bound device is worth less to a policy than to a hand, and the
   // draft is where that belongs. `cone` fires along the movement heading, so its
   // value is the value of a manoeuvre — kite, swing the wedge onto the mass as
   // the cooldown lands, fire, resume. `CONNECT_WEIGHT` in the steering policy
-  // buys the swing and it genuinely works (that seat's cone went 55.7% → 73.6%
+  // gives the swing and it genuinely works (that seat's cone went 55.7% → 73.6%
   // connect, 0.7% → 6.1% of kills at four levels), but a policy executing it
   // still lands well under the omnidirectional shapes' 20–63%, because a wedge
   // it has to earn is worth less than coverage it is simply given.
   //
   // So the discount is a discount and not a ban, and the size of the gap it
-  // prices is MEASURED: the policy holds 29% of the achievable wedge, 32–45% at
+  // costs is MEASURED: the policy holds 29% of the achievable wedge, 32–45% at
   // the instant it fires (`../balance/cone-probe.ts`, which is a ceiling and not
   // a simulated player — it charges nothing for the positioning a real turn
   // costs). Under a player seat the term is absent entirely and the offer scores

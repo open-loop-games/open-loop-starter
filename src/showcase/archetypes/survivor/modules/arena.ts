@@ -52,7 +52,7 @@ export interface ArenaApi {
   elapsed: ComputedRef<number>;
   /** Motes banked this run — the XP the draft ladder is measured against. */
   banked: ComputedRef<number>;
-  /** The seat driving this run. The draft policy reads its dials. */
+  /** The seat driving this run. The draft policy reads its authored parameters. */
   seat: ComputedRef<SeatDef>;
   /**
    * Post the desired unit heading for a player-driven seat; `null` for nothing
@@ -82,7 +82,7 @@ export interface ArenaModuleOptions {
   seat?: SeatDef;
   /** Fixed seed, so a probe run is reproducible. Defaults to the engine's. */
   seed?: number;
-  /** Cross-run multipliers. Supplied by the meta module once it lands. */
+  /** Lifetime multipliers. Supplied by the meta module once it lands. */
   metaSurvival?: number;
   metaCollect?: number;
   metaYield?: number;
@@ -139,12 +139,12 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
       const outcome = ref<RunOutcome>('briefing');
 
       // Plain `let`, deliberately: the pure step reads this every tick through a
-      // closure and nothing renders off it, so a ref would buy reactivity nobody
+      // closure and nothing renders off it, so a ref would give reactivity nobody
       // subscribes to and pay for it on the hot path.
       let control: Vec2 | null = null;
 
       const state = shallowRef<ArenaState>(createArenaState(params));
-      // Touch the tunables so a scope push is observed at read time rather than
+      // Touch the tunables so pushed overrides are observed at read time rather than
       // captured at install — the registry is the perturbation path, and a value
       // frozen here would silently ignore every override.
       void baseHp.value;
@@ -155,7 +155,7 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
         persistentState.seatId.value = chosen.id;
         persistentState.runsStarted.value += 1;
         // Meta multipliers are read at run START, not at install: a run opens
-        // with whatever the shop has bought by then, and stays fixed for its arc.
+        // with whatever has been purchased from the shop by then, and stays fixed for its arc.
         control = null;
         params = buildParams(
           chosen,

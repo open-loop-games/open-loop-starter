@@ -9,7 +9,7 @@
  *
  * The arena's movement policy is an arg-max over a candidate heading set, and an
  * arg-max has no memory — a score that crosses over between two candidates flips
- * the heading with no cost, every step, for as long as the crossing lasts. On
+ * the heading with no cost, every tick, for as long as the crossing lasts. On
  * screen that reads as a vibrating operator rather than a piloted one, and no
  * balance reading shows it: the seat still engages, still banks, still dies on
  * schedule while shaking.
@@ -48,7 +48,7 @@ import { SEATS } from '../data/seats';
 import { BASE_MOVE_SPEED, refreshFields } from '../modules/sim/step';
 import { scoreHeadings, type Fields } from '../modules/sim/steering';
 
-/** 20 Hz — the live tick rate. Movement quality is a per-step property, so this
+/** 20 Hz — the live interval rate. Movement quality is a per-tick property, so this
  *  probe cannot run at the coarse rate the economy probes use. */
 const INTERVAL_RATE = 20;
 /**
@@ -286,7 +286,7 @@ async function main(): Promise<void> {
   console.log('');
   console.log('  rev/s should sit near zero. A reversal past 120° is the shape the');
   console.log('  eye catches, and the policy has no legitimate reason to reverse at');
-  console.log('  every step — a real reversal is a decision that lasts a beat.');
+  console.log('  every tick — a real reversal is a decision that lasts a beat.');
   console.log('');
   console.log('  units/s against nominal is the cost of the jitter in the currency');
   console.log('  the economy cares about: distance walked that went nowhere is');
@@ -305,7 +305,7 @@ async function main(): Promise<void> {
   console.log('     Under 100 live bodies threat spreads 38–269 against a weighted mote');
   console.log('     pull of 11–27 and engage 17–22 — the same order of magnitude, and');
   console.log('     several terms genuinely voting. Past 100 threat runs 365–3060, and');
-  console.log('     past 250 it is ~5000: the priced contact grows as remaining hp falls,');
+  console.log('     past 250 it is ~5000: the costed contact grows as remaining hp falls,');
   console.log('     so late in a run it does decide alone and everything else breaks ties.');
   console.log('');
   console.log('   - engage does NOT saturate away at the cap; its spread holds at 17–37');

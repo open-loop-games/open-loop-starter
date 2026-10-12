@@ -7,7 +7,7 @@
 // the shipping ladder and the projected ladder cannot disagree.
 
 export interface ScheduleBalance {
-  /** Target run length in game-seconds. One session ≈ one run. */
+  /** Target run length in game-seconds. One play session ≈ one run. */
   runSeconds: number;
   /** `t₀` — the first draft interval. */
   beatFirstSeconds: number;
@@ -33,8 +33,8 @@ export const SCHEDULE_BALANCE: ScheduleBalance = {
   hpPickGain: 1.09,
 };
 
-/** Cumulative game-time at which draft beat `n` (1-indexed) is scheduled to fire. */
-export function beatTime(n: number): number {
+/** Fire time of draft beat `n` (1-indexed): the cumulative game-time it is scheduled at. */
+export function fireTime(n: number): number {
   const { beatFirstSeconds: t0, beatRatio: r } = SCHEDULE_BALANCE;
   return (t0 * (Math.pow(r, n) - 1)) / (r - 1);
 }
@@ -42,7 +42,7 @@ export function beatTime(n: number): number {
 /** How many beats the authored schedule expects to have fired by `t`. */
 export function scheduledBeatsBy(t: number): number {
   let n = 0;
-  while (n < SCHEDULE_BALANCE.beatCount && beatTime(n + 1) <= t) n++;
+  while (n < SCHEDULE_BALANCE.beatCount && fireTime(n + 1) <= t) n++;
   return n;
 }
 
@@ -86,7 +86,7 @@ export function offensivePickGain(
 }
 
 /**
- * The XP ladder — DERIVED so beat `n` lands at `beatTime(n)` under the income
+ * The XP ladder — DERIVED so beat `n` fires at `fireTime(n)` under the income
  * curve it is handed. `cumulativeIncomeAt` must be `cumulativeIncomeAmortized`:
  * collector yield has to be in the model (a smooth-derived ladder never re-syncs)
  * but spread rather than impulsive (an impulse-derived ladder over-fits to the
@@ -100,7 +100,7 @@ export function deriveXpLadder(cumulativeIncomeAt: (t: number) => number): numbe
   const ladder: number[] = [];
   let prev = 0;
   for (let n = 1; n <= SCHEDULE_BALANCE.beatCount; n++) {
-    const cum = cumulativeIncomeAt(beatTime(n));
+    const cum = cumulativeIncomeAt(fireTime(n));
     ladder.push(cum - prev);
     prev = cum;
   }
@@ -113,7 +113,7 @@ export function deriveXpLadder(cumulativeIncomeAt: (t: number) => number): numbe
 // `open-loop-research/methodology/techniques/closed-form-progression/
 // per-archetype/survivor.md` for the per-subsystem inventory and its receipts).
 //
-//   beatTime(n) = t₀ · (ρ_bⁿ − 1)/(ρ_b − 1)      draft schedule
+//   fireTime(n) = t₀ · (ρ_bⁿ − 1)/(ρ_b − 1)      draft schedule
 //   HP(t)       = HP₀ · m_hp^(t/60)               specimen toughness
 //   dmg(t)      = dmg₀ · m_dmg^(t/60)             per-contact damage
 //   DPS(L)      = DPS₀ · g^(L·(1−σ))              L beats, σ defensive share
@@ -165,7 +165,7 @@ export function deriveXpLadder(cumulativeIncomeAt: (t: number) => number): numbe
 // `m_dmg ≪ m_hp` is load-bearing and was a measured correction, not a taste
 // call. The first pass reused `m_hp` for per-contact damage; the projection
 // reported all four seats dead by ~15 minutes regardless of draft, because a
-// 67× per-hit curve outruns any survivability the draft can buy. HP and density
+// 67× per-hit curve outruns any survivability the draft can give. HP and density
 // carry escalation; per-hit damage barely moves. Coupling: raising `m_dmg`
 // toward `m_hp` collapses the run length for every seat at once, which reads as
 // "the game got hard" when it is actually "the model stopped having a decision

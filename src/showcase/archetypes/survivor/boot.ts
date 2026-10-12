@@ -16,7 +16,7 @@ export interface SurvivorBootResult {
 }
 
 export interface SurvivorEngineOptions {
-  /** Persistence namespace override. Unique per-engine; used to isolate sim runs. */
+  /** Persistence namespace override. Unique per-engine; used to isolate headless runs. */
   persistenceNamespace?: string;
   /** Extra modules registered alongside the default game modules. */
   extraModules?: EngineModule[];

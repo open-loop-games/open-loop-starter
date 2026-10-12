@@ -38,7 +38,7 @@ export const BASE_MOVE_SPEED = 120;
 
 /**
  * Touching bodies at which contact damage reaches the full aggregate rate.
- * Declared in `../../data/arena.ts` because the movement policy prices contact
+ * Declared in `../../data/arena.ts` because the movement policy costs contact
  * with this same curve; re-exported here so the § contact loop below reads local.
  */
 export const CONTACT_SATURATION = THREAT_BALANCE.contactSaturation;
@@ -86,12 +86,12 @@ export function createArenaState(params: ArenaParams): ArenaState {
 }
 
 /**
- * Live collect radius, after reagents and the cross-run aperture upgrade.
+ * Live collect radius, after reagents and the lifetime aperture upgrade.
  *
  * The two multipliers compose into ONE aperture figure handed to
  * `collectRadiusFor`, which bounds `r_collect / r_kill` structurally
  * (`../../data/arena.ts` § Which is why the ratio is bounded). Multiplying the
- * radius here directly is what let a fully-stacked reagent plus a bought tile
+ * radius here directly is what let a fully-stacked reagent plus a purchased tile
  * put the aperture outside the kill radius.
  */
 export function collectRadius(state: ArenaState, params: ArenaParams): number {
@@ -217,8 +217,8 @@ export function stepArena(
   const rate =
     THREAT_BALANCE.spawnRate0 * Math.pow(THREAT_BALANCE.spawnGrowthPerMinute, state.time / 60);
   state.spawnCarry += rate * dt;
-  // No ceiling: what the escalation curve calls for is what the floor gets. The
-  // `entityBudget` that used to gate this looked like a performance bound and
+  // No cap: what the escalation curve calls for is what the floor gets. The
+  // `entityBudget` that used to block this looked like a performance bound and
   // acted as a design one, discarding 40–70% of the run's authored spawns
   // (`../../BALANCING.md` § Known thin). Density is bounded by the annulus, by
   // kills, and by the distance cull — by the game, rather than by a constant.
@@ -435,7 +435,7 @@ export function stepArena(
   // orbits rather than fleeing in a straight line almost never outruns anything.
   // So bodies lived ~130s against a modelled 12 and the floor held hundreds
   // against a modelled twenty — an order of magnitude, and the reason a hard
-  // entity ceiling looked necessary.
+  // entity cap looked necessary.
   //
   // A body is exempt while it is inside `killRadius`, because that is what
   // "engaged" means here and those leave by dying. Outside it, the clock is the
@@ -452,7 +452,7 @@ export function stepArena(
     const leaves =
       d2 > despawn2 || (d2 > kill2 && state.time - s.spawnedAt >= THREAT_BALANCE.dwellSeconds);
     if (!leaves) return true;
-    // Damage already spent on a body that walks away bought nothing. Booked
+    // Damage already spent on a body that walks away achieved nothing. Booked
     // here rather than at the device, because whether a hit was worth anything
     // is only knowable once the body's fate is — see `ArenaStats.damageWasted`.
     if (s.hp < s.spawnHp) {

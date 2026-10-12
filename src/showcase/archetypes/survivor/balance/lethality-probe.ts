@@ -5,18 +5,18 @@
  * Seeds: `SEEDS=16 …` (default 8).
  *
  * `../BALANCING.md` § Couplings records that realized engagement splits into
- * `reach` (movement, above the dial on every seat) and `lethal` (kills over
+ * `reach` (movement, above the authored parameter on every seat) and `lethal` (kills over
  * bodies reached, varying 9.4× across the roster), and that `kinetic` and
  * `shielded` are authored at the SAME `dps` 0.9 yet reach median levels 10 and
  * 22. Three explanations fit that, and they want different repairs:
  *
- *  - **A constant.** One of `kinetic`'s other dials makes it worse at killing
+ *  - **A constant.** One of `kinetic`'s other authored parameters makes it worse at killing
  *    from the first minute. Repair: change the seat.
  *  - **A feedback loop.** It starts level with the roster and falls away, because
  *    lethality feeds income, income feeds the ladder, the ladder feeds device
  *    level, and device level is the DPS that decides lethality. Repair: damp the
  *    loop, which is a systems change no seat constant reaches.
- *  - **Upgrade selection.** The seat's draft personality buys a different loadout
+ *  - **Upgrade selection.** The seat's draft persona purchases a different loadout
  *    for the same run level, so the gap is what it CHOSE rather than what it is.
  *    Repair: the offer scoring in `../modules/draft.ts`.
  *
@@ -158,19 +158,19 @@ async function main(): Promise<void> {
   // ── Is it what the seat DRAFTED at that level? ──
   //
   // The third explanation, and the one the two tables above cannot separate on
-  // their own: a seat's draft personality (`defenseShare`, and the offer scoring
-  // in `../modules/draft.ts`) could be buying a different loadout for the same
+  // their own: a seat's draft persona (`defenseShare`, and the offer scoring
+  // in `../modules/draft.ts`) could be picking a different loadout for the same
   // run level, in which case the lethality gap is upgrade selection and the
   // repair is the draft policy rather than the seat or the loop.
   //
-  // `dev-lvl` is summed installed device levels — what the picks BOUGHT, against
+  // `dev-lvl` is summed installed device levels — what the picks GAVE, against
   // a run level that says what the ladder GRANTED. `def%` is the realized
   // defensive share against the seat's declared `defenseShare`. If a behind seat
   // holds the same offensive mass at the same run level and still kills less,
   // selection is not the story.
   console.log('\n  ── Loadout at a given run level (selection, not outcome) ──');
   console.log(
-    col('  band', 10) + SEATS.map((s) => col(s.id, 16)).join('') + '(dev-lvl · def% vs dial)',
+    col('  band', 10) + SEATS.map((s) => col(s.id, 16)).join('') + '(dev-lvl · def% vs authored)',
   );
   for (const bin of LEVEL_BINS) {
     const cells = SEATS.map((seat) => {
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
     console.log(col(bin.label, 10) + cells.join(''));
   }
   console.log(
-    `  ${col('dial', 10)}${SEATS.map((s) => col(`${(s.defenseShare * 100).toFixed(0)}%`, 16)).join('')}`,
+    `  ${col('authored', 10)}${SEATS.map((s) => col(`${(s.defenseShare * 100).toFixed(0)}%`, 16)).join('')}`,
   );
 
   // ── The same question asked of density, so the answer is not a coincidence ──
@@ -254,7 +254,7 @@ async function main(): Promise<void> {
   // resolved. Both `speed` and crowding predict it rises: a fast operator's
   // in-reach set churns before anything finishes, and `maxTargets` spreads each
   // activation over more bodies as the floor fills. If it is flat, the two
-  // findings are unrelated and exit 3 buys nothing.
+  // findings are unrelated and exit 3 gives nothing.
   console.log('\n  ── Where the damage went (waste = spent on bodies that left alive) ──');
   console.log(
     col('  seat', 13) +

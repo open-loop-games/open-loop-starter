@@ -1,11 +1,11 @@
 // ─── Skeleton ───
 // Cross-Run Meta — the notes that survive a containment failure, and what they
-// buy (`../IDENTITY.md`). Notes accrue from kills and carry through EVERY run
+// purchase (`../IDENTITY.md`). Notes accrue from kills and survive EVERY run
 // end, successful or not: this is a continuous accumulator, not a hard-reset
 // prestige, and that distinction is the archetype's (see § Balance).
 //
 // Pure config. `../modules/` read it at construction;
-// `../balance/survivor-projection.ts` projects the runs-to-buy ladder from it.
+// `../balance/survivor-projection.ts` projects the runs-to-purchase ladder from it.
 
 /**
  * Which side of the spine an upgrade touches. Load-bearing, not annotation:
@@ -24,18 +24,18 @@ export type MetaEffect =
 
 export interface MetaUpgradeDef {
   id: string;
-  name: string;
+  displayName: string;
   blurb: string;
   effect: MetaEffect;
   side: MetaSide;
-  /** Multiplier contributed per level. `revive` is binary and ignores this. */
-  perLevel: number;
-  maxLevel: number;
-  /** Cost of level 1, in notes. Anchored to first-run payout; see § Balance. */
+  /** Multiplier each purchase adds. `revive` is binary and ignores this. */
+  perPurchase: number;
+  limit: number;
+  /** Cost of the first purchase, in notes. Anchored to first-run payout; see § Balance. */
   baseCost: number;
 }
 
-/** Geometric cost ladder shared by every upgrade — the runs-to-buy shape. */
+/** Geometric cost ladder shared by every upgrade — the runs-to-purchase shape. */
 export const META_COST_RATIO = 1.9;
 
 /** Notes per kill, before the mix. Multiplied by mean mote yield at payout. */
@@ -44,75 +44,75 @@ export const NOTES_PER_KILL = 0.12;
 export const META_UPGRADES: MetaUpgradeDef[] = [
   {
     id: 'reinforced-weave',
-    name: 'Reinforced Weave',
+    displayName: 'Reinforced Weave',
     blurb: 'The coat holds a little longer each time you rebuild it.',
     effect: 'toughness',
     side: 'survival',
-    perLevel: 1.08,
-    maxLevel: 5,
+    perPurchase: 1.08,
+    limit: 5,
     baseCost: 300,
   },
   {
     id: 'refined-reagents',
-    name: 'Refined Reagents',
+    displayName: 'Refined Reagents',
     blurb: 'Cleaner stock. The apparatus notices.',
     effect: 'damage',
     side: 'survival',
-    perLevel: 1.07,
-    maxLevel: 5,
+    perPurchase: 1.07,
+    limit: 5,
     baseCost: 320,
   },
   {
     id: 'field-boots',
-    name: 'Field Boots',
+    displayName: 'Field Boots',
     blurb: 'Purpose-built for leaving.',
     effect: 'moveSpeed',
     side: 'survival',
-    perLevel: 1.05,
-    maxLevel: 4,
+    perPurchase: 1.05,
+    limit: 4,
     baseCost: 280,
   },
   {
     id: 'contingency-vial',
-    name: 'Contingency Vial',
+    displayName: 'Contingency Vial',
     blurb: 'One mistake, forgiven. Once.',
     effect: 'revive',
     side: 'survival',
-    perLevel: 1,
-    maxLevel: 1,
+    perPurchase: 1,
+    limit: 1,
     baseCost: 1400,
   },
   {
     id: 'wider-aperture',
-    name: 'Wider Aperture',
+    displayName: 'Wider Aperture',
     blurb: 'Motes answer from further out.',
     effect: 'collectRadius',
     side: 'income',
-    perLevel: 1.1,
-    maxLevel: 4,
+    perPurchase: 1.1,
+    limit: 4,
     baseCost: 360,
   },
   {
     id: 'assay-bonus',
-    name: 'Assay Bonus',
+    displayName: 'Assay Bonus',
     blurb: 'You have got better at reading what you scraped up.',
     effect: 'moteYield',
     side: 'income',
-    perLevel: 1.08,
-    maxLevel: 4,
+    perPurchase: 1.08,
+    limit: 4,
     baseCost: 340,
   },
 ];
 
-/** Cost of taking `upgrade` from `level` to `level + 1`. Geometric. */
-export function upgradeCost(upgrade: MetaUpgradeDef, level: number): number {
-  return Math.round(upgrade.baseCost * Math.pow(META_COST_RATIO, level));
+/** Cost of taking `upgrade` from `count` purchases to `count + 1`. Geometric. */
+export function upgradeCost(upgrade: MetaUpgradeDef, count: number): number {
+  return Math.round(upgrade.baseCost * Math.pow(META_COST_RATIO, count));
 }
 
-/** Total notes to take `upgrade` from zero to `maxLevel`. */
+/** Total notes to take `upgrade` from zero to `limit`. */
 export function totalCost(upgrade: MetaUpgradeDef): number {
   let sum = 0;
-  for (let l = 0; l < upgrade.maxLevel; l++) sum += upgradeCost(upgrade, l);
+  for (let l = 0; l < upgrade.limit; l++) sum += upgradeCost(upgrade, l);
   return sum;
 }
 
@@ -123,7 +123,7 @@ export function totalCost(upgrade: MetaUpgradeDef): number {
  */
 export function maxRunBaseline(side: MetaSide): number {
   return META_UPGRADES.filter((u) => u.side === side && u.effect !== 'revive').reduce(
-    (product, u) => product * Math.pow(u.perLevel, u.maxLevel),
+    (product, u) => product * Math.pow(u.perPurchase, u.limit),
     1,
   );
 }
@@ -136,7 +136,7 @@ export function notesForRun(kills: number, meanYield: number): number {
 // ─── Balance ────────────────────────────────────────────────────────────────
 //   notes(run)   = kills · meanMoteYield · NOTES_PER_KILL
 //   cost(ℓ)      = baseCost · META_COST_RATIO^ℓ
-//   runBaseline  = ∏ᵢ perLevelᵢ^levelᵢ
+//   runBaseline  = ∏ᵢ perPurchaseᵢ^countᵢ
 //
 // ─── The continuous accumulator is the archetype's, and it is deliberate ───
 //
@@ -152,7 +152,7 @@ export function notesForRun(kills: number, meanYield: number): number {
 // flat-TTK design rather than from taste.
 //
 // Income is `spawnRate · engage · meanMoteYield · η` — it does NOT contain DPS.
-// So a `survival` upgrade (damage, toughness, move speed) buys exactly what its
+// So a `survival` upgrade (damage, toughness, move speed) gives exactly what its
 // name says and nothing else: more DPS shortens time-to-kill, which lowers
 // residency, which lowers density, which lowers contact. Kill rate is set by how
 // much the seat chooses to engage, so income is untouched and the XP ladder still
@@ -165,7 +165,7 @@ export function notesForRun(kills: number, meanYield: number): number {
 // nearly a DOUBLING of income against a run-1 ladder.
 //
 // That front-loading is intended: the meta arc is supposed to make later runs
-// bloom faster, and it is bounded by `maxLevel` rather than drifting. It is not
+// bloom faster, and it is bounded by `limit` rather than drifting. It is not
 // the collector bug wearing a hat — the difference is that this one is declared,
 // capped, and derived. But it does mean two things a fork must not forget:
 //
@@ -180,14 +180,14 @@ export function notesForRun(kills: number, meanYield: number): number {
 //
 // `baseCost` is anchored to the expected payout of a FIRST run — the one a player
 // actually has when they first see the shop — so the opening purchase is roughly
-// one run away rather than a wall. `META_COST_RATIO` at 1.9 is the runs-to-buy
-// ladder: each level costs a bit under twice the last, so an upgrade's fifth
-// level is an arc rather than an afternoon. The projection prints the ladder in
+// one run away rather than a wall. `META_COST_RATIO` at 1.9 is the
+// runs-to-purchase ladder: each purchase costs a bit under twice the last, so an
+// upgrade's fifth purchase is an arc rather than an afternoon. The projection prints the ladder in
 // runs; that table is the thing to read when this feels wrong, not the constants.
 //
-// `contingency-vial` is priced off the ladder deliberately. It is binary and it
-// changes a run's shape rather than its rate, so pricing it as a level-1 tile
-// would make it the obvious first buy and flatten the opening decision.
+// `contingency-vial` costs off the ladder deliberately. It is binary and it
+// changes a run's shape rather than its rate, so a first-purchase cost would
+// make it the obvious first purchase and flatten the opening decision.
 //
 // ─── Known thin ───
 //

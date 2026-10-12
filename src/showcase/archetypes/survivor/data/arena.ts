@@ -59,7 +59,7 @@ export interface ThreatBalance {
    * 1.048 on 50%, 1.037 on 100% — monotone, and the schedule deficit tracks it
    * (−4 → −1). Nothing else moves either: halving `m_dmg` does nothing, and
    * softening `m_hp` moves them the WRONG way, because `m_hp` sits inside
-   * `../data/schedule.ts` `offensivePickGain` and a softer floor buys a slower
+   * `../data/schedule.ts` `offensivePickGain` and a softer floor gives a slower
    * DPS curve.
    *
    * 1.048 rather than 1.037 is a design choice, not the optimum of anything.
@@ -102,7 +102,7 @@ export interface ThreatBalance {
    * Touching bodies at which contact damage reaches the full aggregate rate.
    *
    * Lives here rather than beside the loop that applies it because the movement
-   * policy prices contact with the same formula it pays (`../modules/sim/steering.ts`
+   * policy costs contact with the same formula it pays (`../modules/sim/steering.ts`
    * § CONTACT_WEIGHT). A policy scoring a cost the sim does not charge is the
    * two-models-disagreeing failure this archetype has already paid for twice.
    */
@@ -174,13 +174,13 @@ export function rollCollectorTimes(random: () => number, runSeconds: number): nu
 
 /**
  * `r_collect` for a total aperture multiplier — the reagent chain (`reclaimant`)
- * times the cross-run upgrade (`wider-aperture`).
+ * times the lifetime upgrade (`wider-aperture`).
  *
  * The multiplier is applied to the HEADROOM between the base ratio and
  * `apertureCapRatio`, not to the radius, so the aperture approaches the cap
  * hyperbolically and never crosses it. That shape is chosen over a clamp for a
  * reason worth keeping: a clamp makes the last picks of a fully-stacked reagent
- * do nothing, which is the same defect as a dial that never reaches the policy —
+ * do nothing, which is the same defect as an authored parameter that never reaches the policy —
  * the player invests and the game does not answer. Here every stack still moves
  * the radius, by less.
  *
@@ -207,7 +207,7 @@ export function spawnRate(t: number): number {
  * shortened by the seat's DPS), unengaged ones by scrolling away (dwell) — so
  * killing genuinely thins the field. Derived, never authored.
  *
- * Unclamped. There was a ceiling here, mirroring a hard `entityBudget` in the
+ * Unclamped. There was a cap here, mirroring a hard `entityBudget` in the
  * sim's spawn loop, and it was removed because it did design work while looking
  * like a performance bound: measured, it discarded 40–70% of the run's authored
  * escalation, and the draft is solved against the spawn-growth term it discarded.
@@ -224,7 +224,7 @@ export function localDensity(t: number, engage: number, dps: number): number {
 
 /**
  * Probability of being in contact — the squared approach to the density
- * ceiling, which a faster operator effectively widens. Quiet until gaps start
+ * cap, which a faster operator effectively widens. Quiet until gaps start
  * closing, then sharp: this is traversal collapse as a curve.
  */
 export function contactChance(t: number, engage: number, dps: number, speed: number): number {
@@ -238,7 +238,7 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 // Kills land at the outer edge of `r_kill`; motes land where the specimen died;
 // `r_collect` is smaller, so banking income means looping back through the space
 // just cleared. Income is therefore a RISK TRANSACTION, and this ratio is its
-// price. At 70/180 ≈ 0.39 a pickup costs a real re-approach. Move the two
+// cost. At 70/180 ≈ 0.39 a pickup costs a real re-approach. Move the two
 // together and the genre moves with them: at `r_collect → r_kill` income is free
 // and the archetype degenerates into a DPS check; very small, and every level-up
 // is paid for with a dive. Nothing else changes the character of the game as
@@ -257,7 +257,7 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 // whenever a new aperture source is added. `collectRadiusFor` applies any
 // aperture multiplier to the HEADROOM below `apertureCapRatio`, so every present
 // and future source composes into a ratio that rises toward 0.65 and stops.
-// Fully stacked reagent plus fully bought tile now lands at 0.56 — a real reward
+// Fully stacked reagent plus fully purchased tile now lands at 0.56 — a real reward
 // for four picks and a purchase, and still a floor where a mote dropped at the
 // kill edge has to be walked back to.
 //
@@ -289,14 +289,14 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 // cosmetic, and it is the only channel by which DPS converts into survival.
 //
 // This formula used to be clamped to an `entityBudget`, mirroring a hard
-// ceiling in the sim's spawn loop. Both are gone. The ceiling read as a
+// cap in the sim's spawn loop. Both are gone. The cap read as a
 // performance bound and behaved as a design one: it discarded 40–70% of the
 // run's authored spawns, so the escalation curve — which `offensivePickGain`
 // is solved against, spawn-growth term included — stopped reaching the floor
 // around the midpoint, and the draft was sized to beat a density the game had
-// quietly stopped delivering. Removing it bought density that escalates for the
+// quietly stopped delivering. Removing it added density that escalates for the
 // whole arc — at the time, a measured 763–1465 peak population against the old
-// 400. At the current `m_d` the peak is 100–138, so the ceiling would not bind
+// 400. At the current `m_d` the peak is 100–138, so the cap would not bind
 // today; that is the escalation curve having been softened since, not the
 // argument weakening. Re-read the peak from `../balance/arena-probe.ts` before
 // reasoning about population, never from this comment.
