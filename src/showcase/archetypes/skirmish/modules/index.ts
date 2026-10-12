@@ -32,7 +32,7 @@ export {
   type SkirmishAutomationTier,
 } from './automation-tiers';
 export type { FactionId, Side, SkirmishTunableKey } from './tuning';
-export { createMatchModule, MatchKey, SKIRMISH_MATCH_SCOPE_MODULES } from './match';
+export { createMatchModule, MatchKey, SKIRMISH_MATCH_RESET_CONTEXTS } from './match';
 export type {
   MatchApi,
   MatchEvents,
@@ -50,13 +50,13 @@ export type { AutomationOptions, AutomationApi } from './automation';
 export type { EconomyModuleOptions } from './economy';
 
 /**
- * Tactical sim + AI policies are match-scoped. Their `persistent()` state
- * (cadence accumulators, and the sim's unit arrays / base hp / nextId) clears
- * on the boundary; the sim and economy additionally re-init themselves on
+ * The tactical sim and the AI policies are reset per match. Their `persistent()`
+ * state (cadence accumulators, and the tactical sim's unit arrays / base hp /
+ * nextId) clears on the boundary; the tactical sim and economy additionally re-init themselves on
  * `matchStarted`, because the reset runs at `end()` and a match can open over a
  * live one. The match module itself and tuning stay out (see `match.ts`).
  */
-export const MATCH_SCOPE_MODULES: readonly string[] = [
+export const MATCH_RESET_CONTEXTS: readonly string[] = [
   'skirmish/match/economy',
   'skirmish/match/tactical',
   'skirmish/match/a/automation',
@@ -67,14 +67,14 @@ export const MATCH_SCOPE_MODULES: readonly string[] = [
  * The skirmish module list. `bootEngine` installs the shared base (settings,
  * ui-prefs) alongside these.
  *
- * Bot-vs-bot: the SAME automation factory installs on every seat, and a persona
+ * AI-vs-AI: the SAME automation factory installs on every seat, and a persona
  * is the option bag. The default matchup is **rush versus investor**, separated
  * ONLY on `economyShare` (`φ`):
  *
  * - `a` **rush**: `φ = 0`, everything into army.
  * - `b` **investor**: `φ = 0.2`, a fifth of income compounding.
  *
- * Holding the tempo dials equal is deliberate — it makes this matchup a point on
+ * Holding the tempo parameters equal is deliberate — it makes this matchup a point on
  * the surface `balance/split-probe.ts` sweeps, so the demo can be located on the
  * payoff matrix instead of being a separate configuration nobody measured. The
  * investor wins it, which is the archetype's claim made visible; both splits sit
@@ -108,7 +108,7 @@ export function createSkirmishModules(options?: SkirmishModulesOptions): EngineM
         ? Object.keys(options.personas)
         : SIDES);
 
-  const matchScopeModules = [
+  const matchResetContexts = [
     'skirmish/match/economy',
     'skirmish/match/tactical',
     ...factions.map((f) => `skirmish/match/${f}/automation`),
@@ -132,7 +132,7 @@ export function createSkirmishModules(options?: SkirmishModulesOptions): EngineM
   return [
     createTuningModule(),
     createAutomationTiersModule(),
-    createMatchModule({ factions, resetModules: matchScopeModules }),
+    createMatchModule({ factions, resetPersistentContexts: matchResetContexts }),
     createEconomyModule({ factions }),
     createTacticalSimModule({ factions, baseRadius: options?.baseRadius }),
     ...seats.map(({ side, opts }) => createAutomationModule(side, opts)),

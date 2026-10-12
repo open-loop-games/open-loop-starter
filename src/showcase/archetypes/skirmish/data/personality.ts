@@ -20,7 +20,7 @@ export const PERSONA_KEYS: readonly PersonaKey[] = [
 export const PERSONAS: Record<PersonaKey, PersonaDef> = {
   rush: {
     id: 'rush',
-    name: 'Vanguard Rush',
+    displayName: 'Vanguard Rush',
     role: 'Early infantry swarm',
     description:
       'All-in early aggression committing 100% of income into troopers with high decision frequency.',
@@ -39,7 +39,7 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
   },
   investor: {
     id: 'investor',
-    name: 'Compounding Investor',
+    displayName: 'Compounding Investor',
     role: 'Steady economic expansion',
     description:
       'Devotes 20% of income to economic compounding while drafting standard trooper waves.',
@@ -58,7 +58,7 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
   },
   skirmish: {
     id: 'skirmish',
-    name: 'Ranged Skirmish',
+    displayName: 'Ranged Skirmish',
     role: 'Archer harass & screen',
     description:
       'Light economic hedge (15%) fielding a mobile archer screen backed by infantry to punish slow melee.',
@@ -77,7 +77,7 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
   },
   boom: {
     id: 'boom',
-    name: 'Cavalry Blitz',
+    displayName: 'Cavalry Blitz',
     role: 'Heavy macro & shock cavalry',
     description:
       'Heavy economic reinvestment (35%) banking for devastating late-game cavalry shock bursts.',
@@ -96,7 +96,7 @@ export const PERSONAS: Record<PersonaKey, PersonaDef> = {
   },
   combined: {
     id: 'combined',
-    name: 'Combined Arms',
+    displayName: 'Combined Arms',
     role: 'Adaptable triad roster',
     description:
       'Moderate economic split (20%) drafting a balanced infantry, archer, and cavalry triad.',

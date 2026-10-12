@@ -16,7 +16,7 @@ import { BASE_HP, BASE_RADIUS, computeBasePositions, getCounterMultiplier } from
  * Tactical-sim mechanics (bone #3), isolated from the AI policies — the module
  * stack here has no automation, so `spawn` is driven by hand and the field
  * only holds what the test puts there. Specs movement / targeting / combat /
- * death; the bot-vs-bot loop is `automation.test.ts`.
+ * death; the AI-vs-AI loop is `automation.test.ts`.
  */
 
 function boot() {
@@ -133,7 +133,7 @@ describe('skirmish tactical sim — N-faction regular N-gon geometry and mirror 
 
     // Crimson's base falls
     t.baseHp.crimson.value = 0;
-    await tick(1); // sim onTick processes defeat
+    await tick(1); // the tactical sim's tick handler processes defeat
 
     // Crimson units are immediately disbanded
     expect(t.units.crimson.value).toHaveLength(0);

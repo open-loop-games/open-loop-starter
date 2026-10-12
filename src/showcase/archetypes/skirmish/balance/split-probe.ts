@@ -11,7 +11,7 @@
  * What to read:
  *
  * - **The diagonal must be stalemate.** Identical seats are a mirror; a decided
- *   diagonal cell means the sim favours a seat, which is a bug wearing a balance
+ *   diagonal cell means the tactical sim favours a seat, which is a bug wearing a balance
  *   result's clothes. Two such bugs were found this way.
  * - **A dominant row is a dead axis.** If one `φ` beats everything, the split
  *   is not a decision and the archetype has no strategy space.
@@ -20,7 +20,7 @@
  *   best-response fixed point non-trivial and the opponent worth reading.
  */
 
-import { buildSkirmishSimEngine, createOutcomeCapture, seatsAtShare } from './_engine';
+import { buildSkirmishScratchEngine, createOutcomeCapture, seatsAtShare } from './_engine';
 import { ECONOMY_BALANCE, GROWTH_CONSTANT } from '../data/economy';
 
 const SPLITS = [0, 0.2, 0.4, 0.6, 0.8];
@@ -37,7 +37,7 @@ interface Cell {
 }
 
 function runCell(shareA: number, shareB: number): Cell {
-  const engine = buildSkirmishSimEngine({
+  const engine = buildSkirmishScratchEngine({
     ...seatsAtShare(shareA, shareB),
     maxDeltaTime: STEP_SEC * 4,
   });
@@ -105,7 +105,7 @@ if (decidedDiagonal.length === 0) {
   console.log(
     `- **MIRROR BROKEN** — ${decidedDiagonal.length} diagonal cell(s) decided: ` +
       decidedDiagonal.map((c) => `φ=${c.a}→${c.winner}`).join(', ') +
-      '. Identical seats produced different outcomes, so the sim is asymmetric.',
+      '. Identical seats produced different outcomes, so the tactical sim is asymmetric.',
   );
   console.log('  Treat every other number here as unreliable until that is fixed.');
 }
@@ -121,7 +121,7 @@ for (const a of SPLITS) {
 }
 
 // `beats[x]` — the splits that x defeats. Read from both orientations of each
-// pairing; they agree when the sim is symmetric, which the diagonal check above
+// pairing; they agree when the tactical sim is symmetric, which the diagonal check above
 // is what establishes.
 const beats = new Map<number, Set<number>>(SPLITS.map((s) => [s, new Set<number>()]));
 for (const c of cells) {

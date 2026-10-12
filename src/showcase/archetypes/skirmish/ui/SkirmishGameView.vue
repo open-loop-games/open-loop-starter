@@ -24,8 +24,8 @@ const stack = useModalStack();
             {{ manifest.displayName }}
           </h4>
           <p>
-            Continuous tactical RTS — bot vs bot of built-in AI on a pixi/webgl field. Both sides
-            are played by the shipping AI; player control is a stretch goal.
+            Continuous tactical RTS — built-in AI versus built-in AI on a pixi/webgl field. Both
+            sides are played by the shipping AI; player control is a stretch goal.
           </p>
         </template>
       </SystemHeader>

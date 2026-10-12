@@ -14,7 +14,7 @@
  * having different ones by construction.
  */
 
-import { buildSkirmishSimEngine, INVESTOR, RUSH } from './_engine';
+import { buildSkirmishScratchEngine, INVESTOR, RUSH } from './_engine';
 import { createArcTrace, observe, skirmishBeats, armySeparation, type BeatDef } from './beats';
 import { EconomyKey, MatchKey, TacticalKey, type Side } from '../modules';
 
@@ -48,7 +48,7 @@ console.log(
 console.log('Driving the shipping automation. Windows from `beats.ts`; a miss is a');
 console.log('reading, not a failure.\n');
 
-const engine = buildSkirmishSimEngine({ maxDeltaTime: STEP_SEC * 4 });
+const engine = buildSkirmishScratchEngine({ maxDeltaTime: STEP_SEC * 4 });
 const trace = createArcTrace();
 const beats = skirmishBeats(trace);
 const economy = engine.tryInject(EconomyKey)!;

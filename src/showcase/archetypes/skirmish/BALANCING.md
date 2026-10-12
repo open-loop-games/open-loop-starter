@@ -18,7 +18,7 @@ Perturbable surface — the `tunable()` keys a probe can push a scope onto:
 | ------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `economy/incomePerWorker` | `2.5`   | `ρ`. Raises income and the growth constant `r = ρ/c` together, so it moves both the pace and the whole game's tempo.          |
 | `economy/workerCost`      | `100`   | `c`. Investment lump size AND `r`, inversely. The single most coupled number here — see Couplings.                            |
-| `tactical/unitCost`       | `10`    | Army price. Sets how many units an investment costs and therefore how sharp the tradeoff feels.                               |
+| `tactical/unitCost`       | `10`    | Army cost. Sets how many units an investment costs and therefore how sharp the tradeoff feels.                               |
 | `match/timeLimitSec`      | `1800`  | A backstop, not the match length. Matches resolve in well under a minute; a run that reaches this cap is a stalemate reading. |
 
 **`economyShare` (`φ`) is deliberately not on this surface.** It is a per-seat
@@ -28,23 +28,23 @@ building engines at different splits (`balance/_engine.ts` `seatsAtShare`), whic
 is what `split-probe.ts` does.
 
 **`startingWorkers`, `maxWorkers` and the combat constants are not perturbable
-either.** `E₀` and the roster are content shape; `maxWorkers` is a sim guard that
+either.** `E₀` and the roster are content shape; `maxWorkers` is a simulation guard that
 should never bind (see Known thin).
 
 ## Couplings
 
 **`c` moves three things at once.** It is the investment lump, it divides into
-`r = ρ/c`, and it sets the worker/unit price ratio. Raising `c` therefore slows
+`r = ρ/c`, and it sets the worker/unit cost ratio. Raising `c` therefore slows
 compounding, makes each investment a bigger commitment, AND lengthens payback —
 all pushing personas toward army. If you want _only_ a slower economy, move `ρ`
 and `c` together and leave the ratio alone.
 
 **Investment must withhold, or `φ` is a lie.** Because `c > unitCost`, a worker
 is a lump against a continuous income stream. A policy that commits its remainder
-to army every decision slot never banks the price, so income loses the race to
+to army every decision slot never banks the cost, so income loses the race to
 its own spending and the realized split reads 0 no matter what the persona asked
 for — with nothing anywhere reporting an error. `modules/automation.ts` reserves
-the worker price while under target for exactly this reason. Drop `c` below
+the worker cost while under target for exactly this reason. Drop `c` below
 `unitCost` and the reserve silently becomes a no-op.
 
 **Realized `φ` overshoots in short matches.** Steering is bang-bang against an
@@ -53,7 +53,7 @@ indivisible worker, so the realized share sits at or just above target by up to
 0.2 can realize 0.45 — so read `realizedShare` against match length before
 concluding a persona is misbehaving.
 
-**The sim must stay symmetric, and it is easy to break.** Two seats given
+**The tactical sim must stay symmetric, and it is easy to break.** Two seats given
 identical treatment must reach identical state. Two separate defects broke this
 and both read as balance findings rather than as bugs: a spawn counter shared
 across sides handed each a different formation offset, and sequential per-side
@@ -73,7 +73,7 @@ match resolves around ~50s (49.5s in `arc-probe.ts`, 60s in `split-probe.ts`).
 ## Running a pass
 
 Run from the repo root (`src/game/…` after eject). Order matters — the
-projection is cheap and rules out whole classes of problem before any sim runs:
+projection is cheap and rules out whole classes of problem before any headless run:
 
 ```
 pnpm exec vite-node src/showcase/archetypes/skirmish/balance/skirmish-projection.ts
@@ -89,14 +89,14 @@ pnpm exec vite-node src/showcase/archetypes/skirmish/balance/persona-probe.ts
   the real army smaller, so a probe _over_ the bound means the model is wrong
   rather than the balance. Check the crossovers against expected match length
   first; if the crossover lands after the match ends, the economy is decorative
-  and no amount of sim work will show it.
+  and no amount of simulation will show it.
 - **`arc-probe.ts`** — drives the shipping automation through one match of the
   default matchup and reports when each beat fired, plus a sampled view of the
   match. A beat firing outside its window is a question about the window or the
   content, never a reason to bend a constant.
 - **`split-probe.ts`** — the signature probe. Sweeps `φ` on both seats and prints
   the payoff matrix. Read it in this order: (1) is the diagonal all stalemate — if
-  not, stop, the sim is asymmetric and every other cell is unreliable; (2) is any
+  not, stop, the tactical sim is asymmetric and every other cell is unreliable; (2) is any
   split undefeated — a dominant split means the axis is dead; (3) is there an
   intransitive cycle — that is the outcome worth having.
 - **`roster-probe.ts`** — verifies the 3-unit counter matrix (trooper > cavalry >

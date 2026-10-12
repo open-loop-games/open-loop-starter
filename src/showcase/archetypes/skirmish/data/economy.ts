@@ -1,7 +1,7 @@
 // ─── Skeleton ───
 // The economy half of the RTS macro loop — the guns-versus-butter split the
 // spine is built on (`../IDENTITY.md` § Rate-function spine). A faction owns
-// `workers`, workers produce supply, and supply buys either more workers
+// `workers`, workers produce supply, and supply purchases either more workers
 // (compounding) or army (consumed). Pure config; `../modules/economy.ts` reads
 // it at construction.
 
@@ -12,7 +12,7 @@ export interface EconomyBalance {
   incomePerWorker: number;
   /** `c` — supply cost of one worker. Flat: see § Balance on why not scaling. */
   workerCost: number;
-  /** Ceiling on owned workers. Structural, not a curve knob — see § Balance. */
+  /** Limit on owned workers. Structural, not a curve parameter — see § Balance. */
   maxWorkers: number;
 }
 
@@ -39,7 +39,7 @@ export const GROWTH_CONSTANT = ECONOMY_BALANCE.incomePerWorker / ECONOMY_BALANCE
 //   Aˢ(t)      = ((1−φ)/φ) · c · E₀ · (e^(φ·r·t) − 1)   army SUPPLY spent by t
 //   A(t)       = Aˢ(t) / unitCost                    army UNITS fielded by t
 //
-// `Aˢ` is in supply and carries the `c` factor; `IDENTITY.md` states the same
+// `Aˢ` is in supply and contains the `c` factor; `IDENTITY.md` states the same
 // relation in economy-equivalents (units of `c·E₀`), which is the same curve
 // read on a different axis. Divide by `TROOPER.cost` (`./tactical.ts`) for units.
 //
@@ -61,7 +61,7 @@ export const GROWTH_CONSTANT = ECONOMY_BALANCE.incomePerWorker / ECONOMY_BALANCE
 // match, which made the cap the balance rather than the guard it is meant to be.
 //
 // `c / (ρ · unitCost)`: a worker costs 10 troopers and repays its own cost in
-// c/ρ = 40s. A faction that buys one worker instead of ten troopers is down ten
+// c/ρ = 40s. A faction that purchases one worker instead of ten troopers is down ten
 // troopers for forty seconds and ahead forever after — that is the tension the
 // archetype is made of, and it is why `c` is FLAT rather than cost-scaling.
 // Cost scaling would make the split self-limiting, and the point is that
@@ -69,7 +69,7 @@ export const GROWTH_CONSTANT = ECONOMY_BALANCE.incomePerWorker / ECONOMY_BALANCE
 // wall. Coupling: raising `c` without raising `ρ` lengthens payback AND slows
 // `r`, so it pushes every persona toward army twice over.
 //
-// `maxWorkers` is a sim guard, not pacing — unbounded exponential growth in a
+// `maxWorkers` is a simulation guard, not pacing — unbounded exponential growth in a
 // match with no clock would run the field out of memory before the base fell.
 // It sits far above where any viable `φ` lands inside the time limit; a probe
 // that reports factions pinned at the cap is reporting that the cap became
@@ -78,7 +78,7 @@ export const GROWTH_CONSTANT = ECONOMY_BALANCE.incomePerWorker / ECONOMY_BALANCE
 // ─── Coupling: investment must withhold ───
 //
 // `c > unitCost` makes a worker a LUMP against a continuous income stream, and
-// that is the whole reason `modules/automation.ts` reserves the worker price
+// that is the whole reason `modules/automation.ts` reserves the worker cost
 // before committing its remainder to army. A policy that spends what is left
 // each slot never banks `c`, so income loses the race to its own spending and
 // `φ` silently realizes as 0 no matter what a persona asked for — the symptom

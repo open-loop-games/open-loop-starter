@@ -115,7 +115,7 @@ export function skirmishBeats(trace: ArcTrace): BeatDef[] {
     {
       id: 'first-income-decision',
       window: [0, 30],
-      intent: 'The split becomes real — income can buy economy or army, not both.',
+      intent: 'The split becomes real — income can purchase economy or army, not both.',
       predicate: ({ engine, side }) =>
         economy(engine).cumulativeIncome[side].value >= ECONOMY_BALANCE.workerCost,
     },

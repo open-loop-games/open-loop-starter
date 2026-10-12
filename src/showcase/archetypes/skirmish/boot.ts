@@ -16,13 +16,13 @@ export interface GameBootResult {
 }
 
 export interface GameEngineOptions {
-  /** Persistence namespace override. Unique per-engine; used to isolate sim runs. */
+  /** Persistence namespace override. Unique per-engine; used to isolate headless runs. */
   persistenceNamespace?: string;
   /** Extra modules registered alongside the default game modules. */
   extraModules?: EngineModule[];
   /** Raise the loop's `maxDeltaTime` cap. */
   maxDeltaTime?: number;
-  /** Autosave period in ms; sim engines pass 0 so they never write. */
+  /** Autosave period in ms; scratch engines pass 0 so they never write. */
   autoSaveInterval?: number;
   /** Roster of participating factions. */
   factions?: SkirmishModulesOptions['factions'];

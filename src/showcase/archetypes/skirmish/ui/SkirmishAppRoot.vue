@@ -2,7 +2,7 @@
   SkirmishAppRoot — routing + app chrome only (runs pre-`engine.start()`), so it
   reads no engine module state in setup. The battlefield lives in
   `<SkirmishGameView>`, mounted under the post-start frame. The `onLoaded` seam
-  auto-starts the first match — a legitimate post-start hook. See
+  auto-starts the first match — the legitimate post-start option callback. See
   `.claude/rules/app-root-discipline.md`.
 -->
 <script setup lang="ts">

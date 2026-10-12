@@ -35,26 +35,26 @@ export interface AutomationOptions {
    * existed. `φ → 1` never commits and loses to anything that does.
    */
   economyShare?: number;
-  /** Seconds between spawn decisions (before jitter). Tempo dial. */
+  /** Seconds between spawn decisions (before jitter). A tempo parameter. */
   cadenceSec?: number;
   /**
    * Max units spawned per burst. `Infinity` = commit all affordable (all-in);
    * a finite cap drip-feeds and holds the throughput below income (cautious).
-   * This is the dial that actually differentiates army throughput — spend-
+   * This is the parameter that actually differentiates army throughput — spend-
    * fraction policies all converge to the income limit in steady state.
    */
   maxSpawnPerBurst?: number;
   /**
    * Multiplicative cadence jitter [0..1], seeded per side. 0 = deterministic
-   * (production / mirror play). Sim seed-sweeps pass a calibrated value to
-   * break parameterized-vs-parameterized stalemates — the believability knob.
+   * (production / mirror play). Seed sweeps pass a calibrated value to
+   * break parameterized-vs-parameterized stalemates — the believability parameter.
    */
   cadenceJitter?: number;
   /**
-   * `AutomationTiers` gate — the player seat's progression lock. A seat given
-   * a tier acts only once that tier is reached; a seat given none is gated by
+   * The automation tier that blocks the player seat's progression. A seat given
+   * a tier acts only once that tier is reached; a seat given none is blocked by
    * install-presence instead, which is what the two opponent seats use. Omit
-   * for bot-vs-bot.
+   * for AI-vs-AI.
    */
   tier?: SkirmishAutomationTier;
   /**
@@ -68,7 +68,7 @@ export interface AutomationOptions {
 }
 
 export interface AutomationApi {
-  /** Faction / side identifier. */
+  /** Faction / side id. */
   side: Side;
   faction: FactionId;
   currentPersona: Persistent<PersonaKey | 'custom'>;
@@ -121,11 +121,11 @@ export const AutomationKey: Record<string, InjectionKey<AutomationApi>> = new Pr
  * invariant: in-match guard → cadence accumulator (+ seeded believability
  * jitter) → decide → act. Only `decide` (here: spawn while affordable, up to a
  * cap) is domain. tug's `opponent-bot.ts` is the coupled source instance; this
- * is N=2. The decision is deliberately INLINE, not a shared callback — the
+ * is N=2. The decision is deliberately INLINE, not a shared handler — the
  * recipe surface keeps copies in place so their divergence is the evaluation
- * signal; a callback-based runner is a graduation outcome, not the staging shape.
+ * signal; a handler-based runner is a graduation outcome, not the staging shape.
  *
- * Bot-vs-bot installs both sides, neither carrying a tier. A player seat swaps
+ * AI-vs-AI installs both sides, neither with an automation tier. A player seat swaps
  * its side's policy for input and passes `tier`, which holds the policy behind
  * the ladder in `automation-tiers.ts`.
  */
@@ -319,7 +319,7 @@ export function createAutomationModule(side: Side, options: AutomationOptions): 
         const bestTarget = evaluateTarget();
         tactical.setTargetBase(side, bestTarget);
         // 1. Allocation
-        while (economy.realizedShare(side) < economyShare.value && economy.buyWorker(side)) {
+        while (economy.realizedShare(side) < economyShare.value && economy.purchaseWorker(side)) {
           /* keep investing */
         }
 

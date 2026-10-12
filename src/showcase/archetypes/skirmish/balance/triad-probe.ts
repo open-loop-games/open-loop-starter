@@ -7,7 +7,7 @@
  *    (e.g. 3x rush, 3x investor) achieve equal win shares (1/N = 33.3% ± ε) across
  *    seeded batches with calibrated cadence jitter.
  * 2. Triad Ecological Tournament: Heterogeneous 3-player ecologies (Rush vs Boom vs Skirmish)
- *    evaluating non-zero-sum multi-agent dynamics, third-party free-rider effects,
+ *    evaluating non-zero-sum multi-faction dynamics, third-party free-rider effects,
  *    and survival distributions (T_elim1, T_elim2, final victor).
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/skirmish/balance/triad-probe.ts`
@@ -21,7 +21,7 @@ import {
   seedBatch,
   spreadOf,
 } from '@/balance';
-import { buildSkirmishSimEngine, createOutcomeCapture, seatsForTriad } from './_engine';
+import { buildSkirmishScratchEngine, createOutcomeCapture, seatsForTriad } from './_engine';
 import { PERSONAS, DEFAULT_TRIAD_FACTIONS, type PersonaKey } from '../data/tactical';
 
 const STEP_SEC = 0.5;
@@ -39,7 +39,7 @@ function runTriadMatch(
   personas: [PersonaKey, PersonaKey, PersonaKey],
   options?: { seed?: number; jitter?: number },
 ): TriadMatchResult {
-  const engine = buildSkirmishSimEngine({
+  const engine = buildSkirmishScratchEngine({
     ...seatsForTriad(personas, DEFAULT_TRIAD_FACTIONS, options?.jitter ?? 0.15),
     seed: options?.seed,
     maxDeltaTime: STEP_SEC * 4,
@@ -79,7 +79,7 @@ for (const pKey of MIRROR_PERSONAS) {
   const winSpread = categorySpreadOf(batch, (m) => m.winner);
   const durSpread = spreadOf(batch, { duration: (m) => m.durationSec });
 
-  console.log(`- **3x ${PERSONAS[pKey].name}** (\`${pKey}\`):`);
+  console.log(`- **3x ${PERSONAS[pKey].displayName}** (\`${pKey}\`):`);
   console.log(`  - Win share: ${formatCategorySpread(winSpread)}`);
   console.log(`  - Match duration: ${formatSpread(durSpread.duration, (n) => n.toFixed(1))}s\n`);
 }
@@ -89,7 +89,7 @@ console.log('## 2. Triad Ecological Tournament — Non-Zero-Sum Dynamics\n');
 
 interface TriadEcology {
   id: string;
-  name: string;
+  displayName: string;
   personas: [PersonaKey, PersonaKey, PersonaKey];
   description: string;
 }
@@ -97,32 +97,32 @@ interface TriadEcology {
 const ECOLOGIES: TriadEcology[] = [
   {
     id: 'rps_triad',
-    name: 'Canonical Triad: Rush vs Boom vs Skirmish',
+    displayName: 'Canonical Triad: Rush vs Boom vs Skirmish',
     personas: ['rush', 'boom', 'skirmish'],
     description: 'Swarm (Crimson) vs Cavalry Blitz (Azure) vs Archer Screen (Emerald)',
   },
   {
     id: 'swarm_pincer',
-    name: 'Dual Rush vs Single Boom',
+    displayName: 'Dual Rush vs Single Boom',
     personas: ['rush', 'boom', 'rush'],
     description: 'Two swarms pressuring one high-economy compounding seat',
   },
   {
     id: 'macro_screen',
-    name: 'Rush vs Dual Skirmish Screen',
+    displayName: 'Rush vs Dual Skirmish Screen',
     personas: ['rush', 'skirmish', 'skirmish'],
     description: 'One melee swarm attempting to breach two ranged screens',
   },
   {
     id: 'scaling_standoff',
-    name: 'Macro Standoff: Boom vs Investor vs Combined',
+    displayName: 'Macro Standoff: Boom vs Investor vs Combined',
     personas: ['boom', 'investor', 'combined'],
     description: 'Late-game economic and composition scaling without early rush pressure',
   },
 ];
 
 for (const eco of ECOLOGIES) {
-  console.log(`### ${eco.name}`);
+  console.log(`### ${eco.displayName}`);
   console.log(`*${eco.description}*`);
   console.log(
     `Seats: Crimson=\`${eco.personas[0]}\`, Azure=\`${eco.personas[1]}\`, Emerald=\`${eco.personas[2]}\`\n`,

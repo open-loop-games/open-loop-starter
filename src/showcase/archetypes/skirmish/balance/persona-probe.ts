@@ -4,7 +4,7 @@
  * Measures:
  * 1. Persona roster tournament (deterministic, jitter = 0) over the 5 canonical
  *    personas (rush, investor, skirmish, boom, combined).
- * 2. Stochastic leg instrument (seeded multi-run batch with calibrated cadenceJitter = 0.15)
+ * 2. Stochastic leg probe (seeded multi-run batch with calibrated cadenceJitter = 0.15)
  *    using `@/balance` (`seedBatch`, `spreadOf`, `categorySpreadOf`).
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/skirmish/balance/persona-probe.ts`
@@ -18,7 +18,7 @@ import {
   seedBatch,
   spreadOf,
 } from '@/balance';
-import { buildSkirmishSimEngine, createOutcomeCapture, seatsForPersonas } from './_engine';
+import { buildSkirmishScratchEngine, createOutcomeCapture, seatsForPersonas } from './_engine';
 import { PERSONAS, PERSONA_KEYS, type PersonaKey } from '../data/tactical';
 
 const STEP_SEC = 0.5;
@@ -36,7 +36,7 @@ function runMatch(
   personaB: PersonaKey,
   options?: { seed?: number; jitter?: number },
 ): MatchResult {
-  const engine = buildSkirmishSimEngine({
+  const engine = buildSkirmishScratchEngine({
     ...seatsForPersonas(personaA, personaB, options?.jitter),
     seed: options?.seed,
     maxDeltaTime: STEP_SEC * 4,
@@ -62,7 +62,7 @@ for (const key of PERSONA_KEYS) {
     .map(([type, weight]) => `${weight}${type[0].toUpperCase()}`)
     .join(' ');
   console.log(
-    `  - **${p.name}** (\`${key}\`): φ=${p.economyShare}, cadence=${p.cadenceSec}s, burst=${p.maxSpawnPerBurst}, comp=[${compStr}]`,
+    `  - **${p.displayName}** (\`${key}\`): φ=${p.economyShare}, cadence=${p.cadenceSec}s, burst=${p.maxSpawnPerBurst}, comp=[${compStr}]`,
   );
   console.log(`    *${p.description}*`);
 }

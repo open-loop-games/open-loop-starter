@@ -15,11 +15,11 @@ import { MatchKey } from './match';
 import { ECONOMY_BALANCE } from '../data/economy';
 
 /**
- * The economy half of the macro loop — workers produce supply, supply buys
+ * The economy half of the macro loop — workers produce supply, supply purchases
  * workers or army. This module owns income and the reinvestment channel; the
  * tactical sim owns the field and spends supply on units.
  *
- * The split `φ` is NOT decided here. This module provides the mechanism (buy a
+ * The split `φ` is NOT decided here. This module provides the mechanism (purchase a
  * worker, see what has been spent on economy so far) and `modules/automation.ts`
  * provides the policy, because the split is the seat's strategy — the thing a
  * persona differs on and a player seat would decide by hand.
@@ -40,12 +40,12 @@ export interface EconomyApi {
    * income. What a policy steers against — not a target, a measurement.
    */
   realizedShare(side: Side): number;
-  /** Live worker price, after any tuning override. */
+  /** Live worker cost, after any tuning override. */
   workerCost(): number;
   /** Spendable supply as a number, for policies deciding what they can hold back. */
   available(side: Side): number;
-  /** Buy one worker for `side` if affordable and under the cap. Did it? */
-  buyWorker(side: Side): boolean;
+  /** Purchase one worker for `side` if affordable and under the cap. Did it? */
+  purchaseWorker(side: Side): boolean;
   /** Spend supply on something that is not economy (the army half). */
   spendOnArmy(side: Side, amount: number): boolean;
 }
@@ -110,7 +110,7 @@ export function createEconomyModule(options: EconomyModuleOptions = {}): EngineM
         return earned > 0 ? economySpend[side].value / earned : 0;
       }
 
-      function buyWorker(side: Side): boolean {
+      function purchaseWorker(side: Side): boolean {
         if (!match.inMatch.value) return false;
         if (workers[side].value >= ECONOMY_BALANCE.maxWorkers) return false;
         const cost = Number(workerCost.value);
@@ -131,7 +131,7 @@ export function createEconomyModule(options: EconomyModuleOptions = {}): EngineM
       ctx.onTick((dt) => {
         if (!match.inMatch.value) return;
         for (const side of factions) {
-          // income = ρ · E. The compounding is here and nowhere else: buying a
+          // income = ρ · E. The compounding is here and nowhere else: purchasing a
           // worker raises this term, which is what makes φ an investment rather
           // than a preference.
           const income = Number(incomePerWorker.value) * workers[side].value * dt;
@@ -149,7 +149,7 @@ export function createEconomyModule(options: EconomyModuleOptions = {}): EngineM
         realizedShare,
         workerCost: () => Number(workerCost.value),
         available: (side: Side) => Number(supply[side].value),
-        buyWorker,
+        purchaseWorker,
         spendOnArmy,
       });
     },

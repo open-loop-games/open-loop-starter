@@ -53,7 +53,7 @@ describe('skirmish match spine', () => {
     expect(captured!.outcome).toEqual({ winner: 'a', reason: 'defeat' });
     expect(captured!.elapsedSec).toBeCloseTo(elapsedAtEnd, 5);
 
-    // Match no longer live; the result persists (readable between matches).
+    // Match no longer live; the result stays readable between matches.
     expect(match().inMatch.value).toBe(false);
     expect(match().outcome.value).toEqual({ winner: 'a', reason: 'defeat' });
 

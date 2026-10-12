@@ -39,7 +39,7 @@ import {
  * a uniform-grid / spatial-hash broad-phase over continuous positions goes
  * here; that broad-phase is an engine-primitive candidate (the engine's
  * `SpatialGrid` is discrete-cell, not a float radius-query index) — first
- * instance, so no drop yet. `SpatialInfluenceLayer` for the *bot's* reasoning
+ * instance, so no drop yet. `SpatialInfluenceLayer` for the *AI opponent's* reasoning
  * (threat/frontier maps) is the other growth port: grid-for-thinking,
  * floats-for-being.
  *
@@ -69,9 +69,9 @@ export interface TacticalApi {
    */
   supply: Record<FactionId, Resource<DecimalSource>>;
   basePos: Record<FactionId, { x: number; y: number }>;
-  /** Faction-level march target base (Meso-AI hook). */
+  /** Faction-level march target base (the meso-AI's input). */
   targetBase: Record<FactionId, Persistent<FactionId | null>>;
-  /** Live unit price, after any tuning override. Defaults to 'trooper'. */
+  /** Live unit cost, after any tuning override. Defaults to 'trooper'. */
   unitCost(type?: UnitTypeId): number;
   /** Spawn one unit for `side` if it can afford the cost. Defaults to 'trooper'. */
   spawn(side: Side, type?: UnitTypeId): boolean;

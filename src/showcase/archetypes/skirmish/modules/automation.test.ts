@@ -20,7 +20,7 @@ import {
 import { BASE_HP } from '../data/tactical';
 
 /**
- * Bot-vs-bot spec (bone #2 driving bone #3). BOTH sides' shipping policies are
+ * AI-vs-AI spec (bone #2 driving bone #3). BOTH sides' shipping policies are
  * installed — "production AI plays itself" — and the tactical sim runs under
  * them to a defeat outcome, closing the win-report seam bone #1 opened.
  */
@@ -34,7 +34,7 @@ function tactical(): TacticalApi {
 
 const MAX_TICKS = 30 * 60 * INTERVAL_RATE; // one full time-limit window, as a cap
 
-describe('skirmish bot-vs-bot', () => {
+describe('skirmish AI-vs-AI', () => {
   beforeEach(() => boot());
 
   it('accrues supply on both sides while live', async () => {
@@ -79,7 +79,7 @@ describe('skirmish bot-vs-bot', () => {
     match().start();
     await tickUntil(() => match().outcome.value !== null, MAX_TICKS);
 
-    match().start(); // matchStarted → sim re-inits
+    match().start(); // matchStarted → tactical sim re-inits
     const t = tactical();
     expect(t.baseHp.a.value).toBe(BASE_HP);
     expect(t.baseHp.b.value).toBe(BASE_HP);
@@ -94,7 +94,7 @@ describe('skirmish bot-vs-bot', () => {
       createTuningModule(),
       createAutomationTiersModule(),
       createMatchModule({
-        resetModules: [
+        resetPersistentContexts: [
           'skirmish/match/economy',
           'skirmish/match/tactical',
           'skirmish/match/a/automation',
@@ -149,7 +149,7 @@ describe('skirmish bot-vs-bot', () => {
 });
 
 /**
- * The player seat's progression gate. Bot-vs-bot passes no tier, so without
+ * The automation tier that blocks the player seat. AI-vs-AI passes no tier, so without
  * this suite the `tier` path would ship unexercised — the shape a player seat
  * lands on, asserted before there is a seat to land it.
  */
@@ -159,7 +159,7 @@ describe('skirmish tiered automation seat', () => {
       createTuningModule(),
       createAutomationTiersModule(),
       createMatchModule({
-        resetModules: [
+        resetPersistentContexts: [
           'skirmish/match/economy',
           'skirmish/match/tactical',
           'skirmish/match/a/automation',

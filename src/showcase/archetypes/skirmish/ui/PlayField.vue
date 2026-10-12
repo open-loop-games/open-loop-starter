@@ -11,10 +11,10 @@ import groundUrl from '../assets/ground-grass.png';
 /**
  * The render layer (bone #4) — a pure read-only projection of the tactical sim
  * onto a pixi/webgl field. It OWNS its frame loop (pixi's ticker → RAF) and
- * reads the sim's reactive refs as plain values each frame, so render runs
- * decoupled from both Vue's reactive re-render and the fixed-step engine tick:
- * the sim is authoritative at ~20Hz, this interpolates toward it at display
- * rate. It never writes sim state — the Spring-shaped separation (sim resolves,
+ * reads the tactical sim's reactive refs as plain values each frame, so render runs
+ * decoupled from both Vue's reactive re-render and the fixed-dt engine tick:
+ * the tactical sim is authoritative at an interval rate of ~20, this interpolates toward it at display
+ * rate. It never writes tactical-sim state — the Spring-shaped separation (sim resolves,
  * render draws) made literal.
  *
  * Pixi objects are held in plain `let`s, never Vue refs — wrapping them in a
@@ -33,8 +33,8 @@ const TYPE_SCALE: Record<UnitTypeId, number> = {
 const UNIT_SIZE = 4.6;
 const KEEP_SIZE = 13;
 const TEX_PX = 64; // source sprite edge
-// Render position eases toward sim truth at this rate (1/s); framerate-independent
-// via 1 - e^(-k·dt). High enough to feel tight, low enough to smooth the 20Hz step.
+// Render position eases toward tactical-sim truth at this rate (1/s); framerate-independent
+// via 1 - e^(-k·dt). High enough to feel tight, low enough to smooth the ~20 ticks a second.
 const SMOOTH = 16;
 
 let app: Application | null = null;
@@ -45,8 +45,8 @@ let unitTex: Texture;
 let world: Container | null = null;
 let unitLayer: Container | null = null;
 const keeps = {} as Record<FactionId, { sprite: Sprite; bar: Graphics }>;
-/** Rendered unit sprites keyed by the sim's globally-unique unit id, with the
- *  eased render position that lags the authoritative sim position. */
+/** Rendered unit sprites keyed by the tactical sim's globally-unique unit id, with the
+ *  eased render position that lags the authoritative tactical-sim position. */
 const sprites = new Map<number, { sprite: Sprite; rx: number; ry: number }>();
 
 /** Fit the FIELD rect into the current canvas with uniform scale + centering. */

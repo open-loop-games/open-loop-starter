@@ -104,7 +104,7 @@ function rematch(): void {
           <div class="hud__card-header">
             <div class="hud__identity">
               <span class="hud__name" :style="{ color: toHexColor(getFactionDef(f).color) }">
-                {{ getFactionDef(f).name }}
+                {{ getFactionDef(f).displayName }}
               </span>
               <span v-if="!activeFactions.includes(f)" class="hud__badge hud__badge--eliminated">
                 Eliminated
@@ -117,7 +117,7 @@ function rematch(): void {
                   color: toHexColor(getFactionDef(getTargetBase(f)!).color),
                 }"
               >
-                → {{ getFactionDef(getTargetBase(f)!).name }}
+                → {{ getFactionDef(getTargetBase(f)!).displayName }}
               </span>
             </div>
 
@@ -125,11 +125,11 @@ function rematch(): void {
               class="hud__persona-select"
               :value="getPersona(f)"
               :disabled="!activeFactions.includes(f)"
-              :title="`${getFactionDef(f).name} AI Persona`"
+              :title="`${getFactionDef(f).displayName} AI Persona`"
               @change="onSelectPersona(f, ($event.target as HTMLSelectElement).value as PersonaKey)"
             >
               <option v-for="key in PERSONA_KEYS" :key="key" :value="key">
-                {{ PERSONAS[key].name }}
+                {{ PERSONAS[key].displayName }}
               </option>
               <option v-if="getPersona(f) === 'custom'" value="custom">Custom</option>
             </select>
@@ -167,7 +167,7 @@ function rematch(): void {
           <p class="outcome__line">
             <template v-if="matchOutcome.winner">
               <strong :style="{ color: toHexColor(getFactionDef(matchOutcome.winner).color) }">
-                {{ getFactionDef(matchOutcome.winner).name }}
+                {{ getFactionDef(matchOutcome.winner).displayName }}
               </strong>
               takes the field!
             </template>
@@ -185,7 +185,7 @@ function rematch(): void {
                 class="outcome__elim-name"
                 :style="{ color: toHexColor(getFactionDef(elim.faction).color) }"
               >
-                {{ getFactionDef(elim.faction).name }}
+                {{ getFactionDef(elim.faction).displayName }}
               </strong>
               <span class="outcome__elim-time">{{ elim.eliminatedAtSec.toFixed(1) }}s</span>
             </div>

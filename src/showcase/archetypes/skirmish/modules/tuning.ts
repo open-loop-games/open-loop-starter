@@ -14,12 +14,12 @@ import {
  * module's construction site with `tunable(registry, key, defaultFn)`. Grep for
  * `tunable(` to audit the live surface.
  *
- * Namespaces:
- *   - `match/timeLimitSec` — wall-clock cap before a match ends `time-limit`
+ * Key prefixes:
+ *   - `match/timeLimitSec` — game-time cap before a match ends `time-limit`
  *   - `economy/incomePerWorker`, `economy/workerCost` — the guns-versus-butter
  *     curve. `r = incomePerWorker / workerCost` is the growth constant `φ`
  *     multiplies in the spine's closed form, so these two move it together.
- *   - `tactical/unitCost` — army price; the other side of the same split.
+ *   - `tactical/unitCost` — army cost; the other side of the same split.
  *
  * `economyShare` (`φ` itself) is deliberately NOT here. It is a per-seat policy
  * parameter on `AutomationOptions`, not a global constant — two seats hold
@@ -32,8 +32,8 @@ export type SkirmishTunableKey =
   | 'tactical/unitCost';
 
 /**
- * Faction identifiers. Widened from the bilateral duel (`'a' | 'b'`) to arbitrary
- * N-faction free-for-all identifiers ($N \ge 3$).
+ * Faction ids. Widened from the bilateral duel (`'a' | 'b'`) to arbitrary
+ * N-faction free-for-all ids ($N \ge 3$).
  *
  * `Side` is retained as an alias for backward compatibility.
  */

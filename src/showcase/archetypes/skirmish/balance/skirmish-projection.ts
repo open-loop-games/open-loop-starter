@@ -18,7 +18,7 @@
  * facts the continuous model has no term for, both pushing the same way:
  *
  *   1. A worker is a LUMP (`c > unitCost`), so a seat under its target share
- *      reserves the worker price instead of committing it, and fields less
+ *      reserves the worker cost instead of committing it, and fields less
  *      army than `A(t)` says while it saves.
  *   2. Purchases land on a cadence, not continuously.
  *

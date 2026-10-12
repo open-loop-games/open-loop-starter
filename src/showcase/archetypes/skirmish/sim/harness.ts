@@ -38,7 +38,7 @@ export function boot(): Engine {
 
 /**
  * Build a fresh engine with an arbitrary module list (over the shared base) —
- * for mechanics tests that isolate the sim from the AI policies (drive `spawn`
+ * for mechanics tests that isolate the tactical sim from the AI policies (drive `spawn`
  * by hand instead of letting automation churn the field).
  */
 export function bootModules(modules: EngineModule[]): Engine {
@@ -59,7 +59,7 @@ export function tick(n = 1): Promise<void> {
   return handle.tick(n);
 }
 
-/** Step until `condition()` holds (or throw after `maxTicks`). */
+/** Tick until `condition()` holds (or throw after `maxTicks`). */
 export function tickUntil(condition: () => boolean, maxTicks?: number): Promise<number> {
   return handle.tickUntil(condition, maxTicks);
 }

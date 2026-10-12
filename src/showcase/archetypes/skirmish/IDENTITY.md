@@ -15,8 +15,8 @@ and they come from the adjacent game-AI corpus
 (`open-loop-research/patterns/adjacent/ai-rosters.md` — a keyed collection of
 behavioural variants, drawn from at match creation).
 
-**Nothing persists between matches** — this is the line against Tug, which is the
-same contest with a career carried across matches, and which is core because of
+**Nothing survives from one match to the next** — this is the line against Tug, which is the
+same contest with a career kept across matches, and which is core because of
 it. Lane versus field and two seats versus N are each line's own choices, not the
 boundary. **N factions** is this line's choice. Three armies can meet;
 two can be left to bleed each other while a third expands; threat is directional
@@ -42,7 +42,7 @@ their own once committed. A faction loses when its base breaks.
 The first-class player is a _policy_: the shipping AI drives every seat, so the
 archetype is fully exercisable — and balanceable — headless before a human ever
 touches it. A player seat is that policy swapped for input. The pixi/webgl field
-renders the sim as a pure read-only projection.
+renders the tactical sim as a pure read-only projection.
 
 ## Rate-function spine / bucket
 
@@ -56,7 +56,7 @@ consumed. For a _fixed_ `φ` the whole trajectory closes
     A(t) = ((1 − φ)/φ) · E₀ · (e^(φ · r · t) − 1)    army mass committed by t
 
 Two consequences the archetype is built on. Army mass is _proportional to the
-economy's own growth_, so a higher `φ` buys strictly more army later at the cost
+economy's own growth_, so a higher `φ` gives strictly more army later at the cost
 of everything earlier — the tradeoff is a timing curve, not a magnitude. And
 because the exponent carries `φ`, two factions separated by a small split
 difference diverge exponentially: an early advantage compounds unless it is
@@ -101,9 +101,9 @@ tuning registry. The shipping matchup is rush (`φ = 0`) against greedy
 
 **One discrete artifact the closed form cannot see.** A worker costs more than a
 unit, so investment is a _lump_ against a continuous income stream: a policy that
-commits its remainder to army every decision slot never banks the worker price,
+commits its remainder to army every decision slot never banks the worker cost,
 and `φ` silently realizes as 0 regardless of what a persona asked for. The
-policy therefore reserves the worker price while under target. The continuous
+policy therefore reserves the worker cost while under target. The continuous
 model has no term for this — it is why the projection this spine owes is a bound
 rather than a prediction, and it is recorded at `data/economy.ts` § Coupling.
 
@@ -138,10 +138,10 @@ perf budget:
 
 | Layer                                                                                      | Budget                    | Source                                                        | Status                                                                                                        |
 | ------------------------------------------------------------------------------------------ | ------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Economy + match + events + harness                                                         | fixed-step ~10–20Hz       | engine + tug seeds                                            | ✅ match spine (`match.ts`)                                                                                   |
-| **Tactical sim** — 2D entities, brute-force targeting, unit-vs-unit combat, per-side spawn | fixed-step, deterministic | new                                                           | ✅ `tactical-sim.ts` (continuous 2D units, one type; broad-phase is the scale seam)                           |
-| Bot policy — per-side, cadenced, in-match-guarded, bilateral                               | sub-Hz decision cadence   | tug automation pattern                                        | ✅ `automation.ts` (`decide` = spawn while affordable)                                                        |
-| Automation progression — the player seat's unlock gate                                     | per-seat, reactive        | `AutomationTiers`                                             | ✅ `automation-tiers.ts` (`manual → assisted`; opponent seats pass no tier and are gated by install-presence) |
+| Economy + match + events + balance harness                                                 | fixed dt, ~10–20 ticks/s  | engine + tug seeds                                            | ✅ match spine (`match.ts`)                                                                                   |
+| **Tactical sim** — 2D entities, brute-force targeting, unit-vs-unit combat, per-side spawn | fixed dt, deterministic   | new                                                           | ✅ `tactical-sim.ts` (continuous 2D units, one type; broad-phase is the scale seam)                           |
+| AI policy — per-side, cadenced, in-match-guarded, bilateral                                | sub-Hz decision cadence   | tug automation pattern                                        | ✅ `automation.ts` (`decide` = spawn while affordable)                                                        |
+| Automation progression — the player seat's automation tiers                                | per-seat, reactive        | `AutomationTiers`                                             | ✅ `automation-tiers.ts` (`manual → assisted`; opponent seats pass no tier and are blocked by install-presence) |
 | Render — pixi/webgl, own RAF + interpolation, read-only                                    | 60fps                     | pixi (heavier than SVG-on-reactivity; chosen for unit counts) | ✅ `PlayField.vue` (pixi field, Kenney sprites, per-unit position easing)                                     |
 
 Continuous positions live **here at the consumer layer**, never in the engine —
@@ -152,7 +152,7 @@ engine core stays a plain-data headless economic substrate.
 A fork grows the archetype _up_ through these. The first two are the identity
 line's own unbuilt half, and they feed named spine terms.
 
-- **The split channel** — a reinvestment sink so `φ` exists: income can buy
+- **The split channel** — a reinvestment sink so `φ` exists: income can purchase
   economy instead of army. Feeds `E(t)` / `A(t)` directly; without it the
   economy is flat and every faction is pinned at `φ = 0`.
 - **N factions** — `Side = 'a' | 'b'` widens to a faction set with a friend/foe
@@ -162,38 +162,38 @@ line's own unbuilt half, and they feed named spine terms.
 - **Unit roster + counters** — 3-unit rock-paper-scissors roster (trooper,
   archer, cavalry) with counter matrix (tug's `data/counter-matrix.ts` pattern);
   verified in `balance/roster-probe.ts`.
-- **Bot personas + stochastic leg** — 5-persona roster (`rush`, `investor`,
+- **AI personas + stochastic leg** — 5-persona roster (`rush`, `investor`,
   `skirmish`, `boom`, `combined`) in `data/personality.ts` with tactical drafts and
   calibrated `cadenceJitter` (0.15) exercising the spine's stochastic remainder
   over seeded multi-run batches (`balance/persona-probe.ts` adopting `@/balance`).
 - Scale: brute-force targeting at tens of units → uniform-grid / spatial-hash
   broad-phase when counts demand it (and only then a candidate-primitive, if a
   second consumer converges).
-- `SpatialInfluenceLayer` for bot reasoning (threat/frontier maps).
-- Render interpolation: units currently ease toward sim truth (exponential
+- `SpatialInfluenceLayer` for AI-opponent reasoning (threat/frontier maps).
+- Render interpolation: units currently ease toward tactical-sim truth (exponential
   smoothing, lag-on-stop). True fixed-timestep snapshot interpolation (prev +
-  curr per sim tick, render at alpha) is the upgrade if motion needs to be
-  frame-exact; the ease is smooth enough at 20Hz for now.
+  curr per tick, render at alpha) is the upgrade if motion needs to be
+  frame-exact; the ease is smooth enough at ~20 ticks a second for now.
 - Render is a **pixi** field rather than SVG-on-reactivity — a second
   render tech in the scaffold, not a shared one. "Render = read-only projection
-  of sim state" is the shared discipline (the Spring-shaped cut), not the tech;
+  of tactical-sim state" is the shared discipline (the Spring-shaped cut), not the tech;
   a pixi-field-with-interpolation recipe is N=1, so unregistered.
 - Player-playable stretch: a seat swaps its AI policy for input; the per-seat
-  `AutomationTiers` gate already supports "policy on every seat."
+  `AutomationTiers` ladder already supports "policy on every seat."
 - **Player seat as director** — the seat's design: the player fills a handful of
   goal slots with strategic intents ("claim the north hotspot", "pressure the blue
-  faction") and the seat's persona policy carries them out, steering rather than
+  faction") and the seat's persona policy executes them, steering rather than
   commanding. Goals bias the persona's decisions; they never bypass the policy. No
-  currency carries between matches: a career across matches is what makes Tug core,
-  and this line stays the no-persistence example.
+  currency survives from one match to the next: a career across matches is what makes Tug core,
+  and this line stays the example where nothing survives.
 
 ## Engine fit (pattern → primitive)
 
-Match/reset/economy/harness = direct engine primitives (`createReset`,
+Match/reset/economy/balance harness = direct engine primitives (`createReset`,
 `createResource`, modifier chains, `runMatrixUntil`/`runSensitivity`,
 `tunable`). Tactical spatial layer = **consumer-side, no engine primitive**
 (deliberate — spatial-rendering-boundary-spec keeps continuous coords in the
-render/consumer layer). Candidate-primitive receipts land in
+render/consumer layer). Candidate-primitive receipts go in
 `candidate-primitives.md` only if a second spatial
 consumer converges — not from this archetype alone.
 
@@ -201,7 +201,7 @@ consumer converges — not from this archetype alone.
 
 Measure-and-record over an intransitive payoff matrix — there is no correct `φ`,
 only a best response. `BALANCING.md` beside this file is the working guide: the
-knobs, what couples to what, how to read each probe. In brief:
+tunables, what couples to what, how to read each probe. In brief:
 
 - **The spine, as prose + math** — `data/economy.ts` § Balance carries `E(t)`,
   `Aˢ(t)` and the `c > unitCost` coupling; `data/tactical.ts` § Balance carries
@@ -213,7 +213,7 @@ knobs, what couples to what, how to read each probe. In brief:
   can matter inside a match at all.
 - **`balance/split-probe.ts`** is the signature probe: the payoff matrix over
   `φ` on both seats. It checks its own diagonal for mirror symmetry first,
-  because an asymmetric sim produces balance findings that are really bugs.
+  because an asymmetric tactical sim produces balance findings that are really bugs.
 - **`balance/arc-probe.ts`** drives the shipping automation through the default
   matchup and reports each beat against its measured window.
 - **`balance/roster-probe.ts`** verifies the 3-unit counter matrix and mirror
@@ -223,13 +223,13 @@ knobs, what couples to what, how to read each probe. In brief:
   distributions across seeded batches with calibrated `cadenceJitter = 0.15`.
 
 The driver was already the right shape — shipping automation
-(`modules/automation.ts`, tier-gated), never a bespoke bot — so the probes drive
+(`modules/automation.ts`, behind automation tiers), never a bespoke automated player — so the probes drive
 real game code rather than a re-implementation of it.
 
 Its behavioral suites already sit where the canon puts them —
 `modules/{automation,match,tactical-sim}.test.ts`, beside the modules they spec,
 over `sim/harness.ts`. Skirmish is the reference for that axis and for the
-`AutomationTiers`-gated driver; see `.claude/rules/archetype-authoring.md`
+driver behind `AutomationTiers`; see `.claude/rules/archetype-authoring.md`
 § Conformance.
 
 ## Hack-from references

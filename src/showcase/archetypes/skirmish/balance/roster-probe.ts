@@ -5,7 +5,7 @@
  * Run: pnpm exec vite-node src/showcase/archetypes/skirmish/balance/roster-probe.ts
  */
 
-import { buildSkirmishSimEngine, createOutcomeCapture } from './_engine';
+import { buildSkirmishScratchEngine, createOutcomeCapture } from './_engine';
 import { UNITS, type UnitTypeId } from '../data/tactical';
 
 const STEP_SEC = 0.5;
@@ -16,7 +16,7 @@ function runCompositionMatchup(
   compA: Partial<Record<UnitTypeId, number>>,
   compB: Partial<Record<UnitTypeId, number>>,
 ) {
-  const engine = buildSkirmishSimEngine({
+  const engine = buildSkirmishScratchEngine({
     a: { economyShare: 0, cadenceSec: 2, maxSpawnPerBurst: Infinity, composition: compA },
     b: { economyShare: 0, cadenceSec: 2, maxSpawnPerBurst: Infinity, composition: compB },
     maxDeltaTime: STEP_SEC * 4,
@@ -37,7 +37,7 @@ console.log('# Skirmish roster probe — unit counter matrix verification\n');
 console.log('Roster:');
 for (const u of UNITS) {
   console.log(
-    `  - ${u.name.padEnd(8)} (${u.archetypeTag.padEnd(8)}): cost=${u.cost}, hp=${u.hp}, ` +
+    `  - ${u.displayName.padEnd(8)} (${u.archetypeTag.padEnd(8)}): cost=${u.cost}, hp=${u.hp}, ` +
       `damage=${u.damage}, range=${u.attackRange}, speed=${u.speed}`,
   );
 }

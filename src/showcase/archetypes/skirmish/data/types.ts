@@ -6,10 +6,9 @@ export type UnitTypeId = 'trooper' | 'archer' | 'cavalry';
 export type UnitArchetypeTag = 'infantry' | 'ranged' | 'cavalry';
 
 export interface UnitTypeDef {
-  /** Stable identifier used in simulation state and options. */
+  /** Stable id used in simulation state and options. */
   id: UnitTypeId;
-  /** Display name. */
-  name: string;
+  displayName: string;
   /** Tactical role summary. */
   role: string;
   /** Archetype classification used in the counter matrix. */
@@ -49,10 +48,9 @@ export interface TargetingWeights {
 }
 
 export interface PersonaDef {
-  /** Stable identifier used in options and presets. */
+  /** Stable id used in options and presets. */
   id: PersonaKey;
-  /** Display name. */
-  name: string;
+  displayName: string;
   /** Tactical playstyle summary. */
   role: string;
   /** Description of strategy and composition. */
@@ -74,10 +72,9 @@ export interface PersonaDef {
 export type FactionId = string;
 
 export interface FactionDef {
-  /** Stable identifier (e.g. 'crimson', 'azure', 'emerald', 'amber'). */
+  /** Stable id (e.g. 'crimson', 'azure', 'emerald', 'amber'). */
   id: FactionId;
-  /** Display name. */
-  name: string;
+  displayName: string;
   /** Primary theme color (hex number, e.g. 0xd9524b). */
   color: number;
   /** Base sprite tint. */
@@ -89,7 +86,7 @@ export interface FactionDef {
 export const CANONICAL_FACTIONS: Record<string, FactionDef> = {
   crimson: {
     id: 'crimson',
-    name: 'Crimson',
+    displayName: 'Crimson',
     color: 0xd9524b,
     tint: 0xd9524b,
     typeTint: {
@@ -100,7 +97,7 @@ export const CANONICAL_FACTIONS: Record<string, FactionDef> = {
   },
   azure: {
     id: 'azure',
-    name: 'Azure',
+    displayName: 'Azure',
     color: 0x4f86d6,
     tint: 0x4f86d6,
     typeTint: {
@@ -111,7 +108,7 @@ export const CANONICAL_FACTIONS: Record<string, FactionDef> = {
   },
   emerald: {
     id: 'emerald',
-    name: 'Emerald',
+    displayName: 'Emerald',
     color: 0x2ba84a,
     tint: 0x2ba84a,
     typeTint: {
@@ -122,7 +119,7 @@ export const CANONICAL_FACTIONS: Record<string, FactionDef> = {
   },
   amber: {
     id: 'amber',
-    name: 'Amber',
+    displayName: 'Amber',
     color: 0xe59819,
     tint: 0xe59819,
     typeTint: {
@@ -143,7 +140,7 @@ export function getFactionDef(id: FactionId): FactionDef {
   if (id === 'd') return CANONICAL_FACTIONS.amber;
   return {
     id,
-    name: id.charAt(0).toUpperCase() + id.slice(1),
+    displayName: id.charAt(0).toUpperCase() + id.slice(1),
     color: 0x888888,
     tint: 0x888888,
   };

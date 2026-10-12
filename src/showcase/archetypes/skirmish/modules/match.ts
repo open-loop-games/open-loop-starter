@@ -20,17 +20,17 @@ import { SkirmishTuningRegistryKey, DEFAULT_FACTIONS, type FactionId } from './t
  *
  *   - `start()` opens a match; `end(outcome)` closes it, idempotent.
  *   - `end()` emits `matchEnded` **before** running the match-scope reset — so
- *     subscribers (UI latch, sim outcome-capture) read final pre-reset state.
- *   - a wall-clock `timeLimitSec` cap ends the match on its own.
+ *     subscribers (UI latch, probe outcome-capture) read final pre-reset state.
+ *   - a game-time `timeLimitSec` cap ends the match on its own.
  *   - **who wins is reported from outside.** The tactical-sim / base module
  *     calls `end({ winner })` when a side's base falls; this module never reads
  *     the field. That injection seam is exactly what makes it extractable.
  *
  * RECIPE CANDIDATE (starter recipe surface — NOT the engine track): this is a
- * composition of engine primitives (a two-sided match lifecycle), not a
+ * engine composition (a two-sided match lifecycle), not a
  * primitive gap, so it is indexed in `candidate-recipes.md`
  * for deliberate cross-archetype evaluation — deliberately not dropped in engine
- * `candidate-primitives.md`. tug carries a coupled copy; skirmish is the first
+ * `candidate-primitives.md`. tug has a coupled copy; skirmish is the first
  * stripped, parameterized instance (N=2). A converged shape may later graduate
  * to a shared starter standard module or an engine consumer-guide recipe — by
  * judgment on the recipe batch, not an N=2 trigger. See that index.
@@ -72,7 +72,7 @@ export interface MatchApi {
   activeFactions: Persistent<FactionId[]>;
   /** Ordered history of faction eliminations. */
   eliminations: Persistent<FactionElimination[]>;
-  /** True while a match is live (started AND no outcome). UI / AI gate on this. */
+  /** True while a match is live (started AND no outcome). UI / AI check this. */
   inMatch: ComputedRef<boolean>;
   /** Open a fresh match. */
   start(): void;
@@ -88,15 +88,15 @@ export interface MatchApi {
 export const MatchKey: InjectionKey<MatchApi> = Symbol('skirmish/match') as InjectionKey<MatchApi>;
 
 /**
- * Battlefield module ids whose persistent state clears at match boundary — the
- * tactical-sim, per-side economy, and automation modules join here as they
- * land. Enumerated explicitly: the engine wraps each install in
+ * Persistent context ids, one per battlefield module, whose state clears at the
+ * match boundary — the tactical-sim, per-side economy, and automation modules
+ * are added here as they are built. Enumerated explicitly: the engine wraps each install in
  * `withPersistentContext(mod.id)` with no outer parent, so id-prefix walking
  * does NOT pick up sibling modules — each id must be listed. Ids with no
  * installed module reset nothing; the engine warns once, on the first reset.
  *
  * Deliberately NOT self-referential — `skirmish/match` is absent, and so is
- * `skirmish/tuning` (its override scopes must survive resets). Match
+ * `skirmish/tuning` (its scoped overrides must survive resets). Match
  * bookkeeping (`started`/`outcome`/`matchTimeElapsed`) is owned by
  * `start()`/`end()`, not the reset. This is the one intentional divergence
  * from tug, which lists its own match module and thereby nulls `outcome` at
@@ -105,19 +105,19 @@ export const MatchKey: InjectionKey<MatchApi> = Symbol('skirmish/match') as Inje
  * idempotent and `outcome` directly readable between matches; the reset scope
  * means only "clear the battlefield," never "forget who won."
  */
-export const SKIRMISH_MATCH_SCOPE_MODULES: readonly string[] = [];
+export const SKIRMISH_MATCH_RESET_CONTEXTS: readonly string[] = [];
 
 export interface MatchModuleOptions {
-  /** Wall-clock cap; match ends `time-limit` when reached. Default 30 min. */
+  /** Game-time cap; match ends `time-limit` when reached. Default 30 min. */
   timeLimitSec?: number;
-  /** Match-scope module ids to clear on boundary. Default: this module only. */
-  resetModules?: readonly string[];
+  /** Persistent context ids to clear at the match boundary. Default: none. */
+  resetPersistentContexts?: readonly string[];
   /** Faction roster contending in the match. Defaults to DEFAULT_FACTIONS. */
   factions?: readonly FactionId[];
 }
 
 export function createMatchModule(options: MatchModuleOptions = {}): EngineModule {
-  const resetModules = options.resetModules ?? SKIRMISH_MATCH_SCOPE_MODULES;
+  const resetPersistentContexts = options.resetPersistentContexts ?? SKIRMISH_MATCH_RESET_CONTEXTS;
   const defaultTimeLimit = options.timeLimitSec ?? 30 * 60;
   const configuredFactions = options.factions ?? DEFAULT_FACTIONS;
 
@@ -127,8 +127,8 @@ export function createMatchModule(options: MatchModuleOptions = {}): EngineModul
     install(ctx) {
       const registry = ctx.inject(SkirmishTuningRegistryKey);
 
-      // Persistents are auto-scoped to this module id by the engine's install
-      // wrapper, so the match-boundary reset clears exactly these.
+      // The engine's install wrapper opens this module's persistent context, so
+      // these refs are in it; the match-boundary reset never names it.
       const started = persistent<boolean>(false, { id: 'started' });
       const outcome = persistent<MatchOutcome | null>(null, { id: 'outcome' });
       const matchTimeElapsed = persistent<number>(0, { id: 'matchTimeElapsed' });
@@ -140,7 +140,7 @@ export function createMatchModule(options: MatchModuleOptions = {}): EngineModul
       const inMatch = computed(() => started.value && outcome.value === null);
 
       const handle = createEmitHandle<MatchEvents>();
-      const reset = createReset({ resetPersistentContexts: [...resetModules] });
+      const reset = createReset({ resetPersistentContexts: [...resetPersistentContexts] });
 
       const timeLimitSec = tunable(registry, 'match/timeLimitSec', () => defaultTimeLimit);
 
@@ -157,7 +157,7 @@ export function createMatchModule(options: MatchModuleOptions = {}): EngineModul
       }
 
       function end(o: MatchOutcome): void {
-        if (outcome.value !== null) return; // genuinely idempotent — outcome persists
+        if (outcome.value !== null) return; // genuinely idempotent — outcome stays set
         outcome.value = o;
         // Emit BEFORE reset so subscribers read pre-reset battlefield state
         // (unit positions, kill tallies) that the reset is about to clear.

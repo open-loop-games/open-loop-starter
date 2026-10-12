@@ -15,7 +15,7 @@ import type { UnitTypeId, UnitTypeDef } from './types';
 export const UNITS: readonly UnitTypeDef[] = [
   {
     id: 'trooper',
-    name: 'Trooper',
+    displayName: 'Trooper',
     role: 'Frontline infantry',
     archetypeTag: 'infantry',
     cost: 10,
@@ -28,7 +28,7 @@ export const UNITS: readonly UnitTypeDef[] = [
   },
   {
     id: 'archer',
-    name: 'Archer',
+    displayName: 'Archer',
     role: 'Ranged skirmisher',
     archetypeTag: 'ranged',
     cost: 12,
@@ -41,7 +41,7 @@ export const UNITS: readonly UnitTypeDef[] = [
   },
   {
     id: 'cavalry',
-    name: 'Cavalry',
+    displayName: 'Cavalry',
     role: 'Shock cavalry',
     archetypeTag: 'cavalry',
     cost: 20,

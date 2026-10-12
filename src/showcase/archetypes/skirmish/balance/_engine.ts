@@ -1,13 +1,13 @@
 /**
- * Sim-engine fixture for the skirmish balance probes. Underscore-prefixed
+ * Scratch-engine fixture for the skirmish balance probes. Underscore-prefixed
  * because it is not runnable on its own — the probes import it.
  *
  * It holds **no policy**. Skirmish's policy is shipping game code
- * (`modules/automation.ts`), and what lives here is the engine build, the
+ * (`modules/automation.ts`), and what is here is the engine build, the
  * per-seat persona wiring the probes vary, and outcome capture. A probe that
  * re-implemented the spawn decision would be measuring itself.
  *
- * `sim/harness.ts` is a different thing — it boots the module list on memory
+ * `sim/harness.ts`, the test harness, is a different thing — it boots the module list on memory
  * storage for tick-by-tick behavioral specs.
  */
 
@@ -28,12 +28,12 @@ let engineCounter = 0;
  * The two shipping personas. They differ **only** on `φ`, deliberately: that
  * makes the default matchup a point on the surface `split-probe.ts` sweeps,
  * rather than a separate configuration whose result cannot be located on it.
- * Tempo dials are a second axis and are held equal until one is swept.
+ * Tempo parameters are a second axis and are held equal until one is swept.
  */
 export const RUSH: AutomationOptions = { ...PERSONAS.rush, cadenceJitter: 0 };
 export const INVESTOR: AutomationOptions = { ...PERSONAS.investor, cadenceJitter: 0 };
 
-export interface SkirmishSimOptions {
+export interface SkirmishScratchEngineOptions {
   /** Participating factions roster. Defaults to ['a', 'b'] or derived from seats/personas. */
   factions?: readonly FactionId[];
   /** Per-seat policy options for arbitrary factions. */
@@ -57,17 +57,17 @@ export interface SkirmishSimOptions {
 }
 
 /**
- * Build a started, bot-driven engine with the match already open.
+ * Build a started scratch engine, driven by AI opponents, with the match already open.
  *
  * Each build takes a unique `persistenceNamespace`: matrix sweeps run many
- * engines in one process, and a collision aliases persistent-ref contexts in a
- * way that reads as a balance result rather than as a bug.
+ * engines in one process, and a collision aliases persistent contexts in a
+ * way that looks like a balance result rather than a bug.
  *
  * `start()` then `stop()` hands the clock to the caller — probes advance via
- * `engine.tickDriver.advanceTime(dt)` through the harness runners, so the
+ * `engine.tickDriver.advanceTime(dt)` through the balance harness runners, so the
  * real-time loop must not also be firing.
  */
-export function buildSkirmishSimEngine(options?: SkirmishSimOptions): Engine {
+export function buildSkirmishScratchEngine(options?: SkirmishScratchEngineOptions): Engine {
   if (options?.seed !== undefined) {
     seedRNG(options.seed);
   }
@@ -112,7 +112,7 @@ export function seatsForTriad(
   personas: readonly [PersonaKey, PersonaKey, PersonaKey],
   factions: readonly FactionId[] = DEFAULT_TRIAD_FACTIONS,
   jitter?: number,
-): SkirmishSimOptions {
+): SkirmishScratchEngineOptions {
   const seats: Record<FactionId, AutomationOptions> = {};
   for (let i = 0; i < factions.length; i++) {
     const f = factions[i];
@@ -125,7 +125,7 @@ export function seatsForTriad(
 }
 
 /** A seat pairing on the split axis, for the sweep probes. */
-export function seatsAtShare(shareA: number, shareB: number): SkirmishSimOptions {
+export function seatsAtShare(shareA: number, shareB: number): SkirmishScratchEngineOptions {
   return {
     a: { ...RUSH, economyShare: shareA },
     b: { ...RUSH, economyShare: shareB },
@@ -137,7 +137,7 @@ export function seatsForPersonas(
   personaA: PersonaKey,
   personaB: PersonaKey,
   jitter?: number,
-): SkirmishSimOptions {
+): SkirmishScratchEngineOptions {
   const a = { ...PERSONAS[personaA] };
   const b = { ...PERSONAS[personaB] };
   if (jitter !== undefined) {
@@ -187,7 +187,7 @@ export function createOutcomeCapture(engine: Engine): OutcomeCapture {
   return capture;
 }
 
-/** Surface an {@link OutcomeCapture} as harness metrics for matrix runs. */
+/** Report an {@link OutcomeCapture} as balance harness metrics for matrix runs. */
 export function createOutcomeAnalyzer(capture: OutcomeCapture): Analyzer {
   return {
     id: 'skirmish-outcome',

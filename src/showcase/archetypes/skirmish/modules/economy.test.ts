@@ -25,18 +25,18 @@ import { ECONOMY_BALANCE } from '../data/economy';
  * probes print, so nothing here asserts a curve.
  */
 
-const MATCH_SCOPE = [
+const MATCH_RESET_CONTEXTS = [
   'skirmish/match/economy',
   'skirmish/match/tactical',
   'skirmish/match/a/automation',
   'skirmish/match/b/automation',
 ];
 
-/** Economy + sim, no policies — the split is driven by hand. */
+/** Economy + tactical sim, no policies — the split is driven by hand. */
 function bootBare() {
   bootModules([
     createTuningModule(),
-    createMatchModule({ resetModules: MATCH_SCOPE }),
+    createMatchModule({ resetPersistentContexts: MATCH_RESET_CONTEXTS }),
     createEconomyModule(),
     createTacticalSimModule(),
   ]);
@@ -47,7 +47,7 @@ function bootSplit(shareA: number, shareB: number) {
   bootModules([
     createTuningModule(),
     createAutomationTiersModule(),
-    createMatchModule({ resetModules: MATCH_SCOPE }),
+    createMatchModule({ resetPersistentContexts: MATCH_RESET_CONTEXTS }),
     createEconomyModule(),
     createTacticalSimModule(),
     createAutomationModule('a', { economyShare: shareA, cadenceSec: 1 }),
@@ -99,12 +99,12 @@ describe('skirmish economy — income and the reinvestment channel', () => {
     expect(Number(economy().supply.a.value)).toBeGreaterThan(0);
   });
 
-  it('buys a worker when affordable and refuses when not', () => {
+  it('purchases a worker when affordable and refuses when not', () => {
     match().start();
-    expect(economy().buyWorker('a')).toBe(false); // opens with no banked supply
+    expect(economy().purchaseWorker('a')).toBe(false); // opens with no banked supply
 
     addResource(economy().supply.a, ECONOMY_BALANCE.workerCost);
-    expect(economy().buyWorker('a')).toBe(true);
+    expect(economy().purchaseWorker('a')).toBe(true);
     expect(economy().workers.a.value).toBe(ECONOMY_BALANCE.startingWorkers + 1);
   });
 
@@ -116,7 +116,7 @@ describe('skirmish economy — income and the reinvestment channel', () => {
     // Grant the worker rather than earning it, so the comparison isolates the
     // rate change from the spend that bought it.
     addResource(economy().supply.a, ECONOMY_BALANCE.workerCost);
-    economy().buyWorker('a');
+    economy().purchaseWorker('a');
     const banked = Number(economy().supply.a.value);
     await tick(INTERVAL_RATE);
 
@@ -126,7 +126,7 @@ describe('skirmish economy — income and the reinvestment channel', () => {
   it('counts worker spend against realized share, and army spend against income', () => {
     match().start();
     addResource(economy().supply.a, ECONOMY_BALANCE.workerCost * 2);
-    economy().buyWorker('a');
+    economy().purchaseWorker('a');
     const afterWorker = economy().economySpend.a.value;
     expect(afterWorker).toBe(ECONOMY_BALANCE.workerCost);
 
@@ -139,7 +139,7 @@ describe('skirmish economy — income and the reinvestment channel', () => {
   it('caps owned workers', () => {
     match().start();
     addResource(economy().supply.a, ECONOMY_BALANCE.workerCost * (ECONOMY_BALANCE.maxWorkers + 5));
-    for (let i = 0; i < ECONOMY_BALANCE.maxWorkers + 5; i++) economy().buyWorker('a');
+    for (let i = 0; i < ECONOMY_BALANCE.maxWorkers + 5; i++) economy().purchaseWorker('a');
     expect(economy().workers.a.value).toBe(ECONOMY_BALANCE.maxWorkers);
   });
 
@@ -147,7 +147,7 @@ describe('skirmish economy — income and the reinvestment channel', () => {
     match().start();
     await tick(10 * INTERVAL_RATE);
     addResource(economy().supply.a, ECONOMY_BALANCE.workerCost);
-    economy().buyWorker('a');
+    economy().purchaseWorker('a');
 
     match().start();
     expect(economy().workers.a.value).toBe(ECONOMY_BALANCE.startingWorkers);
@@ -202,7 +202,7 @@ describe('skirmish economy — φ steers the split', () => {
     expect(split.a).toBe(0);
     expect(split.b).toBeGreaterThan(0.4);
 
-    // Buy-while-under-target is bang-bang control against a continuous income
+    // Purchase-while-under-target is bang-bang control against a continuous income
     // stream, so the realized share sits at or just above the target and the
     // overshoot is bounded by one indivisible worker. Asserting that bound
     // rather than a hand-picked ceiling keeps this true as the economy retunes.
