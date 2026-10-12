@@ -245,7 +245,7 @@ export const MAX_TURN_RATE = (420 * Math.PI) / 180;
  * Swept at 4 / 6 / 9 against the arc probe. Schedule delta across the four seats
  * runs (−5, −16, +2, −8) at 4, (−5, −10, +1, −7) at 6, and (−2, −7, +2, −5) at 9,
  * where the binding causes also stop being one cause in four costumes. Nothing in
- * `../../data/` moved to get there: the ladder is the target and the pilot is what
+ * `../../data/` moved to get there: the ladder is the target and the automated player is what
  * was corrected toward it.
  */
 export const ENGAGE_WEIGHT = 9;

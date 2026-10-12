@@ -168,7 +168,7 @@ async function main(): Promise<void> {
   // ── η, split ──
   //
   // Continuous pickup is the movement policy's doing; burst share is the
-  // collector's. A single η conflates a good pilot with a lucky drop, which is
+  // collector's. A single η conflates a good automated player with a lucky drop, which is
   // why `../IDENTITY.md` asks for both.
   console.log('\n  ── Collection efficiency ──');
   console.log(col('  seat', 13) + col('η continuous', 20) + col('burst share', 20) + 'motes left');

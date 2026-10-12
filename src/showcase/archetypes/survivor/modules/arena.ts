@@ -59,7 +59,7 @@ export interface ArenaApi {
    * held. Written by `composables/usePlayerControl.ts` whenever the key set
    * changes, NOT per frame — the sim samples it at its own 20 Hz.
    *
-   * A no-op for policy seats, so the caller never has to ask which it is.
+   * A no-op for automated seats, so the caller never has to ask which it is.
    */
   setControl: (heading: { x: number; y: number } | null) => void;
   /** Begin a run on the given seat. Resets the floor. */
@@ -166,7 +166,7 @@ export function createArenaModule(options: ArenaModuleOptions = {}): EngineModul
             metaYield: options.metaYield ?? meta.yieldMul.value,
           },
           // The reader is installed only for a player seat. Its ABSENCE is what
-          // selects the movement policy in `stepArena`, so a policy seat cannot
+          // selects the movement policy in `stepArena`, so an automated seat cannot
           // accidentally be steered by a stale key that is still held.
           chosen.driver === 'player' ? () => control : undefined,
         );

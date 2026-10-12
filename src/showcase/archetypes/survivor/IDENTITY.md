@@ -42,7 +42,7 @@ because distance is zero damage and zero income. Motes stay on the floor, and a 
 signposted by edge arrows, which is what makes routing to one through your own
 uncollected field a real decision.
 
-**Seats are policies.** Survivor ships with the operator driven by shipping
+**Seats are automated players.** Survivor ships with the operator driven by shipping
 automation and is fully playable and balanceable before a human seat exists; a
 player seat is a policy swapped for input (`modules/automation.ts`, and the same
 discipline skirmish uses). The three **personas** — speed, damage, defence —

@@ -1,5 +1,5 @@
 /**
- * Pilot scenarios — named situations with an answer knowable by inspection.
+ * Automated-player scenarios — named situations with an answer knowable by inspection.
  *
  * The rest of this archetype's movement work is measured by 30-minute arcs and
  * aggregate statistics, which can say a number moved and cannot say whether a
@@ -7,7 +7,7 @@
  * question, run for a few sim seconds, and asserted on the OUTCOME — did the
  * mote get banked, did the body stay in reach, did the operator take the gap.
  *
- * What "right" means here is the pilot's design brief, not a tuning preference:
+ * What "right" means here is the automated player's design brief, not a tuning preference:
  * movement is a triangle — away from bodies, toward bodies, toward motes — and
  * good play crosses the T. Sweep the mass at just under a right angle, cut in
  * enough to drag it around, then swing back through your own wake, where the
@@ -26,7 +26,7 @@
  *    anything the step spawns is removed each tick. The bodies in a case are the
  *    bodies the case placed.
  *
- * A red test here is a named pilot defect. That is the whole point of the file:
+ * A red test here is a named automated-player defect. That is the whole point of the file:
  * the movement policy had no behavioural spec at all, so every previous change
  * to it was argued from statistics.
  */
@@ -70,7 +70,7 @@ interface Placed {
   motes?: { dx: number; dy: number }[];
   /** Unit heading the operator starts on. Default is +x. */
   heading?: { x: number; y: number };
-  /** Seat whose authored parameters drive the pilot. Defaults to the baseline. */
+  /** Seat whose authored parameters drive the automated player. Defaults to the baseline. */
   seat?: SeatDef;
 }
 
@@ -164,9 +164,9 @@ function scenario(placed: Placed, seconds: number): Outcome {
   };
 }
 
-describe('pilot — the income leg of the triangle', () => {
+describe('automated player — the income leg of the triangle', () => {
   it('turns back for a mote behind it when the lane is clear', () => {
-    // Nothing to fear and one thing to bank, 150 units astern. Any pilot that
+    // Nothing to fear and one thing to bank, 150 units astern. Any automated player that
     // does not take this is not trading threat against income, it is fleeing.
     const out = scenario({ motes: [{ dx: -150, dy: 0 }], heading: { x: 1, y: 0 } }, 4);
 
@@ -205,7 +205,7 @@ describe('pilot — the income leg of the triangle', () => {
   });
 });
 
-describe('pilot — the engagement leg of the triangle', () => {
+describe('automated player — the engagement leg of the triangle', () => {
   it('holds a lone body inside kill range instead of outrunning it', () => {
     // The operator moves at 120 and this body at 44, so running is always
     // available and always wrong — distance is zero damage and zero income.
@@ -224,12 +224,12 @@ describe('pilot — the engagement leg of the triangle', () => {
   });
 });
 
-describe('pilot — the evasion leg of the triangle', () => {
+describe('automated player — the evasion leg of the triangle', () => {
   /**
    * A blob pressing from port, a second group waiting to starboard, open floor
    * fore-and-aft.
    *
-   * The port group is INSIDE the orbit the pilot wants to hold, which is what
+   * The port group is INSIDE the orbit the automated player wants to hold, which is what
    * makes this an evasion case rather than an engagement one — a first draft put
    * both groups outside it and the operator correctly closed on the near one,
    * measuring the wrong decision entirely. Running straight away from a crowd
@@ -273,7 +273,7 @@ describe('pilot — the evasion leg of the triangle', () => {
   });
 });
 
-describe('pilot — routing around what is in the way', () => {
+describe('automated player — routing around what is in the way', () => {
   /**
    * These use static bodies. A pursuing wall closes the gap it is being asked
    * about, so a failure could always be blamed on the pursuit rather than on the
@@ -333,7 +333,7 @@ describe('pilot — routing around what is in the way', () => {
   });
 });
 
-describe('pilot — the Kineticist thesis', () => {
+describe('automated player — the Kineticist thesis', () => {
   /**
    * "Never be where it is." The seat's whole claim is that movement and
    * positioning let it take no damage while still killing and still collecting,
@@ -363,7 +363,7 @@ describe('pilot — the Kineticist thesis', () => {
   });
 });
 
-describe('pilot — routing at grid scale', () => {
+describe('automated player — routing at grid scale', () => {
   /**
    * Beyond `MOTE_NEAR_RADIUS`, so the exact near-field term is silent and the
    * nav-grid distance field is what decides. That is the scale the grid is for:

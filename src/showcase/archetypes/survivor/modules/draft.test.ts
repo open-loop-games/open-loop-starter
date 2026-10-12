@@ -137,7 +137,7 @@ describe('survivor/draft — who is driving changes what is worth drafting', () 
     defensive: false,
   });
 
-  it('discounts a heading-bound device for a policy seat but not a hand', () => {
+  it('discounts a heading-bound device for an automated seat but not a hand', () => {
     // The manoeuvre that makes a `cone` pay is one an arg-max with a turn cost
     // executes worse than a player does, so its value depends on the driver —
     // and the draft is where that belongs.

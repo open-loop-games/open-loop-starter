@@ -192,7 +192,7 @@ export interface ArenaStats {
  * Fractions of max HP the attrition timeline records crossings for.
  *
  * Front-loaded on purpose. The interesting part of a positioning seat's run is
- * the top of the bar — being at 95% says the pilot is holding its distance,
+ * the top of the bar — being at 95% says the automated player is holding its distance,
  * where everything below 50% is just the ending arriving.
  */
 export const HP_MILESTONES = [0.95, 0.9, 0.75, 0.5] as const;

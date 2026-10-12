@@ -14,7 +14,7 @@
  *
  * The headline number is **measured η against assumed η**. The closed form
  * (`../data/income.ts`) takes η as given because it is a policy output, so a run
- * that misses its schedule is either badly balanced or badly piloted and those
+ * that misses its schedule is either badly balanced or badly played and those
  * look identical from outside. This is the reading that separates them.
  *
  * **One seed, read in depth.** Everything below is a single arc per seat, which

@@ -110,7 +110,7 @@ export function cumulativeIncomeAmortized(t: number, seat: SeatDef, runSeconds: 
 // of the declared coverage boundary (`../IDENTITY.md` § Rate-function spine).
 //
 // The consequence worth knowing: a run that misses its beat schedule is either
-// badly balanced or badly piloted, and those look identical from outside. The
+// badly balanced or badly played, and those look identical from outside. The
 // probe therefore reports η measured against η assumed, and splits it into
 // continuous pickup and collector bursts — that split is what says which side
 // needs the work. Retuning an economy because the automated player was bad is the standard way

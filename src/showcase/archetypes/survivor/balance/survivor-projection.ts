@@ -349,7 +349,7 @@ function reportSeats(): void {
         // The compound the projection actually rides — measured, not authored.
         // Printing `engage × eta` here made the table look like a statement about
         // the seats when it was a statement about their authored parameters, and the two have
-        // not agreed since the pilot learned to route (`../data/seats.ts`
+        // not agreed since the automated player learned to route (`../data/seats.ts`
         // § SeatOutcome). Comparable directly against `spread-probe.ts`'s
         // `income` column, which measures the same product per run.
         col((seat.measured.killsPerSpawn * seat.measured.eta).toFixed(3), 9) +

@@ -54,7 +54,7 @@ export interface ThreatBalance {
    * `m_d` — spawn-rate growth per minute mark.
    *
    * MEASURED, and it is the archetype's single binding curve. Swept against a
-   * pilot that collects (`../balance/escalation-probe.ts`, baseline seat, six
+   * automated player that collects (`../balance/escalation-probe.ts`, baseline seat, six
    * seeds a point): 1.080 reaches the run timer on 0% of runs, 1.058 on 33%,
    * 1.048 on 50%, 1.037 on 100% — monotone, and the schedule deficit tracks it
    * (−4 → −1). Nothing else moves either: halving `m_dmg` does nothing, and
@@ -89,7 +89,7 @@ export interface ThreatBalance {
    * and at it `localDensity` reads as a prediction again — sim against model
    * 40/28, 41/37, 21/19, 34/25 live at 10:00, against 26–235 against 12–21 before.
    * Re-measure this whenever the movement policy changes what it does with
-   * distance; it is a property of the pilot, not of the floor.
+   * distance; it is a property of the automated player, not of the floor.
    */
   dwellSeconds: number;
   /** Time-to-kill at baseline DPS. Flat across the run by construction. */
@@ -303,7 +303,7 @@ export function contactChance(t: number, engage: number, dps: number, speed: num
 //
 // The consequence for this function is that nothing downstream bounds it any
 // more, so its own honesty is now load-bearing. `dwellSeconds` is the term that
-// carries that weight, and it is measured against the pilot rather than derived
+// carries that weight, and it is measured against the automated player rather than derived
 // from the geometry — the receipt is at the field.
 //
 // Known thin, recorded rather than tuned away: that channel is currently too

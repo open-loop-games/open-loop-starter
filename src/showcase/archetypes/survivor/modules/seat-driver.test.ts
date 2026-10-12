@@ -31,7 +31,7 @@ describe('survivor/seats — drivers', () => {
   it('keeps the player seat out of the measurable roster', () => {
     // `SEATS` is the balance sweep axis. A seat with no policy has no arc, so a
     // probe that walked it would report a stationary operator as a reading.
-    expect(SEATS.every((s) => s.driver === 'policy')).toBe(true);
+    expect(SEATS.every((s) => s.driver === 'automated')).toBe(true);
     expect(SEATS.map((s) => s.id)).not.toContain(PLAYER_SEAT.id);
     expect(seatById(PLAYER_SEAT.id).driver).toBe('player');
   });
@@ -99,11 +99,11 @@ describe('survivor/arena — player-driven movement', () => {
     expect(arena().state.value.operator.heading).toEqual(aimed);
   });
 
-  it('ignores posted control on a policy seat', async () => {
+  it('ignores posted control on an automated seat', async () => {
     run().startRun('generalist');
     const start = { ...arena().state.value.operator };
     // `null` is the one input whose effect is unambiguous: it means STAND STILL,
-    // and the spec above asserts a player seat obeys it. A policy seat must move
+    // and the spec above asserts a player seat obeys it. An automated seat must move
     // anyway, because nothing reads the posted value at all.
     //
     // Asserted this way round deliberately. The earlier form posted (1, 0) and

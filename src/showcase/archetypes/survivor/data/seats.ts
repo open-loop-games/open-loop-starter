@@ -30,7 +30,7 @@
  * is blocked by INSTALL PRESENCE rather than by an automation tier — the analogue
  * of skirmish's opponent seats. The block is literal: `../modules/arena.ts` installs
  * a control reader only when `driver === 'player'`, and the reader's absence is
- * what selects the movement policy in `../modules/sim/step.ts`. A policy seat
+ * what selects the movement policy in `../modules/sim/step.ts`. An automated seat
  * cannot be steered by a stale key, because there is no key to hold.
  *
  * The convention this DOES meet is the load-bearing half — "automation is game
@@ -39,7 +39,7 @@
  * and the two cannot drift. `../modules/seat-driver.test.ts` is the spec that
  * pins it: same mechanics either way, only the answerer changes.
  */
-export type SeatDriver = 'policy' | 'player';
+export type SeatDriver = 'automated' | 'player';
 
 export interface SeatDef {
   id: string;
@@ -148,7 +148,7 @@ export const SEATS: SeatDef[] = [
     id: 'generalist',
     displayName: 'The Generalist',
     blurb: 'No theory. Reads the floor and takes what it offers.',
-    driver: 'policy',
+    driver: 'automated',
     engage: 0.55,
     eta: 0.65,
     speed: 1.0,
@@ -165,7 +165,7 @@ export const SEATS: SeatDef[] = [
     id: 'kinetic',
     displayName: 'The Kineticist',
     blurb: 'Never be where it is. Wide orbits, late sweeps, nothing touches you.',
-    driver: 'policy',
+    driver: 'automated',
     engage: 0.4,
     eta: 0.78,
     speed: 1.35,
@@ -182,7 +182,7 @@ export const SEATS: SeatDef[] = [
     id: 'reactive',
     displayName: 'The Reactionist',
     blurb: 'Nothing that is dead can hurt you. Thin the floor, dive the ash.',
-    driver: 'policy',
+    driver: 'automated',
     engage: 0.72,
     eta: 0.6,
     speed: 0.95,
@@ -199,7 +199,7 @@ export const SEATS: SeatDef[] = [
     id: 'shielded',
     displayName: 'The Shielded',
     blurb: 'Let it hit you. Walk through the mass and take the motes anyway.',
-    driver: 'policy',
+    driver: 'automated',
     engage: 0.62,
     eta: 0.68,
     speed: 0.85,

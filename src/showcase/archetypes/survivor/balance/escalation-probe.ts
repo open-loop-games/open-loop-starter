@@ -93,7 +93,7 @@ const SHIPPED = {
  * `m_hp` is inside the `offensivePickGain` solve — a softer floor gives a slower
  * DPS curve and the operator clears less. Halving `m_dmg` does nothing at all.
  *
- * Re-run this after anything that moves the pilot: the whole curve is read
+ * Re-run this after anything that moves the automated player: the whole curve is read
  * through it, and a policy that collects differently changes every row's cost.
  */
 const POINTS: Point[] = [

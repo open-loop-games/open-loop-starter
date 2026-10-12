@@ -123,7 +123,7 @@ export async function runArc(seatId: string, seed: number) {
   const etaMeasured = stats.motesDropped > 0 ? stats.motesBanked / stats.motesDropped : 0;
   // η split into its two channels, which is what `../BALANCING.md` § Running a
   // pass asks for: continuous pickup is the policy's doing, burst share is the
-  // collector's. A single η conflates a good pilot with a lucky drop.
+  // collector's. A single η conflates a good automated player with a lucky drop.
   const etaContinuous =
     stats.motesDropped > 0
       ? (stats.motesBanked - stats.motesCollectedByCollector) / stats.motesDropped

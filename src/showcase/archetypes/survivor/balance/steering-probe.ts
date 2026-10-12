@@ -10,14 +10,14 @@
  * The arena's movement policy is an arg-max over a candidate heading set, and an
  * arg-max has no memory — a score that crosses over between two candidates flips
  * the heading with no cost, every tick, for as long as the crossing lasts. On
- * screen that reads as a vibrating operator rather than a piloted one, and no
+ * screen that reads as a vibrating operator rather than a steered one, and no
  * balance reading shows it: the seat still engages, still banks, still dies on
  * schedule while shaking.
  *
  * So this measures the PATH rather than the economy. Four readings:
  *
  *  - **turn/s** — mean absolute heading change per sim second, in degrees. The
- *    headline. A piloted operator holds a heading for a beat and turns when the
+ *    headline. A steered operator holds a heading for a beat and turns when the
  *    field changes; a jittering one spends its whole turn budget standing still.
  *  - **reversals/s** — heading changes past 120°, which is the shape the eye
  *    actually catches. Near-zero is the target; anything above ~1 is visible.

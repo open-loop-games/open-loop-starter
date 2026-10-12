@@ -171,9 +171,9 @@ operator's feet.
 Two concentration rules were built against `arc-lance`'s shipped nearest-first —
 closest-to-dying, and a two-tier rule taking the heaviest body an activation can
 kill — and both lost, `η` falling on every seat. **That receipt predates the
-steering fix** and was taken on a pilot that could not collect, so the conclusion
+steering fix** and was taken on an automated player that could not collect, so the conclusion
 is not safe to lean on; the coupling it names is. Re-run both against the current
-pilot before treating concentration as closed, and note that the overkill column
+automated player before treating concentration as closed, and note that the overkill column
 above is exactly what they were built to reclaim.
 
 **`r_collect` against `r_kill` is the top coupling and sets the cost of all
@@ -381,7 +381,7 @@ carry no numbers.
   `arena-probe.ts`'s single one.
 
 - **η runs 0.88–1.00, and that is the correct value rather than a divergence.**
-  Motes do not expire, so the wake is always sweepable and a pilot that routes at
+  Motes do not expire, so the wake is always sweepable and an automated player that routes at
   all approaches full collection; the exemplar set ships the same non-expiring motes.
   The old 0.65–0.78 "band" was an authored parameter being read as a forecast. What is left on
   the floor at the end (0–325 motes, median by seat) is the whole shortfall.
@@ -412,7 +412,7 @@ carry no numbers.
   Never broken, and not a candidate for a higher cost: every drop is taken in
   every probed seat and the routing term works. A collector is _always good_ and
   cheap to take, which is the genre-standard shape; it is simply not a harvest of
-  an abandoned field, because with a competent pilot there is no abandoned field.
+  an abandoned field, because with a competent automated player there is no abandoned field.
 
   Two model imprecisions survive here deliberately, both now too small to reach
   anything. `onscreenShare` (0.35) is the projection's guess at what one pull

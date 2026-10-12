@@ -17,7 +17,7 @@ import { RunKey } from '../modules/run';
  *  - **It posts on change, not per frame.** The sim samples the control value at
  *    its own 20 Hz; pushing on `keydown`/`keyup` means a held key costs two
  *    events for its whole duration.
- *  - **It is inert for a policy seat**, and the guard is at the listener rather
+ *  - **It is inert for an automated seat**, and the guard is at the listener rather
  *    than in the handler, so an AI run leaves the arrow keys to the page.
  */
 
