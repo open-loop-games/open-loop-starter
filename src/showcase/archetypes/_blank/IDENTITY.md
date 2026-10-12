@@ -19,14 +19,11 @@ an open core, and the claim said as one with no patterns. Register the line ther
 write its `../_docs/<line>.md`, before writing it here; a line that exists only in
 this file is ungrounded by construction.
 
-This file is the template for a real archetype's `IDENTITY.md`. It carries every
-section `.claude/rules/archetype-authoring.md` § IDENTITY.md — required sections
-requires, filled in for
-the neutral base. When you build on `pnpm eject --clean`, rewrite each section for
+This file is the template for a real archetype's `IDENTITY.md`. It has every
+required section, filled in for the neutral base. When you build on `pnpm eject --clean`, rewrite each section for
 your game; when you author a *new* archetype in the gallery, replace the placeholder
 content with the real composition. Keep it a single screen — worked balance
-detail belongs in `BALANCING.md` beside this file, per
-`.claude/rules/archetype-authoring.md` § BALANCING.md — required sections.
+detail belongs in `BALANCING.md` beside this file.
 
 ## What this archetype is
 
@@ -83,8 +80,7 @@ here, with candidate-primitive receipts where it hand-rolls a gap
 
 ## Balance model
 
-Math first, one-way flow, one home per number (see
-`.claude/rules/archetype-authoring.md` § Balance — where each surface goes):
+Math first, one-way flow, one home per number:
 
 ```
 data/game.ts ─── Balance ───  →  balance/game-projection.ts  →  balance/game-probe.ts

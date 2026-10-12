@@ -13,7 +13,6 @@ import { GAME_BALANCE, type GameBalance } from '../data/game';
 /**
  * Automation module — the blank base's example of the one canonical shape for
  * player-facing automation: a policy that is invisible until its tier unlocks.
- * See `.claude/rules/archetype-authoring.md` § Conformance.
  *
  * DELETE-OR-RESHAPE, like the rest of the blank economy. What a fork should
  * keep is the *shape*: a tier ladder, a policy blocked on `hasReached`, and a

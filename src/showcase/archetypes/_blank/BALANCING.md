@@ -1,8 +1,7 @@
 # Balance — Blank (template)
 
-This file is the template for a real archetype's `BALANCING.md`. It carries every
-section `.claude/rules/archetype-authoring.md` § BALANCING.md — required sections
-asks for, filled in for the neutral base. Rewrite each one for your game.
+This file is the template for a real archetype's `BALANCING.md`. It has every
+required section, filled in for the neutral base. Rewrite each one for your game.
 
 **Who it is for.** `IDENTITY.md` says what the archetype *is*; this says how you
 work on its numbers. Write it for whoever inherits the game after `pnpm eject` —

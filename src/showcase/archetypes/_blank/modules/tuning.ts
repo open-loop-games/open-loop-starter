@@ -6,10 +6,9 @@ import {
 } from '@open-loop/engine';
 
 /**
- * The `tunable()` key registry — the one perturbation path (no parallel
- * `data/balance.ts`; see `.claude/rules/archetype-authoring.md` § Directory
- * shape). Balance probes and
- * solvers perturb these keys via `registry.pushOverrides`; the engine pattern is
+ * The `tunable()` key registry — the one perturbation path; there is no
+ * parallel `data/balance.ts` override file. Balance probes and solvers
+ * perturb these keys via `registry.pushOverrides`; the engine pattern is
  * `src/core/override-registry.ts` in the `@open-loop/engine` package.
  *
  * A fork adds one union member per perturbable balance value and reads it at the

@@ -92,7 +92,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 ### Key Patterns
 
 - **Engine singleton** — `bootEngine` (`src/boot.ts`) creates it once, and `bootApp` shares it through `provide('engine')`. `bootEngine` prepends `sharedBase` to every mod, so an archetype never assembles the base itself.
-- **Routing shell vs game view** — an archetype root (`*AppRoot.vue`) is routing and app chrome only. It reads **no** module state, because its setup runs before `start()`, on the slot screen. All module reads are in a `<XGameView>` subtree, rendered under the post-start `v-else` frame. The full discipline and its corollaries are in `.claude/rules/app-root-discipline.md`. Claude Code loads it on the path match. No other agent harness loads `.claude/rules/`, so read it directly. `_blank/ui/GameView.vue` is the reference a fork copies.
+- **Routing shell vs game view** — an archetype root (`*AppRoot.vue`) is routing and app chrome only. It reads **no** module state, because its setup runs before `start()`, on the slot screen. All module reads are in a `<XGameView>` subtree, rendered under the post-start `v-else` frame. A header action that reads module state is its own child component in the `SystemHeader` slot. `usePlaySession`'s `onLoaded` is the one root-side seam for post-start work. `_blank/ui/GameView.vue` is the reference a fork copies.
 - **Slot-based shells** — `src/lib/shells/*` never prescribe content; games fill the slots.
 - **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the default token values: palette, spacing, radius, and the shell, modal and widget tokens. `src/styles/` adds the scaffold theme and widget-level selectors on top.
 

@@ -5,7 +5,7 @@
 
   This is where your game lives: pull module state in `<script setup>`, render it
   in the template. Keep the root (`GameAppRoot.vue`) routing-only — never read a
-  module there. See `.claude/rules/app-root-discipline.md`.
+  module there, because it sets up before `engine.start()`.
 -->
 <script setup lang="ts">
 import { SingleColumnShell } from '@/lib';

@@ -1,7 +1,6 @@
 // ─── Skeleton ───
 // Blank-game balance data — the pure-config form of the spine (see
-// `.claude/rules/archetype-authoring.md` § Balance — where each surface goes,
-// and `../IDENTITY.md`).
+// `../IDENTITY.md` § Balance model).
 //
 // This is a DELETE-OR-RESHAPE example, the config counterpart to
 // `sim/example.test.ts`: the single most neutral mechanic an incremental can
