@@ -116,7 +116,7 @@ pnpm lint       # eslint src/
 pnpm domain-map # regenerate src/game/domain-map.md from data types
 \`\`\`
 
-Regenerate \`src/game/overview.md\` + \`domain-map.md\` after editing \`src/game/data\`.
+Regenerate \`src/game/domain-map.md\` after editing \`src/game/data\`.
 `;
 }
 

@@ -1,16 +1,11 @@
 /**
  * Strip-cleanliness lint for `src/showcase/gallery/` and `src/showcase/about/`.
  *
- * Fork workflow:
- *   rm -rf src/showcase/gallery/ src/showcase/about/
- *   <revert main.ts to a single archetype createApp().mount('#app')>
- *   <delete the other archetype directories>
- *
- * If anything under `src/showcase/gallery/**` or `src/showcase/about/**` hard-imports a
- * specific archetype (e.g. `from '@/showcase/archetypes/cycler'`), that strip
- * cascades into broken imports. Only `import.meta.glob(...)` over the
- * `@/showcase/archetypes/*\/index.ts` wildcard is allowed — the eager glob
- * vanishes with the gallery, so its bundle effect goes away too.
+ * The gallery enumerates archetypes only through `import.meta.glob(...)` over
+ * the `@/showcase/archetypes/*\/index.ts` wildcard. If anything under
+ * `src/showcase/gallery/**` or `src/showcase/about/**` hard-imports a specific
+ * archetype (e.g. `from '@/showcase/archetypes/cycler'`), adding or deleting
+ * that archetype's directory breaks the gallery.
  *
  * The check is a textual scan over file sources loaded via Vite's
  * `?raw` glob — keeps the test free of node:fs/path imports while

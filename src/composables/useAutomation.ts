@@ -93,7 +93,7 @@ export interface UseAutomationReturn {
   currentTierId: ComputedRef<string>;
 
   /** Display name of the current automation tier. */
-  currentTierName: ComputedRef<string>;
+  currentTierDisplayName: ComputedRef<string>;
 }
 
 // ============================================================================
@@ -110,7 +110,7 @@ export function useAutomation(options: UseAutomationOptions): UseAutomationRetur
   const lowestOrder = sorted[0]?.order ?? 0;
 
   const isAutomated = computed(() => automationTiers.currentTierOrder.value > lowestOrder);
-  const currentTierName = computed(
+  const currentTierDisplayName = computed(
     () => sorted.find((t) => t.id === automationTiers.currentTierId.value)?.displayName ?? '',
   );
 
@@ -121,6 +121,6 @@ export function useAutomation(options: UseAutomationOptions): UseAutomationRetur
     hasReached: (tierId: string) => automationTiers.hasReached(tierId),
     isAutomated,
     currentTierId: automationTiers.currentTierId,
-    currentTierName,
+    currentTierDisplayName,
   };
 }

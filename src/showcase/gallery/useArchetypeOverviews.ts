@@ -2,10 +2,7 @@
  * Eager `?raw` loader for each archetype's identity doc. Vite resolves the
  * glob at build time, so the index is synchronous.
  *
- * The canonical (and now only) doc is `IDENTITY.md` (see
- * `src/showcase/archetypes/README.md` § IDENTITY.md). The doc-rename sweep
- * (studio/open-loop-starter#9) migrated every archetype off the legacy
- * `overview.md` filename; the fallback glob it needed is gone with it.
+ * Each archetype has one identity doc, `IDENTITY.md`.
  */
 const identityByPath = import.meta.glob('@/showcase/archetypes/*/IDENTITY.md', {
   query: '?raw',

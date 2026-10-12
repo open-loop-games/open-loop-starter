@@ -175,7 +175,7 @@ alongside the constants           and the probes that contradict it
 |---|---|
 | Runnable closed-form projection (no engine) | `<name>-projection.ts` |
 | Probe driving shipping code | `<concern>-probe.ts` |
-| Shipping-automation arc runner | `<name>-run.ts` |
+| Shipping-automation arc runner | `arc-probe.ts` |
 | Beat windows + predicates the probes import | `beats.ts` |
 | Shared fixture the probes and suites both build on | `_<noun>.ts` |
 

@@ -24,54 +24,46 @@ view over that catalogue.
 
 ## How to fork
 
-The starter is a template, not a library. Forks consume it by copying
-the repo and stripping it down:
+The starter is a template, not a library. A fork clones the repo and ejects
+down to one game:
 
 ```bash
-# 1. Fork & clone
-gh repo create my-game --template open-loop/starter --private --clone
-cd my-game
-
-# 2. Pick one archetype (here: cycler) — delete the rest + the gallery
-rm -rf src/showcase/archetypes/{producer,skirmish,survivor,tug}
-rm -rf src/gallery src/about
-
-# 3. Wire main.ts to your one archetype
-cat > src/main.ts <<'EOF'
-import { createApp } from '@/showcase/archetypes/cycler';
-import '@/lib/styles/reset.css';
-import '@/lib/styles/tokens.css';
-import './styles/base.css';
-import './styles/theme-widgets.css';
-const { mount } = createApp();
-mount('#app');
-EOF
-
-# 4. Reskin: update src/styles/base.css tokens for your theme,
-#    rename the archetype directory to your game name, and start
-#    iterating on data/, modules/, ui/.
+pnpm eject cycler --name "My Game"            # dry run: prints the plan
+pnpm eject cycler --name "My Game" --execute  # builds on the cycler archetype
+pnpm eject --clean --name "My Game" --execute # starts from the neutral _blank base
+pnpm install && pnpm typecheck && pnpm test && pnpm lint
 ```
 
-`src/gallery/` and `src/about/` are designed to delete cleanly. A
-strip-cleanliness lint (`src/test/gallery-strip.test.ts`) asserts that
-nothing under `src/gallery/**` hard-imports a specific archetype — only
-the `import.meta.glob('@/showcase/archetypes/*/index.ts')` enumeration is
-allowed. That keeps the strip step from cascading broken imports.
+Eject moves the chosen archetype to `src/game/` and rewrites `main.ts` to boot
+it. It deletes `src/showcase/` (gallery, about, sandbox and every other
+archetype) and its own machinery. The fork's theme is the token values in
+`src/styles/base.css`. `src/showcase/AGENTS.md` § Fork workflow has the full
+list of what eject changes.
+
+The gallery enumerates archetypes only through
+`import.meta.glob('@/showcase/archetypes/*/index.ts')`. A lint
+(`src/test/gallery-strip.test.ts`) checks that nothing under
+`src/showcase/gallery/**` or `src/showcase/about/**` imports a specific
+archetype. So an archetype directory can be added or deleted without breaking
+the gallery.
 
 ## Authoring a new archetype
 
-1. Copy `src/archetypes/_template/` (or fork an existing archetype).
-2. Author the doc at `archetypes/<name>.md` following `_template.md`.
-3. Author `src/archetypes/<name>/manifest.ts` with the typed
-   `ArchetypeManifest` export (see `src/types.ts` for the shape).
-4. Re-export `manifest` from `src/archetypes/<name>/index.ts`. The
-   gallery picks it up automatically the next time it loads.
+1. Copy `src/showcase/archetypes/_blank/` to `src/showcase/archetypes/<name>/`.
+2. Register its line in `src/showcase/archetypes/_identity.md`, and write the
+   line's `_docs/<line>.md`.
+3. Rewrite `IDENTITY.md` and `BALANCING.md`. Each has every required section;
+   `.claude/rules/archetype-authoring.md` says what each section contains.
+4. Write `manifest.ts` with the typed `ArchetypeManifest` export (see
+   `src/types.ts` for the shape), and re-export it from `index.ts`. The gallery
+   finds it the next time it loads; it skips underscore-prefixed directories.
+5. Update `domain-map.config.mjs`, and run `pnpm domain-map`.
 
-Each archetype owns its own theme assets (fonts, body CSS scope), engine
-modules, and UI. The gallery wraps every demo in a sandbox that owns the
-`body[data-archetype]` lifecycle and disposes both engine and Vue app
-between demos — but archetypes still scope their own theme via the
-attribute so they work standalone in a forked single-archetype build.
+Each archetype owns its theme assets (fonts, body CSS scope), modules and UI.
+The gallery wraps every demo in a sandbox. The sandbox owns the
+`body[data-archetype]` lifecycle and disposes both the engine and the Vue app
+between demos. Archetypes still scope their own theme through the attribute,
+so they work standalone after eject.
 
 ## Layering
 

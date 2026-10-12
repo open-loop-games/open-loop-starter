@@ -17,7 +17,7 @@ describe('useAutomation', () => {
       ],
     });
     expect(auto.currentTierId.value).toBe('manual');
-    expect(auto.currentTierName.value).toBe('Manual');
+    expect(auto.currentTierDisplayName.value).toBe('Manual');
     expect(auto.isAutomated.value).toBe(false);
     expect(auto.hasReached('manual')).toBe(true);
     expect(auto.hasReached('build')).toBe(false);
@@ -39,7 +39,7 @@ describe('useAutomation', () => {
 
     expect(auto.hasReached('build')).toBe(true);
     expect(auto.isAutomated.value).toBe(true);
-    expect(auto.currentTierName.value).toBe('Auto-Build');
+    expect(auto.currentTierDisplayName.value).toBe('Auto-Build');
   });
 
   it('shouldRun returns true at most once per throttle interval', () => {
