@@ -16,4 +16,3 @@ A thirty-minute play session is a sequence of discoveries. Each phase has its ow
 | Universal Paperclips | in   | a runless save            | yes     |
 | A Dark Room          | in   | a runless save            | yes     |
 | Candy Box 2          | in   | a runless save            | yes     |
-| Groundhog Life       | in   | a runless save            | yes     |
