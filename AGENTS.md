@@ -38,6 +38,8 @@ Starter differs from the engine list in one rule. It always qualifies "harness":
 
 Where the list is silent, a word keeps its everyday sense. Examples are starter's layers (`modules`, `composables`, `ui`, `lib`) and Vue's "render".
 
+The base and `_blank` cite no `.claude/rules/` file, because `pnpm eject` deletes that directory.
+
 ## Commands
 
 ```bash

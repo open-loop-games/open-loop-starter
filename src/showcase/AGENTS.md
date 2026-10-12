@@ -27,6 +27,8 @@ The bar for new archetype content is two questions:
 - Would a new game that forks this archetype want this on day one?
 - Does its balance follow from the declared spine?
 
+A story's fiction word keeps its game sense in player text and fiction identifiers. Examples are burn tier and device level. Mechanism prose, and an identifier that wraps an engine concept, follow the engine's term list.
+
 ## Archetype convention
 
 Each archetype under `src/showcase/archetypes/<name>/` is self-bootable and follows the same colocated shape:
