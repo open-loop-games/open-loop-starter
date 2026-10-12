@@ -8,7 +8,7 @@
  * § Balance. A probe prints; it does not assert. A probe that disagrees with the
  * projection has done its job.
  *
- * This is the archetype's walkthrough gate: the first surface that walks
+ * This is the archetype's walkthrough check: the first surface that walks
  * spawn → steer → fire → drop → collect → contact end to end. Structural defects
  * surface here, not in the module unit tests.
  *

@@ -4,7 +4,7 @@
  * Run: `pnpm exec vite-node src/showcase/archetypes/producer/balance/producer-projection.ts`
  *
  * The spine in runnable form (`.claude/rules/archetype-authoring.md` § Balance
- * — where each surface lands). It predicts; it does not discover. Everything
+ * — where each surface goes). It predicts; it does not discover. Everything
  * here is arithmetic over `../data/`, with one engine import — the harness's
  * `classifyFlowChannel`, a pure band classifier whose thresholds this file
  * would otherwise restate by hand.

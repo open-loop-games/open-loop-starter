@@ -4,7 +4,7 @@
  * Run: `pnpm exec vite-node src/showcase/archetypes/_blank/balance/game-probe.ts`
  *
  * See `.claude/rules/archetype-authoring.md` § Balance — where each surface
- * lands: drives the REAL assembled engine — the shipping `game/core` module
+ * goes: drives the REAL assembled engine — the shipping `game/core` module
  * ticked by the real loop — and measures the realized accrual rate, verifying it
  * matches the projection (`game-projection.ts`: amount(t) = ratePerSecond · t). A
  * probe is discovery, not a test — it prints, it does not assert, and a probe

@@ -278,7 +278,7 @@ Math first, one-way flow, one home per number. `BALANCING.md` beside this file i
 working guide — the knobs, what couples to what, and how to read each probe.
 Methodology lives at `open-loop-engine/docs/consumer-guide-balance.md`; the disk layout
 it maps onto is `.claude/rules/archetype-authoring.md` § Balance — where each surface
-lands. In brief:
+goes. In brief:
 
 - **The spine, as prose + math (`data/*.ts`).** Constants with co-located
   `// ─── Balance ───` sections: the authored beat targets and the `m` derived from

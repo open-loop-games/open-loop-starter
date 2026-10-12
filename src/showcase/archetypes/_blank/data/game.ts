@@ -1,6 +1,6 @@
 // ─── Skeleton ───
 // Blank-game balance data — the pure-config form of the spine (see
-// `.claude/rules/archetype-authoring.md` § Balance — where each surface lands,
+// `.claude/rules/archetype-authoring.md` § Balance — where each surface goes,
 // and `../IDENTITY.md`).
 //
 // This is a DELETE-OR-RESHAPE example, the config counterpart to

@@ -8,7 +8,7 @@
  * lands. It prints; it does not assert — a probe that disagrees with the
  * projection has done its job.
  *
- * This is the archetype's walkthrough gate: the first surface that walks
+ * This is the archetype's walkthrough check: the first surface that walks
  * ladder → resource → predicate → beat, and the place structural defects show
  * up rather than tuning ones.
  */

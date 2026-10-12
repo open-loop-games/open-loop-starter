@@ -19,7 +19,7 @@ and states no rule of its own.
 - `open-loop-engine/docs/consumer-guide-recipes.md` § Persona-roster composition —
   the engine substrate for a roster: `SequencerItem` carrying persona identity and
   its param bundle, and the sequencer's fill strategies.
-- `.claude/rules/archetype-authoring.md` § Balance — where each surface lands — the
+- `.claude/rules/archetype-authoring.md` § Balance — where each surface goes — the
   starter's own placement contract: spine in `data/`, then projection, probe, suite.
 
 ## AI variety — where the shape comes from

@@ -4,7 +4,7 @@
  * Run: `pnpm exec vite-node src/showcase/archetypes/survivor/balance/survivor-projection.ts`
  *
  * Pure math, NO engine (`.claude/rules/archetype-authoring.md` § Balance — where
- * each surface lands). The spine in runnable form: it predicts the run's shape on
+ * each surface goes). The spine in runnable form: it predicts the run's shape on
  * paper so the coverage boundary in `../IDENTITY.md` § Rate-function spine can be
  * falsified before it is built on. Predicts; does not discover.
  *

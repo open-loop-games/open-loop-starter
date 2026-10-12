@@ -84,7 +84,7 @@ here, with candidate-primitive receipts where it hand-rolls a gap
 ## Balance model
 
 Math first, one-way flow, one home per number (see
-`.claude/rules/archetype-authoring.md` § Balance — where each surface lands):
+`.claude/rules/archetype-authoring.md` § Balance — where each surface goes):
 
 ```
 data/game.ts ─── Balance ───  →  balance/game-projection.ts  →  balance/game-probe.ts

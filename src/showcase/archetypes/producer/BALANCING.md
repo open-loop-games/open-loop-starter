@@ -124,7 +124,7 @@ pnpm exec vite-node src/showcase/archetypes/producer/balance/offline-probe.ts
   completion, and a uniform-depth reference arc. Read it before any probe: it
   says what the math expects, and § 2 says in as many words that it holds income
   constant and therefore does **not** predict felt cadence.
-- **`arc-probe.ts`** is the walkthrough gate — one 8h arc under the shipping
+- **`arc-probe.ts`** is the walkthrough check — one 8h arc under the shipping
   ladder, reporting where each of the seven beats landed, when each class was
   first deployed, when each dispatch rung opened, and the realized stack. Run
   this before treating anything as a balance question; it is the first surface

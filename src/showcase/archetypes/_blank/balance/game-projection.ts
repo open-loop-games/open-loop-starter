@@ -4,7 +4,7 @@
  * Run: `pnpm exec vite-node src/showcase/archetypes/_blank/balance/game-projection.ts`
  *
  * Pure math, NO engine (see `.claude/rules/archetype-authoring.md` § Balance —
- * where each surface lands). The spine in runnable form: it predicts the mechanic's
+ * where each surface goes). The spine in runnable form: it predicts the mechanic's
  * trajectory on paper. The probe (`game-probe.ts`) then drives the shipping
  * module and prints where reality lands against it. Predicts; does not discover.
  *
