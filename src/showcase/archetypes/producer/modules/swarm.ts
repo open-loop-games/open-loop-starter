@@ -121,7 +121,7 @@ export function createSwarmModule(data: ProducerData): EngineModule {
       launchCount = persistent<DecimalSource>(0, { id: 'launchCount' });
 
       // ── The ladder ──────────────────────────────────────────────────────
-      // `costScaling` takes the derived `m` straight from data. It is NOT
+      // `costRatio` takes the derived `m` straight from data. It is NOT
       // routed through the tuning registry: the field is a static
       // `DecimalSource` read once at registration, so a knob here would be a
       // dead key. Rationale and the alternative in `./tuning.ts`.

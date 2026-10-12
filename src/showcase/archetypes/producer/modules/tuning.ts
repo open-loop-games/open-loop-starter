@@ -20,7 +20,7 @@ import type { ProbeClassId } from '../data/types';
  * interesting constants cannot be perturbed through this path:
  *
  * - `COST_RATIO` (`m`) reaches the engine as `ProducerPurchaseOptions.
- *   costScaling`, typed `DecimalSource` rather than `Computable`, so it is
+ *   costRatio`, typed `DecimalSource` rather than `Computable`, so it is
  *   read once at registration and a registered knob would never be re-read.
  *   Sweeping `m` means editing `data/curve.ts` and re-running, or composing
  *   the curve as a `Formula` at the wiring layer — `costCurve` in

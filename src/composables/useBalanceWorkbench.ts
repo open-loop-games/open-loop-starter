@@ -71,7 +71,7 @@ export interface BalanceWorkbenchOptions {
    * "variant got the seed, baseline didn't."
    *
    * Ordering: `prepare(engine, ctx)` → (variant only) `applyPerturbation(...)`
-   * → `buildAnalyzers(engine)` → ticks.
+   * → `buildAnalyzers(engine)` → iterations.
    */
   prepare?: (engine: Engine, ctx: RunContext) => void;
 }
@@ -83,10 +83,10 @@ export interface PerturbationForm {
   factor: number;
   delta: number;
   seedCount: number;
-  ticks: number;
+  iterations: number;
   /**
-   * Capture per-tick resource trajectories (baseline vs variant) for charting.
-   * Fans each tracked resource out to `ticks` metric keys per run, so it's
+   * Capture per-iteration resource trajectories (baseline vs variant) for charting.
+   * Fans each tracked resource out to `iterations` metric keys per run, so it's
    * opt-in — off by default keeps a plain sensitivity run scalar-cheap.
    */
   captureTimeSeries: boolean;
@@ -192,7 +192,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
     factor: 2,
     delta: 1,
     seedCount: 20,
-    ticks: 200,
+    iterations: 200,
     captureTimeSeries: true,
   });
 
@@ -311,7 +311,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         ...(prepare && { perturb: (e, ctx) => prepare(e, ctx) }),
         buildAnalyzers,
         tick,
-        iterations: form.ticks,
+        iterations: form.iterations,
       });
       const variant = createSensitivityCell({
         id: 'variant',
@@ -323,7 +323,7 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
         },
         buildAnalyzers,
         tick,
-        iterations: form.ticks,
+        iterations: form.iterations,
       });
 
       const sensitivity = runSensitivity({

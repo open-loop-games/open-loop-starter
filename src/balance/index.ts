@@ -84,7 +84,7 @@ export interface ProducerInspector {
     effectiveCount: number;
     perUnitRate: number;
     baseCost: number;
-    costScaling: number;
+    costRatio: number;
   }>;
 }
 
@@ -101,7 +101,7 @@ export function producerPacingInspector(
     for (const p of inspector.ownedProducers(engine)) {
       const nextCost = costCurve(p.purchaseCount, {
         baseCost: p.baseCost,
-        costScaling: p.costScaling,
+        costRatio: p.costRatio,
       }).evaluate();
       const production = Decimal.mul(p.perUnitRate, p.effectiveCount);
       // Nothing is ever afforded at zero production. `classifyFlowChannel`

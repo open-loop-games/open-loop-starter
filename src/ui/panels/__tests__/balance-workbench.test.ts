@@ -84,7 +84,7 @@ describe('useBalanceWorkbench composable', () => {
     wb.form.kind = 'scalar-multiply';
     wb.form.factor = 3;
     wb.form.seedCount = 2;
-    wb.form.ticks = 5;
+    wb.form.iterations = 5;
 
     wb.run();
 
@@ -113,7 +113,7 @@ describe('useBalanceWorkbench composable', () => {
     wb.form.kind = 'scalar-multiply';
     wb.form.factor = 3;
     wb.form.seedCount = 2;
-    wb.form.ticks = 5;
+    wb.form.iterations = 5;
     wb.form.captureTimeSeries = true;
 
     wb.run();
@@ -141,7 +141,7 @@ describe('useBalanceWorkbench composable', () => {
     const wb = useBalanceWorkbench({ engine: live, modules: () => [modFactory()] });
     wb.selectEntry(wb.snapshot.value.all.find((e) => e.label.includes('cursor'))!);
     wb.form.seedCount = 2;
-    wb.form.ticks = 5;
+    wb.form.iterations = 5;
     wb.form.captureTimeSeries = false;
 
     wb.run();
@@ -240,8 +240,8 @@ describe('BalanceWorkbench.vue', () => {
 
     const seedInput = wrapper.find('#bw-seeds');
     await seedInput.setValue(2);
-    const tickInput = wrapper.find('#bw-ticks');
-    await tickInput.setValue(5);
+    const iterationInput = wrapper.find('#bw-iterations');
+    await iterationInput.setValue(5);
 
     const runBtn = wrapper.findAll('button').find((b) => b.text().startsWith('Run'));
     expect(runBtn).toBeDefined();

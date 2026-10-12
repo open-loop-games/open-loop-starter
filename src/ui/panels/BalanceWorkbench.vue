@@ -191,10 +191,10 @@ const seriesModel = computed<string | null>({
           </div>
 
           <div class="form-row">
-            <label class="bw-label" for="bw-ticks">Ticks</label>
-            <NumberFieldRoot v-model="wb.form.ticks" :min="1" :step="1" class="bw-numberfield">
+            <label class="bw-label" for="bw-iterations">Iterations</label>
+            <NumberFieldRoot v-model="wb.form.iterations" :min="1" :step="1" class="bw-numberfield">
               <NumberFieldDecrement class="bw-numberfield__btn"> − </NumberFieldDecrement>
-              <NumberFieldInput id="bw-ticks" class="bw-input" />
+              <NumberFieldInput id="bw-iterations" class="bw-input" />
               <NumberFieldIncrement class="bw-numberfield__btn"> + </NumberFieldIncrement>
             </NumberFieldRoot>
           </div>
