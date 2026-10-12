@@ -231,7 +231,7 @@ importers:
         specifier: ^0.72.0
         version: 0.72.0
       oxlint:
-        specifier: ^1.87.0
+        specifier: ^1.85.0
         version: 1.87.0
       ts-morph:
         specifier: ^28.0.0
