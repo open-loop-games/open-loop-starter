@@ -45,7 +45,7 @@ export interface UnitInstance {
   hp: number;
   side: Side;
   /** Id of the opposing unit this one is engaged with. Walk movement is
-   *  gated off while set. */
+   *  blocked while set. */
   engagedWith?: string;
 }
 
@@ -55,7 +55,7 @@ export interface LaneEvents {
    *  so this fires only for unit-archetype spawns. */
   'unit-spawned': (payload: { side: Side; archetypeId: string }) => void;
   /** A unit's hp dropped to ≤0 in combat. Currently unused by leaf-4 wiring;
-   *  exposed so VFX / scoring can hook in without further engine ceremony.
+   *  exposed so VFX / scoring can subscribe without further engine ceremony.
    *  Fortress units (`archetypeId === 'fortress'`) do not emit this — match
    *  end-of-match detection watches the fortress hp resource directly. */
   'unit-killed': (payload: { side: Side; archetypeId: string }) => void;

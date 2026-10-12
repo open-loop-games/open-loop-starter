@@ -25,10 +25,10 @@ export function getIncomeUpgrades(side: Side): PurchasableCategory<IncomeUpgrade
 /**
  * Per-tier engine-side ROI metrics. Reactive against live cost (post-
  * tunable), live multiplier (post-tunable), and the side's
- * `incomeRateChain.apply(baseRate)` (which reflects already-bought prior
+ * `incomeRateChain.apply(baseRate)` (which reflects already-purchased prior
  * tiers via the chain's grant binds).
  *
- * Lives at module scope rather than on a composable because the per-def
+ * It is at module scope rather than on a composable because the per-def
  * tunable multiplier and the `baseRate` tunable are install-private —
  * pulling them into a Vue layer would re-plumb privates. Mirrors the
  * shape of producer's `purchaseBeatSeconds`
@@ -42,8 +42,8 @@ export interface RoiMetrics {
    *  the cost. Mirrors producer "Pays off in X" vocabulary. `Infinity`
    *  when current rate ≤ 0 or multiplier ≤ 1. */
   paybackSeconds: ComputedRef<number>;
-  /** Eco-vs-rush crossover: total elapsed time (including save-up)
-   *  until the eco-then-rush strategy reaches the same cumulative
+  /** Eco-vs-rush crossover: game time (including save-up)
+   *  until the eco-then-rush policy reaches the same cumulative
    *  spendable as pure-rush. Equals `paybackSeconds × multiplier`.
    *  The strategically meaningful break-even — answers the
    *  "macro vs rush" framing. `Infinity` in the same edge cases. */
@@ -58,12 +58,12 @@ export const IncomeUpgradeRoiKey: Record<Side, InjectionKey<Map<string, RoiMetri
 /**
  * Per-side income-upgrade shop. Each tier binds a multiplicative modifier
  * onto the side's `incomeRateChain` (set up by `income.ts`) — the engine's
- * purchasable category wires the bind around `bought.value`, so a tier's
- * contribution is automatically applied / removed when bought / reset.
+ * purchasable category wires the bind around the purchasable's `active` flag,
+ * so a tier's modifier is applied when purchased and removed on reset.
  *
- * Tier gating is sequential: tier N requires tier N-1 bought, mirroring
+ * Tiers unlock in order: tier N requires tier N-1 purchased, mirroring
  * Direct Strike / Age of War. The implementation reads the prior tier's
- * `bought.value` lazily inside the boolean requirement closure — at
+ * `active` flag lazily inside the boolean requirement closure — at
  * requirement-eval time, all tiers have registered. No `shopRef`
  * gymnastics needed; the closure captures the `incomeUpgrades` binding,
  * which is set by the time the closure runs.
@@ -92,7 +92,7 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
         mapPurchasable: (def) => {
           const idx = data.incomeUpgrades.findIndex((u) => u.id === def.id);
           const priorId = idx > 0 ? data.incomeUpgrades[idx - 1].id : null;
-          const priorName = idx > 0 ? data.incomeUpgrades[idx - 1].name : null;
+          const priorName = idx > 0 ? data.incomeUpgrades[idx - 1].displayName : null;
 
           const cost = tunable(registry, `income-upgrades/${def.id}/cost`, () => def.cost);
           const multiplier = tunable(
@@ -103,8 +103,8 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
 
           // Extra income per second the upgrade would add at current rate:
           // `currentRate × (multiplier − 1)`. `currentRate` evaluates the
-          // chain *now*, so already-bought prior tiers are folded in.
-          // Returns 0 in degenerate cases so payback surfaces as Infinity
+          // chain *now*, so already-purchased prior tiers are folded in.
+          // Returns 0 in degenerate cases so payback comes out as Infinity
           // below.
           const extraRatePerSec = computed<Decimal>(() => {
             const base = Decimal.fromValue(resolveComputable(baseRate));
@@ -142,11 +142,11 @@ export function createIncomeUpgradesSideModule(data: TugData, side: Side): Engin
           }
 
           const grants: Grant[] = [
-            { chain: incomeRateChain, multiplier: multiplier, description: def.name },
+            { chain: incomeRateChain, multiplier: multiplier, description: def.displayName },
           ];
 
           return {
-            display: { title: def.name, description: `×${def.multiplier} income` },
+            display: { title: def.displayName, description: `×${def.multiplier} income` },
             requirements,
             limit: 1,
             grants,

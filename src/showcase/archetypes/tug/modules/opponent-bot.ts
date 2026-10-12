@@ -16,13 +16,13 @@ import { getUnits } from './units';
 
 const OPPOSITE: Record<Side, Side> = { player: 'ai', ai: 'player' };
 
-/** Baseline seconds between bot spend attempts. Per-persona
+/** Baseline seconds between AI spend attempts. Per-persona
  *  `cadenceMultiplier` scales this at decision time. Direct-Strike-typical;
- *  AI-quirk pacing knob, not a balance lever. */
+ *  an AI-quirk pacing constant, not a balance constant. */
 const AI_SEND_CADENCE_SEC = 4;
 
 /** Production-zero believability — deterministic AI, predictable for the
- *  human player. Sim engines pass a calibrated bundle to break parameterized-
+ *  human player. Headless engines pass a calibrated bundle to break parameterized-
  *  vs-parameterized mirror stalemates per composition-cookbook §
  *  Believability-calibration discipline. */
 const PRODUCTION_BELIEVABILITY: TugBelievability = {
@@ -32,52 +32,51 @@ const PRODUCTION_BELIEVABILITY: TugBelievability = {
 
 export interface OpponentBotOptions {
   /** Persona key from `data/personality.ts`. Production AI uses
-   *  `'counter'`; sim engines vary per side. */
+   *  `'counter'`; headless engines vary it per side. */
   persona: PersonaKey;
-  /** Calibration constraint on bot decision execution. Defaults to
-   *  production-zero (deterministic). Sim engines override. */
+  /** Calibration constraint on AI decision execution. Defaults to
+   *  production-zero (deterministic). Headless engines override it. */
   believability?: TugBelievability;
 }
 
 /**
  * Per-side opponent policy module. Hand-rolls cadence on top of `ctx.onTick`
- * rather than adopting `setupAutoPurchase`, which would buy every affordable
+ * rather than adopting `setupAutoPurchase`, which would purchase every affordable
  * archetype every tick and dump the side's economy. The accumulator
- * (`lastSendSec`) gates a single purchase call per cadence window; the
- * per-side sequencer paces actual dispatch against per-archetype cooldowns.
+ * (`lastSendSec`) allows a single purchase call per cadence window; the
+ * per-side sequencer paces actual sends against per-archetype cooldowns.
  *
  * Production installs one instance for `'ai'` with `persona: 'counter'`;
- * the player drives the other side via UI input. Sim engines
- * (`buildTugSimEngine`) install a second instance for `'player'` so balance
- * harnesses can run unattended.
+ * the player drives the other side via UI input. Headless engines
+ * (`buildTugScratchEngine`) install a second instance for `'player'` as an
+ * automated player, so balance-harness runs need no human.
  *
  * **Parameterized-personality decision code.** The decision-architecture
- * (cadence gate → upgrade branch → unit picker) is invariant across
+ * (cadence check → upgrade branch → unit picker) is invariant across
  * personas. The `persona` constructor arg drives:
  *
  * - cadence threshold (`cadenceMultiplier * AI_SEND_CADENCE_SEC`)
  * - upgrade greed (`inc >= upgradeSurplusFactor * cost`; `Infinity` skips)
- * - eligible-pool gating (`minSpendCost`; abstain when nothing affordable
+ * - eligible-pool filtering (`minSpendCost`; abstain when nothing affordable
  *   meets the floor — saves funds for next cadence, the tech rush pattern)
  * - action selection (`unitPicker`: `cheapest` / `top-tier` / `counter`)
  *
- * The 4 canonical personas live in `data/personality.ts`; the OL-721
- * game-AI variety study D7 specifies their consumer-side adoption shape.
+ * The canonical personas are in `data/personality.ts`.
  *
  * **Believability calibration applies independently** of persona choice.
- * Production has both fields at 0 (deterministic); sim engines pass a
+ * Production has both fields at 0 (deterministic); headless engines pass a
  * calibrated bundle (suboptimality + cadence jitter) driven by an
  * independent per-side seeded RNG stream so toggling believability on one
  * side doesn't shift global RNG state used by the other side's
  * `randomItem(eligible)` fallback.
  *
- * **PvP / no-bot.** PvP mode (or any "no AI on this side" config) is
+ * **PvP / no AI.** PvP mode (or any "no AI on this side" config) is
  * expressed by not installing the module for that side. Production's
  * `createTugModules` installs `'ai'` only.
  *
- * **Candidate primitive.** This module + its sim-bot counterpart form a
- * bilateral-symmetric sim-bot pattern that's a candidate for engine
- * graduation. See `candidate-primitives.md` §
+ * **Candidate primitive.** This module, installed on both sides, is the
+ * pattern `candidate-primitives.md` calls bilateral-symmetric sim-bot, a
+ * candidate for engine graduation. See `candidate-primitives.md` §
  * bilateral-symmetric sim-bot pattern; graduation trigger is a second
  * adversarial-state consumer landing.
  */
@@ -115,7 +114,7 @@ export function createOpponentBotModule(
       }
 
       // Cadence accumulator. Persistent so save/load mid-match resumes
-      // pacing without dumping a buy on the first post-load tick. Resets to
+      // pacing without dumping a purchase on the first post-load tick. Resets to
       // 0 on match-boundary reset (the match-scope reset enumerates this
       // module).
       const lastSendSec = persistent<number>(0, { id: 'lastSendSec' });
@@ -183,7 +182,7 @@ export function createOpponentBotModule(
       }
 
       function pickByPersona(p: Persona, affordable: Array<{ id: string }>): string | null {
-        // Apply minSpendCost gate. Empty eligible pool = abstain (save
+        // Apply the minSpendCost filter. Empty eligible pool = abstain (save
         // funds for next cadence). `tech` uses this; other personas leave
         // minSpendCost = 0 so eligible === affordable.
         const eligible =
@@ -228,25 +227,25 @@ export function createOpponentBotModule(
         lastSendSec.value += dt;
         const baseThreshold = AI_SEND_CADENCE_SEC * persona.cadenceMultiplier;
         const jitter = believability.cadenceJitterScale;
-        // Multiplicative ±jitter; one knob covers all persona cadence
+        // Multiplicative ±jitter; one constant covers all persona cadence
         // shapes. Production has jitter=0 so the threshold is exact.
         const threshold =
           jitter > 0 ? baseThreshold * (1 + (rng() * 2 - 1) * jitter) : baseThreshold;
         if (lastSendSec.value < threshold) return;
 
-        // Income-upgrade spend branch. Walk tiers in order; first un-bought
-        // tier is the next candidate. Sequential gating means later tiers
-        // won't be canPurchase until earlier tiers buy in, so we stop
-        // walking on the first un-bought entry.
+        // Income-upgrade spend branch. Walk tiers in order; first unpurchased
+        // tier is the next candidate. Tiers unlock in order, so later tiers
+        // won't be canPurchase until earlier tiers are purchased; we stop
+        // walking on the first unpurchased entry.
         //
         // Per-tier mode selected by tier index relative to
         // `persona.saveForUpgradeTiers`:
         //
-        //   - tier index < saveForUpgradeTiers: SAVE-FIRST. Buy when
-        //     balance >= cost; abstain from unit buy while still saving.
+        //   - tier index < saveForUpgradeTiers: SAVE-FIRST. Purchase when
+        //     amount >= cost; abstain from unit purchases while still saving.
         //     Forces an economy-first phase.
-        //   - tier index >= saveForUpgradeTiers: OPPORTUNISTIC. Buy when
-        //     balance >= surplusFactor × cost; fall through to unit buy
+        //   - tier index >= saveForUpgradeTiers: OPPORTUNISTIC. Purchase when
+        //     amount >= surplusFactor × cost; fall through to unit purchase
         //     otherwise. `Infinity` factor disables this path.
         //
         // With `saveForUpgradeTiers: 0` AND `upgradeSurplusFactor: Infinity`,
@@ -265,7 +264,7 @@ export function createOpponentBotModule(
               lastSendSec.value = 0;
               return;
             }
-            // Saving — abstain from unit buy this cadence.
+            // Saving — abstain from unit purchases this cadence.
             return;
           }
           // opportunistic
@@ -276,12 +275,12 @@ export function createOpponentBotModule(
             lastSendSec.value = 0;
             return;
           }
-          break; // Affordable but not surplus — fall through to unit buy.
+          break; // Affordable but not surplus — fall through to unit purchase.
         }
 
         const affordable = shop.getAffordable();
         // Hold the cadence accumulator if nothing affordable — when income
-        // catches up, the bot buys on the next tick rather than waiting an
+        // catches up, the AI opponent purchases on the next tick rather than waiting an
         // extra full cadence window.
         if (affordable.length === 0) return;
 
@@ -293,10 +292,10 @@ export function createOpponentBotModule(
         if (!chosenId) return;
 
         // The shop's `onPurchase` enqueues the unit into SequencerKey[side];
-        // the sequencer's canStart + tick loop dispatches against
+        // the sequencer's canStart + tick loop starts sends against
         // per-archetype cooldowns. Opponent composition is read off
         // lane.units[opposite] above, not via getUnits(opposite) — live-on-
-        // field counts reflect strategy better than cumulative buys.
+        // field counts reflect policy better than cumulative purchases.
         const purchasable = shop.getPurchasable(chosenId);
         purchasable?.purchase();
         lastSendSec.value = 0;

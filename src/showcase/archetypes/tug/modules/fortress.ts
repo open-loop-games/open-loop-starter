@@ -82,7 +82,7 @@ export function createFortressModule(data: TugData): EngineModule {
         hp.player.value = max.value;
         hp.ai.value = max.value;
         // Clear lingering engagement on the unit objects. They're not
-        // persistent; this only matters within a session if a previous
+        // persistent; this only matters within a play session if a previous
         // match left a stale engagedWith pointer.
         unit.player.engagedWith = undefined;
         unit.ai.engagedWith = undefined;

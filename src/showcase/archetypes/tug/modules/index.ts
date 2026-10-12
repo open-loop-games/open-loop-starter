@@ -27,7 +27,7 @@ export { LaneKey, type LaneApi, type LaneEvents, type UnitInstance } from './lan
 export { getUnits, SequencerKey, UnitsCooldownKey, type UnitSendMeta } from './units';
 export {
   MatchKey,
-  TUG_MATCH_SCOPE_MODULES,
+  TUG_MATCH_RESET_CONTEXTS,
   type MatchApi,
   type MatchEvents,
   type MatchEndedPayload,
@@ -38,12 +38,12 @@ export { PrestigeKey } from './prestige';
 export type { OpponentBotOptions } from './opponent-bot';
 
 export interface TugModulesOptions {
-  /** AI-side opponent-bot install. Defaults to `{ persona: 'counter' }` with
-   *  production-zero believability — the human player drives the player
-   *  side. */
+  /** The AI opponent install on the AI side (`opponent-bot`). Defaults to
+   *  `{ persona: 'counter' }` with production-zero believability — the
+   *  human player drives the player side. */
   ai?: OpponentBotOptions;
-  /** Player-side opponent-bot install. Production omits; sim engines pass
-   *  to drive unattended bilateral runs. */
+  /** Player-side automated player install (`opponent-bot`). Production omits;
+   *  headless engines pass it to drive unattended bilateral runs. */
   player?: OpponentBotOptions;
   /** Cross-match meta-progression layer. Production skeleton: false. */
   metaProgressionEnabled?: boolean;
@@ -61,7 +61,7 @@ export interface TugModulesOptions {
  *     pushed scopes survive match resets.
  *  2. `tug/match/<side>/income` — per-side mineral resources.
  *  3. `tug/match/fortress` — per-side fortress HP resources + fortress
- *     `UnitInstance` for the lane's engagement model. Lives between
+ *     `UnitInstance` for the lane's engagement model. It is between
  *     income and lane so lane can inject the fortress units.
  *  4. `tug/match/lane` — single shared module; both sides' unit arrays +
  *     cross-side combat (fortress treated as just-another opposing unit).
@@ -72,9 +72,10 @@ export interface TugModulesOptions {
  *     sequencers.
  *  7. `tug/match/<side>/opponent-bot` — AI policy. Strict-after-units
  *     ordering so `getUnits(side)` returns a populated handle before the
- *     bot reads it. Side-parameterized so sim engines can install a second
- *     instance for `'player'` (unattended balance harnesses); production
- *     installs only the `'ai'` instance and leaves player input to the UI.
+ *     AI opponent reads it. Side-parameterized so headless engines can
+ *     install a second instance for `'player'` (unattended balance-harness
+ *     runs); production installs only the `'ai'` instance and leaves
+ *     player input to the UI.
  *  8. `tug/meta` — cross-match state container.
  *  9. `tug/meta/prestige` — conditional; only when meta-progression is on.
  */

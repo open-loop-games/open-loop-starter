@@ -19,24 +19,25 @@ export interface TugBootResult {
 }
 
 export interface TugEngineOptions {
-  /** Persistence namespace override. Unique per-engine, used to isolate sim runs. */
+  /** Persistence namespace override. Unique per-engine, used to isolate headless runs. */
   persistenceNamespace?: string;
   /** Extra modules registered into the SciFi Armada mod alongside the default tug modules. */
   extraModules?: EngineModule[];
-  /** Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse steps that the default cap would clamp. */
+  /** Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse
+   *  steps that the default cap would clamp. */
   maxDeltaTime?: number;
-  /** Autosave period in ms; sim engines pass 0 so they never write. */
+  /** Autosave period in ms; headless engines pass 0 so they never write. */
   autoSaveInterval?: number;
-  /** Per-side opponent-bot install options + meta-progression toggle. Sim
-   *  engines override; production uses defaults. */
+  /** Per-side `opponent-bot` install options + meta-progression toggle.
+   *  Headless engines override; production uses defaults. */
   modules?: TugModulesOptions;
 }
 
 /**
  * Create an engine instance pre-wired with the Tug archetype modules.
  * Does NOT call `engine.start()` / `engine.load()` / `match.start()` — the
- * AppRoot owns the resume sequence (mirrors Ambient's pattern: engine.start
- * → engine.load → match.start when no in-progress match is loaded).
+ * AppRoot owns the resume sequence: engine.start → engine.load →
+ * match.start when no in-progress match is loaded.
  */
 export function createTugEngine(options?: TugEngineOptions): {
   engine: Engine;

@@ -17,8 +17,8 @@
  * — reset scope, event ordering, both sides firing. Magnitudes stay in the
  * probes, which is why these suites survive a retune.
  *
- * `balance/_engine.ts`'s `buildTugSimEngine` is a different thing and not a
- * duplicate of this: it builds the bilateral bot-driven engine the probes
+ * `balance/_engine.ts`'s `buildTugScratchEngine` is a different thing and not a
+ * duplicate of this: it builds the bilateral scratch engine the probes
  * measure, and `instrumentation.test.ts` imports it deliberately because that
  * measurement path is what the suite specs.
  */
@@ -31,7 +31,7 @@ import { createTugModules, type TugModulesOptions } from '../modules';
 
 /**
  * Intervals per game-second, passed as the engine's `intervalRate`. Tug's
- * cadences are second-valued (bot decision intervals, match clock), and 20Hz is
+ * cadences are second-valued (AI decision intervals, match clock), and 20Hz is
  * what the shipping loop runs, so beat timings measured here line up with the
  * probes.
  */

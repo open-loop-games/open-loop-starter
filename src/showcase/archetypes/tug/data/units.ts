@@ -21,7 +21,7 @@ import type { UnitDef } from './types';
 export const UNITS: UnitDef[] = [
   {
     id: 'marine',
-    name: 'Marine',
+    displayName: 'Marine',
     role: 'Light infantry',
     archetypeTag: 'light',
     cost: 25,
@@ -32,7 +32,7 @@ export const UNITS: UnitDef[] = [
   },
   {
     id: 'vulture',
-    name: 'Vulture',
+    displayName: 'Vulture',
     role: 'Fast skirmish',
     archetypeTag: 'fast',
     cost: 50,
@@ -43,7 +43,7 @@ export const UNITS: UnitDef[] = [
   },
   {
     id: 'siege-tank',
-    name: 'Siege Tank',
+    displayName: 'Siege Tank',
     role: 'Siege artillery',
     archetypeTag: 'siege',
     cost: 150,
@@ -54,7 +54,7 @@ export const UNITS: UnitDef[] = [
   },
   {
     id: 'wraith',
-    name: 'Wraith',
+    displayName: 'Wraith',
     role: 'Air',
     archetypeTag: 'air',
     cost: 120,
@@ -65,7 +65,7 @@ export const UNITS: UnitDef[] = [
   },
   {
     id: 'battlecruiser',
-    name: 'Battlecruiser',
+    displayName: 'Battlecruiser',
     role: 'Capital ship',
     archetypeTag: 'capital',
     cost: 400,
@@ -76,7 +76,7 @@ export const UNITS: UnitDef[] = [
   },
   {
     id: 'ghost',
-    name: 'Ghost',
+    displayName: 'Ghost',
     role: 'Special ability',
     archetypeTag: 'special',
     cost: 200,

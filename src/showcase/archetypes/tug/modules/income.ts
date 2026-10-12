@@ -22,7 +22,7 @@ export const BASE_INCOME_RATE: DecimalSource = 8;
 // Module-scope per-side handles set during install. Sibling modules +
 // composables + UI import the typed accessors below; engine self-publishes
 // these via ResourceRegistryKey + ChainRegistryKey for cross-archetype /
-// external consumers (sim harness, devtools).
+// external consumers (balance harness, devtools).
 const incomeBySide = {} as Record<Side, Resource<DecimalSource>>;
 const incomeRateChainBySide = {} as Record<Side, ModifierChain>;
 

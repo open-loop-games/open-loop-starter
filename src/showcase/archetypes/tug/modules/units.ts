@@ -34,7 +34,7 @@ export const SequencerKey: Record<Side, InjectionKey<Sequencer<UnitSendMeta>>> =
 };
 
 /** Per-archetype send cooldown timers, exposed so the UI's UnitShop can render
- *  cooldown progress reactively. The sequencer's `canStart` already gates dispatch
+ *  cooldown progress reactively. The sequencer's `canStart` already blocks a start
  *  via these refs — exposure is consumer-side display only. */
 export const UnitsCooldownKey: Record<Side, InjectionKey<Record<string, Persistent<number>>>> = {
   player: Symbol('tug/match/player/units-cooldown') as InjectionKey<
@@ -61,7 +61,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       // Per-archetype send cooldown. One persistent ref per archetype, named
       // `cooldown-<archetypeId>` so save keys stay stable + greppable. Reset
       // to `def.sendCooldownSec` on each `'started'` event; ticked down to 0
-      // each frame; gates the sequencer via `canStart`.
+      // each tick; blocks the sequencer via `canStart`.
       const cooldown: Record<string, Persistent<number>> = {};
       for (const def of data.units) {
         cooldown[def.id] = persistent<number>(0, { id: `cooldown-${def.id}` });
@@ -69,7 +69,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
 
       // The shop's `Purchasable.purchase()` flow handles cost subtraction
       // through the cost requirement; `onPurchase` enqueues into the
-      // sequencer (one enqueue per level bought, so a buy-N covers N sends).
+      // sequencer (one enqueue per unit purchased, so a purchase of N covers N sends).
       // The sequencer's `canStart` then paces dispatch against per-archetype
       // cooldowns; the `'started'` handler spawns into the lane.
       //
@@ -80,7 +80,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
       const shop = createPurchasableCategory<UnitDef>({
         id: `tug/match/${side}/units`,
         mapPurchasable: (def) => ({
-          display: { title: def.name, description: def.role },
+          display: { title: def.displayName, description: def.role },
           requirements: createCostRequirement({
             resource: income,
             cost: tunable(registry, `units/${def.id}/cost`, () => def.cost),
@@ -128,7 +128,7 @@ export function createUnitsSideModule(data: TugData, side: Side): EngineModule {
 
       // Decrement cooldowns each tick. The sequencer's retry tick handles
       // re-evaluation of `canStart` independently — we just keep the timers
-      // moving. Floor at 0 so saved snapshots in the past still restart
+      // moving. Floor at 0 so a save loaded from the past still restarts
       // cleanly without negative drift.
       ctx.onTick((dt) => {
         for (const id of Object.keys(cooldown)) {

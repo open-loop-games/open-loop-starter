@@ -23,7 +23,7 @@ export type UnitArchetypeTag =
 export interface UnitDef {
   id: string;
   /** Display name (costume). */
-  name: string;
+  displayName: string;
   /** Display label for the role column (costume). */
   role: string;
   /** Counter-matrix axis tag — fixes role in the counter cycles. */
@@ -42,7 +42,7 @@ export interface UnitDef {
 export interface IncomeUpgradeDef {
   id: string;
   /** Display name (costume). */
-  name: string;
+  displayName: string;
   cost: DecimalSource;
   /** Multiplicative income bonus stacked on top of prior tiers. */
   multiplier: number;
@@ -79,7 +79,7 @@ export type AbilityEffect =
 export interface AbilityDef {
   id: string;
   /** Display name (costume). */
-  label: string;
+  displayName: string;
   cost: DecimalSource;
   /** Cooldown between successive activations, seconds. */
   cooldownSec: number;
@@ -93,17 +93,17 @@ export type CounterMatrix = number[][];
  * Believability calibration bundle. Per `composition-cookbook/
  * parameterized-personality.md` § Believability-calibration discipline:
  * separate from `Persona` because the design semantics differ — personas
- * say *what the agent wants to do*; believability says *how precisely it
+ * say *what the AI opponent wants to do*; believability says *how precisely it
  * executes*. Production = 0/0 (deterministic, predictable for the human
- * player); sim defaults > 0 break parameterized-vs-parameterized mirror
+ * player); headless-run defaults > 0 break parameterized-vs-parameterized mirror
  * stalemates without manufacturing the answer.
  */
 export interface TugBelievability {
   /** Probability per decision of picking second-best instead of optimal.
-   *  Cookbook range 0–40%; sim default 0.20. */
+   *  Cookbook range 0–40%; headless-run default 0.20. */
   suboptimalityRate: number;
   /** ±fraction of multiplicative noise on the cadence threshold. 0 = no
-   *  jitter; sim default 0.25 (±25% of the persona-scaled cadence). */
+   *  jitter; headless-run default 0.25 (±25% of the persona-scaled cadence). */
   cadenceJitterScale: number;
 }
 

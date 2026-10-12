@@ -21,14 +21,14 @@ import type { AbilityDef } from './types';
 export const ABILITIES: AbilityDef[] = [
   {
     id: 'artillery',
-    label: 'Orbital Strike',
+    displayName: 'Orbital Strike',
     cost: 800,
     cooldownSec: 45,
     effect: { kind: 'artillery', damage: 250, radius: 30 },
   },
   {
     id: 'reinforcement',
-    label: 'Drop-Pod Reinforcement',
+    displayName: 'Drop-Pod Reinforcement',
     cost: 300,
     cooldownSec: 60,
     effect: { kind: 'reinforcement', archetypeId: 'marine', count: 5 },

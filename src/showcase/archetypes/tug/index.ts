@@ -26,7 +26,7 @@ export {
   MatchKey,
   MetaKey,
   PrestigeKey,
-  TUG_MATCH_SCOPE_MODULES,
+  TUG_MATCH_RESET_CONTEXTS,
   createTugModules,
   type Side,
   type TugTunableKey,

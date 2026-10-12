@@ -1,8 +1,8 @@
 <!--
   TugAppRoot — routing + app chrome only (runs pre-`engine.start()`, on the slot
-  screen), so it reads no engine module state. The match lives in
+  screen), so it reads no module state. The match is in
   `<TugGameView>`, mounted under the post-start frame. The `onLoaded` seam below
-  is the one legitimate root-side post-start hook (offline catch-up +
+  is the one legitimate root-side post-start seam (offline catch-up +
   auto-starting a match); see `.claude/rules/app-root-discipline.md`.
 -->
 <script setup lang="ts">

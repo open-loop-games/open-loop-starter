@@ -13,16 +13,16 @@ this file is how you work inside it.
 | Key | Default | What it moves |
 |---|---|---|
 | `balance/baseIncomeRate` | `8` | Income accrual for **both** sides. Symmetric by rule — see Couplings. |
-| `fortress/hp` | `5_000` | How long a match can run before a base falls. The match-length ceiling. |
+| `fortress/hp` | `5_000` | How long a match can run before a base falls. The match-length limit. |
 | `units/<id>/cost` | per unit | Composition economics. The retune sweep multiplies costs at or above its top-tier floor as one axis. |
-| `income-upgrades/<id>/cost` | `400` / `1_200` / `3_600` | Buy-now-vs-bank tension — ×3 per rung. Refinery I's cost is the lever the greed persona's economic compound is gated on. |
-| `income-upgrades/<id>/multiplier` | `1.5` / `1.4` / `1.3` | Tapering compounding down the path, `×2.73` with all three bought. |
-| `counter-matrix/strongCounter` | `1.75` | **The signature knob.** How decisively a good counter-pick pays. |
+| `income-upgrades/<id>/cost` | `400` / `1_200` / `3_600` | Purchase-now-or-save tension — ×3 per rung. The greed persona's economic compound depends on Refinery I's cost. |
+| `income-upgrades/<id>/multiplier` | `1.5` / `1.4` / `1.3` | Tapering compounding down the path, `×2.73` with all three purchased. |
+| `counter-matrix/strongCounter` | `1.75` | **The signature tunable.** How decisively a good counter-pick pays. |
 | `counter-matrix/weakCounter` | `0.6` | The other half of the asymmetry — how badly a bad pick punishes. |
 
-**Persona and believability are not on this surface, deliberately.** They are how
-the opponent *behaves*, not what the design is worth. A difficulty dial exposed
-as a balance knob means every probe reading win-rate is measuring the dial
+**Persona and believability are not tunables, deliberately.** They are how
+the opponent *behaves*, not what the design is worth. A difficulty setting exposed
+as a tunable means every probe reading win-rate is measuring that setting
 instead of the design — if a fork wants asymmetric difficulty it gets its own
 namespace, never `balance/`.
 
@@ -39,26 +39,26 @@ Changing roster size changes the matrix, and `strongCounter` / `weakCounter` onl
 set how sharp its off-diagonal entries are. Twelve off-diagonal asymmetries carry
 the whole counter-pick design.
 
-**Refinery tiers gate sequentially.** Tier N requires tier N−1 bought, so the
+**Refinery tiers unlock in order.** Tier N requires tier N−1 purchased, so the
 cost ladder is a path rather than a menu. A cheap tier cannot be skipped to, and
 a tier's ROI is only ever evaluated from the state the previous tier left.
 
-**The sim runs the shipping AI on both sides; production does not.** Production
+**A headless run puts the shipping AI on both sides; production does not.** Production
 is a human against one AI, and there is no human in a headless run — so the AI
 plays itself. This is a deliberate fiction, and it means probe output describes
 a *design property* (is the matrix decisive?) rather than forecasting what a
 player will feel. The counter-vs-greed pairing is calibrated, not arbitrary:
 greed concentrates its composition on the highest-cost archetype, which is what
-gives the matrix something to bite on.
+gives the matrix something to act on.
 
-**Believability is sim noise, not balance.** Deterministic single-pass checks run
+**Believability is headless-run noise, not balance.** Deterministic single-pass checks run
 it at zero so one run suffices; the multi-seed probes run suboptimality `0.20`
 and cadence jitter `0.25` to produce outcome variance that actually responds to
-the knob being swept. Set it wrong in either direction and the probes go blind —
+the tunable being swept. Set it wrong in either direction and the probes go blind —
 deterministic and flat, or noisy and unreadable.
 
-**The match driver is sim-only.** Production lives inside a single match per
-session and never installs it. Without it a headless run ends after match one and
+**The match driver is headless-only.** Production stays inside a single match per
+play session and never installs it. Without it a headless run ends after match one and
 every cumulative multi-match beat silently never fires.
 
 ## Running a pass
@@ -82,30 +82,30 @@ projection file would buy a filename and lose the co-location. Don't add one
 without a second closed form to put beside it.
 
 - **`arc-probe.ts`** is the battery. Deterministic single-pass fire-time checks
-  ride one `runUntil` each; the sensitivity sweep and the ROI snapshot ride
+  use one `runUntil` each; the sensitivity sweep and the ROI snapshot use
   multi-seed matrix runs and read distribution statistics off the aggregate. It
-  prints a per-probe report and surfaces drift for you to look at rather than
+  prints a per-probe report and shows drift for you to look at rather than
   blocking on it.
   - The **signature probe** sweeps `strongCounter ∈ [0.5, 1.5]` against
     counter-persona win-rate versus a concentrating opponent, then proposes an
     elbow: the smallest value where win-rate clears the floor and the next step
-    has stopped buying much. A response curve plus a chosen point on it.
-  - The **ROI snapshot** rides the closed form
+    has stopped adding much. A response curve plus a chosen point on it.
+  - The **ROI snapshot** uses the closed form
     `paybackSeconds = cost / (rate × (multiplier − 1))`, recomputed from the data
     constants. That check is about the instrumentation agreeing with the
     arithmetic, not about whether the number is well-chosen.
-  - The **dominance gate** is pipes, not numbers: a 4×4 persona Cartesian that
+  - The **dominance check** is pipes, not numbers: a 4×4 persona Cartesian that
     passes if every cell runs end-to-end and at least one has wins. Red there
     means the per-archetype spawn/death instrumentation broke, not that the
     balance is bad — check it first when a sweep starts reporting nonsense.
 - **`retune-probe.ts`** is the wide sweep: refinery economics, base income, top-
   tier unit cost and matrix sharpness, Cartesian across the persona matrix. It is
-  ~17k runs and around half an hour of wall time, so it is a deliberate run, not
+  ~17k runs and around half an hour of wall-clock time, so it is a deliberate run, not
   something to reach for casually. It is hunting for a data slice where mass or
   counter has a viable matchup against *someone* — the failure it catches is a
   persona with no viable opponent at all.
-- **`roi-probe.ts`** is a fast no-sim read of the income ladder: cost, multiplier,
-  the rate each rung is bought from, payback, and cumulative multiplier — plus a
+- **`roi-probe.ts`** is a fast read of the income ladder with no simulation: cost,
+  multiplier, the rate each rung is purchased from, payback, and combined multiplier — plus a
   verdict on each claim `data/income.ts` § Balance makes about the ladder's shape.
   Run it after touching refinery numbers; it takes no time and catches the class
   of drift where the prose and the constants stop agreeing.
@@ -113,7 +113,7 @@ without a second closed form to put beside it.
 
 ## Known thin
 
-- **The signature knob barely does anything at default data.** The strongCounter
+- **The signature tunable barely does anything at default data.** The strongCounter
   sweep produces a near-flat win-rate curve across its whole range: the
   underlying economy and roster balance dominate matrix sensitivity, so the
   archetype's centerpiece is currently being drowned out. This is the single most
@@ -122,7 +122,7 @@ without a second closed form to put beside it.
   `retune-probe.ts` exists to find the slice where it stops being flat.
 - **The refinery ladder is retuned but unvalidated in play.** It now matches its
   stated design — costs `400 / 1_200 / 3_600` climbing ×3 against multipliers
-  tapering `1.5 / 1.4 / 1.3`, cumulative `×2.73`, with Refinery III's payback at
+  tapering `1.5 / 1.4 / 1.3`, combined `×2.73`, with Refinery III's payback at
   40% of the match limit so committing to it is a real bet. `roi-probe.ts` checks
   those claims. What is *not* established is that the ladder plays well against
   the unit economy: the numbers are internally coherent and have never been

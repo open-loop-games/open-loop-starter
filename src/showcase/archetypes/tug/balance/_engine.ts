@@ -6,23 +6,23 @@ import type { PersonaKey } from '../data/personality';
 import { createMatchDriverModule } from './_match-driver';
 
 /**
- * Sim-engine harness for balance probes + sweeps. Owns:
+ * Scratch-engine builder over the balance harness, for probes + sweeps. Owns:
  *
- * 1. `buildTugSimEngine(options?)` — builds a started, bot-driven engine
- *    instance with bilateral opponent bots + multi-match orchestration.
+ * 1. `buildTugScratchEngine(options?)` — builds a started engine with an
+ *    automated player on each side + multi-match orchestration.
  * 2. `OutcomeCapture` + `createOutcomeAnalyzer` — per-run match-outcome
- *    capture, used by `runMatrixUntil`'s analyzer hook.
+ *    capture, used by `runMatrixUntil`'s analyzer option.
  *
- * **Bilateral-symmetric bot pattern.** The production AI policy
+ * **Bilateral-symmetric automated players.** The production AI policy
  * (`createOpponentBotModule`, side-parameterized) is installed on BOTH
- * sides for sim. This collapses player-vs-bot policy asymmetry into
- * "production AI plays itself," so the only structural asymmetry knob
+ * sides for a headless run. This collapses player-vs-AI policy asymmetry
+ * into "production AI plays itself," so the only structural asymmetry
  * left is the per-side persona choice.
  *
- * **Sim matchup is chosen to exercise the design property, not to mirror
- * production.** Production runs human-vs-counter (no sim equivalent —
- * the sim has no human), so any "mirror production" framing for the sim
- * default is a category error. The signature probe
+ * **The headless matchup is chosen to exercise the design property, not to
+ * mirror production.** Production runs human-vs-counter (no headless
+ * equivalent — a headless run has no human), so any "mirror production"
+ * framing for the headless default is a category error. The signature probe
  * (counter-strong-sensitivity) measures matrix decisiveness, which
  * requires a *concentrating* opponent for the counter persona to detect
  * dominance and fire counters. `counter`-vs-`greed` is the calibrated
@@ -34,10 +34,10 @@ import { createMatchDriverModule } from './_match-driver';
  *
  * **Believability calibration applies independently** of matchup choice,
  * per `composition-cookbook/parameterized-personality.md` §
- * Believability-calibration discipline. It's a sim-discipline knob that
+ * Believability-calibration discipline. It is a headless-run parameter that
  * adds decision noise to the deterministic policy. Production has
  * `believability: 0/0` (deterministic AI, predictable for the human
- * player); sim default is `0.20/0.25`.
+ * player); the headless default is `0.20/0.25`.
  *
  * See `candidate-primitives.md` § bilateral-
  * symmetric sim-bot pattern for the candidate graduation entry.
@@ -50,7 +50,7 @@ const DEFAULT_SIM_BELIEVABILITY: TugBelievability = {
   cadenceJitterScale: 0.25,
 };
 
-export interface TugSimOptions {
+export interface TugScratchEngineOptions {
   /** Player-side persona. Default `'counter'`. */
   player?: PersonaKey;
   /** AI-side persona. Default `'greed'`. The counter-vs-greed pairing
@@ -58,26 +58,27 @@ export interface TugSimOptions {
    *  composition; counter fires against it. */
   ai?: PersonaKey;
   /** Believability calibration applied to BOTH sides. Default is the
-   *  sim-cookbook bundle (suboptimality 0.20, cadence jitter 0.25);
+   *  cookbook bundle (suboptimality 0.20, cadence jitter 0.25);
    *  math-only probes pass `{ suboptimalityRate: 0, cadenceJitterScale: 0 }`
    *  for determinism. Partial overrides fill from the default. */
   believability?: Partial<TugBelievability>;
-  /** Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse steps that the default cap would clamp. */
+  /** Raise the loop's `maxDeltaTime` cap — headless probes advance in coarse
+   *  steps that the default cap would clamp. */
   maxDeltaTime?: number;
 }
 
 /**
- * Build a started, sim-bot-driven engine for the Tug archetype.
+ * Build a started engine for the Tug archetype, with an automated player on
+ * each side.
  *
- * Mirrors Ambient's `buildAmbientSimEngine` shape line-for-line: unique
- * `persistenceNamespace` per call (essential for `runMatrixUntil`
+ * It uses a unique `persistenceNamespace` per call (essential for `runMatrixUntil`
  * parallelism — collisions are sneaky), `selectMod('sci-fi-armada')`,
  * `engine.start()` then `engine.stop()` so the live `intervalRate` doesn't
  * fire (solver iterations advance via `engine.tickDriver.advanceTime(tickDelta)`
  * from `runUntil` / `runMatrixUntil`), and finally `match.start()` to
  * kick off match 1.
  *
- * **Sim default: `{ player: 'counter', ai: 'greed' }`.** Counter-vs-greed:
+ * **Headless default: `{ player: 'counter', ai: 'greed' }`.** Counter-vs-greed:
  * greed's `top-tier` picker concentrates composition on the highest-cost
  * affordable archetype; counter's matrix-aware picker fires against it.
  *
@@ -85,9 +86,9 @@ export interface TugSimOptions {
  * current data balance, counter-vs-greed is heavily AI-favored; there's
  * no balanced range where `strongCounter` sweep produces a smooth win-
  * rate response. The underlying data balance is filed as a follow-up
- * — the procedural-persona tester-seat agent (cookbook
- * `procedural-personas.md`) is the canonical balance-discovery agent
- * shape. This harness lands the framework correctly; the signature
+ * — the procedural-persona tester seat (cookbook
+ * `procedural-personas.md`) is the canonical balance-discovery automated
+ * player. This builder implements the framework correctly; the signature
  * probe reports a flat curve + null proposed value at current data,
  * which IS the actionable signal: "data balance dominates strongCounter
  * sensitivity."
@@ -96,7 +97,7 @@ export interface TugSimOptions {
  * probes (beats 5, 6) work transparently inside a single `runMatrixUntil`
  * cell.
  */
-export function buildTugSimEngine(options?: TugSimOptions): Engine {
+export function buildTugScratchEngine(options?: TugScratchEngineOptions): Engine {
   const namespace = `tug-balance-${++engineCounter}`;
   const believability: TugBelievability = {
     suboptimalityRate:
@@ -132,11 +133,11 @@ export function buildTugSimEngine(options?: TugSimOptions): Engine {
  * `tug-outcome` analyzer surfaces through `summarize()`.
  *
  * **Why this pattern over `cell.runs[i].engine.tryInject(MatchKey)`:**
- * `cell.runs[i]` has no `engine` field — the harness builds the engine
+ * `cell.runs[i]` has no `engine` field — the balance harness builds the engine
  * fresh per `(cell, seed)` and discards it. AND `match.end()` calls
  * `reset.reset()` synchronously, which wipes `outcome.value` back to
- * `null`. The matchEnded event fires BEFORE the reset (per `match.ts`
- * lines 153–158), so subscribing here is the only way to read the
+ * `null`. The matchEnded event fires BEFORE the reset (see `end()` in
+ * `match.ts`), so subscribing here is the only way to read the
  * pre-reset outcome.
  *
  * `firstMatch*` fields snapshot the first match only — used by the

@@ -8,15 +8,15 @@ import type { IncomeUpgradeRow } from '../../composables/useIncomeUpgrades';
 /**
  * Income display + player income-upgrade shop.
  *
- * Top row: per-side accrual rates and current balances. Displayed rate is
+ * Top row: per-side accrual rates and current amounts. Displayed rate is
  * the static baseline preview (8/s, symmetric); the runtime rate flows
  * through `incomeRateChain` and includes any upgrade multipliers each side
- * has bought, but rendering the chain'd rate per side requires injecting
- * the chain here. Live balances reflect actual accrual.
+ * has purchased, but rendering the chain'd rate per side requires injecting
+ * the chain here. Live amounts reflect actual accrual.
  *
  * Tile row: player income-upgrade tiers — sequential, tier N requires
- * tier N-1 bought. Disabled state covers both unaffordable AND
- * sequentially-gated cases; engine's `canPurchase` is the unified flag.
+ * tier N-1 purchased. Disabled state covers both unaffordable AND
+ * out-of-order cases; engine's `canPurchase` is the unified flag.
  */
 const player = getIncome('player');
 const ai = getIncome('ai');
@@ -34,10 +34,10 @@ function fmtSec(s: number): string {
 
 // Two-line ROI tooltip: "Pays off in X" mirrors producer vocabulary;
 // "Catches rush at Y" answers the macro-vs-rush question directly.
-// Native `:title` attribute renders `\n` as a line break — cheapest
-// landing without pulling in a tooltip component.
+// Native `:title` attribute renders `\n` as a line break — the cheapest
+// option without pulling in a tooltip component.
 function rowTooltip(row: IncomeUpgradeRow): string {
-  if (row.bought.value) return `×${row.def.multiplier} income (active)`;
+  if (row.purchased.value) return `×${row.def.multiplier} income (active)`;
   return [
     `×${row.def.multiplier} income`,
     `Pays off in ${fmtSec(row.paybackSeconds.value)}`,
@@ -70,22 +70,22 @@ function rowTooltip(row: IncomeUpgradeRow): string {
         :key="row.def.id"
         class="olui-purchase-card upgrade-tile"
         :class="{
-          'upgrade-tile--bought': row.bought.value,
-          'upgrade-tile--ready': row.canPurchase.value && !row.bought.value,
+          'upgrade-tile--bought': row.purchased.value,
+          'upgrade-tile--ready': row.canPurchase.value && !row.purchased.value,
         }"
-        :disabled="!row.canPurchase.value || row.bought.value"
+        :disabled="!row.canPurchase.value || row.purchased.value"
         :title="rowTooltip(row)"
-        @click="row.buy()"
+        @click="row.purchase()"
       >
         <div class="upgrade-tile__title">
-          {{ row.def.name }}
+          {{ row.def.displayName }}
         </div>
         <div class="upgrade-tile__effect">×{{ row.def.multiplier }}</div>
         <div class="upgrade-tile__cost">
-          <template v-if="row.bought.value"> bought </template>
+          <template v-if="row.purchased.value"> purchased </template>
           <template v-else> {{ format(row.cost.value, 0) }} {{ resourceLabel }} </template>
         </div>
-        <div v-if="!row.bought.value" class="upgrade-tile__roi">
+        <div v-if="!row.purchased.value" class="upgrade-tile__roi">
           pays {{ fmtSec(row.paybackSeconds.value) }} · catches
           {{ fmtSec(row.crossoverSeconds.value) }}
         </div>

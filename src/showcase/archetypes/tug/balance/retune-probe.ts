@@ -1,15 +1,15 @@
 /**
  * Multi-axis retune sweep — Cartesian over the 4×4 persona matrix to find
  * a data slice where mass / counter / tech personas have viable
- * strategies, not just greed.
+ * policies, not just greed.
  *
  * Axes include refinery-1 cost / multiplier, baseIncomeRate, top-tier
- * unit cost, and counter-matrix sharpness — these are the levers the
- * dominance mechanism (greed's economic compound via refinery-1) is
- * gated on. Per `open-loop-engine/docs/consumer-guide-balance.md`
+ * unit cost, and counter-matrix sharpness — these are the balance constants
+ * the dominance mechanism (greed's economic compound via refinery-1)
+ * depends on. Per `open-loop-engine/docs/consumer-guide-balance.md`
  * § When prediction and truth disagree: before reshape,
- * perturb the constants the existing harness already exposes, including
- * the ones the dominance mechanism is gated on.
+ * perturb the constants the existing balance harness already exposes,
+ * including the ones the dominance mechanism depends on.
  *
  * Acceptance bar: for some slice, mass-row-max > 0.3 OR counter-row-max
  * > 0.3 — i.e. mass or counter has a viable matchup against at least one
@@ -18,12 +18,13 @@
  * (a persona is universally dominant).
  *
  * If found → small data PR retunes refinery economics. If not → reshape
- * territory (cardinality, predicate, or persona-knob), and the procedural-
- * persona agent path indicated with the structural-decisions list.
+ * territory (cardinality, predicate, or persona parameter), and the
+ * procedural-persona tester-seat path indicated with the structural-decisions list.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/tug/balance/retune-probe.ts`.
  * ~17k runs at 12 seeds × 16
- * personas × 108 slices; tractable in one session at ~30 min wall.
+ * personas × 108 slices; tractable in one agent session at ~30 min of
+ * wall-clock time.
  *
  * **Perturbation path.** Every slice perturbation routes through
  * `pushOverrides` on the tuning registry (engine-canonical). The
@@ -35,7 +36,7 @@
 import { runMatrixUntil, type Engine, type UntilCell } from '@open-loop/engine';
 import { BASE_INCOME_RATE, TugTuningRegistryKey, type TugTunables } from '../modules';
 import {
-  buildTugSimEngine,
+  buildTugScratchEngine,
   createOutcomeAnalyzer,
   createOutcomeCapture,
   type OutcomeCapture,
@@ -51,12 +52,12 @@ const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MAX_SIM_TIME_SEC = 35 * 60;
 const TICK_DELTA_SEC = 1.0;
 
-/** Refinery-1 multiplier — the actual lever for greed's economic edge.
- *  1.0 disables the eco strategy entirely; the shipping default sits at the
+/** Refinery-1 multiplier — the actual balance constant behind greed's economic edge.
+ *  1.0 disables the eco policy entirely; the shipping default sits at the
  *  top of this axis. */
 const REFINERY_MULT_AXIS = [1.0, 1.25, 1.5];
 
-/** Refinery-1 cost — gates *when* greed gets the income compound. Default
+/** Refinery-1 cost — decides *when* greed gets the income compound. Default
  *  400; 1600 = ~5min save (greed effectively never gets it). */
 const REFINERY_COST_AXIS = [100, 400, 1600];
 
@@ -132,7 +133,7 @@ function buildCell(
 ): UntilCell {
   return {
     id: name,
-    buildEngine: () => buildTugSimEngine({ player, ai }),
+    buildEngine: () => buildTugScratchEngine({ player, ai }),
     analyzers: (engine: Engine) => {
       const capture = createOutcomeCapture(engine);
       activeCapture = capture;

@@ -1,14 +1,13 @@
 /**
- * Parameterized-personality roster for the opponent bot. Plain consumer
- * composition — no engine primitive (per OL-721 study `parameterized-
- * personality-extraction-sketch.md` §2.5: "(c) close — no extract").
+ * Parameterized-persona roster for the AI opponent. Plain engine
+ * composition: a study of extracting it found no engine primitive to add.
  *
  * Each persona is a parameter vector over the shared decision-architecture
  * in `modules/opponent-bot.ts`. Same code path runs for every persona;
  * only the parameter values differ.
  *
- * **Three orthogonal dials.** `unitPicker` selects an action algorithm;
- * `minSpendCost` gates that algorithm's input pool (abstain to save funds
+ * **Orthogonal parameters.** `unitPicker` selects an action algorithm;
+ * `minSpendCost` filters that algorithm's input pool (abstain to save funds
  * when no eligible unit is affordable); `upgradeSurplusFactor` controls
  * income-upgrade investment greed; `cadenceMultiplier` scales the spend
  * cadence. The four canonical lane-push playstyles (mass / greed / counter /
@@ -37,14 +36,14 @@ export interface Persona {
    *  Default 0 = no floor. `tech` uses this to skip cheap units and
    *  save for capital-tier. */
   minSpendCost: number;
-  /** First N upgrade tiers are bought save-first: as soon as affordable
-   *  (balance ≥ cost), AND the bot abstains from unit buys while balance
-   *  < cost (forcing a genuine economy-first phase). After N tiers are
-   *  bought, subsequent un-bought tiers use `upgradeSurplusFactor`.
+  /** First N upgrade tiers are purchased save-first: as soon as affordable
+   *  (amount ≥ cost), AND the AI opponent abstains from unit purchases while
+   *  amount < cost (forcing a genuine economy-first phase). After N tiers are
+   *  purchased, subsequent unpurchased tiers use `upgradeSurplusFactor`.
    *  0 disables save-first entirely. */
   saveForUpgradeTiers: number;
-  /** Surplus multiplier for un-bought tiers beyond `saveForUpgradeTiers`:
-   *  buy when `balance ≥ K × cost`. `Infinity` means "never buy via
+  /** Surplus multiplier for unpurchased tiers beyond `saveForUpgradeTiers`:
+   *  purchase when `amount ≥ K × cost`. `Infinity` means "never purchase via
    *  opportunistic path" — combined with `saveForUpgradeTiers === 0` this
    *  disables the upgrade branch entirely. */
   upgradeSurplusFactor: number;
@@ -60,13 +59,13 @@ export interface Persona {
  * the first tier acceptable: ~20s of silence is bearable. Saving for the
  * second tier compounds that silence past a minute, which the opponent's
  * flood will exploit — the ladder climbs ×3 per rung while the payoff tapers,
- * so each further rung is a longer bank for less. So `greed` saves only for
+ * so each further rung is a longer save for less. So `greed` saves only for
  * tier 1 and accepts opportunistic-or-never for tiers 2/3; the tier-1 income
  * multiplier alone is the persona's economic identity.
  *
  * `counter` and `mass` are tempo-first; they don't sacrifice early units
  * for economy. With `saveForUpgradeTiers: 0` and `upgradeSurplusFactor:
- * Infinity`, neither persona ever buys an upgrade — they live on the
+ * Infinity`, neither persona ever purchases an upgrade — they stay on the
  * base income rate for the whole match. This gives `greed` an asymmetric
  * late-game advantage (the post-refinery-1 income gap) which the
  * methodology-#3 signature probe rides for the counter-strong response
@@ -86,12 +85,12 @@ export const PERSONAS: Record<PersonaKey, Persona> = {
   },
   // Eco-first: silent ~20s while saving for refinery-1, then top-tier
   // units on a +50% income engine. Vulnerable to early floods; dominant
-  // late. The only persona that buys upgrades.
+  // late. The only persona that purchases upgrades.
   greed: {
     unitPicker: 'top-tier',
     minSpendCost: 0,
     saveForUpgradeTiers: 1,
-    upgradeSurplusFactor: Infinity, // tiers 2/3 never bought via opportunistic
+    upgradeSurplusFactor: Infinity, // tiers 2/3 never purchased via opportunistic
     cadenceMultiplier: 1.0,
   },
   // Reactive composition-picker — the production AI default. Reads

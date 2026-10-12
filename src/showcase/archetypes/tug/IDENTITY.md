@@ -4,7 +4,7 @@
 > names, over `scaled-opposition` + `positional-effect` + `loss-on-failure` +
 > `ending`, with `meta-progression` carrying a career across matches**, and the
 > opponent's economy as a live zero-sum pressure source. You author pressure
-> against another agent authoring pressure in the same shared space; what you earn
+> against an opponent authoring pressure in the same shared space; what you earn
 > outlasts the match.
 
 **Spine-formed.** The SciFi Armada content (units, personas, counter-matrix) is
@@ -27,7 +27,7 @@ the units auto-walk toward the opponent's base; theirs auto-walk toward yours;
 when the two streams meet somewhere in the middle they resolve combat without
 commands, and the survivors keep walking. The front-line drifts toward whichever
 side is losing DPS races, and the match ends when one base's HP reaches zero.
-The player's decisions are composition (what unit types to buy), timing (send
+The player's decisions are composition (what unit types to purchase), timing (send
 now or bank for a larger wave), counter-reading (opponent massed light armor —
 pivot to splash), and upgrade allocation (income upgrades delay presence now but
 pay off later). Moment-to-moment APM is low **by design**; strategic depth lives
@@ -56,15 +56,15 @@ Two structural properties make it _this_ archetype rather than a solo producer:
 
 - **The opponent economy is a live pressure source that ships as game code.**
   The AI (`modules/opponent-bot.ts`, side-parameterized) is a real module, not a
-  harness fixture — its auto-send _is_ the adversarial mechanic the player reads
+  balance-harness fixture — its auto-send _is_ the adversarial mechanic the player reads
   and counters. The player, by contrast, is a **human** (manual send, low APM by
-  design); there is no player auto-send policy to ship. In headless sim the
+  design); there is no player auto-send policy to ship. In a headless run the
   shipping AI plays _both_ sides (bilateral-symmetric) precisely because there is
-  no human — a deliberate sim fiction, harness-side by the automation-as-game-code
-  convention's carve-out.
+  no human — a deliberate headless fiction, on the balance-harness side by the
+  automation-as-game-code convention's carve-out.
 - **The counter matrix is data, not a chain** — an N×N damage-type multiplier
   table the per-tick combat resolver reads as a 2D lookup. Its _sharpness_
-  (`strongCounter`) is the signature balance knob, and the archetype's centerpiece
+  (`strongCounter`) is the signature tunable, and the archetype's centerpiece
   metric is the sensitivity of counter-pivots-per-match to it (methodology #3).
 
 ## The arc — beat map
@@ -92,9 +92,9 @@ match limit.
 ## Growth ports (validated-but-deferred)
 
 - **Cross-match meta-progression** — the line's defining layer, not an optional
-  direction: `modules/prestige.ts` + `metaProgressionEnabled` gate ship dormant
-  (production skeleton: off). The between-match window is where a persistent
-  power/roster layer grows in, and it lands with its spine term.
+  direction: `modules/prestige.ts` + the `metaProgressionEnabled` flag ship dormant
+  (production skeleton: off). The between-match window is where a lifetime
+  power/roster layer grows in, and it is added with its spine term.
 - **Opponent-persona rotation** — persona is bound at module install today; the
   `balance/_match-driver.ts` between-match seam is the documented insertion point for a
   player-facing "rotate opponents per match" toggle or a tuner sweeping persona
@@ -102,9 +102,9 @@ match limit.
 - **Spendable abilities** — `data/abilities.ts` sketches an active-ability layer
   over the passive send loop.
 - **Player-side automation** — tug has no player-facing automation today;
-  `modules/opponent-bot.ts` is an AI opponent, which is gated by install-presence
-  rather than a tier. An auto-sender or auto-upgrade layer is the shape that would
-  earn an `AutomationTiers` ladder, per `.claude/rules/archetype-authoring.md`
+  `modules/opponent-bot.ts` is an AI opponent, which install-presence blocks
+  rather than an automation tier. An auto-sender or auto-upgrade layer is the shape
+  that would qualify for an `AutomationTiers` ladder, per `.claude/rules/archetype-authoring.md`
   § Conformance.
 - **Live PvP** — the overview's endgame: against a second human the counter
   space becomes combinatorial. The shipping AI is the single-player stand-in.
@@ -115,9 +115,9 @@ match limit.
 | ---------------------------- | ------------------------------------------------- | --------------------------------------------------- |
 | income (substrate)           | per-side income `Resource` + rate chain           | both sides accrue symmetrically at `baseIncomeRate` |
 | `escalating-price` upgrades  | geometric refinery ladders (`tunable()` costs)    | the fixed-strategy ROI surface (methodology #5)     |
-| unit production + send       | per-side unit shop + sequencer + cooldowns        | send dispatches a unit into the shared lane         |
+| unit production + send       | per-side unit shop + sequencer + cooldowns        | a send puts a unit into the shared lane             |
 | the shared lane (no pattern) | single shared `lane` module, all-pairs combat     | fortress treated as just-another opposing unit      |
-| `type-effectiveness`         | N×N data table read by the combat resolver        | `strongCounter` sharpness = signature knob          |
+| `type-effectiveness`         | N×N data table read by the combat resolver        | `strongCounter` sharpness = signature tunable       |
 | Adversarial pressure         | `modules/opponent-bot.ts` (side-parameterized AI) | ships as game code; auto-send IS the mechanic       |
 | Match orchestration          | `modules/match.ts` (start/end/reset, events)      | `matchEnded` fires pre-reset — capture then         |
 | Perturbation                 | module `TuningRegistry` (`tunable()`)             | unit costs, refinery, fortress HP, matrix sharpness |
@@ -125,18 +125,18 @@ match limit.
 ## Balance model
 
 Measure-and-record — the signature is a distribution response curve, not a
-fire-time. `BALANCING.md` beside this file is the working guide: the knobs, what
+fire-time. `BALANCING.md` beside this file is the working guide: the tunables, what
 couples to what, and how to read each probe. In brief:
 
 - **The spine, as prose + math** — the `// ─── Balance ───` sections in
   `data/*.ts` name each unit cost, matrix cell and refinery value with its
   coupling.
 - **The probes** — `balance/arc-probe.ts` drives the real engine and the
-  **shipping AI** through `balance/_engine.ts`'s bilateral sim-engine builder: fire-time
+  **shipping AI** through `balance/_engine.ts`'s bilateral scratch-engine builder: fire-time
   checks, the counter-strong sensitivity signature, an income-upgrade ROI
   snapshot, match-duration statistics, and a framework-correctness dominance
-  gate that verifies instrumentation rather than tuning anything.
-  `balance/retune-probe.ts` sweeps the persona matrix for a viable-strategy data
+  check that verifies instrumentation rather than tuning anything.
+  `balance/retune-probe.ts` sweeps the persona matrix for a viable-policy data
   slice. Both lean on `balance/_match-driver.ts` for cumulative multi-match beats.
 - **The behavioral suites** — `sim/match-scope.test.ts` covers match-scope reset
   and `sim/tug.sim.test.ts` the behavioral shape. `sim/data-invariants.test.ts`

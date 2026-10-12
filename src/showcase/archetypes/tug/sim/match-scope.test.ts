@@ -33,7 +33,7 @@ describe('tug match-scope reset (structural invariant)', () => {
     expect(Number(match().fortressHp.ai.value)).toBe(5_000);
     expect(match().outcome.value).toBe(null);
 
-    // 2. Mutate match-scope state across every enumerated module surface so
+    // 2. Mutate match-scope state across every enumerated module so
     //    we can later assert the reset cleared each one. Skip income +
     //    cooldowns + sequencer queues — those are exercised by the AI test
     //    below; here we focus on match-orchestrator-owned state plus the
@@ -106,8 +106,8 @@ describe('tug AI opponent (default counter persona)', () => {
 
     match().start();
 
-    // Drop the player some minerals so they can buy at least once — without
-    // a player buy, there's no player sequencer 'started' event to observe,
+    // Drop the player some minerals so they can purchase at least once — without
+    // a player purchase, there's no player sequencer 'started' event to observe,
     // and acceptance asks both sides to fire.
     addResource(playerIncome, 100);
     playerShop.getPurchasable('marine')?.purchase();

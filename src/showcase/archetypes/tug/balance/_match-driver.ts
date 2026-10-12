@@ -2,24 +2,25 @@ import { persistent, type EngineModule } from '@open-loop/engine';
 import { MatchKey } from '../modules';
 
 /**
- * Sim-only multi-match orchestration. Subscribes to `match.on('matchEnded')`
+ * Headless-only multi-match orchestration. Subscribes to `match.on('matchEnded')`
  * and re-starts the next match on the following tick. Enables cumulative-arc
  * beats (beats 5 + 7) to fire across multiple matches inside a single
  * `runUntil` / `runMatrixUntil` driver — without
- * this module the sim engine ends after match 1 and cumulative probes
+ * this module a headless engine ends after match 1 and cumulative probes
  * never fire.
  *
  * **Why deferred-by-one-tick:** `match.end()` runs `emit('matchEnded')`
  * BEFORE its synchronous `reset.reset()` (see `modules/match.ts`, `end`).
- * A synchronous `match.start()` inside the listener would be wiped by the
+ * A synchronous `match.start()` inside the handler would be wiped by the
  * immediately-following reset. Deferring to the next tick lets the reset
  * settle before re-init.
  *
- * **Production never installs this module.** Production game lives inside
- * a single match per UI session; the player drives match transitions via
- * the match-end summary modal. Only `_engine.ts`'s `buildTugSimEngine` adds this module.
+ * **Production never installs this module.** The production game stays
+ * inside a single match per play session; the player drives match
+ * transitions via the match-end summary modal. Only `_engine.ts`'s
+ * `buildTugScratchEngine` adds this module.
  *
- * **Candidate primitive.** This pattern (sim-bot match driver) recurs in
+ * **Candidate primitive.** This pattern (a headless match driver) recurs in
  * any adversarial-state archetype with multi-match cumulative-arc beats.
  * See `candidate-primitives.md` § `createMatchDriverModule({ matchKey })`;
  * the policy installed atop it is the recipe half, `candidate-recipes.md`
@@ -31,13 +32,13 @@ import { MatchKey } from '../modules';
  * tick block is the natural insertion point for opponent-persona rotation
  * across matches. Today persona is bound at module install
  * (`createOpponentBotModule(data, side, { persona })`) — static for the
- * engine's lifetime; sim engines vary by constructing a fresh engine per
+ * engine's lifetime; headless engines vary it by constructing a fresh engine per
  * persona pair. When auto-rotation lands (player-facing "rotate opponents
  * per match" toggle, or tuner sweeping persona pairs Cartesian within one
  * engine), the canonical composition per
  * `parameterized-personality-extraction-sketch.md` §3.2 is
  * `createSequencer` with `canStart: () => matchEnded.value ? 'now' : 'notNow'`
- * plus `createRoundRobinStrategy` as the `FillStrategy`. That lands as a
+ * plus `createRoundRobinStrategy` as the `FillStrategy`. That is a
  * follow-up; the opponent-bot module would expose a runtime persona setter
  * for the apply step to mutate before `match.start()`.
  */

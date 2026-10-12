@@ -15,7 +15,7 @@
  * taper" and "the ladder is affordable inside a match" are design claims with
  * yes/no answers, so those print as verdicts and the numbers print as a table.
  *
- * Sequential gating matters for the arithmetic: tier N is only ever bought
+ * The unlock order matters for the arithmetic: tier N is only ever purchased
  * from the state tier N-1 left, so each rung's payback is computed against the
  * rate the prior rungs already granted, not against the base rate.
  *
@@ -38,27 +38,27 @@ interface RungRow {
   /** Income rate in effect when this rung is the next purchase. */
   rateBefore: number;
   paybackSec: number;
-  cumulativeMultiplier: number;
+  combinedMultiplier: number;
 }
 
 function ladder(): RungRow[] {
   const base = Number(BASE_INCOME_RATE);
   let rate = base;
-  let cumulative = 1;
+  let combined = 1;
   return DEFAULT_TUG_DATA.incomeUpgrades.map((def) => {
     const cost = Number(def.cost);
     const multiplier = Number(def.multiplier);
     const row: RungRow = {
       id: def.id,
-      name: def.name,
+      name: def.displayName,
       cost,
       multiplier,
       rateBefore: rate,
       paybackSec: cost / (rate * (multiplier - 1)),
-      cumulativeMultiplier: cumulative * multiplier,
+      combinedMultiplier: combined * multiplier,
     };
     rate *= multiplier;
-    cumulative *= multiplier;
+    combined *= multiplier;
     return row;
   });
 }
@@ -68,12 +68,12 @@ function main(): void {
 
   console.log('# Tug income ladder\n');
   console.log(`Base rate ${Number(BASE_INCOME_RATE)}/s; match limit ${MATCH_LIMIT_SEC / 60}min.\n`);
-  console.log('| rung | cost | mult | rate before | payback | cumulative |');
+  console.log('| rung | cost | mult | rate before | payback | combined |');
   console.log('|---|---|---|---|---|---|');
   for (const r of rows) {
     console.log(
       `| ${r.name} | ${r.cost.toLocaleString()} | ×${r.multiplier} | ${r.rateBefore.toFixed(1)}/s | ` +
-        `${r.paybackSec.toFixed(0)}s | ×${r.cumulativeMultiplier.toFixed(2)} |`,
+        `${r.paybackSec.toFixed(0)}s | ×${r.combinedMultiplier.toFixed(2)} |`,
     );
   }
 
@@ -92,7 +92,7 @@ function main(): void {
   console.log(`  cost ratio outruns payoff ratio:    ${costsOutpacePayoff ? 'OK' : 'MISMATCH'}`);
 
   if (!costsAscend) {
-    console.log('\n  A cheaper rung further along makes the gate meaningless — the');
+    console.log('\n  A cheaper rung further along makes the order meaningless — the');
     console.log('  player is never choosing, only walking. Check `data/income.ts`.');
   }
 

@@ -3,7 +3,7 @@ import { addResource, Decimal, runMatrixUntil, runUntil } from '@open-loop/engin
 import { DEFAULT_TUG_DATA } from '../data';
 import type { IncomeUpgradeDef } from '../data/types';
 import {
-  buildTugSimEngine,
+  buildTugScratchEngine,
   createOutcomeAnalyzer,
   createOutcomeCapture,
   type OutcomeCapture,
@@ -42,7 +42,7 @@ describe('framework — counter-strong sensitivity framework', () => {
       cells: [
         {
           id: `strong=${strong}`,
-          buildEngine: () => buildTugSimEngine(),
+          buildEngine: () => buildTugScratchEngine(),
           analyzers: (engine) => {
             const cap = createOutcomeCapture(engine);
             activeCapture = cap;
@@ -73,7 +73,7 @@ describe('framework — counter-strong sensitivity framework', () => {
     // engine-construction errors, scope-push wires through to lane.ts
     // combat, and the analyzer captures outcome for both cells. The
     // numerical signal at default data is currently flat (see
-    // bot.ts § Known limitation); this lock checks that the *framework*
+    // `_engine.ts` § Known limitation); this lock checks that the *framework*
     // doesn't regress, separately from the balance-tuning follow-up.
     const lo = runCellAtStrong(0.5);
     const hi = runCellAtStrong(1.5);
@@ -100,7 +100,7 @@ describe('framework — counter-strong sensitivity framework', () => {
 });
 
 describe('framework — income-upgrade ROI (math-only)', () => {
-  // Default state: no tiers bought, so `currentRate` is the base rate for
+  // Default state: no tiers purchased, so `currentRate` is the base rate for
   // every tier. Expectations recompute the canonical closed form from the
   // shipping data — `paybackSeconds = cost / (rate × (multiplier − 1))` — so
   // this asserts the instrumentation agrees with the arithmetic, not that any
@@ -109,8 +109,8 @@ describe('framework — income-upgrade ROI (math-only)', () => {
   const payback = (def: IncomeUpgradeDef, rate: number) =>
     Number(def.cost) / (rate * (Number(def.multiplier) - 1));
 
-  it('player-side ROI metrics match analytical at default state (no tiers bought)', () => {
-    const engine = buildTugSimEngine();
+  it('player-side ROI metrics match analytical at default state (no tiers purchased)', () => {
+    const engine = buildTugScratchEngine();
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player);
     expect(roi).toBeDefined();
     for (const def of DEFAULT_TUG_DATA.incomeUpgrades) {
@@ -121,12 +121,12 @@ describe('framework — income-upgrade ROI (math-only)', () => {
     }
   });
 
-  it('refinery-2 payback drops when refinery-1 is bought (chain reactivity)', () => {
-    // Pre-buy, refinery-2 sees the base rate. Post-buy, refinery-1's grant
-    // binds onto incomeRateChain, so the rate it sees is `BASE × r1.multiplier`
+  it('refinery-2 payback drops when refinery-1 is purchased (chain reactivity)', () => {
+    // Before the purchase, refinery-2 sees the base rate. After it,
+    // refinery-1's grant binds onto incomeRateChain, so the rate it sees is `BASE × r1.multiplier`
     // and its payback drops proportionally. That drop is the reactivity being
     // asserted; the magnitudes on either side come from the data.
-    const engine = buildTugSimEngine();
+    const engine = buildTugScratchEngine();
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player)!;
     const shop = getIncomeUpgrades('player');
     const income = getIncome('player');
@@ -146,7 +146,7 @@ describe('framework — income-upgrade ROI (math-only)', () => {
   });
 
   it('payback recomputes when baseRate tunable is perturbed at runtime', () => {
-    const engine = buildTugSimEngine();
+    const engine = buildTugScratchEngine();
     const roi = engine.tryInject(IncomeUpgradeRoiKey.player)!;
     const reg = engine.tryInject(TugTuningRegistryKey)!;
     const r1def = DEFAULT_TUG_DATA.incomeUpgrades[0]!;
@@ -178,11 +178,11 @@ describe('framework — per-archetype dominance framework', () => {
   let activeCapture: OutcomeCapture | null = null;
 
   it('lane unit-spawned + unit-killed events accumulate into OutcomeCapture buckets', () => {
-    const engine = buildTugSimEngine();
+    const engine = buildTugScratchEngine();
     const cap = createOutcomeCapture(engine);
     activeCapture = cap;
     // Run one match end-to-end so the lane fires spawn/kill events for
-    // both sides under the bilateral-symmetric sim-bot.
+    // both sides, with an automated player on each.
     const result = runUntil({
       engine,
       until: () => cap.firstMatchEnded,
@@ -207,13 +207,13 @@ describe('framework — per-archetype dominance framework', () => {
   it('persona-Cartesian runMatrixUntil exposes per-archetype spawn + spawnsInWin metrics', () => {
     // Tiny 2×2 sub-Cartesian (greed/counter × greed/counter) with N=2
     // seeds — enough to confirm the metric pipeline; the full 4×4 × 12-
-    // seed sweep lives in the probe runner, not in vitest.
+    // seed sweep is in the probe runner, not in vitest.
     const personas: Array<'greed' | 'counter'> = ['greed', 'counter'];
     const cells = personas.flatMap((player) =>
       personas.map((ai) => ({
         id: `p=${player}/ai=${ai}`,
-        buildEngine: () => buildTugSimEngine({ player, ai }),
-        analyzers: (engine: ReturnType<typeof buildTugSimEngine>) => {
+        buildEngine: () => buildTugScratchEngine({ player, ai }),
+        analyzers: (engine: ReturnType<typeof buildTugScratchEngine>) => {
           const cap = createOutcomeCapture(engine);
           activeCapture = cap;
           return [createOutcomeAnalyzer(cap)];

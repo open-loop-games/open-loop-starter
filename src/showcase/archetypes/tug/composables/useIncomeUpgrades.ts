@@ -7,31 +7,30 @@ import { getIncomeUpgrades, IncomeUpgradeRoiKey, TugDataKey, type Side } from '.
 
 export interface IncomeUpgradeRow {
   def: IncomeUpgradeDef;
-  /** Underlying engine purchasable. `purchase()` flips `bought`, applies
+  /** Underlying engine purchasable. `purchase()` flips `purchased`, applies
    *  the multiplicative grant onto the side's `incomeRateChain`. */
   purchasable: Purchasable;
-  /** True once this tier has been bought. The grant stays applied while
-   *  bought; reset wipes it at match boundary. */
-  bought: ComputedRef<boolean>;
-  /** True when both cost requirement AND sequential gate (prior tier
-   *  bought) are satisfied. Sequential gating prevents tier-3 buying
+  /** True once this tier has been purchased. The grant stays applied while
+   *  purchased; reset wipes it at match boundary. */
+  purchased: ComputedRef<boolean>;
+  /** True when both the cost and the sequential order (prior tier
+   *  purchased) are satisfied. The order blocks a tier-3 purchase
    *  while tier-2 is unavailable, even if income happens to suffice. */
   canPurchase: ComputedRef<boolean>;
   /** Cost of the next purchase, in resource units. Reactive against the
    *  tunable wrap (when applicable) — leaf-6 scope-pushes propagate. */
   cost: ComputedRef<number>;
   /** Time after purchase for the extra income to recoup the cost, in
-   *  seconds. Mirrors producer's `purchaseBeatSeconds` vocabulary
-   *  ("Pays off in 40s"). Sourced from `IncomeUpgradeRoiKey`. */
+   *  seconds: the payback period ("Pays off in 40s"). Sourced from `IncomeUpgradeRoiKey`. */
   paybackSeconds: ComputedRef<number>;
-  /** Total elapsed time until the eco-then-rush strategy catches a
-   *  pure-rush strategy in cumulative spendable, in seconds. The
+  /** Game time until the eco-then-rush policy catches a
+   *  pure-rush policy in cumulative spendable, in seconds. The
    *  strategically meaningful break-even ("Catches rush at 60s").
    *  Sourced from `IncomeUpgradeRoiKey`. */
   crossoverSeconds: ComputedRef<number>;
-  /** Buy this tier. Engine no-ops when `canPurchase` is false; UI uses
+  /** Purchase this tier. Engine no-ops when `canPurchase` is false; UI uses
    *  the disabled state to avoid the click. */
-  buy(): void;
+  purchase(): void;
 }
 
 export interface IncomeUpgradesView {
@@ -42,7 +41,7 @@ export interface IncomeUpgradesView {
 /**
  * Per-side income-upgrade shop view. Mirrors `useUnits` shape so the
  * IncomeBar panel can render upgrade tiles in the same disabled / ready
- * / bought state machine as unit cards. Sequential gating is encoded in
+ * / purchased state machine as unit cards. The sequential order is encoded in
  * the engine's purchasable requirement; UI only consumes `canPurchase`.
  */
 export function useIncomeUpgrades(side: Side): IncomeUpgradesView {
@@ -59,12 +58,12 @@ export function useIncomeUpgrades(side: Side): IncomeUpgradesView {
       out.push({
         def,
         purchasable,
-        bought: computed(() => purchasable.active.value),
+        purchased: computed(() => purchasable.active.value),
         canPurchase: computed(() => purchasable.canPurchase.value),
         cost: computed(() => Number(purchasable.getCost(1))),
         paybackSeconds: metrics.paybackSeconds,
         crossoverSeconds: metrics.crossoverSeconds,
-        buy: () => {
+        purchase: () => {
           purchasable.purchase(1);
         },
       });

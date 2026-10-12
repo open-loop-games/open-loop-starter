@@ -13,7 +13,7 @@ export interface UnitRow {
   canAfford: ComputedRef<boolean>;
   /** Seconds remaining on this archetype's send cooldown (0 when ready). */
   cooldownRemaining: ComputedRef<number>;
-  /** True when both cost and cooldown gates clear. UI sends only when ready. */
+  /** True when both the cost and the cooldown checks pass. UI sends only when ready. */
   ready: ComputedRef<boolean>;
   /** Send one unit. Always safe to call; engine no-ops when not ready. */
   send(): void;

@@ -40,7 +40,7 @@ export interface MatchApi {
   counterPivotsThisMatch: Persistent<number>;
   unitsSentByPlayer: Persistent<number>;
   /** Live state — true while a match is in progress (outcome === null AND
-   *  fortresses initialized). UI / AI policy gate on this. */
+   *  fortresses initialized). UI and AI policy check it. */
   inMatch: ComputedRef<boolean>;
   /** Initialize a fresh match: fortress HP to the tunable max, outcome null. */
   start(): void;
@@ -56,7 +56,8 @@ export interface MatchApi {
 export const MatchKey: InjectionKey<MatchApi> = Symbol('tug/match') as InjectionKey<MatchApi>;
 
 /**
- * Module ids whose persistent state is reset at match boundary. Engine wraps
+ * Persistent contexts the match-boundary reset clears (its
+ * `resetPersistentContexts`): one per match-scope module id. Engine wraps
  * each module's install in `withPersistentContext(mod.id, ...)` with NO outer
  * parent context, so `getPersistentContextRefs('tug/match')` does NOT walk
  * sibling modules by id-prefix alone — `contextChildren['tug/match']` stays
@@ -67,7 +68,7 @@ export const MatchKey: InjectionKey<MatchApi> = Symbol('tug/match') as Injection
  * override registry must survive match resets (otherwise leaf-6 pushed
  * scopes evaporate every match).
  */
-export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
+export const TUG_MATCH_RESET_CONTEXTS: readonly string[] = [
   'tug/match',
   'tug/match/fortress',
   'tug/match/lane',
@@ -77,17 +78,17 @@ export const TUG_MATCH_SCOPE_MODULES: readonly string[] = [
   'tug/match/ai/income-upgrades',
   'tug/match/player/units',
   'tug/match/ai/units',
-  // Per-side opponent bot. Production installs only the `'ai'` instance;
-  // `buildTugSimEngine` adds the `'player'` instance for unattended balance
-  // harnesses. Enumerating both is safe — `getPersistentContextRefs` returns
-  // empty for ids with no installed module.
+  // Per-side `opponent-bot` module. Production installs only the `'ai'`
+  // instance; `buildTugScratchEngine` adds the `'player'` instance for unattended
+  // balance-harness runs. Enumerating both is safe —
+  // `getPersistentContextRefs` returns empty for ids with no installed module.
   'tug/match/player/opponent-bot',
   'tug/match/ai/opponent-bot',
 ];
 
 /**
- * Match orchestrator. Owns match outcome, counter-pivot tally, time-elapsed
- * clock, units-sent counter, and the match-boundary `Reset`. Reads fortress
+ * Match orchestrator. Owns match outcome, counter-pivot tally, the match's
+ * game-time clock, units-sent counter, and the match-boundary `Reset`. Reads fortress
  * HP via `getFortress()` (3c topology — fortress module owns the resources)
  * and ends the match when either side's HP falls to 0. Subscribes to both
  * side sequencers' `'started'` events for cross-side counter-pivot inference +
@@ -107,13 +108,12 @@ export function createMatchModule(data: TugData): EngineModule {
       const lane = ctx.inject(LaneKey);
       const fortress = getFortress();
       const playerSequencer = ctx.inject(SequencerKey.player);
-      const aiSequencer = ctx.inject(SequencerKey.ai);
 
-      // Fortress HP and the tunable hp max live in the fortress module
+      // Fortress HP and the tunable hp max are in the fortress module
       // (3c topology) — match reads via `getFortress()` so both lane (for
       // engagement + damage) and match (for end-of-match detection) read
       // the same per-side resources. Match-scope reset clears these via
-      // `TUG_MATCH_SCOPE_MODULES`; `start()` re-initializes through
+      // `TUG_MATCH_RESET_CONTEXTS`; `start()` re-initializes through
       // `fortress.start()`.
       const fortressHp = fortress.hp;
 
@@ -132,9 +132,9 @@ export function createMatchModule(data: TugData): EngineModule {
 
       // Match-boundary reset. Listed module ids are enumerated explicitly
       // because the engine doesn't establish parent-child linkage between
-      // sibling modules at install time — see TUG_MATCH_SCOPE_MODULES comment.
+      // sibling modules at install time — see TUG_MATCH_RESET_CONTEXTS comment.
       const reset = createReset({
-        resetPersistentContexts: [...TUG_MATCH_SCOPE_MODULES],
+        resetPersistentContexts: [...TUG_MATCH_RESET_CONTEXTS],
       });
 
       function start(): void {
@@ -168,14 +168,14 @@ export function createMatchModule(data: TugData): EngineModule {
       // when opposing units damage it in combat. Match doesn't subscribe
       // to a `fortress-reached` event anymore — instead, the per-tick
       // watcher below polls hp ≤ 0 and triggers `end()`. Polling beats a
-      // Vue `watch()` here since we already have an onTick hook for
-      // match-time elapsed; one effect chain instead of two.
+      // Vue `watch()` here since we already have a tick handler for
+      // the match clock; one effect chain instead of two.
 
       // Counter-pivot inference. Detection is intentionally placeholder —
-      // simple "buy strong-counters AI's current dominant archetype"
+      // simple "purchase strong-counters AI's current dominant archetype"
       // instantaneous check, no time window. Window + dominance threshold
       // are tunable surfaces; revisit when the methodology #3 sweep
-      // surfaces a real shape. unitsSentByPlayer also accumulates here so
+      // finds a real shape. unitsSentByPlayer also accumulates here so
       // the meta-off arc predicate has a consistent counter source.
       const idxOf = new Map<string, number>();
       for (let i = 0; i < data.units.length; i++) idxOf.set(data.units[i].id, i);
@@ -211,11 +211,6 @@ export function createMatchModule(data: TugData): EngineModule {
         if (data.counterMatrix[pIdx][dIdx] > 1) counterPivotsThisMatch.value += 1;
       });
 
-      // AI sequencer subscription is a placeholder hook — leaf 6's tuner may
-      // want to detect AI-side counter-pivots for symmetric difficulty
-      // measurement. No-op for now; subscribed so the wiring is in place.
-      aiSequencer.on('started', () => {});
-
       // Match-time clock + fortress-fall + time-limit watcher.
       ctx.onTick((dt) => {
         if (outcome.value !== null) return;
@@ -233,7 +228,7 @@ export function createMatchModule(data: TugData): EngineModule {
         }
         matchTimeElapsed.value += dt;
         // 30-min match limit. Direct-Strike-typical; structural skeleton
-        // baseline, not a balance lever.
+        // baseline, not a balance constant.
         if (matchTimeElapsed.value >= 30 * 60) {
           end('time-limit');
         }

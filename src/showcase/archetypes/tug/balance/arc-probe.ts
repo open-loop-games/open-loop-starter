@@ -1,29 +1,29 @@
 /**
- * Tug sim-driven balance probes.
+ * Tug balance probes over headless runs.
  *
  * Methodology-#1 math-only locks (probes 1, 2) ride single-pass `runUntil`
- * with deterministic bots (believability 0/0). Methodology-#3 (probe 3 —
+ * with deterministic automated players (believability 0/0). Methodology-#3 (probe 3 —
  * signature counter-strong sensitivity) and methodology-#5 (probe 4 —
  * income-upgrade ROI snapshot) ride `runMatrixUntil` over N seeds.
  * Probe 5 is a methodology-#1 distribution lock on match-duration p50;
- * probe 6 is a framework-correctness archetype-dominance gate (no design
- * knob; the methodology kit doesn't currently name this shape — see
+ * probe 6 is a framework-correctness archetype-dominance check (no design
+ * tunable; the methodology kit doesn't currently name this shape — see
  * `../BALANCING.md`).
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/tug/balance/arc-probe.ts`.
  * Prints per-probe pass/fail report;
- * surfaces drift for human inspection rather than blocking on it.
+ * shows drift for human inspection rather than blocking on it.
  *
  * **Math-only vs MC split:**
  *   - math-only: `runUntil({engine, until, maxSimTime, tickDelta})` once
- *     per (perturbation, beat). Bot uses production-zero believability so
+ *     per (perturbation, beat). The automated player uses production-zero believability so
  *     the run is fully deterministic; one run suffices.
  *   - MC: `runMatrixUntil({cells, seeds, until, maxSimTime})` with N
  *     seeds; aggregate distribution-statistics read off
  *     `cell.aggregate.metrics['tug-outcome.<key>']` (per-run analyzer
  *     captures averaged) and `cell.aggregate.terminationTime.p50`
- *     (built-in termination distribution). MC probes use sim-default
- *     believability through `buildTugSimEngine` (suboptimality 0.20,
+ *     (built-in termination distribution). MC probes use the headless-default
+ *     believability through `buildTugScratchEngine` (suboptimality 0.20,
  *     cadence jitter 0.25) — the cookbook stalemate-breaker for the
  *     counter-vs-greed cell.
  *
@@ -35,7 +35,7 @@
  * which shifts win-rate continuously. Emits a proposed `strongCounter`
  * scalar where win-rate clears a depth-floor with elbow-room before
  * saturation. strongCounter is a design parameter (matrix decisiveness),
- * not an AI knob.
+ * not an AI parameter.
  */
 
 import {
@@ -53,11 +53,11 @@ import {
   type TugTunables,
 } from '../modules';
 import {
-  buildTugSimEngine,
+  buildTugScratchEngine,
   createOutcomeAnalyzer,
   createOutcomeCapture,
   type OutcomeCapture,
-  type TugSimOptions,
+  type TugScratchEngineOptions,
 } from './_engine';
 import { ARC_BEATS, BEAT_WINDOWS } from './beats';
 import { DEFAULT_TUG_DATA } from '../data';
@@ -69,13 +69,13 @@ const MAX_MATCH_SIM_TIME_SEC = 35 * 60;
 const TICK_DELTA_SEC = 1.0;
 
 /** 30-min match limit (inlined in `modules/match.ts`). Cached here for
- *  probe-side gating against match duration. */
+ *  probe-side checks against match duration. */
 const MATCH_TIME_LIMIT_SEC = 30 * 60;
 
 /** Default base income rate (inlined in `modules/income.ts`). Probe 1's
  *  multiplier sweep computes target perturbed values from this baseline. */
 
-/** Deterministic-bot bundle for math-only probes — zero believability. */
+/** Deterministic automated-player bundle for math-only probes — zero believability. */
 const DETERMINISTIC: Partial<import('../data/types').TugBelievability> = {
   suboptimalityRate: 0,
   cadenceJitterScale: 0,
@@ -103,12 +103,12 @@ let activeCapture: OutcomeCapture | null = null;
  *  Engine-canonical pattern — no separate override path. */
 function buildCell(
   name: string,
-  simOptions?: TugSimOptions,
+  engineOptions?: TugScratchEngineOptions,
   scopePerturbations?: Partial<TugTunables>,
 ): UntilCell {
   return {
     id: name,
-    buildEngine: () => buildTugSimEngine(simOptions),
+    buildEngine: () => buildTugScratchEngine(engineOptions),
     analyzers: (engine: Engine) => {
       const capture = createOutcomeCapture(engine);
       activeCapture = capture;
@@ -136,11 +136,11 @@ function buildCell(
 function runMatchScopeMC(
   name: string,
   seeds: number[],
-  simOptions?: TugSimOptions,
+  engineOptions?: TugScratchEngineOptions,
   scopePerturbations?: Partial<TugTunables>,
 ): CellResult {
   const result = runMatrixUntil({
-    cells: [buildCell(name, simOptions, scopePerturbations)],
+    cells: [buildCell(name, engineOptions, scopePerturbations)],
     seeds,
     until: () => activeCapture?.firstMatchEnded ?? false,
     maxSimTime: MAX_MATCH_SIM_TIME_SEC,
@@ -152,7 +152,7 @@ function runMatchScopeMC(
  *  Used by the math-only probes (1, 2). Builds a deterministic engine,
  *  pushes scope, runs to the predicate, restores. */
 function fireBeatUnderScope(beatId: string, scope: Partial<TugTunables>): number {
-  const engine = buildTugSimEngine({ believability: DETERMINISTIC });
+  const engine = buildTugScratchEngine({ believability: DETERMINISTIC });
   const beat = ARC_BEATS.find((b) => b.id === beatId);
   if (!beat) return Infinity;
   const reg = engine.tryInject(TugTuningRegistryKey)!;
@@ -342,8 +342,8 @@ function runCounterStrongSensitivityProbe(): CounterStrongResult {
   // produces a non-decreasing curve. The proposed-strongCounter scalar
   // is a forward-looking output; it may report null when the underlying
   // data balance dominates the sweep signal (currently the case at
-  // default data — see bot.ts § Known limitation). The follow-up
-  // procedural-persona tester-seat agent owns balance discovery for the
+  // default data — see `_engine.ts` § Known limitation). The follow-up
+  // procedural-persona tester seat owns balance discovery for the
   // SIGNATURE matchup.
   const pass = monotonic;
 
@@ -360,15 +360,15 @@ function runCounterStrongSensitivityProbe(): CounterStrongResult {
 
 const REFINERY_1_COST_SWEEP = [200, 400, 800, 1600, 3200];
 
-/** Conservative gate: half the match time limit. Probe 5 asserts the
+/** Conservative threshold: half the match time limit. Probe 5 asserts the
  *  empirical p50 lands in [50%, 95%] of the limit, so anything that fails
  *  to cross over by this threshold definitely doesn't pay off in a
  *  typical match. */
 const MATCH_DURATION_P50_SEC = MATCH_TIME_LIMIT_SEC * 0.5;
 
-/** Analytical defaults at engine-build state — no tiers bought, so every tier
+/** Analytical defaults at engine-build state — no tiers purchased, so every tier
  *  sees `currentRate = baseRate`. These are what the ROI ComputedRefs return
- *  at `buildTugSimEngine()`. Derived from the shipping data rather than
+ *  at `buildTugScratchEngine()`. Derived from the shipping data rather than
  *  restated, so a retune moves the expectation with the value; the ladder's
  *  own shape claims are checked by `roi-probe.ts`. */
 const ANALYTICAL_DEFAULT_PAYBACK: Record<string, number> = Object.fromEntries(
@@ -410,9 +410,9 @@ interface RoiVariantRow {
 interface RoiResult {
   rows: RoiVariantRow[];
   /** Smallest swept refinery-1 cost where crossover exceeds the match-
-   *  duration gate. The analytical "elbow" — the answer to "above what
+   *  duration threshold. The analytical "elbow" — the answer to "above what
    *  cost does macro-vs-rush collapse?" `null` when no swept value
-   *  trips the gate (current data is well below the elbow). */
+   *  passes the threshold (current data is well below the elbow). */
   proposedMaxCost: number | null;
   proposedReason: string;
   pass: boolean;
@@ -424,7 +424,7 @@ interface RoiResult {
 function readRoiSnapshot(
   scope?: Partial<TugTunables>,
 ): { tierId: string; paybackSec: number; crossoverSec: number }[] {
-  const engine = buildTugSimEngine();
+  const engine = buildTugScratchEngine();
   const reg = engine.tryInject(TugTuningRegistryKey)!;
   const cleanup = scope ? reg.pushOverrides('probe:roi-snapshot', scope) : null;
   try {
@@ -546,7 +546,7 @@ function runMatchDurationBoundProbe(): DurationResult {
   };
 }
 
-// ─── Probe 6 — per-archetype dominance (framework-correctness gate) ──────
+// ─── Probe 6 — per-archetype dominance (framework-correctness check) ─────
 
 const DOMINANCE_PERSONAS: PersonaKey[] = ['mass', 'greed', 'counter', 'tech'];
 const DOMINANCE_SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -714,7 +714,7 @@ function main(): void {
   console.log(`DURATION_PROBE_SEEDS = ${DURATION_PROBE_SEEDS}`);
   console.log(`TICK_DELTA_SEC = ${TICK_DELTA_SEC}\n`);
   console.log(
-    'Math-only probes (1, 2) override believability to 0/0 (deterministic); MC probes (3, 5) use sim-default 0.20/0.25 from buildTugSimEngine.\n',
+    'Math-only probes (1, 2) override believability to 0/0 (deterministic); MC probes (3, 5) use the headless default 0.20/0.25 from buildTugScratchEngine.\n',
   );
 
   const summary: ProbeRow[] = [];
@@ -808,7 +808,7 @@ function main(): void {
   console.log(renderTable(roiHeader, roiRows));
   console.log();
   console.log(
-    `match-duration gate = ${fmtSec(MATCH_DURATION_P50_SEC)} (50% of ${fmtSec(MATCH_TIME_LIMIT_SEC)} limit)`,
+    `match-duration threshold = ${fmtSec(MATCH_DURATION_P50_SEC)} (50% of ${fmtSec(MATCH_TIME_LIMIT_SEC)} limit)`,
   );
   console.log(
     `proposed max refinery-1 cost ≈ ${p4.proposedMaxCost != null ? p4.proposedMaxCost.toFixed(0) : 'unbounded in sweep range'}`,
@@ -818,7 +818,7 @@ function main(): void {
   summary.push({
     name: 'income-upgrade-roi',
     reading: `default tiers in tolerance; elbow ≈ ${p4.proposedMaxCost != null ? p4.proposedMaxCost.toFixed(0) : 'unbounded'}`,
-    expected: 'all variants cross over within match-p50 gate',
+    expected: 'all variants cross over within the match-p50 threshold',
     pass: p4.pass,
   });
 

@@ -9,7 +9,7 @@ export const PrestigeKey: InjectionKey<Reset> = Symbol('tug/meta/prestige') as I
  * `tug/meta` context back to defaults — clears `factionsUnlocked`,
  * `maxCounterPivotsAnyMatch`, and `matchesPlayed`.
  *
- * Mirrors Ambient's `prestige.ts` shape: thin `createReset` provider; any
+ * A thin `createReset` provider; any
  * conversion currency / multiplier accrual lives at the call site (a fork
  * extension, not skeleton). Match-scope state is NOT in this reset's scope —
  * the match-boundary reset in `match.ts` owns that surface.

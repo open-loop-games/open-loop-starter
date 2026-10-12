@@ -19,7 +19,7 @@ const matrix = useCounterMatrix();
 const { format } = useFormatting();
 
 const resourceLabel = 'minerals';
-const balance = computed(() => format(income.value, 0));
+const amount = computed(() => format(income.value, 0));
 
 function counterHints(archetypeId: string): string {
   const top = matrix.topStrongCounters(archetypeId, 2);
@@ -32,7 +32,7 @@ function counterHints(archetypeId: string): string {
   <div class="olui-surface unit-shop">
     <div class="unit-shop__header">
       <h3>Send units</h3>
-      <span class="unit-shop__balance"> {{ balance }} {{ resourceLabel }} </span>
+      <span class="unit-shop__balance"> {{ amount }} {{ resourceLabel }} </span>
     </div>
     <div class="unit-shop__grid">
       <Button
@@ -48,7 +48,7 @@ function counterHints(archetypeId: string): string {
         @click="row.send()"
       >
         <div class="unit-card__title">
-          {{ row.def.name }}
+          {{ row.def.displayName }}
         </div>
         <div class="unit-card__role">
           {{ row.def.role }}
