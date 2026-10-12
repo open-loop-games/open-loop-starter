@@ -5,7 +5,7 @@
  * Run: `pnpm exec vite-node src/showcase/archetypes/producer/balance/pacing-probe.ts`
  *
  * `producer-projection.ts` § 2 sizes `m` off beat time on the *isolated*
- * ladder — income held constant — and says in as many words that this does not
+ * ladder — the rate held constant — and says in as many words that this does not
  * predict felt cadence. `arc-probe.ts` reports one run-average beat for the
  * whole eight hours. Neither answers what the engine guide names as the actual
  * objective (§ Flow channels): **shape of play** — how much of the arc is spent
@@ -13,7 +13,7 @@
  *
  * **The beat is measured, not averaged.** An earlier cut of this probe binned
  * purchases into fixed windows and divided, which quietly capped the
- * instrument: at a window of W seconds the longest measurable beat is W, so a
+ * probe: at a window of W seconds the longest measurable beat is W, so a
  * 300s window could not report anything worse than the *first second* of
  * boredom — `boredom` is [300, 900) and `frustration` [900, 3600). It returned
  * "100% engaged" with frustration structurally unreachable. This version
@@ -42,7 +42,7 @@ async function main(): Promise<void> {
     seconds: ARC_SECONDS,
     sampleEverySeconds: 1,
     onSample: (reading) => samples.push(reading),
-    namespace: 'producer-pacing',
+    persistenceNamespacePrefix: 'producer-pacing',
   });
 
   // ── real inter-purchase gaps ────────────────────────────────────────────
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
   // ── 2. The arc, half hour by half hour ──────────────────────────────────
   console.log('\n═══ 2. The arc, half hour by half hour ═══\n');
   console.log(
-    `  ${col('elapsed', 11)}${pad('buys', 6)}${pad('median beat', 13)}  ${col('channel', 13)}${pad('rate/s', 12)}${pad('ref', 5)}${pad('rev', 5)}`,
+    `  ${col('elapsed', 11)}${pad('count', 6)}${pad('median beat', 13)}  ${col('channel', 13)}${pad('rate/s', 12)}${pad('ref', 5)}${pad('rev', 5)}`,
   );
   for (let mark = 1800; mark <= ARC_SECONDS; mark += 1800) {
     const inWindow = gaps.filter((g) => g.at > mark - 1800 && g.at <= mark);
@@ -103,13 +103,13 @@ async function main(): Promise<void> {
       `  ${col(hms(mark), 11)}${pad(
         inWindow.reduce((a, g) => a + g.count, 0),
         6,
-      )}${pad(median.toFixed(0) + 's', 13)}  ${col(classifyFlowChannel(median), 13)}${pad(at.headlineRate.toExponential(2), 12)}${pad(at.refinementsOwned, 5)}${pad(at.revisionsEarned, 5)}`,
+      )}${pad(median.toFixed(0) + 's', 13)}  ${col(classifyFlowChannel(median), 13)}${pad(at.totalRate.toExponential(2), 12)}${pad(at.refinementsOwned, 5)}${pad(at.revisionsEarned, 5)}`,
     );
   }
 
   // ── 3. Content coverage ─────────────────────────────────────────────────
   // The question the beat map cannot ask: once the last refinement and the last
-  // revision have landed, the rest of the arc is deepening with nothing new
+  // revision are reached, the rest of the arc is deepening with nothing new
   // arriving. That interval is a content decision, not a tuning one.
   console.log('\n═══ 3. Content coverage ═══\n');
   const lastNew = (pick: (r: ArcReading) => number, total: number, label: string): number => {
@@ -144,7 +144,7 @@ async function main(): Promise<void> {
   // allocation is gone are the discrete ones: a class appearing, a revision
   // firing, a refinement becoming affordable. Those are counted here.
   console.log('\n═══ 4. Whose beats were those? ═══\n');
-  const handoff = arc.tierAt.get('assisted') ?? 0;
+  const handoff = arc.automationTierAt.get('assisted') ?? 0;
   const auto = gaps.filter((g) => g.at > handoff).reduce((a, g) => a + g.count, 0);
   console.log(
     `  hand-off at ${hms(handoff)} — ${auto} of ${gaps.reduce((a, g) => a + g.count, 0)} purchases ` +

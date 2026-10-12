@@ -13,18 +13,18 @@ import { getMass } from './swarm';
 /**
  * Offline — what the swarm did while the player was away.
  *
- * Tick-sim catch-up: the absence is replayed through the live tick loop, so
+ * Simulated catch-up: the time away is replayed through the live game loop, so
  * every module — the dispatcher included — runs over it exactly as it would
  * have live. That is what keeps the spine intact (`../IDENTITY.md` § Offline
- * is a time-base map): an absence moves wall-clock time onto sim time and
- * changes nothing about the arc measured in sim time.
+ * is a time-base map): time away moves wall-clock time onto sim-time and
+ * changes nothing about the arc measured in sim-time.
  */
 
 export const OfflineKey: InjectionKey<OfflineApi> = Symbol(
   'producer/offline',
 ) as InjectionKey<OfflineApi>;
 
-/** One return from absence, as the welcome-back surface reports it. */
+/** One return after time away, as the welcome-back report shows it. */
 export interface OfflineReturn {
   /** Wall-clock seconds between the save and the return. */
   awaySeconds: number;
@@ -35,13 +35,13 @@ export interface OfflineReturn {
 }
 
 export interface OfflineApi {
-  /** The most recent return this session; `null` until one happens. */
+  /** The most recent return this play session; `null` until one happens. */
   lastReturn: Ref<OfflineReturn | null>;
   /**
-   * Replay the absence since `savedAt` (ms) through `tickDriver`.
+   * Replay the time away since `savedAt` (ms) through `tickDriver`.
    *
    * @param tickDriver the engine's driver — `engine.tickDriver`
-   * @param savedAt when the loaded save was written; `undefined` reads as no absence
+   * @param savedAt when the loaded save was written; `undefined` means no time away
    * @param now the return time in ms, defaulting to `Date.now()`
    * @returns the return, also written to `lastReturn`
    * @example offline.catchUp(engine.tickDriver, loadResult.timestamp)

@@ -7,8 +7,8 @@
   grow one for producer's sake, so the chain rides `extra` and is read back
   typed here.
 
-  What the override buys, and why the default renderer was not enough:
-    · the tier numeral, which is the drawing's item number
+  What the override gives, and why the default renderer was not enough:
+    · the rung numeral, which is the drawing's item number
     · a RichTooltip carrying `ChainBreakdown` — the four chains as a product,
       which IDENTITY names as the archetype's long-term pull. Hover the row,
       not the button, so the reading is available while deciding.
@@ -27,14 +27,14 @@ import type { ClassRow, ClassRowExtra } from '../../composables/useClassRows';
 
 const props = defineProps<{
   rows: ClassRow[];
-  headlineRate: DecimalSource;
+  totalRate: DecimalSource;
 }>();
 
-/** Share of total income, for the tooltip's context line. */
+/** Share of the total rate, for the tooltip's context line. */
 function contribution(row: ClassRow): string {
-  const total = Decimal.fromValue(props.headlineRate);
+  const total = Decimal.fromValue(props.totalRate);
   if (!total.gt(0)) return '—';
-  return `${Decimal.mul(row.displayRate.value, 100).div(total).toFixed(1)}% of income`;
+  return `${Decimal.mul(row.displayRate.value, 100).div(total).toFixed(1)}% of production`;
 }
 
 function extraOf(row: ClassRow): ClassRowExtra {
@@ -57,7 +57,7 @@ const costLabel = computed(() => 'mass');
     <template #row="{ row, pendingCount, pendingCost, purchase }">
       <RichTooltip side="right" :side-offset="10">
         <div class="ladder__row" :data-afford="row.canPurchase(pendingCount)">
-          <span class="ladder__tier">{{ extraOf(row).tier }}</span>
+          <span class="ladder__tier">{{ extraOf(row).rung }}</span>
           <span class="ladder__id">
             <span class="ladder__name">{{ row.displayName }}</span>
             <span class="ladder__desc">{{ extraOf(row).def.description }}</span>

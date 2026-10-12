@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, addResource } from '@open-loop/engine';
 import { boot, tick } from '../sim/harness';
-import { getClasses, getHeadlineRate, getLaunchCount, getMass, launch } from './swarm';
+import { getClasses, getTotalRate, getLaunchCount, getMass, launch } from './swarm';
 
 /**
  * What the swarm mechanic *does*. No magnitudes — every assertion here is a
@@ -30,11 +30,11 @@ describe('hand-launch', () => {
 });
 
 describe('the ladder', () => {
-  it('raises the headline rate when a class is bought', () => {
+  it('raises the total rate when a class is purchased', () => {
     addResource(getMass(), 1_000);
-    expect(num(getHeadlineRate())).toBe(0);
+    expect(num(getTotalRate())).toBe(0);
     getClasses().getProducer('seed')!.repeatable!.purchase(1);
-    expect(num(getHeadlineRate())).toBeGreaterThan(0);
+    expect(num(getTotalRate())).toBeGreaterThan(0);
   });
 
   it('charges more for each successive unit of a class', () => {
@@ -49,7 +49,7 @@ describe('the ladder', () => {
     }
   });
 
-  it('charges a bulk buy the same as the units bought one at a time', () => {
+  it('charges a bulk purchase the same as the units purchased one at a time', () => {
     addResource(getMass(), 1_000_000);
     const bulkStart = num(getMass().value);
     getClasses().getProducer('seed')!.repeatable!.purchase(5);

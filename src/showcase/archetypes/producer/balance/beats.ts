@@ -4,7 +4,7 @@
  * A beat is where the run turns. The windows in `../manifest.ts` are RECORDED
  * from probe runs, never authored as targets to tune toward
  * (`src/types.ts` § `BeatRef.recordedFireTimeRange`), so this file owns only the
- * predicates: what it means for each beat to have landed. The probe owns when.
+ * predicates: what it means for each beat to be reached. The probe owns when.
  */
 
 /** The readings a beat predicate is allowed to see. */
@@ -12,7 +12,7 @@ export interface ArcReading {
   /** Sim-seconds since the run began. */
   t: number;
   /** Aggregate mass/sec across every continuous class. Excludes the launcher. */
-  headlineRate: number;
+  totalRate: number;
   /** Units owned across every class. */
   fleetSize: number;
   /** Distinct classes with at least one unit. */
@@ -23,8 +23,8 @@ export interface ArcReading {
   refinementsOwned: number;
   /** Revisions earned. */
   revisionsEarned: number;
-  /** Highest automation rung reached. */
-  tier: string;
+  /** Highest automation tier reached. */
+  automationTier: string;
 }
 
 export interface BeatDef {
@@ -57,11 +57,11 @@ export const BEATS: BeatDef[] = [
     // crossing is measured. Do not read beat 2 as the felt hand-off.
     n: 2,
     label: 'The swarm outpaces the hand — ladder passes the click ceiling',
-    reached: (r) => r.headlineRate > CLICK_CEILING_PER_SECOND,
+    reached: (r) => r.totalRate > CLICK_CEILING_PER_SECOND,
   },
   {
     n: 3,
-    label: 'First refinement bought — the stack becomes a stack',
+    label: 'First refinement purchased — the stack becomes a stack',
     reached: (r) => r.refinementsOwned >= 1,
   },
   {
@@ -72,12 +72,12 @@ export const BEATS: BeatDef[] = [
   {
     n: 5,
     label: 'Dispatch opens — allocation leaves the player’s hands',
-    reached: (r) => r.tier !== 'manual',
+    reached: (r) => r.automationTier !== 'manual',
   },
   {
     n: 6,
     label: 'Managed dispatch — the rule starts weighing the wait',
-    reached: (r) => r.tier === 'managed',
+    reached: (r) => r.automationTier === 'managed',
   },
   {
     n: 7,

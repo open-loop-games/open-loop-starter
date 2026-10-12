@@ -49,7 +49,7 @@ export function tick(n = 1): Promise<void> {
   return handle.tick(n);
 }
 
-/** Step until `condition()` holds (or throw after `maxTicks`). */
+/** Tick until `condition()` holds (or throw after `maxTicks`). */
 export function tickUntil(condition: () => boolean, maxTicks?: number): Promise<number> {
   return handle.tickUntil(condition, maxTicks);
 }

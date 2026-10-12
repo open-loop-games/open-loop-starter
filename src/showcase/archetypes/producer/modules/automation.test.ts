@@ -11,7 +11,7 @@ import { DispatchKey } from './automation';
  * know it withholds is to fund the economy, run it, and watch nothing happen.
  *
  * That is not hypothetical here — the first arc walkthrough ran eight sim-hours
- * with the toggle on and bought exactly nothing, because no rung had opened.
+ * with the toggle on and purchased exactly nothing, because no rung had opened.
  */
 
 const num = (v: unknown): number => new Decimal(v as never).toNumber();
@@ -29,7 +29,7 @@ describe('the ladder withholds', () => {
     expect(dispatch().tiers.currentTierId.value).toBe('manual');
   });
 
-  it('buys nothing while locked, however much the player can afford', async () => {
+  it('purchases nothing while locked, however much the player can afford', async () => {
     addResource(getMass(), 1e9);
     dispatch().isActive.value = true;
     await tick(120);
@@ -38,7 +38,7 @@ describe('the ladder withholds', () => {
 });
 
 describe('once a rung opens', () => {
-  it('buys on its own when the toggle is on', async () => {
+  it('purchases on its own when the toggle is on', async () => {
     addResource(getMass(), 1e9);
     dispatch().tiers.unlock('assisted');
     dispatch().isActive.value = true;
@@ -63,7 +63,7 @@ describe('once a rung opens', () => {
   });
 });
 
-/** Own `n` Seeds for income, then empty the wallet so nothing is affordable. */
+/** Own `n` Seeds for a rate, then empty the mass so nothing is affordable. */
 function fundThenSpend(n: number): void {
   addResource(getMass(), 1e12);
   const seed = getClasses().getProducer('seed')!.repeatable!;
@@ -79,7 +79,7 @@ describe('saving for a pick', () => {
     expect(dispatch().waitsForCost.value).toBe(true);
   });
 
-  it('the managed rung holds cash for what it cannot yet afford, and buys nothing meanwhile', async () => {
+  it('the managed rung holds cash for what it cannot yet afford, and purchases nothing meanwhile', async () => {
     fundThenSpend(10);
     dispatch().tiers.unlock('managed');
     dispatch().isActive.value = true;

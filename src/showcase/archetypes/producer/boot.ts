@@ -17,17 +17,17 @@ export interface ProducerBootResult {
 }
 
 export interface ProducerEngineOptions {
-  /** Persistence namespace override. Unique per-engine; used to isolate sim runs. */
+  /** Persistence namespace override. Unique per engine; it isolates headless runs. */
   persistenceNamespace?: string;
   /** Extra modules registered alongside the default producer modules. */
   extraModules?: EngineModule[];
-  /** Raise the loop's `maxDeltaTime` cap. */
+  /** Raise the game loop's `maxDeltaTime` cap. */
   maxDeltaTime?: number;
 }
 
 /**
  * Create an engine instance pre-wired with the producer modules.
- * Does NOT call `engine.load()` — `ProducerAppRoot.vue`'s session composable
+ * Does NOT call `engine.load()` — `ProducerAppRoot.vue`'s play-session composable
  * owns the resume sequence.
  */
 export function createProducerEngine(options?: ProducerEngineOptions): { engine: Engine } {

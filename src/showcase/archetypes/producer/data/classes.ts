@@ -12,12 +12,12 @@ import { classBaseCost, classBaseRate } from './curve';
 // A self-replicating probe swarm. The ladder is a scale ladder — dust, then
 // asteroid, then moon, then planet, then star — so each name is a magnitude
 // marker before it is a noun. `revealAtFleetSize` is visibility only; what
-// actually gates a class is whether you can afford it.
+// actually blocks a class is whether you can afford it.
 
 interface ProbeClassCostume {
   id: ProbeClassId;
   scale: ProbeScale;
-  name: string;
+  displayName: string;
   description: string;
   revealAtFleetSize?: number;
 }
@@ -26,55 +26,55 @@ const COSTUME: ProbeClassCostume[] = [
   {
     id: 'seed',
     scale: 'dust',
-    name: 'Seed',
+    displayName: 'Seed',
     description: 'One probe, hand-launched, chewing interplanetary dust.',
   },
   {
     id: 'drone',
     scale: 'dust',
-    name: 'Drone',
+    displayName: 'Drone',
     description: 'A working replicator. It builds copies without being asked.',
     revealAtFleetSize: 5,
   },
   {
     id: 'foundry',
     scale: 'asteroid',
-    name: 'Foundry',
+    displayName: 'Foundry',
     description: 'An asteroid hollowed into a smelter.',
     revealAtFleetSize: 15,
   },
   {
     id: 'hauler',
     scale: 'asteroid',
-    name: 'Hauler',
+    displayName: 'Hauler',
     description: 'Moves belt mass to where the foundries are.',
     revealAtFleetSize: 30,
   },
   {
     id: 'ring',
     scale: 'moon',
-    name: 'Ring',
+    displayName: 'Ring',
     description: 'A moon disassembled into an orbital band.',
     revealAtFleetSize: 50,
   },
   {
     id: 'lathe',
     scale: 'planet',
-    name: 'Lathe',
+    displayName: 'Lathe',
     description: 'Takes a planet apart from the crust inward.',
     revealAtFleetSize: 75,
   },
   {
     id: 'swarm',
     scale: 'star',
-    name: 'Swarm',
+    displayName: 'Swarm',
     description: 'Collectors thick enough to dim the star they orbit.',
     revealAtFleetSize: 105,
   },
   {
     id: 'shell',
     scale: 'star',
-    name: 'Shell',
+    displayName: 'Shell',
     description: 'The star is enclosed. Nothing it emits leaves unused.',
     revealAtFleetSize: 140,
   },
@@ -109,15 +109,15 @@ export const PROBE_CLASSES: ProbeClassDef[] = COSTUME.map((costume, index) => ({
 // against the click yield (`./curve.ts` § Couplings, 1).
 //
 // Self-payback climbs ×1.25 per class, so a class's opener is ALWAYS worse than
-// the class below it at count zero. It prices past only once the class below
+// the class below it at count zero. Its payback passes only once the class below
 // has climbed `m^n` far enough — n = ln(1.25)/ln(m) ≈ 1.6 units, in isolation.
 //
 // That number is deliberately NOT the realized handoff depth, and what sets
-// the depth is whether the buyer may save. A buyer offered only what it can
+// the depth is whether the purchaser may save. A purchaser offered only what it can
 // afford keeps a class in service for tens of units, because the next one is
-// unaffordable at current income: it spends where it can rather than where it
-// would rather, and walks a steep descending ladder. A buyer that may hold
-// cash for the next class spends where it would rather, and the ladder comes
+// unaffordable at the current rate: it spends where it can rather than where it
+// would rather, and walks a steep descending ladder. A purchaser that may hold
+// mass for the next class spends where it would rather, and the ladder comes
 // out nearly flat — 76/74/73/71/70/68/66/65 under the shipping ladder, whose
 // managed rung saves (`balance/arc-probe.ts`, 8h). Neither shape is authored.
 //
@@ -135,5 +135,5 @@ export const PROBE_CLASSES: ProbeClassDef[] = COSTUME.map((costume, index) => ({
 //
 // `revealAtFleetSize` carries NO balance weight. It is spaced to reveal a class
 // a little before it is affordable, so the ladder reads as a ladder; if a probe
-// shows a class revealed long before or after it is first bought, this is the
+// shows a class revealed long before or after it is first purchased, this is the
 // constant to move and nothing downstream cares.

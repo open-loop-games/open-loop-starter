@@ -14,7 +14,7 @@ import { useModule } from '@/composables/useModule';
  * and both dispatch rungs all trigger on it. So the index doubles as the
  * progress reading the entry belongs to.
  *
- * **Session-scoped by design.** The log is not persisted: it records what
+ * **Ephemeral by design.** The log is not saved: it records what
  * happened while you were watching. A reload opens with a resume line rather
  * than a reconstructed history, because a history rebuilt from current state
  * would be fiction — the order and the fleet size at each past event are not
@@ -23,7 +23,7 @@ import { useModule } from '@/composables/useModule';
 export interface SystemLogEntry {
   /** Monotonic id — entries are never removed, only trimmed from the front. */
   id: number;
-  /** Fleet size when the entry landed. The log's index column. */
+  /** Fleet size when the entry was recorded. The log's index column. */
   at: DecimalSource;
   message: string;
 }
@@ -32,7 +32,7 @@ export interface SystemLogView {
   entries: Ref<SystemLogEntry[]>;
 }
 
-/** Ring cap. Long enough to cover a session's beats, short enough to render. */
+/** Ring cap. Long enough to cover a play session's beats, short enough to render. */
 const MAX_ENTRIES = 60;
 
 export function useSystemLog(fleetSize: Ref<DecimalSource>): SystemLogView {
@@ -64,7 +64,7 @@ export function useSystemLog(fleetSize: Ref<DecimalSource>): SystemLogView {
       watch(
         () => Decimal.gte(entry.producer.ownedCount.value, 1),
         (online, was) => {
-          if (online && !was) push(`${entry.def.name.toLowerCase()} class online`);
+          if (online && !was) push(`${entry.def.displayName.toLowerCase()} class online`);
         },
       ),
     ),

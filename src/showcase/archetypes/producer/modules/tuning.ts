@@ -13,7 +13,7 @@ import type { ProbeClassId } from '../data/types';
  *
  * Every key below has a live `tunable()` reader. That is a deliberate
  * constraint, not an accident: a key with no reader is a silent no-op under
- * `pushOverrides`, which reads as a working knob and perturbs nothing.
+ * `pushOverrides`: it looks like a working tunable and perturbs nothing.
  * Grep for `tunable(` to audit.
  *
  * **What is deliberately NOT here, and why.** Two of the archetype's most
@@ -21,7 +21,7 @@ import type { ProbeClassId } from '../data/types';
  *
  * - `COST_RATIO` (`m`) reaches the engine as `ProducerPurchaseOptions.
  *   costRatio`, typed `DecimalSource` rather than `Computable`, so it is
- *   read once at registration and a registered knob would never be re-read.
+ *   read once at registration and a registered tunable would never be re-read.
  *   Sweeping `m` means editing `data/curve.ts` and re-running, or composing
  *   the curve as a `Formula` at the wiring layer — `costCurve` in
  *   `src/balance/cost-curve.ts` is the battery for that, and it is what

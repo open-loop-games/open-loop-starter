@@ -8,7 +8,7 @@ import { OfflineKey } from './offline';
 import { OFFLINE_WINDOW_SECONDS } from '../data';
 
 /**
- * What a return from absence *does*. No magnitudes: how much an absence is
+ * What a return after time away *does*. No magnitudes: how much time away is
  * worth is the spine's question (`../IDENTITY.md` § Offline is a time-base
  * map), and `../balance/offline-probe.ts` measures it.
  */
@@ -22,7 +22,7 @@ const fleetSize = (): number =>
     .reduce((total, entry) => total + num(entry.producer.ownedCount.value), 0);
 const HOUR_MS = 3_600_000;
 
-/** Own one seed probe, so the swarm has an income to carry across an absence. */
+/** Own one seed probe, so the swarm has a rate to keep while offline. */
 function seedTheSwarm(): void {
   addResource(getMass(), 1e6);
   getClasses().getProducer('seed')!.repeatable!.purchase(1);
@@ -30,7 +30,7 @@ function seedTheSwarm(): void {
 
 beforeEach(() => boot());
 
-describe('returning after an absence', () => {
+describe('returning after time away', () => {
   it('advances the swarm across the time away', () => {
     seedTheSwarm();
     const before = num(getMass().value);
@@ -58,7 +58,7 @@ describe('returning after an absence', () => {
     expect(result.caughtUpSeconds).toBe(OFFLINE_WINDOW_SECONDS);
   });
 
-  it('treats a save with no timestamp as no absence', () => {
+  it('treats a save with no timestamp as no time away', () => {
     seedTheSwarm();
     const before = num(getMass().value);
     const result = offline().catchUp(getEngine().tickDriver, undefined);
@@ -76,8 +76,8 @@ describe('returning after an absence', () => {
   });
 });
 
-describe('the absence runs the same game as live play', () => {
-  it('banks the income while dispatch is still locked', () => {
+describe('time away runs the same game as live play', () => {
+  it('accumulates the production while dispatch is still locked', () => {
     seedTheSwarm();
     dispatch().isActive.value = true;
     const fleet = fleetSize();

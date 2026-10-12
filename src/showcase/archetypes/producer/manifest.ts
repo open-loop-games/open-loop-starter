@@ -4,10 +4,10 @@ import type { ArchetypeManifest } from '@/types';
  * Beat windows are RECORDED from `balance/allocation-probe.ts` — the min/max
  * across its three allocation rules over an 8h run — never authored as targets.
  * The probe's fourth run, `hybrid` barred from waiting, is excluded: it is the
- * control that prices saving, not a rule any rung grants, so it would widen a
+ * control that measures saving, not a rule any rung grants, so it would widen a
  * window with a run the game can never produce.
  * They are listed here in the order the beats are numbered, which is NOT the
- * order they land: beat 4 arrives before beat 3, and beat 2 lands fifth.
+ * order they are reached: beat 4 arrives before beat 3, and beat 2 is reached fifth.
  */
 export const manifest: ArchetypeManifest = {
   id: 'producer',
@@ -68,7 +68,7 @@ export const manifest: ArchetypeManifest = {
       label: 'Ladder passes the click ceiling',
       recordedFireTimeRange: [957, 1723],
     },
-    { n: 3, label: 'First refinement bought', recordedFireTimeRange: [248, 248] },
+    { n: 3, label: 'First refinement purchased', recordedFireTimeRange: [248, 248] },
     { n: 4, label: 'First revision earned', recordedFireTimeRange: [121, 121] },
     { n: 5, label: 'Dispatch opens', recordedFireTimeRange: [507, 507] },
     { n: 6, label: 'Managed dispatch', recordedFireTimeRange: [4091, 5241] },

@@ -23,7 +23,7 @@
  * says what saving toward a better pick is worth, with everything else held.
  *
  * It also settles an open question upstream: `studio/open-loop-starter#25`
- * c4920 prices Producer in the "Closes — no policy" row. The spread is the
+ * c4920 places Producer in the "Closes — no policy" row. The spread is the
  * evidence for or against.
  */
 
@@ -91,12 +91,12 @@ async function main(): Promise<void> {
   for (const run of RUNS) {
     const r = get(run).final;
     console.log(
-      `  ${col(run.label, 12)}${pad(r.headlineRate.toExponential(2), 14)}${pad(r.fleetSize, 8)}${pad(r.distinctClasses, 9)}${pad(r.revisionsEarned, 11)}${pad(r.refinementsOwned, 13)}`,
+      `  ${col(run.label, 12)}${pad(r.totalRate.toExponential(2), 14)}${pad(r.fleetSize, 8)}${pad(r.distinctClasses, 9)}${pad(r.revisionsEarned, 11)}${pad(r.refinementsOwned, 13)}`,
     );
   }
   console.log(
-    `\n  rate spread across the rules: ${spread(RULES.map((r) => get(r).final.headlineRate))}` +
-      `    hybrid / no-wait: ${(hybrid.final.headlineRate / noWait.final.headlineRate).toFixed(2)}×`,
+    `\n  rate spread across the rules: ${spread(RULES.map((r) => get(r).final.totalRate))}` +
+      `    hybrid / no-wait: ${(hybrid.final.totalRate / noWait.final.totalRate).toFixed(2)}×`,
   );
 
   const header = (first: string, tail = ''): void =>
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
 
   console.log('\n═══ Time to deploy each class ═══\n');
   header('class');
-  for (const c of hybrid.finalCounts) row(c.name, (r) => r.classAt.get(c.id) ?? Infinity);
+  for (const c of hybrid.finalCounts) row(c.displayName, (r) => r.classAt.get(c.id) ?? Infinity);
 
   console.log('\n═══ Time to each beat ═══\n');
   header('beat', '  label');
@@ -123,7 +123,7 @@ async function main(): Promise<void> {
 
   console.log('\n═══ Final ladder shape ═══\n');
   console.log(
-    `  ${col('run', 12)}${hybrid.finalCounts.map((c) => pad(c.name.slice(0, 7), 9)).join('')}`,
+    `  ${col('run', 12)}${hybrid.finalCounts.map((c) => pad(c.displayName.slice(0, 7), 9)).join('')}`,
   );
   for (const run of RUNS) {
     console.log(
@@ -138,13 +138,13 @@ async function main(): Promise<void> {
     const r = get(run);
     console.log(
       `  ${col(run.label, 12)}held ${pad(hms(r.holdSeconds), 8)}` +
-        `    refinements bought while held: ${pad(r.refinementsWhileHolding.count, 3)}` +
+        `    refinements purchased while held: ${pad(r.refinementsWhileHolding.count, 3)}` +
         ` (${r.refinementsWhileHolding.mass.toExponential(2)} mass)`,
     );
   }
   console.log(
-    `\n  The player and the dispatcher share one wallet. While hybrid holds, mass\n` +
-      `  banks, refinements come within reach sooner and the player buys them out\n` +
+    `\n  The player and the dispatcher share one amount of mass. While hybrid holds,\n` +
+      `  mass accumulates, refinements come within reach sooner and the player purchases them out\n` +
       `  of the savings. So the wait Δ is saving plus the refinements it brings\n` +
       `  forward, not saving alone. The player is the same in every run, so the\n` +
       `  gap is still the rule's — it is just not only the dispatcher's.\n`,
@@ -155,7 +155,7 @@ async function main(): Promise<void> {
     const times = RULES.map((run) => get(run).beatAt.get(beat.n)).filter(
       (t): t is number => t !== undefined,
     );
-    const range = times.length ? `[${Math.min(...times)}, ${Math.max(...times)}]` : 'never landed';
+    const range = times.length ? `[${Math.min(...times)}, ${Math.max(...times)}]` : 'never reached';
     console.log(`  beat ${beat.n}: ${range}`);
   }
 

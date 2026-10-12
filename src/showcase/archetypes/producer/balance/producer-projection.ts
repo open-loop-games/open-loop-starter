@@ -5,8 +5,8 @@
  *
  * The spine in runnable form (`.claude/rules/archetype-authoring.md` § Balance
  * — where each surface goes). It predicts; it does not discover. Everything
- * here is arithmetic over `../data/`, with one engine import — the harness's
- * `classifyFlowChannel`, a pure band classifier whose thresholds this file
+ * here is arithmetic over `../data/`, with one engine import — the balance harness's
+ * `classifyFlowChannel`, a pure flow-channel classifier whose thresholds this file
  * would otherwise restate by hand.
  *
  * Bucket: exponential family under piecewise × modifier-product composition
@@ -19,7 +19,7 @@ import { classifyFlowChannel } from '@open-loop/engine';
 import {
   COST_RATIO,
   OPENING_BEAT_SECONDS,
-  TARGET_BEAT_LEVEL,
+  TARGET_BEAT_PURCHASE_COUNT,
   TARGET_BEAT_SECONDS,
   CLASS_COST_STEP,
   CLASS_RATE_STEP,
@@ -41,13 +41,14 @@ const hms = (s: number): string =>
 
 // ── 1. The one derived number ───────────────────────────────────────────────
 function reportCostRatio(): void {
-  const derived = (TARGET_BEAT_SECONDS / OPENING_BEAT_SECONDS) ** (1 / (TARGET_BEAT_LEVEL - 1));
+  const derived =
+    (TARGET_BEAT_SECONDS / OPENING_BEAT_SECONDS) ** (1 / (TARGET_BEAT_PURCHASE_COUNT - 1));
   const drift = ((COST_RATIO - derived) / derived) * 100;
   const doubling = Math.LN2 / Math.log(COST_RATIO);
 
   console.log('═══ 1. The cost ratio is derived, not chosen ═══\n');
   console.log(
-    `  authored: T_1 = ${OPENING_BEAT_SECONDS}s, T_${TARGET_BEAT_LEVEL} = ${TARGET_BEAT_SECONDS}s`,
+    `  authored: T_1 = ${OPENING_BEAT_SECONDS}s, T_${TARGET_BEAT_PURCHASE_COUNT} = ${TARGET_BEAT_SECONDS}s`,
   );
   console.log(`  m = (T_n / T_1)^(1/(n−1)) = ${derived.toFixed(6)}`);
   console.log(`  data/curve.ts COST_RATIO  = ${COST_RATIO}   (drift ${drift.toFixed(3)}%)`);
@@ -72,7 +73,7 @@ function reportIsolatedBeats(): void {
     }
   }
   console.log(
-    `\n  HOLDS INCOME CONSTANT, so this sizes m and does NOT predict felt cadence.\n` +
+    `\n  HOLDS THE RATE CONSTANT, so this sizes m and does NOT predict felt cadence.\n` +
       `  Realized beat is a·m^n / (n · r · Π μ); both the n and the stack flatten it.\n` +
       `  Measured against this: see § 4 and arc-probe.ts.`,
   );
@@ -86,7 +87,7 @@ function reportLadder(): void {
     const a = Number(c.baseCost);
     const r = Number(c.baseRate);
     console.log(
-      `  ${col(c.name, 10)}${pad(a.toLocaleString(), 14)}${pad(r.toLocaleString(), 12)}${pad((a / r).toFixed(0), 10)}`,
+      `  ${col(c.displayName, 10)}${pad(a.toLocaleString(), 14)}${pad(r.toLocaleString(), 12)}${pad((a / r).toFixed(0), 10)}`,
     );
   }
   console.log(
@@ -161,22 +162,22 @@ function reportUniformDepthArc(): void {
   console.log(
     `  Σa_i = ${sumA.toLocaleString()}   Σr_i = ${sumR.toLocaleString()}   Σa/Σr = ${(sumA / sumR).toFixed(1)}s`,
   );
-  console.log(`\n  ${col('depth', 8)}${pad('elapsed', 12)}${pad('income/s', 16)}${pad('Πμ', 8)}`);
+  console.log(`\n  ${col('depth', 8)}${pad('elapsed', 12)}${pad('rate/s', 16)}${pad('Πμ', 8)}`);
 
   let t = 0;
   for (let n = 1; n <= 60; n++) {
     const stack = stackAt(n);
-    const income = n * sumR * stack;
-    t += (sumA * COST_RATIO ** n) / income;
+    const rate = n * sumR * stack;
+    t += (sumA * COST_RATIO ** n) / rate;
     if (n % 10 === 0 || n === 1) {
       console.log(
-        `  ${col(n, 8)}${pad(hms(t), 12)}${pad(income.toExponential(2), 16)}${pad(stack.toFixed(2), 8)}`,
+        `  ${col(n, 8)}${pad(hms(t), 12)}${pad(rate.toExponential(2), 16)}${pad(stack.toFixed(2), 8)}`,
       );
     }
   }
   console.log(
     `\n  Reference only. The shipping dispatcher never holds uniform depth — it\n` +
-      `  buys one class at a time by payback, which is the term this projection\n` +
+      `  purchases one class at a time by payback, which is the term this projection\n` +
       `  cannot carry (../IDENTITY.md § Where the closed form stops).`,
   );
 }

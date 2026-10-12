@@ -4,7 +4,7 @@ export default {
   defSuffixes: ['Def'],
   title: 'Producer — domain language',
   description:
-    'The classic big-number incremental: a geometric cost ladder under a multiplicative modifier stack, with no adversary, no board, no run and no reset.',
+    'The classic big-number incremental: a geometric cost ladder under multiplicative modifier chains, with no adversary, no board, no run and no reset.',
   curated: [
     {
       term: 'the frontier',
@@ -16,11 +16,11 @@ export default {
     },
     {
       term: 'refinement',
-      note: 'A bought one-shot multiplier, scoped to one class, to every class, or to the hand-launch. Distinct from a revision, which is earned rather than purchased.',
+      note: 'A purchased one-shot multiplier, scoped to one class, to every class, or to the hand-launch. Distinct from a revision, which is earned rather than purchased.',
     },
     {
       term: 'dispatch',
-      note: 'Handing allocation to the swarm. The automation ladder gates which selection rule applies; the rules themselves are engine primitives, not authored here.',
+      note: 'Handing allocation to the swarm. The automation ladder decides which selection rule applies; the rules themselves are engine primitives, not authored here.',
     },
   ],
 };

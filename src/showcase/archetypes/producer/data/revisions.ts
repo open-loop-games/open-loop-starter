@@ -21,125 +21,125 @@ export const REVISIONS: RevisionDef[] = [
   // ── 7 fleet-count ──
   {
     id: 'rev-quorum',
-    name: 'Quorum',
+    displayName: 'Quorum',
     description: 'Ten probes agree on a build order.',
-    requirement: (s) => s.fleetSizeAtLeast(10),
+    goal: (s) => s.fleetSizeAtLeast(10),
   },
   {
     id: 'rev-consensus',
-    name: 'Consensus',
+    displayName: 'Consensus',
     description: 'Twenty-five probes hold one shared plan.',
-    requirement: (s) => s.fleetSizeAtLeast(25),
+    goal: (s) => s.fleetSizeAtLeast(25),
   },
   {
     id: 'rev-lattice-sync',
-    name: 'Lattice Sync',
+    displayName: 'Lattice Sync',
     description: 'Fifty probes tick together.',
-    requirement: (s) => s.fleetSizeAtLeast(50),
+    goal: (s) => s.fleetSizeAtLeast(50),
   },
   {
     id: 'rev-standard-pattern',
-    name: 'Standard Pattern',
+    displayName: 'Standard Pattern',
     description: 'A hundred probes built from one template.',
-    requirement: (s) => s.fleetSizeAtLeast(100),
+    goal: (s) => s.fleetSizeAtLeast(100),
   },
   {
     id: 'rev-self-audit',
-    name: 'Self-Audit',
+    displayName: 'Self-Audit',
     description: 'Two hundred and fifty probes check each other.',
-    requirement: (s) => s.fleetSizeAtLeast(250),
+    goal: (s) => s.fleetSizeAtLeast(250),
   },
   {
     id: 'rev-error-correction',
-    name: 'Error Correction',
+    displayName: 'Error Correction',
     description: 'Copy drift is detected and reverted at five hundred.',
-    requirement: (s) => s.fleetSizeAtLeast(500),
+    goal: (s) => s.fleetSizeAtLeast(500),
   },
   {
     id: 'rev-canonical-build',
-    name: 'Canonical Build',
+    displayName: 'Canonical Build',
     description: 'A thousand probes. There is one right way to be a probe.',
-    requirement: (s) => s.fleetSizeAtLeast(1_000),
+    goal: (s) => s.fleetSizeAtLeast(1_000),
   },
 
   // ── 8 per-class, all at 25 units ──
   {
     id: 'rev-seed-doctrine',
-    name: 'Seed Doctrine',
+    displayName: 'Seed Doctrine',
     description: 'Twenty-five Seeds. Dust is a solved problem.',
-    requirement: (s) => s.classCountAtLeast('seed', 25),
+    goal: (s) => s.classCountAtLeast('seed', 25),
   },
   {
     id: 'rev-drone-doctrine',
-    name: 'Drone Doctrine',
+    displayName: 'Drone Doctrine',
     description: 'Twenty-five Drones replicating unattended.',
-    requirement: (s) => s.classCountAtLeast('drone', 25),
+    goal: (s) => s.classCountAtLeast('drone', 25),
   },
   {
     id: 'rev-foundry-doctrine',
-    name: 'Foundry Doctrine',
+    displayName: 'Foundry Doctrine',
     description: 'Twenty-five Foundries running the same smelt.',
-    requirement: (s) => s.classCountAtLeast('foundry', 25),
+    goal: (s) => s.classCountAtLeast('foundry', 25),
   },
   {
     id: 'rev-hauler-doctrine',
-    name: 'Hauler Doctrine',
+    displayName: 'Hauler Doctrine',
     description: 'Twenty-five Haulers on optimal transfer orbits.',
-    requirement: (s) => s.classCountAtLeast('hauler', 25),
+    goal: (s) => s.classCountAtLeast('hauler', 25),
   },
   {
     id: 'rev-ring-doctrine',
-    name: 'Ring Doctrine',
+    displayName: 'Ring Doctrine',
     description: 'Twenty-five Rings. Moons are inventory.',
-    requirement: (s) => s.classCountAtLeast('ring', 25),
+    goal: (s) => s.classCountAtLeast('ring', 25),
   },
   {
     id: 'rev-lathe-doctrine',
-    name: 'Lathe Doctrine',
+    displayName: 'Lathe Doctrine',
     description: 'Twenty-five Lathes. So are planets.',
-    requirement: (s) => s.classCountAtLeast('lathe', 25),
+    goal: (s) => s.classCountAtLeast('lathe', 25),
   },
   {
     id: 'rev-swarm-doctrine',
-    name: 'Swarm Doctrine',
+    displayName: 'Swarm Doctrine',
     description: 'Twenty-five Swarms drinking from twenty-five stars.',
-    requirement: (s) => s.classCountAtLeast('swarm', 25),
+    goal: (s) => s.classCountAtLeast('swarm', 25),
   },
   {
     id: 'rev-shell-doctrine',
-    name: 'Shell Doctrine',
+    displayName: 'Shell Doctrine',
     description: 'Twenty-five Shells. The sky is going dark on schedule.',
-    requirement: (s) => s.classCountAtLeast('shell', 25),
+    goal: (s) => s.classCountAtLeast('shell', 25),
   },
 
   // ── 4 lifetime-mass ──
   {
     id: 'rev-first-thousand',
-    name: 'First Thousand',
+    displayName: 'First Thousand',
     description: 'A thousand units of matter converted.',
     multiplier: DEEP_REVISION_MULTIPLIER,
-    requirement: (s) => s.lifetimeMassAtLeast(1e3),
+    goal: (s) => s.lifetimeMassAtLeast(1e3),
   },
   {
     id: 'rev-first-million',
-    name: 'First Million',
+    displayName: 'First Million',
     description: 'A million. The swarm stops reporting individual probes.',
     multiplier: DEEP_REVISION_MULTIPLIER,
-    requirement: (s) => s.lifetimeMassAtLeast(1e6),
+    goal: (s) => s.lifetimeMassAtLeast(1e6),
   },
   {
     id: 'rev-first-billion',
-    name: 'First Billion',
+    displayName: 'First Billion',
     description: 'A billion. Nobody is counting probes any more.',
     multiplier: DEEP_REVISION_MULTIPLIER,
-    requirement: (s) => s.lifetimeMassAtLeast(1e9),
+    goal: (s) => s.lifetimeMassAtLeast(1e9),
   },
   {
     id: 'rev-first-trillion',
-    name: 'First Trillion',
+    displayName: 'First Trillion',
     description: 'A trillion. The unit was chosen before it was needed.',
     multiplier: DEEP_REVISION_MULTIPLIER,
-    requirement: (s) => s.lifetimeMassAtLeast(1e12),
+    goal: (s) => s.lifetimeMassAtLeast(1e12),
   },
 ];
 
@@ -181,7 +181,7 @@ export const REVISIONS: RevisionDef[] = [
 // splice points themselves are the design payload — a step the player feels —
 // and their SPACING matters more than their size. Re-tune target: if the arc
 // probe reports bands so long that a revision is forgotten before the next
-// one lands, move the thresholds, not the multipliers.
+// one is earned, move the thresholds, not the multipliers.
 //
 // The per-class family sits at one depth (25) on purpose: it makes handoff
 // depth legible against `./curve.ts` § Flow-channel map, where 25 is late in

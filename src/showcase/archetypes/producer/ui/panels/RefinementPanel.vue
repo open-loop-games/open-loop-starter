@@ -10,7 +10,7 @@
 
   So the split happens in `useRefinementCells` and the grid is handed only the
   open cells, while the register below renders the installed ones as one strip.
-  This is NOT a battery defect — "where do bought things go" is a game
+  This is NOT a battery defect — "where do purchased things go" is a game
   decision, and a composition that answered it would be prescribing content.
   Recorded here rather than silently, per § Conformance.
 -->
@@ -30,7 +30,7 @@ const { open, installed, installedCount, total } = useRefinementCells();
       </div>
       <p class="refinements__register-body">
         <span v-for="def in installed" :key="def.id" class="refinements__entry">{{
-          def.name
+          def.displayName
         }}</span>
       </p>
     </div>

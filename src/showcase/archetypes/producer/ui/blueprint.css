@@ -399,7 +399,7 @@
 .producer .dispatch__locked {
   font-style: italic;
 }
-/* The hold, drawn as a dimension line to the target's price — the same
+/* The hold, drawn as a dimension line to the target's cost — the same
    grammar as the return report: solid cyan is mass banked, dashed redline is
    the span not yet built. Extension lines at both ends mark it as a measure. */
 .producer .dispatch__hold-label {
@@ -445,7 +445,7 @@
   font-style: italic;
 }
 
-/* ── return report: the absence as a dimension line ───────────────────────
+/* ── return report: the time away as a dimension line ───────────────────────
    Portaled by the modal stack, so it carries the sheet itself
    (`.producer-portal`) and the stack's frame steps back. Solid is the span the
    replay recorded; dashed redline is time past the window — the drafting

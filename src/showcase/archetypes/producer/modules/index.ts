@@ -12,7 +12,7 @@ export {
   MassLifetimeKey,
   buildProducerGameState,
   getClasses,
-  getHeadlineRate,
+  getTotalRate,
   getLaunchCount,
   getLauncher,
   getMass,

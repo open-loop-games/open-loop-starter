@@ -15,8 +15,8 @@ import { useFormatting } from '@/composables/useFormatting';
 const props = defineProps<{
   /** Mass produced by one hand-launch, after the click chain. */
   yieldPerLaunch: DecimalSource;
-  /** Swarm income per second — the thing the click is measured against. */
-  headlineRate: DecimalSource;
+  /** Swarm production per second — the thing the click is measured against. */
+  totalRate: DecimalSource;
 }>();
 
 const emit = defineEmits<{ launch: [] }>();
@@ -24,12 +24,12 @@ const emit = defineEmits<{ launch: [] }>();
 const { format } = useFormatting();
 
 /**
- * Share of income the click represents at one launch per second — the honest
+ * Share of production the click represents at one launch per second — the honest
  * ceiling, since a player cannot sustain more. Compared against the swarm's
  * continuous rate, so it falls as the ladder climbs.
  */
 const share = computed(() => {
-  const total = Decimal.add(props.headlineRate, props.yieldPerLaunch);
+  const total = Decimal.add(props.totalRate, props.yieldPerLaunch);
   if (Decimal.lte(total, 0)) return 1;
   return Decimal.div(props.yieldPerLaunch, total).toNumber();
 });
@@ -38,8 +38,8 @@ const dominated = computed(() => share.value < 0.1);
 
 const shareLabel = computed(() => {
   const pct = share.value * 100;
-  if (pct >= 1) return `${pct.toFixed(1)}% of income`;
-  if (pct >= 0.0001) return `${pct.toFixed(4)}% of income`;
+  if (pct >= 1) return `${pct.toFixed(1)}% of production`;
+  if (pct >= 0.0001) return `${pct.toFixed(4)}% of production`;
   return 'negligible';
 });
 </script>

@@ -4,8 +4,8 @@
  * Run: `pnpm exec vite-node src/showcase/archetypes/producer/balance/arc-probe.ts`
  *
  * Drives the REAL assembled engine and the shipping dispatcher (`_engine.ts`
- * supplies only the manual openers a player works) and records where each beat
- * lands. It prints; it does not assert — a probe that disagrees with the
+ * supplies only the manual openers a player works) and records each beat's
+ * fire time. It prints; it does not assert — a probe that disagrees with the
  * projection has done its job.
  *
  * This is the archetype's walkthrough check: the first surface that walks
@@ -36,20 +36,23 @@ async function main(): Promise<void> {
   }
 
   console.log('\n═══ The ladder as it was actually walked ═══\n');
-  console.log(`  ${col('class', 10)}${pad('first bought', 14)}${pad('final count', 14)}`);
+  console.log(`  ${col('class', 10)}${pad('first purchased', 16)}${pad('final count', 14)}`);
   for (const entry of arc.finalCounts) {
     const t = arc.classAt.get(entry.id);
     console.log(
-      `  ${col(entry.name, 10)}${pad(t === undefined ? 'NEVER' : hms(t), 14)}${pad(entry.count, 14)}`,
+      `  ${col(entry.displayName, 10)}${pad(t === undefined ? 'NEVER' : hms(t), 16)}${pad(entry.count, 14)}`,
     );
   }
 
   console.log('\n═══ Dispatch ═══\n');
-  for (const [tier, t] of arc.tierAt) console.log(`  ${col(tier, 12)}${pad(hms(t), 10)}`);
-  console.log(`  ${col('hand-buys', 12)}${pad(arc.handBuys, 10)}   before dispatch opened`);
+  for (const [automationTier, t] of arc.automationTierAt)
+    console.log(`  ${col(automationTier, 12)}${pad(hms(t), 10)}`);
+  console.log(
+    `  ${col('by hand', 12)}${pad(arc.handPurchases, 10)}   purchases before dispatch opened`,
+  );
 
   console.log('\n═══ Final state ═══\n');
-  console.log(`  headline rate      ${arc.final.headlineRate.toExponential(3)} /s`);
+  console.log(`  total rate         ${arc.final.totalRate.toExponential(3)} /s`);
   console.log(`  fleet size         ${arc.final.fleetSize}`);
   console.log(`  distinct classes   ${arc.final.distinctClasses}/${arc.finalCounts.length}`);
   console.log(`  refinements owned  ${arc.final.refinementsOwned}`);
@@ -61,7 +64,7 @@ async function main(): Promise<void> {
   const opening = arc.finalCounts[0];
   const realizedAverage = (HOURS * 3600) / Math.max(opening.count, 1);
   const isolated = OPENING_BEAT_SECONDS * COST_RATIO ** (opening.count - 1);
-  console.log(`  ${opening.name} reached ${opening.count} units in ${HOURS}h.`);
+  console.log(`  ${opening.displayName} reached ${opening.count} units in ${HOURS}h.`);
   console.log(
     `    realized average beat   ${realizedAverage.toFixed(1)}s  → ${classifyFlowChannel(realizedAverage)}`,
   );
@@ -69,16 +72,16 @@ async function main(): Promise<void> {
     `    isolated-ladder T(n)    ${isolated.toExponential(2)}s  → ${classifyFlowChannel(isolated)}`,
   );
   console.log(
-    `\n  The gap is income growth, and it is the reason data/curve.ts reads its\n` +
+    `\n  The gap is rate growth, and it is the reason data/curve.ts reads its\n` +
       `  flow-channel map as cost escalation rather than as felt cadence.`,
   );
 
   console.log('\n═══ The click hand-off ═══\n');
   const beat2 = arc.beatAt.get(2);
   const foundry = arc.classAt.get('foundry');
-  console.log(`  click ceiling        ${CLICK_CEILING_PER_SECOND}/s`);
-  console.log(`  ladder passes it     ${beat2 === undefined ? 'NEVER' : hms(beat2)}`);
-  console.log(`  third class bought   ${foundry === undefined ? 'NEVER' : hms(foundry)}`);
+  console.log(`  click ceiling           ${CLICK_CEILING_PER_SECOND}/s`);
+  console.log(`  ladder passes it        ${beat2 === undefined ? 'NEVER' : hms(beat2)}`);
+  console.log(`  third class purchased   ${foundry === undefined ? 'NEVER' : hms(foundry)}`);
   console.log(
     `\n  data/refinements.ts § Balance predicts the hand-off lands in the third\n` +
       `  class. Compare the two lines above rather than trusting the prose.`,

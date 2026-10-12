@@ -12,7 +12,7 @@ import type { ProducerData, ProducerGameState, RefinementDef } from '../data/typ
 import { buildProducerGameState, getClasses, getLauncher, getMass } from './swarm';
 
 /**
- * Refinements — the bought chain. One-shot purchasables whose `grants` bind a
+ * Refinements — the purchased chain. One-shot purchasables whose `grants` bind a
  * multiplicative modifier onto the chains their scope names, for as long as
  * they are owned.
  *
@@ -67,23 +67,27 @@ export function createRefinementsModule(data: ProducerData): EngineModule {
           const bound = chains.filter((c): c is ModifierChain => c !== undefined);
 
           const grants: Grant[] = bound.length
-            ? [{ chain: bound, multiplier: def.multiplier, description: def.name }]
+            ? [{ chain: bound, multiplier: def.multiplier, description: def.displayName }]
             : [];
 
           return {
-            display: { title: def.name, description: def.description },
+            display: { title: def.displayName, description: def.description },
             requirements: [
-              createCostRequirement({ resource: mass, cost: def.cost, description: def.name }),
+              createCostRequirement({
+                resource: mass,
+                cost: def.cost,
+                description: def.displayName,
+              }),
               createBooleanRequirement({
-                met: computed(() => def.requirement(gameState)),
+                met: computed(() => def.unlockWhen(gameState)),
                 description: def.description,
               }),
             ],
             limit: 1,
             // Owned-only, no partial reveal: a refinement the player cannot
             // yet unlock stays out of the grid entirely, so the grid reads as
-            // "what can I buy" rather than as a catalogue of locked rows.
-            visible: computed(() => def.requirement(gameState)),
+            // "what can I purchase" rather than as a catalogue of locked rows.
+            visible: computed(() => def.unlockWhen(gameState)),
             grants,
           };
         },

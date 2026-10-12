@@ -2,7 +2,7 @@ import { computed, type ComputedRef } from 'vue';
 import { Decimal, type DecimalSource, type Producer } from '@open-loop/engine';
 import type { ProducerRowData } from '@/ui/compositions';
 import type { ProbeClassDef } from '../data/types';
-import { getClasses, getHeadlineRate } from '../modules';
+import { getClasses, getTotalRate } from '../modules';
 
 /**
  * The ladder, adapted to the `ProducerRowData` contract.
@@ -17,16 +17,16 @@ export interface ClassRowExtra {
   def: ProbeClassDef;
   producer: Producer;
   /** 1-based position on the ladder. The drawing's item number. */
-  tier: number;
+  rung: number;
 }
 
 export type ClassRow = ProducerRowData<ClassRowExtra>;
 
 export interface ClassLadderView {
   rows: ComputedRef<ClassRow[]>;
-  /** Units owned across every class — the reveal gate and the log's index. */
+  /** Units owned across every class — the reveal threshold and the log's index. */
   fleetSize: ComputedRef<DecimalSource>;
-  headlineRate: ComputedRef<DecimalSource>;
+  totalRate: ComputedRef<DecimalSource>;
 }
 
 export function useClassRows(): ClassLadderView {
@@ -40,7 +40,7 @@ export function useClassRows(): ClassLadderView {
     ),
   );
 
-  const headlineRate = computed(() => getHeadlineRate());
+  const totalRate = computed(() => getTotalRate());
 
   const rows = computed<ClassRow[]>(() =>
     entries.map((entry, index) => {
@@ -57,7 +57,7 @@ export function useClassRows(): ClassLadderView {
 
       return {
         id: entry.def.id,
-        displayName: entry.def.name,
+        displayName: entry.def.displayName,
         count: producer.ownedCount,
         displayRate: computed(() =>
           Decimal.mul(producer.computedRate.value, producer.ownedCount.value),
@@ -79,10 +79,10 @@ export function useClassRows(): ClassLadderView {
             Decimal.gte(fleetSize.value, entry.def.revealAtFleetSize) ||
             Decimal.gte(producer.ownedCount.value, 1),
         ),
-        extra: { def: entry.def, producer, tier: index + 1 },
+        extra: { def: entry.def, producer, rung: index + 1 },
       };
     }),
   );
 
-  return { rows, fleetSize, headlineRate };
+  return { rows, fleetSize, totalRate };
 }

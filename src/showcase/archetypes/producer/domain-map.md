@@ -1,6 +1,6 @@
 # Producer — domain language
 
-The classic big-number incremental: a geometric cost ladder under a multiplicative modifier stack, with no adversary, no board, no run and no reset.
+The classic big-number incremental: a geometric cost ladder under multiplicative modifier chains, with no adversary, no board, no run and no reset.
 
 > Generated from code structure by `ol-domain-map` — do not edit by hand;
 > regenerate with `pnpm domain-map`. The generated sections below re-derive
@@ -42,5 +42,5 @@ staleness stays visible against the generated sections above.
 
 - **the frontier** — Why cost scales. Each launch reaches a further star, so the cost ladder is the expanding shell — the ratio is derived from the premise rather than imposed on it.
 - **revision** — A threshold-triggered global multiplier — a firmware push reaching the whole swarm at once. Must stay a DISCRETE step on a count: made continuous in production it takes the spine off the closed form, silently.
-- **refinement** — A bought one-shot multiplier, scoped to one class, to every class, or to the hand-launch. Distinct from a revision, which is earned rather than purchased.
-- **dispatch** — Handing allocation to the swarm. The automation ladder gates which selection rule applies; the rules themselves are engine primitives, not authored here.
+- **refinement** — A purchased one-shot multiplier, scoped to one class, to every class, or to the hand-launch. Distinct from a revision, which is earned rather than purchased.
+- **dispatch** — Handing allocation to the swarm. The automation ladder decides which selection rule applies; the rules themselves are engine primitives, not authored here.

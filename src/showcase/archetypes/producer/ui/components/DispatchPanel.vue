@@ -4,13 +4,13 @@
   The rungs render whether or not they are open, because the ladder's job is to
   withhold (`.claude/rules/archetype-authoring.md` § Conformance). A player who
   cannot see the closed rung reads "no automation exists" instead of "not yet",
-  and the gate stops being a beat.
+  and the unlock stops being a beat.
 
-  While the dispatcher holds cash for a class, the hold is drawn as a dimension
-  line to that class's price: solid for the mass already banked, dashed redline
+  While the dispatcher holds mass for a class, the hold is drawn as a dimension
+  line to that class's cost: solid for the mass already held, dashed redline
   for the span still to come. Holding is the managed rung's normal state, so the
   readout stays up; it reads as the plan in progress, not as a stall. When the
-  part is bought the line completes and reads "dispatching" until the next hold,
+  part is purchased the line completes and reads "dispatching" until the next hold,
   so a purchase never unmounts the readout and shifts the rail beneath it.
 -->
 <script setup lang="ts">
@@ -21,7 +21,7 @@ import { useFormatting } from '@/composables/useFormatting';
 import {
   DispatchKey,
   getClasses,
-  getHeadlineRate,
+  getTotalRate,
   getMass,
   type DispatchPolicyName,
   type ProducerAutomationTier,
@@ -49,35 +49,35 @@ const RULE_LABELS: Record<DispatchPolicyName, string> = {
 const reached = computed(() => RUNGS.map((rung) => dispatch.tiers.hasReached(rung.id)));
 const canHandOff = computed(() => dispatch.tiers.hasReached('assisted'));
 
-/** The next rung's requirement, or null once the ladder is fully open. */
+/** The next rung's unlock note, or null once the ladder is fully open. */
 const nextNote = computed(() => {
   const index = reached.value.findIndex((open) => !open);
   return index === -1 ? null : RUNGS[index].note;
 });
 
-/** The class being saved for, how much of its price is banked, and the wait left. */
+/** The class being saved for, how much of its cost is held, and the wait left. */
 const hold = computed(() => {
   const def = dispatch.savingFor.value;
   if (!def) return null;
   const cost = Decimal.fromValue(classes.getProducer(def.id)!.repeatable!.getCost(1));
-  const banked = Decimal.fromValue(mass.value);
-  const rate = Decimal.fromValue(getHeadlineRate());
-  const short = Decimal.max(cost.sub(banked), 0);
+  const held = Decimal.fromValue(mass.value);
+  const rate = Decimal.fromValue(getTotalRate());
+  const short = Decimal.max(cost.sub(held), 0);
   return {
-    name: def.name,
-    share: Math.min(1, Math.max(0, banked.div(cost).toNumber())),
+    displayName: def.displayName,
+    share: Math.min(1, Math.max(0, held.div(cost).toNumber())),
     waitSeconds: rate.gt(0) ? short.div(rate).toNumber() : Infinity,
   };
 });
 
 /**
  * What the readout draws: the hold, or — between holds, while the dispatcher
- * may save — a completed line for the part it just bought. `null` hides it.
+ * may save — a completed line for the part it just purchased. `null` hides it.
  */
 const readout = computed(() => {
   if (hold.value) return { ...hold.value, saving: true };
   if (dispatch.isActive.value && dispatch.waitsForCost.value) {
-    return { name: null, share: 1, waitSeconds: 0, saving: false };
+    return { displayName: null, share: 1, waitSeconds: 0, saving: false };
   }
   return null;
 });
@@ -129,14 +129,14 @@ function toggle(): void {
       v-if="readout"
       class="dispatch__hold"
       role="meter"
-      :aria-label="readout.saving ? `Saving for ${readout.name}` : 'Dispatching'"
+      :aria-label="readout.saving ? `Saving for ${readout.displayName}` : 'Dispatching'"
       aria-valuemin="0"
       aria-valuemax="100"
       :aria-valuenow="Math.round(readout.share * 100)"
     >
       <span class="dispatch__hold-label">
         <template v-if="readout.saving">
-          Saving for <span class="dispatch__hold-target">{{ readout.name }}</span>
+          Saving for <span class="dispatch__hold-target">{{ readout.displayName }}</span>
         </template>
         <template v-else>Dispatching</template>
       </span>

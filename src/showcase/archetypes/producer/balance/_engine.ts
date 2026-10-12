@@ -4,10 +4,10 @@
  *
  * Builds a real producer engine and runs the arc on it. The driver here is
  * deliberately thin: it works only the **manual openers a player works** —
- * hand-launches, hand-buys before dispatch opens, and refinement purchases —
+ * hand-launches, hand purchases before dispatch opens, and refinement purchases —
  * and hands every class purchase to the shipping `modules/automation.ts` the
  * moment its rung opens (`/work/studio/CLAUDE.md` § automation as game code).
- * There is no bot re-implementing the allocation rule; the rule under
+ * No automated player re-implements the allocation rule; the rule under
  * measurement IS the one the game ships.
  *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list
@@ -22,7 +22,7 @@ import {
   OfflineKey,
   createProducerModules,
   getClasses,
-  getHeadlineRate,
+  getTotalRate,
   getMass,
   getRefinements,
   getRevisions,
@@ -46,8 +46,8 @@ export interface ArcOptions {
   forceWaitForCost?: boolean;
   /** Hand-launches per second while the player is still opening the game. */
   launchesPerSecond?: number;
-  /** Unique namespace so concurrent runs cannot share persistent context. */
-  namespace?: string;
+  /** Unique persistence namespace prefix, so concurrent runs share no persistent context. */
+  persistenceNamespacePrefix?: string;
   /**
    * Sample the arc on a fixed cadence. The beat map answers "when did X first
    * happen"; this answers "what was the arc doing between the beats", which is
@@ -60,29 +60,29 @@ export interface ArcOptions {
   /**
    * Times the player is away. At `at` the driver stops working the manual
    * openers and hands `seconds` to the shipping offline catch-up; the arc
-   * resumes at the return. A beat that lands while away records at the return,
+   * resumes at the return. A beat reached while away is recorded at the return,
    * which is when the player sees it.
    */
-  absences?: { at: number; seconds: number }[];
+  offlinePeriods?: { at: number; seconds: number }[];
 }
 
 export interface ArcResult {
-  /** Sim-second each beat first landed, or `undefined` if it never did. */
+  /** Each beat's fire time in sim-seconds, or `undefined` if it never fired. */
   beatAt: Map<number, number>;
   /** Sim-second each class was first deployed. */
   classAt: Map<string, number>;
   /** Final owned count per class, ladder order. */
-  finalCounts: { id: string; name: string; count: number }[];
-  /** Sim-second each automation rung first opened. */
-  tierAt: Map<string, number>;
-  /** Hand-buys the player made before dispatch took over. */
-  handBuys: number;
-  /** Sim-seconds the dispatcher spent holding cash for a pick (`savingFor` set). */
+  finalCounts: { id: string; displayName: string; count: number }[];
+  /** Sim-second each automation tier first unlocked. */
+  automationTierAt: Map<string, number>;
+  /** Hand purchases the player made before dispatch took over. */
+  handPurchases: number;
+  /** Sim-seconds the dispatcher spent holding mass for a pick (`savingFor` set). */
   holdSeconds: number;
   /**
-   * Refinements the player bought while the dispatcher was holding, and the
+   * Refinements the player purchased while the dispatcher was holding, and the
    * mass they took out of its savings. The player and the dispatcher share one
-   * wallet, so saving brings refinements forward, and a gap measured against a
+   * amount of mass, so saving brings refinements forward, and a gap measured against a
    * run that never saves includes that.
    */
   refinementsWhileHolding: { count: number; mass: number };
@@ -91,12 +91,12 @@ export interface ArcResult {
   openingClassStack: number;
 }
 
-function read(t: number, tier: string): ArcReading {
+function read(t: number, automationTier: string): ArcReading {
   const classes = getClasses();
   const entries = classes.getAll();
   return {
     t,
-    headlineRate: num(getHeadlineRate()),
+    totalRate: num(getTotalRate()),
     fleetSize: entries.reduce((total, e) => total + num(e.producer.ownedCount.value), 0),
     distinctClasses: entries.filter((e) => num(e.producer.ownedCount.value) >= 1).length,
     topClassCount: num(entries[entries.length - 1].producer.ownedCount.value),
@@ -106,7 +106,7 @@ function read(t: number, tier: string): ArcReading {
     revisionsEarned: getRevisions()
       .getAll()
       .filter((e) => e.achievement.earned.value).length,
-    tier,
+    automationTier,
   };
 }
 
@@ -124,7 +124,7 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     }),
     intervalRate: 1,
     persistenceNamespacePrefix:
-      options.namespace ??
+      options.persistenceNamespacePrefix ??
       `producer-arc-${forcePolicy ?? 'ladder'}${forceWaitForCost === undefined ? '' : `-wait-${forceWaitForCost}`}`,
   });
 
@@ -134,20 +134,20 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
 
   // The player opts in as soon as the toggle exists. It stays inert until a
   // rung opens — which is the ladder doing its job, and is why the first arc
-  // walkthrough with no manual opener bought nothing in eight hours.
+  // walkthrough with no manual opener purchased nothing in eight hours.
   dispatch.isActive.value = true;
 
   const beatAt = new Map<number, number>();
   const classAt = new Map<string, number>();
-  const tierAt = new Map<string, number>();
-  let handBuys = 0;
+  const automationTierAt = new Map<string, number>();
+  let handPurchases = 0;
   let holdSeconds = 0;
   const refinementsWhileHolding = { count: 0, mass: 0 };
   const offline = handle.engine.tryInject(OfflineKey);
-  const absences = new Map((options.absences ?? []).map((a) => [a.at, a.seconds]));
+  const offlinePeriods = new Map((options.offlinePeriods ?? []).map((a) => [a.at, a.seconds]));
 
   for (let t = 0; t <= seconds; t++) {
-    const away = absences.get(t);
+    const away = offlinePeriods.get(t);
     if (away !== undefined) {
       if (!offline) throw new Error('producer arc: offline module did not provide OfflineKey');
       const now = Date.now();
@@ -158,7 +158,7 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     // ── manual openers, and only these ──
     if (!autoRunning) for (let i = 0; i < launchesPerSecond; i++) launch();
     await handle.tick(1);
-    if (!autoRunning && buyCheapestAffordable()) handBuys++;
+    if (!autoRunning && purchaseCheapestAffordable()) handPurchases++;
     const holding = dispatch.savingFor.value !== null;
     if (holding) holdSeconds++;
     for (const entry of getRefinements().getAll()) {
@@ -170,14 +170,14 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
       }
     }
 
-    const tier = dispatch.tiers.currentTierId.value;
-    if (!tierAt.has(tier)) tierAt.set(tier, t);
+    const automationTier = dispatch.tiers.currentTierId.value;
+    if (!automationTierAt.has(automationTier)) automationTierAt.set(automationTier, t);
     for (const entry of classes.getAll()) {
       if (!classAt.has(entry.def.id) && num(entry.producer.ownedCount.value) >= 1) {
         classAt.set(entry.def.id, t);
       }
     }
-    const reading = read(t, tier);
+    const reading = read(t, automationTier);
     for (const beat of BEATS) {
       if (!beatAt.has(beat.n) && beat.reached(reading)) beatAt.set(beat.n, t);
     }
@@ -190,13 +190,13 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
   const result: ArcResult = {
     beatAt,
     classAt,
-    tierAt,
-    handBuys,
+    automationTierAt,
+    handPurchases,
     holdSeconds,
     refinementsWhileHolding,
     finalCounts: classes.getAll().map((e) => ({
       id: e.def.id,
-      name: e.def.name,
+      displayName: e.def.displayName,
       count: num(e.producer.ownedCount.value),
     })),
     final: read(seconds, dispatch.tiers.currentTierId.value),
@@ -208,11 +208,11 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
 }
 
 /**
- * The one hand-buy a player makes before dispatch opens: whatever is cheapest
+ * The one hand purchase a player makes before dispatch opens: whatever is cheapest
  * and affordable. Deliberately the naive rule — it is what a player does before
  * they think about payback, and the first rung of the ladder grants exactly it.
  */
-function buyCheapestAffordable(): boolean {
+function purchaseCheapestAffordable(): boolean {
   let best: { purchase: (n: number) => unknown } | undefined;
   let bestCost = Infinity;
   for (const entry of getClasses().getAll()) {
@@ -228,7 +228,7 @@ function buyCheapestAffordable(): boolean {
   return best !== undefined;
 }
 
-/** Seed the bank — used only by probes measuring a mechanic in isolation. */
+/** Seed the mass — used only by probes measuring a mechanic in isolation. */
 export function fund(amount: number): void {
   addResource(getMass(), amount);
 }

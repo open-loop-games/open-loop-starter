@@ -1,6 +1,6 @@
 <!--
   ProducerAppRoot — routing + app chrome only. Runs before `engine.start()` (on
-  the slot screen), so it reads NO engine module state. The game lives in
+  the slot screen), so it reads NO module state. The game lives in
   `<ProducerGameView>`, mounted under the post-start `v-else` frame where module
   reads are safe. The one post-start read here is `usePlaySession`'s `onLoaded`
   resume seam (offline catch-up + the return report), which runs after
@@ -29,7 +29,7 @@ import './blueprint.css';
 
 const stack = useModalStack();
 
-/** A shorter return is a reload, not an absence, and gets no report. */
+/** A shorter return is a reload, not time away, and gets no report. */
 const REPORT_MIN_AWAY_SECONDS = 60;
 
 const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession({

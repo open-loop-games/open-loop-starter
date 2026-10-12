@@ -31,7 +31,7 @@ export const MassLifetimeKey: InjectionKey<Ref<DecimalSource>> = Symbol(
   'producer/mass-lifetime',
 ) as InjectionKey<Ref<DecimalSource>>;
 
-// Module-scope handles set during install. Sibling modules, composables and UI
+// File-scope handles set during install. Sibling modules, composables and UI
 // import the typed accessors below; only one producer engine is active per
 // process, which is the same assumption the other archetypes make.
 let mass: Resource<DecimalSource>;
@@ -52,7 +52,7 @@ export function getLauncher(): Producer {
   return launcher;
 }
 
-/** Hand-launches performed this save. Drives the click refinement gates. */
+/** Hand-launches performed this save. Drives the click refinements' unlock predicates. */
 export function getLaunchCount(): Ref<DecimalSource> {
   return launchCount;
 }
@@ -64,7 +64,7 @@ export function launch(): void {
 }
 
 /** Aggregate mass/sec across every continuous class. Excludes the launcher. */
-export function getHeadlineRate(): DecimalSource {
+export function getTotalRate(): DecimalSource {
   return classes.getTotalRate(mass);
 }
 
@@ -77,7 +77,7 @@ export function buildProducerGameState(data: ProducerData): ProducerGameState {
   const lifetime = mass.cumulative!;
 
   // Hoisted, not per-call: these back every revision and refinement predicate,
-  // each of which is itself lowered into a `computed`. Rebuilding them inside
+  // each of which the engine itself adopts into a `computed`. Rebuilding them inside
   // the predicate would allocate a fresh computed per evaluation and cache
   // nothing.
   const fleetSize = computed<DecimalSource>(() =>
@@ -123,8 +123,8 @@ export function createSwarmModule(data: ProducerData): EngineModule {
       // ── The ladder ──────────────────────────────────────────────────────
       // `costRatio` takes the derived `m` straight from data. It is NOT
       // routed through the tuning registry: the field is a static
-      // `DecimalSource` read once at registration, so a knob here would be a
-      // dead key. Rationale and the alternative in `./tuning.ts`.
+      // `DecimalSource` read once at registration, so a tunable here would be an
+      // unused key. Rationale and the alternative in `./tuning.ts`.
       classes = createProducerCategory<ProbeClassDef>({
         id: 'producer/classes',
         registerTick: ctx.onTick,
@@ -132,7 +132,7 @@ export function createSwarmModule(data: ProducerData): EngineModule {
           resource: mass,
           baseRate: def.baseRate,
           trigger: 'continuous',
-          display: def.name,
+          display: def.displayName,
           purchase: {
             costResource: mass,
             baseCost: tunable(
@@ -153,17 +153,17 @@ export function createSwarmModule(data: ProducerData): EngineModule {
       // Producer rather than a bespoke click handler: it gets the same rate
       // chain, attribution and introspection every class has, which is what
       // makes the click-vs-ladder crossover measurable on one axis.
-      const launchers = createProducerCategory<{ id: string; name: string }>({
+      const launchers = createProducerCategory<{ id: string; displayName: string }>({
         id: 'producer/launcher',
         registerTick: ctx.onTick,
         mapProducer: (def) => ({
           resource: mass,
           baseRate: CLICK_BASE_YIELD,
           trigger: 'manual',
-          display: def.name,
+          display: def.displayName,
         }),
       });
-      launchers.register({ id: 'hand-launch', name: 'Hand-launch' });
+      launchers.register({ id: 'hand-launch', displayName: 'Hand-launch' });
       launcher = launchers.getProducer('hand-launch')!;
 
       // ── The `generation` chain ──────────────────────────────────────────
@@ -198,9 +198,9 @@ export function createSwarmModule(data: ProducerData): EngineModule {
           id: `tuning/classRateScale/${def.id}`,
           // No `description` — deliberately. A modifier without one is omitted
           // from `chain.description`, and therefore from every breakdown the UI
-          // renders. This is a perturbation knob, not a game concept: the
+          // renders. This is a perturbation tunable, not a game concept: the
           // player-facing chain is refinements × revisions × generation, and a
-          // "Class rate scale ×1.00" row would put a balance instrument in it.
+          // "Class rate scale ×1.00" row would put a balance tool in it.
           modifier: createMultiplicativeModifier({ multiplier: classRateScale }),
         });
       }

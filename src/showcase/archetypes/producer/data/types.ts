@@ -36,7 +36,7 @@ export interface ProbeClassDef {
   /** Magnitude band (costume). */
   scale: ProbeScale;
   /** Display name (costume). */
-  name: string;
+  displayName: string;
   /** Flavour line (costume). */
   description: string;
   /**
@@ -49,7 +49,7 @@ export interface ProbeClassDef {
   baseRate: DecimalSource;
   /**
    * Fleet-wide unit count that reveals this class. Undefined means visible on
-   * cold boot. Visibility only — affordability is the real gate.
+   * cold boot. Visibility only — affordability is what really blocks a class.
    */
   revealAtFleetSize?: number;
 }
@@ -63,21 +63,21 @@ export type RefinementScope =
 export interface RefinementDef {
   id: string;
   /** Display name (costume). */
-  name: string;
+  displayName: string;
   description: string;
-  /** One-shot purchase price in mass. Not laddered — a refinement buys once. */
+  /** One-shot purchase cost in mass. Not laddered — a refinement is purchased once. */
   cost: DecimalSource;
   scope: RefinementScope;
   /** Multiplicative factor contributed to its chain while owned. */
   multiplier: DecimalSource;
-  /** Purchasable only once this predicate holds. Visibility and gate, both. */
-  requirement: (s: ProducerGameState) => boolean;
+  /** Purchasable only once this predicate holds. It blocks both visibility and purchase. */
+  unlockWhen: (s: ProducerGameState) => boolean;
 }
 
 export interface RevisionDef {
   id: string;
   /** Display name (costume). */
-  name: string;
+  displayName: string;
   description: string;
   /**
    * Global multiplicative reward, applied to every class's rate at once — the
@@ -90,7 +90,7 @@ export interface RevisionDef {
    * of current production. See `./revisions.ts` § Balance for why the spine
    * depends on it.
    */
-  requirement: (s: ProducerGameState) => boolean;
+  goal: (s: ProducerGameState) => boolean;
 }
 
 /**

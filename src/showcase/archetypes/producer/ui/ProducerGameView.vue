@@ -1,6 +1,6 @@
 <!--
   ProducerGameView — the in-game subtree. Mounts under the root's post-start
-  `v-else` frame, so engine module getters and injects are safe to read here.
+  `v-else` frame, so module getters and injects are safe to read here.
   See `.claude/rules/app-root-discipline.md`.
 
   Shell: ThreePanelShell. The corpus routes producer here — Cookie Clicker and
@@ -11,7 +11,7 @@
   The canonical split is action / production / customization. Producer diverges
   on the left column: Cookie Clicker's clicker stays alive forever, while this
   archetype commits to a click that is dominated by tier 3, so an action-only
-  rail would go dead exactly when the session gets long. The left column is
+  rail would go dead exactly when the play session gets long. The left column is
   instead a SYSTEM VIEW — plate, launch pad, dispatch ladder, and a log that
   accumulates. It fills as the click empties.
 -->
@@ -37,7 +37,7 @@ const mass = getMass();
 const launcher = getLauncher();
 const revisions = getRevisions();
 
-const { rows, fleetSize, headlineRate } = useClassRows();
+const { rows, fleetSize, totalRate } = useClassRows();
 const { entries } = useSystemLog(fleetSize);
 
 const earnedRevisions = computed(
@@ -45,7 +45,7 @@ const earnedRevisions = computed(
 );
 
 const readouts = computed<ResourceReadout[]>(() => [
-  { id: 'mass', label: 'mass', value: mass, rate: headlineRate },
+  { id: 'mass', label: 'mass', value: mass, rate: totalRate },
   { id: 'fleet', label: 'probes', value: fleetSize },
 ]);
 
@@ -105,7 +105,7 @@ const scaleLabel = computed(() => {
       <PanelLayout title="Hand-launch" :closable="false">
         <LaunchPad
           :yield-per-launch="launcher.computedRate.value"
-          :headline-rate="headlineRate"
+          :total-rate="totalRate"
           @launch="launch()"
         />
       </PanelLayout>
@@ -129,7 +129,7 @@ const scaleLabel = computed(() => {
     </ResourceHeaderStrip>
 
     <PanelLayout title="Probe classes" :closable="false">
-      <ClassLadder :rows="rows" :headline-rate="headlineRate" />
+      <ClassLadder :rows="rows" :total-rate="totalRate" />
     </PanelLayout>
 
     <template #right>
