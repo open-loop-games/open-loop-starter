@@ -1,0 +1,278 @@
+/*
+ * Phase-shifter — the Night Clerk costume.
+ *
+ * The design language is here, scoped under `.phase-shifter`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in
+ * `src/lib/` or `src/ui/` is edited for it: every hook is a documented costume
+ * class on a shell or a composition (`.olui-single-column__…`,
+ * `.olui-system-header`, `.producer-list__…`, `.upgrade-grid__…`) or a class
+ * this story's own components emit.
+ *
+ * Language: a county records sub-basement at 2 a.m. Soot walls, a green
+ * banker's lamp, manila folders, carbon copies, the red string of a case
+ * board, the sodium streetlights of a replayed night. The affordance palette
+ * comes first: manila = you can act on this now; carbon = not yet (dimmed,
+ * still readable); string = a door, newly opened; lamp = the clerks do this
+ * for you; stamp = retired, filed away, never coming back. A book serif for
+ * everything read, letter-spaced capitals for labels, a typewriter for the
+ * carbon and the stamps.
+ *
+ * Fonts: Crimson Pro and Courier Prime, Latin subsets (SIL OFL,
+ * `../assets/fonts/OFL.txt`).
+ */
+
+@font-face {
+  font-family: 'Records Book';
+  src: url('../assets/fonts/CrimsonPro-Variable.woff') format('woff');
+  font-weight: 200 900;
+}
+@font-face {
+  font-family: 'Records Book';
+  src: url('../assets/fonts/CrimsonPro-Italic-Variable.woff') format('woff');
+  font-weight: 200 900;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Records Typed';
+  src: url('../assets/fonts/CourierPrime-Regular.woff') format('woff');
+  font-weight: 400;
+}
+
+.phase-shifter {
+  /* ── the room ── */
+  --nc-soot: #14120f;
+  --nc-soot-raised: #1c1915;
+  --nc-soot-edge: #2c2721;
+  --nc-carbon-paper: #1a1d22;
+
+  /* ── ink ── */
+  --nc-paper: #e6dfd1;
+  --nc-carbon: #9aa6b4;
+  --nc-carbon-faint: #5d6672;
+
+  /* ── affordance ── */
+  --nc-manila: #d8bd85;
+  --nc-manila-deep: #c7a96d;
+  --nc-manila-dim: #8f7c57;
+  --nc-manila-shadow: #6e5c3c;
+  --nc-string: #c0503a;
+  --nc-lamp: #8fae78;
+  --nc-sodium: #e0a346;
+  --nc-stamp: #a8473a;
+  --nc-lamp-glow: rgba(143, 174, 120, 0.08);
+
+  --nc-face-book: 'Records Book', Georgia, serif;
+  --nc-face-typed: 'Records Typed', 'Courier New', monospace;
+  --nc-radius: 2px;
+
+  /* Scaffold tokens the shared chrome reads, set here so the costume travels
+     with the story. */
+  --color-bg: var(--nc-soot);
+  --color-surface: var(--nc-soot-raised);
+  --color-surface-hover: var(--nc-soot-edge);
+  --color-border: var(--nc-soot-edge);
+  --color-text: var(--nc-paper);
+  --color-text-muted: var(--nc-carbon);
+  --color-primary: var(--nc-manila);
+  --color-primary-hover: var(--nc-manila-deep);
+  --color-danger: var(--nc-stamp);
+  --color-success: var(--nc-lamp);
+  --radius: var(--nc-radius);
+  --radius-sm: 2px;
+  --font-sans: var(--nc-face-book);
+
+  color: var(--nc-paper);
+  font-family: var(--nc-face-book);
+  font-size: 17px;
+  line-height: 1.45;
+
+  /* The costume wrapper sits between the host and AppFrame; it passes the
+     host's flex column through so the frame fills it. */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.phase-shifter button {
+  font: inherit;
+  color: inherit;
+}
+
+.phase-shifter .nc-num {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* The banker's lamp over the desk. Painted on the frame, which already claims
+   the viewport height. */
+.phase-shifter .olui-app-frame,
+.phase-shifter .slot-screen {
+  background:
+    radial-gradient(ellipse 60% 40% at 50% -8%, var(--nc-lamp-glow), transparent 70%),
+    var(--nc-soot);
+}
+
+.phase-shifter .olui-system-header {
+  border-bottom: 1px solid var(--nc-soot-edge);
+  background: var(--nc-soot);
+}
+.phase-shifter .olui-system-header__actions {
+  align-items: center;
+  gap: 16px;
+}
+.phase-shifter .olui-system-header__actions > button {
+  background: transparent;
+  border: 1px solid var(--nc-soot-edge);
+  border-radius: var(--nc-radius);
+  padding: 3px 10px;
+  min-height: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nc-carbon);
+  cursor: pointer;
+}
+.phase-shifter .olui-system-header__actions > button:hover {
+  color: var(--nc-manila);
+  border-color: var(--nc-manila-dim);
+}
+
+/* ── a label: letter-spaced capitals, small ── */
+.phase-shifter .nc-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nc-carbon);
+}
+
+/* ── the hand verb: one big manila button per phase ── */
+.phase-shifter .nc-verb {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  background: linear-gradient(var(--nc-manila), var(--nc-manila-deep));
+  color: var(--nc-soot);
+  border: none;
+  border-radius: var(--nc-radius);
+  box-shadow: 0 2px 0 var(--nc-manila-shadow);
+  cursor: pointer;
+}
+.phase-shifter .nc-verb:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+.phase-shifter .nc-verb:disabled {
+  background: var(--nc-soot-raised);
+  color: var(--nc-carbon-faint);
+  box-shadow: none;
+  opacity: 1;
+  cursor: not-allowed;
+}
+.phase-shifter .nc-verb .nc-num {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* ── an index card: one purchase ── */
+.phase-shifter .nc-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 16px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 14px 10px;
+  background: var(--nc-soot-raised);
+  border: 1px solid var(--nc-soot-edge);
+  border-top: 3px solid var(--nc-carbon-faint);
+  border-radius: var(--nc-radius);
+  color: var(--nc-carbon);
+  /* The scaffold halves a disabled button; "not yet" stays readable here. */
+  opacity: 1;
+  cursor: not-allowed;
+  transition:
+    border-color 160ms,
+    opacity 160ms;
+}
+.phase-shifter .nc-card.can {
+  cursor: pointer;
+  background: #241e15;
+  color: var(--nc-paper);
+  border-top-color: var(--nc-manila);
+}
+.phase-shifter .nc-card.can:hover {
+  border-color: var(--nc-manila-dim);
+  border-top-color: var(--nc-manila);
+}
+.phase-shifter .nc-card.can:active {
+  transform: translateY(1px);
+}
+.phase-shifter .nc-card.automated {
+  border-top-color: var(--nc-lamp);
+}
+.phase-shifter .nc-card .title {
+  font-size: 17.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.phase-shifter .nc-card .owned {
+  justify-self: end;
+  color: var(--nc-carbon);
+}
+.phase-shifter .nc-card .description {
+  grid-column: 1 / -1;
+  font-size: 15px;
+  color: var(--nc-carbon);
+}
+.phase-shifter .nc-card .price {
+  grid-column: 1 / -1;
+  font-size: 15px;
+  color: var(--nc-manila-dim);
+}
+.phase-shifter .nc-card.can .price {
+  color: var(--nc-manila);
+}
+
+/* The compositions render bare: the cards are the chrome. */
+.phase-shifter .producer-list,
+.phase-shifter .upgrade-grid {
+  gap: 10px;
+}
+
+/* ── the stamp: what a door retired ── */
+.phase-shifter .nc-stamp {
+  display: inline-block;
+  font-family: var(--nc-face-typed);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 1px 6px;
+  border: 2px solid var(--nc-stamp);
+  color: var(--nc-stamp);
+  transform: rotate(-4deg);
+  opacity: 0.85;
+}
+.phase-shifter .nc-stamp.reassigned {
+  border-color: var(--nc-lamp);
+  color: var(--nc-lamp);
+}
+
+@keyframes nc-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── a phase's desk ── */
+.phase-shifter .nc-phase {
+  display: grid;
+  gap: 12px;
+}

@@ -1,7 +1,7 @@
 # Phase-shifter
 
-Core · open core. Identity line: the Phase-shifter entry in `../_identity.md`.
-Not built.
+Core · open core. Identity line: the Phase-shifter entry in `../_identity.md`. Built:
+`../phase-shifter/IDENTITY.md`.
 
 ## Player experience
 
