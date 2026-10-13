@@ -196,8 +196,9 @@ function routeCost(cell: Cell): number {
 }
 
 /**
- * Damage multiplier each plant receives from marigolds touching it. Pure over
- * the board, recomputed on planting rather than per tick.
+ * Damage multiplier each plant receives from marigolds touching it: the
+ * strongest boost, once, as an aura that does not stack. Pure over the board,
+ * recomputed on planting rather than per tick.
  */
 export function evaluateCompanions(
   grid: SpatialGrid<Cell>,
@@ -206,13 +207,13 @@ export function evaluateCompanions(
 ): Map<number, number> {
   const amp = new Map<number, number>();
   for (const t of plants.values()) {
-    let mult = 1;
+    let best = 0;
     for (const n of grid.neighbors(t.x, t.y, DIAGONAL_OFFSETS)) {
       const id = grid.at(n.x, n.y).plantId;
       if (id === null) continue;
-      mult += specs[plants.get(id)!.def].amp;
+      best = Math.max(best, specs[plants.get(id)!.def].amp);
     }
-    amp.set(t.id, mult);
+    amp.set(t.id, 1 + best);
   }
   return amp;
 }
@@ -245,6 +246,16 @@ export interface PlotRun {
   field: Float64Array;
 
   canPlant(def: PlantId, x: number, y: number): { ok: boolean; reason?: string };
+  /**
+   * What planting `def` at a cell would change, for the hand to weigh: the
+   * route's length before and after, and the hunting plants it would newly
+   * boost (a marigold) or whether it would be boosted (a hunter).
+   */
+  plantPreview(
+    def: PlantId,
+    x: number,
+    y: number,
+  ): { pathBefore: number; pathAfter: number; boosts: number; boosted: boolean };
   plant(def: PlantId, x: number, y: number): boolean;
   upgrade(plantId: number): boolean;
   digUp(plantId: number): boolean;
@@ -323,6 +334,26 @@ export function createPlotRun(
         return { ok: false, reason: 'Would seal the path' };
       }
       return { ok: true };
+    },
+
+    plantPreview(id, x, y) {
+      const pathBefore = run.field[gap.y * grid.width + gap.x];
+      const probe = grid.distanceField([seedbed], (c, cx, cy) =>
+        cx === x && cy === y ? Infinity : routeCost(c),
+      );
+      const pathAfter = probe[gap.y * grid.width + gap.x];
+      const spec = params.specs[id];
+      let boosts = 0;
+      let boosted = false;
+      for (const n of grid.neighbors(x, y, DIAGONAL_OFFSETS)) {
+        const pid = grid.at(n.x, n.y).plantId;
+        if (pid === null) continue;
+        const p = run.plants.get(pid)!;
+        const pspec = params.specs[p.def];
+        if (spec.amp > 0 && pspec.form !== null && (amp.get(pid) ?? 1) < 1 + spec.amp) boosts++;
+        if (spec.form !== null && pspec.amp > 0) boosted = true;
+      }
+      return { pathBefore, pathAfter, boosts, boosted };
     },
 
     plant(id, x, y) {

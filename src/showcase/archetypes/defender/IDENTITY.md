@@ -24,7 +24,7 @@ watch.
 | Thrush Perch | single shots at the pest nearest the seedbed; marks what it has in flight | 0 |
 | Sticky Trap | slows every pest in reach | 2 |
 | Bat Box | single shots at moths, and at nothing on the ground | 3 |
-| Marigolds | companion planting: every plant touching it hunts harder | 4 |
+| Marigolds | companion planting: every plant touching it hunts half again as hard, once | 4 |
 | Ladybird Hotel | a slow release that lands on a cluster | 7 |
 
 - **The counter wheel.** Each night sends one kind of pest, and each plant's way of
@@ -35,6 +35,11 @@ watch.
   nights and what sees each off, so the gardener plants for the night ahead.
   This is research's `type-effectiveness`, carried beyond the line: none of the
   line's sourced exemplars is a member, so the line does not cite it.
+- **Booster against maze.** Every plant blocks the path, so every cell is a choice.
+  A maze wants long, thin walls that fold the path past the hunters. A marigold's
+  boost does not stack, so it wants its own full ring of hunters: a 3×3 block, the
+  shape a maze can least use. While a plant is in hand, the board shows what the cell
+  does to the path's length and how many plants a marigold there would boost.
 - **Calling it a day** sends the next wave early, and pays compost for the daylight
   given up. The first night waits for the gardener.
 - **Compost** comes only from pests seen off.
@@ -74,15 +79,17 @@ reference gardener (`balance/_gardener.ts`):
 - `capacity-probe.ts` measures dwell, damage share and each wave's tail;
 - `threshold-probe.ts` bisects the loss threshold `land` is set from, and each
   kind's threshold, which `KIND_TOLL` is set from;
+- `maze-probe.ts` measures how long a maze each plot allows, and how deep the
+  reference gardener's search must look to find it;
 - `arc-probe.ts` plays every plot and diffs each wave against the spine.
 
 ## The arc
 
 | Beat | Predicted | Recorded |
 |---|---|---|
-| The Herb Border held | 98s | 100s |
-| The Bean Rows held | 324s | 326s |
-| The Old Orchard held | 508s | 507s |
+| The Herb Border held | 113s | 113s |
+| The Bean Rows held | 430s | 430s |
+| The Old Orchard held | 692s | 693s |
 
 The prediction counts each wave's arrivals, and a measured tail per plot after the last
 one, under a gardener who calls every wave at once. `manifest.ts` holds the recorded
@@ -90,8 +97,6 @@ beats.
 
 ## Growth ports
 
-- **Booster against maze.** A companion boost strong enough to compete with path length
-  for the same cells: a booster wants to be surrounded, a maze wants long thin walls.
 - **Endless tail.** Nights past a plot's last, with health outgrowing bounty and the
   wheel still turning, so depth grades breadth and feeds the plot's best score.
 

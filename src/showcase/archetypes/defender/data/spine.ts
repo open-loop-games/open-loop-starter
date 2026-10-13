@@ -70,11 +70,11 @@ export const ANCHORS: SpineAnchors = {
   pestSpeed: 1.5,
   spawnGap: 0.8,
   startCompost: 200,
-  // Measured: the reference gardener's board is 0.81–1.00 hunting plants (`capacity-probe.ts`).
-  damageShare: 0.95,
-  // Measured: the reference gardener loses a plot at 0.36 / 0.57 / 0.54 of capacity
+  // Measured: the reference gardener's board is 0.88 / 0.80–0.85 / 0.81 hunting plants by plot (`capacity-probe.ts`).
+  damageShare: 0.83,
+  // Measured: the reference gardener loses a plot at 0.71 / 1.00 / 0.90 of capacity
   // (`threshold-probe.ts`, no almanac); `land` is their geometric mean.
-  land: 0.48,
+  land: 0.86,
   // ln2 / ln1.22 ≈ 3.5 waves per doubling: a purchase every wave, a visible jump every ~3.
   waveGrowth: 1.22,
   basePressure: 0.55,
@@ -94,24 +94,26 @@ export const ANCHORS: SpineAnchors = {
 /**
  * Seconds a slug-speed pest spends in one hunting plant's reach on the
  * reference gardener's board, per plot: the leak estimate's dwell. A property
- * of each map's stone, so not a tunable. Measured, damage-weighted plot means
+ * of each map's stone and of the maze the reference gardener lays on it, so
+ * not a tunable. Measured, damage-weighted plot means over two passes
  * (`capacity-probe.ts`).
  */
-export const PLOT_DWELL = [2.5, 6.5, 5.8];
+export const PLOT_DWELL = [5.5, 7.6, 7.2];
 
 /**
  * Seconds from a wave's last arrival to its end on the reference gardener's
  * board, per plot: how far the last pest walks before it is seen off. Like
- * `PLOT_DWELL`, a property of the map. Measured plot means (`capacity-probe.ts`).
+ * `PLOT_DWELL`, a property of the map and its maze. It does not size a wave,
+ * so it is measured in the arc the beats are recorded from (`capacity-probe.ts`).
  */
-export const PLOT_TAIL = [4.0, 9.6, 2.9];
+export const PLOT_TAIL = [5.5, 16.1, 7.2];
 
 /**
  * Seconds a slug-speed flyer spends in one bat box's reach: the dwell of a
  * moth night, which crosses the beds in a straight line whatever the hedges
  * do. Measured mean over moth nights (`capacity-probe.ts`).
  */
-export const FLIGHT_DWELL = 3.5;
+export const FLIGHT_DWELL = 3.7;
 
 /** Maximum plant level. Structural: four rungs fit the board's ~135 cells against the third plot's value. */
 export const MAX_LEVEL = 4;
@@ -276,16 +278,16 @@ const LEAK: Record<PestKind, number> = {
 
 /**
  * A night of each kind's leak threshold over a night of slugs', with the right
- * answer on the board: few heavy beetles get through sooner, a release clears
- * greenfly by the cluster. A property of the kinds, so not a tunable. Measured,
+ * answer on the board: moths fly over the maze that lengthens every other
+ * kind's dwell, a release clears greenfly by the cluster. A property of the kinds, so not a tunable. Measured,
  * geometric mean over the plots that send the kind (`threshold-probe.ts --kinds`).
  */
 export const KIND_TOLL: Record<PestKind, number> = {
   slug: 1,
-  mouse: 1.29,
-  beetle: 0.65,
-  aphid: 1.86,
-  moth: 1.19,
+  mouse: 1.08,
+  beetle: 0.81,
+  aphid: 1.22,
+  moth: 0.35,
   badger: 1,
 };
 
@@ -386,7 +388,7 @@ export interface PlantSpec {
   splash: number;
   /** Fraction of speed removed from pests in range. */
   slow: number;
-  /** Damage bonus granted to each 8-neighbour plant. */
+  /** Damage bonus granted to each 8-neighbour plant; a plant takes the strongest one touching it, once. */
   amp: number;
   /** Gardener's level that opens it. */
   unlockLevel: number;
@@ -394,9 +396,13 @@ export interface PlantSpec {
 
 /** Expected pests a ladybird release catches. Chosen by feel; the probe can count it. */
 const SPLASH_HITS = 2;
-/** Neighbours a marigold must boost to pay for itself. */
-const MARIGOLD_BREAK_EVEN = 3.5;
-const MARIGOLD_AMP = 0.35;
+/**
+ * Hunting neighbours a marigold must boost to pay for itself. Its boost does
+ * not stack, so a full ring of eight is twice its price, and a ring is a 3×3
+ * block: the shape a maze can least use.
+ */
+const MARIGOLD_BREAK_EVEN = 4;
+const MARIGOLD_AMP = 0.5;
 const TRAP_SLOW = 0.4;
 /** Reference thrushes whose fire one trap's slow overlaps. */
 const TRAP_OVERLAP = 2;

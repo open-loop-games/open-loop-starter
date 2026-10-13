@@ -3,7 +3,7 @@
  * gardener stops holding: the measurement `land` and `KIND_TOLL` are set from.
  * Prints; never asserts.
  *
- *   pnpm exec vite-node src/showcase/archetypes/defender/balance/threshold-probe.ts [-- --kinds]
+ *   pnpm exec vite-node src/showcase/archetypes/defender/balance/threshold-probe.ts [-- --kinds] [--refuse plant]
  *
  * Each plot runs alone from a fresh engine with no almanac, every wave sized
  * `x · capacity` (pressure 1 in every plot, `land = x`). The gardener enters
@@ -19,17 +19,31 @@
  * nights at full size (every other pest shrunk to a tenth), over the slug's on
  * the same plot. The geometric mean across plots is that kind's toll.
  *
+ * `--refuse hedge` or `--refuse marigold` bisects with the gardener never
+ * growing that plant: how much of the threshold the maze, or the booster,
+ * carries. *
  * The response is monotone for this gardener in practice, not by proof; a
  * bracket that does not close is printed as such.
  */
 import { runUntil } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
-import { BASE_SEEDLINGS, KIND_TOLL, NIGHTS, PLOTS, perfectScore, type PestKind } from '../data';
+import {
+  BASE_SEEDLINGS,
+  KIND_TOLL,
+  NIGHTS,
+  PLOTS,
+  perfectScore,
+  type PestKind,
+  type PlantId,
+} from '../data';
 import { DefenderTuningRegistryKey, createDefenderModules, getGarden, getPlot } from '../modules';
 import { tendPlot } from './_gardener';
 
 const STEPS = 8;
+const refuse = process.argv.flatMap((arg, i) =>
+  arg === '--refuse' ? [process.argv[i + 1] as PlantId] : [],
+);
 
 interface Outcome {
   leaks: number;
@@ -63,10 +77,10 @@ function play(p: number, x: number, only?: PestKind): Outcome {
   const run = plot.startPlot(PLOTS[p].id);
   const kinds = new Set<PestKind>();
   run.on((e) => {
-    if (e.type === 'build') tendPlot(garden, plot, run, { callEarly: true });
+    if (e.type === 'build') tendPlot(garden, plot, run, { callEarly: true, refuse });
     if (e.type === 'leak') kinds.add(e.kind);
   });
-  tendPlot(garden, plot, run, { callEarly: true });
+  tendPlot(garden, plot, run, { callEarly: true, refuse });
   const seen = new Set<number>();
   runUntil({
     engine,
@@ -103,7 +117,8 @@ function bisect(fails: (x: number) => boolean, lo: number, hi: number): number {
 const f = (x: number) => (Number.isFinite(x) ? x.toFixed(3) : '  —  ');
 
 console.log(
-  'Walled Garden threshold probe — reference gardener, no almanac, pressure 1, land = x\n',
+  'Walled Garden threshold probe — reference gardener, no almanac, pressure 1, land = x' +
+    `${refuse.length ? ', refusing ' + refuse.join(' ') : ''}\n`,
 );
 console.log('plot          first leak    lost   leaks first on');
 for (const [p, def] of PLOTS.entries()) {

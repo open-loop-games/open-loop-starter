@@ -69,7 +69,10 @@ function fmtTime(s: number) {
 }
 
 let firstPurchase = false;
+let bought: Record<string, number> = {};
 const onBuy = (what: string) => {
+  const kind = what.split(' ')[0];
+  bought[kind] = (bought[kind] ?? 0) + 1;
   if (firstPurchase) return;
   firstPurchase = true;
   beat(`first purchase: ${what}`);
@@ -96,6 +99,7 @@ for (const [pi, def] of PLOTS.entries()) {
         `${effectivePressure(a, pi, lv('well-fed'), lv('bins'), lv('early-riser')).toFixed(2)}`,
     );
     let waveStart = 0;
+    bought = {};
     run.on((e) => {
       if (e.type === 'build') tendPlot(garden, plot, run, { callEarly, onBuy, refuse });
       if (e.type === 'launch') waveStart = run.elapsed;
@@ -112,6 +116,10 @@ for (const [pi, def] of PLOTS.entries()) {
         beat(
           `${def.displayName} ${e.outcome === 'won' ? 'HELD' : 'LOST'} — score ${e.score}, seedlings ${num(plot.seedlings.value)}`,
         );
+        const board = Object.entries(bought)
+          .map(([k, n]) => `${k} ${n}`)
+          .join(', ');
+        beat(`  bought: ${board}; path ${run.route().length - 1} cells`);
       }
     });
     tendPlot(garden, plot, run, { callEarly, onBuy, refuse }); // the first build phase opened before the listener attached

@@ -24,7 +24,7 @@ is in `modules/tuning.ts`.
 | `spine/spawnGap` | 0.8 | Seconds between arrivals. Longer spreads a wave, so the board fires at it longer and its HP grows with it. |
 | `spine/startCompost` | 200 | Compost at the start of a plot, and the base of the whole value curve. |
 | `spine/damageShare` | 0.95 | The share of committed compost the spine counts in hunting plants; the rest is hedge. Every wave's HP scales with it. |
-| `spine/land` | 0.48 | The share of the reference board's capacity at which the gardener loses a plot. Every wave's HP scales with it; pressure 1 is that threshold. |
+| `spine/land` | 0.86 | The share of the reference board's capacity at which the gardener loses a plot. Every wave's HP scales with it; pressure 1 is that threshold. |
 | `spine/waveGrowth` | 1.22 | Growth of committed value per wave: ≈3.5 waves per doubling. Income per wave is `value · (G − 1)`. |
 | `spine/basePressure` | 0.55 | The first plot's pressure. `1 / pressure` is the margin the reference gardener has before it loses the plot. |
 | `spine/pressureStep` | 1.5 | Pressure between plots: 0.55 → 0.83 → 1.24. The third plot is past the reference gardener without the almanac, ≈0.9 with the level 8 a flawless pass earns. |
@@ -38,6 +38,8 @@ is in `modules/tuning.ts`.
   gardener: how long a pest stays in a plant's reach, and how long a wave runs past its
   last arrival. They change only when a map, the gardener or a pest's speed does, and
   `capacity-probe.ts` prints the new means.
+- **The reference gardener's dials** (`PREVIEW`, `MIN_GAIN`, `LOOKAHEAD` in
+  `_gardener.ts`) are tooling, not game: `maze-probe.ts` measures the lookahead.
 - **`KIND_TOLL` and `FLIGHT_DWELL`** are measurements too: how much of a pool of each
   kind the reference board lands before one gets through, against slugs, and how long
   a moth stays in a bat box's reach. `threshold-probe.ts --kinds` and
@@ -68,6 +70,16 @@ is in `modules/tuning.ts`.
   learned on entry. The gardener spends toward the split of the next three nights,
   which averages to the same thing. A gardener that splits otherwise meets moth and
   greenfly nights at a different pressure than the spine prints.
+- **The gardener arms to the spine before it mazes.** Each build it arms until the
+  share of its capacity a board lands covers the coming night's pool, and only then
+  prices hedges. That floor divides out `land` and the night's toll, so it never moves
+  what they are measured from. But a change to how `waveHp` sizes a night changes how
+  much the gardener arms before it routes, and so the maze it lays.
+- **Dwell, wave size and the maze form a loop.** `PLOT_DWELL` sizes every wave, wave
+  size sets how much the gardener arms before it routes, and that sets the maze dwell
+  is measured on. Successive passes swing a plot's dwell by up to 15%, so
+  `PLOT_DWELL` is a mean over two passes. `PLOT_TAIL` sizes no wave, so it is taken
+  from the arc the beats are recorded from.
 - **Tolls belong to the reference gardener, like `land`.** A change to `_gardener.ts`,
   to a kind's speed or count, or to the matrix moves them: rerun
   `threshold-probe.ts --kinds` and reset `KIND_TOLL`.
@@ -112,7 +124,12 @@ is in `modules/tuning.ts`.
 - `balance/threshold-probe.ts` bisects, plot by plot with no almanac, the wave size at
   which the reference gardener first leaks and first loses, and names the kinds that
   leak first. The geometric mean of the loss thresholds is `land`. `--kinds` adds each
-  kind's threshold over the slug's, which `KIND_TOLL` is set from.
+  kind's threshold over the slug's, which `KIND_TOLL` is set from. `--refuse hedge` and
+  `--refuse marigold` ask how much of a plot's threshold the maze, or the booster,
+  carries.
+- `balance/maze-probe.ts` lays hedges from a bare plot with the gardener's own search
+  until none lengthens the route, at each lookahead depth: how long a maze each plot
+  allows, and the depth `LOOKAHEAD` is set at.
 - `balance/arc-probe.ts` plays every plot under the reference gardener, up to three
   attempts each, and prints the beats and a per-wave spine diff. Its header lists the
   columns' flags: `--no-early` stops calling it a day, `--refuse <plant>` plays without
@@ -128,15 +145,19 @@ is in `modules/tuning.ts`.
 ## Known thin
 
 - **A kind's toll varies by plot.** `KIND_TOLL` is a mean across plots. Mice land at
-  2.9 times the slug's threshold in the Herb Border and 0.8–0.9 elsewhere, and beetles
-  at 0.4 in the Orchard against 0.7–0.9 elsewhere. So Herb Border mouse nights are
-  easy, and Orchard beetle nights bind.
-- **One `land` for three plots.** The reference gardener loses the plots at 0.36,
-  0.57 and 0.54 of capacity. `land` is their geometric mean, so the Herb Border runs
+  1.36 times the slug's threshold in the Herb Border and 0.74 in the Orchard, and
+  beetles at 1.09 against 0.57. So Orchard mouse and beetle nights bind, and the Herb
+  Border's are easier than their pressure says.
+- **One `land` for three plots.** The reference gardener loses the plots at 0.71,
+  1.00 and 0.90 of capacity. `land` is their geometric mean, so the Herb Border runs
   harder than its pressure says, and the other two easier.
 - **The almanac is worth more than the spine counts.** At the level-8 almanac the
-  Orchard holds first try with every wave 60% heavier than the spine sizes it. Part of
+  Orchard holds first try with every wave 40% heavier than the spine sizes it. Part of
   that is `land` sitting below the Orchard's own threshold. The rest is perches and
   cloches, which the spine never counts.
-- **The trap is never planted.** The reference gardener ranks plants by route coverage
-  times damage, and a trap deals none. So `land` is measured on boards with no slow.
+- **The maze pays on one plot of three.** In the Bean Rows the maze and the booster
+  each carry about a tenth of the threshold (both 1.00, `--refuse hedge` 0.90,
+  `--refuse marigold` 0.90). In the Orchard both cost a little (0.90 with both, 0.91
+  without hedges, 0.95 without marigolds). The Herb Border's open beds need a barrier
+  of about nine hedges before the path lengthens at all, and after the floor a build
+  rarely has that whole, so its maze barely grows and all three read 0.71.

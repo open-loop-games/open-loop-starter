@@ -254,3 +254,51 @@ describe('the counter wheel', () => {
     expect([...aimed.get(bat)!]).toEqual(['moth']);
   });
 });
+
+describe('booster against maze', () => {
+  beforeEach(() => {
+    boot();
+    getGarden().records.submit({ key: 'herb-border', value: 5000, elapsed: 0, runNumber: 1 });
+  });
+
+  /** A thrush beside the route, and two open cells touching it, off the route. */
+  function thrushWithRoom(run: PlotRun) {
+    const at = besideRoute(run);
+    run.plant('thrush', at.x, at.y);
+    const thrush = [...run.plants.values()][0];
+    const onRoute = new Set(run.route().map((c) => `${c.x},${c.y}`));
+    const room: { x: number; y: number }[] = [];
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = at.x + dx;
+        const y = at.y + dy;
+        if ((dx || dy) && !onRoute.has(`${x},${y}`) && run.canPlant('marigold', x, y).ok)
+          room.push({ x, y });
+      }
+    return { thrush, room };
+  }
+
+  it('a marigold boosts what touches it, and a second marigold adds nothing', () => {
+    const run = getPlot().startPlot('herb-border');
+    getPlot().compost.value = 10_000;
+    const { thrush, room } = thrushWithRoom(run);
+    const alone = run.plantDamage(thrush);
+    run.plant('marigold', room[0].x, room[0].y);
+    const boosted = run.plantDamage(thrush);
+    run.plant('marigold', room[1].x, room[1].y);
+    expect(boosted).toBeGreaterThan(alone);
+    expect(run.plantDamage(thrush)).toBe(boosted);
+  });
+
+  it('the hand shows what a planting does to the path, and whom a marigold would boost', () => {
+    const run = getPlot().startPlot('herb-border');
+    getPlot().compost.value = 10_000;
+    const { room } = thrushWithRoom(run);
+    const on = run.route()[3];
+    const hedge = run.plantPreview('hedge', on.x, on.y);
+    expect(hedge.pathAfter).toBeGreaterThanOrEqual(hedge.pathBefore);
+    expect(run.plantPreview('marigold', room[0].x, room[0].y).boosts).toBe(1);
+    run.plant('marigold', room[0].x, room[0].y);
+    expect(run.plantPreview('marigold', room[1].x, room[1].y).boosts).toBe(0);
+  });
+});

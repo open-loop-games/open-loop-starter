@@ -90,7 +90,8 @@ export const PLANT_TEXT: Record<PlantId, { displayName: string; description: str
   },
   marigold: {
     displayName: 'Marigolds',
-    description: 'Companion planting: every plant touching it, diagonals included, hunts harder.',
+    description:
+      'Companion planting: every plant touching it, diagonals included, hunts half again as hard. Two marigolds on one plant do no more than one.',
   },
   ladybird: {
     displayName: 'Ladybird Hotel',

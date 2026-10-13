@@ -9,6 +9,9 @@
  * - `V/Vref`: compost committed over the spine's `committedValue`, which
  *   counts what calling it a day pays;
  * - `share`: the hunting plants' share of compost on the board;
+ * - `boost`: the marigolds' damage multiplier over the hunting plants,
+ *   weighted by damage: what the booster adds that a thrush-equivalent does not;
+ * - `path`: the route's length in cells, what the maze adds;
  * - `kind`: the kind of pest the night sends;
  * - `dwell`: seconds a slug-speed pest spends in the reach of a plant that can
  *   hurt it, weighted by damage: the leak estimate's τ. A moth's is measured
@@ -46,6 +49,7 @@ import {
   DefenderTuningRegistryKey,
   createDefenderModules,
   getGarden,
+  evaluateCompanions,
   getPlot,
   type PlotRun,
 } from '../modules';
@@ -75,6 +79,8 @@ interface Launch {
   kind: string;
   value: number;
   share: number;
+  boost: number;
+  path: number;
   dwell: number;
   capacity: number;
 }
@@ -92,6 +98,8 @@ function measureLaunch(run: PlotRun): Launch {
   let dpsSum = 0;
   let dwellSum = 0;
   let capacity = 0;
+  let boosted = 0;
+  const amp = evaluateCompanions(run.grid, run.plants, specs);
   for (const p of run.plants.values()) {
     value += p.spent;
     const spec = specs[p.def];
@@ -105,6 +113,7 @@ function measureLaunch(run: PlotRun): Launch {
     // A splash release is priced to catch two pests; count it at that.
     const dps = (run.plantDamage(p) / spec.cooldown) * (spec.splash > 0 ? 2 : 1) * hurts;
     dpsSum += dps;
+    boosted += dps * (amp.get(p.id) ?? 1);
     dwellSum += dps * dwell;
     capacity += dps * (n * a.spawnGap + dwell);
   }
@@ -113,6 +122,8 @@ function measureLaunch(run: PlotRun): Launch {
     kind,
     value,
     share: board > 0 ? hunting / board : 0,
+    boost: dpsSum > 0 ? boosted / dpsSum : 1,
+    path: run.route().length - 1,
     dwell: dpsSum > 0 ? dwellSum / dpsSum : 0,
     capacity,
   };
@@ -120,7 +131,7 @@ function measureLaunch(run: PlotRun): Launch {
 
 console.log('Walled Garden capacity probe — reference gardener, early calls on, tickDelta 0.05\n');
 console.log(
-  'plot         wave kind     n   V/Vref  share  dwell  C/Cref   land   HP/C  leaks   tail',
+  'plot         wave kind     n   V/Vref  share  boost  path  dwell  C/Cref   land   HP/C  leaks   tail',
 );
 const flight: number[] = [];
 for (const [pi, def] of PLOTS.entries()) {
@@ -161,6 +172,8 @@ for (const [pi, def] of PLOTS.entries()) {
         String(l.pests).padStart(3),
         f(s.value / vref).padStart(8),
         f(s.share).padStart(6),
+        f(s.boost).padStart(6),
+        String(s.path).padStart(5),
         f(s.dwell, 1).padStart(6),
         f(s.capacity / cref).padStart(7),
         f(l.damageDealt / s.capacity).padStart(6),

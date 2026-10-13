@@ -169,8 +169,22 @@ const hint = computed(() => {
   if (phase.value === 'wave')
     return 'Night has fallen. Nothing can be planted until the wave is over.';
   if (tool.value && hover.value) {
-    const r = props.run.canPlant(tool.value, hover.value.x, hover.value.y);
+    const { x, y } = hover.value;
+    const r = props.run.canPlant(tool.value, x, y);
     if (!r.ok) return r.reason ?? '';
+    // The trade in hand: what this cell does to the path, and to the boost.
+    const p = props.run.plantPreview(tool.value, x, y);
+    const parts: string[] = [];
+    if (p.pathAfter !== p.pathBefore)
+      parts.push(`The path goes ${p.pathBefore} → ${p.pathAfter} cells.`);
+    if (tool.value === 'marigold')
+      parts.push(
+        p.boosts > 0
+          ? `Boosts ${p.boosts} ${p.boosts === 1 ? 'plant' : 'plants'} by half.`
+          : 'Nothing here to boost.',
+      );
+    else if (p.boosted) parts.push('Marigolds will boost it.');
+    if (parts.length) return parts.join(' ');
   }
   if (notice.value) return notice.value;
   if (tool.value)
