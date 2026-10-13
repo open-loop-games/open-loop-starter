@@ -61,11 +61,19 @@ export function createLifecycle(doorDefs: DoorDef[]): Lifecycle {
 
   const doors = createPurchasableCategory<DoorDef>({
     id: IDS.doors,
-    mapPurchasable: (def) => ({
-      display: { title: def.title, description: def.description },
-      requirements: createGateRequirement({ gate: def.opensWhen }),
-      limit: 1,
-    }),
+    // A door's record is not enough: the door before it must be open, so the
+    // ladder opens in order even where a later record could be met early.
+    mapPurchasable: (def) => {
+      const before = doorDefs[doorDefs.indexOf(def) - 1];
+      const gate: Gate = before
+        ? { kind: 'all', of: [doorGate(before.id), def.opensWhen] }
+        : def.opensWhen;
+      return {
+        display: { title: def.title, description: def.description },
+        requirements: createGateRequirement({ gate }),
+        limit: 1,
+      };
+    },
   });
   doors.register(doorDefs);
 

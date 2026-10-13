@@ -31,9 +31,9 @@ stays stopped.
 
 **The lifecycle table** (`MECHANISMS` in `data/case.ts`, `modules/lifecycle.ts`).
 
-- **Doors** are a purchasable category with `limit: 1`, opened from a record that
-  spending never lowers: pages read, lifetime leads, suspects cleared. No reset names
-  them, so door state only grows.
+- **Doors** are a purchasable category with `limit: 1`, opened in order, each from a
+  record that spending never lowers: pages read, lifetime leads, suspects cleared. No
+  reset names them, so door state only grows.
 - **Every mechanism declares `[installedBy, retiredBy)`.** Its liveness is an engine
   Gate over the doors, so it flips on once and off once. The phase is derived as
   "doors opened", never stored beside them.

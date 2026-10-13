@@ -29,6 +29,12 @@ describe('the one-way lifecycle', () => {
     expect(life.doorsOpened.value).toBe(1);
   });
 
+  it('never opens a door out of order', () => {
+    const { life } = getCase();
+    addResource(getBoard().leads, RECONSTRUCT_LEADS);
+    expect(life.open('reconstruct')).toBe(false);
+  });
+
   it('retires reading at the first door but keeps the clerks, reassigned', async () => {
     const { life } = getCase();
     const box = getBox();
