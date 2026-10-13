@@ -21,10 +21,10 @@ Pacing is not a line boundary. A slow Producer differs from a fast one in its ra
 
 Each change below uses something the build already has:
 
-- **A flatter ladder.** Author the target beat closer to the opener and `m` falls with it (`../producer/data/curve.ts` § The one derived number). Spends come less often and each one matters less.
+- **A flatter ladder.** Author the target beat closer to the opener and `m` falls with it (`../producer/data/spine.ts` § The one derived ratio). Spends come less often and each one matters less.
 - **Automation early, not withheld.** Open the first automation tier near the start, so `automation` purchases the next thing whether or not anyone is looking. The click stays available and stops being needed.
 - **Reveals paced by lifetime totals.** Unlock refinements and class visibility on lifetime-mass thresholds, so the board grows over hours rather than minutes. These are discrete steps on a lifetime total, the shape the spine already requires of revisions.
-- **A longer offline window, paid for in load time.** The window is a wait budget (`../producer/data/curve.ts` § The offline window), so twelve hours costs about twice the six-hour wait. Whether to replay at all while closed is the axis this set splits on.
+- **A longer offline window, paid for in load time.** The window is the smaller of the game's length and a wait budget (`../producer/data/spine.ts` § The night bookkeeper), so a longer window costs a longer load. Whether to replay at all while closed is the axis this set splits on.
 
 The worked numbers for this profile are the former `ambient/` archetype at open-loop-starter `9f2c34cb40`: a twelve-hour arc, a reveal ladder on lifetime thresholds, and a window matched to that arc.
 

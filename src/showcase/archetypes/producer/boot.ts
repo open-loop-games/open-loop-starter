@@ -3,11 +3,10 @@ import { type Engine, type EngineModule } from '@open-loop/engine';
 import { bootApp, bootEngine } from '@/boot';
 import ProducerAppRoot from './ui/ProducerAppRoot.vue';
 import { createProducerModules } from './modules';
-import { DEFAULT_PRODUCER_DATA } from './data';
 
 const GAME_ID = 'producer';
 const MOD_ID = 'producer';
-const MOD_NAME = 'Producer';
+const MOD_NAME = 'Consolidated Holdings';
 
 export interface ProducerBootResult {
   engine: Engine;
@@ -31,10 +30,7 @@ export interface ProducerEngineOptions {
  * owns the resume sequence.
  */
 export function createProducerEngine(options?: ProducerEngineOptions): { engine: Engine } {
-  const modules = [
-    ...createProducerModules(DEFAULT_PRODUCER_DATA),
-    ...(options?.extraModules ?? []),
-  ];
+  const modules = [...createProducerModules(), ...(options?.extraModules ?? [])];
   const engine = bootEngine({
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,

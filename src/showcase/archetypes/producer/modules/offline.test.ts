@@ -1,98 +1,65 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, addResource } from '@open-loop/engine';
-import { boot, getEngine } from '../sim/harness';
-import { getClasses, getMass } from './swarm';
 import { SettingsKey } from '@/modules/settings';
-import { DispatchKey } from './automation';
+import { boot, getEngine } from '../sim/harness';
+import { getFirm } from './firm';
 import { OfflineKey } from './offline';
 import { OFFLINE_WINDOW_SECONDS } from '../data';
 
 /**
- * What a return after time away *does*. No magnitudes: how much time away is
- * worth is the spine's question (`../IDENTITY.md` § Offline is a time-base
- * map), and `../balance/offline-probe.ts` measures it.
+ * What a return after time away does. No magnitudes: what time away is worth is
+ * `../balance/offline-probe.ts`'s question.
  */
 
 const num = (v: unknown): number => new Decimal(v as never).toNumber();
 const offline = () => getEngine().tryInject(OfflineKey)!;
-const dispatch = () => getEngine().tryInject(DispatchKey)!;
-const fleetSize = (): number =>
-  getClasses()
-    .getAll()
-    .reduce((total, entry) => total + num(entry.producer.ownedCount.value), 0);
 const HOUR_MS = 3_600_000;
 
-/** Own one seed probe, so the swarm has a rate to keep while offline. */
-function seedTheSwarm(): void {
-  addResource(getMass(), 1e6);
-  getClasses().getProducer('seed')!.repeatable!.purchase(1);
+/** Own a pushcart, so the firm has a rate to keep while the player is away. */
+function openTheFirm(): void {
+  addResource(getFirm().cash, 1e6);
+  getFirm().subsidiaries.getProducer('pushcart')!.repeatable!.purchase(1);
+}
+
+function hireTheBookkeeper(): void {
+  addResource(getFirm().cash, 1e9);
+  for (const e of getFirm().subsidiaries.getAll().slice(0, 4)) e.producer.repeatable!.purchase(1);
+  offline().bookkeeper.purchase(1);
+}
+
+function returnAfter(ms: number) {
+  const now = Date.now();
+  return offline().catchUp(getEngine().tickDriver, now - ms, now);
 }
 
 beforeEach(() => boot());
 
 describe('returning after time away', () => {
-  it('advances the swarm across the time away', () => {
-    seedTheSwarm();
-    const before = num(getMass().value);
-    const now = Date.now();
-    offline().catchUp(getEngine().tickDriver, now - HOUR_MS, now);
-    expect(num(getMass().value)).toBeGreaterThan(before);
+  it('replays nothing before the bookkeeper is hired', () => {
+    openTheFirm();
+    const before = num(getFirm().cash.value);
+    expect(returnAfter(HOUR_MS).caughtUpSeconds).toBe(0);
+    expect(num(getFirm().cash.value)).toBe(before);
+  });
+
+  it('runs the firm across the time away once the bookkeeper is hired', () => {
+    openTheFirm();
+    hireTheBookkeeper();
+    const before = num(getFirm().cash.value);
+    expect(returnAfter(60_000).caughtUpSeconds).toBeGreaterThan(0);
+    expect(num(getFirm().cash.value)).toBeGreaterThan(before);
+  });
+
+  it('replays no more than the window', () => {
+    openTheFirm();
+    hireTheBookkeeper();
+    expect(returnAfter(100 * HOUR_MS).caughtUpSeconds).toBe(OFFLINE_WINDOW_SECONDS);
   });
 
   it('replays nothing when the player has switched offline progress off', () => {
-    seedTheSwarm();
+    openTheFirm();
+    hireTheBookkeeper();
     getEngine().tryInject(SettingsKey)!.settings.offlineProgress.value = false;
-    const before = num(getMass().value);
-    const now = Date.now();
-    const result = offline().catchUp(getEngine().tickDriver, now - HOUR_MS, now);
-    expect(result.caughtUpSeconds).toBe(0);
-    expect(num(getMass().value)).toBe(before);
-  });
-
-  it('replays no more than the offline window', () => {
-    seedTheSwarm();
-    const now = Date.now();
-    const away = OFFLINE_WINDOW_SECONDS * 2;
-    const result = offline().catchUp(getEngine().tickDriver, now - away * 1000, now);
-    expect(result.awaySeconds).toBe(away);
-    expect(result.caughtUpSeconds).toBe(OFFLINE_WINDOW_SECONDS);
-  });
-
-  it('treats a save with no timestamp as no time away', () => {
-    seedTheSwarm();
-    const before = num(getMass().value);
-    const result = offline().catchUp(getEngine().tickDriver, undefined);
-    expect(result.awaySeconds).toBe(0);
-    expect(num(getMass().value)).toBe(before);
-  });
-
-  it('records the return for the welcome-back surface', () => {
-    seedTheSwarm();
-    expect(offline().lastReturn.value).toBeNull();
-    const now = Date.now();
-    const result = offline().catchUp(getEngine().tickDriver, now - HOUR_MS, now);
-    expect(offline().lastReturn.value).toEqual(result);
-    expect(num(result.massGained)).toBeGreaterThan(0);
-  });
-});
-
-describe('time away runs the same game as live play', () => {
-  it('accumulates the production while dispatch is still locked', () => {
-    seedTheSwarm();
-    dispatch().isActive.value = true;
-    const fleet = fleetSize();
-    const now = Date.now();
-    offline().catchUp(getEngine().tickDriver, now - HOUR_MS, now);
-    expect(fleetSize()).toBe(fleet);
-  });
-
-  it('spends it once a dispatch rung is open', () => {
-    seedTheSwarm();
-    dispatch().tiers.unlock('assisted');
-    dispatch().isActive.value = true;
-    const fleet = fleetSize();
-    const now = Date.now();
-    offline().catchUp(getEngine().tickDriver, now - HOUR_MS, now);
-    expect(fleetSize()).toBeGreaterThan(fleet);
+    expect(returnAfter(HOUR_MS).caughtUpSeconds).toBe(0);
   });
 });

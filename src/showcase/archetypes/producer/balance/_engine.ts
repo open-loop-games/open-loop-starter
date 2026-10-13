@@ -1,234 +1,196 @@
 /**
- * Shared probe fixture — NOT runnable on its own (leading underscore, per
- * `.claude/rules/archetype-authoring.md` § Canonical `balance/` filenames).
+ * Shared probe fixture, not runnable on its own. Builds a real producer engine
+ * and plays the arc on it.
  *
- * Builds a real producer engine and runs the arc on it. The driver here is
- * deliberately thin: it works only the **manual openers a player works** —
- * hand-launches, hand purchases before dispatch opens, and refinement purchases —
- * and hands every class purchase to the shipping `modules/automation.ts` the
- * moment its rung opens (`/work/studio/CLAUDE.md` § automation as game code).
- * No automated player re-implements the allocation rule; the rule under
- * measurement IS the one the game ships.
+ * The runner works only what a player works by hand: deals at the active rate,
+ * hand-buys by the shipping acquisition policy, memos and hires on sight. It
+ * stops each one when the desk that automates it is hired and on duty
+ * (`/work/studio/CLAUDE.md` § automation as game code). From then on the shipping
+ * desks in `../modules/automation.ts` play, so the rule under measurement is the
+ * one the game ships.
  *
- * This is not a duplicate of `../sim/harness.ts`. That boots the module list
- * for tick-by-tick behavioral specs; this assembles an instrumented arc runner
- * that records beats and prints magnitudes.
+ * This is not a duplicate of `../sim/harness.ts`. That boots the module list for
+ * tick-by-tick behavioral specs; this assembles an instrumented arc runner that
+ * records beats and reads magnitudes.
  */
 
-import { Decimal, addResource } from '@open-loop/engine';
+import { Decimal, type TickDriver } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import {
-  DispatchKey,
+  AutomationKey,
+  FirmKey,
   OfflineKey,
+  acquisitionPolicy,
   createProducerModules,
-  getClasses,
-  getTotalRate,
-  getMass,
-  getRefinements,
-  getRevisions,
-  launch,
-  type DispatchPolicyName,
+  type AutomationApi,
+  type AutomationModuleOptions,
+  type FirmApi,
+  type OfflineApi,
 } from '../modules';
-import { DEFAULT_PRODUCER_DATA } from '../data';
-import { BEATS, type ArcReading } from './beats';
+import { ACTIVE_DEAL_RATE, type HireId } from '../data';
 
-export const num = (v: unknown): number => new Decimal(v as never).toNumber();
+/** Sim seconds per runner step: the hand acts four times a second. */
+export const DT = 0.25;
 
-export const hms = (s: number): string =>
-  `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(Math.floor(s) % 60).padStart(2, '0')}`;
+export interface Beat {
+  /** Stable key: one beat per thing reached. */
+  key: string;
+  label: string;
+  /** Sim seconds since founding. */
+  t: number;
+}
 
 export interface ArcOptions {
-  /** Sim-seconds to run. */
+  /** Sim seconds to run. */
   seconds: number;
-  /** Pin the allocation rule for the whole run. Unset = the shipping ladder. */
-  forcePolicy?: DispatchPolicyName;
-  /** Pin whether the dispatcher may wait for cost. Unset = the rule decides. */
-  forceWaitForCost?: boolean;
-  /** Hand-launches per second while the player is still opening the game. */
-  launchesPerSecond?: number;
-  /** Unique persistence namespace prefix, so concurrent runs share no persistent context. */
-  persistenceNamespacePrefix?: string;
+  /** Deals per second the hand closes before the sales desk. */
+  dealRate?: number;
+  /** Buy the night bookkeeper when it is affordable. The cell's arc never does. */
+  hireBookkeeper?: boolean;
   /**
-   * Sample the arc on a fixed cadence. The beat map answers "when did X first
-   * happen"; this answers "what was the arc doing between the beats", which is
-   * the only way to read channel occupancy rather than a run average.
-   * Sampling is read-only — a sampler that purchased would be a second driver.
-   */
-  onSample?: (reading: ArcReading) => void;
-  /** Sample cadence in sim-seconds. Ignored without `onSample`. */
-  sampleEverySeconds?: number;
-  /**
-   * Times the player is away. At `at` the driver stops working the manual
-   * openers and hands `seconds` to the shipping offline catch-up; the arc
-   * resumes at the return. A beat reached while away is recorded at the return,
-   * which is when the player sees it.
+   * Times the player is away. At `at` the runner hands `seconds` to the shipping
+   * catch-up; the arc resumes at the return. A beat reached while away is recorded
+   * at the return, which is when the player sees it.
    */
   offlinePeriods?: { at: number; seconds: number }[];
+  /** Probe-side variants of the acquisitions desk. Unset: the shipping desk. */
+  automation?: AutomationModuleOptions;
+  /** Unique persistence namespace prefix, so concurrent runs share no persistent context. */
+  persistenceNamespacePrefix?: string;
 }
 
 export interface ArcResult {
-  /** Each beat's fire time in sim-seconds, or `undefined` if it never fired. */
-  beatAt: Map<number, number>;
-  /** Sim-second each class was first deployed. */
-  classAt: Map<string, number>;
-  /** Final owned count per class, ladder order. */
-  finalCounts: { id: string; displayName: string; count: number }[];
-  /** Sim-second each automation tier first unlocked. */
-  automationTierAt: Map<string, number>;
-  /** Hand purchases the player made before dispatch took over. */
-  handPurchases: number;
-  /** Sim-seconds the dispatcher spent holding mass for a pick (`savingFor` set). */
-  holdSeconds: number;
-  /**
-   * Refinements the player purchased while the dispatcher was holding, and the
-   * mass they took out of its savings. The player and the dispatcher share one
-   * amount of mass, so saving brings refinements forward, and a gap measured against a
-   * run that never saves includes that.
-   */
-  refinementsWhileHolding: { count: number; mass: number };
-  final: ArcReading;
-  /** Final rate-chain product on the opening class, as a factor over its base. */
-  openingClassStack: number;
+  beats: Beat[];
+  /** Units the hand bought before the acquisitions desk took over. */
+  handBuys: number;
+  /** Anomalies seen: NaN, negative cash. Empty on a clean run. */
+  anomalies: string[];
+  firm: FirmApi;
+  automation: AutomationApi;
+  offline: OfflineApi;
+  /** The engine's driver, for a catch-up the caller runs after the arc. */
+  tickDriver: TickDriver;
+  dispose(): void;
 }
 
-function read(t: number, automationTier: string): ArcReading {
-  const classes = getClasses();
-  const entries = classes.getAll();
-  return {
-    t,
-    totalRate: num(getTotalRate()),
-    fleetSize: entries.reduce((total, e) => total + num(e.producer.ownedCount.value), 0),
-    distinctClasses: entries.filter((e) => num(e.producer.ownedCount.value) >= 1).length,
-    topClassCount: num(entries[entries.length - 1].producer.ownedCount.value),
-    refinementsOwned: getRefinements()
-      .getAll()
-      .filter((e) => e.purchasable.active.value).length,
-    revisionsEarned: getRevisions()
-      .getAll()
-      .filter((e) => e.achievement.earned.value).length,
-    automationTier,
-  };
-}
-
-/**
- * Run one arc and record it. Seconds are sim-seconds at a 1s tick — coarse on
- * purpose (`.claude/CLAUDE.md` § Balance methodology): producer's events are
- * minute-to-hour scale and sub-second fidelity would only cost cycles.
- */
+/** Play one arc. The caller reads the end state off the returned APIs, then disposes. */
 export async function runArc(options: ArcOptions): Promise<ArcResult> {
-  const { seconds, forcePolicy, forceWaitForCost, launchesPerSecond = 2 } = options;
-
+  const { seconds, dealRate = ACTIVE_DEAL_RATE } = options;
   const handle = bootTestEngine({
-    modules: createProducerModules(DEFAULT_PRODUCER_DATA, {
-      automation: { forcePolicy, forceWaitForCost },
-    }),
-    intervalRate: 1,
-    persistenceNamespacePrefix:
-      options.persistenceNamespacePrefix ??
-      `producer-arc-${forcePolicy ?? 'ladder'}${forceWaitForCost === undefined ? '' : `-wait-${forceWaitForCost}`}`,
+    modules: createProducerModules({ automation: options.automation }),
+    intervalRate: 1 / DT,
+    persistenceNamespacePrefix: options.persistenceNamespacePrefix ?? 'producer-arc',
   });
+  const firm = handle.engine.tryInject(FirmKey)!;
+  const automation = handle.engine.tryInject(AutomationKey)!;
+  const offline = handle.engine.tryInject(OfflineKey)!;
+  const working = (id: HireId) => automation.working(id);
 
-  const classes = getClasses();
-  const dispatch = handle.engine.tryInject(DispatchKey);
-  if (!dispatch) throw new Error('producer arc: dispatch module did not provide DispatchKey');
-
-  // The player opts in as soon as the toggle exists. It stays inert until a
-  // rung opens — which is the ladder doing its job, and is why the first arc
-  // walkthrough with no manual opener purchased nothing in eight hours.
-  dispatch.isActive.value = true;
-
-  const beatAt = new Map<number, number>();
-  const classAt = new Map<string, number>();
-  const automationTierAt = new Map<string, number>();
-  let handPurchases = 0;
-  let holdSeconds = 0;
-  const refinementsWhileHolding = { count: 0, mass: 0 };
-  const offline = handle.engine.tryInject(OfflineKey);
-  const offlinePeriods = new Map((options.offlinePeriods ?? []).map((a) => [a.at, a.seconds]));
-
-  for (let t = 0; t <= seconds; t++) {
-    const away = offlinePeriods.get(t);
-    if (away !== undefined) {
-      if (!offline) throw new Error('producer arc: offline module did not provide OfflineKey');
-      const now = Date.now();
-      t += offline.catchUp(handle.engine.tickDriver, now - away * 1000, now).caughtUpSeconds;
-    }
-    const autoRunning = dispatch.tiers.hasReached('assisted');
-
-    // ── manual openers, and only these ──
-    if (!autoRunning) for (let i = 0; i < launchesPerSecond; i++) launch();
-    await handle.tick(1);
-    if (!autoRunning && purchaseCheapestAffordable()) handPurchases++;
-    const holding = dispatch.savingFor.value !== null;
-    if (holding) holdSeconds++;
-    for (const entry of getRefinements().getAll()) {
-      if (!entry.purchasable.canPurchase.value) continue;
-      entry.purchasable.purchase(1);
-      if (holding) {
-        refinementsWhileHolding.count++;
-        refinementsWhileHolding.mass += num(entry.def.cost);
-      }
-    }
-
-    const automationTier = dispatch.tiers.currentTierId.value;
-    if (!automationTierAt.has(automationTier)) automationTierAt.set(automationTier, t);
-    for (const entry of classes.getAll()) {
-      if (!classAt.has(entry.def.id) && num(entry.producer.ownedCount.value) >= 1) {
-        classAt.set(entry.def.id, t);
-      }
-    }
-    const reading = read(t, automationTier);
-    for (const beat of BEATS) {
-      if (!beatAt.has(beat.n) && beat.reached(reading)) beatAt.set(beat.n, t);
-    }
-    if (options.onSample && t % (options.sampleEverySeconds ?? 60) === 0) {
-      options.onSample(reading);
-    }
-  }
-
-  const opening = classes.getAll()[0];
-  const result: ArcResult = {
-    beatAt,
-    classAt,
-    automationTierAt,
-    handPurchases,
-    holdSeconds,
-    refinementsWhileHolding,
-    finalCounts: classes.getAll().map((e) => ({
-      id: e.def.id,
-      displayName: e.def.displayName,
-      count: num(e.producer.ownedCount.value),
-    })),
-    final: read(seconds, dispatch.tiers.currentTierId.value),
-    openingClassStack: num(opening.producer.computedRate.value) / num(opening.def.baseRate),
+  const beats: Beat[] = [];
+  const seen = new Set<string>();
+  const fire = (key: string, label: string, t: number) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    beats.push({ key, label, t });
   };
+  const anomalies: string[] = [];
+  const away = new Map((options.offlinePeriods ?? []).map((p) => [p.at, p.seconds]));
 
-  handle.dispose();
-  return result;
-}
-
-/**
- * The one hand purchase a player makes before dispatch opens: whatever is cheapest
- * and affordable. Deliberately the naive rule — it is what a player does before
- * they think about payback, and the first rung of the ladder grants exactly it.
- */
-function purchaseCheapestAffordable(): boolean {
-  let best: { purchase: (n: number) => unknown } | undefined;
-  let bestCost = Infinity;
-  for (const entry of getClasses().getAll()) {
-    const repeatable = entry.producer.repeatable;
-    if (!repeatable?.canPurchase.value) continue;
-    const cost = num(repeatable.getCost(1));
-    if (cost < bestCost) {
-      best = repeatable;
-      bestCost = cost;
+  let t = 0;
+  let owedClicks = 0;
+  let handBuys = 0;
+  while (t < seconds) {
+    const leave = away.get(t);
+    if (leave !== undefined) {
+      const now = Date.now();
+      t += offline.catchUp(handle.engine.tickDriver, now - leave * 1000, now).caughtUpSeconds;
     }
+
+    // The hand.
+    if (!working('sales-desk')) {
+      owedClicks += DT * dealRate;
+      while (owedClicks >= 1) {
+        owedClicks -= 1;
+        firm.deal();
+      }
+    }
+    for (const e of automation.executives.getAll()) {
+      if (e.purchasable.canPurchase.value) e.purchasable.purchase(1);
+    }
+    if (options.hireBookkeeper && offline.bookkeeper.canPurchase.value) {
+      offline.bookkeeper.purchase(1);
+    }
+    if (!working('board')) {
+      for (const e of firm.management.getAll()) {
+        if (e.purchasable.canPurchase.value) e.purchasable.purchase(1);
+      }
+    }
+    if (!working('acquisitions-desk')) {
+      for (;;) {
+        const affordable = firm.subsidiaries
+          .getAll()
+          .map((e) => e.producer)
+          .filter((p) => p.repeatable?.canPurchase.value);
+        const pick = acquisitionPolicy.pick(affordable);
+        if (!pick) break;
+        pick.repeatable!.purchase(1);
+        handBuys++;
+      }
+    }
+
+    await handle.tick(1);
+    t += DT;
+    const now = Math.round(t * 100) / 100;
+
+    for (const e of firm.subsidiaries.getAll()) {
+      if (Decimal.fromValue(e.producer.ownedCount.value).gte(1)) {
+        fire(
+          `open:${e.def.id}`,
+          e.def.tier === 0
+            ? `open t0 ${e.def.displayName} (first purchase)`
+            : `open t${e.def.tier} ${e.def.displayName}`,
+          now,
+        );
+      }
+    }
+    for (const e of firm.management.getAll()) {
+      if (e.purchasable.active.value) fire(`m:${e.def.id}`, `manage ${e.def.title}`, now);
+    }
+    for (const e of firm.milestones.getAll()) {
+      if (e.achievement.earned.value) fire(`ms:${e.def.id}`, `milestone ${e.def.title}`, now);
+    }
+    for (const e of firm.grades.getAll()) {
+      if (e.achievement.earned.value) fire(`g:${e.def.id}`, `grade ${e.def.grade}`, now);
+    }
+    for (const tier of automation.dispatch.tiers) {
+      if (tier.order > 0 && automation.dispatch.isUnlocked(tier.id)) {
+        fire(`d:${tier.id}`, `dispatch → ${tier.displayName}`, now);
+      }
+    }
+    if (firm.incomeRate.value.gt(firm.dealValue.value.mul(ACTIVE_DEAL_RATE))) {
+      fire('crossover', 'subsidiaries out-earn the hand', now);
+    }
+
+    const cash = Decimal.fromValue(firm.cash.value);
+    if (cash.isNan() || firm.incomeRate.value.isNan()) anomalies.push(`NaN at ${now}`);
+    if (cash.lt(0)) anomalies.push(`negative cash at ${now}`);
+    if (anomalies.length > 5) break;
   }
-  best?.purchase(1);
-  return best !== undefined;
+
+  return {
+    beats,
+    handBuys,
+    anomalies,
+    firm,
+    automation,
+    offline,
+    tickDriver: handle.engine.tickDriver,
+    dispose: () => handle.dispose(),
+  };
 }
 
-/** Seed the mass — used only by probes measuring a mechanic in isolation. */
-export function fund(amount: number): void {
-  addResource(getMass(), amount);
-}
+/** Sim seconds as `NmSSs`; an em dash for never. */
+export const fmt = (s: number): string =>
+  Number.isFinite(s)
+    ? `${Math.floor(s / 60)}m${String(Math.round(s % 60)).padStart(2, '0')}s`
+    : '—';

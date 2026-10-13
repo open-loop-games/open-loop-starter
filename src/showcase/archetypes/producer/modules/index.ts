@@ -1,54 +1,32 @@
 import type { EngineModule } from '@open-loop/engine';
-import type { ProducerData } from '../data/types';
 import { createTuningModule } from './tuning';
-import { createSwarmModule } from './swarm';
-import { createRefinementsModule } from './refinements';
-import { createRevisionsModule } from './revisions';
+import { createFirmModule } from './firm';
 import { createAutomationModule, type AutomationModuleOptions } from './automation';
 import { createOfflineModule } from './offline';
 
 export { ProducerTuningRegistryKey, type ProducerTunableKey } from './tuning';
+export { FirmKey, getFirm, type FirmApi, type LedgerKind, type LedgerLine } from './firm';
 export {
-  MassLifetimeKey,
-  buildProducerStateView,
-  getClasses,
-  getTotalRate,
-  getLaunchCount,
-  getLauncher,
-  getMass,
-  launch,
-} from './swarm';
-export { getProducerStateView, getRefinements } from './refinements';
-export { getRevisions } from './revisions';
-export {
-  DispatchKey,
-  buildDispatchPolicies,
+  AutomationKey,
+  acquisitionPolicy,
+  getAutomation,
+  type AutomationApi,
   type AutomationModuleOptions,
-  type DispatchApi,
-  type DispatchPolicyName,
   type ProducerAutomationTier,
 } from './automation';
-export { OfflineKey, type OfflineApi, type OfflineReturn } from './offline';
+export { OfflineKey, getOffline, type OfflineApi, type OfflineReturn } from './offline';
 
 /**
- * Compose the producer modules in dependency order. Modules close over `data`
- * at construction; balance constants land at `tunable()` reader sites in their
- * owning modules (see `ProducerTuningRegistryKey`).
- *
- * The order is the chain order: swarm creates every rate chain, then
- * refinements, revisions and generation bind onto them. Automation comes last
- * because it needs the registered classes to build its policies. Offline sits
- * after everything it replays, so a catch-up runs the whole stack.
+ * The producer modules in dependency order: the registry, the firm that earns,
+ * the desks that spend for the player, and offline catch-up last, so a replay
+ * runs the whole stack.
  */
 export function createProducerModules(
-  data: ProducerData,
   options: { automation?: AutomationModuleOptions } = {},
 ): EngineModule[] {
   return [
     createTuningModule(),
-    createSwarmModule(data),
-    createRefinementsModule(data),
-    createRevisionsModule(data),
+    createFirmModule(),
     createAutomationModule(options.automation),
     createOfflineModule(),
   ];

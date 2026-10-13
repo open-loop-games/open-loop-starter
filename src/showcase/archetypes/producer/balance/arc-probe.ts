@@ -1,93 +1,109 @@
 /**
- * Producer — arc probe: the shipping game, walked end to end.
+ * Producer: arc probe. Plays the shipping game headless and prints when each
+ * beat fired beside the spine's projection, the channel each gap between
+ * perceptible beats falls in, and the end state against the projection.
+ * Prints; never asserts.
  *
- * Run: `pnpm exec vite-node src/showcase/archetypes/producer/balance/arc-probe.ts`
+ * Run: `pnpm exec vite-node src/showcase/archetypes/producer/balance/arc-probe.ts [minutes]`
  *
- * Drives the REAL assembled engine and the shipping dispatcher (`_engine.ts`
- * supplies only the manual openers a player works) and records each beat's
- * fire time. It prints; it does not assert — a probe that disagrees with the
- * projection has done its job.
- *
- * This is the archetype's walkthrough check: the first surface that walks
- * ladder → resource → predicate → beat, and the place structural defects show
- * up rather than tuning ones.
+ * How to read it:
+ * - § spine: the derived ratio and the solved cost step.
+ * - § beats: realized, projected (tier openings, grades and hires only), the gap
+ *   since the previous beat and its flow channel. A perceptible beat is anything
+ *   the player is shown as new: a tier, a memo, a milestone, a grade, a desk.
+ * - § occupancy: the arc's time weighted by the gap each beat closed. Boredom or
+ *   worse inside the horizon is content running out.
+ * - § end state: counts and income against the projection. The projection
+ *   evaluates the same buy order in closed form, so a gap here is the engine and
+ *   the spine disagreeing, not noise.
  */
 
-import { classifyFlowChannel } from '@open-loop/engine';
-import { BEATS, CLICK_CEILING_PER_SECOND } from './beats';
-import { hms, runArc } from './_engine';
-import { COST_RATIO, OPENING_BEAT_SECONDS } from '../data';
+import { Decimal, classifyFlowChannel } from '@open-loop/engine';
+import {
+  CLASS_COST_STEP,
+  COST_RATIO,
+  DOUBLING_PURCHASES,
+  LADDER,
+  LADDER_TARGET,
+  OPENER_COST,
+  OPENER_RATE,
+  projectArc,
+} from '../data';
+import { fmt, runArc } from './_engine';
 
-const HOURS = 8;
-const col = (s: string | number, w: number): string => String(s).padEnd(w);
-const pad = (s: string | number, w: number): string => String(s).padStart(w);
+const HORIZON = Number(process.argv[2] ?? 30) * 60;
 
-async function main(): Promise<void> {
-  console.log(`Producer — arc probe (${HOURS}h, shipping ladder, real engine)\n`);
+const run = await runArc({ seconds: HORIZON });
+const { beats, firm } = run;
 
-  const arc = await runArc({ seconds: HOURS * 3600 });
+console.log('── spine ──');
+console.log(
+  `m = ${COST_RATIO.toFixed(4)} (doubles every ${DOUBLING_PURCHASES.toFixed(2)} buys) · a0 = $${OPENER_COST} · r0 = $${OPENER_RATE}/s`,
+);
+console.log(
+  `cost step ×${CLASS_COST_STEP.toFixed(3)} solved for top tier at ${fmt(LADDER_TARGET)} · rate step ×${LADDER.rateStep.toFixed(3)}`,
+);
 
-  console.log('═══ Beats ═══\n');
-  for (const beat of BEATS) {
-    const t = arc.beatAt.get(beat.n);
-    console.log(
-      `  ${col(beat.n, 4)}${pad(t === undefined ? 'NEVER' : hms(t), 10)}   ${beat.label}`,
-    );
-  }
-
-  console.log('\n═══ The ladder as it was actually walked ═══\n');
-  console.log(`  ${col('class', 10)}${pad('first purchased', 16)}${pad('final count', 14)}`);
-  for (const entry of arc.finalCounts) {
-    const t = arc.classAt.get(entry.id);
-    console.log(
-      `  ${col(entry.displayName, 10)}${pad(t === undefined ? 'NEVER' : hms(t), 16)}${pad(entry.count, 14)}`,
-    );
-  }
-
-  console.log('\n═══ Dispatch ═══\n');
-  for (const [automationTier, t] of arc.automationTierAt)
-    console.log(`  ${col(automationTier, 12)}${pad(hms(t), 10)}`);
-  console.log(
-    `  ${col('by hand', 12)}${pad(arc.handPurchases, 10)}   purchases before dispatch opened`,
-  );
-
-  console.log('\n═══ Final state ═══\n');
-  console.log(`  total rate         ${arc.final.totalRate.toExponential(3)} /s`);
-  console.log(`  fleet size         ${arc.final.fleetSize}`);
-  console.log(`  distinct classes   ${arc.final.distinctClasses}/${arc.finalCounts.length}`);
-  console.log(`  refinements owned  ${arc.final.refinementsOwned}`);
-  console.log(`  revisions earned   ${arc.final.revisionsEarned}`);
-  console.log(`  opening-class Πμ   ${arc.openingClassStack.toFixed(2)}×`);
-
-  // ── Realized vs isolated beat, the correction this probe exists to keep honest ──
-  console.log('\n═══ Realized beat vs the isolated ladder ═══\n');
-  const opening = arc.finalCounts[0];
-  const realizedAverage = (HOURS * 3600) / Math.max(opening.count, 1);
-  const isolated = OPENING_BEAT_SECONDS * COST_RATIO ** (opening.count - 1);
-  console.log(`  ${opening.displayName} reached ${opening.count} units in ${HOURS}h.`);
-  console.log(
-    `    realized average beat   ${realizedAverage.toFixed(1)}s  → ${classifyFlowChannel(realizedAverage)}`,
-  );
-  console.log(
-    `    isolated-ladder T(n)    ${isolated.toExponential(2)}s  → ${classifyFlowChannel(isolated)}`,
-  );
-  console.log(
-    `\n  The gap is rate growth, and it is the reason data/curve.ts reads its\n` +
-      `  flow-channel map as cost escalation rather than as felt cadence.`,
-  );
-
-  console.log('\n═══ The click hand-off ═══\n');
-  const beat2 = arc.beatAt.get(2);
-  const foundry = arc.classAt.get('foundry');
-  console.log(`  click ceiling           ${CLICK_CEILING_PER_SECOND}/s`);
-  console.log(`  ladder passes it        ${beat2 === undefined ? 'NEVER' : hms(beat2)}`);
-  console.log(`  third class purchased   ${foundry === undefined ? 'NEVER' : hms(foundry)}`);
-  console.log(
-    `\n  data/refinements.ts § Balance predicts the hand-off lands in the third\n` +
-      `  class. Compare the two lines above rather than trusting the prose.`,
-  );
-
-  console.log('\ndone.\n');
+const projection = projectArc(LADDER, HORIZON);
+const projected = new Map<string, number>();
+for (const b of projection.beats) {
+  const m = /^open t(\d)/.exec(b.label);
+  if (m) projected.set(`open t${m[1]}`, b.t);
+  const g = /^grade (\S+)/.exec(b.label);
+  if (g) projected.set(`grade ${g[1]}`, b.t);
+  const h = /^hire (\S+)/.exec(b.label);
+  if (h) projected.set(`hire ${h[1]}`, b.t);
 }
 
-void main();
+console.log('\n── beats (realized · projected · gap since previous · channel) ──');
+let prev = 0;
+for (const b of beats) {
+  const keyOpen = /^open (t\d)/.exec(b.label);
+  const keyGrade = /^grade (\S+)/.exec(b.label);
+  const keyHire = /^d:(.+)/.exec(b.key);
+  let p: number | undefined;
+  if (keyOpen) p = projected.get(`open ${keyOpen[1]}`);
+  if (keyGrade) p = projected.get(`grade ${keyGrade[1]}`);
+  if (keyHire) p = projected.get(`hire ${keyHire[1]}`);
+  const gap = b.t - prev;
+  prev = b.t;
+  console.log(
+    `${fmt(b.t).padStart(7)}  ${(p !== undefined ? fmt(p) : '').padStart(7)}  +${gap.toFixed(1).padStart(6)}s ${classifyFlowChannel(gap).padEnd(11)} ${b.label}`,
+  );
+}
+
+// Perceptible-beat channel occupancy: time weighted by the gap each beat closed.
+const occupancy = new Map<string, number>();
+prev = 0;
+for (const b of beats) {
+  const gap = b.t - prev;
+  prev = b.t;
+  const ch = classifyFlowChannel(gap);
+  occupancy.set(ch, (occupancy.get(ch) ?? 0) + gap);
+}
+const tail = HORIZON - prev;
+occupancy.set(classifyFlowChannel(tail), (occupancy.get(classifyFlowChannel(tail)) ?? 0) + tail);
+console.log('\n── channel occupancy of the gaps between perceptible beats ──');
+for (const [ch, s] of occupancy)
+  console.log(`${ch.padEnd(11)} ${((100 * s) / HORIZON).toFixed(1)}%`);
+console.log(`trailing silence after last beat: ${fmt(tail)}`);
+
+console.log('\n── end state ──');
+const counts = firm.subsidiaries
+  .getAll()
+  .map((e) => Decimal.fromValue(e.producer.ownedCount.value).toNumber());
+console.log(`counts realized  ${counts.join(' ')}`);
+console.log(`counts projected ${projection.counts.join(' ')}`);
+console.log(
+  `income realized $${firm.incomeRate.value.toExponential(3)}/s · projected $${projection.finalRate.toExponential(3)}/s`,
+);
+console.log(`hand-buys before the desk: ${run.handBuys}`);
+const earned = (xs: { achievement: { earned: { value: boolean } } }[]) =>
+  xs.filter((e) => e.achievement.earned.value).length;
+console.log(
+  `management bought ${firm.management.purchasedCount.value}/${firm.management.size} · milestones ${earned(firm.milestones.getAll())}/${firm.milestones.size} · grades ${earned(firm.grades.getAll())}/${firm.grades.size}`,
+);
+console.log(
+  run.anomalies.length ? `ANOMALIES: ${run.anomalies.join('; ')}` : 'no NaN, no negative cash',
+);
+run.dispose();

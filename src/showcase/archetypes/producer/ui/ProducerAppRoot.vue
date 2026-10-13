@@ -3,7 +3,7 @@
   the slot screen), so it reads NO module state. The game lives in
   `<ProducerGameView>`, mounted under the post-start `v-else` frame where module
   reads are safe. The one post-start read here is `usePlaySession`'s `onLoaded`
-  resume seam (offline catch-up + the return report), which runs after
+  resume seam (offline catch-up and the bookkeeper's note), which runs after
   `start()`. See `.claude/rules/app-root-discipline.md`.
 -->
 <script setup lang="ts">
@@ -21,11 +21,9 @@ import { OFFLINE_WINDOW_SECONDS } from '../data';
 import { OfflineKey } from '../modules';
 import ProducerGameView from './ProducerGameView.vue';
 import ReturnReport from './components/ReturnReport.vue';
-// The costume, applied under `.producer`. Imported at the root rather than in
-// the game view so the slot screen and app chrome are drawn on the same sheet.
-// Portaled surfaces (tooltips) can't inherit that ancestor, so their rules in
-// this file are deliberately unscoped — see its header.
-import './blueprint.css';
+// The costume, applied under `.consolidated`. Imported at the root so the slot
+// screen and the app chrome sit on the same desk.
+import './consolidated.css';
 
 const stack = useModalStack();
 
@@ -53,11 +51,10 @@ const showDevPanel = ref(false);
 <template>
   <!--
     Costume scope. AppFrame's root node is a TooltipProvider fragment, so a
-    class on the component is dropped rather than inherited — the wrapper is
-    what gives `blueprint.css` an ancestor to hang off. It is a styling scope
-    only and adds no layout of its own.
+    class on the component is dropped rather than inherited; the wrapper gives
+    `consolidated.css` an ancestor.
   -->
-  <div class="producer">
+  <div class="consolidated">
     <SlotScreen
       v-if="currentScreen === Screen.Slots"
       :engine="engine"
@@ -70,9 +67,10 @@ const showDevPanel = ref(false);
           <template #about>
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
-              Seed one self-replicating probe into a dead system. It converts matter into more
-              probes. Nothing opposes you, nothing expires, nothing resets — each launch reaches a
-              further star, so the next one costs more. The curve is the content.
+              You found a holding company on one pushcart. Close deals by hand until your carts
+              out-earn you, then buy newsstands, diners, laundromats and on up to savings banks.
+              Each acquisition raises the next seller's price. Then hire people to do it for you.
+              Nothing opposes you and nothing resets: the curve is the content.
             </p>
           </template>
         </SystemHeader>

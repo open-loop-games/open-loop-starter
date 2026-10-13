@@ -1,0 +1,138 @@
+/*
+ * Producer: the Consolidated Holdings costume.
+ *
+ * The design language is here, scoped under `.consolidated`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in `src/lib/`
+ * or `src/ui/` is edited for it: every hook is a documented costume class on a
+ * shell or a composition (`.olui-system-header`, `.olui-three-panel__…`,
+ * `.producer-list__…`, `.upgrade-grid__…`, `.olui-progress-bar__…`) or a class
+ * this story's own components emit.
+ *
+ * Language: a walnut desk under a banker's lamp, after hours. A green leather
+ * blotter under the holdings, share certificates with engraved borders, a brass
+ * seal for what is earned, the adding machine's paper tape. The affordance inks
+ * come first and the identity palette is built around them:
+ *   lamp-glass green  you can sign this;
+ *   red ledger ink    a price you can't cover yet;
+ *   brass seal        newly opened, earned, graded;
+ *   carbon-copy blue  a desk is doing this for you;
+ *   filed away        owned, done, out of play.
+ *
+ * Faces: Century Schoolbook for the letterhead and the numbers that matter, a
+ * narrow grotesque for the ledger columns; the adding machine types its own.
+ */
+
+.consolidated,
+.consolidated-portal {
+  --ink-affordable: #7cc79a;
+  --ink-debit: #c9654f;
+  --ink-seal: #d2a94e;
+  --ink-carbon: #7f9fd3;
+  --ink-filed: #6f6656;
+
+  --walnut: #17120e;
+  --walnut-grain: #1e1813;
+  --blotter: #223029;
+  --blotter-edge: #2f4237;
+  --lamp-pool: rgba(214, 186, 120, 0.07);
+  --ledger-paper: #e7dcc1;
+  --ledger-rule: rgba(231, 220, 193, 0.14);
+  --tape-paper: #cfc4a5;
+  --tape-ink: #2b2620;
+  --typed-dim: #a59a82;
+
+  --face-letterhead:
+    'C059', 'Century Schoolbook L', 'Century Schoolbook', 'New Century Schoolbook', Georgia, serif;
+  --face-ledger:
+    'Nimbus Sans Narrow', 'Arial Narrow', 'Liberation Sans Narrow', 'Helvetica Neue', sans-serif;
+  --face-adding-machine: 'Nimbus Mono PS', 'Courier Prime', 'Courier New', monospace;
+
+  --radius-paper: 2px;
+
+  /* scaffold tokens, re-pointed */
+  --color-bg: var(--walnut);
+  --color-surface: var(--walnut-grain);
+  --color-surface-hover: #261e17;
+  --color-border: var(--ledger-rule);
+  --color-text: var(--ledger-paper);
+  --color-text-muted: var(--typed-dim);
+  --color-primary: var(--ink-affordable);
+  --color-primary-hover: #93d6ad;
+  --color-danger: var(--ink-debit);
+  --color-success: var(--ink-affordable);
+  --font-sans: var(--face-ledger);
+  --font-mono: var(--face-adding-machine);
+}
+
+/* Portaled surfaces (the return report) take the tokens through
+   `.consolidated-portal`; only the page itself is the desk. */
+.consolidated {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, var(--lamp-pool), transparent 70%),
+    repeating-linear-gradient(
+      92deg,
+      var(--walnut) 0 7px,
+      var(--walnut-grain) 7px 9px,
+      var(--walnut) 9px 23px
+    );
+  color: var(--ledger-paper);
+  font-family: var(--face-ledger);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.consolidated .olui-system-header {
+  background: rgba(23, 18, 14, 0.9);
+  border-bottom: 1px solid var(--ledger-rule);
+}
+
+/* Every control is a story element; the base's button chrome stays out of it. */
+.consolidated button:disabled {
+  opacity: 1;
+}
+
+.consolidated .num {
+  font-family: var(--face-letterhead);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.consolidated .smallcaps {
+  font-family: var(--face-letterhead);
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+}
+
+/* A reveal is the page-load moment: a brass edge that cools to nothing. */
+@keyframes ch-seal-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+    box-shadow:
+      0 0 0 1px var(--ink-seal),
+      0 0 18px rgba(210, 169, 78, 0.45);
+  }
+  25% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px transparent,
+      0 0 0 transparent;
+  }
+}
+.consolidated .reveal-enter-active {
+  animation: ch-seal-reveal 2.4s ease-out;
+}
+
+/* The bookkeeper's note is its own sheet of paper: the modal frame around it
+   steps back. */
+.olui-modal-content:has(> .consolidated-portal) {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}

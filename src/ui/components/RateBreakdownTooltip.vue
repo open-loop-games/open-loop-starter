@@ -1,9 +1,8 @@
 <!--
   RateBreakdownTooltip — Paradox-style hover breakdown for a producer-shaped
   row. Composes RichTooltip + ChainBreakdown + a stat list. Theme-naked
-  using `--color-*` / `--gap-*` tokens; archetypes with bespoke costume keep
-  their own tooltip wrapper (see archetypes/producer/ui/components/
-  ProducerTooltip.vue) and use `useRateBreakdown` for shared compute.
+  using `--color-*` / `--gap-*` tokens; a story with a bespoke costume keeps
+  its own tooltip wrapper and uses `useRateBreakdown` for shared compute.
 
   Slot scope is the same `useRateBreakdown` view, so callers can compose
   arbitrary head/extra rows without re-deriving productionRate/marginal math.

@@ -1,17 +1,14 @@
 import type { ArchetypeManifest } from '@/types';
 
 /**
- * Beat windows are RECORDED from `balance/allocation-probe.ts` — the min/max
- * across its three allocation rules over an 8h run — never authored as targets.
- * The probe's fourth run, `hybrid` barred from waiting, is excluded: it is the
- * control that measures saving, not a rule any rung grants, so it would widen a
- * window with a run the game can never produce.
- * They are listed here in the order the beats are numbered, which is NOT the
- * order they are reached: beat 4 arrives before beat 3, and beat 2 is reached fifth.
+ * Beat windows are RECORDED from `balance/_engine.ts` `runArc` under the
+ * shipping desks, with the hand dealing at 2, 4 and 8 deals a second: the
+ * min/max across the three, never authored as targets. Re-record them after any
+ * spine change.
  */
 export const manifest: ArchetypeManifest = {
   id: 'producer',
-  displayName: 'Producer — Probe Swarm',
+  displayName: 'Producer — Consolidated Holdings',
   primitives: [
     { name: 'createResource', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
@@ -35,26 +32,26 @@ export const manifest: ArchetypeManifest = {
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
     {
-      name: 'createMultiplicativeModifier',
-      sourceLayer: 'core',
-      path: 'open-loop-engine/docs/api/INDEX.md',
-    },
-    {
       name: 'createAutomationTiers',
       sourceLayer: 'systems',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
-    { name: 'processOfflineTime', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
       name: 'setupPolicyAutoPurchase',
       sourceLayer: 'systems',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
     {
-      name: 'selectionHybridPayback',
+      name: 'setupSweepAutoPurchase',
+      sourceLayer: 'systems',
+      path: 'open-loop-engine/docs/api/INDEX.md',
+    },
+    {
+      name: 'selectionPaybackPeriod',
       sourceLayer: 'core',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
+    { name: 'processOfflineTime', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
       name: 'classifyFlowChannel',
       sourceLayer: 'harness',
@@ -62,17 +59,13 @@ export const manifest: ArchetypeManifest = {
     },
   ],
   beats: [
-    { n: 1, label: 'First probe deployed', recordedFireTimeRange: [7, 7] },
-    {
-      n: 2,
-      label: 'Ladder passes the click ceiling',
-      recordedFireTimeRange: [957, 1723],
-    },
-    { n: 3, label: 'First refinement purchased', recordedFireTimeRange: [248, 248] },
-    { n: 4, label: 'First revision earned', recordedFireTimeRange: [121, 121] },
-    { n: 5, label: 'Dispatch opens', recordedFireTimeRange: [507, 507] },
-    { n: 6, label: 'Managed dispatch', recordedFireTimeRange: [4091, 5241] },
-    { n: 7, label: 'The frontier — top class deployed', recordedFireTimeRange: [3703, 13354] },
+    { n: 1, label: 'First pushcart', recordedFireTimeRange: [3, 10] },
+    { n: 2, label: 'Subsidiaries out-earn the hand', recordedFireTimeRange: [17, 45] },
+    { n: 3, label: 'Sales desk hired', recordedFireTimeRange: [164, 251] },
+    { n: 4, label: 'Acquisitions desk hired', recordedFireTimeRange: [292, 380] },
+    { n: 5, label: 'Credit grade AAA', recordedFireTimeRange: [630, 719] },
+    { n: 6, label: 'Board of Directors hired', recordedFireTimeRange: [638, 727] },
+    { n: 7, label: 'The top tier: first savings bank', recordedFireTimeRange: [1186, 1275] },
   ],
   shell: 'ThreePanelShell',
   formFactor: 'responsive',
@@ -82,12 +75,12 @@ export const manifest: ArchetypeManifest = {
       analysisPath: 'open-loop-research/analyses/complete/cookie-clicker-analysis.md',
     },
     {
-      title: 'Antimatter Dimensions',
-      analysisPath: 'open-loop-research/analyses/complete/antimatter-dimensions-analysis.md',
-    },
-    {
       title: 'AdVenture Capitalist',
       analysisPath: 'open-loop-research/analyses/complete/adventure-capitalist-analysis.md',
+    },
+    {
+      title: 'Antimatter Dimensions',
+      analysisPath: 'open-loop-research/analyses/complete/antimatter-dimensions-analysis.md',
     },
     {
       title: 'Universal Paperclips',

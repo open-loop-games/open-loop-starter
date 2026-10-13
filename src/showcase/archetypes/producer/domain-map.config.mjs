@@ -4,23 +4,31 @@ export default {
   defSuffixes: ['Def'],
   title: 'Producer — domain language',
   description:
-    'The classic big-number incremental: a geometric cost ladder under multiplicative modifier chains, with no adversary, no board, no run and no reset.',
+    'Consolidated Holdings: a geometric cost ladder under multiplicative stacks, with desks that take the spending over and no adversary, no board, no run and no reset.',
   curated: [
     {
-      term: 'the frontier',
-      note: 'Why cost scales. Each launch reaches a further star, so the cost ladder is the expanding shell — the ratio is derived from the premise rather than imposed on it.',
+      term: 'subsidiary',
+      note: 'A producer tier: each unit earns cash every second, and each acquisition of a kind raises the next seller’s price. Owning one of a tier reveals the next.',
     },
     {
-      term: 'revision',
-      note: 'A threshold-triggered global multiplier — a firmware push reaching the whole swarm at once. Must stay a DISCRETE step on a count: made continuous in production it takes the spine off the closed form, silently.',
+      term: 'memo',
+      note: 'A management one-shot, signed on the board: it doubles one subsidiary, or the deal (sales training). Purchased, unlike a certificate or a grade, which are earned.',
     },
     {
-      term: 'refinement',
-      note: 'A purchased one-shot multiplier, scoped to one class, to every class, or to the hand-launch. Distinct from a revision, which is earned rather than purchased.',
+      term: 'market-leader certificate',
+      note: 'A milestone earned on an owned count (25, 50, 100). Must stay a DISCRETE step on a count: made continuous it takes the spine off the closed form, silently.',
     },
     {
-      term: 'dispatch',
-      note: 'Handing allocation to the swarm. The automation ladder decides which selection rule applies; the rules themselves are engine primitives, not authored here.',
+      term: 'credit grade',
+      note: 'A global multiplier earned on lifetime revenue, never on the current rate, so spending never takes one back.',
+    },
+    {
+      term: 'desk',
+      note: 'An executive hire: one automation tier, with a duty switch. Sending a desk home is how the player saves by hand.',
+    },
+    {
+      term: 'night bookkeeper',
+      note: 'The one-time unlock for offline catch-up. Before it, a return replays nothing.',
     },
   ],
 };
