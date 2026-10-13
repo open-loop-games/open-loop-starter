@@ -8,9 +8,12 @@
  *   <Button @click="doThing()" :disabled="!canDo">Purchase</Button>
  *
  * Hold-repeat fires once on press, then at interval after a short delay.
+ * `:repeat="false"` fires once per press: use it for a toggle or a
+ * selection, which a held press must not flip back and forth.
  * `disabled` suppresses the emit in-component (the directive still runs,
  * but the handler short-circuits).
  */
+import { computed } from 'vue';
 import { Primitive, type PrimitiveProps } from 'reka-ui';
 import { vHoldRepeat } from '@/directives';
 
@@ -18,15 +21,21 @@ interface Props extends /* @vue-ignore */ PrimitiveProps {
   as?: PrimitiveProps['as'];
   asChild?: boolean;
   disabled?: boolean;
+  /** Whether a held press repeats the click. */
+  repeat?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   as: 'button',
   asChild: false,
   disabled: false,
+  repeat: true,
 });
 
 const emit = defineEmits<{ click: [] }>();
+
+/** The directive argument: `once` stops a held press from repeating. */
+const mode = computed(() => (props.repeat ? undefined : 'once'));
 
 function handle(): void {
   if (props.disabled) return;
@@ -35,7 +44,7 @@ function handle(): void {
 </script>
 
 <template>
-  <Primitive v-hold-repeat="handle" :as="as" :as-child="asChild" :disabled="disabled">
+  <Primitive v-hold-repeat:[mode]="handle" :as="as" :as-child="asChild" :disabled="disabled">
     <slot />
   </Primitive>
 </template>

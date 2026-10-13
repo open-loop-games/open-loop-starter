@@ -8,6 +8,10 @@ import type { Directive } from 'vue';
  * Bind the handler directly: `v-hold-repeat="() => doThing()"`. The directive
  * handles pointer/keyboard lifecycle; don't pair with `@click`, which would
  * double-fire on pointer devices.
+ *
+ * The `once` argument (`v-hold-repeat:once`, or a dynamic `:[arg]`) fires once
+ * per press and never repeats: for a toggle or a selection, where a held press
+ * must not flip the state back and forth.
  */
 
 const DELAY_MS = 400;
@@ -15,13 +19,15 @@ const INTERVAL_MS = 60;
 
 interface HoldState {
   setHandler: (fn: () => void) => void;
+  setRepeat: (repeat: boolean) => void;
   teardown: () => void;
 }
 
 const stateMap = new WeakMap<HTMLElement, HoldState>();
 
-function attach(el: HTMLElement, fn: () => void): HoldState {
+function attach(el: HTMLElement, fn: () => void, initialRepeat: boolean): HoldState {
   let handler = fn;
+  let repeat = initialRepeat;
   let delayTimer: ReturnType<typeof setTimeout> | null = null;
   let repeatTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -40,6 +46,7 @@ function attach(el: HTMLElement, fn: () => void): HoldState {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     el.setPointerCapture?.(e.pointerId);
     handler();
+    if (!repeat) return;
     delayTimer = setTimeout(() => {
       repeatTimer = setInterval(() => {
         handler();
@@ -64,6 +71,9 @@ function attach(el: HTMLElement, fn: () => void): HoldState {
     setHandler: (nextFn) => {
       handler = nextFn;
     },
+    setRepeat: (next) => {
+      repeat = next;
+    },
     teardown: () => {
       stop();
       el.removeEventListener('pointerdown', onPointerdown);
@@ -77,10 +87,12 @@ function attach(el: HTMLElement, fn: () => void): HoldState {
 
 export const vHoldRepeat: Directive<HTMLElement, () => void> = {
   mounted(el, binding) {
-    stateMap.set(el, attach(el, binding.value));
+    stateMap.set(el, attach(el, binding.value, binding.arg !== 'once'));
   },
   updated(el, binding) {
-    stateMap.get(el)?.setHandler(binding.value);
+    const state = stateMap.get(el);
+    state?.setHandler(binding.value);
+    state?.setRepeat(binding.arg !== 'once');
   },
   unmounted(el) {
     stateMap.get(el)?.teardown();
