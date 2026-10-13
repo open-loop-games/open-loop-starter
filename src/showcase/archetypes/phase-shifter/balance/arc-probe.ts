@@ -5,12 +5,16 @@
  * retired verbs refuse and the retired chains read zero, and a save taken
  * mid-phase reloads into the same live set, even into a game past it.
  *
- * The reference player clicks at the anchors' click rate, buys every
- * purchase the moment it is affordable, opens each door the moment its record
- * holds, and works the dawn in the spine's order: witnesses by the filing
- * policy (by hand until the clerks' automation tier opens), then suspects,
- * then insomnia once one has fallen. It ticks through the TickDriver's
- * live path, `processInterval`, so insomnia's game speed applies.
+ * The reference player, phase by phase, through the game's own verbs:
+ * - the box: clicks at the anchors' click rate, hires every clerk the moment
+ *   it is affordable;
+ * - the board: pins each card from the inbox at its `bestCell` the moment it
+ *   arrives, never rearranges, and clears wall the moment it is affordable;
+ * - the night: at every dawn buys roster places while affordable, then
+ *   insomnia once an alibi holds, then plans the night with `planWatches`;
+ * - opens each door the moment its record holds, and reads the last page.
+ * It ticks through the TickDriver's live path, `processInterval`, so
+ * insomnia's game speed applies.
  *
  * Run: pnpm exec vite-node src/showcase/archetypes/phase-shifter/balance/arc-probe.ts
  */
@@ -23,6 +27,9 @@ import {
   PREDICTED_CLERKS,
   PREDICTED_NOTE_BUFFER,
   RECONSTRUCT_LEADS,
+  SUSPECTS,
+  bestCell,
+  planWatches,
   predictBeats,
   type DoorId,
 } from '../data';
@@ -39,37 +46,12 @@ import {
 const WALL_STEP = 0.5;
 const MAX_WALL = 3600;
 const STALL_WALL = 600;
-const DOORS: DoorId[] = ['pin-board', 'reconstruct', 'accuse'];
+const DOORS: DoorId[] = ['pin-board', 'reconstruct', 'box-returns'];
 
-function build(): Engine {
-  return bootTestEngine({
-    modules: [...sharedBase, ...createPhaseShifterModules()],
-    persistenceNamespacePrefix: 'phase-shifter-arc',
-  }).engine;
-}
-
-const num = (x: { value: DecimalSource }) => new Decimal(x.value).toNumber();
-
-/** The lifecycle's derived state: what a load must reproduce. */
-function fingerprint(engine: Engine): string {
-  const { life } = getCase();
-  const box = getBox();
-  const board = getBoard();
-  const night = getNight();
-  const live = MECHANISMS.map((m) => `${m.id}=${life.isLive(m.id).value ? 1 : 0}`).join(' ');
-  return [
-    `doors=${life.doorsOpened.value}`,
-    live,
-    `clerkRead=${box.clerkReadRate.value.toFixed(3)}`,
-    `clerkXref=${board.clerkXrefCapacity.value.toFixed(3)}`,
-    `supply=${board.noteSupply.value.toFixed(3)}`,
-    `night=${night.rate.value.toFixed(3)}`,
-    `running=${night.cycle.running.value}`,
-    `speed=${engine.tickDriver.speedMultiplier}`,
-  ].join(' | ');
-}
-
-const engine = build();
+const engine: Engine = bootTestEngine({
+  modules: [...sharedBase, ...createPhaseShifterModules()],
+  persistenceNamespacePrefix: 'phase-shifter-arc',
+}).engine;
 const kase = getCase();
 const { life } = kase;
 const box = getBox();
@@ -77,12 +59,36 @@ const board = getBoard();
 const night = getNight();
 const automation = getAutomation();
 
+const num = (x: { value: DecimalSource }) => new Decimal(x.value).toNumber();
+
+/** The lifecycle's derived state: what a load must reproduce. */
+function fingerprint(): string {
+  const live = MECHANISMS.map((m) => `${m.id}=${life.isLive(m.id).value ? 1 : 0}`).join(' ');
+  return [
+    `doors=${life.doorsOpened.value}`,
+    live,
+    `clerkRead=${box.clerkReadRate.value.toFixed(3)}`,
+    `strings=${board.rate.value.toFixed(3)}`,
+    `tipline=${new Decimal(board.tipline.computedRate.value).toFixed(3)}`,
+    `pinned=${board.pins.value.filter(Boolean).length}`,
+    `side=${board.side.value}`,
+    `hints=${night.hints.value.size}`,
+    `plan=${night.plan.value.length}`,
+    `running=${night.cycle.running.value}`,
+    `speed=${engine.tickDriver.speedMultiplier}`,
+  ].join(' | ');
+}
+
 const beats: Record<string, { wall: number; sim: number }> = {};
 let wall = 0;
 let sim = 0;
 let lastBeatWall = 0;
 const saves: { label: string; data: string; print: string }[] = [];
 const checks: string[] = [];
+let broken = 0;
+night.cycle.on('beforeEnd', () => {
+  if (night.broken.value) broken++;
+});
 
 function beat(name: string, cond: boolean): void {
   if (cond && !beats[name]) {
@@ -91,41 +97,45 @@ function beat(name: string, cond: boolean): void {
   }
 }
 
+/** The reference player's dawn: roster, then insomnia, then the night's plan. */
+function dawn(): void {
+  while (night.rosterPlace.canPurchase.value) night.rosterPlace.purchase(1);
+  if (night.held.value.length > 0 && night.insomnia.canPurchase.value) night.insomnia.purchase(1);
+  night.setPlan(planWatches(night.view(true)));
+}
+
 let clickDebt = 0;
-let lastNight = 0;
+let lastNight = -1;
 let terminated = 'maxWall';
 while (wall < MAX_WALL) {
-  // The reference player.
   clickDebt += ANCHORS.clickRate * WALL_STEP;
   while (clickDebt >= 1) {
     clickDebt -= 1;
-    if (!box.read()) board.xref.convert();
+    box.read();
   }
   while (box.clerk.canPurchase.value) box.clerk.purchase(1);
-  const canvass = board.canvasser.repeatable!;
-  while (canvass.canPurchase.value) canvass.purchase(1);
-  if (board.secondShift.canPurchase.value) board.secondShift.purchase(1);
-  if (night.cycle.count.value !== lastNight) {
+  while (board.inbox.value.length) {
+    const id = board.inbox.value[0];
+    const cell = bestCell(board.pins.value, board.side.value, id);
+    if (!cell || !board.pin(id, cell.x, cell.y)) break;
+  }
+  if (board.wall.canPurchase.value) board.wall.purchase(1);
+  if (life.isLive('watch').value && night.cycle.count.value !== lastNight) {
     lastNight = night.cycle.count.value;
-    if (!automation.tiers.hasReached('filing')) automation.fileAtDawn();
-    while (night.eliminate.canPurchase.value) night.eliminate.purchase(1);
-    if (num(night.eliminate.count) > 0 && night.insomnia.canPurchase.value) {
-      night.insomnia.purchase(1);
-    }
+    dawn();
   }
   for (const door of DOORS) if (life.open(door)) beat(`door: ${door}`, true);
+  if (box.readLast()) beat('last page', true);
 
   beat('first clerk', num(box.clerk.count) >= 1);
   beat('box empty', num(box.pages) <= 0);
-  beat('first canvasser', num(canvass.count) >= 1);
-  beat('second shift', board.secondShift.active.value);
+  beat('board 4×4', board.side.value >= 4);
+  beat('board 5×5', board.side.value >= 5);
   beat('reconstruct threshold', num(board.leads.cumulative!) >= RECONSTRUCT_LEADS);
   beat('night 1 filed', night.cycle.count.value >= 1);
-  beat('clerks file (tier)', automation.tiers.hasReached('filing'));
+  beat('clerks plan (tier)', automation.tiers.hasReached('planning'));
   beat('insomnia', night.insomnia.active.value);
-  for (let i = 1; i <= ANCHORS.suspects - 1; i++) {
-    beat(`elimination ${i}`, num(night.eliminate.count) >= i);
-  }
+  for (let i = 1; i <= SUSPECTS.length; i++) beat(`alibi ${i}`, night.held.value.length >= i);
 
   if (beats['door: pin-board'] && !checks.some((c) => c.startsWith('I→II'))) {
     checks.push(
@@ -135,38 +145,27 @@ while (wall < MAX_WALL) {
     );
   }
   if (beats['door: reconstruct'] && !checks.some((c) => c.startsWith('II→III'))) {
+    const cell = board.pins.value.findIndex(Boolean);
     checks.push(
-      `II→III: xref refused=${Object.keys(board.xref.convert()).length === 0} ` +
-        `clerkXref=${board.clerkXrefCapacity.value.toFixed(2)} supply=${board.noteSupply.value.toFixed(2)} ` +
-        `canvass visible=${canvass.visible.value} fidelity=${night.fidelity.value.toFixed(3)}`,
+      `II→III: unpin refused=${!board.unpin(cell % 6, Math.floor(cell / 6))} ` +
+        `strings=${board.rate.value.toFixed(2)} tipline=${new Decimal(board.tipline.computedRate.value).toFixed(2)} ` +
+        `wall visible=${board.wall.visible.value} pinned=${board.pins.value.filter(Boolean).length} ` +
+        `hints=${night.hints.value.size} inbox=${board.inbox.value.length}`,
     );
   }
-  if (
-    !saves.find((s) => s.label === 'mid II') &&
-    beats['first canvasser'] &&
-    wall > beats['first canvasser'].wall + 30
-  ) {
-    saves.push({
-      label: 'mid II',
-      data: engine.saveManager!.exportSave(),
-      print: fingerprint(engine),
-    });
+  if (beats['door: box-returns'] && !checks.some((c) => c.startsWith('III→IV'))) {
+    checks.push(
+      `III→IV: toggle refused=${!night.toggle('mill@0')} running=${night.cycle.running.value} ` +
+        `roster visible=${night.rosterPlace.visible.value} roster=${night.roster.value}`,
+    );
   }
-  if (!saves.find((s) => s.label === 'mid III') && beats['elimination 2']) {
-    saves.push({
-      label: 'mid III',
-      data: engine.saveManager!.exportSave(),
-      print: fingerprint(engine),
-    });
+  if (!saves.find((s) => s.label === 'mid II') && beats['board 4×4']) {
+    saves.push({ label: 'mid II', data: engine.saveManager!.exportSave(), print: fingerprint() });
+  }
+  if (!saves.find((s) => s.label === 'mid III') && beats['alibi 2']) {
+    saves.push({ label: 'mid III', data: engine.saveManager!.exportSave(), print: fingerprint() });
   }
 
-  const bad = [box.pages, box.notes, board.leads, night.unfiled, night.contradictions].find((r) =>
-    Number.isNaN(num(r)),
-  );
-  if (bad) {
-    terminated = `NaN in ${bad.id}`;
-    break;
-  }
   if (kase.closed.value) {
     terminated = 'closed';
     break;
@@ -184,7 +183,7 @@ while (wall < MAX_WALL) {
 
 const predicted = predictBeats();
 const pad = (s: string, n: number) => s.padEnd(n);
-console.log(`\nNight Clerk arc probe — ${ANCHORS.clickRate} clicks/s, greedy buys, doors at once`);
+console.log('\nNight Clerk arc probe — the spine’s reference player');
 console.log(`terminated: ${terminated} at wall ${wall}s, sim ${sim}s\n`);
 console.log(`${pad('beat', 26)}${pad('wall s', 10)}${pad('sim s', 10)}${pad('spine s', 10)}Δ sim`);
 for (const [name, t] of Object.entries(beats).sort((a, b) => a[1].wall - b[1].wall)) {
@@ -196,10 +195,10 @@ for (const [name, t] of Object.entries(beats).sort((a, b) => a[1].wall - b[1].wa
 }
 console.log('\nstate at end:');
 console.log(
-  `  clerks=${num(box.clerk.count)} canvassers=${num(board.canvasser.repeatable!.count)} ` +
-    `witnesses=${num(night.witness.repeatable!.count)} nights=${night.cycle.count.value} ` +
-    `leads(lifetime)=${num(board.leads.cumulative!).toFixed(0)} fidelity=${night.fidelity.value.toFixed(3)} ` +
-    `contradictions=${num(night.contradictions).toFixed(0)}`,
+  `  clerks=${num(box.clerk.count)} board=${board.side.value}×${board.side.value} ` +
+    `pinned=${board.pins.value.filter(Boolean).length} strength=${board.strength.value} ` +
+    `leads(lifetime)=${num(board.leads.cumulative!).toFixed(0)} nights=${night.cycle.count.value} ` +
+    `broken=${broken} roster=${night.roster.value} hints=${night.hints.value.size}`,
 );
 console.log('\nlifecycle checks:');
 for (const c of checks) console.log(`  ${c}`);
@@ -207,14 +206,14 @@ console.log(
   `  spine predicted clerks at door=${PREDICTED_CLERKS}, note buffer=${PREDICTED_NOTE_BUFFER.toFixed(0)}`,
 );
 console.log('\nlast log lines:');
-for (const line of kase.lines.value.slice(-6)) console.log(`  ${line}`);
+for (const line of kase.lines.value.slice(-5)) console.log(`  ${line}`);
 
 // Each save is imported into the finished game, so the load runs backwards
 // through the doors: the live set must be re-derived from the doors alone.
 console.log('\nrestore parity:');
 for (const s of saves) {
   engine.saveManager!.importSave(s.data);
-  const after = fingerprint(engine);
+  const after = fingerprint();
   console.log(`  ${s.label}: ${after === s.print ? 'match' : 'MISMATCH'}`);
   if (after !== s.print) console.log(`    saved:  ${s.print}\n    loaded: ${after}`);
 }

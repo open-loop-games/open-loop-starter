@@ -17,7 +17,7 @@ directions it grows through. Start there.
 | `cycler`   | Alternating build/defend phases on a hard-phase cycle                |
 | `explorer` | A fogged map uncovered on jerky and water; what a trip finds banks only at home |
 | `looper`   | Authored plan run against a draining budget; mastery survives the reset |
-| `phase-shifter` | One-way doors that retire each phase's mechanisms for the next |
+| `phase-shifter` | One-way doors: a reader, then an arranger, then a planner, each retiring the last |
 | `producer` | Geometric cost ladder under a compounding multiplier stack           |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
 | `survivor` | Run-scoped real-time survival against continuously escalating threat |

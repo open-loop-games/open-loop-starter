@@ -1,30 +1,28 @@
 import {
-  Decimal,
   createAutomationTiers,
-  tunable,
   type AutomationTiers,
   type EngineModule,
   type InjectionKey,
 } from '@open-loop/engine';
-import { ANCHORS, shouldFileWitness } from '../data';
+import { ANCHORS, planWatches } from '../data';
 import { CaseKey } from './case';
 import { NightKey } from './night';
-import { PhaseShifterTuningRegistryKey } from './tuning';
 
 /**
- * Automation module — the clerks' last job. Once three nights have replayed,
- * the filing tier opens and the clerks file witness accounts at every dawn by
- * the spine's own policy, `shouldFileWitness`. Before it opens the player
- * files by hand; the policy is the same either way, so the prediction holds.
+ * Automation module — the clerks' last job. Once enough nights have replayed,
+ * the planning tier opens: at every dawn the clerks fill the watches the
+ * player left empty, with known suspects first, by the spine's own
+ * `planWatches`. They never search; where to look for the unknown stays the
+ * player's call, and so does the risk of breaking the model.
  */
 
 /** Automation tier ids in ladder order. Policies are typed against this union. */
-export type PhaseShifterAutomationTier = 'by-hand' | 'filing';
+export type PhaseShifterAutomationTier = 'by-hand' | 'planning';
 
 export interface AutomationApi {
   tiers: AutomationTiers;
-  /** One dawn of the filing policy; returns accounts filed. Runs by hand or from the tier. */
-  fileAtDawn(): number;
+  /** Fill the plan's empty watches without searching; returns watches added. */
+  fillWatches(): number;
 }
 
 export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
@@ -37,62 +35,48 @@ export function getAutomation(): AutomationApi {
   return api;
 }
 
-const FILING: PhaseShifterAutomationTier = 'filing';
+const PLANNING: PhaseShifterAutomationTier = 'planning';
 
 export function createAutomationModule(): EngineModule {
   return {
     id: 'phase-shifter/automation',
     install(ctx) {
-      const registry = ctx.inject(PhaseShifterTuningRegistryKey);
       const { life, write } = ctx.inject(CaseKey);
       const night = ctx.inject(NightKey);
-      const witnessShare = tunable(
-        registry,
-        'night/clerks/witnessShare',
-        () => ANCHORS.witnessShare,
-      );
 
       const tiers = createAutomationTiers({
         id: 'clerk-automation',
         tiers: [
           { id: 'by-hand', displayName: 'By hand', order: 0 },
           {
-            id: FILING,
-            displayName: 'Clerks file accounts',
+            id: PLANNING,
+            displayName: 'Clerks plan the watch',
             order: 1,
-            unlockWhen: () => night.cycle.count.value >= ANCHORS.filingTierNights,
+            unlockWhen: () => night.cycle.count.value >= ANCHORS.planningTierNights,
           },
         ],
       });
       tiers.on('unlocked', (tier) => {
-        if (tier === FILING) {
-          write('Your clerks have learned the model. They start filing witness accounts at dawn.');
+        if (tier === PLANNING) {
+          write(
+            'Your clerks have learned the model. At dawn they fill the watches you leave empty.',
+          );
         }
       });
 
-      function fileAtDawn(): number {
-        let filed = 0;
-        const p = night.witness.repeatable!;
-        while (
-          p.canPurchase.value &&
-          shouldFileWitness(
-            new Decimal(p.getCost(1)).toNumber(),
-            new Decimal(night.contradictions.value).toNumber(),
-            witnessShare.value,
-          )
-        ) {
-          p.purchase(1);
-          filed++;
-        }
-        return filed;
+      function fillWatches(): number {
+        const before = night.plan.value.length;
+        const kept = planWatches({ ...night.view(false), roster: night.roster.value });
+        night.setPlan([...night.plan.value, ...kept]);
+        return night.plan.value.length - before;
       }
 
-      const fileLive = life.isLive('clerk-file');
+      const planLive = life.isLive('clerk-plan');
       night.cycle.on('afterEnd', () => {
-        if (fileLive.value && tiers.hasReached(FILING)) fileAtDawn();
+        if (planLive.value && tiers.hasReached(PLANNING)) fillWatches();
       });
 
-      api = { tiers, fileAtDawn };
+      api = { tiers, fillWatches };
       ctx.provide(AutomationKey, api);
     },
   };

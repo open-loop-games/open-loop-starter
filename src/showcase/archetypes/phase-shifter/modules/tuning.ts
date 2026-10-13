@@ -13,8 +13,8 @@ import {
  * Key prefixes:
  *   - `ladders/growth` — the cost ratio every repeatable ladder shares
  *   - `box/*` — Phase I: the box's size, the clerks' pace and price
- *   - `board/*` — Phase II: the note supply, the clerks' cross-referencing, the second shift
- *   - `night/*` — Phase III: the replay's length and yield, witnesses, eliminations, insomnia
+ *   - `board/*` — Phase II: the notes a card costs, the clerks' pace, the phone, what string earns, the wall
+ *   - `night/*` — Phase III: the replay's length, what a sighting files, the roster, insomnia
  */
 export type PhaseShifterTunableKey =
   | 'ladders/growth'
@@ -22,20 +22,18 @@ export type PhaseShifterTunableKey =
   | 'box/notesPerPage'
   | 'box/clerk/pagesPerS'
   | 'box/clerk/baseCost'
-  | 'board/notesPerLead'
-  | 'board/clerk/notesPerS'
+  | 'board/notesPerCard'
+  | 'board/clerk/cardsPerS'
   | 'board/tipline/notesPerS'
-  | 'board/canvasser/notesPerS'
-  | 'board/canvasser/baseCost'
-  | 'board/secondShift/cost'
+  | 'board/leadsPerStrength'
+  | `board/wall/${0 | 1 | 2}/cost`
   | 'night/seconds'
-  | 'night/baseRate'
-  | 'night/witness/baseCost'
-  | 'night/eliminate/baseCost'
-  | 'night/eliminate/ratio'
+  | 'night/sightingsPerHour'
+  | 'night/accountsPerSighting'
+  | 'night/roster/baseCost'
+  | 'night/roster/ratio'
   | 'night/insomnia/cost'
-  | 'night/insomnia/speed'
-  | 'night/clerks/witnessShare';
+  | 'night/insomnia/speed';
 
 export const PhaseShifterTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
   'phase-shifter/tuning-registry',

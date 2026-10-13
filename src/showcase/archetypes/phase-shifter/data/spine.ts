@@ -5,11 +5,30 @@
 // re-author them; `balance/phase-shifter-projection.ts` prints them, and
 // `balance/arc-probe.ts` measures the shipping game against them.
 //
-// Shape: three phases, each a geometric purchase ladder funded by a rate that
-// grows linearly with what the ladder buys. The phases do not compound into
-// each other — each one-way door retires the ladder below it — so each phase
-// is solved on its own. What couples them is what a door hands forward: the
-// leftover notes, the clerk count, the lifetime lead record.
+// Shape: three phases, each with its own currency and its own player. The
+// box is a geometric clerk ladder, solved in closed form. The board and the
+// night are walks of the reference player's own policies (`bestCell`,
+// `planWatches` in `./evidence.ts`), because what they earn depends on
+// arrangement and search, not only on what is bought. The phases do not
+// compound — each one-way door retires the economy below it — so each is
+// solved alone, and what couples them is what a door hands forward: the
+// leftover notes and the clerks into the board, the pinned cards into the
+// night as hints.
+
+import { SUSPECTS } from './case';
+import {
+  BOARD_SIDE,
+  BOARD_SIDES,
+  CARD_BY_ID,
+  DECK,
+  SUSPECT_AT,
+  SUSPECT_CARDS,
+  bestCell,
+  boardStrength,
+  cellAt,
+  planWatches,
+  watchKey,
+} from './evidence';
 
 /** The only hand-picked numbers. Everything in § Balance follows from them. */
 export const ANCHORS = {
@@ -25,32 +44,35 @@ export const ANCHORS = {
   /** Designed length of Phase I, the box. */
   phaseISeconds: 240,
 
-  /** Notes cross-referenced into one lead. */
-  notesPerLead: 10,
-  /** A reassigned clerk cross-references this many times its reading pace. */
-  clerkXrefFactor: 2,
-  /** Seconds of tip-line trickle the first canvasser is priced at. */
-  firstCanvasserSeconds: 20,
-  /** Seconds a first canvasser takes to pay back its price in leads. */
-  canvasserPaybackSeconds: 20,
+  /** Cards a clerk — or you — writes up per second, notes allowing. */
+  clerkCardsPerS: 0.02,
+  /** Seconds into Phase II by which the whole deck is written up. */
+  deckSeconds: 360,
+  /** Leads per second each unit of string strength earns. Unit anchor. */
+  leadsPerStrength: 1,
+  /** Seconds into Phase II at which the reference board opens to 4×4. */
+  boardOpensAt: 200,
+  /** The 5×5 costs this many times what the reference banks after its 4×4: it rewards staying on the board. */
+  boardLinger: 1.5,
   /** Designed length of Phase II, the board. */
   phaseIISeconds: 420,
 
   /** Sim-seconds per replayed night, 18:00 → 06:00. */
   nightSeconds: 40,
-  /** Night on which the first suspect falls under the shared dawn order. */
-  firstEliminationNight: 4,
-  /** Night on which the sixth, last eliminable suspect falls. */
-  lastEliminationNight: 16,
-  /** Share of banked contradictions the filing policy may spend on witnesses. */
-  witnessShare: 0.5,
-  /** Nights replayed before the clerks file accounts themselves. */
-  filingTierNights: 3,
+  /** Watches the first night can staff. */
+  rosterStart: 2,
+  /** Sightings an hour of an alibi needs before it holds. */
+  sightingsPerHour: 1,
+  /** Watches per unit of strain the night can take: a bigger night shift can afford to search more. */
+  watchesPerStrain: 2,
+  /** Accounts each sighting files at dawn. Unit anchor. */
+  accountsPerSighting: 1,
+  /** Night on which the sixth alibi holds under the reference planner. */
+  lastAlibiNight: 13,
+  /** Nights replayed before the clerks plan the watch themselves. */
+  planningTierNights: 3,
   /** Game-speed factor once the clerk stops sleeping. */
   insomniaSpeed: 2,
-
-  /** Suspects on the board; all but the last can be cleared. */
-  suspects: 7,
 } as const;
 
 // ─── Balance ────────────────────────────────────────────────────────────────
@@ -124,109 +146,192 @@ export const PREDICTED_NOTE_BUFFER = boxAtEnd.earned - boxAtEnd.spent;
 
 /** Tip-line notes/s: keeps Phase I's hand pace alive once reading is retired. */
 export const TIPLINE_NOTES_PER_S = ANCHORS.clickRate * NOTES_PER_PAGE;
-/** First canvasser price in leads: `firstCanvasserSeconds` of tip line, cross-referenced. */
-export const CANVASSER_BASE_COST =
-  (TIPLINE_NOTES_PER_S / ANCHORS.notesPerLead) * ANCHORS.firstCanvasserSeconds;
-/** Notes/s per canvasser: pays back its first price in `canvasserPaybackSeconds`. */
-export const CANVASSER_NOTES_PER_S =
-  (CANVASSER_BASE_COST * ANCHORS.notesPerLead) / ANCHORS.canvasserPaybackSeconds;
-/** Notes/s per reassigned clerk. */
-export const CLERK_XREF_NOTES_PER_S = CLERK_PAGES_PER_S * NOTES_PER_PAGE * ANCHORS.clerkXrefFactor;
-/** Second shift: one-shot ×2 clerk throughput, priced at the canvasser rung where clerk capacity binds. */
-export const SECOND_SHIFT_COST = Math.round(
-  CANVASSER_BASE_COST *
-    ANCHORS.growth **
-      Math.max(
-        0,
-        Math.floor(
-          (PREDICTED_CLERKS * CLERK_XREF_NOTES_PER_S - TIPLINE_NOTES_PER_S) / CANVASSER_NOTES_PER_S,
-        ),
-      ),
+/** Notes a card costs to write up, so the deck runs out at `deckSeconds` on the inherited notes and the phone. */
+export const NOTES_PER_CARD = Math.round(
+  (PREDICTED_NOTE_BUFFER + TIPLINE_NOTES_PER_S * ANCHORS.deckSeconds) / DECK.length,
 );
 
-/** Leads/s as a function of canvassers, while clerk capacity does not bind. */
-export const BOARD_LADDER: Ladder = {
-  bank0: PREDICTED_NOTE_BUFFER / ANCHORS.notesPerLead,
-  base: CANVASSER_BASE_COST,
-  growth: ANCHORS.growth,
-  rate0: TIPLINE_NOTES_PER_S / ANCHORS.notesPerLead,
-  ratePer: CANVASSER_NOTES_PER_S / ANCHORS.notesPerLead,
-};
+export interface BoardWalk {
+  /** Seconds into Phase II each expansion was bought. */
+  opened: number[];
+  /** Leads banked at each expansion: the price the walk solves for. */
+  spent: number[];
+  /** Lifetime leads at `phaseIISeconds`. */
+  lifetime: number;
+  /** The board when the door opens: cell → card id. */
+  pins: (string | null)[];
+  /** Seconds into Phase II each card reached the inbox. */
+  written: number[];
+}
 
-const boardAtEnd = ladderAt(BOARD_LADDER, ANCHORS.phaseIISeconds);
 /**
- * Lifetime leads that open the night: the greedy board's lifetime take at
- * `phaseIISeconds`. The opening buffer is spent at t = 0, not banked at the
- * end: Phase I's leftover notes cross-reference within seconds and buy
- * canvassers that compound for the whole phase.
+ * The board under the reference player: clerks write cards up as notes and
+ * their pace allow, every card is pinned the moment it arrives at its
+ * `bestCell`, and each expansion is bought once its price is banked. With no
+ * prices given, the first is bought at `boardOpensAt` for everything banked,
+ * which is how the prices are solved.
  */
-export const RECONSTRUCT_LEADS = Math.round(boardAtEnd.earned);
+export function walkBoard(prices?: readonly number[], dt = 0.5): BoardWalk {
+  const pins: (string | null)[] = Array(BOARD_SIDE * BOARD_SIDE).fill(null);
+  const inbox: string[] = [];
+  const written: number[] = [];
+  const opened: number[] = [];
+  const spent: number[] = [];
+  let notes = PREDICTED_NOTE_BUFFER;
+  let writing = 0;
+  let next = 0;
+  let side: number = BOARD_SIDES[0];
+  let bank = 0;
+  let lifetime = 0;
+  for (let t = 0; t < ANCHORS.phaseIISeconds; t += dt) {
+    notes += TIPLINE_NOTES_PER_S * dt;
+    writing = Math.min(writing + (PREDICTED_CLERKS + 1) * ANCHORS.clerkCardsPerS * dt, 1);
+    while (writing >= 1 && notes >= NOTES_PER_CARD && next < DECK.length) {
+      notes -= NOTES_PER_CARD;
+      writing -= 1;
+      inbox.push(DECK[next++].id);
+      written.push(t);
+    }
+    while (inbox.length) {
+      const cell = bestCell(pins, side, inbox[0]);
+      if (!cell) break;
+      pins[cellAt(cell.x, cell.y)] = inbox.shift()!;
+    }
+    const earned = boardStrength(pins, side) * ANCHORS.leadsPerStrength * dt;
+    bank += earned;
+    lifetime += earned;
+    const k = opened.length;
+    if (k < BOARD_SIDES.length - 1) {
+      const price = prices
+        ? prices[k]
+        : k === 0 && t + dt / 2 >= ANCHORS.boardOpensAt
+          ? bank
+          : Infinity;
+      if (bank >= price) {
+        bank -= price;
+        spent.push(price);
+        opened.push(t);
+        side = BOARD_SIDES[k + 1];
+      }
+    }
+  }
+  return { opened, spent, lifetime, pins, written };
+}
+
+/**
+ * Leads each expansion costs. The 4×4 is what the reference has banked at
+ * `boardOpensAt`. The 5×5 is `boardLinger` times what it banks after that,
+ * so the reference opens the night without it; the 6×6 steps up again by the
+ * same ratio.
+ */
+export const BOARD_PRICES: number[] = (() => {
+  const first = Math.round(walkBoard().spent[0]);
+  const after = walkBoard([first, Infinity, Infinity]);
+  const lifetimeAfter = after.lifetime - first;
+  const second = Math.round(lifetimeAfter * ANCHORS.boardLinger);
+  return [first, second, Math.round((second * second) / first)];
+})();
+/** Lifetime leads that open the night: the reference board's take at `phaseIISeconds`. */
+export const RECONSTRUCT_LEADS = Math.round(walkBoard(BOARD_PRICES).lifetime);
 
 // Phase III — the night ─────────────────────────────────────────────────────
 
-/** Contradictions/s of a bare model (fidelity 1, no witnesses). Unit anchor. */
-export const NIGHT_BASE_RATE = 1;
-/** Model fidelity from the board's lifetime record: √(leads / RECONSTRUCT_LEADS), 1 at the door. */
-export function fidelity(lifetimeLeads: number): number {
-  return Math.sqrt(Math.max(lifetimeLeads, 0) / RECONSTRUCT_LEADS);
-}
-/** First witness account: exactly one bare night's yield, so night one buys the first. */
-export const WITNESS_BASE_COST = NIGHT_BASE_RATE * ANCHORS.nightSeconds;
-
-/** Contradictions one night banks with `witnesses` filed and model fidelity `f`. */
-export function nightYield(witnesses: number, f: number): number {
-  return NIGHT_BASE_RATE * f * (1 + witnesses) * ANCHORS.nightSeconds;
-}
-
-/** Insomnia's price: three bare nights' yield. */
-export const INSOMNIA_COST = 3 * WITNESS_BASE_COST;
-
-/**
- * The filing policy: file a witness account while it costs at most `share` of
- * the bank. The player follows it by hand until the clerks' automation tier
- * opens; then the clerks run this same function at dawn.
- */
-export function shouldFileWitness(
-  witnessCost: number,
-  bank: number,
-  share: number = ANCHORS.witnessShare,
-): boolean {
-  return witnessCost <= bank * share;
-}
-
-/**
- * Night on which each elimination lands, under the dawn order the prediction
- * assumes: file witnesses by the policy, then clear suspects while affordable,
- * then buy insomnia once one has fallen.
- */
-export function eliminationNights(base: number, ratio: number, f = 1, maxNights = 400): number[] {
-  const out: number[] = [];
-  const eliminable = ANCHORS.suspects - 1;
-  let bank = 0;
-  let w = 0;
-  let insomnia = false;
-  for (let night = 1; night <= maxNights && out.length < eliminable; night++) {
-    bank += nightYield(w, f);
-    while (shouldFileWitness(WITNESS_BASE_COST * ANCHORS.growth ** w, bank)) {
-      bank -= WITNESS_BASE_COST * ANCHORS.growth ** w;
-      w++;
-    }
-    while (out.length < eliminable && bank >= base * ratio ** out.length) {
-      bank -= base * ratio ** out.length;
-      out.push(night);
-    }
-    if (!insomnia && out.length > 0 && bank >= INSOMNIA_COST) {
-      bank -= INSOMNIA_COST;
-      insomnia = true;
-    }
+/** The watches the reference board hands the night as hints. */
+export function hintsOf(pins: readonly (string | null)[]): Set<string> {
+  const out = new Set<string>();
+  for (const id of pins) {
+    if (!id) continue;
+    const c = CARD_BY_ID[id];
+    if (c.who !== 'ada') out.add(watchKey(c.where, c.when));
   }
   return out;
 }
 
+export interface NightWalk {
+  /** Night each alibi held on, in the order they held. */
+  alibis: number[];
+  /** Roster at the end. */
+  roster: number;
+  /** Night insomnia was bought. */
+  insomnia: number | null;
+}
+
+/**
+ * Empty watches that break the model on a night staffed by `roster`: one more
+ * than every `watchesPerStrain` watches. A night survives one fewer.
+ */
+export function strainCapacity(roster: number): number {
+  return Math.floor(roster / ANCHORS.watchesPerStrain) + 1;
+}
+
+/** Insomnia's price: what the starting roster files in three nights. */
+export const INSOMNIA_COST =
+  3 * ANCHORS.rosterStart * ANCHORS.accountsPerSighting * ANCHORS.sightingsPerHour;
+
+/**
+ * The night under the reference planner: each dawn banks every sighting,
+ * buys roster places while affordable, then insomnia once an alibi holds.
+ * The planner never breaks the model, so nothing is lost.
+ */
+export function walkNight(
+  hints: ReadonlySet<string>,
+  rosterBase: number,
+  rosterRatio: number,
+  maxNights = 200,
+): NightWalk {
+  const seen: Record<string, number> = {};
+  const empty = new Set<string>();
+  const held = new Set<string>();
+  const alibis: number[] = [];
+  let accounts = 0;
+  let bought = 0;
+  let insomnia: number | null = null;
+  for (let night = 1; night <= maxNights && held.size < SUSPECTS.length; night++) {
+    const plan = planWatches({
+      roster: ANCHORS.rosterStart + bought,
+      seen,
+      empty,
+      hints,
+      need: ANCHORS.sightingsPerHour,
+      strainCap: strainCapacity(ANCHORS.rosterStart + bought),
+      search: true,
+    });
+    for (const k of plan) {
+      if (SUSPECT_AT[k]) {
+        seen[k] = (seen[k] ?? 0) + 1;
+        accounts += ANCHORS.accountsPerSighting;
+      } else empty.add(k);
+    }
+    for (const s of SUSPECTS) {
+      if (held.has(s.id)) continue;
+      const hours = SUSPECT_CARDS.filter((c) => c.who === s.id);
+      if (hours.every((c) => (seen[watchKey(c.where, c.when)] ?? 0) >= ANCHORS.sightingsPerHour)) {
+        held.add(s.id);
+        alibis.push(night);
+      }
+    }
+    while (accounts >= rosterBase * rosterRatio ** bought) {
+      accounts -= rosterBase * rosterRatio ** bought;
+      bought++;
+    }
+    if (insomnia === null && held.size > 0 && accounts >= INSOMNIA_COST) {
+      accounts -= INSOMNIA_COST;
+      insomnia = night;
+    }
+  }
+  return { alibis, roster: ANCHORS.rosterStart + bought, insomnia };
+}
+
+/** The night's hints under the reference board. */
+export const REFERENCE_HINTS = hintsOf(walkBoard(BOARD_PRICES).pins);
+
+/** First roster place: two nights of the starting roster's sightings. */
+export const ROSTER_BASE_COST = 2 * ANCHORS.rosterStart * ANCHORS.accountsPerSighting;
+
 /**
  * Smallest x on a grid of `step` from `lo` where `f(x) >= target`. A scan, not
- * a bisection: witness filing spends the bank between nights, so neither solve
- * below is monotone in its parameter.
+ * a bisection: buying roster changes what the planner can search, so the
+ * night an alibi holds is not monotone in the price.
  */
 function scan(
   f: (x: number) => number,
@@ -239,20 +344,12 @@ function scan(
   throw new Error(`spine: no solution below ${hi}`);
 }
 
-/** First elimination price: the cheapest at which the first suspect falls on `firstEliminationNight`. */
-export const ELIMINATION_BASE_COST = scan(
-  (b) => eliminationNights(b, 1)[0] ?? Infinity,
-  ANCHORS.firstEliminationNight,
+/** Ratio between roster places: the gentlest at which the sixth alibi holds on `lastAlibiNight`. */
+export const ROSTER_RATIO = scan(
+  (q) => walkNight(REFERENCE_HINTS, ROSTER_BASE_COST, q).alibis.at(-1) ?? Infinity,
+  ANCHORS.lastAlibiNight,
   1,
-  1,
-  1e6,
-);
-/** Ratio between eliminations: the gentlest at which the sixth falls on `lastEliminationNight`. */
-export const ELIMINATION_RATIO = scan(
-  (q) => eliminationNights(ELIMINATION_BASE_COST, q).at(-1) ?? Infinity,
-  ANCHORS.lastEliminationNight,
-  1,
-  0.005,
+  0.01,
   20,
 );
 
@@ -262,15 +359,16 @@ export const ELIMINATION_RATIO = scan(
 export function predictBeats(): Record<string, number> {
   const phaseIIStart = ANCHORS.phaseISeconds;
   const phaseIIIStart = phaseIIStart + ANCHORS.phaseIISeconds;
-  const nights = eliminationNights(ELIMINATION_BASE_COST, ELIMINATION_RATIO);
+  const board = walkBoard(BOARD_PRICES);
+  const night = walkNight(REFERENCE_HINTS, ROSTER_BASE_COST, ROSTER_RATIO);
   const beats: Record<string, number> = {
     'first clerk': ladderAt(BOX_LADDER, ANCHORS.phaseISeconds).times[0],
     'box empty': ANCHORS.phaseISeconds,
-    'first canvasser': phaseIIStart + ladderAt(BOARD_LADDER, ANCHORS.phaseIISeconds).times[0],
+    'board 4×4': phaseIIStart + board.opened[0],
     'reconstruct threshold': phaseIIIStart,
   };
-  nights.forEach((n, i) => {
-    beats[`elimination ${i + 1}`] = phaseIIIStart + n * ANCHORS.nightSeconds;
+  night.alibis.forEach((n, i) => {
+    beats[`alibi ${i + 1}`] = phaseIIIStart + n * ANCHORS.nightSeconds;
   });
   return beats;
 }

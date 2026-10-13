@@ -1,27 +1,30 @@
 import {
   TickDriverKey,
+  computed,
   persistent,
   type ComputedRef,
   type EngineModule,
   type InjectionKey,
   type Persistent,
 } from '@open-loop/engine';
-import { ANCHORS, BOX_PAGES, ENDING, OPENING, RECONSTRUCT_LEADS, doorDefs } from '../data';
+import { BOX_PAGES, ENDING, OPENING, RECONSTRUCT_LEADS, SUSPECTS, doorDefs } from '../data';
 import { createLifecycle, type Lifecycle } from './lifecycle';
 
 /**
  * Case module — the case file every phase writes into: the carbon log the
  * game is read through, the door ladder, and whether the case is closed. The
- * last door is the ending: the tick driver stops and stays stopped across
- * reloads, and the content is over.
+ * case closes when the last page is read: the tick driver stops and stays
+ * stopped across reloads, and the content is over.
  */
 export interface CaseApi {
   life: Lifecycle;
   /** The carbon: oldest line first, capped. */
   lines: Persistent<string[]>;
   write(...text: string[]): void;
-  /** The last account is read: nothing ticks again. */
+  /** The last page is read: nothing ticks again. */
   closed: ComputedRef<boolean>;
+  /** Read the last page: write the ending and stop the clock for good. */
+  close(): void;
 }
 
 /** Lines kept; older ones scroll off. */
@@ -47,24 +50,25 @@ export function createCaseModule(): EngineModule {
         doorDefs({
           boxPages: BOX_PAGES,
           reconstructLeads: RECONSTRUCT_LEADS,
-          eliminable: ANCHORS.suspects - 1,
+          alibis: SUSPECTS.length,
         }),
       );
-      const closed = life.isOpen('accuse');
+      const lastPageRead = persistent(false, { id: 'lastPageRead' });
+      const closed = computed(() => lastPageRead.value);
 
       const driver = ctx.inject(TickDriverKey);
-      life.onOpened((door) => {
-        write(...door.log);
-        if (door.id === 'accuse') {
-          write(...ENDING);
-          driver.stop();
-        }
-      });
+      life.onOpened((door) => write(...door.log));
       ctx.onLoad(() => {
         if (closed.value) driver.stop();
       });
+      const close = () => {
+        if (lastPageRead.value) return;
+        lastPageRead.value = true;
+        write(...ENDING);
+        driver.stop();
+      };
 
-      api = { life, lines, write, closed };
+      api = { life, lines, write, closed, close };
       ctx.provide(CaseKey, api);
     },
   };

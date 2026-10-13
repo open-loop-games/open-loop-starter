@@ -4,21 +4,22 @@
 // spine and are passed in.
 
 import type { Gate } from '@open-loop/engine';
+import type { PersonId } from './evidence';
 
-/** Ids of the resources, categories and entities gates read by name. */
+/** Ids of the resources, categories and entries gates read by name. */
 export const IDS = {
   pagesRead: 'pagesRead',
   leads: 'leads',
+  alibis: 'alibis',
   doors: 'doors',
-  eliminations: 'eliminations',
-  eliminate: 'eliminate',
 } as const;
 
 /**
  * A door is the progress that moves the game from one phase to the next. Each
- * is opened once, by hand, when its record is met; nothing ever closes it.
+ * is opened once, by hand, when its record holds and the door before it is
+ * open; nothing ever closes it.
  */
-export type DoorId = 'pin-board' | 'reconstruct' | 'accuse';
+export type DoorId = 'pin-board' | 'reconstruct' | 'box-returns';
 
 export interface DoorDef {
   id: DoorId;
@@ -34,7 +35,7 @@ export interface DoorDef {
 export function doorDefs(thresholds: {
   boxPages: number;
   reconstructLeads: number;
-  eliminable: number;
+  alibis: number;
 }): DoorDef[] {
   return [
     {
@@ -44,36 +45,34 @@ export function doorDefs(thresholds: {
       opensWhen: { kind: 'cumulative-gte', resource: IDS.pagesRead, value: thresholds.boxPages },
       log: [
         'You clear the desk. The box goes back on the shelf.',
-        'The reading lamp is switched off. Your clerks stop reading and start cross-referencing.',
+        'The reading lamp is switched off. Your clerks stop reading and start writing up cards.',
         'Somewhere above you, a telephone begins to ring.',
       ],
     },
     {
       id: 'reconstruct',
       title: 'Reconstruct the night',
-      description: 'Take the board down. Every thread becomes a street, a lamp, a door left open.',
+      description:
+        'Take the board down. Every card you pinned becomes a place and an hour you can watch.',
       opensWhen: {
         kind: 'cumulative-gte',
         resource: IDS.leads,
         value: thresholds.reconstructLeads,
       },
       log: [
-        'The board comes down. Every thread you pinned becomes part of Harrow Mill, January 14, 1979.',
-        'The canvassers are called in. The phone stops ringing.',
-        'Your clerks take a new job: filing the accounts the model turns up.',
+        'The board comes down. Every card you pinned becomes part of Harrow Mill, January 14, 1979.',
+        'The phone stops ringing. Your clerks take the night shift: they watch where you send them.',
       ],
     },
     {
-      id: 'accuse',
-      title: 'Read the last account',
-      description: 'Six alibis hold. One account was never filed.',
-      opensWhen: {
-        kind: 'count-gte',
-        category: IDS.eliminations,
-        entry: IDS.eliminate,
-        value: thresholds.eliminable,
-      },
-      log: [],
+      id: 'box-returns',
+      title: 'The chute rattles',
+      description: 'Six alibis hold. Something is coming back down.',
+      opensWhen: { kind: 'cumulative-gte', resource: IDS.alibis, value: thresholds.alibis },
+      log: [
+        'The night model goes quiet. Your clerks go home.',
+        'At 2:14 a.m. the box comes back down the chute. One page is left in it.',
+      ],
     },
   ];
 }
@@ -82,22 +81,24 @@ export function doorDefs(thresholds: {
  * Every mechanism the player meets. A mechanism is live from the door that
  * installs it until the door that retires it: `null` install means from the
  * first screen, `null` retire means until the case closes. `replaces` names
- * the mechanism whose role this one takes over — the same clerks, a new act.
+ * the mechanism whose role this one takes over at the same door — the same
+ * clerks, a new act.
  */
 export type MechanismId =
   | 'read'
   | 'clerk-hire'
   | 'clerk-read'
-  | 'xref'
-  | 'clerk-xref'
   | 'tipline'
-  | 'canvass'
-  | 'second-shift'
+  | 'clerk-write'
+  | 'pin'
+  | 'board-space'
+  | 'strings'
   | 'night'
-  | 'witness'
-  | 'clerk-file'
-  | 'eliminate'
-  | 'insomnia';
+  | 'watch'
+  | 'roster'
+  | 'clerk-plan'
+  | 'insomnia'
+  | 'last-page';
 
 export interface MechanismDef {
   id: MechanismId;
@@ -112,87 +113,95 @@ export const MECHANISMS: MechanismDef[] = [
   { id: 'read', installedBy: null, retiredBy: 'pin-board', label: 'Reading the box' },
   { id: 'clerk-hire', installedBy: null, retiredBy: 'pin-board', label: 'Hiring clerks' },
   { id: 'clerk-read', installedBy: null, retiredBy: 'pin-board', label: 'Clerks reading' },
+  { id: 'tipline', installedBy: 'pin-board', retiredBy: 'reconstruct', label: 'The tip line' },
   {
-    id: 'xref',
-    installedBy: 'pin-board',
-    retiredBy: 'reconstruct',
-    label: 'Cross-referencing by hand',
-  },
-  {
-    id: 'clerk-xref',
+    id: 'clerk-write',
     installedBy: 'pin-board',
     retiredBy: 'reconstruct',
     replaces: 'clerk-read',
-    label: 'Clerks cross-referencing',
+    label: 'Clerks writing up cards',
   },
-  { id: 'tipline', installedBy: 'pin-board', retiredBy: 'reconstruct', label: 'The tip line' },
+  { id: 'pin', installedBy: 'pin-board', retiredBy: 'reconstruct', label: 'Pinning the board' },
   {
-    id: 'canvass',
+    id: 'board-space',
     installedBy: 'pin-board',
     retiredBy: 'reconstruct',
-    label: 'Canvassing Harrow Mill',
+    label: 'Clearing wall space',
   },
+  { id: 'strings', installedBy: 'pin-board', retiredBy: 'reconstruct', label: 'The red string' },
   {
-    id: 'second-shift',
-    installedBy: 'pin-board',
-    retiredBy: 'reconstruct',
-    label: 'The second shift',
+    id: 'night',
+    installedBy: 'reconstruct',
+    retiredBy: 'box-returns',
+    label: 'The night replayed',
   },
-  { id: 'night', installedBy: 'reconstruct', retiredBy: 'accuse' },
-  { id: 'witness', installedBy: 'reconstruct', retiredBy: 'accuse' },
-  { id: 'clerk-file', installedBy: 'reconstruct', retiredBy: 'accuse', replaces: 'clerk-xref' },
-  { id: 'eliminate', installedBy: 'reconstruct', retiredBy: 'accuse' },
+  { id: 'watch', installedBy: 'reconstruct', retiredBy: 'box-returns', label: 'The stakeout' },
+  { id: 'roster', installedBy: 'reconstruct', retiredBy: 'box-returns', label: 'The night roster' },
+  {
+    id: 'clerk-plan',
+    installedBy: 'reconstruct',
+    retiredBy: 'box-returns',
+    replaces: 'clerk-write',
+    label: 'Clerks planning the watch',
+  },
   { id: 'insomnia', installedBy: 'reconstruct', retiredBy: null },
+  { id: 'last-page', installedBy: 'box-returns', retiredBy: null },
 ];
 
 /** Phase headings, indexed by doors opened. */
-export const PHASES = ['I. The Box', 'II. The Board', 'III. The Night', 'Closed'] as const;
+export const PHASES = [
+  'I. The Box',
+  'II. The Board',
+  'III. The Night',
+  'IV. The Last Page',
+] as const;
 
 export interface Suspect {
+  id: PersonId;
   name: string;
   role: string;
-  /** The alibi that clears them, written when they are cleared. */
+  /** What they say they did; it holds once the stakeout has seen every hour of it. */
   alibi: string;
 }
 
-/** The first six can be cleared in order; the seventh is who is left. */
 export const SUSPECTS: Suspect[] = [
   {
+    id: 'varga',
     name: 'Leon Varga',
     role: 'the boarder',
     alibi: 'Leon Varga was on the 9:40 bus to Corlis. The driver punched his ticket twice.',
   },
   {
+    id: 'ames',
     name: 'Rev. Thomas Ames',
     role: 'the minister',
     alibi:
       "Rev. Ames rang the 11 o'clock bell. Forty people heard it; three saw him pull the rope.",
   },
   {
+    id: 'kell',
     name: 'Dorothy Kell',
     role: 'the postmistress',
     alibi: 'Dorothy Kell sorted mail until two. The franking machine logs every stamp.',
   },
   {
+    id: 'ferro',
     name: 'Walt Ferro',
     role: 'the mill foreman',
     alibi: 'Walt Ferro signed the night-shift register at 10:02 and again at 5:58.',
   },
   {
+    id: 'ashby',
     name: 'June Ashby',
     role: "Ada's sister",
     alibi: 'June Ashby was in the county hospital with a broken wrist. The X-ray is dated.',
   },
   {
+    id: 'pruitt',
     name: 'Sheriff Dale Pruitt',
     role: 'the sheriff',
     alibi:
       'Sheriff Pruitt spent the night pulling a truck out of the Harrow ditch, on the radio log.',
-  },
-  {
-    name: 'The night clerk',
-    role: 'County Records, Sub-basement B',
-    alibi: '',
   },
 ];
 
@@ -215,10 +224,10 @@ export const BOX_FRAGMENTS: [number, string][] = [
   [2500, 'A ledger page: who signed out the Larkspur file, and when. The last line is torn away.'],
 ];
 
-/** The ending, read once the last account is opened. */
+/** The ending, read from the last page. */
 export const ENDING = [
   'Six alibis hold.',
   'One account in the model was never filed: the clerk on duty, County Records, the night of January 14, 1979.',
-  'You pull the intake sheet from the bottom of the box. It was there all along.',
+  'The last page is the intake sheet. It was there all along.',
   'The handwriting is yours.',
 ];

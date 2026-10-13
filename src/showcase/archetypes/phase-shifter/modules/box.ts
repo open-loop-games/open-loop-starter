@@ -47,6 +47,8 @@ export interface BoxApi {
   clerkReadChain: ModifierChain;
   /** The hand verb. False when retired or the box is empty. */
   read(): boolean;
+  /** The verb's last use: the page the box brings back. Closes the case. */
+  readLast(): boolean;
 }
 
 export const BoxKey: InjectionKey<BoxApi> = Symbol('phase-shifter/box') as InjectionKey<BoxApi>;
@@ -62,7 +64,8 @@ export function createBoxModule(): EngineModule {
     id: 'phase-shifter/box',
     install(ctx) {
       const registry = ctx.inject(PhaseShifterTuningRegistryKey);
-      const { life, write } = ctx.inject(CaseKey);
+      const kase = ctx.inject(CaseKey);
+      const { life, write } = kase;
       const boxPages = tunable(registry, 'box/pages', () => BOX_PAGES);
       const notesPerPage = tunable(registry, 'box/notesPerPage', () => NOTES_PER_PAGE);
       const clerkPagesPerS = tunable(registry, 'box/clerk/pagesPerS', () => CLERK_PAGES_PER_S);
@@ -129,6 +132,7 @@ export function createBoxModule(): EngineModule {
       evidence.register(BOX_FRAGMENTS.map(([at, text], i) => ({ id: `fragment-${i}`, at, text })));
 
       const readLive = life.isLive('read');
+      const lastLive = life.isLive('last-page');
       api = {
         pages,
         pagesRead,
@@ -140,6 +144,12 @@ export function createBoxModule(): EngineModule {
         read() {
           if (!readLive.value) return false;
           return readPages(1).gt(0);
+        },
+        readLast() {
+          if (!lastLive.value || kase.closed.value) return false;
+          addResource(pagesRead, 1);
+          kase.close();
+          return true;
         },
       };
       ctx.provide(BoxKey, api);

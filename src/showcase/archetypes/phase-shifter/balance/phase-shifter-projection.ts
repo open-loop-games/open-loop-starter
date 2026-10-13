@@ -1,93 +1,95 @@
 /**
- * Phase-shifter — spine projection. Prints what `data/spine.ts` derives: each
- * phase's ladder, what each door hands forward, the night's elimination
- * schedule, and the predicted beats with their schedule check. Runs no
- * engine. Prints; never asserts.
+ * Phase-shifter — spine projection. Prints what `data/spine.ts` derives: the
+ * box's ladder, the board walked by the reference arranger, the night walked
+ * by the reference planner, and the predicted beats with their schedule
+ * check. Runs no engine. Prints; never asserts.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/phase-shifter/balance/phase-shifter-projection.ts`
  *
  * How to read it:
- * - § Phases: each ladder's base, ratio and funding, and what the greedy walk
- *   holds when the phase's designed length runs out.
- * - § Doors: the record each door reads, and what crosses it.
- * - § Night: contradictions banked per night, witnesses filed and suspects cleared
- *   under the spine's dawn order.
- * - § Schedule: each beat's predicted time against the anchors that set it. A
- *   line marked `off` means a derived value no longer lands on its anchor.
+ * - § Box: the clerk ladder, and what crosses the first door.
+ * - § Board: when cards reach the inbox, when the board opens, the expansion
+ *   prices those openings solve, and the door's lifetime-lead threshold.
+ * - § Night: the hints the board hands over, the roster ladder, and the night
+ *   each alibi holds.
+ * - § Schedule: each beat against the anchor that set it. A line marked `off`
+ *   means a derived value no longer lands on its anchor.
  */
 
 import {
   ANCHORS,
-  BOARD_LADDER,
+  BOARD_PRICES,
   BOX_LADDER,
   BOX_PAGES,
-  CANVASSER_BASE_COST,
-  CLERK_XREF_NOTES_PER_S,
-  ELIMINATION_BASE_COST,
-  ELIMINATION_RATIO,
+  DECK,
   INSOMNIA_COST,
+  NOTES_PER_CARD,
   PREDICTED_CLERKS,
   PREDICTED_NOTE_BUFFER,
   RECONSTRUCT_LEADS,
-  SECOND_SHIFT_COST,
-  WITNESS_BASE_COST,
-  eliminationNights,
+  REFERENCE_HINTS,
+  ROSTER_BASE_COST,
+  ROSTER_RATIO,
+  SUSPECT_CARDS,
+  boardStrength,
   ladderAt,
   predictBeats,
-  type Ladder,
+  walkBoard,
+  walkNight,
 } from '../data';
 
 const f = (x: number, d = 1) => x.toFixed(d);
 
-function phase(name: string, l: Ladder, seconds: number, unit: string): void {
-  const end = ladderAt(l, seconds);
-  console.log(
-    `  ${name.padEnd(10)} base ${f(l.base)} ×${l.growth}  funded ${f(l.rate0, 2)} + ${f(l.ratePer, 2)}/rung ${unit}/s` +
-      `${l.bank0 ? `  opening bank ${f(l.bank0)}` : ''}`,
-  );
-  console.log(
-    `  ${''.padEnd(10)} at ${seconds}s: ${end.count} bought, ${f(end.earned, 0)} earned, ` +
-      `first at ${f(end.times[0] ?? NaN)}s`,
-  );
-}
-
 console.log('\nNight Clerk — spine projection\n');
-console.log('Phases');
-phase('I. Box', BOX_LADDER, ANCHORS.phaseISeconds, 'notes');
-phase('II. Board', BOARD_LADDER, ANCHORS.phaseIISeconds, 'leads');
 
-console.log('\nDoors');
-console.log(`  pin-board    opens at ${BOX_PAGES} pages read (the whole box)`);
+console.log('Box');
+const box = ladderAt(BOX_LADDER, ANCHORS.phaseISeconds);
 console.log(
-  `               carries ${PREDICTED_CLERKS} clerks (${f(PREDICTED_CLERKS * CLERK_XREF_NOTES_PER_S)} notes/s of cross-referencing) and ${f(PREDICTED_NOTE_BUFFER, 0)} notes`,
+  `  clerks base ${BOX_LADDER.base} ×${BOX_LADDER.growth}; ${BOX_PAGES} pages read by ${ANCHORS.phaseISeconds}s`,
 );
 console.log(
-  `  reconstruct  opens at ${RECONSTRUCT_LEADS} lifetime leads; fidelity √(leads / ${RECONSTRUCT_LEADS})`,
+  `  carries ${PREDICTED_CLERKS} clerks and ${f(PREDICTED_NOTE_BUFFER, 0)} notes; first clerk at ${f(box.times[0])}s`,
 );
-console.log(`  accuse       opens at ${ANCHORS.suspects - 1} suspects cleared`);
+
+console.log('\nBoard');
+const board = walkBoard(BOARD_PRICES);
 console.log(
-  `  prices: canvasser ${f(CANVASSER_BASE_COST)} leads, second shift ${SECOND_SHIFT_COST} leads, witness ${WITNESS_BASE_COST}, ` +
-    `elimination ${ELIMINATION_BASE_COST} ×${ELIMINATION_RATIO}, insomnia ${INSOMNIA_COST}`,
+  `  a card costs ${NOTES_PER_CARD} notes; the deck's ${DECK.length} cards are written by ` +
+    `${f(board.written.at(-1) ?? NaN, 0)}s (inbox at the door: ${board.written.length - board.pins.filter(Boolean).length})`,
+);
+console.log(
+  `  opens 4×4 at ${f(board.opened[0] ?? NaN, 0)}s${board.opened[1] === undefined ? '' : `, 5×5 at ${f(board.opened[1], 0)}s`}; ` +
+    `prices ${BOARD_PRICES.join(', ')} leads`,
+);
+const side = 3 + board.opened.length;
+console.log(
+  `  at the door: ${board.pins.filter(Boolean).length} cards pinned, strength ${boardStrength(board.pins, side)}; ` +
+    `threshold ${RECONSTRUCT_LEADS} lifetime leads`,
 );
 
 console.log('\nNight');
-const nights = eliminationNights(ELIMINATION_BASE_COST, ELIMINATION_RATIO);
-console.log(`  suspects cleared on nights ${nights.join(', ')}`);
+console.log(
+  `  hints ${REFERENCE_HINTS.size} of ${SUSPECT_CARDS.length} suspect hours; each needs ${ANCHORS.sightingsPerHour} sightings`,
+);
+console.log(
+  `  roster ${ANCHORS.rosterStart} + places at ${ROSTER_BASE_COST} ×${ROSTER_RATIO}; insomnia ${INSOMNIA_COST}`,
+);
+const night = walkNight(REFERENCE_HINTS, ROSTER_BASE_COST, ROSTER_RATIO);
+console.log(
+  `  alibis hold on nights ${night.alibis.join(', ')}; roster ends at ${night.roster}; insomnia night ${night.insomnia ?? '—'}`,
+);
+const blind = walkNight(new Set(), ROSTER_BASE_COST, ROSTER_RATIO);
+console.log(`  with no hints at all, the sixth holds on night ${blind.alibis.at(-1) ?? '—'}`);
 
 console.log('\nSchedule');
 const beats = predictBeats();
+const phaseIIIStart = ANCHORS.phaseISeconds + ANCHORS.phaseIISeconds;
 const anchored: Record<string, number> = {
   'first clerk': ANCHORS.firstClerkSeconds,
   'box empty': ANCHORS.phaseISeconds,
-  'reconstruct threshold': ANCHORS.phaseISeconds + ANCHORS.phaseIISeconds,
-  'elimination 1':
-    ANCHORS.phaseISeconds +
-    ANCHORS.phaseIISeconds +
-    ANCHORS.firstEliminationNight * ANCHORS.nightSeconds,
-  [`elimination ${ANCHORS.suspects - 1}`]:
-    ANCHORS.phaseISeconds +
-    ANCHORS.phaseIISeconds +
-    ANCHORS.lastEliminationNight * ANCHORS.nightSeconds,
+  'board 4×4': ANCHORS.phaseISeconds + ANCHORS.boardOpensAt,
+  'reconstruct threshold': phaseIIIStart,
+  'alibi 6': phaseIIIStart + ANCHORS.lastAlibiNight * ANCHORS.nightSeconds,
 };
 for (const [name, t] of Object.entries(beats)) {
   const a = anchored[name];

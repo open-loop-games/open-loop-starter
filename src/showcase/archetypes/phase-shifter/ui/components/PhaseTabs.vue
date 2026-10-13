@@ -12,7 +12,7 @@ defineProps<{ phase: number }>();
 <template>
   <ol class="nc-tabs" aria-label="Phases">
     <li
-      v-for="(name, i) in PHASES.slice(0, 3)"
+      v-for="(name, i) in PHASES"
       :key="name"
       :class="{ current: i === phase, past: i < phase }"
       :aria-current="i === phase ? 'step' : undefined"

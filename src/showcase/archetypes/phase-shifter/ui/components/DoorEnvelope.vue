@@ -8,7 +8,7 @@ import { computed } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
-import { ANCHORS, BOX_PAGES, RECONSTRUCT_LEADS } from '../../data';
+import { BOX_PAGES, RECONSTRUCT_LEADS, SUSPECTS } from '../../data';
 import { getBoard, getBox, getCase, getNight } from '../../modules';
 import { whole } from '../format';
 
@@ -26,13 +26,13 @@ const door = computed(() => {
         ? {
             have: new Decimal(board.leads.cumulative!.value),
             need: RECONSTRUCT_LEADS,
-            unit: 'leads pinned',
+            unit: 'leads, all told',
           }
         : opened === 2
           ? {
-              have: new Decimal(night.eliminate.count.value),
-              need: ANCHORS.suspects - 1,
-              unit: 'alibis',
+              have: new Decimal(night.held.value.length),
+              need: SUSPECTS.length,
+              unit: 'alibis holding',
             }
           : null;
   const entry = life.doors.getAll()[opened];
