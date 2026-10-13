@@ -1,21 +1,78 @@
 <!--
-  OfficePanel — the right rail: the executive floor (hires, their duty
-  switches, the night bookkeeper), the management memos on the desk, and the
-  wall of market-leader certificates. Memos are starter's `UpgradeGrid` in one
-  column, each card drawn in the `#card` slot; a signed memo leaves the desk.
+  OfficePanel — the right rail: the Consolidated Building once it is offered,
+  the executive floor (hires, their duty switches, the night bookkeeper),
+  standing and the press it buys, the wire room, the management memos on the
+  desk, and the wall of market-leader certificates. Memos are starter's
+  `UpgradeGrid` in one column, each card drawn in the `#card` slot; a signed memo
+  leaves the desk. The record of achievements opens in starter's
+  `AchievementGrid` on the frame's modal stack.
 -->
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import type { Purchasable } from '@open-loop/engine';
+import { modalStackKey } from '@/lib';
 import Button from '@/ui/components/Button.vue';
+import AchievementGrid, { type AchievementCard } from '@/ui/components/AchievementGrid.vue';
 import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
-import { BOOKKEEPER_DEF, type HireId, type ManagementDef } from '../../data';
-import { getAutomation, getFirm, getOffline } from '../../modules';
+import { BOOKKEEPER_DEF, ENDING_DEF, type HireId, type ManagementDef } from '../../data';
+import { getAutomation, getFirm, getOffline, getStanding, getTips } from '../../modules';
 import { money } from '../format';
 
 const firm = getFirm();
 const automation = getAutomation();
 const offline = getOffline();
+const standing = getStanding();
+const tips = getTips();
+const stack = inject(modalStackKey)!;
+
+/** One-shots bought on sight of their reveal: press for standing, and the wire room. */
+const offers = (
+  all: {
+    def: { id: string; title: string; description: string; cost: number };
+    purchasable: Purchasable;
+  }[],
+) =>
+  all
+    .filter((e) => e.purchasable.visible.value && !e.purchasable.active.value)
+    .map((e) => ({ def: e.def, p: e.purchasable, canBuy: e.purchasable.canPurchase.value }));
+const press = computed(() => offers(standing.upgrades.getAll()));
+const wireRoom = computed(() => offers(tips.upgrades.getAll()));
+const pressOwned = computed(() => standing.upgrades.purchasedCount.value);
+
+const endingOffered = computed(() => firm.ending.visible.value && !firm.ending.active.value);
+
+function openRecord() {
+  const card = (
+    id: string,
+    displayName: string,
+    description: string,
+    earned: boolean,
+  ): AchievementCard => ({
+    id,
+    displayName,
+    description,
+    earned,
+  });
+  const cards: AchievementCard[] = [
+    ...firm.grades
+      .getAll()
+      .map((e) =>
+        card(e.def.id, `Credit ${e.def.grade}`, 'Lifetime revenue', e.achievement.earned.value),
+      ),
+    ...firm.milestones
+      .getAll()
+      .map((e) => card(e.def.id, e.def.title, 'Market leader', e.achievement.earned.value)),
+    ...standing.feats
+      .getAll()
+      .map((e) => card(e.def.id, e.def.title, 'On the record', e.achievement.earned.value)),
+  ];
+  const id = stack.push(AchievementGrid, {
+    class: 'consolidated-portal record-sheet',
+    title: 'The record',
+    cards,
+    onClose: () => stack.remove(id),
+  });
+}
 
 interface FloorEntry {
   id: string;
@@ -101,6 +158,28 @@ function toggle(id: HireId) {
 </script>
 <template>
   <section class="office">
+    <div v-if="endingOffered" class="block landmark" data-testid="ending">
+      <h2 class="smallcaps">For sale</h2>
+      <article class="building">
+        <h3 class="smallcaps">{{ ENDING_DEF.title }}</h3>
+        <p>{{ ENDING_DEF.description }}</p>
+        <Button
+          class="hire-btn"
+          :disabled="!firm.ending.canPurchase.value"
+          :repeat="false"
+          @click="firm.ending.purchase(1)"
+        >
+          <span class="smallcaps">Buy</span>
+          <span class="num">{{ money(ENDING_DEF.cost) }}</span>
+        </Button>
+      </article>
+      <p class="quiet">Send the acquisitions desk home to save for it.</p>
+    </div>
+    <div v-else-if="firm.ending.active.value" class="block landmark">
+      <h2 class="smallcaps">The Consolidated Building</h2>
+      <p class="quiet">Your name is on the tallest building in town. The books stay open.</p>
+    </div>
+
     <div v-if="hires.length" class="block">
       <h2 class="smallcaps">Executive floor</h2>
       <TransitionGroup name="reveal" tag="div" class="hires" appear>
@@ -133,6 +212,56 @@ function toggle(id: HireId) {
           <span v-else class="kept smallcaps">Keeps the books</span>
         </article>
       </TransitionGroup>
+    </div>
+
+    <div class="block">
+      <h2 class="smallcaps">
+        Standing
+        <span class="standing num">{{ standing.standing.value.toFixed(2) }}</span>
+      </h2>
+      <p>
+        {{ standing.achievements.value }} on the record · {{ pressOwned }}
+        {{ pressOwned === 1 ? 'piece' : 'pieces' }} of press, each worth ×{{
+          (1 + standing.standing.value * 0.1).toFixed(2)
+        }}
+      </p>
+      <Button class="record smallcaps" :repeat="false" @click="openRecord">The record</Button>
+      <article
+        v-for="o in press"
+        :key="o.def.id"
+        class="hire"
+        :class="{ affordable: o.canBuy }"
+        :data-testid="`press-${o.def.id}`"
+      >
+        <div class="hire-text">
+          <h3 class="smallcaps">{{ o.def.title }}</h3>
+          <p>{{ o.def.description }}</p>
+        </div>
+        <Button class="hire-btn" :disabled="!o.canBuy" @click="o.p.purchase(1)">
+          <span class="smallcaps">Run it</span>
+          <span class="num">{{ money(o.def.cost) }}</span>
+        </Button>
+      </article>
+    </div>
+
+    <div v-if="wireRoom.length" class="block">
+      <h2 class="smallcaps">The wire room</h2>
+      <article
+        v-for="o in wireRoom"
+        :key="o.def.id"
+        class="hire"
+        :class="{ affordable: o.canBuy }"
+        :data-testid="`wire-${o.def.id}`"
+      >
+        <div class="hire-text">
+          <h3 class="smallcaps">{{ o.def.title }}</h3>
+          <p>{{ o.def.description }}</p>
+        </div>
+        <Button class="hire-btn" :disabled="!o.canBuy" @click="o.p.purchase(1)">
+          <span class="smallcaps">Install</span>
+          <span class="num">{{ money(o.def.cost) }}</span>
+        </Button>
+      </article>
     </div>
 
     <div class="block">
@@ -313,8 +442,8 @@ p {
 }
 .wall-row {
   display: grid;
-  grid-template-columns: 1fr repeat(3, 38px);
-  gap: 6px;
+  grid-template-columns: 1fr repeat(5, 34px);
+  gap: 4px;
   align-items: center;
   font-size: 13px;
   color: var(--typed-dim);
@@ -332,5 +461,32 @@ p {
   box-shadow:
     inset 0 0 0 2px var(--walnut),
     inset 0 0 0 3px rgba(210, 169, 78, 0.4);
+}
+.standing {
+  font-size: 17px;
+  color: var(--ink-seal);
+}
+.record {
+  margin: 6px 0 8px;
+  padding: 3px 10px;
+  font-size: 13px;
+  background: transparent;
+  color: var(--ink-seal);
+  border: 1px solid rgba(210, 169, 78, 0.5);
+  border-radius: var(--radius-paper);
+}
+.block > .hire + .hire {
+  margin-top: 8px;
+}
+.landmark .building {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 3px double var(--ink-seal);
+  background: rgba(210, 169, 78, 0.06);
+}
+.landmark h3 {
+  font-size: 18px;
+  color: var(--ink-seal);
 }
 </style>

@@ -8,65 +8,73 @@
 Identity line source: `../_identity.md` (Producer entry); the line's player experience,
 exemplar calls and the slow-end configuration are `../_docs/producer.md`. **Core ·
 covered.** Cookie Clicker, AdVenture Capitalist, Antimatter Dimensions and Universal
-Paperclips show the composition ships, as a set; none is a lift target.
+Paperclips show the composition ships, as a set; none is a lift target. This build also
+carries `scheduled-event` and `random-draw` (the tips) and an `ending`, beyond the line.
 
 ## What this archetype is
 
 *Consolidated Holdings.* You found a holding company on one pushcart. You close deals by
 hand until your carts out-earn you, then buy newsstands, diners, laundromats, print
 shops, trucking lines, textile mills and savings banks. Each acquisition of a kind
-raises the next seller's asking price. Then you hire people to do it for you. Nothing
-opposes you and nothing resets.
+raises the next seller's asking price. Then you hire people to do it for you, keep an
+eye on the wire, and grow the firm until it can buy the tallest building in town.
 
 | Piece | What it does |
 |---|---|
-| The deal | a button; each press pays cash, on its own chain |
+| The deal | a button; each press pays cash |
 | Eight subsidiaries | each unit earns cash every second; owning one of a tier reveals the next |
-| Management memos | one-shots: each doubles a subsidiary, or the deal (sales training) |
-| Market-leader certificates | owning 25, 50 and 100 of a subsidiary doubles it |
-| Credit grades | lifetime revenue steps every subsidiary up ×1.2, B to AAA |
+| Telephones | the sales desk's lines; each closes a deal a second |
+| Management memos | one-shots at 10 to 200 owned: each doubles a subsidiary, or the deal |
+| Synergies | memos coupling two subsidiaries: each earns more per unit of the other |
+| The referral network | every deal pays more per subsidiary owned, ×5, ×10, ×20 as it grows |
+| Certificates and grades | owning 25 to 200 doubles a subsidiary; lifetime revenue steps all income |
+| Standing | every achievement counts; press bought with it lifts all income by standing |
+| Tips on the wire | a tip comes in every few minutes; caught, it draws a bull market, a closing spree or a windfall deal |
 | The executive floor | three hires, each an automation tier with its own duty switch |
 | The night bookkeeper | bought once; from then on, time away is played out on return |
+| The Consolidated Building | offered at 150 savings banks; buying it ends the firm's story, and play goes on |
 
-- **The desks.** The sales desk closes deals at the hand's pace. The acquisitions desk
-  buys the subsidiary that pays itself back soonest, twice a second. The board signs
-  every memo the moment the money is there, and once it sits, the acquisitions desk
-  holds back the price of the cheapest open memo. Sending a desk home is how the player
-  saves by hand.
-- **Offline is an unlock.** Before the bookkeeper, a return replays nothing. After it,
-  time away replays through the live game loop, desks included, up to a window sized by
-  the game's length and the replay's cost.
+- **The desks.** The sales desk comes with the hand's pace in phones and buys more on
+  payback. The acquisitions desk buys subsidiaries and phones by payback, twice a second.
+  The board signs every memo once the money is there, and the acquisitions desk then
+  holds back the cheapest open memo. Sending a desk home is how the player saves.
+- **Tips are the attentive player's.** No desk catches a tip. A bull market multiplies
+  everything for a while; a closing spree pays the hand ×77; a windfall deal pays a share
+  of cash on hand, so a held bank pays more.
+- **The arc.** The first hour is dense: every tier opens inside fifteen minutes. After
+  it, tips carry the minutes and the thresholds arrive every few: memos, certificates,
+  synergies, press, the referral network. Near four hours the building is offered.
 
 ## Rate-function spine
 
 **Bucket: exponential family** (`incremental-math/…/rate-functions/exponential.mdx`).
-Unit `n` of tier `i` costs `a_i·m^n`, one shared ratio `m` derived from two authored
-beat times. Within a band the stack is one constant factor; every step (a memo, a
-certificate, a grade) is a discrete step on a count or a lifetime total, so each is a
-splice point, not a continuous coupling. The per-tier cost step is solved, not chosen:
-bisected until the projection opens the top tier at `LADDER_TARGET`.
+Unit `n` of tier `i` costs `a_i·m^n`, one shared ratio `m` derived from two authored beat
+times. Every multiplier is a discrete step on a count or a lifetime total, a splice
+point; synergies and the referral network read other holdings' counts, so a tier's rate
+is a function of the count vector. The per-tier cost step is solved, not chosen.
 
-**Where the closed form stops: which subsidiary absorbs the next dollar.** The spine
-closes conditional on a stated buy order: payback-greedy over affordable units, with the
-cheapest open memo held back once the board sits. `projectArc` evaluates that order over
-the closed-form ladder, the same order the acquisitions desk ships.
+**Where the closed form stops:**
+- *which holding absorbs the next dollar.* The spine closes on a stated buy order:
+  payback-greedy over units and phones, at the acquisitions desk's cadence, with the
+  cheapest open memo held back once the board sits. Under synergies this is a heuristic.
+- *tips.* They arrive by a hazard ramp and draw an effect at random. The projection
+  books each at its expected value; a drawn bull market is convex, so the solve targets
+  the expected arc at `ENDING_TARGET / DRAWN_PACE`.
 
-**What measures the remainder:** `arc-probe.ts` plays the shipping desks and diffs every
-beat against the projection; `allocation-probe.ts` swaps the desk's rule to show what
-the stated order carries.
+**What measures the remainder:** `tip-probe.ts` draws tips on seeded streams in closed
+form and records `DRAWN_PACE`; `arc-probe.ts` plays the shipping game on seeds and diffs
+it against the projection; `allocation-probe.ts` swaps the desk's rule.
 
 ## The arc
 
-| Beat | Projected | Recorded |
+| Beat | Projected | Recorded (seeds 1–3) |
 |---|---|---|
-| First pushcart | 5s | 5s |
-| Sales desk hired | 3m20s | 3m27s |
-| Acquisitions desk hired | 5m31s | 5m39s |
-| Board of Directors hired | 10m45s | 11m25s |
-| The top tier: first savings bank | 19m51s | 20m33s |
+| Sales desk hired | 3m57s | 4m05s |
+| The top tier: first savings bank | 15m01s | 8m15s – 15m04s |
+| The building offered | 3h56m | 3h29m – 3h44m |
+| The building bought | 4h09m | 3h45m – 4h03m |
 
-Content thins past about 40 minutes: memos and certificates keep arriving, minutes
-apart. `manifest.ts` holds the recorded windows.
+`manifest.ts` holds the recorded windows; the projection's times are its expected arc.
 
 ## Growth ports
 
@@ -78,19 +86,21 @@ apart. `manifest.ts` holds the recorded windows.
 | Component | Engine primitive |
 |---|---|
 | cash, lifetime revenue | `createResource` (`.cumulative`) |
-| the deal, the subsidiaries | `createProducerCategory` (`manual` and `continuous` triggers) |
+| the deal, subsidiaries, phones | `createProducerCategory` (`manual`, `continuous`; the desk's phones as `extraCount`) |
 | escalating price | `ProducerPurchaseConfig.costRatio` over `tunable` |
-| memos, hires, the bookkeeper | `createPurchasableCategory` + `createCostRequirement` |
-| certificates, grades | `createAchievementCategory` with Gate goals (`count-gte`, `cumulative-gte`) |
-| the stack | `createModifierChain` (deal, operations, each subsidiary's rate chain) |
+| memos, synergies, the referral network | `createPurchasableCategory`; synergies as live `Grant` multipliers |
+| the referral add | `createAdditiveModifier` in a reserved slot of the deal chain, ahead of training |
+| certificates, grades, feats | `createAchievementCategory` with Gate goals |
+| standing's press | `createPurchasableCategory` with a live `Grant` multiplier |
+| bull market, closing spree | `createTemporaryEffectSystem` |
+| tip clock and draws | `random`, `randomItem` (seedable) |
 | the dispatch ladder | `createAutomationTiers` with `active` Gates |
-| the acquisitions desk | `setupPolicyAutoPurchase` + `selectionPaybackPeriod`, `reserve` |
+| the acquisitions desk | `setupPolicyAutoPurchase` over a producer list + `selectionPaybackPeriod`, `reserve` |
 | the board | `setupSweepAutoPurchase` |
 | offline catch-up | `processOfflineTime` |
 
-Two hand-rolls carry `TODO(expansion)` markers in `modules/automation.ts`: the sales
-desk firing a manual producer at a rate, and the memo reserve arbitrating two
-auto-buyers on one wallet.
+The memo reserve carries a `TODO(expansion)` marker in `modules/automation.ts`: priority
+between two auto-buyers drawing on one wallet.
 
 ## Balance model
 

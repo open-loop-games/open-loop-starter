@@ -20,10 +20,10 @@ const books: ResourceReadout = {
   id: 'cash',
   label: 'Cash on hand',
   value: firm.cash.value as never,
-  rate: firm.incomeRate,
+  rate: automation.income,
 };
 const cash = computed(() => money(firm.cash.value));
-const income = computed(() => perSecond(firm.incomeRate.value));
+const income = computed(() => perSecond(automation.income.value));
 const dealValue = computed(() => money(firm.dealValue.value));
 const deskDealing = computed(() => automation.working('sales-desk'));
 
@@ -61,6 +61,7 @@ const tapeMark: Record<LedgerKind, string> = {
   hire: 'HIRE',
   milestone: '★',
   grade: 'CR',
+  tip: 'TIP',
   away: 'AWAY',
 };
 </script>
@@ -78,7 +79,7 @@ const tapeMark: Record<LedgerKind, string> = {
     <div class="books">
       <div class="label smallcaps">{{ books.label }}</div>
       <div class="cash num" data-testid="cash">{{ cash }}</div>
-      <div class="income num">{{ income }} from subsidiaries</div>
+      <div class="income num">{{ income }} from the firm</div>
     </div>
 
     <div class="stamp-well">
@@ -100,7 +101,12 @@ const tapeMark: Record<LedgerKind, string> = {
     </div>
 
     <div class="credit">
-      <div class="grade-seal smallcaps" :class="{ unrated: grade === 'Unrated' }">{{ grade }}</div>
+      <div
+        class="grade-seal smallcaps"
+        :class="{ unrated: grade === 'Unrated', worded: grade.length > 3 && grade !== 'Unrated' }"
+      >
+        {{ grade }}
+      </div>
       <div class="credit-text">
         <div class="smallcaps">Credit grade</div>
         <div v-if="nextGrade" class="credit-next">
@@ -291,6 +297,13 @@ h1 {
   box-shadow:
     inset 0 0 0 4px var(--walnut),
     inset 0 0 0 5px rgba(210, 169, 78, 0.35);
+}
+.grade-seal.worded {
+  font-size: 12px;
+  line-height: 1.1;
+  text-align: center;
+  white-space: normal;
+  width: 62px;
 }
 .grade-seal.unrated {
   font-size: 12px;

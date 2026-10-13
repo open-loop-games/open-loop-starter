@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, addResource } from '@open-loop/engine';
 import { boot, tick } from '../sim/harness';
 import { getFirm } from './firm';
+import { getAutomation } from './automation';
 
 /**
  * What the firm's mechanics do. No magnitudes: how fast the ladder climbs is the
@@ -63,6 +64,47 @@ describe('the stack', () => {
     await tick(1);
     expect(owned('pushcart')).toBe(25);
     expect(getFirm().milestones.getAchievement('pushcart-25')!.earned.value).toBe(true);
+  });
+
+  it('a synergy raises each side of its pair by the other side’s count', () => {
+    fund(1e30);
+    const { subsidiaries, management } = getFirm();
+    for (const e of subsidiaries.getAll().slice(0, 4)) e.producer.repeatable!.purchase(15);
+    const carts = subsidiaries.getProducer('pushcart')!;
+    const synergy = management.getPurchasable('synergy-pushcart-laundromat-1')!;
+    expect(synergy.visible.value).toBe(true);
+    const before = num(carts.computedRate.value);
+    synergy.purchase(1);
+    const after = num(carts.computedRate.value);
+    expect(after).toBeGreaterThan(before);
+    subsidiaries.getProducer('laundromat')!.repeatable!.purchase(10);
+    expect(num(carts.computedRate.value)).toBeGreaterThan(after);
+  });
+
+  it('the referral network pays every deal more per subsidiary owned', () => {
+    fund(1e30);
+    const { management, subsidiaries } = getFirm();
+    subsidiaries.getProducer('pushcart')!.repeatable!.purchase(20);
+    subsidiaries.getProducer('newsstand')!.repeatable!.purchase(1);
+    getAutomation().executives.getPurchasable('sales-desk')!.purchase(1);
+    getAutomation().phone.repeatable!.purchase(25);
+    const referral = management.getPurchasable('referral-1')!;
+    expect(referral.visible.value).toBe(true);
+    const before = num(getFirm().dealValue.value);
+    referral.purchase(1);
+    const after = num(getFirm().dealValue.value);
+    expect(after).toBeGreaterThan(before);
+    subsidiaries.getProducer('pushcart')!.repeatable!.purchase(10);
+    expect(num(getFirm().dealValue.value)).toBeGreaterThan(after);
+  });
+
+  it('the ending is offered only once the top tier is owned deep', () => {
+    fund(1e40);
+    const { subsidiaries, ending } = getFirm();
+    for (const e of subsidiaries.getAll()) e.producer.repeatable!.purchase(1);
+    expect(ending.visible.value).toBe(false);
+    subsidiaries.getProducer('bank')!.repeatable!.purchase(200);
+    expect(ending.visible.value).toBe(true);
   });
 
   it('a credit grade lands on lifetime revenue and lifts every subsidiary', async () => {

@@ -8,9 +8,11 @@
  *       over the time away is the frozen income rate times its length, unless a
  *       grade lands inside it. Closed form against the replay.
  * § 2 — time away inside the arc. The shipping arc with the bookkeeper hired, with
- *       and without time away. Beats the desks drive hold in sim-time; what moves
- *       is what the hand, away, did not do. The first row is the arc that never
- *       hires the bookkeeper, so the hire's own cost shows.
+ *       and without time away. The desks work through the replay; the player does
+ *       not, so tips go uncaught and press waits, and the beats after the return
+ *       slip by more than the time away. Read the slip in the tier columns; income
+ *       at one moment swings with whatever tip is in force. The first row is the
+ *       arc that never hires the bookkeeper, so the hire's own cost shows.
  * § 3 — replay cost. Wall-clock milliseconds to replay one second away, mid-arc
  *       with every desk working: the measurement `OFFLINE_REPLAY_COST` records.
  */

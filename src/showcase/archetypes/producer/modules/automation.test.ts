@@ -46,6 +46,28 @@ describe('the dispatch ladder', () => {
 });
 
 describe('the desks', () => {
+  it('the sales desk comes with phones, and bought phones add to them', () => {
+    hire('sales-desk');
+    const phone = getAutomation().phone;
+    const desk = num(phone.count.value);
+    expect(desk).toBeGreaterThan(0);
+    phone.repeatable!.purchase(1);
+    expect(num(phone.count.value)).toBe(desk + 1);
+  });
+
+  it('phones ring out while the sales desk is sent home', async () => {
+    hire('sales-desk');
+    getAutomation().deskOn['sales-desk'].value = false;
+    expect(num(getAutomation().phone.computedRate.value)).toBe(0);
+  });
+
+  it('the acquisitions desk buys phones as well as subsidiaries', async () => {
+    hire('sales-desk', 'acquisitions-desk');
+    const phones = num(getAutomation().phone.ownedCount.value);
+    await tick(4 * 60);
+    expect(num(getAutomation().phone.ownedCount.value)).toBeGreaterThan(phones);
+  });
+
   it('the sales desk closes deals with no hand on the button', async () => {
     hire('sales-desk');
     const before = num(getFirm().cash.value);

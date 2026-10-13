@@ -8,10 +8,55 @@
   the desk you work at, the holdings you own, the office that runs them.
 -->
 <script setup lang="ts">
-import { ThreePanelShell } from '@/lib';
+import { inject, watch } from 'vue';
+import type { Engine } from '@open-loop/engine';
+import { ThreePanelShell, modalStackKey } from '@/lib';
+import { getAutomation, getFirm, getStanding, getTips } from '../modules';
 import DeskPanel from './components/DeskPanel.vue';
+import EndingNote from './components/EndingNote.vue';
 import HoldingsPanel from './components/HoldingsPanel.vue';
 import OfficePanel from './components/OfficePanel.vue';
+
+// Dev-only hook for the screenshot loop: a stable handle on the modules, and a
+// skip that plays forward in half-second steps (the acquisitions desk's cadence),
+// catching tips and taking press and wire-room upgrades on sight. Read through
+// the hook, not a live `import()` that Vite's module cache could serve stale.
+if (import.meta.env.DEV) {
+  const engine = inject<Engine>('engine')!;
+  const buy = (
+    all: { purchasable: { canPurchase: { value: boolean }; purchase(n: number): unknown } }[],
+  ) => all.forEach((e) => e.purchasable.canPurchase.value && e.purchasable.purchase(1));
+  (window as unknown as Record<string, unknown>).__holdings = {
+    engine,
+    firm: getFirm(),
+    automation: getAutomation(),
+    tips: getTips(),
+    standing: getStanding(),
+    skip: (seconds: number) => {
+      for (let t = 0; t < seconds; t += 0.5) {
+        engine.tickDriver.advanceTime(0.5);
+        getTips().catchTip();
+        buy(getStanding().upgrades.getAll());
+        buy(getTips().upgrades.getAll());
+        buy(getAutomation().executives.getAll());
+      }
+    },
+  };
+}
+
+// The deed, once, at the moment the building is bought.
+const firm = getFirm();
+const stack = inject(modalStackKey)!;
+watch(
+  () => firm.ending.active.value,
+  (bought) => {
+    if (!bought) return;
+    const id = stack.push(EndingNote, {
+      elapsed: firm.elapsed.value,
+      onClose: () => stack.remove(id),
+    });
+  },
+);
 </script>
 
 <template>

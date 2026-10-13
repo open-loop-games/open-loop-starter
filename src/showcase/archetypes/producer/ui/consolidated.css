@@ -136,3 +136,36 @@
   box-shadow: none;
   padding: 0;
 }
+
+/* The record: starter's AchievementGrid as a ledger sheet. Portaled, so it takes
+   the tokens through `.consolidated-portal` on its root. */
+.record-sheet {
+  font-family: var(--face-ledger);
+  padding: 16px 20px;
+  background: var(--walnut-grain);
+  border: 3px double var(--ink-seal);
+  border-radius: var(--radius-paper);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+.record-sheet .olui-panel__title {
+  font-family: var(--face-letterhead);
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  font-weight: 400;
+}
+.record-sheet .olui-achievement-grid__cell {
+  background: transparent;
+  border-color: var(--ledger-rule);
+  border-radius: var(--radius-paper);
+  color: var(--ink-filed);
+}
+.record-sheet .olui-achievement-grid__cell[data-earned='true'] {
+  border-color: var(--ink-seal);
+  color: var(--ledger-paper);
+  box-shadow:
+    inset 0 0 0 2px var(--walnut),
+    inset 0 0 0 3px rgba(210, 169, 78, 0.35);
+}
+.record-sheet .olui-achievement-grid__cell-name {
+  font-family: var(--face-letterhead);
+}

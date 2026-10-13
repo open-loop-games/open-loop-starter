@@ -1,8 +1,9 @@
 <!--
-  HoldingsPanel — the main column: one share certificate per subsidiary on the
-  green blotter, then the sealed prospectus of the next tier. It is starter's
-  `ProducerList` with the certificate drawn in the `#row` slot; the engine
-  handles ride the row's `extra`, so the flat contract stays flat.
+  HoldingsPanel — the main column: the wire, then one share certificate per
+  holding on the green blotter (the sales desk's telephones first, once hired),
+  then the sealed prospectus of the next tier. It is starter's `ProducerList`
+  with the certificate drawn in the `#row` slot; the engine handles ride the
+  row's `extra`, so the flat contract stays flat.
 -->
 <script setup lang="ts">
 import { computed, toValue } from 'vue';
@@ -17,12 +18,13 @@ import Button from '@/ui/components/Button.vue';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { ProducerList, type ProducerRowData } from '@/ui/compositions';
-import type { SubsidiaryDef } from '../../data';
+import { DEAL_YIELD, type SubsidiaryDef } from '../../data';
 import { getAutomation, getFirm } from '../../modules';
 import { amount, money, perSecond } from '../format';
+import TipWire from './TipWire.vue';
 
 interface HoldingExtra {
-  def: SubsidiaryDef;
+  def: Pick<SubsidiaryDef, 'displayName' | 'unit' | 'blurb' | 'baseRate'>;
   producer: Producer;
 }
 type HoldingRow = ProducerRowData<HoldingExtra>;
@@ -31,7 +33,7 @@ const firm = getFirm();
 const automation = getAutomation();
 const deskBuying = computed(() => automation.working('acquisitions-desk'));
 
-const rows: HoldingRow[] = firm.subsidiaries.getAll().map(({ def, producer }) => {
+function rowOf(id: string, def: HoldingExtra['def'], producer: Producer): HoldingRow {
   const repeatable = producer.repeatable!;
   // `countToPurchase` floors at 1 even when nothing is affordable, so the zero
   // case comes from `canPurchase`.
@@ -39,12 +41,10 @@ const rows: HoldingRow[] = firm.subsidiaries.getAll().map(({ def, producer }) =>
     repeatable.canPurchase.value ? repeatable.countToPurchase.value : 0,
   );
   return {
-    id: def.id,
+    id,
     displayName: def.displayName,
-    count: producer.ownedCount,
-    displayRate: computed(() =>
-      Decimal.mul(producer.computedRate.value, producer.ownedCount.value),
-    ),
+    count: producer.count,
+    displayRate: computed(() => Decimal.mul(producer.computedRate.value, producer.count.value)),
     cost: (count) => repeatable.getCost(count),
     canPurchase: (count) => repeatable.canPurchase.value && Decimal.gte(maxAffordable.value, count),
     maxAffordable,
@@ -54,7 +54,18 @@ const rows: HoldingRow[] = firm.subsidiaries.getAll().map(({ def, producer }) =>
     unlocked: computed(() => repeatable.visible.value),
     extra: { def, producer },
   };
-});
+}
+
+const PHONE_DEF: HoldingExtra['def'] = {
+  displayName: 'Telephones',
+  unit: 'phone',
+  blurb: 'Each line on the sales desk closes a deal a second.',
+  baseRate: DEAL_YIELD,
+};
+const subsidiaryRows = firm.subsidiaries
+  .getAll()
+  .map(({ def, producer }) => rowOf(def.id, def, producer));
+const rows: HoldingRow[] = [rowOf('phone', PHONE_DEF, automation.phone), ...subsidiaryRows];
 
 /** The stack as the rate chain describes it: one line per bound contribution. */
 function breakdown(chain: Modifier): ModifierDescription[] {
@@ -70,13 +81,14 @@ const progress = (cost: DecimalSource) =>
 
 /** The next sealed prospectus: the first hidden subsidiary, opened by owning the one before it. */
 const sealed = computed(() => {
-  const i = rows.findIndex((r) => !r.unlocked!.value);
+  const i = subsidiaryRows.findIndex((r) => !r.unlocked!.value);
   if (i < 1) return undefined;
-  return { opener: rows[i - 1].extra!.def.unit };
+  return { opener: subsidiaryRows[i - 1].extra!.def.unit };
 });
 </script>
 <template>
   <section class="holdings">
+    <TipWire />
     <ProducerList :rows="rows" cost-label="cash">
       <template #header>
         <div class="panel-head">

@@ -1,6 +1,6 @@
 # Producer — domain language
 
-Consolidated Holdings: a geometric cost ladder under multiplicative stacks, with desks that take the spending over and no adversary, no board, no run and no reset.
+Consolidated Holdings: a geometric cost ladder under multiplicative stacks, with desks that take the spending over, tips that reward attention, an ending, and no adversary, no board, no run and no reset.
 
 > Generated from code structure by `ol-domain-map` — do not edit by hand;
 > regenerate with `pnpm domain-map`. The generated sections below re-derive
@@ -15,7 +15,7 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 
 ## Defs
 
-`BookkeeperDef`, `ExecutiveDef`, `GradeDef`, `ManagementDef`, `MilestoneDef`, `SubsidiaryDef`
+`BookkeeperDef`, `EndingDef`, `ExecutiveDef`, `FeatDef`, `GradeDef`, `ManagementDef`, `MilestoneDef`, `StandingDef`, `SubsidiaryDef`, `TipUpgradeDef`
 
 ## Relationships
 
@@ -24,13 +24,15 @@ another domain noun. These are name-encoded, not type-encoded, so
 type-graph tools such as dependency-cruiser and findReferences miss them.
 
 - **MilestoneDef** → `subsidiary`
+- **FeatDef** → `subsidiary`
+- **Projection** → `ending`
 
 ## Thin spots
 
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`ManagementDef`, `GradeDef`, `ExecutiveDef`, `BookkeeperDef`
+`ManagementDef`, `StandingDef`, `TipUpgradeDef`, `GradeDef`, `ExecutiveDef`, `BookkeeperDef`
 
 ## Disambiguators (curated)
 
@@ -43,4 +45,9 @@ staleness stays visible against the generated sections above.
 - **market-leader certificate** — A milestone earned on an owned count (25, 50, 100). Must stay a DISCRETE step on a count: made continuous it takes the spine off the closed form, silently.
 - **credit grade** — A global multiplier earned on lifetime revenue, never on the current rate, so spending never takes one back.
 - **desk** — An executive hire: one automation tier, with a duty switch. Sending a desk home is how the player saves by hand.
+- **synergy** — A memo coupling two subsidiaries, cheaper first: each earns more per unit of the other. It reads a live count, so a tier’s rate depends on the whole count vector, and greedy payback becomes a heuristic.
+- **referral network** — Every deal, by hand or by phone, pays more per subsidiary owned. It sits ahead of training in the deal chain, so training multiplies it.
+- **standing** — Achievements over STANDING_DIVISOR. Press bought with it multiplies all income by (1 + standing × k), and keeps rising with every later achievement.
+- **tip** — A windfall on the wire: a hazard-ramp arrival, caught by the player and never by a desk, drawing a bull market, a closing spree or a windfall deal.
+- **the Consolidated Building** — The ending: offered at ENDING_AT of the top tier, priced at ENDING_SAVE of the reference income then. Buying it ends the firm’s story; play goes on.
 - **night bookkeeper** — The one-time unlock for offline catch-up. Before it, a return replays nothing.

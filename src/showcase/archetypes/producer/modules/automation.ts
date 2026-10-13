@@ -3,6 +3,8 @@ import {
   computed,
   createAutomationTiers,
   createCostRequirement,
+  createMultiplicativeModifier,
+  createProducerCategory,
   createPurchasableCategory,
   persistent,
   selectionPaybackPeriod,
@@ -13,15 +15,22 @@ import {
   type EngineModule,
   type InjectionKey,
   type Persistent,
+  type ComputedRef,
   type Producer,
+  type ProducerCategory,
   type PurchasableCategory,
   type SelectionPolicy,
 } from '@open-loop/engine';
 import {
   ACQUISITION_INTERVAL,
-  DESK_DEAL_RATE,
+  DEAL_YIELD,
+  DESK_PHONES,
   EXECUTIVES,
   EXECUTIVE_DEFS,
+  LADDER,
+  PHONES,
+  PHONE_COST_RATIO,
+  phoneCost,
   type ExecutiveDef,
   type HireId,
 } from '../data';
@@ -32,7 +41,8 @@ import { FirmKey } from './firm';
  * hire unlocks one automation tier, and each desk works only while its switch is
  * on, so turning a desk off is how the player saves by hand.
  *
- *   - the sales desk closes deals at the hand's pace;
+ *   - the sales desk closes deals on its phones: it comes with the hand's pace,
+ *     and every phone bought adds a deal a second;
  *   - the acquisitions desk buys the subsidiary that pays itself back soonest;
  *   - the board signs every management memo the moment the money is there.
  */
@@ -49,6 +59,11 @@ export interface AutomationApi {
   working(id: HireId): boolean;
   /** What the acquisitions desk holds back for the board: the cheapest open memo. */
   memoReserve: { readonly value: Decimal };
+  /** The sales desk's phones: bought phones plus the ones the desk came with. */
+  phones: ProducerCategory<{ id: string }>;
+  phone: Producer;
+  /** Everything the firm earns a second without a hand on the button: subsidiaries and phones. */
+  income: ComputedRef<Decimal>;
 }
 
 export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
@@ -89,7 +104,7 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
     dependencies: ['producer/firm'],
     install(ctx) {
       const firm = ctx.inject(FirmKey);
-      const { cash, deal, management, subsidiaries, post } = firm;
+      const { cash, management, subsidiaries, post, dealChain, operations } = firm;
 
       const executives = createPurchasableCategory<ExecutiveDef>({
         id: EXECUTIVES,
@@ -125,22 +140,43 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
       ) as Record<HireId, Persistent<boolean>>;
       const working = (id: HireId) => dispatch.hasReached(id) && deskOn[id].value;
 
-      // The sales desk fires the same deal the button fires, at the hand's pace.
-      // TODO(expansion): auto-firing a manual producer at a rate. setupPolicyAutoPurchase skips
-      // manual producers and createThrottle fires once per tick, so N activations per tick are
-      // counted here by hand.
-      let owedDeals = 0;
-      ctx.onTick((dt) => {
-        if (!working('sales-desk')) {
-          owedDeals = 0;
-          return;
-        }
-        owedDeals += dt * DESK_DEAL_RATE;
-        while (owedDeals >= 1) {
-          owedDeals -= 1;
-          deal();
-        }
+      // The sales desk's phones: each closes a deal a second, through the deal chain
+      // and operations. The desk comes with DESK_PHONES of them; sent home, they ring
+      // out.
+      const phones = createProducerCategory<{ id: string }>({
+        id: PHONES,
+        registerTick: ctx.onTick,
+        mapProducer: () => ({
+          resource: cash,
+          baseRate: DEAL_YIELD,
+          trigger: 'continuous',
+          display: 'Phones',
+          extraCount: () => (dispatch.hasReached('sales-desk') ? DESK_PHONES : 0),
+          purchase: {
+            costResource: cash,
+            baseCost: phoneCost(LADDER, 0),
+            costRatio: PHONE_COST_RATIO,
+            visible: { kind: 'active', category: EXECUTIVES, entry: 'sales-desk' },
+          },
+        }),
+        mapState: (_def, producer) => {
+          producer.rateChain.bind({ modifier: dealChain, text: 'Deal' });
+          producer.rateChain.bind({ modifier: operations, text: 'Operations' });
+          producer.rateChain.bind({
+            modifier: createMultiplicativeModifier({
+              multiplier: () => (working('sales-desk') ? 1 : 0),
+              description: 'On duty',
+            }),
+            text: 'On duty',
+          });
+          producer.repeatable!.on('purchased', () => {
+            post('hire', `phone #${Decimal.fromValue(producer.ownedCount.value).toNumber()}`);
+          });
+        },
       });
+      phones.register({ id: 'phone' });
+      const phone = phones.getProducer('phone')!;
+      const income = computed(() => Decimal.add(firm.incomeRate.value, phones.getTotalRate(cash)));
 
       // Once the board sits, the acquisitions desk holds back the price of the cheapest open
       // memo. Otherwise units priced just under a memo absorb every dollar, and the memo, a
@@ -159,7 +195,7 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
 
       withPersistentContext('desk-clocks', () => {
         setupPolicyAutoPurchase(
-          subsidiaries,
+          [...subsidiaries.getAll().map((e) => e.producer), phone],
           {
             enabled: () => working('acquisitions-desk'),
             interval: ACQUISITION_INTERVAL,
@@ -172,7 +208,7 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
         setupSweepAutoPurchase(management, { enabled: () => working('board') }, ctx.onTick);
       });
 
-      api = { executives, dispatch, deskOn, working, memoReserve };
+      api = { executives, dispatch, deskOn, working, memoReserve, phones, phone, income };
       ctx.provide(AutomationKey, api);
     },
   };

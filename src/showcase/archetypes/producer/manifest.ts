@@ -1,10 +1,9 @@
 import type { ArchetypeManifest } from '@/types';
 
 /**
- * Beat windows are RECORDED from `balance/_engine.ts` `runArc` under the
- * shipping desks, with the hand dealing at 2, 4 and 8 deals a second: the
- * min/max across the three, never authored as targets. Re-record them after any
- * spine change.
+ * Beat windows are RECORDED from `balance/arc-probe.ts` under the reference
+ * player on seeds 1, 2 and 3 (tips are drawn): the min/max across the three, never
+ * authored as targets. Re-record them after any spine change.
  */
 export const manifest: ArchetypeManifest = {
   id: 'producer',
@@ -59,14 +58,15 @@ export const manifest: ArchetypeManifest = {
     },
   ],
   beats: [
-    { n: 1, label: 'First pushcart', recordedFireTimeRange: [3, 10] },
-    { n: 2, label: 'Subsidiaries out-earn the hand', recordedFireTimeRange: [17, 45] },
-    { n: 3, label: 'Sales desk hired', recordedFireTimeRange: [164, 251] },
-    { n: 4, label: 'Acquisitions desk hired', recordedFireTimeRange: [292, 380] },
-    { n: 5, label: 'Credit grade AAA', recordedFireTimeRange: [630, 719] },
-    { n: 6, label: 'Board of Directors hired', recordedFireTimeRange: [638, 727] },
-    { n: 7, label: 'The top tier: first savings bank', recordedFireTimeRange: [1186, 1275] },
+    { n: 1, label: 'First pushcart', recordedFireTimeRange: [5, 5] },
+    { n: 2, label: 'Sales desk hired', recordedFireTimeRange: [245, 245] },
+    { n: 3, label: 'Acquisitions desk hired', recordedFireTimeRange: [431, 431] },
+    { n: 4, label: 'Board of Directors hired', recordedFireTimeRange: [477, 891] },
+    { n: 5, label: 'The top tier: first savings bank', recordedFireTimeRange: [495, 904] },
+    { n: 6, label: 'The Consolidated Building offered', recordedFireTimeRange: [12542, 13463] },
+    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13516, 14578] },
   ],
+
   shell: 'ThreePanelShell',
   formFactor: 'responsive',
   exemplars: [
