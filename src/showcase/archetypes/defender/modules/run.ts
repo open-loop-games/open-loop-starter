@@ -109,7 +109,8 @@ export interface Shot {
   marked: boolean;
 }
 
-export type RunPhase = 'build' | 'wave' | 'won' | 'lost';
+/** `held`: the last night is seen off and the run waits for the gardener: call it a night, or go on into the dark. */
+export type RunPhase = 'build' | 'wave' | 'held' | 'won' | 'lost';
 
 /** One night ahead: the kind it sends and the pests it is composed of. */
 export interface Night {
@@ -122,6 +123,7 @@ export type RunEvent =
   | { type: 'build'; wave: number }
   | { type: 'launch'; wave: number; early: boolean; bonus: number }
   | { type: 'cleared'; wave: number; leaks: number; score: number }
+  | { type: 'held'; score: number }
   | { type: 'leak'; wave: number; kind: PestKind; seedlings: number }
   | { type: 'planted'; def: PlantId; x: number; y: number }
   | { type: 'upgraded'; def: PlantId; level: number }
@@ -234,6 +236,10 @@ export interface PlotRun {
   wave: number;
   /** The first wave waits for the gardener; later ones run on the build timer. */
   held: boolean;
+  /** Whether the run went on past the plot's last night, into the dark. */
+  tail: boolean;
+  /** Nights seen off past the plot's last. */
+  depth: number;
   buildTimer: number;
   buildDuration: number;
   score: number;
@@ -264,6 +270,13 @@ export interface PlotRun {
   earlyCallBonus(): number;
   /** Call it a day: the next wave comes now, paying for the build time given up. */
   callEarly(): boolean;
+  /** At the hold: call it a night, and end the run with the plot held. */
+  finish(): boolean;
+  /**
+   * At the hold: go on into the dark, night after night, until the seedbed is
+   * eaten. Refused when the dark would never end: HP must outgrow bounty.
+   */
+  goOn(): boolean;
   step(dt: number): void;
   plantDamage(t: Plant): number;
   plantRange(t: Plant): number;
@@ -271,7 +284,7 @@ export interface PlotRun {
   route(): { x: number; y: number }[];
   /** Points a cell apart on a flyer's straight line from the gap to the seedbed. */
   flightLine(): { x: number; y: number }[];
-  /** The next `nights` nights from the one in flight or next, as far as the plot's last. */
+  /** The next `nights` nights from the one in flight or next: as far as the plot's last, or on into the dark. */
   preview(nights: number): Night[];
   boardValue(): number;
   on(fn: (e: RunEvent) => void): void;
@@ -308,6 +321,8 @@ export function createPlotRun(
     phase: 'build',
     wave: 1,
     held: true,
+    tail: false,
+    depth: 0,
     buildTimer: a.buildSeconds,
     buildDuration: a.buildSeconds,
     score: 0,
@@ -417,8 +432,22 @@ export function createPlotRun(
       return true;
     },
 
+    finish() {
+      if (run.phase !== 'held') return false;
+      run.phase = 'won';
+      emit({ type: 'end', outcome: 'won', score: run.score });
+      return true;
+    },
+
+    goOn() {
+      if (run.phase !== 'held' || !(a.tailDivergence > 1)) return false;
+      run.tail = true;
+      nextNight();
+      return true;
+    },
+
     step(dt) {
-      if (run.phase === 'won' || run.phase === 'lost') return;
+      if (run.phase === 'won' || run.phase === 'lost' || run.phase === 'held') return;
       run.elapsed += dt;
       if (run.phase === 'build') {
         if (!run.held) run.buildTimer -= dt;
@@ -474,7 +503,10 @@ export function createPlotRun(
 
     preview(nights) {
       const out: Night[] = [];
-      for (let w = run.wave; w < run.wave + nights && w <= run.totalWaves; w++)
+      // At the hold the nights ahead are the dark's, if the gardener goes on.
+      const from = run.phase === 'held' ? run.wave + 1 : run.wave;
+      const last = run.tail || run.phase === 'held' ? Infinity : run.totalWaves;
+      for (let w = from; w < from + nights && w <= last; w++)
         out.push({
           wave: w,
           kind: nightKind(a, plotIndex, w),
@@ -562,12 +594,18 @@ export function createPlotRun(
     run.score += gained;
     closeLog();
     emit({ type: 'cleared', wave: run.wave, leaks: log?.leaks ?? 0, score: gained });
-    if (run.wave >= run.totalWaves) {
+    if (run.tail) run.depth += 1;
+    else if (run.wave >= run.totalWaves) {
+      // The plot is held here, whatever the dark does after.
       run.score += victoryScore(plotIndex, num(seedlings.value));
-      run.phase = 'won';
-      emit({ type: 'end', outcome: 'won', score: run.score });
+      run.phase = 'held';
+      emit({ type: 'held', score: run.score });
       return;
     }
+    nextNight();
+  }
+
+  function nextNight() {
     run.wave += 1;
     run.phase = 'build';
     run.buildTimer = a.buildSeconds;
@@ -662,7 +700,8 @@ export function createPlotRun(
     if (left <= 0) {
       run.phase = 'lost';
       closeLog();
-      emit({ type: 'end', outcome: 'lost', score: run.score });
+      // A run that fell in the dark had held the plot already.
+      emit({ type: 'end', outcome: run.tail ? 'won' : 'lost', score: run.score });
     }
   }
 

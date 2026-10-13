@@ -83,11 +83,15 @@ const clock = computed(() => {
     const out = r.pests.length;
     return { label: out ? `${out} still in the beds` : 'The last of them…', fill: 0, held: false };
   }
-  return {
-    label: r.phase === 'won' ? 'The plot is held' : 'The seedbed is gone',
-    fill: 0,
-    held: false,
-  };
+  const label =
+    r.phase === 'held'
+      ? 'The last night is seen off'
+      : r.phase === 'won'
+        ? 'The plot is held'
+        : r.tail
+          ? 'The dark took the seedbed'
+          : 'The seedbed is gone';
+  return { label, fill: 0, held: false };
 });
 const bonus = computed(() => (void tick.value, props.run.earlyCallBonus()));
 
@@ -239,6 +243,10 @@ onMounted(() => window.addEventListener('keydown', onKey));
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 
 const over = computed(() => phase.value === 'won' || phase.value === 'lost');
+/** Nights seen off past the plot's last, and the one in hand if it is past it. */
+const dark = computed(
+  () => (void tick.value, props.run.tail ? props.run.wave - props.run.totalWaves : 0),
+);
 </script>
 
 <template>
@@ -246,7 +254,10 @@ const over = computed(() => phase.value === 'won' || phase.value === 'lost');
     <header class="wg-hud">
       <div class="where">
         <h2 class="wg-heading">{{ run.def.displayName }}</h2>
-        <span class="night">
+        <span v-if="dark > 0" class="night dark">
+          <span class="wg-num">{{ dark }}</span> {{ dark === 1 ? 'night' : 'nights' }} into the dark
+        </span>
+        <span v-else class="night">
           night <span class="wg-num">{{ run.wave }}</span> of
           <span class="wg-num">{{ run.totalWaves }}</span>
         </span>
@@ -291,16 +302,41 @@ const over = computed(() => phase.value === 'won' || phase.value === 'lost');
           @hover="hover = $event"
           @cancel="tool = null"
         />
-        <div v-if="over" class="wg-over" :class="phase" role="status">
+        <div v-if="phase === 'held'" class="wg-over held" role="dialog" aria-label="The last night">
+          <p class="wg-heading">{{ run.def.displayName }} held</p>
+          <p>
+            <span class="wg-num">{{ whole(run.score) }}</span> points, and
+            <span class="wg-num">{{ seedlings }}</span> seedlings came through.
+          </p>
+          <p class="dark-offer">
+            The pests are still coming. Past tonight each night is harder than its bounty grows, and
+            every night you hold adds to this plot's best.
+          </p>
+          <div class="choice">
+            <Button class="wg-quiet" :repeat="false" @click="run.finish()">Call it a night</Button>
+            <Button class="wg-action" :repeat="false" @click="run.goOn()"
+              >Go on into the dark</Button
+            >
+          </div>
+        </div>
+        <div v-else-if="over" class="wg-over" :class="[phase, { dark: run.tail }]" role="status">
           <p class="wg-heading">
-            {{ phase === 'won' ? `${run.def.displayName} held` : 'The seedbed is eaten' }}
+            {{
+              phase === 'won'
+                ? `${run.def.displayName} held`
+                : run.tail
+                  ? 'The dark took the seedbed'
+                  : 'The seedbed is eaten'
+            }}
           </p>
           <p>
             <span class="wg-num">{{ whole(run.score) }}</span> points.
             {{
               phase === 'won'
                 ? `${seedlings} seedlings came through.`
-                : `You saw off ${run.wave - 1} of ${run.totalWaves} nights.`
+                : run.tail
+                  ? `The plot is held, and you saw off ${run.depth} ${run.depth === 1 ? 'night' : 'nights'} past its last.`
+                  : `You saw off ${run.wave - 1} of ${run.totalWaves} nights.`
             }}
           </p>
           <Button class="wg-action" :repeat="false" @click="plot.leavePlot()"
@@ -502,6 +538,22 @@ const over = computed(() => phase.value === 'won' || phase.value === 'lost');
 }
 .wg-over.lost .wg-heading {
   color: var(--wg-loss);
+}
+.wg-over.lost.dark .wg-heading {
+  color: #b9b3d6;
+}
+.dark-offer {
+  max-width: 34em;
+  font-style: italic;
+  color: var(--wg-twine);
+}
+.choice {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+.night.dark {
+  color: #b9b3d6;
 }
 .wg-over p {
   margin: 0;

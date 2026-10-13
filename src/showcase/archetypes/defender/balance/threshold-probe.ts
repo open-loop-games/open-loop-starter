@@ -78,6 +78,7 @@ function play(p: number, x: number, only?: PestKind): Outcome {
   const kinds = new Set<PestKind>();
   run.on((e) => {
     if (e.type === 'build') tendPlot(garden, plot, run, { callEarly: true, refuse });
+    if (e.type === 'held') run.finish();
     if (e.type === 'leak') kinds.add(e.kind);
   });
   tendPlot(garden, plot, run, { callEarly: true, refuse });

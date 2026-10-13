@@ -54,4 +54,6 @@ staleness stays visible against the generated sections above.
 - **companion** — A plant touching marigolds, diagonals included: it hunts harder by the marigolds' boost.
 - **counter wheel** — Each night sends one kind of pest, each plot in its own rotation, and each attack form meets each armour kind at its own multiplier. The board shows the next three nights, so the gardener plants for the night ahead.
 - **answer share** — The share of the reference board's hunting compost that can hurt tonight's kind, weighted by the matrix. A night is sized against that share, not the whole board.
+- **the dark** — Nights past a plot's last, offered when the plot is held: the rotation turns on and HP outgrows bounty each night until the seedbed is eaten. Its depth adds to the plot's best score.
+- **hold** — The moment a plot's last night is seen off: the plot is held, its victory banked, and the run waits for the gardener to call it a night or go on.
 - **toll** — How much of a pool of one kind a board lands before one gets through, against slugs. Measured per kind; a night is sized by it.

@@ -13,6 +13,8 @@ const props = defineProps<{ result: PlotResult }>();
 const name = computed(() => PLOTS.find((p) => p.id === props.result.plotId)?.displayName ?? '');
 const headline = computed(() => {
   const r = props.result;
+  if (r.outcome === 'held' && r.depth > 0)
+    return `${name.value} held, and ${r.depth} ${r.depth === 1 ? 'night' : 'nights'} into the dark`;
   if (r.outcome === 'held') return `${name.value} held`;
   if (r.outcome === 'lost') return `${name.value} lost on night ${r.wavesCleared + 1}`;
   return `You left ${inSentence(name.value)} after ${r.wavesCleared} ${r.wavesCleared === 1 ? 'night' : 'nights'}`;

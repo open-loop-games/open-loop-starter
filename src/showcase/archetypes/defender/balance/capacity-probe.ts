@@ -142,6 +142,7 @@ for (const [pi, def] of PLOTS.entries()) {
   const starts: Launch[] = [];
   run.on((e) => {
     if (e.type === 'build') tendPlot(garden, plot, run, { callEarly: true });
+    if (e.type === 'held') run.finish();
     if (e.type === 'launch') starts.push(measureLaunch(run));
   });
   tendPlot(garden, plot, run, { callEarly: true });

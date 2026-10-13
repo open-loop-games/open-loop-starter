@@ -13,6 +13,7 @@
  *   and the answer share and toll each kind's nights are sized with.
  * - § Waves: committed value, income, the reference board's capacity and the
  *   HP pool it is sized to, at sample waves of each plot.
+ * - § The dark: how fast HP outgrows bounty past a plot's last night.
  * - § Plants: prices solved from the thrush.
  * - § Schedule: each predicted beat against the beat `arc-probe.ts` recorded
  *   (`manifest.ts`), and each plot's own span against the recorded one. A line
@@ -103,6 +104,13 @@ for (const [p, def] of PLOTS.entries()) {
     );
   }
 }
+
+console.log('\nThe dark');
+console.log(
+  `  past each plot's last night bounty grows ×${f(a.waveGrowth, 2)} a night and HP ` +
+    `×${f(a.waveGrowth * a.tailDivergence, 2)}: divergence ${f(a.tailDivergence, 2)}, ` +
+    `${f(Math.log(2) / Math.log(a.tailDivergence), 1)} nights to halve the margin`,
+);
 
 console.log('\nPlants');
 for (const s of Object.values(plantSpecs(a))) {

@@ -102,6 +102,8 @@ for (const [pi, def] of PLOTS.entries()) {
     bought = {};
     run.on((e) => {
       if (e.type === 'build') tendPlot(garden, plot, run, { callEarly, onBuy, refuse });
+      // The arc is the authored game: at the hold the gardener calls it a night.
+      if (e.type === 'held') run.finish();
       if (e.type === 'launch') waveStart = run.elapsed;
       if (
         e.type === 'cleared' &&

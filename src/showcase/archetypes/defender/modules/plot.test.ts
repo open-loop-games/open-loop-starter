@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal } from '@open-loop/engine';
+import { SPEED_MULT } from '../data';
 import { boot, getEngine, tick, tickUntil } from '../sim/harness';
 import { DefenderTuningRegistryKey, getGarden, getPlot, type PlotRun } from '.';
 
@@ -114,7 +115,8 @@ describe('the garden between plots', () => {
     const at = besideRoute(run);
     run.plant('thrush', at.x, at.y);
     run.callEarly();
-    await tickUntil(() => run.phase === 'won', 20_000);
+    await tickUntil(() => run.phase === 'held', 20_000);
+    run.finish();
     getPlot().leavePlot();
   }
 
@@ -300,5 +302,70 @@ describe('booster against maze', () => {
     expect(run.plantPreview('marigold', room[0].x, room[0].y).boosts).toBe(1);
     run.plant('marigold', room[0].x, room[0].y);
     expect(run.plantPreview('marigold', room[1].x, room[1].y).boosts).toBe(0);
+  });
+});
+
+describe('the dark past the last night', () => {
+  beforeEach(() => {
+    boot();
+    // A one-night plot at almost no pressure, so one thrush holds it.
+    getEngine()
+      .tryInject(DefenderTuningRegistryKey)!
+      .pushOverrides('test', { 'spine/baseWaves': () => 1, 'spine/basePressure': () => 0.01 });
+  });
+
+  async function toTheHold(): Promise<PlotRun> {
+    const run = getPlot().startPlot('herb-border');
+    const at = besideRoute(run);
+    run.plant('thrush', at.x, at.y);
+    run.callEarly();
+    await tickUntil(() => run.phase === 'held', 20_000);
+    return run;
+  }
+
+  it('the last night holds the plot and waits; calling it a night ends the run held', async () => {
+    const run = await toTheHold();
+    expect(getGarden().plots.isUnlocked('bean-rows')).toBe(true);
+    await tick(200);
+    expect(run.phase).toBe('held');
+    run.finish();
+    expect(run.phase).toBe('won');
+    expect(getPlot().lastResult.value?.outcome).toBe('held');
+  });
+
+  it('going on turns the rotation past the last night, never the badger, each night harder over its bounty', async () => {
+    const run = await toTheHold();
+    expect(run.goOn()).toBe(true);
+    expect(run.phase).toBe('build');
+    const ahead = run.preview(4);
+    expect(ahead.map((n) => n.wave)).toEqual([2, 3, 4, 5]);
+    expect(ahead.some((n) => n.kind === 'badger')).toBe(false);
+    const ratio = (n: (typeof ahead)[number]) =>
+      n.pests.reduce((t, u) => t + u.hp * SPEED_MULT[u.kind], 0) /
+      n.pests.reduce((t, u) => t + u.bounty, 0);
+    const slugs = ahead.filter((n) => n.kind === 'slug');
+    expect(ratio(slugs[1])).toBeGreaterThan(ratio(slugs[0]));
+  });
+
+  it('a dark whose HP keeps pace with its bounty is refused at the door', async () => {
+    getEngine()
+      .tryInject(DefenderTuningRegistryKey)!
+      .pushOverrides('flat', { 'spine/tailDivergence': () => 1 });
+    const run = await toTheHold();
+    expect(run.goOn()).toBe(false);
+    expect(run.phase).toBe('held');
+  });
+
+  it('a run that falls in the dark still holds the plot, and the dark adds to its score', async () => {
+    const run = await toTheHold();
+    const held = run.score;
+    run.goOn();
+    await tickUntil(() => {
+      if (run.phase === 'build') run.callEarly();
+      return run.phase === 'lost';
+    }, 400_000);
+    expect(getPlot().lastResult.value?.outcome).toBe('held');
+    expect(getPlot().lastResult.value?.depth).toBe(run.depth);
+    expect(run.score).toBeGreaterThanOrEqual(held);
   });
 });

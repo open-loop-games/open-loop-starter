@@ -10,7 +10,7 @@
 //   income(w)  = S₀ · G^(w−1) · (G − 1)                   bounty a fully-cleared wave w pays
 //   V(w)       = S + Σ income + what calling it a day paid  compost the reference gardener has committed
 //   C(p, w)    = (V(w) · share / thrushCost) · thrushDps · (n·gap + dwell(p))
-//   W(p, w)    = pressure(p) · land · toll(kind(w)) · C(p, w) · answer(p, kind(w))
+//   W(p, w)    = pressure(p) · land · toll(kind(w)) · C(p, w) · answer(p, kind(w)) · δ^(w − last)⁺
 //
 // C is the reference board's stream capacity, the leak estimate's form: every
 // hunting plant fires from the wave's first arrival to its last departure, one
@@ -19,6 +19,11 @@
 // the leak threshold, and `1 / pressure` is the margin a plot leaves. What the
 // almanac adds, and whatever the gardener plants better than the reference, is
 // margin bought.
+//
+// The endless tail: nights past a plot's last go on turning the rotation. Bounty keeps
+// the curve above, so the plot's own economy stays live, and HP grows faster by
+// `tailDivergence` a night, so the dark has a threshold and how deep a board gets is
+// the measurement (td-arcade `map/format.rs` `FinalWaveSpec`, its two-rate tail).
 //
 // The counter wheel: every night sends one kind of pest, and each attack form
 // meets each armour kind at its own multiplier. The reference board splits its
@@ -60,6 +65,8 @@ export interface SpineAnchors {
   upgradeGrowth: number;
   /** Seconds of build time between waves (the first wave waits for the gardener). */
   buildSeconds: number;
+  /** Per night past a plot's last, how much faster HP grows than bounty. Above 1, or the tail never ends. */
+  tailDivergence: number;
 }
 
 /** The only hand-picked numbers. Everything in § Balance follows from them. */
@@ -89,6 +96,10 @@ export const ANCHORS: SpineAnchors = {
   upgradeGrowth: 1.5,
   // Long enough to plant three or four things by hand; calling it a day is what shortens it.
   buildSeconds: 25,
+  // Derived against the margin the dark is entered with, not picked: δ = m^(1/D) for a
+  // margin m and a target depth D, then one sweep and one correction (`tail-probe.ts`).
+  // Measured: the reference gardener gets 6 / 10 / 10 nights deep, against a target of 8.
+  tailDivergence: 1.13,
 };
 
 /**
@@ -186,8 +197,14 @@ export function referenceCapacity(
 /** Effective HP pool of wave `w` in plot `p`, in slug-speed HP. */
 export function waveHp(a: SpineAnchors, p: number, w: number): number {
   const kind = nightKind(a, p, w);
+  const dark = a.tailDivergence ** Math.max(0, w - wavesIn(a, p));
   return (
-    pressure(a, p) * a.land * KIND_TOLL[kind] * referenceCapacity(a, p, w) * answerShare(a, p, kind)
+    pressure(a, p) *
+    a.land *
+    KIND_TOLL[kind] *
+    referenceCapacity(a, p, w) *
+    answerShare(a, p, kind) *
+    dark
   );
 }
 
@@ -306,7 +323,11 @@ export const NIGHTS: PestKind[][] = [
   ['slug', 'aphid', 'beetle', 'moth', 'mouse', 'aphid', 'beetle', 'moth'],
 ];
 
-/** The kind of pest night `w` of plot `p` sends; the last night is the badger's. */
+/**
+ * The kind of pest night `w` of plot `p` sends; the last night is the badger's.
+ * Past it, in the dark, the rotation goes on, and the badger never returns: a
+ * boss is never a turn of the wheel (td-arcade `FinalWaveSpec::cycle`).
+ */
 export function nightKind(a: SpineAnchors, p: number, w: number): PestKind {
   if (w === wavesIn(a, p)) return 'badger';
   const r = NIGHTS[p];

@@ -32,6 +32,7 @@ is in `modules/tuning.ts`.
 | `spine/earlyCallShare` | 0.3 | The share of a wave's income that calling it a day at once pays. It scales with the daylight given up. |
 | `spine/upgradeGrowth` | 1.5 | A plant's level price ratio, and its damage multiplier at the same total, so damage per compost is level-flat. |
 | `spine/buildSeconds` | 25 | Daylight between waves. Only a gardener who does not call it a day feels it. |
+| `spine/tailDivergence` | 1.13 | How much faster HP grows than bounty each night in the dark: how deep a board gets. At 1 or below the dark never ends, and going on is refused. |
 
 **Not perturbable, on purpose:**
 - **`PLOT_DWELL` and `PLOT_TAIL`** are measurements of each map under the reference
@@ -87,6 +88,12 @@ is in `modules/tuning.ts`.
   plants learned at a flawless gardener's entry level. A kind whose answer is learned
   later than the plot that first sends it has no answer there. The night is sized at
   zero share and still leaks in full.
+- **The arc is the authored game.** The probes call it a night at every hold, so the
+  beats, `land` and the tolls never see the dark. The dark is a door a run walks
+  through; it changes nothing before it.
+- **The dark feeds the level.** Every night held adds `waveScore` to the plot's best,
+  so a gardener who goes on reaches each later plot at a higher level, with more of
+  the almanac, than the spine's flawless count prints.
 - **Income closes the curve only on a full clear.** Committed value grows by `G` per
   wave only if the wave pays its whole bounty. A leak cuts the next wave's compost as
   well as seedlings.
@@ -127,6 +134,9 @@ is in `modules/tuning.ts`.
   kind's threshold over the slug's, which `KIND_TOLL` is set from. `--refuse hedge` and
   `--refuse marigold` ask how much of a plot's threshold the maze, or the booster,
   carries.
+- `balance/tail-probe.ts` plays the arc and goes on at every hold: depth, the night
+  and kind of the first leak, and the seconds and score the dark added. Derive
+  `tailDivergence` as its header says: a first probe, one sweep, one correction.
 - `balance/maze-probe.ts` lays hedges from a bare plot with the gardener's own search
   until none lengthens the route, at each lookahead depth: how long a maze each plot
   allows, and the depth `LOOKAHEAD` is set at.
@@ -161,3 +171,7 @@ is in `modules/tuning.ts`.
   without hedges, 0.95 without marigolds). The Herb Border's open beds need a barrier
   of about nine hedges before the path lengthens at all, and after the floor a build
   rarely has that whole, so its maze barely grows and all three read 0.71.
+- **The dark's depth is uneven, and it inflates the level.** The reference gardener
+  gets 6, 10 and 10 nights deep: the Herb Border's thin maze runs out first. Going on
+  at every hold takes it to level 20 by the Orchard's end, against 13 for the arc,
+  which is past every almanac lesson and every plant.

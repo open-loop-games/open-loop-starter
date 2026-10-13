@@ -27,6 +27,8 @@ export interface PlotResult {
   newBest: boolean;
   levelBefore: number;
   levelAfter: number;
+  /** Nights seen off past the plot's last, in the dark. */
+  depth: number;
 }
 
 export interface PlotApi {
@@ -35,7 +37,7 @@ export interface PlotApi {
   run: ShallowRef<PlotRun | null>;
   lastResult: ShallowRef<PlotResult | null>;
   startPlot(plotId: string): PlotRun;
-  /** Leave the plot. A run still in play is left, and banks the waves it cleared. */
+  /** Leave the plot. A run still in play is left, and banks the waves it cleared; a run at the hold calls it a night. */
   leavePlot(): void;
 }
 
@@ -68,12 +70,6 @@ export function createPlotModule(): EngineModule {
         const n = (attempts.value[plotId] ?? 0) + 1;
         attempts.value = { ...attempts.value, [plotId]: n };
         garden.records.submit({ key: plotId, value: r.score, elapsed: r.elapsed, runNumber: n });
-        if (outcome === 'held') {
-          if (!garden.held.value.includes(plotId))
-            garden.held.value = [...garden.held.value, plotId];
-          const next = PLOTS[r.plotIndex + 1];
-          if (next) garden.plots.unlock(next.id);
-        }
         lastResult.value = {
           plotId,
           outcome,
@@ -82,6 +78,7 @@ export function createPlotModule(): EngineModule {
           newBest: !before || r.score > before.value.toNumber(),
           levelBefore,
           levelAfter: garden.level.value,
+          depth: r.depth,
         };
       }
 
@@ -109,6 +106,13 @@ export function createPlotModule(): EngineModule {
           seedlings,
         );
         r.on((e) => {
+          // Holding the last night holds the plot and opens the next, before the gardener chooses.
+          if (e.type === 'held') {
+            if (!garden.held.value.includes(r.def.id))
+              garden.held.value = [...garden.held.value, r.def.id];
+            const next = PLOTS[r.plotIndex + 1];
+            if (next) garden.plots.unlock(next.id);
+          }
           if (e.type === 'end') finish(r, e.outcome === 'won' ? 'held' : 'lost');
         });
         lastResult.value = null;
@@ -118,7 +122,9 @@ export function createPlotModule(): EngineModule {
 
       function leavePlot() {
         const r = run.value;
-        if (r && (r.phase === 'build' || r.phase === 'wave')) finish(r, 'left');
+        if (r?.phase === 'held') r.finish();
+        else if (r && (r.phase === 'build' || r.phase === 'wave'))
+          finish(r, r.tail ? 'held' : 'left');
         run.value = null;
       }
 

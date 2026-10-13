@@ -55,6 +55,14 @@ export default {
       note: "The share of the reference board's hunting compost that can hurt tonight's kind, weighted by the matrix. A night is sized against that share, not the whole board.",
     },
     {
+      term: 'the dark',
+      note: "Nights past a plot's last, offered when the plot is held: the rotation turns on and HP outgrows bounty each night until the seedbed is eaten. Its depth adds to the plot's best score.",
+    },
+    {
+      term: 'hold',
+      note: "The moment a plot's last night is seen off: the plot is held, its victory banked, and the run waits for the gardener to call it a night or go on.",
+    },
+    {
       term: 'toll',
       note: 'How much of a pool of one kind a board lands before one gets through, against slugs. Measured per kind; a night is sized by it.',
     },

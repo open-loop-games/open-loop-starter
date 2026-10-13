@@ -47,6 +47,11 @@ watch.
   plot pays nothing. Each level is a note in the almanac, for lessons that carry into
   every plot, and the level teaches new plants.
 - **Three plots**, each a fixed run of nights. Holding one opens the next.
+- **The dark.** When a plot's last night is seen off, the plot is held, and the
+  gardener chooses: call it a night, or go on. Past the last night the rotation keeps
+  turning, without the badger, and each night's pests outgrow its bounty a little more.
+  The run ends when the seedbed is eaten, and every night held adds to the plot's best
+  score, so how deep a board gets grades how broad its answers are.
 
 ## Rate-function spine
 
@@ -67,7 +72,9 @@ plant fires from the wave's first arrival to its last departure, one pest at a t
   as the point where the reference gardener loses a plot.
 
 So `W = pressure · land · C`, and pressure 1 is the reference gardener's loss
-threshold. The counter wheel adds two factors per night:
+threshold. Past a plot's last night, bounty keeps the curve and HP grows faster by
+`tailDivergence` a night: td-arcade's two-rate tail (`map/format.rs`
+`FinalWaveSpec`), so the dark has a threshold and its depth is the measurement. The counter wheel adds two factors per night:
 - `answer`, the share of the reference board that can hurt tonight's kind. It is
   closed form: the board splits its hunting compost across forms as the plot's
   rotation asks.
@@ -81,6 +88,8 @@ reference gardener (`balance/_gardener.ts`):
   kind's threshold, which `KIND_TOLL` is set from;
 - `maze-probe.ts` measures how long a maze each plot allows, and how deep the
   reference gardener's search must look to find it;
+- `tail-probe.ts` measures how deep into the dark the reference gardener gets, which
+  `tailDivergence` is derived against;
 - `arc-probe.ts` plays every plot and diffs each wave against the spine.
 
 ## The arc
@@ -97,8 +106,8 @@ beats.
 
 ## Growth ports
 
-- **Endless tail.** Nights past a plot's last, with health outgrowing bounty and the
-  wheel still turning, so depth grades breadth and feeds the plot's best score.
+- **Element draft.** Plants drafted by element and combined into fusions, each priced
+  by when it is taken: td-arcade's largest build, deferred for its size.
 
 ## Engine fit
 

@@ -446,6 +446,9 @@ export function tendPlot(
     const plotWaves = run.totalWaves;
     let ahead = 0;
     for (let w = run.wave; w <= plotWaves; w++) ahead += waveIncome(a, w);
+    // In the dark, one release past what is authored, never the tail: HP outgrows bounty, so
+    // income comes only from a night already survived (td-arcade `arbiter.rs` `remaining_income_for`).
+    if (run.tail) ahead += waveIncome(a, run.wave);
     const ground = hunters.filter((id) => specs[id].form !== 'hawk' && grows(id));
     const perCompost = Math.max(...ground.map((id) => dpsOf(id, 1) / specs[id].cost));
     let spent = 0;
