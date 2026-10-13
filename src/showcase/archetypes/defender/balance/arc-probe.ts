@@ -3,10 +3,11 @@
  * gardener (`_gardener.ts`), prints when each beat fired, then diffs every
  * wave against the spine. Prints; never asserts.
  *
- *   pnpm exec vite-node src/showcase/archetypes/defender/balance/arc-probe.ts [-- --no-early] [--set anchor=value]
+ *   pnpm exec vite-node src/showcase/archetypes/defender/balance/arc-probe.ts [-- --no-early] [--refuse plant] [--set anchor=value]
  *
  * `--no-early` stops the gardener calling it a day, so every wave waits out
- * its build timer. `--set thrushCost=60` pushes an override on the tuning
+ * its build timer. `--refuse bat` plays the arc without ever growing a plant:
+ * a turn of the wheel that still holds without its answer is not asking one. `--set thrushCost=60` pushes an override on the tuning
  * registry rather than editing source. Each plot gets up to three attempts.
  */
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';
@@ -33,6 +34,9 @@ import {
 import { spendNotes, tendPlot } from './_gardener';
 
 const callEarly = !process.argv.includes('--no-early');
+const refuse = process.argv.flatMap((arg, i) =>
+  arg === '--refuse' ? [process.argv[i + 1] as PlantId] : [],
+);
 const MAX_ATTEMPTS = 3;
 const TICK_DELTA = 0.05;
 
@@ -74,7 +78,7 @@ const onBuy = (what: string) => {
 const LESSON_ORDER = ['well-fed', 'bins', 'perches', 'cloches', 'early-riser'];
 let lastLevel = garden.level.value;
 const learned = new Set<PlantId>(
-  (['hedge', 'thrush', 'trap', 'marigold', 'ladybird'] as PlantId[]).filter(garden.isPlantUnlocked),
+  (Object.keys(garden.specs.value) as PlantId[]).filter(garden.isPlantUnlocked),
 );
 const diffs: string[] = [];
 
@@ -93,7 +97,7 @@ for (const [pi, def] of PLOTS.entries()) {
     );
     let waveStart = 0;
     run.on((e) => {
-      if (e.type === 'build') tendPlot(garden, plot, run, { callEarly, onBuy });
+      if (e.type === 'build') tendPlot(garden, plot, run, { callEarly, onBuy, refuse });
       if (e.type === 'launch') waveStart = run.elapsed;
       if (
         e.type === 'cleared' &&
@@ -110,7 +114,7 @@ for (const [pi, def] of PLOTS.entries()) {
         );
       }
     });
-    tendPlot(garden, plot, run, { callEarly, onBuy }); // the first build phase opened before the listener attached
+    tendPlot(garden, plot, run, { callEarly, onBuy, refuse }); // the first build phase opened before the listener attached
     const res = runUntil({
       engine,
       until: () => run.phase === 'won' || run.phase === 'lost',
@@ -157,7 +161,7 @@ for (const [pi, def] of PLOTS.entries()) {
       );
       lastLevel = garden.level.value;
     }
-    for (const id of ['trap', 'marigold', 'ladybird'] as PlantId[]) {
+    for (const id of Object.keys(garden.specs.value) as PlantId[]) {
       if (!learned.has(id) && garden.isPlantUnlocked(id)) {
         learned.add(id);
         beat(`learned: ${id}`);
@@ -173,7 +177,8 @@ for (const [pi, def] of PLOTS.entries()) {
 const a = garden.anchors.value;
 console.log(
   `Walled Garden arc probe — reference gardener, early calls ${callEarly ? 'on' : 'off'}, tickDelta ${TICK_DELTA}, ` +
-    `deterministic (1 run)${sets.length ? ', overrides ' + sets.join(' ') : ''}\n`,
+    `deterministic (1 run)${sets.length ? ', overrides ' + sets.join(' ') : ''}` +
+    `${refuse.length ? ', refusing ' + refuse.join(' ') : ''}\n`,
 );
 console.log('BEATS');
 for (const b of beats) console.log('  ' + b);

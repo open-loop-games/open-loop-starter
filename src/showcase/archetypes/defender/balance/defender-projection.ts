@@ -9,6 +9,8 @@
  * How to read it:
  * - § Plots: pressure before and after the almanac a flawless gardener holds
  *   entering the plot, spent as the reference gardener spends it.
+ * - § Wheel: each plot's rotation, the reference board's split across forms,
+ *   and the answer share and toll each kind's nights are sized with.
  * - § Waves: committed value, income, the reference board's capacity and the
  *   HP pool it is sized to, at sample waves of each plot.
  * - § Plants: prices solved from the thrush.
@@ -19,13 +21,21 @@
 
 import {
   ANCHORS,
+  ARMOUR,
   BASE_SEEDLINGS,
+  FORMS,
+  KIND_TOLL,
+  NIGHTS,
   LESSONS,
   LESSON_MAX,
   PLOTS,
+  answerShare,
   committedValue,
   effectivePressure,
+  entryLevel,
+  formShares,
   gardenerLevel,
+  nightKind,
   perfectScore,
   plantSpecs,
   predictHeldAt,
@@ -67,12 +77,27 @@ for (const [p, def] of PLOTS.entries()) {
 }
 console.log(`  flawless clears reach level ${gardenerLevel(xp)} (xp ${xp})`);
 
+console.log('\nWheel');
+for (const [p, def] of PLOTS.entries()) {
+  const shares = formShares(a, p);
+  console.log(
+    `  ${def.id.padEnd(12)} level ${entryLevel(a, p)}  nights ${NIGHTS[p].join(' ')}  ` +
+      `split ${FORMS.map((fm) => `${fm} ${f(shares[fm], 2)}`).join(', ')}`,
+  );
+  for (const k of new Set(NIGHTS[p])) {
+    console.log(
+      `    ${k.padEnd(7)} ${ARMOUR[k].padEnd(6)} answer ${f(answerShare(a, p, k), 2)}  toll ${f(KIND_TOLL[k], 2)}`,
+    );
+  }
+}
+
 console.log('\nWaves');
-console.log('  plot          wave   value  income  capacity      W');
+console.log('  plot          wave kind     value  income  capacity      W');
 for (const [p, def] of PLOTS.entries()) {
   for (const w of [1, 5, wavesIn(a, p)]) {
     console.log(
-      `  ${def.id.padEnd(12)} ${String(w).padStart(5)} ${f(committedValue(a, w), 0).padStart(7)} ` +
+      `  ${def.id.padEnd(12)} ${String(w).padStart(5)} ${nightKind(a, p, w).padEnd(7)}` +
+        `${f(committedValue(a, w), 0).padStart(7)} ` +
         `${f(waveIncome(a, w), 0).padStart(7)} ${f(referenceCapacity(a, p, w), 0).padStart(9)} ` +
         `${f(waveHp(a, p, w), 0).padStart(6)}`,
     );

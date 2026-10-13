@@ -161,3 +161,96 @@ describe('the garden between plots', () => {
     expect(num(plot.seedlings.value)).toBeGreaterThan(base);
   });
 });
+
+describe('the counter wheel', () => {
+  beforeEach(() => {
+    boot();
+    // A record worth every plant, and every plot open.
+    const garden = getGarden();
+    garden.records.submit({ key: 'herb-border', value: 5000, elapsed: 0, runNumber: 1 });
+    garden.plots.unlock('bean-rows');
+    garden.plots.unlock('orchard');
+  });
+
+  /** Call nights early, planting nothing, until night `w` is the next to fall. */
+  async function skipTo(run: PlotRun, w: number): Promise<void> {
+    await tickUntil(() => {
+      if (run.phase === 'build' && run.wave < w) run.callEarly();
+      return run.phase === 'build' && run.wave === w;
+    }, 100_000);
+  }
+
+  /** An open cell a plant can take within `reach` of the line, nearest its middle first. */
+  function beside(run: PlotRun, id: 'thrush' | 'bat'): { x: number; y: number } {
+    const line = run.flightLine();
+    const mid = line[Math.floor(line.length / 2)];
+    for (let r = 1; r < 4; r++)
+      for (let dx = -r; dx <= r; dx++)
+        for (const dy of [-1, 1]) {
+          const x = Math.round(mid.x) + dx;
+          const y = Math.round(mid.y) + dy;
+          if (run.canPlant(id, x, y).ok) return { x, y };
+        }
+    throw new Error('no cell beside the flight line');
+  }
+
+  it('the preview names the nights to come, and the night that falls sends what it named', async () => {
+    const run = getPlot().startPlot('orchard');
+    const ahead = run.preview(3);
+    expect(ahead.map((n) => n.wave)).toEqual([1, 2, 3]);
+    expect(new Set(ahead.map((n) => n.kind)).size).toBeGreaterThan(1);
+    run.callEarly();
+    await tickUntil(() => run.pests.length > 0, 1_000);
+    expect(run.pests.every((u) => u.kind === ahead[0].kind)).toBe(true);
+    expect(run.preview(3)[0].wave).toBe(1);
+  });
+
+  it('moths fly the straight line to the seedbed, over the hedges', async () => {
+    const run = getPlot().startPlot('bean-rows');
+    const moth = run.preview(14).find((n) => n.kind === 'moth')!.wave;
+    const on = run.route()[3];
+    run.plant('hedge', on.x, on.y);
+    await skipTo(run, moth);
+    run.callEarly();
+    const line = run.flightLine();
+    const y = line[0].y + 0.5;
+    const seen = new Set<number>();
+    await tickUntil(() => {
+      for (const u of run.pests) {
+        if (u.kind !== 'moth') continue;
+        seen.add(u.id);
+        expect(u.py).toBeCloseTo(y, 6);
+      }
+      return run.phase !== 'wave';
+    }, 20_000);
+    expect(seen.size).toBeGreaterThan(0);
+  });
+
+  it('a plant aims only at what its form can reach: thrushes at the ground, bats at moths', async () => {
+    const run = getPlot().startPlot('bean-rows');
+    const moth = run.preview(14).find((n) => n.kind === 'moth')!.wave;
+    const t = beside(run, 'thrush');
+    run.plant('thrush', t.x, t.y);
+    const b = beside(run, 'bat');
+    run.plant('bat', b.x, b.y);
+    const [thrush, bat] = [...run.plants.values()].map((p) => p.id);
+    const aimed = new Map<number, Set<string>>([
+      [thrush, new Set()],
+      [bat, new Set()],
+    ]);
+    const watch = () => {
+      for (const s of run.shots) {
+        const target = run.pests.find((u) => u.id === s.targetId);
+        if (target) aimed.get(s.plantId)?.add(target.kind);
+      }
+    };
+    run.callEarly();
+    await tickUntil(() => (watch(), run.phase !== 'wave'), 20_000);
+    await skipTo(run, moth);
+    run.callEarly();
+    await tickUntil(() => (watch(), run.phase !== 'wave'), 20_000);
+    expect(aimed.get(thrush)!.has('slug')).toBe(true);
+    expect(aimed.get(thrush)!.has('moth')).toBe(false);
+    expect([...aimed.get(bat)!]).toEqual(['moth']);
+  });
+});

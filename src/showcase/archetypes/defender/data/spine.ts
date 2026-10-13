@@ -10,7 +10,7 @@
 //   income(w)  = S₀ · G^(w−1) · (G − 1)                   bounty a fully-cleared wave w pays
 //   V(w)       = S + Σ income + what calling it a day paid  compost the reference gardener has committed
 //   C(p, w)    = (V(w) · share / thrushCost) · thrushDps · (n·gap + dwell(p))
-//   W(p, w)    = pressure(p) · land · C(p, w)
+//   W(p, w)    = pressure(p) · land · toll(kind(w)) · C(p, w) · answer(p, kind(w))
 //
 // C is the reference board's stream capacity, the leak estimate's form: every
 // hunting plant fires from the wave's first arrival to its last departure, one
@@ -19,6 +19,13 @@
 // the leak threshold, and `1 / pressure` is the margin a plot leaves. What the
 // almanac adds, and whatever the gardener plants better than the reference, is
 // margin bought.
+//
+// The counter wheel: every night sends one kind of pest, and each attack form
+// meets each armour kind at its own multiplier. The reference board splits its
+// hunting compost across forms as the plot's rotation asks, so only `answer`,
+// the share of that board that can hurt tonight's kind, fires at full weight.
+// `toll` is what the closed form cannot see about a kind: how much of a pool of
+// beetles, or of greenfly, a board lands before one gets through, against slugs.
 
 export interface SpineAnchors {
   /** Price of the reference plant; every other price is a ratio of it. */
@@ -65,9 +72,9 @@ export const ANCHORS: SpineAnchors = {
   startCompost: 200,
   // Measured: the reference gardener's board is 0.81–1.00 hunting plants (`capacity-probe.ts`).
   damageShare: 0.95,
-  // Measured: the reference gardener loses a plot at 0.36 / 0.59 / 0.36 of capacity
-  // (`threshold-probe.ts`, no almanac); the binding plots set it.
-  land: 0.36,
+  // Measured: the reference gardener loses a plot at 0.36 / 0.57 / 0.54 of capacity
+  // (`threshold-probe.ts`, no almanac); `land` is their geometric mean.
+  land: 0.48,
   // ln2 / ln1.22 ≈ 3.5 waves per doubling: a purchase every wave, a visible jump every ~3.
   waveGrowth: 1.22,
   basePressure: 0.55,
@@ -90,14 +97,21 @@ export const ANCHORS: SpineAnchors = {
  * of each map's stone, so not a tunable. Measured, damage-weighted plot means
  * (`capacity-probe.ts`).
  */
-export const PLOT_DWELL = [2.5, 6.6, 6.9];
+export const PLOT_DWELL = [2.5, 6.5, 5.8];
 
 /**
  * Seconds from a wave's last arrival to its end on the reference gardener's
  * board, per plot: how far the last pest walks before it is seen off. Like
  * `PLOT_DWELL`, a property of the map. Measured plot means (`capacity-probe.ts`).
  */
-export const PLOT_TAIL = [5.2, 15.0, 3.5];
+export const PLOT_TAIL = [4.0, 9.6, 2.9];
+
+/**
+ * Seconds a slug-speed flyer spends in one bat box's reach: the dwell of a
+ * moth night, which crosses the beds in a straight line whatever the hedges
+ * do. Measured mean over moth nights (`capacity-probe.ts`).
+ */
+export const FLIGHT_DWELL = 3.5;
 
 /** Maximum plant level. Structural: four rungs fit the board's ~135 cells against the third plot's value. */
 export const MAX_LEVEL = 4;
@@ -123,7 +137,8 @@ export function baseCount(w: number): number {
 
 /** Seconds the wave streams past one hunting plant: arrivals, then one dwell. */
 export function waveWindow(a: SpineAnchors, p: number, w: number): number {
-  return baseCount(w) * a.spawnGap + PLOT_DWELL[p];
+  const dwell = ARMOUR[nightKind(a, p, w)] === 'wing' ? FLIGHT_DWELL : PLOT_DWELL[p];
+  return baseCount(w) * a.spawnGap + dwell;
 }
 
 /** Bounty a fully-cleared wave `w` pays in total: the bounty curve. */
@@ -168,7 +183,10 @@ export function referenceCapacity(
 
 /** Effective HP pool of wave `w` in plot `p`, in slug-speed HP. */
 export function waveHp(a: SpineAnchors, p: number, w: number): number {
-  return pressure(a, p) * a.land * referenceCapacity(a, p, w);
+  const kind = nightKind(a, p, w);
+  return (
+    pressure(a, p) * a.land * KIND_TOLL[kind] * referenceCapacity(a, p, w) * answerShare(a, p, kind)
+  );
 }
 
 /** Seconds after launch at which wave `w`'s last pest arrives. */
@@ -197,7 +215,22 @@ export function predictHeldAt(a: SpineAnchors, plots: number): number[] {
 
 // ── Pests
 
-export type PestKind = 'slug' | 'mouse' | 'beetle' | 'badger';
+export type PestKind = 'slug' | 'mouse' | 'beetle' | 'aphid' | 'moth' | 'badger';
+
+/**
+ * What a pest's body is to the plants that hunt it. A `wing` flies a straight
+ * line from the gap to the seedbed, over hedges and stone alike.
+ */
+export type Armour = 'soft' | 'shell' | 'swarm' | 'wing';
+
+export const ARMOUR: Record<PestKind, Armour> = {
+  slug: 'soft',
+  mouse: 'soft',
+  beetle: 'shell',
+  aphid: 'swarm',
+  moth: 'wing',
+  badger: 'soft',
+};
 
 export interface PestSpec {
   kind: PestKind;
@@ -217,13 +250,66 @@ export const SPEED_MULT: Record<PestKind, number> = {
   slug: 1,
   mouse: 1.6,
   beetle: 0.65,
+  aphid: 0.8,
+  moth: 1.4,
   badger: 0.55,
 };
 
-const LEAK: Record<PestKind, number> = { slug: 1, mouse: 1, beetle: 2, badger: 6 };
+/** Pests in a night of each kind, over the baseline count. */
+const COUNT_MULT: Record<PestKind, number> = {
+  slug: 1,
+  mouse: 1.5,
+  beetle: 0.5,
+  aphid: 2.5,
+  moth: 1,
+  badger: 1,
+};
+
+const LEAK: Record<PestKind, number> = {
+  slug: 1,
+  mouse: 1,
+  beetle: 2,
+  aphid: 1,
+  moth: 1,
+  badger: 6,
+};
+
+/**
+ * A night of each kind's leak threshold over a night of slugs', with the right
+ * answer on the board: few heavy beetles get through sooner, a release clears
+ * greenfly by the cluster. A property of the kinds, so not a tunable. Measured,
+ * geometric mean over the plots that send the kind (`threshold-probe.ts --kinds`).
+ */
+export const KIND_TOLL: Record<PestKind, number> = {
+  slug: 1,
+  mouse: 1.29,
+  beetle: 0.65,
+  aphid: 1.86,
+  moth: 1.19,
+  badger: 1,
+};
 
 /** Share of the final wave's HP pool the badger carries alone. */
 const BADGER_SHARE = 0.35;
+
+/**
+ * The kinds each plot sends, night after night, in order; the rotation starts
+ * again when it runs out. Each plot adds one turn of the wheel: the Bean Rows
+ * bring moths, the Orchard greenfly, so a night asks a different answer from
+ * the night before.
+ */
+export const NIGHTS: PestKind[][] = [
+  ['slug', 'mouse', 'slug', 'beetle'],
+  ['slug', 'mouse', 'moth', 'slug', 'beetle', 'moth'],
+  ['slug', 'aphid', 'beetle', 'moth', 'mouse', 'aphid', 'beetle', 'moth'],
+];
+
+/** The kind of pest night `w` of plot `p` sends; the last night is the badger's. */
+export function nightKind(a: SpineAnchors, p: number, w: number): PestKind {
+  if (w === wavesIn(a, p)) return 'badger';
+  const r = NIGHTS[p];
+  return r[(w - 1) % r.length];
+}
 
 /**
  * Compose wave `w` of plot `p` from the closed forms: scaled opposition with no
@@ -236,20 +322,15 @@ export function composeWave(a: SpineAnchors, p: number, w: number): PestSpec[] {
   const pool = waveHp(a, p, w);
   const income = waveIncome(a, w);
   const n = baseCount(w);
-  const final = w === wavesIn(a, p);
+  const kind = nightKind(a, p, w);
   const plan: { kind: PestKind; share: number }[] = [];
 
-  if (final) {
+  if (kind === 'badger') {
     plan.push({ kind: 'badger', share: BADGER_SHARE });
     for (let i = 0; i < n; i++) plan.push({ kind: 'slug', share: (1 - BADGER_SHARE) / n });
-  } else if (w % 4 === 0) {
-    const m = Math.ceil(n / 2);
-    for (let i = 0; i < m; i++) plan.push({ kind: 'beetle', share: 1 / m });
-  } else if (w % 3 === 0) {
-    const m = Math.round(n * 1.5);
-    for (let i = 0; i < m; i++) plan.push({ kind: 'mouse', share: 1 / m });
   } else {
-    for (let i = 0; i < n; i++) plan.push({ kind: 'slug', share: 1 / n });
+    const m = Math.max(1, Math.round(n * COUNT_MULT[kind]));
+    for (let i = 0; i < m; i++) plan.push({ kind, share: 1 / m });
   }
 
   // The window is sized off the baseline count, so a variant wave spreads its arrivals over the same stream length.
@@ -267,10 +348,31 @@ export function composeWave(a: SpineAnchors, p: number, w: number): PestSpec[] {
 
 // ── Plants
 
-export type PlantId = 'hedge' | 'thrush' | 'trap' | 'marigold' | 'ladybird';
+export type PlantId = 'hedge' | 'thrush' | 'trap' | 'bat' | 'marigold' | 'ladybird';
+
+/** How a hunting plant does its damage: a peck, a ladybird release, a bat hawking on the wing. */
+export type Form = 'peck' | 'release' | 'hawk';
+export const FORMS: Form[] = ['peck', 'release', 'hawk'];
+
+/**
+ * Damage multiplier of each attack form against each armour kind; 0 cannot
+ * reach it, and a plant never aims at what it cannot reach. Every armour kind
+ * has a form at 1, so the wheel takes damage away from a wrong answer and
+ * never adds it to a right one: the spine's thrush-equivalents stay the unit.
+ */
+export const FORM_VS_ARMOUR: Record<Form, Record<Armour, number>> = {
+  // A thrush cracks a shell on its anvil stone; greenfly are hardly worth its while.
+  peck: { soft: 1, shell: 1, swarm: 0.3, wing: 0 },
+  // Ladybirds eat greenfly by the hundred, and a shell turns them.
+  release: { soft: 1, shell: 0.25, swarm: 1, wing: 0 },
+  // Bats take moths on the wing and never stoop for anything on the ground.
+  hawk: { soft: 0, shell: 0, swarm: 0, wing: 1 },
+};
 
 export interface PlantSpec {
   id: PlantId;
+  /** How it hunts; null for a plant that does not. */
+  form: Form | null;
   cost: number;
   /** Damage per shot at level 1; 0 for a plant that does not attack. */
   damage: number;
@@ -307,6 +409,7 @@ export function plantSpecs(a: SpineAnchors): Record<PlantId, PlantSpec> {
   // A trap stretches exposure by 1/(1−slow) for the thrushes it overlaps; priced at the thrush-value that adds.
   const trapCost = Math.round((a.thrushCost * (1 / (1 - TRAP_SLOW) - 1) * TRAP_OVERLAP) / 10) * 10;
   const base = {
+    form: null,
     damage: 0,
     cooldown: 0,
     range: 0,
@@ -321,6 +424,7 @@ export function plantSpecs(a: SpineAnchors): Record<PlantId, PlantSpec> {
     thrush: {
       ...base,
       id: 'thrush',
+      form: 'peck',
       cost: a.thrushCost,
       damage: thrushShot,
       cooldown: 0.5,
@@ -328,6 +432,18 @@ export function plantSpecs(a: SpineAnchors): Record<PlantId, PlantSpec> {
       shotSpeed: 10,
     },
     trap: { ...base, id: 'trap', cost: trapCost, range: 2, slow: TRAP_SLOW, unlockLevel: 2 },
+    // A thrush for moths: the same damage per compost, at the same price.
+    bat: {
+      ...base,
+      id: 'bat',
+      form: 'hawk',
+      cost: a.thrushCost,
+      damage: thrushShot,
+      cooldown: 0.5,
+      range: a.thrushRange,
+      shotSpeed: 12,
+      unlockLevel: 3,
+    },
     marigold: {
       ...base,
       id: 'marigold',
@@ -338,6 +454,7 @@ export function plantSpecs(a: SpineAnchors): Record<PlantId, PlantSpec> {
     ladybird: {
       ...base,
       id: 'ladybird',
+      form: 'release',
       cost: ladybirdCost,
       damage: ladybirdDps * 2,
       cooldown: 2,
@@ -359,6 +476,42 @@ export function levelMultiplier(a: SpineAnchors, level: number): number {
   let total = 0;
   for (let k = 0; k < level; k++) total += a.upgradeGrowth ** k;
   return total;
+}
+
+// ── The wheel
+
+/** The gardener's level entering plot `p` after a flawless pass through the plots before it. */
+export function entryLevel(a: SpineAnchors, p: number): number {
+  let xp = 0;
+  for (let q = 0; q < p; q++) xp += perfectScore(a, q, BASE_SEEDLINGS);
+  return gardenerLevel(xp);
+}
+
+/**
+ * The reference board's split of hunting compost across forms in plot `p`:
+ * every night of the rotation asks for its best form among those learned on
+ * entry, ties shared.
+ */
+export function formShares(a: SpineAnchors, p: number): Record<Form, number> {
+  const level = entryLevel(a, p);
+  const learned = Object.values(plantSpecs(a))
+    .filter((s) => s.form !== null && s.unlockLevel <= level)
+    .map((s) => s.form!);
+  const share: Record<Form, number> = { peck: 0, release: 0, hawk: 0 };
+  const nights = NIGHTS[p];
+  for (const k of nights) {
+    const best = Math.max(...learned.map((f) => FORM_VS_ARMOUR[f][ARMOUR[k]]));
+    if (best === 0) continue;
+    const answers = learned.filter((f) => FORM_VS_ARMOUR[f][ARMOUR[k]] === best);
+    for (const f of answers) share[f] += 1 / answers.length / nights.length;
+  }
+  return share;
+}
+
+/** The share of plot `p`'s reference board that can hurt a pest of `kind`, at full weight. */
+export function answerShare(a: SpineAnchors, p: number, kind: PestKind): number {
+  const s = formShares(a, p);
+  return FORMS.reduce((t, f) => t + s[f] * FORM_VS_ARMOUR[f][ARMOUR[kind]], 0);
 }
 
 /** Compost returned when a plant is dug up. */

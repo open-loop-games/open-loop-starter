@@ -1,7 +1,7 @@
 <!--
   PlantGlyph — each plant drawn as the gardener would sketch it in a planting
-  plan: a clipped box, a thrush on its post, a yellow sticky card, a marigold,
-  a ladybird hotel. One viewBox, so a board cell and a palette tag share it.
+  plan: a clipped box, a thrush on its post, a yellow sticky card, a bat box
+  with a pipistrelle at its slit, a marigold, a ladybird hotel. One viewBox, so a board cell and a palette tag share it.
 -->
 <script setup lang="ts">
 import type { PlantId } from '../../data';
@@ -40,6 +40,16 @@ defineProps<{ id: PlantId }>();
       <circle cx="26" cy="17" r="1.1" fill="#2a2118" />
       <circle cx="16" cy="19" r="1.1" fill="#2a2118" />
       <circle cx="20" cy="14" r="1.1" fill="#2a2118" />
+    </g>
+    <g v-else-if="id === 'bat'">
+      <rect x="18.5" y="30" width="3" height="7" fill="#6a5238" />
+      <path d="M9 9 20 4l11 5v21H9z" fill="#7d6347" />
+      <path d="M9 9 20 4l11 5" stroke="#5b4632" stroke-width="2" fill="none" />
+      <rect x="11" y="27" width="18" height="2.4" fill="#2a2118" />
+      <path
+        d="M20 13c1.5-1 3-.6 3.6.4 2-1.6 4.8-1.8 6.4-.4-1.8.2-2.8 1.4-3.2 3-1.4-.8-2.8-.4-3.6.8-.8-1-2-1.2-3.2-1.2-1.2 0-2.4.2-3.2 1.2-.8-1.2-2.2-1.6-3.6-.8-.4-1.6-1.4-2.8-3.2-3 1.6-1.4 4.4-1.2 6.4.4.6-1 2.1-1.4 3.6-.4z"
+        fill="#2a2118"
+      />
     </g>
     <g v-else-if="id === 'marigold'">
       <path d="M20 26v11" stroke="#4f7a3a" stroke-width="2.5" />

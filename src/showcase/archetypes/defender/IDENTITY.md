@@ -23,9 +23,18 @@ watch.
 | Box Hedge | fills a cell; the path re-routes round it | 0 |
 | Thrush Perch | single shots at the pest nearest the seedbed; marks what it has in flight | 0 |
 | Sticky Trap | slows every pest in reach | 2 |
+| Bat Box | single shots at moths, and at nothing on the ground | 3 |
 | Marigolds | companion planting: every plant touching it hunts harder | 4 |
 | Ladybird Hotel | a slow release that lands on a cluster | 7 |
 
+- **The counter wheel.** Each night sends one kind of pest, and each plant's way of
+  hunting meets each kind at its own strength. Thrushes crack beetles and barely
+  touch greenfly. Ladybirds eat greenfly, and a shell turns them. Moths fly
+  straight over the hedges, and only bats reach them. Each plot adds a turn: the
+  Bean Rows bring moths, the Orchard greenfly. The board shows the next three
+  nights and what sees each off, so the gardener plants for the night ahead.
+  This is research's `type-effectiveness`, carried beyond the line: none of the
+  line's sourced exemplars is a member, so the line does not cite it.
 - **Calling it a day** sends the next wave early, and pays compost for the daylight
   given up. The first night waits for the gardener.
 - **Compost** comes only from pests seen off.
@@ -53,21 +62,27 @@ plant fires from the wave's first arrival to its last departure, one pest at a t
   as the point where the reference gardener loses a plot.
 
 So `W = pressure · land · C`, and pressure 1 is the reference gardener's loss
-threshold.
+threshold. The counter wheel adds two factors per night:
+- `answer`, the share of the reference board that can hurt tonight's kind. It is
+  closed form: the board splits its hunting compost across forms as the plot's
+  rotation asks.
+- `toll`, how much of a pool of that kind a board lands before one gets through,
+  against slugs. It is measured per kind.
 
 **What measures the remainder:** three probes over the shipping game under the
 reference gardener (`balance/_gardener.ts`):
 - `capacity-probe.ts` measures dwell, damage share and each wave's tail;
-- `threshold-probe.ts` bisects the loss threshold `land` is set from;
+- `threshold-probe.ts` bisects the loss threshold `land` is set from, and each
+  kind's threshold, which `KIND_TOLL` is set from;
 - `arc-probe.ts` plays every plot and diffs each wave against the spine.
 
 ## The arc
 
 | Beat | Predicted | Recorded |
 |---|---|---|
-| The Herb Border held | 110s | 108s |
-| The Bean Rows held | 412s | 385s |
-| The Old Orchard held | 606s | 572s |
+| The Herb Border held | 98s | 100s |
+| The Bean Rows held | 324s | 326s |
+| The Old Orchard held | 508s | 507s |
 
 The prediction counts each wave's arrivals, and a measured tail per plot after the last
 one, under a gardener who calls every wave at once. `manifest.ts` holds the recorded
@@ -75,9 +90,6 @@ beats.
 
 ## Growth ports
 
-- **Counter wheel.** Attack forms against armour kinds (shelled beetles, soft swarms),
-  plants that cannot reach flying moths, and a three-night preview, so the board must
-  change its answer, not merely find one.
 - **Booster against maze.** A companion boost strong enough to compete with path length
   for the same cells: a booster wants to be surrounded, a maze wants long thin walls.
 - **Endless tail.** Nights past a plot's last, with health outgrowing bounty and the

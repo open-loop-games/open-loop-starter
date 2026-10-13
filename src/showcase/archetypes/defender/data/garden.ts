@@ -2,7 +2,7 @@
 // Authored content: the plots, and what the gardener reads about each plant,
 // pest and almanac lesson. Numbers that are balance are in `./spine.ts`.
 
-import type { LessonId, PestKind, PlantId } from './spine';
+import type { Armour, LessonId, PestKind, PlantId } from './spine';
 
 export interface PlotDef {
   id: string;
@@ -76,16 +76,26 @@ export const PLANT_TEXT: Record<PlantId, { displayName: string; description: str
   },
   thrush: {
     displayName: 'Thrush Perch',
-    description: 'A song thrush takes one pest at a time, the one nearest the seedbed.',
+    description:
+      'A song thrush takes one pest at a time, the one nearest the seedbed, and cracks a beetle on its anvil stone. It never leaves the ground for a moth.',
   },
-  trap: { displayName: 'Sticky Trap', description: 'Pests in reach wade through it at a crawl.' },
+  trap: {
+    displayName: 'Sticky Trap',
+    description: 'Everything in reach, moths too, wades through it at a crawl.',
+  },
+  bat: {
+    displayName: 'Bat Box',
+    description:
+      'Pipistrelles hawk moths out of the air. They never stoop for anything on the ground.',
+  },
   marigold: {
     displayName: 'Marigolds',
     description: 'Companion planting: every plant touching it, diagonals included, hunts harder.',
   },
   ladybird: {
     displayName: 'Ladybird Hotel',
-    description: 'A slow release that lands on a cluster and works through all of it.',
+    description:
+      'A slow release that lands on a cluster and works through all of it. Greenfly are its meat; a shell turns it.',
   },
 };
 
@@ -93,7 +103,17 @@ export const PEST_TEXT: Record<PestKind, string> = {
   slug: 'Slug',
   mouse: 'Field mouse',
   beetle: 'Chafer beetle',
+  aphid: 'Greenfly',
+  moth: 'Silver Y moth',
   badger: 'Badger',
+};
+
+/** What each armour kind is called where a plant's strengths are read out. */
+export const ARMOUR_TEXT: Record<Armour, string> = {
+  soft: 'soft pests',
+  shell: 'shells',
+  swarm: 'greenfly',
+  wing: 'moths',
 };
 
 export interface LessonDef {

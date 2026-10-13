@@ -2,7 +2,8 @@
   PlotScreen — one plot, from the first planting to the last night. Along the
   top: the night, the compost, the seedlings and the clock to dusk, with the
   one action that moves time on. The board in the middle; at its side the plant
-  tags, the plant being looked at, and what tonight brings. Planting is only
+  tags, the plant being looked at, and what the next three nights bring and
+  which plants answer each. Planting is only
   possible by day: once a wave walks, the gardener watches.
 -->
 <script setup lang="ts">
@@ -12,11 +13,15 @@ import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import type { ResourceReadout } from '@/ui/compositions/ResourceHeaderStrip';
 import {
+  ARMOUR,
+  ARMOUR_TEXT,
+  FORM_VS_ARMOUR,
   MAX_LEVEL,
   PEST_TEXT,
   PLANT_TEXT,
   REFUND_RATE,
-  composeWave,
+  type Armour,
+  type Form,
   type PestKind,
   type PlantId,
 } from '../../data';
@@ -29,7 +34,20 @@ const props = defineProps<{ run: PlotRun }>();
 
 const garden = getGarden();
 const plot = getPlot();
-const PLANTS: PlantId[] = ['hedge', 'thrush', 'trap', 'marigold', 'ladybird'];
+const PLANTS: PlantId[] = ['hedge', 'thrush', 'trap', 'bat', 'marigold', 'ladybird'];
+const ARMOURS: Armour[] = ['soft', 'shell', 'swarm', 'wing'];
+
+/** What a form does to each armour kind, read out: what it hunts, what it barely touches, what it never reaches. */
+function hunts(form: Form): string {
+  const of = (pick: (m: number) => boolean) =>
+    ARMOURS.filter((k) => pick(FORM_VS_ARMOUR[form][k])).map((k) => ARMOUR_TEXT[k]);
+  const parts = [of((m) => m >= 1).join(', ')];
+  const weak = of((m) => m > 0 && m < 1);
+  const never = of((m) => m === 0);
+  if (weak.length) parts.push(`barely ${weak.join(', ')}`);
+  if (never.length) parts.push(`never ${never.join(', ')}`);
+  return parts.join('; ');
+}
 
 const tool = ref<PlantId | null>(null);
 const selected = ref<number | null>(null);
@@ -98,6 +116,7 @@ const looked = computed(() => {
     plant: p,
     name: PLANT_TEXT[p.def].displayName,
     description: PLANT_TEXT[p.def].description,
+    hunts: spec.form === null ? null : hunts(spec.form),
     damage: spec.damage > 0 ? props.run.plantDamage(p) / spec.cooldown : null,
     reach: props.run.plantRange(p),
     price,
@@ -107,17 +126,43 @@ const looked = computed(() => {
   };
 });
 
-/** Tonight's pests, grouped by kind. */
-const tonight = computed(() => {
+const NIGHT_NAMES = ['Tonight', 'Tomorrow'];
+
+/**
+ * The next three nights: each one's pests grouped by kind, and the learned
+ * plants that answer its kind, best first.
+ */
+const ahead = computed(() => {
   void tick.value;
-  const r = props.run;
-  const groups = new Map<PestKind, { n: number; hp: number }>();
-  for (const s of composeWave(garden.anchors.value, r.plotIndex, r.wave)) {
-    const g = groups.get(s.kind) ?? { n: 0, hp: s.hp };
-    g.n += 1;
-    groups.set(s.kind, g);
-  }
-  return [...groups].map(([kind, g]) => ({ kind, name: PEST_TEXT[kind], ...g }));
+  const specs = garden.specs.value;
+  return props.run.preview(3).map((night, i) => {
+    const groups = new Map<PestKind, { n: number; hp: number }>();
+    for (const s of night.pests) {
+      const g = groups.get(s.kind) ?? { n: 0, hp: s.hp };
+      g.n += 1;
+      groups.set(s.kind, g);
+    }
+    const armour = ARMOUR[night.kind];
+    const by = (pick: (m: number) => boolean) =>
+      PLANTS.filter((id) => {
+        const f = specs[id].form;
+        return f !== null && garden.isPlantUnlocked(id) && pick(FORM_VS_ARMOUR[f][armour]);
+      }).map((id) => PLANT_TEXT[id].displayName);
+    const full = by((m) => m >= 1);
+    const weak = by((m) => m > 0 && m < 1);
+    return {
+      wave: night.wave,
+      label: NIGHT_NAMES[i] ?? `Night ${night.wave}`,
+      kind: night.kind,
+      flies: armour === 'wing',
+      pests: [...groups].map(([kind, g]) => ({ kind, name: PEST_TEXT[kind], ...g })),
+      answer: full.length
+        ? `Seen off by ${full.join(', ')}.`
+        : weak.length
+          ? `Only ${weak.join(', ')}, and barely.`
+          : null,
+    };
+  });
 });
 
 const hint = computed(() => {
@@ -278,6 +323,7 @@ const over = computed(() => phase.value === 'won' || phase.value === 'lost');
             level {{ looked.plant.level }}<template v-if="looked.maxed"> (full grown)</template>
           </span>
           <p class="desc">{{ looked.description }}</p>
+          <p v-if="looked.hunts" class="hunts">Hunts {{ looked.hunts }}.</p>
           <dl v-if="looked.damage !== null || looked.reach > 0">
             <template v-if="looked.damage !== null">
               <dt>Damage</dt>
@@ -304,17 +350,30 @@ const over = computed(() => phase.value === 'won' || phase.value === 'lost');
           </div>
         </div>
 
-        <div class="wg-tonight">
-          <span class="wg-label">{{ phase === 'wave' ? 'Tonight' : `Night ${run.wave}` }}</span>
-          <ul>
-            <li v-for="g in tonight" :key="g.kind" :class="g.kind">
-              <span class="wg-num n">{{ g.n }}</span> × {{ g.name }}
-              <span class="hp"
-                ><span class="wg-num">{{ whole(g.hp) }}</span> hp</span
-              >
-            </li>
-          </ul>
-        </div>
+        <ol class="wg-ahead" aria-label="The next three nights">
+          <li
+            v-for="n in ahead"
+            :key="n.wave"
+            class="wg-night"
+            :data-kind="n.kind"
+            :class="{ unanswered: !n.answer }"
+          >
+            <span class="wg-label">{{ n.label }}</span>
+            <ul>
+              <li v-for="g in n.pests" :key="g.kind" :class="g.kind">
+                <span class="wg-num n">{{ g.n }}</span> × {{ g.name }}
+                <span class="hp"
+                  ><span class="wg-num">{{ whole(g.hp) }}</span> hp</span
+                >
+              </li>
+            </ul>
+            <p class="answer">
+              <template v-if="n.flies">They fly over the hedges. </template>
+              <template v-if="n.answer">{{ n.answer }}</template>
+              <template v-else>Nothing you grow can reach them yet.</template>
+            </p>
+          </li>
+        </ol>
       </aside>
     </div>
   </section>
@@ -541,27 +600,64 @@ dd {
   border-color: var(--wg-lantern-deep);
   color: var(--wg-lantern);
 }
-.wg-tonight ul {
+.hunts {
+  margin: 0;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--wg-parchment);
+}
+.wg-ahead {
   list-style: none;
-  margin: 6px 0 0;
+  margin: 0;
   padding: 0;
   display: grid;
-  gap: 4px;
+  gap: 10px;
 }
-.wg-tonight li {
+.wg-night {
+  display: grid;
+  gap: 3px;
+  padding-left: 10px;
+  border-left: 2px solid var(--wg-loam-edge);
+}
+.wg-night:first-child {
+  border-left-color: var(--wg-lantern-deep);
+}
+.wg-night:not(:first-child) {
+  opacity: 0.78;
+}
+.wg-night ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.wg-night ul li {
   display: flex;
   align-items: baseline;
   gap: 6px;
   font-size: 16px;
 }
-.wg-tonight .n {
+.wg-night .n {
   font-size: 19px;
 }
 .hp {
   margin-left: auto;
   color: var(--wg-twine);
 }
-.wg-tonight li.badger {
+.wg-night li.badger {
   color: var(--wg-terracotta);
+}
+.answer {
+  margin: 0;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--wg-twine);
+}
+.wg-night[data-kind='moth'] .answer {
+  color: #b9b3d6;
+}
+.wg-night.unanswered .answer {
+  color: var(--wg-loss);
 }
 </style>

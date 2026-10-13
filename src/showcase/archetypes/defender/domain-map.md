@@ -11,8 +11,10 @@ Maze tower defence in a walled kitchen garden. By day the gardener plants hedges
 
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
-- **PestKind** _(string-literal union)_ — `slug` · `mouse` · `beetle` · `badger`
-- **PlantId** _(string-literal union)_ — `hedge` · `thrush` · `trap` · `marigold` · `ladybird`
+- **PestKind** _(string-literal union)_ — `slug` · `mouse` · `beetle` · `aphid` · `moth` · `badger`
+- **Armour** _(string-literal union)_ — `soft` · `shell` · `swarm` · `wing`
+- **PlantId** _(string-literal union)_ — `hedge` · `thrush` · `trap` · `bat` · `marigold` · `ladybird`
+- **Form** _(string-literal union)_ — `peck` · `release` · `hawk`
 - **LessonId** _(string-literal union)_ — `well-fed` · `bins` · `perches` · `cloches` · `early-riser`
 
 ## Defs
@@ -50,3 +52,6 @@ staleness stays visible against the generated sections above.
 - **level** — The gardener's level: read from the sum of each plot's best score, so a worse night on a plot pays nothing.
 - **almanac** — The lessons the notes buy, one note a level each. They carry into every plot, and can be taken back for free.
 - **companion** — A plant touching marigolds, diagonals included: it hunts harder by the marigolds' boost.
+- **counter wheel** — Each night sends one kind of pest, each plot in its own rotation, and each attack form meets each armour kind at its own multiplier. The board shows the next three nights, so the gardener plants for the night ahead.
+- **answer share** — The share of the reference board's hunting compost that can hurt tonight's kind, weighted by the matrix. A night is sized against that share, not the whole board.
+- **toll** — How much of a pool of one kind a board lands before one gets through, against slugs. Measured per kind; a night is sized by it.

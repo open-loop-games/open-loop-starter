@@ -24,7 +24,7 @@ is in `modules/tuning.ts`.
 | `spine/spawnGap` | 0.8 | Seconds between arrivals. Longer spreads a wave, so the board fires at it longer and its HP grows with it. |
 | `spine/startCompost` | 200 | Compost at the start of a plot, and the base of the whole value curve. |
 | `spine/damageShare` | 0.95 | The share of committed compost the spine counts in hunting plants; the rest is hedge. Every wave's HP scales with it. |
-| `spine/land` | 0.36 | The share of the reference board's capacity at which the gardener loses a plot. Every wave's HP scales with it; pressure 1 is that threshold. |
+| `spine/land` | 0.48 | The share of the reference board's capacity at which the gardener loses a plot. Every wave's HP scales with it; pressure 1 is that threshold. |
 | `spine/waveGrowth` | 1.22 | Growth of committed value per wave: ≈3.5 waves per doubling. Income per wave is `value · (G − 1)`. |
 | `spine/basePressure` | 0.55 | The first plot's pressure. `1 / pressure` is the margin the reference gardener has before it loses the plot. |
 | `spine/pressureStep` | 1.5 | Pressure between plots: 0.55 → 0.83 → 1.24. The third plot is past the reference gardener without the almanac, ≈0.9 with the level 8 a flawless pass earns. |
@@ -38,9 +38,16 @@ is in `modules/tuning.ts`.
   gardener: how long a pest stays in a plant's reach, and how long a wave runs past its
   last arrival. They change only when a map, the gardener or a pest's speed does, and
   `capacity-probe.ts` prints the new means.
-- **Pest kinds** (`SPEED_MULT`, the leak per kind, the badger's share) and the wave
-  composition are structural: they shape the opposition, and the spine sizes the pool
-  regardless of how it is split.
+- **`KIND_TOLL` and `FLIGHT_DWELL`** are measurements too: how much of a pool of each
+  kind the reference board lands before one gets through, against slugs, and how long
+  a moth stays in a bat box's reach. `threshold-probe.ts --kinds` and
+  `capacity-probe.ts` print them.
+- **Pest kinds** (`SPEED_MULT`, `COUNT_MULT`, the leak per kind, the badger's share),
+  each plot's rotation in `NIGHTS`, and the wave composition are structural: they
+  shape the opposition, and the spine sizes the pool regardless of how it is split.
+- **The counter wheel** (`FORM_VS_ARMOUR`, `ARMOUR`) is structural. Every armour kind
+  has a form at 1, so the wheel only takes damage away from a wrong answer, and a
+  thrush-equivalent stays the unit of capacity.
 - **Plant mechanics** besides price (shot speeds, splash radius, the trap's slow, the
   marigold's boost, unlock levels) are constants in `plantSpecs`. Each price is solved
   from the thrush by an equivalence written beside it.
@@ -56,6 +63,18 @@ is in `modules/tuning.ts`.
 - **HP is divided by speed.** Fast mice carry less HP and slow beetles more, so every
   wave has the same pool in slug-speed HP. A pest kind whose speed changes without its
   HP changing breaks that.
+- **`answer` is the reference gardener's split.** `formShares` assumes the board's
+  hunting compost follows the plot's rotation, each night asking for its best form
+  learned on entry. The gardener spends toward the split of the next three nights,
+  which averages to the same thing. A gardener that splits otherwise meets moth and
+  greenfly nights at a different pressure than the spine prints.
+- **Tolls belong to the reference gardener, like `land`.** A change to `_gardener.ts`,
+  to a kind's speed or count, or to the matrix moves them: rerun
+  `threshold-probe.ts --kinds` and reset `KIND_TOLL`.
+- **A plant learned after its turn arrives breaks a plot.** `formShares` reads the
+  plants learned at a flawless gardener's entry level. A kind whose answer is learned
+  later than the plot that first sends it has no answer there. The night is sized at
+  zero share and still leaks in full.
 - **Income closes the curve only on a full clear.** Committed value grows by `G` per
   wave only if the wave pays its whole bounty. A leak cuts the next wave's compost as
   well as seedlings.
@@ -91,12 +110,15 @@ is in `modules/tuning.ts`.
   board's capacity against the reference, and each wave's tail. Its plot lines print
   the means `PLOT_DWELL` and `PLOT_TAIL` are set from.
 - `balance/threshold-probe.ts` bisects, plot by plot with no almanac, the wave size at
-  which the reference gardener first leaks and first loses. The loss threshold is
-  `land`.
+  which the reference gardener first leaks and first loses, and names the kinds that
+  leak first. The geometric mean of the loss thresholds is `land`. `--kinds` adds each
+  kind's threshold over the slug's, which `KIND_TOLL` is set from.
 - `balance/arc-probe.ts` plays every plot under the reference gardener, up to three
   attempts each, and prints the beats and a per-wave spine diff. Its header lists the
-  columns' flags: `--no-early` stops calling it a day, and `--set anchor=value` pushes
-  an override. Read the diff by column:
+  columns' flags: `--no-early` stops calling it a day, `--refuse <plant>` plays without
+  ever growing that plant, and `--set anchor=value` pushes an override. A turn of the
+  wheel that still holds under `--refuse` of its answer is not asking one. Read the
+  diff by column:
   - `ratio` is measured over predicted committed value;
   - `W real` against `W pred` checks the wave sizing;
   - `depth` is how far along the path pests die;
@@ -105,13 +127,16 @@ is in `modules/tuning.ts`.
 
 ## Known thin
 
-- **Pressure is uneven inside a plot.** A plot's loss threshold is set by its hardest
-  waves: the beetles, the mice and the badger. On the rest of the Orchard, most pests
-  still die within a third of the path.
-- **The Bean Rows are easier than their pressure says.** The reference gardener loses
-  them only at 0.59 of capacity, against 0.36 on the other two plots: their stone
-  folds the path further than the measured dwell credits.
-- **Perches and cloches are uncounted margin.** At the level-8 almanac the Orchard
-  still holds with every wave 22% heavier than the spine sizes it.
+- **A kind's toll varies by plot.** `KIND_TOLL` is a mean across plots. Mice land at
+  2.9 times the slug's threshold in the Herb Border and 0.8–0.9 elsewhere, and beetles
+  at 0.4 in the Orchard against 0.7–0.9 elsewhere. So Herb Border mouse nights are
+  easy, and Orchard beetle nights bind.
+- **One `land` for three plots.** The reference gardener loses the plots at 0.36,
+  0.57 and 0.54 of capacity. `land` is their geometric mean, so the Herb Border runs
+  harder than its pressure says, and the other two easier.
+- **The almanac is worth more than the spine counts.** At the level-8 almanac the
+  Orchard holds first try with every wave 60% heavier than the spine sizes it. Part of
+  that is `land` sitting below the Orchard's own threshold. The rest is perches and
+  cloches, which the spine never counts.
 - **The trap is never planted.** The reference gardener ranks plants by route coverage
   times damage, and a trap deals none. So `land` is measured on boards with no slow.

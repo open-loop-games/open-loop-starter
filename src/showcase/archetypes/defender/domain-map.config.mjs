@@ -46,5 +46,17 @@ export default {
       term: 'companion',
       note: "A plant touching marigolds, diagonals included: it hunts harder by the marigolds' boost.",
     },
+    {
+      term: 'counter wheel',
+      note: 'Each night sends one kind of pest, each plot in its own rotation, and each attack form meets each armour kind at its own multiplier. The board shows the next three nights, so the gardener plants for the night ahead.',
+    },
+    {
+      term: 'answer share',
+      note: "The share of the reference board's hunting compost that can hurt tonight's kind, weighted by the matrix. A night is sized against that share, not the whole board.",
+    },
+    {
+      term: 'toll',
+      note: 'How much of a pool of one kind a board lands before one gets through, against slugs. Measured per kind; a night is sized by it.',
+    },
   ],
 };

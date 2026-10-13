@@ -1,7 +1,9 @@
 <!--
   PestLayer — the canvas over the planting board: the silver trail the pests
-  will follow, the reach of the plant in hand or the plant looked at, the
-  sticky ground round every trap, and the pests and shots themselves. A
+  will follow, the moonlit line moths will fly when one of the next three
+  nights brings them, the reach of the plant in hand or the plant looked at,
+  the sticky ground round every trap, and the pests and shots themselves.
+  Moths fly above everything else, wings beating. A
   read-only projection of the plot run: it never writes sim state, and the
   board under it takes every click.
 
@@ -33,6 +35,7 @@ const TRAP = 0xe3c63c;
 const LOSS = 0xd0573f;
 const SEEDLING = 0x9ccc65;
 const COMPOST = 0x8a6a45;
+const MOON = 0xb9b3d6;
 const EASE = 18;
 
 interface Body {
@@ -55,6 +58,8 @@ let trailG: Graphics | null = null;
 let reachG: Graphics | null = null;
 let pestLayer: Container | null = null;
 let shotLayer: Container | null = null;
+let skyLayer: Container | null = null;
+let clock = 0;
 let fxLayer: Container | null = null;
 const bodies = new Map<number, Body>();
 const shots = new Map<number, { g: Graphics; shot: Shot }>();
@@ -87,6 +92,18 @@ function drawPest(g: Graphics, kind: PestKind, c: number): void {
       g.ellipse(-c * 0.04, -c * 0.06, c * 0.08, c * 0.03).fill({ color: 0xc9a46a, alpha: 0.35 });
       g.circle(c * 0.2, 0, c * 0.06).fill(0x2a1d14);
       break;
+    case 'aphid':
+      g.ellipse(0, 0, c * 0.08, c * 0.055).fill(0x9ccc65);
+      g.circle(c * 0.07, 0, c * 0.03).fill(0x7aa84a);
+      g.circle(-c * 0.05, -c * 0.02, c * 0.015).fill({ color: 0xffffff, alpha: 0.5 });
+      break;
+    case 'moth':
+      g.ellipse(-c * 0.02, -c * 0.15, c * 0.11, c * 0.15).fill({ color: 0xcfc6ae, alpha: 0.92 });
+      g.ellipse(-c * 0.02, c * 0.15, c * 0.11, c * 0.15).fill({ color: 0xcfc6ae, alpha: 0.92 });
+      g.circle(-c * 0.03, -c * 0.15, c * 0.03).fill(0xe7e2d6);
+      g.circle(-c * 0.03, c * 0.15, c * 0.03).fill(0xe7e2d6);
+      g.ellipse(0, 0, c * 0.12, c * 0.035).fill(0x8a7f68);
+      break;
     case 'badger':
       g.ellipse(0, 0, c * 0.4, c * 0.22).fill(0x3a3a3a);
       g.ellipse(c * 0.36, 0, c * 0.14, c * 0.12).fill(0xe7e2d6);
@@ -103,8 +120,8 @@ function drawPest(g: Graphics, kind: PestKind, c: number): void {
 function drawHp(g: Graphics, p: Pest, c: number): void {
   g.clear();
   if (p.hp >= p.maxHp) return;
-  const w = c * (p.kind === 'badger' ? 0.7 : 0.42);
-  const y = -c * (p.kind === 'badger' ? 0.36 : 0.26);
+  const w = c * (p.kind === 'badger' ? 0.7 : p.kind === 'aphid' ? 0.22 : 0.42);
+  const y = -c * (p.kind === 'badger' ? 0.36 : p.kind === 'aphid' ? 0.14 : 0.3);
   g.rect(-w / 2, y, w, 3).fill({ color: 0x191510, alpha: 0.8 });
   g.rect(-w / 2, y, w * Math.max(0, p.hp / p.maxHp), 3).fill(SEEDLING);
 }
@@ -119,12 +136,25 @@ function puff(x: number, y: number, color: number, r: number): void {
 }
 
 function redrawTrail(c: number): void {
-  const route = props.run.route();
-  const key = `${props.run.phase}|${route.map((p) => `${p.x},${p.y}`).join(';')}|${c}`;
+  const run = props.run;
+  const route = run.route();
+  const moths = run.phase === 'build' && run.preview(3).some((n) => n.kind === 'moth');
+  const key = `${run.phase}|${moths}|${route.map((p) => `${p.x},${p.y}`).join(';')}|${c}`;
   if (key === trailKey) return;
   trailKey = key;
   const g = trailG!;
   g.clear();
+  if (moths) {
+    // Dashes of moonlight along the straight line the moths will fly.
+    const line = run.flightLine();
+    for (let i = 0; i + 1 < line.length; i++) {
+      const a = line[i];
+      const b = line[i + 1];
+      g.moveTo((a.x + 0.5) * c + c * 0.2, (a.y + 0.5) * c)
+        .lineTo((b.x + 0.5) * c - c * 0.2, (b.y + 0.5) * c)
+        .stroke({ width: 1.5, color: MOON, alpha: 0.5, cap: 'round' });
+    }
+  }
   if (route.length < 2) return;
   const alpha = props.run.phase === 'build' ? 0.32 : 0.16;
   g.moveTo((route[0].x + 0.5) * c, (route[0].y + 0.5) * c);
@@ -183,7 +213,8 @@ function redrawReach(c: number): void {
 }
 
 function frame(dt: number): void {
-  if (!app || !pestLayer || !shotLayer || !fxLayer) return;
+  if (!app || !pestLayer || !shotLayer || !skyLayer || !fxLayer) return;
+  clock += dt;
   const run = props.run;
   const c = app.screen.width / run.grid.width;
   redrawTrail(c);
@@ -201,7 +232,7 @@ function frame(dt: number): void {
       drawPest(g, p.kind, c);
       const hp = new Graphics();
       root.addChild(g, hp);
-      pestLayer.addChild(root);
+      (p.flying ? skyLayer : pestLayer).addChild(root);
       b = { root, g, hp, rx: p.px, ry: p.py, lastHp: -1 };
       bodies.set(p.id, b);
     }
@@ -210,6 +241,7 @@ function frame(dt: number): void {
     b.rx += dx * k;
     b.ry += dy * k;
     if (Math.abs(dx) + Math.abs(dy) > 0.002) b.g.rotation = Math.atan2(dy, dx);
+    if (p.flying) b.g.scale.y = 0.45 + 0.55 * Math.abs(Math.sin(clock * 14 + p.id));
     b.root.x = b.rx * c;
     b.root.y = b.ry * c;
     if (b.lastHp !== p.hp) {
@@ -234,6 +266,22 @@ function frame(dt: number): void {
       if (s.splash > 0) {
         g.circle(0, 0, c * 0.09).fill(0xc8312a);
         g.circle(c * 0.03, -c * 0.02, c * 0.025).fill(0x191510);
+      } else if (s.form === 'hawk') {
+        // A pipistrelle, wings swept back.
+        g.poly([
+          c * 0.1,
+          0,
+          -c * 0.02,
+          -c * 0.16,
+          -c * 0.06,
+          -c * 0.05,
+          -c * 0.1,
+          0,
+          -c * 0.06,
+          c * 0.05,
+          -c * 0.02,
+          c * 0.16,
+        ]).fill(MOON);
       } else {
         g.poly([c * 0.12, 0, -c * 0.08, -c * 0.04, -c * 0.08, c * 0.04]).fill(0x8a6a45);
       }
@@ -244,7 +292,10 @@ function frame(dt: number): void {
     e.shot = s;
     e.g.x = s.px * c;
     e.g.y = s.py * c;
-    if (s.splash === 0) e.g.rotation = Math.atan2(s.ay - s.py, s.ax - s.px);
+    if (s.splash === 0) {
+      const target = s.targetId === null ? null : run.pests.find((u) => u.id === s.targetId);
+      e.g.rotation = Math.atan2((target?.py ?? s.ay) - s.py, (target?.px ?? s.ax) - s.px);
+    }
   }
   for (const [id, e] of shots) {
     if (flying.has(id)) continue;
@@ -288,8 +339,9 @@ onMounted(async () => {
   reachG = new Graphics();
   pestLayer = new Container();
   shotLayer = new Container();
+  skyLayer = new Container();
   fxLayer = new Container();
-  app.stage.addChild(trailG, reachG, fxLayer, pestLayer, shotLayer);
+  app.stage.addChild(trailG, reachG, fxLayer, pestLayer, shotLayer, skyLayer);
   app.ticker.add((tk) => frame(tk.deltaMS / 1000));
 });
 
@@ -300,7 +352,7 @@ onBeforeUnmount(() => {
   app?.destroy(true, { children: true });
   app = null;
   trailG = reachG = null;
-  pestLayer = shotLayer = fxLayer = null;
+  pestLayer = shotLayer = skyLayer = fxLayer = null;
 });
 </script>
 

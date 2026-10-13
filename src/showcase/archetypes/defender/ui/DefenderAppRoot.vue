@@ -58,9 +58,10 @@ const showDevPanel = ref(false);
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
               Every evening the pests come through the gap in the wall and make for the seedbed.
-              Plant hedges to send them the long way round, and birds, traps and ladybirds along the
-              path, then watch the night play out. Whatever a plot teaches you goes into the
-              almanac, and stays.
+              Plant hedges to send them the long way round, and along the path whatever answers the
+              night ahead: thrushes for slugs and beetles, bats for the moths that fly over it all,
+              ladybirds for greenfly. Then watch the night play out. Whatever a plot teaches you
+              goes into the almanac, and stays.
             </p>
           </template>
         </SystemHeader>

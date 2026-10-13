@@ -9,27 +9,36 @@
  * - `V/Vref`: compost committed over the spine's `committedValue`, which
  *   counts what calling it a day pays;
  * - `share`: the hunting plants' share of compost on the board;
- * - `dwell`: seconds a slug-speed pest spends in a hunting plant's reach,
- *   weighted by its damage: the leak estimate's τ;
- * - `C/Cref`: the board's stream capacity, Σ dps·(n·gap + τ) over hunting
- *   plants, over the spine's reference capacity;
+ * - `kind`: the kind of pest the night sends;
+ * - `dwell`: seconds a slug-speed pest spends in the reach of a plant that can
+ *   hurt it, weighted by damage: the leak estimate's τ. A moth's is measured
+ *   along its flight line, every other kind's along the route;
+ * - `C/Cref`: the board's stream capacity against tonight's kind,
+ *   Σ dps·armour·(n·gap + τ) over the plants that can hurt it, over the
+ *   spine's reference capacity times its answer share;
  * - `land`: damage the wave took over that capacity, the firing efficiency.
  *   Below 1 is overkill, idle reach and pests dying before they cross it;
  * - `HP/C`: the wave's pool over the board's capacity, the pressure it met;
  * - `tail`: seconds from the wave's last arrival to its end, the part of a
  *   wave's length the schedule reads from `PLOT_TAIL`.
  *
- * Each plot ends with its means of `dwell` and `tail`, the values
- * `PLOT_DWELL` and `PLOT_TAIL` in `data/spine.ts` are set from.
+ * Each plot ends with its means of ground `dwell` and `tail`, the values
+ * `PLOT_DWELL` and `PLOT_TAIL` in `data/spine.ts` are set from, and the mean
+ * moth-night dwell. The last line is the mean over every moth night of the
+ * arc: `FLIGHT_DWELL`.
  */
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
+  ARMOUR,
+  FORM_VS_ARMOUR,
   PLOTS,
+  answerShare,
   committedValue,
   composeWave,
   lastArrival,
+  nightKind,
   plantSpecs,
   referenceCapacity,
 } from '../data';
@@ -63,6 +72,7 @@ const num = (v: unknown) => new Decimal(v as never).toNumber();
 const f = (x: number, d = 2) => (Number.isFinite(x) ? x.toFixed(d) : '—');
 
 interface Launch {
+  kind: string;
   value: number;
   share: number;
   dwell: number;
@@ -73,7 +83,9 @@ interface Launch {
 function measureLaunch(run: PlotRun): Launch {
   const a = garden.anchors.value;
   const specs = plantSpecs(a);
-  const route = run.route();
+  const kind = nightKind(a, run.plotIndex, run.wave);
+  const armour = ARMOUR[kind];
+  const line = armour === 'wing' ? run.flightLine() : run.route();
   const n = composeWave(a, run.plotIndex, run.wave).length;
   let value = num(plot.compost.value);
   let hunting = 0;
@@ -83,19 +95,22 @@ function measureLaunch(run: PlotRun): Launch {
   for (const p of run.plants.values()) {
     value += p.spent;
     const spec = specs[p.def];
-    if (spec.damage === 0) continue;
+    if (spec.form === null) continue;
     hunting += p.spent;
+    const hurts = FORM_VS_ARMOUR[spec.form][armour];
+    if (hurts === 0) continue;
     const reach = run.plantRange(p);
-    const cells = route.filter((c) => Math.hypot(c.x - p.x, c.y - p.y) <= reach).length;
+    const cells = line.filter((c) => Math.hypot(c.x - p.x, c.y - p.y) <= reach).length;
     const dwell = cells / a.pestSpeed;
     // A splash release is priced to catch two pests; count it at that.
-    const dps = (run.plantDamage(p) / spec.cooldown) * (spec.splash > 0 ? 2 : 1);
+    const dps = (run.plantDamage(p) / spec.cooldown) * (spec.splash > 0 ? 2 : 1) * hurts;
     dpsSum += dps;
     dwellSum += dps * dwell;
     capacity += dps * (n * a.spawnGap + dwell);
   }
   const board = value - num(plot.compost.value);
   return {
+    kind,
     value,
     share: board > 0 ? hunting / board : 0,
     dwell: dpsSum > 0 ? dwellSum / dpsSum : 0,
@@ -104,7 +119,10 @@ function measureLaunch(run: PlotRun): Launch {
 }
 
 console.log('Walled Garden capacity probe — reference gardener, early calls on, tickDelta 0.05\n');
-console.log('plot         wave   n   V/Vref  share  dwell  C/Cref   land   HP/C  leaks   tail');
+console.log(
+  'plot         wave kind     n   V/Vref  share  dwell  C/Cref   land   HP/C  leaks   tail',
+);
+const flight: number[] = [];
 for (const [pi, def] of PLOTS.entries()) {
   if (!garden.plots.isUnlocked(def.id)) break;
   spendNotes(garden);
@@ -123,19 +141,23 @@ for (const [pi, def] of PLOTS.entries()) {
     tickDelta: 0.05,
   });
   const a = garden.anchors.value;
-  let dwellSum = 0;
+  const ground: number[] = [];
+  const moths: number[] = [];
   let tailSum = 0;
   run.waveLogs.forEach((l, i) => {
     const s = starts[i];
     const vref = committedValue(a, l.wave, lv('bins'), lv('early-riser'));
-    const cref = referenceCapacity(a, pi, l.wave, lv('well-fed'), lv('bins'), lv('early-riser'));
+    const cref =
+      referenceCapacity(a, pi, l.wave, lv('well-fed'), lv('bins'), lv('early-riser')) *
+      answerShare(a, pi, nightKind(a, pi, l.wave));
     const tail = l.duration - lastArrival(a, pi, l.wave);
-    dwellSum += s.dwell;
+    (s.kind === 'moth' ? moths : ground).push(s.dwell);
     tailSum += tail;
     console.log(
       [
         def.id.padEnd(12),
         String(l.wave).padStart(4),
+        s.kind.padEnd(7),
         String(l.pests).padStart(3),
         f(s.value / vref).padStart(8),
         f(s.share).padStart(6),
@@ -148,11 +170,16 @@ for (const [pi, def] of PLOTS.entries()) {
       ].join(' '),
     );
   });
-  const n = run.waveLogs.length;
+  const mean = (xs: number[]) => xs.reduce((t, x) => t + x, 0) / xs.length;
+  flight.push(...moths);
   console.log(
     `  ${def.displayName}: ${run.phase === 'won' ? 'held' : 'LOST'}; ` +
-      `mean dwell ${f(dwellSum / n, 1)}s, mean tail ${f(tailSum / n, 1)}s`,
+      `mean dwell ${f(mean(ground), 1)}s, mean tail ${f(tailSum / run.waveLogs.length, 1)}s` +
+      (moths.length ? `, moth-night dwell ${f(mean(moths), 1)}s` : ''),
   );
   plot.leavePlot();
 }
+console.log(
+  `mean moth-night dwell over the arc: ${f(flight.reduce((t, x) => t + x, 0) / flight.length, 1)}s`,
+);
 engine.dispose();

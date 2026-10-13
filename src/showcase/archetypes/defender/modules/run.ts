@@ -11,17 +11,23 @@ import {
   type SpatialGrid,
 } from '@open-loop/engine';
 import {
+  ARMOUR,
+  FORM_VS_ARMOUR,
   MAX_LEVEL,
   REFUND_RATE,
   SPEED_MULT,
   composeWave,
+  nightKind,
   levelMultiplier,
   upgradeCost,
   victoryScore,
   waveIncome,
   waveScore,
   wavesIn,
+  type Armour,
+  type Form,
   type PestKind,
+  type PestSpec,
   type PlantId,
   type PlantSpec,
   type PlotDef,
@@ -69,6 +75,9 @@ export interface Pest {
   ty: number;
   hp: number;
   maxHp: number;
+  armour: Armour;
+  /** A flyer crosses the beds in a straight line, over hedges and stone. */
+  flying: boolean;
   /**
    * Damage already in flight toward this pest. A plant's gather skips a pest
    * whose marks cover its HP, so two thrushes do not both spend a shot on one
@@ -91,7 +100,9 @@ export interface Shot {
   /** Fixed aim point for a release. */
   ax: number;
   ay: number;
+  /** Damage before the target's armour. */
   damage: number;
+  form: Form;
   speed: number;
   splash: number;
   /** Whether this shot minted a reservation mark that its landing must release. */
@@ -99,6 +110,13 @@ export interface Shot {
 }
 
 export type RunPhase = 'build' | 'wave' | 'won' | 'lost';
+
+/** One night ahead: the kind it sends and the pests it is composed of. */
+export interface Night {
+  wave: number;
+  kind: PestKind;
+  pests: PestSpec[];
+}
 
 export type RunEvent =
   | { type: 'build'; wave: number }
@@ -240,6 +258,10 @@ export interface PlotRun {
   plantRange(t: Plant): number;
   /** Cells of the current route from the gap to the seedbed. */
   route(): { x: number; y: number }[];
+  /** Points a cell apart on a flyer's straight line from the gap to the seedbed. */
+  flightLine(): { x: number; y: number }[];
+  /** The next `nights` nights from the one in flight or next, as far as the plot's last. */
+  preview(nights: number): Night[];
   boardValue(): number;
   on(fn: (e: RunEvent) => void): void;
 }
@@ -409,6 +431,27 @@ export function createPlotRun(
       return cells;
     },
 
+    flightLine() {
+      const dx = seedbed.x - gap.x;
+      const dy = seedbed.y - gap.y;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy));
+      const out: { x: number; y: number }[] = [];
+      for (let i = 0; i <= steps; i++)
+        out.push({ x: gap.x + (dx * i) / steps, y: gap.y + (dy * i) / steps });
+      return out;
+    },
+
+    preview(nights) {
+      const out: Night[] = [];
+      for (let w = run.wave; w < run.wave + nights && w <= run.totalWaves; w++)
+        out.push({
+          wave: w,
+          kind: nightKind(a, plotIndex, w),
+          pests: composeWave(a, plotIndex, w),
+        });
+      return out;
+    },
+
     boardValue() {
       let v = 0;
       for (const t of run.plants.values()) v += t.spent;
@@ -445,8 +488,9 @@ export function createPlotRun(
     return best;
   }
 
-  /** Remaining route distance for a pest, used to rank targets nearest the seedbed. */
+  /** Remaining distance to the seedbed for a pest, used to rank targets nearest the seedbed. */
   function remaining(u: Pest): number {
+    if (u.flying) return Math.hypot(seedbed.x + 0.5 - u.px, seedbed.y + 0.5 - u.py);
     const d = run.field[u.ty * grid.width + u.tx];
     return d + Math.hypot(u.tx + 0.5 - u.px, u.ty + 0.5 - u.py);
   }
@@ -512,6 +556,8 @@ export function createPlotRun(
         ty: gap.y,
         hp: s.hp,
         maxHp: s.hp,
+        armour: ARMOUR[s.kind],
+        flying: ARMOUR[s.kind] === 'wing',
         incoming: 0,
         speed: s.speed,
         bounty: s.bounty,
@@ -536,6 +582,21 @@ export function createPlotRun(
     for (const u of run.pests) {
       if (!u.alive) continue;
       let budget = u.speed * (1 - slowAt(u.px, u.py)) * dt;
+      if (u.flying) {
+        const cx = seedbed.x + 0.5;
+        const cy = seedbed.y + 0.5;
+        const d = Math.hypot(cx - u.px, cy - u.py);
+        if (d > budget) {
+          u.px += ((cx - u.px) / d) * budget;
+          u.py += ((cy - u.py) / d) * budget;
+        } else {
+          u.px = cx;
+          u.py = cy;
+          leak(u);
+        }
+        if (run.phase === 'lost') return;
+        continue;
+      }
       while (budget > 0) {
         const cx = u.tx + 0.5;
         const cy = u.ty + 0.5;
@@ -574,14 +635,25 @@ export function createPlotRun(
     }
   }
 
+  /** How hard a plant of `form` hits a pest; 0 when it cannot reach it. */
+  function against(form: Form, u: Pest): number {
+    return FORM_VS_ARMOUR[form][u.armour];
+  }
+
   /** Instrument for the probe's spine diff: how much of the wave each hunting plant had a target. */
   function measure(dt: number) {
     for (const t of run.plants.values()) {
-      if (params.specs[t.def].damage === 0) continue;
+      const form = params.specs[t.def].form;
+      if (form === null) continue;
       const range = run.plantRange(t);
       meter.plantTime += dt;
       if (
-        run.pests.some((u) => u.alive && Math.hypot(u.px - t.x - 0.5, u.py - t.y - 0.5) <= range)
+        run.pests.some(
+          (u) =>
+            u.alive &&
+            against(form, u) > 0 &&
+            Math.hypot(u.px - t.x - 0.5, u.py - t.y - 0.5) <= range,
+        )
       ) {
         meter.busyTime += dt;
       }
@@ -612,7 +684,8 @@ export function createPlotRun(
   function fire(dt: number) {
     for (const t of run.plants.values()) {
       const spec = params.specs[t.def];
-      if (spec.damage === 0) continue;
+      const form = spec.form;
+      if (form === null) continue;
       t.cooldown -= dt;
       if (t.cooldown > 0) continue;
       const range = run.plantRange(t);
@@ -623,7 +696,8 @@ export function createPlotRun(
       let bestRemaining = Infinity;
       let anyInRange = false;
       for (const u of run.pests) {
-        if (!u.alive || Math.hypot(u.px - ox, u.py - oy) > range) continue;
+        if (!u.alive || against(form, u) === 0 || Math.hypot(u.px - ox, u.py - oy) > range)
+          continue;
         anyInRange = true;
         if (!ignoresMarks && u.incoming >= u.hp) continue;
         const r = remaining(u);
@@ -638,7 +712,7 @@ export function createPlotRun(
         continue;
       }
       const damage = run.plantDamage(t);
-      if (!ignoresMarks) target.incoming += damage;
+      if (!ignoresMarks) target.incoming += damage * against(form, target);
       run.shots.push({
         id: nextId++,
         plantId: t.id,
@@ -648,6 +722,7 @@ export function createPlotRun(
         ax: target.px,
         ay: target.py,
         damage,
+        form,
         speed: spec.shotSpeed,
         splash: spec.splash,
         marked: !ignoresMarks,
@@ -672,11 +747,13 @@ export function createPlotRun(
         continue;
       }
       if (target) {
-        target.incoming = Math.max(0, target.incoming - s.damage);
-        hit(target, s.damage);
+        const dealt = s.damage * against(s.form, target);
+        target.incoming = Math.max(0, target.incoming - dealt);
+        hit(target, dealt);
       } else {
         for (const u of run.pests) {
-          if (u.alive && Math.hypot(u.px - ax, u.py - ay) <= s.splash) hit(u, s.damage);
+          const m = u.alive ? against(s.form, u) : 0;
+          if (m > 0 && Math.hypot(u.px - ax, u.py - ay) <= s.splash) hit(u, s.damage * m);
         }
       }
     }

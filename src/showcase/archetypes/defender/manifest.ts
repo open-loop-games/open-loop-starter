@@ -22,9 +22,9 @@ export const manifest: ArchetypeManifest = {
     { name: 'createTuningRegistry', sourceLayer: 'core', path: API },
   ],
   beats: [
-    { n: 1, label: 'The Herb Border held', recordedFireTimeRange: [108, 108] },
-    { n: 2, label: 'The Bean Rows held', recordedFireTimeRange: [385, 385] },
-    { n: 3, label: 'The Old Orchard held', recordedFireTimeRange: [572, 572] },
+    { n: 1, label: 'The Herb Border held', recordedFireTimeRange: [100, 100] },
+    { n: 2, label: 'The Bean Rows held', recordedFireTimeRange: [326, 326] },
+    { n: 3, label: 'The Old Orchard held', recordedFireTimeRange: [507, 507] },
   ],
   shell: 'SingleColumnShell',
   formFactor: 'desktop',
