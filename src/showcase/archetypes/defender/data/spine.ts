@@ -7,18 +7,18 @@
 //
 // The model, stated so it can be wrong:
 //
-//   value(w)   = startCompost · G^(w−1)                compost the gardener has committed by wave w
-//   income(w)  = value(w) · (G − 1)                     bounty a fully-cleared wave w pays
-//   window(w)  = count(w) · spawnGap + exposure         seconds the wave spends crossing the kill zone
-//   killRate   = (thrushDps / thrushCost) · utilization damage per compost per second of window
-//   W(p, w)    = pressure(p) · killRate · window(w) · value(w) · damageShare
+//   income(w)  = S₀ · G^(w−1) · (G − 1)                   bounty a fully-cleared wave w pays
+//   V(w)       = S + Σ income + what calling it a day paid  compost the reference gardener has committed
+//   C(p, w)    = (V(w) · share / thrushCost) · thrushDps · (n·gap + dwell(p))
+//   W(p, w)    = pressure(p) · land · C(p, w)
 //
-// W is the wave's effective HP pool. A garden planted to the spine (value(w),
-// damageShare of it in thrushes, hedges folding the path by `mazeFold`) deals
-// W / pressure(p) over the window, so `pressure < 1` is slack and `1 / pressure`
-// is the damage margin the plot leaves the gardener. Everything above the
-// reference planting — traps, marigolds, a better maze, almanac lessons, an
-// early end to the day — is the gardener buying margin the spine does not count.
+// C is the reference board's stream capacity, the leak estimate's form: every
+// hunting plant fires from the wave's first arrival to its last departure, one
+// pest at a time. `land` is the share of that capacity a board actually lands
+// before a pest gets through, so at `pressure = 1` the reference gardener is at
+// the leak threshold, and `1 / pressure` is the margin a plot leaves. What the
+// almanac adds, and whatever the gardener plants better than the reference, is
+// margin bought.
 
 export interface SpineAnchors {
   /** Price of the reference plant; every other price is a ratio of it. */
@@ -31,15 +31,13 @@ export interface SpineAnchors {
   pestSpeed: number;
   /** Seconds between consecutive arrivals inside one wave. */
   spawnGap: number;
-  /** How many times a reference maze lengthens a pest's path through one range circle. */
-  mazeFold: number;
-  /** Fraction of the window a reference plant has a pest in range. */
-  utilization: number;
   /** Compost at the start of every plot, before the almanac. */
   startCompost: number;
-  /** Share of committed value that deals damage; the rest is hedge. */
+  /** Share of the board's compost in hunting plants; the rest is hedge. */
   damageShare: number;
-  /** Per-wave growth of committed value. ln2 / ln G ≈ waves per doubling. */
+  /** Share of the stream capacity a board lands at the leak threshold. */
+  land: number;
+  /** Per-wave growth of the bounty curve. ln2 / ln G ≈ waves per doubling. */
   waveGrowth: number;
   /** Pressure of the first plot. */
   basePressure: number;
@@ -64,19 +62,18 @@ export const ANCHORS: SpineAnchors = {
   thrushRange: 2.5,
   pestSpeed: 1.5,
   spawnGap: 0.8,
-  // Chosen by feel. `balance/arc-probe.ts` measures route exposure per plant at ~2–7 s
-  // against the 5.3 s this assumes.
-  mazeFold: 1.6,
-  // Chosen by feel. The probe measures 0.1–0.9.
-  utilization: 0.5,
   startCompost: 200,
-  damageShare: 0.75,
+  // Measured: the reference gardener's board is 0.81–1.00 hunting plants (`capacity-probe.ts`).
+  damageShare: 0.95,
+  // Measured: the reference gardener loses a plot at 0.36 / 0.59 / 0.36 of capacity
+  // (`threshold-probe.ts`, no almanac); the binding plots set it.
+  land: 0.36,
   // ln2 / ln1.22 ≈ 3.5 waves per doubling: a purchase every wave, a visible jump every ~3.
   waveGrowth: 1.22,
   basePressure: 0.55,
-  // 0.55 → 0.88 → 1.41: the third plot is meant to be unwinnable at the reference planting,
-  // with the almanac carrying the gardener there (effectivePressure ≈ 0.90 at the level-8 loadout).
-  pressureStep: 1.6,
+  // 0.55 → 0.83 → 1.24: the third plot is past the reference gardener, and the level-8
+  // almanac a flawless pass through the other two earns brings it to ≈0.9.
+  pressureStep: 1.5,
   baseWaves: 10,
   wavesStep: 4,
   earlyCallShare: 0.3,
@@ -86,6 +83,21 @@ export const ANCHORS: SpineAnchors = {
   // Long enough to plant three or four things by hand; calling it a day is what shortens it.
   buildSeconds: 25,
 };
+
+/**
+ * Seconds a slug-speed pest spends in one hunting plant's reach on the
+ * reference gardener's board, per plot: the leak estimate's dwell. A property
+ * of each map's stone, so not a tunable. Measured, damage-weighted plot means
+ * (`capacity-probe.ts`).
+ */
+export const PLOT_DWELL = [2.5, 6.6, 6.9];
+
+/**
+ * Seconds from a wave's last arrival to its end on the reference gardener's
+ * board, per plot: how far the last pest walks before it is seen off. Like
+ * `PLOT_DWELL`, a property of the map. Measured plot means (`capacity-probe.ts`).
+ */
+export const PLOT_TAIL = [5.2, 15.0, 3.5];
 
 /** Maximum plant level. Structural: four rungs fit the board's ~135 cells against the third plot's value. */
 export const MAX_LEVEL = 4;
@@ -109,39 +121,69 @@ export function baseCount(w: number): number {
   return 6 + Math.floor((w - 1) / 2);
 }
 
-/** Seconds a pest spends inside one reference range circle on a reference maze. */
-export function exposure(a: SpineAnchors): number {
-  return ((2 * a.thrushRange) / a.pestSpeed) * a.mazeFold;
+/** Seconds the wave streams past one hunting plant: arrivals, then one dwell. */
+export function waveWindow(a: SpineAnchors, p: number, w: number): number {
+  return baseCount(w) * a.spawnGap + PLOT_DWELL[p];
 }
 
-/** Seconds the wave spends crossing the kill zone. */
-export function waveWindow(a: SpineAnchors, w: number): number {
-  return baseCount(w) * a.spawnGap + exposure(a);
-}
-
-/** Compost the spine expects the gardener to have committed when wave `w` launches. */
-export function committedValue(a: SpineAnchors, w: number): number {
-  return a.startCompost * a.waveGrowth ** (w - 1);
-}
-
-/** Bounty a fully-cleared wave `w` pays in total. */
+/** Bounty a fully-cleared wave `w` pays in total: the bounty curve. */
 export function waveIncome(a: SpineAnchors, w: number): number {
-  return committedValue(a, w) * (a.waveGrowth - 1);
+  return a.startCompost * a.waveGrowth ** (w - 1) * (a.waveGrowth - 1);
 }
 
-/** Effective HP pool of wave `w` in plot `p`, in baseline-speed HP. */
+/**
+ * Compost the reference gardener has committed when wave `w` launches: the
+ * plot's start, every bounty before `w`, and what calling it a day at once paid
+ * for waves 2..w. The first wave waits, so it pays nothing early.
+ *
+ *   V(w) = S + S₀·(G^(w−1) − 1) + e·m·S₀·(G^w − G)
+ */
+export function committedValue(a: SpineAnchors, w: number, bins = 0, earlyRiser = 0): number {
+  const s = a.startCompost * (1 + LESSON_STEP.bins * bins);
+  const m = 1 + LESSON_STEP['early-riser'] * earlyRiser;
+  const g = a.waveGrowth;
+  return (
+    s + a.startCompost * (g ** (w - 1) - 1) + a.earlyCallShare * m * a.startCompost * (g ** w - g)
+  );
+}
+
+/**
+ * Damage the reference board in plot `p` can deal to wave `w`: each hunting
+ * plant fires from the first arrival to the last departure, `n·gap + dwell`
+ * seconds, one pest at a time. The damage share of committed compost buys
+ * thrush-equivalents, whose damage per compost is level-flat.
+ */
+export function referenceCapacity(
+  a: SpineAnchors,
+  p: number,
+  w: number,
+  wellFed = 0,
+  bins = 0,
+  earlyRiser = 0,
+): number {
+  const thrushes = (committedValue(a, w, bins, earlyRiser) * a.damageShare) / a.thrushCost;
+  const dps = a.thrushDps * (1 + LESSON_STEP['well-fed'] * wellFed);
+  return thrushes * dps * waveWindow(a, p, w);
+}
+
+/** Effective HP pool of wave `w` in plot `p`, in slug-speed HP. */
 export function waveHp(a: SpineAnchors, p: number, w: number): number {
-  const killRate = (a.thrushDps / a.thrushCost) * a.utilization;
-  return pressure(a, p) * killRate * waveWindow(a, w) * committedValue(a, w) * a.damageShare;
+  return pressure(a, p) * a.land * referenceCapacity(a, p, w);
+}
+
+/** Seconds after launch at which wave `w`'s last pest arrives. */
+export function lastArrival(a: SpineAnchors, p: number, w: number): number {
+  return Math.max(...composeWave(a, p, w).map((s) => s.at));
 }
 
 /**
  * Seconds plot `p` takes under a gardener who calls every wave the moment the
- * build is spent: build time is zero, so the plot is its waves' windows.
+ * build is spent: build time is zero, so the plot is its waves' arrivals and,
+ * after each wave's last arrival, the map's tail.
  */
 export function plotSeconds(a: SpineAnchors, p: number): number {
   let s = 0;
-  for (let w = 1; w <= wavesIn(a, p); w++) s += waveWindow(a, w);
+  for (let w = 1; w <= wavesIn(a, p); w++) s += lastArrival(a, p, w) + PLOT_TAIL[p];
   return s;
 }
 
@@ -377,14 +419,20 @@ export type LessonId = keyof typeof LESSON_STEP;
 export const LESSON_MAX = 4;
 
 /**
- * Pressure the gardener actually faces in plot `p` given the almanac: damage
- * and starting compost both scale the planting the spine counts.
+ * Pressure the gardener actually faces on plot `p`'s last wave, given the
+ * almanac: damage, starting compost and early-call pay all scale the board the
+ * spine counts. Perches and cloches are margin it does not.
  */
 export function effectivePressure(
   a: SpineAnchors,
   p: number,
   wellFed: number,
   bins: number,
+  earlyRiser = 0,
 ): number {
-  return pressure(a, p) / ((1 + LESSON_STEP['well-fed'] * wellFed) * (1 + LESSON_STEP.bins * bins));
+  const w = wavesIn(a, p);
+  const board =
+    (1 + LESSON_STEP['well-fed'] * wellFed) *
+    (committedValue(a, w, bins, earlyRiser) / committedValue(a, w));
+  return pressure(a, p) / board;
 }

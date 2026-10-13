@@ -13,11 +13,12 @@ import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
+  PLOT_DWELL,
   PLOTS,
   committedValue,
   effectivePressure,
-  exposure,
   pressure,
+  referenceCapacity,
   waveHp,
   waveWindow,
   type PlantId,
@@ -87,7 +88,8 @@ for (const [pi, def] of PLOTS.entries()) {
     const a = garden.anchors.value;
     beat(
       `enter ${def.displayName} (attempt ${attempt}) — almanac ${LESSON_ORDER.map(lv).join('/')}, ` +
-        `pressure ${pressure(a, pi).toFixed(2)} → effective ${effectivePressure(a, pi, lv('well-fed'), lv('bins')).toFixed(2)}`,
+        `pressure ${pressure(a, pi).toFixed(2)} → effective ` +
+        `${effectivePressure(a, pi, lv('well-fed'), lv('bins'), lv('early-riser')).toFixed(2)}`,
     );
     let waveStart = 0;
     run.on((e) => {
@@ -120,8 +122,10 @@ for (const [pi, def] of PLOTS.entries()) {
     if (res.terminated !== 'predicate')
       beat(`!! ${def.displayName} STALLED in phase ${run.phase} at wave ${run.wave}`);
 
+    const lessons = [lv('well-fed'), lv('bins'), lv('early-riser')] as const;
     for (const l of run.waveLogs) {
-      const predicted = committedValue(a, l.wave);
+      const predicted = committedValue(a, l.wave, lessons[1], lessons[2]);
+      const capacity = referenceCapacity(a, pi, l.wave, ...lessons);
       const measured = l.boardValue + l.heldCompost;
       diffs.push(
         [
@@ -134,15 +138,13 @@ for (const [pi, def] of PLOTS.entries()) {
           waveHp(a, pi, l.wave).toFixed(0).padStart(7),
           l.hpPool.toFixed(0).padStart(7),
           l.killDepth.toFixed(2).padStart(6),
-          (l.dps / (committedValue(a, l.wave) * a.damageShare * (a.thrushDps / a.thrushCost)))
-            .toFixed(2)
-            .padStart(6),
+          (l.dps / (capacity / waveWindow(a, pi, l.wave))).toFixed(2).padStart(6),
           l.utilization.toFixed(2).padStart(5),
           l.exposure.toFixed(1).padStart(5),
           `${l.kills}/${l.pests}`.padStart(6),
           String(l.leaks).padStart(4),
           String(l.pathLength).padStart(5),
-          waveWindow(a, l.wave).toFixed(1).padStart(6),
+          waveWindow(a, pi, l.wave).toFixed(1).padStart(6),
           l.duration.toFixed(1).padStart(6),
           String(l.reservedSkips).padStart(6),
         ].join(' '),
@@ -179,8 +181,8 @@ console.log(
   '\nSPINE DIFF  (value = compost committed at launch; depth = mean route fraction walked at death; window = predicted, dur = measured seconds)',
 );
 console.log(
-  `  spine anchors: exposure ${exposure(a).toFixed(2)}s per range circle, utilization ${a.utilization}; ` +
-    `D/Dref = launch DPS over the spine's reference thrushes`,
+  `  spine anchors: dwell ${PLOT_DWELL.join(' / ')}s by plot, land ${a.land}; ` +
+    `D/Dref = launch DPS over the spine's reference board`,
 );
 console.log(
   '  plot        # wave  V pred  V meas  ratio  W pred  W real  depth  D/Dref  util  expo  kills leak path window    dur  rsvSk',

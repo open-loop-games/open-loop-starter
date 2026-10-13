@@ -36,35 +36,42 @@ watch.
 
 ## Rate-function spine
 
-**Bucket: exponential family, a geometric committed value**
-(`incremental-math/…/rate-functions/exponential.mdx`). The gardener's committed compost
-grows by `waveGrowth` each wave, `value(w) = startCompost · G^(w−1)`. Income is what a
-full clear pays back, `value(w) · (G − 1)`. Each wave's HP pool is sized off the
-planting that value buys, `W(p, w) = pressure(p) · killRate · window(w) · value(w) ·
-damageShare`, so `1 / pressure(p)` is the margin a plot leaves. Pests' HP is divided by
-their speed ratio, because damage taken scales with exposure.
+**Bucket: exponential family, a geometric bounty curve**
+(`incremental-math/…/rate-functions/exponential.mdx`). Wave `w` pays
+`S₀ · G^(w−1) · (G − 1)` when every pest is seen off. What the gardener has committed by
+then is that curve summed, plus what calling it a day paid, in closed form
+(`committedValue`).
 
-**Where the closed form stops: the board.** What a planting deals depends on where it
-stands: how far the hedges fold the path (`mazeFold`) and how much of the wave each
-plant has in reach (`utilization`). Both anchors are chosen by feel. So is what the
-almanac buys beyond damage and starting compost.
+**Where the closed form stops: the board.** A wave's HP is sized off what the reference
+board can deal to it, in the stream form of a leak estimate (td-arcade
+`combat/leak_proxy.rs`). Each hunting
+plant fires from the wave's first arrival to its last departure, one pest at a time:
+`C = thrushes · dps · (n·gap + dwell)`. Two things about a board are not closed form:
+- how long a pest dwells in a plant's reach, which depends on the map and on the
+  hedges, measured per plot;
+- how much of that capacity a board lands before a pest gets through (`land`), measured
+  as the point where the reference gardener loses a plot.
 
-**What measures the remainder:** `balance/arc-probe.ts` plays the shipping game under
-the reference gardener (`balance/_gardener.ts`). For every wave it prints the measured
-committed value, HP pool, kill depth, damage against the reference planting,
-utilization and route exposure beside the spine's, and whether each plot holds on the
-first try.
+So `W = pressure · land · C`, and pressure 1 is the reference gardener's loss
+threshold.
+
+**What measures the remainder:** three probes over the shipping game under the
+reference gardener (`balance/_gardener.ts`):
+- `capacity-probe.ts` measures dwell, damage share and each wave's tail;
+- `threshold-probe.ts` bisects the loss threshold `land` is set from;
+- `arc-probe.ts` plays every plot and diffs each wave against the spine.
 
 ## The arc
 
 | Beat | Predicted | Recorded |
 |---|---|---|
-| The Herb Border held | 117s | 114s |
-| The Bean Rows held | 293s | 474s |
-| The Old Orchard held | 533s | 649s |
+| The Herb Border held | 110s | 108s |
+| The Bean Rows held | 412s | 385s |
+| The Old Orchard held | 606s | 572s |
 
-The prediction is the sum of each wave's window under a gardener who calls every wave
-at once. `manifest.ts` holds the recorded beats.
+The prediction counts each wave's arrivals, and a measured tail per plot after the last
+one, under a gardener who calls every wave at once. `manifest.ts` holds the recorded
+beats.
 
 ## Growth ports
 

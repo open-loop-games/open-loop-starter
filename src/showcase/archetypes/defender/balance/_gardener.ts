@@ -86,7 +86,7 @@ export function tendPlot(
       const dps = (spec.damage / spec.cooldown) * (id === 'ladybird' ? 2 : 1);
       for (const c of openCells(run)) {
         const cov = coverage(c.x, c.y, spec.range, route);
-        if (cov === 0) continue;
+        if (cov === 0 || !run.canPlant(id, c.x, c.y).ok) continue;
         consider({ score: (cov * dps) / spec.cost, label: id, go: () => run.plant(id, c.x, c.y) });
       }
     }
@@ -104,6 +104,7 @@ export function tendPlot(
     }
     if (garden.isPlantUnlocked('marigold') && specs.marigold.cost <= compost()) {
       for (const c of openCells(run)) {
+        if (!run.canPlant('marigold', c.x, c.y).ok) continue;
         let gain = 0;
         for (const n of run.grid.neighbors(c.x, c.y, DIAGONAL_OFFSETS)) {
           const id = run.grid.at(n.x, n.y).plantId;
