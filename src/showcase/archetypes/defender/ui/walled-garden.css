@@ -1,0 +1,186 @@
+/*
+ * Defender — the Walled Garden costume.
+ *
+ * The design language is here, scoped under `.defender`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in
+ * `src/lib/` or `src/ui/` is edited for it: every hook is a documented costume
+ * class on a shell or a composition (`.olui-system-header`,
+ * `.resource-header-strip__…`, `.producer-list__…`) or a class this story's
+ * own components emit.
+ *
+ * Language: a kitchen garden inside old brick walls, at dusk. Loam and clipped
+ * box, terracotta pots, zinc plant labels on twine, the slug's silver trail
+ * across the beds, a lantern hung on the potting-shed door. The affordance
+ * palette comes first: lantern = you can do this now; zinc = not yet (dimmed,
+ * still readable); seedling = what you are protecting; brick = loss, a pest
+ * got through; trail = where the pests will walk.
+ *
+ * Fonts: Fraunces (soft axis) for names and numbers that matter, Alegreya Sans
+ * for everything read (SIL OFL, `../assets/fonts/OFL.txt`).
+ */
+
+@font-face {
+  font-family: 'Garden Display';
+  src: url('../assets/fonts/Fraunces-Soft-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: 'Garden Text';
+  src: url('../assets/fonts/AlegreyaSans-400.woff2') format('woff2');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Garden Text';
+  src: url('../assets/fonts/AlegreyaSans-400-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Garden Text';
+  src: url('../assets/fonts/AlegreyaSans-500.woff2') format('woff2');
+  font-weight: 500;
+}
+@font-face {
+  font-family: 'Garden Text';
+  src: url('../assets/fonts/AlegreyaSans-700.woff2') format('woff2');
+  font-weight: 700;
+}
+
+.defender {
+  /* ── the ground ── */
+  --wg-loam: #191510;
+  --wg-loam-raised: #221c15;
+  --wg-loam-edge: #352b20;
+  --wg-bed: #2a2118;
+  --wg-bed-furrow: #31271c;
+  --wg-stone: #4a463e;
+  --wg-stone-edge: #5d584d;
+  --wg-brick: #7e3b2a;
+  --wg-brick-mortar: #3a241b;
+
+  /* ── ink ── */
+  --wg-parchment: #e7dcc2;
+  --wg-twine: #b3a483;
+  --wg-twine-faint: #6f6450;
+
+  /* ── affordance ── */
+  --wg-lantern: #e8a94a;
+  --wg-lantern-deep: #c98a2e;
+  --wg-zinc: #8d949a;
+  --wg-zinc-dim: #565c61;
+  --wg-seedling: #9ccc65;
+  --wg-box: #4f7a3a;
+  --wg-box-deep: #34562a;
+  --wg-terracotta: #c4683f;
+  --wg-trail: #c9d6dc;
+  --wg-loss: #d0573f;
+
+  --wg-face-display: 'Garden Display', 'Iowan Old Style', Georgia, serif;
+  --wg-face-text: 'Garden Text', 'Gill Sans', 'Trebuchet MS', sans-serif;
+
+  /* scaffold tokens, re-pointed */
+  --color-bg: var(--wg-loam);
+  --color-surface: var(--wg-loam-raised);
+  --color-surface-hover: var(--wg-loam-edge);
+  --color-border: var(--wg-loam-edge);
+  --color-text: var(--wg-parchment);
+  --color-text-muted: var(--wg-twine);
+  --color-primary: var(--wg-lantern);
+  --color-primary-hover: var(--wg-lantern-deep);
+  --color-danger: var(--wg-loss);
+  --color-success: var(--wg-seedling);
+  --font-sans: var(--wg-face-text);
+  --font-mono: var(--wg-face-text);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(232, 169, 74, 0.07), transparent 55%), var(--wg-loam);
+  color: var(--wg-parchment);
+  font-family: var(--wg-face-text);
+  font-size: 17px;
+}
+
+.defender .olui-system-header {
+  background: var(--wg-loam);
+  border-bottom: 1px solid var(--wg-loam-edge);
+}
+
+/* numbers that tick never move what is around them */
+.defender .wg-num {
+  font-family: var(--wg-face-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-variation-settings: 'SOFT' 100;
+}
+
+.defender .wg-label {
+  font-family: var(--wg-face-text);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wg-twine);
+}
+
+.defender .wg-heading {
+  font-family: var(--wg-face-display);
+  font-weight: 600;
+  font-variation-settings: 'SOFT' 100;
+  color: var(--wg-parchment);
+  margin: 0;
+}
+
+/* a lantern-lit action: the one thing to do now */
+.defender .wg-action {
+  font-family: var(--wg-face-text);
+  font-weight: 700;
+  font-size: 16px;
+  padding: 9px 16px;
+  border: 1px solid var(--wg-lantern-deep);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f0b75c, var(--wg-lantern-deep));
+  color: #2a1a08;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(232, 169, 74, 0.18);
+}
+.defender .wg-action:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.defender .wg-action:disabled {
+  background: var(--wg-loam-raised);
+  border-color: var(--wg-loam-edge);
+  color: var(--wg-zinc-dim);
+  box-shadow: none;
+  cursor: default;
+}
+.defender .wg-quiet {
+  font-family: var(--wg-face-text);
+  font-size: 15px;
+  padding: 7px 12px;
+  border: 1px solid var(--wg-loam-edge);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--wg-twine);
+  cursor: pointer;
+}
+.defender .wg-quiet:hover:not(:disabled) {
+  border-color: var(--wg-twine-faint);
+  color: var(--wg-parchment);
+}
+.defender .wg-quiet:disabled {
+  color: var(--wg-zinc-dim);
+  cursor: default;
+}
+
+/* the reveal: something newly learned or newly open settles in once */
+@keyframes wg-settle {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

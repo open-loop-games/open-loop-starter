@@ -1,6 +1,7 @@
 # Defender
 
-Core · covered. Identity line: the Defender entry in `../_identity.md`. Not built.
+Core · covered. Identity line: the Defender entry in `../_identity.md`. Built:
+`../defender/IDENTITY.md`.
 
 ## Player experience
 
