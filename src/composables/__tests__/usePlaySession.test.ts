@@ -10,21 +10,32 @@ import { usePlaySession, type PlaySession } from '../usePlaySession';
  * engine API `usePlaySession` touches is implemented — the rest of the engine is
  * tested in the engine package; this locks *this layer's* orchestration.
  */
-function recordingEngine(loadResult = { success: true, timestamp: 1000 }) {
+function recordingEngine(
+  loadResult: { success: boolean; timestamp?: number } = { success: true, timestamp: 1000 },
+) {
   const calls: string[] = [];
   const engine = {
     calls,
-    activeModId: 'demo',
+    loadResult,
+    activeModId: undefined as string | undefined,
     mods: [{ id: 'demo', modules: ['m1', 'm2'] }],
     saveManager: {
       selectSlot: (id: number) => calls.push(`selectSlot:${id}`),
       save: () => calls.push('save'),
+      exportSave: () => {
+        calls.push('exportSave');
+        return 'defaults';
+      },
+      importSave: (text: string) => calls.push(`importSave:${text}`),
     },
-    selectMod: (id: string) => calls.push(`selectMod:${id}`),
+    selectMod: (id: string) => {
+      calls.push(`selectMod:${id}`);
+      engine.activeModId = id;
+    },
     start: () => calls.push('start'),
     load: () => {
       calls.push('load');
-      return loadResult;
+      return engine.loadResult;
     },
     stop: () => calls.push('stop'),
   };
@@ -66,14 +77,45 @@ describe('usePlaySession', () => {
 
     session.startGame(2, 'demo');
 
-    expect(engine.calls).toEqual(['selectSlot:2', 'selectMod:demo', 'start', 'load']);
+    expect(engine.calls).toEqual(['selectSlot:2', 'selectMod:demo', 'start', 'exportSave', 'load']);
     expect(session.currentScreen.value).toBe(Screen.Game);
+  });
+
+  it('a later session resumes the selected mod rather than selecting it again', () => {
+    const engine = recordingEngine();
+    const session = withSession(engine);
+    session.startGame(2, 'demo');
+    session.returnToSlots();
+    engine.calls.length = 0;
+
+    session.startGame(2, 'demo');
+
+    expect(engine.calls).toEqual(['selectSlot:2', 'start', 'load']);
+  });
+
+  it('a later slot that loads nothing starts from the defaults, not the last game', () => {
+    const engine = recordingEngine();
+    const session = withSession(engine);
+    session.startGame(0, 'demo');
+    session.returnToSlots();
+    engine.calls.length = 0;
+    engine.loadResult = { success: false };
+
+    session.startGame(1, 'demo');
+
+    expect(engine.calls).toEqual(['selectSlot:1', 'start', 'load', 'importSave:defaults']);
+  });
+
+  it('a first slot that loads nothing is already at the defaults', () => {
+    const engine = recordingEngine({ success: false });
+    withSession(engine).startGame(0, 'demo');
+    expect(engine.calls).not.toContain('importSave:defaults');
   });
 
   it('omits selectMod when no mod id is given', () => {
     const engine = recordingEngine();
     withSession(engine).startGame(0);
-    expect(engine.calls).toEqual(['selectSlot:0', 'start', 'load']);
+    expect(engine.calls).toEqual(['selectSlot:0', 'start', 'exportSave', 'load']);
   });
 
   it('fires onLoaded with the load result, after load and before the screen flip', () => {
@@ -90,7 +132,7 @@ describe('usePlaySession', () => {
     // The seam the archetype tails depend on: onLoaded runs while the screen is
     // still Slots, so a game's catch-up/first-launch work finishes before Game shows.
     expect(seen[0].screen).toBe(Screen.Slots);
-    expect(engine.calls).toEqual(['selectSlot:0', 'start', 'load']);
+    expect(engine.calls).toEqual(['selectSlot:0', 'start', 'exportSave', 'load']);
   });
 
   it('returnToSlots saves, stops, and returns to the picker', () => {
@@ -108,9 +150,10 @@ describe('usePlaySession', () => {
   it('getActiveModules returns the active mod modules, or empty when none is active', () => {
     const engine = recordingEngine();
     const session = withSession(engine);
+    engine.activeModId = 'demo';
     expect(session.getActiveModules()).toEqual(['m1', 'm2']);
 
-    engine.activeModId = null as unknown as string;
+    engine.activeModId = undefined;
     expect(session.getActiveModules()).toEqual([]);
   });
 });

@@ -35,11 +35,21 @@ export function usePlaySession(options: PlaySessionOptions = {}): PlaySession {
   const { engine } = useGame();
   const currentScreen = ref<Screen>(Screen.Slots);
 
+  // An engine installs its modules once, on the first start(), and selects its
+  // mod only before then; a later start() resumes the same modules. So a slot
+  // that loads nothing (a new game, a failed load) would keep the last game's
+  // state. It starts instead from the defaults, saved before the first load.
+  let started = false;
+  let defaults: string | undefined;
+
   function startGame(slotId: number, modId?: string): void {
     engine.saveManager!.selectSlot(slotId);
-    if (modId) engine.selectMod(modId);
+    if (modId && engine.activeModId !== modId) engine.selectMod(modId);
     engine.start();
+    if (!started) defaults = engine.saveManager?.exportSave();
     const result = engine.load();
+    if (started && !result.success && defaults) engine.saveManager!.importSave(defaults);
+    started = true;
     options.onLoaded?.(result);
     currentScreen.value = Screen.Game;
   }
