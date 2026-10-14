@@ -1,0 +1,188 @@
+/*
+ * Cycler — the Skerry Light costume.
+ *
+ * The whole design language is here, scoped under `.skerry`, so the story's identity is one
+ * file a fork can read, replace or delete. Nothing in `src/lib/` or `src/ui/` is edited for
+ * it: every hook is a documented costume class on a shell or composition, or a class this
+ * story's own components emit.
+ *
+ * Language: a lighthouse rock in the North Atlantic, slate and whitewash under an overcast
+ * day that darkens to a storm-blue night. The affordance palette comes first:
+ *   lamp     = you can act or afford
+ *   overcast = you can't yet
+ *   wrack    = a net full and spilling
+ *   kelp     = a winch hauling, a wall that holds
+ *   rust     = tonight's struck side, water through to the tower
+ *   brass    = labels, and what is new
+ * Libre Baskerville for the chart's hand, Alegreya for the log and the numbers.
+ *
+ * Fonts: Libre Baskerville and Alegreya, both SIL OFL (`../assets/fonts/OFL-*.txt`).
+ */
+
+@font-face {
+  font-family: 'Skerry Chart';
+  src: url('../assets/fonts/LibreBaskerville-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Skerry Chart';
+  src: url('../assets/fonts/LibreBaskerville-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Skerry Log';
+  src: url('../assets/fonts/Alegreya-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Skerry Log';
+  src: url('../assets/fonts/Alegreya-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Skerry Log';
+  src: url('../assets/fonts/Alegreya-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+
+.skerry {
+  /* ── the rock ── */
+  --sk-storm-ink: #0b131d; /* the page at night */
+  --sk-overcast-sky: #1c2626; /* the page by day */
+  --sk-slate: #3b4449;
+  --sk-slate-deep: #262d31;
+  --sk-yard: #4b5542; /* lichen on the yard */
+  --sk-shore: #41494c;
+  --sk-foam: #dfe6e2; /* body text, spray */
+  --sk-whitewash: #f1efe6; /* the tower, headline numbers */
+  --sk-rule: rgba(223, 230, 226, 0.14);
+  /* ── the light ── */
+  --sk-lamp: #f3bb4f; /* can act, can afford */
+  --sk-lamp-soft: rgba(243, 187, 79, 0.14);
+  --sk-lamp-glow: rgba(243, 187, 79, 0.28);
+  --sk-brass: #b8955a; /* labels, what is new */
+  /* ── the sea's grammar ── */
+  --sk-overcast: rgba(223, 230, 226, 0.42); /* can't yet */
+  --sk-wrack: #8a6d3b; /* a full net, spilling */
+  --sk-kelp: #5d8a6e; /* a winch hauling; a wall that holds */
+  --sk-rust: #c4573e; /* the struck side; water through */
+  --sk-rust-soft: rgba(196, 87, 62, 0.16);
+
+  --sk-chart: 'Skerry Chart', 'Libre Baskerville', Georgia, serif;
+  --sk-log: 'Skerry Log', 'Alegreya', Georgia, serif;
+
+  /* starter's tokens, in this rock's colours */
+  --color-bg: var(--sk-overcast-sky);
+  --color-surface: var(--sk-slate-deep);
+  --color-border: var(--sk-rule);
+  --color-text: var(--sk-foam);
+  --color-text-muted: var(--sk-overcast);
+  --color-surface-hover: #2e363a;
+  --color-primary: var(--sk-lamp);
+  --color-primary-hover: #f7cd78;
+  --color-danger: var(--sk-rust);
+  --font-sans: var(--sk-log);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, #1c2626 0%, #121a1c 100%);
+  color: var(--sk-foam);
+  font-family: var(--sk-log);
+  font-size: 15px;
+  line-height: 1.4;
+  color-scheme: dark;
+}
+
+/* Night is a layer that fades in, so the change costs one opacity transition. */
+.skerry::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, #0c1622 0%, #070c12 100%);
+  opacity: 0;
+  transition: opacity 2.4s ease;
+  pointer-events: none;
+}
+.skerry:has(.sk-night)::before {
+  opacity: 1;
+}
+
+.skerry .num {
+  font-family: var(--sk-log);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* A section of the ledger: a title in the chart's hand over a rule. */
+.skerry .sk-title {
+  margin: 0 0 8px;
+  font-family: var(--sk-chart);
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--sk-brass);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.skerry .sk-title small {
+  font-family: var(--sk-log);
+  font-size: 12px;
+  color: var(--sk-overcast);
+}
+
+/* A control on the rock: slate, lit by the lamp when it can act. */
+.skerry .sk-control {
+  border: 1px solid var(--sk-rule);
+  border-radius: 4px;
+  background: rgba(38, 45, 49, 0.7);
+  color: var(--sk-foam);
+  font: inherit;
+  cursor: pointer;
+}
+.skerry .sk-control:disabled {
+  color: var(--sk-overcast);
+  cursor: default;
+}
+.skerry .sk-control.afford {
+  border-color: rgba(243, 187, 79, 0.45);
+}
+.skerry .sk-control.on {
+  background: var(--sk-lamp-soft);
+  border-color: var(--sk-lamp);
+  box-shadow: 0 0 0 1px var(--sk-lamp) inset;
+}
+
+/* Starter's frame and shell, on this rock: the frame shows the sky, and the night with it. */
+.skerry .olui-app-frame {
+  background: transparent;
+}
+.skerry .olui-system-header {
+  background: transparent;
+  border-bottom: 1px solid var(--sk-rule);
+  font-family: var(--sk-chart);
+}
+.skerry .olui-sidebar-main__sidebar,
+.skerry .olui-sidebar-main__main {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skerry *,
+  .skerry *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}

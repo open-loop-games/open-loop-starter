@@ -2,11 +2,11 @@ import { type App } from 'vue';
 import { type Engine, type EngineModule } from '@open-loop/engine';
 import { bootApp, bootEngine } from '@/boot';
 import CyclerAppRoot from './ui/CyclerAppRoot.vue';
-import { createCyclerModules, type CyclerModulesOptions } from './modules';
+import { createCyclerModules } from './modules';
 
 const GAME_ID = 'cycler';
 const MOD_ID = 'cycler';
-const MOD_NAME = 'Cycler';
+const MOD_NAME = 'Skerry Light';
 
 export interface CyclerBootResult {
   engine: Engine;
@@ -16,35 +16,26 @@ export interface CyclerBootResult {
 }
 
 export interface CyclerEngineOptions {
-  /** Persistence namespace override. Unique per-engine; used to isolate headless runs. */
+  /** Persistence namespace override. Unique per engine; it isolates headless runs. */
   persistenceNamespace?: string;
   /** Extra modules registered alongside the default cycler modules. */
   extraModules?: EngineModule[];
-  /** Raise the loop's `maxDeltaTime` cap. */
+  /** Raise the game loop's `maxDeltaTime` cap. */
   maxDeltaTime?: number;
-  /** Balance overrides threaded to the module factories (threat, build, prestige, upgrade). */
-  modules?: CyclerModulesOptions;
 }
 
 /**
- * Create an engine instance pre-wired with the Cycler modules (build → burn-tier
- * → cycle → prestige → upgrades; the barrel owns the install order and the peg
- * wiring). Does NOT call `engine.load()` — `CyclerAppRoot.vue` owns the resume
- * sequence via `usePlaySession`.
+ * Create an engine instance pre-wired with the cycler modules.
+ * Does NOT call `engine.load()` — `CyclerAppRoot.vue`'s play-session composable
+ * owns the resume sequence.
  */
 export function createCyclerEngine(options?: CyclerEngineOptions): { engine: Engine } {
-  const modules = [...createCyclerModules(options?.modules), ...(options?.extraModules ?? [])];
+  const modules = [...createCyclerModules(), ...(options?.extraModules ?? [])];
   const engine = bootEngine({
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
     maxDeltaTime: options?.maxDeltaTime,
-    mods: [
-      {
-        id: MOD_ID,
-        displayName: MOD_NAME,
-        modules,
-      },
-    ],
+    mods: [{ id: MOD_ID, displayName: MOD_NAME, modules }],
   });
   return { engine };
 }
@@ -52,7 +43,6 @@ export function createCyclerEngine(options?: CyclerEngineOptions): { engine: Eng
 /**
  * Build a ready-to-mount Vue app via the shared starter boot factory.
  *
- * Usage:
  * ```ts
  * const { mount } = createApp();
  * mount('#app');
@@ -60,9 +50,6 @@ export function createCyclerEngine(options?: CyclerEngineOptions): { engine: Eng
  */
 export function createApp(options?: CyclerEngineOptions): CyclerBootResult {
   const { engine } = createCyclerEngine(options);
-  const { app, mount } = bootApp({
-    root: CyclerAppRoot,
-    engine,
-  });
+  const { app, mount } = bootApp({ root: CyclerAppRoot, engine });
   return { engine, app, mount };
 }

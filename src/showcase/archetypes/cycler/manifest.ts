@@ -1,82 +1,65 @@
 import type { ArchetypeManifest } from '@/types';
 
 /**
- * Cycler — a forward pattern-language composition (Phase-Alternation + Time
- * Systems + Placement-Adjacency + Wave-Escalation over shared state), carried by
- * a pegged-saturation rate-function spine. NOT a subtractive port; see
- * `IDENTITY.md` for the identity line and the load-bearing spine, and the
- * `studio/open-loop-starter#6` umbrella for the growth-port history.
- *
- * `beats` record the intra-run phase windows of the wave-indexed spine (Defense
- * Command): STANDBY↔INBOUND cycling to an OVERRUN breach, authored N*_waves =
- * log_g(H) + Δ_wall ≈ 7 waves at H=16, g=1.6/wave, 2 min/wave (~14 min, measured on
- * the reference forward-line board). The Reach arc across runs has no single-run
- * window — it is a per-Redeploy cadence, not a clock range — so it is listed without
- * `recordedFireTimeRange` (honest, not incomplete).
+ * Beat windows are RECORDED from `balance/watch-probe.ts` (seed 1) and
+ * `balance/career-probe.ts` (seed 2) under the reference keeper, never authored as targets.
+ * One seeded run is the measurement, so most windows are a single time. Re-record them after
+ * any spine change.
  */
 export const manifest: ArchetypeManifest = {
   id: 'cycler',
-  displayName: 'Cycler — Defense Command',
+  displayName: 'Cycler — Skerry Light',
   primitives: [
-    { name: 'persistent', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'createCycle', sourceLayer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'TickDriver', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     { name: 'createResource', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
-    { name: 'integerRoot', sourceLayer: 'primitives', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
       name: 'createPurchasableCategory',
       sourceLayer: 'systems',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
+    { name: 'createInventory', sourceLayer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'createLoadout', sourceLayer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'createSpatialGrid', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
-      name: 'createCostRequirement',
+      name: 'createModifierChain',
       sourceLayer: 'core',
       path: 'open-loop-engine/docs/api/INDEX.md',
     },
-    {
-      name: 'createBooleanRequirement',
-      sourceLayer: 'core',
-      path: 'open-loop-engine/docs/api/INDEX.md',
-    },
+    { name: 'weightedPick', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'integerRoot', sourceLayer: 'primitives', path: 'open-loop-engine/docs/api/INDEX.md' },
   ],
   beats: [
-    {
-      n: 1,
-      label: 'Standby — rebuild the grid in the grace window; the salvo has not bitten',
-      recordedFireTimeRange: [0, 120],
-    },
+    { n: 1, label: 'Night one: the first gale', recordedFireTimeRange: [120, 120] },
     {
       n: 2,
-      label: 'Comfortable — early salvos clear with margin; the Lances outpace the wave',
-      recordedFireTimeRange: [120, 480],
+      label: 'A buttress behind the struck wall',
+      recordedFireTimeRange: [415, 415],
     },
-    {
-      n: 3,
-      label: 'First bite — the salvo nears the clear-rate C; rearrangement starts to matter',
-      recordedFireTimeRange: [480, 720],
-    },
+    { n: 3, label: 'A winch: the nets haul themselves', recordedFireTimeRange: [674, 674] },
     {
       n: 4,
-      label:
-        'Under review — leak-through drains the line buffer (the Δ_wall tail); the tension peak',
-      recordedFireTimeRange: [720, 840],
+      label: 'The crossing: the storm passes the wall and the tower takes water',
+      recordedFireTimeRange: [1128, 1177],
     },
     {
       n: 5,
-      label: 'Overrun — the salvo breaches the line; the run ends and pays out (Redeploy)',
-      recordedFireTimeRange: [840, 840],
+      label: 'The light goes out: the logbook pays',
+      recordedFireTimeRange: [1491, 1491],
     },
     {
       n: 6,
-      label: 'Reach — Redeploy re-pegs W₀=C/H at higher reach; deeper content, same run length',
+      label: 'The Storm almanac: a watch one night longer',
+      recordedFireTimeRange: [4463, 4463],
     },
   ],
-  // Bespoke command-terminal console (not a src/lib/ shell). The build-defend-cycler
-  // sub-genre's weak majority is single-column (subgenre-shell-mapping-2026.md, N=3);
-  // this deviates to a spatial-dashboard console because the core loop is spatial (a
-  // placement grid + a defended line under a descending salvo) — the doc's free-form
-  // rationale for spatial-primary hybrids. Gallery marks it a declared invention.
-  shell: 'DefenseCommandConsole',
+  shell: 'SidebarMainShell',
   formFactor: 'responsive',
   exemplars: [
+    {
+      title: 'Dome Keeper',
+      analysisPath: 'open-loop-research/analyses/complete/dome-keeper-analysis.md',
+    },
     {
       title: 'Thronefall',
       analysisPath: 'open-loop-research/analyses/complete/thronefall-analysis.md',
@@ -84,10 +67,6 @@ export const manifest: ArchetypeManifest = {
     {
       title: 'Kingdom Two Crowns',
       analysisPath: 'open-loop-research/analyses/complete/kingdom-two-crowns-analysis.md',
-    },
-    {
-      title: 'Increlution',
-      analysisPath: 'open-loop-research/analyses/complete/increlution-analysis.md',
     },
   ],
 };

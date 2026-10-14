@@ -41,7 +41,7 @@ describe('eject plan', () => {
 
   it('slims the manifest to identity — falls back to the source manifest', () => {
     const plan = planEject(ROOT, 'cycler');
-    expect(plan.manifest).toEqual({ id: 'cycler', displayName: 'Cycler — Defense Command' });
+    expect(plan.manifest).toEqual({ id: 'cycler', displayName: 'Cycler — Skerry Light' });
   });
 
   it('omits the game name when none is given', () => {

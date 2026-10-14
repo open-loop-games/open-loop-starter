@@ -57,7 +57,7 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 
 | Archetype | Demo | Shell | Engine systems | What it shows |
 |---|---|---|---|---|
-| `cycler` | Defense Command | DefenseCommandConsole | PurchasableCategory, CostRequirement, BooleanRequirement, integerRoot | Phase alternation: build during the calm, survive the salvo, redeploy at higher reach |
+| `cycler` | Skerry Light | SidebarMainShell | Cycle, TickDriver phases, Inventory, SpatialGrid, Loadout, PurchasableCategory | Phase alternation: build by day against the forecast quarter, weather the night, and spend the logbook between watches |
 | `producer` | Probe Swarm | ThreePanelShell | ProducerCategory, AchievementCategory, AutomationTiers, processOfflineTime | The automation ladder: a geometric cost ladder under a compounding modifier stack, with offline catch-up and a return report |
 | `tug` | SciFi Armada | TugFrameLayout | Sequencer, Loop, PurchasableCategory, ChallengeCategory, Reset | Adversarial lane push: auto-send economy versus a live zero-sum opponent |
 | `skirmish` | Skirmish | SingleColumnShell | Sequencer, Loop, AutomationTiers | Adversarial real-time match with automation on both sides |

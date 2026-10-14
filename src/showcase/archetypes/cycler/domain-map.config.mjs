@@ -1,30 +1,50 @@
 /** @type {import('@open-loop/engine/scripts/lib/domain-extract.mjs').DomainMapConfig} */
 export default {
   scope: ['data/*.ts'],
-  defSuffixes: ['Def', 'Balance', 'Tier'],
+  defSuffixes: ['Def'],
   title: 'Cycler — domain language',
   description:
-    'Phase-alternation over shared state: a saturating capacity ceiling D_max races an exogenous, time-scheduled burn W(t). The run ends — and pays out — at the crossing; prestige re-pegs W₀ = D_max/H so run length stays authored while reach climbs.',
+    'Skerry Light: a keeper on a bare rock builds by day against the quarter tonight’s gale is forecast to come from; the storm grows each night until the tower falls, and the logbook buys knowledge that outlasts the watch.',
   curated: [
     {
-      term: 'burn',
-      note: 'The exogenous pressure W(t) = W₀·g^((t−τ_setup)/T_g) — a pure function of run-time, never derived from within-run state. Its crossing of D_max ends the run.',
+      term: 'watch',
+      note: 'One run: from taking a posting to the light going out. The watch module’s whole context resets at its end.',
     },
     {
-      term: 'the peg',
-      note: 'W₀ = D_max / H. Because D_max/W₀ = H always, run length N* = τ_setup + T_g·log_g(H) is directly authored; a power upgrade re-baselines W₀ and adds zero run length (reach, not pacing).',
+      term: 'day',
+      note: 'The calm phase: nets fill, and the keeper hauls, builds, takes pieces up, mends and takes a find.',
     },
     {
-      term: 'headroom',
-      note: 'H = D_max / W₀ — the difficulty constant. Sets run length directly; the peg holds it constant as D_max climbs.',
+      term: 'night',
+      note: 'The pressure phase: the storm’s breakers land on the forecast quarter. Shoring up is the only verb.',
     },
     {
-      term: 'burn tier',
-      note: 'A reach-locked pace preset overriding (g, T_g). Deeper tiers raise g — a steeper escalation, a shorter/sharper run. The g-bender upgrade is the mirror lever that bends g back toward 1.',
+      term: 'quarter',
+      note: 'The side of the rock tonight’s gale comes from: north, east, south or west. Forecast at dawn.',
     },
     {
-      term: 'merge',
-      note: 'The prestige boundary: on the crossing the run auto-banks sublinear Fragments (⌊∛production⌋ + ⌊∛endurance⌋), the player spends between runs, and the merge re-pegs for the next run.',
+      term: 'ward',
+      note: 'Force a side turns aside per night: the sum of its five shore cells’ breakwaters, braced and buttressed.',
+    },
+    {
+      term: 'storm',
+      note: 'Tonight’s total force, W₀·g^(night−1). Pegged at the watch’s start to the saturated ward of permanent power.',
+    },
+    {
+      term: 'tideline',
+      note: 'The nets’ held catch: each net holds its own until hauled, and spills when full.',
+    },
+    {
+      term: 'find',
+      note: 'What the tide leaves at dawn: three are offered, one is taken, the rest wash out at dusk.',
+    },
+    {
+      term: 'posting',
+      note: 'The rock a watch is kept on, chosen between watches: storm growth, wind and wrack.',
+    },
+    {
+      term: 'logbook entry',
+      note: 'The meta currency: a cube root of force weathered plus a cube root of salvage gathered, paid when the light goes out.',
     },
   ],
 };

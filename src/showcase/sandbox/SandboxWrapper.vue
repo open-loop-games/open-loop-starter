@@ -16,7 +16,7 @@
     in-page; without it the second mount throws on persistent-context
     id collisions (engine assumes single-instance-per-lifetime otherwise).
 
-  Save isolation rides on each archetype's unique `gameId` (cycler-pilot,
+  Save isolation rides on each archetype's unique `gameId` (cycler,
   tug-pilot); save-manager prefixes storage keys with it, so
   no `manifest.id`-as-persistence-namespace push/pop is needed. Saves persist across
   remounts because dispose only touches the in-memory persistent-ref registry.

@@ -14,7 +14,7 @@ directions it grows through. Start there.
 
 | Archetype  | Shape                                                                |
 | ---------- | -------------------------------------------------------------------- |
-| `cycler`   | Alternating build/defend phases on a hard-phase cycle                |
+| `cycler`   | Day and night on one rock: build against the forecast quarter, weather the storm, pegged so power adds reach, not nights |
 | `defender` | Maze tower defence: commit the planting by day, watch the night resolve |
 | `explorer` | A fogged map uncovered on jerky and water; what a trip finds banks only at home |
 | `looper`   | Authored plan run against a draining budget; mastery survives the reset |

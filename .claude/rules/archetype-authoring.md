@@ -183,7 +183,7 @@ alongside the constants           and the probes that contradict it
 | Shared fixture the probes and suites both build on | `_<noun>.ts` |
 
 An underscore prefix marks a file that is *not* runnable on its own. It is a fixture the
-runnable ones import, like cycler's `_board.ts`. Every other file in `balance/` is
+runnable ones import, like cycler's `_keeper.ts`. Every other file in `balance/` is
 executable with `vite-node` and prints something.
 
 `_blank` and cycler are what to copy from.
