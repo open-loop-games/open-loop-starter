@@ -45,12 +45,17 @@ export const manifest: ArchetypeManifest = {
     {
       n: 5,
       label: 'The light goes out: the logbook pays',
-      recordedFireTimeRange: [1491, 1491],
+      recordedFireTimeRange: [1495, 1495],
     },
     {
       n: 6,
       label: 'The Storm almanac: a watch one night longer',
-      recordedFireTimeRange: [4463, 4463],
+      recordedFireTimeRange: [4485, 4485],
+    },
+    {
+      n: 7,
+      label: 'A second almanac level: eleven nights',
+      recordedFireTimeRange: [9501, 9501],
     },
   ],
   shell: 'SidebarMainShell',

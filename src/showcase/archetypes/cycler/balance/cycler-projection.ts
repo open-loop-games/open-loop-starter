@@ -9,9 +9,9 @@
  * How to read it:
  * - § the derived economy: every price, the integrity and the opening storm, from the
  *   anchors. Y is one net's catch over a cycle; every price is a fraction of it.
- * - § per posting: a saturated side (five braced walls, three buttresses) against each
- *   posting's g. "survives" is the last whole night the tower stands; the probes' keeper
- *   should land within a night of it.
+ * - § per posting: a saturated side (five walls on its own cells, three buttresses) against
+ *   each posting's g. "survives" is the last whole night the tower stands; the bare keeper
+ *   in `posting-probe.ts` should land on it.
  * - § the peg: ×power on ward re-pegs W₀, so the nights do not move.
  * - § the almanac: the one lever on the nights.
  */

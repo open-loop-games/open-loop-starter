@@ -44,8 +44,13 @@ registry is `modules/tuning.ts`.
   bends g toward 1, each level keeping 85% of (g − 1). Ungated, a first career could buy
   length before reach.
 - **Shoring and Brass fittings sit outside the peg.** Both add ward the storm was not
-  pegged to. Brass is worth a night at Haven Point in `posting-probe.ts`; it is run-local,
-  and shoring's price doubles within a night, which keeps both bounded.
+  pegged to. In `posting-probe.ts` the bare keeper lands on the spine's nights, and shoring
+  adds about one more at Haven Point and the Skerry; Brass alone adds none, and counts only
+  on top of shoring. Shoring's price doubles within a night, so salvage buys it
+  logarithmically, and more catch (Tide tables) barely moves it.
+- **C_max is a side built from its own cells.** A corner's second brace is a wall on the
+  next side, so it is reach above the peg, like shoring. Counting it in C_max would peg the
+  storm to a seven-wall side the keeper does not build, and every watch would run short.
 - **Taking a piece up refunds its last copy's price in full.** Rearranging costs clicks,
   not salvage, so the forecast quarter is a placement puzzle, not a tax. A partial refund
   would make the keeper commit to one side and turn veering winds into a lottery.
@@ -70,7 +75,7 @@ registry is `modules/tuning.ts`.
 | What does the spine predict? | `cycler-projection.ts` | the derived economy, nights per posting for a saturated keeper, the peg under stone, the almanac's steps |
 | How does one watch play? | `watch-probe.ts [seed]` | each dusk's storm against the struck side's ward, each dawn's leak and shoring, the payout |
 | Does run length hold across a career? | `career-probe.ts [watches] [seed]` | nights, minutes and entries per watch beside the knowledge held |
-| Are the postings level on reward? | `posting-probe.ts` | nights, minutes and entries per minute per posting, with and without Brass fittings |
+| What does each night verb add? Are the postings level on reward? | `posting-probe.ts` | nights per posting beside the spine for a bare keeper, with Brass, with shoring and with both; the reference keeper's minutes and entries per minute |
 
 Run them from the repo root with
 `pnpm exec vite-node src/showcase/archetypes/cycler/balance/<probe>.ts`. Each header says how
@@ -78,10 +83,9 @@ to read it. The four together take about fifteen seconds.
 
 ## Known thin
 
-- **The keeper walls the five side cells only.** It reaches a saturated ward of 96 against
-  the spine's 102, which assumes corners braced from both sides. Shoring and Brass fittings
-  make up the gap, so the probes land within a night of the projection: 7–8 / 7 / 5 nights
-  at Haven Point, the Skerry and Cape Wrath against 7 / 6 / 5.
+- **Shoring is unprojected.** It is worth about a night at Haven Point and the Skerry and
+  none at Cape Wrath, measured, not predicted: how many shorings a night buys depends on
+  the salvage the day left.
 - **The career has no end beat.** Every knowledge entry but the almanac and the charters
   levels without limit, and run length stops moving once the almanac is bought.
 - **The keeper is probe-side, not shipping automation.** The game ships no player

@@ -5,7 +5,7 @@
 //
 // Bucket: piecewise phase alternation, a saturating ward against a geometric storm.
 //
-//   ward on one side  → saturates to  C_max   (five shore cells, bracing, buttresses)
+//   ward on one side  → saturates to  C_max   (its five shore cells, bracing, buttresses)
 //   storm on night n  → W_n = W₀ · g^(n−1)    (exogenous: a pure function of the night index)
 //   peg at run start  → W₀ = C_max / H        (C_max from permanent power only)
 //   crossing night    → N_c = 1 + log_g(H)    (the first night a saturated side leaks)
@@ -66,13 +66,18 @@ export const ANCHORS = {
 // ─── Skeleton ───
 // Board geometry the spine reads. Structural, not tunable.
 
-/** Shore cells per side of the 5×5 rock; corners belong to two sides. */
-export const SIDE_CELLS = 5;
 /**
- * Buttress coverage summed over one side's five shore cells, 1 + 2 + 3 + 2 + 1: the three
- * yard cells behind a side reach one, two, three, two and one of its shore cells.
+ * One side's five shore cells, corner to corner: how many of its own walls brace each, and
+ * how many of the three yard cells behind it touch each. A corner's other neighbour is on
+ * the next side, so a side built alone braces its corners once.
  */
-export const SIDE_BUTTRESS_COVER = 9;
+export const SIDE_PROFILE = [
+  { braced: 1, buttresses: 1 },
+  { braced: 2, buttresses: 2 },
+  { braced: 2, buttresses: 3 },
+  { braced: 2, buttresses: 2 },
+  { braced: 1, buttresses: 1 },
+] as const;
 /** One more breaker each night: a late night reads as a longer assault, not a bigger number. */
 export const BREAKERS_FIRST_NIGHT = 4;
 
@@ -129,16 +134,16 @@ export function referenceInput(wardPower = 1): SpineInput {
   };
 }
 
-/** Saturated ward of one side: five braced breakwaters with three buttresses behind. */
+/**
+ * Saturated ward of one side: five walls on its own shore cells with three buttresses
+ * behind, the side as one side's cells can build it. Walls on the next sides' cells beside
+ * the corners brace them twice, which is reach above C_max, like shoring.
+ */
 export function saturatedSideWard(wardPerWall: number, power: number): number {
-  // Every shore cell has exactly two ring neighbours, so a full side is braced twice
-  // over; buttress coverage sums to SIDE_BUTTRESS_COVER across the side.
-  return (
-    wardPerWall *
-    power *
-    (1 + 2 * ANCHORS.brace) *
-    (SIDE_CELLS + ANCHORS.buttress * SIDE_BUTTRESS_COVER)
-  );
+  let total = 0;
+  for (const cell of SIDE_PROFILE)
+    total += (1 + ANCHORS.brace * cell.braced) * (1 + ANCHORS.buttress * cell.buttresses);
+  return wardPerWall * power * total;
 }
 
 /**

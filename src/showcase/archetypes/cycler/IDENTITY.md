@@ -29,18 +29,19 @@ chosen between watches.
 ## Rate-function spine
 
 **Bucket: piecewise phase alternation**, a saturating ward against a geometric storm
-(`incremental-math/…/rate-functions/composition.mdx`). A fully built side saturates at
-C_max (five braced walls, three buttresses behind). Night n's storm is W₀·g^(n−1), a pure
-function of the night, and W₀ is pegged at the watch's start to C_max / H from permanent
-power. So the crossing night is 1 + log_g(H) whatever the keeper owns: Dressed stone adds
-reach, more force weathered and more entries, and only the Storm almanac, which bends g
-toward 1, lengthens a watch. Integrity is sized to outlast the crossing by a night and a
-half at the reference g.
+(`incremental-math/…/rate-functions/composition.mdx`). A side built on its own five shore
+cells, with three buttresses behind, saturates at C_max; its corners are braced once.
+Night n's storm is W₀·g^(n−1), a pure function of the night, and W₀ is pegged at the
+watch's start to C_max / H from permanent power. So the crossing night is 1 + log_g(H)
+whatever the keeper owns: Dressed stone adds reach, more force weathered and more entries,
+and only the Storm almanac, which bends g toward 1, lengthens a watch. Integrity is sized
+to outlast the crossing by a night and a half at the reference g.
 
 **Where the closed form stops:**
 - *the build.* The spine assumes a saturated side; the keeper reaches it over the first
   nights, with salvage the nets catch and the order it buys in.
-- *the night.* Shoring adds ward the peg does not see, and so does Brass fittings.
+- *the night.* Shoring adds ward the peg does not see, and so does Brass fittings. Walls on
+  the next sides beside the corners brace them twice, above C_max.
 - *the dawn.* The forecast quarter and the finds are drawn; a quarter repeated two nights
   running saves a rebuild.
 
@@ -56,12 +57,13 @@ measures beside `cycler-projection.ts`.
 | A buttress behind the struck wall | 6:55 |
 | A winch: the nets haul themselves | 11:14 |
 | The crossing: the tower takes water | night 7, 18:48 |
-| The light goes out: the logbook pays | 24:51, 8 nights |
-| The Storm almanac: a watch one night longer | watch 4, 1:14:23 |
+| The light goes out: the logbook pays | 24:55, 8 nights |
+| The Storm almanac: a watch one night longer | watch 4, 1:14:45 |
+| A second almanac level: eleven nights | watch 7, 2:38:21 |
 
-A watch at Haven Point runs 22–28 minutes and 7–9 nights. Over eight watches run length
-holds at 8 nights while stone climbs, and steps to 9 at the first almanac level. The
-career has no end beat. `manifest.ts` holds the recorded beats.
+A watch at Haven Point runs 22–28 minutes and 7–8 nights at knowledge zero. Over eight
+watches run length holds while stone climbs and steps up only at almanac levels: 8, then 9,
+then 11 nights. The career has no end beat. `manifest.ts` holds the recorded beats.
 
 ## Growth ports
 

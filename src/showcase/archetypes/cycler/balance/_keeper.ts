@@ -7,6 +7,8 @@
  *     four nets, the buttresses behind the wall, one winch, seven nets. It saves for the
  *     next piece in that order rather than buying past it.
  *   - By night: shores up while tonight's storm would come through and a breaker is left.
+ *     `KeeperPolicy.shores` switches it off, and the find order can decline Brass fittings,
+ *     so a probe can measure what each adds above the spine.
  *   - Between watches: buys knowledge in a fixed order until nothing is affordable.
  *
  * The game ships no automation but the winch, so the keeper is probe-side. This is not a
@@ -95,9 +97,11 @@ export const DECLINES_BRASS: readonly FindId[] = ['timbers', 'oakum', 'cork', 'g
 
 export interface KeeperPolicy {
   findPreference: readonly FindId[];
+  /** Whether the keeper shores up at night. Off, the night is the spine's sum alone. */
+  shores: boolean;
 }
 
-export const REFERENCE_POLICY: KeeperPolicy = { findPreference: TAKES_BRASS };
+export const REFERENCE_POLICY: KeeperPolicy = { findPreference: TAKES_BRASS, shores: true };
 
 export function keeperDay(w: WatchApi, policy: KeeperPolicy): void {
   const q = w.quarter.value;
@@ -151,7 +155,8 @@ export function keeperDay(w: WatchApi, policy: KeeperPolicy): void {
   }
 }
 
-export function keeperNight(w: WatchApi): void {
+export function keeperNight(w: WatchApi, policy: KeeperPolicy): void {
+  if (!policy.shores) return;
   const leakTonight = w.storm.value - (w.wards.value[w.quarter.value] + w.shored.value);
   if (
     leakTonight > 0 &&
@@ -262,7 +267,7 @@ export function playWatch(
       beat('first find taken from the tideline');
     }
     if (w.phase.value === 'day') keeperDay(w, policy);
-    if (w.phase.value === 'night') keeperNight(w);
+    if (w.phase.value === 'night') keeperNight(w, policy);
   }
   if (w.cycle.count.value === keptBefore) return null;
   const s = g.logbook.lastWatch.value!;
