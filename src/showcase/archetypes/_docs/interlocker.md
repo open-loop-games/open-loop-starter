@@ -1,7 +1,7 @@
 # Interlocker
 
-Core · covered. Identity line: the Interlocker entry in `../_identity.md`. Not
-built.
+Core · covered. Identity line: the Interlocker entry in `../_identity.md`. Built:
+`../interlocker/IDENTITY.md`.
 
 ## Player experience
 

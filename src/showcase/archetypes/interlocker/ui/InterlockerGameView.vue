@@ -1,0 +1,105 @@
+<!--
+  InterlockerGameView — the in-game subtree, mounted under the root's post-start frame.
+  The stock ledger on the left, the drawing board in the centre (the Works schematic, the
+  Estate, the Académie and the Exposition, as sheet tabs), the telegraph on the right.
+  A tab with something newly affordable carries a brass dot until it is visited; the
+  Exposition sheet is not drawn until the riggers are patented or an Exposition is
+  remembered.
+-->
+<script setup lang="ts">
+import { computed, inject, ref, watch } from 'vue';
+import type { Engine } from '@open-loop/engine';
+import { ThreePanelShell } from '@/lib';
+import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
+import { getEmpire, getExposition, getTelegraph, getWorks } from '../modules';
+import StockLedger from './components/StockLedger.vue';
+import WorksSchematic from './components/WorksSchematic.vue';
+import EstatePanel from './components/EstatePanel.vue';
+import AcademiePanel from './components/AcademiePanel.vue';
+import ExpositionPanel from './components/ExpositionPanel.vue';
+import TelegraphLine from './components/TelegraphLine.vue';
+
+type Sheet = 'works' | 'estate' | 'academie' | 'exposition';
+
+const works = getWorks();
+const empire = getEmpire();
+const expo = getExposition();
+
+const expoRevealed = computed(
+  () => works.researched('monoplane').value || expo.cycle.count.value > 0,
+);
+const items = computed<TabItem[]>(() => [
+  { value: 'works', label: 'The Works' },
+  { value: 'estate', label: 'Estate' },
+  { value: 'academie', label: 'Académie' },
+  ...(expoRevealed.value ? [{ value: 'exposition', label: 'Exposition' }] : []),
+]);
+const sheet = ref<Sheet>('works');
+const unread = ref(new Set<Sheet>());
+
+const affordable = computed(() => ({
+  estate: works.buildings.getAll().some((e) => e.purchasable.canPurchase.value),
+  academie: works.research.getAll().some((e) => e.purchasable.canPurchase.value),
+  exposition:
+    expo.canStage.value || empire.charters.getAll().some((e) => e.purchasable.canPurchase.value),
+}));
+watch(
+  affordable,
+  (now, before) => {
+    for (const k of ['estate', 'academie', 'exposition'] as const)
+      if (now[k] && !before?.[k] && sheet.value !== k) unread.value.add(k);
+  },
+  { deep: true },
+);
+watch(expoRevealed, (v, was) => {
+  if (v && !was) unread.value.add('exposition');
+});
+watch(sheet, (s) => unread.value.delete(s));
+
+// Dev-only state hook for browser probes: reads live module state without an `import()`
+// that Vite's module cache could serve stale.
+if (import.meta.env.DEV) {
+  const engine = inject<Engine>('engine')!;
+  (window as unknown as Record<string, unknown>).__aero = {
+    works,
+    empire,
+    expo,
+    telegraph: getTelegraph(),
+    engine,
+    skip: (seconds: number) => engine.tickDriver.advanceTime(seconds),
+  };
+}
+</script>
+
+<template>
+  <ThreePanelShell left-width="minmax(250px, 280px)" right-width="minmax(240px, 270px)">
+    <template #left>
+      <StockLedger />
+    </template>
+    <Tabs v-model="sheet" :items="items" class="ae-board">
+      <template v-for="t in items" :key="t.value" #[`tab-${t.value}`]>
+        <span :class="{ 'ae-fresh': unread.has(t.value as Sheet) }">{{ t.label }}</span>
+      </template>
+      <template #panel-works><WorksSchematic /></template>
+      <template #panel-estate><EstatePanel /></template>
+      <template #panel-academie><AcademiePanel /></template>
+      <template #panel-exposition><ExpositionPanel /></template>
+    </Tabs>
+    <template #right>
+      <TelegraphLine />
+    </template>
+  </ThreePanelShell>
+</template>
+
+<style scoped>
+.ae-fresh::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ae-brass);
+}
+</style>

@@ -1,0 +1,321 @@
+/*
+ * Interlocker — the cyanotype costume.
+ *
+ * The whole design language is here, scoped under `.interlocker`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in `src/lib/` or
+ * `src/ui/` is edited for it: every hook is a documented costume class on a shell, a
+ * widget or a composition (`.olui-three-panel__…`, `.olui-system-header…`,
+ * `.olui-tabs__…`, `.producer-list__…`, `.upgrade-grid__…`) or a class this story's own
+ * components emit.
+ *
+ * Language: a Second Empire drafting office. The ground is cyanotype, Herschel's 1842
+ * blueprint process and the engineer's paper of the period; line work is the white the
+ * process leaves; aluminium is the silver Napoleon III served his guests on; brass is the
+ * gauge fittings. The affordance palette comes first, and the identity is built around it:
+ *   brass      you can act: affordable, assignable
+ *   slate      you cannot yet
+ *   vermilion  a shortfall: a starved input, a price you are short of, a price over its bin
+ *   verdigris  flowing: a rising stock, a workshop running free
+ *   aluminium  at the ceiling: a full bin
+ *   chalk      newly inked: a reveal
+ *
+ * Fonts: Old Standard TT, a nineteenth-century modern face with tabular figures by default,
+ * for everything read and every figure; Barlow Semi Condensed for the engineer's capital
+ * lettering. Latin subsets, SIL OFL (`../assets/fonts/OFL.txt`).
+ */
+
+@font-face {
+  font-family: 'Drafting Book';
+  src: url('../assets/fonts/OldStandard-Regular.woff') format('woff');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Drafting Book';
+  src: url('../assets/fonts/OldStandard-Bold.woff') format('woff');
+  font-weight: 700;
+}
+@font-face {
+  font-family: 'Drafting Book';
+  src: url('../assets/fonts/OldStandard-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Drafting Lettering';
+  src: url('../assets/fonts/BarlowSemiCondensed-Medium.woff') format('woff');
+  font-weight: 500;
+}
+@font-face {
+  font-family: 'Drafting Lettering';
+  src: url('../assets/fonts/BarlowSemiCondensed-SemiBold.woff') format('woff');
+  font-weight: 600;
+}
+
+.interlocker {
+  /* ── the paper ── */
+  --ae-cyanotype-deep: #0b1d31;
+  --ae-cyanotype: #10294a;
+  --ae-cyanotype-wash: #163559;
+  --ae-cyanotype-rule: #24486f;
+
+  /* ── the line work ── */
+  --ae-drafting-line: #c9dcec;
+  --ae-drafting-line-faint: #5a7a9c;
+  --ae-chalk: #eef4f8;
+
+  /* ── affordance ── */
+  --ae-brass: #d6ab55;
+  --ae-brass-dim: #8e7442;
+  --ae-slate: #6f849b;
+  --ae-vermilion: #e0634a;
+  --ae-verdigris: #6cc0a0;
+  --ae-aluminium: #b8c4cf;
+
+  --ae-face-book: 'Drafting Book', Georgia, serif;
+  --ae-face-lettering: 'Drafting Lettering', 'Drafting Book', sans-serif;
+  --ae-hairline: 1px solid var(--ae-cyanotype-rule);
+  --ae-plate-radius: 3px;
+
+  /* Scaffold tokens the shared chrome reads, set here so the costume travels with the story. */
+  --color-bg: var(--ae-cyanotype-deep);
+  --color-surface: var(--ae-cyanotype);
+  --color-surface-hover: var(--ae-cyanotype-wash);
+  --color-border: var(--ae-cyanotype-rule);
+  --color-text: var(--ae-drafting-line);
+  --color-text-muted: var(--ae-drafting-line-faint);
+  --color-primary: var(--ae-brass);
+  --color-primary-hover: var(--ae-chalk);
+  --color-danger: var(--ae-vermilion);
+  --color-success: var(--ae-verdigris);
+  --radius: var(--ae-plate-radius);
+  --radius-sm: 2px;
+  --gap: 12px;
+  --font-sans: var(--ae-face-book);
+
+  color: var(--ae-drafting-line);
+  font-family: var(--ae-face-book);
+  font-size: 15px;
+  line-height: 1.35;
+
+  /* The costume wrapper sits between the host and AppFrame; it passes the host's flex
+     column through so the frame fills it. */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.interlocker button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Every live figure: fixed-width digits so ticks never shove the layout. */
+.interlocker .ae-figure {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.interlocker .ae-lettering {
+  font-family: var(--ae-face-lettering);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* The drafting office at night: the paper lit faintly from the upper left. */
+.interlocker .olui-app-frame,
+.interlocker .slot-screen {
+  background:
+    radial-gradient(ellipse 60% 50% at 25% 0%, rgba(201, 220, 236, 0.05), transparent 70%),
+    var(--ae-cyanotype-deep);
+}
+
+.interlocker .olui-system-header {
+  border-bottom: 3px double var(--ae-cyanotype-rule);
+  background: var(--ae-cyanotype-deep);
+}
+.interlocker .olui-system-header__actions {
+  align-items: center;
+  gap: 16px;
+}
+.interlocker .olui-system-header__actions > button {
+  background: transparent;
+  border: 1px solid var(--ae-cyanotype-rule);
+  border-radius: var(--ae-plate-radius);
+  padding: 3px 10px;
+  min-height: 0;
+  font-family: var(--ae-face-lettering);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  color: var(--ae-drafting-line-faint);
+  cursor: pointer;
+}
+.interlocker .olui-system-header__actions > button:hover {
+  color: var(--ae-brass);
+  border-color: var(--ae-brass-dim);
+}
+
+/* The shell's columns: ledger and telegraph on deep paper, the board on the sheet itself. */
+.interlocker .olui-three-panel {
+  gap: 0;
+  padding: 0;
+}
+.interlocker .olui-three-panel__left,
+.interlocker .olui-three-panel__main,
+.interlocker .olui-three-panel__right {
+  border: none;
+  border-radius: 0;
+  min-width: 0;
+}
+.interlocker .olui-three-panel__left {
+  background: var(--ae-cyanotype);
+  border-right: var(--ae-hairline);
+  padding: 14px 16px;
+}
+.interlocker .olui-three-panel__main {
+  background: transparent;
+  padding: 12px 18px 22px;
+}
+.interlocker .olui-three-panel__right {
+  background: var(--ae-cyanotype-deep);
+  border-left: var(--ae-hairline);
+  padding: 14px 14px;
+}
+
+/* ── section heading: lettering over a dotted rule ── */
+.interlocker .ae-section-head {
+  margin: 0 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px dotted var(--ae-cyanotype-rule);
+  font-family: var(--ae-face-lettering);
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ae-drafting-line-faint);
+}
+
+/* ── the board's tabs: drawing-sheet tabs on the rule ── */
+.interlocker .olui-tabs {
+  --tabs-trigger-padding: 7px 16px 6px;
+  --tabs-trigger-color: var(--ae-drafting-line-faint);
+  --tabs-trigger-color-active: var(--ae-chalk);
+  --tabs-trigger-bg-active: var(--ae-cyanotype);
+  --tabs-trigger-border: transparent;
+  --tabs-trigger-border-active: var(--ae-cyanotype-rule);
+  --tabs-trigger-radius: 0;
+}
+.interlocker .olui-tabs__list {
+  border-bottom: 1px solid var(--ae-cyanotype-rule);
+  margin-bottom: 14px;
+}
+.interlocker .olui-tabs__trigger {
+  position: relative;
+  font-family: var(--ae-face-lettering);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  border-bottom: none;
+  margin-bottom: -1px;
+  animation: ae-inked 0.6s ease-out;
+}
+.interlocker .olui-tabs__trigger:hover {
+  color: var(--ae-drafting-line);
+}
+.interlocker .olui-tabs__trigger[data-state='active'] {
+  border-color: var(--ae-cyanotype-rule);
+}
+
+/* ── an action plate: a brass-fitted button ── */
+.interlocker .ae-act {
+  border: 1px solid var(--ae-slate);
+  color: var(--ae-slate);
+  background: transparent;
+  padding: 4px 13px;
+  font-family: var(--ae-face-lettering);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: var(--ae-plate-radius);
+  cursor: default;
+}
+.interlocker .ae-act.can {
+  border-color: var(--ae-brass);
+  background: var(--ae-brass);
+  color: var(--ae-cyanotype-deep);
+  cursor: pointer;
+}
+.interlocker .ae-act.can:hover {
+  background: var(--ae-chalk);
+  border-color: var(--ae-chalk);
+}
+
+/* ── a stamp: a patent held, a charter granted ── */
+.interlocker .ae-stamp {
+  align-self: flex-start;
+  display: inline-block;
+  font-family: var(--ae-face-lettering);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  color: var(--ae-verdigris);
+  border: 1px solid var(--ae-verdigris);
+  padding: 1px 7px;
+  transform: rotate(-3deg);
+}
+
+/* ── the reveal: new line work inks in ── */
+@keyframes ae-inked {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Compositions: bare, so each card draws itself. */
+.interlocker .producer-list__header:empty {
+  display: none;
+}
+.interlocker .producer-list__rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.interlocker .producer-list__row {
+  display: flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+.interlocker .upgrade-grid {
+  gap: 10px;
+}
+.interlocker .upgrade-grid__cell-wrap {
+  display: flex;
+  min-width: 0;
+}
+
+/* ── the Exposition's confirmation, on the scaffold's modal stack ──
+   The stack portals to <body>, outside `.interlocker`; the confirmation's own root carries
+   the class, and this rule dresses the box it is mounted in. */
+.olui-modal-content:has(.ae-stage-confirm) {
+  padding: 0;
+  background: #10294a;
+  border: 1px solid #24486f;
+  outline: 1px solid #24486f;
+  outline-offset: 4px;
+  border-radius: 0;
+}
