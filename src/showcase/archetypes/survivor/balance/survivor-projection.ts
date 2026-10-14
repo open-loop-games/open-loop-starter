@@ -1,388 +1,93 @@
 /**
- * Survivor — closed-form balance projection (no engine).
+ * Survivor: the spine as a runnable function. No engine. Prints the numbers
+ * `../data/spine.ts` derives from its anchors, for `take-probe.ts` and `career-probe.ts` to
+ * measure on the real floor.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/survivor/balance/survivor-projection.ts`
  *
- * Pure math, NO engine (`.claude/rules/archetype-authoring.md` § Balance — where
- * each surface goes). The spine in runnable form: it predicts the run's shape on
- * paper so the coverage boundary in `../IDENTITY.md` § Rate-function spine can be
- * falsified before it is built on. Predicts; does not discover.
- *
- * Bucket: geometric discrete on minute marks over a modifier-product chain. Both
- * sides compound — device DPS through the draft, specimen HP and annulus density
- * through the escalation schedule — so the closed core is a crossing between two
- * geometric curves. Per-subsystem buckets and receipts:
- * `open-loop-research/reports/closed-form-subsystem-inventory/per-archetype/survivor.md`.
- *
- * Every constant lives in `../data/`; the derivations (`fireTime`,
- * `offensivePickGain`, `deriveXpLadder`, the income model) live there too, so the
- * ladder this projects and the ladder the game runs are produced by the same
- * functions rather than by two agreeing implementations.
+ * How to read it:
+ * - the schedule: each rewrite's authored time beside the time the ladder puts it at. The
+ *   ladder is fitted at the first and last beat, so the beats between land near, not on.
+ * - damage: DPS0, the solved level gain, and the demand at the last beat.
+ * - ratings: what each rating's last scene demands of the loadout, against what a
+ *   zero-meta loadout reaches and the most the agency adds. A ratio above the agency's
+ *   ceiling is a rating no purchase opens.
+ * - clout: the payout model behind the agency's prices, and what the whole shop costs.
  */
 
 import {
-  ARENA_BALANCE,
-  COLLECTOR_BALANCE,
-  THREAT_BALANCE,
-  contactChance,
-  localDensity,
-  spawnRate,
-} from '../data/arena';
-import {
+  AGENCY,
+  AGENCY_GROWTH,
+  AGENCY_STEP,
+  ANCHORS,
+  BEATS,
+  DPS0,
+  INCOME_LAG,
+  LADDER,
+  LEVEL_GAIN,
+  OFFENSIVE_PICKS,
+  RATINGS,
+  REELS_PER_CLOUT,
+  STARS,
   cumulativeIncome,
-  cumulativeIncomeAmortized,
-  cumulativeIncomeWithCollectors,
-} from '../data/income';
-import {
-  SCHEDULE_BALANCE,
-  fireTime,
-  contactDamageMul,
-  deriveXpLadder,
-  hpMul,
-  offensivePickGain,
-  scheduledBeatsBy,
-} from '../data/schedule';
-import { BASELINE_SEAT, SEATS, type SeatDef } from '../data/seats';
-import { DEVICES, EVOLUTIONS, draftPoolSize, nominalDps, startingDevice } from '../data/devices';
-import { BASE_SPECIMEN_HP, activeSpecimens, meanHpFactor, meanMoteYield } from '../data/specimens';
-import { META_UPGRADES, maxRunBaseline, notesForRun, totalCost, upgradeCost } from '../data/meta';
+  loadoutDps,
+  predictedBeatTime,
+  requiredDps,
+  sceneAt,
+} from '../data';
 
-const { runSeconds: RUN_SECONDS, beatCount: BEAT_COUNT } = SCHEDULE_BALANCE;
+const f = (x: number, d = 1) => x.toFixed(d);
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-/** How much the roster's mean HP factor rises across the run — a required-DPS term. */
-const MIX_HP_GROWTH = meanHpFactor(RUN_SECONDS) / meanHpFactor(0);
-const PICK_GAIN = offensivePickGain(
-  BASELINE_SEAT.defenseShare,
-  THREAT_BALANCE.spawnGrowthPerMinute,
-  MIX_HP_GROWTH,
+console.log(`\nSURVIVOR projection: a ${clock(ANCHORS.takeSeconds)} take, a scene a minute\n`);
+
+console.log(
+  `The schedule: ${BEATS.count} rewrites, gaps ×${f(BEATS.ratio, 3)} from ${ANCHORS.firstBeat}s to ${ANCHORS.lastInterval}s`,
 );
-const DT = 0.5;
-
-// ─── Survival side of the crossing ───
-
-/** Damage per second taken at `t`, after armour and per-contact escalation. */
-const damageTakenRate = (t: number, seat: SeatDef): number =>
-  (contactChance(t, seat.engage, seat.dps, seat.speed) *
-    THREAT_BALANCE.contactDps *
-    contactDamageMul(t)) /
-  seat.toughness;
-
-/** Effective-HP pool after `beats` picks, of which `defenseShare` went defensive. */
-const effectiveHp = (seat: SeatDef, beats: number): number =>
-  THREAT_BALANCE.baseHp *
-  seat.toughness *
-  Math.pow(SCHEDULE_BALANCE.hpPickGain, beats * seat.defenseShare);
-
-/**
- * First time cumulative damage exceeds the pool, or Infinity if the seat lasts
- * the arc. The pool grows as beats land, so this integrates against a moving
- * ceiling — which is what makes the run a race rather than a countdown.
- */
-function deathTime(seat: SeatDef, landings: number[]): number {
-  let taken = 0;
-  for (let t = 0; t <= RUN_SECONDS; t += DT) {
-    taken += damageTakenRate(t, seat) * DT;
-    const beats = landings.filter((b) => b <= t).length;
-    if (taken >= effectiveHp(seat, beats)) return t;
-  }
-  return Number.POSITIVE_INFINITY;
-}
-
-/** Walk a ladder against a seat's income and report when each beat fires. */
-function beatLandings(ladder: number[], seat: SeatDef, withCollectors: boolean): number[] {
-  const landings: number[] = [];
-  let need = ladder[0];
-  let idx = 0;
-  for (let t = 0; t <= RUN_SECONDS && idx < ladder.length; t += DT) {
-    const acc = withCollectors
-      ? cumulativeIncomeWithCollectors(t, seat)
-      : cumulativeIncome(t, seat);
-    while (idx < ladder.length && acc >= need) {
-      landings.push(t);
-      idx++;
-      if (idx < ladder.length) need += ladder[idx];
-    }
-  }
-  while (landings.length < ladder.length) landings.push(Number.POSITIVE_INFINITY);
-  return landings;
-}
-
-/** The shipping ladder: derived against the baseline seat's HONEST income. */
-const LADDER = deriveXpLadder((t) => cumulativeIncomeAmortized(t, BASELINE_SEAT, RUN_SECONDS));
-
-// ─── Report ───
-
-const col = (s: string | number, w: number): string => String(s).padEnd(w);
-const fmt = (n: number): string => (Number.isFinite(n) ? n.toFixed(1) : '—');
-const clock = (t: number): string => {
-  if (!Number.isFinite(t)) return '—';
-  const total = Math.round(t);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-};
-
-function reportSchedule(): void {
-  console.log('\n═══ Draft schedule — geometric intervals, 30s → 90s ═══');
-  console.log(col('  beat', 8) + col('interval', 11) + col('t', 10) + col('HP ×', 9) + 'XP req');
-  for (const n of [1, 5, 10, 15, 20, 25, 30, BEAT_COUNT]) {
-    const t = fireTime(n);
-    const interval =
-      SCHEDULE_BALANCE.beatFirstSeconds * Math.pow(SCHEDULE_BALANCE.beatRatio, n - 1);
-    console.log(
-      col(`  ${n}`, 8) +
-        col(fmt(interval), 11) +
-        col(clock(t), 10) +
-        col(hpMul(t).toFixed(1), 9) +
-        LADDER[n - 1].toFixed(1),
-    );
-  }
+console.log(
+  `  ladder x0 ${f(LADDER.x0)} reels, ×${f(LADDER.r, 3)} a rung; income trails arrivals by ${f(INCOME_LAG)}s`,
+);
+console.log('  beat  schedule  ladder  off by');
+BEATS.times.forEach((t, i) => {
+  const p = predictedBeatTime(i + 1);
   console.log(
-    `\n  ${BEAT_COUNT} beats span ${fmt(fireTime(BEAT_COUNT))}s (target ${RUN_SECONDS}s).` +
-      `  Beat count is a consequence of the 30–90s band, not a tunable.`,
+    `  ${String(i + 1).padEnd(5)} ${f(t, 0).padStart(6)}s  ${f(p, 0).padStart(5)}s  ${f(p - t, 0).padStart(5)}s`,
   );
+});
+
+const lastBeat = BEATS.times[BEATS.count - 1]!;
+const loadout = loadoutDps(OFFENSIVE_PICKS, LEVEL_GAIN);
+console.log(`\nDamage: DPS0 ${f(DPS0)} a second; level gain ×${f(LEVEL_GAIN, 3)}, solved`);
+console.log(
+  `  ${OFFENSIVE_PICKS} offensive picks reach ${f(loadout, 2)}× DPS0, meeting the last beat's demand of ${f(requiredDps(sceneAt(lastBeat)))}`,
+);
+
+const effects =
+  1 + AGENCY_STEP['effects-budget'] * AGENCY.find((a) => a.id === 'effects-budget')!.maxLevel;
+console.log(
+  `\nRatings: the last beat's demand against the zero-meta loadout (agency adds at most ×${f(effects, 2)})`,
+);
+console.log('  rating  scenes      demand  ×loadout');
+for (const r of RATINGS) {
+  const demand = requiredDps(sceneAt(lastBeat, r.index));
+  const ratio = demand / (loadout * DPS0);
   console.log(
-    `  Per-offensive-pick DPS gain for FLAT time-to-kill at baseline σ=` +
-      `${BASELINE_SEAT.defenseShare}: ${PICK_GAIN.toFixed(4)}×  (solved, not authored —` +
-      ` covers m_hp · m_d and the roster's ${MIX_HP_GROWTH.toFixed(2)}× mix shift)`,
+    `  ${r.label.padEnd(7)} ${f(sceneAt(0, r.index))}–${f(sceneAt(lastBeat, r.index))}`.padEnd(21) +
+      `${f(demand).padStart(7)}  ${f(ratio, 2).padStart(6)}${ratio > effects ? '  past the agency' : ''}`,
   );
 }
 
-function reportArena(): void {
-  const { killRadius, collectRadius, mapWidth, mapHeight } = ARENA_BALANCE;
-  console.log('\n═══ Arena — the cost of income, and the entity budget ═══');
-  console.log(
-    `  r_collect / r_kill = ${collectRadius}/${killRadius} = ` +
-      `${(collectRadius / killRadius).toFixed(2)}  — the risk premium on every mote.`,
-  );
-  console.log(
-    `  map ${mapWidth}×${mapHeight}, crossing ~${Math.round(mapWidth / 120)}s at 120 u/s.`,
-  );
-  console.log('\n' + col('  t', 8) + col('spawn/s', 11) + col('live', 8) + 'contact %');
-  for (const m of [0, 5, 10, 20, 30]) {
-    const t = m * 60;
-    const s = BASELINE_SEAT;
-    console.log(
-      col(`  ${m}:00`, 8) +
-        col(spawnRate(t).toFixed(2), 11) +
-        col(Math.round(localDensity(t, s.engage, s.dps)).toString(), 8) +
-        (contactChance(t, s.engage, s.dps, s.speed) * 100).toFixed(1),
-    );
-  }
-  console.log(
-    '\n  Live population is bounded by the annulus, by kills and by the distance cull —' +
-      '\n  there is no entity cap, so `localDensity` above is the only bound there is.' +
-      '\n  That makes its `dwellSeconds` term load-bearing, and the arena probe prints a' +
-      '\n  measured census beside this column for exactly that reason.',
-  );
-}
-
-function reportContent(): void {
-  console.log('\n═══ Content model — sized by the spine, not chosen ═══');
-  const pool = draftPoolSize();
-  console.log(
-    `  draft pool ${pool} picks vs a ${BEAT_COUNT}-pick budget — a run sees ` +
-      `${((BEAT_COUNT / pool) * 100).toFixed(0)}%.`,
-  );
-  console.log(
-    `  evolutions: ${EVOLUTIONS.length} defined, ~12 picks each → ` +
-      `${Math.floor(BEAT_COUNT / 12)}–${Math.ceil(BEAT_COUNT / 12)} completed per run.`,
-  );
-
-  const opener = startingDevice();
-  const requiredDps0 = spawnRate(0) * BASELINE_SEAT.engage * BASE_SPECIMEN_HP * meanHpFactor(0);
-  const got = nominalDps(opener);
-  console.log(
-    `\n  Opening DPS — flat-TTK wants ${requiredDps0.toFixed(2)}, ` +
-      `${opener.displayName} delivers ${got.toFixed(2)} ` +
-      `(${(((got - requiredDps0) / requiredDps0) * 100).toFixed(1)}%).`,
-  );
-
-  console.log('\n' + col('  t', 8) + col('tiers', 8) + col('mote yield', 13) + 'mean HP ×');
-  for (const m of [0, 5, 10, 20, 30]) {
-    const t = m * 60;
-    console.log(
-      col(`  ${m}:00`, 8) +
-        col(activeSpecimens(t).length.toString(), 8) +
-        col(meanMoteYield(t).toFixed(2), 13) +
-        meanHpFactor(t).toFixed(2),
-    );
-  }
-  console.log('\n  Mean yield is an income term, not flavour — `income.ts` multiplies');
-  console.log('  by it, so the tier mix moves the economy as well as the pressure.');
-
-  console.log(
-    '\n' + col('  device', 18) + col('cd', 8) + col('nominal dps', 14) + 'scales w/ density',
-  );
-  for (const d of DEVICES) {
-    console.log(
-      col(`  ${d.displayName}`, 18) +
-        col(`${d.cooldownSec}s`, 8) +
-        col(nominalDps(d).toFixed(2), 14) +
-        (d.maxTargets > 1 ? `yes (≤${d.maxTargets})` : 'no'),
-    );
-  }
-  console.log('\n  Nominal order is deliberately the reverse of the late-run order:');
-  console.log('  density climbs ~10× across a run, so the area shapes overtake.');
-}
-
-function reportMeta(): void {
-  console.log('\n═══ Cross-run meta — runs to purchase, and the declared front-load ═══');
-
-  // Kills a baseline run banks before it ends, at its own income.
-  const landings = beatLandings(LADDER, BASELINE_SEAT, true);
-  const end = Math.min(deathTime(BASELINE_SEAT, landings), RUN_SECONDS);
-  let kills = 0;
-  for (let t = 0; t < end; t += DT) kills += spawnRate(t) * BASELINE_SEAT.engage * DT;
-  const notes = notesForRun(kills, meanMoteYield(end / 2));
-  console.log(
-    `  A baseline run ends at ${clock(end)}, ~${Math.round(kills)} kills, ` +
-      `~${Math.round(notes)} notes.`,
-  );
-
-  console.log(
-    '\n' + col('  upgrade', 22) + col('side', 11) + col('first', 8) + col('max', 8) + 'runs to max',
-  );
-  for (const u of META_UPGRADES) {
-    console.log(
-      col(`  ${u.displayName}`, 22) +
-        col(u.side, 11) +
-        col(upgradeCost(u, 0).toString(), 8) +
-        col(`${u.limit}`, 8) +
-        (totalCost(u) / notes).toFixed(1),
-    );
-  }
-  const allRuns = META_UPGRADES.reduce((s, u) => s + totalCost(u), 0) / notes;
-  console.log(`\n  Whole shop: ~${allRuns.toFixed(0)} runs of banked notes.`);
-
-  const incomeBaseline = maxRunBaseline('income');
-  const survivalBaseline = maxRunBaseline('survival');
-  console.log(
-    `\n  runBaseline at full investment — survival ×${survivalBaseline.toFixed(2)}` +
-      ` (ladder-safe), income ×${incomeBaseline.toFixed(2)} (shifts the ladder).`,
-  );
-
-  // The declared bound: how early beats land for a fully-metaed income build.
-  // Income is linear in both η and mote yield, and the meta moves one of each, so
-  // scaling the ladder down by the combined multiplier is exactly equivalent to
-  // scaling income up — and avoids pushing η past 1, which it cannot exceed.
-  const juicedLandings = beatLandings(
-    LADDER.map((x) => x / incomeBaseline),
-    BASELINE_SEAT,
-    true,
-  );
-  const last = juicedLandings[BEAT_COUNT - 1];
-  console.log(
-    `  Fully-metaed income run reaches beat ${BEAT_COUNT} at ${clock(last)} vs ` +
-      `${clock(fireTime(BEAT_COUNT))} — ${fmt(fireTime(BEAT_COUNT) - last)}s earlier.`,
-  );
-  console.log('  Bounded and intended: the ladder is derived for a ZERO-meta run, and');
-  console.log('  the arc is capped by each limit. Unlike the collector case, this front-');
-  console.log('  loading is declared — but an added income-side tile moves this number.');
-}
-
-function reportDerivationCheck(): void {
-  const naive = deriveXpLadder((t) => cumulativeIncome(t, BASELINE_SEAT));
-  const landings = beatLandings(naive, BASELINE_SEAT, true);
-
-  console.log('\n═══ Derivation check — why collectors belong IN the ladder ═══');
-  console.log('  A ladder derived on SMOOTH income, walked against honest income:');
-  console.log('\n' + col('  beat', 8) + col('scheduled', 12) + col('actual', 10) + 'drift');
-  let worst = 0;
-  for (let n = 1; n <= BEAT_COUNT; n++) {
-    const drift = landings[n - 1] - fireTime(n);
-    if (Math.abs(drift) > Math.abs(worst)) worst = drift;
-    if ([10, 11, 20, 25, 30, BEAT_COUNT].includes(n)) {
-      console.log(
-        col(`  ${n}`, 8) +
-          col(clock(fireTime(n)), 12) +
-          col(clock(landings[n - 1]), 10) +
-          `${drift > 0 ? '+' : ''}${fmt(drift)}s`,
-      );
-    }
-  }
-  const smooth = cumulativeIncome(RUN_SECONDS, BASELINE_SEAT);
-  const honest = cumulativeIncomeWithCollectors(RUN_SECONDS, BASELINE_SEAT);
-  console.log(
-    `\n  Collectors are ${(((honest - smooth) / honest) * 100).toFixed(1)}% of run income` +
-      ` in ${COLLECTOR_BALANCE.perRun} bursts. Worst drift ${fmt(worst)}s, monotone.`,
-  );
-
-  const shipped = beatLandings(LADDER, BASELINE_SEAT, true);
-  let worstShipped = 0;
-  for (let n = 1; n <= BEAT_COUNT; n++) {
-    const drift = shipped[n - 1] - fireTime(n);
-    if (Math.abs(drift) > Math.abs(worstShipped)) worstShipped = drift;
-  }
-  console.log(
-    `  The shipping ladder (derived on AMORTIZED income): worst deviation ` +
-      `${fmt(worstShipped)}s, and it oscillates rather than accumulating — a seat` +
-      ` runs\n  slightly behind before the first collector and slightly ahead after` +
-      ` one. Bounded\n  jitter around the schedule is the honest cost of impulsive` +
-      ` income; monotone\n  drift is a broken derivation.`,
-  );
-}
-
-function reportSeats(): void {
-  console.log('\n═══ Seat spread — shipping ladder, each seat’s own run ═══');
-  console.log(
-    col('  seat', 13) +
-      col('income', 9) +
-      col('σ', 7) +
-      col('ends', 8) +
-      col('beats', 9) +
-      'predicted bind',
-  );
-  for (const seat of SEATS) {
-    const landings = beatLandings(LADDER, seat, true);
-    const death = deathTime(seat, landings);
-    const end = Math.min(death, RUN_SECONDS);
-    const reached = landings.filter((t) => Number.isFinite(t) && t <= end).length;
-    const behind = reached < scheduledBeatsBy(end) - 3;
-    const bind = Number.isFinite(death)
-      ? contactChance(death, seat.engage, seat.dps, seat.speed) > 0.6
-        ? 'traversal collapse'
-        : 'HP floor'
-      : behind
-        ? 'collection starvation'
-        : 'timer';
-    console.log(
-      col(`  ${seat.id}`, 13) +
-        // The compound the projection actually rides — measured, not authored.
-        // Printing `engage × eta` here made the table look like a statement about
-        // the seats when it was a statement about their authored parameters, and the two have
-        // not agreed since the automated player learned to route (`../data/seats.ts`
-        // § SeatOutcome). Comparable directly against `spread-probe.ts`'s
-        // `income` column, which measures the same product per run.
-        col((seat.measured.killsPerSpawn * seat.measured.eta).toFixed(3), 9) +
-        col(seat.defenseShare.toFixed(2), 7) +
-        col(clock(end), 8) +
-        col(`${reached}/${BEAT_COUNT}`, 9) +
-        bind,
-    );
-  }
-  console.log('\n  READING, as authored: the seats do not yet bind on different causes.');
-  console.log('  Guns-versus-butter is unbalanced — DPS reaches survival only through');
-  console.log('  the squared density term while σ divides damage directly. That');
-  console.log('  conversion rate is a MEASUREMENT; the probe against shipping code');
-  console.log('  takes it. Recorded in `../BALANCING.md` § Known thin — not tuned here.');
-}
-
-function main(): void {
-  console.log('Survivor — closed-form balance projection');
-  console.log('Bucket: geometric discrete on minute marks over a modifier-product chain.');
-  reportSchedule();
-  reportArena();
-  reportContent();
-  reportMeta();
-  reportDerivationCheck();
-  reportSeats();
-  console.log('\n═══ Coverage boundary ═══');
-  console.log('  Closed: draft schedule, ladder derivation, HP/density escalation,');
-  console.log('          flat-TTK pick gain, collector impulses, entity budget,');
-  console.log('          the survival crossing against a draft-grown HP pool.');
-  console.log('  Open:   draft offers are a weighted pick (DPS is a distribution);');
-  console.log('          η is a policy output, assumed here, never predicted.');
-  console.log('  Measured by: seeded multi-run probes — median survival, η split');
-  console.log('          continuous/collector, binding-cause distribution per seat.\n');
-}
-
-main();
+const full = cumulativeIncome(ANCHORS.takeSeconds) / REELS_PER_CLOUT;
+let shop = 0;
+for (const a of AGENCY)
+  for (let l = 0; l < a.maxLevel; l++) shop += a.baseCost * AGENCY_GROWTH ** l;
+const stars = STARS.reduce((x, s) => x + s.cost, 0);
+console.log(
+  `\nClout: ${f(REELS_PER_CLOUT, 2)} reels a point, so a baseline take (${ANCHORS.baselineTakeSeconds}s) pays ${ANCHORS.cloutPerBaselineTake}`,
+);
+console.log(
+  `  a full take at G pays about ${f(full, 0)}; agency levels grow ×${f(AGENCY_GROWTH, 3)}`,
+);
+console.log(
+  `  the whole shop: ${f(shop, 0)} agency + ${stars} stars = ${f((shop + stars) / ANCHORS.cloutPerBaselineTake, 1)} baseline takes, ${f((shop + stars) / full, 1)} full takes`,
+);

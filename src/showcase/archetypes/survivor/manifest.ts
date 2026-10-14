@@ -1,87 +1,40 @@
 import type { ArchetypeManifest } from '@/types';
 
 /**
- * Survivor — Wave Escalation + Cooldown-Rotation + Run-Scoped Upgrade Tree +
- * Cross-Run Meta. See `IDENTITY.md` for the composition and the spine.
- *
- * `beats` are measured, not authored: each window is the observed range across a
- * seed batch (`@/types` § BeatRef). `primitives` lists only surfaces the
- * archetype actually reaches; it grows as the modules land.
+ * Beat windows are RECORDED from `balance/career-probe.ts` under the stars' instincts, never
+ * authored as targets. One seeded career is the measurement, so each window is a single
+ * time. Re-record them after any spine change.
  */
 export const manifest: ArchetypeManifest = {
   id: 'survivor',
-  displayName: 'Survivor',
+  displayName: 'Survivor — One More Take',
   primitives: [
-    {
-      name: 'createSpatialGrid',
-      sourceLayer: 'core',
-      path: 'open-loop-engine/src/core/spatial/grid.ts',
-    },
-    {
-      name: 'createTuningRegistry',
-      sourceLayer: 'core',
-      path: 'open-loop-engine/src/core/override-registry.ts',
-    },
-    { name: 'createResource', sourceLayer: 'core', path: 'open-loop-engine/src/core/resource.ts' },
-    {
-      name: 'createCostRequirement',
-      sourceLayer: 'core',
-      path: 'open-loop-engine/src/core/requirements.ts',
-    },
+    { name: 'createResource', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
       name: 'createPurchasableCategory',
       sourceLayer: 'systems',
-      path: 'open-loop-engine/src/systems/purchasable-category.ts',
+      path: 'open-loop-engine/docs/api/INDEX.md',
     },
+    { name: 'createSkill', sourceLayer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'createReset', sourceLayer: 'systems', path: 'open-loop-engine/docs/api/INDEX.md' },
     {
-      name: 'createSeededRNG',
-      sourceLayer: 'primitives',
-      path: 'open-loop-engine/src/primitives/rng.ts',
+      name: 'createModifierChain',
+      sourceLayer: 'core',
+      path: 'open-loop-engine/docs/api/INDEX.md',
     },
+    { name: 'createSpatialGrid', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'tunable', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
+    { name: 'weightedPick', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
   ],
-  // RECORDED from `balance/spread-probe.ts` § Beat windows — 16 seeds x 4 seats,
-  // the full observed range across all 64 runs, never authored as tuning targets
-  // (`@/types` § BeatRef). Definitions and the order's own correction are in
-  // `balance/beats.ts`; re-record after anything that moves the escalation curve.
   beats: [
-    {
-      n: 1,
-      label: 'Opening — the apparatus fires into an empty floor; the first draft commits nothing',
-      recordedFireTimeRange: [0, 0],
-    },
-    {
-      n: 2,
-      label: 'First contact — the floor gets a hand on you before the loadout is a loadout',
-      recordedFireTimeRange: [13, 49],
-    },
-    {
-      n: 3,
-      label: 'The loadout commits — a device is deep enough to be the one the run is about',
-      recordedFireTimeRange: [120, 360],
-    },
-    {
-      n: 4,
-      label: 'Halfway down — attrition has taken half the bar and disengaging starts to look right',
-      recordedFireTimeRange: [294, 1606],
-    },
-    {
-      n: 5,
-      label: 'The floor fills — bodies outpace the kill radius and collection starts costing',
-      recordedFireTimeRange: [780, 1560],
-    },
-    {
-      n: 6,
-      label: 'The floor closes — the run ends and the notes bank',
-      recordedFireTimeRange: [1145, 1800],
-    },
+    { n: 1, label: 'The first rewrite', recordedFireTimeRange: [18, 18] },
+    { n: 2, label: 'CUT: the first take survives', recordedFireTimeRange: [420, 420] },
+    { n: 3, label: 'The Pyro signs, and PG opens', recordedFireTimeRange: [840, 840] },
+    { n: 4, label: 'CUT at PG', recordedFireTimeRange: [1670, 1670] },
+    { n: 5, label: 'R opens', recordedFireTimeRange: [2135, 2135] },
   ],
-  // Declared invention: a fullscreen floor with
-  // the readouts pinned over it, and the between-runs record sheet as a
-  // full-screen overlay. `subgenre-shell-mapping-2026.md` puts survivor-like at
-  // `free-form` (2/2 classifiable; formally insufficient-corpus at that N, and
-  // the third exemplar is consistent), so no `src/lib/shells/` entry fits.
-  shell: 'ContainmentFloor',
-  formFactor: 'desktop',
+  shell: 'Soundstage',
+  formFactor: 'responsive',
   exemplars: [
     {
       title: 'Vampire Survivors',

@@ -1,0 +1,124 @@
+/*
+ * Survivor — the One More Take costume.
+ *
+ * The whole design language is here, scoped under `.soundstage-costume`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in `src/lib/` or `src/ui/`
+ * is edited for it: every hook is a documented costume class on a shell or composition, or a
+ * class this story's own components emit.
+ *
+ * Language: an action set that never wraps. The floor is a dark soundstage under one
+ * tungsten key light; the chrome is the slate, the call sheet and the timecode; a rewrite is
+ * a typed screenplay page. Tokens are named for the set, not the scale. The affordance
+ * palette comes first:
+ *   tungsten   = you can act: affordable, chosen, the rewrite filling
+ *   gaffer     = you can't yet: the tape on the floor, the unlit rig
+ *   greenlight = newly approved: a fresh page, an open rating
+ *   nitrate    = capped or done: an agency perk fully signed
+ *   squib      = danger: stamina, the wipeout, the timecode's red line
+ * A narrow billing face for chrome and numbers, a schoolbook serif for body text, and
+ * Courier for the screenplay pages, because in the fiction they are typed.
+ *
+ * Fonts are local stacks; nothing is fetched.
+ */
+
+.soundstage-costume {
+  /* ── the stage ── */
+  --stage-black: #110f0d;
+  --stage-floor: #1b1815;
+  --stage-haze: #26221e;
+  --gaffer: #3a3531;
+  --gaffer-hi: #5a534b;
+
+  /* ── light and type ── */
+  --chalk: #ece5d8;
+  --chalk-dim: #a39a8b;
+  --chalk-faint: #6f685e;
+  --script-paper: #efe9dc;
+  --script-ink: #22201c;
+
+  /* ── the affordance palette ── */
+  --tungsten: #f2a73a;
+  --tungsten-dim: #7d5d33;
+  --greenlight: #5cb27a;
+  --nitrate: #b9b3a7;
+  --squib: #d8452f;
+  --squib-dim: #6d2a20;
+  --reel-gold: #ffd56b;
+  --tape-blue: #4b8fd6;
+
+  --font-billing: 'Nimbus Sans Narrow', 'Arial Narrow', 'Liberation Sans Narrow', sans-serif;
+  --font-body: 'C059', 'Century Schoolbook', 'TeX Gyre Schola', Georgia, serif;
+  --font-script: 'Nimbus Mono PS', 'Courier Prime', 'Courier New', monospace;
+
+  --hud-pad: 18px;
+  --ease-cut: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* starter's tokens, on the set */
+  --color-bg: var(--stage-black);
+  --color-surface: var(--stage-floor);
+  --color-surface-hover: var(--stage-haze);
+  --color-border: var(--gaffer);
+  --color-text: var(--chalk);
+  --color-text-muted: var(--chalk-dim);
+  --color-primary: var(--tungsten);
+  --color-primary-hover: #f6bb62;
+  --color-danger: var(--squib);
+  --font-sans: var(--font-body);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--stage-black);
+  color: var(--chalk);
+  font-family: var(--font-body);
+  color-scheme: dark;
+}
+
+.soundstage-costume .num {
+  font-family: var(--font-billing);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.soundstage-costume .billing {
+  font-family: var(--font-billing);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Buttons take the set's type and colour; each screen styles its own. */
+:where(.soundstage-costume) .ss-control {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+/* The clapper stripe: the slate's hinged top bar. */
+.soundstage-costume .clapper-stripe {
+  display: block;
+  height: 10px;
+  background: repeating-linear-gradient(-55deg, var(--chalk) 0 14px, var(--stage-black) 14px 28px);
+}
+
+/* Starter's frame, on the set. */
+.soundstage-costume .olui-app-frame {
+  background: transparent;
+}
+.soundstage-costume .olui-system-header {
+  background: var(--stage-black);
+  border-bottom: 1px solid var(--gaffer);
+  font-family: var(--font-billing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .soundstage-costume *,
+  .soundstage-costume *::before,
+  .soundstage-costume *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

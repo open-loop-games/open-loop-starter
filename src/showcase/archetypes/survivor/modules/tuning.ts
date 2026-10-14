@@ -6,43 +6,24 @@ import {
 } from '@open-loop/engine';
 
 /**
- * The `tunable()` key registry — the one perturbation path (no parallel
- * `data/balance.ts`; `.claude/rules/archetype-authoring.md` § Directory shape).
- * Probes and solvers perturb these keys via `registry.pushOverrides`.
+ * The `tunable()` key registry, the one perturbation path. Every key has a live `tunable()`
+ * reader; `BALANCING.md` § The tunables says what each moves. A key's prefix is the spine
+ * term it feeds:
  *
- * A key exists here only if perturbing it is MEANINGFUL. The solved quantities —
- * the beat ratio, the per-pick DPS gain, the XP ladder — are deliberately absent:
- * each is derived from the others to satisfy a constraint, so overriding one
- * directly decouples it from what it was derived for while still looking like a
- * tunable. Perturb the inputs and re-derive (`../BALANCING.md` § The tunables).
+ *   - `contact/scale`     contact damage against the spine's curve
+ *   - `player/baseHp`     the double's health before star, padding and stamina
  *
- * Key prefixes:
- *   - `threat/*`   — escalation and density (`../data/arena.ts`)
- *   - `arena/*`    — geometry, and the risk premium on income
- *   - `schedule/*` — the run's time axis (`../data/schedule.ts`)
- *   - `income/*`   — collector yield (`../data/income.ts`)
+ * The anchors not keyed here are read from `../data/spine.ts` directly: each one feeds a
+ * solve (the level gain, the ladder, the agency's growth), so perturbing it means rerunning
+ * the projection.
  */
-export type SurvivorTunableKey =
-  | 'threat/spawnRate0'
-  | 'threat/spawnGrowthPerMinute'
-  | 'threat/hpGrowthPerMinute'
-  | 'threat/contactDamageGrowthPerMinute'
-  | 'threat/contactDps'
-  | 'threat/densityCap'
-  | 'arena/killRadius'
-  | 'arena/collectRadius'
-  | 'arena/baseHp'
-  | 'schedule/hpPickGain'
-  | 'income/collectorOnscreenShare';
+export type SurvivorTunableKey = 'contact/scale' | 'player/baseHp';
 
 export const SurvivorTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
   'survivor/tuning-registry',
 ) as InjectionKey<TuningRegistry>;
 
-/**
- * Cross-module foundation. Runs first (no dependencies); every other module
- * carries `dependencies: ['survivor/tuning']` and injects the registry.
- */
+/** Creates the registry every `tunable()` reader binds into. Runs first. */
 export function createTuningModule(): EngineModule {
   return {
     id: 'survivor/tuning',

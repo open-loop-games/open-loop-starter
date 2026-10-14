@@ -1,29 +1,23 @@
 import type { EngineModule } from '@open-loop/engine';
-import { createTuningModule } from './tuning';
-import { createArenaModule, type ArenaModuleOptions } from './arena';
-import { createRunModule } from './run';
-import { createDraftModule } from './draft';
 import { createMetaModule } from './meta';
-
-export { SurvivorTuningRegistryKey, type SurvivorTunableKey } from './tuning';
-export { ArenaKey, createArenaModule, type ArenaApi, type RunOutcome } from './arena';
-export { RunKey, type RunApi, type BindingCause } from './run';
-export { DraftKey, OFFER_COUNT, type DraftApi, type DraftOffer } from './draft';
-export { MetaKey, type MetaApi } from './meta';
+import { createTakeModule } from './take';
+import { createTuningModule } from './tuning';
 
 /**
- * The archetype's module list. `bootEngine` installs the shared base (settings,
- * ui-prefs) alongside these.
- *
- * Order is irrelevant — the engine topo-sorts on `dependencies` — but the tuning
- * foundation is listed first because everything reads through it.
+ * The floor's tick rate. The arena step is not tick-robust (a different dt plays a different
+ * take), so the live engine runs fixed ticks at this rate, and the probes and suites tick at
+ * it too.
  */
-export function createSurvivorModules(options: ArenaModuleOptions = {}): EngineModule[] {
-  return [
-    createTuningModule(),
-    createMetaModule(),
-    createArenaModule(options),
-    createRunModule(),
-    createDraftModule({ seed: options.seed }),
-  ];
+export const INTERVAL_RATE = 30;
+
+export { SurvivorTuningRegistryKey, type SurvivorTunableKey } from './tuning';
+export * from './meta';
+export * from './take';
+
+/**
+ * The survivor modules in dependency order: the registry; the meta module, which outlasts
+ * every take and builds the chains; the take that steps the floor.
+ */
+export function createSurvivorModules(): EngineModule[] {
+  return [createTuningModule(), createMetaModule(), createTakeModule()];
 }

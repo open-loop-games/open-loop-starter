@@ -1,219 +1,124 @@
 /**
- * Survivor — cone probe: what the wedge is worth under a better hand than the policy has.
+ * Survivor: cone probe. What the Pyro Gag is worth under a better aim than the star's
+ * instinct has. Installs the gag at level 4 on every star, plays G takes with the star
+ * improvising, and while the gag is about to fire compares the bodies its cone holds with
+ * the most any facing from the same spot would hold. Prints; never asserts.
  *
- * Run: `pnpm exec vite-node src/showcase/archetypes/survivor/balance/cone-probe.ts`
- * Seeds: `SEEDS=6 …` (default 4). Minutes: `CONE_MINUTES=15 …` (default 12).
+ * Run: `pnpm exec vite-node src/showcase/archetypes/survivor/balance/cone-probe.ts [seeds]`
+ * (default 4).
  *
- * `../modules/draft.ts` `HEADING_BOUND_DISCOUNT` exists because a policy aims a
- * heading-bound shape worse than a player does, and until this probe that was the
- * one claim in `../BALANCING.md` with no reading behind it — reasoning, not a
- * measurement, holding up a live tuning decision.
+ * The comparison is a ceiling, not a simulated player: a free rotation costs nothing here,
+ * and a real turn costs position. `HEADING_BOUND_DISCOUNT` in `../modules/sim/draft.ts`
+ * discounts the gag for an improvising star by about the gap this measures; a smaller gap
+ * would shrink it.
  *
- * **The instrument is a ceiling, not a simulated player.** A scripted hand would
- * be a guess about how someone plays, and the number it produced would inherit
- * the guess. So this measures the *achievable* wedge instead: at each sample it
- * takes the operator's real position and the real specimen field, and asks what
- * the best possible orientation of the wedge would have caught. No hand exceeds
- * that, so `actual / best` bounds what better aiming can be worth. The bound is
- * generous on purpose — free rotation is not what a player has, because turning
- * to aim also moves them, and this charges nothing for that. Read a small gap as
- * conclusive and a large one as an upper bound.
- *
- * **The cone is force-installed** (`../modules/draft.ts` § apply does the same
- * push). Waiting for the shipping draft to offer it would measure the discount,
- * which is the thing under question — a probe cannot take its own hypothesis as
- * an input. Level is fixed across seats so the reading is about aiming rather
- * than about who drafts deeper.
- *
- * Sampling: every tick where the cone is inside `CONNECT_HORIZON` of firing —
- * which is exactly the window `../modules/sim/steering.ts` `CONNECT_WEIGHT`
- * weights by imminence, so this reads the policy while it is actually trying.
- * A separate column reads the ticks it fired on.
+ * How to read it: `capture` is bodies caught over bodies the best facing would catch, over
+ * every armed tick; `at fire` is the same at the instants the gag fired.
  */
 
-import { spreadOf } from '@/balance';
-import { bootTestEngine } from '@/test/bootTestEngine';
-import { ArenaKey, RunKey, createSurvivorModules } from '../modules';
-import { deviceReach, selectTargets } from '../modules/sim/dispatch';
+import { RIG_BY_ID, STARS, type StarDef } from '../data';
 import { CONNECT_HORIZON } from '../modules/sim/steering';
-import type { DeviceRuntime, Specimen, Vec2 } from '../modules/sim/types';
-import { SEATS } from '../data/seats';
-import { col } from './_arc';
+import { inCone } from '../modules/sim/arena';
+import { buildSet, openAll } from './_set';
+import { claimChunk, emitResult, runPool } from './_pool';
 
-const SEED_COUNT = Number(process.env.SEEDS ?? 4);
-const MINUTES = Number(process.env.CONE_MINUTES ?? 12);
-/** 5 ticks/sim-second, matching `./_arc.ts`. */
-const INTERVAL_RATE = 5;
-const CONE_ID = 'culture-sprayer';
-/** Mid-run depth. Level moves reach and damage, never the wedge angle. */
-const CONE_LEVEL = 4;
-/** `../modules/sim/dispatch.ts` § cone — `dot >= 0.5`, so ±60°. */
-const HALF_ANGLE = Math.PI / 3;
-
-/**
- * Targets the best-oriented wedge would take from this position, capped the way
- * the shape is capped.
- *
- * An optimal angular window always has a body on its leading edge, so scanning
- * the window that opens at each body's bearing finds the maximum exactly — no
- * search over headings, and no resolution to argue about.
- */
-function bestWedge(origin: Vec2, reach: number, specimens: readonly Specimen[], cap: number) {
-  const bearings: number[] = [];
-  const reach2 = reach * reach;
-  for (const s of specimens) {
-    const dx = s.x - origin.x;
-    const dy = s.y - origin.y;
-    if (dx * dx + dy * dy <= reach2) bearings.push(Math.atan2(dy, dx));
-  }
-  if (bearings.length === 0) return { best: 0, reachable: 0 };
-  bearings.sort((a, b) => a - b);
-  const n = bearings.length;
-  let best = 0;
-  for (let i = 0; i < n; i++) {
-    // Window [θᵢ, θᵢ + 2·halfAngle]; walk forward with wraparound.
-    let count = 0;
-    for (let k = 0; k < n; k++) {
-      let d = bearings[(i + k) % n]! - bearings[i]!;
-      if (d < 0) d += Math.PI * 2;
-      if (d > HALF_ANGLE * 2) break;
-      count++;
-    }
-    if (count > best) best = count;
-  }
-  return { best: Math.min(best, cap), reachable: n };
+interface Job {
+  star: StarDef['id'];
+  seed: number;
 }
 
-interface SeatReading {
-  /** actual/best per sample, over the aiming window. */
-  capture: number[];
-  /** The same, restricted to the ticks the device actually fired on. */
-  captureAtFire: number[];
-  actual: number[];
-  best: number[];
-  reachable: number[];
+interface Reading {
+  star: StarDef['id'];
+  armed: number;
+  caught: number;
+  best: number;
   fires: number;
+  caughtAtFire: number;
+  bestAtFire: number;
 }
 
-async function runSeat(seatId: string, seed: number, into: SeatReading): Promise<void> {
-  const handle = bootTestEngine({
-    modules: createSurvivorModules({ seed }),
-    intervalRate: INTERVAL_RATE,
-    persistenceNamespacePrefix: `survivor-cone-${seatId}-${seed}`,
-  });
-  const arena = handle.engine.tryInject(ArenaKey);
-  const run = handle.engine.tryInject(RunKey);
-  if (!arena || !run) throw new Error('cone-probe: survivor modules did not provide');
+const FACINGS = 32;
+const GAG = RIG_BY_ID['pyro-gag'];
 
-  run.startRun(seatId);
-  const state = arena.state.value;
-  state.devices.push({ defId: CONE_ID, level: CONE_LEVEL, timer: 0 });
-
-  const dt = 1 / INTERVAL_RATE;
-  const ticks = MINUTES * 60 * INTERVAL_RATE;
-  for (let t = 0; t < ticks; t++) {
-    const live = arena.state.value;
-    const cone = live.devices.find((d: DeviceRuntime) => d.defId === CONE_ID);
-    // Pre-tick: the timer still says how far off the shot is, and the heading is
-    // the one the policy has committed to for this tick.
-    const armed = cone !== undefined && cone.timer <= CONNECT_HORIZON;
-    const willFire = cone !== undefined && cone.timer <= dt;
-    let sample: { actual: number; best: number; reachable: number } | null = null;
-    if (armed && cone) {
-      const reach = deviceReach(cone, live.reagentStacks);
-      const origin = { x: live.operator.x, y: live.operator.y };
-      const { targets } = selectTargets(cone, origin, live.operator.heading, reach, live.specimens);
-      const { best, reachable } = bestWedge(origin, reach, live.specimens, 5);
-      sample = { actual: targets.length, best, reachable };
-    }
-
-    await handle.tick(1);
-
-    if (sample && sample.best > 0) {
-      into.capture.push(sample.actual / sample.best);
-      into.actual.push(sample.actual);
-      into.best.push(sample.best);
-      into.reachable.push(sample.reachable);
-      if (willFire) {
-        into.captureAtFire.push(sample.actual / sample.best);
-        into.fires++;
+function read(job: Job): Reading {
+  const set = buildSet(job.seed);
+  openAll(set);
+  const { take, engine } = set;
+  take.startTake({ star: job.star, rating: 0, driver: 'instinct', seed: job.seed });
+  const a = take.arena()!;
+  const held = a.rigs.find((r) => r.def.id === GAG.id);
+  if (held) held.level = 4;
+  else a.rigs.push({ def: GAG, level: 4, cd: 0 });
+  const out: Reading = {
+    star: job.star,
+    armed: 0,
+    caught: 0,
+    best: 0,
+    fires: 0,
+    caughtAtFire: 0,
+    bestAtFire: 0,
+  };
+  let lastCd = 0;
+  while (take.view.screen === 'take') {
+    const slot = a.rigs.find((r) => r.def.id === GAG.id)!;
+    const p = a.player;
+    const sample = slot.cd <= CONNECT_HORIZON;
+    let caught = 0;
+    let best = 0;
+    if (sample) {
+      caught = inCone(a.extras, p, p.facing, GAG.reach).length;
+      for (let i = 0; i < FACINGS; i++)
+        best = Math.max(best, inCone(a.extras, p, (i / FACINGS) * Math.PI * 2, GAG.reach).length);
+      if (best > 0) {
+        out.armed++;
+        out.caught += caught;
+        out.best += best;
       }
     }
-    if (arena.outcome.value !== 'running') break;
-  }
-  handle.dispose();
-}
-
-const pct = (n: number): string => `${(n * 100).toFixed(0)}%`;
-
-async function main(): Promise<void> {
-  console.log('Survivor — cone probe (shipping module + shipping policy, headless)');
-  console.log(
-    `${SEED_COUNT} seeds x ${SEATS.length} seats, ${MINUTES} sim-minutes each, ` +
-      `${CONE_ID} force-installed at level ${CONE_LEVEL}.\n`,
-  );
-
-  console.log(
-    col('  seat', 13) +
-      col('samples', 10) +
-      col('in wedge', 11) +
-      col('best wedge', 12) +
-      col('in reach', 11) +
-      col('capture', 10) +
-      'capture at fire',
-  );
-
-  const roster: SeatReading[] = [];
-  for (const seat of SEATS) {
-    const r: SeatReading = {
-      capture: [],
-      captureAtFire: [],
-      actual: [],
-      best: [],
-      reachable: [],
-      fires: 0,
-    };
-    for (let i = 0; i < SEED_COUNT; i++) await runSeat(seat.id, 12345 + i * 7919, r);
-    roster.push(r);
-    if (r.capture.length === 0) {
-      console.log(col(`  ${seat.id}`, 13) + 'no armed sample with a reachable body');
-      continue;
+    engine.tickDriver.tickOnce();
+    if (slot.cd > lastCd + 0.5 && best > 0) {
+      out.fires++;
+      out.caughtAtFire += caught;
+      out.bestAtFire += best;
     }
-    const s = spreadOf(r.capture, { v: (x) => x }).v!;
-    const a = spreadOf(r.actual, { v: (x) => x }).v!;
-    const b = spreadOf(r.best, { v: (x) => x }).v!;
-    const re = spreadOf(r.reachable, { v: (x) => x }).v!;
-    const f =
-      r.captureAtFire.length > 0 ? spreadOf(r.captureAtFire, { v: (x) => x }).v!.avg : Number.NaN;
-    console.log(
-      col(`  ${seat.id}`, 13) +
-        col(String(r.capture.length), 10) +
-        col(a.avg.toFixed(2), 11) +
-        col(b.avg.toFixed(2), 12) +
-        col(re.avg.toFixed(1), 11) +
-        col(pct(s.avg), 10) +
-        (Number.isFinite(f) ? `${pct(f)} (${r.fires} fires)` : '—'),
-    );
+    lastCd = slot.cd;
   }
-
-  // ── What the discount is actually costing ──
-  //
-  // Stated rather than thresholded. `HEADING_BOUND_DISCOUNT` cancels the acquire
-  // bonus, so the question it answers is "how much of this shape is unavailable
-  // to a policy", and that is what `1 − capture` bounds from above.
-  const all = roster.flatMap((r) => r.capture);
-  if (all.length > 0) {
-    const s = spreadOf(all, { v: (x) => x }).v!;
-    console.log('\n  ── Against the claim ──');
-    console.log(
-      `  Roster capture ${pct(s.avg)} of the achievable wedge ` +
-        `[${pct(s.p5)}–${pct(s.p95)}], ${all.length} armed samples.`,
-    );
-    console.log(
-      `  Ceiling on better aiming: ${pct(1 - s.avg)} more bodies per shot, before\n` +
-        '  charging anything for the positioning a real turn costs.',
-    );
-  }
+  set.dispose();
+  return out;
 }
 
-main();
+const chunk = claimChunk<Job>();
+if (chunk) {
+  for (const job of chunk) emitResult(read(job));
+} else {
+  const seeds = Number(process.argv[2] ?? 4);
+  const jobs = STARS.flatMap((s) =>
+    Array.from({ length: seeds }, (_, i) => ({ star: s.id, seed: i + 1 })),
+  );
+  const t0 = performance.now();
+  const rs = await runPool<Job, Reading>(import.meta.url, jobs);
+  console.log(`\nSURVIVOR cone probe: ${seeds} seeds a star, the Pyro Gag at level 4, G\n`);
+  console.log('star       armed ticks  in cone  best cone  capture  at fire');
+  let all = { caught: 0, best: 0, cf: 0, bf: 0 };
+  for (const star of STARS) {
+    const r = rs.filter((x) => x.star === star.id);
+    const sum = (k: keyof Reading) => r.reduce((a, x) => a + (x[k] as number), 0);
+    const armed = sum('armed');
+    all = {
+      caught: all.caught + sum('caught'),
+      best: all.best + sum('best'),
+      cf: all.cf + sum('caughtAtFire'),
+      bf: all.bf + sum('bestAtFire'),
+    };
+    console.log(
+      `${star.id.padEnd(10)} ${String(armed).padEnd(12)} ${(sum('caught') / armed).toFixed(2).padEnd(8)} ` +
+        `${(sum('best') / armed).toFixed(2).padEnd(10)} ${((100 * sum('caught')) / sum('best')).toFixed(0).padStart(3)}%     ` +
+        `${((100 * sum('caughtAtFire')) / Math.max(1, sum('bestAtFire'))).toFixed(0)}% (${sum('fires')} fires)`,
+    );
+  }
+  console.log(
+    `\nAll stars: ${((100 * all.caught) / all.best).toFixed(0)}% of the best cone while armed, ` +
+      `${((100 * all.cf) / Math.max(1, all.bf)).toFixed(0)}% at the instant it fires.`,
+  );
+  console.log(`${jobs.length} takes in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+}

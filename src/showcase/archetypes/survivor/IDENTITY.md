@@ -1,206 +1,106 @@
 # Survivor — archetype identity
 
-> **Automatic fire with positioning as the only input — a standing candidate, not
-> a pattern — inside `scaled-opposition`, with an `offered-draft` at every
-> level-up, a `run-setup` choice of character and danger, and `meta-progression`
-> banking unlocks across runs.** Stand inside the threat and respond in real time,
-> run after run.
+> Automatic fire with positioning as the only input — a standing candidate, not a pattern —
+> inside `scaled-opposition`, with an `offered-draft` at every level-up, a `run-setup`
+> choice of character and danger, and `meta-progression` banking unlocks across runs.
+> Stand inside the threat and respond in real time, run after run.
 
-Identity line source: `../_identity.md` (Survivor entry); the line's player
-experience and exemplar calls are `../_docs/survivor.md`. **Core · open core.** Brotato is sourced, and the patterns above are the ones it
-carries; Vampire Survivors and Halls of Torment are called from design knowledge.
-The defining component is the automatic-fire candidate in
-`open-loop-research/patterns/candidate-patterns.md`, which already holds Brotato's
-fire site and a decline; it is cited as a candidate until research graduates or
-places it.
-
-**Topic: Mad Science × Action.** A containment breach you cannot leave. Your
-apparatus fires itself because that is what apparatus does; reagents recombine
-into named hybrids; the notes survive when you do not.
+Identity line source: `../_identity.md` (Survivor entry); the line's player experience and
+exemplar calls are `../_docs/survivor.md`. **Core · open core.** Brotato is sourced, and the
+patterns above are the ones it carries; Vampire Survivors and Halls of Torment are called
+from design knowledge. The defining component is the automatic-fire candidate in
+`open-loop-research/patterns/candidate-patterns.md`, cited as a candidate until research
+graduates or places it.
 
 ## What this archetype is
 
-One operator loose on a bounded floor while specimens pour in from every side.
-Devices fire on their own cooldowns within a **kill radius** — you never aim, you
-only decide where to stand. Standing well means holding specimens inside that
-radius and outside contact range: dancing on the edge. Kills leave reagent motes
-where they died, and the **collect radius is smaller than the kill radius**, so
-banking income means looping back through the space you just cleared. That
-transaction — kill at the edge, dive to collect — is the whole moment-to-moment
-game.
+*One More Take.* You are the stunt double on an action set that never wraps. Extras pour
+onto the soundstage from every side; the effects crew fires your rigs on their own clocks.
+The only thing you choose is where to stand. A rig is a shape that asks a different place:
+the Prop Pistol the nearest body in reach, the Squib Ring everyone close, the Pyro Gag a
+cone along your heading, the Dolly Rifle the toughest body far out, faster while you hold
+your mark, and Breakaway Bottles orbiting you. Downed extras drop reels where they fall;
+walk over them to bank them. A kill inside the drifting camera frame, the shot, drops a gold
+reel worth double. Banked reels fill the rewrite bar, and each rung stops the floor for the
+writers' pages: a new rig, a level, or a perk. A take ends at CUT, seven minutes in, or at a
+wipeout. Either way the reels pay clout, and the agent spends it on perks and new stars.
 
-Every ~30–90 seconds a threshold crossing pauses the floor and offers a draft.
-Devices level, reagents stack, and a device at max paired with the right reagent
-recombines into a named hybrid. The run ends at the timer or when the floor
-closes. Either way the notes bank, and the next descent starts further along.
-
-The floor **scrolls**: the map is larger than the view, walled, and specimens
-spawn only in an annulus around the operator. So threat is always local and
-always escapable — which means disengaging is possible and costs you everything,
-because distance is zero damage and zero income. Motes stay on the floor, and a rare
-**collector** drop pulls every mote on screen at once; off-screen specials are
-signposted by edge arrows, which is what makes routing to one through your own
-uncollected field a real decision.
-
-**Seats are automated players.** Survivor ships with the operator driven by shipping
-automation and is fully playable and balanceable before a human seat exists; a
-player seat is a policy swapped for input (`modules/automation.ts`, and the same
-discipline skirmish uses). The three **personas** — speed, damage, defence —
-bias both the movement policy and the draft policy, so each solves the collection
-problem at a different cost. They are simultaneously the balance sweep axis and
-the character-select screen.
-
-That seam has a consequence the roster is built on: **a device can be worth
-different amounts to a policy than to a hand.** The Culture Sprayer's wedge fires
-along the movement heading, so its value is the value of a manoeuvre — kite,
-swing the wedge onto the mass as the cooldown lands, fire, resume. The movement
-policy can execute that (`CONNECT_WEIGHT`) and measurably does, just worse than a
-player will, so the AI draft discounts it and a human seat does not. Directional
-weapons rewarding the driver is the genre's own texture, and here it is a
-measurement rather than a flavour claim.
+At the call sheet you pick a star, a rating and who calls the moves. A star is a body (an
+opening rig, a health and a speed bias) and an instinct: the parameters of the shipping
+movement and draft policies. Call the moves yourself, or let the star improvise. Each rating
+starts the take deeper into the opposition curve; CUT at one opens the next.
 
 ## Rate-function spine
 
-**Bucket: geometric discrete on minute marks, over a modifier-product chain.**
-Both sides of the run compound — device DPS through the draft, specimen HP and
-annulus density through the escalation schedule — so the closed core is a
-crossing between two geometric curves, and the XP ladder is _derived_ from the
-income model so beats land on the authored schedule rather than being authored
-beside it. Per-subsystem buckets and their receipts are inventoried at
-`open-loop-research/reports/closed-form-subsystem-inventory/per-archetype/survivor.md`.
+**Bucket: geometric discrete on scene marks** (`incremental-math/…/rate-functions/`). Both
+sides of a take compound: rig damage through the rewrites, extra hp and arrivals through the
+scene index, which advances once a minute. The closed core is a crossing between two
+geometric curves. Every rig's level-1 damage a second is the same, so a rig choice is about
+shape; the per-level gain is solved so the mean loadout meets the last scene's demand. The
+rewrite ladder is fitted to the income model at its first and last beat, so the rewrites
+land on the authored schedule. Clout is income over a baseline take, and the agency's price
+growth is solved so the whole shop costs an anchored number of takes. `data/spine.ts`
+holds the anchors and the solves.
 
-The runtime is **sim-as-gameplay**: the spec closes, and the tick-by-tick arena
-integrates it. That is not a gap in coverage — it is the integration of a form
-that is already closed, and classifying it as discrete-event coupled would be
-wrong.
+**Where the closed form stops:**
+- *η and contact.* Collection efficiency and the time a driver spends touched are driver
+  outputs: the spine assumes η, and nothing in it predicts contact.
+- *the draft.* Offers are a weighted draw over a narrowing pool, so the loadout is a
+  distribution; the spine uses a mean pick order.
+- *the ratings.* The spine solves G only. A harsher rating is the same curves entered
+  deeper.
 
-**Where the closed form stops** — two places, both named:
+**What measures the remainder:** `take-probe.ts` plays every star × rating over a seed batch
+with no agency and reads ends, η, contact and the rewrites against the ladder;
+`career-probe.ts` plays the meta arc under the stars' instincts and a reference agent;
+`cone-probe.ts` and `steering-probe.ts` read the movement policy itself.
 
-1. **The draft is stochastic and load-bearing.** Offers are a weighted pick over
-   a pool that narrows through the run, so DPS(t) is a distribution, not a curve.
-   The variance carries design intent; a mean-only spec understates it.
-2. **Collection efficiency `η` is a policy output.** Income is
-   `kill rate × xp_per_mote × η`, and `η` falls out of how the movement policy
-   trades contact risk for banked motes. The closed form assumes an `η`; it
-   cannot predict one.
+## The arc
 
-**What measures the remainder** — seeded multi-run distribution statistics per
-persona: median survival, `η` reported separately for continuous pickup and
-collector bursts, and the distribution of **binding cause** at run end —
+| Beat | Recorded |
+|---|---|
+| The first rewrite | 0:18 |
+| CUT: the first take survives | 7:00 |
+| The Pyro signs, and PG opens | 14:00 |
+| CUT at PG | 27:50 |
+| R opens | 35:35 |
 
-| Cause                 | What bound                                                   |
-| --------------------- | ------------------------------------------------------------ |
-| HP floor              | contact accumulated; defence-bound                           |
-| Traversal collapse    | annulus density beat available DPS; no gap to move through   |
-| Collection starvation | killed enough, banked too little; low `η` against the ladder |
-| Timer                 | survived the arc                                             |
-
-A persona bound by one cause across every seed is a wall in costume. Three
-specialists each bound by a different cause, with the baseline mostly reaching
-the timer, is the target distribution.
-
-## The arc — beat map
-
-Six phase turns, **recorded** from 16 seeds × 4 seats and carried in
-`manifest.ts` (definitions in `balance/beats.ts`). They are deliberately not the
-draft beats: the ladder lands ~33 drafts over ~30 minutes
-(`balance/survivor-projection.ts`), and thirty-three indistinguishable pauses say
-nothing about where a run changes character.
-
-| Beat | Turn                | Observed    | Median |
-| ---- | ------------------- | ----------- | ------ |
-| 1    | Opening             | 0:00        | 0:00   |
-| 2    | First contact       | 0:13–0:49   | 0:22   |
-| 3    | The loadout commits | 2:00–6:00   | 3:00   |
-| 4    | Halfway down        | 4:54–26:46  | 13:50  |
-| 5    | The floor fills     | 13:00–26:00 | 24:00  |
-| 6    | The floor closes    | 19:05–30:00 | 30:00  |
-
-Two were authored in the wrong order and the recording corrected them, which is
-the argument for recording. **First contact lands before the loadout is a
-loadout** — the floor has a hand on you at ~0:22, well before ~3:00 — so this is
-not an archetype with a safe opening. And **attrition runs ahead of density**:
-the bar is half gone at 13:50, ten minutes before the floor crosses a hundred
-live bodies at 24:00. A run is worn down long before it is crowded, which is why
-softening the density curve gives survival without changing schedule
-(`BALANCING.md` § Known thin).
+A take runs up to seven minutes. Over eight seeds R opens at a median of 38 minutes, and an
+R take reaches CUT only where the floor's population guard turns arrivals away.
+`manifest.ts` holds the recorded beats.
 
 ## Growth ports
 
-- **The automation ladder.** The human seat has landed (`data/seats.ts`
-  `PLAYER_SEAT`, `driver: 'player'`) and it cost an addition rather than a
-  rewrite: input replaces the policy's _output_ at two seams the modules already
-  named, and every mechanic downstream is untouched. What it unblocks is the
-  ladder. There is still deliberately **no `AutomationTiers` ladder**: an AI seat
-  is an alternative character, not something the player earns, so install
-  presence blocks it exactly as it blocks skirmish's opponent seats. The honest
-  rung is now buildable and is a different thing — _autopilot on the seat you are
-  sitting in_, unlocked mid-run or across runs, with the existing movement policy
-  as its body. That is a spine decision when it comes: unlocking that automation tier changes
-  the arc, so the projection grows its second branch in the same pass.
-- **Second meta-currency.** Halls of Torment's hero-specific shards alongside
-  universal gold; a second lifetime chain over the same accrual.
-- **Wave-shop fork.** Brotato replaces the level-up draft with a between-wave
-  shop — same identity line, `shopMode` is the structural fork.
-- **Arcana-style run modifiers.** Per-run rule-change cards as a small slot set
-  over the modifier chain.
+- **An ending.** A last take the arc builds toward, with the game playable after.
+- **Rating rewards.** A harsher rating that pays more, so the choice is a trade and not
+  only a gate.
+- **Evolutions.** A maxed rig paired with the right perk recombines into a named rig, as
+  Vampire Survivors' weapons do.
+- **A wave-shop fork.** Brotato replaces the level-up draft with a shop between waves:
+  same identity line, a different draft.
 
-Exemplars — cited as a set that validates the shape ships in the wild, never as
-lift targets: Vampire Survivors, Brotato, Halls of Torment.
+## Engine fit
 
-## Engine fit (pattern → primitive)
+| Component | Engine primitive |
+|---|---|
+| clout | `createResource` |
+| agency, stars, ratings | `createPurchasableCategory`; ratings open by `setupSweepAutoPurchase` |
+| the rewrite ladder | `createSkill` over an inverted geometric `Formula` |
+| damage, fire rate, health, speed, reach | `createModifierChain`; agency grants and rewrite perks bind into the same chains |
+| a take's reset | `createReset` over the take module's persistent context |
+| the reel route | `createSpatialGrid` `distanceField`, descended consumer-side |
+| the floor and the draft's draws | `createSeededRNG`, `weightedPick` |
+| every perturbable anchor | `createTuningRegistry`, `tunable` |
 
-| Pattern                     | Engine surface                                                                                                                                              |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Movement / avoidance        | no grid field — exact euclidean over specimen positions, since a 100-unit cell cannot resolve a 22-unit contact radius; costed along the swept segment      |
-| Trap check + loss detection | `SpatialGrid.bfs` — reachability answers "is there a gap"                                                                                                   |
-| Mote routing                | `distanceField`, multi-source over uncollected motes, crowd-costed and **descended** — the step direction is derived consumer-side, as the engine specifies |
-| Collector routing           | exact euclidean term in `chooseHeading` — a drop lands inside `r_kill` and a 100-unit nav cell cannot resolve an approach ending inside a ~70-unit aperture |
-| Draft offers                | seeded `rng` weighted pick                                                                                                                                  |
-| Device / reagent modifiers  | `createModifierChain` + multiplicative modifiers                                                                                                            |
-| Level cadence               | `createSkill` with an invertible `Formula` ladder                                                                                                           |
-| Run boundary                | `createReset` with `keep` for the meta split                                                                                                                |
-| Meta shop                   | `createPurchasableCategory` + `createCostRequirement`                                                                                                       |
-| Player-facing automation    | `AutomationTiers`, typed automation tier union                                                                                                              |
-| Engagement banding          | balance harness `classifyFlowChannel`                                                                                                                       |
-
-**Deliberately consumer-side:** the real-time arena — positioning, collision,
-frame-level resolution — is named absent from the engine by design
-(`open-loop-engine/docs/api/INDEX.md`). It is not a bypass. The arena step is a
-pure `stepArena(state, dt)` called identically by the live tick and by the
-probes, per the graduated shared-pure-state-function discipline.
-
-**Candidate-primitive receipts this archetype is expected to produce:**
-
-- `Cooldown-rotation dispatch over a def set` — admitted pre-designed under this
-  identity, N=0, and its convergence signal names this build. Hand-roll it and
-  mark the site.
-- `Spatial utility steering` — N=1 (primordial); its convergence signal names a
-  bot layer, which the movement policy is.
-- Pixi field projection — **landed, N=3** (`ui/ArenaField.vue`). It runs neither
-  prior receipt's smoothing: per-entity dead reckoning, integrating a measured
-  velocity at frame rate with the sim sample correcting error only. That kills the
-  recipe's cadence-versus-smoothing question as posed — survivor steps at the same
-  20 Hz as skirmish and still needed it — and replaces it with a sharper one: what
-  the smoothed value _drives_. An eased camera under a player's hand ripples the
-  whole floor at 15.3% CV against 2.5% reckoned. It also added two divergences the
-  dive has to cover: a _moving camera_ where the prior receipts carry a static fit,
-  and a viewport-culled sprite pool for motes, whose population is unbounded
-  because the sim never despawns them. Recorded in `candidate-recipes-ui.md`.
+The real-time floor is consumer-side by the engine's design; `stepArena` is one pure
+function the take module and the probes both call. Three hand-rolls carry `TODO(expansion)`
+markers: the rigs' cooldown dispatch (`modules/sim/arena.ts` `fireRigs`), k distinct weighted
+draws (`modules/sim/draft.ts` `drawOffer`) and the star's utility steering
+(`modules/sim/steering.ts`). The probes' process pool (`balance/_pool.ts`) is a fourth.
 
 ## Balance model
 
-```
-data/survivor.ts ─── Balance ───  →  balance/survivor-projection.ts  →  balance/survivor-probe.ts
-spine, as prose + math               runnable closed form               probes (real engine)
-```
-
-The projection is written **before** `data/` and carries the authored design
-parameters itself, so the coverage boundary is falsified while that is still
-cheap. `data/` is derived from it, not the other way round. `BALANCING.md`
-beside this file is the working guide — the tunables, their couplings, and how to
-run a pass; `r_collect` relative to `r_kill` is the top coupling, because it sets
-the risk premium on all income.
-
-Magnitudes print; they never become assertions. Behavioural suites sit beside
-their modules and carry no numbers, which is why they survive a retune.
+The spine is `data/spine.ts`; `balance/survivor-projection.ts` runs it, with the schedule
+against the ladder, the solved level gain, what each rating demands of the loadout, and the
+clout model. The probes play the shipping game and print beside it. `BALANCING.md` covers the
+tunables and couplings.

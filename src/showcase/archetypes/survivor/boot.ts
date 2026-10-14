@@ -2,11 +2,11 @@ import { type App } from 'vue';
 import { type Engine, type EngineModule } from '@open-loop/engine';
 import { bootApp, bootEngine } from '@/boot';
 import SurvivorAppRoot from './ui/SurvivorAppRoot.vue';
-import { createSurvivorModules } from './modules';
+import { INTERVAL_RATE, createSurvivorModules } from './modules';
 
 const GAME_ID = 'survivor';
 const MOD_ID = 'survivor';
-const MOD_NAME = 'Survivor';
+const MOD_NAME = 'One More Take';
 
 export interface SurvivorBootResult {
   engine: Engine;
@@ -16,32 +16,25 @@ export interface SurvivorBootResult {
 }
 
 export interface SurvivorEngineOptions {
-  /** Persistence namespace override. Unique per-engine; used to isolate headless runs. */
+  /** Persistence namespace override. Unique per engine; it isolates headless runs. */
   persistenceNamespace?: string;
-  /** Extra modules registered alongside the default game modules. */
+  /** Extra modules registered alongside the default survivor modules. */
   extraModules?: EngineModule[];
-  /** Raise the loop's `maxDeltaTime` cap. */
-  maxDeltaTime?: number;
 }
 
 /**
- * Create an engine instance pre-wired with the game modules.
- * Does NOT call `engine.load()` — `SurvivorAppRoot.vue::startGame` owns the
- * resume sequence.
+ * Create an engine instance pre-wired with the survivor modules.
+ * Does NOT call `engine.load()` — `SurvivorAppRoot.vue`'s play-session composable
+ * owns the resume sequence.
  */
 export function createSurvivorEngine(options?: SurvivorEngineOptions): { engine: Engine } {
   const modules = [...createSurvivorModules(), ...(options?.extraModules ?? [])];
   const engine = bootEngine({
     gameId: GAME_ID,
     persistenceNamespace: options?.persistenceNamespace,
-    maxDeltaTime: options?.maxDeltaTime,
-    mods: [
-      {
-        id: MOD_ID,
-        displayName: MOD_NAME,
-        modules,
-      },
-    ],
+    intervalRate: INTERVAL_RATE,
+    tickMode: 'fixed',
+    mods: [{ id: MOD_ID, displayName: MOD_NAME, modules }],
   });
   return { engine };
 }
@@ -49,7 +42,6 @@ export function createSurvivorEngine(options?: SurvivorEngineOptions): { engine:
 /**
  * Build a ready-to-mount Vue app via the shared starter boot factory.
  *
- * Usage:
  * ```ts
  * const { mount } = createApp();
  * mount('#app');
@@ -57,9 +49,6 @@ export function createSurvivorEngine(options?: SurvivorEngineOptions): { engine:
  */
 export function createApp(options?: SurvivorEngineOptions): SurvivorBootResult {
   const { engine } = createSurvivorEngine(options);
-  const { app, mount } = bootApp({
-    root: SurvivorAppRoot,
-    engine,
-  });
+  const { app, mount } = bootApp({ root: SurvivorAppRoot, engine });
   return { engine, app, mount };
 }

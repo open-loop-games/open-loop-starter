@@ -1,113 +1,152 @@
 import {
-  Decimal,
   Formula,
+  createBooleanRequirement,
   createCostRequirement,
+  createModifierChain,
   createPurchasableCategory,
   createResource,
-  type ComputedRef,
+  persistent,
+  setupSweepAutoPurchase,
+  type DecimalSource,
   type EngineModule,
   type InjectionKey,
+  type ModifierChain,
+  type Persistent,
   type PurchasableCategory,
+  type Resource,
 } from '@open-loop/engine';
-import { computed } from 'vue';
 import {
-  META_COST_RATIO,
-  META_UPGRADES,
-  NOTES_PER_KILL,
-  type MetaSide,
-  type MetaUpgradeDef,
-} from '../data/meta';
+  AGENCY,
+  AGENCY_GROWTH,
+  BASE_OFFER,
+  RATINGS,
+  STARS,
+  type AgencyDef,
+  type ChainId,
+  type RatingDef,
+  type StarDef,
+} from '../data';
 
-/**
- * Meta module — the notes that survive a containment failure, and the shop they
- * are spent in (`../IDENTITY.md` § Cross-Run Meta).
- *
- * A **continuous accumulator**, not a hard-reset prestige: notes survive
- * every run end including death, which is what makes a failed run still progress
- * and is the property that separates this archetype from prestige-shaped ones.
- *
- * No dependencies, deliberately. Arena reads its multipliers and run awards its
- * notes, so both depend on this and it depends on neither — the alternative is a
- * cycle.
- */
+/** What outlasts a take, and the record it keeps. */
+export interface TakeRecord {
+  takes: Persistent<number>;
+  bestSeconds: Persistent<number>;
+  /** Index of the harshest rating taken to CUT; −1 before the first CUT. */
+  bestRatingCleared: Persistent<number>;
+  totalKills: Persistent<number>;
+}
 
 export interface MetaApi {
-  /** Banked notes. A `Resource`, so its `cumulative` doubles as the lifetime stat. */
-  notes: ReturnType<typeof createResource<Decimal>>;
-  shop: PurchasableCategory<MetaUpgradeDef>;
-  /** Purchase count of one upgrade. */
-  countOf: (id: string) => number;
-  /** `∏ perPurchase^count` over one side — the `runBaseline` term. */
-  baseline: (side: MetaSide) => number;
-  /** Live survival / collect / yield multipliers a run opens with. */
-  survivalMul: ComputedRef<number>;
-  collectMul: ComputedRef<number>;
-  yieldMul: ComputedRef<number>;
-  /** Bank a finished run's payout. Called by `./run.ts`, win or lose. */
-  award: (kills: number, meanYield: number) => void;
+  clout: Resource<DecimalSource>;
+  /** One chain a quantity: the agency and the rewrite perks both bind into these. */
+  chains: Record<ChainId, ModifierChain>;
+  agency: PurchasableCategory<AgencyDef>;
+  stars: PurchasableCategory<StarDef>;
+  ratings: PurchasableCategory<RatingDef>;
+  record: TakeRecord;
+  /** Pages a rewrite offers: three, and a fourth with Script Doctor. */
+  offerSize(): number;
 }
 
 export const MetaKey: InjectionKey<MetaApi> = Symbol('survivor/meta') as InjectionKey<MetaApi>;
 
+let api: MetaApi;
+
+export function getMeta(): MetaApi {
+  return api;
+}
+
+/**
+ * What survives a take: clout, the agency, the signed stars, the open ratings and the
+ * record. No take reset names this module. It builds the chains, because the agency binds
+ * into them here and the take module binds the rewrite perks into the same ones.
+ */
 export function createMetaModule(): EngineModule {
   return {
     id: 'survivor/meta',
+    dependencies: ['survivor/tuning'],
     install(ctx) {
-      const notes = createResource<Decimal>(new Decimal(0), {
-        id: 'Notes',
-        displayName: 'Notes',
-        decimals: 0,
-      });
-
-      const shop = createPurchasableCategory<MetaUpgradeDef>({
-        id: 'survivor/meta-shop',
-        mapPurchasable: (def) => ({
-          display: { title: def.displayName, description: def.blurb },
-          limit: def.limit,
-          // Geometric ladder over the tile's own purchase count — the
-          // runs-to-purchase shape (`../data/meta.ts` § Balance). A Formula sets
-          // the cost of each purchase in a bulk purchase, and
-          // `createCostRequirement` does the affordability check and the
-          // deduction, so nothing here hand-rolls the amount check.
-          requirements: (count) =>
-            createCostRequirement({
-              resource: notes,
-              cost: Formula.exponential(count, def.baseCost, META_COST_RATIO),
-            }),
-        }),
-      });
-      shop.register(META_UPGRADES);
-
-      const countOf = (id: string): number =>
-        new Decimal(shop.getEntry(id)?.purchasable.count.value ?? 0).toNumber();
-
-      const baseline = (side: MetaSide): number =>
-        META_UPGRADES.filter((u) => u.side === side && u.effect !== 'revive').reduce(
-          (product, u) => product * Math.pow(u.perPurchase, countOf(u.id)),
-          1,
-        );
-
-      /** One effect's compounded multiplier — used where a side is too coarse. */
-      const effectMul = (effect: MetaUpgradeDef['effect']): number => {
-        const def = META_UPGRADES.find((u) => u.effect === effect);
-        return def ? Math.pow(def.perPurchase, countOf(def.id)) : 1;
+      const chains: Record<ChainId, ModifierChain> = {
+        damage: createModifierChain('rig-damage'),
+        fireRate: createModifierChain('rig-fire-rate'),
+        maxHp: createModifierChain('max-hp'),
+        moveSpeed: createModifierChain('move-speed'),
+        pickup: createModifierChain('pickup-reach'),
+      };
+      const clout = createResource<DecimalSource>(0, { id: 'clout', displayName: 'Clout' });
+      const record: TakeRecord = {
+        takes: persistent(0, { id: 'takes', lifetime: true }),
+        bestSeconds: persistent(0, { id: 'bestSeconds', lifetime: true }),
+        bestRatingCleared: persistent(-1, { id: 'bestRatingCleared', lifetime: true }),
+        totalKills: persistent(0, { id: 'totalKills', lifetime: true }),
       };
 
-      ctx.provide(MetaKey, {
-        notes,
-        shop,
-        countOf,
-        baseline,
-        survivalMul: computed(() => baseline('survival')),
-        collectMul: computed(() => effectMul('collectRadius')),
-        yieldMul: computed(() => effectMul('moteYield')),
-        award: (kills, meanYield) => {
-          // Payout is the same expression the projection anchors shop costs to,
-          // so "one run pays for the first tile" stays true rather than drifting.
-          const earned = kills * meanYield * NOTES_PER_KILL;
-          notes.value = new Decimal(notes.value).add(earned);
-        },
+      const agency: PurchasableCategory<AgencyDef> = createPurchasableCategory<AgencyDef>({
+        id: 'agency',
+        mapPurchasable: (def) => ({
+          display: { title: def.name, description: def.blurb },
+          requirements: (count) =>
+            createCostRequirement({
+              resource: clout,
+              cost: Formula.exponential(count, def.baseCost, AGENCY_GROWTH).floor(),
+            }),
+          limit: def.maxLevel,
+          grants:
+            def.chain && def.step
+              ? [
+                  {
+                    chain: chains[def.chain],
+                    // TODO(ergonomics): a grant that scales on its own purchasable's count
+                    // reads it back out of the category; `requirements` gets the count, grants don't.
+                    multiplier: () =>
+                      1 + def.step! * Number(agency.getPurchasable(def.id)?.count.value ?? 0),
+                    description: `Agency: ${def.name}`,
+                  },
+                ]
+              : [],
+        }),
       });
+      agency.register([...AGENCY]);
+
+      const stars = createPurchasableCategory<StarDef>({
+        id: 'stars',
+        mapPurchasable: (def) => ({
+          display: { title: def.name, description: def.blurb },
+          requirements: createCostRequirement({ resource: clout, cost: def.cost }),
+          limit: 1,
+          initialCount: def.cost === 0 ? 1 : 0,
+        }),
+      });
+      stars.register([...STARS]);
+
+      // A rating opens once the one below it has been taken to CUT. Nothing is charged; the
+      // sweep buys it on the first tick the record allows.
+      const ratings = createPurchasableCategory<RatingDef>({
+        id: 'ratings',
+        mapPurchasable: (def) => ({
+          display: { title: def.label, description: def.blurb },
+          requirements: createBooleanRequirement({
+            met: () => record.bestRatingCleared.value >= def.index - 1,
+            description: def.index === 0 ? 'Open' : `Take ${RATINGS[def.index - 1]!.label} to CUT`,
+          }),
+          limit: 1,
+          initialCount: def.index === 0 ? 1 : 0,
+        }),
+      });
+      ratings.register([...RATINGS]);
+      setupSweepAutoPurchase(ratings, { enabled: true }, ctx.onTick);
+
+      api = {
+        clout,
+        chains,
+        agency,
+        stars,
+        ratings,
+        record,
+        offerSize: () =>
+          BASE_OFFER + Number(agency.getPurchasable('script-doctor')?.count.value ?? 0),
+      };
+      ctx.provide(MetaKey, api);
     },
   };
 }

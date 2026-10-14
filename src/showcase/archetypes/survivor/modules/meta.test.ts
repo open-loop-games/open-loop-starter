@@ -1,104 +1,114 @@
 /**
- * Meta behavioural spec — the lifetime accumulator and the shop.
- *
- * The property that matters most here is that notes survive a FAILED run. That
- * is what makes this a continuous accumulator rather than a prestige loop, and
- * it is a structural promise rather than a number, so it belongs at this layer.
+ * Meta behavioral spec: what outlasts a take. Clout, the agency, the signed stars, the open
+ * ratings. No magnitudes: prices and steps are the spine's, and a retune moves them.
  */
 
+import { addResource, toNumber } from '@open-loop/engine';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Decimal } from '@open-loop/engine';
-import { META_COST_RATIO, META_UPGRADES } from '../data/meta';
-import { MetaKey } from './meta';
-import { RunKey } from './run';
-import { ArenaKey } from './arena';
-import { boot, getEngine, tick } from '../sim/harness';
+import { AGENCY, STARS } from '../data';
+import { boot, tick } from '../sim/harness';
+import { getMeta } from './meta';
+import { getTake } from './take';
 
-const meta = () => {
-  const api = getEngine().tryInject(MetaKey);
-  if (!api) throw new Error('survivor/meta did not provide MetaKey');
-  return api;
-};
-const notes = () => new Decimal(meta().notes.value).toNumber();
+const agencyEntry = (id: string) => getMeta().agency.getPurchasable(id)!;
 
 describe('survivor/meta', () => {
   beforeEach(() => boot());
 
-  it('opens with nothing banked and nothing owned', () => {
-    expect(notes()).toBe(0);
-    expect(meta().countOf('reinforced-weave')).toBe(0);
+  it('opens with nothing banked and only the first star and rating', () => {
+    const meta = getMeta();
+    expect(toNumber(meta.clout.value)).toBe(0);
+    expect(
+      meta.stars
+        .getAll()
+        .filter((e) => e.purchasable.active.value)
+        .map((e) => e.def.id),
+    ).toEqual([STARS[0]!.id]);
+    expect(
+      meta.ratings
+        .getAll()
+        .filter((e) => e.purchasable.active.value)
+        .map((e) => e.def.label),
+    ).toEqual(['G']);
   });
 
-  it('registers every upgrade in the shop', () => {
-    expect(meta().shop.getEntry('reinforced-weave')).toBeDefined();
-    expect(meta().shop.getEntry('wider-aperture')).toBeDefined();
+  it('registers every agency perk', () => {
+    expect(
+      getMeta()
+        .agency.getAll()
+        .map((e) => e.def.id),
+    ).toEqual(AGENCY.map((a) => a.id));
   });
 
-  it('banks notes from a run that ENDED IN FAILURE', async () => {
-    const run = getEngine().tryInject(RunKey)!;
-    const arena = getEngine().tryInject(ArenaKey)!;
-    run.startRun('generalist');
-    await tick(1200);
-    expect(arena.state.value.stats.kills).toBeGreaterThan(0);
-    meta().award(arena.state.value.stats.kills, 1);
-    // The continuous-accumulator promise: failure still pays.
-    expect(notes()).toBeGreaterThan(0);
+  it('banks clout from a take that ended in a wipeout', async () => {
+    const take = getTake();
+    take.startTake({ star: 'veteran', rating: 0, driver: 'player', seed: 1 });
+    const a = take.arena()!;
+    a.stats.reelsBanked = 1e4;
+    a.player.hp = 0;
+    await tick(1);
+    expect(take.view.wrap?.end).toBe('wipeout');
+    expect(toNumber(getMeta().clout.value)).toBeGreaterThan(0);
   });
 
-  it('cannot purchase what it cannot afford', () => {
-    const weave = meta().shop.getEntry('reinforced-weave')!;
-    expect(weave.purchasable.canPurchase.value).toBe(false);
+  it('cannot buy what it cannot afford', () => {
+    expect(agencyEntry('padding').canPurchase.value).toBe(false);
   });
 
-  it('purchases, deducts, and raises the purchase count', () => {
-    meta().award(100000, 1);
-    const before = notes();
-    const weave = meta().shop.getEntry('reinforced-weave')!;
-    weave.purchasable.purchase();
-    expect(meta().countOf('reinforced-weave')).toBe(1);
-    expect(notes()).toBeLessThan(before);
+  it('buys, deducts, raises the count and charges more for the next', () => {
+    const meta = getMeta();
+    addResource(meta.clout, 1e6);
+    const p = agencyEntry('padding');
+    const first = toNumber(p.getCost(1));
+    p.purchase(1);
+    expect(toNumber(p.count.value)).toBe(1);
+    expect(toNumber(meta.clout.value)).toBe(1e6 - first);
+    expect(toNumber(p.getCost(1))).toBeGreaterThan(first);
   });
 
-  it('charges more for each successive purchase', () => {
-    meta().award(100000, 1);
-    const weave = meta().shop.getEntry('reinforced-weave')!;
-    const first = notes();
-    weave.purchasable.purchase();
-    const afterFirst = notes();
-    weave.purchasable.purchase();
-    const afterSecond = notes();
-    expect(first - afterFirst).toBeLessThan(afterFirst - afterSecond);
+  it('respects each perk’s level cap', () => {
+    addResource(getMeta().clout, 1e9);
+    for (const def of AGENCY) {
+      const p = agencyEntry(def.id);
+      for (let i = 0; i < def.maxLevel + 2; i++) p.purchase(1);
+      expect(toNumber(p.count.value)).toBe(def.maxLevel);
+    }
   });
 
-  it('costs a bulk purchase one purchase at a time', () => {
-    const def = META_UPGRADES.find((u) => u.id === 'reinforced-weave')!;
-    const weave = meta().shop.getEntry('reinforced-weave')!;
-    expect(new Decimal(weave.purchasable.getCost(2)).toNumber()).toBeCloseTo(
-      def.baseCost * (1 + META_COST_RATIO),
-    );
+  it('raises a chain when its perk is bought, and only that chain', () => {
+    const meta = getMeta();
+    addResource(meta.clout, 1e6);
+    const before = {
+      damage: toNumber(meta.chains.damage.apply(1)),
+      maxHp: toNumber(meta.chains.maxHp.apply(1)),
+    };
+    agencyEntry('effects-budget').purchase(1);
+    expect(toNumber(meta.chains.damage.apply(1))).toBeGreaterThan(before.damage);
+    expect(toNumber(meta.chains.maxHp.apply(1))).toBe(before.maxHp);
   });
 
-  it('raises the survival baseline when a survival tile is purchased', () => {
-    meta().award(100000, 1);
-    expect(meta().survivalMul.value).toBe(1);
-    meta().shop.getEntry('reinforced-weave')!.purchasable.purchase();
-    expect(meta().survivalMul.value).toBeGreaterThan(1);
+  it('opens the next rating once a take reaches CUT, and not before', async () => {
+    const take = getTake();
+    const pg = getMeta().ratings.getPurchasable('pg')!;
+    take.startTake({ star: 'veteran', rating: 0, driver: 'player', seed: 1 });
+    take.arena()!.player.hp = 0;
+    await tick(2);
+    expect(pg.active.value).toBe(false);
+    take.toCallSheet();
+    take.startTake({ star: 'veteran', rating: 0, driver: 'player', seed: 2 });
+    take.arena()!.t = 1e4;
+    await tick(2);
+    expect(take.view.wrap?.end).toBe('cut');
+    expect(pg.active.value).toBe(true);
   });
 
-  it('leaves the survival baseline alone when an INCOME tile is purchased', () => {
-    // `side` is load-bearing, not annotation: survival tiles are ladder-safe and
-    // income tiles are not, so they must not bleed into each other.
-    meta().award(100000, 1);
-    meta().shop.getEntry('wider-aperture')!.purchasable.purchase();
-    expect(meta().survivalMul.value).toBe(1);
-    expect(meta().collectMul.value).toBeGreaterThan(1);
-  });
-
-  it('respects each upgrade’s limit', () => {
-    meta().award(10_000_000, 1);
-    const vial = meta().shop.getEntry('contingency-vial')!;
-    vial.purchasable.purchase();
-    vial.purchasable.purchase();
-    expect(meta().countOf('contingency-vial')).toBe(1);
+  it('signs a star for clout, after which it can be cast', () => {
+    const meta = getMeta();
+    const pyro = meta.stars.getPurchasable('pyro')!;
+    expect(() => getTake().startTake({ star: 'pyro', rating: 0, driver: 'player' })).toThrow();
+    addResource(meta.clout, toNumber(pyro.getCost(1)));
+    pyro.purchase(1);
+    getTake().startTake({ star: 'pyro', rating: 0, driver: 'player' });
+    expect(getTake().view.screen).toBe('take');
   });
 });

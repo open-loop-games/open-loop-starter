@@ -1,208 +1,97 @@
 /**
- * Steering spec — the decision, not the path. Path quality is
- * `../../balance/steering-probe.ts`'s to print.
- *
- * `chooseHeading` and `scoreHeadings` are one policy in two shapes: the probe
- * reads the breakdown and the sim takes the arg-max, and the whole value of the
- * split is that those cannot disagree. That is what is pinned here.
+ * Steering spec: the route is descended, not sampled, and the score and the choice are one
+ * policy. Pure over an arena state. No magnitudes.
  */
 
 import { describe, expect, it } from 'vitest';
-import { createSpatialGrid, ORTHOGONAL_OFFSETS } from '@open-loop/engine';
+import { STARS } from '../../data';
+import { createArena, WORLD_HALF, type ArenaMods } from './arena';
 import {
-  MOTE_ROUTE_WEIGHT,
   NAV_CELL,
+  REEL_ROUTE_WEIGHT,
+  buildNav,
   chooseHeading,
   computeFields,
   descendRoute,
   scoreHeadings,
   toCell,
 } from './steering';
-import type { NavGrid } from './steering';
-import { ARENA_BALANCE } from '../../data/arena';
-import { BASELINE_SEAT } from '../../data/seats';
-import { HP_MILESTONES, type ArenaParams, type ArenaState, type Specimen } from './types';
 
-function nav(): NavGrid {
-  const cols = Math.ceil(ARENA_BALANCE.mapWidth / NAV_CELL);
-  const rows = Math.ceil(ARENA_BALANCE.mapHeight / NAV_CELL);
-  return {
-    cols,
-    rows,
-    grid: createSpatialGrid<number>({
-      width: cols,
-      height: rows,
-      initializer: () => 0,
-      neighborhood: ORTHOGONAL_OFFSETS,
-    }),
-  };
-}
+const mods: ArenaMods = { damage: 1, fireRate: 1, moveSpeed: 1, pickup: 1, maxHp: 100, contact: 1 };
+const instinct = STARS[0]!.instinct;
+const nav = buildNav();
+const arena = () => createArena({ rng: () => 0.5, rating: 0, startRig: 'prop-pistol', maxHp: 100 });
+const reel = (x: number, y: number) => ({ x, y, value: 1, gold: false, pulled: false });
+const grunt = { id: 'grunt', hpFactor: 1, speed: 62, weight: 1, fromScene: 0, radius: 11 } as const;
 
-const params: ArenaParams = {
-  engage: BASELINE_SEAT.engage,
-  eta: BASELINE_SEAT.eta,
-  speedMul: 1,
-  dpsMul: 1,
-  toughnessMul: 1,
-  metaSurvival: 1,
-  metaCollect: 1,
-  metaYield: 1,
-  random: () => 0.5,
-};
-
-function specimen(id: number, x: number, y: number): Specimen {
-  return {
-    id,
-    tierId: 'x',
-    hp: 100,
-    spawnHp: 100,
-    speed: 0,
-    contactDamage: 1,
-    moteYield: 1,
-    spawnedAt: 0,
-    reached: false,
-    x,
-    y,
-  };
-}
-
-/** A floor with a mass off to +x and a scatter of motes off to −y. */
-function state(): ArenaState {
-  const cx = ARENA_BALANCE.mapWidth / 2;
-  const cy = ARENA_BALANCE.mapHeight / 2;
-  return {
-    time: 60,
-    operator: { x: cx, y: cy, hp: 100, maxHp: 100, heading: { x: 1, y: 0 } },
-    specimens: Array.from({ length: 20 }, (_, i) =>
-      specimen(i, cx + 150 + (i % 5) * 30, cy + i * 8),
-    ),
-    motes: Array.from({ length: 6 }, (_, i) => ({
-      id: 100 + i,
-      x: cx - i * 20,
-      y: cy - 300,
-      value: 1,
-      droppedAt: 0,
-    })),
-    collectors: [],
-    collectorTimes: [],
-    collectorsDropped: 0,
-    devices: [],
-    reagentStacks: new Map(),
-    stats: {
-      kills: 0,
-      motesDropped: 0,
-      motesBanked: 0,
-      motesCollectedByCollector: 0,
-      collectorsTaken: 0,
-      contactSeconds: 0,
-      damageTaken: 0,
-      devices: {},
-      spawned: 0,
-      reached: 0,
-      damageConverted: 0,
-      damageWasted: 0,
-      bodiesWasted: 0,
-      damageOverkill: 0,
-      firstDamageAt: null,
-      hpMilestoneAt: HP_MILESTONES.map(() => null),
-    },
-    nextId: 1000,
-    spawnCarry: 0,
-  };
-}
-
-describe('survivor/steering — the routing field is descended, not sampled', () => {
-  /**
-   * Two routes of equal length to the same mote, one of them through a crowd.
-   * The grid's neighbour order puts +x first, so an unweighted descent takes the
-   * crowded cell on a tie — which makes "goes the other way" a statement about
-   * the cost function reaching the route, and not about tie-break luck.
-   */
-  function twoWays() {
-    const n = nav();
-    const s = state();
-    s.operator.x = 4050;
-    s.operator.y = 2650;
-    s.specimens = [];
-    // Four bodies in the cell directly +x of the operator, which is what
-    // `BLOCKING_CROWD` calls impassable in practice.
-    for (let i = 0; i < 4; i++) s.specimens.push(specimen(i, 4150, 2650));
-    // Two cells over and two down: reachable by an equal number of steps whether
-    // the descent turns before the crowd or after it.
-    s.motes = [{ id: 1, x: 4250, y: 2850, value: 1, droppedAt: 0 }];
-    return { n, s };
-  }
+describe('survivor/steering — the reel route is descended', () => {
+  it('descends all the way to the reel it routes to', () => {
+    const a = arena();
+    a.reels.push(reel(5 * NAV_CELL, 0));
+    const route = descendRoute(computeFields(a, nav).reels, nav, toCell(a.player, nav), 20);
+    expect(route.at(-1)).toEqual(toCell(a.reels[0]!, nav));
+  });
 
   it('routes around a crowded cell when a clear route is no longer', () => {
-    const { n, s } = twoWays();
-    const route = descendRoute(computeFields(s, n, 0).motes, n, toCell(s.operator, n), 40);
-
-    expect(route[0]).not.toEqual({ x: 41, y: 26 });
+    const a = arena();
+    a.reels.push(reel(3 * NAV_CELL, 0));
+    for (let i = 0; i < 6; i++)
+      a.extras.push({
+        id: i,
+        kind: grunt,
+        x: 1.5 * NAV_CELL,
+        y: 0,
+        hp: 1,
+        maxHp: 1,
+        orbitCd: 0,
+        flash: 0,
+      });
+    const route = descendRoute(computeFields(a, nav).reels, nav, toCell(a.player, nav), 20);
+    const crowded = toCell({ x: 1.5 * NAV_CELL, y: 0 }, nav);
+    expect(route.some((c) => c.x === crowded.x && c.y === crowded.y)).toBe(false);
   });
 
-  it('descends all the way to the mote it routed to', () => {
-    const { n, s } = twoWays();
-    const route = descendRoute(computeFields(s, n, 0).motes, n, toCell(s.operator, n), 40);
-
-    // A route that stops short is a local minimum in the field, which is the one
-    // way a descent can quietly return a bearing to nowhere.
-    expect(route[route.length - 1]).toEqual(toCell(s.motes[0], n));
-  });
-
-  it('has no route to descend when there is nowhere to go', () => {
-    const { n, s } = twoWays();
-    s.motes = [];
-    const route = descendRoute(computeFields(s, n, 0).motes, n, toCell(s.operator, n), 40);
-
-    // Every cell is `Infinity` with no sources. The term must go silent rather
-    // than resolve to a direction, or the operator chases an artefact.
-    expect(route).toEqual([]);
+  it('has no route when there is nothing to collect', () => {
+    const a = arena();
+    expect(descendRoute(computeFields(a, nav).reels, nav, toCell(a.player, nav), 20)).toEqual([]);
   });
 });
 
-describe('survivor/steering — score and choice are one policy', () => {
-  it('picks exactly the candidate the breakdown scores highest', () => {
-    const s = state();
-    const n = nav();
-    const fields = computeFields(s, n, 0);
+describe('survivor/steering — the score and the choice are one policy', () => {
+  const floor = () => {
+    const a = arena();
+    a.reels.push(reel(-250, 80));
+    a.extras.push({ id: 1, kind: grunt, x: 200, y: 30, hp: 1e6, maxHp: 1e6, orbitCd: 0, flash: 0 });
+    return a;
+  };
 
-    const scores = scoreHeadings(s, n, fields, params);
-    const best = scores.reduce((a, b) => (b.total > a.total ? b : a));
-    const chosen = chooseHeading(s, n, fields, params);
-
-    expect(chosen).toEqual(best.heading);
+  it('picks the candidate the breakdown scores highest', () => {
+    const a = floor();
+    const fields = computeFields(a, nav);
+    const scores = scoreHeadings(a, mods, instinct, nav, fields);
+    const best = scores.reduce((x, y) => (y.total > x.total ? y : x));
+    expect(chooseHeading(a, mods, instinct, nav, fields)).toEqual(best.heading);
   });
 
-  it('sums each breakdown back to the total it was decided on', () => {
-    const s = state();
-    const n = nav();
-    const fields = computeFields(s, n, 0);
-
-    for (const c of scoreHeadings(s, n, fields, params)) {
-      // `mote` and `collector` are reported unweighted so a reader can see the
-      // raw field; `eta` is the seat's weight on income and belongs to the sum.
-      const recomposed =
-        c.threat +
-        c.engage +
-        c.connect +
-        params.eta * (MOTE_ROUTE_WEIGHT * c.mote + c.moteNear + c.collector) +
-        c.wall +
-        c.turn;
-      expect(recomposed).toBeCloseTo(c.total, 9);
+  it('sums each breakdown back to its total', () => {
+    const a = floor();
+    for (const s of scoreHeadings(a, mods, instinct, nav, computeFields(a, nav))) {
+      const sum =
+        s.threat +
+        s.engage +
+        s.connect +
+        instinct.eta * (REEL_ROUTE_WEIGHT * s.route + s.near) +
+        s.wall +
+        s.turn;
+      expect(sum).toBeCloseTo(s.total, 9);
     }
   });
 
-  it('scores only headings that stay on the map', () => {
-    const s = state();
-    s.operator.x = 20;
-    s.operator.y = 20;
-    const n = nav();
-    const fields = computeFields(s, n, 0);
-
-    const scores = scoreHeadings(s, n, fields, params);
-    // A corner drops the candidates that leave the floor, and the arg-max must
-    // run over what is left rather than over a padded set.
-    expect(scores.length).toBeGreaterThan(0);
+  it('scores only headings that stay on the floor', () => {
+    const a = arena();
+    a.player.x = WORLD_HALF - 10;
+    const scores = scoreHeadings(a, mods, instinct, nav, computeFields(a, nav));
     expect(scores.length).toBeLessThan(16);
+    expect(scores.every((s) => s.heading.x <= 0.1)).toBe(true);
   });
 });
