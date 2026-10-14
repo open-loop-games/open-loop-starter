@@ -24,7 +24,7 @@ directions it grows through. Start there.
 | `scripter` | A scroll the player writes and a student performs; each challenger at the gate asks for words the scroll lacks |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
 | `survivor` | Run-scoped real-time survival against continuously escalating threat |
-| `tug`      | Adversarial lane push with a shared contested lane                   |
+| `tug`      | Waves on alternating horns contest one causeway; a career climbs a ladder of lords |
 | `_blank`   | Neutral skeleton — the starting point for a novel research composition |
 
 `_identity.md` is the identity-line registry across the set. It carries more lines than

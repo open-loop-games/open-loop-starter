@@ -120,8 +120,8 @@ export const AutomationKey: Record<string, InjectionKey<AutomationApi>> = new Pr
  * `candidate-recipes.md`). The runner skeleton is
  * invariant: in-match guard → cadence accumulator (+ seeded believability
  * jitter) → decide → act. Only `decide` (here: spawn while affordable, up to a
- * cap) is domain. tug's `opponent-bot.ts` is the coupled source instance; this
- * is N=2. The decision is deliberately INLINE, not a shared handler — the
+ * cap) is domain. Tug's `modules/rival.ts` (`createCommander`, seated on both
+ * keeps by its probes) is the other instance; this is N=2. The decision is deliberately INLINE, not a shared handler — the
  * recipe surface keeps copies in place so their divergence is the evaluation
  * signal; a handler-based runner is a graduation outcome, not the staging shape.
  *

@@ -1,0 +1,183 @@
+/*
+ * Tug — the Hold the Causeway costume.
+ *
+ * The whole design language is here, scoped under `.causeway-costume`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in `src/lib/` or `src/ui/`
+ * is edited for it: every hook is a documented costume class on a shell or composition, or a
+ * class this story's own components emit.
+ *
+ * Language: a chronicle of a petty border war. The page is the peat-dark hall the chronicler
+ * writes in; the battle is a strip of embroidered tapestry, as the Bayeux hanging shows a
+ * battle; the colours are the wool dyes a keep could buy. The affordance palette comes first:
+ *   weld   = gold thread: silver, and anything you can raise or buy now
+ *   linen  = undyed thread: text; dimmed, what you can't afford yet
+ *   woad   = Fairhold's blue; bright, a troop newly opened to us
+ *   madder = the rival's red; the gate breaking, the bailey full
+ *   gall   = oak-gall ink: labels, and what is still on the road (the engineers)
+ *   ember  = the last week of the campaign season, when every blow lands harder
+ * IM Fell English for the chronicle's hand, EB Garamond for the text and the numbers.
+ *
+ * Fonts: IM Fell English (and its small caps) and EB Garamond, both SIL OFL
+ * (`../assets/fonts/OFL-*.txt`).
+ */
+
+@font-face {
+  font-family: 'Causeway Hand';
+  src: url('../assets/fonts/IMFellEnglish-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Causeway Hand';
+  src: url('../assets/fonts/IMFellEnglish-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Causeway Caps';
+  src: url('../assets/fonts/IMFellEnglishSC.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Causeway Text';
+  src: url('../assets/fonts/EBGaramond-normal.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Causeway Text';
+  src: url('../assets/fonts/EBGaramond-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+.causeway-costume {
+  /* ── the hall ── */
+  --cw-peat: #15120e; /* the page */
+  --cw-oak: #211b15; /* a panel */
+  --cw-oak-raised: #2b231b;
+  --cw-rule: rgba(217, 204, 176, 0.13);
+  --cw-linen: #ddd1b6; /* body text, undyed thread */
+  --cw-linen-dim: rgba(221, 209, 182, 0.46); /* can't yet */
+  --cw-gall: #a08b62; /* labels; what is still on the road */
+  /* ── the dyes ── */
+  --cw-weld: #dcae4a; /* silver; can act, can afford */
+  --cw-weld-soft: rgba(220, 174, 74, 0.13);
+  --cw-weld-glow: rgba(220, 174, 74, 0.26);
+  --cw-woad: #6b97c7; /* Fairhold; newly opened */
+  --cw-woad-deep: #304d70;
+  --cw-woad-soft: rgba(107, 151, 199, 0.16);
+  --cw-madder: #bd4f3c; /* the rival; a breaking gate; a full bailey */
+  --cw-madder-deep: #6e2a20;
+  --cw-madder-soft: rgba(189, 79, 60, 0.15);
+  --cw-ember: #d27c3e; /* the last week of the season */
+  /* ── the causeway ── */
+  --cw-road: #3b3226; /* packed earth */
+  --cw-tide: #26302c; /* the marsh either side */
+  --cw-stone: #6a5f4f; /* the keeps */
+
+  --cw-hand: 'Causeway Hand', 'IM Fell English', Georgia, serif;
+  --cw-caps: 'Causeway Caps', 'IM Fell English SC', Georgia, serif;
+  --cw-text: 'Causeway Text', 'EB Garamond', Georgia, serif;
+
+  /* starter's tokens, in the hall's colours */
+  --color-bg: var(--cw-peat);
+  --color-surface: var(--cw-oak);
+  --color-border: var(--cw-rule);
+  --color-text: var(--cw-linen);
+  --color-text-muted: var(--cw-linen-dim);
+  --color-surface-hover: var(--cw-oak-raised);
+  --color-primary: var(--cw-weld);
+  --color-primary-hover: #e8c26c;
+  --color-danger: var(--cw-madder);
+  --font-sans: var(--cw-text);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(220, 174, 74, 0.07), transparent 60%),
+    linear-gradient(180deg, #1a1611 0%, #120f0b 100%);
+  color: var(--cw-linen);
+  font-family: var(--cw-text);
+  font-size: 16px;
+  line-height: 1.4;
+  color-scheme: dark;
+}
+
+.causeway-costume .num {
+  font-family: var(--cw-text);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* A heading in the chronicler's hand, over a stitched rule. */
+.causeway-costume .cw-title {
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  font-family: var(--cw-caps);
+  font-weight: 400;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  color: var(--cw-gall);
+  border-bottom: 1px dashed rgba(160, 139, 98, 0.35);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.causeway-costume .cw-title small {
+  font-family: var(--cw-text);
+  font-size: 13px;
+  color: var(--cw-linen-dim);
+}
+
+/* A control: an oak tablet, banner-cut, threaded with gold when it can act. */
+.causeway-costume .cw-control {
+  border: 1px solid var(--cw-rule);
+  border-radius: 2px;
+  background: var(--cw-oak-raised);
+  color: var(--cw-linen);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+.causeway-costume .cw-control:disabled {
+  color: var(--cw-linen-dim);
+  cursor: default;
+}
+.causeway-costume .cw-control.afford {
+  border-color: rgba(220, 174, 74, 0.55);
+  background: linear-gradient(180deg, rgba(220, 174, 74, 0.1), rgba(220, 174, 74, 0.03));
+}
+.causeway-costume .cw-control.afford:hover {
+  background: var(--cw-weld-soft);
+}
+.causeway-costume .cw-control.fresh {
+  box-shadow: 0 0 0 1px var(--cw-woad) inset;
+}
+
+/* Starter's frame, in the hall. */
+.causeway-costume .olui-app-frame {
+  background: transparent;
+}
+.causeway-costume .olui-system-header {
+  background: transparent;
+  border-bottom: 1px solid var(--cw-rule);
+  font-family: var(--cw-hand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .causeway-costume *,
+  .causeway-costume *::before,
+  .causeway-costume *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

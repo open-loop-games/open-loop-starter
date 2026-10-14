@@ -6,8 +6,8 @@
  * imported by the probes). `./spread-probe.ts` prints the windows; `../manifest.ts`
  * carries the recorded result.
  *
- * **Extractors over a finished arc, not tick predicates.** Tug and skirmish use
- * the engine's `Beat` because their beats are single events a `runUntil`
+ * **Extractors over a finished arc, not tick predicates.** Skirmish uses
+ * the engine's `Beat` because its beats are single events a `runUntil`
  * bisection can stop on. Survivor's are phases of a stochastic thirty-minute arc
  * whose windows only mean something across a seed batch, and `./_arc.ts` already
  * samples every quantity they need per minute. A tick-level predicate here would

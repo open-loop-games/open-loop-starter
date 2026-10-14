@@ -2,8 +2,7 @@ import type { CounterMatrix, UnitArchetypeTag, UnitTypeId } from './types';
 
 // ─── Skeleton ───
 // 3x3 damage-multiplier matrix. `COUNTER_MATRIX[attackerIdx][defenderIdx]` reads
-// at the per-tick combat resolver site in `modules/tactical-sim.ts`. Plain data,
-// following the tug `data/counter-matrix.ts` pattern.
+// at the per-tick combat resolver site in `modules/tactical-sim.ts`. Plain data.
 //
 // Rock-paper-scissors cycle:
 //   infantry > cavalry > ranged > infantry

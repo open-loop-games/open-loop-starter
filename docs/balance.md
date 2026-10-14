@@ -42,9 +42,9 @@ the parent — N hand-authored param bundles read by one decision function — a
 
 ## What the shipped archetypes demonstrate
 
-- **Adversarial seats carry a persona roster.** `tug` holds parameter vectors over
-  one decision architecture (`src/showcase/archetypes/tug/data/personality.ts`,
-  `PersonaKey`), read by `modules/opponent-bot.ts`. `skirmish` scales its decision
+- **Adversarial seats carry a persona roster.** `tug` holds temperaments, parameter
+  bundles over one decision function (`src/showcase/archetypes/tug/data/lords.ts`,
+  `Temperament`), read by `modules/rival.ts` (`chooseWave`). `skirmish` scales its decision
   cadence per persona (`modules/automation.ts`) and ships rush against greedy.
 - **Solo archetypes have player automation behind automation tiers, not an opponent roster.**
   `producer` holds a `modules/automation.ts` behind `AutomationTiers`. That is the automation-as-game-code convention, and it is what

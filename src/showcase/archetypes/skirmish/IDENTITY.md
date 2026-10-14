@@ -87,7 +87,7 @@ cost:**
    from one that wins 100% — so the mean is not the answer.
 
 **What measures the remainder:** distribution statistics over seeded bilateral
-runs, in the shape tug already proves out — a win-rate surface over the split
+runs: a win-rate surface over the split
 axis, and a match-duration distribution rather than a match-duration number.
 Partial coverage: the opening projects, the war is measured.
 
@@ -138,9 +138,9 @@ perf budget:
 
 | Layer                                                                                      | Budget                    | Source                                                        | Status                                                                                                        |
 | ------------------------------------------------------------------------------------------ | ------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Economy + match + events + balance harness                                                 | fixed dt, ~10–20 ticks/s  | engine + tug seeds                                            | ✅ match spine (`match.ts`)                                                                                   |
+| Economy + match + events + balance harness                                                 | fixed dt, ~10–20 ticks/s  | engine                                                        | ✅ match spine (`match.ts`)                                                                                   |
 | **Tactical sim** — 2D entities, brute-force targeting, unit-vs-unit combat, per-side spawn | fixed dt, deterministic   | new                                                           | ✅ `tactical-sim.ts` (continuous 2D units, one type; broad-phase is the scale seam)                           |
-| AI policy — per-side, cadenced, in-match-guarded, bilateral                                | sub-Hz decision cadence   | tug automation pattern                                        | ✅ `automation.ts` (`decide` = spawn while affordable)                                                        |
+| AI policy — per-side, cadenced, in-match-guarded, bilateral                                | sub-Hz decision cadence   | bilateral sim-bot recipe                                      | ✅ `automation.ts` (`decide` = spawn while affordable)                                                        |
 | Automation progression — the player seat's automation tiers                                | per-seat, reactive        | `AutomationTiers`                                             | ✅ `automation-tiers.ts` (`manual → assisted`; opponent seats pass no tier and are blocked by install-presence) |
 | Render — pixi/webgl, own RAF + interpolation, read-only                                    | 60fps                     | pixi (heavier than SVG-on-reactivity; chosen for unit counts) | ✅ `PlayField.vue` (pixi field, Kenney sprites, per-unit position easing)                                     |
 
@@ -160,7 +160,7 @@ line's own unbuilt half, and they feed named spine terms.
   Feeds the coupled-state term: at N ≥ 3 the exchange loses even the zero-sum
   shelter, which is where the archetype's balance question gets its teeth.
 - **Unit roster + counters** — 3-unit rock-paper-scissors roster (trooper,
-  archer, cavalry) with counter matrix (tug's `data/counter-matrix.ts` pattern);
+  archer, cavalry) with counter matrix as data;
   verified in `balance/roster-probe.ts`.
 - **AI personas + stochastic leg** — 5-persona roster (`rush`, `investor`,
   `skirmish`, `boom`, `combined`) in `data/personality.ts` with tactical drafts and
@@ -235,8 +235,8 @@ driver behind `AutomationTiers`; see `.claude/rules/archetype-authoring.md`
 ## Hack-from references
 
 Growth ports read the sibling archetypes **in place**: tug for the adversarial
-spine (`modules/match.ts`, `data/units.ts`, `data/counter-matrix.ts`,
-`data/personality.ts`, `balance/_engine.ts`). Movement and the render seam are
+spine (`modules/battle.ts`, `modules/rival.ts`, `data/lords.ts`,
+`balance/_marshal.ts`). Movement and the render seam are
 skirmish's own — `modules/tactical-sim.ts` and `ui/PlayField.vue`.
 
 A bone consumes a reference by _porting_ it — adapting to skirmish — and the port

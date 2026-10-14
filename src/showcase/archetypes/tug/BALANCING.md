@@ -1,134 +1,76 @@
-# Balance — Tug
+# Tug — balancing
 
-Two economies of the same shape run against each other inside a match, so this
-archetype has no single closed form to project against. Each side is an ordinary
-cost-scaling ladder feeding auto-production, but the thing you are balancing is
-the *distribution* of match outcomes those two ladders produce when they collide
-— which means the method here is measure-and-record over repeated runs, not
-solve-for-a-fire-time. `IDENTITY.md` § Rate-function spine states that boundary;
-this file is how you work inside it.
+A battle is two flat economies spending into one lane, and the balance question is where
+their clashes happen, not how fast either grows. Each clash has a closed form; the line they
+add up to does not, so the probes measure it. The bucket and where its closed form stops are
+in `IDENTITY.md` § Rate-function spine.
 
 ## The tunables
 
+Every key is read through `tunable()` and listed in `modules/tuning.ts`. A probe overrides
+one with `perturb()` from `balance/_marshal.ts`.
+
 | Key | Default | What it moves |
 |---|---|---|
-| `balance/baseIncomeRate` | `8` | Income accrual for **both** sides. Symmetric by rule — see Couplings. |
-| `fortress/hp` | `5_000` | How long a match can run before a base falls. The match-length limit. |
-| `units/<id>/cost` | per unit | Composition economics. The retune sweep multiplies costs at or above its highest-cost floor as one axis. |
-| `income-upgrades/<id>/cost` | `400` / `1_200` / `3_600` | Purchase-now-or-save tension — ×3 per rung. The greed persona's economic compound depends on Refinery I's cost. |
-| `income-upgrades/<id>/multiplier` | `1.5` / `1.4` / `1.3` | Tapering compounding down the path, `×2.73` with all three purchased. |
-| `counter-matrix/strongCounter` | `1.75` | **The signature tunable.** How decisively a good counter-pick pays. |
-| `counter-matrix/weakCounter` | `0.6` | The other half of the asymmetry — how badly a bad pick punishes. |
+| `income/base` | 10 silver/s | Both harvests, every squad's price and the tithe's, which are seconds of it. The member stats do not follow: they are derived at load from the anchor. Raising it speeds a battle's economy against the same troops. |
+| `horn/seconds` | 10 | The release period, and so the size of a wave. The member stats are derived at one release's budget at load, so this moves pacing, not the equal-value rule. Longer periods widen the leading horn's edge. |
+| `clash/counterSharpness` | 1.6 | Damage a troop deals the one it beats, and the inverse it takes back. Higher makes the right answer decisive; at 1 the wheel is gone and mass decides. |
+| `cover/atGate` | 0.15 | Damage a defender takes at its own gate; cover ramps from it to none at the middle. This is the spring that pulls the line home. Toward 1 a pushed side collapses; much lower and lines stall short of the gates. |
+| `gate/share` | 0.25 | Share of its damage an ordinary troop deals to a gate. It decides whether a breach needs a mangonel. |
+| `season/seconds` | 150 | When the last week begins; past it every blow doubles each thirty seconds. It caps how long a stable line can stand, and so battle length. |
+| `ladder/rungGrowth` | 1.12 | The rival's harvest per rung, and the multiplier of one strength boon level. One key for both: that is the parity claim. |
 
-**Persona and believability are not tunables, deliberately.** They are how
-the opponent *behaves*, not what the design is worth. A difficulty setting exposed
-as a tunable means every probe reading win-rate is measuring that setting
-instead of the design — if a fork wants asymmetric difficulty it gets its own
-namespace, never `balance/`.
+**Not perturbable**, because each moves the member stats the spine derives, and a change
+means rerunning `tug-projection.ts`: the troops' squad sizes, costs, duel times, reach and
+speed (`data/troops.ts`); the files, rank spacing and muster; the yeoman's display hp; the
+gate's breach time; the gatehouse; the charge's sight; the mangonel's arrival.
 
 ## Couplings
 
-**Income is symmetric, and that is load-bearing.** Both sides accrue at
-`baseIncomeRate` with no AI-side modifier. Every win-rate number the probes
-produce is only interpretable because of it. Reintroducing an income asymmetry
-silently converts the entire probe battery into a difficulty meter.
-
-**The counter matrix is data, not a chain.** It is an N×N lookup the combat
-resolver reads per tick — square against the roster, identity on the diagonal.
-Changing roster size changes the matrix, and `strongCounter` / `weakCounter` only
-set how sharp its off-diagonal entries are. Twelve off-diagonal asymmetries carry
-the whole counter-pick design.
-
-**Refinery tiers unlock in order.** Tier N requires tier N−1 purchased, so the
-cost ladder is a path rather than a menu. A cheap tier cannot be skipped to, and
-a tier's ROI is only ever evaluated from the state the previous tier left.
-
-**A headless run puts the shipping AI on both sides; production does not.** Production
-is a human against one AI, and there is no human in a headless run — so the AI
-plays itself. This is a deliberate fiction, and it means probe output describes
-a *design property* (is the matrix decisive?) rather than forecasting what a
-player will feel. The counter-vs-greed pairing is calibrated, not arbitrary:
-greed concentrates its composition on the highest-cost archetype, which is what
-gives the matrix something to act on.
-
-**Believability is headless-run noise, not balance.** Deterministic single-pass checks run
-it at zero so one run suffices; the multi-seed probes run suboptimality `0.20`
-and cadence jitter `0.25` to produce outcome variance that actually responds to
-the tunable being swept. Set it wrong in either direction and the probes go blind —
-deterministic and flat, or noisy and unreadable.
-
-**The match driver is headless-only.** Production stays inside a single match per
-play session and never installs it. Without it a headless run ends after match one and
-every cumulative multi-match beat silently never fires.
+- **The opening horn must sound for both keeps together.** If the first keep's opening wave
+  marches alone, the lines first meet in the second keep's half, under its cover, and a
+  pike line then wears down there: the second horn won every pikemen mirror. After the
+  opening the horns alternate, and the keep that leads still wins about 55% of mirrors.
+- **Cover and the season are one mechanism.** The ramp keeps a pushed line alive; the last
+  week is what lets a line that stands break. Strengthen cover without bringing the season
+  forward and battles run to the time limit.
+- **The equal-value rule is read at one release's budget.** Squad sizes, reach and the
+  files set how many members fight at once; change any of them and every member's hp × dps
+  moves. A mangonel costs more than a release, so its frontage is floored at one member.
+- **The muster counts members, not squads.** Yeomen fill it five at a time, so a pike-heavy
+  host reaches the cap first, and a capped host replaces every death at once: a standoff.
+- **A raider at the gate loots.** Gate damage takes silver from the defender's treasury at
+  half its amount, so the side being breached also raises less to stop it.
+- **The rival's decision function reads distances from its own gate.** `viewOf` turns the
+  line and fronts into the keep's frame; the reference marshal uses the same function from
+  Fairhold's side, so a frame error shows as a side lean in `front-probe.ts`.
+- **Renown pays every battle.** A defeat pays 40%, so the first boon arrives after three
+  defeats if no victory comes first.
 
 ## Running a pass
 
-Run from the repo root (`src/game/…` after eject):
+1. `tug-projection.ts` — the spine with no engine: member stats, predicted clashes, the
+   gate, the tithe and the Chronicle's ladder. Change an anchor here first.
+2. `clash-probe.ts` — the same clashes on the real causeway, beside the prediction. The
+   winner must match; the kept share within about ten points.
+3. `front-probe.ts [seeds]` — temperament pairings at equal income with every troop open,
+   the leading horn alternated by seed. Read mirrors for side symmetry, `middle` and
+   `crossings` for the sway, `pushed → back` for recovery, and length against 3–10 minutes.
+4. `career-probe.ts [seed] [battles]` — the ladder under the reference marshal: battles a
+   rung takes, and the session time to the ending.
 
-```
-pnpm exec vite-node src/showcase/archetypes/tug/balance/arc-probe.ts
-pnpm exec vite-node src/showcase/archetypes/tug/balance/retune-probe.ts
-```
-
-**Tug ships no `tug-projection.ts`, deliberately.** The canon wants a runnable
-closed-form projection wherever one is worth executing, and producer and cycler
-both carry one. Tug's spine declares no single closed form (`IDENTITY.md`
-§ Rate-function spine): the arc is a distribution over adversarial match
-outcomes, so there is no expression to run and contradict. The one genuinely
-closed-form piece — the income-upgrade ROI, `paybackSeconds = cost / (rate ×
-(multiplier − 1))` — is already executed where it is used, inside the ROI
-snapshot, recomputed from the data constants each run. Lifting it into a
-projection file would buy a filename and lose the co-location. Don't add one
-without a second closed form to put beside it.
-
-- **`arc-probe.ts`** is the battery. Deterministic single-pass fire-time checks
-  use one `runUntil` each; the sensitivity sweep and the ROI snapshot use
-  multi-seed matrix runs and read distribution statistics off the aggregate. It
-  prints a per-probe report and shows drift for you to look at rather than
-  blocking on it.
-  - The **signature probe** sweeps `strongCounter ∈ [0.5, 1.5]` against
-    counter-persona win-rate versus a concentrating opponent, then proposes an
-    elbow: the smallest value where win-rate clears the floor and the next step
-    has stopped adding much. A response curve plus a chosen point on it.
-  - The **ROI snapshot** uses the closed form
-    `paybackSeconds = cost / (rate × (multiplier − 1))`, recomputed from the data
-    constants. That check is about the instrumentation agreeing with the
-    arithmetic, not about whether the number is well-chosen.
-  - The **dominance check** is pipes, not numbers: a 4×4 persona Cartesian that
-    passes if every cell runs end-to-end and at least one has wins. Red there
-    means the per-archetype spawn/death instrumentation broke, not that the
-    balance is bad — check it first when a sweep starts reporting nonsense.
-- **`retune-probe.ts`** is the wide sweep: refinery economics, base income, highest-
-  cost unit cost and matrix sharpness, Cartesian across the persona matrix. It is
-  ~17k runs and around half an hour of wall-clock time, so it is a deliberate run, not
-  something to reach for casually. It is hunting for a data slice where mass or
-  counter has a viable matchup against *someone* — the failure it catches is a
-  persona with no viable opponent at all.
-- **`roi-probe.ts`** is a fast read of the income ladder with no simulation: cost,
-  multiplier, the rate each rung is purchased from, payback, and combined multiplier — plus a
-  verdict on each claim `data/income.ts` § Balance makes about the ladder's shape.
-  Run it after touching refinery numbers; it takes no time and catches the class
-  of drift where the prose and the constants stop agreeing.
-- **`beats.ts`** holds the windows and predicates both drivers import.
+Each runs in seconds; the header of each says how to read it.
 
 ## Known thin
 
-- **The signature tunable barely does anything at default data.** The strongCounter
-  sweep produces a near-flat win-rate curve across its whole range: the
-  underlying economy and roster balance dominate matrix sensitivity, so the
-  archetype's centerpiece is currently being drowned out. This is the single most
-  important fact about tug's balance today — until the economy underneath is
-  retuned, the sensitivity sweep is reporting on something other than the matrix.
-  `retune-probe.ts` exists to find the slice where it stops being flat.
-- **The refinery ladder is retuned but unvalidated in play.** It now matches its
-  stated design — costs `400 / 1_200 / 3_600` climbing ×3 against multipliers
-  tapering `1.5 / 1.4 / 1.3`, combined `×2.73`, with Refinery III's payback at
-  40% of the match limit so committing to it is a real bet. `roi-probe.ts` checks
-  those claims. What is *not* established is that the ladder plays well against
-  the unit economy: the numbers are internally coherent and have never been
-  measured against win-rate. Run `retune-probe.ts` before trusting them.
-- **The suites assert instrumentation, not numbers.**
-  `sim/instrumentation.test.ts` derives every expectation from
-  `DEFAULT_TUG_DATA`, so retuning `data/income.ts` moves both sides together and
-  nothing reds spuriously. `sim/data-invariants.test.ts` holds shape only. If you
-  want a magnitude recorded, print it from `balance/arc-probe.ts`.
+- **The first lord beats a new Fairhold.** Without bowmen, the marshal loses its first three
+  battles to Lord Grubb before the Charter of the Longbow opens.
+- **The leading horn wins about 55% of mirrors.** The toss is shown, so it is visible, but it
+  is an edge.
+- **Bowmen reach the front late.** At double spend the clash probe keeps 56% where the spine
+  predicts 78%: the rear ranks walk up out of reach. Knights over bowmen keep 30% against a
+  predicted 42%.
+- **What ends a battle is not measured.** No probe counts how much gate damage comes from
+  mangonels and how much from the last week's fury on ordinary troops.
+- **Past the ending nothing is targeted.** The Usurper's heirs grow by the rung forever, and
+  the boons cap out.

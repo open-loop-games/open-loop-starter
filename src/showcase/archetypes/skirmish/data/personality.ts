@@ -6,8 +6,7 @@ import type { PersonaDef, PersonaKey } from './types';
 // needed. Each persona is a parameter vector covering the guns-versus-butter split (φ),
 // spawn cadence, burst cap, unit composition, and calibrated cadence jitter.
 //
-// Follows the research pattern `open-loop-research/patterns/adjacent/ai-rosters.md`
-// and the tug `data/personality.ts` seed.
+// Follows the research pattern `open-loop-research/patterns/adjacent/ai-rosters.md`.
 
 export const PERSONA_KEYS: readonly PersonaKey[] = [
   'rush',

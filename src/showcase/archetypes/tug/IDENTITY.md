@@ -1,157 +1,105 @@
 # Tug — archetype identity
 
-> **The shared lane — two economies feeding one contested path — which no pattern
-> names, over `scaled-opposition` + `positional-effect` + `loss-on-failure` +
-> `ending`, with `meta-progression` carrying a career across matches**, and the
-> opponent's economy as a live zero-sum pressure source. You author pressure
-> against an opponent authoring pressure in the same shared space; what you earn
+> The shared lane — two economies feeding one contested path — which no pattern names, over
+> `scaled-opposition` + `positional-effect` + `loss-on-failure` + `ending`, with
+> `meta-progression` carrying a career across matches, as Warfare 1917 carries them. You
+> author pressure against an opponent authoring pressure in the same space; what you earn
 > outlasts the match.
 
-**Spine-formed.** The SciFi Armada content (units, personas, counter-matrix) is
-declared invention — numbers are perturbation surface settled against the spine
-by engine-as-oracle sensitivity sweeps, never lifted from a single exemplar. The
-lane-push / tug-of-war genre validates the shape ships in the wild — cited as a
-set, never lifted. Identity line source: `../_identity.md` (Tug entry); the line's
-player experience, exemplar calls and lineage are `../_docs/tug.md`. **Core · open
-core** — one exemplar (Warfare 1917) is sourced and the patterns above are the ones
-it carries; the lane itself has no pattern and no decline read yet.
-
-**This build does not yet show what makes the line core.** The career across
-matches ships dormant (§ Growth ports), and without it the build is a one-lane
-Skirmish. Waking it is a spine amendment, not a toggle.
+Identity line source: `../_identity.md` (Tug entry); the line's player experience and
+exemplar calls are `../_docs/tug.md`. **Core · open core.** Warfare 1917 and Minion Masters
+show the composition ships; Age of War, Legion TD 2 and Direct Strike are the lane-push
+crosses. None is a lift target.
 
 ## What this archetype is
 
-You and the opponent feed the same lane. You spend income on unit production;
-the units auto-walk toward the opponent's base; theirs auto-walk toward yours;
-when the two streams meet somewhere in the middle they resolve combat without
-commands, and the survivors keep walking. The front-line drifts toward whichever
-side is losing DPS races, and the match ends when one base's HP reaches zero.
-The player's decisions are composition (what unit types to purchase), timing (send
-now or bank for a larger wave), counter-reading (opponent massed light armor —
-pivot to splash), and upgrade allocation (income upgrades delay presence now but
-pay off later). Moment-to-moment APM is low **by design**; strategic depth lives
-in the composition decision space and in reading the opponent's output, since
-every unit they send is visible evidence of their intentions.
+*Hold the Causeway.* Fairhold and a neighbouring lord's keep face each other across a
+causeway one road wide. Both harvests pay silver at a flat rate, whatever the causeway does.
+Silver raises squads into the bailey: five Stout Yeomen, three Bowmen of the Shire, two
+Knights, and from the second minute one mangonel. The bailey empties when its keep's horn
+sounds, and the wave marches out in ranks three files wide: yeomen in front, knights, bowmen,
+engines last. Both keeps sound the opening horn together; after it the horns alternate every
+five seconds, so each keep answers the wave the other just sent. Yeomen stop knights, knights
+ride past the line to the bowmen, bowmen shoot yeomen. A defender stands stiffer the deeper
+it is pushed into its own half, so the line sways about the middle rather than running home.
+Only a mangonel ignores the ramparts and batters a gate hard; the last week of the campaign
+season hardens every blow until a line breaks. Raiders at a gate loot the treasury.
 
-A first 1–2 hours unfolds across 2–4 matches (each 15–30 minutes). Match 1 is
-onboarding; match 2 is where counter-picking shows up; match 3 is where timing
-discipline emerges. The signature pleasure is the moment after a bad early
-composition when a well-timed pivot reverses the front line in one send; the
-corresponding pain is the moment your opponent recognizes your tank-heavy push
-and drops splash before your tanks arrive.
+Each lord's herald boasts in the lord's own voice; Fairhold's chronicler glosses it in ours.
+Every battle, won or lost, pays renown into the Chronicle, whose volumes buy Boons of the
+Crown: more harvest, drilled levies, a stone curtain, and the Charter of the Longbow. Five
+lords stand on the ladder; taking the Usurper's keep is the ending, and his heirs keep coming.
 
-## Rate-function spine / bucket
+## Rate-function spine
 
-**Bucket: adversarial zero-sum lane over an `escalating-price` economy — no
-single closed form.** Each side's economy is a familiar spine (geometric
-income-upgrade ladders feeding unit production), but it runs _inside a match against a
-live opposing economy_, so the archetype's pacing is not a fire-time curve — it
-is a **distribution** over stochastic match outcomes. That is the honest
-consequence of being adversarial: as with any wide interacting graph, the whole
-has no projectable closed form, which is why balance here is **measure-and-record
-via distribution statistics** (§ Balance model), not projected from a spine.
+**Bucket: adversarial zero-sum lane over flat income, a frontage-limited Lanchester clash**
+(`incremental-math/…/rate-functions/`; strategy-space integration for the battle, closed
+form per clash). Income is flat, r₀ per keep times the tithe ladder; ground pays nothing, so
+being pushed back costs no income. A clash loses members at (fighters in reach) × dps / hp,
+where fighters in reach are three files times the ranks a member's reach covers. Melee
+strikes from its front rank and fights by the linear law; a bow wave fights whole, by the
+square law. Equal value per silver at one release's budget sets each member's hp × dps, and
+the role's duel time splits it; the yeoman's display hp fixes the constant. Counters
+multiply damage by 1.6 and take its inverse. The gate falls to two mangonels in 24 seconds.
+The rival's harvest grows by one boon level a rung, so a boon a rung keeps pace.
 
-Two structural properties make it _this_ archetype rather than a solo producer:
+**Where the closed form stops:**
+- *where the clash happens.* The line is the sum of releases, the ramp of cover and both
+  commanders' choices; a clash's position decides its cover.
+- *the walk-up.* Ranks reach the front over time; the spine reads a clash in the open.
+- *the rival's choices.* Each wave is drawn from its temperament and the answer to the last
+  wave seen.
+- *the career.* How many battles a rung takes is the battle's outcome distribution.
 
-- **The opponent economy is a live pressure source that ships as game code.**
-  The AI (`modules/opponent-bot.ts`, side-parameterized) is a real module, not a
-  balance-harness fixture — its auto-send _is_ the adversarial mechanic the player reads
-  and counters. The player, by contrast, is a **human** (manual send, low APM by
-  design); there is no player auto-send policy to ship. In a headless run the
-  shipping AI plays _both_ sides (bilateral-symmetric) precisely because there is
-  no human — a deliberate headless fiction, on the balance-harness side by the
-  automation-as-game-code convention's carve-out.
-- **The counter matrix is data, not a chain** — an N×N damage-type multiplier
-  table the per-tick combat resolver reads as a 2D lookup. Its _sharpness_
-  (`strongCounter`) is the signature tunable, and the archetype's centerpiece
-  metric is the sensitivity of counter-pivots-per-match to it (methodology #3).
+**What measures the remainder:** `clash-probe.ts` fights the spine's clashes on the real
+causeway; `front-probe.ts` plays temperament pairings at equal income for where the line
+stands, how often it crosses and recovers, side symmetry and battle length; `career-probe.ts`
+plays the ladder under the reference marshal (`balance/_marshal.ts`), which runs the rival's
+own decision function.
 
-## The arc — beat map
+## The arc
 
-Six ordered player-experience phases across a ~75min cumulative arc (2–4
-matches at the 30-min limit); the **measured** windows + predicates live in
-`balance/beats.ts`, never authored:
+| Beat | Recorded |
+|---|---|
+| The opening horn: the lines meet at the middle | 0:20 |
+| The engineers arrive: the first mangonel | 2:00 |
+| The Charter of the Longbow | 15:10 |
+| Lord Grubb's gate falls: the first victory | 19:26 |
+| Lady Vesk, who answers every horn | 31:14 |
+| The Stolen Throne falls: the ending | 59:57, 12 battles |
 
-1. **first-unit-purchased** — the shop → send loop becomes concrete in under a
-   minute.
-2. **first-auto-resolve-combat** — validates "set composition, watch it play
-   out"; the archetype's defining moment.
-3. **first-counter-pivot** — the counter-matrix depth enters; the auto-battler
-   becomes a strategy game.
-4. **first-match-completion** — arc half-way; the match loop closes cleanly.
-5. **second-match-composition-pivot** — learning transfers across matches
-   (needs the multi-match driver; see § Balance model).
-6. **counter-mastery-demonstrated** — at least two counter matchups internalized.
+A battle runs 4–7 minutes. Over three seeds the marshal takes the Usurper's keep between
+1:00 and 1:18, in 12–16 battles. Play goes on after the ending against the Usurper's heirs.
+`manifest.ts` holds the recorded beats.
 
-The phase order and each phase's intent are **fixed identity** — a fork changing
-the adversarial spine or the counter-matrix centerpiece has forked into a
-sibling. The ~75min cumulative budget covers the headless beat span at the 30-min
-match limit.
+## Growth ports
 
-## Growth ports (validated-but-deferred)
+- **A captain.** Player automation that raises each wave to a rule the player writes, behind
+  an automation tier; the rival's decision function is already the shape.
+- **Formations.** A wave's rank order as a choice — knights ahead for a charge, a pike
+  hedge for a hold — instead of the fixed order.
+- **Reading their bailey.** A spyglass boon that shows the lord's waiting squads before its
+  horn, trading the second keep's information edge for a price.
 
-- **Cross-match meta-progression** — the line's defining layer, not an optional
-  direction: `modules/prestige.ts` + the `metaProgressionEnabled` flag ship dormant
-  (production skeleton: off). The between-match window is where a lifetime
-  power/roster layer grows in, and it is added with its spine term.
-- **Opponent-persona rotation** — persona is bound at module install today; the
-  `balance/_match-driver.ts` between-match seam is the documented insertion point for a
-  player-facing "rotate opponents per match" toggle or a tuner sweeping persona
-  pairs (`TODO(expansion)` there).
-- **Spendable abilities** — `data/abilities.ts` sketches an active-ability layer
-  over the passive send loop.
-- **Player-side automation** — tug has no player-facing automation today;
-  `modules/opponent-bot.ts` is an AI opponent, which install-presence blocks
-  rather than an automation tier. An auto-sender or auto-upgrade layer is the shape
-  that would qualify for an `AutomationTiers` ladder, per `.claude/rules/archetype-authoring.md`
-  § Conformance.
-- **Live PvP** — the overview's endgame: against a second human the counter
-  space becomes combinatorial. The shipping AI is the single-player stand-in.
+## Engine fit
 
-## Engine fit (pattern → primitive)
+| Component | Engine primitive |
+|---|---|
+| silver, renown's boon points | `createResource` |
+| troops, the tithe, boons | `createPurchasableCategory`, `Formula.exponential` for the tithe |
+| the Chronicle's volumes | `createSkill` |
+| each keep's harvest, troops and gate | `createModifierChain`, boons and the rung bound in |
+| a battle's reset | `createReset` over both keeps and the causeway |
+| every perturbable anchor | `createTuningRegistry`, `tunable` |
+| the toss, the herald's lines, each wave's draw | `random`, `weightedPick` |
 
-| Pattern                      | Engine primitive                                  | Note                                                |
-| ---------------------------- | ------------------------------------------------- | --------------------------------------------------- |
-| income (substrate)           | per-side income `Resource` + rate chain           | both sides accrue symmetrically at `baseIncomeRate` |
-| `escalating-price` upgrades  | geometric refinery ladders (`tunable()` costs)    | the fixed-strategy ROI surface (methodology #5)     |
-| unit production + send       | per-side unit shop + sequencer + cooldowns        | a send puts a unit into the shared lane             |
-| the shared lane (no pattern) | single shared `lane` module, all-pairs combat     | fortress treated as just-another opposing unit      |
-| `type-effectiveness`         | N×N data table read by the combat resolver        | `strongCounter` sharpness = signature tunable       |
-| Adversarial pressure         | `modules/opponent-bot.ts` (side-parameterized AI) | ships as game code; auto-send IS the mechanic       |
-| Match orchestration          | `modules/match.ts` (start/end/reset, events)      | `matchEnded` fires pre-reset — capture then         |
-| Perturbation                 | module `TuningRegistry` (`tunable()`)             | unit costs, refinery, fortress HP, matrix sharpness |
+Two hand-rolls carry `TODO(expansion)` markers: the causeway's lane occupancy
+(`modules/causeway.ts`) and the two keeps as one per-side factory (`modules/keep.ts`). The
+battle that waits in camp is game code by the engine's design (`modules/battle.ts`), and
+the temperaments follow the consumer guide's persona-roster composition.
 
 ## Balance model
 
-Measure-and-record — the signature is a distribution response curve, not a
-fire-time. `BALANCING.md` beside this file is the working guide: the tunables, what
-couples to what, and how to read each probe. In brief:
-
-- **The spine, as prose + math** — the `// ─── Balance ───` sections in
-  `data/*.ts` name each unit cost, matrix cell and refinery value with its
-  coupling.
-- **The probes** — `balance/arc-probe.ts` drives the real engine and the
-  **shipping AI** through `balance/_engine.ts`'s bilateral scratch-engine builder: fire-time
-  checks, the counter-strong sensitivity signature, an income-upgrade ROI
-  snapshot, match-duration statistics, and a framework-correctness dominance
-  check that verifies instrumentation rather than tuning anything.
-  `balance/retune-probe.ts` sweeps the persona matrix for a viable-policy data
-  slice. Both lean on `balance/_match-driver.ts` for cumulative multi-match beats.
-- **The behavioral suites** — `sim/match-scope.test.ts` covers match-scope reset
-  and `sim/tug.sim.test.ts` the behavioral shape. `sim/data-invariants.test.ts`
-  holds counter-matrix shape, and `sim/instrumentation.test.ts` verifies the
-  measurement path with every expectation derived from the data — no magnitudes,
-  per `open-loop-engine/docs/consumer-guide-balance.md` § Why this isn't a test
-  suite.
-
-## Cross-references
-
-- Exemplars and lineage (shape validation, not lift targets): `../_docs/tug.md`
-- Working on the numbers: `BALANCING.md` (beside this file)
-- Balance methodology: `open-loop-engine/docs/consumer-guide-balance.md`;
-  archetype-specific authoring in `.claude/rules/archetype-authoring.md`
-- Back-flow entries this archetype is a receipt for:
-  `candidate-primitives.md` § `createMatchDriverModule({ matchKey })` and
-  `candidate-recipes.md` § Bilateral sim-bot
-- Engine API: `open-loop-engine/docs/api/INDEX.md`, `consumer-guide.md`
+The spine is `data/spine.ts`; `balance/tug-projection.ts` runs it, with the member table,
+the clashes it predicts, the gate, the tithe and the Chronicle's ladder. The probes play the
+shipping game and print beside it. `BALANCING.md` covers the tunables and couplings.

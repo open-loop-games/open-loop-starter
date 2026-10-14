@@ -9,7 +9,7 @@
   (fullscreen arena canvas + peripheral overlay HUD + a full-screen overlay for
   the between-runs surface), formally insufficient-corpus at N_classifiable=2 but
   consistent across all three exemplars. `manifest.shell` names it
-  `ContainmentFloor`, the same declared-invention path tug takes.
+  `ContainmentFloor`, a declared invention.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';

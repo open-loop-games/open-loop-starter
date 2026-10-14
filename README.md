@@ -59,7 +59,7 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 |---|---|---|---|---|
 | `cycler` | Skerry Light | SidebarMainShell | Cycle, TickDriver phases, Inventory, SpatialGrid, Loadout, PurchasableCategory | Phase alternation: build by day against the forecast quarter, its spray and the quarter it backs to, weather the night, and spend the logbook toward the Flannans' final gale |
 | `producer` | Probe Swarm | ThreePanelShell | ProducerCategory, AchievementCategory, AutomationTiers, processOfflineTime | The automation ladder: a geometric cost ladder under a compounding modifier stack, with offline catch-up and a return report |
-| `tug` | SciFi Armada | TugFrameLayout | Sequencer, Loop, PurchasableCategory, ChallengeCategory, Reset | Adversarial lane push: auto-send economy versus a live zero-sum opponent |
+| `tug` | Hold the Causeway | SingleColumnShell | PurchasableCategory, Skill, Reset, ModifierChain, TuningRegistry | Adversarial lane push: waves released on alternating horns meet at a line that sways about the middle, cover stiffens each side near home, and a Chronicle carries the career up a ladder of lords |
 | `skirmish` | Skirmish | SingleColumnShell | Sequencer, Loop, AutomationTiers | Adversarial real-time match with automation on both sides |
 | `_blank` | — | SingleColumnShell | — | Neutral skeleton for a novel research composition (`pnpm eject --clean`) |
 

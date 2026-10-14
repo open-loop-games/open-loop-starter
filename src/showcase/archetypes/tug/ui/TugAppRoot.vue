@@ -1,57 +1,66 @@
 <!--
-  TugAppRoot — routing + app chrome only (runs pre-`engine.start()`, on the slot
-  screen), so it reads no module state. The match is in
-  `<TugGameView>`, mounted under the post-start frame. The `onLoaded` seam below
-  is the one legitimate root-side post-start seam (offline catch-up +
-  auto-starting a match); see `.claude/rules/app-root-discipline.md`.
+  TugAppRoot — routing + app chrome only. Runs before `engine.start()` (on the slot screen),
+  so it reads NO module state. The game lives in `<TugGameView>`, mounted under the
+  post-start `v-else` frame where module reads are safe. See
+  `.claude/rules/app-root-discipline.md`.
 -->
 <script setup lang="ts">
 import { ref } from 'vue';
-import { processOfflineTime } from '@open-loop/engine';
-import { DevPanelOverlay } from '@/lib';
+import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import { usePlaySession } from '@/composables/usePlaySession';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
+import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
-import { MatchKey } from '../modules';
 import TugGameView from './TugGameView.vue';
+// The costume, applied under `.causeway-costume`. Imported at the root so the slot screen
+// and the app chrome sit in the same hall.
+import './causeway.css';
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession({
-  onLoaded: (result) => {
-    // Catch-up advance for offline gap, then auto-start a match if none in
-    // progress (skeleton plays-by-default; explicit "Start Match" lives only
-    // on the match-end overlay).
-    if (result.success && result.timestamp != null) {
-      const gap = Math.max(0, (Date.now() - result.timestamp) / 1000);
-      if (gap > 0) processOfflineTime(engine.tickDriver, gap);
-    }
-    const match = engine.tryInject(MatchKey);
-    if (match && !match.inMatch.value) match.start();
-  },
-});
+const stack = useModalStack();
+// A battle is played, not left running: a load resumes it where it stood, with no offline
+// catch-up.
+const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
 </script>
 
 <template>
-  <SlotScreen
-    v-if="currentScreen === Screen.Slots"
-    :engine="engine"
-    :app-name="manifest.displayName"
-    @start="startGame"
-  />
-  <TugGameView v-else @return="returnToSlots" />
-  <ToastContainer />
-  <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
-  <DevPanelOverlay
-    v-if="isDev && showDevPanel"
-    title="Balance Workbench"
-    @close="showDevPanel = false"
-  >
-    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
-  </DevPanelOverlay>
+  <div class="causeway-costume">
+    <SlotScreen
+      v-if="currentScreen === Screen.Slots"
+      :engine="engine"
+      :app-name="manifest.displayName"
+      @start="startGame"
+    />
+    <AppFrame v-else :stack="stack" :tooltip-delay="400">
+      <template #header>
+        <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
+          <template #about>
+            <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
+            <p>
+              Fairhold and a neighbouring lord's keep face each other across a causeway one road
+              wide. Raise yeomen, bowmen, knights and, late in the season, a mangonel; they wait in
+              the bailey until your horn sounds, then march out in ranks. Hold the Homeward Road,
+              break their gate, and the Chronicle remembers.
+            </p>
+          </template>
+        </SystemHeader>
+      </template>
+      <TugGameView />
+    </AppFrame>
+    <ToastContainer />
+    <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
+    <DevPanelOverlay
+      v-if="isDev && showDevPanel"
+      title="Balance Workbench"
+      @close="showDevPanel = false"
+    >
+      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+    </DevPanelOverlay>
+  </div>
 </template>

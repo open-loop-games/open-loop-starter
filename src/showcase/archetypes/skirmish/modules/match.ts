@@ -12,11 +12,8 @@ import {
 } from '@open-loop/engine';
 import { SkirmishTuningRegistryKey, DEFAULT_FACTIONS, type FactionId } from './tuning';
 /**
- * Match spine — bone #1, stripped from tug's `match.ts` to the reusable core.
- *
- * Everything domain-specific in tug (fortress HP, lane composition, sequencer
- * counter-pivot inference, `player-win`/`ai-win`) was *coupling*. What remains
- * is a domain-free two-sided match lifecycle:
+ * Match spine — bone #1: a domain-free two-sided match lifecycle. Base HP, lane
+ * composition and counter-pivot inference stay out of it:
  *
  *   - `start()` opens a match; `end(outcome)` closes it, idempotent.
  *   - `end()` emits `matchEnded` **before** running the match-scope reset — so
@@ -30,8 +27,7 @@ import { SkirmishTuningRegistryKey, DEFAULT_FACTIONS, type FactionId } from './t
  * engine composition (a two-sided match lifecycle), not a
  * primitive gap, so it is indexed in `candidate-recipes.md`
  * for deliberate cross-archetype evaluation — deliberately not dropped in engine
- * `candidate-primitives.md`. tug has a coupled copy; skirmish is the first
- * stripped, parameterized instance (N=2). A converged shape may later graduate
+ * `candidate-primitives.md`. Skirmish is its one instance (N=1). A converged shape may later graduate
  * to a shared starter standard module or an engine consumer-guide recipe — by
  * judgment on the recipe batch, not an N=2 trigger. See that index.
  */
@@ -98,9 +94,8 @@ export const MatchKey: InjectionKey<MatchApi> = Symbol('skirmish/match') as Inje
  * Deliberately NOT self-referential — `skirmish/match` is absent, and so is
  * `skirmish/tuning` (its scoped overrides must survive resets). Match
  * bookkeeping (`started`/`outcome`/`matchTimeElapsed`) is owned by
- * `start()`/`end()`, not the reset. This is the one intentional divergence
- * from tug, which lists its own match module and thereby nulls `outcome` at
- * `end()` — that makes tug's idempotency guard dead and forces the latch to
+ * `start()`/`end()`, not the reset. A match module that listed itself would null
+ * `outcome` at `end()`, leaving its idempotency guard dead and the latch to
  * recover the result. Keeping match out of its own scope makes `end()` genuinely
  * idempotent and `outcome` directly readable between matches; the reset scope
  * means only "clear the battlefield," never "forget who won."

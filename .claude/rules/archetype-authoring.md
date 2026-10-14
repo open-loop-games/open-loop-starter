@@ -169,8 +169,7 @@ alongside the constants           and the probes that contradict it
   probe builder assembles whatever the probe measures. It may be driven by an automated
   player, bilateral, or instrumented with analyzers. Producer, skirmish and tug have
   both, and a header in each says what the other is for. A suite may import a probe
-  builder when that measurement path is the thing under test. Tug's
-  `instrumentation.test.ts` does so deliberately, and says so.
+  builder when that measurement path is the thing under test, and says so.
 
 ### Canonical `balance/` filenames
 

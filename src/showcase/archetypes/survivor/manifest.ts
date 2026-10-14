@@ -75,7 +75,7 @@ export const manifest: ArchetypeManifest = {
       recordedFireTimeRange: [1145, 1800],
     },
   ],
-  // Declared invention, like tug's `TugFrameLayout` — a fullscreen floor with
+  // Declared invention: a fullscreen floor with
   // the readouts pinned over it, and the between-runs record sheet as a
   // full-screen overlay. `subgenre-shell-mapping-2026.md` puts survivor-like at
   // `free-form` (2/2 classifiable; formally insufficient-corpus at that N, and
