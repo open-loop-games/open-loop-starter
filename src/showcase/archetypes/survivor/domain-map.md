@@ -28,6 +28,7 @@ Field-name reference edges: untyped ids in named fields that point at
 another domain noun. These are name-encoded, not type-encoded, so
 type-graph tools such as dependency-cruiser and findReferences miss them.
 
+- **RatingStep** → `agency`
 - **StarDef** → `rig`
 
 ## Thin spots
@@ -35,7 +36,7 @@ type-graph tools such as dependency-cruiser and findReferences miss them.
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`AgencyDef`, `ExtraKind`, `RatingDef`, `PerkDef`
+`ExtraKind`, `RatingDef`, `PerkDef`
 
 ## Disambiguators (curated)
 

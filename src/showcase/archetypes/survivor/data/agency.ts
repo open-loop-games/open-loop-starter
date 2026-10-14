@@ -31,7 +31,7 @@ const AGENCY_TEXT: Record<AgencyAnchor['id'], { name: string; blurb: string; cha
 };
 
 // ─── Balance ───
-// Prices come from the spine: the first level costs `takesForFirst` baseline takes, and each
+// Prices come from the spine: the first level costs `takesForFirst` full takes, and each
 // level costs AGENCY_GROWTH times the last, solved so the whole shop costs `shopTakes` takes.
 
 export const AGENCY: readonly AgencyDef[] = AGENCY_ANCHORS.map((a) => {

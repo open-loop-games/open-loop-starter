@@ -3,7 +3,7 @@
 // on a rig the double wears, or a perk that is not a rig. When nothing is left to offer,
 // craft service is the only page.
 
-import { PERK_STEP } from './spine';
+import { OFFENSIVE_PERK_STACKS, PERK_STEP } from './spine';
 
 export type PerkId = keyof typeof PERK_STEP;
 
@@ -44,14 +44,14 @@ export const PERKS: readonly PerkDef[] = [
     id: 'crew-call',
     name: 'Crew Call',
     blurb: `+${pct(PERK_STEP['crew-call'])} rig fire rate.`,
-    maxStacks: 5,
+    maxStacks: OFFENSIVE_PERK_STACKS,
     offensive: true,
   },
   {
     id: 'bigger-charges',
     name: 'Bigger Charges',
     blurb: `+${pct(PERK_STEP['bigger-charges'])} rig damage.`,
-    maxStacks: 5,
+    maxStacks: OFFENSIVE_PERK_STACKS,
     offensive: true,
   },
 ];

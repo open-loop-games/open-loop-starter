@@ -1,30 +1,47 @@
 /**
- * Survivor: take probe. One take per star × rating × seed, each on a fresh set with no
- * agency, every star signed and every rating open, the star improvising. Reads what a take
- * does at each rating with nothing bought: how it ends, the rewrites against the ladder, η
- * and contact. Prints; never asserts.
+ * Survivor: take probe. One take per star × rating × seed, each on a fresh set with every
+ * star signed and every rating open, the star improvising. At each rating the set holds the
+ * agency the spine's model career holds when that rating opens (`CAREER`), so a rating is
+ * played as the career first meets it. Reads how a take ends, the rewrites against the
+ * ladder, η and contact. Prints; never asserts.
  *
- * Run: `pnpm exec vite-node src/showcase/archetypes/survivor/balance/take-probe.ts [seeds] [ratings]`
- * (default 8 seeds, ratings `0123`). Jobs fan over the cores (`_pool.ts`).
+ * Run: `pnpm exec vite-node src/showcase/archetypes/survivor/balance/take-probe.ts [seeds] [ratings] [bare]`
+ * (default 8 seeds, ratings `0123`; `bare` plays every rating with nothing bought). Jobs fan
+ * over the cores (`_pool.ts`).
  *
  * How to read it:
- * - `cut` is takes that reached CUT of those run. G should reach it with nothing bought; the
- *   harsher ratings are what the agency is for, so a zero there is a wall, not a target.
- * - `η` is reels banked over reels dropped. The spine assumes `ANCHORS.eta`.
+ * - `cut` is takes that reached CUT of those run. Each rating's depth is solved so it
+ *   clears its floor as G does, so a rating far below G's rate is a rating the solve
+ *   misplaces.
+ * - `η` is reels banked over reels dropped. `income` is reels banked over what the spine's
+ *   income model predicts for the same seconds at the same depth: it carries η, the share
+ *   of arrivals downed and the shot together, which is what the ladder rides. 1.00 is on
+ *   the spine; `ANCHORS.incomeShare` is the term to refit.
  * - `contact` is seconds touched; `away` is arrivals the `MAX_EXTRAS` guard turned away,
  *   which should be zero wherever the take is decided.
  * - The ladder rows compare each rewrite's median time on G with the spine's prediction.
  *   Early beats run late while η is low before the first sweep.
  */
 
-import { ANCHORS, BEATS, RATINGS, STARS, predictedBeatTime, type StarDef } from '../data';
-import { buildSet, clock, median, openAll, playTake, type TakeResult } from './_set';
+import {
+  ANCHORS,
+  BEATS,
+  CAREER,
+  RATINGS,
+  RATING_DEPTH,
+  STARS,
+  cumulativeIncome,
+  predictedBeatTime,
+  type StarDef,
+} from '../data';
+import { buildSet, clock, equip, median, openAll, playTake, type TakeResult } from './_set';
 import { claimChunk, emitResult, runPool } from './_pool';
 
 interface Job {
   star: StarDef['id'];
   rating: number;
   seed: number;
+  bare: boolean;
 }
 
 const chunk = claimChunk<Job>();
@@ -32,22 +49,26 @@ if (chunk) {
   for (const job of chunk) {
     const set = buildSet(job.seed);
     openAll(set);
+    if (!job.bare) equip(set, CAREER[job.rating]!.agency);
     emitResult(playTake(set, job));
     set.dispose();
   }
 } else {
   const seeds = Number(process.argv[2] ?? 8);
   const ratings = (process.argv[3] ?? '0123').split('').map(Number);
+  const bare = process.argv[4] === 'bare';
   const jobs: Job[] = [];
   for (const star of STARS)
     for (const rating of ratings)
-      for (let seed = 1; seed <= seeds; seed++) jobs.push({ star: star.id, rating, seed });
+      for (let seed = 1; seed <= seeds; seed++) jobs.push({ star: star.id, rating, seed, bare });
   const t0 = performance.now();
   const results = await runPool<Job, TakeResult>(import.meta.url, jobs);
 
-  console.log(`\nSURVIVOR take probe: ${seeds} seeds a cell, no agency, the star improvising\n`);
   console.log(
-    'star       rating  cut   median end  level  η     contact  in-shot  peak  away  kills/s',
+    `\nSURVIVOR take probe: ${seeds} seeds a cell, ${bare ? 'nothing bought' : 'the model career’s agency at each rating'}, the star improvising\n`,
+  );
+  console.log(
+    'star       rating  cut   median end  level  η     income  contact  in-shot  peak  away',
   );
   for (const star of STARS) {
     for (const rating of ratings) {
@@ -55,6 +76,9 @@ if (chunk) {
       const cut = rs.filter((r) => r.end === 'cut').length;
       const eta =
         rs.reduce((a, r) => a + r.reelsBanked, 0) / rs.reduce((a, r) => a + r.reelsDropped, 0);
+      const income =
+        rs.reduce((a, r) => a + r.reelsBanked, 0) /
+        rs.reduce((a, r) => a + cumulativeIncome(r.seconds, RATING_DEPTH[r.rating]), 0);
       const shot =
         rs.reduce((a, r) => a + r.inShotKills, 0) /
         Math.max(
@@ -69,11 +93,11 @@ if (chunk) {
           clock(median(rs.map((r) => r.seconds))).padEnd(11),
           String(median(rs.map((r) => r.level))).padEnd(6),
           eta.toFixed(2).padEnd(5),
+          income.toFixed(2).padEnd(7),
           `${median(rs.map((r) => r.contactSeconds)).toFixed(0)}s`.padEnd(8),
           `${(shot * 100).toFixed(0)}%`.padEnd(8),
           String(Math.max(...rs.map((r) => r.peakExtras))).padEnd(5),
-          String(rs.reduce((a, r) => a + r.turnedAway, 0)).padEnd(5),
-          median(rs.map((r) => r.kills / r.seconds)).toFixed(2),
+          String(rs.reduce((a, r) => a + r.turnedAway, 0)),
         ].join(' '),
       );
     }

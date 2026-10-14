@@ -16,6 +16,7 @@ import {
   ANCHORS,
   CONE_HALF_ANGLE,
   LEVEL_GAIN,
+  RATING_DEPTH,
   RIG_BY_ID,
   arrivalRate,
   contactDps,
@@ -41,7 +42,7 @@ export const BASE_PICKUP = 60;
 /** Arrivals appear in this ring around the double: off-camera, but never far. */
 export const SPAWN_RING = [ANCHORS.spawnRadius - 50, ANCHORS.spawnRadius + 50] as const;
 /** A floor this crowded admits nobody new — a frame-rate guard, not a design cap. */
-export const MAX_EXTRAS = 500;
+export const MAX_EXTRAS = 1000;
 /** Share of arrivals cast into the arc ahead of a moving double — running
  *  away runs into the next wave instead of out of the scene. */
 export const AHEAD_SHARE = 0.4;
@@ -194,7 +195,7 @@ export function createArena(opts: {
 }
 
 export function currentScene(s: ArenaState): number {
-  return sceneAt(s.t, s.rating);
+  return sceneAt(s.t, RATING_DEPTH[s.rating]);
 }
 
 // ─── Step ───────────────────────────────────────────────────────────────────

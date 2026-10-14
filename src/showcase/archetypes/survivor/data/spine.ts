@@ -9,6 +9,7 @@
 // closed form stops is in `../IDENTITY.md` § Rate-function spine.
 
 import { meanHpFactor } from './extras';
+import { RATINGS } from './ratings';
 
 // ─── Balance ───
 // The only hand-picked numbers in the economy. Each line says why.
@@ -43,8 +44,12 @@ export const ANCHORS = {
 
   /** Share of rewrites spent on pages that are not damage (health, speed, mic). */
   defenseShare: 0.3,
-  /** Collection efficiency: a driver output, assumed here. Seed 7, takes 1–3 of the cell's pilot: 0.64–0.71. */
-  eta: 0.68,
+  /**
+   * Reels banked over the reels that walk on: η times the share of arrivals downed, since
+   * the floor holds an uncleared crowd. A driver output, assumed here. The Veteran
+   * improvising at G: 0.59 (take-probe, 16 seeds, `income` × η).
+   */
+  incomeShare: 0.59,
   /** Assumed share of kills that land inside the shot. */
   shotShare: 0.15,
   /** What a kill inside the shot pays, against one outside. */
@@ -62,25 +67,20 @@ export const ANCHORS = {
   /** Rig level cap. */
   rigMaxLevel: 5,
 
-  /** A rating starts the take this many scenes deeper into the curve. */
-  ratingSceneOffset: 1.5,
+  /** Full takes the career banks at a rating before the next opens: the ratings' pace. */
+  takesPerRating: 3,
 
-  /** Clout a baseline take pays: sized for readable shop prices. */
-  cloutPerBaselineTake: 40,
-  /** Seconds a zero-meta first take is assumed to last before it wipes out. */
-  baselineTakeSeconds: 270,
-  /** Takes of baseline payout that buy the whole agency. */
-  shopTakes: 36,
+  /** Clout a full take at G pays: sized for readable shop prices. */
+  cloutPerTake: 80,
+  /** Full takes of payout that buy the whole agency and both stars. */
+  shopTakes: 18,
 } as const;
 
 // ─── Opposition curves: scaled-opposition over the scene index ───
 
-export function ratingSceneOffsetFor(rating: number): number {
-  return ANCHORS.ratingSceneOffset * rating;
-}
-
-export function sceneAt(t: number, rating = 0): number {
-  return Math.floor(t / ANCHORS.sceneSeconds) + ratingSceneOffsetFor(rating);
+/** The scene index `t` seconds into a take entered `depth` scenes deep. */
+export function sceneAt(t: number, depth = 0): number {
+  return Math.floor(t / ANCHORS.sceneSeconds) + depth;
 }
 
 export function extraHp(scene: number): number {
@@ -182,24 +182,24 @@ export const LEVEL_GAIN = solveLevelGain();
 
 // ─── Income and the rewrite ladder ───
 
-/** Reels a second at a scene, assuming the rigs keep pace so kills match arrivals. */
+/** Reels banked a second at a scene. */
 export function incomeRate(scene: number): number {
   const shot = 1 + ANCHORS.shotShare * (ANCHORS.shotMult - 1);
-  return arrivalRate(scene) * meanHpFactor(scene) * ANCHORS.eta * shot;
+  return arrivalRate(scene) * meanHpFactor(scene) * ANCHORS.incomeShare * shot;
 }
 
 /** Seconds before the first arrival walks into the opening rig's reach. */
 export const INCOME_LAG = (ANCHORS.spawnRadius - ANCHORS.openingReach) / ANCHORS.openingSpeed;
 
 /** Cumulative reels banked by time t, integrated scene by scene, trailing arrivals by the walk-in. */
-export function cumulativeIncome(t: number, rating = 0): number {
+export function cumulativeIncome(t: number, depth = 0): number {
   let total = 0;
   let at = 0;
   t -= INCOME_LAG;
   while (at < t) {
     const sceneEnd = (Math.floor(at / ANCHORS.sceneSeconds) + 1) * ANCHORS.sceneSeconds;
     const span = Math.min(sceneEnd, t) - at;
-    total += incomeRate(sceneAt(at, rating)) * span;
+    total += incomeRate(sceneAt(at, depth)) * span;
     at += span;
   }
   return total;
@@ -248,28 +248,27 @@ export function predictedBeatTime(k: number): number {
 
 // ─── Meta: clout and the agency ───
 
-/** Reels per point of clout: a baseline take pays `cloutPerBaselineTake`. */
-export const REELS_PER_CLOUT =
-  cumulativeIncome(ANCHORS.baselineTakeSeconds) / ANCHORS.cloutPerBaselineTake;
+/** Reels per point of clout: a full take at G pays `cloutPerTake`. Deeper takes pay more, because more walks on. */
+export const REELS_PER_CLOUT = cumulativeIncome(ANCHORS.takeSeconds) / ANCHORS.cloutPerTake;
 
 export interface AgencyAnchor {
   id: 'effects-budget' | 'padding' | 'cardio' | 'boom-mic' | 'script-doctor';
-  /** Price of the first level, in baseline takes of clout. */
+  /** Price of the first level, in full takes of clout. */
   takesForFirst: number;
   maxLevel: number;
 }
 
-/** The agency's prices: the cheapest perk costs one baseline take. */
+/** The agency's prices: the cheapest perk costs half a take. */
 export const AGENCY_ANCHORS: readonly AgencyAnchor[] = [
-  { id: 'effects-budget', takesForFirst: 1, maxLevel: 5 },
-  { id: 'padding', takesForFirst: 1, maxLevel: 5 },
-  { id: 'cardio', takesForFirst: 1.25, maxLevel: 4 },
-  { id: 'boom-mic', takesForFirst: 1.25, maxLevel: 3 },
-  { id: 'script-doctor', takesForFirst: 4, maxLevel: 1 },
+  { id: 'effects-budget', takesForFirst: 0.5, maxLevel: 5 },
+  { id: 'padding', takesForFirst: 0.5, maxLevel: 5 },
+  { id: 'cardio', takesForFirst: 0.625, maxLevel: 4 },
+  { id: 'boom-mic', takesForFirst: 0.625, maxLevel: 3 },
+  { id: 'script-doctor', takesForFirst: 2, maxLevel: 1 },
 ];
 
-/** Star signings, in baseline takes of clout. */
-export const STAR_TAKES = { pyro: 2.5, wirework: 5 } as const;
+/** Star signings, in full takes of clout. */
+export const STAR_TAKES = { pyro: 1.25, wirework: 2.5 } as const;
 
 function shopTotal(growth: number): number {
   let total = 0;
@@ -294,7 +293,7 @@ export function solveAgencyGrowth(): number {
 export const AGENCY_GROWTH = solveAgencyGrowth();
 
 export function agencyBaseCost(a: AgencyAnchor): number {
-  return Math.round(a.takesForFirst * ANCHORS.cloutPerBaselineTake);
+  return Math.round(a.takesForFirst * ANCHORS.cloutPerTake);
 }
 
 /**
@@ -317,3 +316,114 @@ export const PERK_STEP = {
   'crew-call': 0.08,
   'bigger-charges': 0.15,
 } as const;
+
+/** Stacks each of the two damage perks takes. */
+export const OFFENSIVE_PERK_STACKS = 5;
+
+// ─── The ratings: depth solved from the career's agency ───
+// A rating enters the same curves deeper. Its depth is solved so the take clears its floor
+// by the last beat as well as a zero-meta take clears G, with the damage the agency adds
+// by the time the rating opens. That agency comes from a model career: `takesPerRating`
+// full takes a rating, each paying its depth's income, spent by the reference agent (the
+// next star once affordable, else the cheapest agency level).
+//
+// Clearing is not surviving: an improvising star kites an uncleared crowd, and the
+// Veteran with nothing bought survives deeper than the clearing line. The opening rig is
+// what binds the short-reach stars, and the solved depths stay inside it.
+
+/** Rewrite level a take reaches by `t` at a depth: the ladder read off the income model. */
+export function levelAt(t: number, depth = 0): number {
+  const reels = cumulativeIncome(t, depth);
+  return 1 + Math.floor(Math.log(1 + (reels * (LADDER.r - 1)) / LADDER.x0) / Math.log(LADDER.r));
+}
+
+/** Rig picks a full harness takes: three new rigs and four levels on each of four. */
+const RIG_PICKS = ANCHORS.rigSlots - 1 + ANCHORS.rigSlots * (ANCHORS.rigMaxLevel - 1);
+
+/** The loadout's damage in DPS0 after `offensive` picks: rigs first, then the two damage perks in turn. */
+export function pickedDps(offensive: number): number {
+  const rigs = Math.min(offensive, RIG_PICKS);
+  const extra = offensive - rigs;
+  const charges = Math.min(OFFENSIVE_PERK_STACKS, Math.ceil(extra / 2));
+  const crew = Math.min(OFFENSIVE_PERK_STACKS, Math.floor(extra / 2));
+  return (
+    loadoutDps(rigs, LEVEL_GAIN) *
+    (1 + PERK_STEP['bigger-charges'] * charges) *
+    (1 + PERK_STEP['crew-call'] * crew)
+  );
+}
+
+/** Damage a take delivers at the last beat over what its scene demands, at a depth and an agency damage multiplier. */
+export function clearance(depth: number, damage = 1): number {
+  const last = BEATS.times[BEATS.count - 1]!;
+  const offensive = Math.round((levelAt(last, depth) - 1) * (1 - ANCHORS.defenseShare));
+  return (DPS0 * pickedDps(offensive) * damage) / requiredDps(sceneAt(last, depth));
+}
+
+export interface RatingStep {
+  depth: number;
+  /** Full takes banked before the rating opens. */
+  takesBefore: number;
+  /** The agency's damage multiplier when it opens. */
+  damage: number;
+  /** Agency levels held when it opens. */
+  agency: Record<AgencyAnchor['id'], number>;
+  /** Clout a full take at this depth pays. */
+  payPerTake: number;
+}
+
+/** The model career, rating by rating, and each rating's solved depth. */
+export function projectCareer(): RatingStep[] {
+  const levels = Object.fromEntries(AGENCY_ANCHORS.map((a) => [a.id, 0])) as RatingStep['agency'];
+  const stars = [STAR_TAKES.pyro, STAR_TAKES.wirework].map((t) =>
+    Math.round(t * ANCHORS.cloutPerTake),
+  );
+  const price = (a: AgencyAnchor) =>
+    levels[a.id] >= a.maxLevel
+      ? Infinity
+      : Math.floor(agencyBaseCost(a) * AGENCY_GROWTH ** levels[a.id]);
+  const target = clearance(0);
+  const steps: RatingStep[] = [];
+  let clout = 0;
+  for (let r = 0; r < RATINGS.length; r++) {
+    const damage = 1 + AGENCY_STEP['effects-budget'] * levels['effects-budget'];
+    let depth = 0;
+    if (r > 0) {
+      let lo = 0;
+      let hi = 12;
+      for (let i = 0; i < 50; i++) {
+        const mid = (lo + hi) / 2;
+        if (clearance(mid, damage) >= target) lo = mid;
+        else hi = mid;
+      }
+      depth = lo;
+    }
+    const payPerTake = cumulativeIncome(ANCHORS.takeSeconds, depth) / REELS_PER_CLOUT;
+    steps.push({
+      depth,
+      takesBefore: r * ANCHORS.takesPerRating,
+      damage,
+      agency: { ...levels },
+      payPerTake,
+    });
+    for (let k = 0; k < ANCHORS.takesPerRating; k++) {
+      clout += payPerTake;
+      for (;;) {
+        if (stars.length && stars[0]! <= clout) {
+          clout -= stars.shift()!;
+          continue;
+        }
+        const next = [...AGENCY_ANCHORS].sort((a, b) => price(a) - price(b))[0]!;
+        if (price(next) > clout) break;
+        clout -= price(next);
+        levels[next.id]++;
+      }
+    }
+  }
+  return steps;
+}
+
+export const CAREER = projectCareer();
+
+/** Scenes deep each rating starts, by rating index. Solved: change an anchor, never this. */
+export const RATING_DEPTH: readonly number[] = CAREER.map((s) => s.depth);

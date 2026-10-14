@@ -9,27 +9,28 @@
  * - the schedule: each rewrite's authored time beside the time the ladder puts it at. The
  *   ladder is fitted at the first and last beat, so the beats between land near, not on.
  * - damage: DPS0, the solved level gain, and the demand at the last beat.
- * - ratings: what each rating's last scene demands of the loadout, against what a
- *   zero-meta loadout reaches and the most the agency adds. A ratio above the agency's
- *   ceiling is a rating no purchase opens.
+ * - ratings: the model career, rating by rating: the takes before it opens, the agency it
+ *   holds, the depth solved from it, and the clearance, which matches G's by construction.
+ *   `career-probe.ts` measures the same arc.
  * - clout: the payout model behind the agency's prices, and what the whole shop costs.
  */
 
 import {
   AGENCY,
   AGENCY_GROWTH,
-  AGENCY_STEP,
   ANCHORS,
   BEATS,
+  CAREER,
   DPS0,
   INCOME_LAG,
   LADDER,
   LEVEL_GAIN,
   OFFENSIVE_PICKS,
   RATINGS,
+  RATING_DEPTH,
   REELS_PER_CLOUT,
   STARS,
-  cumulativeIncome,
+  clearance,
   loadoutDps,
   predictedBeatTime,
   requiredDps,
@@ -62,32 +63,32 @@ console.log(
   `  ${OFFENSIVE_PICKS} offensive picks reach ${f(loadout, 2)}× DPS0, meeting the last beat's demand of ${f(requiredDps(sceneAt(lastBeat)))}`,
 );
 
-const effects =
-  1 + AGENCY_STEP['effects-budget'] * AGENCY.find((a) => a.id === 'effects-budget')!.maxLevel;
 console.log(
-  `\nRatings: the last beat's demand against the zero-meta loadout (agency adds at most ×${f(effects, 2)})`,
+  `\nRatings: each depth solved so the take clears its floor as G does with nothing bought, with`,
 );
-console.log('  rating  scenes      demand  ×loadout');
-for (const r of RATINGS) {
-  const demand = requiredDps(sceneAt(lastBeat, r.index));
-  const ratio = demand / (loadout * DPS0);
+console.log(
+  `the damage the agency adds when the rating opens (${ANCHORS.takesPerRating} full takes a rating, the reference agent)`,
+);
+console.log('  rating  after  depth   damage  clearance  a take pays  agency');
+CAREER.forEach((step, r) => {
+  const levels = Object.entries(step.agency)
+    .filter(([, n]) => n > 0)
+    .map(([id, n]) => `${id} ${n}`)
+    .join(', ');
   console.log(
-    `  ${r.label.padEnd(7)} ${f(sceneAt(0, r.index))}–${f(sceneAt(lastBeat, r.index))}`.padEnd(21) +
-      `${f(demand).padStart(7)}  ${f(ratio, 2).padStart(6)}${ratio > effects ? '  past the agency' : ''}`,
+    `  ${RATINGS[r]!.label.padEnd(7)} ${String(step.takesBefore).padStart(5)}  ${f(RATING_DEPTH[r]!, 2).padStart(5)}  ` +
+      `×${f(step.damage, 2)}   ${f(clearance(RATING_DEPTH[r]!, step.damage), 3).padStart(6)}     ` +
+      `${f(step.payPerTake, 0).padStart(5)}        ${levels || '—'}`,
   );
-}
+});
 
-const full = cumulativeIncome(ANCHORS.takeSeconds) / REELS_PER_CLOUT;
 let shop = 0;
 for (const a of AGENCY)
-  for (let l = 0; l < a.maxLevel; l++) shop += a.baseCost * AGENCY_GROWTH ** l;
+  for (let l = 0; l < a.maxLevel; l++) shop += Math.floor(a.baseCost * AGENCY_GROWTH ** l);
 const stars = STARS.reduce((x, s) => x + s.cost, 0);
 console.log(
-  `\nClout: ${f(REELS_PER_CLOUT, 2)} reels a point, so a baseline take (${ANCHORS.baselineTakeSeconds}s) pays ${ANCHORS.cloutPerBaselineTake}`,
+  `\nClout: ${f(REELS_PER_CLOUT, 2)} reels a point, so a full take at G pays ${ANCHORS.cloutPerTake}; agency levels grow ×${f(AGENCY_GROWTH, 3)}`,
 );
 console.log(
-  `  a full take at G pays about ${f(full, 0)}; agency levels grow ×${f(AGENCY_GROWTH, 3)}`,
-);
-console.log(
-  `  the whole shop: ${f(shop, 0)} agency + ${stars} stars = ${f((shop + stars) / ANCHORS.cloutPerBaselineTake, 1)} baseline takes, ${f((shop + stars) / full, 1)} full takes`,
+  `  the whole shop: ${f(shop, 0)} agency + ${stars} stars = ${f((shop + stars) / ANCHORS.cloutPerTake, 1)} full takes at G`,
 );

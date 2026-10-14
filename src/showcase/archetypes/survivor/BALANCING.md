@@ -2,8 +2,9 @@
 
 A take is two compounding curves racing on one floor: the loadout's damage, grown by the
 rewrites, against the hp walking on, grown by the scene. The spine solves where they cross on
-G and fits the rewrite ladder to the income it expects. What the driver banks, what it
-touches and what the draft deals are measured. The bucket and where its closed form stops are
+G, fits the rewrite ladder to the income it expects, and solves each rating's depth from the
+agency a model career holds when it opens. What the driver banks, what it touches and what
+the draft deals are measured. The bucket and where its closed form stops are
 in `IDENTITY.md` § Rate-function spine.
 
 ## The tunables
@@ -18,7 +19,8 @@ one with `perturb()` from `balance/_set.ts`.
 
 **Not perturbable**, because each feeds a solve and a change means rerunning
 `survivor-projection.ts`: every anchor in `data/spine.ts` (the take, the scene, the hp and
-arrival curves, the margin, η, the shot, the ratings' offset, the clout anchors); the rigs'
+arrival curves, the margin, the income share, the shot, the ratings' pace, the clout
+anchors); the rigs'
 cooldowns, reach and expected hits (`data/rigs.ts`), which set each rig's base damage; the
 extras' roster (`data/extras.ts`), which the hp flux reads; the card weights; the agency's
 prices and steps; the stars' instincts.
@@ -31,17 +33,23 @@ prices and steps; the stars' instincts.
 - **The level gain is solved against a depth-first mean loadout.** A draft that goes broader
   than the mean pick order delivers less damage than the gain was solved for; one that goes
   deeper delivers more. `CARD_WEIGHTS` and the stars' draft policy both move this.
-- **The ladder is fitted to assumed income.** Income rides `ANCHORS.eta` and the shot share.
-  A driver that banks less pushes every rewrite late; one that banks more pulls them early.
-  The first beats always run late, because a driver has swept nothing before the first one.
-- **Clout is anchored to a take that wipes out.** `REELS_PER_CLOUT` assumes a zero-meta take
-  ends at `baselineTakeSeconds`; a take that reaches CUT pays about twice that, so the shop
-  costs about 17 full takes, not the anchored 36.
-- **A rating is the same curves entered deeper.** The spine solves G only. What a rating
-  demands of the loadout grows ×1.5 a scene of offset, and the agency adds at most ×1.6
-  damage, so a harsher rating passes on survival perks, the driver and the population guard.
-- **`MAX_EXTRAS` turns arrivals away.** Past 500 bodies on the floor no arrival is admitted. A
-  frame-rate guard, but it caps the hp flux, so where it binds it decides the take.
+- **The ladder rides the income share.** `ANCHORS.incomeShare` is η times the share of
+  arrivals downed, because the floor holds an uncleared crowd; η alone reads high. It has no
+  fixed point: a refit brings the rewrites earlier, an earlier loadout downs more, and income
+  rises again. Refit it from `take-probe.ts`'s `income` column on G, once.
+- **A rating's depth is solved from the model career's agency.** The career banks
+  `takesPerRating` full takes a rating, spent by the reference agent, and the depth is where
+  the take clears its floor as G does with that agency's damage. Change an agency price or
+  step, the pace or the reference agent, and every depth moves.
+- **A deeper take pays more.** Clout is reels over a fixed rate, and more walks on deeper.
+  The model career counts it; the agency's prices do not.
+- **The opening rig binds the short-reach stars.** The Pyro Gag and the Breakaway Bottles
+  cannot hold a crowd entered much past a scene deep with nothing bought: the take ends at
+  level 1 before the first rewrite. The solved depths sit inside that line once the agency
+  is held.
+- **`MAX_EXTRAS` is a frame-rate guard only.** At 1000 it turns nothing away at any rating;
+  the floor peaks under 900. A guard below the peak turns arrivals away in late takes, which
+  caps the hp flux and decides them.
 - **The movement score is decided by spread.** Each weight in `modules/sim/steering.ts` is
   sized against the others in score units; a term that reads the same on every candidate
   steers nothing. Contact is costed over remaining health, so the same crowd is cheap at full
@@ -57,10 +65,11 @@ prices and steps; the stars' instincts.
 ## Running a pass
 
 1. `survivor-projection.ts`: the spine with no engine: the schedule against the ladder, the
-   level gain, each rating's demand against the loadout, the clout model. Change an anchor
-   here first. Under a second.
-2. `take-probe.ts [seeds] [ratings]`: every star × rating with no agency. Read `cut`, η and
-   contact per cell, `away` for the guard, and the ladder rows on G. About 15 s.
+   level gain, the model career with each rating's solved depth, the clout model. Change an
+   anchor here first. Under a second.
+2. `take-probe.ts [seeds] [ratings] [bare]`: every star × rating with the model career's
+   agency, or nothing bought with `bare`. Read `cut` per cell against G's, `income` against
+   1.00, contact, `away` for the guard, and the ladder rows on G. About 15 s.
 3. `career-probe.ts [seeds] [takes]`: the meta arc under the stars' instincts and the
    reference agent. Read the firsts against `manifest.ts`, the takes per rating and the agency
    at the end. About 20–30 s.
@@ -72,21 +81,19 @@ it.
 
 ## Known thin
 
-- **The ratings are past the agency.** On the projection, PG's last beat asks 1.83× the
-  zero-meta loadout, PG-13 3.34× and R 6.11×, against the agency's ×1.6. In the career, takes
-  at PG-13 and R end at a median of about 0:25.
-- **R is reached through the population guard.** The career's R takes that reach CUT do so
-  with the guard turning thousands of arrivals away; the same holds at PG-13.
-- **Clout is anchored to the wrong take.** See § Couplings: the shop costs about 17 full
-  takes.
-- **The Pyro and the Wirework Ace die at PG and above with nothing bought,** in about 20 s.
-  In the career the Pyro reaches CUT in almost no take: its draft discount leaves its own
-  gag at level 1.
+- **The ratings gate only the short-reach stars.** With nothing bought, the Veteran reaches
+  CUT at R in 7 takes of 8; the Pyro and the Wirework Ace die at PG-13 and R in about 20 s.
+- **The career runs ahead of its model.** The model banks three takes a rating; the reference
+  career reaches CUT at each rating on its first or second take, so R opens near 35 minutes
+  and the agency is bought out within twelve takes. The arc has no target beyond that yet.
+- **The Pyro is the weakest star.** It reaches CUT at G in about half its takes with nothing
+  bought, and in 27 of 38 career takes.
 - **The cone catches little.** The stars land 8% of the best cone while it is armed, and 16%
   at the instant it fires: the gag fires on the first body to enter it, so it fires early on
   one.
-- **The threat term decides alone on a crowded floor.** Past 50 bodies its spread is 440–1600
-  against 10–25 for every other term, and most samples expect contact on every candidate.
+- **The threat term decides alone on a crowded floor.** Past 50 bodies its spread is
+  550–2400 against 10–40 for every other term, and most samples expect contact on every
+  candidate.
 - **The star never holds its mark** for the Dolly Rifle, and never plays the shot.
 - **No ending.** The career has no last take to build toward.
 - **No automation tier, by design.** An improvising star is an alternative driver chosen per

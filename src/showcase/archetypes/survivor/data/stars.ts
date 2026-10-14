@@ -46,7 +46,7 @@ export interface StarDef {
 // ─── Balance ───
 // The Veteran is the baseline the spine's `defenseShare` names. The other two each move one
 // thing: the Pyro presses into the crowd its cone must face, the Wirework Ace trades health
-// for speed and leans on reels. Signing prices are in baseline takes of clout.
+// for speed and leans on reels. Signing prices are in full takes of clout.
 
 export const STARS: readonly StarDef[] = [
   {
@@ -66,7 +66,7 @@ export const STARS: readonly StarDef[] = [
     startRig: 'pyro-gag',
     hpMult: 1.2,
     speedMult: 0.95,
-    cost: Math.round(STAR_TAKES.pyro * ANCHORS.cloutPerBaselineTake),
+    cost: Math.round(STAR_TAKES.pyro * ANCHORS.cloutPerTake),
     instinct: { engage: 0.72, eta: 0.6, defenseShare: 0.25 },
   },
   {
@@ -76,7 +76,7 @@ export const STARS: readonly StarDef[] = [
     startRig: 'breakaway',
     hpMult: 0.9,
     speedMult: 1.15,
-    cost: Math.round(STAR_TAKES.wirework * ANCHORS.cloutPerBaselineTake),
+    cost: Math.round(STAR_TAKES.wirework * ANCHORS.cloutPerTake),
     instinct: { engage: 0.62, eta: 0.78, defenseShare: 0.3 },
   },
 ];

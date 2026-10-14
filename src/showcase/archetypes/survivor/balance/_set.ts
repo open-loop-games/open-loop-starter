@@ -74,6 +74,17 @@ export function openAll(set: Set): void {
   set.engine.tickDriver.tickOnce();
 }
 
+/** Buys agency levels outright, crediting the clout they cost. */
+export function equip(set: Set, levels: Partial<Record<string, number>>): void {
+  for (const [id, n] of Object.entries(levels)) {
+    const p = set.meta.agency.getPurchasable(id)!;
+    for (let i = 0; i < (n ?? 0); i++) {
+      addResource(set.meta.clout, p.getCost(1));
+      p.purchase(1);
+    }
+  }
+}
+
 /** What one take did, for a probe to print. */
 export interface TakeResult {
   star: StarDef['id'];

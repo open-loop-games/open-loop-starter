@@ -5,9 +5,10 @@
 
 import { toNumber } from '@open-loop/engine';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ANCHORS, BEATS, reelsForLevel } from '../data';
+import { ANCHORS, BEATS, RATINGS, RATING_DEPTH, reelsForLevel } from '../data';
 import { boot, getEngine, seconds, tick } from '../sim/harness';
 import { WORLD_HALF } from './sim/arena';
+import { getMeta } from './meta';
 import { getTake } from './take';
 
 const start = (seed = 1) =>
@@ -103,6 +104,27 @@ describe('survivor/take — the floor', () => {
     engine.load();
     expect(getTake().view.screen).toBe('call-sheet');
     expect(getTake().arena()).toBeNull();
+  });
+});
+
+describe('survivor/take — the ratings', () => {
+  beforeEach(() => boot());
+
+  it('starts G at the top of the curve and each rating deeper than the one before', () => {
+    expect(RATING_DEPTH).toHaveLength(RATINGS.length);
+    expect(RATING_DEPTH[0]).toBe(0);
+    for (let r = 1; r < RATING_DEPTH.length; r++)
+      expect(RATING_DEPTH[r]!).toBeGreaterThan(RATING_DEPTH[r - 1]!);
+  });
+
+  it('enters a harsher rating deeper into the scene curve', () => {
+    getTake().startTake({ star: 'veteran', rating: 0, driver: 'player', seed: 1 });
+    const g = getTake().view.hud.scene;
+    getTake().toCallSheet();
+    getMeta().record.bestRatingCleared.value = RATINGS.length - 2;
+    getEngine().tickDriver.tickOnce();
+    getTake().startTake({ star: 'veteran', rating: RATINGS.length - 1, driver: 'player', seed: 1 });
+    expect(getTake().view.hud.scene).toBeGreaterThan(g);
   });
 });
 
