@@ -36,7 +36,7 @@ const LIST = process.argv.includes('--beats');
 
 const run = await runArc({ seconds: HORIZON, seed: SEED });
 const { beats, firm, automation, tips, standing } = run;
-const projection = projectArc(LADDER, HORIZON, undefined, ENDING_COST);
+const projection = projectArc(LADDER, HORIZON, { endingCost: ENDING_COST });
 
 console.log(`── spine (seed ${SEED}) ──`);
 console.log(

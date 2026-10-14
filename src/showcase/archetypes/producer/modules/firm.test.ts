@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, addResource } from '@open-loop/engine';
+import { GRADE_DEFS } from '../data';
 import { boot, tick } from '../sim/harness';
 import { getFirm } from './firm';
 import { getAutomation } from './automation';
@@ -108,7 +109,7 @@ describe('the stack', () => {
   });
 
   it('a credit grade lands on lifetime revenue and lifts every subsidiary', async () => {
-    fund(1e6);
+    fund(GRADE_DEFS[0].threshold);
     await tick(1);
     expect(getFirm().grades.getAchievement('grade-B')!.earned.value).toBe(true);
   });

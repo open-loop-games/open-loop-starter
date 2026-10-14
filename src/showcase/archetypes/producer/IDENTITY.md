@@ -40,10 +40,14 @@ eye on the wire, and grow the firm until it can buy the tallest building in town
   holds back the cheapest open memo. Sending a desk home is how the player saves.
 - **Tips are the attentive player's.** No desk catches a tip. A bull market multiplies
   everything for a while; a closing spree pays the hand ×77; a windfall deal pays a share
-  of cash on hand, so a held bank pays more.
+  of cash on hand, so a held bank pays more. Catching them all is worth about a seventh
+  of the arc.
+- **Grades are the chapters.** Each threshold is the lifetime revenue the reference has
+  at its share of the arc, so a credit grade lands about every 22 minutes.
 - **The arc.** The first hour is dense: every tier opens inside fifteen minutes. After
-  it, tips carry the minutes and the thresholds arrive every few: memos, certificates,
-  synergies, press, the referral network. Near four hours the building is offered.
+  it, the thresholds arrive every few minutes: memos, certificates, synergies, press, the
+  referral network, a grade at each chapter, and a tip between them. Near four hours the
+  building is offered.
 
 ## Rate-function spine
 
@@ -58,21 +62,20 @@ is a function of the count vector. The per-tier cost step is solved, not chosen.
   payback-greedy over units and phones, at the acquisitions desk's cadence, with the
   cheapest open memo held back once the board sits. Under synergies this is a heuristic.
 - *tips.* They arrive by a hazard ramp and draw an effect at random. The projection
-  books each at its expected value; a drawn bull market is convex, so the solve targets
-  the expected arc at `ENDING_TARGET / DRAWN_PACE`.
+  books each at its expected value, and the solve targets that expected arc.
 
 **What measures the remainder:** `tip-probe.ts` draws tips on seeded streams in closed
-form and records `DRAWN_PACE`; `arc-probe.ts` plays the shipping game on seeds and diffs
+form and measures what attention is worth; `arc-probe.ts` plays the shipping game on seeds and diffs
 it against the projection; `allocation-probe.ts` swaps the desk's rule.
 
 ## The arc
 
 | Beat | Projected | Recorded (seeds 1–3) |
 |---|---|---|
-| Sales desk hired | 3m57s | 4m05s |
-| The top tier: first savings bank | 15m01s | 8m15s – 15m04s |
-| The building offered | 3h56m | 3h29m – 3h44m |
-| The building bought | 4h09m | 3h45m – 4h03m |
+| Sales desk hired | 2m19s | 2m31s |
+| The top tier: first savings bank | 10m43s | 12m10s – 12m47s |
+| The building offered | 3h44m | 3h35m – 3h37m |
+| The building bought | 3h57m | 3h48m – 3h50m |
 
 `manifest.ts` holds the recorded windows; the projection's times are its expected arc.
 

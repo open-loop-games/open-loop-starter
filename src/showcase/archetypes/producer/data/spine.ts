@@ -45,14 +45,6 @@ export const PAYBACK_GROWTH = 1.25;
 export const ENDING_TARGET = 4 * 3600;
 /** The reference player catches this share of tips. 1 is attentive; 0 is idle. */
 export const REFERENCE_CATCH = 1;
-/**
- * Median ending with tips drawn, over the ending with each tip booked at its
- * expected value. A drawn bull market is convex: ×7 one tip in three earns more
- * than ×3 every tip, because the desk buys at a cadence and the next windfall
- * reads the bank it leaves. The solve targets the expected arc at
- * ENDING_TARGET / DRAWN_PACE so the drawn median lands on the target.
- */
-export const DRAWN_PACE = 0.956; // 24 seeds (balance/tip-probe.ts § 1)
 
 // ── The one derived ratio ──
 
@@ -107,8 +99,11 @@ export const GRADES = [
   'Gold standard',
   'Bedrock',
 ] as const;
-/** Grade k lands when lifetime revenue reaches the opener price of tier k + GRADE_TIER_OFFSET. */
-export const GRADE_TIER_OFFSET = 2;
+/**
+ * Grade k's threshold is the lifetime revenue the reference player has
+ * (k + 1)/(GRADES.length + 1) of the way to the ending, so the grades mark the
+ * arc's chapters. Solved with the ladder (`solveGrades`).
+ */
 /** Each grade multiplies every subsidiary and phone: the operations chain. */
 export const GRADE_MULT = 1.2;
 
@@ -181,6 +176,10 @@ export const HAND_DEAL_MARKS = [100, 1000] as const;
 // at 30 fps), and the clock waits while a tip is up. A tip lasts TIP_LIFETIME
 // seconds; caught, it draws one effect, an even pick over three, with the last
 // effect struck four times in five. No desk catches tips.
+//
+// Tips are sized so attention is worth a seventh of the arc: the idle player buys
+// the ending about 14% after the attentive reference (balance/tip-probe.ts § 2).
+// The tip achievements count toward standing, so they are part of that share.
 
 export const TIP_MIN = 300;
 export const TIP_MAX = 900;
@@ -189,8 +188,8 @@ export const TIP_ROLLS_PER_SECOND = 30;
 export const TIP_LIFETIME = 13;
 export const TIP_REPEAT_STRIKE = 0.8;
 /** Bull market: operations ×BULL_MULT for BULL_SECONDS. */
-export const BULL_MULT = 7;
-export const BULL_SECONDS = 77;
+export const BULL_MULT = 2;
+export const BULL_SECONDS = 30;
 /** Closing spree: deals by hand ×SPREE_MULT for SPREE_SECONDS. */
 export const SPREE_MULT = 77;
 export const SPREE_SECONDS = 13;
@@ -198,8 +197,10 @@ export const SPREE_SECONDS = 13;
 export const WINDFALL_BANK = 0.15;
 export const WINDFALL_INCOME = 900;
 /**
- * Tip upgrades, revealed at tips caught: the first two halve the interval and
- * double the lifetime, the third doubles every effect's length.
+ * Tip upgrades, revealed at tips caught: the first halves the interval and
+ * doubles the lifetime, the second doubles the lifetime again, the third doubles
+ * every effect's length. Only the first moves an attentive player's arc; the
+ * third is past the reference's catch at the ending.
  */
 export const TIP_UPGRADE_AT = [7, 27, 77] as const;
 
@@ -259,10 +260,15 @@ export interface Ladder {
   baseCost: number[];
   /** r_i */
   baseRate: number[];
+  /** Lifetime revenue at each credit grade; Infinity until solved. */
+  gradeAt: number[];
 }
 
 /** Tier i costs a₀·S^i and earns r₀·(S/g)^i, so self-payback climbs ×g per tier. */
-export function buildLadder(costStep: number): Ladder {
+export function buildLadder(
+  costStep: number,
+  gradeAt: number[] = GRADES.map(() => Infinity),
+): Ladder {
   const rateStep = costStep / PAYBACK_GROWTH;
   const opener = (i: number) => OPENER_COST * costStep ** i;
   const baseCost: number[] = [];
@@ -271,7 +277,7 @@ export function buildLadder(costStep: number): Ladder {
     baseCost.push(opener(i));
     baseRate.push(OPENER_RATE * rateStep ** i);
   }
-  return { costStep, rateStep, opener, baseCost, baseRate };
+  return { costStep, rateStep, opener, baseCost, baseRate, gradeAt };
 }
 
 /** Cost of unit n (zero-based) of a tier: a·m^n. */
@@ -298,10 +304,6 @@ export function synergyCost(ladder: Ladder, cheap: number, dear: number, n: numb
 export function trainingCost(k: number): number {
   const dealBefore = DEAL_YIELD * TRAINING_MULT ** k * ACTIVE_DEAL_RATE;
   return TRAINING_PAYBACK * (TRAINING_MULT - 1) * dealBefore;
-}
-
-export function gradeThreshold(ladder: Ladder, k: number): number {
-  return ladder.opener(k + GRADE_TIER_OFFSET);
 }
 
 export function hireCost(ladder: Ladder, priceTier: number): number {
@@ -341,10 +343,9 @@ export function tipScale(upgrades: number): {
   lifetime: number;
   duration: number;
 } {
-  const halvings = Math.min(upgrades, 2);
   return {
-    interval: 0.5 ** halvings,
-    lifetime: 2 ** halvings,
+    interval: upgrades >= 1 ? 0.5 : 1,
+    lifetime: 2 ** Math.min(upgrades, 2),
     duration: upgrades >= 3 ? 2 : 1,
   };
 }
@@ -393,6 +394,22 @@ export interface Projection {
   phones: number;
   achievements: number;
   tipsCaught: number;
+  /** Lifetime revenue at each credit grade earned, in order. */
+  gradeRevenue: number[];
+}
+
+export interface ProjectOptions {
+  /** Share of tips the reference catches. */
+  catchRate?: number;
+  /** A fixed ending price; unset, it is priced at the offer. */
+  endingCost?: number;
+  /**
+   * Draw tips by the hazard ramp and their effects from this stream, instead of
+   * booking each at its expected value: the arc's spread over seeds.
+   */
+  rng?: () => number;
+  /** Earn grade k at second gradeTimes[k] instead of at the ladder's threshold. */
+  gradeTimes?: number[];
 }
 
 /**
@@ -407,17 +424,12 @@ export interface Projection {
  *
  * @param ladder the ladder to project
  * @param horizon seconds to run
- * @param catchRate share of tips the reference catches
- * @param endingCost a fixed ending price; unset, it is priced at the offer
- * @param rng draw tips by the hazard ramp and their effects from this stream,
- *   instead of booking each at its expected value; the arc's spread over seeds
+ * @param options the catch rate, a fixed ending price, a tip stream, a grade schedule
  */
 export function projectArc(
   ladder: Ladder,
   horizon: number,
-  catchRate = REFERENCE_CATCH,
-  endingCost?: number,
-  rng?: () => number,
+  { catchRate = REFERENCE_CATCH, endingCost, rng, gradeTimes }: ProjectOptions = {},
 ): Projection {
   const counts = new Array<number>(TIER_COUNT).fill(0);
   const tierMult = new Array<number>(TIER_COUNT).fill(1);
@@ -441,6 +453,7 @@ export function projectArc(
   let endingOffered = Infinity;
   let endingBought = Infinity;
   let price = endingCost ?? Infinity;
+  const gradeRevenue: number[] = [];
 
   const subs = () => counts.reduce((s, n) => s + n, 0);
   const phones = () => deskPhones + phonesBought;
@@ -528,7 +541,10 @@ export function projectArc(
     if (bullLeft > 0 && --bullLeft <= 0) bullMult = 1;
 
     // Achievements.
-    while (grades < GRADES.length && lifetime >= gradeThreshold(ladder, grades)) {
+    const gradeDue = (k: number) =>
+      gradeTimes ? t >= gradeTimes[k] : lifetime >= ladder.gradeAt[k];
+    while (grades < GRADES.length && gradeDue(grades)) {
+      gradeRevenue.push(lifetime);
       grades++;
       achieve(t, `grade ${GRADES[grades - 1]}`);
     }
@@ -703,32 +719,47 @@ export function projectArc(
     phones: phones(),
     achievements,
     tipsCaught,
+    gradeRevenue,
   };
 }
 
 // ── The solve ──
 
 /**
+ * The credit grades' thresholds on a ladder: the lifetime revenue the reference
+ * player has at each grade's share of the arc to `ending`. A projection that
+ * grants each grade on its schedule reads them; the deterministic projection then
+ * crosses each threshold at that same second.
+ */
+export function solveGrades(costStep: number, ending: number): number[] {
+  const gradeTimes = GRADES.map((_, k) => Math.round(((k + 1) / (GRADES.length + 1)) * ending));
+  const { gradeRevenue } = projectArc(buildLadder(costStep), ending, { gradeTimes });
+  return GRADES.map((_, k) => gradeRevenue[k] ?? Infinity);
+}
+
+/**
  * CLASS_COST_STEP is solved, not chosen: bisect the per-tier cost step until the
  * reference player, tips booked at their expected value, buys the ending at
- * ENDING_TARGET / DRAWN_PACE, so with tips drawn the median lands on the target.
- * Arc length is monotone in the step (a steeper ladder is a longer climb), so
- * bisection is sound.
+ * ENDING_TARGET. Each step's grades are solved on its own ladder. Arc length
+ * rises with the step (a steeper ladder is a longer climb) but is jagged at fine
+ * scale, where the greedy buy order flips; the bisection lands within that
+ * jaggedness of the target.
  */
-function solveCostStep(): number {
-  const target = ENDING_TARGET / DRAWN_PACE;
+function solveLadder(): Ladder {
+  const target = ENDING_TARGET;
+  const ladderAt = (step: number) => buildLadder(step, solveGrades(step, target));
   let lo = 3;
   let hi = 20;
   for (let iter = 0; iter < 18; iter++) {
     const mid = (lo + hi) / 2;
-    const end = projectArc(buildLadder(mid), target * 1.5).endingBought;
+    const end = projectArc(ladderAt(mid), target * 1.5).endingBought;
     if (end > target) hi = mid;
     else lo = mid;
   }
-  return (lo + hi) / 2;
+  return ladderAt((lo + hi) / 2);
 }
 
-export const CLASS_COST_STEP = solveCostStep();
-export const LADDER = buildLadder(CLASS_COST_STEP);
+export const LADDER = solveLadder();
+export const CLASS_COST_STEP = LADDER.costStep;
 /** The ending's price: ENDING_SAVE seconds of the reference player's income at the offer. */
-export const ENDING_COST = projectArc(LADDER, (ENDING_TARGET / DRAWN_PACE) * 1.5).endingCost;
+export const ENDING_COST = projectArc(LADDER, ENDING_TARGET * 1.5).endingCost;

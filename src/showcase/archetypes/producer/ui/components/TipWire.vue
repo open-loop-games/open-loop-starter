@@ -7,7 +7,7 @@
 import { computed, ref } from 'vue';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
-import { TIP_LIFETIME } from '../../data';
+import { BULL_MULT, SPREE_MULT, TIP_LIFETIME } from '../../data';
 import { getTips, type TipEffect } from '../../modules';
 
 const tips = getTips();
@@ -17,8 +17,8 @@ const lifetime = computed(() => TIP_LIFETIME * tips.scale.value.lifetime);
 const left = computed(() => (tips.current.value ?? 0) / lifetime.value);
 
 const EFFECT_COPY: Record<TipEffect, string> = {
-  bull: 'Bull market: everything earns ×7',
-  spree: 'Closing spree: deals by hand pay ×77',
+  bull: `Bull market: everything earns ×${BULL_MULT}`,
+  spree: `Closing spree: deals by hand pay ×${SPREE_MULT}`,
   windfall: 'A windfall deal, paid on cash on hand',
 };
 const lastCaught = ref<TipEffect | null>(null);
@@ -29,7 +29,7 @@ function take() {
 const inForce = computed(() =>
   tips.effects.getActive().map((e) => ({
     id: e.id,
-    label: e.defId === 'bull' ? 'Bull market ×7' : 'Closing spree ×77',
+    label: e.defId === 'bull' ? `Bull market ×${BULL_MULT}` : `Closing spree ×${SPREE_MULT}`,
     seconds: Math.ceil(e.timeRemaining.value),
   })),
 );

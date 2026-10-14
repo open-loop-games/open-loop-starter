@@ -22,7 +22,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
 | `subsidiaries/<id>/baseCost` | the solved ladder | One tier's opening price. Lower brings that tier's opening forward and pulls the desk's buying toward it. |
 
 **Not perturbable, on purpose:**
-- The beat anchors, `ENDING_TARGET` and `DRAWN_PACE` set `m` and the solved cost step.
+- The beat anchors and `ENDING_TARGET` set `m` and the solved cost step.
   Perturbing the results instead of the anchors desyncs the game from the projection.
 - Every one-shot's price (memos, synergies, networks, press, tip upgrades, hires, the
   bookkeeper, the ending) is derived from the ladder at import; moving `baseCost`
@@ -48,11 +48,19 @@ Every key is read at its reader site through `tunable()`; the registry is in
   needs the projection's reserve changed with it.
 - **A desk that saves for units breaks the projection.** `waitForCost` on the
   acquisitions desk compresses the arc far past what a non-saving projection follows.
-- **Bull markets are convex.** A drawn bull market (×7 one tip in three) earns more than
-  its expected value booked evenly (×3 every tip): the desk buys through it at its
-  cadence and the next windfall reads the bank it leaves. `DRAWN_PACE` is that gap, the
-  median drawn ending over the expected one. It moves with anything that changes tips,
-  the desk's cadence or the windfall, and `tip-probe.ts` § 1 re-measures it.
+- **Attention is worth a seventh of the arc.** The idle player buys the building about
+  14% after the attentive reference in closed form (`tip-probe.ts` § 2), and 17% on the
+  engine. The tip achievements are part
+  of that share: they count toward standing, and standing compounds through every press.
+  A new tip effect, a stronger one or another tip achievement widens the gap.
+- **Bull markets are convex.** A drawn bull market (the whole multiplier one tip in three)
+  earns more than its expected value booked evenly (a third of it every tip): the desk
+  buys through it at its cadence and the next windfall reads the bank it leaves. The solve
+  targets the expected arc, so a stronger bull market pulls the drawn arc ahead of it;
+  `tip-probe.ts` § 1 prints the gap.
+- **Only the first tip upgrade moves the reference.** It halves the interval; the second
+  only keeps a tip up longer, and the third comes after the ending at the reference's
+  catch.
 - **The windfall reads the bank.** It pays the smaller of 15% of cash and 15 minutes of
   income, so saving pays until the bank is 100 minutes of income. The acquisitions desk
   spends the bank down; sending it home is the trade.
@@ -64,8 +72,10 @@ Every key is read at its reader site through `tunable()`; the registry is in
   first jumps ahead, so small allocation differences compound.
 - **Standing is shared by every achievement.** Any certificate, grade or feat raises
   every press already bought. Adding achievements raises income everywhere.
-- **Grades read lifetime revenue, not cash.** A grade's threshold is an opener price,
-  so grades track the ladder.
+- **Grades are solved with the ladder.** A grade's threshold is the lifetime revenue the
+  reference has at its share of the arc, so the ten grades mark eleven even chapters
+  (`solveGrades`). Anything that moves the projection moves the thresholds; a player off
+  the reference's pace reaches each grade at another time.
 - **The offline window is the smaller of two limits.** A quarter of the arc, and the
   wait a return may hold the load (`OFFLINE_WAIT_BUDGET / OFFLINE_REPLAY_COST`). The
   replay cost is measured with every desk working; a heavier module stack raises it.
@@ -79,7 +89,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
 |---|---|---|
 | What does the spine predict? | `producer-projection.ts [minutes]` | the ladder, the stack's prices, projected economic beats, the ending, the offline window |
 | Does the shipping game follow it? | `arc-probe.ts [minutes] [seed] [--beats]` | landmarks beside the projection, economic beats and flow channels per hour, the end state |
-| How much do tips move the arc? | `tip-probe.ts [seeds]` | the ending drawn over seeds against the expected arc (`DRAWN_PACE`), and by catch rate |
+| How much do tips move the arc? | `tip-probe.ts [seeds]` | the ending drawn over seeds against the expected arc, and by catch rate |
 | What does the desk's rule carry? | `allocation-probe.ts [minutes]` | income, top-tier time and counts under each desk variant and hand speed |
 | What does time away do? | `offline-probe.ts` | accumulation against closed form, beats with and without time away, the replay cost |
 
@@ -89,16 +99,15 @@ seconds and takes several minutes; run seeds in parallel.
 
 ## Known thin
 
-- **The engine runs a little ahead of the drawn projection.** Over seeds 1–3 the ending
-  lands at 3h45m–4h03m against a drawn median of about 4h; the first fifteen minutes vary
-  most, because the first tip's draw decides when the top tiers open.
-- **`DRAWN_PACE` is noisy.** It moves ±1.5% between solves on 24 seeds.
-- **The idle player does not reach the ending.** With no tips caught the arc runs past
-  eight hours; at half the tips, six (`tip-probe.ts` § 2). Attention is worth more than
-  the line's slow-end exemplars would allow.
-- **Economic beats thin in hour two.** Hours two to four bring 13–27 economic beats an
-  hour, and the longest gap between them runs 10–16 minutes; tips fill the minutes.
-- **Grades are spent by the first half hour.** Their thresholds are opener prices, which
-  the arc passes early; later revenue marks carry the record.
+- **The engine runs ahead of the projection when tips are caught.** Over seeds 1–3 the
+  building is bought at 3h48m–3h50m, against a drawn median near 4h04m. An idle engine
+  lands within a few percent of the idle projection, so the engine values the spree,
+  the windfall or the tip achievements more than the projection books them.
+- **The expected ending is jagged in the cost step.** A 0.1% change in the step moves it
+  by up to ±3%, because the greedy buy order flips; the solve lands within that of
+  `ENDING_TARGET`, and any change to the projection re-rolls where.
+- **The save for the building is the longest wait.** Hours two to four bring 23–40
+  economic beats an hour with gaps under ten minutes, except the 10–11 minutes the firm
+  saves once the building is offered.
 - **The bookkeeper's cost is not in the projection.** The reference never hires it;
   hiring it delays the first hour by a few seconds.

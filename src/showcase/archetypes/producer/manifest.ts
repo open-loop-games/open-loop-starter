@@ -59,12 +59,12 @@ export const manifest: ArchetypeManifest = {
   ],
   beats: [
     { n: 1, label: 'First pushcart', recordedFireTimeRange: [5, 5] },
-    { n: 2, label: 'Sales desk hired', recordedFireTimeRange: [245, 245] },
-    { n: 3, label: 'Acquisitions desk hired', recordedFireTimeRange: [431, 431] },
-    { n: 4, label: 'Board of Directors hired', recordedFireTimeRange: [477, 891] },
-    { n: 5, label: 'The top tier: first savings bank', recordedFireTimeRange: [495, 904] },
-    { n: 6, label: 'The Consolidated Building offered', recordedFireTimeRange: [12542, 13463] },
-    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13516, 14578] },
+    { n: 2, label: 'Sales desk hired', recordedFireTimeRange: [151, 151] },
+    { n: 3, label: 'Acquisitions desk hired', recordedFireTimeRange: [266, 266] },
+    { n: 4, label: 'Board of Directors hired', recordedFireTimeRange: [537, 565] },
+    { n: 5, label: 'The top tier: first savings bank', recordedFireTimeRange: [730, 767] },
+    { n: 6, label: 'The Consolidated Building offered', recordedFireTimeRange: [12912, 12996] },
+    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13685, 13799] },
   ],
 
   shell: 'ThreePanelShell',

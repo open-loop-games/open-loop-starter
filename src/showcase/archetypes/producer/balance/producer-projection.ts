@@ -31,7 +31,6 @@ import {
   SUBSIDIARY_DEFS,
   TRAINING_COUNT,
   UPGRADE_AT,
-  gradeThreshold,
   hireCost,
   projectArc,
   trainingCost,
@@ -41,7 +40,7 @@ import { fmt } from './_engine';
 
 const HORIZON = Number(process.argv[2] ?? (ENDING_TARGET * 1.1) / 60) * 60;
 const money = (x: number) => `$${x.toExponential(2)}`;
-const projection = projectArc(LADDER, HORIZON, undefined, ENDING_COST);
+const projection = projectArc(LADDER, HORIZON, { endingCost: ENDING_COST });
 
 console.log('\nConsolidated Holdings: spine projection\n');
 console.log(
@@ -66,9 +65,7 @@ for (const n of UPGRADE_AT) {
     `  memo @${String(n).padEnd(3)} ${LADDER.baseCost.map((a) => money(upgradeCost(a, n))).join(' ')}`,
   );
 }
-console.log(
-  `  grades    ${GRADES.map((g, k) => `${g} ${money(gradeThreshold(LADDER, k))}`).join('  ')}`,
-);
+console.log(`  grades    ${GRADES.map((g, k) => `${g} ${money(LADDER.gradeAt[k])}`).join('  ')}`);
 console.log(
   `  hires     ${HIRES.map((h) => `${h.id} ${money(hireCost(LADDER, h.priceTier))}`).join('  ')}`,
 );

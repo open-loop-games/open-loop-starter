@@ -36,7 +36,6 @@ import {
   TRAINING_MULT,
   UPGRADE_AT,
   UPGRADE_MULT,
-  gradeThreshold,
   hireCost,
   referralCost,
   standingCost,
@@ -415,7 +414,7 @@ export interface TipUpgradeDef {
 
 const TIP_UPGRADE_COPY: [string, string][] = [
   ['Wire Service', 'Tips come twice as often and stay up twice as long.'],
-  ['Ticker in the Lobby', 'Tips come twice as often and stay up twice as long.'],
+  ['Ticker in the Lobby', 'Tips stay up twice as long again.'],
   ['Inside Track', 'Every tip’s effect lasts twice as long.'],
 ];
 
@@ -457,9 +456,9 @@ export interface GradeDef {
 export const GRADE_DEFS: GradeDef[] = GRADES.map((grade, k) => ({
   id: `grade-${grade}`,
   grade,
-  threshold: gradeThreshold(LADDER, k),
+  threshold: LADDER.gradeAt[k],
   mult: GRADE_MULT,
-  requirement: { kind: 'cumulative-gte', resource: CASH, value: gradeThreshold(LADDER, k) },
+  requirement: { kind: 'cumulative-gte', resource: CASH, value: LADDER.gradeAt[k] },
 }));
 
 export type HireId = (typeof HIRES)[number]['id'];

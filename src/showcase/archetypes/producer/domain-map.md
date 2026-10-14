@@ -25,14 +25,16 @@ type-graph tools such as dependency-cruiser and findReferences miss them.
 
 - **MilestoneDef** → `subsidiary`
 - **FeatDef** → `subsidiary`
-- **Projection** → `ending`
+- **Ladder** → `grade`
+- **Projection** → `ending`, `grade`
+- **ProjectOptions** → `ending`, `grade`
 
 ## Thin spots
 
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`ManagementDef`, `StandingDef`, `TipUpgradeDef`, `GradeDef`, `ExecutiveDef`, `BookkeeperDef`
+`ManagementDef`, `StandingDef`, `TipUpgradeDef`, `ExecutiveDef`, `BookkeeperDef`
 
 ## Disambiguators (curated)
 
