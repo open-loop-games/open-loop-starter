@@ -1,16 +1,20 @@
 <!--
   KeepBanners — the two keeps over the causeway, on starter's `ResourceReadout` contract with
   this hall's own renderer. Fairhold's banner carries its silver, its harvest and its gate; the
-  rival's carries the lord, his keep and his gate. Each gate is a crenellated wall that reddens
-  as it breaks. Between them: both horns and the campaign season.
+  rival's carries the field, its lord and his gate. Each gate is a crenellated wall that
+  reddens as it breaks. Between them: both horns, the campaign season, and the battle's twist.
+  In the last week the season shows the surge and counts down to its close, with the share each
+  gate has lost beside it: at the close, the keep whose gate lost more yields.
 
-  Costume classes: `.keep-banners`, `.kb-keep--player|rival`, `.kb-gate`, `.kb-season`.
+  Costume classes: `.keep-banners`, `.kb-keep--player|rival`, `.kb-gate`, `.kb-season`,
+  `.kb-tally`, `.kb-twist`, `.last-week`.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import type { ResourceReadout } from '@/ui/compositions';
-import { getBattle, getCauseway, getKeep, type Side } from '../../modules';
+import { seasonClose, seasonSurge } from '../../data';
+import { getBattle, getCauseway, getChronicle, getKeep, type Side } from '../../modules';
 import { mmss, n } from '../format';
 
 const battle = getBattle();
@@ -34,7 +38,10 @@ const silver: ResourceReadout = {
   id: 'silver',
   label: 'Silver',
   value: computed(() => fairhold.silver.value),
-  rate: computed(() => fairhold.income.value),
+  // The harvest as it pays now: the last week's surge included.
+  rate: computed(
+    () => fairhold.income.value * seasonSurge(causeway.clock.value, battle.seasonSeconds.value),
+  ),
 };
 const gates = { player: gateReadout('player'), rival: gateReadout('rival') };
 const whole = (side: Side) =>
@@ -51,6 +58,13 @@ const lastWeek = computed(() => clock.value > season.value);
 const ours = computed(() => battle.hornIn('player'));
 const theirs = computed(() => battle.hornIn('rival'));
 const lord = computed(() => battle.lord.value);
+const chronicle = getChronicle();
+const field = computed(() => chronicle.field.value);
+const twist = computed(() => chronicle.twist.value);
+const surge = computed(() => seasonSurge(clock.value, season.value));
+const closesIn = computed(() => seasonClose(season.value) - clock.value);
+const lost = (side: Side) => computed(() => Math.round(100 * (1 - wholeness[side].value)));
+const lostShare = { player: lost('player'), rival: lost('rival') };
 </script>
 
 <template>
@@ -92,18 +106,32 @@ const lord = computed(() => battle.lord.value);
         Their next rabble in <span class="num">{{ mmss(theirs) }}</span>
       </div>
       <div class="kb-clock">
-        <template v-if="lastWeek"
-          >The last week of the campaign season: every blow lands harder</template
-        >
-        <template v-else>
+        <!-- One span, so the flex box keeps the spaces between words and numbers. -->
+        <span v-if="lastWeek">
+          The last week: harvests and musters <span class="num">×{{ surge }}</span
+          >. The season closes in <span class="num">{{ mmss(closesIn) }}</span>
+        </span>
+        <span v-else>
           Campaign season · <span class="num">{{ mmss(clock) }}</span> of
           <span class="num">{{ mmss(season) }}</span>
-        </template>
+        </span>
+      </div>
+      <div class="kb-tally" :class="{ lit: lastWeek }">
+        <span class="kb-tally-ours"
+          >ours lost <span class="num">{{ lostShare.player.value }}%</span></span
+        >
+        <span class="kb-tally-mid">gates at the close</span>
+        <span class="kb-tally-theirs"
+          >theirs lost <span class="num">{{ lostShare.rival.value }}%</span></span
+        >
+      </div>
+      <div class="kb-twist" :title="twist.blurb">
+        <span class="kb-twist-name">{{ twist.name }}</span> · {{ twist.blurb }}
       </div>
     </div>
 
     <div class="kb-keep kb-keep--rival">
-      <div class="kb-name">{{ lord.keep }}</div>
+      <div class="kb-name">{{ field.name }}</div>
       <div class="kb-lord">{{ lord.name }}</div>
       <div class="kb-gate" :class="{ low: gates.rival.highlight?.value === 'deficit' }">
         <span class="num kb-gate-n">{{ n(gates.rival.value.value) }}</span>
@@ -116,7 +144,7 @@ const lord = computed(() => battle.lord.value);
         <span class="kb-label">their gate</span>
       </div>
       <div class="kb-coffers num">
-        their harvest +{{ toNumber(rival.income.value).toFixed(1) }} a second
+        their harvest +{{ (toNumber(rival.income.value) * surge).toFixed(1) }} a second
       </div>
     </div>
   </header>
@@ -286,6 +314,50 @@ const lord = computed(() => battle.lord.value);
   text-align: center;
   font-family: var(--cw-hand);
   font-size: 14px;
+  color: var(--cw-gall);
+}
+/* The tiebreak, always on the page and lit in the last week: the share each gate has lost. */
+.kb-tally {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--cw-linen-dim);
+}
+.kb-tally-mid {
+  font-family: var(--cw-caps);
+  color: var(--cw-gall);
+  opacity: 0.7;
+}
+.kb-tally-theirs {
+  text-align: right;
+}
+.kb-tally.lit .kb-tally-ours {
+  color: #a9c3e0;
+}
+.kb-tally.lit .kb-tally-theirs {
+  color: #dba497;
+}
+.kb-tally.lit .kb-tally-mid {
+  color: var(--cw-ember);
+  opacity: 1;
+}
+.kb-twist {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--cw-linen-dim);
+  border-top: 1px dotted var(--cw-rule);
+  padding-top: 3px;
+}
+.kb-twist-name {
+  font-family: var(--cw-caps);
+  font-style: normal;
   color: var(--cw-gall);
 }
 .last-week {

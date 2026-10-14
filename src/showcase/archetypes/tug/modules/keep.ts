@@ -22,12 +22,14 @@ import {
   ANCHORS,
   TROOPS,
   gateHp,
+  seasonSurge,
   startSilver,
   titheBaseCost,
   titheCostRatio,
   troop,
   type TroopDef,
   type TroopId,
+  type WeaponKind,
 } from '../data';
 import { CausewayKey } from './causeway';
 import { ChronicleKey } from './chronicle';
@@ -44,7 +46,13 @@ export interface KeepApi {
   /** Damage the gate has taken this battle; it falls at `gateMax`. */
   gateDamage: Persistent<number>;
   gateMax: ComputedRef<number>;
-  /** Whether this keep can raise the troop now: chartered, and arrived. */
+  /** The weapon on this keep's walls this battle, if any. */
+  weapon: ComputedRef<WeaponKind | null>;
+  /** Seconds of charge the weapon holds; it fires at `ANCHORS.weaponCharge`. */
+  charge: Persistent<number>;
+  /** Fires the weapon if it is charged; returns whether it fired. */
+  fire(): boolean;
+  /** Whether this keep can raise the troop now: open on this field, and arrived. */
   isOpen(id: TroopId): boolean;
   /** Raise up to `squads` squads into the bailey, as many as silver and the muster allow. */
   raise(id: TroopId, squads?: number): number;
@@ -83,17 +91,24 @@ export function createKeepModule(side: Side): EngineModule {
       const causeway = ctx.inject(CausewayKey);
       const chains = chronicle.chains[side];
       const baseIncome = tunable(tuning, 'income/base', () => ANCHORS.income);
+      const seasonS = tunable(tuning, 'season/seconds', () => ANCHORS.seasonSeconds);
 
       const silver = createResource(startSilver, { id: `${side}-silver`, displayName: 'Silver' });
       const gateDamage = persistent(0, { id: 'gate-damage' });
-      const gateMax = computed(() => toNumber(chains.gate.apply(gateHp)));
+      const gateMax = computed(
+        () => toNumber(chains.gate.apply(gateHp)) * (chronicle.twist.value.gate ?? 1),
+      );
+      const charge = persistent(0, { id: 'weapon-charge' });
+      const weapon = computed<WeaponKind | null>(() => {
+        if (side === 'rival') return chronicle.lord.value.temperament.weapon ?? null;
+        const kind = chronicle.mounted.value;
+        return kind && chronicle.level(kind) > 0 ? kind : null;
+      });
 
       const isOpen = (id: TroopId): boolean => {
         const def = troop(id);
         if (def.arrivesAt !== undefined && causeway.clock.value < def.arrivesAt) return false;
-        if (!def.charter) return true;
-        if (side === 'rival') return chronicle.rung.value >= def.charter.rivalRung;
-        return chronicle.level(def.charter.boon) > 0;
+        return chronicle.field.value.open.includes(id);
       };
 
       const troops = createPurchasableCategory<TroopDef>({
@@ -114,7 +129,7 @@ export function createKeepModule(side: Side): EngineModule {
               description: 'Room under the muster',
             }),
           ],
-          visible: () => side === 'rival' || !def.charter || isOpen(def.id),
+          visible: () => chronicle.field.value.open.includes(def.id),
           onPurchase: (count) => {
             causeway.stage(side, def.id, toNumber(count));
             if (side === 'player' && !chronicle.raised.value[def.id])
@@ -158,7 +173,9 @@ export function createKeepModule(side: Side): EngineModule {
       tithes.register({ id: 'tithe' });
       const tithe = tithes.getPurchasable('tithe')!;
 
-      const income = computed(() => toNumber(chains.income.apply(baseIncome.value)));
+      const income = computed(
+        () => toNumber(chains.income.apply(baseIncome.value)) * (chronicle.twist.value.income ?? 1),
+      );
 
       function affordable(id: TroopId): number {
         const def = troop(id);
@@ -183,13 +200,32 @@ export function createKeepModule(side: Side): EngineModule {
         troops,
         gateDamage,
         gateMax,
+        weapon,
+        charge,
+        fire: () => {
+          if (!weapon.value || charge.value < ANCHORS.weaponCharge) return false;
+          // Fire-pots wait for an engine within its throw of our gate; the charge is kept.
+          if (weapon.value === 'firepots' && causeway.nearestEngine(side) > ANCHORS.engineThrow)
+            return false;
+          causeway.strike(side, weapon.value);
+          charge.value = 0;
+          return true;
+        },
         isOpen,
         raise,
         affordable,
-        accrue: (dt) => addResource(silver, income.value * dt),
+        accrue: (dt) => {
+          addResource(silver, income.value * seasonSurge(causeway.clock.value, seasonS.value) * dt);
+          if (weapon.value) charge.value = Math.min(ANCHORS.weaponCharge, charge.value + dt);
+        },
         open: () => {
-          silver.value = ANCHORS.startSeconds * baseIncome.value;
+          const start =
+            side === 'rival'
+              ? (chronicle.field.value.rivalStartSeconds ?? ANCHORS.startSeconds)
+              : ANCHORS.startSeconds;
+          silver.value = start * baseIncome.value;
           gateDamage.value = 0;
+          charge.value = 0;
         },
       };
       ctx.provide(KeepKeys[side], apis[side]!);

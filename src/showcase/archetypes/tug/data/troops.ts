@@ -24,12 +24,10 @@ export interface TroopDef {
   beats?: TroopId;
   /** Rides past whatever stands between it and the troop it beats, once that troop is in sight. */
   charges?: boolean;
-  /** Ignores cover, must close to the gate, and batters it at full damage. */
+  /** Ignores cover, and throws at the gate from `engineThrow` paces at full damage. */
   breaksWalls?: boolean;
   /** Battle second from which it can be bought. */
   arrivesAt?: number;
-  /** Raised by the player once this boon is held; by the rival from this rung. */
-  charter?: { boon: string; rivalRung: number };
   ours: { name: string; role: string };
   theirs: { name: string };
 }
@@ -40,7 +38,7 @@ export const TROOPS: TroopDef[] = [
     squad: 5,
     rank: 0,
     costSeconds: 4,
-    duelSeconds: 8,
+    duelSeconds: 4,
     crossSeconds: 18,
     reach: 2.5,
     beats: 'horse',
@@ -52,7 +50,7 @@ export const TROOPS: TroopDef[] = [
     squad: 2,
     rank: 1,
     costSeconds: 6,
-    duelSeconds: 4,
+    duelSeconds: 2,
     crossSeconds: 7,
     reach: 2,
     beats: 'bow',
@@ -65,11 +63,10 @@ export const TROOPS: TroopDef[] = [
     squad: 3,
     rank: 2,
     costSeconds: 5,
-    duelSeconds: 3,
+    duelSeconds: 1.5,
     crossSeconds: 14,
     reach: 10,
     beats: 'pike',
-    charter: { boon: 'longbow', rivalRung: 1 },
     ours: { name: 'Bowmen of the Shire', role: 'Shoot over our own line. Pikes are easy marks.' },
     theirs: { name: 'skulking slingers' },
   },
@@ -78,12 +75,15 @@ export const TROOPS: TroopDef[] = [
     squad: 1,
     rank: 3,
     costSeconds: 16,
-    duelSeconds: 1,
+    duelSeconds: 0.5,
     crossSeconds: 30,
     reach: 20,
     breaksWalls: true,
     arrivesAt: 120,
-    ours: { name: 'Our Mangonel', role: 'Slow and dearer still. Ignores walls; batters the gate.' },
+    ours: {
+      name: 'Our Mangonel',
+      role: 'Slow and dearer still. Throws at their gate over walls and men.',
+    },
     theirs: { name: 'their infernal engine' },
   },
 ];

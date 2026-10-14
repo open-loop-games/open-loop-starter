@@ -1,7 +1,8 @@
 <!--
   Heralds — the signature voice. Each horn gets its herald's cry, quoted in its own keep's
-  voice; under a rival's cry, Fairhold's chronicler glosses it. The newest stands on top;
-  older lines fade, as margin notes do.
+  voice; under a rival's cry, Fairhold's chronicler glosses it. So do the battle's other
+  events: a champion riding out, a keep's weapon loosed, a horn sounded early; those lines
+  carry no wave. The newest stands on top; older lines fade, as margin notes do.
 
   Costume classes: `.heralds`, `.hl-line--player|rival`, `.hl-cry`, `.hl-gloss`.
 -->
@@ -26,7 +27,7 @@ const waveOf = (wave: Partial<Record<TroopId, number>>) =>
     <ol class="hl-lines">
       <li
         v-for="(l, i) in lines"
-        :key="`${l.t}-${l.side}`"
+        :key="`${l.t}-${l.side}-${l.cry}`"
         class="hl-line"
         :class="[`hl-line--${l.side}`, { fresh: i === 0 }]"
       >
@@ -35,7 +36,7 @@ const waveOf = (wave: Partial<Record<TroopId, number>>) =>
             {{ l.side === 'player' ? 'Our herald' : `The herald of ${keepName}` }}
           </span>
           <span class="hl-wave">
-            <span v-for="[id, count] in waveOf(l.wave)" :key="id" class="hl-squad">
+            <span v-for="[id, count] in waveOf(l.wave ?? {})" :key="id" class="hl-squad">
               <span class="hl-glyph"><TroopGlyph :troop="id" /></span
               ><span class="num">{{ count }}</span>
             </span>

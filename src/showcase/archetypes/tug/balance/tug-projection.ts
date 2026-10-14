@@ -11,13 +11,17 @@
  * - clashes: each counter pair at two releases' spend apiece, in the open. The counter should
  *   win clearly but not keep everything; the doubled spend shows the combat law (the linear
  *   law keeps 50%, the square law 87%).
- * - the gate, the tithe ladder and the Chronicle's ladder, as the spine sizes them.
+ * - the gate and the throw, the season, the tithe ladder, and the march: the renown a field
+ *   pays, the volume it reaches, and the lords' growth against the boons that answer it.
  */
 
 import {
   ANCHORS,
+  FIELDS,
   LORDS,
   TROOPS,
+  rivalScale,
+  seasonClose,
   frontage,
   gateHp,
   memberCost,
@@ -61,12 +65,22 @@ for (const t of TROOPS) {
 }
 
 console.log(
-  `\nthe gate: ${f(gateHp, 0)} hp — two mangonels breach it in ${ANCHORS.breachSeconds}s`,
+  `\nthe gate: ${f(gateHp, 0)} hp — two mangonels breach it in ${ANCHORS.breachSeconds}s, ` +
+    `throwing from ${ANCHORS.engineThrow} paces over any line`,
 );
 const yeomen = memberStats('pike');
 console.log(
   `  a full muster of yeomen at the gate breaches it in ${f(gateHp / (ANCHORS.muster * yeomen.gateDps), 0)}s, ` +
     `under the gatehouse bows killing one every ${f(yeomen.hp / ANCHORS.gatehouseDps)}s`,
+);
+const lossShare = (ANCHORS.files * (yeomen.dps / yeomen.hp) * yeomen.cost) / ANCHORS.income;
+console.log(
+  `  a yeoman line at the middle loses ${f(lossShare * 100, 0)}% of a harvest a second to the other's front rank`,
+);
+
+console.log(
+  `\nthe season: ${ANCHORS.seasonSeconds}s, then a last week of ${ANCHORS.lastWeekSeconds}s ` +
+    `(harvest and muster ×${ANCHORS.surge.join(' then ×')}); it closes at ${seasonClose()}s on the gates`,
 );
 
 console.log('\nthe tithe');
@@ -77,12 +91,15 @@ for (let k = 0; k < ANCHORS.tithesPerSeason; k++) {
   );
 }
 
-console.log('\nthe Chronicle (a lord beaten every battle)');
+console.log('\nthe march (a field taken every battle; a defeat pays its share and moves nothing)');
 let xp = 0;
-for (const l of LORDS) {
-  xp += renownFor(l.rung, true);
+FIELDS.forEach((field, rung) => {
+  xp += renownFor(rung, true);
   const volume = Math.floor((Math.sqrt((8 * xp) / ANCHORS.renownBase + 1) - 1) / 2);
+  const lords = rivalScale(rung, ANCHORS.rungGrowth);
   console.log(
-    `  ${l.name.padEnd(24)} +${renownFor(l.rung, true)} renown (${renownFor(l.rung, false)} in defeat) → volume ${volume}`,
+    `  ${String(rung + 1).padStart(2)} ${field.name.padEnd(20)} ${LORDS[field.lord]!.name.padEnd(24)}` +
+      ` +${renownFor(rung, true)} renown (${renownFor(rung, false)} in defeat) → volume ${volume}` +
+      ` · lord's men ×${f(lords, 2)}, ${f(ANCHORS.boonsPerField * rung, 1)} boon levels to match`,
   );
-}
+});

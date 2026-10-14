@@ -1,30 +1,41 @@
 /**
- * Tug: career probe. The reference marshal (`./_marshal.ts`) plays the ladder from a new
- * Chronicle: a battle against the lord at its rung, its boons between battles, until the
+ * Tug: career probe. The reference marshal (`./_marshal.ts`) plays the march from a new
+ * Chronicle: a battle on the field at its rung, its boons between battles, until the
  * Usurper's keep falls or the battle limit. Prints each battle and the ending. Prints; never
  * asserts.
  *
- * Run: `pnpm exec vite-node src/showcase/archetypes/tug/balance/career-probe.ts [seed] [battles]`
+ * Run: `pnpm exec vite-node src/showcase/archetypes/tug/balance/career-probe.ts [seed] [battles] [perField]`
+ *
+ * `perField` overrides `ladder/boonsPerField`, the ladder's steepness, for a sweep.
  *
  * How to read it:
- * - each battle: the lord, the result, its length, the renown it paid and the volume after.
- *   A defeat still pays, so the Chronicle always moves.
- * - the spine predicts parity on every rung for a marshal who takes a strength boon a rung;
- *   a run of defeats on one rung is the ladder outpacing the boons, or a temperament the
- *   marshal's answers lose to.
+ * - each battle: the field, its lord and twist, the result, its length (`season` when the
+ *   gates decided it), the renown it paid and the volume after. A defeat still pays, so the
+ *   Chronicle always moves, and the strength boons have no limit, so a run of defeats always
+ *   buys a way through.
+ * - a field that takes many battles is the ladder outpacing the boons there, or a field the
+ *   marshal's answers lose to. Outlying fields should fall in one or two, keeps in three or four.
  * - the last line: battles and session time to the ending.
  */
 
-import { buildGame, clock, marshalBetweenBattles, playBattle, seatMarshal } from './_marshal';
+import {
+  buildGame,
+  clock,
+  marshalBetweenBattles,
+  perturb,
+  playBattle,
+  seatMarshal,
+} from './_marshal';
 
 const seed = Number(process.argv[2] ?? 1);
-const limit = Number(process.argv[3] ?? 30);
+const limit = Number(process.argv[3] ?? 60);
 const g = buildGame(seed);
+if (process.argv[4]) perturb(g, { 'ladder/boonsPerField': Number(process.argv[4]) });
 seatMarshal(g);
 console.log(`\nTUG career probe — seed ${seed}\n`);
 let session = 0;
 for (let i = 0; i < limit && !g.chronicle.endingReached.value; i++) {
-  const lord = g.battle.lord.value.name;
+  const lord = `${g.chronicle.field.value.name} (${g.battle.lord.value.name.split(' ').slice(-1)[0]}, ${g.chronicle.twist.value.id})`;
   const out = playBattle(g);
   session += out.seconds;
   const r = out.record;
@@ -36,7 +47,7 @@ for (let i = 0; i < limit && !g.chronicle.endingReached.value; i++) {
   }
   const bought = marshalBetweenBattles(g.chronicle);
   console.log(
-    `  ${clock(session).padStart(7)}  battle ${i + 1} vs ${lord}: ${r.won ? 'VICTORY' : 'defeat '} in ${clock(r.seconds)}` +
+    `  ${clock(session).padStart(7)}  battle ${i + 1} vs ${lord}: ${r.won ? 'VICTORY' : 'defeat '} in ${clock(r.seconds)}${r.byBreach ? '' : ' (season)'}` +
       ` · +${r.renown} renown, volume ${r.volumeAfter}` +
       (bought.length ? ` · boons ${bought.join(', ')}` : '') +
       (r.ending ? '  *** the Stolen Throne falls ***' : ''),

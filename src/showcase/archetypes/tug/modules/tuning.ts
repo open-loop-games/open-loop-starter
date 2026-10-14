@@ -15,8 +15,9 @@ import {
  *   - `clash/counterSharpness`         how hard the wheel bites
  *   - `cover/atGate`                   the ramparts' reach: the spring that pulls the line home
  *   - `gate/share`                     how much an ordinary troop batters a gate
- *   - `season/seconds`                 when the last week's fury begins
- *   - `ladder/rungGrowth`              the rival's harvest per rung, and a boon level's worth
+ *   - `season/seconds`                 when the last week's surge begins
+ *   - `ladder/rungGrowth`              a strength boon level's worth, and the lords' growth base
+ *   - `ladder/boonsPerField`           how many boon levels a field the lords grow by
  *
  * The anchors not keyed here (squad shapes, reach, the equal-value rule, the gate's breach
  * time) are read from `../data/spine.ts` and `../data/troops.ts` directly: each one moves
@@ -29,7 +30,8 @@ export type TugTunableKey =
   | 'cover/atGate'
   | 'gate/share'
   | 'season/seconds'
-  | 'ladder/rungGrowth';
+  | 'ladder/rungGrowth'
+  | 'ladder/boonsPerField';
 
 export const TugTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
   'tug/tuning-registry',

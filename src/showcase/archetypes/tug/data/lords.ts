@@ -5,6 +5,13 @@
 // herald's boast, which is the lord's own.
 
 import type { TroopId } from './troops';
+import type { WeaponKind } from './weapons';
+
+/** From battle second `from`, the share of its silver a keep spends at each horn. */
+export interface ProfileStep {
+  from: number;
+  spend: number;
+}
 
 /** How a lord composes its waves: a param bundle the rival's decision function reads. */
 export interface Temperament {
@@ -19,6 +26,12 @@ export interface Temperament {
   tithes: number;
   /** Most of its host's worth it puts into mangonels. */
   siegeShare: number;
+  /** How it spends over a battle: rush, hoard then unleash, build to the last week. */
+  profile: ProfileStep[];
+  /** Sounds its horn early to answer a wave it can counter. */
+  earlyHorn: boolean;
+  /** The engine on its walls. */
+  weapon?: WeaponKind;
 }
 
 export interface LordDef {
@@ -41,6 +54,8 @@ const RABBLE: Temperament = {
   chargeEvery: 5,
   tithes: 0,
   siegeShare: 0.2,
+  profile: [{ from: 0, spend: 1 }],
+  earlyHorn: false,
 };
 const HOARD: Temperament = {
   id: 'hoard',
@@ -49,6 +64,12 @@ const HOARD: Temperament = {
   chargeEvery: 6,
   tithes: 3,
   siegeShare: 0.25,
+  profile: [
+    { from: 0, spend: 0.5 },
+    { from: 90, spend: 1 },
+  ],
+  earlyHorn: false,
+  weapon: 'trebuchet',
 };
 const WATCH: Temperament = {
   id: 'watch',
@@ -57,6 +78,9 @@ const WATCH: Temperament = {
   chargeEvery: 4,
   tithes: 2,
   siegeShare: 0.25,
+  profile: [{ from: 0, spend: 1 }],
+  earlyHorn: true,
+  weapon: 'firepots',
 };
 
 export const LORDS: LordDef[] = [
@@ -95,7 +119,7 @@ export const LORDS: LordDef[] = [
     name: 'the Brothers Harrow',
     keep: 'the Twin Sties',
     tell: 'More rabble, sooner, and two of everything.',
-    temperament: { ...RABBLE, chargeEvery: 3, tithes: 1, counterRead: 0.3 },
+    temperament: { ...RABBLE, chargeEvery: 3, tithes: 1, counterRead: 0.3, weapon: 'trebuchet' },
     boasts: ['Harrow and Harrow ride as one!', 'Two brothers, one glorious host!'],
     glosses: ['Both Harrows, and neither one sober.', 'Twice the rabble, half the sense.'],
   },
@@ -104,7 +128,15 @@ export const LORDS: LordDef[] = [
     name: 'the Usurper',
     keep: 'the Stolen Throne',
     tell: 'Reads every horn. Take his keep and the Causeway is ours.',
-    temperament: { ...WATCH, tithes: 3, siegeShare: 0.3 },
+    temperament: {
+      ...WATCH,
+      tithes: 3,
+      siegeShare: 0.3,
+      profile: [
+        { from: 0, spend: 0.7 },
+        { from: 150, spend: 1 },
+      ],
+    },
     boasts: ['The rightful king commands it!', 'Kneel, Fairhold, before your true king!'],
     glosses: ['The pretender sends his hirelings.', 'A stolen crown, and borrowed men to keep it.'],
   },
@@ -133,3 +165,21 @@ function ordinal(n: number): string {
   const words = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh'];
   return words[n - 1] ?? `${n}th`;
 }
+
+/** The heralds on the battle's other events. `{name}` is a champion's; `{lord}` the lord's. */
+export const EVENT_HERALDS = {
+  champion: {
+    cry: ['Make way for {name}!', '{name} rides for {lord}!'],
+    gloss: ['{name}. Large, loud, and coming this way.', 'Here comes {name}, at last.'],
+  },
+  ourWeapon: {
+    trebuchet: ['Loose the trebuchet!', 'A stone for the front rank!'],
+    firepots: ['Pitch and fire on their engine!', 'Burn it! Burn the engine!'],
+  },
+  theirWeapon: {
+    trebuchet: ['Rocks from {lord}’s walls!', 'Their trebuchet speaks.'],
+    firepots: ['Fire-pots from {lord}’s walls, on our engine!', 'They have burned an engine.'],
+  },
+  ourEarly: ['The horn, early! Out, out!', 'Sound it now. Now!'],
+  theirEarly: ['Their horn, early. Someone is impatient.', '{lord} sounds early.'],
+};

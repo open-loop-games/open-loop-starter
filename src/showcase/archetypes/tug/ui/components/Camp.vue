@@ -1,36 +1,64 @@
 <!--
   Camp — between battles, Fairhold's chronicler writes. The page carries the last battle's
-  entry in the Chronicle, the Renown filling the next volume, the Boons of the Crown on
-  starter's `UpgradeGrid` (each boon levels, so the card shows its level and what it does
-  now), the ladder of five lords with the one across the causeway named, and the order to
-  take the field. Once the Usurper's keep has fallen, the ending heads the page; the ladder
-  goes on with his heirs.
+  entry in the Chronicle (a fallen gate, or the season closing on the gates), the Renown
+  filling the next volume, the march of fifteen fields under five lords with the next one
+  named, and the Boons of the Crown on starter's `UpgradeGrid`. The next field shows what can
+  be raised there, what lies across the road, the champion who rides out, the twist drawn for
+  it, and the weapon to mount on the walls. Once the Usurper's keep has fallen, the ending
+  heads the page and the skirmish field opens: any field, any twist, any lord, for no renown.
 
-  Costume classes: `.camp`, `.cp-entry.victory|setback`, `.cp-renown`, `.cp-ladder`,
-  `.cp-lord.taken|now`, `.cp-boon`.
+  Costume classes: `.camp`, `.cp-entry.victory|setback|skirmish`, `.cp-renown`, `.cp-march`,
+  `.cp-lord.taken|now`, `.cp-field.taken|now`, `.cp-next`, `.cp-twist`, `.cp-mount`,
+  `.cp-skirmish`, `.cp-boon`.
 -->
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
-import { ANCHORS, BOONS, LORDS, lordAt, type BoonDef } from '../../data';
+import {
+  ANCHORS,
+  BOONS,
+  FIELDS,
+  LORDS,
+  NO_TWIST,
+  TWISTS,
+  WEAPONS,
+  troop,
+  type BoonDef,
+} from '../../data';
 import { getBattle, getChronicle } from '../../modules';
 import { opening } from '../format';
+import TroopGlyph from './TroopGlyph.vue';
 
 const chronicle = getChronicle();
 const battle = getBattle();
 const rung = computed(() => chronicle.rung.value);
-const lord = computed(() => lordAt(rung.value));
+const field = computed(() => chronicle.field.value);
+const lord = computed(() => chronicle.lord.value);
+const twist = computed(() => chronicle.twist.value);
 const last = computed(() => chronicle.last.value);
-const lastKeep = computed(() => (last.value ? lordAt(last.value.rung).keep : ''));
 const volume = computed(() => chronicle.volume.value);
+const skirmishing = computed(() => chronicle.skirmish.value !== null);
 
 // The Chronicle's ladder is triangular: volume L opens at R₀·L(L+1)/2 renown.
 const xpAt = (l: number) => (ANCHORS.renownBase * l * (l + 1)) / 2;
 const renown = computed(() => toNumber(chronicle.renown.xp.value));
 const into = computed(() => renown.value - xpAt(volume.value));
 const span = computed(() => xpAt(volume.value + 1) - xpAt(volume.value));
+
+/** The march, lord by lord, each with his three fields and where Fairhold stands on them. */
+const march = LORDS.map((l, i) => ({
+  lord: l,
+  fields: FIELDS.map((f, rungAt) => ({ f, rungAt })).filter(({ f }) => f.lord === i),
+}));
+
+const features = computed(() =>
+  field.value.features.map((b) => (b.kind === 'ford' ? 'a ford' : 'stakes in the road')),
+);
+
+/** The weapon kinds Fairhold owns; one is mounted on the walls. */
+const owned = computed(() => WEAPONS.filter((w) => chronicle.level(w.boon) > 0));
 
 interface Boon {
   def: BoonDef;
@@ -70,9 +98,26 @@ const cards: UpgradeCardData<Boon>[] = BOONS.map((def) => {
     },
   };
 });
-// A charter, once granted, is spent: the troop it opens shows in the bailey instead.
+// A weapon, once granted, is spent: it shows on the walls' mounting instead.
 const shelf = computed(() => cards.filter((c) => !(c.extra!.def.limit === 1 && c.owned.value)));
 const points = computed(() => toNumber(chronicle.boonPoints.value));
+const levelOf = (card: UpgradeCardData<Boon>) => toNumber(card.count!.value);
+
+// The skirmish field: the player sets the row the march once set for them.
+const pickField = ref(chronicle.skirmish.value?.field ?? FIELDS.length - 1);
+const pickTwist = ref(chronicle.skirmish.value?.twist ?? NO_TWIST.id);
+const pickLord = ref(chronicle.skirmish.value?.lord ?? LORDS.length - 1);
+function skirmish(): void {
+  chronicle.skirmish.value = {
+    field: pickField.value,
+    twist: pickTwist.value,
+    lord: pickLord.value,
+  };
+  battle.start();
+}
+function backToMarch(): void {
+  chronicle.skirmish.value = null;
+}
 </script>
 
 <template>
@@ -87,13 +132,31 @@ const points = computed(() => toNumber(chronicle.boonPoints.value));
         sea. The Chronicle closes this volume; the Causeway is yours to keep.
       </div>
 
-      <div v-if="last" class="cp-entry" :class="last.won ? 'victory' : 'setback'">
-        <template v-if="last.won">
-          {{ opening(lastKeep) }}'s gate falls. The Chronicle records a victory:
-          <strong class="num">+{{ last.renown }}</strong> Renown.
+      <div
+        v-if="last"
+        class="cp-entry"
+        :class="last.skirmish ? 'skirmish' : last.won ? 'victory' : 'setback'"
+      >
+        <template v-if="last.skirmish">
+          A skirmish at {{ last.field }} against {{ last.lord }}: {{ last.won ? 'won' : 'lost' }},
+          {{ last.byBreach ? 'a gate fell' : 'on the gates at the season’s close' }}. Skirmishes pay
+          no Renown.
+        </template>
+        <template v-else-if="last.won">
+          <template v-if="last.byBreach">The gate of {{ last.field }} falls.</template>
+          <template v-else
+            >The season closes with {{ last.field }}'s gate the worse for it, and
+            {{ last.lord }} yields.</template
+          >
+          The Chronicle records a victory: <strong class="num">+{{ last.renown }}</strong> Renown.
         </template>
         <template v-else>
-          Fairhold's gate is breached. The Chronicle records a setback (the bards will improve it):
+          <template v-if="last.byBreach">Fairhold's gate is breached at {{ last.field }}.</template>
+          <template v-else
+            >The season closes with our gate the worse for it, and Fairhold yields
+            {{ last.field }}.</template
+          >
+          The Chronicle records a setback (the bards will improve it):
           <strong class="num">+{{ last.renown }}</strong> Renown.
         </template>
       </div>
@@ -116,33 +179,145 @@ const points = computed(() => toNumber(chronicle.boonPoints.value));
       </div>
 
       <div class="cp-columns">
-        <section class="cp-ladder" aria-label="The lords across the causeway">
-          <h2 class="cw-title">Across the Causeway</h2>
-          <ol>
-            <li
-              v-for="l in LORDS"
-              :key="l.rung"
-              class="cp-lord"
-              :class="{ taken: l.rung < rung, now: l.rung === rung }"
-            >
-              <span class="cp-lord-name">{{ l.name }}</span>
-              <span class="cp-lord-keep"
-                >{{ l.keep }}<template v-if="l.rung < rung"> · taken</template></span
-              >
-            </li>
-          </ol>
+        <section class="cp-march" aria-label="The march">
           <div class="cp-next">
-            <div class="cp-next-name">{{ opening(lord.name) }} awaits on the Causeway.</div>
-            <div class="cp-next-tell">{{ lord.tell }}</div>
+            <div class="cp-next-kicker">
+              {{ skirmishing ? 'The skirmish' : 'The next field' }}
+            </div>
+            <div class="cp-next-name">{{ opening(field.name) }}</div>
+            <div class="cp-next-lord">held by {{ lord.name }}</div>
+            <div class="cp-next-tell">{{ field.tell }}</div>
+            <dl class="cp-facts">
+              <dt>Raised here</dt>
+              <dd class="cp-open">
+                <span
+                  v-for="id in field.open"
+                  :key="id"
+                  class="cp-open-troop"
+                  :title="troop(id).ours.name"
+                  ><span class="cp-open-glyph"><TroopGlyph :troop="id" /></span
+                  >{{ troop(id).ours.name }}</span
+                >
+              </dd>
+              <template v-if="features.length">
+                <dt>The ground</dt>
+                <dd>{{ features.join(' and ') }}</dd>
+              </template>
+              <template v-if="field.champions.length">
+                <dt>Champions</dt>
+                <dd class="cp-champions">
+                  <span v-for="c in field.champions" :key="c.name"
+                    >{{ c.name }} rides out at
+                    <span class="num"
+                      >{{ Math.floor(c.at / 60) }}:{{ String(c.at % 60).padStart(2, '0') }}</span
+                    ></span
+                  >
+                </dd>
+              </template>
+            </dl>
+            <div class="cp-twist" :class="{ calm: twist.id === NO_TWIST.id }">
+              <span class="cp-twist-name">{{ twist.name }}</span>
+              <span class="cp-twist-blurb">{{ twist.blurb }}</span>
+            </div>
+            <div v-if="owned.length" class="cp-mount" role="group" aria-label="On the walls">
+              <span class="cp-mount-label">On the walls</span>
+              <Button
+                v-for="w in owned"
+                :key="w.kind"
+                class="cw-control cp-mount-kind"
+                :class="{ afford: chronicle.mounted.value === w.kind }"
+                :aria-pressed="chronicle.mounted.value === w.kind"
+                :repeat="false"
+                :data-weapon="w.kind"
+                @click="chronicle.mounted.value = w.kind"
+              >
+                <span class="cp-mount-name">{{ w.name }}</span>
+                <span class="cp-mount-blurb">{{ w.blurb }}</span>
+              </Button>
+            </div>
             <Button
               class="cp-take"
               data-testid="take-the-field"
               :repeat="false"
               @click="battle.start()"
             >
-              Take the field
+              {{ skirmishing ? 'Skirmish again' : 'Take the field' }}
+            </Button>
+            <Button
+              v-if="skirmishing"
+              class="cw-control cp-back"
+              :repeat="false"
+              data-testid="back-to-march"
+              @click="backToMarch()"
+            >
+              Back to the march: the Usurper's heirs
             </Button>
           </div>
+
+          <div v-if="chronicle.endingReached.value" class="cp-skirmish">
+            <h2 class="cw-title">The skirmish field <small>no Renown</small></h2>
+            <label class="cp-pick">
+              <span>Field</span>
+              <select v-model.number="pickField">
+                <option v-for="(f, i) in FIELDS" :key="i" :value="i">
+                  {{ f.name }} ({{ LORDS[f.lord]!.name }})
+                </option>
+              </select>
+            </label>
+            <label class="cp-pick">
+              <span>Twist</span>
+              <select v-model="pickTwist">
+                <option :value="NO_TWIST.id">{{ NO_TWIST.name }}</option>
+                <option v-for="t in TWISTS" :key="t.id" :value="t.id">{{ t.name }}</option>
+              </select>
+            </label>
+            <label class="cp-pick">
+              <span>Lord</span>
+              <select v-model.number="pickLord">
+                <option v-for="(l, i) in LORDS" :key="i" :value="i">{{ l.name }}</option>
+              </select>
+            </label>
+            <Button
+              class="cw-control afford cp-skirmish-go"
+              :repeat="false"
+              data-testid="skirmish"
+              @click="skirmish()"
+            >
+              Fight this skirmish
+            </Button>
+          </div>
+          <h2 class="cw-title">
+            The March
+            <small class="num"
+              >{{ Math.min(rung, FIELDS.length) }} of {{ FIELDS.length }} fields</small
+            >
+          </h2>
+          <ol class="cp-lords">
+            <li
+              v-for="(m, i) in march"
+              :key="i"
+              class="cp-lord"
+              :class="{
+                taken: m.fields.every((x) => x.rungAt < rung),
+                now: !skirmishing && m.fields.some((x) => x.rungAt === rung),
+              }"
+            >
+              <span class="cp-lord-name">{{ m.lord.name }}</span>
+              <span class="cp-fields">
+                <span
+                  v-for="x in m.fields"
+                  :key="x.rungAt"
+                  class="cp-field"
+                  :class="{
+                    taken: x.rungAt < rung,
+                    now: !skirmishing && x.rungAt === rung,
+                    keep: x.f.champions.length > 0,
+                  }"
+                  >{{ x.f.name }}</span
+                >
+              </span>
+            </li>
+          </ol>
         </section>
 
         <section class="cp-boons">
@@ -162,11 +337,11 @@ const points = computed(() => toNumber(chronicle.boonPoints.value));
               >
                 <span class="cp-boon-name">
                   {{ card.displayName }}
-                  <span
-                    v-if="toNumber(card.count!.value) && card.extra!.def.limit > 1"
-                    class="num cp-lvl"
-                  >
-                    {{ toNumber(card.count!.value) }} of {{ card.extra!.def.limit }}
+                  <span v-if="levelOf(card) && card.extra!.def.limit !== 1" class="num cp-lvl">
+                    <template v-if="card.extra!.def.limit"
+                      >{{ levelOf(card) }} of {{ card.extra!.def.limit }}</template
+                    >
+                    <template v-else>level {{ levelOf(card) }}</template>
                   </span>
                 </span>
                 <span class="cp-boon-blurb">{{ card.description }}</span>
@@ -277,26 +452,52 @@ const points = computed(() => toNumber(chronicle.boonPoints.value));
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   gap: 28px;
 }
-.cp-ladder ol {
+.cp-entry.skirmish {
+  color: var(--cw-linen-dim);
+}
+.cp-lords {
   list-style: none;
   margin: 0 0 12px;
   padding: 0;
 }
 .cp-lord {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  gap: 1px;
   padding: 4px 0;
   border-bottom: 1px dotted var(--cw-rule);
   color: var(--cw-linen-dim);
 }
+.cp-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-size: 13.5px;
+}
+.cp-field::before {
+  content: '◇ ';
+  color: var(--cw-gall);
+}
+.cp-field.keep::before {
+  content: '♜ ';
+}
+.cp-field.taken {
+  opacity: 0.6;
+}
+.cp-field.taken::before {
+  content: '◆ ';
+  color: var(--cw-woad);
+}
+.cp-field.keep.taken::before {
+  content: '♜ ';
+  color: var(--cw-woad);
+}
+.cp-field.now {
+  color: #dba497;
+}
 .cp-lord-name {
   font-family: var(--cw-hand);
   font-size: 17px;
-}
-.cp-lord-keep {
-  font-size: 13.5px;
-  font-style: italic;
 }
 .cp-lord.taken .cp-lord-name {
   text-decoration: line-through;
@@ -309,18 +510,148 @@ const points = computed(() => toNumber(chronicle.boonPoints.value));
   color: #dba497;
 }
 .cp-next {
+  margin-bottom: 20px;
   padding: 12px 14px;
   border: 1px solid rgba(189, 79, 60, 0.4);
   background: var(--cw-madder-soft);
 }
+.cp-next-kicker {
+  font-family: var(--cw-caps);
+  font-size: 13px;
+  color: var(--cw-gall);
+}
 .cp-next-name {
   font-family: var(--cw-hand);
-  font-size: 19px;
+  font-size: 21px;
+  line-height: 1.15;
+}
+.cp-next-lord {
+  font-size: 14px;
+  color: #dba497;
 }
 .cp-next-tell {
-  margin: 2px 0 12px;
+  margin: 4px 0 10px;
   color: var(--cw-linen-dim);
   font-style: italic;
+}
+.cp-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.cp-facts dt {
+  font-family: var(--cw-caps);
+  color: var(--cw-gall);
+}
+.cp-facts dd {
+  margin: 0;
+}
+.cp-open {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.cp-open-troop {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.cp-open-glyph {
+  width: 15px;
+  height: 18px;
+  color: var(--cw-woad);
+}
+.cp-champions {
+  display: flex;
+  flex-direction: column;
+  color: #dba497;
+}
+.cp-twist {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--cw-ember);
+  background: rgba(210, 124, 62, 0.08);
+}
+.cp-twist.calm {
+  border-left-color: var(--cw-gall);
+  background: transparent;
+}
+.cp-twist-name {
+  font-family: var(--cw-caps);
+  color: var(--cw-ember);
+}
+.cp-twist.calm .cp-twist-name {
+  color: var(--cw-gall);
+}
+.cp-twist-blurb {
+  font-size: 14px;
+  color: var(--cw-linen-dim);
+}
+.cp-mount {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.cp-mount-label {
+  grid-column: 1 / -1;
+  font-family: var(--cw-caps);
+  font-size: 13.5px;
+  color: var(--cw-gall);
+}
+.cp-mount-kind {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 6px 8px;
+  text-align: left;
+}
+.cp-mount-name {
+  font-family: var(--cw-hand);
+  font-size: 16px;
+}
+.cp-mount-blurb {
+  font-size: 13px;
+  color: var(--cw-linen-dim);
+}
+.cp-back {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-family: var(--cw-hand);
+}
+.cp-skirmish {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cp-pick {
+  display: grid;
+  grid-template-columns: 4.5em 1fr;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--cw-caps);
+  color: var(--cw-gall);
+}
+.cp-pick select {
+  font: inherit;
+  font-family: var(--cw-text);
+  color: var(--cw-linen);
+  background: var(--cw-oak-raised);
+  border: 1px solid var(--cw-rule);
+  padding: 4px 6px;
+}
+.cp-skirmish-go {
+  margin-top: 4px;
+  padding: 8px 12px;
+  font-family: var(--cw-caps);
+  font-size: 16px;
 }
 .cp-take {
   display: block;

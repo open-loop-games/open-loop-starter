@@ -11,6 +11,8 @@
 //                   fighters in reach = min(n, FILES × rows the reach covers)
 //   equal value   → per member  hp · dps · F(n_B) / cost = K   at one release's budget
 //   the gate      → falls to two mangonels in `breachSeconds`
+//   the season    → closes `lastWeekSeconds` after the last week opens; the keep whose gate
+//                   lost the larger share yields
 //
 // Melee strikes from its front rank only, so it fights by the linear law; a bow reaches
 // over several ranks, so a small bow wave fights whole, by the square law. Equal value per
@@ -51,8 +53,8 @@ export const ANCHORS = {
   gateShare: 0.25,
   /** Share of its damage a mangonel deals to troops; at the gate it deals its full damage. */
   siegeVsTroops: 0.5,
-  /** Paces from the gate a wall-breaker must close to before it can batter it. */
-  gateReach: 3,
+  /** Paces from the enemy gate at which an engine throws at it, over any wall or line. */
+  engineThrow: 60,
   /** Seconds two mangonels at the gate take to breach it. Sizes the gate. */
   breachSeconds: 24,
   /** The gatehouse bows: damage a second on the nearest attacker, and their reach in paces. */
@@ -61,9 +63,11 @@ export const ANCHORS = {
   /** Share of a raider's gate damage it loots from the defender's treasury. */
   lootShare: 0.5,
 
-  /** The campaign season's length; past it, every blow doubles each `lastWeekDoubling` seconds. */
+  /** The campaign season's length; the last week follows it. */
   seasonSeconds: 150,
-  lastWeekDoubling: 30,
+  /** The last week: harvests and musters step through `surge`; at its end the season closes. */
+  lastWeekSeconds: 120,
+  surge: [2, 3],
 
   /** Each raise of the tithe adds this much base income. */
   titheStep: 0.25,
@@ -80,8 +84,24 @@ export const ANCHORS = {
   rungGrowth: 1.12,
   /** Gate hp a Stone Curtain level adds. */
   curtainStep: 0.25,
-  /** Lords on the ladder; taking the last keep is the ending. */
-  rungs: 5,
+  /** Fields on the march, three a lord; taking the last keep is the ending. */
+  rungs: 15,
+  /** Strength boon levels a field the lords grow by: the ladder's steepness. */
+  boonsPerField: 0.85,
+
+  /** Seconds a keep weapon takes to charge. */
+  weaponCharge: 45,
+  /** The trebuchet's stone: damage to each member in the foremost `trebuchetRanks` ranks. */
+  trebuchetDamage: 30,
+  trebuchetRanks: 2,
+  /** A champion's hp and damage, as multiples of a member of its troop. */
+  championHp: 18,
+  championDps: 4,
+  /** Share of the silver the waiting seconds would have paid that an early horn costs. */
+  earlyHornFee: 0.5,
+  /** Walking speed in a ford; a knight's in stakes, where it cannot charge. */
+  fordSpeed: 2 / 3,
+  stakesSpeed: 0.5,
 } as const;
 
 const A = ANCHORS;
@@ -180,7 +200,11 @@ export function predictClash(a: TroopId, na: number, b: TroopId, nb: number) {
 
 // ─── Cover and the season ───
 // Cover ramps with depth, from none at the midpoint to `coverAtGate` at the keep: the
-// ramparts' reach. A line pushed home stiffens; a line at the middle moves freely.
+// ramparts' reach. A line pushed home stiffens; a line at the middle moves freely. The spring
+// is 1/coverAtGate strong, more than any advantage the march hands out, so a line never
+// reaches a gate on strength alone. Engines throw from `engineThrow` paces: a line held past
+// the middle puts its engines in reach, and that is what scores. The last week surges
+// harvests and musters, never damage, so the host that holds ground then converts it.
 
 /** Damage multiplier on a defender `depth` of the way from the midpoint to its own gate. */
 export function coverAt(depth: number, atGate: number): number {
@@ -188,10 +212,15 @@ export function coverAt(depth: number, atGate: number): number {
 }
 
 /** Every blow's multiplier at battle second `t`: 1 in season, doubling through the last week. */
-export function seasonFury(t: number, season: number = A.seasonSeconds): number {
+/** The harvest and muster multiplier at battle second `t`: 1 in season, then the surge steps. */
+export function seasonSurge(t: number, season: number = A.seasonSeconds): number {
   if (t <= season) return 1;
-  return Math.pow(2, (t - season) / A.lastWeekDoubling);
+  const step = Math.floor(((t - season) / A.lastWeekSeconds) * A.surge.length);
+  return A.surge[Math.min(step, A.surge.length - 1)]!;
 }
+
+/** The second the season closes and the gate tiebreak is read. */
+export const seasonClose = (season: number = A.seasonSeconds) => season + A.lastWeekSeconds;
 
 // ─── The gate ───
 // Two mangonels at the gate breach it in `breachSeconds`: H = 2 · d_siege · breachSeconds.
@@ -218,12 +247,18 @@ export function renownFor(rung: number, won: boolean): number {
 }
 
 // ─── Scaled opposition ───
-// The rival's harvest is × g^rung. A Fertile Fields level multiplies income by g; a Drilled
-// Levies level multiplies hp and damage by g each. Under the clash law income × g and
-// hp·dps × g² both buy at least g, so one strength boon a rung keeps pace.
+// The lord's men grow in hp and damage by g^(b·rung), b strength boon levels a field. Under a
+// full muster a harvest buys little, so the rung binds into vigor, where it bites whatever
+// the muster. A Drilled Levies level multiplies Fairhold's the same way; Fertile Fields buys
+// income, which binds while losses at the line consume the harvest. The march stops growing
+// the lords at its end; the boons do not stop, so a run of defeats always buys a way through.
 
-export function rivalScale(rung: number, growth: number): number {
-  return Math.pow(growth, rung);
+export function rivalScale(
+  rung: number,
+  growth: number,
+  perField: number = A.boonsPerField,
+): number {
+  return Math.pow(growth, perField * Math.min(rung, A.rungs));
 }
 
 /** Every troop's member stats, for the projection's table. */

@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { toNumber } from '@open-loop/engine';
-import { ANCHORS, troop } from '../data';
+import { ANCHORS, seasonClose, troop } from '../data';
 import { boot, seconds, tickUntil } from '../sim/harness';
 import { getBattle } from './battle';
 import { getCauseway } from './causeway';
 import { getChronicle } from './chronicle';
 import { getKeep } from './keep';
+import { idleCommander } from './rival';
 
 beforeEach(() => {
   boot();
-  getBattle().commanders.rival = () => ({ intent: 'line', tithe: false, squads: [] });
+  getBattle().commanders.rival = idleCommander;
 });
 
 describe('the horns', () => {
@@ -81,5 +82,51 @@ describe('a fallen gate', () => {
     expect(getKeep('player').gateDamage.value).toBe(0);
     expect(toNumber(getKeep('player').troops.getPurchasable('pike')!.count.value)).toBe(0);
     expect(toNumber(getKeep('player').silver.value)).toBe(ANCHORS.startSeconds * ANCHORS.income);
+  });
+});
+
+describe('the last week', () => {
+  it('surges both harvests once the season turns', async () => {
+    const battle = getBattle();
+    battle.start('player');
+    const keep = getKeep('player');
+    const gain = async () => {
+      const before = toNumber(keep.silver.value);
+      await seconds(1);
+      return toNumber(keep.silver.value) - before;
+    };
+    const inSeason = await gain();
+    await seconds(ANCHORS.seasonSeconds);
+    expect(await gain()).toBeGreaterThan(inSeason * 1.5);
+  });
+
+  it('closes the season on the gates: the keep that lost the larger share yields', async () => {
+    const battle = getBattle();
+    battle.start('player');
+    getKeep('player').gateDamage.value = 1;
+    await tickUntil(() => battle.phase.value === 'camp', (seasonClose() + 5) * 4);
+    const last = getChronicle().last.value!;
+    expect(last.won).toBe(false);
+    expect(last.byBreach).toBe(false);
+  });
+});
+
+describe('the early horn', () => {
+  it('waits half a period after a horn, then sounds now for a fee and restarts the schedule', async () => {
+    const battle = getBattle();
+    battle.start('rival');
+    const T = ANCHORS.hornSeconds;
+    await seconds(T + 0.25);
+    expect(battle.earlyFee('player')).toBeNull();
+    await seconds(T / 2);
+    const fee = battle.earlyFee('player')!;
+    expect(fee).toBeGreaterThan(0);
+    const keep = getKeep('player');
+    const silver = toNumber(keep.silver.value);
+    const horns = battle.horns.player.value;
+    expect(battle.soundEarly('player')).toBe(true);
+    expect(battle.horns.player.value).toBe(horns + 1);
+    expect(toNumber(keep.silver.value)).toBeCloseTo(silver - fee);
+    expect(battle.hornIn('player')).toBeCloseTo(T);
   });
 });

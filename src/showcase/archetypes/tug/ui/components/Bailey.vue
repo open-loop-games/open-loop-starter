@@ -13,7 +13,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { ANCHORS, TROOPS, troop, type TroopId } from '../../data';
+import { TROOPS, troop, type TroopId } from '../../data';
 import { getCauseway, getChronicle, getKeep } from '../../modules';
 import { mmss, n } from '../format';
 import TroopGlyph from './TroopGlyph.vue';
@@ -36,7 +36,7 @@ interface Tablet {
 const tablets = computed<Tablet[]>(() => {
   void toNumber(keep.silver.value);
   void causeway.version.value;
-  return TROOPS.filter((t) => !t.charter || keep.isOpen(t.id)).map((t) => {
+  return TROOPS.filter((t) => getChronicle().field.value.open.includes(t.id)).map((t) => {
     const arrives = t.arrivesAt ?? 0;
     const road = causeway.clock.value < arrives ? arrives - causeway.clock.value : null;
     return {
@@ -50,9 +50,17 @@ const tablets = computed<Tablet[]>(() => {
   });
 });
 
+// The muster surges in the last week and shrinks with camp fever, so its size is read back
+// as what stands plus the room left, never recomputed here.
 const fielded = computed(() => {
   void causeway.version.value;
-  return ANCHORS.muster - causeway.room('player');
+  const out = causeway.members.value.filter((m) => m.side === 'player').length;
+  return out + causeway.bailey.player.value.reduce((k, id) => k + troop(id).squad, 0);
+});
+const muster = computed(() => {
+  void causeway.version.value;
+  void causeway.clock.value;
+  return fielded.value + causeway.room('player');
 });
 
 const waiting = computed(() => {
@@ -87,7 +95,7 @@ const tithes = computed(() => toNumber(tithe.count.value));
   <section class="bailey" aria-label="The bailey">
     <h2 class="cw-title">
       The bailey
-      <small class="num">{{ fielded }} of {{ ANCHORS.muster }} on the muster</small>
+      <small class="num">{{ fielded }} of {{ muster }} on the muster</small>
     </h2>
     <div class="bl-tablets">
       <div

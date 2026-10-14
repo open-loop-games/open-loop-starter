@@ -14,9 +14,12 @@ import {
   counterMultiplier,
   coverAt,
   memberStats,
-  seasonFury,
+  seasonSurge,
   troop,
+  type ChampionDef,
+  type Feature,
   type TroopId,
+  type WeaponKind,
 } from '../data';
 import { ChronicleKey } from './chronicle';
 import { SIDES, other, type Side } from './sides';
@@ -40,6 +43,8 @@ export interface Member {
   cost: number;
   /** Seconds since it last struck or was struck, for the renderer's flash. */
   hitAgo: number;
+  /** A champion's name; ordinary members have none. */
+  name?: string;
 }
 
 /** Squads per troop in one release. */
@@ -48,7 +53,7 @@ export type Wave = Partial<Record<TroopId, number>>;
 /** What one step resolved, for the battle to apply to the keeps and the heralds. */
 export interface ClashEvents {
   /** Damage `side`'s troops dealt to the other keep's gate this step. */
-  gate: { side: Side; damage: number }[];
+  gate: { side: Side; troop: TroopId; damage: number }[];
   fallen: { side: Side; troop: TroopId }[];
 }
 
@@ -75,6 +80,14 @@ export interface CausewayApi {
   line(): number | null;
   /** Silver standing on the causeway for a side, optionally one troop's. */
   worth(side: Side, id?: TroopId): number;
+  /** The field's bands this battle, the twist's flood applied. */
+  bands(): Feature[];
+  /** A champion rides out of `side`'s gate. */
+  champion(side: Side, def: ChampionDef): void;
+  /** `side`'s keep weapon strikes; returns the members it felled. */
+  strike(side: Side, kind: WeaponKind): number;
+  /** Paces from `side`'s gate to the nearest enemy engine, or Infinity. */
+  nearestEngine(side: Side): number;
   clear(): void;
 }
 
@@ -177,7 +190,7 @@ export function createCausewayModule(): EngineModule {
             dps: s.dps * vigor,
             gateDps: (breaker ? s.gateDps : s.dps * gateShare.value) * vigor,
             speed: s.speed,
-            reach: s.reach,
+            reach: id === 'bow' ? s.reach * (chronicle.twist.value.bowReach ?? 1) : s.reach,
             cost: s.cost,
             hitAgo: 99,
           });
@@ -189,9 +202,11 @@ export function createCausewayModule(): EngineModule {
       function step(dt: number): ClashEvents {
         const events: ClashEvents = { gate: [], fallen: [] };
         const all = list();
-        const t = clock.value;
         const s = sharpness.value;
-        const fury = seasonFury(t, season.value);
+        const twist = chronicle.twist.value;
+        const bandList = bands();
+        const inBand = (x: number, kind: Feature['kind']) =>
+          bandList.some((b) => b.kind === kind && x >= b.from && x <= b.to);
         const cols: Record<Side, Member[]> = { player: [], rival: [] };
         for (const m of all) cols[m.side].push(m);
         // Foremost first: the enemy list then runs nearest-first from either side's view.
@@ -214,7 +229,8 @@ export function createCausewayModule(): EngineModule {
             let nearest = Infinity;
             let nearestFoe: Member | undefined;
             let charging = false;
-            if (def.charges && def.beats) {
+            const staked = m.troop === 'horse' && inBand(m.x, 'stakes');
+            if (def.charges && def.beats && !twist.noCharge && !staked) {
               // The charge: ride for the nearest of the troop it beats, past anything else.
               for (const e of foes) {
                 const gap = (e.x - m.x) * d;
@@ -241,35 +257,45 @@ export function createCausewayModule(): EngineModule {
                 if (!target || (e.troop === def.beats && target.troop !== def.beats)) target = e;
               }
             }
-            if (target) {
-              // Cover: the defender's depth into its own half, from none at the middle.
-              const depth = Math.max(0, 1 - Math.abs(target.x - gateX(target.side)) / HALF);
-              const shield = def.breaksWalls ? 1 : coverAt(depth, coverGate.value);
-              hit(target, m.dps * counterMultiplier(m.troop, target.troop, s) * shield * fury * dt);
+            // An engine with the enemy gate in its throw lobs over every wall and line at it.
+            const toGate = (gateX(other(side)) - m.x) * d;
+            if (def.breaksWalls && toGate <= ANCHORS.engineThrow) {
+              events.gate.push({ side, troop: m.troop, damage: m.gateDps * dt });
               m.hitAgo = 0;
               struck.add(m.id);
               aheadInFile.set(m.file, m);
               continue;
             }
-            const toGate = (gateX(other(side)) - m.x) * d;
-            const gateReach = def.breaksWalls ? Math.min(m.reach, ANCHORS.gateReach) : m.reach;
-            if (nearest === Infinity && toGate <= gateReach) {
-              events.gate.push({ side, damage: m.gateDps * fury * dt });
+            if (target) {
+              // Cover: the defender's depth into its own half, from none at the middle.
+              const depth = Math.max(0, 1 - Math.abs(target.x - gateX(target.side)) / HALF);
+              const shield = def.breaksWalls ? 1 : coverAt(depth, coverGate.value);
+              const rain = m.troop === 'bow' ? (twist.bowDamage ?? 1) : 1;
+              hit(target, m.dps * counterMultiplier(m.troop, target.troop, s) * shield * rain * dt);
+              m.hitAgo = 0;
+              struck.add(m.id);
+              aheadInFile.set(m.file, m);
+              continue;
+            }
+            if (nearest === Infinity && toGate <= m.reach) {
+              events.gate.push({ side, troop: m.troop, damage: m.gateDps * dt });
               m.hitAgo = 0;
               aheadInFile.set(m.file, m);
               continue;
             }
-            let room = m.speed * dt;
+            const slow = inBand(m.x, 'ford') ? ANCHORS.fordSpeed : staked ? ANCHORS.stakesSpeed : 1;
+            let room = m.speed * slow * dt;
             if (nearestFoe) {
               // Two walking lines meet halfway; a line that stands and fights is closed on whole.
               const share = standing.has(nearestFoe.id) ? 1 : 0.5;
               room = Math.min(room, Math.max(0, (nearest - m.reach * 0.9) * share));
             }
-            const ahead = aheadInFile.get(m.file);
+            // The ranks open for an engine: it is brought up through its own host.
+            const ahead = def.breaksWalls ? undefined : aheadInFile.get(m.file);
             if (ahead)
               room = Math.min(room, Math.max(0, (ahead.x - m.x) * d - ANCHORS.rankSpacing));
             moves.push([m, d * room]);
-            aheadInFile.set(m.file, m);
+            if (!def.breaksWalls) aheadInFile.set(m.file, m);
           }
         }
 
@@ -318,6 +344,81 @@ export function createCausewayModule(): EngineModule {
         return w;
       }
 
+      function bands(): Feature[] {
+        const own = chronicle.field.value.features;
+        if (!chronicle.twist.value.flood) return own;
+        const fords = own.filter((f) => f.kind === 'ford');
+        if (!fords.length) return [...own, { kind: 'ford', from: 40, to: 60 }];
+        return own.map((f) => {
+          if (f.kind !== 'ford') return f;
+          const mid = (f.from + f.to) / 2;
+          const half = f.to - f.from;
+          return { kind: 'ford', from: Math.max(0, mid - half), to: Math.min(L, mid + half) };
+        });
+      }
+
+      function champion(side: Side, def: ChampionDef): void {
+        const s = memberStats(def.troop);
+        const vigor = toNumber(chronicle.chains[side].vigor.apply(1));
+        list().push({
+          id: nextId.value++,
+          side,
+          troop: def.troop,
+          file: 1,
+          x: gateX(side),
+          hp: s.hp * ANCHORS.championHp * vigor,
+          maxHp: s.hp * ANCHORS.championHp * vigor,
+          dps: s.dps * ANCHORS.championDps * vigor,
+          gateDps: s.gateDps * ANCHORS.championDps * vigor,
+          speed: s.speed,
+          reach: s.reach,
+          cost: s.cost * ANCHORS.championHp,
+          hitAgo: 99,
+          name: def.name,
+        });
+        version.value++;
+      }
+
+      function strike(side: Side, kind: WeaponKind): number {
+        const foes = list().filter((m) => m.side === other(side));
+        if (!foes.length) return 0;
+        const vigor = toNumber(chronicle.chains[side].vigor.apply(1));
+        const fromGate = (m: Member) => Math.abs(m.x - gateX(side));
+        if (kind === 'firepots') {
+          let target: Member | undefined;
+          for (const m of foes)
+            if (troop(m.troop).breaksWalls && (!target || fromGate(m) < fromGate(target)))
+              target = m;
+          if (!target || fromGate(target) > ANCHORS.engineThrow) return 0;
+          target.hp = 0;
+        } else {
+          const nearest = Math.min(...foes.map(fromGate));
+          const depth = ANCHORS.trebuchetRanks * ANCHORS.rankSpacing;
+          for (const m of foes)
+            if (fromGate(m) <= nearest + depth) {
+              m.hp -= ANCHORS.trebuchetDamage * vigor;
+              m.hitAgo = 0;
+            }
+        }
+        // Returns the fallen; the battle reads them for the heralds like any other.
+        let fallen = 0;
+        for (let i = list().length - 1; i >= 0; i--) {
+          if (list()[i]!.hp > 0) continue;
+          list().splice(i, 1);
+          fallen++;
+        }
+        version.value++;
+        return fallen;
+      }
+
+      function nearestEngine(side: Side): number {
+        let best = Infinity;
+        for (const m of list())
+          if (m.side !== side && troop(m.troop).breaksWalls)
+            best = Math.min(best, Math.abs(m.x - gateX(side)));
+        return best;
+      }
+
       function clear(): void {
         list().splice(0);
         standing = new Set();
@@ -330,13 +431,22 @@ export function createCausewayModule(): EngineModule {
         lastWave,
         clock,
         version,
-        room: (side) => ANCHORS.muster - fielded(side),
+        room: (side) =>
+          Math.floor(
+            ANCHORS.muster *
+              seasonSurge(clock.value, season.value) *
+              (chronicle.twist.value.muster ?? 1),
+          ) - fielded(side),
         stage,
         release,
         step,
         front,
         line,
         worth,
+        bands,
+        champion,
+        strike,
+        nearestEngine,
         clear,
       };
       ctx.provide(CausewayKey, api);

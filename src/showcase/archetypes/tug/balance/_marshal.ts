@@ -2,8 +2,8 @@
  * Shared probe fixture, not runnable on its own. Builds a real tug engine and plays it with
  * the reference marshal in Fairhold's seat: the rival's shipping decision function
  * (`../modules/rival.ts`, `createCommander`) under a marshal's temperament, so the sim plays
- * the code the rival ships. Between battles the marshal takes the Charter of the Longbow as
- * soon as it opens, then alternates the two strength boons, then the Stone Curtain.
+ * the code the rival ships. Between battles the marshal takes a weapon boon as soon as one
+ * opens, then alternates the two strength boons. It never raises the Stone Curtain.
  *
  * The game ships no player automation, so the marshal is probe-side. This is not a
  * duplicate of `../sim/harness.ts`: that boots the module list for tick-by-tick behavioral
@@ -13,7 +13,7 @@
 import { seedRNG, toNumber, type Engine, type TuningRegistry } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
-import { ANCHORS, LORDS, type Temperament } from '../data';
+import { ANCHORS, BOONS, FIELDS, LORDS, NO_TWIST, TROOP_IDS, type Temperament } from '../data';
 import {
   BattleKey,
   CausewayKey,
@@ -43,6 +43,8 @@ export const MARSHAL: Temperament = {
   chargeEvery: 4,
   tithes: 2,
   siegeShare: 0.25,
+  profile: [{ from: 0, spend: 1 }],
+  earlyHorn: true,
 };
 
 export interface Game {
@@ -91,13 +93,27 @@ export function seatMirror(g: Game, rung: number): void {
   seatMarshal(g, LORDS[rung]!.temperament);
 }
 
-/** Every unit open to both keeps: the Charter for Fairhold, and the rival past its rung gate. */
+/** A plain field with every troop open, no champion and fair weather: the probes' lane. */
+export const OPEN_FIELD = FIELDS.findIndex(
+  (f) => f.open.length === TROOP_IDS.length && !f.features.length && !f.champions.length,
+);
+
+/**
+ * Seats the next battle on the open field in fair weather, Fairhold's walls armed as the
+ * field's lord arms his, so a mirror is a mirror. Read the rung scaling off it with `perturb`.
+ */
 export function openAll(g: Game): void {
-  const longbow = g.chronicle.boons.getPurchasable('longbow')!;
-  if (toNumber(longbow.count.value) > 0) return;
-  // The charter waits for the first volume, which mints the point that buys it.
-  if (g.chronicle.volume.value < 1) g.chronicle.renown.addXp(ANCHORS.renownBase);
-  longbow.purchase(1);
+  const c = g.chronicle;
+  c.rung.value = OPEN_FIELD;
+  c.twistId.value = NO_TWIST.id;
+  const kind = c.lord.value.temperament.weapon;
+  if (!kind || c.level(kind) > 0) return;
+  const boon = BOONS.find((b) => b.id === kind)!;
+  // The weapon's boon waits for its volume; credit the renown that reaches it.
+  const xp = (ANCHORS.renownBase * boon.minVolume * (boon.minVolume + 1)) / 2;
+  c.renown.addXp(Math.max(0, xp - toNumber(c.renown.xp.value)));
+  c.boons.getPurchasable(kind)!.purchase(1);
+  c.mounted.value = kind;
 }
 
 /** What a probe reads once a second of a battle. */
@@ -136,12 +152,12 @@ export function playBattle(g: Game, maxSeconds = 900, first?: Side): BattleOutco
   return { record: done ? g.chronicle.last.value : null, seconds: t, samples };
 }
 
-/** Between battles: the Charter as soon as it opens, then the strength boons in turn. */
+/** Between battles: a weapon as soon as one opens, then the strength boons in turn, then the curtain. */
 export function marshalBetweenBattles(c: ChronicleApi): string[] {
   const bought: string[] = [];
   for (let guard = 0; guard < 20 && toNumber(c.boonPoints.value) >= 1; guard++) {
     const strength = c.level('fields') <= c.level('levies') ? 'fields' : 'levies';
-    const pick = ['longbow', strength, 'curtain'].find(
+    const pick = ['trebuchet', 'firepots', strength, 'curtain'].find(
       (id) => c.boons.getPurchasable(id)!.canPurchase.value,
     );
     if (!pick) break;

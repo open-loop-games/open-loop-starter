@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ANCHORS, LORDS } from '../data';
-import { chooseWave, type WaveView } from './rival';
+import { chooseWatch, chooseWave, type WatchView, type WaveView } from './rival';
 
 const L = ANCHORS.causewayLength;
 const view = (over: Partial<WaveView> = {}): WaveView => ({
   wave: 1,
+  t: 30,
   silver: 300,
   income: 10,
   seasonLeft: 0,
@@ -45,6 +46,26 @@ describe('the rival’s wave', () => {
     expect(order.intent).toBe('charge');
   });
 
+  it('puts its surplus into engines once its host fills the muster', () => {
+    const prices = { pike: 40, horse: 60, bow: 50, siege: 160 };
+    const full = view({ prices, front: L * 0.3, worth: 1000, silver: 400, room: 2 });
+    expect(chooseWave(full, temper, never).squads).toContain('siege');
+  });
+
+  it('holds back part of its purse while its profile says so', () => {
+    const hoard = {
+      ...temper,
+      profile: [
+        { from: 0, spend: 0.5 },
+        { from: 90, spend: 1 },
+      ],
+    };
+    const spent = (t: number) =>
+      chooseWave(view({ t }), hoard, never).squads.reduce((s, id) => s + view().prices[id]!, 0);
+    expect(spent(30)).toBeLessThanOrEqual(150);
+    expect(spent(120)).toBeGreaterThan(150);
+  });
+
   it('brings an engine only on a push, within its share of the host', () => {
     const prices = { pike: 40, horse: 60, bow: 50, siege: 160 };
     const pushing = view({ prices, front: L * 0.7, worth: 1000, silver: 400 });
@@ -59,5 +80,46 @@ describe('the rival’s wave', () => {
     const v = view({ seasonLeft: 150, titheCost: 125 });
     expect(chooseWave(v, temper, never).tithe).toBe(true);
     expect(chooseWave({ ...v, seasonLeft: 20 }, temper, never).tithe).toBe(false);
+  });
+});
+
+const watch = (over: Partial<WatchView> = {}): WatchView => ({
+  t: 60,
+  sinceHorn: 6,
+  hornIn: 4,
+  sinceTheirs: 0.5,
+  period: 10,
+  silver: 300,
+  income: 10,
+  earlyFee: 20,
+  weapon: null,
+  charged: false,
+  enemyEngine: Infinity,
+  enemyFront: L,
+  theirLast: {},
+  open: ['pike', 'horse', 'bow'],
+  ...over,
+});
+
+describe('the rival between horns', () => {
+  it('burns an engine with fire-pots only once one is in throw of its gate', () => {
+    const w = watch({ weapon: 'firepots', charged: true });
+    expect(chooseWatch(w, temper).fire).toBe(false);
+    expect(chooseWatch({ ...w, enemyEngine: ANCHORS.engineThrow }, temper).fire).toBe(true);
+  });
+
+  it('looses the trebuchet once their front is in its half', () => {
+    const w = watch({ weapon: 'trebuchet', charged: true });
+    expect(chooseWatch(w, temper).fire).toBe(false);
+    expect(chooseWatch({ ...w, enemyFront: L / 3 }, temper).fire).toBe(true);
+  });
+
+  it('sounds early to answer a wave an open troop beats, and never when none does', () => {
+    const early = { ...temper, earlyHorn: true };
+    expect(chooseWatch(watch({ theirLast: { bow: 3 } }), early).early).toBe(true);
+    expect(chooseWatch(watch({ theirLast: { pike: 3 }, open: ['pike'] }), early).early).toBe(false);
+    expect(
+      chooseWatch(watch({ theirLast: { bow: 3 } }), { ...early, earlyHorn: false }).early,
+    ).toBe(false);
   });
 });

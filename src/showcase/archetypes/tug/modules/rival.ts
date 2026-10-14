@@ -5,7 +5,14 @@ import {
   type EngineModule,
   type InjectionKey,
 } from '@open-loop/engine';
-import { ANCHORS, TROOP_IDS, lordAt, troop, type Temperament, type TroopId } from '../data';
+import {
+  ANCHORS,
+  TROOP_IDS,
+  troop,
+  type Temperament,
+  type TroopId,
+  type WeaponKind,
+} from '../data';
 import { CausewayKey, type CausewayApi, type Wave } from './causeway';
 import { ChronicleKey } from './chronicle';
 import { KeepKeys, type KeepApi } from './keep';
@@ -15,6 +22,8 @@ import { other } from './sides';
 export interface WaveView {
   /** Releases this keep has made this battle. */
   wave: number;
+  /** Battle second. */
+  t: number;
   silver: number;
   income: number;
   /** Seconds of the season left: what a tithe raised now has to pay back in. */
@@ -55,14 +64,17 @@ const answerTo = (id: TroopId): TroopId | undefined => TROOP_IDS.find((t) => tro
 
 /**
  * A lord's wave, chosen at its horn. Hold when pushed back into its own quarter; charge when
- * the other keep's last wave was bow-heavy, or on the temperament's rhythm; push once its
+ * the other keep's last wave was bow-heavy, or on the temperament's rhythm where bowmen fight; push once its
  * front is past the middle, bringing engines then; otherwise a line of pike and bow. Each
  * squad is drawn from the intent's template, biased by the temperament and shifted toward
  * the answer to the other keep's last wave. Pure: the same view and roll give the same order.
  */
 export function chooseWave(view: WaveView, temper: Temperament, roll: () => number): Order {
   const L = ANCHORS.causewayLength;
-  let silver = view.silver;
+  // The profile holds back part of the purse until later in the battle.
+  const step = [...temper.profile].reverse().find((p) => view.t >= p.from);
+  const held = view.silver * (1 - (step?.spend ?? 1));
+  let silver = view.silver - held;
   let room = view.room;
 
   const payback = view.titheCost / Math.max(view.income * ANCHORS.titheStep, 1e-9);
@@ -75,7 +87,8 @@ export function chooseWave(view: WaveView, temper: Temperament, roll: () => numb
   const intent: Intent =
     view.line !== null && view.line < L / 4
       ? 'hold'
-      : roll() < bowShare * temper.counterRead * 2 || view.wave % temper.chargeEvery === 0
+      : roll() < bowShare * temper.counterRead * 2 ||
+          (view.wave % temper.chargeEvery === 0 && view.prices.bow !== undefined)
         ? 'charge'
         : view.front > L / 2
           ? 'push'
@@ -92,9 +105,12 @@ export function chooseWave(view: WaveView, temper: Temperament, roll: () => numb
     return true;
   };
 
-  // Engines only on a push, and never more than the temperament's share of the host's worth.
-  if (intent === 'push' && view.prices.siege !== undefined) {
-    let budget = temper.siegeShare * (view.worth + silver) - view.siegeWorth;
+  // Engines on a push, up to the temperament's share of the host's worth; a host at its
+  // muster puts its surplus into engines too, up to twice that share.
+  const atMuster = room < troop('pike').squad;
+  if ((intent === 'push' || atMuster) && view.prices.siege !== undefined) {
+    const share = intent === 'push' ? temper.siegeShare : 2 * temper.siegeShare;
+    let budget = share * (view.worth + silver) - view.siegeWorth;
     while (budget >= view.prices.siege && buy('siege')) budget -= view.prices.siege;
   }
 
@@ -115,6 +131,69 @@ export function chooseWave(view: WaveView, temper: Temperament, roll: () => numb
   return { intent, tithe, squads };
 }
 
+/** What a commander sees between horns, once a second. Distances are paces from its own gate. */
+export interface WatchView {
+  t: number;
+  /** Seconds since this keep's last horn, and until its next. */
+  sinceHorn: number;
+  hornIn: number;
+  /** Seconds since the other keep's last horn. */
+  sinceTheirs: number;
+  /** Seconds between horns. */
+  period: number;
+  silver: number;
+  income: number;
+  /** What the early horn costs now. */
+  earlyFee: number;
+  weapon: WeaponKind | null;
+  charged: boolean;
+  /** Paces from its gate to the nearest enemy engine. */
+  enemyEngine: number;
+  /** Paces from its gate to the enemy's foremost member. */
+  enemyFront: number;
+  theirLast: Wave;
+  /** Troops it can raise now. */
+  open: TroopId[];
+}
+
+export interface Watch {
+  early: boolean;
+  fire: boolean;
+}
+
+/**
+ * Between horns: fire the weapon, and sound the horn early. Fire-pots burn the first engine
+ * in throw of the gate; a trebuchet waits for their front to reach our half. A lord that
+ * sounds early does so right after the other keep's horn, when that wave is one its
+ * cheapest answer beats and the fee is under a third of its silver. Pure.
+ */
+export function chooseWatch(view: WatchView, temper: Temperament): Watch {
+  const L = ANCHORS.causewayLength;
+  const fire =
+    view.charged &&
+    (view.weapon === 'firepots'
+      ? view.enemyEngine <= ANCHORS.engineThrow
+      : view.weapon === 'trebuchet' && view.enemyFront <= L / 2);
+  const theirs = Object.values(view.theirLast).reduce((a, n) => a + (n ?? 0), 0);
+  const answerable = TROOP_IDS.some((id) => {
+    const answer = answerTo(id);
+    return (
+      theirs > 0 &&
+      answer !== undefined &&
+      view.open.includes(answer) &&
+      (view.theirLast[id] ?? 0) / theirs >= 0.5
+    );
+  });
+  const early =
+    temper.earlyHorn &&
+    view.sinceTheirs <= 1 &&
+    view.sinceHorn >= view.period / 2 &&
+    view.hornIn > 2 &&
+    answerable &&
+    view.earlyFee < view.silver / 3;
+  return { early, fire };
+}
+
 /** Builds a keep's view at its horn. */
 export function viewOf(
   keep: KeepApi,
@@ -130,6 +209,7 @@ export function viewOf(
   const line = causeway.line();
   return {
     wave,
+    t: causeway.clock.value,
     silver: toNumber(keep.silver.value),
     income: keep.income.value,
     seasonLeft: Math.max(0, seasonSeconds - causeway.clock.value),
@@ -151,8 +231,11 @@ export function execute(keep: KeepApi, order: Order): void {
   for (const id of order.squads) keep.raise(id, 1);
 }
 
-/** A commander for one keep: at each horn, chooses a wave under a temperament and raises it. */
-export type Commander = (wave: number, seasonSeconds: number) => Order;
+/** A commander for one keep: at each horn it raises a wave; between horns it watches. */
+export interface Commander {
+  horn(wave: number, seasonSeconds: number): Order;
+  watch(view: WatchView): Watch;
+}
 
 export function createCommander(
   keep: KeepApi,
@@ -160,12 +243,21 @@ export function createCommander(
   temperament: () => Temperament,
   roll: () => number = random,
 ): Commander {
-  return (wave, seasonSeconds) => {
-    const order = chooseWave(viewOf(keep, causeway, wave, seasonSeconds), temperament(), roll);
-    execute(keep, order);
-    return order;
+  return {
+    horn: (wave, seasonSeconds) => {
+      const order = chooseWave(viewOf(keep, causeway, wave, seasonSeconds), temperament(), roll);
+      execute(keep, order);
+      return order;
+    },
+    watch: (view) => chooseWatch(view, temperament()),
   };
 }
+
+/** A commander that raises nothing and never watches: for probes and suites that stage by hand. */
+export const idleCommander: Commander = {
+  horn: () => ({ intent: 'line', tithe: false, squads: [] }),
+  watch: () => ({ early: false, fire: false }),
+};
 
 export const RivalKey: InjectionKey<Commander> = Symbol('tug/rival') as InjectionKey<Commander>;
 
@@ -186,7 +278,7 @@ export function createRivalModule(): EngineModule {
       const keep = ctx.inject(KeepKeys.rival);
       ctx.provide(
         RivalKey,
-        createCommander(keep, causeway, () => lordAt(chronicle.rung.value).temperament),
+        createCommander(keep, causeway, () => chronicle.lord.value.temperament),
       );
     },
   };

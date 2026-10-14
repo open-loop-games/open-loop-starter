@@ -3,14 +3,17 @@
   and the rival's on the right. Every member is a stitched figure in its keep's dye, walking
   in one of the three files; a figure that strikes or is struck flashes undyed. The ramparts'
   reach shades the road near each gate, where cover is strongest, and fades to nothing at the
-  middle. A gold stitch marks where the two fronts meet.
+  middle. A gold stitch marks where the two fronts meet. The field's own ground is worked into
+  the road: a ford as a band of water that slows every man, stakes as a palisade no knight
+  charges through. A lord's champion is stitched larger, with its name over it.
 
   The causeway step mutates its member list raw, so this reads `version` to know the figures
   moved, and positions each by transform alone: a member row is the strip's full width, so a
   percentage translate is a percentage of the road.
 
   Costume classes: `.causeway-field`, `.cf-member`, `.cf-member--player|rival`, `.cf-line`,
-  `.cf-gate`, `.cf-reach`, `.last-week`.
+  `.cf-gate`, `.cf-reach`, `.cf-band--ford|stakes`, `.champion`, `.cf-champion-name`,
+  `.last-week`.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -32,6 +35,7 @@ interface Figure {
   file: number;
   struck: boolean;
   worn: number;
+  name?: string;
 }
 
 const figures = computed<Figure[]>(() => {
@@ -46,8 +50,18 @@ const figures = computed<Figure[]>(() => {
       file: m.file,
       struck: m.hitAgo < 0.3,
       worn: m.maxHp > 0 ? m.hp / m.maxHp : 1,
+      name: m.name,
     }));
 });
+
+const bands = computed(() =>
+  causeway.bands().map((b, i) => ({
+    key: `${b.kind}-${i}`,
+    kind: b.kind,
+    left: (b.from / L) * 100,
+    width: ((b.to - b.from) / L) * 100,
+  })),
+);
 
 const line = computed(() => {
   void causeway.version.value;
@@ -76,6 +90,18 @@ const big = (t: TroopId) => troop(t).breaksWalls === true;
         title="The ramparts' reach: under our walls, a yeoman is worth three"
       ></div>
       <div class="cf-reach cf-reach--rival"></div>
+      <div
+        v-for="b in bands"
+        :key="b.key"
+        class="cf-band"
+        :class="`cf-band--${b.kind}`"
+        :style="{ left: `${b.left}%`, width: `${b.width}%` }"
+        :title="
+          b.kind === 'ford' ? 'A ford: every man wades slower' : 'Stakes: no knight charges here'
+        "
+      >
+        <span class="cf-band-label">{{ b.kind === 'ford' ? 'ford' : 'stakes' }}</span>
+      </div>
       <div class="cf-midline"></div>
 
       <div
@@ -85,13 +111,14 @@ const big = (t: TroopId) => troop(t).breaksWalls === true;
         :class="[
           `cf-member--${f.side}`,
           `cf-file-${f.file}`,
-          { struck: f.struck, big: big(f.troop) },
+          { struck: f.struck, big: big(f.troop), champion: !!f.name },
         ]"
         :style="{ transform: `translate3d(${f.x}%, 0, 0)` }"
       >
         <span class="cf-figure" :style="{ opacity: 0.45 + 0.55 * f.worn }">
           <TroopGlyph :troop="f.troop" />
         </span>
+        <span v-if="f.name" class="cf-champion-name">{{ f.name }}</span>
       </div>
 
       <div
@@ -256,6 +283,61 @@ const big = (t: TroopId) => troop(t).breaksWalls === true;
 }
 .cf-member--rival.struck .cf-figure {
   color: #f0c4b8;
+}
+
+/* The field's ground, worked under the figures: a ford's water, a palisade of stakes. */
+.cf-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+.cf-band--ford {
+  background:
+    repeating-linear-gradient(172deg, rgba(150, 190, 200, 0.16) 0 2px, transparent 2px 9px),
+    linear-gradient(180deg, rgba(56, 84, 92, 0.55), rgba(42, 66, 74, 0.7));
+  border-left: 1px solid rgba(150, 190, 200, 0.25);
+  border-right: 1px solid rgba(150, 190, 200, 0.25);
+}
+.cf-band--stakes {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 9px, rgba(120, 92, 58, 0.55) 9px 11px),
+    repeating-linear-gradient(0deg, transparent 0 17px, rgba(150, 118, 76, 0.4) 17px 19px);
+  border-left: 1px dashed rgba(160, 139, 98, 0.45);
+  border-right: 1px dashed rgba(160, 139, 98, 0.45);
+}
+.cf-band-label {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  font-family: var(--cw-caps);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: rgba(221, 209, 182, 0.55);
+}
+
+/* A champion: one big figure, its name stitched over it. */
+.champion .cf-figure {
+  left: -19px;
+  top: -26px;
+  width: 38px;
+  height: 42px;
+  filter: drop-shadow(0 0 4px rgba(220, 174, 74, 0.45));
+}
+.cf-champion-name {
+  position: absolute;
+  top: -42px;
+  left: 0;
+  transform: translateX(-50%);
+  padding: 0 5px;
+  white-space: nowrap;
+  font-family: var(--cw-hand);
+  font-style: italic;
+  font-size: 13px;
+  color: #f0c4b8;
+  background: rgba(28, 24, 19, 0.85);
+  border: 1px solid rgba(189, 79, 60, 0.5);
 }
 
 /* The line: a gold stitch where the fronts meet. */

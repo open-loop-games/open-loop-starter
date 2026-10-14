@@ -13,6 +13,7 @@
  */
 
 import { ANCHORS, TROOPS, predictClash, releaseBudget, troop, type TroopId } from '../data';
+import { idleCommander } from '../modules';
 import { buildGame, openAll, perturb, DT } from './_marshal';
 
 function clash(a: TroopId, sa: number, b: TroopId, sb: number) {
@@ -20,8 +21,8 @@ function clash(a: TroopId, sa: number, b: TroopId, sb: number) {
   perturb(g, { 'ladder/rungGrowth': 1, 'cover/atGate': 1, 'season/seconds': 1e9 });
   g.chronicle.rung.value = 1;
   openAll(g);
-  g.battle.commanders.player = () => ({ intent: 'line', tithe: false, squads: [] });
-  g.battle.commanders.rival = () => ({ intent: 'line', tithe: false, squads: [] });
+  g.battle.commanders.player = idleCommander;
+  g.battle.commanders.rival = idleCommander;
   g.battle.start('player');
   g.causeway.stage('player', a, sa);
   g.causeway.stage('rival', b, sb);

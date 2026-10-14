@@ -11,6 +11,7 @@ import {
   Decimal,
   Formula,
   persistent,
+  random,
   toNumber,
   tunable,
   type ComputedRef,
@@ -22,7 +23,23 @@ import {
   type Resource,
   type Skill,
 } from '@open-loop/engine';
-import { ANCHORS, BOONS, lordAt, renownFor, rivalScale, type BoonDef } from '../data';
+import {
+  ANCHORS,
+  BOONS,
+  FIELDS,
+  NO_TWIST,
+  TWISTS,
+  fieldAt,
+  lordAt,
+  renownFor,
+  rivalScale,
+  twistById,
+  type BoonDef,
+  type FieldDef,
+  type LordDef,
+  type TwistDef,
+  type WeaponKind,
+} from '../data';
 import { SIDES, type Side } from './sides';
 import { TugTuningRegistryKey } from './tuning';
 
@@ -36,10 +53,20 @@ export interface SideChains {
   gate: ModifierChain;
 }
 
+/** A skirmish the player sets after the ending: a field, a twist and a lord, for no renown. */
+export interface Skirmish {
+  /** Index into the march's fields; the lord's men stand as strong as on that field. */
+  field: number;
+  twist: string;
+  /** Index into the ladder of lords: whose temperament and walls. */
+  lord: number;
+}
+
 /** One battle's entry in the Chronicle. */
 export interface BattleRecord {
   won: boolean;
   rung: number;
+  field: string;
   lord: string;
   seconds: number;
   renown: number;
@@ -47,6 +74,10 @@ export interface BattleRecord {
   volumeAfter: number;
   /** True on the one battle that took the last keep. */
   ending: boolean;
+  /** A skirmish: it paid nothing and moved nothing. */
+  skirmish: boolean;
+  /** A gate fell; otherwise the season closed on the tiebreak. */
+  byBreach: boolean;
 }
 
 export interface ChronicleApi {
@@ -55,8 +86,18 @@ export interface ChronicleApi {
   volume: ComputedRef<number>;
   boonPoints: Resource;
   boons: PurchasableCategory<BoonDef>;
-  /** Lords beaten: the scaled-opposition index. */
+  /** Fields taken on the march: the scaled-opposition index. */
   rung: Persistent<number>;
+  /** The field the next battle is fought on, and its lord. */
+  field: ComputedRef<FieldDef>;
+  lord: ComputedRef<LordDef>;
+  /** The twist drawn for the next battle, shown in camp. */
+  twist: ComputedRef<TwistDef>;
+  twistId: Persistent<string>;
+  /** The weapon kind Fairhold mounts on its walls this battle, chosen in camp. */
+  mounted: Persistent<WeaponKind | null>;
+  /** The skirmish set for the next battle, or null for the march. Open once the ending is reached. */
+  skirmish: Persistent<Skirmish | null>;
   battles: Persistent<number>;
   victories: Persistent<number>;
   /** Set once, when the last keep falls. */
@@ -69,7 +110,13 @@ export interface ChronicleApi {
   rungGrowth: ComputedRef<number>;
   level(boon: string): number;
   /** Writes a finished battle into the Chronicle and moves the ladder. */
-  record(won: boolean, seconds: number): BattleRecord;
+  record(won: boolean, seconds: number, byBreach?: boolean): BattleRecord;
+}
+
+/** The lord holding a rung's field; past the march, the Usurper's heirs, one a keep. */
+export function lordOf(rung: number): LordDef {
+  if (rung < ANCHORS.rungs) return lordAt(fieldAt(rung).lord);
+  return lordAt(5 + rung - ANCHORS.rungs);
 }
 
 export const ChronicleKey: InjectionKey<ChronicleApi> = Symbol(
@@ -95,6 +142,7 @@ export function createChronicleModule(): EngineModule {
     install(ctx) {
       const tuning = ctx.inject(TugTuningRegistryKey);
       const rungGrowth = tunable(tuning, 'ladder/rungGrowth', () => ANCHORS.rungGrowth);
+      const perField = tunable(tuning, 'ladder/boonsPerField', () => ANCHORS.boonsPerField);
 
       const chains = Object.fromEntries(
         SIDES.map((side) => [
@@ -122,6 +170,18 @@ export function createChronicleModule(): EngineModule {
       const volume = computed(() => toNumber(renown.level.value));
 
       const rung = persistent(0, { id: 'rung' });
+      const skirmish = persistent<Skirmish | null>(null, { id: 'skirmish' });
+      const field = computed(() =>
+        skirmish.value ? FIELDS[skirmish.value.field]! : fieldAt(rung.value),
+      );
+      const lord = computed(() =>
+        skirmish.value ? lordAt(skirmish.value.lord) : lordOf(rung.value),
+      );
+      const twistId = persistent<string>(NO_TWIST.id, { id: 'twist' });
+      const twist = computed(() => twistById(skirmish.value?.twist ?? twistId.value));
+      /** The rung the lord's men are scaled at: a skirmish's field, or the march's. */
+      const strengthRung = () => skirmish.value?.field ?? rung.value;
+      const mounted = persistent<WeaponKind | null>(null, { id: 'mounted' });
       const battles = persistent(0, { id: 'battles' });
       const victories = persistent(0, { id: 'victories' });
       const endingReached = persistent(false, { id: 'ending-reached' });
@@ -141,6 +201,9 @@ export function createChronicleModule(): EngineModule {
             }),
           ],
           limit: def.limit,
+          onPurchase: () => {
+            if (!def.chain && mounted.value === null) mounted.value = def.id as WeaponKind;
+          },
           grants: def.chain
             ? [
                 {
@@ -163,18 +226,48 @@ export function createChronicleModule(): EngineModule {
         return toNumber(boons.getPurchasable(id)?.count.value ?? 0);
       }
 
-      // Scaled opposition: the rival's whole harvest is evaluated over the rung. One strength
-      // boon level grows by the same factor, so a boon a rung keeps pace (spine).
-      chains.rival.income.bind({
-        text: 'Rival rung',
+      // Scaled opposition: the lord's men grow in grit and blows by the field. Under a full
+      // muster a harvest buys little, so the rung binds into vigor (spine § Scaled opposition).
+      chains.rival.vigor.bind({
+        text: 'Rival field',
         modifier: createMultiplicativeModifier({
-          multiplier: () => rivalScale(rung.value, rungGrowth.value),
-          description: () => `${lordAt(rung.value).name} (rung ${rung.value + 1})`,
+          multiplier: () => rivalScale(strengthRung(), rungGrowth.value, perField.value),
+          description: () => `${lordOf(rung.value).name} (field ${rung.value + 1})`,
         }),
       });
 
-      function record(won: boolean, seconds: number): BattleRecord {
+      /** The next battle's twist: none on a calm field, never the same twice running. */
+      function drawTwist(): void {
+        if (field.value.calm) {
+          twistId.value = NO_TWIST.id;
+          return;
+        }
+        const pool = TWISTS.filter((t) => t.id !== twistId.value);
+        twistId.value = pool[Math.floor(random() * pool.length)]!.id;
+      }
+
+      function record(won: boolean, seconds: number, byBreach = true): BattleRecord {
+        if (skirmish.value) {
+          battles.value++;
+          const entry: BattleRecord = {
+            won,
+            rung: skirmish.value.field,
+            field: field.value.name,
+            lord: lord.value.name,
+            seconds,
+            renown: 0,
+            volumeBefore: volume.value,
+            volumeAfter: volume.value,
+            ending: false,
+            byBreach,
+            skirmish: true,
+          };
+          last.value = entry;
+          return entry;
+        }
         const r = rung.value;
+        const fieldName = field.value.name;
+        const lordName = lord.value.name;
         const gained = renownFor(r, won);
         const volumeBefore = volume.value;
         renown.addXp(gained);
@@ -191,14 +284,18 @@ export function createChronicleModule(): EngineModule {
         const entry: BattleRecord = {
           won,
           rung: r,
-          lord: lordAt(r).name,
+          field: fieldName,
+          lord: lordName,
           seconds,
           renown: gained,
           volumeBefore,
           volumeAfter: volume.value,
           ending,
+          byBreach,
+          skirmish: false,
         };
         last.value = entry;
+        drawTwist();
         return entry;
       }
 
@@ -208,6 +305,12 @@ export function createChronicleModule(): EngineModule {
         boonPoints,
         boons,
         rung,
+        field,
+        lord,
+        twist,
+        twistId,
+        mounted,
+        skirmish,
         battles,
         victories,
         endingReached,
