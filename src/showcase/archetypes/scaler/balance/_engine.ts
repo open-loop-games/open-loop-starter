@@ -2,26 +2,30 @@
  * Shared probe fixture, not runnable on its own. Builds a real scaler engine and
  * plays the arc on it under the reference player.
  *
- * The reference player works only what a player works by hand: it recruits by
- * the Dispatch Desk's own policy until the desk is hired, buys the Legacy shop in
- * price order and Hero Training whenever affordable, the Continuity shop the same
- * way with Mythic Standing, reboots at the spine's share until the Succession
- * Plan takes over, rewrites the moment Continuity is pending, and enters the next
- * open Elseworld at the start of a timeline once output is back at the multiplier
- * Elseworld goals are sized at. From then on the shipping automation in
- * `../modules/automation.ts` plays (`/work/studio/CLAUDE.md` § automation as game
- * code).
+ * The reference player works only what a player works by hand, by the shipping
+ * policies in `../modules/automation.ts`, until each piece of automation takes
+ * its job over (`/work/studio/CLAUDE.md` § automation as game code):
+ *   - recruits by the Dispatch Desk's policy until the desk is hired;
+ *   - spends Legacy by the Liaison's rule and Continuity by the Monitor's until
+ *     each is bought, and Canon by the same rule always;
+ *   - reboots at the spine's share until the Succession Plan takes over, rewrites
+ *     at the spine's share until the Crossover Event does, and turns the Age the
+ *     moment Canon is pending;
+ *   - enters the spine's next scheduled Elseworld tier at the start of a timeline
+ *     once its slot has come and output without Hope is back at the multiplier
+ *     the goal is sized at, and abandons one it has not resolved in ten minutes.
  *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list for
  * tick-by-tick behavioral specs; this assembles an instrumented arc runner that
  * records beats and reads magnitudes.
  */
 
-import { Decimal, type DecimalSource } from '@open-loop/engine';
+import { Decimal, type DecimalSource, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
   AutomationKey,
+  CanonKey,
   ContinuityKey,
   CoreKey,
   LegacyKey,
@@ -30,7 +34,9 @@ import {
   RunKey,
   createScalerModules,
   shouldReboot,
+  shouldRewrite,
   type AutomationApi,
+  type CanonApi,
   type ContinuityApi,
   type CoreApi,
   type LegacyApi,
@@ -38,7 +44,7 @@ import {
   type PrestigeApi,
   type RunApi,
 } from '../modules';
-import { ANCHORS, CONTINUITY_PRICES, ELSEWORLD_MU, LEGACY_PRICES, TIERS } from '../data';
+import { ANCHORS, ELSEWORLD_SCHEDULE, NETWORK, PREDICTION, TIERS, type ElseworldId } from '../data';
 
 /** Sim seconds per runner step. */
 export const DT = 0.5;
@@ -59,37 +65,59 @@ export interface RebootRow {
   at: number;
   /** Seconds this timeline ran. */
   run: number;
-  /** Legacy earned since the last Rewrite after it, or -1 when the step was a Rewrite. */
-  earned: number;
-  /** Output multiplier during the timeline. */
-  mult: number;
 }
 
 export interface RewriteRow {
+  n: number;
   at: number;
-  /** Seconds since the previous Rewrite. */
+  /** Seconds since the previous Rewrite or Age. */
   cycle: number;
   gain: number;
 }
+
+export interface AgeRow {
+  n: number;
+  at: number;
+  /** Seconds since the previous Age. */
+  age: number;
+  gain: number;
+}
+
+export interface ElseworldRow {
+  id: ElseworldId;
+  tier: number;
+  entered: number;
+  resolved?: number;
+}
+
+/**
+ * The output multiplier now, without Hope: the spine sizes a goal on the walk's
+ * output, which leaves Hope to the timeline's τ, and Dark Days takes it away.
+ */
+const outputOf = (core: CoreApi, run: RunApi) =>
+  num(core.output.apply(1)) / num(Decimal.add(1, run.hope.value).pow(NETWORK.power));
 
 export interface ArcResult {
   beats: Beat[];
   /** Seconds into the first timeline at which each tier opened. */
   firstRunOpens: (number | undefined)[];
-  /** Seconds into the second timeline at which each tier opened. */
-  secondRunOpens: (number | undefined)[];
   /** Units of the tier below held when each tier opened, first timeline. */
   heldAtOpen: number[];
   reboots: RebootRow[];
   rewrites: RewriteRow[];
+  ages: AgeRow[];
+  elseworlds: ElseworldRow[];
   anomalies: string[];
   core: CoreApi;
   run: RunApi;
   legacy: LegacyApi;
   continuity: ContinuityApi;
+  canon: CanonApi;
   prestige: PrestigeApi;
   legends: LegendsApi;
   automation: AutomationApi;
+  /** The engine the arc ran on, for a probe that plays on past it. */
+  engine: Engine;
   dispose(): void;
 }
 
@@ -104,119 +132,146 @@ export function runArc(seconds: number): ArcResult {
   const run = handle.engine.tryInject(RunKey)!;
   const legacy = handle.engine.tryInject(LegacyKey)!;
   const continuity = handle.engine.tryInject(ContinuityKey)!;
+  const canon = handle.engine.tryInject(CanonKey)!;
   const prestige = handle.engine.tryInject(PrestigeKey)!;
   const legends = handle.engine.tryInject(LegendsKey)!;
   const automation = handle.engine.tryInject(AutomationKey)!;
   const t = () => core.playSeconds.value;
-  const output = () => num(core.output.apply(1));
 
   const beats: Beat[] = [];
-  const beat = (text: string) => beats.push({ at: t(), text });
-  let elseworldEnteredAt = 0;
+  const elseworlds: ElseworldRow[] = [];
+  let entered: ElseworldRow | undefined;
+  /** Completions the entered Elseworld resolves at. */
+  let resolvedAt = 0;
 
   function playerTurn() {
-    if (!automation.ladder.isUnlocked('dispatch')) automation.recruitBest();
-    for (const id of Object.keys(LEGACY_PRICES) as (keyof typeof LEGACY_PRICES)[]) {
-      const up = legacy.upgrade(id);
-      if (!up.active.value && up.canPurchase.value) up.purchase(1);
-    }
-    while (legacy.upgrade('training').canPurchase.value) legacy.upgrade('training').purchase(1);
-    for (const id of Object.keys(CONTINUITY_PRICES) as (keyof typeof CONTINUITY_PRICES)[]) {
-      const up = continuity.upgrade(id);
-      if (!up.active.value && up.canPurchase.value) up.purchase(1);
-    }
-    while (continuity.upgrade('mythic').canPurchase.value) continuity.upgrade('mythic').purchase(1);
+    const ladder = automation.ladder;
+    const has = (tier: 'dispatch' | 'succession' | 'liaison' | 'crossover' | 'monitor') =>
+      ladder.isUnlocked(tier);
+    if (!(has('dispatch') && legacy.upgrade('dispatch').active.value)) automation.recruitBest();
+    if (!has('liaison')) automation.spendLegacy();
+    if (!has('monitor')) automation.spendContinuity();
+    automation.spendCanon();
 
-    const elseworlds = prestige.elseworlds;
-    if (elseworlds.current.value && t() - elseworldEnteredAt > ELSEWORLD_TIMEOUT_S) {
+    const current = prestige.elseworlds.current.value;
+    if (current && entered && t() - entered.entered > ELSEWORLD_TIMEOUT_S) {
       prestige.abandonElseworld();
+      entered = undefined;
     }
-    if (Decimal.gte(prestige.pendingContinuity.value, 1) && !elseworlds.current.value) {
-      prestige.rewrite();
+    const inElseworld = prestige.elseworlds.current.value !== null;
+
+    if (!inElseworld && Decimal.gte(prestige.pendingCanon.value, 1)) {
+      prestige.turnAge();
       return;
     }
-    if (!automation.ladder.isUnlocked('succession')) {
-      const state = {
-        pendingLegacy: num(prestige.pendingLegacy.value),
-        legacyEarned: num(legacy.legacyEarned.value),
-        inElseworld: elseworlds.current.value !== null,
-      };
-      if (shouldReboot(state, { share: ANCHORS.rebootFraction })) prestige.reboot();
+    if (!has('crossover')) {
+      const rewriteNow = shouldRewrite(
+        {
+          pendingContinuity: num(prestige.pendingContinuity.value),
+          continuityEarned: num(continuity.continuityEarned.value),
+          inElseworld,
+        },
+        { share: ANCHORS.rewriteFraction },
+      );
+      if (rewriteNow) {
+        prestige.rewrite();
+        return;
+      }
     }
-    // A fresh timeline with Elseworlds open and one unresolved: take it on, once
-    // output is back to the multiplier the goals are sized at, never with
-    // Continuity pending.
-    const ready = output() >= ELSEWORLD_MU && Decimal.lt(prestige.pendingContinuity.value, 1);
-    if (ready && !elseworlds.current.value && run.runSeconds.value < 1) {
-      const open = elseworlds
-        .getAll()
-        .find((e) => e.challenge.canEnter.value && !e.challenge.completed.value);
-      if (open && prestige.enterElseworld(open.def.id)) elseworldEnteredAt = t();
+    if (!has('succession')) {
+      const rebootNow = shouldReboot(
+        {
+          pendingLegacy: num(prestige.pendingLegacy.value),
+          legacyEarned: num(legacy.legacyEarned.value),
+          inElseworld,
+          runSeconds: run.runSeconds.value,
+        },
+        { share: ANCHORS.rebootFraction, interval: 0 },
+      );
+      if (rebootNow) prestige.reboot();
+    }
+    // A fresh timeline with the next scheduled slot come, its Elseworld open and
+    // output back at the multiplier its goal is sized at: take it on.
+    const next = ELSEWORLD_SCHEDULE[elseworlds.length];
+    const slot = PREDICTION.walk.slots[elseworlds.length];
+    const slotAt = ANCHORS.elseworldFirstS + elseworlds.length * ANCHORS.elseworldGapS;
+    const strong = slot !== undefined && outputOf(core, run) >= slot.mu;
+    if (
+      next &&
+      strong &&
+      !prestige.elseworlds.current.value &&
+      run.runSeconds.value < 1 &&
+      t() >= slotAt
+    ) {
+      const challenge = prestige.elseworlds.getChallenge(next)!;
+      const tier = challenge.completions.value + 1;
+      if (challenge.canEnter.value && prestige.enterElseworld(next)) {
+        entered = { id: next, tier, entered: t() };
+        elseworlds.push(entered);
+        resolvedAt = tier;
+      }
     }
   }
 
-  const tierSeen = new Set<string>();
   const firstRunOpens: (number | undefined)[] = [];
-  const secondRunOpens: (number | undefined)[] = [];
   const heldAtOpen: number[] = [];
   const reboots: RebootRow[] = [];
   const rewrites: RewriteRow[] = [];
+  const ages: AgeRow[] = [];
   const anomalies: string[] = [];
-  let firstPurchase: number | undefined;
   let lastRebootAt = 0;
   let lastRewriteAt = 0;
+  let lastAgeAt = 0;
   let lastSeq = 0;
-  let stuckSince = 0;
-  let lastRate = 0;
 
   while (t() < seconds) {
     const rebootsBefore = core.reboots.value;
     const rewritesBefore = core.rewrites.value;
+    const agesBefore = core.ages.value;
     const continuityBefore = num(continuity.continuity.cumulative!.value);
-    const multBefore = output();
+    const canonBefore = num(canon.canon.cumulative!.value);
     playerTurn();
     handle.engine.tickDriver.advanceTime(DT);
 
-    for (const { def, producer } of run.heroes.getAll()) {
-      const owned = num(producer.ownedCount.value);
-      if (owned > 0 && firstPurchase === undefined) {
-        firstPurchase = t();
-        beat(`first purchase (${def.displayName})`);
-      }
-      const timeline = core.reboots.value;
-      const key = `${timeline}:${def.id}`;
-      if (owned > 0 && !tierSeen.has(key)) {
-        tierSeen.add(key);
-        const sinceRun = run.runSeconds.value;
-        if (timeline === 0) {
-          firstRunOpens[def.tier - 1] = sinceRun;
+    if (core.reboots.value === 0) {
+      for (const { def, producer } of run.heroes.getAll()) {
+        if (num(producer.ownedCount.value) > 0 && firstRunOpens[def.tier - 1] === undefined) {
+          firstRunOpens[def.tier - 1] = run.runSeconds.value;
           if (def.tier > 1) {
             const below = run.heroes.getAll()[def.tier - 2].producer;
             heldAtOpen[def.tier - 2] = num(below.ownedCount.value);
           }
-          beat(`tier ${def.tier} opened: ${def.displayName}`);
         }
-        if (timeline === 1 && core.rewrites.value === 0) secondRunOpens[def.tier - 1] = sinceRun;
       }
     }
-
+    if (entered && entered.resolved === undefined) {
+      const done = prestige.elseworlds.getChallenge(entered.id)!.completions.value;
+      if (done >= resolvedAt) entered.resolved = t();
+    }
     if (core.reboots.value !== rebootsBefore) {
-      reboots.push({
-        n: core.reboots.value,
-        at: t(),
-        run: t() - lastRebootAt,
-        earned: core.rewrites.value !== rewritesBefore ? -1 : num(legacy.legacyEarned.value),
-        mult: multBefore,
-      });
+      reboots.push({ n: core.reboots.value, at: t(), run: t() - lastRebootAt });
       lastRebootAt = t();
     }
     if (core.rewrites.value !== rewritesBefore) {
       rewrites.push({
+        n: core.rewrites.value,
         at: t(),
         cycle: t() - lastRewriteAt,
         gain: num(continuity.continuity.cumulative!.value) - continuityBefore,
       });
       lastRewriteAt = t();
+      lastRebootAt = t();
+    }
+    if (core.ages.value !== agesBefore) {
+      ages.push({
+        n: core.ages.value,
+        at: t(),
+        age: t() - lastAgeAt,
+        gain: num(canon.canon.cumulative!.value) - canonBefore,
+      });
+      lastAgeAt = t();
+      lastRewriteAt = t();
+      lastRebootAt = t();
     }
 
     for (const l of core.scanner.value) if (l.seq > lastSeq) beats.push({ at: t(), text: l.text });
@@ -228,30 +283,30 @@ export function runArc(seconds: number): ArcResult {
       anomalies.push(`t=${t().toFixed(0)} non-finite justice/rate: ${justice} / ${rate}`);
       break;
     }
-    if (rate <= lastRate && Decimal.lt(prestige.pendingLegacy.value, 1)) {
-      if (t() - stuckSince > 900) {
-        anomalies.push(`t=${t().toFixed(0)} rate flat for 15 min with nothing pending`);
-        stuckSince = t();
-      }
-    } else stuckSince = t();
-    lastRate = rate;
+    if (t() - lastRebootAt > 1800) {
+      anomalies.push(`t=${t().toFixed(0)} no Reboot for 30 min`);
+      lastRebootAt = t();
+    }
   }
 
   return {
     beats,
     firstRunOpens,
-    secondRunOpens,
     heldAtOpen,
     reboots,
     rewrites,
+    ages,
+    elseworlds,
     anomalies,
     core,
     run,
     legacy,
     continuity,
+    canon,
     prestige,
     legends,
     automation,
+    engine: handle.engine,
     dispose: handle.dispose,
   };
 }

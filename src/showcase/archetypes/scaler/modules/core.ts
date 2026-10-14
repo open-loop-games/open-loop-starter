@@ -12,12 +12,14 @@ import {
 /**
  * What no reset reaches: the modifier chains every layer binds into, the clocks,
  * the prestige counts and the police scanner. The masthead reads the counts as a
- * comic: the Rewrite count is the volume, the Reboot count the issue.
+ * comic: the Age count names the age, the Rewrite count is the volume, the
+ * Reboot count the issue.
  */
 
 export type ScannerKind =
   | 'reboot'
   | 'rewrite'
+  | 'age'
   | 'elseworld-enter'
   | 'elseworld-complete'
   | 'elseworld-abandon'
@@ -48,10 +50,20 @@ export interface CoreApi {
   legacyGain: ModifierChain;
   /** Where the Legacy multiplier bends: Secret Identity's reward moves it. */
   knee: ModifierChain;
+  /** Continuity per Rewrite: Myth, Canon. */
+  continuityGain: ModifierChain;
+  /** How fast the Network makes Hope: Echoes, Dark Days. */
+  hopeSpeed: ModifierChain;
+  /** How fast the Earths make Echoes: Myth, Lost Earth's reward. */
+  echoSpeed: ModifierChain;
+  /** How much Echoes count for: Lost Earth's rule silences them. */
+  echoPotency: ModifierChain;
   /** Seconds of play since the save began. */
   playSeconds: Persistent<number>;
   reboots: Persistent<number>;
   rewrites: Persistent<number>;
+  /** Turns of the Age. */
+  ages: Persistent<number>;
   /** The scanner's recent lines, oldest first. Session state, not saved. */
   scanner: ShallowRef<ScannerLine[]>;
   /** Put a line on the scanner. */
@@ -75,6 +87,7 @@ export function createCoreModule(): EngineModule {
       const playSeconds = persistent<number>(0, { id: 'play-seconds' });
       const reboots = persistent<number>(0, { id: 'reboots' });
       const rewrites = persistent<number>(0, { id: 'rewrites' });
+      const ages = persistent<number>(0, { id: 'ages' });
       ctx.onTick((dt) => {
         playSeconds.value += dt;
       });
@@ -95,9 +108,14 @@ export function createCoreModule(): EngineModule {
         priceRatio: createModifierChain('price-ratio'),
         legacyGain: createModifierChain('legacy-gain'),
         knee: createModifierChain('legacy-knee'),
+        continuityGain: createModifierChain('continuity-gain'),
+        hopeSpeed: createModifierChain('hope-speed'),
+        echoSpeed: createModifierChain('echo-speed'),
+        echoPotency: createModifierChain('echo-potency'),
         playSeconds,
         reboots,
         rewrites,
+        ages,
         scanner,
         log,
       };

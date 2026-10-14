@@ -16,6 +16,7 @@
  *   cape red        new, or under a worse rule;
  *   steel blue      automation is doing it;
  *   orbit teal      Continuity, the second layer;
+ *   foil violet     Canon, the third layer: a foil variant cover;
  *   dashed ink      not yet.
  *
  * Faces: Kenney Thick for the masthead and Kenney Bold for captions and numbers
@@ -47,6 +48,7 @@
   --cape: #e0473e;
   --steel: #7397c4;
   --orbit: #84d2cb;
+  --foil: #b9a2f0;
 
   --halftone: radial-gradient(circle, rgba(230, 223, 202, 0.07) 1px, transparent 1.6px);
   --halftone-ink: radial-gradient(circle, rgba(4, 6, 12, 0.35) 1.1px, transparent 1.7px);
@@ -135,6 +137,9 @@
 .paragon .caption.orbit {
   background: var(--orbit);
 }
+.paragon .caption.foil {
+  background: var(--foil);
+}
 .paragon .lede {
   margin: 8px 0 14px;
   color: var(--newsprint-dim);
@@ -166,6 +171,9 @@
 }
 .paragon .act.orbit {
   background: var(--orbit);
+}
+.paragon .act.foil {
+  background: var(--foil);
 }
 .paragon .act.ghost {
   background: var(--night-raised);
@@ -219,6 +227,9 @@
 }
 .paragon .meter.orbit {
   --progress-bar-fill: var(--orbit);
+}
+.paragon .meter.foil {
+  --progress-bar-fill: var(--foil);
 }
 
 .paragon .stamp {

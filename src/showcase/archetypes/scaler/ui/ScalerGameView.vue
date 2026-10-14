@@ -6,17 +6,30 @@
   Shell: SidebarMainShell, the prestige-idle majority
   (`open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`): the
   prestige cards and the scanner in the sidebar, the tabs over the main panel.
-  A tab appears as its layer opens and carries a dot until it is read.
+  A tab appears as its layer opens and carries a dot until it is read; each
+  layer's tab holds its shop over its chain.
 -->
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue';
 import { Decimal, type Engine } from '@open-loop/engine';
+import { ANCHORS } from '../data';
 import { SidebarMainShell } from '@/lib';
 import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
-import { getAutomation, getContinuity, getCore, getLegacy, getPrestige, getRun } from '../modules';
+import {
+  getAutomation,
+  getCanon,
+  getContinuity,
+  getCore,
+  getLegacy,
+  getPrestige,
+  getRun,
+  shouldReboot,
+  shouldRewrite,
+} from '../modules';
 import Masthead from './components/Masthead.vue';
 import CorpsPanel from './components/CorpsPanel.vue';
 import ShopPanel from './components/ShopPanel.vue';
+import ChainPanel from './components/ChainPanel.vue';
 import ElseworldsPanel from './components/ElseworldsPanel.vue';
 import PrestigeCards from './components/PrestigeCards.vue';
 import ScannerPanel from './components/ScannerPanel.vue';
@@ -25,37 +38,46 @@ const core = getCore();
 const prestige = getPrestige();
 
 // Dev-only hook for the screenshot loop: a stable handle on the modules, and a
-// skip that plays forward in half-second steps, buying both shops in price
-// order and taking a pending Rewrite. Read through the hook, not a live
-// `import()` that Vite's module cache could serve stale.
+// skip that plays forward in half-second steps as the reference player does:
+// the shipping policies by hand, Reboots and Rewrites at the spine's shares, and
+// an Age the moment it pays.
+// Read through the hook, not a live `import()` that Vite's module cache could
+// serve stale.
 if (import.meta.env.DEV) {
   const engine = inject<Engine>('engine')!;
   const legacy = getLegacy();
-  const continuity = getContinuity();
-  const buyAll = (shop: {
-    getAll(): { purchasable: { canPurchase: { value: boolean }; purchase(n: number): unknown } }[];
-  }) => shop.getAll().forEach((e) => e.purchasable.canPurchase.value && e.purchasable.purchase(1));
+  const automation = getAutomation();
   (window as unknown as Record<string, unknown>).__paragon = {
     engine,
     core,
     run: getRun(),
     legacy,
-    continuity,
+    continuity: getContinuity(),
+    canon: getCanon(),
     prestige,
-    automation: getAutomation(),
+    automation,
     skip: (seconds: number) => {
       for (let t = 0; t < seconds; t += 0.5) {
         engine.tickDriver.advanceTime(0.5);
-        if (!getAutomation().ladder.isUnlocked('dispatch')) getAutomation().recruitBest();
-        buyAll(legacy.shop);
-        buyAll(continuity.shop);
-        if (Decimal.gte(prestige.pendingContinuity.value, 1)) prestige.rewrite();
-        else if (
-          Decimal.gte(
-            prestige.pendingLegacy.value,
-            Math.max(1, 0.5 * legacy.legacyEarned.value.toNumber()),
-          )
-        ) {
+        automation.recruitBest();
+        automation.spendLegacy();
+        automation.spendContinuity();
+        automation.spendCanon();
+        const inElseworld = prestige.elseworlds.current.value !== null;
+        const rewrite = {
+          pendingContinuity: prestige.pendingContinuity.value.toNumber(),
+          continuityEarned: getContinuity().continuityEarned.value.toNumber(),
+          inElseworld,
+        };
+        const reboot = {
+          pendingLegacy: prestige.pendingLegacy.value.toNumber(),
+          legacyEarned: legacy.legacyEarned.value.toNumber(),
+          inElseworld,
+          runSeconds: getRun().runSeconds.value,
+        };
+        if (Decimal.gte(prestige.pendingCanon.value, 1)) prestige.turnAge();
+        else if (shouldRewrite(rewrite, { share: ANCHORS.rewriteFraction })) prestige.rewrite();
+        else if (shouldReboot(reboot, { share: ANCHORS.rebootFraction, interval: 0 })) {
           prestige.reboot();
         }
       }
@@ -80,7 +102,15 @@ const tabs = computed<(TabItem & { open: boolean })[]>(() => [
   {
     value: 'continuity',
     label: 'Continuity',
-    open: core.rewrites.value > 0 || Decimal.gte(prestige.pendingContinuity.value, 1),
+    open:
+      core.rewrites.value > 0 ||
+      core.ages.value > 0 ||
+      Decimal.gte(prestige.pendingContinuity.value, 1),
+  },
+  {
+    value: 'canon',
+    label: 'Canon',
+    open: core.ages.value > 0 || Decimal.gte(prestige.pendingCanon.value, 1),
   },
 ]);
 const openTabs = computed(() => tabs.value.filter((t) => t.open));
@@ -105,9 +135,16 @@ function select(value: string) {
           {{ tab.label }}<span v-if="!seen.has(tab.value)" class="new-dot" aria-label="new" />
         </template>
         <template #panel-corps><CorpsPanel /></template>
-        <template #panel-legacy><ShopPanel kind="legacy" /></template>
+        <template #panel-legacy>
+          <div class="layer"><ShopPanel kind="legacy" /><ChainPanel kind="network" /></div>
+        </template>
         <template #panel-elseworlds><ElseworldsPanel /></template>
-        <template #panel-continuity><ShopPanel kind="continuity" /></template>
+        <template #panel-continuity>
+          <div class="layer"><ShopPanel kind="continuity" /><ChainPanel kind="earths" /></div>
+        </template>
+        <template #panel-canon>
+          <div class="layer"><ShopPanel kind="canon" /><ChainPanel kind="imprints" /></div>
+        </template>
       </Tabs>
     </SidebarMainShell>
   </div>
@@ -125,6 +162,11 @@ function select(value: string) {
 }
 .paragon-shell {
   padding: 0;
+  gap: 18px;
+}
+.layer {
+  display: flex;
+  flex-direction: column;
   gap: 18px;
 }
 </style>

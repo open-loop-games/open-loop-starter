@@ -1,6 +1,7 @@
 import {
   Decimal,
   computed,
+  createMultiplicativeModifier,
   createProducerCategory,
   createResource,
   persistent,
@@ -13,14 +14,16 @@ import {
   type ProducerCategory,
   type Resource,
 } from '@open-loop/engine';
-import { ANCHORS, HIGH_TIER_FROM, TIERS, type TierDef } from '../data';
+import { ANCHORS, HIGH_TIER_FROM, NETWORK, TIERS, type TierDef } from '../data';
 import { CoreKey } from './core';
 import { ScalerTuningRegistryKey, type ScalerTunableKey } from './tuning';
 
 /**
  * The run: Justice and the hero corps. Every hero earns Justice on its own, and
  * each recruit of a tier costs more than the last. A Reboot wipes this module's
- * whole context, so everything here lasts one timeline.
+ * whole context, so everything here lasts one timeline: Hope too, and the
+ * Informants and Safehouses the Network has made this timeline. The Network's
+ * bought units belong to Legacy (`./legacy.ts`) and outlast a Reboot.
  */
 
 export interface RunApi {
@@ -34,8 +37,10 @@ export interface RunApi {
   runEarned: ComputedRef<Decimal>;
   /** Justice per second across the corps. */
   totalRate: ComputedRef<Decimal>;
-  /** Start counting `runEarned` from now; a reset calls it once it settles. */
-  markRunStart(): void;
+  /** Hope, which the Network makes this timeline; heroes ×(1 + Hope)^power. */
+  hope: Resource;
+  /** Informants and Safehouses the Network has made this timeline, by chain tier 1 and 2. */
+  networkMade: [Resource, Resource];
 }
 
 export const RunKey: InjectionKey<RunApi> = Symbol('scaler/run') as InjectionKey<RunApi>;
@@ -61,13 +66,10 @@ export function createRunModule(): EngineModule {
         id: JUSTICE,
         displayName: 'Justice',
       });
-      // TODO(expansion): a run-scoped cumulative. Resource.cumulative is lifetime-only, so
-      // "earned since my layer last reset" is a mark written after each reset and subtracted
-      // on read; `./legacy.ts` does the same for Legacy earned since the last Rewrite.
-      const runMark = persistent<DecimalSource>(ANCHORS.startJustice, {
-        id: 'run-mark',
-        decimal: true,
-      });
+      // TODO(expansion): a run-scoped cumulative. Resource.cumulative is lifetime-only, and a
+      // mark subtracted from it fails past 9e15: break_eternity drops a gain under ~1e-13 of the
+      // total. So the run counts its own earnings, and the Reboot's wipe zeroes the count.
+      const earned = persistent<DecimalSource>(0, { id: 'run-earned', decimal: true });
       const runSeconds = persistent<number>(0, { id: 'run-seconds' });
       const baseRatio = tunable(
         tuning,
@@ -102,8 +104,23 @@ export function createRunModule(): EngineModule {
       });
       heroes.register(TIERS);
 
+      const hope = createResource<DecimalSource>(0, { id: 'hope', displayName: 'Hope' });
+      const networkMade: [Resource, Resource] = [
+        createResource<DecimalSource>(0, { id: 'informants-made' }),
+        createResource<DecimalSource>(0, { id: 'safehouses-made' }),
+      ];
+      core.output.bind({
+        modifier: createMultiplicativeModifier({
+          multiplier: () => Decimal.add(1, hope.value).pow(NETWORK.power),
+          description: 'Hope',
+        }),
+        text: 'Hope',
+      });
+
+      const totalRate = computed(() => Decimal.fromValue(heroes.getTotalRate(justice)));
       ctx.onTick((dt) => {
         runSeconds.value += dt;
+        earned.value = Decimal.mul(totalRate.value, dt).add(earned.value);
       });
 
       api = {
@@ -111,11 +128,10 @@ export function createRunModule(): EngineModule {
         heroes,
         priceRatio,
         runSeconds,
-        runEarned: computed(() => Decimal.sub(justice.cumulative!.value, runMark.value)),
-        totalRate: computed(() => Decimal.fromValue(heroes.getTotalRate(justice))),
-        markRunStart: () => {
-          runMark.value = justice.cumulative!.value;
-        },
+        hope,
+        networkMade,
+        runEarned: computed(() => Decimal.fromValue(earned.value)),
+        totalRate,
       };
       ctx.provide(RunKey, api);
     },

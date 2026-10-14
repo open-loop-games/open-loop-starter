@@ -1,18 +1,20 @@
 <!--
-  Masthead — the comic's cover line: the title, the volume (Rewrites) and the
-  issue (Reboots), Justice and its rate, and the layer currencies once each
-  layer has opened. A prestige prints an onomatopoeia across it: the one
-  orchestrated moment.
+  Masthead — the comic's cover line: the title, the age (Ages turned), the
+  volume (Rewrites) and the issue (Reboots), Justice and its rate, and the layer
+  currencies once each layer has opened. A prestige prints an onomatopoeia
+  across it: the one orchestrated moment.
 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { getContinuity, getCore, getLegacy, getRun } from '../../modules';
+import { ageName } from '../../data';
+import { getCanon, getContinuity, getCore, getLegacy, getRun } from '../../modules';
 import { fmt, fmtMult, fmtRate } from '../format';
 
 const core = getCore();
 const run = getRun();
 const legacy = getLegacy();
 const continuity = getContinuity();
+const canon = getCanon();
 
 const issue = computed(() => core.reboots.value + 1);
 const volume = computed(() => core.rewrites.value + 1);
@@ -32,13 +34,21 @@ watch(
     if (n > old) burst.value = { word: 'SHAZAAM!', key: -n };
   },
 );
+watch(
+  () => core.ages.value,
+  (n, old) => {
+    if (n > old) burst.value = { word: 'WHAAAM!', key: 1e6 + n };
+  },
+);
 </script>
 
 <template>
   <header class="masthead">
     <div class="logo-block">
       <h1 class="logo">PARAGON</h1>
-      <div class="issue num">VOL. {{ volume }} · ISSUE #{{ issue }}</div>
+      <div class="issue num">
+        {{ ageName(core.ages.value).toUpperCase() }} AGE · VOL. {{ volume }} · ISSUE #{{ issue }}
+      </div>
     </div>
     <div class="justice">
       <span class="caption">Justice</span>
@@ -52,9 +62,13 @@ watch(
         <dt>Legacy</dt>
         <dd class="num">{{ fmt(legacy.legacy.value) }}</dd>
       </div>
-      <div v-if="core.rewrites.value > 0" class="reveal">
+      <div v-if="core.rewrites.value > 0 || core.ages.value > 0" class="reveal">
         <dt>Continuity</dt>
         <dd class="num orbit">{{ fmt(continuity.continuity.value) }}</dd>
+      </div>
+      <div v-if="core.ages.value > 0" class="reveal">
+        <dt>Canon</dt>
+        <dd class="num foil">{{ fmt(canon.canon.value) }}</dd>
       </div>
     </dl>
     <div v-if="burst" :key="burst.key" class="burst" aria-hidden="true">{{ burst.word }}</div>
@@ -121,6 +135,9 @@ watch(
 }
 .ledger dd.orbit {
   color: var(--orbit);
+}
+.ledger dd.foil {
+  color: var(--foil);
 }
 .burst {
   position: absolute;

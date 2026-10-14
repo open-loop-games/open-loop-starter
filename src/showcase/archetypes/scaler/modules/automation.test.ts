@@ -1,20 +1,27 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, addResource } from '@open-loop/engine';
-import { REBOOT_THRESHOLD } from '../data';
-import { boot, tick } from '../sim/harness';
-import { getAutomation, shouldReboot } from './automation';
+import { LEVERS, REWRITE_THRESHOLD } from '../data';
+import { boot, tick, tickUntil } from '../sim/harness';
+import { getAutomation, shouldReboot, shouldRewrite } from './automation';
+import { getCanon } from './canon';
 import { getContinuity } from './continuity';
 import { getCore } from './core';
 import { getLegacy } from './legacy';
+import { getPrestige } from './prestige';
 import { getRun } from './run';
 
-/** What the automation ladder does: each policy is inert until its tier is reached. */
+/** What the automation ladder does: each policy is inert until its tier is reached and its piece owned. */
 
 const num = (v: unknown): number => new Decimal(v as never).toNumber();
 const corps = () =>
   getRun()
     .heroes.getAll()
     .reduce((n, e) => n + num(e.producer.ownedCount.value), 0);
+/** Heroes earning enough that a Reboot is pending within seconds. */
+function strongCorps() {
+  addResource(getRun().justice, 1e30);
+  getRun().heroes.getProducer('bastion')!.repeatable!.purchase();
+}
 
 beforeEach(() => boot());
 
@@ -26,7 +33,7 @@ describe('the Dispatch Desk', () => {
   });
 
   it('recruits once bought, and only while on duty', async () => {
-    addResource(getLegacy().legacy, 1);
+    getLegacy().bank(1);
     getLegacy().upgrade('dispatch').purchase(1);
     getAutomation().dispatchOn.value = false;
     addResource(getRun().justice, 1e6);
@@ -36,26 +43,105 @@ describe('the Dispatch Desk', () => {
     await tick(1);
     expect(corps()).toBeGreaterThan(0);
   });
+
+  it('stops when a Rewrite takes it, even with the Succession Plan owned', async () => {
+    getLegacy().bank(1);
+    getLegacy().upgrade('dispatch').purchase(1);
+    getContinuity().bank(1);
+    getContinuity().upgrade('succession').purchase(1);
+    getLegacy().bank(REWRITE_THRESHOLD);
+    getPrestige().rewrite();
+    addResource(getRun().justice, 1e6);
+    await tick(20);
+    expect(corps()).toBe(0);
+  });
 });
 
 describe('the Succession Plan', () => {
-  it('reboots on its own once bought', async () => {
-    addResource(getContinuity().continuity, 1);
-    getContinuity().upgrade('auto-reboot').purchase(1);
-    addResource(getRun().justice, REBOOT_THRESHOLD);
-    await tick(1);
-    expect(getCore().reboots.value).toBe(1);
+  it('reboots on its own once bought, no sooner than its interval', async () => {
+    getContinuity().bank(1);
+    getContinuity().upgrade('succession').purchase(1);
+    strongCorps();
+    await tickUntil(() => Decimal.gte(getPrestige().pendingLegacy.value, 1), 20 * 10);
+    expect(getCore().reboots.value).toBe(0);
+    await tickUntil(() => getCore().reboots.value === 1, 20 * (LEVERS.successionIntervalS + 1));
+    expect(getRun().runSeconds.value).toBeLessThan(1);
+  });
+
+  it('reboots sooner once drilled', () => {
+    getContinuity().bank(1e3);
+    getContinuity().upgrade('succession').purchase(1);
+    const before = getAutomation().rebootInterval();
+    getContinuity().upgrade('drill').purchase(1);
+    expect(getAutomation().rebootInterval()).toBeLessThan(before);
   });
 
   it('never forfeits an Elseworld in progress', () => {
-    const state = { pendingLegacy: 10, legacyEarned: 1, inElseworld: true };
-    expect(shouldReboot(state, { share: 0 })).toBe(false);
-    expect(shouldReboot({ ...state, inElseworld: false }, { share: 0 })).toBe(true);
+    const state = { pendingLegacy: 10, legacyEarned: 1, inElseworld: true, runSeconds: 60 };
+    expect(shouldReboot(state, { share: 0, interval: 0 })).toBe(false);
+    expect(shouldReboot({ ...state, inElseworld: false }, { share: 0, interval: 0 })).toBe(true);
   });
 
-  it('waits for its share of Legacy earned', () => {
-    const state = { pendingLegacy: 4, legacyEarned: 10, inElseworld: false };
-    expect(shouldReboot(state, { share: 0.5 })).toBe(false);
-    expect(shouldReboot({ ...state, pendingLegacy: 5 }, { share: 0.5 })).toBe(true);
+  it('waits for its share of Legacy earned and its interval', () => {
+    const state = { pendingLegacy: 4, legacyEarned: 10, inElseworld: false, runSeconds: 60 };
+    expect(shouldReboot(state, { share: 0.5, interval: 0 })).toBe(false);
+    expect(shouldReboot({ ...state, pendingLegacy: 5 }, { share: 0.5, interval: 0 })).toBe(true);
+    expect(shouldReboot({ ...state, pendingLegacy: 5 }, { share: 0.5, interval: 90 })).toBe(false);
+  });
+});
+
+describe('the Network Liaison', () => {
+  it('spends Legacy once bought', async () => {
+    getLegacy().bank(100);
+    await tick(1);
+    expect(num(getLegacy().legacy.value)).toBe(100);
+    getContinuity().bank(10);
+    getContinuity().upgrade('liaison').purchase(1);
+    await tick(1);
+    expect(num(getLegacy().legacy.value)).toBeLessThan(100);
+    expect(getLegacy().upgrade('public-trust').active.value).toBe(true);
+  });
+});
+
+describe('the Crossover Event', () => {
+  it('rewrites on its own once bought', async () => {
+    getCanon().canon.value = 100;
+    getCanon().upgrade('crossover').purchase(1);
+    getLegacy().bank(REWRITE_THRESHOLD);
+    await tick(1);
+    expect(getCore().rewrites.value).toBe(1);
+  });
+
+  it('waits for its share of Continuity earned and never forfeits an Elseworld', () => {
+    const state = { pendingContinuity: 4, continuityEarned: 10, inElseworld: false };
+    expect(shouldRewrite(state, { share: 0.5 })).toBe(false);
+    expect(shouldRewrite({ ...state, pendingContinuity: 5 }, { share: 0.5 })).toBe(true);
+    expect(
+      shouldRewrite({ ...state, pendingContinuity: 5, inElseworld: true }, { share: 0.5 }),
+    ).toBe(false);
+  });
+});
+
+describe('the Monitor', () => {
+  it('spends Continuity once bought', async () => {
+    getContinuity().bank(100);
+    await tick(1);
+    expect(num(getContinuity().continuity.value)).toBe(100);
+    getCanon().canon.value = 100;
+    getCanon().upgrade('monitor').purchase(1);
+    await tick(1);
+    expect(num(getContinuity().continuity.value)).toBeLessThan(100);
+  });
+});
+
+describe('Turning the Age', () => {
+  it('is never automated', async () => {
+    getCanon().canon.value = 100;
+    getCanon().upgrade('crossover').purchase(1);
+    getCanon().upgrade('monitor').purchase(1);
+    getContinuity().bank(1e30);
+    await tick(20);
+    expect(num(getPrestige().pendingCanon.value)).toBeGreaterThan(0);
+    expect(getCore().ages.value).toBe(0);
   });
 });
