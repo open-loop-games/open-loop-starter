@@ -1,6 +1,7 @@
 # Scripter
 
-Core · covered. Identity line: the Scripter entry in `../_identity.md`. Not built.
+Core · covered. Identity line: the Scripter entry in `../_identity.md`. Built
+as `../scripter/`.
 
 ## Player experience
 

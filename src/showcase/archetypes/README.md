@@ -21,6 +21,7 @@ directions it grows through. Start there.
 | `phase-shifter` | One-way doors: a reader, then an arranger, then a planner, each retiring the last |
 | `producer` | Geometric cost ladder under a compounding multiplier stack           |
 | `scaler`   | Three prestige layers over a hero ladder, each compressing the one below and opening its own chain |
+| `scripter` | A scroll the player writes and a student performs; each challenger at the gate asks for words the scroll lacks |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
 | `survivor` | Run-scoped real-time survival against continuously escalating threat |
 | `tug`      | Adversarial lane push with a shared contested lane                   |

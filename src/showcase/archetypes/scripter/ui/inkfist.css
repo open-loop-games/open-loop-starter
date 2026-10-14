@@ -1,0 +1,199 @@
+/*
+ * Scripter — the Inkfist Dojo costume.
+ *
+ * The whole design language is here, scoped under `.inkfist`, so the story's identity is
+ * one file a fork can read, replace or delete. Nothing in `src/lib/` or `src/ui/` is
+ * edited for it: every hook is a documented costume class on a shell or composition, or a
+ * class this story's own components emit.
+ *
+ * Language: a night dojo lit by one lamp. The affordance palette comes first: lamplight =
+ * you can act or afford; straw = you can't yet; vermilion seal = new, or a blow that
+ * landed on the student; indigo dye = the student acting on its own, the scroll at work;
+ * amber = waiting. A mincho serif for everything read, Spectral for the numbers.
+ *
+ * Fonts: Shippori Mincho and Spectral, both SIL OFL (`../assets/fonts/OFL*.txt`).
+ */
+
+@font-face {
+  font-family: 'Inkfist Mincho';
+  src: url('../assets/fonts/ShipporiMincho-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inkfist Mincho';
+  src: url('../assets/fonts/ShipporiMincho-600.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inkfist Numerals';
+  src: url('../assets/fonts/Spectral-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inkfist Numerals';
+  src: url('../assets/fonts/Spectral-600.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+
+.inkfist {
+  /* ── the room ── */
+  --if-lacquer: #14110d; /* floorboards after dark: the page */
+  --if-lacquer-raised: #1d1913; /* a cabinet face: panels */
+  --if-lacquer-edge: #2e281e; /* joinery */
+  --if-tatami: #8d8661; /* straw: quiet labels, can't-afford */
+  --if-tatami-dim: #5d583f;
+  /* ── the scroll ── */
+  --if-washi: #c7b997; /* paper, kept dim for long sessions */
+  --if-washi-shade: #b3a581; /* the row the student is on */
+  --if-washi-wait: #c9a865; /* the row the student waits at */
+  --if-rod: #6b5a3e; /* the scroll's rods */
+  --if-sumi: #1c1814; /* ink on paper */
+  --if-sumi-wash: #5a5143; /* diluted ink: comments, glosses */
+  --if-sumi-blue: #34497a; /* tests, in ink */
+  --if-sumi-red: #8a3a22; /* numbers and counts, in ink */
+  --if-sumi-faded: #7d725c; /* a word not yet learned */
+  /* ── the light ── */
+  --if-lamplight: #e3ac53; /* can-afford, live numbers */
+  --if-lamplight-soft: #e3ac5333;
+  --if-moonlight: #d9d2c0; /* body text on lacquer */
+  --if-amber: #b07a1c; /* waiting */
+  /* ── the dye and the seal ── */
+  --if-indigo: #6d86b5; /* the student acting on its own */
+  --if-indigo-deep: #2b3650;
+  --if-vermilion: #c4472f; /* the seal: inking, new, a blow taken */
+  --if-vermilion-soft: #c4472f40;
+  --if-incense: #d8cbb0; /* the bout's clock, burning down */
+
+  --if-face: 'Inkfist Mincho', 'Shippori Mincho', 'Noto Serif CJK JP', Georgia, serif;
+  --if-numerals: 'Inkfist Numerals', 'Spectral', Georgia, serif;
+
+  /* starter's tokens, in this room's colours */
+  --color-bg: var(--if-lacquer);
+  --color-surface: var(--if-lacquer-raised);
+  --color-border: var(--if-lacquer-edge);
+  --color-text: var(--if-moonlight);
+  --color-text-muted: var(--if-tatami);
+  --color-surface-hover: #241f18;
+  --color-primary: var(--if-lamplight);
+  --color-primary-hover: #f0c071;
+  --color-danger: var(--if-vermilion);
+  --font-sans: var(--if-face);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--if-lacquer);
+  color: var(--if-moonlight);
+  font-family: var(--if-face);
+  font-size: 15px;
+  line-height: 1.45;
+  color-scheme: dark;
+}
+
+.inkfist .num {
+  font-family: var(--if-numerals);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* A panel: a cabinet face with a title in the room's hand. */
+.inkfist .if-panel {
+  background: var(--if-lacquer-raised);
+  border: 1px solid var(--if-lacquer-edge);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inkfist .if-title {
+  margin: 0;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inkfist .if-title small {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--if-tatami);
+}
+
+/* A plain action: lamplight when it can be done, straw when it can't. */
+.inkfist .if-act {
+  font: inherit;
+  font-size: 13px;
+  color: var(--if-lamplight);
+  background: transparent;
+  border: 1px solid var(--if-lamplight);
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.inkfist .if-act:hover:not([disabled]) {
+  background: var(--if-lamplight-soft);
+}
+.inkfist .if-act[disabled] {
+  color: var(--if-tatami-dim);
+  border-color: var(--if-lacquer-edge);
+  cursor: default;
+}
+.inkfist .if-act.quiet {
+  color: var(--if-tatami);
+  border-color: var(--if-lacquer-edge);
+}
+
+/* A bar, brushed: health, chi and the incense. */
+.inkfist .if-bar {
+  position: relative;
+  height: 6px;
+  background: var(--if-lacquer-edge);
+  overflow: hidden;
+}
+.inkfist .if-bar > i {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: var(--if-vermilion);
+  transition: transform 160ms linear;
+}
+.inkfist .if-bar.chi > i {
+  background: var(--if-indigo);
+}
+
+/* A reveal: a new panel or card unrolls like a scroll. transform/opacity only. */
+@keyframes if-unroll {
+  from {
+    opacity: 0;
+    transform: scaleY(0.7) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.inkfist .if-reveal {
+  animation: if-unroll 520ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-origin: top;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inkfist .if-reveal {
+    animation: none;
+  }
+}
+
+/* Starter's frame and shell, in this room. */
+.inkfist .olui-system-header {
+  background: var(--if-lacquer);
+  border-bottom: 1px solid var(--if-lacquer-edge);
+}
+.inkfist .olui-sidebar-main__sidebar,
+.inkfist .olui-sidebar-main__main {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
