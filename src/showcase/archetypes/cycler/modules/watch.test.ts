@@ -4,6 +4,8 @@ import { boot, seconds, tickUntil } from '../sim/harness';
 import { getLogbook } from './logbook';
 import { getWatch } from './watch';
 import { cellKey, quartersOf, SHORE_CELLS } from './rock';
+import { neighbours } from './storm';
+import { ANCHORS, SEA } from '../data';
 
 beforeEach(() => {
   boot();
@@ -172,7 +174,7 @@ describe('the storm', () => {
     const price = w.shoreCost.value;
     expect(w.shoreUp()).toBe(true);
     expect(w.shoreCost.value).toBe(price * 2);
-    expect(w.shored.value).toBeGreaterThan(0);
+    expect(w.shored.value[w.quarter.value]).toBeGreaterThan(0);
   });
 
   it('is pegged when the watch starts, so power bought mid-watch does not move it', () => {
@@ -199,5 +201,154 @@ describe('the light going out', () => {
     expect(w.cycle.elapsed.value).toBe(elapsed);
     w.startWatch();
     expect(w.phase.value).toBe('day');
+  });
+});
+
+/** A tower no storm in these specs can fell, so the watch runs as long as a spec needs. */
+function shoreTheTower(): void {
+  const w = getWatch();
+  w.integrityMax.value = 1e12;
+  w.integrity.value = 1e12;
+}
+
+/** Plays dawns forward until `when` holds at one, or gives up after `nights`. */
+async function untilDawn(when: () => boolean, nights = 40): Promise<boolean> {
+  const w = getWatch();
+  for (let i = 0; i < nights; i++) {
+    if (w.phase.value === 'day' && when()) return true;
+    if (w.integrityMax.value < 1e12) w.integrity.value = w.integrityMax.value;
+    if (w.phase.value === 'day') w.lightLamp();
+    await toDusk();
+  }
+  return false;
+}
+
+describe('spray', () => {
+  it('is named at dawn and drawn at dusk, and only on spray nights', async () => {
+    const w = getWatch();
+    shoreTheTower();
+    expect(await untilDawn(() => w.kind.value === 'spray')).toBe(true);
+    expect(w.spray.value).toBe(0);
+    w.lightLamp();
+    expect(SEA.sprayShares).toContain(w.spray.value);
+    await toDusk();
+    expect(await untilDawn(() => w.kind.value === 'gale')).toBe(true);
+    w.lightLamp();
+    expect(w.spray.value).toBe(0);
+  });
+});
+
+describe('backing', () => {
+  it('names a neighbouring quarter from the middle of the watch, and lands breakers there', async () => {
+    const w = getWatch();
+    expect(w.backQuarter.value).toBeNull();
+    expect(await untilDawn(() => w.backQuarter.value !== null)).toBe(true);
+    expect(w.night.value).toBeGreaterThanOrEqual(SEA.backingFromNight);
+    expect(neighbours(w.quarter.value)).toContain(w.backQuarter.value);
+    const sides = new Set<string>();
+    for (let i = 0; i < 6; i++) {
+      const back = w.backQuarter.value;
+      w.integrity.value = w.integrityMax.value;
+      w.lightLamp();
+      for (let s = 0; s < w.phaseLength.value; s++) {
+        await seconds(1);
+        if (w.lastStrike.value && w.lastStrike.value.quarter === back) sides.add('back');
+      }
+      await untilDawn(() => true);
+    }
+    expect(sides.has('back')).toBe(true);
+  });
+});
+
+describe('the boat', () => {
+  it('rows out only to a sighted wreck, and the keeper does nothing else while away', async () => {
+    const w = getWatch();
+    expect(w.rowOut()).toBe(false);
+    expect(await untilDawn(() => w.wreck.value > 0)).toBe(true);
+    expect(w.rowOut()).toBe(true);
+    expect(w.home.value).toBe(false);
+    expect(w.build('breakwater', 2, 0)).toBe(false);
+    expect(w.lightLamp()).toBe(false);
+  });
+
+  it('strips the wreck while there and banks the haul on landing', async () => {
+    const w = getWatch();
+    await untilDawn(() => w.wreck.value > 0);
+    const before = num(w.salvage.value);
+    w.rowOut();
+    await seconds(SEA.rowSeconds + 20);
+    expect(w.boatHaul.value).toBeGreaterThan(0);
+    expect(num(w.salvage.value)).toBe(before);
+    w.rowHome();
+    await seconds(SEA.rowSeconds + 1);
+    expect(w.home.value).toBe(true);
+    expect(num(w.salvage.value)).toBeGreaterThan(before);
+  });
+
+  it('caught out at dusk, shelters till dawn without shoring, and lands the haul then', async () => {
+    const w = getWatch();
+    shoreTheTower();
+    await untilDawn(() => w.wreck.value > 0);
+    w.salvage.value = 10_000;
+    w.rowOut();
+    await toDusk();
+    expect(w.caughtOut.value).toBe(true);
+    expect(w.shoreUp()).toBe(false);
+    const before = num(w.salvage.value);
+    await toDusk();
+    expect(w.home.value).toBe(true);
+    expect(num(w.salvage.value)).toBeGreaterThan(before);
+  });
+});
+
+describe('the relief', () => {
+  beforeEach(() => {
+    const l = getLogbook();
+    const w = getWatch();
+    w.cycle.end();
+    l.knowledge.getPurchasable('charter-flannans')!.count.value = 1;
+    l.knowledge.getPurchasable('charter-wrath')!.count.value = 1;
+    l.posting.select('flannans');
+    w.startWatch();
+  });
+
+  it('can be signalled only on the closing posting, from its first night of call', async () => {
+    const w = getWatch();
+    expect(w.posting.value.closing).toBe(true);
+    expect(w.signalRelief()).toBe(false);
+    expect(await untilDawn(() => w.night.value >= ANCHORS.callFromNight)).toBe(true);
+    expect(w.signalRelief()).toBe(true);
+  });
+
+  it('makes the tower whole and brings a final gale no smaller than the crossing night’s', async () => {
+    const w = getWatch();
+    await untilDawn(() => w.night.value >= ANCHORS.callFromNight);
+    const plain = w.storm.value;
+    w.integrity.value = 1;
+    w.signalRelief();
+    expect(num(w.integrity.value)).toBe(w.integrityMax.value);
+    expect(w.storm.value).toBeGreaterThan(plain * ANCHORS.finalGale - 1e-9);
+  });
+
+  it('closes the career on the light holding, and a lesser close when it goes out', async () => {
+    const w = getWatch();
+    const l = getLogbook();
+    await untilDawn(() => w.night.value >= ANCHORS.callFromNight);
+    w.signalRelief();
+    w.lightLamp();
+    await tickUntil(() => w.phase.value === 'setup', 4 * 120);
+    expect(l.lastWatch.value!.relief).toBe('lost');
+    expect(l.ending.value).toBe('lesser');
+    // A rock walled all round, with stone enough, holds the same gale.
+    l.knowledge.getPurchasable('stone')!.count.value = 8;
+    w.startWatch();
+    await untilDawn(() => w.night.value >= ANCHORS.callFromNight);
+    w.salvage.value = 1e6;
+    for (const c of SHORE_CELLS) w.build('breakwater', c.x, c.y);
+    w.signalRelief();
+    w.lightLamp();
+    await tickUntil(() => w.phase.value === 'setup', 4 * 120);
+    expect(l.lastWatch.value!.relief).toBe('held');
+    expect(l.ending.value).toBe('held');
   });
 });

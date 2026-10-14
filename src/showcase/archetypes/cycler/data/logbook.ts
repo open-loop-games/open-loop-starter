@@ -3,7 +3,7 @@
 // postings. A posting is the run's setup: chosen between watches, read by the storm, the wind
 // and the wrack, never by the payout.
 
-export type PostingId = 'haven' | 'skerry' | 'wrath';
+export type PostingId = 'haven' | 'skerry' | 'wrath' | 'flannans';
 
 export interface PostingDef {
   id: PostingId;
@@ -14,6 +14,11 @@ export interface PostingDef {
   wind: 'veering' | 'N' | 'E' | 'S' | 'W';
   /** Multiplier on every net's catch. */
   wrack: number;
+  /**
+   * The closing posting: its storm is authored, not pegged to the keeper's power, and from
+   * `ANCHORS.callFromNight` the keeper may signal the relief and call the final gale.
+   */
+  closing?: boolean;
   blurb: string;
 }
 
@@ -42,6 +47,16 @@ export const POSTINGS: readonly PostingDef[] = [
     wrack: 1,
     blurb: 'Every gale comes from the west, and every gale is worse. A short, hard watch.',
   },
+  {
+    id: 'flannans',
+    name: 'The Flannans',
+    g: 1.5,
+    wind: 'veering',
+    wrack: 1,
+    closing: true,
+    blurb:
+      'The last light the Board keeps. Its storms do not grow with you. Signal the relief when the rock is ready, and hold the light through the gale that comes with it.',
+  },
 ];
 
 export type KnowledgeId =
@@ -50,7 +65,8 @@ export type KnowledgeId =
   | 'almanac'
   | 'stores'
   | 'charter-skerry'
-  | 'charter-wrath';
+  | 'charter-wrath'
+  | 'charter-flannans';
 
 /** Permanent keeper's knowledge, bought with logbook entries between watches. */
 export interface KnowledgeDef {
@@ -117,6 +133,16 @@ export const KNOWLEDGE: readonly KnowledgeDef[] = [
     growth: 1,
     limit: 1,
     opens: 'wrath',
+  },
+  {
+    id: 'charter-flannans',
+    name: 'Charter: The Flannans',
+    blurb: 'Opens the last posting, where the relief can be signalled.',
+    baseCost: 15,
+    growth: 1,
+    limit: 1,
+    requires: { id: 'charter-wrath', levels: 1 },
+    opens: 'flannans',
   },
 ];
 

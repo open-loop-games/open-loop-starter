@@ -39,13 +39,21 @@ import { CyclerTuningRegistryKey, type CyclerTunableKey } from './tuning';
  * module, never this one.
  */
 
+/** How a watch under the relief ended: the light held through the final gale, or not. */
+export type ReliefOutcome = 'held' | 'lost';
+
 export interface WatchSummary {
   posting: PostingId;
   nights: number;
   weathered: number;
   gathered: number;
   entries: number;
+  /** Set when the relief was signalled this watch. */
+  relief: ReliefOutcome | null;
 }
+
+/** The career's close: none yet, the lesser (the light went out under the final gale), or held. */
+export type Ending = 'none' | 'lesser' | 'held';
 
 export interface LogbookApi {
   entries: Resource<DecimalSource>;
@@ -68,6 +76,10 @@ export interface LogbookApi {
   setPostingOpen: (open: () => boolean) => void;
   bestNights: Persistent<number>;
   lastWatch: Persistent<WatchSummary | null>;
+  /** The best close the career has reached. */
+  ending: Persistent<Ending>;
+  /** Records a watch under the relief; a held light outranks a lesser close. */
+  recordRelief: (outcome: ReliefOutcome) => void;
 }
 
 export const LogbookKey: InjectionKey<LogbookApi> = Symbol('cycler/logbook');
@@ -178,6 +190,8 @@ export function createLogbookModule(): EngineModule {
       });
       posting.select('haven');
 
+      const ending = persistent<Ending>('none', { id: 'ending' });
+
       api = {
         entries,
         knowledge,
@@ -196,6 +210,11 @@ export function createLogbookModule(): EngineModule {
         },
         bestNights: persistent(0, { id: 'best-nights' }),
         lastWatch: persistent<WatchSummary | null>(null, { id: 'last-watch' }),
+        ending,
+        recordRelief: (outcome) => {
+          if (outcome === 'held') ending.value = 'held';
+          else if (ending.value === 'none') ending.value = 'lesser';
+        },
       };
       ctx.provide(LogbookKey, api);
     },

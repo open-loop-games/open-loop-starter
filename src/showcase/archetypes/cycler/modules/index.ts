@@ -4,8 +4,16 @@ import { createLogbookModule } from './logbook';
 import { createWatchModule } from './watch';
 
 export { CyclerTuningRegistryKey, type CyclerTunableKey } from './tuning';
-export { LogbookKey, getLogbook, type LogbookApi, type WatchSummary } from './logbook';
-export { WatchKey, getWatch, type WatchApi, type Phase, type Strike } from './watch';
+export {
+  LogbookKey,
+  getLogbook,
+  type Ending,
+  type LogbookApi,
+  type ReliefOutcome,
+  type WatchSummary,
+} from './logbook';
+export { WatchKey, getWatch, type Boat, type WatchApi, type Phase, type Strike } from './watch';
+export * from './storm';
 export * from './rock';
 
 /**

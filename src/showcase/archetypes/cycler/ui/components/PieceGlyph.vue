@@ -20,6 +20,10 @@ defineProps<{ kind: PieceKind }>();
       <path d="M8 32 L14 8 L26 8 L32 32 Z" />
       <path d="M12 22 L28 22" class="seam" />
     </g>
+    <g v-else-if="kind === 'screen'" class="screen">
+      <path d="M7 34 L7 10 M15 34 L15 8 M23 34 L23 8 M31 34 L31 10" class="post" />
+      <path d="M5 14 Q19 9 33 14 M5 21 Q19 16 33 21 M5 28 Q19 23 33 28" class="slat" />
+    </g>
     <g v-else class="winch">
       <circle cx="20" cy="20" r="10" />
       <circle cx="20" cy="20" r="3" class="hub" />
@@ -29,6 +33,15 @@ defineProps<{ kind: PieceKind }>();
 </template>
 
 <style scoped>
+.screen .post {
+  stroke: #6b5a43;
+  stroke-width: 2.4;
+}
+.screen .slat {
+  fill: none;
+  stroke: #b8b29f;
+  stroke-width: 2.2;
+}
 .glyph {
   width: 100%;
   height: 100%;

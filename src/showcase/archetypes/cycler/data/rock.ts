@@ -4,7 +4,7 @@
 // day, and taking one up refunds its price in full. The tide leaves finds at dawn: three are
 // offered, one is taken, and the rest wash back out at dusk.
 
-export type PieceKind = 'breakwater' | 'net' | 'buttress' | 'winch';
+export type PieceKind = 'breakwater' | 'net' | 'buttress' | 'screen' | 'winch';
 /** Shore: the outer ring, where the sea breaks. Yard: the ring around the tower. */
 export type Ground = 'shore' | 'yard';
 export type Quarter = 'N' | 'E' | 'S' | 'W';
@@ -34,6 +34,12 @@ export const PIECES: readonly PieceDef[] = [
     name: 'Buttress',
     ground: 'yard',
     blurb: 'Stiffens every breakwater it touches, corners too.',
+  },
+  {
+    id: 'screen',
+    name: 'Spray screen',
+    ground: 'yard',
+    blurb: 'Takes the spray that goes over the walls, on every quarter it faces.',
   },
   {
     id: 'winch',

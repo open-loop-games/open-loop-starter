@@ -4,7 +4,7 @@ export default {
   defSuffixes: ['Def'],
   title: 'Cycler — domain language',
   description:
-    'Skerry Light: a keeper on a bare rock builds by day against the quarter tonight’s gale is forecast to come from; the storm grows each night until the tower falls, and the logbook buys knowledge that outlasts the watch.',
+    'Skerry Light: a keeper on a bare rock builds by day against the quarter tonight’s gale is forecast to come from; the storm grows each night until the tower falls, and the logbook buys knowledge and charters toward the Flannans, where signalling the relief closes the career.',
   curated: [
     {
       term: 'watch',
@@ -41,6 +41,26 @@ export default {
     {
       term: 'posting',
       note: 'The rock a watch is kept on, chosen between watches: storm growth, wind and wrack.',
+    },
+    {
+      term: 'spray',
+      note: 'A share of a gale night’s force that goes over the walls. Dawn names a spray night; dusk draws its share. Only screens facing the quarter turn it.',
+    },
+    {
+      term: 'backing',
+      note: 'From the middle of a watch, dawn names a neighbouring quarter the gale may back to; each breaker may land there, with odds against a repeat.',
+    },
+    {
+      term: 'wreck',
+      note: 'Salvage sighted offshore some dawns. The keeper rows out to strip it, and does none of the day’s work while away; caught out at dusk, the keeper shelters there and cannot shore.',
+    },
+    {
+      term: 'relief',
+      note: 'On the closing posting, a signal the keeper sends at a dawn: the tower is made whole and that night brings the final gale. Holding the light closes the career; failing is a lesser close.',
+    },
+    {
+      term: 'closing posting',
+      note: 'The Flannans: a posting whose storm is authored at a level of stone rather than pegged to the keeper’s power, so stone buys survival there.',
     },
     {
       term: 'logbook entry',

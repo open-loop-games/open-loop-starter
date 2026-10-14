@@ -1,7 +1,7 @@
 /**
  * Cycler: posting probe. Plays one watch per posting at knowledge zero over three seeds,
- * under four keepers: bare (no shoring, no Brass fittings), with Brass, with shoring, and
- * the reference keeper with both. Prints nights beside the spine's prediction, then the
+ * under five keepers: bare (no shoring, no Brass fittings, no rowing to wrecks), with each
+ * of the three alone, and the reference keeper with all three. Prints nights beside the spine's prediction, then the
  * reference keeper's minutes and entries per minute. Prints; never asserts.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/cycler/balance/posting-probe.ts`
@@ -9,8 +9,8 @@
  * How to read it:
  * - the bare keeper saturates the struck side and nothing more, so it should match the
  *   spine's nights (`cycler-projection.ts` § per posting).
- * - the brass and shoring columns are the remainder the spine declares and does not
- *   project: ward the storm was not pegged to.
+ * - the other columns are the remainder the spine declares and does not project: ward the
+ *   storm was not pegged to, and salvage from the wrecks.
  * - entries per minute should sit roughly level across postings, so the choice is about
  *   pace, a long gentle watch or a short hard one, and not about reward.
  */
@@ -28,10 +28,11 @@ import {
 
 const SEEDS = [11, 12, 13];
 const KEEPERS: [string, KeeperPolicy][] = [
-  ['bare', { findPreference: DECLINES_BRASS, shores: false }],
-  ['+brass', { findPreference: TAKES_BRASS, shores: false }],
-  ['+shoring', { findPreference: DECLINES_BRASS, shores: true }],
-  ['both', { findPreference: TAKES_BRASS, shores: true }],
+  ['bare', { findPreference: DECLINES_BRASS, shores: false, rows: false }],
+  ['+brass', { findPreference: TAKES_BRASS, shores: false, rows: false }],
+  ['+shoring', { findPreference: DECLINES_BRASS, shores: true, rows: false }],
+  ['+rowing', { findPreference: DECLINES_BRASS, shores: false, rows: true }],
+  ['all', { findPreference: TAKES_BRASS, shores: true, rows: true }],
 ];
 
 function play(postingId: (typeof POSTINGS)[number]['id'], policy: KeeperPolicy): WatchResult[] {
@@ -60,7 +61,7 @@ for (const post of POSTINGS) {
   const ref = results[results.length - 1];
   const mins = avg(ref, (r) => r.seconds / 60);
   console.log(
-    `  ${post.name.padEnd(12)} ${String(predictNightsSurvived(spine, post.g)).padStart(5)}  ` +
+    `  ${post.name.padEnd(12)} ${String(predictNightsSurvived(post.closing ? { ...spine, w0: spine.closingW0 } : spine, post.g)).padStart(5)}  ` +
       results
         .map((rows) =>
           avg(rows, (r) => r.nights)

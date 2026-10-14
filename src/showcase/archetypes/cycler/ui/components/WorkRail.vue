@@ -1,7 +1,8 @@
 <!--
   WorkRail — the day's work: the tool a click on the rock uses (haul, a piece, take up),
-  hauling every net, mending the tower, and the finds the tide left at dawn. It locks at
-  dusk; the night has only the hour band's shore-up.
+  hauling every net, mending the tower, the finds the tide left at dawn, and the boat to a
+  wreck sighted offshore. It locks at dusk, and while the keeper is out in the boat; the
+  night has only the hour band's shore-up.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -15,6 +16,13 @@ import PieceGlyph from './PieceGlyph.vue';
 const tool = defineModel<Tool>('tool', { required: true });
 const watch = getWatch();
 const day = computed(() => watch.phase.value === 'day');
+const atWork = computed(() => day.value && watch.home.value);
+const boatLine = computed(() => {
+  if (watch.boat.value === 'returning') return 'Rowing home with the haul.';
+  if (watch.boat.value === 'out')
+    return watch.wreck.value > 0 ? 'Out at the wreck, stripping it.' : 'The wreck is stripped.';
+  return 'A wreck is sighted offshore.';
+});
 const salvage = computed(() => toNumber(watch.salvage.value));
 
 const pieces = computed(() =>
@@ -46,7 +54,7 @@ function pick(t: Tool): void {
 </script>
 
 <template>
-  <section class="rail" :class="{ locked: !day }">
+  <section class="rail" :class="{ locked: !atWork }">
     <h2 class="sk-title">
       The day's work <small v-if="!day">build and haul by daylight only</small>
     </h2>
@@ -91,8 +99,8 @@ function pick(t: Tool): void {
     <div class="actions">
       <Button
         class="sk-control act"
-        :class="{ afford: day && heldTotal >= 1 }"
-        :disabled="!day || heldTotal < 1"
+        :class="{ afford: atWork && heldTotal >= 1 }"
+        :disabled="!atWork || heldTotal < 1"
         :repeat="false"
         @click="watch.haulAll()"
       >
@@ -101,7 +109,7 @@ function pick(t: Tool): void {
       <Button
         class="sk-control act"
         :class="{ afford: day && missing > 0 && salvage >= watch.repairCost(mendStep) }"
-        :disabled="!day || missing < 0.5"
+        :disabled="!atWork || missing < 0.5"
         @click="watch.mend(mendStep)"
       >
         Mend <span class="num">{{ mendStep.toFixed(0) }}</span> ·
@@ -109,7 +117,7 @@ function pick(t: Tool): void {
       </Button>
     </div>
 
-    <div v-if="offer.length && day" class="finds" aria-label="Washed up at dawn">
+    <div v-if="offer.length && atWork" class="finds" aria-label="Washed up at dawn">
       <div class="finds-head">Washed up at dawn. Take one; the tide has the rest by dusk.</div>
       <div class="find-row">
         <Button
@@ -124,6 +132,40 @@ function pick(t: Tool): void {
           <span class="blurb">{{ f.blurb }}</span>
         </Button>
       </div>
+    </div>
+
+    <div
+      v-if="day && (watch.wreck.value > 0 || !watch.home.value)"
+      class="boat"
+      aria-label="The boat"
+    >
+      <div class="boat-head">
+        <span>{{ boatLine }}</span>
+        <span class="num"
+          >{{ n(watch.boatHaul.value) }} aboard · {{ n(watch.wreck.value) }} left in her</span
+        >
+      </div>
+      <div class="boat-note">
+        Away, the keeper can't haul, build or mend. Out at dusk, there's no shoring that night.
+      </div>
+      <Button
+        v-if="watch.home.value"
+        class="sk-control act afford"
+        data-testid="row-out"
+        :repeat="false"
+        @click="watch.rowOut()"
+      >
+        Row out to the wreck
+      </Button>
+      <Button
+        v-else-if="watch.boat.value === 'out'"
+        class="sk-control act afford"
+        data-testid="row-home"
+        :repeat="false"
+        @click="watch.rowHome()"
+      >
+        Row home
+      </Button>
     </div>
   </section>
 </template>
@@ -198,6 +240,27 @@ function pick(t: Tool): void {
     opacity: 0;
     transform: translate3d(0, 8px, 0);
   }
+}
+.boat {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(93, 138, 110, 0.5);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(93, 138, 110, 0.14), rgba(93, 138, 110, 0.04));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.boat-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--sk-kelp);
+}
+.boat-note {
+  font-size: 12px;
+  color: var(--sk-overcast);
 }
 .finds-head {
   font-size: 13px;

@@ -1,13 +1,14 @@
 <!--
   HourBand — where the watch stands: the posting and the watch's number, the sun or moon
-  crossing the horizon toward dusk or dawn, and the phase's one big verb. By day that is
-  lighting the lamp early; by night, shoring up the struck side.
+  crossing the horizon toward dusk or dawn, and the phase's big verbs. By day that is
+  lighting the lamp early, and on the closing posting signalling the relief; by night,
+  shoring up the struck side, or the side the gale may back to.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { QUARTER_NAME } from '../../data';
+import { ANCHORS, QUARTER_NAME, type Quarter } from '../../data';
 import { getWatch } from '../../modules';
 import { mmss, n } from '../format';
 
@@ -16,12 +17,19 @@ const night = computed(() => watch.phase.value === 'night');
 const left = computed(() => Math.max(0, watch.phaseLength.value - watch.clock.value));
 const through = computed(() => Math.min(1, watch.clock.value / watch.phaseLength.value));
 const canShore = computed(
-  () => night.value && toNumber(watch.salvage.value) >= watch.shoreCost.value,
+  () => night.value && watch.home.value && toNumber(watch.salvage.value) >= watch.shoreCost.value,
+);
+const sides = computed<Quarter[]>(() =>
+  watch.backQuarter.value ? [watch.quarter.value, watch.backQuarter.value] : [watch.quarter.value],
+);
+const closing = computed(() => watch.posting.value.closing === true);
+const reliefLater = computed(
+  () => closing.value && !watch.relief.value && watch.night.value < ANCHORS.callFromNight,
 );
 </script>
 
 <template>
-  <header class="hour-band" :class="{ night }">
+  <header class="hour-band" :class="{ night, relief: watch.relief.value }">
     <div class="where">
       <div class="posting">{{ watch.posting.value.name }}</div>
       <div class="watch-no">watch {{ watch.cycle.count.value + 1 }}</div>
@@ -29,7 +37,9 @@ const canShore = computed(
 
     <div class="hour">
       <div class="hour-label">
-        <span v-if="night">Night {{ watch.night.value }} · the storm is on the rock</span>
+        <span v-if="night && watch.relief.value"
+          >Night {{ watch.night.value }} · the final gale</span
+        >
         <span v-else>Day {{ watch.night.value }} · calm</span>
         <span class="num left">{{ night ? 'dawn' : 'dusk' }} in {{ mmss(left) }}</span>
       </div>
@@ -37,29 +47,54 @@ const canShore = computed(
         <div class="horizon-run" :style="{ transform: `scaleX(${through})` }"></div>
         <div class="body" :style="{ left: `${through * 100}%` }"></div>
       </div>
+      <div v-if="watch.relief.value" class="hint relief-hint">
+        Hold the light till first light, and the relief comes.
+      </div>
+      <div v-if="reliefLater" class="hint">
+        The relief can be signalled from day {{ ANCHORS.callFromNight }}.
+      </div>
+      <div v-if="watch.caughtOut.value" class="hint caught">
+        The keeper is sheltering at the wreck: no shoring tonight.
+      </div>
     </div>
 
-    <Button
-      v-if="!night"
-      class="sk-control verb lamp"
-      data-testid="light-lamp"
-      :repeat="false"
-      @click="watch.lightLamp()"
-    >
-      Light the lamp early
-    </Button>
-    <Button
-      v-else
-      class="sk-control verb shore"
-      :class="{ afford: canShore }"
-      :disabled="!canShore"
-      data-testid="shore-up"
-      :repeat="false"
-      @click="watch.shoreUp()"
-    >
-      Shore up the {{ QUARTER_NAME[watch.quarter.value] }} wall ·
-      <span class="num">{{ n(watch.shoreCost.value) }}</span>
-    </Button>
+    <div class="verbs">
+      <template v-if="!night">
+        <Button
+          v-if="watch.canSignal.value"
+          class="sk-control verb relief-btn"
+          data-testid="signal-relief"
+          :repeat="false"
+          @click="watch.signalRelief()"
+        >
+          Signal the relief
+        </Button>
+        <Button
+          class="sk-control verb lamp"
+          data-testid="light-lamp"
+          :disabled="!watch.home.value"
+          :repeat="false"
+          @click="watch.lightLamp()"
+        >
+          Light the lamp early
+        </Button>
+      </template>
+      <template v-else>
+        <Button
+          v-for="side in sides"
+          :key="side"
+          class="sk-control verb shore"
+          :class="{ afford: canShore, second: side !== watch.quarter.value }"
+          :disabled="!canShore"
+          :data-testid="`shore-up-${side}`"
+          :repeat="false"
+          @click="watch.shoreUp(side)"
+        >
+          Shore up the {{ QUARTER_NAME[side] }} wall ·
+          <span class="num">{{ n(watch.shoreCost.value) }}</span>
+        </Button>
+      </template>
+    </div>
   </header>
 </template>
 
@@ -87,6 +122,9 @@ const canShore = computed(
 }
 .night .hour-label {
   color: #c7d3dc;
+}
+.relief .hour-label {
+  color: var(--sk-lamp);
 }
 .left {
   color: var(--sk-overcast);
@@ -122,8 +160,25 @@ const canShore = computed(
   background: var(--sk-foam);
   box-shadow: 0 0 10px rgba(223, 230, 226, 0.6);
 }
+.hint {
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--sk-overcast);
+}
+.hint.relief-hint {
+  color: var(--sk-lamp);
+}
+.hint.caught {
+  color: var(--sk-rust);
+}
+.verbs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .verb {
-  padding: 9px 16px;
+  padding: 8px 16px;
   font-family: var(--sk-chart);
   font-size: 13px;
   white-space: nowrap;
@@ -133,9 +188,20 @@ const canShore = computed(
   background: rgba(243, 187, 79, 0.1);
   color: var(--sk-lamp);
 }
+.verb.relief-btn {
+  border-color: var(--sk-lamp);
+  background: var(--sk-lamp);
+  color: #1b1408;
+  box-shadow: 0 0 18px var(--sk-lamp-glow);
+}
 .verb.shore.afford {
   border-color: rgba(196, 87, 62, 0.8);
   color: #f0b5a6;
   background: var(--sk-rust-soft);
+}
+.verb.shore.second.afford {
+  border-color: rgba(184, 149, 90, 0.7);
+  color: var(--sk-brass);
+  background: transparent;
 }
 </style>

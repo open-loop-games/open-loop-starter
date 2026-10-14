@@ -14,6 +14,9 @@
 // The peg re-baselines W₀ on permanent power, so a power purchase adds no run length; only
 // bending g (the Storm almanac) lengthens a watch.
 
+import { KNOWLEDGE_EFFECT } from './logbook';
+import { SEA } from './sea';
+
 /** The only hand-picked numbers. */
 export const ANCHORS = {
   /** Seconds of calm per day. A cycle (day and night) is about three minutes. */
@@ -27,6 +30,8 @@ export const ANCHORS = {
   brace: 0.25,
   /** Ward bonus per buttress in the yard touching a breakwater (8-adjacent). */
   buttress: 0.2,
+  /** Spray one screen turns per night on each quarter it faces, in lone walls. */
+  screen: 1.2,
 
   /** Reference storm growth: the Skerry's own posting. Postings sit either side of it. */
   gRef: 1.5,
@@ -43,9 +48,9 @@ export const ANCHORS = {
   netSlackDaySeconds: 60,
 
   /** Each price as a fraction of Y, one net's catch over a whole cycle. */
-  priceInCycles: { net: 0.3, breakwater: 0.35, buttress: 1, winch: 2 },
+  priceInCycles: { net: 0.3, breakwater: 0.35, buttress: 1, screen: 0.8, winch: 2 },
   /** Per-copy price growth. Walls grow slowest: a side of five should stay in reach. */
-  priceGrowth: { net: 1.6, breakwater: 1.3, buttress: 1.5, winch: 2 },
+  priceGrowth: { net: 1.6, breakwater: 1.3, buttress: 1.5, screen: 1.5, winch: 2 },
   /** Starting salvage, in cycles of Y: one net and two breakwaters on day one. */
   startInCycles: 1.15,
   /** A full mend of the tower costs this many cycles of Y. */
@@ -61,6 +66,16 @@ export const ANCHORS = {
   refEntriesWeathered: 6,
   /** Logbook entries a saturated reference run pays for salvage gathered. */
   refEntriesGathered: 4,
+
+  /** The closing posting's storm is pegged to this many levels of stone, whatever is owned. */
+  closingStone: 3,
+  /** The first night the relief may be signalled on the closing posting. */
+  callFromNight: 3,
+  /**
+   * The final gale, as a multiple of tonight's storm or the crossing night's, whichever is
+   * larger: calling before the crossing buys no smaller gale, only an earlier one.
+   */
+  finalGale: 2.4,
 } as const;
 
 // ─── Skeleton ───
@@ -116,7 +131,15 @@ export interface Spine {
   shoreUpBase: number;
   /** Ward one shoring adds to the struck side for the rest of the night: one braced wall. */
   shoreUpWard: number;
+  /** Spray one screen turns per night on each quarter it faces. */
+  screenWard: number;
+  /** The closing posting's opening storm: authored at `closingStone`, not pegged to power. */
+  closingW0: number;
   timbers: number;
+  /** A wreck's salvage, smallest and largest. */
+  wreckSize: readonly [number, number];
+  /** Salvage stripped from a wreck per second there. */
+  stripPerSecond: number;
   /** Divisors inside the cube-root payout, one per source. */
   payoutScale: { weathered: number; gathered: number };
 }
@@ -189,13 +212,19 @@ export function deriveSpine(input: SpineInput): Spine {
       net: price('net'),
       breakwater: price('breakwater'),
       buttress: price('buttress'),
+      screen: price('screen'),
       winch: price('winch'),
     },
     startSalvage: Math.round(cycleYield * a.startInCycles),
     repairPerPoint: (cycleYield * a.fullRepairInCycles) / integrity,
     shoreUpBase: Math.round(cycleYield * a.shoreUpInCycles),
     shoreUpWard: input.wardPerWall * input.wardPower * (1 + 2 * a.brace),
+    screenWard: input.wardPerWall * input.wardPower * a.screen,
+    closingW0:
+      saturatedSideWard(input.wardPerWall, KNOWLEDGE_EFFECT.stone ** a.closingStone) / headroom,
     timbers: Math.round(cycleYield * a.timbersInCycles),
+    wreckSize: [cycleYield * SEA.wreckSizeInCycles[0], cycleYield * SEA.wreckSizeInCycles[1]],
+    stripPerSecond: cycleYield * SEA.stripPerSecondInCycles,
     payoutScale: {
       weathered: refWeathered / a.refEntriesWeathered ** 3,
       gathered: refGathered / a.refEntriesGathered ** 3,

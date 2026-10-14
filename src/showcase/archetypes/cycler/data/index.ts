@@ -2,4 +2,5 @@
 // modules read it at construction, and the projection reads it on paper.
 export * from './rock';
 export * from './logbook';
+export * from './sea';
 export * from './spine';

@@ -1,14 +1,16 @@
 <!--
   WatchEnd — between watches. The logbook's account of the watch just ended, the keeper's
   knowledge on starter's `UpgradeGrid` (each entry levels, so the card shows its level and
-  the next price), the postings the charters have opened, and taking the next one.
+  the next price), the postings the charters have opened, and taking the next one. A watch
+  under the relief ends in the career's close: the light held, or the lesser close, which
+  the Flannans can be taken again to better.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
-import { KNOWLEDGE, POSTINGS, type KnowledgeDef } from '../../data';
+import { ANCHORS, KNOWLEDGE, POSTINGS, type KnowledgeDef } from '../../data';
 import { getLogbook, getWatch } from '../../modules';
 import { n } from '../format';
 
@@ -16,6 +18,7 @@ const logbook = getLogbook();
 const watch = getWatch();
 const last = computed(() => logbook.lastWatch.value);
 const lastPosting = computed(() => POSTINGS.find((p) => p.id === last.value?.posting)?.name);
+const ending = computed(() => logbook.ending.value);
 
 interface Shelf {
   def: KnowledgeDef;
@@ -60,9 +63,26 @@ const postings = computed(() =>
 <template>
   <div class="watch-end" role="region" aria-label="Between watches">
     <div class="page">
+      <div v-if="ending !== 'none'" class="ending" :class="ending">
+        <template v-if="ending === 'held'">
+          The light held through the last gale, and the relief came to the Flannans. The Board's log
+          closes here; the rock is yours to keep as long as you like.
+        </template>
+        <template v-else>
+          The light went out the night the relief came. The log records it; the Flannans can be
+          taken again.
+        </template>
+      </div>
       <header v-if="last">
         <div class="kicker">From the logbook</div>
-        <h1>
+        <h1 v-if="last.relief === 'held'">
+          The light at {{ lastPosting }} held through the final gale, {{ last.nights }} nights kept.
+        </h1>
+        <h1 v-else-if="last.relief === 'lost'">
+          The light at {{ lastPosting }} went out under the final gale, on night
+          {{ last.nights + 1 }}.
+        </h1>
+        <h1 v-else>
           The light at {{ lastPosting }} went dark after {{ last.nights }}
           {{ last.nights === 1 ? 'night' : 'nights' }}.
         </h1>
@@ -125,7 +145,10 @@ const postings = computed(() =>
             <span class="price num"
               >storms ×{{ p.def.g }} a night ·
               {{ p.def.wind === 'veering' ? 'veering winds' : 'always from the west'
-              }}<template v-if="p.def.wrack !== 1"> · wrack ×{{ p.def.wrack }}</template></span
+              }}<template v-if="p.def.wrack !== 1"> · wrack ×{{ p.def.wrack }}</template
+              ><template v-if="p.def.closing">
+                · storms set for {{ ANCHORS.closingStone }} levels of Dressed stone</template
+              ></span
             >
           </Button>
         </div>
@@ -157,6 +180,25 @@ const postings = computed(() =>
   border: 1px solid rgba(184, 149, 90, 0.4);
   border-radius: 6px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+.ending {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 4px;
+  font-family: var(--sk-chart);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.ending.held {
+  border: 1px solid var(--sk-lamp);
+  background: var(--sk-lamp-soft);
+  color: var(--sk-whitewash);
+  box-shadow: 0 0 30px var(--sk-lamp-glow);
+}
+.ending.lesser {
+  border: 1px solid rgba(196, 87, 62, 0.6);
+  background: var(--sk-rust-soft);
+  color: #f0b5a6;
 }
 .kicker {
   font-family: var(--sk-chart);
@@ -194,7 +236,7 @@ section {
 }
 .postings {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 .book,

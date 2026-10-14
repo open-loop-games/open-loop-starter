@@ -14,12 +14,20 @@
  *   in `posting-probe.ts` should land on it.
  * - § the peg: ×power on ward re-pegs W₀, so the nights do not move.
  * - § the almanac: the one lever on the nights.
+ * - § the spray hedge: the largest storm a side turns at each spray share, by how the three
+ *   yard cells behind it split between buttresses and screens. Dawn names spray but not its
+ *   share, so the hedge is the column best across the row.
+ * - § the finale: the final gale against a saturated side and a whole tower, by stone. The
+ *   stone where it first holds is the closing posting's target; the keeper's shoring,
+ *   screens and the backing side move the measured hold rate around it.
  */
 
 import {
   ANCHORS,
   KNOWLEDGE_EFFECT,
   POSTINGS,
+  SEA,
+  SIDE_PROFILE,
   bentG,
   crossingNight,
   deriveSpine,
@@ -73,5 +81,55 @@ for (let level = 0; level <= 4; level++) {
   const g = bentG(ANCHORS.gRef, level, KNOWLEDGE_EFFECT.almanacBend);
   console.log(
     `  almanac ${level}: g ${g.toFixed(3)} → survives ${predictNightsSurvived(s, g)} nights`,
+  );
+}
+
+// ─── The spray hedge ───
+// A side's walls with b buttresses behind and 3 − b screens: the largest storm it turns
+// whole at each spray share. Yard cells behind a side reach shore cells 0–2, 1–3 and 2–4;
+// the middle one is placed first.
+const YARD_REACH = [
+  [1, 2, 3],
+  [0, 1, 2],
+  [2, 3, 4],
+];
+function wallsWith(buttresses: number): number {
+  const cover = [0, 0, 0, 0, 0];
+  for (const reach of YARD_REACH.slice(0, buttresses)) for (const i of reach) cover[i]++;
+  return SIDE_PROFILE.reduce(
+    (sum, cell, i) =>
+      sum +
+      ANCHORS.wardPerWall * (1 + ANCHORS.brace * cell.braced) * (1 + ANCHORS.buttress * cover[i]),
+    0,
+  );
+}
+console.log('\nTHE SPRAY HEDGE — largest storm a side turns whole, by buttresses : screens');
+console.log(
+  `  share   ${[3, 2, 1, 0].map((b) => `${b}:${3 - b}`.padStart(7)).join('')}   (C_max ${s.cMax.toFixed(0)})`,
+);
+for (const share of [0, ...SEA.sprayShares]) {
+  const row = [3, 2, 1, 0].map((b) => {
+    const walls = wallsWith(b) / (1 - share);
+    const screens = share > 0 ? ((3 - b) * ANCHORS.wardPerWall * ANCHORS.screen) / share : Infinity;
+    return Math.min(walls, screens).toFixed(0).padStart(7);
+  });
+  console.log(`  ${String(Math.round(share * 100)).padStart(3)}%   ${row.join('')}`);
+}
+
+// ─── The finale ───
+// On the closing posting the storm is authored at `closingStone`, and the final gale is
+// `finalGale` × the crossing night's storm, C_max at that stone. A saturated side and a
+// whole tower hold it when the gale less the ward fits in the integrity: no shoring, no
+// spray, no backing.
+console.log(
+  `\nTHE FINALE — final gale ${ANCHORS.finalGale} × C_max at stone ${ANCHORS.closingStone}, called by the crossing night`,
+);
+const finalGale = ANCHORS.finalGale * s.closingW0 * s.headroom;
+for (let stone = 0; stone <= 5; stone++) {
+  const sp = deriveSpine(referenceInput(KNOWLEDGE_EFFECT.stone ** stone));
+  const margin = sp.cMax + sp.integrity - finalGale;
+  console.log(
+    `  stone ${stone}: gale ${finalGale.toFixed(0)} against ward ${sp.cMax.toFixed(0)} + tower ${sp.integrity.toFixed(0)}` +
+      ` → ${margin >= 0 ? `holds, ${margin.toFixed(0)} to spare` : `${(-margin).toFixed(0)} short`}`,
   );
 }

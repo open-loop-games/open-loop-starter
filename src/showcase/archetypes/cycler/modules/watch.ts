@@ -1,14 +1,19 @@
 /**
- * One watch on the rock: the board, the tideline, the tower and the day/night alternation
- * that drives them. The light going out resets this module's whole context; the logbook
- * entries it pays are written after the reset returns, into `./logbook.ts`.
+ * One watch on the rock: the board, the tideline, the tower, the boat and the day/night
+ * alternation that drives them. The light going out resets this module's whole context; the
+ * logbook entries it pays are written after the reset returns, into `./logbook.ts`.
  *
  * Day and night share every piece of state: one salvage pile, one board, one tower. A phase
  * changes which verbs are open and which tick runs:
- *   day:   haul nets, build, take up, mend, take a find, light the lamp early
- *   night: shore up the struck side; the storm's breakers land on a schedule
+ *   day:   haul nets, build, take up, mend, take a find, row out to a wreck, light the lamp
+ *          early, and on the closing posting signal the relief
+ *   night: shore up a side; the storm's breakers land on a schedule
  * Nets catch through both, more at night, and the night's catch waits on the tideline for
- * the morning, so the board carries one phase into the next.
+ * the morning, so the board carries one phase into the next. A keeper out in the boat does
+ * none of the keeper's verbs, and one still out at dusk shelters at the wreck till dawn.
+ *
+ * Sections: Ward · Storm · Tideline · Pieces · Tower · Finds · The boat · Phase alternation ·
+ * The watch.
  */
 import {
   addResource,
@@ -51,8 +56,10 @@ import {
   POSTINGS,
   QUARTER_NAME,
   QUARTERS,
+  SEA,
   bentG,
   type FindId,
+  type GaleKind,
   type PieceDef,
   type PieceKind,
   type PostingDef,
@@ -69,17 +76,24 @@ import {
   type Placed,
   type WardFactors,
 } from './rock';
-import { LogbookKey, type WatchSummary } from './logbook';
+import { breakerLeak, neighbours, nextBackingOdds, screenWards } from './storm';
+import { LogbookKey, type ReliefOutcome, type WatchSummary } from './logbook';
 
 export type Phase = 'setup' | 'day' | 'night';
+/** Where the keeper is: home, rowing out or at the wreck, or rowing back. */
+export type Boat = 'home' | 'out' | 'returning';
 
 /** One breaker as it landed: what the UI flashes and the log reads. */
 export interface Strike {
   index: number;
+  /** The side it broke on: tonight's quarter, or the one the gale backed to. */
   quarter: Quarter;
   force: number;
   leak: number;
 }
+
+type ByQuarter = Record<Quarter, number>;
+const NONE: ByQuarter = { N: 0, E: 0, S: 0, W: 0 };
 
 export interface WatchApi {
   phase: Persistent<Phase>;
@@ -90,6 +104,12 @@ export interface WatchApi {
   phaseLength: ComputedRef<number>;
   /** Tonight's quarter, forecast at dawn. */
   quarter: Persistent<Quarter>;
+  /** Tonight's kind, forecast at dawn. */
+  kind: Persistent<GaleKind>;
+  /** Share of tonight's force that is spray: drawn at dusk on a spray night, else 0. */
+  spray: Persistent<number>;
+  /** The quarter tonight's gale may back to, named at dawn; null before backing starts. */
+  backQuarter: Persistent<Quarter | null>;
   posting: ComputedRef<PostingDef>;
   /** Storm growth for this watch, frozen at its start. */
   g: Persistent<number>;
@@ -98,7 +118,7 @@ export interface WatchApi {
   salvage: Resource<DecimalSource>;
   integrity: Resource<DecimalSource>;
   integrityMax: Persistent<number>;
-  /** Force the walls turned this watch: one of the payout's two sources. */
+  /** Force the walls and screens turned this watch: one of the payout's two sources. */
   weathered: Resource<DecimalSource>;
   /** Salvage banked this watch: the payout's other source. */
   gathered: Resource<DecimalSource>;
@@ -106,19 +126,33 @@ export interface WatchApi {
   board: ComputedRef<OccupancyView>;
   pieces: PurchasableCategory<PieceDef>;
   tideline: Inventory;
-  wards: ComputedRef<Record<Quarter, number>>;
+  /** Each side's wall ward. */
+  wards: ComputedRef<ByQuarter>;
+  /** Spray each side's screens turn. */
+  screens: ComputedRef<ByQuarter>;
   wardFactors: ComputedRef<WardFactors>;
   /** Tonight's storm: total force across every breaker. */
   storm: ComputedRef<number>;
   breakers: ComputedRef<number>;
   struck: Persistent<number>;
-  /** Ward shoring has added to the struck side tonight. */
-  shored: Persistent<number>;
+  /** Ward shoring has added to each side tonight. */
+  shored: Persistent<ByQuarter>;
   shoreCost: ComputedRef<number>;
   repairCost: (points: number) => number;
   offer: Persistent<FindId[]>;
   /** One net's catch per second in the calm, after every multiplier. */
   netRate: ComputedRef<number>;
+  /** Salvage left in the wreck sighted today; 0 when none is. */
+  wreck: Persistent<number>;
+  boat: Persistent<Boat>;
+  /** Salvage in the boat, banked when the keeper is home. */
+  boatHaul: Persistent<number>;
+  /** Out at dusk: sheltering at the wreck until dawn. */
+  caughtOut: Persistent<boolean>;
+  home: ComputedRef<boolean>;
+  /** The relief is signalled: tonight's gale is the final one. */
+  relief: Persistent<boolean>;
+  canSignal: ComputedRef<boolean>;
   lastStrike: Ref<Strike | null>;
   log: Ref<string[]>;
 
@@ -133,7 +167,12 @@ export interface WatchApi {
   mend: (points: number) => number;
   take: (find: FindId) => boolean;
   lightLamp: () => boolean;
-  shoreUp: () => boolean;
+  /** Shores up a side for the rest of the night: tonight's quarter unless named. */
+  shoreUp: (side?: Quarter) => boolean;
+  rowOut: () => boolean;
+  rowHome: () => boolean;
+  /** On the closing posting: the tower is made whole, and tonight's gale is the final one. */
+  signalRelief: () => boolean;
   /** The price of the next copy of a piece. */
   priceOf: (kind: PieceKind) => number;
 }
@@ -173,6 +212,10 @@ export function createWatchModule(): EngineModule {
       const night = persistent(1, { id: 'night' });
       const clock = persistent(0, { id: 'clock' });
       const quarter = persistent<Quarter>('N', { id: 'quarter' });
+      const kind = persistent<GaleKind>('gale', { id: 'kind' });
+      const spray = persistent(0, { id: 'spray' });
+      const backQuarter = persistent<Quarter | null>(null, { id: 'back-quarter' });
+      const backingOdds = persistent<number>(SEA.backingOdds, { id: 'backing-odds' });
       const postingId = persistent(POSTINGS[0].id, { id: 'posting' });
       const g = persistent<number>(ANCHORS.gRef, { id: 'g' });
       // The opening storm, pegged at the watch's start and frozen for it: power bought
@@ -181,12 +224,18 @@ export function createWatchModule(): EngineModule {
       const integrityMax = persistent(0, { id: 'integrity-max' });
       const placed = persistent<Placed[]>([], { id: 'placed' });
       const struck = persistent(0, { id: 'struck' });
-      const shored = persistent(0, { id: 'shored' });
+      const shored = persistent<ByQuarter>({ ...NONE }, { id: 'shored' });
       const shoreUses = persistent(0, { id: 'shore-uses' });
       const offer = persistent<FindId[]>([], { id: 'offer' });
       const brass = persistent(0, { id: 'brass' });
       const cork = persistent(0, { id: 'cork' });
       const glass = persistent(false, { id: 'glass' });
+      const wreck = persistent(0, { id: 'wreck' });
+      const boat = persistent<Boat>('home', { id: 'boat' });
+      const boatClock = persistent(0, { id: 'boat-clock' });
+      const boatHaul = persistent(0, { id: 'boat-haul' });
+      const caughtOut = persistent(false, { id: 'caught-out' });
+      const relief = persistent(false, { id: 'relief' });
 
       const lastStrike = ref<Strike | null>(null);
       const log = shallowRef<string[]>([]);
@@ -196,6 +245,9 @@ export function createWatchModule(): EngineModule {
 
       const posting = computed(() => POSTINGS.find((p) => p.id === postingId.value) ?? POSTINGS[0]);
       logbook.setPostingOpen(() => phase.value === 'setup');
+      const home = computed(() => boat.value === 'home');
+      /** The keeper's own day verbs: by day, and at home. */
+      const atWork = () => phase.value === 'day' && home.value;
 
       // ─── Ward ───
       logbook.wardChain.bind({
@@ -213,13 +265,20 @@ export function createWatchModule(): EngineModule {
       }));
       const board = computed(() => viewOf(placed.value));
       const wards = computed(() => sideWards(board.value, wardFactors.value));
+      const screens = computed(() => screenWards(board.value, wardFactors.value, ANCHORS.screen));
 
       // ─── Storm ───
       const phaseLength = computed(() =>
         phase.value === 'night' ? logbook.nightSeconds.value : logbook.daySeconds.value,
       );
-      const storm = computed(
+      const tonight = computed(
         () => w0.value * g.value ** (night.value - 1) * (glass.value ? FIND_EFFECT.glass : 1),
+      );
+      // The final gale is floored at the crossing night's storm, W₀·H.
+      const storm = computed(() =>
+        relief.value
+          ? ANCHORS.finalGale * Math.max(tonight.value, w0.value * spine.value.headroom)
+          : tonight.value,
       );
       const breakers = computed(() => BREAKERS_FIRST_NIGHT - 1 + night.value);
 
@@ -262,23 +321,23 @@ export function createWatchModule(): EngineModule {
         }),
       });
       pieces.register([...PIECES]);
-      const priceOf = (kind: PieceKind) => toNumber(pieces.getPurchasable(kind)!.getCost(1));
+      const priceOf = (piece: PieceKind) => toNumber(pieces.getPurchasable(piece)!.getCost(1));
 
       function occupant(x: number, y: number): Placed | undefined {
         return placed.value.find((p) => p.x === x && p.y === y);
       }
 
-      function build(kind: PieceKind, x: number, y: number): boolean {
-        if (phase.value !== 'day') return false;
-        const def = PIECES.find((p) => p.id === kind)!;
+      function build(piece: PieceKind, x: number, y: number): boolean {
+        if (!atWork()) return false;
+        const def = PIECES.find((p) => p.id === piece)!;
         if (groundAt(x, y) !== def.ground || occupant(x, y)) return false;
-        if (toNumber(pieces.getPurchasable(kind)!.purchase(1)) < 1) return false;
-        placed.value = [...placed.value, { kind, x, y }];
+        if (toNumber(pieces.getPurchasable(piece)!.purchase(1)) < 1) return false;
+        placed.value = [...placed.value, { kind: piece, x, y }];
         return true;
       }
 
       function clear(x: number, y: number): boolean {
-        if (phase.value !== 'day') return false;
+        if (!atWork()) return false;
         const p = occupant(x, y);
         if (!p) return false;
         if (p.kind === 'net') haul(x, y);
@@ -304,12 +363,12 @@ export function createWatchModule(): EngineModule {
 
       /** The keeper walks the tideline by day only. */
       function haul(x: number, y: number): number {
-        if (phase.value !== 'day') return 0;
+        if (!atWork()) return 0;
         return haulKey(cellKey(x, y));
       }
 
       function haulAll(): number {
-        if (phase.value !== 'day') return 0;
+        if (!atWork()) return 0;
         let total = 0;
         for (const p of placed.value) if (p.kind === 'net') total += haulKey(cellKey(p.x, p.y));
         return total;
@@ -323,7 +382,7 @@ export function createWatchModule(): EngineModule {
         const catchPerNet = netRate.value * surge * dt;
         for (const p of placed.value)
           if (p.kind === 'net') tideline.add(cellKey(p.x, p.y), catchPerNet);
-        // A winch hauls every net it touches, at any hour.
+        // A winch hauls every net it touches, at any hour, keeper home or not.
         const view = board.value;
         for (const w of placed.value) {
           if (w.kind !== 'winch') continue;
@@ -338,7 +397,7 @@ export function createWatchModule(): EngineModule {
       }
 
       function mend(points: number): number {
-        if (phase.value !== 'day') return 0;
+        if (!atWork()) return 0;
         const want = Math.min(points, integrityMax.value - toNumber(integrity.value));
         if (want <= 0) return 0;
         const affordable = Math.min(want, toNumber(salvage.value) / spine.value.repairPerPoint);
@@ -350,12 +409,14 @@ export function createWatchModule(): EngineModule {
 
       const shoreCost = computed(() => spine.value.shoreUpBase * 2 ** shoreUses.value);
 
-      function shoreUp(): boolean {
-        if (phase.value !== 'night') return false;
+      function shoreUp(side: Quarter = quarter.value): boolean {
+        if (phase.value !== 'night' || !home.value) return false;
+        if (side !== quarter.value && side !== backQuarter.value) return false;
         if (!subtractResource(salvage, shoreCost.value)) return false;
         shoreUses.value += 1;
-        shored.value += spine.value.shoreUpWard * (1 + FIND_EFFECT.brass * brass.value);
-        note(`Shored the ${QUARTER_NAME[quarter.value]} side with what was to hand.`);
+        const added = spine.value.shoreUpWard * (1 + FIND_EFFECT.brass * brass.value);
+        shored.value = { ...shored.value, [side]: shored.value[side] + added };
+        note(`Shored the ${QUARTER_NAME[side]} side with what was to hand.`);
         return true;
       }
 
@@ -379,7 +440,7 @@ export function createWatchModule(): EngineModule {
       }
 
       function take(find: FindId): boolean {
-        if (phase.value !== 'day' || !offer.value.includes(find)) return false;
+        if (!atWork() || !offer.value.includes(find)) return false;
         offer.value = [];
         if (find === 'timbers') bank(spine.value.timbers);
         if (find === 'oakum')
@@ -397,6 +458,44 @@ export function createWatchModule(): EngineModule {
         return true;
       }
 
+      // ─── The boat ───
+      // A wreck sighted at dawn is stripped at a steady rate while the keeper is there; the
+      // haul banks when the keeper is home. Out at dusk, the keeper shelters at the wreck and
+      // rows home at dawn, so the night runs without shoring.
+      function rowOut(): boolean {
+        if (!atWork() || wreck.value <= 0) return false;
+        boat.value = 'out';
+        boatClock.value = 0;
+        note('Rowed out to the wreck.');
+        return true;
+      }
+
+      function rowHome(): boolean {
+        if (phase.value !== 'day' || boat.value !== 'out') return false;
+        boat.value = 'returning';
+        boatClock.value = 0;
+        return true;
+      }
+
+      function landBoat(): void {
+        const haul = bank(boatHaul.value);
+        boatHaul.value = 0;
+        boat.value = 'home';
+        caughtOut.value = false;
+        if (haul > 0) note(`Landed ${Math.round(haul)} salvage from the wreck.`);
+      }
+
+      function tickBoat(dt: number): void {
+        if (boat.value === 'home') return;
+        boatClock.value += dt;
+        if (boat.value === 'out' && boatClock.value > SEA.rowSeconds && wreck.value > 0) {
+          const stripped = Math.min(wreck.value, spine.value.stripPerSecond * dt);
+          wreck.value -= stripped;
+          boatHaul.value += stripped;
+        }
+        if (boat.value === 'returning' && boatClock.value >= SEA.rowSeconds) landBoat();
+      }
+
       // ─── Phase alternation ───
       // The day and night clock is game code. The engine keeps no timed phase cadence on
       // purpose: waves on a timer have no items for a Sequencer to start (engine
@@ -404,54 +503,114 @@ export function createWatchModule(): EngineModule {
       // neither the entered set nor elapsed time. So the phase and its clock are saved
       // here, and `syncPhase` re-enters the TickDriver phase after every transition and
       // load. The shape is candidate-recipes.md § Run-phase controller.
-      function forecast(): Quarter {
+      function forecastQuarter(): Quarter {
         const wind = posting.value.wind;
         if (wind !== 'veering') return wind;
         return QUARTERS[Math.floor(random() * QUARTERS.length)];
+      }
+
+      /** Dawn names tonight's quarter, its kind and the quarter it may back to. */
+      function forecast(): void {
+        quarter.value = forecastQuarter();
+        const n = night.value;
+        kind.value = n >= SEA.sprayFromNight && random() < SEA.sprayChance ? 'spray' : 'gale';
+        backQuarter.value =
+          n >= SEA.backingFromNight ? neighbours(quarter.value)[random() < 0.5 ? 0 : 1] : null;
+        spray.value = 0;
+      }
+
+      function sightWreck(): void {
+        const [lo, hi] = spine.value.wreckSize;
+        wreck.value =
+          night.value >= 2 && random() < SEA.wreckChance ? lo + (hi - lo) * random() : 0;
+        if (wreck.value > 0) note('A wreck is sighted offshore.');
+      }
+
+      function forecastLine(): string {
+        const back = backQuarter.value ? `, backing ${QUARTER_NAME[backQuarter.value]}` : '';
+        const what = kind.value === 'spray' ? 'a gale with spray' : 'a gale';
+        return `Tonight: ${what} from the ${QUARTER_NAME[quarter.value]}${back}.`;
       }
 
       function dusk(): void {
         phase.value = 'night';
         clock.value = 0;
         struck.value = 0;
+        backingOdds.value = SEA.backingOdds;
+        if (kind.value === 'spray')
+          spray.value = SEA.sprayShares[Math.floor(random() * SEA.sprayShares.length)];
         if (offer.value.length) note('The rest of the find washed back out at dusk.');
         offer.value = [];
-        note(
-          `Night ${night.value}: a gale from the ${QUARTER_NAME[quarter.value]}, ${breakers.value} breakers.`,
-        );
+        if (!home.value) {
+          caughtOut.value = true;
+          note('Dusk caught the boat out. The keeper shelters at the wreck.');
+        }
+        const sprayLine = spray.value ? `, ${Math.round(spray.value * 100)}% of it spray` : '';
+        note(`Night ${night.value}: ${breakers.value} breakers${sprayLine}.`);
         syncPhase();
       }
 
       function dawn(): void {
+        if (!home.value) landBoat();
         night.value += 1;
         phase.value = 'day';
         clock.value = 0;
-        shored.value = 0;
+        shored.value = { ...NONE };
         shoreUses.value = 0;
         glass.value = false;
-        quarter.value = forecast();
+        forecast();
         offer.value = drawOffer();
-        note(`Dawn. The tower stands. Tonight's wind: ${QUARTER_NAME[quarter.value]}.`);
+        sightWreck();
+        note(`Dawn. The tower stands. ${forecastLine()}`);
         syncPhase();
       }
 
       function lightLamp(): boolean {
-        if (phase.value !== 'day') return false;
+        if (!atWork()) return false;
         dusk();
+        return true;
+      }
+
+      const canSignal = computed(
+        () =>
+          atWork() &&
+          posting.value.closing === true &&
+          !relief.value &&
+          night.value >= ANCHORS.callFromNight,
+      );
+
+      function signalRelief(): boolean {
+        if (!canSignal.value) return false;
+        relief.value = true;
+        integrity.value = integrityMax.value;
+        note('The relief is signalled. The tower is made whole; the last gale comes tonight.');
         return true;
       }
 
       function strike(): void {
         const k = breakers.value;
+        // Each breaker may back to the named quarter, with odds against a repeat.
+        let side = quarter.value;
+        if (backQuarter.value) {
+          const backed = random() < backingOdds.value;
+          backingOdds.value = nextBackingOdds(backingOdds.value, backed);
+          if (backed) side = backQuarter.value;
+        }
         const force = storm.value / k;
-        const ward = (wards.value[quarter.value] + shored.value) / k;
-        const turned = Math.min(force, ward);
-        const leak = force - turned;
+        const leak = breakerLeak({
+          force,
+          spray: spray.value,
+          walls: (wards.value[side] + shored.value[side]) / k,
+          screens: screens.value[side] / k,
+        });
         struck.value += 1;
-        addResource(weathered, turned);
+        addResource(weathered, force - leak);
         integrity.value = Math.max(0, toNumber(integrity.value) - leak);
-        lastStrike.value = { index: struck.value, quarter: quarter.value, force, leak };
-        if (toNumber(integrity.value) <= 0) cycle.end();
+        lastStrike.value = { index: struck.value, quarter: side, force, leak };
+        if (toNumber(integrity.value) <= 0) {
+          outcome = relief.value ? 'lost' : null;
+          cycle.end();
+        }
       }
 
       function tickNight(dt: number): void {
@@ -465,20 +624,26 @@ export function createWatchModule(): EngineModule {
           clock.value >= ((struck.value + 0.5) * T) / breakers.value
         )
           strike();
-        if (phase.value === 'night' && clock.value >= T) {
-          const leaked = toNumber(integrity.value) < integrityMax.value;
-          note(
-            leaked
-              ? 'The storm blew itself out. The tower took water.'
-              : 'The storm broke on the walls and nothing came through.',
-          );
-          dawn();
+        if (phase.value !== 'night' || clock.value < T) return;
+        if (relief.value) {
+          note('The relief came at first light. The light held.');
+          outcome = 'held';
+          cycle.end();
+          return;
         }
+        const leaked = toNumber(integrity.value) < integrityMax.value;
+        note(
+          leaked
+            ? 'The storm blew itself out. The tower took water.'
+            : 'The storm broke on the walls and nothing came through.',
+        );
+        dawn();
       }
 
       function tickDay(dt: number): void {
         if (phase.value !== 'day') return;
         clock.value += dt;
+        tickBoat(dt);
         if (clock.value >= logbook.daySeconds.value) dusk();
       }
 
@@ -496,6 +661,7 @@ export function createWatchModule(): EngineModule {
 
       // ─── The watch: start, wreck, payout ───
       let summary: WatchSummary | null = null;
+      let outcome: ReliefOutcome | null = null;
       const cycle = createCycle({
         resetPersistentContexts: [WATCH_CONTEXT],
         registerTick: ctx.onTick,
@@ -509,10 +675,11 @@ export function createWatchModule(): EngineModule {
             toNumber(integerRoot(gth / s.payoutScale.gathered, 3));
           summary = {
             posting: postingId.value,
-            nights: night.value - 1,
+            nights: outcome === 'held' ? night.value : night.value - 1,
             weathered: w,
             gathered: gth,
             entries,
+            relief: outcome,
           };
         },
       });
@@ -523,6 +690,8 @@ export function createWatchModule(): EngineModule {
         addResource(logbook.entries, s.entries);
         logbook.bestNights.value = Math.max(logbook.bestNights.value, s.nights);
         logbook.lastWatch.value = s;
+        if (s.relief) logbook.recordRelief(s.relief);
+        outcome = null;
         lastStrike.value = null;
         log.value = [];
         cycle.pause();
@@ -535,16 +704,16 @@ export function createWatchModule(): EngineModule {
         postingId.value = p.id;
         g.value = bentG(p.g, logbook.level('almanac'), KNOWLEDGE_EFFECT.almanacBend);
         const s = spine.value;
-        w0.value = s.w0;
+        w0.value = p.closing ? s.closingW0 : s.w0;
         integrityMax.value = s.integrity;
         integrity.value = s.integrity;
         salvage.value = s.startSalvage * (1 + KNOWLEDGE_EFFECT.stores * logbook.level('stores'));
         night.value = 1;
         clock.value = 0;
-        quarter.value = forecast();
+        forecast();
         phase.value = 'day';
         log.value = [];
-        note(`Posted to ${p.name}. Tonight's wind: ${QUARTER_NAME[quarter.value]}.`);
+        note(`Posted to ${p.name}. ${forecastLine()}`);
         if (cycle.count.value === 0)
           note('Lay a tide net on the lee shore, and breakwaters side by side facing the gale.');
         cycle.resume();
@@ -562,6 +731,9 @@ export function createWatchModule(): EngineModule {
         clock,
         phaseLength,
         quarter,
+        kind,
+        spray,
+        backQuarter,
         posting,
         g,
         cycle,
@@ -575,6 +747,7 @@ export function createWatchModule(): EngineModule {
         pieces,
         tideline,
         wards,
+        screens,
         wardFactors,
         storm,
         breakers,
@@ -584,6 +757,13 @@ export function createWatchModule(): EngineModule {
         repairCost,
         offer,
         netRate,
+        wreck,
+        boat,
+        boatHaul,
+        caughtOut,
+        home,
+        relief,
+        canSignal,
         lastStrike,
         log,
         startWatch,
@@ -598,6 +778,9 @@ export function createWatchModule(): EngineModule {
         take,
         lightLamp,
         shoreUp,
+        rowOut,
+        rowHome,
+        signalRelief,
         priceOf,
       };
       ctx.provide(WatchKey, api);

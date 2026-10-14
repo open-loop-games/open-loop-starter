@@ -3,8 +3,10 @@
 A saturating ward races a geometric storm the keeper does not control. The calm phase is an
 economy of its own: nets catch salvage, salvage buys the pieces, and every price is a
 fraction of one net's catch over a cycle. The pressure phase is a sum, tonight's storm
-against one side's ward, and the run ends when the leaks pass the tower's integrity. The
-bucket and where its closed form stops are in `IDENTITY.md` § Rate-function spine.
+against a side's walls and screens, and the run ends when the leaks pass the tower's
+integrity. Above the watches, the career is a road to the closing posting, whose storm is
+authored rather than pegged and whose final gale is the end beat. The bucket and where its
+closed form stops are in `IDENTITY.md` § Rate-function spine.
 
 Every number comes from the anchors at the top of `data/spine.ts` (`ANCHORS`), through
 `deriveSpine`. To retune, move an anchor and read `cycler-projection.ts`; never edit a
@@ -29,8 +31,11 @@ registry is `modules/tuning.ts`.
   the repair and shoring prices, and the payout's reference run are anchors without keys.
   They are shape: moving one changes what a saturated side or a reference watch is, so
   re-read the projection rather than sweeping them.
+- The closing posting's stone, the first night of call and the final gale's multiple are
+  anchors too (`closingStone`, `callFromNight`, `finalGale`). They set the end beat's
+  difficulty and are read once a career; re-measure the hold rate by stone after moving one.
 - Postings, knowledge ratios and find effects are content in `data/logbook.ts` and
-  `data/rock.ts`.
+  `data/rock.ts`; spray, backing and wreck odds and sizes are in `data/sea.ts`.
 
 ## Couplings
 
@@ -65,6 +70,31 @@ registry is `modules/tuning.ts`.
   rate, Cork floats included. A keeper who skips a morning's haul loses the overflow.
 - **Day and night length feed the prices.** Y is the catch over a whole cycle, so a longer
   day makes every price larger in salvage and the same in cycles.
+- **Spray and backing move force; they never add it.** A spray share goes over the walls
+  to the screens; a backed breaker lands on the neighbouring side. Tonight's storm is still
+  W_n. A side hedged for spray (`cycler-projection.ts` § the spray hedge) turns about C_max,
+  and a keeper who walls both the struck and the backing side meets each breaker with a
+  full side, so the bare keeper still lands on the spine's nights.
+- **Screens compete with buttresses for the yard.** Three yard cells stand behind a side.
+  On a plain gale three buttresses are best; on a spray night three screens are, because
+  the share is drawn at dusk and screens alone hold every share. A screen that turned more
+  than ~1.2 walls of spray would make screens the answer to every night.
+- **The backing side costs walls the nets wanted.** From night 4 the keeper walls two
+  sides, so fewer shore cells hold nets and a watch gathers less. That is the economy's
+  half of the backing storm; a backing quarter the keeper could ignore would be cosmetic.
+- **The wreck pays salvage, never nights.** Salvage buys saturation sooner, then shoring,
+  which is logarithmic. Its cost is the day's work left undone and, if dusk catches the
+  boat, a night without shoring. A wreck worth more than about a cycle of one net's catch would
+  make rowing out every dawn the answer.
+- **The closing posting releases the peg on purpose.** Its W₀ is authored at
+  `closingStone`, so stone buys survival there and nowhere else. The final gale is floored
+  at the crossing night's storm: calling the relief early buys an earlier gale, never a
+  smaller one, so the call waits on a built board and a forecast without spray, and the
+  storm grows past the crossing.
+- **The final gale sets the end beat's difficulty.** At 2.4 × C_max(stone 3), a saturated
+  side and a whole tower hold it from stone 4; at stone 3 the keeper holds it with shoring
+  and screens about half to two thirds of the time. A lower multiple makes the first call a
+  formality; a higher one sends every career to stone 4.
 - **The phase is saved; the TickDriver phase is not.** `syncPhase` re-enters `cycler/day` or
   `cycler/night` after every transition and on load. A new transition must call it.
 
@@ -72,10 +102,10 @@ registry is `modules/tuning.ts`.
 
 | Question | Probe | What it prints |
 |---|---|---|
-| What does the spine predict? | `cycler-projection.ts` | the derived economy, nights per posting for a saturated keeper, the peg under stone, the almanac's steps |
+| What does the spine predict? | `cycler-projection.ts` | the derived economy, nights per posting for a saturated keeper, the peg under stone, the almanac's steps, the spray hedge, the finale by stone |
 | How does one watch play? | `watch-probe.ts [seed]` | each dusk's storm against the struck side's ward, each dawn's leak and shoring, the payout |
-| Does run length hold across a career? | `career-probe.ts [watches] [seed]` | nights, minutes and entries per watch beside the knowledge held |
-| What does each night verb add? Are the postings level on reward? | `posting-probe.ts` | nights per posting beside the spine for a bare keeper, with Brass, with shoring and with both; the reference keeper's minutes and entries per minute |
+| Where is the end beat? Does run length hold across a career? | `career-probe.ts [watches] [seed]` | each watch's posting, nights, minutes and entries beside the knowledge held, to the light holding on the Flannans |
+| What does each risk add? Are the postings level on reward? | `posting-probe.ts` | nights per posting beside the spine for a bare keeper, with Brass, with shoring, with rowing and with all three; the reference keeper's minutes and entries per minute |
 
 Run them from the repo root with
 `pnpm exec vite-node src/showcase/archetypes/cycler/balance/<probe>.ts`. Each header says how
@@ -86,8 +116,13 @@ to read it. The four together take about fifteen seconds.
 - **Shoring is unprojected.** It is worth about a night at Haven Point and the Skerry and
   none at Cape Wrath, measured, not predicted: how many shorings a night buys depends on
   the salvage the day left.
-- **The career has no end beat.** Every knowledge entry but the almanac and the charters
-  levels without limit, and run length stops moving once the almanac is bought.
+- **The finale's hold rate is measured, not projected.** The projection says stone 3 falls
+  52 short on a plain gale; shoring, screens and the forecast decide the rest, and the
+  career probe is the only measure of the first call's odds.
+- **Knowledge past the road is open-ended.** Every entry but the almanac and the charters
+  levels without limit, so play after the end beat has no further target.
+- **The keeper is never caught out.** It rows home with time to spare, so the cost of a
+  night without shoring is a player's risk the probes do not price.
 - **The keeper is probe-side, not shipping automation.** The game ships no player
   automation but the winch, so the canon driver (a policy in `modules/automation.ts`
   behind `AutomationTiers`) would mean shipping a keeper's mate first, a growth port in

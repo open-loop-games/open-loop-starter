@@ -1,6 +1,6 @@
 # Cycler — domain language
 
-Skerry Light: a keeper on a bare rock builds by day against the quarter tonight’s gale is forecast to come from; the storm grows each night until the tower falls, and the logbook buys knowledge that outlasts the watch.
+Skerry Light: a keeper on a bare rock builds by day against the quarter tonight’s gale is forecast to come from; the storm grows each night until the tower falls, and the logbook buys knowledge and charters toward the Flannans, where signalling the relief closes the career.
 
 > Generated from code structure by `ol-domain-map` — do not edit by hand;
 > regenerate with `pnpm domain-map`. The generated sections below re-derive
@@ -11,13 +11,14 @@ Skerry Light: a keeper on a bare rock builds by day against the quarter tonight�
 
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
-- **PostingId** _(string-literal union)_ — `haven` · `skerry` · `wrath`
-- **KnowledgeId** _(string-literal union)_ — `stone` · `tides` · `almanac` · `stores` · `charter-skerry` · `charter-wrath`
-- **PieceKind** _(string-literal union)_ — `breakwater` · `net` · `buttress` · `winch`
+- **PostingId** _(string-literal union)_ — `haven` · `skerry` · `wrath` · `flannans`
+- **KnowledgeId** _(string-literal union)_ — `stone` · `tides` · `almanac` · `stores` · `charter-skerry` · `charter-wrath` · `charter-flannans`
+- **PieceKind** _(string-literal union)_ — `breakwater` · `net` · `buttress` · `screen` · `winch`
 - **Ground** _(string-literal union)_ — `shore` · `yard`
 - **Quarter** _(string-literal union)_ — `N` · `E` · `S` · `W`
 - **FindId** _(string-literal union)_ — `timbers` · `oakum` · `brass` · `cork` · `glass`
-- **PricedPiece** _(string-literal union)_ — `breakwater` · `net` · `buttress` · `winch`
+- **GaleKind** _(string-literal union)_ — `gale` · `spray`
+- **PricedPiece** _(string-literal union)_ — `breakwater` · `net` · `buttress` · `screen` · `winch`
 
 ## Defs
 
@@ -49,4 +50,9 @@ staleness stays visible against the generated sections above.
 - **tideline** — The nets’ held catch: each net holds its own until hauled, and spills when full.
 - **find** — What the tide leaves at dawn: three are offered, one is taken, the rest wash out at dusk.
 - **posting** — The rock a watch is kept on, chosen between watches: storm growth, wind and wrack.
+- **spray** — A share of a gale night’s force that goes over the walls. Dawn names a spray night; dusk draws its share. Only screens facing the quarter turn it.
+- **backing** — From the middle of a watch, dawn names a neighbouring quarter the gale may back to; each breaker may land there, with odds against a repeat.
+- **wreck** — Salvage sighted offshore some dawns. The keeper rows out to strip it, and does none of the day’s work while away; caught out at dusk, the keeper shelters there and cannot shore.
+- **relief** — On the closing posting, a signal the keeper sends at a dawn: the tower is made whole and that night brings the final gale. Holding the light closes the career; failing is a lesser close.
+- **closing posting** — The Flannans: a posting whose storm is authored at a level of stone rather than pegged to the keeper’s power, so stone buys survival there.
 - **logbook entry** — The meta currency: a cube root of force weathered plus a cube root of salvage gathered, paid when the light goes out.

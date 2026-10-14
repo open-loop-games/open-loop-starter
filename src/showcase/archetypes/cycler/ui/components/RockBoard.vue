@@ -1,15 +1,26 @@
 <!--
   RockBoard — the 5×5 rock in its sea. A click does what the work rail's tool says: haul a
-  net, place a piece, take one up. Tonight's side is outlined in rust; a cell that the tool
-  can act on is dashed in lamplight. By night the beam sweeps, the wind quickens from the
-  forecast quarter, and each breaker flashes foam on the struck edge with what came through.
+  net, place a piece, take one up. Tonight's side is outlined in rust and the side it may
+  back to in brass; screens facing tonight's quarter glow on a spray night; a cell that the
+  tool can act on is dashed in lamplight, and none can while the keeper is out in the boat.
+  By night the beam sweeps, the wind quickens from the forecast quarter, and each breaker
+  flashes foam on the edge it struck with what came through.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import { PIECES, type Quarter } from '../../data';
-import { cellKey, getWatch, groundAt, quartersOf, ringAround, SIZE, wallWard } from '../../modules';
+import {
+  cellKey,
+  getWatch,
+  groundAt,
+  quartersOf,
+  ringAround,
+  SIZE,
+  wallWard,
+  yardQuartersOf,
+} from '../../modules';
 import type { Tool } from '../format';
 import PieceGlyph from './PieceGlyph.vue';
 
@@ -39,14 +50,16 @@ const cells = computed(() => {
       const held = piece === 'net' ? toNumber(watch.tideline.get(key)) : 0;
       const t = props.tool;
       const def = PIECES.find((p) => p.id === t);
+      const working = !night.value && watch.home.value;
       const placeable =
-        !night.value &&
+        working &&
         !piece &&
         def !== undefined &&
         def.ground === ground &&
         salvage >= watch.priceOf(def.id);
-      const clearable = !night.value && t === 'clear' && piece !== null;
-      const haulable = !night.value && t === 'haul' && piece === 'net' && held >= 1;
+      const clearable = working && t === 'clear' && piece !== null;
+      const haulable = working && t === 'haul' && piece === 'net' && held >= 1;
+      const back = watch.backQuarter.value;
       out.push({
         x,
         y,
@@ -60,6 +73,11 @@ const cells = computed(() => {
         ward:
           piece === 'breakwater' ? wallWard(watch.board.value, x, y, watch.wardFactors.value) : 0,
         struck: ground === 'shore' && quartersOf(x, y).includes(watch.quarter.value),
+        backing: ground === 'shore' && back !== null && quartersOf(x, y).includes(back),
+        facing:
+          piece === 'screen' &&
+          watch.kind.value === 'spray' &&
+          yardQuartersOf(x, y).includes(watch.quarter.value),
         actionable: placeable || clearable || haulable,
       });
     }
@@ -93,7 +111,14 @@ const strikeLeak = computed(() => watch.lastStrike.value?.leak ?? 0);
         class="cell"
         :class="[
           c.ground,
-          { struck: c.struck, actionable: c.actionable, full: c.full, winched: c.winched },
+          {
+            struck: c.struck,
+            backing: c.backing && !c.struck,
+            facing: c.facing,
+            actionable: c.actionable,
+            full: c.full,
+            winched: c.winched,
+          },
         ]"
         :aria-label="`${c.ground} ${c.x},${c.y}${c.piece ? ' ' + c.piece : ''}`"
         :data-cell="c.key"
@@ -114,6 +139,13 @@ const strikeLeak = computed(() => watch.lastStrike.value?.leak ?? 0);
         </template>
       </Button>
       <div class="beam" aria-hidden="true"></div>
+      <div v-if="!watch.home.value" class="away">
+        {{
+          watch.caughtOut.value
+            ? 'Sheltering at the wreck till dawn'
+            : 'The keeper is out in the boat'
+        }}
+      </div>
       <div
         v-if="strikeKey"
         :key="strikeKey"
@@ -241,6 +273,20 @@ const strikeLeak = computed(() => watch.lastStrike.value?.leak ?? 0);
 }
 .night .cell.struck {
   box-shadow: inset 0 0 0 2px rgba(196, 87, 62, 0.9);
+}
+.cell.backing {
+  box-shadow: inset 0 0 0 2px rgba(184, 149, 90, 0.5);
+}
+.cell.facing {
+  box-shadow: inset 0 0 0 2px rgba(223, 230, 226, 0.6);
+}
+.away {
+  position: absolute;
+  inset: auto 0 -26px 0;
+  text-align: center;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--sk-kelp);
 }
 .cell.actionable {
   cursor: pointer;
