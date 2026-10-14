@@ -1,6 +1,7 @@
 # Scaler
 
-Core · covered. Identity line: the Scaler entry in `../_identity.md`. Not built.
+Core · covered. Identity line: the Scaler entry in `../_identity.md`. Built
+as `../scaler/`.
 
 ## Player experience
 

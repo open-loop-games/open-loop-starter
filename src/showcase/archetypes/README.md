@@ -20,6 +20,7 @@ directions it grows through. Start there.
 | `looper`   | Authored plan run against a draining budget; mastery survives the reset |
 | `phase-shifter` | One-way doors: a reader, then an arranger, then a planner, each retiring the last |
 | `producer` | Geometric cost ladder under a compounding multiplier stack           |
+| `scaler`   | Two prestige layers over a hero ladder, each compressing the one below |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
 | `survivor` | Run-scoped real-time survival against continuously escalating threat |
 | `tug`      | Adversarial lane push with a shared contested lane                   |

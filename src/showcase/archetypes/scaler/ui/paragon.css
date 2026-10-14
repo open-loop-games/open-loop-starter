@@ -1,0 +1,318 @@
+/*
+ * Scaler: the Paragon costume.
+ *
+ * The design language is here, scoped under `.paragon`, so the story's identity
+ * is one file a fork can read, replace or delete. Nothing in `src/lib/` or
+ * `src/ui/` is edited for it: every hook is a documented costume class on a shell,
+ * a widget or a composition (`.olui-system-header`, `.olui-sidebar-main__…`,
+ * `.olui-tabs__…`, `.olui-progress-bar__…`, `.producer-list__…`,
+ * `.upgrade-grid__…`, `.olui-achievement-grid__…`) or a class this story's own
+ * components emit.
+ *
+ * Language: a comic book read at night. Ink-bordered panels with hard drop
+ * shadows, caption boxes, halftone dots, the signal beacon over the skyline, the
+ * red of a cape. The affordance inks come first:
+ *   signal yellow   you can act;
+ *   cape red        new, or under a worse rule;
+ *   steel blue      automation is doing it;
+ *   orbit teal      Continuity, the second layer;
+ *   dashed ink      not yet.
+ *
+ * Faces: Kenney Thick for the masthead and Kenney Bold for captions and numbers
+ * (both CC0, from Kenney's font pack), a humanist sans for body text.
+ */
+
+@font-face {
+  font-family: 'Kenney Thick';
+  src: url('../assets/fonts/kenney-thick.ttf') format('truetype');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Kenney Bold';
+  src: url('../assets/fonts/kenney-bold.ttf') format('truetype');
+  font-display: block;
+}
+
+.paragon,
+.paragon-portal {
+  --night: #0c1020;
+  --night-panel: #141a2d;
+  --night-raised: #1b2238;
+  --gutter-ink: #04060c;
+  --newsprint: #e6dfca;
+  --newsprint-dim: #858398;
+  --newsprint-faint: #4a4e66;
+
+  --signal: #f4c232;
+  --cape: #e0473e;
+  --steel: #7397c4;
+  --orbit: #84d2cb;
+
+  --halftone: radial-gradient(circle, rgba(230, 223, 202, 0.07) 1px, transparent 1.6px);
+  --halftone-ink: radial-gradient(circle, rgba(4, 6, 12, 0.35) 1.1px, transparent 1.7px);
+
+  --face-masthead: 'Kenney Thick', 'Impact', sans-serif;
+  --face-caption: 'Kenney Bold', 'Arial Black', sans-serif;
+  --face-body: 'Trebuchet MS', 'Segoe UI', sans-serif;
+
+  --panel-border: 3px solid var(--gutter-ink);
+  --panel-shadow: 5px 5px 0 var(--gutter-ink);
+
+  /* scaffold tokens, re-pointed */
+  --color-bg: var(--night);
+  --color-surface: var(--night-panel);
+  --color-surface-hover: var(--night-raised);
+  --color-border: var(--gutter-ink);
+  --color-text: var(--newsprint);
+  --color-text-muted: var(--newsprint-dim);
+  --color-primary: var(--signal);
+  --color-primary-hover: #ffd75a;
+  --color-danger: var(--cape);
+  --color-success: var(--signal);
+  --font-sans: var(--face-body);
+  --radius: 0;
+}
+
+.paragon {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--night);
+  background-image: var(--halftone);
+  background-size: 7px 7px;
+  color: var(--newsprint);
+  font-family: var(--face-body);
+  font-size: 15px;
+}
+
+.paragon .olui-system-header {
+  background: var(--gutter-ink);
+  border-bottom: 3px solid var(--signal);
+}
+
+/* The page is the comic's gutter: the shell's columns draw no box of their own. */
+.paragon .olui-sidebar-main__sidebar,
+.paragon .olui-sidebar-main__main {
+  background: transparent;
+  border: none;
+  padding: 0;
+  gap: 18px;
+  overflow: visible;
+}
+
+.paragon .num {
+  font-family: var(--face-caption);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* The comic panel: an ink border, a hard drop shadow, no rounded corners. */
+.paragon .panel,
+.paragon-portal.panel {
+  background: var(--night-panel);
+  border: var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  padding: 14px 16px;
+}
+
+/* Caption box: the yellow narration strip comics use for "Meanwhile…". */
+.paragon .caption,
+.paragon-portal .caption {
+  display: inline-block;
+  background: var(--signal);
+  color: var(--gutter-ink);
+  font-family: var(--face-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 2px solid var(--gutter-ink);
+}
+.paragon .caption.cape {
+  background: var(--cape);
+  color: var(--newsprint);
+}
+.paragon .caption.orbit {
+  background: var(--orbit);
+}
+.paragon .lede {
+  margin: 8px 0 14px;
+  color: var(--newsprint-dim);
+  font-size: 14px;
+}
+
+/* Action buttons, on the base Button. Affordable reads as a lit signal;
+   unaffordable as unprinted ink. */
+.paragon .act {
+  font-family: var(--face-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 2px solid var(--gutter-ink);
+  border-radius: 0;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--signal);
+  color: var(--gutter-ink);
+  box-shadow: 3px 3px 0 var(--gutter-ink);
+  transition: transform 80ms ease-out;
+}
+.paragon .act:active:not(:disabled) {
+  transform: translate(2px, 2px);
+}
+.paragon .act.cape {
+  background: var(--cape);
+  color: var(--newsprint);
+}
+.paragon .act.orbit {
+  background: var(--orbit);
+}
+.paragon .act.ghost {
+  background: var(--night-raised);
+  color: var(--newsprint);
+}
+.paragon .act:disabled {
+  opacity: 1;
+  cursor: default;
+  background: transparent;
+  color: var(--newsprint-dim);
+  border: 2px dashed var(--newsprint-faint);
+  box-shadow: none;
+}
+
+/* A duty switch: steel when the automation works, dashed when it is off. */
+.paragon .duty {
+  font-family: var(--face-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  color: var(--steel);
+  background: transparent;
+  border: 2px solid var(--steel);
+  border-radius: 0;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.paragon .duty[aria-checked='false'] {
+  color: var(--newsprint-dim);
+  border-style: dashed;
+  border-color: var(--newsprint-faint);
+}
+
+/* Halftone meter, on the base ProgressBar: the fill is printed in dots. */
+.paragon .meter {
+  --progress-bar-track: var(--night);
+  --progress-bar-fill: var(--signal);
+  --progress-bar-radius: 0;
+  --progress-bar-transition: transform 200ms linear, width 200ms linear;
+}
+.paragon .meter .olui-progress-bar__track {
+  height: 12px;
+  border: 2px solid var(--gutter-ink);
+}
+.paragon .meter .olui-progress-bar__fill {
+  background-image: var(--halftone-ink);
+  background-size: 5px 5px;
+}
+.paragon .meter.cape {
+  --progress-bar-fill: var(--cape);
+}
+.paragon .meter.orbit {
+  --progress-bar-fill: var(--orbit);
+}
+
+.paragon .stamp {
+  display: inline-block;
+  font-family: var(--face-caption);
+  font-size: 11px;
+  text-transform: uppercase;
+  border: 2px solid currentColor;
+  padding: 1px 6px;
+  transform: rotate(-3deg);
+}
+
+/* The tabs, on the base Tabs: caption strips over the main panel. */
+.paragon .olui-tabs__list {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  border: none;
+}
+.paragon .olui-tabs__trigger {
+  font-family: var(--face-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+  background: var(--night-panel);
+  color: var(--newsprint-dim);
+  border: 2px solid var(--gutter-ink);
+  border-radius: 0;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.paragon .olui-tabs__trigger[data-state='active'] {
+  background: var(--newsprint);
+  color: var(--gutter-ink);
+  box-shadow: 4px 4px 0 var(--gutter-ink);
+}
+.paragon .new-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--cape);
+  border: 2px solid var(--gutter-ink);
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* A reveal is the page-load moment: a panel drops into the page like a new frame. */
+@keyframes paragon-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.paragon .reveal {
+  animation: paragon-panel-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Legends: starter's AchievementGrid as a page of clippings. Portaled, so it
+   takes the tokens through `.paragon-portal` on its root. */
+.clippings {
+  font-family: var(--face-body);
+  color: var(--newsprint);
+}
+.clippings .olui-panel__title {
+  font-family: var(--face-masthead);
+  letter-spacing: 0.04em;
+  color: var(--signal);
+}
+.clippings .olui-achievement-grid__cell {
+  border: 2px dashed var(--newsprint-faint);
+  border-radius: 0;
+  background: transparent;
+  color: var(--newsprint-faint);
+}
+.clippings .olui-achievement-grid__cell[data-earned='true'] {
+  border: 2px solid var(--gutter-ink);
+  background: var(--newsprint);
+  color: var(--gutter-ink);
+  box-shadow: 4px 4px 0 var(--gutter-ink);
+}
+
+/* One tab is no choice: the list appears with the second layer's tab. */
+.paragon .olui-tabs__list:has(> :only-child) {
+  display: none;
+}
+.clippings .olui-achievement-grid__cell-name {
+  font-family: var(--face-masthead);
+  text-transform: uppercase;
+}
+.clippings .olui-achievement-grid__cell[data-earned='true'] .olui-achievement-grid__cell-desc {
+  color: var(--night-raised);
+}
