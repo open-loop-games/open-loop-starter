@@ -16,6 +16,7 @@ import {
   type Instinct,
   type PerkId,
   type RigId,
+  type RigShape,
 } from '../../data';
 import type { ArenaState } from './arena';
 
@@ -131,6 +132,13 @@ export interface DraftTally {
  */
 export const HEADING_BOUND_DISCOUNT = 7;
 
+/**
+ * Score a single-target rig earns while the loadout has none. The lead is one body, and
+ * only the pistol and the rifle reach it from outside its contact, so a loadout without one
+ * meets the climax unable to close it out.
+ */
+export const LEAD_REACH_BONUS = 8;
+
 /** Pages after which a new rig stops being worth more than depth. */
 const BREADTH_PICKS = 6;
 
@@ -161,6 +169,13 @@ export function scoreCard(
 
   const rig = card.kind === 'rig-new' || card.kind === 'rig-level' ? RIG_BY_ID[card.rig] : null;
   if (driver !== 'player' && rig?.shape === 'heading-cone') score -= HEADING_BOUND_DISCOUNT;
+  if (
+    card.kind === 'rig-new' &&
+    rig &&
+    singleTarget(rig.shape) &&
+    !arena.rigs.some((r) => singleTarget(r.def.shape))
+  )
+    score += LEAD_REACH_BONUS;
 
   if (card.kind === 'perk' && card.perk === 'boom-mic') score += instinct.eta * 3;
   if (card.kind === 'perk' && card.perk === 'stamina') {
@@ -168,6 +183,10 @@ export function scoreCard(
     score += hurt * 8;
   }
   return score;
+}
+
+function singleTarget(shape: RigShape): boolean {
+  return shape === 'nearest' || shape === 'heaviest';
 }
 
 /** The star's pick: the highest-scoring page, the first on a tie. */

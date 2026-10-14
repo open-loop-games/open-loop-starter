@@ -25,12 +25,13 @@ import {
   type GridCoord,
   type SpatialGrid,
 } from '@open-loop/engine';
-import { LEVEL_GAIN, contactDps, type Instinct } from '../../data';
+import { LEVEL_GAIN, SCRIPT, contactDps, type Instinct } from '../../data';
 import {
   WORLD_HALF,
   contactRange,
   currentScene,
-  inCone,
+  coneBearings,
+  inArc,
   type ArenaInput,
   type ArenaMods,
   type ArenaState,
@@ -46,6 +47,12 @@ interface Vec2 {
 
 /** Nav-grid cell size in world units. Coarse: routing, not collision. */
 export const NAV_CELL = 100;
+
+/**
+ * Seconds a decision stands before the star decides again: a human's reaction time. The
+ * swing toward it runs every tick, so movement stays smooth between decisions.
+ */
+export const DECISION_SECONDS = 0.1;
 
 /** Seconds a computed reel field stays in use. The field barely moves between ticks. */
 export const FIELD_REFRESH_SECONDS = 0.25;
@@ -171,6 +178,20 @@ export const MAX_TURN_RATE = (420 * Math.PI) / 180;
 export const ENGAGE_WEIGHT = 9;
 /** Bodies in reach past which more add nothing but risk. */
 export const ENGAGE_SATURATION = 8;
+/**
+ * Score per world unit the lead stands beyond the hold distance, at full health. Downing
+ * the lead is the climax's only way to the can, so a hundred units off it costs about a
+ * reversal. It is scaled by max over remaining health, as contact is, so a hurt star weighs
+ * the lead against the crowd at the same rate as a whole one.
+ */
+export const LEAD_PULL = 0.3;
+/** Share of the longest single-target reach the star holds the lead inside. */
+export const LEAD_HOLD = 0.8;
+
+/** Score per world unit outside the hold of the nearest open mark, before `mark` scales it. */
+export const MARK_PULL = 0.2;
+/** Share of a mark's radius the star works inside, so its kills land in the chalk. */
+export const MARK_HOLD = 0.4;
 
 /**
  * The peaked threat term's two sides. Further from the crowd than the orbit costs
@@ -192,6 +213,12 @@ export const CONTACT_HORIZON = 1.5;
  * lethal one at a fifth of it: caution comes from the take's state, not a constant.
  */
 export const CONTACT_WEIGHT = 900;
+
+/**
+ * The contact a lethal body is costed at, in crowd bodies. The strike crew's contact is
+ * unbounded, and an unbounded cost on every candidate would leave nothing to choose by.
+ */
+const LETHAL_CONTACT = 60;
 
 /**
  * Score per body a heading-bound rig would catch, weighted by how soon it fires. A rig
@@ -299,12 +326,14 @@ export function scoreHeadings(
   const close = new Float64Array(n);
   const band = new Float64Array(n);
   const outside = new Uint8Array(n);
+  const weight = new Float64Array(n);
   for (let j = 0; j < n; j++) {
     const e = relevant[j]!;
     ex[j] = e.x;
     ey[j] = e.y;
     close[j] = e.kind.speed * CONTACT_HORIZON;
     band[j] = contactRange(e) + close[j]!;
+    weight[j] = Math.min(e.kind.contact ?? 1, LETHAL_CONTACT);
     const rx = e.x - p.x;
     const ry = e.y - p.y;
     outside[j] = rx * rx + ry * ry > band[j]! * band[j]! ? 1 : 0;
@@ -316,7 +345,32 @@ export function scoreHeadings(
     if (route.length > 0) waypoint = cellCentre(route[route.length - 1]!);
   }
 
-  const cones = s.rigs.filter((r) => r.def.shape === 'heading-cone');
+  const cones = s.rigs
+    .filter((r) => r.def.shape === 'heading-cone')
+    .map((slot) => ({ slot, bearings: coneBearings(relevant, p, slot.def.reach) }));
+  // The cast the star works toward: the lead once it stands, else a rival on set.
+  const leadUrgency = p.maxHp / Math.max(1, p.hp);
+  const lead = s.lead && s.lead.hp > 0 ? s.lead : s.rival;
+  // The nearest open mark, before the climax.
+  let mark: { x: number; y: number } | null = null;
+  if (!s.lead) {
+    let best = Infinity;
+    for (const m of s.marks) {
+      if (m.filled) continue;
+      const d2 = (m.x - p.x) ** 2 + (m.y - p.y) ** 2;
+      if (d2 < best) {
+        best = d2;
+        mark = m;
+      }
+    }
+  }
+  const leadHold =
+    LEAD_HOLD *
+    s.rigs.reduce(
+      (a, r) =>
+        r.def.shape === 'nearest' || r.def.shape === 'heaviest' ? Math.max(a, r.def.reach) : a,
+      orbit,
+    );
   const scored: HeadingScore[] = [];
   for (const h of HEADINGS) {
     const px = p.x + h.x * LOOKAHEAD;
@@ -351,7 +405,8 @@ export function scoreHeadings(
       }
       const b = band[j]!;
       if (priced2 <= b * b)
-        expectedTouching += Math.min(1, Math.max(0, (b - Math.sqrt(priced2)) / close[j]!));
+        expectedTouching +=
+          weight[j]! * Math.min(1, Math.max(0, (b - Math.sqrt(priced2)) / close[j]!));
     }
 
     const nearest = Math.sqrt(nearest2);
@@ -364,12 +419,22 @@ export function scoreHeadings(
     for (let i = 0; i < inReach.length; i++)
       engage += shares[i]! * Math.min(inReach[i]!, ENGAGE_SATURATION);
     engage *= instinct.engage * ENGAGE_WEIGHT;
+    if (lead) {
+      const d = Math.sqrt((lead.x - px) ** 2 + (lead.y - py) ** 2);
+      engage -= LEAD_PULL * leadUrgency * Math.max(0, d - leadHold);
+    }
+    if (mark) {
+      const d = Math.sqrt((mark.x - px) ** 2 + (mark.y - py) ** 2);
+      engage -= MARK_PULL * instinct.mark * Math.max(0, d - SCRIPT.markRadius * MARK_HOLD);
+    }
 
     let connect = 0;
-    for (const slot of cones) {
+    for (const { slot, bearings } of cones) {
       const imminence = 1 - Math.min(1, Math.max(0, slot.cd) / CONNECT_HORIZON);
       if (imminence <= 0) continue;
-      const caught = inCone(relevant, p, Math.atan2(h.y, h.x), slot.def.reach).length;
+      const facing = Math.atan2(h.y, h.x);
+      let caught = 0;
+      for (const b of bearings) if (inArc(b, facing)) caught++;
       connect += CONNECT_WEIGHT * caught * imminence;
     }
 
@@ -436,6 +501,8 @@ export interface Steerer {
 export function createSteerer(): Steerer {
   const nav = buildNav();
   let fields: Fields | undefined;
+  let want: Vec2 | undefined;
+  let decidedAt = -Infinity;
   const fresh = (s: ArenaState): Fields => {
     if (!fields || s.t < fields.computedAt || s.t - fields.computedAt >= FIELD_REFRESH_SECONDS)
       fields = computeFields(s, nav);
@@ -445,7 +512,10 @@ export function createSteerer(): Steerer {
     nav,
     fields: fresh,
     steer(s, mods, instinct, dt) {
-      const want = chooseHeading(s, mods, instinct, nav, fresh(s));
+      if (!want || s.t < decidedAt || s.t - decidedAt >= DECISION_SECONDS - 1e-9) {
+        want = chooseHeading(s, mods, instinct, nav, fresh(s));
+        decidedAt = s.t;
+      }
       const current = { x: Math.cos(s.player.facing), y: Math.sin(s.player.facing) };
       const h = slewHeading(current, want, dt);
       return { mx: h.x, my: h.y };

@@ -10,9 +10,11 @@
  * over the cores (`_pool.ts`).
  *
  * How to read it:
- * - `cut` is takes that reached CUT of those run. Each rating's depth is solved so it
- *   clears its floor as G does, so a rating far below G's rate is a rating the solve
- *   misplaces.
+ * - `cut` is takes whose lead fell, of those run; `fall` is the median seconds from the
+ *   climax to the fall. `lead` is takes that reached the climax and `left` the median share
+ *   of the lead's hp left when the others ended. A cell played with its opening agency is
+ *   meant to be a gate: the lead falls in some takes, not all.
+ * - `marks` is the mean marks filled a take; `jackpots` is rivals downed over rivals cast.
  * - `η` is reels banked over reels dropped. `income` is reels banked over what the spine's
  *   income model predicts for the same seconds at the same depth: it carries η, the share
  *   of arrivals downed and the shot together, which is what the ladder rides. 1.00 is on
@@ -68,7 +70,7 @@ if (chunk) {
     `\nSURVIVOR take probe: ${seeds} seeds a cell, ${bare ? 'nothing bought' : 'the model career’s agency at each rating'}, the star improvising\n`,
   );
   console.log(
-    'star       rating  cut   median end  level  η     income  contact  in-shot  peak  away',
+    'star       rating  cut   fall  lead  left  marks  jackpots  median end  level  η     income  contact  in-shot  peak  away',
   );
   for (const star of STARS) {
     for (const rating of ratings) {
@@ -90,6 +92,19 @@ if (chunk) {
           star.id.padEnd(10),
           RATINGS[rating]!.label.padEnd(7),
           `${cut}/${rs.length}`.padEnd(5),
+          (cut
+            ? `${median(rs.filter((r) => r.end === 'cut').map((r) => r.seconds - ANCHORS.takeSeconds)).toFixed(0)}s`
+            : '–'
+          ).padEnd(5),
+          String(rs.filter((r) => r.leadLeft !== null).length).padEnd(5),
+          (() => {
+            const left = rs.map((r) => r.leadLeft).filter((x): x is number => x !== null);
+            return left.length ? `${(median(left) * 100).toFixed(0)}%` : '–';
+          })().padEnd(5),
+          (rs.reduce((a, r) => a + r.marksFilled, 0) / rs.length).toFixed(1).padEnd(6),
+          `${rs.reduce((a, r) => a + r.jackpots, 0)}/${rs.reduce((a, r) => a + r.rivals, 0)}`.padEnd(
+            9,
+          ),
           clock(median(rs.map((r) => r.seconds))).padEnd(11),
           String(median(rs.map((r) => r.level))).padEnd(6),
           eta.toFixed(2).padEnd(5),

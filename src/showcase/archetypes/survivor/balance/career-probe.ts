@@ -5,17 +5,19 @@
  * in session time and where the agency stands at the end. Prints; never asserts.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/survivor/balance/career-probe.ts [seeds] [takes]`
- * (default 8 seeds of 12 takes). One career a child process (`_pool.ts`); `CAREER_LOG=1`
- * prints seed 1's takes one by one.
+ * (default 8 seeds of 18 takes, about two and a half hours of session, run in about 30 s).
+ * One career a child process (`_pool.ts`); `CAREER_LOG=1` prints seed 1's takes one by one.
  *
  * How to read it:
  * - The firsts are session time, the sum of the takes before them. `manifest.ts` records
- *   seed 1's.
+ *   seed 1's. `the picture wraps` is R's lead falling, the arc's end, which the spine's
+ *   `arcTakes` aims near two hours; `the agency bought out` should land close to it.
  * - `takes` per rating is how many takes the career spent at each; a career stuck at one
  *   rating with the agency growing slowly is the ratings wall.
  * - `agency` is the levels bought of each perk at the end.
  */
 
+import { toNumber } from '@open-loop/engine';
 import { AGENCY, RATINGS, STARS } from '../data';
 import { buildSet, callSheet, clock, median, playTake, shop, type TakeResult } from './_set';
 import { claimChunk, emitResult, runPool } from './_pool';
@@ -47,8 +49,19 @@ function play(job: Job): Career {
     const at = clockS;
     clockS += r.seconds;
     if (r.end === 'cut') mark(`CUT at ${RATINGS[r.rating]!.label}`, clockS);
+    if (set.meta.record.pictureWrapped.value) mark('the picture wraps', clockS);
     const bought = shop(set);
     for (const b of bought) if (b.startsWith('signed')) mark(b, clockS);
+    if (
+      set.meta.agency
+        .getAll()
+        .every(
+          (e) =>
+            !Number.isFinite(toNumber(e.purchasable.getCost(1))) ||
+            Number(e.purchasable.count.value) >= e.def.maxLevel,
+        )
+    )
+      mark('the agency bought out', clockS);
     for (const rating of RATINGS.slice(1))
       if (set.meta.ratings.getPurchasable(rating.id)?.active.value)
         mark(`${rating.label} opens`, clockS);
@@ -66,7 +79,7 @@ if (chunk) {
   for (const job of chunk) emitResult(play(job));
 } else {
   const seeds = Number(process.argv[2] ?? 8);
-  const takes = Number(process.argv[3] ?? 12);
+  const takes = Number(process.argv[3] ?? 18);
   const t0 = performance.now();
   const careers = await runPool<Job, Career>(
     import.meta.url,

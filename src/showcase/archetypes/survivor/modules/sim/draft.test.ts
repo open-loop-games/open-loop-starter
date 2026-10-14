@@ -100,3 +100,35 @@ describe('survivor/draft — the star’s policy', () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe('survivor/draft — the climax', () => {
+  const tally = { taken: 2, defensive: 1 };
+  const bottles = (): ArenaState =>
+    createArena({ rng: () => 0.5, rating: 0, startRig: 'breakaway', maxHp: 100 });
+
+  it('reaches for a single-target rig while the loadout has none', () => {
+    const offer: Card[] = [
+      { kind: 'rig-new', rig: 'squib-ring' },
+      { kind: 'rig-new', rig: 'prop-pistol' },
+    ];
+    expect(chooseCard(offer, veteran, 'instinct', tally, bottles())).toBe(1);
+  });
+
+  it('stops reaching once one is worn', () => {
+    const ring = scoreCard(
+      { kind: 'rig-new', rig: 'squib-ring' },
+      veteran,
+      'instinct',
+      tally,
+      arena(),
+    );
+    const rifle = scoreCard(
+      { kind: 'rig-new', rig: 'dolly-rifle' },
+      veteran,
+      'instinct',
+      tally,
+      arena(),
+    );
+    expect(rifle).toBe(ring);
+  });
+});

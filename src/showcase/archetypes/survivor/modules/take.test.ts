@@ -5,7 +5,7 @@
 
 import { toNumber } from '@open-loop/engine';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ANCHORS, BEATS, RATINGS, RATING_DEPTH, reelsForLevel } from '../data';
+import { ANCHORS, BEATS, RATINGS, RATING_DEPTH, SCRIPT, reelsForLevel } from '../data';
 import { boot, getEngine, seconds, tick } from '../sim/harness';
 import { WORLD_HALF } from './sim/arena';
 import { getMeta } from './meta';
@@ -57,12 +57,45 @@ describe('survivor/take — the floor', () => {
     expect(Math.abs(p.y)).toBeLessThanOrEqual(WORLD_HALF);
   });
 
-  it('calls CUT on the clock and wraps', async () => {
+  it('walks the lead on at the climax and keeps rolling while it stands', async () => {
     start();
     getTake().arena()!.t = ANCHORS.takeSeconds - 0.01;
     await tick(2);
+    expect(getTake().arena()!.lead).not.toBeNull();
+    expect(getTake().view.screen).toBe('take');
+  });
+
+  it('calls CUT when the lead falls, and wraps', async () => {
+    start();
+    getTake().arena()!.t = ANCHORS.takeSeconds - 0.01;
+    await tick(2);
+    getTake().arena()!.lead!.hp = 0;
+    await tick(2);
     expect(getTake().view.screen).toBe('wrap');
     expect(getTake().view.wrap?.end).toBe('cut');
+  });
+
+  it('sends the strike crew on if the lead outlasts the call, and they end the take', async () => {
+    start();
+    const strikeAt = ANCHORS.takeSeconds + SCRIPT.strikeAfter * ANCHORS.sceneSeconds;
+    getTake().arena()!.t = strikeAt - 0.01;
+    await tick(2);
+    const a = getTake().arena()!;
+    const crew = a.extras.find((e) => e.role === 'strike-crew')!;
+    expect(crew).toBeDefined();
+    crew.x = a.player.x;
+    crew.y = a.player.y;
+    await tick(2);
+    expect(getTake().view.wrap?.end).toBe('struck');
+  });
+
+  it("cuts the lead's part for every mark filled before it walks on", async () => {
+    start();
+    const a = getTake().arena()!;
+    a.marks[0]!.filled = true;
+    a.t = ANCHORS.takeSeconds - 0.01;
+    await tick(2);
+    expect(a.lead!.hp).toBeLessThan(a.leadHp0);
   });
 
   it('stops stepping once the take has wrapped', async () => {
@@ -121,7 +154,7 @@ describe('survivor/take — the ratings', () => {
     getTake().startTake({ star: 'veteran', rating: 0, driver: 'player', seed: 1 });
     const g = getTake().view.hud.scene;
     getTake().toCallSheet();
-    getMeta().record.bestRatingCleared.value = RATINGS.length - 2;
+    for (const w of Object.values(getMeta().record.wrapped)) w.value = RATINGS.length - 2;
     getEngine().tickDriver.tickOnce();
     getTake().startTake({ star: 'veteran', rating: RATINGS.length - 1, driver: 'player', seed: 1 });
     expect(getTake().view.hud.scene).toBeGreaterThan(g);

@@ -71,6 +71,7 @@ export function openAll(set: Set): void {
     e.purchasable.purchase(1);
   }
   set.meta.record.bestRatingCleared.value = RATINGS.length - 1;
+  for (const w of Object.values(set.meta.record.wrapped)) w.value = RATINGS.length - 1;
   set.engine.tickDriver.tickOnce();
 }
 
@@ -109,6 +110,11 @@ export interface TakeResult {
   offensive: number;
   picks: number;
   rigs: string;
+  /** Share of the lead's hp left at the end; null if it never walked on. */
+  leadLeft: number | null;
+  marksFilled: number;
+  jackpots: number;
+  rivals: number;
 }
 
 /** Plays one take to its end and returns what happened. */
@@ -148,6 +154,10 @@ export function playTake(
     offensive: take.tally.taken - take.tally.defensive,
     picks: take.tally.taken,
     rigs: a.rigs.map((r) => `${r.def.id}:${r.level}`).join(','),
+    leadLeft: a.lead ? Math.max(0, a.lead.hp) / a.leadHp0 : null,
+    marksFilled: a.marks.filter((m) => m.filled).length,
+    jackpots: a.stats.jackpots,
+    rivals: a.cues.filter((c) => c.played && c.what === 'rival').length,
   };
   take.toCallSheet();
   return result;

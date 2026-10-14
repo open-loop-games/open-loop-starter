@@ -23,7 +23,7 @@ directions it grows through. Start there.
 | `scaler`   | Three prestige layers over a hero ladder, each compressing the one below and opening its own chain |
 | `scripter` | A scroll the player writes and a student performs; each challenger at the gate asks for words the scroll lacks |
 | `skirmish` | Adversarial real-time match with bilateral automation                |
-| `survivor` | Seven-minute takes on a crowded soundstage; rigs fire themselves, and ratings open harsher takes |
+| `survivor` | Takes on a crowded soundstage that end on a lead to fell; rigs fire themselves, ratings stage harsher takes, and R's lead wraps the picture |
 | `tug`      | Waves on alternating horns contest one causeway; a career marches across fifteen fields |
 | `_blank`   | Neutral skeleton — the starting point for a novel research composition |
 

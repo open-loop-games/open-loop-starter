@@ -30,6 +30,8 @@ export interface Instinct {
   eta: number;
   /** Share of rewrites the draft policy spends on pages that are not damage. */
   defenseShare: number;
+  /** Appetite for the chalk marks, 0–1: the weight on the pull toward an open one. */
+  mark: number;
 }
 
 export interface StarDef {
@@ -57,7 +59,7 @@ export const STARS: readonly StarDef[] = [
     hpMult: 1,
     speedMult: 1,
     cost: 0,
-    instinct: { engage: 0.55, eta: 0.65, defenseShare: ANCHORS.defenseShare },
+    instinct: { engage: 0.55, eta: 0.65, defenseShare: ANCHORS.defenseShare, mark: 0.7 },
   },
   {
     id: 'pyro',
@@ -67,7 +69,7 @@ export const STARS: readonly StarDef[] = [
     hpMult: 1.2,
     speedMult: 0.95,
     cost: Math.round(STAR_TAKES.pyro * ANCHORS.cloutPerTake),
-    instinct: { engage: 0.72, eta: 0.6, defenseShare: 0.25 },
+    instinct: { engage: 0.72, eta: 0.6, defenseShare: 0.25, mark: 0.5 },
   },
   {
     id: 'wirework',
@@ -77,7 +79,7 @@ export const STARS: readonly StarDef[] = [
     hpMult: 0.9,
     speedMult: 1.15,
     cost: Math.round(STAR_TAKES.wirework * ANCHORS.cloutPerTake),
-    instinct: { engage: 0.62, eta: 0.78, defenseShare: 0.3 },
+    instinct: { engage: 0.62, eta: 0.78, defenseShare: 0.3, mark: 0.6 },
   },
 ];
 

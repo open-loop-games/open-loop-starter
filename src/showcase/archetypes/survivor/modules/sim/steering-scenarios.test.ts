@@ -8,12 +8,12 @@
  * - **Outcomes, not headings.** Asserting one arg-max pins the implementation; asserting the
  *   reel got banked pins the behavior.
  * - **No magnitudes.** Counts, distances against a radius the game defines, directions.
- * - **The floor is the case's own.** Anything the step spawns is removed each tick, so the
- *   bodies in a case are the bodies it placed.
+ * - **The floor is the case's own.** Anything the step spawns is removed each tick, and the
+ *   script's marks and cues are cleared, so the bodies in a case are the bodies it placed.
  */
 
 import { describe, expect, it } from 'vitest';
-import { EXTRAS, RIG_BY_ID, STARS, type StarDef } from '../../data';
+import { CAST, EXTRAS, RIG_BY_ID, SCRIPT, STARS, type StarDef } from '../../data';
 import { contactRange, createArena, stepArena, type ArenaMods, type ArenaState } from './arena';
 import { createSteerer } from './steering';
 
@@ -28,6 +28,10 @@ interface Placed {
   /** Facing the double starts on, radians. Default +x. */
   facing?: number;
   star?: StarDef;
+  /** A lead placed on the floor, with hp it cannot lose in the case's seconds. */
+  lead?: { dx: number; dy: number };
+  /** Open chalk marks placed on the floor. */
+  marks?: { dx: number; dy: number }[];
 }
 
 interface Outcome {
@@ -45,11 +49,37 @@ function scenario(placed: Placed, seconds: number): Outcome {
   const star = placed.star ?? STARS[0]!;
   const s = createArena({ rng: () => 0.5, rating: 0, startRig: 'prop-pistol', maxHp: 100 });
   s.player.facing = placed.facing ?? 0;
+  // The script's marks and cues are the take's, not the case's.
+  s.marks = (placed.marks ?? []).map((m) => ({
+    x: m.dx,
+    y: m.dy,
+    kills: 0,
+    filled: false,
+    filledAt: null,
+  }));
+  s.cues = [];
   const ids: number[] = [];
   for (const b of placed.bodies ?? []) {
     const hp = b.hp ?? 5;
     const kind = { ...GRUNT, speed: b.speed ?? GRUNT.speed };
     s.extras.push({ id: s.nextId, kind, x: b.dx, y: b.dy, hp, maxHp: hp, orbitCd: 0, flash: 0 });
+    ids.push(s.nextId++);
+  }
+  if (placed.lead) {
+    const hp = 1e9;
+    s.lead = {
+      id: s.nextId,
+      kind: CAST.lead,
+      x: placed.lead.dx,
+      y: placed.lead.dy,
+      hp,
+      maxHp: hp,
+      orbitCd: 0,
+      flash: 0,
+      role: 'lead',
+    };
+    s.leadHp0 = hp;
+    s.extras.push(s.lead);
     ids.push(s.nextId++);
   }
   for (const r of placed.reels ?? [])
@@ -154,6 +184,21 @@ describe('the star improvising — what is in the way', () => {
     const farClosest = Math.min(...out.closest.slice(10));
     expect(farClosest).toBeGreaterThan(
       contactRange(out.state.extras[0] ?? ({ kind: GRUNT } as never)) * 2,
+    );
+  });
+});
+
+describe('the star improvising — the script', () => {
+  it('crosses the floor to bring the lead into reach, and the crew fires on it', () => {
+    const out = scenario({ lead: { dx: 900, dy: 0 } }, 8);
+    expect(out.state.lead!.hp).toBeLessThan(out.state.leadHp0);
+  });
+
+  it('walks to an open chalk mark on an empty floor', () => {
+    const out = scenario({ marks: [{ dx: -700, dy: 300 }] }, 8);
+    const m = out.state.marks[0]!;
+    expect(Math.hypot(m.x - out.state.player.x, m.y - out.state.player.y)).toBeLessThan(
+      SCRIPT.markRadius,
     );
   });
 });

@@ -6,7 +6,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Decimal, formatResource } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { ANCHORS, RATINGS, type Driver, type StarDef } from '../data';
+import { ANCHORS, LEADS, RATINGS, type Driver, type StarDef } from '../data';
 import { getMeta, getTake } from '../modules';
 
 const take = getTake();
@@ -34,13 +34,18 @@ const stars = computed(() =>
     signed: e.purchasable.active.value,
     affordable: e.purchasable.canPurchase.value,
     buy: () => e.purchasable.purchase(1),
+    wrapped: RATINGS[meta.record.wrapped[e.def.id].value]?.label ?? null,
   })),
 );
 const ratings = computed(() =>
   meta.ratings.getAll().map((e) => ({
     def: e.def,
     open: e.purchasable.active.value,
-    need: e.def.index > 0 ? `Take ${RATINGS[e.def.index - 1]!.label} to CUT` : '',
+    lead: LEADS[e.def.index]!.name,
+    need:
+      e.def.index > 0
+        ? `Wrap ${RATINGS[e.def.index - 1]!.label} with ${e.def.gate === 1 ? 'a star' : `${e.def.gate} stars`} · ${Math.min(meta.starsWrapped(e.def.index - 1), e.def.gate)}/${e.def.gate}`
+        : '',
   })),
 );
 const agency = computed(() =>
@@ -90,8 +95,11 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
         <h1 class="billing">One More Take</h1>
         <div class="logline">
           You are the stunt double. The rigs go off on their own; all you choose is where to stand.
-          Survive {{ takeMinutes }} minutes of floor to hear CUT.
+          Hold the floor {{ takeMinutes }} minutes, then down the lead to hear CUT.
         </div>
+      </div>
+      <div v-if="meta.record.pictureWrapped.value" class="wrapped-badge billing">
+        That's a wrap on the picture
       </div>
       <div class="purse">
         <div class="billing lbl">Clout</div>
@@ -119,6 +127,9 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
             >
               <span class="billing name">{{ s.def.name }}</span>
               <span class="blurb">{{ s.def.blurb }}</span>
+              <span v-if="s.signed" class="billing ledger" :class="{ none: !s.wrapped }">{{
+                s.wrapped ? `Wrapped ${s.wrapped}` : 'Nothing wrapped yet'
+              }}</span>
             </Button>
             <Button
               v-if="!s.signed"
@@ -171,8 +182,13 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
             :title="r.open ? r.def.blurb : r.need"
             @click="ratingIndex = r.def.index"
           >
-            <span class="billing mark">{{ r.def.label }}</span>
-            <span class="rblurb">{{ r.open ? r.def.blurb : r.need }}</span>
+            <span class="billing mark"
+              >{{ r.def.label }}<small class="num">×{{ r.def.pay }}</small></span
+            >
+            <span class="rtext">
+              <span class="billing rlead">{{ r.lead }}</span>
+              <span class="rblurb">{{ r.open ? r.def.blurb : r.need }}</span>
+            </span>
           </Button>
         </div>
       </section>
@@ -418,9 +434,43 @@ h2 {
   border: 2px solid var(--greenlight);
   color: var(--greenlight);
 }
+.rating .mark small {
+  display: block;
+  font-size: 12px;
+  color: var(--chalk-dim);
+}
+.rating .rtext {
+  display: grid;
+  gap: 2px;
+}
+.rating .rlead {
+  font-size: 13px;
+  color: var(--chalk);
+}
+.rating.locked .rlead {
+  color: var(--chalk-faint);
+}
 .rating .rblurb {
   font-size: 12.5px;
   color: var(--chalk-dim);
+}
+.ledger {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--greenlight);
+}
+.ledger.none {
+  color: var(--chalk-faint);
+}
+.wrapped-badge {
+  align-self: center;
+  padding: 6px 12px;
+  border: 2px solid var(--reel-gold);
+  color: var(--reel-gold);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .rating.chosen {
   border-color: var(--tungsten);

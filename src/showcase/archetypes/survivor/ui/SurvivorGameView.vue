@@ -19,7 +19,7 @@ import WrapScreen from './WrapScreen.vue';
 const take = getTake();
 
 // Dev-only hook for the screenshot loop: a stable handle on the modules, a skip that plays
-// the floor forward tick by tick, and setters for clout and the ratings record. Read through
+// the floor forward tick by tick, and setters for clout and the ledger. Read through
 // the hook, not a live `import()` that Vite's module cache could serve stale.
 if (import.meta.env.DEV) {
   const engine = inject<Engine>('engine')!;
@@ -33,8 +33,11 @@ if (import.meta.env.DEV) {
         engine.tickDriver.advanceTime(1 / INTERVAL_RATE);
     },
     grant: (clout: number) => addResource(meta.clout, clout),
-    /** Records ratings up to `index` as taken to CUT, which opens the next. */
-    clear: (index: number) => (meta.record.bestRatingCleared.value = index),
+    /** Records every star as having wrapped ratings up to `index`, which opens the next. */
+    clear: (index: number) => {
+      meta.record.bestRatingCleared.value = index;
+      for (const w of Object.values(meta.record.wrapped)) w.value = index;
+    },
   };
 }
 </script>

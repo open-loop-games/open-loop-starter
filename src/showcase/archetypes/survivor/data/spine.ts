@@ -69,11 +69,14 @@ export const ANCHORS = {
 
   /** Full takes the career banks at a rating before the next opens: the ratings' pace. */
   takesPerRating: 3,
+  /**
+   * Full takes from a fresh save to the picture's wrap, when R's lead falls: about two
+   * hours of eight-minute takes. The shop is sized to be bought out there.
+   */
+  arcTakes: 15,
 
   /** Clout a full take at G pays: sized for readable shop prices. */
   cloutPerTake: 80,
-  /** Full takes of payout that buy the whole agency and both stars. */
-  shopTakes: 18,
 } as const;
 
 // ─── Opposition curves: scaled-opposition over the scene index ───
@@ -270,6 +273,7 @@ export const AGENCY_ANCHORS: readonly AgencyAnchor[] = [
 /** Star signings, in full takes of clout. */
 export const STAR_TAKES = { pyro: 1.25, wirework: 2.5 } as const;
 
+/** The whole shop, agency and stars, in full takes at G, at a price growth. */
 function shopTotal(growth: number): number {
   let total = 0;
   for (const a of AGENCY_ANCHORS) {
@@ -278,19 +282,17 @@ function shopTotal(growth: number): number {
   return total + STAR_TAKES.pyro + STAR_TAKES.wirework;
 }
 
-/** Per-level agency price growth, solved so the whole shop costs `shopTakes` takes. */
-export function solveAgencyGrowth(): number {
+/** Per-level agency price growth that makes the whole shop cost `shopTakes` full takes. */
+export function solveAgencyGrowth(shopTakes: number): number {
   let lo = 1;
   let hi = 4;
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
-    if (shopTotal(mid) < ANCHORS.shopTakes) lo = mid;
+    if (shopTotal(mid) < shopTakes) lo = mid;
     else hi = mid;
   }
   return (lo + hi) / 2;
 }
-
-export const AGENCY_GROWTH = solveAgencyGrowth();
 
 export function agencyBaseCost(a: AgencyAnchor): number {
   return Math.round(a.takesForFirst * ANCHORS.cloutPerTake);
@@ -368,25 +370,43 @@ export interface RatingStep {
   damage: number;
   /** Agency levels held when it opens. */
   agency: Record<AgencyAnchor['id'], number>;
-  /** Clout a full take at this depth pays. */
+  /** Clout a full take at this depth pays, the rating's pay included. */
   payPerTake: number;
 }
 
-/** The model career, rating by rating, and each rating's solved depth. */
-export function projectCareer(): RatingStep[] {
+export interface CareerModel {
+  /** One step a rating, as the career meets it. */
+  ratings: RatingStep[];
+  /** The agency, its damage and its health at the wrap, after `arcTakes` takes. */
+  wrap: { agency: RatingStep['agency']; damage: number; health: number };
+  /** Clout the whole arc pays, in full takes at G. */
+  arcPay: number;
+}
+
+const agencyDamage = (levels: RatingStep['agency']) =>
+  1 + AGENCY_STEP['effects-budget'] * levels['effects-budget'];
+const agencyHealth = (levels: RatingStep['agency']) => 1 + AGENCY_STEP.padding * levels.padding;
+
+/**
+ * The model career at an agency price growth: `takesPerRating` full takes at each rating
+ * below R, then R until `arcTakes`, each paying its depth's income at its rating's pay and
+ * spent by the reference agent (the next star once affordable, else the cheapest agency
+ * level). Each rating's depth is solved on the agency held when it opens.
+ */
+export function projectCareer(growth: number): CareerModel {
   const levels = Object.fromEntries(AGENCY_ANCHORS.map((a) => [a.id, 0])) as RatingStep['agency'];
   const stars = [STAR_TAKES.pyro, STAR_TAKES.wirework].map((t) =>
     Math.round(t * ANCHORS.cloutPerTake),
   );
   const price = (a: AgencyAnchor) =>
-    levels[a.id] >= a.maxLevel
-      ? Infinity
-      : Math.floor(agencyBaseCost(a) * AGENCY_GROWTH ** levels[a.id]);
+    levels[a.id] >= a.maxLevel ? Infinity : Math.floor(agencyBaseCost(a) * growth ** levels[a.id]);
   const target = clearance(0);
-  const steps: RatingStep[] = [];
+  const ratings: RatingStep[] = [];
   let clout = 0;
+  let arcPay = 0;
+  const last = RATINGS.length - 1;
   for (let r = 0; r < RATINGS.length; r++) {
-    const damage = 1 + AGENCY_STEP['effects-budget'] * levels['effects-budget'];
+    const damage = agencyDamage(levels);
     let depth = 0;
     if (r > 0) {
       let lo = 0;
@@ -398,16 +418,20 @@ export function projectCareer(): RatingStep[] {
       }
       depth = lo;
     }
-    const payPerTake = cumulativeIncome(ANCHORS.takeSeconds, depth) / REELS_PER_CLOUT;
-    steps.push({
+    const payPerTake =
+      (cumulativeIncome(ANCHORS.takeSeconds, depth) / REELS_PER_CLOUT) * RATINGS[r]!.pay;
+    ratings.push({
       depth,
       takesBefore: r * ANCHORS.takesPerRating,
       damage,
       agency: { ...levels },
       payPerTake,
     });
-    for (let k = 0; k < ANCHORS.takesPerRating; k++) {
+    const takes =
+      r < last ? ANCHORS.takesPerRating : ANCHORS.arcTakes - last * ANCHORS.takesPerRating;
+    for (let k = 0; k < takes; k++) {
       clout += payPerTake;
+      arcPay += payPerTake;
       for (;;) {
         if (stars.length && stars[0]! <= clout) {
           clout -= stars.shift()!;
@@ -420,10 +444,51 @@ export function projectCareer(): RatingStep[] {
       }
     }
   }
-  return steps;
+  return {
+    ratings,
+    wrap: { agency: { ...levels }, damage: agencyDamage(levels), health: agencyHealth(levels) },
+    arcPay: arcPay / ANCHORS.cloutPerTake,
+  };
 }
 
-export const CAREER = projectCareer();
+/**
+ * The shop's size and the model career together: the shop costs what the arc pays, so the
+ * reference agent buys it out at the wrap. The career's pay reads the depths, which read
+ * the agency, which reads the prices, so this iterates; the depths barely move the pay,
+ * and it settles in a few rounds.
+ */
+function solveShop(): { growth: number; career: CareerModel } {
+  let growth = solveAgencyGrowth(ANCHORS.arcTakes);
+  let career = projectCareer(growth);
+  for (let i = 0; i < 20; i++) {
+    const next = solveAgencyGrowth(career.arcPay);
+    if (Math.abs(next - growth) < 1e-9) break;
+    growth = next;
+    career = projectCareer(growth);
+  }
+  return { growth, career };
+}
+
+const SHOP = solveShop();
+
+/** Per-level agency price growth. Solved: change an anchor, never this. */
+export const AGENCY_GROWTH = SHOP.growth;
+
+export const CAREER_MODEL = SHOP.career;
+export const CAREER: readonly RatingStep[] = CAREER_MODEL.ratings;
+
+/**
+ * Each rating's lead part: a multiple of a lead's hp. R's lead stands against the wrap's
+ * agency as every other lead stands against the agency its rating opens with. The climax
+ * is a race between the lead's hp and the double's, so the agency counts as damage times
+ * health.
+ */
+export const LEAD_PART: readonly number[] = CAREER.map((step, r) =>
+  r === RATINGS.length - 1
+    ? (CAREER_MODEL.wrap.damage * CAREER_MODEL.wrap.health) /
+      (step.damage * agencyHealth(step.agency))
+    : 1,
+);
 
 /** Scenes deep each rating starts, by rating index. Solved: change an anchor, never this. */
 export const RATING_DEPTH: readonly number[] = CAREER.map((s) => s.depth);

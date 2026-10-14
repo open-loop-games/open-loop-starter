@@ -34,6 +34,10 @@ export interface TakeRecord {
   /** Index of the harshest rating taken to CUT; −1 before the first CUT. */
   bestRatingCleared: Persistent<number>;
   totalKills: Persistent<number>;
+  /** The ledger: each star's harshest rating wrapped, −1 before its first. */
+  wrapped: Record<StarDef['id'], Persistent<number>>;
+  /** True once R's lead has fallen: the picture is wrapped. */
+  pictureWrapped: Persistent<boolean>;
 }
 
 export interface MetaApi {
@@ -46,6 +50,8 @@ export interface MetaApi {
   record: TakeRecord;
   /** Pages a rewrite offers: three, and a fourth with Script Doctor. */
   offerSize(): number;
+  /** Stars that have wrapped a rating or harsher. */
+  starsWrapped(rating: number): number;
 }
 
 export const MetaKey: InjectionKey<MetaApi> = Symbol('survivor/meta') as InjectionKey<MetaApi>;
@@ -79,7 +85,13 @@ export function createMetaModule(): EngineModule {
         bestSeconds: persistent(0, { id: 'bestSeconds', lifetime: true }),
         bestRatingCleared: persistent(-1, { id: 'bestRatingCleared', lifetime: true }),
         totalKills: persistent(0, { id: 'totalKills', lifetime: true }),
+        wrapped: Object.fromEntries(
+          STARS.map((s) => [s.id, persistent(-1, { id: `wrapped-${s.id}`, lifetime: true })]),
+        ) as TakeRecord['wrapped'],
+        pictureWrapped: persistent(false, { id: 'pictureWrapped', lifetime: true }),
       };
+      const starsWrapped = (rating: number) =>
+        STARS.filter((s) => record.wrapped[s.id].value >= rating).length;
 
       const agency: PurchasableCategory<AgencyDef> = createPurchasableCategory<AgencyDef>({
         id: 'agency',
@@ -119,15 +131,18 @@ export function createMetaModule(): EngineModule {
       });
       stars.register([...STARS]);
 
-      // A rating opens once the one below it has been taken to CUT. Nothing is charged; the
-      // sweep buys it on the first tick the record allows.
+      // A rating opens once enough stars have wrapped the one below it. Nothing is charged;
+      // the sweep buys it on the first tick the ledger allows.
       const ratings = createPurchasableCategory<RatingDef>({
         id: 'ratings',
         mapPurchasable: (def) => ({
           display: { title: def.label, description: def.blurb },
           requirements: createBooleanRequirement({
-            met: () => record.bestRatingCleared.value >= def.index - 1,
-            description: def.index === 0 ? 'Open' : `Take ${RATINGS[def.index - 1]!.label} to CUT`,
+            met: () => def.index === 0 || starsWrapped(def.index - 1) >= def.gate,
+            description:
+              def.index === 0
+                ? 'Open'
+                : `Wrap ${RATINGS[def.index - 1]!.label} with ${def.gate === 1 ? 'a star' : `${def.gate} stars`}`,
           }),
           limit: 1,
           initialCount: def.index === 0 ? 1 : 0,
@@ -143,6 +158,7 @@ export function createMetaModule(): EngineModule {
         stars,
         ratings,
         record,
+        starsWrapped,
         offerSize: () =>
           BASE_OFFER + Number(agency.getPurchasable('script-doctor')?.count.value ?? 0),
       };

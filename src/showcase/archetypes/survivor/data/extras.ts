@@ -5,8 +5,11 @@
 
 export type ExtraId = 'grunt' | 'biker' | 'bruiser' | 'henchman';
 
+/** The bodies the script stages rather than the crowd. */
+export type CastId = 'lead' | 'rival' | 'strike-crew';
+
 export interface ExtraKind {
-  id: ExtraId;
+  id: ExtraId | CastId;
   /** Multiple of the scene's extra hp. Also the reel a kill drops, so income tracks the hp dealt. */
   hpFactor: number;
   /** Walking speed, world units a second. */
@@ -16,6 +19,8 @@ export interface ExtraKind {
   /** First scene index the kind walks on at. */
   fromScene: number;
   radius: number;
+  /** Multiple of the scene's contact damage a touch deals; 1 when absent. */
+  contact?: number;
 }
 
 export const EXTRAS: readonly ExtraKind[] = [
@@ -28,6 +33,24 @@ export const EXTRAS: readonly ExtraKind[] = [
 export function eligibleExtras(scene: number): ExtraKind[] {
   return EXTRAS.filter((k) => scene >= k.fromScene);
 }
+
+/**
+ * The cast the script stages. Their hp is sized by the script, not the roster, so
+ * `hpFactor` here is only the reel a kill drops in scene-hp units.
+ */
+export const CAST: Record<CastId, ExtraKind> = {
+  lead: { id: 'lead', hpFactor: 0, speed: 70, weight: 0, fromScene: 0, radius: 30, contact: 5 },
+  rival: { id: 'rival', hpFactor: 0, speed: 95, weight: 0, fromScene: 0, radius: 21, contact: 3 },
+  'strike-crew': {
+    id: 'strike-crew',
+    hpFactor: 0,
+    speed: 230,
+    weight: 0,
+    fromScene: 0,
+    radius: 16,
+    contact: Infinity,
+  },
+};
 
 // ─── Balance ───
 // The roster shifts the mean hp of what arrives as heavier kinds join: 1.0 at scene 0, 1.41

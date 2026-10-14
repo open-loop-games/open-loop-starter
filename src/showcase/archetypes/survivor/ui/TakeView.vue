@@ -6,7 +6,7 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { ANCHORS } from '../data';
+import { ANCHORS, GUESTS, LEADS, MARK_KILLS, SCRIPT, SET_PIECES } from '../data';
 import { getTake } from '../modules';
 import { renderArena } from './render';
 import { pageOf } from './pages';
@@ -117,12 +117,39 @@ const timecode = computed(() => {
   const t = hud.t;
   return `00:${pad(Math.floor(t / 60))}:${pad(Math.floor(t) % 60)}:${pad(Math.floor((t % 1) * 24))}`;
 });
-const toCut = computed(() => {
-  const left = Math.max(0, ANCHORS.takeSeconds - hud.t);
-  return `${Math.floor(left / 60)}:${pad(Math.floor(left % 60))}`;
+const clock = (s: number) => `${Math.floor(s / 60)}:${pad(Math.floor(s % 60))}`;
+const STRIKE_AT = ANCHORS.takeSeconds + SCRIPT.strikeAfter * ANCHORS.sceneSeconds;
+/** Seconds under which the strike call reads as a warning. */
+const STRIKE_WARN = 20;
+/** What the timecode counts toward: the lead's entrance, then the strike crew. */
+const countdown = computed(() => {
+  if (hud.t < ANCHORS.takeSeconds)
+    return { label: 'lead on in', left: clock(ANCHORS.takeSeconds - hud.t), warn: false };
+  if (hud.t < STRIKE_AT)
+    return {
+      label: 'strike in',
+      left: clock(STRIKE_AT - hud.t),
+      warn: STRIKE_AT - hud.t < STRIKE_WARN,
+    };
+  return { label: 'striking the set', left: '', warn: true };
 });
+const lead = computed(() => LEADS[take.view.rating.index]!);
 const sceneLabel = computed(() => Math.floor(hud.scene) + 1);
 const hpFrac = computed(() => (hud.maxHp > 0 ? hud.hp / hud.maxHp : 0));
+
+/** Seconds of floor time a cue's call stays up. */
+const CALL_SECONDS = 3.5;
+const call = computed(() => {
+  const what = hud.cue;
+  if (!what || hud.t - hud.cueAt > CALL_SECONDS) return null;
+  const def = what === 'rival' || what === 'mob' ? GUESTS[what] : SET_PIECES[what];
+  return {
+    key: hud.cueAt,
+    kicker: what === 'rival' || what === 'mob' ? 'Guest' : 'Set piece',
+    ...def,
+  };
+});
+const markCut = Math.round(SCRIPT.markCut * 100);
 
 /** Seconds of floor time the slip announcing an improvised page stays up. */
 const SLIP_SECONDS = 2.5;
@@ -159,9 +186,41 @@ const slip = computed(() => {
 
     <div class="timecode">
       <div class="tc num">{{ timecode }}</div>
-      <div class="tc-sub billing">
-        to cut <span class="num">{{ toCut }}</span>
+      <div class="tc-sub billing" :class="{ warn: countdown.warn }">
+        {{ countdown.label }} <span class="num">{{ countdown.left }}</span>
       </div>
+    </div>
+
+    <Transition name="billing-card">
+      <div v-if="hud.lead !== null" class="lead-card">
+        <div class="lead-kicker billing">And introducing</div>
+        <div class="lead-name billing">{{ lead.name }}</div>
+        <div class="bar lead-bar">
+          <div class="bar-fill lead-fill" :style="{ transform: `scaleX(${hud.lead})` }"></div>
+        </div>
+        <div class="lead-sub billing">Down the lead to call CUT</div>
+      </div>
+    </Transition>
+
+    <Transition name="call">
+      <div v-if="call" :key="call.key" class="call">
+        <div class="clapper-stripe"></div>
+        <div class="call-body">
+          <span class="call-kicker billing">{{ call.kicker }}</span>
+          <span class="call-name billing">{{ call.name }}</span>
+          <span class="call-blurb">{{ call.blurb }}</span>
+        </div>
+      </div>
+    </Transition>
+
+    <div v-if="hud.rival !== null" class="guest">
+      <div class="guest-row billing">
+        <span>Guest star</span><span class="num">walks in {{ clock(hud.rivalLeft) }}</span>
+      </div>
+      <div class="bar guest-bar">
+        <div class="bar-fill guest-fill" :style="{ transform: `scaleX(${hud.rival})` }"></div>
+      </div>
+      <div class="guest-sub billing">Down them for a jackpot reel</div>
     </div>
 
     <div class="tally">
@@ -172,6 +231,17 @@ const slip = computed(() => {
       <div class="tally-row dim">
         <span class="num">{{ hud.kills }}</span
         ><span class="billing lbl">extras down</span>
+      </div>
+      <div class="marks" :class="{ closed: hud.lead !== null }">
+        <span
+          v-for="(m, i) in hud.marks"
+          :key="i"
+          class="chalk-mark"
+          :class="{ filled: m.filled }"
+          :style="{ '--fill': m.kills / MARK_KILLS }"
+          :title="`${m.kills}/${MARK_KILLS} down inside the mark`"
+        ></span>
+        <span class="billing lbl">marks · each cuts the lead {{ markCut }}%</span>
       </div>
     </div>
 
@@ -413,6 +483,144 @@ const slip = computed(() => {
 }
 .pips i.on {
   background: var(--tungsten);
+}
+.tc-sub.warn {
+  color: var(--squib);
+}
+/* The lead's billing card: a title card under the timecode once it walks on. */
+.lead-card {
+  position: absolute;
+  top: 86px;
+  left: 50%;
+  width: 340px;
+  margin-left: -170px;
+  text-align: center;
+  padding: 8px 14px 9px;
+  background: rgba(17, 15, 13, 0.82);
+  border-top: 2px solid var(--squib);
+}
+.lead-kicker,
+.lead-sub {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--chalk-dim);
+}
+.lead-name {
+  font-size: 26px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk);
+  line-height: 1.1;
+}
+.lead-bar {
+  margin: 6px 0 4px;
+}
+.lead-fill {
+  background: var(--squib);
+}
+.billing-card-enter-active {
+  transition:
+    opacity 420ms var(--ease-cut),
+    transform 420ms var(--ease-cut);
+}
+.billing-card-enter-from {
+  opacity: 0;
+  transform: scale(1.12);
+}
+/* A cue's call: the AD's board, a clapper strip over the set piece or guest's name. */
+.call {
+  position: absolute;
+  top: 92px;
+  left: 50%;
+  width: 340px;
+  margin-left: -170px;
+  background: var(--stage-black);
+  border: 2px solid var(--chalk);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+.call-body {
+  display: grid;
+  justify-items: center;
+  padding: 8px 14px 10px;
+}
+.call-kicker {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--tungsten);
+  text-transform: uppercase;
+}
+.call-name {
+  font-size: 26px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.call-blurb {
+  font-size: 13px;
+  color: var(--chalk-dim);
+}
+.call-enter-active,
+.call-leave-active {
+  transition:
+    opacity 220ms var(--ease-cut),
+    transform 220ms var(--ease-cut);
+}
+.call-enter-from {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+.call-leave-to {
+  opacity: 0;
+}
+/* A rival on set: its bar and the seconds before it walks with the jackpot. */
+.guest {
+  position: absolute;
+  top: 132px;
+  right: var(--hud-pad);
+  width: 200px;
+  padding: 7px 10px 8px;
+  background: rgba(17, 15, 13, 0.82);
+  border-left: 3px solid var(--reel-gold);
+}
+.guest-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--reel-gold);
+}
+.guest-bar {
+  margin: 5px 0 3px;
+  height: 7px;
+  background: var(--tungsten-dim);
+}
+.guest-fill {
+  background: var(--reel-gold);
+}
+.guest-sub {
+  font-size: 11px;
+  color: var(--chalk-dim);
+}
+/* The chalk marks: a ring each, filled in tungsten as kills land inside it. */
+.marks {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+.marks.closed {
+  opacity: 0.45;
+}
+.chalk-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: conic-gradient(var(--tungsten) calc(var(--fill) * 360deg), var(--gaffer) 0);
+  -webkit-mask: radial-gradient(circle, transparent 4px, #000 4.5px);
+  mask: radial-gradient(circle, transparent 4px, #000 4.5px);
+}
+.chalk-mark.filled {
+  background: var(--greenlight);
 }
 /* An improvised page: a script slip pinned under the timecode. */
 .slip {

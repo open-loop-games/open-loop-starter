@@ -12,7 +12,12 @@
  * - ratings: the model career, rating by rating: the takes before it opens, the agency it
  *   holds, the depth solved from it, and the clearance, which matches G's by construction.
  *   `career-probe.ts` measures the same arc.
- * - clout: the payout model behind the agency's prices, and what the whole shop costs.
+ * - the wrap: the agency the model career holds after `arcTakes` takes, which the shop is
+ *   solved to buy out.
+ * - the leads: each rating's lead hp before the marks cut it, R's solved part, and the
+ *   rating's pay.
+ * - clout: the payout model behind the agency's prices, what the whole shop costs and what
+ *   the arc pays, which match by construction.
  */
 
 import {
@@ -21,6 +26,10 @@ import {
   ANCHORS,
   BEATS,
   CAREER,
+  CAREER_MODEL,
+  LEAD_PART,
+  LEADS,
+  leadHp,
   DPS0,
   INCOME_LAG,
   LADDER,
@@ -82,6 +91,19 @@ CAREER.forEach((step, r) => {
   );
 });
 
+const wrapLevels = Object.entries(CAREER_MODEL.wrap.agency)
+  .map(([id, n]) => `${id} ${n}`)
+  .join(', ');
+console.log(
+  `  wrap    ${String(ANCHORS.arcTakes).padStart(5)}         ×${f(CAREER_MODEL.wrap.damage, 2)}                              ${wrapLevels}`,
+);
+console.log('\nThe leads: hp at the climax before the marks cut it, and the part over a lead');
+RATINGS.forEach((r, i) =>
+  console.log(
+    `  ${r.label.padEnd(7)} ${LEADS[i]!.name.padEnd(16)} ${f(leadHp(i), 0).padStart(6)} hp  part ×${f(LEAD_PART[i]!, 2)}  pay ×${r.pay}`,
+  ),
+);
+
 let shop = 0;
 for (const a of AGENCY)
   for (let l = 0; l < a.maxLevel; l++) shop += Math.floor(a.baseCost * AGENCY_GROWTH ** l);
@@ -90,5 +112,5 @@ console.log(
   `\nClout: ${f(REELS_PER_CLOUT, 2)} reels a point, so a full take at G pays ${ANCHORS.cloutPerTake}; agency levels grow ×${f(AGENCY_GROWTH, 3)}`,
 );
 console.log(
-  `  the whole shop: ${f(shop, 0)} agency + ${stars} stars = ${f((shop + stars) / ANCHORS.cloutPerTake, 1)} full takes at G`,
+  `  the whole shop: ${f(shop, 0)} agency + ${stars} stars = ${f((shop + stars) / ANCHORS.cloutPerTake, 1)} full takes at G; the arc pays ${f(CAREER_MODEL.arcPay, 1)}`,
 );

@@ -5,8 +5,8 @@
 
 import { addResource, toNumber } from '@open-loop/engine';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AGENCY, STARS } from '../data';
-import { boot, tick } from '../sim/harness';
+import { AGENCY, ANCHORS, RATINGS, STARS } from '../data';
+import { boot, getEngine, tick } from '../sim/harness';
 import { getMeta } from './meta';
 import { getTake } from './take';
 
@@ -87,7 +87,7 @@ describe('survivor/meta', () => {
     expect(toNumber(meta.chains.maxHp.apply(1))).toBe(before.maxHp);
   });
 
-  it('opens the next rating once a take reaches CUT, and not before', async () => {
+  it('opens the next rating once a take wraps it, and not before', async () => {
     const take = getTake();
     const pg = getMeta().ratings.getPurchasable('pg')!;
     take.startTake({ star: 'veteran', rating: 0, driver: 'player', seed: 1 });
@@ -96,10 +96,42 @@ describe('survivor/meta', () => {
     expect(pg.active.value).toBe(false);
     take.toCallSheet();
     take.startTake({ star: 'veteran', rating: 0, driver: 'player', seed: 2 });
-    take.arena()!.t = 1e4;
+    take.arena()!.t = ANCHORS.takeSeconds;
+    await tick(2);
+    take.arena()!.lead!.hp = 0;
     await tick(2);
     expect(take.view.wrap?.end).toBe('cut');
     expect(pg.active.value).toBe(true);
+  });
+
+  it("records each star's wraps in the ledger, and opens R only on enough stars", () => {
+    const meta = getMeta();
+    const r = meta.ratings.getPurchasable('r')!;
+    const gate = RATINGS[RATINGS.length - 1]!.gate;
+    const below = RATINGS.length - 2;
+    STARS.slice(0, gate - 1).forEach((s) => (meta.record.wrapped[s.id].value = below));
+    getEngine().tickDriver.tickOnce();
+    expect(r.active.value).toBe(false);
+    meta.record.wrapped[STARS[gate - 1]!.id].value = below;
+    getEngine().tickDriver.tickOnce();
+    expect(r.active.value).toBe(true);
+  });
+
+  it('pays more clout for the same reels at a harsher rating', async () => {
+    const meta = getMeta();
+    const pay = async (rating: number) => {
+      const before = toNumber(meta.clout.value);
+      getTake().startTake({ star: 'veteran', rating, driver: 'player', seed: 1 });
+      getTake().arena()!.stats.reelsBanked = 1e4;
+      getTake().arena()!.player.hp = 0;
+      await tick(2);
+      getTake().toCallSheet();
+      return toNumber(meta.clout.value) - before;
+    };
+    const g = await pay(0);
+    for (const w of Object.values(meta.record.wrapped)) w.value = RATINGS.length - 2;
+    getEngine().tickDriver.tickOnce();
+    expect(await pay(RATINGS.length - 1)).toBeGreaterThan(g);
   });
 
   it('signs a star for clout, after which it can be cast', () => {

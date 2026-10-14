@@ -8,7 +8,7 @@ export default {
   curated: [
     {
       term: 'take',
-      note: 'One run: from Action! to CUT at seven minutes or a wipeout. Either way the reels banked pay clout.',
+      note: 'One run: from Action! to CUT when the lead falls, a wipeout, or the strike. Whatever the end, the reels banked pay clout.',
     },
     {
       term: 'scene',
@@ -36,7 +36,35 @@ export default {
     },
     {
       term: 'rating',
-      note: 'The take’s danger, chosen at the call sheet: G, PG, PG-13, R. Each starts deeper into the scene curve; CUT at one opens the next.',
+      note: 'The take’s danger, chosen at the call sheet: G, PG, PG-13, R. Each starts deeper into the scene curve, stages more and pays more; it opens once enough stars have wrapped the one below.',
+    },
+    {
+      term: 'the climax',
+      note: 'Seven minutes into a take: the set clears and the rating’s lead walks on. The scene keeps stepping while the lead stands.',
+    },
+    {
+      term: 'lead',
+      note: 'The rating’s staged villain. The take is in the can only when it falls. R’s lead, the Big Bad, wraps the picture.',
+    },
+    {
+      term: 'strike crew',
+      note: 'The sweeper: three minutes after the climax it walks on, cannot be downed, and a touch ends the take as struck.',
+    },
+    {
+      term: 'chalk mark',
+      note: 'A ring on the floor. Kills inside it fill it, and each filled mark cuts the lead’s hp by a quarter.',
+    },
+    {
+      term: 'set piece',
+      note: 'A staged formation rolled into a minute of the take: a stampede, the charge (a wall with a gap), or a ring that surrounds the double. A harsher rating stages more.',
+    },
+    {
+      term: 'guest star',
+      note: 'A guest event rolled into a minute: a rival who walks at the scene’s end with its jackpot unless downed first, or a crowd call that brings a wave at once.',
+    },
+    {
+      term: 'ledger',
+      note: 'Each star’s harshest rating wrapped. The ratings’ gates read it, so R needs more than one star.',
     },
     {
       term: 'clout',

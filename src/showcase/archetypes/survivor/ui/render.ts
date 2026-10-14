@@ -3,7 +3,7 @@
  * The camera is locked to the double. Colours are the costume's, as literals, because a
  * canvas cannot read CSS variables per draw.
  */
-import { ANCHORS, CONE_HALF_ANGLE } from '../data';
+import { ANCHORS, CONE_HALF_ANGLE, LEADS, MARK_KILLS, SCRIPT } from '../data';
 import {
   SHOT_RADIUS,
   WORLD_HALF,
@@ -33,6 +33,9 @@ const KIND_FILL: Record<Extra['kind']['id'], string> = {
   biker: '#8d5b3b',
   bruiser: '#4b4541',
   henchman: '#2c2b30',
+  lead: '#d8452f',
+  rival: '#d9b84a',
+  'strike-crew': '#f2a73a',
 };
 
 /** Floor marks: actors' T-marks taped at fixed world spots. */
@@ -70,6 +73,7 @@ export function renderArena(
   drawGrid(ctx, p.x, p.y, w, h);
   drawMarks(ctx, p.x, p.y, w, h);
   drawWalls(ctx);
+  drawChalkMarks(ctx, a);
   drawShot(ctx, a);
 
   // reels
@@ -111,6 +115,10 @@ export function renderArena(
   // extras
   for (const e of a.extras) {
     if (Math.abs(e.x - p.x) > w / 2 + 40 || Math.abs(e.y - p.y) > h / 2 + 40) continue;
+    if (e.role) {
+      drawCast(ctx, a, e);
+      continue;
+    }
     const r = e.kind.radius;
     ctx.fillStyle = e.flash > 0 ? C.chalk : KIND_FILL[e.kind.id];
     ctx.beginPath();
@@ -202,7 +210,91 @@ export function renderArena(
   ctx.fillStyle = v;
   ctx.fillRect(0, 0, w, h);
 
-  drawShotArrow(ctx, a, w, h);
+  drawEdgeArrow(ctx, a, a.shot, 'rgba(242,167,58,0.85)', w, h);
+  for (const m of a.marks)
+    if (!m.filled && !a.lead) drawEdgeArrow(ctx, a, m, 'rgba(236,229,216,0.75)', w, h);
+  if (a.rival) drawEdgeArrow(ctx, a, a.rival, C.gold, w, h);
+  if (a.lead && a.lead.hp > 0) drawEdgeArrow(ctx, a, a.lead, C.squib, w, h);
+}
+
+/**
+ * The script's chalk marks: a ring with an X, the kills inside it drawn round the ring in
+ * tungsten. A filled mark is taped over in greenlight. Marks go dark once the lead is on.
+ */
+function drawChalkMarks(ctx: CanvasRenderingContext2D, a: ArenaState): void {
+  const r = SCRIPT.markRadius;
+  for (const m of a.marks) {
+    const live = !m.filled && !a.lead;
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    ctx.setLineDash(m.filled ? [] : [18, 10]);
+    ctx.lineWidth = m.filled ? 5 : 3;
+    ctx.strokeStyle = m.filled
+      ? 'rgba(92,178,122,0.4)'
+      : live
+        ? 'rgba(236,229,216,0.32)'
+        : 'rgba(236,229,216,0.1)';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (live && m.kills > 0) {
+      ctx.strokeStyle = 'rgba(242,167,58,0.7)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * m.kills) / MARK_KILLS);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = m.filled ? 'rgba(92,178,122,0.5)' : 'rgba(236,229,216,0.35)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-16, -16);
+    ctx.lineTo(16, 16);
+    ctx.moveTo(16, -16);
+    ctx.lineTo(-16, 16);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/** The staged cast: the lead billed by name, a rival in gold, the strike crew in hazard stripe. */
+function drawCast(ctx: CanvasRenderingContext2D, a: ArenaState, e: Extra): void {
+  const r = e.kind.radius;
+  // Under steady fire a flash fill would never clear, so a hit lights the ring instead.
+  ctx.fillStyle = e.role === 'strike-crew' ? hazard! : KIND_FILL[e.kind.id];
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = e.role === 'lead' ? 4 : 3;
+  ctx.strokeStyle =
+    e.role === 'strike-crew'
+      ? C.hazardB
+      : e.flash > 0
+        ? C.chalk
+        : e.role === 'rival'
+          ? C.gold
+          : 'rgba(236,229,216,0.6)';
+  ctx.stroke();
+  ctx.font = '700 12px "Nimbus Sans Narrow", "Arial Narrow", sans-serif';
+  ctx.textAlign = 'center';
+  if (e.role === 'strike-crew') {
+    ctx.fillStyle = C.hazardA;
+    ctx.fillText('STRIKE CREW', e.x, e.y - r - 6);
+    ctx.textAlign = 'start';
+    return;
+  }
+  const bw = r * 2.4;
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.fillRect(e.x - bw / 2, e.y - r - 12, bw, 5);
+  ctx.fillStyle = e.role === 'lead' ? C.squib : C.gold;
+  ctx.fillRect(e.x - bw / 2, e.y - r - 12, (bw * Math.max(0, e.hp)) / e.maxHp, 5);
+  ctx.fillStyle = C.chalk;
+  ctx.fillText(
+    e.role === 'lead' ? LEADS[a.rating]!.name.toUpperCase() : 'GUEST STAR',
+    e.x,
+    e.y - r - 17,
+  );
+  ctx.textAlign = 'start';
 }
 
 function drawGrid(
@@ -324,10 +416,17 @@ function drawShot(ctx: CanvasRenderingContext2D, a: ArenaState): void {
   ctx.fillText(`REC  ×${ANCHORS.shotMult}`, x - hw + 24, y - hh + 18);
 }
 
-/** When the shot drifts off-camera, an edge tick points back to it. */
-function drawShotArrow(ctx: CanvasRenderingContext2D, a: ArenaState, w: number, h: number): void {
-  const dx = a.shot.x - a.player.x;
-  const dy = a.shot.y - a.player.y;
+/** A target off camera gets an edge tick pointing back to it: the shot, a mark, the cast. */
+function drawEdgeArrow(
+  ctx: CanvasRenderingContext2D,
+  a: ArenaState,
+  target: { x: number; y: number },
+  color: string,
+  w: number,
+  h: number,
+): void {
+  const dx = target.x - a.player.x;
+  const dy = target.y - a.player.y;
   if (Math.abs(dx) < w / 2 - 40 && Math.abs(dy) < h / 2 - 40) return;
   const ang = Math.atan2(dy, dx);
   const ex = w / 2 + Math.cos(ang) * (w / 2 - 30);
@@ -335,7 +434,7 @@ function drawShotArrow(ctx: CanvasRenderingContext2D, a: ArenaState, w: number, 
   ctx.save();
   ctx.translate(Math.max(24, Math.min(w - 24, ex)), Math.max(24, Math.min(h - 24, ey)));
   ctx.rotate(ang);
-  ctx.fillStyle = 'rgba(242,167,58,0.85)';
+  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(10, 0);
   ctx.lineTo(-6, -7);

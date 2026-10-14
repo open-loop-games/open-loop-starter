@@ -14,7 +14,7 @@ import {
   type InjectionKey,
   type LevelDrivenSkill,
 } from '@open-loop/engine';
-import { reactive } from 'vue';
+import { computed, reactive } from 'vue';
 import {
   ANCHORS,
   LADDER,
@@ -22,6 +22,9 @@ import {
   PERK_STEP,
   RATINGS,
   REELS_PER_CLOUT,
+  LAST_RATING,
+  MARK_KILLS,
+  LEADS,
   STARS,
   type Driver,
   type PerkId,
@@ -37,6 +40,7 @@ import {
   type ArenaInput,
   type ArenaMods,
   type ArenaState,
+  type Cue,
   type TakeEnd,
 } from './sim/arena';
 import {
@@ -66,6 +70,13 @@ export interface WrapReport {
   inShotKills: number;
   /** The rating this take opened, if it opened one. */
   unlockedRating: string | null;
+  lead: string;
+  /** Share of the lead's hp left; null if it never walked on. */
+  leadLeft: number | null;
+  marksFilled: number;
+  jackpots: number;
+  /** True when this take felled R's lead for the first time: the picture wraps. */
+  pictureWrapped: boolean;
 }
 
 /** The take's reactive surface for the UI. The arena itself is deliberately not reactive. */
@@ -86,6 +97,15 @@ export interface TakeView {
     kills: number;
     extras: number;
     rigs: { id: string; name: string; level: number }[];
+    /** Share of the lead's hp left once it walks on; null before the climax. */
+    lead: number | null;
+    marks: { kills: number; filled: boolean }[];
+    /** The last cue played and when, for the banner. */
+    cue: Cue['what'] | null;
+    cueAt: number;
+    /** Share of the rival's hp left while one is on set, and the seconds before it walks. */
+    rival: number | null;
+    rivalLeft: number;
   };
   offer: Card[];
   pendingRewrites: number;
@@ -127,7 +147,7 @@ export function getTake(): TakeApi {
 }
 
 /**
- * One take on the floor, from Action! to CUT or a wipeout. The rewrite ladder is a skill
+ * One take on the floor, from Action! to CUT when the lead falls, a wipeout or the strike. The rewrite ladder is a skill
  * over banked reels; the rewrite perks bind into the meta chains; the floor steps on every
  * engine tick while the take screen is up. A take ends by banking clout and resetting this
  * module's persistent context, so a take is never resumed from a save.
@@ -163,6 +183,12 @@ export function createTakeModule(): EngineModule {
           kills: 0,
           extras: 0,
           rigs: [],
+          lead: null,
+          marks: [],
+          cue: null,
+          cueAt: 0,
+          rival: null,
+          rivalLeft: 0,
         },
         offer: [],
         pendingRewrites: 0,
@@ -215,7 +241,9 @@ export function createTakeModule(): EngineModule {
 
       const takeReset = createReset({ resetPersistentContexts: ['survivor/take'] });
 
-      function mods(): ArenaMods {
+      // The chains move only on a page, a purchase or a tuning push, so the resolved set is
+      // cached and the step reads it every tick for free.
+      const resolvedMods = computed<ArenaMods>(() => {
         const star = view.star;
         return {
           damage: num(meta.chains.damage.apply(1)),
@@ -225,25 +253,58 @@ export function createTakeModule(): EngineModule {
           maxHp: Math.round(num(meta.chains.maxHp.apply(num(baseHp.value) * star.hpMult))),
           contact: num(contactScale.value),
         };
+      });
+      const mods = (): ArenaMods => resolvedMods.value;
+
+      // The HUD's last written values, kept off the proxy: a reactive write costs even when
+      // nothing changed, and the HUD syncs every tick.
+      let shadow: Partial<Record<keyof TakeView['hud'], unknown>> = {};
+      let shadowRigs = '';
+      function put<K extends keyof TakeView['hud']>(key: K, value: TakeView['hud'][K]): void {
+        if (shadow[key] === value) return;
+        shadow[key] = value;
+        view.hud[key] = value;
       }
 
       function syncHud(): void {
         if (!arena) return;
-        const h = view.hud;
-        h.t = arena.t;
-        h.scene = currentScene(arena);
-        h.hp = Math.max(0, arena.player.hp);
-        h.maxHp = arena.player.maxHp;
-        h.level = Number(rewrites.level.value);
-        h.progress = getSkillProgress(rewrites);
-        h.reels = arena.stats.reelsBanked;
-        h.kills = arena.stats.kills;
-        h.extras = arena.extras.length;
-        if (
-          h.rigs.length !== arena.rigs.length ||
-          h.rigs.some((r, i) => r.level !== arena!.rigs[i]!.level)
-        ) {
-          h.rigs = arena.rigs.map((r) => ({ id: r.def.id, name: r.def.name, level: r.level }));
+        put('t', arena.t);
+        put('scene', currentScene(arena));
+        put('hp', Math.max(0, arena.player.hp));
+        put('maxHp', arena.player.maxHp);
+        put('level', Number(rewrites.level.value));
+        // Progress inverts the ladder's formula, so it is read only when reels bank.
+        if (shadow.reels !== arena.stats.reelsBanked || shadow.progress === undefined)
+          put('progress', getSkillProgress(rewrites));
+        put('reels', arena.stats.reelsBanked);
+        put('kills', arena.stats.kills);
+        put('extras', arena.extras.length);
+        put('lead', arena.lead ? Math.max(0, arena.lead.hp) / arena.leadHp0 : null);
+        let cue: Cue | null = null;
+        for (const c of arena.cues) if (c.played) cue = c;
+        put('cue', cue?.what ?? null);
+        put('cueAt', cue?.at ?? 0);
+        const rival = arena.rival;
+        put('rival', rival ? Math.max(0, rival.hp) / rival.maxHp : null);
+        put('rivalLeft', rival ? Math.ceil(rival.life ?? 0) : 0);
+        let rigs = '';
+        for (const r of arena.rigs) rigs += `${r.def.id}:${r.level},`;
+        let marks = '';
+        for (const m of arena.marks) marks += `${m.kills},`;
+        if (rigs !== shadowRigs) {
+          shadowRigs = rigs;
+          view.hud.rigs = arena.rigs.map((r) => ({
+            id: r.def.id,
+            name: r.def.name,
+            level: r.level,
+          }));
+        }
+        if (marks !== shadow.marks) {
+          shadow.marks = marks;
+          view.hud.marks = arena.marks.map((m) => ({
+            kills: Math.min(m.kills, MARK_KILLS),
+            filled: m.filled,
+          }));
         }
       }
 
@@ -308,6 +369,9 @@ export function createTakeModule(): EngineModule {
           maxHp: mods().maxHp,
         });
         view.hud.rigs = [];
+        view.hud.marks = [];
+        shadow = {};
+        shadowRigs = '';
         view.screen = 'take';
         syncHud();
       }
@@ -315,15 +379,26 @@ export function createTakeModule(): EngineModule {
       function endTake(end: TakeEnd): void {
         if (!arena) return;
         const record = meta.record;
-        const earned = Math.floor(arena.stats.reelsBanked / REELS_PER_CLOUT);
+        const earned = Math.floor((arena.stats.reelsBanked / REELS_PER_CLOUT) * view.rating.pay);
         const level = Number(rewrites.level.value);
         record.takes.value++;
         record.bestSeconds.value = Math.max(record.bestSeconds.value, arena.t);
         record.totalKills.value += arena.stats.kills;
-        const before = record.bestRatingCleared.value;
-        if (end === 'cut') record.bestRatingCleared.value = Math.max(before, view.rating.index);
-        const next = RATINGS[record.bestRatingCleared.value + 1];
-        const unlocked = record.bestRatingCleared.value > before && next ? next.label : null;
+        const open = (r: RatingDef) => meta.ratings.getPurchasable(r.id)?.active.value;
+        const shut = RATINGS.filter((r) => !open(r));
+        const firstPicture =
+          end === 'cut' && view.rating.index === LAST_RATING && !record.pictureWrapped.value;
+        if (end === 'cut') {
+          const ledger = record.wrapped[view.star.id];
+          ledger.value = Math.max(ledger.value, view.rating.index);
+          record.bestRatingCleared.value = Math.max(
+            record.bestRatingCleared.value,
+            view.rating.index,
+          );
+          if (firstPicture) record.pictureWrapped.value = true;
+        }
+        const next = shut.find((r) => r.gate <= meta.starsWrapped(r.index - 1));
+        const unlocked = next ? next.label : null;
         takeReset.reset();
         // Earnings land after the reset returns, outside its load guard.
         addResource(meta.clout, earned);
@@ -339,6 +414,11 @@ export function createTakeModule(): EngineModule {
           driver: view.driver,
           inShotKills: arena.stats.inShotKills,
           unlockedRating: unlocked,
+          lead: LEADS[view.rating.index]!.name,
+          leadLeft: arena.lead ? Math.max(0, arena.lead.hp) / arena.leadHp0 : null,
+          marksFilled: arena.marks.filter((m) => m.filled).length,
+          jackpots: arena.stats.jackpots,
+          pictureWrapped: firstPicture,
         };
         view.takeNumber = record.takes.value + 1;
         view.screen = 'wrap';

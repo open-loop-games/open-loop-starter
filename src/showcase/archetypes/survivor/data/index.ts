@@ -5,3 +5,4 @@ export * from './rewrites';
 export * from './agency';
 export * from './stars';
 export * from './ratings';
+export * from './script';
