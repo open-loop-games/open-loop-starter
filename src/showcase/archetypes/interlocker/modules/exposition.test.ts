@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, toNumber } from '@open-loop/engine';
-import { PATENT_POOL, type ResearchId } from '../data';
+import { PATENT_POOL, RAW, RESOURCES, type ResearchId } from '../data';
 import { boot, getEngine, tick } from '../sim/harness';
 import { getEmpire } from './empire';
 import { getExposition } from './exposition';
@@ -63,6 +63,22 @@ describe('the Exposition', () => {
     for (const id of PATENT_POOL) expect(works.researched(id).value).toBe(true);
     expect(works.researched('hall').value).toBe(false);
     expect(empire.holds('patents').value).toBe(true);
+  });
+
+  it('advances Crédit Mobilier’s stake into the run it is petitioned in, and every run after', () => {
+    const works = getWorks();
+    const empire = getEmpire();
+    for (const r of RAW) works.res[r].value = new Decimal(0);
+    empire.renown.value = new Decimal(10);
+    expect(empire.charters.getPurchasable('credit')!.purchase(1)).toBeTruthy();
+    for (const r of RAW) expect(num(works.res[r])).toBeGreaterThan(0);
+
+    fillHangar();
+    getExposition().stage();
+    for (const r of RAW) {
+      const start = RESOURCES.find((d) => d.id === r)!.start;
+      expect(num(works.res[r])).toBeGreaterThan(start);
+    }
   });
 
   it('lifts every raw building’s yield with the renown earned', async () => {

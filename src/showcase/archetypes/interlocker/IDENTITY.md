@@ -50,22 +50,31 @@ aeroplane 25), and prices, bins and labour rates all key off that valuation.
 cost growth   m = 2^(K/N) = 2^(5/25)              prices = weight · RHO · T_FIRST
 role rate     r = RHO_WORKER / Σ recipe inputs     one compagnon per raw building per stage
 bin           cap = RHO · T_FILL / RAW_EQ          the hangar holds 6 < the Exposition's 10
-renown        floor(2 · √(P / 10))
-first run     T ≈ T_raw + T_crew
-              T_raw  = raw prices / mean raw throughput
-              T_crew = worked goods in crew-seconds / mean crew
+renown        floor(2 · √(P / 10))                 raw output × (1 + 0.1 · lifetime renown)
+a run         T = max(T_raw, T_crew)
+              T_raw  = raw units drawn / (ρ_R · mean raw buildings, less the ration)
+              T_crew = worked goods in crew-seconds / mean crew · labour
 ```
 
-The first-run prediction composes two budgets as a sum (`…/composition.mdx`): raw stock
-spent directly, at the mean raw throughput, then worked goods in crew-seconds, because raw
-bins sit full while the crew binds. `warehousesNeeded` guards the softlock where a price
-on the path to Bonded Warehousing outgrows the base bins.
+A run composes two budgets that work at once, and lasts as long as the longer
+(`…/composition.mdx`). The raw budget is every raw unit the run draws: prices, and what
+the workshops eat to make the worked goods. The crew budget is every worked good, in
+crew-seconds. Renown scales raw throughput; Imperial Patronage and the École Centrale
+scale the crew; the Patent Pool and Crédit Mobilier's stake take units off the bill.
+Across the whole arc the raw budget is the longer: the purse binds, not the crew.
 
-**Where the closed form stops: the crew and the arc.** The spine predicts the first
-Exposition on an expected build. How a player seats the compagnons, which buildings it
-raises first, and every run after the first are measured, not projected:
-`balance/arc-probe.ts` plays the shipping game under a greedy foreman and prints each
-run, its build, and what bound each trade minute by minute.
+The build each run reaches is derived, not authored (`planFor`): warehouses until the
+hangar holds an Exposition, every cité the bins can price, gardens for the ration and the
+next cité, and raw producers for the full crew's draw plus the purse. The charters'
+strengths and prices are solved from the same model (`CHARTER_SHARE`, `CHARTER_PAYBACK`).
+`warehousesNeeded` guards the softlock where a price on the path to Bonded Warehousing
+outgrows the base bins.
+
+**Where the closed form stops: the ramp.** How fast raw buildings come online across a run
+is measured, not derived: `RAMP_SHARE` is fit on `balance/charter-probe.ts`, 35 runs
+over lifetime renown and charter sets, where the model holds to about 6% rms.
+`balance/arc-probe.ts` plays the shipping game under the reference foreman, who raises
+the planned build, and prints each run beside the spine's arc.
 
 ## The arc
 
@@ -73,15 +82,15 @@ run, its build, and what bound each trade minute by minute.
 |---|---|---|
 | The first timber yard raised | | 63–64s |
 | The Sawpit Guild patented | | 145–148s |
-| Les Baux Concession: pits and drifts | | 236–242s |
-| Deville's reduction furnace | | 294–300s |
-| Bonded Warehousing | | 364–370s |
-| The Light Steam Engine | | 397–411s |
-| Monoplane Rigging | | 578–590s |
-| The first aeroplane | | 583–598s |
-| The first Exposition | 556s | 614–630s |
-| The third Exposition | | 1615–1648s |
-| The fifth Exposition | | 2522–2560s |
+| Les Baux Concession: pits and drifts | | 244–252s |
+| Deville's reduction furnace | | 314–318s |
+| Bonded Warehousing | | 361–375s |
+| The Light Steam Engine | | 393–421s |
+| Monoplane Rigging | | 524–537s |
+| The first aeroplane | | 527–540s |
+| The first Exposition | 526s | 558–572s |
+| The third Exposition | 1390s | 1449–1488s |
+| The fifth Exposition | 1996s | 2070–2142s |
 
 Ranges are the arc probe at tick sizes 0.25 s to 2 s; the foreman is deterministic.
 `manifest.ts` holds the recorded beats.
@@ -105,6 +114,7 @@ Ranges are the arc probe at tick sizes 0.25 s to 2 s; the foreman is determinist
 | bins | `createResourceBag` with `capacityPerType` and `discard` overflow, linked to each stock |
 | the compagnons | `createResourceBag` with a total capacity and `block` overflow, a stock per trade |
 | warehouses, charters, patents as multipliers | `createModifierChain` with `bind` |
+| Crédit Mobilier's stake | the charter's `on('purchased')`, and the Cycle's `afterEnd` |
 | a workshop's exchange | `createConversion` with a batch sized each tick |
 | the Exposition | `createCycle` (count, these works' clock, reset of the works, Patent Pool `retain`) |
 | the play clock | `createTimeSystem` |
@@ -119,4 +129,5 @@ the stock delta across a tick, since producer totals miss conversions and bins).
 
 The spine is `data/spine.ts`, printed by `balance/interlocker-projection.ts`.
 `balance/arc-probe.ts` plays Expositions under the reference foreman in
-`balance/_foreman.ts`. `BALANCING.md` covers the knobs and couplings.
+`balance/_foreman.ts`, beside the spine's arc; `balance/charter-probe.ts` checks the run
+model across renown and charters. `BALANCING.md` covers the knobs and couplings.

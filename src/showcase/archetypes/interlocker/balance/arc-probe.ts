@@ -8,14 +8,13 @@
  * Defaults: 5 Expositions at a 0.5 s tick, about 2 s. TRACE=1 adds a line a minute.
  *
  * Reading it:
- * - EXPOSITION 1 against the projection's first-Exposition prediction is the spine check.
- *   Pass the build it prints to `interlocker-projection.ts` to separate a plan miss from a
- *   model miss.
+ * - § runs prints each run beside the spine's `predictArc`: the arc check. The foreman
+ *   raises the build `planFor` gives, so a gap is a model miss, not a plan miss.
  * - "bound by" shows each trade's limit, in sampled minutes: `labour` is crew-bound,
  *   `input:x` starved of x, `storage` blocked by a full output bin, `locked` not yet patented.
  */
 
-import { RESOURCES, ROLES } from '../data';
+import { RESOURCES, ROLES, predictArc } from '../data';
 import { DT, runArc } from './_foreman';
 
 declare const process: { argv: string[]; env: Record<string, string | undefined> };
@@ -34,10 +33,11 @@ const arc = runArc({
 console.log(`== beats (dt ${dt}) ==`);
 for (const [t, label] of arc.beats) console.log(`  ${fmt(t).padStart(7)}  ${label}`);
 
-console.log('== runs ==');
+console.log('== runs, measured · spine ==');
+const spine = predictArc(arc.expositions.length);
 for (const [i, r] of arc.expositions.entries())
   console.log(
-    `  ${String(i + 1).padStart(2)}: ${fmt(r.runSeconds).padStart(6)} · ${Math.floor(r.planes)} planes → +${r.renown} · crew ${r.crew} · ${Object.entries(
+    `  ${String(i + 1).padStart(2)}: ${fmt(r.runSeconds).padStart(6)} · ${fmt(spine[i]!.seconds).padStart(6)} · ${Math.floor(r.planes)} planes → +${r.renown} · crew ${r.crew} · ${Object.entries(
       r.built,
     )
       .map(([k, v]) => `${k} ${v}`)

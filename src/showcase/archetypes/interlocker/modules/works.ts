@@ -28,9 +28,8 @@ import {
 import {
   BASE_WORKERS,
   BUILDINGS,
+  CHARTER_EFFECTS,
   COKING_MULT,
-  CREDIT_CAP_MULT,
-  ECOLE_LABOUR_MULT,
   PATRONAGE_WORKERS,
   RECIPES,
   RENOWN_OUTPUT_STEP,
@@ -205,14 +204,6 @@ export function createWorksModule(): EngineModule {
           description: 'Bonded warehouses',
         }),
       });
-      storage.bind({
-        text: 'Crédit Mobilier',
-        active: empire.holds('credit'),
-        modifier: createMultiplicativeModifier({
-          multiplier: CREDIT_CAP_MULT,
-          description: 'Crédit Mobilier',
-        }),
-      });
       const cap = {} as Record<ResourceId, ComputedRef<number>>;
       const capacityPerType: Record<string, () => number> = {};
       for (const def of RESOURCES) {
@@ -308,7 +299,7 @@ export function createWorksModule(): EngineModule {
           text: 'École Centrale',
           active: empire.holds('ecole'),
           modifier: createMultiplicativeModifier({
-            multiplier: ECOLE_LABOUR_MULT,
+            multiplier: CHARTER_EFFECTS.ecole,
             description: 'École Centrale',
           }),
         });

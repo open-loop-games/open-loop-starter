@@ -6,10 +6,13 @@
 import {
   BUILDING_COST,
   CHARTER_COST,
+  CHARTER_EFFECTS,
+  PATRONAGE_WORKERS,
   CITE_GROWTH,
   COST_GROWTH,
   RESEARCH_COST,
   WAREHOUSE_GROWTH,
+  type CharterId,
   type Cost,
   type ResourceId,
   type RoleId,
@@ -211,8 +214,6 @@ export const ROLES: RoleDef[] = [
   { id: 'rigger', name: 'Riggers', workshop: 'Rigging Hall', opensWith: 'monoplane' },
 ];
 
-export type CharterId = keyof typeof CHARTER_COST;
-
 export interface CharterDef {
   id: CharterId;
   name: string;
@@ -224,7 +225,7 @@ export const CHARTERS: CharterDef[] = [
   {
     id: 'patronage',
     name: 'Imperial Patronage',
-    blurb: 'Every run begins with two more compagnons.',
+    blurb: `Every run begins with ${PATRONAGE_WORKERS} more compagnons.`,
     cost: CHARTER_COST.patronage,
   },
   {
@@ -236,16 +237,13 @@ export const CHARTERS: CharterDef[] = [
   {
     id: 'credit',
     name: 'Crédit Mobilier',
-    blurb: 'Every bin holds half again as much.',
+    blurb: `Every run opens with ${CHARTER_EFFECTS.stake} of each raw stock advanced.`,
     cost: CHARTER_COST.credit,
   },
   {
     id: 'ecole',
     name: 'École Centrale',
-    blurb: 'Every workshop runs a quarter faster.',
+    blurb: `Every workshop runs ${Math.round((CHARTER_EFFECTS.ecole - 1) * 100)}% faster.`,
     cost: CHARTER_COST.ecole,
   },
 ];
-
-/** The patents the Patent Pool keeps across an Exposition. */
-export const PATENT_POOL: ResearchId[] = ['sawpit', 'concession', 'cites', 'bonded'];

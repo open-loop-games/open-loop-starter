@@ -2,37 +2,52 @@
  * Shared probe fixture — not runnable on its own.
  *
  * Builds a real interlocker engine and plays it Exposition after Exposition under a
- * greedy foreman. The foreman is balance-harness tooling, not a mechanic: the Aluminium
- * Empire ships no automation. He stands in for the spine's reference player, so his rules
- * are the spine's assumptions:
- * - once a second he patents everything he can afford, then raises the cheapest wanted
- *   building, then petitions every charter he can afford;
- * - he wants a market garden while the gardens feed less than the ration plus 0.75, a
- *   cité while no compagnon is idle and the gardens keep up, a warehouse while any price
- *   outgrows its bin or the hangar holds under 12, and a raw building while its bin is
- *   under 90% full;
+ * foreman. The foreman is balance-harness tooling, not a mechanic: the Aluminium Empire
+ * ships no automation. He plays the spine's reference player, so his rules are the
+ * spine's assumptions, and he raises the build `planFor` gives his empire:
+ * - once a second he patents Cités Ouvrières as soon as he can, then every patent he can
+ *   afford on the path to the riggers. Coking Ovens and the Rolling Mill take only what
+ *   the next patent on the path leaves;
+ * - he saves for the cheapest building he wants, by raw value. He wants a market garden
+ *   while the gardens feed less than the ration plus GARDEN_LEAD seconds of the next
+ *   cité's bread, a cité while no compagnon is idle and the gardens keep up, and
+ *   warehouses and raw producers up to the plan, a producer only while its bin is under
+ *   90% full;
+ * - housing comes first: while the cités patent or a wanted cité is short, nothing else
+ *   may spend what it needs, because a cité's compagnons work the whole rest of the run;
  * - he seats compagnons on the most under-weighted open trade. The weights balance one
- *   rigger against the trades that feed him, from the spine's role rates. He withdraws
- *   crew from a trade whose output bin is full, and moves one compagnon a second from the
- *   most over-weighted trade when the gap is wide;
- * - he stages the Exposition as soon as it pays.
+ *   rigger against the trades that feed him, from the spine's role rates. While a raw
+ *   bin is under half full, a trade takes no more seats than draw half that stock's
+ *   yield, so the purse keeps filling. He withdraws crew from a trade whose output bin
+ *   is full, and moves one compagnon a second from the most over-weighted trade when the
+ *   gap is wide;
+ * - he stages the Exposition as soon as it pays, then petitions the charters in their
+ *   listed order, saving for each before the next.
  *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list for
  * tick-by-tick behavioral specs; this plays an arc and records magnitudes.
  */
 
-import { toNumber } from '@open-loop/engine';
+import { addResource, toNumber } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
   BUILDINGS,
   CHARTERS,
+  GARDEN_LEAD,
+  RAW,
   RAW_EQ,
+  RECIPES,
   RESEARCH,
   RESOURCES,
   ROLES,
   ROLE_RATE,
+  UPKEEP_PER_WORKER,
+  planFor,
   type BuildingId,
+  type CharterId,
+  type Cost,
+  type Empire,
   type ResourceId,
   type RoleId,
 } from '../data';
@@ -91,11 +106,22 @@ export interface ArcOptions {
   maxSimSeconds?: number;
   dt?: number;
   trace?: boolean;
+  /**
+   * The empire the first run opens with: lifetime renown, and charters granted on top of
+   * it. He petitions nothing further, so a run's length reads one charter set.
+   */
+  start?: { renown: number; charters: CharterId[] };
 }
 
 /** Play Expositions under the foreman until `expositions` are staged, or `maxSimSeconds`. */
 export function runArc(options: ArcOptions = {}): ArcRecord {
-  const { expositions: stopAfter = 5, maxSimSeconds = 7200, dt = DT, trace = false } = options;
+  const {
+    expositions: stopAfter = 5,
+    maxSimSeconds = 7200,
+    dt = DT,
+    trace = false,
+    start,
+  } = options;
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createInterlockerModules()],
     persistenceNamespacePrefix: 'interlocker-probe',
@@ -105,7 +131,17 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
   const empire = getEmpire();
   const expo = getExposition();
   const n = (v: unknown) => toNumber(v as number);
+  if (start) {
+    addResource(empire.renown, start.renown);
+    // Granted, not bought, so lifetime renown stays `start.renown`.
+    for (const c of start.charters) empire.charters.getPurchasable(c)!.count.value = 1;
+  }
   const owned = (id: BuildingId) => works.owned(id);
+  const empireNow = (): Empire => ({
+    renown: empire.lifetimeRenown.value,
+    charters: CHARTERS.filter((c) => empire.holds(c.id).value).map((c) => c.id),
+  });
+  let plan = planFor(empireNow());
 
   // ── the foreman ──
 
@@ -119,49 +155,80 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     sawyer: (perPlane * 4) / ROLE_RATE.sawyer,
   };
 
+  // Below half a bin, a trade draws at most this share of a raw stock's yield.
+  const PURSE_SHARE = 0.5;
+  const rawYield = (k: ResourceId) =>
+    BUILDINGS.filter((b) => b.yields === k).reduce(
+      (s, b) => s + owned(b.id) * works.yieldEach(b.id),
+      0,
+    );
+  function seatCap(role: RoleId): number {
+    const rec = RECIPES[role];
+    const seated = n(works.crew[role].value);
+    const perSeat = seated > 0 ? works.roleStatus[role].capacityPerSec / seated : ROLE_RATE[role];
+    let cap = Infinity;
+    for (const [k, q] of Object.entries(rec.inputs))
+      if (
+        RAW.includes(k as ResourceId) &&
+        n(works.res[k as ResourceId].value) < 0.5 * works.cap[k as ResourceId].value
+      )
+        cap = Math.min(cap, Math.floor((PURSE_SHARE * rawYield(k as ResourceId)) / (perSeat * q)));
+    return cap;
+  }
+
   function rebalance(): void {
+    for (const r of ROLES) {
+      const over = n(works.crew[r.id].value) - seatCap(r.id);
+      if (over > 0) works.assign(r.id, -over);
+    }
     const open = ROLES.map((r) => r.id).filter(
-      (r) => works.roleOpen[r].value && works.roleStatus[r].limit !== 'storage',
+      (r) =>
+        works.roleOpen[r].value &&
+        works.roleStatus[r].limit !== 'storage' &&
+        n(works.crew[r].value) < seatCap(r),
     );
     const share = (r: RoleId) => n(works.crew[r].value) / WEIGHT[r];
     for (const r of ROLES)
       if (works.roleStatus[r.id].limit === 'storage' && n(works.crew[r.id].value) > 0)
         works.assign(r.id, -1);
     let guard = 50;
-    while (works.workersIdle.value >= 1 && open.length && guard-- > 0) {
-      const target = [...open].sort((a, b) => share(a) - share(b))[0]!;
+    while (works.workersIdle.value >= 1 && guard-- > 0) {
+      const room = open.filter((r) => n(works.crew[r].value) < seatCap(r));
+      if (!room.length) break;
+      const target = room.sort((a, b) => share(a) - share(b))[0]!;
       if (works.assign(target, 1) === 0) break;
     }
     if (open.length > 1) {
       const sorted = [...open].sort((a, b) => share(a) - share(b));
       const lo = sorted[0]!;
       const hi = sorted[sorted.length - 1]!;
-      if (n(works.crew[hi].value) > 1 && share(hi) - share(lo) > 1.5 / WEIGHT[hi]) {
+      if (
+        n(works.crew[hi].value) > 1 &&
+        n(works.crew[lo].value) < seatCap(lo) &&
+        share(hi) - share(lo) > 1.5 / WEIGHT[hi]
+      ) {
         works.assign(hi, -1);
         works.assign(lo, 1);
       }
     }
   }
 
-  const rhoNow = () => 1 + 0.1 * empire.lifetimeRenown.value;
-
   function want(id: BuildingId): boolean {
-    const ration = works.workersTotal.value * 0.25;
-    const farmsFeed = owned('farm') * rhoNow();
+    const ration = works.workersTotal.value * UPKEEP_PER_WORKER;
+    const farmsFeed = owned('farm') * works.yieldEach('farm');
     switch (id) {
-      case 'farm':
-        return farmsFeed < ration + 0.75;
+      case 'farm': {
+        const site = BUILDINGS.find((b) => b.id === 'cite')!;
+        const nextBread = (site.cost.bread ?? 0) * Math.pow(site.growth, owned('cite'));
+        return farmsFeed < ration + nextBread / GARDEN_LEAD;
+      }
       case 'cite':
         return works.workersIdle.value < 1 && farmsFeed >= ration;
-      case 'warehouse': {
-        const starved = [...RESEARCH, ...BUILDINGS].some((r) =>
-          Object.entries(r.cost).some(([k, v]) => v > works.cap[k as ResourceId].value * 0.95),
-        );
-        return starved || works.cap.aeroplanes.value < 12;
-      }
+      case 'warehouse':
+        return owned(id) < plan.warehouse;
       default: {
         const yields = BUILDINGS.find((b) => b.id === id)!.yields!;
-        return n(works.res[yields].value) < works.cap[yields].value * 0.9;
+        return owned(id) < plan[id] && n(works.res[yields].value) < works.cap[yields].value * 0.9;
       }
     }
   }
@@ -172,20 +239,63 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     return base * Math.pow(def.growth, owned(id));
   }
 
+  const priceNow = (b: (typeof BUILDINGS)[number]): Cost =>
+    Object.fromEntries(
+      Object.entries(b.cost).map(([k, v]) => [k, v * Math.pow(b.growth, owned(b.id) - b.start)]),
+    );
+  function housing(): Cost | undefined {
+    const pat = works.research.getPurchasable('cites')!;
+    if (!pat.active.value)
+      return works.researched('sawpit').value
+        ? RESEARCH.find((r) => r.id === 'cites')!.cost
+        : undefined;
+    return want('cite') ? priceNow(BUILDINGS.find((b) => b.id === 'cite')!) : undefined;
+  }
+  function leaves(cost: Cost, reserve: Cost | undefined): boolean {
+    if (!reserve) return true;
+    return Object.entries(cost).every(
+      ([k, v]) =>
+        !(k in reserve) || n(works.res[k as ResourceId].value) - v >= reserve[k as ResourceId]!,
+    );
+  }
+
   function buy(): void {
+    const cites = works.research.getPurchasable('cites')!;
+    if (cites.canPurchase.value) cites.purchase(1);
+    const cite = works.buildings.getPurchasable('cite')!;
+    if (cite.visible.value && cite.canPurchase.value && want('cite')) cite.purchase(1);
+    const reserve = housing();
+    // The climb comes before the investments: Coking Ovens and the Rolling Mill take only
+    // what the next patent on the path to the riggers leaves.
+    const next = RESEARCH.find(
+      (r) =>
+        r.id !== 'coking' &&
+        r.id !== 'rolling' &&
+        !works.researched(r.id).value &&
+        r.requires.every((q) => works.researched(q).value),
+    );
     for (const r of RESEARCH) {
       const p = works.research.getPurchasable(r.id)!;
-      if (p.canPurchase.value) p.purchase(1);
+      const investment = r.id === 'coking' || r.id === 'rolling';
+      if (
+        p.canPurchase.value &&
+        leaves(r.cost, reserve) &&
+        (!investment || !next || leaves(r.cost, next.cost))
+      )
+        p.purchase(1);
     }
-    const options = BUILDINGS.filter((b) => {
+    const wanted = BUILDINGS.filter((b) => {
       const p = works.buildings.getPurchasable(b.id)!;
-      return p.visible.value && p.canPurchase.value && want(b.id);
-    });
-    options.sort((a, b) => value(a.id) - value(b.id));
-    if (options[0]) works.buildings.getPurchasable(options[0].id)!.purchase(1);
-    for (const c of CHARTERS) {
+      return p.visible.value && want(b.id) && (b.id === 'cite' || leaves(priceNow(b), reserve));
+    }).sort((a, b) => value(a.id) - value(b.id));
+    const first = wanted[0] && works.buildings.getPurchasable(wanted[0].id)!;
+    if (first?.canPurchase.value) first.purchase(1);
+    // Charters in their listed order, each saved for before the next.
+    for (const c of start ? [] : CHARTERS) {
       const p = empire.charters.getPurchasable(c.id)!;
-      if (p.canPurchase.value) p.purchase(1);
+      if (p.active.value) continue;
+      if (!p.canPurchase.value) break;
+      p.purchase(1);
     }
   }
 
@@ -248,6 +358,7 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
       const gain = expo.stage();
       const runSeconds = sim - runStart;
       buy(); // charters before the next run starts
+      plan = planFor(empireNow());
       records.push({
         at: sim,
         runSeconds,

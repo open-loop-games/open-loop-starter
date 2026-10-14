@@ -1,14 +1,13 @@
 /**
  * The spine as a runnable function: no engine, only `../data/spine.ts`. Prints the derived
- * numbers every price and bin reads, the softlock guard, and the first-Exposition
- * prediction the arc probe contradicts.
+ * numbers every price and bin reads, the softlock guard, the solved charters, the first
+ * run and the arc that `arc-probe.ts` contradicts.
  *
- *   pnpm exec vite-node src/showcase/archetypes/interlocker/balance/interlocker-projection.ts
+ *   pnpm exec vite-node src/showcase/archetypes/interlocker/balance/interlocker-projection.ts [expositions] [build]
  *
- * The prediction is printed twice: on `DEFAULT_PLAN`, the build the spine expects, and on
- * any build passed as `yard,farm,mine,pit,warehouse,cite` (the counts the arc probe prints
- * at an Exposition). A gap on the default plan but none on the probe's build means the plan
- * is off, not the model.
+ * The first run is printed on `DEFAULT_PLAN`, and on any build passed as
+ * `yard,farm,mine,pit,warehouse,cite`. The arc prints each run's plan and which budget
+ * binds it. Instant.
  */
 
 import {
@@ -21,7 +20,12 @@ import {
   T_FIRST,
   WAREHOUSES_FOR_EXPO,
   baseCapacity,
-  predictFirstExposition,
+  CHARTER_COST,
+  CHARTER_EFFECTS,
+  CHARTER_IDS,
+  FRESH,
+  predictArc,
+  predictRun,
   warehousesNeeded,
   type BuildPlan,
   type ResourceId,
@@ -53,18 +57,29 @@ for (const id of ['sawpit', 'bonded'] as const) {
     console.log(`  SOFTLOCK RISK: ${id} does not fit the base bins`);
 }
 
+console.log('== charters, solved ==');
+for (const c of CHARTER_IDS)
+  console.log(`  ${c.padEnd(10)} ${String(CHARTER_COST[c]).padStart(2)} renown`);
+console.log(
+  `  Crédit Mobilier's stake ${CHARTER_EFFECTS.stake} of each raw stock; the École's labour ×${CHARTER_EFFECTS.ecole}`,
+);
+
 function show(label: string, plan: BuildPlan): void {
-  const p = predictFirstExposition(plan);
+  const p = predictRun(FRESH, plan);
   console.log(
-    `  ${label}: ${fmt(p.seconds)} = raw ${fmt(p.rawSeconds)} + crew ${fmt(p.crewSeconds)} (${JSON.stringify(plan)})`,
+    `  ${label}: ${fmt(p.seconds)}, raw ${fmt(p.rawSeconds)} · crew ${fmt(p.crewSeconds)} (${Object.entries(
+      plan,
+    )
+      .map(([k, v]) => `${k} ${v}`)
+      .join(' ')})`,
   );
 }
 
 console.log('== first Exposition ==');
 show('default plan', DEFAULT_PLAN);
-const arg = process.argv[2];
-if (arg) {
-  const [yard, farm, mine, pit, warehouse, cite] = arg.split(',').map(Number) as number[];
+const build = process.argv[3];
+if (build) {
+  const [yard, farm, mine, pit, warehouse, cite] = build.split(',').map(Number) as number[];
   show('given build', {
     yard: yard!,
     farm: farm!,
@@ -73,4 +88,16 @@ if (arg) {
     warehouse: warehouse!,
     cite: cite!,
   });
+}
+
+console.log('== the arc ==');
+for (const [i, r] of predictArc(Number(process.argv[2] || 12)).entries()) {
+  const p = predictRun(r.empire, r.plan);
+  console.log(
+    `  ${String(i + 1).padStart(2)}: ${fmt(r.seconds).padStart(6)} at ${fmt(r.at).padStart(7)} · ${(p.rawSeconds >= p.crewSeconds ? 'raw' : 'crew') + '-bound'} · renown ${String(r.empire.renown).padStart(2)} [${r.empire.charters.join(', ')}] · ${Object.entries(
+      r.plan,
+    )
+      .map(([k, v]) => `${k} ${v}`)
+      .join(' ')}`,
+  );
 }

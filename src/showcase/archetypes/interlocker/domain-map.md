@@ -13,24 +13,28 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 
 - **ResourceId** _(string-literal union)_ — `bread` · `spruce` · `bauxite` · `coal` · `aluminium` · `spars` · `engines` · `aeroplanes`
 - **RoleId** _(string-literal union)_ — `sawyer` · `smelter` · `machinist` · `rigger`
+- **CharterId** _(string-literal union)_ — `patronage` · `patents` · `credit` · `ecole`
 - **BuildingId** _(string-literal union)_ — `yard` · `farm` · `mine` · `pit` · `warehouse` · `cite`
 - **ResearchId** _(string-literal union)_ — `sawpit` · `concession` · `cites` · `bonded` · `hall` · `coking` · `steam` · `rolling` · `monoplane`
-- **CharterId** _(string-literal union)_ — `patronage` · `patents` · `credit` · `ecole`
 
 ## Defs
 
-`BuildPlan`, `BuildingDef`, `CharterDef`, `ExpositionPrediction`, `ResearchDef`, `ResourceDef`, `RoleDef`
+`BuildPlan`, `BuildingDef`, `CharterDef`, `ResearchDef`, `ResourceDef`, `RoleDef`, `RunPrediction`
 
 ## Relationships
 
-_(no field-name reference edges mined)_
+Field-name reference edges: untyped ids in named fields that point at
+another domain noun. These are name-encoded, not type-encoded, so
+type-graph tools such as dependency-cruiser and findReferences miss them.
+
+- **Empire** → `charter`
 
 ## Thin spots
 
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`BuildPlan`, `ExpositionPrediction`, `ResourceDef`, `BuildingDef`, `ResearchDef`, `RoleDef`, `CharterDef`
+`BuildPlan`, `RunPrediction`, `ResourceDef`, `BuildingDef`, `ResearchDef`, `RoleDef`
 
 ## Disambiguators (curated)
 
