@@ -10,10 +10,10 @@
   it, then the bailey and the heralds. In camp the shell gives way to the Chronicle's page.
 -->
 <script setup lang="ts">
-import { computed, inject } from 'vue';
-import { type Engine } from '@open-loop/engine';
-import { SingleColumnShell } from '@/lib';
+import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
+import { SingleColumnShell } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
 import { ANCHORS, BOONS } from '../data';
 import { getBattle, getCauseway, getChronicle, getKeep } from '../modules';
 import Bailey from './components/Bailey.vue';
@@ -26,31 +26,28 @@ import Walls from './components/Walls.vue';
 const battle = getBattle();
 const inCamp = computed(() => battle.phase.value === 'camp');
 
-// Dev-only hook for the screenshot loop: a stable handle on the modules, a skip that plays
-// forward in quarter-second ticks, and camp setters (the field, the twist, a boon). Read
-// through the hook, not a live `import()` that Vite's module cache could serve stale.
+// Dev-only state hook for browser probes, on window.__game: the modules, camp setters (the
+// field, the twist, a boon), and a skip in quarter-second steps.
 if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
   const chronicle = getChronicle();
-  (window as unknown as Record<string, unknown>).__causeway = {
-    field: (rung: number) => (chronicle.rung.value = rung),
-    twist: (id: string) => (chronicle.twistId.value = id),
-    /** Grants a boon, crediting the renown its volume waits for. */
-    grant: (id: string) => {
-      const def = BOONS.find((b) => b.id === id)!;
-      const xp = (ANCHORS.renownBase * (def.minVolume + 1) * (def.minVolume + 2)) / 2;
-      chronicle.renown.addXp(Math.max(0, xp - toNumber(chronicle.renown.xp.value)));
-      chronicle.boons.getPurchasable(id)!.purchase(1);
+  useDevHandle(
+    {
+      field: (rung: number) => (chronicle.rung.value = rung),
+      twist: (id: string) => (chronicle.twistId.value = id),
+      /** Grants a boon, crediting the renown its volume waits for. */
+      grant: (id: string) => {
+        const def = BOONS.find((b) => b.id === id)!;
+        const xp = (ANCHORS.renownBase * (def.minVolume + 1) * (def.minVolume + 2)) / 2;
+        chronicle.renown.addXp(Math.max(0, xp - toNumber(chronicle.renown.xp.value)));
+        chronicle.boons.getPurchasable(id)!.purchase(1);
+      },
+      battle,
+      causeway: getCauseway(),
+      chronicle,
+      keeps: { player: getKeep('player'), rival: getKeep('rival') },
     },
-    engine,
-    battle,
-    causeway: getCauseway(),
-    chronicle: getChronicle(),
-    keeps: { player: getKeep('player'), rival: getKeep('rival') },
-    skip: (seconds: number) => {
-      for (let t = 0; t < seconds; t += 0.25) engine.tickDriver.advanceTime(0.25);
-    },
-  };
+    { chunk: 0.25 },
+  );
 }
 </script>
 

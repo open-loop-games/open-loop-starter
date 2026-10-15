@@ -1,4 +1,5 @@
 import { format, toNumber, type DecimalSource } from '@open-loop/engine';
+import { formatClock } from '@/composables/useFormatting';
 
 /** Whole numbers with separators below a million, the engine's notation above. */
 export function n(v: DecimalSource): string {
@@ -7,9 +8,9 @@ export function n(v: DecimalSource): string {
   return x < 1e6 ? Math.max(0, Math.floor(x)).toLocaleString('en-GB') : format(v, 2);
 }
 
+/** A clock that counts a part second as whole, so a countdown reads 0:00 only when it is done. */
 export function mmss(seconds: number): string {
-  const s = Math.max(0, Math.ceil(seconds));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  return formatClock(Math.ceil(seconds));
 }
 
 /** A name that opens a sentence: "the Abbot of Dunmarrow" → "The Abbot of Dunmarrow". */

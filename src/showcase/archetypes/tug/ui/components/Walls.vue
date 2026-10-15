@@ -12,6 +12,7 @@
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { ANCHORS, weapon } from '../../data';
 import { getBattle, getCauseway, getKeep, type Side } from '../../modules';
 import { n } from '../format';
@@ -59,9 +60,11 @@ const canSound = computed(
           <span class="wl-blurb">{{ ours.def.blurb }}</span>
         </div>
         <div class="wl-row">
-          <span class="wl-windlass" :class="{ ready: ours.ready }"
-            ><span class="wl-wound" :style="{ transform: `scaleX(${ours.wound})` }"></span
-          ></span>
+          <ProgressBar
+            class="cw-gauge wl-windlass"
+            :class="{ ready: ours.ready }"
+            :value="ours.wound"
+          />
           <Button
             class="cw-control wl-loose"
             :class="{ afford: ours.ready && !ours.waiting, waiting: ours.waiting }"
@@ -104,9 +107,11 @@ const canSound = computed(
           <span class="wl-name">their {{ theirs.def.name.replace(/^the /, '') }}</span>
         </div>
         <div class="wl-row">
-          <span class="wl-windlass wl-windlass--rival" :class="{ ready: theirs.ready }"
-            ><span class="wl-wound" :style="{ transform: `scaleX(${theirs.wound})` }"></span
-          ></span>
+          <ProgressBar
+            class="cw-gauge from-right wl-windlass wl-windlass--rival"
+            :class="{ ready: theirs.ready }"
+            :value="theirs.wound"
+          />
           <span class="wl-state num">{{
             theirs.ready ? 'wound' : `${Math.ceil(theirs.left)}s`
           }}</span>
@@ -169,38 +174,30 @@ const canSound = computed(
 }
 /* The windlass: a rope wound tight; gold when the arm is cocked. */
 .wl-windlass {
-  position: relative;
-  flex: 1;
-  min-width: 80px;
-  height: 7px;
-  background: rgba(0, 0, 0, 0.45);
-  border-top: 1px solid rgba(160, 139, 98, 0.25);
-}
-.wl-windlass--rival {
-  flex: 0 0 110px;
-  height: 5px;
-}
-.wl-wound {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
+  --progress-bar-height: 6px;
+  --progress-bar-fill: repeating-linear-gradient(
     110deg,
     var(--cw-gall) 0 3px,
     rgba(160, 139, 98, 0.55) 3px 6px
   );
-  transform-origin: left center;
-  transition: transform 0.25s linear;
+  --progress-bar-transition: transform 0.25s linear;
+  flex: 1;
+  min-width: 80px;
+  background: rgba(0, 0, 0, 0.45);
+  border-top: 1px solid rgba(160, 139, 98, 0.25);
 }
-.wl-windlass--rival .wl-wound {
-  transform-origin: right center;
-  background: repeating-linear-gradient(
-    70deg,
+/* Mirrored to fill from the right, so its rope is laid at 290deg to read as 70deg. */
+.wl-windlass--rival {
+  --progress-bar-height: 4px;
+  --progress-bar-fill: repeating-linear-gradient(
+    290deg,
     var(--cw-madder) 0 3px,
     rgba(189, 79, 60, 0.5) 3px 6px
   );
+  flex: 0 0 110px;
 }
-.wl-windlass.ready:not(.wl-windlass--rival) .wl-wound {
-  background: var(--cw-weld);
+.wl-windlass.ready:not(.wl-windlass--rival) {
+  --progress-bar-fill: var(--cw-weld);
 }
 .wl-loose {
   /* One width for winding, waiting and loose, so the row never shifts. */

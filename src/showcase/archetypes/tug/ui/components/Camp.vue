@@ -15,8 +15,10 @@
 import { computed, ref } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import Select from '@/ui/components/Select.vue';
-import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
+import { formatClock } from '@/composables/useFormatting';
+import { UpgradeGrid, createPurchasableCard, type UpgradeCardData } from '@/ui/compositions';
 import {
   ANCHORS,
   BOONS,
@@ -76,18 +78,14 @@ function effect(def: BoonDef, level: number): string | null {
   return def.chain === 'income' ? `silver ×${g}` : `grit and blows ×${g}`;
 }
 
-const cards: UpgradeCardData<Boon>[] = BOONS.map((def) => {
+const cards = BOONS.map((def) => {
   const p = chronicle.boons.getPurchasable(def.id)!;
-  return {
-    id: def.id,
+  return createPurchasableCard<Boon>(p, {
     displayName: def.name,
     description: def.blurb,
-    cost: computed(() => p.getCost(1)),
-    costLabel: 'boon',
-    canPurchase: p.canPurchase,
-    owned: p.maxed,
     count: p.count,
-    purchase: () => p.purchase(1),
+    // A weapon, once granted, is spent: it shows on the walls' mounting instead.
+    unlocked: computed(() => p.visible.value && !(def.limit === 1 && p.maxed.value)),
     extra: {
       def,
       get now() {
@@ -97,10 +95,8 @@ const cards: UpgradeCardData<Boon>[] = BOONS.map((def) => {
         return volume.value < def.minVolume ? def.minVolume : null;
       },
     },
-  };
+  });
 });
-// A weapon, once granted, is spent: it shows on the walls' mounting instead.
-const shelf = computed(() => cards.filter((c) => !(c.extra!.def.limit === 1 && c.owned.value)));
 const points = computed(() => toNumber(chronicle.boonPoints.value));
 const levelOf = (card: UpgradeCardData<Boon>) => toNumber(card.count!.value);
 
@@ -174,12 +170,7 @@ function backToMarch(): void {
 
       <div class="cp-renown">
         <span class="cp-label">Renown</span>
-        <span class="cp-rubric"
-          ><span
-            class="cp-rubric-fill"
-            :style="{ transform: `scaleX(${span ? into / span : 0})` }"
-          ></span
-        ></span>
+        <ProgressBar class="cw-gauge cp-rubric" :value="into" :max="span" />
         <span class="num cp-renown-n"
           >{{ Math.floor(into) }} / {{ span }} to volume {{ volume + 1 }}</span
         >
@@ -215,9 +206,7 @@ function backToMarch(): void {
                 <dd class="cp-champions">
                   <span v-for="c in field.champions" :key="c.name"
                     >{{ c.name }} rides out at
-                    <span class="num"
-                      >{{ Math.floor(c.at / 60) }}:{{ String(c.at % 60).padStart(2, '0') }}</span
-                    ></span
+                    <span class="num">{{ formatClock(c.at) }}</span></span
                   >
                 </dd>
               </template>
@@ -315,7 +304,7 @@ function backToMarch(): void {
             Boons of the Crown
             <small class="num">{{ points }} to grant</small>
           </h2>
-          <UpgradeGrid :cards="shelf" :columns="2" reveal="inline">
+          <UpgradeGrid :cards="cards" :columns="2" reveal="inline">
             <template #card="{ card }">
               <Button
                 class="cw-control cp-boon"
@@ -420,17 +409,11 @@ function backToMarch(): void {
 }
 /* The rubric: a red-and-gold ruled line, inked as renown fills the volume. */
 .cp-rubric {
-  position: relative;
-  height: 6px;
+  --progress-bar-height: 5px;
+  --progress-bar-fill: linear-gradient(90deg, var(--cw-madder), var(--cw-weld));
+  --progress-bar-transition: transform 0.6s ease;
   background: rgba(0, 0, 0, 0.4);
   border-top: 1px solid rgba(160, 139, 98, 0.3);
-}
-.cp-rubric-fill {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, var(--cw-madder), var(--cw-weld));
-  transform-origin: left center;
-  transition: transform 0.6s ease;
 }
 .cp-renown-n {
   font-size: 14px;

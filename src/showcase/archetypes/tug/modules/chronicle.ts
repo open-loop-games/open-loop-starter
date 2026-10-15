@@ -23,6 +23,7 @@ import {
   type Resource,
   type Skill,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   BOONS,
@@ -123,11 +124,8 @@ export const ChronicleKey: InjectionKey<ChronicleApi> = Symbol(
   'tug/chronicle',
 ) as InjectionKey<ChronicleApi>;
 
-let api: ChronicleApi;
-
-export function getChronicle(): ChronicleApi {
-  return api;
-}
+const chronicleApi = createModuleApi(ChronicleKey);
+export const getChronicle = chronicleApi.get;
 
 /**
  * What outlasts a battle: Renown and the volumes it fills, the boons they buy, and the
@@ -299,7 +297,7 @@ export function createChronicleModule(): EngineModule {
         return entry;
       }
 
-      api = {
+      chronicleApi.publish(ctx, {
         renown,
         volume,
         boonPoints,
@@ -320,8 +318,7 @@ export function createChronicleModule(): EngineModule {
         rungGrowth,
         level,
         record,
-      };
-      ctx.provide(ChronicleKey, api);
+      });
     },
   };
 }

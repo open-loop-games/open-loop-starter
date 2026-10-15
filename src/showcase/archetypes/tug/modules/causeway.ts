@@ -9,6 +9,7 @@ import {
   type Ref,
 } from '@open-loop/engine';
 import { toRaw } from 'vue';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   counterMultiplier,
@@ -95,11 +96,8 @@ export const CausewayKey: InjectionKey<CausewayApi> = Symbol(
   'tug/causeway',
 ) as InjectionKey<CausewayApi>;
 
-let api: CausewayApi;
-
-export function getCauseway(): CausewayApi {
-  return api;
-}
+const causewayApi = createModuleApi(CausewayKey);
+export const getCauseway = causewayApi.get;
 
 const L = ANCHORS.causewayLength;
 const HALF = L / 2;
@@ -425,7 +423,7 @@ export function createCausewayModule(): EngineModule {
         version.value++;
       }
 
-      api = {
+      causewayApi.publish(ctx, {
         members,
         bailey,
         lastWave,
@@ -448,8 +446,7 @@ export function createCausewayModule(): EngineModule {
         strike,
         nearestEngine,
         clear,
-      };
-      ctx.provide(CausewayKey, api);
+      });
     },
   };
 }

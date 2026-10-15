@@ -12,6 +12,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import type { ResourceReadout } from '@/ui/compositions';
 import { seasonClose, seasonSurge } from '../../data';
 import { getBattle, getCauseway, getChronicle, getKeep, type Side } from '../../modules';
@@ -78,12 +79,9 @@ const lostShare = { player: lost('player'), rival: lost('rival') };
       </div>
       <div class="kb-gate" :class="{ low: gates.player.highlight?.value === 'deficit' }">
         <span class="kb-label">Fairhold's gate</span>
-        <span class="kb-wall"
-          ><span
-            class="kb-wall-fill"
-            :style="{ transform: `scaleX(${wholeness.player.value})` }"
-          ></span
-        ></span>
+        <div class="kb-wall">
+          <ProgressBar class="cw-gauge kb-wall-fill" :value="wholeness.player.value" />
+        </div>
         <span class="num kb-gate-n">{{ n(gates.player.value.value) }}</span>
       </div>
     </div>
@@ -93,14 +91,11 @@ const lostShare = { player: lost('player'), rival: lost('rival') };
         The horn sounds in <span class="num">{{ mmss(ours) }}</span>
       </div>
       <div class="kb-horn-bar">
-        <span
-          class="kb-horn-run kb-horn-run--ours"
-          :style="{ transform: `scaleX(${1 - ours / T})` }"
-        ></span>
-        <span
-          class="kb-horn-run kb-horn-run--theirs"
-          :style="{ transform: `scaleX(${1 - theirs / T})` }"
-        ></span>
+        <ProgressBar class="cw-gauge kb-horn-run kb-horn-run--ours" :value="1 - ours / T" />
+        <ProgressBar
+          class="cw-gauge from-right kb-horn-run kb-horn-run--theirs"
+          :value="1 - theirs / T"
+        />
       </div>
       <div class="kb-horn kb-horn--theirs">
         Their next rabble in <span class="num">{{ mmss(theirs) }}</span>
@@ -135,12 +130,9 @@ const lostShare = { player: lost('player'), rival: lost('rival') };
       <div class="kb-lord">{{ lord.name }}</div>
       <div class="kb-gate" :class="{ low: gates.rival.highlight?.value === 'deficit' }">
         <span class="num kb-gate-n">{{ n(gates.rival.value.value) }}</span>
-        <span class="kb-wall kb-wall--rival"
-          ><span
-            class="kb-wall-fill"
-            :style="{ transform: `scaleX(${wholeness.rival.value})` }"
-          ></span
-        ></span>
+        <div class="kb-wall">
+          <ProgressBar class="cw-gauge from-right kb-wall-fill" :value="wholeness.rival.value" />
+        </div>
         <span class="kb-label">their gate</span>
       </div>
       <div class="kb-coffers num">
@@ -219,7 +211,6 @@ const lostShare = { player: lost('player'), rival: lost('rival') };
 }
 /* The wall: merlons along the top, the masonry draining as the gate breaks. */
 .kb-wall {
-  position: relative;
   width: 150px;
   height: 14px;
   background: rgba(0, 0, 0, 0.45);
@@ -249,17 +240,12 @@ const lostShare = { player: lost('player'), rival: lost('rival') };
   );
 }
 .kb-wall-fill {
-  position: absolute;
-  inset: 0;
-  background: #9a8c74;
-  transform-origin: left center;
-  transition: transform 0.4s ease;
-}
-.kb-wall--rival .kb-wall-fill {
-  transform-origin: right center;
+  --progress-bar-height: 14px;
+  --progress-bar-fill: #9a8c74;
+  --progress-bar-transition: transform 0.4s ease;
 }
 .low .kb-wall-fill {
-  background: var(--cw-madder);
+  --progress-bar-fill: var(--cw-madder);
 }
 .low .kb-gate-n {
   color: #e6a092;
@@ -291,17 +277,14 @@ const lostShare = { player: lost('player'), rival: lost('rival') };
   height: 5px;
 }
 .kb-horn-run {
-  display: block;
-  height: 100%;
-  transition: transform 0.25s linear;
+  --progress-bar-height: 5px;
+  --progress-bar-transition: transform 0.25s linear;
 }
 .kb-horn-run--ours {
-  background: var(--cw-woad);
-  transform-origin: left center;
+  --progress-bar-fill: var(--cw-woad);
 }
 .kb-horn-run--theirs {
-  background: var(--cw-madder);
-  transform-origin: right center;
+  --progress-bar-fill: var(--cw-madder);
 }
 .kb-clock {
   grid-column: 1 / -1;

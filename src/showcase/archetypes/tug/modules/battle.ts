@@ -13,6 +13,8 @@ import {
   type InjectionKey,
   type Persistent,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
+import { createEventLog, type EventLog } from '@/modules/event-log';
 import { ANCHORS, EVENT_HERALDS, OUR_HERALD, TROOP_IDS, seasonClose, type LordDef } from '../data';
 import { CausewayKey, type Wave } from './causeway';
 import { ChronicleKey, type BattleRecord } from './chronicle';
@@ -23,13 +25,13 @@ import { TugTuningRegistryKey } from './tuning';
 
 export type Phase = 'camp' | 'battle';
 
-/** One horn's pair of lines: the herald's cry, and Fairhold's chronicler on it. */
-export interface HeraldLine {
-  t: number;
-  side: Side;
-  cry: string;
+/**
+ * What a herald's line carries beside its cry (the line's text) and its side (the line's
+ * kind): Fairhold's chronicler on a rival's cry, and the wave a horn released. An event line
+ * carries no wave.
+ */
+export interface HeraldExtra {
   gloss?: string;
-  /** The wave a horn released; none on an event line. */
   wave?: Wave;
 }
 
@@ -40,7 +42,8 @@ export interface BattleApi {
   firstHorn: Persistent<Side>;
   /** Releases each keep has made this battle. */
   horns: Record<Side, Persistent<number>>;
-  heralds: Persistent<HeraldLine[]>;
+  /** The battle's heralds, kinded by side: saved, and emptied when a battle opens. */
+  heralds: EventLog<Side, HeraldExtra>;
   /** The lord across the causeway this battle. */
   lord: ComputedRef<LordDef>;
   /** Seconds until a keep's next horn. */
@@ -66,11 +69,8 @@ export interface BattleApi {
 
 export const BattleKey: InjectionKey<BattleApi> = Symbol('tug/battle') as InjectionKey<BattleApi>;
 
-let api: BattleApi;
-
-export function getBattle(): BattleApi {
-  return api;
-}
+const battleApi = createModuleApi(BattleKey);
+export const getBattle = battleApi.get;
 
 const HERALD_LINES = 6;
 
@@ -110,7 +110,11 @@ export function createBattleModule(): EngineModule {
         player: persistent(0, { id: 'horns-player' }),
         rival: persistent(0, { id: 'horns-rival' }),
       };
-      const heralds = persistent<HeraldLine[]>([], { id: 'heralds' });
+      const heralds = createEventLog<Side, HeraldExtra>(ctx, {
+        cap: HERALD_LINES,
+        clock: () => causeway.clock.value,
+        persistId: 'herald-log',
+      });
       const lord = computed(() => chronicle.lord.value);
       const hornAt = {
         player: persistent<number>(ANCHORS.hornSeconds, { id: 'horn-at-player' }),
@@ -141,17 +145,11 @@ export function createBattleModule(): EngineModule {
           lord.value.name,
         );
 
-      function herald(line: Omit<HeraldLine, 't'>): void {
-        heralds.value = [...heralds.value, { t: causeway.clock.value, ...line }].slice(
-          -HERALD_LINES,
-        );
-      }
-
       function fire(side: Side): void {
         const kind = keeps[side].weapon.value;
         if (!kind || !keeps[side].fire()) return;
-        if (side === 'player') herald({ side, cry: pick(EVENT_HERALDS.ourWeapon[kind]) });
-        else herald({ side, cry: pick(EVENT_HERALDS.theirWeapon[kind]) });
+        if (side === 'player') heralds.post(pick(EVENT_HERALDS.ourWeapon[kind]), side);
+        else heralds.post(pick(EVENT_HERALDS.theirWeapon[kind]), side);
       }
 
       function sound(side: Side): void {
@@ -165,11 +163,8 @@ export function createBattleModule(): EngineModule {
         const wave = causeway.release(side);
         if (!Object.keys(wave).length) return;
         const l = lord.value;
-        herald(
-          side === 'player'
-            ? { side, cry: pick(OUR_HERALD), wave }
-            : { side, cry: pick(l.boasts), gloss: pick(l.glosses), wave },
-        );
+        if (side === 'player') heralds.post(pick(OUR_HERALD), side, { wave });
+        else heralds.post(pick(l.boasts), side, { gloss: pick(l.glosses), wave });
       }
 
       function earlyFee(side: Side): number | null {
@@ -185,11 +180,8 @@ export function createBattleModule(): EngineModule {
         const fee = earlyFee(side);
         if (fee === null || Decimal.lt(keeps[side].silver.value, fee)) return false;
         subtractResource(keeps[side].silver, fee);
-        herald(
-          side === 'player'
-            ? { side, cry: pick(EVENT_HERALDS.ourEarly) }
-            : { side, cry: pick(EVENT_HERALDS.theirEarly) },
-        );
+        if (side === 'player') heralds.post(pick(EVENT_HERALDS.ourEarly), side);
+        else heralds.post(pick(EVENT_HERALDS.theirEarly), side);
         sound(side);
         // An early horn is never the opening, so its next horn is a full period on.
         hornAt[side].value = causeway.clock.value + hornSeconds.value;
@@ -238,7 +230,7 @@ export function createBattleModule(): EngineModule {
         championsOut.value = 0;
         nextWatch = 0;
         firstHorn.value = first ?? (random() < 0.5 ? 'player' : 'rival');
-        heralds.value = [];
+        heralds.clear();
         phase.value = 'battle';
       }
 
@@ -254,9 +246,7 @@ export function createBattleModule(): EngineModule {
         while (championsOut.value < champs.length && t >= champs[championsOut.value]!.at) {
           const champ = champs[championsOut.value++]!;
           causeway.champion('rival', champ);
-          herald({
-            side: 'rival',
-            cry: pick(EVENT_HERALDS.champion.cry, champ.name),
+          heralds.post(pick(EVENT_HERALDS.champion.cry, champ.name), 'rival', {
             gloss: pick(EVENT_HERALDS.champion.gloss, champ.name),
           });
         }
@@ -307,7 +297,7 @@ export function createBattleModule(): EngineModule {
         }
       });
 
-      api = {
+      battleApi.publish(ctx, {
         phase,
         firstHorn,
         horns,
@@ -321,8 +311,7 @@ export function createBattleModule(): EngineModule {
         seasonSeconds,
         commanders,
         start,
-      };
-      ctx.provide(BattleKey, api);
+      });
     },
   };
 }

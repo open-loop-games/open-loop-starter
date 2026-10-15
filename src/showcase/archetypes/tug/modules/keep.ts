@@ -18,6 +18,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   TROOPS,
@@ -68,10 +69,13 @@ export const KeepKeys: Record<Side, InjectionKey<KeepApi>> = {
   rival: Symbol('tug/keep-rival') as InjectionKey<KeepApi>,
 };
 
-const apis: Partial<Record<Side, KeepApi>> = {};
+const keepApis = {
+  player: createModuleApi(KeepKeys.player),
+  rival: createModuleApi(KeepKeys.rival),
+};
 
 export function getKeep(side: Side): KeepApi {
-  return apis[side]!;
+  return keepApis[side].get();
 }
 
 /**
@@ -192,7 +196,7 @@ export function createKeepModule(side: Side): EngineModule {
         return toNumber(troops.getPurchasable(id)!.purchase(n));
       }
 
-      apis[side] = {
+      keepApis[side].publish(ctx, {
         side,
         silver,
         income,
@@ -227,8 +231,7 @@ export function createKeepModule(side: Side): EngineModule {
           gateDamage.value = 0;
           charge.value = 0;
         },
-      };
-      ctx.provide(KeepKeys[side], apis[side]!);
+      });
     },
   };
 }
