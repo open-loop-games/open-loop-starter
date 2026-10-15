@@ -681,14 +681,10 @@ export function createWatchModule(): EngineModule {
       });
 
       // After the cycle's own tick, so a watch a breaker ends has counted this tick. A phase
-      // that begins inside a tick runs in that tick too, on the same dt, so its clock starts
-      // one tick in. The balance is measured with that extra tick at each turn.
+      // the tick turns to first runs on the next tick, so its clock starts at 0.
       ctx.onTick((dt) => {
-        for (let ran: Phase = 'setup'; phase.value !== 'setup' && phase.value !== ran;) {
-          ran = phase.value;
-          if (ran === 'day') tickDay(dt);
-          else tickNight(dt);
-        }
+        if (phase.value === 'day') tickDay(dt);
+        else if (phase.value === 'night') tickNight(dt);
       });
 
       function startWatch(): void {
