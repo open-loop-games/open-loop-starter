@@ -4,6 +4,7 @@ import type { DecimalSource } from '@open-loop/engine';
 export interface UpgradeCardData<T = never> {
   id: string;
   displayName: string;
+  /** A function is read at render, for text that changes; a `#card` slot calls it itself. */
   description: string | (() => string);
   cost: Ref<DecimalSource>;
   costLabel: string;

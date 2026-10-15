@@ -5,7 +5,11 @@
   olui-progress-bar__fill, olui-progress-bar__mark (one per mark),
   olui-progress-bar__label (when `label` set).
   Root carries data-state="empty" | "partial" | "full".
-  Custom props: --progress-bar-{fill,track,radius,height,mark,transition}.
+  Custom props: --progress-bar-{fill,fill-full,track,track-empty,border,shadow,
+  radius,height,mark,transition}. A theme styles the track and the full and empty
+  states through these alone, so a story restyles a bar, a hairline gauge
+  included, without reaching into its elements. The border is inside the
+  height: a 2px gauge sets `--progress-bar-border: none`.
 
   The fill is scaled, never resized: each fill carries `--progress-bar-ratio`
   (and `--progress-bar-offset` for a segment), and the stylesheet turns them into
@@ -109,7 +113,11 @@ const markLefts = computed(() =>
 <style>
 .olui-progress-bar {
   --progress-bar-fill: var(--color-primary);
+  --progress-bar-fill-full: var(--progress-bar-fill);
   --progress-bar-track: var(--color-surface);
+  --progress-bar-track-empty: var(--progress-bar-track);
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
   --progress-bar-radius: var(--radius-sm);
   --progress-bar-height: 10px;
   --progress-bar-mark: var(--color-text-muted);
@@ -125,8 +133,14 @@ const markLefts = computed(() =>
   width: 100%;
   min-height: var(--progress-bar-height);
   background: var(--progress-bar-track);
+  border: var(--progress-bar-border);
   border-radius: var(--progress-bar-radius);
+  box-shadow: var(--progress-bar-shadow);
   overflow: hidden;
+}
+
+.olui-progress-bar[data-state='empty'] .olui-progress-bar__track {
+  background: var(--progress-bar-track-empty);
 }
 
 .olui-progress-bar__fill {
@@ -137,6 +151,10 @@ const markLefts = computed(() =>
   transform: translateX(calc(var(--progress-bar-offset, 0) * 100%))
     scaleX(var(--progress-bar-ratio, 0));
   transition: var(--progress-bar-transition);
+}
+
+.olui-progress-bar[data-state='full'] .olui-progress-bar__fill {
+  background: var(--progress-bar-fill-full);
 }
 
 .olui-progress-bar__mark {
