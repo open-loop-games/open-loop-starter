@@ -7,6 +7,7 @@
 import { computed, ref } from 'vue';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
+import { formatClock } from '@/composables/useFormatting';
 import { BULL_MULT, SPREE_MULT, TIP_LIFETIME } from '../../data';
 import { getTips, type TipEffect } from '../../modules';
 
@@ -33,7 +34,6 @@ const inForce = computed(() =>
     seconds: Math.ceil(e.timeRemaining.value),
   })),
 );
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 </script>
 
 <template>
@@ -47,7 +47,7 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2,
     </template>
     <template v-else>
       <span v-for="e in inForce" :key="e.id" class="force num"
-        >{{ e.label }} · {{ clock(e.seconds) }}</span
+        >{{ e.label }} · {{ formatClock(e.seconds) }}</span
       >
       <span v-if="!inForce.length" class="quiet">
         {{ lastCaught ? EFFECT_COPY[lastCaught] : 'Quiet. Keep an eye on the tape.' }}
@@ -93,11 +93,11 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2,
   flex: 1;
   --progress-bar-fill: var(--walnut);
   --progress-bar-track: rgba(23, 18, 14, 0.2);
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
   --progress-bar-radius: 0;
+  --progress-bar-height: 3px;
   --progress-bar-transition: transform 0.25s linear;
-}
-.tip-left :deep(.olui-progress-bar__track) {
-  min-height: 3px;
 }
 .force {
   padding: 1px 8px;

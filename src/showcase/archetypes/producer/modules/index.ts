@@ -7,7 +7,7 @@ import { createStandingModule } from './standing';
 import { createOfflineModule } from './offline';
 
 export { ProducerTuningRegistryKey, type ProducerTunableKey } from './tuning';
-export { FirmKey, getFirm, type FirmApi, type LedgerKind, type LedgerLine } from './firm';
+export { FirmKey, getFirm, type FirmApi, type LedgerExtra, type LedgerKind } from './firm';
 export {
   AutomationKey,
   acquisitionPolicy,

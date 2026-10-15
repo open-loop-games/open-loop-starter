@@ -11,6 +11,7 @@ import {
   type Predicate,
   type PurchasableCategory,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   CASH,
   FEATS,
@@ -46,11 +47,10 @@ export const StandingKey: InjectionKey<StandingApi> = Symbol(
   'producer/standing',
 ) as InjectionKey<StandingApi>;
 
-let api: StandingApi;
+const standingApi = createModuleApi(StandingKey);
 
-export function getStanding(): StandingApi {
-  return api;
-}
+/** Standing, the feats on the record and the press it buys. Read it after the engine starts. */
+export const getStanding = standingApi.get;
 
 export function createStandingModule(): EngineModule {
   return {
@@ -90,7 +90,7 @@ export function createStandingModule(): EngineModule {
         mapAchievement: (def) => ({
           display: { title: def.title },
           goal: goalFor(def),
-          onComplete: () => firm.post('milestone', def.title.toLowerCase()),
+          onComplete: () => firm.ledger.post(def.title.toLowerCase(), 'milestone'),
         }),
       });
       feats.register(FEAT_DEFS);
@@ -118,13 +118,12 @@ export function createStandingModule(): EngineModule {
           ],
         }),
         mapState: (def, p) => {
-          p.on('purchased', () => firm.post('manage', def.title, -def.cost));
+          p.on('purchased', () => firm.ledger.post(def.title, 'manage', { amount: -def.cost }));
         },
       });
       upgrades.register(STANDING_DEFS);
 
-      api = { feats, achievements, standing, upgrades };
-      ctx.provide(StandingKey, api);
+      standingApi.publish(ctx, { feats, achievements, standing, upgrades });
     },
   };
 }

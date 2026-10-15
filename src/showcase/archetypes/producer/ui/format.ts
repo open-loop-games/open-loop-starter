@@ -4,6 +4,7 @@
  * notation only once the words run out.
  */
 import { Decimal, format, type DecimalSource } from '@open-loop/engine';
+import { formatGrouped } from '@/composables/useFormatting';
 
 const ILLIONS = [
   'million',
@@ -18,7 +19,6 @@ const ILLIONS = [
   'decillion',
 ];
 
-const grouped = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const cents = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -28,8 +28,8 @@ const cents = new Intl.NumberFormat('en-US', {
 export function amount(value: DecimalSource): string {
   const d = Decimal.fromValue(value);
   if (d.lt(0)) return `−${amount(d.neg())}`;
-  if (d.lt(100)) return d.eq(d.floor()) ? grouped.format(d.toNumber()) : cents.format(d.toNumber());
-  if (d.lt(1e6)) return grouped.format(Math.floor(d.toNumber()));
+  if (d.lt(100) && d.neq(d.floor())) return cents.format(d.toNumber());
+  if (d.lt(1e6)) return formatGrouped(d);
   const exp = Math.floor(d.log10().toNumber() / 3) - 2;
   if (exp < ILLIONS.length) {
     const mantissa = d.div(Decimal.pow(1000, exp + 2)).toNumber();

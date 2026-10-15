@@ -9,6 +9,7 @@ import {
   type Purchasable,
   type TickDriver,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { SettingsKey } from '@/modules/settings';
 import {
   ACQUISITION_INTERVAL,
@@ -61,18 +62,17 @@ export interface OfflineApi {
   catchUp(tickDriver: TickDriver, savedAt: number | undefined, now?: number): OfflineReturn;
 }
 
-let api: OfflineApi;
+const offlineApi = createModuleApi(OfflineKey);
 
-export function getOffline(): OfflineApi {
-  return api;
-}
+/** The night bookkeeper and catch-up. Read it after the engine starts. */
+export const getOffline = offlineApi.get;
 
 export function createOfflineModule(): EngineModule {
   return {
     id: 'producer/offline',
     dependencies: ['producer/firm'],
     install(ctx) {
-      const { cash, post } = ctx.inject(FirmKey);
+      const { cash, ledger } = ctx.inject(FirmKey);
       const lastReturn: Ref<OfflineReturn | null> = ref(null);
       // The base's player-facing toggle (Settings → "Process offline progress
       // on load"). Absent outside the shared base, where catch-up always runs.
@@ -87,7 +87,9 @@ export function createOfflineModule(): EngineModule {
           visible: def.visible,
         }),
         mapState: (def, p) => {
-          p.on('purchased', () => post('hire', `hired the ${def.title.toLowerCase()}`, -def.cost));
+          p.on('purchased', () =>
+            ledger.post(`hired the ${def.title.toLowerCase()}`, 'hire', { amount: -def.cost }),
+          );
         },
       });
       firmOffice.register(BOOKKEEPER_DEF);
@@ -114,13 +116,12 @@ export function createOfflineModule(): EngineModule {
           cashGained: Decimal.sub(cash.value, before),
         };
         if (caughtUpSeconds > 0)
-          post('away', `books kept for ${Math.round(caughtUpSeconds / 60)} min away`);
+          ledger.post(`books kept for ${Math.round(caughtUpSeconds / 60)} min away`, 'away');
         lastReturn.value = result;
         return result;
       }
 
-      api = { bookkeeper, lastReturn, catchUp };
-      ctx.provide(OfflineKey, api);
+      offlineApi.publish(ctx, { bookkeeper, lastReturn, catchUp });
     },
   };
 }

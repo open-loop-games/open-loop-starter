@@ -2,9 +2,9 @@
   OfficePanel — the right rail: the Consolidated Building once it is offered,
   the executive floor (hires, their duty switches, the night bookkeeper),
   standing and the press it buys, the wire room, the management memos on the
-  desk, and the wall of market-leader certificates. Memos are starter's
-  `UpgradeGrid` in one column, each card drawn in the `#card` slot; a signed memo
-  leaves the desk. The record of achievements opens in starter's
+  desk, and the wall of market-leader certificates. Press, the wire room and the
+  memos are starter's `UpgradeGrid` in one column, each card drawn in the `#card`
+  slot; a bought card leaves the rail. The record of achievements opens in starter's
   `AchievementGrid` on the frame's modal stack.
 -->
 <script setup lang="ts">
@@ -13,8 +13,8 @@ import type { Purchasable } from '@open-loop/engine';
 import { modalStackKey } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import AchievementGrid, { type AchievementCard } from '@/ui/components/AchievementGrid.vue';
-import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
-import { BOOKKEEPER_DEF, ENDING_DEF, type HireId, type ManagementDef } from '../../data';
+import { UpgradeGrid, createPurchasableCard, type UpgradeCardData } from '@/ui/compositions';
+import { BOOKKEEPER_DEF, ENDING_DEF, type HireId } from '../../data';
 import { getAutomation, getFirm, getOffline, getStanding, getTips } from '../../modules';
 import { money } from '../format';
 
@@ -25,18 +25,20 @@ const standing = getStanding();
 const tips = getTips();
 const stack = inject(modalStackKey)!;
 
-/** One-shots bought on sight of their reveal: press for standing, and the wire room. */
-const offers = (
-  all: {
-    def: { id: string; title: string; description: string; cost: number };
-    purchasable: Purchasable;
-  }[],
+/** One card per one-shot; the grid shows a card while its purchasable is visible and unbought. */
+const cardsOf = (
+  all: { def: { title: string; description: string }; purchasable: Purchasable }[],
 ) =>
-  all
-    .filter((e) => e.purchasable.visible.value && !e.purchasable.active.value)
-    .map((e) => ({ def: e.def, p: e.purchasable, canBuy: e.purchasable.canPurchase.value }));
-const press = computed(() => offers(standing.upgrades.getAll()));
-const wireRoom = computed(() => offers(tips.upgrades.getAll()));
+  all.map(({ def, purchasable }) =>
+    createPurchasableCard(purchasable, { displayName: def.title, description: def.description }),
+  );
+/** Whether the grid shows any card: its own filter, which it does not expose. */
+const onRail = (cards: UpgradeCardData[]) => cards.some((c) => c.unlocked!.value && !c.owned.value);
+
+/** One-shots bought on sight of their reveal: press for standing, and the wire room. */
+const press = cardsOf(standing.upgrades.getAll());
+const wireRoom = cardsOf(tips.upgrades.getAll());
+const wireOpen = computed(() => onRail(wireRoom));
 const pressOwned = computed(() => standing.upgrades.purchasedCount.value);
 
 const endingOffered = computed(() => firm.ending.visible.value && !firm.ending.active.value);
@@ -110,28 +112,8 @@ const hires = computed(() =>
 
 const boardSitting = computed(() => automation.working('board'));
 
-type MemoCard = UpgradeCardData<ManagementDef>;
-const memos: MemoCard[] = [...firm.management.getAll()]
-  .sort((a, b) => a.def.cost - b.def.cost)
-  .map(({ def, purchasable }) => ({
-    id: def.id,
-    displayName: def.title,
-    description: def.description,
-    cost: computed(() => def.cost),
-    costLabel: 'cash',
-    canPurchase: purchasable.canPurchase,
-    owned: purchasable.active,
-    purchase: () => purchasable.purchase(1),
-    extra: def,
-  }));
-const onDesk = computed(() =>
-  firm.management
-    .getAll()
-    .filter((e) => e.purchasable.visible.value && !e.purchasable.active.value),
-);
-const visibleMemos = computed(() =>
-  memos.filter((m) => onDesk.value.some((e) => e.def.id === m.id)),
-);
+const memos = cardsOf([...firm.management.getAll()].sort((a, b) => a.def.cost - b.def.cost));
+const memosOnDesk = computed(() => onRail(memos));
 const filed = computed(() => firm.management.purchasedCount.value);
 
 const wall = computed(() =>
@@ -213,42 +195,46 @@ const wall = computed(() =>
         }}
       </p>
       <Button class="record smallcaps" @click="openRecord">The record</Button>
-      <article
-        v-for="o in press"
-        :key="o.def.id"
-        class="hire"
-        :class="{ affordable: o.canBuy }"
-        :data-testid="`press-${o.def.id}`"
-      >
-        <div class="hire-text">
-          <h3 class="smallcaps">{{ o.def.title }}</h3>
-          <p>{{ o.def.description }}</p>
-        </div>
-        <Button class="hire-btn" :disabled="!o.canBuy" @click="o.p.purchase(1)">
-          <span class="smallcaps">Run it</span>
-          <span class="num">{{ money(o.def.cost) }}</span>
-        </Button>
-      </article>
+      <UpgradeGrid :cards="press" reveal="inline" purchased-state="removed" class="offers">
+        <template #card="{ card }">
+          <article
+            class="hire"
+            :class="{ affordable: card.canPurchase.value }"
+            :data-testid="`press-${card.id}`"
+          >
+            <div class="hire-text">
+              <h3 class="smallcaps">{{ card.displayName }}</h3>
+              <p>{{ card.description }}</p>
+            </div>
+            <Button class="hire-btn" :disabled="!card.canPurchase.value" @click="card.purchase()">
+              <span class="smallcaps">Run it</span>
+              <span class="num">{{ money(card.cost.value) }}</span>
+            </Button>
+          </article>
+        </template>
+      </UpgradeGrid>
     </div>
 
-    <div v-if="wireRoom.length" class="block">
+    <div v-if="wireOpen" class="block">
       <h2 class="smallcaps">The wire room</h2>
-      <article
-        v-for="o in wireRoom"
-        :key="o.def.id"
-        class="hire"
-        :class="{ affordable: o.canBuy }"
-        :data-testid="`wire-${o.def.id}`"
-      >
-        <div class="hire-text">
-          <h3 class="smallcaps">{{ o.def.title }}</h3>
-          <p>{{ o.def.description }}</p>
-        </div>
-        <Button class="hire-btn" :disabled="!o.canBuy" @click="o.p.purchase(1)">
-          <span class="smallcaps">Install</span>
-          <span class="num">{{ money(o.def.cost) }}</span>
-        </Button>
-      </article>
+      <UpgradeGrid :cards="wireRoom" reveal="inline" purchased-state="removed" class="offers">
+        <template #card="{ card }">
+          <article
+            class="hire"
+            :class="{ affordable: card.canPurchase.value }"
+            :data-testid="`wire-${card.id}`"
+          >
+            <div class="hire-text">
+              <h3 class="smallcaps">{{ card.displayName }}</h3>
+              <p>{{ card.description }}</p>
+            </div>
+            <Button class="hire-btn" :disabled="!card.canPurchase.value" @click="card.purchase()">
+              <span class="smallcaps">Install</span>
+              <span class="num">{{ money(card.cost.value) }}</span>
+            </Button>
+          </article>
+        </template>
+      </UpgradeGrid>
     </div>
 
     <div class="block">
@@ -256,13 +242,7 @@ const wall = computed(() =>
         Management memos
         <span v-if="boardSitting" class="board-tag">the board signs these</span>
       </h2>
-      <UpgradeGrid
-        :cards="visibleMemos"
-        :columns="1"
-        reveal="inline"
-        purchased-state="removed"
-        class="memos"
-      >
+      <UpgradeGrid :cards="memos" reveal="inline" purchased-state="removed" class="offers">
         <template #card="{ card }">
           <article
             class="memo"
@@ -271,7 +251,7 @@ const wall = computed(() =>
           >
             <div>
               <h3>{{ card.displayName }}</h3>
-              <p>{{ card.extra!.description }}</p>
+              <p>{{ card.description }}</p>
             </div>
             <Button class="sign" :disabled="!card.canPurchase.value" @click="card.purchase()">
               <span class="smallcaps">Sign</span>
@@ -280,9 +260,7 @@ const wall = computed(() =>
           </article>
         </template>
       </UpgradeGrid>
-      <p v-if="!visibleMemos.length" class="quiet">
-        No memos on the desk. Grow a subsidiary to draw one.
-      </p>
+      <p v-if="!memosOnDesk" class="quiet">No memos on the desk. Grow a subsidiary to draw one.</p>
       <p v-if="filed" class="quiet">
         {{ filed }} {{ filed === 1 ? 'memo' : 'memos' }} signed and filed.
       </p>
@@ -347,7 +325,7 @@ p {
   flex-direction: column;
   gap: 8px;
 }
-.memos {
+.offers {
   gap: 8px;
 }
 .kept {
@@ -465,9 +443,6 @@ p {
   color: var(--ink-seal);
   border: 1px solid rgba(210, 169, 78, 0.5);
   border-radius: var(--radius-paper);
-}
-.block > .hire + .hire {
-  margin-top: 8px;
 }
 .landmark .building {
   display: grid;

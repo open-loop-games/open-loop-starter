@@ -8,7 +8,7 @@ import { computed, ref } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
-import type { ResourceReadout } from '@/ui/compositions';
+import { EventLog, type ResourceReadout } from '@/ui/compositions';
 import { getAutomation, getFirm, type LedgerKind } from '../../modules';
 import { clock, money, perSecond } from '../format';
 
@@ -118,15 +118,15 @@ const tapeMark: Record<LedgerKind, string> = {
 
     <div class="tape-housing">
       <div class="tape-slot smallcaps">Adding machine</div>
-      <ol class="tape" data-testid="tape">
-        <li v-for="line in firm.ledger.value" :key="line.seq" :class="line.kind">
+      <EventLog class="tape" data-testid="tape" :lines="firm.ledger.lines.value">
+        <template #row="{ line }">
           <span class="t">{{ clock(line.at) }}</span>
           <span class="k">{{ tapeMark[line.kind] }}</span>
           <span class="x">{{ line.text }}</span>
-          <span v-if="line.amount !== undefined" class="a">{{ money(line.amount) }}</span>
-        </li>
-        <li v-if="firm.ledger.value.length === 0" class="empty">— no entries —</li>
-      </ol>
+          <span v-if="line.extra" class="a">{{ money(line.extra.amount) }}</span>
+        </template>
+        <template #empty>— no entries —</template>
+      </EventLog>
     </div>
   </section>
 </template>
@@ -323,11 +323,11 @@ h1 {
 .grade-rule {
   --progress-bar-fill: var(--ink-seal);
   --progress-bar-track: var(--ledger-rule);
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
   --progress-bar-radius: 0;
+  --progress-bar-height: 3px;
   --progress-bar-transition: transform 0.3s linear;
-}
-.grade-rule :deep(.olui-progress-bar__track) {
-  min-height: 3px;
 }
 
 .tape-housing {
@@ -346,8 +346,8 @@ h1 {
   border-radius: 3px 3px 0 0;
   background: var(--walnut-grain);
 }
-.tape {
-  list-style: none;
+.desk .tape {
+  display: block;
   margin: 0;
   width: 88%;
   padding: 8px 10px 18px;
@@ -361,12 +361,15 @@ h1 {
   mask-image: linear-gradient(to bottom, black 70%, transparent);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
 }
-.tape li {
+/* The machine prints each line in place: no fresh-line fade. */
+.desk .tape :deep(.event-log__row) {
   display: grid;
   grid-template-columns: 40px 34px 1fr auto;
   gap: 4px;
   line-height: 1.6;
   white-space: nowrap;
+  color: inherit;
+  animation: none;
 }
 .tape .t {
   opacity: 0.55;
@@ -379,15 +382,17 @@ h1 {
   color: #9b2f1f;
   font-variant-numeric: tabular-nums;
 }
-.tape .milestone .k,
-.tape .grade .k,
-.tape li.milestone,
-.tape li.grade {
+.desk .tape :deep(.event-log__row--milestone),
+.desk .tape :deep(.event-log__row--grade) {
   color: #6b4a0e;
 }
-.tape .empty {
+.desk .tape :deep(.event-log__empty) {
   display: block;
+  line-height: 1.6;
+  white-space: nowrap;
   text-align: center;
+  font-style: normal;
+  color: inherit;
   opacity: 0.5;
 }
 </style>

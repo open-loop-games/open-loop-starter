@@ -9,7 +9,6 @@ import {
   createPurchasableCategory,
   createResource,
   persistent,
-  shallowRef,
   tunable,
   withPersistentContext,
   type AchievementCategory,
@@ -22,8 +21,9 @@ import {
   type ProducerCategory,
   type PurchasableCategory,
   type Resource,
-  type ShallowRef,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
+import { createEventLog, type EventLog } from '@/modules/event-log';
 import {
   CASH,
   COST_RATIO,
@@ -57,14 +57,9 @@ import { ProducerTuningRegistryKey, type ProducerTunableKey } from './tuning';
 
 export type LedgerKind = 'acquire' | 'manage' | 'hire' | 'milestone' | 'grade' | 'tip' | 'away';
 
-/** One line on the adding-machine tape. */
-export interface LedgerLine {
-  seq: number;
-  /** Sim seconds since the firm was founded. */
-  at: number;
-  kind: LedgerKind;
-  text: string;
-  amount?: number;
+/** What a tape line carries beside its text: the cash it moved. */
+export interface LedgerExtra {
+  amount: number;
 }
 
 export interface FirmApi {
@@ -93,19 +88,16 @@ export interface FirmApi {
   handChain: ModifierChain;
   /** The Consolidated Building; bought, the firm's story ends and play goes on. */
   ending: Purchasable;
-  /** The most recent tape lines, newest first. */
-  ledger: ShallowRef<LedgerLine[]>;
-  /** Type a line on the tape. */
-  post(kind: LedgerKind, text: string, amount?: number): void;
+  /** The adding-machine tape, stamped in sim seconds since founding; a session log. */
+  ledger: EventLog<LedgerKind, LedgerExtra>;
 }
 
 export const FirmKey: InjectionKey<FirmApi> = Symbol('producer/firm') as InjectionKey<FirmApi>;
 
-let api: FirmApi;
+const firmApi = createModuleApi(FirmKey);
 
-export function getFirm(): FirmApi {
-  return api;
-}
+/** The firm's books and ladder. Read it after the engine starts. */
+export const getFirm = firmApi.get;
 
 const LEDGER_LENGTH = 60;
 
@@ -130,12 +122,10 @@ export function createFirmModule(): EngineModule {
         elapsed.value += dt;
       });
 
-      let seq = 0;
-      const ledger = shallowRef<LedgerLine[]>([]);
-      const post = (kind: LedgerKind, text: string, amount?: number) => {
-        const line = { seq: seq++, at: elapsed.value, kind, text, amount };
-        ledger.value = [line, ...ledger.value].slice(0, LEDGER_LENGTH);
-      };
+      const ledger = createEventLog<LedgerKind, LedgerExtra>(ctx, {
+        cap: LEDGER_LENGTH,
+        clock: () => elapsed.value,
+      });
 
       // ─── The deal: manual-action. The referral network adds before training
       // multiplies, so the deal chain holds both, in that order. ───
@@ -187,10 +177,10 @@ export function createFirmModule(): EngineModule {
             const m = Decimal.fromValue(costRatio.value).toNumber();
             // What the n units just bought cost: a·m^(c−n)·(m^n − 1)/(m − 1).
             const paid = def.baseCost * m ** (count - n) * ((m ** n - 1) / (m - 1));
-            post(
-              'acquire',
+            ledger.post(
               n > 1 ? `${n} ${def.unit}s → ${count}` : `${def.unit} #${count}`,
-              -paid,
+              'acquire',
+              { amount: -paid },
             );
           });
         },
@@ -242,7 +232,7 @@ export function createFirmModule(): EngineModule {
           grants: grantsFor(def),
         }),
         mapState: (def, p) => {
-          p.on('purchased', () => post('manage', def.title, -def.cost));
+          p.on('purchased', () => ledger.post(def.title, 'manage', { amount: -def.cost }));
         },
       });
       management.register(MANAGEMENT_DEFS);
@@ -275,7 +265,7 @@ export function createFirmModule(): EngineModule {
               description: `Market leader (${def.count})`,
             },
           ],
-          onComplete: () => post('milestone', `market leader · ${def.title.toLowerCase()}`),
+          onComplete: () => ledger.post(`market leader · ${def.title.toLowerCase()}`, 'milestone'),
         }),
       });
       milestones.register(MILESTONE_DEFS);
@@ -288,7 +278,7 @@ export function createFirmModule(): EngineModule {
           grants: [
             { chain: operations, multiplier: def.mult, description: `Credit grade ${def.grade}` },
           ],
-          onComplete: () => post('grade', `credit upgraded to ${def.grade}`),
+          onComplete: () => ledger.post(`credit upgraded to ${def.grade}`, 'grade'),
         }),
       });
       grades.register(GRADE_DEFS);
@@ -303,13 +293,15 @@ export function createFirmModule(): EngineModule {
           visible: def.visible,
         }),
         mapState: (def, p) => {
-          p.on('purchased', () => post('manage', `bought ${def.title}`, -def.cost));
+          p.on('purchased', () =>
+            ledger.post(`bought ${def.title}`, 'manage', { amount: -def.cost }),
+          );
         },
       });
       landmarks.register(ENDING_DEF);
       const ending = landmarks.getPurchasable(ENDING_DEF.id)!;
 
-      api = {
+      firmApi.publish(ctx, {
         cash,
         elapsed,
         deal,
@@ -326,9 +318,7 @@ export function createFirmModule(): EngineModule {
         handChain,
         ending,
         ledger,
-        post,
-      };
-      ctx.provide(FirmKey, api);
+      });
     },
   };
 }

@@ -17,6 +17,7 @@ import {
   type PurchasableCategory,
   type TemporaryEffectSystem,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   BULL_MULT,
   BULL_SECONDS,
@@ -66,11 +67,10 @@ export interface TipsApi {
 
 export const TipsKey: InjectionKey<TipsApi> = Symbol('producer/tips') as InjectionKey<TipsApi>;
 
-let api: TipsApi;
+const tipsApi = createModuleApi(TipsKey);
 
-export function getTips(): TipsApi {
-  return api;
-}
+/** Tips on the wire and the effects in force. Read it after the engine starts. */
+export const getTips = tipsApi.get;
 
 export function createTipsModule(): EngineModule {
   return {
@@ -79,7 +79,7 @@ export function createTipsModule(): EngineModule {
     install(ctx) {
       const firm = ctx.inject(FirmKey);
       const automation = ctx.inject(AutomationKey);
-      const { cash, post } = firm;
+      const { cash, ledger } = firm;
 
       const { caught, lastEffect, sinceLast } = withPersistentContext('tips', () => ({
         caught: persistent<number>(0, { id: 'caught' }),
@@ -97,7 +97,7 @@ export function createTipsModule(): EngineModule {
           visible: () => caught.value >= def.caught,
         }),
         mapState: (def, p) => {
-          p.on('purchased', () => post('manage', def.title, -def.cost));
+          p.on('purchased', () => ledger.post(def.title, 'manage', { amount: -def.cost }));
         },
       });
       upgrades.register(TIP_UPGRADE_DEFS);
@@ -155,16 +155,15 @@ export function createTipsModule(): EngineModule {
           const minutes = Decimal.mul(automation.income.value, WINDFALL_INCOME);
           const paid = Decimal.min(bank, minutes);
           addResource(cash, paid);
-          post('tip', 'a windfall deal', paid.toNumber());
+          ledger.post('a windfall deal', 'tip', { amount: paid.toNumber() });
         } else {
           effects.activate(effect);
-          post('tip', effect === 'bull' ? 'a bull market' : 'a closing spree');
+          ledger.post(effect === 'bull' ? 'a bull market' : 'a closing spree', 'tip');
         }
         return effect;
       }
 
-      api = { current, catchTip, caught, lastEffect, scale, effects, upgrades };
-      ctx.provide(TipsKey, api);
+      tipsApi.publish(ctx, { current, catchTip, caught, lastEffect, scale, effects, upgrades });
     },
   };
 }

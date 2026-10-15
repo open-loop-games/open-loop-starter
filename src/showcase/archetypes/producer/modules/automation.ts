@@ -21,6 +21,7 @@ import {
   type PurchasableCategory,
   type SelectionPolicy,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ACQUISITION_INTERVAL,
   DEAL_YIELD,
@@ -70,11 +71,10 @@ export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
   'producer/automation',
 ) as InjectionKey<AutomationApi>;
 
-let api: AutomationApi;
+const automationApi = createModuleApi(AutomationKey);
 
-export function getAutomation(): AutomationApi {
-  return api;
-}
+/** The executive floor, its desks and their phones. Read it after the engine starts. */
+export const getAutomation = automationApi.get;
 
 /** The acquisitions desk's rule: lowest marginal payback, cost of the next unit over what one unit earns. */
 export const acquisitionPolicy: SelectionPolicy<Producer> = selectionPaybackPeriod<Producer>(
@@ -104,7 +104,7 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
     dependencies: ['producer/firm'],
     install(ctx) {
       const firm = ctx.inject(FirmKey);
-      const { cash, management, subsidiaries, post, dealChain, operations } = firm;
+      const { cash, management, subsidiaries, ledger, dealChain, operations } = firm;
 
       const executives = createPurchasableCategory<ExecutiveDef>({
         id: EXECUTIVES,
@@ -115,7 +115,9 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
           visible: def.visible,
         }),
         mapState: (def, p) => {
-          p.on('purchased', () => post('hire', `hired ${def.title.toLowerCase()}`, -def.cost));
+          p.on('purchased', () =>
+            ledger.post(`hired ${def.title.toLowerCase()}`, 'hire', { amount: -def.cost }),
+          );
         },
       });
       executives.register(EXECUTIVE_DEFS);
@@ -170,7 +172,10 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
             text: 'On duty',
           });
           producer.repeatable!.on('purchased', () => {
-            post('hire', `phone #${Decimal.fromValue(producer.ownedCount.value).toNumber()}`);
+            ledger.post(
+              `phone #${Decimal.fromValue(producer.ownedCount.value).toNumber()}`,
+              'hire',
+            );
           });
         },
       });
@@ -208,8 +213,16 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
         setupSweepAutoPurchase(management, { enabled: () => working('board') }, ctx.onTick);
       });
 
-      api = { executives, dispatch, deskOn, working, memoReserve, phones, phone, income };
-      ctx.provide(AutomationKey, api);
+      automationApi.publish(ctx, {
+        executives,
+        dispatch,
+        deskOn,
+        working,
+        memoReserve,
+        phones,
+        phone,
+        income,
+      });
     },
   };
 }

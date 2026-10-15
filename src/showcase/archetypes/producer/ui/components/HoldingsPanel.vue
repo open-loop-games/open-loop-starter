@@ -345,11 +345,11 @@ h3 {
 .saving {
   --progress-bar-fill: var(--ink-debit);
   --progress-bar-track: var(--ledger-rule);
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
   --progress-bar-radius: 0;
+  --progress-bar-height: 2px;
   opacity: 0.7;
-}
-.saving :deep(.olui-progress-bar__track) {
-  min-height: 2px;
 }
 
 .prospectus {
