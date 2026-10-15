@@ -94,9 +94,9 @@ the recorded beats. Play goes on past the Modern Age, each Age's gate growing by
 | Elseworlds | `createChallengeCategory` with `completionLimit`, `restricts` and `rewards`; Secret Identity by `replacementGrants` |
 | Legends | `createAchievementCategory` with `cumulative-gte` Gates |
 | the automation ladder | `createAutomationTiers`; the desk's policy `selectionHybridPayback` |
+| each layer's earned-since-reset count | `Resource.sinceReset`, zeroed by that layer's reset |
 
-Two hand-rolls carry `TODO(expansion)` markers: each layer's earned-since-reset count
-(`modules/run.ts`), and the desk's buy loop (`modules/automation.ts`).
+One hand-roll carries a `TODO(expansion)` marker: the desk's buy loop (`modules/automation.ts`).
 
 ## Balance model
 

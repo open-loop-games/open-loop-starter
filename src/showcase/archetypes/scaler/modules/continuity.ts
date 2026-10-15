@@ -7,7 +7,6 @@ import {
   createMultiplicativeModifier,
   createPurchasableCategory,
   createResource,
-  persistent,
   type ComputedRef,
   type DecimalSource,
   type EngineModule,
@@ -72,13 +71,13 @@ export function createContinuityModule(): EngineModule {
     install(ctx) {
       const core = ctx.inject(CoreKey);
       const legacy = ctx.inject(LegacyKey);
+      // An Age's wipe of this context zeroes `sinceReset`: Continuity earned this Age.
       const continuity = createResource<DecimalSource>(0, {
         id: 'continuity',
         displayName: 'Continuity',
+        trackSinceReset: true,
       });
-      // The run-scoped cumulative of `./run.ts`, two layers up, kept where it is banked.
-      const earned = persistent<DecimalSource>(0, { id: 'continuity-earned', decimal: true });
-      const continuityEarned = computed(() => Decimal.fromValue(earned.value));
+      const continuityEarned = computed(() => Decimal.fromValue(continuity.sinceReset!.value));
 
       const upgrade = (id: ContinuityUpgradeDef['id']): Purchasable =>
         shop.getPurchasable(id) as Purchasable;
@@ -168,10 +167,7 @@ export function createContinuityModule(): EngineModule {
         earths,
         myth,
         imprintsMade,
-        bank: (amount) => {
-          addResource(continuity, amount);
-          earned.value = Decimal.add(earned.value, amount);
-        },
+        bank: (amount) => addResource(continuity, amount),
       };
       continuityApi.publish(ctx, api);
     },

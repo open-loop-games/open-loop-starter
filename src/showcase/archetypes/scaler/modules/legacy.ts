@@ -7,7 +7,6 @@ import {
   createMultiplicativeModifier,
   createPurchasableCategory,
   createResource,
-  persistent,
   type ComputedRef,
   type DecimalSource,
   type EngineModule,
@@ -73,11 +72,13 @@ export function createLegacyModule(): EngineModule {
     install(ctx) {
       const core = ctx.inject(CoreKey);
       const run = ctx.inject(RunKey);
-      const legacy = createResource<DecimalSource>(0, { id: 'legacy', displayName: 'Legacy' });
-      // The run-scoped cumulative of `./run.ts`, one layer up: Legacy arrives only at a
-      // Reboot, so the count is kept where it is banked.
-      const earned = persistent<DecimalSource>(0, { id: 'legacy-earned', decimal: true });
-      const legacyEarned = computed(() => Decimal.fromValue(earned.value));
+      // A Rewrite's wipe of this context zeroes `sinceReset`: Legacy earned this cycle.
+      const legacy = createResource<DecimalSource>(0, {
+        id: 'legacy',
+        displayName: 'Legacy',
+        trackSinceReset: true,
+      });
+      const legacyEarned = computed(() => Decimal.fromValue(legacy.sinceReset!.value));
       const legacyMultiplier = computed(() =>
         Formula.variable(legacyEarned)
           .step(
@@ -186,10 +187,7 @@ export function createLegacyModule(): EngineModule {
         upgrade,
         legacyEarned,
         legacyMultiplier: computed(() => Decimal.fromValue(legacyMultiplier.value)),
-        bank: (amount) => {
-          addResource(legacy, amount);
-          earned.value = Decimal.add(earned.value, amount);
-        },
+        bank: (amount) => addResource(legacy, amount),
       };
       legacyApi.publish(ctx, api);
     },

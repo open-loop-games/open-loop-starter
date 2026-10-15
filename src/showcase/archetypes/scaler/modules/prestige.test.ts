@@ -36,12 +36,14 @@ describe('Reboot the Timeline', () => {
     expect(getCore().reboots.value).toBe(0);
   });
 
-  it('counts only what heroes earn toward it', async () => {
+  it('counts Justice earned this timeline, spent or not', async () => {
     addResource(getRun().justice, 1e15);
-    expect(num(getRun().runEarned.value)).toBe(0);
+    const granted = num(getRun().runEarned.value);
+    expect(granted).toBeGreaterThan(0);
     getRun().heroes.getProducer('patrol')!.repeatable!.purchase(1);
+    expect(num(getRun().runEarned.value)).toBe(granted);
     await tick(20);
-    expect(num(getRun().runEarned.value)).toBeGreaterThan(0);
+    expect(num(getRun().runEarned.value)).toBeGreaterThan(granted);
   });
 
   it('banks Legacy and wipes the run', async () => {

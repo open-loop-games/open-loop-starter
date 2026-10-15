@@ -60,14 +60,12 @@ export function createRunModule(): EngineModule {
       const tuning = ctx.inject(ScalerTuningRegistryKey);
       const core = ctx.inject(CoreKey);
 
+      // The Reboot's wipe of this context zeroes `sinceReset`, so it is the run's earnings.
       const justice = createResource<DecimalSource>(ANCHORS.startJustice, {
         id: JUSTICE,
         displayName: 'Justice',
+        trackSinceReset: true,
       });
-      // TODO(expansion): a run-scoped cumulative. Resource.cumulative is lifetime-only, and a
-      // mark subtracted from it fails past 9e15: break_eternity drops a gain under ~1e-13 of the
-      // total. So the run counts its own earnings, and the Reboot's wipe zeroes the count.
-      const earned = persistent<DecimalSource>(0, { id: 'run-earned', decimal: true });
       const runSeconds = persistent<number>(0, { id: 'run-seconds' });
       const baseRatio = tunable(
         tuning,
@@ -118,7 +116,6 @@ export function createRunModule(): EngineModule {
       const totalRate = computed(() => Decimal.fromValue(heroes.getTotalRate(justice)));
       ctx.onTick((dt) => {
         runSeconds.value += dt;
-        earned.value = Decimal.mul(totalRate.value, dt).add(earned.value);
       });
 
       const api: RunApi = {
@@ -128,7 +125,7 @@ export function createRunModule(): EngineModule {
         runSeconds,
         hope,
         networkMade,
-        runEarned: computed(() => Decimal.fromValue(earned.value)),
+        runEarned: computed(() => Decimal.fromValue(justice.sinceReset!.value)),
         totalRate,
       };
       runApi.publish(ctx, api);
