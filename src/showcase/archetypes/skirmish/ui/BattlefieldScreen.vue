@@ -5,6 +5,7 @@ import { useModule } from '@/composables/useModule';
 import { useMatch } from '../composables/useMatch';
 import { TacticalKey, getAutomationKey, type FactionId } from '../modules';
 import { BASE_HP, PERSONAS, PERSONA_KEYS, getFactionDef, type PersonaKey } from '../data/tactical';
+import Select, { type SelectOption } from '@/ui/components/Select.vue';
 import PlayField from './PlayField.vue';
 
 /**
@@ -33,7 +34,21 @@ function getPersona(faction: FactionId): PersonaKey | 'custom' {
   return auto?.currentPersona.value ?? 'custom';
 }
 
-function onSelectPersona(faction: FactionId, key: PersonaKey): void {
+// A seat whose settings match no persona reads 'custom': listed, so the
+// trigger can name it, but never offered.
+function personaOptions(faction: FactionId): SelectOption<PersonaKey | 'custom'>[] {
+  const options: SelectOption<PersonaKey | 'custom'>[] = PERSONA_KEYS.map((key) => ({
+    value: key,
+    label: PERSONAS[key].displayName,
+  }));
+  if (getPersona(faction) === 'custom') {
+    options.push({ value: 'custom', label: 'Custom', disabled: true });
+  }
+  return options;
+}
+
+function onSelectPersona(faction: FactionId, key: PersonaKey | 'custom'): void {
+  if (key === 'custom') return;
   const auto = engine.tryInject(getAutomationKey(faction));
   auto?.setPersona(key);
 }
@@ -121,18 +136,15 @@ function rematch(): void {
               </span>
             </div>
 
-            <select
-              class="hud__persona-select"
-              :value="getPersona(f)"
-              :disabled="!activeFactions.includes(f)"
-              :title="`${getFactionDef(f).displayName} AI Persona`"
-              @change="onSelectPersona(f, ($event.target as HTMLSelectElement).value as PersonaKey)"
-            >
-              <option v-for="key in PERSONA_KEYS" :key="key" :value="key">
-                {{ PERSONAS[key].displayName }}
-              </option>
-              <option v-if="getPersona(f) === 'custom'" value="custom">Custom</option>
-            </select>
+            <span class="hud__persona" :title="`${getFactionDef(f).displayName} AI Persona`">
+              <Select
+                :model-value="getPersona(f)"
+                :options="personaOptions(f)"
+                :disabled="!activeFactions.includes(f)"
+                :aria-label="`${getFactionDef(f).displayName} AI Persona`"
+                @update:model-value="(key) => onSelectPersona(f, key)"
+              />
+            </span>
           </div>
 
           <div class="hud__track-row">
@@ -266,6 +278,7 @@ function rematch(): void {
 }
 
 .hud__identity {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -300,16 +313,26 @@ function rematch(): void {
   border: 1px solid currentColor;
 }
 
-.hud__persona-select {
+.hud__persona {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.hud__persona :deep(.olui-select__trigger) {
+  min-width: 0;
+  max-width: 100%;
   font-size: 0.7rem;
   padding: 1px 4px;
+  gap: 4px;
   background: color-mix(in srgb, var(--color-fg, #fff) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-fg, #fff) 18%, transparent);
-  border-radius: var(--radius-sm, 4px);
+  border-color: color-mix(in srgb, var(--color-fg, #fff) 18%, transparent);
   color: var(--color-fg, #fff);
-  cursor: pointer;
-  outline: none;
-  max-width: 110px;
+}
+
+.hud__persona :deep(.olui-select__trigger > span:first-child) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hud__track-row {
