@@ -127,15 +127,12 @@ rolls. `manifest.ts` holds the recorded beats.
 | the chart, the notes, the tether, routing | `createSpatialGrid`: explored mask, FOV, `distanceField`, `bfs` |
 | terrain sighted | `createZoneSystem` |
 | woodcutters, snare lines | `createProducerCategory` |
-| smoke racks | `createScalingPurchasable` |
+| smoke racks | `createScalingPurchasable` for the count; a producer with `inputs` (meat, wood) smokes |
 | the outfitter | `createPurchasableCategory` with cost requirements |
 | the pack | `createResourceBag` with a capacity getter and `discard` overflow |
 | Huntcraft, prowess, yield | `createSkill`, `createModifierChain` |
 | bestiary, Wayfinder | `createAchievementCategory` with `grants` |
 | the walk and the hunt | `createTimedProgress` |
-
-The rack's smoking is a hand-roll with a `TODO(expansion)` marker in `modules/lodge.ts`:
-a continuous converter whose throughput is the minimum its inputs can feed.
 
 ## Balance model
 

@@ -5,8 +5,6 @@ import {
   createPurchasableCategory,
   createResource,
   createScalingPurchasable,
-  Decimal,
-  ref,
   toNumber,
   tunable,
   unref,
@@ -16,7 +14,6 @@ import {
   type InjectionKey,
   type ProducerCategory,
   type PurchasableCategory,
-  type Ref,
   type Resource,
   type Purchasable,
 } from '@open-loop/engine';
@@ -56,7 +53,7 @@ export interface LodgeApi {
   producers: ProducerCategory<ProducerDef>;
   racks: Purchasable;
   /** jerky per second the racks managed on the last tick */
-  smokeRate: Ref<number>;
+  smokeRate: ComputedRef<number>;
   /** jerky per rack per second at full feed */
   rackJerkyRate: ComputedRef<number>;
   /** wood each jerky burns */
@@ -97,7 +94,6 @@ export function createLodgeModule(): EngineModule {
         wood: createResource<DecimalSource>(START_WOOD, { id: 'wood', displayName: 'Wood' }),
         jerky: createResource<DecimalSource>(START_JERKY, { id: 'jerky', displayName: 'Jerky' }),
       };
-      const num = (r: Resource<DecimalSource>): number => toNumber(r.value);
 
       // === PRODUCERS ===
 
@@ -137,24 +133,26 @@ export function createLodgeModule(): EngineModule {
       });
       const rackJerkyRate = tunable(registry, 'racks/jerkyRate', () => RACK_JERKY_RATE);
       const woodPerJerky = tunable(registry, 'racks/woodPerJerky', () => WOOD_PER_JERKY);
-      const smokeRate = ref(0);
 
-      // TODO(expansion): continuous converter — per-tick credit bounded by the min
-      // over an input bundle it debits. ProducerCategory credits unconditionally and
-      // createConversion is one-shot, so the rack tick is hand-rolled.
-      ctx.onTick((dt) => {
-        if (chronicle.won.value) return;
-        const want = toNumber(racks.count.value) * rackJerkyRate.value * dt;
-        const byMeat = num(stores.meat) * ANCHORS.jerkyPerMeat;
-        const byWood = num(stores.wood) / woodPerJerky.value;
-        const made = Math.max(0, Math.min(want, byMeat, byWood));
-        if (made > 0) {
-          stores.meat.value = Decimal.sub(stores.meat.value, made / ANCHORS.jerkyPerMeat).max(0);
-          stores.wood.value = Decimal.sub(stores.wood.value, made * woodPerJerky.value).max(0);
-          stores.jerky.value = Decimal.add(stores.jerky.value, made);
-        }
-        smokeRate.value = dt > 0 ? made / dt : 0;
+      // The racks are a converter over the rack purchasable's count, so the count keeps
+      // its save key. A won game smokes nothing.
+      const smokehouse = createProducerCategory<{ id: 'rack' }>({
+        id: 'smokehouse',
+        registerTick: ctx.onTick,
+        mapProducer: () => ({
+          resource: stores.jerky,
+          baseRate: () => (chronicle.won.value ? 0 : rackJerkyRate.value),
+          trigger: 'continuous',
+          extraCount: racks.count,
+          inputs: {
+            meat: { resource: stores.meat, per: 1 / ANCHORS.jerkyPerMeat },
+            wood: { resource: stores.wood, per: woodPerJerky },
+          },
+        }),
       });
+      smokehouse.register({ id: 'rack' });
+      const rack = smokehouse.getProducer('rack')!;
+      const smokeRate = computed(() => toNumber(rack.realizedRate!.value));
 
       // === OUTFITTER ===
 
