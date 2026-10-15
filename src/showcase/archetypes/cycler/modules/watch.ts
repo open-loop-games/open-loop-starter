@@ -29,9 +29,7 @@ import {
   persistent,
   random,
   ref,
-  shallowRef,
   subtractResource,
-  TickDriverKey,
   toNumber,
   weightedPick,
   type ComputedRef,
@@ -45,6 +43,8 @@ import {
   type Ref,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
+import { createEventLog, type EventLog } from '@/modules/event-log';
 import {
   ANCHORS,
   BREAKERS_FIRST_NIGHT,
@@ -154,7 +154,8 @@ export interface WatchApi {
   relief: Persistent<boolean>;
   canSignal: ComputedRef<boolean>;
   lastStrike: Ref<Strike | null>;
-  log: Ref<string[]>;
+  /** The keeper's log for this watch: emptied when a watch starts and when it ends. */
+  log: EventLog;
 
   startWatch: () => void;
   /** Starts the first watch when none has been kept: there is only one posting yet. */
@@ -182,11 +183,8 @@ export const WatchKey: InjectionKey<WatchApi> = Symbol('cycler/watch');
 const LOG_LINES = 7;
 const WATCH_CONTEXT = 'cycler/watch';
 
-let api: WatchApi;
-
-export function getWatch(): WatchApi {
-  return api;
-}
+const watchApi = createModuleApi(WatchKey);
+export const getWatch = watchApi.get;
 
 export function createWatchModule(): EngineModule {
   return {
@@ -194,7 +192,6 @@ export function createWatchModule(): EngineModule {
     dependencies: ['cycler/logbook'],
     install(ctx) {
       const logbook = ctx.inject(LogbookKey);
-      const tickDriver = ctx.inject(TickDriverKey);
       const spine = logbook.spine;
 
       const salvage = createResource<DecimalSource>(0, { id: 'salvage', displayName: 'Salvage' });
@@ -238,10 +235,8 @@ export function createWatchModule(): EngineModule {
       const relief = persistent(false, { id: 'relief' });
 
       const lastStrike = ref<Strike | null>(null);
-      const log = shallowRef<string[]>([]);
-      function note(line: string): void {
-        log.value = [line, ...log.value].slice(0, LOG_LINES);
-      }
+      const log = createEventLog(ctx, { cap: LOG_LINES, clock: () => cycle.elapsed.value });
+      const note = (line: string) => log.post(line);
 
       const posting = computed(() => POSTINGS.find((p) => p.id === postingId.value) ?? POSTINGS[0]);
       logbook.setPostingOpen(() => phase.value === 'setup');
@@ -499,10 +494,10 @@ export function createWatchModule(): EngineModule {
       // ─── Phase alternation ───
       // The day and night clock is game code. The engine keeps no timed phase cadence on
       // purpose: waves on a timer have no items for a Sequencer to start (engine
-      // docs/api/INDEX.md § Reserved names, Sequencer), and TickDriver phases persist
-      // neither the entered set nor elapsed time. So the phase and its clock are saved
-      // here, and `syncPhase` re-enters the TickDriver phase after every transition and
-      // load. The shape is candidate-recipes.md § Run-phase controller.
+      // docs/api/INDEX.md § Reserved names, Sequencer). So the phase and its clock are saved
+      // here, and one tick guarded on the phase runs the day or the night (under The watch),
+      // with nothing to re-enter on a load. The shape is candidate-recipes.md § Run-phase
+      // controller.
       function forecastQuarter(): Quarter {
         const wind = posting.value.wind;
         if (wind !== 'veering') return wind;
@@ -547,7 +542,6 @@ export function createWatchModule(): EngineModule {
         }
         const sprayLine = spray.value ? `, ${Math.round(spray.value * 100)}% of it spray` : '';
         note(`Night ${night.value}: ${breakers.value} breakers${sprayLine}.`);
-        syncPhase();
       }
 
       function dawn(): void {
@@ -562,7 +556,6 @@ export function createWatchModule(): EngineModule {
         offer.value = drawOffer();
         sightWreck();
         note(`Dawn. The tower stands. ${forecastLine()}`);
-        syncPhase();
       }
 
       function lightLamp(): boolean {
@@ -614,7 +607,6 @@ export function createWatchModule(): EngineModule {
       }
 
       function tickNight(dt: number): void {
-        if (phase.value !== 'night') return;
         clock.value += dt;
         const T = logbook.nightSeconds.value;
         // Breakers land evenly through the night, the i-th at (i + ½)/k of it.
@@ -641,18 +633,9 @@ export function createWatchModule(): EngineModule {
       }
 
       function tickDay(dt: number): void {
-        if (phase.value !== 'day') return;
         clock.value += dt;
         tickBoat(dt);
         if (clock.value >= logbook.daySeconds.value) dusk();
-      }
-
-      tickDriver.registerPhase('cycler/day', { onTick: tickDay });
-      tickDriver.registerPhase('cycler/night', { onTick: tickNight });
-      function syncPhase(): void {
-        if (phase.value !== 'day') tickDriver.exitPhase('cycler/day');
-        if (phase.value !== 'night') tickDriver.exitPhase('cycler/night');
-        if (phase.value !== 'setup') tickDriver.enterPhase(`cycler/${phase.value}`);
       }
 
       ctx.onTick((dt) => {
@@ -693,9 +676,19 @@ export function createWatchModule(): EngineModule {
         if (s.relief) logbook.recordRelief(s.relief);
         outcome = null;
         lastStrike.value = null;
-        log.value = [];
+        log.clear();
         cycle.pause();
-        syncPhase();
+      });
+
+      // After the cycle's own tick, so a watch a breaker ends has counted this tick. A phase
+      // that begins inside a tick runs in that tick too, on the same dt, so its clock starts
+      // one tick in. The balance is measured with that extra tick at each turn.
+      ctx.onTick((dt) => {
+        for (let ran: Phase = 'setup'; phase.value !== 'setup' && phase.value !== ran;) {
+          ran = phase.value;
+          if (ran === 'day') tickDay(dt);
+          else tickNight(dt);
+        }
       });
 
       function startWatch(): void {
@@ -712,20 +705,18 @@ export function createWatchModule(): EngineModule {
         clock.value = 0;
         forecast();
         phase.value = 'day';
-        log.value = [];
+        log.clear();
         note(`Posted to ${p.name}. ${forecastLine()}`);
         if (cycle.count.value === 0)
           note('Lay a tide net on the lee shore, and breakwaters side by side facing the gale.');
         cycle.resume();
-        syncPhase();
       }
 
       ctx.onLoad(() => {
-        syncPhase();
         if (phase.value !== 'setup') cycle.resume();
       });
 
-      api = {
+      const api: WatchApi = {
         phase,
         night,
         clock,
@@ -783,7 +774,7 @@ export function createWatchModule(): EngineModule {
         signalRelief,
         priceOf,
       };
-      ctx.provide(WatchKey, api);
+      watchApi.publish(ctx, api);
     },
   };
 }

@@ -6,9 +6,9 @@
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import type { ResourceReadout } from '@/ui/compositions';
+import { formatGrouped } from '@/composables/useFormatting';
 import { ANCHORS } from '../../data';
 import { getLogbook, getWatch } from '../../modules';
-import { n } from '../format';
 
 const watch = getWatch();
 const logbook = getLogbook();
@@ -49,7 +49,8 @@ const tower = computed(() =>
     >
       <div class="label">{{ r.label }}</div>
       <div class="value num">
-        {{ n(r.value.value) }}<span v-if="r.capacity" class="of">/{{ n(r.capacity.value) }}</span>
+        {{ formatGrouped(r.value.value)
+        }}<span v-if="r.capacity" class="of">/{{ formatGrouped(r.capacity.value) }}</span>
       </div>
       <div v-if="r.id === 'salvage'" class="sub num">
         nets catch {{ toNumber(r.rate!.value).toFixed(2) }}/s each

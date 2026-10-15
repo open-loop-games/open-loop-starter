@@ -9,9 +9,10 @@
   gives way to the logbook's page.
 -->
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
-import { type Engine } from '@open-loop/engine';
+import { computed, ref } from 'vue';
 import { SidebarMainShell } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
+import { EventLog } from '@/ui/compositions';
 import { getLogbook, getWatch } from '../modules';
 import type { Tool } from './format';
 import HourBand from './components/HourBand.vue';
@@ -26,20 +27,7 @@ const tool = ref<Tool>('haul');
 const between = computed(() => watch.phase.value === 'setup');
 const night = computed(() => watch.phase.value === 'night');
 
-// Dev-only hook for the screenshot loop: a stable handle on the modules, and a skip that
-// plays forward in one-second steps. Read through the hook, not a live `import()` that
-// Vite's module cache could serve stale.
-if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
-  (window as unknown as Record<string, unknown>).__skerry = {
-    engine,
-    watch,
-    logbook: getLogbook(),
-    skip: (seconds: number) => {
-      for (let t = 0; t < seconds; t++) engine.tickDriver.advanceTime(1);
-    },
-  };
-}
+if (import.meta.env.DEV) useDevHandle({ watch, logbook: getLogbook() });
 </script>
 
 <template>
@@ -51,9 +39,7 @@ if (import.meta.env.DEV) {
         <Reckoning />
         <WorkRail v-model:tool="tool" />
         <section class="log" aria-label="Keeper's log">
-          <p v-for="(line, i) in watch.log.value" :key="line + i" :class="{ fresh: i === 0 }">
-            {{ line }}
-          </p>
+          <EventLog :lines="watch.log.lines.value" />
         </section>
       </template>
       <div class="main">
@@ -84,13 +70,21 @@ if (import.meta.env.DEV) {
   padding-top: 8px;
   min-height: 120px;
 }
-.log p {
+.log :deep(.event-log) {
+  gap: 0;
+}
+.log :deep(.event-log__row) {
+  display: block;
   margin: 0 0 3px;
+  color: inherit;
   font-size: 14px;
   font-style: italic;
   opacity: 0.55;
 }
-.log p.fresh {
+.log :deep(.event-log__row--fresh) {
   opacity: 0.95;
+}
+.log :deep(.event-log__empty) {
+  display: none;
 }
 </style>

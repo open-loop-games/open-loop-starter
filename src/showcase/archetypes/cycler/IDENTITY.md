@@ -96,7 +96,7 @@ recorded beats.
 |---|---|
 | salvage, integrity, the payout's sources, logbook entries | `createResource` |
 | the watch: count, clock, the reset at the light going out | `createCycle`, paused between watches |
-| day and night ticks | `TickDriver` phases, re-entered after every transition and load |
+| day and night ticks | one `onTick` guarded on the saved phase |
 | pieces and knowledge | `createPurchasableCategory`, `Formula.exponential` costs |
 | the board | `createSpatialGrid`, rebuilt from the placed list |
 | the tideline | `createInventory`, one slot per shore cell |

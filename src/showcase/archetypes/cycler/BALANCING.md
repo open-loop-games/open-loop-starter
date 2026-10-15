@@ -95,8 +95,11 @@ registry is `modules/tuning.ts`.
   side and a whole tower hold it from stone 4; at stone 3 the keeper holds it with shoring
   and screens about half to two thirds of the time. A lower multiple makes the first call a
   formality; a higher one sends every career to stone 4.
-- **The phase is saved; the TickDriver phase is not.** `syncPhase` re-enters `cycler/day` or
-  `cycler/night` after every transition and on load. A new transition must call it.
+- **A phase that begins inside a tick runs in that tick too.** The watch's tick runs the new
+  phase on the same dt, so a day or night the clock turns to is one tick shorter than its
+  length: a second at the probes' `DT`. A night the lamp starts early is not. The probes are
+  measured with it. A tick that stops at the turn lengthens those phases by a tick and moves
+  every probe.
 
 ## Running a pass
 

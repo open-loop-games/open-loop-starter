@@ -8,9 +8,10 @@
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
+import { formatClock, formatGrouped } from '@/composables/useFormatting';
 import { ANCHORS, QUARTER_NAME, type Quarter } from '../../data';
 import { getWatch } from '../../modules';
-import { mmss, n } from '../format';
 
 const watch = getWatch();
 const night = computed(() => watch.phase.value === 'night');
@@ -41,10 +42,10 @@ const reliefLater = computed(
           >Night {{ watch.night.value }} · the final gale</span
         >
         <span v-else>Day {{ watch.night.value }} · calm</span>
-        <span class="num left">{{ night ? 'dawn' : 'dusk' }} in {{ mmss(left) }}</span>
+        <span class="num left">{{ night ? 'dawn' : 'dusk' }} in {{ formatClock(left) }}</span>
       </div>
       <div class="horizon">
-        <div class="horizon-run" :style="{ transform: `scaleX(${through})` }"></div>
+        <ProgressBar class="horizon-run" :value="through" />
         <div class="body" :style="{ left: `${through * 100}%` }"></div>
       </div>
       <div v-if="watch.relief.value" class="hint relief-hint">
@@ -88,7 +89,7 @@ const reliefLater = computed(
           @click="watch.shoreUp(side)"
         >
           Shore up the {{ QUARTER_NAME[side] }} wall ·
-          <span class="num">{{ n(watch.shoreCost.value) }}</span>
+          <span class="num">{{ formatGrouped(watch.shoreCost.value) }}</span>
         </Button>
       </template>
     </div>
@@ -128,20 +129,21 @@ const reliefLater = computed(
 }
 .horizon {
   position: relative;
-  height: 6px;
   margin-top: 6px;
-  border-radius: 3px;
-  background: rgba(223, 230, 226, 0.1);
 }
 .horizon-run {
-  position: absolute;
-  inset: 0;
-  border-radius: 3px;
-  background: linear-gradient(90deg, rgba(243, 187, 79, 0.15), rgba(243, 187, 79, 0.55));
-  transform-origin: left center;
+  --progress-bar-height: 6px;
+  --progress-bar-radius: 3px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-track: rgba(223, 230, 226, 0.1);
+  --progress-bar-track-empty: var(--progress-bar-track);
+  --progress-bar-fill: linear-gradient(90deg, rgba(243, 187, 79, 0.15), rgba(243, 187, 79, 0.55));
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-transition: none;
 }
 .night .horizon-run {
-  background: linear-gradient(90deg, rgba(120, 150, 180, 0.15), rgba(160, 190, 215, 0.55));
+  --progress-bar-fill: linear-gradient(90deg, rgba(120, 150, 180, 0.15), rgba(160, 190, 215, 0.55));
 }
 .body {
   position: absolute;

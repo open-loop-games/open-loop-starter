@@ -10,6 +10,7 @@
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { PIECES, type Quarter } from '../../data';
 import {
   cellKey,
@@ -131,9 +132,12 @@ const strikeLeak = computed(() => watch.lastStrike.value?.leak ?? 0);
         <template v-else-if="c.piece">
           <PieceGlyph :kind="c.piece" class="piece" />
           <span v-if="c.piece === 'breakwater'" class="tag num">{{ Math.round(c.ward) }}</span>
-          <span v-if="c.piece === 'net'" class="hold">
-            <span class="hold-fill" :style="{ transform: `scaleX(${c.fill})` }"></span>
-          </span>
+          <ProgressBar
+            v-if="c.piece === 'net'"
+            class="hold"
+            :class="{ full: c.full, winched: c.winched }"
+            :value="c.fill"
+          />
           <span v-if="c.piece === 'net'" class="tag num">{{ Math.floor(c.held) }}</span>
         </template>
       </Button>
@@ -310,30 +314,30 @@ const strikeLeak = computed(() => watch.lastStrike.value?.leak ?? 0);
   opacity: 0.85;
 }
 .hold {
+  --progress-bar-height: 5px;
+  --progress-bar-radius: 2px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-track: rgba(10, 14, 16, 0.6);
+  --progress-bar-track-empty: var(--progress-bar-track);
+  --progress-bar-fill: var(--sk-lamp);
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-transition: none;
   position: absolute;
   left: 8px;
   right: 8px;
   bottom: 7px;
-  height: 5px;
-  background: rgba(10, 14, 16, 0.6);
-  border-radius: 2px;
-  overflow: hidden;
+  width: auto;
 }
-.hold-fill {
-  display: block;
-  height: 100%;
-  background: var(--sk-lamp);
-  transform-origin: left center;
-}
-.cell.full .hold-fill {
-  background: var(--sk-wrack);
+.hold.full {
+  --progress-bar-fill: var(--sk-wrack);
 }
 .cell.full .tag {
   color: var(--sk-wrack);
   font-weight: 600;
 }
-.cell.winched .hold-fill {
-  background: var(--sk-kelp);
+.hold.winched {
+  --progress-bar-fill: var(--sk-kelp);
 }
 
 .tower-body {

@@ -1,6 +1,6 @@
 /**
  * The rock's geometry and the ward evaluator: pure functions over an occupancy view, so the
- * watch module, the placement preview and the probes all read the same arithmetic. The
+ * watch module, the board and the probes all read the same arithmetic. The
  * saved state is the placed-piece list; the grid is rebuilt from it.
  */
 import {

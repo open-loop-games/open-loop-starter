@@ -20,6 +20,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   KNOWLEDGE,
@@ -84,11 +85,8 @@ export interface LogbookApi {
 
 export const LogbookKey: InjectionKey<LogbookApi> = Symbol('cycler/logbook');
 
-let api: LogbookApi;
-
-export function getLogbook(): LogbookApi {
-  return api;
-}
+const logbookApi = createModuleApi(LogbookKey);
+export const getLogbook = logbookApi.get;
 
 export function createLogbookModule(): EngineModule {
   return {
@@ -192,7 +190,7 @@ export function createLogbookModule(): EngineModule {
 
       const ending = persistent<Ending>('none', { id: 'ending' });
 
-      api = {
+      const api: LogbookApi = {
         entries,
         knowledge,
         level,
@@ -216,7 +214,7 @@ export function createLogbookModule(): EngineModule {
           else if (ending.value === 'none') ending.value = 'lesser';
         },
       };
-      ctx.provide(LogbookKey, api);
+      logbookApi.publish(ctx, api);
     },
   };
 }

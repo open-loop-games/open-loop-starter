@@ -8,9 +8,10 @@
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import { formatGrouped } from '@/composables/useFormatting';
 import { FINDS, PIECES } from '../../data';
 import { cellKey, getWatch } from '../../modules';
-import { n, type Tool } from '../format';
+import type { Tool } from '../format';
 import PieceGlyph from './PieceGlyph.vue';
 
 const tool = defineModel<Tool>('tool', { required: true });
@@ -75,7 +76,7 @@ function pick(t: Tool): void {
       >
         <PieceGlyph :kind="p.def.id" class="mini" />
         <span class="name">{{ p.def.name }}</span>
-        <span class="price num">{{ n(Math.ceil(p.price)) }}</span>
+        <span class="price num">{{ formatGrouped(Math.ceil(p.price)) }}</span>
         <span class="owned num">{{ p.owned }} on the {{ p.def.ground }}</span>
       </Button>
       <Button
@@ -105,7 +106,7 @@ function pick(t: Tool): void {
         @click="watch.mend(mendStep)"
       >
         Mend <span class="num">{{ mendStep.toFixed(0) }}</span> ·
-        <span class="num">{{ n(watch.repairCost(mendStep)) }}</span>
+        <span class="num">{{ formatGrouped(watch.repairCost(mendStep)) }}</span>
       </Button>
     </div>
 
@@ -133,7 +134,8 @@ function pick(t: Tool): void {
       <div class="boat-head">
         <span>{{ boatLine }}</span>
         <span class="num"
-          >{{ n(watch.boatHaul.value) }} aboard · {{ n(watch.wreck.value) }} left in her</span
+          >{{ formatGrouped(watch.boatHaul.value) }} aboard ·
+          {{ formatGrouped(watch.wreck.value) }} left in her</span
         >
       </div>
       <div class="boat-note">

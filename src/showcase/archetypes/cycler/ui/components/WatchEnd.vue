@@ -9,10 +9,10 @@
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
+import { createPurchasableCard, UpgradeGrid } from '@/ui/compositions';
+import { formatGrouped } from '@/composables/useFormatting';
 import { ANCHORS, KNOWLEDGE, POSTINGS, type KnowledgeDef } from '../../data';
 import { getLogbook, getWatch } from '../../modules';
-import { n } from '../format';
 
 const logbook = getLogbook();
 const watch = getWatch();
@@ -20,36 +20,17 @@ const last = computed(() => logbook.lastWatch.value);
 const lastPosting = computed(() => POSTINGS.find((p) => p.id === last.value?.posting)?.name);
 const ending = computed(() => logbook.ending.value);
 
-interface Shelf {
-  def: KnowledgeDef;
-  /** What must be learned first, while it is not. */
-  gated: string | null;
-}
-
-const all: UpgradeCardData<Shelf>[] = KNOWLEDGE.map((def) => {
+const all = KNOWLEDGE.map((def) => {
   const p = logbook.knowledge.getPurchasable(def.id)!;
-  return {
-    id: def.id,
+  return createPurchasableCard<KnowledgeDef>(p, {
     displayName: def.name,
     description: def.blurb,
-    cost: computed(() => p.getCost(1)),
-    costLabel: 'entries',
-    canPurchase: p.canPurchase,
-    owned: p.maxed,
     count: p.count,
-    purchase: () => p.purchase(1),
-    extra: {
-      def,
-      get gated() {
-        const req = def.requires;
-        if (!req || logbook.level(req.id) >= req.levels) return null;
-        return `needs ${KNOWLEDGE.find((k) => k.id === req.id)!.name} ${req.levels}`;
-      },
-    },
-  };
+    extra: def,
+  });
 });
 // A charter, once bought, is spent: its posting shows below instead.
-const cards = computed(() => all.filter((c) => !(c.extra!.def.limit === 1 && c.owned.value)));
+const cards = computed(() => all.filter((c) => !(c.extra!.limit === 1 && c.owned.value)));
 
 const postings = computed(() =>
   POSTINGS.map((p) => ({
@@ -87,7 +68,8 @@ const postings = computed(() =>
           {{ last.nights === 1 ? 'night' : 'nights' }}.
         </h1>
         <p class="summary num">
-          Weathered {{ n(last.weathered) }} force · gathered {{ n(last.gathered) }} salvage ·
+          Weathered {{ formatGrouped(last.weathered) }} force · gathered
+          {{ formatGrouped(last.gathered) }} salvage ·
           <strong>{{ last.entries }} entries</strong> written
         </p>
       </header>
@@ -95,7 +77,7 @@ const postings = computed(() =>
       <section>
         <h2 class="sk-title">
           Keeper's knowledge
-          <span class="spend num">{{ n(logbook.entries.value) }} entries to spend</span>
+          <span class="spend num">{{ formatGrouped(logbook.entries.value) }} entries to spend</span>
         </h2>
         <UpgradeGrid :cards="cards" :columns="3" reveal="inline">
           <template #card="{ card }">
@@ -108,18 +90,17 @@ const postings = computed(() =>
             >
               <span class="title"
                 >{{ card.displayName
-                }}<span
-                  v-if="toNumber(card.count!.value) && card.extra!.def.limit > 1"
-                  class="num lvl"
-                >
+                }}<span v-if="toNumber(card.count!.value) && card.extra!.limit > 1" class="num lvl">
                   {{ toNumber(card.count!.value) }}</span
                 ></span
               >
               <span class="blurb">{{ card.description }}</span>
               <span class="price num">
                 <template v-if="card.owned.value">learned</template>
-                <template v-else-if="card.extra!.gated">{{ card.extra!.gated }}</template>
-                <template v-else>{{ n(card.cost.value) }} entries</template>
+                <template v-else-if="card.unmet!.value.length"
+                  >needs {{ card.unmet!.value.join(', ') }}</template
+                >
+                <template v-else>{{ formatGrouped(card.cost.value) }} entries</template>
               </span>
             </Button>
           </template>
