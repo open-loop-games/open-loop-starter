@@ -5,8 +5,8 @@
 > base, `loss-on-failure` on the expedition out, and an `ending`. Nothing resets and
 > nothing compresses: the reward is territory.
 
-Identity line source: `../_identity.md` (Explorer entry); the line's player experience
-and exemplar calls are `../_docs/explorer.md`. **Core · open core.** The defining
+Research composition: **The uncovered map**. Its composition document in the studio's research
+library lists the members and the membership claims. The defining
 component, zone as gameplay, has no research pattern, so this build designs it (§ The
 defining component). A Dark Room, Level13, Candy Box and Candy Box 2 show the
 composition ships, as a set; none is a lift target.

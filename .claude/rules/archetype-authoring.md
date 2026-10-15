@@ -76,14 +76,12 @@ edit it.
 The filename is `IDENTITY.md` for every archetype. It fits on a single screen. Required
 sections:
 
-1. **Identity line** — the research composition, sourced from `_identity.md`, with the
-   tier and pattern-coverage grade that registry gives it.
-   - Cite a research pattern by handle only when both hold:
-     - a sourced, in-called exemplar is a member;
-     - a design claim says it is one.
-   - Point at the line's file, `_docs/<line>.md`, for the exemplar calls.
+1. **Identity line** — the research composition's statement, copied verbatim, then the
+   composition's name, or a stack of them. Name no path: a fork keeps this file.
+   - Cite a research pattern by handle only where the composition names it.
+   - The composition's document lists the members; this file lists none of its own.
 2. **What this archetype is** — the player experience in prose, as this build realizes
-   it. The line's general prose is in its `_docs/` file.
+   it. The composition's general prose is in its composition document.
 3. **Rate-function spine** — the bucket, where the closed form stops, and what measures the
    remainder. The rest of the archetype depends on this section.
 4. **The arc / beat map** — where the run turns.

@@ -17,7 +17,7 @@ Forkable best-practice implementations of the archetype set. Each archetype is a
 
 This half is a research-output surface inside starter. Its maintenance discipline is research grounding. An archetype is grounded in two things:
 
-- **The pattern language:** the research patterns its identity line composes, cited by handle. `_identity.md` lists each line with its tier and its pattern-coverage grade, and the grade fixes what the line may cite. `_docs/<line>.md` records the call on every exemplar.
+- **The pattern language:** the research composition its identity line states, or a stack of them, with research patterns cited by handle. `archetypes/README.md` maps each archetype to its composition. The composition's document in the studio's research library lists the members, so a story lists none of its own.
 - **A rate-function balance spine** that *generates* its balance.
 
 A spine declares its coverage boundary: the named bucket of its closed core, where the closed form stops, and what measures the remainder. Full coverage is the simple case; partial coverage is ordinary. "No bucket" is not an available answer. An economy with no declared spine has no balance; it has values. Exemplar games show that the research composition ships in real games. They are cited as a set, crosses included, and are never lift targets.

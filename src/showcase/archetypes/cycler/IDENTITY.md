@@ -6,8 +6,8 @@
 > `meta-progression` keeping unlocks across runs. Build during the calm, survive the
 > pressure, repeat with escalating stakes.
 
-Identity line source: `../_identity.md` (Cycler entry); the line's player experience and
-exemplar calls are `../_docs/cycler.md`. **Core · open core.** Dome Keeper, Thronefall and
+Research composition: **Phase alternation**. Its composition document in the studio's research
+library lists the members and the membership claims. Dome Keeper, Thronefall and
 Kingdom Two Crowns show the composition ships, as a set; none is a lift target.
 
 ## What this archetype is

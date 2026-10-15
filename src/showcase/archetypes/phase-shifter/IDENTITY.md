@@ -5,9 +5,8 @@
 > `statistics`, with an `ending`. Each door changes what the player does: a reader,
 > then an arranger, then a planner, then a reader again for one page.
 
-Identity line source: `../_identity.md` (Phase-shifter entry), with its door test; the
-line's player experience and exemplar calls are `../_docs/phase-shifter.md`. **Core ·
-open core.** The defining component, the one-way mechanic lifecycle, has no research
+Research composition: **The one-way lifecycle**. Its composition document in the studio's research
+library lists the members and the membership claims. The defining component, the one-way mechanic lifecycle, has no research
 pattern, so this build designs it (§ The defining component). Universal Paperclips, A
 Dark Room and Candy Box 2 show the composition ships, as a set; none is a lift target.
 

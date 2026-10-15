@@ -6,18 +6,16 @@
 > numbers — a single tracked number rising at a tunable rate, wired through the
 > full canonical shape so a novel composition starts green and consistent.
 
-**Unregistered.** `_blank` names no game shape the studio has a story for, so it has
-no line in `../_identity.md`, no tier and no pattern-coverage grade. That is a
-different case from a **claim**, which is a registered line that cites no research
-pattern; a novel composition simply has no registry entry until someone writes one.
+**No research composition.** `_blank` names no game shape, so it has no research
+composition. That is a different case from a **design claim**, a story whose shape
+cites no research pattern; a novel composition simply has none until someone writes one.
 
-A real archetype replaces both lines. Source the identity line from `../_identity.md`
-and carry the tier and pattern-coverage grade that registry gives it — the grade
-fixes what the line may cite: research patterns by handle only where a sourced,
-in-called exemplar is a member, the defining component named as having no pattern in
-an open core, and the claim said as one with no patterns. Register the line there, and
-write its `../_docs/<line>.md`, before writing it here; a line that exists only in
-this file is ungrounded by construction.
+A real archetype replaces both paragraphs. Copy its research composition's statement
+into the quote verbatim, and name the composition below it. Where no single
+composition states the game, name a stack of them. The composition's document in the
+studio's research library lists its members, so a story never lists exemplars of its
+own. Write the composition there before you write it here: a composition that exists
+only in this file is ungrounded.
 
 This file is the template for a real archetype's `IDENTITY.md`. It has every
 required section, filled in for the neutral base. When you build on `pnpm eject --clean`, rewrite each section for

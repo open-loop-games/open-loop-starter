@@ -29,17 +29,30 @@ directions it grows through. Start there.
 | `tug`      | Waves on alternating horns contest one causeway; a career marches across fifteen fields |
 | `_blank`   | Neutral skeleton — the starting point for a novel research composition |
 
-`_identity.md` is the identity-line registry across the set. It carries more lines than
-there are directories here — a line is a game shape the studio wants a story for: a
-research composition with its exemplar set, a tier (core
-incremental expression, or adjacent engine example) and a pattern-coverage grade saying how much
-of it research patterns cover. A line exists independent of whether an archetype has
-been built for it. Each line's explanation — player experience, the call on every
-exemplar, lineage — is `_docs/<line>.md`.
+Each archetype tells one research composition, or a stack of them. The compositions,
+with their members and membership claims, are in the studio's research library, under
+research's names. This table maps each archetype to them.
+
+| Archetype | Research composition |
+| --- | --- |
+| `cycler` | Phase alternation |
+| `defender` | Maze tower defence |
+| `explorer` | The uncovered map |
+| `interlocker` | The settlement |
+| `looper` | The loop game |
+| `packer` | The arrangement board |
+| `phase-shifter` | The one-way lifecycle |
+| `producer` | The production curve |
+| `scaler` | The automation ladder + The prestige stack + The graded run |
+| `scripter` | The policy game |
+| `skirmish` | none: a design claim that cites no research pattern |
+| `survivor` | The auto-fire arena |
+| `tug` | The shared lane |
 
 ## Where to look
 
-- **What a line is, built or not** — `_docs/<line>.md`.
+- **What a composition is, and which games are its members** — its composition document,
+  in the studio's research library.
 - **What an archetype is** — its `IDENTITY.md`.
 - **What its domain language looks like** — its generated `domain-map.md`.
 - **How its economy is checked** — its `balance/` (probes and projections) and `sim/`

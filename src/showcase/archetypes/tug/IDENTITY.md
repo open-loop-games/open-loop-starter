@@ -6,8 +6,8 @@
 > author pressure against an opponent authoring pressure in the same space; what you earn
 > outlasts the match.
 
-Identity line source: `../_identity.md` (Tug entry); the line's player experience and
-exemplar calls are `../_docs/tug.md`. **Core · open core.** Warfare 1917 and Minion Masters
+Research composition: **The shared lane**. Its composition document in the studio's research
+library lists the members and the membership claims. Warfare 1917 and Minion Masters
 show the composition ships; Age of War, Legion TD 2 and Direct Strike are the lane-push
 crosses. None is a lift target.
 

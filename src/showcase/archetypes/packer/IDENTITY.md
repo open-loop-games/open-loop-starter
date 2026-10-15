@@ -7,8 +7,8 @@
 > `prestige` starts the board over with what it earned kept. Arrangement is the score;
 > the player is arranger.
 
-Identity line source: `../_identity.md` (Packer entry); the line's player experience and
-exemplar calls are `../_docs/packer.md`. **Core · covered.** Calculator Evolution, NGU
+Research composition: **The arrangement board**. Its composition document in the studio's research
+library lists the members and the membership claims. Calculator Evolution, NGU
 Industries and Ballionaire show the research composition ships, as a set; none is a lift
 target. NGU Industries is the `scaled-opposition` member and Calculator Evolution the
 `prestige` member among them.

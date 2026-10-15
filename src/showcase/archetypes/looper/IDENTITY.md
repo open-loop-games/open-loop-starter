@@ -6,8 +6,8 @@
 > skill track have no pattern. A run is a rehearsal; the game is the diff between two
 > runs.
 
-Identity line source: `../_identity.md` (Looper entry); the line's player experience and
-exemplar calls are `../_docs/looper.md`. **Core · open core.** The defining component,
+Research composition: **The loop game**. Its composition document in the studio's research
+library lists the members and the membership claims. The defining component,
 per-action duration with a parallel skill track, has no research pattern, so this build
 designs it (§ The defining component). Increlution, Idle Loops, Cavernous II and
 Progress Knight 2 show the composition ships, as a set; none is a lift target.

@@ -6,10 +6,10 @@
 > `meta-progression` above and `automation` taking the running of the works over. Wide,
 > not deep: the graph is the content.
 
-Identity line source: `../_identity.md` (Interlocker entry); the line's player experience
-and exemplar calls are `../_docs/interlocker.md`. **Core · covered.** Kittens Game,
+Research composition: **The settlement**. Its composition document in the studio's research
+library lists the members and the membership claims. Kittens Game,
 Industry Idle and Evolve show the composition ships, as a set; none is a lift target.
-This build adds one thing the line does not carry: an `ending`, which all three exemplars
+This build adds one thing the composition does not name: an `ending`, which all three exemplars
 decline.
 
 ## What this archetype is

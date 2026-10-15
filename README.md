@@ -53,7 +53,7 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 
 ## Archetype demos
 
-`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a research composition — its identity line — built on a rate-function balance spine, showing a distinct slice of engine systems and a distinct layout shell. How much of a shape research can ground varies by archetype and is stated per line as its pattern-coverage grade in `src/showcase/archetypes/_identity.md`: some are covered by research patterns, others are design claims said as such. Exemplar games validate that a research composition ships in the wild; they are cited as a set and are not clone targets. Pick the one closest to your game and `eject` it (above).
+`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a research composition — its identity line — built on a rate-function balance spine, showing a distinct slice of engine systems and a distinct layout shell. Each maps to a research composition in the studio's research library, which lists the games that are its members; one, Skirmish, is a design claim said as such. Exemplar games validate that a research composition ships in the wild; they are cited as a set and are not clone targets. Pick the one closest to your game and `eject` it (above).
 
 | Archetype | Demo | Shell | Engine systems | What it shows |
 |---|---|---|---|---|

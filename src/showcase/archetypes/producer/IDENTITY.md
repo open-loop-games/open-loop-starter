@@ -5,11 +5,10 @@
 > automation ladder with its `prestige` declined, which is Scaler's. No adversary, no
 > board, no run: the curve is the content.
 
-Identity line source: `../_identity.md` (Producer entry); the line's player experience,
-exemplar calls and the slow-end configuration are `../_docs/producer.md`. **Core ·
-covered.** Cookie Clicker, AdVenture Capitalist, Antimatter Dimensions and Universal
+Research composition: **The production curve**. Its composition document in the studio's research
+library lists the members and the membership claims. Cookie Clicker, AdVenture Capitalist, Antimatter Dimensions and Universal
 Paperclips show the composition ships, as a set; none is a lift target. This build also
-carries `scheduled-event` and `random-draw` (the tips) and an `ending`, beyond the line.
+carries `scheduled-event` and `random-draw` (the tips) and an `ending`, beyond the composition.
 
 ## What this archetype is
 
@@ -81,8 +80,8 @@ it against the projection; `allocation-probe.ts` swaps the desk's rule.
 
 ## Growth ports
 
-- **The slow end.** The same composition paced for time away, `../_docs/producer.md`
-  § The slow-end profile.
+- **The slow end.** The same composition paced for time away, as its composition
+  document describes.
 
 ## Engine fit
 

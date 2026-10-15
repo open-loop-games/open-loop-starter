@@ -50,8 +50,9 @@ the gallery.
 ## Authoring a new archetype
 
 1. Copy `src/showcase/archetypes/_blank/` to `src/showcase/archetypes/<name>/`.
-2. Register its line in `src/showcase/archetypes/_identity.md`, and write the
-   line's `_docs/<line>.md`.
+2. Name its research composition, or a stack of them, in
+   `src/showcase/archetypes/README.md`. A composition research does not have yet is
+   written there first.
 3. Rewrite `IDENTITY.md` and `BALANCING.md`. Each has every required section;
    `.claude/rules/archetype-authoring.md` says what each section contains.
 4. Write `manifest.ts` with the typed `ArchetypeManifest` export (see

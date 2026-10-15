@@ -6,8 +6,9 @@
 > Producer's exemplars do not share; `manual-action` is the one Scaler's drop. Each
 > layer compresses the one below it.
 
-Identity line source: `../_identity.md` (Scaler entry); the line's player experience and
-exemplar calls are `../_docs/scaler.md`. **Core · covered.** Antimatter Dimensions, The
+Research compositions, stacked: **The automation ladder**, **The prestige stack** and
+**The graded run**. Their composition documents in the studio's research library list the
+members and the membership claims. Antimatter Dimensions, The
 Prestige Tree, Synergism and NGU Idle show the composition ships, as a set; none is a
 lift target. This build also carries `automation`, one piece per layer it hands off.
 

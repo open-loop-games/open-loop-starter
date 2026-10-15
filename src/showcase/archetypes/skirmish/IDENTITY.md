@@ -7,8 +7,7 @@
 > real time; build order, composition and engagement are the decision surface
 > because rivals make theirs at the same time, and policies drive the seats.
 
-Registered in `../_identity.md` (Skirmish entry); the line's player experience is
-`../_docs/skirmish.md`. **Adjacent · claim** — the corpus holds no sourced exemplar
+No research composition: a design claim, adjacent to the incremental set — the corpus holds no sourced exemplar
 for the shape, and no research pattern is cited. The economy is the substrate every archetype shares (a stock,
 a rate, a spend); the opponents are what is load-bearing rather than decorative,
 and they come from the adjacent game-AI corpus
