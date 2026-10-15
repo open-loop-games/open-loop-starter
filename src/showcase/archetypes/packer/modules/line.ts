@@ -10,6 +10,7 @@ import {
   type InjectionKey,
   type ShallowRef,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   CARRIER_WINDOW_S,
   CARRIERS,
@@ -62,11 +63,10 @@ export interface LineApi {
 
 export const LineKey: InjectionKey<LineApi> = Symbol('packer/line') as InjectionKey<LineApi>;
 
-let api: LineApi;
+const lineApi = createModuleApi(LineKey);
 
-export function getLine(): LineApi {
-  return api;
-}
+/** The breach line: the engagement, its window and the recommission. Read it after the engine starts. */
+export const getLine = lineApi.get;
 
 export function createLineModule(): EngineModule {
   return {
@@ -144,7 +144,7 @@ export function createLineModule(): EngineModule {
         () => fleet.shipDone.value && fleet.shipIndex.value < SHIPS.length - 1 && !engagement.value,
       );
 
-      api = {
+      const api: LineApi = {
         engagement,
         last,
         hullOf,
@@ -160,7 +160,7 @@ export function createLineModule(): EngineModule {
         recommission: () => cycle.end(),
         cycle,
       };
-      ctx.provide(LineKey, api);
+      lineApi.publish(ctx, api);
     },
   };
 }

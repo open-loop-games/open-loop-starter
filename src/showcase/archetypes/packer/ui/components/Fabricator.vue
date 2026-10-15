@@ -4,13 +4,16 @@
   hand; clicking a schematic with copies in the bay takes one into the hand, or lets go of
   it. The next schematic still encrypted shows how far salvage has come toward it.
 
-  Declines ProducerList: its row contract requires a rate, and a fabricated module
-  produces nothing until it is fitted, so the row has no rate to show.
+  Each schematic is a ProducerList row over its fabricator purchasable, drawn in the `#row`
+  slot. The row has no rate, because a module produces nothing until it is fitted; the bay
+  count beside it is the board's, the copies fabricated and not yet fitted.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal, toNumber } from '@open-loop/engine';
+import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
+import { ProducerList, createPurchasableRow } from '@/ui/compositions';
 import { PIECES, unlockGate, type PieceDef } from '../../data';
 import { getBoard, getFleet, getYard } from '../../modules';
 import { useFitting } from '../fitting';
@@ -21,15 +24,12 @@ const board = getBoard();
 const fleet = getFleet();
 const fitting = useFitting();
 
-const rows = computed(() =>
-  PIECES.filter((p) => yard.unlocked(p.id)).map((def) => {
-    const fab = yard.fabricator.getPurchasable(def.id)!;
-    return {
-      def,
-      price: toNumber(fab.getCost(1)),
-      afford: fab.canPurchase.value,
-      stock: board.stock(def.id),
-    };
+const rows = PIECES.map((def) =>
+  createPurchasableRow(yard.fabricator.getPurchasable(def.id)!, {
+    id: def.id,
+    displayName: def.name,
+    purchase: () => fabricate(def),
+    extra: def,
   }),
 );
 
@@ -60,68 +60,63 @@ function hold(def: PieceDef) {
 <template>
   <section class="fabricator">
     <h2 class="hp-head">Fabricator</h2>
-    <ul>
-      <li
-        v-for="r in rows"
-        :key="r.def.id"
-        class="schematic"
-        :class="[`pc-${r.def.id}`, { held: fitting.hand === r.def.id, stocked: r.stock > 0 }]"
-      >
-        <Button
-          class="pick"
-          :disabled="r.stock === 0"
-          :aria-pressed="fitting.hand === r.def.id"
-          :aria-label="`Hold ${r.def.name}`"
-          @click="hold(r.def)"
+    <ProducerList :rows="rows" bulk-mode-source="none">
+      <template #row="{ row, pendingCost, purchase }">
+        <div
+          class="schematic"
+          :class="[
+            `pc-${row.id}`,
+            { held: fitting.hand === row.id, stocked: board.stock(row.extra!.id) > 0 },
+          ]"
         >
-          <span class="tile">{{ r.def.glyph }}</span>
-          <span class="body">
-            <span class="name">{{ r.def.name }}</span>
-            <span class="rel hp-ink">{{ r.def.relationName }}</span>
-            <span class="blurb">{{ r.def.blurb }}</span>
-          </span>
-        </Button>
-        <div class="side">
-          <span class="bay hp-num" :class="{ empty: r.stock === 0 }">bay {{ r.stock }}</span>
           <Button
-            class="hp-act"
-            :class="{ can: r.afford }"
-            :disabled="!r.afford"
-            :aria-label="`Fabricate ${r.def.name} for ${fmt(r.price)} salvage`"
-            @click="fabricate(r.def)"
+            class="pick"
+            :disabled="board.stock(row.extra!.id) === 0"
+            :aria-pressed="fitting.hand === row.id"
+            :aria-label="`Hold ${row.displayName}`"
+            @click="hold(row.extra!)"
           >
-            {{ fmt(r.price) }}
+            <span class="tile">{{ row.extra!.glyph }}</span>
+            <span class="body">
+              <span class="name">{{ row.displayName }}</span>
+              <span class="rel hp-ink">{{ row.extra!.relationName }}</span>
+              <span class="blurb">{{ row.extra!.blurb }}</span>
+            </span>
           </Button>
+          <div class="side">
+            <span class="bay hp-num" :class="{ empty: board.stock(row.extra!.id) === 0 }"
+              >bay {{ board.stock(row.extra!.id) }}</span
+            >
+            <Button
+              class="hp-act"
+              :class="{ can: row.canPurchase(1) }"
+              :disabled="!row.canPurchase(1)"
+              :aria-label="`Fabricate ${row.displayName} for ${fmt(pendingCost!)} salvage`"
+              @click="purchase"
+            >
+              {{ fmt(pendingCost!) }}
+            </Button>
+          </div>
         </div>
-      </li>
-      <li v-if="nextLocked" :key="nextLocked.def.id" class="schematic encrypted">
-        <span class="pick">
-          <span class="tile">?</span>
-          <span class="body">
-            <span class="name">Encrypted schematic</span>
-            <span class="rel">decrypts as salvage comes in</span>
-            <span class="meter"
-              ><span class="fill" :style="{ transform: `scaleX(${nextLocked.progress})` }"
-            /></span>
-          </span>
+      </template>
+    </ProducerList>
+    <div v-if="nextLocked" class="schematic encrypted">
+      <span class="pick">
+        <span class="tile">?</span>
+        <span class="body">
+          <span class="name">Encrypted schematic</span>
+          <span class="rel">decrypts as salvage comes in</span>
+          <ProgressBar class="meter" :value="nextLocked.progress" />
         </span>
-        <div class="side">
-          <span class="bay hp-num">{{ fmt(nextLocked.gate) }}</span>
-        </div>
-      </li>
-    </ul>
+      </span>
+      <div class="side">
+        <span class="bay hp-num">{{ fmt(nextLocked.gate) }}</span>
+      </div>
+    </div>
   </section>
 </template>
 
 <style scoped>
-ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 .schematic {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -210,17 +205,19 @@ ul {
 .encrypted .rel {
   color: var(--readout-dim);
 }
-.meter {
-  display: block;
+.encrypted {
   margin-top: 6px;
-  height: 3px;
-  background: var(--hull-seam);
-  overflow: hidden;
 }
-.meter .fill {
-  display: block;
-  height: 100%;
-  background: var(--blueprint);
-  transform-origin: left;
+.meter {
+  --progress-bar-height: 3px;
+  --progress-bar-track: var(--hull-seam);
+  --progress-bar-track-empty: var(--hull-seam);
+  --progress-bar-fill: var(--blueprint);
+  --progress-bar-fill-full: var(--blueprint);
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-radius: 0;
+  --progress-bar-transition: none;
+  margin-top: 6px;
 }
 </style>

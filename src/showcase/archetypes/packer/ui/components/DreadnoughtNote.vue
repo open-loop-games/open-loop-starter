@@ -1,7 +1,6 @@
 <!--
   DreadnoughtNote — the story's end, shown once, when the Dreadnought falls, on the
-  scaffold's modal stack. The line goes on: raised carriers keep coming. The stack
-  portals it outside `.hardpoint`, so its root carries the costume class itself.
+  scaffold's modal stack. The line goes on: raised carriers keep coming.
 -->
 <script setup lang="ts">
 import { DialogTitle } from 'reka-ui';
@@ -17,7 +16,7 @@ defineProps<{
 </script>
 
 <template>
-  <section class="hardpoint hp-modal hp-dreadnought">
+  <section class="hp-modal hp-dreadnought">
     <div class="wreck" aria-hidden="true">
       <span v-for="i in 5" :key="i" class="mark" />
     </div>

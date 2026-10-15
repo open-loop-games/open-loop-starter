@@ -30,7 +30,7 @@ const offer = computed(() => {
 function confirm() {
   const o = offer.value;
   if (!o) return;
-  const id = stack.push(
+  stack.push(
     RecommissionConfirm,
     {
       from: ship.def.value.name,
@@ -41,12 +41,10 @@ function confirm() {
       honourMult: fleet.honourMult.value,
       schematics: fleet.decrypted.value.map((p) => PIECE_BY_ID[p].name),
       onConfirm: () => {
-        stack.remove(id);
         fitting.hand = null;
         fitting.facing = 0;
         line.recommission();
       },
-      onCancel: () => stack.remove(id),
     },
     'sm',
   );

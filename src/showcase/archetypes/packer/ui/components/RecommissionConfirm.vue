@@ -1,14 +1,14 @@
 <!--
   RecommissionConfirm — the last word before the yard is cleared, pushed on the scaffold's
-  modal stack. The stack portals it outside `.hardpoint`, so its root carries the costume
-  class itself. Dismissing the dialog cancels.
+  modal stack. Stay on, or dismissing the dialog, closes it; Commission closes it and
+  commissions.
 -->
 <script setup lang="ts">
 import { DialogTitle } from 'reka-ui';
 import Button from '@/ui/components/Button.vue';
 import { fmt, times } from '../format';
 
-defineProps<{
+const props = defineProps<{
   /** the ship being stood down */
   from: string;
   name: string;
@@ -20,12 +20,17 @@ defineProps<{
   /** names of every schematic recovered */
   schematics: string[];
   onConfirm: () => void;
-  onCancel: () => void;
+  onClose: () => void;
 }>();
+
+function commission(): void {
+  props.onClose();
+  props.onConfirm();
+}
 </script>
 
 <template>
-  <section class="hardpoint hp-modal hp-recommission">
+  <section class="hp-modal hp-recommission">
     <DialogTitle as-child>
       <h2 class="hp-modal-title">Commission the {{ name }}?</h2>
     </DialogTitle>
@@ -56,8 +61,8 @@ defineProps<{
       </div>
     </div>
     <div class="actions">
-      <Button class="hp-act cancel" @click="onCancel">Stay on</Button>
-      <Button class="hp-act can" @click="onConfirm">Commission</Button>
+      <Button class="hp-act cancel" @click="onClose">Stay on</Button>
+      <Button class="hp-act can" @click="commission">Commission</Button>
     </div>
   </section>
 </template>

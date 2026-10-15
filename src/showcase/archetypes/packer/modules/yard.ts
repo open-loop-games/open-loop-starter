@@ -21,6 +21,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   CALIBRATION_RATIO,
   CALIBRATION_STEP,
@@ -81,11 +82,10 @@ export const YardKey: InjectionKey<YardApi> = Symbol('packer/yard') as Injection
 /** The yard's persistent context: what a recommission clears. */
 export const YARD_CONTEXT = 'packer/yard';
 
-let api: YardApi;
+const yardApi = createModuleApi(YardKey);
 
-export function getYard(): YardApi {
-  return api;
-}
+/** What salvage buys on the ship in service. Read it after the engine starts. */
+export const getYard = yardApi.get;
 
 /** A refit's beat id: `frigate:fire-control` is scheduled as `frigate:refit:fire-control`. */
 export const refitBeat = (def: RefitDef) => def.id.replace(':', ':refit:');
@@ -242,7 +242,7 @@ export function createYardModule(): EngineModule {
         }),
       });
 
-      api = {
+      const api: YardApi = {
         salvage,
         fabricator,
         hull,
@@ -258,7 +258,7 @@ export function createYardModule(): EngineModule {
           (section > 0 &&
             !!hull.getPurchasable(`${fleet.ship.value}:section-${section}`)?.active.value),
       };
-      ctx.provide(YardKey, api);
+      yardApi.publish(ctx, api);
     },
   };
 }

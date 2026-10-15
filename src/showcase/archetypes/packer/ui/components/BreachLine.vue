@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue';
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { CARRIER_WINDOW_S, HONOUR_MULT, LINE_OPENS, SHIP_BY_ID, SHIPS } from '../../data';
 import { getBoard, getFleet, getLine, getYard, type Engagement } from '../../modules';
 import { fmt, pct, secs, times } from '../format';
@@ -63,6 +64,17 @@ const target = computed(() => {
     /** what the fitted fire needs to fell it inside the window */
     needs: remaining / Math.max(left, 1e-9),
   };
+});
+
+/** The hull left when the window closes, then the hatched strip the fit takes before then. */
+const hullSegments = computed(() => {
+  const t = target.value;
+  if (!t) return [];
+  const kept = t.falls ? 0 : t.holdsAt;
+  return [
+    { value: kept, class: 'fill' },
+    { value: t.remaining / t.hull - kept, class: t.falls ? 'strip falls' : 'strip' },
+  ];
 });
 
 /** Why the Engage plate is cold, when it is. */
@@ -120,32 +132,21 @@ watch(line.engagement, (now, was: Engagement | null) => {
             >{{ fmt(target.remaining) }} <small>/ {{ fmt(target.hull) }} hull</small></span
           >
         </div>
-        <div
+        <ProgressBar
           class="hull-bar"
           role="meter"
           :aria-valuenow="target.remaining"
           :aria-valuemax="target.hull"
           aria-valuemin="0"
           :aria-label="`${target.c.def.name} hull`"
-        >
-          <span
-            class="strip"
-            :class="{ falls: target.falls }"
-            :style="{ transform: `scaleX(${target.remaining / target.hull})` }"
-          />
-          <span
-            class="fill"
-            :style="{
-              transform: `scaleX(${target.falls ? 0 : target.holdsAt})`,
-            }"
-          />
-        </div>
-        <div class="clock" :aria-label="`window ${secs(target.left)} left`">
-          <span
-            class="clock-fill"
-            :style="{ transform: `scaleX(${target.elapsed / CARRIER_WINDOW_S})` }"
-          />
-        </div>
+          :segments="hullSegments"
+        />
+        <ProgressBar
+          class="clock"
+          :value="target.elapsed"
+          :max="CARRIER_WINDOW_S"
+          :aria-label="`window ${secs(target.left)} left`"
+        />
       </div>
     </div>
     <div class="console">
@@ -307,52 +308,53 @@ watch(line.engagement, (now, was: Engagement | null) => {
   color: var(--readout-dim);
 }
 .hull-bar {
-  position: relative;
-  height: 12px;
-  background: var(--void);
-  border: 1px solid color-mix(in srgb, var(--breach) 35%, var(--hull-seam));
-  border-radius: 2px;
-  overflow: hidden;
+  --progress-bar-height: 12px;
+  --progress-bar-track: var(--void);
+  --progress-bar-track-empty: var(--void);
+  --progress-bar-border: 1px solid color-mix(in srgb, var(--breach) 35%, var(--hull-seam));
+  --progress-bar-shadow: none;
+  --progress-bar-radius: 2px;
+  --progress-bar-transition: none;
 }
-.hull-bar > span {
-  position: absolute;
-  inset: 0;
-  transform-origin: left;
-}
-/* What the window will strip, hatched: plasma when it reaches zero, slag when it falls short. */
-.strip {
+/* What the window will strip, hatched: plasma when it reaches zero, slag when it falls short.
+   The hatch is clipped to its span, not scaled, so its stripes keep their pitch. */
+.hull-bar :deep(.strip) {
+  transform: none;
+  clip-path: inset(
+    0 calc((1 - var(--progress-bar-offset) - var(--progress-bar-ratio)) * 100%) 0
+      calc(var(--progress-bar-offset) * 100%)
+  );
   background: repeating-linear-gradient(
     135deg,
     color-mix(in srgb, var(--slag) 55%, transparent) 0 3px,
     transparent 3px 7px
   );
 }
-.strip.falls {
+.hull-bar :deep(.strip.falls) {
   background: repeating-linear-gradient(
     135deg,
     color-mix(in srgb, var(--plasma) 55%, transparent) 0 3px,
     transparent 3px 7px
   );
 }
-.fill {
+.hull-bar :deep(.fill) {
   background: linear-gradient(180deg, #ff7676, var(--breach) 60%, #c94343);
   filter: saturate(0.45) brightness(0.7);
 }
 /* The carrier at rest is held back; under fire its hull burns at full strength. */
-.engaged .fill {
+.engaged .hull-bar :deep(.fill) {
   filter: none;
 }
 .clock {
-  position: relative;
-  height: 3px;
-  background: var(--hull-seam);
-  overflow: hidden;
-}
-.clock-fill {
-  position: absolute;
-  inset: 0;
-  background: var(--blueprint);
-  transform-origin: left;
+  --progress-bar-height: 3px;
+  --progress-bar-track: var(--hull-seam);
+  --progress-bar-track-empty: var(--hull-seam);
+  --progress-bar-fill: var(--blueprint);
+  --progress-bar-fill-full: var(--blueprint);
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-radius: 0;
+  --progress-bar-transition: none;
 }
 
 /* ── the console: the verdict, the need, the Engage plate ── */

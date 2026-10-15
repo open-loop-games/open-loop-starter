@@ -153,6 +153,32 @@
   background: var(--void);
   border-bottom: 1px solid var(--hull-seam);
 }
+/* The brand: the ship's name stencilled over the bay's station line. The header is named
+   twice so these outrank its own scoped rules. */
+.hardpoint .olui-system-header .olui-system-header__title-btn {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.hardpoint .olui-system-header .olui-system-header__title {
+  margin: 0;
+  font-family: var(--face-stencil);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--readout);
+  line-height: 1;
+}
+.hardpoint .olui-system-header .olui-system-header__subtitle {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--blueprint-dim);
+}
+.hardpoint .olui-system-header .olui-system-header__title-btn:hover .olui-system-header__title {
+  color: var(--blueprint);
+}
 .hardpoint .olui-system-header__actions {
   align-items: center;
   gap: 14px;
@@ -315,18 +341,16 @@
   min-width: 0;
 }
 
-/* ── the commission and the Dreadnought, on the scaffold's modal stack ──
-   The stack portals to <body>, outside `.hardpoint`; each dialog's own root carries the
-   class, and this rule dresses the box it is mounted in. */
-.olui-modal-content:has(.hp-modal) {
+/* ── the commission and the Dreadnought: the modal box drawn as a bulkhead plate ── */
+.hardpoint .olui-modal-content:has(> .hp-modal) {
   padding: 0;
-  background: #0c131d;
-  border: 1px solid #1d2b3b;
-  border-top: 2px solid #ece3c8;
-  border-radius: 3px;
+  background: var(--hull);
+  border: 1px solid var(--hull-seam);
+  border-top: 2px solid var(--honour);
+  border-radius: var(--radius-plate);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
-.hardpoint.hp-modal {
+.hardpoint .hp-modal {
   display: flex;
   flex-direction: column;
   padding: 20px 22px 18px;

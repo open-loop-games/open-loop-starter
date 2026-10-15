@@ -6,6 +6,7 @@ import {
   type InjectionKey,
   type Persistent,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   CARRIERS,
   CONDITIONS,
@@ -59,11 +60,10 @@ export interface FleetApi {
 
 export const FleetKey: InjectionKey<FleetApi> = Symbol('packer/fleet') as InjectionKey<FleetApi>;
 
-let api: FleetApi;
+const fleetApi = createModuleApi(FleetKey);
 
-export function getFleet(): FleetApi {
-  return api;
-}
+/** The ship in service, its carriers and what a recommission keeps. Read it after the engine starts. */
+export const getFleet = fleetApi.get;
 
 /** The conditions a carrier raised past a ship's last brings: one, then two, seeded by its count. */
 function raisedConditions(sector: number): ConditionId[] {
@@ -110,7 +110,7 @@ export function createFleetModule(): EngineModule {
           : carrierAt(authoredFallen.value, c.beyond);
       });
 
-      api = {
+      const api: FleetApi = {
         shipIndex,
         ship,
         honours,
@@ -128,7 +128,7 @@ export function createFleetModule(): EngineModule {
         }),
         storyEnded,
       };
-      ctx.provide(FleetKey, api);
+      fleetApi.publish(ctx, api);
     },
   };
 }

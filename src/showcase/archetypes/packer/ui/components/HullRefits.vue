@@ -2,21 +2,15 @@
   HullRefits — what salvage buys besides modules: the ship in service's next hull section,
   the refits once cleared, and calibration once the breach line is open. Hovering the
   section's card outlines the sealed cells it would open on the board; a section the
-  schedule puts behind a carrier names that carrier until it falls. Both lists adopt
-  UpgradeGrid through its `#card` slot; the section card carries the hover the board reads.
+  schedule puts behind a carrier names that carrier until it falls. Both lists are purchasable
+  cards on UpgradeGrid, drawn in its `#card` slot; the section card carries the hover the
+  board reads.
 -->
 <script setup lang="ts">
 import { computed, unref } from 'vue';
-import {
-  isCostRequirement,
-  requirementsMet,
-  toNumber,
-  type Purchasable,
-  type PurchasableCategory,
-} from '@open-loop/engine';
+import { toNumber, type PurchasableCategory } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import UpgradeGrid from '@/ui/compositions/UpgradeGrid.vue';
-import type { UpgradeCardData } from '@/ui/compositions';
+import { UpgradeGrid, createPurchasableCard, type UpgradeCardData } from '@/ui/compositions';
 import { CALIBRATION_STEP, REFIT_MULT } from '../../data';
 import { getBoard, getYard } from '../../modules';
 import { useFitting } from '../fitting';
@@ -29,48 +23,36 @@ const fitting = useFitting();
 interface Extra {
   /** hull section index, for the board's plating outline; absent on a refit */
   section?: number;
-  /** what still bars it besides salvage: a carrier to destroy */
-  bars?: () => string[];
 }
 
-/** A purchasable's unmet requirements other than its price, by their descriptions. */
-const barsOf = (p: Purchasable) => () => {
-  const reqs = [p.requirements].flat();
-  return reqs
-    .filter((r) => !isCostRequirement(r) && !requirementsMet(r))
-    .map((r) => unref(r.description) ?? '')
-    .filter((d) => d && !d.endsWith('plated'));
-};
-
+/** One card per purchasable; its description is read once, so the slot prints a string. */
 function cardsOf<D extends { id: string; name: string }>(
   category: PurchasableCategory<D>,
-  extra: (def: D, p: Purchasable) => Extra,
+  extra: (def: D) => Extra,
 ): UpgradeCardData<Extra>[] {
-  return category.getAll().map(({ def, purchasable: p }) => ({
-    id: def.id,
-    displayName: def.name,
-    description: unref(p.display.description),
-    cost: computed(() => toNumber(p.getCost(1))),
-    costLabel: 'salvage',
-    canPurchase: p.canPurchase,
-    owned: p.active,
-    purchase: () => p.purchase(1),
-    extra: extra(def, p),
-  }));
+  return category.getAll().map(({ def, purchasable: p }) =>
+    createPurchasableCard<Extra>(p, {
+      displayName: def.name,
+      description: unref(p.display.description),
+      extra: extra(def),
+    }),
+  );
 }
 
-const sectionCards = cardsOf(yard.hull, (def, p) => ({ section: def.index, bars: barsOf(p) }));
+/**
+ * What still bars a card besides salvage: a carrier to destroy. Sections plate in order and
+ * only the next is offered, so the previous section's plating is not news.
+ */
+const bars = (c: UpgradeCardData<Extra>) => c.unmet!.value.filter((d) => !d.endsWith('plated'));
+
+const sectionCards = cardsOf(yard.hull, (def) => ({ section: def.index }));
 const refitCards = cardsOf(yard.refits, () => ({}));
 
 /** Sections plate in order, so only the ship's next one is offered. */
 const nextSection = computed(() =>
-  sectionCards
-    .filter((c) => !c.owned.value && yard.hull.getPurchasable(c.id)!.visible.value)
-    .slice(0, 1),
+  sectionCards.filter((c) => !c.owned.value && c.unlocked!.value).slice(0, 1),
 );
-const shownRefits = computed(() =>
-  refitCards.filter((c) => yard.refits.getPurchasable(c.id)!.visible.value),
-);
+const shownRefits = computed(() => refitCards.filter((c) => c.unlocked!.value));
 const openRefits = computed(() => shownRefits.value.filter((c) => !c.owned.value));
 const installed = computed(() => shownRefits.value.filter((c) => c.owned.value));
 const hullArmed = computed(
@@ -95,7 +77,7 @@ const calPrice = computed(() => toNumber(calibration.getCost(1)));
           <div>
             <div class="name">{{ c.displayName }}</div>
             <div class="sub">{{ c.description }}</div>
-            <div v-for="b in c.extra!.bars!()" :key="b" class="bar-req">needs {{ b }}</div>
+            <div v-for="b in bars(c)" :key="b" class="bar-req">needs {{ b }}</div>
           </div>
           <Button
             class="hp-act"

@@ -15,6 +15,7 @@ import {
   type ProducerCategory,
   type SpatialGrid,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   BEACON_GAIN,
   COOLANT_GAIN,
@@ -114,11 +115,10 @@ export const BoardKey: InjectionKey<BoardApi> = Symbol('packer/board') as Inject
 /** The board's persistent context: what a recommission clears. */
 export const BOARD_CONTEXT = 'packer/board';
 
-let api: BoardApi;
+const boardApi = createModuleApi(BoardKey);
 
-export function getBoard(): BoardApi {
-  return api;
-}
+/** The fitted hull: its modules, their layout and its firepower. Read it after the engine starts. */
+export const getBoard = boardApi.get;
 
 /** Corner-only adjacency: the four diagonals without the orthogonals. */
 const CORNER_OFFSETS: readonly GridOffset[] = [
@@ -303,7 +303,7 @@ export function createBoardModule(): EngineModule {
         placed.value = placed.value.map((q) => (q.id === id ? turned : q));
       }
 
-      api = {
+      const api: BoardApi = {
         placed,
         layout,
         firepower,
@@ -334,7 +334,7 @@ export function createBoardModule(): EngineModule {
         ],
         view,
       };
-      ctx.provide(BoardKey, api);
+      boardApi.publish(ctx, api);
     },
   };
 }
