@@ -8,14 +8,8 @@
 import { computed, nextTick, watch } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
-import {
-  TECHNIQUES,
-  challenger,
-  techniqueCost,
-  type TechniqueDef,
-  type TechniqueId,
-} from '../../data';
+import { UpgradeGrid, createPurchasableCard } from '@/ui/compositions';
+import { TECHNIQUES, challenger, type TechniqueDef, type TechniqueId } from '../../data';
 import { getDojo } from '../../modules';
 import { fmt } from '../format';
 
@@ -24,36 +18,16 @@ const dojo = getDojo();
 
 interface Shelf {
   def: TechniqueDef;
-  /** Why it cannot be learned yet, when the purse is not the reason. */
-  blocked: string | null;
 }
 
-const all: UpgradeCardData<Shelf>[] = TECHNIQUES.map((def) => {
-  const p = dojo.techniques.getPurchasable(def.id)!;
-  return {
-    id: def.id,
+const cards = TECHNIQUES.map((def) =>
+  createPurchasableCard<Shelf>(dojo.techniques.getPurchasable(def.id)!, {
     displayName: def.displayName,
-    description: def.lore,
-    cost: computed(() => techniqueCost(def.id)),
-    costLabel: 'Ki',
-    canPurchase: p.canPurchase,
-    owned: p.active,
-    purchase: () => dojo.learn(def.id),
-    extra: {
-      def,
-      get blocked() {
-        const missing = def.after.filter((id) => !dojo.knows(id));
-        return missing.length
-          ? `learn ${missing.map((id) => TECHNIQUES.find((t) => t.id === id)!.displayName).join(' and ')} first`
-          : null;
-      },
-    },
-  };
-});
-const cards = computed(() =>
-  all.filter((c) => dojo.techniques.getPurchasable(c.id)!.visible.value),
+    purchase: () => void dojo.learn(def.id),
+    extra: { def },
+  }),
 );
-const unseen = computed(() => TECHNIQUES.length - cards.value.length);
+const unseen = computed(() => cards.filter((c) => !c.unlocked!.value).length);
 
 watch(
   () => props.focus,
@@ -70,7 +44,7 @@ watch(
 <template>
   <section class="if-panel shelf" aria-label="The shelf of techniques">
     <h2 class="if-title">The shelf <small>words the student can learn</small></h2>
-    <UpgradeGrid :cards="cards" :columns="1" reveal="inline">
+    <UpgradeGrid :cards="cards" reveal="inline">
       <template #card="{ card }">
         <article
           class="technique if-reveal"
@@ -93,7 +67,9 @@ watch(
             Answers {{ challenger(card.extra!.def.answers).displayName }}.
           </p>
           <div v-if="!card.owned.value" class="act">
-            <span v-if="card.extra!.blocked" class="blocked">{{ card.extra!.blocked }}</span>
+            <span v-if="card.unmet!.value.length" class="blocked">{{
+              card.unmet!.value.join(' · ')
+            }}</span>
             <Button
               v-else
               class="learn"
@@ -106,7 +82,7 @@ watch(
             <span
               v-if="
                 !card.owned.value &&
-                !card.extra!.blocked &&
+                !card.unmet!.value.length &&
                 Decimal.lt(dojo.ki.value, card.cost.value)
               "
               class="short num"
@@ -123,8 +99,6 @@ watch(
 
 <style scoped>
 .shelf :deep(.upgrade-grid) {
-  display: flex !important;
-  flex-direction: column;
   gap: 8px;
 }
 .technique {

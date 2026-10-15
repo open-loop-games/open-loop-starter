@@ -9,9 +9,9 @@
   page, because writing it is the game.
 -->
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
-import { type Engine } from '@open-loop/engine';
+import { computed, ref } from 'vue';
 import { SidebarMainShell } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
 import { TECHNIQUES, type TechniqueId } from '../data';
 import { getDojo, getGate, getGraduation, getKata, getLineage } from '../modules';
 import DojoPanel from './components/DojoPanel.vue';
@@ -26,27 +26,19 @@ const lineage = getLineage();
 const focus = ref<TechniqueId | null>(null);
 const rackShown = computed(() => lineage.arrived.value.length >= 2);
 
-// Dev-only hook for the screenshot loop: a stable handle on the modules, and a skip that
-// plays forward in half-second steps, learning whatever the purse allows, as a sensei
-// who reads the shelf would. Read through the hook, not a live `import()` that Vite's
-// module cache could serve stale.
+// The dev handle's skip plays forward in half-second steps, learning whatever the purse
+// allows, as a sensei who reads the shelf would.
 if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
   const dojo = getDojo();
-  (window as unknown as Record<string, unknown>).__inkfist = {
-    engine,
-    lineage,
-    dojo,
-    gate: getGate(),
-    kata: getKata(),
-    graduation: getGraduation(),
-    skip: (seconds: number) => {
-      for (let t = 0; t < seconds; t += 0.5) {
-        engine.tickDriver.advanceTime(0.5);
+  useDevHandle(
+    { lineage, dojo, gate: getGate(), kata: getKata(), graduation: getGraduation() },
+    {
+      chunk: 0.5,
+      step: () => {
         for (const tech of TECHNIQUES) if (!dojo.knows(tech.id)) dojo.learn(tech.id);
-      }
+      },
     },
-  };
+  );
 }
 </script>
 

@@ -7,13 +7,7 @@ import { createKataModule } from './kata';
 import { createGraduationModule } from './graduation';
 
 export { ScripterTuningRegistryKey, type ScripterTunableKey } from './tuning';
-export {
-  LineageKey,
-  getLineage,
-  type LineageApi,
-  type JournalLine,
-  type JournalTone,
-} from './lineage';
+export { LineageKey, getLineage, type LineageApi, type JournalTone } from './lineage';
 export { DojoKey, getDojo, type DojoApi } from './dojo';
 export { GateKey, getGate, type GateApi, type Visitor } from './gate';
 export {

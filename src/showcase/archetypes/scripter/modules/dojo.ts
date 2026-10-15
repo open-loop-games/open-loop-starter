@@ -21,6 +21,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   TECHNIQUES,
@@ -79,11 +80,10 @@ export interface DojoApi {
 
 export const DojoKey: InjectionKey<DojoApi> = Symbol('scripter/dojo') as InjectionKey<DojoApi>;
 
-let api: DojoApi;
+const dojoApi = createModuleApi(DojoKey);
 
-export function getDojo(): DojoApi {
-  return api;
-}
+/** The run: Ki, its producers, Temper and the techniques. Read it after the engine starts. */
+export const getDojo = dojoApi.get;
 
 export function createDojoModule(): EngineModule {
   return {
@@ -117,7 +117,12 @@ export function createDojoModule(): EngineModule {
                         entry: id,
                       })),
                     },
-                    description: `Learn ${def.after.map((id) => TECHNIQUES.find((x) => x.id === id)!.displayName).join(' and ')} first`,
+                    // Names only the prerequisites still unlearned; the shelf prints it as is.
+                    description: (): string =>
+                      `learn ${def.after
+                        .filter((id) => !knows(id))
+                        .map((id) => TECHNIQUES.find((x) => x.id === id)!.displayName)
+                        .join(' and ')} first`,
                   }),
                 ]
               : []),
@@ -216,7 +221,7 @@ export function createDojoModule(): EngineModule {
       const usable = (what: Purchase) =>
         what === 'recruit' || (what === 'promote' ? knows('lineage') : knows('iron-body'));
 
-      api = {
+      dojoApi.publish(ctx, {
         ki,
         trained,
         producers,
@@ -243,8 +248,7 @@ export function createDojoModule(): EngineModule {
           lineage.say('learn', `learned ${TECHNIQUES.find((x) => x.id === id)!.displayName}`);
           return true;
         },
-      };
-      ctx.provide(DojoKey, api);
+      });
     },
   };
 }

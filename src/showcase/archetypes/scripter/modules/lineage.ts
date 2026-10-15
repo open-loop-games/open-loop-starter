@@ -8,7 +8,6 @@ import {
   createPurchasableCategory,
   createResource,
   persistent,
-  shallowRef,
   tunable,
   type ComputedRef,
   type DecimalSource,
@@ -18,8 +17,9 @@ import {
   type Persistent,
   type PurchasableCategory,
   type Resource,
-  type ShallowRef,
 } from '@open-loop/engine';
+import { createEventLog, type EventLog } from '@/modules/event-log';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   META,
@@ -38,16 +38,6 @@ import { ScripterTuningRegistryKey, type ScripterTunableKey } from './tuning';
  */
 
 export type JournalTone = 'buy' | 'fumble' | 'learn' | 'rite' | 'gate' | 'win' | 'loss' | 'ink';
-
-/** One journal line. */
-export interface JournalLine {
-  /** Order of writing, from 1; the journal is bounded, so read new lines by it. */
-  seq: number;
-  /** Seconds of play when it happened. */
-  at: number;
-  tone: JournalTone;
-  text: string;
-}
 
 export interface LineageApi {
   insight: Resource;
@@ -68,8 +58,8 @@ export interface LineageApi {
   arrived: Persistent<ChallengerId[]>;
   /** Challengers the dojo has beaten, in order of first win. */
   beaten: Persistent<ChallengerId[]>;
-  /** The journal's recent lines, oldest first. Session state, not saved. */
-  journal: ShallowRef<JournalLine[]>;
+  /** The journal, stamped in play-seconds: a session log, so a load empties it. */
+  journal: EventLog<JournalTone>;
   say(tone: JournalTone, text: string): void;
 }
 
@@ -77,11 +67,10 @@ export const LineageKey: InjectionKey<LineageApi> = Symbol(
   'scripter/lineage',
 ) as InjectionKey<LineageApi>;
 
-let api: LineageApi;
+const lineageApi = createModuleApi(LineageKey);
 
-export function getLineage(): LineageApi {
-  return api;
-}
+/** What outlasts the student: Insight, records and the journal. Read it after the engine starts. */
+export const getLineage = lineageApi.get;
 
 const JOURNAL_LENGTH = 80;
 
@@ -151,16 +140,12 @@ export function createLineageModule(): EngineModule {
         createMultiplicativeModifier({ multiplier: () => standing.value, description: 'Standing' }),
       );
 
-      let seq = 0;
-      const journal = shallowRef<JournalLine[]>([]);
-      const say = (tone: JournalTone, text: string) => {
-        journal.value = [
-          ...journal.value.slice(-(JOURNAL_LENGTH - 1)),
-          { seq: ++seq, at: playSeconds.value, tone, text },
-        ];
-      };
+      const journal = createEventLog<JournalTone>(ctx, {
+        cap: JOURNAL_LENGTH,
+        clock: () => playSeconds.value,
+      });
 
-      api = {
+      lineageApi.publish(ctx, {
         insight,
         scrolls,
         level,
@@ -175,9 +160,8 @@ export function createLineageModule(): EngineModule {
         arrived,
         beaten,
         journal,
-        say,
-      };
-      ctx.provide(LineageKey, api);
+        say: (tone, text) => journal.post(text, tone),
+      });
     },
   };
 }

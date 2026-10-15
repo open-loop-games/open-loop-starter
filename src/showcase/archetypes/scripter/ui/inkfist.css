@@ -149,20 +149,18 @@
 
 /* A bar, brushed: health, chi and the incense. */
 .inkfist .if-bar {
-  position: relative;
-  height: 6px;
-  background: var(--if-lacquer-edge);
-  overflow: hidden;
+  --progress-bar-height: 6px;
+  --progress-bar-track: var(--if-lacquer-edge);
+  --progress-bar-track-empty: var(--progress-bar-track);
+  --progress-bar-fill: var(--if-vermilion);
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-radius: 0;
+  --progress-bar-transition: transform 160ms linear;
 }
-.inkfist .if-bar > i {
-  position: absolute;
-  inset: 0;
-  transform-origin: left;
-  background: var(--if-vermilion);
-  transition: transform 160ms linear;
-}
-.inkfist .if-bar.chi > i {
-  background: var(--if-indigo);
+.inkfist .if-bar.chi {
+  --progress-bar-fill: var(--if-indigo);
 }
 
 /* A reveal: a new panel or card unrolls like a scroll. transform/opacity only. */

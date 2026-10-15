@@ -8,6 +8,7 @@
 import { computed } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { EXECUTOR_TIERS, SCROLLS, META } from '../../data';
 import { getDojo, getGate, getGraduation, getKata, getLineage } from '../../modules';
 import { fmt, fmtMult } from '../format';
@@ -57,9 +58,11 @@ const scrolls = computed(() =>
       <h2 class="if-title if-reveal">
         Graduation <small class="num">Insight {{ fmt(lineage.insight.value) }}</small>
       </h2>
-      <div class="if-bar grad" :aria-label="`run Ki toward graduation: ${Math.round(fill * 100)}%`">
-        <i :style="{ transform: `scaleX(${fill})` }" />
-      </div>
+      <ProgressBar
+        class="if-bar grad"
+        :value="fill"
+        :aria-label="`run Ki toward graduation: ${Math.round(fill * 100)}%`"
+      />
       <div class="grad-row">
         <span class="num"
           >run Ki {{ fmt(dojo.runKi.value) }} / {{ fmt(graduation.threshold.value) }}</span
@@ -110,8 +113,8 @@ const scrolls = computed(() =>
   font-size: 12px;
   color: var(--if-tatami);
 }
-.if-bar.grad > i {
-  background: var(--if-lamplight);
+.if-bar.grad {
+  --progress-bar-fill: var(--if-lamplight);
 }
 .grad-row {
   display: flex;

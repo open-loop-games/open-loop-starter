@@ -9,6 +9,7 @@ import {
   type EngineModule,
   type InjectionKey,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { ANCHORS, GRADUATION_THRESHOLD, META, SCROLLS, type ScrollId } from '../data';
 import { DojoKey } from './dojo';
 import { GateKey } from './gate';
@@ -34,11 +35,10 @@ export const GraduationKey: InjectionKey<GraduationApi> = Symbol(
   'scripter/graduation',
 ) as InjectionKey<GraduationApi>;
 
-let api: GraduationApi;
+const graduationApi = createModuleApi(GraduationKey);
 
-export function getGraduation(): GraduationApi {
-  return api;
-}
+/** Graduation and the old master's scrolls. Read it after the engine starts. */
+export const getGraduation = graduationApi.get;
 
 export function createGraduationModule(): EngineModule {
   return {
@@ -84,7 +84,7 @@ export function createGraduationModule(): EngineModule {
         return run.div(threshold.value).pow(ANCHORS.insightExponent).floor().toNumber();
       });
 
-      api = {
+      graduationApi.publish(ctx, {
         pendingInsight,
         threshold,
         graduate() {
@@ -108,8 +108,7 @@ export function createGraduationModule(): EngineModule {
           lineage.say('learn', `studied ${SCROLLS.find((s) => s.id === id)!.displayName}`);
           return true;
         },
-      };
-      ctx.provide(GraduationKey, api);
+      });
     },
   };
 }

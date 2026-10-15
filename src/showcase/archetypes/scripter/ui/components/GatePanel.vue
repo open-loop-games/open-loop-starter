@@ -8,10 +8,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { challenger, clockFor } from '../../data';
 import { RULES } from '../../data';
 import { getGate, getKata, getLineage, showsPhase, type Attacker } from '../../modules';
-import { fmt, fmtClock, fmtMult } from '../format';
+import { formatClock } from '@/composables/useFormatting';
+import { fmt, fmtMult } from '../format';
 
 const gate = getGate();
 const kata = getKata();
@@ -87,9 +89,12 @@ const rackSlots = computed(() =>
               stance(a)!.text
             }}</span>
           </div>
-          <div class="if-bar" :aria-label="`health ${Math.ceil(a.hp)} of ${a.maxHp}`">
-            <i :style="{ transform: `scaleX(${Math.max(0, a.hp / a.maxHp)})` }" />
-          </div>
+          <ProgressBar
+            class="if-bar"
+            :value="a.hp"
+            :max="a.maxHp"
+            :aria-label="`health ${Math.ceil(a.hp)} of ${a.maxHp}`"
+          />
         </li>
       </ul>
       <p v-if="bout.queue.length" class="queue">
@@ -104,16 +109,14 @@ const rackSlots = computed(() =>
             <template v-else-if="bout.parry"> · parry raised</template>
           </span>
         </div>
-        <div class="if-bar chi">
-          <i :style="{ transform: `scaleX(${bout.chi / RULES.chiMax})` }" />
-        </div>
+        <ProgressBar class="if-bar chi" :value="bout.chi" :max="RULES.chiMax" />
       </div>
       <div
         class="incense"
         :aria-label="`incense: ${clockFor(bout.challenger) - bout.beat} beats left`"
       >
         <span class="stick"
-          ><i :style="{ transform: `scaleX(${incense})` }" /><b
+          ><ProgressBar class="if-bar incense" :value="incense" /><b
             :style="{ left: `${incense * 100}%` }"
         /></span>
         <span class="num">{{ clockFor(bout.challenger) - bout.beat }} beats of incense</span>
@@ -124,7 +127,7 @@ const rackSlots = computed(() =>
       <div class="who">
         <span class="name">{{ visitor.displayName }}</span>
         <span v-if="isNew(visitor.id)" class="seal-mark">new</span>
-        <span class="when num">steps through in {{ fmtClock(countdown) }}</span>
+        <span class="when num">steps through in {{ formatClock(Math.ceil(countdown)) }}</span>
       </div>
       <p class="tell">{{ visitor.tell }}</p>
       <div v-if="rackSlots.length" class="rack-quick">
@@ -245,14 +248,11 @@ const rackSlots = computed(() =>
   position: relative;
   flex: 1;
   height: 3px;
-  background: var(--if-lacquer-edge);
 }
-.stick i {
-  position: absolute;
-  inset: 0;
-  background: var(--if-incense);
-  transform-origin: left;
-  transition: transform 300ms linear;
+.if-bar.incense {
+  --progress-bar-height: 3px;
+  --progress-bar-fill: var(--if-incense);
+  --progress-bar-transition: transform 300ms linear;
 }
 .stick b {
   position: absolute;

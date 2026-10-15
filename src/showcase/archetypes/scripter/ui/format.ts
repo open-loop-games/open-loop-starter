@@ -19,7 +19,7 @@ export function fmtMult(x: DecimalSource): string {
   return `×${Decimal.lt(x, 100) ? format(x, 2) : fmt(x)}`;
 }
 
-/** Seconds as m:ss. */
+/** Play-seconds as m:ss, rounded up; minutes run past sixty, where `formatClock` turns to h:mm:ss. */
 export function fmtClock(seconds: number): string {
   const s = Math.max(0, Math.ceil(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;

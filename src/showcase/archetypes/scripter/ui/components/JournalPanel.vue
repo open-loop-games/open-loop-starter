@@ -1,58 +1,63 @@
 <!--
   JournalPanel — the dojo's journal, newest first: inkings, purchases and fumbles, bouts
-  won and lost, techniques learned, graduations.
+  won and lost, techniques learned, graduations. A line runs on under its stamp, and its
+  tone sets its colour; the newest line is not singled out.
 -->
 <script setup lang="ts">
-import { computed } from 'vue';
+import { EventLog } from '@/ui/compositions';
 import { getLineage } from '../../modules';
 import { fmtClock } from '../format';
 
 const lineage = getLineage();
-const lines = computed(() => [...lineage.journal.value].reverse().slice(0, 40));
 </script>
 
 <template>
   <section class="if-panel journal" aria-label="Journal">
     <h2 class="if-title">Journal</h2>
-    <ol class="lines" aria-live="polite">
-      <li v-for="l in lines" :key="l.seq" :class="l.tone">
-        <span class="at num">{{ fmtClock(l.at) }}</span> {{ l.text }}
-      </li>
-    </ol>
+    <EventLog :lines="lineage.journal.lines.value" :limit="40" aria-live="polite">
+      <template #row="{ line }">
+        <span class="at num">{{ fmtClock(line.at) }}</span> {{ line.text }}
+      </template>
+      <template #empty>The brush is dry; nothing is written yet.</template>
+    </EventLog>
   </section>
 </template>
 
 <style scoped>
-.lines {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.journal :deep(.event-log) {
+  display: block;
   max-height: 260px;
   overflow: auto;
   font-size: 12.5px;
-  color: var(--if-tatami);
 }
-.lines li {
+.journal :deep(.event-log__row) {
+  display: block;
   padding: 1px 0;
+  color: var(--if-tatami);
+  animation: none;
+}
+.journal :deep(.event-log__empty) {
+  font-style: normal;
+  color: var(--if-tatami-dim);
 }
 .at {
   color: var(--if-tatami-dim);
   margin-right: 4px;
 }
-.win,
-.learn,
-.ink {
+.journal :deep(.event-log__row--win),
+.journal :deep(.event-log__row--learn),
+.journal :deep(.event-log__row--ink) {
   color: var(--if-moonlight);
 }
-.win {
+.journal :deep(.event-log__row--win) {
   color: var(--if-lamplight);
 }
-.loss,
-.fumble {
+.journal :deep(.event-log__row--loss),
+.journal :deep(.event-log__row--fumble) {
   color: var(--if-vermilion);
 }
-.gate,
-.rite {
+.journal :deep(.event-log__row--gate),
+.journal :deep(.event-log__row--rite) {
   color: var(--if-indigo);
 }
 </style>

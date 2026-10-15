@@ -9,6 +9,7 @@ import {
   type InjectionKey,
   type Persistent,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { toRaw } from 'vue';
 import {
   ANCHORS,
@@ -63,11 +64,10 @@ export interface GateApi {
 
 export const GateKey: InjectionKey<GateApi> = Symbol('scripter/gate') as InjectionKey<GateApi>;
 
-let api: GateApi;
+const gateApi = createModuleApi(GateKey);
 
-export function getGate(): GateApi {
-  return api;
-}
+/** The gate: the announced visitor and the bout. Read it after the engine starts. */
+export const getGate = gateApi.get;
 
 /** Mulberry32 step over a plain seed, for the rotation's draw. */
 function draw(seed: number): [number, number] {
@@ -165,7 +165,7 @@ export function createGateModule(): EngineModule {
         schedule(Number(rotation.value) * (won ? 1 : ANCHORS.returnAfterLoss));
       }
 
-      api = {
+      gateApi.publish(ctx, {
         next,
         bout,
         inBout,
@@ -193,8 +193,7 @@ export function createGateModule(): EngineModule {
           bout.value = null;
           next.value = null;
         },
-      };
-      ctx.provide(GateKey, api);
+      });
     },
   };
 }

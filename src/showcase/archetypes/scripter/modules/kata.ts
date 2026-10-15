@@ -17,6 +17,7 @@ import {
   type ShallowRef,
   type StartResult,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   CHALLENGERS,
@@ -112,11 +113,10 @@ export interface KataApi {
 
 export const KataKey: InjectionKey<KataApi> = Symbol('scripter/kata') as InjectionKey<KataApi>;
 
-let api: KataApi;
+const kataApi = createModuleApi(KataKey);
 
-export function getKata(): KataApi {
-  return api;
-}
+/** The scroll: the draft, the inked kata and its executor. Read it after the engine starts. */
+export const getKata = kataApi.get;
 
 /** Beats one engine tick may run, so a long offline stride cannot stall the frame. */
 const MAX_BEATS_PER_TICK = 4000;
@@ -398,7 +398,7 @@ export function createKataModule(): EngineModule {
       // A fresh dojo starts with the first scroll inked; a save's load replaces it.
       load(FIRST_SCROLL, parse(FIRST_SCROLL).lines);
 
-      api = {
+      kataApi.publish(ctx, {
         draft,
         inked,
         rack,
@@ -428,8 +428,7 @@ export function createKataModule(): EngineModule {
           return text ? ink(text) : [];
         },
         revalidate,
-      };
-      ctx.provide(KataKey, api);
+      });
     },
   };
 }
