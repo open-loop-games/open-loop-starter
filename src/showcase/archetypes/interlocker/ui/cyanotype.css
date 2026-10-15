@@ -85,6 +85,7 @@
   --color-text-muted: var(--ae-drafting-line-faint);
   --color-primary: var(--ae-brass);
   --color-primary-hover: var(--ae-chalk);
+  --color-on-primary: var(--ae-cyanotype-deep);
   --color-danger: var(--ae-vermilion);
   --color-success: var(--ae-verdigris);
   --radius: var(--ae-plate-radius);
@@ -105,7 +106,7 @@
   min-height: 0;
 }
 
-.interlocker button {
+:where(.interlocker) button {
   font: inherit;
   color: inherit;
 }
