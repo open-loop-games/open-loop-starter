@@ -27,3 +27,24 @@ export interface UpgradeCardData<T = never> {
    */
   extra?: T;
 }
+
+/** How an owned card is drawn; `removed` drops it from the grid. */
+export type PurchasedState = 'greyed' | 'removed' | 'checkmark';
+
+/**
+ * The cards an `UpgradeGrid` shows: unlocked, and not owned when owned cards are removed.
+ *
+ * @param cards - the grid's cards.
+ * @param purchasedState - the grid's `purchased-state`.
+ * @returns the shown cards, in order.
+ * @example
+ * const wireOpen = computed(() => readShownCards(wireRoom, 'removed').length > 0);
+ */
+export function readShownCards<C extends UpgradeCardData<unknown>>(
+  cards: readonly C[],
+  purchasedState: PurchasedState = 'greyed',
+): C[] {
+  return cards.filter(
+    (c) => (c.unlocked?.value ?? true) && !(c.owned.value && purchasedState === 'removed'),
+  );
+}

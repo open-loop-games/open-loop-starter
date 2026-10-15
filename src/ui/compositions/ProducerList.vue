@@ -158,7 +158,7 @@ function rowState(row: R) {
   </section>
 </template>
 
-<style scoped>
+<style>
 .producer-list {
   display: flex;
   flex-direction: column;

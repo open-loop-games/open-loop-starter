@@ -13,7 +13,7 @@ import type { Purchasable } from '@open-loop/engine';
 import { modalStackKey } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import AchievementGrid, { type AchievementCard } from '@/ui/components/AchievementGrid.vue';
-import { UpgradeGrid, createPurchasableCard, type PurchasableCard } from '@/ui/compositions';
+import { UpgradeGrid, createPurchasableCard, readShownCards } from '@/ui/compositions';
 import { BOOKKEEPER_DEF, ENDING_DEF, type HireId } from '../../data';
 import { getAutomation, getFirm, getOffline, getStanding, getTips } from '../../modules';
 import { money } from '../format';
@@ -32,13 +32,11 @@ const cardsOf = (
   all.map(({ def, purchasable }) =>
     createPurchasableCard(purchasable, { displayName: def.title, description: def.description }),
   );
-/** Whether the grid shows any card: its own filter, which it does not expose. */
-const onRail = (cards: PurchasableCard[]) => cards.some((c) => c.unlocked.value && !c.owned.value);
 
 /** One-shots bought on sight of their reveal: press for standing, and the wire room. */
 const press = cardsOf(standing.upgrades.getAll());
 const wireRoom = cardsOf(tips.upgrades.getAll());
-const wireOpen = computed(() => onRail(wireRoom));
+const wireOpen = computed(() => readShownCards(wireRoom, 'removed').length > 0);
 const pressOwned = computed(() => standing.upgrades.purchasedCount.value);
 
 const endingOffered = computed(() => firm.ending.visible.value && !firm.ending.active.value);
@@ -113,7 +111,6 @@ const hires = computed(() =>
 const boardSitting = computed(() => automation.working('board'));
 
 const memos = cardsOf([...firm.management.getAll()].sort((a, b) => a.def.cost - b.def.cost));
-const memosOnDesk = computed(() => onRail(memos));
 const filed = computed(() => firm.management.purchasedCount.value);
 
 const wall = computed(() =>
@@ -259,8 +256,10 @@ const wall = computed(() =>
             </Button>
           </article>
         </template>
+        <template #empty>
+          <p class="quiet">No memos on the desk. Grow a subsidiary to draw one.</p>
+        </template>
       </UpgradeGrid>
-      <p v-if="!memosOnDesk" class="quiet">No memos on the desk. Grow a subsidiary to draw one.</p>
       <p v-if="filed" class="quiet">
         {{ filed }} {{ filed === 1 ? 'memo' : 'memos' }} signed and filed.
       </p>

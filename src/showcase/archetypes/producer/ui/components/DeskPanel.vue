@@ -346,7 +346,7 @@ h1 {
   border-radius: 3px 3px 0 0;
   background: var(--walnut-grain);
 }
-.desk .tape {
+.tape {
   display: block;
   margin: 0;
   width: 88%;
@@ -362,7 +362,7 @@ h1 {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
 }
 /* The machine prints each line in place: no fresh-line fade. */
-.desk .tape :deep(.event-log__row) {
+.tape :deep(.event-log__row) {
   display: grid;
   grid-template-columns: 40px 34px 1fr auto;
   gap: 4px;
@@ -382,11 +382,11 @@ h1 {
   color: #9b2f1f;
   font-variant-numeric: tabular-nums;
 }
-.desk .tape :deep(.event-log__row--milestone),
-.desk .tape :deep(.event-log__row--grade) {
+.tape :deep(.event-log__row--milestone),
+.tape :deep(.event-log__row--grade) {
   color: #6b4a0e;
 }
-.desk .tape :deep(.event-log__empty) {
+.tape :deep(.event-log__empty) {
   display: block;
   line-height: 1.6;
   white-space: nowrap;

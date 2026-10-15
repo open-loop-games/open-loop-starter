@@ -63,7 +63,7 @@ const newest = computed(() => props.lines.at(-1)?.seq);
   </ol>
 </template>
 
-<style scoped>
+<style>
 .event-log {
   list-style: none;
   margin: 0;

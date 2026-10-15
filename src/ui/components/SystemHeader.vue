@@ -8,6 +8,7 @@
 
   Costume classes (stable API) — renames are breaking:
     .olui-system-header                the header strip
+    .olui-system-header__heading       the page's h1, around the return button
     .olui-system-header__title-btn     the return-to-slots button
     .olui-system-header__title         the app name
     .olui-system-header__subtitle      the subtitle
@@ -65,15 +66,17 @@ function openSettings(): void {
 <template>
   <header class="olui-system-header">
     <slot name="title" :return-to-slots="() => emit('returnToSlots')">
-      <Button
-        class="olui-system-header__title-btn"
-        data-testid="return-to-slots"
-        title="Save and return to save picker"
-        @click="emit('returnToSlots')"
-      >
-        <h2 class="olui-system-header__title">{{ appName }}</h2>
-        <span v-if="subtitle" class="olui-system-header__subtitle">{{ subtitle }}</span>
-      </Button>
+      <h1 class="olui-system-header__heading">
+        <Button
+          class="olui-system-header__title-btn"
+          data-testid="return-to-slots"
+          title="Save and return to save picker"
+          @click="emit('returnToSlots')"
+        >
+          <span class="olui-system-header__title">{{ appName }}</span>
+          <span v-if="subtitle" class="olui-system-header__subtitle">{{ subtitle }}</span>
+        </Button>
+      </h1>
     </slot>
     <div class="olui-system-header__actions">
       <Popover align="end" :side-offset="8">
@@ -103,6 +106,11 @@ function openSettings(): void {
   background: var(--color-surface);
 }
 
+.olui-system-header__heading {
+  margin: 0;
+  font: inherit;
+}
+
 .olui-system-header__title-btn {
   display: flex;
   align-items: baseline;
@@ -118,6 +126,7 @@ function openSettings(): void {
 
 .olui-system-header__title {
   font-size: 1.1em;
+  font-weight: 600;
 }
 
 .olui-system-header__title-btn:hover .olui-system-header__title {

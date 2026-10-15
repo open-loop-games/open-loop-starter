@@ -81,8 +81,8 @@ function rateSign(value: DecimalSource): string {
   </div>
 </template>
 
-<style scoped>
-.resource-header-strip[data-orientation='vertical-sidebar'] :deep(.hud-bar) {
+<style>
+.resource-header-strip[data-orientation='vertical-sidebar'] .hud-bar {
   flex-direction: column;
   align-items: stretch;
 }

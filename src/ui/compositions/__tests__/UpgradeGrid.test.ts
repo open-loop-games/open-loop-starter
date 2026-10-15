@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
 import type { DecimalSource } from '@open-loop/engine';
 import UpgradeGrid from '../UpgradeGrid.vue';
-import type { UpgradeCardData } from '../UpgradeGrid';
+import { readShownCards, type UpgradeCardData } from '../UpgradeGrid';
 
 function makeCard(
   id: string,
@@ -120,6 +120,27 @@ describe('UpgradeGrid', () => {
       },
     });
     expect(wrapper.find('.custom-desc').text()).toBe('the hall is dark');
+  });
+
+  it('draws the #empty slot while it shows no card', () => {
+    const slots = { empty: '<p class="none">Nothing on offer.</p>' };
+    const empty = mount(UpgradeGrid, {
+      props: { cards: [makeCard('a', { owned: true })], purchasedState: 'removed' },
+      slots,
+    });
+    expect(empty.find('.upgrade-grid__empty .none').exists()).toBe(true);
+    const shown = mount(UpgradeGrid, { props: { cards: [makeCard('a')] }, slots });
+    expect(shown.find('.upgrade-grid__empty').exists()).toBe(false);
+  });
+
+  it('reads which cards it shows, by the same rule the grid filters with', () => {
+    const cards = [
+      makeCard('owned', { owned: true }),
+      { ...makeCard('hidden'), unlocked: ref(false) },
+      makeCard('open'),
+    ];
+    expect(readShownCards(cards, 'removed').map((c) => c.id)).toEqual(['open']);
+    expect(readShownCards(cards).map((c) => c.id)).toEqual(['owned', 'open']);
   });
 
   it('lays out as one column by default', () => {

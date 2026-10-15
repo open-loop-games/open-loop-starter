@@ -4,7 +4,8 @@
   UpgradeCardData. Reveal mode picks Tooltip / Popover / inline; the reveal
   wrapper sits above the card, so a `#card` override still gets the
   tooltip/popover wrapping. Use `#reveal-content` to customise the
-  tooltip/popover body.
+  tooltip/popover body. `#empty` draws while no card is shown; a game that
+  hides a whole block on that reads `readShownCards`.
 
   Costume classes (stable API) — reskin via `:deep(.upgrade-grid__…)`.
   A class says `cell` where the contract says card. Renames are breaking:
@@ -12,6 +13,7 @@
     .upgrade-grid__cell-wrap the reveal wrapper around each card
     .upgrade-grid__cell      one card (+ [data-locked] while prerequisites are unmet)
     .upgrade-grid__cell-unmet  the unmet prerequisites, in place of the button
+    .upgrade-grid__empty     the `#empty` slot's box, while no card is shown
   (Panel compositions expose bare BEM classes; widgets under src/ui/components
   expose `olui-` classes. Both stable.)
 -->
@@ -21,10 +23,9 @@ import { format } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import Tooltip from '@/ui/components/Tooltip.vue';
 import Popover from '@/ui/components/Popover.vue';
-import type { UpgradeCardData } from './UpgradeGrid';
+import { readShownCards, type PurchasedState, type UpgradeCardData } from './UpgradeGrid';
 
 type Reveal = 'inline' | 'tooltip' | 'popover';
-type PurchasedState = 'greyed' | 'removed' | 'checkmark';
 
 const props = withDefaults(
   defineProps<{
@@ -45,17 +46,14 @@ const props = withDefaults(
 defineSlots<{
   card?: (props: { card: C; idx: number; description: string }) => unknown;
   'reveal-content'?: (props: { card: C; description: string }) => unknown;
+  empty?: () => unknown;
 }>();
 
 const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${props.columns}, 1fr)`,
 }));
 
-const visibleCards = computed(() =>
-  props.cards.filter(
-    (c) => (c.unlocked?.value ?? true) && !(c.owned.value && props.purchasedState === 'removed'),
-  ),
-);
+const visibleCards = computed(() => readShownCards(props.cards, props.purchasedState));
 
 function unmetOf(card: C): string[] {
   return card.unmet?.value ?? [];
@@ -230,10 +228,13 @@ function describe(card: C): string {
         </div>
       </template>
     </div>
+    <div v-if="visibleCards.length === 0 && $slots.empty" class="upgrade-grid__empty">
+      <slot name="empty" />
+    </div>
   </div>
 </template>
 
-<style scoped>
+<style>
 .upgrade-grid {
   display: grid;
   gap: var(--gap-sm);
@@ -277,6 +278,10 @@ function describe(card: C): string {
   font-weight: 600;
   font-size: 0.85em;
   color: var(--color-accent, var(--color-text));
+}
+
+.upgrade-grid__empty {
+  grid-column: 1 / -1;
 }
 
 .upgrade-grid__cell-unmet {
