@@ -546,8 +546,8 @@ function shoulderCell(v: number): number {
   return c < 0 ? 0 : c >= SHOULDER_COLS ? SHOULDER_COLS - 1 : c;
 }
 
-// TODO(expansion): a float proximity query (candidate-engine-api.md); the shoulder grid
-// is a hand-rolled broad-phase over continuous positions.
+// The engine leaves real-time positioning and collision to the game, so the shoulder grid is
+// this step's own broad-phase over continuous positions.
 /** Extras close on the double and shoulder each other apart (bucketed). */
 function moveExtras(s: ArenaState, dt: number): void {
   const p = s.player;

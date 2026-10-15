@@ -37,8 +37,8 @@ import {
  * SCALE SEAM (the real growth port): targeting is O(units²) brute force — right
  * at skirmish scale (tens of units), a wall past that. When counts demand it,
  * a uniform-grid / spatial-hash broad-phase over continuous positions goes
- * here; that broad-phase is an engine-primitive candidate (the engine's
- * `SpatialGrid` is discrete-cell, not a float radius-query index).
+ * here, as game code: the engine leaves real-time positioning to the game, and
+ * its `SpatialGrid` is discrete-cell, not a float radius-query index.
  * `SpatialInfluenceLayer` for the *AI opponent's* reasoning
  * (threat/frontier maps) is the other growth port: grid-for-thinking,
  * floats-for-being.
@@ -102,8 +102,8 @@ interface Frozen {
   faction: FactionId;
 }
 
-// TODO(expansion): a float proximity query (candidate-engine-api.md); this scan visits
-// every enemy, where a broad-phase visits only nearby cells.
+// Brute force by choice: the engine leaves real-time positioning to the game, and the scan is
+// cheap at the unit counts a player sees. A broad-phase would visit only nearby cells.
 /** Nearest living enemy within `range`, else null. Brute force — the scale seam. */
 function nearestEnemy(self: Frozen, enemies: Frozen[], range: number): Frozen | null {
   let best: Frozen | null = null;

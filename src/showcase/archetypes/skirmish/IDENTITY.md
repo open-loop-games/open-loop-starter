@@ -166,9 +166,9 @@ line's own unbuilt half, and they feed named spine terms.
   `skirmish`, `boom`, `combined`) in `data/personality.ts` with tactical drafts and
   calibrated `cadenceJitter` (0.15) exercising the spine's stochastic remainder
   over seeded multi-run batches (`balance/persona-probe.ts` adopting `@/balance`).
-- Scale: brute-force targeting at tens of units → uniform-grid / spatial-hash
-  broad-phase when counts demand it (and only then an engine API candidate, if a
-  second consumer converges).
+- Scale: brute-force targeting at tens of units → a uniform-grid / spatial-hash
+  broad-phase in game code when counts demand it. The engine leaves real-time
+  positioning to the game.
 - `SpatialInfluenceLayer` for AI-opponent reasoning (threat/frontier maps).
 - Render interpolation: units currently ease toward tactical-sim truth (exponential
   smoothing, lag-on-stop). True fixed-timestep snapshot interpolation (prev +
