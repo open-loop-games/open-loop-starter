@@ -1,8 +1,9 @@
-import { Decimal, type DecimalSource } from '@open-loop/engine';
+import type { DecimalSource } from '@open-loop/engine';
+import { formatGrouped } from '@/composables/useFormatting';
 
-/** A count the gardener reads: whole, with thousands grouped. */
+/** A count the gardener reads: whole, with thousands grouped, never in notation. */
 export function whole(v: DecimalSource): string {
-  return Math.floor(new Decimal(v).toNumber()).toLocaleString('en-GB');
+  return formatGrouped(v, Infinity);
 }
 
 /** Seconds left on a clock, to the second. */

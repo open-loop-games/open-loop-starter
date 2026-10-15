@@ -99,7 +99,7 @@ function measureLaunch(run: PlotRun): Launch {
   let dwellSum = 0;
   let capacity = 0;
   let boosted = 0;
-  const amp = evaluateCompanions(run.grid, run.plants, specs);
+  const amp = evaluateCompanions(run.companions, specs);
   for (const p of run.plants.values()) {
     value += p.spent;
     const spec = specs[p.def];

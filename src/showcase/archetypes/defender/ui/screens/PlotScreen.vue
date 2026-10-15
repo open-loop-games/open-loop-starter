@@ -7,10 +7,11 @@
   possible by day: once a wave walks, the gardener watches.
 -->
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
+import { useWindowKeys } from '@/composables/useWindowKeys';
 import type { ResourceReadout } from '@/ui/compositions/ResourceHeaderStrip';
 import {
   ARMOUR,
@@ -239,8 +240,7 @@ function onKey(e: KeyboardEvent) {
   const n = Number(e.key);
   if (n >= 1 && n <= PLANTS.length && tags.value[n - 1].learned) pick(PLANTS[n - 1]);
 }
-onMounted(() => window.addEventListener('keydown', onKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
+useWindowKeys(onKey);
 
 const over = computed(() => phase.value === 'won' || phase.value === 'lost');
 /** Nights seen off past the plot's last, and the one in hand if it is past it. */

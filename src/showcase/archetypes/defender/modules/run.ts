@@ -197,23 +197,57 @@ function routeCost(cell: Cell): number {
   return cell.terrain === 'stone' || cell.plantId !== null ? Infinity : 1;
 }
 
+/** The board as the companion evaluator reads it. */
+export interface CompanionView {
+  plants(): Iterable<Plant>;
+  /** The plant growing in a cell, or null. */
+  plantAt(x: number, y: number): Plant | null;
+  /** The cells a plant in this cell touches: its 8-ring, inside the board. */
+  touching(x: number, y: number): Iterable<{ x: number; y: number }>;
+}
+
+/** The live board as a companion view. */
+export function companionView(
+  grid: SpatialGrid<Cell>,
+  plants: ReadonlyMap<number, Plant>,
+): CompanionView {
+  return {
+    plants: () => plants.values(),
+    plantAt: (x, y) => {
+      const id = grid.at(x, y).plantId;
+      return id === null ? null : plants.get(id)!;
+    },
+    touching: (x, y) => grid.neighbors(x, y, DIAGONAL_OFFSETS),
+  };
+}
+
+/** A view of the board with one more plant in it, for a preview. */
+export function withPlant(view: CompanionView, plant: Plant): CompanionView {
+  return {
+    *plants() {
+      yield* view.plants();
+      yield plant;
+    },
+    plantAt: (x, y) => (x === plant.x && y === plant.y ? plant : view.plantAt(x, y)),
+    touching: view.touching,
+  };
+}
+
 /**
  * Damage multiplier each plant receives from marigolds touching it: the
  * strongest boost, once, as an aura that does not stack. Pure over the board,
  * recomputed on planting rather than per tick.
  */
 export function evaluateCompanions(
-  grid: SpatialGrid<Cell>,
-  plants: ReadonlyMap<number, Plant>,
+  view: CompanionView,
   specs: Record<PlantId, PlantSpec>,
 ): Map<number, number> {
   const amp = new Map<number, number>();
-  for (const t of plants.values()) {
+  for (const t of view.plants()) {
     let best = 0;
-    for (const n of grid.neighbors(t.x, t.y, DIAGONAL_OFFSETS)) {
-      const id = grid.at(n.x, n.y).plantId;
-      if (id === null) continue;
-      best = Math.max(best, specs[plants.get(id)!.def].amp);
+    for (const n of view.touching(t.x, t.y)) {
+      const p = view.plantAt(n.x, n.y);
+      if (p) best = Math.max(best, specs[p.def].amp);
     }
     amp.set(t.id, 1 + best);
   }
@@ -231,6 +265,8 @@ export interface PlotRun {
   readonly totalWaves: number;
   /** Bumped on every step and every board change: the renderer's redraw signal. */
   readonly version: { value: number };
+  /** The board as the companion evaluator reads it. */
+  readonly companions: CompanionView;
   phase: RunPhase;
   /** The wave in flight, or the next wave during a build phase (1-based). */
   wave: number;
@@ -302,6 +338,7 @@ export function createPlotRun(
   const listeners: ((e: RunEvent) => void)[] = [];
   const emit = (e: RunEvent) => listeners.forEach((fn) => fn(e));
   const version = shallowRef(0);
+  const plants = new Map<number, Plant>();
 
   let nextId = 1;
   let amp = new Map<number, number>();
@@ -318,6 +355,7 @@ export function createPlotRun(
     seedbed,
     totalWaves: wavesIn(a, plotIndex),
     version,
+    companions: companionView(grid, plants),
     phase: 'build',
     wave: 1,
     held: true,
@@ -327,7 +365,7 @@ export function createPlotRun(
     buildDuration: a.buildSeconds,
     score: 0,
     elapsed: 0,
-    plants: new Map(),
+    plants,
     pests: [],
     shots: [],
     waveLogs: [],
@@ -357,17 +395,14 @@ export function createPlotRun(
         cx === x && cy === y ? Infinity : routeCost(c),
       );
       const pathAfter = probe[gap.y * grid.width + gap.x];
-      const spec = params.specs[id];
+      // The boost is only worth weighing on a plant that hunts.
+      const hunts = (p: Plant) => params.specs[p.def].form !== null;
+      const t: Plant = { id: nextId, def: id, x, y, level: 1, spent: 0, cooldown: 0 };
+      const after = evaluateCompanions(withPlant(run.companions, t), params.specs);
       let boosts = 0;
-      let boosted = false;
-      for (const n of grid.neighbors(x, y, DIAGONAL_OFFSETS)) {
-        const pid = grid.at(n.x, n.y).plantId;
-        if (pid === null) continue;
-        const p = run.plants.get(pid)!;
-        const pspec = params.specs[p.def];
-        if (spec.amp > 0 && pspec.form !== null && (amp.get(pid) ?? 1) < 1 + spec.amp) boosts++;
-        if (spec.form !== null && pspec.amp > 0) boosted = true;
-      }
+      for (const p of run.plants.values())
+        if (hunts(p) && after.get(p.id)! > amp.get(p.id)!) boosts++;
+      const boosted = hunts(t) && after.get(t.id)! > 1;
       return { pathBefore, pathAfter, boosts, boosted };
     },
 
@@ -532,7 +567,7 @@ export function createPlotRun(
 
   function boardChanged() {
     grid.distanceField([seedbed], routeCost, run.field);
-    amp = evaluateCompanions(grid, run.plants, params.specs);
+    amp = evaluateCompanions(run.companions, params.specs);
     bump();
   }
 

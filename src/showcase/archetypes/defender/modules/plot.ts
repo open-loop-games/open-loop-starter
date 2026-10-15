@@ -10,6 +10,7 @@ import {
   type Resource,
   type ShallowRef,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { BASE_SEEDLINGS, PLOTS } from '../data';
 import { GardenKey } from './garden';
 import { createPlotRun, type PlotRun } from './run';
@@ -43,11 +44,8 @@ export interface PlotApi {
 
 export const PlotKey: InjectionKey<PlotApi> = Symbol('defender/plot') as InjectionKey<PlotApi>;
 
-let api: PlotApi;
-
-export function getPlot(): PlotApi {
-  return api;
-}
+const plotApi = createModuleApi(PlotKey);
+export const getPlot = plotApi.get;
 
 const num = (v: DecimalSource) => new Decimal(v).toNumber();
 
@@ -130,8 +128,8 @@ export function createPlotModule(): EngineModule {
 
       ctx.onTick((dt) => run.value?.step(dt));
 
-      api = { compost, seedlings, run, lastResult, startPlot, leavePlot };
-      ctx.provide(PlotKey, api);
+      const api: PlotApi = { compost, seedlings, run, lastResult, startPlot, leavePlot };
+      plotApi.publish(ctx, api);
     },
   };
 }

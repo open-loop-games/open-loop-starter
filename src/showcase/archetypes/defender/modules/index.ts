@@ -10,6 +10,7 @@ export {
   createPlotRun,
   evaluateCompanions,
   type Cell,
+  type CompanionView,
   type Pest,
   type Plant,
   type PlotRun,

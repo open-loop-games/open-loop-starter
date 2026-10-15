@@ -9,7 +9,7 @@ import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import ProducerList from '@/ui/compositions/ProducerList.vue';
-import type { ProducerRowData } from '@/ui/compositions/ProducerList';
+import { createPurchasableRow, type PurchasableRow } from '@/ui/compositions/purchasable';
 import {
   LESSONS,
   LESSON_MAX,
@@ -59,21 +59,13 @@ const toLearn = computed(() =>
 interface LessonExtra {
   def: LessonDef;
 }
-const rows: ProducerRowData<LessonExtra>[] = LESSONS.map((def) => {
-  const p = garden.lessons.getPurchasable(def.id)!;
-  return {
-    id: def.id,
+const rows = LESSONS.map((def) =>
+  createPurchasableRow<LessonExtra>(garden.lessons.getPurchasable(def.id)!, {
     displayName: def.displayName,
-    count: p.count,
-    displayRate: computed(() => 0),
-    cost: () => 1,
-    canPurchase: () => p.canPurchase.value,
-    maxAffordable: computed(() => (p.canPurchase.value ? 1 : 0)),
-    purchase: () => void p.purchase(1),
     extra: { def },
-  };
-});
-const learned = (row: ProducerRowData<LessonExtra>) => new Decimal(row.count.value).toNumber();
+  }),
+);
+const learned = (row: PurchasableRow<LessonExtra>) => new Decimal(row.count.value).toNumber();
 const anyLearned = computed(() => new Decimal(garden.lessons.totalCount.value).gt(0));
 </script>
 
@@ -147,7 +139,7 @@ const anyLearned = computed(() => new Decimal(garden.lessons.totalCount.value).g
           Start the almanac over
         </Button>
       </header>
-      <ProducerList :rows="rows" cost-label="" bulk-mode-source="none">
+      <ProducerList :rows="rows" bulk-mode-source="none">
         <template #row="{ row, purchase }">
           <div class="wg-lesson" :class="{ full: learned(row) >= LESSON_MAX }">
             <div class="name">

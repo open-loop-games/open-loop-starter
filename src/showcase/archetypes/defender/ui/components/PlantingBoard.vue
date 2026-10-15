@@ -61,10 +61,7 @@ const companions = computed(() => {
     if (p?.def === 'marigold') at = p;
   }
   if (!at) return new Set<string>();
-  const out = new Set<string>();
-  for (let dy = -1; dy <= 1; dy++)
-    for (let dx = -1; dx <= 1; dx++) if (dx || dy) out.add(`${at.x + dx},${at.y + dy}`);
-  return out;
+  return new Set([...props.run.companions.touching(at.x, at.y)].map((c) => `${c.x},${c.y}`));
 });
 
 const night = computed(() => {

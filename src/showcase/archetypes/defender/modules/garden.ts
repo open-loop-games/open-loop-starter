@@ -22,6 +22,7 @@ import {
   type Resource,
   type ZoneSystem,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   LESSONS,
@@ -67,11 +68,8 @@ export const GardenKey: InjectionKey<GardenApi> = Symbol(
   'defender/garden',
 ) as InjectionKey<GardenApi>;
 
-let api: GardenApi;
-
-export function getGarden(): GardenApi {
-  return api;
-}
+const gardenApi = createModuleApi(GardenKey);
+export const getGarden = gardenApi.get;
 
 const num = (v: DecimalSource) => new Decimal(v).toNumber();
 
@@ -155,7 +153,7 @@ export function createGardenModule(): EngineModule {
       );
       const relearnReset = createReset({ thingsToReset: [lessons] });
 
-      api = {
+      const api: GardenApi = {
         anchors,
         specs,
         plots,
@@ -169,7 +167,7 @@ export function createGardenModule(): EngineModule {
         chains,
         isPlantUnlocked: (id) => level.value >= specs.value[id].unlockLevel,
       };
-      ctx.provide(GardenKey, api);
+      gardenApi.publish(ctx, api);
     },
   };
 }

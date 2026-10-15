@@ -4,26 +4,16 @@
   the almanac. Inside a plot it is the board, until the gardener leaves it.
 -->
 <script setup lang="ts">
-import { inject } from 'vue';
-import type { Engine } from '@open-loop/engine';
 import { SingleColumnShell } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
 import { getGarden, getPlot } from '../modules';
 import GardenScreen from './screens/GardenScreen.vue';
 import PlotScreen from './screens/PlotScreen.vue';
 
 const plot = getPlot();
 
-// Dev-only state hook for browser probes: reads live module state without an
-// `import()` that Vite's module cache could serve stale.
-if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
-  (window as unknown as Record<string, unknown>).__walledGarden = {
-    garden: getGarden(),
-    plot,
-    engine,
-    skip: (seconds: number) => engine.tickDriver.advanceTime(seconds),
-  };
-}
+// Dev-only state hook for browser probes, on window.__game.
+if (import.meta.env.DEV) useDevHandle({ garden: getGarden(), plot });
 </script>
 
 <template>
