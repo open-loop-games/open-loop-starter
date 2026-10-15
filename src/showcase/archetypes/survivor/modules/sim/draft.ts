@@ -75,7 +75,8 @@ export function drawOffer(
   const pool = eligibleCards(arena, perks);
   const offer: Card[] = [];
   while (offer.length < size && pool.length > 0) {
-    const card = weightedPick(pool, rng)!;
+    const card = weightedPick(pool, rng);
+    if (!card) break;
     offer.push(card);
     pool.splice(
       pool.findIndex((p) => p.item === card),
