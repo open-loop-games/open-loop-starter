@@ -14,11 +14,6 @@
  * their spreads.
  */
 
-// TODO(expansion): weighted utility over composed influence readers
-// (candidate-engine-api.md § Spatial utility steering). This scores a continuous position
-// sampled onto a nav grid, where primordial scores grid cells, and its threat term is
-// peaked at an orbit rather than monotone.
-
 import {
   ORTHOGONAL_OFFSETS,
   createSpatialGrid,
@@ -455,7 +450,13 @@ export function scoreHeadings(
   return scored;
 }
 
-/** The arg-max over `scoreHeadings`: the heading the star wants. */
+/**
+ * The arg-max over `scoreHeadings`: the heading the star wants.
+ *
+ * Not `createGoalPicker`, by an adoption probe: it chose identically, but cost about 7% of
+ * the take probe's time. Its `pool()` reads no context, so this pure decision would build a
+ * picker every 0.1 s, and the picker's capacity, completion and loadout would go unused.
+ */
 export function chooseHeading(
   s: ArenaState,
   mods: ArenaMods,
