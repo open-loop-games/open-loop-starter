@@ -55,7 +55,7 @@ staleness stays visible against the generated sections above.
 - **chain** — A layer’s cascading producer chain: tier 1 makes the chain’s currency, each tier above makes units of the tier below. The Network makes Hope, the Parallel Earths Echoes, the Imprints Myth. What a chain made goes with its layer’s reset; what was bought goes with the reset above.
 - **Elseworld** — A timeline under a worse rule, entered by a Reboot. Reaching the tier’s goal before the next Reboot resolves the tier, up to five; each resolution grows its permanent reward. Distinct from the Rewrite: an Elseworld wipes only the run.
 - **Legend** — An achievement on lifetime Justice; each multiplies every hero, and no reset takes it back.
-- **Dispatch Desk** — The first automation tier: recruits by blended payback, and saves for a dearer tier when that pays sooner.
+- **Dispatch Desk** — The first automation tier: recruits by blended payback, and saves for a costlier tier when that pays sooner.
 - **Succession Plan** — The second automation tier: reboots once pending Legacy reaches a share of Legacy earned, at most once per interval, never inside an Elseworld.
 - **Crossover Event** — A Canon upgrade that rewrites once pending Continuity reaches a share of Continuity earned this Age, never inside an Elseworld.
 - **Eternal Dispatch** — A Continuity upgrade that keeps the Dispatch Desk and Elseworld Protocols through a Rewrite: the conditional keep-set.

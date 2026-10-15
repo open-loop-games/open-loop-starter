@@ -109,7 +109,7 @@ export const GRADE_MULT = 1.2;
 
 // ── Synergies ──
 // A pair of holdings, cheaper first, coupled by a memo once both are owned past a
-// count. The cheaper earns SYNERGY_CHEAP more per unit of the dearer; the dearer
+// count. The cheaper earns SYNERGY_CHEAP more per unit of the costlier; the costlier
 // SYNERGY_DEAR more per unit of the cheaper (Cookie Clicker `Game.SynergyUpgrade`,
 // unlocked by count alone here, never by prestige). Each holding sits in two pairs.
 
@@ -665,7 +665,7 @@ export function projectArc(
 
     // Units and phones: payback-greedy over the affordable. The hand buys all it can;
     // the acquisitions desk buys one each ACQUISITION_INTERVAL, so cash it cannot
-    // spend yet waits for a dearer unit with a better payback.
+    // spend yet waits for a costlier unit with a better payback.
     let budget = taken.has('hire acquisitions-desk') ? 1 / ACQUISITION_INTERVAL : Infinity;
     while (budget-- > 0) {
       let best = -2;

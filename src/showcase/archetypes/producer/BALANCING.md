@@ -38,7 +38,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
   `projectArc` reads and the step re-solves on import, so the ending stays near
   `ENDING_TARGET` while every earlier beat moves.
 - **The desk's cadence is part of the spine.** The acquisitions desk buys one unit
-  every `ACQUISITION_INTERVAL`, so cash it cannot spend yet waits for a dearer unit with
+  every `ACQUISITION_INTERVAL`, so cash it cannot spend yet waits for a costlier unit with
   a better payback. The projection buys at the same cadence once the desk is hired;
   spending everything each second puts it behind the engine's counts within the first
   half hour.

@@ -83,7 +83,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
   stands in for the reference player, and its rules are the spine's assumptions. Change
   them, the map or any trip term, and the factors no longer describe the walk.
 - **The forest's and the Fen's factors trade.** The Fen's gear is priced from the
-  forest's budget. A higher forest factor makes the Fen's gear dearer, so a step that
+  forest's budget. A higher forest factor makes the Fen's gear costlier, so a step that
   fixes one band's stay moves the other's.
 
 ## Running a pass

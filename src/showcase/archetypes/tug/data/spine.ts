@@ -126,7 +126,7 @@ export function frontage(t: TroopDef, n: number): number {
   return Math.min(n, A.files * Math.max(1, Math.floor(t.reach / A.rankSpacing)));
 }
 
-/** Members one release's budget raises; never under one, so an engine dearer than a release is still one engine. */
+/** Members one release's budget raises; never under one, so an engine costlier than a release is still one engine. */
 const releaseMembers = (t: TroopDef) => Math.max(1, releaseBudget / memberCost(t));
 const pike = troop('pike');
 const K =

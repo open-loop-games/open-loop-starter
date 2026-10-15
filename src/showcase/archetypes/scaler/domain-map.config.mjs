@@ -48,7 +48,7 @@ export default {
     },
     {
       term: 'Dispatch Desk',
-      note: 'The first automation tier: recruits by blended payback, and saves for a dearer tier when that pays sooner.',
+      note: 'The first automation tier: recruits by blended payback, and saves for a costlier tier when that pays sooner.',
     },
     {
       term: 'Succession Plan',

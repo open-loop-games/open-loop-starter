@@ -82,7 +82,7 @@ export const TROOPS: TroopDef[] = [
     arrivesAt: 120,
     ours: {
       name: 'Our Mangonel',
-      role: 'Slow and dearer still. Throws at their gate over walls and men.',
+      role: 'Slow and costlier still. Throws at their gate over walls and men.',
     },
     theirs: { name: 'their infernal engine' },
   },

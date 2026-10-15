@@ -164,7 +164,7 @@ describe('survivor/take — the ratings', () => {
 describe('survivor/take — the rewrite ladder', () => {
   beforeEach(() => boot());
 
-  it('derives one rung a beat, each dearer than the last', () => {
+  it('derives one rung a beat, each costlier than the last', () => {
     const steps = BEATS.times.map((_, i) => reelsForLevel(i + 2) - reelsForLevel(i + 1));
     expect(steps).toHaveLength(BEATS.count);
     for (let i = 1; i < steps.length; i++) expect(steps[i]!).toBeGreaterThan(steps[i - 1]!);
