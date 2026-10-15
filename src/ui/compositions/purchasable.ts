@@ -51,9 +51,10 @@ export function readUnmet(p: Purchasable): string[] {
   return getRequirementDescriptions(unmet);
 }
 
-/** A row the adapter built: it always knows the purchasable's max and its unmet prerequisites. */
+/** A row the adapter built: it always knows the purchasable's max, whether it is shown and its unmet prerequisites. */
 export type PurchasableRow<T = never> = ProducerRowData<T> & {
   maxAffordable: Ref<DecimalSource>;
+  unlocked: Ref<boolean>;
   unmet: Ref<string[]>;
 };
 
@@ -62,6 +63,12 @@ export type ProducerRow<T = never> = PurchasableRow<T> & {
   displayRate: Ref<DecimalSource>;
   cost: (count: DecimalSource) => DecimalSource;
   costLabel: string;
+};
+
+/** A card the adapter built: it always knows whether it is shown and its unmet prerequisites. */
+export type PurchasableCard<T = never> = UpgradeCardData<T> & {
+  unlocked: Ref<boolean>;
+  unmet: Ref<string[]>;
 };
 
 /** What a story supplies beside the purchasable; every field but the name has an engine default. */
@@ -161,10 +168,10 @@ export function createProducerRow<T = never>(
 export function createPurchasableCard<T = never>(
   p: Purchasable,
   o: Omit<PurchasableRowOptions<T>, 'rate'> & { description?: string | (() => string) },
-): UpgradeCardData<T> {
+): PurchasableCard<T> {
   const costs = costsOf(p);
   const single = costs.length === 1 ? costs[0] : undefined;
-  const card: UpgradeCardData<T> = {
+  const card: PurchasableCard<T> = {
     id: o.id ?? p.id,
     displayName: o.displayName,
     description: o.description ?? (() => unref(p.display.description)),

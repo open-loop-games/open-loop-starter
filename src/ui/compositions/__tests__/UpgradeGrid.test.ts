@@ -110,6 +110,18 @@ describe('UpgradeGrid', () => {
     expect(wrapper.find('.upgrade-grid__cell').exists()).toBe(false);
   });
 
+  it('hands a #card slot the description as text, a function read at render', () => {
+    const lit = ref('dark');
+    const card = { ...makeCard('a'), description: () => `the hall is ${lit.value}` };
+    const wrapper = mount(UpgradeGrid, {
+      props: { cards: [card], reveal: 'inline' },
+      slots: {
+        card: `<template #card="{ description }"><p class="custom-desc">{{ description }}</p></template>`,
+      },
+    });
+    expect(wrapper.find('.custom-desc').text()).toBe('the hall is dark');
+  });
+
   it('lays out as one column by default', () => {
     const wrapper = mount(UpgradeGrid, { props: { cards: [makeCard('a')], reveal: 'inline' } });
     const grid = wrapper.find('.upgrade-grid').element as HTMLElement;

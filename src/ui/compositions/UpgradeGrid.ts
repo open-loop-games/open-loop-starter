@@ -4,7 +4,7 @@ import type { DecimalSource } from '@open-loop/engine';
 export interface UpgradeCardData<T = never> {
   id: string;
   displayName: string;
-  /** A function is read at render, for text that changes; a `#card` slot calls it itself. */
+  /** A function is read at render, for text that changes; the `#card` slot gets the text as `description`. */
   description: string | (() => string);
   cost: Ref<DecimalSource>;
   costLabel: string;
@@ -21,8 +21,9 @@ export interface UpgradeCardData<T = never> {
   unmet?: Ref<string[]>;
   /**
    * Typed per-card payload forwarded to the `#card` / `#reveal-content` slots —
-   * the extension seam (see `ProducerRowData.extra`). Parameterize the
-   * component (`UpgradeGrid<MyCard>`) to type it; defaults to `never`.
+   * the extension seam (see `ProducerRowData.extra`). The slots receive the card
+   * type the grid was given, so `extra` and any field a card always carries read
+   * back typed, with no cast. Defaults to `never`.
    */
   extra?: T;
 }

@@ -7,10 +7,10 @@
   board reads.
 -->
 <script setup lang="ts">
-import { computed, unref } from 'vue';
+import { computed } from 'vue';
 import { toNumber, type PurchasableCategory } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { UpgradeGrid, createPurchasableCard, type UpgradeCardData } from '@/ui/compositions';
+import { UpgradeGrid, createPurchasableCard, type PurchasableCard } from '@/ui/compositions';
 import { CALIBRATION_STEP, REFIT_MULT } from '../../data';
 import { getBoard, getYard } from '../../modules';
 import { useFitting } from '../fitting';
@@ -25,34 +25,32 @@ interface Extra {
   section?: number;
 }
 
-/** One card per purchasable; its description is read once, so the slot prints a string. */
+/** One card per purchasable. */
 function cardsOf<D extends { id: string; name: string }>(
   category: PurchasableCategory<D>,
   extra: (def: D) => Extra,
-): UpgradeCardData<Extra>[] {
-  return category.getAll().map(({ def, purchasable: p }) =>
-    createPurchasableCard<Extra>(p, {
-      displayName: def.name,
-      description: unref(p.display.description),
-      extra: extra(def),
-    }),
-  );
+): PurchasableCard<Extra>[] {
+  return category
+    .getAll()
+    .map(({ def, purchasable: p }) =>
+      createPurchasableCard<Extra>(p, { displayName: def.name, extra: extra(def) }),
+    );
 }
 
 /**
  * What still bars a card besides salvage: a carrier to destroy. Sections plate in order and
  * only the next is offered, so the previous section's plating is not news.
  */
-const bars = (c: UpgradeCardData<Extra>) => c.unmet!.value.filter((d) => !d.endsWith('plated'));
+const bars = (c: PurchasableCard<Extra>) => c.unmet.value.filter((d) => !d.endsWith('plated'));
 
 const sectionCards = cardsOf(yard.hull, (def) => ({ section: def.index }));
 const refitCards = cardsOf(yard.refits, () => ({}));
 
 /** Sections plate in order, so only the ship's next one is offered. */
 const nextSection = computed(() =>
-  sectionCards.filter((c) => !c.owned.value && c.unlocked!.value).slice(0, 1),
+  sectionCards.filter((c) => !c.owned.value && c.unlocked.value).slice(0, 1),
 );
-const shownRefits = computed(() => refitCards.filter((c) => c.unlocked!.value));
+const shownRefits = computed(() => refitCards.filter((c) => c.unlocked.value));
 const openRefits = computed(() => shownRefits.value.filter((c) => !c.owned.value));
 const installed = computed(() => shownRefits.value.filter((c) => c.owned.value));
 const hullArmed = computed(
@@ -68,7 +66,7 @@ const calPrice = computed(() => toNumber(calibration.getCost(1)));
   <section class="hull-refits">
     <h2 class="hp-head">Hull</h2>
     <UpgradeGrid v-if="nextSection.length" :cards="nextSection" :columns="1" reveal="inline">
-      <template #card="{ card: c }">
+      <template #card="{ card: c, description }">
         <div
           class="hp-card"
           @mouseenter="fitting.sectionHover = c.extra!.section!"
@@ -76,7 +74,7 @@ const calPrice = computed(() => toNumber(calibration.getCost(1)));
         >
           <div>
             <div class="name">{{ c.displayName }}</div>
-            <div class="sub">{{ c.description }}</div>
+            <div class="sub">{{ description }}</div>
             <div v-for="b in bars(c)" :key="b" class="bar-req">needs {{ b }}</div>
           </div>
           <Button
@@ -96,12 +94,12 @@ const calPrice = computed(() => toNumber(calibration.getCost(1)));
     <template v-if="shownRefits.length">
       <h2 class="hp-head">Refits</h2>
       <UpgradeGrid v-if="openRefits.length" :cards="openRefits" :columns="1" reveal="inline">
-        <template #card="{ card: c }">
+        <template #card="{ card: c, description }">
           <div class="hp-card refit">
             <div>
               <div class="name">{{ c.displayName }}</div>
               <div class="sub">
-                {{ c.description }}
+                {{ description }}
                 <span class="hp-num">{{ times(REFIT_MULT) }}</span>
               </div>
             </div>

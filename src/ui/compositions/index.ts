@@ -13,6 +13,7 @@ export {
   readUnmet,
   type PriceLine,
   type ProducerRow,
+  type PurchasableCard,
   type PurchasableRow,
   type PurchasableRowOptions,
 } from './purchasable';

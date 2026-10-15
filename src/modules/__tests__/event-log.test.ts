@@ -42,6 +42,22 @@ describe('createEventLog', () => {
     ]);
   });
 
+  it('stamps every line 0 when the log has no clock', () => {
+    let log!: EventLog;
+    bootTestEngine({
+      modules: [
+        {
+          id: 'test/untimed',
+          install(ctx) {
+            log = createEventLog(ctx, { cap: 3 });
+          },
+        },
+      ],
+    });
+    log.post('untimed');
+    expect(log.lines.value).toEqual([{ seq: 1, at: 0, kind: 'plain', text: 'untimed' }]);
+  });
+
   it('keeps the newest lines up to the cap', () => {
     const { log } = bootLog();
     for (const text of ['a', 'b', 'c', 'd']) log().post(text);

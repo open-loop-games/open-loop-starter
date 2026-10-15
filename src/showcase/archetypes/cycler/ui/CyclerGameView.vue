@@ -39,7 +39,7 @@ if (import.meta.env.DEV) useDevHandle({ watch, logbook: getLogbook() });
         <Reckoning />
         <WorkRail v-model:tool="tool" />
         <section class="log" aria-label="Keeper's log">
-          <EventLog :lines="watch.log.lines.value" />
+          <EventLog :lines="watch.log.lines.value" :show-empty="false" />
         </section>
       </template>
       <div class="main">
@@ -83,8 +83,5 @@ if (import.meta.env.DEV) useDevHandle({ watch, logbook: getLogbook() });
 }
 .log :deep(.event-log__row--fresh) {
   opacity: 0.95;
-}
-.log :deep(.event-log__empty) {
-  display: none;
 }
 </style>

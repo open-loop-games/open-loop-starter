@@ -97,8 +97,8 @@ const postings = computed(() =>
               <span class="blurb">{{ card.description }}</span>
               <span class="price num">
                 <template v-if="card.owned.value">learned</template>
-                <template v-else-if="card.unmet!.value.length"
-                  >needs {{ card.unmet!.value.join(', ') }}</template
+                <template v-else-if="card.unmet.value.length"
+                  >needs {{ card.unmet.value.join(', ') }}</template
                 >
                 <template v-else>{{ formatGrouped(card.cost.value) }} entries</template>
               </span>

@@ -30,4 +30,22 @@ describe('ProgressBar', () => {
       .map((m) => (m.element as HTMLElement).style.left);
     expect(lefts).toEqual(['25%', '100%']);
   });
+
+  it('draws a mark as a position, or with its own class and title', () => {
+    const w = mount(ProgressBar, {
+      props: { value: 1, max: 4, marks: [1, { at: 2, class: 'ghost', title: 'last night' }] },
+    });
+    const marks = w.findAll('.olui-progress-bar__mark');
+    expect(marks.map((m) => (m.element as HTMLElement).style.left)).toEqual(['25%', '50%']);
+    expect(marks[1]!.classes()).toContain('ghost');
+    expect(marks[1]!.attributes('title')).toBe('last night');
+    expect(marks[0]!.attributes('title')).toBeUndefined();
+  });
+
+  it('fills from the right on request, its marks measured from the right too', () => {
+    const w = mount(ProgressBar, { props: { value: 1, max: 4, marks: [1], from: 'right' } });
+    expect(w.attributes('data-from')).toBe('right');
+    expect((w.get('.olui-progress-bar__mark').element as HTMLElement).style.left).toBe('75%');
+    expect(mount(ProgressBar, { props: { value: 1 } }).attributes('data-from')).toBe('left');
+  });
 });

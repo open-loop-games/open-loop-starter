@@ -13,7 +13,7 @@ import type { Purchasable } from '@open-loop/engine';
 import { modalStackKey } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import AchievementGrid, { type AchievementCard } from '@/ui/components/AchievementGrid.vue';
-import { UpgradeGrid, createPurchasableCard, type UpgradeCardData } from '@/ui/compositions';
+import { UpgradeGrid, createPurchasableCard, type PurchasableCard } from '@/ui/compositions';
 import { BOOKKEEPER_DEF, ENDING_DEF, type HireId } from '../../data';
 import { getAutomation, getFirm, getOffline, getStanding, getTips } from '../../modules';
 import { money } from '../format';
@@ -33,7 +33,7 @@ const cardsOf = (
     createPurchasableCard(purchasable, { displayName: def.title, description: def.description }),
   );
 /** Whether the grid shows any card: its own filter, which it does not expose. */
-const onRail = (cards: UpgradeCardData[]) => cards.some((c) => c.unlocked!.value && !c.owned.value);
+const onRail = (cards: PurchasableCard[]) => cards.some((c) => c.unlocked.value && !c.owned.value);
 
 /** One-shots bought on sight of their reveal: press for standing, and the wire room. */
 const press = cardsOf(standing.upgrades.getAll());

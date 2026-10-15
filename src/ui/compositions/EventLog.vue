@@ -2,7 +2,8 @@
   EventLog — panel-level composition over the lines of a `createEventLog` log:
   a list of kinded rows, the newest marked fresh, with an empty state.
   `#row` replaces a row's content and receives `{ line, fresh }`; `#empty` replaces
-  the empty state.
+  the empty state, and `:show-empty="false"` draws none. New lines are announced
+  politely; a fallthrough `aria-live` overrides it.
 
   Costume classes (stable API) — reskin via `:deep(.event-log__…)`. Renames are breaking:
     .event-log                the <ol> (+ [data-order])
@@ -23,8 +24,10 @@ const props = withDefaults(
     limit?: number;
     order?: EventLogOrder;
     formatTime?: (at: number) => string;
+    /** False: an empty log draws nothing, not the empty state. */
+    showEmpty?: boolean;
   }>(),
-  { limit: undefined, order: 'newest-first', formatTime: undefined },
+  { limit: undefined, order: 'newest-first', formatTime: undefined, showEmpty: true },
 );
 defineSlots<{
   row?: (props: { line: L; fresh: boolean }) => unknown;
@@ -39,7 +42,7 @@ const newest = computed(() => props.lines.at(-1)?.seq);
 </script>
 
 <template>
-  <ol class="event-log" :data-order="order">
+  <ol class="event-log" :data-order="order" aria-live="polite">
     <li
       v-for="line in shown"
       :key="line.seq"
@@ -54,7 +57,7 @@ const newest = computed(() => props.lines.at(-1)?.seq);
         <span class="event-log__text">{{ line.text }}</span>
       </slot>
     </li>
-    <li v-if="shown.length === 0" class="event-log__empty">
+    <li v-if="shown.length === 0 && showEmpty" class="event-log__empty">
       <slot name="empty">Nothing yet.</slot>
     </li>
   </ol>

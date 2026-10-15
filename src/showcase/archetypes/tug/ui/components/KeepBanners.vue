@@ -93,7 +93,8 @@ const lostShare = { player: lost('player'), rival: lost('rival') };
       <div class="kb-horn-bar">
         <ProgressBar class="cw-gauge kb-horn-run kb-horn-run--ours" :value="1 - ours / T" />
         <ProgressBar
-          class="cw-gauge from-right kb-horn-run kb-horn-run--theirs"
+          class="cw-gauge kb-horn-run kb-horn-run--theirs"
+          from="right"
           :value="1 - theirs / T"
         />
       </div>
@@ -131,7 +132,7 @@ const lostShare = { player: lost('player'), rival: lost('rival') };
       <div class="kb-gate" :class="{ low: gates.rival.highlight?.value === 'deficit' }">
         <span class="num kb-gate-n">{{ n(gates.rival.value.value) }}</span>
         <div class="kb-wall">
-          <ProgressBar class="cw-gauge from-right kb-wall-fill" :value="wholeness.rival.value" />
+          <ProgressBar class="cw-gauge kb-wall-fill" from="right" :value="wholeness.rival.value" />
         </div>
         <span class="kb-label">their gate</span>
       </div>

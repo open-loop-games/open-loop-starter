@@ -16,23 +16,24 @@ const byId = Object.fromEntries(ACTIONS.map((a) => [a.id, a]));
 const nerve = computed(() => new Decimal(night.nerve.value).toNumber());
 const elapsed = computed(() => (night.nightActive.value ? night.cycle.elapsed.value : 0));
 const nightLength = computed(() => Math.max(1, elapsed.value + nerve.value));
-const nerveShare = computed(() => nerve.value / nightLength.value);
 const low = computed(() => night.nightActive.value && nerve.value < 0.2 * night.nerveCap.value);
 
-const ghosts = computed(() =>
-  Object.entries(meta.lastSplits.value).map(([d, t]) => ({
-    d,
-    at: Math.min(1, t / nightLength.value),
-    t,
+/**
+ * Landmarks on the strip, last night's ghosted and tonight's lit. The strip is drawn in Nerve
+ * left, so a landmark that fell `t` seconds in sits at `nightLength - t`.
+ */
+const landmarks = computed(() => [
+  ...Object.entries(meta.lastSplits.value).map(([d, t]) => ({
+    at: nightLength.value - t,
+    class: 'lo-tick ghost',
+    title: `last night: ${LANDMARKS[+d]} at ${clock(t)}`,
   })),
-);
-const marks = computed(() =>
-  Object.entries(night.splits.value).map(([d, t]) => ({
-    d,
-    at: Math.min(1, t / nightLength.value),
-    t,
+  ...Object.entries(night.splits.value).map(([d, t]) => ({
+    at: nightLength.value - t,
+    class: 'lo-tick now',
+    title: `tonight: ${LANDMARKS[+d]} at ${clock(t)}`,
   })),
-);
+]);
 
 const planEdited = computed(
   () => night.nightActive.value && night.planStamp.value !== JSON.stringify(meta.plan.value),
@@ -100,28 +101,15 @@ const summary = computed(() => night.lastNight.value);
       </div>
     </div>
 
-    <!--
-      The night strip: elapsed dark, remaining Nerve lit; last night's landmarks ghosted.
-      Not a ProgressBar: the lit share is anchored at the end, and the marks come in two
-      kinds, each with a title.
-    -->
-    <div class="lo-strip" aria-hidden="true">
-      <div class="lo-strip-lit" :style="{ transform: `scaleX(${nerveShare})` }" />
-      <span
-        v-for="m in ghosts"
-        :key="'g' + m.d"
-        class="lo-tick ghost"
-        :style="{ left: `${m.at * 100}%` }"
-        :title="`last night: ${LANDMARKS[+m.d]} at ${clock(m.t)}`"
-      />
-      <span
-        v-for="m in marks"
-        :key="'m' + m.d"
-        class="lo-tick now"
-        :style="{ left: `${m.at * 100}%` }"
-        :title="`tonight: ${LANDMARKS[+m.d]} at ${clock(m.t)}`"
-      />
-    </div>
+    <!-- The night strip: elapsed dark, remaining Nerve lit from the end. -->
+    <ProgressBar
+      class="lo-strip"
+      aria-hidden="true"
+      from="right"
+      :value="nerve"
+      :max="nightLength"
+      :marks="landmarks"
+    />
 
     <p class="lo-status">
       <template v-if="status === 'first'">Lights out in Cell 4471. Write a plan, then go.</template>
@@ -282,34 +270,29 @@ const summary = computed(() => night.lastNight.value);
   border: 1px solid var(--lo-jumpsuit);
 }
 .lo-strip {
-  position: relative;
-  height: 16px;
+  --progress-bar-height: 16px;
+  --progress-bar-track: repeating-linear-gradient(90deg, var(--lo-night) 0 9px, #0e141b 9px 10px);
+  --progress-bar-track-empty: var(--progress-bar-track);
+  --progress-bar-border: 1px solid var(--lo-concrete-edge);
+  --progress-bar-shadow: none;
+  --progress-bar-radius: 0;
+  --progress-bar-fill: linear-gradient(90deg, var(--lo-sodium-dim), var(--lo-sodium));
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-transition: transform 120ms linear;
   margin: 12px 0 6px;
-  background: repeating-linear-gradient(90deg, var(--lo-night) 0 9px, #0e141b 9px 10px);
-  border: 1px solid var(--lo-concrete-edge);
 }
-.lo-strip-lit {
-  position: absolute;
-  inset: 0;
-  transform-origin: right center;
-  background: linear-gradient(90deg, var(--lo-sodium-dim), var(--lo-sodium));
-  transition: transform 120ms linear;
+.lo-nerve.low + .lo-strip {
+  --progress-bar-fill: linear-gradient(90deg, #7a3a1a, var(--lo-jumpsuit));
 }
-.lo-nerve.low + .lo-strip .lo-strip-lit {
-  background: linear-gradient(90deg, #7a3a1a, var(--lo-jumpsuit));
+.lo-strip :deep(.lo-tick) {
+  top: -4px;
+  bottom: -4px;
 }
-.lo-tick {
-  position: absolute;
-  top: -5px;
-  bottom: -5px;
-  width: 2px;
-  margin-left: -1px;
-}
-.lo-tick.ghost {
+.lo-strip :deep(.lo-tick.ghost) {
   background: var(--lo-ink-faded);
   opacity: 0.7;
 }
-.lo-tick.now {
+.lo-strip :deep(.lo-tick.now) {
   background: var(--lo-searchlight);
   box-shadow: 0 0 6px var(--lo-searchlight);
 }

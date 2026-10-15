@@ -41,6 +41,17 @@ describe('EventLog', () => {
     expect(w.find('.event-log__empty').text()).toBe('All quiet.');
   });
 
+  it('draws nothing for an empty log when told not to show the empty state', () => {
+    const w = mount(EventLog, { props: { lines: [], showEmpty: false } });
+    expect(w.find('.event-log__empty').exists()).toBe(false);
+  });
+
+  it('announces new lines politely, unless the story says otherwise', () => {
+    expect(mount(EventLog, { props: { lines } }).attributes('aria-live')).toBe('polite');
+    const w = mount(EventLog, { props: { lines }, attrs: { 'aria-live': 'off' } });
+    expect(w.attributes('aria-live')).toBe('off');
+  });
+
   it('hands a row slot the line and whether it is fresh', () => {
     const w = mount(EventLog, {
       props: { lines },

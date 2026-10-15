@@ -4,7 +4,7 @@
   Costume classes: olui-progress-bar, olui-progress-bar__track,
   olui-progress-bar__fill, olui-progress-bar__mark (one per mark),
   olui-progress-bar__label (when `label` set).
-  Root carries data-state="empty" | "partial" | "full".
+  Root carries data-state="empty" | "partial" | "full" and data-from="left" | "right".
   Custom props: --progress-bar-{fill,fill-full,track,track-empty,border,shadow,
   radius,height,mark,transition}. A theme styles the track and the full and empty
   states through these alone, so a story restyles a bar, a hairline gauge
@@ -15,21 +15,36 @@
   (and `--progress-bar-offset` for a segment), and the stylesheet turns them into
   `transform: scaleX(…)` on a full-width element, so a bar that moves every tick
   costs no layout. A transition on it is a `transform` transition. A scaled
-  pattern distorts, so a patterned fill clips instead:
+  pattern distorts, so a patterned fill or segment clips instead:
     transform: none;
-    clip-path: inset(0 calc((1 - var(--progress-bar-ratio)) * 100%) 0 0);
-  with a `clip-path` transition.
+    clip-path: inset(0 calc((1 - var(--progress-bar-offset, 0) - var(--progress-bar-ratio)) * 100%)
+      0 calc(var(--progress-bar-offset, 0) * 100%));
+  with a `clip-path` transition. A bar filling from the right swaps the two insets.
 
   Segmented mode: passing `segments` overrides `value`/`max`. Each segment is
-  scaled to its fraction and shifted past the ones before it, left to right in
-  the shared track. Consumers keep the sum ≤ 1 and colour segments via the
-  optional per-segment `class`.
+  scaled to its fraction and shifted past the ones before it in the shared
+  track. Consumers keep the sum ≤ 1 and colour segments via the optional
+  per-segment `class`.
 
-  `marks` draws thin ticks at positions in the units of `value` and `max`: a
-  threshold, a checkpoint, a night's hours.
+  `from="right"` anchors the fill at the right edge, for a gauge that drains
+  toward its end or belongs to the right-hand side. Segments then stack leftward.
+
+  `marks` draws thin ticks at positions in the units of `value` and `max`, so a
+  mark sits where the fill's edge would be: a threshold, a checkpoint, a
+  landmark. A mark given as `{ at, class, title }` carries its own costume
+  class and a hover title.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
+
+export interface ProgressBarMark {
+  /** Position, in the units of `value` and `max`. */
+  at: number;
+  /** Optional class applied to the mark element. */
+  class?: string;
+  /** Shown on hover. */
+  title?: string;
+}
 
 export interface ProgressBarSegment {
   /** Fraction of the track this segment fills, 0..1. */
@@ -43,10 +58,12 @@ const props = withDefaults(
     value?: number;
     max?: number;
     segments?: ProgressBarSegment[];
-    marks?: readonly number[];
+    marks?: readonly (number | ProgressBarMark)[];
     label?: string;
+    /** The edge the fill grows from. */
+    from?: 'left' | 'right';
   }>(),
-  { value: 0, max: 1, segments: undefined, marks: undefined, label: undefined },
+  { value: 0, max: 1, segments: undefined, marks: undefined, label: undefined, from: 'left' },
 );
 
 const isSegmented = computed(() => Array.isArray(props.segments));
@@ -81,13 +98,17 @@ const segmentStyles = computed(() => {
   });
 });
 
-const markLefts = computed(() =>
-  (props.marks ?? []).map((m) => `${clamp(props.max > 0 ? m / props.max : 0) * 100}%`),
+const markViews = computed(() =>
+  (props.marks ?? []).map((m) => {
+    const mark = typeof m === 'number' ? { at: m } : m;
+    const r = clamp(props.max > 0 ? mark.at / props.max : 0);
+    return { ...mark, left: `${(props.from === 'right' ? 1 - r : r) * 100}%` };
+  }),
 );
 </script>
 
 <template>
-  <div class="olui-progress-bar" :data-state="state">
+  <div class="olui-progress-bar" :data-state="state" :data-from="from">
     <div class="olui-progress-bar__track">
       <template v-if="isSegmented">
         <div
@@ -101,10 +122,12 @@ const markLefts = computed(() =>
       <div v-else class="olui-progress-bar__fill" :style="{ '--progress-bar-ratio': ratio }" />
     </div>
     <span
-      v-for="(left, i) in markLefts"
+      v-for="(mark, i) in markViews"
       :key="i"
       class="olui-progress-bar__mark"
-      :style="{ left }"
+      :class="mark.class"
+      :style="{ left: mark.left }"
+      :title="mark.title"
     />
     <span v-if="label" class="olui-progress-bar__label">{{ label }}</span>
   </div>
@@ -153,6 +176,12 @@ const markLefts = computed(() =>
   transition: var(--progress-bar-transition);
 }
 
+.olui-progress-bar[data-from='right'] .olui-progress-bar__fill {
+  transform-origin: right;
+  transform: translateX(calc(var(--progress-bar-offset, 0) * -100%))
+    scaleX(var(--progress-bar-ratio, 0));
+}
+
 .olui-progress-bar[data-state='full'] .olui-progress-bar__fill {
   background: var(--progress-bar-fill-full);
 }
@@ -165,6 +194,10 @@ const markLefts = computed(() =>
   margin-left: -1px;
   background: var(--progress-bar-mark);
   pointer-events: none;
+}
+
+.olui-progress-bar__mark[title] {
+  pointer-events: auto;
 }
 
 .olui-progress-bar__label {

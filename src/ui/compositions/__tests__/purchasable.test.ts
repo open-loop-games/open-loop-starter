@@ -178,7 +178,7 @@ describe('createPurchasableRow', () => {
       displayName: 'Charter',
       purchase: (n) => bought.push(Number(n)),
     });
-    expect(row.unmet!.value).toEqual(['A mill']);
+    expect(row.unmet.value).toEqual(['A mill']);
     row.purchase(1);
     expect(bought).toEqual([1]);
   });
@@ -203,8 +203,8 @@ describe('createPurchasableCard', () => {
     expect((card.description as () => string)()).toBe('Founds the town.');
     expect(Number(card.cost.value)).toBe(5);
     expect(card.costLabel).toBe('gold');
-    expect(card.unmet!.value).toEqual(['A mill']);
-    expect(card.unlocked!.value).toBe(true);
+    expect(card.unmet.value).toEqual(['A mill']);
+    expect(card.unlocked.value).toBe(true);
 
     millOwned.value = true;
     gold().value = new Decimal(5);

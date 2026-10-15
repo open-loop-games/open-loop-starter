@@ -166,7 +166,7 @@
 
 /* A gauge: starter's ProgressBar as a square, unframed rule. Each gauge sets its own height,
    fill and transition; where a track shows, the gauge's own box carries it. A rival's gauge
-   is mirrored to fill from its own side, which mirrors a patterned fill with it. */
+   fills from the right, its own side. */
 .causeway-costume .cw-gauge {
   --progress-bar-border: none;
   --progress-bar-shadow: none;
@@ -174,9 +174,6 @@
   --progress-bar-track: transparent;
   --progress-bar-track-empty: var(--progress-bar-track);
   --progress-bar-fill-full: var(--progress-bar-fill);
-}
-.causeway-costume .cw-gauge.from-right {
-  transform: scaleX(-1);
 }
 
 /* Starter's frame, in the hall. */

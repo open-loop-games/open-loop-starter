@@ -14,7 +14,7 @@ const lineage = getLineage();
 <template>
   <section class="if-panel journal" aria-label="Journal">
     <h2 class="if-title">Journal</h2>
-    <EventLog :lines="lineage.journal.lines.value" :limit="40" aria-live="polite">
+    <EventLog :lines="lineage.journal.lines.value" :limit="40">
       <template #row="{ line }">
         <span class="at num">{{ fmtClock(line.at) }}</span> {{ line.text }}
       </template>

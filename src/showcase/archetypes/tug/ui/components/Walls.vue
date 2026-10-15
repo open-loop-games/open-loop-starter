@@ -108,7 +108,8 @@ const canSound = computed(
         </div>
         <div class="wl-row">
           <ProgressBar
-            class="cw-gauge from-right wl-windlass wl-windlass--rival"
+            class="cw-gauge wl-windlass wl-windlass--rival"
+            from="right"
             :class="{ ready: theirs.ready }"
             :value="theirs.wound"
           />
@@ -186,11 +187,10 @@ const canSound = computed(
   background: rgba(0, 0, 0, 0.45);
   border-top: 1px solid rgba(160, 139, 98, 0.25);
 }
-/* Mirrored to fill from the right, so its rope is laid at 290deg to read as 70deg. */
 .wl-windlass--rival {
   --progress-bar-height: 4px;
   --progress-bar-fill: repeating-linear-gradient(
-    290deg,
+    70deg,
     var(--cw-madder) 0 3px,
     rgba(189, 79, 60, 0.5) 3px 6px
   );

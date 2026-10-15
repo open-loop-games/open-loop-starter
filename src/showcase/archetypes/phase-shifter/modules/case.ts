@@ -45,8 +45,6 @@ export function createCaseModule(): EngineModule {
     install(ctx) {
       const log = createEventLog(ctx, {
         cap: LOG_LIMIT,
-        // The carbon is untimed: no line shows when it was typed.
-        clock: () => 0,
         persistId: 'log',
         initial: OPENING,
       });

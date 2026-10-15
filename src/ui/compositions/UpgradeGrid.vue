@@ -15,7 +15,7 @@
   (Panel compositions expose bare BEM classes; widgets under src/ui/components
   expose `olui-` classes. Both stable.)
 -->
-<script setup lang="ts" generic="T = never">
+<script setup lang="ts" generic="C extends UpgradeCardData<unknown>">
 import { computed } from 'vue';
 import { format } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
@@ -28,7 +28,7 @@ type PurchasedState = 'greyed' | 'removed' | 'checkmark';
 
 const props = withDefaults(
   defineProps<{
-    cards: UpgradeCardData<T>[];
+    cards: C[];
     columns?: number;
     reveal?: Reveal;
     purchasedState?: PurchasedState;
@@ -43,8 +43,8 @@ const props = withDefaults(
 );
 
 defineSlots<{
-  card?: (props: { card: UpgradeCardData<T>; idx: number }) => unknown;
-  'reveal-content'?: (props: { card: UpgradeCardData<T> }) => unknown;
+  card?: (props: { card: C; idx: number; description: string }) => unknown;
+  'reveal-content'?: (props: { card: C; description: string }) => unknown;
 }>();
 
 const gridStyle = computed(() => ({
@@ -57,11 +57,11 @@ const visibleCards = computed(() =>
   ),
 );
 
-function unmetOf(card: UpgradeCardData<T>): string[] {
+function unmetOf(card: C): string[] {
   return card.unmet?.value ?? [];
 }
 
-function describe(card: UpgradeCardData<T>): string {
+function describe(card: C): string {
   return typeof card.description === 'function' ? card.description() : card.description;
 }
 </script>
@@ -75,7 +75,13 @@ function describe(card: UpgradeCardData<T>): string {
       :style="card.position !== undefined ? { order: card.position } : undefined"
     >
       <Tooltip v-if="reveal === 'tooltip'">
-        <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
+        <slot
+          v-if="$slots.card"
+          name="card"
+          :card="card"
+          :idx="idx"
+          :description="describe(card)"
+        />
         <div
           v-else
           class="upgrade-grid__cell"
@@ -107,7 +113,12 @@ function describe(card: UpgradeCardData<T>): string {
           </div>
         </div>
         <template #content>
-          <slot v-if="$slots['reveal-content']" name="reveal-content" :card="card" />
+          <slot
+            v-if="$slots['reveal-content']"
+            name="reveal-content"
+            :card="card"
+            :description="describe(card)"
+          />
           <template v-else>
             <p class="upgrade-grid__cell-desc">
               {{ describe(card) }}
@@ -120,7 +131,13 @@ function describe(card: UpgradeCardData<T>): string {
       </Tooltip>
       <Popover v-else-if="reveal === 'popover'">
         <template #trigger>
-          <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
+          <slot
+            v-if="$slots.card"
+            name="card"
+            :card="card"
+            :idx="idx"
+            :description="describe(card)"
+          />
           <div
             v-else
             class="upgrade-grid__cell"
@@ -133,7 +150,12 @@ function describe(card: UpgradeCardData<T>): string {
             </div>
           </div>
         </template>
-        <slot v-if="$slots['reveal-content']" name="reveal-content" :card="card" />
+        <slot
+          v-if="$slots['reveal-content']"
+          name="reveal-content"
+          :card="card"
+          :description="describe(card)"
+        />
         <template v-else>
           <p class="upgrade-grid__cell-desc">
             {{ describe(card) }}
@@ -163,7 +185,13 @@ function describe(card: UpgradeCardData<T>): string {
         </template>
       </Popover>
       <template v-else>
-        <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
+        <slot
+          v-if="$slots.card"
+          name="card"
+          :card="card"
+          :idx="idx"
+          :description="describe(card)"
+        />
         <div
           v-else
           class="upgrade-grid__cell"

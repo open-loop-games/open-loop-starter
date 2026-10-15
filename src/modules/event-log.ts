@@ -10,7 +10,7 @@ import {
 export interface EventLine<K extends string = string, X = undefined> {
   /** From 1, never reused, so `since(seq)` is a cursor. */
   seq: number;
-  /** `clock()` when the line was posted. */
+  /** `clock()` when the line was posted; 0 in a log without a clock. */
   at: number;
   kind: K;
   text: string;
@@ -20,8 +20,8 @@ export interface EventLine<K extends string = string, X = undefined> {
 export interface EventLogOptions<K extends string> {
   /** Lines kept; the oldest go first. */
   cap: number;
-  /** The time a line is stamped with, usually play-seconds. */
-  clock: () => number;
+  /** The time a line is stamped with, usually play-seconds. Without it, the log is untimed. */
+  clock?: () => number;
   /** Kind of a line posted without one, and of `initial` lines. */
   defaultKind?: K;
   /**
@@ -48,7 +48,7 @@ export interface EventLog<K extends string = string, X = undefined> {
  * Create a capped log of game events inside a module's `install()`.
  *
  * @param ctx - the installing module's engine context.
- * @param options - the cap, the clock, and whether the save keeps the log.
+ * @param options - the cap, any clock, and whether the save keeps the log.
  * @returns the log: its lines and the means to post to it.
  * @example
  * const log = createEventLog<'build' | 'warn'>(ctx, { cap: 60, clock: () => time.totalPlayTime.value });
@@ -90,7 +90,7 @@ export function createEventLog<K extends string = 'plain', X = undefined>(
   return {
     lines,
     post(text, kind = defaultKind, extra) {
-      const line: EventLine<K, X> = { seq: ++seq.value, at: clock(), kind, text };
+      const line: EventLine<K, X> = { seq: ++seq.value, at: clock?.() ?? 0, kind, text };
       if (extra !== undefined) line.extra = extra;
       lines.value = [...lines.value, line].slice(-cap);
     },

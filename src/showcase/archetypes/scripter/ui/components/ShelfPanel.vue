@@ -27,7 +27,7 @@ const cards = TECHNIQUES.map((def) =>
     extra: { def },
   }),
 );
-const unseen = computed(() => cards.filter((c) => !c.unlocked!.value).length);
+const unseen = computed(() => cards.filter((c) => !c.unlocked.value).length);
 
 watch(
   () => props.focus,
@@ -67,8 +67,8 @@ watch(
             Answers {{ challenger(card.extra!.def.answers).displayName }}.
           </p>
           <div v-if="!card.owned.value" class="act">
-            <span v-if="card.unmet!.value.length" class="blocked">{{
-              card.unmet!.value.join(' · ')
+            <span v-if="card.unmet.value.length" class="blocked">{{
+              card.unmet.value.join(' · ')
             }}</span>
             <Button
               v-else
@@ -82,7 +82,7 @@ watch(
             <span
               v-if="
                 !card.owned.value &&
-                !card.unmet!.value.length &&
+                !card.unmet.value.length &&
                 Decimal.lt(dojo.ki.value, card.cost.value)
               "
               class="short num"

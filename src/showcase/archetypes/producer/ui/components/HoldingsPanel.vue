@@ -68,7 +68,7 @@ const progress = (cost: DecimalSource) =>
 
 /** The next sealed prospectus: the first hidden subsidiary, opened by owning the one before it. */
 const sealed = computed(() => {
-  const i = subsidiaryRows.findIndex((r) => !r.unlocked!.value);
+  const i = subsidiaryRows.findIndex((r) => !r.unlocked.value);
   if (i < 1) return undefined;
   return { opener: subsidiaryRows[i - 1].extra!.def.unit };
 });
