@@ -425,7 +425,7 @@ export function createWorksModule(): EngineModule {
         }
         let drawn = steam.share.mill * ask.mill * dt;
 
-        // TODO(expansion): continuous converter (candidate-primitives.md). A workshop's
+        // TODO(expansion): continuous converter (candidate-engine-api.md). A workshop's
         // throughput is the minimum over crew × rate × fed, each input's stock, and the
         // output bin's room; createConversion is one-shot, so the batch is sized here.
         for (const role of ROLES) {

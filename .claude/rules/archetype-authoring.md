@@ -88,7 +88,7 @@ sections:
    remainder. The rest of the archetype depends on this section.
 4. **The arc / beat map** — where the run turns.
 5. **Growth ports** — the validated-but-deferred directions the archetype grows through.
-6. **Engine fit** — pattern → engine primitive, with candidate-primitive receipts.
+6. **Engine fit** — pattern → engine primitive, with drop-spot receipts.
 7. **Balance model** — the spine and what checks it, pointing at this archetype's `balance/`.
 
 ## BALANCING.md — required sections

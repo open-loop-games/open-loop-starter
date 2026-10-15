@@ -27,7 +27,7 @@ import { SkirmishTuningRegistryKey, DEFAULT_FACTIONS, type FactionId } from './t
  * engine composition (a two-sided match lifecycle), not a
  * primitive gap, so it is indexed in `candidate-recipes.md`
  * for deliberate cross-archetype evaluation — deliberately not dropped in engine
- * `candidate-primitives.md`. Skirmish is its one instance (N=1). A converged shape may later graduate
+ * `candidate-engine-api.md`. Skirmish is its one instance (N=1). A converged shape may later graduate
  * to a shared starter standard module or an engine consumer-guide recipe — by
  * judgment on the recipe batch, not an N=2 trigger. See that index.
  */

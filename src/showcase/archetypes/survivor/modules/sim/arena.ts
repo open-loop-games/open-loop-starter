@@ -546,7 +546,7 @@ function shoulderCell(v: number): number {
   return c < 0 ? 0 : c >= SHOULDER_COLS ? SHOULDER_COLS - 1 : c;
 }
 
-// TODO(expansion): a float proximity query (candidate-primitives.md); the shoulder grid
+// TODO(expansion): a float proximity query (candidate-engine-api.md); the shoulder grid
 // is a hand-rolled broad-phase over continuous positions.
 /** Extras close on the double and shoulder each other apart (bucketed). */
 function moveExtras(s: ArenaState, dt: number): void {
@@ -670,7 +670,7 @@ function resolveContact(s: ArenaState, scene: number, contactScale: number, dt: 
 
 // ─── Fire: automatic, positioning-only ──────────────────────────────────────
 
-// TODO(expansion): cooldown dispatch over a def set (candidate-primitives.md). Each rig's
+// TODO(expansion): cooldown dispatch over a def set (candidate-engine-api.md). Each rig's
 // clock runs down, holds at ready while nothing qualifies, and fires on the first tick
 // something does. createTimedProgress owns its ref and ticks itself, so it cannot live here.
 function fireRigs(s: ArenaState, mods: ArenaMods, dt: number): void {

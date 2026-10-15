@@ -75,8 +75,8 @@ the `tunable()` perturbation path, and an `AutomationTiers` ladder
 `assisted` automation tier unlocks. The ladder ships locked, so it costs the default arc nothing; it is here so a
 fork inherits the canonical shape for player-facing automation rather than inventing
 one. A real archetype maps each pattern in its identity line to an engine primitive
-here, with candidate-primitive receipts where it hand-rolls a gap
-(`candidate-primitives.md`).
+here, with drop-spot receipts where it hand-rolls a gap
+(`candidate-engine-api.md`).
 
 ## Balance model
 

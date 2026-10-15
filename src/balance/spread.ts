@@ -18,7 +18,7 @@
  * then silently drops.
  *
  * TODO(expansion): categorical aggregation over a seed sweep is a parked
- * engine primitive — `candidate-primitives.md` § Categorical outcome
+ * engine primitive — `candidate-engine-api.md` § Categorical outcome
  * distribution over a seed sweep. Promote when a second archetype's spine
  * declares a categorical outcome as its measured remainder.
  *

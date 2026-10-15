@@ -15,7 +15,7 @@
  */
 
 // TODO(expansion): weighted utility over composed influence readers
-// (candidate-primitives.md § Spatial utility steering). This scores a continuous position
+// (candidate-engine-api.md § Spatial utility steering). This scores a continuous position
 // sampled onto a nav grid, where primordial scores grid cells, and its threat term is
 // peaked at an orbit rather than monotone.
 

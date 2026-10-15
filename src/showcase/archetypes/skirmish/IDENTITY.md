@@ -167,7 +167,7 @@ line's own unbuilt half, and they feed named spine terms.
   calibrated `cadenceJitter` (0.15) exercising the spine's stochastic remainder
   over seeded multi-run batches (`balance/persona-probe.ts` adopting `@/balance`).
 - Scale: brute-force targeting at tens of units → uniform-grid / spatial-hash
-  broad-phase when counts demand it (and only then a candidate-primitive, if a
+  broad-phase when counts demand it (and only then an engine API candidate, if a
   second consumer converges).
 - `SpatialInfluenceLayer` for AI-opponent reasoning (threat/frontier maps).
 - Render interpolation: units currently ease toward tactical-sim truth (exponential
@@ -194,7 +194,7 @@ Match/reset/economy/balance harness = direct engine primitives (`createReset`,
 `tunable`). Tactical spatial layer = **consumer-side, no engine primitive**
 (deliberate — spatial-rendering-boundary-spec keeps continuous coords in the
 render/consumer layer). Candidate-primitive receipts go in
-`candidate-primitives.md` only if a second spatial
+`candidate-engine-api.md` only if a second spatial
 consumer converges — not from this archetype alone.
 
 ## Balance model

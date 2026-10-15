@@ -102,7 +102,7 @@ interface Frozen {
   faction: FactionId;
 }
 
-// TODO(expansion): a float proximity query (candidate-primitives.md); this scan visits
+// TODO(expansion): a float proximity query (candidate-engine-api.md); this scan visits
 // every enemy, where a broad-phase visits only nearby cells.
 /** Nearest living enemy within `range`, else null. Brute force — the scale seam. */
 function nearestEnemy(self: Frozen, enemies: Frozen[], range: number): Frozen | null {
