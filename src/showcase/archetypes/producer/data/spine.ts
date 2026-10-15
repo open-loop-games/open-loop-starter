@@ -270,7 +270,8 @@ export function buildLadder(
   gradeAt: number[] = GRADES.map(() => Infinity),
 ): Ladder {
   const rateStep = costStep / PAYBACK_GROWTH;
-  const opener = (i: number) => OPENER_COST * costStep ** i;
+  const openers: number[] = [];
+  const opener = (i: number) => (openers[i] ??= OPENER_COST * costStep ** i);
   const baseCost: number[] = [];
   const baseRate: number[] = [];
   for (let i = 0; i < TIER_COUNT; i++) {
@@ -280,9 +281,14 @@ export function buildLadder(
   return { costStep, rateStep, opener, baseCost, baseRate, gradeAt };
 }
 
+// m^n for integer n, computed once: the projection prices every tier's next unit
+// on every buy it weighs.
+const costPowers: number[] = [];
+
 /** Cost of unit n (zero-based) of a tier: a·m^n. */
 export function unitCost(a: number, n: number): number {
-  return a * COST_RATIO ** n;
+  if (!Number.isInteger(n) || n < 0) return a * COST_RATIO ** n;
+  return a * (costPowers[n] ??= COST_RATIO ** n);
 }
 
 /** Memo price at reveal count N: ρ·(μ−1)·N·a·m^N. */
@@ -455,16 +461,22 @@ export function projectArc(
   let price = endingCost ?? Infinity;
   const gradeRevenue: number[] = [];
 
-  const subs = () => counts.reduce((s, n) => s + n, 0);
   const phones = () => deskPhones + phonesBought;
   const standing = () => achievements / STANDING_DIVISOR;
   // A bull market in force: the multiplier and the seconds it has left.
   let bullMult = 1;
   let bullLeft = 0;
+  // The operations factor, recomputed only after a grade, an achievement, a bull
+  // market or a standing upgrade changes it.
+  let opsFactor = 1;
+  let opsStale = false;
   const ops = () => {
-    let f = GRADE_MULT ** grades * bullMult;
-    for (let k = 0; k < standingBought; k++) f *= 1 + standing() * STANDING_K;
-    return f;
+    if (opsStale) {
+      opsFactor = GRADE_MULT ** grades * bullMult;
+      for (let k = 0; k < standingBought; k++) opsFactor *= 1 + standing() * STANDING_K;
+      opsStale = false;
+    }
+    return opsFactor;
   };
   // Synergy memos bought per pair, and each tier's synergy factor, kept current
   // as counts and memos change: the greedy reads them inside its inner loop.
@@ -480,18 +492,33 @@ export function projectArc(
     });
   };
   const synergy = (i: number) => synergyFactor[i];
-  const deal = () =>
-    (DEAL_YIELD + referralPerSubsidiary(networks) * subs()) * TRAINING_MULT ** training;
+  // The deal's factors, kept current as subsidiaries, networks and training change.
+  let owned = 0;
+  let referralAdd = 0;
+  let trainingFactor = 1;
+  const deal = () => (DEAL_YIELD + referralAdd * owned) * trainingFactor;
   const tierRate = (i: number) => ladder.baseRate[i] * tierMult[i] * synergy(i) * ops();
   const phoneRate = () => deal() * ops();
-  const passive = () => counts.reduce((s, n, i) => s + n * tierRate(i), 0) + phones() * phoneRate();
+  const passive = () => {
+    let sum = 0;
+    for (let i = 0; i < TIER_COUNT; i++) sum += counts[i] * tierRate(i);
+    return sum + phones() * phoneRate();
+  };
   const memoCost = (i: number, n: number) => upgradeCost(ladder.baseCost[i], n);
   const achieve = (t: number, label: string) => {
     achievements++;
+    opsStale = true;
     beats.push({ label: `achievement ${label}`, t });
   };
 
   const memoIds = counts.map((_, i) => UPGRADE_AT.map((n) => `memo t${i}@${n}`));
+  // Memos bought per tier. A chain's memos cost more at each reveal, so the bought
+  // ones are always a prefix and the next is the only one to try or reserve for.
+  const memosBought = new Array<number>(TIER_COUNT).fill(0);
+  const phoneMarkIds = PHONE_MARKS.map((n) => `phones ${n}`);
+  const tipMarkIds = TIP_MARKS.map((n) => `tips ${n}`);
+  const dealMarkIds = HAND_DEAL_MARKS.map((n) => `deals ${n}`);
+  const hireIds = HIRES.map((h) => `hire ${h.id}`);
   const synergyIds = SYNERGY_PAIRS.map(([c, d]) => SYNERGY_AT.map((n) => `syn ${c}-${d}@${n}`));
   // A caught tip is caught at once; a missed one holds the clock its whole lifetime.
   const upSeconds = (lifetimeScale: number) => (1 - catchRate) * TIP_LIFETIME * lifetimeScale;
@@ -532,13 +559,17 @@ export function projectArc(
       if (bull > 1) {
         bullMult = bull;
         bullLeft = BULL_SECONDS * scale.duration;
+        opsStale = true;
       }
       cash += gain;
       lifetime += gain;
       tipsCaught += caught;
       beats.push({ label: 'tip', t });
     }
-    if (bullLeft > 0 && --bullLeft <= 0) bullMult = 1;
+    if (bullLeft > 0 && --bullLeft <= 0) {
+      bullMult = 1;
+      opsStale = true;
+    }
 
     // Achievements.
     const gradeDue = (k: number) =>
@@ -565,54 +596,64 @@ export function projectArc(
         achieve(t, id);
       }
     };
-    for (const n of PHONE_MARKS) once(`phones ${n}`, phones() >= n);
-    for (const n of TIP_MARKS) once(`tips ${n}`, tipsCaught >= n);
-    for (const n of HAND_DEAL_MARKS) once(`deals ${n}`, handDeals >= n);
+    PHONE_MARKS.forEach((n, k) => once(phoneMarkIds[k], phones() >= n));
+    TIP_MARKS.forEach((n, k) => once(tipMarkIds[k], tipsCaught >= n));
+    HAND_DEAL_MARKS.forEach((n, k) => once(dealMarkIds[k], handDeals >= n));
 
     // One-shots, taken on sight.
     const take = (id: string, cost: number, apply: () => void) => {
-      if (taken.has(id) || cash < cost) return;
+      if (taken.has(id) || cash < cost) return false;
       cash -= cost;
       taken.add(id);
       apply();
       beats.push({ label: id, t });
+      return true;
     };
     if (endingOffered === Infinity) {
       for (let k = training; k < TRAINING_COUNT && counts[k] > 0; k++) {
-        take(`training ${k + 1}`, trainingCost(k), () => training++);
+        take(`training ${k + 1}`, trainingCost(k), () => {
+          training++;
+          trainingFactor = TRAINING_MULT ** training;
+        });
       }
       for (let i = 0; i < TIER_COUNT; i++) {
-        UPGRADE_AT.forEach((n, k) => {
-          if (counts[i] >= n)
-            take(memoIds[i][k], memoCost(i, n), () => (tierMult[i] *= UPGRADE_MULT));
-        });
+        for (let k = memosBought[i]; k < UPGRADE_AT.length && counts[i] >= UPGRADE_AT[k]; k++) {
+          const bought = take(memoIds[i][k], memoCost(i, UPGRADE_AT[k]), () => {
+            memosBought[i]++;
+            tierMult[i] *= UPGRADE_MULT;
+          });
+          if (!bought) break;
+        }
       }
       SYNERGY_PAIRS.forEach(([c, d], p) => {
-        SYNERGY_AT.forEach((n, k) => {
-          if (counts[c] >= n && counts[d] >= n) {
-            take(synergyIds[p][k], synergyCost(ladder, c, d, n), () => {
-              pairMemos[p]++;
-              refreshSynergy();
-            });
-          }
-        });
+        for (let k = pairMemos[p]; k < SYNERGY_AT.length; k++) {
+          const n = SYNERGY_AT[k];
+          if (counts[c] < n || counts[d] < n) break;
+          const bought = take(synergyIds[p][k], synergyCost(ladder, c, d, n), () => {
+            pairMemos[p]++;
+            refreshSynergy();
+          });
+          if (!bought) break;
+        }
       });
-      for (const h of HIRES) {
+      HIRES.forEach((h, k) => {
         if (counts[h.revealTier] >= 1) {
-          take(`hire ${h.id}`, hireCost(ladder, h.priceTier), () => {
+          take(hireIds[k], hireCost(ladder, h.priceTier), () => {
             if (h.id === 'sales-desk') deskPhones = DESK_PHONES;
           });
         }
-      }
+      });
       if (networks < REFERRAL_AT.length && phones() >= REFERRAL_AT[networks]) {
-        take(`referral ${networks + 1}`, referralCost(ladder, networks), () => networks++);
+        take(`referral ${networks + 1}`, referralCost(ladder, networks), () => {
+          networks++;
+          referralAdd = referralPerSubsidiary(networks);
+        });
       }
       if (standingBought < STANDING_AT.length && standing() >= STANDING_AT[standingBought]) {
-        take(
-          `standing ${standingBought + 1}`,
-          standingCost(ladder, standingBought),
-          () => standingBought++,
-        );
+        take(`standing ${standingBought + 1}`, standingCost(ladder, standingBought), () => {
+          standingBought++;
+          opsStale = true;
+        });
       }
       if (tipUpgrades < TIP_UPGRADE_AT.length && tipsCaught >= TIP_UPGRADE_AT[tipUpgrades]) {
         take(`tip upgrade ${tipUpgrades + 1}`, tipUpgradeCost(ladder, tipUpgrades), () => {
@@ -645,17 +686,14 @@ export function projectArc(
     if (taken.has('hire board')) {
       reserve = Infinity;
       for (let i = 0; i < TIER_COUNT; i++) {
-        UPGRADE_AT.forEach((n, k) => {
-          if (counts[i] >= n && !taken.has(memoIds[i][k]))
-            reserve = Math.min(reserve, memoCost(i, n));
-        });
+        const k = memosBought[i];
+        if (k < UPGRADE_AT.length && counts[i] >= UPGRADE_AT[k])
+          reserve = Math.min(reserve, memoCost(i, UPGRADE_AT[k]));
       }
       SYNERGY_PAIRS.forEach(([c, d], p) => {
-        SYNERGY_AT.forEach((n, k) => {
-          if (counts[c] >= n && counts[d] >= n && !taken.has(synergyIds[p][k])) {
-            reserve = Math.min(reserve, synergyCost(ladder, c, d, n));
-          }
-        });
+        const k = pairMemos[p];
+        if (k < SYNERGY_AT.length && counts[c] >= SYNERGY_AT[k] && counts[d] >= SYNERGY_AT[k])
+          reserve = Math.min(reserve, synergyCost(ladder, c, d, SYNERGY_AT[k]));
       });
       if (networks < REFERRAL_AT.length && phones() >= REFERRAL_AT[networks]) {
         reserve = Math.min(reserve, referralCost(ladder, networks));
@@ -693,6 +731,7 @@ export function projectArc(
 
       cash -= unitCost(ladder.baseCost[best], counts[best]);
       counts[best]++;
+      owned++;
       refreshSynergy();
       if (counts[best] === 1) {
         tierOpen[best] = t;
@@ -725,6 +764,12 @@ export function projectArc(
 
 // ── The solve ──
 
+/** The reference arc to `ending` on a ladder, each credit grade granted on its share of it. */
+function projectOnGradeSchedule(costStep: number, ending: number): Projection {
+  const gradeTimes = GRADES.map((_, k) => Math.round(((k + 1) / (GRADES.length + 1)) * ending));
+  return projectArc(buildLadder(costStep), ending, { gradeTimes });
+}
+
 /**
  * The credit grades' thresholds on a ladder: the lifetime revenue the reference
  * player has at each grade's share of the arc to `ending`. A projection that
@@ -732,8 +777,7 @@ export function projectArc(
  * crosses each threshold at that same second.
  */
 export function solveGrades(costStep: number, ending: number): number[] {
-  const gradeTimes = GRADES.map((_, k) => Math.round(((k + 1) / (GRADES.length + 1)) * ending));
-  const { gradeRevenue } = projectArc(buildLadder(costStep), ending, { gradeTimes });
+  const { gradeRevenue } = projectOnGradeSchedule(costStep, ending);
   return GRADES.map((_, k) => gradeRevenue[k] ?? Infinity);
 }
 
@@ -747,16 +791,19 @@ export function solveGrades(costStep: number, ending: number): number[] {
  */
 function solveLadder(): Ladder {
   const target = ENDING_TARGET;
-  const ladderAt = (step: number) => buildLadder(step, solveGrades(step, target));
   let lo = 3;
   let hi = 20;
   for (let iter = 0; iter < 18; iter++) {
     const mid = (lo + hi) / 2;
-    const end = projectArc(ladderAt(mid), target * 1.5).endingBought;
+    // Lifetime revenue climbs every second, so the projection on the solved
+    // thresholds crosses each one at its scheduled second and retraces this run
+    // to `target`. This run's ending is that projection's.
+    const end = projectOnGradeSchedule(mid, target).endingBought;
     if (end > target) hi = mid;
     else lo = mid;
   }
-  return ladderAt((lo + hi) / 2);
+  const step = (lo + hi) / 2;
+  return buildLadder(step, solveGrades(step, target));
 }
 
 export const LADDER = solveLadder();
