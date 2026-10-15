@@ -1,6 +1,7 @@
 # Packer
 
-Core · covered. Identity line: the Packer entry in `../_identity.md`. Not built.
+Core · covered. Identity line: the Packer entry in `../_identity.md`. Built:
+`../packer/IDENTITY.md`.
 
 ## Player experience
 

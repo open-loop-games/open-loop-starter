@@ -1,0 +1,282 @@
+/*
+ * Packer — the Hardpoint costume.
+ *
+ * The whole design language is here, scoped under `.hardpoint`, so the story's identity
+ * is one file a fork can read, replace or delete. Nothing in `src/lib/` or `src/ui/` is
+ * edited for it: every hook is a documented costume class on a shell, a widget or a
+ * composition (`.olui-three-panel__…`, `.olui-system-header…`, `.producer-list__…`,
+ * `.upgrade-grid__…`) or a class this story's own components emit.
+ *
+ * Language: a fitting bay under combat alert. The hull board is blueprint, a cold cyan
+ * lattice on hull black; live fire is plasma amber; the swarm is breach red and appears
+ * only on the breach line. The affordance palette comes first, and the identity is built
+ * around it:
+ *   plasma     you can act: fabricate, plate, refit; a legal socket under a held module
+ *   slag       you cannot yet
+ *   blueprint  a schematic recovered, a cell a module reaches: what the lattice reads
+ *   hull-seam  owned, spent, installed
+ *   gain/loss  the firing solution's sign
+ * Each module type has one hue, read off the lattice at a glance (`--pc-*`).
+ *
+ * Fonts: Chakra Petch, a squared engineering face, for the chrome and the module glyphs;
+ * Barlow for everything read; Barlow Semi Condensed for every figure. Latin subsets,
+ * SIL OFL (`../assets/fonts/OFL.txt`).
+ */
+
+@font-face {
+  font-family: 'Hardpoint Stencil';
+  src: url('../assets/fonts/ChakraPetch-SemiBold.woff') format('woff');
+  font-weight: 600;
+}
+@font-face {
+  font-family: 'Hardpoint Stencil';
+  src: url('../assets/fonts/ChakraPetch-Bold.woff') format('woff');
+  font-weight: 700;
+}
+@font-face {
+  font-family: 'Hardpoint Manual';
+  src: url('../assets/fonts/Barlow-Regular.woff') format('woff');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Hardpoint Manual';
+  src: url('../assets/fonts/Barlow-Medium.woff') format('woff');
+  font-weight: 500;
+}
+@font-face {
+  font-family: 'Hardpoint Readout';
+  src: url('../assets/fonts/BarlowSemiCondensed-Medium.woff') format('woff');
+  font-weight: 500;
+}
+@font-face {
+  font-family: 'Hardpoint Readout';
+  src: url('../assets/fonts/BarlowSemiCondensed-Bold.woff') format('woff');
+  font-weight: 700;
+}
+
+.hardpoint {
+  /* ── the hull ── */
+  --void: #06090f;
+  --hull: #0c131d;
+  --hull-plate: #111b28;
+  --hull-seam: #1d2b3b;
+  --lattice: #23394b;
+
+  /* ── affordance ── */
+  --blueprint: #6fd3e8;
+  --blueprint-dim: #2f6474;
+  --plasma: #ffb547;
+  --plasma-hot: #ffd38a;
+  --slag: #5d6878;
+  --gain: #7ee0a1;
+  --loss: #ff7a7a;
+  --breach: #ff5d5d;
+
+  /* ── the readouts ── */
+  --readout: #c9d6e3;
+  --readout-dim: #8494a7;
+
+  /* ── one hue per module type ── */
+  --pc-pulse: #ffb547;
+  --pc-rail: #e8eefc;
+  --pc-capacitor: #4fd1c5;
+  --pc-targeting: #a3e635;
+  --pc-beacon: #f472b6;
+  --pc-coolant: #93c5fd;
+
+  --face-stencil: 'Hardpoint Stencil', 'Bahnschrift', sans-serif;
+  --face-manual: 'Hardpoint Manual', 'Segoe UI', sans-serif;
+  --face-readout: 'Hardpoint Readout', 'Hardpoint Manual', sans-serif;
+
+  --cell: 62px;
+  --radius-plate: 3px;
+
+  /* Scaffold tokens the shared chrome reads, set here so the costume travels with the story. */
+  --color-bg: var(--void);
+  --color-surface: var(--hull);
+  --color-surface-hover: var(--hull-plate);
+  --color-border: var(--hull-seam);
+  --color-text: var(--readout);
+  --color-text-muted: var(--readout-dim);
+  --color-primary: var(--plasma);
+  --color-primary-hover: var(--plasma-hot);
+  --color-on-primary: var(--void);
+  --color-danger: var(--breach);
+  --color-success: var(--gain);
+  --radius: var(--radius-plate);
+  --radius-sm: 2px;
+  --font-sans: var(--face-manual);
+
+  color: var(--readout);
+  font-family: var(--face-manual);
+  font-size: 14px;
+  line-height: 1.35;
+
+  /* The costume wrapper sits between the host and AppFrame; it passes the host's flex
+     column through so the frame fills it. */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Zero specificity: it overrides the UA button face but not a scaffold button's own class. */
+:where(.hardpoint) button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Every live figure: fixed-width digits so ticks never shove the layout. */
+.hardpoint .hp-num {
+  font-family: var(--face-readout);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* The bay at alert: the hull lit faintly from above the board. */
+.hardpoint .olui-app-frame,
+.hardpoint .slot-screen {
+  background: radial-gradient(ellipse 70% 55% at 50% 40%, #0f1b2a 0%, transparent 70%), var(--void);
+}
+
+.hardpoint .olui-system-header {
+  background: var(--void);
+  border-bottom: 1px solid var(--hull-seam);
+}
+.hardpoint .olui-system-header__actions {
+  align-items: center;
+  gap: 14px;
+}
+.hardpoint .olui-system-header__actions > button {
+  background: transparent;
+  border: 1px solid var(--hull-seam);
+  border-radius: var(--radius-plate);
+  padding: 3px 10px;
+  min-height: 0;
+  font-family: var(--face-stencil);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  color: var(--readout-dim);
+  cursor: pointer;
+}
+.hardpoint .olui-system-header__actions > button:hover {
+  color: var(--blueprint);
+  border-color: var(--blueprint-dim);
+}
+
+/* The shell's columns: the bay's two consoles either side of the hull, no box round it. */
+.hardpoint .olui-three-panel {
+  gap: 28px;
+  padding: 20px 24px 32px;
+  justify-content: center;
+}
+.hardpoint .olui-three-panel__left,
+.hardpoint .olui-three-panel__main,
+.hardpoint .olui-three-panel__right {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  min-width: 0;
+  overflow: visible;
+}
+.hardpoint .olui-three-panel__main {
+  align-items: center;
+}
+
+/* ── console heading: stencilled blueprint capitals ── */
+.hardpoint .hp-head {
+  margin: 0 0 10px;
+  font-family: var(--face-stencil);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--blueprint);
+}
+.hardpoint * + .hp-head {
+  margin-top: 18px;
+}
+
+/* ── an action plate: plasma when you can act, slag when you cannot ── */
+.hardpoint .hp-act {
+  min-width: 64px;
+  white-space: nowrap;
+  padding: 4px 8px;
+  font-family: var(--face-readout);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 2px;
+  background: transparent;
+  border: 1px solid var(--hull-seam);
+  color: var(--slag);
+  cursor: not-allowed;
+}
+.hardpoint .hp-act.can {
+  border-color: var(--plasma);
+  color: var(--plasma);
+  background: rgba(255, 181, 71, 0.08);
+  cursor: pointer;
+}
+.hardpoint .hp-act.can:hover {
+  background: rgba(255, 181, 71, 0.18);
+  color: var(--plasma-hot);
+}
+.hardpoint .hp-act:focus-visible {
+  outline: 1px solid var(--blueprint);
+  outline-offset: 2px;
+}
+
+/* ── a module's hue: set `--pc` from the type; `.hp-ink` also paints the text in it ── */
+.hardpoint .pc-pulse {
+  --pc: var(--pc-pulse);
+}
+.hardpoint .pc-rail {
+  --pc: var(--pc-rail);
+}
+.hardpoint .pc-capacitor {
+  --pc: var(--pc-capacitor);
+}
+.hardpoint .pc-targeting {
+  --pc: var(--pc-targeting);
+}
+.hardpoint .pc-beacon {
+  --pc: var(--pc-beacon);
+}
+.hardpoint .pc-coolant {
+  --pc: var(--pc-coolant);
+}
+.hardpoint .hp-ink {
+  color: var(--pc);
+}
+
+/* ── the reveal: a schematic decrypts, a card comes online ── */
+@keyframes hp-decrypt {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+    box-shadow: 0 0 0 1px var(--blueprint);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Compositions: bare, so each row and card draws itself. */
+.hardpoint .producer-list__rows {
+  gap: 6px;
+}
+.hardpoint .producer-list__row {
+  display: block;
+}
+.hardpoint .upgrade-grid {
+  gap: 6px;
+}
+.hardpoint .upgrade-grid__cell-wrap {
+  display: flex;
+  min-width: 0;
+}

@@ -19,6 +19,7 @@ directions it grows through. Start there.
 | `explorer` | A fogged map uncovered on jerky and water; what a trip finds banks only at home |
 | `interlocker` | A production graph drawn as a cyanotype: workshops, patents, a seated crew, steam, seasons and bins, with Ministry orders, a medal-paying Exposition and an ending |
 | `looper`   | Authored plan run against a draining budget; mastery survives the reset |
+| `packer`   | A frigate's hull lattice plated out section by section, where each module's firepower comes from what sits beside it |
 | `phase-shifter` | One-way doors: a reader, then an arranger, then a planner, each retiring the last |
 | `producer` | Geometric cost ladder under a compounding multiplier stack           |
 | `scaler`   | Three prestige layers over a hero ladder, each compressing the one below and opening its own chain |
