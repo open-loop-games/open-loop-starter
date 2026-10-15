@@ -15,9 +15,9 @@ In a runless game the board stays and grows: a play session is a rearrangement p
 
 | Game                 | Call | How progress survives                                                                              | Sourced |
 | -------------------- | ---- | -------------------------------------------------------------------------------------------------- | ------- |
-| Calculator Evolution | in   | a runless save under `prestige`; a 5×5 lattice where each `Booster` multiplies its Moore-ring neighbours | yes     |
+| Calculator Evolution | in   | stacked `prestige` resets; the Singularity layer's 5×5 machine board, eleven machine kinds each facing one of four ways, where an effect counts only when its chain points into the Output | yes     |
 | NGU Industries       | in   | a runless save with `offline-progress`, `escalating-price` and `softcap`; beacons stamp box, knight's-move, arrow, wall and donut footprints | yes     |
-| Ballionaire          | in   | `meta-progression`: Ploop banked on the profile widens the draftable pool; a slot board with authored per-slot adjacency | yes     |
+| Ballionaire          | in   | `meta-progression`: Ploop banked on the profile widens the draftable pool; a plinko board with authored per-slot adjacency, where placement is permanent and a removal spends a counted resource | yes     |
 
 ## Lineage
 

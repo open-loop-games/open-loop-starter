@@ -1,195 +1,217 @@
 /**
- * The packing: each board stage's best arrangement, found by local search on the shipping
- * evaluator (`../modules/layout.ts`), beside the claim `STAGE_PACKING` holds for it in
- * `../data/spine.ts`. Then the Coolant Manifold's gain, solved on the coolant stage.
- * Prints; never asserts. No engine boots: the evaluator is pure.
+ * The packing: each board stage's claimed board re-scored on the shipping evaluator
+ * (`../modules/layout.ts`), then a search for a better one, seeded with it and with the
+ * previous stage's best. A stage that closes on a carrier gets a second board, for
+ * firepower alone. Then the Coolant Manifold's gain, solved on the coolant stage. Prints;
+ * never asserts. No engine boots: the evaluator is pure.
  *
- *   pnpm exec vite-node src/showcase/archetypes/packer/balance/packing-probe.ts
+ *   pnpm exec vite-node src/showcase/archetypes/packer/balance/packing-probe.ts [ship] [--deep] [--coolant]
  *
- * About 2 s.
+ * `ship` is frigate, lancer or flagship; without it every stage runs. `--deep` searches with
+ * a larger budget and adds a cold search, seeded with nothing. `--coolant` adds the
+ * Coolant Manifold's gain solve.
  *
  * Reading it:
- * - § stages: each stage's cells and types, the claimed and the measured rate (dps before
- *   the refits), and the measured counts. `DRIFT` marks a claim more than 2% off. § paste
- *   is the measured table in `STAGE_PACKING`'s shape.
- * - § coolant: the best coolant-stage packing with and without manifolds at each gain the
- *   bisection tries, against one weapon's share of the stage's rate. The solved gain is
- *   the smallest at which manifolds earn that share.
+ * - § stages: each stage's cells and conditions, then its claimed and best salvage (and
+ *   firepower, for a fight), and the best board's counts. Flags: `NEW` a board not yet
+ *   claimed, `SHAPE` a claimed board that no longer fits its hull, `DRIFT` a claimed board
+ *   whose stored numbers are not what it scores now, `BETTER +x%` a search that beat it.
+ *   Under `--deep`, `cold` is the unseeded search against the seeded one, and the better
+ *   of the two is the best: a stage whose cold search lands on the seeded best has
+ *   converged.
+ * - § paste: `STAGE_PACKING` and `PACKING_BOARDS` as `../data/packing.ts` holds them, from
+ *   the best boards. Paste it after a pass, then rerun the arc probe.
+ * - § coolant: the best packing with and without manifolds at each gain the bisection
+ *   tries, against one weapon's share of the stage's rate.
  *
- * The search: from a seed board (the previous stage's best, its new cells random) and from
- * random boards, it changes one cell's type, or trades two cells' types, while board
- * firepower rises. A seeded RNG keeps runs repeatable.
+ * Boards are keyed by search spec (`specKey`): stages that differ only in refits or honours
+ * share one. The search is `./_search.ts`.
  */
 
 import {
-  BEACON_GAIN,
   COOLANT_GAIN,
-  HULL_H,
-  HULL_W,
-  LINK_BOOST,
-  PULSE_DPS,
-  RAIL_DPS,
+  PACKING_BOARDS,
   STAGES,
   STAGE_PACKING,
-  sectionAt,
   type BoardStage,
   type PieceId,
+  type StagePacking,
 } from '../data';
-import { RELATION_OFFSETS, boardTotal, type LayoutParams, type OccupancyView } from '../modules';
+import {
+  KICKS,
+  bestPacking,
+  decodeBoard,
+  encodeBoard,
+  openCells,
+  paramsFor,
+  scoreBoard,
+  specKey,
+  type Board,
+  type Objective,
+  type Packing,
+} from './_search';
 
-const RESTARTS = 24;
+declare const process: { argv: string[] };
 
-const params = (coolantGain = COOLANT_GAIN): LayoutParams => ({
-  dps: { pulse: PULSE_DPS, rail: RAIL_DPS },
-  boost: { capacitor: LINK_BOOST, targeting: LINK_BOOST },
-  beaconGain: BEACON_GAIN,
-  coolantGain,
-});
-
-/** mulberry32 */
-function rng(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-type Board = Map<string, PieceId>;
-
-function viewOf(cells: Board): OccupancyView {
-  return {
-    occupantAt: (x, y) => {
-      const type = cells.get(`${x},${y}`);
-      return type ? { id: `${x},${y}`, type } : null;
-    },
-    *reach(x, y, relation) {
-      for (const o of RELATION_OFFSETS[relation]) yield { x: x + o.dx, y: y + o.dy };
-    },
-    *occupied() {
-      for (const [k, type] of cells) {
-        const [x, y] = k.split(',').map(Number) as [number, number];
-        yield { id: k, type, x, y };
-      }
-    },
-  };
-}
-
-const openCells = (stage: BoardStage) => {
-  const out: string[] = [];
-  for (let y = 0; y < HULL_H; y++)
-    for (let x = 0; x < HULL_W; x++) {
-      const s = sectionAt(x, y);
-      if (s >= 0 && s <= stage.sections) out.push(`${x},${y}`);
-    }
-  return out;
-};
-
-/** The best board found for a stage's cells and types. */
-function bestPacking(stage: BoardStage, types: readonly PieceId[], p: LayoutParams, seed?: Board) {
-  const cells = openCells(stage);
-  const random = rng(cells.length * 131 + types.length);
-  let best: { rate: number; board: Board } = { rate: -1, board: new Map() };
-  for (let r = 0; r < RESTARTS; r++) {
-    const board: Board = new Map();
-    for (const k of cells) {
-      const seeded = r === 0 ? seed?.get(k) : undefined;
-      board.set(
-        k,
-        seeded && types.includes(seeded) ? seeded : types[Math.floor(random() * types.length)]!,
-      );
-    }
-    let rate = boardTotal(viewOf(board), p);
-    for (let improved = true; improved;) {
-      improved = false;
-      for (const k of cells)
-        for (const t of types) {
-          const old = board.get(k)!;
-          if (old === t) continue;
-          board.set(k, t);
-          const next = boardTotal(viewOf(board), p);
-          if (next > rate + 1e-9) {
-            rate = next;
-            improved = true;
-          } else board.set(k, old);
-        }
-      for (let a = 0; a < cells.length; a++)
-        for (let b = a + 1; b < cells.length; b++) {
-          const ta = board.get(cells[a]!)!;
-          const tb = board.get(cells[b]!)!;
-          if (ta === tb) continue;
-          board.set(cells[a]!, tb);
-          board.set(cells[b]!, ta);
-          const next = boardTotal(viewOf(board), p);
-          if (next > rate + 1e-9) {
-            rate = next;
-            improved = true;
-          } else {
-            board.set(cells[a]!, ta);
-            board.set(cells[b]!, tb);
-          }
-        }
-    }
-    if (rate > best.rate) best = { rate, board: new Map(board) };
-  }
-  const counts: Partial<Record<PieceId, number>> = {};
-  for (const t of best.board.values()) counts[t] = (counts[t] ?? 0) + 1;
-  return { ...best, counts };
-}
+const args = process.argv.slice(2);
+const only = args.find((a) => !a.startsWith('--'));
+const deep = args.includes('--deep');
+const solveCoolant = args.includes('--coolant');
+/** Kicks under `--deep`, and the cold search's. */
+const DEEP_KICKS = 800;
 
 const fmtCounts = (c: Partial<Record<PieceId, number>>) =>
   Object.entries(c)
     .map(([k, v]) => `${k}: ${v}`)
     .join(', ');
+const round = (n: number) => Number(n.toPrecision(5));
+const pct = (a: number, b: number) => `${a >= b ? '+' : ''}${(((a - b) / b) * 100).toFixed(1)}%`;
+
+/** A stage's best board for an objective: the claim re-scored, then searched from. */
+interface Measured {
+  best: Packing;
+  claimed?: number;
+  flags: string[];
+  cold?: number;
+}
+
+const measured = new Map<string, Measured>();
+/** The claimed board for a spec, scored as stored. */
+const stored = (
+  stage: BoardStage,
+  score: Objective,
+  claimedValue: number | undefined,
+): { board?: Board; value?: number; flags: string[] } => {
+  const rows = PACKING_BOARDS[specKey(stage, score)];
+  if (!rows) return { flags: ['NEW'] };
+  const board = decodeBoard(stage, rows);
+  if (!board) return { flags: ['SHAPE'] };
+  const value = scoreBoard(stage, board)[score];
+  // Stored numbers carry five significant figures.
+  const drift = claimedValue !== undefined && Math.abs(value - claimedValue) > 1e-4 * value;
+  return { board, value, flags: drift ? ['DRIFT'] : [] };
+};
+
+function measure(
+  stage: BoardStage,
+  score: Objective,
+  claimedValue: number | undefined,
+  prev?: Board,
+) {
+  const key = specKey(stage, score);
+  const done = measured.get(key);
+  if (done) return done;
+  const s = stored(stage, score, claimedValue);
+  const seeds = [s.board, prev].filter((b): b is Board => !!b);
+  const searched = bestPacking(stage, score, {
+    seeds,
+    restarts: s.board ? 0 : undefined,
+    kicks: deep ? DEEP_KICKS : KICKS,
+  });
+  const flags = s.flags;
+  if (s.value !== undefined && searched[score] > s.value * (1 + 1e-6))
+    flags.push(`BETTER ${pct(searched[score], s.value)}`);
+  const m: Measured = { best: searched, claimed: s.value, flags };
+  if (deep) {
+    // The cold search also competes: a seeded search can sit on the seed's local optimum.
+    const cold = bestPacking(stage, score, { kicks: DEEP_KICKS });
+    m.cold = cold[score];
+    if (cold[score] > searched[score] * (1 + 1e-6)) {
+      m.best = cold;
+      if (
+        s.value !== undefined &&
+        cold[score] > s.value * (1 + 1e-6) &&
+        !flags.some((f) => f.startsWith('BETTER'))
+      )
+        flags.push(`BETTER ${pct(cold[score], s.value)}`);
+    }
+  }
+  measured.set(key, m);
+  return m;
+}
 
 // ── stages ──
-console.log('== stages: claimed · measured (dps before refits) ==');
-const measured: { rate: number; counts: Partial<Record<PieceId, number>> }[] = [];
-let seed: Board | undefined;
-let coolantIndex = -1;
-for (const [j, stage] of STAGES.entries()) {
-  const best = bestPacking(stage, stage.types, params(), seed);
-  seed = best.board;
-  measured.push({ rate: best.rate, counts: best.counts });
-  if (stage.after === 'unlock:coolant') coolantIndex = j;
-  const claim = STAGE_PACKING[j]!.rate;
-  const drift = Math.abs(best.rate - claim) / best.rate > 0.02 ? '  DRIFT' : '';
+console.log(
+  `== stages: claimed · best salvage (before refits and honours)${deep ? ' · cold' : ''} ==`,
+);
+const entries: [string, StagePacking][] = [];
+let prev: Board | undefined;
+let ship = '';
+for (const stage of STAGES) {
+  if (only && stage.ship !== only) continue;
+  if (stage.ship !== ship) {
+    ship = stage.ship;
+    prev = undefined;
+  }
+  const claim = STAGE_PACKING[stage.key];
+  const eco = measure(stage, 'salvage', claim?.salvage, prev);
+  prev = eco.best.board;
+  const entry: StagePacking = {
+    salvage: round(eco.best.salvage),
+    firepower: round(eco.best.firepower),
+    counts: eco.best.counts,
+  };
+  const flags = [...eco.flags];
+  let fight = '';
+  if (stage.fights) {
+    const war = measure(stage, 'firepower', claim?.combat?.firepower, eco.best.board);
+    entry.combat = { firepower: round(war.best.firepower), counts: war.best.counts };
+    flags.push(...war.flags.map((f) => `fight ${f}`));
+    fight = ` · fight ${stage.fights.slice(8)} ${(war.claimed ?? 0).toFixed(1)} · ${war.best.firepower.toFixed(1)}${war.cold !== undefined ? ` · cold ${pct(war.cold, war.best.firepower)}` : ''} (${fmtCounts(war.best.counts)})`;
+  }
+  entries.push([stage.key, entry]);
   console.log(
-    `  ${String(j).padStart(2)} ${stage.after.padEnd(20)} ${String(stage.cells).padStart(2)} cells  ${claim.toFixed(1).padStart(7)} · ${best.rate.toFixed(1).padStart(7)}  ${fmtCounts(best.counts)}${drift}`,
+    `  ${stage.key.padEnd(28)} ${String(openCells(stage.ship, stage.sections).length).padStart(2)}c ${stage.conditions.join('+') || 'calm'} · ${(eco.claimed ?? 0).toFixed(1)} · ${eco.best.salvage.toFixed(1)}${eco.cold !== undefined ? ` · cold ${pct(eco.cold, eco.best.salvage)}` : ''} (${fmtCounts(eco.best.counts)})${fight}${flags.length ? `  ${flags.join(' ')}` : ''}`,
   );
 }
-console.log('== paste: STAGE_PACKING ==');
-for (const m of measured)
-  console.log(`  { rate: ${Number(m.rate.toFixed(2))}, counts: { ${fmtCounts(m.counts)} } },`);
+
+console.log('== paste: data/packing.ts ==');
+console.log('export const STAGE_PACKING: Readonly<Record<string, StagePacking>> = {');
+for (const [key, m] of entries) console.log(`  '${key}': ${JSON.stringify(m)},`);
+console.log('};');
+console.log('export const PACKING_BOARDS: Readonly<Record<string, readonly string[]>> = {');
+for (const [key, m] of measured)
+  console.log(`  '${key}': ${JSON.stringify(encodeBoard(m.best.board))},`);
+console.log('};');
 
 // ── coolant ──
-const stage = STAGES[coolantIndex]!;
-const without = bestPacking(
-  stage,
-  stage.types.filter((t) => t !== 'coolant'),
-  params(),
-);
-const weapons = (without.counts.pulse ?? 0) + (without.counts.rail ?? 0);
-const share = without.rate / Math.max(1, weapons);
-console.log(
-  `== coolant: stage ${coolantIndex}, best without manifolds ${without.rate.toFixed(1)}, one weapon's share ${share.toFixed(1)} ==`,
-);
-const earns = (gain: number) => {
-  const best = bestPacking(stage, stage.types, params(gain), without.board);
-  const gainOver = best.rate - without.rate;
-  console.log(
-    `  gain ${gain.toFixed(3)}: best ${best.rate.toFixed(1)} (+${gainOver.toFixed(1)}), manifolds ${best.counts.coolant ?? 0}`,
+if (solveCoolant) {
+  const stage = STAGES.find((s) => s.key === 'frigate:unlock:coolant')!;
+  const rows = PACKING_BOARDS[specKey(stage, 'salvage')];
+  const claimed = rows ? decodeBoard(stage, rows) : null;
+  // The coolant stage's board with its manifolds lifted, descended without them.
+  const lifted = claimed
+    ? new Map([...claimed].map(([k, f]) => [k, f?.type === 'coolant' ? null : f]))
+    : undefined;
+  const without = bestPacking(
+    { ...stage, types: stage.types.filter((t) => t !== 'coolant') },
+    'salvage',
+    { seeds: lifted ? [lifted] : [], kicks: deep ? DEEP_KICKS : KICKS },
   );
-  return gainOver >= share;
-};
-let lo = 0;
-let hi = 2;
-while (hi - lo > 0.025) {
-  const mid = (lo + hi) / 2;
-  if (earns(mid)) hi = mid;
-  else lo = mid;
+  const weapons = (without.counts.pulse ?? 0) + (without.counts.rail ?? 0);
+  const share = without.salvage / Math.max(1, weapons);
+  console.log(
+    `== coolant: best without manifolds ${without.salvage.toFixed(1)}, one weapon's share ${share.toFixed(1)} ==`,
+  );
+  const earns = (gain: number) => {
+    const best = bestPacking(stage, 'salvage', {
+      seeds: [without.board, ...(claimed ? [claimed] : [])],
+      restarts: 0,
+      kicks: deep ? DEEP_KICKS : KICKS,
+      params: paramsFor(stage.conditions, gain),
+    });
+    const over = best.salvage - without.salvage;
+    console.log(
+      `  gain ${gain.toFixed(3)}: best ${best.salvage.toFixed(1)} (+${over.toFixed(1)}), manifolds ${best.counts.coolant ?? 0}`,
+    );
+    return over >= share;
+  };
+  let lo = 0;
+  let hi = 2;
+  while (hi - lo > 0.025) {
+    const mid = (lo + hi) / 2;
+    if (earns(mid)) hi = mid;
+    else lo = mid;
+  }
+  console.log(`  solved: COOLANT_GAIN ≈ ${hi.toFixed(3)} (spine holds ${COOLANT_GAIN})`);
 }
-console.log(`  solved: COOLANT_GAIN ≈ ${hi.toFixed(3)} (spine holds ${COOLANT_GAIN})`);

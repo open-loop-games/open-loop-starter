@@ -8,14 +8,17 @@
  * `.upgrade-grid__…`) or a class this story's own components emit.
  *
  * Language: a fitting bay under combat alert. The hull board is blueprint, a cold cyan
- * lattice on hull black; live fire is plasma amber; the swarm is breach red and appears
- * only on the breach line. The affordance palette comes first, and the identity is built
- * around it:
- *   plasma     you can act: fabricate, plate, refit; a legal socket under a held module
+ * lattice on hull black; live fire is plasma amber; the swarm is breach red, and so is
+ * everything it brings: its carriers, the sector's conditions, the modules they silence.
+ * Honours are kill-mark white, stencilled on the ship plate. The affordance palette comes
+ * first, and the identity is built around it:
+ *   plasma     you can act: fabricate, plate, refit, engage; a legal socket under a held module
  *   slag       you cannot yet
  *   blueprint  a schematic recovered, a cell a module reaches: what the lattice reads
  *   hull-seam  owned, spent, installed
- *   gain/loss  the firing solution's sign
+ *   gain/loss  the firing solution's sign, and whether a carrier falls
+ *   breach     the swarm's doing
+ *   honour     what a fallen carrier paid, and what a recommission keeps
  * Each module type has one hue, read off the lattice at a glance (`--pc-*`).
  *
  * Fonts: Chakra Petch, a squared engineering face, for the chrome and the module glyphs;
@@ -71,6 +74,7 @@
   --gain: #7ee0a1;
   --loss: #ff7a7a;
   --breach: #ff5d5d;
+  --honour: #ece3c8;
 
   /* ── the readouts ── */
   --readout: #c9d6e3;
@@ -83,6 +87,13 @@
   --pc-targeting: #a3e635;
   --pc-beacon: #f472b6;
   --pc-coolant: #93c5fd;
+  --pc-director: #c4b5fd;
+  --pc-lance: #fde68a;
+  --pc-tractor: #d6a77a;
+
+  /* ── the keel: a centre rule down the plates a spinal mount sits on ── */
+  --keel-rule: rgba(253, 230, 138, 0.22);
+  --keel-plate: #141d29;
 
   --face-stencil: 'Hardpoint Stencil', 'Bahnschrift', sans-serif;
   --face-manual: 'Hardpoint Manual', 'Segoe UI', sans-serif;
@@ -184,6 +195,20 @@
 .hardpoint .olui-three-panel__main {
   align-items: center;
 }
+/* The consoles scroll on their own; the hull board stays where the hand is. */
+.hardpoint .olui-three-panel__left,
+.hardpoint .olui-three-panel__right {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hull-seam) transparent;
+  padding-right: 4px;
+}
+/* Where the page itself scrolls instead, the hull board rides along beside the consoles. */
+.hardpoint .olui-three-panel__main {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
 
 /* ── console heading: stencilled blueprint capitals ── */
 .hardpoint .hp-head {
@@ -248,6 +273,15 @@
 .hardpoint .pc-coolant {
   --pc: var(--pc-coolant);
 }
+.hardpoint .pc-director {
+  --pc: var(--pc-director);
+}
+.hardpoint .pc-lance {
+  --pc: var(--pc-lance);
+}
+.hardpoint .pc-tractor {
+  --pc: var(--pc-tractor);
+}
 .hardpoint .hp-ink {
   color: var(--pc);
 }
@@ -279,4 +313,31 @@
 .hardpoint .upgrade-grid__cell-wrap {
   display: flex;
   min-width: 0;
+}
+
+/* ── the commission and the Dreadnought, on the scaffold's modal stack ──
+   The stack portals to <body>, outside `.hardpoint`; each dialog's own root carries the
+   class, and this rule dresses the box it is mounted in. */
+.olui-modal-content:has(.hp-modal) {
+  padding: 0;
+  background: #0c131d;
+  border: 1px solid #1d2b3b;
+  border-top: 2px solid #ece3c8;
+  border-radius: 3px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.hardpoint.hp-modal {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 22px 18px;
+  background: var(--hull);
+}
+.hardpoint .hp-modal-title {
+  margin: 0 0 10px;
+  font-family: var(--face-stencil);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--honour);
 }

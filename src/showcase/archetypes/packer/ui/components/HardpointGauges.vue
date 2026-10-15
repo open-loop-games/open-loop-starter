@@ -1,6 +1,7 @@
 <!--
-  HardpointGauges — the header's live gauges: salvage and its rate, the board's firepower,
-  the refit stack's multiplier, and modules fitted against sockets open. It reads module
+  HardpointGauges — the header's live gauges: salvage and the rate the guns recover it, the
+  board's firepower (what a carrier is tested against; tractors raise salvage, not this),
+  the fire stack's multiplier, and modules fitted against sockets open. It reads module
   state, so it is its own component in SystemHeader's slot and never a root read.
 
   Adopts the `ResourceReadout` contract with its own renderer: ResourceHeaderStrip's chip
@@ -37,7 +38,7 @@ const gauges: Gauge[] = [
     unit: 'dps',
   },
   {
-    readout: { id: 'refits', label: 'refits', value: yard.globalMult },
+    readout: { id: 'stack', label: 'fire stack', value: yard.globalMult },
     show: (v) => times(num(v)),
   },
   {
@@ -101,6 +102,10 @@ dd {
   font-size: 28px;
   color: var(--plasma);
   min-width: 7.5ch;
+  text-align: right;
+}
+.firepower .value {
+  min-width: 6.5ch;
   text-align: right;
 }
 .rate {

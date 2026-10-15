@@ -12,12 +12,13 @@ import { computed } from 'vue';
 import { Decimal, toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import { PIECES, unlockGate, type PieceDef } from '../../data';
-import { getBoard, getYard } from '../../modules';
+import { getBoard, getFleet, getYard } from '../../modules';
 import { useFitting } from '../fitting';
 import { fmt } from '../format';
 
 const yard = getYard();
 const board = getBoard();
+const fleet = getFleet();
 const fitting = useFitting();
 
 const rows = computed(() =>
@@ -35,12 +36,15 @@ const rows = computed(() =>
 /** The next schematic still encrypted: the one locked module the bay hints at. */
 // TODO(expansion): progress toward a cumulative-gte Gate as a fraction. The threshold is re-read
 // from the spine rather than from the Gate the fabricator registered.
+// A schematic decrypts only on the ship its beat belongs to, so only this ship's are hinted.
 const nextLocked = computed(() => {
-  const def = PIECES.find((p) => p.unlock && !yard.unlocked(p.id));
+  const ship = fleet.ship.value;
+  const def = PIECES.find(
+    (p) => p.unlock && p.unlock.startsWith(`${ship}:`) && !yard.unlocked(p.id),
+  );
   if (!def) return null;
   const gate = unlockGate(def.unlock!);
-  const earned = Decimal.fromValue(yard.salvage.cumulative?.value ?? 0).toNumber();
-  return { def, gate, progress: Math.min(1, earned / gate) };
+  return { def, gate, progress: Math.min(1, yard.shipEarned() / gate) };
 });
 
 function fabricate(def: PieceDef) {

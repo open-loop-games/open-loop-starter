@@ -2,3 +2,4 @@
 // No engine; modules read it at construction, and the projection reads it on paper.
 export * from './spine';
 export * from './hull';
+export * from './packing';

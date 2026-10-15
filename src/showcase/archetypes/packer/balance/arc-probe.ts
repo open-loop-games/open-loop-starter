@@ -1,33 +1,23 @@
 /**
- * The arc: one cold start to a fully fitted hull under the reference fitter
- * (`./_fitter.ts`), on the real engine and modules. Prints every beat beside the spine's
- * schedule, the flow channel of each gap, the finished board's packing against the
- * spine's claims, and the board itself. Prints; never asserts.
+ * The arc: one cold start through three ships to the Dreadnought's fall, under the
+ * reference fitter (`./_fitter.ts`), on the real engine and modules. Prints every beat and
+ * carrier beside the spine's walk, the flow channel of each gap, the fitter's tallies, and
+ * each ship's board as it was relieved. Prints; never asserts.
  *
  *   pnpm exec vite-node src/showcase/archetypes/packer/balance/arc-probe.ts [dt]
  *
- * Default tick 1 s, about 7 s of wall time; the fitter's per-tick layout evaluation
- * dominates, so a coarser tick is no faster. TRACE=1 adds a line every 30 s.
+ * TRACE=1 adds a line a minute.
  *
  * Reading it:
- * - `Δt` is measured minus scheduled. A beat ahead of schedule is negative.
- * - `income` is salvage a second when the beat fired; `pred.inc` is the spine's at the
- *   scheduled time.
+ * - `Δt` is measured minus the walk's time. A beat ahead of the walk is negative.
+ * - `income` is salvage a second when the beat fired; `pred.inc` is the walk's at its time.
  * - `channel` classes the gap since the previous beat (`classifyFlowChannel`).
- * - § finished board compares the fitter's last board with the full-hull packing the spine
- *   claims (`STAGE_PACKING`): its firepower, and the modules each fields.
+ * - `withdrawals` counts engagements a carrier survived: the fitter engages only once a
+ *   window's fire covers the hull, so a withdrawal is a hull the layout fell short of.
  */
 
 import { classifyFlowChannel } from '@open-loop/engine';
-import {
-  ARC_END_S,
-  BEAT_TIME,
-  BEATS,
-  OPENING_S,
-  STAGE_PACKING,
-  predictedIncome,
-  type BeatId,
-} from '../data';
+import { ARC_END_S, BEAT_TIME, predictedIncome } from '../data';
 import { DT, runArc } from './_fitter';
 
 declare const process: { argv: string[]; env: Record<string, string | undefined> };
@@ -35,62 +25,46 @@ declare const process: { argv: string[]; env: Record<string, string | undefined>
 const dt = Number(process.argv[2] ?? DT);
 const arc = runArc({ dt, trace: !!process.env.TRACE });
 
-const scheduled = (id: string): number | undefined =>
-  id === 'corvette fitted'
-    ? OPENING_S
-    : id === 'arc complete: hull fully fitted'
-      ? ARC_END_S
-      : (BEATS as readonly string[]).includes(id)
-        ? BEAT_TIME[id as BeatId]
-        : undefined;
-
-const w = (n: number, width = 7) => n.toFixed(0).padStart(width);
+const clock = (t: number) => {
+  const s = Math.round(t);
+  return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+};
+const e = (n: number) => n.toExponential(2).padStart(9);
 console.log(`Hardpoint arc — reference fitter, dt ${dt}s, one deterministic run`);
-console.log(
-  `spine: corvette fitted at ${OPENING_S.toFixed(0)}s, hull fully fitted at ${ARC_END_S.toFixed(0)}s`,
-);
+console.log(`spine: the Dreadnought falls at ${clock(ARC_END_S)}`);
 console.log('');
 console.log(
-  'beat                              actual  predict   Δt(s)  income  pred.inc  gap(s) channel',
+  'beat                              actual     walk    Δt(s)    income  pred.inc  gap(s) channel',
 );
 let prev = 0;
 for (const b of arc.beats) {
-  const p = scheduled(b.id);
+  const p = BEAT_TIME[b.id];
   const gap = b.t - prev;
   prev = b.t;
   console.log(
-    `${b.id.padEnd(32)} ${w(b.t)} ${p !== undefined ? w(p, 8) : '       -'} ${
-      p !== undefined ? w(b.t - p) : '      -'
-    } ${b.income.toFixed(1).padStart(7)} ${p !== undefined ? predictedIncome(p).toFixed(1).padStart(9) : '        -'} ${w(gap)} ${classifyFlowChannel(gap)}`,
+    `${b.id.padEnd(32)} ${clock(b.t).padStart(8)} ${p !== undefined ? clock(p).padStart(8) : '       -'} ${p !== undefined ? String(Math.round(b.t - p)).padStart(7) : '      -'} ${e(b.income)} ${p !== undefined ? e(predictedIncome(p)) : '        -'} ${String(Math.round(gap)).padStart(6)} ${classifyFlowChannel(gap)}`,
   );
 }
 console.log('');
 const fired = new Set(arc.beats.map((b) => b.id));
-for (const b of BEATS)
-  if (!fired.has(b)) console.log(`NOT FIRED: ${b} (scheduled ${BEAT_TIME[b].toFixed(0)}s)`);
-console.log(`ended: ${arc.ended} at ${arc.endedAt}s${arc.anomaly ? ` — ${arc.anomaly}` : ''}`);
+for (const id of Object.keys(BEAT_TIME))
+  if (!fired.has(id)) console.log(`NOT FIRED: ${id} (walk ${clock(BEAT_TIME[id]!)})`);
 console.log(
-  `fits ${arc.counts.fits}, swaps ${arc.counts.swaps}, rearranges ${arc.counts.rearranges}, salvage ${arc.salvage.toFixed(0)}, rate ${arc.rate.toFixed(1)}/s, firepower ${arc.firepower.toFixed(1)}`,
+  `ended: ${arc.ended} at ${clock(arc.endedAt)}${arc.anomaly ? ` — ${arc.anomaly}` : ''}`,
 );
-
-const k = arc.packing;
-const claim = STAGE_PACKING[STAGE_PACKING.length - 1]!;
-console.log('');
+const c = arc.counts;
 console.log(
-  `finished board: ${arc.firepower.toFixed(1)} dps after refits · board ${(arc.firepower / k.globalMult).toFixed(1)} against the full-hull claim ${claim.rate} · links/weapon ${k.linksPerWeapon.toFixed(2)} · stamps/weapon ${k.stampsPerWeapon.toFixed(2)} · refits ×${k.globalMult.toFixed(2)}`,
+  `passes ${c.passes}, steers ${c.steers} (${c.claimed} to a claimed board), fits ${c.fits}, swaps ${c.swaps}, trades ${c.trades}, engagements ${c.engagements}, withdrawals ${c.withdrawals}, calibrations ${c.calibrations}`,
 );
-console.log(
-  `  claimed: ${Object.entries(claim.counts)
-    .map(([t, n]) => `${t} ${n}`)
-    .join(', ')}`,
-);
-console.log(
-  `  fitted:  ${Object.entries(arc.fitted)
-    .map(([t, n]) => `${t} ${n}`)
-    .join(', ')}`,
-);
-for (const r of arc.board) console.log(`  ${r}`);
-
+for (const b of arc.boards) {
+  console.log('');
+  console.log(
+    `${b.ship}: ${Object.entries(b.fitted)
+      .map(([t, n]) => `${t} ${n}`)
+      .join(', ')}`,
+  );
+  for (const r of b.rows) if (r.trim()) console.log(`  ${r}`);
+}
 if (arc.trace.length) {
   console.log('');
   for (const line of arc.trace) console.log(`  ${line}`);

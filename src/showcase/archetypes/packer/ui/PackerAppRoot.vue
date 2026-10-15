@@ -16,6 +16,7 @@ import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import Button from '@/ui/components/Button.vue';
 import { manifest } from '../manifest';
+import { CARRIER_WINDOW_S } from '../data';
 import PackerGameView from './PackerGameView.vue';
 import HardpointGauges from './components/HardpointGauges.vue';
 // The costume, applied under `.hardpoint`. Imported at the root so the slot screen and
@@ -59,11 +60,17 @@ const showDevPanel = ref(false);
           <template #about>
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
-              You are the fitter aboard a frigate holding a breach line against a drone swarm. The
-              guns fire on their own; your job is the hull. Every module's worth comes from what
-              sits next to it: fabricate in the bay, then fit, lift and swap freely until the firing
-              solution reads right. Drones downed become salvage, and salvage plates the hull out
-              from a corvette core to a frigate.
+              You are the fitter aboard the frigate Hardpoint, holding a breach line against a drone
+              swarm. The guns fire on their own; your job is the hull. Every module's worth comes
+              from what sits next to it: fabricate in the bay, then fit, lift, turn and swap freely
+              until the firing solution reads right. Salvage plates the hull out from a corvette
+              core.
+            </p>
+            <p>
+              Once the cruiser keel is plated the breach line opens. Each sector is held by a
+              carrier and brings conditions that rewrite the board. Engage it, and your firepower
+              has {{ CARRIER_WINDOW_S }} seconds to break its hull. When a ship's last carrier
+              falls, commission the next: the lancer Longreach, then the flagship Sovereign.
             </p>
           </template>
           <template #extra-actions>
