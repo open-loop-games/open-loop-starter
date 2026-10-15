@@ -7,10 +7,10 @@
   never reads as owned; at its limit it reads as maxed.
 -->
 <script setup lang="ts">
-import { computed, type ComputedRef } from 'vue';
-import type { DecimalSource, Purchasable } from '@open-loop/engine';
+import { computed } from 'vue';
+import type { Purchasable } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
+import { UpgradeGrid, createPurchasableCard, type UpgradeCardData } from '@/ui/compositions';
 import { CANON_UPGRADES, CONTINUITY_UPGRADES, LEGACY_UPGRADES } from '../../data';
 import { getCanon, getContinuity, getLegacy } from '../../modules';
 import { fmt } from '../format';
@@ -50,44 +50,28 @@ const held = computed(() =>
 );
 
 interface Item {
-  /** Levelled rather than bought once. */
+  /** Levelled rather than bought once: it shows its level, and reads as maxed when owned. */
   leveled: boolean;
-  level: ComputedRef<DecimalSource>;
-  /** A levelled upgrade at its limit. */
-  maxed: ComputedRef<boolean>;
-  visible: ComputedRef<boolean>;
 }
 
-function card(
+const card = (
   def: { id: string; displayName: string; description: string; price?: number },
   p: Purchasable,
-): UpgradeCardData<Item> {
-  const leveled = def.price === undefined;
-  return {
+): UpgradeCardData<Item> =>
+  createPurchasableCard(p, {
     id: def.id,
     displayName: def.displayName,
     description: def.description,
-    cost: computed(() => p.getCost(1)),
-    costLabel: layer.currency,
-    canPurchase: p.canPurchase,
-    owned: computed(() => !leveled && p.active.value),
-    purchase: () => p.purchase(1),
-    extra: {
-      leveled,
-      level: computed(() => p.count.value),
-      maxed: computed(() => leveled && p.maxed.value),
-      visible: computed(() => p.visible.value),
-    },
-  };
-}
+    count: p.count,
+    extra: { leveled: def.price === undefined },
+  });
 
-const all: UpgradeCardData<Item>[] =
+const cards: UpgradeCardData<Item>[] =
   props.kind === 'legacy'
     ? LEGACY_UPGRADES.map((def) => card(def, legacy.upgrade(def.id)))
     : props.kind === 'continuity'
       ? CONTINUITY_UPGRADES.map((def) => card(def, continuity.upgrade(def.id)))
       : CANON_UPGRADES.map((def) => card(def, canon.upgrade(def.id)));
-const cards = computed(() => all.filter((c) => c.extra!.visible.value));
 </script>
 
 <template>
@@ -98,14 +82,18 @@ const cards = computed(() => all.filter((c) => c.extra!.visible.value));
     </p>
     <UpgradeGrid :cards="cards" :columns="3" reveal="inline">
       <template #card="{ card: c }">
-        <div class="item" :class="{ owned: c.owned.value, ready: c.canPurchase.value }">
+        <div
+          class="item"
+          :class="{ owned: c.owned.value && !c.extra!.leveled, ready: c.canPurchase.value }"
+        >
           <div class="title">
             {{ c.displayName }}
-            <span v-if="c.extra!.leveled" class="lvl num">Lv {{ fmt(c.extra!.level.value) }}</span>
+            <span v-if="c.extra!.leveled" class="lvl num">Lv {{ fmt(c.count!.value) }}</span>
           </div>
           <p class="desc">{{ c.description }}</p>
-          <div v-if="c.owned.value" class="stamp owned-stamp">Owned</div>
-          <div v-else-if="c.extra!.maxed.value" class="stamp owned-stamp">Maxed</div>
+          <div v-if="c.owned.value" class="stamp owned-stamp">
+            {{ c.extra!.leveled ? 'Maxed' : 'Owned' }}
+          </div>
           <Button
             repeat
             v-else

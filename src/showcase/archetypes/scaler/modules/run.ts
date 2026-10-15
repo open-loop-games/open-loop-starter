@@ -14,6 +14,7 @@ import {
   type ProducerCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { ANCHORS, HIGH_TIER_FROM, NETWORK, TIERS, type TierDef } from '../data';
 import { CoreKey } from './core';
 import { ScalerTuningRegistryKey, type ScalerTunableKey } from './tuning';
@@ -45,11 +46,8 @@ export interface RunApi {
 
 export const RunKey: InjectionKey<RunApi> = Symbol('scaler/run') as InjectionKey<RunApi>;
 
-let api: RunApi;
-
-export function getRun(): RunApi {
-  return api;
-}
+const runApi = createModuleApi(RunKey);
+export const getRun = runApi.get;
 
 export const HEROES = 'heroes';
 export const JUSTICE = 'justice';
@@ -123,7 +121,7 @@ export function createRunModule(): EngineModule {
         earned.value = Decimal.mul(totalRate.value, dt).add(earned.value);
       });
 
-      api = {
+      const api: RunApi = {
         justice,
         heroes,
         priceRatio,
@@ -133,7 +131,7 @@ export function createRunModule(): EngineModule {
         runEarned: computed(() => Decimal.fromValue(earned.value)),
         totalRate,
       };
-      ctx.provide(RunKey, api);
+      runApi.publish(ctx, api);
     },
   };
 }

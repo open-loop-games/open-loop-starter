@@ -17,6 +17,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   CONTINUITY_UPGRADES,
   DRILL_LIMIT,
@@ -59,11 +60,8 @@ export const ContinuityKey: InjectionKey<ContinuityApi> = Symbol(
   'scaler/continuity',
 ) as InjectionKey<ContinuityApi>;
 
-let api: ContinuityApi;
-
-export function getContinuity(): ContinuityApi {
-  return api;
-}
+const continuityApi = createModuleApi(ContinuityKey);
+export const getContinuity = continuityApi.get;
 
 export const CONTINUITY_SHOP = 'continuity-shop';
 
@@ -123,7 +121,7 @@ export function createContinuityModule(): EngineModule {
               display,
               requirements: createCostRequirement({ resource: continuity, cost: def.price! }),
               limit: 1,
-              onPurchase: () => core.log('upgrade', `Bought ${def.displayName}.`),
+              onPurchase: () => core.scanner.post(`Bought ${def.displayName}.`, 'upgrade'),
             };
           },
         });
@@ -162,7 +160,7 @@ export function createContinuityModule(): EngineModule {
         text: 'Myth',
       });
 
-      api = {
+      const api: ContinuityApi = {
         continuity,
         shop,
         upgrade,
@@ -175,7 +173,7 @@ export function createContinuityModule(): EngineModule {
           earned.value = Decimal.add(earned.value, amount);
         },
       };
-      ctx.provide(ContinuityKey, api);
+      continuityApi.publish(ctx, api);
     },
   };
 }

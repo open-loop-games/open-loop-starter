@@ -8,13 +8,13 @@ import { computed, inject } from 'vue';
 import { modalStackKey } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import AchievementGrid, { type AchievementCard } from '@/ui/components/AchievementGrid.vue';
+import { EventLog } from '@/ui/compositions';
 import { getCore, getLegends } from '../../modules';
 
 const core = getCore();
 const legends = getLegends();
 const stack = inject(modalStackKey)!;
 
-const recent = computed(() => core.scanner.value.slice(-8).reverse());
 const earned = computed(
   () => legends.legends.getAll().filter((e) => e.achievement.earned.value).length,
 );
@@ -26,22 +26,16 @@ function openLegends() {
     description: e.def.description,
     earned: e.achievement.earned.value,
   }));
-  const id = stack.push(AchievementGrid, {
-    class: 'paragon-portal clippings',
-    title: 'Legends',
-    cards,
-    onClose: () => stack.remove(id),
-  });
+  stack.push(AchievementGrid, { class: 'clippings', title: 'Legends', cards });
 }
 </script>
 
 <template>
   <section class="panel scanner">
     <span class="caption">Police scanner</span>
-    <ol>
-      <li v-for="line in recent" :key="line.seq" :class="line.kind">{{ line.text }}</li>
-      <li v-if="recent.length === 0" class="quiet">Quiet night. Recruit your first patrol.</li>
-    </ol>
+    <EventLog class="calls" :lines="core.scanner.lines.value" :limit="8">
+      <template #empty>Quiet night. Recruit your first patrol.</template>
+    </EventLog>
     <Button v-if="earned > 0" class="act ghost legends reveal" @click="openLegends">
       Legends <span class="num">{{ earned }} / {{ legends.legends.getAll().length }}</span>
     </Button>
@@ -49,33 +43,37 @@ function openLegends() {
 </template>
 
 <style scoped>
-.scanner ol {
-  list-style: none;
+.calls {
+  display: block;
   margin: 10px 0 0;
-  padding: 0;
   font-size: 13px;
   line-height: 1.45;
 }
-.scanner li {
+/* Edged by kind, never by freshness: the newest call reads like the rest. */
+.calls :deep(.event-log__row),
+.calls :deep(.event-log__empty) {
+  display: list-item;
   border-left: 3px solid var(--newsprint-faint);
   padding-left: 8px;
   margin-bottom: 4px;
   color: var(--newsprint-dim);
+  font-style: normal;
+  animation: none;
 }
-.scanner li.reboot,
-.scanner li.upgrade,
-.scanner li.legend {
+.calls :deep(.event-log__row--reboot),
+.calls :deep(.event-log__row--upgrade),
+.calls :deep(.event-log__row--legend) {
   border-color: var(--signal);
 }
-.scanner li.rewrite {
+.calls :deep(.event-log__row--rewrite) {
   border-color: var(--orbit);
 }
-.scanner li.elseworld-enter,
-.scanner li.elseworld-complete,
-.scanner li.elseworld-abandon {
+.calls :deep(.event-log__row--elseworld-enter),
+.calls :deep(.event-log__row--elseworld-complete),
+.calls :deep(.event-log__row--elseworld-abandon) {
   border-color: var(--cape);
 }
-.scanner li.automation {
+.calls :deep(.event-log__row--automation) {
   border-color: var(--steel);
 }
 .legends {

@@ -4,6 +4,7 @@ import {
   type EngineModule,
   type InjectionKey,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { LEGENDS, LEVERS, type LegendDef } from '../data';
 import { CoreKey } from './core';
 import { JUSTICE } from './run';
@@ -21,11 +22,8 @@ export const LegendsKey: InjectionKey<LegendsApi> = Symbol(
   'scaler/legends',
 ) as InjectionKey<LegendsApi>;
 
-let api: LegendsApi;
-
-export function getLegends(): LegendsApi {
-  return api;
-}
+const legendsApi = createModuleApi(LegendsKey);
+export const getLegends = legendsApi.get;
 
 export function createLegendsModule(): EngineModule {
   return {
@@ -43,14 +41,14 @@ export function createLegendsModule(): EngineModule {
           },
           goal: { kind: 'cumulative-gte', resource: JUSTICE, value: def.lifetime },
           showPopup: false,
-          onComplete: () => core.log('legend', `Legend earned: ${def.title}.`),
+          onComplete: () => core.scanner.post(`Legend earned: ${def.title}.`, 'legend'),
           grants: [{ chain: core.output, multiplier: LEVERS.legendMult, description: def.title }],
         }),
       });
       legends.register(LEGENDS);
 
-      api = { legends };
-      ctx.provide(LegendsKey, api);
+      const api: LegendsApi = { legends };
+      legendsApi.publish(ctx, api);
     },
   };
 }

@@ -13,6 +13,7 @@ import {
   type ProducerCategory,
   type Purchasable,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   CANON_PRICES,
@@ -156,11 +157,8 @@ export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
   'scaler/automation',
 ) as InjectionKey<AutomationApi>;
 
-let api: AutomationApi;
-
-export function getAutomation(): AutomationApi {
-  return api;
-}
+const automationApi = createModuleApi(AutomationKey);
+export const getAutomation = automationApi.get;
 
 /** More recruits than one tick of any run buys; a guard, not a rule. */
 const MAX_RECRUITS_PER_TICK = 500;
@@ -237,7 +235,7 @@ export function createAutomationModule(): EngineModule {
       });
       ladder.on('unlocked', (id) => {
         const tier = ladder.tiers.find((t) => t.id === id);
-        if (tier) core.log('automation', `Automation online: ${tier.displayName}.`);
+        if (tier) core.scanner.post(`Automation online: ${tier.displayName}.`, 'automation');
       });
       // A Rewrite can take the Dispatch Desk away, an Age the Continuity shop; the
       // ladder re-reads what is owned.
@@ -318,7 +316,7 @@ export function createAutomationModule(): EngineModule {
         if (shouldRewrite(state, { share: settings.crossoverShare.value })) prestige.rewrite();
       });
 
-      api = {
+      const api: AutomationApi = {
         ladder,
         ...settings,
         rebootInterval,
@@ -327,7 +325,7 @@ export function createAutomationModule(): EngineModule {
         spendContinuity,
         spendCanon,
       };
-      ctx.provide(AutomationKey, api);
+      automationApi.publish(ctx, api);
     },
   };
 }

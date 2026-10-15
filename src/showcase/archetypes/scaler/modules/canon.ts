@@ -12,6 +12,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   CANON_UPGRADES,
   IMPRINT_TIERS,
@@ -39,11 +40,8 @@ export interface CanonApi {
 
 export const CanonKey: InjectionKey<CanonApi> = Symbol('scaler/canon') as InjectionKey<CanonApi>;
 
-let api: CanonApi;
-
-export function getCanon(): CanonApi {
-  return api;
-}
+const canonApi = createModuleApi(CanonKey);
+export const getCanon = canonApi.get;
 
 export const CANON_SHOP = 'canon-shop';
 
@@ -62,7 +60,7 @@ export function createCanonModule(): EngineModule {
           display: { title: def.displayName, description: def.description },
           requirements: createCostRequirement({ resource: canon, cost: def.price }),
           limit: 1,
-          onPurchase: () => core.log('upgrade', `Bought ${def.displayName}.`),
+          onPurchase: () => core.scanner.post(`Bought ${def.displayName}.`, 'upgrade'),
         }),
       });
       shop.register(CANON_UPGRADES);
@@ -93,13 +91,13 @@ export function createCanonModule(): EngineModule {
         registerTick: ctx.onTick,
       });
 
-      api = {
+      const api: CanonApi = {
         canon,
         shop,
         upgrade: (id) => shop.getPurchasable(id) as Purchasable,
         imprints,
       };
-      ctx.provide(CanonKey, api);
+      canonApi.publish(ctx, api);
     },
   };
 }

@@ -8,9 +8,15 @@ import { createCanonModule } from './canon';
 import { createPrestigeModule } from './prestige';
 import { createLegendsModule } from './legends';
 import { createAutomationModule } from './automation';
+export {
+  createReferencePlayer,
+  type ElseworldEntry,
+  type ReferencePlayer,
+  type ReferencePlayerApis,
+} from './reference-player';
 
 export { ScalerTuningRegistryKey, type ScalerTunableKey } from './tuning';
-export { CoreKey, getCore, type CoreApi, type ScannerKind, type ScannerLine } from './core';
+export { CoreKey, getCore, type CoreApi, type ScannerKind } from './core';
 export { RunKey, getRun, HEROES, JUSTICE, type RunApi } from './run';
 export { LegacyKey, getLegacy, LEGACY_SHOP, type LegacyApi } from './legacy';
 export { ContinuityKey, getContinuity, CONTINUITY_SHOP, type ContinuityApi } from './continuity';

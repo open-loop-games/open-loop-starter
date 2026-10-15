@@ -14,6 +14,7 @@ import {
   type InjectionKey,
   type Reset,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   AGE_KEEPS,
   ANCHORS,
@@ -84,11 +85,8 @@ export const PrestigeKey: InjectionKey<PrestigeApi> = Symbol(
   'scaler/prestige',
 ) as InjectionKey<PrestigeApi>;
 
-let api: PrestigeApi;
-
-export function getPrestige(): PrestigeApi {
-  return api;
-}
+const prestigeApi = createModuleApi(PrestigeKey);
+export const getPrestige = prestigeApi.get;
 
 export const ELSEWORLDS_CATEGORY = 'elseworlds';
 
@@ -283,11 +281,11 @@ export function createPrestigeModule(): EngineModule {
                 run.runEarned.value,
                 def.goals[Math.min(completions(def.id), ELSEWORLD_TIERS - 1)],
               ),
-            onEnter: () => core.log('elseworld-enter', `Entered ${def.displayName}.`),
+            onEnter: () => core.scanner.post(`Entered ${def.displayName}.`, 'elseworld-enter'),
             onComplete: () =>
-              core.log(
-                'elseworld-complete',
+              core.scanner.post(
                 `Resolved ${def.displayName}, tier ${completions(def.id)}!`,
+                'elseworld-complete',
               ),
           };
         }),
@@ -297,9 +295,9 @@ export function createPrestigeModule(): EngineModule {
         const current = elseworlds.current.value;
         if (!current) return;
         current.exit();
-        core.log(
-          'elseworld-abandon',
+        core.scanner.post(
           `Abandoned ${elseworlds.getDef(current.id)!.displayName}${why}.`,
+          'elseworld-abandon',
         );
       }
 
@@ -311,7 +309,7 @@ export function createPrestigeModule(): EngineModule {
         // Banked after reset() returns, so the wipe does not take it.
         legacy.bank(gain);
         core.reboots.value += 1;
-        core.log('reboot', `Reboot ${core.reboots.value}: +${gain.toNumber()} Legacy.`);
+        core.scanner.post(`Reboot ${core.reboots.value}: +${gain.toNumber()} Legacy.`, 'reboot');
         return true;
       }
 
@@ -322,7 +320,10 @@ export function createPrestigeModule(): EngineModule {
         if (!rewriteReset.reset()) return false;
         continuity.bank(gain);
         core.rewrites.value += 1;
-        core.log('rewrite', `Rewrite ${core.rewrites.value}: +${gain.toNumber()} Continuity.`);
+        core.scanner.post(
+          `Rewrite ${core.rewrites.value}: +${gain.toNumber()} Continuity.`,
+          'rewrite',
+        );
         return true;
       }
 
@@ -333,11 +334,14 @@ export function createPrestigeModule(): EngineModule {
         if (!ageReset.reset()) return false;
         addResource(canon.canon, gain);
         core.ages.value += 1;
-        core.log('age', `The ${ageName(core.ages.value)} Age begins: +${gain.toNumber()} Canon.`);
+        core.scanner.post(
+          `The ${ageName(core.ages.value)} Age begins: +${gain.toNumber()} Canon.`,
+          'age',
+        );
         return true;
       }
 
-      api = {
+      const api: PrestigeApi = {
         rebootReset,
         rewriteReset,
         ageReset,
@@ -355,7 +359,7 @@ export function createPrestigeModule(): EngineModule {
         enterElseworld: (id) => elseworlds.getChallenge(id)?.enter() ?? false,
         abandonElseworld: () => exitElseworld(''),
       };
-      ctx.provide(PrestigeKey, api);
+      prestigeApi.publish(ctx, api);
     },
   };
 }

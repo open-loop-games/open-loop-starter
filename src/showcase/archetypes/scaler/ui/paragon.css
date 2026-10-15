@@ -5,7 +5,7 @@
  * is one file a fork can read, replace or delete. Nothing in `src/lib/` or
  * `src/ui/` is edited for it: every hook is a documented costume class on a shell,
  * a widget or a composition (`.olui-system-header`, `.olui-sidebar-main__…`,
- * `.olui-tabs__…`, `.olui-progress-bar__…`, `.producer-list__…`,
+ * `.olui-tabs__…`, `.olui-progress-bar__…`, `.olui-switch__…`, `.producer-list__…`,
  * `.upgrade-grid__…`, `.olui-achievement-grid__…`) or a class this story's own
  * components emit.
  *
@@ -34,8 +34,7 @@
   font-display: block;
 }
 
-.paragon,
-.paragon-portal {
+.paragon {
   --night: #0c1020;
   --night-panel: #141a2d;
   --night-raised: #1b2238;
@@ -109,8 +108,7 @@
 }
 
 /* The comic panel: an ink border, a hard drop shadow, no rounded corners. */
-.paragon .panel,
-.paragon-portal.panel {
+.paragon .panel {
   background: var(--night-panel);
   border: var(--panel-border);
   box-shadow: var(--panel-shadow);
@@ -118,8 +116,7 @@
 }
 
 /* Caption box: the yellow narration strip comics use for "Meanwhile…". */
-.paragon .caption,
-.paragon-portal .caption {
+.paragon .caption {
   display: inline-block;
   background: var(--signal);
   color: var(--gutter-ink);
@@ -201,10 +198,14 @@
   padding: 6px 10px;
   cursor: pointer;
 }
-.paragon .duty[aria-checked='false'] {
+.paragon .duty[data-state='unchecked'] {
   color: var(--newsprint-dim);
   border-style: dashed;
   border-color: var(--newsprint-faint);
+}
+/* The words say on or off; the switch draws no track. */
+.paragon .duty .olui-switch__track {
+  display: none;
 }
 
 /* Halftone meter, on the base ProgressBar: the fill is printed in dots. */
@@ -213,10 +214,8 @@
   --progress-bar-fill: var(--signal);
   --progress-bar-radius: 0;
   --progress-bar-transition: clip-path 200ms linear;
-}
-.paragon .meter .olui-progress-bar__track {
-  height: 12px;
-  border: 2px solid var(--gutter-ink);
+  --progress-bar-height: 12px;
+  --progress-bar-border: 2px solid var(--gutter-ink);
 }
 .paragon .meter .olui-progress-bar__fill {
   background-image: var(--halftone-ink);
@@ -295,24 +294,23 @@
   animation: paragon-panel-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* Legends: starter's AchievementGrid as a page of clippings. Portaled, so it
-   takes the tokens through `.paragon-portal` on its root. */
-.clippings {
+/* Legends: starter's AchievementGrid as a page of clippings, in the frame's modal. */
+.paragon .clippings {
   font-family: var(--face-body);
   color: var(--newsprint);
 }
-.clippings .olui-panel__title {
+.paragon .clippings .olui-panel__title {
   font-family: var(--face-masthead);
   letter-spacing: 0.04em;
   color: var(--signal);
 }
-.clippings .olui-achievement-grid__cell {
+.paragon .clippings .olui-achievement-grid__cell {
   border: 2px dashed var(--newsprint-faint);
   border-radius: 0;
   background: transparent;
   color: var(--newsprint-faint);
 }
-.clippings .olui-achievement-grid__cell[data-earned='true'] {
+.paragon .clippings .olui-achievement-grid__cell[data-earned='true'] {
   border: 2px solid var(--gutter-ink);
   background: var(--newsprint);
   color: var(--gutter-ink);
@@ -323,10 +321,13 @@
 .paragon .olui-tabs__list:has(> :only-child) {
   display: none;
 }
-.clippings .olui-achievement-grid__cell-name {
+.paragon .clippings .olui-achievement-grid__cell-name {
   font-family: var(--face-masthead);
   text-transform: uppercase;
 }
-.clippings .olui-achievement-grid__cell[data-earned='true'] .olui-achievement-grid__cell-desc {
+.paragon
+  .clippings
+  .olui-achievement-grid__cell[data-earned='true']
+  .olui-achievement-grid__cell-desc {
   color: var(--night-raised);
 }

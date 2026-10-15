@@ -1,13 +1,13 @@
 import {
   createModifierChain,
   persistent,
-  shallowRef,
   type EngineModule,
   type InjectionKey,
   type ModifierChain,
   type Persistent,
-  type ShallowRef,
 } from '@open-loop/engine';
+import { createEventLog, type EventLog } from '@/modules/event-log';
+import { createModuleApi } from '@/modules/module-api';
 
 /**
  * What no reset reaches: the modifier chains every layer binds into, the clocks,
@@ -26,16 +26,6 @@ export type ScannerKind =
   | 'legend'
   | 'upgrade'
   | 'automation';
-
-/** One line on the police scanner. */
-export interface ScannerLine {
-  /** Order of logging, from 1; the scanner is bounded, so read new lines by it. */
-  seq: number;
-  /** Seconds of play when it happened. */
-  at: number;
-  kind: ScannerKind;
-  text: string;
-}
 
 export interface CoreApi {
   /** Every hero's output: Legacy, Continuity, Public Trust, Hero Training, Legends. */
@@ -64,19 +54,14 @@ export interface CoreApi {
   rewrites: Persistent<number>;
   /** Turns of the Age. */
   ages: Persistent<number>;
-  /** The scanner's recent lines, oldest first. Session state, not saved. */
-  scanner: ShallowRef<ScannerLine[]>;
-  /** Put a line on the scanner. */
-  log(kind: ScannerKind, text: string): void;
+  /** What happened, stamped in play-seconds. Session state, not saved. */
+  scanner: EventLog<ScannerKind>;
 }
 
 export const CoreKey: InjectionKey<CoreApi> = Symbol('scaler/core') as InjectionKey<CoreApi>;
 
-let api: CoreApi;
-
-export function getCore(): CoreApi {
-  return api;
-}
+const coreApi = createModuleApi(CoreKey);
+export const getCore = coreApi.get;
 
 const SCANNER_LENGTH = 80;
 
@@ -92,16 +77,12 @@ export function createCoreModule(): EngineModule {
         playSeconds.value += dt;
       });
 
-      let seq = 0;
-      const scanner = shallowRef<ScannerLine[]>([]);
-      const log = (kind: ScannerKind, text: string) => {
-        scanner.value = [
-          ...scanner.value.slice(-(SCANNER_LENGTH - 1)),
-          { seq: ++seq, at: playSeconds.value, kind, text },
-        ];
-      };
+      const scanner = createEventLog<ScannerKind>(ctx, {
+        cap: SCANNER_LENGTH,
+        clock: () => playSeconds.value,
+      });
 
-      api = {
+      const api: CoreApi = {
         output: createModifierChain('output'),
         street: createModifierChain('output-street'),
         high: createModifierChain('output-high'),
@@ -117,9 +98,8 @@ export function createCoreModule(): EngineModule {
         rewrites,
         ages,
         scanner,
-        log,
       };
-      ctx.provide(CoreKey, api);
+      coreApi.publish(ctx, api);
     },
   };
 }

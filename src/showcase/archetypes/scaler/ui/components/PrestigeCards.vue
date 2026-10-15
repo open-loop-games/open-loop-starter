@@ -12,6 +12,7 @@ import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import Select from '@/ui/components/Select.vue';
+import Switch from '@/ui/components/Switch.vue';
 import { REBOOT_THRESHOLD, REWRITE_THRESHOLD, ageName } from '../../data';
 import {
   getAutomation,
@@ -97,15 +98,14 @@ const rewriteShare = computed({
       <span>earned {{ fmt(legacy.legacyEarned.value) }}</span>
     </div>
     <div v-if="succession" class="auto reveal">
-      <Button
+      <Switch
+        v-model="automation.autoRebootOn.value"
+        v-slot="{ on }"
         class="duty"
-        role="switch"
-        :aria-checked="automation.autoRebootOn.value"
         aria-label="Succession Plan on duty"
-        @click="automation.autoRebootOn.value = !automation.autoRebootOn.value"
       >
-        Succession Plan {{ automation.autoRebootOn.value ? 'on' : 'off' }}
-      </Button>
+        Succession Plan {{ on ? 'on' : 'off' }}
+      </Switch>
       <span>reboots at</span>
       <Select v-model="rebootShare" :options="SHARES" aria-label="Succession Plan share" />
       <span class="num">every {{ Math.round(automation.rebootInterval()) }}s at most</span>
@@ -135,15 +135,14 @@ const rewriteShare = computed({
       <template v-else>Rewrite</template>
     </Button>
     <div v-if="crossover" class="auto reveal">
-      <Button
+      <Switch
+        v-model="automation.crossoverOn.value"
+        v-slot="{ on }"
         class="duty"
-        role="switch"
-        :aria-checked="automation.crossoverOn.value"
         aria-label="Crossover Event on duty"
-        @click="automation.crossoverOn.value = !automation.crossoverOn.value"
       >
-        Crossover {{ automation.crossoverOn.value ? 'on' : 'off' }}
-      </Button>
+        Crossover {{ on ? 'on' : 'off' }}
+      </Switch>
       <span>rewrites at</span>
       <Select v-model="rewriteShare" :options="SHARES" aria-label="Crossover Event share" />
     </div>

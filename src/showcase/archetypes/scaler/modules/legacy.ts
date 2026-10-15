@@ -17,6 +17,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   EARTHS,
   LEGACY_UPGRADES,
@@ -60,11 +61,8 @@ export const LegacyKey: InjectionKey<LegacyApi> = Symbol(
   'scaler/legacy',
 ) as InjectionKey<LegacyApi>;
 
-let api: LegacyApi;
-
-export function getLegacy(): LegacyApi {
-  return api;
-}
+const legacyApi = createModuleApi(LegacyKey);
+export const getLegacy = legacyApi.get;
 
 export const LEGACY_SHOP = 'legacy-shop';
 
@@ -138,7 +136,7 @@ export function createLegacyModule(): EngineModule {
               requirements: createCostRequirement({ resource: legacy, cost: def.price! }),
               limit: 1,
               grants,
-              onPurchase: () => core.log('upgrade', `Bought ${def.displayName}.`),
+              onPurchase: () => core.scanner.post(`Bought ${def.displayName}.`, 'upgrade'),
             };
           },
         });
@@ -179,7 +177,7 @@ export function createLegacyModule(): EngineModule {
         text: 'Echoes',
       });
 
-      api = {
+      const api: LegacyApi = {
         legacy,
         network,
         echo,
@@ -193,7 +191,7 @@ export function createLegacyModule(): EngineModule {
           earned.value = Decimal.add(earned.value, amount);
         },
       };
-      ctx.provide(LegacyKey, api);
+      legacyApi.publish(ctx, api);
     },
   };
 }

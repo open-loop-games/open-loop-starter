@@ -8,6 +8,7 @@
 import { computed, type ComputedRef } from 'vue';
 import { Decimal, type DecimalSource } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import Switch from '@/ui/components/Switch.vue';
 import { ProducerList, createProducerRow } from '@/ui/compositions';
 import { HIGH_TIER_FROM, type TierDef } from '../../data';
 import { getAutomation, getPrestige, getRun } from '../../modules';
@@ -48,10 +49,6 @@ const rows = run.heroes.getAll().map(({ def, producer }, i, all) => {
     },
   });
 });
-
-function toggleDispatch() {
-  automation.dispatchOn.value = !automation.dispatchOn.value;
-}
 </script>
 
 <template>
@@ -65,16 +62,15 @@ function toggleDispatch() {
               Every hero earns Justice on their own. Each recruit costs more than the last.
             </p>
           </div>
-          <Button
+          <Switch
             v-if="dispatchOnline"
+            v-model="automation.dispatchOn.value"
+            v-slot="{ on }"
             class="duty reveal"
-            role="switch"
-            :aria-checked="automation.dispatchOn.value"
             aria-label="Dispatch Desk on duty"
-            @click="toggleDispatch"
           >
-            Dispatch Desk {{ automation.dispatchOn.value ? 'on duty' : 'off duty' }}
-          </Button>
+            Dispatch Desk {{ on ? 'on duty' : 'off duty' }}
+          </Switch>
         </div>
       </template>
       <template #row="{ row, purchase }">

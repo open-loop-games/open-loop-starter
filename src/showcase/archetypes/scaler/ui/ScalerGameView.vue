@@ -10,12 +10,13 @@
   layer's tab holds its shop over its chain.
 -->
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
-import { Decimal, type Engine } from '@open-loop/engine';
-import { ANCHORS } from '../data';
+import { computed, ref } from 'vue';
+import { Decimal } from '@open-loop/engine';
 import { SidebarMainShell } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
 import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
 import {
+  createReferencePlayer,
   getAutomation,
   getCanon,
   getContinuity,
@@ -23,8 +24,6 @@ import {
   getLegacy,
   getPrestige,
   getRun,
-  shouldReboot,
-  shouldRewrite,
 } from '../modules';
 import Masthead from './components/Masthead.vue';
 import CorpsPanel from './components/CorpsPanel.vue';
@@ -37,52 +36,21 @@ import ScannerPanel from './components/ScannerPanel.vue';
 const core = getCore();
 const prestige = getPrestige();
 
-// Dev-only hook for the screenshot loop: a stable handle on the modules, and a
-// skip that plays forward in half-second steps as the reference player does:
-// the shipping policies by hand, Reboots and Rewrites at the spine's shares, and
-// an Age the moment it pays.
-// Read through the hook, not a live `import()` that Vite's module cache could
-// serve stale.
+// The dev handle's skip plays the reference player's turn after each half-second
+// chunk, the same turn the balance probes play.
 if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
-  const legacy = getLegacy();
-  const automation = getAutomation();
-  (window as unknown as Record<string, unknown>).__paragon = {
-    engine,
+  const apis = {
     core,
     run: getRun(),
-    legacy,
+    legacy: getLegacy(),
     continuity: getContinuity(),
-    canon: getCanon(),
     prestige,
-    automation,
-    skip: (seconds: number) => {
-      for (let t = 0; t < seconds; t += 0.5) {
-        engine.tickDriver.advanceTime(0.5);
-        automation.recruitBest();
-        automation.spendLegacy();
-        automation.spendContinuity();
-        automation.spendCanon();
-        const inElseworld = prestige.elseworlds.current.value !== null;
-        const rewrite = {
-          pendingContinuity: prestige.pendingContinuity.value.toNumber(),
-          continuityEarned: getContinuity().continuityEarned.value.toNumber(),
-          inElseworld,
-        };
-        const reboot = {
-          pendingLegacy: prestige.pendingLegacy.value.toNumber(),
-          legacyEarned: legacy.legacyEarned.value.toNumber(),
-          inElseworld,
-          runSeconds: getRun().runSeconds.value,
-        };
-        if (Decimal.gte(prestige.pendingCanon.value, 1)) prestige.turnAge();
-        else if (shouldRewrite(rewrite, { share: ANCHORS.rewriteFraction })) prestige.rewrite();
-        else if (shouldReboot(reboot, { share: ANCHORS.rebootFraction, interval: 0 })) {
-          prestige.reboot();
-        }
-      }
-    },
+    automation: getAutomation(),
   };
+  useDevHandle(
+    { ...apis, canon: getCanon() },
+    { chunk: 0.5, step: createReferencePlayer(apis).turn },
+  );
 }
 
 const tabs = computed<(TabItem & { open: boolean })[]>(() => [

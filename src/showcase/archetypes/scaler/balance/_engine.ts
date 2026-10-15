@@ -1,19 +1,6 @@
 /**
  * Shared probe fixture, not runnable on its own. Builds a real scaler engine and
- * plays the arc on it under the reference player.
- *
- * The reference player works only what a player works by hand, by the shipping
- * policies in `../modules/automation.ts`, until each piece of automation takes
- * its job over (`/work/studio/CLAUDE.md` § automation as game code):
- *   - recruits by the Dispatch Desk's policy until the desk is hired;
- *   - spends Legacy by the Liaison's rule and Continuity by the Monitor's until
- *     each is bought, and Canon by the same rule always;
- *   - reboots at the spine's share until the Succession Plan takes over, rewrites
- *     at the spine's share until the Crossover Event does, and turns the Age the
- *     moment Canon is pending;
- *   - enters the spine's next scheduled Elseworld tier at the start of a timeline
- *     once its slot has come and output without Hope is back at the multiplier
- *     the goal is sized at, and abandons one it has not resolved in ten minutes.
+ * plays the arc on it under the reference player (`../modules/reference-player.ts`).
  *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list for
  * tick-by-tick behavioral specs; this assembles an instrumented arc runner that
@@ -32,26 +19,24 @@ import {
   LegendsKey,
   PrestigeKey,
   RunKey,
+  createReferencePlayer,
   createScalerModules,
-  shouldReboot,
-  shouldRewrite,
   type AutomationApi,
   type CanonApi,
   type ContinuityApi,
   type CoreApi,
+  type ElseworldEntry,
   type LegacyApi,
   type LegendsApi,
   type PrestigeApi,
   type RunApi,
 } from '../modules';
-import { ANCHORS, ELSEWORLD_SCHEDULE, NETWORK, PREDICTION, TIERS, type ElseworldId } from '../data';
+import { TIERS } from '../data';
 
 /** Sim seconds per runner step. */
 export const DT = 0.5;
 /** Engine intervals per second. */
 export const INTERVAL_RATE = 20;
-/** An Elseworld the reference has not resolved in this long is abandoned. */
-const ELSEWORLD_TIMEOUT_S = 600;
 
 export const num = (x: DecimalSource) => Decimal.fromValue(x).toNumber();
 
@@ -83,20 +68,6 @@ export interface AgeRow {
   gain: number;
 }
 
-export interface ElseworldRow {
-  id: ElseworldId;
-  tier: number;
-  entered: number;
-  resolved?: number;
-}
-
-/**
- * The output multiplier now, without Hope: the spine sizes a goal on the walk's
- * output, which leaves Hope to the timeline's τ, and Dark Days takes it away.
- */
-const outputOf = (core: CoreApi, run: RunApi) =>
-  num(core.output.apply(1)) / num(Decimal.add(1, run.hope.value).pow(NETWORK.power));
-
 export interface ArcResult {
   beats: Beat[];
   /** Seconds into the first timeline at which each tier opened. */
@@ -106,7 +77,7 @@ export interface ArcResult {
   reboots: RebootRow[];
   rewrites: RewriteRow[];
   ages: AgeRow[];
-  elseworlds: ElseworldRow[];
+  elseworlds: readonly ElseworldEntry[];
   anomalies: string[];
   core: CoreApi;
   run: RunApi;
@@ -137,82 +108,9 @@ export function runArc(seconds: number): ArcResult {
   const legends = handle.engine.tryInject(LegendsKey)!;
   const automation = handle.engine.tryInject(AutomationKey)!;
   const t = () => core.playSeconds.value;
+  const player = createReferencePlayer({ core, run, legacy, continuity, prestige, automation });
 
   const beats: Beat[] = [];
-  const elseworlds: ElseworldRow[] = [];
-  let entered: ElseworldRow | undefined;
-  /** Completions the entered Elseworld resolves at. */
-  let resolvedAt = 0;
-
-  function playerTurn() {
-    const ladder = automation.ladder;
-    const has = (tier: 'dispatch' | 'succession' | 'liaison' | 'crossover' | 'monitor') =>
-      ladder.isUnlocked(tier);
-    if (!(has('dispatch') && legacy.upgrade('dispatch').active.value)) automation.recruitBest();
-    if (!has('liaison')) automation.spendLegacy();
-    if (!has('monitor')) automation.spendContinuity();
-    automation.spendCanon();
-
-    const current = prestige.elseworlds.current.value;
-    if (current && entered && t() - entered.entered > ELSEWORLD_TIMEOUT_S) {
-      prestige.abandonElseworld();
-      entered = undefined;
-    }
-    const inElseworld = prestige.elseworlds.current.value !== null;
-
-    if (!inElseworld && Decimal.gte(prestige.pendingCanon.value, 1)) {
-      prestige.turnAge();
-      return;
-    }
-    if (!has('crossover')) {
-      const rewriteNow = shouldRewrite(
-        {
-          pendingContinuity: num(prestige.pendingContinuity.value),
-          continuityEarned: num(continuity.continuityEarned.value),
-          inElseworld,
-        },
-        { share: ANCHORS.rewriteFraction },
-      );
-      if (rewriteNow) {
-        prestige.rewrite();
-        return;
-      }
-    }
-    if (!has('succession')) {
-      const rebootNow = shouldReboot(
-        {
-          pendingLegacy: num(prestige.pendingLegacy.value),
-          legacyEarned: num(legacy.legacyEarned.value),
-          inElseworld,
-          runSeconds: run.runSeconds.value,
-        },
-        { share: ANCHORS.rebootFraction, interval: 0 },
-      );
-      if (rebootNow) prestige.reboot();
-    }
-    // A fresh timeline with the next scheduled slot come, its Elseworld open and
-    // output back at the multiplier its goal is sized at: take it on.
-    const next = ELSEWORLD_SCHEDULE[elseworlds.length];
-    const slot = PREDICTION.walk.slots[elseworlds.length];
-    const slotAt = ANCHORS.elseworldFirstS + elseworlds.length * ANCHORS.elseworldGapS;
-    const strong = slot !== undefined && outputOf(core, run) >= slot.mu;
-    if (
-      next &&
-      strong &&
-      !prestige.elseworlds.current.value &&
-      run.runSeconds.value < 1 &&
-      t() >= slotAt
-    ) {
-      const challenge = prestige.elseworlds.getChallenge(next)!;
-      const tier = challenge.completions.value + 1;
-      if (challenge.canEnter.value && prestige.enterElseworld(next)) {
-        entered = { id: next, tier, entered: t() };
-        elseworlds.push(entered);
-        resolvedAt = tier;
-      }
-    }
-  }
-
   const firstRunOpens: (number | undefined)[] = [];
   const heldAtOpen: number[] = [];
   const reboots: RebootRow[] = [];
@@ -230,7 +128,7 @@ export function runArc(seconds: number): ArcResult {
     const agesBefore = core.ages.value;
     const continuityBefore = num(continuity.continuity.cumulative!.value);
     const canonBefore = num(canon.canon.cumulative!.value);
-    playerTurn();
+    player.turn();
     handle.engine.tickDriver.advanceTime(DT);
 
     if (core.reboots.value === 0) {
@@ -244,9 +142,10 @@ export function runArc(seconds: number): ArcResult {
         }
       }
     }
+    const entered = player.entered;
     if (entered && entered.resolved === undefined) {
       const done = prestige.elseworlds.getChallenge(entered.id)!.completions.value;
-      if (done >= resolvedAt) entered.resolved = t();
+      if (done >= entered.tier) entered.resolved = t();
     }
     if (core.reboots.value !== rebootsBefore) {
       reboots.push({ n: core.reboots.value, at: t(), run: t() - lastRebootAt });
@@ -274,8 +173,8 @@ export function runArc(seconds: number): ArcResult {
       lastRebootAt = t();
     }
 
-    for (const l of core.scanner.value) if (l.seq > lastSeq) beats.push({ at: t(), text: l.text });
-    lastSeq = core.scanner.value.at(-1)?.seq ?? lastSeq;
+    for (const l of core.scanner.since(lastSeq)) beats.push({ at: t(), text: l.text });
+    lastSeq = core.scanner.lines.value.at(-1)?.seq ?? lastSeq;
 
     const justice = num(run.justice.value);
     const rate = num(run.totalRate.value);
@@ -296,7 +195,7 @@ export function runArc(seconds: number): ArcResult {
     reboots,
     rewrites,
     ages,
-    elseworlds,
+    elseworlds: player.elseworlds,
     anomalies,
     core,
     run,
