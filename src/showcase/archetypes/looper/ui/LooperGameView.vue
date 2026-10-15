@@ -4,9 +4,8 @@
   in the center, the case file on the right (skills, the count, the notes, the log).
 -->
 <script setup lang="ts">
-import { inject } from 'vue';
-import type { Engine } from '@open-loop/engine';
 import { ThreePanelShell } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
 import { getAutomation, getMeta, getNight } from '../modules';
 import GroundPanel from './panels/GroundPanel.vue';
 import NightPanel from './panels/NightPanel.vue';
@@ -15,15 +14,11 @@ import SplitsPanel from './panels/SplitsPanel.vue';
 import NotesPanel from './panels/NotesPanel.vue';
 import LogPanel from './panels/LogPanel.vue';
 
-// Dev-only state hook for browser probes: reads live module state without an
-// `import()` that Vite's module cache could serve stale.
+// Dev-only handle for browser probes: window.__game.skip(seconds), and the
+// module APIs a probe reads. A skip steps at the arc probe's 0.1 s tick, which
+// is fine enough for 4 s reps.
 if (import.meta.env.DEV) {
-  (window as unknown as Record<string, unknown>).__looper = {
-    meta: getMeta(),
-    night: getNight(),
-    automation: getAutomation(),
-    engine: inject<Engine>('engine'),
-  };
+  useDevHandle({ meta: getMeta(), night: getNight(), automation: getAutomation() }, { chunk: 0.1 });
 }
 </script>
 

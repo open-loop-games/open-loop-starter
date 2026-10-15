@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { Decimal, getSkillProgress } from '@open-loop/engine';
 import { getNight } from '../../modules';
 import { SKILLS } from '../../data';
@@ -30,7 +31,7 @@ const rows = computed(() =>
       <div class="lo-skill-name" :title="s.blurb">{{ s.displayName }}</div>
       <div class="lo-skill-level">
         <span class="lo-num">Lv {{ s.level }}</span>
-        <div class="lo-skill-bar"><div :style="{ transform: `scaleX(${s.progress})` }" /></div>
+        <ProgressBar class="lo-skill-bar" :value="s.progress" />
       </div>
       <span class="lo-num lo-skill-kept" title="Mastery kept across nights"
         >+{{ (s.mastery * 100).toFixed(0) }}%</span
@@ -79,14 +80,15 @@ const rows = computed(() =>
 }
 .lo-skill-bar {
   flex: 1;
-  height: 4px;
-  background: var(--lo-night);
-  overflow: hidden;
-}
-.lo-skill-bar div {
-  height: 100%;
-  background: var(--tint);
-  transform-origin: left center;
+  --progress-bar-height: 4px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-radius: 0;
+  --progress-bar-track: var(--lo-night);
+  --progress-bar-track-empty: var(--lo-night);
+  --progress-bar-fill: var(--tint);
+  --progress-bar-fill-full: var(--tint);
+  --progress-bar-transition: none;
 }
 .lo-skill-kept {
   font-size: 13px;

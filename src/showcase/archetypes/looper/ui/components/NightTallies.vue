@@ -7,6 +7,7 @@
 import { computed } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import Switch from '@/ui/components/Switch.vue';
 import { getAutomation, getMeta, getNight } from '../../modules';
 import { whole } from '../format';
 
@@ -52,14 +53,20 @@ const chosen = computed(() => Math.min(meta.chosenSpeed.value, meta.speedSteps.v
         ×{{ s }}
       </Button>
     </div>
-    <label v-if="automation.hasReached('routine')" class="lo-auto lo-reveal">
-      <input v-model="automation.autoBegin.value" type="checkbox" />
-      <span>Routine</span>
-    </label>
-    <label v-if="automation.hasReached('discipline')" class="lo-auto lo-reveal">
-      <input v-model="automation.autoTurnIn.value" type="checkbox" />
-      <span>Discipline</span>
-    </label>
+    <Switch
+      v-if="automation.hasReached('routine')"
+      v-model="automation.autoBegin.value"
+      class="lo-auto lo-reveal"
+    >
+      Routine
+    </Switch>
+    <Switch
+      v-if="automation.hasReached('discipline')"
+      v-model="automation.autoTurnIn.value"
+      class="lo-auto lo-reveal"
+    >
+      Discipline
+    </Switch>
   </div>
 </template>
 
@@ -118,14 +125,32 @@ const chosen = computed(() => Math.min(meta.chosenSpeed.value, meta.speedSteps.v
   border-color: var(--lo-sodium);
 }
 .lo-auto {
-  display: flex;
-  align-items: center;
   gap: 6px;
   color: var(--lo-guard-lamp);
-  cursor: pointer;
   font-size: 14px;
 }
-.lo-auto input {
-  accent-color: var(--lo-guard-lamp);
+/* A small lamp switch in the guard lamp's green: lit when the routine runs. */
+.lo-auto :deep(.olui-switch__track) {
+  width: 26px;
+  height: 14px;
+  background: transparent;
+  border: 1px solid var(--lo-concrete-edge);
+}
+.lo-auto :deep(.olui-switch__thumb) {
+  width: 10px;
+  height: 10px;
+  background: var(--lo-ink-faded);
+  transform: translateX(1px);
+}
+.lo-auto[data-state='checked'] :deep(.olui-switch__track) {
+  background: var(--lo-guard-lamp-dim);
+  border-color: var(--lo-guard-lamp);
+}
+.lo-auto[data-state='checked'] :deep(.olui-switch__thumb) {
+  background: var(--lo-guard-lamp);
+  transform: translateX(13px);
+}
+.lo-auto:focus-visible :deep(.olui-switch__track) {
+  outline-color: var(--lo-guard-lamp);
 }
 </style>

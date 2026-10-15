@@ -6,6 +6,7 @@ import {
   type InjectionKey,
   type Persistent,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { MetaKey } from './meta';
 import { NightKey } from './night';
 
@@ -66,11 +67,8 @@ export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
   'looper/automation',
 ) as InjectionKey<AutomationApi>;
 
-let api: AutomationApi;
-
-export function getAutomation(): AutomationApi {
-  return api;
-}
+const automationApi = createModuleApi(AutomationKey);
+export const getAutomation = automationApi.get;
 
 export function createAutomationModule(): EngineModule {
   return {
@@ -124,8 +122,8 @@ export function createAutomationModule(): EngineModule {
         }
       });
 
-      api = { tiers, autoBegin, autoTurnIn, hasReached };
-      ctx.provide(AutomationKey, api);
+      const api: AutomationApi = { tiers, autoBegin, autoTurnIn, hasReached };
+      automationApi.publish(ctx, api);
     },
   };
 }

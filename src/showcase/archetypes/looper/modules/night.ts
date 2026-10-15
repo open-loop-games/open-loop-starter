@@ -25,6 +25,7 @@ import {
   type SkillCategory,
   type StartResult,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ACTIONS,
   COFFEE_NERVE,
@@ -125,11 +126,8 @@ export interface NightApi {
 
 export const NightKey: InjectionKey<NightApi> = Symbol('looper/night') as InjectionKey<NightApi>;
 
-let api: NightApi;
-
-export function getNight(): NightApi {
-  return api;
-}
+const nightApi = createModuleApi(NightKey);
+export const getNight = nightApi.get;
 
 export function createNightModule(): EngineModule {
   return {
@@ -433,7 +431,7 @@ export function createNightModule(): EngineModule {
         return cycle.end();
       }
 
-      api = {
+      const api: NightApi = {
         nerve,
         nerveCap,
         maxNerve,
@@ -458,7 +456,7 @@ export function createNightModule(): EngineModule {
         beginNight,
         turnIn,
       };
-      ctx.provide(NightKey, api);
+      nightApi.publish(ctx, api);
     },
   };
 }

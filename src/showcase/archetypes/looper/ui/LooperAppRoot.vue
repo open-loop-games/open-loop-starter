@@ -14,7 +14,6 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import Button from '@/ui/components/Button.vue';
 import { manifest } from '../manifest';
 import LooperGameView from './LooperGameView.vue';
 import NightTallies from './components/NightTallies.vue';
@@ -32,8 +31,8 @@ const showDevPanel = ref(false);
 
 <template>
   <!--
-    Costume scope. AppFrame's root node is a TooltipProvider fragment, so a class
-    on the component is dropped; the wrapper gives `lights-out.css` an ancestor.
+    Costume scope for the slot screen and the frame alike; the frame's modals
+    mount inside it, so they wear the costume too.
   -->
   <div class="looper">
     <SlotScreen
@@ -44,18 +43,11 @@ const showDevPanel = ref(false);
     />
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
-        <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
-          <template #title="{ returnToSlots: back }">
-            <Button
-              class="lo-brand"
-              data-testid="return-to-slots"
-              title="Save and return to save picker"
-              @click="back()"
-            >
-              <h1>Lights Out</h1>
-              <span class="lo-brand-sub">Blackwater Penitentiary · Cell 4471</span>
-            </Button>
-          </template>
+        <SystemHeader
+          app-name="Lights Out"
+          subtitle="Blackwater Penitentiary · Cell 4471"
+          @return-to-slots="returnToSlots"
+        >
           <template #about>
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
@@ -83,31 +75,3 @@ const showDevPanel = ref(false);
     </DevPanelOverlay>
   </div>
 </template>
-
-<style scoped>
-.lo-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-.lo-brand h1 {
-  margin: 0;
-  font-family: var(--lo-face-stencil);
-  font-weight: normal;
-  font-size: 30px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--lo-searchlight);
-  line-height: 1;
-}
-.lo-brand-sub {
-  font-size: 13px;
-  color: var(--lo-ink-faded);
-}
-</style>

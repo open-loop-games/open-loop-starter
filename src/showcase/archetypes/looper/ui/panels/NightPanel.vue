@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from '@/ui/components/Button.vue';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { computed } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import { getMeta, getNight } from '../../modules';
@@ -99,7 +100,11 @@ const summary = computed(() => night.lastNight.value);
       </div>
     </div>
 
-    <!-- The night strip: elapsed dark, remaining Nerve lit; last night's landmarks ghosted. -->
+    <!--
+      The night strip: elapsed dark, remaining Nerve lit; last night's landmarks ghosted.
+      Not a ProgressBar: the lit share is anchored at the end, and the marks come in two
+      kinds, each with a title.
+    -->
     <div class="lo-strip" aria-hidden="true">
       <div class="lo-strip-lit" :style="{ transform: `scaleX(${nerveShare})` }" />
       <span
@@ -173,14 +178,16 @@ const summary = computed(() => night.lastNight.value);
               >{{ r.row.times }}
             </span>
           </div>
-          <div class="lo-bar">
-            <div
-              class="lo-bar-fill"
-              :style="{
-                transform: `scaleX(${r.running !== null ? r.running : r.done >= r.row.times && night.nightActive.value ? 1 : 0})`,
-              }"
-            />
-          </div>
+          <ProgressBar
+            class="lo-bar"
+            :value="
+              r.running !== null
+                ? r.running
+                : r.done >= r.row.times && night.nightActive.value
+                  ? 1
+                  : 0
+            "
+          />
           <span v-if="r.skipped" class="lo-row-skip"
             >skipped ×{{ r.skipped }} — not reachable or not carrying what it needs</span
           >
@@ -401,18 +408,19 @@ const summary = computed(() => night.lastNight.value);
   font-size: 13px;
 }
 .lo-bar {
-  height: 4px;
   margin-top: 4px;
-  background: var(--lo-night);
-  overflow: hidden;
+  --progress-bar-height: 4px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-radius: 0;
+  --progress-bar-track: var(--lo-night);
+  --progress-bar-track-empty: var(--lo-night);
+  --progress-bar-fill: var(--lo-sodium);
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-transition: none;
 }
-.lo-bar-fill {
-  height: 100%;
-  transform-origin: left center;
-  background: var(--lo-sodium);
-}
-.lo-row.done .lo-bar-fill {
-  background: var(--lo-guard-lamp);
+.lo-row.done .lo-bar {
+  --progress-bar-fill: var(--lo-guard-lamp);
 }
 .lo-row-skip {
   display: block;

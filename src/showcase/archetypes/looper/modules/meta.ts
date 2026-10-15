@@ -21,6 +21,7 @@ import {
   type Resource,
   type ZoneSystem,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   DEFAULT_PLAN,
   GRAPEVINE_PER_LEVEL,
@@ -70,11 +71,8 @@ export interface MetaApi {
 
 export const MetaKey: InjectionKey<MetaApi> = Symbol('looper/meta') as InjectionKey<MetaApi>;
 
-let api: MetaApi;
-
-export function getMeta(): MetaApi {
-  return api;
-}
+const metaApi = createModuleApi(MetaKey);
+export const getMeta = metaApi.get;
 
 // === PLAN VERBS ===
 // Every edit replaces the persisted array, so it saves and re-renders. An edit
@@ -82,31 +80,35 @@ export function getMeta(): MetaApi {
 
 /** Append an action; a repeat of the last row's action bumps its count instead. */
 export function addToPlan(id: string): void {
-  const rows = [...api.plan.value];
+  const { plan } = getMeta();
+  const rows = [...plan.value];
   const last = rows[rows.length - 1];
   if (last?.id === id) rows[rows.length - 1] = { id, times: last.times + 1 };
   else rows.push({ id, times: 1 });
-  api.plan.value = rows;
+  plan.value = rows;
 }
 
 /** Change a row's repeat count, never below one. */
 export function bumpTimes(index: number, by: number): void {
-  const rows = [...api.plan.value];
+  const { plan } = getMeta();
+  const rows = [...plan.value];
   rows[index] = { ...rows[index], times: Math.max(1, rows[index].times + by) };
-  api.plan.value = rows;
+  plan.value = rows;
 }
 
 /** Swap a row with its neighbour above (-1) or below (+1). */
 export function moveRow(index: number, by: -1 | 1): void {
+  const { plan } = getMeta();
   const to = index + by;
-  if (to < 0 || to >= api.plan.value.length) return;
-  const rows = [...api.plan.value];
+  if (to < 0 || to >= plan.value.length) return;
+  const rows = [...plan.value];
   [rows[index], rows[to]] = [rows[to], rows[index]];
-  api.plan.value = rows;
+  plan.value = rows;
 }
 
 export function removeRow(index: number): void {
-  api.plan.value = api.plan.value.filter((_, i) => i !== index);
+  const { plan } = getMeta();
+  plan.value = plan.value.filter((_, i) => i !== index);
 }
 
 export function createMetaModule(): EngineModule {
@@ -182,7 +184,7 @@ export function createMetaModule(): EngineModule {
         { immediate: true },
       );
 
-      api = {
+      const api: MetaApi = {
         intel,
         plan,
         zones,
@@ -196,7 +198,7 @@ export function createMetaModule(): EngineModule {
         escapes,
         patrolKnowledge,
       };
-      ctx.provide(MetaKey, api);
+      metaApi.publish(ctx, api);
     },
   };
 }
