@@ -1,6 +1,5 @@
 import {
   computed,
-  createConversion,
   createCostRequirement,
   createGateRequirement,
   createModifierChain,
@@ -17,7 +16,6 @@ import {
   toNumber,
   tunable,
   type ComputedRef,
-  type Conversion,
   type EngineModule,
   type InjectionKey,
   type ModifierChain,
@@ -57,6 +55,7 @@ import {
   type ResearchDef,
   type ResearchId,
   type ResourceId,
+  type RoleDef,
   type RoleId,
   type SteamDraw,
 } from '../data';
@@ -340,24 +339,6 @@ export function createWorksModule(): EngineModule {
         }),
       });
 
-      // Each workshop's exchange is an engine conversion whose costs read a per-tick batch:
-      // the conversion keeps the debit and the credit atomic, and the batch is sized outside it.
-      const batch = {} as Record<RoleId, Ref<number>>;
-      const exchange = {} as Record<RoleId, Conversion>;
-      for (const role of ROLES) {
-        const rec = RECIPES[role.id];
-        const b = ref(0);
-        batch[role.id] = b;
-        exchange[role.id] = createConversion({
-          inputs: Object.fromEntries(
-            Object.entries(rec.inputs).map(([id, qty]) => [
-              id,
-              createCostRequirement({ resource: res[id as ResourceId], cost: () => b.value * qty }),
-            ]),
-          ),
-          outputs: { out: { resource: res[rec.output], amount: () => b.value * rec.yields } },
-        });
-      }
       const roleStatus = reactive(
         Object.fromEntries(
           ROLES.map((r) => [r.id, { cyclesPerSec: 0, capacityPerSec: 0, limit: 'locked' }]),
@@ -380,6 +361,8 @@ export function createWorksModule(): EngineModule {
 
       const fed = ref(1);
       let warnedHunger = false;
+      // Steam drawn this tick: the mill's share, then each workshop's through `onProduce`.
+      let drawn = 0;
       ctx.onTick((dt) => {
         // Producers have already run this tick, so an empty larder means the gardens'
         // inflow is all the compagnons got.
@@ -423,11 +406,47 @@ export function createWorksModule(): EngineModule {
           left -= got;
           steam.share[d] = ask[d] > 0 ? got / ask[d] : 1;
         }
-        let drawn = steam.share.mill * ask.mill * dt;
+        drawn = steam.share.mill * ask.mill * dt;
+      });
 
-        // TODO(expansion): continuous converter (candidate-engine-api.md). A workshop's
-        // throughput is the minimum over crew × rate × fed, each input's stock, and the
-        // output bin's room; createConversion is one-shot, so the batch is sized here.
+      // Each workshop is a converter whose count is its seated crew. Its rate is the labour
+      // rate, times the share fed, times its steam share. The workshops claim shared inputs
+      // (coal, aluminium) in ROLES order: upstream trades first.
+      const labourPerSec = (role: RoleId) =>
+        toNumber(crew[role].value) *
+        toNumber(labour[role].apply(workerRate.value / recipeDraw(role)));
+      const workshops = createProducerCategory<RoleDef>({
+        id: 'workshops',
+        registerTick: ctx.onTick,
+        mapProducer: (role) => {
+          const rec = RECIPES[role.id];
+          const steamShare = () => (rec.steam ? steam.share[role.id as SteamDraw] : 1);
+          return {
+            resource: res[rec.output],
+            baseRate: () =>
+              roleOpen[role.id].value
+                ? toNumber(labour[role.id].apply(workerRate.value / recipeDraw(role.id))) *
+                  fed.value *
+                  steamShare() *
+                  rec.yields
+                : 0,
+            trigger: 'continuous',
+            extraCount: crew[role.id],
+            inputs: Object.fromEntries(
+              Object.entries(rec.inputs).map(([id, qty]) => [
+                id,
+                { resource: res[id as ResourceId], per: qty / rec.yields },
+              ]),
+            ),
+            onProduce: (made) => {
+              drawn += (toNumber(made) / rec.yields) * (rec.steam ?? 0);
+            },
+          };
+        },
+      });
+      workshops.register([...ROLES]);
+
+      ctx.onTick((dt) => {
         for (const role of ROLES) {
           const st = roleStatus[role.id];
           const rec = RECIPES[role.id];
@@ -435,39 +454,22 @@ export function createWorksModule(): EngineModule {
             Object.assign(st, { cyclesPerSec: 0, capacityPerSec: 0, limit: 'locked' });
             continue;
           }
-          const seated = toNumber(crew[role.id].value);
-          if (seated === 0) {
+          if (toNumber(crew[role.id].value) === 0) {
             Object.assign(st, { cyclesPerSec: 0, capacityPerSec: 0, limit: 'unstaffed' });
             continue;
           }
-          const perSec =
-            seated * toNumber(labour[role.id].apply(workerRate.value / recipeDraw(role.id)));
-          let cycles = perSec * fed.value * dt;
-          let limit: Limit = fed.value < 1 ? 'hunger' : 'labour';
-          if (rec.steam && steam.share[role.id as SteamDraw] < 1) {
-            cycles *= steam.share[role.id as SteamDraw];
-            limit = 'steam';
-          }
-          for (const [id, qty] of Object.entries(rec.inputs)) {
-            const afford = toNumber(res[id as ResourceId].value) / qty;
-            if (afford < cycles) {
-              cycles = afford;
-              limit = `input:${id as ResourceId}`;
-            }
-          }
-          const room = (cap[rec.output].value - toNumber(res[rec.output].value)) / rec.yields;
-          if (room < cycles) {
-            cycles = Math.max(0, room);
-            limit = 'storage';
-          }
-          // Shave a hair so float error in stock/qty never fails the affordability check.
-          cycles *= 1 - 1e-9;
-          if (cycles > 1e-12) {
-            batch[role.id].value = cycles;
-            exchange[role.id].convert();
-            drawn += cycles * (rec.steam ?? 0);
-          }
-          Object.assign(st, { cyclesPerSec: cycles / dt, capacityPerSec: perSec, limit });
+          const shop = workshops.getProducer(role.id)!;
+          const bound = shop.limit!.value;
+          let limit: Limit;
+          if (bound === 'room') limit = 'storage';
+          else if (bound !== 'rate') limit = bound as Limit;
+          else if (rec.steam && steam.share[role.id as SteamDraw] < 1) limit = 'steam';
+          else limit = fed.value < 1 ? 'hunger' : 'labour';
+          Object.assign(st, {
+            cyclesPerSec: toNumber(shop.realizedRate!.value) / rec.yields,
+            capacityPerSec: labourPerSec(role.id),
+            limit,
+          });
         }
 
         // The boilers burn the coal for the steam drawn; the workshops have eaten first.

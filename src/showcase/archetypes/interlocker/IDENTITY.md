@@ -115,7 +115,7 @@ Ranges are the arc probe at tick sizes 0.25 s to 2 s. `manifest.ts` holds every 
 | bins | `createResourceBag` with `capacityPerType` and `discard` overflow |
 | the compagnons | `createResourceBag` with a total capacity and `block` overflow |
 | renown, seasons, patents, the mill's power as multipliers | `createModifierChain` with `bind` |
-| a workshop's exchange | `createConversion` with a batch sized each tick |
+| a workshop's exchange | a producer with `inputs`, `extraCount` from its crew; claims shared inputs in trade order |
 | the play clock and the seasons | `createTimeSystem`; the season is a computed over it |
 | the Ministry's orders | `persistent` state in a context the Exposition resets; `createSeededRNG` |
 | the Exposition | `createCycle` (count, these works' clock, reset of the works and the Ministry, Patent Pool `retain`) |
