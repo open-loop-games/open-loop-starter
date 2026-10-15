@@ -22,14 +22,18 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 
 ## Relationships
 
-_(no field-name reference edges mined)_
+Field-name reference edges: untyped ids in named fields that point at
+another domain noun. These are name-encoded, not type-encoded, so
+type-graph tools such as dependency-cruiser and findReferences miss them.
+
+- **BoardStage** → `section`, `refit`
 
 ## Thin spots
 
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`PieceDef`, `SectionDef`, `RefitDef`
+`PieceDef`
 
 ## Disambiguators (curated)
 
@@ -43,4 +47,5 @@ staleness stays visible against the generated sections above.
 - **bay** — Modules fabricated and not fitted: a type’s fabricated count minus its modules on the board. Fitting draws from it; lifting or stowing returns to it.
 - **section** — A block of hull cells plated in authored order. The corvette core is section 0 and always open; plating the next section opens its cells to fitting.
 - **refit** — A one-time purchase that multiplies every weapon through the firepower chain, leaving the layout unchanged.
-- **reference packing** — The arrangement the spine assumes a fitted hull reaches: the share of cells holding weapons, the rail share and the mean weapon multiplier. The arc probe prints the finished board's packing beside each claim.
+- **packing** — A stage's best arrangement: what it fires and the modules it fields. The packing probe measures each stage's on the shipping evaluator, and the spine solves every price from them.
+- **stage** — The board between two beats: its open cells, the types unlocked and the refits held. The spine's income is constant within a stage, at the rate of the stage's best packing.

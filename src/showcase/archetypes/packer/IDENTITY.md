@@ -35,40 +35,45 @@ most, is answered on the lattice itself.
 
 ## Rate-function spine
 
-**Bucket: exponential** (`incremental-math/…/rate-functions/exponential.mdx`): every
-module type climbs its own geometric price ladder, and income is modelled as exponential
-between closed-form rates, spliced in three regimes (`…/composition.mdx`).
+**Bucket: composition** (`incremental-math/…/rate-functions/composition.mdx`) over
+**exponential-family geometric ladders** (`…/exponential.mdx`). The board is full from
+about a minute in, so salvage has nowhere to go but the next plate, refit or schematic:
+income is piecewise constant by board stage, the rate the stage's best packing fires at,
+and the arc is the sum of its stages.
 
 ```
-price ladder   m = 2^(1/5)                      doubles every 5 copies of a type
-link boost     b = 1 / 2                        a booster touching 2 weapons is worth a cannon
+price ladder   m = 2^(1/5)                       doubles every 5 copies of a type
+link boost     b = 1 / 2                         a booster touching 2 weapons is worth a cannon
 weapon         dps · (1 + Σ links) · (1 + Σ stamps) · refits
-opening        R: 1 → 11/s over the corvette's fit, closed form (≈ 38 s)
-main arc       12 beats on a gap ladder 40 → 150 s; income R → full hull at the reference packing
-rail step      × RAIL_DPS / PULSE_DPS = 8 at the Railgun beat
+stage rate     R_j = packing_j · 1.5^refits      one stage per beat: cells, types, refits
+adoption       ln(R_j / R_in) · spend / (R_j − R_in)   the stage's new modules, bought from income
+a beat         plate or refit: saved = price · schematic: lifetime salvage = gate
 ```
 
-Every gate and price is read off the scheduled income or cumulative salvage at its beat:
-a schematic decrypts at the cumulative salvage scheduled for it, a section costs half of
-what the schedule earns across its gap, and a new type's first copy costs its worth in
+The opening is the same adoption in closed form: one cannon to a fitted corvette at
+11/s in about 38 s. Each beat's price or gate is solved from the stage walk so it lands on
+a gap ladder of 40 → 150 s over twelve beats; a new type's first copy costs its worth in
 weapons for 30 s.
 
-**Where the closed form stops: the packing.** What an arrangement reaches is claimed, not
-derived: the share of cells holding weapons and the mean weapon multiplier are fitted on
-`balance/arc-probe.ts`, whose reference fitter plays the arc and prints the finished
-board's packing beside each claim.
+**Where the closed form stops: the packing.** What each stage's best arrangement fires,
+and the modules it fields, are measured, not derived: `balance/packing-probe.ts` searches
+each stage on the shipping evaluator and prints the table the spine holds. It also solves
+the Coolant Manifold's gain, the smallest at which manifolds earn one weapon's share of
+the rail board they arrive into. `balance/arc-probe.ts` plays the walk under a reference
+fitter.
 
 ## The arc
 
 | Beat | Recorded |
 |---|---|
 | The corvette core fully fitted | 41–46s |
-| Midship spars plated | 101–106s |
-| The Fire-Control Uplink refit | 193–198s |
-| The Arc Beacon schematic | 269–274s |
-| The Railgun schematic | 361–366s |
-| Wing hardpoints plated | 647–654s |
-| The hull fully fitted | 735–742s |
+| Midship spars plated | 132–136s |
+| The Fire-Control Uplink refit | 237–242s |
+| The Arc Beacon schematic | 302–306s |
+| The Railgun schematic | 460–466s |
+| The Coolant Manifold schematic | 664–672s |
+| Wing hardpoints plated | 888–896s |
+| The hull fully fitted (spine: 1073s) | 1036–1044s |
 
 Ranges are the arc probe at tick sizes 0.25 s to 2 s. `manifest.ts` holds every beat.
 The arc ends at a fully fitted hull; the game runs on after it, and nothing resets.
@@ -95,5 +100,6 @@ The arc ends at a fully fitted hull; the game runs on after it, and nothing rese
 
 ## Balance model
 
-`data/spine.ts` is the spine; `balance/packer-projection.ts` prints it, and
-`balance/arc-probe.ts` plays it. `BALANCING.md` says how to work on the numbers.
+`data/spine.ts` is the spine; `balance/packer-projection.ts` prints its stage walk,
+`balance/packing-probe.ts` measures the packing it reads, and `balance/arc-probe.ts` plays
+it. `BALANCING.md` says how to work on the numbers.

@@ -137,6 +137,11 @@ function compose(view: OccupancyView, p: LayoutParams, skipId?: string) {
   return { all, amp, terms, firepower, firepowerByType, total };
 }
 
+/** Board firepower (dps, before the firepower chain) alone: what a packing search scores. */
+export function boardTotal(view: OccupancyView, params: LayoutParams): number {
+  return compose(view, params).total;
+}
+
 /** Evaluate a board: every piece's firepower, terms and marginal contribution. */
 export function evaluateLayout(view: OccupancyView, params: LayoutParams): LayoutResult {
   const base = compose(view, params);

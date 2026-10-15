@@ -5,13 +5,15 @@ import { createBoardModule } from './board';
 
 export { PackerTuningRegistryKey, type PackerTunableKey } from './tuning';
 export { YardKey, getYard, type YardApi } from './yard';
-export { BoardKey, getBoard, type BoardApi, type Placed } from './board';
+export { BoardKey, RELATION_OFFSETS, getBoard, type BoardApi, type Placed } from './board';
 export {
+  boardTotal,
   cellKey,
   evaluateLayout,
   previewChange,
   type LayoutParams,
   type LayoutResult,
+  type OccupancyView,
   type PieceResult,
   type Preview,
   type Term,

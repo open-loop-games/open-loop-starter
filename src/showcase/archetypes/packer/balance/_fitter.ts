@@ -48,7 +48,9 @@ export interface ArcRecord {
   salvage: number;
   rate: number;
   firepower: number;
-  /** the finished board's packing, beside the spine's claims */
+  /** modules fitted on the finished board, by type */
+  fitted: Partial<Record<PieceId, number>>;
+  /** the finished board's packing */
   packing: {
     weaponShare: number;
     railShare: number;
@@ -263,8 +265,11 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     }
     rows.push(row);
   }
+  const fitted: Partial<Record<PieceId, number>> = {};
+  for (const p of board.placed.value) fitted[p.type] = (fitted[p.type] ?? 0) + 1;
   const record: ArcRecord = {
     beats,
+    fitted,
     endedAt: sim,
     ended,
     anomaly,

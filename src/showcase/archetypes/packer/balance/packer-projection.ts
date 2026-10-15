@@ -1,75 +1,77 @@
 /**
- * The spine on paper: every derived constant, the beat schedule, and the price or gate
- * each beat reads off it. No engine. Prints; never asserts.
+ * The spine on paper: the derived strengths, the opening, and the stage walk every price
+ * and gate is solved from. No engine. Prints; never asserts.
  *
  *   pnpm exec vite-node src/showcase/archetypes/packer/balance/packer-projection.ts
  *
- * The arc probe (`./arc-probe.ts`) plays the same schedule on the real engine and prints
- * where the board lands against it.
+ * Reading § the walk, one row a stage:
+ * - `rate` is salvage a second entering the stage and once its packing is adopted;
+ * - `spend` is what the copies its packing adds cost, `saved` the part savings pay, and
+ *   `ramp` the seconds the rest takes out of income;
+ * - `beat` is the beat that closes the stage, and its price (a plate or refit, what the
+ *   stage saves) or gate (a schematic, lifetime salvage). `RAMP > GAP` marks a stage whose
+ *   adoption outlasts its gap, so its beat cannot land on schedule.
+ *
+ * The arc probe (`./arc-probe.ts`) plays the same walk on the real engine, and the packing
+ * probe (`./packing-probe.ts`) measures the packing claims it reads.
  */
 
 import {
-  ARC_GROWTH,
-  ARC_S,
+  ARC_END_S,
   BEACON_GAIN,
-  BEAT_TIME,
   BEATS,
-  CAPACITOR_COST0,
   COOLANT_GAIN,
-  CORE_CELLS,
-  FINAL_RATE,
   FULL_CELLS,
   LINK_BOOST,
-  OPENING_GROWTH,
   OPENING_RATE,
   OPENING_S,
   OPENING_SPEND,
+  PIECE_COST0,
   PRICE_RATIO,
-  PULSE_COST0,
   RAIL_DPS,
-  RAIL_STEP,
-  RAIL_WORTH,
   REFIT_MULT,
   SECTION_CELLS,
-  openCellsAt,
-  pieceEntryPrice,
-  predictedCumulative,
-  predictedIncome,
+  CORE_CELLS,
+  WALK,
   refitGate,
-  refitPrice,
   sectionPrice,
   unlockGate,
-  type BeatId,
 } from '../data';
 
-const f = (n: number, d = 2) => n.toFixed(d);
+const f = (n: number, d = 0) => n.toFixed(d);
+const clock = (t: number) => `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`;
+
 console.log('== strengths ==');
 console.log(
-  `  price ratio ${f(PRICE_RATIO, 4)} · link boost ${LINK_BOOST} · beacon gain ${BEACON_GAIN} · coolant gain ${COOLANT_GAIN} · rail dps ${f(RAIL_DPS)} · refit ×${REFIT_MULT}`,
+  `  price ratio ${f(PRICE_RATIO, 4)} · link boost ${LINK_BOOST} · beacon gain ${BEACON_GAIN} · coolant gain ${COOLANT_GAIN} · rail dps ${f(RAIL_DPS, 2)} · refit ×${REFIT_MULT}`,
 );
 console.log(
   `  hull: core ${CORE_CELLS} cells, sections ${SECTION_CELLS.join('/')}, full ${FULL_CELLS}`,
 );
+console.log(
+  `  first copies: ${Object.entries(PIECE_COST0)
+    .map(([k, v]) => `${k} ${f(v)}`)
+    .join(', ')}`,
+);
 console.log('== opening ==');
-console.log(
-  `  pulse ${PULSE_COST0}, capacitor ${CAPACITOR_COST0} · spend ${f(OPENING_SPEND, 0)} · rate 1 → ${OPENING_RATE}/s at λ ${f(OPENING_GROWTH, 4)} · ${f(OPENING_S, 1)} s`,
-);
-console.log('== main arc ==');
-console.log(
-  `  ${f(ARC_S, 0)} s → ${f(FINAL_RATE, 0)}/s at λ ${f(ARC_GROWTH, 5)}, rail step ×${f(RAIL_STEP, 1)}`,
-);
+console.log(`  spend ${f(OPENING_SPEND)} · rate 1 → ${OPENING_RATE}/s · ${f(OPENING_S, 1)} s`);
 
-const what = (b: BeatId): string => {
-  if (b.startsWith('section:')) return `price ${f(sectionPrice(b), 0)}`;
-  if (b.startsWith('refit:')) return `price ${f(refitPrice(b), 0)}, shown at ${f(refitGate(b), 0)}`;
-  const worth = b === 'unlock:rail' ? RAIL_WORTH : 1;
-  return `gate ${f(unlockGate(b), 0)}, first copy ${f(pieceEntryPrice(b, worth), 0)}`;
-};
-console.log('== the schedule ==');
-console.log('  beat                  at (s)  income  earned  open  price or gate');
-for (const b of BEATS) {
-  const t = BEAT_TIME[b];
+console.log('== the walk ==');
+console.log(
+  '   # after               cells  from    to   rate in → out   spend  saved  ramp  beat                 price or gate',
+);
+for (const [j, w] of WALK.entries()) {
+  const beat = BEATS[j];
+  const what = !beat
+    ? `arc end ${clock(w.to)}`
+    : beat.startsWith('unlock:')
+      ? `gate ${f(unlockGate(beat))}`
+      : beat.startsWith('refit:')
+        ? `price ${f(sectionPrice(beat))}, shown at ${f(refitGate(beat))}`
+        : `price ${f(sectionPrice(beat))}`;
+  const warn = beat && w.adoption > w.to - w.from ? '  RAMP > GAP' : '';
   console.log(
-    `  ${b.padEnd(20)} ${f(t, 0).padStart(7)} ${f(predictedIncome(t), 1).padStart(7)} ${f(predictedCumulative(t), 0).padStart(7)} ${String(openCellsAt(b)).padStart(5)}  ${what(b)}`,
+    `  ${String(j).padStart(2)} ${w.stage.after.padEnd(20)} ${String(w.stage.cells).padStart(4)} ${f(w.from).padStart(5)} ${f(w.to).padStart(5)} ${f(w.rateIn, 1).padStart(7)} → ${f(w.rate, 1).padStart(6)} ${f(w.spend).padStart(7)} ${f(w.fromSavings).padStart(6)} ${f(w.adoption).padStart(5)}  ${(beat ?? '-').padEnd(20)} ${what}${warn}`,
   );
 }
+console.log(`== landmark: the hull fully fitted at ${clock(ARC_END_S)} (${f(ARC_END_S)} s) ==`);

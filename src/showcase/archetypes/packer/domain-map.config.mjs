@@ -31,8 +31,12 @@ export default {
       note: 'A one-time purchase that multiplies every weapon through the firepower chain, leaving the layout unchanged.',
     },
     {
-      term: 'reference packing',
-      note: "The arrangement the spine assumes a fitted hull reaches: the share of cells holding weapons, the rail share and the mean weapon multiplier. The arc probe prints the finished board's packing beside each claim.",
+      term: 'packing',
+      note: "A stage's best arrangement: what it fires and the modules it fields. The packing probe measures each stage's on the shipping evaluator, and the spine solves every price from them.",
+    },
+    {
+      term: 'stage',
+      note: "The board between two beats: its open cells, the types unlocked and the refits held. The spine's income is constant within a stage, at the rate of the stage's best packing.",
     },
   ],
 };

@@ -118,7 +118,8 @@ const KNIGHT_OFFSETS: readonly GridOffset[] = [
   { dx: -2, dy: 1 },
   { dx: -1, dy: 2 },
 ];
-const RELATION_OFFSETS: Record<RelationId, readonly GridOffset[]> = {
+/** The cells each relation reaches, as offsets from the module's own cell. */
+export const RELATION_OFFSETS: Record<RelationId, readonly GridOffset[]> = {
   none: [],
   orthogonal: ORTHOGONAL_OFFSETS,
   corners: CORNER_OFFSETS,

@@ -14,21 +14,17 @@
  * - `income` is salvage a second when the beat fired; `pred.inc` is the spine's at the
  *   scheduled time.
  * - `channel` classes the gap since the previous beat (`classifyFlowChannel`).
- * - § packing compares the finished board with the reference packing the spine claims.
+ * - § finished board compares the fitter's last board with the full-hull packing the spine
+ *   claims (`STAGE_PACKING`): its firepower, and the modules each fields.
  */
 
 import { classifyFlowChannel } from '@open-loop/engine';
 import {
-  ARC_S,
+  ARC_END_S,
   BEAT_TIME,
   BEATS,
-  FINAL_RATE,
-  OPENING_RATE,
   OPENING_S,
-  REF_RAIL_SHARE,
-  REF_WEAPON_MULT,
-  REF_WEAPON_SHARE,
-  REFIT_MULT,
+  STAGE_PACKING,
   predictedIncome,
   type BeatId,
 } from '../data';
@@ -43,7 +39,7 @@ const scheduled = (id: string): number | undefined =>
   id === 'corvette fitted'
     ? OPENING_S
     : id === 'arc complete: hull fully fitted'
-      ? OPENING_S + ARC_S
+      ? ARC_END_S
       : (BEATS as readonly string[]).includes(id)
         ? BEAT_TIME[id as BeatId]
         : undefined;
@@ -51,7 +47,7 @@ const scheduled = (id: string): number | undefined =>
 const w = (n: number, width = 7) => n.toFixed(0).padStart(width);
 console.log(`Hardpoint arc — reference fitter, dt ${dt}s, one deterministic run`);
 console.log(
-  `spine: opening ${OPENING_S.toFixed(0)}s → ${OPENING_RATE}/s, arc ${ARC_S.toFixed(0)}s → ${FINAL_RATE.toFixed(0)}/s`,
+  `spine: corvette fitted at ${OPENING_S.toFixed(0)}s, hull fully fitted at ${ARC_END_S.toFixed(0)}s`,
 );
 console.log('');
 console.log(
@@ -78,16 +74,21 @@ console.log(
 );
 
 const k = arc.packing;
-const row = (label: string, claimed: string, measured: number) =>
-  console.log(`${label.padEnd(18)}  ${claimed.padStart(7)}  ${measured.toFixed(2).padStart(8)}`);
+const claim = STAGE_PACKING[STAGE_PACKING.length - 1]!;
 console.log('');
-console.log('packing             claimed  measured');
-row('weapon share', REF_WEAPON_SHARE.toFixed(2), k.weaponShare);
-row('rail share', REF_RAIL_SHARE.toFixed(2), k.railShare);
-row('weapon mult (mean)', REF_WEAPON_MULT.toFixed(2), k.weaponMult);
-row('  links / weapon', '-', k.linksPerWeapon);
-row('  stamps / weapon', '-', k.stampsPerWeapon);
-row('global mult', (REFIT_MULT ** 2).toFixed(2), k.globalMult);
+console.log(
+  `finished board: ${arc.firepower.toFixed(1)} dps after refits · board ${(arc.firepower / k.globalMult).toFixed(1)} against the full-hull claim ${claim.rate} · links/weapon ${k.linksPerWeapon.toFixed(2)} · stamps/weapon ${k.stampsPerWeapon.toFixed(2)} · refits ×${k.globalMult.toFixed(2)}`,
+);
+console.log(
+  `  claimed: ${Object.entries(claim.counts)
+    .map(([t, n]) => `${t} ${n}`)
+    .join(', ')}`,
+);
+console.log(
+  `  fitted:  ${Object.entries(arc.fitted)
+    .map(([t, n]) => `${t} ${n}`)
+    .join(', ')}`,
+);
 for (const r of arc.board) console.log(`  ${r}`);
 
 if (arc.trace.length) {

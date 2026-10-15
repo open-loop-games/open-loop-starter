@@ -19,16 +19,14 @@ import {
   type Resource,
 } from '@open-loop/engine';
 import {
-  CAPACITOR_COST0,
   PIECES,
+  PIECE_COST0,
   PRICE_RATIO,
   PULSE_COST0,
-  RAIL_WORTH,
   REFITS,
   REFIT_MULT,
   SECTIONS,
   cellsInSection,
-  pieceEntryPrice,
   refitGate,
   refitPrice,
   sectionPrice,
@@ -94,14 +92,6 @@ export function createYardModule(): EngineModule {
 
       // ── Fabricator: one escalating ladder per module type ──
       const priceRatio = tunable(registry, 'pieces/priceRatio', () => PRICE_RATIO);
-      const cost0: Record<PieceId, number> = {
-        pulse: PULSE_COST0,
-        capacitor: CAPACITOR_COST0,
-        targeting: pieceEntryPrice('unlock:targeting', 1),
-        beacon: pieceEntryPrice('unlock:beacon', 1),
-        rail: pieceEntryPrice('unlock:rail', RAIL_WORTH),
-        coolant: pieceEntryPrice('unlock:coolant', 1),
-      };
       const fabricator = createPurchasableCategory<PieceDef>({
         id: 'fabricator',
         mapPurchasable: (def) => {
@@ -114,7 +104,7 @@ export function createYardModule(): EngineModule {
                 : []),
               createCostRequirement({
                 resource: salvage,
-                cost: Formula.exponential(level, cost0[def.id], priceRatio),
+                cost: Formula.exponential(level, PIECE_COST0[def.id], priceRatio),
               }),
             ],
             visible: gate ?? true,
