@@ -15,6 +15,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   AGENCY,
   AGENCY_GROWTH,
@@ -56,11 +57,9 @@ export interface MetaApi {
 
 export const MetaKey: InjectionKey<MetaApi> = Symbol('survivor/meta') as InjectionKey<MetaApi>;
 
-let api: MetaApi;
+const metaApi = createModuleApi(MetaKey);
 
-export function getMeta(): MetaApi {
-  return api;
-}
+export const getMeta = metaApi.get;
 
 /**
  * What survives a take: clout, the agency, the signed stars, the open ratings and the
@@ -151,7 +150,7 @@ export function createMetaModule(): EngineModule {
       ratings.register([...RATINGS]);
       setupSweepAutoPurchase(ratings, { enabled: true }, ctx.onTick);
 
-      api = {
+      const api: MetaApi = {
         clout,
         chains,
         agency,
@@ -162,7 +161,7 @@ export function createMetaModule(): EngineModule {
         offerSize: () =>
           BASE_OFFER + Number(agency.getPurchasable('script-doctor')?.count.value ?? 0),
       };
-      ctx.provide(MetaKey, api);
+      metaApi.publish(ctx, api);
     },
   };
 }

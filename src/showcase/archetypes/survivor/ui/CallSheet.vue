@@ -3,8 +3,10 @@
   the agent's shop. Action! starts the take.
 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Decimal, formatResource } from '@open-loop/engine';
+import { formatClock } from '@/composables/useFormatting';
+import { useWindowKeys } from '@/composables/useWindowKeys';
 import Button from '@/ui/components/Button.vue';
 import { ANCHORS, LEADS, RATINGS, type Driver, type StarDef } from '../data';
 import { getMeta, getTake } from '../modules';
@@ -74,16 +76,11 @@ function pickDriver(d: Driver): void {
 function action(): void {
   take.startTake({ star: starId.value, rating: ratingIndex.value, driver: driver.value });
 }
-function onKey(e: KeyboardEvent): void {
+useWindowKeys((e) => {
   if (e.key === 'Enter') action();
-}
-onMounted(() => window.addEventListener('keydown', onKey));
-onUnmounted(() => window.removeEventListener('keydown', onKey));
-
-const best = computed(() => {
-  const s = meta.record.bestSeconds.value;
-  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 });
+
+const best = computed(() => formatClock(meta.record.bestSeconds.value));
 const takeMinutes = ANCHORS.takeSeconds / 60;
 </script>
 

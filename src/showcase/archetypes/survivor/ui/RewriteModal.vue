@@ -3,19 +3,17 @@
   floor holds until a page is taken; keys 1–4 take one.
 -->
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { useWindowKeys } from '@/composables/useWindowKeys';
 import Button from '@/ui/components/Button.vue';
 import { getTake } from '../modules';
 import { pageOf } from './pages';
 
 const take = getTake();
 
-function onKey(e: KeyboardEvent): void {
+useWindowKeys((e) => {
   const n = Number(e.key);
   if (n >= 1 && n <= take.view.offer.length) take.pickCard(n - 1);
-}
-onMounted(() => window.addEventListener('keydown', onKey));
-onUnmounted(() => window.removeEventListener('keydown', onKey));
+});
 </script>
 
 <template>

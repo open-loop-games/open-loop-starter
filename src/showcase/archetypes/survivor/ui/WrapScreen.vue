@@ -4,7 +4,9 @@
   picture's end credits above the report. Enter returns to the call sheet.
 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed } from 'vue';
+import { formatClock } from '@/composables/useFormatting';
+import { useWindowKeys } from '@/composables/useWindowKeys';
 import Button from '@/ui/components/Button.vue';
 import { getTake } from '../modules';
 
@@ -23,18 +25,13 @@ const leadText = computed(() => {
   if (left === null) return 'never on';
   return left <= 0 ? 'down' : `${Math.round(left * 100)}% left`;
 });
-const time = computed(() => {
-  const s = w.value.seconds;
-  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-});
+const time = computed(() => formatClock(w.value.seconds));
 function back(): void {
   take.toCallSheet();
 }
-function onKey(e: KeyboardEvent): void {
+useWindowKeys((e) => {
   if (e.key === 'Enter') back();
-}
-onMounted(() => window.addEventListener('keydown', onKey));
-onUnmounted(() => window.removeEventListener('keydown', onKey));
+});
 </script>
 
 <template>

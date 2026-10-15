@@ -9,36 +9,30 @@
   take the whole stage.
 -->
 <script setup lang="ts">
-import { inject } from 'vue';
-import { addResource, type Engine } from '@open-loop/engine';
-import { INTERVAL_RATE, getMeta, getTake } from '../modules';
+import { addResource } from '@open-loop/engine';
+import { useDevHandle } from '@/composables/useDevHandle';
+import { getMeta, getTake } from '../modules';
 import CallSheet from './CallSheet.vue';
 import TakeView from './TakeView.vue';
 import WrapScreen from './WrapScreen.vue';
 
 const take = getTake();
 
-// Dev-only hook for the screenshot loop: a stable handle on the modules, a skip that plays
-// the floor forward tick by tick, and setters for clout and the ledger. Read through
-// the hook, not a live `import()` that Vite's module cache could serve stale.
+// Dev-only handle for the screenshot loop: window.__game.skip(seconds), the modules, and
+// setters for clout and the ledger. The engine runs fixed ticks, so the skip's advance
+// already steps the floor one tick at a time and needs no chunk.
 if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
   const meta = getMeta();
-  (window as unknown as Record<string, unknown>).__soundstage = {
-    engine,
+  useDevHandle({
     take,
     meta,
-    skip: (seconds: number) => {
-      for (let t = 0; t < seconds * INTERVAL_RATE; t++)
-        engine.tickDriver.advanceTime(1 / INTERVAL_RATE);
-    },
     grant: (clout: number) => addResource(meta.clout, clout),
     /** Records every star as having wrapped ratings up to `index`, which opens the next. */
     clear: (index: number) => {
       meta.record.bestRatingCleared.value = index;
       for (const w of Object.values(meta.record.wrapped)) w.value = index;
     },
-  };
+  });
 }
 </script>
 

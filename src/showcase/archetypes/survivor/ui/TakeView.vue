@@ -6,6 +6,8 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { formatClock } from '@/composables/useFormatting';
+import { useWindowKeys } from '@/composables/useWindowKeys';
 import { ANCHORS, GUESTS, LEADS, MARK_KILLS, SCRIPT, SET_PIECES } from '../data';
 import { getTake } from '../modules';
 import { renderArena } from './render';
@@ -45,7 +47,6 @@ function syncInput(): void {
 
 const MOVE_KEYS = ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'w', 'a', 's', 'd'];
 function onKey(e: KeyboardEvent, down: boolean): void {
-  if (improvising.value) return;
   const k = e.key.toLowerCase();
   if (!MOVE_KEYS.includes(k)) return;
   e.preventDefault();
@@ -53,8 +54,6 @@ function onKey(e: KeyboardEvent, down: boolean): void {
   else keys.delete(k);
   syncInput();
 }
-const keydown = (e: KeyboardEvent) => onKey(e, true);
-const keyup = (e: KeyboardEvent) => onKey(e, false);
 function pointerDown(e: PointerEvent): void {
   pointer = { x: e.clientX, y: e.clientY };
   syncInput();
@@ -94,17 +93,12 @@ function frame(): void {
   raf = requestAnimationFrame(frame);
 }
 
+useWindowKeys(onKey, { up: true, when: () => !improvising.value, onBlur: release });
 onMounted(() => {
-  window.addEventListener('keydown', keydown);
-  window.addEventListener('keyup', keyup);
-  window.addEventListener('blur', release);
   window.addEventListener('pointerup', pointerUp);
   raf = requestAnimationFrame(frame);
 });
 onUnmounted(() => {
-  window.removeEventListener('keydown', keydown);
-  window.removeEventListener('keyup', keyup);
-  window.removeEventListener('blur', release);
   window.removeEventListener('pointerup', pointerUp);
   cancelAnimationFrame(raf);
   release();
@@ -117,18 +111,17 @@ const timecode = computed(() => {
   const t = hud.t;
   return `00:${pad(Math.floor(t / 60))}:${pad(Math.floor(t) % 60)}:${pad(Math.floor((t % 1) * 24))}`;
 });
-const clock = (s: number) => `${Math.floor(s / 60)}:${pad(Math.floor(s % 60))}`;
 const STRIKE_AT = ANCHORS.takeSeconds + SCRIPT.strikeAfter * ANCHORS.sceneSeconds;
 /** Seconds under which the strike call reads as a warning. */
 const STRIKE_WARN = 20;
 /** What the timecode counts toward: the lead's entrance, then the strike crew. */
 const countdown = computed(() => {
   if (hud.t < ANCHORS.takeSeconds)
-    return { label: 'lead on in', left: clock(ANCHORS.takeSeconds - hud.t), warn: false };
+    return { label: 'lead on in', left: formatClock(ANCHORS.takeSeconds - hud.t), warn: false };
   if (hud.t < STRIKE_AT)
     return {
       label: 'strike in',
-      left: clock(STRIKE_AT - hud.t),
+      left: formatClock(STRIKE_AT - hud.t),
       warn: STRIKE_AT - hud.t < STRIKE_WARN,
     };
   return { label: 'striking the set', left: '', warn: true };
@@ -195,9 +188,7 @@ const slip = computed(() => {
       <div v-if="hud.lead !== null" class="lead-card">
         <div class="lead-kicker billing">And introducing</div>
         <div class="lead-name billing">{{ lead.name }}</div>
-        <div class="bar lead-bar">
-          <div class="bar-fill lead-fill" :style="{ transform: `scaleX(${hud.lead})` }"></div>
-        </div>
+        <ProgressBar class="bar lead-bar" :value="hud.lead" />
         <div class="lead-sub billing">Down the lead to call CUT</div>
       </div>
     </Transition>
@@ -215,11 +206,9 @@ const slip = computed(() => {
 
     <div v-if="hud.rival !== null" class="guest">
       <div class="guest-row billing">
-        <span>Guest star</span><span class="num">walks in {{ clock(hud.rivalLeft) }}</span>
+        <span>Guest star</span><span class="num">walks in {{ formatClock(hud.rivalLeft) }}</span>
       </div>
-      <div class="bar guest-bar">
-        <div class="bar-fill guest-fill" :style="{ transform: `scaleX(${hud.rival})` }"></div>
-      </div>
+      <ProgressBar class="bar guest-bar" :value="hud.rival" />
       <div class="guest-sub billing">Down them for a jackpot reel</div>
     </div>
 
@@ -250,22 +239,14 @@ const slip = computed(() => {
         <div class="billing lbl">
           Stamina <span class="num">{{ Math.ceil(hud.hp) }}/{{ hud.maxHp }}</span>
         </div>
-        <div class="bar">
-          <div
-            class="bar-fill hp"
-            :class="{ low: hpFrac < 0.3 }"
-            :style="{ transform: `scaleX(${hpFrac})` }"
-          ></div>
-        </div>
+        <ProgressBar class="bar hp" :class="{ low: hpFrac < 0.3 }" :value="hpFrac" />
       </div>
 
       <div class="strip">
         <div class="billing lbl">
           Rewrite <span class="num">{{ hud.level }}</span>
         </div>
-        <div class="filmstrip">
-          <div class="filmstrip-fill" :style="{ transform: `scaleX(${hud.progress})` }"></div>
-        </div>
+        <ProgressBar class="filmstrip" :value="hud.progress" />
       </div>
 
       <div class="rigs">
@@ -412,31 +393,36 @@ const slip = computed(() => {
   gap: 20px;
   align-items: end;
 }
+/* The HUD's bars are flat tape with square ends, and keep their own colours when full or empty. */
+.bar,
+.filmstrip {
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-track-empty: var(--progress-bar-track);
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-radius: 0;
+}
 .bar {
-  height: 10px;
-  background: var(--squib-dim);
-  overflow: hidden;
+  --progress-bar-height: 10px;
+  --progress-bar-track: var(--squib-dim);
+  --progress-bar-transition: transform 120ms linear;
 }
-.bar-fill {
-  height: 100%;
-  transform-origin: left;
-  transition: transform 120ms linear;
+.bar.hp {
+  --progress-bar-fill: var(--squib);
 }
-.bar-fill.hp {
-  background: var(--squib);
-}
-.bar-fill.hp.low {
-  background: #ff6a4d;
+.bar.hp.low {
+  --progress-bar-fill: #ff6a4d;
 }
 .filmstrip {
-  position: relative;
-  height: 22px;
-  background: var(--stage-black);
-  border: 1px solid var(--gaffer-hi);
-  overflow: hidden;
+  --progress-bar-height: 22px;
+  --progress-bar-track: var(--stage-black);
+  --progress-bar-border: 1px solid var(--gaffer-hi);
+  --progress-bar-fill: linear-gradient(90deg, var(--tungsten-dim), var(--tungsten));
+  --progress-bar-transition: transform 150ms linear;
 }
-.filmstrip::before,
-.filmstrip::after {
+/* Sprocket holes, over the fill. */
+.filmstrip :deep(.olui-progress-bar__track)::before,
+.filmstrip :deep(.olui-progress-bar__track)::after {
   content: '';
   position: absolute;
   left: 0;
@@ -445,18 +431,11 @@ const slip = computed(() => {
   z-index: 2;
   background: repeating-linear-gradient(90deg, var(--chalk-faint) 0 6px, transparent 6px 14px);
 }
-.filmstrip::before {
+.filmstrip :deep(.olui-progress-bar__track)::before {
   top: 2px;
 }
-.filmstrip::after {
+.filmstrip :deep(.olui-progress-bar__track)::after {
   bottom: 2px;
-}
-.filmstrip-fill {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, var(--tungsten-dim), var(--tungsten));
-  transform-origin: left;
-  transition: transform 150ms linear;
 }
 .rigs {
   display: flex;
@@ -513,10 +492,8 @@ const slip = computed(() => {
   line-height: 1.1;
 }
 .lead-bar {
+  --progress-bar-fill: var(--squib);
   margin: 6px 0 4px;
-}
-.lead-fill {
-  background: var(--squib);
 }
 .billing-card-enter-active {
   transition:
@@ -589,12 +566,10 @@ const slip = computed(() => {
   color: var(--reel-gold);
 }
 .guest-bar {
+  --progress-bar-height: 7px;
+  --progress-bar-track: var(--tungsten-dim);
+  --progress-bar-fill: var(--reel-gold);
   margin: 5px 0 3px;
-  height: 7px;
-  background: var(--tungsten-dim);
-}
-.guest-fill {
-  background: var(--reel-gold);
 }
 .guest-sub {
   font-size: 11px;

@@ -15,6 +15,7 @@ import {
   type LevelDrivenSkill,
 } from '@open-loop/engine';
 import { computed, reactive } from 'vue';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   LADDER,
@@ -140,11 +141,9 @@ export interface TakeApi {
 
 export const TakeKey: InjectionKey<TakeApi> = Symbol('survivor/take') as InjectionKey<TakeApi>;
 
-let api: TakeApi;
+const takeApi = createModuleApi(TakeKey);
 
-export function getTake(): TakeApi {
-  return api;
-}
+export const getTake = takeApi.get;
 
 /**
  * One take on the floor, from Action! to CUT when the lead falls, a wipeout or the strike. The rewrite ladder is a skill
@@ -448,7 +447,7 @@ export function createTakeModule(): EngineModule {
         view.takeNumber = meta.record.takes.value + 1;
       });
 
-      api = {
+      const api: TakeApi = {
         view,
         input,
         arena: () => arena,
@@ -460,7 +459,7 @@ export function createTakeModule(): EngineModule {
         pickCard,
         toCallSheet,
       };
-      ctx.provide(TakeKey, api);
+      takeApi.publish(ctx, api);
     },
   };
 }
