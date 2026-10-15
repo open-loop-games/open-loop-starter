@@ -7,6 +7,7 @@ import {
   type TimeSystem,
 } from '@open-loop/engine';
 import { createEventLog, type EventLog } from '@/modules/event-log';
+import { createModuleApi } from '@/modules/module-api';
 
 /**
  * Chronicle module — the hunt's record: the play clock, the spoor log, the
@@ -40,11 +41,10 @@ export const ChronicleKey: InjectionKey<ChronicleApi> = Symbol(
   'explorer/chronicle',
 ) as InjectionKey<ChronicleApi>;
 
-let api: ChronicleApi;
+const chronicleApi = createModuleApi(ChronicleKey);
 
-export function getChronicle(): ChronicleApi {
-  return api;
-}
+/** The play clock, the spoor log, the beats and the ending. Read it after the engine starts. */
+export const getChronicle = chronicleApi.get;
 
 export function createChronicleModule(): EngineModule {
   return {
@@ -61,7 +61,7 @@ export function createChronicleModule(): EngineModule {
         if (!won.value) time.tick(dt);
       });
 
-      api = {
+      const api: ChronicleApi = {
         time,
         log,
         beats,
@@ -72,7 +72,7 @@ export function createChronicleModule(): EngineModule {
           beats.value = [...beats.value, { label, at: Math.round(time.totalPlayTime.value) }];
         },
       };
-      ctx.provide(ChronicleKey, api);
+      chronicleApi.publish(ctx, api);
     },
   };
 }

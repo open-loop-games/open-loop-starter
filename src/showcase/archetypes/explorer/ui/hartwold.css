@@ -5,8 +5,8 @@
  * identity is one file a fork can read, replace or delete. Nothing in
  * `src/lib/` or `src/ui/` is edited for it: every hook is a documented costume
  * class on a shell or a composition (`.olui-three-panel__…`,
- * `.olui-system-header`, `.olui-progress-bar__…`, `.producer-list__…`,
- * `.upgrade-grid__…`) or a class this story's own components emit.
+ * `.olui-system-header__…`, `.olui-progress-bar`, `.olui-modal-content`,
+ * `.producer-list__…`, `.upgrade-grid__…`) or a class this story's own components emit.
  *
  * Language: a huntsman's lodge at the edge of a fogged forest, read by a tallow
  * lamp. The affordance palette comes first: tallow = you can reach or afford;
@@ -129,6 +129,25 @@
   border-bottom: 1px solid var(--sp-bark-edge);
   background: linear-gradient(var(--sp-peat), rgba(18, 17, 14, 0.6));
 }
+/* The masthead: the game's name in the display face beside a line of italic. The
+   header is named twice so these outrank its own scoped rules. */
+.explorer .olui-system-header .olui-system-header__title-btn {
+  gap: 12px;
+}
+.explorer .olui-system-header .olui-system-header__title {
+  margin: 0;
+  font-family: var(--sp-face-display);
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: 0.08em;
+  color: var(--sp-tallow);
+  line-height: 1;
+}
+.explorer .olui-system-header .olui-system-header__subtitle {
+  font-style: italic;
+  font-size: 14px;
+  color: var(--sp-birch-dim);
+}
 .explorer .olui-system-header__actions {
   align-items: center;
   gap: 16px;
@@ -182,16 +201,12 @@
 .explorer .olui-progress-bar {
   --progress-bar-track: var(--sp-peat);
   --progress-bar-fill: var(--sp-tallow);
+  --progress-bar-border: 1px solid var(--sp-bark-edge);
   --progress-bar-radius: 0;
   --progress-bar-transition: transform 200ms linear;
-}
-.explorer .olui-progress-bar__track {
-  border: 1px solid var(--sp-bark-edge);
-}
-/* The scaffold theme paints a full bar as success. Here a full satchel is just
-   a full satchel; each meter says what full means in its own fill. */
-.explorer .olui-progress-bar[data-state='full'] .olui-progress-bar__fill {
-  background: var(--progress-bar-fill);
+  /* The scaffold theme paints a full bar as success. Here a full satchel is just
+     a full satchel; each meter says what full means in its own fill. */
+  --progress-bar-fill-full: var(--progress-bar-fill);
 }
 
 /* ── a purchase card: tallow edge when it can be afforded ── */
@@ -308,12 +323,10 @@
   }
 }
 
-/* ── the epilogue, on the scaffold's modal stack ──
-   The stack portals to <body>, outside `.explorer`; the epilogue's own root
-   carries the class, and this rule dresses the box it is mounted in. */
-.olui-modal-content:has(.sp-epilogue) {
+/* ── the epilogue: the modal box drawn as a lamp-lit plate ── */
+.explorer .olui-modal-content:has(> .sp-epilogue) {
   padding: 0;
-  background: #1b1a15;
-  border: 1px solid #3a372c;
-  border-top: 3px solid #e2aa4c;
+  background: var(--sp-peat);
+  border: 1px solid var(--sp-bark-edge);
+  border-top: 3px solid var(--sp-tallow);
 }

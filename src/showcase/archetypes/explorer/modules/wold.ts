@@ -16,6 +16,7 @@ import {
   type SpatialGrid,
   type ZoneSystem,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   FROZEN_BAND,
@@ -109,11 +110,10 @@ export interface WoldApi {
 
 export const WoldKey: InjectionKey<WoldApi> = Symbol('explorer/wold') as InjectionKey<WoldApi>;
 
-let api: WoldApi;
+const woldApi = createModuleApi(WoldKey);
 
-export function getWold(): WoldApi {
-  return api;
-}
+/** The map, its charting and its camps. Read it after the engine starts. */
+export const getWold = woldApi.get;
 
 export function createWoldModule(): EngineModule {
   return {
@@ -301,7 +301,7 @@ export function createWoldModule(): EngineModule {
         grid.markMaskChanged('explored');
       });
 
-      api = {
+      const api: WoldApi = {
         tiles,
         grid,
         mapVersion,
@@ -361,7 +361,7 @@ export function createWoldModule(): EngineModule {
           mapVersion.value++;
         },
       };
-      ctx.provide(WoldKey, api);
+      woldApi.publish(ctx, api);
     },
   };
 }

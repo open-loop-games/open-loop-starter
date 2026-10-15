@@ -26,6 +26,7 @@ import {
   type ResourceBag,
   type TimedProgress,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   BESTIARY_BONUS,
@@ -112,11 +113,10 @@ export const HuntsmanKey: InjectionKey<HuntsmanApi> = Symbol(
   'explorer/huntsman',
 ) as InjectionKey<HuntsmanApi>;
 
-let api: HuntsmanApi;
+const huntsmanApi = createModuleApi(HuntsmanKey);
 
-export function getHuntsman(): HuntsmanApi {
-  return api;
-}
+/** Where the huntsman stands, what he carries, and his verbs. Read it after the engine starts. */
+export const getHuntsman = huntsmanApi.get;
 
 const STARVED = 'Your jerky is gone. You drop on the trail, and porters find you.';
 const PARCHED = 'Your water is gone. You fall in the heat of the day, and porters find you.';
@@ -532,7 +532,7 @@ export function createHuntsmanModule(): EngineModule {
       supply.value = Math.min(supplyCap.value, num(stores.jerky));
       stores.jerky.value = Decimal.sub(stores.jerky.value, supply.value);
 
-      api = {
+      const api: HuntsmanApi = {
         pos,
         path,
         action,
@@ -561,7 +561,7 @@ export function createHuntsmanModule(): EngineModule {
         hunt,
         buildCamp,
       };
-      ctx.provide(HuntsmanKey, api);
+      huntsmanApi.publish(ctx, api);
     },
   };
 }

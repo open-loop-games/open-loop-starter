@@ -14,7 +14,6 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import Button from '@/ui/components/Button.vue';
 import { manifest } from '../manifest';
 import ExplorerGameView from './ExplorerGameView.vue';
 import WoldTallies from './components/WoldTallies.vue';
@@ -32,8 +31,8 @@ const showDevPanel = ref(false);
 
 <template>
   <!--
-    Costume scope. AppFrame's root node is a TooltipProvider fragment, so a class
-    on the component is dropped; the wrapper gives `hartwold.css` an ancestor.
+    Costume scope for the slot screen and the frame alike; the frame's modals
+    mount inside it, so they wear the costume too.
   -->
   <div class="explorer">
     <SlotScreen
@@ -44,18 +43,11 @@ const showDevPanel = ref(false);
     />
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
-        <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
-          <template #title="{ returnToSlots: back }">
-            <Button
-              class="sp-brand"
-              data-testid="return-to-slots"
-              title="Save and return to save picker"
-              @click="back()"
-            >
-              <h1>Spoor</h1>
-              <span class="sp-brand-sub">the Hartwold, uncharted</span>
-            </Button>
-          </template>
+        <SystemHeader
+          app-name="Spoor"
+          subtitle="the Hartwold, uncharted"
+          @return-to-slots="returnToSlots"
+        >
           <template #about>
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
@@ -84,30 +76,3 @@ const showDevPanel = ref(false);
     </DevPanelOverlay>
   </div>
 </template>
-
-<style scoped>
-.sp-brand {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-.sp-brand h1 {
-  margin: 0;
-  font-family: var(--sp-face-display);
-  font-weight: 600;
-  font-size: 26px;
-  letter-spacing: 0.08em;
-  color: var(--sp-tallow);
-  line-height: 1;
-}
-.sp-brand-sub {
-  font-style: italic;
-  font-size: 14px;
-  color: var(--sp-birch-dim);
-}
-</style>

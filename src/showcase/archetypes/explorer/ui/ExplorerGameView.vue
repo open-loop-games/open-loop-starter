@@ -6,8 +6,8 @@
 -->
 <script setup lang="ts">
 import { inject, watch } from 'vue';
-import type { Engine } from '@open-loop/engine';
 import { ThreePanelShell, modalStackKey } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
 import { getChronicle, getHuntsman, getLodge, getWold } from '../modules';
 import LodgePanel from './panels/LodgePanel.vue';
 import ChartPanel from './panels/ChartPanel.vue';
@@ -16,6 +16,8 @@ import Epilogue from './Epilogue.vue';
 
 const chronicle = getChronicle();
 const stack = inject(modalStackKey)!;
+// The ending is terminal: taking the Hart stops every clock, so a won save
+// reopens the epilogue on load.
 watch(
   () => chronicle.won.value,
   (won) => {
@@ -24,18 +26,9 @@ watch(
   { immediate: true },
 );
 
-// Dev-only state hook for browser probes: reads live module state without an
-// `import()` that Vite's module cache could serve stale.
+// Dev-only state hook for browser probes, on window.__game.
 if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
-  (window as unknown as Record<string, unknown>).__spoor = {
-    chronicle,
-    lodge: getLodge(),
-    wold: getWold(),
-    huntsman: getHuntsman(),
-    engine,
-    skip: (seconds: number) => engine.tickDriver.advanceTime(seconds),
-  };
+  useDevHandle({ chronicle, lodge: getLodge(), wold: getWold(), huntsman: getHuntsman() });
 }
 </script>
 

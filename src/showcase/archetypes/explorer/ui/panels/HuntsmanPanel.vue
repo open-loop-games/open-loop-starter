@@ -307,13 +307,10 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
 .act .clock {
   flex: 0 0 80px;
   --progress-bar-fill: var(--sp-birch-dim);
+  --progress-bar-height: 5px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
   --progress-bar-transition: none;
-}
-.act :deep(.olui-progress-bar__track) {
-  height: 5px;
-  min-height: 0;
-  border: none;
-  box-shadow: none;
 }
 .doing {
   font-size: 13px;

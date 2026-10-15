@@ -20,6 +20,7 @@ import {
   type Resource,
   type Purchasable,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   GEAR,
@@ -74,11 +75,10 @@ export interface LodgeApi {
 
 export const LodgeKey: InjectionKey<LodgeApi> = Symbol('explorer/lodge') as InjectionKey<LodgeApi>;
 
-let api: LodgeApi;
+const lodgeApi = createModuleApi(LodgeKey);
 
-export function getLodge(): LodgeApi {
-  return api;
-}
+/** The stores, the yard, the racks and the gear. Read it after the engine starts. */
+export const getLodge = lodgeApi.get;
 
 export function createLodgeModule(): EngineModule {
   return {
@@ -186,7 +186,7 @@ export function createLodgeModule(): EngineModule {
       const gearLevel = (id: GearId): number => toNumber(gear.getPurchasable(id)?.count.value ?? 0);
       const hounds = computed(() => gearLevel('hounds'));
 
-      api = {
+      const api: LodgeApi = {
         stores,
         producers,
         racks,
@@ -223,7 +223,7 @@ export function createLodgeModule(): EngineModule {
           return true;
         },
       };
-      ctx.provide(LodgeKey, api);
+      lodgeApi.publish(ctx, api);
     },
   };
 }

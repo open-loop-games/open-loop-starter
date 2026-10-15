@@ -1,13 +1,15 @@
 <!--
   Epilogue — the ending, pushed onto the scaffold's modal stack when the Hart is
-  taken. The stack portals it outside `.explorer`, so its root carries the
-  costume class itself.
+  taken. Closing it leaves the finished chart to look over; every clock has stopped.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { DialogTitle } from 'reka-ui';
+import Button from '@/ui/components/Button.vue';
 import { getChronicle, getWold } from '../modules';
 import { milestoneClock } from './format';
+
+defineEmits<{ close: [] }>();
 
 const chronicle = getChronicle();
 const wold = getWold();
@@ -35,7 +37,7 @@ const finished = computed(() => chronicle.beats.value.find((b) => b.label === 't
 </script>
 
 <template>
-  <article class="explorer sp-epilogue">
+  <article class="sp-epilogue">
     <DialogTitle as-child><h1>The Hart is taken</h1></DialogTitle>
     <p>
       The wold you walked into blind is charted to its heart:
@@ -49,6 +51,7 @@ const finished = computed(() => chronicle.beats.value.find((b) => b.label === 't
       </li>
     </ol>
     <p class="coda sp-num">Finished in {{ milestoneClock(finished) }}.</p>
+    <Button class="sp-verb quiet" @click="$emit('close')">Look over the wold</Button>
   </article>
 </template>
 
@@ -82,5 +85,8 @@ li .sp-num {
 }
 .coda {
   color: var(--sp-birch);
+}
+.sp-verb {
+  margin-top: 18px;
 }
 </style>
