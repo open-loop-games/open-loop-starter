@@ -23,9 +23,8 @@ export interface Occupant {
   facing?: number;
 }
 
-// TODO(expansion): the OccupancyView seam with an overlay preview — the evaluator reads a view,
-// and a preview is the same evaluator over a view answering with one hypothetical change.
-// candidate-engine-api.md § OccupancyView + overlay-preview; candidate-recipes.md § Placement-adjacency.
+// The seam of the engine's docs/consumer-guide-recipes.md § Adjacency → stat bonus: the
+// evaluator reads a view, and a preview is the same evaluator over a view laid with changes.
 /** What the evaluator reads: who sits where, and which cells a relation reaches. */
 export interface OccupancyView {
   occupantAt(x: number, y: number): Occupant | null;

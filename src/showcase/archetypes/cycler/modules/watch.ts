@@ -496,8 +496,8 @@ export function createWatchModule(): EngineModule {
       // purpose: waves on a timer have no items for a Sequencer to start (engine
       // docs/api/INDEX.md § Reserved names, Sequencer). So the phase and its clock are saved
       // here, and one tick guarded on the phase runs the day or the night (under The watch),
-      // with nothing to re-enter on a load. The shape is candidate-recipes.md § Run-phase
-      // controller.
+      // with nothing to re-enter on a load. The shape is the engine's
+      // docs/consumer-guide-recipes-tick.md § Phases inside a run.
       function forecastQuarter(): Quarter {
         const wind = posting.value.wind;
         if (wind !== 'veering') return wind;

@@ -204,8 +204,8 @@ export function createBoardModule(): EngineModule {
         return id ? (byId.get(id) ?? null) : null;
       };
 
-      // TODO(expansion): a directional ray to the hull's edge — `neighbors` takes fixed offsets,
-      // so a facing-dependent reach that stops at void is walked by hand.
+      // A directional ray to the hull's edge is walked by hand: `neighbors` takes fixed offsets,
+      // and the engine ships no connection shapes (docs/consumer-guide-recipes.md § Adjacency).
       const view: OccupancyView = {
         occupantAt,
         *reach(x, y, relation, facing = 0) {
