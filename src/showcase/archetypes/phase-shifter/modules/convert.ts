@@ -1,13 +1,10 @@
 import { Decimal, addResource, type DecimalSource, type Resource } from '@open-loop/engine';
 
 /**
- * Continuous conversion: draws up to `inputAmount` from `input` this tick,
- * partial-filled at whatever it still holds, and credits `output` at
- * `outputPerInput`. Returns what was drawn.
+ * One draw: takes up to `inputAmount` from `input`, partial at whatever it
+ * still holds, and credits `output` at `outputPerInput`. Returns what was
+ * drawn. A verb's act; a rate that draws every tick is a producer with `inputs`.
  */
-// TODO(expansion): continuous converter producer — a ProducerMapping with an input draw
-// (rate × count from `input`, partial fill at what it holds). createProducerCategory takes
-// one output and no input; createConversion is a discrete atomic call, not a rate.
 export function drawConvert(
   input: Resource,
   output: Resource,

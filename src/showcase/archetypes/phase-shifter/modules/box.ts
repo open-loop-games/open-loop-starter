@@ -2,6 +2,7 @@ import {
   Decimal,
   Formula,
   addResource,
+  createProducerCategory,
   computed,
   createAchievementCategory,
   createCostRequirement,
@@ -82,7 +83,7 @@ export function createBoxModule(): EngineModule {
       });
       const notes = createResource<Decimal>(Decimal.dZero, { id: 'notes', displayName: 'notes' });
 
-      /** The act both the reading verb and the clerks perform. */
+      /** The reading verb's act; the clerks' converter below reads the same way on the tick. */
       function readPages(amount: DecimalSource): Decimal {
         const read = drawConvert(pages, notes, amount, notesPerPage.value);
         if (read.gt(0)) addResource(pagesRead, read);
@@ -115,10 +116,21 @@ export function createBoxModule(): EngineModule {
         new Decimal(clerkReadChain.apply(clerkPagesPerS.value)).mul(clerks.value),
       );
 
-      // The clerks perform the reading verb's own act on the tick.
-      ctx.onTick((dt) => {
-        if (clerkReadRate.value.gt(0)) readPages(clerkReadRate.value.mul(dt));
+      // The clerks read on the tick: a converter from pages to pages read, which credits
+      // the notes beside its output.
+      const reading = createProducerCategory<{ id: 'clerk' }>({
+        id: 'reading',
+        registerTick: ctx.onTick,
+        mapProducer: () => ({
+          resource: pagesRead,
+          baseRate: () => clerkReadChain.apply(clerkPagesPerS.value),
+          trigger: 'continuous',
+          extraCount: clerks,
+          inputs: { pages: { resource: pages, per: 1 } },
+          onProduce: (read) => addResource(notes, Decimal.mul(read, notesPerPage.value)),
+        }),
       });
+      reading.register({ id: 'clerk' });
 
       const evidence = createAchievementCategory<{ id: string; at: number; text: string }>({
         id: 'evidence',

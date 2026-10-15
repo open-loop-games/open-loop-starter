@@ -83,15 +83,14 @@ checks each door's retirements and restore parity.
 |---|---|
 | the doors | `createPurchasableCategory` with `createGateRequirement` |
 | mechanism liveness, dormancy | `createPredicateResolver`, `createConditionalEffectSystem` |
-| reading; the phone and the string | `createProducerCategory`, and a continuous converter hand-roll |
+| reading; the phone and the string | `createProducerCategory`; the clerks read through a producer with `inputs` (pages) |
 | clerks, wall, roster | `createPurchasableCategory` with `createCostRequirement` |
 | the replayed night | `createCycle` |
 | the clerks' planning | `createAutomationTiers` |
 | the box's fragments | `createAchievementCategory` |
 | insomnia | the TickDriver's `speedMultiplier` |
 
-Two hand-rolls carry `TODO(expansion)` markers: the continuous converter
-(`modules/convert.ts`) and the lifespan table (`modules/lifecycle.ts`). The board
+One hand-roll carries a `TODO(expansion)` marker: the lifespan table (`modules/lifecycle.ts`). The board
 declines `createSpatialGrid`: its adjacency is shared arithmetic with the spine
 (`modules/board.ts` says why).
 
