@@ -23,7 +23,7 @@ import './causeway.css';
 const stack = useModalStack();
 // A battle is played, not left running: a load resumes it where it stood, with no offline
 // catch-up.
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession();
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
@@ -60,7 +60,7 @@ const showDevPanel = ref(false);
       title="Balance Workbench"
       @close="showDevPanel = false"
     >
-      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+      <BalanceWorkbench :engine="engine" />
     </DevPanelOverlay>
   </div>
 </template>

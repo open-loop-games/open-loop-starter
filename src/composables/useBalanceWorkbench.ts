@@ -48,10 +48,11 @@ export interface BalanceWorkbenchOptions {
   /** Live engine being inspected. Picker walks it; commit mutates it directly. */
   engine: Engine;
   /**
-   * Factory returning fresh module instances for the per-run scratch engines.
-   * Required: workbench cannot reconstruct the consumer's module graph itself.
+   * Factory returning fresh module instances for the per-run scratch engines,
+   * when the live engine has no mod selected. With a mod selected, each
+   * per-run engine selects the save's mod from `engine.mods`, so pass none.
    */
-  modules: () => EngineModule[];
+  modules?: () => EngineModule[];
   /**
    * Per-run tick driver. Defaults to `engine.tickDriver.tickOnce()`. Override for
    * games with custom tick semantics in the balance harness.
@@ -284,6 +285,15 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       return;
     }
 
+    // A mod's save loads only under that mod, so a scratch engine takes the
+    // live engine's mods and selects the save's; `modules` would install it twice.
+    const scratchModules = engine.activeModId ? () => [] : modules;
+    if (!scratchModules) {
+      error.value = 'No mod is selected, so pass `modules` for the scratch engines';
+      return;
+    }
+    const mods = () => [...engine.mods];
+
     error.value = null;
     running.value = true;
     result.value = null;
@@ -307,7 +317,8 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       const baseline = createSensitivityCell({
         id: 'baseline',
         saveText,
-        modules,
+        modules: scratchModules,
+        mods,
         ...(prepare && { perturb: (e, ctx) => prepare(e, ctx) }),
         buildAnalyzers,
         tick,
@@ -316,7 +327,8 @@ export function useBalanceWorkbench(options: BalanceWorkbenchOptions): UseBalanc
       const variant = createSensitivityCell({
         id: 'variant',
         saveText,
-        modules,
+        modules: scratchModules,
+        mods,
         perturb: (e, ctx) => {
           prepare?.(e, ctx);
           applyPerturbation(e, entry, perturbation);

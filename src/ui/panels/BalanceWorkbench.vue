@@ -21,7 +21,7 @@ import { useBalanceWorkbench } from '@/composables/useBalanceWorkbench';
 
 const props = defineProps<{
   engine: Engine;
-  modules: () => EngineModule[];
+  modules?: () => EngineModule[];
   tick?: (engine: Engine, dt: number) => void;
   analyzerPack?: (engine: Engine) => Analyzer[];
   prepare?: (engine: Engine, ctx: RunContext) => void;
@@ -29,7 +29,7 @@ const props = defineProps<{
 
 const wb = useBalanceWorkbench({
   engine: props.engine,
-  modules: props.modules,
+  ...(props.modules && { modules: props.modules }),
   ...(props.tick && { tick: props.tick }),
   ...(props.analyzerPack && { analyzerPack: props.analyzerPack }),
   ...(props.prepare && { prepare: props.prepare }),

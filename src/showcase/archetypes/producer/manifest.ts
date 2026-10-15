@@ -63,8 +63,8 @@ export const manifest: ArchetypeManifest = {
     { n: 3, label: 'Acquisitions desk hired', recordedFireTimeRange: [266, 266] },
     { n: 4, label: 'Board of Directors hired', recordedFireTimeRange: [537, 565] },
     { n: 5, label: 'The top tier: first savings bank', recordedFireTimeRange: [730, 767] },
-    { n: 6, label: 'The Consolidated Building offered', recordedFireTimeRange: [12912, 12996] },
-    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13685, 13799] },
+    { n: 6, label: 'The Consolidated Building offered', recordedFireTimeRange: [12996, 13482] },
+    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13728, 14347] },
   ],
 
   shell: 'ThreePanelShell',

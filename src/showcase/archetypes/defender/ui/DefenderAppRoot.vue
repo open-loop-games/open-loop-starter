@@ -19,7 +19,7 @@ import DefenderGameView from './DefenderGameView.vue';
 // screen and the app chrome stand in the same garden.
 import './walled-garden.css';
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession();
 
 const stack = useModalStack();
 
@@ -67,7 +67,7 @@ const showDevPanel = ref(false);
       title="Balance Workbench"
       @close="showDevPanel = false"
     >
-      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+      <BalanceWorkbench :engine="engine" />
     </DevPanelOverlay>
   </div>
 </template>

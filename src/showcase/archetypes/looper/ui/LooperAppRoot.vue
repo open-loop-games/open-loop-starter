@@ -21,7 +21,7 @@ import NightTallies from './components/NightTallies.vue';
 // and the app chrome are drawn in the same night.
 import './lights-out.css';
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession();
 
 const stack = useModalStack();
 
@@ -71,7 +71,7 @@ const showDevPanel = ref(false);
       title="Balance Workbench"
       @close="showDevPanel = false"
     >
-      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+      <BalanceWorkbench :engine="engine" />
     </DevPanelOverlay>
   </div>
 </template>

@@ -30,7 +30,7 @@ const stack = useModalStack();
 /** A shorter return is a reload, not time away, and gets no report. */
 const REPORT_MIN_AWAY_SECONDS = 60;
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession({
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession({
   onLoaded: (result) => {
     const offline = engine.tryInject(OfflineKey);
     if (!offline || !result.success) return;
@@ -79,7 +79,7 @@ const showDevPanel = ref(false);
       title="Balance Workbench"
       @close="showDevPanel = false"
     >
-      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+      <BalanceWorkbench :engine="engine" />
     </DevPanelOverlay>
   </div>
 </template>

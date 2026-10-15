@@ -25,7 +25,7 @@ import './skerry.css';
 const stack = useModalStack();
 // The rock's clock stops while the tab is closed: a watch is played, not left running, so
 // a load does no offline catch-up. The first watch needs no choosing.
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession({
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession({
   onLoaded: () => engine.tryInject(WatchKey)?.openFirstWatch(),
 });
 
@@ -69,7 +69,7 @@ const showDevPanel = ref(false);
       title="Balance Workbench"
       @close="showDevPanel = false"
     >
-      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+      <BalanceWorkbench :engine="engine" />
     </DevPanelOverlay>
   </div>
 </template>

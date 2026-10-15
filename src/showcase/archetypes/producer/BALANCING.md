@@ -100,7 +100,7 @@ seconds and takes several minutes; run seeds in parallel.
 ## Known thin
 
 - **The engine runs ahead of the projection when tips are caught.** Over seeds 1–3 the
-  building is bought at 3h48m–3h50m, against a drawn median near 4h04m. An idle engine
+  building is bought at 3h49m–3h59m, against a drawn median near 4h04m. An idle engine
   lands within a few percent of the idle projection, so the engine values the spree,
   the windfall or the tip achievements more than the projection books them.
 - **The expected ending is jagged in the cost step.** A 0.1% change in the step moves it

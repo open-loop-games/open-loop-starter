@@ -67,6 +67,30 @@ function buildLiveEngine(tag: string, mod: EngineModule): Engine {
 }
 
 describe('useBalanceWorkbench composable', () => {
+  it("runs on a modded engine with no modules, each scratch engine selecting the save's mod", () => {
+    const displayName = 'bw-mod-gold';
+    const live = createEngine({
+      gameId: 'bw-mod',
+      persistenceNamespace: `bw-mod-${Math.random().toString(36).slice(2)}`,
+      storageAdapter: createMemoryStorage(),
+      persistence: true,
+      autoSaveInterval: 0,
+      mods: [{ id: 'demo', displayName: 'Demo', modules: [makeProducerModule(displayName)] }],
+    });
+    live.selectMod('demo');
+    live.start();
+
+    const wb = useBalanceWorkbench({ engine: live });
+    wb.selectEntry(wb.snapshot.value.all.find((e) => e.label.includes('cursor'))!);
+    wb.form.seedCount = 1;
+    wb.form.iterations = 5;
+    wb.run();
+
+    expect(wb.error.value).toBeNull();
+    expect(wb.progress.value.completedRuns).toBe(2);
+    live.stop();
+  });
+
   it('exposes a snapshot grouped by source and runs a sweep end-to-end', () => {
     const displayName = 'bw-comp-gold';
     const modFactory = (): EngineModule => makeProducerModule(displayName);

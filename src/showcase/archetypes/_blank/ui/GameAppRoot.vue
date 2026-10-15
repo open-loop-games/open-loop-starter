@@ -19,7 +19,7 @@ import GameView from './GameView.vue';
 
 // Slot-pick → start → load → play → save → back. `usePlaySession` owns it;
 // pass `onLoaded` when your game needs to do something with the offline gap.
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession();
 
 const stack = useModalStack();
 
@@ -57,6 +57,6 @@ const showDevPanel = ref(false);
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+    <BalanceWorkbench :engine="engine" />
   </DevPanelOverlay>
 </template>

@@ -21,7 +21,7 @@ import ScripterGameView from './ScripterGameView.vue';
 import './inkfist.css';
 
 const stack = useModalStack();
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession();
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
@@ -63,7 +63,7 @@ const showDevPanel = ref(false);
       title="Balance Workbench"
       @close="showDevPanel = false"
     >
-      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+      <BalanceWorkbench :engine="engine" />
     </DevPanelOverlay>
   </div>
 </template>

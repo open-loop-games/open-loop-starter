@@ -21,7 +21,7 @@ import WorksTallies from './components/WorksTallies.vue';
 // and the app chrome are drawn on the same paper.
 import './cyanotype.css';
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession();
 
 const stack = useModalStack();
 
@@ -72,7 +72,7 @@ const showDevPanel = ref(false);
       title="Balance Workbench"
       @close="showDevPanel = false"
     >
-      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+      <BalanceWorkbench :engine="engine" />
     </DevPanelOverlay>
   </div>
 </template>

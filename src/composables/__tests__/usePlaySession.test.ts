@@ -146,14 +146,4 @@ describe('usePlaySession', () => {
     expect(engine.calls).toEqual(['save', 'stop']);
     expect(session.currentScreen.value).toBe(Screen.Slots);
   });
-
-  it('getActiveModules returns the active mod modules, or empty when none is active', () => {
-    const engine = recordingEngine();
-    const session = withSession(engine);
-    engine.activeModId = 'demo';
-    expect(session.getActiveModules()).toEqual(['m1', 'm2']);
-
-    engine.activeModId = undefined;
-    expect(session.getActiveModules()).toEqual([]);
-  });
 });

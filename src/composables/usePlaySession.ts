@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue';
-import type { EngineModule, SaveLoadResult, Engine } from '@open-loop/engine';
+import type { SaveLoadResult, Engine } from '@open-loop/engine';
 import { Screen } from '@/types';
 import { useGame } from './useGame';
 
@@ -22,8 +22,6 @@ export interface PlaySession {
   currentScreen: Ref<Screen>;
   startGame: (slotId: number, modId?: string) => void;
   returnToSlots: () => void;
-  /** Active mod's modules — feeds `BalanceWorkbench`'s `:modules`. */
-  getActiveModules: () => EngineModule[];
 }
 
 /**
@@ -60,11 +58,5 @@ export function usePlaySession(options: PlaySessionOptions = {}): PlaySession {
     currentScreen.value = Screen.Slots;
   }
 
-  function getActiveModules(): EngineModule[] {
-    const activeId = engine.activeModId;
-    if (!activeId) return [];
-    return engine.mods.find((m) => m.id === activeId)?.modules ?? [];
-  }
-
-  return { engine, currentScreen, startGame, returnToSlots, getActiveModules };
+  return { engine, currentScreen, startGame, returnToSlots };
 }

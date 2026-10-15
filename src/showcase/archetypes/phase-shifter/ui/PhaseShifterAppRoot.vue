@@ -19,7 +19,7 @@ import PhaseShifterGameView from './PhaseShifterGameView.vue';
 // slot screen and the app chrome are lit by the same lamp.
 import './night-clerk.css';
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession();
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession();
 
 const stack = useModalStack();
 
@@ -66,7 +66,7 @@ const showDevPanel = ref(false);
       title="Balance Workbench"
       @close="showDevPanel = false"
     >
-      <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+      <BalanceWorkbench :engine="engine" />
     </DevPanelOverlay>
   </div>
 </template>

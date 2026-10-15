@@ -144,7 +144,6 @@ import { DevPanelOverlay } from '@/lib';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import { engine } from './main';
-import { allModules } from './modules';
 
 const isDev = import.meta.env.DEV;
 const showDevPanel = ref(false);
@@ -154,7 +153,7 @@ const showDevPanel = ref(false);
   <AppFrame>…</AppFrame>
   <DevDiagnostics v-if="isDev" v-model:workbench-open="showDevPanel" />
   <DevPanelOverlay v-if="isDev && showDevPanel" title="Balance Workbench" @close="showDevPanel = false">
-    <BalanceWorkbench :engine="engine" :modules="() => allModules" />
+    <BalanceWorkbench :engine="engine" />
   </DevPanelOverlay>
 </template>
 ```

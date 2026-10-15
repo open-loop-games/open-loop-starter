@@ -18,7 +18,7 @@ import { manifest } from '../manifest';
 import { MatchKey } from '../modules';
 import SkirmishGameView from './SkirmishGameView.vue';
 
-const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = usePlaySession({
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession({
   onLoaded: () => {
     // Match module is only injectable post-start; kick off the first match.
     const match = engine.tryInject(MatchKey);
@@ -45,6 +45,6 @@ const showDevPanel = ref(false);
     title="Balance Workbench"
     @close="showDevPanel = false"
   >
-    <BalanceWorkbench :engine="engine" :modules="getActiveModules" />
+    <BalanceWorkbench :engine="engine" />
   </DevPanelOverlay>
 </template>
