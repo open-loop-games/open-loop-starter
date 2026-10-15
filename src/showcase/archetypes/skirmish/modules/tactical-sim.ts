@@ -38,8 +38,8 @@ import {
  * at skirmish scale (tens of units), a wall past that. When counts demand it,
  * a uniform-grid / spatial-hash broad-phase over continuous positions goes
  * here; that broad-phase is an engine-primitive candidate (the engine's
- * `SpatialGrid` is discrete-cell, not a float radius-query index) — first
- * instance, so no drop yet. `SpatialInfluenceLayer` for the *AI opponent's* reasoning
+ * `SpatialGrid` is discrete-cell, not a float radius-query index).
+ * `SpatialInfluenceLayer` for the *AI opponent's* reasoning
  * (threat/frontier maps) is the other growth port: grid-for-thinking,
  * floats-for-being.
  *
@@ -102,6 +102,8 @@ interface Frozen {
   faction: FactionId;
 }
 
+// TODO(expansion): a float proximity query (candidate-primitives.md); this scan visits
+// every enemy, where a broad-phase visits only nearby cells.
 /** Nearest living enemy within `range`, else null. Brute force — the scale seam. */
 function nearestEnemy(self: Frozen, enemies: Frozen[], range: number): Frozen | null {
   let best: Frozen | null = null;
