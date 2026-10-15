@@ -86,14 +86,14 @@ winter larder and the boilers are the player's, and the probe's runner provision
 | Beat | Recorded |
 |---|---|
 | The Sawpit Guild patented | 118–120s |
-| The Light Steam Engine; the first Boiler House | 353–380s |
-| The first aeroplane | 517–546s |
-| The first Exposition | 806–877s |
-| The first Ministry order delivered | 912–1178s |
-| Every charter held | 1997–2024s |
-| Le Contremaître employed | 2409–2434s |
-| The tenth Exposition | 4635–4674s |
-| The Grand Prix (spine: spring 1867, 7200s) | 6357–7342s |
+| The Light Steam Engine; the first Boiler House | 378–398s |
+| The first aeroplane | 570–610s |
+| The first Exposition | 874–912s |
+| The first Ministry order delivered | 980–1168s |
+| Every charter held | 2004–2052s |
+| Le Contremaître employed | 2418–2460s |
+| The tenth Exposition | 4643–4722s |
+| The Grand Prix (spine: spring 1867, 7200s) | 6361–7340s |
 
 Ranges are the arc probe at tick sizes 0.25 s to 2 s. `manifest.ts` holds every beat.
 
