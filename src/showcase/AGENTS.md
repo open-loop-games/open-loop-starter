@@ -27,6 +27,8 @@ The bar for new archetype content is two questions:
 - Would a new game that forks this archetype want this on day one?
 - Does its balance follow from the declared spine?
 
+**What a story is for.** Agents are starter's main reader. A fork's agent reads a story in place, beside the fork: the docs are the method and the code is the answer key. So starter keeps one story per genre. The genre's research composition is what makes balancing hard, and that difficulty is what a story teaches. A story deepens toward its exemplar set through mechanics that add variance its balance must address. More of an existing thing is not depth, and depth past that belongs to a game, not a story.
+
 A story's fiction word keeps its game sense in player text and fiction identifiers. Examples are burn tier and device level. Mechanism prose, and an identifier that wraps an engine concept, follow the engine's term list.
 
 ## Archetype convention
