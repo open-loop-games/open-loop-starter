@@ -368,7 +368,7 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
   let sim = 0;
   let nextSnap = 0;
   let losses = 0;
-  let lastLossBeat = 0;
+  let lossCursor = 0;
   let lastKey = '';
   let stuck = 0;
   while (sim < maxSimSeconds && !chronicle.won.value) {
@@ -383,11 +383,9 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
       snapshots.push(snapshot(sim));
     }
     account();
-    const bad = chronicle.log.value.filter((e) => e.tone === 'bad');
-    if (bad.length && bad[0].id !== lastLossBeat) {
-      lastLossBeat = bad[0].id;
-      losses++;
-    }
+    const fresh = chronicle.log.since(lossCursor);
+    if (fresh.length) lossCursor = fresh[fresh.length - 1].seq;
+    if (fresh.some((e) => e.kind === 'bad')) losses++;
     for (const r of Object.values(lodge.stores))
       if (!Number.isFinite(toNumber(r.value))) throw new Error(`non-finite ${r.displayName}`);
   }

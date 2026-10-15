@@ -14,6 +14,9 @@ import Button from '@/ui/components/Button.vue';
 import PanelLayout from '@/ui/components/PanelLayout.vue';
 import { useSave } from '@/composables/useSave';
 import { SettingsKey } from '@/modules/settings';
+import { usePortalTarget } from '@/lib/portal';
+
+const portalTarget = usePortalTarget();
 
 const emit = defineEmits<{ close: [] }>();
 const { save, exportSave, importSave, deleteSave, downloadSave, uploadSave } = useSave();
@@ -128,7 +131,7 @@ function confirmDelete(): void {
     </section>
 
     <DialogRoot v-model:open="showDeleteConfirm">
-      <DialogPortal>
+      <DialogPortal :to="portalTarget">
         <DialogOverlay class="dialog-overlay" />
         <DialogContent class="dialog-content">
           <VisuallyHidden>

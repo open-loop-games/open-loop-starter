@@ -5,9 +5,10 @@
   This component supplies costume classes + default custom-property values so
   theme-widgets.css can style Select without touching scoped CSS.
 
-  Emits `update:modelValue` so it works with `v-model` at the call site.
+  Emits `update:modelValue` so it works with `v-model` at the call site. A value is
+  a string or a number, typed by the options passed.
 -->
-<script setup lang="ts">
+<script setup lang="ts" generic="V extends string | number = string">
 import {
   SelectRoot,
   SelectTrigger,
@@ -20,27 +21,30 @@ import {
   SelectItemText,
   SelectItemIndicator,
 } from 'reka-ui';
+import { usePortalTarget } from '@/lib/portal';
 
-export interface SelectOption {
-  value: string;
+export interface SelectOption<V extends string | number = string> {
+  value: V;
   label: string;
   disabled?: boolean;
 }
 
+const portalTarget = usePortalTarget();
+
 const props = defineProps<{
-  modelValue: string;
-  options: ReadonlyArray<SelectOption>;
+  modelValue: V;
+  options: ReadonlyArray<SelectOption<V>>;
   placeholder?: string;
   disabled?: boolean;
   ariaLabel?: string;
 }>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string];
+  'update:modelValue': [value: V];
 }>();
 
-function onUpdate(next: string) {
-  if (next !== props.modelValue) emit('update:modelValue', next);
+function onUpdate(next: unknown) {
+  if (next !== props.modelValue) emit('update:modelValue', next as V);
 }
 </script>
 
@@ -50,7 +54,7 @@ function onUpdate(next: string) {
       <SelectValue :placeholder="placeholder ?? 'Select…'" />
       <SelectIcon class="olui-select__icon"> ▾ </SelectIcon>
     </SelectTrigger>
-    <SelectPortal>
+    <SelectPortal :to="portalTarget">
       <SelectContent class="olui-select__content" :side-offset="4" position="popper">
         <SelectViewport class="olui-select__viewport">
           <SelectItem

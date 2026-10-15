@@ -4,8 +4,13 @@ import { createAutomationModule } from './automation';
 import { createCoreModule } from './core';
 
 export { GameTuningRegistryKey, type GameTunableKey } from './tuning';
-export { AutomationKey, type AutomationApi, type GameAutomationTier } from './automation';
-export { CoreKey, type CoreApi } from './core';
+export {
+  AutomationKey,
+  getAutomation,
+  type AutomationApi,
+  type GameAutomationTier,
+} from './automation';
+export { CoreKey, getCore, type CoreApi } from './core';
 
 /**
  * The blank game's module list. `bootEngine` installs the shared base

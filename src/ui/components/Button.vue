@@ -1,17 +1,17 @@
 <script setup lang="ts">
 /**
  * Button — the canonical starter button. Wraps Reka's `Primitive` so it's
- * polymorphic (`as="a"`, `asChild`) and a11y-compliant, while baking in
- * `v-hold-repeat` for clicker-game press-and-hold semantics.
+ * polymorphic (`as="a"`, `asChild`) and a11y-compliant, with `v-hold-repeat`
+ * for clicker-game press-and-hold.
  *
  * Consumers use standard Vue idioms:
- *   <Button @click="doThing()" :disabled="!canDo">Purchase</Button>
+ *   <Button @click="doThing()" :disabled="!canDo">Open</Button>
+ *   <Button repeat @click="buy()">Buy</Button>
  *
- * Hold-repeat fires once on press, then at interval after a short delay.
- * `:repeat="false"` fires once per press: use it for a toggle or a
- * selection, which a held press must not flip back and forth.
- * `disabled` suppresses the emit in-component (the directive still runs,
- * but the handler short-circuits).
+ * A press fires once. `repeat` makes a held press fire again at an interval
+ * after a short delay: for a repeatable purchase or a stepper. `click` carries
+ * the press, so `e.shiftKey` reads at the click. `disabled` suppresses the
+ * emit in-component (the directive still runs, but the handler short-circuits).
  */
 import { computed } from 'vue';
 import { Primitive, type PrimitiveProps } from 'reka-ui';
@@ -21,7 +21,7 @@ interface Props extends /* @vue-ignore */ PrimitiveProps {
   as?: PrimitiveProps['as'];
   asChild?: boolean;
   disabled?: boolean;
-  /** Whether a held press repeats the click. */
+  /** A held press repeats the click. */
   repeat?: boolean;
 }
 
@@ -29,17 +29,17 @@ const props = withDefaults(defineProps<Props>(), {
   as: 'button',
   asChild: false,
   disabled: false,
-  repeat: true,
+  repeat: false,
 });
 
-const emit = defineEmits<{ click: [] }>();
+const emit = defineEmits<{ click: [event: PointerEvent | KeyboardEvent] }>();
 
 /** The directive argument: `once` stops a held press from repeating. */
 const mode = computed(() => (props.repeat ? undefined : 'once'));
 
-function handle(): void {
+function handle(e: PointerEvent | KeyboardEvent): void {
   if (props.disabled) return;
-  emit('click');
+  emit('click', e);
 }
 </script>
 

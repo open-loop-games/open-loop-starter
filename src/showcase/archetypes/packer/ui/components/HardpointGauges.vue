@@ -4,10 +4,8 @@
   the fire stack's multiplier, and modules fitted against sockets open. It reads module
   state, so it is its own component in SystemHeader's slot and never a root read.
 
-  Adopts the `ResourceReadout` contract with its own renderer: ResourceHeaderStrip's chip
-  formats every value with `format(v, 0)`, and these gauges each need their own notation
-  (one decimal under ten, a ×multiplier, a dps unit). The contract has no per-readout
-  notation field, so each gauge pairs a readout with its formatter here.
+  Adopts the `ResourceReadout` contract with its own renderer: each gauge carries its own
+  notation in `format` (one decimal under ten, a ×multiplier), and a dps unit beside it.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -21,29 +19,41 @@ const board = getBoard();
 const placed = computed(() => board.placed.value.length);
 
 interface Gauge {
-  readout: ResourceReadout;
-  show: (v: DecimalSource) => string;
+  readout: ResourceReadout & { format: (v: DecimalSource) => string };
   unit?: string;
 }
 
 const num = (v: DecimalSource) => Decimal.fromValue(v).toNumber();
 const gauges: Gauge[] = [
   {
-    readout: { id: 'salvage', label: 'salvage', value: yard.salvage, rate: board.salvageRate },
-    show: (v) => fmt(v, 0),
+    readout: {
+      id: 'salvage',
+      label: 'salvage',
+      value: yard.salvage,
+      rate: board.salvageRate,
+      format: (v) => fmt(v, 0),
+    },
   },
   {
-    readout: { id: 'firepower', label: 'firepower', value: board.firepower },
-    show: (v) => fmt(v),
+    readout: { id: 'firepower', label: 'firepower', value: board.firepower, format: (v) => fmt(v) },
     unit: 'dps',
   },
   {
-    readout: { id: 'stack', label: 'fire stack', value: yard.globalMult },
-    show: (v) => times(num(v)),
+    readout: {
+      id: 'stack',
+      label: 'fire stack',
+      value: yard.globalMult,
+      format: (v) => times(num(v)),
+    },
   },
   {
-    readout: { id: 'hull', label: 'hull', value: placed, capacity: board.openCells },
-    show: (v) => fmt(v, 0),
+    readout: {
+      id: 'hull',
+      label: 'hull',
+      value: placed,
+      capacity: board.openCells,
+      format: (v) => fmt(v, 0),
+    },
   },
 ];
 </script>
@@ -53,8 +63,9 @@ const gauges: Gauge[] = [
     <div v-for="g in gauges" :key="g.readout.id" class="gauge" :class="g.readout.id">
       <dt>{{ g.readout.label }}</dt>
       <dd class="value hp-num">
-        {{ g.show(g.readout.value.value)
-        }}<small v-if="g.readout.capacity"> / {{ g.show(g.readout.capacity.value) }}</small
+        {{ g.readout.format(g.readout.value.value)
+        }}<small v-if="g.readout.capacity">
+          / {{ g.readout.format(g.readout.capacity.value) }}</small
         ><small v-if="g.unit"> {{ g.unit }}</small>
       </dd>
       <dd v-if="g.readout.rate" class="rate hp-num">+{{ fmt(g.readout.rate.value) }}/s</dd>

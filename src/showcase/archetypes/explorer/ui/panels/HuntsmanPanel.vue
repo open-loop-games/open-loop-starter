@@ -8,6 +8,7 @@ import { computed } from 'vue';
 import { getSkillProgress, toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
+import { EventLog } from '@/ui/compositions';
 import {
   ANCHORS,
   BESTIARY_KILLS,
@@ -19,7 +20,7 @@ import {
   speciesById,
 } from '../../data';
 import { getChronicle, getHuntsman, getLodge, getWold } from '../../modules';
-import { fmt } from '../format';
+import { formatGrouped as fmt } from '@/composables/useFormatting';
 
 const man = getHuntsman();
 const wold = getWold();
@@ -35,7 +36,6 @@ const toWater = computed(() => {
   const { x, y } = man.pos.value;
   return wold.waterField()[y * MAP_W + x];
 });
-const waterMark = computed(() => Math.min(100, (100 * toWater.value) / man.waterCap.value));
 const homeCost = computed(() => {
   void wold.mapVersion.value;
   void wold.camps.value.length;
@@ -93,7 +93,6 @@ const bestiary = computed(() =>
 );
 
 const skillPct = computed(() => Math.round(100 * getSkillProgress(man.skill)));
-const homeMark = computed(() => Math.min(100, (100 * homeCost.value) / man.supplyCap.value));
 const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
 </script>
 
@@ -106,10 +105,7 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
           <span>Jerky carried</span>
           <span class="sp-num">{{ supply.toFixed(1) }} / {{ man.supplyCap.value }}</span>
         </div>
-        <div class="bar">
-          <ProgressBar class="jerky" :value="supply" :max="man.supplyCap.value" />
-          <div class="mark" :style="{ left: `${homeMark}%` }" />
-        </div>
+        <ProgressBar class="jerky" :value="supply" :max="man.supplyCap.value" :marks="[homeCost]" />
         <div class="sp-hint sp-num" :class="{ 'sp-warn': homeCost >= supply - 1 && !here.atLodge }">
           home costs {{ Number.isFinite(homeCost) ? homeCost.toFixed(1) : '—' }} · each tile
           {{ wold.stepCost.value }}
@@ -120,10 +116,7 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
           <span>Water carried</span>
           <span class="sp-num">{{ Math.floor(water) }} / {{ man.waterCap.value }}</span>
         </div>
-        <div class="bar">
-          <ProgressBar class="water" :value="water" :max="man.waterCap.value" />
-          <div class="mark" :style="{ left: `${waterMark}%` }" />
-        </div>
+        <ProgressBar class="water" :value="water" :max="man.waterCap.value" :marks="[toWater]" />
         <div class="sp-hint sp-num" :class="{ 'sp-warn': toWater >= water - 2 && toWater > 0 }">
           {{
             toWater === 0
@@ -253,11 +246,9 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
 
     <section class="sp-section">
       <h2>Spoor</h2>
-      <ol class="log">
-        <li v-for="e in chronicle.log.value.slice(0, 14)" :key="e.id" :class="e.tone">
-          {{ e.text }}
-        </li>
-      </ol>
+      <EventLog class="log" :lines="chronicle.log.lines.value" :limit="14">
+        <template #empty>No spoor yet.</template>
+      </EventLog>
     </section>
   </div>
 </template>
@@ -276,15 +267,10 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
   justify-content: space-between;
   font-size: 14px;
 }
-.bar {
-  position: relative;
-}
 .meter :deep(.olui-progress-bar) {
+  --progress-bar-height: 9px;
+  --progress-bar-mark: var(--sp-rust);
   margin: 3px 0;
-}
-.meter :deep(.olui-progress-bar__track) {
-  height: 9px;
-  min-height: 0;
 }
 .meter .jerky {
   --progress-bar-fill: linear-gradient(90deg, var(--sp-tallow-deep), var(--sp-tallow));
@@ -297,14 +283,6 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
 }
 .meter .pack.full {
   --progress-bar-fill: var(--sp-ember);
-}
-.mark {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 2px;
-  background: var(--sp-rust);
-  pointer-events: none;
 }
 .stats {
   display: flex;
@@ -395,31 +373,29 @@ const packFull = computed(() => man.packLoad.value >= man.packCap.value - 0.5);
 }
 
 .log {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   font-size: 13px;
   max-height: 260px;
   overflow: hidden;
+  gap: 0;
 }
-.log li {
+.log :deep(.event-log__row) {
   padding: 2px 0;
   border-bottom: 1px solid #1f1d17;
   color: var(--sp-birch-dim);
 }
-.log li:first-child {
+.log :deep(.event-log__row--fresh) {
   animation: sp-reveal-in 500ms ease-out both;
 }
-.log li.plain:first-child {
+.log :deep(.event-log__row--plain.event-log__row--fresh) {
   color: var(--sp-birch);
 }
-.log .good {
+.log :deep(.event-log__row--good) {
   color: var(--sp-moss);
 }
-.log .bad {
+.log :deep(.event-log__row--bad) {
   color: var(--sp-rust);
 }
-.log .find {
+.log :deep(.event-log__row--find) {
   color: var(--sp-frost);
 }
 </style>

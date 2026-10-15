@@ -60,12 +60,7 @@ function pick(t: Tool): void {
     </h2>
 
     <div class="tools">
-      <Button
-        class="sk-control tool plain"
-        :class="{ on: tool === 'haul' }"
-        :repeat="false"
-        @click="pick('haul')"
-      >
+      <Button class="sk-control tool plain" :class="{ on: tool === 'haul' }" @click="pick('haul')">
         <span class="name">Haul</span>
         <span class="price num">{{ Math.floor(heldTotal) }} on the line</span>
       </Button>
@@ -76,7 +71,6 @@ function pick(t: Tool): void {
         :class="{ on: tool === p.def.id, afford: p.affordable && day, short: !p.affordable }"
         :data-piece="p.def.id"
         :title="p.def.blurb"
-        :repeat="false"
         @click="pick(p.def.id)"
       >
         <PieceGlyph :kind="p.def.id" class="mini" />
@@ -88,7 +82,6 @@ function pick(t: Tool): void {
         class="sk-control tool plain"
         :class="{ on: tool === 'clear' }"
         title="Take a piece up; its price comes back in full."
-        :repeat="false"
         @click="pick('clear')"
       >
         <span class="name">Take up</span>
@@ -101,7 +94,6 @@ function pick(t: Tool): void {
         class="sk-control act"
         :class="{ afford: atWork && heldTotal >= 1 }"
         :disabled="!atWork || heldTotal < 1"
-        :repeat="false"
         @click="watch.haulAll()"
       >
         Haul every net
@@ -125,7 +117,6 @@ function pick(t: Tool): void {
           :key="f.id"
           class="sk-control find"
           :data-find="f.id"
-          :repeat="false"
           @click="watch.take(f.id)"
         >
           <span class="name">{{ f.name }}</span>
@@ -152,7 +143,6 @@ function pick(t: Tool): void {
         v-if="watch.home.value"
         class="sk-control act afford"
         data-testid="row-out"
-        :repeat="false"
         @click="watch.rowOut()"
       >
         Row out to the wreck
@@ -161,7 +151,6 @@ function pick(t: Tool): void {
         v-else-if="watch.boat.value === 'out'"
         class="sk-control act afford"
         data-testid="row-home"
-        :repeat="false"
         @click="watch.rowHome()"
       >
         Row home

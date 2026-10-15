@@ -47,6 +47,10 @@ function chipVariant(
   return 'default';
 }
 
+function show(r: ResourceReadout, value: DecimalSource): string {
+  return r.format ? r.format(value) : format(value, 0);
+}
+
 function rateSign(value: DecimalSource): string {
   return Decimal.lt(value, 0) ? '' : '+';
 }
@@ -64,8 +68,8 @@ function rateSign(value: DecimalSource): string {
         :data-highlight="r.highlight?.value ?? 'normal'"
       >
         <span class="resource-header-strip__value"
-          >{{ format(r.value.value, 0)
-          }}<template v-if="r.capacity"> / {{ format(r.capacity.value, 0) }}</template></span
+          >{{ show(r, r.value.value)
+          }}<template v-if="r.capacity"> / {{ show(r, r.capacity.value) }}</template></span
         >
         <span class="resource-header-strip__label">{{ r.label }}</span>
         <span v-if="r.rate" class="resource-header-strip__rate"

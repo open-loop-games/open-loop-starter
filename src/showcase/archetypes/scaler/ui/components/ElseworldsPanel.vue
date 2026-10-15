@@ -69,9 +69,7 @@ const cards = computed(() =>
         </div>
         <template v-if="card.entered">
           <ProgressBar class="meter cape" :value="card.fill" />
-          <Button class="act ghost" :repeat="false" @click="prestige.abandonElseworld()">
-            Abandon
-          </Button>
+          <Button class="act ghost" @click="prestige.abandonElseworld()"> Abandon </Button>
         </template>
         <div v-else-if="card.maxed" class="stamp resolved">Resolved ×{{ ELSEWORLD_TIERS }}</div>
         <div v-else-if="card.capped" class="capped">
@@ -81,7 +79,6 @@ const cards = computed(() =>
         <Button
           v-else
           class="act cape"
-          :repeat="false"
           :disabled="!card.canEnter"
           :data-testid="`enter-${card.def.id}`"
           @click="prestige.enterElseworld(card.def.id)"

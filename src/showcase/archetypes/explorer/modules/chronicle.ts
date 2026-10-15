@@ -1,13 +1,12 @@
 import {
   createTimeSystem,
   persistent,
-  shallowRef,
   type EngineModule,
   type InjectionKey,
   type Persistent,
-  type ShallowRef,
   type TimeSystem,
 } from '@open-loop/engine';
+import { createEventLog, type EventLog } from '@/modules/event-log';
 
 /**
  * Chronicle module — the hunt's record: the play clock, the spoor log, the
@@ -17,13 +16,6 @@ import {
 
 export type Tone = 'plain' | 'good' | 'bad' | 'find';
 
-export interface LogEntry {
-  id: number;
-  at: number;
-  text: string;
-  tone: Tone;
-}
-
 /** A beat the probe and the epilogue read: what happened, at what play-second. */
 export interface Beat {
   label: string;
@@ -32,8 +24,8 @@ export interface Beat {
 
 export interface ChronicleApi {
   time: TimeSystem;
-  /** newest first, capped */
-  log: ShallowRef<LogEntry[]>;
+  /** the spoor: a session log, kinded by tone */
+  log: EventLog<Tone>;
   beats: Persistent<Beat[]>;
   /** the Hart is taken: every clock in the wold stops */
   won: Persistent<boolean>;
@@ -59,8 +51,10 @@ export function createChronicleModule(): EngineModule {
     id: 'explorer/chronicle',
     install(ctx) {
       const time = createTimeSystem();
-      const log = shallowRef<LogEntry[]>([]);
-      let logId = 0;
+      const log = createEventLog<Tone>(ctx, {
+        cap: LOG_CAP,
+        clock: () => time.totalPlayTime.value,
+      });
       const beats = persistent<Beat[]>([], { id: 'beats', lifetime: true });
       const won = persistent(false, { id: 'won', lifetime: true });
       ctx.onTick((dt) => {
@@ -72,12 +66,7 @@ export function createChronicleModule(): EngineModule {
         log,
         beats,
         won,
-        say(text, tone = 'plain') {
-          log.value = [
-            { id: ++logId, at: time.totalPlayTime.value, text, tone },
-            ...log.value,
-          ].slice(0, LOG_CAP);
-        },
+        say: log.post,
         beat(label) {
           if (beats.value.some((b) => b.label === label)) return;
           beats.value = [...beats.value, { label, at: Math.round(time.totalPlayTime.value) }];

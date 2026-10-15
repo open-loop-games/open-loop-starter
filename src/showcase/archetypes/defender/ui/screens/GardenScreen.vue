@@ -125,7 +125,6 @@ const anyLearned = computed(() => new Decimal(garden.lessons.totalCount.value).g
           <Button
             v-if="p.open"
             class="wg-action"
-            :repeat="false"
             :data-testid="`enter-${p.def.id}`"
             @click="plot.startPlot(p.def.id)"
           >
@@ -144,7 +143,7 @@ const anyLearned = computed(() => new Decimal(garden.lessons.totalCount.value).g
         <span class="notes">
           <span class="wg-num">{{ notes }}</span> {{ notes === 1 ? 'note' : 'notes' }} to write up
         </span>
-        <Button class="wg-quiet" :repeat="false" :disabled="!anyLearned" @click="garden.relearn()">
+        <Button class="wg-quiet" :disabled="!anyLearned" @click="garden.relearn()">
           Start the almanac over
         </Button>
       </header>
@@ -163,12 +162,7 @@ const anyLearned = computed(() => new Decimal(garden.lessons.totalCount.value).g
                 :class="{ on: i <= learned(row) }"
               />
             </span>
-            <Button
-              class="wg-quiet write"
-              :repeat="false"
-              :disabled="!row.canPurchase(1)"
-              @click="purchase()"
-            >
+            <Button class="wg-quiet write" :disabled="!row.canPurchase(1)" @click="purchase()">
               Write up
             </Button>
           </div>

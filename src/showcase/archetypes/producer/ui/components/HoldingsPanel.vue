@@ -17,7 +17,7 @@ import {
 import Button from '@/ui/components/Button.vue';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
-import { ProducerList, type ProducerRowData } from '@/ui/compositions';
+import { ProducerList, createProducerRow, type ProducerRow } from '@/ui/compositions';
 import { DEAL_YIELD, type SubsidiaryDef } from '../../data';
 import { getAutomation, getFirm } from '../../modules';
 import { amount, money, perSecond } from '../format';
@@ -27,33 +27,20 @@ interface HoldingExtra {
   def: Pick<SubsidiaryDef, 'displayName' | 'unit' | 'blurb' | 'baseRate'>;
   producer: Producer;
 }
-type HoldingRow = ProducerRowData<HoldingExtra>;
+type HoldingRow = ProducerRow<HoldingExtra>;
 
 const firm = getFirm();
 const automation = getAutomation();
 const deskBuying = computed(() => automation.working('acquisitions-desk'));
 
 function rowOf(id: string, def: HoldingExtra['def'], producer: Producer): HoldingRow {
-  const repeatable = producer.repeatable!;
-  // `countToPurchase` floors at 1 even when nothing is affordable, so the zero
-  // case comes from `canPurchase`.
-  const maxAffordable = computed<DecimalSource>(() =>
-    repeatable.canPurchase.value ? repeatable.countToPurchase.value : 0,
-  );
-  return {
+  // A holding counts every unit that produces, so the count is the producer's, not the owned one.
+  return createProducerRow(producer, {
     id,
     displayName: def.displayName,
     count: producer.count,
-    displayRate: computed(() => Decimal.mul(producer.computedRate.value, producer.count.value)),
-    cost: (count) => repeatable.getCost(count),
-    canPurchase: (count) => repeatable.canPurchase.value && Decimal.gte(maxAffordable.value, count),
-    maxAffordable,
-    purchase: (count) => {
-      repeatable.purchase(count);
-    },
-    unlocked: computed(() => repeatable.visible.value),
     extra: { def, producer },
-  };
+  });
 }
 
 const PHONE_DEF: HoldingExtra['def'] = {
@@ -97,7 +84,7 @@ const sealed = computed(() => {
           <BulkModeSelector class="bulk" :modes="[1, 10, 'max']" />
         </div>
       </template>
-      <template #row="{ row, pendingCount, pendingCost, purchase }">
+      <template #row="{ row, pendingCount, purchase }">
         <article
           class="cert"
           :class="{
@@ -137,6 +124,7 @@ const sealed = computed(() => {
           </div>
           <div class="cert-buy">
             <Button
+              repeat
               class="acquire"
               :disabled="!row.canPurchase(pendingCount)"
               :data-testid="`buy-${row.id}`"
@@ -147,12 +135,12 @@ const sealed = computed(() => {
                   ×{{ amount(pendingCount) }}</span
                 ></span
               >
-              <span class="price num">{{ money(pendingCost) }}</span>
+              <span class="price num">{{ money(row.cost(pendingCount)) }}</span>
             </Button>
             <ProgressBar
               v-if="!row.canPurchase(pendingCount)"
               class="saving"
-              :value="progress(pendingCost)"
+              :value="progress(row.cost(pendingCount))"
             />
           </div>
         </article>

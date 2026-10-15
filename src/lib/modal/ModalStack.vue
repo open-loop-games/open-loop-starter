@@ -2,10 +2,17 @@
 import { inject } from 'vue';
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent } from 'reka-ui';
 import { modalStackKey, type ModalStackApi } from './useModalStack';
+import { usePortalTarget } from '../portal';
+
+const portalTarget = usePortalTarget();
 
 // Consuming modals must render their own <DialogTitle as-child><h*>…</h*></DialogTitle>
 // for screen-reader labelling. aria-describedby is opted out (undefined) so reka-ui
 // does not require a DialogDescription.
+//
+// Each pushed component receives an `onClose` that removes its own entry, so a
+// dismissible modal needs no `const id = stack.push(…)` round-trip. An explicit
+// `onClose` in the pushed props wins.
 
 const props = defineProps<{
   stack?: ModalStackApi;
@@ -31,13 +38,16 @@ const handleUpdateOpen = (id: string, open: boolean) => {
     :open="true"
     @update:open="(v: boolean) => handleUpdateOpen(entry.id, v)"
   >
-    <DialogPortal>
+    <DialogPortal :to="portalTarget">
       <DialogOverlay class="olui-modal-overlay" />
       <DialogContent
         :class="['olui-modal-content', `olui-modal-content--${entry.size ?? 'md'}`]"
         :aria-describedby="undefined"
       >
-        <component :is="entry.component" v-bind="entry.props ?? {}" />
+        <component
+          :is="entry.component"
+          v-bind="{ onClose: () => api.remove(entry.id), ...entry.props }"
+        />
       </DialogContent>
     </DialogPortal>
   </DialogRoot>

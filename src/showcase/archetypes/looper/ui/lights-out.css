@@ -140,15 +140,6 @@
 
 /* The shell's three columns are bare: each panel is its own concrete slab, and
    the case-file column stacks four of them. */
-.looper .olui-three-panel__left,
-.looper .olui-three-panel__main,
-.looper .olui-three-panel__right {
-  background: transparent;
-  border: none;
-  padding: 0;
-  min-width: 0;
-}
-
 /* ── shared panel chrome: a slab of concrete with a stenciled label ── */
 .looper .lo-panel {
   background: var(--lo-concrete);

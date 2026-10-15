@@ -107,6 +107,7 @@ const cards = computed(() => all.filter((c) => c.extra!.visible.value));
           <div v-if="c.owned.value" class="stamp owned-stamp">Owned</div>
           <div v-else-if="c.extra!.maxed.value" class="stamp owned-stamp">Maxed</div>
           <Button
+            repeat
             v-else
             class="act"
             :class="layer.ink"

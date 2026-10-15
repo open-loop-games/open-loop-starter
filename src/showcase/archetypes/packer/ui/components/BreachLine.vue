@@ -169,7 +169,6 @@ watch(line.engagement, (now, was: Engagement | null) => {
             class="hp-act engage"
             :class="{ can: line.canEngage.value }"
             :disabled="!line.canEngage.value"
-            :repeat="false"
             @click="line.engage()"
           >
             {{ line.engagement.value ? 'Engaged' : 'Engage' }}

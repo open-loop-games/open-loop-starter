@@ -6,7 +6,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { getChronicle, getWold } from '../../modules';
-import { playClock } from '../format';
+import { formatClock } from '@/composables/useFormatting';
 
 const wold = getWold();
 const chronicle = getChronicle();
@@ -30,7 +30,7 @@ const share = computed(() => Math.floor((100 * wold.chartedCount.value) / wold.t
     </div>
     <div class="dim" :title="`${openTiles} tiles of open ground`">
       <dt>Afield</dt>
-      <dd class="sp-num">{{ playClock(chronicle.time.totalPlayTime.value) }}</dd>
+      <dd class="sp-num">{{ formatClock(chronicle.time.totalPlayTime.value) }}</dd>
     </div>
   </dl>
 </template>

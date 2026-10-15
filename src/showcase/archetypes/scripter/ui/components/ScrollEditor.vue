@@ -369,11 +369,7 @@ const status = computed(() => {
             <p :id="`scroll-under-${i}`" class="under" :class="under(i + 1).kind">
               <template v-if="under(i + 1).kind === 'locked'">
                 {{ under(i + 1).text }} — learn
-                <Button
-                  class="technique"
-                  :repeat="false"
-                  @click="emit('technique', under(i + 1).technique!)"
-                >
+                <Button class="technique" @click="emit('technique', under(i + 1).technique!)">
                   {{ techniqueName(under(i + 1).technique!) }}
                 </Button>
                 first ({{ fmt(techniqueCost(under(i + 1).technique!)) }} Ki).
@@ -385,16 +381,10 @@ const status = computed(() => {
         </ol>
       </div>
       <div class="seal-col">
-        <Button
-          class="seal"
-          :repeat="false"
-          :disabled="!dirty"
-          title="Ink the scroll (Ctrl+Enter)"
-          @click="ink"
-        >
+        <Button class="seal" :disabled="!dirty" title="Ink the scroll (Ctrl+Enter)" @click="ink">
           <b aria-hidden="true">印</b>INK
         </Button>
-        <Button v-if="dirty" class="if-act quiet" :repeat="false" @click="revert">Revert</Button>
+        <Button v-if="dirty" class="if-act quiet" @click="revert">Revert</Button>
       </div>
     </div>
     <div class="foot">
@@ -410,7 +400,6 @@ const status = computed(() => {
         :key="c.text"
         class="chip"
         :class="c.state"
-        :repeat="false"
         :title="c.state === 'locked' ? `not learned yet: ${c.price} Ki` : 'insert at the caret'"
         @mousedown.prevent
         @click="insert(c)"

@@ -2,9 +2,15 @@
   SystemHeader — cross-demo header strip mounted by every archetype.
 
   Owns the title-button-back-to-slots, About popover, optional extra
-  actions, and Save / Settings buttons. Slot the title for custom
-  shopfronts (Producer's bakery markup); leave default for the standard
-  h2-in-a-button shape.
+  actions, and Save / Settings buttons. The default title is the app name and
+  an optional subtitle inside the return button; slot `#title` only for markup
+  that shape cannot hold.
+
+  Costume classes (stable API) — renames are breaking:
+    .olui-system-header                the header strip
+    .olui-system-header__title-btn     the return-to-slots button
+    .olui-system-header__title         the app name
+    .olui-system-header__subtitle      the subtitle
 
   Also drives the engine's autosave from the player pref refs, by writing
   `engine.autoSaveInterval` (0 when the player turns autosave off) while
@@ -19,19 +25,22 @@ import Popover from '@/ui/components/Popover.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
-import { useModalStack } from '@/lib';
+import { modalStackKey } from '@/lib';
 
 withDefaults(
   defineProps<{
     appName?: string;
+    /** A line beside the app name, inside the return button. */
+    subtitle?: string;
   }>(),
-  { appName: 'Open Loop Starter' },
+  { appName: 'Open Loop Starter', subtitle: undefined },
 );
 
 const emit = defineEmits<{ returnToSlots: [] }>();
 
 const engine = inject<Engine>('engine')!;
-const stack = useModalStack();
+// The frame's stack: the one its ModalStack renders.
+const stack = inject(modalStackKey)!;
 const prefs = usePlayerPrefs();
 
 watch(
@@ -46,10 +55,10 @@ onUnmounted(() => {
 });
 
 function openSave(): void {
-  const id = stack.push(SavePanel, { onClose: () => stack.remove(id) });
+  stack.push(SavePanel);
 }
 function openSettings(): void {
-  const id = stack.push(SettingsPanel, { onClose: () => stack.remove(id) });
+  stack.push(SettingsPanel);
 }
 </script>
 
@@ -62,7 +71,8 @@ function openSettings(): void {
         title="Save and return to save picker"
         @click="emit('returnToSlots')"
       >
-        <h2>{{ appName }}</h2>
+        <h2 class="olui-system-header__title">{{ appName }}</h2>
+        <span v-if="subtitle" class="olui-system-header__subtitle">{{ subtitle }}</span>
       </Button>
     </slot>
     <div class="olui-system-header__actions">
@@ -94,20 +104,29 @@ function openSettings(): void {
 }
 
 .olui-system-header__title-btn {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-sm);
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   color: inherit;
   font: inherit;
+  text-align: left;
 }
 
-.olui-system-header__title-btn h2 {
+.olui-system-header__title {
   font-size: 1.1em;
 }
 
-.olui-system-header__title-btn:hover h2 {
+.olui-system-header__title-btn:hover .olui-system-header__title {
   color: var(--color-primary);
+}
+
+.olui-system-header__subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.9em;
 }
 
 .olui-system-header__actions {

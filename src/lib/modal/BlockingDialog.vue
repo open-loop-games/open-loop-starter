@@ -11,13 +11,17 @@
   centred panel, title) is here; the body, any stat list, and the action
   button fill the default slot and stay the game's.
 
-  Reskin: the panel is PORTALED to <body>, so a consumer's `<style scoped>`
-  :deep() does NOT reach these chrome classes (unlike the inline compositions,
-  which render in place). Pass `panel-class` and style it from an UNSCOPED rule,
-  or set `max-width`. Slotted content keeps its own component scope and styles
-  normally.
+  It blocks the whole page. An overlay over one stage while the rest of the page
+  stays live (a match-end curtain, a level-up draft) is not a dialog: it has no
+  page-wide focus trap and no aria-modal, so it is the game's own markup.
 
-  Costume classes (stable API) — for unscoped/global rules only; renames break:
+  Reskin: the panel is portaled into the app frame (to <body> outside one), so a
+  costume class on the frame or an ancestor of it reaches these classes. A
+  `<style scoped>` :deep() reaches them only from a component whose element
+  contains the frame. Pass `panel-class` for a hook of your own, or set
+  `max-width`. Slotted content keeps its own component scope and styles normally.
+
+  Costume classes (stable API) — renames break:
     .olui-blocking-dialog__overlay
     .olui-blocking-dialog__panel   (+ your panel-class)
     .olui-blocking-dialog__title
@@ -31,6 +35,9 @@ import {
   AlertDialogContent,
   AlertDialogTitle,
 } from 'reka-ui';
+import { usePortalTarget } from '../portal';
+
+const portalTarget = usePortalTarget();
 
 withDefaults(
   defineProps<{
@@ -50,7 +57,7 @@ defineSlots<{
 
 <template>
   <AlertDialogRoot :open="open">
-    <AlertDialogPortal>
+    <AlertDialogPortal :to="portalTarget">
       <AlertDialogOverlay class="olui-blocking-dialog__overlay" />
       <AlertDialogContent
         :class="['olui-blocking-dialog__panel', panelClass]"

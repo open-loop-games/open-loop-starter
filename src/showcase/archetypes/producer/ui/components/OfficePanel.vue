@@ -66,12 +66,7 @@ function openRecord() {
       .getAll()
       .map((e) => card(e.def.id, e.def.title, 'On the record', e.achievement.earned.value)),
   ];
-  const id = stack.push(AchievementGrid, {
-    class: 'consolidated-portal record-sheet',
-    title: 'The record',
-    cards,
-    onClose: () => stack.remove(id),
-  });
+  stack.push(AchievementGrid, { class: 'record-sheet', title: 'The record', cards });
 }
 
 interface FloorEntry {
@@ -151,10 +146,6 @@ const wall = computed(() =>
         .map((m) => ({ id: m.def.id, count: m.def.count, earned: m.achievement.earned.value })),
     })),
 );
-
-function toggle(id: HireId) {
-  automation.deskOn[id].value = !automation.deskOn[id].value;
-}
 </script>
 <template>
   <section class="office">
@@ -166,7 +157,6 @@ function toggle(id: HireId) {
         <Button
           class="hire-btn"
           :disabled="!firm.ending.canPurchase.value"
-          :repeat="false"
           @click="firm.ending.purchase(1)"
         >
           <span class="smallcaps">Buy</span>
@@ -198,17 +188,14 @@ function toggle(id: HireId) {
             <span class="smallcaps">Hire</span>
             <span class="num">{{ money(h.cost) }}</span>
           </Button>
-          <Button
+          <Switch
             v-else-if="h.desk"
+            v-model="automation.deskOn[h.desk].value"
             class="duty"
-            role="switch"
-            :repeat="false"
-            :aria-checked="h.on"
             :aria-label="`${h.title} on duty`"
-            @click="toggle(h.desk)"
           >
             <span class="smallcaps">{{ h.on ? 'On duty' : 'Sent home' }}</span>
-          </Button>
+          </Switch>
           <span v-else class="kept smallcaps">Keeps the books</span>
         </article>
       </TransitionGroup>
@@ -225,7 +212,7 @@ function toggle(id: HireId) {
           (1 + standing.standing.value * 0.1).toFixed(2)
         }}
       </p>
-      <Button class="record smallcaps" :repeat="false" @click="openRecord">The record</Button>
+      <Button class="record smallcaps" @click="openRecord">The record</Button>
       <article
         v-for="o in press"
         :key="o.def.id"
@@ -421,6 +408,7 @@ p {
 }
 
 .duty {
+  justify-content: center;
   min-width: 96px;
   padding: 7px 8px;
   border: 1px solid var(--ink-carbon);
@@ -428,6 +416,9 @@ p {
   color: var(--ink-carbon);
   border-radius: var(--radius-paper);
   font-size: 13px;
+}
+.duty :deep(.olui-switch__track) {
+  display: none;
 }
 .hire.off .duty {
   border-color: var(--ink-filed);

@@ -98,9 +98,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
         <div v-if="w.unlockedRating" class="ribbon billing">
           Approved: rating {{ w.unlockedRating }} now open
         </div>
-        <Button class="ss-control back billing" :repeat="false" @click="back">
-          Back to the call sheet
-        </Button>
+        <Button class="ss-control back billing" @click="back"> Back to the call sheet </Button>
       </div>
     </div>
   </main>

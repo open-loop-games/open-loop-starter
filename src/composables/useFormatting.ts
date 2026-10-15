@@ -63,6 +63,30 @@ export function formatBeatTime(seconds: number): string {
 }
 
 /**
+ * A count read as exact whole units with thousands separators, floored; from
+ * `notationFrom` on, the engine's notation, so the player's notation setting holds.
+ * 1234.9 → "1,234"; 2.5e6 → the notation's "2.50 M".
+ */
+export function formatGrouped(value: DecimalSource, notationFrom: DecimalSource = 1e6): string {
+  const whole = Decimal.floor(value);
+  if (whole.gte(notationFrom)) return formatWhole(whole);
+  return whole.toNumber().toLocaleString('en-US');
+}
+
+/**
+ * A clock: 65 → "1:05", 3725 → "1:02:05". The engine's `formatTime` writes a
+ * duration ("1m 5.00s") instead.
+ */
+export function formatClock(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+/**
  * Thin composable exposing engine formatters plus a handful of small utilities
  * validated across incremental game reference codebases.
  */
@@ -80,5 +104,7 @@ export function useFormatting() {
     formatRate,
     formatPow,
     formatBeatTime,
+    formatGrouped,
+    formatClock,
   };
 }

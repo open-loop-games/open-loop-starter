@@ -66,7 +66,6 @@ const scrolls = computed(() =>
         >
         <Button
           class="if-act"
-          :repeat="false"
           :disabled="graduation.pendingInsight.value < 1"
           data-testid="graduate"
           @click="graduation.graduate()"
@@ -93,7 +92,6 @@ const scrolls = computed(() =>
           <Button
             v-else
             class="if-act"
-            :repeat="false"
             :disabled="!s.p.canPurchase.value"
             @click="graduation.study(s.def.id)"
           >

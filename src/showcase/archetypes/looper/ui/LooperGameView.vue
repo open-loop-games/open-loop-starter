@@ -29,7 +29,11 @@ if (import.meta.env.DEV) {
 
 <template>
   <!-- Column ratio 1 : 1.45 : 1.1 against the 1fr center, with readable floors. -->
-  <ThreePanelShell left-width="minmax(250px, 0.69fr)" right-width="minmax(300px, 0.76fr)">
+  <ThreePanelShell
+    chromeless
+    left-width="minmax(250px, 0.69fr)"
+    right-width="minmax(300px, 0.76fr)"
+  >
     <template #left>
       <GroundPanel />
     </template>

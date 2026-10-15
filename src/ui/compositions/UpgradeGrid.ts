@@ -14,6 +14,10 @@ export interface UpgradeCardData<T = never> {
   formula?: () => string;
   purchase: () => void;
   position?: number;
+  /** Absent or true: shown. False: filtered out, as `ProducerList` filters rows. */
+  unlocked?: Ref<boolean>;
+  /** Unmet prerequisites; while any are listed, their text replaces the purchase button. */
+  unmet?: Ref<string[]>;
   /**
    * Typed per-card payload forwarded to the `#card` / `#reveal-content` slots —
    * the extension seam (see `ProducerRowData.extra`). Parameterize the

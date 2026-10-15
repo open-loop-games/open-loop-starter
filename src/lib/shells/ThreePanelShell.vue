@@ -5,20 +5,25 @@
   three-panel, so defaults are asymmetric.
 
   Shell API conventions — see SingleColumnShell.vue.
+
+  `chromeless` drops the columns' surface, border and padding, for a game whose
+  panels draw their own.
 -->
 <script setup lang="ts">
 withDefaults(
   defineProps<{
     leftWidth?: string;
     rightWidth?: string;
+    chromeless?: boolean;
   }>(),
-  { leftWidth: '200px', rightWidth: '280px' },
+  { leftWidth: '200px', rightWidth: '280px', chromeless: false },
 );
 </script>
 
 <template>
   <div
     class="olui-three-panel"
+    :data-chromeless="chromeless || undefined"
     :style="{
       '--three-panel-left-width': leftWidth,
       '--three-panel-right-width': rightWidth,
@@ -62,5 +67,13 @@ withDefaults(
   padding: var(--gap);
   overflow: auto;
   min-height: 0;
+  min-width: 0;
+}
+
+.olui-three-panel[data-chromeless] > * {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
 }
 </style>

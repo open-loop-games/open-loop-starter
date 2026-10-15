@@ -107,4 +107,13 @@ describe('ResourceHeaderStrip', () => {
     expect(wrapper.find('.leading-marker').exists()).toBe(true);
     expect(wrapper.find('.trailing-marker').exists()).toBe(true);
   });
+
+  it('writes the value and the capacity with a readout’s own format', () => {
+    const r = {
+      ...readout('hull', { value: 3, capacity: 12 }),
+      format: (v: DecimalSource) => `${v} cells`,
+    };
+    const wrapper = mount(ResourceHeaderStrip, { props: { readouts: [r] } });
+    expect(wrapper.find('.resource-header-strip__value').text()).toBe('3 cells / 12 cells');
+  });
 });

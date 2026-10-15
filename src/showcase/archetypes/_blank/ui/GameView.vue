@@ -9,10 +9,16 @@
 -->
 <script setup lang="ts">
 import { SingleColumnShell } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
+import { getAutomation, getCore } from '../modules';
 
-// Read your modules here, e.g.:
-//   import { getMyThing } from '../modules';
-//   const thing = getMyThing();
+// Read your modules here through their getters, e.g. `const core = getCore();`.
+
+// Dev-only handle for browser probes: window.__game.skip(seconds), and the
+// module APIs a probe reads.
+if (import.meta.env.DEV) {
+  useDevHandle({ core: getCore(), automation: getAutomation() });
+}
 </script>
 
 <template>

@@ -16,10 +16,10 @@
 
 .olui-progress-bar {
   --progress-bar-track: color-mix(in srgb, var(--color-bg) 70%, #000 30%);
+  --progress-bar-height: 12px;
 }
 
 .olui-progress-bar__track {
-  min-height: 12px;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
   border: 1px solid var(--color-border);
 }
@@ -265,27 +265,50 @@
   }
 }
 
-/* Switch — instant-effect boolean preference. reka-ui SwitchRoot/SwitchThumb. */
+/* Switch — instant-effect boolean preference. src/ui/components/Switch.vue. */
 .olui-switch {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  background: var(--color-border);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  /* A flex column would stretch it across the row. */
+  width: fit-content;
   padding: 0;
-  transition: background 120ms ease-out;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
-.olui-switch[data-state='checked'] {
-  background: var(--color-primary, #4a9eff);
-  border-color: var(--color-primary, #4a9eff);
+.olui-switch:hover {
+  background: none;
 }
 
 .olui-switch[data-disabled] {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.olui-switch__track {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition: background 120ms ease-out;
+}
+
+.olui-switch[data-state='checked'] .olui-switch__track {
+  background: var(--color-primary, #4a9eff);
+  border-color: var(--color-primary, #4a9eff);
+}
+
+.olui-switch:focus-visible .olui-switch__track {
+  outline: 2px solid var(--color-primary, #4a9eff);
+  outline-offset: 2px;
 }
 
 .olui-switch__thumb {

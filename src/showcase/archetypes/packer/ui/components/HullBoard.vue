@@ -241,7 +241,6 @@ const silenceTag = (p: Placed) => {
         <Button
           v-else
           :as="c.open ? 'button' : 'div'"
-          :repeat="false"
           class="cell"
           :class="{
             sealed: !c.open,

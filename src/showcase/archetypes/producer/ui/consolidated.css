@@ -22,8 +22,7 @@
  * narrow grotesque for the ledger columns; the adding machine types its own.
  */
 
-.consolidated,
-.consolidated-portal {
+.consolidated {
   --ink-affordable: #7cc79a;
   --ink-debit: #c9654f;
   --ink-seal: #d2a94e;
@@ -64,8 +63,7 @@
   --font-mono: var(--face-adding-machine);
 }
 
-/* Portaled surfaces (the return report) take the tokens through
-   `.consolidated-portal`; only the page itself is the desk. */
+/* Only the page itself is the desk. */
 .consolidated {
   min-height: 100vh;
   display: flex;
@@ -130,15 +128,14 @@
 
 /* The bookkeeper's note is its own sheet of paper: the modal frame around it
    steps back. */
-.olui-modal-content:has(> .consolidated-portal) {
+.consolidated .olui-modal-content:has(> .note, > .deed, > .record-sheet) {
   background: transparent;
   border: none;
   box-shadow: none;
   padding: 0;
 }
 
-/* The record: starter's AchievementGrid as a ledger sheet. Portaled, so it takes
-   the tokens through `.consolidated-portal` on its root. */
+/* The record: starter's AchievementGrid as a ledger sheet. */
 .record-sheet {
   font-family: var(--face-ledger);
   padding: 16px 20px;

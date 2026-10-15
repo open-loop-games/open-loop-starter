@@ -60,7 +60,7 @@ watch(
 </script>
 
 <template>
-  <ThreePanelShell class="firm" left-width="340px" right-width="360px">
+  <ThreePanelShell class="firm" chromeless left-width="340px" right-width="360px">
     <template #left>
       <DeskPanel />
     </template>
@@ -81,12 +81,5 @@ watch(
 .firm {
   gap: 18px;
   padding: 18px;
-}
-.firm :deep(.olui-three-panel__left),
-.firm :deep(.olui-three-panel__main),
-.firm :deep(.olui-three-panel__right) {
-  background: transparent;
-  border: none;
-  padding: 0;
 }
 </style>

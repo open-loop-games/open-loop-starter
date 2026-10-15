@@ -69,7 +69,6 @@ function confirm() {
         class="hp-act commission-act"
         :class="{ can: line.canRecommission.value }"
         :disabled="!line.canRecommission.value"
-        :repeat="false"
         @click="confirm"
       >
         Commission

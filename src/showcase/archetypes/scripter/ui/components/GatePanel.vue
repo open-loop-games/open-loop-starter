@@ -129,13 +129,7 @@ const rackSlots = computed(() =>
       <p class="tell">{{ visitor.tell }}</p>
       <div v-if="rackSlots.length" class="rack-quick">
         <span>Ink from the rack:</span>
-        <Button
-          v-for="s in rackSlots"
-          :key="s.i"
-          class="if-act"
-          :repeat="false"
-          @click="kata.inkFromRack(s.i)"
-        >
+        <Button v-for="s in rackSlots" :key="s.i" class="if-act" @click="kata.inkFromRack(s.i)">
           {{ s.name }}
         </Button>
       </div>

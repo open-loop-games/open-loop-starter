@@ -13,7 +13,6 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import Button from '@/ui/components/Button.vue';
 import { manifest } from '../manifest';
 import DefenderGameView from './DefenderGameView.vue';
 // The costume, applied under `.defender`. Imported at the root so the slot
@@ -42,18 +41,11 @@ const showDevPanel = ref(false);
     />
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
-        <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
-          <template #title="{ returnToSlots: back }">
-            <Button
-              class="wg-brand"
-              data-testid="return-to-slots"
-              title="Save and return to save picker"
-              @click="back()"
-            >
-              <h1>The Walled Garden</h1>
-              <span class="wg-brand-sub">Kitchen garden &middot; after dusk</span>
-            </Button>
-          </template>
+        <SystemHeader
+          app-name="The Walled Garden"
+          subtitle="Kitchen garden · after dusk"
+          @return-to-slots="returnToSlots"
+        >
           <template #about>
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
@@ -81,17 +73,10 @@ const showDevPanel = ref(false);
 </template>
 
 <style scoped>
-.wg-brand {
-  display: flex;
-  align-items: baseline;
+.defender :deep(.olui-system-header__title-btn) {
   gap: 12px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
 }
-.wg-brand h1 {
+.defender :deep(.olui-system-header__title) {
   margin: 0;
   font-family: var(--wg-face-display);
   font-variation-settings: 'SOFT' 100;
@@ -100,7 +85,7 @@ const showDevPanel = ref(false);
   color: var(--wg-parchment);
   line-height: 1;
 }
-.wg-brand-sub {
+.defender :deep(.olui-system-header__subtitle) {
   font-size: 15px;
   font-style: italic;
   color: var(--wg-twine);

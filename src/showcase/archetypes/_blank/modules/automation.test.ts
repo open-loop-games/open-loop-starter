@@ -10,17 +10,10 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, getEngine, tick } from '../sim/harness';
-import { AutomationKey, CoreKey } from '.';
+import { boot, tick } from '../sim/harness';
+import { getAutomation as automation, getCore as core } from '.';
 
 beforeEach(() => boot());
-
-function automation() {
-  return getEngine().tryInject(AutomationKey)!;
-}
-function core() {
-  return getEngine().tryInject(CoreKey)!;
-}
 
 describe('assisted automation tier', () => {
   it('starts locked on the manual tier', () => {

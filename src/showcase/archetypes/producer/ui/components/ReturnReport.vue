@@ -2,9 +2,6 @@
   ReturnReport — the bookkeeper's note on a return: how long the firm ran
   without you and what it made. Time past the window is written off the books
   in red ink, not raised as a warning.
-
-  Rendered inside the portaled modal stack, outside `.consolidated`, so its root
-  takes the tokens through `.consolidated-portal`.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -26,7 +23,7 @@ const unkept = computed(() => Math.max(0, props.report.awaySeconds - props.repor
 </script>
 
 <template>
-  <section class="consolidated-portal note">
+  <section class="note">
     <DialogTitle as-child>
       <h2 class="smallcaps">While you were out</h2>
     </DialogTitle>
@@ -42,7 +39,7 @@ const unkept = computed(() => Math.max(0, props.report.awaySeconds - props.repor
     <p v-if="unkept > 0" class="unkept">
       {{ hours(unkept) }} written off: the books keep at most {{ minutes(windowSeconds) }}.
     </p>
-    <Button class="resume smallcaps" :repeat="false" @click="onClose">Back to the desk</Button>
+    <Button class="resume smallcaps" @click="onClose">Back to the desk</Button>
   </section>
 </template>
 

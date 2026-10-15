@@ -10,11 +10,12 @@
     .producer-list          root section (+ [data-density])
     .producer-list__header  header slot region
     .producer-list__rows    the <ul>
-    .producer-list__row     one <li>
+    .producer-list__row     one <li> (+ [data-locked] while prerequisites are unmet)
+    .producer-list__row-unmet  the unmet prerequisites, in place of the button
   (Convention: panel-level compositions expose bare BEM classes; widget-level
   components under src/ui/components expose `olui-` classes. Both are stable.)
 -->
-<script setup lang="ts" generic="T = never">
+<script setup lang="ts" generic="R extends ProducerRowData<unknown>">
 import { computed } from 'vue';
 import { Decimal, format, formatWhole, type DecimalSource } from '@open-loop/engine';
 import BulkModeSelector from '@/ui/components/BulkModeSelector.vue';
@@ -29,14 +30,16 @@ type Reveal = 'inline' | 'tooltip';
 
 const props = withDefaults(
   defineProps<{
-    rows: ProducerRowData<T>[];
-    costLabel: string;
+    rows: R[];
+    /** Price unit for rows that carry none of their own. */
+    costLabel?: string;
     bulkModeSource?: BulkModeSource;
     density?: Density;
     reveal?: Reveal;
     bulkModes?: BulkMode[];
   }>(),
   {
+    costLabel: '',
     bulkModeSource: 'global',
     density: 'row',
     reveal: 'inline',
@@ -47,9 +50,9 @@ const props = withDefaults(
 defineSlots<{
   header?: () => unknown;
   row?: (props: {
-    row: ProducerRowData<T>;
+    row: R;
     pendingCount: DecimalSource;
-    pendingCost: DecimalSource;
+    pendingCost: DecimalSource | undefined;
     purchaseLabel: string;
     purchase: () => void;
   }) => unknown;
@@ -57,22 +60,28 @@ defineSlots<{
 
 const globalBulk = useBulkMode();
 
-function resolveCount(maxAffordable: DecimalSource): DecimalSource {
-  if (props.bulkModeSource === 'none') return 1;
+function resolveCount(maxAffordable: DecimalSource | undefined): DecimalSource {
+  if (props.bulkModeSource === 'none' || maxAffordable === undefined) return 1;
   return globalBulk.resolveCount(maxAffordable);
+}
+
+function unmetOf(row: R): string[] {
+  return row.unmet?.value ?? [];
 }
 
 const visibleRows = computed(() => props.rows.filter((r) => r.unlocked?.value ?? true));
 
-function rowState(row: ProducerRowData<T>) {
+function rowState(row: R) {
   // Floor at 1. `maxAffordable` is 0 when the player cannot afford a single
   // unit, and quoting `cost(0)` renders the cost as 0 — the row would hide
   // what it costs exactly when the player is saving up for it. One is also the
   // count a click would purchase if it could, so `canPurchase`/`purchase` stay honest: both
   // are asked about the count actually shown.
-  const pendingCount = Decimal.max(1, resolveCount(row.maxAffordable.value));
-  const pendingCost = row.cost(pendingCount);
-  const purchaseLabel = `Purchase ${formatWhole(pendingCount)} — ${format(pendingCost, 0)} ${props.costLabel}`;
+  const pendingCount = Decimal.max(1, resolveCount(row.maxAffordable?.value));
+  const pendingCost = row.cost?.(pendingCount);
+  const label = (row.costLabel ?? props.costLabel).trim();
+  const price = pendingCost === undefined ? '' : ` — ${format(pendingCost, 0)} ${label}`.trimEnd();
+  const purchaseLabel = `Purchase ${formatWhole(pendingCount)}${price}`;
   const canPurchase = row.canPurchase(pendingCount);
   const purchase = () => {
     if (canPurchase) row.purchase(pendingCount);
@@ -89,7 +98,12 @@ function rowState(row: ProducerRowData<T>) {
       </slot>
     </header>
     <ul class="producer-list__rows">
-      <li v-for="row in visibleRows" :key="row.id" class="producer-list__row">
+      <li
+        v-for="row in visibleRows"
+        :key="row.id"
+        class="producer-list__row"
+        :data-locked="unmetOf(row).length > 0 || undefined"
+      >
         <template v-if="$slots.row">
           <slot
             name="row"
@@ -105,10 +119,16 @@ function rowState(row: ProducerRowData<T>) {
             <div class="producer-list__row-head">
               <strong class="producer-list__row-name">{{ row.displayName }}</strong>
               <span class="producer-list__row-owned">owned: {{ format(row.count.value, 0) }}</span>
-              <span class="producer-list__row-rate">+{{ format(row.displayRate.value, 2) }}/s</span>
+              <span v-if="row.displayRate" class="producer-list__row-rate"
+                >+{{ format(row.displayRate.value, 2) }}/s</span
+              >
             </div>
-            <Tooltip v-if="reveal === 'tooltip'">
+            <span v-if="unmetOf(row).length" class="producer-list__row-unmet">
+              {{ unmetOf(row).join(' · ') }}
+            </span>
+            <Tooltip v-else-if="reveal === 'tooltip'">
               <Button
+                repeat
                 :disabled="!rowState(row).canPurchase"
                 :data-testid="`purchase-${row.id}`"
                 @click="rowState(row).purchase()"
@@ -116,10 +136,14 @@ function rowState(row: ProducerRowData<T>) {
                 {{ rowState(row).purchaseLabel }}
               </Button>
               <template #content>
-                {{ row.displayName }} — {{ format(row.displayRate.value, 2) }}/s
+                {{ row.displayName
+                }}<template v-if="row.displayRate">
+                  — {{ format(row.displayRate.value, 2) }}/s</template
+                >
               </template>
             </Tooltip>
             <Button
+              repeat
               v-else
               :disabled="!rowState(row).canPurchase"
               :data-testid="`purchase-${row.id}`"
@@ -190,5 +214,10 @@ function rowState(row: ProducerRowData<T>) {
 .producer-list__row-rate {
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.producer-list__row-unmet {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
 }
 </style>

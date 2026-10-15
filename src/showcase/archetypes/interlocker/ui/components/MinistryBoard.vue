@@ -77,7 +77,6 @@ const orders = computed(() =>
           class="ae-act consign"
           :class="{ can: o.can }"
           :disabled="!o.can"
-          :repeat="false"
           @click="ministry.deliver(o.id)"
           >Consign</Button
         >

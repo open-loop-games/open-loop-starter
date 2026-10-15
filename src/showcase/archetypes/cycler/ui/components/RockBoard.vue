@@ -123,7 +123,6 @@ const strikeLeak = computed(() => watch.lastStrike.value?.leak ?? 0);
         :aria-label="`${c.ground} ${c.x},${c.y}${c.piece ? ' ' + c.piece : ''}`"
         :data-cell="c.key"
         :disabled="c.ground === 'tower'"
-        :repeat="false"
         @click="act(c.x, c.y)"
       >
         <div v-if="c.ground === 'tower'" class="tower-body">

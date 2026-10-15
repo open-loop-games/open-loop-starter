@@ -40,7 +40,13 @@ const rows = computed(() =>
 <template>
   <section class="nc-phase">
     <Ledger :entries="ledger" />
-    <Button class="nc-verb" aria-label="Read a page" :disabled="!read || empty" @click="box.read()">
+    <Button
+      repeat
+      class="nc-verb"
+      aria-label="Read a page"
+      :disabled="!read || empty"
+      @click="box.read()"
+    >
       {{ empty ? 'The box is empty' : 'Read a page' }}
     </Button>
     <ProducerList :rows="rows" cost-label="" bulk-mode-source="none">

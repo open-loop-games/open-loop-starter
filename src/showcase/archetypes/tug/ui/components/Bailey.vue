@@ -10,7 +10,7 @@
   `.bl-waiting`.
 -->
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import { TROOPS, troop, type TroopId } from '../../data';
@@ -71,20 +71,9 @@ const waiting = computed(() => {
   );
 });
 
-// Starter's Button emits a bare click, so the shift key is read from the keyboard.
-const shift = ref(false);
-const onKey = (e: KeyboardEvent) => (shift.value = e.shiftKey);
-onMounted(() => {
-  window.addEventListener('keydown', onKey);
-  window.addEventListener('keyup', onKey);
-});
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKey);
-  window.removeEventListener('keyup', onKey);
-});
-
-function raise(id: TroopId): void {
-  keep.raise(id, shift.value ? 5 : 1);
+/** A shift-click raises five. */
+function raise(id: TroopId, e: PointerEvent | KeyboardEvent): void {
+  keep.raise(id, e.shiftKey ? 5 : 1);
 }
 
 const tithe = keep.tithe;
@@ -105,11 +94,12 @@ const tithes = computed(() => toNumber(tithe.count.value));
         :class="{ afford: t.can > 0, fresh: t.fresh, full: t.full, road: t.road !== null }"
       >
         <Button
+          repeat
           class="cw-control bl-raise"
           :class="{ afford: t.can > 0, fresh: t.fresh }"
           :disabled="t.can === 0"
           :data-troop="t.id"
-          @click="raise(t.id)"
+          @click="(e: PointerEvent | KeyboardEvent) => raise(t.id, e)"
         >
           <span class="bl-glyph"><TroopGlyph :troop="t.id" /></span>
           <span class="bl-text">
@@ -129,6 +119,7 @@ const tithes = computed(() => toNumber(tithe.count.value));
           </span>
         </Button>
         <Button
+          repeat
           class="cw-control bl-five"
           :class="{ afford: t.can >= 5 }"
           :disabled="t.can < 5"
@@ -142,6 +133,7 @@ const tithes = computed(() => toNumber(tithe.count.value));
 
     <div class="bl-foot">
       <Button
+        repeat
         class="cw-control bl-tithe"
         :class="{ afford: tithe.canPurchase.value }"
         :disabled="!tithe.canPurchase.value"

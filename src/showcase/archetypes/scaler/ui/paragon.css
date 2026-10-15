@@ -212,7 +212,7 @@
   --progress-bar-track: var(--night);
   --progress-bar-fill: var(--signal);
   --progress-bar-radius: 0;
-  --progress-bar-transition: transform 200ms linear, width 200ms linear;
+  --progress-bar-transition: clip-path 200ms linear;
 }
 .paragon .meter .olui-progress-bar__track {
   height: 12px;
@@ -221,6 +221,9 @@
 .paragon .meter .olui-progress-bar__fill {
   background-image: var(--halftone-ink);
   background-size: 5px 5px;
+  /* A scaled fill would squash the dots, so this one clips. */
+  transform: none;
+  clip-path: inset(0 calc((1 - var(--progress-bar-ratio)) * 100%) 0 0);
 }
 .paragon .meter.cape {
   --progress-bar-fill: var(--cape);

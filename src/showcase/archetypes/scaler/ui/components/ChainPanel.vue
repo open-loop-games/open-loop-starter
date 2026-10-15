@@ -14,7 +14,7 @@ import {
   type Resource,
 } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { ProducerList, type ProducerRowData } from '@/ui/compositions';
+import { ProducerList, createProducerRow } from '@/ui/compositions';
 import { EARTHS, IMPRINTS, NETWORK, type ChainSpec, type ChainTierDef } from '../../data';
 import { getCanon, getContinuity, getLegacy, getRun } from '../../modules';
 import { fmt, fmtMult, fmtRate } from '../format';
@@ -82,18 +82,10 @@ interface Rung {
 }
 
 const all = c.chain.getAll();
-const rows: ProducerRowData<Rung>[] = all.map(({ def, producer }, i) => {
-  const rep = producer.repeatable!;
+const rows = all.map(({ def, producer }, i) => {
   const below = i === 0 ? null : all[i - 1].producer;
-  return {
-    id: def.id,
+  return createProducerRow<Rung>(producer, {
     displayName: def.displayName,
-    count: producer.ownedCount,
-    displayRate: computed(() => Decimal.mul(producer.computedRate.value, producer.count.value)),
-    cost: (n) => rep.getCost(n),
-    canPurchase: (n) => Decimal.lte(rep.getCost(n), c.cost.value),
-    maxAffordable: rep.countToPurchase,
-    purchase: (n) => rep.purchase(n),
     unlocked: computed(
       () =>
         below === null ||
@@ -105,7 +97,7 @@ const rows: ProducerRowData<Rung>[] = all.map(({ def, producer }, i) => {
       made: producer.extraCount,
       makes: i === 0 ? c.currency.displayName : all[i - 1].def.displayName,
     },
-  };
+  });
 });
 </script>
 
@@ -142,6 +134,7 @@ const rows: ProducerRowData<Rung>[] = all.map(({ def, producer }, i) => {
           </div>
           <div class="buys">
             <Button
+              repeat
               class="act"
               :class="c.ink"
               :disabled="!row.canPurchase(1)"

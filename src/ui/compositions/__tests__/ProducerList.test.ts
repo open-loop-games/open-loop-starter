@@ -121,12 +121,40 @@ describe('ProducerList', () => {
       def: { flavor: string };
     }
     const row: ProducerRowData<RichRow> = { ...makeRow('a'), extra: { def: { flavor: 'spicy' } } };
-    const wrapper = mount(ProducerList<RichRow>, {
+    const wrapper = mount(ProducerList<ProducerRowData<RichRow>>, {
       props: { rows: [row], costLabel: 'c', bulkModeSource: 'none' },
       slots: {
         row: `<template #row="{ row }"><span class="flavor">{{ row.extra.def.flavor }}</span></template>`,
       },
     });
     expect(wrapper.find('.flavor').text()).toBe('spicy');
+  });
+
+  it('draws no rate line for a row without a rate, and purchases one at a time without a max', () => {
+    const row = makeRow('a');
+    delete row.displayRate;
+    delete row.maxAffordable;
+    const wrapper = mount(ProducerList, { props: { rows: [row], costLabel: 'coins' } });
+    expect(wrapper.find('.producer-list__row-rate').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="purchase-a"]').text()).toContain('Purchase 1 — 10 coins');
+  });
+
+  it('prefers a row’s own price unit, and drops the price when the row has none', () => {
+    const own = { ...makeRow('a'), costLabel: 'wood' };
+    const free = makeRow('b');
+    delete free.cost;
+    const wrapper = mount(ProducerList, {
+      props: { rows: [own, free], costLabel: 'coins', bulkModeSource: 'none' },
+    });
+    expect(wrapper.find('[data-testid="purchase-a"]').text()).toContain('10 wood');
+    expect(wrapper.find('[data-testid="purchase-b"]').text().trim()).toBe('Purchase 1');
+  });
+
+  it('shows unmet prerequisites in place of the button, and marks the row locked', () => {
+    const row = { ...makeRow('a'), unmet: ref(['A mill', 'Spring']) };
+    const wrapper = mount(ProducerList, { props: { rows: [row], costLabel: 'coins' } });
+    expect(wrapper.find('[data-testid="purchase-a"]').exists()).toBe(false);
+    expect(wrapper.find('.producer-list__row-unmet').text()).toBe('A mill · Spring');
+    expect(wrapper.find('.producer-list__row').attributes('data-locked')).toBeDefined();
   });
 });

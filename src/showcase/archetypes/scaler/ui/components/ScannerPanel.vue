@@ -42,7 +42,7 @@ function openLegends() {
       <li v-for="line in recent" :key="line.seq" :class="line.kind">{{ line.text }}</li>
       <li v-if="recent.length === 0" class="quiet">Quiet night. Recruit your first patrol.</li>
     </ol>
-    <Button v-if="earned > 0" class="act ghost legends reveal" :repeat="false" @click="openLegends">
+    <Button v-if="earned > 0" class="act ghost legends reveal" @click="openLegends">
       Legends <span class="num">{{ earned }} / {{ legends.legends.getAll().length }}</span>
     </Button>
   </section>

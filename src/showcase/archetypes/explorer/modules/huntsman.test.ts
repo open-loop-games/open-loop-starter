@@ -67,7 +67,7 @@ describe('the huntsman', () => {
     await tickUntil(() => man.action.value === 'idle');
 
     expect(man.pos.value).toEqual(LODGE);
-    expect(chronicle.log.value[0].text).toMatch(/water is gone/);
+    expect(chronicle.log.lines.value.at(-1)!.text).toMatch(/water is gone/);
   });
 
   it('banks the pack only on reaching the lodge', async () => {
@@ -101,7 +101,7 @@ describe('the huntsman', () => {
     expect(man.pos.value).toEqual(LODGE);
     expect(man.packLoad.value).toBe(0);
     expect(num(stores.hide)).toBe(0);
-    expect(chronicle.log.value[0].tone).toBe('bad');
+    expect(chronicle.log.lines.value.at(-1)!.kind).toBe('bad');
     expect(getWold().notesCount.value).toBe(0);
   });
 

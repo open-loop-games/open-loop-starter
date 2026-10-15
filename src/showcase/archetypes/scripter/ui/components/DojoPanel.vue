@@ -8,7 +8,7 @@
 import { computed, type ComputedRef } from 'vue';
 import { Decimal, type DecimalSource, type Purchasable } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { ProducerList, type ProducerRowData } from '@/ui/compositions';
+import { ProducerList, createPurchasableRow } from '@/ui/compositions';
 import { getDojo, getKata } from '../../modules';
 import { fmt, fmtRate } from '../format';
 
@@ -30,24 +30,20 @@ function row(
   note: ComputedRef<string>,
   verb: string,
   unlocked: ComputedRef<boolean>,
-): ProducerRowData<Rung> {
-  return {
+) {
+  return createPurchasableRow<Rung>(p, {
     id,
     displayName,
     count,
-    displayRate: rate,
-    cost: (n) => p.getCost(n),
-    canPurchase: (n) => Decimal.lte(p.getCost(n), dojo.ki.value),
-    maxAffordable: p.countToPurchase,
-    purchase: (n) => p.purchase(n),
+    rate,
     unlocked,
     extra: { note, verb },
-  };
+  });
 }
 
 const student = dojo.producers.getEntry('student')!.producer;
 const senpai = dojo.producers.getEntry('senpai')!.producer;
-const rows: ProducerRowData<Rung>[] = [
+const rows = [
   row(
     'student',
     'Students',
@@ -114,13 +110,14 @@ const perSecond = computed(() =>
           </div>
           <span class="count num">{{ fmt(row.count.value) }}</span>
           <Button
+            repeat
             class="buy"
             :disabled="!row.canPurchase(1)"
             :data-testid="`hand-${row.id}`"
             @click="purchase"
           >
             <span>{{ row.extra!.verb }}</span>
-            <span class="num">{{ fmt(row.cost(1)) }}</span>
+            <span class="num">{{ fmt(row.cost!(1)) }}</span>
           </Button>
         </div>
       </template>

@@ -66,7 +66,6 @@ const canSound = computed(
             class="cw-control wl-loose"
             :class="{ afford: ours.ready && !ours.waiting, waiting: ours.waiting }"
             :disabled="!ours.ready || ours.waiting"
-            :repeat="false"
             data-testid="loose-weapon"
             @click="battle.fire('player')"
           >
@@ -88,7 +87,6 @@ const canSound = computed(
         class="cw-control wl-early"
         :class="{ afford: canSound }"
         :disabled="!canSound"
-        :repeat="false"
         data-testid="sound-early"
         @click="battle.soundEarly('player')"
       >

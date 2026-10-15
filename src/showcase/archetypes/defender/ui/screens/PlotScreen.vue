@@ -278,7 +278,6 @@ const dark = computed(
       <Button
         v-if="phase === 'build'"
         class="wg-action call"
-        :repeat="false"
         data-testid="call-it-a-day"
         @click="run.callEarly()"
       >
@@ -287,7 +286,7 @@ const dark = computed(
           Call it a day <span class="wg-num">+{{ whole(bonus) }}</span>
         </template>
       </Button>
-      <Button class="wg-quiet" :repeat="false" @click="plot.leavePlot()">
+      <Button class="wg-quiet" @click="plot.leavePlot()">
         {{ over ? 'Back to the garden' : 'Leave the plot' }}
       </Button>
     </header>
@@ -313,10 +312,8 @@ const dark = computed(
             every night you hold adds to this plot's best.
           </p>
           <div class="choice">
-            <Button class="wg-quiet" :repeat="false" @click="run.finish()">Call it a night</Button>
-            <Button class="wg-action" :repeat="false" @click="run.goOn()"
-              >Go on into the dark</Button
-            >
+            <Button class="wg-quiet" @click="run.finish()">Call it a night</Button>
+            <Button class="wg-action" @click="run.goOn()">Go on into the dark</Button>
           </div>
         </div>
         <div v-else-if="over" class="wg-over" :class="[phase, { dark: run.tail }]" role="status">
@@ -339,9 +336,7 @@ const dark = computed(
                   : `You saw off ${run.wave - 1} of ${run.totalWaves} nights.`
             }}
           </p>
-          <Button class="wg-action" :repeat="false" @click="plot.leavePlot()"
-            >Back to the garden</Button
-          >
+          <Button class="wg-action" @click="plot.leavePlot()">Back to the garden</Button>
         </div>
         <p class="wg-hint">{{ hint }}</p>
       </div>
@@ -352,7 +347,6 @@ const dark = computed(
             v-for="(t, i) in tags"
             :key="t.id"
             class="wg-tag"
-            :repeat="false"
             :class="{ armed: tool === t.id, can: t.can, unlearned: !t.learned }"
             :disabled="!t.learned || phase !== 'build'"
             :aria-pressed="tool === t.id"
@@ -388,13 +382,12 @@ const dark = computed(
             <Button
               v-if="looked.price !== null"
               class="wg-quiet feed"
-              :repeat="false"
               :disabled="!looked.canUpgrade"
               @click="run.upgrade(looked.plant.id)"
             >
               Feed it <span class="wg-num">{{ looked.price }}</span>
             </Button>
-            <Button class="wg-quiet" :repeat="false" :disabled="phase !== 'build'" @click="digUp">
+            <Button class="wg-quiet" :disabled="phase !== 'build'" @click="digUp">
               Dig up <span class="wg-num">+{{ looked.refund }}</span>
             </Button>
           </div>

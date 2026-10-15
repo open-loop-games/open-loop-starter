@@ -33,7 +33,7 @@ defineProps<{
       <span class="hp-num">{{ times(honourMult) }}</span> on every weapon
     </p>
     <p class="after">The swarm keeps sending raised carriers. The bay stays open.</p>
-    <Button class="hp-act can" :repeat="false" @click="onClose">Back to the bay</Button>
+    <Button class="hp-act can" @click="onClose">Back to the bay</Button>
   </section>
 </template>
 

@@ -40,7 +40,6 @@ const preview = (text: string) =>
           />
           <Button
             class="if-act quiet"
-            :repeat="false"
             :title="'Save the draft in this slot'"
             @click="kata.saveToRack(i, slot.name)"
             >Save</Button
@@ -48,7 +47,6 @@ const preview = (text: string) =>
           <Button
             v-if="slot.text"
             class="if-act"
-            :repeat="false"
             :disabled="slot.text === kata.inked.value"
             @click="kata.inkFromRack(i)"
             >Ink</Button

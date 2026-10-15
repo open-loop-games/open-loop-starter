@@ -17,6 +17,9 @@ import {
   PopoverArrow,
   PopoverClose,
 } from 'reka-ui';
+import { usePortalTarget } from '@/lib/portal';
+
+const portalTarget = usePortalTarget();
 
 withDefaults(
   defineProps<{
@@ -43,7 +46,7 @@ withDefaults(
     <PopoverTrigger as-child>
       <slot name="trigger" />
     </PopoverTrigger>
-    <PopoverPortal>
+    <PopoverPortal :to="portalTarget">
       <PopoverContent
         class="olui-popover__content"
         :side="side"

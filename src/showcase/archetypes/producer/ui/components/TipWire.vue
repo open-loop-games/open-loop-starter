@@ -40,7 +40,7 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2,
   <section class="wire" :class="{ live: up }" aria-live="polite">
     <span class="wire-head smallcaps">The wire</span>
     <template v-if="up">
-      <Button class="tip smallcaps" :repeat="false" data-testid="tip" @click="take">
+      <Button class="tip smallcaps" data-testid="tip" @click="take">
         A tip on the wire: take it
       </Button>
       <ProgressBar class="tip-left" :value="left" />
@@ -94,7 +94,7 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2,
   --progress-bar-fill: var(--walnut);
   --progress-bar-track: rgba(23, 18, 14, 0.2);
   --progress-bar-radius: 0;
-  --progress-bar-transition: width 0.25s linear;
+  --progress-bar-transition: transform 0.25s linear;
 }
 .tip-left :deep(.olui-progress-bar__track) {
   min-height: 3px;

@@ -69,7 +69,6 @@ function hold(def: PieceDef) {
       >
         <Button
           class="pick"
-          :repeat="false"
           :disabled="r.stock === 0"
           :aria-pressed="fitting.hand === r.def.id"
           :aria-label="`Hold ${r.def.name}`"

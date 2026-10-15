@@ -15,6 +15,7 @@
 import { computed, ref } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
+import Select from '@/ui/components/Select.vue';
 import { UpgradeGrid, type UpgradeCardData } from '@/ui/compositions';
 import {
   ANCHORS,
@@ -107,6 +108,12 @@ const levelOf = (card: UpgradeCardData<Boon>) => toNumber(card.count!.value);
 const pickField = ref(chronicle.skirmish.value?.field ?? FIELDS.length - 1);
 const pickTwist = ref(chronicle.skirmish.value?.twist ?? NO_TWIST.id);
 const pickLord = ref(chronicle.skirmish.value?.lord ?? LORDS.length - 1);
+const fieldOptions = FIELDS.map((f, i) => ({
+  value: i,
+  label: `${f.name} (${LORDS[f.lord]!.name})`,
+}));
+const twistOptions = [NO_TWIST, ...TWISTS].map((t) => ({ value: t.id, label: t.name }));
+const lordOptions = LORDS.map((l, i) => ({ value: i, label: l.name }));
 function skirmish(): void {
   chronicle.skirmish.value = {
     field: pickField.value,
@@ -227,7 +234,6 @@ function backToMarch(): void {
                 class="cw-control cp-mount-kind"
                 :class="{ afford: chronicle.mounted.value === w.kind }"
                 :aria-pressed="chronicle.mounted.value === w.kind"
-                :repeat="false"
                 :data-weapon="w.kind"
                 @click="chronicle.mounted.value = w.kind"
               >
@@ -235,18 +241,12 @@ function backToMarch(): void {
                 <span class="cp-mount-blurb">{{ w.blurb }}</span>
               </Button>
             </div>
-            <Button
-              class="cp-take"
-              data-testid="take-the-field"
-              :repeat="false"
-              @click="battle.start()"
-            >
+            <Button class="cp-take" data-testid="take-the-field" @click="battle.start()">
               {{ skirmishing ? 'Skirmish again' : 'Take the field' }}
             </Button>
             <Button
               v-if="skirmishing"
               class="cw-control cp-back"
-              :repeat="false"
               data-testid="back-to-march"
               @click="backToMarch()"
             >
@@ -256,30 +256,20 @@ function backToMarch(): void {
 
           <div v-if="chronicle.endingReached.value" class="cp-skirmish">
             <h2 class="cw-title">The skirmish field <small>no Renown</small></h2>
-            <label class="cp-pick">
+            <div class="cp-pick">
               <span>Field</span>
-              <select v-model.number="pickField">
-                <option v-for="(f, i) in FIELDS" :key="i" :value="i">
-                  {{ f.name }} ({{ LORDS[f.lord]!.name }})
-                </option>
-              </select>
-            </label>
-            <label class="cp-pick">
+              <Select v-model="pickField" :options="fieldOptions" aria-label="Field" />
+            </div>
+            <div class="cp-pick">
               <span>Twist</span>
-              <select v-model="pickTwist">
-                <option :value="NO_TWIST.id">{{ NO_TWIST.name }}</option>
-                <option v-for="t in TWISTS" :key="t.id" :value="t.id">{{ t.name }}</option>
-              </select>
-            </label>
-            <label class="cp-pick">
+              <Select v-model="pickTwist" :options="twistOptions" aria-label="Twist" />
+            </div>
+            <div class="cp-pick">
               <span>Lord</span>
-              <select v-model.number="pickLord">
-                <option v-for="(l, i) in LORDS" :key="i" :value="i">{{ l.name }}</option>
-              </select>
-            </label>
+              <Select v-model="pickLord" :options="lordOptions" aria-label="Lord" />
+            </div>
             <Button
               class="cw-control afford cp-skirmish-go"
-              :repeat="false"
               data-testid="skirmish"
               @click="skirmish()"
             >
@@ -332,7 +322,6 @@ function backToMarch(): void {
                 :class="{ afford: card.canPurchase.value, maxed: card.owned.value }"
                 :disabled="!card.canPurchase.value"
                 :data-boon="card.id"
-                :repeat="false"
                 @click="card.purchase()"
               >
                 <span class="cp-boon-name">
@@ -639,12 +628,13 @@ function backToMarch(): void {
   font-family: var(--cw-caps);
   color: var(--cw-gall);
 }
-.cp-pick select {
+.cp-pick :deep(.olui-select__trigger) {
   font: inherit;
   font-family: var(--cw-text);
   color: var(--cw-linen);
   background: var(--cw-oak-raised);
   border: 1px solid var(--cw-rule);
+  border-radius: 0;
   padding: 4px 6px;
 }
 .cp-skirmish-go {

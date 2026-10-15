@@ -104,7 +104,6 @@ const postings = computed(() =>
               :class="{ afford: card.canPurchase.value, maxed: card.owned.value }"
               :disabled="!card.canPurchase.value"
               :data-knowledge="card.id"
-              :repeat="false"
               @click="card.purchase()"
             >
               <span class="title"
@@ -137,7 +136,6 @@ const postings = computed(() =>
             :class="{ on: p.chosen, closed: !p.open }"
             :disabled="!p.open"
             :data-posting="p.def.id"
-            :repeat="false"
             @click="logbook.posting.select(p.def.id)"
           >
             <span class="title">{{ p.def.name }}</span>
@@ -154,7 +152,7 @@ const postings = computed(() =>
         </div>
       </section>
 
-      <Button class="take" data-testid="take-posting" :repeat="false" @click="watch.startWatch()">
+      <Button class="take" data-testid="take-posting" @click="watch.startWatch()">
         Take the posting
       </Button>
     </div>

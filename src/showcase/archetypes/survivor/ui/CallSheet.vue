@@ -119,7 +119,6 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
           >
             <Button
               class="ss-control row-main star-pick"
-              :repeat="false"
               :disabled="!s.signed"
               :aria-pressed="starId === s.def.id"
               :aria-label="s.def.name"
@@ -135,7 +134,6 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
               v-if="!s.signed"
               class="ss-control buy"
               :class="{ can: s.affordable }"
-              :repeat="false"
               :disabled="!s.affordable"
               :aria-label="`Sign ${s.def.name}`"
               @click="s.buy()"
@@ -151,7 +149,6 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
           <Button
             class="ss-control driver"
             :class="{ chosen: driver === 'player' }"
-            :repeat="false"
             :aria-pressed="driver === 'player'"
             @click="pickDriver('player')"
           >
@@ -161,7 +158,6 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
           <Button
             class="ss-control driver"
             :class="{ chosen: driver === 'instinct' }"
-            :repeat="false"
             :aria-pressed="driver === 'instinct'"
             @click="pickDriver('instinct')"
           >
@@ -177,7 +173,6 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
             :key="r.def.id"
             class="ss-control rating"
             :class="{ chosen: ratingIndex === r.def.index, locked: !r.open }"
-            :repeat="false"
             :disabled="!r.open"
             :title="r.open ? r.def.blurb : r.need"
             @click="ratingIndex = r.def.index"
@@ -209,7 +204,6 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
               v-else
               class="ss-control buy"
               :class="{ can: a.affordable }"
-              :repeat="false"
               :disabled="!a.affordable"
               :aria-label="`Buy ${a.def.name}`"
               @click="a.buy()"
@@ -233,7 +227,7 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
           ><b class="num">{{ meta.record.totalKills.value }}</b> extras down</span
         >
       </div>
-      <Button class="ss-control action" :repeat="false" @click="action">
+      <Button class="ss-control action" @click="action">
         <span class="clapper-stripe"></span>
         <span class="billing">Action!</span>
       </Button>

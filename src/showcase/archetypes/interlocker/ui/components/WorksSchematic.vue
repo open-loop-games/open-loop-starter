@@ -322,6 +322,7 @@ const lean = computed(() => cal.yield.value < 1);
         <div class="recipe">{{ p.recipe }}</div>
         <div class="crew">
           <Button
+            repeat
             class="step"
             :aria-label="`Withdraw one of the ${p.name}`"
             :disabled="p.crew < 1"
@@ -331,6 +332,7 @@ const lean = computed(() => cal.yield.value < 1);
           <span class="ae-figure crew-n">{{ p.crew }}</span>
           <span class="crew-label">{{ p.name.toLowerCase() }}</span>
           <Button
+            repeat
             class="step"
             :aria-label="`Seat one more of the ${p.name}`"
             :disabled="!p.canAdd"
@@ -385,7 +387,6 @@ const lean = computed(() => cal.yield.value < 1);
             <Button
               v-if="i > 0"
               class="sooner"
-              :repeat="false"
               :aria-label="`Serve the ${d.name} before the ${d.before}`"
               :title="`Serve before the ${d.before}`"
               @click="serveSooner(i)"

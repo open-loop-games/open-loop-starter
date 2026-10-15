@@ -8,6 +8,7 @@ import {
   type Persistent,
 } from '@open-loop/engine';
 import { computed } from 'vue';
+import { createModuleApi } from '@/modules/module-api';
 import { GAME_BALANCE, type GameBalance } from '../data/game';
 
 /**
@@ -44,6 +45,11 @@ export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
   'game/automation',
 ) as InjectionKey<AutomationApi>;
 
+const automationApi = createModuleApi(AutomationKey);
+
+/** The automation ladder and its player toggle. Read it after the engine starts. */
+export const getAutomation = automationApi.get;
+
 export interface AutomationModuleOptions {
   balance?: GameBalance;
 }
@@ -64,7 +70,7 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
 
       const isActive = persistent<boolean>(false, { id: 'automationActive' });
 
-      ctx.provide(AutomationKey, {
+      automationApi.publish(ctx, {
         tiers,
         isActive,
         automationMultiplier: computed(() =>

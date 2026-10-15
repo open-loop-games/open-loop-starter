@@ -13,6 +13,7 @@ defineEmits<{ buy: [] }>();
 
 <template>
   <Button
+    repeat
     class="nc-card"
     :class="{ can, automated: card.automated?.() }"
     :disabled="!can"

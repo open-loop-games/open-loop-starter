@@ -56,8 +56,8 @@ defineProps<{
       </div>
     </div>
     <div class="actions">
-      <Button class="hp-act cancel" :repeat="false" @click="onCancel">Stay on</Button>
-      <Button class="hp-act can" :repeat="false" @click="onConfirm">Commission</Button>
+      <Button class="hp-act cancel" @click="onCancel">Stay on</Button>
+      <Button class="hp-act can" @click="onConfirm">Commission</Button>
     </div>
   </section>
 </template>

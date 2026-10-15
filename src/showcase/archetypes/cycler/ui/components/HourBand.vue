@@ -64,7 +64,6 @@ const reliefLater = computed(
           v-if="watch.canSignal.value"
           class="sk-control verb relief-btn"
           data-testid="signal-relief"
-          :repeat="false"
           @click="watch.signalRelief()"
         >
           Signal the relief
@@ -73,7 +72,6 @@ const reliefLater = computed(
           class="sk-control verb lamp"
           data-testid="light-lamp"
           :disabled="!watch.home.value"
-          :repeat="false"
           @click="watch.lightLamp()"
         >
           Light the lamp early
@@ -87,7 +85,6 @@ const reliefLater = computed(
           :class="{ afford: canShore, second: side !== watch.quarter.value }"
           :disabled="!canShore"
           :data-testid="`shore-up-${side}`"
-          :repeat="false"
           @click="watch.shoreUp(side)"
         >
           Shore up the {{ QUARTER_NAME[side] }} wall ·

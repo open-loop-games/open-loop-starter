@@ -7,16 +7,20 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { toNumber, type DecimalSource } from '@open-loop/engine';
+import { toNumber, type DecimalSource, type Purchasable } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import ProducerList from '@/ui/compositions/ProducerList.vue';
-import UpgradeGrid from '@/ui/compositions/UpgradeGrid.vue';
-import type { ProducerRowData } from '@/ui/compositions/ProducerList';
-import type { UpgradeCardData } from '@/ui/compositions/UpgradeGrid';
-import type { ResourceReadout } from '@/ui/compositions/ResourceHeaderStrip';
+import {
+  ProducerList,
+  UpgradeGrid,
+  createProducerRow,
+  createPurchasableCard,
+  createPurchasableRow,
+  readPriceLines,
+  type ResourceReadout,
+} from '@/ui/compositions';
 import { ANCHORS, GEAR, PRODUCERS, type Currency, type GearDef } from '../../data';
 import { getLodge, getWold, type LodgeStore } from '../../modules';
-import { fmt } from '../format';
+import { formatGrouped as fmt } from '@/composables/useFormatting';
 
 const lodge = getLodge();
 const wold = getWold();
@@ -51,10 +55,15 @@ interface Chip {
   v: number;
   ok: boolean;
 }
-const chips = (cost: Partial<Record<Currency, number>>): Chip[] =>
-  (Object.entries(cost) as [Currency, number][])
-    .filter(([, v]) => v > 0)
-    .map(([k, v]) => ({ k, v, ok: n(lodge.stores[k].value) >= v }));
+/** The engine's price for the next unit, one chip per store that pays. */
+const chips = (p: Purchasable): Chip[] =>
+  readPriceLines(p)
+    .filter((line) => n(line.amount) > 0)
+    .map((line) => ({
+      k: STORE_ORDER.find((k) => lodge.stores[k] === line.resource)! as Currency,
+      v: n(line.amount),
+      ok: !line.short,
+    }));
 
 // === THE YARD ===
 
@@ -64,38 +73,22 @@ interface YardExtra {
 }
 
 const rack = lodge.racks;
-const yard: ProducerRowData<YardExtra>[] = [
-  {
-    id: 'rack',
+// One at a time, through the lodge's own verbs; the rate shown is per unit.
+const yard = [
+  createPurchasableRow<YardExtra>(rack, {
     displayName: 'Smoke rack',
-    count: rack.count,
-    displayRate: computed(() => lodge.rackJerkyRate.value),
-    cost: () => rack.getCost(1),
-    canPurchase: () => rack.canPurchase.value,
-    maxAffordable: computed(() => (rack.canPurchase.value ? 1 : 0)),
+    rate: computed(() => lodge.rackJerkyRate.value),
     purchase: () => lodge.buyRack(),
-    extra: {
-      blurb: 'Meat and wood into jerky',
-      chips: () => chips({ wood: n(rack.getCost(1)) }),
-    },
-  },
-  ...PRODUCERS.map((def): ProducerRowData<YardExtra> => {
+    extra: { blurb: 'Meat and wood into jerky', chips: () => chips(rack) },
+  }),
+  ...PRODUCERS.map((def) => {
     const p = lodge.producers.getProducer(def.id)!;
-    const r = p.repeatable!;
-    return {
-      id: def.id,
+    return createProducerRow<YardExtra>(p, {
       displayName: def.displayName,
-      count: p.ownedCount,
-      displayRate: p.computedRate,
-      cost: () => r.getCost(1),
-      canPurchase: () => r.canPurchase.value,
-      maxAffordable: computed(() => (r.canPurchase.value ? 1 : 0)),
+      rate: p.computedRate,
       purchase: () => lodge.buyProducer(def.id),
-      extra: {
-        blurb: def.blurb,
-        chips: () => chips({ [def.payer]: n(r.getCost(1)) }),
-      },
-    };
+      extra: { blurb: def.blurb, chips: () => chips(p.repeatable!) },
+    });
   }),
 ];
 const yardUnit = (id: string) => (id === 'rack' ? 'jerky' : id === 'snare' ? 'meat' : 'wood');
@@ -120,27 +113,17 @@ const outfitter = computed(() =>
   GEAR.filter((def) => {
     const zone = sighted[def.id];
     return zone == null || wold.zones.isUnlocked(zone);
-  }).map((def): UpgradeCardData<GearExtra> => {
+  }).map((def) => {
     const p = lodge.gear.getPurchasable(def.id)!;
     const level = () => lodge.gearLevel(def.id);
-    // The contract's single cost is the price's first currency; the slot shows all of them.
-    const [unit] = Object.keys(def.cost(0)) as Currency[];
-    return {
-      id: def.id,
+    // Several stores pay, so the card carries no single price; the slot shows the chips.
+    return createPurchasableCard<GearExtra>(p, {
       displayName: def.displayName,
       description: def.blurb,
-      cost: computed(() => def.cost(level())[unit] ?? 0),
-      costLabel: unit,
-      canPurchase: p.canPurchase,
-      owned: computed(() => level() >= def.limit),
       count: p.count,
       purchase: () => lodge.buyGear(def.id),
-      extra: {
-        def,
-        level,
-        chips: () => (level() >= def.limit ? [] : chips(def.cost(level()))),
-      },
-    };
+      extra: { def, level, chips: () => (p.maxed.value ? [] : chips(p)) },
+    });
   }),
 );
 </script>
@@ -168,6 +151,7 @@ const outfitter = computed(() =>
       <ProducerList :rows="yard" cost-label="" bulk-mode-source="none">
         <template #row="{ row, purchase }">
           <Button
+            repeat
             class="sp-buy"
             :class="{ can: row.canPurchase(1) }"
             :disabled="!row.canPurchase(1)"

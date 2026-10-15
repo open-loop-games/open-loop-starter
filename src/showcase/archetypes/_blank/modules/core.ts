@@ -8,6 +8,7 @@ import {
   type InjectionKey,
 } from '@open-loop/engine';
 import { computed } from 'vue';
+import { createModuleApi } from '@/modules/module-api';
 import { GAME_BALANCE, type GameBalance } from '../data/game';
 import { GameTuningRegistryKey } from './tuning';
 import { AutomationKey } from './automation';
@@ -34,6 +35,14 @@ export interface CoreApi {
 }
 
 export const CoreKey: InjectionKey<CoreApi> = Symbol('game/core') as InjectionKey<CoreApi>;
+
+// The module publishes on both surfaces: `ctx.provide` for sibling modules in
+// install(), and the getter for everything else (game views, the dev handle,
+// tests). The getter works outside a component setup.
+const coreApi = createModuleApi(CoreKey);
+
+/** The example accumulator. Read it after the engine starts. */
+export const getCore = coreApi.get;
 
 export interface CoreModuleOptions {
   balance?: GameBalance;
@@ -68,7 +77,7 @@ export function createCoreModule(options: CoreModuleOptions = {}): EngineModule 
         state.amount.value = state.amount.value.add(Decimal.mul(effectiveRate.value, dt));
       });
 
-      ctx.provide(CoreKey, {
+      coreApi.publish(ctx, {
         amount: computed(() => state.amount.value),
         ratePerSecond: effectiveRate,
       });

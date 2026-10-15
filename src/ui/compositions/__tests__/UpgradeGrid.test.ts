@@ -109,4 +109,24 @@ describe('UpgradeGrid', () => {
     expect(wrapper.find('.custom-card').exists()).toBe(true);
     expect(wrapper.find('.upgrade-grid__cell').exists()).toBe(false);
   });
+
+  it('lays out as one column by default', () => {
+    const wrapper = mount(UpgradeGrid, { props: { cards: [makeCard('a')], reveal: 'inline' } });
+    const grid = wrapper.find('.upgrade-grid').element as HTMLElement;
+    expect(grid.style.gridTemplateColumns).toBe('repeat(1, 1fr)');
+  });
+
+  it('filters out a card that is not unlocked', () => {
+    const cards = [makeCard('a'), { ...makeCard('b'), unlocked: ref(false) }];
+    const wrapper = mount(UpgradeGrid, { props: { cards, reveal: 'inline' } });
+    expect(wrapper.findAll('.upgrade-grid__cell-wrap')).toHaveLength(1);
+  });
+
+  it('shows unmet prerequisites in place of the button, and marks the card locked', () => {
+    const card = { ...makeCard('a'), unmet: ref(['A mill']) };
+    const wrapper = mount(UpgradeGrid, { props: { cards: [card], reveal: 'inline' } });
+    expect(wrapper.find('[data-testid="purchase-a"]').exists()).toBe(false);
+    expect(wrapper.find('.upgrade-grid__cell-unmet').text()).toBe('A mill');
+    expect(wrapper.find('.upgrade-grid__cell').attributes('data-locked')).toBeDefined();
+  });
 });

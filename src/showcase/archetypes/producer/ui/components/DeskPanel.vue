@@ -19,7 +19,7 @@ const automation = getAutomation();
 const books: ResourceReadout = {
   id: 'cash',
   label: 'Cash on hand',
-  value: firm.cash.value as never,
+  value: firm.cash,
   rate: automation.income,
 };
 const cash = computed(() => money(firm.cash.value));
@@ -86,7 +86,6 @@ const tapeMark: Record<LedgerKind, string> = {
       <Button
         class="stamp"
         :class="{ thump: stamping, carbon: deskDealing }"
-        :repeat="false"
         data-testid="deal"
         @click="press"
         @animationend="stamping = false"
@@ -325,7 +324,7 @@ h1 {
   --progress-bar-fill: var(--ink-seal);
   --progress-bar-track: var(--ledger-rule);
   --progress-bar-radius: 0;
-  --progress-bar-transition: width 0.3s linear;
+  --progress-bar-transition: transform 0.3s linear;
 }
 .grade-rule :deep(.olui-progress-bar__track) {
   min-height: 3px;

@@ -8,7 +8,7 @@
 import { computed, type ComputedRef } from 'vue';
 import { Decimal, type DecimalSource } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
-import { ProducerList, type ProducerRowData } from '@/ui/compositions';
+import { ProducerList, createProducerRow } from '@/ui/compositions';
 import { HIGH_TIER_FROM, type TierDef } from '../../data';
 import { getAutomation, getPrestige, getRun } from '../../modules';
 import { fmt, fmtRate } from '../format';
@@ -31,20 +31,10 @@ interface Rung {
 }
 
 // The corps is fixed, so the rows are built once and their reactive parts are refs.
-const rows: ProducerRowData<Rung>[] = run.heroes.getAll().map(({ def, producer }, i, all) => {
-  const rep = producer.repeatable!;
+const rows = run.heroes.getAll().map(({ def, producer }, i, all) => {
   const below = i === 0 ? null : all[i - 1].producer;
-  return {
-    id: def.id,
+  return createProducerRow<Rung>(producer, {
     displayName: def.displayName,
-    count: producer.ownedCount,
-    displayRate: computed(() =>
-      Decimal.mul(producer.computedRate.value, producer.ownedCount.value),
-    ),
-    cost: (n) => rep.getCost(n),
-    canPurchase: (n) => Decimal.lte(rep.getCost(n), run.justice.value),
-    maxAffordable: rep.countToPurchase,
-    purchase: (n) => rep.purchase(n),
     unlocked: computed(
       () =>
         below === null ||
@@ -56,7 +46,7 @@ const rows: ProducerRowData<Rung>[] = run.heroes.getAll().map(({ def, producer }
       each: computed(() => producer.computedRate.value),
       silenced: computed(() => noPowers.value && def.tier >= HIGH_TIER_FROM),
     },
-  };
+  });
 });
 
 function toggleDispatch() {
@@ -79,7 +69,6 @@ function toggleDispatch() {
             v-if="dispatchOnline"
             class="duty reveal"
             role="switch"
-            :repeat="false"
             :aria-checked="automation.dispatchOn.value"
             aria-label="Dispatch Desk on duty"
             @click="toggleDispatch"
@@ -106,6 +95,7 @@ function toggleDispatch() {
           </div>
           <div class="buys">
             <Button
+              repeat
               class="act"
               :disabled="!row.canPurchase(1)"
               :data-testid="`recruit-${row.id}`"

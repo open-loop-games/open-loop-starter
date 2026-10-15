@@ -101,7 +101,6 @@ const calPrice = computed(() => toNumber(calibration.getCost(1)));
             class="hp-act"
             :class="{ can: c.canPurchase.value }"
             :disabled="!c.canPurchase.value"
-            :repeat="false"
             @click="c.purchase()"
           >
             plate · {{ fmt(c.cost.value) }}
@@ -128,7 +127,6 @@ const calPrice = computed(() => toNumber(calibration.getCost(1)));
               class="hp-act"
               :class="{ can: c.canPurchase.value }"
               :disabled="!c.canPurchase.value"
-              :repeat="false"
               @click="c.purchase()"
             >
               {{ fmt(c.cost.value) }}
@@ -157,6 +155,7 @@ const calPrice = computed(() => toNumber(calibration.getCost(1)));
           </div>
         </div>
         <Button
+          repeat
           class="hp-act"
           :class="{ can: calibration.canPurchase.value }"
           :disabled="!calibration.canPurchase.value"

@@ -76,6 +76,7 @@ const rows: ProducerRowData<EstateExtra>[] = BUILDINGS.map((def) => {
           <footer>
             <CostLine :item="works.buildings.getPurchasable(row.id)!" />
             <Button
+              repeat
               class="ae-act"
               :class="{ can: row.canPurchase(1) }"
               :disabled="!row.canPurchase(1)"

@@ -2,3 +2,4 @@ export * from './shells';
 export * from './frame';
 export * from './modal';
 export * from './dev';
+export * from './portal';

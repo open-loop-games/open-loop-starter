@@ -36,11 +36,7 @@ const { engine, currentScreen, startGame, returnToSlots, getActiveModules } = us
     if (!offline || !result.success) return;
     const report = offline.catchUp(engine.tickDriver, result.timestamp ?? undefined);
     if (report.caughtUpSeconds < REPORT_MIN_AWAY_SECONDS) return;
-    const id = stack.push(ReturnReport, {
-      report,
-      windowSeconds: OFFLINE_WINDOW_SECONDS,
-      onClose: () => stack.remove(id),
-    });
+    stack.push(ReturnReport, { report, windowSeconds: OFFLINE_WINDOW_SECONDS });
   },
 });
 
@@ -50,9 +46,8 @@ const showDevPanel = ref(false);
 
 <template>
   <!--
-    Costume scope. AppFrame's root node is a TooltipProvider fragment, so a
-    class on the component is dropped rather than inherited; the wrapper gives
-    `consolidated.css` an ancestor.
+    Costume scope for the slot screen and the frame alike; the frame's modals
+    mount inside it, so they wear the costume too.
   -->
   <div class="consolidated">
     <SlotScreen

@@ -187,8 +187,8 @@ const summary = computed(() => night.lastNight.value);
         </div>
         <span class="lo-row-eta lo-num">{{ secs(r.eta) }}</span>
         <div class="lo-row-tools">
-          <Button aria-label="One fewer" @click="bumpTimes(i, -1)">−</Button>
-          <Button aria-label="One more" @click="bumpTimes(i, 1)">+</Button>
+          <Button repeat aria-label="One fewer" @click="bumpTimes(i, -1)">−</Button>
+          <Button repeat aria-label="One more" @click="bumpTimes(i, 1)">+</Button>
           <Button aria-label="Move up" @click="moveRow(i, -1)">↑</Button>
           <Button aria-label="Move down" @click="moveRow(i, 1)">↓</Button>
           <Button aria-label="Remove" class="lo-x" @click="removeRow(i)">✕</Button>

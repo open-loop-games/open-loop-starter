@@ -17,6 +17,9 @@
 -->
 <script setup lang="ts">
 import { HoverCardRoot, HoverCardTrigger, HoverCardPortal, HoverCardContent } from 'reka-ui';
+import { usePortalTarget } from '@/lib/portal';
+
+const portalTarget = usePortalTarget();
 
 withDefaults(
   defineProps<{
@@ -41,7 +44,7 @@ withDefaults(
     <HoverCardTrigger as-child>
       <slot />
     </HoverCardTrigger>
-    <HoverCardPortal>
+    <HoverCardPortal :to="portalTarget">
       <HoverCardContent
         class="olui-rich-tooltip__content"
         :side="side"

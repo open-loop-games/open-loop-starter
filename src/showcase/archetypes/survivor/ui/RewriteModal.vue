@@ -31,7 +31,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
         :key="i"
         class="ss-control page"
         :class="{ fresh: pageOf(c).isNew }"
-        :repeat="false"
         :aria-label="`Page ${i + 1}: ${pageOf(c).heading}`"
         @click="take.pickCard(i)"
       >

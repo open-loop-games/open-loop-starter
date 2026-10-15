@@ -64,7 +64,7 @@ src/
 ├── lib/           # Scaffold layout/theme layer. Presentational — no engine imports (oxlint-enforced). Import via '@/lib'.
 ├── ui/            # Engine-bridged UI — screens, panels, components, compositions. Archetype-specific SFCs are in their archetype, not here.
 ├── composables/   # Starter-level composables — bridge shared-base state to UI.
-├── modules/       # The shared-base engine modules every archetype boots.
+├── modules/       # The shared-base engine modules every archetype boots, and the helpers a game's modules call in install().
 ├── directives/    # Shared Vue directives.
 ├── balance/       # Cross-archetype balance toolkit over the engine's balance harness. Per-archetype balance/ is in the archetype.
 ├── styles/        # Scaffold theme layered over lib's token defaults.
@@ -85,7 +85,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 - **`src/modules/`** own engine state through `persistent()` refs, and import no UI.
 - **`src/composables/`** — UI uses a module's public API, never its internals. A composable qualifies for this layer through `computed`, `watch` or lifecycle, per-component state, or cross-module synthesis. A composable that only re-exports adds nothing; UI imports from `modules/` directly.
 - **`src/ui/compositions/`** — engine-state-to-widget wiring that recurs across archetypes. Each composition is a `.ts` **contract** (the row or item shape a game supplies), a `.vue` **default renderer** and a test. **The contract is the battery; the renderer is one default.** A game can adopt the contract and render it its own way. For example, render `ResourceReadout` with your own list component. "Want the shape, not the markup" is a first-class path, not a fallback. There are two extension seams, in order of reach:
-  1. The typed `extra?: T` payload and the `#row`/`#card` slot. Parameterize the component (`ProducerList<MyRow>`), and read your own state back, typed, in the slot. This way a game holds a shape the flat contract cannot, such as multi-resource costs. So **the core contract does not grow with every consumer's needs**.
+  1. The typed `extra?: T` payload and the `#row`/`#card` slot. Type your rows (`ProducerRowData<MyExtra>`), and read your own state back, typed, in the slot. This way a game holds a shape the flat contract cannot, such as multi-resource costs. So **the core contract does not grow with every consumer's needs**.
   2. A reskin from outside, through the composition's costume classes (`:deep(.producer-list__…)`). Each composition header documents them as **stable API**, so a rename is breaking.
 
   Compositions survive eject. Their bar is the one in § Scaffold. Promotion is a deliberate pass over accumulated evidence, never a hoist on first notice.
@@ -94,6 +94,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 ### Key Patterns
 
 - **Engine singleton** — `bootEngine` (`src/boot.ts`) creates it once, and `bootApp` shares it through `provide('engine')`. `bootEngine` prepends `sharedBase` to every mod, so an archetype never assembles the base itself.
+- **Module API on two surfaces** — a module publishes its API through `createModuleApi(Key)` (`src/modules/module-api.ts`). `publish(ctx, api)` in `install()` provides it to sibling modules, and the module exports `get` as its getter (`getX()`). The getter works outside a component setup: in game views, tests and dev tools. It follows the newest live engine, so a headless engine from the balance workbench does not strand it. `_blank/modules/core.ts` is the reference. `useModule(Key)` stays for a component that reads through the app's own engine.
 - **Routing shell vs game view** — an archetype root (`*AppRoot.vue`) is routing and app chrome only. It reads **no** module state, because its setup runs before `start()`, on the slot screen. All module reads are in a `<XGameView>` subtree, rendered under the post-start `v-else` frame. A header action that reads module state is its own child component in the `SystemHeader` slot. `usePlaySession`'s `onLoaded` is the one root-side seam for post-start work. `_blank/ui/GameView.vue` is the reference a fork copies.
 - **Slot-based shells** — `src/lib/shells/*` never prescribe content; games fill the slots.
 - **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the default token values: palette, spacing, radius, and the shell, modal and widget tokens. `src/styles/` adds the scaffold theme and widget-level selectors on top.

@@ -31,7 +31,7 @@ defineProps<{
       Bourget the first aerodrome of the Empire.
     </p>
     <p class="after">The drawing board stays pinned; the works go on.</p>
-    <Button class="ae-act can" :repeat="false" @click="onClose">Back to the board</Button>
+    <Button class="ae-act can" @click="onClose">Back to the board</Button>
   </section>
 </template>
 

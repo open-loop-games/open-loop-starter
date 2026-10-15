@@ -112,7 +112,6 @@ const rows = [wall];
           v-for="cell in cells"
           :key="cell.i"
           class="nc-cell"
-          :repeat="false"
           :class="{
             open: cell.open,
             pinned: !!cell.card,
@@ -145,7 +144,6 @@ const rows = [wall];
         <Button
           v-if="held && held.from !== null"
           class="nc-return"
-          :repeat="false"
           aria-label="Take the card down"
           @click="returnToInbox()"
         >
@@ -155,7 +153,6 @@ const rows = [wall];
           v-for="id in board.inbox.value"
           :key="id"
           class="nc-inbox-card"
-          :repeat="false"
           :class="{ held: held?.id === id }"
           :aria-label="`Inbox card ${id}`"
           @click="pickInbox(id)"

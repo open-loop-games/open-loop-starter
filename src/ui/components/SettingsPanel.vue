@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { DialogTitle, SwitchRoot, SwitchThumb } from 'reka-ui';
+import { DialogTitle } from 'reka-ui';
 import PanelLayout from '@/ui/components/PanelLayout.vue';
 import Select, { type SelectOption } from '@/ui/components/Select.vue';
 import { useModule } from '@/composables/useModule';
@@ -82,12 +82,7 @@ const uiScalePercent = computed<number>({
       <h3>Autosave</h3>
       <p class="setting-group__hint">Shared across every demo in the gallery.</p>
 
-      <label class="setting setting--switch">
-        <SwitchRoot v-model="prefs.autoSave.value" class="olui-switch">
-          <SwitchThumb class="olui-switch__thumb" />
-        </SwitchRoot>
-        Enabled
-      </label>
+      <Switch v-model="prefs.autoSave.value">Enabled</Switch>
 
       <label class="setting">
         <span>Interval</span>
@@ -108,12 +103,7 @@ const uiScalePercent = computed<number>({
       <h3>This Demo</h3>
       <p class="setting-group__hint">Saved with this demo only.</p>
 
-      <label class="setting setting--switch">
-        <SwitchRoot v-model="settings.offlineProgress.value" class="olui-switch">
-          <SwitchThumb class="olui-switch__thumb" />
-        </SwitchRoot>
-        Process offline progress on load
-      </label>
+      <Switch v-model="settings.offlineProgress.value"> Process offline progress on load </Switch>
     </div>
   </PanelLayout>
 </template>
@@ -176,9 +166,5 @@ const uiScalePercent = computed<number>({
 
 .setting input[type='number'] {
   width: 80px;
-}
-
-.setting--switch {
-  cursor: pointer;
 }
 </style>

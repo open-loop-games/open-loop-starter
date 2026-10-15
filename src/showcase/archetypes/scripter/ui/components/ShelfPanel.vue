@@ -99,7 +99,6 @@ watch(
               class="learn"
               :disabled="!card.canPurchase.value"
               :data-testid="`learn-${card.id}`"
-              :repeat="false"
               @click="card.purchase()"
             >
               Learn <span class="num">{{ fmt(card.cost.value) }}</span> Ki

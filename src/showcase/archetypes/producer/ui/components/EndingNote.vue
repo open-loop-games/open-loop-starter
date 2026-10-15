@@ -1,7 +1,6 @@
 <!--
   EndingNote — the deed to the Consolidated Building: the firm's story ends, and
-  the books stay open. Rendered inside the portaled modal stack, outside
-  `.consolidated`, so its root takes the tokens through `.consolidated-portal`.
+  the books stay open.
 -->
 <script setup lang="ts">
 import { DialogTitle } from 'reka-ui';
@@ -22,7 +21,7 @@ const took = (() => {
 </script>
 
 <template>
-  <section class="consolidated-portal deed">
+  <section class="deed">
     <div class="crest" aria-hidden="true">C<span>&amp;</span>H</div>
     <DialogTitle as-child>
       <h2 class="smallcaps">The town is yours</h2>
@@ -31,7 +30,7 @@ const took = (() => {
       From one pushcart to the tallest building in town, in {{ took }}. The name on top is yours.
     </p>
     <p class="after">The desks keep working, and the books stay open.</p>
-    <Button class="resume smallcaps" :repeat="false" @click="onClose">Back to the desk</Button>
+    <Button class="resume smallcaps" @click="onClose">Back to the desk</Button>
   </section>
 </template>
 

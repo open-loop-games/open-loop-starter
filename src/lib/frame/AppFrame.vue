@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { provide } from 'vue';
+import { provide, useTemplateRef } from 'vue';
 import { TooltipProvider } from 'reka-ui';
 import { ModalStack, useModalStack, modalStackKey, type ModalStackApi } from '../modal';
+import { portalTargetKey } from '../portal';
+
+// A class or attribute on AppFrame lands on the frame element, not on the
+// TooltipProvider, which renders none: it is the costume scope, and the
+// portaled surfaces mount inside it.
+defineOptions({ inheritAttrs: false });
 
 const props = defineProps<{
   theme?: 'light' | 'dark';
@@ -16,11 +22,12 @@ const props = defineProps<{
 }>();
 
 provide(modalStackKey, props.stack ?? useModalStack());
+provide(portalTargetKey, useTemplateRef<HTMLElement>('frame'));
 </script>
 
 <template>
   <TooltipProvider :delay-duration="tooltipDelay">
-    <div class="olui-app-frame" :data-theme="theme">
+    <div ref="frame" class="olui-app-frame" :data-theme="theme" v-bind="$attrs">
       <header v-if="$slots.header" class="olui-app-frame__header">
         <slot name="header" />
       </header>

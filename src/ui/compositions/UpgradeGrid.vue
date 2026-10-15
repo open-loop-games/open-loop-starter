@@ -10,7 +10,8 @@
   A class says `cell` where the contract says card. Renames are breaking:
     .upgrade-grid            root grid (+ inline grid-template-columns)
     .upgrade-grid__cell-wrap the reveal wrapper around each card
-    .upgrade-grid__cell      one card
+    .upgrade-grid__cell      one card (+ [data-locked] while prerequisites are unmet)
+    .upgrade-grid__cell-unmet  the unmet prerequisites, in place of the button
   (Panel compositions expose bare BEM classes; widgets under src/ui/components
   expose `olui-` classes. Both stable.)
 -->
@@ -34,7 +35,7 @@ const props = withDefaults(
     showFormula?: boolean;
   }>(),
   {
-    columns: 5,
+    columns: 1,
     reveal: 'tooltip',
     purchasedState: 'greyed',
     showFormula: false,
@@ -51,8 +52,14 @@ const gridStyle = computed(() => ({
 }));
 
 const visibleCards = computed(() =>
-  props.cards.filter((c) => !(c.owned.value && props.purchasedState === 'removed')),
+  props.cards.filter(
+    (c) => (c.unlocked?.value ?? true) && !(c.owned.value && props.purchasedState === 'removed'),
+  ),
 );
+
+function unmetOf(card: UpgradeCardData<T>): string[] {
+  return card.unmet?.value ?? [];
+}
 
 function describe(card: UpgradeCardData<T>): string {
   return typeof card.description === 'function' ? card.description() : card.description;
@@ -69,7 +76,12 @@ function describe(card: UpgradeCardData<T>): string {
     >
       <Tooltip v-if="reveal === 'tooltip'">
         <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
-        <div v-else class="upgrade-grid__cell" :data-bought="card.owned.value">
+        <div
+          v-else
+          class="upgrade-grid__cell"
+          :data-bought="card.owned.value"
+          :data-locked="unmetOf(card).length > 0 || undefined"
+        >
           <div class="upgrade-grid__cell-head">
             <span class="upgrade-grid__cell-pos">#{{ card.position ?? idx + 1 }}</span>
             <strong>{{ card.displayName }}</strong>
@@ -81,6 +93,9 @@ function describe(card: UpgradeCardData<T>): string {
               >✓ Purchased</span
             >
             <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
+            <span v-else-if="unmetOf(card).length" class="upgrade-grid__cell-unmet">
+              {{ unmetOf(card).join(' · ') }}
+            </span>
             <Button
               v-else
               :disabled="!card.canPurchase.value"
@@ -106,7 +121,12 @@ function describe(card: UpgradeCardData<T>): string {
       <Popover v-else-if="reveal === 'popover'">
         <template #trigger>
           <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
-          <div v-else class="upgrade-grid__cell" :data-bought="card.owned.value">
+          <div
+            v-else
+            class="upgrade-grid__cell"
+            :data-bought="card.owned.value"
+            :data-locked="unmetOf(card).length > 0 || undefined"
+          >
             <div class="upgrade-grid__cell-head">
               <span class="upgrade-grid__cell-pos">#{{ card.position ?? idx + 1 }}</span>
               <strong>{{ card.displayName }}</strong>
@@ -128,6 +148,9 @@ function describe(card: UpgradeCardData<T>): string {
               >✓ Purchased</span
             >
             <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
+            <span v-else-if="unmetOf(card).length" class="upgrade-grid__cell-unmet">
+              {{ unmetOf(card).join(' · ') }}
+            </span>
             <Button
               v-else
               :disabled="!card.canPurchase.value"
@@ -141,7 +164,12 @@ function describe(card: UpgradeCardData<T>): string {
       </Popover>
       <template v-else>
         <slot v-if="$slots.card" name="card" :card="card" :idx="idx" />
-        <div v-else class="upgrade-grid__cell" :data-bought="card.owned.value">
+        <div
+          v-else
+          class="upgrade-grid__cell"
+          :data-bought="card.owned.value"
+          :data-locked="unmetOf(card).length > 0 || undefined"
+        >
           <div class="upgrade-grid__cell-head">
             <span class="upgrade-grid__cell-pos">#{{ card.position ?? idx + 1 }}</span>
             <strong>{{ card.displayName }}</strong>
@@ -159,6 +187,9 @@ function describe(card: UpgradeCardData<T>): string {
               >✓ Purchased</span
             >
             <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
+            <span v-else-if="unmetOf(card).length" class="upgrade-grid__cell-unmet">
+              {{ unmetOf(card).join(' · ') }}
+            </span>
             <Button
               v-else
               :disabled="!card.canPurchase.value"
@@ -218,5 +249,10 @@ function describe(card: UpgradeCardData<T>): string {
   font-weight: 600;
   font-size: 0.85em;
   color: var(--color-accent, var(--color-text));
+}
+
+.upgrade-grid__cell-unmet {
+  font-size: 0.85em;
+  color: var(--color-text-muted);
 }
 </style>

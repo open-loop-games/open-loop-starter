@@ -2,14 +2,27 @@
   ProgressBar — plain or segmented horizontal progress bar.
 
   Costume classes: olui-progress-bar, olui-progress-bar__track,
-  olui-progress-bar__fill, olui-progress-bar__label (when `label` set).
+  olui-progress-bar__fill, olui-progress-bar__mark (one per mark),
+  olui-progress-bar__label (when `label` set).
   Root carries data-state="empty" | "partial" | "full".
-  Custom props: --progress-bar-{fill,track,radius,transition}.
+  Custom props: --progress-bar-{fill,track,radius,height,mark,transition}.
 
-  Segmented mode: passing `segments` overrides `value`/`max`. Each
-  segment is a fill sized `width: value * 100%`, rendered left-to-right
-  in the shared track. Consumers keep the sum ≤ 1 and colour segments
-  via the optional per-segment `class`.
+  The fill is scaled, never resized: each fill carries `--progress-bar-ratio`
+  (and `--progress-bar-offset` for a segment), and the stylesheet turns them into
+  `transform: scaleX(…)` on a full-width element, so a bar that moves every tick
+  costs no layout. A transition on it is a `transform` transition. A scaled
+  pattern distorts, so a patterned fill clips instead:
+    transform: none;
+    clip-path: inset(0 calc((1 - var(--progress-bar-ratio)) * 100%) 0 0);
+  with a `clip-path` transition.
+
+  Segmented mode: passing `segments` overrides `value`/`max`. Each segment is
+  scaled to its fraction and shifted past the ones before it, left to right in
+  the shared track. Consumers keep the sum ≤ 1 and colour segments via the
+  optional per-segment `class`.
+
+  `marks` draws thin ticks at positions in the units of `value` and `max`: a
+  threshold, a checkpoint, a night's hours.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -26,9 +39,10 @@ const props = withDefaults(
     value?: number;
     max?: number;
     segments?: ProgressBarSegment[];
+    marks?: readonly number[];
     label?: string;
   }>(),
-  { value: 0, max: 1 },
+  { value: 0, max: 1, segments: undefined, marks: undefined, label: undefined },
 );
 
 const isSegmented = computed(() => Array.isArray(props.segments));
@@ -50,7 +64,22 @@ const state = computed<'empty' | 'partial' | 'full'>(() => {
   return 'partial';
 });
 
-const pct = (v: number) => Math.max(0, Math.min(1, v)) * 100 + '%';
+const clamp = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : v > 0 ? 1 : 0);
+
+/** Each segment's fraction, and the fractions before it. */
+const segmentStyles = computed(() => {
+  let offset = 0;
+  return (props.segments ?? []).map((seg) => {
+    const r = clamp(seg.value);
+    const style = { '--progress-bar-ratio': r, '--progress-bar-offset': offset };
+    offset += r;
+    return style;
+  });
+});
+
+const markLefts = computed(() =>
+  (props.marks ?? []).map((m) => `${clamp(props.max > 0 ? m / props.max : 0) * 100}%`),
+);
 </script>
 
 <template>
@@ -62,11 +91,17 @@ const pct = (v: number) => Math.max(0, Math.min(1, v)) * 100 + '%';
           :key="i"
           class="olui-progress-bar__fill"
           :class="seg.class"
-          :style="{ width: pct(seg.value) }"
+          :style="segmentStyles[i]"
         />
       </template>
-      <div v-else class="olui-progress-bar__fill" :style="{ width: pct(ratio) }" />
+      <div v-else class="olui-progress-bar__fill" :style="{ '--progress-bar-ratio': ratio }" />
     </div>
+    <span
+      v-for="(left, i) in markLefts"
+      :key="i"
+      class="olui-progress-bar__mark"
+      :style="{ left }"
+    />
     <span v-if="label" class="olui-progress-bar__label">{{ label }}</span>
   </div>
 </template>
@@ -76,7 +111,9 @@ const pct = (v: number) => Math.max(0, Math.min(1, v)) * 100 + '%';
   --progress-bar-fill: var(--color-primary);
   --progress-bar-track: var(--color-surface);
   --progress-bar-radius: var(--radius-sm);
-  --progress-bar-transition: width 0.1s linear;
+  --progress-bar-height: 10px;
+  --progress-bar-mark: var(--color-text-muted);
+  --progress-bar-transition: transform 0.1s linear;
 
   position: relative;
   width: 100%;
@@ -84,18 +121,32 @@ const pct = (v: number) => Math.max(0, Math.min(1, v)) * 100 + '%';
 }
 
 .olui-progress-bar__track {
-  display: flex;
+  position: relative;
   width: 100%;
-  min-height: 10px;
+  min-height: var(--progress-bar-height);
   background: var(--progress-bar-track);
   border-radius: var(--progress-bar-radius);
   overflow: hidden;
 }
 
 .olui-progress-bar__fill {
-  flex: 0 0 auto;
+  position: absolute;
+  inset: 0;
   background: var(--progress-bar-fill);
+  transform-origin: left;
+  transform: translateX(calc(var(--progress-bar-offset, 0) * 100%))
+    scaleX(var(--progress-bar-ratio, 0));
   transition: var(--progress-bar-transition);
+}
+
+.olui-progress-bar__mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--progress-bar-mark);
+  pointer-events: none;
 }
 
 .olui-progress-bar__label {

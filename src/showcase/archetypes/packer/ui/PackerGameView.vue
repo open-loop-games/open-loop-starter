@@ -8,9 +8,10 @@
   go of the held module; R turns a held or hovered Fire Director.
 -->
 <script setup lang="ts">
-import { inject, onBeforeUnmount, onMounted, watch } from 'vue';
-import type { Engine } from '@open-loop/engine';
+import { inject, watch } from 'vue';
 import { ThreePanelShell, modalStackKey } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
+import { useWindowKeys } from '@/composables/useWindowKeys';
 import { PIECE_BY_ID } from '../data';
 import { getBoard, getFleet, getLine, getYard } from '../modules';
 import { provideFitting } from './fitting';
@@ -44,39 +45,23 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') fitting.hand = null;
   else if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && !e.altKey) turn();
 }
-onMounted(() => window.addEventListener('keydown', onKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
+useWindowKeys(onKey);
 
 // The story's end, once, when the Dreadnought falls. A save that already holds it loads
 // before this view mounts, so the note is not shown again.
 const stack = inject(modalStackKey)!;
 watch(fleet.storyEnded, (ended) => {
   if (!ended) return;
-  const id = stack.push(
+  stack.push(
     DreadnoughtNote,
-    {
-      ship: ship.def.value.name,
-      honours: fleet.honours.value,
-      honourMult: fleet.honourMult.value,
-      onClose: () => stack.remove(id),
-    },
+    { ship: ship.def.value.name, honours: fleet.honours.value, honourMult: fleet.honourMult.value },
     'sm',
   );
 });
 
-// Dev-only state hook for browser probes: reads live module state without an `import()`
-// that Vite's module cache could serve stale.
+// Dev-only state hook for browser probes, on window.__game.
 if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
-  (window as unknown as Record<string, unknown>).__hardpoint = {
-    engine,
-    yard: getYard(),
-    board,
-    fleet,
-    line: getLine(),
-    fitting,
-    skip: (seconds: number) => engine.tickDriver.advanceTime(seconds),
-  };
+  useDevHandle({ yard: getYard(), board, fleet, line: getLine(), fitting });
 }
 </script>
 

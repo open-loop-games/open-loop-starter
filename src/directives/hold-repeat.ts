@@ -5,7 +5,7 @@ import type { Directive } from 'vue';
  * once immediately, then repeats at a fixed interval after a short delay.
  * Keyboard activation (Enter/Space) fires once — OS keyrepeat handles holds.
  *
- * Bind the handler directly: `v-hold-repeat="() => doThing()"`. The directive
+ * Bind the handler directly: `v-hold-repeat="(e) => doThing(e)"`; it receives the press. The directive
  * handles pointer/keyboard lifecycle; don't pair with `@click`, which would
  * double-fire on pointer devices.
  *
@@ -17,15 +17,18 @@ import type { Directive } from 'vue';
 const DELAY_MS = 400;
 const INTERVAL_MS = 60;
 
+/** Receives the press that started it; a repeat passes the same press again. */
+type HoldHandler = (e: PointerEvent | KeyboardEvent) => void;
+
 interface HoldState {
-  setHandler: (fn: () => void) => void;
+  setHandler: (fn: HoldHandler) => void;
   setRepeat: (repeat: boolean) => void;
   teardown: () => void;
 }
 
 const stateMap = new WeakMap<HTMLElement, HoldState>();
 
-function attach(el: HTMLElement, fn: () => void, initialRepeat: boolean): HoldState {
+function attach(el: HTMLElement, fn: HoldHandler, initialRepeat: boolean): HoldState {
   let handler = fn;
   let repeat = initialRepeat;
   let delayTimer: ReturnType<typeof setTimeout> | null = null;
@@ -45,11 +48,11 @@ function attach(el: HTMLElement, fn: () => void, initialRepeat: boolean): HoldSt
   const onPointerdown = (e: PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     el.setPointerCapture?.(e.pointerId);
-    handler();
+    handler(e);
     if (!repeat) return;
     delayTimer = setTimeout(() => {
       repeatTimer = setInterval(() => {
-        handler();
+        handler(e);
       }, INTERVAL_MS);
     }, DELAY_MS);
   };
@@ -58,7 +61,7 @@ function attach(el: HTMLElement, fn: () => void, initialRepeat: boolean): HoldSt
     if (e.key !== 'Enter' && e.key !== ' ') return;
     if (e.repeat) return;
     e.preventDefault();
-    handler();
+    handler(e);
   };
 
   el.addEventListener('pointerdown', onPointerdown);
@@ -85,7 +88,7 @@ function attach(el: HTMLElement, fn: () => void, initialRepeat: boolean): HoldSt
   };
 }
 
-export const vHoldRepeat: Directive<HTMLElement, () => void> = {
+export const vHoldRepeat: Directive<HTMLElement, HoldHandler> = {
   mounted(el, binding) {
     stateMap.set(el, attach(el, binding.value, binding.arg !== 'once'));
   },

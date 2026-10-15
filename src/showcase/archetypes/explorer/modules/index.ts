@@ -6,14 +6,7 @@ import { createWoldModule } from './wold';
 import { createHuntsmanModule } from './huntsman';
 
 export { ExplorerTuningRegistryKey, type ExplorerTunableKey } from './tuning';
-export {
-  ChronicleKey,
-  getChronicle,
-  type Beat,
-  type ChronicleApi,
-  type LogEntry,
-  type Tone,
-} from './chronicle';
+export { ChronicleKey, getChronicle, type Beat, type ChronicleApi, type Tone } from './chronicle';
 export { LodgeKey, getLodge, type LodgeApi, type LodgeStore } from './lodge';
 export { WoldKey, getWold, type WayfinderDef, type WoldApi } from './wold';
 export {

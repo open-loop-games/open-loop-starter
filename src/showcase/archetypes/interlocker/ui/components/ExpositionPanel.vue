@@ -260,7 +260,6 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
         class="ae-act stage"
         :class="{ can: expo.canStage.value }"
         :disabled="!expo.canStage.value"
-        :repeat="false"
         @click="stage"
         >Stage the Exposition<span v-if="expo.canStage.value" class="ae-figure">
           · {{ expo.gain.value }} renown</span
@@ -289,7 +288,6 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
                 class="ae-act"
                 :class="{ can: card.canPurchase.value }"
                 :disabled="!card.canPurchase.value"
-                :repeat="false"
                 @click="card.purchase()"
                 >Petition</Button
               >
@@ -318,7 +316,6 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
                 <Button
                   class="switch"
                   role="switch"
-                  :repeat="false"
                   :aria-checked="card.extra!.on()"
                   :aria-label="`${card.displayName} at work`"
                   @click="card.extra!.toggle()"
@@ -331,7 +328,6 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
                 class="ae-act"
                 :class="{ can: card.canPurchase.value }"
                 :disabled="!card.canPurchase.value"
-                :repeat="false"
                 @click="card.purchase()"
                 >Employ</Button
               >

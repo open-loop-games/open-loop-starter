@@ -129,7 +129,6 @@ const cap = computed(() => new Decimal(night.strainCap.value).toNumber());
           v-for="cell in row.cells"
           :key="cell.key"
           class="nc-watch"
-          :repeat="false"
           :class="{
             posted: cell.posted,
             hinted: !!cell.hint,

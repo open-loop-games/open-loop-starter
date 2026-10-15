@@ -85,13 +85,7 @@ const rewriteShare = computed({
         canReboot ? `next at ${fmt(prestige.nextLegacyAt.value)}` : `needs ${fmt(REBOOT_THRESHOLD)}`
       }}</span>
     </div>
-    <Button
-      class="act big"
-      :repeat="false"
-      :disabled="!canReboot"
-      data-testid="reboot"
-      @click="prestige.reboot()"
-    >
+    <Button class="act big" :disabled="!canReboot" data-testid="reboot" @click="prestige.reboot()">
       <template v-if="canReboot">
         Reboot +<span class="num">{{ fmt(prestige.pendingLegacy.value) }}</span>
       </template>
@@ -106,7 +100,6 @@ const rewriteShare = computed({
       <Button
         class="duty"
         role="switch"
-        :repeat="false"
         :aria-checked="automation.autoRebootOn.value"
         aria-label="Succession Plan on duty"
         @click="automation.autoRebootOn.value = !automation.autoRebootOn.value"
@@ -132,7 +125,6 @@ const rewriteShare = computed({
     </div>
     <Button
       class="act orbit big"
-      :repeat="false"
       :disabled="!canRewrite"
       data-testid="rewrite"
       @click="prestige.rewrite()"
@@ -146,7 +138,6 @@ const rewriteShare = computed({
       <Button
         class="duty"
         role="switch"
-        :repeat="false"
         :aria-checked="automation.crossoverOn.value"
         aria-label="Crossover Event on duty"
         @click="automation.crossoverOn.value = !automation.crossoverOn.value"
@@ -172,7 +163,6 @@ const rewriteShare = computed({
     </div>
     <Button
       class="act foil big"
-      :repeat="false"
       :disabled="!canTurn"
       data-testid="turn-age"
       @click="prestige.turnAge()"
