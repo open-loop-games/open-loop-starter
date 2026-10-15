@@ -54,8 +54,6 @@ export type StepCost = 'jerky' | 'water';
 export interface WoldApi {
   tiles: readonly Tile[];
   grid: SpatialGrid<Tile>;
-  /** bumped whenever the board changes, since grid cells are not Vue-reactive */
-  mapVersion: Ref<number>;
   /** tiles on the banked chart */
   chartedCount: Ref<number>;
   /** tiles charted this trip and not yet banked at the lodge or a camp */
@@ -101,7 +99,7 @@ export interface WoldApi {
   bankNotes(): void;
   /** lose this trip's notes: the chart falls back to what was banked */
   loseNotes(): void;
-  /** tile `i` is on the banked chart, not only in this trip's notes */
+  /** tile `i` is on the banked chart, not only in this trip's notes; reactive through `chartedCount` */
   isBanked(i: number): boolean;
   /** raise a camp on tile `i`; the caller has checked the waystone and paid */
   raiseCamp(i: number): void;
@@ -156,7 +154,6 @@ export function createWoldModule(): EngineModule {
       /** lookouts used this trip: their sight is part of the notes */
       const tripLooted = persistent<number[]>([], { id: 'tripLooted' });
 
-      const mapVersion = ref(0);
       const chartedCount = ref(0);
       const notesCount = ref(0);
       const recount = () => {
@@ -164,7 +161,6 @@ export function createWoldModule(): EngineModule {
         for (let i = 0; i < banked.length; i++) b += banked[i];
         chartedCount.value = b;
         notesCount.value = grid.exploredCount - b;
-        mapVersion.value++;
       };
       grid.on('fovUpdated', recount);
       grid.on('maskChanged', recount);
@@ -304,7 +300,6 @@ export function createWoldModule(): EngineModule {
       const api: WoldApi = {
         tiles,
         grid,
-        mapVersion,
         chartedCount,
         notesCount,
         stock,
@@ -350,15 +345,18 @@ export function createWoldModule(): EngineModule {
         },
         bankNotes,
         loseNotes,
-        isBanked: (i) => banked[i] === 1,
+        // The banked mask is a typed array. A bank only adds explored tiles to it, so
+        // `chartedCount` changes whenever the mask does.
+        isBanked: (i) => {
+          void chartedCount.value;
+          return banked[i] === 1;
+        },
         raiseCamp(i) {
           camps.value = [...camps.value, i];
-          mapVersion.value++;
         },
         grantTrophy(id) {
           if (hasTrophy(id)) return;
           trophies.value = [...trophies.value, id];
-          mapVersion.value++;
         },
       };
       woldApi.publish(ctx, api);
