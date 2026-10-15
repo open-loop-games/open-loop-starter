@@ -7,18 +7,16 @@ import {
   createPurchasableCategory,
   createResource,
   createScalingPurchasable,
-  persistent,
   tunable,
-  watch,
   type ComputedRef,
   type DecimalSource,
   type EngineModule,
   type Gate,
   type InjectionKey,
-  type Persistent,
   type ProducerCategory,
   type Purchasable,
   type PurchasableCategory,
+  type Ref,
   type Resource,
 } from '@open-loop/engine';
 import { createModuleApi } from '@/modules/module-api';
@@ -70,7 +68,7 @@ export interface DojoApi {
   /** Students on the floor, hired and trained. */
   studentCount: ComputedRef<number>;
   /** Ki earned this run, spent or not. */
-  runKi: Persistent<DecimalSource>;
+  runKi: Ref<DecimalSource>;
   /** Make a purchase if the purse allows; returns how many were bought. */
   buy(what: Purchase, max: boolean): DecimalSource;
   /** Whether one of a purchase is affordable now: what `ready` reads. */
@@ -94,7 +92,13 @@ export function createDojoModule(): EngineModule {
       const lineage = ctx.inject(LineageKey);
       const t = (key: ScripterTunableKey, get: () => number) => tunable(tuning, key, get);
 
-      const ki = createResource<DecimalSource>(0, { id: 'ki', displayName: 'Ki', decimals: 1 });
+      // Graduation's wipe of this context zeroes `sinceReset`, so it is the run's Ki.
+      const ki = createResource<DecimalSource>(0, {
+        id: 'ki',
+        displayName: 'Ki',
+        decimals: 1,
+        trackSinceReset: true,
+      });
       const trained = createResource<DecimalSource>(0, {
         id: 'trained',
         displayName: 'Trained students',
@@ -204,18 +208,6 @@ export function createDojoModule(): EngineModule {
         Decimal.fromValue(producers.getEntry('student')!.producer.count.value).toNumber(),
       );
 
-      // TODO(expansion): a run-scoped cumulative. Resource.cumulative is lifetime-only, so the
-      // run counts its own earnings off the Ki ref; graduation's wipe of this context zeroes it.
-      const runKi = persistent<DecimalSource>(0, { id: 'run-ki', decimal: true });
-      watch(
-        () => ki.value,
-        (now, before) => {
-          const gain = Decimal.sub(now, before ?? 0);
-          if (gain.gt(0)) runKi.value = Decimal.add(runKi.value, gain);
-        },
-        { flush: 'sync' },
-      );
-
       const target = (what: Purchase): Purchasable =>
         what === 'recruit' ? students : what === 'promote' ? senpai : temper;
       const usable = (what: Purchase) =>
@@ -234,7 +226,7 @@ export function createDojoModule(): EngineModule {
         strikeValue,
         fist,
         studentCount,
-        runKi,
+        runKi: ki.sinceReset!,
         ready: (what) => usable(what) && target(what).canPurchase.value,
         buy(what, max) {
           const p = target(what);

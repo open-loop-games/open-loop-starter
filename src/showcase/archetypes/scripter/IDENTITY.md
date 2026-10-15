@@ -93,9 +93,9 @@ Gauntlet, the beaten challengers returning in rotation.
 | the student's hand | `createAutomationTiers` |
 | graduation | `createReset` with a `retain` for Remembered Forms |
 | Dan, standing | `createModifierChain` |
+| Ki earned this run | `Resource.sinceReset`, zeroed by graduation |
 
-Two hand-rolls carry `TODO(expansion)` markers: Ki earned this run (`modules/dojo.ts`),
-and the scroll's test evaluator (`modules/kata.ts`).
+One hand-roll carries a `TODO(expansion)` marker: the scroll's test evaluator (`modules/kata.ts`).
 
 ## Balance model
 
