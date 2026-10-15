@@ -4,7 +4,12 @@
   recipes are drafted lines between them. A line is pencilled until its workshop is
   patented, then inked: verdigris while it runs, broken vermilion where that input
   starves the workshop, dotted aluminium where a full output bin blocks it.
-  Coordinates are in a 1000×500 drawing space.
+  Once the Light Steam Engine is patented, the Boiler House plate is inked under the
+  workshops, and steam mains are drawn as hollow pipes from it to the three draws: the
+  engine shop, the rigging hall and the rolling mill at the furnace. A main breaks vermilion
+  where its draw is shed. The plate lists the draws in the order they are served, and
+  the player reorders them there.
+  Coordinates are in a 1000×600 drawing space.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -16,16 +21,21 @@ import {
   RESEARCH,
   RESOURCES,
   ROLES,
+  STEAM_DRAWS,
   type ResourceId,
   type RoleId,
+  type SteamDraw,
 } from '../../data';
-import { getWorks, type Limit } from '../../modules';
-import { rate, stock } from '../format';
+import { getAutomation, getCalendar, getEmpire, getWorks, type Limit } from '../../modules';
+import { rate, stock, times } from '../format';
 
 const works = getWorks();
+const empire = getEmpire();
+const cal = getCalendar();
+const automation = getAutomation();
 
 const W = 1000;
-const H = 530;
+const H = 600;
 const R = 34;
 
 const dial: Record<ResourceId, [number, number]> = {
@@ -61,6 +71,15 @@ const route: Record<string, string> = {
   'rigger:engines': 'M840,346 V280 H650 V194',
   'rigger:out': 'M725,160 H876',
 };
+
+/** The steam mains: from the Boiler House plate to each draw, and the coal that feeds it. */
+const BOILER: [number, number] = [480, 552];
+const main: Record<SteamDraw, string> = {
+  machinist: 'M620,518 V420',
+  rigger: 'M680,552 H770 V180 H720',
+  mill: 'M372,518 V296 H340',
+};
+const COAL_FEED = 'M470,412 V510';
 
 const patentName = Object.fromEntries(RESEARCH.map((r) => [r.id, r.name]));
 
@@ -149,11 +168,62 @@ function describe(limit: Limit): string {
   if (limit === 'labour') return 'crew-bound';
   if (limit === 'storage') return 'bin full';
   if (limit === 'hunger') return 'crew hungry';
+  if (limit === 'steam') return 'short of steam';
   return `short of ${limit.slice(6)}`;
 }
 
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
 const fed = computed(() => works.fed.value);
+const foreman = computed(
+  () => automation.tiers.hasReached('seating') && automation.active.seating.value,
+);
+
+// ── steam ──
+const steamOpen = works.researched('steam');
+const drawName = Object.fromEntries(STEAM_DRAWS.map((d) => [d.id, d.name])) as Record<
+  SteamDraw,
+  string
+>;
+/** Whether a draw is built: its workshop open, or the mill patented. */
+const drawOpen = (d: SteamDraw) =>
+  d === 'mill' ? works.researched('rolling').value : works.roleOpen[d].value;
+
+const boilers = computed(() => works.buildings.getPurchasable('boiler')!.count.value);
+const mains = computed(() =>
+  STEAM_DRAWS.map(({ id }) => {
+    const share = works.steam.share[id];
+    const asking = id === 'mill' || works.roleStatus[id].capacityPerSec > 0;
+    return {
+      id,
+      d: main[id],
+      state: !drawOpen(id) ? 'sealed' : share < 1 ? 'starved' : asking ? 'running' : 'idle',
+    };
+  }),
+);
+const coalFeed = computed(() => {
+  if (!steamOpen.value) return 'sealed';
+  if (works.steam.demand <= 0 || toNumber(boilers.value) < 1) return 'idle';
+  // The feed starves only when the coal itself runs out; too few boilers is the plate's shortfall.
+  return toNumber(works.res.coal.value) < 1 ? 'starved' : 'running';
+});
+const draws = computed(() =>
+  empire.shedOrder.value.map((id, i) => ({
+    id,
+    rank: i + 1,
+    name: drawName[id],
+    open: drawOpen(id),
+    share: works.steam.share[id],
+    before: i > 0 ? drawName[empire.shedOrder.value[i - 1]!] : undefined,
+  })),
+);
+/** Serve a draw one place sooner: it swaps with the draw before it. */
+function serveSooner(i: number): void {
+  const order = [...empire.shedOrder.value];
+  [order[i - 1], order[i]] = [order[i]!, order[i - 1]!];
+  empire.shedOrder.value = order;
+}
+
+const lean = computed(() => cal.yield.value < 1);
 </script>
 
 <template>
@@ -176,8 +246,14 @@ const fed = computed(() => works.fed.value);
       <!-- the drafting grid -->
       <g class="grid">
         <line v-for="i in 19" :key="'v' + i" :x1="i * 50" y1="0" :x2="i * 50" :y2="H" />
-        <line v-for="i in 10" :key="'h' + i" x1="0" :y1="i * 50" :x2="W" :y2="i * 50" />
+        <line v-for="i in H / 50 - 1" :key="'h' + i" x1="0" :y1="i * 50" :x2="W" :y2="i * 50" />
       </g>
+      <!-- the steam mains: a hollow pipe, a wide stroke cut by the paper -->
+      <g v-for="m in mains" v-show="steamOpen" :key="m.id" class="main" :class="m.state">
+        <path :d="m.d" class="pipe" />
+        <path :d="m.d" class="bore" />
+      </g>
+      <path :d="COAL_FEED" class="edge" :class="coalFeed" marker-end="url(#arrow)" />
       <path
         v-for="e in edges"
         :key="e.key"
@@ -226,6 +302,10 @@ const fed = computed(() => works.fed.value);
     >
       feeds <span class="ae-figure">{{ works.workersTotal.value }}</span> compagnons
       <span v-if="fed < 1" class="ae-figure"> · {{ Math.round(fed * 100) }}% fed</span>
+      <span class="season" :class="{ lean }"
+        >gardens <span class="ae-figure">{{ times(cal.yield.value) }}</span> in
+        {{ cal.season.value }}</span
+      >
     </div>
 
     <div
@@ -236,7 +316,9 @@ const fed = computed(() => works.fed.value);
       :style="{ left: pct(p.x, W), top: pct(p.y, H) }"
     >
       <template v-if="p.open">
-        <header class="ae-lettering">{{ p.workshop }}</header>
+        <header class="ae-lettering">
+          {{ p.workshop }}<span v-if="foreman" class="foreman">foreman</span>
+        </header>
         <div class="recipe">{{ p.recipe }}</div>
         <div class="crew">
           <Button
@@ -265,6 +347,56 @@ const fed = computed(() => works.fed.value);
       <template v-else>
         <header class="ae-lettering">{{ p.workshop }}</header>
         <div class="sealed-note">unbuilt — needs {{ p.opensWith }}</div>
+      </template>
+    </div>
+
+    <div
+      class="boiler"
+      :class="{
+        open: steamOpen,
+        sealed: !steamOpen,
+        short: works.steam.supply < works.steam.demand,
+      }"
+      :style="{ left: pct(BOILER[0], W), top: pct(BOILER[1], H) }"
+      aria-label="Boiler House"
+    >
+      <template v-if="steamOpen">
+        <header>
+          <span class="ae-lettering">Boiler House</span>
+          <span class="count ae-figure"
+            >{{ stock(boilers) }} {{ toNumber(boilers) === 1 ? 'boiler' : 'boilers' }}</span
+          >
+          <span class="gauge ae-figure"
+            >steam {{ works.steam.supply.toFixed(1)
+            }}<span class="of"> raised / {{ works.steam.demand.toFixed(1) }} asked</span></span
+          >
+        </header>
+        <ol class="draws" aria-label="Steam, first served first">
+          <li
+            v-for="(d, i) in draws"
+            :key="d.id"
+            :class="{ shed: d.open && d.share < 1, idle: !d.open }"
+          >
+            <span class="rank ae-figure">{{ d.rank }}</span>
+            <span class="draw">{{ d.name }}</span>
+            <span class="share ae-figure">{{
+              d.open ? `${Math.round(d.share * 100)}%` : '—'
+            }}</span>
+            <Button
+              v-if="i > 0"
+              class="sooner"
+              :repeat="false"
+              :aria-label="`Serve the ${d.name} before the ${d.before}`"
+              :title="`Serve before the ${d.before}`"
+              @click="serveSooner(i)"
+              >▲</Button
+            >
+          </li>
+        </ol>
+      </template>
+      <template v-else>
+        <header class="ae-lettering">Boiler House</header>
+        <div class="sealed-note">unbuilt — needs {{ patentName.steam }}</div>
       </template>
     </div>
   </div>
@@ -329,6 +461,35 @@ const fed = computed(() => works.fed.value);
   stroke-dasharray: 1 4;
   stroke-width: 2.4;
   stroke-linecap: round;
+}
+.main .pipe {
+  fill: none;
+  stroke: var(--ae-drafting-line);
+  stroke-width: 7;
+  vector-effect: non-scaling-stroke;
+}
+.main .bore {
+  fill: none;
+  stroke: var(--ae-cyanotype);
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
+}
+.main.sealed {
+  opacity: 0.3;
+}
+.main.sealed .pipe {
+  stroke: var(--ae-drafting-line-faint);
+  stroke-dasharray: 3 5;
+}
+.main.idle .pipe {
+  stroke: var(--ae-drafting-line-faint);
+}
+.main.running .pipe {
+  stroke: var(--ae-verdigris);
+}
+.main.starved .pipe {
+  stroke: var(--ae-vermilion);
+  stroke-dasharray: 10 5;
 }
 .dial .rim {
   fill: var(--ae-cyanotype-deep);
@@ -395,6 +556,13 @@ const fed = computed(() => works.fed.value);
 .crew-note.hungry {
   color: var(--ae-vermilion);
 }
+.crew-note .season {
+  display: block;
+  color: var(--ae-drafting-line-faint);
+}
+.crew-note .season.lean {
+  color: var(--ae-vermilion);
+}
 .plate {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -421,16 +589,30 @@ const fed = computed(() => works.fed.value);
   }
 }
 .plate.limit-input,
-.plate.limit-hunger {
+.plate.limit-hunger,
+.plate.limit-steam {
   border-color: var(--ae-vermilion);
 }
 .plate.limit-storage {
   border-color: var(--ae-aluminium);
 }
 .plate header {
+  display: flex;
+  justify-content: space-between;
   font-size: 0.9em;
   color: var(--ae-chalk);
   letter-spacing: 0.14em;
+}
+/* Set on the plate's frame, like a label lettered on the border: it takes no line. */
+.foreman {
+  position: absolute;
+  top: -0.7em;
+  right: 0.6em;
+  padding: 0 0.3em;
+  background: var(--ae-cyanotype-deep);
+  font-size: 0.72em;
+  line-height: 1.3;
+  color: var(--ae-drafting-line-faint);
 }
 .plate.sealed header {
   color: var(--ae-drafting-line-faint);
@@ -497,7 +679,8 @@ const fed = computed(() => works.fed.value);
   color: var(--ae-verdigris);
 }
 .limit-input .limit,
-.limit-hunger .limit {
+.limit-hunger .limit,
+.limit-steam .limit {
   color: var(--ae-vermilion);
 }
 .limit-storage .limit {
@@ -506,5 +689,98 @@ const fed = computed(() => works.fed.value);
 .sealed-note {
   font-style: italic;
   margin-top: 0.2rem;
+}
+
+/* The Boiler House: a pipe-fitter's plate, double-ruled, wider than a workshop's. */
+.boiler {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 40cqi;
+  padding: 0.5cqi 0.9cqi 0.6cqi;
+  background: var(--ae-cyanotype-deep);
+  border: 3px double var(--ae-drafting-line);
+  font-size: clamp(0.62rem, 1.15cqi, 0.82rem);
+}
+.boiler.open {
+  animation: plate-inked 0.6s ease-out;
+}
+.boiler.sealed {
+  border: 1px dashed var(--ae-drafting-line-faint);
+  background: transparent;
+  color: var(--ae-drafting-line-faint);
+  width: 22cqi;
+}
+.boiler.short {
+  border-color: var(--ae-vermilion);
+}
+.boiler header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  color: var(--ae-chalk);
+}
+.boiler header .ae-lettering {
+  font-size: 0.9em;
+  letter-spacing: 0.14em;
+}
+.boiler.sealed header {
+  color: var(--ae-drafting-line-faint);
+}
+.boiler .count {
+  color: var(--ae-drafting-line);
+}
+.boiler .gauge {
+  margin-left: auto;
+  color: var(--ae-chalk);
+}
+.draws {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6em;
+}
+.draws li {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  border-top: 1px solid var(--ae-cyanotype-rule);
+  padding-top: 0.2rem;
+}
+.rank {
+  color: var(--ae-drafting-line-faint);
+}
+.draw {
+  color: var(--ae-drafting-line);
+  white-space: nowrap;
+}
+.share {
+  margin-left: auto;
+  color: var(--ae-verdigris);
+}
+.draws .shed .share,
+.draws .shed .draw {
+  color: var(--ae-vermilion);
+}
+.draws .idle .share,
+.draws .idle .draw {
+  color: var(--ae-slate);
+}
+.sooner {
+  width: 1.5em;
+  height: 1.5em;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.8em;
+  border: 1px solid var(--ae-brass-dim);
+  background: transparent;
+  color: var(--ae-brass);
+  border-radius: var(--ae-plate-radius);
+  cursor: pointer;
+}
+.sooner:hover {
+  background: var(--ae-brass);
+  color: var(--ae-cyanotype-deep);
 }
 </style>

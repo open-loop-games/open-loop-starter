@@ -1,17 +1,29 @@
 <!--
   InterlockerGameView — the in-game subtree, mounted under the root's post-start frame.
-  The stock ledger on the left, the drawing board in the centre (the Works schematic, the
-  Estate, the Académie and the Exposition, as sheet tabs), the telegraph on the right.
-  A tab with something newly affordable carries a brass dot until it is visited; the
-  Exposition sheet is not drawn until the riggers are patented or an Exposition is
-  remembered.
+  The almanac and the stock ledger on the left, the drawing board in the centre (the
+  Works schematic, the Estate, the Académie and the Exposition, as sheet tabs), the
+  Ministry's orders and the telegraph on the right. A tab with something newly affordable
+  carries a brass dot until it is visited; the Exposition sheet is not drawn until the
+  riggers are patented or an Exposition is remembered. The Grand Prix's note is pushed on
+  the modal stack once, at the staging that wins it.
 -->
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
 import type { Engine } from '@open-loop/engine';
-import { ThreePanelShell } from '@/lib';
+import { ThreePanelShell, modalStackKey } from '@/lib';
 import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
-import { getEmpire, getExposition, getTelegraph, getWorks } from '../modules';
+import {
+  getAutomation,
+  getCalendar,
+  getEmpire,
+  getExposition,
+  getMinistry,
+  getTelegraph,
+  getWorks,
+} from '../modules';
+import Almanac from './components/Almanac.vue';
+import GrandPrixNote from './components/GrandPrixNote.vue';
+import MinistryBoard from './components/MinistryBoard.vue';
 import StockLedger from './components/StockLedger.vue';
 import WorksSchematic from './components/WorksSchematic.vue';
 import EstatePanel from './components/EstatePanel.vue';
@@ -41,7 +53,9 @@ const affordable = computed(() => ({
   estate: works.buildings.getAll().some((e) => e.purchasable.canPurchase.value),
   academie: works.research.getAll().some((e) => e.purchasable.canPurchase.value),
   exposition:
-    expo.canStage.value || empire.charters.getAll().some((e) => e.purchasable.canPurchase.value),
+    expo.canStage.value ||
+    empire.charters.getAll().some((e) => e.purchasable.canPurchase.value) ||
+    empire.bureaux.getAll().some((e) => e.purchasable.canPurchase.value),
 }));
 watch(
   affordable,
@@ -56,6 +70,25 @@ watch(expoRevealed, (v, was) => {
 });
 watch(sheet, (s) => unread.value.delete(s));
 
+// The Grand Prix, once, at the staging that wins it. A save that already holds it loads
+// before this view mounts, so the note is not shown again.
+const stack = inject(modalStackKey)!;
+let lastMedal = 0;
+watch(empire.lifetimeRenown, (now, before) => (lastMedal = now - before), { flush: 'sync' });
+watch(empire.grandPrix, (won) => {
+  if (!won) return;
+  const id = stack.push(
+    GrandPrixNote,
+    {
+      year: getCalendar().year.value,
+      renown: lastMedal,
+      expositions: expo.cycle.count.value,
+      onClose: () => stack.remove(id),
+    },
+    'sm',
+  );
+});
+
 // Dev-only state hook for browser probes: reads live module state without an `import()`
 // that Vite's module cache could serve stale.
 if (import.meta.env.DEV) {
@@ -65,6 +98,9 @@ if (import.meta.env.DEV) {
     empire,
     expo,
     telegraph: getTelegraph(),
+    calendar: getCalendar(),
+    ministry: getMinistry(),
+    automation: getAutomation(),
     engine,
     skip: (seconds: number) => engine.tickDriver.advanceTime(seconds),
   };
@@ -74,6 +110,7 @@ if (import.meta.env.DEV) {
 <template>
   <ThreePanelShell left-width="minmax(250px, 280px)" right-width="minmax(240px, 270px)">
     <template #left>
+      <Almanac />
       <StockLedger />
     </template>
     <Tabs v-model="sheet" :items="items" class="ae-board">
@@ -86,6 +123,7 @@ if (import.meta.env.DEV) {
       <template #panel-exposition><ExpositionPanel /></template>
     </Tabs>
     <template #right>
+      <MinistryBoard />
       <TelegraphLine />
     </template>
   </ThreePanelShell>

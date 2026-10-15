@@ -1,29 +1,50 @@
 import {
   computed,
   createCostRequirement,
+  createGateRequirement,
   createPurchasableCategory,
   createResource,
   Decimal,
+  persistent,
   toNumber,
   type ComputedRef,
   type EngineModule,
   type InjectionKey,
+  type Persistent,
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
-import { CHARTERS, type CharterDef, type CharterId } from '../data';
+import {
+  BUREAUX,
+  CHARTERS,
+  STEAM_DRAWS,
+  type BureauDef,
+  type BureauId,
+  type CharterDef,
+  type CharterId,
+  type SteamDraw,
+} from '../data';
 
 /**
- * Empire module — what an Exposition never clears: the Emperor's renown and the
- * charters it buys. The works read it; it reads nothing of theirs.
+ * Empire module — what an Exposition never clears: the Emperor's renown, the charters and
+ * the foreman's bureaux it buys, the order steam is shed in, and the Grand Prix once won.
+ * The bureaux are bought in order, because each unlocks the next automation tier. The
+ * works read it; it reads nothing of theirs.
  */
 
 export interface EmpireApi {
   renown: Resource<Decimal>;
-  /** renown ever earned; the raw-output bonus reads it */
+  /** renown ever earned; the raw-output and labour bonus reads it */
   lifetimeRenown: ComputedRef<number>;
   charters: PurchasableCategory<CharterDef>;
   holds(id: CharterId): ComputedRef<boolean>;
+  /** the foreman's bureaux; each opens once every charter is held */
+  bureaux: PurchasableCategory<BureauDef>;
+  employs(id: BureauId): ComputedRef<boolean>;
+  /** what draws steam, first served first: the last is shed first when the boilers fall short */
+  shedOrder: Persistent<SteamDraw[]>;
+  /** whether the 1867 Exposition's Grand Prix has been won */
+  grandPrix: Persistent<boolean>;
 }
 
 export const EmpireKey: InjectionKey<EmpireApi> = Symbol(
@@ -53,12 +74,45 @@ export function createEmpireModule(): EngineModule {
         }),
       });
       charters.register(CHARTERS);
+      const holds = (id: CharterId) => charters.getPurchasable(id)!.active;
+      const chartered = computed(() => CHARTERS.every((c) => holds(c.id).value));
+
+      // The bureaux unlock a ladder of automation tiers, so each is bought after the last.
+      const bureaux = createPurchasableCategory<BureauDef>({
+        id: 'bureaux',
+        mapPurchasable: (def) => {
+          const before = BUREAUX[BUREAUX.findIndex((b) => b.id === def.id) - 1];
+          return {
+            display: { title: def.name, description: def.blurb },
+            requirements: [
+              ...(before
+                ? [
+                    createGateRequirement({
+                      gate: { kind: 'active', category: 'bureaux', entry: before.id },
+                    }),
+                  ]
+                : []),
+              createCostRequirement({ resource: renown, cost: def.cost }),
+            ],
+            visible: () => chartered.value,
+            limit: 1,
+          };
+        },
+      });
+      bureaux.register(BUREAUX);
 
       api = {
         renown,
         lifetimeRenown: computed(() => toNumber(renown.cumulative!.value)),
         charters,
-        holds: (id) => charters.getPurchasable(id)!.active,
+        holds,
+        bureaux,
+        employs: (id) => bureaux.getPurchasable(id)!.active,
+        shedOrder: persistent<SteamDraw[]>(
+          STEAM_DRAWS.map((d) => d.id),
+          { id: 'shedOrder' },
+        ),
+        grandPrix: persistent(false, { id: 'grandPrix' }),
       };
       ctx.provide(EmpireKey, api);
     },

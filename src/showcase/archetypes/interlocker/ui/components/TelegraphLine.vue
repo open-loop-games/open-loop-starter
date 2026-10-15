@@ -1,7 +1,8 @@
 <!--
   TelegraphLine — the works' wire, newest first: patents in chalk,
-  first buildings in line work, Expositions in brass, shortfalls in vermilion. Each wire
-  carries the play clock it was sent at.
+  first buildings in line work, Expositions in brass, the Ministry's orders under a brass
+  rule, the turn of the seasons in italic, shortfalls in vermilion. Each wire carries the
+  play clock it was sent at.
 -->
 <script setup lang="ts">
 import { getTelegraph, getWorks } from '../../modules';
@@ -55,6 +56,15 @@ li {
 }
 .expo .what {
   color: var(--ae-brass);
+}
+.order .what {
+  color: var(--ae-chalk);
+  padding-left: 6px;
+  border-left: 2px solid var(--ae-brass-dim);
+}
+.season .what {
+  font-style: italic;
+  color: var(--ae-drafting-line-faint);
 }
 .warn .what {
   color: var(--ae-vermilion);

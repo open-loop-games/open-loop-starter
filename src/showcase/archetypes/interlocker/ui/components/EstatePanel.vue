@@ -1,5 +1,5 @@
 <!--
-  EstatePanel — the buildings: four raw producers and the two that serve the works, each
+  EstatePanel — the buildings: four raw producers and the three that serve the works, each
   a geometric ladder priced in several stocks. Adopts ProducerList through its `#row`
   slot, because a multi-stock price is a shape the flat row contract cannot hold; the
   price is read back from the engine by CostLine. A building a patent has not opened is
@@ -14,6 +14,7 @@ import {
   BUILDINGS,
   RESEARCH,
   RESOURCES,
+  STEAM_PER_COAL,
   WAREHOUSE_CAP_STEP,
   WORKERS_PER_CITE,
   type BuildingDef,
@@ -50,7 +51,9 @@ const rows: ProducerRowData<EstateExtra>[] = BUILDINGS.map((def) => {
           ? `+${works.yieldEach(def.id).toFixed(2)} ${resName[def.yields]} a second each`
           : def.id === 'warehouse'
             ? `every bin +${Math.round(WAREHOUSE_CAP_STEP * 100)}% of its base`
-            : `+${WORKERS_PER_CITE} compagnons`,
+            : def.id === 'boiler'
+              ? `${STEAM_PER_COAL} steam from each coal it burns`
+              : `+${WORKERS_PER_CITE} compagnons`,
     },
   };
 });

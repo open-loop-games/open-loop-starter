@@ -2,12 +2,24 @@ import type { EngineModule } from '@open-loop/engine';
 import { createTuningModule } from './tuning';
 import { createTelegraphModule } from './telegraph';
 import { createEmpireModule } from './empire';
+import { createCalendarModule } from './calendar';
 import { createWorksModule } from './works';
+import { createMinistryModule } from './ministry';
+import { createAutomationModule } from './automation';
 import { createExpositionModule } from './exposition';
 
 export { InterlockerTuningRegistryKey, type InterlockerTunableKey } from './tuning';
 export { TelegraphKey, getTelegraph, type Notice, type TelegraphApi, type Wire } from './telegraph';
 export { EmpireKey, getEmpire, type EmpireApi } from './empire';
+export { CalendarKey, getCalendar, type CalendarApi } from './calendar';
+export {
+  AutomationKey,
+  getAutomation,
+  empireOf,
+  type AutomationApi,
+  type InterlockerAutomationTier,
+} from './automation';
+export { MinistryKey, getMinistry, type MinistryApi, type Order } from './ministry';
 export {
   WORKS_CONTEXT,
   WorksKey,
@@ -27,7 +39,10 @@ export function createInterlockerModules(): EngineModule[] {
     createTuningModule(),
     createTelegraphModule(),
     createEmpireModule(),
+    createCalendarModule(),
     createWorksModule(),
+    createMinistryModule(),
+    createAutomationModule(),
     createExpositionModule(),
   ];
 }

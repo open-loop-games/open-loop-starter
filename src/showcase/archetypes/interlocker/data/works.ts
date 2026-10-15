@@ -4,14 +4,18 @@
 // data with no engine refs; every number comes from `./spine.ts`.
 
 import {
+  BOILER_GROWTH,
   BUILDING_COST,
+  BUREAU_COST,
   CHARTER_COST,
+  GRAND_PRIX,
   CHARTER_EFFECTS,
   PATRONAGE_WORKERS,
   CITE_GROWTH,
   COST_GROWTH,
   RESEARCH_COST,
   WAREHOUSE_GROWTH,
+  type BureauId,
   type CharterId,
   type Cost,
   type ResourceId,
@@ -100,6 +104,15 @@ export const BUILDINGS: BuildingDef[] = [
     cost: BUILDING_COST.warehouse,
     growth: WAREHOUSE_GROWTH,
     opensWith: 'bonded',
+    start: 0,
+  },
+  {
+    id: 'boiler',
+    name: 'Boiler House',
+    blurb: 'Raises steam from coal for the engine shop, the rigging hall and the mill.',
+    cost: BUILDING_COST.boiler,
+    growth: BOILER_GROWTH,
+    opensWith: 'steam',
     start: 0,
   },
   {
@@ -246,4 +259,58 @@ export const CHARTERS: CharterDef[] = [
     blurb: `Every workshop runs ${Math.round((CHARTER_EFFECTS.ecole - 1) * 100)}% faster.`,
     cost: CHARTER_COST.ecole,
   },
+];
+
+/** What draws steam: two workshops by the cycle, and the rolling mill by the second. */
+export type SteamDraw = 'rigger' | 'machinist' | 'mill';
+
+export const STEAM_DRAWS: { id: SteamDraw; name: string }[] = [
+  { id: 'rigger', name: 'Rigging Hall' },
+  { id: 'machinist', name: 'Engine Shop' },
+  { id: 'mill', name: 'Rolling Mill' },
+];
+
+export interface BureauDef {
+  id: BureauId;
+  name: string;
+  blurb: string;
+  cost: number;
+}
+
+/** The foreman's bureaux: each hands one part of the works' running to him. */
+export const BUREAUX: BureauDef[] = [
+  {
+    id: 'seating',
+    name: 'Le Contremaître',
+    blurb: 'The foreman seats the compagnons along a balanced line.',
+    cost: BUREAU_COST.seating,
+  },
+  {
+    id: 'estate',
+    name: "L'Intendance",
+    blurb:
+      'The steward raises the estate: gardens for the mean season, producers, warehouses and cités. Winter’s larder and the boilers stay yours.',
+    cost: BUREAU_COST.estate,
+  },
+  {
+    id: 'academie',
+    name: 'Le Secrétariat',
+    blurb: "The Académie's secretary patents the path to the riggers as funds allow.",
+    cost: BUREAU_COST.academie,
+  },
+];
+
+export interface MedalDef {
+  /** the least renown the medal pays */
+  renown: number;
+  name: string;
+}
+
+/** The jury's medals, by the renown they pay. The Grand Prix is the 1867 Exposition's. */
+export const MEDALS: MedalDef[] = [
+  { renown: 2, name: 'Bronze medal' },
+  { renown: 4, name: 'Silver medal' },
+  { renown: 8, name: 'Gold medal' },
+  { renown: 16, name: 'Grand medal of honour' },
+  { renown: GRAND_PRIX, name: 'Grand Prix' },
 ];

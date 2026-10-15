@@ -1,17 +1,21 @@
 /**
- * The arc: Exposition after Exposition under the reference foreman (`./_foreman.ts`), on
- * the real engine and modules. Prints every beat, each run's length and build, what bound
+ * The arc: Exposition after Exposition under the shipping automation, forced to its top
+ * tier, with a thin runner for the player's part (`./_foreman.ts`), on the real engine and
+ * modules. Prints every beat and order, each run's length, medal and build, what bound
  * each trade minute by minute, and the end state. Prints; never asserts.
  *
  *   pnpm exec vite-node src/showcase/archetypes/interlocker/balance/arc-probe.ts [expositions] [dt]
  *
- * Defaults: 5 Expositions at a 0.5 s tick, about 2 s. TRACE=1 adds a line a minute.
+ * Defaults: 5 Expositions at a 0.5 s tick, about 3 s; 24 take about 9 s. TRACE=1 adds a
+ * line a minute.
  *
  * Reading it:
- * - § runs prints each run beside the spine's `predictArc`: the arc check. The foreman
- *   raises the build `planFor` gives, so a gap is a model miss, not a plan miss.
+ * - § runs prints each run's length and medal beside the spine's `predictArc`: the arc
+ *   check. The bureaux raise the build `planFor` gives and the runner stages at the medal
+ *   `medalFor` predicts, so a gap is a model miss, not a plan miss.
  * - "bound by" shows each trade's limit, in sampled minutes: `labour` is crew-bound,
- *   `input:x` starved of x, `storage` blocked by a full output bin, `locked` not yet patented.
+ *   `input:x` starved of x, `steam` short of steam, `storage` blocked by a full output bin,
+ *   `locked` not yet patented.
  */
 
 import { RESOURCES, ROLES, predictArc } from '../data';
@@ -37,7 +41,7 @@ console.log('== runs, measured · spine ==');
 const spine = predictArc(arc.expositions.length);
 for (const [i, r] of arc.expositions.entries())
   console.log(
-    `  ${String(i + 1).padStart(2)}: ${fmt(r.runSeconds).padStart(6)} · ${fmt(spine[i]!.seconds).padStart(6)} · ${Math.floor(r.planes)} planes → +${r.renown} · crew ${r.crew} · ${Object.entries(
+    `  ${String(i + 1).padStart(2)}: ${fmt(r.runSeconds).padStart(6)} · ${fmt(spine[i]!.seconds).padStart(6)} · +${r.renown} · +${spine[i]!.renown} · score ${Math.round(r.score)} (dossier ${Math.round(r.dossier)}) · crew ${r.crew} · ${Object.entries(
       r.built,
     )
       .map(([k, v]) => `${k} ${v}`)

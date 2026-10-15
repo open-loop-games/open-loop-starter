@@ -13,6 +13,7 @@ import {
   Formula,
   reactive,
   ref,
+  subtractResource,
   toNumber,
   tunable,
   type ComputedRef,
@@ -27,9 +28,11 @@ import {
 } from '@open-loop/engine';
 import {
   BASE_WORKERS,
+  BOILER_STEAM,
   BUILDINGS,
   CHARTER_EFFECTS,
   COKING_MULT,
+  MILL_LOAD,
   PATRONAGE_WORKERS,
   RECIPES,
   RENOWN_OUTPUT_STEP,
@@ -39,6 +42,8 @@ import {
   RHO_WORKER,
   ROLES,
   ROLLING_MULT,
+  STEAM_DRAWS,
+  STEAM_PER_COAL,
   T_FILL,
   UPKEEP_PER_WORKER,
   WAREHOUSE_CAP_STEP,
@@ -52,7 +57,9 @@ import {
   type ResearchId,
   type ResourceId,
   type RoleId,
+  type SteamDraw,
 } from '../data';
+import { CalendarKey } from './calendar';
 import { EmpireKey } from './empire';
 import { TelegraphKey } from './telegraph';
 import { InterlockerTuningRegistryKey } from './tuning';
@@ -71,6 +78,7 @@ export type Limit =
   | 'labour'
   | 'storage'
   | 'hunger'
+  | 'steam'
   | `input:${ResourceId}`;
 
 export interface RoleStatus {
@@ -97,6 +105,8 @@ export interface WorksApi {
   workersIdle: ComputedRef<number>;
   /** share of the compagnons' ration met last tick, 0..1 */
   fed: Ref<number>;
+  /** steam last tick: what the boilers could raise, what was asked of them, and each draw's share met */
+  steam: { supply: number; demand: number; share: Record<SteamDraw, number> };
   /** seat (positive) or withdraw (negative) compagnons at a trade; returns how many moved */
   assign(role: RoleId, delta: number): number;
   researched(id: ResearchId): ComputedRef<boolean>;
@@ -121,10 +131,11 @@ export function getWorks(): WorksApi {
 export function createWorksModule(): EngineModule {
   return {
     id: WORKS_CONTEXT,
-    dependencies: ['interlocker/empire'],
+    dependencies: ['interlocker/empire', 'interlocker/calendar'],
     install(ctx) {
       const registry = ctx.inject(InterlockerTuningRegistryKey);
       const empire = ctx.inject(EmpireKey);
+      const calendar = ctx.inject(CalendarKey);
       const telegraph = ctx.inject(TelegraphKey);
 
       const rho = tunable(registry, 'works/rho', () => RHO);
@@ -216,14 +227,13 @@ export function createWorksModule(): EngineModule {
       for (const def of RESOURCES) bins.link(def.id, res[def.id]);
 
       // ── raw production: producers whose count is the building ladder's level ──
-      const output = createModifierChain('raw-output');
-      output.bind({
-        text: 'Renown',
-        modifier: createMultiplicativeModifier({
-          multiplier: () => 1 + outputStep.value * empire.lifetimeRenown.value,
-          description: 'Renown',
-        }),
+      // Renown lifts every building's yield and every compagnon's labour alike.
+      const renownLift = createMultiplicativeModifier({
+        multiplier: () => 1 + outputStep.value * empire.lifetimeRenown.value,
+        description: 'Renown',
       });
+      const output = createModifierChain('raw-output');
+      output.bind({ text: 'Renown', modifier: renownLift });
       const raw = createProducerCategory<BuildingDef>({
         id: 'raw',
         registerTick: ctx.onTick,
@@ -235,6 +245,15 @@ export function createWorksModule(): EngineModule {
         }),
         mapState: (def, producer) => {
           producer.rateChain.bind({ text: 'Raw output', modifier: output });
+          if (def.id === 'farm') {
+            producer.rateChain.bind({
+              text: 'Season',
+              modifier: createMultiplicativeModifier({
+                multiplier: () => calendar.yield.value,
+                description: 'Season',
+              }),
+            });
+          }
           if (def.id === 'pit') {
             producer.rateChain.bind({
               text: 'Coking ovens',
@@ -295,6 +314,7 @@ export function createWorksModule(): EngineModule {
       const labour = {} as Record<RoleId, ModifierChain>;
       for (const role of ROLES) {
         labour[role.id] = createModifierChain(`labour/${role.id}`);
+        labour[role.id].bind({ text: 'Renown', modifier: renownLift });
         labour[role.id].bind({
           text: 'École Centrale',
           active: empire.holds('ecole'),
@@ -304,11 +324,18 @@ export function createWorksModule(): EngineModule {
           }),
         });
       }
+      // ── steam: boilers burn coal for what the workshops and the mill draw ──
+      const steam = reactive({
+        supply: 0,
+        demand: 0,
+        share: Object.fromEntries(STEAM_DRAWS.map((d) => [d.id, 1])) as Record<SteamDraw, number>,
+      });
+      // The mill lifts the smelters only as far as it is powered.
       labour.smelter.bind({
         text: 'Sheet rolling mill',
         active: researched('rolling'),
         modifier: createMultiplicativeModifier({
-          multiplier: ROLLING_MULT,
+          multiplier: () => 1 + (ROLLING_MULT - 1) * steam.share.mill,
           description: 'Sheet rolling mill',
         }),
       });
@@ -370,6 +397,34 @@ export function createWorksModule(): EngineModule {
         }
         if (fed.value >= 1) warnedHunger = false;
 
+        // Steam is shared out before the workshops run: each draw asks for its full seated
+        // rate, and the boilers serve them in the shed order, so the last is shed first.
+        // TODO(expansion): a shared budget served by priority (Kittens' energy, Evolve's
+        // power order); no engine primitive allocates a continuous supply among draws.
+        const perSecAt = (role: RoleId) =>
+          toNumber(crew[role].value) *
+          toNumber(labour[role].apply(workerRate.value / recipeDraw(role))) *
+          fed.value;
+        const ask: Record<SteamDraw, number> = {
+          rigger: roleOpen.rigger.value ? perSecAt('rigger') * (RECIPES.rigger.steam ?? 0) : 0,
+          machinist: roleOpen.machinist.value
+            ? perSecAt('machinist') * (RECIPES.machinist.steam ?? 0)
+            : 0,
+          mill: researched('rolling').value ? MILL_LOAD : 0,
+        };
+        steam.supply = Math.min(
+          owned('boiler') * toNumber(output.apply(BOILER_STEAM)),
+          (toNumber(res.coal.value) * STEAM_PER_COAL) / dt,
+        );
+        steam.demand = ask.rigger + ask.machinist + ask.mill;
+        let left = steam.supply;
+        for (const d of empire.shedOrder.value) {
+          const got = Math.min(ask[d], left);
+          left -= got;
+          steam.share[d] = ask[d] > 0 ? got / ask[d] : 1;
+        }
+        let drawn = steam.share.mill * ask.mill * dt;
+
         // TODO(expansion): continuous converter (candidate-primitives.md). A workshop's
         // throughput is the minimum over crew × rate × fed, each input's stock, and the
         // output bin's room; createConversion is one-shot, so the batch is sized here.
@@ -389,6 +444,10 @@ export function createWorksModule(): EngineModule {
             seated * toNumber(labour[role.id].apply(workerRate.value / recipeDraw(role.id)));
           let cycles = perSec * fed.value * dt;
           let limit: Limit = fed.value < 1 ? 'hunger' : 'labour';
+          if (rec.steam && steam.share[role.id as SteamDraw] < 1) {
+            cycles *= steam.share[role.id as SteamDraw];
+            limit = 'steam';
+          }
           for (const [id, qty] of Object.entries(rec.inputs)) {
             const afford = toNumber(res[id as ResourceId].value) / qty;
             if (afford < cycles) {
@@ -406,9 +465,14 @@ export function createWorksModule(): EngineModule {
           if (cycles > 1e-12) {
             batch[role.id].value = cycles;
             exchange[role.id].convert();
+            drawn += cycles * (rec.steam ?? 0);
           }
           Object.assign(st, { cyclesPerSec: cycles / dt, capacityPerSec: perSec, limit });
         }
+
+        // The boilers burn the coal for the steam drawn; the workshops have eaten first.
+        const burn = Math.min(drawn / STEAM_PER_COAL, toNumber(res.coal.value));
+        if (burn > 0) subtractResource(res.coal, burn);
 
         for (const def of RESOURCES)
           net[def.id] = (toNumber(res[def.id].value) - before[def.id]) / dt;
@@ -428,6 +492,7 @@ export function createWorksModule(): EngineModule {
         workersTotal,
         workersIdle,
         fed,
+        steam,
         assign(role, delta) {
           if (!roleOpen[role].value) return 0;
           return delta > 0

@@ -17,7 +17,7 @@ directions it grows through. Start there.
 | `cycler`   | Day and night on one rock: build against the forecast gale, weather the storm, and close the career by holding the light through a final gale |
 | `defender` | Maze tower defence: commit the planting by day, watch the night resolve |
 | `explorer` | A fogged map uncovered on jerky and water; what a trip finds banks only at home |
-| `interlocker` | A production graph drawn as a cyanotype: workshops, patents, a seated crew and bins, with an Exposition that clears the works |
+| `interlocker` | A production graph drawn as a cyanotype: workshops, patents, a seated crew, steam, seasons and bins, with Ministry orders, a medal-paying Exposition and an ending |
 | `looper`   | Authored plan run against a draining budget; mastery survives the reset |
 | `phase-shifter` | One-way doors: a reader, then an arranger, then a planner, each retiring the last |
 | `producer` | Geometric cost ladder under a compounding multiplier stack           |

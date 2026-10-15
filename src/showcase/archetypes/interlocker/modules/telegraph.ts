@@ -12,7 +12,7 @@ import {
  * other modules send down it. It reads none of them.
  */
 
-export type Notice = 'research' | 'build' | 'expo' | 'warn';
+export type Notice = 'research' | 'build' | 'expo' | 'order' | 'season' | 'warn';
 
 export interface Wire {
   id: number;
@@ -49,6 +49,8 @@ export function createTelegraphModule(): EngineModule {
       const log = shallowRef<Wire[]>([]);
       let wireId = 0;
       ctx.onTick((dt) => time.tick(dt));
+      // The wire is the session's, not the save's: a slot loaded or begun starts it empty.
+      ctx.onLoad(() => (log.value = []));
 
       api = {
         time,

@@ -1,28 +1,17 @@
 /**
  * Shared probe fixture — not runnable on its own.
  *
- * Builds a real interlocker engine and plays it Exposition after Exposition under a
- * foreman. The foreman is balance-harness tooling, not a mechanic: the Aluminium Empire
- * ships no automation. He plays the spine's reference player, so his rules are the
- * spine's assumptions, and he raises the build `planFor` gives his empire:
- * - once a second he patents Cités Ouvrières as soon as he can, then every patent he can
- *   afford on the path to the riggers. Coking Ovens and the Rolling Mill take only what
- *   the next patent on the path leaves;
- * - he saves for the cheapest building he wants, by raw value. He wants a market garden
- *   while the gardens feed less than the ration plus GARDEN_LEAD seconds of the next
- *   cité's bread, a cité while no compagnon is idle and the gardens keep up, and
- *   warehouses and raw producers up to the plan, a producer only while its bin is under
- *   90% full;
- * - housing comes first: while the cités patent or a wanted cité is short, nothing else
- *   may spend what it needs, because a cité's compagnons work the whole rest of the run;
- * - he seats compagnons on the most under-weighted open trade. The weights balance one
- *   rigger against the trades that feed him, from the spine's role rates. While a raw
- *   bin is under half full, a trade takes no more seats than draw half that stock's
- *   yield, so the purse keeps filling. He withdraws crew from a trade whose output bin
- *   is full, and moves one compagnon a second from the most over-weighted trade when the
- *   gap is wide;
- * - he stages the Exposition as soon as it pays, then petitions the charters in their
- *   listed order, saving for each before the next.
+ * Builds a real interlocker engine and plays it Exposition after Exposition. The
+ * automation tiers are forced to the top, so the foreman's three bureaux play the works
+ * with the shipping policies of `../modules/automation.ts`. This runner works only what
+ * stays the player's:
+ * - it raises a market garden while the gardens at winter's yield, with a full larder,
+ *   cannot carry the crew through a season, and a Boiler House while the boilers fall
+ *   short of what is drawn;
+ * - it delivers every Ministry order the bins can fill;
+ * - it stages the Exposition once the jury sits and the medal reaches the one the spine
+ *   predicts this empire's run shows (`medalFor`);
+ * - it petitions the charters in their listed order, then the bureaux.
  *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list for
  * tick-by-tick behavioral specs; this plays an arc and records magnitudes.
@@ -33,28 +22,29 @@ import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
   BUILDINGS,
+  BUREAUX,
   CHARTERS,
-  GARDEN_LEAD,
-  RAW,
-  RAW_EQ,
-  RECIPES,
   RESEARCH,
   RESOURCES,
   ROLES,
-  ROLE_RATE,
+  SEASON_SECONDS,
+  SEASON_YIELD,
   UPKEEP_PER_WORKER,
-  planFor,
+  medalFor,
   type BuildingId,
   type CharterId,
-  type Cost,
-  type Empire,
   type ResourceId,
   type RoleId,
 } from '../data';
 import {
   createInterlockerModules,
+  empireOf,
+  getAutomation,
+  getCalendar,
   getEmpire,
   getExposition,
+  getMinistry,
+  getTelegraph,
   getWorks,
   type Limit,
 } from '../modules';
@@ -69,6 +59,9 @@ export interface ExpositionRecord {
   /** seconds the run took */
   runSeconds: number;
   planes: number;
+  /** the jury's score, and the dossier's part of it */
+  score: number;
+  dossier: number;
   renown: number;
   built: Record<BuildingId, number>;
   crew: number;
@@ -137,166 +130,45 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     for (const c of start.charters) empire.charters.getPurchasable(c)!.count.value = 1;
   }
   const owned = (id: BuildingId) => works.owned(id);
-  const empireNow = (): Empire => ({
-    renown: empire.lifetimeRenown.value,
-    charters: CHARTERS.filter((c) => empire.holds(c.id).value).map((c) => c.id),
-  });
-  let plan = planFor(empireNow());
+  const ministry = getMinistry();
+  const telegraph = getTelegraph();
+  let lastWire = 0;
+  const calendar = getCalendar();
+  getAutomation().tiers.unlock('academie');
+  let medal = medalFor(empireOf(empire));
 
-  // ── the foreman ──
+  // ── the player's part ──
 
-  // Crew weights for a balanced line, from the spine: compagnons per rigger that keep each
-  // upstream trade matched (an aeroplane needs 4 spars, 2 aluminium + 3 per engine, 1 engine).
-  const perPlane = ROLE_RATE.rigger;
-  const WEIGHT: Record<RoleId, number> = {
-    rigger: 1,
-    machinist: perPlane / ROLE_RATE.machinist,
-    smelter: (perPlane * (2 + 3)) / ROLE_RATE.smelter,
-    sawyer: (perPlane * 4) / ROLE_RATE.sawyer,
-  };
-
-  // Below half a bin, a trade draws at most this share of a raw stock's yield.
-  const PURSE_SHARE = 0.5;
-  const rawYield = (k: ResourceId) =>
-    BUILDINGS.filter((b) => b.yields === k).reduce(
-      (s, b) => s + owned(b.id) * works.yieldEach(b.id),
-      0,
-    );
-  function seatCap(role: RoleId): number {
-    const rec = RECIPES[role];
-    const seated = n(works.crew[role].value);
-    const perSeat = seated > 0 ? works.roleStatus[role].capacityPerSec / seated : ROLE_RATE[role];
-    let cap = Infinity;
-    for (const [k, q] of Object.entries(rec.inputs))
-      if (
-        RAW.includes(k as ResourceId) &&
-        n(works.res[k as ResourceId].value) < 0.5 * works.cap[k as ResourceId].value
-      )
-        cap = Math.min(cap, Math.floor((PURSE_SHARE * rawYield(k as ResourceId)) / (perSeat * q)));
-    return cap;
-  }
-
-  function rebalance(): void {
-    for (const r of ROLES) {
-      const over = n(works.crew[r.id].value) - seatCap(r.id);
-      if (over > 0) works.assign(r.id, -over);
-    }
-    const open = ROLES.map((r) => r.id).filter(
-      (r) =>
-        works.roleOpen[r].value &&
-        works.roleStatus[r].limit !== 'storage' &&
-        n(works.crew[r].value) < seatCap(r),
-    );
-    const share = (r: RoleId) => n(works.crew[r].value) / WEIGHT[r];
-    for (const r of ROLES)
-      if (works.roleStatus[r.id].limit === 'storage' && n(works.crew[r.id].value) > 0)
-        works.assign(r.id, -1);
-    let guard = 50;
-    while (works.workersIdle.value >= 1 && guard-- > 0) {
-      const room = open.filter((r) => n(works.crew[r].value) < seatCap(r));
-      if (!room.length) break;
-      const target = room.sort((a, b) => share(a) - share(b))[0]!;
-      if (works.assign(target, 1) === 0) break;
-    }
-    if (open.length > 1) {
-      const sorted = [...open].sort((a, b) => share(a) - share(b));
-      const lo = sorted[0]!;
-      const hi = sorted[sorted.length - 1]!;
-      if (
-        n(works.crew[hi].value) > 1 &&
-        n(works.crew[lo].value) < seatCap(lo) &&
-        share(hi) - share(lo) > 1.5 / WEIGHT[hi]
-      ) {
-        works.assign(hi, -1);
-        works.assign(lo, 1);
-      }
-    }
-  }
-
-  function want(id: BuildingId): boolean {
-    const ration = works.workersTotal.value * UPKEEP_PER_WORKER;
-    const farmsFeed = owned('farm') * works.yieldEach('farm');
-    switch (id) {
-      case 'farm': {
-        const site = BUILDINGS.find((b) => b.id === 'cite')!;
-        const nextBread = (site.cost.bread ?? 0) * Math.pow(site.growth, owned('cite'));
-        return farmsFeed < ration + nextBread / GARDEN_LEAD;
-      }
-      case 'cite':
-        return works.workersIdle.value < 1 && farmsFeed >= ration;
-      case 'warehouse':
-        return owned(id) < plan.warehouse;
-      default: {
-        const yields = BUILDINGS.find((b) => b.id === id)!.yields!;
-        return owned(id) < plan[id] && n(works.res[yields].value) < works.cap[yields].value * 0.9;
-      }
-    }
-  }
-
-  function value(id: BuildingId): number {
-    const def = BUILDINGS.find((b) => b.id === id)!;
-    const base = Object.entries(def.cost).reduce((s, [k, v]) => s + RAW_EQ[k as ResourceId] * v, 0);
-    return base * Math.pow(def.growth, owned(id));
-  }
-
-  const priceNow = (b: (typeof BUILDINGS)[number]): Cost =>
-    Object.fromEntries(
-      Object.entries(b.cost).map(([k, v]) => [k, v * Math.pow(b.growth, owned(b.id) - b.start)]),
-    );
-  function housing(): Cost | undefined {
-    const pat = works.research.getPurchasable('cites')!;
-    if (!pat.active.value)
-      return works.researched('sawpit').value
-        ? RESEARCH.find((r) => r.id === 'cites')!.cost
-        : undefined;
-    return want('cite') ? priceNow(BUILDINGS.find((b) => b.id === 'cite')!) : undefined;
-  }
-  function leaves(cost: Cost, reserve: Cost | undefined): boolean {
-    if (!reserve) return true;
-    return Object.entries(cost).every(
-      ([k, v]) =>
-        !(k in reserve) || n(works.res[k as ResourceId].value) - v >= reserve[k as ResourceId]!,
-    );
-  }
-
-  function buy(): void {
-    const cites = works.research.getPurchasable('cites')!;
-    if (cites.canPurchase.value) cites.purchase(1);
-    const cite = works.buildings.getPurchasable('cite')!;
-    if (cite.visible.value && cite.canPurchase.value && want('cite')) cite.purchase(1);
-    const reserve = housing();
-    // The climb comes before the investments: Coking Ovens and the Rolling Mill take only
-    // what the next patent on the path to the riggers leaves.
-    const next = RESEARCH.find(
-      (r) =>
-        r.id !== 'coking' &&
-        r.id !== 'rolling' &&
-        !works.researched(r.id).value &&
-        r.requires.every((q) => works.researched(q).value),
-    );
-    for (const r of RESEARCH) {
-      const p = works.research.getPurchasable(r.id)!;
-      const investment = r.id === 'coking' || r.id === 'rolling';
-      if (
-        p.canPurchase.value &&
-        leaves(r.cost, reserve) &&
-        (!investment || !next || leaves(r.cost, next.cost))
-      )
-        p.purchase(1);
-    }
-    const wanted = BUILDINGS.filter((b) => {
-      const p = works.buildings.getPurchasable(b.id)!;
-      return p.visible.value && want(b.id) && (b.id === 'cite' || leaves(priceNow(b), reserve));
-    }).sort((a, b) => value(a.id) - value(b.id));
-    const first = wanted[0] && works.buildings.getPurchasable(wanted[0].id)!;
-    if (first?.canPurchase.value) first.purchase(1);
-    // Charters in their listed order, each saved for before the next.
-    for (const c of start ? [] : CHARTERS) {
+  function petition(): void {
+    if (start) return;
+    for (const c of CHARTERS) {
       const p = empire.charters.getPurchasable(c.id)!;
       if (p.active.value) continue;
-      if (!p.canPurchase.value) break;
+      if (!p.canPurchase.value) return;
       p.purchase(1);
     }
+    for (const b of BUREAUX) {
+      const p = empire.bureaux.getPurchasable(b.id)!;
+      if (p.active.value) continue;
+      if (!p.canPurchase.value) return;
+      p.purchase(1);
+    }
+  }
+  function provision(): void {
+    const farm = works.buildings.getPurchasable('farm')!;
+    const perFarm = (works.yieldEach('farm') / calendar.yield.value) * SEASON_YIELD.winter;
+    const ration = works.workersTotal.value * UPKEEP_PER_WORKER;
+    if (
+      owned('farm') * perFarm + works.cap.bread.value / SEASON_SECONDS < ration &&
+      farm.canPurchase.value
+    )
+      farm.purchase(1);
+    const boiler = works.buildings.getPurchasable('boiler')!;
+    if (works.steam.demand > works.steam.supply && boiler.visible.value && boiler.canPurchase.value)
+      boiler.purchase(1);
+  }
+  function deliver(): void {
+    for (const o of ministry.orders.value) if (ministry.canDeliver(o.id)) ministry.deliver(o.id);
   }
 
   // ── accounting ──
@@ -332,8 +204,16 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     handle.engine.tickDriver.tickOnce();
     sim += dt;
     if (Math.round(sim * 2) % 2 === 0) {
-      buy();
-      rebalance();
+      provision();
+      deliver();
+    }
+    const wire = telegraph.log.value[0];
+    if (wire && wire.id !== lastWire) {
+      for (const w of telegraph.log.value) {
+        if (w.id <= lastWire) break;
+        if (w.kind === 'order') beats.push([sim, `run ${records.length + 1}: ${w.text}`]);
+      }
+      lastWire = wire.id;
     }
     const run = records.length + 1;
     for (const b of BUILDINGS)
@@ -345,24 +225,34 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
         `run ${run}: patent ${r.name}`,
       );
     once(`plane-${run}`, n(works.res.aeroplanes.value) >= 1, `run ${run}: first aeroplane`);
+    once(`dossier-${run}`, ministry.dossier.value > 0, `run ${run}: first order delivered`);
+    for (const c of CHARTERS)
+      once(`charter-${c.id}`, empire.holds(c.id).value, `charter ${c.name} held`);
+    for (const b of BUREAUX)
+      once(`bureau-${b.id}`, empire.employs(b.id).value, `bureau ${b.name} employed`);
+    once('grand-prix', empire.grandPrix.value, 'THE GRAND PRIX, Paris 1867');
     once(
       `hunger-${run}`,
       works.fed.value < 1,
       `run ${run}: the compagnons go hungry (fed ${works.fed.value.toFixed(2)})`,
     );
 
-    if (expo.canStage.value && expo.gain.value >= 2) {
+    if (expo.canStage.value && expo.gain.value >= medal) {
       const planes = n(works.res.aeroplanes.value);
       const atBuilt = built();
       const crew = works.workersTotal.value;
+      const score = expo.score.value;
+      const dossier = ministry.dossier.value;
       const gain = expo.stage();
       const runSeconds = sim - runStart;
-      buy(); // charters before the next run starts
-      plan = planFor(empireNow());
+      petition();
+      medal = medalFor(empireOf(empire));
       records.push({
         at: sim,
         runSeconds,
         planes,
+        score,
+        dossier,
         renown: gain,
         built: atBuilt,
         crew,
@@ -375,7 +265,7 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
       const r = records[records.length - 1]!;
       beats.push([
         sim,
-        `EXPOSITION ${records.length}: ${planes.toFixed(0)} planes -> +${gain} renown (run ${fmt(r.runSeconds)}; built ${Object.entries(
+        `EXPOSITION ${records.length} (${calendar.season.value} ${calendar.year.value}): score ${score.toFixed(0)} (dossier ${dossier.toFixed(0)}) -> +${gain} renown (run ${fmt(r.runSeconds)}; built ${Object.entries(
           atBuilt,
         )
           .map(([k, v]) => `${k} ${v}`)

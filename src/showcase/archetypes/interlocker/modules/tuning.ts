@@ -16,7 +16,9 @@ import {
  *   - `storage/fillSeconds`     seconds of one raw building a base bin holds
  *   - `storage/warehouseStep`   the share of its base each warehouse adds to every bin
  *   - `expo/threshold`          aeroplanes in the hangar an Exposition needs
- *   - `renown/outputStep`       raw output added per lifetime renown
+ *   - `renown/outputStep`       raw output and labour added per lifetime renown
+ *   - `expo/jurySitting`        seconds the jury takes between Expositions
+ *   - `ministry/orderPeriod`    seconds between the Ministry's offers
  *
  * Prices are not keyed. They are multiples of C0 = RHO · T_FIRST fixed in `../data/spine.ts`
  * at load, so perturbing them means editing the spine and rerunning the projection.
@@ -28,7 +30,9 @@ export type InterlockerTunableKey =
   | 'storage/fillSeconds'
   | 'storage/warehouseStep'
   | 'expo/threshold'
-  | 'renown/outputStep';
+  | 'renown/outputStep'
+  | 'expo/jurySitting'
+  | 'ministry/orderPeriod';
 
 export const InterlockerTuningRegistryKey: InjectionKey<TuningRegistry> = Symbol(
   'interlocker/tuning-registry',

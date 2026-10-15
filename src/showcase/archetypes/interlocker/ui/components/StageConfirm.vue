@@ -7,7 +7,7 @@
 import { DialogTitle } from 'reka-ui';
 import Button from '@/ui/components/Button.vue';
 
-defineProps<{ renown: number; planes: number; kept: string[] }>();
+defineProps<{ renown: number; medal?: string; planes: number; kept: string[] }>();
 const emit = defineEmits<{ stage: []; cancel: [] }>();
 </script>
 
@@ -15,8 +15,12 @@ const emit = defineEmits<{ stage: []; cancel: [] }>();
   <div class="interlocker ae-stage-confirm">
     <DialogTitle as-child><h2 class="ae-lettering">Stage the Exposition?</h2></DialogTitle>
     <p>
-      <span class="ae-figure">{{ planes }}</span> aeroplanes go before the Emperor for
-      <span class="ae-figure gain">{{ renown }}</span> renown. The works are then cleared to the
+      <span class="ae-figure">{{ planes }}</span> aeroplanes go before the Emperor<template
+        v-if="medal"
+      >
+        for the <span class="gain">{{ medal }}</span></template
+      >
+      and <span class="ae-figure gain">{{ renown }}</span> renown. The works are then cleared to the
       ground: stock, buildings, compagnons<template v-if="!kept.length"> and every patent</template
       ><template v-else> and every patent but {{ kept.join(', ') }}</template
       >.

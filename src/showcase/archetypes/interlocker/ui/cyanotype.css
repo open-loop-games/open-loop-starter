@@ -308,10 +308,11 @@
   min-width: 0;
 }
 
-/* ── the Exposition's confirmation, on the scaffold's modal stack ──
-   The stack portals to <body>, outside `.interlocker`; the confirmation's own root carries
+/* ── the Exposition's confirmation and the Grand Prix, on the scaffold's modal stack ──
+   The stack portals to <body>, outside `.interlocker`; each dialog's own root carries
    the class, and this rule dresses the box it is mounted in. */
-.olui-modal-content:has(.ae-stage-confirm) {
+.olui-modal-content:has(.ae-stage-confirm),
+.olui-modal-content:has(.ae-grand-prix) {
   padding: 0;
   background: #10294a;
   border: 1px solid #24486f;
