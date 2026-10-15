@@ -9,10 +9,11 @@
 import { computed, ref } from 'vue';
 import Button from '@/ui/components/Button.vue';
 import ProducerList from '@/ui/compositions/ProducerList.vue';
+import { formatGrouped } from '@/composables/useFormatting';
 import { BOARD_SIDE, CARD_BY_ID, DECK, cellAt, pinGain, stringStrength } from '../../data';
 import { getBoard } from '../../modules';
-import { cardRow, type CardExtra } from '../cards';
-import { rate, whole } from '../format';
+import { cardRow } from '../cards';
+import { rate } from '../format';
 import FactCard from '../components/FactCard.vue';
 import IndexCard from '../components/IndexCard.vue';
 import Ledger from '../components/Ledger.vue';
@@ -20,7 +21,7 @@ import Ledger from '../components/Ledger.vue';
 const board = getBoard();
 
 const ledger = computed(() => [
-  { label: 'leads', value: whole(board.leads.value) },
+  { label: 'leads', value: formatGrouped(board.leads.value) },
   { label: 'string earns', value: `${rate(board.rate.value)}/s` },
   { label: 'cards written', value: `${board.written.value} / ${DECK.length}` },
   { label: 'in the inbox', value: String(board.inbox.value.length), automated: true },
@@ -162,9 +163,9 @@ const rows = [wall];
         <p v-if="!board.inbox.value.length" class="empty">Nothing waiting.</p>
       </aside>
     </div>
-    <ProducerList :rows="rows" cost-label="" bulk-mode-source="none">
+    <ProducerList :rows="rows" bulk-mode-source="none">
       <template #row="{ row, purchase }">
-        <IndexCard :card="row.extra as CardExtra" :can="row.canPurchase(1)" @buy="purchase()" />
+        <IndexCard :card="row.extra!" :can="row.canPurchase(1)" @buy="purchase()" />
       </template>
     </ProducerList>
   </section>

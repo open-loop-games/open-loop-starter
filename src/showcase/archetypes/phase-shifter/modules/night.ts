@@ -21,6 +21,7 @@ import {
   type Ref,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   HOURS,
@@ -94,11 +95,10 @@ export const NightKey: InjectionKey<NightApi> = Symbol(
   'phase-shifter/night',
 ) as InjectionKey<NightApi>;
 
-let api: NightApi;
+const nightApi = createModuleApi(NightKey);
 
-export function getNight(): NightApi {
-  return api;
-}
+/** The stakeout, the night cycle and the alibis. Read it after the engine starts. */
+export const getNight = nightApi.get;
 
 export function createNightModule(): EngineModule {
   return {
@@ -262,7 +262,7 @@ export function createNightModule(): EngineModule {
       );
 
       const watchLive = life.isLive('watch');
-      api = {
+      const api: NightApi = {
         accounts,
         unfiled,
         cycle,
@@ -305,7 +305,7 @@ export function createNightModule(): EngineModule {
           search,
         }),
       };
-      ctx.provide(NightKey, api);
+      nightApi.publish(ctx, api);
     },
   };
 }

@@ -20,11 +20,12 @@ describe('the box', () => {
 
   it('gives up its fragments to the case log as it is read', () => {
     const box = getBox();
-    const { lines } = getCase();
+    const { log } = getCase();
     const [, first] = BOX_FRAGMENTS[0];
-    expect(lines.value).not.toContain(first);
+    const texts = () => log.lines.value.map((l) => l.text);
+    expect(texts()).not.toContain(first);
     box.read();
-    expect(lines.value).toContain(first);
+    expect(texts()).toContain(first);
   });
 
   it('is read by the clerks without a hand on it', async () => {

@@ -5,9 +5,9 @@
   door opens, the ending replaces all of it.
 -->
 <script setup lang="ts">
-import { computed, inject } from 'vue';
-import type { Engine } from '@open-loop/engine';
+import { computed } from 'vue';
 import { SingleColumnShell } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
 import { bestCell, planWatches } from '../data';
 import { getAutomation, getBoard, getBox, getCase, getNight } from '../modules';
 import BoxPanel from './panels/BoxPanel.vue';
@@ -25,18 +25,14 @@ const phase = kase.life.doorsOpened;
 // The corkboard needs the room; the other phases read best narrow.
 const width = computed(() => (phase.value === 1 ? '880px' : '700px'));
 
-// Dev-only state hook for browser probes: reads live module state without an
-// `import()` that Vite's module cache could serve stale.
+// Dev-only state hook for browser probes, on window.__game.
 if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
-  (window as unknown as Record<string, unknown>).__nightClerk = {
+  useDevHandle({
     case: kase,
     box: getBox(),
     board: getBoard(),
     night: getNight(),
     automation: getAutomation(),
-    engine,
-    skip: (seconds: number) => engine.tickDriver.advanceTime(seconds),
     /** Pin the inbox as the spine's reference player does. */
     arrange: () => {
       const board = getBoard();
@@ -48,7 +44,7 @@ if (import.meta.env.DEV) {
     },
     /** Plan tonight as the spine's reference player does. */
     plan: () => getNight().setPlan(planWatches(getNight().view(true))),
-  };
+  });
 }
 </script>
 

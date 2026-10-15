@@ -116,6 +116,23 @@
   border-bottom: 1px solid var(--nc-soot-edge);
   background: var(--nc-soot);
 }
+.phase-shifter .olui-system-header .olui-system-header__title-btn {
+  gap: 12px;
+}
+.phase-shifter .olui-system-header .olui-system-header__title,
+.phase-shifter .olui-system-header .olui-system-header__title-btn:hover .olui-system-header__title {
+  margin: 0;
+  font-weight: 500;
+  font-size: 26px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nc-manila);
+  line-height: 1;
+}
+.phase-shifter .olui-system-header .olui-system-header__subtitle {
+  font-size: 15px;
+  color: var(--nc-carbon);
+}
 .phase-shifter .olui-system-header__actions {
   align-items: center;
   gap: 16px;

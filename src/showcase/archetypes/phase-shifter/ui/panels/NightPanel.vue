@@ -12,6 +12,7 @@ import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import ProducerList from '@/ui/compositions/ProducerList.vue';
 import UpgradeGrid from '@/ui/compositions/UpgradeGrid.vue';
+import { formatGrouped } from '@/composables/useFormatting';
 import {
   CARD_BY_ID,
   HOURS,
@@ -23,8 +24,8 @@ import {
   type Hour,
 } from '../../data';
 import { getAutomation, getBoard, getNight } from '../../modules';
-import { cardOnce, cardRow, type CardExtra } from '../cards';
-import { nightClock, whole } from '../format';
+import { cardOnce, cardRow } from '../cards';
+import { nightClock } from '../format';
 import IndexCard from '../components/IndexCard.vue';
 import Ledger from '../components/Ledger.vue';
 
@@ -33,8 +34,8 @@ const board = getBoard();
 const { tiers } = getAutomation();
 
 const ledger = computed(() => [
-  { label: 'accounts', value: whole(night.accounts.value) },
-  { label: 'unfiled tonight', value: whole(night.unfiled.value) },
+  { label: 'accounts', value: formatGrouped(night.accounts.value) },
+  { label: 'unfiled tonight', value: formatGrouped(night.unfiled.value) },
   { label: 'clerks posted', value: `${night.plan.value.length} / ${night.roster.value}` },
   {
     label: 'alibis holding',
@@ -159,18 +160,14 @@ const cap = computed(() => new Decimal(night.strainCap.value).toNumber());
       </span>
     </div>
 
-    <ProducerList :rows="rows" cost-label="" bulk-mode-source="none">
+    <ProducerList :rows="rows" bulk-mode-source="none">
       <template #row="{ row, purchase }">
-        <IndexCard :card="row.extra as CardExtra" :can="row.canPurchase(1)" @buy="purchase()" />
+        <IndexCard :card="row.extra!" :can="row.canPurchase(1)" @buy="purchase()" />
       </template>
     </ProducerList>
     <UpgradeGrid v-if="cards.length" :cards="cards" :columns="1" reveal="inline">
       <template #card="{ card }">
-        <IndexCard
-          :card="card.extra as CardExtra"
-          :can="card.canPurchase.value"
-          @buy="card.purchase()"
-        />
+        <IndexCard :card="card.extra!" :can="card.canPurchase.value" @buy="card.purchase()" />
       </template>
     </UpgradeGrid>
 

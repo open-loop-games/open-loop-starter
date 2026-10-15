@@ -5,8 +5,9 @@ import {
   type ComputedRef,
   type EngineModule,
   type InjectionKey,
-  type Persistent,
 } from '@open-loop/engine';
+import { createEventLog, type EventLog } from '@/modules/event-log';
+import { createModuleApi } from '@/modules/module-api';
 import { BOX_PAGES, ENDING, OPENING, RECONSTRUCT_LEADS, SUSPECTS, doorDefs } from '../data';
 import { createLifecycle, type Lifecycle } from './lifecycle';
 
@@ -18,8 +19,9 @@ import { createLifecycle, type Lifecycle } from './lifecycle';
  */
 export interface CaseApi {
   life: Lifecycle;
-  /** The carbon: oldest line first, capped. */
-  lines: Persistent<string[]>;
+  /** The carbon, saved with the game. */
+  log: EventLog;
+  /** Type lines onto the carbon, in order. */
   write(...text: string[]): void;
   /** The last page is read: nothing ticks again. */
   closed: ComputedRef<boolean>;
@@ -32,19 +34,24 @@ const LOG_LIMIT = 80;
 
 export const CaseKey: InjectionKey<CaseApi> = Symbol('phase-shifter/case') as InjectionKey<CaseApi>;
 
-let api: CaseApi;
+const caseApi = createModuleApi(CaseKey);
 
-export function getCase(): CaseApi {
-  return api;
-}
+/** The case file: the carbon, the door ladder, and whether the case is closed. Read it after the engine starts. */
+export const getCase = caseApi.get;
 
 export function createCaseModule(): EngineModule {
   return {
     id: 'phase-shifter/case',
     install(ctx) {
-      const lines = persistent<string[]>([...OPENING], { id: 'lines' });
+      const log = createEventLog(ctx, {
+        cap: LOG_LIMIT,
+        // The carbon is untimed: no line shows when it was typed.
+        clock: () => 0,
+        persistId: 'log',
+        initial: OPENING,
+      });
       const write = (...text: string[]) => {
-        lines.value = [...lines.value, ...text].slice(-LOG_LIMIT);
+        for (const line of text) log.post(line);
       };
       const life = createLifecycle(
         doorDefs({
@@ -68,8 +75,8 @@ export function createCaseModule(): EngineModule {
         driver.stop();
       };
 
-      api = { life, lines, write, closed, close };
-      ctx.provide(CaseKey, api);
+      const api: CaseApi = { life, log, write, closed, close };
+      caseApi.publish(ctx, api);
     },
   };
 }

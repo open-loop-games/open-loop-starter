@@ -4,12 +4,13 @@
 -->
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue';
+import EventLog from '@/ui/compositions/EventLog.vue';
 import { getCase } from '../../modules';
 
-const { lines } = getCase();
+const { lines } = getCase().log;
 const el = ref<HTMLElement>();
 watch(
-  () => lines.value.length,
+  () => lines.value.at(-1)?.seq,
   () => nextTick(() => el.value?.scrollTo({ top: el.value.scrollHeight })),
   { immediate: true },
 );
@@ -18,9 +19,7 @@ watch(
 <template>
   <section ref="el" class="nc-log" aria-label="Case log">
     <h2 class="nc-label">Carbon &mdash; case log</h2>
-    <p v-for="(line, i) in lines" :key="i" :class="{ fresh: i === lines.length - 1 }">
-      {{ line }}
-    </p>
+    <EventLog :lines="lines" order="chronological" />
   </section>
 </template>
 
@@ -44,10 +43,15 @@ watch(
   background: var(--nc-carbon-paper);
   font-family: var(--nc-face-book);
 }
-.nc-log p {
-  margin: 0 0 7px;
+.nc-log :deep(.event-log) {
+  gap: 0;
 }
-.nc-log p.fresh {
+.nc-log :deep(.event-log__row) {
+  display: block;
+  margin: 0 0 7px;
+  color: inherit;
+}
+.nc-log :deep(.event-log__row--fresh) {
   color: var(--nc-paper);
   animation: nc-arrive 600ms ease-out both;
 }

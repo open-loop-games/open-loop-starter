@@ -17,6 +17,7 @@ import {
   type Purchasable,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   BOX_FRAGMENTS,
@@ -53,11 +54,10 @@ export interface BoxApi {
 
 export const BoxKey: InjectionKey<BoxApi> = Symbol('phase-shifter/box') as InjectionKey<BoxApi>;
 
-let api: BoxApi;
+const boxApi = createModuleApi(BoxKey);
 
-export function getBox(): BoxApi {
-  return api;
-}
+/** The box, its reading verb and the clerks. Read it after the engine starts. */
+export const getBox = boxApi.get;
 
 export function createBoxModule(): EngineModule {
   return {
@@ -133,7 +133,7 @@ export function createBoxModule(): EngineModule {
 
       const readLive = life.isLive('read');
       const lastLive = life.isLive('last-page');
-      api = {
+      const api: BoxApi = {
         pages,
         pagesRead,
         notes,
@@ -152,7 +152,7 @@ export function createBoxModule(): EngineModule {
           return true;
         },
       };
-      ctx.provide(BoxKey, api);
+      boxApi.publish(ctx, api);
     },
   };
 }

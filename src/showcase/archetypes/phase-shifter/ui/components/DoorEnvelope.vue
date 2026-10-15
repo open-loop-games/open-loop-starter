@@ -8,9 +8,9 @@ import { computed } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
+import { formatGrouped } from '@/composables/useFormatting';
 import { BOX_PAGES, RECONSTRUCT_LEADS, SUSPECTS } from '../../data';
 import { getBoard, getBox, getCase, getNight } from '../../modules';
-import { whole } from '../format';
 
 const { life } = getCase();
 const box = getBox();
@@ -53,7 +53,8 @@ const door = computed(() => {
       <span class="title">{{ door.ready ? door.def.title : 'Something is taking shape' }}</span>
       <span v-if="door.ready" class="description">{{ door.def.description }}</span>
       <span class="seal nc-num">
-        {{ whole(Decimal.min(door.have, door.need)) }} / {{ whole(door.need) }} {{ door.unit }}
+        {{ formatGrouped(Decimal.min(door.have, door.need)) }} / {{ formatGrouped(door.need) }}
+        {{ door.unit }}
       </span>
       <ProgressBar :value="door.fill" />
     </Button>

@@ -16,6 +16,7 @@ import {
   type Purchasable,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   ANCHORS,
   BOARD_PRICES,
@@ -70,11 +71,10 @@ export const BoardKey: InjectionKey<BoardApi> = Symbol(
   'phase-shifter/board',
 ) as InjectionKey<BoardApi>;
 
-let api: BoardApi;
+const boardApi = createModuleApi(BoardKey);
 
-export function getBoard(): BoardApi {
-  return api;
-}
+/** The corkboard, its inbox and the leads the string earns. Read it after the engine starts. */
+export const getBoard = boardApi.get;
 
 export function createBoardModule(): EngineModule {
   return {
@@ -172,7 +172,7 @@ export function createBoardModule(): EngineModule {
       const pinLive = life.isLive('pin');
       const open = (x: number, y: number) => x >= 0 && y >= 0 && x < side.value && y < side.value;
 
-      api = {
+      const api: BoardApi = {
         leads,
         inbox,
         pins,
@@ -203,7 +203,7 @@ export function createBoardModule(): EngineModule {
           return true;
         },
       };
-      ctx.provide(BoardKey, api);
+      boardApi.publish(ctx, api);
     },
   };
 }

@@ -1,8 +1,12 @@
 import { computed } from 'vue';
 import { Decimal, type Purchasable } from '@open-loop/engine';
-import type { ProducerRowData } from '@/ui/compositions/ProducerList';
+import {
+  createPurchasableCard,
+  createPurchasableRow,
+  type PurchasableRow,
+} from '@/ui/compositions/purchasable';
 import type { UpgradeCardData } from '@/ui/compositions/UpgradeGrid';
-import { whole } from './format';
+import { formatGrouped } from '@/composables/useFormatting';
 
 /**
  * What an index card shows beyond the compositions' flat contract: the card's
@@ -31,39 +35,29 @@ function extra(p: Purchasable, copy: CardCopy): CardExtra {
   return {
     title: read(copy.title),
     description: read(copy.description),
-    price: () => `${whole(new Decimal(p.getCost(1)).ceil())} ${copy.unit}`,
+    price: () => `${formatGrouped(new Decimal(p.getCost(1)).ceil())} ${copy.unit}`,
     owned: copy.owned,
     automated: copy.automated,
   };
 }
 
 /** A repeatable purchase as a `ProducerList` row, bought one at a time. */
-export function cardRow(id: string, p: Purchasable, copy: CardCopy): ProducerRowData<CardExtra> {
-  return {
+export function cardRow(id: string, p: Purchasable, copy: CardCopy): PurchasableRow<CardExtra> {
+  return createPurchasableRow(p, {
     id,
     displayName: typeof copy.title === 'string' ? copy.title : id,
-    count: p.count,
-    displayRate: computed(() => 0),
-    cost: () => p.getCost(1),
-    canPurchase: () => p.canPurchase.value,
-    maxAffordable: computed(() => (p.canPurchase.value ? 1 : 0)),
-    purchase: () => void p.purchase(1),
+    // A maxed purchase leaves the desk rather than staying on as owned.
     unlocked: computed(() => p.visible.value && !p.maxed.value),
     extra: extra(p, copy),
-  };
+  });
 }
 
 /** A one-shot purchase as an `UpgradeGrid` card. */
 export function cardOnce(id: string, p: Purchasable, copy: CardCopy): UpgradeCardData<CardExtra> {
-  return {
+  return createPurchasableCard(p, {
     id,
     displayName: typeof copy.title === 'string' ? copy.title : id,
     description: read(copy.description),
-    cost: computed(() => p.getCost(1)),
-    costLabel: copy.unit,
-    canPurchase: p.canPurchase,
-    owned: p.active,
-    purchase: () => void p.purchase(1),
     extra: extra(p, copy),
-  };
+  });
 }

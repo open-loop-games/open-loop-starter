@@ -7,9 +7,10 @@ import { computed } from 'vue';
 import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProducerList from '@/ui/compositions/ProducerList.vue';
+import { formatGrouped } from '@/composables/useFormatting';
 import { getBox, getCase } from '../../modules';
-import { cardRow, type CardExtra } from '../cards';
-import { rate, whole } from '../format';
+import { cardRow } from '../cards';
+import { rate } from '../format';
 import IndexCard from '../components/IndexCard.vue';
 import Ledger from '../components/Ledger.vue';
 
@@ -18,8 +19,8 @@ const read = getCase().life.isLive('read');
 
 const empty = computed(() => new Decimal(box.pages.value).lte(0));
 const ledger = computed(() => [
-  { label: 'pages left', value: whole(box.pages.value) },
-  { label: 'notes', value: whole(box.notes.value) },
+  { label: 'pages left', value: formatGrouped(box.pages.value) },
+  { label: 'notes', value: formatGrouped(box.notes.value) },
   ...(box.clerks.value.gt(0)
     ? [{ label: 'clerks reading', value: `${rate(box.clerkReadRate.value)}/s`, automated: true }]
     : []),
@@ -30,7 +31,7 @@ const hire = cardRow('clerk', box.clerk, {
   title: 'Hire a clerk',
   description: 'Reads a page a second. Stays on through whatever comes next.',
   unit: 'notes',
-  owned: () => (box.clerks.value.gt(0) ? `${whole(box.clerks.value)} on staff` : undefined),
+  owned: () => (box.clerks.value.gt(0) ? `${formatGrouped(box.clerks.value)} on staff` : undefined),
 });
 const rows = computed(() =>
   new Decimal(box.notes.value).gte(5) || box.clerks.value.gt(0) ? [hire] : [],
@@ -49,9 +50,9 @@ const rows = computed(() =>
     >
       {{ empty ? 'The box is empty' : 'Read a page' }}
     </Button>
-    <ProducerList :rows="rows" cost-label="" bulk-mode-source="none">
+    <ProducerList :rows="rows" bulk-mode-source="none">
       <template #row="{ row, purchase }">
-        <IndexCard :card="row.extra as CardExtra" :can="row.canPurchase(1)" @buy="purchase()" />
+        <IndexCard :card="row.extra!" :can="row.canPurchase(1)" @buy="purchase()" />
       </template>
     </ProducerList>
   </section>

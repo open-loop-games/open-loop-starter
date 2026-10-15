@@ -13,7 +13,6 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import Button from '@/ui/components/Button.vue';
 import { manifest } from '../manifest';
 import PhaseShifterGameView from './PhaseShifterGameView.vue';
 // The costume, applied under `.phase-shifter`. Imported at the root so the
@@ -30,8 +29,8 @@ const showDevPanel = ref(false);
 
 <template>
   <!--
-    Costume scope. AppFrame's root node is a TooltipProvider fragment, so a class
-    on the component is dropped; the wrapper gives `night-clerk.css` an ancestor.
+    Costume scope for the slot screen and the frame alike; the frame's modals
+    mount inside it, so they wear the costume too.
   -->
   <div class="phase-shifter">
     <SlotScreen
@@ -42,18 +41,11 @@ const showDevPanel = ref(false);
     />
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
-        <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
-          <template #title="{ returnToSlots: back }">
-            <Button
-              class="nc-brand"
-              data-testid="return-to-slots"
-              title="Save and return to save picker"
-              @click="back()"
-            >
-              <h1>Night Clerk</h1>
-              <span class="nc-brand-sub">County Records &middot; Sub-basement B</span>
-            </Button>
-          </template>
+        <SystemHeader
+          app-name="Night Clerk"
+          subtitle="County Records · Sub-basement B"
+          @return-to-slots="returnToSlots"
+        >
           <template #about>
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
@@ -78,29 +70,3 @@ const showDevPanel = ref(false);
     </DevPanelOverlay>
   </div>
 </template>
-
-<style scoped>
-.nc-brand {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-.nc-brand h1 {
-  margin: 0;
-  font-weight: 500;
-  font-size: 26px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--nc-manila);
-  line-height: 1;
-}
-.nc-brand-sub {
-  font-size: 15px;
-  color: var(--nc-carbon);
-}
-</style>

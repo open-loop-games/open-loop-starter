@@ -4,6 +4,7 @@ import {
   type EngineModule,
   type InjectionKey,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { ANCHORS, planWatches } from '../data';
 import { CaseKey } from './case';
 import { NightKey } from './night';
@@ -29,11 +30,10 @@ export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
   'phase-shifter/automation',
 ) as InjectionKey<AutomationApi>;
 
-let api: AutomationApi;
+const automationApi = createModuleApi(AutomationKey);
 
-export function getAutomation(): AutomationApi {
-  return api;
-}
+/** The automation tiers and the clerks' planning. Read it after the engine starts. */
+export const getAutomation = automationApi.get;
 
 const PLANNING: PhaseShifterAutomationTier = 'planning';
 
@@ -76,8 +76,8 @@ export function createAutomationModule(): EngineModule {
         if (planLive.value && tiers.hasReached(PLANNING)) fillWatches();
       });
 
-      api = { tiers, fillWatches };
-      ctx.provide(AutomationKey, api);
+      const api: AutomationApi = { tiers, fillWatches };
+      automationApi.publish(ctx, api);
     },
   };
 }

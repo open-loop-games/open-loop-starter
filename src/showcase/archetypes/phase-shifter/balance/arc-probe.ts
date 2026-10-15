@@ -206,7 +206,7 @@ console.log(
   `  spine predicted clerks at door=${PREDICTED_CLERKS}, note buffer=${PREDICTED_NOTE_BUFFER.toFixed(0)}`,
 );
 console.log('\nlast log lines:');
-for (const line of kase.lines.value.slice(-5)) console.log(`  ${line}`);
+for (const line of kase.log.lines.value.slice(-5)) console.log(`  ${line.text}`);
 
 // Each save is imported into the finished game, so the load runs backwards
 // through the doors: the live set must be re-derived from the doors alone.
