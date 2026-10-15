@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
+import ProgressBar from '@/ui/components/ProgressBar.vue';
 import type { ResourceReadout } from '@/ui/compositions';
 import { RESOURCES, type ResourceDef } from '../../data';
 import { getWorks } from '../../modules';
@@ -39,7 +40,6 @@ const rows = computed(() =>
       value,
       cap,
       net,
-      fill: Math.min(1, value / cap),
       // Within half a percent: rations nibble a pinned larder just under its lid every tick.
       full: value >= cap * 0.995,
       seen: value > 0 || toNumber(works.res[r.id as ResourceDef['id']].best!.value) > 0,
@@ -70,9 +70,7 @@ const rows = computed(() =>
         <span class="net ae-figure">{{
           row.full && row.net >= -0.005 ? 'full' : rate(row.net)
         }}</span>
-        <span class="bin" aria-hidden="true"
-          ><span class="bin-fill" :style="{ transform: `scaleX(${row.fill})` }"
-        /></span>
+        <ProgressBar class="bin" :value="row.value" :max="row.cap" aria-hidden="true" />
       </div>
     </section>
   </div>
@@ -122,20 +120,19 @@ const rows = computed(() =>
 }
 .bin {
   grid-column: 1 / -1;
-  height: 2px;
   margin-top: 3px;
-  background: var(--ae-cyanotype-rule);
-  overflow: hidden;
+  --progress-bar-height: 2px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-track-empty: var(--progress-bar-track);
+  --progress-bar-radius: 0;
+  --progress-bar-track: var(--ae-cyanotype-rule);
+  --progress-bar-fill: var(--ae-drafting-line-faint);
+  --progress-bar-transition: transform 0.4s linear;
 }
-.bin-fill {
-  display: block;
-  height: 100%;
-  background: var(--ae-drafting-line-faint);
-  transform-origin: left;
-  transition: transform 0.4s linear;
-}
-.full .bin-fill {
-  background: var(--ae-aluminium);
+.full .bin {
+  --progress-bar-fill: var(--ae-aluminium);
 }
 .unseen {
   opacity: 0.35;

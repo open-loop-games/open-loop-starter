@@ -241,6 +241,6 @@ describe('the seasons', () => {
     const time = getTelegraph().time;
     time.totalPlayTime.value = SEASON_SECONDS - 0.01;
     await tick(2);
-    expect(getTelegraph().log.value.some((w) => w.kind === 'season')).toBe(true);
+    expect(getTelegraph().log.lines.value.some((w) => w.kind === 'season')).toBe(true);
   });
 });

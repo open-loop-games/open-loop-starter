@@ -8,8 +8,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import Button from '@/ui/components/Button.vue';
-import ProducerList from '@/ui/compositions/ProducerList.vue';
-import type { ProducerRowData } from '@/ui/compositions';
+import { ProducerList, createPurchasableRow } from '@/ui/compositions';
 import {
   BUILDINGS,
   RESEARCH,
@@ -32,17 +31,14 @@ interface EstateExtra {
   does: () => string;
 }
 
-const rows: ProducerRowData<EstateExtra>[] = BUILDINGS.map((def) => {
+// Every building is listed, so a sealed one shows the patent it waits on.
+const listed = computed(() => true);
+
+const rows = BUILDINGS.map((def) => {
   const p = works.buildings.getPurchasable(def.id)!;
-  return {
-    id: def.id,
+  return createPurchasableRow<EstateExtra>(p, {
     displayName: def.name,
-    count: p.count,
-    displayRate: computed(() => works.yieldEach(def.id)),
-    cost: () => 0,
-    canPurchase: () => p.canPurchase.value,
-    maxAffordable: computed(() => (p.canPurchase.value ? 1 : 0)),
-    purchase: () => p.purchase(1),
+    unlocked: listed,
     extra: {
       def,
       visible: () => p.visible.value,
@@ -55,13 +51,12 @@ const rows: ProducerRowData<EstateExtra>[] = BUILDINGS.map((def) => {
               ? `${STEAM_PER_COAL} steam from each coal it burns`
               : `+${WORKERS_PER_CITE} compagnons`,
     },
-  };
+  });
 });
 </script>
 
 <template>
-  <ProducerList :rows="rows" cost-label="" bulk-mode-source="none" class="ae-estate">
-    <template #header />
+  <ProducerList :rows="rows" bulk-mode-source="none" class="ae-estate">
     <template #row="{ row, purchase }">
       <article class="plate" :class="{ can: row.canPurchase(1), sealed: !row.extra!.visible() }">
         <template v-if="row.extra!.visible()">

@@ -5,6 +5,7 @@ import {
   type EngineModule,
   type InjectionKey,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import { FOUNDED, SEASONS, SEASON_SECONDS, gardenYield, weatherFor, type Season } from '../data';
 import { TelegraphKey } from './telegraph';
 
@@ -34,11 +35,10 @@ export const CalendarKey: InjectionKey<CalendarApi> = Symbol(
   'interlocker/calendar',
 ) as InjectionKey<CalendarApi>;
 
-let api: CalendarApi;
+const calendarApi = createModuleApi(CalendarKey);
 
-export function getCalendar(): CalendarApi {
-  return api;
-}
+/** The seasons on the play clock. Read it after the engine starts. */
+export const getCalendar = calendarApi.get;
 
 export function createCalendarModule(): EngineModule {
   return {
@@ -48,7 +48,7 @@ export function createCalendarModule(): EngineModule {
       const telegraph = ctx.inject(TelegraphKey);
       const played = () => telegraph.time.totalPlayTime.value;
       const index = computed(() => Math.floor(played() / SEASON_SECONDS));
-      api = {
+      const api: CalendarApi = {
         index,
         season: computed(() => SEASONS[index.value % SEASONS.length]!),
         year: computed(() => FOUNDED + Math.floor(index.value / SEASONS.length)),
@@ -72,7 +72,7 @@ export function createCalendarModule(): EngineModule {
           'season',
         );
       });
-      ctx.provide(CalendarKey, api);
+      calendarApi.publish(ctx, api);
     },
   };
 }

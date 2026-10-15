@@ -7,7 +7,7 @@
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import { getEmpire, getExposition, getWorks } from '../../modules';
-import { clock } from '../format';
+import { formatClock } from '@/composables/useFormatting';
 
 const works = getWorks();
 const empire = getEmpire();
@@ -34,7 +34,7 @@ const renown = computed(() => toNumber(empire.renown.value));
     </div>
     <div>
       <dt>These works</dt>
-      <dd class="ae-figure">{{ clock(expo.cycle.elapsed.value) }}</dd>
+      <dd class="ae-figure">{{ formatClock(expo.cycle.elapsed.value) }}</dd>
     </div>
   </dl>
 </template>

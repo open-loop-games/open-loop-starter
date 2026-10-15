@@ -10,12 +10,13 @@
 -->
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import { toNumber } from '@open-loop/engine';
+import { toNumber, type Persistent } from '@open-loop/engine';
 import { modalStackKey } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
-import UpgradeGrid from '@/ui/compositions/UpgradeGrid.vue';
-import type { UpgradeCardData } from '@/ui/compositions';
+import Switch from '@/ui/components/Switch.vue';
+import { UpgradeGrid, createPurchasableCard } from '@/ui/compositions';
+import { formatClock, formatGrouped } from '@/composables/useFormatting';
 import {
   BUREAUX,
   CHARTERS,
@@ -31,7 +32,7 @@ import {
   type BureauId,
 } from '../../data';
 import { getAutomation, getEmpire, getExposition, getMinistry, getWorks } from '../../modules';
-import { clock, countdown, score } from '../format';
+import { countdown } from '../format';
 import StageConfirm from './StageConfirm.vue';
 
 const works = getWorks();
@@ -109,64 +110,43 @@ const why = computed(() => {
 });
 
 function stage(): void {
-  const id = stack.push(
+  stack.push(
     StageConfirm,
     {
       renown: expo.gain.value,
       medal: medalOf(expo.gain.value)?.name,
       planes: planes.value,
       kept: empire.holds('patents').value ? poolNames : [],
-      onStage: () => {
-        stack.remove(id);
-        expo.stage();
-      },
-      onCancel: () => stack.remove(id),
+      onStage: () => expo.stage(),
     },
     'sm',
   );
 }
 
 // ── charters and bureaux ──
-const charters: UpgradeCardData[] = CHARTERS.map((def) => {
-  const p = empire.charters.getPurchasable(def.id)!;
-  return {
-    id: def.id,
+const charters = CHARTERS.map((def) =>
+  createPurchasableCard(empire.charters.getPurchasable(def.id)!, {
     displayName: def.name,
     description: def.blurb,
-    cost: computed(() => def.cost),
-    costLabel: 'renown',
-    canPurchase: p.canPurchase,
-    owned: p.active,
-    purchase: () => p.purchase(1),
-  };
-});
+  }),
+);
 const granted = computed(() => CHARTERS.filter((c) => empire.holds(c.id).value).length);
 
 interface BureauExtra {
   /** the bureau's automation tier is reached, so its switch means something */
   reached: () => boolean;
-  on: () => boolean;
-  toggle: () => void;
+  on: Persistent<boolean>;
 }
-const bureaux: UpgradeCardData<BureauExtra>[] = BUREAUX.map((def) => {
-  const p = empire.bureaux.getPurchasable(def.id)!;
-  const sw = automation.active[def.id as BureauId];
-  return {
-    id: def.id,
+const bureaux = BUREAUX.map((def) =>
+  createPurchasableCard<BureauExtra>(empire.bureaux.getPurchasable(def.id)!, {
     displayName: def.name,
     description: def.blurb,
-    cost: computed(() => def.cost),
-    costLabel: 'renown',
-    canPurchase: p.canPurchase,
-    owned: p.active,
-    purchase: () => p.purchase(1),
     extra: {
       reached: () => automation.tiers.hasReached(def.id),
-      on: () => sw.value,
-      toggle: () => (sw.value = !sw.value),
+      on: automation.active[def.id as BureauId],
     },
-  };
-});
+  }),
+);
 const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)!.visible.value);
 </script>
 
@@ -184,10 +164,10 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
       <div class="jury">
         <div class="score">
           <span class="label">The jury's score</span>
-          <span class="ae-figure big">{{ score(jury.score) }}</span>
+          <span class="ae-figure big">{{ formatGrouped(jury.score) }}</span>
           <span class="split ae-figure"
-            ><span class="key exhibit" />exhibit {{ score(jury.exhibit) }}
-            <span class="key dossier" />dossier {{ score(jury.dossier) }}</span
+            ><span class="key exhibit" />exhibit {{ formatGrouped(jury.exhibit) }}
+            <span class="key dossier" />dossier {{ formatGrouped(jury.dossier) }}</span
           >
         </div>
         <div class="medal">
@@ -215,14 +195,15 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
       </div>
       <p class="next ae-figure">
         <template v-if="jury.nextName">{{ jury.nextName }} · </template>{{ jury.next }} renown at
-        {{ score(jury.nextAt) }}<span class="of"> · {{ score(jury.nextAt - jury.score) }} more</span
+        {{ formatGrouped(jury.nextAt)
+        }}<span class="of"> · {{ formatGrouped(jury.nextAt - jury.score) }} more</span
         ><template v-if="jury.after">
-          · {{ jury.after.name }} at {{ score(jury.after.at) }}</template
+          · {{ jury.after.name }} at {{ formatGrouped(jury.after.at) }}</template
         ><br />
         <span v-if="empire.grandPrix.value" class="ae-stamp gp-stamp">Grand Prix · Paris</span>
         <span v-else class="of"
-          >The Grand Prix asks {{ score(scoreFor(GRAND_PRIX)) }} · {{ score(toGrandPrix) }} to
-          go</span
+          >The Grand Prix asks {{ formatGrouped(scoreFor(GRAND_PRIX)) }} ·
+          {{ formatGrouped(toGrandPrix) }} to go</span
         >
       </p>
 
@@ -252,7 +233,7 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
         <div>
           <dt>Expositions · these works</dt>
           <dd class="ae-figure">
-            {{ expo.cycle.count.value }} · {{ clock(expo.cycle.elapsed.value) }}
+            {{ expo.cycle.count.value }} · {{ formatClock(expo.cycle.elapsed.value) }}
           </dd>
         </div>
       </dl>
@@ -279,7 +260,7 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
             >
               <header>
                 <span class="name">{{ card.displayName }}</span>
-                <span class="price ae-figure">{{ card.cost.value }} renown</span>
+                <span class="price ae-figure">{{ toNumber(card.cost.value) }} renown</span>
               </header>
               <p>{{ card.description }}</p>
               <div v-if="card.owned.value" class="ae-stamp">Granted</div>
@@ -307,20 +288,17 @@ const bureauxOpen = computed(() => empire.bureaux.getPurchasable(BUREAUX[0]!.id)
               <header>
                 <span class="name">{{ card.displayName }}</span>
                 <span v-if="!card.owned.value" class="price ae-figure"
-                  >{{ card.cost.value }} renown</span
+                  >{{ toNumber(card.cost.value) }} renown</span
                 >
               </header>
               <p>{{ card.description }}</p>
               <div v-if="card.extra!.reached()" class="duty">
                 <span v-if="card.owned.value" class="ae-stamp">Employed</span>
-                <Button
+                <Switch
+                  v-model="card.extra!.on.value"
                   class="switch"
-                  role="switch"
-                  :aria-checked="card.extra!.on()"
                   :aria-label="`${card.displayName} at work`"
-                  @click="card.extra!.toggle()"
-                  ><span class="track" aria-hidden="true"><span class="knob" /></span
-                  >{{ card.extra!.on() ? 'At work' : 'Stood down' }}</Button
+                  >{{ card.extra!.on.value ? 'At work' : 'Stood down' }}</Switch
                 >
               </div>
               <Button
@@ -429,10 +407,11 @@ dt {
   right: 0;
   --progress-bar-track: var(--ae-cyanotype-rule);
   --progress-bar-radius: 0;
+  --progress-bar-height: 3px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-track-empty: var(--progress-bar-track);
   --progress-bar-transition: none;
-}
-.ae-ladder__fill :deep(.olui-progress-bar__track) {
-  min-height: 3px;
 }
 .ladder ol {
   position: relative;
@@ -585,12 +564,8 @@ dd.short {
   justify-content: space-between;
   gap: 10px;
 }
-.switch {
-  display: inline-flex;
-  align-items: center;
+.duty .switch {
   gap: 7px;
-  background: transparent;
-  border: none;
   padding: 2px 0;
   font-family: var(--ae-face-lettering);
   font-weight: 500;
@@ -598,32 +573,27 @@ dd.short {
   letter-spacing: 0.1em;
   font-size: 11px;
   color: var(--ae-slate);
-  cursor: pointer;
 }
-.switch .track {
-  width: 26px;
-  height: 12px;
-  border: 1px solid var(--ae-slate);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  padding: 0 2px;
-}
-.switch .knob {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ae-slate);
-  transition: transform 0.15s ease-out;
-}
-.switch[aria-checked='true'] {
+.duty .switch[data-state='checked'] {
   color: var(--ae-verdigris);
 }
-.switch[aria-checked='true'] .track {
-  border-color: var(--ae-verdigris);
+/* The track and knob are drawn in the label's ink, slate when stood down, verdigris at work. */
+.duty .switch :deep(.olui-switch__track) {
+  width: 26px;
+  height: 12px;
+  padding: 0 2px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
 }
-.switch[aria-checked='true'] .knob {
-  background: var(--ae-verdigris);
+.duty .switch :deep(.olui-switch__thumb) {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  transform: none;
+  transition: transform 0.15s ease-out;
+}
+.duty .switch[data-state='checked'] :deep(.olui-switch__thumb) {
   transform: translateX(12px);
 }
 .pencilled {

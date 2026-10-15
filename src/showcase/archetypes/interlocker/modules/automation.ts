@@ -7,6 +7,7 @@ import {
   type InjectionKey,
   type Persistent,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   BUILDINGS,
   CHARTERS,
@@ -62,11 +63,10 @@ export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
   'interlocker/automation',
 ) as InjectionKey<AutomationApi>;
 
-let api: AutomationApi;
+const automationApi = createModuleApi(AutomationKey);
 
-export function getAutomation(): AutomationApi {
-  return api;
-}
+/** The bureaux' automation tiers and their switches. Read it after the engine starts. */
+export const getAutomation = automationApi.get;
 
 /** The empire as the spine reads it. */
 export function empireOf(empire: EmpireApi): Empire {
@@ -330,8 +330,8 @@ export function createAutomationModule(params: PolicyParams = DEFAULT_POLICY): E
         if (on('seating')) seatPolicy(works, params);
       });
 
-      api = { tiers, active, params };
-      ctx.provide(AutomationKey, api);
+      const api: AutomationApi = { tiers, active, params };
+      automationApi.publish(ctx, api);
     },
   };
 }

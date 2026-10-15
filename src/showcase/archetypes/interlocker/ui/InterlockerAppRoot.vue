@@ -14,7 +14,6 @@ import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
-import Button from '@/ui/components/Button.vue';
 import { manifest } from '../manifest';
 import InterlockerGameView from './InterlockerGameView.vue';
 import WorksTallies from './components/WorksTallies.vue';
@@ -32,8 +31,8 @@ const showDevPanel = ref(false);
 
 <template>
   <!--
-    Costume scope. AppFrame's root node is a TooltipProvider fragment, so a class on the
-    component is dropped; the wrapper gives `cyanotype.css` an ancestor.
+    Costume scope for the slot screen and the frame alike; the frame's modals mount
+    inside it, so they wear the costume too.
   -->
   <div class="interlocker">
     <SlotScreen
@@ -44,21 +43,11 @@ const showDevPanel = ref(false);
     />
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
-        <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
-          <template #title="{ returnToSlots: back }">
-            <Button
-              class="ae-brand"
-              data-testid="return-to-slots"
-              title="Save and return to save picker"
-              @click="back()"
-            >
-              <h1>The Aluminium Empire</h1>
-              <span class="ae-brand-sub"
-                >Imperial Aeroworks · Le Bourget · an aluminium age that came forty years
-                early</span
-              >
-            </Button>
-          </template>
+        <SystemHeader
+          app-name="The Aluminium Empire"
+          subtitle="Imperial Aeroworks · Le Bourget · an aluminium age that came forty years early"
+          @return-to-slots="returnToSlots"
+        >
           <template #about>
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>
@@ -87,32 +76,3 @@ const showDevPanel = ref(false);
     </DevPanelOverlay>
   </div>
 </template>
-
-<style scoped>
-.ae-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-.ae-brand h1 {
-  margin: 0;
-  font-family: var(--ae-face-lettering);
-  font-weight: 500;
-  font-size: 22px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--ae-chalk);
-  line-height: 1;
-}
-.ae-brand-sub {
-  font-style: italic;
-  font-size: 13px;
-  color: var(--ae-drafting-line-faint);
-}
-</style>

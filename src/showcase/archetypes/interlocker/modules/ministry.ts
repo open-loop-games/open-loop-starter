@@ -10,6 +10,7 @@ import {
   type InjectionKey,
   type Persistent,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   CHARTER_EFFECTS,
   EXHIBITED,
@@ -73,11 +74,10 @@ export const MinistryKey: InjectionKey<MinistryApi> = Symbol(
 /** The ministry's persistent context: what an Exposition clears. */
 export const MINISTRY_CONTEXT = 'interlocker/ministry';
 
-let api: MinistryApi;
+const ministryApi = createModuleApi(MinistryKey);
 
-export function getMinistry(): MinistryApi {
-  return api;
-}
+/** The Ministry of War's orders and the dossier. Read it after the engine starts. */
+export const getMinistry = ministryApi.get;
 
 /** The workshop that makes each exhibited good. */
 const MAKER = Object.fromEntries(ROLES.map((r) => [RECIPES[r.id].output, r.id])) as Record<
@@ -164,7 +164,7 @@ export function createMinistryModule(): EngineModule {
         );
       };
 
-      api = {
+      const api: MinistryApi = {
         orders,
         dossier,
         nextOfferIn: computed(() =>
@@ -200,7 +200,7 @@ export function createMinistryModule(): EngineModule {
           return score;
         },
       };
-      ctx.provide(MinistryKey, api);
+      ministryApi.publish(ctx, api);
     },
   };
 }

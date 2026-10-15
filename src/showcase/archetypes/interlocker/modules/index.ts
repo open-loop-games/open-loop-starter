@@ -9,7 +9,7 @@ import { createAutomationModule } from './automation';
 import { createExpositionModule } from './exposition';
 
 export { InterlockerTuningRegistryKey, type InterlockerTunableKey } from './tuning';
-export { TelegraphKey, getTelegraph, type Notice, type TelegraphApi, type Wire } from './telegraph';
+export { TelegraphKey, getTelegraph, type Notice, type TelegraphApi } from './telegraph';
 export { EmpireKey, getEmpire, type EmpireApi } from './empire';
 export { CalendarKey, getCalendar, type CalendarApi } from './calendar';
 export {

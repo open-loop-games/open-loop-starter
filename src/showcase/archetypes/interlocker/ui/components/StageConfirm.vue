@@ -1,18 +1,23 @@
 <!--
   StageConfirm — the Exposition's last word before the works are cleared, pushed on the
-  scaffold's modal stack. The stack portals it outside `.interlocker`, so its root carries
-  the costume class itself. Dismissing the dialog cancels.
+  scaffold's modal stack. Not yet, or dismissing the dialog, closes it; Stage it closes it
+  and stages.
 -->
 <script setup lang="ts">
 import { DialogTitle } from 'reka-ui';
 import Button from '@/ui/components/Button.vue';
 
 defineProps<{ renown: number; medal?: string; planes: number; kept: string[] }>();
-const emit = defineEmits<{ stage: []; cancel: [] }>();
+const emit = defineEmits<{ stage: []; close: [] }>();
+
+function stage(): void {
+  emit('close');
+  emit('stage');
+}
 </script>
 
 <template>
-  <div class="interlocker ae-stage-confirm">
+  <div class="ae-stage-confirm">
     <DialogTitle as-child><h2 class="ae-lettering">Stage the Exposition?</h2></DialogTitle>
     <p>
       <span class="ae-figure">{{ planes }}</span> aeroplanes go before the Emperor<template
@@ -26,8 +31,8 @@ const emit = defineEmits<{ stage: []; cancel: [] }>();
       >.
     </p>
     <div class="actions">
-      <Button class="ae-act" @click="emit('cancel')">Not yet</Button>
-      <Button class="ae-act can" @click="emit('stage')">Stage it</Button>
+      <Button class="ae-act" @click="emit('close')">Not yet</Button>
+      <Button class="ae-act can" @click="stage">Stage it</Button>
     </div>
   </div>
 </template>

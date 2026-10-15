@@ -1,11 +1,11 @@
 import {
   createTimeSystem,
-  shallowRef,
   type EngineModule,
   type InjectionKey,
-  type ShallowRef,
   type TimeSystem,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
+import { createEventLog, type EventLog } from '@/modules/event-log';
 
 /**
  * Telegraph module — the works' wire: the play clock and the line of notices the
@@ -14,18 +14,10 @@ import {
 
 export type Notice = 'research' | 'build' | 'expo' | 'order' | 'season' | 'warn';
 
-export interface Wire {
-  id: number;
-  /** play-seconds when it was sent */
-  at: number;
-  text: string;
-  kind: Notice;
-}
-
 export interface TelegraphApi {
   time: TimeSystem;
-  /** newest first, capped */
-  log: ShallowRef<Wire[]>;
+  /** the wire: a session log, kinded by notice, so a slot loaded or begun starts it empty */
+  log: EventLog<Notice>;
   send(text: string, kind: Notice): void;
 }
 
@@ -35,34 +27,23 @@ export const TelegraphKey: InjectionKey<TelegraphApi> = Symbol(
   'interlocker/telegraph',
 ) as InjectionKey<TelegraphApi>;
 
-let api: TelegraphApi;
+const telegraphApi = createModuleApi(TelegraphKey);
 
-export function getTelegraph(): TelegraphApi {
-  return api;
-}
+/** The play clock and the wire. Read it after the engine starts. */
+export const getTelegraph = telegraphApi.get;
 
 export function createTelegraphModule(): EngineModule {
   return {
     id: 'interlocker/telegraph',
     install(ctx) {
       const time = createTimeSystem();
-      const log = shallowRef<Wire[]>([]);
-      let wireId = 0;
+      const log = createEventLog<Notice>(ctx, {
+        cap: LOG_CAP,
+        clock: () => time.totalPlayTime.value,
+      });
       ctx.onTick((dt) => time.tick(dt));
-      // The wire is the session's, not the save's: a slot loaded or begun starts it empty.
-      ctx.onLoad(() => (log.value = []));
 
-      api = {
-        time,
-        log,
-        send(text, kind) {
-          log.value = [
-            { id: ++wireId, at: time.totalPlayTime.value, text, kind },
-            ...log.value,
-          ].slice(0, LOG_CAP);
-        },
-      };
-      ctx.provide(TelegraphKey, api);
+      telegraphApi.publish(ctx, { time, log, send: log.post });
     },
   };
 }

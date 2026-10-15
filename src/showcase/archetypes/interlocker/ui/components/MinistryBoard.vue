@@ -174,10 +174,12 @@ header {
   --progress-bar-track: var(--ae-cyanotype-rule);
   --progress-bar-fill: var(--ae-brass-dim);
   --progress-bar-radius: 0;
+  --progress-bar-height: 2px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-track-empty: var(--progress-bar-track);
   --progress-bar-transition: none;
-}
-.ae-ministry__line :deep(.olui-progress-bar__track) {
-  min-height: 2px;
 }
 .done .ae-ministry__line {
   --progress-bar-fill: var(--ae-verdigris);

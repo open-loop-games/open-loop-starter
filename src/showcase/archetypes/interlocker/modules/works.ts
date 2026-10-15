@@ -26,6 +26,7 @@ import {
   type Requirement,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   BASE_WORKERS,
   BOILER_STEAM,
@@ -122,11 +123,10 @@ export const WorksKey: InjectionKey<WorksApi> = Symbol(
 /** The works' persistent context: what an Exposition clears. */
 export const WORKS_CONTEXT = 'interlocker/works';
 
-let api: WorksApi;
+const worksApi = createModuleApi(WorksKey);
 
-export function getWorks(): WorksApi {
-  return api;
-}
+/** The stocks, the buildings, the patents and the crew. Read it after the engine starts. */
+export const getWorks = worksApi.get;
 
 export function createWorksModule(): EngineModule {
   return {
@@ -480,7 +480,7 @@ export function createWorksModule(): EngineModule {
       });
       ctx.onLoad(snapshot);
 
-      api = {
+      const api: WorksApi = {
         res,
         cap,
         net,
@@ -506,7 +506,7 @@ export function createWorksModule(): EngineModule {
           return p ? toNumber(p.computedRate.value) : 0;
         },
       };
-      ctx.provide(WorksKey, api);
+      worksApi.publish(ctx, api);
     },
   };
 }

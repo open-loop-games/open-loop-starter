@@ -207,13 +207,9 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
       provision();
       deliver();
     }
-    const wire = telegraph.log.value[0];
-    if (wire && wire.id !== lastWire) {
-      for (const w of telegraph.log.value) {
-        if (w.id <= lastWire) break;
-        if (w.kind === 'order') beats.push([sim, `run ${records.length + 1}: ${w.text}`]);
-      }
-      lastWire = wire.id;
+    for (const w of telegraph.log.since(lastWire)) {
+      if (w.kind === 'order') beats.push([sim, `run ${records.length + 1}: ${w.text}`]);
+      lastWire = w.seq;
     }
     const run = records.length + 1;
     for (const b of BUILDINGS)

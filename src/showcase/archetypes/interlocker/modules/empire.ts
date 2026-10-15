@@ -14,6 +14,7 @@ import {
   type PurchasableCategory,
   type Resource,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   BUREAUX,
   CHARTERS,
@@ -51,11 +52,10 @@ export const EmpireKey: InjectionKey<EmpireApi> = Symbol(
   'interlocker/empire',
 ) as InjectionKey<EmpireApi>;
 
-let api: EmpireApi;
+const empireApi = createModuleApi(EmpireKey);
 
-export function getEmpire(): EmpireApi {
-  return api;
-}
+/** What an Exposition never clears. Read it after the engine starts. */
+export const getEmpire = empireApi.get;
 
 export function createEmpireModule(): EngineModule {
   return {
@@ -101,7 +101,7 @@ export function createEmpireModule(): EngineModule {
       });
       bureaux.register(BUREAUX);
 
-      api = {
+      const api: EmpireApi = {
         renown,
         lifetimeRenown: computed(() => toNumber(renown.cumulative!.value)),
         charters,
@@ -114,7 +114,7 @@ export function createEmpireModule(): EngineModule {
         ),
         grandPrix: persistent(false, { id: 'grandPrix' }),
       };
-      ctx.provide(EmpireKey, api);
+      empireApi.publish(ctx, api);
     },
   };
 }

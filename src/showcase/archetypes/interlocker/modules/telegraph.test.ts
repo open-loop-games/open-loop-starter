@@ -10,6 +10,6 @@ describe('the telegraph', () => {
     engine.saveManager!.save();
     getTelegraph().send('a wire from the last game', 'build');
     expect(engine.load().success).toBe(true);
-    expect(getTelegraph().log.value).toHaveLength(0);
+    expect(getTelegraph().log.lines.value).toHaveLength(0);
   });
 });

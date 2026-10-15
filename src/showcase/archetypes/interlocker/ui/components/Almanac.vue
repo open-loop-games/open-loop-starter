@@ -99,10 +99,12 @@ const larder = computed(() => {
   --progress-bar-track: var(--ae-cyanotype-rule);
   --progress-bar-fill: var(--ae-drafting-line);
   --progress-bar-radius: 0;
+  --progress-bar-height: 2px;
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-track-empty: var(--progress-bar-track);
   --progress-bar-transition: none;
-}
-.ae-almanac__turn :deep(.olui-progress-bar__track) {
-  min-height: 2px;
 }
 .winter .ae-almanac__turn {
   --progress-bar-fill: var(--ae-aluminium);

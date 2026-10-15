@@ -9,6 +9,7 @@ import {
   type EngineModule,
   type InjectionKey,
 } from '@open-loop/engine';
+import { createModuleApi } from '@/modules/module-api';
 import {
   CHARTER_EFFECTS,
   EXHIBITED,
@@ -57,11 +58,10 @@ export const ExpositionKey: InjectionKey<ExpositionApi> = Symbol(
   'interlocker/exposition',
 ) as InjectionKey<ExpositionApi>;
 
-let api: ExpositionApi;
+const expositionApi = createModuleApi(ExpositionKey);
 
-export function getExposition(): ExpositionApi {
-  return api;
-}
+/** The prestige: the jury, the medal and the staging. Read it after the engine starts. */
+export const getExposition = expositionApi.get;
 
 export function createExpositionModule(): EngineModule {
   return {
@@ -121,7 +121,7 @@ export function createExpositionModule(): EngineModule {
       });
       cycle.resume();
 
-      api = {
+      const api: ExpositionApi = {
         cycle,
         threshold,
         score,
@@ -130,7 +130,7 @@ export function createExpositionModule(): EngineModule {
         canStage,
         stage: () => (cycle.end() ? earned : 0),
       };
-      ctx.provide(ExpositionKey, api);
+      expositionApi.publish(ctx, api);
     },
   };
 }

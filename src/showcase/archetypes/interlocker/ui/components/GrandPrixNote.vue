@@ -1,6 +1,6 @@
 <!--
-  GrandPrixNote — the Exposition's Grand Prix, shown once, at the staging that wins it, on the scaffold's modal stack. The story ends and the works go on. The stack portals
-  it outside `.interlocker`, so its root carries the costume class itself.
+  GrandPrixNote — the Exposition's Grand Prix, shown once, at the staging that wins it, on
+  the scaffold's modal stack, which supplies `onClose`. The story ends and the works go on.
 -->
 <script setup lang="ts">
 import { DialogTitle } from 'reka-ui';
@@ -18,7 +18,7 @@ defineProps<{
 </script>
 
 <template>
-  <section class="interlocker ae-grand-prix">
+  <section class="ae-grand-prix">
     <!-- the imperial cipher, as struck on the Exposition's medals -->
     <div class="medallion" aria-hidden="true">N</div>
     <DialogTitle as-child>

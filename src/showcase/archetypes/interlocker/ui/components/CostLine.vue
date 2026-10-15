@@ -1,12 +1,12 @@
 <!--
-  CostLine — a purchasable's price, one line item per stock. The engine prices the next
-  unit, so it reads the item's cost requirements rather than re-deriving the ladder. A
-  line item the stock cannot meet is vermilion, and one larger than its bin says so: no
-  amount of waiting pays it before a warehouse.
+  CostLine — a purchasable's price, one line item per stock, as the engine prices the next
+  unit. A line item the stock cannot meet is vermilion, and one larger than its bin says
+  so: no amount of waiting pays it before a warehouse.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { isCostRequirement, toNumber, type Purchasable } from '@open-loop/engine';
+import { toNumber, type Purchasable } from '@open-loop/engine';
+import { readPriceLines } from '@/ui/compositions';
 import type { ResourceId } from '../../data';
 import { getWorks } from '../../modules';
 import { stock } from '../format';
@@ -14,22 +14,19 @@ import { stock } from '../format';
 const props = defineProps<{ item: Purchasable }>();
 const works = getWorks();
 
-const lines = computed(() => {
-  const reqs = Array.isArray(props.item.requirements)
-    ? props.item.requirements
-    : [props.item.requirements];
-  return reqs.filter(isCostRequirement).map((r) => {
-    const id = r.resource.id as ResourceId;
-    const amount = toNumber(r.getCost(1));
+const lines = computed(() =>
+  readPriceLines(props.item).map((line) => {
+    const id = line.resource.id as ResourceId;
+    const amount = toNumber(line.amount);
     return {
       id,
-      name: (r.resource.displayName ?? id).toLowerCase(),
+      name: (line.resource.displayName ?? id).toLowerCase(),
       amount,
-      short: toNumber(r.resource.value) < amount,
+      short: line.short,
       overBin: amount > works.cap[id].value,
     };
-  });
-});
+  }),
+);
 </script>
 
 <template>

@@ -135,6 +135,28 @@
   border-bottom: 3px double var(--ae-cyanotype-rule);
   background: var(--ae-cyanotype-deep);
 }
+/* The masthead: the works' name in capital lettering over its line of italic. The header
+   is named twice so these outrank its own scoped rules. */
+.interlocker .olui-system-header .olui-system-header__title-btn {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.interlocker .olui-system-header .olui-system-header__title {
+  margin: 0;
+  font-family: var(--ae-face-lettering);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ae-chalk);
+  line-height: 1;
+}
+.interlocker .olui-system-header .olui-system-header__subtitle {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ae-drafting-line-faint);
+}
 .interlocker .olui-system-header__actions {
   align-items: center;
   gap: 16px;
@@ -309,15 +331,12 @@
   min-width: 0;
 }
 
-/* ── the Exposition's confirmation and the Grand Prix, on the scaffold's modal stack ──
-   The stack portals to <body>, outside `.interlocker`; each dialog's own root carries
-   the class, and this rule dresses the box it is mounted in. */
-.olui-modal-content:has(.ae-stage-confirm),
-.olui-modal-content:has(.ae-grand-prix) {
+/* ── the Exposition's confirmation and the Grand Prix: the modal box drawn as a plate ── */
+.interlocker .olui-modal-content:has(> .ae-stage-confirm, > .ae-grand-prix) {
   padding: 0;
-  background: #10294a;
-  border: 1px solid #24486f;
-  outline: 1px solid #24486f;
+  background: var(--ae-cyanotype);
+  border: var(--ae-hairline);
+  outline: var(--ae-hairline);
   outline-offset: 4px;
   border-radius: 0;
 }

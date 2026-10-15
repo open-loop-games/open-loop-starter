@@ -9,8 +9,8 @@
 -->
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
-import type { Engine } from '@open-loop/engine';
 import { ThreePanelShell, modalStackKey } from '@/lib';
+import { useDevHandle } from '@/composables/useDevHandle';
 import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
 import {
   getAutomation,
@@ -77,23 +77,16 @@ let lastMedal = 0;
 watch(empire.lifetimeRenown, (now, before) => (lastMedal = now - before), { flush: 'sync' });
 watch(empire.grandPrix, (won) => {
   if (!won) return;
-  const id = stack.push(
+  stack.push(
     GrandPrixNote,
-    {
-      year: getCalendar().year.value,
-      renown: lastMedal,
-      expositions: expo.cycle.count.value,
-      onClose: () => stack.remove(id),
-    },
+    { year: getCalendar().year.value, renown: lastMedal, expositions: expo.cycle.count.value },
     'sm',
   );
 });
 
-// Dev-only state hook for browser probes: reads live module state without an `import()`
-// that Vite's module cache could serve stale.
+// Dev-only state hook for browser probes, on window.__game.
 if (import.meta.env.DEV) {
-  const engine = inject<Engine>('engine')!;
-  (window as unknown as Record<string, unknown>).__aero = {
+  useDevHandle({
     works,
     empire,
     expo,
@@ -101,9 +94,7 @@ if (import.meta.env.DEV) {
     calendar: getCalendar(),
     ministry: getMinistry(),
     automation: getAutomation(),
-    engine,
-    skip: (seconds: number) => engine.tickDriver.advanceTime(seconds),
-  };
+  });
 }
 </script>
 

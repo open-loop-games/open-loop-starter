@@ -7,8 +7,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import Button from '@/ui/components/Button.vue';
-import UpgradeGrid from '@/ui/compositions/UpgradeGrid.vue';
-import type { UpgradeCardData } from '@/ui/compositions';
+import { UpgradeGrid, createPurchasableCard } from '@/ui/compositions';
 import { RESEARCH, type ResearchDef, type ResearchId } from '../../data';
 import { getWorks } from '../../modules';
 import CostLine from './CostLine.vue';
@@ -27,21 +26,14 @@ interface PatentExtra {
   open: () => boolean;
 }
 
-function card(def: ResearchDef): UpgradeCardData<PatentExtra> {
-  const p = works.research.getPurchasable(def.id)!;
+function card(def: ResearchDef) {
   const edges = () =>
     def.requires.map((q) => ({ id: q, name: names[q], held: works.researched(q).value }));
-  return {
-    id: def.id,
+  return createPurchasableCard<PatentExtra>(works.research.getPurchasable(def.id)!, {
     displayName: def.name,
     description: def.blurb,
-    cost: computed(() => 0),
-    costLabel: '',
-    canPurchase: p.canPurchase,
-    owned: p.active,
-    purchase: () => p.purchase(1),
     extra: { def, edges, open: () => edges().every((e) => e.held) },
-  };
+  });
 }
 
 const columns = computed(() =>
