@@ -670,9 +670,8 @@ function resolveContact(s: ArenaState, scene: number, contactScale: number, dt: 
 
 // ─── Fire: automatic, positioning-only ──────────────────────────────────────
 
-// TODO(expansion): cooldown dispatch over a def set (candidate-engine-api.md). Each rig's
-// clock runs down, holds at ready while nothing qualifies, and fires on the first tick
-// something does. createTimedProgress owns its ref and ticks itself, so it cannot live here.
+// Each rig's clock runs down, holds at ready while nothing qualifies, and fires on the first
+// tick something does. createTimedProgress owns its ref and ticks itself, so it cannot live here.
 function fireRigs(s: ArenaState, mods: ArenaMods, dt: number): void {
   const still = s.player.speed < STILL_SPEED;
   for (const slot of s.rigs) {

@@ -800,6 +800,8 @@ export function createPlotRun(
       let target: Pest | null = null;
       let bestRemaining = Infinity;
       let anyInRange = false;
+      // TODO(expansion): a float proximity query (candidate-engine-api.md). Every pest is
+      // scanned for range, here and at splash; SpatialGrid indexes cells, not positions.
       for (const u of run.pests) {
         if (!u.alive || against(form, u) === 0 || Math.hypot(u.px - ox, u.py - oy) > range)
           continue;
