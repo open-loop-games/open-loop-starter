@@ -229,14 +229,14 @@ export function keeperBetweenWatches(l: LogbookApi): void {
   for (const [id, levels] of ROAD)
     while (l.level(id) < levels) {
       const p = l.knowledge.getPurchasable(id)!;
-      if (!p.canPurchase.value || toNumber(p.purchase(1)) < 1) break;
+      if (!p.purchase(1)) break;
     }
   const onRoad = ROAD.some(([id, levels]) => l.level(id) < levels);
   for (let bought = !onRoad; bought;) {
     bought = false;
     for (const id of AFTER) {
       const p = l.knowledge.getPurchasable(id)!;
-      if (p.canPurchase.value && toNumber(p.purchase(1)) > 0) bought = true;
+      if (p.purchase(1)) bought = true;
     }
   }
   const ready = l.level('charter-flannans') >= 1 && l.level('stone') >= ANCHORS.closingStone;

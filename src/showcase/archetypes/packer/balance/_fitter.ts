@@ -338,7 +338,7 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     };
     const acquire = (type: PieceId) => {
       if (board.stock(type) > 0) return true;
-      return toNumber(yard.fabricator.getPurchasable(type)!.purchase(1)) === 1;
+      return yard.fabricator.getPurchasable(type)!.purchase(1) !== 0;
     };
 
     for (let guard = 0; guard < 200; guard++) {

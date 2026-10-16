@@ -10,7 +10,6 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Decimal } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { ProducerList, createPurchasableRow } from '@/ui/compositions';
@@ -49,7 +48,7 @@ const nextLocked = computed(() => {
 
 function fabricate(def: PieceDef) {
   const fab = yard.fabricator.getPurchasable(def.id)!;
-  if (Decimal.gt(fab.purchase(1), 0)) fitting.hand = def.id;
+  if (fab.purchase(1)) fitting.hand = def.id;
 }
 
 function hold(def: PieceDef) {

@@ -326,7 +326,7 @@ export function createWatchModule(): EngineModule {
         if (!atWork()) return false;
         const def = PIECES.find((p) => p.id === piece)!;
         if (groundAt(x, y) !== def.ground || occupant(x, y)) return false;
-        if (toNumber(pieces.getPurchasable(piece)!.purchase(1)) < 1) return false;
+        if (!pieces.getPurchasable(piece)!.purchase(1)) return false;
         placed.value = [...placed.value, { kind: piece, x, y }];
         return true;
       }
