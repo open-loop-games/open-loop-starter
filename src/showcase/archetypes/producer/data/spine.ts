@@ -242,7 +242,7 @@ export const OFFLINE_ARC_SHARE = 0.25;
 /** Longest wait a return may hold the load, in seconds. */
 export const OFFLINE_WAIT_BUDGET = 3;
 /** Wall-clock seconds to replay one second away. */
-export const OFFLINE_REPLAY_COST = 0.0013; // 1.33 ms mid-arc, every desk working (balance/offline-probe.ts § 3)
+export const OFFLINE_REPLAY_COST = 0.0006; // 0.60 ms mid-arc, every desk working (balance/offline-probe.ts § 3)
 /** Longest time away one return replays, in seconds; time past it is lost. */
 export const OFFLINE_WINDOW_SECONDS = Math.min(
   OFFLINE_ARC_SHARE * ENDING_TARGET,
