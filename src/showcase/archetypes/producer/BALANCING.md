@@ -106,8 +106,9 @@ seconds and takes several minutes; run seeds in parallel.
 - **The expected ending is jagged in the cost step.** A 0.1% change in the step moves it
   by up to ±3%, because the greedy buy order flips; the solve lands within that of
   `ENDING_TARGET`, and any change to the projection re-rolls where.
-- **The save for the building is the longest wait.** Hours two to four bring 23–40
-  economic beats an hour with gaps under ten minutes, except the 10–11 minutes the firm
-  saves once the building is offered.
+- **The longest waits come before a late memo.** Hours two to four bring 23–40 economic
+  beats an hour, with most gaps under seven minutes. The longest, 8–11 minutes, wait for a
+  memo such as Night Depots or Ballot Printing. Feats break the save for the building
+  into gaps under nine minutes.
 - **The bookkeeper's cost is not in the projection.** The reference never hires it;
   hiring it delays the first hour by a few seconds.
