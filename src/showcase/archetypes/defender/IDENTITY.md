@@ -6,9 +6,9 @@
 > between fields. Commit architecture before the threat arrives and watch the outcome
 > resolve: the player is architect, not participant.
 
-Research composition: **Maze tower defence**. Its composition document in the studio's research
-library lists the members and the membership claims. GemCraft, Bloons TD 6
-and Kingdom Rush show the composition ships, as a set; none is a lift target.
+Genre: `tower-defense`, whose document in the studio's research library lists the games in
+it. GemCraft, Bloons TD 6 and Kingdom Rush show the research composition ships, as a set;
+none is a lift target.
 
 ## What this archetype is
 
@@ -33,8 +33,8 @@ watch.
   straight over the hedges, and only bats reach them. Each plot adds a turn: the
   Bean Rows bring moths, the Orchard greenfly. The board shows the next three
   nights and what sees each off, so the gardener plants for the night ahead.
-  This is research's `type-effectiveness`, carried beyond the composition: none of
-  its members is a member of that pattern, so the composition does not name it.
+  This is research's `type-effectiveness`, beyond the exemplars: none of them is a
+  member of that pattern.
 - **Booster against maze.** Every plant blocks the path, so every cell is a choice.
   A maze wants long, thin walls that fold the path past the hunters. A marigold's
   boost does not stack, so it wants its own full ring of hunters: a 3×3 block, the

@@ -29,30 +29,30 @@ directions it grows through. Start there.
 | `tug`      | Waves on alternating horns contest one causeway; a career marches across fifteen fields |
 | `_blank`   | Neutral skeleton — the starting point for a novel research composition |
 
-Each archetype tells one research composition, or a stack of them. The compositions,
-with their members and membership claims, are in the studio's research library, under
-research's names. This table maps each archetype to them.
+Each archetype is in one or more genres. The genre documents, with the games in each
+genre, are in the studio's research library, under research's handles. This table maps
+each archetype to its genres.
 
-| Archetype | Research composition |
+| Archetype | Genres |
 | --- | --- |
-| `cycler` | Phase alternation |
-| `defender` | Maze tower defence |
-| `explorer` | The uncovered map |
-| `interlocker` | The settlement |
-| `looper` | The loop game |
-| `packer` | The arrangement board |
-| `phase-shifter` | The one-way lifecycle |
-| `producer` | The production curve |
-| `scaler` | The automation ladder + The prestige stack + The graded run |
-| `scripter` | The policy game |
-| `skirmish` | none: a design claim that cites no research pattern |
-| `survivor` | The auto-fire arena |
-| `tug` | The shared lane |
+| `cycler` | `build-and-defend`, `roguelike` |
+| `defender` | `tower-defense` |
+| `explorer` | `incremental` |
+| `interlocker` | `civ-builder` |
+| `looper` | `loops` |
+| `packer` | `backpack-battler`, `incremental` |
+| `phase-shifter` | `incremental` |
+| `producer` | `incremental` |
+| `scaler` | `layered-incremental` |
+| `scripter` | `programming-game`, `incremental` |
+| `skirmish` | `rts` |
+| `survivor` | `survivors-like` |
+| `tug` | lane push, which has no genre document |
 
 ## Where to look
 
-- **What a composition is, and which games are its members** — its composition document,
-  in the studio's research library.
+- **What a genre is, and which games are in it** — its genre document, in the studio's
+  research library.
 - **What an archetype is** — its `IDENTITY.md`.
 - **What its domain language looks like** — its generated `domain-map.md`.
 - **How its economy is checked** — its `balance/` (probes and projections) and `sim/`

@@ -6,10 +6,9 @@
 > author pressure against an opponent authoring pressure in the same space; what you earn
 > outlasts the match.
 
-Research composition: **The shared lane**. Its composition document in the studio's research
-library lists the members and the membership claims. Warfare 1917 and Minion Masters
-show the composition ships; Age of War, Legion TD 2 and Direct Strike are the lane-push
-crosses. None is a lift target.
+Genre: lane push, which has no genre document in the studio's research library. Warfare
+1917 and Minion Masters show the research composition ships; Age of War, Legion TD 2 and
+Direct Strike are the lane-push crosses. None is a lift target.
 
 ## What this archetype is
 

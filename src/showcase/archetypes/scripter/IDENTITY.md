@@ -6,9 +6,9 @@
 > `prerequisite-graph` opening the command vocabulary, `meta-progression` and `softcap`
 > above. The artifact is the policy; the scaling axis is its quality.
 
-Research composition: **The policy game**. Its composition document in the studio's research
-library lists the members and the membership claims. Bitburner, Cavernous II and
-Points Progression show the composition ships, as a set; none is a lift target.
+Genres: `programming-game` and `incremental`, whose documents in the studio's research
+library list the games in them. Bitburner, Cavernous II and Points Progression show the
+research composition ships, as a set; none is a lift target.
 
 ## What this archetype is
 

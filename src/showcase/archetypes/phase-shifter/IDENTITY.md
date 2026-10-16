@@ -5,10 +5,10 @@
 > `statistics`, with an `ending`. Each door changes what the player does: a reader,
 > then an arranger, then a planner, then a reader again for one page.
 
-Research composition: **The one-way lifecycle**. Its composition document in the studio's research
-library lists the members and the membership claims. The defining component, the one-way mechanic lifecycle, has no research
-pattern, so this build designs it (§ The defining component). Universal Paperclips, A
-Dark Room and Candy Box 2 show the composition ships, as a set; none is a lift target.
+Genre: `incremental`, whose document in the studio's research library lists the games in
+it. The defining component, the one-way mechanic lifecycle, has no research pattern, so
+this build designs it (§ The defining component). Universal Paperclips, A Dark Room and
+Candy Box 2 show the research composition ships, as a set; none is a lift target.
 
 ## What this archetype is
 

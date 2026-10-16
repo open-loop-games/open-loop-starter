@@ -5,12 +5,11 @@
 > choice of character and danger, and `meta-progression` banking unlocks across runs.
 > Stand inside the threat and respond in real time, run after run.
 
-Research composition: **The auto-fire arena**. Its composition document in the studio's research
-library lists the members and the membership claims. Brotato is sourced, and the
-patterns above are the ones it carries; Vampire Survivors and Halls of Torment are called
-from design knowledge. The defining component is the automatic-fire candidate in
-`open-loop-research/patterns/candidate-patterns.md`, cited as a candidate until research
-graduates or places it.
+Genre: `survivors-like`, whose document in the studio's research library lists the games
+in it. Brotato is sourced, and the patterns above are the ones it carries; Vampire
+Survivors and Halls of Torment are called from design knowledge. The defining component is
+the automatic-fire candidate in `open-loop-research/patterns/candidate-patterns.md`, cited
+as a candidate until research graduates or places it.
 
 ## What this archetype is
 

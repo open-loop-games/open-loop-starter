@@ -7,12 +7,13 @@
 > real time; build order, composition and engagement are the decision surface
 > because rivals make theirs at the same time, and policies drive the seats.
 
-No research composition: a design claim, adjacent to the incremental set — the corpus holds no sourced exemplar
-for the shape, and no research pattern is cited. The economy is the substrate every archetype shares (a stock,
-a rate, a spend); the opponents are what is load-bearing rather than decorative,
-and they come from the adjacent game-AI corpus
-(`open-loop-research/patterns/adjacent/ai-rosters.md` — a keyed collection of
-behavioural variants, drawn from at match creation).
+Genre: `rts`, whose document in the studio's research library lists the games in it. The
+story is a design claim, adjacent to the incremental set: the corpus holds no sourced
+exemplar for the shape, and no research pattern is cited. The economy is the substrate
+every archetype shares (a stock, a rate, a spend); the opponents are what is load-bearing
+rather than decorative, and they come from the adjacent game-AI corpus
+(`open-loop-research/patterns/adjacent/ai-rosters.md` — a keyed collection of behavioural
+variants, drawn from at match creation).
 
 **Nothing survives from one match to the next** — this is the line against Tug, which is the
 same contest with a career kept across matches, and which is core because of

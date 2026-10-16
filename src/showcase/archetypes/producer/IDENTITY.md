@@ -5,10 +5,10 @@
 > automation ladder with its `prestige` declined, which is Scaler's. No adversary, no
 > board, no run: the curve is the content.
 
-Research composition: **The production curve**. Its composition document in the studio's research
-library lists the members and the membership claims. Cookie Clicker, AdVenture Capitalist, Antimatter Dimensions and Universal
-Paperclips show the composition ships, as a set; none is a lift target. This build also
-carries `scheduled-event` and `random-draw` (the tips) and an `ending`, beyond the composition.
+Genre: `incremental`, whose document in the studio's research library lists the games in
+it. Cookie Clicker, AdVenture Capitalist, Antimatter Dimensions and Universal Paperclips
+show the research composition ships, as a set; none is a lift target. This build also has
+`scheduled-event` and `random-draw` (the tips) and an `ending`, beyond its exemplars.
 
 ## What this archetype is
 
@@ -80,8 +80,8 @@ it against the projection; `allocation-probe.ts` swaps the desk's rule.
 
 ## Growth ports
 
-- **The slow end.** The same composition paced for time away, as its composition
-  document describes.
+- **The slow end.** The same economy paced for time away: the `cozy-incremental`
+  genre.
 
 ## Engine fit
 

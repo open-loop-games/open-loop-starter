@@ -6,11 +6,9 @@
 > `meta-progression` above and `automation` taking the running of the works over. Wide,
 > not deep: the graph is the content.
 
-Research composition: **The settlement**. Its composition document in the studio's research
-library lists the members and the membership claims. Kittens Game,
-Industry Idle and Evolve show the composition ships, as a set; none is a lift target.
-This build adds one thing the composition does not name: an `ending`, which all three exemplars
-decline.
+Genre: `civ-builder`, whose document in the studio's research library lists the games in
+it. Kittens Game, Industry Idle and Evolve show the research composition ships, as a set;
+none is a lift target. This build adds an `ending`, which all three exemplars decline.
 
 ## What this archetype is
 

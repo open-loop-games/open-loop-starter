@@ -6,11 +6,11 @@
 > skill track have no pattern. A run is a rehearsal; the game is the diff between two
 > runs.
 
-Research composition: **The loop game**. Its composition document in the studio's research
-library lists the members and the membership claims. The defining component,
-per-action duration with a parallel skill track, has no research pattern, so this build
-designs it (§ The defining component). Increlution, Idle Loops, Cavernous II and
-Progress Knight 2 show the composition ships, as a set; none is a lift target.
+Genre: `loops`, whose document in the studio's research library lists the games in it. The
+defining component, per-action duration with a parallel skill track, has no research
+pattern, so this build designs it (§ The defining component). Increlution, Idle Loops,
+Cavernous II and Progress Knight 2 show the research composition ships, as a set; none is
+a lift target.
 
 ## What this archetype is
 

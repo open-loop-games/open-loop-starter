@@ -18,7 +18,7 @@ view over that catalogue.
   the game loop, and the balance harness for simulation and balance work.
 - **Starter** — this repo. The pattern language made legible: each
   archetype is a working demo of one game shape, its identity line naming
-  the research patterns it composes and the pattern-coverage grade they give it, and its
+  the research patterns it composes and the genres it is in, and its
   manifest naming the engine primitives it uses, the beats it expects,
   and the exemplars it descends from.
 
@@ -50,9 +50,9 @@ the gallery.
 ## Authoring a new archetype
 
 1. Copy `src/showcase/archetypes/_blank/` to `src/showcase/archetypes/<name>/`.
-2. Name its research composition, or a stack of them, in
-   `src/showcase/archetypes/README.md`. A composition research does not have yet is
-   written there first.
+2. Name the genres it is in, by research's handles, in
+   `src/showcase/archetypes/README.md`. A genre research has no document for is
+   named as such.
 3. Rewrite `IDENTITY.md` and `BALANCING.md`. Each has every required section;
    `.claude/rules/archetype-authoring.md` says what each section contains.
 4. Write `manifest.ts` with the typed `ArchetypeManifest` export (see

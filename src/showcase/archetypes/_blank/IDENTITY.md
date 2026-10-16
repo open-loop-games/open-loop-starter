@@ -10,12 +10,11 @@
 composition. That is a different case from a **design claim**, a story whose shape
 cites no research pattern; a novel composition simply has none until someone writes one.
 
-A real archetype replaces both paragraphs. Copy its research composition's statement
-into the quote verbatim, and name the composition below it. Where no single
-composition states the game, name a stack of them. The composition's document in the
-studio's research library lists its members, so a story never lists exemplars of its
-own. Write the composition there before you write it here: a composition that exists
-only in this file is ungrounded.
+A real archetype replaces both paragraphs. State its research composition in the
+quote: the research patterns it is built from, by handle, and any component no pattern
+names. Below it, name the genres it is in, by their handles in the studio's research
+library. A genre's document lists the games in it, so a story cites its exemplars as a
+set and never as a list of the games in a genre.
 
 This file is the template for a real archetype's `IDENTITY.md`. It has every
 required section, filled in for the neutral base. When you build on `pnpm eject --clean`, rewrite each section for

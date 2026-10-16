@@ -76,12 +76,13 @@ edit it.
 The filename is `IDENTITY.md` for every archetype. It fits on a single screen. Required
 sections:
 
-1. **Identity line** — the research composition's statement, copied verbatim, then the
-   composition's name, or a stack of them. Name no path: a fork keeps this file.
-   - Cite a research pattern by handle only where the composition names it.
-   - The composition's document lists the members; this file lists none of its own.
+1. **Identity line** — the research composition: the research patterns the story is
+   built from, by handle, and any component no pattern names. Then the genres it is in,
+   by handle. Name no path: a fork keeps this file.
+   - A genre's document lists the games in it. This file cites its exemplars as a set,
+     never as the games in a genre.
 2. **What this archetype is** — the player experience in prose, as this build realizes
-   it. The composition's general prose is in its composition document.
+   it. A genre's general prose is in its genre document.
 3. **Rate-function spine** — the bucket, where the closed form stops, and what measures the
    remainder. The rest of the archetype depends on this section.
 4. **The arc / beat map** — where the run turns.

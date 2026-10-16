@@ -6,9 +6,9 @@
 > `meta-progression` keeping unlocks across runs. Build during the calm, survive the
 > pressure, repeat with escalating stakes.
 
-Research composition: **Phase alternation**. Its composition document in the studio's research
-library lists the members and the membership claims. Dome Keeper, Thronefall and
-Kingdom Two Crowns show the composition ships, as a set; none is a lift target.
+Genres: `build-and-defend` and `roguelike`, whose documents in the studio's research
+library list the games in them. Dome Keeper, Thronefall and Kingdom Two Crowns show the
+research composition ships, as a set; none is a lift target.
 
 ## What this archetype is
 
