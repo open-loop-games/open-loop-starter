@@ -22,6 +22,9 @@ export function useSaveEvents(mgr: SaveManager): () => void {
   // The toast the last failed load raised. The save manager protects the slot
   // right after reporting the failure, and that note joins this toast.
   let failedLoad: { slotId: number; toastId: number } | null = null;
+  // The engine refuses a future-version save on its own event, then reports
+  // the same failure on `save:load-failed`; one toast covers both.
+  let refusedToastId: number | null = null;
 
   const unsubs = [
     mgr.on('save:validation-failed', (issue) => {
@@ -54,7 +57,9 @@ export function useSaveEvents(mgr: SaveManager): () => void {
         pendingHealed = 0;
         return;
       }
-      const toastId = addToast('Save load failed', describeFailure(err.reason), false);
+      const refused = err.reason === 'future-version' ? refusedToastId : null;
+      refusedToastId = null;
+      const toastId = refused ?? addToast('Save load failed', describeFailure(err.reason), false);
       failedLoad = { slotId: err.slotId, toastId };
       console.error('[save] load failed:', err.reason, err.detail);
       pendingHealed = 0;
@@ -70,7 +75,7 @@ export function useSaveEvents(mgr: SaveManager): () => void {
     }),
 
     mgr.on('save:future-version-refused', (err) => {
-      addToast(
+      refusedToastId = addToast(
         'Save from a newer build',
         `This save has save version ${err.writtenVersion}; this build loads up to save version ${err.supportedVersion}. Refusing to load to avoid corruption.`,
         false,
@@ -97,6 +102,8 @@ function describeFailure(reason: string): string {
       return 'The save text is malformed or corrupted.';
     case 'wrong-game-id':
       return 'This save belongs to a different game.';
+    case 'wrong-mod':
+      return 'This save belongs to a different mod.';
     case 'not-found':
       return 'No save found in this slot.';
     default:

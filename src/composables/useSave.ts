@@ -26,12 +26,10 @@ export function useSave() {
       // No existing save to back up — that's fine
     }
 
+    // A failed import raises `save:load-failed`, which useSaveEvents toasts
+    // with its reason; a second toast here would repeat it.
     const result = mgr.importSave(saveText);
-    if (result.success) {
-      addToast('Imported', 'Previous save backed up', 2500);
-    } else {
-      addToast('Import failed', 'Invalid save text', 4000);
-    }
+    if (result.success) addToast('Imported', 'Previous save backed up', 2500);
     return result.success;
   }
 

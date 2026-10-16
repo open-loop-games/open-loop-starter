@@ -105,6 +105,27 @@ describe('useSaveEvents', () => {
     expect(toasts.value[0].content).toContain('paused');
   });
 
+  it('a save from a newer build raises one toast, which says the slot is kept', () => {
+    const storage = createMemoryStorage();
+    const mgr = createSaveManager({
+      gameId: 'future-load',
+      storageAdapter: storage,
+      compressSave: false,
+    });
+    mgr.save();
+    const raw = JSON.parse(storage.getItem('future-load-slot-0')!);
+    raw.version = 99;
+    storage.setItem('future-load-slot-0', JSON.stringify(raw));
+
+    useSaveEvents(mgr);
+    mgr.load();
+
+    const { toasts } = useToasts();
+    expect(toasts.value).toHaveLength(1);
+    expect(toasts.value[0].title).toBe('Save from a newer build');
+    expect(toasts.value[0].content).toContain('paused');
+  });
+
   it('unsubscribe removes every handler', () => {
     const storage = createMemoryStorage();
     const mgr = createSaveManager({ gameId: 'unsub-test', storageAdapter: storage });
