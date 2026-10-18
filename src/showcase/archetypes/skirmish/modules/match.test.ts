@@ -1,130 +1,94 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { boot, bootModules, getEngine, tick, INTERVAL_RATE } from '../sim/harness';
-import {
-  createTuningModule,
-  createMatchModule,
-  MatchKey,
-  type MatchApi,
-  type MatchEndedPayload,
-} from '.';
-/**
- * Behavioral spec for the match spine (bone #1). Drives the real engine
- * tick-by-tick — specs *what the lifecycle does*, not economy magnitudes.
- */
+import { beforeEach, describe, expect, it } from 'vitest';
+import { Decimal, toNumber } from '@open-loop/engine';
+import { DISTRICTS } from '../data/contracts';
+import { boot, seconds, tickUntil } from '../sim/harness';
+import { getMatch } from './match';
+import { deploy, setStance } from './orders';
 
-function match(): MatchApi {
-  const m = getEngine().tryInject(MatchKey);
-  if (!m) throw new Error('skirmish/match not installed');
-  return m;
+/** Put whole units of a kind straight into a seat's safehouse. */
+function grant(side: ReturnType<typeof getMatch>['p'], n: number): void {
+  side.reserve.enforcer.value = new Decimal(n);
 }
 
-describe('skirmish match spine', () => {
+describe('the match', () => {
   beforeEach(() => boot());
 
-  it('is idle until started', () => {
-    expect(match().inMatch.value).toBe(false);
-    expect(match().outcome.value).toBeNull();
+  it('makes nothing at the briefing', async () => {
+    const m = getMatch();
+    const scrip = toNumber(m.p.scrip.value);
+    await seconds(10);
+    expect(m.phase.value).toBe('briefing');
+    expect(m.clock.value).toBe(0);
+    expect(toNumber(m.p.scrip.value)).toBe(scrip);
   });
 
-  it('opens a live match on start()', () => {
-    match().start();
-    expect(match().inMatch.value).toBe(true);
-    expect(match().outcome.value).toBeNull();
+  it('runs the clock and the hustle once the job is taken', async () => {
+    const m = getMatch();
+    const scrip = toNumber(m.p.scrip.value);
+    m.start();
+    await seconds(10);
+    expect(m.phase.value).toBe('live');
+    expect(m.clock.value).toBeGreaterThan(0);
+    expect(toNumber(m.p.scrip.value)).toBeGreaterThan(scrip);
   });
 
-  it('advances the match clock while live', async () => {
-    match().start();
-    await tick(INTERVAL_RATE); // one game-second
-    expect(match().matchTimeElapsed.value).toBeGreaterThan(0.9);
-    expect(match().matchTimeElapsed.value).toBeLessThan(1.1);
+  it('gives a district to the crew that stands in it unopposed', async () => {
+    const m = getMatch();
+    m.start();
+    grant(m.p, 6);
+    deploy(m.p, 'enforcer', 0);
+    await tickUntil(() => m.control[0]!.value >= 1);
+    expect(m.feed.value.some((f) => f.text.includes(DISTRICTS[0]!.name))).toBe(true);
   });
 
-  it('ends on externally-reported defeat and stops the clock', async () => {
-    let captured: MatchEndedPayload | null = null;
-    match().on('matchEnded', (p) => (captured = p));
-
-    match().start();
-    await tick(INTERVAL_RATE);
-    const elapsedAtEnd = match().matchTimeElapsed.value;
-    match().end({ winner: 'a', reason: 'defeat' });
-
-    // matchEnded fired with the pre-reset elapsed + winner.
-    expect(captured).not.toBeNull();
-    expect(captured!.outcome).toEqual({ winner: 'a', reason: 'defeat' });
-    expect(captured!.elapsedSec).toBeCloseTo(elapsedAtEnd, 5);
-
-    // Match no longer live; the result stays readable between matches.
-    expect(match().inMatch.value).toBe(false);
-    expect(match().outcome.value).toEqual({ winner: 'a', reason: 'defeat' });
-
-    // Clock does not advance once ended.
-    await tick(INTERVAL_RATE);
-    expect(match().matchTimeElapsed.value).toBeCloseTo(elapsedAtEnd, 5);
+  it('burns the rival safehouse from a held district under an assault order', async () => {
+    const m = getMatch();
+    m.start();
+    grant(m.p, 12);
+    deploy(m.p, 'enforcer', 0);
+    await tickUntil(() => m.control[0]!.value >= 1);
+    const integrity = toNumber(m.e.hq.value);
+    setStance(m.p, 0, 'assault');
+    await seconds(5);
+    expect(toNumber(m.e.hq.value)).toBeLessThan(integrity);
   });
 
-  it('end() is idempotent — first outcome wins', () => {
-    let count = 0;
-    match().on('matchEnded', () => (count += 1));
-    match().start();
-    match().end({ winner: 'a', reason: 'defeat' });
-    match().end({ winner: 'b', reason: 'defeat' });
-    expect(count).toBe(1);
-    expect(match().outcome.value).toEqual({ winner: 'a', reason: 'defeat' });
+  it('holds a district without an assault order, and the safehouse stays whole', async () => {
+    const m = getMatch();
+    m.start();
+    grant(m.p, 12);
+    deploy(m.p, 'enforcer', 0);
+    await tickUntil(() => m.control[0]!.value >= 1);
+    const integrity = toNumber(m.e.hq.value);
+    await seconds(5);
+    expect(toNumber(m.e.hq.value)).toBe(integrity);
   });
 
-  it('start() re-opens a fresh match after a prior result', () => {
-    match().start();
-    match().end({ winner: 'a', reason: 'defeat' });
-    match().start();
-    expect(match().inMatch.value).toBe(true);
-    expect(match().outcome.value).toBeNull();
-    expect(match().matchTimeElapsed.value).toBe(0);
+  it('ends won when the rival safehouse falls, and the next match starts from a briefing', async () => {
+    const m = getMatch();
+    m.start();
+    grant(m.p, 30);
+    deploy(m.p, 'enforcer', 0);
+    await tickUntil(() => m.control[0]!.value >= 1);
+    setStance(m.p, 0, 'assault');
+    await tickUntil(() => m.phase.value !== 'live', 20_000);
+    expect(m.phase.value).toBe('won');
+    m.nextMatch();
+    expect(m.phase.value).toBe('briefing');
+    expect(m.clock.value).toBe(0);
+    expect(m.control.every((c) => c.value === 0)).toBe(true);
+    expect(toNumber(m.e.hq.value)).toBe(m.tune.hqIntegrity.value);
   });
 
-  it('tracks active factions initialized on start', () => {
-    bootModules([
-      createTuningModule(),
-      createMatchModule({ factions: ['crimson', 'azure', 'emerald'] }),
-    ]);
-    match().start();
-    expect(match().activeFactions.value).toEqual(['crimson', 'azure', 'emerald']);
-    expect(match().eliminations.value).toEqual([]);
-  });
-
-  it('handles sequential elimination in 3-way match, resolving on last-standing', async () => {
-    bootModules([
-      createTuningModule(),
-      createMatchModule({ factions: ['crimson', 'azure', 'emerald'] }),
-    ]);
-    let eliminatedEvent: { faction: string; elapsedSec: number } | null = null;
-    let endedPayload: MatchEndedPayload | null = null;
-    match().on('factionEliminated', (p) => (eliminatedEvent = p));
-    match().on('matchEnded', (p) => (endedPayload = p));
-
-    match().start();
-    await tick(INTERVAL_RATE);
-    match().eliminate('crimson');
-
-    expect(match().inMatch.value).toBe(true);
-    expect(match().activeFactions.value).toEqual(['azure', 'emerald']);
-    expect(match().eliminations.value).toHaveLength(1);
-    expect(match().eliminations.value[0].faction).toBe('crimson');
-    expect(match().eliminations.value[0].remainingFactions).toEqual(['azure', 'emerald']);
-    expect((eliminatedEvent as { faction: string; elapsedSec: number } | null)?.faction).toBe(
-      'crimson',
-    );
-
-    await tick(INTERVAL_RATE);
-    match().eliminate('azure');
-
-    expect(match().inMatch.value).toBe(false);
-    expect(match().activeFactions.value).toEqual(['emerald']);
-    expect(match().outcome.value).toEqual({ winner: 'emerald', reason: 'last-standing' });
-    expect(match().eliminations.value).toHaveLength(2);
-    expect(match().eliminations.value[1].faction).toBe('azure');
-    expect(match().eliminations.value[1].remainingFactions).toEqual(['emerald']);
-    expect(endedPayload).not.toBeNull();
-    expect(endedPayload!.outcome).toEqual({ winner: 'emerald', reason: 'last-standing' });
-    expect(endedPayload!.eliminations).toHaveLength(2);
+  it('lets the astral scout see every district for a while, then fogs them again', async () => {
+    const m = getMatch();
+    m.start();
+    m.p.aether.value = new Decimal(m.scoutCost);
+    expect(DISTRICTS.some((_, i) => !m.visible(i))).toBe(true);
+    expect(m.scout()).toBe(true);
+    expect(DISTRICTS.every((_, i) => m.visible(i))).toBe(true);
+    expect(m.scout()).toBe(false);
+    await tickUntil(() => m.scoutLeft.value === 0);
+    expect(DISTRICTS.some((_, i) => !m.visible(i))).toBe(true);
   });
 });

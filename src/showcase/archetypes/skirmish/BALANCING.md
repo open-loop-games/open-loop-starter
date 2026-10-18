@@ -1,152 +1,73 @@
-# Balance — Skirmish
+# Skirmish — balancing
 
-This is an RTS economy: income funds an army, and the only real decision is how
-much of it to reinvest instead. `IDENTITY.md` § Rate-function spine declares the
-bucket and where the closed form stops; the closed forms themselves sit in
-`data/economy.ts` § Balance. This file is how you _work_ on it.
-
-The thing to understand before touching a number: **balance here is a payoff
-matrix, not a curve.** There is no correct `φ`, only a best response to what the
-opponent is doing. A pass that produces one dominant split has made the game
-worse even if every individual number looks reasonable.
+Two seats grow a worker economy and convert it into an army that contests three districts.
+The economy is a priced ladder with a payback horizon; the army side is a value budget that
+every price is a multiple of; the fight is a square-law exchange. `IDENTITY.md` § Rate-function
+spine names the buckets. Everything in `data/` is derived in `data/spine.ts` from the named
+anchors at its head.
 
 ## The tunables
 
-Perturbable surface — the `tunable()` keys a probe can push a scope onto:
+Every key is read through `tunable()` in `modules/tunables.ts`; both seats share one set.
 
-| Key                       | Default | What it moves                                                                                                                 |
-| ------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `economy/incomePerWorker` | `2.5`   | `ρ`. Raises income and the growth constant `r = ρ/c` together, so it moves both the pace and the whole game's tempo.          |
-| `economy/workerCost`      | `100`   | `c`. Investment lump size AND `r`, inversely. The single most coupled number here — see Couplings.                            |
-| `tactical/unitCost`       | `10`    | Army cost. Sets how many units an investment costs and therefore how sharp the tradeoff feels.                               |
-| `match/timeLimitSec`      | `1800`  | A backstop, not the match length. Matches resolve in well under a minute; a run that reaches this cap is a stalemate reading. |
+| Key | Default from | What it moves |
+|---|---|---|
+| `econ/<id>/rate` | `HUSTLER_RATE`, `TAP_RATE`, `turfRate` | income per hustler, aether per tap, scrip per held district |
+| `econ/<id>/baseCost`, `econ/<id>/ratio` | `hustlerBaseCost`, `hustlerRatio`, `tapBaseCost`, `tapRatio` | where the hustler plateau falls; how many taps a seat can feed floors from |
+| `barracks/<id>/baseCost`, `barracks/<id>/ratio` | `buildingBaseCost`, `buildingRatio` | how early a second floor of a kind comes, and so how fast a mix can shift |
+| `barracks/trainRate` | `1 / TRAIN_S` | units per floor per second, before research |
+| `units/<kind>/dps`, `units/<kind>/hp` | `UNIT_DPS`, `unitHp`, `enforcerDps`, `enforcerHp` | fight length; with the pairing table, who wins it |
+| `units/<kind>/scrip`, `units/<kind>/aether` | `unitValue`, split at `AETHER_PRICE` | what a unit costs, and how much of the army leans on taps |
+| `squats/baseCost`, `squats/ratio` | `squatBaseCost`, `squatRatio` | when the bunks stop binding |
+| `squats/supplyBase`, `squats/supplyPer` | `SUPPLY_BASE`, `SUPPLY_PER_SQUAT` | the army a seat can field before and per squat |
+| `hq/integrity` | `hqIntegrity` | how long a siege takes, and so the match length |
+| `hq/turretDps` | `turretDps` | the smallest squad that can raze a safehouse |
+| `districts/captureRate` | `captureRate` | how fast an unopposed squad takes a district |
+| `districts/refPresence` | `REF_PRESENCE` | the squad size control drift is scaled to |
+| `research/<id>/scrip`, `research/<id>/aether` | multiples of `unitValue` | when each upgrade lands |
 
-**`economyShare` (`φ`) is deliberately not on this surface.** It is a per-seat
-policy parameter on `AutomationOptions`, not a global constant — two seats hold
-different values at once, which a registry key cannot express. Sweep it by
-building engines at different splits (`balance/_engine.ts` `seatsAtShare`), which
-is what `split-probe.ts` does.
-
-**`startingWorkers`, `maxWorkers` and the combat constants are not perturbable
-either.** `E₀` and the roster are content shape; `maxWorkers` is a simulation guard that
-should never bind (see Known thin).
+Not perturbable: the pairing table (`data/units.ts` `EFFECTIVENESS`), whose cells are design
+choices the square law is solved against; the contract income terms and personas
+(`data/contracts.ts`); and the scout's duration, cooldown and cost.
 
 ## Couplings
 
-**`c` moves three things at once.** It is the investment lump, it divides into
-`r = ρ/c`, and it sets the worker/unit cost ratio. Raising `c` therefore slows
-compounding, makes each investment a bigger commitment, AND lengthens payback —
-all pushing personas toward army. If you want _only_ a slower economy, move `ρ`
-and `c` together and leave the ratio alone.
+- **Every price is a multiple of `unitValue`.** It is the army-side spend of the reference
+  walk at `MID_S`, so any change to the hustler ladder, `ECON_SHARE` or `PAYBACK_HORIZON_S`
+  reprices floors, squats, research and units together. Perturbing one price key alone moves
+  it off the spine.
+- **`killRate` is solved from `COUNTER`, `RESIST` and `FIGHT_S`.** Changing a pairing cell
+  without re-solving changes every fight's length, not only who wins it.
+- **`turretDps` is solved from `MIN_SIEGE_FORCE` and `hqIntegrity`.** Raising integrity
+  alone makes small sieges viable; the two move together.
+- **The Enforcer's stats are `ENFORCER_VALUE` units for one bunk.** The bag counts every
+  unit as one, so a higher value per unit is a higher value per bunk once the bunks bind.
+- **Turf compounds control.** It is paid per district held, so its rate decides whether the
+  first seat to take ground snowballs.
+- **Aether is drawn by every floor but the Chop shop.** A build heavy in hexers, riggers and
+  enforcers is capped by taps, not scrip, and `TAP_LIMIT` caps taps.
+- **The rival's analysts are not fogged.** `situation('e')` reads the player's whole army,
+  so the rival's `counter` persona weight acts on true information.
 
-**Investment must withhold, or `φ` is a lie.** Because `c > unitCost`, a worker
-is a lump against a continuous income stream. A policy that commits its remainder
-to army every decision slot never banks the cost, so income loses the race to
-its own spending and the realized split reads 0 no matter what the persona asked
-for — with nothing anywhere reporting an error. `modules/automation.ts` reserves
-the worker cost while under target for exactly this reason. Drop `c` below
-`unitCost` and the reserve silently becomes a no-op.
-
-**Realized `φ` overshoots in short matches.** Steering is bang-bang against an
-indivisible worker, so the realized share sits at or just above target by up to
-`c / cumulativeIncome`. In a 40s match that bound is large — a seat targeting
-0.2 can realize 0.45 — so read `realizedShare` against match length before
-concluding a persona is misbehaving.
-
-**The tactical sim must stay symmetric, and it is easy to break.** Two seats given
-identical treatment must reach identical state. Two separate defects broke this
-and both read as balance findings rather than as bugs: a spawn counter shared
-across sides handed each a different formation offset, and sequential per-side
-resolution let the second side act on the first's already-moved positions. Both
-were found by noticing that a mirror matchup had a winner. `modules/tactical-sim.test.ts`
-§ mirror symmetry locks it; `split-probe.ts` re-checks it on every run via the
-diagonal, and says so loudly.
-
-**Base HP and army throughput set whether the economy matters at all.** The
-economic crossovers sit around 1.5–2.1m (`skirmish-projection.ts` § 3). If
-matches resolve much faster than that, no investment can ever pay off and the
-split is decorative regardless of how well `r` is tuned. The first pass here
-resolved matches in 21s, which made every economic number irrelevant; raising
-`BASE_HP` to 500 (50 trooper equivalents) pushes economic clashes (φ = 0.2 vs
-0.4) across the crossover to ~130s (2.17m), while the default rush-vs-investor
-match resolves around ~50s (49.5s in `arc-probe.ts`, 60s in `split-probe.ts`).
 ## Running a pass
 
-Run from the repo root (`src/game/…` after eject). Order matters — the
-projection is cheap and rules out whole classes of problem before any headless run:
-
-```
-pnpm exec vite-node src/showcase/archetypes/skirmish/balance/skirmish-projection.ts
-pnpm exec vite-node src/showcase/archetypes/skirmish/balance/arc-probe.ts
-pnpm exec vite-node src/showcase/archetypes/skirmish/balance/split-probe.ts
-pnpm exec vite-node src/showcase/archetypes/skirmish/balance/roster-probe.ts
-pnpm exec vite-node src/showcase/archetypes/skirmish/balance/persona-probe.ts
-```
-
-- **`skirmish-projection.ts`** — no engine, pure arithmetic. Prints army and
-  income under a fixed split, and the economic crossover against pure rush. Army
-  counts are an **upper bound**: the reserve and the purchase cadence both make
-  the real army smaller, so a probe _over_ the bound means the model is wrong
-  rather than the balance. Check the crossovers against expected match length
-  first; if the crossover lands after the match ends, the economy is decorative
-  and no amount of simulation will show it.
-- **`arc-probe.ts`** — drives the shipping automation through one match of the
-  default matchup and reports when each beat fired, plus a sampled view of the
-  match. A beat firing outside its window is a question about the window or the
-  content, never a reason to bend a constant.
-- **`split-probe.ts`** — the signature probe. Sweeps `φ` on both seats and prints
-  the payoff matrix. Read it in this order: (1) is the diagonal all stalemate — if
-  not, stop, the tactical sim is asymmetric and every other cell is unreliable; (2) is any
-  split undefeated — a dominant split means the axis is dead; (3) is there an
-  intransitive cycle — that is the outcome worth having.
-- **`roster-probe.ts`** — verifies the 3-unit counter matrix (trooper > cavalry >
-  archer > trooper) across pure and mixed composition matchups. Diagonal must be
-  all stalemate (mirror symmetry); off-diagonal cells verify the counter cycle.
-- **`persona-probe.ts`** — sweeps the 5-persona tournament matrix deterministically
-  (confirming mirror symmetry on the diagonal) and measures win distributions and
-  duration spreads across a 10-seed batch under calibrated `cadenceJitter = 0.15`
-  via `@/balance`.
-- **`beats.ts`** holds the windows and predicates. Windows are **measured**, and
-  the current ones come from the default matchup resolving around ~50s.
-**On `never` readings.** The break and recovery beats are asymmetric by nature: a
-seat that wins cleanly never has its army broken, and a seat that collapses never
-recovers. Those `never`s describe the match correctly. A `never` on any other
-beat, or on both seats at once, is the one worth chasing.
+- `pnpm exec vite-node src/showcase/archetypes/skirmish/balance/arc-probe.ts` prints the
+  spine's values and landmarks, then plays each contract under the reference player and
+  prints every beat, both seats' end state and the career. It takes about two seconds.
+- A healthy contract ends inside the spine's match length at equal income; earlier against
+  the cheaper contracts. A stall to `MAX_MATCH_S` is a structural defect, not a tuning one.
+- The probe header says what the reference player is and why it plays with every
+  lieutenant hired.
 
 ## Known thin
 
-- **Stochastic leg and multi-run distributions.** The spine names stochastic
-  cadence jitter as one of three places where the closed form stops.
-  `persona-probe.ts` exercises this third leg across seeded batches via
-  `src/balance/spread.ts` (`seedBatch`, `spreadOf`, `categorySpreadOf`) with
-  calibrated `cadenceJitter = 0.15`. Close matchups resolve as distributions:
-  `rush vs investor` yields 9b : 1a (duration spread 67.8s [43.0–86.5s]), and
-  `combined vs rush` splits 6b : 4a (duration spread 42.3s [32.0–72.0s]),
-  confirming that borderline matchups turn on the stochastic cadence of
-  individual bursts rather than collapsing to deterministic parity.
-- **5-persona roster and counter dynamics.** `data/personality.ts` declares five
-  canonical RTS archetypes: `rush` (infantry swarm), `investor` (steady macro),
-  `skirmish` (archer screen & harass), `boom` (cavalry blitz & heavy macro), and
-  `combined` (triad roster). Verified in `persona-probe.ts`: `rush` punishes `boom`'s
-  slow compounding in 28s; `skirmish`'s archers counter `rush`'s troopers in 48s;
-  and `boom`'s cavalry counters `skirmish`'s archers in 54s.
-- **The economic crossover and match resolution.** The projection puts
-  crossover against pure rush at 1.5–2.1m. With `BASE_HP = 500`, economic clashes
-  (φ = 0.2 vs 0.4) last 130s (~2.17m), crossing the threshold and demonstrating
-  the compounding half of the spine. However, aggressive rush matchups (φ = 0 vs 0.2)
-  resolve earlier around ~50s, because field combat is decided at the first
-  engagement (~26s) and the defeated base falls under siege. The split
-  decides matches cleanly with an intransitive cycle (0 → 0.4 → 0.2 → 0).
-- **`maxWorkers` has never been reached, and must not be.** It is a guard against
-  unbounded growth in a match with no clock. A probe reporting a seat pinned at
-  the cap is reporting that the cap became balance, which is a defect — the first
-  data pass had exactly that problem at `c = 40`, where the cap bound at ~74s.
-- **3-unit roster and counter matrix.** The roster provides the classic
-  rock-paper-scissors triad: trooper (infantry) counters cavalry (1.75x),
-  cavalry counters archer (1.75x), and archer counters trooper (1.75x). Verified
-  in `roster-probe.ts` with mirror symmetry on the diagonal. Automation policies
-  draft compositions via `AutomationOptions.composition` (defaults to pure trooper).
-- **Two seats, where the identity claims N.** Free-for-all is the base case in
-  the identity line; the implementation seats two. Everything here — the payoff
-  matrix especially — is the degenerate bilateral case, and the coupled-state
-  term in the spine only loses its zero-sum shelter at N ≥ 3.
+- **The pairing table decides little.** A seat that trains only Enforcers wins at least as
+  often as one that counters what it sees, and flattening the table changes no aggregate
+  outcome. Scouting and the counter wheel are present but not yet load-bearing.
+- **The reference player can starve its floors of aether.** Its build plan reads the next
+  floor's price, not which input binds, so it can stack aether floors on capped taps while
+  scrip piles up.
+- **The siege-force landmark has no probe beat.** The probe reports the first assault, which
+  also waits on holding a district.
+- **Repeated attempts are not identical.** Each policy throttle keeps its phase across
+  matches.

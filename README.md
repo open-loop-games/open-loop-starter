@@ -61,7 +61,7 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 | `producer` | Probe Swarm | ThreePanelShell | ProducerCategory, AchievementCategory, AutomationTiers, processOfflineTime | A geometric cost ladder under a compounding modifier stack, with offline catch-up and a return report |
 | `tug` | Hold the Causeway | SingleColumnShell | PurchasableCategory, Skill, Reset, ModifierChain, TuningRegistry | Adversarial lane push: waves released on alternating horns meet at a line that sways about the middle, cover stiffens each side near home, engines thrown from behind a held line breach the gate, and a Chronicle carries the career across a march of fields |
 | `survivor` | One More Take | Soundstage | Skill, PurchasableCategory, Reset, ModifierChain, SpatialGrid, TuningRegistry | Automatic fire with positioning as the only input: rigs fire themselves, rewrites draft the loadout, each take ends on a lead to fell, ratings stage harsher takes, and each star improvises as an automated player |
-| `skirmish` | Skirmish | SingleColumnShell | Sequencer, Loop, AutomationTiers | Adversarial real-time match with automation on both sides |
+| `skirmish` | Chrome & Cantrip | ThreePanelShell | ProducerCategory, ResourceBag, PurchasableCategory, Reset, AutomationTiers, TuningRegistry | Real-time strategy: hustlers and ley taps feed training floors, squads take three districts on the player's orders, units meet through a pairing table, and an assault from a held district burns the rival safehouse |
 | `_blank` | — | SingleColumnShell | — | Neutral skeleton for a novel research composition (`pnpm eject --clean`) |
 
 ## Commands

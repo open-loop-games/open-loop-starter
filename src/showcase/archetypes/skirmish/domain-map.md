@@ -1,6 +1,6 @@
 # Skirmish — domain language
 
-N factions each fund an army from a compounding economy and contest one continuous field in real time; nothing survives from one match to the next.
+Chrome & Cantrip: a shadow crew and a rival outfit fight over three districts of a sprawl where the ley lines have woken. Hustlers earn scrip, ley taps draw aether, training floors turn both into four kinds of unit, and the crew that burns the other’s safehouse takes the contract.
 
 > Generated from code structure by `ol-domain-map` — do not edit by hand;
 > regenerate with `pnpm domain-map`. The generated sections below re-derive
@@ -11,13 +11,16 @@ N factions each fund an army from a compounding economy and contest one continuo
 
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
-- **UnitTypeId** _(string-literal union)_ — `trooper` · `archer` · `cavalry`
-- **UnitArchetypeTag** _(string-literal union)_ — `cavalry` · `infantry` · `ranged`
-- **PersonaKey** _(string-literal union)_ — `rush` · `investor` · `skirmish` · `boom` · `combined`
+- **SideId** _(string-literal union)_ — `p` · `e`
+- **EconId** _(string-literal union)_ — `hustler` · `ley-tap` · `turf`
+- **ResearchEffect.kind** _(discriminated-union arm)_ — `damage` · `hp` · `income` · `training` · `turret`
+- **UnitKind** _(string-literal union)_ — `razor` · `hexer` · `rigger` · `enforcer`
+- **AttackKind** _(string-literal union)_ — `kinetic` · `arcane` · `code` · `heavy`
+- **BodyKind** _(string-literal union)_ — `chrome` · `flesh` · `drone` · `plated` · `structure`
 
 ## Defs
 
-`EconomyBalance`, `FactionDef`, `PersonaDef`, `UnitTypeDef`
+`BarracksDef`, `ContractDef`, `DistrictDef`, `EconDef`, `ResearchDef`, `UnitDef`
 
 ## Relationships
 
@@ -25,15 +28,15 @@ Field-name reference edges: untyped ids in named fields that point at
 another domain noun. These are name-encoded, not type-encoded, so
 type-graph tools such as dependency-cruiser and findReferences miss them.
 
-- **TargetingWeights** → `economy`
-- **PersonaDef** → `economy`
+- **Persona** → `research`
+- **ResearchEffect** → `unit`
 
 ## Thin spots
 
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`UnitTypeDef`, `FactionDef`
+`EconDef`, `BarracksDef`, `DistrictDef`, `ContractDef`
 
 ## Disambiguators (curated)
 
@@ -41,6 +44,19 @@ Hand-authored: the game-level concepts no single type owns, which
 structure cannot derive. Kept small and stored in the config, so
 staleness stays visible against the generated sections above.
 
-- **split** — The fraction φ of income a faction reinvests in its economy, which compounds; the rest, 1 − φ, buys army, which is consumed. The economic decision is a split, not a curve.
-- **persona** — A keyed behavioural variant an AI opponent is drawn from at match creation (PersonaDef): its split and its targeting weights. A persona matchup is a design object of its own.
-- **counter matrix** — UnitArchetypeTag × UnitArchetypeTag damage multipliers. Composition against a rival reads through it, so who to build depends on what the rivals build.
+- **match** — One run against one contract: from the briefing to a burned safehouse. Starting the next resets both seats and the districts, never the career.
+- **seat** — One side of a match: the player’s crew or the rival. Both play the same policy; the rival through its persona, the player through hired lieutenants or by hand.
+- **contract** — A rival outfit to beat: its persona, its income terms and its briefing. The career fights them in order.
+- **persona** — A parameter bundle the one shared policy reads: production mix, how hard it counters, payback horizon, research order, when it assaults and when it pulls back.
+- **hustler** — A worker producer: one scrip a second, at a geometric price. The economy grows by hiring them until one no longer pays back inside the horizon.
+- **ley tap** — A producer of aether, the second input hexers, riggers and enforcers are trained from.
+- **turf** — Income from districts held outright: one producer whose count is the districts a seat holds.
+- **training floor** — A converter that turns scrip and aether into one unit kind, while its switch is on and the bunks have room.
+- **bunks** — The supply cap: one bag holding every unit a seat has, at home and in the districts. Coffin squats raise it.
+- **district** — One of three places between the safehouses. Control drifts toward the side present in it; a side that holds it outright earns turf and may assault from it.
+- **squad** — A seat’s units standing in one district, by kind. Units at home are the reserve and hold the gates.
+- **assault** — An order on a held, uncontested district: its squad fires on the rival safehouse while the safehouse turret fires back.
+- **focus** — Where a squad’s fire goes: on one kind if it stands in the district, else spread by count.
+- **pairing** — The attack kind × body kind table every hit is read through: razors cut flesh, hexers fry drones, riggers brick chrome, and each reverse cell resists.
+- **astral scout** — A paid reveal: every district and the rival safehouse are seen for a while, then fog returns with each sighting kept at its age.
+- **lieutenant** — The player’s automation, one per automation tier: the fixer plays the economy, the quartermaster builds and researches, the tactician commands. Each has a switch.

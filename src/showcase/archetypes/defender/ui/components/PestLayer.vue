@@ -7,7 +7,7 @@
   read-only projection of the plot run: it never writes sim state, and the
   board under it takes every click.
 
-  Follows the field-projection pattern of `skirmish/ui/PlayField.vue`: pixi
+  The field-projection pattern: pixi
   handles in plain `let`s (a Vue reactive proxy corrupts pixi's bookkeeping),
   the component owns its ticker, an async-mount guard, full teardown. Bodies
   ease toward the 20 Hz sim sample; they are decorations, so a chase is enough.

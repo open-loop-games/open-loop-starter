@@ -46,4 +46,4 @@ Corollaries:
 `_blank/ui/GameView.vue` is the reference. Every clean fork copies the thin-root +
 game-view split from that template, so the pattern does not drift from fork to fork.
 Every archetype's `ui/*GameView.vue` is a worked example of the boundary. One
-example is `skirmish/ui/SkirmishGameView.vue`, with `BattlefieldScreen.vue` inside it.
+example is `tug/ui/TugGameView.vue`.

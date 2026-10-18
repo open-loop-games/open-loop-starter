@@ -1,37 +1,56 @@
 <!--
-  SkirmishGameView — skirmish's game-view boundary: the app frame + header
-  wrapping the battlefield. Mounts under the root's post-start `v-else`, so the
-  battlefield's match/tactical injection resolves below it. See
-  `.claude/rules/app-root-discipline.md`.
+  SkirmishGameView — the in-game subtree. Mounts under the root's post-start `v-else`
+  frame, so module getters are safe to read here. See `.claude/rules/app-root-discipline.md`.
+
+  Shell: ThreePanelShell under a HUD. The shell research has no RTS row; this is the combat
+  genres' deck: a central play surface (the safehouses and the districts) with the economy
+  and the training floors on the left, research and the crew on the right, and the purse
+  over all three. The contract sheet lies over the deck while the match is not live.
 -->
 <script setup lang="ts">
-import { AppFrame, SingleColumnShell, useModalStack } from '@/lib';
-import SystemHeader from '@/ui/components/SystemHeader.vue';
-import { manifest } from '../manifest';
-import BattlefieldScreen from './BattlefieldScreen.vue';
-
-const emit = defineEmits<{ return: [] }>();
-
-const stack = useModalStack();
+import { ThreePanelShell } from '@/lib';
+import ContractSheet from './components/ContractSheet.vue';
+import CrewHud from './components/CrewHud.vue';
+import CrewPanel from './components/CrewPanel.vue';
+import HustlePanel from './components/HustlePanel.vue';
+import MapBoard from './components/MapBoard.vue';
+import ResearchPanel from './components/ResearchPanel.vue';
 </script>
 
 <template>
-  <AppFrame :stack="stack" :tooltip-delay="400">
-    <template #header>
-      <SystemHeader :app-name="manifest.displayName" @return-to-slots="emit('return')">
-        <template #about>
-          <h4 style="margin-bottom: 6px">
-            {{ manifest.displayName }}
-          </h4>
-          <p>
-            Continuous tactical RTS — built-in AI versus built-in AI on a pixi/webgl field. Both
-            sides are played by the shipping AI; player control is a stretch goal.
-          </p>
-        </template>
-      </SystemHeader>
-    </template>
-    <SingleColumnShell>
-      <BattlefieldScreen />
-    </SingleColumnShell>
-  </AppFrame>
+  <div class="deck">
+    <CrewHud />
+    <ThreePanelShell class="deck__shell" chromeless left-width="290px" right-width="300px">
+      <template #left>
+        <HustlePanel />
+      </template>
+      <MapBoard />
+      <template #right>
+        <aside class="cc-panel" aria-label="Research and crew">
+          <ResearchPanel />
+          <CrewPanel />
+        </aside>
+      </template>
+    </ThreePanelShell>
+    <ContractSheet />
+  </div>
 </template>
+
+<style scoped>
+.deck {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  min-width: 0;
+  padding: var(--gap);
+}
+.deck__shell {
+  padding: 0;
+  grid-template-columns: var(--three-panel-left-width) minmax(560px, 1fr) var(
+      --three-panel-right-width
+    );
+}
+</style>

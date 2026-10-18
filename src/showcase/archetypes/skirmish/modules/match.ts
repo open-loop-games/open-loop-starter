@@ -1,215 +1,290 @@
-import { computed, type ComputedRef } from 'vue';
+/**
+ * The match: both seats, the three districts between them, the clock, fog of
+ * war and the phase a match is in. A match is a run that keeps its end state
+ * on screen until the player starts the next one, so it is a reset plus a
+ * phase-guarded tick, not a Cycle.
+ */
 import {
-  createEmitHandle,
+  computed,
   createReset,
   persistent,
-  tunable,
-  type Emittable,
+  shallowRef,
+  subtractResource,
+  toNumber,
+  type ComputedRef,
   type EngineModule,
   type InjectionKey,
   type Persistent,
-  type Reset,
+  type ShallowRef,
 } from '@open-loop/engine';
-import { SkirmishTuningRegistryKey, DEFAULT_FACTIONS, type FactionId } from './tuning';
-/**
- * Match spine — bone #1: a domain-free two-sided match lifecycle. Base HP, lane
- * composition and counter-pivot inference stay out of it:
- *
- *   - `start()` opens a match; `end(outcome)` closes it, idempotent.
- *   - `end()` emits `matchEnded` **before** running the match-scope reset — so
- *     subscribers (UI latch, probe outcome-capture) read final pre-reset state.
- *   - a game-time `timeLimitSec` cap ends the match on its own.
- *   - **who wins is reported from outside.** The tactical-sim / base module
- *     calls `end({ winner })` when a side's base falls; this module never reads
- *     the field. That injection seam is exactly what makes it extractable.
- *
- * RECIPE CANDIDATE (starter recipe surface — NOT the engine track): this is a
- * engine composition (a two-sided match lifecycle), not a
- * primitive gap, so it is indexed in `candidate-recipes.md`
- * for deliberate cross-archetype evaluation — deliberately not dropped in engine
- * `candidate-engine-api.md`. Skirmish is its one instance (N=1). A converged shape may later graduate
- * to a shared starter standard module or an engine consumer-guide recipe — by
- * judgment on the recipe batch, not an N=2 trigger. See that index.
- */
+import { createModuleApi } from '@/modules/module-api';
+import { DISTRICTS, type ContractDef } from '../data/contracts';
+import { UNIT_KINDS } from '../data/units';
+import {
+  GHOST,
+  PRESENCE,
+  countsOf,
+  stepBattle,
+  total,
+  type BattleEvent,
+  type Counts,
+} from './battle';
+import { createSide, type Side } from './side';
+import type { Situation } from './policy';
+import type { Tunables } from './tunables';
+import { SCOUT_COOLDOWN_S, SCOUT_S, scoutCost } from '../data/spine';
+import { CareerKey } from './career';
+import { TunablesKey } from './tuning';
 
-export interface FactionElimination {
-  faction: FactionId;
-  eliminatedAtSec: number;
-  remainingFactions: FactionId[];
+export type Phase = 'briefing' | 'live' | 'won' | 'lost';
+
+export interface FeedEntry {
+  t: number;
+  text: string;
+  tone: 'good' | 'bad' | 'info';
 }
 
-export type MatchOutcome =
-  | { winner: FactionId; reason: 'last-standing' | 'defeat' }
-  | { winner: null; reason: 'time-limit' | 'draw' };
-
-export interface MatchEndedPayload {
-  outcome: MatchOutcome;
-  elapsedSec: number;
-  eliminations: FactionElimination[];
-}
-
-export interface MatchEvents {
-  /**
-   * Fires when a match opens (synchronously inside `start()`). Battlefield /
-   * tactical-sim modules subscribe to (re)initialize their own state — the
-   * decoupled alternative to match reaching into them.
-   */
-  matchStarted: () => void;
-  /** Fires when a faction's base falls, removing it from active contention. */
-  factionEliminated: (payload: { faction: FactionId; elapsedSec: number }) => void;
-  /** Fires once per completion, BEFORE the match-scope reset clears state. */
-  matchEnded: (payload: MatchEndedPayload) => void;
+/** What the player last saw of a district, and when. */
+export interface Sighting {
+  counts: Counts;
+  at: number;
 }
 
 export interface MatchApi {
-  outcome: Persistent<MatchOutcome | null>;
-  matchTimeElapsed: Persistent<number>;
-  /** Factions currently still contending in the live match. */
-  activeFactions: Persistent<FactionId[]>;
-  /** Ordered history of faction eliminations. */
-  eliminations: Persistent<FactionElimination[]>;
-  /** True while a match is live (started AND no outcome). UI / AI check this. */
-  inMatch: ComputedRef<boolean>;
-  /** Open a fresh match. */
+  readonly p: Side;
+  readonly e: Side;
+  readonly tune: Tunables;
+  /** −1..1 per district; +1 is held by the player. */
+  readonly control: Persistent<number>[];
+  readonly phase: Persistent<Phase>;
+  /** Seconds into the live match. */
+  readonly clock: Persistent<number>;
+  readonly contract: ComputedRef<ContractDef>;
+  readonly feed: ShallowRef<FeedEntry[]>;
+  /** Seconds of astral sight left, and seconds until the next scout. */
+  readonly scoutLeft: ComputedRef<number>;
+  readonly scoutCooldown: ComputedRef<number>;
+  readonly scoutCost: number;
+  /** The player's last sighting per district, and of the rival's safehouse. */
+  readonly sightings: ShallowRef<(Sighting | undefined)[]>;
+  readonly safehouseSighting: ShallowRef<Sighting | undefined>;
+  /** Whether the player sees a district now. */
+  visible(district: number): boolean;
   start(): void;
-  /** Eliminate a faction. If <= 1 faction remains, resolves the match. */
-  eliminate(faction: FactionId): void;
-  /** Close the match. Idempotent. Emits `matchEnded` then runs the reset. */
-  end(outcome: MatchOutcome): void;
-  /** The match-scope reset, exposed for test/debug drive-through. */
-  reset: Reset;
-  on: Emittable<MatchEvents>['on'];
+  /** Leave a finished match and return to the briefing for the next contract. */
+  nextMatch(): void;
+  scout(): boolean;
+  situation(seat: 'p' | 'e'): Situation;
+  log(text: string, tone?: FeedEntry['tone']): void;
 }
 
-export const MatchKey: InjectionKey<MatchApi> = Symbol('skirmish/match') as InjectionKey<MatchApi>;
+export const MatchKey: InjectionKey<MatchApi> = Symbol('skirmish/match');
 
-/**
- * Persistent context ids, one per battlefield module, whose state clears at the
- * match boundary — the tactical-sim, per-side economy, and automation modules
- * are added here as they are built. Enumerated explicitly: the engine wraps each install in
- * `withPersistentContext(mod.id)` with no outer parent, so id-prefix walking
- * does NOT pick up sibling modules — each id must be listed. Ids with no
- * installed module reset nothing; the engine warns once, on the first reset.
- *
- * Deliberately NOT self-referential — `skirmish/match` is absent, and so is
- * `skirmish/tuning` (its scoped overrides must survive resets). Match
- * bookkeeping (`started`/`outcome`/`matchTimeElapsed`) is owned by
- * `start()`/`end()`, not the reset. A match module that listed itself would null
- * `outcome` at `end()`, leaving its idempotency guard dead and the latch to
- * recover the result. Keeping match out of its own scope makes `end()` genuinely
- * idempotent and `outcome` directly readable between matches; the reset scope
- * means only "clear the battlefield," never "forget who won."
- */
-export const SKIRMISH_MATCH_RESET_CONTEXTS: readonly string[] = [];
+const matchApi = createModuleApi(MatchKey);
+/** The match API the newest live engine published. */
+export const getMatch = matchApi.get;
 
-export interface MatchModuleOptions {
-  /** Game-time cap; match ends `time-limit` when reached. Default 30 min. */
-  timeLimitSec?: number;
-  /** Persistent context ids to clear at the match boundary. Default: none. */
-  resetPersistentContexts?: readonly string[];
-  /** Faction roster contending in the match. Defaults to DEFAULT_FACTIONS. */
-  factions?: readonly FactionId[];
-}
+const FEED_LENGTH = 40;
 
-export function createMatchModule(options: MatchModuleOptions = {}): EngineModule {
-  const resetPersistentContexts = options.resetPersistentContexts ?? SKIRMISH_MATCH_RESET_CONTEXTS;
-  const defaultTimeLimit = options.timeLimitSec ?? 30 * 60;
-  const configuredFactions = options.factions ?? DEFAULT_FACTIONS;
+export const matchModule: EngineModule = {
+  id: 'skirmish/match',
+  dependencies: ['skirmish/tuning', 'skirmish/career'],
+  install(ctx) {
+    const tune = ctx.inject(TunablesKey);
+    const career = ctx.inject(CareerKey);
+    const phase = persistent<Phase>('briefing', { id: 'phase' });
+    const clock = persistent(0, { id: 'clock' });
+    const control = DISTRICTS.map((d) => persistent(0, { id: `control-${d.id}` }));
+    const scoutUntil = persistent(-1, { id: 'scout-until' });
+    const scoutReadyAt = persistent(0, { id: 'scout-ready' });
+    const contract = computed(() => career.contract.value);
+    const running = () => phase.value === 'live';
 
-  return {
-    id: 'skirmish/match',
-    dependencies: ['skirmish/tuning'],
-    install(ctx) {
-      const registry = ctx.inject(SkirmishTuningRegistryKey);
+    const held = (sign: 1 | -1) => () => control.filter((c) => c.value * sign >= 1).length;
+    const p = createSide({
+      ctx,
+      id: 'p',
+      tune,
+      heldDistricts: held(1),
+      incomeMult: () => 1,
+      running,
+    });
+    const e = createSide({
+      ctx,
+      id: 'e',
+      tune,
+      heldDistricts: held(-1),
+      incomeMult: () => contract.value.incomeMult,
+      running,
+    });
 
-      // The engine's install wrapper opens this module's persistent context, so
-      // these refs are in it; the match-boundary reset never names it.
-      const started = persistent<boolean>(false, { id: 'started' });
-      const outcome = persistent<MatchOutcome | null>(null, { id: 'outcome' });
-      const matchTimeElapsed = persistent<number>(0, { id: 'matchTimeElapsed' });
-      const activeFactions = persistent<FactionId[]>([...configuredFactions], {
-        id: 'activeFactions',
+    const feed = shallowRef<FeedEntry[]>([]);
+    const log = (text: string, tone: FeedEntry['tone'] = 'info') => {
+      feed.value = [{ t: clock.value, text, tone }, ...feed.value].slice(0, FEED_LENGTH);
+    };
+
+    // ─── Fog of war ───
+    const scoutLeft = computed(() => Math.max(0, scoutUntil.value - clock.value));
+    const scoutCooldown = computed(() => Math.max(0, scoutReadyAt.value - clock.value));
+    const sightings = shallowRef<(Sighting | undefined)[]>(DISTRICTS.map(() => undefined));
+    const safehouseSighting = shallowRef<Sighting | undefined>(undefined);
+    // The player sees a district while scouting, while a squad stands in it, or while its informants answer to them.
+    const visible = (i: number) =>
+      scoutLeft.value > 0 || total(countsOf(p.squads[i])) > PRESENCE || control[i].value > 0;
+
+    function updateSightings(): void {
+      const next = [...sightings.value];
+      let changed = false;
+      for (let i = 0; i < DISTRICTS.length; i++) {
+        if (!visible(i)) continue;
+        next[i] = { counts: countsOf(e.squads[i]), at: clock.value };
+        changed = true;
+      }
+      if (changed) sightings.value = next;
+      if (scoutLeft.value > 0)
+        safehouseSighting.value = { counts: countsOf(e.reserve), at: clock.value };
+    }
+
+    function enemyMixFor(seat: 'p' | 'e'): Counts {
+      const mix = Object.fromEntries(UNIT_KINDS.map((k) => [k, 0])) as Counts;
+      if (seat === 'e') {
+        // The rival's analysts are not fogged: it reads the player's whole army.
+        for (const k of UNIT_KINDS) {
+          mix[k] = toNumber(p.reserve[k].value);
+          for (const sq of p.squads) mix[k] += toNumber(sq[k].value);
+        }
+        return mix;
+      }
+      for (const s of [...sightings.value, safehouseSighting.value]) {
+        if (!s) continue;
+        for (const k of UNIT_KINDS) mix[k] += s.counts[k];
+      }
+      return mix;
+    }
+
+    function situation(seat: 'p' | 'e'): Situation {
+      const own = seat === 'p' ? p : e;
+      const other = seat === 'p' ? e : p;
+      const sign = seat === 'p' ? 1 : -1;
+      const enemySquads = DISTRICTS.map((_, i) => {
+        if (seat === 'e') return countsOf(p.squads[i]);
+        if (visible(i)) return countsOf(e.squads[i]);
+        return sightings.value[i]?.counts;
       });
-      const eliminations = persistent<FactionElimination[]>([], { id: 'eliminations' });
-
-      const inMatch = computed(() => started.value && outcome.value === null);
-
-      const handle = createEmitHandle<MatchEvents>();
-      const reset = createReset({ resetPersistentContexts: [...resetPersistentContexts] });
-
-      const timeLimitSec = tunable(registry, 'match/timeLimitSec', () => defaultTimeLimit);
-
-      function start(): void {
-        // Authoritative match-bookkeeping init — this owns these fields, not
-        // the reset. `outcome` carried the prior result until now.
-        started.value = true;
-        outcome.value = null;
-        matchTimeElapsed.value = 0;
-        activeFactions.value = [...configuredFactions];
-        eliminations.value = [];
-        // Announce the open so resource-holding modules re-init themselves.
-        handle.emit('matchStarted');
-      }
-
-      function end(o: MatchOutcome): void {
-        if (outcome.value !== null) return; // genuinely idempotent — outcome stays set
-        outcome.value = o;
-        // Emit BEFORE reset so subscribers read pre-reset battlefield state
-        // (unit positions, kill tallies) that the reset is about to clear.
-        handle.emit('matchEnded', {
-          outcome: o,
-          elapsedSec: matchTimeElapsed.value,
-          eliminations: [...eliminations.value],
-        });
-        reset.reset();
-      }
-
-      function eliminate(faction: FactionId): void {
-        if (!inMatch.value) return;
-        const idx = activeFactions.value.indexOf(faction);
-        if (idx === -1) return;
-        const remaining = activeFactions.value.filter((f) => f !== faction);
-        activeFactions.value = remaining;
-        const record: FactionElimination = {
-          faction,
-          eliminatedAtSec: matchTimeElapsed.value,
-          remainingFactions: [...remaining],
-        };
-        eliminations.value = [...eliminations.value, record];
-        handle.emit('factionEliminated', { faction, elapsedSec: matchTimeElapsed.value });
-
-        if (remaining.length === 1) {
-          end({
-            winner: remaining[0],
-            reason: configuredFactions.length === 2 ? 'defeat' : 'last-standing',
-          });
-        } else if (remaining.length === 0) {
-          end({ winner: null, reason: 'draw' });
+      const besiegedFrom: number[] = [];
+      for (let i = 0; i < DISTRICTS.length; i++) {
+        if (
+          control[i].value * -sign >= 1 &&
+          other.stance[i].value === 'assault' &&
+          total(countsOf(other.squads[i])) > GHOST
+        ) {
+          besiegedFrom.push(i);
         }
       }
+      return {
+        own,
+        other,
+        control: control.map((c) => c.value * sign),
+        enemySquads,
+        enemyMix: enemyMixFor(seat),
+        besiegedFrom,
+      };
+    }
 
-      // Match clock + time-limit. Win-by-defeat is reported externally via
-      // end({ winner }) or eliminate(faction); this module owns the clock-driven ending.
-      ctx.onTick((dt) => {
-        if (!inMatch.value) return;
-        matchTimeElapsed.value += dt;
-        if (matchTimeElapsed.value >= timeLimitSec.value) {
-          end({ winner: null, reason: 'time-limit' });
-        }
-      });
+    // ─── The match reset: everything this module built, both seats included ───
+    const matchReset = createReset({ resetPersistentContexts: ['skirmish/match'] });
 
-      ctx.provide(MatchKey, {
-        outcome,
-        matchTimeElapsed,
-        activeFactions,
-        eliminations,
-        inMatch,
-        start,
-        eliminate,
-        end,
-        reset,
-        on: handle.on,
-      });
-    },
-  };
-}
+    // Who last held each district outright. A district whose control dips and recovers keeps
+    // its owner, so the feed reports a change of hands, not every recapture.
+    let owners: ('p' | 'e' | undefined)[] = DISTRICTS.map(() => undefined);
+    const ownerOf = (c: number) => (c >= 1 ? 'p' : c <= -1 ? 'e' : undefined);
+
+    function describe(ev: BattleEvent): void {
+      if (ev.kind !== 'captured' || owners[ev.district] === ev.by) return;
+      owners[ev.district] = ev.by;
+      const name = DISTRICTS[ev.district].name;
+      log(
+        ev.by === 'p'
+          ? `${name} answers to your crew.`
+          : `${name} falls to ${contract.value.rival}.`,
+        ev.by === 'p' ? 'good' : 'bad',
+      );
+    }
+
+    // Clock time of the last siege line per side: a siege a trickle of defenders keeps interrupting logs once, not every tick.
+    const SIEGE_LOG_GAP_S = 30;
+    let lastSiegeLog = [-Infinity, -Infinity];
+    ctx.onTick((dt) => {
+      if (phase.value !== 'live') return;
+      clock.value += dt;
+      const events = stepBattle(p, e, control, tune, dt);
+      for (const ev of events) {
+        describe(ev);
+        if (ev.kind !== 'siege') continue;
+        const side = ev.by === 'p' ? 0 : 1;
+        if (clock.value - lastSiegeLog[side] < SIEGE_LOG_GAP_S) continue;
+        lastSiegeLog[side] = clock.value;
+        if (side === 0) log(`Your crew is hitting ${contract.value.rival}'s safehouse.`, 'good');
+        else log('Your safehouse is under assault!', 'bad');
+      }
+      updateSightings();
+      if (toNumber(e.hq.value) <= 0) {
+        phase.value = 'won';
+        career.recordWin(Math.round(clock.value));
+        log(`${contract.value.rival}'s safehouse burns. Contract complete.`, 'good');
+      } else if (toNumber(p.hq.value) <= 0) {
+        phase.value = 'lost';
+        log('Your safehouse is gone. The fixers stop calling.', 'bad');
+      }
+    });
+
+    ctx.onLoad(() => {
+      owners = control.map((c) => ownerOf(c.value));
+      sightings.value = DISTRICTS.map(() => undefined);
+      safehouseSighting.value = undefined;
+    });
+
+    const api: MatchApi = {
+      p,
+      e,
+      tune,
+      control,
+      phase,
+      clock,
+      contract,
+      feed,
+      scoutLeft,
+      scoutCooldown,
+      scoutCost,
+      sightings,
+      safehouseSighting,
+      visible,
+      start() {
+        if (phase.value !== 'briefing') return;
+        phase.value = 'live';
+        log(`Contract on ${contract.value.rival}. The clock is running.`);
+      },
+      nextMatch() {
+        if (phase.value === 'won') career.advance();
+        matchReset.reset();
+        feed.value = [];
+        sightings.value = DISTRICTS.map(() => undefined);
+        safehouseSighting.value = undefined;
+        lastSiegeLog = [-Infinity, -Infinity];
+        owners = DISTRICTS.map(() => undefined);
+      },
+      scout() {
+        if (phase.value !== 'live' || scoutCooldown.value > 0) return false;
+        if (!subtractResource(p.aether, scoutCost)) return false;
+        scoutUntil.value = clock.value + SCOUT_S;
+        scoutReadyAt.value = clock.value + SCOUT_S + SCOUT_COOLDOWN_S;
+        log('Your mage slips loose of her body and rides the ley lines over the sprawl.');
+        updateSightings();
+        return true;
+      },
+      situation,
+      log,
+    };
+    matchApi.publish(ctx, api);
+  },
+};

@@ -1,0 +1,283 @@
+/*
+ * Skirmish — the Chrome & Cantrip costume.
+ *
+ * The whole design language is here, scoped under `.cantrip-costume`, so the story's
+ * identity is one file a fork can read, replace or delete. Nothing in `src/lib/` or `src/ui/`
+ * is edited for it: every hook is a documented costume class on a shell, composition or
+ * widget, or a class this story's own components emit.
+ *
+ * Language: a rain-soaked sprawl at night, read off a fixer's deck. The affordance palette
+ * comes first:
+ *   sodium = streetlight orange: your crew, and what you can buy now
+ *   chalk  = text and outlines; faint, what you cannot act on yet
+ *   ley    = ley-light violet: aether, magic, and what just opened
+ *   rival  = the rival's neon pink
+ *   brass  = scrip
+ *   ice    = ICE-teal: a lieutenant's hands on the controls
+ *   short  = a cost you cannot meet, a full barracks
+ * Kenney Future Square for signs, Kenney High for the neon numerals, the street face for text.
+ *
+ * Fonts: Kenney Future Square and Kenney High, both CC0 (kenney.nl).
+ */
+
+/* Kenney Future Square, not Kenney Future: the round cut draws X like H ("HEHERS").
+   Even the square cut blurs X toward H below ~14px, so small tags use the street face. */
+@font-face {
+  font-family: 'Kenney Future Square';
+  src: url('../assets/fonts/kenney-future-square.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kenney High';
+  src: url('../assets/fonts/kenney-high.ttf') format('truetype');
+  font-display: swap;
+}
+
+.cantrip-costume {
+  /* ── the street: wet asphalt under a dead sky ── */
+  --cc-asphalt: #090d12;
+  --cc-asphalt-raised: #10161e;
+  --cc-asphalt-lit: #16202b;
+  --cc-gutter: #1e2a37;
+  --cc-rain: #2f3e4e;
+  /* ── chalk: text, glyphs, outlines ── */
+  --cc-chalk: #e4dfd1;
+  --cc-chalk-dim: #98a0a8;
+  --cc-chalk-faint: #5d6772;
+  /* ── sodium-vapor streetlight: your crew, and what you can buy ── */
+  --cc-sodium: #ffa646;
+  --cc-sodium-glow: rgba(255, 166, 70, 0.16);
+  --cc-sodium-deep: #8a521c;
+  /* ── ley-light: aether, magic, and what just opened ── */
+  --cc-ley: #b49bff;
+  --cc-ley-glow: rgba(180, 155, 255, 0.18);
+  /* ── the rival's neon ── */
+  --cc-rival: #ff4f7b;
+  --cc-rival-glow: rgba(255, 79, 123, 0.16);
+  --cc-rival-deep: #7a2238;
+  /* ── scrip is brass ── */
+  --cc-brass: #e8c76a;
+  /* ── ICE-teal: your lieutenants' hands on the controls ── */
+  --cc-ice: #5fd4c8;
+  /* ── short of something: a cost you cannot meet ── */
+  --cc-short: #c4776a;
+
+  --cc-face-sign: 'Kenney Future Square', 'Noto Sans', sans-serif;
+  --cc-face-tag: 'Noto Sans', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --cc-face-neon: 'Kenney High', 'Kenney Future Square', monospace;
+  --cc-face-street: 'Noto Sans', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --cc-notch: 3px;
+
+  /* starter's tokens, on the street */
+  --color-bg: var(--cc-asphalt);
+  --color-surface: var(--cc-asphalt-raised);
+  --color-surface-hover: var(--cc-asphalt-lit);
+  --color-border: var(--cc-gutter);
+  --color-text: var(--cc-chalk);
+  --color-text-muted: var(--cc-chalk-dim);
+  --color-primary: var(--cc-sodium);
+  --color-primary-hover: #ffb769;
+  --color-on-primary: var(--cc-asphalt);
+  --color-danger: var(--cc-rival);
+  --font-sans: var(--cc-face-street);
+  --radius: var(--cc-notch);
+  --radius-sm: var(--cc-notch);
+  --gap: 10px;
+  --gap-sm: 6px;
+  --modal-surface: var(--cc-asphalt-raised);
+  --modal-backdrop: rgba(5, 8, 11, 0.72);
+
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: var(--app-root-min-height, 100vh);
+  /* Rain-streaked glass over the whole deck: two faint gradients, no motion. */
+  background:
+    radial-gradient(1200px 500px at 15% -10%, rgba(255, 166, 70, 0.07), transparent 60%),
+    radial-gradient(900px 600px at 110% 120%, rgba(180, 155, 255, 0.06), transparent 60%),
+    var(--cc-asphalt);
+  color: var(--cc-chalk);
+  font-family: var(--cc-face-street);
+  font-stretch: semi-condensed;
+  font-size: 13px;
+  line-height: 1.35;
+  color-scheme: dark;
+}
+
+.cantrip-costume .num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A panel: a dark pane of the deck, scrolling on its own. */
+.cantrip-costume .cc-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--gap);
+  background: color-mix(in srgb, var(--cc-asphalt-raised) 70%, transparent);
+  border: 1px solid var(--cc-gutter);
+  border-radius: var(--cc-notch);
+  scrollbar-width: thin;
+  scrollbar-color: var(--cc-rain) transparent;
+}
+
+/* A sign over a panel. */
+.cantrip-costume .cc-title {
+  margin: 4px 0 0;
+  padding-bottom: 4px;
+  font-family: var(--cc-face-sign);
+  font-weight: normal;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cc-chalk-dim);
+  border-bottom: 1px solid var(--cc-gutter);
+}
+
+/* A tag: a small caps-height label in the street face, set heavy so it reads as chrome. */
+.cantrip-costume .cc-tag {
+  font-family: var(--cc-face-tag);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-chalk-faint);
+}
+
+/* A lieutenant's mark on what they handle for you. */
+.cantrip-costume .cc-auto {
+  font-family: var(--cc-face-tag);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-ice);
+  border: 1px solid color-mix(in srgb, var(--cc-ice) 45%, transparent);
+  border-radius: var(--cc-notch);
+  padding: 1px 4px;
+}
+
+/* No eyes there: what the fog hides, and when you last saw it. */
+.cantrip-costume .cc-fog {
+  font-size: 11px;
+  color: var(--cc-chalk-faint);
+  letter-spacing: 0.04em;
+}
+
+/* Starter's Switch as a lit tab: a dot that glows when the switch is on. */
+.cantrip-costume .olui-switch {
+  gap: 5px;
+  padding: 2px 7px 2px 5px;
+  background: var(--cc-asphalt);
+  border: 1px solid var(--cc-rain);
+  border-radius: var(--cc-notch);
+  font-family: var(--cc-face-tag);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-chalk-dim);
+}
+.cantrip-costume .olui-switch:hover {
+  background: var(--cc-asphalt);
+}
+.cantrip-costume .olui-switch__track {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--cc-chalk-faint);
+}
+.cantrip-costume .olui-switch__thumb {
+  display: none;
+}
+.cantrip-costume .olui-switch[data-state='checked'] {
+  color: var(--cc-sodium);
+  border-color: var(--cc-sodium-deep);
+}
+.cantrip-costume .olui-switch[data-state='checked'] .olui-switch__track {
+  background: var(--cc-sodium);
+  border-color: transparent;
+  box-shadow: 0 0 6px var(--cc-sodium);
+}
+/* A lieutenant's switch is in ICE-teal: their hands, not yours. */
+.cantrip-costume .olui-switch.cc-switch--ice[data-state='checked'] {
+  color: var(--cc-ice);
+  border-color: color-mix(in srgb, var(--cc-ice) 50%, transparent);
+}
+.cantrip-costume .olui-switch.cc-switch--ice[data-state='checked'] .olui-switch__track {
+  background: var(--cc-ice);
+  box-shadow: 0 0 6px var(--cc-ice);
+}
+
+/* Starter's ProgressBar as a thin lit rule: no frame, a gutter track. Each gauge sets its
+   own height, fill and transition. */
+.cantrip-costume .cc-gauge {
+  --progress-bar-border: none;
+  --progress-bar-shadow: none;
+  --progress-bar-track: var(--cc-gutter);
+  --progress-bar-track-empty: var(--progress-bar-track);
+  --progress-bar-fill: var(--cc-sodium);
+  --progress-bar-fill-full: var(--progress-bar-fill);
+  --progress-bar-radius: 2px;
+}
+
+/* An order: a small key on the deck. */
+.cantrip-costume .cc-order {
+  display: inline-flex;
+  gap: 3px;
+  align-items: baseline;
+  padding: 2px 7px;
+  background: var(--cc-asphalt);
+  border: 1px solid var(--cc-rain);
+  border-radius: var(--cc-notch);
+  font-size: 11px;
+  color: var(--cc-chalk-dim);
+  cursor: pointer;
+}
+.cantrip-costume .cc-order:hover:not(:disabled) {
+  background: var(--cc-asphalt);
+  border-color: var(--cc-chalk-dim);
+  color: var(--cc-chalk);
+}
+.cantrip-costume .cc-order:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.cantrip-costume .cc-order--send {
+  border-color: var(--cc-sodium-deep);
+  color: var(--cc-sodium);
+}
+.cantrip-costume .cc-order[aria-pressed='true'],
+.cantrip-costume .cc-order[aria-pressed='true']:hover:not(:disabled) {
+  border-color: var(--cc-sodium);
+  color: var(--cc-asphalt);
+  background: var(--cc-sodium);
+}
+.cantrip-costume .cc-order--assault[aria-pressed='false'] {
+  border-color: var(--cc-sodium);
+  color: var(--cc-sodium);
+}
+
+/* Starter's frame, on the street. */
+.cantrip-costume .olui-app-frame {
+  background: transparent;
+}
+.cantrip-costume .olui-system-header {
+  background: transparent;
+  border-bottom: 1px solid var(--cc-gutter);
+  font-family: var(--cc-face-sign);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cantrip-costume *,
+  .cantrip-costume *::before,
+  .cantrip-costume *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

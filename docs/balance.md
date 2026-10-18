@@ -44,8 +44,9 @@ automated player optimizes, are on the balance harness side of that recipe.
 
 - **Adversarial seats carry a persona roster.** `tug` holds temperaments, parameter
   bundles over one decision function (`src/showcase/archetypes/tug/data/lords.ts`,
-  `Temperament`), read by `modules/rival.ts` (`chooseWave`). `skirmish` scales its decision
-  cadence per persona (`modules/automation.ts`) and ships rush against greedy.
+  `Temperament`), read by `modules/rival.ts` (`chooseWave`). `skirmish` holds personas,
+  parameter bundles over the one policy its rival and the player's lieutenants share
+  (`src/showcase/archetypes/skirmish/data/contracts.ts`, `Persona`), read by `modules/policy.ts`.
 - **Solo archetypes have player automation behind automation tiers, not an opponent roster.**
   `producer` holds a `modules/automation.ts` behind `AutomationTiers`. That is the automation-as-game-code convention, and it is what
   the balance harness drives — a different object from an opponent seat, and not a

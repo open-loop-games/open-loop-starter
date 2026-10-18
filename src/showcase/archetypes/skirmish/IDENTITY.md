@@ -1,245 +1,91 @@
-# Skirmish — Identity
+# Skirmish — archetype identity
 
-## Identity line
+> Workers fund an army: `producer` hustlers and ley taps feed `converter` training floors,
+> gated by a `prerequisite-graph` and capped by `storage-capacity`, whose units meet through
+> `type-effectiveness`. Over it, three components no pattern names: real time, direct command
+> of squads by district, and a match won by burning the rival's base.
 
-> **Real-time strategy** — a design claim from the genre: **N factions**, each
-> funding an army from a compounding economy, contesting one continuous field in
-> real time; build order, composition and engagement are the decision surface
-> because rivals make theirs at the same time, and policies drive the seats.
-
-Genre: `rts`, whose document in the studio's research library lists the games in it. The
-story is a design claim, adjacent to the incremental set: the corpus holds no sourced
-exemplar for the shape, and no research pattern is cited. The economy is the substrate
-every archetype shares (a stock, a rate, a spend); the opponents are what is load-bearing
-rather than decorative, and they come from the adjacent game-AI corpus
-(`open-loop-research/patterns/adjacent/ai-rosters.md` — a keyed collection of behavioural
-variants, drawn from at match creation).
-
-**Nothing survives from one match to the next** — this is the line against Tug, which is the
-same contest with a career kept across matches, and which is core because of
-it. Lane versus field and two seats versus N are each line's own choices, not the
-boundary. **N factions** is this line's choice. Three armies can meet;
-two can be left to bleed each other while a third expands; threat is directional
-and unevenly distributed, so _who to fight_ sits alongside how much to build.
-Free-for-all is the base case, teams a friend/foe relation over the same
-substrate. The current cut seats two (`Side = 'a' | 'b'`) — that is a first
-implementation, not the archetype, and § Growth ports carries the widening.
-
-**No spatial pattern is in this line, deliberately.** `positional-effect` wants
-outcomes that turn on arrangement and `player-siting` wants acquiring and siting
-as two decisions; skirmish has neither. Units acquire and close. The field is where attrition _resolves_ rather
-than a surface anyone authors — it is load-bearing in the spine (it sets how many
-units are in contact at once) without being a pattern the player composes.
-Claiming either sibling here would be the easy mis-file.
+Genre: `rts`. Its document in the studio's research library lists the games in it.
 
 ## What this archetype is
 
-Each faction funds an army that contests one shared field. Income splits between
-compounding the economy and building units; units are free-moving agents
-(continuous `(x,y)`), not lane-rail followers, and they acquire and engage on
-their own once committed. A faction loses when its base breaks.
+*Chrome & Cantrip.* The ley lines have woken under a rain-soaked sprawl, and two crews fight
+over three of its districts. Hustlers bring home scrip, ley taps draw aether. Four training
+floors turn both into Razorboys, Hexers, Riggers and Enforcers, while their switch is on and
+the bunks have room; coffin squats add bunks. Research sits behind the floors it needs.
 
-The first-class player is a _policy_: the shipping AI drives every seat, so the
-archetype is fully exercisable — and balanceable — headless before a human ever
-touches it. A player seat is that policy swapped for input. The pixi/webgl field
-renders the tactical sim as a pure read-only projection.
+Razorboys cut Hexers, Hexers fry Riggers' drones, Riggers brick Razorboys' chrome; Enforcers
+hit everything evenly in heavy frames. The player sends whole units into a district by kind,
+pulls a squad back, sets its focus, and orders an assault once the district is held. A held,
+uncontested district under an assault order fires on the rival's safehouse while its turret
+fires back. Units at home hold the gates.
 
-## Rate-function spine / bucket
+The player sees a district only through a squad in it or control leaning their way. An
+astral scout, paid in aether, reveals everything for a while; afterwards each district keeps
+its last sighting, dimmed with its age. Four contracts are fought in order: a street gang, a
+talismonger cabal, a rival runner crew and a megacorp. Each win hires a lieutenant — a fixer,
+a quartermaster, a tactician — who plays part of the player's seat with the rival's own policy.
 
-**Bucket: the exponential family — guns-versus-butter allocation.** The RTS
-economic decision is a split, not a curve. A faction reinvests a fraction `φ` of
-income into the economy, which compounds, and spends `1 − φ` on army, which is
-consumed. For a _fixed_ `φ` the whole trajectory closes
-(`incremental-math/…/rate-functions/exponential`):
+## Rate-function spine
 
-    E(t) = E₀ · e^(φ · r · t)                        economy, compounding
-    A(t) = ((1 − φ)/φ) · E₀ · (e^(φ · r · t) − 1)    army mass committed by t
+**Bucket: exponential, a geometric worker ladder under a payback horizon; the battle is
+coupled-state deterministic** (`incremental-math/…/rate-functions/exponential`,
+`…/bifurcations#coupled-state-deterministic`). One scrip is one hustler-second, and the
+first hustler pays back in 30 s; the ratio gives three doublings across 24 purchases. A
+reference crew walks the ladder, spending half its income on hustlers while one pays back
+inside the horizon. A unit's value is the army-side spend at the 240 s mark over a 24-unit
+reference army, and every floor, squat, research and unit price is a multiple of it. For
+fixed compositions a fight is Lanchester's square law: `k = dps/hp` is solved so an even
+ten-unit counter pairing resolves in 20 s. Safehouse integrity is fifteen units' minute of
+fire, and the turret is solved so seven units is the smallest siege that razes it.
 
-Two consequences the archetype is built on. Army mass is _proportional to the
-economy's own growth_, so a higher `φ` gives strictly more army later at the cost
-of everything earlier — the tradeoff is a timing curve, not a magnitude. And
-because the exponent carries `φ`, two factions separated by a small split
-difference diverge exponentially: an early advantage compounds unless it is
-spent. That is the RTS opening in closed form, and it is what the beat map is
-measured against.
+**Where the closed form stops:** the joint choice of two seats (strategy-space integration),
+fog of war, and control flipping between them.
 
-**Where the closed form stops — three named places, in order of how much they
-cost:**
+**What measures the remainder:** `balance/arc-probe.ts` plays the whole career under the
+reference player (`balance/_game.ts`), which runs the shipping policy in the player's seat
+with every lieutenant hired, and prints each beat beside the spine's landmarks.
 
-1. **The optimum for `φ` is a best-response fixed point, not an expression.**
-   The right split depends on rivals' splits, so this is _strategy-space
-   integration_ (`…/rate-functions/bifurcations#strategy-space-integration`):
-   per-fixed-strategy ROI closes per the algebra, `σ* = BR(σ*)` does not.
-   Skirmish inherits the bucket's own caveat — the closed-orbit results it
-   illustrates are zero-sum ones, and at N ≥ 3 factions even that shelter is
-   gone.
-2. **The attrition exchange is coupled-state deterministic**
-   (`…/bifurcations#coupled-state-deterministic`, which names multi-faction
-   warfare outright). Armies mutually consume each other; a conserved quantity
-   exists — Lanchester's square law in the fully-engaged limit, since targeting
-   is aimed (`modules/tactical-sim.ts`, `nearestEnemy`) — but the
-   time-parametrization does not. Worse, units arrive as a _stream_ rather than
-   a mass, so the engaged fraction is itself dynamic and the square law is a
-   bound rather than the model.
-3. **Cadence jitter is stochastic load-bearing** where it is switched on
-   (`AutomationOptions.cadenceJitter`). The distribution over seeds carries the
-   design intent — a persona matchup that wins 60% is a different design object
-   from one that wins 100% — so the mean is not the answer.
+## The arc
 
-**What measures the remainder:** distribution statistics over seeded bilateral
-runs: a win-rate surface over the split
-axis, and a match-duration distribution rather than a match-duration number.
-Partial coverage: the opening projects, the war is measured.
+| Beat | Recorded (contract 1) |
+|---|---|
+| The first training floor | 71 s |
+| The first unit trained | 91 s |
+| The first district held | 136.5 s |
+| The first clash | 150 s |
+| The first assault on their safehouse | 294.5 s |
+| Their safehouse burns | 352 s |
 
-**Where `φ` lives.** `data/economy.ts` carries `ρ`, `c` and `E₀` with the closed
-form as prose; `modules/economy.ts` owns the mechanism (workers, income,
-reinvestment) and `modules/automation.ts` owns the policy, because the split is a
-_seat's strategy_ rather than a global constant — two seats hold different values
-at once, which is why `economyShare` sits on `AutomationOptions` and not in the
-tuning registry. The shipping matchup is rush (`φ = 0`) against greedy
-(`φ = 0.5`).
-
-**One discrete artifact the closed form cannot see.** A worker costs more than a
-unit, so investment is a _lump_ against a continuous income stream: a policy that
-commits its remainder to army every decision slot never banks the worker cost,
-and `φ` silently realizes as 0 regardless of what a persona asked for. The
-policy therefore reserves the worker cost while under target. The continuous
-model has no term for this — it is why the projection this spine owes is a bound
-rather than a prediction, and it is recorded at `data/economy.ts` § Coupling.
-
-## The arc — beat map
-
-Match-scoped: **fund → build → commit → engage → break**. Six ordered
-player-experience phases; the **measured** windows and predicates belong in
-`balance/beats.ts`, never authored — that file is owed with the economy bone.
-
-1. **first-income-decision** — the split becomes real: income can go to economy
-   or to army and cannot go to both.
-2. **first-army-committed** — the opening ends; units leave the base with the
-   economy at whatever `φ` bought.
-3. **first-contact** — armies meet. The first read on whether the split was
-   right, and the archetype's defining moment.
-4. **first-engagement-decided** — one army breaks. Attrition asymmetry becomes
-   legible as a _consequence of the opening_ rather than as noise.
-5. **recovery-or-collapse** — the losing faction either rebuilds off a compounded
-   economy or cannot. This is where `φ` pays or doesn't, and it is the beat the
-   spine most directly predicts.
-6. **base-broken** — the match resolves.
-
-The phase order is **fixed identity**: an economy phase that does not precede
-commitment, or a commitment with no recovery window behind it, has forked into a
-sibling. Beats 3–5 are the ones that only exist because rivals are live; a
-single-seat game reaches beat 2 and stops.
-
-## Layered architecture (the load-bearing design)
-
-Spring-shaped separation — sim resolves, render draws, AI decides; each its own
-perf budget:
-
-| Layer                                                                                      | Budget                    | Source                                                        | Status                                                                                                        |
-| ------------------------------------------------------------------------------------------ | ------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Economy + match + events + balance harness                                                 | fixed dt, ~10–20 ticks/s  | engine                                                        | ✅ match spine (`match.ts`)                                                                                   |
-| **Tactical sim** — 2D entities, brute-force targeting, unit-vs-unit combat, per-side spawn | fixed dt, deterministic   | new                                                           | ✅ `tactical-sim.ts` (continuous 2D units, one type; broad-phase is the scale seam)                           |
-| AI policy — per-side, cadenced, in-match-guarded, bilateral                                | sub-Hz decision cadence   | bilateral sim-bot recipe                                      | ✅ `automation.ts` (`decide` = spawn while affordable)                                                        |
-| Automation progression — the player seat's automation tiers                                | per-seat, reactive        | `AutomationTiers`                                             | ✅ `automation-tiers.ts` (`manual → assisted`; opponent seats pass no tier and are blocked by install-presence) |
-| Render — pixi/webgl, own RAF + interpolation, read-only                                    | 60fps                     | pixi (heavier than SVG-on-reactivity; chosen for unit counts) | ✅ `PlayField.vue` (pixi field, Kenney sprites, per-unit position easing)                                     |
-
-Continuous positions live **here at the consumer layer**, never in the engine —
-engine core stays a plain-data headless economic substrate.
+The career is four such matches, each a few minutes; the rival's income terms climb to
+parity by the megacorp.
 
 ## Growth ports
 
-A fork grows the archetype _up_ through these. The first two are the identity
-line's own unbuilt half, and they feed named spine terms.
+- **Per-type supply weight.** An Enforcer worth 2.5 units should cost more than one bunk.
+- **A converter input reserve.** A seat saving for a purchase must switch its floors off.
+- **More districts, and paths between them,** so a squad's route is a decision.
 
-- **The split channel** — a reinvestment sink so `φ` exists: income can purchase
-  economy instead of army. Feeds `E(t)` / `A(t)` directly; without it the
-  economy is flat and every faction is pinned at `φ = 0`.
-- **N factions** — `Side = 'a' | 'b'` widens to a faction set with a friend/foe
-  relation, making free-for-all the base case and teams a relation over it.
-  Feeds the coupled-state term: at N ≥ 3 the exchange loses even the zero-sum
-  shelter, which is where the archetype's balance question gets its teeth.
-- **Unit roster + counters** — 3-unit rock-paper-scissors roster (trooper,
-  archer, cavalry) with counter matrix as data;
-  verified in `balance/roster-probe.ts`.
-- **AI personas + stochastic leg** — 5-persona roster (`rush`, `investor`,
-  `skirmish`, `boom`, `combined`) in `data/personality.ts` with tactical drafts and
-  calibrated `cadenceJitter` (0.15) exercising the spine's stochastic remainder
-  over seeded multi-run batches (`balance/persona-probe.ts` adopting `@/balance`).
-- Scale: brute-force targeting at tens of units → a uniform-grid / spatial-hash
-  broad-phase in game code when counts demand it. The engine leaves real-time
-  positioning to the game.
-- `SpatialInfluenceLayer` for AI-opponent reasoning (threat/frontier maps).
-- Render interpolation: units currently ease toward tactical-sim truth (exponential
-  smoothing, lag-on-stop). True fixed-timestep snapshot interpolation (prev +
-  curr per tick, render at alpha) is the upgrade if motion needs to be
-  frame-exact; the ease is smooth enough at ~20 ticks a second for now.
-- Render is a **pixi** field rather than SVG-on-reactivity — a second
-  render tech in the scaffold, not a shared one. "Render = read-only projection
-  of tactical-sim state" is the shared discipline (the Spring-shaped cut), not the tech;
-  a pixi-field-with-interpolation recipe is N=1, so unregistered.
-- Player-playable stretch: a seat swaps its AI policy for input; the per-seat
-  `AutomationTiers` ladder already supports "policy on every seat."
-- **Player seat as director** — the seat's design: the player fills a handful of
-  goal slots with strategic intents ("claim the north hotspot", "pressure the blue
-  faction") and the seat's persona policy executes them, steering rather than
-  commanding. Goals bias the persona's decisions; they never bypass the policy. No
-  currency survives from one match to the next: a career across matches is what makes Tug core,
-  and this line stays the example where nothing survives.
+## Engine fit
 
-## Engine fit (pattern → primitive)
+| Component | Engine primitive |
+|---|---|
+| hustlers, ley taps, turf | `createProducerCategory`, turf as `extraCount` |
+| training floors | `createProducerCategory` converters, a phase-gated `registerTick` |
+| the bunks | `createResourceBag` with a reactive capacity |
+| coffin squats | `createScalingPurchasable` |
+| research | `createPurchasableCategory` with grants on `createModifierChain` chains |
+| the prerequisite graph | gate predicates as `visible` |
+| a match's reset | `createReset` over the match context |
+| the lieutenants | `createAutomationTiers`, a switch each, `createThrottle` |
+| every perturbable anchor | `createTuningRegistry`, `tunable` |
 
-Match/reset/economy/balance harness = direct engine primitives (`createReset`,
-`createResource`, modifier chains, `runMatrixUntil`/`runSensitivity`,
-`tunable`). Tactical spatial layer = **consumer-side, no engine primitive**
-(deliberate — spatial-rendering-boundary-spec keeps continuous coords in the
-render/consumer layer). Candidate-primitive receipts go in
-`candidate-engine-api.md` only if a second spatial
-consumer converges — not from this archetype alone.
+Three hand-rolls carry `TODO(expansion)` markers: the pairing table (`data/units.ts`), the
+one-bunk-per-unit bag (`modules/side.ts`) and saving against a converter
+(`modules/policy.ts`). The district fight is game code by the engine's design
+(`modules/battle.ts`), and the rival and the lieutenants are one policy over personas.
 
 ## Balance model
 
-Measure-and-record over an intransitive payoff matrix — there is no correct `φ`,
-only a best response. `BALANCING.md` beside this file is the working guide: the
-tunables, what couples to what, how to read each probe. In brief:
-
-- **The spine, as prose + math** — `data/economy.ts` § Balance carries `E(t)`,
-  `Aˢ(t)` and the `c > unitCost` coupling; `data/tactical.ts` § Balance carries
-  the attrition constants the closed form does not reach.
-- **`balance/skirmish-projection.ts`** runs the closed form with no engine and
-  reports army as an **upper bound** rather than a prediction — the reserve and
-  the purchase cadence both make the real army smaller. It also prints the
-  economic crossover against pure rush, which is what says whether the economy
-  can matter inside a match at all.
-- **`balance/split-probe.ts`** is the signature probe: the payoff matrix over
-  `φ` on both seats. It checks its own diagonal for mirror symmetry first,
-  because an asymmetric tactical sim produces balance findings that are really bugs.
-- **`balance/arc-probe.ts`** drives the shipping automation through the default
-  matchup and reports each beat against its measured window.
-- **`balance/roster-probe.ts`** verifies the 3-unit counter matrix and mirror
-  stalemate across pure and mixed unit compositions.
-- **`balance/persona-probe.ts`** sweeps the 5-persona tournament matrix deterministically
-  (confirming mirror symmetry on the diagonal) and measures win-rate and duration
-  distributions across seeded batches with calibrated `cadenceJitter = 0.15`.
-
-The driver was already the right shape — shipping automation
-(`modules/automation.ts`, behind automation tiers), never a bespoke automated player — so the probes drive
-real game code rather than a re-implementation of it.
-
-Its behavioral suites already sit where the canon puts them —
-`modules/{automation,match,tactical-sim}.test.ts`, beside the modules they spec,
-over `sim/harness.ts`. Skirmish is the reference for that axis and for the
-driver behind `AutomationTiers`; see `.claude/rules/archetype-authoring.md`
-§ Conformance.
-
-## Hack-from references
-
-Growth ports read the sibling archetypes **in place**: tug for the adversarial
-spine (`modules/battle.ts`, `modules/rival.ts`, `data/lords.ts`,
-`balance/_marshal.ts`). Movement and the render seam are
-skirmish's own — `modules/tactical-sim.ts` and `ui/PlayField.vue`.
-
-A bone consumes a reference by _porting_ it — adapting to skirmish — and the port
-is what's committed, never the raw copy. Read the siblings where they live; no
-staged copy belongs here, since a duplicate preserves nothing and gives the same
-code a second place to rot.
+The spine is `data/spine.ts`; `describeSpine` and `landmarks` print it at the head of the
+arc probe. `BALANCING.md` covers the tunables and couplings.

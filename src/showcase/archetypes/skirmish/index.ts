@@ -1,4 +1,4 @@
-export { createApp, createGameEngine } from './boot';
-export type { GameBootResult, GameEngineOptions } from './boot';
+export { createApp, createSkirmishEngine } from './boot';
+export type { SkirmishBootResult, SkirmishEngineOptions } from './boot';
 export { manifest } from './manifest';
 export { createSkirmishModules } from './modules';

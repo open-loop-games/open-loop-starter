@@ -202,9 +202,9 @@ tooling, not mechanics.
 
 - An AI *opponent* is not automation the player unlocks. Its install-presence blocks it,
   not an automation tier.
-- Skirmish's opponent seats pass no automation tier. Its `AutomationOptions.tier` is
-  what a player seat would pass.
-- Automation tier ids are a typed union per archetype (`SkirmishAutomationTier`,
+- Skirmish's rival seat runs the shared policy under no automation tier; the player's
+  lieutenants run the same policy behind theirs.
+- Automation tier ids are a typed union per archetype (skirmish's `CrewTier`,
   `ProducerAutomationTier`). So a policy that names an automation tier that does not
   exist fails at the call site. It does not silently never run.
 
