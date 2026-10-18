@@ -35,10 +35,10 @@ Its coverage figure is stated over the game-ai-variety subcorpus it was read fro
 is calibration for that study, not a prevalence claim about incremental games. It is
 not a row an identity line may cite.
 
-Implementation recipes sit in research's composition cookbook:
-`open-loop-research/practical/composition-cookbook/parameterized-personality.md` is
-the parent — N hand-authored param bundles read by one decision function — and
-`procedural-personas.md` beside it is the specialization for search-based agents.
+The implementation recipe is the engine's `docs/consumer-guide-recipes.md`
+§ Persona-roster composition: N hand-authored parameter bundles read by one
+decision function. Procedural personas, which vary the objective a search-based
+automated player optimizes, are on the balance harness side of that recipe.
 
 ## What the shipped archetypes demonstrate
 
