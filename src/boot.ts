@@ -19,6 +19,13 @@
  * the cadence is user-configurable at runtime. An engine that must never write
  * (a simulation, a balance probe, a test) passes `autoSaveInterval: 0`.
  *
+ * Timers: `bootEngine` schedules on `worker-timers` wherever a `Worker` exists.
+ * A browser throttles a hidden tab's native `setInterval` to as little as one
+ * wake a minute, and each wake simulates at most `maxDeltaTime`, so a game in a
+ * background tab would run at a fraction of real time. A worker's timers are
+ * not throttled. Node has no `Worker`, so tests and balance probes keep the
+ * engine's native default. A caller's own `timerProvider` wins.
+ *
  * Error reporting: `bootApp` installs an `app.config.errorHandler`. Without
  * one, Vue degrades a throw inside a lifecycle hook or event handler to a
  * `[Vue warn]` with the cause swallowed — which is how engine wiring mistakes
@@ -26,12 +33,26 @@
  */
 
 import { createApp as createVueApp, type App, type Component } from 'vue';
-import { createEngine, type Engine, type EngineOptions, type ModDef } from '@open-loop/engine';
+import {
+  createEngine,
+  type Engine,
+  type EngineOptions,
+  type ModDef,
+  type TimerProvider,
+} from '@open-loop/engine';
+import {
+  clearInterval as clearWorkerInterval,
+  setInterval as setWorkerInterval,
+} from 'worker-timers';
 import { sharedBase } from '@/modules';
 import { useSaveEvents } from '@/composables/useSaveEvents';
 
 const DEFAULT_INTERVAL_RATE = 20;
 const DEFAULT_MAX_SAVE_SLOTS = 30;
+const DEFAULT_TIMER_PROVIDER: TimerProvider | undefined =
+  typeof Worker === 'undefined'
+    ? undefined
+    : { setInterval: setWorkerInterval, clearInterval: clearWorkerInterval };
 
 export interface BootEngineOptions extends Omit<EngineOptions, 'mods'> {
   mods: ModDef[];
@@ -41,6 +62,7 @@ export function bootEngine(options: BootEngineOptions): Engine {
   const {
     intervalRate = DEFAULT_INTERVAL_RATE,
     maxSaveSlots = DEFAULT_MAX_SAVE_SLOTS,
+    timerProvider = DEFAULT_TIMER_PROVIDER,
     mods,
     ...rest
   } = options;
@@ -49,6 +71,7 @@ export function bootEngine(options: BootEngineOptions): Engine {
     ...rest,
     intervalRate,
     maxSaveSlots,
+    timerProvider,
     mods: mods.map((mod) => ({
       ...mod,
       modules: [...sharedBase, ...mod.modules],
