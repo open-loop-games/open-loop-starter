@@ -403,7 +403,18 @@ export function playCommand(sit: Situation, persona: Persona): void {
     for (let i = 0; i < n; i++)
       if (total(known(i)) > PRESENCE && total(ownCounts[i]) > PRESENCE && canTake(i)) objective = i;
   }
-  // 3. Finish the capture closest to done; where the army already stands breaks ties.
+  // 3. Press an assault the army can already make rather than chase a raid elsewhere:
+  // a squad that will not fight escapes any district the army moves to.
+  if (objective < 0) {
+    for (let i = 0; i < n; i++)
+      if (
+        sit.control[i] >= 1 &&
+        total(known(i)) <= PRESENCE &&
+        total(ownCounts[i]) >= persona.assaultAt
+      )
+        objective = i;
+  }
+  // 4. Finish the capture closest to done; where the army already stands breaks ties.
   if (objective < 0) {
     let best = -Infinity;
     for (let i = 0; i < n; i++) {
@@ -415,7 +426,7 @@ export function playCommand(sit: Situation, persona: Persona): void {
       }
     }
   }
-  // 4. Everything held: stage the assault where most of the army already stands.
+  // 5. Everything held: stage the assault where most of the army already stands.
   if (objective < 0) {
     let most = -1;
     for (let i = 0; i < n; i++) {
