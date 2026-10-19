@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Decimal, addResource } from '@open-loop/engine';
+import { Decimal, addResource, selectionHybridPayback, type Producer } from '@open-loop/engine';
 import { LEVERS, REWRITE_THRESHOLD } from '../data';
 import { boot, tick, tickUntil } from '../sim/harness';
-import { getAutomation, shouldReboot, shouldRewrite } from './automation';
+import { getAutomation, recruitHeroes, shouldReboot, shouldRewrite } from './automation';
 import { getCanon } from './canon';
 import { getContinuity } from './continuity';
 import { getCore } from './core';
@@ -43,6 +43,38 @@ describe('the Dispatch Desk', () => {
     await tick(1);
     expect(corps()).toBeGreaterThan(0);
   });
+
+  it.each([1e9, 1e15, 1e40])(
+    'recruits from %d Justice what one recruit at a time would',
+    (justice) => {
+      const recruit = (one: boolean) => {
+        boot();
+        addResource(getRun().justice, justice);
+        const heroes = getRun()
+          .heroes.getAll()
+          .map((e) => e.producer);
+        const income = () => getRun().totalRate.value;
+        if (one) {
+          const policy = selectionHybridPayback<Producer>({
+            getCost: (p) => p.repeatable!.getCost(1),
+            getRate: (p) => p.computedRate.value,
+            getAmount: (p) => p.resource.value,
+            getReserve: () => 0,
+            getTotalRate: income,
+          });
+          for (let n = 0; n < 500; n++) {
+            const best = policy.pick(heroes);
+            if (!best?.repeatable!.canPurchase.value) break;
+            best.repeatable!.purchase(1);
+          }
+        } else {
+          recruitHeroes(heroes, income, getRun().priceRatio.value, 500);
+        }
+        return heroes.map((p) => num(p.ownedCount.value));
+      };
+      expect(recruit(false)).toEqual(recruit(true));
+    },
+  );
 
   it('stops when a Rewrite takes it, even with the Succession Plan owned', async () => {
     getLegacy().bank(1);

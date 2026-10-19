@@ -62,6 +62,11 @@ Every key is read at its reader site through `tunable()`; the registry is in
 - **The desk buys until it would rather save.** Each tick it recruits by blended payback
   until the best pick is unaffordable. A desk limited to one recruit a tick falls behind
   the late economy.
+- **The desk prices a batch with `priceRatio`.** While Justice covers a whole batch, it
+  buys the batch as one purchase per tier, and it sizes the batch as if every tier's price
+  grows by the run's price ratio per recruit. Give a tier another price curve and the
+  batch recruits a different corps. The Dispatch Desk suite compares the batch with one
+  recruit at a time.
 - **`hold` is fitted to the desk.** The ladder model fills a tier to `hold` units before
   saving for the next; the Dispatch Desk interleaves tiers instead. Change the desk's
   policy and refit `hold` against § tier openings of the arc probe.

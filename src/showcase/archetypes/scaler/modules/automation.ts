@@ -88,20 +88,82 @@ export function shouldRewrite(state: RewriteState, params: { share: number }): b
 // TODO(expansion): setupPolicyAutoPurchase with `waitForCost` lets the policy save, but at
 // `interval: 0` it makes one attempt per tick; this desk buys until the policy would rather
 // save. One per tick slows the 13th Reboot by 4 minutes (balance/arc-probe.ts).
+/** Headroom between the batch's price, summed here, and the engine's sum of it. */
+const BATCH_MARGIN = 1e-9;
+
+/**
+ * The recruits one-at-a-time recruiting makes first, as a count per row: every
+ * recruit that pays back in under a threshold, for the largest threshold whose
+ * recruits Justice covers and `room` holds.
+ *
+ * While the batch's total price is within `amount`, every recruit left in it is
+ * affordable at every step, so it waits zero and scores its payback alone. One
+ * recruit at a time then buys all of the batch before anything outside it, and
+ * the order inside cannot change the counts.
+ */
+function planBatch(
+  rows: { cost: DecimalSource; rate: DecimalSource }[],
+  amount: DecimalSource,
+  priceRatio: DecimalSource,
+  room: number,
+): number[] {
+  const none = rows.map(() => 0);
+  const ratio = Decimal.fromValue(priceRatio).toNumber();
+  if (!(ratio > 1) || room < 2 || !Decimal.gt(amount, 0)) return none;
+  // Log10 space in doubles: a count is at most `room`, so ratio^count stays in range.
+  const step = Math.log10(ratio);
+  const logAmount = Decimal.log10(amount).toNumber();
+  const lines = rows.map(({ cost, rate }) =>
+    Decimal.gt(rate, 0)
+      ? {
+          payback: Decimal.div(cost, rate).log10().toNumber(),
+          share: Decimal.log10(cost).toNumber() - logAmount,
+        }
+      : undefined,
+  );
+  const paybacks = lines.flatMap((l) => (l ? [l.payback] : []));
+  if (paybacks.length === 0) return none;
+  const counts = (t: number) =>
+    lines.map((l) => (l && t > l.payback ? Math.ceil((t - l.payback) / step) : 0));
+  const fits = (n: number[]) => {
+    let total = 0;
+    let spend = 0;
+    n.forEach((k, j) => {
+      if (k === 0) return;
+      total += k;
+      spend += (10 ** lines[j]!.share * (ratio ** k - 1)) / (ratio - 1);
+    });
+    return total <= room && spend <= 1 - BATCH_MARGIN;
+  };
+  // Bisect the threshold: at `lo` nothing pays back under it, at `hi` a row overflows `room`.
+  let lo = Math.min(...paybacks);
+  let hi = Math.max(...paybacks) + (room + 1) * step;
+  for (let i = 0; i < 64; i++) {
+    const mid = (lo + hi) / 2;
+    if (fits(counts(mid))) lo = mid;
+    else hi = mid;
+  }
+  return counts(lo);
+}
+
 /**
  * Dispatch Desk: recruits one hero at a time, each the winner over every tier,
  * affordable or not, by Cookie Monster's blended payback. Stops when the winner
  * is still being saved for, which is the point: buying whatever is affordable
  * never opens the next tier. Returns recruits made, at most `limit`.
+ *
+ * `priceRatio` is the growth of every tier's price per recruit. While Justice
+ * covers a whole batch, the desk buys it as one purchase per hero (`planBatch`).
  */
 export function recruitHeroes(
   heroes: Producer[],
   income: () => DecimalSource,
+  priceRatio: DecimalSource,
   limit: number,
 ): number {
   // A recruit moves only its own tier's price: a hero's per-unit rate reads its
   // modifier chains, never a count, and spending leaves lifetime Justice (the
-  // Legends) alone. So each recruit re-reads the one hero it bought.
+  // Legends) alone. So each purchase re-reads only the hero it bought.
   const read = (p: Producer) => ({
     cost: p.repeatable!.getCost(1),
     rate: p.computedRate.value,
@@ -116,11 +178,32 @@ export function recruitHeroes(
     getTotalRate: income,
   });
   let bought = 0;
-  for (; bought < limit; bought++) {
-    const best = policy.pick([...scored].filter(([, s]) => s.open).map(([p]) => p));
-    if (!best?.repeatable!.canPurchase.value) break;
-    best.repeatable!.purchase(1);
-    scored.set(best, read(best));
+  while (bought < limit) {
+    const open = [...scored].filter(([, s]) => s.open).map(([p]) => p);
+    if (open.length === 0) break;
+    // Every tier is paid in Justice, so any hero's resource is the budget.
+    const plan = planBatch(
+      open.map((p) => scored.get(p)!),
+      open[0]!.resource.value,
+      priceRatio,
+      limit - bought,
+    );
+    let made = 0;
+    if (plan.reduce((a, b) => a + b, 0) > 1) {
+      open.forEach((p, j) => {
+        if (plan[j] === 0) return;
+        made += Decimal.fromValue(p.repeatable!.purchase(plan[j])).toNumber();
+        scored.set(p, read(p));
+      });
+    }
+    if (made === 0) {
+      const best = policy.pick(open);
+      if (!best?.repeatable!.canPurchase.value) break;
+      made = Decimal.fromValue(best.repeatable!.purchase(1)).toNumber();
+      if (made === 0) break;
+      scored.set(best, read(best));
+    }
+    bought += made;
   }
   return bought;
 }
@@ -270,6 +353,7 @@ export function createAutomationModule(): EngineModule {
         recruitHeroes(
           run.heroes.getAll().map((e) => e.producer),
           () => run.totalRate.value,
+          run.priceRatio.value,
           MAX_RECRUITS_PER_TICK,
         );
       const spendLegacy = () =>
