@@ -10,9 +10,11 @@ Genre: `rts`. Its document in the studio's research library lists the games in i
 ## What this archetype is
 
 *Chrome & Cantrip.* The ley lines have woken under a rain-soaked sprawl, and two crews fight
-over three of its districts. Hustlers bring home scrip, ley taps draw aether. Four training
-floors turn both into Razorboys, Hexers, Riggers and Enforcers, while their switch is on and
-the bunks have room; coffin squats add bunks. Research sits behind the floors it needs.
+over three of its districts. Hustlers bring home scrip, ley taps draw aether. Training floors turn both into
+Razorboys, Hexers, Riggers and Enforcers while the bunks have room; coffin squats add bunks.
+Each kind is opened by its own floor — a chop shop, a talisman parlor, a drone garage, a black
+clinic — and every floor then trains whatever kinds stand open, splitting its time by the
+crew's queue. Research sits behind the floors it needs.
 
 Razorboys cut Hexers, Hexers fry Riggers' drones, Riggers brick Razorboys' chrome; Enforcers
 hit everything evenly in heavy frames. The player sends whole units into a district by kind,
@@ -36,18 +38,24 @@ coupled-state deterministic** (`incremental-math/…/rate-functions/exponential`
 first hustler pays back in 30 s; the ratio gives three doublings across 24 purchases. A
 reference crew walks the ladder, spending half its income on hustlers while one pays back
 inside the horizon. A unit's value is the army-side spend at the 240 s mark over a 24-unit
-reference army, and every floor, squat, research and unit price is a multiple of it. For
-fixed compositions a fight is Lanchester's square law: `k = dps/hp` is solved so an even
-ten-unit counter pairing resolves in 20 s. Safehouse integrity is fifteen units' minute of
+reference army, and every floor, squat, research and unit price is a multiple of it. Every floor
+climbs one price ladder, a tech floor at its multiple of the next floor's price. For fixed
+compositions a fight is Lanchester's square law: a counter pairing hits for double and a
+resisted one for half, and `k = dps/hp` is solved so an even ten-unit counter pairing resolves
+in 20 s. Safehouse integrity is fifteen units' minute of
 fire, and the turret is solved so seven units is the smallest siege that razes it.
 
 **Where the closed form stops:** the joint choice of two seats (strategy-space integration),
 fog of war, and control flipping between them.
 
+The army's ramp closes as well: a walk of the reference crew as the policy plays it, saving
+for floors ahead of hustlers and converting one unit per floor every 20 s, gives the landmarks.
+Its army at the 240 s mark is smaller than the 24 units a unit's value is defined by.
+
 **What measures the remainder:** `balance/arc-probe.ts` plays every contract under the
 reference player (`balance/_game.ts`), which hires its lieutenants by the rival's rule and
 runs the shipping policy in the player's seat, and prints each beat beside the spine's
-landmarks.
+landmarks. `balance/counter-probe.ts` measures whether reading the rival wins matches.
 
 ## The arc
 
@@ -58,14 +66,13 @@ landmarks.
 | The first unit trained | 132 s |
 | The first district held | 177.5 s |
 | The first clash | 201 s |
-| The first assault on their safehouse | 321.5 s |
-| Their safehouse burns | 383 s |
+| The first assault on their safehouse | 332.5 s |
+| Their safehouse burns | 392 s |
 
 Each match is a few minutes; the rival's income terms climb to parity by the megacorp.
 
 ## Growth ports
 
-- **Per-type supply weight.** An Enforcer worth 2.5 units should cost more than one bunk.
 - **A converter input reserve.** A seat saving for a purchase must switch its floors off.
 - **More districts, and paths between them,** so a squad's route is a decision.
 
@@ -74,7 +81,8 @@ Each match is a few minutes; the rival's income terms climb to parity by the meg
 | Component | Engine primitive |
 |---|---|
 | hustlers, ley taps, turf | `createProducerCategory`, turf as `extraCount` |
-| training floors | `createProducerCategory` converters, a phase-gated `registerTick` |
+| tech floors | `createProducerCategory` converters, each at its kind's share of floor time, a phase-gated `registerTick` |
+| plain floors | `createScalingPurchasable` on the tech floors' ladder |
 | the bunks | `createResourceBag` with a reactive capacity |
 | coffin squats | `createScalingPurchasable` |
 | research | `createPurchasableCategory` with grants on `createModifierChain` chains |

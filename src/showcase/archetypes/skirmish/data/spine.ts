@@ -13,8 +13,11 @@
  * - Where the closed form stops: the joint choice of two seats (what each
  *   builds, where it sends units, when it assaults), fog of war, and district
  *   control flipping under both. None of that projects.
- * - What measures the remainder: `src/probe.ts` plays every contract under the
- *   shipping policies and prints each beat's time against `matchSeconds`.
+ * - The army's ramp closes too, under the reference crew's own rules: floors on
+ *   one price ladder, saved for ahead of hustlers, each converting one unit per
+ *   `TRAIN_S` (`walkArmy`). Fights, turf, squats and research are left out.
+ * - What measures the remainder: `balance/arc-probe.ts` plays every contract
+ *   under the shipping policies and prints each beat beside `landmarks()`.
  */
 
 // ─── Anchors ───────────────────────────────────────────────────────────────
@@ -40,7 +43,11 @@ export const ECON_SHARE = 0.5;
 export const PAYBACK_HORIZON_S = 150;
 /** Share of army-side spend that goes to buildings, squats and research, not units. */
 export const OVERHEAD_SHARE = 0.3;
-/** Units the reference crew fields at `MID_S`. */
+/**
+ * Units of value the reference crew's army-side spend buys by `MID_S`. It defines a
+ * unit's value; floors cannot convert that spend so fast, so the army the crew fields
+ * by then is smaller (`walkArmy`).
+ */
 export const MID_ARMY = 24;
 /** Seconds one training building takes per unit. */
 export const TRAIN_S = 20;
@@ -54,9 +61,13 @@ export const TAP_RATE = 0.5;
 export const TAP_PAYBACK_S = 40;
 /** Display scale of combat: damage per second of one basic unit. */
 export const UNIT_DPS = 5;
-/** Damage multiplier of a counter pairing, and of a resisted one. */
-export const COUNTER = 1.5;
-export const RESIST = 0.6;
+/**
+ * Damage multiplier of a counter pairing, and of a resisted one. At 1.5 / 0.6 the
+ * pairing rewarded no reading of the rival: counter fit 1.17 for a seat that bent its
+ * mix toward counters against 1.14 for one that did not (2026-10-18 loop probe).
+ */
+export const COUNTER = 2;
+export const RESIST = 0.5;
 /** Two equal-size squads, one countering the other, resolve in this long. */
 export const FIGHT_S = 20;
 /** A siege force this size razes a headquarters in `SIEGE_S`, ignoring its turret. */
@@ -83,6 +94,16 @@ export const SUPPLY_BASE = 12;
 export const SUPPLY_PER_SQUAT = 8;
 /** Enforcer value, in basic units. Value-equal under the square law, so dps and hp scale by its root squared. */
 export const ENFORCER_VALUE = 2.5;
+/** Share of a unit's value paid in scrip, the rest in aether at `AETHER_PRICE`. Razors pay it all. */
+export const HEXER_SCRIP_SHARE = 0.5;
+export const RIGGER_SCRIP_SHARE = 0.75;
+export const ENFORCER_SCRIP_SHARE = 0.7;
+/** A crew saves for a floor once it is this many seconds of income away; hustlers wait for it. */
+export const SAVE_HORIZON_S = 40;
+/** Training pauses only for the last stretch of a save, this many seconds of income. */
+export const PAUSE_HORIZON_S = 12;
+/** Ley taps the reference crew holds before any floor needs more. */
+export const REF_TAPS = 3;
 
 // ─── Economy ───────────────────────────────────────────────────────────────
 
@@ -139,12 +160,12 @@ const midArmyIncome = walk[MID_S].income;
 /** `B = income · TRAIN_S / u`: buildings that convert mid-match income into units with nothing idle. */
 export const buildingsAtMid = (midArmyIncome * TRAIN_S) / unitValue;
 
-/** A training building costs four of its units: it pays back in four trained units' worth of throughput. */
+/** The first training floor costs four units: it pays back in four trained units' worth of throughput. */
 export const buildingBaseCost = 4 * unitValue;
 /**
- * `m_b = (cost of the B-th building / first)^(1/(B−1))`, solved so the B-th
- * building costs `PAYBACK_HORIZON_S` of mid-match income: past that a crew
- * trains with what it has.
+ * `m_b = (cost of the B-th floor / first)^(1/(B−1))`, one ladder over every floor a
+ * crew stands up, tech floors included. Solved so the B-th floor costs a quarter of
+ * `PAYBACK_HORIZON_S` of mid-match income: past that a crew trains with what it has.
  */
 export const buildingRatio =
   ((PAYBACK_HORIZON_S * midArmyIncome) / 4 / buildingBaseCost) **
@@ -254,19 +275,97 @@ export interface Landmark {
   predictedS: number;
 }
 
+/** Past the hustler plateau a crew builds floors drawing up to this share of income. */
+export const LATE_FLOOR_SHARE = 1.15;
+
+/** Scrip one unit of an even triangle mix costs: razors, hexers and riggers alike. */
+const refScripPerUnit = ((1 + HEXER_SCRIP_SHARE + RIGGER_SCRIP_SHARE) / 3) * unitValue;
+
+/** One step of the army walk: what the reference crew has stood up by second `t`. */
+export interface ArmyPoint {
+  t: number;
+  hustlers: number;
+  /** False once the next hustler pays back past `PAYBACK_HORIZON_S`. */
+  hustlersPay: boolean;
+  floors: number;
+  units: number;
+}
+
 /**
- * Predicted landmarks for the reference crew: last hustler, the army reaching
- * a minimum siege force, and a match at `MATCH_S`.
+ * The reference crew's economy as the shipping policy plays it, by the half second:
+ * lieutenants hired as soon as their price is in the purse; the next floor saved for
+ * while its draw fits the army share of income, holding hustlers and taps back once it
+ * is `SAVE_HORIZON_S` of income away; `REF_TAPS` taps; hustlers while they pay back;
+ * every floor training an even triangle mix at one unit per `TRAIN_S`, paused for a
+ * save's last `PAUSE_HORIZON_S`. Aether is assumed fed; fights, turf, squats and
+ * research are left out.
+ */
+export function walkArmy(seconds: number): ArmyPoint[] {
+  const dt = 0.5;
+  const out: ArmyPoint[] = [];
+  let hustlers = START_HUSTLERS;
+  let bought = 0;
+  let scrip = START_SCRIP;
+  let floors = 0;
+  let units = 0;
+  let taps = 0;
+  let hired = 0;
+  const draw = (n: number) => (n * refScripPerUnit) / TRAIN_S;
+  for (let t = 0; t <= seconds; t += dt) {
+    const income = hustlers * HUSTLER_RATE;
+    scrip += income * dt;
+    while (hired < lieutenantCost.length && scrip >= lieutenantCost[hired]!)
+      scrip -= lieutenantCost[hired++]!;
+    const hustlerCost = hustlerBaseCost * hustlerRatio ** bought;
+    const pays = hustlerCost / HUSTLER_RATE < PAYBACK_HORIZON_S;
+    const share = pays ? 1 - ECON_SHARE : LATE_FLOOR_SHARE;
+    let saving = false;
+    let paused = false;
+    const floorCost = buildingBaseCost * buildingRatio ** floors;
+    if (draw(floors + 1) <= share * income) {
+      if (scrip >= floorCost) {
+        scrip -= floorCost;
+        floors += 1;
+      } else if (floorCost < SAVE_HORIZON_S * income) {
+        saving = true;
+        paused = floorCost - scrip < PAUSE_HORIZON_S * income;
+      }
+    }
+    const tapCost = tapBaseCost * tapRatio ** taps;
+    if (!saving && taps < REF_TAPS && scrip >= tapCost) {
+      scrip -= tapCost;
+      taps += 1;
+    }
+    if (pays && !saving && scrip >= hustlerCost) {
+      scrip -= hustlerCost;
+      hustlers += 1;
+      bought += 1;
+    }
+    if (!paused && floors > 0) {
+      const spend = Math.min(draw(floors) * dt, scrip);
+      scrip -= spend;
+      units += spend / refScripPerUnit;
+    }
+    out.push({ t, hustlers, hustlersPay: pays, floors, units });
+  }
+  return out;
+}
+
+/**
+ * Predicted landmarks for the reference crew, from the army walk: its first floor, the
+ * hustler plateau, the army reaching a siege force plus a holding squad, and a match at
+ * `MATCH_S`. The walk fields no losses, so a measured siege beat lands later.
  */
 export function landmarks(): Landmark[] {
-  const finalHustlers = walk[MATCH_S].hustlers;
-  const lastHustler = walk.findIndex((p) => p.hustlers >= finalHustlers);
-  const unitsAt = (t: number) =>
-    ((1 - OVERHEAD_SHARE) * walk[Math.min(t, MATCH_S)].armySpend) / unitValue;
-  const siegeReady = walk.findIndex((p) => unitsAt(p.t) >= MIN_SIEGE_FORCE + REF_PRESENCE);
+  const army = walkArmy(MATCH_S);
+  const at = (f: (p: ArmyPoint) => boolean) => army.find(f)?.t ?? NaN;
   return [
-    { beat: 'econ plateau (hustler payback past horizon)', predictedS: lastHustler },
-    { beat: 'army reaches a siege force plus a holding squad', predictedS: siegeReady },
+    { beat: 'first training floor', predictedS: at((p) => p.floors > 0) },
+    { beat: 'econ plateau (hustler payback past horizon)', predictedS: at((p) => !p.hustlersPay) },
+    {
+      beat: 'army reaches a siege force plus a holding squad',
+      predictedS: at((p) => p.units >= MIN_SIEGE_FORCE + REF_PRESENCE),
+    },
     { beat: 'match ends (equal economy)', predictedS: MATCH_S },
   ];
 }

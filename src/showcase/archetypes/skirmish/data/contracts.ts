@@ -10,6 +10,7 @@ import {
   MIN_SIEGE_FORCE,
   PAYBACK_HORIZON_S,
   REF_PRESENCE,
+  REF_TAPS,
 } from './spine';
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
@@ -167,7 +168,7 @@ export const PLAYER_PERSONA: Persona = {
   counter: 0.75,
   hustlerPayback: PAYBACK_HORIZON_S,
   armyShare: 1 - ECON_SHARE,
-  taps: 3,
+  taps: REF_TAPS,
   research: [
     'syndicate-ledgers',
     'smartlink-rounds',

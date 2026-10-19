@@ -4,7 +4,7 @@
  * balance workbench overrides them by key.
  */
 import { tunable, type ComputedRef, type TuningRegistry } from '@open-loop/engine';
-import { BARRACKS, ECON, RESEARCH, SQUATS, TRAIN_RATE } from '../data/buildings';
+import { ECON, FLOORS, RESEARCH, SQUATS, TRAIN_RATE } from '../data/buildings';
 import { UNITS, UNIT_KINDS, type UnitKind } from '../data/units';
 import { captureRate, hqIntegrity, turretDps, REF_PRESENCE } from '../data/spine';
 
@@ -13,7 +13,8 @@ export interface Tunables {
     string,
     { rate: ComputedRef<number>; baseCost?: ComputedRef<number>; ratio?: ComputedRef<number> }
   >;
-  barracks: Record<string, { baseCost: ComputedRef<number>; ratio: ComputedRef<number> }>;
+  floorBaseCost: ComputedRef<number>;
+  floorRatio: ComputedRef<number>;
   trainRate: ComputedRef<number>;
   unit: Record<
     UnitKind,
@@ -48,16 +49,9 @@ export function createTunables(t: TuningRegistry): Tunables {
         },
       ]),
     ),
-    barracks: Object.fromEntries(
-      BARRACKS.map((d) => [
-        d.id,
-        {
-          baseCost: num(`barracks/${d.id}/baseCost`, d.baseCost),
-          ratio: num(`barracks/${d.id}/ratio`, d.ratio),
-        },
-      ]),
-    ),
-    trainRate: num('barracks/trainRate', TRAIN_RATE),
+    floorBaseCost: num('floors/baseCost', FLOORS.baseCost),
+    floorRatio: num('floors/ratio', FLOORS.ratio),
+    trainRate: num('floors/trainRate', TRAIN_RATE),
     unit: Object.fromEntries(
       UNIT_KINDS.map((k) => [
         k,

@@ -63,3 +63,11 @@ export function setStance(side: Side, district: number, stance: Stance): void {
 export function setFocus(side: Side, district: number, focus: Focus): void {
   side.focus[district].value = focus;
 }
+
+/**
+ * Set a kind's weight in the floors' queue. The player steps whole weights; a fractional
+ * weight the quartermaster left rounds to the nearest whole.
+ */
+export function setWeight(side: Side, kind: UnitKind, weight: number): void {
+  side.queue[kind].value = Math.max(0, Math.round(weight));
+}

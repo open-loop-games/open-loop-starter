@@ -1,8 +1,10 @@
 /**
  * What a crew builds: the economy (hustlers, ley taps, turf), the training
- * buildings that convert scrip and aether into units, squats that raise the
- * supply cap, and the research tree. Prerequisites are Gates over the side's
- * own category ids, so the tree is data.
+ * floors that convert scrip and aether into units, squats that raise the
+ * supply cap, and the research tree. Each kind of unit is opened by its tech
+ * floor; every floor then trains whatever kinds stand open, by the seat's
+ * queue. Prerequisites are Gates over the side's own category ids, so the
+ * tree is data.
  */
 import type { Gate } from '@open-loop/engine';
 import type { UnitKind } from './units';
@@ -51,13 +53,15 @@ export interface EconDef {
   purchase?: { baseCost: number; ratio: number; limit?: number; initial?: number };
 }
 
+/** A tech floor: it opens one kind of unit to every floor, and is a floor itself. */
 export interface BarracksDef {
   id: string;
   name: string;
   blurb: string;
+  /** The kind it opens. */
   trains: UnitKind;
-  baseCost: number;
-  ratio: number;
+  /** Its price, in multiples of the next floor's. */
+  floors: number;
   /** Availability: a Gate over this side's categories. Built per side. */
   requires: (s: SideId) => Gate | undefined;
   requiresText: string;
@@ -120,15 +124,22 @@ export const ECON: EconDef[] = [
   },
 ];
 
-// A clinic costs two buildings: it trains a unit worth ENFORCER_VALUE.
+/** Every floor, tech or plain, is priced on one ladder by the floors already standing. */
+export const FLOORS = {
+  name: 'Training floors',
+  blurb: 'Bunk rooms and back rooms turned over to training whatever the crew needs.',
+  baseCost: buildingBaseCost,
+  ratio: buildingRatio,
+};
+
+// A clinic costs two floors: it opens a unit worth ENFORCER_VALUE.
 export const BARRACKS: BarracksDef[] = [
   {
     id: 'chop-shop',
     name: 'Chop shop',
     blurb: 'Back-alley chrome installs, no questions.',
     trains: 'razor',
-    baseCost: buildingBaseCost,
-    ratio: buildingRatio,
+    floors: 1,
     requires: () => undefined,
     requiresText: '',
   },
@@ -137,8 +148,7 @@ export const BARRACKS: BarracksDef[] = [
     name: 'Talisman parlor',
     blurb: 'Incense, debt ledgers and a back room where the chalk circles are.',
     trains: 'hexer',
-    baseCost: buildingBaseCost,
-    ratio: buildingRatio,
+    floors: 1,
     requires: (s) => owns(catId.econ(s), 'ley-tap'),
     requiresText: 'a ley tap',
   },
@@ -147,8 +157,7 @@ export const BARRACKS: BarracksDef[] = [
     name: 'Drone garage',
     blurb: 'Rotor drones on hooks and riggers asleep in the jack chairs.',
     trains: 'rigger',
-    baseCost: buildingBaseCost,
-    ratio: buildingRatio,
+    floors: 1,
     requires: (s) => owns(catId.barracks(s), 'chop-shop'),
     requiresText: 'a chop shop',
   },
@@ -157,8 +166,7 @@ export const BARRACKS: BarracksDef[] = [
     name: 'Black clinic',
     blurb: 'Stolen corp exo-frames refitted for whoever pays.',
     trains: 'enforcer',
-    baseCost: 2 * buildingBaseCost,
-    ratio: buildingRatio,
+    floors: 2,
     requires: (s) => ({
       kind: 'all',
       of: [owns(catId.barracks(s), 'drone-garage'), owns(catId.barracks(s), 'talisman-parlor')],
@@ -177,7 +185,7 @@ export const SQUATS = {
   supplyPer: SUPPLY_PER_SQUAT,
 };
 
-/** Units per second one training building makes. */
+/** Units per second one training floor makes. */
 export const TRAIN_RATE = 1 / TRAIN_S;
 
 // Research prices are in units of value: a tier-1 line costs three units, a

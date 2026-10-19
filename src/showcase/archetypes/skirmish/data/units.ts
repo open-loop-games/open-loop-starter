@@ -5,7 +5,11 @@
 import {
   AETHER_PRICE,
   COUNTER,
+  ENFORCER_SCRIP_SHARE,
+  ENFORCER_VALUE,
+  HEXER_SCRIP_SHARE,
   RESIST,
+  RIGGER_SCRIP_SHARE,
   UNIT_DPS,
   enforcerDps,
   enforcerHp,
@@ -63,8 +67,10 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     body: 'flesh',
     dps: UNIT_DPS,
     hp: unitHp,
-    // 0.5u scrip + 0.25u aether × AETHER_PRICE = u
-    cost: { scrip: whole(0.5 * u), aether: whole((0.5 * u) / AETHER_PRICE) },
+    cost: {
+      scrip: whole(HEXER_SCRIP_SHARE * u),
+      aether: whole(((1 - HEXER_SCRIP_SHARE) * u) / AETHER_PRICE),
+    },
   },
   rigger: {
     id: 'rigger',
@@ -74,8 +80,10 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     body: 'drone',
     dps: UNIT_DPS,
     hp: unitHp,
-    // 0.75u scrip + 0.125u aether × AETHER_PRICE = u
-    cost: { scrip: whole(0.75 * u), aether: whole((0.25 * u) / AETHER_PRICE) },
+    cost: {
+      scrip: whole(RIGGER_SCRIP_SHARE * u),
+      aether: whole(((1 - RIGGER_SCRIP_SHARE) * u) / AETHER_PRICE),
+    },
   },
   enforcer: {
     id: 'enforcer',
@@ -86,8 +94,10 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     body: 'plated',
     dps: enforcerDps,
     hp: enforcerHp,
-    // 1.75u scrip + 0.375u aether × AETHER_PRICE = 2.5u
-    cost: { scrip: whole(1.75 * u), aether: whole((0.75 * u) / AETHER_PRICE) },
+    cost: {
+      scrip: whole(ENFORCER_SCRIP_SHARE * ENFORCER_VALUE * u),
+      aether: whole(((1 - ENFORCER_SCRIP_SHARE) * ENFORCER_VALUE * u) / AETHER_PRICE),
+    },
   },
 };
 

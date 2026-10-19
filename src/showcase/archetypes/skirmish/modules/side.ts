@@ -1,5 +1,5 @@
 /**
- * One seat at the table: a crew's economy, training buildings, research,
+ * One seat at the table: a crew's economy, training floors, research,
  * supply and army. Both seats are built by this factory, so the player and
  * the rival play by the same rules; only the persona driving them differs.
  *
@@ -35,6 +35,7 @@ import {
 } from '@open-loop/engine';
 import {
   BARRACKS,
+  FLOORS,
   ECON,
   RESEARCH,
   catId,
@@ -45,7 +46,7 @@ import {
 } from '../data/buildings';
 import { DISTRICTS } from '../data/contracts';
 import { LIEUTENANTS, type LieutenantDef } from '../data/crew';
-import { UNITS, byKind, type UnitKind } from '../data/units';
+import { UNITS, UNIT_KINDS, byKind, type UnitKind } from '../data/units';
 import type { Tunables } from './tunables';
 import { START_SCRIP } from '../data/spine';
 
@@ -59,7 +60,12 @@ export interface Side {
   /** Headquarters integrity; the match ends when one side's reaches zero. */
   readonly hq: Resource;
   readonly econ: ProducerCategory<EconDef>;
+  /** The tech floors, one per kind: owning one opens that kind to every floor. Its producer trains the kind. */
   readonly barracks: ProducerCategory<BarracksDef>;
+  /** Floors beyond the tech floors. */
+  readonly floors: Purchasable;
+  /** How the floors split their time between the open kinds, as weights. */
+  readonly queue: Record<UnitKind, Persistent<number>>;
   readonly research: PurchasableCategory<ResearchDef>;
   /** The seat's lieutenants: one-shot hires in scrip, in order, while the match is live. */
   readonly crew: PurchasableCategory<LieutenantDef>;
@@ -80,8 +86,16 @@ export interface Side {
   unitDps(kind: UnitKind): number;
   unitHp(kind: UnitKind): number;
   turretDps(): number;
-  /** Units per second one training building makes at the current training speed, switch aside. */
+  /** Units per second one training floor makes at the current training speed, switch aside. */
   trainRate(): number;
+  /** Every floor the seat stands up, tech floors included. */
+  floorCount(): number;
+  /** The next floor's price on the one ladder every floor climbs. */
+  floorPrice(): number;
+  /** Whether the seat's tech floor for this kind stands. */
+  opened(kind: UnitKind): boolean;
+  /** Floors' worth of training time spent on this kind: its queue weight's share of every floor. */
+  floorShare(kind: UnitKind): number;
   /** Units in the field and at home, whole and in training. */
   supplyUsed(): number;
   /** Per-second scrip income from every producer, after modifiers. */
@@ -201,25 +215,50 @@ export function createSide({
   const squads = DISTRICTS.map((d) => byKind((k): Resource => unitRes(d.id, k)));
 
   const training = byKind((k) => persistent<boolean>(true, { id: `${id}-train-${k}` }));
+  const queue = byKind((k) => persistent<number>(1, { id: `${id}-queue-${k}` }));
 
-  // ─── Training buildings: converters that spend scrip and aether into units ───
+  // ─── Training floors: one price ladder over every floor, tech or plain ───
+  // The tech floors are read through late-bound readers: they are created below.
+  let techFloors = () => 0;
+  let opened = (_k: UnitKind) => false;
+  const floors = createScalingPurchasable({
+    id: `${id}-floors`,
+    title: FLOORS.name,
+    resource: scrip,
+    baseCost: () => tune.floorBaseCost.value * tune.floorRatio.value ** techFloors(),
+    costRatio: tune.floorRatio,
+    purchaseMaxByDefault: false,
+    visible: () => techFloors() > 0,
+  });
+  const floorCount = () => techFloors() + toNumber(floors.count.value);
+  const floorPrice = () => tune.floorBaseCost.value * tune.floorRatio.value ** floorCount();
+  const floorShare = (k: UnitKind) => {
+    if (!opened(k) || queue[k].value <= 0) return 0;
+    let weights = 0;
+    for (const q of UNIT_KINDS) if (opened(q)) weights += Math.max(0, queue[q].value);
+    return (floorCount() * queue[k].value) / weights;
+  };
+
+  // ─── Tech floors: converters that spend scrip and aether into units, at the queue's share ───
   const barracks = createProducerCategory<BarracksDef>({
     id: catId.barracks(id),
     registerTick,
     mapProducer: (def) => {
-      const t = tune.barracks[def.id];
       const cost = tune.unit[def.trains];
       const requires = def.requires(id);
       return {
         resource: reserve[def.trains],
-        // The training switch is the cycle driver: off, the building idles.
-        baseRate: () => (training[def.trains].value ? tune.trainRate.value : 0),
+        // The training switch is the cycle driver: off, every floor's time on this kind idles.
+        baseRate: () =>
+          training[def.trains].value ? tune.trainRate.value * floorShare(def.trains) : 0,
         trigger: 'continuous',
         display: { title: def.name, description: def.blurb },
         purchase: {
           costResource: scrip,
-          baseCost: t.baseCost,
-          costRatio: t.ratio,
+          // A tech floor is the next floor on the ladder, at its multiple of the price.
+          baseCost: () => floorPrice() * def.floors,
+          costRatio: 1,
+          limit: 1,
           purchaseMaxByDefault: false,
           ...(requires ? { visible: requires } : {}),
         },
@@ -234,6 +273,9 @@ export function createSide({
     },
   });
   barracks.register(BARRACKS);
+  techFloors = () => barracks.getAll().reduce((n, e) => n + toNumber(e.producer.count.value), 0);
+  const techOf = byKind((k) => barracks.getProducer(BARRACKS.find((b) => b.trains === k)!.id)!);
+  opened = (k) => toNumber(techOf[k].count.value) > 0;
 
   // ─── Research: a prerequisite graph of one-shot upgrades ───
   const research = createPurchasableCategory<ResearchDef>({
@@ -317,12 +359,18 @@ export function createSide({
     turret,
     income,
     training,
+    floors,
+    queue,
     stance,
     focus,
     unitDps: (k) => toNumber(dmg[k].apply(tune.unit[k].dps.value)),
     unitHp: (k) => toNumber(hp[k].apply(tune.unit[k].hp.value)),
     turretDps: () => toNumber(turret.apply(tune.turretDps.value)),
     trainRate: () => toNumber(trainingSpeed.apply(tune.trainRate.value)),
+    floorCount,
+    floorPrice,
+    opened,
+    floorShare,
     supplyUsed: () => toNumber(bag.total()),
     scripRate: () => toNumber(econ.getTotalRate(scrip)),
     aetherRate: () => toNumber(econ.getTotalRate(aether)),

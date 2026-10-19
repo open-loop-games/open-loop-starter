@@ -9,7 +9,7 @@ import { toNumber } from '@open-loop/engine';
 import { runUntil } from '@open-loop/engine/harness';
 import { CONTRACTS, DISTRICTS, PLAYER_PERSONA } from '../data/contracts';
 import { UNIT_KINDS } from '../data/units';
-import { describeSpine, landmarks } from '../data/spine';
+import { MIN_SIEGE_FORCE, REF_PRESENCE, describeSpine, landmarks } from '../data/spine';
 import { readyUnits } from '../modules/orders';
 import { PRESENCE, countsOf, total } from '../modules/battle';
 import { hustlersPay } from '../modules/policy';
@@ -26,7 +26,8 @@ console.log('── Spine ──');
 for (const [k, v] of Object.entries(describeSpine()))
   console.log(`  ${k.padEnd(22)} ${v.toFixed(3)}`);
 console.log('── Spine landmarks (equal economy) ──');
-for (const l of landmarks()) console.log(`  ${String(l.predictedS).padStart(5)}s  ${l.beat}`);
+for (const l of landmarks().sort((a, b) => a.predictedS - b.predictedS))
+  console.log(`  ${String(l.predictedS).padStart(5)}s  ${l.beat}`);
 
 function armySize(s: Side): number {
   let n = 0;
@@ -35,10 +36,6 @@ function armySize(s: Side): number {
     for (const sq of s.squads) n += toNumber(sq[k].value);
   }
   return n;
-}
-
-function buildings(s: Side): number {
-  return s.barracks.getAll().reduce((sum, e) => sum + toNumber(e.producer.count.value), 0);
 }
 
 function check(label: string, v: number): void {
@@ -73,10 +70,10 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
       const hustlers = toNumber(p.econ.getProducer('hustler')!.count.value);
       beat('first hustler bought', hustlers > 5);
       beat('first ley tap', toNumber(p.econ.getProducer('ley-tap')!.count.value) > 0);
-      beat('first training building', buildings(p) > 0);
+      beat('first training floor', p.floorCount() > 0);
       beat('first unit trained', UNIT_KINDS.some((k) => readyUnits(p, k) > 0) || armySize(p) >= 1);
       for (const b of p.barracks.getAll())
-        beat(`${b.def.name} built`, toNumber(b.producer.count.value) > 0);
+        beat(`${b.def.name} opens ${b.def.trains}s`, toNumber(b.producer.count.value) > 0);
       for (const r of p.research.getAll())
         beat(`research: ${r.def.name}`, r.purchasable.active.value);
       beat(
@@ -85,6 +82,10 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
           p.barracks.getAll().some((b) => b.producer.limit?.value === 'room'),
       );
       beat('first squat', toNumber(p.squats.count.value) > 0);
+      beat(
+        'army reaches a siege force plus a holding squad',
+        armySize(p) >= MIN_SIEGE_FORCE + REF_PRESENCE,
+      );
       beat(
         'first clash',
         DISTRICTS.some(
@@ -117,7 +118,7 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
   for (const [name, t] of sorted) console.log(`  ${t.toFixed(1).padStart(7)}s  ${name}`);
   const fmt = (s: Side) =>
     `hustlers ${toNumber(s.econ.getProducer('hustler')!.count.value)}, taps ${toNumber(s.econ.getProducer('ley-tap')!.count.value)}, ` +
-    `buildings ${buildings(s)}, squats ${toNumber(s.squats.count.value)}, supply ${s.supplyUsed().toFixed(1)}/${s.supplyCap.value}, ` +
+    `floors ${s.floorCount()}, squats ${toNumber(s.squats.count.value)}, supply ${s.supplyUsed().toFixed(1)}/${s.supplyCap.value}, ` +
     `scrip ${toNumber(s.scrip.value).toFixed(0)} (+${s.scripRate().toFixed(1)}/s), hq ${toNumber(s.hq.value).toFixed(0)}`;
   console.log(`  you:   ${fmt(p)}, peak army ${peakArmyP.toFixed(1)}`);
   console.log(`  rival: ${fmt(e)}, peak army ${peakArmyE.toFixed(1)}`);

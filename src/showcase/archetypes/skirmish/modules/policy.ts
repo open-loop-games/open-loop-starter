@@ -5,18 +5,19 @@
  * to the automation tiers the player has unlocked. The probe plays the same
  * functions, so the balance harness measures shipping code.
  *
- * What the spine assumes, and this plays: hustlers while they pay back inside
- * the persona's horizon; training buildings sized so their scrip draw is the
+ * What the spine assumes, and this plays (`walkArmy`): hustlers while they pay
+ * back inside the persona's horizon; floors sized so their scrip draw is the
  * persona's army share of income (the spine's `1 − ECON_SHARE` for the player)
- * until the hustlers stop paying back, then all of it; research saved for only
- * after that; one army, concentrated on one objective at a time.
+ * until the hustlers stop paying back, then all of it; tech floors toward the
+ * kinds the mix wants; every floor's time split by that mix; research saved for
+ * only after that; one army, concentrated on one objective at a time.
  */
 import { toNumber, type Producer, type Purchasable } from '@open-loop/engine';
 import { BARRACKS, RESEARCH } from '../data/buildings';
 import type { Persona } from '../data/contracts';
 import { DISTRICTS } from '../data/contracts';
 import { UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
-import { AETHER_PRICE } from '../data/spine';
+import { AETHER_PRICE, LATE_FLOOR_SHARE, PAUSE_HORIZON_S, SAVE_HORIZON_S } from '../data/spine';
 import { PRESENCE, countsOf, fightingValue, total, type Counts } from './battle';
 import { deploy, readyUnits, redeploy, retreat, setFocus, setStance } from './orders';
 import type { Focus, Side } from './side';
@@ -40,10 +41,6 @@ export type { PolicyScope };
 
 // TODO(expansion): a converter input has no reserve (auto-purchase has one), so a seat
 // saving for a purchase must switch its training floors off; see `playEconomy`.
-/** A building this many seconds of income away is saved for: hustlers and research wait. */
-const SAVE_HORIZON_S = 40;
-/** Training pauses only for the last stretch of a save, this many seconds of income. */
-const PAUSE_HORIZON_S = 12;
 /** A floor's aether draw is fed if the taps plus the bank spread over this many seconds cover it. */
 const FEED_HORIZON_S = 120;
 
@@ -53,6 +50,7 @@ function hustler(side: Side): Producer {
   return side.econ.getProducer('hustler')!;
 }
 
+/** The tech floor that opens a kind; its producer trains that kind. */
 function barracksFor(side: Side, kind: UnitKind): Producer {
   return side.barracks.getProducer(BARRACKS.find((b) => b.trains === kind)!.id)!;
 }
@@ -111,32 +109,43 @@ export function productionMix(persona: Persona, enemyMix: Counts | undefined): C
   return out;
 }
 
-/**
- * A building keeps training unless what it makes is countered by what the
- * enemy fields: idling a floor costs throughput, so only a losing trade does.
- */
-export function worthTraining(kind: UnitKind, mix: Counts, enemyMix: Counts | undefined): boolean {
-  if (mix[kind] > 0.02 || !enemyMix || total(enemyMix) <= 0) return true;
-  const sum = total(enemyMix);
-  let trade = 0;
-  for (const b of UNIT_KINDS)
-    trade += (enemyMix[b] / sum) * (effectiveness(kind, b) / effectiveness(b, kind));
-  return trade >= 0.75;
-}
-
 type Input = 'scrip' | 'aether';
 
-/** What one training building of this kind draws per second of an input while switched on. */
+/** What one floor's whole time on this kind draws per second of an input while switched on. */
 function drainOf(side: Side, kind: UnitKind, input: Input = 'scrip'): number {
   return side.trainRate() * toNumber(barracksFor(side, kind).inputs![input].per.value);
 }
 
-/** What every training building would draw per second of an input with its switch on. */
+/** What every floor would draw per second of an input with every switch on. */
 export function trainingDrain(side: Side, input: Input = 'scrip'): number {
   let d = 0;
-  for (const k of UNIT_KINDS)
-    d += drainOf(side, k, input) * toNumber(barracksFor(side, k).count.value);
+  for (const k of UNIT_KINDS) d += drainOf(side, k, input) * side.floorShare(k);
   return d;
+}
+
+/** What one more floor would draw per second of an input, its time split by `share`. */
+function floorDrain(side: Side, share: Counts, input: Input): number {
+  let d = 0;
+  for (const k of UNIT_KINDS) d += share[k] * drainOf(side, k, input);
+  return d;
+}
+
+/** Aether per second the taps feed, with the bank spread over `FEED_HORIZON_S`. */
+function aetherFed(side: Side): number {
+  return side.aetherRate() + toNumber(side.aether.value) / FEED_HORIZON_S;
+}
+
+/** The mix over the kinds the seat has opened, normalized; razors when it has opened none of them. */
+function openMix(side: Side, mix: Counts): Counts {
+  const out = zero();
+  for (const k of UNIT_KINDS) if (mix[k] > 0.02 && side.opened(k)) out[k] = mix[k];
+  const sum = total(out);
+  if (sum <= 0) {
+    if (side.opened('razor')) out.razor = 1;
+    return out;
+  }
+  for (const k of UNIT_KINDS) out[k] /= sum;
+  return out;
 }
 
 /** Whether the seat's army is in a fight it is losing, so it must not stop training to save. */
@@ -169,46 +178,70 @@ function fieldArmy(side: Side): number {
 
 // ─── Economy and building ──────────────────────────────────────────────────
 
+/** A kind the mix wants this much of is worth its tech floor. */
+const TECH_SHARE = 0.1;
+
 /**
- * The training building the seat wants next, if the persona's army share has room for it.
- * A floor whose aether draw the taps cannot feed waits on a tap; once the taps are at
- * their limit, the next kind in line stands in.
+ * The next floor the seat wants, if the persona's army share of income has room for its
+ * draw: the tech floor of the kind the mix wants most and has not opened, else a plain
+ * floor. A missing prerequisite's next purchase stands in for a tech floor; a ley tap
+ * stands in for a floor the taps cannot feed.
  */
-function nextBuilding(
+function nextFloor(
   side: Side,
   persona: Persona,
   mix: Counts,
 ): { kind: UnitKind; buy: Purchasable } | undefined {
-  const share = hustlersPay(side, persona) ? persona.armyShare : 1.15;
-  const income = side.scripRate();
-  const owned = (k: UnitKind) => toNumber(barracksFor(side, k).count.value);
-  const buildings = UNIT_KINDS.reduce((s, k) => s + owned(k), 0);
-  // The kind whose share of buildings lags its production share most.
-  const lag = (k: UnitKind) => mix[k] * (buildings + 1) - owned(k);
-  const order = [...UNIT_KINDS].filter((k) => mix[k] > 0.02).sort((a, b) => lag(b) - lag(a));
-  const tap = side.econ.getProducer('ley-tap')!.repeatable!;
-  const fed = side.aetherRate() + toNumber(side.aether.value) / FEED_HORIZON_S;
-  for (const k of order) {
-    if (trainingDrain(side) + drainOf(side, k) > share * income) return undefined;
-    const b = barracksFor(side, k).repeatable!;
-    const aether = drainOf(side, k, 'aether');
-    if (b.visible.value && aether > 0 && trainingDrain(side, 'aether') + aether > fed) {
-      if (tap.maxed.value) continue;
-      return { kind: k, buy: tap };
-    }
-    if (b.visible.value) return { kind: k, buy: b };
-    // Missing prerequisite: the next purchase on the way to it stands in.
+  const share = hustlersPay(side, persona) ? persona.armyShare : LATE_FLOOR_SHARE;
+  const open = openMix(side, mix);
+  // Before any kind is open the next floor draws nothing yet, so the first tech floor always fits.
+  if (trainingDrain(side) + floorDrain(side, open, 'scrip') > share * side.scripRate())
+    return undefined;
+  const wanted = UNIT_KINDS.filter((k) => mix[k] > TECH_SHARE && !side.opened(k)).sort(
+    (a, b) => mix[b] - mix[a],
+  );
+  for (const k of wanted) {
+    const tech = barracksFor(side, k).repeatable!;
+    if (tech.visible.value) return { kind: k, buy: tech };
     const prereq = prerequisiteFor(side, k);
     if (prereq && !prereq.maxed.value) return { kind: k, buy: prereq };
   }
-  return undefined;
+  if (side.floorCount() === 0)
+    return { kind: 'razor', buy: barracksFor(side, 'razor').repeatable! };
+  const tap = side.econ.getProducer('ley-tap')!.repeatable!;
+  const aether = floorDrain(side, open, 'aether');
+  if (aether > 0 && trainingDrain(side, 'aether') + aether > aetherFed(side) && !tap.maxed.value)
+    return { kind: 'hexer', buy: tap };
+  return { kind: 'razor', buy: side.floors };
 }
 
 /**
- * One economy step: buy hustlers, taps and squats (`econ`), training
- * buildings and research (`build`), and set the training switches (`build`).
- * A building the seat can afford within `SAVE_HORIZON_S` of income is saved
- * for: hustlers wait for it, and so does research. Returns what it bought.
+ * Split every floor's time by the mix over the opened kinds, then hand aether kinds' time
+ * to razors until the taps can feed what is left.
+ */
+export function setQueue(side: Side, mix: Counts): void {
+  const weights = openMix(side, mix);
+  const need = UNIT_KINDS.reduce(
+    (d, k) => d + weights[k] * side.floorCount() * drainOf(side, k, 'aether'),
+    0,
+  );
+  const fed = aetherFed(side);
+  if (need > fed && side.opened('razor')) {
+    const keep = fed / need;
+    for (const k of UNIT_KINDS) {
+      if (drainOf(side, k, 'aether') <= 0) continue;
+      weights.razor += weights[k] * (1 - keep);
+      weights[k] *= keep;
+    }
+  }
+  for (const k of UNIT_KINDS) side.queue[k].value = weights[k];
+}
+
+/**
+ * One economy step: buy hustlers, taps and squats (`econ`); floors and research,
+ * and set the queue and the training switches (`build`). A floor the seat can
+ * afford within `SAVE_HORIZON_S` of income is saved for: hustlers wait for it,
+ * and so does research. Returns what it bought.
  */
 export function playEconomy(
   sit: Situation,
@@ -220,17 +253,16 @@ export function playEconomy(
   const income = side.scripRate();
   const mix = productionMix(persona, sit.enemyMix);
   const econWanted = hustlersPay(side, persona);
-  const owned = (k: UnitKind) => toNumber(barracksFor(side, k).count.value);
   let saving = false;
-  let savingForBuilding = false;
+  let savingForFloor = false;
 
   if (scopes.has('build')) {
-    const want = nextBuilding(side, persona, mix);
+    const want = nextFloor(side, persona, mix);
     if (want) {
       if (want.buy.canPurchase.value) {
-        if (want.buy.purchase(1)) bought.push(`building toward ${want.kind}`);
+        if (want.buy.purchase(1)) bought.push(`floor toward ${want.kind}`);
       } else if (toNumber(want.buy.getCost(1)) < SAVE_HORIZON_S * Math.max(income, 1)) {
-        savingForBuilding = true;
+        savingForFloor = true;
         const short = toNumber(want.buy.getCost(1)) - toNumber(side.scrip.value);
         saving = short < PAUSE_HORIZON_S * income && !underPressure(sit);
       }
@@ -250,7 +282,7 @@ export function playEconomy(
     const keep = scopes.has('build') ? 0 : cheapestFloor(side);
     if (
       econWanted &&
-      !savingForBuilding &&
+      !savingForFloor &&
       h.canPurchase.value &&
       toNumber(side.scrip.value) >= toNumber(h.getCost(1)) + keep
     ) {
@@ -259,7 +291,7 @@ export function playEconomy(
     const tap = side.econ.getProducer('ley-tap')!;
     const tapCost = toNumber(tap.repeatable!.getCost(1));
     if (
-      !savingForBuilding &&
+      !savingForFloor &&
       toNumber(tap.count.value) < persona.taps &&
       tap.repeatable!.canPurchase.value &&
       toNumber(side.scrip.value) >= tapCost + keep &&
@@ -273,10 +305,10 @@ export function playEconomy(
     for (const id of persona.research) {
       const r = side.research.getPurchasable(id);
       if (!r || r.active.value) continue;
-      if (!savingForBuilding && r.canPurchase.value) {
+      if (!savingForFloor && r.canPurchase.value) {
         if (r.purchase()) bought.push(id);
       } else if (
-        !savingForBuilding &&
+        !savingForFloor &&
         !econWanted &&
         r.visible.value &&
         fieldArmy(side) >= persona.assaultAt &&
@@ -287,23 +319,23 @@ export function playEconomy(
       }
       break;
     }
-    for (const k of UNIT_KINDS)
-      side.training[k].value = !saving && owned(k) > 0 && worthTraining(k, mix, sit.enemyMix);
+    setQueue(side, mix);
+    for (const k of UNIT_KINDS) side.training[k].value = !saving;
   }
   return bought;
 }
 
-/** The price of the cheapest training floor the seat could build now. */
+/** The price of the cheapest floor the seat could stand up now, tech or plain. */
 function cheapestFloor(side: Side): number {
-  let best = Infinity;
+  let best = side.floors.visible.value ? toNumber(side.floors.getCost(1)) : Infinity;
   for (const k of UNIT_KINDS) {
-    const b = barracksFor(side, k).repeatable!;
-    if (b.visible.value) best = Math.min(best, toNumber(b.getCost(1)));
+    const tech = barracksFor(side, k).repeatable!;
+    if (tech.visible.value && !tech.maxed.value) best = Math.min(best, toNumber(tech.getCost(1)));
   }
   return Number.isFinite(best) ? best : 0;
 }
 
-/** The next purchase on the way to a training building whose prerequisite is missing. */
+/** The next purchase on the way to a tech floor whose prerequisite is missing. */
 function prerequisiteFor(side: Side, kind: UnitKind): Purchasable | undefined {
   const tap = side.econ.getProducer('ley-tap')!.repeatable!;
   const chop = barracksFor(side, 'razor').repeatable!;

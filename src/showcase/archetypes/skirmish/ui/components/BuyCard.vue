@@ -22,6 +22,8 @@ const props = defineProps<{
   /** What the purchase waits on ("needs a chop shop"), shown in place of the price. */
   locked?: string;
   maxed?: boolean;
+  /** What a maxed card says it is. Default: done. */
+  doneLabel?: string;
   /** The lieutenant who buys this for you. */
   automated?: string;
 }>();
@@ -62,7 +64,7 @@ const state = computed(() => {
     </span>
     <span v-if="note" class="buy__note">{{ note }}</span>
     <span class="buy__foot">
-      <span v-if="maxed" class="buy__cost buy__cost--done">✓ done</span>
+      <span v-if="maxed" class="buy__cost buy__cost--done">✓ {{ doneLabel ?? 'done' }}</span>
       <span v-else-if="locked" class="buy__cost buy__cost--locked">⌁ {{ locked }}</span>
       <template v-else>
         <span

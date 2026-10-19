@@ -1,32 +1,39 @@
 <!--
   HustlePanel — the left column: the crew's economy, its bunks and its training floors.
 
-  Hustlers, ley taps and the training floors are engine producers, so each list is a
-  ProducerList over `createProducerRow`; coffin squats are a scaling purchasable, so their
-  row is `createPurchasableRow`. Rows render through the `#row` slot as BuyCards, because
-  a card that is the button, a lieutenant's mark and a floor's switch are shapes the flat
-  row contract cannot hold. The price lines are the engine's (`readPriceLines`).
+  Hustlers, ley taps and the tech floors are engine producers, so their rows are
+  `createProducerRow`; coffin squats and plain floors are scaling purchasables, so theirs
+  are `createPurchasableRow`. Rows render through ProducerList's `#row` slot as BuyCards,
+  because a card that is the button and a lieutenant's mark are shapes the flat row
+  contract cannot hold. The price lines are the engine's (`readPriceLines`).
 
-  A floor a prerequisite has not opened is listed anyway, locked on what it waits on: the
-  row's `prerequisite`.
+  A tech floor is bought once and opens its kind to every floor; a plain floor is one more
+  floor. Both climb one price ladder. A floor a prerequisite has not opened is listed
+  anyway, locked on what it waits on: the row's `prerequisite`. How the floors split their
+  time is the FloorQueue under them.
 -->
 <script setup lang="ts">
-import type { Ref } from 'vue';
 import { toNumber, type Purchasable } from '@open-loop/engine';
-import ProgressBar from '@/ui/components/ProgressBar.vue';
-import Switch from '@/ui/components/Switch.vue';
 import {
   ProducerList,
   createProducerRow,
   createPurchasableRow,
   readPriceLines,
 } from '@/ui/compositions';
-import { BARRACKS, ECON, SQUATS, type BarracksDef, type EconDef } from '../../data/buildings';
+import {
+  BARRACKS,
+  ECON,
+  FLOORS,
+  SQUATS,
+  type BarracksDef,
+  type EconDef,
+} from '../../data/buildings';
 import { UNITS } from '../../data/units';
 import { getMatch } from '../../modules';
 import { useHandledBy } from '../handled-by';
 import { grouped, rate } from '../format';
 import BuyCard from './BuyCard.vue';
+import FloorQueue from './FloorQueue.vue';
 
 const match = getMatch();
 const { p, tune } = match;
@@ -64,48 +71,43 @@ const squatRow = createPurchasableRow<HustleExtra>(p.squats, {
 
 const hustleRows = [...econRows, squatRow];
 
+// ─── Training floors: a tech floor per kind, then plain floors, on one price ladder ───
+
 interface FloorExtra {
-  def: BarracksDef;
   item: Purchasable;
-  training: Ref<boolean>;
-  status: () => { text: string; stalled: boolean };
-  progress: () => number;
+  note: () => string;
+  count?: () => string;
 }
 
-const floorRows = BARRACKS.map((def) => {
+/** "Opens Razorboys (94 scrip each) to every floor. Counts as one floor." */
+function opens(def: BarracksDef): string {
+  const cost = tune.unit[def.trains];
+  const aether = cost.aether.value ? ` + ${grouped(cost.aether.value)} aether` : '';
+  const price =
+    def.floors > 1 ? `One floor, at ${def.floors}× a floor's price.` : 'Counts as one floor.';
+  return `Opens ${UNITS[def.trains].name} (${grouped(cost.scrip.value)} scrip${aether} each) to every floor. ${price}`;
+}
+
+const techRows = BARRACKS.map((def) => {
   const prod = p.barracks.getProducer(def.id)!;
-  const kind = def.trains;
   return createProducerRow<FloorExtra>(prod, {
     displayName: def.name,
     prerequisite: `needs ${def.requiresText}`,
-    extra: {
-      def,
-      item: prod.repeatable!,
-      training: p.training[kind],
-      status: () => {
-        const owned = toNumber(prod.ownedCount.value);
-        if (owned <= 0) return { text: 'idle', stalled: false };
-        if (!p.training[kind].value) return { text: 'switched off', stalled: false };
-        const limit = prod.limit?.value ?? 'rate';
-        if (limit === 'room') return { text: 'no bunks — buy squats', stalled: true };
-        if (limit.startsWith('input:'))
-          return { text: `short of ${limit.slice(6)}`, stalled: true };
-        return { text: `${rate(toNumber(prod.realizedRate!.value) * 60)} / min`, stalled: false };
-      },
-      progress: () => {
-        const r = toNumber(p.reserve[kind].value);
-        return r - Math.floor(r);
-      },
-    },
+    extra: { item: prod.repeatable!, note: () => opens(def) },
   });
 });
 
-/** "Trains Razorboys: 94 scrip + 12 aether each." */
-function trains(def: BarracksDef): string {
-  const cost = tune.unit[def.trains];
-  const aether = cost.aether.value ? ` + ${grouped(cost.aether.value)} aether` : '';
-  return `Trains ${UNITS[def.trains].name}: ${grouped(cost.scrip.value)} scrip${aether} each.`;
-}
+const plainRow = createPurchasableRow<FloorExtra>(p.floors, {
+  displayName: FLOORS.name,
+  prerequisite: 'needs a tech floor',
+  extra: {
+    item: p.floors,
+    note: () => `${FLOORS.blurb} The queue below splits them.`,
+    count: () => String(p.floorCount()),
+  },
+});
+
+const floorRows = [...techRows, plainRow];
 </script>
 
 <template>
@@ -133,33 +135,21 @@ function trains(def: BarracksDef): string {
         <h2 class="cc-title">Training floors</h2>
       </template>
       <template #row="{ row, purchase }">
-        <div class="floor" :data-stalled="row.extra!.status().stalled">
-          <BuyCard
-            :title="row.displayName"
-            :note="trains(row.extra!.def)"
-            :count="String(row.count.value)"
-            :prices="readPriceLines(row.extra!.item)"
-            :can="row.canPurchase(1)"
-            :locked="row.unmet.value[0]"
-            :automated="quartermaster"
-            @buy="purchase()"
-          />
-          <div v-if="Number(row.count.value) > 0" class="floor__run">
-            <Switch
-              v-model="row.extra!.training.value"
-              :aria-label="`Training ${UNITS[row.extra!.def.trains].name}`"
-            >
-              <template #default="{ on }">{{ on ? 'Training' : 'Off' }}</template>
-            </Switch>
-            <ProgressBar
-              class="cc-gauge floor__bar"
-              :value="row.extra!.training.value ? row.extra!.progress() : 0"
-            />
-            <span class="floor__status">{{ row.extra!.status().text }}</span>
-          </div>
-        </div>
+        <BuyCard
+          :title="row.displayName"
+          :note="row.extra!.note()"
+          :count="row.extra!.count?.()"
+          :prices="readPriceLines(row.extra!.item)"
+          :can="row.canPurchase(1)"
+          :maxed="row.extra!.item.maxed.value"
+          done-label="open"
+          :locked="row.unmet.value[0]"
+          :automated="row.extra!.item.maxed.value ? undefined : quartermaster"
+          @buy="purchase()"
+        />
       </template>
     </ProducerList>
+    <FloorQueue />
   </section>
 </template>
 
@@ -169,26 +159,5 @@ function trains(def: BarracksDef): string {
 }
 .hustle :deep(.producer-list__rows) {
   gap: var(--gap-sm);
-}
-.floor {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.floor__run {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
-  align-items: center;
-  padding: 0 2px 2px 6px;
-  font-size: 11px;
-  color: var(--cc-chalk-dim);
-}
-.floor[data-stalled='true'] .floor__status {
-  color: var(--cc-short);
-}
-.floor__bar.cc-gauge {
-  --progress-bar-height: 3px;
-  --progress-bar-transition: transform 0.25s linear;
 }
 </style>

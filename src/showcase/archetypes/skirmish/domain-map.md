@@ -31,6 +31,7 @@ another domain noun. These are name-encoded, not type-encoded, so
 type-graph tools such as dependency-cruiser and findReferences miss them.
 
 - **Persona** → `research`
+- **ArmyPoint** → `unit`
 - **ResearchEffect** → `unit`
 
 ## Thin spots
