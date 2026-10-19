@@ -16,4 +16,8 @@ export interface ResourceReadout {
   highlight?: Ref<ResourceHighlight>;
   /** Writes the value and the capacity. Default: whole numbers in the engine notation. */
   format?: (value: DecimalSource) => string;
+  /** Writes the rate, without its sign and unit. Default: two decimals in the engine notation. */
+  formatRate?: (rate: DecimalSource) => string;
+  /** A short status under the readout, such as "full". An empty string shows none. */
+  note?: Ref<string>;
 }

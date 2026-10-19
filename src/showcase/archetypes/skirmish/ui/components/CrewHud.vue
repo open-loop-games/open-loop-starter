@@ -6,18 +6,21 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { toNumber } from '@open-loop/engine';
+import { toNumber, type DecimalSource } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import HudChip from '@/ui/components/HudChip.vue';
 import { ResourceHeaderStrip, type ResourceReadout } from '@/ui/compositions';
 import { getCareer, getMatch } from '../../modules';
-import { clock, whole } from '../format';
+import { clock, rate, whole } from '../format';
 
 const match = getMatch();
 const career = getCareer();
 const { p } = match;
 
 const used = computed(() => Math.floor(p.supplyUsed()));
+// A full barracks stalls every training floor.
+const full = computed(() => p.supplyUsed() >= p.supplyCap.value - 0.5);
+const perSecond = (v: DecimalSource) => rate(toNumber(v));
 const readouts: ResourceReadout[] = [
   {
     id: 'scrip',
@@ -25,6 +28,7 @@ const readouts: ResourceReadout[] = [
     value: p.scrip,
     rate: computed(() => p.scripRate()),
     format: whole,
+    formatRate: perSecond,
   },
   {
     id: 'aether',
@@ -32,14 +36,15 @@ const readouts: ResourceReadout[] = [
     value: p.aether,
     rate: computed(() => p.aetherRate()),
     format: whole,
+    formatRate: perSecond,
   },
   {
     id: 'bunks',
     label: 'Bunks',
     value: used,
     capacity: p.supplyCap,
-    // A full barracks stalls every training floor: the bunks read short.
-    highlight: computed(() => (p.supplyUsed() >= p.supplyCap.value - 0.5 ? 'deficit' : 'normal')),
+    highlight: computed(() => (full.value ? 'deficit' : 'normal')),
+    note: computed(() => (full.value ? 'full — training stalls' : 'free')),
     format: (v) => String(toNumber(v)),
   },
 ];
@@ -165,6 +170,16 @@ const scoutLabel = computed(() => {
 .hud :deep([data-readout-id='aether'] .resource-header-strip__value) {
   color: var(--cc-ley);
 }
+.hud :deep(.resource-header-strip__capacity) {
+  font-size: 20px;
+  color: var(--cc-chalk-dim);
+}
+.hud :deep(.resource-header-strip__note) {
+  grid-area: rate;
+  font-size: 11px;
+  color: var(--cc-chalk-dim);
+}
+.hud :deep([data-highlight='deficit'] .resource-header-strip__note),
 .hud :deep([data-highlight='deficit'] .resource-header-strip__value) {
   color: var(--cc-short);
 }

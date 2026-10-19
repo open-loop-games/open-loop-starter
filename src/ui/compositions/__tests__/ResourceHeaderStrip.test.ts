@@ -116,4 +116,31 @@ describe('ResourceHeaderStrip', () => {
     const wrapper = mount(ResourceHeaderStrip, { props: { readouts: [r] } });
     expect(wrapper.find('.resource-header-strip__value').text()).toBe('3 cells / 12 cells');
   });
+
+  it('puts the capacity in its own span, so a costume can style it apart', () => {
+    const wrapper = mount(ResourceHeaderStrip, {
+      props: { readouts: [readout('bunks', { value: 9, capacity: 12 })] },
+    });
+    expect(wrapper.find('.resource-header-strip__capacity').text()).toBe('/ 12');
+  });
+
+  it('writes the rate with a readout’s own rate format', () => {
+    const r = {
+      ...readout('scrip', { rate: 27.6 }),
+      formatRate: (v: DecimalSource) => Math.round(Number(v)).toString(),
+    };
+    const wrapper = mount(ResourceHeaderStrip, { props: { readouts: [r] } });
+    expect(wrapper.find('.resource-header-strip__rate').text()).toBe('+28/s');
+  });
+
+  it('shows a readout’s note while it has one', async () => {
+    const note = ref('');
+    const wrapper = mount(ResourceHeaderStrip, {
+      props: { readouts: [{ ...readout('bunks'), note }] },
+    });
+    expect(wrapper.find('.resource-header-strip__note').exists()).toBe(false);
+    note.value = 'full';
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.resource-header-strip__note').text()).toBe('full');
+  });
 });

@@ -10,7 +10,8 @@
   the shape and render it with its OWN component — "want the shape, not the
   markup" is a first-class path, not a fallback. Costume classes
   (`:deep(.resource-header-strip__…)`) are stable API for stories that keep
-  this renderer; `.resource-header-strip` root, `__value` / `__rate` / `__label`.
+  this renderer; `.resource-header-strip` root, `__value` (with `__capacity` inside it) /
+  `__rate` / `__label` / `__note`.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -51,6 +52,10 @@ function show(r: ResourceReadout, value: DecimalSource): string {
   return r.format ? r.format(value) : format(value, 0);
 }
 
+function showRate(r: ResourceReadout, value: DecimalSource): string {
+  return r.formatRate ? r.formatRate(value) : format(value, 2);
+}
+
 function rateSign(value: DecimalSource): string {
   return Decimal.lt(value, 0) ? '' : '+';
 }
@@ -69,12 +74,15 @@ function rateSign(value: DecimalSource): string {
       >
         <span class="resource-header-strip__value"
           >{{ show(r, r.value.value)
-          }}<template v-if="r.capacity"> / {{ show(r, r.capacity.value) }}</template></span
+          }}<span v-if="r.capacity" class="resource-header-strip__capacity">
+            / {{ show(r, r.capacity.value) }}</span
+          ></span
         >
         <span class="resource-header-strip__label">{{ r.label }}</span>
         <span v-if="r.rate" class="resource-header-strip__rate"
-          >{{ rateSign(r.rate.value) }}{{ format(r.rate.value, 2) }}/s</span
+          >{{ rateSign(r.rate.value) }}{{ showRate(r, r.rate.value) }}/s</span
         >
+        <span v-if="r.note?.value" class="resource-header-strip__note">{{ r.note.value }}</span>
       </HudChip>
       <slot name="trailing" />
     </HudBar>
@@ -93,6 +101,11 @@ function rateSign(value: DecimalSource): string {
   font-size: 0.7em;
   opacity: 0.7;
   margin-left: 0.4em;
+}
+.resource-header-strip__note {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.7em;
 }
 .resource-header-strip__rate {
   color: var(--color-text-muted);
