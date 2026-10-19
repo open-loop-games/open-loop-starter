@@ -10,7 +10,9 @@
  * - Bucket, combat: strategy-space integration. For a fixed pair of army
  *   compositions and focus orders, a district fight is Lanchester's square law
  *   and closes (`fightSeconds`, `survivorsOfWinner`). Siege against a turret
- *   is a linear-attrition integral and closes (`minSiegeForce`).
+ *   is a linear-attrition integral and closes (`minSiegeForce`), at every gate gun
+ *   level (`minSiegeAt`). How many levels and nests a seat buys does not project;
+ *   the landmarks read level one.
  * - Where the closed form stops: the joint choice of two seats (what each
  *   builds, where it sends units, when it assaults), fog of war, and district
  *   control flipping under both, which decides whose hustlers work each district.
@@ -80,6 +82,11 @@ export const SIEGE_FORCE = 15;
 export const SIEGE_S = 60;
 /** Below this many units, a siege dies to the turret before the headquarters falls. */
 export const MIN_SIEGE_FORCE = 7;
+/** Turret levels a safehouse can stand; it opens with the first. */
+export const TURRET_LEVELS = 4;
+/** A district turret fights like this many units, and costs this many units of value. */
+export const DISTRICT_TURRET_VALUE = 3;
+export const DISTRICT_TURRET_UNITS = 2;
 /** A squad of `REF_PRESENCE` units takes an empty district in `CAPTURE_S`. */
 export const CAPTURE_S = 15;
 export const REF_PRESENCE = 5;
@@ -266,6 +273,26 @@ export function minSiegeForce(h = hqIntegrity, d = turretDps, dps = UNIT_DPS, hp
   return Math.sqrt((2 * h * d) / (dps * hp));
 }
 
+/**
+ * Turret levels add the first's fire each, so the smallest siege at level `k` is
+ * `MIN_SIEGE_FORCE · √k` (`minSiegeForce` with `D·k`).
+ */
+export const minSiegeAt = (level: number) => minSiegeForce(hqIntegrity, turretDps * level);
+/** Whole units the smallest siege at a level takes; the tolerance keeps √1 and √4 exact. */
+export const siegeUnits = (level: number) => Math.ceil(minSiegeAt(level) - 1e-9);
+/** Level `k` costs the extra siege it demands of an attacker: `u · (n_k − n_{k−1})`. */
+export const turretLevelCost = (level: number) =>
+  unitValue * (minSiegeAt(level) - minSiegeAt(level - 1));
+
+/**
+ * A district turret is worth `DISTRICT_TURRET_VALUE` units under the square law, split
+ * evenly between fire and hit points. It costs fewer units than it is worth: it cannot
+ * move, retreat or follow an assault, but it needs no bunk.
+ */
+export const districtTurretDps = UNIT_DPS * DISTRICT_TURRET_VALUE;
+export const districtTurretHp = unitHp * DISTRICT_TURRET_VALUE;
+export const districtTurretCost = DISTRICT_TURRET_UNITS * unitValue;
+
 /** Control per second a full `REF_PRESENCE` squad adds to an uncontested district (control spans −1..1). */
 export const captureRate = 1 / CAPTURE_S;
 
@@ -431,6 +458,9 @@ export function describeSpine(): Record<string, number> {
     hqIntegrity,
     turretDps,
     minSiegeForce: minSiegeForce(),
+    minSiegeAtTopLevel: minSiegeAt(TURRET_LEVELS),
+    turretLevel2Cost: turretLevelCost(2),
+    districtTurretCost,
     counterFightS: fightSeconds(10, 10, COUNTER, RESIST),
     counterSurvivorsOf10: survivorsOfWinner(10, 10, COUNTER, RESIST),
     enforcerDps,

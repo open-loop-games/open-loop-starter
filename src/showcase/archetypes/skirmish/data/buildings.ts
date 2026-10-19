@@ -23,6 +23,12 @@ import {
   charterCost,
   buildingRatio,
   NODE_HUSTLERS,
+  DISTRICT_TURRET_VALUE,
+  TURRET_LEVELS,
+  districtTurretCost,
+  districtTurretDps,
+  districtTurretHp,
+  turretLevelCost,
   hustlerBaseCost,
   hustlerRatio,
   squatBaseCost,
@@ -228,6 +234,26 @@ export const CHARTER: CharterDef = {
     'The Lantern Syndicate puts your crew on its books. Exo-frame brokers and the better labs start taking your calls.',
   cost: charterCost,
   floors: CHARTER_FLOORS,
+};
+
+/** Safehouse turret levels: each adds the first turret's fire; the safehouse opens with one. */
+export const GATE_GUNS = {
+  name: 'Gate guns',
+  blurb: 'Another turret on the safehouse roof. A siege needs more bodies to get through.',
+  levels: TURRET_LEVELS,
+  /** Scrip for the level the next purchase raises the safehouse to. */
+  cost: turretLevelCost,
+};
+
+/** A district turret: it fights for the district its seat owns and holds it while it stands. */
+export const SENTRY_NEST = {
+  name: 'Sentry nest',
+  blurb: 'A rooftop gun nest over your rackets. Nobody takes the district while it stands.',
+  dps: districtTurretDps,
+  hp: districtTurretHp,
+  cost: districtTurretCost,
+  /** Fire spread over a district counts the nest as this many units. */
+  bulk: DISTRICT_TURRET_VALUE,
 };
 
 /** Squats: each one houses SUPPLY_PER_SQUAT more units over the SUPPLY_BASE a safehouse holds. */

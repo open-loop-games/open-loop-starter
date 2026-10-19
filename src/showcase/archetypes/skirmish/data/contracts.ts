@@ -4,14 +4,7 @@
  * opposing crews and the player's own automation differ only here.
  */
 import type { UnitKind } from './units';
-import {
-  CONTRACT_INCOME,
-  ECON_SHARE,
-  MIN_SIEGE_FORCE,
-  PAYBACK_HORIZON_S,
-  REF_PRESENCE,
-  REF_TAPS,
-} from './spine';
+import { CONTRACT_INCOME, ECON_SHARE, PAYBACK_HORIZON_S, REF_PRESENCE, REF_TAPS } from './spine';
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
 
@@ -48,8 +41,12 @@ export interface Persona {
   taps: number;
   /** Research in the order the seat buys it. */
   research: string[];
-  /** Assault a held district once this many units stand in it. */
-  assaultAt: number;
+  /** Assault from a held district once this many more units stand in it than the smallest siege the rival's turrets allow. */
+  assaultMargin: number;
+  /** Turret levels to stand at the safehouse, the first included. */
+  gateGuns: number;
+  /** Raise a sentry nest in an owned district once this many hustlers work it. */
+  fortifyAt: number;
   /** Pull a squad out when its square-law strength falls below this share of the enemy's. */
   retreatBelow: number;
 }
@@ -68,8 +65,8 @@ export interface ContractDef {
 }
 
 // ─── Balance ───────────────────────────────────────────────────────────────
-// assaultAt sits above MIN_SIEGE_FORCE so an assault survives the turret; a
-// rival that rushes assaults closer to it. hustlerPayback below the spine's
+// assaultMargin is how far above the smallest siege an assault waits; a rival that
+// rushes assaults closer to it. A rush crew builds no defence; a cabal digs in. hustlerPayback below the spine's
 // PAYBACK_HORIZON_S is a crew that stops building economy early; an armyShare
 // above the spine's 1 − ECON_SHARE is a crew that rushes.
 
@@ -89,7 +86,9 @@ export const CONTRACTS: ContractDef[] = [
       armyShare: 0.7,
       taps: 1,
       research: ['smartlink-rounds'],
-      assaultAt: MIN_SIEGE_FORCE + 1,
+      assaultMargin: 1,
+      gateGuns: 1,
+      fortifyAt: Infinity,
       retreatBelow: 0.3,
     },
   },
@@ -108,7 +107,9 @@ export const CONTRACTS: ContractDef[] = [
       armyShare: 0.55,
       taps: 4,
       research: ['spirit-pacts', 'syndicate-ledgers', 'ward-glyphs'],
-      assaultAt: MIN_SIEGE_FORCE + 3,
+      assaultMargin: 3,
+      gateGuns: 3,
+      fortifyAt: 3,
       retreatBelow: 0.4,
     },
   },
@@ -127,7 +128,9 @@ export const CONTRACTS: ContractDef[] = [
       armyShare: 0.5,
       taps: 3,
       research: ['ice-breakers', 'syndicate-ledgers', 'smartlink-rounds', 'overclocked-fabs'],
-      assaultAt: MIN_SIEGE_FORCE + 4,
+      assaultMargin: 4,
+      gateGuns: 2,
+      fortifyAt: 4,
       retreatBelow: 0.45,
     },
   },
@@ -153,7 +156,9 @@ export const CONTRACTS: ContractDef[] = [
         'spirit-pacts',
         'overclocked-fabs',
       ],
-      assaultAt: MIN_SIEGE_FORCE + 5,
+      assaultMargin: 5,
+      gateGuns: 2,
+      fortifyAt: 3,
       retreatBelow: 0.5,
     },
   },
@@ -178,6 +183,8 @@ export const PLAYER_PERSONA: Persona = {
     'overclocked-fabs',
     'ward-glyphs',
   ],
-  assaultAt: MIN_SIEGE_FORCE + REF_PRESENCE,
+  assaultMargin: REF_PRESENCE,
+  gateGuns: 2,
+  fortifyAt: 4,
   retreatBelow: 0.5,
 };

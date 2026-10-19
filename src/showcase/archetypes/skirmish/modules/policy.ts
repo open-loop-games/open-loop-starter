@@ -17,7 +17,14 @@ import { BARRACKS, CHARTER, RESEARCH } from '../data/buildings';
 import type { Persona } from '../data/contracts';
 import { DISTRICTS } from '../data/contracts';
 import { UNITS, UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
-import { AETHER_PRICE, LATE_FLOOR_SHARE, PAUSE_HORIZON_S, SAVE_HORIZON_S } from '../data/spine';
+import {
+  AETHER_PRICE,
+  LATE_FLOOR_SHARE,
+  PAUSE_HORIZON_S,
+  SAVE_HORIZON_S,
+  minSiegeAt,
+  siegeUnits,
+} from '../data/spine';
 import { PRESENCE, countsOf, fightingValue, total, type Counts } from './battle';
 import { deploy, readyUnits, redeploy, retreat, setFocus, setStance } from './orders';
 import type { Focus, Side } from './side';
@@ -34,6 +41,18 @@ export interface Situation {
   enemyMix: Counts | undefined;
   /** This seat's safehouse is under siege from these districts. */
   besiegedFrom: number[];
+  /** Hit points of the enemy's sentry nest in each district as this seat sees it; 0 where none is seen. */
+  enemyNests: number[];
+}
+
+/** Units a held district must stand before this seat assaults: the smallest siege the enemy's turrets allow, plus the persona's margin. */
+export function assaultAt(sit: Situation, persona: Persona): number {
+  return siegeUnits(sit.other.turretLevel()) + persona.assaultMargin;
+}
+
+/** A squad's square-law value with `side`'s sentry nest beside it: the nest adds its own root term. */
+function withNest(side: Side, value: number, nestHp: number): number {
+  return (Math.sqrt(value) + Math.sqrt(side.nestDps() * nestHp)) ** 2;
 }
 
 import { LIEUTENANTS, type LieutenantDef, type PolicyScope } from '../data/crew';
@@ -328,6 +347,25 @@ export function playEconomy(
     }
   }
 
+  // Defence waits behind a floor's save unless the enemy army the seat knows of could already
+  // siege the safehouse at its current turret level.
+  const threatened =
+    total(sit.enemyMix ?? zero()) >= minSiegeAt(side.turretLevel()) || sit.besiegedFrom.length > 0;
+  if (scopes.has('build') && (!savingForFloor || threatened)) {
+    if (
+      side.turretLevel() < persona.gateGuns &&
+      side.gateGuns.canPurchase.value &&
+      side.gateGuns.purchase(1)
+    )
+      bought.push('gate gun');
+    for (let i = 0; i < DISTRICTS.length; i++) {
+      const working = toNumber(side.econ.getProducer(`hustler-${DISTRICTS[i]!.id}`)!.count.value);
+      const nest = side.nests[i]!.build;
+      if (working >= persona.fortifyAt && nest.canPurchase.value && nest.purchase(1))
+        bought.push(`sentry nest in ${DISTRICTS[i]!.name}`);
+    }
+  }
+
   if (scopes.has('build')) {
     for (const id of persona.research) {
       const r = side.research.getPurchasable(id);
@@ -338,7 +376,7 @@ export function playEconomy(
         !savingForFloor &&
         !econWanted &&
         r.visible.value &&
-        fieldArmy(side) >= persona.assaultAt &&
+        fieldArmy(side) >= assaultAt(sit, persona) &&
         researchCost(id) - toNumber(side.scrip.value) < PAUSE_HORIZON_S * income
       ) {
         // Research is saved for only once the economy is built and an army stands.
@@ -419,16 +457,23 @@ export function playCommand(sit: Situation, persona: Persona): void {
   const n = DISTRICTS.length;
   const ownCounts = Array.from({ length: n }, (_, i) => countsOf(own.squads[i]));
   const known = (i: number) => sit.enemySquads[i] ?? zero();
+  const nestOf = (i: number) => sit.enemyNests[i] ?? 0;
+  const enemyHere = (i: number) => total(known(i)) > PRESENCE || nestOf(i) > 0;
+  const assaultFrom = assaultAt(sit, persona);
 
   // Retreat and focus inside every fight.
   for (let i = 0; i < n; i++) {
     const enemy = known(i);
-    if (total(enemy) <= PRESENCE || total(ownCounts[i]) <= PRESENCE) {
+    if (!enemyHere(i) || total(ownCounts[i]) <= PRESENCE) {
       setFocus(own, i, 'spread');
       continue;
     }
-    const mine = fightingValue(own, ownCounts[i], enemy);
-    const theirs = fightingValue(other, enemy, ownCounts[i]);
+    const mine = withNest(
+      own,
+      fightingValue(own, ownCounts[i], enemy),
+      toNumber(own.nests[i]!.hp.value),
+    );
+    const theirs = withNest(other, fightingValue(other, enemy, ownCounts[i]), nestOf(i));
     if (mine < persona.retreatBelow * theirs) {
       retreat(own, i);
       ownCounts[i] = zero();
@@ -443,10 +488,10 @@ export function playCommand(sit: Situation, persona: Persona): void {
   // a cautious persona (high retreatBelow) waits for an edge, a reckless one does not.
   const canTake = (i: number) => {
     const enemy = known(i);
-    if (total(enemy) <= PRESENCE) return true;
+    if (!enemyHere(i)) return true;
     return (
       fightingValue(own, army, enemy) >=
-      (persona.retreatBelow + 0.5) * fightingValue(other, enemy, army)
+      (persona.retreatBelow + 0.5) * withNest(other, fightingValue(other, enemy, army), nestOf(i))
     );
   };
   let objective = -1;
@@ -455,17 +500,13 @@ export function playCommand(sit: Situation, persona: Persona): void {
   // 2. Win a fight already under way.
   if (objective < 0) {
     for (let i = 0; i < n; i++)
-      if (total(known(i)) > PRESENCE && total(ownCounts[i]) > PRESENCE && canTake(i)) objective = i;
+      if (enemyHere(i) && total(ownCounts[i]) > PRESENCE && canTake(i)) objective = i;
   }
   // 3. Press an assault the army can already make rather than chase a raid elsewhere:
   // a squad that will not fight escapes any district the army moves to.
   if (objective < 0) {
     for (let i = 0; i < n; i++)
-      if (
-        sit.control[i] >= 1 &&
-        total(known(i)) <= PRESENCE &&
-        total(ownCounts[i]) >= persona.assaultAt
-      )
+      if (sit.control[i] >= 1 && total(known(i)) <= PRESENCE && total(ownCounts[i]) >= assaultFrom)
         objective = i;
   }
   // 4. Finish the capture closest to done; where the army already stands breaks ties.
@@ -503,8 +544,8 @@ export function playCommand(sit: Situation, persona: Persona): void {
   for (let i = 0; i < n; i++) {
     const here = total(countsOf(own.squads[i]));
     const held = sit.control[i] >= 1 && total(known(i)) <= PRESENCE;
-    if (held && here >= persona.assaultAt) setStance(own, i, 'assault');
-    else if (here < persona.assaultAt / 2 || !held) setStance(own, i, 'hold');
+    if (held && here >= assaultFrom) setStance(own, i, 'assault');
+    else if (here < assaultFrom / 2 || !held) setStance(own, i, 'hold');
   }
 }
 

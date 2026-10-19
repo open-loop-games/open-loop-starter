@@ -4,20 +4,25 @@
   ley-line is starter's ProgressBar: the share that answers to you fills from the left,
   and one mark rides its edge. Every order is a call into the seat's orders module, the
   same path the lieutenants and the rival take.
+
+  A sentry nest stands in its seat's squad row, so it costs the district no height; the
+  purchase that raises one is one more order key. The rival's nest is fogged like its squad.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
-import { ECON } from '../../data/buildings';
-import { DISTRICTS } from '../../data/contracts';
+import { readPriceLines } from '@/ui/compositions';
+import { ECON, SENTRY_NEST } from '../../data/buildings';
+import { DISTRICTS, PLAYER_PERSONA } from '../../data/contracts';
 import { UNITS, UNIT_KINDS, type UnitKind } from '../../data/units';
 import { getMatch } from '../../modules';
 import { PRESENCE, countsOf, total } from '../../modules/battle';
 import { deploy, deployAll, readyUnits, retreat, setFocus, setStance } from '../../modules/orders';
 import { useHandledBy } from '../handled-by';
-import { GLYPH, clock } from '../format';
+import { GLYPH, clock, grouped } from '../format';
+import NestChip from './NestChip.vue';
 import SquadChips from './SquadChips.vue';
 
 const props = defineProps<{ index: number }>();
@@ -25,6 +30,7 @@ const match = getMatch();
 const { p, e } = match;
 const d = DISTRICTS[props.index];
 const tactician = useHandledBy('tactician');
+const quartermaster = useHandledBy('quartermaster');
 
 const mine = computed(() => countsOf(p.squads[props.index]));
 const theirs = computed(() => countsOf(e.squads[props.index]));
@@ -42,6 +48,31 @@ const working = computed(() => {
   return n === 1 ? '1 hustler working' : `${n || 'no'} hustlers working`;
 });
 const stance = computed(() => p.stance[props.index].value);
+
+// ─── Sentry nests ───
+const nestMax = computed(() => match.tune.nestHp.value);
+const myNest = computed(() => toNumber(p.nests[props.index].hp.value));
+/** The rival's nest, only while you can see the district. */
+const theirNest = computed(() => (seen.value ? toNumber(e.nests[props.index].hp.value) : 0));
+const nestBuy = p.nests[props.index].build;
+const nestPrice = computed(() => readPriceLines(nestBuy)[0]);
+/** The purchase is offered where the game would take it: your district, no nest standing. */
+const nestOffered = computed(() => owner.value === 'p' && myNest.value <= 0);
+/** The quartermaster raises one once as many hustlers work here as his persona waits for. */
+const nestBy = computed(() => {
+  if (!quartermaster.value || !nestOffered.value) return undefined;
+  const n = toNumber(p.econ.getProducer(racketsId)!.ownedCount.value);
+  return n >= PLAYER_PERSONA.fortifyAt ? quartermaster.value : undefined;
+});
+/** A squad stands against a nest: the nest holds the district while it stands. */
+const nestHolds = computed(() =>
+  myNest.value > 0 && total(theirs.value) > PRESENCE
+    ? 'p'
+    : theirNest.value > 0 && total(mine.value) > PRESENCE
+      ? 'e'
+      : undefined,
+);
+
 const fighting = computed(() => total(mine.value) > PRESENCE && total(theirs.value) > PRESENCE);
 const besieging = computed(
   () => held.value === 'p' && stance.value === 'assault' && total(mine.value) > PRESENCE,
@@ -71,12 +102,20 @@ function focus(k: UnitKind | 'spread') {
   <article
     class="district"
     :data-owner="owner"
-    :data-fight="fighting"
+    :data-fight="fighting || nestHolds !== undefined"
     :data-siege="besieging ? 'out' : besieged ? 'in' : 'none'"
     :aria-label="d.name"
   >
     <div class="district__mine">
-      <SquadChips :counts="mine" side="p" :focus="p.focus[index].value" />
+      <span class="district__force">
+        <SquadChips
+          v-if="myNest <= 0 || total(mine) > 0"
+          :counts="mine"
+          side="p"
+          :focus="p.focus[index].value"
+        />
+        <NestChip v-if="myNest > 0" :hp="myNest" :max="nestMax" side="p" />
+      </span>
       <div class="orders">
         <Button
           v-for="r in ready"
@@ -107,6 +146,21 @@ function focus(k: UnitKind | 'spread') {
         >
           {{ stance === 'assault' ? 'Assaulting' : 'Assault' }}
         </Button>
+        <template v-if="nestOffered && nestPrice">
+          <Button
+            class="cc-order cc-order--nest"
+            :disabled="!live || !nestBuy.canPurchase.value"
+            :title="`${SENTRY_NEST.name}: nobody takes ${d.name} while it stands`"
+            @click="nestBuy.purchase(1)"
+          >
+            ▲ Nest<span class="num" :data-short="nestPrice.short">{{
+              grouped(toNumber(nestPrice.amount))
+            }}</span>
+          </Button>
+          <span v-if="nestBy" class="cc-auto" :title="`${nestBy} raises the nest`">{{
+            nestBy
+          }}</span>
+        </template>
       </div>
       <div
         v-if="fighting && focusOptions.length"
@@ -140,6 +194,9 @@ function focus(k: UnitKind | 'spread') {
       <span class="district__state">
         <template v-if="besieging">your crew hits their safehouse</template>
         <template v-else-if="besieged">assault on your safehouse</template>
+        <template v-else-if="nestHolds"
+          >held by {{ nestHolds === 'p' ? 'your' : 'their' }} nest</template
+        >
         <template v-else-if="fighting">fighting</template>
         <template v-else-if="owner !== 'none'"
           >{{ owner === 'p' ? 'yours' : 'theirs'
@@ -151,7 +208,10 @@ function focus(k: UnitKind | 'spread') {
     </div>
 
     <div class="district__theirs">
-      <SquadChips v-if="seen" :counts="theirs" side="e" />
+      <span v-if="seen" class="district__force">
+        <NestChip v-if="theirNest > 0" :hp="theirNest" :max="nestMax" side="e" />
+        <SquadChips v-if="theirNest <= 0 || total(theirs) > 0" :counts="theirs" side="e" />
+      </span>
       <template v-else-if="sighting">
         <SquadChips :counts="sighting.counts" side="e" dim />
         <span class="cc-fog">last seen {{ clock(sighting.at) }}</span>
@@ -239,6 +299,19 @@ function focus(k: UnitKind | 'spread') {
   transform: rotate(45deg) scale(0.75);
   /* The bar places a mark by its inline `left`; easing it keeps the diamond on the fill's edge. */
   transition: left 0.3s linear;
+}
+.district__force {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+/* A nest is bought with scrip: its price in brass, short-rust while you cannot pay. */
+.cc-order--nest .num {
+  color: var(--cc-brass);
+}
+.cc-order--nest .num[data-short='true'] {
+  color: var(--cc-short);
 }
 .orders,
 .focus {

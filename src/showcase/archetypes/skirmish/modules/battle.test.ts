@@ -43,3 +43,55 @@ describe('a district fight', () => {
     expect(total(countsOf(m.p.squads[2]!))).toBe(0);
   });
 });
+
+describe('a sentry nest', () => {
+  beforeEach(() => {
+    boot();
+    getMatch().start();
+  });
+
+  it('holds its district until it falls', async () => {
+    const m = getMatch();
+    m.owner[1]!.value = 'p';
+    m.control[1]!.value = 1;
+    m.p.scrip.value = new Decimal(1e6);
+    expect(m.p.nests[1]!.build.purchase(1)).toBeTruthy();
+    m.e.reserve.razor.value = new Decimal(6);
+    deploy(m.e, 'razor', 1);
+    let lowest = 1;
+    await tickUntil(() => {
+      if (toNumber(m.p.nests[1]!.hp.value) > 0) lowest = Math.min(lowest, m.control[1]!.value);
+      return toNumber(m.p.nests[1]!.hp.value) === 0 || total(countsOf(m.e.squads[1]!)) === 0;
+    });
+    expect(lowest).toBe(1);
+    expect(toNumber(m.p.nests[1]!.hp.value)).toBeLessThan(m.tune.nestHp.value);
+  });
+
+  it('stands only where its seat owns the ground, and falls with it', async () => {
+    const m = getMatch();
+    m.p.scrip.value = new Decimal(1e6);
+    expect(m.p.nests[0]!.build.canPurchase.value).toBe(false);
+    m.owner[0]!.value = 'p';
+    m.p.nests[0]!.build.purchase(1);
+    expect(toNumber(m.p.nests[0]!.hp.value)).toBeGreaterThan(0);
+    m.owner[0]!.value = 'e';
+    await tickUntil(() => toNumber(m.p.nests[0]!.hp.value) === 0);
+    expect(toNumber(m.p.nests[0]!.hp.value)).toBe(0);
+  });
+});
+
+describe('gate guns', () => {
+  beforeEach(() => {
+    boot();
+    getMatch().start();
+  });
+
+  it("each add the first turret's fire", () => {
+    const m = getMatch();
+    m.p.scrip.value = new Decimal(1e6);
+    const first = m.p.turretDps();
+    m.p.gateGuns.purchase(1);
+    expect(m.p.turretLevel()).toBe(2);
+    expect(m.p.turretDps()).toBeCloseTo(2 * first);
+  });
+});

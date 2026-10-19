@@ -27,11 +27,16 @@ Every key is read through `tunable()` in `modules/tunables.ts`; both seats share
 | `districts/refPresence` | `REF_PRESENCE` | the squad size control drift is scaled to |
 | `research/<id>/scrip`, `research/<id>/aether` | multiples of `unitValue` | when each upgrade lands |
 | `charter/cost` | `charterCost` | when the second tier opens: the black clinic and the tier-two research |
+| `hq/turretLevels` | `TURRET_LEVELS` | the largest siege a safehouse can demand, `MIN_SIEGE_FORCE · √levels` |
+| `districts/nestCost`, `districts/nestDps`, `districts/nestHp` | `districtTurretCost`, `districtTurretDps`, `districtTurretHp` | what holding a district against a raid costs, and how big a raid a nest outlasts |
 
 Not perturbable: the pairing table (`data/units.ts` `EFFECTIVENESS`), whose cells are design
 choices the square law is solved against; the floors the charter waits for (`CHARTER_FLOORS`); the contract income terms and personas
 (`data/contracts.ts`); the lieutenants' prices (`data/crew.ts`, from `LIEUTENANT_UNITS`); and
-the scout's duration, cooldown and cost.
+the scout's duration, cooldown and cost. A gate gun level's price and the siege it demands
+(`turretLevelCost`, `minSiegeAt`) are solved from the spine's turret and integrity, not from
+the tunables: overriding `hq/turretDps` or `hq/integrity` moves the fire but not the
+assault threshold, the siege the safehouse card shows, or the price.
 
 ## Couplings
 
@@ -43,6 +48,18 @@ the scout's duration, cooldown and cost.
   without re-solving changes every fight's length, not only who wins it.
 - **`turretDps` is solved from `MIN_SIEGE_FORCE` and `hqIntegrity`.** Raising integrity
   alone makes small sieges viable; the two move together.
+- **A gate gun costs the siege it adds.** Level k needs `MIN_SIEGE_FORCE · √k` units, and is
+  priced at the units it adds over level k − 1, so each level costs less than the last and
+  demands less. The assault threshold reads the rival's level (`assaultAt` in the policy),
+  so a turret bought is an assault delayed, not only a siege survived.
+- **A sentry nest is presence.** A district with an enemy nest is a fight, so nobody captures
+  it and no siege leaves it until the nest falls. Spread fire treats a nest as
+  `DISTRICT_TURRET_VALUE` units; focused fire skips it. Its value is protecting the
+  hustlers working the district, so it matters as much as `NODE_HUSTLERS` does.
+- **Defence waits behind a floor's save unless the seat is threatened.** The seat buys gate
+  guns and nests from the same purse as floors. While saving for a floor it buys defence
+  only once the enemy army it knows of could already siege its current level, or it is
+  besieged.
 - **The Enforcer's stats are `ENFORCER_VALUE` units for one bunk.** The bag counts every
   unit as one, so a higher value per unit is a higher value per bunk once the bunks bind.
 - **Every floor climbs one ladder.** A tech floor is the next floor's price, so opening a
@@ -115,7 +132,5 @@ the scout's duration, cooldown and cost.
 - **Taking ground moves income, not the player's wins.** Under the reference player the
   district gap shows up in hustlers (about 16 against the rival's 13 at 300 s), yet a variant
   with no district slots wins as often. One won fight decides more matches than the income.
-- **Matches end short of `MATCH_S`.** At parity a contract ends around 440 s, against the
-  spine's 480 s.
 - **Repeated attempts are not identical.** Each policy throttle keeps its phase across
   matches.

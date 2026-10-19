@@ -37,6 +37,8 @@ import {
 import {
   BARRACKS,
   CHARTER,
+  GATE_GUNS,
+  SENTRY_NEST,
   FLOORS,
   ECON,
   RESEARCH,
@@ -48,7 +50,7 @@ import {
   type ResearchDef,
   type SideId,
 } from '../data/buildings';
-import { DISTRICTS } from '../data/contracts';
+import { DISTRICTS, type DistrictDef } from '../data/contracts';
 import { LIEUTENANTS, type LieutenantDef } from '../data/crew';
 import { UNITS, UNIT_KINDS, byKind, type UnitKind } from '../data/units';
 import type { Tunables } from './tunables';
@@ -87,6 +89,14 @@ export interface Side {
   readonly dmg: Record<UnitKind, ModifierChain>;
   readonly hp: Record<UnitKind, ModifierChain>;
   readonly turret: ModifierChain;
+  /** Turret levels past the one the safehouse opens with. */
+  readonly gateGuns: Purchasable;
+  /** A sentry nest per district: its hit points (0 is none standing), and the purchase that raises one. */
+  readonly nests: { hp: Resource; build: Purchasable }[];
+  /** The safehouse's turret level, the first included. */
+  turretLevel(): number;
+  /** A sentry nest's fire per second. */
+  nestDps(): number;
   readonly income: ModifierChain;
   readonly training: Record<UnitKind, Persistent<boolean>>;
   readonly stance: Persistent<Stance>[];
@@ -379,6 +389,57 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
   });
   crew.register(LIEUTENANTS);
 
+  // ─── Defence: gate guns at the safehouse, a sentry nest per owned district ───
+  // Each level is priced by the level it raises the safehouse to, so the base reads the count.
+  let gateLevels = () => 0;
+  const gateGuns = createScalingPurchasable({
+    id: `${id}-gate-guns`,
+    title: GATE_GUNS.name,
+    resource: scrip,
+    baseCost: () => GATE_GUNS.cost(gateLevels() + 2),
+    costRatio: 1,
+    limit: () => tune.turretLevels.value - 1,
+    purchaseMaxByDefault: false,
+  });
+  gateLevels = () => toNumber(gateGuns.count.value);
+  const nestHp = DISTRICTS.map((d) =>
+    createResource<DecimalSource>(Decimal.dZero, {
+      id: `${id}-nest-${d.id}`,
+      displayName: `${SENTRY_NEST.name} in ${d.name}`,
+      decimals: 0,
+    }),
+  );
+  const nestCategory = createPurchasableCategory<DistrictDef>({
+    id: `${id}-nests`,
+    mapPurchasable: (d) => {
+      const i = DISTRICTS.indexOf(d);
+      return {
+        display: { title: SENTRY_NEST.name, description: SENTRY_NEST.blurb },
+        requirements: [
+          createBooleanRequirement({
+            met: () => owns(i) && Decimal.lte(nestHp[i]!.value, 0),
+            description: `${d.name} owned, no nest standing`,
+          }),
+          createCostRequirement({ resource: scrip, cost: tune.nestCost, description: 'scrip' }),
+        ],
+        purchaseMaxByDefault: false,
+        onPurchase: () => {
+          nestHp[i]!.value = new Decimal(tune.nestHp.value);
+        },
+      };
+    },
+  });
+  nestCategory.register(DISTRICTS);
+  const nests = DISTRICTS.map((d, i) => ({
+    hp: nestHp[i]!,
+    build: nestCategory.getPurchasable(d.id)!,
+  }));
+  // A district lost takes its nest with it; a nest stands only where its seat owns the ground.
+  registerTick(() => {
+    for (let i = 0; i < nests.length; i++)
+      if (!owns(i) && Decimal.gt(nests[i]!.hp.value, 0)) nests[i]!.hp.value = Decimal.dZero;
+  });
+
   const stance = DISTRICTS.map((d) => persistent<Stance>('hold', { id: `${id}-stance-${d.id}` }));
   const focus = DISTRICTS.map((d) => persistent<Focus>('spread', { id: `${id}-focus-${d.id}` }));
 
@@ -409,7 +470,12 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
     focus,
     unitDps: (k) => toNumber(dmg[k].apply(tune.unit[k].dps.value)),
     unitHp: (k) => toNumber(hp[k].apply(tune.unit[k].hp.value)),
-    turretDps: () => toNumber(turret.apply(tune.turretDps.value)),
+    turretDps: () =>
+      toNumber(turret.apply(tune.turretDps.value)) * (1 + toNumber(gateGuns.count.value)),
+    gateGuns,
+    nests,
+    turretLevel: () => 1 + toNumber(gateGuns.count.value),
+    nestDps: () => tune.nestDps.value,
     trainRate: () => toNumber(trainingSpeed.apply(tune.trainRate.value)),
     floorCount,
     floorPrice,

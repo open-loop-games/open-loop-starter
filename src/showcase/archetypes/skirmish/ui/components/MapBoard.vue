@@ -4,15 +4,24 @@
   its own side. Each safehouse note opens on what kind of outfit holds it: theirs from the
   contract, yours from the crew's tier. While the astral scout rides, the whole board
   takes the ley's tint.
+
+  Gate guns are bought on your safehouse, the thing they defend, and both safehouses read
+  their turret level as the smallest siege that razes them: what an assault on theirs must
+  bring, and what yours makes the rival bring.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
-import { DISTRICTS } from '../../data/contracts';
+import { readPriceLines } from '@/ui/compositions';
+import { GATE_GUNS } from '../../data/buildings';
+import { DISTRICTS, PLAYER_PERSONA } from '../../data/contracts';
+import { siegeUnits } from '../../data/spine';
 import { getMatch } from '../../modules';
 import { countsOf } from '../../modules/battle';
+import { useHandledBy } from '../handled-by';
 import { clock, grouped, rate } from '../format';
+import BuyCard from './BuyCard.vue';
 import DistrictRow from './DistrictRow.vue';
 import FeedPanel from './FeedPanel.vue';
 import SquadChips from './SquadChips.vue';
@@ -23,6 +32,24 @@ const full = computed(() => match.tune.hqIntegrity.value);
 const home = computed(() => countsOf(p.reserve));
 const rivalHome = computed(() => match.safehouseSighting.value);
 const scouting = computed(() => match.scoutLeft.value > 0);
+
+// ─── Gate guns ───
+const quartermaster = useHandledBy('quartermaster');
+const levels = computed(() => match.tune.turretLevels.value);
+const gunsMaxed = computed(() => p.gateGuns.maxed.value);
+const gunsNote = computed(() => {
+  const now = p.turretLevel();
+  const reach = gunsMaxed.value
+    ? `${siegeUnits(now)}`
+    : `${siegeUnits(now)} → ${siegeUnits(now + 1)}`;
+  return `Turret ${rate(p.turretDps())} dps. A siege needs ${reach} units.`;
+});
+/** The quartermaster mans the guns up to the level his persona stands at. */
+const gunsBy = computed(() =>
+  quartermaster.value && p.turretLevel() < PLAYER_PERSONA.gateGuns
+    ? quartermaster.value
+    : undefined,
+);
 </script>
 
 <template>
@@ -38,12 +65,24 @@ const scouting = computed(() => match.scoutLeft.value > 0);
           <span class="cc-tag">At the gates</span>
           <SquadChips :counts="home" side="p" />
         </div>
+        <BuyCard
+          class="house__guns"
+          :title="GATE_GUNS.name"
+          :note="gunsNote"
+          :count="String(p.turretLevel())"
+          :limit="String(levels)"
+          :prices="readPriceLines(p.gateGuns)"
+          :can="p.gateGuns.canPurchase.value"
+          :maxed="gunsMaxed"
+          done-label="every gun up"
+          :automated="gunsBy"
+          @buy="p.gateGuns.purchase(1)"
+        />
         <span class="house__note"
           ><span class="house__tier" :data-chartered="p.chartered()">{{
             p.chartered() ? 'chartered' : 'street crew'
           }}</span>
-          · Turret {{ rate(p.turretDps()) }} dps. Units at home hold the gates against an
-          assault.</span
+          · Units at home hold the gates against an assault.</span
         >
       </div>
       <div class="house" data-side="e">
@@ -63,6 +102,15 @@ const scouting = computed(() => match.scoutLeft.value > 0);
             <span class="cc-fog">{{ scouting ? 'seen now' : `seen ${clock(rivalHome.at)}` }}</span>
           </template>
           <span v-else class="cc-fog">▒▒ send an astral scout to see inside ▒▒</span>
+        </div>
+        <div class="house__rival-guns" :title="`Turret ${rate(e.turretDps())} dps`">
+          <span class="house__siege"
+            >a siege needs <span class="num">{{ siegeUnits(e.turretLevel()) }}</span> units</span
+          >
+          <span class="house__level num"
+            >{{ e.turretLevel() }}<span class="house__limit">/{{ levels }}</span></span
+          >
+          <span class="cc-tag">{{ GATE_GUNS.name }}</span>
         </div>
         <span class="house__note"
           >{{ match.contract.value.outfit }} · {{ match.contract.value.rumor }}</span
@@ -169,6 +217,44 @@ const scouting = computed(() => match.scoutLeft.value > 0);
 .house__note {
   font-size: 11px;
   color: var(--cc-chalk-dim);
+}
+.house__guns {
+  margin-top: 2px;
+}
+/* The rival's gate guns: the same count and siege line as yours, mirrored, with no button. */
+.house__rival-guns {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+  padding: 7px 9px 6px;
+  border: 1px solid var(--cc-gutter);
+  border-right: 3px solid var(--cc-rival-deep);
+  border-radius: var(--cc-notch);
+}
+.house__siege {
+  margin-right: auto;
+  font-size: 11.5px;
+  color: var(--cc-chalk-dim);
+}
+.house__siege .num {
+  color: var(--cc-chalk);
+  font-weight: 700;
+}
+.house__level {
+  display: inline-block;
+  min-width: 4ch;
+  text-align: right;
+  font-family: var(--cc-face-neon);
+  font-size: 22px;
+  line-height: 0.8;
+  color: var(--cc-rival);
+}
+.house__limit {
+  margin-left: 2px;
+  font-size: 16px;
+  color: var(--cc-chalk-faint);
 }
 .house__tier[data-chartered='true'] {
   color: var(--cc-brass);

@@ -9,6 +9,7 @@
  */
 import { Decimal, toNumber, type Persistent, type Resource } from '@open-loop/engine';
 import { DISTRICTS } from '../data/contracts';
+import { SENTRY_NEST } from '../data/buildings';
 import { UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
 import type { Focus, Side } from './side';
 import type { Tunables } from './tunables';
@@ -62,6 +63,45 @@ export function casualtyRates(att: Side, a: Counts, def: Side, d: Counts, focus:
 }
 
 /**
+ * What one side's fire does in a district where the defender may have a sentry nest: unit
+ * casualties per second, and nest hit points per second. Fire focused on a kind standing
+ * there skips the nest; spread fire treats the nest as `SENTRY_NEST.bulk` units.
+ */
+export function fireOnDistrict(
+  att: Side,
+  a: Counts,
+  def: Side,
+  d: Counts,
+  nestUp: boolean,
+  focus: Focus,
+): { units: Counts; nest: number } {
+  const units = Object.fromEntries(UNIT_KINDS.map((k) => [k, 0])) as Counts;
+  const sum = total(d);
+  const focused = focus !== 'spread' && d[focus] > GHOST;
+  const nestShare = nestUp && !focused ? SENTRY_NEST.bulk / (sum + SENTRY_NEST.bulk) : 0;
+  const onUnits = focused ? fireWeights(d, focus) : fireWeights(d, 'spread');
+  let nest = 0;
+  for (const ak of UNIT_KINDS) {
+    if (a[ak] <= 0) continue;
+    const dps = a[ak] * att.unitDps(ak);
+    nest += dps * nestShare * effectiveness(ak, 'structure');
+    for (const bk of UNIT_KINDS)
+      if (onUnits[bk] > 0)
+        units[bk] += (dps * (1 - nestShare) * onUnits[bk] * effectiveness(ak, bk)) / def.unitHp(bk);
+  }
+  return { units, nest };
+}
+
+/** Casualties per second `att`'s sentry nest inflicts, its fire spread over the squad by count. */
+export function nestFire(att: Side, def: Side, d: Counts): Counts {
+  const out = Object.fromEntries(UNIT_KINDS.map((k) => [k, 0])) as Counts;
+  const sum = total(d);
+  if (sum <= 0) return out;
+  for (const k of UNIT_KINDS) out[k] = (att.nestDps() * (d[k] / sum)) / def.unitHp(k);
+  return out;
+}
+
+/**
  * Square-law fighting value of a squad against a target mix: `(Σ n·√(dps·hp·eff))²`.
  * Policies compare these to decide retreats and reinforcements.
  */
@@ -103,15 +143,22 @@ export function stepBattle(
     const ec = countsOf(e.squads[i]);
     const pt = total(pc);
     const et = total(ec);
-    if (pt > PRESENCE && et > PRESENCE) {
-      const onE = casualtyRates(p, pc, e, ec, p.focus[i].value);
-      const onP = casualtyRates(e, ec, p, pc, e.focus[i].value);
+    const pNest = toNumber(p.nests[i]!.hp.value);
+    const eNest = toNumber(e.nests[i]!.hp.value);
+    // A nest is presence: it fights for its seat, and while it stands nobody takes the district.
+    if ((pt > PRESENCE || pNest > 0) && (et > PRESENCE || eNest > 0)) {
+      const onE = fireOnDistrict(p, pc, e, ec, eNest > 0, p.focus[i].value);
+      const onP = fireOnDistrict(e, ec, p, pc, pNest > 0, e.focus[i].value);
+      const fromPNest = pNest > 0 ? nestFire(p, e, ec) : undefined;
+      const fromENest = eNest > 0 ? nestFire(e, p, pc) : undefined;
       for (const k of UNIT_KINDS) {
-        pc[k] = Math.max(0, pc[k] - onP[k] * dt);
-        ec[k] = Math.max(0, ec[k] - onE[k] * dt);
+        pc[k] = Math.max(0, pc[k] - (onP.units[k] + (fromENest?.[k] ?? 0)) * dt);
+        ec[k] = Math.max(0, ec[k] - (onE.units[k] + (fromPNest?.[k] ?? 0)) * dt);
       }
       writeCounts(p.squads[i], pc);
       writeCounts(e.squads[i], ec);
+      if (pNest > 0) p.nests[i]!.hp.value = new Decimal(Math.max(0, pNest - onP.nest * dt));
+      if (eNest > 0) e.nests[i]!.hp.value = new Decimal(Math.max(0, eNest - onE.nest * dt));
       events.push({ kind: 'clash', district: i });
       continue;
     }

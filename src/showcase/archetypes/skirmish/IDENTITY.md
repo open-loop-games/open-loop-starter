@@ -23,7 +23,9 @@ Razorboys cut Hexers, Hexers fry Riggers' drones, Riggers brick Razorboys' chrom
 hit everything evenly in heavy frames. The player sends whole units into a district by kind,
 pulls a squad back, sets its focus, and orders an assault once the district is held. A held,
 uncontested district under an assault order fires on the rival's safehouse while its turret
-fires back. Units at home hold the gates.
+fires back. Units at home hold the gates, and gate guns add turrets to the roof. A crew can
+raise a sentry nest over its rackets in a district it owns; nobody takes the district while
+the nest stands.
 
 The player sees a district only through a squad in it or control leaning their way. An
 astral scout, paid in aether, reveals everything for a while; afterwards each district keeps
@@ -48,7 +50,10 @@ units of value, saved for like a floor once two stand. For fixed
 compositions a fight is Lanchester's square law: a counter pairing hits for double and a
 resisted one for half, and `k = dps/hp` is solved so an even ten-unit counter pairing resolves
 in 20 s. Safehouse integrity is fifteen units' minute of
-fire, and the turret is solved so seven units is the smallest siege that razes it.
+fire, and the turret is solved so seven units is the smallest siege that razes it. Each gate
+gun adds the first turret's fire, so level k needs 7·√k, and costs the extra units of siege it
+demands. A sentry nest fights like three units for the price of two: it cannot move, and needs
+no bunk.
 
 **Where the closed form stops:** the joint choice of two seats (strategy-space integration),
 fog of war, and control flipping between them.
@@ -73,8 +78,9 @@ landmarks. `balance/counter-probe.ts` measures whether reading the rival wins ma
 | The first clash | 129 s |
 | The crew chartered | 228 s |
 | The black clinic opens | 271 s |
-| The first assault on their safehouse | 312 s |
-| Their safehouse burns | 378.5 s |
+| The first assault on their safehouse | 314.5 s |
+| Your first sentry nest | 356 s |
+| Their safehouse burns | 387 s |
 
 Each match is a few minutes; the rival's income terms climb to parity by the megacorp.
 
@@ -95,6 +101,8 @@ Each match is a few minutes; the rival's income terms climb to parity by the meg
 | research | `createPurchasableCategory` with grants on `createModifierChain` chains |
 | the prerequisite graph | gate predicates as `visible`; a tier-two entry's gate also requires the charter |
 | the charter | `createPurchasableCategory` with a `createBooleanRequirement` on standing floors |
+| gate guns | `createScalingPurchasable` whose base reads its own count |
+| sentry nests | `createPurchasableCategory` over the districts; each nest's hit points a `createResource` |
 | a match's reset | `createReset` over the match context |
 | the lieutenants | each seat's hires in `createPurchasableCategory`, unlocking `createAutomationTiers`; a switch each, `createThrottle` |
 | every perturbable anchor | `createTuningRegistry`, `tunable` |

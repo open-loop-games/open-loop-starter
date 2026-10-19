@@ -4,7 +4,16 @@
  * balance workbench overrides them by key.
  */
 import { tunable, type ComputedRef, type TuningRegistry } from '@open-loop/engine';
-import { CHARTER, ECON, FLOORS, RESEARCH, SQUATS, TRAIN_RATE } from '../data/buildings';
+import {
+  CHARTER,
+  ECON,
+  FLOORS,
+  GATE_GUNS,
+  SENTRY_NEST,
+  RESEARCH,
+  SQUATS,
+  TRAIN_RATE,
+} from '../data/buildings';
 import { UNITS, UNIT_KINDS, type UnitKind } from '../data/units';
 import { captureRate, hqIntegrity, turretDps, REF_PRESENCE } from '../data/spine';
 
@@ -40,6 +49,10 @@ export interface Tunables {
   refPresence: ComputedRef<number>;
   research: Record<string, { scrip: ComputedRef<number>; aether: ComputedRef<number> }>;
   charterCost: ComputedRef<number>;
+  turretLevels: ComputedRef<number>;
+  nestCost: ComputedRef<number>;
+  nestDps: ComputedRef<number>;
+  nestHp: ComputedRef<number>;
 }
 
 export function createTunables(t: TuningRegistry): Tunables {
@@ -88,5 +101,9 @@ export function createTunables(t: TuningRegistry): Tunables {
       ]),
     ),
     charterCost: num('charter/cost', CHARTER.cost),
+    turretLevels: num('hq/turretLevels', GATE_GUNS.levels),
+    nestCost: num('districts/nestCost', SENTRY_NEST.cost),
+    nestDps: num('districts/nestDps', SENTRY_NEST.dps),
+    nestHp: num('districts/nestHp', SENTRY_NEST.hp),
   };
 }

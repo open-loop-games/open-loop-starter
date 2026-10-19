@@ -197,6 +197,10 @@ export const matchModule: EngineModule = {
         enemySquads,
         enemyMix: enemyMixFor(seat),
         besiegedFrom,
+        // A nest is a building on the street: the rival's analysts see every one, the player those in districts in sight.
+        enemyNests: DISTRICTS.map((_, i) =>
+          seat === 'e' || visible(i) ? toNumber(other.nests[i]!.hp.value) : 0,
+        ),
       };
     }
 
@@ -229,7 +233,15 @@ export const matchModule: EngineModule = {
     ctx.onTick((dt) => {
       if (phase.value !== 'live') return;
       clock.value += dt;
+      const nestsUp = [p, e].map((s) => s.nests.map((n) => toNumber(n.hp.value) > 0));
       const events = stepBattle(p, e, control, tune, dt);
+      // A nest that falls in a fight opens its district to capture again.
+      DISTRICTS.forEach((d, i) => {
+        if (nestsUp[0]![i] && toNumber(p.nests[i]!.hp.value) <= 0)
+          log(`Your sentry nest over ${d.name} goes down.`, 'bad');
+        if (nestsUp[1]![i] && toNumber(e.nests[i]!.hp.value) <= 0 && visible(i))
+          log(`${contract.value.rival}'s sentry nest over ${d.name} goes down.`, 'good');
+      });
       for (const ev of events) {
         describe(ev);
         if (ev.kind !== 'siege') continue;
