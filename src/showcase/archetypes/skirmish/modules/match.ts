@@ -35,7 +35,7 @@ import {
 import { createSide, type Side } from './side';
 import type { Situation } from './policy';
 import type { Tunables } from './tunables';
-import { SCOUT_COOLDOWN_S, SCOUT_S, scoutCost } from '../data/spine';
+import { SCOUT_COOLDOWN_S, SCOUT_S, scoutCost, siegeUnits } from '../data/spine';
 import { RosterKey } from './roster';
 import { TunablesKey } from './tuning';
 
@@ -227,6 +227,19 @@ export const matchModule: EngineModule = {
         ev.by === 'p' ? 'good' : 'bad',
       );
     }
+
+    // The player's defences go up by their own hand or the quartermaster's; either way the feed says so.
+    p.gateGuns.on('purchased', () =>
+      log(
+        `A gate gun goes up on your safehouse. Razing it now takes ${siegeUnits(p.turretLevel())} units.`,
+        'good',
+      ),
+    );
+    DISTRICTS.forEach((d, i) =>
+      p.nests[i]!.build.on('purchased', () =>
+        log(`Your sentry nest goes up over ${d.name}.`, 'good'),
+      ),
+    );
 
     // Clock time of the last siege line per side: a siege a trickle of defenders keeps interrupting logs once, not every tick.
     const SIEGE_LOG_GAP_S = 30;

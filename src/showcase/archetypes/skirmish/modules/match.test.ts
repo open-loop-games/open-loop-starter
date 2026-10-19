@@ -53,6 +53,15 @@ describe('the match', () => {
     expect(m.feed.lines.value).toEqual([]);
   });
 
+  it('tells the feed when your safehouse takes a gate gun', () => {
+    const m = getMatch();
+    m.start();
+    m.p.scrip.value = new Decimal(1e6);
+    const before = m.feed.lines.value.length;
+    m.p.gateGuns.purchase(1);
+    expect(m.feed.lines.value.length).toBe(before + 1);
+  });
+
   it('burns the rival safehouse from a held district under an assault order', async () => {
     const m = getMatch();
     m.start();
