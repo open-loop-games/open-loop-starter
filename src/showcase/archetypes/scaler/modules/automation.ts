@@ -89,21 +89,40 @@ export function shouldRewrite(state: RewriteState, params: { share: number }): b
 // `interval: 0` it makes one attempt per tick; this desk buys until the policy would rather
 // save. One per tick slows the 13th Reboot by 4 minutes (balance/arc-probe.ts).
 /**
- * Dispatch Desk: which hero to recruit next, ranked over every tier, affordable
- * or not, by Cookie Monster's blended payback. Returns undefined when the winner
+ * Dispatch Desk: recruits one hero at a time, each the winner over every tier,
+ * affordable or not, by Cookie Monster's blended payback. Stops when the winner
  * is still being saved for, which is the point: buying whatever is affordable
- * never opens the next tier.
+ * never opens the next tier. Returns recruits made, at most `limit`.
  */
-export function pickHero(heroes: Producer[], income: () => DecimalSource): Producer | undefined {
+export function recruitHeroes(
+  heroes: Producer[],
+  income: () => DecimalSource,
+  limit: number,
+): number {
+  // A recruit moves only its own tier's price: a hero's per-unit rate reads its
+  // modifier chains, never a count, and spending leaves lifetime Justice (the
+  // Legends) alone. So each recruit re-reads the one hero it bought.
+  const read = (p: Producer) => ({
+    cost: p.repeatable!.getCost(1),
+    rate: p.computedRate.value,
+    open: !p.repeatable!.maxed.value,
+  });
+  const scored = new Map(heroes.filter((p) => p.repeatable).map((p) => [p, read(p)]));
   const policy = selectionHybridPayback<Producer>({
-    getCost: (p) => p.repeatable!.getCost(1),
-    getRate: (p) => p.computedRate.value,
+    getCost: (p) => scored.get(p)!.cost,
+    getRate: (p) => scored.get(p)!.rate,
     getAmount: (p) => p.resource.value,
     getReserve: () => 0,
     getTotalRate: income,
   });
-  const best = policy.pick(heroes.filter((p) => p.repeatable && !p.repeatable.maxed.value));
-  return best?.repeatable!.canPurchase.value ? best : undefined;
+  let bought = 0;
+  for (; bought < limit; bought++) {
+    const best = policy.pick([...scored].filter(([, s]) => s.open).map(([p]) => p));
+    if (!best?.repeatable!.canPurchase.value) break;
+    best.repeatable!.purchase(1);
+    scored.set(best, read(best));
+  }
+  return bought;
 }
 
 /**
@@ -247,16 +266,12 @@ export function createAutomationModule(): EngineModule {
       const running = (tier: Exclude<ScalerAutomationTier, 'manual'>) =>
         ladder.isUnlocked(tier) && owns[tier]();
 
-      function recruitBest(): number {
-        const list = run.heroes.getAll().map((e) => e.producer);
-        let bought = 0;
-        for (; bought < MAX_RECRUITS_PER_TICK; bought++) {
-          const pick = pickHero(list, () => run.totalRate.value);
-          if (!pick) break;
-          pick.repeatable!.purchase(1);
-        }
-        return bought;
-      }
+      const recruitBest = () =>
+        recruitHeroes(
+          run.heroes.getAll().map((e) => e.producer),
+          () => run.totalRate.value,
+          MAX_RECRUITS_PER_TICK,
+        );
       const spendLegacy = () =>
         spendShop(
           (Object.keys(LEGACY_PRICES) as (keyof typeof LEGACY_PRICES)[]).map((id) =>

@@ -33,7 +33,7 @@ export { LegendsKey, getLegends, type LegendsApi } from './legends';
 export {
   AutomationKey,
   getAutomation,
-  pickHero,
+  recruitHeroes,
   shouldReboot,
   shouldRewrite,
   spendShop,
