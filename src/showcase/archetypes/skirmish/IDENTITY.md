@@ -2,7 +2,8 @@
 
 > Workers fund an army: `producer` hustlers and ley taps feed `converter` training floors,
 > gated by a `prerequisite-graph` and capped by `storage-capacity`, whose units meet through
-> `type-effectiveness`. Over it, three components no pattern names: real time, direct command
+> `type-effectiveness`. Hustlers hired into a district are staked on holding it
+> (`loss-on-failure`). Over it, three components no pattern names: real time, direct command
 > of squads by district, and a match won by burning the rival's base.
 
 Genre: `rts`. Its document in the studio's research library lists the games in it.
