@@ -4,11 +4,12 @@
  */
 import { Decimal, toNumber } from '@open-loop/engine';
 import { UNIT_KINDS, type UnitKind } from '../data/units';
+import { wholeUnits } from './battle';
 import type { Focus, Side, Stance } from './side';
 
 /** Whole units waiting at the safehouse; the fraction left behind is still in training. */
 export function readyUnits(side: Side, kind: UnitKind): number {
-  return Math.floor(toNumber(side.reserve[kind].value) + 1e-9);
+  return wholeUnits(toNumber(side.reserve[kind].value));
 }
 
 /**

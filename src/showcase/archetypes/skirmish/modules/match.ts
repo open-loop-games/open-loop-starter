@@ -26,6 +26,7 @@ import {
   GHOST,
   PRESENCE,
   countsOf,
+  heldBy,
   stepBattle,
   total,
   type BattleEvent,
@@ -183,7 +184,7 @@ export const matchModule: EngineModule = {
       const besiegedFrom: number[] = [];
       for (let i = 0; i < DISTRICTS.length; i++) {
         if (
-          control[i].value * -sign >= 1 &&
+          heldBy(control[i].value) === other.id &&
           other.stance[i].value === 'assault' &&
           total(countsOf(other.squads[i])) > GHOST
         ) {

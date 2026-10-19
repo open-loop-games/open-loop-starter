@@ -18,7 +18,7 @@ import { ECON, SENTRY_NEST } from '../../data/buildings';
 import { DISTRICTS, PLAYER_PERSONA } from '../../data/contracts';
 import { UNITS, UNIT_KINDS, type UnitKind } from '../../data/units';
 import { getMatch } from '../../modules';
-import { PRESENCE, countsOf, total } from '../../modules/battle';
+import { PRESENCE, countsOf, heldBy, total } from '../../modules/battle';
 import { deploy, deployAll, readyUnits, retreat, setFocus, setStance } from '../../modules/orders';
 import { useHandledBy } from '../handled-by';
 import { GLYPH, clock, grouped } from '../format';
@@ -37,7 +37,8 @@ const theirs = computed(() => countsOf(e.squads[props.index]));
 const seen = computed(() => match.visible(props.index));
 const sighting = computed(() => match.sightings.value[props.index]);
 const control = computed(() => match.control[props.index].value);
-const held = computed(() => (control.value >= 1 ? 'p' : control.value <= -1 ? 'e' : 'none'));
+/** The seat in full control, whose squad here may siege; a raid can dent it without changing the owner. */
+const held = computed(() => heldBy(control.value));
 /** Who took it last: their hustlers work it until the other seat takes it, through any dip. */
 const owner = computed(() => match.owner[props.index].value);
 const racketsId = ECON.find((def) => def.district === props.index)!.id;
@@ -91,6 +92,14 @@ const live = computed(() => match.phase.value === 'live');
 
 /** Share of the ley-line that answers to you: 0 is all theirs, 1 all yours. */
 const share = computed(() => (1 + control.value) / 2);
+/** Your share of the ley-line as a whole percent: floored, so a share short of whole never reads 100%. */
+const yours = computed(() => Math.floor(share.value * 100));
+/** The owner's share of the ley-line while a raid has dented it, on the same scale. */
+const dent = computed(() =>
+  owner.value === 'none' || held.value === owner.value
+    ? undefined
+    : Math.floor((owner.value === 'p' ? share.value : 1 - share.value) * 100),
+);
 const marks = computed(() => [{ at: share.value, class: 'ley__mark' }]);
 
 function focus(k: UnitKind | 'spread') {
@@ -200,9 +209,10 @@ function focus(k: UnitKind | 'spread') {
         <template v-else-if="fighting">fighting</template>
         <template v-else-if="owner !== 'none'"
           >{{ owner === 'p' ? 'yours' : 'theirs'
-          }}<template v-if="working"> · {{ working }}</template></template
+          }}<template v-if="dent !== undefined"> · {{ dent }}% held</template
+          ><template v-if="working"> · {{ working }}</template></template
         >
-        <template v-else>contested {{ Math.round(Math.abs(control) * 100) }}%</template>
+        <template v-else>contested · {{ yours }}% yours</template>
       </span>
       <span v-if="tactician" class="cc-auto">{{ tactician }}</span>
     </div>

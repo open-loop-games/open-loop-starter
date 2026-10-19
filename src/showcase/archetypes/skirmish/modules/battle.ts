@@ -33,6 +33,9 @@ export function countsOf(squad: Record<UnitKind, Resource>): Counts {
   return Object.fromEntries(UNIT_KINDS.map((k) => [k, toNumber(squad[k].value)])) as Counts;
 }
 
+/** Whole, trained units of a pool; the fraction still on a training floor does not count. */
+export const wholeUnits = (n: number): number => Math.floor(n + 1e-9);
+
 export const total = (c: Counts): number => UNIT_KINDS.reduce((s, k) => s + c[k], 0);
 
 /** Where a side's fire goes: all on the focused kind if it stands here, else spread by count. */
@@ -120,6 +123,15 @@ export function fightingValue(side: Side, own: Counts, against: Counts): number 
   return root * root;
 }
 
+/**
+ * The seat in full control of a district: the one whose squad there may siege. A dented
+ * district keeps its owner and the owner's hustlers, but no siege leaves it until the
+ * owner stands there long enough to take it back.
+ */
+export function heldBy(control: number): 'p' | 'e' | undefined {
+  return control >= 1 ? 'p' : control <= -1 ? 'e' : undefined;
+}
+
 /** Write counts back; a district squad below `floor` is wiped, a safehouse's training fraction is kept (floor 0). */
 function writeCounts(squad: Record<UnitKind, Resource>, c: Counts, floor = GHOST): void {
   for (const k of UNIT_KINDS) squad[k].value = new Decimal(c[k] < floor ? 0 : c[k]);
@@ -178,9 +190,10 @@ export function stepBattle(
     if (before > -1 && control[i].value <= -1)
       events.push({ kind: 'captured', district: i, by: 'e' });
     // A held, uncontested district under an assault order sieges the other safehouse.
-    if (control[i].value >= 1 && pt > PRESENCE && p.stance[i].value === 'assault')
+    const holder = heldBy(control[i].value);
+    if (holder === 'p' && pt > PRESENCE && p.stance[i].value === 'assault')
       sieges.push({ att: p, def: e, district: i, counts: pc });
-    if (control[i].value <= -1 && et > PRESENCE && e.stance[i].value === 'assault')
+    if (holder === 'e' && et > PRESENCE && e.stance[i].value === 'assault')
       sieges.push({ att: e, def: p, district: i, counts: ec });
   }
   for (const def of [e, p]) {
@@ -188,9 +201,7 @@ export function stepBattle(
     if (against.length === 0) continue;
     // Only whole, trained units hold the gates; a unit still on the training floor is inside.
     const held = countsOf(def.reserve);
-    const home = Object.fromEntries(
-      UNIT_KINDS.map((k) => [k, Math.floor(held[k] + 1e-9)]),
-    ) as Counts;
+    const home = Object.fromEntries(UNIT_KINDS.map((k) => [k, wholeUnits(held[k])])) as Counts;
     if (total(home) > PRESENCE) {
       // Units waiting at the safehouse meet the besiegers at the gates; the walls hold while they stand.
       for (const s of against) {
@@ -203,7 +214,7 @@ export function stepBattle(
         writeCounts(s.att.squads[s.district], s.counts);
         events.push({ kind: 'clash', district: s.district });
       }
-      for (const k of UNIT_KINDS) held[k] = home[k] + (held[k] - Math.floor(held[k] + 1e-9));
+      for (const k of UNIT_KINDS) held[k] = home[k] + (held[k] - wholeUnits(held[k]));
       writeCounts(def.reserve, held, 0);
       continue;
     }

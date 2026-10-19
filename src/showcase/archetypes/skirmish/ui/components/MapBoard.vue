@@ -18,7 +18,9 @@ import { GATE_GUNS } from '../../data/buildings';
 import { DISTRICTS, PLAYER_PERSONA } from '../../data/contracts';
 import { siegeUnits } from '../../data/spine';
 import { getMatch } from '../../modules';
-import { countsOf } from '../../modules/battle';
+import { UNIT_KINDS } from '../../data/units';
+import type { Counts } from '../../modules/battle';
+import { readyUnits } from '../../modules/orders';
 import { useHandledBy } from '../handled-by';
 import { clock, grouped, rate } from '../format';
 import BuyCard from './BuyCard.vue';
@@ -29,7 +31,10 @@ import SquadChips from './SquadChips.vue';
 const match = getMatch();
 const { p, e } = match;
 const full = computed(() => match.tune.hqIntegrity.value);
-const home = computed(() => countsOf(p.reserve));
+/** The units that hold the gates: whole ones only, as the siege counts them. */
+const home = computed(
+  () => Object.fromEntries(UNIT_KINDS.map((k) => [k, readyUnits(p, k)])) as Counts,
+);
 const rivalHome = computed(() => match.safehouseSighting.value);
 const scouting = computed(() => match.scoutLeft.value > 0);
 
