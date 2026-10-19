@@ -1,5 +1,5 @@
 /**
- * What a crew builds: the economy (hustlers, ley taps, turf), the training
+ * What a crew builds: the economy (hustlers and ley taps), the training
  * floors that convert scrip and aether into units, squats that raise the
  * supply cap, and the research tree. Each kind of unit is opened by its tech
  * floor; every floor then trains whatever kinds stand open, by the seat's
@@ -8,6 +8,7 @@
  */
 import type { Gate } from '@open-loop/engine';
 import type { UnitKind } from './units';
+import { DISTRICTS } from './contracts';
 import {
   AETHER_PRICE,
   HUSTLER_RATE,
@@ -21,13 +22,13 @@ import {
   buildingBaseCost,
   charterCost,
   buildingRatio,
+  NODE_HUSTLERS,
   hustlerBaseCost,
   hustlerRatio,
   squatBaseCost,
   squatRatio,
   tapBaseCost,
   tapRatio,
-  turfRate,
   unitValue,
 } from './spine';
 
@@ -44,7 +45,8 @@ export const catId = {
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
 
-export type EconId = 'hustler' | 'ley-tap' | 'turf';
+/** The safehouse's hustlers, a district's, or the ley taps. */
+export type EconId = 'hustler' | `hustler-${string}` | 'ley-tap';
 
 export interface EconDef {
   id: EconId;
@@ -52,8 +54,9 @@ export interface EconDef {
   blurb: string;
   output: 'scrip' | 'aether';
   rate: number;
-  /** Absent for turf, whose count is the districts held. */
-  purchase?: { baseCost: number; ratio: number; limit?: number; initial?: number };
+  purchase: { baseCost: number; ratio: number; limit: number; initial?: number };
+  /** A district's hustlers: hired while the seat owns it, laid off when the rival takes it. */
+  district?: number;
 }
 
 /** A tech floor: it opens one kind of unit to every floor, and is a floor itself. */
@@ -138,15 +141,31 @@ export function prerequisiteText(
 
 // ─── Balance ───────────────────────────────────────────────────────────────
 
+// Every node climbs its own ladder from `hustlerBaseCost`. The safehouse's starts past the
+// hustlers it opens with, so its base is divided back down by them.
 export const ECON: EconDef[] = [
   {
     id: 'hustler',
     name: 'Hustlers',
-    blurb: 'Fences, runners and street-corner fixers. Every one brings scrip home.',
+    blurb: 'Fences, runners and street-corner fixers working out of the safehouse.',
     output: 'scrip',
     rate: HUSTLER_RATE,
-    purchase: { baseCost: hustlerBaseCost, ratio: hustlerRatio, initial: START_HUSTLERS },
+    purchase: {
+      baseCost: hustlerBaseCost / hustlerRatio ** START_HUSTLERS,
+      ratio: hustlerRatio,
+      limit: START_HUSTLERS + NODE_HUSTLERS,
+      initial: START_HUSTLERS,
+    },
   },
+  ...DISTRICTS.map((d, i): EconDef => ({
+    id: `hustler-${d.id}`,
+    name: `${d.name} rackets`,
+    blurb: `Hustlers working ${d.name}. They run while your crew owns it, and scatter when the rival takes it.`,
+    output: 'scrip',
+    rate: HUSTLER_RATE,
+    purchase: { baseCost: hustlerBaseCost, ratio: hustlerRatio, limit: NODE_HUSTLERS },
+    district: i,
+  })),
   {
     id: 'ley-tap',
     name: 'Ley taps',
@@ -154,13 +173,6 @@ export const ECON: EconDef[] = [
     output: 'aether',
     rate: TAP_RATE,
     purchase: { baseCost: tapBaseCost, ratio: tapRatio, limit: TAP_LIMIT },
-  },
-  {
-    id: 'turf',
-    name: 'Turf',
-    blurb: 'Protection money from every district your crew holds.',
-    output: 'scrip',
-    rate: turfRate,
   },
 ];
 

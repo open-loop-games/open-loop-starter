@@ -26,6 +26,7 @@ import {
   type Grant,
   type ModifierChain,
   type Persistent,
+  type Producer,
   type ProducerCategory,
   type Purchasable,
   type PurchasableCategory,
@@ -105,6 +106,10 @@ export interface Side {
   floorShare(kind: UnitKind): number;
   /** Units in the field and at home, whole and in training. */
   supplyUsed(): number;
+  /** Hustlers working for the seat, at the safehouse and in its districts. */
+  hustlers(): number;
+  /** The hustler node whose next hire is cheapest, or none while every node it owns is full. */
+  nextHustler(): Producer | undefined;
   /** Per-second scrip income from every producer, after modifiers. */
   scripRate(): number;
   aetherRate(): number;
@@ -114,22 +119,15 @@ export interface SideOptions {
   ctx: EngineContext;
   id: SideId;
   tune: Tunables;
-  /** Districts this side holds outright; turf pays per district. */
-  heldDistricts: () => number;
+  /** Whether this side owns a district: it took it last. Its hustlers work it while it does. */
+  owns: (district: number) => boolean;
   /** The contract's economy multiplier for this seat. */
   incomeMult: () => number;
   /** False outside a live match: every producer idles. */
   running: () => boolean;
 }
 
-export function createSide({
-  ctx,
-  id,
-  tune,
-  heldDistricts,
-  incomeMult,
-  running,
-}: SideOptions): Side {
+export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOptions): Side {
   const label = id === 'p' ? 'Your crew' : 'Rival';
   const scrip = createResource<DecimalSource>(new Decimal(START_SCRIP), {
     id: `${id}-scrip`,
@@ -168,18 +166,15 @@ export function createSide({
         baseRate: t.rate,
         trigger: 'continuous',
         display: { title: def.name, description: def.blurb },
-        ...(def.purchase
-          ? {
-              purchase: {
-                costResource: scrip,
-                baseCost: t.baseCost!,
-                costRatio: t.ratio!,
-                limit: def.purchase.limit,
-                initialCount: def.purchase.initial,
-                purchaseMaxByDefault: false,
-              },
-            }
-          : { extraCount: () => heldDistricts() }),
+        purchase: {
+          costResource: scrip,
+          baseCost: t.baseCost,
+          costRatio: t.ratio,
+          limit: t.limit,
+          initialCount: def.purchase.initial,
+          purchaseMaxByDefault: false,
+          ...(def.district !== undefined ? { visible: () => owns(def.district!) } : {}),
+        },
       };
     },
     mapState: (def, producer) => {
@@ -187,6 +182,26 @@ export function createSide({
     },
   });
   econ.register(ECON);
+  const hustlerNodes = ECON.filter((d) => d.output === 'scrip').map((d) => econ.getProducer(d.id)!);
+  // A district the rival takes lays off the hustlers working it.
+  const rackets = ECON.filter((d) => d.district !== undefined).map((d) => ({
+    district: d.district!,
+    count: econ.getProducer(d.id)!.repeatable!.count,
+  }));
+  registerTick(() => {
+    for (const r of rackets)
+      if (!owns(r.district) && toNumber(r.count.value) > 0) r.count.value = Decimal.dZero;
+  });
+  /** The node whose next hire is cheapest, among those the seat can hire at now. */
+  const nextHustler = () => {
+    let best: Producer | undefined;
+    for (const n of hustlerNodes) {
+      const buy = n.repeatable!;
+      if (!buy.visible.value || buy.maxed.value) continue;
+      if (!best || toNumber(buy.getCost(1)) < toNumber(best.repeatable!.getCost(1))) best = n;
+    }
+    return best;
+  };
 
   // ─── Army: units are linked into one bag whose capacity is the supply cap ───
   const squats = createScalingPurchasable({
@@ -398,6 +413,8 @@ export function createSide({
     trainRate: () => toNumber(trainingSpeed.apply(tune.trainRate.value)),
     floorCount,
     floorPrice,
+    hustlers: () => hustlerNodes.reduce((n, p) => n + toNumber(p.count.value), 0),
+    nextHustler,
     opened,
     floorShare,
     supplyUsed: () => toNumber(bag.total()),

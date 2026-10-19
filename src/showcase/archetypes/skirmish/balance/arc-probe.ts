@@ -7,12 +7,12 @@
  */
 import { toNumber } from '@open-loop/engine';
 import { runUntil } from '@open-loop/engine/harness';
+import { hustlersPay } from '../modules/policy';
 import { CONTRACTS, DISTRICTS, PLAYER_PERSONA } from '../data/contracts';
 import { UNIT_KINDS } from '../data/units';
 import { MIN_SIEGE_FORCE, REF_PRESENCE, describeSpine, landmarks } from '../data/spine';
 import { readyUnits } from '../modules/orders';
 import { PRESENCE, countsOf, total } from '../modules/battle';
-import { hustlersPay } from '../modules/policy';
 import type { Side } from '../modules/side';
 import { MAX_MATCH_S, TICK, buildGame, staffMatch } from './_game';
 
@@ -54,6 +54,7 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
   };
   const { p, e } = match;
   let peakArmyP = 0;
+  let lastHustlers = 5;
   let peakArmyE = 0;
   const run = runUntil({
     engine: game.engine,
@@ -67,7 +68,7 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
         check(`${s.id} hq`, toNumber(s.hq.value));
         check(`${s.id} army`, armySize(s));
       }
-      const hustlers = toNumber(p.econ.getProducer('hustler')!.count.value);
+      const hustlers = p.hustlers();
       beat('first hustler bought', hustlers > 5);
       beat('first ley tap', toNumber(p.econ.getProducer('ley-tap')!.count.value) > 0);
       beat('first training floor', p.floorCount() > 0);
@@ -107,7 +108,16 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
         'rival first assault on your safehouse',
         toNumber(p.hq.value) < match.tune.hqIntegrity.value,
       );
-      beat('hustlers plateau (payback past horizon)', !hustlersPay(p, PLAYER_PERSONA));
+      beat(
+        'safehouse full (no home hire left)',
+        p.econ.getProducer('hustler')!.repeatable!.maxed.value,
+      );
+      beat(
+        'hustlers plateau (no owned node has a hire that pays)',
+        !hustlersPay(p, PLAYER_PERSONA),
+      );
+      if (hustlers < lastHustlers) beat(`hustlers laid off (${lastHustlers} → ${hustlers})`, true);
+      lastHustlers = hustlers;
       peakArmyP = Math.max(peakArmyP, armySize(p));
       peakArmyE = Math.max(peakArmyE, armySize(e));
       return match.phase.value === 'won' || match.phase.value === 'lost';
@@ -119,7 +129,7 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
   const sorted = [...beats.entries()].sort((a, b) => a[1] - b[1]);
   for (const [name, t] of sorted) console.log(`  ${t.toFixed(1).padStart(7)}s  ${name}`);
   const fmt = (s: Side) =>
-    `hustlers ${toNumber(s.econ.getProducer('hustler')!.count.value)}, taps ${toNumber(s.econ.getProducer('ley-tap')!.count.value)}, ` +
+    `hustlers ${s.hustlers()}, taps ${toNumber(s.econ.getProducer('ley-tap')!.count.value)}, ` +
     `floors ${s.floorCount()}, tier ${s.chartered() ? 2 : 1}, enforcers ${(toNumber(s.reserve.enforcer.value) + s.squads.reduce((n, sq) => n + toNumber(sq.enforcer.value), 0)).toFixed(1)}, squats ${toNumber(s.squats.count.value)}, supply ${s.supplyUsed().toFixed(1)}/${s.supplyCap.value}, ` +
     `scrip ${toNumber(s.scrip.value).toFixed(0)} (+${s.scripRate().toFixed(1)}/s), hq ${toNumber(s.hq.value).toFixed(0)}`;
   console.log(`  you:   ${fmt(p)}, peak army ${peakArmyP.toFixed(1)}`);

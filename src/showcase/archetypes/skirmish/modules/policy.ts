@@ -46,18 +46,15 @@ const FEED_HORIZON_S = 120;
 
 const zero = (): Counts => Object.fromEntries(UNIT_KINDS.map((k) => [k, 0])) as Counts;
 
-function hustler(side: Side): Producer {
-  return side.econ.getProducer('hustler')!;
-}
-
 /** The tech floor that opens a kind; its producer trains that kind. */
 function barracksFor(side: Side, kind: UnitKind): Producer {
   return side.barracks.getProducer(BARRACKS.find((b) => b.trains === kind)!.id)!;
 }
 
-/** True while the next hustler still pays back inside the persona's horizon. */
+/** True while some node the seat owns has room for a hire that pays back inside the persona's horizon. */
 export function hustlersPay(side: Side, persona: Persona): boolean {
-  const h = hustler(side);
+  const h = side.nextHustler();
+  if (!h) return false;
   const cost = toNumber(h.repeatable!.getCost(1));
   return cost / toNumber(h.computedRate.value) < persona.hustlerPayback;
 }
@@ -306,10 +303,11 @@ export function playEconomy(
     ) {
       bought.push('squat');
     }
-    const h = hustler(side).repeatable!;
+    const h = side.nextHustler()?.repeatable;
     // Without a quartermaster the player builds; the fixer never spends what the next training floor needs.
     const keep = scopes.has('build') ? 0 : cheapestFloor(side);
     if (
+      h &&
       econWanted &&
       !savingForFloor &&
       h.canPurchase.value &&

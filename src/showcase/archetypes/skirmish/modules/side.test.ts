@@ -80,6 +80,38 @@ describe('training floors', () => {
   });
 });
 
+describe('hustler nodes', () => {
+  beforeEach(() => {
+    boot();
+    getMatch().start();
+    rich();
+  });
+  const narrows = () => side().econ.getProducer('hustler-narrows')!;
+
+  it('hire in a district only while the seat owns it', () => {
+    expect(narrows().repeatable!.visible.value).toBe(false);
+    getMatch().owner[0]!.value = 'p';
+    expect(narrows().repeatable!.purchase(1)).toBeTruthy();
+    expect(side().hustlers()).toBe(6);
+  });
+
+  it('scatter when the rival takes the district', async () => {
+    getMatch().owner[0]!.value = 'p';
+    narrows().repeatable!.purchase(1);
+    getMatch().owner[0]!.value = 'e';
+    await seconds(1);
+    expect(toNumber(narrows().count.value)).toBe(0);
+  });
+
+  it('start each ladder at the same first price, and hire where it is cheapest', () => {
+    const home = side().econ.getProducer('hustler')!.repeatable!;
+    expect(toNumber(home.getCost(1))).toBeCloseTo(toNumber(narrows().repeatable!.getCost(1)));
+    home.purchase(1);
+    getMatch().owner[0]!.value = 'p';
+    expect(side().nextHustler()).toBe(narrows());
+  });
+});
+
 describe('the charter', () => {
   beforeEach(() => {
     boot();

@@ -7,8 +7,10 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
+import { toNumber } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
+import { ECON } from '../../data/buildings';
 import { DISTRICTS } from '../../data/contracts';
 import { UNITS, UNIT_KINDS, type UnitKind } from '../../data/units';
 import { getMatch } from '../../modules';
@@ -30,6 +32,15 @@ const seen = computed(() => match.visible(props.index));
 const sighting = computed(() => match.sightings.value[props.index]);
 const control = computed(() => match.control[props.index].value);
 const held = computed(() => (control.value >= 1 ? 'p' : control.value <= -1 ? 'e' : 'none'));
+/** Who took it last: their hustlers work it until the other seat takes it, through any dip. */
+const owner = computed(() => match.owner[props.index].value);
+const racketsId = ECON.find((def) => def.district === props.index)!.id;
+/** Hustlers the owner works here; the rival's only while you can see the district. */
+const working = computed(() => {
+  if (owner.value === 'none' || (owner.value === 'e' && !seen.value)) return undefined;
+  const n = toNumber(match[owner.value].econ.getProducer(racketsId)!.ownedCount.value);
+  return n === 1 ? '1 hustler working' : `${n || 'no'} hustlers working`;
+});
 const stance = computed(() => p.stance[props.index].value);
 const fighting = computed(() => total(mine.value) > PRESENCE && total(theirs.value) > PRESENCE);
 const besieging = computed(
@@ -59,7 +70,7 @@ function focus(k: UnitKind | 'spread') {
 <template>
   <article
     class="district"
-    :data-held="held"
+    :data-owner="owner"
     :data-fight="fighting"
     :data-siege="besieging ? 'out' : besieged ? 'in' : 'none'"
     :aria-label="d.name"
@@ -130,8 +141,10 @@ function focus(k: UnitKind | 'spread') {
         <template v-if="besieging">your crew hits their safehouse</template>
         <template v-else-if="besieged">assault on your safehouse</template>
         <template v-else-if="fighting">fighting</template>
-        <template v-else-if="held === 'p'">yours · +turf</template>
-        <template v-else-if="held === 'e'">theirs</template>
+        <template v-else-if="owner !== 'none'"
+          >{{ owner === 'p' ? 'yours' : 'theirs'
+          }}<template v-if="working"> · {{ working }}</template></template
+        >
         <template v-else>contested {{ Math.round(Math.abs(control) * 100) }}%</template>
       </span>
       <span v-if="tactician" class="cc-auto">{{ tactician }}</span>
@@ -198,10 +211,10 @@ function focus(k: UnitKind | 'spread') {
   font-size: 11px;
   color: var(--cc-chalk-dim);
 }
-.district[data-held='p'] .district__state {
+.district[data-owner='p'] .district__state {
   color: var(--cc-sodium);
 }
-.district[data-held='e'] .district__state {
+.district[data-owner='e'] .district__state {
   color: var(--cc-rival);
 }
 /* The ley-line: the rival's share is the track, yours the fill, and a diamond rides the edge. */

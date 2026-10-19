@@ -11,7 +11,12 @@ import { captureRate, hqIntegrity, turretDps, REF_PRESENCE } from '../data/spine
 export interface Tunables {
   econ: Record<
     string,
-    { rate: ComputedRef<number>; baseCost?: ComputedRef<number>; ratio?: ComputedRef<number> }
+    {
+      rate: ComputedRef<number>;
+      baseCost: ComputedRef<number>;
+      ratio: ComputedRef<number>;
+      limit: ComputedRef<number>;
+    }
   >;
   floorBaseCost: ComputedRef<number>;
   floorRatio: ComputedRef<number>;
@@ -45,8 +50,9 @@ export function createTunables(t: TuningRegistry): Tunables {
         d.id,
         {
           rate: num(`econ/${d.id}/rate`, d.rate),
-          baseCost: d.purchase && num(`econ/${d.id}/baseCost`, d.purchase.baseCost),
-          ratio: d.purchase && num(`econ/${d.id}/ratio`, d.purchase.ratio),
+          baseCost: num(`econ/${d.id}/baseCost`, d.purchase.baseCost),
+          ratio: num(`econ/${d.id}/ratio`, d.purchase.ratio),
+          limit: num(`econ/${d.id}/limit`, d.purchase.limit),
         },
       ]),
     ),

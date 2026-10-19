@@ -12,8 +12,9 @@ Every key is read through `tunable()` in `modules/tunables.ts`; both seats share
 
 | Key | Default from | What it moves |
 |---|---|---|
-| `econ/<id>/rate` | `HUSTLER_RATE`, `TAP_RATE`, `turfRate` | income per hustler, aether per tap, scrip per held district |
-| `econ/<id>/baseCost`, `econ/<id>/ratio` | `hustlerBaseCost`, `hustlerRatio`, `tapBaseCost`, `tapRatio` | where the hustler plateau falls; how many taps a seat can feed floors from |
+| `econ/<id>/rate` | `HUSTLER_RATE`, `TAP_RATE` | income per hustler at that node, aether per tap |
+| `econ/<id>/baseCost`, `econ/<id>/ratio` | `hustlerBaseCost`, `hustlerRatio`, `tapBaseCost`, `tapRatio` | how far into a node's slots hiring still pays back; how many taps a seat can feed floors from |
+| `econ/<id>/limit` | `START_HUSTLERS + NODE_HUSTLERS` at the safehouse, `NODE_HUSTLERS` per district, `TAP_LIMIT` | how much income the safehouse alone carries, and what taking a district is worth |
 | `floors/baseCost`, `floors/ratio` | `buildingBaseCost`, `buildingRatio` | the one ladder every floor climbs, tech floors included: how many floors convert income, and what a tech floor delays |
 | `floors/trainRate` | `1 / TRAIN_S` | units of value per floor per second, before research; an enforcer takes `ENFORCER_VALUE` of them |
 | `units/<kind>/dps`, `units/<kind>/hp` | `UNIT_DPS`, `unitHp`, `enforcerDps`, `enforcerHp` | fight length; with the pairing table, who wins it |
@@ -35,8 +36,8 @@ the scout's duration, cooldown and cost.
 ## Couplings
 
 - **Every price is a multiple of `unitValue`.** It is the army-side spend of the reference
-  walk at `MID_S`, so any change to the hustler ladder, `ECON_SHARE` or `PAYBACK_HORIZON_S`
-  reprices floors, squats, research and units together. Perturbing one price key alone moves
+  walk at `MID_S`, so any change to the node ladders and limits, `REF_TAKE_S`, `ECON_SHARE` or
+  `PAYBACK_HORIZON_S` reprices floors, squats, research and units together. Perturbing one price key alone moves
   it off the spine.
 - **`killRate` is solved from `COUNTER`, `RESIST` and `FIGHT_S`.** Changing a pairing cell
   without re-solving changes every fight's length, not only who wins it.
@@ -65,8 +66,17 @@ the scout's duration, cooldown and cost.
   floors and the charter ahead of hustlers and converts one triangle unit per floor per `TRAIN_S`, so its army at
   `MID_S` is well short of `MID_ARMY`. `MID_ARMY` defines a unit's value; changing it reprices
   everything without moving the walk's army much.
-- **Turf compounds control.** It is paid per district held, so its rate decides whether the
-  first seat to take ground snowballs.
+- **District hustlers follow ownership, not control.** A seat owns a district from its capture
+  until the rival's (`match.owner`), so a raid that dents control costs nothing until it
+  flips the district; then that district's hustlers scatter. A node's limit is what taking
+  ground is worth, and so whether the first seat to take it snowballs.
+- **A node's ratio decides whether its slots fill.** The fifth hire pays back in
+  `FIRST_PAYBACK_S · 2^NODE_DOUBLINGS`. Under the horizon, every slot fills and the node is
+  a cap; past it, the ladder stops a seat first. A persona with a shorter horizon (the
+  street gang's 90 s, the cabal's 120 s) stops one hire short in every node.
+- **The safehouse ladder starts past the hustlers it opens with.** Its base is divided by
+  `ratio^START_HUSTLERS`, so its first hire costs what a district's first does. The engine
+  prices a purchase from the count, initial hustlers included.
 - **Aether is drawn by every kind but razors.** A mix heavy in hexers, riggers and enforcers
   is capped by taps, not scrip, and `TAP_LIMIT` caps taps. The build plan buys a tap before a
   floor its taps and bank cannot feed, and the queue hands aether kinds' time to razors until
@@ -95,13 +105,17 @@ the scout's duration, cooldown and cost.
 
 ## Known thin
 
-- **The counter edge is modest.** The shipped seat's counter fit leads the blind seat's, but
-  the edge decides matches only near parity. Rivals that field mixed armies leave little to
+- **Above parity the counter edge does not save the player.** Below it, reading the rival
+  wins matches a blind or table-flat seat loses; against rivals at 1.1–1.2× income the
+  shipped and blind seats win equally few. Rivals that field mixed armies leave little to
   counter.
-- **Enforcers arrive late.** The measured charter lands 30–60 s after the walk's, the same
-  lag the siege beat shows. The clinic follows when the bunks begin to bind, and the
-  reference player fields less than one enforcer before the match ends.
-- **Below parity the table hardly matters.** Contracts 1–3 sit under the player's income, so
-  a flat table still wins them; the counter probe's `--hard` run is where the axis shows.
+- **Enforcers arrive late.** The charter lands on the walk's mark, but the clinic waits on
+  the floor ladder and opens about when the bunks begin to bind. The reference player fields
+  about one enforcer before the match ends.
+- **Taking ground moves income, not the player's wins.** Under the reference player the
+  district gap shows up in hustlers (about 16 against the rival's 13 at 300 s), yet a variant
+  with no district slots wins as often. One won fight decides more matches than the income.
+- **Matches end short of `MATCH_S`.** At parity a contract ends around 440 s, against the
+  spine's 480 s.
 - **Repeated attempts are not identical.** Each policy throttle keeps its phase across
   matches.

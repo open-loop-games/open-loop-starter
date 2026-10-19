@@ -3,19 +3,21 @@
  * a few named anchors. Plain arithmetic, no engine construction, no live state.
  *
  * Coverage boundary:
- * - Bucket, economy: pure closed-form. The hustler ladder is geometric
- *   (`cost(k) = c0 · m^k`) and income is linear in hustlers; the supply cap
- *   splices the training rate to zero at the cap (piecewise closed-form).
+ * - Bucket, economy: pure closed-form. Each hustler node (the safehouse, and
+ *   every district a crew owns) climbs its own geometric ladder
+ *   (`cost(k) = c0 · m^k`) to a limit, and income is linear in hustlers; the
+ *   supply cap splices the training rate to zero at the cap (piecewise closed-form).
  * - Bucket, combat: strategy-space integration. For a fixed pair of army
  *   compositions and focus orders, a district fight is Lanchester's square law
  *   and closes (`fightSeconds`, `survivorsOfWinner`). Siege against a turret
  *   is a linear-attrition integral and closes (`minSiegeForce`).
  * - Where the closed form stops: the joint choice of two seats (what each
  *   builds, where it sends units, when it assaults), fog of war, and district
- *   control flipping under both. None of that projects.
+ *   control flipping under both, which decides whose hustlers work each district.
+ *   None of that projects; the walks assume one district owned from `REF_TAKE_S`.
  * - The army's ramp closes too, under the reference crew's own rules: floors on
  *   one price ladder and the charter, saved for ahead of hustlers, each floor converting
- *   one unit per `TRAIN_S` (`walkArmy`). Fights, turf, squats and research are left out.
+ *   one unit per `TRAIN_S` (`walkArmy`). Fights, squats and research are left out.
  * - What measures the remainder: `balance/arc-probe.ts` plays every contract
  *   under the shipping policies and prints each beat beside `landmarks()`.
  */
@@ -29,10 +31,13 @@ export const HUSTLER_RATE = 1;
 export const START_HUSTLERS = 5;
 /** The first hustler pays back its price in this many seconds. */
 export const FIRST_PAYBACK_S = 30;
-/** Cost doublings across the hustlers a reference match buys. */
-export const HUSTLER_DOUBLINGS = 3;
-/** Hustlers a reference match buys before payback passes the horizon. */
-export const HUSTLER_BUYS = 24;
+/**
+ * Hustlers one node hires: the safehouse, past the ones it opens with, and each district a
+ * crew owns. Income saturates at each node and grows by taking ground.
+ */
+export const NODE_HUSTLERS = 5;
+/** Cost doublings across one node's hires: its last pays back in four times the first's. */
+export const NODE_DOUBLINGS = 2;
 /** A reference match lasts this long against a contract of equal economy. */
 export const MATCH_S = 480;
 /** Mid-match landmark the army anchor is read at. */
@@ -83,12 +88,8 @@ export const SCOUT_S = 20;
 export const SCOUT_COOLDOWN_S = 45;
 /** A scout costs what one ley tap seeps in the scout's own duration. */
 export const scoutCost = SCOUT_S * TAP_RATE;
-/**
- * A held district pays what this many hustlers pay. Four was retired: holding
- * all three districts then out-earned the hustler economy by ~70% and every
- * probed match went to whoever took turf first (2026-10-18 sweep, 16 cells).
- */
-export const TURF_HUSTLERS = 2;
+/** The reference crew owns one district from this second: the first take the arc probe records. */
+export const REF_TAKE_S = 190;
 /** Supply cap with no squats, and what each squat adds. */
 export const SUPPLY_BASE = 12;
 export const SUPPLY_PER_SQUAT = 8;
@@ -112,8 +113,29 @@ export const CHARTER_FLOORS = 2;
 
 /** `c0 = payback · rate`: the first hustler costs what it pays in `FIRST_PAYBACK_S`. */
 export const hustlerBaseCost = FIRST_PAYBACK_S * HUSTLER_RATE;
-/** `m = 2^(K/N)`: `HUSTLER_DOUBLINGS` doublings across `HUSTLER_BUYS` purchases. */
-export const hustlerRatio = 2 ** (HUSTLER_DOUBLINGS / HUSTLER_BUYS);
+/** `m = 2^(K/(N−1))`: `NODE_DOUBLINGS` doublings from a node's first hire to its last. */
+export const hustlerRatio = 2 ** (NODE_DOUBLINGS / (NODE_HUSTLERS - 1));
+
+/** Districts the reference crew owns at second `t`. */
+export const refHeld = (t: number) => (t >= REF_TAKE_S ? 1 : 0);
+
+/**
+ * The cheapest next hire for a crew that has made `bought[i]` hires at node `i` (0 the
+ * safehouse, then each owned district) and owns `held` districts; none once every node is full.
+ */
+export function nextHire(
+  bought: number[],
+  held: number,
+): { node: number; cost: number } | undefined {
+  let best: { node: number; cost: number } | undefined;
+  for (let i = 0; i <= held; i++) {
+    const b = bought[i] ?? 0;
+    if (b >= NODE_HUSTLERS) continue;
+    const cost = hustlerBaseCost * hustlerRatio ** b;
+    if (!best || cost < best.cost) best = { node: i, cost };
+  }
+  return best;
+}
 
 /** One step of the reference walk: what the crew holds at second `t`. */
 export interface WalkPoint {
@@ -126,28 +148,29 @@ export interface WalkPoint {
 
 /**
  * The reference crew's economy, walked second by second: `ECON_SHARE` of income
- * to hustlers while the next one pays back inside `PAYBACK_HORIZON_S`, the rest
- * (and everything after) to the army side. Turf income is left out: it is the
+ * to hustlers while the cheapest next hire pays back inside `PAYBACK_HORIZON_S`, the
+ * rest (and everything after) to the army side. Hires fill the safehouse and the
+ * districts the reference crew owns (`refHeld`); when it owns them is the
  * strategy-space remainder the probe measures.
  */
 export function walkEconomy(seconds: number, incomeMult = 1): WalkPoint[] {
   const out: WalkPoint[] = [];
   let hustlers = START_HUSTLERS;
-  let bought = 0;
+  const bought: number[] = [];
   let econPurse = START_SCRIP;
   let armySpend = 0;
   for (let t = 0; t <= seconds; t++) {
     const income = hustlers * HUSTLER_RATE * incomeMult;
     out.push({ t, hustlers, income, armySpend });
-    const next = hustlerBaseCost * hustlerRatio ** bought;
-    const pays = next / (HUSTLER_RATE * incomeMult) < PAYBACK_HORIZON_S;
+    const next = nextHire(bought, refHeld(t));
+    const pays = !!next && next.cost / (HUSTLER_RATE * incomeMult) < PAYBACK_HORIZON_S;
     const share = pays ? ECON_SHARE : 0;
     econPurse += income * share;
     armySpend += income * (1 - share);
-    if (pays && econPurse >= next) {
-      econPurse -= next;
+    if (next && pays && econPurse >= next.cost) {
+      econPurse -= next.cost;
       hustlers += 1;
-      bought += 1;
+      bought[next.node] = (bought[next.node] ?? 0) + 1;
     }
   }
   return out;
@@ -187,9 +210,6 @@ export const TAP_LIMIT = 6;
 
 /** The charter's price: a sink on the unit-value scale, saved for like a floor. */
 export const charterCost = CHARTER_UNITS * unitValue;
-
-/** A held district's scrip rate. */
-export const turfRate = TURF_HUSTLERS * HUSTLER_RATE;
 
 // ─── Combat ────────────────────────────────────────────────────────────────
 
@@ -281,7 +301,7 @@ export interface Landmark {
   predictedS: number;
 }
 
-/** Past the hustler plateau a crew builds floors drawing up to this share of income. */
+/** Once no owned node has a hire that pays, a crew builds floors drawing up to this share of income. */
 export const LATE_FLOOR_SHARE = 1.15;
 
 /** Scrip one unit of an even triangle mix costs: razors, hexers and riggers alike. */
@@ -291,7 +311,7 @@ const refScripPerUnit = ((1 + HEXER_SCRIP_SHARE + RIGGER_SCRIP_SHARE) / 3) * uni
 export interface ArmyPoint {
   t: number;
   hustlers: number;
-  /** False once the next hustler pays back past `PAYBACK_HORIZON_S`. */
+  /** False while no owned node has room for a hire that pays back inside `PAYBACK_HORIZON_S`. */
   hustlersPay: boolean;
   floors: number;
   /** True once the crew holds its charter. */
@@ -304,16 +324,16 @@ export interface ArmyPoint {
  * lieutenants hired as soon as their price is in the purse; the next floor saved for
  * while its draw fits the army share of income, holding hustlers and taps back once it
  * is `SAVE_HORIZON_S` of income away; the charter saved for the same way once
- * `CHARTER_FLOORS` stand, ahead of the next floor; `REF_TAPS` taps; hustlers while they pay back;
- * every floor training an even triangle mix at one unit per `TRAIN_S`, paused for a
- * save's last `PAUSE_HORIZON_S`. Aether is assumed fed; fights, turf, squats and
- * research are left out.
+ * `CHARTER_FLOORS` stand, ahead of the next floor; `REF_TAPS` taps; the cheapest hire at
+ * an owned node while it pays back (`nextHire`, `refHeld`); every floor training an even
+ * triangle mix at one unit per `TRAIN_S`, paused for a save's last `PAUSE_HORIZON_S`.
+ * Aether is assumed fed; fights, squats and research are left out.
  */
 export function walkArmy(seconds: number): ArmyPoint[] {
   const dt = 0.5;
   const out: ArmyPoint[] = [];
   let hustlers = START_HUSTLERS;
-  let bought = 0;
+  const bought: number[] = [];
   let scrip = START_SCRIP;
   let floors = 0;
   let units = 0;
@@ -326,8 +346,8 @@ export function walkArmy(seconds: number): ArmyPoint[] {
     scrip += income * dt;
     while (hired < lieutenantCost.length && scrip >= lieutenantCost[hired]!)
       scrip -= lieutenantCost[hired++]!;
-    const hustlerCost = hustlerBaseCost * hustlerRatio ** bought;
-    const pays = hustlerCost / HUSTLER_RATE < PAYBACK_HORIZON_S;
+    const hire = nextHire(bought, refHeld(t));
+    const pays = !!hire && hire.cost / HUSTLER_RATE < PAYBACK_HORIZON_S;
     const share = pays ? 1 - ECON_SHARE : LATE_FLOOR_SHARE;
     let saving = false;
     let paused = false;
@@ -354,10 +374,10 @@ export function walkArmy(seconds: number): ArmyPoint[] {
       scrip -= tapCost;
       taps += 1;
     }
-    if (pays && !saving && scrip >= hustlerCost) {
-      scrip -= hustlerCost;
+    if (hire && pays && !saving && scrip >= hire.cost) {
+      scrip -= hire.cost;
       hustlers += 1;
-      bought += 1;
+      bought[hire.node] = (bought[hire.node] ?? 0) + 1;
     }
     if (!paused && floors > 0) {
       const spend = Math.min(draw(floors) * dt, scrip);
@@ -371,7 +391,7 @@ export function walkArmy(seconds: number): ArmyPoint[] {
 
 /**
  * Predicted landmarks for the reference crew, from the army walk: its first floor, the
- * hustler plateau, its charter, the army reaching a siege force plus a holding squad, and a match at
+ * safehouse filling, its charter, its safehouse and first district filling, the army reaching a siege force plus a holding squad, and a match at
  * `MATCH_S`. The walk fields no losses, so a measured siege beat lands later.
  */
 export function landmarks(): Landmark[] {
@@ -379,7 +399,11 @@ export function landmarks(): Landmark[] {
   const at = (f: (p: ArmyPoint) => boolean) => army.find(f)?.t ?? NaN;
   return [
     { beat: 'first training floor', predictedS: at((p) => p.floors > 0) },
-    { beat: 'econ plateau (hustler payback past horizon)', predictedS: at((p) => !p.hustlersPay) },
+    { beat: 'safehouse full (no home hire left)', predictedS: at((p) => !p.hustlersPay) },
+    {
+      beat: 'econ plateau (safehouse and one district full)',
+      predictedS: at((p) => p.t >= REF_TAKE_S && !p.hustlersPay),
+    },
     { beat: 'crew chartered (tier two)', predictedS: at((p) => p.chartered) },
     {
       beat: 'army reaches a siege force plus a holding squad',
@@ -402,7 +426,6 @@ export function describeSpine(): Record<string, number> {
     squatRatio,
     charterCost,
     tapBaseCost,
-    turfRate,
     killRate,
     unitHp,
     hqIntegrity,

@@ -10,7 +10,8 @@ Genre: `rts`. Its document in the studio's research library lists the games in i
 ## What this archetype is
 
 *Chrome & Cantrip.* The ley lines have woken under a rain-soaked sprawl, and two crews fight
-over three of its districts. Hustlers bring home scrip, ley taps draw aether. Training floors turn both into
+over three of its districts. Hustlers bring home scrip, ley taps draw aether. The safehouse runs ten hustlers; every
+district a crew takes runs five more, until the rival takes it back and they scatter. Training floors turn both into
 Razorboys, Hexers, Riggers and Enforcers while the bunks have room; coffin squats add bunks.
 Each kind is opened by its own floor — a chop shop, a talisman parlor, a drone garage — and
 every floor then trains whatever kinds stand open, splitting its time by the crew's queue.
@@ -34,12 +35,13 @@ same prices. Nothing carries from one match to the next.
 
 ## Rate-function spine
 
-**Bucket: exponential, a geometric worker ladder under a payback horizon; the battle is
-coupled-state deterministic** (`incremental-math/…/rate-functions/exponential`,
-`…/bifurcations#coupled-state-deterministic`). One scrip is one hustler-second, and the
-first hustler pays back in 30 s; the ratio gives three doublings across 24 purchases. A
-reference crew walks the ladder, spending half its income on hustlers while one pays back
-inside the horizon. A unit's value is the army-side spend at the 240 s mark over a 24-unit
+**Bucket: exponential, a geometric worker ladder per income node under a payback horizon;
+the battle is coupled-state deterministic** (`incremental-math/…/rate-functions/exponential`,
+`…/bifurcations#coupled-state-deterministic`). One scrip is one hustler-second. Each node —
+the safehouse, and every district a crew owns — hires five on its own ladder: the first pays
+back in 30 s, and two doublings later the fifth in 120 s. A reference crew owns one district
+from 190 s, the first take the probe records, and spends half its income on the cheapest
+hire while one pays back inside the horizon. A unit's value is the army-side spend at the 240 s mark over a 24-unit
 reference army, and every floor, squat, research and unit price is a multiple of it. Every floor
 climbs one price ladder, a tech floor at the next floor's price; the charter is a sink of eight
 units of value, saved for like a floor once two stand. For fixed
@@ -65,14 +67,14 @@ landmarks. `balance/counter-probe.ts` measures whether reading the rival wins ma
 | Beat | Recorded (contract 1) |
 |---|---|
 | The fixer hired | 0 s |
-| The first training floor | 112 s |
-| The first unit trained | 132 s |
-| The first district held | 177.5 s |
-| The first clash | 201 s |
-| The crew chartered | 284 s |
-| The black clinic opens | 349 s |
-| The first assault on their safehouse | 365.5 s |
-| Their safehouse burns | 429 s |
+| The first training floor | 51 s |
+| The first unit trained | 71 s |
+| The first district taken | 116.5 s |
+| The first clash | 129 s |
+| The crew chartered | 228 s |
+| The black clinic opens | 271 s |
+| The first assault on their safehouse | 312 s |
+| Their safehouse burns | 378.5 s |
 
 Each match is a few minutes; the rival's income terms climb to parity by the megacorp.
 
@@ -85,7 +87,7 @@ Each match is a few minutes; the rival's income terms climb to parity by the meg
 
 | Component | Engine primitive |
 |---|---|
-| hustlers, ley taps, turf | `createProducerCategory`, turf as `extraCount` |
+| hustler nodes, ley taps | `createProducerCategory`, one producer per node; a district's is `visible` while its seat owns it |
 | tech floors | `createProducerCategory` converters, each at its kind's share of floor time, a phase-gated `registerTick` |
 | plain floors | `createScalingPurchasable` on the tech floors' ladder |
 | the bunks | `createResourceBag` with a reactive capacity |

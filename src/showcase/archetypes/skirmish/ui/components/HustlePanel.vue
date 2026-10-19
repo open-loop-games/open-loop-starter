@@ -7,6 +7,12 @@
   because a card that is the button and a lieutenant's mark are shapes the flat row
   contract cannot hold. The price lines are the engine's (`readPriceLines`).
 
+  Hustlers work at nodes: the safehouse, and each district the crew owns. Every node climbs
+  its own ladder to its own limit, so a card reads its count against that limit and its
+  next price. A district's rackets hang under the safehouse's card, the same hustlers on
+  turf the map can take away; they stay listed while the district is not yours, locked on
+  taking it, so the map's prize is in view before it is won.
+
   A tech floor is bought once and opens its kind to every floor; a plain floor is one more
   floor. Both climb one price ladder. A floor a prerequisite has not opened is listed
   anyway, locked on what it waits on: the row's `prerequisite`. How the floors split their
@@ -17,6 +23,7 @@
   charter's own unmet requirement.
 -->
 <script setup lang="ts">
+import { unref } from 'vue';
 import { toNumber, type Purchasable } from '@open-loop/engine';
 import {
   ProducerList,
@@ -34,8 +41,8 @@ import {
   SQUATS,
   prerequisiteText,
   type BarracksDef,
-  type EconDef,
 } from '../../data/buildings';
+import { DISTRICTS } from '../../data/contracts';
 import { UNITS } from '../../data/units';
 import { getMatch } from '../../modules';
 import { useHandledBy } from '../handled-by';
@@ -52,18 +59,35 @@ interface HustleExtra {
   item: Purchasable;
   note: () => string;
   count: () => string;
+  limit: () => string;
+  /** A district's rackets: listed under the safehouse, come and go with the district. */
+  district?: true;
 }
 
-const econRows = ECON.filter((d): d is EconDef & Required<Pick<EconDef, 'purchase'>> =>
-  Boolean(d.purchase),
-).map((def) => {
+/** What a district's rackets wait on: the district, said to be the rival's while it is. */
+function waitsOn(i: number): string {
+  const name = DISTRICTS[i]!.name;
+  return match.owner[i]!.value === 'e' ? `${name}, theirs now` : name;
+}
+
+const econRows = ECON.map((def) => {
   const prod = p.econ.getProducer(def.id)!;
+  const item = prod.repeatable!;
+  const each = () => `+${rate(toNumber(prod.computedRate.value))} ${def.output}/s each.`;
+  const i = def.district;
   return createProducerRow<HustleExtra>(prod, {
     displayName: def.name,
+    // A district's rackets stay listed while the seat does not own it, locked on taking it.
+    ...(i === undefined ? {} : { prerequisite: () => `needs ${waitsOn(i)}` }),
     extra: {
-      item: prod.repeatable!,
-      note: () => `${def.blurb} +${rate(toNumber(prod.computedRate.value))} ${def.output}/s each.`,
+      item,
+      note: () =>
+        i === undefined
+          ? `${def.blurb} ${each()}`
+          : `${each()} They scatter if ${DISTRICTS[i]!.name} falls.`,
       count: () => String(toNumber(prod.ownedCount.value)),
+      limit: () => String(toNumber(unref(item.limit))),
+      ...(i === undefined ? {} : { district: true as const }),
     },
   });
 });
@@ -73,7 +97,8 @@ const squatRow = createPurchasableRow<HustleExtra>(p.squats, {
   extra: {
     item: p.squats,
     note: () => `${SQUATS.blurb} +${tune.supplyPer.value} bunks.`,
-    count: () => `${Math.floor(p.supplyUsed())}/${p.supplyCap.value}`,
+    count: () => String(Math.floor(p.supplyUsed())),
+    limit: () => String(p.supplyCap.value),
   },
 });
 
@@ -160,19 +185,27 @@ const floorRows = [
 
 <template>
   <section class="cc-panel hustle" aria-label="Economy">
-    <ProducerList :rows="hustleRows" bulk-mode-source="none">
+    <ProducerList class="hustle__econ" :rows="hustleRows" bulk-mode-source="none">
       <template #header>
-        <h2 class="cc-title">The Hustle</h2>
+        <h2 class="cc-title hustle__head">
+          The Hustle<span class="hustle__working"
+            ><span class="num">{{ p.hustlers() }}</span> hustlers working</span
+          >
+        </h2>
       </template>
       <template #row="{ row, purchase }">
         <BuyCard
           :title="row.displayName"
-          :note="row.extra!.note()"
+          :note="row.unmet.value.length ? undefined : row.extra!.note()"
           :count="row.extra!.count()"
+          :limit="row.extra!.limit()"
           :prices="readPriceLines(row.extra!.item)"
           :can="row.canPurchase(1)"
           :maxed="row.extra!.item.maxed.value"
-          :automated="fixer"
+          done-label="full"
+          :locked="row.unmet.value[0]"
+          :data-node="row.extra!.district ? 'district' : undefined"
+          :automated="row.extra!.item.maxed.value || row.unmet.value.length ? undefined : fixer"
           @buy="purchase()"
         />
       </template>
@@ -208,6 +241,58 @@ const floorRows = [
 }
 .hustle :deep(.producer-list__rows) {
   gap: var(--gap-sm);
+}
+.hustle__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.hustle__working {
+  font-family: var(--cc-face-tag);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--cc-chalk-dim);
+}
+.hustle__working .num {
+  color: var(--cc-chalk);
+}
+/* A district's rackets hang off the safehouse's card on a wire: the same hustlers, worked
+   from turf the map can take away. The indent is the group; the left edge stays the
+   affordance grammar. */
+.hustle :deep(.producer-list__row:has(> .buy[data-node='district'])) {
+  position: relative;
+  margin-top: -3px;
+  padding-left: 14px;
+}
+.hustle :deep(.producer-list__row:has(> .buy[data-node='district']))::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: -6px;
+  bottom: 50%;
+  width: 7px;
+  border-left: 1px solid var(--cc-rain);
+  border-bottom: 1px solid var(--cc-rain);
+}
+/* The wire runs on past a card that has another district under it. */
+.hustle
+  :deep(
+    .producer-list__row:has(> .buy[data-node='district']):has(
+        + .producer-list__row > .buy[data-node='district']
+      )
+  )::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  bottom: calc(-1 * var(--gap-sm));
+  border-left: 1px solid var(--cc-rain);
+}
+/* The price is the decision: a node's fifth hire costs four times its first. */
+.hustle__econ :deep(.buy__cost:not(.buy__cost--locked, .buy__cost--done)) {
+  font-size: 13px;
+  font-weight: 600;
 }
 /* The charter is the rung between the tiers: set off from the floors by the Syndicate's
    brass, while its left edge keeps the shared affordance grammar. */

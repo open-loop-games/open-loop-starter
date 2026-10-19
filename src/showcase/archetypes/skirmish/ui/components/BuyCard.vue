@@ -15,6 +15,8 @@ const props = defineProps<{
   title: string;
   note?: string;
   count?: string;
+  /** The most the count can reach, set beside it ("/10"). */
+  limit?: string;
   /** The engine's price lines, one per resource. */
   prices?: PriceLine[];
   /** The game says you can buy it now. */
@@ -60,7 +62,9 @@ const state = computed(() => {
   >
     <span class="buy__head">
       <span class="buy__title">{{ title }}</span>
-      <span v-if="count !== undefined" class="buy__count num">{{ count }}</span>
+      <span v-if="count !== undefined" class="buy__count num"
+        >{{ count }}<span v-if="limit !== undefined" class="buy__limit">/{{ limit }}</span></span
+      >
     </span>
     <span v-if="note" class="buy__note">{{ note }}</span>
     <span class="buy__foot">
@@ -171,6 +175,11 @@ const state = computed(() => {
 }
 .buy[data-state='afford'] .buy__count {
   color: var(--cc-sodium);
+}
+.buy__limit {
+  margin-left: 2px;
+  font-size: 16px;
+  color: var(--cc-chalk-faint);
 }
 .buy__note {
   font-size: 11.5px;

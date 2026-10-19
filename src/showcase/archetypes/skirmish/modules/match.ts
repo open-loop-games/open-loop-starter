@@ -38,6 +38,7 @@ import { RosterKey } from './roster';
 import { TunablesKey } from './tuning';
 
 export type Phase = 'briefing' | 'live' | 'won' | 'lost';
+export type Owner = 'p' | 'e' | 'none';
 
 export interface FeedEntry {
   t: number;
@@ -57,6 +58,8 @@ export interface MatchApi {
   readonly tune: Tunables;
   /** −1..1 per district; +1 is held by the player. */
   readonly control: Persistent<number>[];
+  /** The seat that last took each district outright; its hustler slots are that seat's. */
+  readonly owner: Persistent<Owner>[];
   readonly phase: Persistent<Phase>;
   /** Seconds into the live match. */
   readonly clock: Persistent<number>;
@@ -98,17 +101,20 @@ export const matchModule: EngineModule = {
     const phase = persistent<Phase>('briefing', { id: 'phase' });
     const clock = persistent(0, { id: 'clock' });
     const control = DISTRICTS.map((d) => persistent(0, { id: `control-${d.id}` }));
+    // Who last took each district outright. Its hustler slots stay with that seat until the
+    // other takes it, so a raid that dents control lays nobody off.
+    const owner = DISTRICTS.map((d) => persistent<Owner>('none', { id: `owner-${d.id}` }));
     const scoutUntil = persistent(-1, { id: 'scout-until' });
     const scoutReadyAt = persistent(0, { id: 'scout-ready' });
     const contract = computed(() => roster.contract.value);
     const running = () => phase.value === 'live';
 
-    const held = (sign: 1 | -1) => () => control.filter((c) => c.value * sign >= 1).length;
+    const owns = (seat: 'p' | 'e') => (district: number) => owner[district].value === seat;
     const p = createSide({
       ctx,
       id: 'p',
       tune,
-      heldDistricts: held(1),
+      owns: owns('p'),
       incomeMult: () => 1,
       running,
     });
@@ -116,7 +122,7 @@ export const matchModule: EngineModule = {
       ctx,
       id: 'e',
       tune,
-      heldDistricts: held(-1),
+      owns: owns('e'),
       incomeMult: () => contract.value.incomeMult,
       running,
     });
@@ -197,19 +203,22 @@ export const matchModule: EngineModule = {
     // ─── The match reset: everything this module built, both seats included ───
     const matchReset = createReset({ resetPersistentContexts: ['skirmish/match'] });
 
-    // Who last held each district outright. A district whose control dips and recovers keeps
-    // its owner, so the feed reports a change of hands, not every recapture.
-    let owners: ('p' | 'e' | undefined)[] = DISTRICTS.map(() => undefined);
-    const ownerOf = (c: number) => (c >= 1 ? 'p' : c <= -1 ? 'e' : undefined);
-
+    // A district whose control dips and recovers keeps its owner, so the feed reports a change
+    // of hands, not every recapture.
     function describe(ev: BattleEvent): void {
-      if (ev.kind !== 'captured' || owners[ev.district] === ev.by) return;
-      owners[ev.district] = ev.by;
+      if (ev.kind !== 'captured' || owner[ev.district].value === ev.by) return;
+      owner[ev.district].value = ev.by;
       const name = DISTRICTS[ev.district].name;
+      // The side's tick lays the loser's hustlers off after this, so they still stand here.
+      const scattered = (ev.by === 'p' ? e : p).econ.getProducer(
+        `hustler-${DISTRICTS[ev.district].id}`,
+      )!;
+      const n = toNumber(scattered.count.value);
+      const off = n > 0 ? ` ${n} of ${ev.by === 'p' ? 'their' : 'your'} hustlers scatter.` : '';
       log(
         ev.by === 'p'
-          ? `${name} answers to your crew.`
-          : `${name} falls to ${contract.value.rival}.`,
+          ? `${name} answers to your crew.${off}`
+          : `${name} falls to ${contract.value.rival}.${off}`,
         ev.by === 'p' ? 'good' : 'bad',
       );
     }
@@ -241,7 +250,6 @@ export const matchModule: EngineModule = {
     });
 
     ctx.onLoad(() => {
-      owners = control.map((c) => ownerOf(c.value));
       sightings.value = DISTRICTS.map(() => undefined);
       safehouseSighting.value = undefined;
     });
@@ -251,6 +259,7 @@ export const matchModule: EngineModule = {
       e,
       tune,
       control,
+      owner,
       phase,
       clock,
       contract,
@@ -272,7 +281,6 @@ export const matchModule: EngineModule = {
         sightings.value = DISTRICTS.map(() => undefined);
         safehouseSighting.value = undefined;
         lastSiegeLog = [-Infinity, -Infinity];
-        owners = DISTRICTS.map(() => undefined);
       },
       scout() {
         if (phase.value !== 'live' || scoutCooldown.value > 0) return false;

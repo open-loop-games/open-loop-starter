@@ -12,7 +12,6 @@ Chrome & Cantrip: a shadow crew and a rival outfit fight over three districts of
 Enum / union membership is an is-a relation — each arm *is a* kind of its owner.
 
 - **SideId** _(string-literal union)_ — `p` · `e`
-- **EconId** _(string-literal union)_ — `hustler` · `ley-tap` · `turf`
 - **ResearchEffect.kind** _(discriminated-union arm)_ — `damage` · `hp` · `income` · `training` · `turret`
 - **CrewTier** _(string-literal union)_ — `none` · `fixer` · `quartermaster` · `tactician`
 - **PolicyScope** _(string-literal union)_ — `econ` · `build` · `command`
@@ -30,6 +29,7 @@ Field-name reference edges: untyped ids in named fields that point at
 another domain noun. These are name-encoded, not type-encoded, so
 type-graph tools such as dependency-cruiser and findReferences miss them.
 
+- **EconDef** → `district`
 - **Persona** → `research`
 - **ArmyPoint** → `unit`
 - **ResearchEffect** → `unit`
@@ -39,7 +39,7 @@ type-graph tools such as dependency-cruiser and findReferences miss them.
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`EconDef`, `BarracksDef`, `CharterDef`, `DistrictDef`, `ContractDef`, `LieutenantDef`
+`BarracksDef`, `CharterDef`, `ContractDef`, `LieutenantDef`
 
 ## Disambiguators (curated)
 

@@ -6,7 +6,7 @@ import { getMatch } from './match';
 
 const fixer = () => getAutomation().lieutenants.find((l) => l.def.id === 'fixer')!;
 const quartermaster = () => getAutomation().lieutenants.find((l) => l.def.id === 'quartermaster')!;
-const hustlers = () => toNumber(getMatch().p.econ.getProducer('hustler')!.count.value);
+const hustlers = () => getMatch().p.hustlers();
 
 describe("the player's lieutenants", () => {
   beforeEach(() => boot());
@@ -95,9 +95,9 @@ describe('the rival seat', () => {
 
   it('plays its economy with no automation tier', async () => {
     const m = getMatch();
-    const before = toNumber(m.e.econ.getProducer('hustler')!.count.value);
+    const before = m.e.hustlers();
     m.start();
     await seconds(30);
-    expect(toNumber(m.e.econ.getProducer('hustler')!.count.value)).toBeGreaterThan(before);
+    expect(m.e.hustlers()).toBeGreaterThan(before);
   });
 });
