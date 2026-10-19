@@ -15,7 +15,7 @@ Every key is read through `tunable()` in `modules/tunables.ts`; both seats share
 | `econ/<id>/rate` | `HUSTLER_RATE`, `TAP_RATE`, `turfRate` | income per hustler, aether per tap, scrip per held district |
 | `econ/<id>/baseCost`, `econ/<id>/ratio` | `hustlerBaseCost`, `hustlerRatio`, `tapBaseCost`, `tapRatio` | where the hustler plateau falls; how many taps a seat can feed floors from |
 | `floors/baseCost`, `floors/ratio` | `buildingBaseCost`, `buildingRatio` | the one ladder every floor climbs, tech floors included: how many floors convert income, and what a tech floor delays |
-| `floors/trainRate` | `1 / TRAIN_S` | units per floor per second, before research |
+| `floors/trainRate` | `1 / TRAIN_S` | units of value per floor per second, before research; an enforcer takes `ENFORCER_VALUE` of them |
 | `units/<kind>/dps`, `units/<kind>/hp` | `UNIT_DPS`, `unitHp`, `enforcerDps`, `enforcerHp` | fight length; with the pairing table, who wins it |
 | `units/<kind>/scrip`, `units/<kind>/aether` | `unitValue`, split at `AETHER_PRICE` | what a unit costs, and how much of the army leans on taps |
 | `squats/baseCost`, `squats/ratio` | `squatBaseCost`, `squatRatio` | when the bunks stop binding |
@@ -52,7 +52,7 @@ the scout's duration, cooldown and cost.
   rival fields, not by the floors. A seat bent fully toward counters scores no better than the
   shipped three-quarters.
 - **The landmarks come from a walk of the policy, not of the spend.** `walkArmy` saves for
-  floors ahead of hustlers and converts one unit per floor per `TRAIN_S`, so its army at
+  floors ahead of hustlers and converts one triangle unit per floor per `TRAIN_S`, so its army at
   `MID_S` is well short of `MID_ARMY`. `MID_ARMY` defines a unit's value; changing it reprices
   everything without moving the walk's army much.
 - **Turf compounds control.** It is paid per district held, so its rate decides whether the

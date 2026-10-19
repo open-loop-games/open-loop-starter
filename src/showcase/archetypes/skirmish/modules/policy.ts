@@ -16,7 +16,7 @@ import { toNumber, type Producer, type Purchasable } from '@open-loop/engine';
 import { BARRACKS, RESEARCH } from '../data/buildings';
 import type { Persona } from '../data/contracts';
 import { DISTRICTS } from '../data/contracts';
-import { UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
+import { UNITS, UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
 import { AETHER_PRICE, LATE_FLOOR_SHARE, PAUSE_HORIZON_S, SAVE_HORIZON_S } from '../data/spine';
 import { PRESENCE, countsOf, fightingValue, total, type Counts } from './battle';
 import { deploy, readyUnits, redeploy, retreat, setFocus, setStance } from './orders';
@@ -113,7 +113,8 @@ type Input = 'scrip' | 'aether';
 
 /** What one floor's whole time on this kind draws per second of an input while switched on. */
 function drainOf(side: Side, kind: UnitKind, input: Input = 'scrip'): number {
-  return side.trainRate() * toNumber(barracksFor(side, kind).inputs![input].per.value);
+  const per = toNumber(barracksFor(side, kind).inputs![input].per.value);
+  return (side.trainRate() * per) / UNITS[kind].value;
 }
 
 /** What every floor would draw per second of an input with every switch on. */

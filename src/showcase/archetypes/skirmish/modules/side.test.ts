@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, toNumber } from '@open-loop/engine';
-import { UNIT_KINDS } from '../data/units';
+import { UNITS, UNIT_KINDS } from '../data/units';
 import { boot, seconds } from '../sim/harness';
 import { getMatch } from './match';
 import { setQueue } from './policy';
@@ -54,6 +54,19 @@ describe('training floors', () => {
     side().queue.rigger.value = 3;
     await seconds(60);
     expect(trained('rigger')).toBeGreaterThan(2 * trained('razor'));
+  });
+
+  it('take as long per unit as the unit is worth', async () => {
+    side().econ.getProducer('ley-tap')!.repeatable!.purchase(1);
+    tech('chop-shop').purchase(1);
+    tech('talisman-parlor').purchase(1);
+    tech('drone-garage').purchase(1);
+    tech('black-clinic').purchase(1);
+    side().queue.hexer.value = 0;
+    side().queue.rigger.value = 0;
+    await seconds(60);
+    const enforcers = toNumber(side().reserve.enforcer.value);
+    expect(trained('razor') / enforcers).toBeCloseTo(UNITS.enforcer.value, 0);
   });
 
   it('give a kind no time until it is open, whatever its weight', () => {

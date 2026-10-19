@@ -250,7 +250,9 @@ export function createSide({
         resource: reserve[def.trains],
         // The training switch is the cycle driver: off, every floor's time on this kind idles.
         baseRate: () =>
-          training[def.trains].value ? tune.trainRate.value * floorShare(def.trains) : 0,
+          training[def.trains].value
+            ? (tune.trainRate.value * floorShare(def.trains)) / UNITS[def.trains].value
+            : 0,
         trigger: 'continuous',
         display: { title: def.name, description: def.blurb },
         purchase: {

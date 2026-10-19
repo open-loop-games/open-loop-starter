@@ -185,7 +185,7 @@ export const SQUATS = {
   supplyPer: SUPPLY_PER_SQUAT,
 };
 
-/** Units per second one training floor makes. */
+/** Units of value per second one training floor makes. */
 export const TRAIN_RATE = 1 / TRAIN_S;
 
 // Research prices are in units of value: a tier-1 line costs three units, a

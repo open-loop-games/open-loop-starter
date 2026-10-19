@@ -34,6 +34,8 @@ export interface UnitDef {
   body: BodyKind;
   dps: number;
   hp: number;
+  /** Units of value one is worth; its floor time scales with it. */
+  value: number;
   cost: { scrip: number; aether: number };
 }
 
@@ -56,6 +58,7 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     body: 'chrome',
     dps: UNIT_DPS,
     hp: unitHp,
+    value: 1,
     cost: { scrip: whole(u), aether: 0 },
   },
   hexer: {
@@ -67,6 +70,7 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     body: 'flesh',
     dps: UNIT_DPS,
     hp: unitHp,
+    value: 1,
     cost: {
       scrip: whole(HEXER_SCRIP_SHARE * u),
       aether: whole(((1 - HEXER_SCRIP_SHARE) * u) / AETHER_PRICE),
@@ -80,6 +84,7 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     body: 'drone',
     dps: UNIT_DPS,
     hp: unitHp,
+    value: 1,
     cost: {
       scrip: whole(RIGGER_SCRIP_SHARE * u),
       aether: whole(((1 - RIGGER_SCRIP_SHARE) * u) / AETHER_PRICE),
@@ -94,6 +99,7 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     body: 'plated',
     dps: enforcerDps,
     hp: enforcerHp,
+    value: ENFORCER_VALUE,
     cost: {
       scrip: whole(ENFORCER_SCRIP_SHARE * ENFORCER_VALUE * u),
       aether: whole(((1 - ENFORCER_SCRIP_SHARE) * ENFORCER_VALUE * u) / AETHER_PRICE),

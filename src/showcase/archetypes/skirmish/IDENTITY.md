@@ -49,7 +49,7 @@ fire, and the turret is solved so seven units is the smallest siege that razes i
 fog of war, and control flipping between them.
 
 The army's ramp closes as well: a walk of the reference crew as the policy plays it, saving
-for floors ahead of hustlers and converting one unit per floor every 20 s, gives the landmarks.
+for floors ahead of hustlers and converting one unit of value per floor every 20 s, gives the landmarks.
 Its army at the 240 s mark is smaller than the 24 units a unit's value is defined by.
 
 **What measures the remainder:** `balance/arc-probe.ts` plays every contract under the

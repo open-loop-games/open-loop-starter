@@ -49,7 +49,7 @@ export const OVERHEAD_SHARE = 0.3;
  * by then is smaller (`walkArmy`).
  */
 export const MID_ARMY = 24;
-/** Seconds one training building takes per unit. */
+/** Seconds one training floor takes per unit of value. */
 export const TRAIN_S = 20;
 /** A crew opens with four first-hustlers' worth of scrip. */
 export const START_SCRIP = 4 * FIRST_PAYBACK_S * HUSTLER_RATE;
