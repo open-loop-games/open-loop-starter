@@ -224,6 +224,8 @@ function focus(k: UnitKind | 'spread') {
   border: 1px solid var(--cc-chalk);
   background: var(--cc-asphalt);
   transform: rotate(45deg) scale(0.75);
+  /* The bar places a mark by its inline `left`; easing it keeps the diamond on the fill's edge. */
+  transition: left 0.3s linear;
 }
 .orders,
 .focus {
