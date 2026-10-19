@@ -14,9 +14,10 @@
   taking it, so the map's prize is in view before it is won.
 
   A tech floor is bought once and opens its kind to every floor; a plain floor is one more
-  floor. Both climb one price ladder. A floor a prerequisite has not opened is listed
-  anyway, locked on what it waits on: the row's `prerequisite`. How the floors split their
-  time is the FloorQueue under them.
+  floor. Both climb one price ladder. An opened tech floor folds to one line naming the kind
+  it opened, so a long match does not stack up cards that no longer ask anything. A floor a
+  prerequisite has not opened is listed anyway, locked on what it waits on: the row's
+  `prerequisite`. How the floors split their time is the FloorQueue under them.
 
   The Syndicate charter is the rung between the tiers, so it is listed after the tier-one
   tech floors and directly above the first floor it opens. Its locked line reads the
@@ -127,10 +128,15 @@ function opens(def: BarracksDef): string {
 
 const techRows = BARRACKS.map((def) => {
   const prod = p.barracks.getProducer(def.id)!;
+  const item = prod.repeatable!;
   return createProducerRow<FloorExtra>(prod, {
     displayName: def.name,
     prerequisite: () => `needs ${prerequisiteText(def, p.chartered())}`,
-    extra: { item: prod.repeatable!, note: () => opens(def) },
+    extra: {
+      item,
+      note: () => (item.maxed.value ? '' : opens(def)),
+      doneLabel: `${UNITS[def.trains].name} open`,
+    },
   });
 });
 

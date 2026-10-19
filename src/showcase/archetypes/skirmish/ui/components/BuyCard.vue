@@ -2,7 +2,8 @@
   BuyCard — one purchasable line: what it is, what it costs, and whether you can pay. The
   whole card is the button. The affordance grammar is here so every panel reads the same
   way: sodium when you can buy, a short price in rust, dashed while a prerequisite is
-  missing, faded once done. The ley-light runs along a line the moment it opens.
+  missing, faded once done. The ley-light runs along a line the moment it opens. A done card
+  with nothing left to say folds to one line, its mark beside its title.
 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
@@ -43,6 +44,9 @@ watch(
   },
 );
 
+/** Done and nothing left to say: one line, so a finished purchase stops costing height. */
+const folded = computed(() => props.maxed && !props.note);
+
 const state = computed(() => {
   if (props.maxed) return 'maxed';
   if (props.locked) return 'locked';
@@ -55,6 +59,7 @@ const state = computed(() => {
     class="buy"
     :data-state="state"
     :data-fresh="fresh"
+    :data-folded="folded"
     :disabled="state !== 'afford'"
     :aria-label="`Buy ${title}`"
     repeat
@@ -65,9 +70,10 @@ const state = computed(() => {
       <span v-if="count !== undefined" class="buy__count num"
         >{{ count }}<span v-if="limit !== undefined" class="buy__limit">/{{ limit }}</span></span
       >
+      <span v-if="folded" class="buy__cost buy__cost--done">✓ {{ doneLabel ?? 'done' }}</span>
     </span>
     <span v-if="note" class="buy__note">{{ note }}</span>
-    <span class="buy__foot">
+    <span v-if="!folded" class="buy__foot">
       <span v-if="maxed" class="buy__cost buy__cost--done">✓ {{ doneLabel ?? 'done' }}</span>
       <span v-else-if="locked" class="buy__cost buy__cost--locked">⌁ {{ locked }}</span>
       <template v-else>
@@ -127,6 +133,9 @@ const state = computed(() => {
 .buy[data-state='maxed'] {
   border-left-color: var(--cc-chalk-faint);
   opacity: 0.6;
+}
+.buy[data-folded='true'] {
+  padding-block: 5px;
 }
 /* A reveal: the ley-light runs once along a line that just opened. */
 .buy[data-fresh='true'] {
@@ -203,6 +212,10 @@ const state = computed(() => {
 }
 .buy__cost[data-short='true'] {
   color: var(--cc-short);
+}
+.buy__head .buy__cost--done {
+  font-size: 11.5px;
+  white-space: nowrap;
 }
 .buy__cost--locked {
   color: var(--cc-chalk-faint);
