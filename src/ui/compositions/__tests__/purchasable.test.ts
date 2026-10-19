@@ -29,7 +29,8 @@ interface Def {
 
 /**
  * A mill (repeatable, doubling price in gold, at most 3), a charter (one-shot,
- * gold, behind an owned mill), a quarry (one-shot, gold and stone) and a farm
+ * gold, behind an owned mill), a granary (one-shot, gold, hidden until a mill is
+ * owned), a quarry (one-shot, gold and stone) and a farm
  * (a producer of 2 gold/s per unit, doubling price in gold).
  */
 function bootShop() {
@@ -66,6 +67,13 @@ function bootShop() {
                 createCostRequirement({ resource: gold, cost: 5 }),
               ],
             };
+          if (def.id === 'granary')
+            return {
+              display: { description: 'Stores grain.' },
+              limit: 1,
+              visible: () => millOwned.value,
+              requirements: createCostRequirement({ resource: gold, cost: 5 }),
+            };
           return {
             display: { description: 'Cuts stone.' },
             limit: 1,
@@ -76,7 +84,7 @@ function bootShop() {
           };
         },
       });
-      shop.register([{ id: 'mill' }, { id: 'charter' }, { id: 'quarry' }]);
+      shop.register([{ id: 'mill' }, { id: 'charter' }, { id: 'granary' }, { id: 'quarry' }]);
       get = (id) => shop.getPurchasable(id)!;
       const fields = createProducerCategory<Def>({
         id: 'fields',
@@ -182,6 +190,24 @@ describe('createPurchasableRow', () => {
     row.purchase(1);
     expect(bought).toEqual([1]);
   });
+
+  it('hides a purchasable gated by visibility, by default', () => {
+    const { get } = bootShop();
+    const row = createPurchasableRow(get('granary'), { displayName: 'Granary' });
+    expect(row.unlocked.value).toBe(false);
+  });
+
+  it('lists a hidden purchasable as locked on its named prerequisite, until it shows', () => {
+    const { get, millOwned } = bootShop();
+    const row = createPurchasableRow(get('granary'), {
+      displayName: 'Granary',
+      prerequisite: 'needs a mill',
+    });
+    expect(row.unlocked.value).toBe(true);
+    expect(row.unmet.value).toEqual(['needs a mill']);
+    millOwned.value = true;
+    expect(row.unmet.value).toEqual([]);
+  });
 });
 
 describe('createProducerRow', () => {
@@ -211,5 +237,15 @@ describe('createPurchasableCard', () => {
     expect(card.canPurchase.value).toBe(true);
     card.purchase();
     expect(card.owned.value).toBe(true);
+  });
+
+  it('lists a hidden one-shot as locked on its named prerequisite', () => {
+    const { get } = bootShop();
+    const card = createPurchasableCard(get('granary'), {
+      displayName: 'Granary',
+      prerequisite: () => 'needs a mill',
+    });
+    expect(card.unlocked.value).toBe(true);
+    expect(card.unmet.value).toEqual(['needs a mill']);
   });
 });

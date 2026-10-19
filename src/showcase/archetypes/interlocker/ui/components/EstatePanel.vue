@@ -3,10 +3,9 @@
   a geometric ladder priced in several stocks. Adopts ProducerList through its `#row`
   slot, because a multi-stock price is a shape the flat row contract cannot hold; the
   price is read back from the engine by CostLine. A building a patent has not opened is
-  pencilled in, with the patent it waits on.
+  pencilled in, locked on the patent it waits on: the row's `prerequisite`.
 -->
 <script setup lang="ts">
-import { computed } from 'vue';
 import Button from '@/ui/components/Button.vue';
 import { ProducerList, createPurchasableRow } from '@/ui/compositions';
 import {
@@ -31,14 +30,11 @@ interface EstateExtra {
   does: () => string;
 }
 
-// Every building is listed, so a sealed one shows the patent it waits on.
-const listed = computed(() => true);
-
 const rows = BUILDINGS.map((def) => {
   const p = works.buildings.getPurchasable(def.id)!;
   return createPurchasableRow<EstateExtra>(p, {
     displayName: def.name,
-    unlocked: listed,
+    ...(def.opensWith && { prerequisite: `needs ${patentName[def.opensWith]}` }),
     extra: {
       def,
       visible: () => p.visible.value,
@@ -82,9 +78,7 @@ const rows = BUILDINGS.map((def) => {
         </template>
         <template v-else>
           <h3 class="ae-lettering">{{ row.displayName }}</h3>
-          <p class="blurb sealed-note">
-            Not yet drawn — needs {{ patentName[row.extra!.def.opensWith!] }}
-          </p>
+          <p class="blurb sealed-note">Not yet drawn — {{ row.unmet.value[0] }}</p>
         </template>
       </article>
     </template>

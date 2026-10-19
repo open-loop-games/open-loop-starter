@@ -51,6 +51,17 @@ export function readUnmet(p: Purchasable): string[] {
   return getRequirementDescriptions(unmet);
 }
 
+const LISTED = computed(() => true);
+
+/** The prerequisite a hidden purchasable waits on, or none once it shows. */
+function waitingOn(
+  p: Purchasable,
+  prerequisite: PurchasableRowOptions<unknown>['prerequisite'],
+): string[] {
+  if (prerequisite === undefined || p.visible.value) return [];
+  return [typeof prerequisite === 'function' ? prerequisite() : prerequisite];
+}
+
 /** A row the adapter built: it always knows the purchasable's max, whether it is shown and its unmet prerequisites. */
 export type PurchasableRow<T = never> = ProducerRowData<T> & {
   maxAffordable: Ref<DecimalSource>;
@@ -81,8 +92,13 @@ export interface PurchasableRowOptions<T = never> {
   count?: Ref<DecimalSource>;
   /** Default: none, so the row shows no rate. */
   rate?: Ref<DecimalSource>;
-  /** Default: the purchasable's visibility. */
+  /** Default: the purchasable's visibility, or always when `prerequisite` is set. */
   unlocked?: Ref<boolean>;
+  /**
+   * What the purchasable waits on while hidden, e.g. "needs a chop shop". With it, the row
+   * is listed while hidden, locked, with this as its first unmet prerequisite.
+   */
+  prerequisite?: string | (() => string);
   /** A story verb with side effects. Default: the purchasable's own purchase. */
   purchase?: (count: DecimalSource) => void;
 }
@@ -119,8 +135,8 @@ export function createPurchasableRow<T = never>(
     canPurchase: (n) => p.canPurchase.value && Decimal.gte(maxAffordable.value, n),
     maxAffordable,
     purchase: o.purchase ?? ((n) => void p.purchase(n)),
-    unlocked: o.unlocked ?? p.visible,
-    unmet: computed(() => readUnmet(p)),
+    unlocked: o.unlocked ?? (o.prerequisite === undefined ? p.visible : LISTED),
+    unmet: computed(() => [...waitingOn(p, o.prerequisite), ...readUnmet(p)]),
   };
   if (single) {
     row.cost = (n) => single.getCost(n);
@@ -180,8 +196,8 @@ export function createPurchasableCard<T = never>(
     canPurchase: p.canPurchase,
     owned: p.maxed,
     purchase: () => (o.purchase ? o.purchase(1) : void p.purchase(1)),
-    unlocked: o.unlocked ?? p.visible,
-    unmet: computed(() => readUnmet(p)),
+    unlocked: o.unlocked ?? (o.prerequisite === undefined ? p.visible : LISTED),
+    unmet: computed(() => [...waitingOn(p, o.prerequisite), ...readUnmet(p)]),
   };
   if (o.count) card.count = o.count;
   if (o.extra !== undefined) card.extra = o.extra;

@@ -7,12 +7,11 @@
   a card that is the button, a lieutenant's mark and a floor's switch are shapes the flat
   row contract cannot hold. The price lines are the engine's (`readPriceLines`).
 
-  A floor a prerequisite has not opened is listed anyway, with what it waits on. The data
-  gates it by `visible`, which hides a row, so every row is listed and the gate is read
-  back from the purchasable in the slot.
+  A floor a prerequisite has not opened is listed anyway, locked on what it waits on: the
+  row's `prerequisite`.
 -->
 <script setup lang="ts">
-import { computed, type Ref } from 'vue';
+import type { Ref } from 'vue';
 import { toNumber, type Purchasable } from '@open-loop/engine';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import Switch from '@/ui/components/Switch.vue';
@@ -34,9 +33,6 @@ const { p, tune } = match;
 const fixer = useHandledBy('fixer');
 const quartermaster = useHandledBy('quartermaster');
 
-// Every row is listed: a gated one shows what it waits on.
-const listed = computed(() => true);
-
 interface HustleExtra {
   item: Purchasable;
   note: () => string;
@@ -49,7 +45,6 @@ const econRows = ECON.filter((d): d is EconDef & Required<Pick<EconDef, 'purchas
   const prod = p.econ.getProducer(def.id)!;
   return createProducerRow<HustleExtra>(prod, {
     displayName: def.name,
-    unlocked: listed,
     extra: {
       item: prod.repeatable!,
       note: () => `${def.blurb} +${rate(toNumber(prod.computedRate.value))} ${def.output}/s each.`,
@@ -60,7 +55,6 @@ const econRows = ECON.filter((d): d is EconDef & Required<Pick<EconDef, 'purchas
 
 const squatRow = createPurchasableRow<HustleExtra>(p.squats, {
   displayName: SQUATS.name,
-  unlocked: listed,
   extra: {
     item: p.squats,
     note: () => `${SQUATS.blurb} +${tune.supplyPer.value} bunks.`,
@@ -83,7 +77,7 @@ const floorRows = BARRACKS.map((def) => {
   const kind = def.trains;
   return createProducerRow<FloorExtra>(prod, {
     displayName: def.name,
-    unlocked: listed,
+    prerequisite: def.requiresText,
     extra: {
       def,
       item: prod.repeatable!,
@@ -112,9 +106,6 @@ function trains(def: BarracksDef): string {
   const aether = cost.aether.value ? ` + ${grouped(cost.aether.value)} aether` : '';
   return `Trains ${UNITS[def.trains].name}: ${grouped(cost.scrip.value)} scrip${aether} each.`;
 }
-
-const locked = (def: { requiresText: string }, item: Purchasable) =>
-  item.visible.value ? undefined : def.requiresText;
 </script>
 
 <template>
@@ -149,7 +140,7 @@ const locked = (def: { requiresText: string }, item: Purchasable) =>
             :count="String(row.count.value)"
             :prices="readPriceLines(row.extra!.item)"
             :can="row.canPurchase(1)"
-            :locked="locked(row.extra!.def, row.extra!.item)"
+            :locked="row.unmet.value[0]"
             :automated="quartermaster"
             @buy="purchase()"
           />
