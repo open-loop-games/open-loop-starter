@@ -72,6 +72,8 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
       beat('first ley tap', toNumber(p.econ.getProducer('ley-tap')!.count.value) > 0);
       beat('first training floor', p.floorCount() > 0);
       beat('first unit trained', UNIT_KINDS.some((k) => readyUnits(p, k) > 0) || armySize(p) >= 1);
+      beat('crew chartered (tier two)', p.chartered());
+      beat('rival chartered', e.chartered());
       for (const b of p.barracks.getAll())
         beat(`${b.def.name} opens ${b.def.trains}s`, toNumber(b.producer.count.value) > 0);
       for (const r of p.research.getAll())
@@ -118,7 +120,7 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
   for (const [name, t] of sorted) console.log(`  ${t.toFixed(1).padStart(7)}s  ${name}`);
   const fmt = (s: Side) =>
     `hustlers ${toNumber(s.econ.getProducer('hustler')!.count.value)}, taps ${toNumber(s.econ.getProducer('ley-tap')!.count.value)}, ` +
-    `floors ${s.floorCount()}, squats ${toNumber(s.squats.count.value)}, supply ${s.supplyUsed().toFixed(1)}/${s.supplyCap.value}, ` +
+    `floors ${s.floorCount()}, tier ${s.chartered() ? 2 : 1}, enforcers ${(toNumber(s.reserve.enforcer.value) + s.squads.reduce((n, sq) => n + toNumber(sq.enforcer.value), 0)).toFixed(1)}, squats ${toNumber(s.squats.count.value)}, supply ${s.supplyUsed().toFixed(1)}/${s.supplyCap.value}, ` +
     `scrip ${toNumber(s.scrip.value).toFixed(0)} (+${s.scripRate().toFixed(1)}/s), hq ${toNumber(s.hq.value).toFixed(0)}`;
   console.log(`  you:   ${fmt(p)}, peak army ${peakArmyP.toFixed(1)}`);
   console.log(`  rival: ${fmt(e)}, peak army ${peakArmyE.toFixed(1)}`);

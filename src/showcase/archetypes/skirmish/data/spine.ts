@@ -14,8 +14,8 @@
  *   builds, where it sends units, when it assaults), fog of war, and district
  *   control flipping under both. None of that projects.
  * - The army's ramp closes too, under the reference crew's own rules: floors on
- *   one price ladder, saved for ahead of hustlers, each converting one unit per
- *   `TRAIN_S` (`walkArmy`). Fights, turf, squats and research are left out.
+ *   one price ladder and the charter, saved for ahead of hustlers, each floor converting
+ *   one unit per `TRAIN_S` (`walkArmy`). Fights, turf, squats and research are left out.
  * - What measures the remainder: `balance/arc-probe.ts` plays every contract
  *   under the shipping policies and prints each beat beside `landmarks()`.
  */
@@ -104,6 +104,9 @@ export const SAVE_HORIZON_S = 40;
 export const PAUSE_HORIZON_S = 12;
 /** Ley taps the reference crew holds before any floor needs more. */
 export const REF_TAPS = 3;
+/** The charter that raises a crew a tier costs this many units of value, once this many floors stand. */
+export const CHARTER_UNITS = 8;
+export const CHARTER_FLOORS = 2;
 
 // ─── Economy ───────────────────────────────────────────────────────────────
 
@@ -181,6 +184,9 @@ export const tapBaseCost = TAP_PAYBACK_S * TAP_RATE * AETHER_PRICE;
 /** Each tap after the first costs a third more; six taps is the node limit. */
 export const tapRatio = 4 / 3;
 export const TAP_LIMIT = 6;
+
+/** The charter's price: a sink on the unit-value scale, saved for like a floor. */
+export const charterCost = CHARTER_UNITS * unitValue;
 
 /** A held district's scrip rate. */
 export const turfRate = TURF_HUSTLERS * HUSTLER_RATE;
@@ -288,6 +294,8 @@ export interface ArmyPoint {
   /** False once the next hustler pays back past `PAYBACK_HORIZON_S`. */
   hustlersPay: boolean;
   floors: number;
+  /** True once the crew holds its charter. */
+  chartered: boolean;
   units: number;
 }
 
@@ -295,7 +303,8 @@ export interface ArmyPoint {
  * The reference crew's economy as the shipping policy plays it, by the half second:
  * lieutenants hired as soon as their price is in the purse; the next floor saved for
  * while its draw fits the army share of income, holding hustlers and taps back once it
- * is `SAVE_HORIZON_S` of income away; `REF_TAPS` taps; hustlers while they pay back;
+ * is `SAVE_HORIZON_S` of income away; the charter saved for the same way once
+ * `CHARTER_FLOORS` stand, ahead of the next floor; `REF_TAPS` taps; hustlers while they pay back;
  * every floor training an even triangle mix at one unit per `TRAIN_S`, paused for a
  * save's last `PAUSE_HORIZON_S`. Aether is assumed fed; fights, turf, squats and
  * research are left out.
@@ -310,6 +319,7 @@ export function walkArmy(seconds: number): ArmyPoint[] {
   let units = 0;
   let taps = 0;
   let hired = 0;
+  let chartered = false;
   const draw = (n: number) => (n * refScripPerUnit) / TRAIN_S;
   for (let t = 0; t <= seconds; t += dt) {
     const income = hustlers * HUSTLER_RATE;
@@ -322,7 +332,15 @@ export function walkArmy(seconds: number): ArmyPoint[] {
     let saving = false;
     let paused = false;
     const floorCost = buildingBaseCost * buildingRatio ** floors;
-    if (draw(floors + 1) <= share * income) {
+    if (!chartered && floors >= CHARTER_FLOORS) {
+      if (scrip >= charterCost) {
+        scrip -= charterCost;
+        chartered = true;
+      } else if (charterCost < SAVE_HORIZON_S * income) {
+        saving = true;
+        paused = charterCost - scrip < PAUSE_HORIZON_S * income;
+      }
+    } else if (draw(floors + 1) <= share * income) {
       if (scrip >= floorCost) {
         scrip -= floorCost;
         floors += 1;
@@ -346,14 +364,14 @@ export function walkArmy(seconds: number): ArmyPoint[] {
       scrip -= spend;
       units += spend / refScripPerUnit;
     }
-    out.push({ t, hustlers, hustlersPay: pays, floors, units });
+    out.push({ t, hustlers, hustlersPay: pays, floors, chartered, units });
   }
   return out;
 }
 
 /**
  * Predicted landmarks for the reference crew, from the army walk: its first floor, the
- * hustler plateau, the army reaching a siege force plus a holding squad, and a match at
+ * hustler plateau, its charter, the army reaching a siege force plus a holding squad, and a match at
  * `MATCH_S`. The walk fields no losses, so a measured siege beat lands later.
  */
 export function landmarks(): Landmark[] {
@@ -362,6 +380,7 @@ export function landmarks(): Landmark[] {
   return [
     { beat: 'first training floor', predictedS: at((p) => p.floors > 0) },
     { beat: 'econ plateau (hustler payback past horizon)', predictedS: at((p) => !p.hustlersPay) },
+    { beat: 'crew chartered (tier two)', predictedS: at((p) => p.chartered) },
     {
       beat: 'army reaches a siege force plus a holding squad',
       predictedS: at((p) => p.units >= MIN_SIEGE_FORCE + REF_PRESENCE),
@@ -381,6 +400,7 @@ export function describeSpine(): Record<string, number> {
     buildingRatio,
     squatBaseCost,
     squatRatio,
+    charterCost,
     tapBaseCost,
     turfRate,
     killRate,

@@ -13,7 +13,7 @@
  * only after that; one army, concentrated on one objective at a time.
  */
 import { toNumber, type Producer, type Purchasable } from '@open-loop/engine';
-import { BARRACKS, RESEARCH } from '../data/buildings';
+import { BARRACKS, CHARTER, RESEARCH } from '../data/buildings';
 import type { Persona } from '../data/contracts';
 import { DISTRICTS } from '../data/contracts';
 import { UNITS, UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
@@ -103,9 +103,14 @@ export function productionMix(persona: Persona, enemyMix: Counts | undefined): C
   const counter = zero();
   const enemySum = total(enemyMix);
   for (const k of UNIT_KINDS) counter[counterTo(k)] += enemyMix[k] / enemySum;
+  // Only the kinds that counter something are bent; a generalist keeps its share.
+  const counters = new Set(UNIT_KINDS.map(counterTo));
+  const bendable = UNIT_KINDS.reduce((n, k) => n + (counters.has(k) ? base[k] : 0), 0);
   const out = zero();
   for (const k of UNIT_KINDS)
-    out[k] = (1 - persona.counter) * base[k] + persona.counter * counter[k];
+    out[k] = counters.has(k)
+      ? (1 - persona.counter) * base[k] + persona.counter * bendable * counter[k]
+      : base[k];
   return out;
 }
 
@@ -217,6 +222,24 @@ function nextFloor(
 }
 
 /**
+ * The charter, once enough floors stand, for a seat that wants something behind it: a
+ * kind its mix wants or a research line it means to buy. Saved for like a floor.
+ */
+function nextCharter(
+  side: Side,
+  persona: Persona,
+): { kind: UnitKind; buy: Purchasable } | undefined {
+  if (side.chartered() || side.floorCount() < CHARTER.floors) return undefined;
+  const mix = productionMix(persona, undefined);
+  const wantsKind = UNIT_KINDS.some(
+    (k) => mix[k] > TECH_SHARE && BARRACKS.find((b) => b.trains === k)!.tier === 2,
+  );
+  const wantsLine = persona.research.some((id) => RESEARCH.find((d) => d.id === id)?.tier === 2);
+  if (!wantsKind && !wantsLine) return undefined;
+  return { kind: 'enforcer', buy: side.tier.getPurchasable(CHARTER.id)! };
+}
+
+/**
  * Split every floor's time by the mix over the opened kinds, then hand aether kinds' time
  * to razors until the taps can feed what is left.
  */
@@ -258,10 +281,15 @@ export function playEconomy(
   let savingForFloor = false;
 
   if (scopes.has('build')) {
-    const want = nextFloor(side, persona, mix);
+    const want = nextCharter(side, persona) ?? nextFloor(side, persona, mix);
     if (want) {
       if (want.buy.canPurchase.value) {
-        if (want.buy.purchase(1)) bought.push(`floor toward ${want.kind}`);
+        if (want.buy.purchase(1))
+          bought.push(
+            want.buy === side.tier.getPurchasable(CHARTER.id)
+              ? 'charter'
+              : `floor toward ${want.kind}`,
+          );
       } else if (toNumber(want.buy.getCost(1)) < SAVE_HORIZON_S * Math.max(income, 1)) {
         savingForFloor = true;
         const short = toNumber(want.buy.getCost(1)) - toNumber(side.scrip.value);
@@ -342,12 +370,7 @@ function prerequisiteFor(side: Side, kind: UnitKind): Purchasable | undefined {
   const chop = barracksFor(side, 'razor').repeatable!;
   if (kind === 'hexer') return tap;
   if (kind === 'rigger') return chop;
-  if (kind === 'enforcer') {
-    const garage = barracksFor(side, 'rigger').repeatable!;
-    const parlor = barracksFor(side, 'hexer').repeatable!;
-    if (!garage.active.value) return garage.visible.value ? garage : chop;
-    if (!parlor.active.value) return parlor.visible.value ? parlor : tap;
-  }
+  // The clinic waits on the charter, which `nextCharter` saves for once enough floors stand.
   return undefined;
 }
 

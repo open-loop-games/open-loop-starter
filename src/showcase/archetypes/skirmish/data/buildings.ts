@@ -17,7 +17,9 @@ import {
   SUPPLY_BASE,
   SUPPLY_PER_SQUAT,
   TRAIN_S,
+  CHARTER_FLOORS,
   buildingBaseCost,
+  charterCost,
   buildingRatio,
   hustlerBaseCost,
   hustlerRatio,
@@ -37,6 +39,7 @@ export const catId = {
   barracks: (s: SideId) => `${s}-barracks`,
   research: (s: SideId) => `${s}-research`,
   crew: (s: SideId) => `${s}-crew`,
+  tier: (s: SideId) => `${s}-tier`,
 };
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
@@ -60,9 +63,9 @@ export interface BarracksDef {
   blurb: string;
   /** The kind it opens. */
   trains: UnitKind;
-  /** Its price, in multiples of the next floor's. */
-  floors: number;
-  /** Availability: a Gate over this side's categories. Built per side. */
+  /** Present on the second tier, which waits for the charter too. */
+  tier?: 2;
+  /** Availability within its tier: a Gate over this side's categories. Built per side. */
   requires: (s: SideId) => Gate | undefined;
   requiresText: string;
 }
@@ -80,8 +83,21 @@ export interface ResearchDef {
   blurb: string;
   cost: { scrip: number; aether: number };
   effect: ResearchEffect;
+  /** Present on the second tier, which waits for the charter too. */
+  tier?: 2;
   requires: (s: SideId) => Gate | undefined;
   requiresText: string;
+}
+
+/** The tier-up: a one-shot purchase that opens the second tier of floors and research. */
+export interface CharterDef {
+  id: 'charter';
+  name: string;
+  blurb: string;
+  /** Scrip. */
+  cost: number;
+  /** Floors, tech or plain, that must stand before it can be bought. */
+  floors: number;
 }
 
 const owns = (category: string, entry: string): Gate => ({
@@ -95,6 +111,30 @@ const researched = (s: SideId, entry: string): Gate => ({
   category: catId.research(s),
   entry,
 });
+const chartered = (s: SideId): Gate => ({
+  kind: 'active',
+  category: catId.tier(s),
+  entry: 'charter',
+});
+
+/** What a floor or research line waits on: its own prerequisite, and the charter if it is tier two. */
+export function prerequisiteOf(
+  def: { tier?: 2; requires: (s: SideId) => Gate | undefined },
+  s: SideId,
+): Gate | undefined {
+  const own = def.requires(s);
+  if (def.tier !== 2) return own;
+  return own ? { kind: 'all', of: [chartered(s), own] } : chartered(s);
+}
+
+/** The same prerequisite in player text, after "needs"; a chartered crew no longer needs the charter. */
+export function prerequisiteText(
+  def: { tier?: 2; requiresText: string },
+  chartered: boolean,
+): string {
+  if (def.tier !== 2 || chartered) return def.requiresText;
+  return def.requiresText ? `the charter and ${def.requiresText}` : 'the charter';
+}
 
 // ─── Balance ───────────────────────────────────────────────────────────────
 
@@ -132,14 +172,12 @@ export const FLOORS = {
   ratio: buildingRatio,
 };
 
-// A clinic costs two floors: it opens a unit worth ENFORCER_VALUE.
 export const BARRACKS: BarracksDef[] = [
   {
     id: 'chop-shop',
     name: 'Chop shop',
     blurb: 'Back-alley chrome installs, no questions.',
     trains: 'razor',
-    floors: 1,
     requires: () => undefined,
     requiresText: '',
   },
@@ -148,7 +186,6 @@ export const BARRACKS: BarracksDef[] = [
     name: 'Talisman parlor',
     blurb: 'Incense, debt ledgers and a back room where the chalk circles are.',
     trains: 'hexer',
-    floors: 1,
     requires: (s) => owns(catId.econ(s), 'ley-tap'),
     requiresText: 'a ley tap',
   },
@@ -157,7 +194,6 @@ export const BARRACKS: BarracksDef[] = [
     name: 'Drone garage',
     blurb: 'Rotor drones on hooks and riggers asleep in the jack chairs.',
     trains: 'rigger',
-    floors: 1,
     requires: (s) => owns(catId.barracks(s), 'chop-shop'),
     requiresText: 'a chop shop',
   },
@@ -166,14 +202,21 @@ export const BARRACKS: BarracksDef[] = [
     name: 'Black clinic',
     blurb: 'Stolen corp exo-frames refitted for whoever pays.',
     trains: 'enforcer',
-    floors: 2,
-    requires: (s) => ({
-      kind: 'all',
-      of: [owns(catId.barracks(s), 'drone-garage'), owns(catId.barracks(s), 'talisman-parlor')],
-    }),
-    requiresText: 'a drone garage and a talisman parlor',
+    tier: 2,
+    requires: () => undefined,
+    requiresText: '',
   },
 ];
+
+/** One charter raises a crew a tier: it opens the black clinic and the tier-two research. */
+export const CHARTER: CharterDef = {
+  id: 'charter',
+  name: 'Syndicate charter',
+  blurb:
+    'The Lantern Syndicate puts your crew on its books. Exo-frame brokers and the better labs start taking your calls.',
+  cost: charterCost,
+  floors: CHARTER_FLOORS,
+};
 
 /** Squats: each one houses SUPPLY_PER_SQUAT more units over the SUPPLY_BASE a safehouse holds. */
 export const SQUATS = {
@@ -238,6 +281,7 @@ export const RESEARCH: ResearchDef[] = [
     blurb: 'Subdermal mesh for everyone on the payroll. Every unit takes 25% more to drop.',
     cost: tier(5, 1 / 3),
     effect: { kind: 'hp', units: ['razor', 'hexer', 'rigger', 'enforcer'], mult: 1.25 },
+    tier: 2,
     requires: (s) => researched(s, 'smartlink-rounds'),
     requiresText: 'Smartlink rounds',
   },
@@ -247,6 +291,7 @@ export const RESEARCH: ResearchDef[] = [
     blurb: 'Glyphs burned into the safehouse doors. The turret hits twice as hard.',
     cost: tier(5, 1 / 3),
     effect: { kind: 'turret', mult: 2 },
+    tier: 2,
     requires: (s) => researched(s, 'spirit-pacts'),
     requiresText: 'Spirit pacts',
   },
@@ -256,6 +301,7 @@ export const RESEARCH: ResearchDef[] = [
     blurb: 'Every training floor runs a third faster.',
     cost: tier(5, 1 / 3),
     effect: { kind: 'training', mult: 1.33 },
+    tier: 2,
     requires: (s) => ({
       kind: 'all',
       of: [researched(s, 'ice-breakers'), researched(s, 'syndicate-ledgers')],

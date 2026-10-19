@@ -4,7 +4,7 @@
  * balance workbench overrides them by key.
  */
 import { tunable, type ComputedRef, type TuningRegistry } from '@open-loop/engine';
-import { ECON, FLOORS, RESEARCH, SQUATS, TRAIN_RATE } from '../data/buildings';
+import { CHARTER, ECON, FLOORS, RESEARCH, SQUATS, TRAIN_RATE } from '../data/buildings';
 import { UNITS, UNIT_KINDS, type UnitKind } from '../data/units';
 import { captureRate, hqIntegrity, turretDps, REF_PRESENCE } from '../data/spine';
 
@@ -34,6 +34,7 @@ export interface Tunables {
   captureRate: ComputedRef<number>;
   refPresence: ComputedRef<number>;
   research: Record<string, { scrip: ComputedRef<number>; aether: ComputedRef<number> }>;
+  charterCost: ComputedRef<number>;
 }
 
 export function createTunables(t: TuningRegistry): Tunables {
@@ -80,5 +81,6 @@ export function createTunables(t: TuningRegistry): Tunables {
         },
       ]),
     ),
+    charterCost: num('charter/cost', CHARTER.cost),
   };
 }

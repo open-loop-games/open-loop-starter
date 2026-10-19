@@ -1,7 +1,9 @@
 <!--
   MapBoard — the centre: the two safehouses, the three districts between them and the
   street feed. Safehouse integrity is starter's ProgressBar; the rival's drains toward
-  its own side. While the astral scout rides, the whole board takes the ley's tint.
+  its own side. Each safehouse note opens on what kind of outfit holds it: theirs from the
+  contract, yours from the crew's tier. While the astral scout rides, the whole board
+  takes the ley's tint.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -37,7 +39,10 @@ const scouting = computed(() => match.scoutLeft.value > 0);
           <SquadChips :counts="home" side="p" />
         </div>
         <span class="house__note"
-          >Turret {{ rate(p.turretDps()) }} dps. Units at home hold the gates against an
+          ><span class="house__tier" :data-chartered="p.chartered()">{{
+            p.chartered() ? 'chartered' : 'street crew'
+          }}</span>
+          · Turret {{ rate(p.turretDps()) }} dps. Units at home hold the gates against an
           assault.</span
         >
       </div>
@@ -164,5 +169,8 @@ const scouting = computed(() => match.scoutLeft.value > 0);
 .house__note {
   font-size: 11px;
   color: var(--cc-chalk-dim);
+}
+.house__tier[data-chartered='true'] {
+  color: var(--cc-brass);
 }
 </style>

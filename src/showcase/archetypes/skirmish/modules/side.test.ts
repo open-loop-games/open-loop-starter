@@ -3,10 +3,12 @@ import { Decimal, toNumber } from '@open-loop/engine';
 import { UNITS, UNIT_KINDS } from '../data/units';
 import { boot, seconds } from '../sim/harness';
 import { getMatch } from './match';
-import { setQueue } from './policy';
+import { productionMix, setQueue } from './policy';
+import { PLAYER_PERSONA } from '../data/contracts';
 
 const side = () => getMatch().p;
 const tech = (id: string) => side().barracks.getProducer(id)!.repeatable!;
+const charter = () => side().tier.getPurchasable('charter')!;
 const trained = (kind: 'razor' | 'rigger') => toNumber(side().reserve[kind].value);
 
 function rich(): void {
@@ -61,6 +63,7 @@ describe('training floors', () => {
     tech('chop-shop').purchase(1);
     tech('talisman-parlor').purchase(1);
     tech('drone-garage').purchase(1);
+    charter().purchase();
     tech('black-clinic').purchase(1);
     side().queue.hexer.value = 0;
     side().queue.rigger.value = 0;
@@ -74,6 +77,43 @@ describe('training floors', () => {
     side().queue.hexer.value = 5;
     expect(side().floorShare('hexer')).toBe(0);
     expect(side().floorShare('razor')).toBe(side().floorCount());
+  });
+});
+
+describe('the charter', () => {
+  beforeEach(() => {
+    boot();
+    getMatch().start();
+    rich();
+  });
+
+  it('waits for two floors', () => {
+    tech('chop-shop').purchase(1);
+    expect(charter().canPurchase.value).toBe(false);
+    side().floors.purchase(1);
+    expect(charter().canPurchase.value).toBe(true);
+  });
+
+  it('opens the black clinic and the tier-two research', () => {
+    tech('chop-shop').purchase(1);
+    tech('drone-garage').purchase(1);
+    side().research.getPurchasable('smartlink-rounds')!.purchase();
+    expect(tech('black-clinic').visible.value).toBe(false);
+    expect(side().research.getPurchasable('dermal-weave')!.visible.value).toBe(false);
+    charter().purchase();
+    expect(side().chartered()).toBe(true);
+    expect(tech('black-clinic').visible.value).toBe(true);
+    expect(side().research.getPurchasable('dermal-weave')!.visible.value).toBe(true);
+  });
+});
+
+describe("the policy's mix", () => {
+  it('bends only the kinds that counter something; a generalist keeps its share', () => {
+    const seen = { razor: 10, hexer: 0, rigger: 0, enforcer: 0 };
+    const unbent = productionMix(PLAYER_PERSONA, undefined);
+    const bent = productionMix(PLAYER_PERSONA, seen);
+    expect(bent.enforcer).toBeCloseTo(unbent.enforcer);
+    expect(bent.rigger).toBeGreaterThan(unbent.rigger);
   });
 });
 

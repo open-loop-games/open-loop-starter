@@ -12,9 +12,11 @@ Genre: `rts`. Its document in the studio's research library lists the games in i
 *Chrome & Cantrip.* The ley lines have woken under a rain-soaked sprawl, and two crews fight
 over three of its districts. Hustlers bring home scrip, ley taps draw aether. Training floors turn both into
 Razorboys, Hexers, Riggers and Enforcers while the bunks have room; coffin squats add bunks.
-Each kind is opened by its own floor — a chop shop, a talisman parlor, a drone garage, a black
-clinic — and every floor then trains whatever kinds stand open, splitting its time by the
-crew's queue. Research sits behind the floors it needs.
+Each kind is opened by its own floor — a chop shop, a talisman parlor, a drone garage — and
+every floor then trains whatever kinds stand open, splitting its time by the crew's queue.
+Research sits behind the floors it needs. Once two floors stand, a crew can buy the
+syndicate charter, which raises it a tier: the black clinic that opens Enforcers, and the
+second tier of research, wait behind it.
 
 Razorboys cut Hexers, Hexers fry Riggers' drones, Riggers brick Razorboys' chrome; Enforcers
 hit everything evenly in heavy frames. The player sends whole units into a district by kind,
@@ -39,7 +41,8 @@ first hustler pays back in 30 s; the ratio gives three doublings across 24 purch
 reference crew walks the ladder, spending half its income on hustlers while one pays back
 inside the horizon. A unit's value is the army-side spend at the 240 s mark over a 24-unit
 reference army, and every floor, squat, research and unit price is a multiple of it. Every floor
-climbs one price ladder, a tech floor at its multiple of the next floor's price. For fixed
+climbs one price ladder, a tech floor at the next floor's price; the charter is a sink of eight
+units of value, saved for like a floor once two stand. For fixed
 compositions a fight is Lanchester's square law: a counter pairing hits for double and a
 resisted one for half, and `k = dps/hp` is solved so an even ten-unit counter pairing resolves
 in 20 s. Safehouse integrity is fifteen units' minute of
@@ -49,7 +52,7 @@ fire, and the turret is solved so seven units is the smallest siege that razes i
 fog of war, and control flipping between them.
 
 The army's ramp closes as well: a walk of the reference crew as the policy plays it, saving
-for floors ahead of hustlers and converting one unit of value per floor every 20 s, gives the landmarks.
+for floors and the charter ahead of hustlers and converting one unit of value per floor every 20 s, gives the landmarks.
 Its army at the 240 s mark is smaller than the 24 units a unit's value is defined by.
 
 **What measures the remainder:** `balance/arc-probe.ts` plays every contract under the
@@ -66,8 +69,10 @@ landmarks. `balance/counter-probe.ts` measures whether reading the rival wins ma
 | The first unit trained | 132 s |
 | The first district held | 177.5 s |
 | The first clash | 201 s |
-| The first assault on their safehouse | 332.5 s |
-| Their safehouse burns | 392 s |
+| The crew chartered | 284 s |
+| The black clinic opens | 349 s |
+| The first assault on their safehouse | 365.5 s |
+| Their safehouse burns | 429 s |
 
 Each match is a few minutes; the rival's income terms climb to parity by the megacorp.
 
@@ -86,7 +91,8 @@ Each match is a few minutes; the rival's income terms climb to parity by the meg
 | the bunks | `createResourceBag` with a reactive capacity |
 | coffin squats | `createScalingPurchasable` |
 | research | `createPurchasableCategory` with grants on `createModifierChain` chains |
-| the prerequisite graph | gate predicates as `visible` |
+| the prerequisite graph | gate predicates as `visible`; a tier-two entry's gate also requires the charter |
+| the charter | `createPurchasableCategory` with a `createBooleanRequirement` on standing floors |
 | a match's reset | `createReset` over the match context |
 | the lieutenants | each seat's hires in `createPurchasableCategory`, unlocking `createAutomationTiers`; a switch each, `createThrottle` |
 | every perturbable anchor | `createTuningRegistry`, `tunable` |

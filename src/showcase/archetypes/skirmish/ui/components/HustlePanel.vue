@@ -11,6 +11,10 @@
   floor. Both climb one price ladder. A floor a prerequisite has not opened is listed
   anyway, locked on what it waits on: the row's `prerequisite`. How the floors split their
   time is the FloorQueue under them.
+
+  The Syndicate charter is the rung between the tiers, so it is listed after the tier-one
+  tech floors and directly above the first floor it opens. Its locked line reads the
+  charter's own unmet requirement.
 -->
 <script setup lang="ts">
 import { toNumber, type Purchasable } from '@open-loop/engine';
@@ -19,12 +23,16 @@ import {
   createProducerRow,
   createPurchasableRow,
   readPriceLines,
+  readUnmet,
 } from '@/ui/compositions';
 import {
   BARRACKS,
+  CHARTER,
   ECON,
   FLOORS,
+  RESEARCH,
   SQUATS,
+  prerequisiteText,
   type BarracksDef,
   type EconDef,
 } from '../../data/buildings';
@@ -77,22 +85,26 @@ interface FloorExtra {
   item: Purchasable;
   note: () => string;
   count?: () => string;
+  /** What the card says once bought. Default: open. */
+  doneLabel?: string;
+  /** Replaces the row's first unmet prerequisite as the locked line. */
+  locked?: () => string | undefined;
+  /** The charter's card: the rung between the tiers. */
+  rung?: true;
 }
 
 /** "Opens Razorboys (94 scrip each) to every floor. Counts as one floor." */
 function opens(def: BarracksDef): string {
   const cost = tune.unit[def.trains];
   const aether = cost.aether.value ? ` + ${grouped(cost.aether.value)} aether` : '';
-  const price =
-    def.floors > 1 ? `One floor, at ${def.floors}× a floor's price.` : 'Counts as one floor.';
-  return `Opens ${UNITS[def.trains].name} (${grouped(cost.scrip.value)} scrip${aether} each) to every floor. ${price}`;
+  return `Opens ${UNITS[def.trains].name} (${grouped(cost.scrip.value)} scrip${aether} each) to every floor. Counts as one floor.`;
 }
 
 const techRows = BARRACKS.map((def) => {
   const prod = p.barracks.getProducer(def.id)!;
   return createProducerRow<FloorExtra>(prod, {
     displayName: def.name,
-    prerequisite: `needs ${def.requiresText}`,
+    prerequisite: () => `needs ${prerequisiteText(def, p.chartered())}`,
     extra: { item: prod.repeatable!, note: () => opens(def) },
   });
 });
@@ -107,7 +119,43 @@ const plainRow = createPurchasableRow<FloorExtra>(p.floors, {
   },
 });
 
-const floorRows = [...techRows, plainRow];
+/** "a, b and c" */
+function andList(names: string[]): string {
+  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+}
+
+const charter = p.tier.getPurchasable(CHARTER.id)!;
+const tierTwo = {
+  floors: BARRACKS.filter((d) => d.tier === 2),
+  research: RESEARCH.filter((d) => d.tier === 2),
+};
+/** "Opens Black clinic here, and Dermal weave, … in research." */
+const charterOpens = [
+  tierTwo.floors.length && `${andList(tierTwo.floors.map((d) => d.name))} here`,
+  tierTwo.research.length && `${andList(tierTwo.research.map((d) => d.name))} in research`,
+].filter(Boolean);
+const charterRow = createPurchasableRow<FloorExtra>(charter, {
+  displayName: CHARTER.name,
+  extra: {
+    item: charter,
+    // Once held, the card shrinks to its name and mark: the rows it opened say the rest.
+    note: () =>
+      charter.maxed.value ? '' : `${CHARTER.blurb} Opens ${charterOpens.join(', and ')}.`,
+    doneLabel: 'chartered',
+    locked: () => {
+      const why = readUnmet(charter)[0];
+      return why && `needs ${why}`;
+    },
+    rung: true,
+  },
+});
+
+const floorRows = [
+  ...techRows.filter((_, i) => BARRACKS[i]!.tier !== 2),
+  charterRow,
+  ...techRows.filter((_, i) => BARRACKS[i]!.tier === 2),
+  plainRow,
+];
 </script>
 
 <template>
@@ -142,8 +190,9 @@ const floorRows = [...techRows, plainRow];
           :prices="readPriceLines(row.extra!.item)"
           :can="row.canPurchase(1)"
           :maxed="row.extra!.item.maxed.value"
-          done-label="open"
-          :locked="row.unmet.value[0]"
+          :done-label="row.extra!.doneLabel ?? 'open'"
+          :locked="row.extra!.locked ? row.extra!.locked() : row.unmet.value[0]"
+          :data-rung="row.extra!.rung"
           :automated="row.extra!.item.maxed.value ? undefined : quartermaster"
           @buy="purchase()"
         />
@@ -159,5 +208,14 @@ const floorRows = [...techRows, plainRow];
 }
 .hustle :deep(.producer-list__rows) {
   gap: var(--gap-sm);
+}
+/* The charter is the rung between the tiers: set off from the floors by the Syndicate's
+   brass, while its left edge keeps the shared affordance grammar. */
+.hustle :deep(.buy[data-rung='true']) {
+  margin-block: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--cc-brass) 55%, transparent);
+}
+.hustle :deep(.buy[data-rung='true'] .buy__title) {
+  color: var(--cc-brass);
 }
 </style>

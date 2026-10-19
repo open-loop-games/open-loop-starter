@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import type { Purchasable } from '@open-loop/engine';
 import { UpgradeGrid, createPurchasableCard, readPriceLines } from '@/ui/compositions';
-import { RESEARCH, type ResearchDef } from '../../data/buildings';
+import { RESEARCH, prerequisiteText, type ResearchDef } from '../../data/buildings';
 import { getMatch } from '../../modules';
 import { useHandledBy } from '../handled-by';
 import BuyCard from './BuyCard.vue';
@@ -20,7 +20,8 @@ const cards = RESEARCH.map((def) => {
   return createPurchasableCard<{ def: ResearchDef; item: Purchasable }>(item, {
     displayName: def.name,
     description: def.blurb,
-    prerequisite: `needs ${def.requiresText}`,
+    // Once the charter is held, a tier-two line waits only on its own prerequisite.
+    prerequisite: () => `needs ${prerequisiteText(def, p.chartered())}`,
     extra: { def, item },
   });
 });

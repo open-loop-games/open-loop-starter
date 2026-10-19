@@ -35,11 +35,14 @@ import {
 } from '@open-loop/engine';
 import {
   BARRACKS,
+  CHARTER,
   FLOORS,
   ECON,
   RESEARCH,
   catId,
+  prerequisiteOf,
   type BarracksDef,
+  type CharterDef,
   type EconDef,
   type ResearchDef,
   type SideId,
@@ -67,6 +70,10 @@ export interface Side {
   /** How the floors split their time between the open kinds, as weights. */
   readonly queue: Record<UnitKind, Persistent<number>>;
   readonly research: PurchasableCategory<ResearchDef>;
+  /** The tier-up: its one entry, the charter, opens the second tier of floors and research. */
+  readonly tier: PurchasableCategory<CharterDef>;
+  /** Whether the seat holds its charter. */
+  chartered(): boolean;
   /** The seat's lieutenants: one-shot hires in scrip, in order, while the match is live. */
   readonly crew: PurchasableCategory<LieutenantDef>;
   readonly squats: Purchasable;
@@ -245,7 +252,7 @@ export function createSide({
     registerTick,
     mapProducer: (def) => {
       const cost = tune.unit[def.trains];
-      const requires = def.requires(id);
+      const requires = prerequisiteOf(def, id);
       return {
         resource: reserve[def.trains],
         // The training switch is the cycle driver: off, every floor's time on this kind idles.
@@ -257,8 +264,8 @@ export function createSide({
         display: { title: def.name, description: def.blurb },
         purchase: {
           costResource: scrip,
-          // A tech floor is the next floor on the ladder, at its multiple of the price.
-          baseCost: () => floorPrice() * def.floors,
+          // A tech floor is the next floor on the ladder.
+          baseCost: floorPrice,
           costRatio: 1,
           limit: 1,
           purchaseMaxByDefault: false,
@@ -292,7 +299,7 @@ export function createSide({
           createCostRequirement({ resource: aether, cost: t.aether, description: 'aether' }),
         );
       // The prerequisite edge is an availability check, as on the training floors: it withholds, it never charges.
-      const gate = def.requires(id);
+      const gate = prerequisiteOf(def, id);
       return {
         display: { title: def.name, description: def.blurb },
         requirements,
@@ -319,6 +326,24 @@ export function createSide({
         return [{ chain: turret, multiplier: e.mult, description: def.name }];
     }
   }
+
+  // ─── The tier-up: one charter, bought once enough floors stand ───
+  const tier = createPurchasableCategory<CharterDef>({
+    id: catId.tier(id),
+    mapPurchasable: (def) => ({
+      display: { title: def.name, description: def.blurb },
+      requirements: [
+        createBooleanRequirement({
+          met: () => floorCount() >= def.floors,
+          description: `${def.floors} training floors`,
+        }),
+        createCostRequirement({ resource: scrip, cost: tune.charterCost, description: 'scrip' }),
+      ],
+      limit: 1,
+    }),
+  });
+  tier.register([CHARTER]);
+  const charter = tier.getPurchasable(CHARTER.id)!;
 
   // ─── Lieutenants: each seat hires its own, in order, and loses them with the match ───
   const live = createBooleanRequirement({ met: running, description: 'during a job' });
@@ -350,6 +375,8 @@ export function createSide({
     econ,
     barracks,
     research,
+    tier,
+    chartered: () => charter.active.value,
     crew,
     squats,
     supplyCap,

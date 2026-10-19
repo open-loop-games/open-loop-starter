@@ -25,10 +25,10 @@ Every key is read through `tunable()` in `modules/tunables.ts`; both seats share
 | `districts/captureRate` | `captureRate` | how fast an unopposed squad takes a district |
 | `districts/refPresence` | `REF_PRESENCE` | the squad size control drift is scaled to |
 | `research/<id>/scrip`, `research/<id>/aether` | multiples of `unitValue` | when each upgrade lands |
+| `charter/cost` | `charterCost` | when the second tier opens: the black clinic and the tier-two research |
 
 Not perturbable: the pairing table (`data/units.ts` `EFFECTIVENESS`), whose cells are design
-choices the square law is solved against; a tech floor's price in floors (`data/buildings.ts`
-`BarracksDef.floors`); the contract income terms and personas
+choices the square law is solved against; the floors the charter waits for (`CHARTER_FLOORS`); the contract income terms and personas
 (`data/contracts.ts`); the lieutenants' prices (`data/crew.ts`, from `LIEUTENANT_UNITS`); and
 the scout's duration, cooldown and cost.
 
@@ -44,15 +44,25 @@ the scout's duration, cooldown and cost.
   alone makes small sieges viable; the two move together.
 - **The Enforcer's stats are `ENFORCER_VALUE` units for one bunk.** The bag counts every
   unit as one, so a higher value per unit is a higher value per bunk once the bunks bind.
-- **Every floor climbs one ladder.** A tech floor is the next floor at its multiple of the
-  price, so opening a kind delays the next plain floor, and a late tech costs more than an
-  early one.
+- **Every floor climbs one ladder.** A tech floor is the next floor's price, so opening a
+  kind delays the next plain floor, and a late tech costs more than an early one.
+- **The charter is saved for like a floor, ahead of the next one.** It delays every floor
+  after the second. Once it is bought, the clinic is still the next floor on the ladder and
+  waits on the draw rule, so a cheaper charter brings the charter forward but hardly moves
+  the clinic.
+- **A seat charters only for something behind it.** The policy saves for the charter when
+  the persona's mix wants a tier-two kind or its research list names a tier-two line. A
+  persona with neither, such as the street gang, never buys it.
+- **The counter bend moves only the kinds that counter something.** A generalist keeps its
+  persona share, so the persona's enforcer weight is what decides whether the seat opens
+  the clinic. A bend over every kind starves the generalist under the share that buys a
+  tech floor.
 - **The queue answers a counter at once.** Floors split their time by the seat's mix the moment
   its intel changes, so the counter edge is bounded by what the seat sees and how mixed the
   rival fields, not by the floors. A seat bent fully toward counters scores no better than the
   shipped three-quarters.
 - **The landmarks come from a walk of the policy, not of the spend.** `walkArmy` saves for
-  floors ahead of hustlers and converts one triangle unit per floor per `TRAIN_S`, so its army at
+  floors and the charter ahead of hustlers and converts one triangle unit per floor per `TRAIN_S`, so its army at
   `MID_S` is well short of `MID_ARMY`. `MID_ARMY` defines a unit's value; changing it reprices
   everything without moving the walk's army much.
 - **Turf compounds control.** It is paid per district held, so its rate decides whether the
@@ -88,8 +98,9 @@ the scout's duration, cooldown and cost.
 - **The counter edge is modest.** The shipped seat's counter fit leads the blind seat's, but
   the edge decides matches only near parity. Rivals that field mixed armies leave little to
   counter.
-- **The reference player never techs to enforcers.** Its bent mix keeps them under the share
-  that buys a tech floor; only the megacorp fields them.
+- **Enforcers arrive late.** The measured charter lands 30–60 s after the walk's, the same
+  lag the siege beat shows. The clinic follows when the bunks begin to bind, and the
+  reference player fields less than one enforcer before the match ends.
 - **Below parity the table hardly matters.** Contracts 1–3 sit under the player's income, so
   a flat table still wins them; the counter probe's `--hard` run is where the axis shows.
 - **Repeated attempts are not identical.** Each policy throttle keeps its phase across

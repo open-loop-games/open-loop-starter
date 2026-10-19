@@ -22,7 +22,7 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 
 ## Defs
 
-`BarracksDef`, `ContractDef`, `DistrictDef`, `EconDef`, `LieutenantDef`, `ResearchDef`, `UnitDef`
+`BarracksDef`, `CharterDef`, `ContractDef`, `DistrictDef`, `EconDef`, `LieutenantDef`, `ResearchDef`, `UnitDef`
 
 ## Relationships
 
@@ -39,7 +39,7 @@ type-graph tools such as dependency-cruiser and findReferences miss them.
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`EconDef`, `BarracksDef`, `DistrictDef`, `ContractDef`, `LieutenantDef`
+`EconDef`, `BarracksDef`, `CharterDef`, `DistrictDef`, `ContractDef`, `LieutenantDef`
 
 ## Disambiguators (curated)
 
