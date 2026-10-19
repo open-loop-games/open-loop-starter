@@ -46,7 +46,10 @@ the scout's duration, cooldown and cost.
 - **Turf compounds control.** It is paid per district held, so its rate decides whether the
   first seat to take ground snowballs.
 - **Aether is drawn by every floor but the Chop shop.** A build heavy in hexers, riggers and
-  enforcers is capped by taps, not scrip, and `TAP_LIMIT` caps taps.
+  enforcers is capped by taps, not scrip, and `TAP_LIMIT` caps taps. The build plan buys a
+  tap before a floor its taps and bank cannot feed; at the limit it builds the next kind in
+  line. Research and faster training still draw on floors already fed, so a seat at the
+  limit can run short.
 - **Both seats pay the same lieutenant prices.** Every scope of the policy a seat runs is
   bought with scrip the army does not get. A price one seat pays and the other does not is
   a handicap the economy has no slack for: with the rival's policy free, a fully hired
@@ -70,9 +73,6 @@ the scout's duration, cooldown and cost.
 - **The pairing table decides little.** A seat that trains only Enforcers wins at least as
   often as one that counters what it sees, and flattening the table changes no aggregate
   outcome. Scouting and the counter wheel are present but not yet load-bearing.
-- **The reference player can starve its floors of aether.** Its build plan reads the next
-  floor's price, not which input binds, so it can stack aether floors on capped taps while
-  scrip piles up.
 - **The siege-force landmark has no probe beat.** The probe reports the first assault, which
   also waits on holding a district.
 - **Repeated attempts are not identical.** Each policy throttle keeps its phase across

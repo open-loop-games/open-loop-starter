@@ -44,6 +44,8 @@ export type { PolicyScope };
 const SAVE_HORIZON_S = 40;
 /** Training pauses only for the last stretch of a save, this many seconds of income. */
 const PAUSE_HORIZON_S = 12;
+/** A floor's aether draw is fed if the taps plus the bank spread over this many seconds cover it. */
+const FEED_HORIZON_S = 120;
 
 const zero = (): Counts => Object.fromEntries(UNIT_KINDS.map((k) => [k, 0])) as Counts;
 
@@ -122,15 +124,18 @@ export function worthTraining(kind: UnitKind, mix: Counts, enemyMix: Counts | un
   return trade >= 0.75;
 }
 
-/** Scrip per second one training building of this kind draws while switched on. */
-function drainOf(side: Side, kind: UnitKind): number {
-  return side.trainRate() * toNumber(barracksFor(side, kind).inputs!.scrip.per.value);
+type Input = 'scrip' | 'aether';
+
+/** What one training building of this kind draws per second of an input while switched on. */
+function drainOf(side: Side, kind: UnitKind, input: Input = 'scrip'): number {
+  return side.trainRate() * toNumber(barracksFor(side, kind).inputs![input].per.value);
 }
 
-/** Scrip per second every training building would draw with its switch on. */
-export function trainingDrain(side: Side): number {
+/** What every training building would draw per second of an input with its switch on. */
+export function trainingDrain(side: Side, input: Input = 'scrip'): number {
   let d = 0;
-  for (const k of UNIT_KINDS) d += drainOf(side, k) * toNumber(barracksFor(side, k).count.value);
+  for (const k of UNIT_KINDS)
+    d += drainOf(side, k, input) * toNumber(barracksFor(side, k).count.value);
   return d;
 }
 
@@ -164,7 +169,11 @@ function fieldArmy(side: Side): number {
 
 // ─── Economy and building ──────────────────────────────────────────────────
 
-/** The training building the seat wants next, if the persona's army share has room for it. */
+/**
+ * The training building the seat wants next, if the persona's army share has room for it.
+ * A floor whose aether draw the taps cannot feed waits on a tap; once the taps are at
+ * their limit, the next kind in line stands in.
+ */
 function nextBuilding(
   side: Side,
   persona: Persona,
@@ -177,9 +186,16 @@ function nextBuilding(
   // The kind whose share of buildings lags its production share most.
   const lag = (k: UnitKind) => mix[k] * (buildings + 1) - owned(k);
   const order = [...UNIT_KINDS].filter((k) => mix[k] > 0.02).sort((a, b) => lag(b) - lag(a));
+  const tap = side.econ.getProducer('ley-tap')!.repeatable!;
+  const fed = side.aetherRate() + toNumber(side.aether.value) / FEED_HORIZON_S;
   for (const k of order) {
     if (trainingDrain(side) + drainOf(side, k) > share * income) return undefined;
     const b = barracksFor(side, k).repeatable!;
+    const aether = drainOf(side, k, 'aether');
+    if (b.visible.value && aether > 0 && trainingDrain(side, 'aether') + aether > fed) {
+      if (tap.maxed.value) continue;
+      return { kind: k, buy: tap };
+    }
     if (b.visible.value) return { kind: k, buy: b };
     // Missing prerequisite: the next purchase on the way to it stands in.
     const prereq = prerequisiteFor(side, k);

@@ -43,7 +43,7 @@ export interface Persona {
   hustlerPayback: number;
   /** Share of income the training floors may draw while hustlers still pay back; after, all of it. */
   armyShare: number;
-  /** Ley taps to hold. */
+  /** Ley taps to hold before any training floor needs more; the build plan adds what floors need. */
   taps: number;
   /** Research in the order the seat buys it. */
   research: string[];
