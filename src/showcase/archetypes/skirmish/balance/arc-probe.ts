@@ -1,7 +1,7 @@
 /**
- * The arc runner: plays the whole career under the reference player (`_game.ts`) and
- * prints when each beat fired, beside the spine's landmarks. Each contract gets up to two
- * attempts; a loss resets and replays it.
+ * The arc runner: plays every contract on the roster, in order, under the reference player
+ * (`_game.ts`) and prints when each beat fired, beside the spine's landmarks. Each contract
+ * gets up to two attempts; a loss resets and replays it.
  *
  * Run: pnpm exec vite-node src/showcase/archetypes/skirmish/balance/arc-probe.ts
  */
@@ -14,13 +14,13 @@ import { readyUnits } from '../modules/orders';
 import { PRESENCE, countsOf, total } from '../modules/battle';
 import { hustlersPay } from '../modules/policy';
 import type { Side } from '../modules/side';
-import { MAX_MATCH_S, TICK, buildGame } from './_game';
+import { MAX_MATCH_S, TICK, buildGame, staffMatch } from './_game';
 
 // The cell carries no Node typings; the probe runs under vite-node.
 declare const process: { exit(code: number): never };
 
 const game = buildGame();
-const { match, career, automation: auto } = game;
+const { match, roster } = game;
 
 console.log('── Spine ──');
 for (const [k, v] of Object.entries(describeSpine()))
@@ -63,6 +63,8 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
     tickDelta: TICK,
     maxSimTime: MAX_MATCH_S,
     until: () => {
+      const hired = staffMatch(game);
+      if (hired) beat(`hired the ${hired}`, true);
       for (const s of [p, e]) {
         check(`${s.id} scrip`, toNumber(s.scrip.value));
         check(`${s.id} hq`, toNumber(s.hq.value));
@@ -124,23 +126,23 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
 }
 
 const summary: string[] = [];
+let wins = 0;
 for (let idx = 0; idx < CONTRACTS.length; idx++) {
-  let result: 'won' | 'lost' | 'stalled' = 'lost';
+  roster.choose(idx);
   for (let attempt = 1; attempt <= 2; attempt++) {
-    result = playMatch(idx, attempt);
+    const result = playMatch(idx, attempt);
     const seconds = match.clock.value;
     summary.push(
       `${CONTRACTS[idx].rival.padEnd(22)} attempt ${attempt}: ${result} at ${seconds.toFixed(0)}s`,
     );
     match.nextMatch();
-    if (result === 'won') break;
-  }
-  if (result !== 'won') break;
-  if (career.contractIndex.value !== Math.min(idx + 1, CONTRACTS.length - 1)) {
-    console.log(`  !! career did not advance: contract index ${career.contractIndex.value}`);
+    if (result === 'won') {
+      wins += 1;
+      break;
+    }
   }
 }
-console.log('\n── Career ──');
+console.log('\n── Roster ──');
 for (const s of summary) console.log(`  ${s}`);
-console.log(`  wins ${career.wins.value}, tiers unlocked: ${auto.tiers.unlocked.value.join(', ')}`);
+console.log(`  contracts won ${wins} of ${CONTRACTS.length}`);
 process.exit(0);

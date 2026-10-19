@@ -47,7 +47,7 @@ const showDevPanel = ref(false);
               crew for the Lantern Syndicate: hire hustlers for scrip, sink ley taps for aether, and
               train Razorboys, Hexers, Riggers and leased Enforcers. Take the three districts from a
               rival crew, order an assault from one you hold, and burn their safehouse before they
-              burn yours. Every contract won hires a lieutenant.
+              burn yours. Lieutenants hire on mid-job and run part of the crew for you.
             </p>
           </template>
         </SystemHeader>

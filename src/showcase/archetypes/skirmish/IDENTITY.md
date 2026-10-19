@@ -22,9 +22,11 @@ fires back. Units at home hold the gates.
 
 The player sees a district only through a squad in it or control leaning their way. An
 astral scout, paid in aether, reveals everything for a while; afterwards each district keeps
-its last sighting, dimmed with its age. Four contracts are fought in order: a street gang, a
-talismonger cabal, a rival runner crew and a megacorp. Each win hires a lieutenant — a fixer,
-a quartermaster, a tactician — who plays part of the player's seat with the rival's own policy.
+its last sighting, dimmed with its age. A match is one contract, picked freely from four: a
+street gang, a talismonger cabal, a rival runner crew and a megacorp. Inside it the player may
+hire lieutenants in order — a fixer, a quartermaster, a tactician — for scrip the army does not
+get; each plays part of the seat with the rival's own policy. The rival hires its crew at the
+same prices. Nothing carries from one match to the next.
 
 ## Rate-function spine
 
@@ -42,23 +44,24 @@ fire, and the turret is solved so seven units is the smallest siege that razes i
 **Where the closed form stops:** the joint choice of two seats (strategy-space integration),
 fog of war, and control flipping between them.
 
-**What measures the remainder:** `balance/arc-probe.ts` plays the whole career under the
-reference player (`balance/_game.ts`), which runs the shipping policy in the player's seat
-with every lieutenant hired, and prints each beat beside the spine's landmarks.
+**What measures the remainder:** `balance/arc-probe.ts` plays every contract under the
+reference player (`balance/_game.ts`), which hires its lieutenants by the rival's rule and
+runs the shipping policy in the player's seat, and prints each beat beside the spine's
+landmarks.
 
 ## The arc
 
 | Beat | Recorded (contract 1) |
 |---|---|
-| The first training floor | 71 s |
-| The first unit trained | 91 s |
-| The first district held | 136.5 s |
-| The first clash | 150 s |
-| The first assault on their safehouse | 294.5 s |
-| Their safehouse burns | 352 s |
+| The fixer hired | 0 s |
+| The first training floor | 112 s |
+| The first unit trained | 132 s |
+| The first district held | 177.5 s |
+| The first clash | 201 s |
+| The first assault on their safehouse | 321.5 s |
+| Their safehouse burns | 383 s |
 
-The career is four such matches, each a few minutes; the rival's income terms climb to
-parity by the megacorp.
+Each match is a few minutes; the rival's income terms climb to parity by the megacorp.
 
 ## Growth ports
 
@@ -77,7 +80,7 @@ parity by the megacorp.
 | research | `createPurchasableCategory` with grants on `createModifierChain` chains |
 | the prerequisite graph | gate predicates as `visible` |
 | a match's reset | `createReset` over the match context |
-| the lieutenants | `createAutomationTiers`, a switch each, `createThrottle` |
+| the lieutenants | each seat's hires in `createPurchasableCategory`, unlocking `createAutomationTiers`; a switch each, `createThrottle` |
 | every perturbable anchor | `createTuningRegistry`, `tunable` |
 
 Three hand-rolls carry `TODO(expansion)` markers: the pairing table (`data/units.ts`), the

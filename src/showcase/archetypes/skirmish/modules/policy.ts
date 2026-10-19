@@ -35,7 +35,8 @@ export interface Situation {
   besiegedFrom: number[];
 }
 
-export type PolicyScope = 'econ' | 'build' | 'command';
+import { LIEUTENANTS, type LieutenantDef, type PolicyScope } from '../data/crew';
+export type { PolicyScope };
 
 // TODO(expansion): a converter input has no reserve (auto-purchase has one), so a seat
 // saving for a purchase must switch its training floors off; see `playEconomy`.
@@ -59,6 +60,23 @@ export function hustlersPay(side: Side, persona: Persona): boolean {
   const h = hustler(side);
   const cost = toNumber(h.repeatable!.getCost(1));
   return cost / toNumber(h.computedRate.value) < persona.hustlerPayback;
+}
+
+/** The lieutenant a seat hires next, in order, once its price is in the purse; none when all are hired. */
+export function hireNext(side: Side): LieutenantDef | undefined {
+  const next = LIEUTENANTS.find((l) => !side.crew.getPurchasable(l.id)!.active.value);
+  if (!next) return undefined;
+  const hire = side.crew.getPurchasable(next.id)!;
+  if (!hire.canPurchase.value) return undefined;
+  hire.purchase();
+  return hire.active.value ? next : undefined;
+}
+
+/** The policy scopes a seat's hired lieutenants run. */
+export function hiredScopes(side: Side): Set<PolicyScope> {
+  return new Set(
+    LIEUTENANTS.filter((l) => side.crew.getPurchasable(l.id)!.active.value).map((l) => l.scope),
+  );
 }
 
 /** The kind that does the most damage to `target` per scrip of unit value. */

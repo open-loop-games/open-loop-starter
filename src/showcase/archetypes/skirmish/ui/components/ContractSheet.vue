@@ -10,20 +10,13 @@ import { computed } from 'vue';
 import Button from '@/ui/components/Button.vue';
 import { CONTRACTS } from '../../data/contracts';
 import { UNITS, UNIT_KINDS } from '../../data/units';
-import { getCareer, getMatch } from '../../modules';
+import { getMatch, getRoster } from '../../modules';
 import { GLYPH, clock, matchup } from '../format';
 
 const match = getMatch();
-const career = getCareer();
+const roster = getRoster();
 const phase = computed(() => match.phase.value);
-const c = computed(() => match.contract.value);
-const best = computed(() => career.best.value);
-// A contract is open once the one before it has been won.
-const reached = computed(() =>
-  CONTRACTS.map(
-    (_, i) => i <= career.contractIndex.value || best.value[CONTRACTS[i - 1].id] !== undefined,
-  ),
-);
+const c = computed(() => roster.contract.value);
 </script>
 
 <template>
@@ -34,29 +27,20 @@ const reached = computed(() =>
       :aria-label="phase === 'briefing' ? 'Contract briefing' : 'Match over'"
     >
       <template v-if="phase === 'briefing'">
-        <span class="sheet__kicker"
-          >Contract {{ career.contractIndex.value + 1 }} of {{ CONTRACTS.length }} ·
-          {{ c.outfit }}</span
-        >
+        <span class="sheet__kicker">The job board · {{ c.outfit }}</span>
         <h1 class="sheet__title">{{ c.rival }}</h1>
         <p class="sheet__body">{{ c.briefing }}</p>
         <p class="sheet__rumor">“{{ c.rumor }}”</p>
-        <div class="ladder" role="list">
+        <div class="jobs" role="group" aria-label="Pick the job">
           <Button
             v-for="(k, i) in CONTRACTS"
             :key="k.id"
-            role="listitem"
-            class="ladder__step"
-            :data-current="i === career.contractIndex.value"
-            :data-done="best[k.id] !== undefined"
-            :disabled="!reached[i]"
-            @click="career.choose(i)"
+            class="jobs__job"
+            :aria-pressed="i === roster.contractIndex.value"
+            @click="roster.choose(i)"
           >
-            <span class="ladder__n">{{ i + 1 }}</span
+            <span class="jobs__n">{{ i + 1 }}</span
             >{{ k.rival }}
-            <span v-if="best[k.id] !== undefined" class="num ladder__best">{{
-              clock(best[k.id])
-            }}</span>
           </Button>
         </div>
         <div class="roster">
@@ -70,7 +54,7 @@ const reached = computed(() =>
           Hire hustlers for scrip, sink ley taps for aether, build training floors. Send your crew
           into the three districts, take them, then order an assault on the rival safehouse. Scout
           to see what they field, and answer it: blades cut mages, mages fry drones, riggers brick
-          chrome.
+          chrome. Lieutenants hire on for scrip mid-job and run part of the crew for you.
         </p>
         <Button class="go" @click="match.start()">Take the job</Button>
       </template>
@@ -82,17 +66,16 @@ const reached = computed(() =>
         <h1 class="sheet__title">
           {{ phase === 'won' ? `${c.rival} is finished.` : 'Your safehouse burned.' }}
         </h1>
-        <p v-if="phase === 'won' && career.finished.value" class="sheet__body">
-          Every crew that mattered has answered to you. The sprawl is yours. Replay any contract to
-          beat your time.
+        <p v-if="phase === 'won'" class="sheet__body">
+          The Lantern Syndicate pays out, and the fixers are calling with more work.
         </p>
-        <p v-else-if="phase === 'won'" class="sheet__body">
-          The fixers are calling again. A new lieutenant asks for a seat at your table.
+        <p v-else class="sheet__body">
+          {{ c.rival }} still hold their safehouse. The fixers have other work.
         </p>
-        <p v-else class="sheet__body">The fixers will give you one more try at {{ c.rival }}.</p>
-        <Button class="go" @click="match.nextMatch()">{{
-          phase === 'won' ? 'Next contract' : 'Try again'
-        }}</Button>
+        <p class="sheet__how">
+          Your lieutenants take their cut and walk. Every job starts from the street.
+        </p>
+        <Button class="go" @click="match.nextMatch()">Back to the job board</Button>
       </template>
     </div>
   </div>
@@ -169,12 +152,12 @@ const reached = computed(() =>
   color: var(--cc-ley);
   font-size: 13px;
 }
-.ladder {
+.jobs {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
-.ladder__step {
+.jobs__job {
   display: inline-flex;
   gap: 6px;
   align-items: baseline;
@@ -186,27 +169,21 @@ const reached = computed(() =>
   color: var(--cc-chalk-dim);
   cursor: pointer;
 }
-.ladder__step:hover:not(:disabled) {
+.jobs__job:hover {
   background: var(--cc-asphalt);
   border-color: var(--cc-chalk-dim);
+  color: var(--cc-chalk);
 }
-.ladder__step:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.ladder__step[data-current='true'] {
+.jobs__job[aria-pressed='true'] {
   border-color: var(--cc-sodium);
   color: var(--cc-chalk);
 }
-.ladder__step[data-done='true'] .ladder__n {
+.jobs__job[aria-pressed='true'] .jobs__n {
   color: var(--cc-sodium);
 }
-.ladder__n {
+.jobs__n {
   font-family: var(--cc-face-neon);
   font-size: 18px;
-}
-.ladder__best {
-  color: var(--cc-chalk-faint);
 }
 .roster {
   display: grid;

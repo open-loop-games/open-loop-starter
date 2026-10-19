@@ -1,9 +1,8 @@
 /**
- * Shared probe fixture, not runnable on its own. Builds a real skirmish engine with every
- * lieutenant hired, so the player's seat plays the shipping policy (`../modules/policy.ts`)
- * under `PLAYER_PERSONA`. That is the reference player: more automation than a
- * first-contract player has, because the probes measure the design under the policy the
- * spine assumes, not a human.
+ * Shared probe fixture, not runnable on its own. Builds a real skirmish engine whose player
+ * seat is the reference player: the shipping policy (`../modules/policy.ts`) under
+ * `PLAYER_PERSONA`, run by lieutenants it hires at their price as soon as each is
+ * affordable, as the rival hires its own. Hiring is the one manual opener it works.
  *
  * This is not a duplicate of `../sim/harness.ts`: that boots the module list for
  * tick-by-tick behavioral specs; this plays whole matches and reads magnitudes.
@@ -14,13 +13,14 @@ import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
   AutomationKey,
-  CareerKey,
   MatchKey,
+  RosterKey,
   createSkirmishModules,
   type AutomationApi,
-  type CareerApi,
   type MatchApi,
+  type RosterApi,
 } from '../modules';
+import { hireNext } from '../modules/policy';
 
 /** Sim seconds per probe step. Minute-scale matches need no finer clock. */
 export const TICK = 0.5;
@@ -30,25 +30,32 @@ export const MAX_MATCH_S = 1800;
 export interface Game {
   engine: Engine;
   match: MatchApi;
-  career: CareerApi;
+  roster: RosterApi;
   automation: AutomationApi;
   dispose(): void;
 }
 
-/** A fresh engine at the briefing of the first contract, with every lieutenant hired. */
+/** A fresh engine at the briefing of the first contract. */
 export function buildGame(): Game {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createSkirmishModules()],
     persistenceNamespacePrefix: 'skirmish-probe',
   });
   const { engine } = handle;
-  const automation = engine.tryInject(AutomationKey)!;
-  for (const t of ['fixer', 'quartermaster', 'tactician']) automation.tiers.unlock(t);
   return {
     engine,
     match: engine.tryInject(MatchKey)!,
-    career: engine.tryInject(CareerKey)!,
-    automation,
+    roster: engine.tryInject(RosterKey)!,
+    automation: engine.tryInject(AutomationKey)!,
     dispose: handle.dispose,
   };
+}
+
+/**
+ * The reference player's one manual opener: hire the next lieutenant as soon as its price is
+ * in the purse, by the rival's own rule (`hireNext`). Call each tick of a live match; returns
+ * the hire just made.
+ */
+export function staffMatch(game: Game): string | undefined {
+  return hireNext(game.match.p)?.id;
 }

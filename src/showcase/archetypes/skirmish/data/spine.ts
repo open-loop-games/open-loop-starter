@@ -226,6 +226,17 @@ export const captureRate = 1 / CAPTURE_S;
 export const enforcerDps = UNIT_DPS * ENFORCER_VALUE;
 export const enforcerHp = unitHp * ENFORCER_VALUE;
 
+// ─── Lieutenants ───────────────────────────────────────────────────────────
+
+/**
+ * A lieutenant's price, in units of value: hiring one spends scrip the army does
+ * not get, and both seats pay it, since both play the policy through lieutenants.
+ * The ladder climbs half a unit a rung: fixer, quartermaster, tactician. Measured
+ * at ×1 a fully hired seat lost two contracts of four; at this rung it took all four.
+ */
+export const LIEUTENANT_UNITS = [0.5, 1, 1.5];
+export const lieutenantCost = LIEUTENANT_UNITS.map((u) => u * unitValue);
+
 // ─── Contracts ─────────────────────────────────────────────────────────────
 
 /**

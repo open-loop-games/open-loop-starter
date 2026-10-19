@@ -14,13 +14,15 @@ Enum / union membership is an is-a relation — each arm *is a* kind of its owne
 - **SideId** _(string-literal union)_ — `p` · `e`
 - **EconId** _(string-literal union)_ — `hustler` · `ley-tap` · `turf`
 - **ResearchEffect.kind** _(discriminated-union arm)_ — `damage` · `hp` · `income` · `training` · `turret`
+- **CrewTier** _(string-literal union)_ — `none` · `fixer` · `quartermaster` · `tactician`
+- **PolicyScope** _(string-literal union)_ — `econ` · `build` · `command`
 - **UnitKind** _(string-literal union)_ — `razor` · `hexer` · `rigger` · `enforcer`
 - **AttackKind** _(string-literal union)_ — `kinetic` · `arcane` · `code` · `heavy`
 - **BodyKind** _(string-literal union)_ — `chrome` · `flesh` · `drone` · `plated` · `structure`
 
 ## Defs
 
-`BarracksDef`, `ContractDef`, `DistrictDef`, `EconDef`, `ResearchDef`, `UnitDef`
+`BarracksDef`, `ContractDef`, `DistrictDef`, `EconDef`, `LieutenantDef`, `ResearchDef`, `UnitDef`
 
 ## Relationships
 
@@ -36,7 +38,7 @@ type-graph tools such as dependency-cruiser and findReferences miss them.
 Defs with no structural signal (no vocabulary, no incident edge).
 These are candidates for a curated note below — or for richer typing.
 
-`EconDef`, `BarracksDef`, `DistrictDef`, `ContractDef`
+`EconDef`, `BarracksDef`, `DistrictDef`, `ContractDef`, `LieutenantDef`
 
 ## Disambiguators (curated)
 
@@ -44,9 +46,9 @@ Hand-authored: the game-level concepts no single type owns, which
 structure cannot derive. Kept small and stored in the config, so
 staleness stays visible against the generated sections above.
 
-- **match** — One run against one contract: from the briefing to a burned safehouse. Starting the next resets both seats and the districts, never the career.
+- **match** — One run against one contract: from the briefing to a burned safehouse. Starting the next resets both seats, their lieutenants and the districts; nothing carries over.
 - **seat** — One side of a match: the player’s crew or the rival. Both play the same policy; the rival through its persona, the player through hired lieutenants or by hand.
-- **contract** — A rival outfit to beat: its persona, its income terms and its briefing. The career fights them in order.
+- **contract** — A rival outfit to beat: its persona, its income terms and its briefing. The roster holds four; the player picks the next one freely.
 - **persona** — A parameter bundle the one shared policy reads: production mix, how hard it counters, payback horizon, research order, when it assaults and when it pulls back.
 - **hustler** — A worker producer: one scrip a second, at a geometric price. The economy grows by hiring them until one no longer pays back inside the horizon.
 - **ley tap** — A producer of aether, the second input hexers, riggers and enforcers are trained from.
@@ -59,4 +61,4 @@ staleness stays visible against the generated sections above.
 - **focus** — Where a squad’s fire goes: on one kind if it stands in the district, else spread by count.
 - **pairing** — The attack kind × body kind table every hit is read through: razors cut flesh, hexers fry drones, riggers brick chrome, and each reverse cell resists.
 - **astral scout** — A paid reveal: every district and the rival safehouse are seen for a while, then fog returns with each sighting kept at its age.
-- **lieutenant** — The player’s automation, one per automation tier: the fixer plays the economy, the quartermaster builds and researches, the tactician commands. Each has a switch.
+- **lieutenant** — A hire inside a match, in order and for scrip: the fixer plays the economy, the quartermaster builds and researches, the tactician commands. Both seats hire them; the player’s unlock an automation tier each, with a switch.

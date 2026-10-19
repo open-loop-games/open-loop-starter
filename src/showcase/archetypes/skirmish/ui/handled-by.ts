@@ -1,5 +1,10 @@
 import { computed, type ComputedRef } from 'vue';
-import { getAutomation, type CrewTier } from '../modules';
+import { getAutomation, type CrewTier, type Lieutenant } from '../modules';
+
+/** A lieutenant's first name: "Moth, your fixer" → "Moth". */
+export function firstName(l: Lieutenant): string {
+  return l.def.name.split(',')[0]!;
+}
 
 /**
  * The lieutenant who works this part of the deck for you, by first name, while they are
@@ -10,8 +15,6 @@ import { getAutomation, type CrewTier } from '../modules';
  */
 export function useHandledBy(tier: Exclude<CrewTier, 'none'>): ComputedRef<string | undefined> {
   const auto = getAutomation();
-  const lt = auto.lieutenants.find((l) => l.tier === tier)!;
-  return computed(() =>
-    auto.isUnlocked(tier) && lt.enabled.value ? lt.name.split(',')[0] : undefined,
-  );
+  const lt = auto.lieutenants.find((l) => l.def.id === tier)!;
+  return computed(() => (auto.isUnlocked(tier) && lt.enabled.value ? firstName(lt) : undefined));
 }

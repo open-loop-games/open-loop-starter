@@ -9,6 +9,7 @@
 import {
   Decimal,
   computed,
+  createBooleanRequirement,
   createCostRequirement,
   createModifierChain,
   createMultiplicativeModifier,
@@ -43,6 +44,7 @@ import {
   type SideId,
 } from '../data/buildings';
 import { DISTRICTS } from '../data/contracts';
+import { LIEUTENANTS, type LieutenantDef } from '../data/crew';
 import { UNITS, byKind, type UnitKind } from '../data/units';
 import type { Tunables } from './tunables';
 import { START_SCRIP } from '../data/spine';
@@ -59,6 +61,8 @@ export interface Side {
   readonly econ: ProducerCategory<EconDef>;
   readonly barracks: ProducerCategory<BarracksDef>;
   readonly research: PurchasableCategory<ResearchDef>;
+  /** The seat's lieutenants: one-shot hires in scrip, in order, while the match is live. */
+  readonly crew: PurchasableCategory<LieutenantDef>;
   readonly squats: Purchasable;
   readonly supplyCap: ComputedRef<number>;
   readonly bag: ResourceBag;
@@ -272,6 +276,25 @@ export function createSide({
     }
   }
 
+  // ─── Lieutenants: each seat hires its own, in order, and loses them with the match ───
+  const live = createBooleanRequirement({ met: running, description: 'during a job' });
+  const crew: PurchasableCategory<LieutenantDef> = createPurchasableCategory<LieutenantDef>({
+    id: catId.crew(id),
+    mapPurchasable: (def) => {
+      const before = LIEUTENANTS[LIEUTENANTS.indexOf(def) - 1];
+      return {
+        display: { title: def.name, description: def.does },
+        requirements: [
+          live,
+          createCostRequirement({ resource: scrip, cost: def.cost, description: 'scrip' }),
+        ],
+        limit: 1,
+        ...(before ? { visible: (): boolean => crew.getPurchasable(before.id)!.active.value } : {}),
+      };
+    },
+  });
+  crew.register(LIEUTENANTS);
+
   const stance = DISTRICTS.map((d) => persistent<Stance>('hold', { id: `${id}-stance-${d.id}` }));
   const focus = DISTRICTS.map((d) => persistent<Focus>('spread', { id: `${id}-focus-${d.id}` }));
 
@@ -283,6 +306,7 @@ export function createSide({
     econ,
     barracks,
     research,
+    crew,
     squats,
     supplyCap,
     bag,

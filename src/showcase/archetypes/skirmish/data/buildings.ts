@@ -34,6 +34,7 @@ export const catId = {
   econ: (s: SideId) => `${s}-econ`,
   barracks: (s: SideId) => `${s}-barracks`,
   research: (s: SideId) => `${s}-research`,
+  crew: (s: SideId) => `${s}-crew`,
 };
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────

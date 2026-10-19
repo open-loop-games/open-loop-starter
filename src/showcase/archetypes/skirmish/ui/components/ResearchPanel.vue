@@ -20,7 +20,7 @@ const cards = RESEARCH.map((def) => {
   return createPurchasableCard<{ def: ResearchDef; item: Purchasable }>(item, {
     displayName: def.name,
     description: def.blurb,
-    prerequisite: def.requiresText,
+    prerequisite: `needs ${def.requiresText}`,
     extra: { def, item },
   });
 });

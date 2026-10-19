@@ -8,7 +8,7 @@ export default {
   curated: [
     {
       term: 'match',
-      note: 'One run against one contract: from the briefing to a burned safehouse. Starting the next resets both seats and the districts, never the career.',
+      note: 'One run against one contract: from the briefing to a burned safehouse. Starting the next resets both seats, their lieutenants and the districts; nothing carries over.',
     },
     {
       term: 'seat',
@@ -16,7 +16,7 @@ export default {
     },
     {
       term: 'contract',
-      note: 'A rival outfit to beat: its persona, its income terms and its briefing. The career fights them in order.',
+      note: 'A rival outfit to beat: its persona, its income terms and its briefing. The roster holds four; the player picks the next one freely.',
     },
     {
       term: 'persona',
@@ -68,7 +68,7 @@ export default {
     },
     {
       term: 'lieutenant',
-      note: 'The player’s automation, one per automation tier: the fixer plays the economy, the quartermaster builds and researches, the tactician commands. Each has a switch.',
+      note: 'A hire inside a match, in order and for scrip: the fixer plays the economy, the quartermaster builds and researches, the tactician commands. Both seats hire them; the player’s unlock an automation tier each, with a switch.',
     },
   ],
 };

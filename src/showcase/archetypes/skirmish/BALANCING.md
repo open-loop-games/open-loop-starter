@@ -28,7 +28,8 @@ Every key is read through `tunable()` in `modules/tunables.ts`; both seats share
 
 Not perturbable: the pairing table (`data/units.ts` `EFFECTIVENESS`), whose cells are design
 choices the square law is solved against; the contract income terms and personas
-(`data/contracts.ts`); and the scout's duration, cooldown and cost.
+(`data/contracts.ts`); the lieutenants' prices (`data/crew.ts`, from `LIEUTENANT_UNITS`); and
+the scout's duration, cooldown and cost.
 
 ## Couplings
 
@@ -46,6 +47,10 @@ choices the square law is solved against; the contract income terms and personas
   first seat to take ground snowballs.
 - **Aether is drawn by every floor but the Chop shop.** A build heavy in hexers, riggers and
   enforcers is capped by taps, not scrip, and `TAP_LIMIT` caps taps.
+- **Both seats pay the same lieutenant prices.** Every scope of the policy a seat runs is
+  bought with scrip the army does not get. A price one seat pays and the other does not is
+  a handicap the economy has no slack for: with the rival's policy free, a fully hired
+  player lost every contract at 1, 2 and 3 units of value.
 - **The rival's analysts are not fogged.** `situation('e')` reads the player's whole army,
   so the rival's `counter` persona weight acts on true information.
 
@@ -53,7 +58,8 @@ choices the square law is solved against; the contract income terms and personas
 
 - `pnpm exec vite-node src/showcase/archetypes/skirmish/balance/arc-probe.ts` prints the
   spine's values and landmarks, then plays each contract under the reference player and
-  prints every beat, both seats' end state and the career. It takes about two seconds.
+  prints every beat, both seats' end state and the roster's results. It takes about two
+  seconds.
 - A healthy contract ends inside the spine's match length at equal income; earlier against
   the cheaper contracts. A stall to `MAX_MATCH_S` is a structural defect, not a tuning one.
 - The probe header says what the reference player is and why it plays with every

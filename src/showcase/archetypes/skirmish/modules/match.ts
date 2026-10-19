@@ -15,6 +15,7 @@ import {
   type EngineModule,
   type InjectionKey,
   type Persistent,
+  type Reset,
   type ShallowRef,
 } from '@open-loop/engine';
 import { createModuleApi } from '@/modules/module-api';
@@ -33,7 +34,7 @@ import { createSide, type Side } from './side';
 import type { Situation } from './policy';
 import type { Tunables } from './tunables';
 import { SCOUT_COOLDOWN_S, SCOUT_S, scoutCost } from '../data/spine';
-import { CareerKey } from './career';
+import { RosterKey } from './roster';
 import { TunablesKey } from './tuning';
 
 export type Phase = 'briefing' | 'live' | 'won' | 'lost';
@@ -73,6 +74,8 @@ export interface MatchApi {
   start(): void;
   /** Leave a finished match and return to the briefing for the next contract. */
   nextMatch(): void;
+  /** Subscribe to the match reset: `afterReset` fires once both seats are back at the briefing. */
+  onReset: Reset['on'];
   scout(): boolean;
   situation(seat: 'p' | 'e'): Situation;
   log(text: string, tone?: FeedEntry['tone']): void;
@@ -88,16 +91,16 @@ const FEED_LENGTH = 40;
 
 export const matchModule: EngineModule = {
   id: 'skirmish/match',
-  dependencies: ['skirmish/tuning', 'skirmish/career'],
+  dependencies: ['skirmish/tuning', 'skirmish/roster'],
   install(ctx) {
     const tune = ctx.inject(TunablesKey);
-    const career = ctx.inject(CareerKey);
+    const roster = ctx.inject(RosterKey);
     const phase = persistent<Phase>('briefing', { id: 'phase' });
     const clock = persistent(0, { id: 'clock' });
     const control = DISTRICTS.map((d) => persistent(0, { id: `control-${d.id}` }));
     const scoutUntil = persistent(-1, { id: 'scout-until' });
     const scoutReadyAt = persistent(0, { id: 'scout-ready' });
-    const contract = computed(() => career.contract.value);
+    const contract = computed(() => roster.contract.value);
     const running = () => phase.value === 'live';
 
     const held = (sign: 1 | -1) => () => control.filter((c) => c.value * sign >= 1).length;
@@ -230,7 +233,6 @@ export const matchModule: EngineModule = {
       updateSightings();
       if (toNumber(e.hq.value) <= 0) {
         phase.value = 'won';
-        career.recordWin(Math.round(clock.value));
         log(`${contract.value.rival}'s safehouse burns. Contract complete.`, 'good');
       } else if (toNumber(p.hq.value) <= 0) {
         phase.value = 'lost';
@@ -265,7 +267,6 @@ export const matchModule: EngineModule = {
         log(`Contract on ${contract.value.rival}. The clock is running.`);
       },
       nextMatch() {
-        if (phase.value === 'won') career.advance();
         matchReset.reset();
         feed.value = [];
         sightings.value = DISTRICTS.map(() => undefined);
@@ -284,6 +285,7 @@ export const matchModule: EngineModule = {
       },
       situation,
       log,
+      onReset: matchReset.on,
     };
     matchApi.publish(ctx, api);
   },

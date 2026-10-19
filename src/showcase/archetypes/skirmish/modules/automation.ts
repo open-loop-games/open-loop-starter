@@ -1,7 +1,8 @@
 /**
  * The player's own automation: the shared policy, scoped by automation tier.
- * Each contract won hires one more lieutenant. Each lieutenant has a switch,
- * read beside the tier where the policy acts.
+ * Each lieutenant is a hire on the player's seat (`Side.crew`), in order, for
+ * scrip the army does not get; it unlocks its tier, and leaves when the match
+ * does. Each has a switch, read beside the tier where the policy acts.
  */
 import {
   createAutomationTiers,
@@ -11,26 +12,20 @@ import {
   type EngineModule,
   type InjectionKey,
   type Persistent,
+  type Purchasable,
 } from '@open-loop/engine';
 import { createModuleApi } from '@/modules/module-api';
 import { PLAYER_PERSONA } from '../data/contracts';
+import { LIEUTENANTS, type CrewTier, type LieutenantDef } from '../data/crew';
 import { playCommand, playEconomy, type PolicyScope } from './policy';
-import { CareerKey } from './career';
 import { MatchKey } from './match';
 
-export type CrewTier = 'none' | 'fixer' | 'quartermaster' | 'tactician';
-
-/** Which policy scope each lieutenant runs. */
-export const TIER_SCOPE: Record<Exclude<CrewTier, 'none'>, PolicyScope> = {
-  fixer: 'econ',
-  quartermaster: 'build',
-  tactician: 'command',
-};
+export type { CrewTier } from '../data/crew';
 
 export interface Lieutenant {
-  tier: Exclude<CrewTier, 'none'>;
-  name: string;
-  does: string;
+  def: LieutenantDef;
+  /** The hire on the player's seat: one-shot, in scrip, open once the lieutenant before is hired. */
+  hire: Purchasable;
   enabled: Persistent<boolean>;
 }
 
@@ -48,55 +43,39 @@ export const getAutomation = automationApi.get;
 
 export const automationModule: EngineModule = {
   id: 'skirmish/automation',
-  dependencies: ['skirmish/match', 'skirmish/career'],
+  dependencies: ['skirmish/match'],
   install(ctx) {
     const match = ctx.inject(MatchKey);
-    const career = ctx.inject(CareerKey);
+    const lieutenants: Lieutenant[] = LIEUTENANTS.map((def) => ({
+      def,
+      hire: match.p.crew.getPurchasable(def.id)!,
+      enabled: persistent(true, { id: `auto-${def.id}` }),
+    }));
     const tiers = createAutomationTiers({
       tiers: [
         { id: 'none', displayName: 'Running it yourself', order: 0 },
-        { id: 'fixer', displayName: 'Fixer', order: 1, unlockWhen: () => career.wins.value >= 1 },
-        {
-          id: 'quartermaster',
-          displayName: 'Quartermaster',
-          order: 2,
-          unlockWhen: () => career.wins.value >= 2,
-        },
-        {
-          id: 'tactician',
-          displayName: 'Tactician',
-          order: 3,
-          unlockWhen: () => career.wins.value >= 3,
-        },
+        ...lieutenants.map((l, i) => ({
+          id: l.def.id,
+          displayName: l.def.name,
+          order: i + 1,
+          unlockWhen: () => l.hire.active.value,
+        })),
       ],
     });
-    const lieutenants: Lieutenant[] = [
-      {
-        tier: 'fixer',
-        name: 'Moth, your fixer',
-        does: 'hires hustlers, sinks ley taps, rents squats; never spends what your next training floor costs',
-        enabled: persistent(true, { id: 'auto-fixer' }),
-      },
-      {
-        tier: 'quartermaster',
-        name: 'Old Brass, quartermaster',
-        does: 'builds training floors, buys research, runs the training switches',
-        enabled: persistent(true, { id: 'auto-quartermaster' }),
-      },
-      {
-        tier: 'tactician',
-        name: 'Saint Ivo, tactician',
-        does: 'deploys, focuses fire, pulls back and calls assaults',
-        enabled: persistent(true, { id: 'auto-tactician' }),
-      },
-    ];
+
+    // The match reset lets the hires go; the tiers they unlocked and their switches follow.
+    match.onReset('afterReset', () => {
+      tiers.resetUnlocks();
+      for (const l of lieutenants) l.enabled.value = true;
+    });
+
     const think = createThrottle({ interval: 1 });
     ctx.onTick((dt) => {
       if (match.phase.value !== 'live' || !think.ready(dt)) return;
       // isUnlocked, not hasReached: each lieutenant is its own hire.
       const scopes = new Set<PolicyScope>();
       for (const l of lieutenants)
-        if (tiers.isUnlocked(l.tier) && l.enabled.value) scopes.add(TIER_SCOPE[l.tier]);
+        if (tiers.isUnlocked(l.def.id) && l.enabled.value) scopes.add(l.def.scope);
       if (scopes.size === 0) return;
       const persona = PLAYER_PERSONA;
       if (scopes.has('econ') || scopes.has('build'))

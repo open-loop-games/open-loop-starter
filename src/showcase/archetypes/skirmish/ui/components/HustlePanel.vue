@@ -77,7 +77,7 @@ const floorRows = BARRACKS.map((def) => {
   const kind = def.trains;
   return createProducerRow<FloorExtra>(prod, {
     displayName: def.name,
-    prerequisite: def.requiresText,
+    prerequisite: `needs ${def.requiresText}`,
     extra: {
       def,
       item: prod.repeatable!,

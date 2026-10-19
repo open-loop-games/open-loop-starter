@@ -4,7 +4,7 @@
 
   Shell: ThreePanelShell under a HUD. The shell research has no RTS row; this is the combat
   genres' deck: a central play surface (the safehouses and the districts) with the economy
-  and the training floors on the left, research and the crew on the right, and the purse
+  and the training floors on the left, the crew and research on the right, and the purse
   over all three. The contract sheet lies over the deck while the match is not live.
 -->
 <script setup lang="ts">
@@ -27,8 +27,8 @@ import ResearchPanel from './components/ResearchPanel.vue';
       <MapBoard />
       <template #right>
         <aside class="cc-panel" aria-label="Research and crew">
-          <ResearchPanel />
           <CrewPanel />
+          <ResearchPanel />
         </aside>
       </template>
     </ThreePanelShell>

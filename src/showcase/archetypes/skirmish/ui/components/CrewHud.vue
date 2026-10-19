@@ -10,11 +10,11 @@ import { toNumber, type DecimalSource } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import HudChip from '@/ui/components/HudChip.vue';
 import { ResourceHeaderStrip, type ResourceReadout } from '@/ui/compositions';
-import { getCareer, getMatch } from '../../modules';
+import { getMatch, getRoster } from '../../modules';
 import { clock, rate, whole } from '../format';
 
 const match = getMatch();
-const career = getCareer();
+const roster = getRoster();
 const { p } = match;
 
 const used = computed(() => Math.floor(p.supplyUsed()));
@@ -68,7 +68,7 @@ const scoutLabel = computed(() => {
     <template #leading>
       <div class="hud__brand">
         <span class="cc-tag"
-          >Contract {{ career.contractIndex.value + 1 }} · {{ match.contract.value.outfit }}</span
+          >Contract {{ roster.contractIndex.value + 1 }} · {{ match.contract.value.outfit }}</span
         >
         <span class="hud__rival">{{ match.contract.value.rival }}</span>
       </div>
