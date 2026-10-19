@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, toNumber } from '@open-loop/engine';
 import { DISTRICTS } from '../data/contracts';
-import { boot, seconds, tickUntil } from '../sim/harness';
+import { boot, getEngine, seconds, tickUntil } from '../sim/harness';
 import { getMatch } from './match';
 import { deploy, setStance } from './orders';
 
@@ -38,7 +38,19 @@ describe('the match', () => {
     grant(m.p, 6);
     deploy(m.p, 'enforcer', 0);
     await tickUntil(() => m.control[0]!.value >= 1);
-    expect(m.feed.value.some((f) => f.text.includes(DISTRICTS[0]!.name))).toBe(true);
+    expect(m.feed.lines.value.some((f) => f.text.includes(DISTRICTS[0]!.name))).toBe(true);
+  });
+
+  it('starts the feed empty on a load and on the next contract', () => {
+    const m = getMatch();
+    getEngine().save();
+    m.start();
+    expect(m.feed.lines.value).not.toEqual([]);
+    getEngine().load();
+    expect(m.feed.lines.value).toEqual([]);
+    m.start();
+    m.nextMatch();
+    expect(m.feed.lines.value).toEqual([]);
   });
 
   it('burns the rival safehouse from a held district under an assault order', async () => {

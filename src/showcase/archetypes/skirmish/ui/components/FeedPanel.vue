@@ -1,40 +1,19 @@
 <!--
-  FeedPanel — the street feed: what just happened on the map, newest first. Starter's
-  EventLog renders it. The match keeps its feed as entries of its own, newest first and
-  unnumbered, so this panel numbers each entry once, the first time it sees it, and hands
-  the log its lines oldest first.
+  FeedPanel — the street feed: what just happened on the map, newest first. The match keeps
+  it as starter's event log, so its lines go to the EventLog composition as they are.
 -->
 <script setup lang="ts">
-import { computed } from 'vue';
-import { EventLog, type EventLine } from '@/ui/compositions';
-import { getMatch, type FeedEntry } from '../../modules';
+import { EventLog } from '@/ui/compositions';
+import { getMatch } from '../../modules';
 import { clock } from '../format';
 
 const match = getMatch();
-
-// An entry object is never rebuilt, so its number is stable for as long as it is shown.
-const numbered = new WeakMap<FeedEntry, number>();
-let next = 0;
-const seqOf = (f: FeedEntry) => {
-  let seq = numbered.get(f);
-  if (seq === undefined) numbered.set(f, (seq = ++next));
-  return seq;
-};
-
-const lines = computed(() =>
-  [...match.feed.value].reverse().map((f): EventLine<FeedEntry['tone']> => ({
-    seq: seqOf(f),
-    at: f.t,
-    kind: f.tone,
-    text: f.text,
-  })),
-);
 </script>
 
 <template>
   <section class="feedbox" aria-label="Street feed">
     <h2 class="cc-title">Street feed</h2>
-    <EventLog class="feed" :lines="lines" :format-time="clock">
+    <EventLog class="feed" :lines="match.feed.lines.value" :format-time="clock">
       <template #empty>Quiet. Too quiet.</template>
     </EventLog>
   </section>

@@ -19,6 +19,7 @@ import {
   type ShallowRef,
 } from '@open-loop/engine';
 import { createModuleApi } from '@/modules/module-api';
+import { createEventLog, type EventLog } from '@/modules/event-log';
 import { DISTRICTS, type ContractDef } from '../data/contracts';
 import { UNIT_KINDS } from '../data/units';
 import {
@@ -40,11 +41,8 @@ import { TunablesKey } from './tuning';
 export type Phase = 'briefing' | 'live' | 'won' | 'lost';
 export type Owner = 'p' | 'e' | 'none';
 
-export interface FeedEntry {
-  t: number;
-  text: string;
-  tone: 'good' | 'bad' | 'info';
-}
+/** How a feed line reads for the player: their gain, their loss, or neither. */
+export type FeedTone = 'good' | 'bad' | 'info';
 
 /** What the player last saw of a district, and when. */
 export interface Sighting {
@@ -64,7 +62,8 @@ export interface MatchApi {
   /** Seconds into the live match. */
   readonly clock: Persistent<number>;
   readonly contract: ComputedRef<ContractDef>;
-  readonly feed: ShallowRef<FeedEntry[]>;
+  /** The street feed. It belongs to the play session: a load or a new match empties it. */
+  readonly feed: EventLog<FeedTone>;
   /** Seconds of astral sight left, and seconds until the next scout. */
   readonly scoutLeft: ComputedRef<number>;
   readonly scoutCooldown: ComputedRef<number>;
@@ -81,7 +80,6 @@ export interface MatchApi {
   onReset: Reset['on'];
   scout(): boolean;
   situation(seat: 'p' | 'e'): Situation;
-  log(text: string, tone?: FeedEntry['tone']): void;
 }
 
 export const MatchKey: InjectionKey<MatchApi> = Symbol('skirmish/match');
@@ -127,10 +125,12 @@ export const matchModule: EngineModule = {
       running,
     });
 
-    const feed = shallowRef<FeedEntry[]>([]);
-    const log = (text: string, tone: FeedEntry['tone'] = 'info') => {
-      feed.value = [{ t: clock.value, text, tone }, ...feed.value].slice(0, FEED_LENGTH);
-    };
+    const feed = createEventLog<FeedTone>(ctx, {
+      cap: FEED_LENGTH,
+      clock: () => clock.value,
+      defaultKind: 'info',
+    });
+    const log = feed.post;
 
     // ─── Fog of war ───
     const scoutLeft = computed(() => Math.max(0, scoutUntil.value - clock.value));
@@ -289,7 +289,7 @@ export const matchModule: EngineModule = {
       },
       nextMatch() {
         matchReset.reset();
-        feed.value = [];
+        feed.clear();
         sightings.value = DISTRICTS.map(() => undefined);
         safehouseSighting.value = undefined;
         lastSiegeLog = [-Infinity, -Infinity];
@@ -304,7 +304,6 @@ export const matchModule: EngineModule = {
         return true;
       },
       situation,
-      log,
       onReset: matchReset.on,
     };
     matchApi.publish(ctx, api);
