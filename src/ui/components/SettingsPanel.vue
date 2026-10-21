@@ -48,7 +48,7 @@ const uiScalePercent = computed<number>({
 
     <div class="setting-group">
       <h3>Display</h3>
-      <p class="setting-group__hint">Shared across every demo in the gallery.</p>
+      <p class="setting-group__hint">Applies to every save slot.</p>
 
       <label class="setting">
         <span>Theme</span>
@@ -80,7 +80,7 @@ const uiScalePercent = computed<number>({
 
     <div class="setting-group">
       <h3>Autosave</h3>
-      <p class="setting-group__hint">Shared across every demo in the gallery.</p>
+      <p class="setting-group__hint">Applies to every save slot.</p>
 
       <Switch v-model="prefs.autoSave.value">Enabled</Switch>
 
@@ -100,8 +100,8 @@ const uiScalePercent = computed<number>({
     </div>
 
     <div class="setting-group">
-      <h3>This Demo</h3>
-      <p class="setting-group__hint">Saved with this demo only.</p>
+      <h3>This Save</h3>
+      <p class="setting-group__hint">Saved with this slot only.</p>
 
       <Switch v-model="settings.offlineProgress.value"> Process offline progress on load </Switch>
     </div>

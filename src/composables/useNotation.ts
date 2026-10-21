@@ -23,7 +23,7 @@ function ensurePresetsRegistered(): void {
 
 /**
  * Registers extra notation presets and binds the active notation to the
- * player-level pref. Idempotent across demo switches.
+ * player-level pref. Idempotent, so every game mounted on the page may call it.
  */
 export function useNotation(): void {
   ensurePresetsRegistered();

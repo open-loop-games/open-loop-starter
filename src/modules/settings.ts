@@ -11,9 +11,9 @@ import {
 import { useToasts } from '@/composables/useToasts';
 
 /**
- * Demo-level toggles that persist with the engine save (per-demo, per-slot).
+ * Game-level toggles that persist with the engine save (per game, per slot).
  * Player-level prefs (theme, notation, ui scale, autosave) live in
- * `usePlayerPrefs` and are shared across every demo in the gallery.
+ * `usePlayerPrefs`, outside any save, and apply to every slot.
  */
 export interface StockSettings {
   offlineProgress: Persistent<boolean>;

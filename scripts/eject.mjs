@@ -10,9 +10,10 @@
  * demo surface).
  *
  * Hoists one archetype out of the showcase boundary into `src/game/`, rewrites
- * `main.ts` to a single-archetype boot, repoints config, and deletes the entire
- * demo/research surface (`src/showcase/`, the gallery-strip guard, and the
- * repo-root demo docs). The result is a clean game with the scaffold + one
+ * `main.ts` to a single-archetype boot, repoints config and the game's own
+ * paths, strips starter-only text from the docs a fork keeps, and deletes the
+ * entire demo/research surface (`src/showcase/`, the gallery-strip guard, and
+ * the repo-root demo docs). The result is a clean game with the scaffold + one
  * archetype and nothing to strip by hand.
  *
  * Safe because the move is mechanical: archetypes import only scaffold
@@ -21,7 +22,7 @@
  * default-dry-run plan is what `src/test/eject.test.ts` asserts against.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const SHOWCASE = 'src/showcase';
@@ -45,6 +46,13 @@ const DEMO_DELETES = [
   // Starter's task-backend config; a fork inherits the studio-root gitea config.
   '.mcp.json',
 ];
+
+// Docs a fork keeps that also describe the showcase. Their starter-only text is
+// wrapped in `<!-- eject:strip-start -->` / `<!-- eject:strip-end -->`.
+const STRIP_DOCS = ['AGENTS.md'];
+
+// Text files in the hoisted game whose showcase paths are repointed to src/game.
+const REPOINT_EXTS = /\.(ts|vue|mjs|md|json|css)$/;
 
 const MAIN_TS = `import { effectScope } from 'vue';
 import { createApp } from '@/game';
@@ -96,12 +104,12 @@ export const manifest: GameManifest = { id: '${esc(id)}', displayName: '${esc(di
 function readmeMd(name) {
   return `# ${name}
 
-A game built on [open-loop-engine](../open-loop-engine), forked from open-loop-starter.
+A game built on \`@open-loop/engine\`, forked from open-loop-starter.
 
 ## Setup
 
 \`\`\`bash
-pnpm install   # engine is a link: dep to the sibling directory
+pnpm install   # @open-loop/engine installs from the registry pnpm-workspace.yaml names
 pnpm dev
 \`\`\`
 
@@ -180,6 +188,7 @@ function planEject(root, archetype, name) {
     repoint: { from: `${ARCHETYPES}/${archetype}/`, to: `${GAME_DIR}/` },
     domainMap: { from: `${ARCHETYPES}/*/domain-map.config.mjs`, to: `${GAME_DIR}/domain-map.config.mjs` },
     pruneConfigLines: SHOWCASE, // delete config lines still mentioning this after repoint
+    stripDocs: STRIP_DOCS,
     packageName: gameId,
     gameId,
     deletes: DEMO_DELETES,
@@ -195,6 +204,21 @@ function gitMv(root, from, to) {
   }
 }
 
+/** Every file under `dir`, recursively. */
+function walkFiles(dir) {
+  return readdirSync(dir).flatMap((name) => {
+    const p = join(dir, name);
+    return statSync(p).isDirectory() ? walkFiles(p) : [p];
+  });
+}
+
+/** Remove each `eject:strip` region of a markdown doc, and the blank line it leaves. */
+function stripMarkdown(src) {
+  return src
+    .replace(/[ \t]*<!-- eject:strip-start -->[\s\S]*?<!-- eject:strip-end -->\n?/g, '')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
 function editFile(path, fn) {
   if (!existsSync(path)) return;
   const next = fn(readFileSync(path, 'utf8'));
@@ -204,6 +228,15 @@ function editFile(path, fn) {
 function applyPlan(root, plan) {
   // 1. Hoist the chosen archetype out of the showcase boundary.
   gitMv(root, join(root, plan.move.from), join(root, plan.move.to));
+
+  // 1b. Repoint the hoisted game's own references to its old showcase path
+  // (run lines in balance scripts, doc cites).
+  for (const path of walkFiles(join(root, plan.move.to))) {
+    if (!REPOINT_EXTS.test(path)) continue;
+    editFile(path, (src) =>
+      src.includes(plan.repoint.from) ? src.split(plan.repoint.from).join(plan.repoint.to) : null,
+    );
+  }
 
   // 2. Single-archetype main.ts.
   writeFileSync(join(root, plan.rewriteMain), MAIN_TS);
@@ -246,6 +279,7 @@ function applyPlan(root, plan) {
   writeFileSync(join(root, 'src/types.ts'), TYPES_TS);
   writeFileSync(join(root, GAME_DIR, 'manifest.ts'), gameManifest(plan.manifest.id, plan.manifest.displayName));
   writeFileSync(join(root, 'README.md'), readmeMd(plan.manifest.displayName));
+  for (const rel of plan.stripDocs) editFile(join(root, rel), stripMarkdown);
 
   // 5. Apply the game name to package.json + the hoisted boot's GAME_ID.
   if (plan.packageName) {

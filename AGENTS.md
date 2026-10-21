@@ -10,9 +10,13 @@ open-loop-starter is the engine's batteries-included clone target, and the story
 
 ## Purpose
 
+<!-- eject:strip-start -->
 Two halves split at `src/showcase/`. The **base** is the batteries (§ Scaffold). The **stories** are the archetype demos. Starter is not a library; clone and eject.
 
-The stories half documents itself in `src/showcase/AGENTS.md`, inside the strip boundary. That file covers how an archetype is built, how the two halves test each other, and the `pnpm eject` fork workflow. `pnpm eject` deletes that tree, so the file goes with the code it describes. A fork keeps only what still applies to it.
+The stories half documents itself in `src/showcase/AGENTS.md`, inside the strip boundary. That file covers how an archetype is built, how the two halves test each other, and the `pnpm eject` fork workflow. `pnpm eject` deletes that tree, so the file goes with the code it describes. A fork keeps only what still applies to it. Text in this file that only starter needs is between `eject:strip` markers, which eject removes.
+<!-- eject:strip-end -->
+
+**Read the stories in place.** Starter's stories are its worked examples: each one composes the batteries into a game shape. A fork keeps none of their code. To see a battery in use, read the stories in an `open-loop-starter` checkout, under `src/showcase/archetypes/`. A story's docs are the method, and its code is the answer key.
 
 ### Scaffold — the base (`src/lib/`, `src/ui/`, `src/styles/`, composables)
 
@@ -38,7 +42,9 @@ Starter differs from the engine list in one rule. It always qualifies "harness":
 
 Where the list is silent, a word keeps its everyday sense. Examples are starter's layers (`modules`, `composables`, `ui`, `lib`) and Vue's "render".
 
+<!-- eject:strip-start -->
 The base and `_blank` cite no `.claude/rules/` file, because `pnpm eject` deletes that directory.
+<!-- eject:strip-end -->
 
 ## Commands
 
@@ -57,10 +63,9 @@ pnpm format           # oxfmt src
 
 ```
 src/
-├── main.ts        # Gallery boot. `pnpm eject` rewrites it to a single-game mount.
+├── main.ts        # App entry: starts the player prefs, then mounts the app.
 ├── boot.ts        # bootEngine / bootApp — the supported way to wire an engine + app. Archetype boot.ts files flow through these.
-├── types.ts       # Shared starter types (the gallery contract).
-├── showcase/      # ← STRIP BOUNDARY. `pnpm eject` deletes this whole tree. Archetype demos, gallery, about, sandbox. Documented at src/showcase/AGENTS.md.
+├── types.ts       # App-wide shared types.
 ├── lib/           # Scaffold layout/theme layer. Presentational — no engine imports (oxlint-enforced). Import via '@/lib'.
 ├── ui/            # Engine-bridged UI — screens, panels, components, compositions. Archetype-specific SFCs are in their archetype, not here.
 ├── composables/   # Starter-level composables — bridge shared-base state to UI.
@@ -72,6 +77,10 @@ src/
 ```
 
 These are roles, not inventories: the directory is the list. `src/ui/components/**` is registered globally (`unplugin-vue-components`), so templates need no import for them.
+
+<!-- eject:strip-start -->
+Beside these, `src/showcase/` is the **strip boundary**: archetype demos, gallery, about and sandbox. `pnpm eject` deletes the whole tree. It is documented at `src/showcase/AGENTS.md`.
+<!-- eject:strip-end -->
 
 ### Layering
 
@@ -173,7 +182,7 @@ const showDevPanel = ref(false);
 - Archetype `data/` is pure config: typed defs and balance constants only. Modules read data at construction, through a factory closure.
 - Archetype data is inline in `data/*.ts`, with the skeleton and the balance lens as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`). There is no parallel `vars/` layer and no codegen round-trip.
 - Each archetype has a `domain-map.config.mjs` and a generated `domain-map.md`. The map covers the archetype's own domain language: vocabulary, is-a and reference graph. The engine's `ol-domain-map` tool builds it from the `data/` types; regenerate with `pnpm domain-map`. It is a read-only research reference, generated FROM the types and never feeding back IN. So it cannot drift, and it is not a codegen round-trip. Edit the config (suffixes, nouns, curated disambiguators), never the `.md`. Each committed map is also a forkable best-practice example.
-- Game-specific content goes under `src/showcase/archetypes/<name>/`. Cross-archetype `src/modules/` and `src/ui/` stay archetype-agnostic.
+- Game-specific content stays in the game's own directory. Cross-archetype `src/modules/` and `src/ui/` stay archetype-agnostic.
 - Layering inside each archetype runs `data → modules → composables → ui`.
 - Layout uses `src/lib/` shells and AppFrame. `src/lib/` is presentational; engine bridging is in `src/ui/`.
 - Theme by setting CSS variables (no Tailwind, no shadcn-vue).

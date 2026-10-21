@@ -10,10 +10,10 @@ import { useToasts } from './useToasts';
  * human-readable reasons. A failed load that protects its slot says so on the
  * same toast: saves to that slot stop until the player deletes the save.
  *
- * Wired automatically by `bootApp` so every starter-using demo + every fork
- * inherits the pattern. Returns an unsubscribe function that removes every
- * handler; `bootApp` doesn't currently call it (the handlers last as long as
- * the engine), but the gallery sandbox could on unmount.
+ * Wired automatically by `bootApp`, so every game booted through it inherits
+ * the pattern. Returns an unsubscribe function that removes every handler;
+ * `bootApp` doesn't call it, because the handlers last as long as the engine.
+ * A host that unmounts a game and keeps the page calls it.
  */
 export function useSaveEvents(mgr: SaveManager): () => void {
   const { toasts, addToast } = useToasts();

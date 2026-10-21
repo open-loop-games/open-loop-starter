@@ -1,5 +1,5 @@
 <!--
-  SystemHeader — cross-demo header strip mounted by every archetype.
+  SystemHeader — the header strip every archetype mounts.
 
   Owns the title-button-back-to-slots, About popover, optional extra
   actions, and Save / Settings buttons. The default title is the app name and
@@ -16,7 +16,7 @@
   Also drives the engine's autosave from the player pref refs, by writing
   `engine.autoSaveInterval` (0 when the player turns autosave off) while
   the header is mounted. Theme, ui-scale, and notation
-  are bound at app boot in usePlayerPrefs (page-lifetime, demo-agnostic).
+  are bound at app boot in usePlayerPrefs (page-lifetime, game-agnostic).
 -->
 <script setup lang="ts">
 import { inject, onUnmounted, watch } from 'vue';

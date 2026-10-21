@@ -1,7 +1,7 @@
 /**
  * Locks for `pnpm eject` (scripts/eject.mjs).
  *
- * Two guarantees:
+ * Three guarantees:
  *   1. The eject *plan* keeps its shape — hoist one archetype to `src/game`,
  *      delete the whole demo surface. A `--dry-run`-equivalent assertion that
  *      needs no node_modules, so it's a fast CI lock.
@@ -9,7 +9,21 @@
  *      sibling archetype or the gallery/sandbox. That isolation is the reason
  *      deleting the rest of the showcase can't break the archetype you keep;
  *      this test fails the moment a future port introduces cross-coupling.
+ *   3. A clean fork *carries no showcase text* — no path into the deleted
+ *      tree, no gallery framing, no `eject:strip` region left behind.
  */
+import { execFileSync } from 'node:child_process';
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, relative } from 'node:path';
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error — .mjs script, no types; we only touch the pure planner.
 import { planEject, slug } from '../../scripts/eject.mjs';
@@ -111,4 +125,55 @@ describe('eject safety — archetype isolation', () => {
     }
     expect(violations, violations.join('\n')).toEqual([]);
   });
+});
+
+/** Every file under `dir`, recursively, as paths relative to `root`. */
+function filesUnder(root: string, dir = root): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const p = join(dir, name);
+    return statSync(p).isDirectory() ? filesUnder(root, p) : [relative(root, p)];
+  });
+}
+
+describe('eject --clean residue', () => {
+  it('leaves no showcase text in the fork', () => {
+    // Eject a copy of the working tree: tracked files plus untracked, unignored ones.
+    const fork = mkdtempSync(join(tmpdir(), 'starter-eject-'));
+    try {
+      const files = execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      })
+        .split('\0')
+        // A tracked file deleted from the working tree is still listed.
+        .filter((f) => f && existsSync(join(ROOT, f)));
+      for (const f of files) cpSync(join(ROOT, f), join(fork, f));
+      execFileSync(
+        'node',
+        [join(fork, 'scripts/eject.mjs'), '--clean', '--execute', '--root', fork],
+        {
+          stdio: 'pipe',
+        },
+      );
+
+      const residue: string[] = [];
+      for (const rel of filesUnder(fork)) {
+        if (rel === 'pnpm-lock.yaml' || !/\.(ts|vue|mjs|md|json|css|html)$|^\.husky\//.test(rel)) {
+          continue;
+        }
+        readFileSync(join(fork, rel), 'utf8')
+          .split('\n')
+          .forEach((line, i) => {
+            // The read-in-place pointer names starter's tree on purpose.
+            const showcasePath = /src\/showcase/.test(line) && !line.includes('open-loop-starter');
+            if (showcasePath || /\b(gallery|sandbox)\b|eject:strip/i.test(line)) {
+              residue.push(`${rel}:${i + 1}: ${line.trim()}`);
+            }
+          });
+      }
+      expect(residue, residue.join('\n')).toEqual([]);
+    } finally {
+      rmSync(fork, { recursive: true, force: true });
+    }
+  }, 30_000);
 });

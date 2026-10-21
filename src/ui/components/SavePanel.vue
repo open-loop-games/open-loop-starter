@@ -140,7 +140,7 @@ function confirmDelete(): void {
           </VisuallyHidden>
           <PanelLayout title="Delete this slot?" @close="showDeleteConfirm = false">
             <div class="confirm-body">
-              <p>This deletes the active save slot. Other slots and other demos are untouched.</p>
+              <p>This deletes the active save slot. Other slots are untouched.</p>
               <div class="confirm-actions">
                 <Button class="btn-sm" @click="showDeleteConfirm = false"> Cancel </Button>
                 <Button

@@ -18,7 +18,7 @@ set and never as a list of the games in a genre.
 
 This file is the template for a real archetype's `IDENTITY.md`. It has every
 required section, filled in for the neutral base. When you build on `pnpm eject --clean`, rewrite each section for
-your game; when you author a *new* archetype in the gallery, replace the placeholder
+your game; when you author a *new* archetype in starter, replace the placeholder
 content with the real composition. Keep it a single screen — worked balance
 detail belongs in `BALANCING.md` beside this file.
 

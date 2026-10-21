@@ -2,7 +2,7 @@
 
 Conventions for `src/showcase/`, for every agent harness: Claude Code, Codex, opencode or any other. `CLAUDE.md` beside this file imports it rather than restating it. So this file is the one home for the content; edit here.
 
-This half is the demo and research surface: archetypes, gallery, about and sandbox. It is *inside* the strip boundary. `pnpm eject` deletes the tree and this file with it. So a fork inherits the root `AGENTS.md` and none of what follows. That is the point. What a fork must not inherit is documented where the deletion already reaches. Eject then needs no list to keep in sync.
+This half is the demo and research surface: archetypes, gallery, about and sandbox. It is *inside* the strip boundary. `pnpm eject` deletes the tree and this file with it. So a fork inherits the root `AGENTS.md` and none of what follows. That is the point. What a fork must not inherit is documented where the deletion already reaches. Eject then needs no list to keep in sync. Where the root `AGENTS.md` must describe the showcase for a starter reader, that text is wrapped in `<!-- eject:strip-start -->` / `<!-- eject:strip-end -->` markers, and eject removes it.
 
 **The stories demonstrate the base.** The strip boundary is a one-way *import* cut, not a separation of concerns.
 
@@ -68,9 +68,9 @@ Each archetype's `ui/` follows the root-vs-game-view split in `.claude/rules/app
 
 - hoists your archetype to `src/game/`;
 - rewrites `main.ts` to a single-archetype boot;
-- repoints and prunes config;
+- repoints and prunes config, and repoints the game's own references to its showcase path;
 - slims `types.ts` and `manifest.ts` to game identity;
-- stubs the README;
+- stubs the README, and removes the `eject:strip` regions from the root `AGENTS.md`;
 - deletes the entire demo and research surface: `src/showcase/` and the repo-root demo docs;
 - deletes the Claude-only `.claude/rules/`, whose paths only ever matched the showcase tree;
 - deletes **eject's own machinery**: `scripts/eject.mjs`, `src/test/eject.test.ts`, the `eject` script and the `@/showcase` oxlint guard.
@@ -88,7 +88,7 @@ Eject deletes the eject test with the machinery. So no check of a green fork aft
 
 **Manual post-fork steps that eject leaves to judgment:**
 
-- Rewrite the root `AGENTS.md` from the starter's dual-character framing to your game. Eject leaves it verbatim, because a `--name` stub would lose too much.
+- Rewrite the root `AGENTS.md`'s framing for your game. Eject removes only its starter-only regions, because a `--name` stub would lose the batteries doc.
 - Update `src/game/IDENTITY.md` once you have reshaped `src/game/data`.
 - Regenerate `domain-map.md` (`pnpm domain-map`) at the same point.
 - Re-establish anything the starter kept in `.claude/CLAUDE.local.md`. That file is gitignored, so it does not travel.

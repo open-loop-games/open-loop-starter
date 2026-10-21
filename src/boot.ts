@@ -10,9 +10,9 @@
  * Archetype `boot.ts` files flow through these — there is no other supported
  * way to wire an engine + app. Bypass them at your own peril.
  *
- * Invariant: every demo's `gameId` must be unique within the gallery —
- * SaveManager keys storage by `gameId`, so collisions cross-contaminate
- * saves between sibling demos. Forks rename `gameId` when forking.
+ * Invariant: every game's `gameId` is unique among the games served from one
+ * origin. SaveManager keys storage by `gameId`, so a collision mixes two
+ * games' saves. `pnpm eject --name` sets it.
  *
  * Autosave: the engine's default applies (it writes only after a load). While
  * SystemHeader is mounted it drives the interval from the player-pref refs, so

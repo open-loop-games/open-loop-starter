@@ -1,10 +1,11 @@
 /**
- * Player-level preferences shared across all demos in the gallery.
+ * Player-level preferences, shared by every game on the page's origin.
  *
- * Stored in localStorage outside any engine's persistence namespace, so
- * flipping the theme in one demo applies to every other demo in the gallery.
- * Settings under an engine's persistence namespace (see `useSettings` /
- * `settingsModule`) are for demo-mechanic toggles only.
+ * Stored in localStorage outside any engine's persistence namespace, under a
+ * fixed key, so flipping the theme in one game applies to every save slot and
+ * to every other game that reads the same key. Settings under an engine's
+ * persistence namespace (see `useSettings` / `settingsModule`) are for
+ * game-mechanic toggles only.
  *
  * Singleton — refs are created on first import and reused. Writes are
  * mirrored to localStorage via `watch`.

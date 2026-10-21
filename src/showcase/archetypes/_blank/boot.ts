@@ -10,7 +10,7 @@ const MOD_NAME = 'Game';
 
 export interface GameBootResult {
   engine: Engine;
-  /** Underlying Vue app — exposed so sandbox / gallery hosts can call `app.unmount()`. */
+  /** Underlying Vue app — exposed so a host page that mounts the game can call `app.unmount()`. */
   app: App;
   mount: (selector: string | Element) => void;
 }
