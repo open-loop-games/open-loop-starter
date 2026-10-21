@@ -54,14 +54,16 @@ const STRIP_DOCS = ['AGENTS.md'];
 // Text files in the hoisted game whose showcase paths are repointed to src/game.
 const REPOINT_EXTS = /\.(ts|vue|mjs|md|json|css)$/;
 
-const MAIN_TS = `import { effectScope } from 'vue';
-import { createApp } from '@/game';
-import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
-import { useNotation } from '@/composables/useNotation';
+const MAIN_TS = `// The scaffold's styles load before the game's, so a game stylesheet that
+// redeclares a token on :root wins the tie, as tokens.css says it does.
 import '@/lib/styles/reset.css';
 import '@/lib/styles/tokens.css';
 import './styles/base.css';
 import './styles/theme-widgets.css';
+import { effectScope } from 'vue';
+import { createApp } from '@/game';
+import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
+import { useNotation } from '@/composables/useNotation';
 
 // Page-lifetime player-pref runtime: theme + ui-scale + notation begin
 // applying at boot so the game honours the player's saved settings.
