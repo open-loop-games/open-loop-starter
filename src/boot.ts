@@ -2,7 +2,8 @@
  * Starter boot factories — the canonical entry points for every archetype.
  *
  * `bootEngine` creates an engine with starter defaults (interval rate, autosave,
- * save-slot count) and auto-prepends `sharedBase` modules to every mod.
+ * save-slot count) and auto-prepends `sharedBase` modules to every mod. Given
+ * exactly one mod, it selects it, so `start()` installs the game.
  *
  * `bootApp` creates a Vue app and provides the engine. Pass additional
  * provides for archetype-specific keys.
@@ -67,7 +68,7 @@ export function bootEngine(options: BootEngineOptions): Engine {
     ...rest
   } = options;
 
-  return createEngine({
+  const engine = createEngine({
     ...rest,
     intervalRate,
     maxSaveSlots,
@@ -77,6 +78,11 @@ export function bootEngine(options: BootEngineOptions): Engine {
       modules: [...sharedBase, ...mod.modules],
     })),
   });
+  // An unselected mod installs nothing, and start() doesn't warn. A game
+  // boots one mod, so select it here: a headless script's start() then
+  // installs the game, as the app's play session does.
+  if (mods.length === 1) engine.selectMod(mods[0]!.id);
+  return engine;
 }
 
 export interface BootAppOptions {
