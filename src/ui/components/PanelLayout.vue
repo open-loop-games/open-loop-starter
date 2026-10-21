@@ -58,14 +58,15 @@ const hasFooter = computed(() => !!slots.footer);
 
 <style>
 .olui-panel {
-  --panel-gap: var(--gap);
-  --panel-padding: var(--gap-lg);
-  --panel-header-border: 1px solid var(--color-border);
-  --panel-max-height: 80vh;
+  /* Read each token, never set it, so a value set on any ancestor reaches the widget. */
+  --_panel-gap: var(--panel-gap, var(--gap));
+  --_panel-padding: var(--panel-padding, var(--gap-lg));
+  --_panel-header-border: var(--panel-header-border, 1px solid var(--color-border));
+  --_panel-max-height: var(--panel-max-height, 80vh);
 
   display: flex;
   flex-direction: column;
-  max-height: var(--panel-max-height);
+  max-height: var(--_panel-max-height);
   min-height: 0;
 }
 
@@ -73,9 +74,9 @@ const hasFooter = computed(() => !!slots.footer);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--panel-gap);
-  padding: var(--panel-padding);
-  border-bottom: var(--panel-header-border);
+  gap: var(--_panel-gap);
+  padding: var(--_panel-padding);
+  border-bottom: var(--_panel-header-border);
   flex: 0 0 auto;
 }
 
@@ -105,15 +106,15 @@ const hasFooter = computed(() => !!slots.footer);
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--panel-padding);
+  padding: var(--_panel-padding);
 }
 
 .olui-panel__footer {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: var(--panel-gap);
-  padding: var(--panel-padding);
-  border-top: var(--panel-header-border);
+  gap: var(--_panel-gap);
+  padding: var(--_panel-padding);
+  border-top: var(--_panel-header-border);
 }
 </style>

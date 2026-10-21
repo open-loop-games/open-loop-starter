@@ -55,17 +55,18 @@ const isOpen = ref(false);
 
 <style>
 .olui-tooltip__content {
-  --tooltip-bg: var(--color-text);
-  --tooltip-text: var(--color-bg);
-  --tooltip-padding: 6px 10px;
-  --tooltip-radius: var(--radius-sm);
-  --tooltip-max-width: 260px;
+  /* Read each token, never set it, so a value set on any ancestor reaches the widget. */
+  --_tooltip-bg: var(--tooltip-bg, color-mix(in srgb, var(--color-bg) 10%, #000 90%));
+  --_tooltip-text: var(--tooltip-text, var(--color-text));
+  --_tooltip-padding: var(--tooltip-padding, 6px 10px);
+  --_tooltip-radius: var(--tooltip-radius, var(--radius-sm));
+  --_tooltip-max-width: var(--tooltip-max-width, 260px);
 
-  background: var(--tooltip-bg);
-  color: var(--tooltip-text);
-  padding: var(--tooltip-padding);
-  border-radius: var(--tooltip-radius);
-  max-width: var(--tooltip-max-width);
+  background: var(--_tooltip-bg);
+  color: var(--_tooltip-text);
+  padding: var(--_tooltip-padding);
+  border-radius: var(--_tooltip-radius);
+  max-width: var(--_tooltip-max-width);
   font-size: 0.85em;
   line-height: 1.4;
   z-index: calc(var(--modal-z-base, 1000) + 10);

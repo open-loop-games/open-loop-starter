@@ -135,16 +135,23 @@ const markViews = computed(() =>
 
 <style>
 .olui-progress-bar {
-  --progress-bar-fill: var(--color-primary);
-  --progress-bar-fill-full: var(--progress-bar-fill);
-  --progress-bar-track: var(--color-surface);
-  --progress-bar-track-empty: var(--progress-bar-track);
-  --progress-bar-border: none;
-  --progress-bar-shadow: none;
-  --progress-bar-radius: var(--radius-sm);
-  --progress-bar-height: 10px;
-  --progress-bar-mark: var(--color-text-muted);
-  --progress-bar-transition: transform 0.1s linear;
+  /* Read each token, never set it, so a value set on any ancestor reaches the widget. */
+  --_progress-bar-fill: var(--progress-bar-fill, var(--color-primary));
+  --_progress-bar-fill-full: var(--progress-bar-fill-full, var(--color-success));
+  --_progress-bar-track: var(
+    --progress-bar-track,
+    color-mix(in srgb, var(--color-bg) 70%, #000 30%)
+  );
+  --_progress-bar-track-empty: var(
+    --progress-bar-track-empty,
+    color-mix(in srgb, var(--_progress-bar-track) 70%, transparent)
+  );
+  --_progress-bar-border: var(--progress-bar-border, 1px solid var(--color-border));
+  --_progress-bar-shadow: var(--progress-bar-shadow, inset 0 1px 2px rgba(0, 0, 0, 0.3));
+  --_progress-bar-radius: var(--progress-bar-radius, var(--radius-sm));
+  --_progress-bar-height: var(--progress-bar-height, 12px);
+  --_progress-bar-mark: var(--progress-bar-mark, var(--color-text-muted));
+  --_progress-bar-transition: var(--progress-bar-transition, transform 0.1s linear);
 
   position: relative;
   width: 100%;
@@ -154,26 +161,26 @@ const markViews = computed(() =>
 .olui-progress-bar__track {
   position: relative;
   width: 100%;
-  min-height: var(--progress-bar-height);
-  background: var(--progress-bar-track);
-  border: var(--progress-bar-border);
-  border-radius: var(--progress-bar-radius);
-  box-shadow: var(--progress-bar-shadow);
+  min-height: var(--_progress-bar-height);
+  background: var(--_progress-bar-track);
+  border: var(--_progress-bar-border);
+  border-radius: var(--_progress-bar-radius);
+  box-shadow: var(--_progress-bar-shadow);
   overflow: hidden;
 }
 
 .olui-progress-bar[data-state='empty'] .olui-progress-bar__track {
-  background: var(--progress-bar-track-empty);
+  background: var(--_progress-bar-track-empty);
 }
 
 .olui-progress-bar__fill {
   position: absolute;
   inset: 0;
-  background: var(--progress-bar-fill);
+  background: var(--_progress-bar-fill);
   transform-origin: left;
   transform: translateX(calc(var(--progress-bar-offset, 0) * 100%))
     scaleX(var(--progress-bar-ratio, 0));
-  transition: var(--progress-bar-transition);
+  transition: var(--_progress-bar-transition);
 }
 
 .olui-progress-bar[data-from='right'] .olui-progress-bar__fill {
@@ -183,7 +190,7 @@ const markViews = computed(() =>
 }
 
 .olui-progress-bar[data-state='full'] .olui-progress-bar__fill {
-  background: var(--progress-bar-fill-full);
+  background: var(--_progress-bar-fill-full);
 }
 
 .olui-progress-bar__mark {
@@ -192,7 +199,7 @@ const markViews = computed(() =>
   bottom: -2px;
   width: 2px;
   margin-left: -1px;
-  background: var(--progress-bar-mark);
+  background: var(--_progress-bar-mark);
   pointer-events: none;
 }
 

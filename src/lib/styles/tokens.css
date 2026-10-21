@@ -2,9 +2,9 @@
  * Default design tokens used by src/lib/ and the scaffold theme.
  *
  * Override any of these by redeclaring on :root or [data-theme='...'] in
- * src/styles/. Scaffold layer tokens (shell, modal, panel, tooltip, etc.)
- * and palette tokens (--color-*, --gap-*, --radius-*, --font-*) share one
- * flat namespace — there is no separate library-owned tier.
+ * src/styles/. Scaffold layer tokens (shell, modal) and palette tokens
+ * (--color-*, --gap-*, --radius-*, --font-*) share one flat namespace —
+ * there is no separate library-owned tier.
  */
 
 :root,

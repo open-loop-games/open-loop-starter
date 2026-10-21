@@ -106,7 +106,7 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 - **Module API on two surfaces** — a module publishes its API through `createModuleApi(Key)` (`src/modules/module-api.ts`). `publish(ctx, api)` in `install()` provides it to sibling modules, and the module exports `get` as its getter (`getX()`). The getter works outside a component setup: in game views, tests and dev tools. It follows the newest live engine, so a headless engine from the balance workbench does not strand it. `_blank/modules/core.ts` is the reference. `useModule(Key)` stays for a component that reads through the app's own engine.
 - **Routing shell vs game view** — an archetype root (`*AppRoot.vue`) is routing and app chrome only. It reads **no** module state, because its setup runs before `start()`, on the slot screen. All module reads are in a `<XGameView>` subtree, rendered under the post-start `v-else` frame. A header action that reads module state is its own child component in the `SystemHeader` slot. `usePlaySession`'s `onLoaded` is the one root-side seam for post-start work. `_blank/ui/GameView.vue` is the reference a fork copies.
 - **Slot-based shells** — `src/lib/shells/*` never prescribe content; games fill the slots.
-- **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the default token values: palette, spacing, radius, and the shell, modal and widget tokens. `src/styles/` adds the scaffold theme and widget-level selectors on top.
+- **CSS variables for theming** — the single source of styling truth. `src/lib/styles/tokens.css` declares the default token values: palette, spacing, radius, and the shell and modal tokens. A widget in `src/ui/components/` reads its own tokens, and never sets them, so a value a game sets on any ancestor reaches it. Each widget's defaults are the fallbacks in its own stylesheet. `src/styles/` adds the scaffold theme and widget-level selectors on top.
 
 ## Balance methodology
 
@@ -174,7 +174,7 @@ const showDevPanel = ref(false);
 **Naming:**
 - Components: PascalCase.vue — `SidebarMainShell.vue`, `ModalStack.vue`
 - Composables: `use*` — `useModalStack`, `useGame`
-- CSS variables: one flat CSS namespace. Palette (`--color-*`, `--gap-*`, `--radius-*`, `--font-*`) and scaffold tokens (`--shell-*`, `--modal-*`, `--panel-*`, `--tooltip-*`, `--popover-*`, `--progress-bar-*`) are all in `src/lib/styles/tokens.css`.
+- CSS variables: one flat CSS namespace. Palette (`--color-*`, `--gap-*`, `--radius-*`, `--font-*`) and scaffold tokens (`--shell-*`, `--modal-*`) are in `src/lib/styles/tokens.css`. Widget tokens (`--panel-*`, `--tooltip-*`, `--popover-*`, `--progress-bar-*` and the rest) take their defaults in their component. A component reads each one into a private `--_<token>` name.
 
 **Rules:**
 - All game quantities use `Decimal` from `@open-loop/engine`. The engine re-exports `break_eternity`; import it from the engine, not from the upstream package.

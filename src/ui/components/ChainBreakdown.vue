@@ -94,15 +94,16 @@ const totalIsBad = computed(() =>
 
 <style>
 .olui-chain-breakdown {
-  --chain-breakdown-gap: 2px;
-  --chain-breakdown-separator: var(--color-border);
-  --chain-breakdown-good: var(--color-accent, #7fd67f);
-  --chain-breakdown-bad: var(--color-danger, #d67f7f);
-  --chain-breakdown-muted: var(--color-text-muted);
+  /* Read each token, never set it, so a value set on any ancestor reaches the widget. */
+  --_chain-breakdown-gap: var(--chain-breakdown-gap, 2px);
+  --_chain-breakdown-separator: var(--chain-breakdown-separator, var(--color-border));
+  --_chain-breakdown-good: var(--chain-breakdown-good, var(--color-accent, #7fd67f));
+  --_chain-breakdown-bad: var(--chain-breakdown-bad, var(--color-danger, #d67f7f));
+  --_chain-breakdown-muted: var(--chain-breakdown-muted, var(--color-text-muted));
 
   display: flex;
   flex-direction: column;
-  gap: var(--chain-breakdown-gap);
+  gap: var(--_chain-breakdown-gap);
   min-width: 240px;
 }
 
@@ -111,7 +112,7 @@ const totalIsBad = computed(() =>
   font-size: 0.95em;
   padding-bottom: 4px;
   margin-bottom: 2px;
-  border-bottom: 1px solid var(--chain-breakdown-separator);
+  border-bottom: 1px solid var(--_chain-breakdown-separator);
 }
 
 .olui-chain-breakdown__row {
@@ -124,25 +125,25 @@ const totalIsBad = computed(() =>
 
 .olui-chain-breakdown__row--base,
 .olui-chain-breakdown__row--muted {
-  color: var(--chain-breakdown-muted);
+  color: var(--_chain-breakdown-muted);
 }
 
 .olui-chain-breakdown__row--total {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid var(--chain-breakdown-separator);
+  border-top: 1px solid var(--_chain-breakdown-separator);
   font-weight: 600;
 }
 
 .olui-chain-breakdown__row--bad .olui-chain-breakdown__value {
-  color: var(--chain-breakdown-bad);
+  color: var(--_chain-breakdown-bad);
 }
 
 .olui-chain-breakdown__row:not(.olui-chain-breakdown__row--base):not(
     .olui-chain-breakdown__row--bad
   ):not(.olui-chain-breakdown__row--muted)
   .olui-chain-breakdown__value {
-  color: var(--chain-breakdown-good);
+  color: var(--_chain-breakdown-good);
 }
 
 .olui-chain-breakdown__value {

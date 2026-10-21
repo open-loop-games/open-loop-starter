@@ -65,18 +65,19 @@ function labelFor(k: string): string {
 
 <style>
 .olui-bulk-mode {
-  --bulk-mode-bg: var(--color-bg);
-  --bulk-mode-border: var(--color-border);
-  --bulk-mode-item-color: var(--color-text-muted);
-  --bulk-mode-item-color-active: var(--color-text);
-  --bulk-mode-item-bg-active: var(--color-surface);
-  --bulk-mode-item-border-active: var(--color-primary);
-  --bulk-mode-radius: var(--radius-sm);
+  /* Read each token, never set it, so a value set on any ancestor reaches the widget. */
+  --_bulk-mode-bg: var(--bulk-mode-bg, var(--color-bg));
+  --_bulk-mode-border: var(--bulk-mode-border, var(--color-border));
+  --_bulk-mode-item-color: var(--bulk-mode-item-color, var(--color-text-muted));
+  --_bulk-mode-item-color-active: var(--bulk-mode-item-color-active, var(--color-text));
+  --_bulk-mode-item-bg-active: var(--bulk-mode-item-bg-active, var(--color-surface));
+  --_bulk-mode-item-border-active: var(--bulk-mode-item-border-active, var(--color-primary));
+  --_bulk-mode-radius: var(--bulk-mode-radius, var(--radius-sm));
 
   display: inline-flex;
-  border: 1px solid var(--bulk-mode-border);
-  border-radius: var(--bulk-mode-radius);
-  background: var(--bulk-mode-bg);
+  border: 1px solid var(--_bulk-mode-border);
+  border-radius: var(--_bulk-mode-radius);
+  background: var(--_bulk-mode-bg);
   overflow: hidden;
 }
 
@@ -85,7 +86,7 @@ function labelFor(k: string): string {
   padding: 4px 10px;
   font-size: 0.8em;
   font-weight: 500;
-  color: var(--bulk-mode-item-color);
+  color: var(--_bulk-mode-item-color);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -97,22 +98,22 @@ function labelFor(k: string): string {
 }
 
 .olui-bulk-mode__item + .olui-bulk-mode__item {
-  border-left: 1px solid var(--bulk-mode-border);
+  border-left: 1px solid var(--_bulk-mode-border);
 }
 
 .olui-bulk-mode__item:hover:not([data-disabled]) {
-  color: var(--bulk-mode-item-color-active);
+  color: var(--_bulk-mode-item-color-active);
 }
 
 .olui-bulk-mode__item[data-state='on'] {
-  color: var(--bulk-mode-item-color-active);
-  background: var(--bulk-mode-item-bg-active);
+  color: var(--_bulk-mode-item-color-active);
+  background: var(--_bulk-mode-item-bg-active);
   font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--bulk-mode-item-border-active);
+  box-shadow: inset 0 -2px 0 var(--_bulk-mode-item-border-active);
 }
 
 .olui-bulk-mode__item:focus-visible {
-  outline: 2px solid var(--bulk-mode-item-border-active);
+  outline: 2px solid var(--_bulk-mode-item-border-active);
   outline-offset: -2px;
 }
 </style>

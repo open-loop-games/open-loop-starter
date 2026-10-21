@@ -11,8 +11,8 @@
 
   Costume classes: olui-tabs, olui-tabs__list, olui-tabs__trigger,
   olui-tabs__trigger--active, olui-tabs__content. All colors, spacing,
-  and borders come from CSS custom properties rooted on the olui-tabs
-  class — forks override via `--tabs-*` tokens.
+  and borders come from `--tabs-*` tokens, set on the olui-tabs element
+  or any ancestor.
 -->
 <script setup lang="ts">
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'reka-ui';
@@ -61,15 +61,16 @@ const model = defineModel<string>({ required: true });
 
 <style>
 .olui-tabs {
-  --tabs-list-gap: 0;
-  --tabs-trigger-padding: var(--gap-sm) var(--gap);
-  --tabs-trigger-color: var(--color-text-muted);
-  --tabs-trigger-color-active: var(--color-text);
-  --tabs-trigger-bg: transparent;
-  --tabs-trigger-bg-active: var(--color-surface);
-  --tabs-trigger-border: var(--color-border);
-  --tabs-trigger-border-active: var(--color-primary);
-  --tabs-trigger-radius: var(--radius-sm);
+  /* Read each token, never set it, so a value set on any ancestor reaches the widget. */
+  --_tabs-list-gap: var(--tabs-list-gap, 0);
+  --_tabs-trigger-padding: var(--tabs-trigger-padding, var(--gap-sm) var(--gap));
+  --_tabs-trigger-color: var(--tabs-trigger-color, var(--color-text-muted));
+  --_tabs-trigger-color-active: var(--tabs-trigger-color-active, var(--color-text));
+  --_tabs-trigger-bg: var(--tabs-trigger-bg, transparent);
+  --_tabs-trigger-bg-active: var(--tabs-trigger-bg-active, var(--color-surface));
+  --_tabs-trigger-border: var(--tabs-trigger-border, var(--color-border));
+  --_tabs-trigger-border-active: var(--tabs-trigger-border-active, var(--color-primary));
+  --_tabs-trigger-radius: var(--tabs-trigger-radius, var(--radius-sm));
 
   display: flex;
   flex-direction: column;
@@ -77,18 +78,18 @@ const model = defineModel<string>({ required: true });
 }
 .olui-tabs__list {
   display: flex;
-  gap: var(--tabs-list-gap);
-  border-bottom: 1px solid var(--tabs-trigger-border);
+  gap: var(--_tabs-list-gap);
+  border-bottom: 1px solid var(--_tabs-trigger-border);
   margin-bottom: var(--gap-sm);
 }
 .olui-tabs__trigger {
-  padding: var(--tabs-trigger-padding);
-  background: var(--tabs-trigger-bg);
-  color: var(--tabs-trigger-color);
+  padding: var(--_tabs-trigger-padding);
+  background: var(--_tabs-trigger-bg);
+  color: var(--_tabs-trigger-color);
   border: 1px solid transparent;
   border-bottom: none;
-  border-top-left-radius: var(--tabs-trigger-radius);
-  border-top-right-radius: var(--tabs-trigger-radius);
+  border-top-left-radius: var(--_tabs-trigger-radius);
+  border-top-right-radius: var(--_tabs-trigger-radius);
   cursor: pointer;
   font-size: 0.9em;
   font-weight: 500;
@@ -98,13 +99,13 @@ const model = defineModel<string>({ required: true });
     background 0.1s;
 }
 .olui-tabs__trigger:hover:not([data-disabled]) {
-  color: var(--tabs-trigger-color-active);
+  color: var(--_tabs-trigger-color-active);
 }
 .olui-tabs__trigger[data-state='active'] {
-  color: var(--tabs-trigger-color-active);
-  background: var(--tabs-trigger-bg-active);
-  border-color: var(--tabs-trigger-border);
-  border-bottom-color: var(--tabs-trigger-bg-active);
+  color: var(--_tabs-trigger-color-active);
+  background: var(--_tabs-trigger-bg-active);
+  border-color: var(--_tabs-trigger-border);
+  border-bottom-color: var(--_tabs-trigger-bg-active);
   font-weight: 600;
 }
 .olui-tabs__trigger[data-disabled] {

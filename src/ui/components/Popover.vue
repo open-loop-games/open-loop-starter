@@ -65,25 +65,26 @@ withDefaults(
 
 <style>
 .olui-popover__content {
-  --popover-surface: var(--color-surface);
-  --popover-border: var(--color-border);
-  --popover-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --popover-padding: var(--gap);
-  --popover-radius: var(--radius);
+  /* Read each token, never set it, so a value set on any ancestor reaches the widget. */
+  --_popover-surface: var(--popover-surface, var(--color-surface));
+  --_popover-border: var(--popover-border, var(--color-border));
+  --_popover-shadow: var(--popover-shadow, 0 12px 32px rgba(0, 0, 0, 0.5));
+  --_popover-padding: var(--popover-padding, var(--gap));
+  --_popover-radius: var(--popover-radius, var(--radius));
 
   position: relative;
-  background: var(--popover-surface);
+  background: var(--_popover-surface);
   color: var(--color-text);
-  border: 1px solid var(--popover-border);
-  border-radius: var(--popover-radius);
-  padding: var(--popover-padding);
-  box-shadow: var(--popover-shadow);
+  border: 1px solid var(--_popover-border);
+  border-radius: var(--_popover-radius);
+  padding: var(--_popover-padding);
+  box-shadow: var(--_popover-shadow);
   max-width: min(90vw, 360px);
   z-index: calc(var(--modal-z-base, 1000) + 5);
 }
 
 .olui-popover__arrow {
-  fill: var(--popover-surface);
+  fill: var(--_popover-surface);
 }
 
 .olui-popover__close {

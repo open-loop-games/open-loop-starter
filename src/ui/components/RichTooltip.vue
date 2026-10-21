@@ -59,20 +59,21 @@ withDefaults(
 
 <style>
 .olui-rich-tooltip__content {
-  --rich-tooltip-surface: var(--color-surface);
-  --rich-tooltip-border: var(--color-border);
-  --rich-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --rich-tooltip-padding: var(--gap);
-  --rich-tooltip-radius: var(--radius);
-  --rich-tooltip-max-width: 360px;
+  /* Read each token, never set it, so a value set on any ancestor reaches the widget. */
+  --_rich-tooltip-surface: var(--rich-tooltip-surface, var(--color-surface));
+  --_rich-tooltip-border: var(--rich-tooltip-border, var(--color-border));
+  --_rich-tooltip-shadow: var(--rich-tooltip-shadow, 0 8px 24px rgba(0, 0, 0, 0.35));
+  --_rich-tooltip-padding: var(--rich-tooltip-padding, var(--gap));
+  --_rich-tooltip-radius: var(--rich-tooltip-radius, var(--radius));
+  --_rich-tooltip-max-width: var(--rich-tooltip-max-width, 360px);
 
-  background: var(--rich-tooltip-surface);
+  background: var(--_rich-tooltip-surface);
   color: var(--color-text);
-  border: 1px solid var(--rich-tooltip-border);
-  border-radius: var(--rich-tooltip-radius);
-  padding: var(--rich-tooltip-padding);
-  box-shadow: var(--rich-tooltip-shadow);
-  max-width: var(--rich-tooltip-max-width);
+  border: 1px solid var(--_rich-tooltip-border);
+  border-radius: var(--_rich-tooltip-radius);
+  padding: var(--_rich-tooltip-padding);
+  box-shadow: var(--_rich-tooltip-shadow);
+  max-width: var(--_rich-tooltip-max-width);
   font-size: 0.9em;
   line-height: 1.4;
   z-index: calc(var(--modal-z-base, 1000) + 10);
