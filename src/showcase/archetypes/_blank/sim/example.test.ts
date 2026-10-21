@@ -4,10 +4,11 @@
  * freshly-ejected repo starts green, and it guards the scaffold's core promise:
  * persistence survives a round-trip.
  *
- * This targets the shared base (settings) plus the example economy's automation
- * tier. As you add game modules, write one suite per module beside it —
- * `src/game/modules/<name>.test.ts` — that boots the test harness and asserts
- * the mechanic's *observable behavior* through its public API:
+ * It asserts only on the shared base (settings), so it stays green when the
+ * example economy is deleted. As you add game modules, write one suite per
+ * module beside it — `src/game/modules/<name>.test.ts` — that boots the test
+ * harness and asserts the mechanic's *observable behavior* through its public
+ * API:
  *
  *   beforeEach(() => boot());
  *   it('a widget produces while it runs', async () => {

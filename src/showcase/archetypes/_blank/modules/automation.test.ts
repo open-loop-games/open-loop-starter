@@ -7,6 +7,9 @@
  * unlocks, and live afterwards. Note there is not a single magnitude here — the
  * multiplier's *size* is a balance question that `balance/game-probe.ts`
  * prints, so these assertions survive any retune of `automationMultiplier`.
+ *
+ * It specs the example economy, so it goes, or is reshaped, with
+ * `automation.ts`. Keep the layout, not the file.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
