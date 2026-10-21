@@ -13,7 +13,7 @@ The scaffold never imports across the boundary. An oxlint rule enforces the one-
 
 ## Archetype demos (`src/showcase/archetypes/<name>/`)
 
-Forkable best-practice implementations of the archetype set. Each archetype is a research composition (its identity line) built on a rate-function balance spine. Each is self-bootable, with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/` and `boot.ts`. Those give pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme and a working game skeleton.
+Forkable best-practice implementations of the archetype set. Each archetype is a research composition (its identity line) built on a rate-function balance spine. Each is self-bootable, with its own `data/`, `modules/`, `composables/`, `ui/`, `sim/`, `engine.ts` and `boot.ts`. Those give pre-wired engine boot, module registration, save/load, settings, notation, toasts, theme and a working game skeleton.
 
 This half is a research-output surface inside starter. Its maintenance discipline is research grounding. An archetype is grounded in two things:
 
@@ -45,6 +45,7 @@ src/showcase/archetypes/<name>/
 │                    # `*AppRoot.vue` is routing+chrome only; a `<XGameView>`
 │                    # subtree owns all module reads (see root § Key Patterns).
 ├── sim/             # the test harness (harness.ts) + any suite spanning modules; probes are in balance/.
+├── engine.ts        # create<X>Engine(options?) → { engine }. No .vue import, so headless scripts import it.
 └── boot.ts          # createApp(overrides?) → { app, engine, mount }.
 ```
 

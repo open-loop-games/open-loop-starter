@@ -281,12 +281,12 @@ function applyPlan(root, plan) {
   writeFileSync(join(root, 'README.md'), readmeMd(plan.manifest.displayName));
   for (const rel of plan.stripDocs) editFile(join(root, rel), stripMarkdown);
 
-  // 5. Apply the game name to package.json + the hoisted boot's GAME_ID.
+  // 5. Apply the game name to package.json + the hoisted engine's GAME_ID.
   if (plan.packageName) {
     editFile(join(root, 'package.json'), (src) =>
       src.replace(/("name":\s*")[^"]*(")/, `$1${plan.packageName}$2`),
     );
-    editFile(join(root, GAME_DIR, 'boot.ts'), (src) =>
+    editFile(join(root, GAME_DIR, 'engine.ts'), (src) =>
       src.replace(/(const GAME_ID\s*=\s*')[^']*(')/, `$1${plan.gameId}$2`),
     );
   }

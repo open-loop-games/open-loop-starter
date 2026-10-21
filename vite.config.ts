@@ -12,6 +12,10 @@ export default defineConfig({
       extensions: ['vue'],
     }),
   ],
+  // Inline the engine under vite-node too. Externalized, Node loads its
+  // break_eternity.js through the UMD `main`, while consumer code gets the ESM
+  // `module`: two Decimal classes, and the engine reads the consumer's as 0.
+  ssr: { noExternal: ['@open-loop/engine'] },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
