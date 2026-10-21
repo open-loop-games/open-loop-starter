@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue';
+import { onScopeDispose, ref, type Ref } from 'vue';
 import type { SaveLoadResult, Engine } from '@open-loop/engine';
 import { Screen } from '@/types';
 import { useGame } from './useGame';
@@ -51,6 +51,25 @@ export function usePlaySession(options: PlaySessionOptions = {}): PlaySession {
     options.onLoaded?.(result);
     currentScreen.value = Screen.Game;
   }
+
+  // The autosave writes on an interval, so a page closed between two writes
+  // loses what happened since the last one. A hidden page may never run
+  // script again, so write the live game now: `pagehide` covers a close or a
+  // reload, and a mobile browser that discards a background tab fires only
+  // `visibilitychange`. The slot picker has no loaded game, and a write there
+  // would put defaults over the slot's save. An autoSaveInterval of 0 is the
+  // player's autosave turned off (SystemHeader).
+  function saveOnHide(event: Event): void {
+    if (event.type === 'visibilitychange' && document.visibilityState !== 'hidden') return;
+    if (currentScreen.value !== Screen.Game || engine.autoSaveInterval <= 0) return;
+    engine.saveManager?.save();
+  }
+  window.addEventListener('pagehide', saveOnHide);
+  document.addEventListener('visibilitychange', saveOnHide);
+  onScopeDispose(() => {
+    window.removeEventListener('pagehide', saveOnHide);
+    document.removeEventListener('visibilitychange', saveOnHide);
+  });
 
   function returnToSlots(): void {
     engine.saveManager?.save();

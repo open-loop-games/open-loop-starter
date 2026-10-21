@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import { defineComponent, h, provide } from 'vue';
-import { mount } from '@vue/test-utils';
+import { mount, type VueWrapper } from '@vue/test-utils';
 import { Screen } from '@/types';
 import { usePlaySession, type PlaySession } from '../usePlaySession';
 
@@ -18,6 +18,7 @@ function recordingEngine(
     calls,
     loadResult,
     activeModId: undefined as string | undefined,
+    autoSaveInterval: 30_000,
     mods: [{ id: 'demo', modules: ['m1', 'm2'] }],
     saveManager: {
       selectSlot: (id: number) => calls.push(`selectSlot:${id}`),
@@ -47,6 +48,11 @@ function recordingEngine(
  * — `inject` reads *parent* provides, so provide and inject can't share one
  * component.
  */
+const mounted: VueWrapper[] = [];
+afterEach(() => {
+  for (const wrapper of mounted.splice(0)) wrapper.unmount();
+});
+
 function withSession(
   engine: ReturnType<typeof recordingEngine>,
   options?: Parameters<typeof usePlaySession>[0],
@@ -56,12 +62,13 @@ function withSession(
     session = usePlaySession(options);
     return () => h('div');
   });
-  mount(
+  const wrapper = mount(
     defineComponent(() => {
       provide('engine', engine);
       return () => h(Child);
     }),
   );
+  mounted.push(wrapper);
   return session;
 }
 
@@ -145,5 +152,68 @@ describe('usePlaySession', () => {
 
     expect(engine.calls).toEqual(['save', 'stop']);
     expect(session.currentScreen.value).toBe(Screen.Slots);
+  });
+
+  describe('saves when the page is hidden', () => {
+    it('saves a live game when the page goes away', () => {
+      const engine = recordingEngine();
+      withSession(engine).startGame(0);
+      engine.calls.length = 0;
+
+      window.dispatchEvent(new Event('pagehide'));
+
+      expect(engine.calls).toEqual(['save']);
+    });
+
+    it('writes nothing from the slot picker, where no game is loaded', () => {
+      const engine = recordingEngine();
+      const session = withSession(engine);
+      window.dispatchEvent(new Event('pagehide'));
+      expect(engine.calls).toEqual([]);
+
+      session.startGame(0);
+      session.returnToSlots();
+      engine.calls.length = 0;
+      window.dispatchEvent(new Event('pagehide'));
+      expect(engine.calls).toEqual([]);
+    });
+
+    it('writes nothing while the player has autosave off', () => {
+      const engine = recordingEngine();
+      withSession(engine).startGame(0);
+      engine.autoSaveInterval = 0;
+      engine.calls.length = 0;
+
+      window.dispatchEvent(new Event('pagehide'));
+
+      expect(engine.calls).toEqual([]);
+    });
+
+    it('saves when the tab is hidden, and not when it shows again', () => {
+      const engine = recordingEngine();
+      withSession(engine).startGame(0);
+      engine.calls.length = 0;
+      const changeVisibility = (state: DocumentVisibilityState) => {
+        Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+      };
+
+      changeVisibility('hidden');
+      changeVisibility('visible');
+      Reflect.deleteProperty(document, 'visibilityState');
+
+      expect(engine.calls).toEqual(['save']);
+    });
+
+    it('stops listening once the session unmounts', () => {
+      const engine = recordingEngine();
+      withSession(engine).startGame(0);
+      engine.calls.length = 0;
+
+      mounted.pop()!.unmount();
+      window.dispatchEvent(new Event('pagehide'));
+
+      expect(engine.calls).toEqual([]);
+    });
   });
 });
