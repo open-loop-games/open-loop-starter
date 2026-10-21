@@ -33,12 +33,15 @@ const props = withDefaults(
     columns?: number;
     reveal?: Reveal;
     purchasedState?: PurchasedState;
+    /** The owned card's label, in the game's own word ("Learned", "Built"). */
+    ownedLabel?: string;
     showFormula?: boolean;
   }>(),
   {
     columns: 1,
     reveal: 'tooltip',
     purchasedState: 'greyed',
+    ownedLabel: 'Purchased',
     showFormula: false,
   },
 );
@@ -94,9 +97,9 @@ function describe(card: C): string {
             <span
               v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-              >✓ Purchased</span
+              >✓ {{ ownedLabel }}</span
             >
-            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">{{ ownedLabel }}</span>
             <span v-else-if="unmetOf(card).length" class="upgrade-grid__cell-unmet">
               {{ unmetOf(card).join(' · ') }}
             </span>
@@ -165,9 +168,9 @@ function describe(card: C): string {
             <span
               v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-              >✓ Purchased</span
+              >✓ {{ ownedLabel }}</span
             >
-            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">{{ ownedLabel }}</span>
             <span v-else-if="unmetOf(card).length" class="upgrade-grid__cell-unmet">
               {{ unmetOf(card).join(' · ') }}
             </span>
@@ -210,9 +213,9 @@ function describe(card: C): string {
             <span
               v-if="card.owned.value && purchasedState === 'checkmark'"
               class="upgrade-grid__bought"
-              >✓ Purchased</span
+              >✓ {{ ownedLabel }}</span
             >
-            <span v-else-if="card.owned.value" class="upgrade-grid__bought">Purchased</span>
+            <span v-else-if="card.owned.value" class="upgrade-grid__bought">{{ ownedLabel }}</span>
             <span v-else-if="unmetOf(card).length" class="upgrade-grid__cell-unmet">
               {{ unmetOf(card).join(' · ') }}
             </span>

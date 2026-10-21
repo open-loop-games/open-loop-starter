@@ -41,9 +41,9 @@ const visible = computed(() => props.readouts.filter((r) => r.visible?.value ?? 
 
 function chipVariant(
   highlight: ResourceHighlight | undefined,
-): 'default' | 'big' | 'muted' | 'stat' {
+): 'default' | 'big' | 'danger' | 'stat' {
   if (!highlight) return 'default';
-  if (highlight === 'deficit') return 'muted';
+  if (highlight === 'deficit') return 'danger';
   if (highlight === 'surplus') return 'big';
   return 'default';
 }

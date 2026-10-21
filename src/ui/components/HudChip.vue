@@ -3,6 +3,7 @@
     default — standard chip (CF rate chip, IL loop counter)
     big     — larger padding, bigger font (CF cookie total)
     muted   — muted text color (CF rate "10/s")
+    danger  — danger text color (a readout in deficit)
     stat    — compact tabular-nums chip (IL stat row)
     toggle  — chip wrapping a <label>/<input>, cursor:pointer
   Emits nothing; content in the default slot.
@@ -10,7 +11,7 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    variant?: 'default' | 'big' | 'muted' | 'stat' | 'toggle';
+    variant?: 'default' | 'big' | 'muted' | 'danger' | 'stat' | 'toggle';
   }>(),
   { variant: 'default' },
 );
@@ -42,6 +43,10 @@ withDefaults(
 .hud-chip--muted {
   color: var(--color-text-muted);
   font-weight: 500;
+}
+.hud-chip--danger {
+  color: var(--color-danger);
+  font-weight: 600;
 }
 .hud-chip--stat {
   padding: 2px 8px;
