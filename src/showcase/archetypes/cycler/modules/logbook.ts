@@ -156,7 +156,7 @@ export function createLogbookModule(): EngineModule {
                 : undefined,
         }),
       });
-      knowledge.register([...KNOWLEDGE]);
+      knowledge.register(KNOWLEDGE);
 
       const wardPerWall = t('ward/perWall', () => ANCHORS.wardPerWall);
       const crossNight = t('peg/crossNight', () => ANCHORS.crossNightRef);

@@ -153,7 +153,7 @@ export function createYardModule(): EngineModule {
           purchaseMaxByDefault: false,
         }),
       });
-      fabricator.register([...PIECES]);
+      fabricator.register(PIECES);
 
       // ── Hull sections: one-shot plates of the ship in service, in authored order ──
       // A section the schedule puts after a carrier waits for that carrier's fall.

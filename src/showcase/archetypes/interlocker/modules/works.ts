@@ -444,7 +444,7 @@ export function createWorksModule(): EngineModule {
           };
         },
       });
-      workshops.register([...ROLES]);
+      workshops.register(ROLES);
 
       ctx.onTick((dt) => {
         for (const role of ROLES) {

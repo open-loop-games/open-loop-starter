@@ -136,7 +136,7 @@ export function createDojoModule(): EngineModule {
           visible: () => def.answers === null || lineage.arrived.value.includes(def.answers),
         }),
       });
-      techniques.register([...TECHNIQUES]);
+      techniques.register(TECHNIQUES);
       const knows = (id: TechniqueId) => techniques.getPurchasable(id)?.active.value ?? false;
 
       const studentCost = t('student/baseCost', () => studentBaseCost);

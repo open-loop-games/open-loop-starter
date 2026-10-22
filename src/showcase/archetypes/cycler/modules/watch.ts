@@ -315,7 +315,7 @@ export function createWatchModule(): EngineModule {
             }),
         }),
       });
-      pieces.register([...PIECES]);
+      pieces.register(PIECES);
       const priceOf = (piece: PieceKind) => toNumber(pieces.getPurchasable(piece)!.getCost(1));
 
       function occupant(x: number, y: number): Placed | undefined {

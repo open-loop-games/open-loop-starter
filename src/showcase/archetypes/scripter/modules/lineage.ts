@@ -110,7 +110,7 @@ export function createLineageModule(): EngineModule {
           };
         },
       });
-      scrolls.register([...SCROLLS]);
+      scrolls.register(SCROLLS);
 
       const playSeconds = persistent<number>(0, { id: 'play-seconds' });
       const beats = persistent<number>(0, { id: 'beats' });

@@ -117,7 +117,7 @@ export function createMetaModule(): EngineModule {
               : [],
         }),
       });
-      agency.register([...AGENCY]);
+      agency.register(AGENCY);
 
       const stars = createPurchasableCategory<StarDef>({
         id: 'stars',
@@ -128,7 +128,7 @@ export function createMetaModule(): EngineModule {
           initialCount: def.cost === 0 ? 1 : 0,
         }),
       });
-      stars.register([...STARS]);
+      stars.register(STARS);
 
       // A rating opens once enough stars have wrapped the one below it. Nothing is charged;
       // the sweep buys it on the first tick the ledger allows.
@@ -147,7 +147,7 @@ export function createMetaModule(): EngineModule {
           initialCount: def.index === 0 ? 1 : 0,
         }),
       });
-      ratings.register([...RATINGS]);
+      ratings.register(RATINGS);
       setupSweepAutoPurchase(ratings, { enabled: true }, ctx.onTick);
 
       const api: MetaApi = {

@@ -115,7 +115,7 @@ export function createLodgeModule(): EngineModule {
           },
         }),
       });
-      producers.register([...PRODUCERS]);
+      producers.register(PRODUCERS);
 
       // === SMOKEHOUSE ===
       // Each rack turns meat and wood into jerky, and its throughput is the
@@ -180,7 +180,7 @@ export function createLodgeModule(): EngineModule {
             ),
         }),
       });
-      gear.register([...GEAR]);
+      gear.register(GEAR);
       const gearLevel = (id: GearId): number => toNumber(gear.getPurchasable(id)?.count.value ?? 0);
       const hounds = computed(() => gearLevel('hounds'));
 

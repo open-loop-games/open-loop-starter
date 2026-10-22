@@ -469,7 +469,7 @@ export function createHuntsmanModule(): EngineModule {
         let offered = 0;
         for (const item of PACK_ITEMS) {
           offered += want[item];
-          kept += pack.add(item, want[item]).toNumber();
+          kept += toNumber(pack.add(item, want[item]));
         }
         const left = offered - kept;
         say(
