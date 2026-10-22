@@ -9,7 +9,7 @@ import {
 } from '@open-loop/engine';
 import { computed } from 'vue';
 import { createModuleApi } from '@/modules/module-api';
-import { GAME_BALANCE, type GameBalance } from '../data/game';
+import { GAME_BALANCE, type GameBalance, type GameFlag } from '../data/game';
 
 /**
  * Automation module — the blank base's example of the one canonical shape for
@@ -59,12 +59,21 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
 
   return {
     id: 'game/automation',
+    // The `assisted` tier's unlock reads a flag, so the flags install first.
+    dependencies: ['game/flags'],
     install(ctx) {
       const tiers = createAutomationTiers({
         id: 'game-automation',
         tiers: [
           { id: 'manual', displayName: 'Manual', order: 0 },
-          { id: 'assisted', displayName: 'Assisted', order: 1 },
+          {
+            id: 'assisted',
+            displayName: 'Assisted',
+            order: 1,
+            // A flag Gate: it reads the flag through the engine's accessor, and
+            // unlocks the tier for good the first time the flag is set.
+            unlockWhen: { kind: 'flag', id: 'assistance-unlocked' satisfies GameFlag },
+          },
         ],
       });
 

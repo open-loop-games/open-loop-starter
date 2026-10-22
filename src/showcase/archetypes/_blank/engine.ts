@@ -6,7 +6,7 @@
  */
 import { type Engine, type EngineModule } from '@open-loop/engine';
 import { bootEngine } from '@/boot';
-import { createGameModules } from './modules';
+import { createGame } from './modules';
 
 const GAME_ID = 'game';
 const MOD_ID = 'game';
@@ -27,9 +27,11 @@ export interface GameEngineOptions {
  * resume sequence.
  */
 export function createGameEngine(options?: GameEngineOptions): { engine: Engine } {
-  const modules = [...createGameModules(), ...(options?.extraModules ?? [])];
+  const game = createGame();
+  const modules = [...game.modules, ...(options?.extraModules ?? [])];
   const engine = bootEngine({
     gameId: GAME_ID,
+    accessor: game.accessor,
     persistenceNamespace: options?.persistenceNamespace,
     maxDeltaTime: options?.maxDeltaTime,
     mods: [

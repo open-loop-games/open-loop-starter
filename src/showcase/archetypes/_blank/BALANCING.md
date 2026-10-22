@@ -43,7 +43,7 @@ day.
 § Balance carries the linear closed form *and* the branch that opens when the
 `assisted` tier unlocks. `balance/game-projection.ts` only implements the linear
 one, because the ladder ships locked — the probe reads 0.00% drift for exactly
-that reason. Unlock the `assisted` tier without growing the projection and the probe starts
+that reason. Unlock the `assisted` tier (set its `assistance-unlocked` flag) without growing the projection and the probe starts
 reporting drift that is real but unexplained, which is the worst way to discover
 you changed the economy.
 

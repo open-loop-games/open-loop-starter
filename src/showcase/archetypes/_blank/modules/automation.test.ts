@@ -13,7 +13,8 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { boot, tick } from '../sim/harness';
+import { GameStateAccessorKey } from '@open-loop/engine';
+import { boot, getEngine, tick } from '../sim/harness';
 import { getAutomation as automation, getCore as core } from '.';
 
 beforeEach(() => boot());
@@ -22,6 +23,12 @@ describe('assisted automation tier', () => {
   it('starts locked on the manual tier', () => {
     expect(automation().tiers.currentTierId.value).toBe('manual');
     expect(automation().tiers.hasReached('assisted')).toBe(false);
+  });
+
+  it('unlocks when its flag is set through the game-state accessor', () => {
+    getEngine().tryInject(GameStateAccessorKey)!.setFlag('assistance-unlocked', true);
+
+    expect(automation().tiers.hasReached('assisted')).toBe(true);
   });
 
   it('ignores the player toggle while the tier is locked', () => {

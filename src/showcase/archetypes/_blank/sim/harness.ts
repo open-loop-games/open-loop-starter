@@ -20,7 +20,7 @@
 import { type Engine } from '@open-loop/engine';
 import { bootTestEngine, type TestEngineHandle } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
-import { createGameModules } from '../modules';
+import { createGame } from '../modules';
 
 /**
  * Intervals per game-second, passed as the engine's `intervalRate`.
@@ -34,8 +34,10 @@ let handle: TestEngineHandle;
 
 /** Build a fresh engine with the full game module stack. Use in `beforeEach`. */
 export function boot(): Engine {
+  const game = createGame();
   handle = bootTestEngine({
-    modules: [...sharedBase, ...createGameModules()],
+    modules: [...sharedBase, ...game.modules],
+    accessor: game.accessor,
     persistenceNamespacePrefix: 'game-test',
     intervalRate: INTERVAL_RATE,
   });

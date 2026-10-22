@@ -28,6 +28,15 @@ export const GAME_BALANCE: GameBalance = {
   automationMultiplier: 2,
 };
 
+/**
+ * The game's saved flags: booleans a `flag` Gate reads and a `flag` effect
+ * writes. Each id saves under `game/flags`, so add one here before a Gate or an
+ * effect names it. `assistance-unlocked` unlocks the `assisted` automation tier;
+ * nothing in the blank base sets it, so the ladder ships locked.
+ */
+export const GAME_FLAGS = ['assistance-unlocked'] as const;
+export type GameFlag = (typeof GAME_FLAGS)[number];
+
 // ─── Balance ───
 // Rate-function bucket: LINEAR ACCUMULATION — the trivial base case. Every
 // archetype replaces this with its own spine (geometric cost-scaling,

@@ -26,6 +26,7 @@ import {
   seedRNG,
   type Engine,
   type EngineModule,
+  type EngineOptions,
 } from '@open-loop/engine';
 
 export interface TestEngineHandle {
@@ -55,6 +56,8 @@ export interface BootTestEngineOptions {
    * entropy, and a behavioral run would draw differently every time.
    */
   seed?: number;
+  /** The game's accessor or accessor factory, as its own boot passes to `bootEngine`. */
+  accessor?: EngineOptions['accessor'];
 }
 
 /**
@@ -64,7 +67,13 @@ export interface BootTestEngineOptions {
  * collide on persistent contexts.
  */
 export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle {
-  const { modules, persistenceNamespacePrefix = 'boot', intervalRate = 20, seed = 0 } = options;
+  const {
+    modules,
+    persistenceNamespacePrefix = 'boot',
+    intervalRate = 20,
+    seed = 0,
+    accessor,
+  } = options;
   const persistenceNamespace = `${persistenceNamespacePrefix}-${bootCounter++}`;
   seedRNG(seed);
 
@@ -75,6 +84,7 @@ export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle
     storageAdapter: createMemoryStorage(),
     autoSaveInterval: 0,
     intervalRate,
+    accessor,
   });
   for (const mod of modules) engine.use(mod);
   // start() runs install/onStart wiring; stop() immediately hands the clock to

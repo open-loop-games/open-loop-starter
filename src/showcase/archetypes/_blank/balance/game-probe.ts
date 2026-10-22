@@ -15,7 +15,7 @@
  */
 
 import { bootTestEngine } from '@/test/bootTestEngine';
-import { createGameModules } from '../modules';
+import { createGame } from '../modules';
 import { CoreKey } from '../modules/core';
 import { GAME_BALANCE } from '../data/game';
 
@@ -24,8 +24,10 @@ const INTERVAL_RATE = 1; // 1 tick = 1 sim-second — coarse, matches the linear
 async function main(): Promise<void> {
   console.log('Blank game — core probe (shipping accrual vs closed-form projection)');
 
+  const game = createGame();
   const handle = bootTestEngine({
-    modules: createGameModules(),
+    modules: game.modules,
+    accessor: game.accessor,
     intervalRate: INTERVAL_RATE,
     persistenceNamespacePrefix: 'game-probe',
   });
