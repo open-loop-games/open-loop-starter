@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Decimal, addResource, selectionHybridPayback, type Producer } from '@open-loop/engine';
 import { LEVERS, REWRITE_THRESHOLD } from '../data';
-import { boot, tick, tickUntil } from '../sim/harness';
-import { getAutomation, recruitHeroes, shouldReboot, shouldRewrite } from './automation';
+import { boot, getEngine, tick, tickUntil } from '../sim/harness';
+import {
+  DESK_RECRUITS_PER_SECOND,
+  getAutomation,
+  recruitHeroes,
+  shouldReboot,
+  shouldRewrite,
+} from './automation';
 import { getCanon } from './canon';
 import { getContinuity } from './continuity';
 import { getCore } from './core';
@@ -42,6 +48,17 @@ describe('the Dispatch Desk', () => {
     getAutomation().dispatchOn.value = true;
     await tick(1);
     expect(corps()).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['twenty ticks', () => tick(20)],
+    ['one tick', async () => getEngine().tickDriver.advanceTime(1)],
+  ])('recruits its per-second limit in one second of %s', async (_, second) => {
+    getLegacy().bank(1);
+    getLegacy().upgrade('dispatch').purchase(1);
+    addResource(getRun().justice, 1e300);
+    await second();
+    expect(corps()).toBe(DESK_RECRUITS_PER_SECOND);
   });
 
   it.each([1e9, 1e15, 1e40])(

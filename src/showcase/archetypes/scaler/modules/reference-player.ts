@@ -16,7 +16,8 @@ import type { RunApi } from './run';
  * One turn works what a player works by hand, by the shipping policies in
  * `./automation.ts`, until each piece of automation takes its job over
  * (`/work/studio/CLAUDE.md` § automation as game code). Each turn it:
- *   - recruits by the Dispatch Desk's policy until the desk is hired;
+ *   - recruits by the Dispatch Desk's policy, uncapped as a hand is, until the
+ *     desk is hired;
  *   - spends Legacy by the Liaison's rule and Continuity by the Monitor's until
  *     each is bought, and Canon by the same rule always;
  *   - reboots at the spine's share until the Succession Plan takes over, rewrites

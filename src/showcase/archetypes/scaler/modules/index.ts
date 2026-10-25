@@ -32,6 +32,7 @@ export {
 export { LegendsKey, getLegends, type LegendsApi } from './legends';
 export {
   AutomationKey,
+  DESK_RECRUITS_PER_SECOND,
   getAutomation,
   recruitHeroes,
   shouldReboot,

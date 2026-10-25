@@ -62,10 +62,10 @@ Every key is read at its reader site through `tunable()`; the registry is in
 - **The desk buys until it would rather save.** Each tick it recruits by blended payback
   until the best pick is unaffordable. A desk limited to one recruit a tick falls behind
   the late economy.
-- **The desk's per-tick cap is part of its rule.** `MAX_RECRUITS_PER_TICK` stops a tick's
-  recruiting, and the arc probe reaches it. Lifting it moves the probe's Age beats by
-  seconds, and Lost Earth's fifth tier falls past the probe's horizon. The cap is per
-  tick, so live play at a finer dt reaches it less often than the probe does.
+- **The desk's recruit cap is part of its rule.** `DESK_RECRUITS_PER_SECOND` caps the
+  desk per second of game time, so the probe's tick and live play's allow the same rate.
+  The arc probe prints how many ticks reach it. Lifting it moves the Age beats, and the
+  spine's walk leaves it out. Recruiting by hand before the desk has no cap.
 - **The desk prices a batch with `priceRatio`.** While Justice covers a whole batch, it
   buys the batch as one purchase per tier, and it sizes the batch as if every tier's price
   grows by the run's price ratio per recruit. Give a tier another price curve and the
@@ -89,17 +89,24 @@ Every key is read at its reader site through `tunable()`; the registry is in
 
 Run it from the repo root with
 `pnpm exec vite-node src/showcase/archetypes/scaler/balance/arc-probe.ts`. Its header says
-how to read it. The default is the four-hour arc plus ten minutes, about five minutes of
-wall time.
+how to read it. The default is the four-hour arc plus ten minutes at dt 0.5, about 15 s
+of wall time. `--dt` plays it at another tick; compare 0.25, 0.5 and 1 after a change to
+anything that acts once per tick.
 
 ## Known thin
 
-- **The engine runs five to seven minutes ahead of the walk from the first Age on.**
-  Each Age's length matches within about a minute; the lead is set in Act II, where the
+- **The engine runs up to seven minutes ahead of the walk from the first Age on.**
+  Each Age's length matches within a few minutes; the lead is set in Act II, where the
   engine rewrites more often than the walk at the same share.
-- **The last Elseworld tier can miss the arc.** The engine reaches the Modern Age before
-  Lost Earth 5's slot, and the Age's reset leaves its output below the goal's sizing until
-  past four hours.
+- **An Age beat moves by a whole Rewrite cycle with the probe's dt.** An Age turns on the
+  first Rewrite whose Continuity crosses the gate. A small change in timing, such as the
+  probe's dt, decides whether one Rewrite crosses it or the next does. So Age 2 lands near
+  2:31 at some dt values and near 2:37 at others, with no trend in dt. Compare beats
+  across a dt sweep by branch, not by the second.
+- **The last Elseworld tier can miss the arc.** When the engine reaches the Modern Age
+  before Lost Earth 5's slot, the Age's reset leaves its output below the goal's sizing
+  until past four hours. Whether it does depends on the Age 4 branch above; at dt 0.5 it
+  does.
 - **Most Elseworld tiers resolve in seconds, not two minutes.** The reference enters on
   the first fresh timeline past the slot that is strong enough, which is usually much
   stronger than the slot's sizing. A goal is a minimum, not a duration.

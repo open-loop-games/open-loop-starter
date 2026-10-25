@@ -15,6 +15,7 @@ import {
   CanonKey,
   ContinuityKey,
   CoreKey,
+  DESK_RECRUITS_PER_SECOND,
   LegacyKey,
   LegendsKey,
   PrestigeKey,
@@ -33,7 +34,7 @@ import {
 } from '../modules';
 import { TIERS } from '../data';
 
-/** Sim seconds per runner step. */
+/** Sim seconds per runner step, unless the probe asks for another. */
 export const DT = 0.5;
 /** Engine intervals per second. */
 export const INTERVAL_RATE = 20;
@@ -79,6 +80,8 @@ export interface ArcResult {
   ages: AgeRow[];
   elseworlds: readonly ElseworldEntry[];
   anomalies: string[];
+  /** Ticks the Dispatch Desk ran, and those on which it recruited its whole limit. */
+  desk: { ticks: number; capped: number };
   core: CoreApi;
   run: RunApi;
   legacy: LegacyApi;
@@ -92,8 +95,11 @@ export interface ArcResult {
   dispose(): void;
 }
 
-/** Play the arc for `seconds`. The caller reads the end state off the returned APIs. */
-export function runArc(seconds: number): ArcResult {
+/**
+ * Play the arc for `seconds`, one engine tick of `dt` per runner step. The caller
+ * reads the end state off the returned APIs.
+ */
+export function runArc(seconds: number, dt = DT): ArcResult {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createScalerModules()],
     intervalRate: INTERVAL_RATE,
@@ -121,6 +127,14 @@ export function runArc(seconds: number): ArcResult {
   let lastRewriteAt = 0;
   let lastAgeAt = 0;
   let lastSeq = 0;
+  const desk = { ticks: 0, capped: 0 };
+  const deskLimit = Math.floor(DESK_RECRUITS_PER_SECOND * dt);
+  const corps = () => run.heroes.getAll().reduce((n, e) => n + num(e.producer.ownedCount.value), 0);
+  const resets = () => core.reboots.value + core.rewrites.value + core.ages.value;
+  const deskOn = () =>
+    automation.ladder.isUnlocked('dispatch') &&
+    legacy.upgrade('dispatch').active.value &&
+    automation.dispatchOn.value;
 
   while (t() < seconds) {
     const rebootsBefore = core.reboots.value;
@@ -129,7 +143,15 @@ export function runArc(seconds: number): ArcResult {
     const continuityBefore = num(continuity.continuity.cumulative!.value);
     const canonBefore = num(canon.canon.cumulative!.value);
     player.turn();
-    handle.engine.tickDriver.advanceTime(DT);
+    const corpsBefore = corps();
+    const resetsBefore = resets();
+    const deskRan = deskOn();
+    handle.engine.tickDriver.advanceTime(dt);
+    // A reset in the tick wipes the corps, so its recruits cannot be read off.
+    if (deskRan && resets() === resetsBefore) {
+      desk.ticks++;
+      if (corps() - corpsBefore >= deskLimit) desk.capped++;
+    }
 
     if (core.reboots.value === 0) {
       for (const { def, producer } of run.heroes.getAll()) {
@@ -197,6 +219,7 @@ export function runArc(seconds: number): ArcResult {
     ages,
     elseworlds: player.elseworlds,
     anomalies,
+    desk,
     core,
     run,
     legacy,

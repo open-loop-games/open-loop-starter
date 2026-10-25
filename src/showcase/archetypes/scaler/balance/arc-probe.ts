@@ -3,7 +3,7 @@
  * player and prints each beat beside the spine's prediction. Prints; never
  * asserts. The game has no RNG, so one run is the measurement.
  *
- * Run: `pnpm exec vite-node src/showcase/archetypes/scaler/balance/arc-probe.ts [seconds] [--beats]`
+ * Run: `pnpm exec vite-node src/showcase/archetypes/scaler/balance/arc-probe.ts [seconds] [--dt=0.5] [--beats]`
  *
  * How to read it:
  * - § beats, with `--beats`: every scanner line, in order.
@@ -16,7 +16,11 @@
  *   columns are where engine and spine part ways first.
  * - § Elseworlds: every scheduled tier, when the spine and the engine entered and
  *   resolved it, against the goal the spine sized.
- * - § end state: the final stack.
+ * - § end state: the final stack, and the ticks on which the Dispatch Desk
+ *   recruited its whole limit for the tick.
+ *
+ * Compare runs at `--dt` 0.25, 0.5 and 1: where the beats move by more than
+ * seconds, the probe's dt plays a different game from live play.
  */
 
 import { ANCHORS, PREDICTION, REWRITE_THRESHOLD, TIERS, ageGate } from '../data';
@@ -25,6 +29,8 @@ import { num, runArc, DT } from './_engine';
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const SECONDS = Number(args[0] ?? 15000);
 const LIST = process.argv.includes('--beats');
+const DT_ARG = process.argv.find((a) => a.startsWith('--dt='));
+const STEP = DT_ARG ? Number(DT_ARG.slice('--dt='.length)) : DT;
 const fmt = (x: number) => (Math.abs(x) >= 1e4 ? x.toExponential(2) : x.toFixed(x < 10 ? 2 : 0));
 const clock = (s: number | undefined) =>
   s === undefined
@@ -34,12 +40,12 @@ const median = (xs: number[]) =>
   xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : NaN;
 
 const started = Date.now();
-const arc = runArc(SECONDS);
+const arc = runArc(SECONDS, STEP);
 const { core, run, legacy, continuity, canon, prestige, legends, automation } = arc;
 const walk = PREDICTION.walk;
 
 console.log(
-  `\nSCALER probe — ${SECONDS}s sim at dt=${DT}s, one deterministic run (no RNG in the game), ${((Date.now() - started) / 1000).toFixed(0)}s wall\n`,
+  `\nSCALER probe — ${SECONDS}s sim at dt=${STEP}s, one deterministic run (no RNG in the game), ${((Date.now() - started) / 1000).toFixed(0)}s wall\n`,
 );
 if (LIST) {
   console.log('BEATS');
@@ -118,6 +124,7 @@ console.log(
     )}, legends ${legends.legends.getAll().filter((e) => e.achievement.earned.value).length}/${legends.legends.getAll().length}`,
 );
 console.log(`  automation: ${automation.ladder.unlocked.value.join(', ')}`);
+console.log(`  Dispatch Desk at its limit on ${arc.desk.capped} of ${arc.desk.ticks} ticks`);
 console.log(
   arc.anomalies.length ? `\nANOMALIES\n  ${arc.anomalies.join('\n  ')}` : '\nANOMALIES none',
 );

@@ -135,9 +135,11 @@ function planBatch(
     });
     return total <= room && spend <= 1 - BATCH_MARGIN;
   };
-  // Bisect the threshold: at `lo` nothing pays back under it, at `hi` a row overflows `room`.
+  // Bisect the threshold: at `lo` nothing pays back under it, at `hi` a row overflows
+  // `room` or Justice. `room` may be unbounded, so widen `hi` until one does.
   let lo = Math.min(...paybacks);
-  let hi = Math.max(...paybacks) + (room + 1) * step;
+  let hi = Math.max(...paybacks) + step;
+  while (fits(counts(hi))) hi += 2 * (hi - lo);
   for (let i = 0; i < 64; i++) {
     const mid = (lo + hi) / 2;
     if (fits(counts(mid))) lo = mid;
@@ -150,7 +152,8 @@ function planBatch(
  * Dispatch Desk: recruits one hero at a time, each the winner over every tier,
  * affordable or not, by Cookie Monster's blended payback. Stops when the winner
  * is still being saved for, which is the point: buying whatever is affordable
- * never opens the next tier. Returns recruits made, at most `limit`.
+ * never opens the next tier. Returns recruits made, at most `limit`, which may
+ * be `Infinity`.
  *
  * `priceRatio` is the growth of every tier's price per recruit. While Justice
  * covers a whole batch, the desk buys it as one purchase per hero (`planBatch`).
@@ -245,7 +248,10 @@ export interface AutomationApi {
   crossoverShare: Persistent<number>;
   /** The Succession Plan's interval now. */
   rebootInterval(): number;
-  /** Recruit by the desk's policy until it would rather save; returns units bought. */
+  /**
+   * Recruit by the desk's policy until it would rather save, with no cap, as a
+   * player recruiting by hand; returns units bought.
+   */
   recruitBest(): number;
   /** The Liaison's spending: the Legacy shop and the Network. */
   spendLegacy(): number;
@@ -262,8 +268,8 @@ export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
 const automationApi = createModuleApi(AutomationKey);
 export const getAutomation = automationApi.get;
 
-/** The most recruits the desk buys in one tick. The arc reaches it: BALANCING.md § Couplings. */
-const MAX_RECRUITS_PER_TICK = 500;
+/** The most recruits the desk buys per second of game time. The arc reaches it: BALANCING.md § Couplings. */
+export const DESK_RECRUITS_PER_SECOND = 1000;
 
 export function createAutomationModule(): EngineModule {
   return {
@@ -349,13 +355,14 @@ export function createAutomationModule(): EngineModule {
       const running = (tier: Exclude<ScalerAutomationTier, 'manual'>) =>
         ladder.isUnlocked(tier) && owns[tier]();
 
-      const recruitBest = () =>
+      const recruit = (limit: number) =>
         recruitHeroes(
           run.heroes.getAll().map((e) => e.producer),
           () => run.totalRate.value,
           run.priceRatio.value,
-          MAX_RECRUITS_PER_TICK,
+          limit,
         );
+      const recruitBest = () => recruit(Infinity);
       const spendLegacy = () =>
         spendShop(
           (Object.keys(LEGACY_PRICES) as (keyof typeof LEGACY_PRICES)[]).map((id) =>
@@ -387,8 +394,16 @@ export function createAutomationModule(): EngineModule {
         );
       const inElseworld = () => prestige.elseworlds.current.value !== null;
 
-      ctx.onTick(() => {
-        if (running('dispatch') && settings.dispatchOn.value) recruitBest();
+      // The desk's limit is per second, so a coarse tick and a fine one allow the
+      // same rate. Only the fraction of a recruit carries over; an unspent limit is
+      // not banked.
+      let carry = 0;
+      ctx.onTick((dt) => {
+        if (!running('dispatch') || !settings.dispatchOn.value) return;
+        const allowance = carry + DESK_RECRUITS_PER_SECOND * dt;
+        const limit = Math.floor(allowance);
+        carry = allowance - limit;
+        recruit(limit);
       });
       ctx.onTick(() => {
         if (running('liaison')) spendLegacy();
