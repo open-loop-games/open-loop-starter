@@ -151,7 +151,7 @@ alongside the constants           and the probes that contradict it
   re-implementation. They print; they do not assert. A probe that finds something
   unexpected has done its job.
 
-- **A probe a pass reruns finishes in seconds,** about 20 s at most, at a coarse tick. When it outgrows that, make its scoring or its search faster before you trust more runs. A slow probe gets run less, so its findings arrive late.
+- **A probe a pass reruns finishes in about 20 s at most.** The engine guide's § Making a pass cheap says why, and how to find the cost when a probe grows slow.
 
 - **The projection prints a landmark-on-schedule check:** each landmark's predicted time beside its schedule. `BALANCING.md` § Running a pass states the healthy arc's tolerance per zone or act, not one figure for the whole arc.
 
