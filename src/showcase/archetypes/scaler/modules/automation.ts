@@ -262,7 +262,7 @@ export const AutomationKey: InjectionKey<AutomationApi> = Symbol(
 const automationApi = createModuleApi(AutomationKey);
 export const getAutomation = automationApi.get;
 
-/** More recruits than one tick of any run buys; a guard, not a rule. */
+/** The most recruits the desk buys in one tick. The arc reaches it: BALANCING.md § Couplings. */
 const MAX_RECRUITS_PER_TICK = 500;
 
 export function createAutomationModule(): EngineModule {

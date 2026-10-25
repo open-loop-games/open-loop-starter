@@ -62,6 +62,10 @@ Every key is read at its reader site through `tunable()`; the registry is in
 - **The desk buys until it would rather save.** Each tick it recruits by blended payback
   until the best pick is unaffordable. A desk limited to one recruit a tick falls behind
   the late economy.
+- **The desk's per-tick cap is part of its rule.** `MAX_RECRUITS_PER_TICK` stops a tick's
+  recruiting, and the arc probe reaches it. Lifting it moves the probe's Age beats by
+  seconds, and Lost Earth's fifth tier falls past the probe's horizon. The cap is per
+  tick, so live play at a finer dt reaches it less often than the probe does.
 - **The desk prices a batch with `priceRatio`.** While Justice covers a whole batch, it
   buys the batch as one purchase per tier, and it sizes the batch as if every tier's price
   grows by the run's price ratio per recruit. Give a tier another price curve and the
