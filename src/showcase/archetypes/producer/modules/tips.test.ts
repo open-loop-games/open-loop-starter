@@ -16,7 +16,7 @@ const income = () => num(getAutomation().income.value);
 /** Own a few pushcarts, so the firm has an income for tips to act on. */
 function openTheFirm(): void {
   addResource(getFirm().cash, 1e6);
-  getFirm().subsidiaries.getProducer('pushcart')!.repeatable!.purchase(10);
+  getFirm().subsidiaries.getProducer('pushcart')!.purchasable!.purchase(10);
 }
 
 /** Wait for a tip, then catch it until it draws `effect`. */

@@ -80,8 +80,8 @@ export const getAutomation = automationApi.get;
 export const acquisitionPolicy: SelectionPolicy<Producer> = selectionPaybackPeriod<Producer>(
   (p) => {
     const rate = Decimal.fromValue(p.computedRate.value);
-    if (!rate.gt(0) || !p.repeatable) return Infinity;
-    return Decimal.fromValue(p.repeatable.getCost(1)).div(rate).toNumber();
+    if (!rate.gt(0) || !p.purchasable) return Infinity;
+    return Decimal.fromValue(p.purchasable.getCost(1)).div(rate).toNumber();
   },
 );
 
@@ -171,7 +171,7 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
             }),
             text: 'On duty',
           });
-          producer.repeatable!.on('purchased', () => {
+          producer.purchasable!.on('purchased', () => {
             ledger.post(
               `phone #${Decimal.fromValue(producer.ownedCount.value).toNumber()}`,
               'hire',

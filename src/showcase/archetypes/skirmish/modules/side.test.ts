@@ -7,7 +7,7 @@ import { productionMix, setQueue } from './policy';
 import { PLAYER_PERSONA } from '../data/contracts';
 
 const side = () => getMatch().p;
-const tech = (id: string) => side().barracks.getProducer(id)!.repeatable!;
+const tech = (id: string) => side().barracks.getProducer(id)!.purchasable!;
 const charter = () => side().tier.getPurchasable('charter')!;
 const trained = (kind: 'razor' | 'rigger') => toNumber(side().reserve[kind].value);
 
@@ -59,7 +59,7 @@ describe('training floors', () => {
   });
 
   it('take as long per unit as the unit is worth', async () => {
-    side().econ.getProducer('ley-tap')!.repeatable!.purchase(1);
+    side().econ.getProducer('ley-tap')!.purchasable!.purchase(1);
     tech('chop-shop').purchase(1);
     tech('talisman-parlor').purchase(1);
     tech('drone-garage').purchase(1);
@@ -89,23 +89,23 @@ describe('hustler nodes', () => {
   const narrows = () => side().econ.getProducer('hustler-narrows')!;
 
   it('hire in a district only while the seat owns it', () => {
-    expect(narrows().repeatable!.visible.value).toBe(false);
+    expect(narrows().purchasable!.visible.value).toBe(false);
     getMatch().owner[0]!.value = 'p';
-    expect(narrows().repeatable!.purchase(1)).toBeTruthy();
+    expect(narrows().purchasable!.purchase(1)).toBeTruthy();
     expect(side().hustlers()).toBe(6);
   });
 
   it('scatter when the rival takes the district', async () => {
     getMatch().owner[0]!.value = 'p';
-    narrows().repeatable!.purchase(1);
+    narrows().purchasable!.purchase(1);
     getMatch().owner[0]!.value = 'e';
     await seconds(1);
     expect(toNumber(narrows().count.value)).toBe(0);
   });
 
   it('start each ladder at the same first price, and hire where it is cheapest', () => {
-    const home = side().econ.getProducer('hustler')!.repeatable!;
-    expect(toNumber(home.getCost(1))).toBeCloseTo(toNumber(narrows().repeatable!.getCost(1)));
+    const home = side().econ.getProducer('hustler')!.purchasable!;
+    expect(toNumber(home.getCost(1))).toBeCloseTo(toNumber(narrows().purchasable!.getCost(1)));
     home.purchase(1);
     getMatch().owner[0]!.value = 'p';
     expect(side().nextHustler()).toBe(narrows());
@@ -157,7 +157,7 @@ describe("the policy's queue", () => {
   });
 
   it('hands an aether kind its time back to razors while the taps cannot feed it', () => {
-    side().econ.getProducer('ley-tap')!.repeatable!.purchase(1);
+    side().econ.getProducer('ley-tap')!.purchasable!.purchase(1);
     tech('chop-shop').purchase(1);
     tech('talisman-parlor').purchase(1);
     for (let i = 0; i < 6; i++) side().floors.purchase(1);

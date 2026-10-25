@@ -21,7 +21,7 @@ const fleet = (): number =>
 function hire(...ids: HireId[]): void {
   fund(1e12);
   const { subsidiaries } = getFirm();
-  for (const e of subsidiaries.getAll().slice(0, 5)) e.producer.repeatable!.purchase(1);
+  for (const e of subsidiaries.getAll().slice(0, 5)) e.producer.purchasable!.purchase(1);
   for (const id of ids) getAutomation().executives.getPurchasable(id)!.purchase(1);
 }
 
@@ -51,7 +51,7 @@ describe('the desks', () => {
     const phone = getAutomation().phone;
     const desk = num(phone.count.value);
     expect(desk).toBeGreaterThan(0);
-    phone.repeatable!.purchase(1);
+    phone.purchasable!.purchase(1);
     expect(num(phone.count.value)).toBe(desk + 1);
   });
 
@@ -93,7 +93,7 @@ describe('the desks', () => {
   it('the board signs memos the moment they are affordable', async () => {
     hire('sales-desk', 'acquisitions-desk', 'board');
     getAutomation().deskOn['acquisitions-desk'].value = false;
-    getFirm().subsidiaries.getProducer('pushcart')!.repeatable!.purchase(10);
+    getFirm().subsidiaries.getProducer('pushcart')!.purchasable!.purchase(10);
     await tick(4);
     expect(getFirm().management.getPurchasable('pushcart-upgrade-1')!.active.value).toBe(true);
   });

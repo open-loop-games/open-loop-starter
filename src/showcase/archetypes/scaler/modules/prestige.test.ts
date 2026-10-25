@@ -20,7 +20,7 @@ const owned = (id: string) => num(getRun().heroes.getProducer(id)!.ownedCount.va
 /** Earn this timeline's way to a Reboot: Justice only counts once heroes earn it. */
 async function earnToReboot() {
   addResource(getRun().justice, 1e15);
-  getRun().heroes.getProducer('bastion')!.repeatable!.purchase(10);
+  getRun().heroes.getProducer('bastion')!.purchasable!.purchase(10);
   await tickUntil(() => Decimal.gte(getPrestige().pendingLegacy.value, 1), 20 * 600);
 }
 /** Bank enough Legacy since the last Rewrite to open one. */
@@ -40,7 +40,7 @@ describe('Reboot the Timeline', () => {
     addResource(getRun().justice, 1e15);
     const granted = num(getRun().runEarned.value);
     expect(granted).toBeGreaterThan(0);
-    getRun().heroes.getProducer('patrol')!.repeatable!.purchase(1);
+    getRun().heroes.getProducer('patrol')!.purchasable!.purchase(1);
     expect(num(getRun().runEarned.value)).toBe(granted);
     await tick(20);
     expect(num(getRun().runEarned.value)).toBeGreaterThan(granted);
@@ -59,7 +59,7 @@ describe('Reboot the Timeline', () => {
     addResource(getRun().justice, 1e25);
     await earnToReboot();
     getPrestige().reboot();
-    getRun().heroes.getProducer('patrol')!.repeatable!.purchase(1);
+    getRun().heroes.getProducer('patrol')!.purchasable!.purchase(1);
     await tick(20);
     expect(num(getRun().runEarned.value)).toBeGreaterThan(0);
   });
@@ -77,7 +77,7 @@ describe('Rewrite the Multiverse', () => {
   it('banks Continuity and wipes Legacy, its shop and the Network', async () => {
     earnToRewrite();
     getLegacy().upgrade('public-trust').purchase(1);
-    getLegacy().network.getProducer('informant')!.repeatable!.purchase(1);
+    getLegacy().network.getProducer('informant')!.purchasable!.purchase(1);
     expect(getPrestige().rewrite()).toBe(true);
     await tick(1);
     expect(num(getContinuity().continuity.value)).toBeGreaterThan(0);
@@ -108,7 +108,7 @@ describe('Turn the Age', () => {
   it('banks Canon and wipes Continuity, its shop and the Earths', async () => {
     earnToAge();
     getContinuity().upgrade('mythic').purchase(1);
-    getContinuity().earths.getProducer('earth-two')!.repeatable!.purchase(1);
+    getContinuity().earths.getProducer('earth-two')!.purchasable!.purchase(1);
     getPrestige().turnAge();
     await tick(1);
     expect(num(getCanon().canon.value)).toBeGreaterThan(0);
@@ -177,7 +177,7 @@ describe('Elseworlds', () => {
   it('silence the high tiers under No Powers while entered', async () => {
     openProtocols();
     addResource(getRun().justice, 1e12);
-    getRun().heroes.getProducer('tower')!.repeatable!.purchase(1);
+    getRun().heroes.getProducer('tower')!.purchasable!.purchase(1);
     const tower = getRun().heroes.getProducer('tower')!;
     expect(num(tower.computedRate.value)).toBeGreaterThan(0);
     getPrestige().enterElseworld('no-powers');
@@ -221,7 +221,7 @@ describe('Elseworlds', () => {
     earnToRewrite();
     getPrestige().rewrite();
     getLegacy().bank(100);
-    getLegacy().network.getProducer('informant')!.repeatable!.purchase(1);
+    getLegacy().network.getProducer('informant')!.purchasable!.purchase(1);
     expect(getPrestige().enterElseworld('dark-days')).toBe(true);
     await tick(40);
     expect(num(getRun().hope.value)).toBe(0);

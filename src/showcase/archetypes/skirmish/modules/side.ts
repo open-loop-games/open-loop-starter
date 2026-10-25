@@ -196,7 +196,7 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
   // A district the rival takes lays off the hustlers working it.
   const rackets = ECON.filter((d) => d.district !== undefined).map((d) => ({
     district: d.district!,
-    count: econ.getProducer(d.id)!.repeatable!.count,
+    count: econ.getProducer(d.id)!.purchasable!.count,
   }));
   registerTick(() => {
     for (const r of rackets)
@@ -206,9 +206,9 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
   const nextHustler = () => {
     let best: Producer | undefined;
     for (const n of hustlerNodes) {
-      const buy = n.repeatable!;
+      const buy = n.purchasable!;
       if (!buy.visible.value || buy.maxed.value) continue;
-      if (!best || toNumber(buy.getCost(1)) < toNumber(best.repeatable!.getCost(1))) best = n;
+      if (!best || toNumber(buy.getCost(1)) < toNumber(best.purchasable!.getCost(1))) best = n;
     }
     return best;
   };

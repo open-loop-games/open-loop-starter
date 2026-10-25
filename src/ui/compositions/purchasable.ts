@@ -161,8 +161,8 @@ export function createProducerRow<T = never>(
   pr: Producer,
   o: PurchasableRowOptions<T>,
 ): ProducerRow<T> {
-  if (!pr.repeatable) throw new Error(`[createProducerRow] producer '${pr.id}' has no purchase`);
-  const row = createPurchasableRow(pr.repeatable, { ...o, count: o.count ?? pr.ownedCount });
+  if (!pr.purchasable) throw new Error(`[createProducerRow] producer '${pr.id}' has no purchase`);
+  const row = createPurchasableRow(pr.purchasable, { ...o, count: o.count ?? pr.ownedCount });
   const { cost, costLabel } = row;
   if (!cost || costLabel === undefined) {
     throw new Error(`[createProducerRow] producer '${pr.id}' is not priced in one resource`);

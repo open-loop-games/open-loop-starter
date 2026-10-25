@@ -116,7 +116,7 @@ const filed = computed(() => firm.management.purchasedCount.value);
 const wall = computed(() =>
   firm.subsidiaries
     .getAll()
-    .filter((s) => s.producer.repeatable!.visible.value)
+    .filter((s) => s.producer.purchasable!.visible.value)
     .map((s) => ({
       name: s.def.displayName,
       frames: firm.milestones

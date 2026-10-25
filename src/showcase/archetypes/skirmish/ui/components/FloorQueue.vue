@@ -31,8 +31,8 @@ function status(k: UnitKind): { text: string; stalled: boolean } {
   if (!p.training[k].value) return { text: 'paused — its floor time idles', stalled: true };
   if (p.floorShare(k) <= 0) return { text: 'no floor time', stalled: false };
   const prod = line(k);
-  const limit = prod.limit?.value ?? 'rate';
-  if (limit === 'room') return { text: 'no bunks — buy squats', stalled: true };
+  const limit = prod.bottleneck?.value ?? 'rate';
+  if (limit === 'capacity') return { text: 'no bunks — buy squats', stalled: true };
   if (limit.startsWith('input:')) return { text: `short of ${limit.slice(6)}`, stalled: true };
   return { text: `${rate(toNumber(prod.realizedRate!.value) * 60)} / min`, stalled: false };
 }

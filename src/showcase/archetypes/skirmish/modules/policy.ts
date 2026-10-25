@@ -74,7 +74,7 @@ function barracksFor(side: Side, kind: UnitKind): Producer {
 export function hustlersPay(side: Side, persona: Persona): boolean {
   const h = side.nextHustler();
   if (!h) return false;
-  const cost = toNumber(h.repeatable!.getCost(1));
+  const cost = toNumber(h.purchasable!.getCost(1));
   return cost / toNumber(h.computedRate.value) < persona.hustlerPayback;
 }
 
@@ -223,14 +223,14 @@ function nextFloor(
     (a, b) => mix[b] - mix[a],
   );
   for (const k of wanted) {
-    const tech = barracksFor(side, k).repeatable!;
+    const tech = barracksFor(side, k).purchasable!;
     if (tech.visible.value) return { kind: k, buy: tech };
     const prereq = prerequisiteFor(side, k);
     if (prereq && !prereq.maxed.value) return { kind: k, buy: prereq };
   }
   if (side.floorCount() === 0)
-    return { kind: 'razor', buy: barracksFor(side, 'razor').repeatable! };
-  const tap = side.econ.getProducer('ley-tap')!.repeatable!;
+    return { kind: 'razor', buy: barracksFor(side, 'razor').purchasable! };
+  const tap = side.econ.getProducer('ley-tap')!.purchasable!;
   const aether = floorDrain(side, open, 'aether');
   if (aether > 0 && trainingDrain(side, 'aether') + aether > aetherFed(side) && !tap.maxed.value)
     return { kind: 'hexer', buy: tap };
@@ -322,7 +322,7 @@ export function playEconomy(
     ) {
       bought.push('squat');
     }
-    const h = side.nextHustler()?.repeatable;
+    const h = side.nextHustler()?.purchasable;
     // Without a quartermaster the player builds; the fixer never spends what the next training floor needs.
     const keep = scopes.has('build') ? 0 : cheapestFloor(side);
     if (
@@ -335,13 +335,13 @@ export function playEconomy(
       if (h.purchase(1)) bought.push('hustler');
     }
     const tap = side.econ.getProducer('ley-tap')!;
-    const tapCost = toNumber(tap.repeatable!.getCost(1));
+    const tapCost = toNumber(tap.purchasable!.getCost(1));
     if (
       !savingForFloor &&
       toNumber(tap.count.value) < persona.taps &&
-      tap.repeatable!.canPurchase.value &&
+      tap.purchasable!.canPurchase.value &&
       toNumber(side.scrip.value) >= tapCost + keep &&
-      tap.repeatable!.purchase(1)
+      tap.purchasable!.purchase(1)
     ) {
       bought.push('ley tap');
     }
@@ -394,7 +394,7 @@ export function playEconomy(
 function cheapestFloor(side: Side): number {
   let best = side.floors.visible.value ? toNumber(side.floors.getCost(1)) : Infinity;
   for (const k of UNIT_KINDS) {
-    const tech = barracksFor(side, k).repeatable!;
+    const tech = barracksFor(side, k).purchasable!;
     if (tech.visible.value && !tech.maxed.value) best = Math.min(best, toNumber(tech.getCost(1)));
   }
   return Number.isFinite(best) ? best : 0;
@@ -402,8 +402,8 @@ function cheapestFloor(side: Side): number {
 
 /** The next purchase on the way to a tech floor whose prerequisite is missing. */
 function prerequisiteFor(side: Side, kind: UnitKind): Purchasable | undefined {
-  const tap = side.econ.getProducer('ley-tap')!.repeatable!;
-  const chop = barracksFor(side, 'razor').repeatable!;
+  const tap = side.econ.getProducer('ley-tap')!.purchasable!;
+  const chop = barracksFor(side, 'razor').purchasable!;
   if (kind === 'hexer') return tap;
   if (kind === 'rigger') return chop;
   // The clinic waits on the charter, which `nextCharter` saves for once enough floors stand.

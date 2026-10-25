@@ -18,12 +18,12 @@ const HOUR_MS = 3_600_000;
 /** Own a pushcart, so the firm has a rate to keep while the player is away. */
 function openTheFirm(): void {
   addResource(getFirm().cash, 1e6);
-  getFirm().subsidiaries.getProducer('pushcart')!.repeatable!.purchase(1);
+  getFirm().subsidiaries.getProducer('pushcart')!.purchasable!.purchase(1);
 }
 
 function hireTheBookkeeper(): void {
   addResource(getFirm().cash, 1e9);
-  for (const e of getFirm().subsidiaries.getAll().slice(0, 4)) e.producer.repeatable!.purchase(1);
+  for (const e of getFirm().subsidiaries.getAll().slice(0, 4)) e.producer.purchasable!.purchase(1);
   offline().bookkeeper.purchase(1);
 }
 

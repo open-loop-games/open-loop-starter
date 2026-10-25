@@ -87,7 +87,7 @@ const yard = [
       displayName: def.displayName,
       rate: p.computedRate,
       purchase: () => lodge.buyProducer(def.id),
-      extra: { blurb: def.blurb, chips: () => chips(p.repeatable!) },
+      extra: { blurb: def.blurb, chips: () => chips(p.purchasable!) },
     });
   }),
 ];

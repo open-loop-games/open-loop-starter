@@ -20,7 +20,7 @@ const corps = () =>
 /** Heroes earning enough that a Reboot is pending within seconds. */
 function strongCorps() {
   addResource(getRun().justice, 1e30);
-  getRun().heroes.getProducer('bastion')!.repeatable!.purchase();
+  getRun().heroes.getProducer('bastion')!.purchasable!.purchase();
 }
 
 beforeEach(() => boot());
@@ -56,7 +56,7 @@ describe('the Dispatch Desk', () => {
         const income = () => getRun().totalRate.value;
         if (one) {
           const policy = selectionHybridPayback<Producer>({
-            getCost: (p) => p.repeatable!.getCost(1),
+            getCost: (p) => p.purchasable!.getCost(1),
             getRate: (p) => p.computedRate.value,
             getAmount: (p) => p.resource.value,
             getReserve: () => 0,
@@ -64,8 +64,8 @@ describe('the Dispatch Desk', () => {
           });
           for (let n = 0; n < 500; n++) {
             const best = policy.pick(heroes);
-            if (!best?.repeatable!.canPurchase.value) break;
-            best.repeatable!.purchase(1);
+            if (!best?.purchasable!.canPurchase.value) break;
+            best.purchasable!.purchase(1);
           }
         } else {
           recruitHeroes(heroes, income, getRun().priceRatio.value, 500);

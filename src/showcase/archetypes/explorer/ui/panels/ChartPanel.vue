@@ -40,7 +40,7 @@ interface TileView {
 
 /** Jerky from here to each tile and from each tile home; the tether is where the two fit in the satchel. */
 const fields = computed(() => {
-  void wold.grid.revision.value;
+  void wold.grid.gridVersion.value;
   void man.pos.value;
   void wold.camps.value.length;
   void wold.trophies.value.length;
@@ -57,7 +57,7 @@ const supply = computed(() => toNumber(man.supply.value));
 const water = computed(() => toNumber(man.water.value));
 
 const view = computed<TileView[]>(() => {
-  void wold.grid.revision.value;
+  void wold.grid.gridVersion.value;
   const { here, home, hereW, srcW } = fields.value;
   const inTether = (i: number) =>
     Number.isFinite(here[i]) &&

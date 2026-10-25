@@ -25,7 +25,7 @@ import { fmt, runArc } from './_engine';
 const HORIZON = Number(process.argv[2] ?? 30) * 60;
 
 const cheapest = selectionCheapest<Producer>((p) =>
-  p.repeatable ? p.repeatable.getCost(1) : Infinity,
+  p.purchasable ? p.purchasable.getCost(1) : Infinity,
 );
 
 const variants: { name: string; automation?: AutomationModuleOptions; dealRate?: number }[] = [

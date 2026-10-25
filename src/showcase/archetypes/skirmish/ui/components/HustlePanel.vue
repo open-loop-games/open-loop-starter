@@ -73,7 +73,7 @@ function waitsOn(i: number): string {
 
 const econRows = ECON.map((def) => {
   const prod = p.econ.getProducer(def.id)!;
-  const item = prod.repeatable!;
+  const item = prod.purchasable!;
   const each = () => `+${rate(toNumber(prod.computedRate.value))} ${def.output}/s each.`;
   const i = def.district;
   return createProducerRow<HustleExtra>(prod, {
@@ -128,7 +128,7 @@ function opens(def: BarracksDef): string {
 
 const techRows = BARRACKS.map((def) => {
   const prod = p.barracks.getProducer(def.id)!;
-  const item = prod.repeatable!;
+  const item = prod.purchasable!;
   return createProducerRow<FloorExtra>(prod, {
     displayName: def.name,
     prerequisite: () => `needs ${prerequisiteText(def, p.chartered())}`,

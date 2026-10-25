@@ -26,14 +26,14 @@ describe('the deal', () => {
 describe('subsidiaries', () => {
   it('earn cash every second once owned', async () => {
     fund(1e6);
-    getFirm().subsidiaries.getProducer('pushcart')!.repeatable!.purchase(1);
+    getFirm().subsidiaries.getProducer('pushcart')!.purchasable!.purchase(1);
     const before = num(getFirm().cash.value);
     await tick(4);
     expect(num(getFirm().cash.value)).toBeGreaterThan(before);
   });
 
   it('cost more with every one owned', () => {
-    const cart = getFirm().subsidiaries.getProducer('pushcart')!.repeatable!;
+    const cart = getFirm().subsidiaries.getProducer('pushcart')!.purchasable!;
     const first = num(cart.getCost(1));
     fund(1e6);
     cart.purchase(1);
@@ -41,10 +41,10 @@ describe('subsidiaries', () => {
   });
 
   it('open one tier at a time: owning one of a tier reveals the next', () => {
-    const stands = getFirm().subsidiaries.getProducer('newsstand')!.repeatable!;
+    const stands = getFirm().subsidiaries.getProducer('newsstand')!.purchasable!;
     expect(stands.visible.value).toBe(false);
     fund(1e6);
-    getFirm().subsidiaries.getProducer('pushcart')!.repeatable!.purchase(1);
+    getFirm().subsidiaries.getProducer('pushcart')!.purchasable!.purchase(1);
     expect(stands.visible.value).toBe(true);
   });
 });
@@ -53,7 +53,7 @@ describe('the stack', () => {
   it('a memo multiplies the subsidiary it names', () => {
     fund(1e9);
     const carts = getFirm().subsidiaries.getProducer('pushcart')!;
-    carts.repeatable!.purchase(10);
+    carts.purchasable!.purchase(10);
     const before = num(carts.computedRate.value);
     getFirm().management.getPurchasable('pushcart-upgrade-1')!.purchase(1);
     expect(num(carts.computedRate.value)).toBeGreaterThan(before);
@@ -61,7 +61,7 @@ describe('the stack', () => {
 
   it('a market-leader milestone lands on its owned count', async () => {
     fund(1e12);
-    getFirm().subsidiaries.getProducer('pushcart')!.repeatable!.purchase(25);
+    getFirm().subsidiaries.getProducer('pushcart')!.purchasable!.purchase(25);
     await tick(1);
     expect(owned('pushcart')).toBe(25);
     expect(getFirm().milestones.getAchievement('pushcart-25')!.earned.value).toBe(true);
@@ -70,7 +70,7 @@ describe('the stack', () => {
   it('a synergy raises each side of its pair by the other side’s count', () => {
     fund(1e30);
     const { subsidiaries, management } = getFirm();
-    for (const e of subsidiaries.getAll().slice(0, 4)) e.producer.repeatable!.purchase(15);
+    for (const e of subsidiaries.getAll().slice(0, 4)) e.producer.purchasable!.purchase(15);
     const carts = subsidiaries.getProducer('pushcart')!;
     const synergy = management.getPurchasable('synergy-pushcart-laundromat-1')!;
     expect(synergy.visible.value).toBe(true);
@@ -78,33 +78,33 @@ describe('the stack', () => {
     synergy.purchase(1);
     const after = num(carts.computedRate.value);
     expect(after).toBeGreaterThan(before);
-    subsidiaries.getProducer('laundromat')!.repeatable!.purchase(10);
+    subsidiaries.getProducer('laundromat')!.purchasable!.purchase(10);
     expect(num(carts.computedRate.value)).toBeGreaterThan(after);
   });
 
   it('the referral network pays every deal more per subsidiary owned', () => {
     fund(1e30);
     const { management, subsidiaries } = getFirm();
-    subsidiaries.getProducer('pushcart')!.repeatable!.purchase(20);
-    subsidiaries.getProducer('newsstand')!.repeatable!.purchase(1);
+    subsidiaries.getProducer('pushcart')!.purchasable!.purchase(20);
+    subsidiaries.getProducer('newsstand')!.purchasable!.purchase(1);
     getAutomation().executives.getPurchasable('sales-desk')!.purchase(1);
-    getAutomation().phone.repeatable!.purchase(25);
+    getAutomation().phone.purchasable!.purchase(25);
     const referral = management.getPurchasable('referral-1')!;
     expect(referral.visible.value).toBe(true);
     const before = num(getFirm().dealValue.value);
     referral.purchase(1);
     const after = num(getFirm().dealValue.value);
     expect(after).toBeGreaterThan(before);
-    subsidiaries.getProducer('pushcart')!.repeatable!.purchase(10);
+    subsidiaries.getProducer('pushcart')!.purchasable!.purchase(10);
     expect(num(getFirm().dealValue.value)).toBeGreaterThan(after);
   });
 
   it('the ending is offered only once the top tier is owned deep', () => {
     fund(1e40);
     const { subsidiaries, ending } = getFirm();
-    for (const e of subsidiaries.getAll()) e.producer.repeatable!.purchase(1);
+    for (const e of subsidiaries.getAll()) e.producer.purchasable!.purchase(1);
     expect(ending.visible.value).toBe(false);
-    subsidiaries.getProducer('bank')!.repeatable!.purchase(200);
+    subsidiaries.getProducer('bank')!.purchasable!.purchase(200);
     expect(ending.visible.value).toBe(true);
   });
 

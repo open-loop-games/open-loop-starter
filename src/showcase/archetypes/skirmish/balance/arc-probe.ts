@@ -92,7 +92,7 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
       beat(
         'supply cap binds (a converter limited by room)',
         match.clock.value > 0 &&
-          p.barracks.getAll().some((b) => b.producer.limit?.value === 'room'),
+          p.barracks.getAll().some((b) => b.producer.bottleneck?.value === 'capacity'),
       );
       beat('first squat', toNumber(p.squats.count.value) > 0);
       beat(
@@ -120,7 +120,7 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
       );
       beat(
         'safehouse full (no home hire left)',
-        p.econ.getProducer('hustler')!.repeatable!.maxed.value,
+        p.econ.getProducer('hustler')!.purchasable!.maxed.value,
       );
       beat(
         'hustlers plateau (no owned node has a hire that pays)',

@@ -132,7 +132,7 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
       n(man.supply) + n(lodge.stores.jerky) + n(lodge.stores.meat) * ANCHORS.jerkyPerMeat <
       2 * wold.stepCost.value;
     for (const p of lodge.producers.getAll()) {
-      const r = p.producer.repeatable!;
+      const r = p.producer.purchasable!;
       if (p.def.id === 'snare' && n(lodge.stores.meat) > 30) continue;
       if (p.def.id === 'snare' && starving) {
         lodge.buyProducer('snare');

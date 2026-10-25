@@ -171,7 +171,7 @@ export function createFirmModule(): EngineModule {
         }),
         mapState: (def, producer) => {
           producer.rateChain.bind({ modifier: operations, text: 'Operations' });
-          producer.repeatable!.on('purchased', (bought) => {
+          producer.purchasable!.on('purchased', (bought) => {
             const n = Decimal.fromValue(bought).toNumber();
             const count = Decimal.fromValue(producer.ownedCount.value).toNumber();
             const m = Decimal.fromValue(costRatio.value).toNumber();

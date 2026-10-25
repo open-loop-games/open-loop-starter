@@ -170,10 +170,10 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
         const affordable = [
           ...firm.subsidiaries.getAll().map((e) => e.producer),
           automation.phone,
-        ].filter((p) => p.repeatable?.canPurchase.value);
+        ].filter((p) => p.purchasable?.canPurchase.value);
         const pick = acquisitionPolicy.pick(affordable);
         if (!pick) break;
-        pick.repeatable!.purchase(1);
+        pick.purchasable!.purchase(1);
         handBuys++;
       }
     }

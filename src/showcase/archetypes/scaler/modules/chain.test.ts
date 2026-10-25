@@ -16,7 +16,7 @@ import { getRun } from './run';
 
 const num = (v: unknown): number => new Decimal(v as never).toNumber();
 const unit = (id: string) => getLegacy().network.getProducer(id)!;
-const buy = (id: string) => unit(id).repeatable!.purchase(1);
+const buy = (id: string) => unit(id).purchasable!.purchase(1);
 
 beforeEach(() => {
   boot();
@@ -53,7 +53,7 @@ describe('the Network', () => {
     buy('watchtower');
     await tick(40);
     addResource(getRun().justice, 1e15);
-    getRun().heroes.getProducer('bastion')!.repeatable!.purchase(10);
+    getRun().heroes.getProducer('bastion')!.purchasable!.purchase(10);
     await tickUntil(() => Decimal.gte(getPrestige().pendingLegacy.value, 1), 20 * 600);
     getPrestige().reboot();
     expect(num(getRun().hope.value)).toBe(0);

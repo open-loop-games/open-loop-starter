@@ -459,9 +459,9 @@ export function createWorksModule(): EngineModule {
             continue;
           }
           const shop = workshops.getProducer(role.id)!;
-          const bound = shop.limit!.value;
+          const bound = shop.bottleneck!.value;
           let limit: Limit;
-          if (bound === 'room') limit = 'storage';
+          if (bound === 'capacity') limit = 'storage';
           else if (bound !== 'rate') limit = bound as Limit;
           else if (rec.steam && steam.share[role.id as SteamDraw] < 1) limit = 'steam';
           else limit = fed.value < 1 ? 'hunger' : 'labour';

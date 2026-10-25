@@ -165,11 +165,11 @@ export function recruitHeroes(
   // modifier chains, never a count, and spending leaves lifetime Justice (the
   // Legends) alone. So each purchase re-reads only the hero it bought.
   const read = (p: Producer) => ({
-    cost: p.repeatable!.getCost(1),
+    cost: p.purchasable!.getCost(1),
     rate: p.computedRate.value,
-    open: !p.repeatable!.maxed.value,
+    open: !p.purchasable!.maxed.value,
   });
-  const scored = new Map(heroes.filter((p) => p.repeatable).map((p) => [p, read(p)]));
+  const scored = new Map(heroes.filter((p) => p.purchasable).map((p) => [p, read(p)]));
   const policy = selectionHybridPayback<Producer>({
     getCost: (p) => scored.get(p)!.cost,
     getRate: (p) => scored.get(p)!.rate,
@@ -192,14 +192,14 @@ export function recruitHeroes(
     if (plan.reduce((a, b) => a + b, 0) > 1) {
       open.forEach((p, j) => {
         if (plan[j] === 0) return;
-        made += Decimal.fromValue(p.repeatable!.purchase(plan[j])).toNumber();
+        made += Decimal.fromValue(p.purchasable!.purchase(plan[j])).toNumber();
         scored.set(p, read(p));
       });
     }
     if (made === 0) {
       const best = policy.pick(open);
-      if (!best?.repeatable!.canPurchase.value) break;
-      made = Decimal.fromValue(best.repeatable!.purchase(1)).toNumber();
+      if (!best?.purchasable!.canPurchase.value) break;
+      made = Decimal.fromValue(best.purchasable!.purchase(1)).toNumber();
       if (made === 0) break;
       scored.set(best, read(best));
     }
@@ -229,7 +229,7 @@ export function spendShop(oneShots: Purchasable[], levelled: Purchasable[]): num
 }
 
 const chainUnits = (chain: ProducerCategory<ChainTierDef>): Purchasable[] =>
-  chain.getAll().map((e) => e.producer.repeatable!);
+  chain.getAll().map((e) => e.producer.purchasable!);
 
 export interface AutomationApi {
   ladder: AutomationTiers;

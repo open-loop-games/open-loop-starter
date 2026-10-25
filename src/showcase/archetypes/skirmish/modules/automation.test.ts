@@ -28,8 +28,8 @@ describe("the player's lieutenants", () => {
     const floor = Math.min(
       ...m.p.barracks
         .getAll()
-        .filter((b) => b.producer.repeatable!.visible.value)
-        .map((b) => toNumber(b.producer.repeatable!.getCost(1))),
+        .filter((b) => b.producer.purchasable!.visible.value)
+        .map((b) => toNumber(b.producer.purchasable!.getCost(1))),
     );
     expect(toNumber(m.p.scrip.value)).toBeGreaterThanOrEqual(floor);
   });

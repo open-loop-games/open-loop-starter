@@ -208,7 +208,7 @@ export function createLodgeModule(): EngineModule {
           return true;
         },
         buyProducer(id) {
-          const r = producers.getProducer(id)?.repeatable;
+          const r = producers.getProducer(id)?.purchasable;
           if (!r?.canPurchase.value) return false;
           r.purchase(1);
           chronicle.beat('first lodge purchase');

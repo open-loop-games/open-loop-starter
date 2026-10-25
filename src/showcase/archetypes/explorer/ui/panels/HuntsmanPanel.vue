@@ -31,20 +31,20 @@ const supply = computed(() => toNumber(man.supply.value));
 const water = computed(() => toNumber(man.water.value));
 /** Water from where he stands to the nearest water. */
 const toWater = computed(() => {
-  void wold.grid.revision.value;
+  void wold.grid.gridVersion.value;
   void wold.trophies.value.length;
   const { x, y } = man.pos.value;
   return wold.waterField()[y * MAP_W + x];
 });
 const homeCost = computed(() => {
-  void wold.grid.revision.value;
+  void wold.grid.gridVersion.value;
   void wold.camps.value.length;
   const { x, y } = man.pos.value;
   return wold.homeField()[y * MAP_W + x];
 });
 
 const here = computed(() => {
-  void wold.grid.revision.value;
+  void wold.grid.gridVersion.value;
   const { x, y } = man.pos.value;
   const t = wold.tileAt(x, y);
   const herd = man.herdAt(x, y);

@@ -179,8 +179,8 @@ export function createDojoModule(): EngineModule {
         },
       });
       producers.register([{ id: 'student' }, { id: 'senpai' }]);
-      const students = producers.getEntry('student')!.producer.repeatable!;
-      const senpai = producers.getEntry('senpai')!.producer.repeatable!;
+      const students = producers.getEntry('student')!.producer.purchasable!;
+      const senpai = producers.getEntry('senpai')!.producer.purchasable!;
 
       const temperCost = t('temper/baseCost', () => temperBaseCost);
       const temperRatio = t('temper/growth', () => temperGrowth);
