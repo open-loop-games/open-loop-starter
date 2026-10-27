@@ -4,7 +4,7 @@
  * The whole design language is here, scoped under `.hardpoint`, so the story's identity
  * is one file a fork can read, replace or delete. Nothing in `src/lib/` or `src/ui/` is
  * edited for it: every hook is a documented costume class on a shell, a widget or a
- * composition (`.olui-three-panel__…`, `.olui-system-header…`, `.producer-list__…`,
+ * composition (`.olui-shell__…`, `.olui-system-header…`, `.producer-list__…`,
  * `.upgrade-grid__…`) or a class this story's own components emit.
  *
  * Language: a fitting bay under combat alert. The hull board is blueprint, a cold cyan
@@ -202,38 +202,22 @@
   border-color: var(--blueprint-dim);
 }
 
-/* The shell's columns: the bay's two consoles either side of the hull, no box round it. */
-.hardpoint .olui-three-panel {
-  gap: 28px;
-  padding: 20px 24px 32px;
-  justify-content: center;
+/* The shell's regions: the bay's two consoles either side of the hull. */
+.hardpoint .olui-shell {
+  --shell-gap: 24px;
 }
-.hardpoint .olui-three-panel__left,
-.hardpoint .olui-three-panel__main,
-.hardpoint .olui-three-panel__right {
-  background: transparent;
-  border: none;
-  border-radius: 0;
+/* The breach line runs edge to edge under the header, a strip of the frame, not a plate. */
+.hardpoint .olui-shell__top-bar {
   padding: 0;
-  min-width: 0;
-  overflow: visible;
 }
-.hardpoint .olui-three-panel__main {
-  align-items: center;
-}
-/* The consoles scroll on their own; the hull board stays where the hand is. */
-.hardpoint .olui-three-panel__left,
-.hardpoint .olui-three-panel__right {
-  overflow-y: auto;
+/* The consoles scroll on their own; the hull board stays where the hand is. Their
+   sections sit closer than the regions do. */
+.hardpoint .olui-shell__side-bar-left,
+.hardpoint .olui-shell__side-bar-right {
+  gap: var(--gap);
   scrollbar-width: thin;
   scrollbar-color: var(--hull-seam) transparent;
   padding-right: 4px;
-}
-/* Where the page itself scrolls instead, the hull board rides along beside the consoles. */
-.hardpoint .olui-three-panel__main {
-  position: sticky;
-  top: 0;
-  align-self: start;
 }
 
 /* ── console heading: stencilled blueprint capitals ── */

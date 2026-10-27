@@ -347,14 +347,20 @@ const silenceTag = (p: Placed) => {
 
 <style scoped>
 .bay {
+  /* Fills the deck, and is the size the lattice fits. */
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 0;
+  container-type: size;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
 }
 .hull {
-  /* The lattice fits the deck's height: thirteen rows on a lancer, fewer on a frigate. */
-  --cell: clamp(36px, calc((100vh - 410px) / var(--h) - 4px), 58px);
+  /* The lattice fits the deck's height, less its own frame and the caption under it:
+     thirteen rows on a lancer, fewer on a frigate. */
+  --cell: clamp(36px, calc((100cqh - 80px) / var(--h) - 4px), 58px);
   display: grid;
   grid-template-columns: repeat(var(--w), var(--cell));
   grid-template-rows: repeat(var(--h), var(--cell));

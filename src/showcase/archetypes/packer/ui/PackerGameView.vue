@@ -1,15 +1,16 @@
 <!--
   PackerGameView — the in-game subtree, mounted under the root's post-start frame. The
-  breach line runs full width over the shell: the ship plate, the carrier and the Engage
-  console. Below it the fabricator is on the left, the hull board in the centre, and on the
-  right the sector's conditions, fire control, the hull's plating, refits and calibration,
-  and the next ship's commission. The fitting state (the held module and its facing, the
-  hovered cell) is provided here, so the board and both consoles read one hand. Escape lets
-  go of the held module; R turns a held or hovered Fire Director.
+  breach line is the shell's top bar: the ship plate, the carrier and the Engage console.
+  Below it the fabricator is on the left, the hull board in the centre, and on the right
+  the sector's conditions, fire control, the hull's plating, refits and calibration, and
+  the next ship's commission. The viewport is fixed, so each console scrolls on its own
+  while the hull board stays where the hand is. The fitting state (the held module and its
+  facing, the hovered cell) is provided here, so the board and both consoles read one hand.
+  Escape lets go of the held module; R turns a held or hovered Fire Director.
 -->
 <script setup lang="ts">
 import { inject, watch } from 'vue';
-import { ThreePanelShell, modalStackKey } from '@/lib';
+import { ColumnShell, modalStackKey } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { useWindowKeys } from '@/composables/useWindowKeys';
 import { PIECE_BY_ID } from '../data';
@@ -66,28 +67,23 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <div class="hp-deck">
-    <BreachLine />
-    <ThreePanelShell left-width="minmax(290px, 330px)" right-width="minmax(300px, 340px)">
-      <template #left>
-        <Fabricator />
-      </template>
-      <HullBoard />
-      <template #right>
-        <SectorPanel />
-        <FireControl />
-        <HullRefits />
-        <Commission />
-      </template>
-    </ThreePanelShell>
-  </div>
+  <ColumnShell
+    viewport="fixed"
+    side-bar-left-width="minmax(290px, 330px)"
+    side-bar-right-width="minmax(300px, 340px)"
+  >
+    <template #topBar>
+      <BreachLine />
+    </template>
+    <template #sideBarLeft>
+      <Fabricator />
+    </template>
+    <HullBoard />
+    <template #sideBarRight>
+      <SectorPanel />
+      <FireControl />
+      <HullRefits />
+      <Commission />
+    </template>
+  </ColumnShell>
 </template>
-
-<style scoped>
-.hp-deck {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-</style>

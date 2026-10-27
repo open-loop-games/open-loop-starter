@@ -46,6 +46,6 @@ export const manifest: ArchetypeManifest = {
     { n: 17, label: 'The Breach Mother destroyed', recordedFireTimeRange: [7427, 7510] },
     { n: 18, label: 'The Dreadnought destroyed', recordedFireTimeRange: [8984, 9074] },
   ],
-  shell: 'ThreePanelShell',
+  shell: 'ColumnShell · topBar + left + right · fixed',
   formFactor: 'desktop',
 };
