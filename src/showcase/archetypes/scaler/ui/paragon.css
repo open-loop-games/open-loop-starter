@@ -3,9 +3,9 @@
  *
  * The design language is here, scoped under `.paragon`, so the story's identity
  * is one file a fork can read, replace or delete. Nothing in `src/lib/` or
- * `src/ui/` is edited for it: every hook is a documented costume class on a shell,
- * a widget or a composition (`.olui-system-header`, `.olui-sidebar-main__…`,
- * `.olui-tabs__…`, `.olui-progress-bar__…`, `.olui-switch__…`, `.producer-list__…`,
+ * `src/ui/` is edited for it: every hook is a documented costume class on a
+ * widget or a composition (`.olui-system-header`, `.olui-tabs__…`,
+ * `.olui-progress-bar__…`, `.olui-switch__…`, `.producer-list__…`,
  * `.upgrade-grid__…`, `.olui-achievement-grid__…`) or a class this story's own
  * components emit.
  *
@@ -75,7 +75,8 @@
 }
 
 .paragon {
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   display: flex;
   flex-direction: column;
   background-color: var(--night);
@@ -89,16 +90,6 @@
 .paragon .olui-system-header {
   background: var(--gutter-ink);
   border-bottom: 3px solid var(--signal);
-}
-
-/* The page is the comic's gutter: the shell's columns draw no box of their own. */
-.paragon .olui-sidebar-main__sidebar,
-.paragon .olui-sidebar-main__main {
-  background: transparent;
-  border: none;
-  padding: 0;
-  gap: 18px;
-  overflow: visible;
 }
 
 .paragon .num {

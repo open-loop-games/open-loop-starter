@@ -3,16 +3,17 @@
   `v-else` frame, so module getters are safe to read here.
   See `.claude/rules/app-root-discipline.md`.
 
-  Shell: SidebarMainShell, the prestige-idle majority
+  Shell: ColumnShell with a top bar and a left rail, the prestige-idle majority
   (`open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`): the
-  prestige cards and the scanner in the sidebar, the tabs over the main panel.
+  masthead in the top bar, the prestige cards and the scanner in the rail, the
+  tabs over main.
   A tab appears as its layer opens and carries a dot until it is read; each
   layer's tab holds its shop over its chain.
 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Decimal } from '@open-loop/engine';
-import { SidebarMainShell } from '@/lib';
+import { ColumnShell } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
 import {
@@ -91,46 +92,34 @@ function select(value: string) {
 </script>
 
 <template>
-  <div class="paragon-page">
-    <Masthead />
-    <SidebarMainShell class="paragon-shell" sidebar-width="300px">
-      <template #sidebar>
-        <PrestigeCards />
-        <ScannerPanel />
+  <ColumnShell class="paragon-shell" side-bar-left-width="300px" max-width="1204px">
+    <template #topBar><Masthead /></template>
+    <template #sideBarLeft>
+      <PrestigeCards />
+      <ScannerPanel />
+    </template>
+    <Tabs :model-value="active" :items="openTabs" @update:model-value="select">
+      <template v-for="tab in openTabs" :key="tab.value" #[`tab-${tab.value}`]>
+        {{ tab.label }}<span v-if="!seen.has(tab.value)" class="new-dot" aria-label="new" />
       </template>
-      <Tabs :model-value="active" :items="openTabs" @update:model-value="select">
-        <template v-for="tab in openTabs" :key="tab.value" #[`tab-${tab.value}`]>
-          {{ tab.label }}<span v-if="!seen.has(tab.value)" class="new-dot" aria-label="new" />
-        </template>
-        <template #panel-corps><CorpsPanel /></template>
-        <template #panel-legacy>
-          <div class="layer"><ShopPanel kind="legacy" /><ChainPanel kind="network" /></div>
-        </template>
-        <template #panel-elseworlds><ElseworldsPanel /></template>
-        <template #panel-continuity>
-          <div class="layer"><ShopPanel kind="continuity" /><ChainPanel kind="earths" /></div>
-        </template>
-        <template #panel-canon>
-          <div class="layer"><ShopPanel kind="canon" /><ChainPanel kind="imprints" /></div>
-        </template>
-      </Tabs>
-    </SidebarMainShell>
-  </div>
+      <template #panel-corps><CorpsPanel /></template>
+      <template #panel-legacy>
+        <div class="layer"><ShopPanel kind="legacy" /><ChainPanel kind="network" /></div>
+      </template>
+      <template #panel-elseworlds><ElseworldsPanel /></template>
+      <template #panel-continuity>
+        <div class="layer"><ShopPanel kind="continuity" /><ChainPanel kind="earths" /></div>
+      </template>
+      <template #panel-canon>
+        <div class="layer"><ShopPanel kind="canon" /><ChainPanel kind="imprints" /></div>
+      </template>
+    </Tabs>
+  </ColumnShell>
 </template>
 
 <style scoped>
-.paragon-page {
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
 .paragon-shell {
-  padding: 0;
-  gap: 18px;
+  --shell-gap: 18px;
 }
 .layer {
   display: flex;

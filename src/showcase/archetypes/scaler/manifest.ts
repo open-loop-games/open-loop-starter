@@ -67,7 +67,7 @@ export const manifest: ArchetypeManifest = {
     { n: 9, label: 'The Modern Age: the end beat', recordedFireTimeRange: [14144, 14144] },
   ],
 
-  shell: 'SidebarMainShell',
+  shell: 'ColumnShell · topBar + left',
   formFactor: 'responsive',
   exemplars: [
     {
