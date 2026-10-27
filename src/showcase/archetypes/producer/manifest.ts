@@ -67,7 +67,7 @@ export const manifest: ArchetypeManifest = {
     { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13728, 14347] },
   ],
 
-  shell: 'ThreePanelShell',
+  shell: 'ColumnShell · left + right',
   formFactor: 'responsive',
   exemplars: [
     {

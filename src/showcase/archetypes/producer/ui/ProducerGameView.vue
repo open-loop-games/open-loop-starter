@@ -3,13 +3,14 @@
   `v-else` frame, so module getters are safe to read here.
   See `.claude/rules/app-root-discipline.md`.
 
-  Shell: ThreePanelShell, the clicker majority's secondary shell (Cookie Clicker,
-  Universal Paperclips; `open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`):
-  the desk you work at, the holdings you own, the office that runs them.
+  Shell: ColumnShell with both rails, the clicker majority's secondary shell (Cookie
+  Clicker, Universal Paperclips; `open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`):
+  the desk you work at, the holdings you own, the office that runs them. The shell draws
+  no panels, so the desk itself is the surface.
 -->
 <script setup lang="ts">
 import { inject, watch } from 'vue';
-import { ThreePanelShell, modalStackKey } from '@/lib';
+import { ColumnShell, modalStackKey } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { getAutomation, getFirm, getStanding, getTips } from '../modules';
 import DeskPanel from './components/DeskPanel.vue';
@@ -51,26 +52,24 @@ watch(
 </script>
 
 <template>
-  <ThreePanelShell class="firm" chromeless left-width="340px" right-width="360px">
-    <template #left>
+  <ColumnShell
+    class="firm"
+    side-bar-left-width="340px"
+    side-bar-right-width="360px"
+    max-width="1440px"
+  >
+    <template #sideBarLeft>
       <DeskPanel />
     </template>
     <HoldingsPanel />
-    <template #right>
+    <template #sideBarRight>
       <OfficePanel />
     </template>
-  </ThreePanelShell>
+  </ColumnShell>
 </template>
 
 <style scoped>
 .firm {
-  max-width: 1440px;
-  margin: 0 auto;
-  width: 100%;
-}
-/* The desk is the surface: the shell's columns draw no box of their own. */
-.firm {
-  gap: 18px;
-  padding: 18px;
+  --shell-gap: 18px;
 }
 </style>

@@ -4,7 +4,7 @@
  * The design language is here, scoped under `.consolidated`, so the story's
  * identity is one file a fork can read, replace or delete. Nothing in `src/lib/`
  * or `src/ui/` is edited for it: every hook is a documented costume class on a
- * shell or a composition (`.olui-system-header`, `.olui-three-panel__…`,
+ * shell or a composition (`.olui-system-header`, `.olui-shell__…`,
  * `.producer-list__…`, `.upgrade-grid__…`, `.olui-progress-bar__…`) or a class
  * this story's own components emit.
  *
@@ -65,7 +65,8 @@
 
 /* Only the page itself is the desk. */
 .consolidated {
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   display: flex;
   flex-direction: column;
   background:
