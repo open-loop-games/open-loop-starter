@@ -6,9 +6,12 @@
   This is where your game lives: pull module state in `<script setup>`, render it
   in the template. Keep the root (`GameAppRoot.vue`) routing-only — never read a
   module there, because it sets up before `engine.start()`.
+
+  Shell: ColumnShell, one column capped at 800px. To grow the layout, fill its
+  #topBar, #sideBarLeft or #sideBarRight slot; for a full-viewport stage, use StageShell.
 -->
 <script setup lang="ts">
-import { SingleColumnShell } from '@/lib';
+import { ColumnShell } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { getAutomation, getCore } from '../modules';
 
@@ -22,7 +25,7 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <SingleColumnShell>
+  <ColumnShell max-width="800px">
     <section class="game-placeholder">
       <h2>Hello from your new game.</h2>
       <p>
@@ -31,7 +34,7 @@ if (import.meta.env.DEV) {
         <code>src/game/modules/</code> and rendering its state here.
       </p>
     </section>
-  </SingleColumnShell>
+  </ColumnShell>
 </template>
 
 <style scoped>

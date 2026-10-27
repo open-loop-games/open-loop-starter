@@ -11,6 +11,6 @@ export const manifest: ArchetypeManifest = {
   displayName: 'Game',
   primitives: [],
   beats: [],
-  shell: 'SingleColumnShell',
+  shell: 'ColumnShell',
   formFactor: 'responsive',
 };
