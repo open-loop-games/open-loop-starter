@@ -3,10 +3,9 @@
   main is either the home card grid or an "entered" view for one archetype.
 
   Layout comes from the lib/ shells; gallery only composes them. The
-  hamburger drives the shell's `data-collapsed` attribute, one of its
-  costume classes (the shell publishes it for mobile responsive
-  collapse; gallery-scoped CSS extends it to desktop without editing the
-  shell — see "wrap it yourself" guidance in SidebarMainShell.vue).
+  hamburger turns the list's rail off by leaving its slot unfilled. The
+  shell's viewport is fixed, so the list and main scroll on their own and an
+  embedded fixed-viewport demo gets a bounded height.
 
   Entered controls (Back, archetype name, Details ↔ Live demo toggle)
   live in the gallery header — no second header row in the entered view.
@@ -21,7 +20,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { ListboxContent, ListboxItem, ListboxRoot } from 'reka-ui';
-import { SidebarMainShell } from '@/lib';
+import { ColumnShell } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import { listArchetypes, findArchetype, type GalleryArchetype } from './useArchetypes';
 import Card from './Card.vue';
@@ -114,14 +113,9 @@ function flipTab(): void {
       </nav>
     </header>
 
-    <SidebarMainShell
-      class="gallery-shell__shell"
-      :sidebar-width="sidebarOpen ? '240px' : '0px'"
-      collapsible
-      :data-collapsed="!sidebarOpen ? 'true' : null"
-    >
-      <template #sidebar>
-        <div v-if="sidebarOpen" class="gallery-sidebar">
+    <ColumnShell viewport="fixed" side-bar-left-width="240px" main-min-width="0px">
+      <template v-if="sidebarOpen" #sideBarLeft>
+        <div class="gallery-sidebar">
           <Button class="gallery-sidebar__home" type="button" @click="showHome"> Home </Button>
 
           <ListboxRoot :model-value="enteredId" @update:model-value="onSidebarPick">
@@ -139,48 +133,50 @@ function flipTab(): void {
         </div>
       </template>
 
-      <div v-if="entered" class="gallery-entered">
-        <!-- Demo + details are mutually exclusive in the main column so each
+      <div class="gallery-main">
+        <div v-if="entered" class="gallery-entered">
+          <!-- Demo + details are mutually exclusive in the main column so each
              gets the full available width. The sandbox stays mounted across
              toggles via v-show so engine state survives. -->
-        <div v-show="enteredTab === 'demo'" class="gallery-entered__demo">
-          <SandboxWrapper :archetype="entered.manifest" :boot="entered.boot" />
+          <div v-show="enteredTab === 'demo'" class="gallery-entered__demo">
+            <SandboxWrapper :archetype="entered.manifest" :boot="entered.boot" />
+          </div>
+          <div v-show="enteredTab === 'details'" class="gallery-entered__detail">
+            <section class="gallery-entered__cta">
+              <Button
+                class="btn-primary gallery-entered__cta-btn"
+                type="button"
+                @click="enteredTab = 'demo'"
+              >
+                ▶ Try {{ entered.manifest.displayName }} live
+              </Button>
+              <span class="gallery-entered__cta-hint">
+                Mounts the {{ entered.manifest.id }} engine in an isolated sandbox.
+              </span>
+            </section>
+            <DetailPane :manifest="entered.manifest" />
+          </div>
         </div>
-        <div v-show="enteredTab === 'details'" class="gallery-entered__detail">
-          <section class="gallery-entered__cta">
-            <Button
-              class="btn-primary gallery-entered__cta-btn"
-              type="button"
-              @click="enteredTab = 'demo'"
-            >
-              ▶ Try {{ entered.manifest.displayName }} live
-            </Button>
-            <span class="gallery-entered__cta-hint">
-              Mounts the {{ entered.manifest.id }} engine in an isolated sandbox.
-            </span>
-          </section>
-          <DetailPane :manifest="entered.manifest" />
+        <AboutPanel v-else-if="view === 'about'" />
+        <div v-else class="gallery-home">
+          <header class="gallery-home__header">
+            <h2>Archetype gallery</h2>
+            <p>
+              Each archetype is a self-bootable demo of a validated game pattern. Click any card to
+              see its details and toggle into the live sandbox. Forks pick one and delete the rest.
+            </p>
+          </header>
+          <div class="gallery-home__grid">
+            <Card
+              v-for="a in archetypes"
+              :key="a.manifest.id"
+              :manifest="a.manifest"
+              @enter="enterArchetype(a.manifest.id)"
+            />
+          </div>
         </div>
       </div>
-      <AboutPanel v-else-if="view === 'about'" />
-      <div v-else class="gallery-home">
-        <header class="gallery-home__header">
-          <h2>Archetype gallery</h2>
-          <p>
-            Each archetype is a self-bootable demo of a validated game pattern. Click any card to
-            see its details and toggle into the live sandbox. Forks pick one and delete the rest.
-          </p>
-        </header>
-        <div class="gallery-home__grid">
-          <Card
-            v-for="a in archetypes"
-            :key="a.manifest.id"
-            :manifest="a.manifest"
-            @enter="enterArchetype(a.manifest.id)"
-          />
-        </div>
-      </div>
-    </SidebarMainShell>
+    </ColumnShell>
   </div>
 </template>
 
@@ -188,25 +184,9 @@ function flipTab(): void {
 .gallery-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--color-bg);
   color: var(--color-text);
-}
-
-/* Activate SidebarMainShell's `data-collapsed='true'` costume class on desktop too.
-   The shell publishes this attribute for its own responsive collapse
-   below 720px; gallery-scoped CSS lifts it to all viewport widths so the
-   hamburger toggle can drive collapse without lib/ changes.
-
-   Direct-child combinators are load-bearing: an archetype that itself uses
-   SidebarMainShell would otherwise inherit `display: none`
-   on its inner __sidebar via descendant match, and the surviving __main
-   would auto-place into the 260px first track. */
-.gallery-shell > .gallery-shell__shell[data-collapsed='true'] {
-  grid-template-columns: 1fr;
-}
-.gallery-shell > .gallery-shell__shell[data-collapsed='true'] > .olui-sidebar-main__sidebar {
-  display: none;
 }
 
 .gallery-header {
@@ -265,9 +245,18 @@ function flipTab(): void {
   margin-left: auto;
 }
 
-.gallery-sidebar {
+/* The shell draws no panels; the rail and main draw their own. */
+.gallery-sidebar,
+.gallery-main {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--gap);
+}
+.gallery-sidebar {
   gap: 0.4rem;
 }
 .gallery-sidebar__home {

@@ -65,15 +65,14 @@ export function findArchetype(id: string): GalleryArchetype | undefined {
 }
 
 /**
- * Optional shell-component lookup for the gallery's "Shell:" classification
- * line. Returns the resolved `<lib>/shells/*.vue` component when the
- * manifest's `shell` field matches a known shell name; otherwise undefined
- * (declared-invention case, e.g. survivor's `Soundstage`). Imported eagerly
- * for type-safety; payload is small.
+ * Shell-component lookup for the gallery's "Shell:" line. Returns the
+ * `src/lib/shells/` component named by the leading word of the manifest's
+ * `shell` field, or undefined when that name is a declared invention.
+ * Imported eagerly for type-safety; payload is small.
  */
 import * as libShells from '@/lib/shells';
 
 export function resolveShellComponent(name: string): Component | undefined {
   const reg = libShells as unknown as Record<string, Component>;
-  return reg[name];
+  return reg[name.split(/\s/)[0]];
 }

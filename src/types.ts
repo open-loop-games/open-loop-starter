@@ -56,10 +56,10 @@ export interface ArchetypeManifest {
   /** Engine primitives the archetype uses. */
   primitives: PrimitiveRef[];
   beats: BeatRef[];
-  /** Prescribed shell name for gallery presentation. The gallery resolves at
-   * render time whether this maps to `src/lib/shells/<name>.vue` or is a
-   * declared-invention label. The archetype's actual mounted root component
-   * is reachable separately via `createApp()` and is not held here. */
+  /** The layout, for gallery presentation: the shell's name, then the regions
+   * it fills, such as `ColumnShell · topBar + right`. The gallery checks that the
+   * leading name is a `src/lib/shells/` export; any other name is labelled a
+   * declared invention. */
   shell: string;
   formFactor: FormFactor;
   /** Optional — declared-invention archetypes omit this. */
