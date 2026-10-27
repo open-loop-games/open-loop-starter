@@ -90,7 +90,8 @@
   --color-danger: var(--sk-rust);
   --font-sans: var(--sk-log);
 
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -163,7 +164,7 @@
   box-shadow: 0 0 0 1px var(--sk-lamp) inset;
 }
 
-/* Starter's frame and shell, on this rock: the frame shows the sky, and the night with it. */
+/* Starter's frame, on this rock: it shows the sky, and the night with it. */
 .skerry .olui-app-frame {
   background: transparent;
 }
@@ -171,12 +172,6 @@
   background: transparent;
   border-bottom: 1px solid var(--sk-rule);
   font-family: var(--sk-chart);
-}
-.skerry .olui-sidebar-main__sidebar,
-.skerry .olui-sidebar-main__main {
-  background: transparent;
-  border: 0;
-  padding: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

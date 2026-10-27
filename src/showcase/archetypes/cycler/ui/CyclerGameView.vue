@@ -2,15 +2,15 @@
   CyclerGameView — the in-game subtree. Mounts under the root's post-start `v-else` frame,
   so module getters are safe to read here. See `.claude/rules/app-root-discipline.md`.
 
-  Shell: SidebarMainShell, the incremental majority
+  Shell: ColumnShell with a left rail, the incremental majority
   (`open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`): the ledger and the
-  day's work in the sidebar, the hour band over the rock in the main column. The rock is the
-  biggest thing on the page, because arranging it is the game. Between watches the shell
-  gives way to the logbook's page.
+  day's work in the rail, the hour band over the rock in main. The rock is the biggest thing
+  on the page, because arranging it is the game. Between watches the rail and the rock give
+  way to the logbook's page.
 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { SidebarMainShell } from '@/lib';
+import { ColumnShell } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { EventLog } from '@/ui/compositions';
 import { getLogbook, getWatch } from '../modules';
@@ -31,34 +31,31 @@ if (import.meta.env.DEV) useDevHandle({ watch, logbook: getLogbook() });
 </script>
 
 <template>
-  <div class="skerry-page" :class="{ 'sk-night': night }">
+  <ColumnShell
+    class="skerry-shell"
+    :class="{ 'sk-night': night }"
+    side-bar-left-width="400px"
+    max-width="1120px"
+  >
+    <template v-if="!between" #sideBarLeft>
+      <Stocks />
+      <Reckoning />
+      <WorkRail v-model:tool="tool" />
+      <section class="log" aria-label="Keeper's log">
+        <EventLog :lines="watch.log.lines.value" :show-empty="false" />
+      </section>
+    </template>
     <WatchEnd v-if="between" />
-    <SidebarMainShell v-else class="skerry-shell" sidebar-width="400px">
-      <template #sidebar>
-        <Stocks />
-        <Reckoning />
-        <WorkRail v-model:tool="tool" />
-        <section class="log" aria-label="Keeper's log">
-          <EventLog :lines="watch.log.lines.value" :show-empty="false" />
-        </section>
-      </template>
-      <div class="main">
-        <HourBand />
-        <RockBoard :tool="tool" />
-      </div>
-    </SidebarMainShell>
-  </div>
+    <div v-else class="main">
+      <HourBand />
+      <RockBoard :tool="tool" />
+    </div>
+  </ColumnShell>
 </template>
 
 <style scoped>
-.skerry-page {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 16px 18px 28px;
-}
-.skerry-shell :deep(.olui-sidebar-main__sidebar) {
-  gap: 16px;
+.skerry-shell {
+  --shell-gap: 16px;
 }
 .main {
   display: flex;
