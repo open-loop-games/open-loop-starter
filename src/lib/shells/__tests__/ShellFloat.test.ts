@@ -44,6 +44,15 @@ describe('ShellFloat', () => {
     );
   });
 
+  it('puts a class given to it on the float element', async () => {
+    mount(BaseShell, {
+      attachTo: document.body,
+      slots: { floats: () => h(ShellFloat, { anchor: 'bottom', class: 'xp' }, () => 'xp') },
+    });
+    await flushPromises();
+    expect(document.querySelector('.olui-shell-float.xp')!.textContent).toBe('xp');
+  });
+
   it('renders in place outside a shell', () => {
     const w = mount(ShellFloat, { props: { anchor: 'top' }, slots: { default: () => 'alone' } });
     expect(w.find('.olui-shell-float').text()).toBe('alone');

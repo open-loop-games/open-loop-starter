@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { h } from 'vue';
+import { defineComponent, h, nextTick, ref } from 'vue';
 import BaseShell from '../BaseShell.vue';
 
 const text = (s: string) => () => h('p', s);
@@ -24,6 +24,24 @@ describe('BaseShell', () => {
     });
     const style = w.find('.olui-shell').attributes('style');
     expect(style).toContain('--_shell-columns: 200px minmax(480px, 1fr)');
+  });
+
+  it('drops a rail and its track when its slot goes away', async () => {
+    const open = ref(true);
+    const Host = defineComponent(
+      () => () =>
+        h(BaseShell, null, {
+          default: text('main'),
+          ...(open.value ? { sideBarLeft: text('left') } : {}),
+        }),
+    );
+    const w = mount(Host);
+    open.value = false;
+    await nextTick();
+    expect(w.find('.olui-shell__side-bar-left').exists()).toBe(false);
+    expect(w.find('.olui-shell').attributes('style')).toContain(
+      '--_shell-columns: minmax(0px, 1fr);',
+    );
   });
 
   describe('viewport', () => {

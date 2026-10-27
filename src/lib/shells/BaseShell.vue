@@ -24,6 +24,9 @@
   content height, and a bottom anchor must sit at the screen's foot, not the
   content's.
 
+  Floats sit at z-index 1 over main. An overlay over the stage that must cover
+  them, such as a level-up draft or a match-end curtain, takes a higher z-index.
+
   Gap: `--shell-gap`, set on the shell or any ancestor; it falls back to `--gap`.
 
   Costume classes (stable API): olui-shell, olui-shell__top-bar,
@@ -33,7 +36,7 @@
   Every shell rule is one class deep, so a costume rule scoped to the game wins.
 -->
 <script setup lang="ts">
-import { computed, provide, useId, useSlots } from 'vue';
+import { provide, useId, useSlots } from 'vue';
 import {
   BASE_SHELL_DEFAULTS,
   SHELL_ANCHORS,
@@ -45,19 +48,17 @@ import {
 const props = withDefaults(defineProps<BaseShellProps>(), BASE_SHELL_DEFAULTS);
 const slots = useSlots();
 
-const viewportMode = computed(() =>
-  props.main === 'stage' || slots.floats ? 'fixed' : props.viewport,
-);
+// Slots are not reactive, so these run on every render rather than as cached computeds.
+const viewportMode = () => (props.main === 'stage' || slots.floats ? 'fixed' : props.viewport);
 
-const columns = computed(() =>
+const columns = () =>
   [
     slots.sideBarLeft && props.sideBarLeftWidth,
     `minmax(${props.mainMinWidth}, 1fr)`,
     slots.sideBarRight && props.sideBarRightWidth,
   ]
     .filter(Boolean)
-    .join(' '),
-);
+    .join(' ');
 
 const id = useId();
 const cell = (anchor: ShellAnchor) => `${id}-${anchor}`;
@@ -68,14 +69,13 @@ provide(shellFloatTargetKey, (anchor) => `[data-shell-cell="${cell(anchor)}"]`);
   <div
     class="olui-shell"
     :data-main="main"
-    :data-viewport="viewportMode"
+    :data-viewport="viewportMode()"
     :data-capped="maxWidth ? '' : undefined"
     :data-bleed-bars="bleedBars ? '' : undefined"
     :data-stage-bleed="stageBleed ? '' : undefined"
     :data-top-bar="$slots.topBar ? '' : undefined"
     :data-bottom-bar="$slots.bottomBar ? '' : undefined"
-    :data-floats="$slots.floats ? '' : undefined"
-    :style="{ '--_shell-columns': columns, '--_shell-max-width': maxWidth }"
+    :style="{ '--_shell-columns': columns(), '--_shell-max-width': maxWidth }"
   >
     <div v-if="$slots.topBar" class="olui-shell__top-bar">
       <div class="olui-shell__bar-content"><slot name="topBar" /></div>
@@ -209,10 +209,6 @@ provide(shellFloatTargetKey, (anchor) => `[data-shell-cell="${cell(anchor)}"]`);
 :where(.olui-shell[data-main='stage']) .olui-shell__main-content {
   position: relative;
   overflow: hidden;
-}
-/* Keeps main's own stacking under the floats. */
-:where(.olui-shell[data-floats]) .olui-shell__main-content {
-  isolation: isolate;
 }
 
 /* Floats: a 3×3 anchor grid over main. Clicks pass through the layer, not the floats. */
