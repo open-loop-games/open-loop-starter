@@ -2,15 +2,16 @@
   ScripterGameView — the in-game subtree. Mounts under the root's post-start `v-else`
   frame, so module getters are safe to read here. See `.claude/rules/app-root-discipline.md`.
 
-  Shell: SidebarMainShell, the incremental majority
+  Shell: ColumnShell with a left rail, the incremental majority
   (`open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`): the dojo and the
-  shelf in the sidebar, the gate over the scroll in the main column, with the rack, the
-  student's hand and the journal beside the scroll. The scroll is the widest thing on the
-  page, because writing it is the game.
+  shelf in the rail, the gate over the scroll in main, with the rack, the student's hand
+  and the journal beside the scroll. The scroll is the widest thing on the page, because
+  writing it is the game. The column beside the scroll is main's own, not a right rail: the
+  gate spans it, and it drops under the scroll on a narrow screen.
 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { SidebarMainShell } from '@/lib';
+import { ColumnShell } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { TECHNIQUES, type TechniqueId } from '../data';
 import { getDojo, getGate, getGraduation, getKata, getLineage } from '../modules';
@@ -43,37 +44,28 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <div class="inkfist-page">
-    <SidebarMainShell class="inkfist-shell" sidebar-width="320px">
-      <template #sidebar>
-        <DojoPanel />
-        <ShelfPanel :focus="focus" />
-      </template>
-      <div class="main">
-        <GatePanel />
-        <div class="desk-grid">
-          <ScrollEditor @technique="focus = $event" />
-          <div class="side">
-            <RackPanel v-if="rackShown" class="if-reveal" />
-            <LineagePanel />
-            <JournalPanel />
-          </div>
+  <ColumnShell class="inkfist-shell" side-bar-left-width="320px" max-width="1364px">
+    <template #sideBarLeft>
+      <DojoPanel />
+      <ShelfPanel :focus="focus" />
+    </template>
+    <div class="main">
+      <GatePanel />
+      <div class="desk-grid">
+        <ScrollEditor @technique="focus = $event" />
+        <div class="side">
+          <RackPanel v-if="rackShown" class="if-reveal" />
+          <LineagePanel />
+          <JournalPanel />
         </div>
       </div>
-    </SidebarMainShell>
-  </div>
+    </div>
+  </ColumnShell>
 </template>
 
 <style scoped>
-.inkfist-page {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 18px;
-}
 .inkfist-shell {
-  padding: 0;
-  gap: 18px;
+  --shell-gap: 18px;
 }
 .main {
   display: flex;

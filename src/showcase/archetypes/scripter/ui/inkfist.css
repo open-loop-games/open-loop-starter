@@ -83,7 +83,8 @@
   --color-danger: var(--if-vermilion);
   --font-sans: var(--if-face);
 
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   display: flex;
   flex-direction: column;
   background: var(--if-lacquer);
@@ -184,14 +185,8 @@
   }
 }
 
-/* Starter's frame and shell, in this room. */
+/* Starter's frame, in this room. */
 .inkfist .olui-system-header {
   background: var(--if-lacquer);
   border-bottom: 1px solid var(--if-lacquer-edge);
-}
-.inkfist .olui-sidebar-main__sidebar,
-.inkfist .olui-sidebar-main__main {
-  background: transparent;
-  border: 0;
-  padding: 0;
 }

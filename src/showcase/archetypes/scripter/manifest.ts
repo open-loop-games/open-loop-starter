@@ -57,7 +57,7 @@ export const manifest: ArchetypeManifest = {
     { n: 7, label: 'Master Lu beaten: the forms alternate', recordedFireTimeRange: [5278, 5278] },
     { n: 8, label: 'The Envoy’s Gauntlet: the end beat', recordedFireTimeRange: [7342, 7342] },
   ],
-  shell: 'SidebarMainShell',
+  shell: 'ColumnShell · left',
   formFactor: 'responsive',
   exemplars: [
     {
