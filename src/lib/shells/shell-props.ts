@@ -10,7 +10,7 @@ export interface BaseShellProps {
   sideBarLeftWidth?: string;
   /** A CSS grid track, as for `sideBarLeftWidth`. */
   sideBarRightWidth?: string;
-  /** The least width main shrinks to before the page scrolls sideways. */
+  /** The least width main shrinks to beside a rail before the page scrolls sideways. Alone, main has none. */
   mainMinWidth?: string;
   /** Caps the columns and centres them. Unset, the shell spans the frame. */
   maxWidth?: string;

@@ -26,6 +26,16 @@ describe('BaseShell', () => {
     expect(style).toContain('--_shell-columns: 200px minmax(480px, 1fr)');
   });
 
+  it('holds main to its minimum only beside a rail', () => {
+    const w = mount(BaseShell, {
+      props: { mainMinWidth: '480px' },
+      slots: { default: text('main') },
+    });
+    expect(w.find('.olui-shell').attributes('style')).toContain(
+      '--_shell-columns: minmax(0px, 1fr);',
+    );
+  });
+
   it('drops a rail and its track when its slot goes away', async () => {
     const open = ref(true);
     const Host = defineComponent(

@@ -51,14 +51,18 @@ const slots = useSlots();
 // Slots are not reactive, so these run on every render rather than as cached computeds.
 const viewportMode = () => (props.main === 'stage' || slots.floats ? 'fixed' : props.viewport);
 
-const columns = () =>
-  [
+// Alone, main has no rail to hold its ground against, so its minimum would only force a
+// narrow screen to scroll sideways.
+const columns = () => {
+  const railed = slots.sideBarLeft || slots.sideBarRight;
+  return [
     slots.sideBarLeft && props.sideBarLeftWidth,
-    `minmax(${props.mainMinWidth}, 1fr)`,
+    `minmax(${railed ? props.mainMinWidth : '0px'}, 1fr)`,
     slots.sideBarRight && props.sideBarRightWidth,
   ]
     .filter(Boolean)
     .join(' ');
+};
 
 const id = useId();
 const cell = (anchor: ShellAnchor) => `${id}-${anchor}`;
