@@ -35,6 +35,6 @@ export const manifest: ArchetypeManifest = {
     { n: 8, label: 'Into the rail yard', recordedFireTimeRange: [1846.4, 1846.4] },
     { n: 9, label: 'On the freight', recordedFireTimeRange: [2772.4, 2772.4] },
   ],
-  shell: 'ThreePanelShell',
+  shell: 'ColumnShell · left + right',
   formFactor: 'desktop',
 };
