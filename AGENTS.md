@@ -192,7 +192,7 @@ const showDevPanel = ref(false);
 - Component and composable tests use Vitest, @vue/test-utils and jsdom.
 - Visual behavior runs in CSS first; JS is for state and interaction only.
 - Focus, portal and a11y come from reka-ui primitives.
-- A shell added to `src/lib/` cites the layout research it comes from. The shell set is a research finding, not a preference.
+- A new shell region or prefab in `src/lib/` cites its evidence: a layout that games built on this stack hand-roll outside the shells. The shell set follows what games need, not a preference.
 
 ## Path Aliases
 

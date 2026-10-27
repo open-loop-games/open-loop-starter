@@ -2,9 +2,7 @@
   ScripterGameView — the in-game subtree. Mounts under the root's post-start `v-else`
   frame, so module getters are safe to read here. See `.claude/rules/app-root-discipline.md`.
 
-  Shell: ColumnShell with a left rail, the incremental majority
-  (`open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`): the dojo and the
-  shelf in the rail, the gate over the scroll in main, with the rack, the student's hand
+  Shell: ColumnShell with a left rail: the dojo and the shelf in the rail, the gate over the scroll in main, with the rack, the student's hand
   and the journal beside the scroll. The scroll is the widest thing on the page, because
   writing it is the game. The column beside the scroll is main's own, not a right rail: the
   gate spans it, and it drops under the scroll on a narrow screen.

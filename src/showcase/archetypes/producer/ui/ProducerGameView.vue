@@ -3,8 +3,7 @@
   `v-else` frame, so module getters are safe to read here.
   See `.claude/rules/app-root-discipline.md`.
 
-  Shell: ColumnShell with both rails, the clicker majority's secondary shell (Cookie
-  Clicker, Universal Paperclips; `open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`):
+  Shell: ColumnShell with both rails, as in Cookie Clicker and Universal Paperclips:
   the desk you work at, the holdings you own, the office that runs them. The shell draws
   no panels, so the desk itself is the surface.
 -->

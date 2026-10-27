@@ -2,9 +2,7 @@
   CyclerGameView — the in-game subtree. Mounts under the root's post-start `v-else` frame,
   so module getters are safe to read here. See `.claude/rules/app-root-discipline.md`.
 
-  Shell: ColumnShell with a left rail, the incremental majority
-  (`open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`): the ledger and the
-  day's work in the rail, the hour band over the rock in main. The rock is the biggest thing
+  Shell: ColumnShell with a left rail: the ledger and the day's work in the rail, the hour band over the rock in main. The rock is the biggest thing
   on the page, because arranging it is the game. Between watches the rail and the rock give
   way to the logbook's page.
 -->

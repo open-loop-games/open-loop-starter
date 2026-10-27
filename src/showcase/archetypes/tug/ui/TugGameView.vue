@@ -2,11 +2,9 @@
   TugGameView — the in-game subtree. Mounts under the root's post-start `v-else` frame, so
   module getters are safe to read here. See `.claude/rules/app-root-discipline.md`.
 
-  Shell: ColumnShell, capped at 1240px. The lane-push row the shell mapping can classify
-  (Warfare 1917, `open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`
-  § lane-push) stacks a horizontal battlefield over a production menu, with resources at the
-  top; a sample of one, so no majority, but the causeway wants the page's full width and
-  nothing beside it. The keeps' banners are the top bar; under them the causeway, the walls
+  Shell: ColumnShell, capped at 1240px. Like Warfare 1917, it stacks a horizontal
+  battlefield over a production menu, with resources at the top: the causeway wants the
+  page's full width and nothing beside it. The keeps' banners are the top bar; under them the causeway, the walls
   (each keep's weapon and the early horn), then the bailey and the heralds. In camp the shell
   gives way to the Chronicle's page.
 -->

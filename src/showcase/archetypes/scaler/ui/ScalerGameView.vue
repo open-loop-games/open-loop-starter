@@ -3,9 +3,7 @@
   `v-else` frame, so module getters are safe to read here.
   See `.claude/rules/app-root-discipline.md`.
 
-  Shell: ColumnShell with a top bar and a left rail, the prestige-idle majority
-  (`open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`): the
-  masthead in the top bar, the prestige cards and the scanner in the rail, the
+  Shell: ColumnShell with a top bar and a left rail: the masthead in the top bar, the prestige cards and the scanner in the rail, the
   tabs over main.
   A tab appears as its layer opens and carries a dot until it is read; each
   layer's tab holds its shop over its chain.
