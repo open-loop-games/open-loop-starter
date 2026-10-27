@@ -42,6 +42,6 @@ export const manifest: ArchetypeManifest = {
     { n: 6, label: 'Your first assault on their safehouse', recordedFireTimeRange: [332.5, 332.5] },
     { n: 7, label: 'The Gutter Saints’ safehouse burns', recordedFireTimeRange: [392, 392] },
   ],
-  shell: 'ThreePanelShell',
+  shell: 'ColumnShell · topBar + left + right · fixed',
   formFactor: 'responsive',
 };
