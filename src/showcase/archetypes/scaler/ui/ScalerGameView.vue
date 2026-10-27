@@ -54,24 +54,24 @@ if (import.meta.env.DEV) {
   );
 }
 
-const tabs = computed<(TabItem & { open: boolean })[]>(() => [
-  { value: 'corps', label: 'The Corps', open: true },
+const tabs = computed<TabItem[]>(() => [
+  { value: 'corps', label: 'The Corps' },
   {
     value: 'legacy',
     label: 'Legacy',
-    open: core.reboots.value > 0 || core.rewrites.value > 0,
+    visible: core.reboots.value > 0 || core.rewrites.value > 0,
   },
   {
     value: 'elseworlds',
     label: 'Elseworlds',
-    open: prestige.elseworlds
+    visible: prestige.elseworlds
       .getAll()
       .some((e) => e.challenge.visible.value || e.challenge.completed.value),
   },
   {
     value: 'continuity',
     label: 'Continuity',
-    open:
+    visible:
       core.rewrites.value > 0 ||
       core.ages.value > 0 ||
       Decimal.gte(prestige.pendingContinuity.value, 1),
@@ -79,16 +79,10 @@ const tabs = computed<(TabItem & { open: boolean })[]>(() => [
   {
     value: 'canon',
     label: 'Canon',
-    open: core.ages.value > 0 || Decimal.gte(prestige.pendingCanon.value, 1),
+    visible: core.ages.value > 0 || Decimal.gte(prestige.pendingCanon.value, 1),
   },
 ]);
-const openTabs = computed(() => tabs.value.filter((t) => t.open));
 const active = ref('corps');
-const seen = ref(new Set<string>(['corps']));
-function select(value: string) {
-  active.value = value;
-  seen.value = new Set([...seen.value, value]);
-}
 </script>
 
 <template>
@@ -98,10 +92,7 @@ function select(value: string) {
       <PrestigeCards />
       <ScannerPanel />
     </template>
-    <Tabs :model-value="active" :items="openTabs" @update:model-value="select">
-      <template v-for="tab in openTabs" :key="tab.value" #[`tab-${tab.value}`]>
-        {{ tab.label }}<span v-if="!seen.has(tab.value)" class="new-dot" aria-label="new" />
-      </template>
+    <Tabs v-model="active" :items="tabs">
       <template #panel-corps><CorpsPanel /></template>
       <template #panel-legacy>
         <div class="layer"><ShopPanel kind="legacy" /><ChainPanel kind="network" /></div>

@@ -259,7 +259,7 @@
   color: var(--gutter-ink);
   box-shadow: 4px 4px 0 var(--gutter-ink);
 }
-.paragon .new-dot {
+.paragon .olui-tabs__unread {
   display: inline-block;
   width: 8px;
   height: 8px;
