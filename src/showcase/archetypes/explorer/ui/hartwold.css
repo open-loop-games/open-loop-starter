@@ -4,9 +4,9 @@
  * The whole design language is here, scoped under `.explorer`, so the story's
  * identity is one file a fork can read, replace or delete. Nothing in
  * `src/lib/` or `src/ui/` is edited for it: every hook is a documented costume
- * class on a shell or a composition (`.olui-three-panel__…`,
- * `.olui-system-header__…`, `.olui-progress-bar`, `.olui-modal-content`,
- * `.producer-list__…`, `.upgrade-grid__…`) or a class this story's own components emit.
+ * class on a widget or a composition (`.olui-system-header__…`,
+ * `.olui-progress-bar`, `.olui-modal-content`, `.producer-list__…`,
+ * `.upgrade-grid__…`) or a class this story's own components emit.
  *
  * Language: a huntsman's lodge at the edge of a fogged forest, read by a tallow
  * lamp. The affordance palette comes first: tallow = you can reach or afford;
@@ -167,16 +167,6 @@
 .explorer .olui-system-header__actions > button:hover {
   color: var(--sp-tallow);
   border-color: var(--sp-tallow-deep);
-}
-
-/* The shell's three columns are bare; each section draws its own ledger rule. */
-.explorer .olui-three-panel__left,
-.explorer .olui-three-panel__main,
-.explorer .olui-three-panel__right {
-  background: transparent;
-  border: none;
-  padding: 0;
-  min-width: 0;
 }
 
 /* ── shared section chrome: a ledger heading over a rule ── */

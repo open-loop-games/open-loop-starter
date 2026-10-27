@@ -35,6 +35,6 @@ export const manifest: ArchetypeManifest = {
     { n: 8, label: 'Under the Deepwood', recordedFireTimeRange: [1426, 1516] },
     { n: 9, label: 'The Pale Hart', recordedFireTimeRange: [1784, 1987] },
   ],
-  shell: 'ThreePanelShell',
+  shell: 'ColumnShell · left + right',
   formFactor: 'desktop',
 };

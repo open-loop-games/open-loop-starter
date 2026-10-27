@@ -6,7 +6,7 @@
 -->
 <script setup lang="ts">
 import { inject, watch } from 'vue';
-import { ThreePanelShell, modalStackKey } from '@/lib';
+import { ColumnShell, modalStackKey } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { getChronicle, getHuntsman, getLodge, getWold } from '../modules';
 import LodgePanel from './panels/LodgePanel.vue';
@@ -33,13 +33,16 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <ThreePanelShell left-width="minmax(270px, 300px)" right-width="minmax(290px, 340px)">
-    <template #left>
+  <ColumnShell
+    side-bar-left-width="minmax(270px, 300px)"
+    side-bar-right-width="minmax(290px, 340px)"
+  >
+    <template #sideBarLeft>
       <LodgePanel />
     </template>
     <ChartPanel />
-    <template #right>
+    <template #sideBarRight>
       <HuntsmanPanel />
     </template>
-  </ThreePanelShell>
+  </ColumnShell>
 </template>
