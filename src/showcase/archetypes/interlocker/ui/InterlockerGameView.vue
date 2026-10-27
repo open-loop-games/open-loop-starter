@@ -40,35 +40,31 @@ const expo = getExposition();
 const expoRevealed = computed(
   () => works.researched('monoplane').value || expo.cycle.count.value > 0,
 );
+// A sheet is marked unread when it is revealed, and each time something on it becomes
+// affordable while another sheet is up.
 const items = computed<TabItem[]>(() => [
   { value: 'works', label: 'The Works' },
-  { value: 'estate', label: 'Estate' },
-  { value: 'academie', label: 'Académie' },
-  ...(expoRevealed.value ? [{ value: 'exposition', label: 'Exposition' }] : []),
+  {
+    value: 'estate',
+    label: 'Estate',
+    notify: works.buildings.getAll().some((e) => e.purchasable.canPurchase.value),
+  },
+  {
+    value: 'academie',
+    label: 'Académie',
+    notify: works.research.getAll().some((e) => e.purchasable.canPurchase.value),
+  },
+  {
+    value: 'exposition',
+    label: 'Exposition',
+    visible: expoRevealed.value,
+    notify:
+      expo.canStage.value ||
+      empire.charters.getAll().some((e) => e.purchasable.canPurchase.value) ||
+      empire.bureaux.getAll().some((e) => e.purchasable.canPurchase.value),
+  },
 ]);
 const sheet = ref<Sheet>('works');
-const unread = ref(new Set<Sheet>());
-
-const affordable = computed(() => ({
-  estate: works.buildings.getAll().some((e) => e.purchasable.canPurchase.value),
-  academie: works.research.getAll().some((e) => e.purchasable.canPurchase.value),
-  exposition:
-    expo.canStage.value ||
-    empire.charters.getAll().some((e) => e.purchasable.canPurchase.value) ||
-    empire.bureaux.getAll().some((e) => e.purchasable.canPurchase.value),
-}));
-watch(
-  affordable,
-  (now, before) => {
-    for (const k of ['estate', 'academie', 'exposition'] as const)
-      if (now[k] && !before?.[k] && sheet.value !== k) unread.value.add(k);
-  },
-  { deep: true },
-);
-watch(expoRevealed, (v, was) => {
-  if (v && !was) unread.value.add('exposition');
-});
-watch(sheet, (s) => unread.value.delete(s));
 
 // The Grand Prix, once, at the staging that wins it. A save that already holds it loads
 // before this view mounts, so the note is not shown again.
@@ -108,9 +104,6 @@ if (import.meta.env.DEV) {
       <StockLedger />
     </template>
     <Tabs v-model="sheet" :items="items" class="ae-board">
-      <template v-for="t in items" :key="t.value" #[`tab-${t.value}`]>
-        <span :class="{ 'ae-fresh': unread.has(t.value as Sheet) }">{{ t.label }}</span>
-      </template>
       <template #panel-works><WorksSchematic /></template>
       <template #panel-estate><EstatePanel /></template>
       <template #panel-academie><AcademiePanel /></template>
@@ -122,16 +115,3 @@ if (import.meta.env.DEV) {
     </template>
   </ColumnShell>
 </template>
-
-<style scoped>
-.ae-fresh::after {
-  content: '';
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--ae-brass);
-}
-</style>

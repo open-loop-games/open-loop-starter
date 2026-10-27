@@ -248,6 +248,16 @@
 .interlocker .olui-tabs__trigger[data-state='active'] {
   border-color: var(--ae-cyanotype-rule);
 }
+/* An unread sheet: a brass rivet in the tab's corner. */
+.interlocker .olui-tabs__unread {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  margin: 0;
+  background: var(--ae-brass);
+}
 
 /* ── an action plate: a brass-fitted button ── */
 .interlocker .ae-act {
