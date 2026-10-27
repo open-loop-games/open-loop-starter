@@ -6,7 +6,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { SingleColumnShell } from '@/lib';
+import { ColumnShell } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { bestCell, planWatches } from '../data';
 import { getAutomation, getBoard, getBox, getCase, getNight } from '../modules';
@@ -49,7 +49,7 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <SingleColumnShell :max-width="width">
+  <ColumnShell :max-width="width">
     <Ending v-if="kase.closed.value" />
     <template v-else>
       <PhaseTabs :phase="phase" />
@@ -61,5 +61,5 @@ if (import.meta.env.DEV) {
       <FiledAway />
       <CaseLog />
     </template>
-  </SingleColumnShell>
+  </ColumnShell>
 </template>

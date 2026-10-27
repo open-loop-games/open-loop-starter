@@ -30,6 +30,6 @@ export const manifest: ArchetypeManifest = {
     { n: 5, label: 'First alibi holds', recordedFireTimeRange: [822, 822] },
     { n: 6, label: 'Sixth alibi holds: the box comes back', recordedFireTimeRange: [1182, 1182] },
   ],
-  shell: 'SingleColumnShell',
+  shell: 'ColumnShell',
   formFactor: 'desktop',
 };
