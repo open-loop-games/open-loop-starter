@@ -108,7 +108,9 @@ provide(shellFloatTargetKey, (anchor) => `[data-shell-cell="${cell(anchor)}"]`);
 </template>
 
 <style>
-/* Each rule is one class deep: state selectors on the root sit in :where(). */
+/* Each rule is one class deep: state selectors on the root sit in :where(). Every state
+   selector is a child chain from its own root, so a shell nested in another shell's main
+   never takes on the outer shell's state. */
 .olui-shell {
   --_shell-gap: var(--shell-gap, var(--gap));
   flex: 1 1 auto;
@@ -156,24 +158,25 @@ provide(shellFloatTargetKey, (anchor) => `[data-shell-cell="${cell(anchor)}"]`);
   min-height: 0;
   padding-inline: var(--_shell-gap);
 }
-:where(.olui-shell:not([data-top-bar])) .olui-shell__body {
+:where(.olui-shell:not([data-top-bar])) > .olui-shell__body {
   padding-top: var(--_shell-gap);
 }
-:where(.olui-shell:not([data-bottom-bar])) .olui-shell__body {
+:where(.olui-shell:not([data-bottom-bar])) > .olui-shell__body {
   padding-bottom: var(--_shell-gap);
 }
-:where(.olui-shell[data-capped]) .olui-shell__body {
+:where(.olui-shell[data-capped]) > .olui-shell__body {
   max-width: calc(var(--_shell-max-width) + 2 * var(--_shell-gap));
   margin-inline: auto;
 }
-:where(.olui-shell[data-capped]) .olui-shell__bar-content {
+:where(.olui-shell[data-capped] > .olui-shell__top-bar) > .olui-shell__bar-content,
+:where(.olui-shell[data-capped] > .olui-shell__bottom-bar) > .olui-shell__bar-content {
   max-width: var(--_shell-max-width);
   margin-inline: auto;
 }
-:where(.olui-shell[data-viewport='fixed']) .olui-shell__body {
+:where(.olui-shell[data-viewport='fixed']) > .olui-shell__body {
   grid-template-rows: minmax(0, 1fr);
 }
-:where(.olui-shell[data-main='stage'][data-stage-bleed]) .olui-shell__body {
+:where(.olui-shell[data-main='stage'][data-stage-bleed]) > .olui-shell__body {
   padding: 0;
   gap: 0;
 }
@@ -200,13 +203,15 @@ provide(shellFloatTargetKey, (anchor) => `[data-shell-cell="${cell(anchor)}"]`);
   gap: var(--_shell-gap);
   min-height: 0;
 }
-:where(.olui-shell[data-viewport='fixed']) .olui-shell__side-bar-left,
-:where(.olui-shell[data-viewport='fixed']) .olui-shell__side-bar-right,
-:where(.olui-shell[data-viewport='fixed']) .olui-shell__main-content {
+:where(.olui-shell[data-viewport='fixed'] > .olui-shell__body) > .olui-shell__side-bar-left,
+:where(.olui-shell[data-viewport='fixed'] > .olui-shell__body) > .olui-shell__side-bar-right,
+:where(.olui-shell[data-viewport='fixed'] > .olui-shell__body > .olui-shell__main)
+  > .olui-shell__main-content {
   overflow: auto;
 }
 /* A stage is a plane to position things on: it clips, and anchors its content. */
-:where(.olui-shell[data-main='stage']) .olui-shell__main-content {
+:where(.olui-shell[data-main='stage'] > .olui-shell__body > .olui-shell__main)
+  > .olui-shell__main-content {
   position: relative;
   overflow: hidden;
 }
