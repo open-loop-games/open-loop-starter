@@ -9,7 +9,7 @@
 -->
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
-import { ThreePanelShell, modalStackKey } from '@/lib';
+import { ColumnShell, modalStackKey } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import Tabs, { type TabItem } from '@/ui/components/Tabs.vue';
 import {
@@ -99,8 +99,11 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <ThreePanelShell left-width="minmax(250px, 280px)" right-width="minmax(240px, 270px)">
-    <template #left>
+  <ColumnShell
+    side-bar-left-width="minmax(250px, 280px)"
+    side-bar-right-width="minmax(240px, 270px)"
+  >
+    <template #sideBarLeft>
       <Almanac />
       <StockLedger />
     </template>
@@ -113,11 +116,11 @@ if (import.meta.env.DEV) {
       <template #panel-academie><AcademiePanel /></template>
       <template #panel-exposition><ExpositionPanel /></template>
     </Tabs>
-    <template #right>
+    <template #sideBarRight>
       <MinistryBoard />
       <TelegraphLine />
     </template>
-  </ThreePanelShell>
+  </ColumnShell>
 </template>
 
 <style scoped>

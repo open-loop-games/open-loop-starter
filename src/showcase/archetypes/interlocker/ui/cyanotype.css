@@ -4,7 +4,7 @@
  * The whole design language is here, scoped under `.interlocker`, so the story's
  * identity is one file a fork can read, replace or delete. Nothing in `src/lib/` or
  * `src/ui/` is edited for it: every hook is a documented costume class on a shell, a
- * widget or a composition (`.olui-three-panel__…`, `.olui-system-header…`,
+ * widget or a composition (`.olui-shell__…`, `.olui-system-header…`,
  * `.olui-tabs__…`, `.producer-list__…`, `.upgrade-grid__…`) or a class this story's own
  * components emit.
  *
@@ -180,28 +180,24 @@
   border-color: var(--ae-brass-dim);
 }
 
-/* The shell's columns: ledger and telegraph on deep paper, the board on the sheet itself. */
-.interlocker .olui-three-panel {
-  gap: 0;
-  padding: 0;
+/* The shell's regions: ledger and telegraph on deep paper, the board on the sheet itself.
+   The rails meet the frame's edges and the board, and draw their own rule between. */
+.interlocker .olui-shell {
+  --shell-gap: 0;
 }
-.interlocker .olui-three-panel__left,
-.interlocker .olui-three-panel__main,
-.interlocker .olui-three-panel__right {
-  border: none;
-  border-radius: 0;
-  min-width: 0;
+.interlocker .olui-shell__side-bar-left,
+.interlocker .olui-shell__side-bar-right {
+  gap: var(--gap);
 }
-.interlocker .olui-three-panel__left {
+.interlocker .olui-shell__side-bar-left {
   background: var(--ae-cyanotype);
   border-right: var(--ae-hairline);
   padding: 14px 16px;
 }
-.interlocker .olui-three-panel__main {
-  background: transparent;
+.interlocker .olui-shell__main {
   padding: 12px 18px 22px;
 }
-.interlocker .olui-three-panel__right {
+.interlocker .olui-shell__side-bar-right {
   background: var(--ae-cyanotype-deep);
   border-left: var(--ae-hairline);
   padding: 14px 14px;

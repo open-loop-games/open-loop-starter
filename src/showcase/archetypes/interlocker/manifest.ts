@@ -42,6 +42,6 @@ export const manifest: ArchetypeManifest = {
     { n: 14, label: 'The tenth Exposition', recordedFireTimeRange: [4643, 4722] },
     { n: 15, label: 'The Grand Prix', recordedFireTimeRange: [6361, 7340] },
   ],
-  shell: 'ThreePanelShell',
+  shell: 'ColumnShell · left + right',
   formFactor: 'desktop',
 };
