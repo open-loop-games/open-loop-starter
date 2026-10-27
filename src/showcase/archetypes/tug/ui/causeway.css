@@ -98,7 +98,8 @@
   --color-danger: var(--cw-madder);
   --font-sans: var(--cw-text);
 
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   display: flex;
   flex-direction: column;
   background:

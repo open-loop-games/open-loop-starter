@@ -2,17 +2,18 @@
   TugGameView — the in-game subtree. Mounts under the root's post-start `v-else` frame, so
   module getters are safe to read here. See `.claude/rules/app-root-discipline.md`.
 
-  Shell: SingleColumnShell. The lane-push row the shell mapping can classify (Warfare 1917,
-  `open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md` § lane-push) stacks a
-  horizontal battlefield over a production menu, with resources at the top; a sample of one,
-  so no majority, but the causeway wants the page's full width and nothing beside it. The
-  keeps' banners over the causeway, the walls (each keep's weapon and the early horn) under
-  it, then the bailey and the heralds. In camp the shell gives way to the Chronicle's page.
+  Shell: ColumnShell, capped at 1240px. The lane-push row the shell mapping can classify
+  (Warfare 1917, `open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`
+  § lane-push) stacks a horizontal battlefield over a production menu, with resources at the
+  top; a sample of one, so no majority, but the causeway wants the page's full width and
+  nothing beside it. The keeps' banners are the top bar; under them the causeway, the walls
+  (each keep's weapon and the early horn), then the bailey and the heralds. In camp the shell
+  gives way to the Chronicle's page.
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import { toNumber } from '@open-loop/engine';
-import { SingleColumnShell } from '@/lib';
+import { ColumnShell } from '@/lib';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { ANCHORS, BOONS } from '../data';
 import { getBattle, getCauseway, getChronicle, getKeep } from '../modules';
@@ -54,9 +55,11 @@ if (import.meta.env.DEV) {
 <template>
   <div class="causeway-page">
     <Camp v-if="inCamp" />
-    <SingleColumnShell v-else max-width="1240px">
-      <div class="battle">
+    <ColumnShell v-else max-width="1240px">
+      <template #topBar>
         <KeepBanners />
+      </template>
+      <div class="battle">
         <CausewayField />
         <Walls />
         <div class="under">
@@ -64,7 +67,7 @@ if (import.meta.env.DEV) {
           <Heralds />
         </div>
       </div>
-    </SingleColumnShell>
+    </ColumnShell>
   </div>
 </template>
 

@@ -43,7 +43,7 @@ export const manifest: ArchetypeManifest = {
       recordedFireTimeRange: [6381, 6381],
     },
   ],
-  shell: 'SingleColumnShell',
+  shell: 'ColumnShell · topBar',
   formFactor: 'responsive',
   exemplars: [
     {
