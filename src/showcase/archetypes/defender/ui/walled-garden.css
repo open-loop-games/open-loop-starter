@@ -92,7 +92,8 @@
   --font-sans: var(--wg-face-text);
   --font-mono: var(--wg-face-text);
 
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   display: flex;
   flex-direction: column;
   background:

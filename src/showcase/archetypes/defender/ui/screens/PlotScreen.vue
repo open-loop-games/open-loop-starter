@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Decimal } from '@open-loop/engine';
+import { ColumnShell } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import { useWindowKeys } from '@/composables/useWindowKeys';
@@ -250,46 +251,49 @@ const dark = computed(
 </script>
 
 <template>
-  <section class="wg-plotscreen">
-    <header class="wg-hud">
-      <div class="where">
-        <h2 class="wg-heading">{{ run.def.displayName }}</h2>
-        <span v-if="dark > 0" class="night dark">
-          <span class="wg-num">{{ dark }}</span> {{ dark === 1 ? 'night' : 'nights' }} into the dark
-        </span>
-        <span v-else class="night">
-          night <span class="wg-num">{{ run.wave }}</span> of
-          <span class="wg-num">{{ run.totalWaves }}</span>
-        </span>
-      </div>
-      <dl class="wg-stocks">
-        <div v-for="r in readouts" :key="r.id" :data-readout-id="r.id">
-          <dd class="wg-num">{{ whole(r.value.value) }}</dd>
-          <dt class="wg-label">{{ r.label }}</dt>
+  <ColumnShell max-width="1120px">
+    <template #topBar>
+      <header class="wg-hud">
+        <div class="where">
+          <h2 class="wg-heading">{{ run.def.displayName }}</h2>
+          <span v-if="dark > 0" class="night dark">
+            <span class="wg-num">{{ dark }}</span> {{ dark === 1 ? 'night' : 'nights' }} into the
+            dark
+          </span>
+          <span v-else class="night">
+            night <span class="wg-num">{{ run.wave }}</span> of
+            <span class="wg-num">{{ run.totalWaves }}</span>
+          </span>
         </div>
-      </dl>
-      <div class="seedbed" :class="{ hurt: seedlings < seedlingsAtStart }" aria-hidden="true">
-        <i v-for="i in seedlingsAtStart" :key="i" :class="{ gone: i > seedlings }" />
-      </div>
-      <div class="clock">
-        <span class="when">{{ clock.label }}</span>
-        <ProgressBar :value="clock.fill" />
-      </div>
-      <Button
-        v-if="phase === 'build'"
-        class="wg-action call"
-        data-testid="call-it-a-day"
-        @click="run.callEarly()"
-      >
-        <template v-if="clock.held">Let night fall</template>
-        <template v-else>
-          Call it a day <span class="wg-num">+{{ whole(bonus) }}</span>
-        </template>
-      </Button>
-      <Button class="wg-quiet" @click="plot.leavePlot()">
-        {{ over ? 'Back to the garden' : 'Leave the plot' }}
-      </Button>
-    </header>
+        <dl class="wg-stocks">
+          <div v-for="r in readouts" :key="r.id" :data-readout-id="r.id">
+            <dd class="wg-num">{{ whole(r.value.value) }}</dd>
+            <dt class="wg-label">{{ r.label }}</dt>
+          </div>
+        </dl>
+        <div class="seedbed" :class="{ hurt: seedlings < seedlingsAtStart }" aria-hidden="true">
+          <i v-for="i in seedlingsAtStart" :key="i" :class="{ gone: i > seedlings }" />
+        </div>
+        <div class="clock">
+          <span class="when">{{ clock.label }}</span>
+          <ProgressBar :value="clock.fill" />
+        </div>
+        <Button
+          v-if="phase === 'build'"
+          class="wg-action call"
+          data-testid="call-it-a-day"
+          @click="run.callEarly()"
+        >
+          <template v-if="clock.held">Let night fall</template>
+          <template v-else>
+            Call it a day <span class="wg-num">+{{ whole(bonus) }}</span>
+          </template>
+        </Button>
+        <Button class="wg-quiet" @click="plot.leavePlot()">
+          {{ over ? 'Back to the garden' : 'Leave the plot' }}
+        </Button>
+      </header>
+    </template>
 
     <div class="wg-field">
       <div class="board-wrap">
@@ -419,14 +423,10 @@ const dark = computed(
         </ol>
       </aside>
     </div>
-  </section>
+  </ColumnShell>
 </template>
 
 <style scoped>
-.wg-plotscreen {
-  display: grid;
-  gap: 16px;
-}
 .wg-hud {
   display: flex;
   align-items: center;

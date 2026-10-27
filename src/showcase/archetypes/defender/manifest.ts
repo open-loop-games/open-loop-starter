@@ -26,6 +26,6 @@ export const manifest: ArchetypeManifest = {
     { n: 2, label: 'The Bean Rows held', recordedFireTimeRange: [430, 430] },
     { n: 3, label: 'The Old Orchard held', recordedFireTimeRange: [693, 693] },
   ],
-  shell: 'SingleColumnShell',
+  shell: 'ColumnShell · topBar in a plot',
   formFactor: 'desktop',
 };

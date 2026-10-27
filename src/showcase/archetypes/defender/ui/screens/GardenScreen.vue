@@ -6,6 +6,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Decimal } from '@open-loop/engine';
+import { ColumnShell } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import ProgressBar from '@/ui/components/ProgressBar.vue';
 import ProducerList from '@/ui/compositions/ProducerList.vue';
@@ -70,98 +71,100 @@ const anyLearned = computed(() => new Decimal(garden.lessons.totalCount.value).g
 </script>
 
 <template>
-  <section class="wg-garden">
-    <header class="wg-gardener">
-      <div class="lvl">
-        <span class="wg-label">Gardener</span>
-        <span class="wg-num big">{{ level }}</span>
-      </div>
-      <div class="toward">
-        <ProgressBar :value="toNext.value" :max="toNext.max" />
-        <span class="hint">
-          <span class="wg-num">{{ whole(toNext.left) }}</span> more points from your best nights for
-          level {{ level + 1 }}
-        </span>
-      </div>
-      <div class="learn" v-if="toLearn.length">
-        <span class="wg-label">Still to learn</span>
-        <span v-for="p in toLearn" :key="p.name" class="next"
-          >{{ p.name }} <em>at {{ p.at }}</em></span
-        >
-      </div>
-    </header>
-
-    <PlotResult v-if="plot.lastResult.value" :result="plot.lastResult.value" />
-
-    <div class="wg-plots">
-      <article
-        v-for="p in plots"
-        :key="p.def.id"
-        class="wg-plot"
-        :class="{ open: p.open, held: p.held }"
-      >
-        <div class="label-tag">
-          <h3 class="wg-heading">{{ p.def.displayName }}</h3>
-          <span class="waves"
-            ><span class="wg-num">{{ p.waves }}</span> nights</span
-          >
+  <ColumnShell max-width="1120px">
+    <section class="wg-garden">
+      <header class="wg-gardener">
+        <div class="lvl">
+          <span class="wg-label">Gardener</span>
+          <span class="wg-num big">{{ level }}</span>
         </div>
-        <p class="blurb">{{ p.def.blurb }}</p>
-        <div class="foot">
-          <span v-if="p.best !== null" class="best">
-            best <span class="wg-num">{{ whole(p.best) }}</span>
-            <span v-if="p.held" class="held-mark">held</span>
+        <div class="toward">
+          <ProgressBar :value="toNext.value" :max="toNext.max" />
+          <span class="hint">
+            <span class="wg-num">{{ whole(toNext.left) }}</span> more points from your best nights
+            for level {{ level + 1 }}
           </span>
-          <span v-else-if="p.open" class="best none">not yet held</span>
-          <span v-else class="best none">Hold {{ p.before }} first</span>
-          <Button
-            v-if="p.open"
-            class="wg-action"
-            :data-testid="`enter-${p.def.id}`"
-            @click="plot.startPlot(p.def.id)"
-          >
-            Go out
-          </Button>
         </div>
-      </article>
-    </div>
-
-    <p v-if="level === 0 && !anyLearned" class="wg-almanac-later">
-      Hold a plot and the gardener learns something: the almanac opens at level 1.
-    </p>
-    <section v-else class="wg-almanac" aria-label="Almanac">
-      <header>
-        <h2 class="wg-heading">The almanac</h2>
-        <span class="notes">
-          <span class="wg-num">{{ notes }}</span> {{ notes === 1 ? 'note' : 'notes' }} to write up
-        </span>
-        <Button class="wg-quiet" :disabled="!anyLearned" @click="garden.relearn()">
-          Start the almanac over
-        </Button>
+        <div class="learn" v-if="toLearn.length">
+          <span class="wg-label">Still to learn</span>
+          <span v-for="p in toLearn" :key="p.name" class="next"
+            >{{ p.name }} <em>at {{ p.at }}</em></span
+          >
+        </div>
       </header>
-      <ProducerList :rows="rows" bulk-mode-source="none">
-        <template #row="{ row, purchase }">
-          <div class="wg-lesson" :class="{ full: learned(row) >= LESSON_MAX }">
-            <div class="name">
-              <span class="wg-heading">{{ row.extra!.def.displayName }}</span>
-              <span class="desc">{{ row.extra!.def.description }}</span>
-            </div>
-            <span class="pips" :aria-label="`${learned(row)} of ${LESSON_MAX}`">
-              <span
-                v-for="i in LESSON_MAX"
-                :key="i"
-                class="pip"
-                :class="{ on: i <= learned(row) }"
-              />
+
+      <PlotResult v-if="plot.lastResult.value" :result="plot.lastResult.value" />
+
+      <div class="wg-plots">
+        <article
+          v-for="p in plots"
+          :key="p.def.id"
+          class="wg-plot"
+          :class="{ open: p.open, held: p.held }"
+        >
+          <div class="label-tag">
+            <h3 class="wg-heading">{{ p.def.displayName }}</h3>
+            <span class="waves"
+              ><span class="wg-num">{{ p.waves }}</span> nights</span
+            >
+          </div>
+          <p class="blurb">{{ p.def.blurb }}</p>
+          <div class="foot">
+            <span v-if="p.best !== null" class="best">
+              best <span class="wg-num">{{ whole(p.best) }}</span>
+              <span v-if="p.held" class="held-mark">held</span>
             </span>
-            <Button class="wg-quiet write" :disabled="!row.canPurchase(1)" @click="purchase()">
-              Write up
+            <span v-else-if="p.open" class="best none">not yet held</span>
+            <span v-else class="best none">Hold {{ p.before }} first</span>
+            <Button
+              v-if="p.open"
+              class="wg-action"
+              :data-testid="`enter-${p.def.id}`"
+              @click="plot.startPlot(p.def.id)"
+            >
+              Go out
             </Button>
           </div>
-        </template>
-      </ProducerList>
+        </article>
+      </div>
+
+      <p v-if="level === 0 && !anyLearned" class="wg-almanac-later">
+        Hold a plot and the gardener learns something: the almanac opens at level 1.
+      </p>
+      <section v-else class="wg-almanac" aria-label="Almanac">
+        <header>
+          <h2 class="wg-heading">The almanac</h2>
+          <span class="notes">
+            <span class="wg-num">{{ notes }}</span> {{ notes === 1 ? 'note' : 'notes' }} to write up
+          </span>
+          <Button class="wg-quiet" :disabled="!anyLearned" @click="garden.relearn()">
+            Start the almanac over
+          </Button>
+        </header>
+        <ProducerList :rows="rows" bulk-mode-source="none">
+          <template #row="{ row, purchase }">
+            <div class="wg-lesson" :class="{ full: learned(row) >= LESSON_MAX }">
+              <div class="name">
+                <span class="wg-heading">{{ row.extra!.def.displayName }}</span>
+                <span class="desc">{{ row.extra!.def.description }}</span>
+              </div>
+              <span class="pips" :aria-label="`${learned(row)} of ${LESSON_MAX}`">
+                <span
+                  v-for="i in LESSON_MAX"
+                  :key="i"
+                  class="pip"
+                  :class="{ on: i <= learned(row) }"
+                />
+              </span>
+              <Button class="wg-quiet write" :disabled="!row.canPurchase(1)" @click="purchase()">
+                Write up
+              </Button>
+            </div>
+          </template>
+        </ProducerList>
+      </section>
     </section>
-  </section>
+  </ColumnShell>
 </template>
 
 <style scoped>
