@@ -65,7 +65,8 @@
   --color-danger: var(--squib);
   --font-sans: var(--font-body);
 
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: var(--app-root-min-height, 100vh);
   display: flex;
   flex-direction: column;
   background: var(--stage-black);

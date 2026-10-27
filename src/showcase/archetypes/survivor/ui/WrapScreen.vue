@@ -7,6 +7,7 @@
 import { computed } from 'vue';
 import { formatClock } from '@/composables/useFormatting';
 import { useWindowKeys } from '@/composables/useWindowKeys';
+import { ColumnShell } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import { getTake } from '../modules';
 
@@ -35,70 +36,72 @@ useWindowKeys((e) => {
 </script>
 
 <template>
-  <main class="wrap" :class="w.end">
-    <section v-if="w.pictureWrapped" class="credits">
-      <div class="credits-kicker billing">That's a wrap on the picture</div>
-      <div class="credits-title billing">One More Take</div>
-      <div class="credits-line">Starring {{ w.star }}</div>
-      <div class="credits-line dim">
-        The set stays open: every rating still plays, and every take still pays.
-      </div>
-    </section>
-    <div class="wrap-card">
-      <div class="clapper-stripe"></div>
-      <div class="inner">
-        <div class="billing kicker">
-          {{ w.star }} · rated {{ w.rating }}{{ w.driver === 'instinct' ? ' · improvised' : '' }}
+  <ColumnShell>
+    <main class="wrap" :class="w.end">
+      <section v-if="w.pictureWrapped" class="credits">
+        <div class="credits-kicker billing">That's a wrap on the picture</div>
+        <div class="credits-title billing">One More Take</div>
+        <div class="credits-line">Starring {{ w.star }}</div>
+        <div class="credits-line dim">
+          The set stays open: every rating still plays, and every take still pays.
         </div>
-        <h1 class="billing">{{ TITLE[w.end] }}</h1>
-        <p class="line">{{ line }}</p>
-        <dl class="stats">
-          <div>
-            <dt class="billing">On the floor</dt>
-            <dd class="num">{{ time }}</dd>
+      </section>
+      <div class="wrap-card">
+        <div class="clapper-stripe"></div>
+        <div class="inner">
+          <div class="billing kicker">
+            {{ w.star }} · rated {{ w.rating }}{{ w.driver === 'instinct' ? ' · improvised' : '' }}
           </div>
-          <div>
-            <dt class="billing">Extras down</dt>
-            <dd class="num">{{ w.kills }}</dd>
+          <h1 class="billing">{{ TITLE[w.end] }}</h1>
+          <p class="line">{{ line }}</p>
+          <dl class="stats">
+            <div>
+              <dt class="billing">On the floor</dt>
+              <dd class="num">{{ time }}</dd>
+            </div>
+            <div>
+              <dt class="billing">Extras down</dt>
+              <dd class="num">{{ w.kills }}</dd>
+            </div>
+            <div>
+              <dt class="billing">In the shot</dt>
+              <dd class="num">{{ w.inShotKills }}</dd>
+            </div>
+            <div>
+              <dt class="billing">Reels banked</dt>
+              <dd class="num">{{ Math.floor(w.reels) }}</dd>
+            </div>
+            <div>
+              <dt class="billing">Rewrites</dt>
+              <dd class="num">{{ w.level - 1 }}</dd>
+            </div>
+            <div>
+              <dt class="billing">{{ w.lead }}</dt>
+              <dd class="num" :class="{ down: w.leadLeft !== null && w.leadLeft <= 0 }">
+                {{ leadText }}
+              </dd>
+            </div>
+            <div>
+              <dt class="billing">Marks filled</dt>
+              <dd class="num">{{ w.marksFilled }}</dd>
+            </div>
+            <div>
+              <dt class="billing">Jackpots</dt>
+              <dd class="num">{{ w.jackpots }}</dd>
+            </div>
+            <div class="earn">
+              <dt class="billing">Clout earned</dt>
+              <dd class="num">+{{ w.clout }}</dd>
+            </div>
+          </dl>
+          <div v-if="w.unlockedRating" class="ribbon billing">
+            Approved: rating {{ w.unlockedRating }} now open
           </div>
-          <div>
-            <dt class="billing">In the shot</dt>
-            <dd class="num">{{ w.inShotKills }}</dd>
-          </div>
-          <div>
-            <dt class="billing">Reels banked</dt>
-            <dd class="num">{{ Math.floor(w.reels) }}</dd>
-          </div>
-          <div>
-            <dt class="billing">Rewrites</dt>
-            <dd class="num">{{ w.level - 1 }}</dd>
-          </div>
-          <div>
-            <dt class="billing">{{ w.lead }}</dt>
-            <dd class="num" :class="{ down: w.leadLeft !== null && w.leadLeft <= 0 }">
-              {{ leadText }}
-            </dd>
-          </div>
-          <div>
-            <dt class="billing">Marks filled</dt>
-            <dd class="num">{{ w.marksFilled }}</dd>
-          </div>
-          <div>
-            <dt class="billing">Jackpots</dt>
-            <dd class="num">{{ w.jackpots }}</dd>
-          </div>
-          <div class="earn">
-            <dt class="billing">Clout earned</dt>
-            <dd class="num">+{{ w.clout }}</dd>
-          </div>
-        </dl>
-        <div v-if="w.unlockedRating" class="ribbon billing">
-          Approved: rating {{ w.unlockedRating }} now open
+          <Button class="ss-control back billing" @click="back"> Back to the call sheet </Button>
         </div>
-        <Button class="ss-control back billing" @click="back"> Back to the call sheet </Button>
       </div>
-    </div>
-  </main>
+    </main>
+  </ColumnShell>
 </template>
 
 <style scoped>

@@ -49,6 +49,8 @@ useWindowKeys((e) => {
 .rewrite {
   position: absolute;
   inset: 0;
+  /* Over the HUD floats, which sit at z-index 1. */
+  z-index: 2;
   background: rgba(10, 9, 8, 0.78);
   display: flex;
   flex-direction: column;

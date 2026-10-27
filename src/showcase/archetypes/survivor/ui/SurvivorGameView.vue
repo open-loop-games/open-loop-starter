@@ -2,11 +2,10 @@
   SurvivorGameView — the in-game subtree. Mounts under the root's post-start `v-else` frame,
   so module getters are safe to read here. See `.claude/rules/app-root-discipline.md`.
 
-  Shell: `Soundstage`, a declared invention rather than a `src/lib/shells/` pick. The
-  survivor-like majority in `open-loop-research/practical/ui-ux/subgenre-shell-mapping-2026.md`
-  is a fullscreen arena canvas with a peripheral overlay HUD and full-screen surfaces between
-  runs; `src/lib/shells/` has no shell for it. Between takes the call sheet and the wrap card
-  take the whole stage.
+  Shell: one per screen. The survivor-like majority is a fullscreen arena canvas with a
+  peripheral overlay HUD, and full-screen surfaces between runs. So the take is a StageShell
+  with its HUD as floats, and the call sheet and the wrap card are ColumnShell pages, because
+  a stage clips and they scroll.
 -->
 <script setup lang="ts">
 import { addResource } from '@open-loop/engine';
@@ -37,20 +36,7 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <div class="soundstage-page">
-    <CallSheet v-if="take.view.screen === 'call-sheet'" />
-    <TakeView v-else-if="take.view.screen === 'take' || take.view.screen === 'rewrite'" />
-    <WrapScreen v-else-if="take.view.screen === 'wrap'" />
-  </div>
+  <CallSheet v-if="take.view.screen === 'call-sheet'" />
+  <TakeView v-else-if="take.view.screen === 'take' || take.view.screen === 'rewrite'" />
+  <WrapScreen v-else-if="take.view.screen === 'wrap'" />
 </template>
-
-<style scoped>
-.soundstage-page {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-</style>

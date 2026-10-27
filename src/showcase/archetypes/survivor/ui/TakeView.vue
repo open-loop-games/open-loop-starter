@@ -1,11 +1,13 @@
 <!--
-  TakeView — the floor and its HUD. The canvas paints whatever the step last wrote, every
+  TakeView — the floor and its HUD, on a StageShell: the canvas fills the stage and the HUD
+  pieces are floats on its anchors. The canvas paints whatever the step last wrote, every
   animation frame; the HUD reads the take's reactive mirror. Input is read only while the
   player calls the moves; an improvising star steers itself, and its pages are announced on
   a slip instead of the rewrite modal.
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { ShellFloat, StageShell } from '@/lib';
 import { formatClock } from '@/composables/useFormatting';
 import { useWindowKeys } from '@/composables/useWindowKeys';
 import { ANCHORS, GUESTS, LEADS, MARK_KILLS, SCRIPT, SET_PIECES } from '../data';
@@ -154,134 +156,143 @@ const slip = computed(() => {
 </script>
 
 <template>
-  <div class="take" @pointerdown="pointerDown" @pointermove="pointerMove">
+  <StageShell class="take" @pointerdown="pointerDown" @pointermove="pointerMove">
     <canvas ref="canvas" class="floor" aria-label="The soundstage floor"></canvas>
-
-    <div class="slate">
-      <div class="clapper-stripe"></div>
-      <div class="slate-body">
-        <div class="slate-row billing">
-          <span
-            >Scene <b class="num">{{ sceneLabel }}</b></span
-          >
-          <span
-            >Take <b class="num">{{ take.view.takeNumber }}</b></span
-          >
-        </div>
-        <div class="slate-rating billing">
-          Rated {{ take.view.rating.label }}
-          <span class="caller" :class="{ improvising }">{{
-            improvising ? 'Improvising' : 'You call it'
-          }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="timecode">
-      <div class="tc num">{{ timecode }}</div>
-      <div class="tc-sub billing" :class="{ warn: countdown.warn }">
-        {{ countdown.label }} <span class="num">{{ countdown.left }}</span>
-      </div>
-    </div>
-
-    <Transition name="billing-card">
-      <div v-if="hud.lead !== null" class="lead-card">
-        <div class="lead-kicker billing">And introducing</div>
-        <div class="lead-name billing">{{ lead.name }}</div>
-        <ProgressBar class="bar lead-bar" :value="hud.lead" />
-        <div class="lead-sub billing">Down the lead to call CUT</div>
-      </div>
-    </Transition>
-
-    <Transition name="call">
-      <div v-if="call" :key="call.key" class="call">
-        <div class="clapper-stripe"></div>
-        <div class="call-body">
-          <span class="call-kicker billing">{{ call.kicker }}</span>
-          <span class="call-name billing">{{ call.name }}</span>
-          <span class="call-blurb">{{ call.blurb }}</span>
-        </div>
-      </div>
-    </Transition>
-
-    <div v-if="hud.rival !== null" class="guest">
-      <div class="guest-row billing">
-        <span>Guest star</span><span class="num">walks in {{ formatClock(hud.rivalLeft) }}</span>
-      </div>
-      <ProgressBar class="bar guest-bar" :value="hud.rival" />
-      <div class="guest-sub billing">Down them for a jackpot reel</div>
-    </div>
-
-    <div class="tally">
-      <div class="tally-row">
-        <span class="reel-icon"></span><span class="num big">{{ Math.floor(hud.reels) }}</span
-        ><span class="billing lbl">reels</span>
-      </div>
-      <div class="tally-row dim">
-        <span class="num">{{ hud.kills }}</span
-        ><span class="billing lbl">extras down</span>
-      </div>
-      <div class="marks" :class="{ closed: hud.lead !== null }">
-        <span
-          v-for="(m, i) in hud.marks"
-          :key="i"
-          class="chalk-mark"
-          :class="{ filled: m.filled }"
-          :style="{ '--fill': m.kills / MARK_KILLS }"
-          :title="`${m.kills}/${MARK_KILLS} down inside the mark`"
-        ></span>
-        <span class="billing lbl">marks · each cuts the lead {{ markCut }}%</span>
-      </div>
-    </div>
-
-    <div class="bottom">
-      <div class="stamina">
-        <div class="billing lbl">
-          Stamina <span class="num">{{ Math.ceil(hud.hp) }}/{{ hud.maxHp }}</span>
-        </div>
-        <ProgressBar class="bar hp" :class="{ low: hpFrac < 0.3 }" :value="hpFrac" />
-      </div>
-
-      <div class="strip">
-        <div class="billing lbl">
-          Rewrite <span class="num">{{ hud.level }}</span>
-        </div>
-        <ProgressBar class="filmstrip" :value="hud.progress" />
-      </div>
-
-      <div class="rigs">
-        <div v-for="r in hud.rigs" :key="r.id" class="rig">
-          <span class="billing">{{ r.name }}</span>
-          <span class="pips"><i v-for="n in 5" :key="n" :class="{ on: n <= r.level }"></i></span>
-        </div>
-      </div>
-    </div>
-
-    <Transition name="slip">
-      <div v-if="slip" :key="slip.key" class="slip" :class="{ fresh: slip.page.isNew }">
-        <div class="slip-slug">REWRITE — {{ slip.page.slug }}</div>
-        <div class="slip-head">{{ slip.page.heading.toUpperCase() }}</div>
-        <div class="slip-cont">{{ slip.page.cont }}</div>
-      </div>
-    </Transition>
-
-    <div v-if="hud.t < 12" class="hint billing">
-      <template v-if="improvising">The star is improvising. Sit back and watch the take.</template>
-      <template v-else
-        >Move with WASD, arrows or a held pointer. Your rigs fire themselves.</template
-      >
-    </div>
-
     <RewriteModal v-if="take.view.screen === 'rewrite'" />
-  </div>
+
+    <template #floats>
+      <ShellFloat anchor="top-left">
+        <div class="slate">
+          <div class="clapper-stripe"></div>
+          <div class="slate-body">
+            <div class="slate-row billing">
+              <span
+                >Scene <b class="num">{{ sceneLabel }}</b></span
+              >
+              <span
+                >Take <b class="num">{{ take.view.takeNumber }}</b></span
+              >
+            </div>
+            <div class="slate-rating billing">
+              Rated {{ take.view.rating.label }}
+              <span class="caller" :class="{ improvising }">{{
+                improvising ? 'Improvising' : 'You call it'
+              }}</span>
+            </div>
+          </div>
+        </div>
+      </ShellFloat>
+      <ShellFloat anchor="top">
+        <div class="timecode">
+          <div class="tc num">{{ timecode }}</div>
+          <div class="tc-sub billing" :class="{ warn: countdown.warn }">
+            {{ countdown.label }} <span class="num">{{ countdown.left }}</span>
+          </div>
+        </div>
+      </ShellFloat>
+      <ShellFloat anchor="top">
+        <div class="cues">
+          <Transition name="billing-card">
+            <div v-if="hud.lead !== null" class="lead-card">
+              <div class="lead-kicker billing">And introducing</div>
+              <div class="lead-name billing">{{ lead.name }}</div>
+              <ProgressBar class="bar lead-bar" :value="hud.lead" />
+              <div class="lead-sub billing">Down the lead to call CUT</div>
+            </div>
+          </Transition>
+          <Transition name="call">
+            <div v-if="call" :key="call.key" class="call">
+              <div class="clapper-stripe"></div>
+              <div class="call-body">
+                <span class="call-kicker billing">{{ call.kicker }}</span>
+                <span class="call-name billing">{{ call.name }}</span>
+                <span class="call-blurb">{{ call.blurb }}</span>
+              </div>
+            </div>
+          </Transition>
+          <Transition name="slip">
+            <div v-if="slip" :key="slip.key" class="slip" :class="{ fresh: slip.page.isNew }">
+              <div class="slip-slug">REWRITE — {{ slip.page.slug }}</div>
+              <div class="slip-head">{{ slip.page.heading.toUpperCase() }}</div>
+              <div class="slip-cont">{{ slip.page.cont }}</div>
+            </div>
+          </Transition>
+        </div>
+      </ShellFloat>
+      <ShellFloat anchor="top-right">
+        <div class="tally">
+          <div class="tally-row">
+            <span class="reel-icon"></span><span class="num big">{{ Math.floor(hud.reels) }}</span
+            ><span class="billing lbl">reels</span>
+          </div>
+          <div class="tally-row dim">
+            <span class="num">{{ hud.kills }}</span
+            ><span class="billing lbl">extras down</span>
+          </div>
+          <div class="marks" :class="{ closed: hud.lead !== null }">
+            <span
+              v-for="(m, i) in hud.marks"
+              :key="i"
+              class="chalk-mark"
+              :class="{ filled: m.filled }"
+              :style="{ '--fill': m.kills / MARK_KILLS }"
+              :title="`${m.kills}/${MARK_KILLS} down inside the mark`"
+            ></span>
+            <span class="billing lbl">marks · each cuts the lead {{ markCut }}%</span>
+          </div>
+        </div>
+      </ShellFloat>
+      <ShellFloat v-if="hud.rival !== null" anchor="top-right">
+        <div class="guest">
+          <div class="guest-row billing">
+            <span>Guest star</span
+            ><span class="num">walks in {{ formatClock(hud.rivalLeft) }}</span>
+          </div>
+          <ProgressBar class="bar guest-bar" :value="hud.rival" />
+          <div class="guest-sub billing">Down them for a jackpot reel</div>
+        </div>
+      </ShellFloat>
+      <ShellFloat v-if="hud.t < 12" anchor="bottom">
+        <div class="hint billing">
+          <template v-if="improvising"
+            >The star is improvising. Sit back and watch the take.</template
+          >
+          <template v-else
+            >Move with WASD, arrows or a held pointer. Your rigs fire themselves.</template
+          >
+        </div>
+      </ShellFloat>
+      <ShellFloat anchor="bottom-left">
+        <div class="stamina">
+          <div class="billing lbl">
+            Stamina <span class="num">{{ Math.ceil(hud.hp) }}/{{ hud.maxHp }}</span>
+          </div>
+          <ProgressBar class="bar hp" :class="{ low: hpFrac < 0.3 }" :value="hpFrac" />
+        </div>
+      </ShellFloat>
+      <ShellFloat class="strip-float" anchor="bottom">
+        <div class="strip">
+          <div class="billing lbl">
+            Rewrite <span class="num">{{ hud.level }}</span>
+          </div>
+          <ProgressBar class="filmstrip" :value="hud.progress" />
+        </div>
+      </ShellFloat>
+      <ShellFloat anchor="bottom-right">
+        <div class="rigs">
+          <div v-for="r in hud.rigs" :key="r.id" class="rig">
+            <span class="billing">{{ r.name }}</span>
+            <span class="pips"><i v-for="n in 5" :key="n" :class="{ on: n <= r.level }"></i></span>
+          </div>
+        </div>
+      </ShellFloat>
+    </template>
+  </StageShell>
 </template>
 
 <style scoped>
 .take {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
+  --shell-gap: var(--hud-pad);
   user-select: none;
   touch-action: none;
 }
@@ -294,9 +305,6 @@ const slip = computed(() => {
   cursor: crosshair;
 }
 .slate {
-  position: absolute;
-  top: var(--hud-pad);
-  left: var(--hud-pad);
   width: 190px;
   background: var(--stage-black);
   border: 2px solid var(--chalk);
@@ -330,10 +338,6 @@ const slip = computed(() => {
   color: var(--tungsten);
 }
 .timecode {
-  position: absolute;
-  top: var(--hud-pad);
-  left: 50%;
-  transform: translateX(-50%);
   text-align: center;
   padding: 6px 14px 4px;
   background: rgba(17, 15, 13, 0.72);
@@ -350,9 +354,6 @@ const slip = computed(() => {
   color: var(--chalk-dim);
 }
 .tally {
-  position: absolute;
-  top: var(--hud-pad);
-  right: var(--hud-pad);
   text-align: right;
   background: rgba(17, 15, 13, 0.72);
   padding: 8px 12px;
@@ -383,15 +384,19 @@ const slip = computed(() => {
   background: radial-gradient(circle, var(--stage-black) 0 2px, var(--reel-gold) 2.5px);
   align-self: center;
 }
-.bottom {
-  position: absolute;
-  left: var(--hud-pad);
-  right: var(--hud-pad);
-  bottom: var(--hud-pad);
-  display: grid;
-  grid-template-columns: 220px 1fr 260px;
-  gap: 20px;
-  align-items: end;
+/* The cue cards stack under the timecode, each centred on it. */
+.cues {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.stamina {
+  width: 220px;
+}
+/* The filmstrip runs the width of the bottom cell, not the width of its label. */
+.take :deep(.strip-float) {
+  align-self: stretch;
 }
 /* The HUD's bars are flat tape with square ends, and keep their own colours when full or empty. */
 .bar,
@@ -468,11 +473,7 @@ const slip = computed(() => {
 }
 /* The lead's billing card: a title card under the timecode once it walks on. */
 .lead-card {
-  position: absolute;
-  top: 86px;
-  left: 50%;
   width: 340px;
-  margin-left: -170px;
   text-align: center;
   padding: 8px 14px 9px;
   background: rgba(17, 15, 13, 0.82);
@@ -506,11 +507,7 @@ const slip = computed(() => {
 }
 /* A cue's call: the AD's board, a clapper strip over the set piece or guest's name. */
 .call {
-  position: absolute;
-  top: 92px;
-  left: 50%;
   width: 340px;
-  margin-left: -170px;
   background: var(--stage-black);
   border: 2px solid var(--chalk);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
@@ -551,9 +548,6 @@ const slip = computed(() => {
 }
 /* A rival on set: its bar and the seconds before it walks with the jackpot. */
 .guest {
-  position: absolute;
-  top: 132px;
-  right: var(--hud-pad);
   width: 200px;
   padding: 7px 10px 8px;
   background: rgba(17, 15, 13, 0.82);
@@ -599,11 +593,7 @@ const slip = computed(() => {
 }
 /* An improvised page: a script slip pinned under the timecode. */
 .slip {
-  position: absolute;
-  top: 96px;
-  left: 50%;
   width: 230px;
-  margin-left: -115px;
   padding: 10px 14px 9px 16px;
   background: var(--script-paper);
   color: var(--script-ink);
@@ -643,10 +633,6 @@ const slip = computed(() => {
   opacity: 0;
 }
 .hint {
-  position: absolute;
-  bottom: 90px;
-  left: 50%;
-  transform: translateX(-50%);
   font-size: 13px;
   color: var(--chalk-dim);
   background: rgba(17, 15, 13, 0.72);

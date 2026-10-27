@@ -39,7 +39,7 @@ export const manifest: ArchetypeManifest = {
     },
     { n: 7, label: 'The picture wraps: the Big Bad falls', recordedFireTimeRange: [7271, 7271] },
   ],
-  shell: 'Soundstage',
+  shell: 'StageShell · floats; ColumnShell between takes',
   formFactor: 'responsive',
   exemplars: [
     {

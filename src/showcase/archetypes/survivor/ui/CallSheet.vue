@@ -7,6 +7,7 @@ import { computed, ref } from 'vue';
 import { Decimal, formatResource } from '@open-loop/engine';
 import { formatClock } from '@/composables/useFormatting';
 import { useWindowKeys } from '@/composables/useWindowKeys';
+import { ColumnShell } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import { ANCHORS, LEADS, RATINGS, type Driver, type StarDef } from '../data';
 import { getMeta, getTake } from '../modules';
@@ -85,159 +86,158 @@ const takeMinutes = ANCHORS.takeSeconds / 60;
 </script>
 
 <template>
-  <main class="sheet">
-    <header class="masthead">
-      <div>
-        <div class="billing kicker">Daily call sheet · Day {{ take.view.takeNumber }}</div>
-        <h1 class="billing">One More Take</h1>
-        <div class="logline">
-          You are the stunt double. The rigs go off on their own; all you choose is where to stand.
-          Hold the floor {{ takeMinutes }} minutes, then down the lead to hear CUT.
-        </div>
-      </div>
-      <div v-if="meta.record.pictureWrapped.value" class="wrapped-badge billing">
-        That's a wrap on the picture
-      </div>
-      <div class="purse">
-        <div class="billing lbl">Clout</div>
-        <div class="num clout">{{ cloutText }}</div>
-      </div>
-    </header>
-
-    <div class="cols">
-      <section class="block">
-        <h2 class="billing">Cast</h2>
-        <div class="cast">
-          <div
-            v-for="s in stars"
-            :key="s.def.id"
-            class="row star"
-            :class="{ chosen: starId === s.def.id, locked: !s.signed }"
-          >
-            <Button
-              class="ss-control row-main star-pick"
-              :disabled="!s.signed"
-              :aria-pressed="starId === s.def.id"
-              :aria-label="s.def.name"
-              @click="pickStar(s.def.id, s.signed)"
-            >
-              <span class="billing name">{{ s.def.name }}</span>
-              <span class="blurb">{{ s.def.blurb }}</span>
-              <span v-if="s.signed" class="billing ledger" :class="{ none: !s.wrapped }">{{
-                s.wrapped ? `Wrapped ${s.wrapped}` : 'Nothing wrapped yet'
-              }}</span>
-            </Button>
-            <Button
-              v-if="!s.signed"
-              class="ss-control buy"
-              :class="{ can: s.affordable }"
-              :disabled="!s.affordable"
-              :aria-label="`Sign ${s.def.name}`"
-              @click="s.buy()"
-            >
-              <span class="billing">Sign</span> <span class="num">{{ s.def.cost }}</span>
-            </Button>
-            <span v-else-if="starId === s.def.id" class="billing tag">On call</span>
+  <ColumnShell max-width="1100px">
+    <main class="sheet">
+      <header class="masthead">
+        <div>
+          <div class="billing kicker">Daily call sheet · Day {{ take.view.takeNumber }}</div>
+          <h1 class="billing">One More Take</h1>
+          <div class="logline">
+            You are the stunt double. The rigs go off on their own; all you choose is where to
+            stand. Hold the floor {{ takeMinutes }} minutes, then down the lead to hear CUT.
           </div>
         </div>
-
-        <h2 class="billing">Who calls the moves</h2>
-        <div class="drivers">
-          <Button
-            class="ss-control driver"
-            :class="{ chosen: driver === 'player' }"
-            :aria-pressed="driver === 'player'"
-            @click="pickDriver('player')"
-          >
-            <span class="billing dname">You call the moves</span>
-            <span class="dblurb">WASD, arrows or a held pointer. You take the pages.</span>
-          </Button>
-          <Button
-            class="ss-control driver"
-            :class="{ chosen: driver === 'instinct' }"
-            :aria-pressed="driver === 'instinct'"
-            @click="pickDriver('instinct')"
-          >
-            <span class="billing dname">The star improvises</span>
-            <span class="dblurb">Sit in the director's chair. The star moves and picks.</span>
-          </Button>
+        <div v-if="meta.record.pictureWrapped.value" class="wrapped-badge billing">
+          That's a wrap on the picture
         </div>
+        <div class="purse">
+          <div class="billing lbl">Clout</div>
+          <div class="num clout">{{ cloutText }}</div>
+        </div>
+      </header>
 
-        <h2 class="billing">Rating</h2>
-        <div class="ratings">
-          <Button
-            v-for="r in ratings"
-            :key="r.def.id"
-            class="ss-control rating"
-            :class="{ chosen: ratingIndex === r.def.index, locked: !r.open }"
-            :disabled="!r.open"
-            :title="r.open ? r.def.blurb : r.need"
-            @click="ratingIndex = r.def.index"
-          >
-            <span class="billing mark"
-              >{{ r.def.label }}<small class="num">×{{ r.def.pay }}</small></span
+      <div class="cols">
+        <section class="block">
+          <h2 class="billing">Cast</h2>
+          <div class="cast">
+            <div
+              v-for="s in stars"
+              :key="s.def.id"
+              class="row star"
+              :class="{ chosen: starId === s.def.id, locked: !s.signed }"
             >
-            <span class="rtext">
-              <span class="billing rlead">{{ r.lead }}</span>
-              <span class="rblurb">{{ r.open ? r.def.blurb : r.need }}</span>
-            </span>
-          </Button>
-        </div>
-      </section>
-
-      <section class="block">
-        <h2 class="billing">Your agent</h2>
-        <div class="agency">
-          <div v-for="a in agency" :key="a.def.id" class="row perk" :class="{ maxed: a.maxed }">
-            <div class="row-main">
-              <div class="billing name">{{ a.def.name }}</div>
-              <div class="blurb">{{ a.def.blurb }}</div>
-              <div class="pips">
-                <i v-for="n in a.def.maxLevel" :key="n" :class="{ on: n <= a.level }"></i>
-              </div>
+              <Button
+                class="ss-control row-main star-pick"
+                :disabled="!s.signed"
+                :aria-pressed="starId === s.def.id"
+                :aria-label="s.def.name"
+                @click="pickStar(s.def.id, s.signed)"
+              >
+                <span class="billing name">{{ s.def.name }}</span>
+                <span class="blurb">{{ s.def.blurb }}</span>
+                <span v-if="s.signed" class="billing ledger" :class="{ none: !s.wrapped }">{{
+                  s.wrapped ? `Wrapped ${s.wrapped}` : 'Nothing wrapped yet'
+                }}</span>
+              </Button>
+              <Button
+                v-if="!s.signed"
+                class="ss-control buy"
+                :class="{ can: s.affordable }"
+                :disabled="!s.affordable"
+                :aria-label="`Sign ${s.def.name}`"
+                @click="s.buy()"
+              >
+                <span class="billing">Sign</span> <span class="num">{{ s.def.cost }}</span>
+              </Button>
+              <span v-else-if="starId === s.def.id" class="billing tag">On call</span>
             </div>
-            <span v-if="a.maxed" class="billing tag done">Signed</span>
+          </div>
+
+          <h2 class="billing">Who calls the moves</h2>
+          <div class="drivers">
             <Button
-              v-else
-              class="ss-control buy"
-              :class="{ can: a.affordable }"
-              :disabled="!a.affordable"
-              :aria-label="`Buy ${a.def.name}`"
-              @click="a.buy()"
+              class="ss-control driver"
+              :class="{ chosen: driver === 'player' }"
+              :aria-pressed="driver === 'player'"
+              @click="pickDriver('player')"
             >
-              <span class="num">{{ a.cost }}</span>
+              <span class="billing dname">You call the moves</span>
+              <span class="dblurb">WASD, arrows or a held pointer. You take the pages.</span>
+            </Button>
+            <Button
+              class="ss-control driver"
+              :class="{ chosen: driver === 'instinct' }"
+              :aria-pressed="driver === 'instinct'"
+              @click="pickDriver('instinct')"
+            >
+              <span class="billing dname">The star improvises</span>
+              <span class="dblurb">Sit in the director's chair. The star moves and picks.</span>
             </Button>
           </div>
-        </div>
-      </section>
-    </div>
 
-    <footer class="foot">
-      <div class="record">
-        <span
-          ><b class="num">{{ meta.record.takes.value }}</b> takes</span
-        >
-        <span
-          >best <b class="num">{{ best }}</b></span
-        >
-        <span
-          ><b class="num">{{ meta.record.totalKills.value }}</b> extras down</span
-        >
+          <h2 class="billing">Rating</h2>
+          <div class="ratings">
+            <Button
+              v-for="r in ratings"
+              :key="r.def.id"
+              class="ss-control rating"
+              :class="{ chosen: ratingIndex === r.def.index, locked: !r.open }"
+              :disabled="!r.open"
+              :title="r.open ? r.def.blurb : r.need"
+              @click="ratingIndex = r.def.index"
+            >
+              <span class="billing mark"
+                >{{ r.def.label }}<small class="num">×{{ r.def.pay }}</small></span
+              >
+              <span class="rtext">
+                <span class="billing rlead">{{ r.lead }}</span>
+                <span class="rblurb">{{ r.open ? r.def.blurb : r.need }}</span>
+              </span>
+            </Button>
+          </div>
+        </section>
+
+        <section class="block">
+          <h2 class="billing">Your agent</h2>
+          <div class="agency">
+            <div v-for="a in agency" :key="a.def.id" class="row perk" :class="{ maxed: a.maxed }">
+              <div class="row-main">
+                <div class="billing name">{{ a.def.name }}</div>
+                <div class="blurb">{{ a.def.blurb }}</div>
+                <div class="pips">
+                  <i v-for="n in a.def.maxLevel" :key="n" :class="{ on: n <= a.level }"></i>
+                </div>
+              </div>
+              <span v-if="a.maxed" class="billing tag done">Signed</span>
+              <Button
+                v-else
+                class="ss-control buy"
+                :class="{ can: a.affordable }"
+                :disabled="!a.affordable"
+                :aria-label="`Buy ${a.def.name}`"
+                @click="a.buy()"
+              >
+                <span class="num">{{ a.cost }}</span>
+              </Button>
+            </div>
+          </div>
+        </section>
       </div>
-      <Button class="ss-control action" @click="action">
-        <span class="clapper-stripe"></span>
-        <span class="billing">Action!</span>
-      </Button>
-    </footer>
-  </main>
+
+      <footer class="foot">
+        <div class="record">
+          <span
+            ><b class="num">{{ meta.record.takes.value }}</b> takes</span
+          >
+          <span
+            >best <b class="num">{{ best }}</b></span
+          >
+          <span
+            ><b class="num">{{ meta.record.totalKills.value }}</b> extras down</span
+          >
+        </div>
+        <Button class="ss-control action" @click="action">
+          <span class="clapper-stripe"></span>
+          <span class="billing">Action!</span>
+        </Button>
+      </footer>
+    </main>
+  </ColumnShell>
 </template>
 
 <style scoped>
 .sheet {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 28px 40px 24px;
+  padding: 16px 0 24px;
   display: flex;
   flex-direction: column;
   gap: 22px;
