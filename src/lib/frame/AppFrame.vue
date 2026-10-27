@@ -55,6 +55,13 @@ provide(portalTargetKey, useTemplateRef<HTMLElement>('frame'));
   color: var(--color-text);
 }
 
+/* A fixed-viewport shell scrolls its regions inside a bounded height, so the frame
+   holding one takes that height rather than growing with its content. Embedded,
+   the token is 0 and the host's flex chain grows the frame to fill it. */
+.olui-app-frame:has(.olui-shell[data-viewport='fixed']) {
+  height: var(--app-root-min-height, 100vh);
+}
+
 .olui-app-frame__header {
   flex: 0 0 auto;
 }
