@@ -53,16 +53,16 @@ Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engi
 
 ## Archetype demos
 
-`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a research composition — its identity line — built on a rate-function balance spine, showing a distinct slice of engine systems and a distinct layout shell. Each is in one or more genres, whose documents in the studio's research library list the games in them; one, Skirmish, is a design claim said as such. Exemplar games validate that a research composition ships in the wild; they are cited as a set and are not clone targets. Pick the one closest to your game and `eject` it (above).
+`pnpm dev` opens a gallery of self-bootable archetype demos under `src/showcase/archetypes/`. Each is a research composition — its identity line — built on a rate-function balance spine, showing a distinct slice of engine systems in the layout its game shape wants. Each is in one or more genres, whose documents in the studio's research library list the games in them; one, Skirmish, is a design claim said as such. Exemplar games validate that a research composition ships in the wild; they are cited as a set and are not clone targets. Pick the one closest to your game and `eject` it (above).
 
-| Archetype | Demo | Shell | Engine systems | What it shows |
+| Archetype | Demo | Layout | Engine systems | What it shows |
 |---|---|---|---|---|
-| `cycler` | Skerry Light | SidebarMainShell | Cycle, TickDriver phases, Inventory, SpatialGrid, Loadout, PurchasableCategory | Build by day against the forecast quarter, its spray and the quarter it backs to, weather the night, and spend the logbook toward the Flannans' final gale |
-| `producer` | Probe Swarm | ThreePanelShell | ProducerCategory, AchievementCategory, AutomationTiers, processOfflineTime | A geometric cost ladder under a compounding modifier stack, with offline catch-up and a return report |
-| `tug` | Hold the Causeway | SingleColumnShell | PurchasableCategory, Skill, Reset, ModifierChain, TuningRegistry | Adversarial lane push: waves released on alternating horns meet at a line that sways about the middle, cover stiffens each side near home, engines thrown from behind a held line breach the gate, and a Chronicle carries the career across a march of fields |
-| `survivor` | One More Take | Soundstage | Skill, PurchasableCategory, Reset, ModifierChain, SpatialGrid, TuningRegistry | Automatic fire with positioning as the only input: rigs fire themselves, rewrites draft the loadout, each take ends on a lead to fell, ratings stage harsher takes, and each star improvises as an automated player |
-| `skirmish` | Chrome & Cantrip | ThreePanelShell | ProducerCategory, ResourceBag, PurchasableCategory, Reset, AutomationTiers, TuningRegistry | Real-time strategy: hustlers and ley taps feed training floors, squads take three districts on the player's orders, units meet through a pairing table, and an assault from a held district burns the rival safehouse |
-| `_blank` | — | SingleColumnShell | — | Neutral skeleton for a novel research composition (`pnpm eject --clean`) |
+| `cycler` | Skerry Light | ColumnShell · left | Cycle, TickDriver phases, Inventory, SpatialGrid, Loadout, PurchasableCategory | Build by day against the forecast quarter, its spray and the quarter it backs to, weather the night, and spend the logbook toward the Flannans' final gale |
+| `producer` | Probe Swarm | ColumnShell · left + right | ProducerCategory, AchievementCategory, AutomationTiers, processOfflineTime | A geometric cost ladder under a compounding modifier stack, with offline catch-up and a return report |
+| `tug` | Hold the Causeway | ColumnShell · topBar | PurchasableCategory, Skill, Reset, ModifierChain, TuningRegistry | Adversarial lane push: waves released on alternating horns meet at a line that sways about the middle, cover stiffens each side near home, engines thrown from behind a held line breach the gate, and a Chronicle carries the career across a march of fields |
+| `survivor` | One More Take | StageShell · floats | Skill, PurchasableCategory, Reset, ModifierChain, SpatialGrid, TuningRegistry | Automatic fire with positioning as the only input: rigs fire themselves, rewrites draft the loadout, each take ends on a lead to fell, ratings stage harsher takes, and each star improvises as an automated player |
+| `skirmish` | Chrome & Cantrip | ColumnShell · topBar + left + right · fixed | ProducerCategory, ResourceBag, PurchasableCategory, Reset, AutomationTiers, TuningRegistry | Real-time strategy: hustlers and ley taps feed training floors, squads take three districts on the player's orders, units meet through a pairing table, and an assault from a held district burns the rival safehouse |
+| `_blank` | — | ColumnShell | — | Neutral skeleton for a novel research composition (`pnpm eject --clean`) |
 
 ## Commands
 

@@ -2,7 +2,7 @@
  * Default design tokens used by src/lib/ and the scaffold theme.
  *
  * Override any of these by redeclaring on :root or [data-theme='...'] in
- * src/styles/. Scaffold layer tokens (shell, modal) and palette tokens
+ * src/styles/. Scaffold layer tokens (app root, modal) and palette tokens
  * (--color-*, --gap-*, --radius-*, --font-*) share one flat namespace —
  * there is no separate library-owned tier.
  */
@@ -35,8 +35,6 @@
   --font-mono: 'Courier New', Courier, monospace;
   --font-sans: system-ui, -apple-system, sans-serif;
 
-  --shell-sidebar-width: 250px;
-  --shell-max-width: 1400px;
   /* How tall an archetype app's root surface insists on being — AppFrame and
      SlotScreen are the two mutually-exclusive ones, and both claim it. `100vh`
      is right when the app IS the page, which is the ejected-fork case. A host
