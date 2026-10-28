@@ -44,6 +44,9 @@ describe('eject plan', () => {
     // Eject strips its own machinery so the fork starts clean + green.
     expect(plan.deletes).toContain('scripts/eject.mjs');
     expect(plan.deletes).toContain('src/test/eject.test.ts');
+    // The games-site listing is the stories', so a fork does not inherit it.
+    expect(plan.deletes).toContain('game.json');
+    expect(plan.deletes).toContain('.gitea/workflows/games-site.yaml');
     // Nothing in the plan deletes anything under what becomes the game.
     for (const d of plan.deletes) expect(d.startsWith('src/game')).toBe(false);
   });

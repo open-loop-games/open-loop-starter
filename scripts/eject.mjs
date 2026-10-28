@@ -45,6 +45,9 @@ const DEMO_DELETES = [
   'TODO.md',
   // Starter's task-backend config; a fork inherits the studio-root gitea config.
   '.mcp.json',
+  // The games-site listing: one card per story, and the CI that publishes it.
+  'game.json',
+  '.gitea/workflows/games-site.yaml',
 ];
 
 // Docs a fork keeps that also describe the showcase. Their starter-only text is

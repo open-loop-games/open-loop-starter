@@ -74,6 +74,7 @@ Each archetype's `ui/` follows the root-vs-game-view split in `.claude/rules/app
 - stubs the README, and removes the `eject:strip` regions from the root `AGENTS.md`;
 - deletes the entire demo and research surface: `src/showcase/` and the repo-root demo docs;
 - deletes the Claude-only `.claude/rules/`, whose paths only ever matched the showcase tree;
+- deletes the games-site listing: the root `game.json`, one card per story, and its publish workflow. The hoisted story keeps its `shots/`;
 - deletes **eject's own machinery**: `scripts/eject.mjs`, `src/test/eject.test.ts`, the `eject` script and the `@/showcase` oxlint guard.
 
 The fork starts clean, green and correctly named. Eject is **dry-run by default**: it prints the plan and touches nothing. Pass `--execute` to perform it. The implementation is `scripts/eject.mjs`, and `src/test/eject.test.ts` locks it.

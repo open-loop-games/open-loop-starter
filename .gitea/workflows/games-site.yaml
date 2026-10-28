@@ -1,0 +1,59 @@
+name: Publish to games-site
+
+# A game repo carries a copy of this at .gitea/workflows/games-site.yaml; the canonical copy
+# is studio/games-site ci/games-site.yaml. Publishing is listing: the site picks up the new
+# version on its next poll. The logic stays in games-site's publish.mjs.
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: git.gamebois.lol
+  HUSKY: 0
+  # The game dirs to publish: `.` for a game repo, `*/` for open-loop-mvps.
+  GAMES: .
+
+jobs:
+  publish:
+    runs-on: linux
+    container:
+      image: node:24-alpine
+
+    steps:
+      # Before checkout: without git, checkout downloads a tarball with no history.
+      - name: Install git
+        run: apk add --no-cache git
+
+      # Whole history: the version is the last commit touching each game dir.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Outside the game's tree, so the tree stays clean for publish.mjs.
+      - uses: actions/checkout@v4
+        with:
+          repository: studio/games-site
+          path: .games-site
+      - name: Move games-site out of the tree
+        run: mv .games-site /tmp/games-site
+
+      - name: Install pnpm
+        run: corepack enable
+
+      # The engine installs from the studio registry, which needs auth.
+      - name: Registry auth
+        run: |
+          cat <<EOF > ~/.npmrc
+          @open-loop:registry=https://${{ env.REGISTRY }}/api/packages/studio/npm/
+          //${{ env.REGISTRY }}/api/packages/studio/npm/:_authToken=${{ secrets.REGISTRY_TOKEN_STUDIO }}
+          EOF
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish
+        env:
+          GITEA_TOKEN: ${{ secrets.REGISTRY_TOKEN_STUDIO }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          node /tmp/games-site/scripts/publish.mjs $GAMES
