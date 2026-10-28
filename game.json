@@ -7,13 +7,190 @@
   },
   "cards": [
     {
+      "id": "cycler",
+      "title": "Skerry Light",
+      "blurb": "You keep the light on a bare rock in the North Atlantic. By day haul the tide nets and set walls, nets and screens to the quarter each dawn forecasts; by night the breakers land, and what the walls cannot turn goes into the tower. When the light goes out, the logbook buys what the next keeper knows.",
+      "line": "Cycler",
+      "topic": "Lighthouse keeper × Build-and-defend",
+      "path": "#/cycler/play",
+      "capture": {
+        "storageKey": "cycler-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "Day three: screens behind the side tonight's spray will strike",
+          "file": "src/showcase/archetypes/cycler/shots/1-spray.png",
+          "save": "src/showcase/archetypes/cycler/shots/1-spray.save"
+        },
+        {
+          "beat": "Night seven: the storm comes through the walls",
+          "file": "src/showcase/archetypes/cycler/shots/2-crossing.png",
+          "save": "src/showcase/archetypes/cycler/shots/2-crossing.save"
+        },
+        {
+          "beat": "The light goes out: the logbook pays",
+          "file": "src/showcase/archetypes/cycler/shots/3-logbook.png",
+          "save": "src/showcase/archetypes/cycler/shots/3-logbook.save"
+        }
+      ]
+    },
+    {
+      "id": "defender",
+      "title": "The Walled Garden",
+      "blurb": "Every evening the pests come through the gap in the garden wall and make for the seedbed. By day you plant box hedges to send them the long way round, and along the path whatever answers the night ahead: thrushes for slugs, bats for the moths that fly over it all, ladybirds for greenfly. Then night falls, and you watch.",
+      "line": "Defender",
+      "topic": "Kitchen garden × Tower defense",
+      "path": "#/defender/play",
+      "capture": {
+        "storageKey": "defender-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "The Herb Border: hedges send the slugs the long way past a thrush",
+          "file": "src/showcase/archetypes/defender/shots/1-herb-border.png",
+          "save": "src/showcase/archetypes/defender/shots/1-herb-border.save",
+          "eval": "const moves = [[2,3,3,1],[1,13,2,0],[1,13,3,0],[1,2,4,0],[1,2,3,0],[1,1,2,0],[1,4,6,0]]; const sleep = (ms) => new Promise((r) => setTimeout(r, ms)); const key = (k) => window.dispatchEvent(new KeyboardEvent('keydown', { key: String(k) })); const press = (el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); const until = async (sel) => { let el; while (!(el = document.querySelector(sel))) await sleep(50); return el; }; const cell = (x, y) => document.querySelector('.wg-board__cell[aria-label^=\"' + x + ', ' + y + ':\"]'); (async () => { press(await until('[data-testid=\"enter-herb-border\"]')); await until('.wg-board__cell'); for (const [k, x, y] of moves) { key('Escape'); key(k); cell(x, y).click(); } for (const [, x, y, feeds] of moves) for (let i = 0; i < feeds; i++) { key('Escape'); cell(x, y).click(); press(await until('.wg-looked .feed')); await sleep(50); } key('Escape'); })()",
+          "wait": 3500
+        },
+        {
+          "beat": "The Bean Rows: bat boxes learned, and moths three nights off",
+          "file": "src/showcase/archetypes/defender/shots/2-bean-rows.png",
+          "save": "src/showcase/archetypes/defender/shots/2-bean-rows.save",
+          "eval": "const moves = [[2,13,2,1],[2,4,3,0],[1,10,1,0]]; const sleep = (ms) => new Promise((r) => setTimeout(r, ms)); const key = (k) => window.dispatchEvent(new KeyboardEvent('keydown', { key: String(k) })); const press = (el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); const until = async (sel) => { let el; while (!(el = document.querySelector(sel))) await sleep(50); return el; }; const cell = (x, y) => document.querySelector('.wg-board__cell[aria-label^=\"' + x + ', ' + y + ':\"]'); (async () => { press(await until('[data-testid=\"enter-bean-rows\"]')); await until('.wg-board__cell'); for (const [k, x, y] of moves) { key('Escape'); key(k); cell(x, y).click(); } for (const [, x, y, feeds] of moves) for (let i = 0; i < feeds; i++) { key('Escape'); cell(x, y).click(); press(await until('.wg-looked .feed')); await sleep(50); } key('Escape'); })()",
+          "wait": 3500
+        },
+        {
+          "beat": "The Old Orchard: a ladybird hotel planted for tomorrow’s greenfly",
+          "file": "src/showcase/archetypes/defender/shots/3-orchard.png",
+          "save": "src/showcase/archetypes/defender/shots/3-orchard.save",
+          "eval": "const moves = [[2,3,3,1],[6,4,3,0],[1,6,4,0]]; const sleep = (ms) => new Promise((r) => setTimeout(r, ms)); const key = (k) => window.dispatchEvent(new KeyboardEvent('keydown', { key: String(k) })); const press = (el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); const until = async (sel) => { let el; while (!(el = document.querySelector(sel))) await sleep(50); return el; }; const cell = (x, y) => document.querySelector('.wg-board__cell[aria-label^=\"' + x + ', ' + y + ':\"]'); (async () => { press(await until('[data-testid=\"enter-orchard\"]')); await until('.wg-board__cell'); for (const [k, x, y] of moves) { key('Escape'); key(k); cell(x, y).click(); } for (const [, x, y, feeds] of moves) for (let i = 0; i < feeds; i++) { key('Escape'); cell(x, y).click(); press(await until('.wg-looked .feed')); await sleep(50); } key('Escape'); })()",
+          "wait": 3500
+        }
+      ]
+    },
+    {
+      "id": "explorer",
+      "title": "Spoor",
+      "blurb": "You are the last huntsman of a lodge at the edge of the Hartwold, a fogged forest said to hold the Pale Hart. Walk it one tile at a time on jerky and water, hunt what you find, and carry it home: a fall out there loses the haul and the ground you charted. Take the dens' trophies, refit for the Fen, the Snowfield and the Deepwood, and track the Hart to its lair.",
+      "line": "Explorer",
+      "topic": "Hunting-lodge folklore × Incremental",
+      "path": "#/explorer/play",
+      "capture": {
+        "storageKey": "explorer-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "The forest kit: the first camp raised",
+          "file": "src/showcase/archetypes/explorer/shots/1-camp.png",
+          "save": "src/showcase/archetypes/explorer/shots/1-camp.save"
+        },
+        {
+          "beat": "The Mere Wolf taken: the Fen's meres open",
+          "file": "src/showcase/archetypes/explorer/shots/2-coracle.png",
+          "save": "src/showcase/archetypes/explorer/shots/2-coracle.save"
+        },
+        {
+          "beat": "Three trophies and the sledge, camped below the Deepwood",
+          "file": "src/showcase/archetypes/explorer/shots/3-deepwood.png",
+          "save": "src/showcase/archetypes/explorer/shots/3-deepwood.save"
+        }
+      ]
+    },
+    {
+      "id": "interlocker",
+      "title": "The Aluminium Empire",
+      "blurb": "In 1855 aluminium comes cheap, forty years early, and the Second Empire builds aeroplanes. Raise timber yards and bauxite pits at Le Bourget, patent the workshops that turn them into spars, engines and monoplanes, and keep the compagnons seated and fed through the seasons. Then stage an Exposition Universelle, fill the Ministry of War's orders, and play for the Grand Prix of 1867.",
+      "line": "Interlocker",
+      "topic": "Second Empire alt-history × Civ-builder",
+      "path": "#/interlocker/play",
+      "capture": {
+        "storageKey": "interlocker-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "The first aeroplane: every workshop on the drawing inked",
+          "file": "src/showcase/archetypes/interlocker/shots/1-aeroplane.png",
+          "save": "src/showcase/archetypes/interlocker/shots/1-aeroplane.save"
+        },
+        {
+          "beat": "After the first Exposition: a Ministry of War order on the books",
+          "file": "src/showcase/archetypes/interlocker/shots/2-ministry.png",
+          "save": "src/showcase/archetypes/interlocker/shots/2-ministry.save"
+        },
+        {
+          "beat": "Every charter granted, and Le Contremaître employed",
+          "file": "src/showcase/archetypes/interlocker/shots/3-contremaitre.png",
+          "save": "src/showcase/archetypes/interlocker/shots/3-contremaitre.save",
+          "eval": "const t = setInterval(() => { const tab = [...document.querySelectorAll('.olui-tabs__trigger')].find((el) => el.textContent.includes('Exposition')); if (!tab) return; clearInterval(t); tab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }, 50)"
+        }
+      ]
+    },
+    {
+      "id": "looper",
+      "title": "Lights Out",
+      "blurb": "Inmate 4471 relives the same night in Blackwater Penitentiary. At lights-out you write the plan, from bending a wire into a pick to boarding the freight, and the plan runs until your Nerve breaks. You wake in the cell again with what the night taught you, and the plan gets you out a little faster.",
+      "line": "Looper",
+      "topic": "Prison-break noir × Loops",
+      "path": "#/looper/play",
+      "capture": {
+        "storageKey": "looper-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "Night 4: the plan into the laundry",
+          "file": "src/showcase/archetypes/looper/shots/1-laundry.png",
+          "save": "src/showcase/archetypes/looper/shots/1-laundry.save"
+        },
+        {
+          "beat": "Night 9: over the wall, the milk truck pays",
+          "file": "src/showcase/archetypes/looper/shots/2-woods.png",
+          "save": "src/showcase/archetypes/looper/shots/2-woods.save"
+        },
+        {
+          "beat": "Night 18: out on the freight, racing the splits",
+          "file": "src/showcase/archetypes/looper/shots/3-freight.png",
+          "save": "src/showcase/archetypes/looper/shots/3-freight.save"
+        }
+      ]
+    },
+    {
+      "id": "packer",
+      "title": "Hardpoint",
+      "blurb": "A drone swarm presses the breach line, and you are the fitter aboard the frigate Hardpoint. The guns fire on their own; you plate out the hull and fit each module where its neighbours make it worth most. Break each sector's carrier inside thirty seconds of fire, then recommission into the lancer Longreach and the flagship Sovereign.",
+      "line": "Packer",
+      "topic": "Military sci-fi × Backpack battler",
+      "path": "#/packer/play",
+      "capture": {
+        "storageKey": "packer-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "The frigate: Railgun schematic recovered",
+          "file": "src/showcase/archetypes/packer/shots/1-railgun.png",
+          "save": "src/showcase/archetypes/packer/shots/1-railgun.save"
+        },
+        {
+          "beat": "The cruiser keel plated: the breach line opens",
+          "file": "src/showcase/archetypes/packer/shots/2-breach-line.png",
+          "save": "src/showcase/archetypes/packer/shots/2-breach-line.save"
+        },
+        {
+          "beat": "Sovereign: the Breach Mother destroyed, the Dreadnought ahead",
+          "file": "src/showcase/archetypes/packer/shots/3-breach-mother.png",
+          "save": "src/showcase/archetypes/packer/shots/3-breach-mother.save"
+        }
+      ]
+    },
+    {
       "id": "phase-shifter",
       "title": "Night Clerk",
       "blurb": "A box with no label comes down the chute at 2:14 a.m.: the file on a woman who vanished in 1979. Read it, hire clerks, pin the cards to a wall, then post the clerks on the night's watches. Each door you open retires what you did before it.",
       "line": "Phase-shifter",
       "topic": "Cold-case noir × Incremental",
       "path": "#/phase-shifter/play",
-      "capture": { "storageKey": "phase-shifter-slot-0" },
+      "capture": {
+        "storageKey": "phase-shifter-slot-0"
+      },
       "shots": [
         {
           "beat": "Phase I: eight clerks reading the box",
@@ -29,6 +206,181 @@
           "beat": "Phase III: two alibis hold",
           "file": "src/showcase/archetypes/phase-shifter/shots/3-night.png",
           "save": "src/showcase/archetypes/phase-shifter/shots/3-night.save"
+        }
+      ]
+    },
+    {
+      "id": "producer",
+      "title": "Consolidated Holdings",
+      "blurb": "You found a holding company on one pushcart and close its deals by hand. Buy newsstands, diners and mills on up to savings banks, each seller asking more than the last, then hire a sales desk, an acquisitions desk and a board to run the firm for you. Keep an eye on the wire for tips, and grow until the firm can buy the tallest building in town.",
+      "line": "Producer",
+      "topic": "Small-town tycoon × Incremental",
+      "path": "#/producer/play",
+      "capture": {
+        "storageKey": "producer-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "Two minutes in: the sales desk takes over the deals",
+          "file": "src/showcase/archetypes/producer/shots/1-sales-desk.png",
+          "save": "src/showcase/archetypes/producer/shots/1-sales-desk.save"
+        },
+        {
+          "beat": "The first savings bank, with the executive floor hired",
+          "file": "src/showcase/archetypes/producer/shots/2-savings-bank.png",
+          "save": "src/showcase/archetypes/producer/shots/2-savings-bank.save"
+        },
+        {
+          "beat": "The Consolidated Building goes up for sale",
+          "file": "src/showcase/archetypes/producer/shots/3-building.png",
+          "save": "src/showcase/archetypes/producer/shots/3-building.save"
+        }
+      ]
+    },
+    {
+      "id": "scaler",
+      "title": "Paragon",
+      "blurb": "You run a hero corps over a comic-book city at night, and the heroes earn Justice on their own. Reboot the timeline for Legacy, rewrite the multiverse for Continuity, then turn the Age for Canon: each layer wipes the one below it and hands it to automation. Between resets, Elseworlds run the corps under worse rules for permanent rewards.",
+      "line": "Scaler",
+      "topic": "Superhero comic × Layered incremental",
+      "path": "#/scaler/play",
+      "capture": {
+        "storageKey": "scaler-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "The first timeline: the corps, its first Reboot ready",
+          "file": "src/showcase/archetypes/scaler/shots/1-corps.png",
+          "save": "src/showcase/archetypes/scaler/shots/1-corps.save"
+        },
+        {
+          "beat": "Villain Uprising: an Elseworld after two Rewrites",
+          "file": "src/showcase/archetypes/scaler/shots/2-elseworld.png",
+          "save": "src/showcase/archetypes/scaler/shots/2-elseworld.save",
+          "eval": "const t = setInterval(() => { const tab = [...document.querySelectorAll('.olui-tabs__trigger')].find((el) => el.textContent.trim() === 'Elseworlds'); if (!tab) return; clearInterval(t); tab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }, 50)"
+        },
+        {
+          "beat": "The Silver Age: the first Canon hands Rewrites to automation",
+          "file": "src/showcase/archetypes/scaler/shots/3-age.png",
+          "save": "src/showcase/archetypes/scaler/shots/3-age.save",
+          "eval": "const t = setInterval(() => { const tab = [...document.querySelectorAll('.olui-tabs__trigger')].find((el) => el.textContent.trim() === 'Canon'); if (!tab) return; clearInterval(t); tab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }, 50)"
+        }
+      ]
+    },
+    {
+      "id": "scripter",
+      "title": "Inkfist Dojo",
+      "blurb": "You are an old master who can no longer fight, so you write kata: scrolls of moves your student performs one line per beat. Each challenger at the gate brings a pattern the old scroll cannot answer, and the word that answers it goes on the shelf. You never press strike; the scroll is the only verb.",
+      "line": "Scripter",
+      "topic": "Martial-arts dojo × Programming game",
+      "path": "#/scripter/play",
+      "capture": {
+        "storageKey": "scripter-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "Ox-Hide Ren's rematch: the fist is tempered",
+          "file": "src/showcase/archetypes/scripter/shots/1-ren.png",
+          "save": "src/showcase/archetypes/scripter/shots/1-ren.save"
+        },
+        {
+          "beat": "Four graduations on, the scroll parries Brother Gang",
+          "file": "src/showcase/archetypes/scripter/shots/2-gang.png",
+          "save": "src/showcase/archetypes/scripter/shots/2-gang.save"
+        },
+        {
+          "beat": "The Envoy's Gauntlet: one scroll names each challenger",
+          "file": "src/showcase/archetypes/scripter/shots/3-envoy.png",
+          "save": "src/showcase/archetypes/scripter/shots/3-envoy.save"
+        }
+      ]
+    },
+    {
+      "id": "skirmish",
+      "title": "Chrome & Cantrip",
+      "blurb": "Rain on the sprawl, and the old ley lines awake under its streets. Hire hustlers for scrip, sink taps for aether, and train Razorboys, Hexers and Riggers to send into three districts a rival crew wants too. Hold one, order the assault, and burn their safehouse before they burn yours.",
+      "line": "Skirmish",
+      "topic": "Occult cyberpunk × RTS",
+      "path": "#/skirmish/play",
+      "capture": {
+        "storageKey": "skirmish-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "Neon Narrows answers to your crew",
+          "file": "src/showcase/archetypes/skirmish/shots/1-district.png",
+          "save": "src/showcase/archetypes/skirmish/shots/1-district.save"
+        },
+        {
+          "beat": "The syndicate charter: the crew goes tier two",
+          "file": "src/showcase/archetypes/skirmish/shots/2-charter.png",
+          "save": "src/showcase/archetypes/skirmish/shots/2-charter.save"
+        },
+        {
+          "beat": "The assault: their safehouse at half",
+          "file": "src/showcase/archetypes/skirmish/shots/3-assault.png",
+          "save": "src/showcase/archetypes/skirmish/shots/3-assault.save"
+        }
+      ]
+    },
+    {
+      "id": "survivor",
+      "title": "One More Take",
+      "blurb": "You are the stunt double on an action set that never wraps. The effects crew fires your rigs on their own clocks while extras pour in from every side; all you choose is where to stand. Bank the reels the fallen drop, take the writers' pages, and hold the floor until the lead falls and someone calls CUT.",
+      "line": "Survivor",
+      "topic": "Action-movie stunt set × Survivors-like",
+      "path": "#/survivor/play",
+      "capture": {
+        "storageKey": "survivor-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "Rated G: the Pyro improvises the take",
+          "file": "src/showcase/archetypes/survivor/shots/1-pyro.png",
+          "save": "src/showcase/archetypes/survivor/shots/1-pyro.save",
+          "eval": "const t = setInterval(() => { if (!document.querySelector('.sheet')) return; clearInterval(t); const enter = () => new KeyboardEvent('keydown', { key: 'Enter' }); document.querySelector(\".star-pick[aria-label='The Pyro']\").dispatchEvent(enter()); document.querySelectorAll('.driver')[1].dispatchEvent(enter()); window.dispatchEvent(enter()); }, 50)",
+          "wait": 20000
+        },
+        {
+          "beat": "The call sheet: PG opens",
+          "file": "src/showcase/archetypes/survivor/shots/2-pg.png",
+          "save": "src/showcase/archetypes/survivor/shots/2-pg.save",
+          "scroll": ".ratings"
+        },
+        {
+          "beat": "Rated PG-13: the Wirework Ace on a harsher floor",
+          "file": "src/showcase/archetypes/survivor/shots/3-pg13.png",
+          "save": "src/showcase/archetypes/survivor/shots/3-pg13.save",
+          "eval": "const t = setInterval(() => { if (!document.querySelector('.sheet')) return; clearInterval(t); const enter = () => new KeyboardEvent('keydown', { key: 'Enter' }); document.querySelector(\".star-pick[aria-label='The Wirework Ace']\").dispatchEvent(enter()); document.querySelectorAll('.driver')[1].dispatchEvent(enter()); window.dispatchEvent(enter()); }, 50)",
+          "wait": 25000
+        }
+      ]
+    },
+    {
+      "id": "tug",
+      "title": "Hold the Causeway",
+      "blurb": "Fairhold and a neighbouring lord's keep face each other across a causeway one road wide. Raise yeomen, bowmen, knights and a mangonel, sound your horn to send them out in ranks, and hold the line past the middle so your engines can reach his gate. Every battle, won or lost, goes into the Chronicle, whose boons carry you up a march of fifteen fields to the Usurper's throne.",
+      "line": "Tug",
+      "topic": "Feudal siege × Lane push",
+      "path": "#/tug/play",
+      "capture": {
+        "storageKey": "tug-slot-0"
+      },
+      "shots": [
+        {
+          "beat": "Grubb's Ford: yeomen against yeomen on the causeway",
+          "file": "src/showcase/archetypes/tug/shots/1-ford.png",
+          "save": "src/showcase/archetypes/tug/shots/1-ford.save"
+        },
+        {
+          "beat": "The Mudhole: the line held past the middle, a mangonel at the gate",
+          "file": "src/showcase/archetypes/tug/shots/2-mudhole.png",
+          "save": "src/showcase/archetypes/tug/shots/2-mudhole.save"
+        },
+        {
+          "beat": "Camp: Dunmarrow's keep taken, Lady Vesk next on the march",
+          "file": "src/showcase/archetypes/tug/shots/3-chronicle.png",
+          "save": "src/showcase/archetypes/tug/shots/3-chronicle.save"
         }
       ]
     }
