@@ -5,16 +5,7 @@
  * retired verbs refuse and the retired chains read zero, and a save taken
  * mid-phase reloads into the same live set, even into a game past it.
  *
- * The reference player, phase by phase, through the game's own verbs:
- * - the box: clicks at the anchors' click rate, hires every clerk the moment
- *   it is affordable;
- * - the board: pins each card from the inbox at its `bestCell` the moment it
- *   arrives, never rearranges, and clears wall the moment it is affordable;
- * - the night: at every dawn buys roster places while affordable, then
- *   insomnia once an alibi holds, then plans the night with `planWatches`;
- * - opens each door the moment its record holds, and reads the last page.
- * It ticks through the TickDriver's live path, `processInterval`, so
- * insomnia's game speed applies.
+ * The reference player is `_player.ts`'s.
  *
  * Run: pnpm exec vite-node src/showcase/archetypes/phase-shifter/balance/arc-probe.ts
  */
@@ -22,16 +13,12 @@ import { Decimal, type DecimalSource, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
-  ANCHORS,
   MECHANISMS,
   PREDICTED_CLERKS,
   PREDICTED_NOTE_BUFFER,
   RECONSTRUCT_LEADS,
   SUSPECTS,
-  bestCell,
-  planWatches,
   predictBeats,
-  type DoorId,
 } from '../data';
 import {
   createPhaseShifterModules,
@@ -41,12 +28,12 @@ import {
   getCase,
   getNight,
 } from '../modules';
+import { createReferencePlayer } from './_player';
 
 /** Wall-seconds per interval the probe feeds the driver. */
 const WALL_STEP = 0.5;
 const MAX_WALL = 3600;
 const STALL_WALL = 600;
-const DOORS: DoorId[] = ['pin-board', 'reconstruct', 'box-returns'];
 
 const engine: Engine = bootTestEngine({
   modules: [...sharedBase, ...createPhaseShifterModules()],
@@ -97,35 +84,12 @@ function beat(name: string, cond: boolean): void {
   }
 }
 
-/** The reference player's dawn: roster, then insomnia, then the night's plan. */
-function dawn(): void {
-  while (night.rosterPlace.canPurchase.value) night.rosterPlace.purchase(1);
-  if (night.held.value.length > 0 && night.insomnia.canPurchase.value) night.insomnia.purchase(1);
-  night.setPlan(planWatches(night.view(true)));
-}
-
-let clickDebt = 0;
-let lastNight = -1;
+const player = createReferencePlayer(WALL_STEP);
 let terminated = 'maxWall';
 while (wall < MAX_WALL) {
-  clickDebt += ANCHORS.clickRate * WALL_STEP;
-  while (clickDebt >= 1) {
-    clickDebt -= 1;
-    box.read();
-  }
-  while (box.clerk.canPurchase.value) box.clerk.purchase(1);
-  while (board.inbox.value.length) {
-    const id = board.inbox.value[0];
-    const cell = bestCell(board.pins.value, board.side.value, id);
-    if (!cell || !board.pin(id, cell.x, cell.y)) break;
-  }
-  if (board.wall.canPurchase.value) board.wall.purchase(1);
-  if (life.isLive('watch').value && night.cycle.count.value !== lastNight) {
-    lastNight = night.cycle.count.value;
-    dawn();
-  }
-  for (const door of DOORS) if (life.open(door)) beat(`door: ${door}`, true);
-  if (box.readLast()) beat('last page', true);
+  const { opened, readLast } = player.step();
+  for (const door of opened) beat(`door: ${door}`, true);
+  if (readLast) beat('last page', true);
 
   beat('first clerk', num(box.clerk.count) >= 1);
   beat('box empty', num(box.pages) <= 0);
