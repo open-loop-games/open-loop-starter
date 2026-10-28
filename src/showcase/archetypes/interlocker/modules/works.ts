@@ -2,6 +2,7 @@ import {
   computed,
   createCostRequirement,
   createGateRequirement,
+  addRateSource,
   createModifierChain,
   createMultiplicativeModifier,
   createProducerCategory,
@@ -10,6 +11,7 @@ import {
   createResourceBag,
   Decimal,
   Formula,
+  getRate,
   reactive,
   ref,
   subtractResource,
@@ -93,7 +95,7 @@ export interface WorksApi {
   res: Record<ResourceId, Resource<Decimal>>;
   /** each stock's bin */
   cap: Record<ResourceId, ComputedRef<number>>;
-  /** net change per second last tick, across every channel: buildings, workshops, rations, bins */
+  /** net rate per second, across every rate source: buildings, workshops, rations, boilers; 0 at a full bin */
   net: Record<ResourceId, number>;
   buildings: PurchasableCategory<BuildingDef>;
   research: PurchasableCategory<ResearchDef>;
@@ -345,19 +347,14 @@ export function createWorksModule(): EngineModule {
         ),
       ) as Record<RoleId, RoleStatus>;
 
-      // TODO(expansion): a flow ledger. getTotalRate sees producers only, not conversions
-      // or a bag's clamp, so the true net rate is the stock delta across a whole tick.
-      const net = reactive(Object.fromEntries(RESOURCES.map((r) => [r.id, 0]))) as Record<
-        ResourceId,
-        number
-      >;
-      const before = {} as Record<ResourceId, number>;
-      // Snapshot at the end of each tick and diff at the end of the next, so the producer
-      // categories' ticks, which run first, are inside the window.
-      const snapshot = () => {
-        for (const def of RESOURCES) before[def.id] = toNumber(res[def.id].value);
-      };
-      snapshot();
+      const net = reactive(
+        Object.fromEntries(
+          RESOURCES.map((r) => [r.id, computed(() => toNumber(getRate(res[r.id])))]),
+        ) as Record<ResourceId, ComputedRef<number>>,
+      );
+      // The boilers' coal, burned by hand below, is the one rate no producer reports.
+      const coalBurned = ref(0);
+      addRateSource(res.coal, { text: 'Boilers', rate: () => -coalBurned.value });
 
       const fed = ref(1);
       let warnedHunger = false;
@@ -475,12 +472,8 @@ export function createWorksModule(): EngineModule {
         // The boilers burn the coal for the steam drawn; the workshops have eaten first.
         const burn = Math.min(drawn / STEAM_PER_COAL, toNumber(res.coal.value));
         if (burn > 0) subtractResource(res.coal, burn);
-
-        for (const def of RESOURCES)
-          net[def.id] = (toNumber(res[def.id].value) - before[def.id]) / dt;
-        snapshot();
+        coalBurned.value = burn / dt;
       });
-      ctx.onLoad(snapshot);
 
       const api: WorksApi = {
         res,
