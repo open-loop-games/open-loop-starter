@@ -91,7 +91,7 @@ winter larder and the boilers are the player's, and the probe's runner provision
 | Every charter held | 1836–1922s |
 | Le Contremaître employed | 2246–2340s |
 | The tenth Exposition | 4500–4576s |
-| The Grand Prix (spine: spring 1867, 7200s) | 6167–6957s |
+| The Grand Prix (up to 7000s) | 6167–6957s |
 
 Ranges are the arc probe at tick sizes 0.25 s to 2 s. `manifest.ts` holds every beat.
 

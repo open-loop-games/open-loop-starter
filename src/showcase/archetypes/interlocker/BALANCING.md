@@ -129,7 +129,8 @@ Every key is read at its reader site through `tunable()`; the registry is in
 
 The economy is tick-robust: 0.25 s to 2 s moves an early beat by a few seconds. The
 Grand Prix's window is wider, about 13 minutes, because late medals rise a renown at a
-time and a tick can carry a run across one.
+time and a tick can carry a run across one. A healthy arc stages it by 7000 s. The spine
+prices it at the spring of 1867, 7200 s, and the measured arc earns that medal sooner.
 
 ## Known thin
 
