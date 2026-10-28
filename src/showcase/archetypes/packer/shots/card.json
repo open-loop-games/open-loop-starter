@@ -1,0 +1,26 @@
+{
+  "id": "packer",
+  "title": "Hardpoint",
+  "blurb": "A drone swarm presses the breach line, and you are the fitter aboard the frigate Hardpoint. The guns fire on their own; you plate out the hull and fit each module where its neighbours make it worth most. Break each sector's carrier inside thirty seconds of fire, then recommission into the lancer Longreach and the flagship Sovereign.",
+  "line": "Packer",
+  "topic": "Military sci-fi × Backpack battler",
+  "path": "#/packer/play",
+  "capture": { "storageKey": "packer-slot-0" },
+  "shots": [
+    {
+      "beat": "The frigate: Railgun schematic recovered",
+      "file": "src/showcase/archetypes/packer/shots/1-railgun.png",
+      "save": "src/showcase/archetypes/packer/shots/1-railgun.save"
+    },
+    {
+      "beat": "The cruiser keel plated: the breach line opens",
+      "file": "src/showcase/archetypes/packer/shots/2-breach-line.png",
+      "save": "src/showcase/archetypes/packer/shots/2-breach-line.save"
+    },
+    {
+      "beat": "Sovereign: the Breach Mother destroyed, the Dreadnought ahead",
+      "file": "src/showcase/archetypes/packer/shots/3-breach-mother.png",
+      "save": "src/showcase/archetypes/packer/shots/3-breach-mother.save"
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 /**
  * Shared probe fixture — not runnable on its own.
  *
- * Builds a real packer engine and plays the arc under a greedy fitter. The fitter is
+ * Plays the arc under a greedy fitter. `createReferenceFitter` decides against whichever
+ * engine is live; `runArc` boots a real packer engine and records the arc. The fitter is
  * balance-harness tooling, not a mechanic: Hardpoint ships no automation. It stands in for
  * the spine's reference player, so its rules are the spine's assumptions:
  * - every tick it buys each hull section and refit it can afford, and recommissions as
@@ -113,20 +114,31 @@ interface Fit {
   facing: number;
 }
 
-/** Play the arc under the fitter until the Dreadnought falls, or `maxSimSeconds`. */
-export function runArc(options: ArcOptions = {}): ArcRecord {
-  const { dt = DT, maxSimSeconds = 4 * 3600, trace = false } = options;
-  const handle = bootTestEngine({
-    modules: [...sharedBase, ...createPackerModules()],
-    persistenceNamespacePrefix: 'packer-probe',
-    intervalRate: 1 / dt,
-  });
+/** What a recommission's caller hears: it clears the board the relieved ship fitted. */
+export interface FitterHooks {
+  /** just before the recommission, with the relieved ship's board still fitted */
+  onRelieved?: () => void;
+  /** just after it, with the next ship commissioned */
+  onCommissioned?: () => void;
+}
+
+export interface ReferenceFitter {
+  /** The fitter's decisions for one tick; call it after each tick the caller advances. */
+  step: () => void;
+  counts: ArcRecord['counts'];
+  /** what the last fitting pass scored for */
+  objective: () => Objective;
+}
+
+const num = (v: unknown) => toNumber(Decimal.fromValue(v as never));
+const price = (p: Purchasable) => num(p.getCost(1));
+
+/** Binds the fitter to the running engine's modules. */
+export function createReferenceFitter(hooks: FitterHooks = {}): ReferenceFitter {
   const yard = getYard();
   const board = getBoard();
   const fleet = getFleet();
   const line = getLine();
-  const num = (v: unknown) => toNumber(Decimal.fromValue(v as never));
-  const price = (p: Purchasable) => num(p.getCost(1));
   const counts = {
     passes: 0,
     steers: 0,
@@ -458,41 +470,11 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     return !!c && fleet.authoredFallen.value <= CARRIERS.indexOf(c);
   };
 
-  // ── beats ──
-  const beats: BeatRecord[] = [];
-  const seen = new Set<string>();
-  const mark = (id: string, t: number) => {
-    if (seen.has(id)) return;
-    seen.add(id);
-    beats.push({ id, t, income: board.salvageRate.value, firepower: board.firepower.value });
-  };
-  const lines: string[] = [];
-  const boards: ArcRecord['boards'] = [];
-  const snapshot = () => {
-    const rows: string[] = [];
-    for (let y = 0; y < HULL_H; y++) {
-      let row = '';
-      for (let x = 0; x < HULL_W; x++) {
-        const o = board.occupantAt(x, y);
-        row += o ? PIECE_BY_ID[o.type].glyph : board.isOpen(x, y) ? '_' : ' ';
-      }
-      rows.push(row);
-    }
-    const fitted: Partial<Record<PieceId, number>> = {};
-    for (const p of board.placed.value) fitted[p.type] = (fitted[p.type] ?? 0) + 1;
-    boards.push({ ship: fleet.ship.value, rows, fitted });
-  };
-
-  let ended: ArcRecord['ended'] = 'time';
-  let anomaly: string | undefined;
-  let sim = 0;
   let signature = '';
   let gaveUp = '';
   let retryAt = Infinity;
-  while (sim < maxSimSeconds) {
-    handle.engine.tickDriver.tickOnce();
-    sim += dt;
-    const t = sim;
+
+  function step() {
     const e = line.engagement.value;
     if (!e && line.last.value === 'withdrew') {
       counts.withdrawals++;
@@ -500,9 +482,9 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     }
     structure();
     if (line.canRecommission.value) {
-      snapshot();
+      hooks.onRelieved?.();
       line.recommission();
-      mark(`${fleet.ship.value}:commissioned`, t);
+      hooks.onCommissioned?.();
     }
     // The objective: firepower while the sector's carrier can be engaged and has not been given up on.
     const stage = `${fleet.ship.value}|${yard.hull.getAll().filter((x) => x.purchasable.active.value).length}|${yard.refits.getAll().filter((x) => x.purchasable.active.value).length}|${PIECES.filter((p) => yard.unlocked(p.id)).length}|${fleet.honours.value}|${fleet.conditions.value.join('+')}`;
@@ -547,6 +529,63 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
         retryAt = wantSalvage;
       }
     }
+  }
+
+  return { step, counts, objective: () => objective };
+}
+
+/** Play the arc under the fitter until the Dreadnought falls, or `maxSimSeconds`. */
+export function runArc(options: ArcOptions = {}): ArcRecord {
+  const { dt = DT, maxSimSeconds = 4 * 3600, trace = false } = options;
+  const handle = bootTestEngine({
+    modules: [...sharedBase, ...createPackerModules()],
+    persistenceNamespacePrefix: 'packer-probe',
+    intervalRate: 1 / dt,
+  });
+  const yard = getYard();
+  const board = getBoard();
+  const fleet = getFleet();
+  const line = getLine();
+
+  // ── beats ──
+  let sim = 0;
+  const beats: BeatRecord[] = [];
+  const seen = new Set<string>();
+  const mark = (id: string, t: number) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    beats.push({ id, t, income: board.salvageRate.value, firepower: board.firepower.value });
+  };
+  const lines: string[] = [];
+  const boards: ArcRecord['boards'] = [];
+  const snapshot = () => {
+    const rows: string[] = [];
+    for (let y = 0; y < HULL_H; y++) {
+      let row = '';
+      for (let x = 0; x < HULL_W; x++) {
+        const o = board.occupantAt(x, y);
+        row += o ? PIECE_BY_ID[o.type].glyph : board.isOpen(x, y) ? '_' : ' ';
+      }
+      rows.push(row);
+    }
+    const fitted: Partial<Record<PieceId, number>> = {};
+    for (const p of board.placed.value) fitted[p.type] = (fitted[p.type] ?? 0) + 1;
+    boards.push({ ship: fleet.ship.value, rows, fitted });
+  };
+  const fitter = createReferenceFitter({
+    onRelieved: snapshot,
+    onCommissioned: () => mark(`${fleet.ship.value}:commissioned`, sim),
+  });
+  const { counts } = fitter;
+
+  let ended: ArcRecord['ended'] = 'time';
+  let anomaly: string | undefined;
+  while (sim < maxSimSeconds) {
+    handle.engine.tickDriver.tickOnce();
+    sim += dt;
+    const t = sim;
+    const e = line.engagement.value;
+    fitter.step();
     const s = num(yard.salvage.value);
     if (!Number.isFinite(s) || !Number.isFinite(board.salvageRate.value)) {
       anomaly = `non-finite at t=${t}: salvage=${s} rate=${board.salvageRate.value}`;
@@ -565,7 +604,7 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     }
     if (trace && t % 60 === 0) {
       lines.push(
-        `t=${t} ${fleet.ship.value} salvage=${s.toExponential(2)} rate=${board.salvageRate.value.toExponential(2)} fp=${board.firepower.value.toExponential(2)} cells=${board.placed.value.length}/${board.openCells.value} obj=${objective} ${fleet.conditions.value.join('+') || 'calm'}${e ? ` ENGAGED ${e.remaining.toExponential(2)}` : ''}`,
+        `t=${t} ${fleet.ship.value} salvage=${s.toExponential(2)} rate=${board.salvageRate.value.toExponential(2)} fp=${board.firepower.value.toExponential(2)} cells=${board.placed.value.length}/${board.openCells.value} obj=${fitter.objective()} ${fleet.conditions.value.join('+') || 'calm'}${e ? ` ENGAGED ${e.remaining.toExponential(2)}` : ''}`,
       );
     }
     if (fleet.storyEnded.value) {
