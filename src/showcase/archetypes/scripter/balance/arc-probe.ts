@@ -1,6 +1,6 @@
 /**
  * Scripter: arc probe. Plays the shipping game headless under the reference sensei
- * (`./_engine.ts`) and prints each beat beside the walk's (`../data/spine.ts` `WALK`).
+ * (`./_sensei.ts`) and prints each beat beside the walk's (`../data/spine.ts` `WALK`).
  * Prints; never asserts. Bouts are seeded from the save, so one run is the measurement.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/scripter/balance/arc-probe.ts [seconds] [--beats]`

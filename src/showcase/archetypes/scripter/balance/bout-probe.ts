@@ -14,7 +14,8 @@
  */
 
 import { CHALLENGERS, PAR, TECHNIQUES, type TechniqueId } from '../data';
-import { boutLines, fightBouts, referenceScroll } from './_engine';
+import { fightBouts } from './_engine';
+import { boutLines, referenceScroll } from './_sensei';
 
 const SEEDS = Number(process.argv[2] ?? 300);
 const knowsAll = () => true;

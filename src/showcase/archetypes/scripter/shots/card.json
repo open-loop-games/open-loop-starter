@@ -1,0 +1,26 @@
+{
+  "id": "scripter",
+  "title": "Inkfist Dojo",
+  "blurb": "You are an old master who can no longer fight, so you write kata: scrolls of moves your student performs one line per beat. Each challenger at the gate brings a pattern the old scroll cannot answer, and the word that answers it goes on the shelf. You never press strike; the scroll is the only verb.",
+  "line": "Scripter",
+  "topic": "Martial-arts dojo × Programming game",
+  "path": "#/scripter/play",
+  "capture": { "storageKey": "scripter-slot-0" },
+  "shots": [
+    {
+      "beat": "Ox-Hide Ren's rematch: the fist is tempered",
+      "file": "src/showcase/archetypes/scripter/shots/1-ren.png",
+      "save": "src/showcase/archetypes/scripter/shots/1-ren.save"
+    },
+    {
+      "beat": "Four graduations on, the scroll parries Brother Gang",
+      "file": "src/showcase/archetypes/scripter/shots/2-gang.png",
+      "save": "src/showcase/archetypes/scripter/shots/2-gang.save"
+    },
+    {
+      "beat": "The Envoy's Gauntlet: one scroll names each challenger",
+      "file": "src/showcase/archetypes/scripter/shots/3-envoy.png",
+      "save": "src/showcase/archetypes/scripter/shots/3-envoy.save"
+    }
+  ]
+}
