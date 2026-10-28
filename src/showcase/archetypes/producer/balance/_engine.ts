@@ -1,23 +1,14 @@
 /**
  * Shared probe fixture, not runnable on its own. Builds a real producer engine
- * and plays the arc on it.
- *
- * The runner is the reference player: it works only what a player works by hand.
- * It deals at the active rate, and through every closing spree; hand-buys units and
- * phones by the shipping acquisition policy; takes memos, hires and upgrades on
- * sight; and catches tips at a stated rate. It stops each chore when the desk that
- * automates it is hired and on duty (`/work/studio/CLAUDE.md` § automation as game
- * code). From then on the shipping desks in `../modules/automation.ts` play, so the
- * rule under measurement is the one the game ships. Once the ending is offered it
- * sends the acquisitions desk and the board home, buys nothing else, and buys the
- * ending when the cash is there.
+ * and plays the arc on it under `_player.ts`'s reference player, recording the
+ * beats it reaches.
  *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list for
  * tick-by-tick behavioral specs; this assembles an instrumented arc runner that
  * records beats and reads magnitudes.
  */
 
-import { Decimal, createSeededRNG, type TickDriver } from '@open-loop/engine';
+import { Decimal, type TickDriver } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import {
   AutomationKey,
@@ -25,7 +16,6 @@ import {
   OfflineKey,
   StandingKey,
   TipsKey,
-  acquisitionPolicy,
   createProducerModules,
   type AutomationApi,
   type AutomationModuleOptions,
@@ -34,7 +24,8 @@ import {
   type StandingApi,
   type TipsApi,
 } from '../modules';
-import { ACTIVE_DEAL_RATE, REFERENCE_CATCH, type HireId } from '../data';
+import { ACTIVE_DEAL_RATE } from '../data';
+import { createReferencePlayer, type PlayerOptions } from './_player';
 
 /** Sim seconds per runner step: the hand acts four times a second. */
 export const DT = 0.25;
@@ -47,13 +38,10 @@ export interface Beat {
   t: number;
 }
 
-export interface ArcOptions {
+/** The arc's options; `dealRate`, `catchRate` and `hireBookkeeper` set the player's. */
+export interface ArcOptions extends Omit<PlayerOptions, 'dt' | 'seed'> {
   /** Sim seconds to run. */
   seconds: number;
-  /** Deals per second the hand closes before the sales desk. */
-  dealRate?: number;
-  /** Buy the night bookkeeper when it is affordable. The cell's arc never does. */
-  hireBookkeeper?: boolean;
   /**
    * Times the player is away. At `at` the runner hands `seconds` to the shipping
    * catch-up; the arc resumes at the return. A beat reached while away is recorded
@@ -62,8 +50,6 @@ export interface ArcOptions {
   offlinePeriods?: { at: number; seconds: number }[];
   /** Probe-side variants of the acquisitions desk. Unset: the shipping desk. */
   automation?: AutomationModuleOptions;
-  /** Share of tips the player catches. Default: the reference player's. */
-  catchRate?: number;
   /** Seeds the engine's draws (tip clock, effects) and the player's catch rolls. */
   seed?: number;
   /** Unique persistence namespace prefix, so concurrent runs share no persistent context. */
@@ -88,7 +74,7 @@ export interface ArcResult {
 
 /** Play one arc. The caller reads the end state off the returned APIs, then disposes. */
 export async function runArc(options: ArcOptions): Promise<ArcResult> {
-  const { seconds, dealRate = ACTIVE_DEAL_RATE, catchRate = REFERENCE_CATCH, seed = 1 } = options;
+  const { seconds, seed = 1 } = options;
   const handle = bootTestEngine({
     modules: createProducerModules({ automation: options.automation }),
     intervalRate: 1 / DT,
@@ -100,14 +86,13 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
   const offline = handle.engine.tryInject(OfflineKey)!;
   const tips = handle.engine.tryInject(TipsKey)!;
   const standing = handle.engine.tryInject(StandingKey)!;
-  const working = (id: HireId) => automation.working(id);
-  const playerRng = createSeededRNG(seed + 7919);
-  const spree = tips.effects.isActive('spree');
-  const buyOnSight = (
-    items: { purchasable: { canPurchase: { value: boolean }; purchase(n: number): unknown } }[],
-  ) => {
-    for (const e of items) if (e.purchasable.canPurchase.value) e.purchasable.purchase(1);
-  };
+  const player = createReferencePlayer(handle.engine, {
+    dt: DT,
+    dealRate: options.dealRate,
+    catchRate: options.catchRate,
+    hireBookkeeper: options.hireBookkeeper,
+    seed,
+  });
 
   const beats: Beat[] = [];
   const seen = new Set<string>();
@@ -120,10 +105,7 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
   const away = new Map((options.offlinePeriods ?? []).map((p) => [p.at, p.seconds]));
 
   let t = 0;
-  let owedClicks = 0;
   let handBuys = 0;
-  let tipSeen = false;
-  let tipWanted = false;
   while (t < seconds) {
     const leave = away.get(t);
     if (leave !== undefined) {
@@ -131,52 +113,7 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
       t += offline.catchUp(handle.engine.tickDriver, now - leave * 1000, now).caughtUpSeconds;
     }
 
-    // A tip: the player decides once, when it comes up, whether this one is caught.
-    if (tips.current.value === null) tipSeen = false;
-    else if (!tipSeen) {
-      tipSeen = true;
-      tipWanted = playerRng() < catchRate;
-    }
-    if (tipSeen && tipWanted) tips.catchTip();
-
-    // The hand: it deals until the sales desk takes over, and through every spree.
-    if (!working('sales-desk') || spree.value) {
-      owedClicks += DT * dealRate;
-      while (owedClicks >= 1) {
-        owedClicks -= 1;
-        firm.deal();
-      }
-    }
-
-    // The ending: send the spending desks home and save for it.
-    const endingOffered = firm.ending.visible.value && !firm.ending.active.value;
-    if (endingOffered) {
-      automation.deskOn['acquisitions-desk'].value = false;
-      automation.deskOn.board.value = false;
-      if (firm.ending.canPurchase.value) firm.ending.purchase(1);
-    }
-
-    if (!endingOffered) buyOnSight(automation.executives.getAll());
-    if (!endingOffered && options.hireBookkeeper && offline.bookkeeper.canPurchase.value) {
-      offline.bookkeeper.purchase(1);
-    }
-    if (!endingOffered) {
-      buyOnSight(standing.upgrades.getAll());
-      buyOnSight(tips.upgrades.getAll());
-    }
-    if (!endingOffered && !working('board')) buyOnSight(firm.management.getAll());
-    if (!endingOffered && !working('acquisitions-desk')) {
-      for (;;) {
-        const affordable = [
-          ...firm.subsidiaries.getAll().map((e) => e.producer),
-          automation.phone,
-        ].filter((p) => p.purchasable?.canPurchase.value);
-        const pick = acquisitionPolicy.pick(affordable);
-        if (!pick) break;
-        pick.purchasable!.purchase(1);
-        handBuys++;
-      }
-    }
+    handBuys += player.step();
 
     await handle.tick(1);
     t += DT;

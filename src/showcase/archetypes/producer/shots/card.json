@@ -1,0 +1,26 @@
+{
+  "id": "producer",
+  "title": "Consolidated Holdings",
+  "blurb": "You found a holding company on one pushcart and close its deals by hand. Buy newsstands, diners and mills on up to savings banks, each seller asking more than the last, then hire a sales desk, an acquisitions desk and a board to run the firm for you. Keep an eye on the wire for tips, and grow until the firm can buy the tallest building in town.",
+  "line": "Producer",
+  "topic": "Small-town tycoon × Incremental",
+  "path": "#/producer/play",
+  "capture": { "storageKey": "producer-slot-0" },
+  "shots": [
+    {
+      "beat": "Two minutes in: the sales desk takes over the deals",
+      "file": "src/showcase/archetypes/producer/shots/1-sales-desk.png",
+      "save": "src/showcase/archetypes/producer/shots/1-sales-desk.save"
+    },
+    {
+      "beat": "The first savings bank, with the executive floor hired",
+      "file": "src/showcase/archetypes/producer/shots/2-savings-bank.png",
+      "save": "src/showcase/archetypes/producer/shots/2-savings-bank.save"
+    },
+    {
+      "beat": "The Consolidated Building goes up for sale",
+      "file": "src/showcase/archetypes/producer/shots/3-building.png",
+      "save": "src/showcase/archetypes/producer/shots/3-building.save"
+    }
+  ]
+}
