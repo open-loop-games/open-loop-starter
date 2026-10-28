@@ -1,0 +1,28 @@
+{
+  "id": "scaler",
+  "title": "Paragon",
+  "blurb": "You run a hero corps over a comic-book city at night, and the heroes earn Justice on their own. Reboot the timeline for Legacy, rewrite the multiverse for Continuity, then turn the Age for Canon: each layer wipes the one below it and hands it to automation. Between resets, Elseworlds run the corps under worse rules for permanent rewards.",
+  "line": "Scaler",
+  "topic": "Superhero comic × Layered incremental",
+  "path": "#/scaler/play",
+  "capture": { "storageKey": "scaler-slot-0" },
+  "shots": [
+    {
+      "beat": "The first timeline: the corps, its first Reboot ready",
+      "file": "src/showcase/archetypes/scaler/shots/1-corps.png",
+      "save": "src/showcase/archetypes/scaler/shots/1-corps.save"
+    },
+    {
+      "beat": "Villain Uprising: an Elseworld after two Rewrites",
+      "file": "src/showcase/archetypes/scaler/shots/2-elseworld.png",
+      "save": "src/showcase/archetypes/scaler/shots/2-elseworld.save",
+      "eval": "const t = setInterval(() => { const tab = [...document.querySelectorAll('.olui-tabs__trigger')].find((el) => el.textContent.trim() === 'Elseworlds'); if (!tab) return; clearInterval(t); tab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }, 50)"
+    },
+    {
+      "beat": "The Silver Age: the first Canon hands Rewrites to automation",
+      "file": "src/showcase/archetypes/scaler/shots/3-age.png",
+      "save": "src/showcase/archetypes/scaler/shots/3-age.save",
+      "eval": "const t = setInterval(() => { const tab = [...document.querySelectorAll('.olui-tabs__trigger')].find((el) => el.textContent.trim() === 'Canon'); if (!tab) return; clearInterval(t); tab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }, 50)"
+    }
+  ]
+}
