@@ -27,7 +27,6 @@ async function main(): Promise<void> {
   const game = createGame();
   const handle = bootTestEngine({
     modules: game.modules,
-    accessor: game.accessor,
     intervalRate: INTERVAL_RATE,
     persistenceNamespacePrefix: 'game-probe',
   });

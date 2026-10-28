@@ -56,7 +56,7 @@ export interface BootTestEngineOptions {
    * entropy, and a behavioral run would draw differently every time.
    */
   seed?: number;
-  /** The game's accessor or accessor factory, as its own boot passes to `bootEngine`. */
+  /** The game's accessor options (state paths, `wrap`), as its own boot passes to `bootEngine`. */
   accessor?: EngineOptions['accessor'];
 }
 

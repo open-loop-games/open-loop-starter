@@ -22,6 +22,6 @@ describe('saved flags', () => {
   });
 
   it('throws on a flag id the game does not list', () => {
-    expect(() => accessor().getFlag('assistance-unlockd')).toThrow(/GAME_FLAGS/);
+    expect(() => accessor().getFlag('assistance-unlockd')).toThrow(/no flag 'assistance-unlockd'/);
   });
 });

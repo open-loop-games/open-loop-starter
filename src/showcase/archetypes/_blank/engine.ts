@@ -31,7 +31,6 @@ export function createGameEngine(options?: GameEngineOptions): { engine: Engine 
   const modules = [...game.modules, ...(options?.extraModules ?? [])];
   const engine = bootEngine({
     gameId: GAME_ID,
-    accessor: game.accessor,
     persistenceNamespace: options?.persistenceNamespace,
     maxDeltaTime: options?.maxDeltaTime,
     mods: [

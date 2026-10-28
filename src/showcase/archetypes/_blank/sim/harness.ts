@@ -37,7 +37,6 @@ export function boot(): Engine {
   const game = createGame();
   handle = bootTestEngine({
     modules: [...sharedBase, ...game.modules],
-    accessor: game.accessor,
     persistenceNamespacePrefix: 'game-test',
     intervalRate: INTERVAL_RATE,
   });

@@ -27,15 +27,12 @@
  * not throttled. Node has no `Worker`, so tests and balance probes keep the
  * engine's native default. A caller's own `timerProvider` wins.
  *
- * Game state for Gates and effects: pass `accessor` through, as for
- * `createEngine`. The usual form is a factory over the engine's
- * `createGameStateAccessor`, given the game's own flags, state paths and rates:
- * `accessor: (services) => createGameStateAccessor(services, { getFlag, setFlag })`.
- * The engine calls it once at `start()`, before any module installs, so each
- * engine gets its own. A method left out fails the Gate, effect or dialog that
- * needs it when that is built, naming the method. `_blank`'s `createGame` is
- * the worked example. A game whose Gates read only resources, categories and
- * cumulative totals needs no accessor.
+ * Game state for Gates and effects: the engine builds its accessor at
+ * `start()`, with flags from `createFlag` and rates from rate sources. Pass
+ * `accessor` through, as for `createEngine`, only for state paths
+ * (`{ getStateAt, setStateAt }`) or a `wrap`. A state Gate or effect without
+ * them fails where it is built, naming the method. `_blank`'s flags module is
+ * the worked example.
  *
  * Error reporting: `bootApp` installs an `app.config.errorHandler`. Without
  * one, Vue degrades a throw inside a lifecycle hook or event handler to a
