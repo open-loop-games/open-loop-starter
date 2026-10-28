@@ -6,6 +6,7 @@ import {
   createMultiplicativeModifier,
   createProducerCategory,
   createPurchasableCategory,
+  getRate,
   persistent,
   selectionPaybackPeriod,
   setupPolicyAutoPurchase,
@@ -181,7 +182,7 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): E
       });
       phones.register({ id: 'phone' });
       const phone = phones.getProducer('phone')!;
-      const income = computed(() => Decimal.add(firm.incomeRate.value, phones.getTotalRate(cash)));
+      const income = computed(() => getRate(cash));
 
       // Once the board sits, the acquisitions desk holds back the price of the cheapest open
       // memo. Otherwise units priced just under a memo absorb every dollar, and the memo, a
