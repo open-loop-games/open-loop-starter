@@ -3,8 +3,9 @@
  *
  * Builds a real interlocker engine and plays it Exposition after Exposition. The
  * automation tiers are forced to the top, so the foreman's three bureaux play the works
- * with the shipping policies of `../modules/automation.ts`. This runner works only what
- * stays the player's:
+ * with the shipping policies of `../modules/automation.ts`. The runner, `createForeman`,
+ * works only what stays the player's; the arc runs it, and so does the games site's beat
+ * script:
  * - it raises a market garden while the gardens at winter's yield, with a full larder,
  *   cannot carry the crew through a season, and a Boiler House while the boilers fall
  *   short of what is drawn;
@@ -106,24 +107,25 @@ export interface ArcOptions {
   start?: { renown: number; charters: CharterId[] };
 }
 
-/** Play Expositions under the foreman until `expositions` are staged, or `maxSimSeconds`. */
-export function runArc(options: ArcOptions = {}): ArcRecord {
-  const {
-    expositions: stopAfter = 5,
-    maxSimSeconds = 7200,
-    dt = DT,
-    trace = false,
-    start,
-  } = options;
-  const handle = bootTestEngine({
-    modules: [...sharedBase, ...createInterlockerModules()],
-    persistenceNamespacePrefix: 'interlocker-probe',
-    intervalRate: 1 / dt,
-  });
+/** The player's part, bound to the running engine's modules. */
+export interface Foreman {
+  /** Once a sim-second: provision the larder and the boilers, deliver every order the bins fill. */
+  tend: () => void;
+  /** Whether the jury sits and the medal reaches the one the spine predicts. */
+  ready: () => boolean;
+  /** Stage the Exposition, then petition; returns the renown gained. */
+  stage: () => number;
+}
+
+/**
+ * Forces the automation tiers to the top and grants `start`'s empire, if given; with a
+ * `start`, he petitions nothing. The caller advances the engine and calls `tend` once a
+ * sim-second, and `ready`, then `stage`, every tick.
+ */
+export function createForeman(start?: ArcOptions['start']): Foreman {
   const works = getWorks();
   const empire = getEmpire();
   const expo = getExposition();
-  const n = (v: unknown) => toNumber(v as number);
   if (start) {
     addResource(empire.renown, start.renown);
     // Granted, not bought, so lifetime renown stays `start.renown`.
@@ -131,13 +133,9 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
   }
   const owned = (id: BuildingId) => works.owned(id);
   const ministry = getMinistry();
-  const telegraph = getTelegraph();
-  let lastWire = 0;
   const calendar = getCalendar();
   getAutomation().tiers.unlock('academie');
   let medal = medalFor(empireOf(empire));
-
-  // ── the player's part ──
 
   function petition(): void {
     if (start) return;
@@ -171,6 +169,46 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     for (const o of ministry.orders.value) if (ministry.canDeliver(o.id)) ministry.deliver(o.id);
   }
 
+  return {
+    tend() {
+      provision();
+      deliver();
+    },
+    ready: () => expo.canStage.value && expo.gain.value >= medal,
+    stage() {
+      const gain = expo.stage();
+      petition();
+      medal = medalFor(empireOf(empire));
+      return gain;
+    },
+  };
+}
+
+/** Play Expositions under the foreman until `expositions` are staged, or `maxSimSeconds`. */
+export function runArc(options: ArcOptions = {}): ArcRecord {
+  const {
+    expositions: stopAfter = 5,
+    maxSimSeconds = 7200,
+    dt = DT,
+    trace = false,
+    start,
+  } = options;
+  const handle = bootTestEngine({
+    modules: [...sharedBase, ...createInterlockerModules()],
+    persistenceNamespacePrefix: 'interlocker-probe',
+    intervalRate: 1 / dt,
+  });
+  const works = getWorks();
+  const empire = getEmpire();
+  const expo = getExposition();
+  const n = (v: unknown) => toNumber(v as number);
+  const owned = (id: BuildingId) => works.owned(id);
+  const ministry = getMinistry();
+  const telegraph = getTelegraph();
+  let lastWire = 0;
+  const calendar = getCalendar();
+  const foreman = createForeman(start);
+
   // ── accounting ──
 
   const beats: [number, string][] = [];
@@ -203,10 +241,7 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
   for (let t = 0; t < maxSimSeconds; t += dt) {
     handle.engine.tickDriver.tickOnce();
     sim += dt;
-    if (Math.round(sim * 2) % 2 === 0) {
-      provision();
-      deliver();
-    }
+    if (Math.round(sim * 2) % 2 === 0) foreman.tend();
     for (const w of telegraph.log.since(lastWire)) {
       if (w.kind === 'order') beats.push([sim, `run ${records.length + 1}: ${w.text}`]);
       lastWire = w.seq;
@@ -233,16 +268,14 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
       `run ${run}: the compagnons go hungry (fed ${works.fed.value.toFixed(2)})`,
     );
 
-    if (expo.canStage.value && expo.gain.value >= medal) {
+    if (foreman.ready()) {
       const planes = n(works.res.aeroplanes.value);
       const atBuilt = built();
       const crew = works.workersTotal.value;
       const score = expo.score.value;
       const dossier = ministry.dossier.value;
-      const gain = expo.stage();
+      const gain = foreman.stage();
       const runSeconds = sim - runStart;
-      petition();
-      medal = medalFor(empireOf(empire));
       records.push({
         at: sim,
         runSeconds,

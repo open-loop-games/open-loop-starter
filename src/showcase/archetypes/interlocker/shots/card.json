@@ -1,0 +1,27 @@
+{
+  "id": "interlocker",
+  "title": "The Aluminium Empire",
+  "blurb": "In 1855 aluminium comes cheap, forty years early, and the Second Empire builds aeroplanes. Raise timber yards and bauxite pits at Le Bourget, patent the workshops that turn them into spars, engines and monoplanes, and keep the compagnons seated and fed through the seasons. Then stage an Exposition Universelle, fill the Ministry of War's orders, and play for the Grand Prix of 1867.",
+  "line": "Interlocker",
+  "topic": "Second Empire alt-history × Civ-builder",
+  "path": "#/interlocker/play",
+  "capture": { "storageKey": "interlocker-slot-0" },
+  "shots": [
+    {
+      "beat": "The first aeroplane: every workshop on the drawing inked",
+      "file": "src/showcase/archetypes/interlocker/shots/1-aeroplane.png",
+      "save": "src/showcase/archetypes/interlocker/shots/1-aeroplane.save"
+    },
+    {
+      "beat": "After the first Exposition: a Ministry of War order on the books",
+      "file": "src/showcase/archetypes/interlocker/shots/2-ministry.png",
+      "save": "src/showcase/archetypes/interlocker/shots/2-ministry.save"
+    },
+    {
+      "beat": "Every charter granted, and Le Contremaître employed",
+      "file": "src/showcase/archetypes/interlocker/shots/3-contremaitre.png",
+      "save": "src/showcase/archetypes/interlocker/shots/3-contremaitre.save",
+      "eval": "const t = setInterval(() => { const tab = [...document.querySelectorAll('.olui-tabs__trigger')].find((el) => el.textContent.includes('Exposition')); if (!tab) return; clearInterval(t); tab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }, 50)"
+    }
+  ]
+}
