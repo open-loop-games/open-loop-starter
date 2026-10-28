@@ -137,5 +137,5 @@ rolls. `manifest.ts` holds the recorded beats.
 
 The spine is `data/spine.ts`, printed by `balance/explorer-projection.ts`.
 `balance/arc-probe.ts` plays the shipping game to the Hart under a greedy walker, one run
-per seed, with the walker in `balance/_engine.ts`; `balance/field-probe.ts` re-solves the
+per seed, with the walker in `balance/_walker.ts`; `balance/field-probe.ts` re-solves the
 field factor. `BALANCING.md` covers the knobs and couplings.

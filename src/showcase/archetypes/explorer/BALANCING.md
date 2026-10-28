@@ -79,7 +79,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
 - **The opening is paid in wood, net of smoking.** The meadow lasts until the first camp
   and the second rack are affordable, and the racks burn wood while the meadow eats.
   Raising `racks/woodPerJerky` lengthens the opening as well as the forest.
-- **`FIELD_FACTOR` is measured under the walker.** The walker in `balance/_engine.ts`
+- **`FIELD_FACTOR` is measured under the walker.** The walker in `balance/_walker.ts`
   stands in for the reference player, and its rules are the spine's assumptions. Change
   them, the map or any trip term, and the factors no longer describe the walk.
 - **The forest's and the Fen's factors trade.** The Fen's gear is priced from the

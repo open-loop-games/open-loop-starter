@@ -1,0 +1,26 @@
+{
+  "id": "explorer",
+  "title": "Spoor",
+  "blurb": "You are the last huntsman of a lodge at the edge of the Hartwold, a fogged forest said to hold the Pale Hart. Walk it one tile at a time on jerky and water, hunt what you find, and carry it home: a fall out there loses the haul and the ground you charted. Take the dens' trophies, refit for the Fen, the Snowfield and the Deepwood, and track the Hart to its lair.",
+  "line": "Explorer",
+  "topic": "Hunting-lodge folklore × Incremental",
+  "path": "#/explorer/play",
+  "capture": { "storageKey": "explorer-slot-0" },
+  "shots": [
+    {
+      "beat": "The forest kit: the first camp raised",
+      "file": "src/showcase/archetypes/explorer/shots/1-camp.png",
+      "save": "src/showcase/archetypes/explorer/shots/1-camp.save"
+    },
+    {
+      "beat": "The Mere Wolf taken: the Fen's meres open",
+      "file": "src/showcase/archetypes/explorer/shots/2-coracle.png",
+      "save": "src/showcase/archetypes/explorer/shots/2-coracle.save"
+    },
+    {
+      "beat": "Three trophies and the sledge, camped below the Deepwood",
+      "file": "src/showcase/archetypes/explorer/shots/3-deepwood.png",
+      "save": "src/showcase/archetypes/explorer/shots/3-deepwood.save"
+    }
+  ]
+}
