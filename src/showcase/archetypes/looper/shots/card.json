@@ -1,0 +1,26 @@
+{
+  "id": "looper",
+  "title": "Lights Out",
+  "blurb": "Inmate 4471 relives the same night in Blackwater Penitentiary. At lights-out you write the plan, from bending a wire into a pick to boarding the freight, and the plan runs until your Nerve breaks. You wake in the cell again with what the night taught you, and the plan gets you out a little faster.",
+  "line": "Looper",
+  "topic": "Prison-break noir × Loops",
+  "path": "#/looper/play",
+  "capture": { "storageKey": "looper-slot-0" },
+  "shots": [
+    {
+      "beat": "Night 4: the plan into the laundry",
+      "file": "src/showcase/archetypes/looper/shots/1-laundry.png",
+      "save": "src/showcase/archetypes/looper/shots/1-laundry.save"
+    },
+    {
+      "beat": "Night 9: over the wall, the milk truck pays",
+      "file": "src/showcase/archetypes/looper/shots/2-woods.png",
+      "save": "src/showcase/archetypes/looper/shots/2-woods.save"
+    },
+    {
+      "beat": "Night 18: out on the freight, racing the splits",
+      "file": "src/showcase/archetypes/looper/shots/3-freight.png",
+      "save": "src/showcase/archetypes/looper/shots/3-freight.save"
+    }
+  ]
+}

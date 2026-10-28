@@ -1,11 +1,8 @@
 /**
  * Shared probe fixture — not runnable on its own.
  *
- * Builds a real looper engine and plays nights on it. The driver works only
- * what a player works by hand: it writes the plan between nights, presses Begin
- * until Routine takes over, and buys notes cheapest-first, the spine's assumed
- * buying rule. Routine and Discipline run as the shipping
- * `modules/automation.ts` once bought.
+ * Builds a real looper engine and plays nights on it under the reference
+ * player in `./_player.ts`.
  *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list
  * for tick-by-tick behavioral specs; this records an arc and prints magnitudes.
@@ -14,49 +11,20 @@
 import { Decimal } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
-import { NOTES, SKILLS, ZONES, referencePlan } from '../data';
+import { SKILLS, ZONES } from '../data';
 import {
   createLooperModules,
   getAutomation,
   getMeta,
   getNight,
   type NightSummary,
-  type PlanRow,
 } from '../modules';
+import { createReferencePlayer } from './_player';
 
 export const num = (v: unknown): number => new Decimal(v as never).toNumber();
 
 /** Sim-seconds per tick: coarse enough for minute-scale nights, fine enough for 4s reps. */
 export const DT = 0.1;
-
-/**
- * The plan for the ground known up to zone `known`: the spine's reference plan,
- * then training to fill the night.
- */
-export function planFor(known: number, patrolLevel: number): PlanRow[] {
-  // Training long enough that no night's plan runs out before its Nerve does.
-  const filler: PlanRow[] = ['push-ups', 'shadow-walk', 'rehearse'].map((id) => ({
-    id,
-    times: 250,
-  }));
-  return [...referencePlan({ known, patrolLevel }), ...filler];
-}
-
-/** Buy notes cheapest-first until nothing is affordable; returns the ids bought. */
-export function buyCheapest(): string[] {
-  const { notes } = getMeta();
-  const bought: string[] = [];
-  for (;;) {
-    const open = NOTES.map((s) => notes.getPurchasable(s.id)!)
-      .filter((p) => p.visible.value && !p.maxed.value)
-      .sort((a, b) => new Decimal(a.getCost(1)).cmp(b.getCost(1)));
-    const p = open[0];
-    if (!p || !p.canPurchase.value) break;
-    p.purchase(1);
-    bought.push(p.id);
-  }
-  return bought;
-}
 
 export interface NightRow {
   summary: NightSummary;
@@ -86,6 +54,7 @@ export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<
   const meta = getMeta();
   const night = getNight();
   const automation = getAutomation();
+  const player = createReferencePlayer();
 
   let sim = 0;
   const beats: string[] = [];
@@ -93,7 +62,6 @@ export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<
     beats.push(
       `t=${sim.toFixed(1).padStart(7)}s  nights done ${String(night.cycle.count.value).padStart(2)}  ${msg}`,
     );
-  const discovered = () => ZONES.filter((z) => meta.zones.isUnlocked(z.id)).length - 1;
   const zonesSeen = new Set<string>(['cell']);
   const tiersSeen = new Set<string>(['manual']);
   const rows: NightRow[] = [];
@@ -102,8 +70,7 @@ export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<
   let idle = 0;
   let stalled = false;
 
-  meta.plan.value = planFor(discovered(), meta.patrolKnowledge.value);
-  night.beginNight();
+  player.begin();
   beat('first night begins');
 
   while (night.cycle.count.value < nights && sim < maxSimSeconds) {
@@ -132,7 +99,7 @@ export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<
       beat(
         `night ${s.night} ends (${s.cause}) after ${s.seconds.toFixed(1)}s, depth ${s.depth}${s.escaped ? ' — ESCAPED' : ''}, +${s.intel} intel`,
       );
-      const bought = buyCheapest();
+      const bought = player.buy();
       if (bought.length) {
         if (!firstPurchase) beat(`first purchase: ${bought[0]}`);
         firstPurchase = true;
@@ -141,9 +108,7 @@ export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<
       const mastery =
         SKILLS.reduce((a, k) => a + num(night.mastery.getSkill(k.id)!.lifetimeBonus!.value), 0) / 4;
       rows.push({ summary: s, mastery, bought });
-      // The player rewrites the plan between nights; Routine, once owned, presses Begin.
-      meta.plan.value = planFor(discovered(), meta.patrolKnowledge.value);
-      if (!automation.hasReached('routine')) night.beginNight();
+      player.replan();
     }
     // Routine owns the restart once bought; a long gap between nights is a stuck phase.
     idle = night.nightActive.value ? 0 : idle + DT;
