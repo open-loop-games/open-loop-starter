@@ -353,6 +353,8 @@ export function createWorksModule(): EngineModule {
         ) as Record<ResourceId, ComputedRef<number>>,
       );
       // The boilers' coal, burned by hand below, is the one rate no producer reports.
+      // TODO(expansion): a hydration hook. A load or a reset leaves this and the other
+      // tick-written state stale for one tick; works cannot reach the Exposition's reset.
       const coalBurned = ref(0);
       addRateSource(res.coal, { text: 'Boilers', rate: () => -coalBurned.value });
 
