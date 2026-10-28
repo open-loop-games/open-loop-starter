@@ -2,7 +2,7 @@ import {
   computed,
   createProducerCategory,
   createSpatialGrid,
-  Decimal,
+  getRate,
   ORTHOGONAL_OFFSETS,
   persistent,
   toNumber,
@@ -267,9 +267,7 @@ export function createBoardModule(): EngineModule {
       });
       weapons.register(PIECES.filter((p) => p.role === 'weapon'));
 
-      const salvageRate = computed(() =>
-        toNumber(Decimal.fromValue(weapons.getTotalRate(yard.salvage))),
-      );
+      const salvageRate = computed(() => toNumber(getRate(yard.salvage)));
       const firepower = computed(() => layout.value.total * yard.globalMult.value);
 
       // TODO(expansion): acquire-then-site stock — a purchasable's count minus the pieces sited
