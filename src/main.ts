@@ -1,6 +1,6 @@
 /**
- * Gallery is the landing surface. The gallery enumerates archetypes via
- * `import.meta.glob('@/showcase/archetypes/*\/index.ts')` and mounts each demo
+ * Gallery is the landing surface. The gallery enumerates archetypes by their
+ * `manifest.ts`, loads a story's code when it is opened, and mounts each demo
  * through `src/showcase/sandbox/SandboxWrapper.vue`.
  *
  * `pnpm eject` deletes `src/showcase/` and rewrites this file to a single
