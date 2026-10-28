@@ -1,0 +1,26 @@
+{
+  "id": "tug",
+  "title": "Hold the Causeway",
+  "blurb": "Fairhold and a neighbouring lord's keep face each other across a causeway one road wide. Raise yeomen, bowmen, knights and a mangonel, sound your horn to send them out in ranks, and hold the line past the middle so your engines can reach his gate. Every battle, won or lost, goes into the Chronicle, whose boons carry you up a march of fifteen fields to the Usurper's throne.",
+  "line": "Tug",
+  "topic": "Feudal siege × Lane push",
+  "path": "#/tug/play",
+  "capture": { "storageKey": "tug-slot-0" },
+  "shots": [
+    {
+      "beat": "Grubb's Ford: yeomen against yeomen on the causeway",
+      "file": "src/showcase/archetypes/tug/shots/1-ford.png",
+      "save": "src/showcase/archetypes/tug/shots/1-ford.save"
+    },
+    {
+      "beat": "The Mudhole: the line held past the middle, a mangonel at the gate",
+      "file": "src/showcase/archetypes/tug/shots/2-mudhole.png",
+      "save": "src/showcase/archetypes/tug/shots/2-mudhole.save"
+    },
+    {
+      "beat": "Camp: Dunmarrow's keep taken, Lady Vesk next on the march",
+      "file": "src/showcase/archetypes/tug/shots/3-chronicle.png",
+      "save": "src/showcase/archetypes/tug/shots/3-chronicle.save"
+    }
+  ]
+}

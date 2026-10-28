@@ -65,7 +65,11 @@ export function buildGame(seed: number): Game {
     intervalRate: INTERVAL_RATE,
   });
   seedRNG(seed);
-  const { engine } = handle;
+  return wrapGame(handle.engine, handle.dispose);
+}
+
+/** The probe's view of an engine already booted with the tug modules, such as the shipping one. */
+export function wrapGame(engine: Engine, dispose: () => void): Game {
   return {
     engine,
     battle: engine.tryInject(BattleKey)!,
@@ -73,7 +77,7 @@ export function buildGame(seed: number): Game {
     causeway: engine.tryInject(CausewayKey)!,
     keeps: { player: engine.tryInject(KeepKeys.player)!, rival: engine.tryInject(KeepKeys.rival)! },
     tuning: engine.tryInject(TugTuningRegistryKey)!,
-    dispose: handle.dispose,
+    dispose,
   };
 }
 
