@@ -34,9 +34,9 @@ export interface BeatRef {
   label: string;
   /**
    * Fire-time window (min, max) in sim-seconds where this beat was OBSERVED to
-   * fire, measured from headless runs and recorded here — never authored as a
-   * target to tune the source numbers toward. Omit until measured; a beat with
-   * no recorded window is honest, not incomplete.
+   * fire, recorded by the story's `balance/beats.ts` (`pnpm beats --write`) — never
+   * authored as a target to tune the source numbers toward. Omit until measured; a
+   * beat with no recorded window is honest, not incomplete.
    */
   recordedFireTimeRange?: [number, number];
 }

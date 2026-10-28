@@ -3,9 +3,9 @@ import type { ArchetypeManifest } from '@/types';
 const API = 'open-loop-engine/docs/api/INDEX.md';
 
 /**
- * Beat windows are RECORDED from `balance/arc-probe.ts`, never authored as
- * targets. A window is sim-seconds of play from a cold start; the reference
- * player is deterministic, so each window is one point.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them.
  */
 export const manifest: ArchetypeManifest = {
   id: 'phase-shifter',
@@ -23,12 +23,20 @@ export const manifest: ArchetypeManifest = {
     { name: 'createTuningRegistry', sourceLayer: 'core', path: API },
   ],
   beats: [
-    { n: 1, label: 'First clerk', recordedFireTimeRange: [8, 8] },
-    { n: 2, label: 'The box is empty: pin it to the wall', recordedFireTimeRange: [241, 241] },
-    { n: 3, label: 'The board opens to 4×4', recordedFireTimeRange: [442, 442] },
-    { n: 4, label: 'The board holds: reconstruct the night', recordedFireTimeRange: [662, 662] },
-    { n: 5, label: 'First alibi holds', recordedFireTimeRange: [822, 822] },
-    { n: 6, label: 'Sixth alibi holds: the box comes back', recordedFireTimeRange: [1182, 1182] },
+    { n: 1, label: 'First clerk', recordedFireTimeRange: [7.5, 7.5] },
+    { n: 2, label: 'The box is empty: pin it to the wall', recordedFireTimeRange: [240.5, 240.5] },
+    { n: 3, label: 'The board opens to 4×4', recordedFireTimeRange: [441.5, 441.5] },
+    {
+      n: 4,
+      label: 'The board holds: reconstruct the night',
+      recordedFireTimeRange: [661.5, 661.5],
+    },
+    { n: 5, label: 'First alibi holds', recordedFireTimeRange: [821.5, 821.5] },
+    {
+      n: 6,
+      label: 'Sixth alibi holds: the box comes back',
+      recordedFireTimeRange: [1181.5, 1181.5],
+    },
   ],
   shell: 'ColumnShell',
   formFactor: 'desktop',

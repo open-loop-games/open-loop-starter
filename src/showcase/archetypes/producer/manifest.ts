@@ -1,9 +1,9 @@
 import type { ArchetypeManifest } from '@/types';
 
 /**
- * Beat windows are RECORDED from `balance/arc-probe.ts` under the reference
- * player on seeds 1, 2 and 3 (tips are drawn): the min/max across the three, never
- * authored as targets. Re-record them after any spine change.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them.
  */
 export const manifest: ArchetypeManifest = {
   id: 'producer',
@@ -60,11 +60,11 @@ export const manifest: ArchetypeManifest = {
   beats: [
     { n: 1, label: 'First pushcart', recordedFireTimeRange: [5, 5] },
     { n: 2, label: 'Sales desk hired', recordedFireTimeRange: [151, 151] },
-    { n: 3, label: 'Acquisitions desk hired', recordedFireTimeRange: [266, 266] },
-    { n: 4, label: 'Board of Directors hired', recordedFireTimeRange: [537, 565] },
-    { n: 5, label: 'The top tier: first savings bank', recordedFireTimeRange: [730, 767] },
-    { n: 6, label: 'The Consolidated Building offered', recordedFireTimeRange: [12996, 13482] },
-    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13728, 14347] },
+    { n: 3, label: 'Acquisitions desk hired', recordedFireTimeRange: [266.5, 266.5] },
+    { n: 4, label: 'Board of Directors hired', recordedFireTimeRange: [536.5, 565] },
+    { n: 5, label: 'The top tier: first savings bank', recordedFireTimeRange: [729.5, 767] },
+    { n: 6, label: 'The Consolidated Building offered', recordedFireTimeRange: [12996, 13481.5] },
+    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13727.5, 14347.5] },
   ],
 
   shell: 'ColumnShell · left + right',

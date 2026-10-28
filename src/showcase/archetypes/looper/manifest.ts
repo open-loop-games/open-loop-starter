@@ -3,9 +3,10 @@ import type { ArchetypeManifest } from '@/types';
 const API = 'open-loop-engine/docs/api/INDEX.md';
 
 /**
- * Beat windows are RECORDED from `balance/arc-probe.ts`, never authored as
- * targets. A window is sim-seconds of play from the first night. The probe is
- * deterministic, so each window is one run's point.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them. The clock is
+ * sim-seconds from the first night.
  */
 export const manifest: ArchetypeManifest = {
   id: 'looper',
@@ -25,15 +26,15 @@ export const manifest: ArchetypeManifest = {
     { name: 'Formula', sourceLayer: 'core', path: API },
   ],
   beats: [
-    { n: 1, label: 'Out of the cell', recordedFireTimeRange: [25.2, 25.2] },
+    { n: 1, label: 'Out of the cell', recordedFireTimeRange: [25, 25] },
     { n: 2, label: 'First note bought', recordedFireTimeRange: [150, 150] },
     { n: 3, label: 'Into the laundry', recordedFireTimeRange: [244, 244] },
-    { n: 4, label: 'Into the yard', recordedFireTimeRange: [485.4, 485.4] },
-    { n: 5, label: 'Routine takes the restart', recordedFireTimeRange: [500.3, 500.3] },
-    { n: 6, label: 'Over the wall', recordedFireTimeRange: [922.2, 922.2] },
-    { n: 7, label: 'Discipline takes the turn-in', recordedFireTimeRange: [929.3, 929.3] },
-    { n: 8, label: 'Into the rail yard', recordedFireTimeRange: [1846.4, 1846.4] },
-    { n: 9, label: 'On the freight', recordedFireTimeRange: [2772.4, 2772.4] },
+    { n: 4, label: 'Into the yard', recordedFireTimeRange: [485.5, 485.5] },
+    { n: 5, label: 'Routine takes the restart', recordedFireTimeRange: [500.5, 500.5] },
+    { n: 6, label: 'Over the wall', recordedFireTimeRange: [922, 922] },
+    { n: 7, label: 'Discipline takes the turn-in', recordedFireTimeRange: [929.5, 929.5] },
+    { n: 8, label: 'Into the rail yard', recordedFireTimeRange: [1846.5, 1846.5] },
+    { n: 9, label: 'On the freight', recordedFireTimeRange: [2772.5, 2772.5] },
   ],
   shell: 'ColumnShell · left + right',
   formFactor: 'desktop',

@@ -3,9 +3,9 @@ import type { ArchetypeManifest } from '@/types';
 const API = 'open-loop-engine/docs/api/INDEX.md';
 
 /**
- * Beat windows are RECORDED from `balance/arc-probe.ts`, never authored as
- * targets. A window is sim-seconds of play from a cold start, the range over
- * the probe's default seeds.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them.
  */
 export const manifest: ArchetypeManifest = {
   id: 'explorer',

@@ -157,6 +157,14 @@ alongside the constants           and the probes that contradict it
 
 - **The projection prints a landmark-on-schedule check:** each landmark's predicted time beside its schedule. `BALANCING.md` § Running a pass states the healthy arc's tolerance per zone or act, not one figure for the whole arc.
 
+- **The beat recording is `balance/beats.ts`.** It exports `runs`, the runs one recording
+  spans (seeds, tick sizes or one deterministic run). It also exports `record(run)`, which
+  plays one run under the probe's reference player and returns each manifest beat's fire
+  time by beat number. It reuses the probe's runner, so the record and the probe cannot
+  define a beat two ways. `pnpm beats [story]` compares it with `manifest.ts`'s windows.
+  `--write` re-records them; then update the `IDENTITY.md` arc table with what moved. Run
+  it after any change that can move the arc.
+
 - **Behavioral suites are beside the module they spec**: `modules/<name>.test.ts`,
   importing `sim/harness.ts`. They spec what a mechanic *does*, driven tick by tick:
   counts, monotonic growth, a slot freeing, a wave completing. They contain no
@@ -183,12 +191,13 @@ alongside the constants           and the probes that contradict it
 | Runnable closed-form projection (no engine) | `<name>-projection.ts` |
 | Probe driving shipping code | `<concern>-probe.ts` |
 | Shipping-automation arc runner | `arc-probe.ts` |
-| Beat windows + predicates the probes import | `beats.ts` |
+| The manifest's beat recording | `beats.ts` |
 | Shared fixture the probes and suites both build on | `_<noun>.ts` |
 
 An underscore prefix marks a file that is *not* runnable on its own. It is a fixture the
 runnable ones import, like cycler's `_keeper.ts`. Every other file in `balance/` is
-executable with `vite-node` and prints something.
+executable with `vite-node` and prints something, except `beats.ts`, which `pnpm beats`
+plays.
 
 `_blank` and cycler are what to copy from.
 

@@ -3,9 +3,9 @@ import type { ArchetypeManifest } from '@/types';
 const API = 'open-loop-engine/docs/api/INDEX.md';
 
 /**
- * Beat windows are RECORDED from `balance/arc-probe.ts`, never authored as
- * targets. A window is sim-seconds of play from a cold start, the range over
- * the probe at tick sizes 0.25 s to 2 s.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them.
  */
 export const manifest: ArchetypeManifest = {
   id: 'interlocker',
@@ -37,10 +37,10 @@ export const manifest: ArchetypeManifest = {
     { n: 9, label: 'The first aeroplane', recordedFireTimeRange: [544, 546] },
     { n: 10, label: 'The first Exposition', recordedFireTimeRange: [797, 824] },
     { n: 11, label: 'The first Ministry order delivered', recordedFireTimeRange: [903, 1056] },
-    { n: 12, label: 'Every charter held', recordedFireTimeRange: [1836, 1922] },
-    { n: 13, label: 'Le Contremaître employed', recordedFireTimeRange: [2246, 2340] },
+    { n: 12, label: 'Every charter held', recordedFireTimeRange: [1835.5, 1922] },
+    { n: 13, label: 'Le Contremaître employed', recordedFireTimeRange: [2246.5, 2340] },
     { n: 14, label: 'The tenth Exposition', recordedFireTimeRange: [4500, 4576] },
-    { n: 15, label: 'The Grand Prix', recordedFireTimeRange: [6167, 6957] },
+    { n: 15, label: 'The Grand Prix', recordedFireTimeRange: [6167, 6956.5] },
   ],
   shell: 'ColumnShell · left + right',
   formFactor: 'desktop',

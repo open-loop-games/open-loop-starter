@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "eject": "node scripts/eject.mjs",
     "domain-map": "ol-domain-map src/showcase/archetypes/*/domain-map.config.mjs",
+    "beats": "vite-node src/showcase/beats/check.ts",
     "lint": "oxlint src/",
     "format": "oxfmt src",
     "format:check": "oxfmt --check src",

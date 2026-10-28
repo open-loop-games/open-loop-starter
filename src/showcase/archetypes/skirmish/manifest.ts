@@ -1,9 +1,9 @@
 import type { ArchetypeManifest } from '@/types';
 
 /**
- * Beat windows are RECORDED from `balance/arc-probe.ts` (contract 1, attempt 1) under the
- * reference player, never authored as targets. One run is the measurement, so each window
- * is a single time. Re-record them after any spine change.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them.
  */
 export const manifest: ArchetypeManifest = {
   id: 'skirmish',

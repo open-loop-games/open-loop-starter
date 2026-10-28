@@ -1,9 +1,9 @@
 import type { ArchetypeManifest } from '@/types';
 
 /**
- * Beat windows are RECORDED from `balance/career-probe.ts` under the stars' instincts, never
- * authored as targets. One seeded career is the measurement, so each window is a single
- * time. Re-record them after any spine change.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them.
  */
 export const manifest: ArchetypeManifest = {
   id: 'survivor',
@@ -27,17 +27,17 @@ export const manifest: ArchetypeManifest = {
     { name: 'weightedPick', sourceLayer: 'core', path: 'open-loop-engine/docs/api/INDEX.md' },
   ],
   beats: [
-    { n: 1, label: 'The first rewrite', recordedFireTimeRange: [16, 16] },
-    { n: 2, label: 'The Pyro signs', recordedFireTimeRange: [549, 549] },
-    { n: 3, label: 'CUT: the first lead falls', recordedFireTimeRange: [1052, 1052] },
-    { n: 4, label: 'PG opens', recordedFireTimeRange: [1513, 1513] },
-    { n: 5, label: 'PG-13 opens', recordedFireTimeRange: [2897, 2897] },
+    { n: 1, label: 'The first rewrite', recordedFireTimeRange: [16.5, 16.5] },
+    { n: 2, label: 'The Pyro signs', recordedFireTimeRange: [550, 550] },
+    { n: 3, label: 'CUT: the first lead falls', recordedFireTimeRange: [1053, 1053] },
+    { n: 4, label: 'PG opens', recordedFireTimeRange: [1513.5, 1513.5] },
+    { n: 5, label: 'PG-13 opens', recordedFireTimeRange: [2897.5, 2897.5] },
     {
       n: 6,
       label: 'R opens, with two stars wrapped at PG-13',
-      recordedFireTimeRange: [6815, 6815],
+      recordedFireTimeRange: [6815.5, 6815.5],
     },
-    { n: 7, label: 'The picture wraps: the Big Bad falls', recordedFireTimeRange: [7271, 7271] },
+    { n: 7, label: 'The picture wraps: the Big Bad falls', recordedFireTimeRange: [7272, 7272] },
   ],
   shell: 'StageShell · floats; ColumnShell between takes',
   formFactor: 'responsive',

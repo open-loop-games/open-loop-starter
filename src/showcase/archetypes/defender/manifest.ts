@@ -3,9 +3,9 @@ import type { ArchetypeManifest } from '@/types';
 const API = 'open-loop-engine/docs/api/INDEX.md';
 
 /**
- * Beat windows are RECORDED from `balance/arc-probe.ts`, never authored as
- * targets. A window is sim-seconds of play from a cold start; the reference
- * gardener is deterministic, so each window is one point.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them.
  */
 export const manifest: ArchetypeManifest = {
   id: 'defender',
@@ -23,7 +23,7 @@ export const manifest: ArchetypeManifest = {
   ],
   beats: [
     { n: 1, label: 'The Herb Border held', recordedFireTimeRange: [113, 113] },
-    { n: 2, label: 'The Bean Rows held', recordedFireTimeRange: [430, 430] },
+    { n: 2, label: 'The Bean Rows held', recordedFireTimeRange: [430.5, 430.5] },
     { n: 3, label: 'The Old Orchard held', recordedFireTimeRange: [693, 693] },
   ],
   shell: 'ColumnShell · topBar in a plot',

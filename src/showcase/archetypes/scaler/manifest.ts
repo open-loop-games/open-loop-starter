@@ -1,10 +1,9 @@
 import type { ArchetypeManifest } from '@/types';
 
 /**
- * Beat windows are RECORDED from `balance/arc-probe.ts` under the reference
- * player, never authored as targets. The game has no RNG, so one run is the
- * measurement and each window is a single time. Re-record them after any spine
- * change.
+ * Beat windows are RECORDED by `balance/beats.ts`, never authored as targets: each window
+ * is the range of a beat's fire time over the runs that file spans. `pnpm beats` checks
+ * them against today's game, and `pnpm beats --write` re-records them.
  */
 export const manifest: ArchetypeManifest = {
   id: 'scaler',
@@ -57,13 +56,17 @@ export const manifest: ArchetypeManifest = {
   ],
   beats: [
     { n: 1, label: 'First Night Patrol', recordedFireTimeRange: [0.5, 0.5] },
-    { n: 2, label: 'First Reboot of the Timeline', recordedFireTimeRange: [227, 227] },
-    { n: 3, label: 'Elseworld Protocols bought', recordedFireTimeRange: [484, 484] },
-    { n: 4, label: 'First Elseworld tier resolved', recordedFireTimeRange: [1031, 1031] },
-    { n: 5, label: 'First Rewrite of the Multiverse', recordedFireTimeRange: [1531, 1531] },
-    { n: 6, label: 'The Silver Age: first Turn of the Age', recordedFireTimeRange: [6030, 6030] },
+    { n: 2, label: 'First Reboot of the Timeline', recordedFireTimeRange: [227.5, 227.5] },
+    { n: 3, label: 'Elseworld Protocols bought', recordedFireTimeRange: [484.5, 484.5] },
+    { n: 4, label: 'First Elseworld tier resolved', recordedFireTimeRange: [1031.5, 1031.5] },
+    { n: 5, label: 'First Rewrite of the Multiverse', recordedFireTimeRange: [1531.5, 1531.5] },
+    {
+      n: 6,
+      label: 'The Silver Age: first Turn of the Age',
+      recordedFireTimeRange: [6030.5, 6030.5],
+    },
     { n: 7, label: 'The Bronze Age', recordedFireTimeRange: [9036, 9036] },
-    { n: 8, label: 'The Dark Age', recordedFireTimeRange: [11527, 11527] },
+    { n: 8, label: 'The Dark Age', recordedFireTimeRange: [11527.5, 11527.5] },
     { n: 9, label: 'The Modern Age: the end beat', recordedFireTimeRange: [14144, 14144] },
   ],
 

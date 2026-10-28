@@ -9,47 +9,19 @@
  *
  * Run: pnpm exec vite-node src/showcase/archetypes/phase-shifter/balance/arc-probe.ts
  */
-import { Decimal, type DecimalSource, type Engine } from '@open-loop/engine';
-import { bootTestEngine } from '@/test/bootTestEngine';
-import { sharedBase } from '@/modules';
-import {
-  MECHANISMS,
-  PREDICTED_CLERKS,
-  PREDICTED_NOTE_BUFFER,
-  RECONSTRUCT_LEADS,
-  SUSPECTS,
-  predictBeats,
-} from '../data';
-import {
-  createPhaseShifterModules,
-  getAutomation,
-  getBoard,
-  getBox,
-  getCase,
-  getNight,
-} from '../modules';
-import { createReferencePlayer } from './_player';
+import { Decimal, type Engine } from '@open-loop/engine';
+import { MECHANISMS, PREDICTED_CLERKS, PREDICTED_NOTE_BUFFER, predictBeats } from '../data';
+import { getBoard, getBox, getCase, getNight } from '../modules';
+import { num, runArc } from './_arc';
 
-/** Wall-seconds per interval the probe feeds the driver. */
-const WALL_STEP = 0.5;
-const MAX_WALL = 3600;
-const STALL_WALL = 600;
-
-const engine: Engine = bootTestEngine({
-  modules: [...sharedBase, ...createPhaseShifterModules()],
-  persistenceNamespacePrefix: 'phase-shifter-arc',
-}).engine;
-const kase = getCase();
-const { life } = kase;
-const box = getBox();
-const board = getBoard();
-const night = getNight();
-const automation = getAutomation();
-
-const num = (x: { value: DecimalSource }) => new Decimal(x.value).toNumber();
+let engine: Engine;
 
 /** The lifecycle's derived state: what a load must reproduce. */
 function fingerprint(): string {
+  const { life } = getCase();
+  const box = getBox();
+  const board = getBoard();
+  const night = getNight();
   const live = MECHANISMS.map((m) => `${m.id}=${life.isLive(m.id).value ? 1 : 0}`).join(' ');
   return [
     `doors=${life.doorsOpened.value}`,
@@ -66,41 +38,14 @@ function fingerprint(): string {
   ].join(' | ');
 }
 
-const beats: Record<string, { wall: number; sim: number }> = {};
-let wall = 0;
-let sim = 0;
-let lastBeatWall = 0;
 const saves: { label: string; data: string; print: string }[] = [];
 const checks: string[] = [];
-let broken = 0;
-night.cycle.on('beforeEnd', () => {
-  if (night.broken.value) broken++;
-});
 
-function beat(name: string, cond: boolean): void {
-  if (cond && !beats[name]) {
-    beats[name] = { wall, sim };
-    lastBeatWall = wall;
-  }
-}
-
-const player = createReferencePlayer(WALL_STEP);
-let terminated = 'maxWall';
-while (wall < MAX_WALL) {
-  const { opened, readLast } = player.step();
-  for (const door of opened) beat(`door: ${door}`, true);
-  if (readLast) beat('last page', true);
-
-  beat('first clerk', num(box.clerk.count) >= 1);
-  beat('box empty', num(box.pages) <= 0);
-  beat('board 4×4', board.side.value >= 4);
-  beat('board 5×5', board.side.value >= 5);
-  beat('reconstruct threshold', num(board.leads.cumulative!) >= RECONSTRUCT_LEADS);
-  beat('night 1 filed', night.cycle.count.value >= 1);
-  beat('clerks plan (tier)', automation.tiers.hasReached('planning'));
-  beat('insomnia', night.insomnia.active.value);
-  for (let i = 1; i <= SUSPECTS.length; i++) beat(`alibi ${i}`, night.held.value.length >= i);
-
+const arc = runArc(({ engine: live, beats }) => {
+  engine = live;
+  const box = getBox();
+  const board = getBoard();
+  const night = getNight();
   if (beats['door: pin-board'] && !checks.some((c) => c.startsWith('I→II'))) {
     checks.push(
       `I→II: read() refused=${!box.read()} clerkRead=${box.clerkReadRate.value.toFixed(2)} ` +
@@ -129,21 +74,13 @@ while (wall < MAX_WALL) {
   if (!saves.find((s) => s.label === 'mid III') && beats['alibi 2']) {
     saves.push({ label: 'mid III', data: engine.saveManager!.exportSave(), print: fingerprint() });
   }
-
-  if (kase.closed.value) {
-    terminated = 'closed';
-    break;
-  }
-  if (wall - lastBeatWall > STALL_WALL) {
-    terminated = `stall: no beat for ${STALL_WALL}s`;
-    break;
-  }
-
-  const speed = engine.tickDriver.speedMultiplier;
-  engine.tickDriver.processInterval(WALL_STEP);
-  wall += WALL_STEP;
-  sim += WALL_STEP * speed;
-}
+});
+const { beats, wall, sim, terminated, broken } = arc;
+engine = arc.engine;
+const kase = getCase();
+const box = getBox();
+const board = getBoard();
+const night = getNight();
 
 const predicted = predictBeats();
 const pad = (s: string, n: number) => s.padEnd(n);
