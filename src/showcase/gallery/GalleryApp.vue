@@ -13,61 +13,65 @@
   demo. The sandbox stays mounted across toggles via v-show, so engine
   state survives flipping back to docs.
 
+  The view is read from the URL hash (`galleryRoute.ts`), so `#/<id>/play`
+  opens one story's live demo directly. The games site links its story
+  cards that way.
+
   Forks delete `src/gallery/` and `src/about/` and revert `main.ts` to a
   single archetype `createApp().mount('#app')`. The strip-cleanliness lint
   asserts nothing here hard-imports `@/showcase/archetypes/<name>`.
 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { ListboxContent, ListboxItem, ListboxRoot } from 'reka-ui';
 import { ColumnShell } from '@/lib';
 import Button from '@/ui/components/Button.vue';
 import { listArchetypes, findArchetype, type GalleryArchetype } from './useArchetypes';
+import { formatRoute, parseRoute, type GalleryRoute } from './galleryRoute';
 import Card from './Card.vue';
 import DetailPane from './DetailPane.vue';
 import AboutPanel from './AboutPanel.vue';
 import { SandboxWrapper } from '@/showcase/sandbox';
 
-type View = 'home' | 'about';
-type EnteredTab = 'demo' | 'details';
-
 const archetypes = listArchetypes();
-const enteredId = ref<string | null>(null);
-const view = ref<View>('home');
-const enteredTab = ref<EnteredTab>('details');
-const sidebarOpen = ref(true);
+const readHash = (): GalleryRoute => parseRoute(location.hash, (id) => !!findArchetype(id));
+const route = ref<GalleryRoute>(readHash());
+const sidebarOpen = ref(route.value.view !== 'story');
 
-const entered = computed<GalleryArchetype | null>(() => {
-  if (!enteredId.value) return null;
-  return findArchetype(enteredId.value) ?? null;
-});
+// The hash is the state, so back and forward walk the gallery and a link
+// opens one story.
+function navigate(next: GalleryRoute): void {
+  location.hash = formatRoute(next);
+}
+const onHashChange = (): void => {
+  route.value = readHash();
+};
+window.addEventListener('hashchange', onHashChange);
+onBeforeUnmount(() => window.removeEventListener('hashchange', onHashChange));
+
+const entered = computed<GalleryArchetype | null>(() =>
+  route.value.view === 'story' ? (findArchetype(route.value.id) ?? null) : null,
+);
+const enteredId = computed(() => entered.value?.manifest.id ?? null);
+const enteredTab = computed(() => (route.value.view === 'story' ? route.value.tab : 'details'));
+
+watch(
+  () => route.value.view,
+  (view) => {
+    sidebarOpen.value = view !== 'story';
+  },
+);
 
 function enterArchetype(id: string): void {
-  enteredId.value = id;
-  view.value = 'home';
-  enteredTab.value = 'details';
-  sidebarOpen.value = false;
-}
-
-watch(enteredId, () => {
-  enteredTab.value = 'details';
-});
-
-function exitArchetype(): void {
-  enteredId.value = null;
-  sidebarOpen.value = true;
+  navigate({ view: 'story', id, tab: 'details' });
 }
 
 function showAbout(): void {
-  enteredId.value = null;
-  view.value = 'about';
-  sidebarOpen.value = true;
+  navigate({ view: 'about' });
 }
 
 function showHome(): void {
-  enteredId.value = null;
-  view.value = 'home';
-  sidebarOpen.value = true;
+  navigate({ view: 'home' });
 }
 
 function onSidebarPick(value: unknown): void {
@@ -78,8 +82,8 @@ function toggleSidebar(): void {
   sidebarOpen.value = !sidebarOpen.value;
 }
 
-function flipTab(): void {
-  enteredTab.value = enteredTab.value === 'details' ? 'demo' : 'details';
+function showTab(tab: 'details' | 'demo'): void {
+  if (enteredId.value) navigate({ view: 'story', id: enteredId.value, tab });
 }
 </script>
 
@@ -101,9 +105,13 @@ function flipTab(): void {
       </Button>
 
       <div v-if="entered" class="gallery-header__entered">
-        <Button class="btn-sm" type="button" @click="exitArchetype"> ← Back </Button>
+        <Button class="btn-sm" type="button" @click="showHome"> ← Back </Button>
         <span class="gallery-header__entered-name">{{ entered.manifest.displayName }}</span>
-        <Button class="btn-sm" type="button" @click="flipTab">
+        <Button
+          class="btn-sm"
+          type="button"
+          @click="showTab(enteredTab === 'details' ? 'demo' : 'details')"
+        >
           {{ enteredTab === 'details' ? 'Live demo →' : '← Details' }}
         </Button>
       </div>
@@ -146,7 +154,7 @@ function flipTab(): void {
               <Button
                 class="btn-primary gallery-entered__cta-btn"
                 type="button"
-                @click="enteredTab = 'demo'"
+                @click="showTab('demo')"
               >
                 ▶ Try {{ entered.manifest.displayName }} live
               </Button>
@@ -157,7 +165,7 @@ function flipTab(): void {
             <DetailPane :manifest="entered.manifest" />
           </div>
         </div>
-        <AboutPanel v-else-if="view === 'about'" />
+        <AboutPanel v-else-if="route.view === 'about'" />
         <div v-else class="gallery-home">
           <header class="gallery-home__header">
             <h2>Archetype gallery</h2>
