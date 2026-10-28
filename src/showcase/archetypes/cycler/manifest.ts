@@ -34,32 +34,32 @@ export const manifest: ArchetypeManifest = {
     {
       n: 2,
       label: 'The first spray: screens behind the struck side',
-      recordedFireTimeRange: [456, 456],
+      recordedFireTimeRange: [460, 460],
     },
     {
       n: 3,
       label: 'The gale backs: walls round the corner',
-      recordedFireTimeRange: [624, 624],
+      recordedFireTimeRange: [630, 630],
     },
     {
       n: 4,
       label: 'The light goes out: the logbook pays',
-      recordedFireTimeRange: [1491, 1491],
+      recordedFireTimeRange: [1508, 1508],
     },
     {
       n: 5,
       label: 'Posted to the Flannans',
-      recordedFireTimeRange: [6815, 6815],
+      recordedFireTimeRange: [6892, 6892],
     },
     {
       n: 6,
       label: 'The relief signalled: a lesser close',
-      recordedFireTimeRange: [7653, 7653],
+      recordedFireTimeRange: [7739, 7739],
     },
     {
       n: 7,
       label: 'The light holds through the final gale: the end beat',
-      recordedFireTimeRange: [9326, 9326],
+      recordedFireTimeRange: [9430, 9430],
     },
   ],
   shell: 'ColumnShell · left',

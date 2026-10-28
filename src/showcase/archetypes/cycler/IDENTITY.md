@@ -68,15 +68,15 @@ measures beside `cycler-projection.ts`.
 | Beat | Recorded |
 |---|---|
 | Night one: the first gale | 2:00 |
-| The first spray: screens behind the struck side | night 3, 7:36 |
-| The gale backs: walls round the corner | night 4, 10:24 |
-| The light goes out: the logbook pays | 24:51, 8 nights |
-| Posted to the Flannans | watch 6, 1:53:35 |
-| The relief signalled: a lesser close | 2:07:33 |
-| The light holds through the final gale: the end beat | watch 8, 2:35:26 |
+| The first spray: screens behind the struck side | night 3, 7:40 |
+| The gale backs: walls round the corner | night 4, 10:30 |
+| The light goes out: the logbook pays | 25:08, 8 nights |
+| Posted to the Flannans | watch 6, 1:54:52 |
+| The relief signalled: a lesser close | 2:08:59 |
+| The light holds through the final gale: the end beat | watch 8, 2:37:10 |
 
-A watch runs 22–28 minutes and 7–9 nights. The keeper buys three levels of stone and the
-charters by about 1:55; over ten seeds the light holds between 2:05 and 2:38, seven times on
+A watch runs 22–25 minutes and 7–8 nights. The keeper buys three levels of stone and the
+charters by about 1:55; over ten seeds the light holds between 2:09 and 2:38, seven times on
 the first watch at the Flannans. Play goes on after either close. `manifest.ts` holds the
 recorded beats.
 

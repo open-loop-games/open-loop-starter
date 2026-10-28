@@ -49,8 +49,15 @@ steps; the weapons' charge and strength; champions' strength; the fields and twi
 - **Strength boons have no limit; the lords stop growing at the Stolen Throne.** A run of
   defeats still pays renown, renown buys strength, so no seed meets a wall. Past the ending
   the heirs stand at the last lord's strength and grow no harder.
-- **The opening horn sounds for both keeps together.** If one keep's opening wave marched
-  alone, the lines would first meet under the other's cover. After it the horns alternate.
+- **The opening horn sounds for both keeps together, but a tithe comes before troops.** A
+  keep whose opening wave marches alone meets the other's first wave under that keep's cover.
+  `chooseWave` buys the tithe first, and the opening horn's silver is the whole first tithe.
+  So a temperament that tithes sends no opening wave, and gives ground for income. At
+  Grubb's Ford the marshal does: the Mire's yeomen pin the line 26 or 40 paces out, by which
+  keep leads the horns. The mangonels the tithe pays for take it back. Hold the tithe past
+  the opening horn and its payback window closes before the silver returns. The lines then
+  meet at the middle, but that battle closes on the season and is lost. After the opening
+  the horns alternate.
 - **An early horn restarts its keep's schedule.** It is open half a period after a horn, and
   costs half the silver the waiting seconds would pay. A lord sounds early only to answer a
   wave an open troop beats.
@@ -89,10 +96,16 @@ Each runs in seconds; the header of each says how to read it.
   meets a bow line, not in the members' stats. Bowmen at double spend keep 56% against 78%.
 - **The reference marshal never raises the Stone Curtain.** The strength boons have no limit
   and it prefers them, so the curtain's worth is unmeasured.
-- **The arc is steep in `ladder/boonsPerField`.** Over eight seeds, 0.8 puts the ending near
-  1:49 and 0.85 near 1:54–2:12; the spread across seeds is about ±15 minutes.
-- **The lords' keeps take three to four battles,** the Twin Sties and the Spyglass the most.
-  Outlying fields take one to three.
+- **Yeomen against yeomen, the line does not move.** Two hosts at their musters replace
+  their losses as fast as they take them, so the line stands where it first met. At Grubb's
+  Ford it stands until the mangonels come, and only a harvest surplus raises them. At equal
+  harvests that battle closes on the season.
+- **The arc is steep in `ladder/boonsPerField`.** Over eight seeds, 0.8 puts the ending
+  between 1:31 and 1:48, and 0.85 between 1:22 and 2:05. The spread across seeds is wider
+  than the step between the two.
+- **A field can take many battles.** Over eight seeds an outlying field takes one to five,
+  and a keep one to eight: the Spyglass, the Twin Sties and the Stolen Throne the most. The
+  career probe reads one or two, and three or four, as healthy.
 - **Fire-pot mirrors close on the season.** On the open field both seats mount fire-pots,
   and only 5 of 72 battles breach; a feast day lifts that to 46. In the career, where the
   weapons differ, almost every battle breaches.

@@ -33,8 +33,8 @@ const planes = () => toNumber(works.res.aeroplanes.value as unknown as number);
 
 /** In beat order: the file stem, and the moment it is saved at. */
 const BEATS: { file: string; at: () => boolean }[] = [
-  // The first aeroplane is built in the winter of 1855, with the crew hungry; this is the
-  // first moment of the run with one in the hangar and the crew fed.
+  // The first aeroplane is built in the winter of 1855, when the larder runs thinnest;
+  // this is the first moment of the run with one in the hangar and the crew fed.
   {
     file: '1-aeroplane',
     at: () => expo.cycle.count.value === 0 && planes() >= 1 && works.fed.value >= 1,

@@ -79,6 +79,9 @@ Every key is read at its reader site through `tunable()`; the registry is in
   `0.75 · crew · upkeep · 150`, is what the larder must hold. The plan's gardens cover the
   ration at the mean season and at least a winter on a full larder. L'Intendance builds
   neither winter's gardens nor boilers: the seasons and the shed order stay the player's.
+- **A cité costs bread, in any season.** L'Intendance raises cités whenever the plan wants
+  one, so a winter can open on a larder the cités emptied. Gardens sized for a full larder
+  then leave the crew hungry until spring. A player gardens against the bread in stock.
 - **The bureaux are a ladder.** Each bureau unlocks the next automation tier, and a tier
   implies those below it, so the bureaux are bought in order. Le Contremaître seats no
   compagnon at a trade short of steam or of bin room, so a works with no boilers shows
@@ -125,16 +128,17 @@ Every key is read at its reader site through `tunable()`; the registry is in
   Crédit's stake, the bureaux and the telegraph.
 
 The economy is tick-robust: 0.25 s to 2 s moves an early beat by a few seconds. The
-Grand Prix's window is wider, about 15 minutes, because late medals rise a renown at a
+Grand Prix's window is wider, about 13 minutes, because late medals rise a renown at a
 time and a tick can carry a run across one.
 
 ## Known thin
 
 - **Seasons and steam bind the player, not the reference.** The probe's runner raises a
-  garden whenever a winter would outrun the larder and a boiler whenever steam falls
-  short, so the arc goes hungry or short of steam for a few sampled minutes in two
-  hours. The mechanics bite a player who neglects them, and the spine models neither cost.
-- **The first run is long.** The reference stages its first Exposition at 14 minutes, for
+  garden whenever a winter would outrun the larder, and a boiler whenever steam falls
+  short. In winter it reads the bread in stock, not a full larder. So the arc goes hungry
+  only as a winter opens, and short of steam for a few sampled minutes in two hours. The
+  mechanics bite a player who neglects them, and the spine models neither cost.
+- **The first run is long.** The reference stages its first Exposition at 13 minutes, for
   a medal of 5: a concave payout makes waiting for a fuller exhibit pay, and orders open
   only after it.
 - **Late medals are the Ministry's.** From the mid-arc the dossier is about nine tenths

@@ -32,7 +32,7 @@ const has = (troop: string) => g.causeway.members.value.some((m) => m.troop === 
 
 /** In beat order: the file stem, and the moment it is saved at. */
 const BEATS: { file: string; at: () => boolean }[] = [
-  // Grubb's Ford, the first battle: yeomen against yeomen, the lines met at the middle.
+  // Grubb's Ford, the first battle: yeomen against yeomen, the line pinned under our cover.
   { file: '1-ford', at: () => onField('Grubb’s Ford') && g.causeway.clock.value >= 40 },
   // The Mudhole, bowmen on both sides: the line held past the middle, a mangonel throwing.
   {

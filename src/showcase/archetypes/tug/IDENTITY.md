@@ -63,16 +63,16 @@ the sway and the close; `career-probe.ts` plays the march under the reference ma
 
 | Beat | Recorded |
 |---|---|
-| The opening horn: the lines meet at the middle | 0:20 |
-| The engineers arrive: the first mangonel | 2:00 |
+| The opening horn: Fairhold tithes, and the Mire's yeomen pin the line | 0:22 |
+| The engineers arrive: the first mangonel | 2:10 |
 | Grubb's Ford falls: the first victory | 3:13 |
-| The bowmen take the field at the Mudhole | 6:25 |
-| Fire-pots on the walls | 29:37 |
-| Lady Vesk, who answers every horn | 37:20 |
-| The Stolen Throne falls: the ending | 1:46:21, 30 battles |
+| The bowmen take the field at the Mudhole | 16:07 |
+| Fire-pots on the walls | 35:21 |
+| Lady Vesk, who answers every horn | 47:26 |
+| The Stolen Throne falls: the ending | 1:58:39, 35 battles |
 
 A battle runs 3–4½ minutes. Over eight seeds the marshal takes the Stolen Throne between
-1:45 and 2:14, in 30–38 battles: outlying fields in one to three, keeps in three to four.
+1:22 and 2:05, in 24–37 battles: outlying fields in one to five, keeps in one to eight.
 `manifest.ts` holds the recorded beats.
 
 ## Growth ports

@@ -6,9 +6,9 @@
  * with the shipping policies of `../modules/automation.ts`. The runner, `createForeman`,
  * works only what stays the player's; the arc runs it, and so does the games site's beat
  * script:
- * - it raises a market garden while the gardens at winter's yield, with a full larder,
- *   cannot carry the crew through a season, and a Boiler House while the boilers fall
- *   short of what is drawn;
+ * - it raises a market garden while the gardens at winter's yield cannot carry the crew
+ *   through a season on a full larder, or, in winter, through the rest of it on the bread
+ *   in stock; and a Boiler House while the boilers fall short of what is drawn;
  * - it delivers every Ministry order the bins can fill;
  * - it stages the Exposition once the jury sits and the medal reaches the one the spine
  *   predicts this empire's run shows (`medalFor`);
@@ -156,11 +156,12 @@ export function createForeman(start?: ArcOptions['start']): Foreman {
     const farm = works.buildings.getPurchasable('farm')!;
     const perFarm = (works.yieldEach('farm') / calendar.yield.value) * SEASON_YIELD.winter;
     const ration = works.workersTotal.value * UPKEEP_PER_WORKER;
-    if (
-      owned('farm') * perFarm + works.cap.bread.value / SEASON_SECONDS < ration &&
-      farm.canPurchase.value
-    )
-      farm.purchase(1);
+    // In winter the larder is what the steward's cités left of it, over the winter left.
+    const larder =
+      calendar.season.value === 'winter'
+        ? toNumber(works.res.bread.value) / Math.max(calendar.remaining.value, 1)
+        : works.cap.bread.value / SEASON_SECONDS;
+    if (owned('farm') * perFarm + larder < ration && farm.canPurchase.value) farm.purchase(1);
     const boiler = works.buildings.getPurchasable('boiler')!;
     if (works.steam.demand > works.steam.supply && boiler.visible.value && boiler.canPurchase.value)
       boiler.purchase(1);

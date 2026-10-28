@@ -79,9 +79,9 @@ landmarks. `balance/counter-probe.ts` measures whether reading the rival wins ma
 | The first clash | 129 s |
 | The crew chartered | 228 s |
 | The black clinic opens | 271 s |
-| The first assault on their safehouse | 314.5 s |
-| Your first sentry nest | 356 s |
-| Their safehouse burns | 387 s |
+| The first assault on their safehouse | 312 s |
+| Your first sentry nest | 357 s |
+| Their safehouse burns | 378.5 s |
 
 Each match is a few minutes; the rival's income terms climb to parity by the megacorp.
 
