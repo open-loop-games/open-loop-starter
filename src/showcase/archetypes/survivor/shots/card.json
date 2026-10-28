@@ -1,0 +1,31 @@
+{
+  "id": "survivor",
+  "title": "One More Take",
+  "blurb": "You are the stunt double on an action set that never wraps. The effects crew fires your rigs on their own clocks while extras pour in from every side; all you choose is where to stand. Bank the reels the fallen drop, take the writers' pages, and hold the floor until the lead falls and someone calls CUT.",
+  "line": "Survivor",
+  "topic": "Action-movie stunt set × Survivors-like",
+  "path": "#/survivor/play",
+  "capture": { "storageKey": "survivor-slot-0" },
+  "shots": [
+    {
+      "beat": "Rated G: the Pyro improvises the take",
+      "file": "src/showcase/archetypes/survivor/shots/1-pyro.png",
+      "save": "src/showcase/archetypes/survivor/shots/1-pyro.save",
+      "eval": "const t = setInterval(() => { if (!document.querySelector('.sheet')) return; clearInterval(t); const enter = () => new KeyboardEvent('keydown', { key: 'Enter' }); document.querySelector(\".star-pick[aria-label='The Pyro']\").dispatchEvent(enter()); document.querySelectorAll('.driver')[1].dispatchEvent(enter()); window.dispatchEvent(enter()); }, 50)",
+      "wait": 20000
+    },
+    {
+      "beat": "The call sheet: PG opens",
+      "file": "src/showcase/archetypes/survivor/shots/2-pg.png",
+      "save": "src/showcase/archetypes/survivor/shots/2-pg.save",
+      "scroll": ".ratings"
+    },
+    {
+      "beat": "Rated PG-13: the Wirework Ace on a harsher floor",
+      "file": "src/showcase/archetypes/survivor/shots/3-pg13.png",
+      "save": "src/showcase/archetypes/survivor/shots/3-pg13.save",
+      "eval": "const t = setInterval(() => { if (!document.querySelector('.sheet')) return; clearInterval(t); const enter = () => new KeyboardEvent('keydown', { key: 'Enter' }); document.querySelector(\".star-pick[aria-label='The Wirework Ace']\").dispatchEvent(enter()); document.querySelectorAll('.driver')[1].dispatchEvent(enter()); window.dispatchEvent(enter()); }, 50)",
+      "wait": 25000
+    }
+  ]
+}
