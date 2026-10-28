@@ -1,0 +1,34 @@
+{
+  "id": "defender",
+  "title": "The Walled Garden",
+  "blurb": "Every evening the pests come through the gap in the garden wall and make for the seedbed. By day you plant box hedges to send them the long way round, and along the path whatever answers the night ahead: thrushes for slugs, bats for the moths that fly over it all, ladybirds for greenfly. Then night falls, and you watch.",
+  "line": "Defender",
+  "topic": "Kitchen garden × Tower defense",
+  "path": "#/defender/play",
+  "capture": {
+    "storageKey": "defender-slot-0"
+  },
+  "shots": [
+    {
+      "beat": "The Herb Border: hedges send the slugs the long way past a thrush",
+      "file": "src/showcase/archetypes/defender/shots/1-herb-border.png",
+      "save": "src/showcase/archetypes/defender/shots/1-herb-border.save",
+      "eval": "const moves = [[2,3,3,1],[1,13,2,0],[1,13,3,0],[1,2,4,0],[1,2,3,0],[1,1,2,0],[1,4,6,0]]; const sleep = (ms) => new Promise((r) => setTimeout(r, ms)); const key = (k) => window.dispatchEvent(new KeyboardEvent('keydown', { key: String(k) })); const press = (el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); const until = async (sel) => { let el; while (!(el = document.querySelector(sel))) await sleep(50); return el; }; const cell = (x, y) => document.querySelector('.wg-board__cell[aria-label^=\"' + x + ', ' + y + ':\"]'); (async () => { press(await until('[data-testid=\"enter-herb-border\"]')); await until('.wg-board__cell'); for (const [k, x, y] of moves) { key('Escape'); key(k); cell(x, y).click(); } for (const [, x, y, feeds] of moves) for (let i = 0; i < feeds; i++) { key('Escape'); cell(x, y).click(); press(await until('.wg-looked .feed')); await sleep(50); } key('Escape'); })()",
+      "wait": 3500
+    },
+    {
+      "beat": "The Bean Rows: bat boxes learned, and moths three nights off",
+      "file": "src/showcase/archetypes/defender/shots/2-bean-rows.png",
+      "save": "src/showcase/archetypes/defender/shots/2-bean-rows.save",
+      "eval": "const moves = [[2,13,2,1],[2,4,3,0],[1,10,1,0]]; const sleep = (ms) => new Promise((r) => setTimeout(r, ms)); const key = (k) => window.dispatchEvent(new KeyboardEvent('keydown', { key: String(k) })); const press = (el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); const until = async (sel) => { let el; while (!(el = document.querySelector(sel))) await sleep(50); return el; }; const cell = (x, y) => document.querySelector('.wg-board__cell[aria-label^=\"' + x + ', ' + y + ':\"]'); (async () => { press(await until('[data-testid=\"enter-bean-rows\"]')); await until('.wg-board__cell'); for (const [k, x, y] of moves) { key('Escape'); key(k); cell(x, y).click(); } for (const [, x, y, feeds] of moves) for (let i = 0; i < feeds; i++) { key('Escape'); cell(x, y).click(); press(await until('.wg-looked .feed')); await sleep(50); } key('Escape'); })()",
+      "wait": 3500
+    },
+    {
+      "beat": "The Old Orchard: a ladybird hotel planted for tomorrow’s greenfly",
+      "file": "src/showcase/archetypes/defender/shots/3-orchard.png",
+      "save": "src/showcase/archetypes/defender/shots/3-orchard.save",
+      "eval": "const moves = [[2,3,3,1],[6,4,3,0],[1,6,4,0]]; const sleep = (ms) => new Promise((r) => setTimeout(r, ms)); const key = (k) => window.dispatchEvent(new KeyboardEvent('keydown', { key: String(k) })); const press = (el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); const until = async (sel) => { let el; while (!(el = document.querySelector(sel))) await sleep(50); return el; }; const cell = (x, y) => document.querySelector('.wg-board__cell[aria-label^=\"' + x + ', ' + y + ':\"]'); (async () => { press(await until('[data-testid=\"enter-orchard\"]')); await until('.wg-board__cell'); for (const [k, x, y] of moves) { key('Escape'); key(k); cell(x, y).click(); } for (const [, x, y, feeds] of moves) for (let i = 0; i < feeds; i++) { key('Escape'); cell(x, y).click(); press(await until('.wg-looked .feed')); await sleep(50); } key('Escape'); })()",
+      "wait": 3500
+    }
+  ]
+}
