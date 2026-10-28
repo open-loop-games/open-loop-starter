@@ -1,0 +1,26 @@
+{
+  "id": "cycler",
+  "title": "Skerry Light",
+  "blurb": "You keep the light on a bare rock in the North Atlantic. By day haul the tide nets and set walls, nets and screens to the quarter each dawn forecasts; by night the breakers land, and what the walls cannot turn goes into the tower. When the light goes out, the logbook buys what the next keeper knows.",
+  "line": "Cycler",
+  "topic": "Lighthouse keeper × Build-and-defend",
+  "path": "#/cycler/play",
+  "capture": { "storageKey": "cycler-slot-0" },
+  "shots": [
+    {
+      "beat": "Day three: screens behind the side tonight's spray will strike",
+      "file": "src/showcase/archetypes/cycler/shots/1-spray.png",
+      "save": "src/showcase/archetypes/cycler/shots/1-spray.save"
+    },
+    {
+      "beat": "Night seven: the storm comes through the walls",
+      "file": "src/showcase/archetypes/cycler/shots/2-crossing.png",
+      "save": "src/showcase/archetypes/cycler/shots/2-crossing.save"
+    },
+    {
+      "beat": "The light goes out: the logbook pays",
+      "file": "src/showcase/archetypes/cycler/shots/3-logbook.png",
+      "save": "src/showcase/archetypes/cycler/shots/3-logbook.save"
+    }
+  ]
+}
