@@ -3,6 +3,7 @@ import {
   computed,
   createMultiplicativeModifier,
   createProducerCategory,
+  getRate,
   createResource,
   persistent,
   tunable,
@@ -113,7 +114,7 @@ export function createRunModule(): EngineModule {
         text: 'Hope',
       });
 
-      const totalRate = computed(() => Decimal.fromValue(heroes.getTotalRate(justice)));
+      const totalRate = computed(() => getRate(justice));
       ctx.onTick((dt) => {
         runSeconds.value += dt;
       });
