@@ -4,6 +4,7 @@ import {
   createCostRequirement,
   createGateRequirement,
   createProducerCategory,
+  getRate,
   createPurchasableCategory,
   createResource,
   createScalingPurchasable,
@@ -196,7 +197,7 @@ export function createDojoModule(): EngineModule {
       });
 
       const strikeSeconds = t('strike/seconds', () => ANCHORS.strikeSecondsBase);
-      const kiRate = computed(() => Decimal.fromValue(producers.getTotalRate(ki)));
+      const kiRate = computed(() => getRate(ki));
       const strikeValue = computed(() =>
         Decimal.add(
           ANCHORS.strikeKiFloor,
