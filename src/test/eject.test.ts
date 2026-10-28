@@ -1,7 +1,7 @@
 /**
  * Locks for `pnpm eject` (scripts/eject.mjs).
  *
- * Three guarantees:
+ * Four guarantees:
  *   1. The eject *plan* keeps its shape — hoist one archetype to `src/game`,
  *      delete the whole demo surface. A `--dry-run`-equivalent assertion that
  *      needs no node_modules, so it's a fast CI lock.
@@ -11,6 +11,8 @@
  *      this test fails the moment a future port introduces cross-coupling.
  *   3. A clean fork *carries no showcase text* — no path into the deleted
  *      tree, no gallery framing, no `eject:strip` region left behind.
+ *   4. A fork *installs only what its game imports* — every dependency only the
+ *      showcase imports is listed in `SHOWCASE_ONLY_DEPS`, and eject drops it.
  */
 import { execFileSync } from 'node:child_process';
 import {
@@ -26,7 +28,7 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error — .mjs script, no types; we only touch the pure planner.
-import { planEject, slug } from '../../scripts/eject.mjs';
+import { planEject, slug, importSpecifiers, SHOWCASE_ONLY_DEPS } from '../../scripts/eject.mjs';
 
 const ROOT = process.cwd();
 
@@ -75,6 +77,11 @@ describe('eject plan', () => {
     expect(plan.manifest).toEqual({ id: 'game', displayName: 'Game' });
   });
 
+  it('drops the showcase-only dependencies the kept game does not import', () => {
+    expect(planEject(ROOT, 'cycler').dropDependencies).toContain('pixi.js');
+    expect(planEject(ROOT, 'defender').dropDependencies).not.toContain('pixi.js');
+  });
+
   it('rejects an unknown archetype', () => {
     expect(() => planEject(ROOT, 'does-not-exist')).toThrow(/Unknown archetype/);
   });
@@ -94,15 +101,6 @@ const archetypeSources = import.meta.glob('../showcase/archetypes/**/*.{ts,vue}'
 /** `…/archetypes/<name>/…` → `<name>`. */
 function archetypeOf(path: string): string {
   return path.replace(/^.*\/archetypes\//, '').split('/')[0];
-}
-
-/** Quote-delimited import specifiers — `from '…'` and `import('…')`. Matching
- *  on the quoted specifier keeps prose comments from registering as imports. */
-function importSpecifiers(source: string): string[] {
-  const specs: string[] = [];
-  const re = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g;
-  for (const m of source.matchAll(re)) specs.push(m[1]);
-  return specs;
 }
 
 describe('eject safety — archetype isolation', () => {
@@ -138,6 +136,27 @@ function filesUnder(root: string, dir = root): string[] {
   });
 }
 
+describe('eject — showcase-only dependencies', () => {
+  it('lists every dependency that only the showcase imports', () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+    const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
+    const importers = new Map<string, string[]>();
+    for (const rel of filesUnder(ROOT, join(ROOT, 'src')).filter((f) => /\.(ts|vue)$/.test(f))) {
+      for (const spec of importSpecifiers(readFileSync(join(ROOT, rel), 'utf8')) as string[]) {
+        const dep = deps.find((d) => spec === d || spec.startsWith(`${d}/`));
+        if (dep) importers.set(dep, [...(importers.get(dep) ?? []), rel]);
+      }
+    }
+    const unlisted = [...importers]
+      .filter(
+        ([dep, files]) =>
+          !(dep in SHOWCASE_ONLY_DEPS) && files.every((f) => f.startsWith('src/showcase/')),
+      )
+      .map(([dep]) => dep);
+    expect(unlisted, 'add these to SHOWCASE_ONLY_DEPS in scripts/eject.mjs').toEqual([]);
+  });
+});
+
 describe('eject --clean residue', () => {
   it('leaves no showcase text in the fork', () => {
     // Eject a copy of the working tree: tracked files plus untracked, unignored ones.
@@ -158,6 +177,10 @@ describe('eject --clean residue', () => {
           stdio: 'pipe',
         },
       );
+
+      const pkg = JSON.parse(readFileSync(join(fork, 'package.json'), 'utf8'));
+      const forkDeps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
+      expect(forkDeps.filter((d) => d in SHOWCASE_ONLY_DEPS)).toEqual([]);
 
       const residue: string[] = [];
       for (const rel of filesUnder(fork)) {

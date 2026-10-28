@@ -1,5 +1,12 @@
 import { defineConfig } from 'oxlint';
 
+/* eject:strip-start — renderer ban for the scaffold; removed by `pnpm eject` */
+// A renderer is a story's choice: eject drops the ones a fork's game does not
+// import, so a renderer the scaffold imported would reach every fork.
+const RENDERERS = ['pixi.js', 'pixi.js/*', 'three', 'three/*'];
+const RENDERER_MESSAGE =
+  'The scaffold stays renderer-free. A story imports its renderer in its own field component.';
+/* eject:strip-end */
 // The rule set is the one the studio's engine consumers share. A fork inherits
 // it, so it stays generic; game-specific rules belong in the fork's own config.
 export default defineConfig({
@@ -182,6 +189,10 @@ export default defineConfig({
                 message:
                   'Scaffold must not import the showcase (demo) surface — it is deleted on `pnpm eject`.',
               },
+              {
+                group: RENDERERS,
+                message: RENDERER_MESSAGE,
+              },
               /* eject:strip-end */
             ],
           },
@@ -214,6 +225,10 @@ export default defineConfig({
                 group: ['@/showcase', '@/showcase/*', '@/showcase/**'],
                 message:
                   'Scaffold must not import the showcase (demo) surface — it is deleted on `pnpm eject`. Put shared code in the scaffold (src/ui, src/composables, …) instead.',
+              },
+              {
+                group: RENDERERS,
+                message: RENDERER_MESSAGE,
               },
             ],
           },

@@ -11,9 +11,10 @@
  *
  * Hoists one archetype out of the showcase boundary into `src/game/`, rewrites
  * `main.ts` to a single-archetype boot, repoints config and the game's own
- * paths, strips starter-only text from the docs a fork keeps, and deletes the
- * entire demo/research surface (`src/showcase/`, the gallery-strip guard, and
- * the repo-root demo docs). The result is a clean game with the scaffold + one
+ * paths, strips starter-only text from the docs a fork keeps, drops the
+ * dependencies only the rest of the showcase imports, and deletes the entire
+ * demo/research surface (`src/showcase/`, the gallery-strip guard, and the
+ * repo-root demo docs). The result is a clean game with the scaffold + one
  * archetype and nothing to strip by hand.
  *
  * Safe because the move is mechanical: archetypes import only scaffold
@@ -23,7 +24,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 
 const SHOWCASE = 'src/showcase';
 const ARCHETYPES = `${SHOWCASE}/archetypes`;
@@ -49,6 +50,17 @@ const DEMO_DELETES = [
   'game.json',
   '.gitea/workflows/games-site.yaml',
 ];
+
+// Dependencies only the showcase imports (stories, gallery), each with the
+// packages that exist for it alone. Eject drops each one the kept game does not
+// import, so a fork installs only the renderer its game draws with.
+// src/test/eject.test.ts fails when a showcase-only import is missing here.
+const SHOWCASE_ONLY_DEPS = {
+  dompurify: [],
+  marked: [],
+  'pixi.js': [],
+  three: ['@types/three'],
+};
 
 // Docs a fork keeps that also describe the showcase. Their starter-only text is
 // wrapped in `<!-- eject:strip-start -->` / `<!-- eject:strip-end -->`.
@@ -170,6 +182,33 @@ function readManifestIdentity(root, archetype) {
   return { id: archetype, displayName: archetype };
 }
 
+/** Quote-delimited import specifiers — `from '…'` and `import('…')`. Matching
+ *  on the quoted specifier keeps prose comments from registering as imports. */
+function importSpecifiers(source) {
+  return [...source.matchAll(/(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)].map((m) => m[1]);
+}
+
+/** The showcase-only dependencies, companions included, that no source the fork keeps imports. */
+function unusedShowcaseDeps(root, archetype) {
+  const keptStory = `${ARCHETYPES}/${archetype}/`;
+  const specs = new Set(
+    walkFiles(join(root, 'src'))
+      .filter((p) => /\.(ts|vue)$/.test(p))
+      .filter((p) => {
+        const rel = relative(root, p);
+        return !rel.startsWith(`${SHOWCASE}/`) || rel.startsWith(keptStory);
+      })
+      .flatMap((p) => importSpecifiers(readFileSync(p, 'utf8'))),
+  );
+  const imported = (dep) => [...specs].some((s) => s === dep || s.startsWith(`${dep}/`));
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const declared = new Set(Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }));
+  return Object.entries(SHOWCASE_ONLY_DEPS)
+    .filter(([dep]) => !imported(dep))
+    .flatMap(([dep, companions]) => [dep, ...companions])
+    .filter((dep) => declared.has(dep));
+}
+
 /** Compute the eject plan without touching disk. Pure given the root tree. */
 function planEject(root, archetype, name) {
   const archDir = join(root, ARCHETYPES, archetype);
@@ -194,6 +233,7 @@ function planEject(root, archetype, name) {
     domainMap: { from: `${ARCHETYPES}/*/domain-map.config.mjs`, to: `${GAME_DIR}/domain-map.config.mjs` },
     pruneConfigLines: SHOWCASE, // delete config lines still mentioning this after repoint
     stripDocs: STRIP_DOCS,
+    dropDependencies: unusedShowcaseDeps(root, archetype),
     packageName: gameId,
     gameId,
     deletes: DEMO_DELETES,
@@ -278,6 +318,17 @@ function applyPlan(root, plan) {
     });
   }
 
+  // 3b. Drop the showcase-only dependencies the game does not import. The fork's
+  // first `pnpm install` brings the lockfile in line.
+  editFile(join(root, 'package.json'), (src) => {
+    const pkg = JSON.parse(src);
+    for (const dep of plan.dropDependencies) {
+      delete pkg.dependencies?.[dep];
+      delete pkg.devDependencies?.[dep];
+    }
+    return `${JSON.stringify(pkg, null, 2)}\n`;
+  });
+
   // 4. Slim starter-wide surfaces to the single game: drop the gallery manifest
   // contract from types.ts, reduce the hoisted manifest to identity, and stub
   // the README. Wholesale writes (same pattern as main.ts) — never munging.
@@ -333,6 +384,9 @@ function main() {
   const label = clean ? 'clean scaffold' : `"${archetype}"`;
   console.log(`✓ ejected ${label} → ${GAME_DIR}`);
   console.log(`  main.ts now boots the single game; showcase, demo docs, and eject machinery removed.`);
+  if (plan.dropDependencies.length) {
+    console.log(`  dropped dependencies only the showcase imports: ${plan.dropDependencies.join(', ')}.`);
+  }
   if (plan.gameId) console.log(`  named "${plan.gameId}" (package.json + GAME_ID + manifest).`);
   // The eject lock test is deleted with the rest of the machinery, so there is
   // no longer a self-checking green-after-eject invariant — the fork must run
@@ -343,6 +397,6 @@ function main() {
 }
 
 // Exported for the dry-run lock test; runs as a CLI otherwise.
-export { planEject, slug, MAIN_TS };
+export { planEject, slug, importSpecifiers, SHOWCASE_ONLY_DEPS, MAIN_TS };
 
 if (import.meta.url === `file://${process.argv[1]}`) main();

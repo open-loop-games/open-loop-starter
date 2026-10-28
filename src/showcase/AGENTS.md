@@ -9,7 +9,7 @@ This half is the demo and research surface: archetypes, gallery, about and sandb
 - A story that hand-rolls what a battery provides is a **story** defect, because it teaches the next fork to hand-roll.
 - A story that must work around a battery to say what it means is a **battery** defect. The stories are the generality test. A documented bypass at the call site is that test reporting a failure.
 
-The scaffold never imports across the boundary. An oxlint rule enforces the one-way cut, so the ejected game cannot break; `oxlint.config.ts` lists the covered paths. The `_blank` skeleton is under the boundary too. It is an underscore-prefixed authoring surface, and the gallery and the archetype list both filter it out.
+The scaffold never imports across the boundary. An oxlint rule enforces the one-way cut, so the ejected game cannot break; `oxlint.config.ts` lists the covered paths. A second rule keeps renderers (`pixi.js`, `three`) out of the scaffold: a story imports its renderer in its own field component, so eject can drop the renderers a fork does not draw with. The `_blank` skeleton is under the boundary too. It is an underscore-prefixed authoring surface, and the gallery and the archetype list both filter it out.
 
 ## Archetype demos (`src/showcase/archetypes/<name>/`)
 
@@ -71,11 +71,12 @@ Each archetype's `ui/` follows the root-vs-game-view split in `.claude/rules/app
 - rewrites `main.ts` to a single-archetype boot;
 - repoints and prunes config, and repoints the game's own references to its showcase path;
 - slims `types.ts` and `manifest.ts` to game identity;
+- drops each showcase-only dependency your game does not import, such as a renderer another story draws with. `SHOWCASE_ONLY_DEPS` in `scripts/eject.mjs` lists them, and a test fails when a showcase-only import is missing from it;
 - stubs the README, and removes the `eject:strip` regions from the root `AGENTS.md`;
 - deletes the entire demo and research surface: `src/showcase/` and the repo-root demo docs;
 - deletes the Claude-only `.claude/rules/`, whose paths only ever matched the showcase tree;
 - deletes the games-site listing: the root `game.json`, one card per story, and its publish workflow. The hoisted story keeps its `shots/`;
-- deletes **eject's own machinery**: `scripts/eject.mjs`, `src/test/eject.test.ts`, the `eject` script and the `@/showcase` oxlint guard.
+- deletes **eject's own machinery**: `scripts/eject.mjs`, `src/test/eject.test.ts`, the `eject` script, and the `@/showcase` and renderer oxlint guards.
 
 The fork starts clean, green and correctly named. Eject is **dry-run by default**: it prints the plan and touches nothing. Pass `--execute` to perform it. The implementation is `scripts/eject.mjs`, and `src/test/eject.test.ts` locks it.
 
