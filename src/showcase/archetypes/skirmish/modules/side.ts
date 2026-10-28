@@ -18,6 +18,7 @@ import {
   createResource,
   createResourceBag,
   createScalingPurchasable,
+  getInflowRate,
   persistent,
   toNumber,
   type ComputedRef,
@@ -484,7 +485,7 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
     opened,
     floorShare,
     supplyUsed: () => toNumber(bag.total()),
-    scripRate: () => toNumber(econ.getTotalRate(scrip)),
-    aetherRate: () => toNumber(econ.getTotalRate(aether)),
+    scripRate: () => toNumber(getInflowRate(scrip)),
+    aetherRate: () => toNumber(getInflowRate(aether)),
   };
 }
