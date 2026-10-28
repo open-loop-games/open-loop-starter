@@ -1,0 +1,26 @@
+{
+  "id": "skirmish",
+  "title": "Chrome & Cantrip",
+  "blurb": "Rain on the sprawl, and the old ley lines awake under its streets. Hire hustlers for scrip, sink taps for aether, and train Razorboys, Hexers and Riggers to send into three districts a rival crew wants too. Hold one, order the assault, and burn their safehouse before they burn yours.",
+  "line": "Skirmish",
+  "topic": "Occult cyberpunk × RTS",
+  "path": "#/skirmish/play",
+  "capture": { "storageKey": "skirmish-slot-0" },
+  "shots": [
+    {
+      "beat": "Neon Narrows answers to your crew",
+      "file": "src/showcase/archetypes/skirmish/shots/1-district.png",
+      "save": "src/showcase/archetypes/skirmish/shots/1-district.save"
+    },
+    {
+      "beat": "The syndicate charter: the crew goes tier two",
+      "file": "src/showcase/archetypes/skirmish/shots/2-charter.png",
+      "save": "src/showcase/archetypes/skirmish/shots/2-charter.save"
+    },
+    {
+      "beat": "The assault: their safehouse at half",
+      "file": "src/showcase/archetypes/skirmish/shots/3-assault.png",
+      "save": "src/showcase/archetypes/skirmish/shots/3-assault.save"
+    }
+  ]
+}

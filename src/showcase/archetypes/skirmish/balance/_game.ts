@@ -56,6 +56,6 @@ export function buildGame(): Game {
  * in the purse, by the rival's own rule (`hireNext`). Call each tick of a live match; returns
  * the hire just made.
  */
-export function staffMatch(game: Game): string | undefined {
+export function staffMatch(game: Pick<Game, 'match'>): string | undefined {
   return hireNext(game.match.p)?.id;
 }
