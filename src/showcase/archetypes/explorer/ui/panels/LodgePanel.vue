@@ -7,7 +7,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { toNumber, type DecimalSource, type Purchasable } from '@open-loop/engine';
+import { getRate, toNumber, type DecimalSource, type Purchasable } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import {
   ProducerList,
@@ -18,7 +18,7 @@ import {
   readPriceLines,
   type ResourceReadout,
 } from '@/ui/compositions';
-import { ANCHORS, GEAR, PRODUCERS, type Currency, type GearDef } from '../../data';
+import { GEAR, PRODUCERS, type Currency, type GearDef } from '../../data';
 import { getLodge, getWold, type LodgeStore } from '../../modules';
 import { formatGrouped as fmt } from '@/composables/useFormatting';
 
@@ -29,21 +29,11 @@ const n = (v: DecimalSource) => toNumber(v);
 // === STORES ===
 
 const STORE_ORDER: LodgeStore[] = ['jerky', 'meat', 'hide', 'antler', 'wood'];
-const rates = computed<Record<LodgeStore, number>>(() => {
-  const smoke = lodge.smokeRate.value;
-  return {
-    jerky: smoke,
-    meat: n(lodge.producers.getTotalRate(lodge.stores.meat)) - smoke / ANCHORS.jerkyPerMeat,
-    wood: n(lodge.producers.getTotalRate(lodge.stores.wood)) - smoke * lodge.woodPerJerky.value,
-    hide: 0,
-    antler: 0,
-  };
-});
 const readouts: ResourceReadout[] = STORE_ORDER.map((id) => ({
   id,
   label: lodge.stores[id].displayName ?? id,
   value: lodge.stores[id],
-  rate: computed(() => rates.value[id]),
+  rate: computed(() => n(getRate(lodge.stores[id]))),
 }));
 const rateText = (r: number) =>
   Math.abs(r) > 0.005 ? `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}/s` : '';
