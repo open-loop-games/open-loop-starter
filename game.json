@@ -339,6 +339,10 @@
       "line": "Survivor",
       "topic": "Action-movie stunt set × Survivors-like",
       "path": "#/survivor/play",
+      "credits": [
+        "Cast and crowd figures: Kenney · CC0",
+        "Pixel Art Assets: Will Tice / unTied Games · Purchased license"
+      ],
       "capture": {
         "storageKey": "survivor-slot-0"
       },

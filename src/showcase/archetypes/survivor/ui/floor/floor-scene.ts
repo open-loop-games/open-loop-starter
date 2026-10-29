@@ -10,6 +10,11 @@
  * ticker; the host's animation-frame loop calls `render`, so starter's two fields share one
  * loop shape whatever draws them.
  *
+ * Bodies are Kenney figures turned to face where they walk, tinted half-way toward their
+ * kind's colour so the kinds read apart; the cast stand on rings. Effects are unTied
+ * animations played to their last frame, longer than the sim keeps the entry that started
+ * them (`bursts.ts`). The art and its packing are in `floor-art.ts`.
+ *
  * Colours are the costume's (`soundstage.css`), mirrored as literals, because a renderer
  * cannot read CSS variables per draw. The billing face is read from `--font-billing` once.
  */
@@ -23,15 +28,19 @@ import {
   Texture,
   type TextStyleOptions,
 } from 'pixi.js';
-import { ANCHORS, CONE_HALF_ANGLE, EXTRAS, LEADS, MARK_KILLS, SCRIPT } from '../../data';
+import { ANCHORS, LEADS, MARK_KILLS, SCRIPT } from '../../data';
 import {
+  PLAYER_RADIUS,
   SHOT_RADIUS,
   WORLD_HALF,
   orbitBottles,
   type ArenaState,
   type Extra,
+  type Fx,
   type Reel,
 } from '../../modules/sim/arena';
+import { createBursts, type Burst } from './bursts';
+import { FIGURE_ANCHOR, FIGURE_HEAD, loadFloorArt, type Figure, type FloorArt } from './floor-art';
 import { chase, createReckoner } from './smoothing';
 
 // ─── Palette ────────────────────────────────────────────────────────────────
@@ -62,8 +71,50 @@ const KIND_FILL: Record<Extra['kind']['id'], number> = {
   'strike-crew': 0xf2a73a,
 };
 
-/** The crowd's kinds; the staged cast is drawn per body, not from baked textures. */
-type CrowdKind = (typeof EXTRAS)[number]['id'];
+type KindId = Extra['kind']['id'];
+
+/** How far each kind's figure is tinted toward its fill: enough to read the kinds apart. */
+const TINT_SHARE = 0.5;
+const KIND_TINT = Object.fromEntries(
+  Object.entries(KIND_FILL).map(([k, c]) => [k, lerpColor(0xffffff, c, TINT_SHARE)]),
+) as Record<KindId, number>;
+/** A hurt double flushes squib red. */
+const HURT_TINT = lerpColor(0xffffff, C.squib, 0.6);
+
+// ─── Casting ────────────────────────────────────────────────────────────────
+
+/** Grunts are the general public: a civilian per extra, picked by id so it keeps it. */
+const CIVILIANS: readonly Figure[] = [
+  'manBlue_stand',
+  'manBrown_stand',
+  'manOld_stand',
+  'manRed_stand',
+  'womanGreen_stand',
+  'womanOld_stand',
+];
+const KIND_FIGURE: Record<Exclude<KindId, 'grunt'>, Figure> = {
+  biker: 'manRed_hold',
+  bruiser: 'robot1_stand',
+  henchman: 'hitman1_gun',
+  lead: 'hitman2_machine',
+  rival: 'womanGreen_gun',
+  'strike-crew': 'soldier1_hold',
+};
+const DOUBLE_FIGURE: Figure = 'survivor1_gun';
+/** A figure's head spans this share of its body's diameter. */
+const FIGURE_SIZE = 0.9;
+/** A cast member's ring, as a multiple of its radius: wide enough to show round the figure. */
+const CAST_RING = 1.3;
+
+function figureOf(e: Extra): Figure {
+  const id = e.kind.id;
+  return id === 'grunt' ? CIVILIANS[e.id % CIVILIANS.length]! : KIND_FIGURE[id];
+}
+
+/** The scale that puts a figure's head across a body of radius `r`. */
+function figureScale(r: number): number {
+  return ((2 * r) / FIGURE_HEAD) * FIGURE_SIZE;
+}
 
 // ─── Tuning of the drawing ──────────────────────────────────────────────────
 
@@ -75,8 +126,13 @@ const GRID_STEP = 160;
 const WALL_BAND = 40;
 /** How far the offstage dark reaches past the walls; past any view the camera can frame. */
 const OFFSTAGE = 2000;
-/** Stepped bands of the pyro cone's gradient. */
-const CONE_BANDS = 10;
+/** Live animations at once: kills come many a second on a full floor, rigs a few. */
+const POP_CAP = 96;
+const BLAST_CAP = 16;
+/** World size a kill pop spans: about a body's width. */
+const POP_SIZE = 52;
+/** A squib ring's art spans this multiple of the ring's reach, so its burst fills the ring. */
+const RING_SPAN = 2.1;
 
 /** Floor marks: actors' T-marks taped at fixed world spots. */
 const MARKS: { x: number; y: number; blue: boolean; rot: number }[] = (() => {
@@ -103,10 +159,11 @@ interface CrowdAt {
   seen: number;
 }
 
-/** A staged body: the lead, a rival or a strike-crew member, with its billing. */
+/** A staged body: the lead, a rival or a strike-crew member, on its ring, with its billing. */
 interface CastBody {
   root: Container;
-  body: Graphics;
+  ring: Graphics;
+  figure: Sprite;
   label: Text;
   x: number;
   y: number;
@@ -127,21 +184,20 @@ export class FloorScene {
   private shot = new Graphics();
   private shotLabel: Text | null = null;
   private reelLayer = new Container();
-  private fxUnder = new Graphics();
+  private blastLayer = new Container();
   private crowdLayer = new Container();
   private castLayer = new Container();
-  private fxOver = new Graphics();
+  private tracers = new Graphics();
+  private popLayer = new Container();
   private bars = new Graphics();
   private bottles = new Graphics();
   private double = new Container();
-  private doubleBody = new Graphics();
-  private heading = new Graphics();
+  private doubleFigure = new Sprite();
   private vignette = new Sprite();
   private arrows = new Graphics();
 
+  private art: FloorArt | null = null;
   private textures: {
-    crowd: Record<CrowdKind, Texture>;
-    flash: Record<CrowdKind, Texture>;
     reel: Record<'nitrate' | 'nitrateBig' | 'gold' | 'goldBig', Texture>;
     glow: Texture;
     hazard: Texture;
@@ -159,6 +215,11 @@ export class FloorScene {
   private cast = new Map<number, CastBody>();
   private reelSprites: Sprite[] = [];
   private reelAt = new WeakMap<Reel, { x: number; y: number }>();
+  /** Squib rings and pyro cones, under the bodies; kill pops, over them. */
+  private blasts = createBursts<Fx>(BLAST_CAP);
+  private pops = createBursts<Fx>(POP_CAP);
+  private blastSprites: Sprite[] = [];
+  private popSprites: Sprite[] = [];
   private shotAt = { x: 0, y: 0 };
 
   private reckoner = createReckoner();
@@ -187,6 +248,13 @@ export class FloorScene {
       app.destroy(true, { children: true });
       return;
     }
+    const art = await loadFloorArt();
+    if (this.disposed) {
+      art.destroy();
+      app.destroy(true, { children: true });
+      return;
+    }
+    this.art = art;
     this.app = app;
     this.host.appendChild(app.canvas);
     const billing = getComputedStyle(this.host).getPropertyValue('--font-billing').trim();
@@ -198,10 +266,11 @@ export class FloorScene {
       this.chalk,
       this.shot,
       this.reelLayer,
-      this.fxUnder,
+      this.blastLayer,
       this.crowdLayer,
       this.castLayer,
-      this.fxOver,
+      this.tracers,
+      this.popLayer,
       this.bars,
       this.bottles,
       this.double,
@@ -212,8 +281,10 @@ export class FloorScene {
 
     const glow = new Sprite(this.textures.glow);
     glow.anchor.set(0.5);
-    this.double.addChild(glow, this.doubleBody, this.heading);
-    this.heading.moveTo(6, 0).lineTo(19, 0).stroke({ width: 3, color: C.tungsten });
+    this.doubleFigure.texture = art.figure[DOUBLE_FIGURE];
+    this.doubleFigure.anchor.set(FIGURE_ANCHOR.x, FIGURE_ANCHOR.y);
+    this.doubleFigure.scale.set(figureScale(PLAYER_RADIUS));
+    this.double.addChild(glow, this.doubleFigure);
 
     this.lens.addChild(this.vignette, this.arrows);
     app.stage.addChild(this.world, this.lens);
@@ -243,21 +314,9 @@ export class FloorScene {
       g.destroy();
       return tex;
     };
-    const crowdBody = (kind: CrowdKind, flash: boolean) => (g: Graphics) => {
-      const r = EXTRAS.find((k) => k.id === kind)!.radius;
-      g.circle(0, 0, r)
-        .fill(flash ? C.chalk : KIND_FILL[kind])
-        .stroke({ width: 2, color: 0x000000, alpha: 0.55 });
-      if (kind === 'henchman') g.rect(-1.5, -2, 3, 7).fill(C.squib);
-      if (kind === 'biker') g.rect(-r + 2, -2, (r - 2) * 2, 3).fill(C.tapeYellow);
-    };
     const reel = (fill: number, r: number) => (g: Graphics) =>
       g.circle(0, 0, r).fill(fill).circle(0, 0, 1.6).fill(C.floor);
-    const record = <T>(f: (k: CrowdKind) => T) =>
-      Object.fromEntries(EXTRAS.map((k) => [k.id, f(k.id)])) as Record<CrowdKind, T>;
     return {
-      crowd: record((k) => bake(crowdBody(k, false))),
-      flash: record((k) => bake(crowdBody(k, true))),
       reel: {
         nitrate: bake(reel(C.nitrate, 4.5)),
         nitrateBig: bake(reel(C.nitrate, 6)),
@@ -315,7 +374,7 @@ export class FloorScene {
    */
   render(a: ArenaState | null, dt: number, now: number): void {
     const app = this.app;
-    if (!app || !this.textures) return;
+    if (!app || !this.textures || !this.art) return;
     const t0 = performance.now();
     this.frameNo++;
     const w = app.screen.width;
@@ -341,10 +400,10 @@ export class FloorScene {
     this.drawChalk(a);
     this.drawShot(a);
     this.drawReels(a, dt, view);
-    this.drawFxUnder(a);
+    this.drawBursts(a, now, view);
     this.bars.clear();
-    this.drawBodies(a, dt, view);
-    this.drawFxOver(a);
+    this.drawBodies(a, dt, view, cam);
+    this.drawTracers(a);
     this.drawBottles(a, cam);
     this.drawDouble(a, cam);
     this.drawArrows(a, cam, w, h);
@@ -363,6 +422,8 @@ export class FloorScene {
     for (const b of this.cast.values()) b.root.destroy({ children: true });
     this.cast.clear();
     this.reelAt = new WeakMap();
+    this.blasts = createBursts<Fx>(BLAST_CAP);
+    this.pops = createBursts<Fx>(POP_CAP);
   }
 
   /** The script's chalk marks: a ring with an X, kills inside it drawn round the ring. */
@@ -447,42 +508,67 @@ export class FloorScene {
     for (let i = used; i < this.reelSprites.length; i++) this.reelSprites[i]!.visible = false;
   }
 
-  /** Squib rings and the pyro cone, under the bodies they hit. */
-  private drawFxUnder(a: ArenaState): void {
-    const g = this.fxUnder.clear();
+  /**
+   * The rigs' blasts under the bodies and the kill pops over them, each an unTied animation
+   * started the first frame its sim entry is seen and played to its end.
+   */
+  private drawBursts(a: ArenaState, now: number, v: View): void {
+    const fx = this.art!.fx;
     for (const f of a.fx) {
-      const k = f.life / f.max;
-      if (f.kind === 'ring') {
-        g.circle(f.x, f.y, f.r * (1.05 - 0.35 * k)).stroke({
-          width: 6 * k + 1,
-          color: C.tungsten,
-          alpha: 0.7 * k,
-        });
-      } else if (f.kind === 'cone') {
-        // The canvas's radial gradient, as stepped bands: gold at the nozzle, squib at the edge.
-        for (let i = CONE_BANDS; i >= 1; i--) {
-          const u = i / CONE_BANDS;
-          const r = 10 + (f.r - 10) * u;
-          const [color, alpha] =
-            u < 0.6
-              ? [lerpColor(C.gold, C.squib, u / 0.6), 0.75 + (0.55 - 0.75) * (u / 0.6)]
-              : [C.squib, 0.55 * (1 - (u - 0.6) / 0.4)];
-          g.moveTo(f.x, f.y)
-            .arc(f.x, f.y, r, f.angle - CONE_HALF_ANGLE, f.angle + CONE_HALF_ANGLE)
-            .closePath()
-            .fill({ color, alpha: (alpha * k) / 2 });
-        }
-      }
+      if (f.kind === 'ring') this.blasts.start(f, fx.ring.length, now);
+      else if (f.kind === 'cone') this.blasts.start(f, fx.cone.length, now);
+      else if (f.kind === 'pop') this.pops.start(f, (f.gold ? fx.gold : fx.pop).length, now);
     }
+    this.place(this.blasts.advance(now), this.blastSprites, this.blastLayer, v);
+    this.place(this.pops.advance(now), this.popSprites, this.popLayer, v);
   }
 
-  private drawBodies(a: ArenaState, dt: number, v: View): void {
-    const tex = this.textures!;
+  private place(live: readonly Burst<Fx>[], pool: Sprite[], layer: Container, v: View): void {
+    const fx = this.art!.fx;
+    let used = 0;
+    for (const b of live) {
+      const f = b.source;
+      if (f.kind === 'tracer' || !inView(f, v, 200)) continue;
+      let s = pool[used];
+      if (!s) {
+        s = new Sprite();
+        layer.addChild(s);
+        pool.push(s);
+      }
+      used++;
+      s.visible = true;
+      s.position.set(f.x, f.y);
+      if (f.kind === 'cone') {
+        // The fire burst points up its frame from the bottom edge: turn it onto the heading.
+        const tex = fx.cone[b.frame]!;
+        s.texture = tex;
+        s.anchor.set(0.5, 1);
+        s.rotation = f.angle + Math.PI / 2;
+        s.scale.set(f.r / tex.height);
+      } else {
+        const tex = (f.kind === 'ring' ? fx.ring : f.gold ? fx.gold : fx.pop)[b.frame]!;
+        const span = f.kind === 'ring' ? f.r * RING_SPAN : POP_SIZE;
+        s.texture = tex;
+        s.anchor.set(0.5);
+        s.rotation = 0;
+        s.scale.set(span / Math.max(tex.width, tex.height));
+      }
+    }
+    for (let i = used; i < pool.length; i++) pool[i]!.visible = false;
+  }
+
+  private drawBodies(
+    a: ArenaState,
+    dt: number,
+    v: View,
+    cam: Readonly<{ x: number; y: number }>,
+  ): void {
+    const art = this.art!;
     const frame = this.frameNo;
     let used = 0;
     for (const e of a.extras) {
       if (e.role) {
-        this.drawCast(a, e, dt, v);
+        this.drawCast(a, e, dt, v, cam);
         continue;
       }
       let b = this.crowd.get(e.id);
@@ -491,13 +577,16 @@ export class FloorScene {
       b.x = chase(b.x, e.x, BODY_CHASE, dt);
       b.y = chase(b.y, e.y, BODY_CHASE, dt);
       if (!inView(b, v, CULL_MARGIN)) continue;
-      const kind = e.kind.id as CrowdKind;
       const s = this.crowdSprites[used] ?? this.newCrowdSprite();
       used++;
-      s.texture = e.flash > 0 ? tex.flash[kind] : tex.crowd[kind];
+      const figure = figureOf(e);
+      s.texture = e.flash > 0 ? art.flash[figure] : art.figure[figure];
+      s.tint = e.flash > 0 ? 0xffffff : KIND_TINT[e.kind.id];
+      s.scale.set(figureScale(e.kind.radius));
+      s.rotation = facing(e, b, cam);
       s.position.set(b.x, b.y);
       s.visible = true;
-      if (kind === 'bruiser' && e.hp < e.maxHp) {
+      if (e.kind.id === 'bruiser' && e.hp < e.maxHp) {
         const r = e.kind.radius;
         this.bars
           .rect(b.x - r, b.y - r - 8, r * 2, 3)
@@ -518,19 +607,30 @@ export class FloorScene {
 
   private newCrowdSprite(): Sprite {
     const s = new Sprite();
-    s.anchor.set(0.5);
+    s.anchor.set(FIGURE_ANCHOR.x, FIGURE_ANCHOR.y);
     this.crowdLayer.addChild(s);
     this.crowdSprites.push(s);
     return s;
   }
 
   /** The staged cast: the lead billed by name, a rival in gold, the strike crew in hazard stripe. */
-  private drawCast(a: ArenaState, e: Extra, dt: number, v: View): void {
+  private drawCast(
+    a: ArenaState,
+    e: Extra,
+    dt: number,
+    v: View,
+    cam: Readonly<{ x: number; y: number }>,
+  ): void {
+    const r = e.kind.radius;
+    const crew = e.role === 'strike-crew';
     let b = this.cast.get(e.id);
     if (!b) {
       const root = new Container();
-      const body = new Graphics();
-      const crew = e.role === 'strike-crew';
+      const ring = new Graphics();
+      const figure = new Sprite(this.art!.figure[figureOf(e)]);
+      figure.anchor.set(FIGURE_ANCHOR.x, FIGURE_ANCHOR.y);
+      figure.scale.set(figureScale(r));
+      figure.tint = KIND_TINT[e.kind.id];
       const label = this.text(
         e.role === 'lead'
           ? LEADS[a.rating]!.name.toUpperCase()
@@ -540,61 +640,52 @@ export class FloorScene {
         crew ? C.hazardA : C.chalk,
       );
       label.anchor.set(0.5, 1);
-      root.addChild(body, label);
+      root.addChild(ring, figure, label);
       this.castLayer.addChild(root);
-      b = { root, body, label, x: e.x, y: e.y, seen: this.frameNo };
+      b = { root, ring, figure, label, x: e.x, y: e.y, seen: this.frameNo };
       this.cast.set(e.id, b);
     }
     b.seen = this.frameNo;
     b.x = chase(b.x, e.x, BODY_CHASE, dt);
     b.y = chase(b.y, e.y, BODY_CHASE, dt);
-    b.root.visible = inView(b, v, CULL_MARGIN);
+    b.root.visible = inView(b, v, CULL_MARGIN + r);
     if (!b.root.visible) return;
     b.root.position.set(b.x, b.y);
-    const r = e.kind.radius;
-    const crew = e.role === 'strike-crew';
-    // Under steady fire a flash fill would never clear, so a hit lights the ring instead.
-    b.body
-      .clear()
-      .circle(0, 0, r)
-      .fill(crew ? new FillPattern(this.textures!.hazard, 'repeat') : KIND_FILL[e.kind.id])
-      .stroke({
-        width: e.role === 'lead' ? 4 : 3,
-        color: crew ? C.hazardB : e.flash > 0 ? C.chalk : e.role === 'rival' ? C.gold : C.chalk,
-        alpha: crew || e.flash > 0 || e.role === 'rival' ? 1 : 0.6,
-      });
+    b.figure.rotation = facing(e, b, cam);
+    const ringR = r * CAST_RING;
+    // Under steady fire a flash would never clear off the figure, so a hit lights the ring.
+    b.ring.clear();
     if (crew) {
-      b.label.position.set(0, -r - 4);
+      dashedCircle(b.ring, 0, 0, ringR, 9, 7).stroke({ width: 3, color: C.hazardA });
+      b.label.position.set(0, -ringR - 4);
       return;
     }
-    b.label.position.set(0, -r - 14);
+    b.ring.circle(0, 0, ringR).stroke({
+      width: e.role === 'lead' ? 4 : 3,
+      color: e.flash > 0 ? C.chalk : e.role === 'rival' ? C.gold : C.squib,
+    });
+    b.label.position.set(0, -ringR - 14);
     const bw = r * 2.4;
     this.bars
-      .rect(b.x - bw / 2, b.y - r - 12, bw, 5)
+      .rect(b.x - bw / 2, b.y - ringR - 12, bw, 5)
       .fill({ color: 0x000000, alpha: 0.65 })
-      .rect(b.x - bw / 2, b.y - r - 12, (bw * Math.max(0, e.hp)) / e.maxHp, 5)
+      .rect(b.x - bw / 2, b.y - ringR - 12, (bw * Math.max(0, e.hp)) / e.maxHp, 5)
       .fill(e.role === 'lead' ? C.squib : C.gold);
   }
 
-  /** Tracers and kill pops, over the bodies. */
-  private drawFxOver(a: ArenaState): void {
-    const g = this.fxOver.clear();
+  /** The rigs' tracers, over the bodies: a line from the double to what it hit. */
+  private drawTracers(a: ArenaState): void {
+    const g = this.tracers.clear();
     for (const f of a.fx) {
+      if (f.kind !== 'tracer') continue;
       const k = f.life / f.max;
-      if (f.kind === 'tracer') {
-        g.moveTo(f.x, f.y)
-          .lineTo(f.x2, f.y2)
-          .stroke(
-            f.heavy
-              ? { width: 3, color: C.gold, alpha: k }
-              : { width: 1.5, color: C.chalk, alpha: 0.85 * k },
-          );
-      } else if (f.kind === 'pop') {
-        g.circle(f.x, f.y, 16 * (1.3 - k)).fill({
-          color: f.gold ? C.gold : C.chalk,
-          alpha: (f.gold ? 0.6 : 0.35) * k,
-        });
-      }
+      g.moveTo(f.x, f.y)
+        .lineTo(f.x2, f.y2)
+        .stroke(
+          f.heavy
+            ? { width: 3, color: C.gold, alpha: k }
+            : { width: 1.5, color: C.chalk, alpha: 0.85 * k },
+        );
     }
   }
 
@@ -612,15 +703,12 @@ export class FloorScene {
     }
   }
 
-  /** The double: a lit figure with a heading notch, at the reckoned position. */
+  /** The double: a lit figure turned to its heading, at the reckoned position. */
   private drawDouble(a: ArenaState, cam: Readonly<{ x: number; y: number }>): void {
     const p = a.player;
     this.double.position.set(cam.x, cam.y);
-    this.doubleBody
-      .clear()
-      .circle(0, 0, 12)
-      .fill(p.hurt > 0 ? C.squib : C.chalk);
-    this.heading.rotation = p.facing;
+    this.doubleFigure.rotation = p.facing;
+    this.doubleFigure.tint = p.hurt > 0 ? HURT_TINT : 0xffffff;
   }
 
   /** A target off camera gets an edge tick pointing back to it: the shot, a mark, the cast. */
@@ -698,24 +786,19 @@ export class FloorScene {
     const app = this.app;
     this.app = null;
     if (!app) return;
-    const t = this.textures;
+    // The renderer's teardown frees what this scene baked and drew. Destroying those textures
+    // after it trips pixi's bind-group warnings, so only the art's slices are let go here.
     app.destroy(true, { children: true });
-    if (t) {
-      for (const tex of [
-        ...Object.values(t.crowd),
-        ...Object.values(t.flash),
-        ...Object.values(t.reel),
-        t.glow,
-        t.hazard,
-      ])
-        tex.destroy(true);
-    }
-    this.vignetteTexture?.destroy(true);
+    this.art?.destroy();
+    this.art = null;
+    this.vignetteTexture = null;
     this.textures = null;
     this.crowd.clear();
     this.cast.clear();
     this.crowdSprites.length = 0;
     this.reelSprites.length = 0;
+    this.blastSprites.length = 0;
+    this.popSprites.length = 0;
   }
 }
 
@@ -730,6 +813,15 @@ interface View {
 
 function inView(p: { x: number; y: number }, v: View, margin: number): boolean {
   return p.x > v.x0 - margin && p.x < v.x1 + margin && p.y > v.y0 - margin && p.y < v.y1 + margin;
+}
+
+/** Where a body faces: along its march in a set piece, else at the double it closes on. */
+function facing(
+  e: Extra,
+  at: { x: number; y: number },
+  cam: Readonly<{ x: number; y: number }>,
+): number {
+  return e.march ? Math.atan2(e.march.y, e.march.x) : Math.atan2(cam.y - at.y, cam.x - at.x);
 }
 
 function clamp(x: number, lo: number, hi: number): number {
