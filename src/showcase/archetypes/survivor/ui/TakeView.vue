@@ -1,23 +1,23 @@
 <!--
-  TakeView — the floor and its HUD, on a StageShell: the canvas fills the stage and the HUD
-  pieces are floats on its anchors. The canvas paints whatever the step last wrote, every
-  animation frame; the HUD reads the take's reactive mirror. Input is read only while the
+  TakeView — the floor and its HUD, on a StageShell: the pixi floor fills the stage and the
+  HUD pieces are floats on its anchors. The floor draws itself every animation frame; the HUD
+  reads the take's reactive mirror. Input is read only while the
   player calls the moves; an improvising star steers itself, and its pages are announced on
   a slip instead of the rewrite modal.
 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, useTemplateRef } from 'vue';
 import { ShellFloat, StageShell } from '@/lib';
 import { formatClock } from '@/composables/useFormatting';
 import { useWindowKeys } from '@/composables/useWindowKeys';
 import { ANCHORS, GUESTS, LEADS, MARK_KILLS, SCRIPT, SET_PIECES } from '../data';
 import { getTake } from '../modules';
-import { renderArena } from './render';
 import { pageOf } from './pages';
+import FloorField from './FloorField.vue';
 import RewriteModal from './RewriteModal.vue';
 
 const take = getTake();
-const canvas = ref<HTMLCanvasElement | null>(null);
+const field = useTemplateRef<InstanceType<typeof FloorField>>('field');
 const hud = take.view.hud;
 const improvising = computed(() => take.view.driver === 'instinct');
 
@@ -33,8 +33,10 @@ function syncInput(): void {
   if (keys.has('arrowright') || keys.has('d')) mx += 1;
   if (keys.has('arrowup') || keys.has('w')) my -= 1;
   if (keys.has('arrowdown') || keys.has('s')) my += 1;
-  if (mx === 0 && my === 0 && pointer && canvas.value) {
-    const r = canvas.value.getBoundingClientRect();
+  const floor = field.value?.$el as HTMLElement | undefined;
+  if (mx === 0 && my === 0 && pointer && floor) {
+    // The camera holds the double at the floor's centre, so the pointer steers from there.
+    const r = floor.getBoundingClientRect();
     const dx = pointer.x - (r.left + r.width / 2);
     const dy = pointer.y - (r.top + r.height / 2);
     const d = Math.hypot(dx, dy);
@@ -75,36 +77,17 @@ function release(): void {
   syncInput();
 }
 
-// ─── Frame loop: paint whatever the step last wrote ───
-let raf = 0;
-function frame(): void {
-  const c = canvas.value;
-  const a = take.arena();
-  if (c && a) {
-    const dpr = window.devicePixelRatio || 1;
-    const w = c.clientWidth;
-    const h = c.clientHeight;
-    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
-      c.width = Math.round(w * dpr);
-      c.height = Math.round(h * dpr);
-    }
-    const ctx = c.getContext('2d')!;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    renderArena(ctx, a, w, h);
-  }
-  raf = requestAnimationFrame(frame);
-}
-
 useWindowKeys(onKey, { up: true, when: () => !improvising.value, onBlur: release });
 onMounted(() => {
   window.addEventListener('pointerup', pointerUp);
-  raf = requestAnimationFrame(frame);
 });
 onUnmounted(() => {
   window.removeEventListener('pointerup', pointerUp);
-  cancelAnimationFrame(raf);
   release();
 });
+
+/** The floor's counts and draw time, for the game view's dev handle. */
+defineExpose({ floorStats: () => field.value?.stats() });
 
 // ─── HUD readouts ───
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -157,7 +140,7 @@ const slip = computed(() => {
 
 <template>
   <StageShell class="take" @pointerdown="pointerDown" @pointermove="pointerMove">
-    <canvas ref="canvas" class="floor" aria-label="The soundstage floor"></canvas>
+    <FloorField ref="field" />
     <RewriteModal v-if="take.view.screen === 'rewrite'" />
 
     <template #floats>
@@ -295,14 +278,6 @@ const slip = computed(() => {
   --shell-gap: var(--hud-pad);
   user-select: none;
   touch-action: none;
-}
-.floor {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  cursor: crosshair;
 }
 .slate {
   width: 190px;

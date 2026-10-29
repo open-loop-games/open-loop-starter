@@ -8,6 +8,7 @@
   a stage clips and they scroll.
 -->
 <script setup lang="ts">
+import { useTemplateRef } from 'vue';
 import { addResource } from '@open-loop/engine';
 import { useDevHandle } from '@/composables/useDevHandle';
 import { getMeta, getTake } from '../modules';
@@ -16,15 +17,17 @@ import TakeView from './TakeView.vue';
 import WrapScreen from './WrapScreen.vue';
 
 const take = getTake();
+const takeView = useTemplateRef<InstanceType<typeof TakeView>>('takeView');
 
-// Dev-only handle for the screenshot loop: window.__game.skip(seconds), the modules, and
-// setters for clout and the ledger. The engine runs fixed ticks, so the skip's advance
-// already steps the floor one tick at a time and needs no chunk.
+// Dev-only handle for the screenshot loop: window.__game.skip(seconds), the modules, the
+// floor's counts and draw time, and setters for clout and the ledger. The engine runs fixed
+// ticks, so the skip's advance already steps the floor one tick at a time and needs no chunk.
 if (import.meta.env.DEV) {
   const meta = getMeta();
   useDevHandle({
     take,
     meta,
+    floor: { stats: () => takeView.value?.floorStats() },
     grant: (clout: number) => addResource(meta.clout, clout),
     /** Records every star as having wrapped ratings up to `index`, which opens the next. */
     clear: (index: number) => {
@@ -37,6 +40,9 @@ if (import.meta.env.DEV) {
 
 <template>
   <CallSheet v-if="take.view.screen === 'call-sheet'" />
-  <TakeView v-else-if="take.view.screen === 'take' || take.view.screen === 'rewrite'" />
+  <TakeView
+    v-else-if="take.view.screen === 'take' || take.view.screen === 'rewrite'"
+    ref="takeView"
+  />
   <WrapScreen v-else-if="take.view.screen === 'wrap'" />
 </template>
