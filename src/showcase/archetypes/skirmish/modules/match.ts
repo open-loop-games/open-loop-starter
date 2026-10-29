@@ -32,7 +32,7 @@ import {
   type BattleEvent,
   type Counts,
 } from './battle';
-import { createSide, type Side } from './side';
+import { blockOf, createSide, type Block, type Side } from './side';
 import { stepTravel, type Convoy } from './travel';
 import type { Place } from '../data/map';
 import type { Situation } from './policy';
@@ -51,6 +51,11 @@ export type FeedTone = 'good' | 'bad' | 'info';
 export interface Sighting {
   counts: Counts;
   at: number;
+}
+
+/** What the astral scout last saw inside the rival's safehouse: its units and its block. */
+export interface SafehouseSighting extends Sighting {
+  block: Block;
 }
 
 export interface MatchApi {
@@ -73,7 +78,7 @@ export interface MatchApi {
   readonly scoutCost: number;
   /** The player's last sighting per district, and of the rival's safehouse. */
   readonly sightings: ShallowRef<(Sighting | undefined)[]>;
-  readonly safehouseSighting: ShallowRef<Sighting | undefined>;
+  readonly safehouseSighting: ShallowRef<SafehouseSighting | undefined>;
   /** Whether the player sees a district now. */
   visible(district: number): boolean;
   /** Whether the player sees a place now: their own safehouse always, the rival's only while scouting. */
@@ -143,7 +148,7 @@ export const matchModule: EngineModule = {
     const scoutLeft = computed(() => Math.max(0, scoutUntil.value - clock.value));
     const scoutCooldown = computed(() => Math.max(0, scoutReadyAt.value - clock.value));
     const sightings = shallowRef<(Sighting | undefined)[]>(DISTRICTS.map(() => undefined));
-    const safehouseSighting = shallowRef<Sighting | undefined>(undefined);
+    const safehouseSighting = shallowRef<SafehouseSighting | undefined>(undefined);
     // The player sees a district while scouting, while a squad stands in it, or while its informants answer to them.
     const visible = (i: number) =>
       scoutLeft.value > 0 || total(countsOf(p.squads[i])) > PRESENCE || control[i].value > 0;
@@ -162,7 +167,11 @@ export const matchModule: EngineModule = {
       }
       if (changed) sightings.value = next;
       if (scoutLeft.value > 0)
-        safehouseSighting.value = { counts: countsOf(e.reserve), at: clock.value };
+        safehouseSighting.value = {
+          counts: countsOf(e.reserve),
+          at: clock.value,
+          block: blockOf(e),
+        };
     }
 
     function enemyMixFor(seat: 'p' | 'e'): Counts {

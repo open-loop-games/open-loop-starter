@@ -131,6 +131,22 @@ export interface Side {
   aetherRate(): number;
 }
 
+/** What stands on a seat's safehouse block: the tech floors it opened, its other floors, its squats. */
+export interface Block {
+  tech: UnitKind[];
+  floors: number;
+  squats: number;
+}
+
+export function blockOf(side: Side): Block {
+  const tech = UNIT_KINDS.filter((k) => side.opened(k));
+  return {
+    tech,
+    floors: side.floorCount() - tech.length,
+    squats: toNumber(side.squats.count.value),
+  };
+}
+
 export interface SideOptions {
   ctx: EngineContext;
   id: SideId;

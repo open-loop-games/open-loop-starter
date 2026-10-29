@@ -4,19 +4,33 @@
  * as a `Pick`, and the host turns it into an order. This class is the one owner of the
  * field → screen mapping.
  *
- * Built from primitives: each kind is one shape, each seat one colour, so a squad reads
- * by its figures before any model is loaded. Figures are decoration: they chase the slot
- * the latest sim sample puts them in.
+ * What changes with the match is drawn on its place: control as a ring round the plaza,
+ * nests and gate guns as turrets, each safehouse block's floors and squats as buildings
+ * (the rival's as the scout last saw them), and the squads and convoys as figures. The
+ * city, the night and the figures are their own files; this one places them.
  */
 import * as THREE from 'three';
 import type { Place } from '../../data/map';
-import { ROADS } from '../../data/map';
 import { UNIT_KINDS, type UnitKind } from '../../data/units';
+import type { Block } from '../../modules/side';
 import type { Pick } from '../command';
-import type { ConvoyView, FieldFrame } from './frame';
-import { PLACES } from './frame';
 import { CameraRig } from './camera';
-import { alongRoad, columnSlot, figureCounts, spotOf, squadSlot, type Spot } from './layout';
+import { buildCity, fit, type City } from './city';
+import { Figures, type Act } from './figures';
+import type { FieldFrame, PlaceView } from './frame';
+import { PLACES } from './frame';
+import {
+  PLAZA,
+  alongRoad,
+  columnSlot,
+  figureCounts,
+  spotOf,
+  squadFacing,
+  squadSlot,
+  type Spot,
+} from './layout';
+import { Look } from './look';
+import { loadModels, type Models } from './models';
 
 /** What the host adds to the frame: the player's selection and where the pointer is. */
 export interface FieldView {
@@ -26,32 +40,35 @@ export interface FieldView {
 }
 
 /** The deck's palette, from `cantrip.css`. */
-const COLOR = {
-  night: 0x070b10,
-  ground: 0x10161e,
-  road: 0x1e2a37,
-  kerb: 0x2f3e4e,
-  water: 0x0b1c2a,
-  pad: 0x16202b,
-  building: 0x1a2430,
-  you: 0xffa646,
-  rival: 0xff4f7b,
-  ley: 0xb49bff,
-  chalk: 0xe4dfd1,
-};
+const COLOR = { you: 0xffa646, rival: 0xff4f7b, chalk: 0xe4dfd1 };
+const SIDE_COLOR = { p: COLOR.you, e: COLOR.rival };
 
-/** The most figures of one kind on the field at once: every place and convoy at the cap. */
-const MAX_FIGURES = 400;
-/** How fast a figure closes on its slot, 1/s. */
-const CHASE = 10;
 /** Ground distance within which a click picks a place, and a convoy's marker. */
-const PLACE_REACH = 2.4;
-const CONVOY_REACH = 0.9;
-/** Gate guns drawn around a safehouse, at most. */
-const MAX_GUNS = 8;
+const PLACE_REACH = PLAZA;
+const CONVOY_REACH = 1.2;
+const MARKER_HEIGHT = 2.1;
+const ARC_SEGMENTS = 64;
 
-const ARC_SEGMENTS = 48;
-const PAD_RADIUS = 2.6;
+// ─── Safehouse blocks ───
+// Offsets from your safehouse; the rival's block is the mirror image. Each tech floor has
+// its own slot, so a floor opening never moves the others.
+const HOUSE: [string, number, number, number] = ['industrial-building-c', -1.6, -1.9, 2.3];
+const TECH: Record<UnitKind, [string, number, number, number]> = {
+  razor: ['industrial-building-f', 0.9, -2.3, 1.5],
+  hexer: ['defence-tower-round-crystals', -3.3, -4.3, 1.2],
+  rigger: ['industrial-building-m', -1.3, -4.7, 1.5],
+  enforcer: ['industrial-building-a', 0.8, -4.7, 1.4],
+};
+/** Plain floors and squats show up to their slots; the panels carry the counts. */
+const FLOOR_SLOTS = [-3.4, -2.4, -1.4, -0.4, 0.6, 1.6].map((x) => [x, -6.2] as const);
+const SQUAT_SLOTS = [-4.4, -5.6, -6.8].map((z) => [2.7, z] as const);
+/** Gate guns on the safehouse roof, one turret per level. */
+const GUN_SLOTS = [
+  [-0.45, -0.35],
+  [0.45, -0.35],
+  [-0.45, 0.45],
+  [0.45, 0.45],
+] as const;
 
 interface Marker {
   mesh: THREE.Mesh;
@@ -59,210 +76,144 @@ interface Marker {
 }
 
 export class SkirmishScene {
+  /** Settles once the models are in and the city stands; figures draw from then on. */
+  readonly ready: Promise<void>;
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private rig = new CameraRig();
-  private figures: Record<UnitKind, THREE.InstancedMesh>;
-  private ghosts: Record<UnitKind, THREE.InstancedMesh>;
-  /** Where each figure is drawn now, by a key stable while it stands in one squad or convoy. */
-  private shown = new Map<string, Spot>();
+  private look: Look;
+  private models: Models | null = null;
+  private city: City | null = null;
+  private figures: Figures | null = null;
+  private disposed = false;
   private heads = new Map<string, Spot>();
   private yourArcs = new Map<Place, THREE.Mesh>();
   private selectRings = new Map<Place, THREE.Mesh>();
   private hoverRing: THREE.Mesh;
-  private nests = new Map<string, THREE.Mesh>();
-  private guns: Record<'p' | 'e', THREE.Mesh[]> = { p: [], e: [] };
+  private nests = new Map<string, THREE.Object3D>();
+  private nestRings: THREE.Mesh[] = [];
+  private blocks: Record<'p' | 'e', { key: string; group: THREE.Group }> = {
+    p: { key: '', group: new THREE.Group() },
+    e: { key: '', group: new THREE.Group() },
+  };
   private markers: Marker[] = [];
-  private markerGeo = new THREE.OctahedronGeometry(0.32, 0);
+  private markerGeo = new THREE.OctahedronGeometry(0.28, 0);
   private markerMat: Record<'p' | 'e' | 'picked', THREE.MeshBasicMaterial>;
   private route: THREE.Line;
   private routeKey = '';
   private last: FieldFrame | null = null;
   private width = 0;
-  private color = new THREE.Color();
-  private matrix = new THREE.Matrix4();
+  private time = 0;
+  /** Milliseconds a frame spends in `render`, smoothed. */
+  private cpu = 0;
 
   constructor(private host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setClearColor(COLOR.night);
+    // A frame is several passes; count them all, reset once per frame.
+    this.renderer.info.autoReset = false;
     host.appendChild(this.renderer.domElement);
+    this.look = new Look(this.renderer, this.scene, this.rig.camera);
 
-    this.scene.fog = new THREE.Fog(COLOR.night, 40, 90);
-    const sky = new THREE.HemisphereLight(0x8fa6c8, 0x0a0d12, 1.4);
-    const moon = new THREE.DirectionalLight(0xc8d4ff, 1.2);
-    moon.position.set(-8, 20, 10);
-    this.scene.add(sky, moon);
-
-    this.buildGround();
-    this.buildPlaces();
-    this.figures = this.figureMeshes(false);
-    this.ghosts = this.figureMeshes(true);
-
-    this.markerMat = {
-      p: new THREE.MeshBasicMaterial({ color: COLOR.you }),
-      e: new THREE.MeshBasicMaterial({ color: COLOR.rival }),
-      picked: new THREE.MeshBasicMaterial({ color: COLOR.chalk }),
-    };
-    this.hoverRing = this.ring(2.0, 2.15, COLOR.chalk, 0.35);
+    // Markers and rings are unlit and skip tone mapping, so they stay the deck's colours.
+    const flat = (color: number, opacity = 1) =>
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: opacity < 1,
+        opacity,
+        depthWrite: false,
+        toneMapped: false,
+      });
+    this.markerMat = { p: flat(COLOR.you), e: flat(COLOR.rival), picked: flat(COLOR.chalk) };
+    for (const place of PLACES) {
+      const s = spotOf(place);
+      const sel = this.ring(PLAZA + 0.1, PLAZA + 0.25, flat(COLOR.chalk, 0.8));
+      sel.position.set(s.x, 0.09, s.z);
+      sel.visible = false;
+      this.selectRings.set(place, sel);
+      if (typeof place !== 'number') continue;
+      // Control: the rival's share is the full ring under, yours an arc drawn over it.
+      this.ring(PLAZA - 0.25, PLAZA - 0.1, flat(COLOR.rival, 0.45)).position.set(s.x, 0.07, s.z);
+      const yours = this.ring(PLAZA - 0.25, PLAZA - 0.1, flat(COLOR.you, 0.85));
+      yours.position.set(s.x, 0.08, s.z);
+      this.yourArcs.set(place, yours);
+    }
+    this.hoverRing = this.ring(PLAZA + 0.1, PLAZA + 0.2, flat(COLOR.chalk, 0.3));
     this.hoverRing.visible = false;
     this.route = new THREE.Line(
       new THREE.BufferGeometry(),
-      new THREE.LineDashedMaterial({ color: COLOR.chalk, dashSize: 0.4, gapSize: 0.3 }),
-    );
-    this.route.position.y = 0.06;
-    this.scene.add(this.route);
-    this.resize();
-  }
-
-  // ─── The static map ──────────────────────────────────────────────────────
-
-  private buildGround(): void {
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(80, 50),
-      new THREE.MeshStandardMaterial({ color: COLOR.ground, roughness: 0.95 }),
-    );
-    ground.rotation.x = -Math.PI / 2;
-    const water = new THREE.Mesh(
-      new THREE.PlaneGeometry(80, 16),
-      new THREE.MeshStandardMaterial({ color: COLOR.water, roughness: 0.3, metalness: 0.2 }),
-    );
-    water.rotation.x = -Math.PI / 2;
-    water.position.set(0, 0.01, 16);
-    this.scene.add(ground, water);
-
-    const roadMat = new THREE.MeshStandardMaterial({ color: COLOR.road, roughness: 0.6 });
-    const kerbMat = new THREE.MeshStandardMaterial({ color: COLOR.kerb, roughness: 0.8 });
-    for (const [a, b] of ROADS) {
-      const from = spotOf(a);
-      const to = spotOf(b);
-      const len = Math.hypot(to.x - from.x, to.z - from.z);
-      const angle = Math.atan2(to.z - from.z, to.x - from.x);
-      const road = new THREE.Mesh(new THREE.BoxGeometry(len, 0.04, 1.3), roadMat);
-      const kerb = new THREE.Mesh(new THREE.BoxGeometry(len, 0.03, 1.6), kerbMat);
-      for (const m of [road, kerb]) {
-        m.position.set((from.x + to.x) / 2, m === road ? 0.03 : 0.015, (from.z + to.z) / 2);
-        m.rotation.y = -angle;
-        this.scene.add(m);
-      }
-    }
-  }
-
-  private buildPlaces(): void {
-    const padMat = new THREE.MeshStandardMaterial({ color: COLOR.pad, roughness: 0.7 });
-    const blockMat = new THREE.MeshStandardMaterial({ color: COLOR.building, roughness: 0.8 });
-    for (const place of PLACES) {
-      const s = spotOf(place);
-      const pad = new THREE.Mesh(
-        new THREE.CylinderGeometry(PAD_RADIUS, PAD_RADIUS, 0.08, 40),
-        padMat,
-      );
-      pad.position.set(s.x, 0.04, s.z);
-      this.scene.add(pad);
-      const sel = this.ring(2.25, 2.45, COLOR.chalk, 0.9);
-      sel.position.set(s.x, 0.1, s.z);
-      sel.visible = false;
-      this.selectRings.set(place, sel);
-      if (typeof place === 'number') {
-        // Control: the rival's share is the full ring under, yours an arc drawn over it.
-        const theirs = this.ring(2.6, 2.95, COLOR.rival, 0.35);
-        theirs.position.set(s.x, 0.08, s.z);
-        const yours = this.ring(2.6, 2.95, COLOR.you, 0.6);
-        yours.position.set(s.x, 0.09, s.z);
-        this.yourArcs.set(place, yours);
-        // A few blocks behind the pad, so a district reads as streets, not a token.
-        for (let i = 0; i < 4; i++) {
-          const h = 1.2 + ((i * 7 + place * 3) % 4) * 0.6;
-          const block = new THREE.Mesh(new THREE.BoxGeometry(1.4, h, 1.4), blockMat);
-          const a = Math.PI * (0.15 + i * 0.23) + place;
-          block.position.set(s.x + Math.cos(a) * 3.8, h / 2, s.z - Math.abs(Math.sin(a)) * 3.6);
-          this.scene.add(block);
-        }
-        for (const side of ['p', 'e'] as const) {
-          const nest = new THREE.Mesh(
-            new THREE.ConeGeometry(0.45, 1.2, 4),
-            new THREE.MeshStandardMaterial({ color: side === 'p' ? COLOR.you : COLOR.rival }),
-          );
-          nest.position.set(s.x + (side === 'p' ? -1.9 : 1.9), 0.6, s.z - 1.6);
-          nest.visible = false;
-          this.nests.set(`${side}${place}`, nest);
-          this.scene.add(nest);
-        }
-      } else {
-        const tint = place === 'p' ? COLOR.you : COLOR.rival;
-        const house = new THREE.Mesh(
-          new THREE.BoxGeometry(2.6, 2.4, 2.6),
-          new THREE.MeshStandardMaterial({
-            color: COLOR.building,
-            emissive: tint,
-            emissiveIntensity: 0.12,
-          }),
-        );
-        house.position.set(s.x + (place === 'p' ? -1.2 : 1.2), 1.2, s.z - 1.2);
-        this.scene.add(house);
-        const gunMat = new THREE.MeshStandardMaterial({ color: tint });
-        for (let i = 0; i < MAX_GUNS; i++) {
-          const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.6, 8), gunMat);
-          const a = (i / MAX_GUNS) * Math.PI * 2;
-          gun.position.set(s.x + Math.cos(a) * 2.2, 0.3, s.z + Math.sin(a) * 2.2);
-          gun.visible = false;
-          this.guns[place].push(gun);
-          this.scene.add(gun);
-        }
-      }
-    }
-  }
-
-  private ring(inner: number, outer: number, color: number, opacity: number): THREE.Mesh {
-    const mesh = new THREE.Mesh(
-      new THREE.RingGeometry(inner, outer, ARC_SEGMENTS, 1, Math.PI / 2),
-      new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity,
-        depthWrite: false,
-        side: THREE.DoubleSide,
+      new THREE.LineDashedMaterial({
+        color: COLOR.chalk,
+        dashSize: 0.5,
+        gapSize: 0.35,
+        toneMapped: false,
       }),
     );
-    mesh.rotation.x = -Math.PI / 2;
+    this.route.position.y = 0.1;
+    this.scene.add(this.route, this.blocks.p.group, this.blocks.e.group);
+    this.resize();
+
+    this.ready = loadModels().then((models) => {
+      if (this.disposed) {
+        models.dispose();
+        return;
+      }
+      this.models = models;
+      this.city = buildCity(models);
+      this.figures = new Figures(models, SIDE_COLOR);
+      this.scene.add(this.city.group, this.figures.group);
+      this.buildNests(models);
+    });
+  }
+
+  private ring(inner: number, outer: number, material: THREE.Material): THREE.Mesh {
+    const mesh = new THREE.Mesh(
+      new THREE.RingGeometry(inner, outer, ARC_SEGMENTS, 1, Math.PI / 2).rotateX(-Math.PI / 2),
+      material,
+    );
     this.scene.add(mesh);
     return mesh;
   }
 
-  private figureMeshes(ghost: boolean): Record<UnitKind, THREE.InstancedMesh> {
-    const shape: Record<UnitKind, THREE.BufferGeometry> = {
-      razor: new THREE.ConeGeometry(0.26, 0.95, 6).translate(0, 0.47, 0),
-      hexer: new THREE.OctahedronGeometry(0.36, 0).translate(0, 0.5, 0),
-      rigger: new THREE.SphereGeometry(0.26, 10, 8).translate(0, 0.95, 0),
-      enforcer: new THREE.BoxGeometry(0.55, 0.75, 0.55).translate(0, 0.38, 0),
-    };
-    const out = {} as Record<UnitKind, THREE.InstancedMesh>;
-    for (const k of UNIT_KINDS) {
-      const mat = new THREE.MeshStandardMaterial({
-        roughness: 0.5,
-        transparent: ghost,
-        opacity: ghost ? 0.28 : 1,
-        depthWrite: !ghost,
-      });
-      const mesh = new THREE.InstancedMesh(shape[k], mat, MAX_FIGURES);
-      mesh.count = 0;
-      mesh.frustumCulled = false;
-      out[k] = mesh;
-      this.scene.add(mesh);
+  /** A turret at each district's back corner for each seat, shown while its nest stands. */
+  private buildNests(models: Models): void {
+    for (const place of PLACES) {
+      if (typeof place !== 'number') continue;
+      const s = spotOf(place);
+      for (const side of ['p', 'e'] as const) {
+        const x = s.x + (side === 'p' ? -1 : 1) * (PLAZA - 0.7);
+        const nest = fit(models.piece('defence-weapon-turret'), x, s.z + 1.8, 1.0).obj;
+        nest.rotation.y = side === 'p' ? Math.PI / 2 : -Math.PI / 2;
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.55, 0.7, 24).rotateX(-Math.PI / 2),
+          new THREE.MeshBasicMaterial({ color: SIDE_COLOR[side], toneMapped: false }),
+        );
+        // The ring hangs in the turret's own scaled space.
+        ring.position.y = (0.08 - nest.position.y) / nest.scale.x;
+        ring.scale.divideScalar(nest.scale.x);
+        this.nestRings.push(ring);
+        nest.add(ring);
+        nest.visible = false;
+        this.nests.set(`${side}${place}`, nest);
+        this.scene.add(nest);
+      }
     }
-    return out;
   }
 
   // ─── Each frame ──────────────────────────────────────────────────────────
 
-  render(frame: FieldFrame, view: FieldView, dt: number): void {
+  render(frame: FieldFrame, view: FieldView, dt: number, raw = dt): void {
     if (!this.width) return;
+    const start = performance.now();
+    this.renderer.info.reset();
+    this.time += dt;
     this.last = frame;
     this.rig.update(dt);
     this.drawPlaces(frame, view);
+    this.drawBlocks(frame);
     this.drawFigures(frame, view, dt);
     this.drawRoute(view);
-    this.renderer.render(this.scene, this.rig.camera);
+    this.look.render(dt, raw);
+    this.cpu += (performance.now() - start - this.cpu) * 0.05;
   }
 
   private drawPlaces(frame: FieldFrame, view: FieldView): void {
@@ -271,59 +222,115 @@ export class SkirmishScene {
       // A ring segment is two triangles: the arc draws your share of them.
       if (arc) arc.geometry.setDrawRange(0, Math.round(((1 + v.control) / 2) * ARC_SEGMENTS) * 6);
       const picked = view.picks.some((p) => p.kind === 'squad' && p.place === v.place);
-      this.selectRings.get(v.place)!.visible = picked;
+      const ring = this.selectRings.get(v.place)!;
+      ring.visible = picked;
+      if (picked)
+        (ring.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.3 * Math.sin(this.time * 4);
       if (typeof v.place === 'number') {
-        this.showNest(`p${v.place}`, v.nests.p);
-        this.showNest(`e${v.place}`, v.nests.e);
+        const p = this.nests.get(`p${v.place}`);
+        const e = this.nests.get(`e${v.place}`);
+        if (p) p.visible = v.nests.p > 0;
+        if (e) e.visible = v.nests.e > 0;
       }
     }
-    for (const side of ['p', 'e'] as const)
-      this.guns[side].forEach((g, i) => (g.visible = i < frame.turrets[side]));
     if (view.hover !== null) {
       const s = spotOf(view.hover);
-      this.hoverRing.position.set(s.x, 0.11, s.z);
+      this.hoverRing.position.set(s.x, 0.1, s.z);
     }
     this.hoverRing.visible = view.hover !== null;
   }
 
-  private showNest(key: string, hp: number): void {
-    const nest = this.nests.get(key)!;
-    nest.visible = hp > 0;
-    nest.scale.y = Math.max(0.2, hp);
-    nest.position.y = 0.6 * nest.scale.y;
+  /** Rebuild a safehouse block when what stands on it changes: rare, so clones will do. */
+  private drawBlocks(frame: FieldFrame): void {
+    const models = this.models;
+    if (!models) return;
+    for (const side of ['p', 'e'] as const) {
+      const block: Block | undefined = frame.blocks[side];
+      const guns = frame.turrets[side];
+      const key = `${JSON.stringify(block)}|${guns}`;
+      const held = this.blocks[side];
+      if (held.key === key) continue;
+      held.key = key;
+      held.group.clear();
+      const s = spotOf(side);
+      const m = side === 'p' ? 1 : -1;
+      const at = (piece: string, dx: number, dz: number, w: number, maxHeight = 2.6) => {
+        const b = fit(models.piece(piece), s.x + m * dx, s.z + dz, w, 0, maxHeight);
+        held.group.add(b.obj);
+        return b;
+      };
+      const [piece, hx, hz, hw] = HOUSE;
+      const house = at(piece, hx, hz, hw);
+      GUN_SLOTS.slice(0, guns).forEach(([gx, gz]) => {
+        const gun = fit(
+          models.piece('defence-weapon-turret'),
+          s.x + m * (hx + gx),
+          s.z + hz + gz,
+          0.6,
+        );
+        gun.obj.position.y += house.top;
+        gun.obj.rotation.y = side === 'p' ? Math.PI / 2 : -Math.PI / 2;
+        held.group.add(gun.obj);
+      });
+      if (!block) continue;
+      for (const kind of UNIT_KINDS) {
+        if (!block.tech.includes(kind)) continue;
+        const [p, dx, dz, w] = TECH[kind];
+        at(p, dx, dz, w);
+      }
+      FLOOR_SLOTS.slice(0, block.floors).forEach(([dx, dz], i) =>
+        at(`commercial-low-detail-building-${'abcdef'[i % 6]}`, dx, dz, 0.9, 1.4),
+      );
+      SQUAT_SLOTS.slice(0, Math.ceil(block.squats / 2)).forEach(([dx, dz]) =>
+        at('commercial-low-detail-building-wide-a', dx, dz, 1.1, 0.8),
+      );
+    }
   }
 
   private drawFigures(frame: FieldFrame, view: FieldView, dt: number): void {
-    const k = 1 - Math.exp(-CHASE * dt);
-    const count = { solid: new Map<UnitKind, number>(), ghost: new Map<UnitKind, number>() };
-    const live = new Set<string>();
-    const put = (key: string, kind: UnitKind, side: 'p' | 'e', goal: Spot, ghost = false) => {
-      live.add(key);
-      let at = this.shown.get(key);
-      if (!at) this.shown.set(key, (at = { ...goal }));
-      at.x += (goal.x - at.x) * k;
-      at.z += (goal.z - at.z) * k;
-      const mesh = (ghost ? this.ghosts : this.figures)[kind];
-      const tally = ghost ? count.ghost : count.solid;
-      const n = tally.get(kind) ?? 0;
-      if (n >= MAX_FIGURES) return;
-      tally.set(kind, n + 1);
-      this.matrix.makeTranslation(at.x, 0.08, at.z);
-      mesh.setMatrixAt(n, this.matrix);
-      mesh.setColorAt(n, this.color.set(side === 'p' ? COLOR.you : COLOR.rival));
-    };
+    const figures = this.figures;
+    const k = 1 - Math.exp(-8 * dt);
+    const liveHeads = new Set<string>();
+    // Convoy heads chase their sim position even before the figures load: markers need them.
+    frame.convoys.forEach((c, n) => {
+      const key = `${c.side}c${c.id}`;
+      liveHeads.add(key);
+      const goal = alongRoad(c.from, c.next, c.progress);
+      let head = this.heads.get(key);
+      if (!head) this.heads.set(key, (head = { ...goal }));
+      head.x += (goal.x - head.x) * k;
+      head.z += (goal.z - head.z) * k;
+      const picked = c.side === 'p' && view.picks.some((q) => q.kind === 'convoy' && q.id === c.id);
+      const marker = this.markers[n] ?? this.addMarker();
+      marker.key = key;
+      marker.mesh.visible = true;
+      marker.mesh.position.set(head.x, MARKER_HEIGHT + Math.sin(this.time * 3 + n) * 0.08, head.z);
+      marker.mesh.rotation.y = this.time * 1.5;
+      marker.mesh.material = this.markerMat[picked ? 'picked' : c.side];
+      marker.mesh.scale.setScalar(picked ? 1.4 : 1);
+    });
+    for (let n = frame.convoys.length; n < this.markers.length; n++)
+      this.markers[n]!.mesh.visible = false;
+    for (const key of this.heads.keys()) if (!liveHeads.has(key)) this.heads.delete(key);
+    if (!figures) return;
 
+    figures.begin();
     for (const v of frame.places) {
-      const squad = (side: 'p' | 'e', counts: typeof v.mine, ghost: boolean) => {
+      const act = (side: 'p' | 'e'): Act =>
+        v.fight || v.siege === (side === 'p' ? 'out' : 'in') ? 'attack' : 'idle';
+      const squad = (side: 'p' | 'e', counts: PlaceView['mine'], ghost: boolean) => {
         const shown = figureCounts(counts);
+        const face = squadFacing(v.place, side);
         let i = 0;
         for (const kind of UNIT_KINDS)
           for (let j = 0; j < shown[kind]; j++, i++)
-            put(
+            figures.put(
               `${side}:${v.place}:${kind}:${j}${ghost ? 'g' : ''}`,
               kind,
               side,
               squadSlot(v.place, side, i),
+              face,
+              ghost ? 'idle' : act(side),
               ghost,
             );
       };
@@ -331,54 +338,19 @@ export class SkirmishScene {
       if (v.theirs) squad('e', v.theirs, false);
       else if (v.sighting) squad('e', v.sighting.counts, true);
     }
-    this.drawConvoys(frame.convoys, view, k, put);
-
-    for (const key of this.shown.keys()) if (!live.has(key)) this.shown.delete(key);
-    for (const kind of UNIT_KINDS) {
-      for (const [meshes, tally] of [
-        [this.figures, count.solid],
-        [this.ghosts, count.ghost],
-      ] as const) {
-        const mesh = meshes[kind];
-        mesh.count = tally.get(kind) ?? 0;
-        mesh.instanceMatrix.needsUpdate = true;
-        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      }
-    }
-  }
-
-  private drawConvoys(
-    convoys: readonly ConvoyView[],
-    view: FieldView,
-    k: number,
-    put: (key: string, kind: UnitKind, side: 'p' | 'e', goal: Spot) => void,
-  ): void {
-    const live = new Set<string>();
-    convoys.forEach((c, n) => {
+    for (const c of frame.convoys) {
       const key = `${c.side}c${c.id}`;
-      live.add(key);
-      const goal = alongRoad(c.from, c.next, c.progress);
-      let head = this.heads.get(key);
-      if (!head) this.heads.set(key, (head = { ...goal }));
-      head.x += (goal.x - head.x) * k;
-      head.z += (goal.z - head.z) * k;
+      const head = this.heads.get(key)!;
+      const next = spotOf(c.next);
       const back = spotOf(c.from);
+      const face = Math.atan2(next.x - back.x, next.z - back.z);
       const shown = figureCounts(c.counts);
       let i = 0;
       for (const kind of UNIT_KINDS)
         for (let j = 0; j < shown[kind]; j++, i++)
-          put(`${key}:${kind}:${j}`, kind, c.side, columnSlot(head, back, i));
-      const marker = this.markers[n] ?? this.addMarker();
-      marker.key = key;
-      marker.mesh.visible = true;
-      marker.mesh.position.set(head.x, 1.4, head.z);
-      const picked = c.side === 'p' && view.picks.some((q) => q.kind === 'convoy' && q.id === c.id);
-      marker.mesh.material = this.markerMat[picked ? 'picked' : c.side];
-      marker.mesh.scale.setScalar(picked ? 1.4 : 1);
-    });
-    for (let n = convoys.length; n < this.markers.length; n++)
-      this.markers[n]!.mesh.visible = false;
-    for (const key of this.heads.keys()) if (!live.has(key)) this.heads.delete(key);
+          figures.put(`${key}:${kind}:${j}`, kind, c.side, columnSlot(head, back, i), face, 'walk');
+    }
+    figures.end(dt);
   }
 
   private addMarker(): Marker {
@@ -422,14 +394,14 @@ export class SkirmishScene {
     const h = this.host.clientHeight;
     if (w < 1 || h < 1) return;
     this.width = w;
-    this.renderer.setSize(w, h, false);
+    this.look.setSize(w, h);
     this.rig.resize(w, h);
   }
 
   /** Forget where figures were drawn, so a new match places them rather than sliding them. */
   snap(): void {
-    this.shown.clear();
     this.heads.clear();
+    this.figures?.clear();
   }
 
   zoomAt(px: number, py: number, deltaY: number): void {
@@ -438,6 +410,12 @@ export class SkirmishScene {
 
   pan(dx: number, dy: number, dt: number): void {
     this.rig.pan(dx, dy, dt);
+  }
+
+  /** Figures standing now and the last frame's draw calls: the frame-time check reads them. */
+  stats(): { figures: number; calls: number; triangles: number; cpuMs: number } {
+    const { calls, triangles } = this.renderer.info.render;
+    return { figures: this.figures?.count ?? 0, calls, triangles, cpuMs: this.cpu };
   }
 
   /** What stands under a canvas pixel: one of your convoys, else a place. */
@@ -461,7 +439,7 @@ export class SkirmishScene {
     let near = PLACE_REACH;
     for (const place of PLACES) {
       const s = spotOf(place);
-      const d = Math.hypot(s.x - g.x, s.z - g.z);
+      const d = Math.max(Math.abs(s.x - g.x), Math.abs(s.z - g.z));
       if (d < near) {
         near = d;
         best = place;
@@ -503,32 +481,42 @@ export class SkirmishScene {
     return this.rig.project(s.x, 0, s.z);
   }
 
-  /** Where a place's tag hangs: the front edge of its pad, clear of the figures on it. */
+  /** Where a place's tag hangs: the front edge of its plaza, clear of the figures on it. */
   tagAnchor(place: Place): { x: number; y: number } | null {
     const s = spotOf(place);
-    return this.rig.project(s.x, 0, s.z + PAD_RADIUS);
+    return this.rig.project(s.x, 0, s.z + PLAZA);
   }
 
   /** A convoy's marker on the canvas, as drawn this frame. */
   screenOfConvoy(side: 'p' | 'e', id: number): { x: number; y: number } | null {
     const head = this.convoyHead(side, id);
-    return head ? this.rig.project(head.x, 1.4, head.z) : null;
+    return head ? this.rig.project(head.x, MARKER_HEIGHT, head.z) : null;
   }
 
   dispose(): void {
-    const free = (m: THREE.Material) => {
-      (m as THREE.MeshStandardMaterial).map?.dispose();
-      m.dispose();
-    };
+    this.disposed = true;
+    this.figures?.dispose();
+    this.city?.dispose();
+    // The blocks and nests are clones: their geometry and materials are the models'.
+    for (const side of ['p', 'e'] as const) this.blocks[side].group.clear();
+    for (const ring of this.nestRings) {
+      ring.geometry.dispose();
+      (ring.material as THREE.Material).dispose();
+    }
+    for (const nest of this.nests.values()) nest.removeFromParent();
+    if (this.figures) this.figures.group.removeFromParent();
+    if (this.city) this.city.group.removeFromParent();
+    this.models?.dispose();
     this.scene.traverse((o) => {
       const mesh = o as THREE.Mesh;
       mesh.geometry?.dispose();
       const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
-      if (Array.isArray(mat)) mat.forEach(free);
-      else if (mat) free(mat);
-      if (o instanceof THREE.InstancedMesh) o.dispose();
+      if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+      else mat?.dispose();
     });
     for (const m of Object.values(this.markerMat)) m.dispose();
+    this.markerGeo.dispose();
+    this.look.dispose();
     this.renderer.dispose();
     // dispose() leaves the context alive until GC; repeated HMR remounts would otherwise
     // run into the browser's limit on live contexts.

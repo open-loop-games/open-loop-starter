@@ -15,6 +15,7 @@ const disposed = vi.fn();
 // jsdom has no WebGL: the scene is stood in, so the host's own routing is what runs.
 vi.mock('../field/skirmish-scene', () => ({
   SkirmishScene: class {
+    ready = Promise.resolve();
     render() {}
     resize() {}
     snap() {}

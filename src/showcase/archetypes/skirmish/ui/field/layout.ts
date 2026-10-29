@@ -17,15 +17,18 @@ export interface Spot {
 }
 
 const SPOTS: Record<string, Spot> = {
-  p: { x: -12, z: 0 },
-  0: { x: -5, z: -5 },
+  p: { x: -15, z: 0 },
+  0: { x: -6, z: -6 },
   1: { x: 0, z: 5 },
-  2: { x: 5, z: -5 },
-  e: { x: 12, z: 0 },
+  2: { x: 6, z: -6 },
+  e: { x: 15, z: 0 },
 };
 
+/** The half-width of each place's square plaza. */
+export const PLAZA = 3.2;
+
 /** The map's extent around its places, which the camera keeps in view. */
-export const BOUNDS = { minX: -15, maxX: 15, minZ: -8, maxZ: 8 };
+export const BOUNDS = { minX: -19, maxX: 19, minZ: -10, maxZ: 9 };
 
 /** A place's spot on the field. */
 export const spotOf = (place: Place): Spot => SPOTS[String(place)]!;
@@ -74,9 +77,9 @@ export function figureCounts(counts: Counts, cap = FIGURE_CAP): Counts {
   return shown;
 }
 
-/** Figures stand in rows of this many, a pace apart. */
+/** Figures stand in rows of this many, a pace apart, inside the plaza. */
 const ROW = 4;
-const PACE = 0.8;
+const PACE = 1.1;
 
 /**
  * Where the `i`th figure of a squad stands: in a district your squad west of the centre
@@ -88,7 +91,13 @@ export function squadSlot(place: Place, side: 'p' | 'e', i: number): Spot {
   const dir = place === 'p' ? 1 : place === 'e' ? -1 : side === 'p' ? -1 : 1;
   const col = Math.floor(i / ROW);
   const row = i % ROW;
-  return { x: c.x + dir * (0.9 + col * PACE), z: c.z + (row - (ROW - 1) / 2) * PACE };
+  return { x: c.x + dir * (0.6 + col * PACE), z: c.z + 0.6 + (row - (ROW - 1) / 2) * PACE };
+}
+
+/** Which way a squad's figures face at a place: toward the other seat's side of the map. */
+export function squadFacing(place: Place, side: 'p' | 'e'): number {
+  const east = place === 'p' || (place !== 'e' && side === 'p');
+  return east ? Math.PI / 2 : -Math.PI / 2;
 }
 
 /** Where the `i`th figure of a convoy walks: in a column behind its head, back along the road. */
@@ -96,7 +105,7 @@ export function columnSlot(head: Spot, back: Spot, i: number): Spot {
   const dx = back.x - head.x;
   const dz = back.z - head.z;
   const len = Math.hypot(dx, dz) || 1;
-  const step = (0.45 * (i + 1)) / len;
-  const side = i % 2 === 0 ? 0.18 : -0.18;
+  const step = (0.75 * i) / len;
+  const side = i % 2 === 0 ? 0.25 : -0.25;
   return { x: head.x + dx * step - (dz / len) * side, z: head.z + dz * step + (dx / len) * side };
 }

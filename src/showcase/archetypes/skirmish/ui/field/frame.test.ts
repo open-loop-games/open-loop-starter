@@ -3,6 +3,7 @@ import { Decimal } from '@open-loop/engine';
 import { boot, tick } from '../../sim/harness';
 import { getMatch } from '../../modules/match';
 import { redeploy } from '../../modules/orders';
+import { UNIT_KINDS } from '../../data/units';
 import { readFrame } from './frame';
 
 const NARROWS = 0;
@@ -44,6 +45,16 @@ describe('the field frame', () => {
     m.p.aether.value = new Decimal(m.scoutCost);
     m.scout();
     expect(at('e').theirs!.enforcer).toBe(5);
+  });
+
+  it("draws the rival's safehouse block as the astral scout last saw it", () => {
+    const m = getMatch();
+    expect(readFrame(m).blocks.e).toBeUndefined();
+    m.p.aether.value = new Decimal(m.scoutCost);
+    m.scout();
+    const seen = readFrame(m).blocks.e!;
+    expect(seen.tech).toEqual(UNIT_KINDS.filter((k) => m.e.opened(k)));
+    expect(readFrame(m).blocks.p.floors).toBe(m.p.floorCount() - readFrame(m).blocks.p.tech.length);
   });
 
   it('draws your convoys, and only the rival convoys you see', () => {

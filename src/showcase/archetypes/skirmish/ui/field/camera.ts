@@ -16,6 +16,8 @@ const EASE = 6;
 /** Zoom range as a multiple of the whole-map distance. */
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 1;
+/** How far the view's centre can travel when zoomed in: every place and its blocks. */
+const REACH = { minX: -16, maxX: 16, minZ: -7, maxZ: 6 };
 /** Pan speed in viewport heights per second at the current zoom. */
 const PAN_SPEED = 0.9;
 
@@ -88,12 +90,15 @@ export class CameraRig {
     return { x: (this.tmp.x * 0.5 + 0.5) * this.width, y: (-this.tmp.y * 0.5 + 0.5) * this.height };
   }
 
-  /** Keep the view's centre over the map; the more it is zoomed out, the less it can move. */
+  /**
+   * Keep the view's centre over the map: whole-map framing stays centred, and from half
+   * zoom in the view can centre on any place, its safehouse blocks included.
+   */
   private clamp(): void {
-    const slack = 1 - this.goal.distance / this.fit;
+    const slack = Math.min(1, 2 * (1 - this.goal.distance / this.fit));
     const t = this.goal.target;
-    t.x = THREE.MathUtils.clamp(t.x, BOUNDS.minX * slack, BOUNDS.maxX * slack);
-    t.z = THREE.MathUtils.clamp(t.z, BOUNDS.minZ * slack, BOUNDS.maxZ * slack);
+    t.x = THREE.MathUtils.clamp(t.x, REACH.minX * slack, REACH.maxX * slack);
+    t.z = THREE.MathUtils.clamp(t.z, REACH.minZ * slack, REACH.maxZ * slack);
   }
 
   private apply(target: THREE.Vector3, distance: number): void {

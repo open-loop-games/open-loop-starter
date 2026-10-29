@@ -13,7 +13,7 @@ import { UNIT_KINDS } from '../../data/units';
 import { PRESENCE, countsOf, heldBy, noCounts, total, type Counts } from '../../modules/battle';
 import type { MatchApi, Owner, Sighting } from '../../modules/match';
 import { readyUnits } from '../../modules/orders';
-import type { Focus, Stance } from '../../modules/side';
+import { blockOf, type Block, type Focus, type Stance } from '../../modules/side';
 import { destination, roadsLeft, type Convoy } from '../../modules/travel';
 
 export interface PlaceView {
@@ -56,6 +56,8 @@ export interface FieldFrame {
   convoys: ConvoyView[];
   integrity: { p: number; e: number; max: number };
   turrets: { p: number; e: number };
+  /** What stands on each safehouse block: yours now, the rival's as the scout last saw it. */
+  blocks: { p: Block; e?: Block };
   scouting: boolean;
 }
 
@@ -144,6 +146,7 @@ export function readFrame(m: MatchApi): FieldFrame {
       max: m.tune.hqIntegrity.value,
     },
     turrets: { p: m.p.turretLevel(), e: m.e.turretLevel() },
+    blocks: { p: blockOf(m.p), e: m.safehouseSighting.value?.block },
     scouting,
   };
 }

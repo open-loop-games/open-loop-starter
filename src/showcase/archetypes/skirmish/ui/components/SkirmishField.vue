@@ -36,6 +36,7 @@ const frame = computed(() => readFrame(match));
 const host = ref<HTMLDivElement>();
 const tags = new Map<string, HTMLElement>();
 const box = ref<{ x: number; y: number; w: number; h: number } | null>(null);
+const loading = ref(true);
 
 let scene: SkirmishScene | null = null;
 let raf = 0;
@@ -91,7 +92,8 @@ function placeTags(): void {
 }
 
 function frameLoop(now: number): void {
-  const dt = Math.min(0.1, (now - last) / 1000);
+  const raw = (now - last) / 1000;
+  const dt = Math.min(0.1, raw);
   last = now;
   if (scene) {
     let dx = 0;
@@ -112,6 +114,7 @@ function frameLoop(now: number): void {
       frame.value,
       { picks: props.selection.picks, via: props.selection.via, hover },
       dt,
+      raw,
     );
     placeTags();
   }
@@ -209,6 +212,7 @@ defineExpose({
     const q = scene?.screenOf(place);
     return r && q ? { x: r.left + q.x, y: r.top + q.y } : null;
   },
+  stats: () => scene?.stats(),
   pageOfConvoy(side: 'p' | 'e', id: number) {
     const r = host.value?.getBoundingClientRect();
     const q = scene?.screenOfConvoy(side, id);
@@ -218,6 +222,13 @@ defineExpose({
 
 onMounted(() => {
   scene = new SkirmishScene(host.value!);
+  scene.ready.then(
+    () => (loading.value = false),
+    (err: unknown) => {
+      loading.value = false;
+      console.error('the sprawl failed to load', err);
+    },
+  );
   observer = new ResizeObserver(() => scene?.resize());
   observer.observe(host.value!);
   unsubscribe = match.onReset('afterReset', () => scene?.snap());
@@ -284,6 +295,7 @@ onBeforeUnmount(() => {
         <span v-else class="tag__theirs num">{{ line(c.counts) }}</span>
       </div>
     </div>
+    <p v-if="loading" class="field__loading">Rain on the sprawl…</p>
     <div
       v-if="box"
       class="field__box"
@@ -403,6 +415,19 @@ onBeforeUnmount(() => {
   min-width: 3.5ch;
   text-align: center;
   color: var(--cc-chalk);
+}
+.field__loading {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  translate: -50% 0;
+  margin: 0;
+  font-family: var(--cc-face-sign);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cc-chalk-dim);
+  pointer-events: none;
 }
 .field__box {
   position: absolute;
