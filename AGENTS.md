@@ -204,3 +204,25 @@ const showDevPanel = ref(false);
 ## Peer Setup
 
 `@open-loop/engine` is an ordinary dependency. The version range in `package.json` is the pin, and engine updates come through your package manager like any other. A checkout may resolve it to a local sibling through a workspace override, which supersedes that range. Check for one before you trust the range.
+
+## Adding a renderer
+
+A renderer is the drawing library a game draws its play space with, beside the Vue DOM. Starter's stories use two: `pixi.js` for 2D sprites and `three` for 3D. A canvas 2D drawing needs no renderer.
+
+Eject removes each renderer the kept game does not import. To add one to a fork:
+
+```bash
+pnpm add three && pnpm add -D @types/three   # three.js ships its types separately
+pnpm add pixi.js                             # pixi ships its own types
+```
+
+- **Range.** Take the range from starter's `package.json`, because the stories test it. The minor version of three is its breaking line, so a caret range on `0.x` holds one minor.
+- **One copy of three.** `vite.config.ts` dedupes `three` and gives it its own chunk. Keep both. Without the dedupe, an addon from `three/addons` can load a second copy of three. Neither entry does anything in a fork without three.
+- **The drawing.** Follow the engine recipe § Drawing ticking game state: a read-only projection. It is in `docs/consumer-guide-recipes-tick.md` in the `@open-loop/engine` package. The drawing owns its loop, reads game state each animation frame, and writes none.
+- **Tests.** jsdom has no WebGL. A component test of a WebGL host replaces the scene class with a stand-in through `vi.mock`.
+- **Screenshots.** Headless Chrome draws WebGL in software, at a few frames a second. Launch it on the host GPU with `--use-angle=gl-egl --ignore-gpu-blocklist`.
+- **Worked examples.** In a starter checkout, skirmish's `ui/field/` draws with three, and defender's `ui/components/PestLayer.vue` with pixi.
+
+<!-- eject:strip-start -->
+A story that adds a renderer lists it in `SHOWCASE_ONLY_DEPS`; `src/showcase/AGENTS.md` § Fork workflow says why.
+<!-- eject:strip-end -->

@@ -101,6 +101,8 @@ Each match is a few minutes; the rival's income terms climb to parity by the meg
 ## Growth ports
 
 - **A converter input reserve.** A seat saving for a purchase must switch its floors off.
+- **A flank that surprises.** A road is seen only from a squad or nest at one of its ends, or while scouting. The rival is fogged like the player. A flank can then surprise either seat. It changes the rival's information model, so the counter probe measures the counter edge again.
+- **A raid detachment.** The persona sends a share of ready units at the enemy's weakest reachable holding while the main army fights, for pressure on two fronts. It breaks the spine's one-army walk: the walk's landmarks are derived again, and a raid-outcome probe measures what the raids take.
 
 ## Engine fit
 

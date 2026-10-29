@@ -3,7 +3,8 @@
   "capture": {
     "viewport": [1280, 800],
     "eval": "const t = setInterval(() => { const load = document.querySelector('.slot-card .btn-primary'); if (!load) return; clearInterval(t); load.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }, 50)",
-    "wait": 2500
+    "wait": 2500,
+    "gpu": true
   },
   "cards": [
     {
@@ -303,7 +304,8 @@
       "topic": "Occult cyberpunk × RTS",
       "path": "#/skirmish/play",
       "capture": {
-        "storageKey": "skirmish-slot-0"
+        "storageKey": "skirmish-slot-0",
+        "wait": 6000
       },
       "shots": [
         {

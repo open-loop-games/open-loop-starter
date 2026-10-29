@@ -5,7 +5,7 @@
   "line": "Skirmish",
   "topic": "Occult cyberpunk × RTS",
   "path": "#/skirmish/play",
-  "capture": { "storageKey": "skirmish-slot-0" },
+  "capture": { "storageKey": "skirmish-slot-0", "wait": 6000 },
   "shots": [
     {
       "beat": "Neon Narrows answers to your crew",
