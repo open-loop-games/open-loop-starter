@@ -33,6 +33,8 @@ import {
   type Counts,
 } from './battle';
 import { createSide, type Side } from './side';
+import { stepTravel, type Convoy } from './travel';
+import type { Place } from '../data/map';
 import type { Situation } from './policy';
 import type { Tunables } from './tunables';
 import { SCOUT_COOLDOWN_S, SCOUT_S, scoutCost, siegeUnits } from '../data/spine';
@@ -74,6 +76,10 @@ export interface MatchApi {
   readonly safehouseSighting: ShallowRef<Sighting | undefined>;
   /** Whether the player sees a district now. */
   visible(district: number): boolean;
+  /** Whether the player sees a place now: their own safehouse always, the rival's only while scouting. */
+  seen(place: Place): boolean;
+  /** The rival's convoys the player sees now: those on a road with a seen end. Nothing remembers them. */
+  seenConvoys(): Convoy[];
   start(): void;
   /** Leave a finished match and return to the briefing for the next contract. */
   nextMatch(): void;
@@ -142,6 +148,10 @@ export const matchModule: EngineModule = {
     const visible = (i: number) =>
       scoutLeft.value > 0 || total(countsOf(p.squads[i])) > PRESENCE || control[i].value > 0;
 
+    const seen = (place: Place) =>
+      place === 'p' ? true : place === 'e' ? scoutLeft.value > 0 : visible(place);
+    const seenConvoys = () => e.convoys.value.filter((c) => seen(c.from) || seen(c.path[0]!));
+
     function updateSightings(): void {
       const next = [...sightings.value];
       let changed = false;
@@ -162,6 +172,7 @@ export const matchModule: EngineModule = {
         for (const k of UNIT_KINDS) {
           mix[k] = toNumber(p.reserve[k].value);
           for (const sq of p.squads) mix[k] += toNumber(sq[k].value);
+          for (const c of p.convoys.value) mix[k] += c.counts[k];
         }
         return mix;
       }
@@ -202,6 +213,8 @@ export const matchModule: EngineModule = {
         enemyNests: DISTRICTS.map((_, i) =>
           seat === 'e' || visible(i) ? toNumber(other.nests[i]!.hp.value) : 0,
         ),
+        enemyConvoys: seat === 'e' ? p.convoys.value : seenConvoys(),
+        enemyReserve: seat === 'e' ? countsOf(p.reserve) : safehouseSighting.value?.counts,
       };
     }
 
@@ -247,6 +260,8 @@ export const matchModule: EngineModule = {
     ctx.onTick((dt) => {
       if (phase.value !== 'live') return;
       clock.value += dt;
+      stepTravel(p, e, dt, tune.hopS.value);
+      stepTravel(e, p, dt, tune.hopS.value);
       const nestsUp = [p, e].map((s) => s.nests.map((n) => toNumber(n.hp.value) > 0));
       const events = stepBattle(p, e, control, tune, dt);
       // A nest that falls in a fight opens its district to capture again.
@@ -296,6 +311,8 @@ export const matchModule: EngineModule = {
       sightings,
       safehouseSighting,
       visible,
+      seen,
+      seenConvoys,
       start() {
         if (phase.value !== 'briefing') return;
         phase.value = 'live';

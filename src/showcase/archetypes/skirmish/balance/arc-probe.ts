@@ -14,6 +14,8 @@ import { MIN_SIEGE_FORCE, REF_PRESENCE, describeSpine, landmarks } from '../data
 import { readyUnits } from '../modules/orders';
 import { PRESENCE, countsOf, total } from '../modules/battle';
 import type { Side } from '../modules/side';
+import { destination, onRoad } from '../modules/travel';
+import { plan } from '../data/map';
 import { MAX_MATCH_S, TICK, buildGame, staffMatch } from './_game';
 
 // The cell carries no Node typings; the probe runs under vite-node.
@@ -30,7 +32,7 @@ for (const l of landmarks().sort((a, b) => a.predictedS - b.predictedS))
   console.log(`  ${String(l.predictedS).padStart(5)}s  ${l.beat}`);
 
 function armySize(s: Side): number {
-  let n = 0;
+  let n = onRoad(s);
   for (const k of UNIT_KINDS) {
     n += toNumber(s.reserve[k].value);
     for (const sq of s.squads) n += toNumber(sq[k].value);
@@ -56,11 +58,23 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
   let peakArmyP = 0;
   let lastHustlers = 5;
   let peakArmyE = 0;
+  // A flank is a convoy sent around a place the default shortest route passes through.
+  const launched = { p: new Set<number>(), e: new Set<number>() };
+  const flanks = { p: 0, e: 0 };
+  const convoys = { p: 0, e: 0 };
   const run = runUntil({
     engine: game.engine,
     tickDelta: TICK,
     maxSimTime: MAX_MATCH_S,
     until: () => {
+      for (const s of [p, e])
+        for (const c of s.convoys.value) {
+          if (launched[s.id].has(c.id)) continue;
+          launched[s.id].add(c.id);
+          convoys[s.id] += 1;
+          if (c.progress === 0 && c.path.join() !== plan(c.from, destination(c)).join())
+            flanks[s.id] += 1;
+        }
       const hired = staffMatch(game);
       if (hired) beat(`hired the ${hired}`, true);
       for (const s of [p, e]) {
@@ -145,6 +159,9 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
   console.log(`  you:   ${fmt(p)}, peak army ${peakArmyP.toFixed(1)}`);
   console.log(`  rival: ${fmt(e)}, peak army ${peakArmyE.toFixed(1)}`);
   console.log(`  control: ${match.control.map((c) => c.value.toFixed(2)).join(' / ')}`);
+  console.log(
+    `  convoys: you ${convoys.p} (${flanks.p} flanking), rival ${convoys.e} (${flanks.e} flanking)`,
+  );
   return outcome;
 }
 

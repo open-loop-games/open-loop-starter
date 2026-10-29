@@ -25,9 +25,11 @@ import {
   minSiegeAt,
   siegeUnits,
 } from '../data/spine';
-import { PRESENCE, countsOf, fightingValue, total, type Counts } from './battle';
-import { deploy, readyUnits, redeploy, retreat, setFocus, setStance } from './orders';
+import { PRESENCE, countsOf, fightingValue, noCounts, total, type Counts } from './battle';
+import { deploy, readyUnits, redeploy, redirect, retreat, setFocus, setStance } from './orders';
 import type { Focus, Side } from './side';
+import { adjacent, hops, routes, type Place } from '../data/map';
+import { convoyHops, destination, onRoad, type Convoy } from './travel';
 
 /** What a seat knows when it decides. */
 export interface Situation {
@@ -43,6 +45,10 @@ export interface Situation {
   besiegedFrom: number[];
   /** Hit points of the enemy's sentry nest in each district as this seat sees it; 0 where none is seen. */
   enemyNests: number[];
+  /** The enemy's convoys this seat sees on the road now. */
+  enemyConvoys: Convoy[];
+  /** Units at the enemy's safehouse as this seat last saw them, or none. */
+  enemyReserve: Counts | undefined;
 }
 
 /** Units a held district must stand before this seat assaults: the smallest siege the enemy's turrets allow, plus the persona's margin. */
@@ -63,7 +69,7 @@ export type { PolicyScope };
 /** A floor's aether draw is fed if the taps plus the bank spread over this many seconds cover it. */
 const FEED_HORIZON_S = 120;
 
-const zero = (): Counts => Object.fromEntries(UNIT_KINDS.map((k) => [k, 0])) as Counts;
+const zero = noCounts;
 
 /** The tech floor that opens a kind; its producer trains that kind. */
 function barracksFor(side: Side, kind: UnitKind): Producer {
@@ -190,7 +196,7 @@ function underPressure(sit: Situation): boolean {
 }
 
 function fieldArmy(side: Side): number {
-  let n = 0;
+  let n = onRoad(side);
   for (const k of UNIT_KINDS) {
     n += readyUnits(side, k);
     for (const sq of side.squads) n += toNumber(sq[k].value);
@@ -417,15 +423,60 @@ function researchCost(id: string): number {
 
 // ─── Command ───────────────────────────────────────────────────────────────
 
-/** What the seat's whole army is worth against a target mix: squads plus ready reserve. */
-function armyAvailable(side: Side): Counts {
-  const c = zero();
-  for (const k of UNIT_KINDS) {
-    c[k] = readyUnits(side, k);
-    for (let i = 0; i < DISTRICTS.length; i++) c[k] += toNumber(side.squads[i][k].value);
-  }
-  return c;
+/** What a seat knows stands at a place: nothing, an enemy it can take, or one it cannot. */
+export type Standing = 'clear' | 'takeable' | 'strong';
+
+/**
+ * The route a seat sends units by: the shortest that passes no enemy the seat cannot take,
+ * and between equal routes one that passes no enemy at all. Where every route passes one it
+ * cannot take, the shortest; the convoy stops there and fights.
+ */
+export function chooseRoute(from: Place, to: Place, standing: (place: Place) => Standing): Place[] {
+  const all = routes(from, to);
+  const passes = (route: readonly Place[], s: Standing) =>
+    route.slice(0, -1).some((place) => standing(place) === s);
+  const open = all.filter((r) => !passes(r, 'strong'));
+  if (open.length === 0) return [...all[0]!];
+  const shortest = open.filter((r) => r.length === open[0]!.length);
+  return [...(shortest.find((r) => !passes(r, 'takeable')) ?? shortest[0]!)];
 }
+
+/** Units somewhere on the map, and how many roads they are from any place. */
+interface Group {
+  counts: Counts;
+  roadsTo: (to: Place) => number;
+}
+
+/** A seat's units: the ready reserve at home, each district's squad, each convoy. */
+function ownGroups(side: Side): Group[] {
+  const home = zero();
+  for (const k of UNIT_KINDS) home[k] = readyUnits(side, k);
+  return [
+    { counts: home, roadsTo: (to) => hops(side.id, to) },
+    ...side.squads.map((sq, i) => ({ counts: countsOf(sq), roadsTo: (to: Place) => hops(i, to) })),
+    ...side.convoys.value.map((c) => ({
+      counts: c.counts,
+      roadsTo: (to: Place) => convoyHops(c, to),
+    })),
+  ];
+}
+
+/** The enemy's units as a seat knows them, the squads standing in districts aside. */
+function enemyMovers(sit: Situation): Group[] {
+  return [
+    ...(sit.enemyReserve
+      ? [{ counts: sit.enemyReserve, roadsTo: (to: Place) => hops(sit.other.id, to) }]
+      : []),
+    ...sit.enemyConvoys.map((c) => ({
+      counts: c.counts,
+      roadsTo: (to: Place) => convoyHops(c, to),
+    })),
+  ];
+}
+
+const add = (into: Counts, c: Counts) => {
+  for (const k of UNIT_KINDS) into[k] += c[k];
+};
 
 /** The enemy kind this squad kills fastest, weighted by how hard that kind hits back. */
 export function chooseFocus(side: Side, other: Side, own: Counts, enemy: Counts): Focus {
@@ -448,9 +499,13 @@ export function chooseFocus(side: Side, other: Side, own: Counts, enemy: Counts)
 }
 
 /**
- * One command step: retreat squads that are losing badly, focus fire, pick
- * one objective and send every ready unit and idle squad to it, and order an
- * assault from a held district once enough units stand there.
+ * One command step: retreat squads that are losing badly, focus fire, pick one objective
+ * and send every ready unit, idle squad and convoy to it, and order an assault from a held
+ * district on a road to the enemy's safehouse once enough units stand there.
+ *
+ * A convoy counts toward the place it is going. A place is worth taking when the whole army
+ * beats what stands there plus every enemy unit the seat knows of that can reach it no later
+ * than the army does.
  */
 export function playCommand(sit: Situation, persona: Persona): void {
   const { own, other } = sit;
@@ -483,49 +538,81 @@ export function playCommand(sit: Situation, persona: Persona): void {
   }
 
   // Choose one objective for the whole army.
-  const army = armyAvailable(own);
-  // A seat commits when its whole army is worth `retreatBelow + 0.5` of what stands there:
+  const groups = ownGroups(own);
+  const army = zero();
+  for (const g of groups) add(army, g.counts);
+  /** Squads standing in a district plus the convoys walking to it. */
+  const toward = ownCounts.map((c) => ({ ...c }));
+  for (const c of own.convoys.value) {
+    const to = destination(c);
+    if (typeof to === 'number') add(toward[to]!, c.counts);
+  }
+  const movers = enemyMovers(sit);
+  /** What stands at a district plus every enemy unit known to reach it no later than the army. */
+  const threatAt = (i: number) => {
+    let arrive = 0;
+    for (const g of groups) if (total(g.counts) > PRESENCE) arrive = Math.max(arrive, g.roadsTo(i));
+    const threat = { ...known(i) };
+    for (let j = 0; j < n; j++) if (j !== i && hops(j, i) <= arrive) add(threat, known(j));
+    for (const g of movers) if (g.roadsTo(i) <= arrive) add(threat, g.counts);
+    return threat;
+  };
+  // A seat commits when its whole army is worth `retreatBelow + 0.5` of what it would meet:
   // a cautious persona (high retreatBelow) waits for an edge, a reckless one does not.
   const canTake = (i: number) => {
-    const enemy = known(i);
-    if (!enemyHere(i)) return true;
+    const threat = threatAt(i);
+    if (total(threat) <= PRESENCE && nestOf(i) <= 0) return true;
     return (
-      fightingValue(own, army, enemy) >=
-      (persona.retreatBelow + 0.5) * withNest(other, fightingValue(other, enemy, army), nestOf(i))
+      fightingValue(own, army, threat) >=
+      (persona.retreatBelow + 0.5) * withNest(other, fightingValue(other, threat, army), nestOf(i))
     );
   };
+  const standing = (place: Place): Standing =>
+    typeof place !== 'number' || !enemyHere(place)
+      ? 'clear'
+      : canTake(place)
+        ? 'takeable'
+        : 'strong';
+  const sieges = (i: number) => adjacent(i, other.id);
+
   let objective = -1;
   // 1. Break a siege on our safehouse.
   for (const i of sit.besiegedFrom) if (objective < 0 && canTake(i)) objective = i;
   // 2. Win a fight already under way.
   if (objective < 0) {
     for (let i = 0; i < n; i++)
-      if (enemyHere(i) && total(ownCounts[i]) > PRESENCE && canTake(i)) objective = i;
+      if (enemyHere(i) && total(toward[i]!) > PRESENCE && canTake(i)) objective = i;
   }
   // 3. Press an assault the army can already make rather than chase a raid elsewhere:
   // a squad that will not fight escapes any district the army moves to.
   if (objective < 0) {
     for (let i = 0; i < n; i++)
-      if (sit.control[i] >= 1 && total(known(i)) <= PRESENCE && total(ownCounts[i]) >= assaultFrom)
+      if (
+        sieges(i) &&
+        sit.control[i] >= 1 &&
+        total(known(i)) <= PRESENCE &&
+        total(toward[i]!) >= assaultFrom
+      )
         objective = i;
   }
-  // 4. Finish the capture closest to done; where the army already stands breaks ties.
+  // 4. Finish the capture closest to done; where the army already stands or walks breaks ties.
   if (objective < 0) {
     let best = -Infinity;
     for (let i = 0; i < n; i++) {
       if (sit.control[i] >= 1 || !canTake(i)) continue;
-      const score = sit.control[i] + (total(ownCounts[i]) > PRESENCE ? 0.5 : 0);
+      const score = sit.control[i] + (total(toward[i]!) > PRESENCE ? 0.5 : 0);
       if (score > best) {
         best = score;
         objective = i;
       }
     }
   }
-  // 5. Everything held: stage the assault where most of the army already stands.
+  // 5. Everything held: stage the assault where most of the army already stands, on a road
+  // to the enemy's safehouse where the seat holds one.
   if (objective < 0) {
     let most = -1;
     for (let i = 0; i < n; i++) {
-      const t = total(ownCounts[i]);
+      const t = total(toward[i]!) + (sieges(i) ? 1e6 : 0);
       if (sit.control[i] >= 1 && t > most) {
         most = t;
         objective = i;
@@ -534,20 +621,22 @@ export function playCommand(sit: Situation, persona: Persona): void {
   }
   if (objective < 0) return;
 
-  for (const k of UNIT_KINDS) deploy(own, k, objective);
+  const via = (from: Place) => chooseRoute(from, objective, standing).slice(0, -1);
+  const fromHome = via(own.id);
+  for (const k of UNIT_KINDS) deploy(own, k, objective, Infinity, fromHome);
   // Idle squads elsewhere (no enemy in their district) join the objective.
   for (let i = 0; i < n; i++) {
     if (i === objective) continue;
-    if (total(known(i)) <= PRESENCE && total(ownCounts[i]) > 0) redeploy(own, i, objective);
+    if (total(known(i)) <= PRESENCE && total(ownCounts[i]) > 0) redeploy(own, i, objective, via(i));
   }
+  // A changed objective turns the army around on the road.
+  for (const c of [...own.convoys.value])
+    if (destination(c) !== objective) redirect(own, c.id, objective);
 
   for (let i = 0; i < n; i++) {
     const here = total(countsOf(own.squads[i]));
     const held = sit.control[i] >= 1 && total(known(i)) <= PRESENCE;
-    if (held && here >= assaultFrom) setStance(own, i, 'assault');
+    if (held && sieges(i) && here >= assaultFrom) setStance(own, i, 'assault');
     else if (here < assaultFrom / 2 || !held) setStance(own, i, 'hold');
   }
 }
-
-/** Zero counts, for a seat that knows nothing about a district. */
-export { zero as noCounts };

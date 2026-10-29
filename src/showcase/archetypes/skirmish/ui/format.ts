@@ -2,6 +2,8 @@
 import { Decimal, format, formatWhole, type DecimalSource } from '@open-loop/engine';
 import { formatClock } from '@/composables/useFormatting';
 import { UNITS, UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
+import { DISTRICTS } from '../data/contracts';
+import type { Place } from '../data/map';
 
 /** Whole units held: floored, since `formatWhole` still prints a fraction under one. */
 export function whole(x: DecimalSource): string {
@@ -40,4 +42,11 @@ export function matchup(kind: UnitKind): string {
   if (beats.length) parts.push(`beats ${beats.join(', ')}`);
   if (falls.length) parts.push(`falls to ${falls.join(', ')}`);
   return parts.join(' · ') || 'even against everything';
+}
+
+/** A place by name: a district's, your safehouse, or the named rival's. */
+export function placeName(place: Place, rival: string): string {
+  if (place === 'p') return 'your safehouse';
+  if (place === 'e') return `${rival}'s safehouse`;
+  return DISTRICTS[place]!.name;
 }

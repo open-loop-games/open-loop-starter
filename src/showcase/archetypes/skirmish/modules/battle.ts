@@ -9,6 +9,7 @@
  */
 import { Decimal, toNumber, type Persistent, type Resource } from '@open-loop/engine';
 import { DISTRICTS } from '../data/contracts';
+import { adjacent } from '../data/map';
 import { SENTRY_NEST } from '../data/buildings';
 import { UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
 import type { Focus, Side } from './side';
@@ -37,6 +38,9 @@ export function countsOf(squad: Record<UnitKind, Resource>): Counts {
 export const wholeUnits = (n: number): number => Math.floor(n + 1e-9);
 
 export const total = (c: Counts): number => UNIT_KINDS.reduce((s, k) => s + c[k], 0);
+
+/** No units of any kind. */
+export const noCounts = (): Counts => Object.fromEntries(UNIT_KINDS.map((k) => [k, 0])) as Counts;
 
 /** Where a side's fire goes: all on the focused kind if it stands here, else spread by count. */
 export function fireWeights(targets: Counts, focus: Focus): Counts {
@@ -189,11 +193,11 @@ export function stepBattle(
       events.push({ kind: 'captured', district: i, by: 'p' });
     if (before > -1 && control[i].value <= -1)
       events.push({ kind: 'captured', district: i, by: 'e' });
-    // A held, uncontested district under an assault order sieges the other safehouse.
+    // A held, uncontested district with a road to the other safehouse sieges it under an assault order.
     const holder = heldBy(control[i].value);
-    if (holder === 'p' && pt > PRESENCE && p.stance[i].value === 'assault')
+    if (holder === 'p' && pt > PRESENCE && p.stance[i].value === 'assault' && adjacent(i, 'e'))
       sieges.push({ att: p, def: e, district: i, counts: pc });
-    if (holder === 'e' && et > PRESENCE && e.stance[i].value === 'assault')
+    if (holder === 'e' && et > PRESENCE && e.stance[i].value === 'assault' && adjacent(i, 'p'))
       sieges.push({ att: e, def: p, district: i, counts: ec });
   }
   for (const def of [e, p]) {

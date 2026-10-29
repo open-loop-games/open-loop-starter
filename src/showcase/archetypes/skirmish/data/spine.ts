@@ -14,8 +14,10 @@
  *   level (`minSiegeAt`). How many levels and nests a seat buys does not project;
  *   the landmarks read level one.
  * - Where the closed form stops: the joint choice of two seats (what each
- *   builds, where it sends units, when it assaults), fog of war, and district
- *   control flipping under both, which decides whose hustlers work each district.
+ *   builds, where it sends units by which route and when, when it assaults), fog
+ *   of war, and district control flipping under both, which decides whose
+ *   hustlers work each district. Travel is `HOP_S` a road; the walks below
+ *   assume units stand where they are needed.
  *   None of that projects; the walks assume one district owned from `REF_TAKE_S`.
  * - The army's ramp closes too, under the reference crew's own rules: floors on
  *   one price ladder and the charter, saved for ahead of hustlers, each floor converting
@@ -90,6 +92,12 @@ export const DISTRICT_TURRET_UNITS = 2;
 /** A squad of `REF_PRESENCE` units takes an empty district in `CAPTURE_S`. */
 export const CAPTURE_S = 15;
 export const REF_PRESENCE = 5;
+/**
+ * Seconds a convoy takes over one road. Equal to `CAPTURE_S`, so taking an undefended
+ * district takes one road of reaction: a seat's near district is held by reacting, the
+ * middle one is a race, and a far holding needs a garrison or a sentry nest.
+ */
+export const HOP_S = CAPTURE_S;
 /** An astral scout reveals the whole map this long, then rests for the cooldown. */
 export const SCOUT_S = 20;
 export const SCOUT_COOLDOWN_S = 45;

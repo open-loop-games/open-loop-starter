@@ -1,6 +1,6 @@
 <!--
-  MapBoard — the centre: the two safehouses, the three districts between them and the
-  street feed. Safehouse integrity is starter's ProgressBar; the rival's drains toward
+  MapBoard — the centre: the two safehouses, what walks the roads, the three districts
+  between them and the street feed. Safehouse integrity is starter's ProgressBar; the rival's drains toward
   its own side. Each safehouse note opens on what kind of outfit holds it: theirs from the
   contract, yours from the crew's tier. While the astral scout rides, the whole board
   takes the ley's tint.
@@ -24,6 +24,7 @@ import { readyUnits } from '../../modules/orders';
 import { useHandledBy } from '../handled-by';
 import { clock, grouped, rate } from '../format';
 import BuyCard from './BuyCard.vue';
+import ConvoyRow from './ConvoyRow.vue';
 import DistrictRow from './DistrictRow.vue';
 import FeedPanel from './FeedPanel.vue';
 import SquadChips from './SquadChips.vue';
@@ -122,6 +123,7 @@ const gunsBy = computed(() =>
         >
       </div>
     </div>
+    <ConvoyRow />
     <DistrictRow v-for="(d, i) in DISTRICTS" :key="d.id" :index="i" />
     <FeedPanel class="board__feed" />
   </section>

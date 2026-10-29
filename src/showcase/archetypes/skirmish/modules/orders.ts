@@ -3,9 +3,11 @@
  * shared policy calls them for automation and the rival. One code path.
  */
 import { Decimal, toNumber } from '@open-loop/engine';
+import { plan, type Place } from '../data/map';
 import { UNIT_KINDS, type UnitKind } from '../data/units';
-import { wholeUnits } from './battle';
+import { noCounts, total, wholeUnits } from './battle';
 import type { Focus, Side, Stance } from './side';
+import { launch, reroute } from './travel';
 
 /** Whole units waiting at the safehouse; the fraction left behind is still in training. */
 export function readyUnits(side: Side, kind: UnitKind): number {
@@ -13,48 +15,73 @@ export function readyUnits(side: Side, kind: UnitKind): number {
 }
 
 /**
- * Send up to `n` ready units of a kind from the safehouse into a district.
- * Subtract first: both pools are in one supply bag, and an add before the
- * subtract would be clamped by the cap.
+ * Send up to `n` ready units of a kind from the safehouse toward a district, by the
+ * shortest route through the waypoints in `via`. They walk as a convoy.
  */
-export function deploy(side: Side, kind: UnitKind, district: number, n = Infinity): number {
+export function deploy(
+  side: Side,
+  kind: UnitKind,
+  district: number,
+  n = Infinity,
+  via: readonly Place[] = [],
+): number {
   const moved = Math.min(readyUnits(side, kind), n);
   if (moved <= 0) return 0;
   side.reserve[kind].value = Decimal.sub(side.reserve[kind].value, moved);
-  side.squads[district][kind].value = Decimal.add(side.squads[district][kind].value, moved);
+  const counts = noCounts();
+  counts[kind] = moved;
+  launch(side, counts, side.id, plan(side.id, district, via));
   return moved;
 }
 
-export function deployAll(side: Side, district: number): number {
+export function deployAll(side: Side, district: number, via: readonly Place[] = []): number {
   let moved = 0;
-  for (const k of UNIT_KINDS) moved += deploy(side, k, district);
+  for (const k of UNIT_KINDS) moved += deploy(side, k, district, Infinity, via);
   return moved;
 }
 
-/** Pull every unit in a district back to the safehouse. */
+/**
+ * Send a convoy on the road somewhere else, through the waypoints in `via`. It walks on or
+ * turns back along the road it is on, whichever is shorter. False if no such convoy is on
+ * the road.
+ */
+export function redirect(
+  side: Side,
+  convoyId: number,
+  to: Place,
+  via: readonly Place[] = [],
+): boolean {
+  const convoy = side.convoys.value.find((c) => c.id === convoyId);
+  if (!convoy) return false;
+  reroute(convoy, to, via);
+  return true;
+}
+
+/** Pull every unit in a district back to the safehouse, by the shortest route. */
 export function retreat(side: Side, district: number): number {
-  let moved = 0;
-  for (const k of UNIT_KINDS) {
-    const n = side.squads[district][k].value;
-    if (!Decimal.gt(n, 0)) continue;
-    side.squads[district][k].value = Decimal.dZero;
-    side.reserve[k].value = Decimal.add(side.reserve[k].value, n);
-    moved += toNumber(n);
-  }
+  const moved = leave(side, district, side.id);
   side.stance[district].value = 'hold';
   return moved;
 }
 
-/** Move a whole squad from one district to another. */
-export function redeploy(side: Side, from: number, to: number): void {
+/** Move a whole squad from one district to another, by the shortest route through `via`. */
+export function redeploy(side: Side, from: number, to: number, via: readonly Place[] = []): void {
   if (from === to) return;
-  for (const k of UNIT_KINDS) {
-    const n = side.squads[from][k].value;
-    if (!Decimal.gt(n, 0)) continue;
-    side.squads[from][k].value = Decimal.dZero;
-    side.squads[to][k].value = Decimal.add(side.squads[to][k].value, n);
-  }
+  leave(side, from, to, via);
   side.stance[from].value = 'hold';
+}
+
+/** Put a district's whole squad on the road toward a place; returns the units that left. */
+function leave(side: Side, district: number, to: Place, via: readonly Place[] = []): number {
+  const counts = noCounts();
+  for (const k of UNIT_KINDS) {
+    const n = toNumber(side.squads[district][k].value);
+    if (n <= 0) continue;
+    side.squads[district][k].value = Decimal.dZero;
+    counts[k] = n;
+  }
+  launch(side, counts, district, plan(district, to, via));
+  return total(counts);
 }
 
 export function setStance(side: Side, district: number, stance: Stance): void {

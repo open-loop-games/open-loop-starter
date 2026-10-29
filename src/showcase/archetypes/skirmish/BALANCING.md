@@ -1,6 +1,7 @@
 # Skirmish — balancing
 
-Two seats grow a worker economy and convert it into an army that contests three districts.
+Two seats grow a worker economy and convert it into an army that walks the roads between
+three districts and contests them.
 The economy is a priced ladder with a payback horizon; the army side is a value budget that
 every price is a multiple of; the fight is a square-law exchange. `IDENTITY.md` § Rate-function
 spine names the buckets. Everything in `data/` is derived in `data/spine.ts` from the named
@@ -25,6 +26,7 @@ Every key is read through `tunable()` in `modules/tunables.ts`; both seats share
 | `hq/turretDps` | `turretDps` | the smallest squad that can raze a safehouse |
 | `districts/captureRate` | `captureRate` | how fast an unopposed squad takes a district |
 | `districts/refPresence` | `REF_PRESENCE` | the squad size control drift is scaled to |
+| `map/hopS` | `HOP_S` | how long a road takes: how much warning a convoy gives, whether help from home reaches a district before it falls, and how long reinforcements take to stream into a fight |
 | `research/<id>/scrip`, `research/<id>/aether` | multiples of `unitValue` | when each upgrade lands |
 | `charter/cost` | `charterCost` | when the second tier opens: the black clinic and the tier-two research |
 | `hq/turretLevels` | `TURRET_LEVELS` | the largest siege a safehouse can demand, `MIN_SIEGE_FORCE · √levels` |
@@ -103,14 +105,30 @@ assault threshold, the siege the safehouse card shows, or the price.
   a handicap the economy has no slack for: with the rival's policy free, a fully hired
   player lost every contract at 1, 2 and 3 units of value.
 - **The rival's analysts are not fogged.** `situation('e')` reads the player's whole army,
-  so the rival's `counter` persona weight acts on true information.
+  convoys included, so the rival's `counter` persona weight and its route choice act on true
+  information.
+- **A road takes `CAPTURE_S`.** `HOP_S` equals it, so help sent from home reaches a near
+  district as an undefended capture of it completes. Raising `map/hopS` alone loses near
+  districts before help arrives; lowering it makes every holding safe. It moves with
+  `districts/captureRate`.
+- **A siege leaves only from a district with a road to the safehouse it hits.** A seat's near
+  district is income that cannot siege, so an assault needs the middle district or the
+  rival's near one. The policy stages assaults only there.
+- **Units on the road hold their bunks.** The supply bag's room shrinks by the units in
+  convoys, so a seat cannot train past its cap by keeping its army walking.
+- **A seat commits by the whole map within its own arrival.** The policy's `canTake` weighs
+  the whole army against what stands at a place plus every enemy unit known to reach it no
+  later than the army's slowest group. Every place is at most two roads from any other, so
+  near home that is most of the enemy army: the policy commits on whole-army strength, and
+  a lead in one fight does not tempt it across the map.
 
 ## Running a pass
 
 - `pnpm exec vite-node src/showcase/archetypes/skirmish/balance/arc-probe.ts` prints the
   spine's values and landmarks, then plays each contract under the reference player and
-  prints every beat, both seats' end state and the roster's results. It takes about two
-  seconds. The measured siege beat lands after the walk's: the walk fields no losses.
+  prints every beat, both seats' end state, the convoys each seat sent and how many of them
+  flanked, and the roster's results. It takes a few seconds. A flank is a convoy sent around
+  a place its default shortest route passes through. The measured siege beat lands after the walk's: the walk fields no losses.
 - `pnpm exec vite-node src/showcase/archetypes/skirmish/balance/counter-probe.ts [--hard]`
   asks whether reading the rival wins matches: wins, ends and counter fit for a shipped,
   blind, fully bent and table-flat player seat. Its header defines counter fit. A healthy
@@ -130,7 +148,15 @@ assault threshold, the siege the safehouse card shows, or the price.
   the floor ladder and opens about when the bunks begin to bind. The reference player fields
   about one enforcer before the match ends.
 - **Taking ground moves income, not the player's wins.** Under the reference player the
-  district gap shows up in hustlers (about 16 against the rival's 13 at 300 s), yet a variant
-  with no district slots wins as often. One won fight decides more matches than the income.
+  district gap shows up in hustlers, yet a variant with no district slots for either seat wins
+  every contract too. One won fight decides more matches than the income.
+- **Flanks are few.** The policy flanks only between equal routes, around an enemy it knows
+  of, and keeps one army; the rival flanks a handful of times a match against the stronger
+  contracts and the reference player almost never.
+- **The rival never assaults the player's safehouse.** Its assault beat fires in no contract
+  under the reference player; why is not yet measured.
+- **Matches below parity run to the spine's match length, not under it.** Every move costs at
+  least a road, and the walk that gives the landmarks does not model travel, so the measured
+  assault and end beats land after the walk's.
 - **Repeated attempts are not identical.** Each policy throttle keeps its phase across
   matches.

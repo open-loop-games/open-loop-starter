@@ -14,13 +14,14 @@ import { UNIT_KINDS } from '../data/units';
 import { PRESENCE, countsOf, total } from '../modules/battle';
 import { readyUnits } from '../modules/orders';
 import type { Side } from '../modules/side';
+import { onRoad } from '../modules/travel';
 import { MAX_MATCH_S, TICK, buildGame, staffMatch } from './_game';
 
 /** The runs one recording spans: one deterministic run, the first contract's first attempt. */
 export const runs = [{ contract: 0 }];
 
 function armySize(s: Side): number {
-  let n = 0;
+  let n = onRoad(s);
   for (const k of UNIT_KINDS) {
     n += toNumber(s.reserve[k].value);
     for (const sq of s.squads) n += toNumber(sq[k].value);

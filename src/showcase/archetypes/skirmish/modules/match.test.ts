@@ -5,6 +5,9 @@ import { boot, getEngine, seconds, tickUntil } from '../sim/harness';
 import { getMatch } from './match';
 import { deploy, setStance } from './orders';
 
+const NARROWS = 0;
+const DOCKS = 1;
+
 /** Put whole units of a kind straight into a seat's safehouse. */
 function grant(side: ReturnType<typeof getMatch>['p'], n: number): void {
   side.reserve.enforcer.value = new Decimal(n);
@@ -66,12 +69,23 @@ describe('the match', () => {
     const m = getMatch();
     m.start();
     grant(m.p, 12);
-    deploy(m.p, 'enforcer', 0);
-    await tickUntil(() => m.control[0]!.value >= 1);
+    deploy(m.p, 'enforcer', DOCKS);
+    await tickUntil(() => m.control[DOCKS]!.value >= 1);
     const integrity = toNumber(m.e.hq.value);
-    setStance(m.p, 0, 'assault');
+    setStance(m.p, DOCKS, 'assault');
     await seconds(5);
     expect(toNumber(m.e.hq.value)).toBeLessThan(integrity);
+  });
+
+  it('sieges only from a district with a road to the safehouse it hits', async () => {
+    const m = getMatch();
+    m.start();
+    m.p.squads[NARROWS]!.enforcer.value = new Decimal(12);
+    m.control[NARROWS]!.value = 1;
+    const integrity = toNumber(m.e.hq.value);
+    setStance(m.p, NARROWS, 'assault');
+    await seconds(5);
+    expect(toNumber(m.e.hq.value)).toBe(integrity);
   });
 
   it('holds a district without an assault order, and the safehouse stays whole', async () => {
@@ -89,9 +103,9 @@ describe('the match', () => {
     const m = getMatch();
     m.start();
     grant(m.p, 30);
-    deploy(m.p, 'enforcer', 0);
-    await tickUntil(() => m.control[0]!.value >= 1);
-    setStance(m.p, 0, 'assault');
+    deploy(m.p, 'enforcer', DOCKS);
+    await tickUntil(() => m.control[DOCKS]!.value >= 1);
+    setStance(m.p, DOCKS, 'assault');
     await tickUntil(() => m.phase.value !== 'live', 20_000);
     expect(m.phase.value).toBe('won');
     m.nextMatch();

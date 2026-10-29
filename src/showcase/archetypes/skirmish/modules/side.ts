@@ -56,6 +56,7 @@ import { LIEUTENANTS, type LieutenantDef } from '../data/crew';
 import { UNITS, UNIT_KINDS, byKind, type UnitKind } from '../data/units';
 import type { Tunables } from './tunables';
 import { START_SCRIP } from '../data/spine';
+import { onRoad, type Convoy } from './travel';
 
 export type Stance = 'hold' | 'assault';
 export type Focus = UnitKind | 'spread';
@@ -87,6 +88,10 @@ export interface Side {
   readonly reserve: Record<UnitKind, Resource>;
   /** Squads standing in each district, by district index. */
   readonly squads: Record<UnitKind, Resource>[];
+  /** Units on the road between places. */
+  readonly convoys: Persistent<Convoy[]>;
+  /** The id the next convoy takes. */
+  readonly convoyIds: Persistent<number>;
   readonly dmg: Record<UnitKind, ModifierChain>;
   readonly hp: Record<UnitKind, ModifierChain>;
   readonly turret: ModifierChain;
@@ -115,7 +120,7 @@ export interface Side {
   opened(kind: UnitKind): boolean;
   /** Floors' worth of training time spent on this kind: its queue weight's share of every floor. */
   floorShare(kind: UnitKind): number;
-  /** Units in the field and at home, whole and in training. */
+  /** Units in the field, on the road and at home, whole and in training. */
   supplyUsed(): number;
   /** Hustlers working for the seat, at the safehouse and in its districts. */
   hustlers(): number;
@@ -226,11 +231,14 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
   const supplyCap = computed(
     () => tune.supplyBase.value + tune.supplyPer.value * toNumber(squats.count.value),
   );
+  const convoys = persistent<Convoy[]>([], { id: `${id}-convoys` });
+  const convoyIds = persistent(0, { id: `${id}-convoy-ids` });
   // TODO(expansion): a bag's total capacity counts every item type as one, so a
   // unit that should cost more supply than another (an exo-frame at two) cannot
   // be expressed; every unit here costs one supply.
+  // Convoys come and go, so they are not linked items: the bag's room shrinks by the units on the road.
   const bag = createResourceBag({
-    capacity: supplyCap,
+    capacity: computed(() => supplyCap.value - onRoad({ convoys })),
     overflow: 'block',
     displayName: `${label} supply`,
   });
@@ -444,7 +452,7 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
   const stance = DISTRICTS.map((d) => persistent<Stance>('hold', { id: `${id}-stance-${d.id}` }));
   const focus = DISTRICTS.map((d) => persistent<Focus>('spread', { id: `${id}-focus-${d.id}` }));
 
-  return {
+  const side: Side = {
     id,
     scrip,
     aether,
@@ -460,6 +468,8 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
     bag,
     reserve,
     squads,
+    convoys,
+    convoyIds,
     dmg,
     hp,
     turret,
@@ -484,8 +494,9 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
     nextHustler,
     opened,
     floorShare,
-    supplyUsed: () => toNumber(bag.total()),
+    supplyUsed: () => toNumber(bag.total()) + onRoad(side),
     scripRate: () => toNumber(getInflowRate(scrip)),
     aetherRate: () => toNumber(getInflowRate(aether)),
   };
+  return side;
 }

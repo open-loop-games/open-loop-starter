@@ -4,7 +4,7 @@ import { UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
 import { boot, tickUntil } from '../sim/harness';
 import { countsOf, total } from './battle';
 import { getMatch } from './match';
-import { deploy, retreat } from './orders';
+import { retreat } from './orders';
 
 /** The kind each kind beats, read from the pairing table rather than restated. */
 function counterOf(target: UnitKind): UnitKind {
@@ -20,10 +20,8 @@ describe('a district fight', () => {
       const fresh = getMatch();
       fresh.start();
       const winner = counterOf(target);
-      fresh.p.reserve[winner].value = new Decimal(8);
-      fresh.e.reserve[target].value = new Decimal(8);
-      deploy(fresh.p, winner, 1);
-      deploy(fresh.e, target, 1);
+      fresh.p.squads[1]![winner].value = new Decimal(8);
+      fresh.e.squads[1]![target].value = new Decimal(8);
       await tickUntil(
         () =>
           total(countsOf(fresh.e.squads[1]!)) === 0 || total(countsOf(fresh.p.squads[1]!)) === 0,
@@ -32,15 +30,15 @@ describe('a district fight', () => {
     }
   });
 
-  it('brings a pulled-back squad home whole', async () => {
+  it('brings a pulled-back squad home whole, over the road', async () => {
     const m = getMatch();
     m.start();
-    m.p.reserve.hexer.value = new Decimal(5);
-    deploy(m.p, 'hexer', 2);
-    expect(toNumber(m.p.reserve.hexer.value)).toBe(0);
+    m.p.squads[2]!.hexer.value = new Decimal(5);
     retreat(m.p, 2);
-    expect(toNumber(m.p.reserve.hexer.value)).toBe(5);
     expect(total(countsOf(m.p.squads[2]!))).toBe(0);
+    expect(toNumber(m.p.reserve.hexer.value)).toBe(0);
+    await tickUntil(() => m.p.convoys.value.length === 0);
+    expect(toNumber(m.p.reserve.hexer.value)).toBe(5);
   });
 });
 
@@ -56,8 +54,7 @@ describe('a sentry nest', () => {
     m.control[1]!.value = 1;
     m.p.scrip.value = new Decimal(1e6);
     expect(m.p.nests[1]!.build.purchase(1)).toBeTruthy();
-    m.e.reserve.razor.value = new Decimal(6);
-    deploy(m.e, 'razor', 1);
+    m.e.squads[1]!.razor.value = new Decimal(6);
     let lowest = 1;
     await tickUntil(() => {
       if (toNumber(m.p.nests[1]!.hp.value) > 0) lowest = Math.min(lowest, m.control[1]!.value);

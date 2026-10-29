@@ -15,7 +15,7 @@ import {
   TRAIN_RATE,
 } from '../data/buildings';
 import { UNITS, UNIT_KINDS, type UnitKind } from '../data/units';
-import { captureRate, hqIntegrity, turretDps, REF_PRESENCE } from '../data/spine';
+import { HOP_S, captureRate, hqIntegrity, turretDps, REF_PRESENCE } from '../data/spine';
 
 export interface Tunables {
   econ: Record<
@@ -47,6 +47,7 @@ export interface Tunables {
   turretDps: ComputedRef<number>;
   captureRate: ComputedRef<number>;
   refPresence: ComputedRef<number>;
+  hopS: ComputedRef<number>;
   research: Record<string, { scrip: ComputedRef<number>; aether: ComputedRef<number> }>;
   charterCost: ComputedRef<number>;
   turretLevels: ComputedRef<number>;
@@ -91,6 +92,7 @@ export function createTunables(t: TuningRegistry): Tunables {
     turretDps: num('hq/turretDps', turretDps),
     captureRate: num('districts/captureRate', captureRate),
     refPresence: num('districts/refPresence', REF_PRESENCE),
+    hopS: num('map/hopS', HOP_S),
     research: Object.fromEntries(
       RESEARCH.map((d) => [
         d.id,
