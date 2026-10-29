@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@open-loop/engine':
-        specifier: ^0.10.0
-        version: 0.10.0(break_eternity.js@2.1.3)(eternal_notations@1.1.1)(ts-morph@28.0.0)(vue@3.5.43(typescript@6.0.3))
+        specifier: ^0.10.2
+        version: 0.10.2(break_eternity.js@2.1.3)(eternal_notations@1.1.1)(ts-morph@28.0.0)(vue@3.5.43(typescript@6.0.3))
       break_eternity.js:
         specifier: ^2.1.3
         version: 2.1.3
@@ -528,8 +528,8 @@ packages:
   '@one-ini/wasm@0.2.1':
     resolution: {integrity: sha512-TUqERXGNTifZ9y2g3wPxQrw3HpHv/02DsW3D90T9x0hhonrL1ZqpSmNrU2XkoIq0fP1N6gZfVQzy2Fw1ZvGBNg==}
 
-  '@open-loop/engine@0.10.0':
-    resolution: {integrity: sha512-ffB+Gp+4uhJ/m9Dii7LB/g5Ukir79y70/T2JhOa4XPoUUwxG3FHd7rpC+R0Lza+6+oAr183cFhI9QP1OpstN+Q==, tarball: https://git.gamebois.lol/api/packages/studio/npm/@open-loop/engine/-/engine-0.10.0.tgz}
+  '@open-loop/engine@0.10.2':
+    resolution: {integrity: sha512-PrLf5h50K+aCyvrOB+1ak4jyGwQbcIZWDUs4lIsR3pDtYlqFJMU+OEqdz6+mWKl59ewanFIt49ifkmq6229V/w==}
     engines: {node: '>=24'}
     hasBin: true
     peerDependencies:
@@ -1993,7 +1993,7 @@ snapshots:
 
   '@one-ini/wasm@0.2.1': {}
 
-  '@open-loop/engine@0.10.0(break_eternity.js@2.1.3)(eternal_notations@1.1.1)(ts-morph@28.0.0)(vue@3.5.43(typescript@6.0.3))':
+  '@open-loop/engine@0.10.2(break_eternity.js@2.1.3)(eternal_notations@1.1.1)(ts-morph@28.0.0)(vue@3.5.43(typescript@6.0.3))':
     dependencies:
       break_eternity.js: 2.1.3
       eternal_notations: 1.1.1
