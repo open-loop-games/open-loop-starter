@@ -15,6 +15,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
+import { credits } from '../credits';
 import GameView from './GameView.vue';
 
 // Slot-pick → start → load → play → save → back. `usePlaySession` owns it;
@@ -36,7 +37,11 @@ const showDevPanel = ref(false);
   />
   <AppFrame v-else :stack="stack" :tooltip-delay="400">
     <template #header>
-      <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
+      <SystemHeader
+        :credits="credits"
+        :app-name="manifest.displayName"
+        @return-to-slots="returnToSlots"
+      >
         <template #about>
           <h4 style="margin-bottom: 6px">
             {{ manifest.displayName }}

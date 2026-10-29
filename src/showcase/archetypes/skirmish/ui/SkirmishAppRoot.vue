@@ -15,6 +15,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
+import { credits } from '../credits';
 import SkirmishGameView from './SkirmishGameView.vue';
 // The costume, applied under `.cantrip-costume`. Imported at the root so the slot screen
 // and the app chrome sit on the same street.
@@ -39,7 +40,11 @@ const showDevPanel = ref(false);
     />
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
-        <SystemHeader :app-name="manifest.displayName" @return-to-slots="returnToSlots">
+        <SystemHeader
+          :credits="credits"
+          :app-name="manifest.displayName"
+          @return-to-slots="returnToSlots"
+        >
           <template #about>
             <h4 style="margin-bottom: 6px">{{ manifest.displayName }}</h4>
             <p>

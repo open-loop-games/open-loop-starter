@@ -15,6 +15,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
+import { credits } from '../credits';
 import InterlockerGameView from './InterlockerGameView.vue';
 import WorksTallies from './components/WorksTallies.vue';
 // The costume, applied under `.interlocker`. Imported at the root so the slot screen
@@ -44,6 +45,7 @@ const showDevPanel = ref(false);
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
         <SystemHeader
+          :credits="credits"
           app-name="The Aluminium Empire"
           subtitle="Imperial Aeroworks · Le Bourget · an aluminium age that came forty years early"
           @return-to-slots="returnToSlots"

@@ -4,7 +4,8 @@
   Owns the title-button-back-to-slots, About popover, optional extra
   actions, and Save / Settings buttons. The default title is the app name and
   an optional subtitle inside the return button; slot `#title` only for markup
-  that shape cannot hold.
+  that shape cannot hold. The About popover holds slot `#about`, then the
+  game's `credits` (CreditList).
 
   Costume classes (stable API) — renames are breaking:
     .olui-system-header                the header strip
@@ -23,6 +24,7 @@ import { inject, onUnmounted, watch } from 'vue';
 import type { Engine } from '@open-loop/engine';
 import Button from '@/ui/components/Button.vue';
 import Popover from '@/ui/components/Popover.vue';
+import CreditList, { type GameCredit } from '@/ui/components/CreditList.vue';
 import SavePanel from '@/ui/components/SavePanel.vue';
 import SettingsPanel from '@/ui/components/SettingsPanel.vue';
 import { usePlayerPrefs } from '@/composables/usePlayerPrefs';
@@ -33,8 +35,10 @@ withDefaults(
     appName?: string;
     /** A line beside the app name, inside the return button. */
     subtitle?: string;
+    /** The sourced assets the game ships, credited under the About text. */
+    credits?: GameCredit[];
   }>(),
-  { appName: 'Open Loop Starter', subtitle: undefined },
+  { appName: 'Open Loop Starter', subtitle: undefined, credits: () => [] },
 );
 
 const emit = defineEmits<{ returnToSlots: [] }>();
@@ -88,6 +92,7 @@ function openSettings(): void {
             {{ appName }}
           </h4>
         </slot>
+        <CreditList :credits="credits" />
       </Popover>
       <slot name="extra-actions" />
       <Button class="btn-sm" data-testid="open-save" @click="openSave"> Save </Button>

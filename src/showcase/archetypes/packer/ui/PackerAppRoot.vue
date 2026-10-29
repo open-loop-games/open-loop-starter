@@ -15,6 +15,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
+import { credits } from '../credits';
 import { CARRIER_WINDOW_S } from '../data';
 import PackerGameView from './PackerGameView.vue';
 import HardpointGauges from './components/HardpointGauges.vue';
@@ -45,6 +46,7 @@ const showDevPanel = ref(false);
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
         <SystemHeader
+          :credits="credits"
           app-name="Hardpoint"
           subtitle="fitting bay · breach line"
           @return-to-slots="returnToSlots"

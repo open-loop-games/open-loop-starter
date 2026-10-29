@@ -14,6 +14,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
+import { credits } from '../credits';
 import DefenderGameView from './DefenderGameView.vue';
 // The costume, applied under `.defender`. Imported at the root so the slot
 // screen and the app chrome stand in the same garden.
@@ -42,6 +43,7 @@ const showDevPanel = ref(false);
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
         <SystemHeader
+          :credits="credits"
           app-name="The Walled Garden"
           subtitle="Kitchen garden · after dusk"
           @return-to-slots="returnToSlots"

@@ -15,6 +15,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
+import { credits } from '../credits';
 import LooperGameView from './LooperGameView.vue';
 import NightTallies from './components/NightTallies.vue';
 // The costume, applied under `.looper`. Imported at the root so the slot screen
@@ -44,6 +45,7 @@ const showDevPanel = ref(false);
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
         <SystemHeader
+          :credits="credits"
           app-name="Lights Out"
           subtitle="Blackwater Penitentiary · Cell 4471"
           @return-to-slots="returnToSlots"

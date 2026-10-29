@@ -15,6 +15,7 @@ import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
 import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
+import { credits } from '../credits';
 import ExplorerGameView from './ExplorerGameView.vue';
 import WoldTallies from './components/WoldTallies.vue';
 // The costume, applied under `.explorer`. Imported at the root so the slot
@@ -44,6 +45,7 @@ const showDevPanel = ref(false);
     <AppFrame v-else :stack="stack" :tooltip-delay="400">
       <template #header>
         <SystemHeader
+          :credits="credits"
           app-name="Spoor"
           subtitle="the Hartwold, uncharted"
           @return-to-slots="returnToSlots"
