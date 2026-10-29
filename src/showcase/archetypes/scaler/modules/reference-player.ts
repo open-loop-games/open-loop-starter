@@ -14,8 +14,8 @@ import type { RunApi } from './run';
  * APIs, not an engine module, so it is not in `createScalerModules()`.
  *
  * One turn works what a player works by hand, by the shipping policies in
- * `./automation.ts`, until each piece of automation takes its job over
- * (`/work/studio/CLAUDE.md` § automation as game code). Each turn it:
+ * `./automation.ts`, until each piece of automation takes its job over,
+ * because automation is game code. Each turn it:
  *   - recruits by the Dispatch Desk's policy, uncapped as a hand is, until the
  *     desk is hired;
  *   - spends Legacy by the Liaison's rule and Continuity by the Monitor's until

@@ -7,7 +7,7 @@
  * through every closing spree; hand-buys units and phones by the shipping
  * acquisition policy; takes memos, hires and upgrades on sight; and catches tips
  * at a stated rate. It stops each chore when the desk that automates it is hired
- * and on duty (`/work/studio/CLAUDE.md` § automation as game code). From then on
+ * and on duty, because automation is game code. From then on
  * the shipping desks in `../modules/automation.ts` play, so the rule under
  * measurement is the one the game ships. Once the ending is offered it sends the
  * acquisitions desk and the board home, buys nothing else, and buys the ending

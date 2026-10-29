@@ -9,8 +9,8 @@
  * and `claimChunk` returns that chunk in the child, which prints one `RESULT <json>` line
  * per job.
  *
- * TODO(expansion): a parallel session pool for probe scripts (candidate-engine-api.md
- * § Parallel session pool). This chunks jobs per worker, where frontier spawns per job.
+ * TODO(expansion): a parallel session pool for probe scripts. This chunks jobs per
+ * worker, where frontier spawns per job.
  */
 
 import { spawn } from 'node:child_process';

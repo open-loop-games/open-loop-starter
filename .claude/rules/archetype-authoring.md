@@ -203,7 +203,6 @@ plays.
 
 ### The driver is shipping automation, not a bespoke bot
 
-`/work/studio/CLAUDE.md` § "automation is game code, not a harness bot" sets this rule.
 A probe drives the game's own `modules/automation.ts`, behind `AutomationTiers`. A thin
 runner works only the manual openers a player works. Deliberately unrealistic drivers stay
 probe-side: full-auto play-session runners and optimal-play enumeration. They are
@@ -271,5 +270,5 @@ Add the row, and pick the reference before a third archetype invents a third ans
 
   Declare the spine before the contract phase is complete. Later phases measure against
   it rather than re-deriving it.
-- **Doc-size discipline.** Read-first docs follow `/work/studio/CLAUDE.md` § Doc size:
-  measured in bytes, with a goal of about 20–30kb. Keep `IDENTITY.md` to a single screen.
+- **Doc-size discipline.** Read-first docs are measured in bytes, with a goal of about
+  20–30kb. Keep `IDENTITY.md` to a single screen.
