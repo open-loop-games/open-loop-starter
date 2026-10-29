@@ -47,6 +47,6 @@ export function matchup(kind: UnitKind): string {
 /** A place by name: a district's, your safehouse, or the named rival's. */
 export function placeName(place: Place, rival: string): string {
   if (place === 'p') return 'your safehouse';
-  if (place === 'e') return `${rival}'s safehouse`;
+  if (place === 'e') return `${rival}${rival.endsWith('s') ? "'" : "'s"} safehouse`;
   return DISTRICTS[place]!.name;
 }

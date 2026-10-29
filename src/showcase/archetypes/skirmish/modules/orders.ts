@@ -5,7 +5,7 @@
 import { Decimal, toNumber } from '@open-loop/engine';
 import { plan, type Place } from '../data/map';
 import { UNIT_KINDS, type UnitKind } from '../data/units';
-import { noCounts, total, wholeUnits } from './battle';
+import { countsOf, noCounts, total, wholeUnits } from './battle';
 import type { Focus, Side, Stance } from './side';
 import { launch, reroute } from './travel';
 
@@ -64,17 +64,33 @@ export function retreat(side: Side, district: number): number {
   return moved;
 }
 
-/** Move a whole squad from one district to another, by the shortest route through `via`. */
-export function redeploy(side: Side, from: number, to: number, via: readonly Place[] = []): void {
-  if (from === to) return;
-  leave(side, from, to, via);
-  side.stance[from].value = 'hold';
+/**
+ * Move a district's squad, or the kinds of it in `kinds`, to another place by the shortest
+ * route through `via`. Returns the units that left.
+ */
+export function redeploy(
+  side: Side,
+  from: number,
+  to: Place,
+  via: readonly Place[] = [],
+  kinds: readonly UnitKind[] = UNIT_KINDS,
+): number {
+  if (from === to && via.length === 0) return 0;
+  const moved = leave(side, from, to, via, kinds);
+  if (total(countsOf(side.squads[from]!)) <= 0) side.stance[from].value = 'hold';
+  return moved;
 }
 
-/** Put a district's whole squad on the road toward a place; returns the units that left. */
-function leave(side: Side, district: number, to: Place, via: readonly Place[] = []): number {
+/** Put a district's units of `kinds` on the road toward a place; returns the units that left. */
+function leave(
+  side: Side,
+  district: number,
+  to: Place,
+  via: readonly Place[] = [],
+  kinds: readonly UnitKind[] = UNIT_KINDS,
+): number {
   const counts = noCounts();
-  for (const k of UNIT_KINDS) {
+  for (const k of kinds) {
     const n = toNumber(side.squads[district][k].value);
     if (n <= 0) continue;
     side.squads[district][k].value = Decimal.dZero;

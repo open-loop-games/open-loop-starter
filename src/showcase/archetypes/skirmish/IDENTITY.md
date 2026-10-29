@@ -27,9 +27,11 @@ Razorboys cut Hexers, Hexers fry Riggers' drones, Riggers brick Razorboys' chrom
 hit everything evenly in heavy frames. Roads join the two safehouses and the three districts: each
 safehouse has a road to its near district and to Ashfall Docks in the middle, and the Docks have a road to both other
 districts. Units train at the safehouse and walk; every road takes the same time. The player
-sends whole units by kind toward a district, by the shortest route or through a waypoint,
-pulls a squad back, turns a convoy around on the road, sets a squad's focus, and orders an
-assault once the district is held. A convoy fights nobody on the road; it stops at the first
+commands on a field of the sprawl: select a squad or a convoy, right-click a place to send it
+by the shortest route, shift+right-click to walk it through a waypoint first, and turn a
+convoy around on the road the same way. A command card under the field holds every order as
+a button too, with the kinds a squad sends, its focus, and an assault once the district is
+held. A convoy fights nobody on the road; it stops at the first
 place on its way where the rival stands and joins that fight. A held, uncontested district
 with a road to the rival's safehouse fires on it under an assault order while its turret
 fires back. Units at home hold the gates, and gate guns add turrets to the roof. A crew can

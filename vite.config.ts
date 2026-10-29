@@ -16,10 +16,20 @@ export default defineConfig({
   // break_eternity.js through the UMD `main`, while consumer code gets the ESM
   // `module`: two Decimal classes, and the engine reads the consumer's as 0.
   ssr: { noExternal: ['@open-loop/engine'] },
+  build: {
+    // three.js changes on its own cadence: its own chunk caches across story changes.
+    rolldownOptions: {
+      output: {
+        codeSplitting: { groups: [{ name: 'three', test: /node_modules[\\/]three[\\/]/ }] },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+    // An addon imported through another entry would otherwise load a second three.
+    dedupe: ['three'],
   },
   test: {
     // Agent worktrees carry a full copy of src/ — without this, vitest
