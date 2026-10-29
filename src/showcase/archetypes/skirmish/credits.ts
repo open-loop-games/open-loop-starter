@@ -13,6 +13,6 @@ export const credits: GameCredit[] = [
     what: 'Kenney Future Square and Kenney High fonts',
     by: 'Kenney',
     url: 'https://www.kenney.nl',
-    license: 'CC0',
+    license: 'CC BY-SA 3.0',
   },
 ];

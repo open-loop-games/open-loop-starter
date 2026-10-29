@@ -6,6 +6,6 @@ export const credits: GameCredit[] = [
     what: 'Kenney Thick and Kenney Bold fonts',
     by: 'Kenney',
     url: 'https://www.kenney.nl',
-    license: 'CC0',
+    license: 'CC BY-SA 3.0',
   },
 ];
