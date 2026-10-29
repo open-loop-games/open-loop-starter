@@ -62,13 +62,11 @@ strict and one-way: `data → modules → composables → ui`.
 ├── shots/               # games-site card: beat-saves.ts writes a save per beat from the
 │                        #   arc probe's player; games-site's capture.mjs shoots the PNGs
 ├── boot.ts              # createApp(overrides?) → { app, engine, mount }
-├── domain-map.config.mjs + domain-map.md   # generated domain-language map (pnpm domain-map)
 ```
 
 `data → modules` never reverses. Composables and components never hold game logic.
 `tuning.ts` (the `tunable()` key registry) is the one perturbation path. There is no
-parallel `data/balance.ts` override file. Regenerate `domain-map.md` from the types; never
-edit it.
+parallel `data/balance.ts` override file.
 
 ## IDENTITY.md — required sections
 

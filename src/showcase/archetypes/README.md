@@ -54,7 +54,6 @@ each archetype to its genres.
 - **What a genre is, and which games are in it** — its genre document, in the studio's
   research library.
 - **What an archetype is** — its `IDENTITY.md`.
-- **What its domain language looks like** — its generated `domain-map.md`.
 - **How its economy is checked** — its `balance/` (probes and projections) and `sim/`
   (behavioral suites).
 - **How balance works in general** — `open-loop-engine/docs/consumer-guide-balance.md`.

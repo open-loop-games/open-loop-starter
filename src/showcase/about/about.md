@@ -58,7 +58,6 @@ the gallery.
 4. Write `manifest.ts` with the typed `ArchetypeManifest` export (see
    `src/types.ts` for the shape), and re-export it from `index.ts`. The gallery
    finds it the next time it loads; it skips underscore-prefixed directories.
-5. Update `domain-map.config.mjs`, and run `pnpm domain-map`.
 
 Each archetype owns its theme assets (fonts, body CSS scope), modules and UI.
 The gallery wraps every demo in a sandbox. The sandbox owns the

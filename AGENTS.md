@@ -182,7 +182,6 @@ const showDevPanel = ref(false);
 - Declare engine state inside `withPersistentContext(id, () => ({ ... }))` in `install(ctx)`. Or call bare `persistent()` while a persistent context is open: the engine wraps `install()` in its own `withPersistentContext`.
 - Archetype `data/` is pure config: typed defs and balance constants only. Modules read data at construction, through a factory closure.
 - Archetype data is inline in `data/*.ts`, with the skeleton and the balance lens as comment sections (`// ─── Skeleton ───`, `// ─── Balance ───`). There is no parallel `vars/` layer and no codegen round-trip.
-- Each archetype has a `domain-map.config.mjs` and a generated `domain-map.md`. The map covers the archetype's own domain language: vocabulary, is-a and reference graph. The engine's `ol-domain-map` tool builds it from the `data/` types; regenerate with `pnpm domain-map`. It is a read-only research reference, generated FROM the types and never feeding back IN. So it cannot drift, and it is not a codegen round-trip. Edit the config (suffixes, nouns, curated disambiguators), never the `.md`. Each committed map is also a forkable best-practice example.
 - Game-specific content stays in the game's own directory. Cross-archetype `src/modules/` and `src/ui/` stay archetype-agnostic.
 - Layering inside each archetype runs `data → modules → composables → ui`.
 - Layout uses `src/lib/` shells and AppFrame. `src/lib/` is presentational; engine bridging is in `src/ui/`.

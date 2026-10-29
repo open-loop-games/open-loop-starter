@@ -138,10 +138,7 @@ pnpm build      # vue-tsc -b && vite build
 pnpm typecheck  # vue-tsc -b
 pnpm test       # Vitest run
 pnpm lint       # oxlint src/
-pnpm domain-map # regenerate src/game/domain-map.md from data types
 \`\`\`
-
-Regenerate \`src/game/domain-map.md\` after editing \`src/game/data\`.
 `;
 }
 
@@ -230,7 +227,6 @@ function planEject(root, archetype, name) {
     // Repoint config references for the kept archetype, then prune any that
     // still point into the (about-to-be-deleted) showcase.
     repoint: { from: `${ARCHETYPES}/${archetype}/`, to: `${GAME_DIR}/` },
-    domainMap: { from: `${ARCHETYPES}/*/domain-map.config.mjs`, to: `${GAME_DIR}/domain-map.config.mjs` },
     pruneConfigLines: SHOWCASE, // delete config lines still mentioning this after repoint
     stripDocs: STRIP_DOCS,
     dropDependencies: unusedShowcaseDeps(root, archetype),
@@ -289,11 +285,7 @@ function applyPlan(root, plan) {
   // 3. Repoint + prune config. oxlint/tsconfig/package reference archetype paths.
   for (const rel of ['oxlint.config.ts', 'tsconfig.app.json', 'package.json']) {
     editFile(join(root, rel), (src) => {
-      let out = src
-        .split(plan.repoint.from)
-        .join(plan.repoint.to)
-        .split(plan.domainMap.from)
-        .join(plan.domainMap.to);
+      let out = src.split(plan.repoint.from).join(plan.repoint.to);
       // oxlint.config.ts carries demo-only rule blocks (the showcase-boundary
       // guard) that are brace-balanced JS a
       // line-filter can't safely remove. They're wrapped in `eject:strip-start`

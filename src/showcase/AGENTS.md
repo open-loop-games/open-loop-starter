@@ -93,6 +93,5 @@ Eject deletes the eject test with the machinery. So no check of a green fork aft
 
 - Rewrite the root `AGENTS.md`'s framing for your game. Eject removes only its starter-only regions, because a `--name` stub would lose the batteries doc.
 - Update `src/game/IDENTITY.md` once you have reshaped `src/game/data`.
-- Regenerate `domain-map.md` (`pnpm domain-map`) at the same point.
 - Re-establish anything the starter kept in `.claude/CLAUDE.local.md`. That file is gitignored, so it does not travel.
 - Re-add the MCP servers your fork needs. Eject removes the repo's own `.mcp.json`.
