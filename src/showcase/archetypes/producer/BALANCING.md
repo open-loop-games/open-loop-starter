@@ -68,7 +68,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
   a large share of income in the first minutes and a sliver after the referral network.
   At ×777 (Cookie Clicker's) the first spree buys two tiers at once.
 - **Synergies amplify count leads.** A cheap holding's synergy pays ×(1 + 0.05 × the
-  dear holding's count) per memo, about ×8.5 at 150. Whoever reaches a pair's threshold
+  costly holding's count) per memo, about ×8.5 at 150. Whoever reaches a pair's threshold
   first jumps ahead, so small allocation differences compound.
 - **Standing is shared by every achievement.** Any certificate, grade or feat raises
   every press already bought. Adding achievements raises income everywhere.

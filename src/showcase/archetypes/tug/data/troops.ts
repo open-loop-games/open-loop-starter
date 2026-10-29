@@ -55,7 +55,7 @@ export const TROOPS: TroopDef[] = [
     reach: 2,
     beats: 'bow',
     charges: true,
-    ours: { name: 'the Knights', role: 'Fast and dear. Rides down bowmen.' },
+    ours: { name: 'the Knights', role: 'Fast and costly. Rides down bowmen.' },
     theirs: { name: 'horse thieves' },
   },
   {

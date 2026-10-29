@@ -38,7 +38,7 @@ import {
   SUBSIDIARIES,
   SUBSIDIARY_DEFS,
   SYNERGY_CHEAP,
-  SYNERGY_DEAR,
+  SYNERGY_COSTLY,
   referralPerSubsidiary,
   type EndingDef,
   type GradeDef,
@@ -203,12 +203,12 @@ export function createFirmModule(): EngineModule {
             return [
               {
                 chain: rateChainOf(t.cheap),
-                multiplier: () => 1 + SYNERGY_CHEAP * owned(t.dear),
+                multiplier: () => 1 + SYNERGY_CHEAP * owned(t.costly),
                 description: def.title,
               },
               {
-                chain: rateChainOf(t.dear),
-                multiplier: () => 1 + SYNERGY_DEAR * owned(t.cheap),
+                chain: rateChainOf(t.costly),
+                multiplier: () => 1 + SYNERGY_COSTLY * owned(t.cheap),
                 description: def.title,
               },
             ];

@@ -110,7 +110,7 @@ export const GRADE_MULT = 1.2;
 // ── Synergies ──
 // A pair of holdings, cheaper first, coupled by a memo once both are owned past a
 // count. The cheaper earns SYNERGY_CHEAP more per unit of the costlier; the costlier
-// SYNERGY_DEAR more per unit of the cheaper (Cookie Clicker `Game.SynergyUpgrade`,
+// SYNERGY_COSTLY more per unit of the cheaper (Cookie Clicker `Game.SynergyUpgrade`,
 // unlocked by count alone here, never by prestige). Each holding sits in two pairs.
 
 export const SYNERGY_PAIRS = [
@@ -126,7 +126,7 @@ export const SYNERGY_PAIRS = [
 /** Both holdings owned at least this many reveal the pair's next synergy memo. */
 export const SYNERGY_AT = [15, 75, 150] as const;
 export const SYNERGY_CHEAP = 0.05;
-export const SYNERGY_DEAR = 0.001;
+export const SYNERGY_COSTLY = 0.001;
 
 // ── Phones (the sales desk's ladder) ──
 // The sales desk comes with DESK_PHONES phones, so it deals at the hand's pace;
@@ -297,12 +297,12 @@ export function upgradeCost(a: number, n: number): number {
 }
 
 /** Synergy memo price at reveal count N: ρ times the units' worth of rate it adds on each side. */
-export function synergyCost(ladder: Ladder, cheap: number, dear: number, n: number): number {
+export function synergyCost(ladder: Ladder, cheap: number, costly: number, n: number): number {
   return (
     UPGRADE_PAYBACK_RATIO *
     n *
     (SYNERGY_CHEAP * n * unitCost(ladder.baseCost[cheap], n) +
-      SYNERGY_DEAR * n * unitCost(ladder.baseCost[dear], n))
+      SYNERGY_COSTLY * n * unitCost(ladder.baseCost[costly], n))
   );
 }
 
@@ -487,7 +487,7 @@ export function projectArc(
     SYNERGY_PAIRS.forEach(([c, d], p) => {
       for (let v = 0; v < pairMemos[p]; v++) {
         synergyFactor[c] *= 1 + SYNERGY_CHEAP * counts[d];
-        synergyFactor[d] *= 1 + SYNERGY_DEAR * counts[c];
+        synergyFactor[d] *= 1 + SYNERGY_COSTLY * counts[c];
       }
     });
   };

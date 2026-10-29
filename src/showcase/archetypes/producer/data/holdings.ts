@@ -27,7 +27,7 @@ import {
   STANDING_K,
   SYNERGY_AT,
   SYNERGY_CHEAP,
-  SYNERGY_DEAR,
+  SYNERGY_COSTLY,
   SYNERGY_PAIRS,
   TIER_COUNT,
   TIP_MARKS,
@@ -149,7 +149,7 @@ export interface ManagementDef {
   target:
     | { kind: 'subsidiary'; id: string }
     | { kind: 'deal' }
-    | { kind: 'synergy'; cheap: string; dear: string }
+    | { kind: 'synergy'; cheap: string; costly: string }
     | { kind: 'referral'; network: number };
   visible: Gate;
 }
@@ -256,14 +256,14 @@ export const MANAGEMENT_DEFS: ManagementDef[] = [
   ...SYNERGY_PAIRS.flatMap(([c, d]) =>
     SYNERGY_AT.map((n, v): ManagementDef => {
       const cheap = SUBSIDIARY_DEFS[c];
-      const dear = SUBSIDIARY_DEFS[d];
+      const costly = SUBSIDIARY_DEFS[d];
       return {
-        id: `synergy-${cheap.id}-${dear.id}-${v + 1}`,
-        title: `${SYNERGY_TITLES[v]}: ${cheap.displayName} and ${dear.displayName}`,
-        description: `${cheap.displayName} earn +${SYNERGY_CHEAP * 100}% per ${dear.unit}; ${dear.displayName} +${SYNERGY_DEAR * 100}% per ${cheap.unit}.`,
+        id: `synergy-${cheap.id}-${costly.id}-${v + 1}`,
+        title: `${SYNERGY_TITLES[v]}: ${cheap.displayName} and ${costly.displayName}`,
+        description: `${cheap.displayName} earn +${SYNERGY_CHEAP * 100}% per ${costly.unit}; ${costly.displayName} +${SYNERGY_COSTLY * 100}% per ${cheap.unit}.`,
         cost: synergyCost(LADDER, c, d, n),
         mult: 1,
-        target: { kind: 'synergy', cheap: cheap.id, dear: dear.id },
+        target: { kind: 'synergy', cheap: cheap.id, costly: costly.id },
         visible: { kind: 'all', of: [ownedGate(c, n), ownedGate(d, n)] },
       };
     }),
