@@ -11,11 +11,11 @@
  * loop shape whatever draws them.
  *
  * Bodies are Kenney figures turned to face where they walk, tinted half-way toward their
- * kind's colour so the kinds read apart; the cast stand on rings. Effects are unTied
+ * kind's color so the kinds read apart; the cast stand on rings. Effects are unTied
  * animations played to their last frame, longer than the sim keeps the entry that started
  * them (`bursts.ts`). The art and its packing are in `floor-art.ts`.
  *
- * Colours are the costume's (`soundstage.css`), mirrored as literals, because a renderer
+ * Colors are the costume's (`soundstage.css`), mirrored as literals, because a renderer
  * cannot read CSS variables per draw. The billing face is read from `--font-billing` once.
  */
 import {
@@ -835,7 +835,7 @@ function lerpColor(a: number, b: number, t: number): number {
 }
 
 /**
- * An X of two butt-ended arms from the centre out to `arm` on each diagonal, `width` thick, as
+ * An X of two butt-ended arms from the center out to `arm` on each diagonal, `width` thick, as
  * one outline. Two stroked arms would double their alpha where they cross; one polygon
  * paints the crossing once, as the canvas's single stroked path did.
  */
@@ -874,7 +874,7 @@ function dashedCircle(g: Graphics, x: number, y: number, r: number, on: number, 
   return g;
 }
 
-/** A square canvas with a radial gradient from its centre to its edge. */
+/** A square canvas with a radial gradient from its center to its edge. */
 function radialCanvas(size: number, stops: [number, string][]): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = c.height = size;

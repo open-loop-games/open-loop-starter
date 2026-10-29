@@ -35,7 +35,7 @@ function syncInput(): void {
   if (keys.has('arrowdown') || keys.has('s')) my += 1;
   const floor = field.value?.$el as HTMLElement | undefined;
   if (mx === 0 && my === 0 && pointer && floor) {
-    // The camera holds the double at the floor's centre, so the pointer steers from there.
+    // The camera holds the double at the floor's center, so the pointer steers from there.
     const r = floor.getBoundingClientRect();
     const dx = pointer.x - (r.left + r.width / 2);
     const dy = pointer.y - (r.top + r.height / 2);
@@ -359,7 +359,7 @@ const slip = computed(() => {
   background: radial-gradient(circle, var(--stage-black) 0 2px, var(--reel-gold) 2.5px);
   align-self: center;
 }
-/* The cue cards stack under the timecode, each centred on it. */
+/* The cue cards stack under the timecode, each centered on it. */
 .cues {
   display: flex;
   flex-direction: column;
@@ -373,7 +373,7 @@ const slip = computed(() => {
 .take :deep(.strip-float) {
   align-self: stretch;
 }
-/* The HUD's bars are flat tape with square ends, and keep their own colours when full or empty. */
+/* The HUD's bars are flat tape with square ends, and keep their own colors when full or empty. */
 .bar,
 .filmstrip {
   --progress-bar-fill-full: var(--progress-bar-fill);

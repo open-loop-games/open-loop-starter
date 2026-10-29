@@ -222,7 +222,7 @@ pnpm add pixi.js                             # pixi ships its own types
 - **The drawing.** Follow the engine recipe § Drawing ticking game state: a read-only projection. It is in `docs/consumer-guide-recipes-tick.md` in the `@open-loop/engine` package. The drawing owns its loop, reads game state each animation frame, and writes none.
 - **Tests.** jsdom has no WebGL. A component test of a WebGL host replaces the scene class with a stand-in through `vi.mock`.
 - **Screenshots.** Headless Chrome draws WebGL in software, at a few frames a second. Launch it on the host GPU with `--use-angle=gl-egl --ignore-gpu-blocklist`.
-- **Worked examples.** In a starter checkout, skirmish's `ui/field/` draws with three, and defender's `ui/components/PestLayer.vue` with pixi.
+- **Worked examples.** In a starter checkout, skirmish's `ui/field/` draws its play space with three, and survivor's `ui/floor/` draws its play space with pixi. Defender's `ui/components/PestLayer.vue` is a pixi layer over a DOM board.
 
 <!-- eject:strip-start -->
 A story that adds a renderer lists it in `SHOWCASE_ONLY_DEPS`; `src/showcase/AGENTS.md` § Fork workflow says why.

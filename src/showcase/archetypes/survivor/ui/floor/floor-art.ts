@@ -9,7 +9,7 @@
  *   its cell.
  *
  * A Kenney figure faces +x, its head about 26 px across a 43 px frame, a little left of the
- * frame's centre; `FIGURE_ANCHOR` is that head.
+ * frame's center; `FIGURE_ANCHOR` is that head.
  */
 import { Assets, Rectangle, Texture } from 'pixi.js';
 import figuresUrl from '../../assets/floor/figures.png';

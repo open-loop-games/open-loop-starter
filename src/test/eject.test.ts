@@ -80,6 +80,7 @@ describe('eject plan', () => {
   it('drops the showcase-only dependencies the kept game does not import', () => {
     expect(planEject(ROOT, 'cycler').dropDependencies).toContain('pixi.js');
     expect(planEject(ROOT, 'defender').dropDependencies).not.toContain('pixi.js');
+    expect(planEject(ROOT, 'survivor').dropDependencies).not.toContain('pixi.js');
   });
 
   it('rejects an unknown archetype', () => {
