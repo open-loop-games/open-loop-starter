@@ -1,6 +1,6 @@
 # open-loop-starter
 
-Batteries-included clone target for building games on [open-loop-engine](../open-loop-engine), and the storybook for those batteries. Clone this repo, `eject` down to one archetype, start building.
+Batteries-included clone target for building games on [open-loop-engine](https://github.com/open-loop-games/open-loop-engine), and the storybook for those batteries. Clone this repo, `eject` down to one archetype, start building.
 
 Engine and starter are the two API surfaces — there's no library to depend on and no version to pin. The batteries reach you by being copied, so once you clone, they're yours: rename them, restructure them, delete them.
 
@@ -17,7 +17,7 @@ The repo has two halves:
 # Fork or clone
 git clone <this-repo> my-game && cd my-game
 
-# Install (engine is a link: dep to the sibling directory)
+# Install (the engine comes from npm as @open-loop/engine)
 pnpm install
 
 # Browse the archetype gallery
@@ -47,9 +47,9 @@ This hoists your archetype to `src/game/`, rewrites `main.ts` to boot it directl
 
 ## How to use the engine
 
-Read the [consumer guide](../open-loop-engine/docs/consumer-guide.md) for how to think about expressing your game — which primitives to reach for, when to drop down an abstraction level, and when the engine should grow.
+Read the [consumer guide](https://github.com/open-loop-games/open-loop-engine/blob/main/docs/consumer-guide.md) for how to think about expressing your game — which primitives to reach for, when to drop down an abstraction level, and when the engine should grow.
 
-Per-symbol API reference: [open-loop-engine/docs/api/INDEX.md](../open-loop-engine/docs/api/INDEX.md)
+Per-symbol API reference: [docs/api/INDEX.md](https://github.com/open-loop-games/open-loop-engine/blob/main/docs/api/INDEX.md)
 
 ## Archetype demos
 
@@ -77,4 +77,4 @@ pnpm format           # oxfmt src
 
 ## Architecture
 
-See [CLAUDE.md](CLAUDE.md) for layering rules, code conventions, and project structure.
+See [AGENTS.md](AGENTS.md) for layering rules, code conventions, and project structure.
