@@ -41,7 +41,7 @@ stays open after.
 
 ## Rate-function spine
 
-**Bucket: geometric discrete on scene marks** (`incremental-math/…/rate-functions/`). Both
+**Bucket: geometric discrete on scene marks** ([rate functions](https://open-loop-games.github.io/incremental-math/rate-functions/)). Both
 sides of a take compound: rig damage through the rewrites, extra hp and arrivals through the
 scene index, which advances once a minute. The closed core is a crossing between two
 geometric curves. Every rig's level-1 damage a second is the same, so a rig choice is about

@@ -50,8 +50,8 @@ same prices. Nothing carries from one match to the next.
 ## Rate-function spine
 
 **Bucket: exponential, a geometric worker ladder per income node under a payback horizon;
-the battle is coupled-state deterministic** (`incremental-math/…/rate-functions/exponential`,
-`…/bifurcations#coupled-state-deterministic`). One scrip is one hustler-second. Each node —
+the battle is coupled-state deterministic** ([rate functions § exponential](https://open-loop-games.github.io/incremental-math/rate-functions/exponential/),
+[§ bifurcations, coupled-state deterministic](https://open-loop-games.github.io/incremental-math/rate-functions/bifurcations/#coupled-state-deterministic)). One scrip is one hustler-second. Each node —
 the safehouse, and every district a crew owns — hires five on its own ladder: the first pays
 back in 30 s, and two doublings later the fifth in 120 s. A reference crew owns one district
 from 190 s, the first take the probe records, and spends half its income on the cheapest

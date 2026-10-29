@@ -17,9 +17,6 @@ This file contains only what is starter-specific:
 - which directory each surface goes in;
 - what the files are called.
 
-`prototypes/frontier/docs/balance-process.md` is the worked example of the whole process
-on a real game.
-
 ## The spine
 
 An archetype's numbers come from its spine. The spine is a falsifiable prediction; the
@@ -28,7 +25,7 @@ probes are what contradict it.
 A spine declares its **coverage boundary** — three things:
 
 1. **The bucket** — the named rate-function bucket the closed core is in
-   (`incremental-math/…/rate-functions/`).
+   ([rate functions](https://open-loop-games.github.io/incremental-math/rate-functions/)).
 2. **Where the closed form stops** — the part of the economy the bucket does not project.
 3. **What measures the remainder** — the probe methodology that settles what projection
    leaves open. Examples are distribution statistics over repeated runs, sensitivity

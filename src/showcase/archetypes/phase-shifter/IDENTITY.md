@@ -44,7 +44,7 @@ intake sheet the box brings back. A "Filed away" list stamps each retired mechan
 
 ## Rate-function spine
 
-**Bucket: exponential family, geometric cost ladders** (`incremental-math/…/rate-functions/exponential.mdx`),
+**Bucket: exponential family, geometric cost ladders** ([rate functions § exponential](https://open-loop-games.github.io/incremental-math/rate-functions/exponential/)),
 one per phase, spliced at each door (`…/rate-functions/composition.mdx` § Piecewise
 splice). The box is a clerk ladder solved in closed form: its size is what the greedy
 ladder reads by the phase's length. The phases never compound, so each is solved alone.

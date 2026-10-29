@@ -37,7 +37,7 @@ This is the load-bearing section of any real `IDENTITY.md`, and it declares a
 **coverage boundary** — three things:
 
 1. **The bucket** the closed core lives in, named from
-   `incremental-math/…/rate-functions/` (a geometric crossing, a saturating
+   [rate functions](https://open-loop-games.github.io/incremental-math/rate-functions/) (a geometric crossing, a saturating
    ceiling, a log-frontier).
 2. **Where the closed form stops** — the part of the economy the bucket does not
    project.

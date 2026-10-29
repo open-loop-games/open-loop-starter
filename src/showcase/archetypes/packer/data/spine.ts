@@ -7,7 +7,7 @@
 // The board binds income: it is full from about a minute into each hull, so salvage has
 // nowhere to go but the next plate, refit or schematic. So income is piecewise constant by
 // board stage, the salvage the stage's best packing recovers, and the arc composes stage
-// by stage (`incremental-math/…/rate-functions/composition.mdx`):
+// by stage (https://open-loop-games.github.io/incremental-math/rate-functions/composition/):
 //  - Ship I opens from one cannon and grows to its fitted corvette core; each later ship
 //    is commissioned with a grant that buys its opening fit outright;
 //  - each later stage opens with an adoption ramp, the modules its packing adds bought

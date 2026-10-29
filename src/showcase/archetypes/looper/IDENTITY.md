@@ -47,7 +47,7 @@ every night ends on the train, and the game is the splits board.
 
 ## Rate-function spine
 
-**Bucket: power-law** (`incremental-math/…/rate-functions/power-law.mdx`). Within a
+**Bucket: power-law** ([rate functions § power-law](https://open-loop-games.github.io/incremental-math/rate-functions/power-law/)). Within a
 night, work feeds its own rate through the square root of skill xp:
 
 ```

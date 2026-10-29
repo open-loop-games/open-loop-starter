@@ -4,7 +4,7 @@
  * so nothing here re-implements one.
  *
  * Its shape is td-arcade's forward-build maze planner, cut down to one board
- * and one purse (`bevy-games/td-arcade/src/balance/planner/maze/`). Each build
+ * and one purse. Each build
  * phase makes four decisions in order.
  *
  * **Which forms.** It reads the next three nights and sets a target split of

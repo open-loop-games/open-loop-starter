@@ -10,7 +10,7 @@ on:
 env:
   REGISTRY: git.gamebois.lol
   HUSKY: 0
-  # The game dirs to publish: `.` for a game repo, `*/` for open-loop-mvps.
+  # The game dirs to publish: `.` for a game repo, `*/` for a repo that holds several games.
   GAMES: .
 
 jobs:

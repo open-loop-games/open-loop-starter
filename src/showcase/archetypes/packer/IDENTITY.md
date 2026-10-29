@@ -48,7 +48,7 @@ most, is answered on the lattice itself, under the sector's conditions.
 
 ## Rate-function spine
 
-**Bucket: composition** (`incremental-math/…/rate-functions/composition.mdx`) over
+**Bucket: composition** ([rate functions § composition](https://open-loop-games.github.io/incremental-math/rate-functions/composition/)) over
 **exponential-family geometric ladders** (`…/exponential.mdx`). The board is full from
 about a minute into each hull, so salvage has nowhere to go but the next plate, refit or
 schematic: income is piecewise constant by board stage, the rate the stage's best

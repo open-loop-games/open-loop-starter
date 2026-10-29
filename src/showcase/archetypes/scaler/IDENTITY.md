@@ -39,7 +39,7 @@ and each tier above makes the one below.
 
 ## Rate-function spine
 
-**Bucket: exponential family** (`incremental-math/…/rate-functions/exponential.mdx`). A
+**Bucket: exponential family** ([rate functions § exponential](https://open-loop-games.github.io/incremental-math/rate-functions/exponential/)). A
 tier's unit n costs c·mⁿ with one shared ratio, every tier repays itself in the same
 seconds, and the per-tier cost step is solved so the top tier opens on schedule. Each
 prestige layer pays a root of what the layer below earned. A chain inside one reset is a

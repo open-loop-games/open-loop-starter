@@ -62,7 +62,7 @@ Uncovering is the content because of what surrounds the tether:
 
 ## Rate-function spine
 
-**Bucket: exponential, geometric** (`incremental-math/…/rate-functions/exponential.mdx`).
+**Bucket: exponential, geometric** ([rate functions § exponential](https://open-loop-games.github.io/incremental-math/rate-functions/exponential/)).
 Band k's quarry yields `Y₀·Gᵏ`. The spine's unit is the **reference trip**: walk to the
 middle of band k, hunt four times, walk back to where the haul banks.
 

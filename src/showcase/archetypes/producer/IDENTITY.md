@@ -50,7 +50,7 @@ eye on the wire, and grow the firm until it can buy the tallest building in town
 
 ## Rate-function spine
 
-**Bucket: exponential family** (`incremental-math/…/rate-functions/exponential.mdx`).
+**Bucket: exponential family** ([rate functions § exponential](https://open-loop-games.github.io/incremental-math/rate-functions/exponential/)).
 Unit `n` of tier `i` costs `a_i·m^n`, one shared ratio `m` derived from two authored beat
 times. Every multiplier is a discrete step on a count or a lifetime total, a splice
 point; synergies and the referral network read other holdings' counts, so a tier's rate

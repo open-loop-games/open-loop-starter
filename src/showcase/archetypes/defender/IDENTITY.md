@@ -56,7 +56,7 @@ watch.
 ## Rate-function spine
 
 **Bucket: exponential family, a geometric bounty curve**
-(`incremental-math/…/rate-functions/exponential.mdx`). Wave `w` pays
+([rate functions § exponential](https://open-loop-games.github.io/incremental-math/rate-functions/exponential/)). Wave `w` pays
 `S₀ · G^(w−1) · (G − 1)` when every pest is seen off. What the gardener has committed by
 then is that curve summed, plus what calling it a day paid, in closed form
 (`committedValue`).

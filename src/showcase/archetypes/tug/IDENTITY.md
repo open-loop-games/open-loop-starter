@@ -37,7 +37,7 @@ any field, twist and lord, for no renown.
 ## Rate-function spine
 
 **Bucket: adversarial zero-sum lane over flat income, a frontage-limited Lanchester clash**
-(`incremental-math/…/rate-functions/`; strategy-space integration for the battle, closed
+([rate functions](https://open-loop-games.github.io/incremental-math/rate-functions/); strategy-space integration for the battle, closed
 form per clash). Income is flat; ground pays nothing. A clash loses members at (fighters in
 reach) × dps / hp, three files times the ranks a member's reach covers: melee fights by the
 linear law, a bow wave by the square law. Equal value per silver at one release's budget sets

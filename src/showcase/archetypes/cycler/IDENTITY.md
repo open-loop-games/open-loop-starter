@@ -35,7 +35,7 @@ be taken again.
 ## Rate-function spine
 
 **Bucket: piecewise phase alternation**, a saturating ward against a geometric storm
-(`incremental-math/…/rate-functions/composition.mdx`). A side built on its own five shore
+([rate functions § composition](https://open-loop-games.github.io/incremental-math/rate-functions/composition/)). A side built on its own five shore
 cells, with three buttresses behind, saturates at C_max; its corners are braced once.
 Night n's storm is W₀·g^(n−1), a pure function of the night, and W₀ is pegged at the
 watch's start to C_max / H from permanent power. So the crossing night is 1 + log_g(H)

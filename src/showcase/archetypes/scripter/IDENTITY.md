@@ -37,7 +37,7 @@ old scroll falls back to the first one, unless Remembered Forms keeps the words.
 
 ## Rate-function spine
 
-**Bucket: exponential family** (`incremental-math/…/rate-functions/exponential.mdx`). The
+**Bucket: exponential family** ([rate functions § exponential](https://open-loop-games.github.io/incremental-math/rate-functions/exponential/)). The
 n-th student costs c·mⁿ with m = 2^(1/5), and every student meditates the same rate under
 a multiplier stack (Dan over lifetime Insight, Ancestral Breath, standing per challenger
 beaten). A training strike banks (1 + Temper) seconds of that income per beat.

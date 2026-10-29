@@ -48,7 +48,7 @@ drawing.
 
 ## Rate-function spine
 
-**Bucket: power-law, linear** (`incremental-math/…/rate-functions/power-law.mdx`): every
+**Bucket: power-law, linear** ([rate functions § power-law](https://open-loop-games.github.io/incremental-math/rate-functions/power-law/)): every
 raw building adds a constant rate, priced on **exponential-family geometric ladders**
 (`…/exponential.mdx`). The unit is one raw building's second of output; every worked good
 is valued in raw-equivalents by walking its recipe down, steam at the coal it burns
