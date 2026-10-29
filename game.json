@@ -133,6 +133,7 @@
       "line": "Looper",
       "topic": "Prison-break noir × Loops",
       "path": "#/looper/play",
+      "credits": ["Kenney Future Narrow font: Kenney · CC BY-SA 3.0"],
       "capture": {
         "storageKey": "looper-slot-0"
       },
@@ -245,6 +246,7 @@
       "line": "Scaler",
       "topic": "Superhero comic × Layered incremental",
       "path": "#/scaler/play",
+      "credits": ["Kenney Thick and Kenney Bold fonts: Kenney · CC BY-SA 3.0"],
       "capture": {
         "storageKey": "scaler-slot-0"
       },
@@ -303,6 +305,11 @@
       "line": "Skirmish",
       "topic": "Occult cyberpunk × RTS",
       "path": "#/skirmish/play",
+      "credits": [
+        "City and defense models: Kenney · CC0",
+        "Crew figures and their animations: Kay Lousberg · CC0",
+        "Kenney Future Square and Kenney High fonts: Kenney · CC BY-SA 3.0"
+      ],
       "capture": {
         "storageKey": "skirmish-slot-0",
         "wait": 6000
