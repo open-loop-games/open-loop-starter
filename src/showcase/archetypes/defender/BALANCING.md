@@ -80,7 +80,7 @@ is in `modules/tuning.ts`.
   size sets how much the gardener arms before it routes, and that sets the maze dwell
   is measured on. Successive passes swing a plot's dwell by up to 15%, so
   `PLOT_DWELL` is a mean over two passes. `PLOT_TAIL` sizes no wave, so it is taken
-  from the arc the beats are recorded from.
+  from the reference gardener's arc.
 - **Tolls belong to the reference gardener, like `land`.** A change to `_gardener.ts`,
   to a kind's speed or count, or to the matrix moves them: rerun
   `threshold-probe.ts --kinds` and reset `KIND_TOLL`.
@@ -122,8 +122,7 @@ is in `modules/tuning.ts`.
 
 - `balance/defender-projection.ts` prints the spine: each plot's waves and pressure
   before and after a flawless gardener's almanac, a sample of wave sizes, plant prices,
-  and the schedule check: each plot's predicted span against its recorded span, with a
-  ±15% tolerance per plot. `off` means the spine no longer predicts the plot.
+  and the sim-second each plot is predicted held.
 - `balance/capacity-probe.ts` measures, wave by wave, what the capacity model reads
   off the board: committed value against the closed form, the damage share, dwell, the
   board's capacity against the reference, and each wave's tail. Its plot lines print
@@ -141,11 +140,13 @@ is in `modules/tuning.ts`.
   until none lengthens the route, at each lookahead depth: how long a maze each plot
   allows, and the depth `LOOKAHEAD` is set at.
 - `balance/arc-probe.ts` plays every plot under the reference gardener, up to three
-  attempts each, and prints the beats and a per-wave spine diff. Its header lists the
-  columns' flags: `--no-early` stops calling it a day, `--refuse <plant>` plays without
-  ever growing that plant, and `--set anchor=value` pushes an override. A turn of the
-  wheel that still holds under `--refuse` of its answer is not asking one. Read the
-  diff by column:
+  attempts each. It prints the beats, the schedule check and a per-wave spine diff. The
+  schedule check puts each plot's measured span against its predicted span, with a
+  ±15% tolerance per plot; `off` means the spine no longer predicts the plot. Its
+  header lists the columns' flags: `--no-early` stops calling it a day, `--refuse
+  <plant>` plays without ever growing that plant, and `--set anchor=value` pushes an
+  override. A turn of the wheel that still holds under `--refuse` of its answer is not
+  asking one. Read the diff by column:
   - `ratio` is measured over predicted committed value;
   - `W real` against `W pred` checks the wave sizing;
   - `depth` is how far along the path pests die;

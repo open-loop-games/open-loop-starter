@@ -15,9 +15,8 @@
  *   HP pool it is sized to, at sample waves of each plot.
  * - § The dark: how fast HP outgrows bounty past a plot's last night.
  * - § Plants: prices solved from the thrush.
- * - § Schedule: each predicted beat against the beat `arc-probe.ts` recorded
- *   (`manifest.ts`), and each plot's own span against the recorded one. A line
- *   marked `off` is outside the plot's tolerance.
+ * - § Schedule: the sim-second each plot is predicted held, and its own span.
+ *   `arc-probe.ts` checks them against the shipping game.
  */
 
 import {
@@ -46,7 +45,6 @@ import {
   waveIncome,
   wavesIn,
 } from '../data';
-import { manifest } from '../manifest';
 
 const f = (x: number, d = 1) => x.toFixed(d);
 const a = ANCHORS;
@@ -117,25 +115,13 @@ for (const s of Object.values(plantSpecs(a))) {
   console.log(`  ${s.id.padEnd(9)} cost ${String(s.cost).padStart(4)}   level ${s.unlockLevel}`);
 }
 
-console.log("\nSchedule (tolerance ±15% of each plot's own span)");
+console.log('\nSchedule');
 const predicted = predictHeldAt(a, PLOTS.length);
 let previous = 0;
-let recordedPrevious = 0;
 for (const [p, def] of PLOTS.entries()) {
-  const label = `${def.displayName} held`;
-  const recorded = manifest.beats.find((b) => b.label === label)?.recordedFireTimeRange?.[0];
   const t = predicted[p] ?? NaN;
-  const span = t - previous;
-  previous = t;
-  if (recorded === undefined) {
-    console.log(`  ${label.padEnd(24)}${f(t, 0).padStart(6)}s  (no recorded beat)`);
-    continue;
-  }
-  const recordedSpan = recorded - recordedPrevious;
-  recordedPrevious = recorded;
-  const mark = Math.abs(recordedSpan - span) <= 0.15 * span ? 'ok' : 'off';
   console.log(
-    `  ${label.padEnd(24)}${f(t, 0).padStart(6)}s  recorded ${recorded}s  ` +
-      `span ${f(span, 0)}s vs ${recordedSpan}s  ${mark}`,
+    `  ${`${def.displayName} held`.padEnd(24)}${f(t, 0).padStart(6)}s  span ${f(t - previous, 0)}s`,
   );
+  previous = t;
 }

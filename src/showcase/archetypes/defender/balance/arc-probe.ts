@@ -1,7 +1,8 @@
 /**
  * Arc probe — plays the shipping game through every plot under the reference
- * gardener (`_gardener.ts`), prints when each beat fired, then diffs every
- * wave against the spine. Prints; never asserts.
+ * gardener (`_gardener.ts`), prints when each beat fired, checks each plot's
+ * hold against the spine's schedule, then diffs every wave against the spine.
+ * Prints; never asserts.
  *
  *   pnpm exec vite-node src/showcase/archetypes/defender/balance/arc-probe.ts [-- --no-early] [--refuse plant] [--set anchor=value]
  *
@@ -9,6 +10,10 @@
  * its build timer. `--refuse bat` plays the arc without ever growing a plant:
  * a turn of the wheel that still holds without its answer is not asking one. `--set thrushCost=60` pushes an override on the tuning
  * registry rather than editing source. Each plot gets up to three attempts.
+ *
+ * The schedule check puts each plot's measured span beside the span
+ * `predictHeldAt` gives under the same anchors. A line marked `off` is outside
+ * ±15% of the predicted span: the spine no longer predicts the plot.
  */
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
@@ -18,6 +23,7 @@ import {
   PLOTS,
   committedValue,
   effectivePressure,
+  predictHeldAt,
   pressure,
   referenceCapacity,
   waveHp,
@@ -84,6 +90,8 @@ const learned = new Set<PlantId>(
   (Object.keys(garden.specs.value) as PlantId[]).filter(garden.isPlantUnlocked),
 );
 const diffs: string[] = [];
+/** Sim-second each plot was held, by plot index; null while not held. */
+const heldAt: (number | null)[] = PLOTS.map(() => null);
 
 for (const [pi, def] of PLOTS.entries()) {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -115,6 +123,7 @@ for (const [pi, def] of PLOTS.entries()) {
         );
       }
       if (e.type === 'end') {
+        if (e.outcome === 'won') heldAt[pi] = clock + run.elapsed;
         beat(
           `${def.displayName} ${e.outcome === 'won' ? 'HELD' : 'LOST'} — score ${e.score}, seedlings ${num(plot.seedlings.value)}`,
         );
@@ -192,6 +201,28 @@ console.log(
 );
 console.log('BEATS');
 for (const b of beats) console.log('  ' + b);
+console.log("\nSCHEDULE  (tolerance ±15% of each plot's own predicted span)");
+const predicted = predictHeldAt(a, PLOTS.length);
+let previous = 0;
+let measuredPrevious = 0;
+for (const [p, def] of PLOTS.entries()) {
+  const label = `${def.displayName} held`.padEnd(24);
+  const t = predicted[p] ?? NaN;
+  const span = t - previous;
+  previous = t;
+  const measured = heldAt[p];
+  if (measured == null) {
+    console.log(`  ${label}${t.toFixed(0).padStart(6)}s  never held`);
+    continue;
+  }
+  const measuredSpan = measured - measuredPrevious;
+  measuredPrevious = measured;
+  const mark = Math.abs(measuredSpan - span) <= 0.15 * span ? 'ok' : 'off';
+  console.log(
+    `  ${label}${t.toFixed(0).padStart(6)}s  measured ${measured.toFixed(1)}s  ` +
+      `span ${span.toFixed(0)}s vs ${measuredSpan.toFixed(1)}s  ${mark}`,
+  );
+}
 console.log(
   '\nSPINE DIFF  (value = compost committed at launch; depth = mean route fraction walked at death; window = predicted, dur = measured seconds)',
 );

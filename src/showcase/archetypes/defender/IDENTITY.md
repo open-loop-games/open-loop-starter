@@ -127,6 +127,7 @@ consumer-side too (`modules/run.ts`).
 
 ## Balance model
 
-The spine is `data/spine.ts`, printed by `balance/defender-projection.ts` with its
-beat schedule check. `balance/arc-probe.ts` plays the shipping game through every plot.
+The spine is `data/spine.ts`, printed by `balance/defender-projection.ts`.
+`balance/arc-probe.ts` plays the shipping game through every plot and checks the beat
+schedule against the spine.
 `BALANCING.md` covers the tunables and couplings.

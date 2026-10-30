@@ -115,7 +115,7 @@ export const PLOT_DWELL = [5.5, 7.6, 7.2];
  * Seconds from a wave's last arrival to its end on the reference gardener's
  * board, per plot: how far the last pest walks before it is seen off. Like
  * `PLOT_DWELL`, a property of the map and its maze. It does not size a wave,
- * so it is measured in the arc the beats are recorded from (`capacity-probe.ts`).
+ * so it is measured in the reference gardener's arc (`capacity-probe.ts`).
  */
 export const PLOT_TAIL = [5.5, 16.1, 7.2];
 
