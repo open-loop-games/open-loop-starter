@@ -107,7 +107,11 @@ stay went.
 | The Pale Hart | 1800s | 1784–1987s |
 
 The ranges are the probe's default seeds; the map is fixed and the seed drives the hunt
-rolls. `manifest.ts` holds the recorded beats.
+rolls.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

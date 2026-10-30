@@ -69,8 +69,12 @@ no RNG, so one run is the measurement.
 | The Dark Age | 3h18m22s | 3h12m07s |
 | The Modern Age, the end beat | 4h02m39s | 3h55m44s |
 
-An Elseworld tier comes up about every nine minutes from 0:16 to 3:57. `manifest.ts` holds
-the recorded beats. Play goes on past the Modern Age, each Age's gate growing by the last.
+An Elseworld tier comes up about every nine minutes from 0:16 to 3:57. Play goes on past
+the Modern Age, each Age's gate growing by the last.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

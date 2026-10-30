@@ -77,8 +77,11 @@ measures beside `cycler-projection.ts`.
 
 A watch runs 22–25 minutes and 7–8 nights. The keeper buys three levels of stone and the
 charters by about 1:55; over ten seeds the light holds between 2:09 and 2:38, seven times on
-the first watch at the Flannans. Play goes on after either close. `manifest.ts` holds the
-recorded beats.
+the first watch at the Flannans. Play goes on after either close.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

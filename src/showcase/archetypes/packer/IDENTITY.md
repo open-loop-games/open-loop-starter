@@ -88,7 +88,11 @@ builds those boards.
 | The Breach Mother destroyed | 2:03:47–2:05:10 |
 | The Dreadnought destroyed (spine: 2:32:49) | 2:29:44–2:31:14 |
 
-Ranges are the arc probe at tick sizes 0.5 s to 2 s. `manifest.ts` holds every beat.
+Ranges are the arc probe at tick sizes 0.5 s to 2 s.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds every beat.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

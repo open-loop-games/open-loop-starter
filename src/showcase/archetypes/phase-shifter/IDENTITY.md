@@ -68,7 +68,9 @@ checks each door's retirements and restore parity.
 | First alibi holds | 820s | 822s |
 | Sixth alibi holds: the box comes back | 1180s | 1182s |
 
+<!-- eject:strip-start -->
 `manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

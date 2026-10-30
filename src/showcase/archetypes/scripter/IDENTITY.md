@@ -68,8 +68,12 @@ under the reference sensei against the walk.
 | The Envoy's Gauntlet, the end beat | 2h02m21s | 2h02m22s |
 
 A challenger arrives every 10–15 minutes from Old Bao on; graduations come every 6–14
-minutes after the first. `manifest.ts` holds the recorded beats. Play goes on past the
-Gauntlet, the beaten challengers returning in rotation.
+minutes after the first. Play goes on past the Gauntlet, the beaten challengers returning
+in rotation.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

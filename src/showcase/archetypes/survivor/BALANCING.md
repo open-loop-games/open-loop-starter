@@ -96,7 +96,7 @@ prices and steps; the stars' instincts.
    leads that stood, marks and jackpots, `income` against 1.00, contact, `away` for the
    guard, and the ladder rows on G. About 15 s.
 3. `career-probe.ts [seeds] [takes]`: the meta arc under the stars' instincts and the
-   reference agent. Read the firsts against `manifest.ts`, the wrap against two hours, the
+   reference agent. Read the firsts against `IDENTITY.md` § The arc, the wrap against two hours, the
    takes per rating and the agency at the end. About 30 s.
 4. `steering-probe.ts [seeds]` and `cone-probe.ts [seeds]`: the movement policy. Read term
    spreads by density, the path's turn rate, and the cone's capture. Seconds each.

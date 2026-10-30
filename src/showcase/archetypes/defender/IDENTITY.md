@@ -101,8 +101,11 @@ reference gardener (`balance/_gardener.ts`):
 | The Old Orchard held | 692s | 693s |
 
 The prediction counts each wave's arrivals, and a measured tail per plot after the last
-one, under a gardener who calls every wave at once. `manifest.ts` holds the recorded
-beats.
+one, under a gardener who calls every wave at once.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

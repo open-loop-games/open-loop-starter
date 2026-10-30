@@ -13,22 +13,19 @@
  *      tree, no gallery framing, no `eject:strip` region left behind.
  *   4. A fork *installs only what its game imports* — every dependency only the
  *      showcase imports is listed in `SHOWCASE_ONLY_DEPS`, and eject drops it.
+ *
+ * That a real eject of every archetype typechecks and lints is `pnpm eject:check`
+ * (scripts/eject-check.mjs), which is too slow for this suite.
  */
 import { execFileSync } from 'node:child_process';
-import {
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-} from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error — .mjs script, no types; we only touch the pure planner.
 import { planEject, slug, importSpecifiers, SHOWCASE_ONLY_DEPS } from '../../scripts/eject.mjs';
+// @ts-expect-error — .mjs script, no types.
+import { copyWorkingTree } from '../../scripts/eject-check.mjs';
 
 const ROOT = process.cwd();
 
@@ -45,6 +42,7 @@ describe('eject plan', () => {
     expect(plan.deletes).toContain('.claude/rules');
     // Eject strips its own machinery so the fork starts clean + green.
     expect(plan.deletes).toContain('scripts/eject.mjs');
+    expect(plan.deletes).toContain('scripts/eject-check.mjs');
     expect(plan.deletes).toContain('src/test/eject.test.ts');
     // The games-site listing is the stories', so a fork does not inherit it.
     expect(plan.deletes).toContain('game.json');
@@ -75,6 +73,11 @@ describe('eject plan', () => {
     const plan = planEject(ROOT, '_blank');
     expect(plan.move).toEqual({ from: 'src/showcase/archetypes/_blank', to: 'src/game' });
     expect(plan.manifest).toEqual({ id: 'game', displayName: 'Game' });
+  });
+
+  it("drops the story's beat recording, whose checker is in the showcase", () => {
+    expect(planEject(ROOT, 'defender').storyDeletes).toEqual(['balance/beats.ts']);
+    expect(planEject(ROOT, '_blank').storyDeletes).toEqual([]);
   });
 
   it('drops the showcase-only dependencies the kept game does not import', () => {
@@ -160,17 +163,9 @@ describe('eject — showcase-only dependencies', () => {
 
 describe('eject --clean residue', () => {
   it('leaves no showcase text in the fork', () => {
-    // Eject a copy of the working tree: tracked files plus untracked, unignored ones.
     const fork = mkdtempSync(join(tmpdir(), 'starter-eject-'));
     try {
-      const files = execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {
-        cwd: ROOT,
-        encoding: 'utf8',
-      })
-        .split('\0')
-        // A tracked file deleted from the working tree is still listed.
-        .filter((f) => f && existsSync(join(ROOT, f)));
-      for (const f of files) cpSync(join(ROOT, f), join(fork, f));
+      copyWorkingTree(ROOT, fork);
       execFileSync(
         'node',
         [join(fork, 'scripts/eject.mjs'), '--clean', '--execute', '--root', fork],

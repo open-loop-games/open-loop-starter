@@ -73,7 +73,10 @@ the sway and the close; `career-probe.ts` plays the march under the reference ma
 
 A battle runs 3–4½ minutes. Over eight seeds the marshal takes the Stolen Throne between
 1:22 and 2:05, in 24–37 battles: outlying fields in one to five, keeps in one to eight.
+
+<!-- eject:strip-start -->
 `manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

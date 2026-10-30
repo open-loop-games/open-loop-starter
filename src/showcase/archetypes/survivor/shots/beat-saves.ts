@@ -16,7 +16,7 @@ import { createSurvivorEngine } from '../engine';
 import { SurvivorTuningRegistryKey, getMeta, getTake } from '../modules';
 import { callSheet, clock, playTake, shop, type Set } from '../balance/_set';
 
-/** The career probe's seed 1, whose firsts `manifest.ts` records. */
+/** The career probe's seed 1, whose firsts `IDENTITY.md` § The arc records. */
 const SEED = 1;
 const MAX_TAKES = 18;
 

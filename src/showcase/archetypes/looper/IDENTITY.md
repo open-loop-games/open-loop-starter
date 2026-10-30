@@ -93,7 +93,11 @@ the prediction: work per night, and the wall, ride, rail-yard and freight splits
 | On the freight | 17 | 2772s |
 
 The wall falls at 138s on night 8 and under 50s by night 20, and the truck's refill
-grows from 7 to 40 Nerve as it does. `manifest.ts` holds the recorded beats.
+grows from 7 to 40 Nerve as it does.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

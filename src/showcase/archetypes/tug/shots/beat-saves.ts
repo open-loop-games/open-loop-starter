@@ -1,6 +1,7 @@
 /**
  * Beat saves for the studio games site: plays the shipping game under the career probe's
- * reference marshal (seed 1, the run `manifest.ts` records) and writes one save per beat.
+ * reference marshal (seed 1, the run `IDENTITY.md` § The arc records) and writes one save
+ * per beat.
  * The games site's capture driver seeds each save into the gallery's live demo and shoots
  * it (see the root `game.json`'s tug card).
  *

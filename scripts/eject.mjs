@@ -11,8 +11,9 @@
  *
  * Hoists one archetype out of the showcase boundary into `src/game/`, rewrites
  * `main.ts` to a single-archetype boot, repoints config and the game's own
- * paths, strips starter-only text from the docs a fork keeps, drops the
- * dependencies only the rest of the showcase imports, and deletes the entire
+ * paths, strips starter-only text from the docs a fork keeps, drops the story
+ * files only the showcase runs and the dependencies only the rest of the
+ * showcase imports, and deletes the entire
  * demo/research surface (`src/showcase/`, the gallery-strip guard, and the
  * repo-root demo docs). The result is a clean game with the scaffold + one
  * archetype and nothing to strip by hand.
@@ -41,6 +42,7 @@ const DEMO_DELETES = [
   'src/test/gallery-strip.test.ts',
   'src/test/eject.test.ts',
   'scripts/eject.mjs',
+  'scripts/eject-check.mjs',
   'docs',
   'profiles',
   'TODO.md',
@@ -50,6 +52,11 @@ const DEMO_DELETES = [
   'game.json',
   '.gitea/workflows/games-site.yaml',
 ];
+
+// Files of the kept story, relative to it, whose only runner is in the showcase.
+// `balance/beats.ts` is the beat recording `pnpm beats` plays against the
+// manifest's windows, and eject slims the manifest to identity.
+const STORY_DELETES = ['balance/beats.ts'];
 
 // Dependencies only the showcase imports (stories, gallery), each with the
 // packages that exist for it alone. Eject drops each one the kept game does not
@@ -63,7 +70,8 @@ const SHOWCASE_ONLY_DEPS = {
 };
 
 // Docs a fork keeps that also describe the showcase. Their starter-only text is
-// wrapped in `<!-- eject:strip-start -->` / `<!-- eject:strip-end -->`.
+// wrapped in `<!-- eject:strip-start -->` / `<!-- eject:strip-end -->`. The hoisted
+// game's own markdown is stripped the same way.
 const STRIP_DOCS = ['AGENTS.md'];
 
 // Text files in the hoisted game whose showcase paths are repointed to src/game.
@@ -229,6 +237,7 @@ function planEject(root, archetype, name) {
     repoint: { from: `${ARCHETYPES}/${archetype}/`, to: `${GAME_DIR}/` },
     pruneConfigLines: SHOWCASE, // delete config lines still mentioning this after repoint
     stripDocs: STRIP_DOCS,
+    storyDeletes: STORY_DELETES.filter((rel) => existsSync(join(archDir, rel))),
     dropDependencies: unusedShowcaseDeps(root, archetype),
     packageName: gameId,
     gameId,
@@ -270,13 +279,17 @@ function applyPlan(root, plan) {
   // 1. Hoist the chosen archetype out of the showcase boundary.
   gitMv(root, join(root, plan.move.from), join(root, plan.move.to));
 
-  // 1b. Repoint the hoisted game's own references to its old showcase path
-  // (run lines in balance scripts, doc cites).
+  // 1b. Drop the story files only the showcase runs.
+  for (const rel of plan.storyDeletes) rmSync(join(root, plan.move.to, rel), { force: true });
+
+  // 1c. Repoint the hoisted game's own references to its old showcase path
+  // (run lines in balance scripts, doc cites), and strip its docs' starter-only text.
   for (const path of walkFiles(join(root, plan.move.to))) {
     if (!REPOINT_EXTS.test(path)) continue;
     editFile(path, (src) =>
       src.includes(plan.repoint.from) ? src.split(plan.repoint.from).join(plan.repoint.to) : null,
     );
+    if (path.endsWith('.md')) editFile(path, stripMarkdown);
   }
 
   // 2. Single-archetype main.ts.
@@ -299,11 +312,11 @@ function applyPlan(root, plan) {
         .split('\n')
         .filter((line) => !line.includes(plan.pruneConfigLines))
         .join('\n');
-      // The `eject` script references machinery deleted by this run.
+      // The `eject` scripts reference machinery deleted by this run.
       if (rel === 'package.json') {
         out = out
           .split('\n')
-          .filter((line) => !/^\s*"eject":/.test(line))
+          .filter((line) => !/^\s*"eject(:check)?":/.test(line))
           .join('\n');
       }
       return out;

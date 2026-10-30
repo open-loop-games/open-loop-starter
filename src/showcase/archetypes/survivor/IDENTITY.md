@@ -87,8 +87,11 @@ rewrites against the ladder;
 
 A take runs seven minutes to the climax and up to three more. Over eight seeds R opens at a
 median of 1:30:44 and the picture wraps at 1:54:36, as the agency is bought out; the set
-stays open after. `manifest.ts`
-holds the recorded beats.
+stays open after.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds the recorded beats.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

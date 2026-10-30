@@ -93,7 +93,11 @@ winter larder and the boilers are the player's, and the probe's runner provision
 | The tenth Exposition | 4500–4576s |
 | The Grand Prix (up to 7000s) | 6167–6957s |
 
-Ranges are the arc probe at tick sizes 0.25 s to 2 s. `manifest.ts` holds every beat.
+Ranges are the arc probe at tick sizes 0.25 s to 2 s.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds every beat.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

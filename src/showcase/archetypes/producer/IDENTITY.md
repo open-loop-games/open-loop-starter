@@ -76,7 +76,11 @@ it against the projection; `allocation-probe.ts` swaps the desk's rule.
 | The building offered | 3h44m | 3h37m – 3h45m |
 | The building bought | 3h57m | 3h49m – 3h59m |
 
-`manifest.ts` holds the recorded windows; the projection's times are its expected arc.
+The projection's times are its expected arc.
+
+<!-- eject:strip-start -->
+`manifest.ts` holds the recorded windows.
+<!-- eject:strip-end -->
 
 ## Growth ports
 

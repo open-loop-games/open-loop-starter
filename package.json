@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "eject": "node scripts/eject.mjs",
+    "eject:check": "node scripts/eject-check.mjs",
     "beats": "vite-node src/showcase/beats/check.ts",
     "lint": "oxlint src/",
     "format": "oxfmt src",

@@ -2,7 +2,7 @@
 
 Conventions for `src/showcase/`, for every agent harness: Claude Code, Codex, opencode or any other. `CLAUDE.md` beside this file imports it rather than restating it. So this file is the one home for the content; edit here.
 
-This half is the demo and research surface: archetypes, gallery, about and sandbox. It is *inside* the strip boundary. `pnpm eject` deletes the tree and this file with it. So a fork inherits the root `AGENTS.md` and none of what follows. That is the point. What a fork must not inherit is documented where the deletion already reaches. Eject then needs no list to keep in sync. Where the root `AGENTS.md` must describe the showcase for a starter reader, that text is wrapped in `<!-- eject:strip-start -->` / `<!-- eject:strip-end -->` markers, and eject removes it.
+This half is the demo and research surface: archetypes, gallery, about and sandbox. It is *inside* the strip boundary. `pnpm eject` deletes the tree and this file with it. So a fork inherits the root `AGENTS.md` and none of what follows. That is the point. What a fork must not inherit is documented where the deletion already reaches. Eject then needs no list to keep in sync. Where a doc a fork keeps must describe the showcase for a starter reader, that text is wrapped in `<!-- eject:strip-start -->` / `<!-- eject:strip-end -->` markers, and eject removes it. Such docs are the root `AGENTS.md` and a story's own markdown. Eject strips a marked region whole, so a marked region is a block on its own lines.
 
 **The stories demonstrate the base.** The strip boundary is a one-way *import* cut, not a separation of concerns.
 
@@ -71,14 +71,15 @@ Each archetype's `ui/` follows the root-vs-game-view split in `.claude/rules/app
 - rewrites `main.ts` to a single-archetype boot;
 - repoints and prunes config, and repoints the game's own references to its showcase path;
 - slims `types.ts` and `manifest.ts` to game identity;
+- drops your story's beat recording, `balance/beats.ts`. Its checker, `pnpm beats`, is in the showcase, and the slimmed manifest holds no beats;
 - drops each showcase-only dependency your game does not import, such as a renderer another story draws with. `SHOWCASE_ONLY_DEPS` in `scripts/eject.mjs` lists them, and a test fails when a showcase-only import is missing from it;
-- stubs the README, and removes the `eject:strip` regions from the root `AGENTS.md`;
+- stubs the README, and removes the `eject:strip` regions from the root `AGENTS.md` and from your game's docs;
 - deletes the entire demo and research surface: `src/showcase/` and the repo-root demo docs;
 - deletes the Claude-only `.claude/rules/`, whose paths only ever matched the showcase tree;
 - deletes the games-site listing: the root `game.json`, one card per story, and its publish workflow. The hoisted story keeps its `shots/`;
-- deletes **eject's own machinery**: `scripts/eject.mjs`, `src/test/eject.test.ts`, the `eject` script, and the `@/showcase` and renderer oxlint guards.
+- deletes **eject's own machinery**: `scripts/eject.mjs`, `scripts/eject-check.mjs`, `src/test/eject.test.ts`, the `eject` and `eject:check` scripts, and the `@/showcase` and renderer oxlint guards.
 
-The fork starts clean, green and correctly named. Eject is **dry-run by default**: it prints the plan and touches nothing. Pass `--execute` to perform it. The implementation is `scripts/eject.mjs`, and `src/test/eject.test.ts` locks it.
+The fork starts clean, green and correctly named. Eject is **dry-run by default**: it prints the plan and touches nothing. Pass `--execute` to perform it. The implementation is `scripts/eject.mjs`, and `src/test/eject.test.ts` locks its plan. `pnpm eject:check` ejects every archetype into a temporary copy, then typechecks and lints each fork. `pnpm test` does not run it, because it is slower than a suite should be. Run it after a change to eject, to the base's types or config, or to what a story imports.
 
 Eject has two modes:
 

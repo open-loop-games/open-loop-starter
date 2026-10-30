@@ -9,9 +9,9 @@
  * One career a child process (`_pool.ts`); `CAREER_LOG=1` prints seed 1's takes one by one.
  *
  * How to read it:
- * - The firsts are session time, the sum of the takes before them. `manifest.ts` records
- *   seed 1's. `the picture wraps` is R's lead falling, the arc's end, which the spine's
- *   `arcTakes` aims near two hours; `the agency bought out` should land close to it.
+ * - The firsts are session time, the sum of the takes before them. `IDENTITY.md` § The
+ *   arc records seed 1's. `the picture wraps` is R's lead falling, the arc's end, which the
+ *   spine's `arcTakes` aims near two hours; `the agency bought out` should land close to it.
  * - `takes` per rating is how many takes the career spent at each; a career stuck at one
  *   rating with the agency growing slowly is the ratings wall.
  * - `agency` is the levels bought of each perk at the end.
