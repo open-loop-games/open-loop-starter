@@ -111,10 +111,11 @@ styles (scaffold theme) → ui + lib (via CSS custom properties)
 
 ## Balance methodology
 
-Three rules for per-archetype balance work under `sim/` and `balance/`:
+Rules for per-archetype balance work under `sim/` and `balance/`:
 
 - **Math first, simulate to verify.** Predict balance targets with closed-form expressions: `costCurve` and the engine's `Formula` algebra, geometric series, piecewise integrals. Verify by simulation at a coarse `tickDelta` of 1s–5s. The default of 0.05s wastes cycles on sub-second fidelity for minute-scale events.
 - **Scripts discover, Vitest locks.** Balance discovery belongs in vite-node scripts (`pnpm exec vite-node <archetype>/balance/<probe>.ts`): solver iteration, projector runs, perturbation sweeps. Vitest is for regression locks: chosen invariants, pinned with tolerance bounds *after* discovery converges. Do not route discovery through Vitest, because its semantics do not fit the workflow.
+- **Run a probe on the balance harness, and print it with the balance toolkit.** The balance harness has a runner for each question: one run to a predicate, a beat's time over seeds, a sweep across a range, the live loop's own dt. Its entry points are in `docs/api/harness.md` in the `@open-loop/engine` package. `src/balance/` renders what the runners return: the arc, flow and sensitivity tables, and a metric's spread over a seed batch. A hand-written tick loop with a hand-printed table repeats both. `_blank/balance/game-probe.ts` is the reference a fork copies.
 - **Step solvers incrementally.** For a multi-beat solver, run beat N alone at `PASSES = 1`, then at `PASSES = 3`, then add the next beat. Each step should write its log in under two minutes. The full run is the last step, not the first.
 
 ## Behavioral testing

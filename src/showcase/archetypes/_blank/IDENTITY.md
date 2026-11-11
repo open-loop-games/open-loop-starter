@@ -87,9 +87,9 @@ spine, as prose + math           runnable projection             probe (real eng
   `ratePerSecond`.
 - **Projection** — `balance/game-projection.ts`: pure math, no engine; predicts
   `amount(t)`.
-- **Probe** — `balance/game-probe.ts`: drives the shipping `game/core` module on
-  the real engine and prints the drift against the projection. It reports; it
-  does not assert.
+- **Probe** — `balance/game-probe.ts`: plays the shipping `game/core` module to
+  each beat on the real engine and prints when it fired against the projection.
+  It reports; it does not assert.
 - **Behavioral suite** — `sim/example.test.ts` specs *what the mechanic does*
   (the amount rises), carrying no magnitudes, which is why it survives a retune.
 

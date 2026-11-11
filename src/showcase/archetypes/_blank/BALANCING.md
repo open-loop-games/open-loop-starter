@@ -65,9 +65,10 @@ pnpm exec vite-node src/game/balance/game-probe.ts
 
 - **`game-projection.ts`** — the spine in runnable form. Pure math, no engine.
   Predicts; it does not discover.
-- **`game-probe.ts`** — drives the shipping module on the real engine and prints
-  the drift against the projection. It reports; it does not assert. A probe that
-  finds something unexpected has done its job.
+- **`game-probe.ts`** — plays the shipping module to each beat on the real engine,
+  through the engine's balance harness, and prints when the beat fired against
+  the projection's window. It reports; it does not assert. A probe that finds
+  something unexpected has done its job.
 - **`sim/example.test.ts`** — the behavioral suite: what the mechanic *does*,
   tick by tick, with no magnitudes. Add per-module specs beside their modules as
   the game grows.

@@ -3,53 +3,79 @@
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/_blank/balance/game-probe.ts`
  *
- * Drives the REAL assembled engine — the shipping `game/core` module
- * ticked by the real loop — and measures the realized accrual rate, verifying it
- * matches the projection (`game-projection.ts`: amount(t) = ratePerSecond · t). A
- * probe is discovery, not a test — it prints, it does not assert, and a probe
- * that disagrees found something. Magnitudes stay here; `../sim/` specs
- * behavior, which is why those suites survive a retune.
+ * Drives the REAL assembled engine, the shipping `game/core` module, to each
+ * beat of the arc and prints when it fired against when the projection
+ * (`game-projection.ts`: amount(t) = ratePerSecond · t) says it should. A probe
+ * is discovery, not a test — it prints, it does not assert, and a probe that
+ * disagrees found something. Magnitudes stay here; `../sim/` specs behavior,
+ * which is why those suites survive a retune.
+ *
+ * The probe is two calls, and a fork keeps both as its game grows:
+ *
+ * - `runBeatProbe`, the engine's balance harness, plays one fresh engine per
+ *   beat and seed until the beat's predicate holds, and times it. Its siblings
+ *   answer the other questions a pass asks: `runUntil` for one run,
+ *   `runSensitivity` for a curve across a range, `replayLive` for the live
+ *   loop's own dt.
+ * - `renderArcTable`, from the balance toolkit (`@/balance`), prints the
+ *   result. The same folder has the cost curve as a `Formula`, the flow and
+ *   sensitivity tables, and the spread of a metric over a seed batch.
  *
  * Coarse tick (1s) per `AGENTS.md` § Balance methodology — no sub-second
  * fidelity needed for a linear rate.
  */
 
+import { Decimal, runBeatProbe, type Beat } from '@open-loop/engine';
+import { renderArcTable, seedBatch } from '@/balance';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { createGame } from '../modules';
 import { CoreKey } from '../modules/core';
 import { GAME_BALANCE } from '../data/game';
 
-const INTERVAL_RATE = 1; // 1 tick = 1 sim-second — coarse, matches the linear rate
+/** The arc's beats: the amounts it passes. A real game names its unlocks here. */
+const MILESTONES = [60, 600, 3600];
 
-async function main(): Promise<void> {
-  console.log('Blank game — core probe (shipping accrual vs closed-form projection)');
+/** The projection, inverted: the second the spine says an amount is reached. */
+const predictedSecond = (amount: number): number => amount / GAME_BALANCE.ratePerSecond;
 
-  const game = createGame();
-  const handle = bootTestEngine({
-    modules: game.modules,
-    intervalRate: INTERVAL_RATE,
-    persistenceNamespacePrefix: 'game-probe',
+/** How far the shipping game may land from the projection and still match it. */
+const TOLERANCE = 0.05;
+
+const beats: Beat[] = MILESTONES.map((amount) => {
+  const at = predictedSecond(amount);
+  return {
+    id: `amount ≥ ${amount}`,
+    predicate: (engine) => Decimal.gte(engine.tryInject(CoreKey)!.amount.value, amount),
+    // The window is the projection's own second, give or take the tolerance.
+    // So "in window?" reads as "shipping = projection".
+    tuningWindow: [at * (1 - TOLERANCE), at * (1 + TOLERANCE)],
+  };
+});
+
+function main(): void {
+  console.log('Blank game — core probe (shipping accrual vs closed-form projection)\n');
+
+  const results = runBeatProbe({
+    buildEngine: ({ seed }) =>
+      bootTestEngine({
+        modules: createGame().modules,
+        seed,
+        persistenceNamespacePrefix: 'game-probe',
+      }).engine,
+    beats,
+    // This game has no random leg, so every seed fires on the same second. A
+    // game with one reads the p5–p95 spread across the batch.
+    seeds: seedBatch(3),
+    maxSimTime: 2 * predictedSecond(Math.max(...MILESTONES)),
+    tickDelta: 1,
   });
-  const core = handle.engine.tryInject(CoreKey);
-  if (!core) throw new Error('game-probe: core module did not provide CoreKey');
 
-  const seconds = 60;
-  await handle.tick(seconds);
-
-  const measured = core.amount.value.toNumber();
-  const predicted = GAME_BALANCE.ratePerSecond * seconds;
-  const driftPct = ((measured - predicted) / predicted) * 100;
-  handle.dispose();
-
+  console.log(renderArcTable(results));
+  const drifted = results.filter((r) => !r.inTuningWindow).map((r) => r.beatId);
   console.log(
-    `\n═══ Realized accrual over ${seconds}s (ratePerSecond = ${GAME_BALANCE.ratePerSecond}) ═══`,
-  );
-  console.log(`  projection             = ${predicted.toLocaleString()}`);
-  console.log(`  measured (real engine)  = ${measured.toLocaleString()}`);
-  console.log(
-    `  drift ${driftPct >= 0 ? '+' : ''}${driftPct.toFixed(2)}%   → ${
-      Math.abs(driftPct) < 0.5 ? 'MATCH ✓ (shipping = projection)' : 'DRIFT ✗'
-    }`,
+    drifted.length === 0
+      ? `\n  MATCH ✓ every beat fires within ${TOLERANCE * 100}% of the projection`
+      : `\n  DRIFT ✗ outside the projection's window: ${drifted.join(', ')}`,
   );
 }
 
