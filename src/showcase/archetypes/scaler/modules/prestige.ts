@@ -107,7 +107,7 @@ export function createPrestigeModule(): EngineModule {
       const continuity = ctx.inject(ContinuityKey);
       const canon = ctx.inject(CanonKey);
 
-      const legacyGain = computed(() => Decimal.fromValue(core.legacyGain.apply(1)));
+      const legacyGain = computed(() => core.legacyGain.apply(1));
       const pendingLegacy = computed(() => {
         const earned = run.runEarned.value;
         if (Decimal.lt(earned, REBOOT_THRESHOLD)) return Decimal.dZero;
@@ -126,7 +126,7 @@ export function createPrestigeModule(): EngineModule {
       );
       const pendingContinuity = computed(() => {
         if (Decimal.lt(legacy.legacyEarned.value, REWRITE_THRESHOLD)) return Decimal.dZero;
-        const gain = Decimal.fromValue(core.continuityGain.apply(1));
+        const gain = core.continuityGain.apply(1);
         return integerRoot(
           Decimal.div(legacy.legacyEarned.value, REWRITE_THRESHOLD).mul(
             gain.pow(ANCHORS.continuityDegree),

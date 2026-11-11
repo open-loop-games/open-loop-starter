@@ -289,7 +289,7 @@ export function createNightModule(): EngineModule {
           canStart: (entry) => runnable(def, entry.state),
           tick: ({ entry, dt, category }) => {
             if (!cycle.running.value) return;
-            const step = dt * new Decimal(entry.rateChain!.apply(1)).toNumber();
+            const step = dt * entry.rateChain!.apply(1).toNumber();
             category.tickItemProgress(def.id, step);
             work.value += step;
             // TODO(expansion): one xp stream feeds both skill tiers by hand — the
@@ -447,7 +447,7 @@ export function createNightModule(): EngineModule {
         skillSpeed: (id) => skillMult[id].value,
         actions,
         actionSeconds: effectiveSeconds,
-        actionSpeed: (id) => new Decimal(actions.getRateChain(id)!.apply(1)).toNumber(),
+        actionSpeed: (id) => actions.getRateChain(id)!.apply(1).toNumber(),
         cycle,
         log,
         planExhausted,

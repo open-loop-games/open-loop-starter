@@ -113,7 +113,7 @@ export function createBoxModule(): EngineModule {
       const clerkReadChain = createModifierChain('clerk-read');
       life.scope('clerk-read', [clerkReadChain]);
       const clerkReadRate = computed(() =>
-        new Decimal(clerkReadChain.apply(clerkPagesPerS.value)).mul(clerks.value),
+        clerkReadChain.apply(clerkPagesPerS.value).mul(clerks.value),
       );
 
       // The clerks read on the tick: a converter from pages to pages read, which credits

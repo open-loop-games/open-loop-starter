@@ -5,6 +5,7 @@ import {
   createPurchasableCategory,
   createResource,
   createScalingPurchasable,
+  Formula,
   toNumber,
   tunable,
   unref,
@@ -97,6 +98,13 @@ export function createLodgeModule(): EngineModule {
 
       // === PRODUCERS ===
 
+      // A store holds whole things, so a price is the geometric ladder rounded to one.
+      const wholePrice = (
+        count: Parameters<typeof Formula.exponential>[0],
+        base: ComputedRef<number>,
+        ratio: ComputedRef<number>,
+      ) => Formula.exponential(count, base, ratio).round();
+
       const costRatio = tunable(registry, 'lodge/costRatio', () => ANCHORS.priceRatio);
       const producers = createProducerCategory<ProducerDef>({
         id: 'producers',
@@ -108,8 +116,12 @@ export function createLodgeModule(): EngineModule {
           display: def.displayName,
           purchase: {
             costResource: stores[def.payer],
-            baseCost: tunable(registry, `lodge/${def.id}/baseCost`, () => def.baseCost),
-            costRatio,
+            costFormula: (count) =>
+              wholePrice(
+                count,
+                tunable(registry, `lodge/${def.id}/baseCost`, () => def.baseCost),
+                costRatio,
+              ),
             initialCount: def.initial,
             purchaseMaxByDefault: false,
           },
@@ -121,13 +133,14 @@ export function createLodgeModule(): EngineModule {
       // Each rack turns meat and wood into jerky, and its throughput is the
       // minimum its inputs can feed.
 
+      const rackBaseCost = tunable(registry, 'racks/baseCost', () => RACK_BASE_COST);
+      const rackCostRatio = tunable(registry, 'racks/costRatio', () => RACK_PRICE_RATIO);
       const racks = createScalingPurchasable({
         id: 'racks',
         title: 'Smoke rack',
         description: 'Smokes meat into jerky over a wood fire.',
         resource: stores.wood,
-        baseCost: tunable(registry, 'racks/baseCost', () => RACK_BASE_COST),
-        costRatio: tunable(registry, 'racks/costRatio', () => RACK_PRICE_RATIO),
+        costFormula: (count) => wholePrice(count, rackBaseCost, rackCostRatio),
         initialCount: 1,
         purchaseMaxByDefault: false,
       });

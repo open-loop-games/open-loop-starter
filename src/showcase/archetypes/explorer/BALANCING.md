@@ -23,10 +23,10 @@ Every key is read at its reader site through `tunable()`; the registry is in
 | `trip/supplyPerStep`, `trip/supplyPerHunt` | 1, 1 | Jerky per tile and per hunt. This sets the tether's radius for a given satchel. |
 | `water/perStep`, `water/perHunt` | 2, 1 | Water per tile and per hunt. At 2 a tile, water binds the walk before jerky does; lower it and the springs stop shaping paths. |
 | `lodge/<producer>/rate` | 0.2, 0.15 | Wood or meat per second per woodcutter or snare line. |
-| `lodge/<producer>/baseCost`, `lodge/costRatio` | from the spine, 1.15 | The producers' price ladder. |
+| `lodge/<producer>/baseCost`, `lodge/costRatio` | from the spine, 1.15 | The producers' price ladder. Each price is rounded to a whole unit. |
 | `racks/jerkyRate` | 0.57 | Jerky per second per rack at full feed: the meadow's jerky demand. |
 | `racks/woodPerJerky` | 0.11 | Wood burned per jerky. Higher starves the racks of wood before meat. |
-| `racks/baseCost`, `racks/costRatio` | 20, 1.6 | The rack's price ladder in wood. |
+| `racks/baseCost`, `racks/costRatio` | 20, 1.6 | The rack's price ladder in wood, rounded the same way. |
 | `hounds/pack`, `hounds/prowess`, `hounds/supplyPerStep` | 0.2, 0.25, 0.25 | What each hound adds to the pack and to prowess, and what it costs per tile. |
 | `herds/<band>/regrowSeconds` | one reference trip | Seconds a depleted herd takes to regrow one head. |
 | `hunt/skillStep` | 1.08 | Yield and prowess per Huntcraft level. |
@@ -108,7 +108,7 @@ within 10% of their predictions, and the Fen within 25%.
 ## Known thin
 
 - **The opening runs long.** The first camp falls at 347–443s against 294s: the walker
-  reaches the waystone after the wood is ready. The Fen then opens 3–22% late.
+  reaches the waystone after the wood is ready. The Fen then opens 3–17% late.
 - **Dens fall off schedule.** The mattock comes 30% after the Fen opens, while the
   coracle and the sledge come before their bands open: the walker owns the next bow
   before it owns the next terrain gear. The spine counts each trophy from a band
