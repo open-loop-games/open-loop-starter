@@ -75,7 +75,7 @@ export function formatGrouped(value: DecimalSource, notationFrom: DecimalSource 
 
 /**
  * A clock: 65 → "1:05", 3725 → "1:02:05". The engine's `formatTime` writes a
- * duration ("1m 5.00s") instead.
+ * duration ("1m 05s") instead.
  */
 export function formatClock(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));

@@ -63,11 +63,11 @@ export const manifest: ArchetypeManifest = {
     {
       n: 6,
       label: 'The Silver Age: first Turn of the Age',
-      recordedFireTimeRange: [6030.5, 6030.5],
+      recordedFireTimeRange: [6040.5, 6040.5],
     },
-    { n: 7, label: 'The Bronze Age', recordedFireTimeRange: [9036, 9036] },
-    { n: 8, label: 'The Dark Age', recordedFireTimeRange: [11527.5, 11527.5] },
-    { n: 9, label: 'The Modern Age: the end beat', recordedFireTimeRange: [14144, 14144] },
+    { n: 7, label: 'The Bronze Age', recordedFireTimeRange: [9045.5, 9045.5] },
+    { n: 8, label: 'The Dark Age', recordedFireTimeRange: [11562, 11562] },
+    { n: 9, label: 'The Modern Age: the end beat', recordedFireTimeRange: [14162, 14162] },
   ],
 
   shell: 'ColumnShell · topBar + left',
