@@ -24,18 +24,18 @@ export const manifest: ArchetypeManifest = {
   ],
   beats: [
     { n: 1, label: 'First clerk', recordedFireTimeRange: [7.5, 7.5] },
-    { n: 2, label: 'The box is empty: pin it to the wall', recordedFireTimeRange: [240.5, 240.5] },
-    { n: 3, label: 'The board opens to 4×4', recordedFireTimeRange: [441.5, 441.5] },
+    { n: 2, label: 'The box is empty: pin it to the wall', recordedFireTimeRange: [240, 240] },
+    { n: 3, label: 'The board opens to 4×4', recordedFireTimeRange: [441, 441] },
     {
       n: 4,
       label: 'The board holds: reconstruct the night',
-      recordedFireTimeRange: [661.5, 661.5],
+      recordedFireTimeRange: [661, 661],
     },
-    { n: 5, label: 'First alibi holds', recordedFireTimeRange: [821.5, 821.5] },
+    { n: 5, label: 'First alibi holds', recordedFireTimeRange: [821, 821] },
     {
       n: 6,
       label: 'Sixth alibi holds: the box comes back',
-      recordedFireTimeRange: [1181.5, 1181.5],
+      recordedFireTimeRange: [1181, 1181],
     },
   ],
   shell: 'ColumnShell',

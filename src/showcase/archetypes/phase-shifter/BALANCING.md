@@ -17,8 +17,8 @@ Every key is read at its reader site through `tunable()`; the registry is in
 
 | Key | Default | What it moves |
 |---|---|---|
-| `ladders/growth` | 1.15 | The clerk ladder's ratio. Higher is fewer clerks by the door, and more notes carried across it. |
-| `box/pages` | 4434 | Pages in the box. More pages lengthen Phase I, but the first door reads the spine's count. |
+| `ladders/growth` | 1.15 | The clerk ladder's ratio. Each price is rounded to a whole note. Higher is fewer clerks by the door, and more notes carried across it. |
+| `box/pages` | 4440 | Pages in the box. More pages lengthen Phase I, but the first door reads the spine's count. |
 | `box/notesPerPage` | 1 | Notes a page pays. Phase II writes cards from what is left. |
 | `box/clerk/pagesPerS`, `box/clerk/baseCost` | 1, 16 | A clerk's reading pace and first price: Phase I's ramp. |
 | `board/notesPerCard` | 47 | Notes a card costs to write up. Lower floods the inbox; higher starves the board. |
@@ -29,7 +29,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
 | `night/seconds` | 40 | Sim-seconds per replayed night. |
 | `night/sightingsPerHour` | 1 | Sightings an hour of an alibi needs before it holds. |
 | `night/accountsPerSighting` | 1 | Accounts a sighting files at dawn. |
-| `night/roster/baseCost`, `night/roster/ratio` | 4, 1.22 | The roster ladder: how fast the night shift grows. |
+| `night/roster/baseCost`, `night/roster/ratio` | 4, 1.24 | The roster ladder: how fast the night shift grows. Each price is rounded to a whole account. |
 | `night/insomnia/cost`, `night/insomnia/speed` | 6, 2 | Insomnia's price and the game speed it sets. |
 
 **Not perturbable, on purpose:**
@@ -43,6 +43,9 @@ Every key is read at its reader site through `tunable()`; the registry is in
 
 ## Couplings
 
+- **A price is rounded in two places.** Notes and accounts are whole, so the spine's
+  `wholePrice` and the modules' `.round()` on the ladder are one rounding. Change one
+  alone and the probe's clerks and notes at the first door leave the spine's.
 - **The box is finite, so a clerk costs Phase II fuel.** Every note spent on a clerk is
   a note the board never writes up. A player who under-hires carries more notes across,
   and the first cards arrive faster.

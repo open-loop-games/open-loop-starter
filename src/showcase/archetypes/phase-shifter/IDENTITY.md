@@ -62,11 +62,11 @@ checks each door's retirements and restore parity.
 | Beat | Predicted | Recorded |
 |---|---|---|
 | First clerk | 8s | 8s |
-| The box is empty: pin it to the wall | 240s | 241s |
-| The board opens to 4×4 | 440s | 442s |
-| The board holds: reconstruct the night | 660s | 662s |
-| First alibi holds | 820s | 822s |
-| Sixth alibi holds: the box comes back | 1180s | 1182s |
+| The box is empty: pin it to the wall | 240s | 240s |
+| The board opens to 4×4 | 440s | 441s |
+| The board holds: reconstruct the night | 660s | 661s |
+| First alibi holds | 820s | 821s |
+| Sixth alibi holds: the box comes back | 1180s | 1181s |
 
 <!-- eject:strip-start -->
 `manifest.ts` holds the recorded beats.

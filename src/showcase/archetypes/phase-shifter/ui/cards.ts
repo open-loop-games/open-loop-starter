@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import { Decimal, type Purchasable } from '@open-loop/engine';
+import type { Purchasable } from '@open-loop/engine';
 import {
   createPurchasableCard,
   createPurchasableRow,
@@ -35,7 +35,7 @@ function extra(p: Purchasable, copy: CardCopy): CardExtra {
   return {
     title: read(copy.title),
     description: read(copy.description),
-    price: () => `${formatGrouped(new Decimal(p.getCost(1)).ceil())} ${copy.unit}`,
+    price: () => `${formatGrouped(p.getCost(1))} ${copy.unit}`,
     owned: copy.owned,
     automated: copy.automated,
   };

@@ -100,7 +100,7 @@ export function createBoxModule(): EngineModule {
           requirements: (level) =>
             createCostRequirement({
               resource: notes,
-              cost: Formula.exponential(level, clerkBaseCost, growth),
+              cost: Formula.exponential(level, clerkBaseCost, growth).round(),
               maxBulkCount: 1,
             }),
           visible: life.liveGate('clerk-hire'),

@@ -151,7 +151,7 @@ export function createNightModule(): EngineModule {
           requirements: (count) =>
             createCostRequirement({
               resource: accounts,
-              cost: Formula.exponential(count, rosterBase, rosterRatio),
+              cost: Formula.exponential(count, rosterBase, rosterRatio).round(),
               maxBulkCount: 1,
             }),
           visible: life.liveGate('roster'),

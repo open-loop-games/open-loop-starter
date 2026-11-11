@@ -78,8 +78,9 @@ export const ANCHORS = {
 // ─── Balance ────────────────────────────────────────────────────────────────
 
 /**
- * A geometric ladder `cost(j) = base · growth^j` funded by
+ * A geometric ladder `cost(j) = round(base · growth^j)` funded by
  * `rate(j) = rate0 + ratePer · j`, bought greedily from an opening bank.
+ * Notes and accounts are whole things, so every price is a whole number.
  */
 export interface Ladder {
   base: number;
@@ -88,6 +89,11 @@ export interface Ladder {
   ratePer: number;
   /** Currency in hand at t = 0. */
   bank0?: number;
+}
+
+/** Rung `n` of a whole-unit ladder: the geometric price, rounded. */
+export function wholePrice(base: number, growth: number, n: number): number {
+  return Math.round(base * growth ** n);
 }
 
 /**
@@ -104,7 +110,7 @@ export function ladderAt(
   let bank = l.bank0 ?? 0;
   let spent = 0;
   for (let n = 0; ; n++) {
-    const cost = l.base * l.growth ** n;
+    const cost = wholePrice(l.base, l.growth, n);
     const rate = l.rate0 + l.ratePer * n;
     const wait = Math.max(0, cost - bank) / rate;
     if (t + wait > seconds) {
@@ -310,8 +316,8 @@ export function walkNight(
         alibis.push(night);
       }
     }
-    while (accounts >= rosterBase * rosterRatio ** bought) {
-      accounts -= rosterBase * rosterRatio ** bought;
+    while (accounts >= wholePrice(rosterBase, rosterRatio, bought)) {
+      accounts -= wholePrice(rosterBase, rosterRatio, bought);
       bought++;
     }
     if (insomnia === null && held.size > 0 && accounts >= INSOMNIA_COST) {
