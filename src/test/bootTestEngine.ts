@@ -58,6 +58,10 @@ export interface BootTestEngineOptions {
   seed?: number;
   /** The game's accessor options (state paths, `wrap`), as its own boot passes to `bootEngine`. */
   accessor?: EngineOptions['accessor'];
+  /** The game's tick mode, as its own boot passes to `bootEngine`. In fixed mode a tick runs `fixedDt`. */
+  tickMode?: EngineOptions['tickMode'];
+  /** The dt of a fixed-mode tick, as the game's own boot passes it. */
+  fixedDt?: EngineOptions['fixedDt'];
 }
 
 /**
@@ -73,6 +77,8 @@ export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle
     intervalRate = 20,
     seed = 0,
     accessor,
+    tickMode,
+    fixedDt,
   } = options;
   const persistenceNamespace = `${persistenceNamespacePrefix}-${bootCounter++}`;
   seedRNG(seed);
@@ -85,6 +91,8 @@ export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle
     autoSaveInterval: 0,
     intervalRate,
     accessor,
+    tickMode,
+    fixedDt,
   });
   for (const mod of modules) engine.use(mod);
   // start() runs install/onStart wiring; stop() immediately hands the clock to

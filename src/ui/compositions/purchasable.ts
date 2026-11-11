@@ -39,9 +39,13 @@ export function readPriceLines(p: Purchasable, count: DecimalSource = 1): PriceL
   });
 }
 
-/** Units purchasable now: 0 when none, capped by the limit (unlike `countToPurchase`). */
+/**
+ * Units one purchase can take now: 0 when none (where `countToPurchase` gives
+ * 1), capped by the limit, and 1 when `purchaseMaxByDefault` is off.
+ */
 export function readMaxAffordable(p: Purchasable): DecimalSource {
   if (!p.canPurchase.value) return 0;
+  if (!unref(p.purchaseMaxByDefault)) return 1;
   return maxRequirementsMet(p.requirements);
 }
 

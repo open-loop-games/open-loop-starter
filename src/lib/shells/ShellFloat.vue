@@ -6,8 +6,10 @@
 
   Outside a shell it renders in place.
 
-  A class or attribute given to it lands on the float element. A float sizes to
-  its content; to fill its cell's width, give it a class with `align-self: stretch`.
+  A class or attribute given to it lands on the float element. The float is
+  teleported into the shell, so a scoped style reaches that class only through
+  `:deep()`: `.my-view :deep(.my-float)`. A float sizes to its content; to fill
+  its cell's width, give it a class with `align-self: stretch`.
 
   Costume class: olui-shell-float, with data-anchor.
 -->

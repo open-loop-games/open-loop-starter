@@ -17,7 +17,7 @@
  * - `report.ts` — the markdown renderers a discovery script prints.
  * - `spread.ts` — seeded multi-run statistics, for a spine whose closed form
  *   stops at a stochastic leg: numeric spread over the engine's own
- *   descriptive kernel, plus the categorical distribution it does not carry.
+ *   descriptive kernel.
  *
  * Discovery shape: scripts drive the engine runners, render with `report.ts`,
  * iterate balance constants until tables are green. Regression shape: a thin
@@ -44,14 +44,7 @@ export {
   renderSensitivityTable,
 } from './report';
 
-export {
-  categorySpreadOf,
-  formatCategorySpread,
-  formatSpread,
-  seedBatch,
-  spreadOf,
-  type CategorySpread,
-} from './spread';
+export { formatSpread, seedBatch, spreadOf } from './spread';
 
 /**
  * One producer's per-purchase pacing texture at a single waypoint snapshot.

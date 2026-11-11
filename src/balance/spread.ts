@@ -3,23 +3,14 @@
  * stops at a stochastic leg.
  *
  * An archetype whose coverage boundary names "seeded multi-run distribution
- * statistics" as what measures the remainder needs two readings its probes
- * cannot get from one run: the SPREAD of a numeric outcome across seeds, and
- * the DISTRIBUTION of a categorical one. A single-seed probe reports a point
- * and cannot say whether it is the centre of anything.
+ * statistics" as what measures the remainder needs a reading its probes cannot
+ * get from one run: the SPREAD of a numeric outcome across seeds. A
+ * single-seed probe reports a point and cannot say whether it is the centre of
+ * anything.
  *
- * The numeric half is the engine's — `computeMetricStats` is its descriptive
+ * The statistics are the engine's — `computeMetricStats` is its descriptive
  * kernel, and reusing it is what keeps percentiles here on the same
- * floor-index convention as every other stats utility in the tree. What this
- * adds is the categorical half, which the engine's `CellAggregate` documents
- * as deliberately absent ("string/boolean metric aggregation (mode,
- * distribution) is deferred until a consumer demands it") — and the shape it
- * aggregates, `AnalyzerSummary.metrics`, carries strings that `aggregateCell`
- * then silently drops.
- *
- * TODO(expansion): categorical aggregation over a seed sweep is a parked
- * engine primitive: categorical outcome distribution over a seed sweep. Promote when a second archetype's spine
- * declares a categorical outcome as its measured remainder.
+ * floor-index convention as every other stats utility in the tree.
  *
  * This file is deliberately statistics only. Running the seeds is the probe's
  * job: a per-seed run boots its own engine under its own persistence
@@ -68,52 +59,6 @@ export function spreadOf<T>(
 }
 
 /**
- * How a categorical outcome landed across a seed batch.
- *
- * `modalShare` is the reading a spine target is usually written against: a
- * persona bound by one cause on every seed reads 1.0, which is a wall in
- * costume however well-tuned the number underneath it is.
- */
-export interface CategorySpread {
-  /** Occurrences per category, insertion-ordered by first appearance. */
-  counts: Record<string, number>;
-  total: number;
-  /** Most frequent category; ties resolve to the one seen first. */
-  modal: string;
-  /** `counts[modal] / total`. 1.0 means the outcome never varied. */
-  modalShare: number;
-  distinct: number;
-}
-
-/** Tally a categorical outcome across a batch. Empty batch → an empty tally. */
-export function categorySpreadOf<T>(
-  samples: readonly T[],
-  pick: (sample: T) => string,
-): CategorySpread {
-  const counts: Record<string, number> = {};
-  for (const s of samples) {
-    const key = pick(s);
-    counts[key] = (counts[key] ?? 0) + 1;
-  }
-  let modal = '';
-  let best = 0;
-  for (const [key, n] of Object.entries(counts)) {
-    if (n > best) {
-      best = n;
-      modal = key;
-    }
-  }
-  const total = samples.length;
-  return {
-    counts,
-    total,
-    modal,
-    modalShare: total > 0 ? best / total : 0,
-    distinct: Object.keys(counts).length,
-  };
-}
-
-/**
  * `median [min–max]`, with an optional domain formatter for the three numbers.
  *
  * Range rather than `p5`–`p95` on purpose: floor-index percentiles over a
@@ -124,12 +69,4 @@ export function categorySpreadOf<T>(
  */
 export function formatSpread(stats: MetricStats, format: (n: number) => string = String): string {
   return `${format(stats.median)} [${format(stats.min)}–${format(stats.max)}]`;
-}
-
-/** `traversal 4 · hp-floor 3 · timer 1`, most frequent first. */
-export function formatCategorySpread(spread: CategorySpread): string {
-  return Object.entries(spread.counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([key, n]) => `${key} ${n}`)
-    .join(' · ');
 }

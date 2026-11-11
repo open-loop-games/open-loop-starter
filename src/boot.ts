@@ -27,6 +27,11 @@
  * not throttled. Node has no `Worker`, so tests and balance probes keep the
  * engine's native default. A caller's own `timerProvider` wins.
  *
+ * Tick mode: `bootEngine` passes `tickMode` and `fixedDt` through, as for
+ * `createEngine`. A game whose tick math presumes a small constant dt sets
+ * `tickMode: 'fixed'`, and its test harness passes the same pair to
+ * `bootTestEngine`, so a test ticks at the game's own dt.
+ *
  * Game state for Gates and effects: the engine builds its accessor at
  * `start()`, with flags from `createFlag` and rates from rate sources. Pass
  * `accessor` through, as for `createEngine`, only for state paths

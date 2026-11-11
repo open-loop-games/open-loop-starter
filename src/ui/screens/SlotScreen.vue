@@ -26,16 +26,19 @@ const {
   activeSlotId,
 } = useSlots(mgr, props.engine.mods);
 
-const hasMods = props.engine.mods.length > 0;
+// A picker is for a choice. A game with one mod starts that mod directly.
+const mods = props.engine.mods;
+const hasModChoice = mods.length > 1;
+const loneModId = mods.length === 1 ? mods[0]!.id : undefined;
 
 // Only show slots that have actual save data — the engine always creates a
 // default slot 0 "Autosave" as a placeholder, but we don't show it until
 // the user has actually saved there.
 const savedSlots = computed(() => slots.value.filter((s) => s.peek !== null));
 
-// On first launch (no real saves) with mods, skip the empty slot list and go
-// straight to the mod picker.
-const showModPicker = ref(savedSlots.value.length === 0 && hasMods);
+// On first launch (no real saves) with a choice of mods, skip the empty slot
+// list and go straight to the mod picker.
+const showModPicker = ref(savedSlots.value.length === 0 && hasModChoice);
 
 function loadSlot(slotId: number) {
   selectSlot(slotId);
@@ -50,10 +53,10 @@ function startNewGame(modId?: string) {
 }
 
 function handleNewGame() {
-  if (hasMods) {
+  if (hasModChoice) {
     showModPicker.value = true;
   } else {
-    startNewGame();
+    startNewGame(loneModId);
   }
 }
 

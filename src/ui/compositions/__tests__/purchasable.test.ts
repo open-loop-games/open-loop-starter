@@ -30,8 +30,8 @@ interface Def {
 /**
  * A mill (repeatable, doubling price in gold, at most 3), a charter (one-shot,
  * gold, behind an owned mill), a granary (one-shot, gold, hidden until a mill is
- * owned), a quarry (one-shot, gold and stone) and a farm
- * (a producer of 2 gold/s per unit, doubling price in gold).
+ * owned), a quarry (one-shot, gold and stone), a well (repeatable, one unit per
+ * purchase) and a farm (a producer of 2 gold/s per unit, doubling price in gold).
  */
 function bootShop() {
   let gold!: Resource<Decimal>;
@@ -74,6 +74,17 @@ function bootShop() {
               visible: () => millOwned.value,
               requirements: createCostRequirement({ resource: gold, cost: 5 }),
             };
+          if (def.id === 'well')
+            return {
+              display: { description: 'Draws water.' },
+              purchaseMaxByDefault: false,
+              requirements: (level) =>
+                createCostRequirement({
+                  resource: gold,
+                  cost: Formula.exponential(level, 10, 2),
+                  maxBulkCount: Decimal.dInf,
+                }),
+            };
           return {
             display: { description: 'Cuts stone.' },
             limit: 1,
@@ -84,7 +95,13 @@ function bootShop() {
           };
         },
       });
-      shop.register([{ id: 'mill' }, { id: 'charter' }, { id: 'granary' }, { id: 'quarry' }]);
+      shop.register([
+        { id: 'mill' },
+        { id: 'charter' },
+        { id: 'granary' },
+        { id: 'quarry' },
+        { id: 'well' },
+      ]);
       get = (id) => shop.getPurchasable(id)!;
       const fields = createProducerCategory<Def>({
         id: 'fields',
@@ -116,6 +133,14 @@ describe('readMaxAffordable', () => {
     expect(Number(readMaxAffordable(get('mill')))).toBe(2);
     gold().value = new Decimal(1000);
     expect(Number(readMaxAffordable(get('mill')))).toBe(3);
+  });
+
+  it('is one unit when a purchase takes one, so a row quotes what the engine buys', () => {
+    const { gold, get } = bootShop();
+    gold().value = new Decimal(1000);
+    const well = get('well');
+    expect(Number(readMaxAffordable(well))).toBe(1);
+    expect(Number(well.purchase(5))).toBe(1);
   });
 });
 
