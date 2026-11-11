@@ -7,6 +7,9 @@
     stat    — compact tabular-nums chip (IL stat row)
     toggle  — chip wrapping a <label>/<input>, cursor:pointer
   Emits nothing; content in the default slot.
+
+  Custom props: --hud-chip-radius, by default the palette's --radius-pill. The
+  stat variant keeps --radius-sm.
 -->
 <script setup lang="ts">
 withDefaults(
@@ -29,10 +32,13 @@ withDefaults(
 
 <style scoped>
 .hud-chip {
+  /* Read the token, never set it, so a value set on any ancestor reaches the widget. */
+  --_hud-chip-radius: var(--hud-chip-radius, var(--radius-pill));
+
   padding: 4px 12px;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--_hud-chip-radius);
   font-weight: 600;
   color: var(--color-text);
 }

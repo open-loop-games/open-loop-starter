@@ -5,6 +5,12 @@
  * button is the one reactive engine read. It has no state-dump panel; a fork
  * adds one locally when it needs one.
  *
+ * It starts as a chip: the FPS, and the speed when it is not 1x. A press opens
+ * the dock, and the dev session remembers that. No corner of a game is free of
+ * a rail, the toasts or the header, so the dock keeps small instead of moving.
+ * Outside its buttons it takes no pointer events: a press there reaches the
+ * game under it.
+ *
  * FPS is rAF-derived frame count. The interval rate is
  * `1 / engine.tickDriver.deltaMean`, sampled once a second — sufficient for
  * spot-checking repaint budget on large engine-driven views.
@@ -21,6 +27,14 @@ import Button from '@/ui/components/Button.vue';
 const engine = inject<Engine>('engine');
 
 const workbenchOpen = defineModel<boolean>('workbenchOpen', { default: false });
+
+const OPEN_KEY = 'olui:dev-dock-open';
+const open = ref(sessionStorage.getItem(OPEN_KEY) === '1');
+
+function setOpen(next: boolean): void {
+  open.value = next;
+  sessionStorage.setItem(OPEN_KEY, next ? '1' : '0');
+}
 
 const fps = ref(0);
 const intervalRate = ref(0);
@@ -66,38 +80,61 @@ onUnmounted(() => {
 
 <template>
   <div class="dev-diag">
-    <div class="dev-diag-row dev-diag-row--workbench">
-      <Button
-        type="button"
-        class="dev-diag-speed"
-        :class="{ active: workbenchOpen }"
-        data-testid="dev-workbench-toggle"
-        @click="workbenchOpen = !workbenchOpen"
-      >
-        Workbench
-      </Button>
-    </div>
-    <div class="dev-diag-row">
-      <span class="dev-diag-label">FPS</span>
+    <Button
+      v-if="!open"
+      type="button"
+      class="dev-diag-chip"
+      data-testid="dev-dock-open"
+      aria-label="Open the dev dock"
+      @click="setOpen(true)"
+    >
       <span class="dev-diag-value">{{ fps }}</span>
-      <span class="dev-diag-sep">|</span>
-      <span class="dev-diag-label">Interval/s</span>
-      <span class="dev-diag-value">{{ intervalRate }}</span>
-    </div>
-    <div class="dev-diag-row dev-diag-row--speed">
-      <span class="dev-diag-label">Speed</span>
-      <Button
-        v-for="s in SPEEDS"
-        :key="s"
-        type="button"
-        class="dev-diag-speed"
-        :class="speedClasses(s)"
-        :data-testid="`dev-speed-${s}x`"
-        @click="setSpeed(s)"
-      >
-        {{ s }}x
-      </Button>
-    </div>
+      <span class="dev-diag-label">fps</span>
+      <span v-if="speed !== 1" class="dev-diag-fast">{{ speed }}x</span>
+    </Button>
+    <template v-else>
+      <div class="dev-diag-row">
+        <Button
+          type="button"
+          class="dev-diag-speed"
+          :class="{ active: workbenchOpen }"
+          data-testid="dev-workbench-toggle"
+          @click="workbenchOpen = !workbenchOpen"
+        >
+          Workbench
+        </Button>
+        <Button
+          type="button"
+          class="dev-diag-speed dev-diag-close"
+          data-testid="dev-dock-close"
+          aria-label="Collapse the dev dock"
+          @click="setOpen(false)"
+        >
+          –
+        </Button>
+      </div>
+      <div class="dev-diag-row">
+        <span class="dev-diag-label">FPS</span>
+        <span class="dev-diag-value">{{ fps }}</span>
+        <span class="dev-diag-sep">|</span>
+        <span class="dev-diag-label">Interval/s</span>
+        <span class="dev-diag-value">{{ intervalRate }}</span>
+      </div>
+      <div class="dev-diag-row">
+        <span class="dev-diag-label">Speed</span>
+        <Button
+          v-for="s in SPEEDS"
+          :key="s"
+          type="button"
+          class="dev-diag-speed"
+          :class="speedClasses(s)"
+          :data-testid="`dev-speed-${s}x`"
+          @click="setSpeed(s)"
+        >
+          {{ s }}x
+        </Button>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -119,19 +156,45 @@ onUnmounted(() => {
   font-size: 11px;
   color: #8899aa;
   user-select: none;
+  /* Only the buttons take a press; the rest lets it through to the game. */
+  pointer-events: none;
+}
+.dev-diag:has(> .dev-diag-chip) {
+  padding: 0;
+  border: 0;
+  background: none;
 }
 .dev-diag-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  pointer-events: none;
 }
-.dev-diag-row--speed,
-.dev-diag-row--workbench {
+.dev-diag-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  background: rgba(10, 10, 20, 0.88);
+  border: 1px solid #2a2a3a;
+  border-radius: 4px;
+  color: #8899aa;
+  padding: 2px 6px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
   pointer-events: auto;
+  opacity: 0.7;
+  transition: opacity 0.1s linear;
 }
-.dev-diag-row--workbench .dev-diag-speed {
-  flex: 1 1 0;
+.dev-diag-chip:hover,
+.dev-diag-chip:focus-visible {
+  opacity: 1;
+}
+.dev-diag-chip .dev-diag-value {
+  min-width: 0;
+}
+/* A speed above 1x is easy to forget, so the chip says so. */
+.dev-diag-fast {
+  color: #ffcc66;
 }
 .dev-diag-label {
   color: #667788;
@@ -146,6 +209,7 @@ onUnmounted(() => {
 }
 .dev-diag-speed {
   flex: 1 1 0;
+  pointer-events: auto;
   background: transparent;
   border: 1px solid #2a2a3a;
   border-radius: 4px;
@@ -157,6 +221,9 @@ onUnmounted(() => {
     background 0.1s linear,
     border-color 0.1s linear,
     color 0.1s linear;
+}
+.dev-diag-close {
+  flex: 0 0 auto;
 }
 .dev-diag-speed:hover {
   border-color: #4a5a7a;

@@ -168,7 +168,7 @@ const showDevPanel = ref(false);
 </template>
 ```
 
-`DevDiagnostics` is the always-on dev dock: an FPS and interval-rate readout, speed buttons and a balance workbench toggle. `DevPanelOverlay` is a top-level sibling of `AppFrame`, not pushed through `useModalStack`. It owns its fullscreen chrome, so it needs no modal-stack Dialog wrapping.
+`DevDiagnostics` is the always-on dev dock: an FPS and interval-rate readout, speed buttons and a balance workbench toggle. It starts collapsed to a chip that shows the FPS, and a press opens it. `DevPanelOverlay` is a top-level sibling of `AppFrame`, not pushed through `useModalStack`. It owns its fullscreen chrome, so it needs no modal-stack Dialog wrapping.
 
 ## Code Rules
 

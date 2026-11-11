@@ -18,6 +18,6 @@ export interface ResourceReadout {
   format?: (value: DecimalSource) => string;
   /** Writes the rate, without its sign and unit. Default: two decimals in the engine notation. */
   formatRate?: (rate: DecimalSource) => string;
-  /** A short status under the readout, such as "full". An empty string shows none. */
+  /** A short status under the readout, such as "full". An empty string shows none and keeps the line. */
   note?: Ref<string>;
 }

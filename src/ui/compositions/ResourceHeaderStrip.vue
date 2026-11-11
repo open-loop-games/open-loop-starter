@@ -82,7 +82,7 @@ function rateSign(value: DecimalSource): string {
         <span v-if="r.rate" class="resource-header-strip__rate"
           >{{ rateSign(r.rate.value) }}{{ showRate(r, r.rate.value) }}/s</span
         >
-        <span v-if="r.note?.value" class="resource-header-strip__note">{{ r.note.value }}</span>
+        <span v-if="r.note" class="resource-header-strip__note">{{ r.note.value }}</span>
       </HudChip>
       <slot name="trailing" />
     </HudBar>
@@ -102,8 +102,11 @@ function rateSign(value: DecimalSource): string {
   opacity: 0.7;
   margin-left: 0.4em;
 }
+/* A readout that can have a note keeps its line while the note is empty, so
+   a note that appears does not grow the bar and move what is under it. */
 .resource-header-strip__note {
   display: block;
+  min-height: 1lh;
   color: var(--color-text-muted);
   font-size: 0.7em;
 }

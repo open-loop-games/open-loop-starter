@@ -133,12 +133,14 @@ describe('ResourceHeaderStrip', () => {
     expect(wrapper.find('.resource-header-strip__rate').text()).toBe('+28/s');
   });
 
-  it('shows a readout’s note while it has one', async () => {
+  it('keeps the note’s line while the note is empty, so the bar does not grow when it appears', async () => {
     const note = ref('');
     const wrapper = mount(ResourceHeaderStrip, {
-      props: { readouts: [{ ...readout('bunks'), note }] },
+      props: { readouts: [{ ...readout('bunks'), note }, readout('scrip')] },
     });
-    expect(wrapper.find('.resource-header-strip__note').exists()).toBe(false);
+    // Only a readout that can have a note has the line.
+    expect(wrapper.findAll('.resource-header-strip__note')).toHaveLength(1);
+    expect(wrapper.find('.resource-header-strip__note').text()).toBe('');
     note.value = 'full';
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.resource-header-strip__note').text()).toBe('full');

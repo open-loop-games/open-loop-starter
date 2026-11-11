@@ -28,6 +28,8 @@
 
   --radius: 6px;
   --radius-sm: 4px;
+  /* Fully round ends: a chip, a switch track. Set it to --radius for square ones. */
+  --radius-pill: 999px;
   --gap: 12px;
   --gap-sm: 8px;
   --gap-lg: 20px;
