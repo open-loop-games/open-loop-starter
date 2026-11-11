@@ -69,7 +69,7 @@ src/
 ├── lib/           # Scaffold layout/theme layer. Presentational — no engine imports (oxlint-enforced). Import via '@/lib'.
 ├── ui/            # Engine-bridged UI — screens, panels, components, compositions. Archetype-specific SFCs are in their archetype, not here.
 ├── composables/   # Starter-level composables — bridge shared-base state to UI.
-├── modules/       # The shared-base engine modules every archetype boots, and the helpers a game's modules call in install().
+├── modules/       # The shared-base engine modules every archetype boots, and the helpers a game calls: in a module's install(), or at the root's onLoaded.
 ├── directives/    # Shared Vue directives.
 ├── balance/       # Cross-archetype balance toolkit over the engine's balance harness. Per-archetype balance/ is in the archetype.
 ├── styles/        # Scaffold theme layered over lib's token defaults.

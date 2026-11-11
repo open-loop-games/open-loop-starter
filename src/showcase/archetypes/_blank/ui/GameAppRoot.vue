@@ -9,6 +9,7 @@ import { ref } from 'vue';
 import { AppFrame, DevPanelOverlay, useModalStack } from '@/lib';
 import { Screen } from '@/types';
 import { usePlaySession } from '@/composables/usePlaySession';
+import { replayOfflineTime } from '@/modules/offline';
 import SlotScreen from '@/ui/screens/SlotScreen.vue';
 import ToastContainer from '@/ui/components/ToastContainer.vue';
 import DevDiagnostics from '@/ui/components/DevDiagnostics.vue';
@@ -16,11 +17,19 @@ import BalanceWorkbench from '@/ui/panels/BalanceWorkbench.vue';
 import SystemHeader from '@/ui/components/SystemHeader.vue';
 import { manifest } from '../manifest';
 import { credits } from '../credits';
+import { GAME_BALANCE } from '../data/game';
 import GameView from './GameView.vue';
 
-// Slot-pick → start → load → play → save → back. `usePlaySession` owns it;
-// pass `onLoaded` when your game needs to do something with the offline gap.
-const { engine, currentScreen, startGame, returnToSlots } = usePlaySession();
+// Slot-pick → start → load → play → save → back. `usePlaySession` owns it.
+// `onLoaded` is where a game decides what its offline time means. This one
+// replays it through the loop, up to a window, when the player's Settings
+// switch allows it. Change this call for a different rule, or delete it and
+// the switch with it.
+const { engine, currentScreen, startGame, returnToSlots } = usePlaySession({
+  onLoaded: (result) => {
+    replayOfflineTime(engine, result, { maxOfflineSeconds: GAME_BALANCE.offlineWindowSeconds });
+  },
+});
 
 const stack = useModalStack();
 

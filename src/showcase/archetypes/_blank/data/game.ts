@@ -21,11 +21,14 @@ export interface GameBalance {
    * linear spine exactly as written.
    */
   automationMultiplier: number;
+  /** Most offline seconds a return replays. Time away past it earns nothing. */
+  offlineWindowSeconds: number;
 }
 
 export const GAME_BALANCE: GameBalance = {
   ratePerSecond: 1,
   automationMultiplier: 2,
+  offlineWindowSeconds: 8 * 3600,
 };
 
 /**
@@ -55,6 +58,11 @@ export type GameFlag = (typeof GAME_FLAGS)[number];
 // above is the whole story until a fork unlocks it. That is the point of
 // carrying the example: unlocking an automation tier is a balance change, and
 // the projection has to grow the second branch when you unlock it.
+//
+// Offline time is replayed through the same loop, so it adds nothing to the
+// closed form but a cap on `t`: a return after `away` seconds advances the
+// game by `min(away, offlineWindowSeconds)`. The window is a design number:
+// it sets how long a player can stay away before more time earns nothing.
 //
 // One design number to author: `ratePerSecond`. The projection predicts
 // `amount(t)` on paper; the probe (`balance/game-probe.ts`) drives the shipping

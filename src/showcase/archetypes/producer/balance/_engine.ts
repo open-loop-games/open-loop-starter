@@ -8,7 +8,7 @@
  * records beats and reads magnitudes.
  */
 
-import { Decimal, type TickDriver } from '@open-loop/engine';
+import { Decimal, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import {
   AutomationKey,
@@ -67,8 +67,8 @@ export interface ArcResult {
   offline: OfflineApi;
   tips: TipsApi;
   standing: StandingApi;
-  /** The engine's driver, for a catch-up the caller runs after the arc. */
-  tickDriver: TickDriver;
+  /** The engine, for a catch-up the caller runs after the arc. */
+  engine: Engine;
   dispose(): void;
 }
 
@@ -110,7 +110,8 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     const leave = away.get(t);
     if (leave !== undefined) {
       const now = Date.now();
-      t += offline.catchUp(handle.engine.tickDriver, now - leave * 1000, now).caughtUpSeconds;
+      const saved = { success: true, timestamp: now - leave * 1000 };
+      t += offline.catchUp(handle.engine, saved, now).caughtUpSeconds;
     }
 
     handBuys += player.step();
@@ -175,7 +176,7 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     offline,
     tips,
     standing,
-    tickDriver: handle.engine.tickDriver,
+    engine: handle.engine,
     dispose: () => handle.dispose(),
   };
 }

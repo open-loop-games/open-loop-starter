@@ -17,22 +17,41 @@ export interface EventLine<K extends string = string, X = undefined> {
   extra?: X;
 }
 
-export interface EventLogOptions<K extends string> {
+interface EventLogBaseOptions<K extends string> {
   /** Lines kept; the oldest go first. */
   cap: number;
   /** The time a line is stamped with, usually play-seconds. Without it, the log is untimed. */
   clock?: () => number;
   /** Kind of a line posted without one, and of `initial` lines. */
   defaultKind?: K;
+}
+
+/** A log the save keeps. */
+interface SavedEventLogOptions {
   /**
    * Saves the log under this id in the module's persistent context; `extra`
-   * must then be serializable. Without it, the log belongs to the play
-   * session and a load empties it.
+   * must then be serializable.
    */
-  persistId?: string;
-  /** Lines a fresh log opens with. */
+  persistId: string;
+  /**
+   * Lines a new game's log opens with, stamped with `clock()` when the log is
+   * created. So the clock must be readable by then.
+   */
   initial?: readonly string[];
 }
+
+/**
+ * A log of the play session: a load empties it. It takes no `initial` lines,
+ * because a module cannot tell a new game from a loaded save. Its game posts
+ * an opening line where it knows which one it is.
+ */
+interface SessionEventLogOptions {
+  persistId?: undefined;
+  initial?: undefined;
+}
+
+export type EventLogOptions<K extends string> = EventLogBaseOptions<K> &
+  (SavedEventLogOptions | SessionEventLogOptions);
 
 export interface EventLog<K extends string = string, X = undefined> {
   /** Oldest first. */
@@ -60,9 +79,13 @@ export function createEventLog<K extends string = 'plain', X = undefined>(
 ): EventLog<K, X> {
   const { cap, clock, persistId } = options;
   const defaultKind = (options.defaultKind ?? 'plain') as K;
-  const opening = (options.initial ?? []).map((text, i): EventLine<K, X> => ({
+  const initial = options.initial ?? [];
+  // Read only for a log with initial lines: another log's clock may close over
+  // state its module creates after the log.
+  const openedAt = initial.length > 0 ? (clock?.() ?? 0) : 0;
+  const opening = initial.map((text, i): EventLine<K, X> => ({
     seq: i + 1,
-    at: 0,
+    at: openedAt,
     kind: defaultKind,
     text,
   }));
@@ -70,8 +93,8 @@ export function createEventLog<K extends string = 'plain', X = undefined>(
   let lines: Ref<EventLine<K, X>[]>;
   let seq: Ref<number>;
   if (persistId === undefined) {
-    lines = shallowRef(opening);
-    seq = shallowRef(opening.length);
+    lines = shallowRef([]);
+    seq = shallowRef(0);
     // A session log belongs to the play session, not the save: loading a slot
     // or beginning a new game on the same engine starts it empty.
     ctx.onLoad(() => {

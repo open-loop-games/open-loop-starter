@@ -22,6 +22,9 @@ import { fmt, runArc, type ArcResult } from './_engine';
 
 const ARC = 30 * 60;
 
+/** A load result for a save written `seconds` ago. */
+const savedAgo = (seconds: number) => ({ success: true, timestamp: Date.now() - seconds * 1000 });
+
 async function hireAndPause(at: number): Promise<ArcResult> {
   const run = await runArc({
     seconds: at,
@@ -40,7 +43,7 @@ async function accumulation(): Promise<void> {
     run.automation.deskOn[id].value = false;
   for (const away of [60, 600]) {
     const rate = run.firm.incomeRate.value.toNumber();
-    const back = run.offline.catchUp(run.tickDriver, Date.now() - away * 1000);
+    const back = run.offline.catchUp(run.engine, savedAgo(away));
     const predicted = rate * back.caughtUpSeconds;
     console.log(
       `  ${fmt(away).padStart(7)} away: replayed ${fmt(back.caughtUpSeconds)}, made $${back.cashGained.toExponential(3)}, closed form $${predicted.toExponential(3)} (${((100 * back.cashGained.toNumber()) / predicted).toFixed(2)}%)`,
@@ -83,7 +86,7 @@ async function replayCost(): Promise<void> {
   const run = await hireAndPause(15 * 60);
   const away = 600;
   const start = performance.now();
-  const back = run.offline.catchUp(run.tickDriver, Date.now() - away * 1000);
+  const back = run.offline.catchUp(run.engine, savedAgo(away));
   const ms = performance.now() - start;
   const perSecond = ms / back.caughtUpSeconds;
   console.log(

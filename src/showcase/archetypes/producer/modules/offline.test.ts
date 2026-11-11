@@ -29,7 +29,7 @@ function hireTheBookkeeper(): void {
 
 function returnAfter(ms: number) {
   const now = Date.now();
-  return offline().catchUp(getEngine().tickDriver, now - ms, now);
+  return offline().catchUp(getEngine(), { success: true, timestamp: now - ms }, now);
 }
 
 beforeEach(() => boot());

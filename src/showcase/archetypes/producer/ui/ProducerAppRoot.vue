@@ -35,7 +35,7 @@ const { engine, currentScreen, startGame, returnToSlots } = usePlaySession({
   onLoaded: (result) => {
     const offline = engine.tryInject(OfflineKey);
     if (!offline || !result.success) return;
-    const report = offline.catchUp(engine.tickDriver, result.timestamp ?? undefined);
+    const report = offline.catchUp(engine, result);
     if (report.caughtUpSeconds < REPORT_MIN_AWAY_SECONDS) return;
     stack.push(ReturnReport, { report, windowSeconds: OFFLINE_WINDOW_SECONDS });
   },

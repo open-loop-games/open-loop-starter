@@ -3,14 +3,14 @@ import {
   Decimal,
   createCostRequirement,
   createPurchasableCategory,
-  processOfflineTime,
+  type Engine,
   type EngineModule,
   type InjectionKey,
   type Purchasable,
-  type TickDriver,
+  type SaveLoadResult,
 } from '@open-loop/engine';
 import { createModuleApi } from '@/modules/module-api';
-import { SettingsKey } from '@/modules/settings';
+import { readOfflineSeconds, replayOfflineTime } from '@/modules/offline';
 import {
   ACQUISITION_INTERVAL,
   BOOKKEEPER_DEF,
@@ -51,15 +51,19 @@ export interface OfflineApi {
   /** The most recent return this play session; `null` until one happens. */
   lastReturn: Ref<OfflineReturn | null>;
   /**
-   * Replay the time away since `savedAt` (ms) through `tickDriver`.
+   * Replay the time away since the loaded save through the engine's loop.
    *
-   * @param tickDriver the engine's driver, `engine.tickDriver`
-   * @param savedAt when the loaded save was written; `undefined` means no time away
+   * @param engine the started engine the save was loaded into
+   * @param result what `engine.load()` returned; a new game has no time away
    * @param now the return time in ms, defaulting to `Date.now()`
    * @returns the return, also written to `lastReturn`
-   * @example offline.catchUp(engine.tickDriver, loadResult.timestamp)
+   * @example offline.catchUp(engine, loadResult)
    */
-  catchUp(tickDriver: TickDriver, savedAt: number | undefined, now?: number): OfflineReturn;
+  catchUp(
+    engine: Pick<Engine, 'tickDriver' | 'tryInject'>,
+    result: Pick<SaveLoadResult, 'success' | 'timestamp'>,
+    now?: number,
+  ): OfflineReturn;
 }
 
 const offlineApi = createModuleApi(OfflineKey);
@@ -74,9 +78,6 @@ export function createOfflineModule(): EngineModule {
     install(ctx) {
       const { cash, ledger } = ctx.inject(FirmKey);
       const lastReturn: Ref<OfflineReturn | null> = ref(null);
-      // The base's player-facing toggle (Settings → "Process offline progress
-      // on load"). Absent outside the shared base, where catch-up always runs.
-      const settings = ctx.tryInject(SettingsKey)?.settings;
 
       const firmOffice = createPurchasableCategory<BookkeeperDef>({
         id: FIRM,
@@ -96,16 +97,18 @@ export function createOfflineModule(): EngineModule {
       const bookkeeper = firmOffice.getPurchasable(BOOKKEEPER_DEF.id)!;
 
       function catchUp(
-        tickDriver: TickDriver,
-        savedAt: number | undefined,
+        engine: Pick<Engine, 'tickDriver' | 'tryInject'>,
+        loaded: Pick<SaveLoadResult, 'success' | 'timestamp'>,
         now: number = Date.now(),
       ): OfflineReturn {
-        const awaySeconds = savedAt == null ? 0 : Math.max(0, (now - savedAt) / 1000);
+        const awaySeconds = readOfflineSeconds(loaded, now);
         const before = Decimal.fromValue(cash.value);
-        const enabled = bookkeeper.active.value && (settings?.offlineProgress.value ?? true);
-        // Half-second chunks keep the acquisitions desk on its own cadence through the replay.
-        const caughtUpSeconds = enabled
-          ? processOfflineTime(tickDriver, awaySeconds, {
+        // The base's replay honors the player's Settings switch; the bookkeeper
+        // is this game's own gate in front of it. Half-second chunks keep the
+        // acquisitions desk on its own cadence through the replay.
+        const caughtUpSeconds = bookkeeper.active.value
+          ? replayOfflineTime(engine, loaded, {
+              now,
               maxOfflineSeconds: OFFLINE_WINDOW_SECONDS,
               chunkSize: ACQUISITION_INTERVAL,
             })

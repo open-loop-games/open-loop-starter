@@ -5,7 +5,10 @@ import { createEventLog, type EventLog, type EventLogOptions } from '../event-lo
 
 type Kind = 'plain' | 'warn';
 
-function bootLog(options: Partial<EventLogOptions<Kind>> = {}) {
+/** The options without `cap`, kept as the saved-or-session union. */
+type LogOverrides<O = EventLogOptions<Kind>> = O extends unknown ? Omit<O, 'cap'> : never;
+
+function bootLog(options: LogOverrides = {}) {
   let now = 0;
   let log!: EventLog<Kind, { amount: number }>;
   const mod: EngineModule = {
@@ -83,6 +86,20 @@ describe('createEventLog', () => {
     expect(log().lines.value).toMatchObject([{ seq: 2, text: 'b' }]);
   });
 
+  it('takes no initial lines in a session log, which a load would empty', () => {
+    bootTestEngine({
+      modules: [
+        {
+          id: 'test/session-initial',
+          install(ctx) {
+            // @ts-expect-error -- `initial` needs `persistId`: only a saved log keeps its opening lines.
+            createEventLog(ctx, { cap: 3, initial: ['It begins.'] });
+          },
+        },
+      ],
+    });
+  });
+
   it('is the session’s, not the save’s: a load starts it empty', () => {
     const { engine, log } = bootLog();
     engine.save();
@@ -95,6 +112,26 @@ describe('createEventLog', () => {
     it('opens a fresh log with its initial lines', () => {
       const { log } = bootLog({ persistId: 'log', initial: ['It begins.'], defaultKind: 'warn' });
       expect(log().lines.value).toEqual([{ seq: 1, at: 0, kind: 'warn', text: 'It begins.' }]);
+    });
+
+    it('stamps the initial lines with the clock, which need not start at 0', () => {
+      let log!: EventLog;
+      bootTestEngine({
+        modules: [
+          {
+            id: 'test/day-one',
+            install(ctx) {
+              log = createEventLog(ctx, {
+                cap: 3,
+                clock: () => 1,
+                persistId: 'diary',
+                initial: ['The farm is mine now.'],
+              });
+            },
+          },
+        ],
+      });
+      expect(log.lines.value.map((l) => l.at)).toEqual([1]);
     });
 
     it('restores the saved lines on load', () => {
