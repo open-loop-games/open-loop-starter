@@ -12,6 +12,9 @@
  * after a short delay: for a repeatable purchase or a stepper. `click` carries
  * the press, so `e.shiftKey` reads at the click. `disabled` suppresses the
  * emit in-component (the directive still runs, but the handler short-circuits).
+ *
+ * Every way to press fires it once: a pointer, Enter or Space, and a bare
+ * click from assistive tech or `element.click()`.
  */
 import { computed } from 'vue';
 import { Primitive, type PrimitiveProps } from 'reka-ui';
@@ -32,12 +35,12 @@ const props = withDefaults(defineProps<Props>(), {
   repeat: false,
 });
 
-const emit = defineEmits<{ click: [event: PointerEvent | KeyboardEvent] }>();
+const emit = defineEmits<{ click: [event: MouseEvent | KeyboardEvent] }>();
 
 /** The directive argument: `once` stops a held press from repeating. */
 const mode = computed(() => (props.repeat ? undefined : 'once'));
 
-function handle(e: PointerEvent | KeyboardEvent): void {
+function handle(e: MouseEvent | KeyboardEvent): void {
   if (props.disabled) return;
   emit('click', e);
 }

@@ -72,7 +72,7 @@ const waiting = computed(() => {
 });
 
 /** A shift-click raises five. */
-function raise(id: TroopId, e: PointerEvent | KeyboardEvent): void {
+function raise(id: TroopId, e: MouseEvent | KeyboardEvent): void {
   keep.raise(id, e.shiftKey ? 5 : 1);
 }
 
@@ -99,7 +99,7 @@ const tithes = computed(() => toNumber(tithe.count.value));
           :class="{ afford: t.can > 0, fresh: t.fresh }"
           :disabled="t.can === 0"
           :data-troop="t.id"
-          @click="(e: PointerEvent | KeyboardEvent) => raise(t.id, e)"
+          @click="(e: MouseEvent | KeyboardEvent) => raise(t.id, e)"
         >
           <span class="bl-glyph"><TroopGlyph :troop="t.id" /></span>
           <span class="bl-text">
