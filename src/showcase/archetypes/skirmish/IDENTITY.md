@@ -80,21 +80,23 @@ Its army at the 240 s mark is smaller than the 24 units a unit's value is define
 reference player (`balance/_game.ts`), which hires its lieutenants by the rival's rule and
 runs the shipping policy in the player's seat, and prints each beat beside the spine's
 landmarks. `balance/counter-probe.ts` measures whether reading the rival wins matches.
+`balance/nudge-probe.ts` measures how far one match's end spreads under nudges far below a
+tuning step.
 
 ## The arc
 
 | Beat | Recorded (contract 1) |
 |---|---|
 | The fixer hired | 0 s |
-| The first training floor | 51 s |
-| The first unit trained | 71 s |
-| The first district taken | 131 s |
+| The first training floor | 50 s |
+| The first unit trained | 70 s |
+| The first district taken | 130 s |
 | The first clash | 158 s |
-| The crew chartered | 256 s |
-| Your first sentry nest | 281 s |
-| The black clinic opens | 339 s |
-| The first assault on their safehouse | 418.5 s |
-| Their safehouse burns | 487 s |
+| The crew chartered | 249 s |
+| Your first sentry nest | 273 s |
+| The black clinic opens | 330 s |
+| The first assault on their safehouse | 466.5 s |
+| Their safehouse burns | 516.5 s |
 
 Each match is a few minutes; the rival's income terms climb to parity by the megacorp.
 

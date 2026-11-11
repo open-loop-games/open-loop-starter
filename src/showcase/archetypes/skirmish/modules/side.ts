@@ -8,6 +8,7 @@
  */
 import {
   Decimal,
+  Formula,
   computed,
   createBooleanRequirement,
   createCostRequirement,
@@ -55,7 +56,7 @@ import { DISTRICTS, type DistrictDef } from '../data/contracts';
 import { LIEUTENANTS, type LieutenantDef } from '../data/crew';
 import { UNITS, UNIT_KINDS, byKind, type UnitKind } from '../data/units';
 import type { Tunables } from './tunables';
-import { START_SCRIP } from '../data/spine';
+import { START_SCRIP, ladderPrice } from '../data/spine';
 import { onRoad, type Convoy } from './travel';
 
 export type Stance = 'hold' | 'assault';
@@ -187,6 +188,12 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
   const dmg = byKind((k) => createModifierChain(`${id}-dmg-${k}`));
   const hp = byKind((k) => createModifierChain(`${id}-hp-${k}`));
 
+  // A price paid in one sum is whole: every ladder ends in `.round()`, as the spine's
+  // `ladderPrice` does.
+  type Curve = Parameters<typeof Formula.exponential>;
+  const ladder = (base: Curve[1], ratio: Curve[2]) => (count: Curve[0]) =>
+    Formula.exponential(count, base, ratio).round();
+
   // ─── Economy: workers are producers, so income rises with every hustler ───
   const econ = createProducerCategory<EconDef>({
     id: catId.econ(id),
@@ -200,8 +207,7 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
         display: { title: def.name, description: def.blurb },
         purchase: {
           costResource: scrip,
-          baseCost: t.baseCost,
-          costRatio: t.ratio,
+          costFormula: ladder(t.baseCost, t.ratio),
           limit: t.limit,
           initialCount: def.purchase.initial,
           purchaseMaxByDefault: false,
@@ -240,8 +246,7 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
     id: `${id}-squats`,
     title: 'Coffin squats',
     resource: scrip,
-    baseCost: tune.squatBaseCost,
-    costRatio: tune.squatRatio,
+    costFormula: ladder(tune.squatBaseCost, tune.squatRatio),
     purchaseMaxByDefault: false,
   });
   const supplyCap = computed(
@@ -282,13 +287,16 @@ export function createSide({ ctx, id, tune, owns, incomeMult, running }: SideOpt
     id: `${id}-floors`,
     title: FLOORS.name,
     resource: scrip,
-    baseCost: () => tune.floorBaseCost.value * tune.floorRatio.value ** techFloors(),
-    costRatio: tune.floorRatio,
+    costFormula: ladder(
+      computed(() => tune.floorBaseCost.value * tune.floorRatio.value ** techFloors()),
+      tune.floorRatio,
+    ),
     purchaseMaxByDefault: false,
     visible: () => techFloors() > 0,
   });
   const floorCount = () => techFloors() + toNumber(floors.count.value);
-  const floorPrice = () => tune.floorBaseCost.value * tune.floorRatio.value ** floorCount();
+  const floorPrice = () =>
+    ladderPrice(tune.floorBaseCost.value, tune.floorRatio.value, floorCount());
   const floorShare = (k: UnitKind) => {
     if (!opened(k) || queue[k].value <= 0) return 0;
     let weights = 0;

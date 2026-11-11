@@ -18,7 +18,7 @@ export function rate(x: number): string {
 /** Match seconds as m:ss. */
 export const clock = formatClock;
 
-/** Rounded up, with separators: a price you will actually pay, integrity left standing. */
+/** Rounded up, with separators: integrity left standing. A price is whole already. */
 export function grouped(x: number): string {
   return Math.ceil(x).toLocaleString('en-US');
 }

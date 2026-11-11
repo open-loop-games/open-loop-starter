@@ -126,6 +126,15 @@ export const CHARTER_FLOORS = 2;
 
 // ─── Economy ───────────────────────────────────────────────────────────────
 
+/**
+ * Scrip changes hands in whole amounts: a price paid in one sum is rounded to one. Training
+ * draws its scrip by the second and stays a rate.
+ */
+export const wholePrice = (scrip: number) => Math.round(scrip);
+/** Rung `n` of a price ladder: the geometric price, rounded. */
+export const ladderPrice = (base: number, ratio: number, n: number) =>
+  wholePrice(base * ratio ** n);
+
 /** `c0 = payback · rate`: the first hustler costs what it pays in `FIRST_PAYBACK_S`. */
 export const hustlerBaseCost = FIRST_PAYBACK_S * HUSTLER_RATE;
 /** `m = 2^(K/(N−1))`: `NODE_DOUBLINGS` doublings from a node's first hire to its last. */
@@ -146,7 +155,7 @@ export function nextHire(
   for (let i = 0; i <= held; i++) {
     const b = bought[i] ?? 0;
     if (b >= NODE_HUSTLERS) continue;
-    const cost = hustlerBaseCost * hustlerRatio ** b;
+    const cost = ladderPrice(hustlerBaseCost, hustlerRatio, b);
     if (!best || cost < best.cost) best = { node: i, cost };
   }
   return best;
@@ -224,7 +233,7 @@ export const tapRatio = 4 / 3;
 export const TAP_LIMIT = 6;
 
 /** The charter's price: a sink on the unit-value scale, saved for like a floor. */
-export const charterCost = CHARTER_UNITS * unitValue;
+export const charterCost = wholePrice(CHARTER_UNITS * unitValue);
 
 // ─── Combat ────────────────────────────────────────────────────────────────
 
@@ -290,7 +299,7 @@ export const minSiegeAt = (level: number) => minSiegeForce(hqIntegrity, turretDp
 export const siegeUnits = (level: number) => Math.ceil(minSiegeAt(level) - 1e-9);
 /** Level `k` costs the extra siege it demands of an attacker: `u · (n_k − n_{k−1})`. */
 export const turretLevelCost = (level: number) =>
-  unitValue * (minSiegeAt(level) - minSiegeAt(level - 1));
+  wholePrice(unitValue * (minSiegeAt(level) - minSiegeAt(level - 1)));
 
 /**
  * A district turret is worth `DISTRICT_TURRET_VALUE` units under the square law, split
@@ -299,7 +308,7 @@ export const turretLevelCost = (level: number) =>
  */
 export const districtTurretDps = UNIT_DPS * DISTRICT_TURRET_VALUE;
 export const districtTurretHp = unitHp * DISTRICT_TURRET_VALUE;
-export const districtTurretCost = DISTRICT_TURRET_UNITS * unitValue;
+export const districtTurretCost = wholePrice(DISTRICT_TURRET_UNITS * unitValue);
 
 /** Control per second a full `REF_PRESENCE` squad adds to an uncontested district (control spans −1..1). */
 export const captureRate = 1 / CAPTURE_S;
@@ -317,7 +326,7 @@ export const enforcerHp = unitHp * ENFORCER_VALUE;
  * at ×1 a fully hired seat lost two contracts of four; at this rung it took all four.
  */
 export const LIEUTENANT_UNITS = [0.5, 1, 1.5];
-export const lieutenantCost = LIEUTENANT_UNITS.map((u) => u * unitValue);
+export const lieutenantCost = LIEUTENANT_UNITS.map((u) => wholePrice(u * unitValue));
 
 // ─── Contracts ─────────────────────────────────────────────────────────────
 
@@ -386,7 +395,7 @@ export function walkArmy(seconds: number): ArmyPoint[] {
     const share = pays ? 1 - ECON_SHARE : LATE_FLOOR_SHARE;
     let saving = false;
     let paused = false;
-    const floorCost = buildingBaseCost * buildingRatio ** floors;
+    const floorCost = ladderPrice(buildingBaseCost, buildingRatio, floors);
     if (!chartered && floors >= CHARTER_FLOORS) {
       if (scrip >= charterCost) {
         scrip -= charterCost;
@@ -404,7 +413,7 @@ export function walkArmy(seconds: number): ArmyPoint[] {
         paused = floorCost - scrip < PAUSE_HORIZON_S * income;
       }
     }
-    const tapCost = tapBaseCost * tapRatio ** taps;
+    const tapCost = ladderPrice(tapBaseCost, tapRatio, taps);
     if (!saving && taps < REF_TAPS && scrip >= tapCost) {
       scrip -= tapCost;
       taps += 1;

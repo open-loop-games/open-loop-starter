@@ -46,6 +46,11 @@ assault threshold, the siege the safehouse card shows, or the price.
   walk at `MID_S`, so any change to the node ladders and limits, `REF_TAKE_S`, `ECON_SHARE` or
   `PAYBACK_HORIZON_S` reprices floors, squats, research and units together. Perturbing one price key alone moves
   it off the spine.
+- **A price paid in one sum is whole scrip, rounded in two places.** `wholePrice` and
+  `ladderPrice` in `data/spine.ts` round the one-shot prices and each ladder rung, and
+  `modules/side.ts` ends each ladder in `.round()`. The two are one rounding, so the spine's
+  walks and the game pay the same prices. Training draws scrip by the second and stays a
+  rate. An override of a one-shot price key, such as `charter/cost`, is paid as given.
 - **`killRate` is solved from `COUNTER`, `RESIST` and `FIGHT_S`.** Changing a pairing cell
   without re-solving changes every fight's length, not only who wins it.
 - **`turretDps` is solved from `MIN_SIEGE_FORCE` and `hqIntegrity`.** Raising integrity
@@ -133,6 +138,10 @@ assault threshold, the siege the safehouse card shows, or the price.
   asks whether reading the rival wins matches: wins, ends and counter fit for a shipped,
   blind, fully bent and table-flat player seat. Its header defines counter fit. A healthy
   axis has the shipped seat ahead of the blind one, and the flat table losing above parity.
+- `pnpm exec vite-node src/showcase/archetypes/skirmish/balance/nudge-probe.ts [sets]` asks
+  whether one match is a measurement. It plays every contract once per nudge set, each set
+  moving a few rates and stats within ±0.3%, and prints the wins and the spread of the
+  match's end. Read a retune against that spread: a shift inside it is not a finding.
 - A healthy contract ends inside the spine's match length at equal income; earlier against
   the cheaper contracts. A stall to `MAX_MATCH_S` is a structural defect, not a tuning one.
 - The probe header says what the reference player is and why it plays with every
@@ -155,8 +164,12 @@ assault threshold, the siege the safehouse card shows, or the price.
   contracts and the reference player almost never.
 - **The rival never assaults the player's safehouse.** Its assault beat fires in no contract
   under the reference player; why is not yet measured.
-- **Matches below parity run to the spine's match length, not under it.** Every move costs at
+- **One match is one sample.** A match has no RNG, but two seats answer each other. Over
+  the nudge probe's sets a contract's end spreads by minutes, and a win at parity can turn
+  into a loss. The arc probe and the recorded beats are one such run each.
+- **Matches run to the spine's match length or past it, not under it.** Every move costs at
   least a road, and the walk that gives the landmarks does not model travel, so the measured
-  assault and end beats land after the walk's.
+  assault and end beats land after the walk's. Over the nudge probe's sets the median end is
+  near the spine's against the street gang and about a fifth past it against the rest.
 - **Repeated attempts are not identical.** Each policy throttle keeps its phase across
   matches.
