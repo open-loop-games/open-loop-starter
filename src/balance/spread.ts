@@ -18,6 +18,7 @@
  * you then ask of the batch.
  */
 
+import type { BeatResult } from '@open-loop/engine';
 import { computeMetricStats, type MetricStats } from '@open-loop/engine/harness';
 
 /**
@@ -69,4 +70,45 @@ export function spreadOf<T>(
  */
 export function formatSpread(stats: MetricStats, format: (n: number) => string = String): string {
   return `${format(stats.median)} [${format(stats.min)}–${format(stats.max)}]`;
+}
+
+/** One beat's fire time in each run of a batch; `null` where the run never reached it. */
+export interface BeatFireTimes {
+  beatId: string;
+  /** The `[lo, hi]` seconds the median should fall in. */
+  tuningWindow?: [number, number];
+  fireTimes: readonly (number | null)[];
+}
+
+/**
+ * Fire times a probe recorded itself, as the `BeatResult`s `runBeatProbe`
+ * returns, so `renderArcTable` prints either.
+ *
+ * `runBeatProbe` plays a fresh engine per beat and seed. An arc probe that
+ * times every beat in one run per seed records the times instead, and this
+ * summarises them the same way: stats over the runs that reached the beat,
+ * a run that did not counted as `maxSimTime`, and "in window" read off p50.
+ */
+export function beatResultsOf(beats: readonly BeatFireTimes[]): BeatResult[] {
+  return beats.map(({ beatId, tuningWindow, fireTimes }) => {
+    const reached = fireTimes.filter((t): t is number => t !== null);
+    const terminationTime = reached.length > 0 ? computeMetricStats(reached) : undefined;
+    const result: BeatResult = {
+      beatId,
+      terminationTime,
+      counts: {
+        predicate: reached.length,
+        maxSimTime: fireTimes.length - reached.length,
+        unreachable: 0,
+      },
+    };
+    if (tuningWindow) {
+      result.tuningWindow = tuningWindow;
+      result.inTuningWindow =
+        terminationTime !== undefined &&
+        terminationTime.p50 >= tuningWindow[0] &&
+        terminationTime.p50 <= tuningWindow[1];
+    }
+    return result;
+  });
 }

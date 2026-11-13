@@ -18,8 +18,8 @@
  *   `runSensitivity` for a curve across a range, `replayLive` for the live
  *   loop's own dt.
  * - `renderArcTable`, from the balance toolkit (`@/balance`), prints the
- *   result. The same folder has the cost curve as a `Formula`, the flow and
- *   sensitivity tables, and the spread of a metric over a seed batch.
+ *   result. The same folder has `beatResultsOf`, for an arc probe that times
+ *   every beat in one run, and the spread of a metric over a seed batch.
  *
  * Coarse tick (1s) per `AGENTS.md` § Balance methodology — no sub-second
  * fidelity needed for a linear rate.
