@@ -50,8 +50,8 @@ registry is `modules/tuning.ts`.
   length before reach.
 - **Shoring and Brass fittings sit outside the peg.** Both add ward the storm was not
   pegged to. In `posting-probe.ts` the bare keeper lands on the spine's nights, and shoring
-  adds about one more at Haven Point and the Skerry; Brass alone adds none, and counts only
-  on top of shoring. Shoring's price doubles within a night, so salvage buys it
+  adds up to one more at Haven Point and the Skerry, by seed; Brass alone adds a fraction at
+  most, and counts mainly on top of shoring. Shoring's price doubles within a night, so salvage buys it
   logarithmically, and more catch (Tide tables) barely moves it.
 - **C_max is a side built from its own cells.** A corner's second brace is a wall on the
   next side, so it is reach above the peg, like shoring. Counting it in C_max would peg the

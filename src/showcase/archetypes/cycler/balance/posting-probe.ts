@@ -1,5 +1,5 @@
 /**
- * Cycler: posting probe. Plays one watch per posting at knowledge zero over three seeds,
+ * Cycler: posting probe. Plays one watch per posting at knowledge zero over a three-seed batch,
  * under five keepers: bare (no shoring, no Brass fittings, no rowing to wrecks), with each
  * of the three alone, and the reference keeper with all three. Prints nights beside the spine's prediction, then the
  * reference keeper's minutes and entries per minute. Prints; never asserts.
@@ -15,6 +15,7 @@
  *   pace, a long gentle watch or a short hard one, and not about reward.
  */
 
+import { seedBatch, spreadOf } from '@/balance';
 import { POSTINGS, deriveSpine, predictNightsSurvived, referenceInput } from '../data';
 import {
   DECLINES_BRASS,
@@ -26,7 +27,7 @@ import {
   type WatchResult,
 } from './_keeper';
 
-const SEEDS = [11, 12, 13];
+const SEEDS = seedBatch(3);
 const KEEPERS: [string, KeeperPolicy][] = [
   ['bare', { findPreference: DECLINES_BRASS, shores: false, rows: false }],
   ['+brass', { findPreference: TAKES_BRASS, shores: false, rows: false }],
@@ -49,10 +50,10 @@ function play(postingId: (typeof POSTINGS)[number]['id'], policy: KeeperPolicy):
 }
 
 const avg = (rows: WatchResult[], f: (r: WatchResult) => number) =>
-  rows.reduce((a, r) => a + f(r), 0) / Math.max(1, rows.length);
+  spreadOf(rows, { v: f }).v?.avg ?? NaN;
 
 const spine = deriveSpine(referenceInput());
-console.log('\nCYCLER posting probe — one watch each, knowledge at zero, seeds 11–13\n');
+console.log(`\nCYCLER posting probe — one watch each, knowledge at zero, ${SEEDS.length} seeds\n`);
 console.log(
   `  ${'posting'.padEnd(12)} spine  ${KEEPERS.map(([k]) => k.padStart(10)).join('')}   min  entries/min`,
 );

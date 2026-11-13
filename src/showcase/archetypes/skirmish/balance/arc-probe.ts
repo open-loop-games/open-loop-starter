@@ -62,6 +62,8 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
   const launched = { p: new Set<number>(), e: new Set<number>() };
   const flanks = { p: 0, e: 0 };
   const convoys = { p: 0, e: 0 };
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // match's step, which `'uniform'` mode runs before every advance.
   const run = runUntil({
     engine: game.engine,
     tickDelta: TICK,

@@ -23,7 +23,7 @@
  * specs; this plays whole watches and reads magnitudes.
  */
 
-import { seedRNG, toNumber, type Engine } from '@open-loop/engine';
+import { runUntil, seedRNG, toNumber, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -297,58 +297,67 @@ export function playWatch(
       `integrity ${lastIntegrity.toFixed(0)}, salvage ${toNumber(w.salvage.value).toFixed(0)}`,
   );
 
-  while (t < maxSeconds) {
-    g.engine.tickDriver.advanceTime(DT);
-    t += DT;
-    if (w.cycle.count.value > keptBefore) break;
-    const integrity = toNumber(w.integrity.value);
-    if (integrity < lastIntegrity) nightLeak += lastIntegrity - integrity;
-    nightShored = Math.max(nightShored, w.shored.value[w.quarter.value]);
-    lastIntegrity = integrity;
-    if (w.boat.value !== lastBoat) {
-      if (w.boat.value === 'out') rows++;
-      lastBoat = w.boat.value;
-    }
-    if (w.phase.value !== lastPhase) {
-      const q = w.quarter.value;
-      if (w.phase.value === 'night') {
-        if (w.caughtOut.value) caught++;
-        const kind = w.spray.value ? ` spray ${Math.round(w.spray.value * 100)}%` : '';
-        const back = w.backQuarter.value ? ` backing ${w.backQuarter.value}` : '';
-        beat(
-          `dusk → night ${w.night.value}: storm ${fixed(w.storm.value)} from ${q}${back}${kind}, ` +
-            `ward ${fixed(w.wards.value[q])} + screens ${fixed(w.screens.value[q])}, ` +
-            `salvage ${toNumber(w.salvage.value).toFixed(0)}, pieces ${w.placed.value.length}` +
-            (w.caughtOut.value ? ', caught out' : ''),
-        );
-        nightLeak = 0;
-        nightShored = 0;
-      } else if (w.phase.value === 'day') {
-        beat(
-          `dawn → day ${w.night.value}: night leaked ${fixed(nightLeak)}, ` +
-            `tower ${integrity.toFixed(0)}/${w.integrityMax.value.toFixed(0)}, ` +
-            `shored +${nightShored.toFixed(0)} ward`,
-        );
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // keeper's step, which `'uniform'` mode runs before every advance.
+  const run = runUntil({
+    engine: g.engine,
+    tickDelta: DT,
+    maxSimTime: maxSeconds,
+    until: ({ iteration, simTime }) => {
+      // Iteration 0 is the state the opening beat above already read.
+      if (iteration === 0) return false;
+      t = simTime;
+      if (w.cycle.count.value > keptBefore) return true;
+      const integrity = toNumber(w.integrity.value);
+      if (integrity < lastIntegrity) nightLeak += lastIntegrity - integrity;
+      nightShored = Math.max(nightShored, w.shored.value[w.quarter.value]);
+      lastIntegrity = integrity;
+      if (w.boat.value !== lastBoat) {
+        if (w.boat.value === 'out') rows++;
+        lastBoat = w.boat.value;
       }
-      lastPhase = w.phase.value;
-    }
-    for (const p of w.placed.value)
-      if (!seenKinds.has(p.kind)) {
-        seenKinds.add(p.kind);
-        beat(`first ${p.kind} placed`);
+      if (w.phase.value !== lastPhase) {
+        const q = w.quarter.value;
+        if (w.phase.value === 'night') {
+          if (w.caughtOut.value) caught++;
+          const kind = w.spray.value ? ` spray ${Math.round(w.spray.value * 100)}%` : '';
+          const back = w.backQuarter.value ? ` backing ${w.backQuarter.value}` : '';
+          beat(
+            `dusk → night ${w.night.value}: storm ${fixed(w.storm.value)} from ${q}${back}${kind}, ` +
+              `ward ${fixed(w.wards.value[q])} + screens ${fixed(w.screens.value[q])}, ` +
+              `salvage ${toNumber(w.salvage.value).toFixed(0)}, pieces ${w.placed.value.length}` +
+              (w.caughtOut.value ? ', caught out' : ''),
+          );
+          nightLeak = 0;
+          nightShored = 0;
+        } else if (w.phase.value === 'day') {
+          beat(
+            `dawn → day ${w.night.value}: night leaked ${fixed(nightLeak)}, ` +
+              `tower ${integrity.toFixed(0)}/${w.integrityMax.value.toFixed(0)}, ` +
+              `shored +${nightShored.toFixed(0)} ward`,
+          );
+        }
+        lastPhase = w.phase.value;
       }
-    if (!sawFind && w.offer.value.length === 0 && w.night.value > 1 && w.phase.value === 'day') {
-      sawFind = true;
-      beat('first find taken from the tideline');
-    }
-    if (w.relief.value && !signalled) {
-      signalled = true;
-      beat(`the relief is signalled on day ${w.night.value}: the final gale tonight`);
-    }
-    if (w.phase.value === 'day') keeperDay(w, policy);
-    if (w.phase.value === 'night') keeperNight(w, policy);
-  }
-  if (w.cycle.count.value === keptBefore) return null;
+      for (const p of w.placed.value)
+        if (!seenKinds.has(p.kind)) {
+          seenKinds.add(p.kind);
+          beat(`first ${p.kind} placed`);
+        }
+      if (!sawFind && w.offer.value.length === 0 && w.night.value > 1 && w.phase.value === 'day') {
+        sawFind = true;
+        beat('first find taken from the tideline');
+      }
+      if (w.relief.value && !signalled) {
+        signalled = true;
+        beat(`the relief is signalled on day ${w.night.value}: the final gale tonight`);
+      }
+      if (w.phase.value === 'day') keeperDay(w, policy);
+      if (w.phase.value === 'night') keeperNight(w, policy);
+      return false;
+    },
+  });
+  if (run.terminated !== 'predicate') return null;
   const s = g.logbook.lastWatch.value!;
   const end =
     s.relief === 'held'
@@ -367,18 +376,9 @@ export function playWatch(
     weathered: s.weathered,
     gathered: s.gathered,
     relief: s.relief,
-    seconds: t,
+    seconds: run.elapsedSimulated,
     rows,
     caught,
     beats,
   };
-}
-
-export function clock(t: number): string {
-  const h = Math.floor(t / 3600);
-  const m = Math.floor((t % 3600) / 60);
-  const s = Math.floor(t % 60);
-  return h
-    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-    : `${m}:${String(s).padStart(2, '0')}`;
 }

@@ -12,7 +12,8 @@
  * - the last line: nights kept and the payout's two sources.
  */
 
-import { buildGame, clock, playWatch } from './_keeper';
+import { formatClock } from '@/composables/useFormatting';
+import { buildGame, playWatch } from './_keeper';
 
 const seed = Number(process.argv[2] ?? 1);
 const g = buildGame(seed);
@@ -20,5 +21,5 @@ g.watch.startWatch();
 const result = playWatch(g);
 console.log(`\nCYCLER watch probe — Haven Point, seed ${seed}\n`);
 if (!result) console.log('  !! the tower still stands at the time limit');
-else for (const b of result.beats) console.log(`  ${clock(b.at).padStart(6)}  ${b.text}`);
+else for (const b of result.beats) console.log(`  ${formatClock(b.at).padStart(6)}  ${b.text}`);
 g.dispose();

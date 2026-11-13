@@ -13,7 +13,8 @@
  */
 
 import { toNumber } from '@open-loop/engine';
-import { buildGame, clock, keeperBetweenWatches, playWatch } from './_keeper';
+import { formatClock } from '@/composables/useFormatting';
+import { buildGame, keeperBetweenWatches, playWatch } from './_keeper';
 
 const watches = Number(process.argv[2] ?? 14);
 const seed = Number(process.argv[3] ?? 2);
@@ -34,7 +35,7 @@ for (let i = 1; i <= watches; i++) {
     `  watch ${String(i).padStart(2)} ${r.posting.padEnd(8)} ${r.nights} nights, ${(r.seconds / 60).toFixed(1)} min, ` +
       `+${r.entries} entries, rows ${r.rows} caught ${r.caught}` +
       `  | stone ${lv('stone')} tides ${lv('tides')} stores ${lv('stores')} almanac ${lv('almanac')}` +
-      ` | logbook ${toNumber(g.logbook.entries.value).toFixed(0)} | ${clock(total)}${relief}`,
+      ` | logbook ${toNumber(g.logbook.entries.value).toFixed(0)} | ${formatClock(total)}${relief}`,
   );
   if (r.relief === 'held') break;
   keeperBetweenWatches(g.logbook);
