@@ -92,7 +92,8 @@ Every key is read at its reader site through `tunable()`; the registry is in
   budgets, every gear price against the budget it is bought from, and the predicted
   beats.
 - `balance/arc-probe.ts [seeds] [maxSeconds]` plays the shipping game to the Hart once per
-  seed. Read § Beats against the prediction, then § Bands: the time split into walking
+  seed. Read § Beats, each beat over the seeds against the spine and in or out of a healthy
+  pass's window, then § Bands: the time split into walking
   (charting toward the frontier within it), hunting and waiting at a restock point, the
   hit rate and kills, and the hide rate against the spine. A long wait is a jerky
   shortage; a low rate at full hunting time is thin quarry.
@@ -107,8 +108,13 @@ within 10% of their predictions, and the Fen within 25%.
 
 ## Known thin
 
-- **The opening runs long.** The first camp falls at 347–443s against 294s: the walker
-  reaches the waystone after the wood is ready. The Fen then opens 3–17% late.
+- **The opening runs long.** The first camp falls at 342–423s against 294s: the walker
+  reaches the waystone after the wood is ready.
+- **The forest can starve the racks.** On one seed of the default three, the forest stay
+  waits 573s on jerky, 506s of it with the racks short of meat or wood. The Fen opens
+  70% late, and the Hart falls at 2256s. The other two seeds take the Hart at about
+  1917s, 6.5% past `ANCHORS.arcSeconds`, so the default seeds fail a healthy pass on the
+  Hart.
 - **Dens fall off schedule.** The mattock comes 30% after the Fen opens, while the
   coracle and the sledge come before their bands open: the walker owns the next bow
   before it owns the next terrain gear. The spine counts each trophy from a band

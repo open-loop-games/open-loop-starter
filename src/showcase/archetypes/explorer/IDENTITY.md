@@ -96,15 +96,15 @@ stay went.
 
 | Beat | Predicted | Recorded |
 |---|---|---|
-| First lodge purchase | 119s | 107–109s |
-| The forest kit: first camp | 294s | 347–443s |
-| Into the Fen | 671s | 692–784s |
-| The Old Tusker: the mattock | 671s | 875–916s |
-| The Mere Wolf: the coracle | 1047s | 970–999s |
-| Onto the Snowfield | 1047s | 1074–1177s |
-| The White Bear: the sledge | 1424s | 1371–1438s |
-| Under the Deepwood | 1424s | 1451–1545s |
-| The Pale Hart | 1800s | 1833–1986s |
+| First lodge purchase | 119s | 107–111s |
+| The forest kit: first camp | 294s | 342–423s |
+| Into the Fen | 671s | 679–1142s |
+| The Old Tusker: the mattock | 671s | 821–1364s |
+| The Mere Wolf: the coracle | 1047s | 988–1432s |
+| Onto the Snowfield | 1047s | 1036–1507s |
+| The White Bear: the sledge | 1424s | 1337–1732s |
+| Under the Deepwood | 1424s | 1437–1905s |
+| The Pale Hart | 1800s | 1916–2256s |
 
 The ranges are the probe's default seeds; the map is fixed and the seed drives the hunt
 rolls.

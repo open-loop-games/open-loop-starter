@@ -8,7 +8,7 @@
  * for tick-by-tick behavioral specs; this records an arc and prints magnitudes.
  */
 
-import { seedRNG, toNumber } from '@open-loop/engine';
+import { runUntil, seedRNG, toNumber } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import { speciesById } from '../data';
@@ -58,7 +58,7 @@ export interface ArcRecord {
 }
 
 /** Play one arc to the Hart, or to `maxSimSeconds`. `seed` drives the hunt rolls. */
-export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRecord> {
+export function runArc(seed: number, maxSimSeconds = 3600): ArcRecord {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createExplorerModules()],
     persistenceNamespacePrefix: 'explorer-probe',
@@ -150,24 +150,33 @@ export async function runArc(seed: number, maxSimSeconds = 3600): Promise<ArcRec
   let lossCursor = 0;
   let lastKey = '';
   let stuck = 0;
-  while (sim < maxSimSeconds && !chronicle.won.value) {
-    await handle.tick(1);
-    sim += DT;
-    walker.step();
-    const key = `${man.pos.value.x},${man.pos.value.y},${man.action.value},${wold.chartedCount.value}`;
-    stuck = key === lastKey ? stuck + DT : 0;
-    lastKey = key;
-    if (sim >= nextSnap) {
-      nextSnap += 180;
-      snapshots.push(snapshot(sim));
-    }
-    account();
-    const fresh = chronicle.log.since(lossCursor);
-    if (fresh.length) lossCursor = fresh[fresh.length - 1].seq;
-    if (fresh.some((e) => e.kind === 'bad')) losses++;
-    for (const r of Object.values(lodge.stores))
-      if (!Number.isFinite(toNumber(r.value))) throw new Error(`non-finite ${r.displayName}`);
-  }
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // walker's step, which `'uniform'` mode runs before every advance.
+  runUntil({
+    engine: handle.engine,
+    tickDelta: DT,
+    maxSimTime: maxSimSeconds,
+    until: ({ iteration, simTime }) => {
+      // Iteration 0 is the state before the first advance; the walker first steps after it.
+      if (iteration === 0) return chronicle.won.value;
+      sim = simTime;
+      walker.step();
+      const key = `${man.pos.value.x},${man.pos.value.y},${man.action.value},${wold.chartedCount.value}`;
+      stuck = key === lastKey ? stuck + DT : 0;
+      lastKey = key;
+      if (sim >= nextSnap) {
+        nextSnap += 180;
+        snapshots.push(snapshot(sim));
+      }
+      account();
+      const fresh = chronicle.log.since(lossCursor);
+      if (fresh.length) lossCursor = fresh[fresh.length - 1].seq;
+      if (fresh.some((e) => e.kind === 'bad')) losses++;
+      for (const r of Object.values(lodge.stores))
+        if (!Number.isFinite(toNumber(r.value))) throw new Error(`non-finite ${r.displayName}`);
+      return chronicle.won.value;
+    },
+  });
   snapshots.push(snapshot(sim));
 
   const record: ArcRecord = {

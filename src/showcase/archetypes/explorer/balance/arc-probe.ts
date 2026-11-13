@@ -4,11 +4,12 @@
  * Prints; never asserts.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/explorer/balance/arc-probe.ts [seeds] [maxSeconds]`
- * `seeds` is a comma list (default `7,11,23`); the seed drives the hunt rolls,
+ * `seeds` is a comma list (default `seedBatch(3)`); the seed drives the hunt rolls,
  * never the map.
  *
  * How to read it:
- * - § Beats: each predicted beat against the measured second, per seed.
+ * - § Beats: each beat's fire time over the seeds beside the spine's second, and in or
+ *   out of a healthy pass's window where `BALANCING.md` states one.
  * - § Bands: where each band's stay went (walking, and of it charting toward
  *   the frontier; hunting; waiting at a restock point), its hunts and kills, and its hide rate against the spine's
  *   `hideRate(k)` times the band's field factor. `wait jerky` is waiting on a store that cannot fill the
@@ -19,27 +20,43 @@
  *   streak at the end, which is the walker finding nothing in reach.
  */
 
+import { beatResultsOf, renderArcTable, seedBatch } from '@/balance';
+import { formatClock } from '@/composables/useFormatting';
 import { ANCHORS, FIELD_FACTOR, hideRate, predictBeats } from '../data';
 import { runArc, type ArcRecord } from './_engine';
 
 const argv = (globalThis as { process?: { argv: string[] } }).process?.argv ?? [];
-const SEEDS = (argv[2] ?? '7,11,23').split(',').map(Number);
+const SEEDS = argv[2] ? argv[2].split(',').map(Number) : seedBatch(3);
 const MAX = Number(argv[3] ?? 3600);
 
 const t0 = performance.now();
 const runs: ArcRecord[] = [];
-for (const seed of SEEDS) runs.push(await runArc(seed, MAX));
+for (const seed of SEEDS) runs.push(runArc(seed, MAX));
 
-console.log('\n=== Beats: spine (predicted) vs probe (measured), per seed ===');
-console.table(
-  predictBeats().map((p) => {
-    const row: Record<string, string | number> = { beat: p.label, predicted: p.seconds };
-    for (const r of runs) {
-      const at = r.beats.find((b) => b.label === p.label)?.at;
-      row[`seed ${r.seed}`] = at ?? '-';
-    }
-    return row;
-  }),
+/** A healthy pass's tolerance per beat, from `BALANCING.md` § Running a pass. */
+const TOLERANCE: Record<string, number> = {
+  'enter band 2': 0.25,
+  'enter band 3': 0.1,
+  'enter band 4': 0.1,
+  'the Hart': 0.05,
+};
+
+console.log('\n=== Beats: spine (predicted) vs probe (measured), over the seeds ===');
+console.log(
+  renderArcTable(
+    beatResultsOf(
+      predictBeats().map((p) => {
+        const tol = TOLERANCE[p.label];
+        return {
+          beatId: `${p.label} · spine ${formatClock(p.seconds)}`,
+          ...(tol !== undefined && {
+            tuningWindow: [p.seconds * (1 - tol), p.seconds * (1 + tol)] as [number, number],
+          }),
+          fireTimes: runs.map((r) => r.beats.find((b) => b.label === p.label)?.at ?? null),
+        };
+      }),
+    ),
+  ),
 );
 
 console.log('\n=== Bands: where each stay went, and the hide rate against the spine ===');

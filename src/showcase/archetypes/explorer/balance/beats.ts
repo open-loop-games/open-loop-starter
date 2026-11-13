@@ -5,14 +5,15 @@
  * The seed drives the hunt rolls, never the map, so each run is one seed and the
  * window is the range over the probe's default seeds.
  */
+import { seedBatch } from '@/balance';
 import { runArc } from './_engine';
 
 /** The runs one recording spans: the probe's default seeds, each to the Hart. */
-export const runs = [{ seed: 7 }, { seed: 11 }, { seed: 23 }];
+export const runs = seedBatch(3).map((seed) => ({ seed }));
 
 /** Plays one run; each manifest beat's fire time in sim-seconds, by beat number. */
-export async function record(run: (typeof runs)[number]): Promise<Record<number, number | null>> {
-  const arc = await runArc(run.seed, 3600);
+export function record(run: (typeof runs)[number]): Record<number, number | null> {
+  const arc = runArc(run.seed, 3600);
   const at = (label: string) => arc.beats.find((b) => b.label === label)?.at ?? null;
   return {
     1: at('first lodge purchase'),

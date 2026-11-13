@@ -15,31 +15,31 @@
  */
 
 import { FIELD_FACTOR, bandSeconds, bandStart } from '../data';
+import { seedBatch, spreadOf } from '@/balance';
 import { runArc } from './_engine';
 
 const argv = (globalThis as { process?: { argv: string[] } }).process?.argv ?? [];
-const SEEDS = (argv[2] ?? '7,11,23').split(',').map(Number);
+const SEEDS = argv[2] ? argv[2].split(',').map(Number) : seedBatch(3);
 
 /** The beat that opens band k's stay in the spine's bookkeeping, and the one that closes it. */
 const OPENS = ['', 'camp 1', 'enter band 2', 'enter band 3', 'enter band 4', 'the Hart'];
 
-const entries: number[][] = OPENS.map(() => []);
-for (const seed of SEEDS) {
-  const r = await runArc(seed);
-  OPENS.forEach((label, i) => {
-    const at = r.beats.find((b) => b.label === label)?.at;
-    if (at !== undefined) entries[i].push(at);
-  });
-}
-const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
+const runs = SEEDS.map((seed) => runArc(seed));
+const opened = spreadOf(
+  runs,
+  Object.fromEntries(
+    OPENS.map((label) => [label, (r) => r.beats.find((b) => b.label === label)?.at ?? NaN]),
+  ),
+);
+const mean = (k: number) => opened[OPENS[k]]?.avg ?? NaN;
 
 console.log('\n=== Stays: scheduled vs measured, mean over seeds ===');
 const rows = [1, 2, 3, 4].map((k) => {
-  const measured = mean(entries[k + 1]) - mean(entries[k]);
+  const measured = mean(k + 1) - mean(k);
   return {
     band: k,
     start: Math.round(bandStart(k)),
-    measuredStart: Math.round(mean(entries[k])),
+    measuredStart: Math.round(mean(k)),
     scheduled: Math.round(bandSeconds(k)),
     measured: Math.round(measured),
     factor: FIELD_FACTOR[k],
